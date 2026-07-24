@@ -5,7 +5,7 @@
 // title and language share a row, and wide screens may grow the shell to at most 1.5x its old cap.
 var lib = require("./lib");
 
-function run(width, height) {
+function run(width, height, standalone) {
   var harness = String.raw`<script>
 (function () {
   var out = { checks: [], errors: [] };
@@ -20,6 +20,11 @@ function run(width, height) {
     var langs = document.querySelector(".langs").getBoundingClientRect();
     var area = document.getElementById("hunt-fullscreen-area").getBoundingClientRect();
     var watch = document.querySelector(".watch-controls").getBoundingClientRect();
+    if (${standalone ? "true" : "false"}) {
+      check("installed mode hides browser and device warnings",
+        document.documentElement.classList.contains("installed-app") &&
+        getComputedStyle(document.getElementById("device-hint")).display === "none");
+    }
     check("game-only title and language share the top row", Math.abs(title.top - langs.top) <= 3,
       title.top + "/" + langs.top);
     check("game-only title stays centered in the browser", Math.abs((title.left + title.width / 2) - innerWidth / 2) <= 2,
@@ -48,7 +53,18 @@ function run(width, height) {
         invitationWidth + " -> " + enteredArea.width);
       check("entered page mode remains outside true/class fullscreen",
         !document.getElementById("hunt-fullscreen-area").classList.contains("is-fullscreen"));
-      report();
+      window.__activateExtinguisher();
+      setTimeout(function () {
+        check("an in-game extinguisher reset preserves enlarged page mode and returns to CLICK ME",
+          window.__gameOnlyEntered() && !window.__gameStarted() && !!document.getElementById("click-me-overlay"));
+        window.__endAttract();
+        window.reset();
+        setTimeout(function () {
+          check("the public reset() API preserves enlarged page mode and returns to CLICK ME",
+            window.__gameOnlyEntered() && !window.__gameStarted() && !!document.getElementById("click-me-overlay"));
+          report();
+        }, 900);
+      }, 900);
     }, 40);
   } catch (error) {
     out.errors.push("setup: " + (error && error.stack || error));
@@ -57,15 +73,17 @@ function run(width, height) {
   }, 100);
 })();
 </script>`;
-  return lib.runPageSync("rsvp.html", harness, 2200, {
+  return lib.runPageSync("rsvp.html", harness, 3200, {
     urlSuffix: "#play",
+    forceStandalone: !!standalone,
     chromeFlags: "--window-size=" + width + "," + height + " --force-device-scale-factor=1"
   });
 }
 
 var reports = [
   { label: "wide", report: run(1800, 1000) },
-  { label: "mobile", report: run(390, 844) }
+  { label: "mobile", report: run(390, 844) },
+  { label: "installed", report: run(390, 844, true) }
 ];
 var failed = false;
 reports.forEach(function (entry) {

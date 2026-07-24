@@ -30,17 +30,23 @@ nothing to compile: committed page artifacts are served directly from the live G
 
 In direct `#play`/`loft-day` mode, `:root:not(.revealed)` turns `main` into a compact title/language
 grid and raises the game shell's desktop cap from 1080px to 1620px. The invitation-state height term
-reserves Trailer/Autoplay in an explicit full-width grid row below the 2:1 scene. `setGameOnlyEntered()` adds `.loft-entered` after
+reserves Trailer/Autoplay in an explicit full-width grid row below the 2:1 scene. Short-landscape
+recovery uses a less conservative height reserve because those controls replace the dots inside the
+shell; installed recovery spends the warning row it omits on a larger scene too.
+`setGameOnlyEntered()` adds `.loft-entered` after
 CLICK ME, Continue, Trailer, or Autoplay hands over control; that hides the outer page chrome and
 uses a larger height fit without setting `.is-fullscreen`. Direct web play never auto-enters true
 fullscreen; only an installed PWA may use its first interaction for that transition. The fullscreen
-button and `F` remain explicit.
+button and `F` remain explicit. The synchronous mode bootstrap also adds `.installed-app` from the
+display-mode/navigator standalone signals, suppressing `.device-hint` before first paint in the PWA.
 
 The capture-phase room keyboard controller owns one `activateCurrentRoom()` transition used by
 `Enter` and by an otherwise-unconsumed top-level `Escape`. The existing Backspace alias dispatches
 a synthetic Escape, so it reaches the same transition even while browser fullscreen consumes the
 physical Escape key. Window-level phone/monitor closers and component menu/dialog handlers retain
-first refusal; typing fields never fall through to a room action.
+first refusal; typing fields never fall through to a room action. CLICK ME is checked before
+`activateCurrentRoom()`: Enter/Escape, including the synthetic Backspace alias, dismisses the
+invitation and advances its caption handoff without touching the room underneath.
 
 ## Self-hosted runtimes
 
@@ -108,11 +114,21 @@ with static fallback text where needed. Any English copy change must be mirrored
 The checkpoint recovery gate is a modal state boundary. Its capture-phase key handler consumes all
 keyboard events before gameplay handlers run, while handling arrow/Enter/Space itself and leaving
 browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
-or Start over removes the gate. Trailer and Autoplay remain visible beside the gate: recovery
+or Start over removes the gate. While it is present, the normal room instruction is replaced by the
+localized saved-room/age summary in `#hunt-caption`; the modal references that caption with
+`aria-describedby`, and removing the gate restores the live room caption. Trailer and Autoplay remain
+available in the room-dot row while the gate hides both navigation rails, Restart, and the dots;
+closing recovery reparents the watch controls to their normal position below the shell. Recovery
 Autoplay applies the checkpoint before starting its director, while recovery Trailer holds and
 restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
 directly because the recovery gate is already an explicit destructive choice; only the in-game
-Restart button/key uses `__confirmRestart()`.
+Restart button/key uses `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
+`resetHunt()`: the fresh-load CLICK ME state remains unstarted, but `.loft-entered` immediately
+hides the outer page chrome and enlarges its scene. The extinguisher snapshots whether game-only
+page mode was already entered before its delayed wipe, then passes the same option to `resetHunt()`;
+`R` and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
+re-arms CLICK ME without dropping the enlarged view. Cinematic/fresh-load resets omit the option and
+retain their own page-mode behavior.
 
 ### Trailer lifecycle
 

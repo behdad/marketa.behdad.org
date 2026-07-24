@@ -9,10 +9,17 @@
   // <html> synchronously here so whichever mode paints has no flash of the other first. The
   // title mirrors it: plain "Loft Day" in game-only, the full wordmark when scaffolding shows.
   (function () {
+    function installedApp() {
+      try {
+        return (window.matchMedia && (matchMedia("(display-mode: standalone)").matches ||
+          matchMedia("(display-mode: fullscreen)").matches)) || navigator.standalone === true;
+      } catch (_error) { return false; }
+    }
     function apply() {
       var gameOnly = (location.hash || "").toLowerCase() === "#play" || /loft-day/i.test(location.pathname);
       var revealed = !gameOnly;
       document.documentElement.classList.toggle("revealed", revealed);
+      document.documentElement.classList.toggle("installed-app", installedApp());
       document.title = revealed ? "markéta & behdad — RSVP — Loft Day" : "Loft Day";
     }
     apply();
@@ -585,6 +592,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #hunt-fullscreen-area.chrome-overlap #hunt-caption{z-index:62}
 .device-hint{display:none; text-align:center; font-size:.9rem; color:var(--soft); margin:.15rem 0 0; text-wrap:balance}
 .device-hint.show{display:block}
+:root.installed-app .device-hint{display:none !important}
 .browser-issues-link{color:var(--wine); text-decoration:underline; text-underline-offset:2px}
 .browser-issues-link:hover{color:var(--ink)}
 .season-toast{position:absolute; left:50%; bottom:12px; background:rgba(69,58,49,.85); color:#f8f5ec; font-size:.85rem; padding:.3rem .9rem; border-radius:999px; opacity:0; transition:opacity .3s ease; pointer-events:none; z-index:6; white-space:nowrap;
@@ -4029,8 +4037,10 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
    It is a real modal surface: the scene stays recognizable underneath, but cannot receive a
    stray tap before Continue or Start over has established which state owns the page. */
 #loft-recovery-gate{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.55rem; padding:1rem; box-sizing:border-box; color:var(--ink); background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); text-align:center}
+.recovery-active :is(#hunt-restart-btn,.hunt-left,.hunt-right){visibility:hidden; pointer-events:none}
+.recovery-active #hunt-dots{display:none}
+.recovery-active > .watch-controls{margin:.35rem 0 0; min-height:2rem}
 .loft-recovery-title{font-size:clamp(1rem,2.4vw,1.5rem); font-weight:700; line-height:1.15}
-.loft-recovery-meta{font-size:clamp(.72rem,1.5vw,.92rem); color:var(--muted); line-height:1.25}
 .loft-recovery-actions{display:flex; gap:.55rem; align-items:center; justify-content:center; margin-top:.2rem}
 .loft-recovery-btn{min-height:2.35rem; padding:.45rem .85rem; border:1.5px solid var(--wine); border-radius:6px; background:var(--paper); color:var(--wine); font:inherit; font-size:clamp(.72rem,1.5vw,.9rem); cursor:pointer; box-shadow:0 2px 7px rgba(69,58,49,.14)}
 .loft-recovery-btn.primary{background:var(--wine); color:var(--paper)}
@@ -8468,6 +8478,17 @@ section{margin:1.9rem 0}
      2:1 scene. 1620px remains exactly 1.5x the former 1080px shell. */
   max-width:min(1620px, calc(200vh - 440px));
   margin:.55rem auto 0;
+}
+/* Short landscape recovery has less outer chrome than the fresh invitation: the watch controls
+   replace the dots inside the shell, and installed mode also omits the device/browser warning.
+   Spend those reclaimed rows on the scene instead of retaining the invitation's 440px reserve. */
+@media (max-height:520px) and (orientation:landscape){
+  :root:not(.revealed) #hunt-fullscreen-area.recovery-active:not(.is-fullscreen){
+    max-width:min(calc(100vw - 2.5rem), calc(200dvh - 320px));
+  }
+  :root:not(.revealed).installed-app #hunt-fullscreen-area.recovery-active:not(.is-fullscreen){
+    max-width:min(calc(100vw - 2.5rem), calc(200dvh - 220px));
+  }
 }
 :root:not(.revealed) #hunt-fullscreen-area:not(.is-fullscreen) > .hunt-frame{max-width:none}
 :root:not(.revealed) .watch-controls{
@@ -25149,7 +25170,7 @@ var T = {
       intro: "Practice the art of aimless wandering.",
       clickme: "CLICK ME!", // the melting Climate-Crisis invitation overlaid on the scene during the intro prompt (uppercase keeps the font subset small)
       recovery_title: "Welcome back",
-      recovery_meta: "Continue from {room} · {age}",
+      recovery_meta: "Saved {room} · {age}",
       recovery_continue: "▶ Continue",
       recovery_restart: "↻ Start over",
       recovery_just_now: "just now",
@@ -26037,7 +26058,7 @@ var T = {
       intro: "Cvičte se v umění bezcílného toulání.",
       clickme: "KLIKNI!", // ASCII-only (no Ě) so it reuses the same small Climate-Crisis subset as CLICK ME!
       recovery_title: "Vítej zpátky",
-      recovery_meta: "Pokračovat od {room} · {age}",
+      recovery_meta: "Uloženo {room} · {age}",
       recovery_continue: "▶ Pokračovat",
       recovery_restart: "↻ Začít znovu",
       recovery_just_now: "právě teď",
@@ -67022,6 +67043,7 @@ function spawnDustMote(container) {
   window.__captionKey = function () { return captionKey; }; // current caption key — games snapshot it to restore the room hint after
 
   window.refreshHuntCaption = function () {
+    if (recoveryGate && recoverySaved) { showRecoveryCaption(recoverySaved); return; }
     if (captionKey === "rsvp_nudge" || captionKey === "rsvp_exit") { showRsvpNudge(captionKey); return; }
     caption.innerHTML = huntText(captionKey);
   };
@@ -67678,7 +67700,7 @@ function spawnDustMote(container) {
       if (window.__confirmRestart && !window.__confirmRestart()) return; // ask before wiping progress
       // fire the extinguisher (hiss + powder + wipe, then reset) rather than a bare reset
       if (window.__activateExtinguisher) window.__activateExtinguisher();
-      else resetHunt();
+      else resetHunt({ enterPageMode: !!(window.__gameOnlyEntered && window.__gameOnlyEntered()) });
     } else if (e.key === "/") {
       e.preventDefault();
       if (window.__togglePhoneMessages) window.__togglePhoneMessages();
@@ -67756,6 +67778,17 @@ function spawnDustMote(container) {
         e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var ae = document.activeElement;
     if (ae && (/^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable)) return;
+    // CLICK ME is a higher-level situation than the room beneath it. Dismiss the invitation and
+    // hand off to the caption guide before any Enter/Escape (including synthetic Backspace→Escape)
+    // can reach La Maz or another room action.
+    if (document.getElementById("click-me-overlay")) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (window.__removeClickMe) window.__removeClickMe();
+      if (window.__stopHintBlink) window.__stopHintBlink();
+      if (ae && ae.blur && ae !== document.body) ae.blur();
+      return;
+    }
     var did = activateCurrentRoom();
     if (did) { e.preventDefault(); e.stopPropagation(); if (ae && ae.blur && ae !== document.body) ae.blur(); } // suppress the focused scene object's activation + drop its focus
   }, true); // capture — ahead of scene objects' onActivate
@@ -74956,7 +74989,8 @@ function spawnDustMote(container) {
     return null;
   };
 
-  function resetHunt() {
+  function resetHunt(options) {
+    var enterPageMode = !!(options && options.enterPageMode);
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     setOfficeProgress("prague", false);
     setOfficeProgress("pc", false);
@@ -75138,7 +75172,10 @@ function spawnDustMote(container) {
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // a fresh game returns to the forced-DAY intro kitchen; auto day/night re-arms when the kitchen is solved again
     if (window.__resetDayNightState) window.__resetDayNightState(); // after the stop, so nothing re-stamps: forget the held segment verdict + any twilight() force
     goToStage("kitchen");
-    if (window.__showHuntIntro) window.__showHuntIntro(); // a fresh reset re-opens on the blinking intro prompt (matches load)
+    if (window.__showHuntIntro) {
+      window.__showHuntIntro(); // every fresh run keeps the clean CLICK ME introduction
+      if (enterPageMode) setGameOnlyEntered(true); // recovery already supplied the first page interaction, so enlarge now
+    }
   }
   // ── seasonal dressing ────────────────────────────────────────────────────
   // Calendar state, not game state: derived from the real date at load, so the
@@ -77161,11 +77198,12 @@ function spawnDustMote(container) {
   var wipe = document.getElementById("hunt-wipe");
   if (extinguisher) {
     function activateExtinguisher() {
+      var enterPageMode = !!(window.__gameOnlyEntered && window.__gameOnlyEntered());
       playExtinguisherHissSound();
       spawnPowderBurst(document.getElementById("loft-game-strip"), 635, 98);
       if (wipe) wipe.classList.add("active");
       setTimeout(function () {
-        resetHunt();
+        resetHunt({ enterPageMode: enterPageMode });
         if (wipe) wipe.classList.remove("active");
       }, 700);
     }
@@ -79163,6 +79201,7 @@ function spawnDustMote(container) {
   var LOFT_CHECKPOINT_VERSION = 1;
   var LOFT_CHECKPOINT_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
   var checkpointWriteTimer = null, recoveryGate = null, recoverySaved = null, recoveryKeyHandler = null;
+  var recoveryWatchParent = null, recoveryWatchNext = null;
   var cinematicRecoveryRaw = null;
   function checkpointClass(id, name) { var el = document.getElementById(id); return !!(el && el.classList.contains(name)); }
   function checkpointToggle(id, name, on) { var el = document.getElementById(id); if (el) el.classList.toggle(name, !!on); }
@@ -79287,14 +79326,43 @@ function spawnDustMote(container) {
     else if (mins >= 1) { key = "recovery_minutes"; n = mins; }
     return huntText(key).replace("{n}", n);
   }
+  function recoveryCaptionText(saved) {
+    return huntText("recovery_meta").replace("{room}", roomDotLabel(saved.progress.room)).replace("{age}", recoveryAge(saved.savedAt));
+  }
+  function showRecoveryCaption(saved) {
+    caption.classList.add("recovery-caption");
+    caption.textContent = recoveryCaptionText(saved);
+  }
+  function dockRecoveryWatchControls(area) {
+    var controls = document.querySelector(".watch-controls");
+    if (!area || !controls) return;
+    recoveryWatchParent = controls.parentNode;
+    recoveryWatchNext = controls.nextSibling;
+    area.appendChild(controls);
+  }
+  function restoreRecoveryWatchControls() {
+    var controls = document.querySelector(".watch-controls");
+    if (!controls || !recoveryWatchParent) return;
+    recoveryWatchParent.insertBefore(controls, recoveryWatchNext && recoveryWatchNext.parentNode === recoveryWatchParent ? recoveryWatchNext : null);
+    recoveryWatchParent = null;
+    recoveryWatchNext = null;
+  }
   function hideRecoveryGate() {
     var startWaitingAutoplay = apWaitRecovery;
+    var hadRecoveryGate = !!recoveryGate;
+    var recoveryArea = document.getElementById("hunt-fullscreen-area");
     apWaitRecovery = false;
     if (recoveryKeyHandler) document.removeEventListener("keydown", recoveryKeyHandler, true);
     recoveryKeyHandler = null;
     if (recoveryGate && recoveryGate.parentNode) recoveryGate.parentNode.removeChild(recoveryGate);
     recoveryGate = null;
     recoverySaved = null;
+    if (recoveryArea) recoveryArea.classList.remove("recovery-active");
+    restoreRecoveryWatchControls();
+    if (hadRecoveryGate) {
+      caption.classList.remove("recovery-caption");
+      window.refreshHuntCaption();
+    }
     var watchControls = document.querySelector(".watch-controls");
     if (watchControls) { watchControls.hidden = false; watchControls.removeAttribute("aria-hidden"); }
     if (startWaitingAutoplay) setTimeout(function () { if (!apOn) startAutoplay(); }, 0);
@@ -79338,20 +79406,22 @@ function spawnDustMote(container) {
     var host = document.querySelector(".hunt-viewport");
     if (!saved || !host) return false;
     removeClickMe(); hideRecoveryGate(); recoverySaved = saved;
+    var recoveryArea = document.getElementById("hunt-fullscreen-area");
+    if (recoveryArea) recoveryArea.classList.add("recovery-active");
+    dockRecoveryWatchControls(recoveryArea);
     var gate = document.createElement("div"); recoveryGate = gate;
-    gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title");
+    gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title"); gate.setAttribute("aria-describedby", "hunt-caption");
     var title = document.createElement("div"); title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
-    var meta = document.createElement("div"); meta.className = "loft-recovery-meta";
-    meta.textContent = huntText("recovery_meta").replace("{room}", roomDotLabel(saved.progress.room)).replace("{age}", recoveryAge(saved.savedAt));
     var actions = document.createElement("div"); actions.className = "loft-recovery-actions";
     var continueBtn = document.createElement("button"); continueBtn.type = "button"; continueBtn.className = "loft-recovery-btn primary selected"; continueBtn.textContent = huntText("recovery_continue");
     var restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "loft-recovery-btn"; restartBtn.textContent = huntText("recovery_restart");
-    actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(title); gate.appendChild(meta); gate.appendChild(actions); host.appendChild(gate);
+    actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(title); gate.appendChild(actions); host.appendChild(gate);
+    showRecoveryCaption(saved);
     var buttons = [continueBtn, restartBtn], selected = 0;
     function select(index) { selected = (index + buttons.length) % buttons.length; buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); }); buttons[selected].focus(); }
     function choose(index) {
       if (index === 0) { applyCheckpoint(saved); return; }
-      hideRecoveryGate(); clearCheckpoint(); resetHunt();
+      hideRecoveryGate(); clearCheckpoint(); resetHunt({ enterPageMode: true });
     }
     continueBtn.addEventListener("click", function (e) { e.stopPropagation(); choose(0); });
     restartBtn.addEventListener("click", function (e) { e.stopPropagation(); choose(1); });

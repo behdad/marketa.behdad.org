@@ -24,9 +24,10 @@ var HARNESS = [
   "  function enter(){ key('Enter'); }",
   "  function dusk(){var b=document.getElementById('stage-balcony');return !!(b&&b.classList.contains('dusk'));}",
   "  function proj(){var w=document.getElementById('cuddly-wallscreen');return w?(w.getAttribute('class')||''):null;}",
-  "  var report={errors:[],reached:{},solvedFinalIdx:null,toggles:{}};",
+  "  var report={errors:[],introKeys:{},reached:{},solvedFinalIdx:null,toggles:{}};",
   "  async function pressUntil(idx,maxPresses,gap){var i=0;for(;i<maxPresses&&window.currentStageIndex===idx;i++){enter();await sleep(gap);}return i;}",
   "  async function run(){",
+  "    for (var ik=0,keys=['Enter','Escape','Backspace'];ik<keys.length;ik++){if(window.__showHuntIntro)window.__showHuntIntro();await sleep(40);key(keys[ik]);await sleep(80);var machine=document.getElementById('kitchen-lamarzocco');report.introKeys[keys[ik]]=!document.getElementById('click-me-overlay')&&window.__gameStarted()&&!(machine&&machine.classList.contains('powered-on'));}",
   // ── Part 1: Enter alone walks every room's solve and reaches the balcony ──
   "    window.goToStage('kitchen');await sleep(300);",
   "    report.reached.kitchen=await pressUntil(0,25,1500);report.after0=window.currentStageIndex;", // espresso: power/warmup/grind/tamp/brew/sip
@@ -54,6 +55,8 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 75000, { patchRaf: true });
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {
+  if (r.introKeys.Enter && r.introKeys.Escape && r.introKeys.Backspace) pass("Enter, Escape, and Backspace dismiss CLICK ME without operating La Maz");
+  else fail("Enter, Escape, and Backspace dismiss CLICK ME without operating La Maz", JSON.stringify(r.introKeys));
   if (r.solvedFinalIdx === 4) pass("Enter alone walks every room's solve and reaches the balcony");
   else fail("Enter walks the whole game to the balcony", "stage progression: " + JSON.stringify({ after0: r.after0, after1: r.after1, after2: r.after2, after3: r.after3, reached: r.reached }));
   if (r.gardenEnterGuitar) pass("garden music step: Enter clicks the guitar, not the ukulele");

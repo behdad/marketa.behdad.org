@@ -9,12 +9,16 @@ knowledge of adventure games. Follow the instruction line, click objects that
 look useful, and keep wandering.
 
 When a saved session is available, the opening screen asks whether to continue
-or start over. Gameplay shortcuts remain disabled until that choice is made;
-use the buttons, arrow keys, `Enter`, or `Space` to choose. Trailer and Autoplay
-remain available: Trailer preserves the unopened checkpoint, while Autoplay
-continues from it. **Start over** acts immediately because the recovery choice
-itself is the confirmation; the in-game Restart control still asks before
-discarding active progress.
+or start over. The caption above the scene shows `Saved`, the saved room, and
+its age instead of showing a gameplay instruction. Room arrows, utility rails,
+Restart, and room dots stay hidden until that choice is made. Trailer and
+Autoplay occupy the dots' bottom row: Trailer preserves the unopened
+checkpoint, while Autoplay continues from it. Use the buttons, arrow keys,
+`Enter`, or `Space` to choose. **Start over** acts immediately because the
+recovery choice itself is the confirmation; the in-game Restart control still
+asks before discarding active progress. Both recovery choices enter the enlarged
+page mode immediately. **Start over** preserves the clean fresh-game **CLICK
+ME** invitation inside that enlarged view.
 
 ## Quick start
 
@@ -23,7 +27,9 @@ discarding active progress.
    language selector, browser advice, Trailer, and Autoplay controls disappear
    so the scene can use nearly the full browser window. Use the fullscreen
    control or `F` for true fullscreen. An installed app may enter fullscreen on
-   its first interaction.
+   its first interaction and omits the browser/device recommendation.
+   `Enter`, `Escape`, or `Backspace` dismisses **CLICK ME** without operating
+   the room underneath it.
 2. Follow the instruction line above the scene. It is the authoritative current
    hint.
 3. Solve the highlighted activity in each room. The right room arrow unlocks as
@@ -903,7 +909,9 @@ not visible; a persistent off-room effect should be reported as a bug.
 
 Press `R` and confirm, or use the visible reset/extinguisher control. Reset clears
 progress and session-scoped UI state. It is intentionally more destructive than
-ending the party.
+ending the party. In game-only browser play, an in-game reset preserves the
+enlarged page view while returning the scene to the clean **CLICK ME**
+invitation. The console/API `reset()` command uses the same transition.
 
 ## Maintainer verification
 

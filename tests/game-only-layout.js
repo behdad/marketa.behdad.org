@@ -47,10 +47,22 @@ function run(width, height, standalone, fullPage) {
     var portrait = matchMedia("(max-width:600px) and (orientation:portrait)").matches;
     if (portrait) {
       var gate = document.getElementById("portrait-orientation-gate");
+      var portraitBrand = document.getElementById("portrait-orientation-brand");
       var action = document.getElementById("portrait-landscape-btn");
       check("portrait shows one intentional orientation banner",
-        gate && getComputedStyle(gate).display === "flex" &&
+        gate && getComputedStyle(gate).display === "grid" &&
         gate.getBoundingClientRect().width > 0 && gate.getBoundingClientRect().right <= innerWidth + 1);
+      check("portrait banner identifies Loft Day before asking for landscape",
+        portraitBrand && portraitBrand.textContent.trim().length > 0 &&
+        portraitBrand.getBoundingClientRect().width > 0 &&
+        portraitBrand.getBoundingClientRect().top < document.getElementById("portrait-orientation-title").getBoundingClientRect().top);
+      setLang("cs");
+      check("Czech portrait copy stays inside the orientation banner",
+        gate.scrollWidth <= gate.clientWidth &&
+        Array.prototype.every.call(gate.children, function (child) {
+          return child.getBoundingClientRect().right <= gate.getBoundingClientRect().right + 1;
+        }));
+      setLang("en");
       check("portrait suppresses the caption, scene, game controls, and watch actions",
         getComputedStyle(document.getElementById("hunt-caption")).display === "none" &&
         getComputedStyle(document.querySelector(".hunt-frame")).display === "none" &&
@@ -61,7 +73,7 @@ function run(width, height, standalone, fullPage) {
         setTimeout(function () {
           check("portrait action requests the fullscreen fill while keeping the gate",
             document.getElementById("hunt-fullscreen-area").classList.contains("is-fullscreen") &&
-            getComputedStyle(gate).display === "flex" &&
+            getComputedStyle(gate).display === "grid" &&
             getComputedStyle(document.querySelector(".hunt-frame")).display === "none");
           report();
         }, 100);

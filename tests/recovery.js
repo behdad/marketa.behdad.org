@@ -8,7 +8,7 @@ var lib = require("./lib");
 var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
-  'var saved={version:1,savedAt:Date.now()-120000,progress:{room:"office",maxUnlocked:4,phase2:true,party:false,daylight:true,bbq:false},puzzle:{},phone:null,album:null};',
+  'var saved={version:1,savedAt:Date.now()-120000,progress:{room:"office",maxUnlocked:4,phase2:true,party:false,daylight:true,bbq:false},puzzle:{cuddly:{door:true}},phone:null,album:null};',
   'if(!sessionStorage.getItem("recovery-seeded")){sessionStorage.setItem("recovery-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
@@ -18,7 +18,7 @@ var HARNESS = [
   ' S("blocked",{gate:!!document.getElementById("loft-recovery-gate"),room:window.currentStageName,started:window.__gameStarted(),party:!!window.__gardenPartyOn,trip:!!window.__tripActive,help:!!document.querySelector(".kbd-backdrop"),console:document.getElementById("dropterm").classList.contains("open"),save:!!localStorage.getItem("loftCheckpoint:v1")});',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true}));S("right",buttons[1].classList.contains("selected"));',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true}));S("left",buttons[0].classList.contains("selected"));',
-  ' document.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));S("continued",{gate:!!document.getElementById("loft-recovery-gate"),room:window.currentStageName,max:window.__maxUnlocked(),phase2:!!window.__secondRound,started:window.__gameStarted(),caption:caption&&caption.textContent,recoveryCaption:caption&&caption.classList.contains("recovery-caption"),recoveryActive:area&&area.classList.contains("recovery-active"),leftVisibility:getComputedStyle(document.getElementById("hunt-left")).visibility,rightVisibility:getComputedStyle(document.getElementById("hunt-right")).visibility,dotsDisplay:getComputedStyle(document.getElementById("hunt-dots")).display,watchParent:watch&&watch.parentNode&&watch.parentNode.tagName,watchHidden:watch.hidden,watchAria:watch.hasAttribute("aria-hidden"),watchDisplay:getComputedStyle(watch).display});',
+  ' document.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));S("continued",{gate:!!document.getElementById("loft-recovery-gate"),room:window.currentStageName,max:window.__maxUnlocked(),phase2:!!window.__secondRound,started:window.__gameStarted(),caption:caption&&caption.textContent,recoveryCaption:caption&&caption.classList.contains("recovery-caption"),recoveryActive:area&&area.classList.contains("recovery-active"),leftVisibility:getComputedStyle(document.getElementById("hunt-left")).visibility,rightVisibility:getComputedStyle(document.getElementById("hunt-right")).visibility,dotsDisplay:getComputedStyle(document.getElementById("hunt-dots")).display,watchParent:watch&&watch.parentNode&&watch.parentNode.tagName,watchHidden:watch.hidden,watchAria:watch.hasAttribute("aria-hidden"),watchDisplay:getComputedStyle(watch).display,frontDoor:document.getElementById("balcony-door").classList.contains("open"),nookDoor:document.getElementById("cuddly-balcony-door").classList.contains("open")});',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},350);});',
   '})();</script>'
 ].join("\n");
@@ -33,8 +33,20 @@ var START_OVER_HARNESS = [
   ' var confirmations=0;window.confirm=function(){confirmations++;return false;};',
   ' var gate=document.getElementById("loft-recovery-gate"),buttons=gate&&gate.querySelectorAll(".loft-recovery-btn");',
   ' if(buttons&&buttons[1])buttons[1].click();',
-  ' var area=document.getElementById("hunt-fullscreen-area"),watch=document.querySelector(".watch-controls");report.steps.startedOver={confirmations:confirmations,gate:!!document.getElementById("loft-recovery-gate"),save:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound,started:window.__gameStarted(),entered:window.__gameOnlyEntered(),clickMe:!!document.getElementById("click-me-overlay"),introActive:area.classList.contains("intro-active"),watchParent:watch.parentNode&&watch.parentNode.id,langsDisplay:getComputedStyle(document.querySelector(".game-langs")).display,escapeVisibility:getComputedStyle(document.getElementById("hunt-escape-btn")).visibility,caption:document.getElementById("hunt-caption").textContent};',
+  ' var area=document.getElementById("hunt-fullscreen-area"),watch=document.querySelector(".watch-controls"),url=new URL(location.href);report.steps.startedOver={confirmations:confirmations,gate:!!document.getElementById("loft-recovery-gate"),save:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound,started:window.__gameStarted(),entered:window.__gameOnlyEntered(),clickMe:!!document.getElementById("click-me-overlay"),introActive:area.classList.contains("intro-active"),watchParent:watch.parentNode&&watch.parentNode.id,langsDisplay:getComputedStyle(document.querySelector(".game-langs")).display,escapeVisibility:getComputedStyle(document.getElementById("hunt-escape-btn")).visibility,caption:document.getElementById("hunt-caption").textContent,date:url.searchParams.get("date"),time:url.searchParams.get("time")};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},350);});',
+  '})();</script>'
+].join("\n");
+
+var RESET_CONTEXT_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var report={errors:[],steps:{}};',
+  'window.addEventListener("load",function(){setTimeout(function(){try{',
+  ' window.__activateExtinguisher();',
+  ' setTimeout(function(){var afterPhysical=new URL(location.href);report.steps.physical={date:afterPhysical.searchParams.get("date"),time:afterPhysical.searchParams.get("time")};window.confirm=function(){return true;};document.getElementById("hunt-restart-btn").click();',
+  ' setTimeout(function(){var afterChrome=new URL(location.href);report.steps.chrome={date:afterChrome.searchParams.get("date"),time:afterChrome.searchParams.get("time")};report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},850);},850);',
+  '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);}},100);});',
   '})();</script>'
 ].join("\n");
 
@@ -45,7 +57,7 @@ function check(ok, msg, detail) {
 }
 
 console.log("rsvp.html checkpoint recovery:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 1900, { patchRaf: true, urlSuffix: "#play" });
+var r = lib.runPageSync("rsvp.html", HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
 if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
@@ -58,18 +70,28 @@ check(!s.gate.watchHidden && s.gate.watchAria === null && s.gate.watchDisplay ==
 check(s.blocked && s.blocked.gate && s.blocked.room === "kitchen" && !s.blocked.started && !s.blocked.party && !s.blocked.trip && !s.blocked.help && !s.blocked.console && s.blocked.save, "gameplay shortcuts stay inert until a recovery choice is made", s.blocked);
 check(s.right && s.left, "arrow keys move between Start over and Continue", { right: s.right, left: s.left });
 check(!s.continued.gate && s.continued.room === "office" && s.continued.max === 4 && s.continued.phase2 && s.continued.started, "Enter continues into the restored unlocked game", s.continued);
+check(s.continued.frontDoor && s.continued.nookDoor, "Continue restores both views of the one balcony door", s.continued);
 check(!s.continued.recoveryCaption && s.continued.caption.toLowerCase().indexOf("continue from") === -1, "continuing restores the room caption", s.continued);
 check(!s.continued.recoveryActive && s.continued.leftVisibility === "visible" && s.continued.rightVisibility === "visible" && s.continued.dotsDisplay === "flex", "continuing restores navigation", s.continued);
 check(s.continued.watchParent === "MAIN", "continuing returns Trailer and Autoplay to their document owner", s.continued);
 check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "none", "game-only play hides Trailer and Autoplay after the recovery choice", s.continued);
 
-var restart = lib.runPageSync("rsvp.html", START_OVER_HARNESS, 1900, { patchRaf: true, urlSuffix: "#play" });
+var restart = lib.runPageSync("rsvp.html", START_OVER_HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
 check(!!restart && restart.errors.length === 0, "Start over harness has no uncaught page errors", restart && restart.errors);
 var startedOver = restart && restart.steps.startedOver;
 check(startedOver && startedOver.confirmations === 0 && !startedOver.gate && !startedOver.save && startedOver.room === "kitchen" && !startedOver.phase2,
   "Start over is the confirmation: it resets immediately without a browser dialog", startedOver);
 check(startedOver && !startedOver.started && startedOver.entered && startedOver.clickMe && startedOver.introActive && startedOver.watchParent === "hunt-fullscreen-area" && startedOver.langsDisplay === "flex" && startedOver.escapeVisibility === "hidden" && !/La Maz/.test(startedOver.caption),
   "recovery Start over enlarges the page but preserves the clean CLICK ME introduction", startedOver);
+check(startedOver && startedOver.date === "2027-02-14" && startedOver.time === "18:30",
+  "recovery Start over preserves the pretend date and time", startedOver);
+
+var resetContext = lib.runPageSync("rsvp.html", RESET_CONTEXT_HARNESS, 3000, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
+check(!!resetContext && resetContext.errors.length === 0, "reset-context harness has no uncaught page errors", resetContext && resetContext.errors);
+check(resetContext && resetContext.steps.physical.date === "2027-02-14" && resetContext.steps.physical.time === "18:30",
+  "the in-room extinguisher preserves the pretend date and time", resetContext && resetContext.steps.physical);
+check(resetContext && resetContext.steps.chrome.date === null && resetContext.steps.chrome.time === null,
+  "the explicit chrome reset returns to the real date and time", resetContext && resetContext.steps.chrome);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

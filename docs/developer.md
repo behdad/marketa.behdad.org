@@ -179,7 +179,9 @@ Restart button/key uses `__confirmRestart()`. Recovery Start over passes `enterP
 while `.loft-entered` immediately enlarges its scene. The extinguisher snapshots whether game-only
 page mode was already entered before its delayed wipe, then passes the same option to `resetHunt()`;
 `R` and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
-re-arms CLICK ME without dropping the enlarged view. Cinematic/fresh-load resets omit the option and
+re-arms CLICK ME without dropping the enlarged view. These contextual reset paths preserve active
+`?date=` and `?time=` parameters; only the explicit right-side chrome Restart passes
+`resetDateTime:true` and returns to the real clock. Cinematic/fresh-load resets omit the option and
 retain their own page-mode behavior.
 
 ### Trailer lifecycle
@@ -470,7 +472,10 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   from the persistent Cuddly assignment. Identity-specific s'mores art selects eligible godkids;
   the seasonal two-slot art can represent any assigned children. `__balconyPlayKidsNow` publishes
   the generic slots to the people manager, and teardown clears the borrowing without rerolling
-  unrelated dancers.
+  unrelated dancers. `__reconcileBalconyKidsPlay()` deterministically derives the daytime activity
+  from door, phase, sleep, date, and temperature state: freezing air gives the snowman; Apr 2–29
+  gives blossom play; Jun 1–Aug 31 gives sprinkler play; and Sep 15–Oct 15 gives leaf-pile play.
+  Date, weather, day/night, and either view of the physical balcony door all invoke that one owner.
 - Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck
   contexts. `__roomHasPhotoSubjects(room)` excludes working crew and gates her visible clone,
   camera/flash, shutter, and Album write together; an empty room must not show her or create a

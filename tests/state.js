@@ -667,6 +667,8 @@ var PROBE_HARNESS = [
   "    if (window.__applyDateOccasion) window.__applyDateOccasion();",
   "    var dayBanner = el('occasion-banner');",
   "    ok('special day: Garden Brunch gets the permanent occasion ribbon', !!dayBanner && dayBanner.classList.contains('show') && /Garden Brunch/i.test(dayBanner.textContent));",
+  "    var bannerCalendar=null,realOpenPhoneApp=window.__openPhoneAppHere;window.__openPhoneAppHere=function(app,fromScene){bannerCalendar={app:app,fromScene:fromScene};};dayBanner.click();window.__openPhoneAppHere=realOpenPhoneApp;",
+  "    ok('special day: clicking the permanent ribbon opens the phone Calendar', !!bannerCalendar && bannerCalendar.app==='calendar' && bannerCalendar.fromScene===true, bannerCalendar&&JSON.stringify(bannerCalendar));",
   "    var fsArea = el('hunt-fullscreen-area'), guideCaption = el('hunt-caption');",
   "    if (fsArea) fsArea.classList.add('chrome-overlap'); if (guideCaption) guideCaption.classList.add('intro-guide');",
   "    ok('special day: opening-guide arrow layer stays above the permanent ribbon', !!dayBanner && parseInt(getComputedStyle(guideCaption).zIndex, 10) > parseInt(getComputedStyle(dayBanner).zIndex, 10));",

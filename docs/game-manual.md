@@ -311,9 +311,10 @@ API. On its first ordinary opening it presents a small math lock. Three failed
 answers unlock it automatically. The lock also has an accessible context-menu
 shortcut.
 
-The phone has Home, Back, and Recents controls. App icons can be rearranged by
-dragging. Most app and navigation state lasts for the current browser session;
-the full game reset restores the initial layout.
+The phone has Home, Back, and Recents controls. Swipe vertically anywhere on
+the launcher to scroll; press and hold an app icon briefly before dragging to
+rearrange it. Most app and navigation state lasts for the current browser
+session; the full game reset restores the initial layout.
 
 The current phone apps are:
 

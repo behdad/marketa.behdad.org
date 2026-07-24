@@ -4707,7 +4707,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* the picked-up icon dims in place; a ghost clone follows the pointer */
 .phone-app-tile.dragging{opacity:.32}
 .phone-drag-ghost{position:fixed; left:0; top:0; z-index:70; margin:0; width:62px; pointer-events:none; transform:translate(-50%,-50%) scale(1.12); opacity:.95; filter:drop-shadow(0 6px 12px rgba(0,0,0,.32))}
-/* touch-action:none keeps a touch-drag on an icon from panning the page (works here — an HTML overlay element, unlike the SVG scene children) */
+/* Icon touches are handled locally: a quick vertical drag scrolls the launcher,
+   while a short hold followed by movement rearranges the icon. */
 .phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit; touch-action:none; -webkit-user-select:none; user-select:none}
 .phone-app-tile .pat-ico{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .phone-app-tile .pat-ico svg{width:32px; height:32px; display:block}
@@ -50343,13 +50344,31 @@ async def localfont(name):
     // shift-insert) is the natural fit for the fixed-slot/gap model — nothing else has
     // to reflow. A floating ghost follows the pointer; the source tile dims. `touch-action:
     // none` on the tile (an HTML overlay element, so unlike the SVG scene it honors the
-    // property) keeps a touch-drag from panning the page.
+    // property) lets us distinguish launcher scrolling from icon rearrangement:
+    // a quick touch-drag scrolls, while holding briefly before moving rearranges.
     var PH_DRAG_THRESH = 6; // px of movement before a press becomes a drag (below it = a tap)
+    var PH_TOUCH_HOLD_MS = 320;
     function phStartDrag(e, tile, fromSlot, app) {
       if (e.button != null && e.button !== 0) return; // left-button / touch / pen only; right-click falls through to contextmenu
       phSuppressClick = false; // fresh press: clear any stale flag from a prior drag (advisor: reset at next pointerdown, not on a timer)
       phCancelDrag(); // abandon any half-live drag first
-      phDrag = { tile: tile, fromSlot: fromSlot, app: app, startX: e.clientX, startY: e.clientY, active: false, pointerId: e.pointerId, ghost: null, target: null };
+      var home = tile.closest(".phone-home");
+      phDrag = {
+        tile: tile, fromSlot: fromSlot, app: app,
+        startX: e.clientX, startY: e.clientY,
+        active: false, mode: null, pointerId: e.pointerId,
+        ghost: null, target: null,
+        isTouch: e.pointerType === "touch",
+        holdReady: e.pointerType !== "touch",
+        holdTimer: null,
+        home: home,
+        startScrollTop: home ? home.scrollTop : 0
+      };
+      if (phDrag.isTouch) {
+        phDrag.holdTimer = setTimeout(function () {
+          if (phDrag && phDrag.pointerId === e.pointerId && !phDrag.active) phDrag.holdReady = true;
+        }, PH_TOUCH_HOLD_MS);
+      }
       document.addEventListener("selectstart", phBlockDragSelection, true);
       window.addEventListener("pointermove", phOnDragMove, true);
       window.addEventListener("pointerup", phOnDragEnd, true);
@@ -50361,6 +50380,13 @@ async def localfont(name):
       if (!phDrag.active) {
         if (Math.abs(dx) < PH_DRAG_THRESH && Math.abs(dy) < PH_DRAG_THRESH) return;
         phDrag.active = true;
+        phDrag.mode = (phDrag.isTouch && !phDrag.holdReady) ? "scroll" : "reorder";
+        phClearHold(phDrag);
+        if (phDrag.mode === "scroll") {
+          e.preventDefault();
+          if (phDrag.home) phDrag.home.scrollTop = phDrag.startScrollTop - dy;
+          return;
+        }
         // A desktop hold can begin a native selection before the drag crosses its
         // threshold. Clear that transient range and own subsequent movement.
         try { var sel = window.getSelection && window.getSelection(); if (sel) sel.removeAllRanges(); } catch (_error) {}
@@ -50372,6 +50398,11 @@ async def localfont(name):
         g.removeAttribute("id");
         document.body.appendChild(g);
         phDrag.ghost = g;
+      }
+      if (phDrag.mode === "scroll") {
+        e.preventDefault();
+        if (phDrag.home) phDrag.home.scrollTop = phDrag.startScrollTop - dy;
+        return;
       }
       if (phDrag.active) e.preventDefault();
       phMoveGhost(e);
@@ -50402,8 +50433,16 @@ async def localfont(name):
       if (!phDrag) return;
       var d = phDrag;
       if (d.active) {
+        if (d.mode === "scroll") {
+          phClearHold(d);
+          phTeardownDragListeners();
+          phDrag = null;
+          phSuppressClick = true; // a scroll ending over the tile must not open its app
+          return;
+        }
         var slotEl = phSlotElAt(e);
         var target = slotEl ? parseInt(slotEl.getAttribute("data-slot"), 10) : null;
+        phClearHold(d);
         phTeardownDragListeners();
         if (d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
         phDrag = null;
@@ -50411,9 +50450,13 @@ async def localfont(name):
         if (target != null && target !== d.fromSlot) { phSwapSlots(d.fromSlot, target); renderHome(); }
         else renderHome(); // no move — just rebuild to clear the .dragging dim
       } else {
+        phClearHold(d);
         phTeardownDragListeners();
         phDrag = null; // a tap (sub-threshold): let the click through to open
       }
+    }
+    function phClearHold(d) {
+      if (d && d.holdTimer) { clearTimeout(d.holdTimer); d.holdTimer = null; }
     }
     function phTeardownDragListeners() {
       document.removeEventListener("selectstart", phBlockDragSelection, true);
@@ -50423,6 +50466,7 @@ async def localfont(name):
     }
     function phCancelDrag() { // abort a live drag with no state change (used by close())
       if (!phDrag) return;
+      phClearHold(phDrag);
       phTeardownDragListeners();
       if (phDrag.ghost && phDrag.ghost.parentNode) phDrag.ghost.parentNode.removeChild(phDrag.ghost);
       phDrag = null;

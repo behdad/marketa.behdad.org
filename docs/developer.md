@@ -549,6 +549,11 @@ photobooth output, and similar state. Kill, uninstall, or full reset must clear 
 retained state. Adding an app therefore requires an open path, a teardown path, Back semantics,
 context-menu behavior, and reset coverage.
 
+The launcher owns touch gestures that begin on app icons because those icons use
+`touch-action:none` for rearrangement. A quick vertical drag updates the launcher scroll position;
+holding briefly before movement enters icon-reorder mode. Keep that distinction when changing the
+grid so short phone screens do not leave only the gaps as usable scroll targets.
+
 Madla's incoming call has one availability boundary, `__madlaAvailable()`: phase 2 must be latched
 and the party must be off. The random scheduler, cuddly outlet, console command, typed action, and
 answer hook all route through `__madlaRing`/`__answerMadla`, so no entry point may reproduce or

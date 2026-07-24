@@ -365,6 +365,8 @@ app itself closes.
 The Tattoo detail view includes the design, artist portrait, and the artist's
 name and relationship. The gallery stays compact. The Album and Photobooth share
 captured photo metadata, while live camera pixels remain local to the browser.
+During the party, Aspen follows people into the loft's rooms and deck. She does
+not enter, flash, or create an Album keepsake when a room has no subjects.
 
 ### Computer-only environments
 

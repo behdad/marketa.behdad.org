@@ -1134,6 +1134,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    entirely (both here AND at the spawner, which self-gates on gardenPartyActive). */
 #garden-photographer{opacity:0; pointer-events:none; transition:opacity .6s ease}
 #stage-garden.garden-party #garden-photographer{opacity:1}
+#stage-garden.garden-party.photog-empty #garden-photographer{opacity:0; pointer-events:none}
 #loft-game-strip.party-on #garden-photog-hit{pointer-events:auto; cursor:pointer} /* click her to take a photo (flash + shutter) while the party's on */
 #garden-photog-move-hit{pointer-events:none}
 #loft-game-strip.party-on #garden-photog-move-hit{pointer-events:auto; cursor:move}
@@ -67061,7 +67062,6 @@ function spawnDustMote(container) {
     if (window.__updateBalconyHangout) window.__updateBalconyHangout(); // party crowd + smokers step onto the deck on entry (self-gates on balcony + party); clear on leaving
     if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // Hamid the grillmaster shows near a lit BBQ on entry (self-gates on balcony + party + smoking); clear on leaving
     if (window.__updateBalconyPhotog) window.__updateBalconyPhotog(); // Aspen shoots the BBQ (and the party's smokers) on the deck on entry (self-gates on balcony); clear on leaving
-    if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // ...and she works the kitchen/nook/office too, wherever the party's on and you are
     if (window.__updateGardenPhotographer) window.__updateGardenPhotographer(); // the garden station clock exists only while Aspen is actually on screen
     if (name !== "balcony" && window.__snowmanOn && window.__setSnowman) window.__setSnowman(false); // ...and the winter snowman melts away when you leave the deck
     if (name !== "balcony" && window.__leafpileOn && window.__setLeafpile) window.__setLeafpile(false); // ...same for the autumn leaf pile,
@@ -67101,6 +67101,7 @@ function spawnDustMote(container) {
     if (window.__updateKitchenRoach) window.__updateKitchenRoach(); // freeze the counter roach off-kitchen, resume it on return (reads window.currentStageName)
     if (window.__updateBarGroovers) window.__updateBarGroovers(); // bar's grooving couples rotate only while the kitchen's the room you're in (party on) — arm on entry, tear down on leave
     if (window.__updateOfficeHangout) window.__updateOfficeHangout(); // an occasional cast couple hangs out in the office (party on) only while the office is the room you're in — arm on entry, tear down on leave
+    if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // occupants settle first; Aspen only follows into a room containing subjects
     if (window.__updateRoosterEgg) window.__updateRoosterEgg(); // the rooster only lays its golden egg while the garden is the room you're in
     if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
     if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
@@ -70670,12 +70671,14 @@ function spawnDustMote(container) {
   // .flashing class, cleared on animationend. Light only — no shutter sound.
   var gardenFlashTimer = null;
   function fireGardenFlash() {
+    if (window.__roomHasPhotoSubjects && !window.__roomHasPhotoSubjects("garden")) return false;
     var bloom = document.getElementById("garden-flash-bloom");
     var wash = document.getElementById("garden-flash-wash");
     var cam = document.getElementById("garden-photog-cam");
     if (cam) { cam.classList.remove("aiming"); void cam.getBoundingClientRect(); cam.classList.add("aiming"); } // she lifts the camera to her eye before each pop
     if (bloom) { bloom.classList.remove("flashing"); void bloom.getBBox; bloom.classList.add("flashing"); }
     if (wash) { wash.classList.remove("flashing"); wash.classList.add("flashing"); }
+    return true;
   }
   window.__gardenFlashNow = fireGardenFlash; // the roving-photographer module fires the garden's own bloom through this
   (function () { // clear each one-shot .flashing on animationend so the class can be re-added next pop
@@ -70690,7 +70693,7 @@ function spawnDustMote(container) {
     var photog = document.getElementById("garden-photographer");
     if (!photog) return;
     photog.addEventListener("click", function (e) {
-      if (!window.__gardenPartyOn) return;
+      if (!window.__gardenPartyOn || (window.__roomHasPhotoSubjects && !window.__roomHasPhotoSubjects("garden"))) return;
       e.stopPropagation();
       fireGardenFlash();
       playCameraShutterSound();
@@ -70715,7 +70718,8 @@ function spawnDustMote(container) {
     ];
     var stationIndex = 0, roamTimer = null, groupHeld = false;
     function stage() { return document.getElementById("stage-garden"); }
-    function active() { return !groupHeld && gardenPartyActive() && document.hasFocus(); }
+    function hasSubjects() { return !window.__roomHasPhotoSubjects || window.__roomHasPhotoSubjects("garden"); }
+    function active() { return !groupHeld && gardenPartyActive() && document.hasFocus() && hasSubjects(); }
     function clearRoam() { if (roamTimer) { clearTimeout(roamTimer); roamTimer = null; } }
     function applyStation(index) {
       stationIndex = Math.max(0, Math.min(STATIONS.length - 1, index | 0));
@@ -70762,8 +70766,12 @@ function spawnDustMote(container) {
       gardenStage.addEventListener("aspen-home", function () { groupHeld = true; clearRoam(); applyStation(0); footEnabled(); });
       gardenStage.addEventListener("aspen-resume", function () { groupHeld = false; footEnabled(); schedule(false); });
     }
-    window.__updateGardenPhotographer = function () { clearRoam(); footEnabled(); if (active()) schedule(true); };
-    window.__resetGardenPhotographer = function () { groupHeld = false; clearRoam(); applyStation(0); footEnabled(); };
+    window.__updateGardenPhotographer = function () {
+      var st = stage();
+      if (st) st.classList.toggle("photog-empty", !hasSubjects());
+      clearRoam(); footEnabled(); if (active()) schedule(true);
+    };
+    window.__resetGardenPhotographer = function () { groupHeld = false; clearRoam(); var st = stage(); if (st) st.classList.remove("photog-empty"); applyStation(0); footEnabled(); };
     document.addEventListener("visibilitychange", window.__updateGardenPhotographer);
     window.addEventListener("focus", window.__updateGardenPhotographer);
     window.addEventListener("blur", clearRoam);
@@ -70994,6 +71002,12 @@ function spawnDustMote(container) {
       out.push({ key: key, grp: info ? info.grp : "", name: name, roleKey: info ? info.roleKey : (p.roleKey || "") });
     });
     return out;
+  };
+  // A photographer never counts herself as a subject. __roomOccupants already asks the people
+  // manager for { crew:false }, so this one gate can drive Aspen's presence, flash, shutter and
+  // keepsake without an empty room becoming occupied merely because her clone is standing there.
+  window.__roomHasPhotoSubjects = function (room) {
+    return !!window.__roomOccupants(room || window.currentStageName || "garden").length;
   };
   // Build the list of candidate "other subjects" from who's present (excluding the hosts): each is a
   // {id, members:[{key,name,roleKey}]} — a couple (2 members, both present) or an individual (1).
@@ -71704,10 +71718,10 @@ function spawnDustMote(container) {
       if (window.__startAlbumSnaps) window.__startAlbumSnaps(); // Aspen grabs album keepsakes often (~14-22s), no freeze
       if (window.__startPhotogRounds) window.__startPhotogRounds(); // ...and she works the OTHER rooms too — one shot per round, wherever you are
       if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
-      if (window.__updateGardenPhotographer) window.__updateGardenPhotographer(); // occasionally choose another authored garden camera station
       startGardenChaseDriver(); // begin the godkids' occasional garden chase (idempotent; self-gates on gardenPartyActive + not-busy)
       startPartyKidFormation(); // rotate the three standing godkids through family/hosts groupings
       updateGardenGuests(); // arm Ali + Goli's arrival (they crash the floor a beat after the party lights; self-gates on garden + visible)
+      if (window.__updateGardenPhotographer) window.__updateGardenPhotographer(); // population settles first; then Aspen chooses a station only if there are subjects
       if (partyDancers) { // the colorful dancers rise in the garden and hold for the party
         partyDancers.setAttribute("transform", "translate(0,0)"); // now lives INSIDE #stage-garden (already shifted +680) → no extra column offset; sits behind the named guests + running kids
         partyDancers.classList.add("party-dancing");
@@ -73223,7 +73237,11 @@ function spawnDustMote(container) {
     function attended() { return !document.hidden && document.hasFocus(); }
     // She's on the deck for the daytime BBQ AND for the party's smoking crowd — either way there
     // are people out here to shoot.
-    function shouldShow() { return window.currentStageName === "balcony" && (!!window.__balconyBBQOn || !!window.__gardenPartyOn); }
+    function shouldShow() {
+      return window.currentStageName === "balcony" &&
+        (!!window.__balconyBBQOn || !!window.__gardenPartyOn) &&
+        !!(window.__roomHasPhotoSubjects && window.__roomHasPhotoSubjects("balcony"));
+    }
     function raiseCam() { if (!bcam) return; bcam.classList.remove("aiming"); void bcam.getBoundingClientRect(); bcam.classList.add("aiming"); }
     function fireFlash() { raiseCam(); bloom.classList.remove("flashing"); void bloom.getBoundingClientRect(); bloom.classList.add("flashing"); }
     var flashTimer = null;
@@ -73338,15 +73356,17 @@ function spawnDustMote(container) {
       });
     });
     function attended() { return !document.hidden && document.hasFocus(); }
+    function hasSubjects(room) { return !!(window.__roomHasPhotoSubjects && window.__roomHasPhotoSubjects(room)); }
     var lastWhere = ""; // the (room, party-on) pair update() last saw — an ARRIVAL is a change in it
     function update() { // she's out wherever the party is, in whichever of her three rooms is on screen
       Object.keys(mounted).forEach(function (room) {
-        mounted[room].g.classList.toggle("showing", !!window.__gardenPartyOn && window.currentStageName === room);
+        mounted[room].g.classList.toggle("showing", !!window.__gardenPartyOn && window.currentStageName === room && hasSubjects(room));
       });
-      var where = window.currentStageName + "|" + !!window.__gardenPartyOn;
+      var occupied = hasSubjects(window.currentStageName);
+      var where = window.currentStageName + "|" + !!window.__gardenPartyOn + "|" + occupied;
       if (where === lastWhere) return; // a blur/focus/visibility re-run is not an arrival
       lastWhere = where;
-      if (window.__gardenPartyOn && window.currentStageName !== "garden") armArrival();
+      if (window.__gardenPartyOn && window.currentStageName !== "garden" && occupied) armArrival();
       else if (arriveTimer) { clearTimeout(arriveTimer); arriveTimer = null; }
     }
     window.__updateRoomPhotogs = update;
@@ -73354,6 +73374,7 @@ function spawnDustMote(container) {
     // `silent` leaves the shutter off — that's the ambient rounds path.
     window.__photogSnap = function (room, silent, force) {
       room = room || window.currentStageName || "garden";
+      if (!hasSubjects(room)) return null;
       if (room === "garden") { if (window.__gardenFlashNow) window.__gardenFlashNow(); }
       else if (room === "balcony") { if (window.__balconyPhotogFlash) window.__balconyPhotogFlash(); }
       else if (mounted[room]) mounted[room].flash();
@@ -73366,7 +73387,7 @@ function spawnDustMote(container) {
     // would double-fire both the flash and the keepsake.
     function shootHere() {
       var room = window.currentStageName;
-      if (!window.__gardenPartyOn || room === "garden" || !attended()) return;
+      if (!window.__gardenPartyOn || room === "garden" || !attended() || !hasSubjects(room)) return;
       window.__photogSnap(room, true);                            // silent: an ambient flash, never an autonomous shutter
     }
     function armRound() { if (roundTimer) clearTimeout(roundTimer); roundTimer = setTimeout(roundTick, 22000 + Math.random() * 18000); }
@@ -73505,6 +73526,7 @@ function spawnDustMote(container) {
         current = null;
       }
       layer.classList.remove("on"); // no one present → hide the office-hangout layer
+      if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
     }
     function stop() {
       if (timer) { clearTimeout(timer); timer = null; }
@@ -73525,6 +73547,7 @@ function spawnDustMote(container) {
       el.classList.add("present");
       layer.classList.add("on"); // reveal the layer — #office-hangout is opacity:0/hidden without .on
       current = c;
+      if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
       return true;
     }
     // swap: retire the current couple, occasionally bring on a fresh eligible one (this is a

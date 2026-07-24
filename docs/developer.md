@@ -352,7 +352,9 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
 - Children switch among free, family, godson, chase/game, and asleep states. Chase handoffs remove
   standing duplicates; sleeping/waking can be both an authored state transition and a message.
 - Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck
-  contexts. Automatic rounds and explicit `photo.take` use the same occupancy truth as album shots.
+  contexts. `__roomHasPhotoSubjects(room)` excludes working crew and gates her visible clone,
+  camera/flash, shutter, and Album write together; an empty room must not show her or create a
+  keepsake. Automatic rounds and explicit `photo.take` use that same occupancy truth.
 
 When changing people data, verify all three representations: painted SVG figures, roster/chat
 metadata, and photo composition.
@@ -620,7 +622,8 @@ Run focused tests for the changed surface. Important examples:
   `tests/safe-actions.js`, and `tests/safe-actions-worker.mjs` for assistant/action boundaries;
 - `tests/performance.js` and `tests/leak.js` for lifecycle regressions;
 - `tests/bar-layout.js` for the calm-night patrons, occupied stools, and hands-on mixer paint order;
-- `tests/album-axis.mjs`, `tests/album-render.mjs`, and `tests/album-ui.js` for photography;
+- `tests/album-axis.mjs`, `tests/album-render.mjs`, `tests/album-ui.js`, and
+  `tests/photographer-occupancy.js` for photography;
 - `tests/weather.js`, `tests/birthday.js`, and `tests/bbq-days.js` for date/weather gates.
 
 `tests/lib.js` starts a fresh headless Chrome profile, loads a scratch page, injects narrow setup and

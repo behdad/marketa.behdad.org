@@ -550,6 +550,11 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
+Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
+Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;
+surface-specific activity and close callbacks own interval lifetime and sunrise/
+sunset navigation without duplicating time, countdown, or time-travel logic.
+
 The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat, and
 Browser their own staged gag before teardown. They all use `__runMonitorDeathFlash` so
 cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.

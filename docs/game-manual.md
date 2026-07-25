@@ -372,7 +372,9 @@ Every monitor app has its own Kill gag. Right-click an open app and choose **Kil
 to terminate it with its own send-off instead of closing it silently.
 
 Weather does not occupy a desktop tile. Click the Edmonton weather item in the
-computer's menu bar to open it.
+computer's menu bar to open it. The live time beside it opens Clock, with the
+same city times, wedding countdowns, play time, and game-time controls as the
+phone Clock.
 
 Typing an app name while the desktop or screensaver is visible opens an
 autocomplete search bar. `Enter` or `Tab` accepts the suggestion; `Escape` clears

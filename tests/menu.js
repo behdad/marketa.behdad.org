@@ -37,7 +37,7 @@ var HARNESS = [
   "  function mon(){ return document.getElementById('office-monitor'); }",
   "  function reg(id){ return !!(window.__monitorAppRunning&&window.__monitorAppRunning(id)); }",
   "  function dot(id){ var c=document.getElementById('monitor-dock-'+id); return !!(c&&c.classList.contains('is-running')); }",
-  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-video','show-tattoo','show-life','show-code','show-browser','show-family','photobooth','show-python','show-linux','show-console','show-doom'];",
+  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-clock','show-video','show-tattoo','show-life','show-code','show-browser','show-family','photobooth','show-python','show-linux','show-console','show-doom'];",
   "  function showApp(cls){ var m=mon(); APP_CLASSES.forEach(function(c){m.classList.remove(c);}); m.classList.add('screen-on'); if(cls) m.classList.add(cls); window.currentStageName='office'; }",
   "  async function run(){",
   "    if (window.goToStage) window.goToStage('office');",
@@ -257,9 +257,9 @@ var HARNESS = [
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-mail'); await sleep(0); showApp('show-mines'); await sleep(0); showApp('show-caps'); await sleep(0);",
   "    S('desk_switch_kept_both_running',reg('mail')&&reg('mines')&&dot('mail')&&dot('mines'));",
   // Every monitor class, including toolbar-only Weather and the three runtime consoles, maps in.
-  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['tattoo','show-tattoo'],['mines','show-mines'],['life','show-life'],['doom','show-doom'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather']];",
+  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['clock','show-clock'],['tattoo','show-tattoo'],['mines','show-mines'],['life','show-life'],['doom','show-doom'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather']];",
   "    for(var ri=0;ri<regApps.length;ri++){showApp(regApps[ri][1]); await sleep(0);} showApp('show-caps'); await sleep(0);",
-  "    S('desk_every_app_registered',regApps.every(function(a){return reg(a[0]);})); S('desk_every_tiled_app_dotted',regApps.filter(function(a){return a[0]!=='weather';}).every(function(a){return dot(a[0]);}));",
+  "    S('desk_every_app_registered',regApps.every(function(a){return reg(a[0]);})); S('desk_every_tiled_app_dotted',regApps.filter(function(a){return a[0]!=='weather'&&a[0]!=='clock';}).every(function(a){return dot(a[0]);}));",
   // Every registered plain app, including Browser and Console, exposes its established Kill.
   "    var plainIds=['chrome','music','photobooth','video','call','chat','mail','calendar','tattoo','mines','life','code','console']; var plainKill=true;",
   "    for(var pi=0;pi<plainIds.length;pi++){ctxAt(deskTile(plainIds[pi])); if(!monKill()) plainKill=false; escMenu();} S('desk_registered_plain_apps_have_kill',plainKill);",
@@ -384,7 +384,7 @@ check("running dot sits inside the app icon’s bottom-right corner", s.desk_dot
 check("backgrounded Mail exposes Open + Kill (Open first)", s.desk_mail_prevented === true && Array.isArray(s.desk_mail_items) && s.desk_mail_items.length === 2 && /open/i.test(s.desk_mail_items[0] || "") && /kill/i.test(s.desk_mail_items[1] || "") && s.desk_mail_has_open === true && s.desk_mail_has_kill === true, s.desk_mail_items);
 check("desktop Mail Kill runs the same paper-airplane gag, clears its task, and hides the menu", s.desk_mail_kill_same_gag === true && s.desk_mail_kill_cleared === true && s.desk_mail_kill_hid_menu === true, { gag: s.desk_mail_kill_same_gag, cleared: s.desk_mail_kill_cleared, hid: s.desk_mail_kill_hid_menu });
 check("switching foreground apps keeps both tasks registered and dotted", s.desk_switch_kept_both_running === true);
-check("all 17 monitor apps, including toolbar Weather, register from their foreground class", s.desk_every_app_registered === true);
+check("all 18 monitor apps, including toolbar Weather and Clock, register from their foreground class", s.desk_every_app_registered === true);
 check("all 16 desktop apps receive a running dot", s.desk_every_tiled_app_dotted === true);
 check("every registered plain app, including Browser and Console, offers Kill", s.desk_registered_plain_apps_have_kill === true);
 check("every plain desktop Kill dispatches to that app's exact themed hook and clears its task", s.desk_exact_plain_kill_hooks === true);

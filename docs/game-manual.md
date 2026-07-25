@@ -229,8 +229,8 @@ becomes the main party room. Its wall switch changes meaning after the party has
 been unlocked: in phase 1 it changes day and night; in phase 2 it changes between
 day and party. As a hidden alternative, three rapid taps on the mirror start the
 party and three rapid taps on the active DJ end it. A single DJ tap opens the
-song picker, which appears to the left of the booth; a double-click skips to the
-next song.
+modal song picker to the left of the booth; a double-click skips to the next
+song.
 
 The guitar always toggles **Tumbalalaika**, sung by Markéta Jakešová. The ukulele
 alternates between **I Need You** by Dan Bern and **Strange & Beautiful Things**

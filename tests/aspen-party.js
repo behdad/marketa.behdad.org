@@ -53,6 +53,8 @@ var harness = String.raw`<script>
   report.steps.dj = {
     picker: document.getElementById("garden-djpicker").classList.contains("open"),
     pickerRight: djPanelBg ? (+djPanelBg.getAttribute("x") + +djPanelBg.getAttribute("width")) : null,
+    modalTop: stage.lastElementChild && stage.lastElementChild.id === "garden-djpicker",
+    backdrop: !!document.querySelector("#garden-djpicker .dj-pick-backdrop"),
     who: who
   };
   var danceBeforeDouble = window.__partyDance;
@@ -124,7 +126,8 @@ if (result) {
     "body click takes exactly one photo without a bio popup", s.body);
   check(s.bodyDouble.photoFreeze && s.bodyDouble.photos === 1,
     "body double-click cancels the portrait and starts a short photo pose", s.bodyDouble);
-  check(s.dj.picker && s.dj.pickerRight < 560 && s.dj.who === 0, "DJ head opens its picker fully left of the booth without a bio popup", s.dj);
+  check(s.dj.picker && s.dj.pickerRight < 560 && s.dj.modalTop && s.dj.backdrop && s.dj.who === 0,
+    "DJ head opens a scene-modal picker above the dancers, fully left of the booth, without a bio popup", s.dj);
   check(s.djDouble.before !== s.djDouble.after && !s.djDouble.picker && s.djDouble.party, "double-clicking the DJ advances the song and closes the picker without ending the party", s.djDouble);
   check(s.frame.station === "peace-lily" && s.frame.stationMeta.every(function (id) { return id === "peace-lily"; }),
     "garden photos retain their camera-station metadata", s.frame);

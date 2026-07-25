@@ -2589,14 +2589,15 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
   #garden-dj-decks.cue{animation:none}
   #garden-dj-scratch.scratching{animation:none}
 }
-/* request-a-song style picker — a compact neon panel that pops up when you tap the DJ booth
-   during the party. Built in JS into #garden-djpicker (rows are .dj-pick-row groups). The
-   whole panel only takes taps while it's .open; each row is its own pointer target. The active
-   dance's row is flagged .cur (neon-lit). Pop-in scales from the booth; reduced-motion shows it
-   flat with no animation (and taps still land). Themed to the booth's neon palette. */
+/* request-a-song style picker — a compact neon modal that pops up when you tap the DJ booth
+   during the party. Built in JS into #garden-djpicker (rows are .dj-pick-row groups), then
+   lifted to the end of the garden SVG so every dancer remains behind it. Its full-room backdrop
+   absorbs scene taps; each row is its own pointer target. The active dance's row is flagged .cur
+   (neon-lit). Pop-in scales from the booth; reduced-motion shows it flat with no animation. */
 #garden-dj-request{pointer-events:none}
 #stage-garden.garden-party #garden-dj-request{pointer-events:auto; cursor:pointer}
 #garden-djpicker.open{pointer-events:auto}
+#garden-djpicker .dj-pick-backdrop{fill:#09070d; fill-opacity:.34; cursor:pointer}
 #garden-djpicker .dj-pick-panel{transform-box:fill-box; transform-origin:100% 100%}
 #garden-djpicker.open .dj-pick-panel{animation:dj-pick-in .22s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes dj-pick-in{0%{transform:scale(.72); opacity:0}100%{transform:scale(1); opacity:1}}
@@ -37999,6 +38000,19 @@ function gameTapsNear(a, b) {
     while (picker.firstChild) picker.removeChild(picker.firstChild);
     var ids = danceIds();
     var panelH = HEAD_H + ids.length * ROW_H + PAD;
+    // A scene-sized hit surface makes the picker modal: guests and props stay visible but
+    // cannot intercept song-selection taps. Tapping the dimmed room dismisses the picker.
+    var backdrop = document.createElementNS(SVGNS, "path");
+    backdrop.setAttribute("class", "dj-pick-backdrop");
+    // Even-odd hole over the DJ keeps the established three-tap party shutdown reachable.
+    // The picker itself ends at x=552, so the live booth never competes with a song row.
+    backdrop.setAttribute("d", "M0 0H680V340H0Z M555 130H680V260H555Z");
+    backdrop.setAttribute("fill-rule", "evenodd");
+    backdrop.addEventListener("click", function (e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      window.__closeDjPicker();
+    });
+    picker.appendChild(backdrop);
     var panel = document.createElementNS(SVGNS, "g");
     panel.setAttribute("class", "dj-pick-panel");
     // backdrop slab + neon frame
@@ -38069,10 +38083,12 @@ function gameTapsNear(a, b) {
   function openPicker() {
     if (!window.__gardenPartyOn || window.currentStageName !== "garden") return;
     if (window.__toggleRoster) window.__toggleRoster(false); // jukebox + roster are mutually exclusive
+    gs2.appendChild(picker); // paint the modal above every party effect and dancer
     build(); // rebuild each open so labels track the current language + the highlight is fresh
     open = true;
     picker.classList.add("open"); // the pop-in plays off .open .dj-pick-panel (skipped under reduced motion via the media query)
     picker.setAttribute("pointer-events", "auto");
+    picker.setAttribute("aria-hidden", "false");
     document.addEventListener("keydown", onKey, true);
     document.addEventListener("click", onAway, true);
   }
@@ -38081,6 +38097,7 @@ function gameTapsNear(a, b) {
     open = false;
     picker.classList.remove("open");
     picker.setAttribute("pointer-events", "none");
+    picker.setAttribute("aria-hidden", "true");
     while (picker.firstChild) picker.removeChild(picker.firstChild); // actually REMOVE the panel — .open only gates pointer-events/pop-in, so without this the built rows stay painted after a selection (openPicker rebuilds fresh)
     document.removeEventListener("keydown", onKey, true);
     document.removeEventListener("click", onAway, true);
@@ -38090,8 +38107,13 @@ function gameTapsNear(a, b) {
     if (e && (e.key === "Escape" || e.key === "Esc")) { e.stopPropagation(); e.preventDefault(); window.__closeDjPicker(); }
   }
   function onAway(e) {
-    // any click that isn't on a picker row closes it (rows stopPropagation, so their taps never reach here)
+    // A click outside the SVG modal closes it but cannot activate navigation or another control
+    // underneath in the same gesture. Inside clicks are handled by the rows/backdrop themselves.
     if (e && picker.contains(e.target)) return;
+    // The backdrop deliberately leaves the active DJ exposed: follow-up taps retain the hidden
+    // three-tap shutdown gesture while the picker remains open beside the booth.
+    if (e && e.target && e.target.closest && e.target.closest("#garden-dj-headbang, #garden-dj-request")) return;
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     window.__closeDjPicker();
   }
   // Tap the booth body to toggle the picker (open, or close if already open). stopPropagation so

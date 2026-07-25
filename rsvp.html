@@ -4142,6 +4142,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-python #monitor-pymonty{opacity:1}
 #office-monitor.death-console #monitor-js{opacity:1}
 #office-monitor.death-code #monitor-qbasic{opacity:1}
+#office-monitor.death-life #monitor-life-farewell{opacity:1}
 #office-monitor.death-browser #monitor-awsnap{opacity:1}
 /* Browser is the one app defined AFTER #monitor-deathfx (it paints above), and .browser-wrap is
    opaque, so hide the frozen browser + its bezel nav arrows under the Aw-Snap overlay during the
@@ -21000,6 +21001,19 @@ section{margin:1.9rem 0}
 <text x="259" y="164.5" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="5.2" fill="#c7c7c7">C:\LOFT&gt;_</text>
 </g>
 </g>
+<!-- Game of Life killed → one real five-cell Conway glider keeps playing until the screen
+     fades. lifeDeathFlash advances it with the same B3/S23 rules as the app. -->
+<g id="monitor-life-farewell">
+<defs>
+<pattern id="monitor-life-farewell-grid" width="3" height="3" patternUnits="userSpaceOnUse">
+<path d="M3 0 H0 V3" fill="none" stroke="#8e3a4a" stroke-opacity="0.12" stroke-width="0.28"/>
+</pattern>
+</defs>
+<rect x="254" y="154" width="124" height="42" fill="#fffdf8"/>
+<rect x="254" y="154" width="124" height="42" fill="url(#monitor-life-farewell-grid)"/>
+<g id="monitor-life-farewell-glider"></g>
+<rect id="monitor-life-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
+</g>
 <!-- Browser (chrome) killed → Chrome's classic "Aw, Snap!" crash page: the sad rounded-page face
      (tilted a touch), the dark-gray "Aw, Snap!" heading + a small explainer line, and a decorative
      (non-functional) Reload pill. Native SVG (no foreignObject font-subset risk). Fills the 254/154
@@ -25621,6 +25635,7 @@ var T = {
       df_python_quip2: "It's just a flesh wound!", // caption beat 2 under the Monty Python Black Knight (Python kill)
       df_console_quip: "undefined is not a function.", // caption under the on-screen JS-console flatline (console kill); a literal JS error — same in both languages (code, not prose)
       df_code_quip: "Back to BASICs.", // caption under the QBasic → DOS send-off (Code kill)
+      df_life_quip: "The point of the game is the playing.", // Alan Watts-inspired caption under the departing glider (Life kill)
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Turn on La Maz → run El Maz → brew.",
       kitchen_grind: "Now grind coffee.",
@@ -26539,6 +26554,7 @@ var T = {
       df_python_quip2: "Je to jenom škrábnutí!", // caption beat 2 under the Monty Python Black Knight (Python kill)
       df_console_quip: "undefined is not a function.", // literal JS error string — same in both languages (a code token, not translated prose)
       df_code_quip: "Zpátky k BASICům.", // caption under the QBasic → DOS send-off (Code kill)
+      df_life_quip: "Smyslem hry je samotné hraní.", // Alan Watts-inspired caption under the departing glider (Life kill)
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
       kitchen_grind: "Teď umel kávu.",
@@ -44772,7 +44788,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a death-flash
     // instead of the silent generic close — the browser flashes Chrome's "Aw, Snap!" then closes.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -45601,6 +45617,67 @@ setOfficeProgress("pc", false);
     scheduleSaver();
   }
   window.__closeMonitorLife = closeLifeApp; // other monitor apps / the photobooth close the sim before taking the screen
+  // Kill does not end Life immediately: a canonical five-cell glider gets a final run under
+  // Conway's actual B3/S23 rules, then the screen fades and the app returns fresh.
+  function lifeDeathFlash() {
+    var finish = function () {
+      if (window.resetMonitorAppState) window.resetMonitorAppState("life");
+      else closeLifeApp();
+    };
+    if (!monitor.classList.contains("show-life") || !window.__runMonitorDeathFlash) { finish(); return; }
+    var layer = document.getElementById("monitor-life-farewell-glider");
+    var dim = document.getElementById("monitor-life-farewell-dim");
+    var live = { "0,1": 1, "1,2": 1, "2,0": 1, "2,1": 1, "2,2": 1 };
+    var generation = 0;
+    function advance(cells) {
+      var counts = {};
+      Object.keys(cells).forEach(function (key) {
+        var p = key.split(","), r = +p[0], c = +p[1];
+        for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+          if (!dr && !dc) continue;
+          var nk = (r + dr) + "," + (c + dc);
+          counts[nk] = (counts[nk] || 0) + 1;
+        }
+      });
+      var next = {};
+      Object.keys(counts).forEach(function (key) {
+        if (counts[key] === 3 || (counts[key] === 2 && cells[key])) next[key] = 1;
+      });
+      return next;
+    }
+    function render() {
+      if (!layer) return;
+      while (layer.firstChild) layer.removeChild(layer.firstChild);
+      Object.keys(live).forEach(function (key) {
+        var p = key.split(","), r = +p[0], c = +p[1];
+        var cell = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        cell.setAttribute("x", 260 + c * 3);
+        cell.setAttribute("y", 155.5 + r * 3);
+        cell.setAttribute("width", "2.35");
+        cell.setAttribute("height", "2.35");
+        cell.setAttribute("rx", "0.3");
+        cell.setAttribute("fill", "#8e3a4a");
+        layer.appendChild(cell);
+      });
+      layer.setAttribute("data-generation", String(generation));
+    }
+    render();
+    if (dim) dim.setAttribute("opacity", "0");
+    window.__runMonitorDeathFlash({
+      screenClass: "death-life",
+      beats: [{ key: "df_life_quip", at: 220 }],
+      dur: 2600,
+      freeze: lifePause,
+      tick: function (t) {
+        var target = Math.floor(t * 36);
+        while (generation < target) { live = advance(live); generation++; }
+        render();
+        if (dim) dim.setAttribute("opacity", (Math.max(0, (t - 0.78) / 0.22) * 0.5).toFixed(3));
+      },
+      close: finish
+    });
+  }
+  window.__killMonitorLife = lifeDeathFlash;
   window.__pauseMonitorLife = function () { if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; } }; // room-leave: stop the loop but keep lifePlaying so it resumes on return
   window.__resumeMonitorLife = function () { if (lifePlaying && !lifeTimer && monitor.classList.contains("show-life") && document.visibilityState !== "hidden") lifeArmTimer(); };
   window.refreshLifeText = function () { lifeRefreshLabels(); };

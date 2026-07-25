@@ -90585,6 +90585,9 @@ function spawnDustMote(container) {
   function tick() {
     if (!armed || !live) return;
     if (document.hidden || !document.hasFocus() || window.__cinematic) return;
+    // Window Tetris owns the balcony while it is active. Preserve the remaining
+    // attended-time delay so the automatic party handoff cannot interrupt a game.
+    if (window.__balconyTetrisState && window.__balconyTetrisState().active) return;
     liveMs += 1000;
     var b = beat(live);
     if (b && b.id === "act_b2" && liveMs >= 60000 && !bridgeNudged && window.currentStageName !== "balcony") {
@@ -90655,6 +90658,8 @@ function spawnDustMote(container) {
     switchPulse(false);
   };
   window.__actBeat = function () { return live; }; // test hook
+  window.__actTwoState = function () { return { armed: armed, beat: live, elapsed: liveMs }; }; // focused lifecycle test hook
+  window.__actTwoTick = tick; // focused lifecycle test hook
 
   // Hazard A, the one the whole hinge turns on: told "kill the lights", people click the
   // LIGHTS — the string lights or the wall lamp — and neither does anything here. So don't

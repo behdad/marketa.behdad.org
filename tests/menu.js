@@ -76,6 +76,8 @@ var HARNESS = [
   "    await sleep(520); callKill=window.__monitorCallKillState(); S('call_kill_signal_dropping', callKill.stage==='signal' && callKill.bars>0 && callKill.bars<4);",
   "    await sleep(650); callKill=window.__monitorCallKillState(); S('call_kill_wave_cut', callKill.stage==='flatline' && callKill.bars===0 && callKill.wave<0.05 && callKill.flat>0.95); S('call_kill_caption', document.getElementById('hunt-caption').textContent==='It’s not you. It’s the connection.');",
   "    await sleep(1100); callKill=window.__monitorCallKillState(); S('call_kill_teardown', callKill.active===false && callKill.call===false && !mon().classList.contains('show-family') && !mon().classList.contains('death-call'));",
+  // Calendar Kill tears pages away at shortening intervals until only its backing remains.
+  "    showApp('show-calendar'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(50); var calPages=document.getElementById('monitor-calendar-farewell-pages'); S('calendar_kill_started', mon().classList.contains('death-calendar') && mon().classList.contains('show-calendar')); S('calendar_kill_full_pad', !!calPages && Number(calPages.getAttribute('data-pages'))===12); await sleep(1450); S('calendar_kill_accelerating', !!calPages && Number(calPages.getAttribute('data-pages'))<8 && Number(calPages.getAttribute('data-pages'))>1); await sleep(1000); S('calendar_kill_bare', !!calPages && Number(calPages.getAttribute('data-pages'))===0); await sleep(180); S('calendar_kill_closed', !mon().classList.contains('show-calendar') && !mon().classList.contains('death-calendar'));",
   // browser Kill is the one non-runtime app that flashes: Chrome's ~2.2s 'Aw, Snap!' crash (death-browser),
   // THEN closes. Menu shows only an enabled Kill (no Restart); the flash starts immediately, show-browser
   // stays up during it, and is torn down only after. Mirrors the doom kill shape (flash-then-close).
@@ -249,7 +251,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 53000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 57000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -275,6 +277,7 @@ check("Call Kill starts with the live call frozen behind a full signal", s.call_
 check("Call Kill drops its signal bars one at a time", s.call_kill_signal_dropping === true);
 check("Call Kill cuts the waveform to a flat line and shows its exact caption", s.call_kill_wave_cut === true && s.call_kill_caption === true, { wave: s.call_kill_wave_cut, caption: s.call_kill_caption });
 check("Call Kill silently ends the call and removes its death state", s.call_kill_teardown === true);
+check("Calendar Kill accelerates through a full pad to bare backing, then closes", s.calendar_kill_started === true && s.calendar_kill_full_pad === true && s.calendar_kill_accelerating === true && s.calendar_kill_bare === true && s.calendar_kill_closed === true, { started: s.calendar_kill_started, full: s.calendar_kill_full_pad, accelerating: s.calendar_kill_accelerating, bare: s.calendar_kill_bare, closed: s.calendar_kill_closed });
 check("browser menu shows only an enabled Kill, no Restart", Array.isArray(s.browser_items) && s.browser_items.length === 1 && /kill/i.test(s.browser_items[0] || "") && s.browser_kill_enabled === true && s.browser_has_restart === false, { items: s.browser_items, enabled: s.browser_kill_enabled, restart: s.browser_has_restart });
 check("browser Kill runs the Aw-Snap flash then closes the app", s.browser_kill_hid_menu === true && s.browser_kill_flash_started === true && s.browser_kill_still_open_during_flash === true && s.browser_kill_closed_app === true && s.browser_kill_flash_ended === true, { hid: s.browser_kill_hid_menu, flash: s.browser_kill_flash_started, during: s.browser_kill_still_open_during_flash, closed: s.browser_kill_closed_app, ended: s.browser_kill_flash_ended });
 console.log(" python / linux (folded into the console menu):");

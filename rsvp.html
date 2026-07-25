@@ -4161,6 +4161,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-console #monitor-js{opacity:1}
 #office-monitor.death-code #monitor-qbasic{opacity:1}
 #office-monitor.death-life #monitor-life-farewell{opacity:1}
+#office-monitor.death-calendar #monitor-calendar-farewell{opacity:1}
 #office-monitor.death-tattoo #monitor-tattoo-farewell{opacity:1}
 #office-monitor.death-video #monitor-video-farewell{opacity:1}
 #office-monitor.death-call #monitor-call-farewell{opacity:1}
@@ -21041,6 +21042,17 @@ section{margin:1.9rem 0}
 <g id="monitor-life-farewell-glider"></g>
 <rect id="monitor-life-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
 </g>
+<!-- Calendar killed → an old tear-off date pad sheds its pages faster and faster until
+     only the bare backing board and binding rings remain. -->
+<g id="monitor-calendar-farewell">
+<rect x="254" y="154" width="124" height="42" fill="#e9e3d6"/>
+<rect x="281" y="157" width="70" height="37" rx="2.2" fill="#9c6a55" stroke="#6e493a" stroke-width="0.8"/>
+<rect x="286" y="159.5" width="60" height="31.5" rx="1.3" fill="#c9b59b"/>
+<circle cx="297" cy="159.5" r="2.1" fill="#58483f"/>
+<circle cx="335" cy="159.5" r="2.1" fill="#58483f"/>
+<g id="monitor-calendar-farewell-pages"></g>
+<rect id="monitor-calendar-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
+</g>
 <!-- Tattoo killed → a tiny machine permanently inks NO REGRETS, then underlines it. -->
 <g id="monitor-tattoo-farewell">
 <defs>
@@ -25760,6 +25772,7 @@ var T = {
       df_console_quip: "undefined is not a function.", // caption under the on-screen JS-console flatline (console kill); a literal JS error — same in both languages (code, not prose)
       df_code_quip: "Back to BASICs.", // caption under the QBasic → DOS send-off (Code kill)
       df_life_quip: "The point of the game is the playing.", // Alan Watts-inspired caption under the departing glider (Life kill)
+      df_calendar_quip: "Your days are numbered.", // caption under Calendar's accelerating tear-off pages
       df_tattoo_quip: "No regrets.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Dance like the whole world is watching.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "You found them.", // caption under the Mines board's forced reveal and detonation chain
@@ -26686,6 +26699,7 @@ var T = {
       df_console_quip: "undefined is not a function.", // literal JS error string — same in both languages (a code token, not translated prose)
       df_code_quip: "Zpátky k BASICům.", // caption under the QBasic → DOS send-off (Code kill)
       df_life_quip: "Smyslem hry je samotné hraní.", // Alan Watts-inspired caption under the departing glider (Life kill)
+      df_calendar_quip: "Tvé dny jsou sečteny.", // caption under Calendar's accelerating tear-off pages
       df_tattoo_quip: "Bez výčitek.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Tancuj, jako by se díval celý svět.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "Našel jsi je.", // caption under the Mines board's forced reveal and detonation chain
@@ -45109,7 +45123,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -46407,6 +46421,74 @@ setOfficeProgress("pc", false);
     scheduleSaver();
   }
   window.__closeMonitorCalendar = closeCalendar; // other monitor apps clear the calendar before taking the screen
+  function calendarDeathFlash() {
+    var finish = function () {
+      if (window.resetMonitorAppState) window.resetMonitorAppState("calendar");
+      else closeCalendar();
+    };
+    if (!monitor.classList.contains("show-calendar") || !window.__runMonitorDeathFlash) { finish(); return; }
+    var layer = document.getElementById("monitor-calendar-farewell-pages");
+    var dim = document.getElementById("monitor-calendar-farewell-dim");
+    // Shortening gaps make the pad visibly accelerate instead of losing sheets at a flat rate.
+    var tears = [.10,.24,.36,.47,.57,.66,.74,.80,.85,.89,.92,.94];
+    function svgEl(name, attrs) {
+      var el = document.createElementNS("http://www.w3.org/2000/svg", name);
+      Object.keys(attrs).forEach(function (key) { el.setAttribute(key, attrs[key]); });
+      return el;
+    }
+    function page(number, transform, opacity) {
+      var g = svgEl("g", { transform: transform || "", opacity: opacity == null ? "1" : opacity });
+      g.appendChild(svgEl("rect", { x: "286", y: "160", width: "60", height: "31", rx: "1.1", fill: "#fffdf8", stroke: "#d8cfbd", "stroke-width": ".45" }));
+      g.appendChild(svgEl("rect", { x: "286", y: "160", width: "60", height: "7", rx: "1.1", fill: "#8e3a4a" }));
+      var month = svgEl("text", { x: "316", y: "165.2", "text-anchor": "middle", "font-family": "Arial,sans-serif", "font-size": "3.7", "font-weight": "700", fill: "#fffdf8" });
+      month.textContent = "MAY";
+      g.appendChild(month);
+      var day = svgEl("text", { x: "316", y: "185.8", "text-anchor": "middle", "font-family": "Arial,sans-serif", "font-size": "18", "font-weight": "700", fill: "#453a31" });
+      day.textContent = String(number);
+      g.appendChild(day);
+      g.appendChild(svgEl("circle", { cx: "297", cy: "160", r: "1.45", fill: "#58483f" }));
+      g.appendChild(svgEl("circle", { cx: "335", cy: "160", r: "1.45", fill: "#58483f" }));
+      return g;
+    }
+    function draw(t) {
+      if (!layer) return;
+      while (layer.firstChild) layer.removeChild(layer.firstChild);
+      var torn = 0;
+      for (var i = 0; i < tears.length; i++) if (t >= tears[i]) torn++;
+      var remaining = tears.length - torn;
+      // A few offset edges make the surviving pad read as a stack, not one floating card.
+      for (var edge = Math.min(3, remaining - 1); edge > 0; edge--) {
+        layer.appendChild(page(remaining, "translate(0 " + (edge * .45) + ")", ".55"));
+      }
+      if (remaining > 0) layer.appendChild(page(remaining));
+      // Keep recently torn sheets in flight; old ones have already left the screen.
+      for (var j = 0; j < torn; j++) {
+        var flightDur = Math.max(.035, .13 - j * .008); // the flying sheets accelerate too
+        var p = Math.min(1, (t - tears[j]) / flightDur);
+        if (p >= 1) continue;
+        var dir = j % 2 ? 1 : -1;
+        var dx = dir * (15 + j * 1.8) * p;
+        var dy = -(8 + j * .55) * p;
+        var rot = dir * (8 + j * 2.2) * p;
+        layer.appendChild(page(tears.length - j, "translate(" + dx.toFixed(2) + " " + dy.toFixed(2) + ") rotate(" + rot.toFixed(2) + " 316 160)", String(1 - p * .28)));
+      }
+      layer.setAttribute("data-pages", String(remaining));
+      layer.setAttribute("data-torn", String(torn));
+    }
+    draw(0);
+    if (dim) dim.setAttribute("opacity", "0");
+    window.__runMonitorDeathFlash({
+      screenClass: "death-calendar",
+      beats: [{ key: "df_calendar_quip", at: 160 }],
+      dur: 2550,
+      tick: function (t) {
+        draw(t);
+        if (dim) dim.setAttribute("opacity", (Math.max(0, (t - .97) / .03) * .18).toFixed(3));
+      },
+      close: finish
+    });
+  }
+  window.__killMonitorCalendar = calendarDeathFlash;
   window.__phoneWeddingIcs = function (city) { downloadCalendarIcs(city); }; // each city card's .ics chip (fns hoisted below); no city = both cities
   window.__phoneGcalUrl = function (city) { return gcalUrl(city); }; // pocket Calendar's per-city GCal links
   // The four events, local wall-clock times in each city's own IANA zone. The .ics

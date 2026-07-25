@@ -20,6 +20,11 @@ var HARNESS = [
   " report.opened=opened;",
   " var input=document.getElementById('monitor-browser-url');",
   " report.placeholder=input&&input.getAttribute('placeholder');",
+  " var plus=document.querySelector('.browser-tab-plus'); if(plus)plus.click();",
+  " input.value='test';",
+  " var go=document.getElementById('monitor-browser-go');",
+  " if(go)go.dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true,cancelable:true}));",
+  " report.pointerGo=!!document.querySelector('.browser-frame-holder iframe:not(#monitor-browser-frame)')&&!input.value;",
   " } catch(e) { report.harnessError=String(e&&e.stack||e); }",
   " document.getElementById('__report').textContent=JSON.stringify(report);",
   "})();",
@@ -39,6 +44,7 @@ ok("external-tab control opens the active tab safely",
   r.opened && r.opened.url === "https://marketajakesova.ca/" &&
   r.opened.target === "_blank" && r.opened.features === "noopener");
 ok("address field advertises search", r.placeholder === "Search or enter address");
+ok("visible arrow submits search text", r.pointerGo === true);
 var src = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ok("search frames stay inside the frame holder",
   src.indexOf("browserFrameHolder.appendChild(tab.frame)") !== -1 &&

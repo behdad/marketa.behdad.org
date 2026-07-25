@@ -90,8 +90,10 @@ var harness = String.raw`<script>
               reply && reply.querySelector(".rumi-speaker") &&
               reply.querySelector(".rumi-speaker").textContent === "behdad",
               reply && reply.textContent);
-            check("behdad's Rumi bubble uses the stable top-left-of-head layout",
-              reply && reply._rumiLayout === "head-top-left",
+            check("behdad's approved Rumi placement keeps its cumulative offset and top-left layout",
+              reply && reply._rumiOffset && reply._rumiOffset.x === -130 &&
+              reply._rumiOffset.y === 30 &&
+              reply._rumiLayout === "head-top-left",
               reply && (reply.style.left + "," + reply.style.top));
             check("behdad's Rumi bubble has a tail aimed at him",
               reply && reply._rumiTailAnchor &&

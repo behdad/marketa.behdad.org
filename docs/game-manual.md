@@ -416,9 +416,10 @@ computer and survives leaving the monitor and continuing after a reload. **Reboo
 introduces The Loft without leaving the game. **Credits**
 rolls the people and open-source software behind the loft over its ever-burning fire.
 
-Typing an app name while the desktop or screensaver is visible opens an
-autocomplete search bar. `Enter` or `Tab` accepts the suggestion; `Escape` clears
-it. About and Credits are searchable apps even though they have no desktop tiles.
+Tap the magnifying glass in the desktop menu bar, or type an app name while the
+desktop or screensaver is visible, to open autocomplete search. `Enter` or `Tab`
+accepts the suggestion; `Escape` clears it. About and Credits are searchable apps
+even though they have no desktop tiles.
 Search recognizes localized app labels where a translation exists. In apps
 with their own search field, `/` focuses that field when it will not overwrite an
 active draft.

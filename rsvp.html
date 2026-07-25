@@ -29579,15 +29579,21 @@ document.addEventListener("click", function (e) {
     if (head) head.classList.remove("pleased");
   }
   window.__endBehdadWake = endBehdadWake;
-  function wakeBehdad() {
+  function holdBehdadWake() {
     var strip = document.getElementById("loft-game-strip");
     var head = document.getElementById("cuddly-behdad-head");
     var behdad = document.getElementById("cuddly-behdad");
     var dozing = strip && (strip.classList.contains("uv-mode") || (behdad && behdad.classList.contains("snoozing"))); // he dozes under the blacklight (party) OR at a quiet night (.snoozing)
-    if (!strip || !head || !dozing) return;
+    if (!strip || !head || !dozing) return false;
     strip.classList.add("behdad-awake");
     head.classList.add("pleased"); // affectionate cue (opacity transition, not a one-shot)
     if (behdadWakeTimer) clearTimeout(behdadWakeTimer);
+    behdadWakeTimer = null;
+    return true;
+  }
+  window.__holdBehdadWake = holdBehdadWake;
+  function wakeBehdad() {
+    if (!holdBehdadWake()) return;
     behdadWakeTimer = setTimeout(endBehdadWake, 3400);
   }
   ["cuddly-behdad-head", "cuddly-marketa-head"].forEach(function (id) {
@@ -64479,6 +64485,14 @@ async def localfont(name):
     ["\u06af\u064e\u0631 \u062a\u0648 \u0646\u0628\u0627\u0634\u06cc \u06cc\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u06af\u064e\u0634\u062a \u062e\u0631\u0627\u0628 \u06a9\u0627\u0631\u0650 \u0645\u0646", "\u0645\u0648\u0646\u0633\u0650 \u0648 \u063a\u064e\u0645\u200c\u06af\u064f\u0633\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"]
   ];
   var lastRumi = -1, rumiReplyTimer = null, rumiFollowRaf = null;
+  var rumiWakeTimer = null, rumiWakeHeld = false;
+  function endRumiWake() {
+    clearTimeout(rumiWakeTimer); rumiWakeTimer = null;
+    if (!rumiWakeHeld) return;
+    rumiWakeHeld = false;
+    if (window.__endBehdadWake) window.__endBehdadWake();
+  }
+  window.__endRumiWake = endRumiWake;
   function rumiPick() {
     if (RUMI_FA.length < 2) return 0;
     var i = lastRumi;
@@ -64501,8 +64515,8 @@ async def localfont(name):
     positionEggBubble(bubble, anchor, "top", yOffset, xOffset);
     var anchorRect = anchor.getBoundingClientRect();
     if (layout === "head-top-left") {
-      bubble.style.left = Math.max(8, anchorRect.left - bubble.offsetWidth - 10) + "px";
-      bubble.style.top = Math.max(8, anchorRect.top - bubble.offsetHeight - 10) + "px";
+      bubble.style.left = Math.max(8, anchorRect.left - bubble.offsetWidth - 10 + xOffset) + "px";
+      bubble.style.top = Math.max(8, anchorRect.top - bubble.offsetHeight - 10 + yOffset) + "px";
     }
     var bubbleLeft = parseFloat(bubble.style.left) || 0;
     var tailX = anchorRect.left + anchorRect.width / 2 - bubbleLeft;
@@ -64533,13 +64547,19 @@ async def localfont(name):
   }
   window.__offerRumiAt = function (fallback) {
     clearTimeout(rumiReplyTimer);
+    clearTimeout(rumiWakeTimer); rumiWakeTimer = null;
+    rumiWakeHeld = !!(window.__holdBehdadWake && window.__holdBehdadWake());
     var i = rumiPick();
     var t = T[document.documentElement.lang] || T.en;
     var readings = t.rumi_lines || T.en.rumi_lines;
     showRumi(hostAnchor("cuddly-marketa-head", fallback), "markéta", RUMI_FA[i][0], readings[i][0], false, 5, 60);
     rumiReplyTimer = setTimeout(function () {
-      if (window.currentStageName !== "cuddly" || window.__gardenPartyOn) return;
-      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true, 30, -130, "head-top-left");
+      if (window.currentStageName !== "cuddly" || window.__gardenPartyOn) {
+        endRumiWake();
+        return;
+      }
+      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true, 23, 43, "head-top-left");
+      rumiWakeTimer = setTimeout(endRumiWake, 6400);
     }, 5200);
     return i;
   };
@@ -65061,6 +65081,7 @@ async def localfont(name):
   window.__updateCuddlyRumiFairy = syncRumiFairy;
   window.__resetRumiFairy = function () {
     clearTimeout(fairyDepartureTimer); fairyDepartureTimer = null;
+    if (window.__endRumiWake) window.__endRumiWake();
     if (fairy) fairy.classList.remove("released", "departed", "wobbling");
     if (fairyDance) fairyDance.classList.remove("departing", "away", "grooving");
     syncRumiFairy({ noDepart: true });

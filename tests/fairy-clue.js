@@ -81,6 +81,8 @@ var harness = String.raw`<script>
           rumi._rumiTailAnchor.id === "cuddly-marketa-head" &&
           !!rumi.style.getPropertyValue("--rumi-tail-x") &&
           rumi._rumiFollowing === true);
+        check("Markéta's recitation wakes Behdad for the exchange",
+          document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
         check("the Rumi exchange does not add a public command",
           typeof window.rumi === "undefined");
 
@@ -91,9 +93,9 @@ var harness = String.raw`<script>
               reply && reply.querySelector(".rumi-speaker") &&
               reply.querySelector(".rumi-speaker").textContent === "behdad",
               reply && reply.textContent);
-            check("behdad's approved Rumi placement keeps its cumulative offset and top-left layout",
-              reply && reply._rumiOffset && reply._rumiOffset.x === -130 &&
-              reply._rumiOffset.y === 30 &&
+            check("behdad's manual Rumi adjustment is 43px right and 23px down",
+              reply && reply._rumiOffset && reply._rumiOffset.x === 43 &&
+              reply._rumiOffset.y === 23 &&
               reply._rumiLayout === "head-top-left",
               reply && (reply.style.left + "," + reply.style.top));
             check("behdad's Rumi bubble has a tail aimed at him",
@@ -101,12 +103,16 @@ var harness = String.raw`<script>
               reply._rumiTailAnchor.id === "cuddly-behdad-head" &&
               !!reply.style.getPropertyValue("--rumi-tail-x") &&
               reply._rumiFollowing === true);
+            check("Behdad stays awake while reciting his reply",
+              document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
             window.__setDayNight(false);
             check("dawn sends the cuddly fairy away again",
               !cameo.classList.contains("present") &&
               cameo.getAttribute("aria-hidden") === "true");
 
             window.__resetRumiFairy();
+            check("reset releases the Rumi-held wake",
+              !document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
             window.goToStage("garden");
             door.classList.remove("open");
             click(door);

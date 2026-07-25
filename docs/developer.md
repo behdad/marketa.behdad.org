@@ -357,7 +357,9 @@ The released garden fairy's Cuddly cameo is projected by `syncRumiFairy`: it req
 night, a stopped party, and the couple's presence. Phase, party, room, and both manual and automatic
 day/night transitions re-run that projection. Its two Rumi bubbles use one bounded rAF follower to
 stay attached to the speakers' live head geometry; opening the reply cancels the prior follower, and
-detachment stops the loop.
+detachment stops the loop. The exchange holds the existing `behdad-awake` projection from Markéta's
+verse through the end of Behdad's reply, then releases it through the normal wake owner; reset and
+an interrupted reply clear the same hold.
 
 ### Party lifetime
 

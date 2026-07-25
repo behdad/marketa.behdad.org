@@ -4152,6 +4152,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .mon-ctx button:hover:not(:disabled), .mon-ctx button:focus-visible:not(:disabled){background:var(--cream)}
 .mon-ctx button.ctx-kill{color:var(--wine)}
 .mon-ctx button.ctx-kill:hover:not(:disabled), .mon-ctx button.ctx-kill:focus-visible:not(:disabled){background:#f4e6e6}
+.mon-ctx button.ctx-sep{margin-top:3px; border-top:1px solid var(--rule); border-radius:0 0 4px 4px}
 .mon-ctx button:disabled{opacity:.4; cursor:default}
 .mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
 /* runtime death-flash (Kill a self-hosted runtime → a themed ~2s send-off, see __runMonitorDeathFlash).
@@ -26544,6 +26545,10 @@ var T = {
     mon_ctx_restart: "Restart",
     mon_ctx_kill: "Kill",
     mon_ctx_open: "Open",
+    mon_ctx_cut: "Cut",
+    mon_ctx_copy: "Copy",
+    mon_ctx_paste: "Paste",
+    mon_ctx_select_all: "Select all",
     dpad_prev: "Previous room",
     dpad_next: "Next room",
     tab_ctx_reload: "Reload",
@@ -27468,6 +27473,10 @@ var T = {
     mon_ctx_restart: "Restartovat",
     mon_ctx_kill: "Ukončit",
     mon_ctx_open: "Otevřít",
+    mon_ctx_cut: "Vyjmout",
+    mon_ctx_copy: "Kopírovat",
+    mon_ctx_paste: "Vložit",
+    mon_ctx_select_all: "Vybrat vše",
     dpad_prev: "Předchozí místnost",
     dpad_next: "Další místnost",
     tab_ctx_reload: "Načíst znovu",
@@ -45415,7 +45424,7 @@ setOfficeProgress("pc", false);
       else if (killOverride) closeFn = killOverride;            // browser (Aw-Snap) / photobooth (its own reset-kill)
       else if (resetId) closeFn = function () { window.resetMonitorAppState(resetId); }; // reset the app's state, then close
       else closeFn = "__closeTopMonitorApp";                    // fallback (should be unreachable for a served app)
-      return { close: closeFn, restart: extra ? extra.restart : null, running: extra ? extra.running : null };
+      return { cls: openCls, close: closeFn, restart: extra ? extra.restart : null, running: extra ? extra.running : null };
     }
     function contextIsOnMonitor(e) {
       if (e.target && e.target.closest && e.target.closest("#office-monitor")) return true;
@@ -45439,6 +45448,10 @@ setOfficeProgress("pc", false);
     var RESTART_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 3.4 A4 4 0 1 0 10.3 6.2"/><path d="M10 1.8 L10 3.6 L8.2 3.6"/></svg>';
     var KILL_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
     var OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
+    var CUT_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><path d="M4.2 7.9 L9.4 2 M7.8 6.2 L2.6 2"/></svg>';
+    var COPY_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linejoin="round"><rect x="3.6" y="3.6" width="6.2" height="6.2" rx=".7"/><path d="M2.2 8.2 H1.8 A.7.7 0 0 1 1.1 7.5 V1.8 A.7.7 0 0 1 1.8 1.1 H7.5 A.7.7 0 0 1 8.2 1.8 V2.2"/></svg>';
+    var PASTE_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.4 H2.6 A.8.8 0 0 0 1.8 3.2 V10 A.8.8 0 0 0 2.6 10.8 H9.4 A.8.8 0 0 0 10.2 10 V3.2 A.8.8 0 0 0 9.4 2.4 H8"/><rect x="4" y="1.1" width="4" height="2.3" rx=".7"/></svg>';
+    var SELECT_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round"><path d="M1.5 4 V1.5 H4 M8 1.5 H10.5 V4 M10.5 8 V10.5 H8 M4 10.5 H1.5 V8"/></svg>';
     // Desktop dock hosts: the three self-hosted runtimes have an additional live-engine
     // predicate. Opening one registers the task like every other app, but Kill only becomes
     // available once its actual engine is ready.
@@ -45479,10 +45492,66 @@ setOfficeProgress("pc", false);
       window.addEventListener("blur", closeMenu);
       window.addEventListener("resize", closeMenu);
     }
-    function buildMenu(app, x, y) {
+    function codeEditTarget(node) {
+      var el = node && (node.nodeType === 1 ? node : node.parentElement);
+      if (!el || !el.closest || !el.closest("#monitor-code-wrap")) return null;
+      return el.matches("textarea, input:not([type]), input[type='text']") ? el : null;
+    }
+    function editSelection(target) {
+      var start = target && target.selectionStart != null ? target.selectionStart : 0;
+      var end = target && target.selectionEnd != null ? target.selectionEnd : start;
+      return { target: target, start: start, end: end, text: target ? target.value.slice(start, end) : "" };
+    }
+    function restoreEditSelection(edit) {
+      if (!edit || !edit.target) return;
+      try { edit.target.focus({ preventScroll: true }); edit.target.setSelectionRange(edit.start, edit.end); } catch (e) {}
+    }
+    function dispatchEditInput(target) {
+      if (target) target.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    function writeEditClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return false; });
+      return new Promise(function (resolve) {
+        var ta = document.createElement("textarea");
+        ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+        document.body.appendChild(ta); ta.select();
+        var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+        ta.remove(); resolve(ok);
+      });
+    }
+    function cutEditSelection(edit) {
+      if (!edit || !edit.text) return;
+      writeEditClipboard(edit.text).then(function (ok) {
+        if (!ok || !edit.target) return;
+        edit.target.value = edit.target.value.slice(0, edit.start) + edit.target.value.slice(edit.end);
+        edit.end = edit.start;
+        restoreEditSelection(edit); dispatchEditInput(edit.target);
+      });
+    }
+    function pasteIntoEdit(edit) {
+      if (!edit || !edit.target || !navigator.clipboard || !navigator.clipboard.readText) return;
+      navigator.clipboard.readText().then(function (text) {
+        if (!text) return;
+        edit.target.value = edit.target.value.slice(0, edit.start) + text + edit.target.value.slice(edit.end);
+        edit.start += text.length; edit.end = edit.start;
+        restoreEditSelection(edit); dispatchEditInput(edit.target);
+      }, function () {});
+    }
+    function buildMenu(app, x, y, target) {
       var items = [];
+      var edit = app.cls === "show-code" ? editSelection(codeEditTarget(target)) : null;
+      if (edit && edit.target) {
+        items.push(makeItem("ctx-cut", CUT_ICO, tr("mon_ctx_cut"), function () { cutEditSelection(edit); }, !edit.text));
+        items.push(makeItem("ctx-copy", COPY_ICO, tr("mon_ctx_copy"), function () {
+          if (edit.text) writeEditClipboard(edit.text).then(function () { restoreEditSelection(edit); });
+        }, !edit.text));
+        items.push(makeItem("ctx-paste", PASTE_ICO, tr("mon_ctx_paste"), function () { pasteIntoEdit(edit); }, !(navigator.clipboard && navigator.clipboard.readText)));
+        items.push(makeItem("ctx-select-all", SELECT_ICO, tr("mon_ctx_select_all"), function () {
+          edit.start = 0; edit.end = edit.target.value.length; restoreEditSelection(edit);
+        }, !edit.target.value));
+      }
       var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
-      items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled)); // Kill first
+      items.push(makeItem("ctx-kill" + (edit && edit.target ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
       if (app.restart) items.push(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
       openMenu(items, x, y);
     }
@@ -45546,7 +45615,7 @@ setOfficeProgress("pc", false);
       if (app) { // an app is OPEN on the monitor → close/restart/kill it
         if (!contextIsOnMonitor(e)) return; // app screen, bezel, stand, and rim share this menu
         e.preventDefault();
-        buildMenu(app, e.clientX, e.clientY);
+        buildMenu(app, e.clientX, e.clientY, e.target);
         return;
       }
       // otherwise: the desktop home screen. Right-clicking a dock app icon → Open [+ Kill].

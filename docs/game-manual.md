@@ -236,6 +236,9 @@ The guitar always toggles **Tumbalalaika**, sung by Markéta Jakešová. The uku
 alternates between **I Need You** by Dan Bern and **Strange & Beautiful Things**
 by Orit Shimoni.
 
+The fairy hidden in the witchy table can provide an optional hint during the
+garden puzzle. Clicking them sends a trail of sparkles toward the next clue.
+
 ### Cuddly-puddly
 
 Cuddly-puddly contains soft furnishings, Octi, a balcony door, children's play,

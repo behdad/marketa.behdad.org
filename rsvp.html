@@ -66138,43 +66138,49 @@ function spawnFairyClueTrail(svg, fromEl, toEl) {
   var ns = "http://www.w3.org/2000/svg";
   var group = document.createElementNS(ns, "g");
   group.id = "fairy-clue-trail";
+  group.setAttribute("data-target", toEl.id || "");
   group.setAttribute("pointer-events", "none");
   group.setAttribute("aria-hidden", "true");
   svg.appendChild(group);
-  var count = 12, reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var count = 16, reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   for (var i = 0; i < count; i++) {
     var t = (i + 1) / (count + 1);
     var x = from.x + (to.x - from.x) * t;
-    var y = from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * 18;
-    var size = 1.7 + (i % 3) * 0.45;
+    var y = from.y + (to.y - from.y) * t - Math.sin(Math.PI * t) * 22;
+    var size = 3.1 + (i % 3) * .65;
     var star = document.createElementNS(ns, "path");
     star.setAttribute("d", "M " + x + " " + (y - size) + " L " + (x + size * .42) + " " + (y - size * .42) +
       " L " + (x + size) + " " + y + " L " + (x + size * .42) + " " + (y + size * .42) +
       " L " + x + " " + (y + size) + " L " + (x - size * .42) + " " + (y + size * .42) +
       " L " + (x - size) + " " + y + " L " + (x - size * .42) + " " + (y - size * .42) + " Z");
-    star.setAttribute("fill", i % 2 ? "#fff7bf" : "#efd5ff");
-    star.setAttribute("stroke", "#b987c7");
-    star.setAttribute("stroke-width", ".25");
+    star.setAttribute("fill", i % 2 ? "#fff2a1" : "#f2c9ff");
+    star.setAttribute("stroke", "#8e3a4a");
+    star.setAttribute("stroke-width", ".55");
+    star.setAttribute("paint-order", "stroke");
     star.style.opacity = "0";
+    star.style.transformBox = "fill-box";
+    star.style.transformOrigin = "center";
     group.appendChild(star);
     if (star.animate && !reduced) {
       star.animate([
-        { opacity: 0 },
-        { opacity: 1, offset: .35 },
-        { opacity: .9, offset: .68 },
-        { opacity: 0 }
-      ], { duration: 720, delay: i * 68, easing: "ease-in-out", fill: "both" });
+        { opacity: 0, transform: "scale(.35)" },
+        { opacity: 1, transform: "scale(1.2)", offset: .3 },
+        { opacity: 1, transform: "scale(1)", offset: .7 },
+        { opacity: 0, transform: "scale(.55)" }
+      ], { duration: 1050, delay: i * 90, easing: "ease-in-out", fill: "both" });
     } else {
-      star.style.opacity = i % 2 ? ".7" : "1";
+      star.style.opacity = i % 2 ? ".82" : "1";
     }
   }
-  var lifetime = reduced ? 950 : 720 + (count - 1) * 68;
+  var lifetime = reduced ? 1350 : 1050 + (count - 1) * 90;
   setTimeout(function () {
     if (group.parentNode) group.parentNode.removeChild(group);
   }, lifetime + 120);
   setTimeout(function () {
-    if (group.parentNode) spawnSparkFlare(svg, to.x, to.y);
-  }, reduced ? 180 : Math.max(0, lifetime - 240));
+    if (!group.parentNode) return;
+    spawnSparkFlare(svg, to.x, to.y);
+    setTimeout(function () { spawnSparkFlare(svg, to.x, to.y); }, 180);
+  }, reduced ? 260 : Math.max(0, lifetime - 360));
   return true;
 }
 function spawnPaneGleam(svg, pane) {

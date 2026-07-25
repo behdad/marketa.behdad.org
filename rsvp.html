@@ -3497,11 +3497,15 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .desk-search-button:hover .desk-search-icon,.desk-search-button:focus .desk-search-icon{stroke:#d9a6a6}
 /* A real input sits over the menu-bar icon before search opens, so Android receives the
    initiating touch on an editable control instead of relying on a later scripted focus.
-   Once active it expands over the SVG finder; SVG still paints the visible text. */
-.dock-search-keyboard{display:block;position:fixed;z-index:10020;box-sizing:border-box;min-width:20px;min-height:20px;visibility:hidden;opacity:0;pointer-events:none;-webkit-appearance:none;appearance:none;font-size:16px;border:0;padding:0;background:transparent;color:transparent;caret-color:transparent;outline:none}
+   Keep the armed control barely painted: Android declines to raise its IME for a fully
+   transparent input. Once active, the native control paints the query itself. */
+.dock-search-keyboard{display:block;position:fixed;z-index:10020;box-sizing:border-box;min-width:20px;min-height:20px;visibility:hidden;opacity:0;pointer-events:none;-webkit-appearance:none;appearance:none;font:16px/1 sans-serif;letter-spacing:0;border:0;padding:0;background:transparent;color:transparent;caret-color:transparent;outline:none;border-radius:0}
 .dock-search-keyboard.armed,.dock-search-keyboard.active{visibility:visible;pointer-events:auto}
-.dock-search-keyboard.active{caret-color:#8e3a4a}
+.dock-search-keyboard.armed{opacity:.02}
+.dock-search-keyboard.active{opacity:1;color:#453a31;caret-color:#8e3a4a}
+.dock-search-keyboard::placeholder{color:#9a9288;opacity:1}
 .dock-search-keyboard::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+#monitor-dock-search.native-input #monitor-dock-search-text{visibility:hidden}
 .desk-search-close{cursor:pointer}
 .desk-search-close circle{fill:#e8dfcc}
 .desk-search-close path{fill:none;stroke:#716455;stroke-width:.45;stroke-linecap:round}
@@ -42832,9 +42836,11 @@ setOfficeProgress("pc", false);
     dockSearchInput.autocapitalize = "none";
     dockSearchInput.spellcheck = false;
     dockSearchInput.maxLength = 28;
+    dockSearchInput.inputMode = "search";
+    dockSearchInput.enterKeyHint = "go";
     dockSearchInput.setAttribute("data-aria-i", "desk_search_apps_aria");
     dockSearchInput.setAttribute("aria-label", (T[document.documentElement.lang] || T.en).desk_search_apps_aria || T.en.desk_search_apps_aria);
-    document.body.appendChild(dockSearchInput);
+    (document.getElementById("hunt-fullscreen-area") || document.body).appendChild(dockSearchInput);
     function placeDockSearchInput() {
       if (!dockSearchInput || !dockSearchBg || !searchButton) return;
       var active = dockSearchInput.classList.contains("active");
@@ -42846,6 +42852,8 @@ setOfficeProgress("pc", false);
       dockSearchInput.style.top = r.top + "px";
       dockSearchInput.style.width = Math.max(20, r.width - glyphSpace - closeSpace) + "px";
       dockSearchInput.style.height = Math.max(20, r.height) + "px";
+      dockSearchInput.style.fontSize = active ? Math.max(16, r.height * .62) + "px" : "16px";
+      dockSearchInput.style.lineHeight = Math.max(20, r.height) + "px";
     }
     function syncDockSearchInput() {
       if (!dockSearchInput) return;
@@ -42866,11 +42874,13 @@ setOfficeProgress("pc", false);
     });
     dockSearchInput.addEventListener("pointerdown", function (e) {
       e.stopPropagation();
+    });
+    dockSearchInput.addEventListener("click", function (e) {
+      e.stopPropagation();
       if (dockSearchInput.classList.contains("active") || !dockSearchReady()) return;
-      // Focus the native control while it is still the direct touch target, then grow
-      // it into the full finder. This is the gesture Android uses to raise its IME.
-      try { dockSearchInput.focus({ preventScroll: true }); } catch (err) { dockSearchInput.focus(); }
-      openDockSearch(false);
+      // Leave the control under the finger through pointerdown so the browser performs
+      // its native focus gesture; only expand it after the trusted click completes.
+      openDockSearch(true);
     });
     dockSearchInput.addEventListener("keydown", function (e) {
       if (e.key === "Escape" || e.key === "Esc") {
@@ -43282,6 +43292,12 @@ setOfficeProgress("pc", false);
   }
   function paintDockSearch() {
     if (!dockGrid || !dockSearch || !dockSearchText) return;
+    var dict = T[document.documentElement.lang] || T.en;
+    if (dockSearchInput) {
+      dockSearchInput.placeholder = dict.desk_search_apps || T.en.desk_search_apps;
+      dockSearchInput.setAttribute("aria-label", dict.desk_search_apps_aria || T.en.desk_search_apps_aria);
+    }
+    dockSearch.classList.toggle("native-input", !!(dockSearchInput && dockSearchInput.classList.contains("active")));
     var query = normalizeDockSearch(dockSearchQuery), bestScore = Infinity;
     dockSearchBest = null; dockSearchCompletion = "";
     var searchableApps = DESKTOP_APPS.filter(function (app) { return !app.locked || !app.locked(); }).concat(TOOLBAR_APPS);
@@ -43330,6 +43346,7 @@ setOfficeProgress("pc", false);
     }
     if (dockGrid) dockGrid.classList.remove("searching");
     if (dockSearch) dockSearch.classList.remove("active");
+    if (dockSearch) dockSearch.classList.remove("native-input");
     if (dockSearchText) { dockSearchText.textContent = ""; dockSearchText.classList.remove("no-match"); }
     for (var id in dockCells) dockCells[id].classList.remove("search-match");
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
@@ -43339,10 +43356,12 @@ setOfficeProgress("pc", false);
     if (!dockSearchReady()) return false;
     stopSaver();
     dockSearchOpen = true;
-    paintDockSearch();
     if (focusKeyboard && dockSearchInput) {
       dockSearchInput.value = dockSearchQuery;
       dockSearchInput.classList.add("active");
+    }
+    paintDockSearch();
+    if (focusKeyboard && dockSearchInput) {
       placeDockSearchInput();
       try { dockSearchInput.focus({ preventScroll: true }); } catch (e) { dockSearchInput.focus(); }
     }

@@ -3506,6 +3506,20 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .desk-system-item.danger .desk-system-label{fill:#8e3a4a}
 .desk-system-rule{stroke:#cbb5aa; stroke-width:.3}
 .desk-system-tagline{fill:#81766b; font:1.38px/1 "Source Serif 4",serif; pointer-events:none}
+.monitor-about-layer{opacity:0;visibility:hidden;pointer-events:none}
+.monitor-about-layer.open{opacity:1;visibility:visible;pointer-events:auto}
+.monitor-about-bg{fill:#f4ecdf;stroke:#8e3a4a;stroke-width:.42}
+.monitor-about-mark{fill:#8e3a4a;font:600 2px/1 Fraunces,serif;letter-spacing:.05px}
+.monitor-about-title{fill:#453a31;font:600 4.2px/1 Fraunces,serif}
+.monitor-about-copy{fill:#5f5348;font:1.95px/1 "Source Serif 4",serif}
+.monitor-about-motto{fill:#8e3a4a;font:italic 1.8px/1 "Source Serif 4",serif}
+.monitor-about-blank{opacity:0;fill:#453a31;font:2.8px/1 monospace;text-anchor:middle;pointer-events:none}
+.monitor-about-layer.killing .monitor-about-normal{opacity:0}
+.monitor-about-layer.killing .monitor-about-blank{opacity:1}
+.monitor-about-close{cursor:pointer;outline:none}
+.monitor-about-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
+.monitor-about-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
+.monitor-about-close:hover circle,.monitor-about-close:focus circle{fill:#a94a5d;stroke-width:.62}
 .monitor-credits-layer{opacity:0;visibility:hidden;pointer-events:none}
 .monitor-credits-layer.open{opacity:1;visibility:visible;pointer-events:auto}
 .monitor-credits-bg{fill:#17131d}
@@ -26821,6 +26835,10 @@ var T = {
     mon_sys_credits: "Credits",
     mon_sys_tagline_1: "where artificial meets higher intelligence.",
     mon_sys_tagline_2: "",
+    mon_about_title: "Welcome to The Loft",
+    mon_about_home: "the place we (Markéta & behdad) call home.",
+    mon_about_wander: "Wander around, make coffee, meet our people,",
+    mon_about_party: "and find the party.",
     credits_title: "Credits",
     credits_thanks: "with thanks",
     credits_codesigner: "co-designer",
@@ -27792,6 +27810,10 @@ var T = {
     mon_sys_credits: "Titulky",
     mon_sys_tagline_1: "kde se setkává umělá a vyšší inteligence.",
     mon_sys_tagline_2: "",
+    mon_about_title: "Vítejte v The Loft",
+    mon_about_home: "místě, kterému my (Markéta & behdad) říkáme domov.",
+    mon_about_wander: "Procházejte se, uvařte si kávu, poznejte naše blízké",
+    mon_about_party: "a najděte oslavu.",
     credits_title: "Titulky",
     credits_thanks: "s poděkováním",
     credits_codesigner: "spolutvůrkyně designu",
@@ -41036,7 +41058,7 @@ setOfficeProgress("pc", false);
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-about", "show-credits");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -41873,7 +41895,7 @@ setOfficeProgress("pc", false);
     eqFrame = frame;
     syncEqVisualLoop();
   }
-  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser"];
+  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-about", "show-credits"];
   function eqVisualWant() {
     if (monitorSleeping || !eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
         !monitor.classList.contains("here") || !monitor.classList.contains("screen-on")) return false;
@@ -42210,6 +42232,8 @@ setOfficeProgress("pc", false);
     { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
     { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true,
       open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
+    { id: "about", labelKey: "mon_sys_website", glyph: "i", tile: "#f4ecdf", color: "#8e3a4a", glyphSize: "5.2", searchOnly: true,
+      open: function () { openMonitorAbout(); } },
     { id: "credits", labelKey: "mon_sys_credits", glyph: "✦", tile: "#17131d", color: "#d9a6a6", glyphSize: "5.2", searchOnly: true,
       open: function () { openMonitorCredits(); } },
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
@@ -42248,7 +42272,7 @@ setOfficeProgress("pc", false);
     video: "show-video", call: "show-family", chat: "show-chat", mail: "show-mail",
     calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", mines: "show-mines", pacman: "show-pacman",
     life: "show-life", doom: "show-doom", code: "show-code", console: "show-console",
-    python: "show-python", linux: "show-linux", weather: "show-weather", credits: "show-credits"
+    python: "show-python", linux: "show-linux", weather: "show-weather", about: "show-about", credits: "show-credits"
   };
   var MONITOR_APP_KILLS = {
     chrome: "__killMonitorBrowser", music: "__killMonitorMusic",
@@ -42258,7 +42282,7 @@ setOfficeProgress("pc", false);
     mines: "__killMonitorMines", pacman: "__killMonitorPacman", life: "__killMonitorLife", doom: "__killMonitorDoom",
     code: "__killMonitorCode", console: "__killMonitorConsole",
     python: "__killMonitorPython", linux: "__killMonitorLinux",
-    weather: "__killMonitorWeather", credits: "__killMonitorCredits"
+    weather: "__killMonitorWeather", about: "__killMonitorAbout", credits: "__killMonitorCredits"
   };
   var monitorRunningApps = Object.create(null);
   var monitorKillingApps = Object.create(null);
@@ -42320,6 +42344,8 @@ setOfficeProgress("pc", false);
     return n;
   }
   var monitorSystemMenu = null;
+  var monitorAboutLayer = null;
+  var monitorAboutKillTimer = null;
   var monitorCreditsLayer = null;
   var monitorCreditsKillTimer = null;
   function closeMonitorSystemMenu() {
@@ -42328,6 +42354,42 @@ setOfficeProgress("pc", false);
     var brand = document.getElementById("monitor-system-brand");
     if (brand) brand.setAttribute("aria-expanded", "false");
   }
+  function closeMonitorAbout() {
+    if (!monitorAboutLayer) return;
+    clearTimeout(monitorAboutKillTimer);
+    monitorAboutKillTimer = null;
+    monitorAboutLayer.classList.remove("open", "killing");
+    monitor.classList.remove("show-about");
+    scheduleSaver();
+  }
+  function openMonitorAbout() {
+    if (!monitorAboutLayer) return false;
+    closeMonitorSystemMenu();
+    stopSaver();
+    clearTimeout(monitorAboutKillTimer);
+    monitorAboutKillTimer = null;
+    monitorAboutLayer.classList.remove("killing");
+    monitor.classList.add("show-about");
+    monitorAboutLayer.classList.add("open");
+    var close = monitorAboutLayer.querySelector(".monitor-about-close");
+    if (close) try { close.focus(); } catch (e) {}
+    return true;
+  }
+  window.__openMonitorAbout = openMonitorAbout;
+  window.__closeMonitorAbout = closeMonitorAbout;
+  function killMonitorAbout() {
+    if (!monitorAboutLayer) return false;
+    if (!monitorAboutLayer.classList.contains("open")) openMonitorAbout();
+    clearTimeout(monitorAboutKillTimer);
+    monitorAboutLayer.classList.add("killing");
+    monitorAboutKillTimer = setTimeout(function () {
+      monitorAboutKillTimer = null;
+      closeMonitorAbout();
+      monitor.classList.add("show-caps");
+    }, 2400);
+    return true;
+  }
+  window.__killMonitorAbout = killMonitorAbout;
   function closeMonitorCredits() {
     if (!monitorCreditsLayer) return;
     clearTimeout(monitorCreditsKillTimer);
@@ -42371,10 +42433,7 @@ setOfficeProgress("pc", false);
   window.__killMonitorCredits = killMonitorCredits;
   function monitorSystemAction(action) {
     closeMonitorSystemMenu();
-    if (action === "website") {
-      try { window.open(CAPS_URL, "_blank"); } catch (e) {}
-      return true;
-    }
+    if (action === "about") return openMonitorAbout();
     if (action === "credits") return openMonitorCredits();
     if (action === "sleep") {
       return sleepMonitor();
@@ -42421,7 +42480,7 @@ setOfficeProgress("pc", false);
     mkEl("use", { href: "#cap-blue" }, capsWm);
     // menu bar: brand at left, a live clock at right
     mkEl("rect", { x: 254, y: 154, width: 124, height: 5.5, fill: "#453a31", opacity: 0.92 }, dock);
-    // the little m ∞ b brand doubles as the desktop's one link out: the wedding site
+    // the little m ∞ b brand opens the Loft's native system menu
     var brandG = mkEl("g", { id: "monitor-system-brand", "class": "desk-brand", role: "button", tabindex: "0", "aria-haspopup": "menu", "aria-expanded": "false" }, dock);
     var deskBrand = mkEl("text", { x: 257, y: 158.3, "class": "desk-bar-text" }, brandG);
     deskBrand.textContent = "m ∞ b";
@@ -42681,7 +42740,7 @@ setOfficeProgress("pc", false);
       ["reboot", "mon_sys_reboot", false],
       ["shutdown", "mon_sys_shutdown", false],
       null,
-      ["website", "mon_sys_website", false],
+      ["about", "mon_sys_website", false],
       ["credits", "mon_sys_credits", false]
     ];
     var sysY = 163.3;
@@ -42713,6 +42772,47 @@ setOfficeProgress("pc", false);
       if (monitorSystemMenu.classList.contains("open") &&
           !monitorSystemMenu.contains(e.target) && !brandG.contains(e.target)) closeMonitorSystemMenu();
     });
+
+    monitorAboutLayer = mkEl("g", { id: "monitor-about-layer",
+      "class": "monitor-about-layer", role: "dialog", "aria-modal": "true",
+      "aria-labelledby": "monitor-about-title" }, dock);
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
+      "class": "monitor-about-bg" }, monitorAboutLayer);
+    var aboutNormal = mkEl("g", { "class": "monitor-about-normal" }, monitorAboutLayer);
+    var aboutMark = mkEl("text", { x: 260, y: 161.5, "class": "monitor-about-mark" }, aboutNormal);
+    aboutMark.textContent = "m ∞ b";
+    var aboutTitle = mkEl("text", { id: "monitor-about-title", x: 260, y: 169,
+      "class": "monitor-about-title", "data-i": "mon_about_title" }, aboutNormal);
+    aboutTitle.textContent = (T[document.documentElement.lang] || T.en).mon_about_title;
+    [
+      ["mon_about_home", 174],
+      ["mon_about_wander", 179],
+      ["mon_about_party", 183]
+    ].forEach(function (line) {
+      var text = mkEl("text", { x: 260, y: line[1], "class": "monitor-about-copy",
+        "data-i": line[0] }, aboutNormal);
+      text.textContent = (T[document.documentElement.lang] || T.en)[line[0]];
+    });
+    var aboutMotto = mkEl("text", { x: 260, y: 190, "class": "monitor-about-motto",
+      "data-i": "mon_sys_tagline_1" }, aboutNormal);
+    aboutMotto.textContent = (T[document.documentElement.lang] || T.en).mon_sys_tagline_1;
+    var aboutBlank = mkEl("text", { x: 316, y: 176.5, "class": "monitor-about-blank" }, monitorAboutLayer);
+    aboutBlank.textContent = "about:blank";
+    var aboutClose = mkEl("g", { "class": "monitor-about-close", role: "button",
+      tabindex: "0", "data-aria-i": "install_dismiss",
+      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorAboutLayer);
+    mkEl("circle", { cx: 375, cy: 157, r: 2.15 }, aboutClose);
+    var aboutX = mkEl("text", { x: 375, y: 158.15 }, aboutClose); aboutX.textContent = "×";
+    function dismissAbout(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      closeMonitorAbout();
+    }
+    aboutClose.addEventListener("click", dismissAbout);
+    aboutClose.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") dismissAbout(e);
+    });
+    monitorAboutLayer.addEventListener("click", function (e) { e.stopPropagation(); });
+    monitorAboutLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
 
     monitorCreditsLayer = mkEl("g", { id: "monitor-credits-layer",
       "class": "monitor-credits-layer", role: "dialog", "aria-modal": "true",
@@ -43390,7 +43490,7 @@ setOfficeProgress("pc", false);
         ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
         ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-code", "code"],
         ["show-mines", "mines"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "doom"], ["show-video", "video"],
-        ["show-browser", "browser"], ["show-credits", "credits"]
+        ["show-browser", "browser"], ["show-about", "about"], ["show-credits", "credits"]
       ];
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
       return monitor && monitor.classList.contains("show-caps") ? "desktop" : null;
@@ -46691,6 +46791,7 @@ setOfficeProgress("pc", false);
   // Esc's app layer: ends the live call or closes whichever app owns the screen.
   // Returns true if it consumed the press (checked before the zoom backs out).
   window.__closeTopMonitorApp = function (stepBack) {
+    if (monitorAboutLayer && monitorAboutLayer.classList.contains("open")) { closeMonitorAbout(); return true; }
     if (monitor.classList.contains("show-family") && window.__closeMonitorFamily) { window.__closeMonitorFamily(); return true; }
     if (monitor.classList.contains("photobooth")) {
       if (stepBack && window.__backOfficePhotobooth && window.__backOfficePhotobooth()) return true;
@@ -46788,13 +46889,13 @@ setOfficeProgress("pc", false);
   (function () {
     // Real closable apps this menu serves — the exact set __closeTopMonitorApp knows how to
     // close, minus the three console apps (console-ctx owns those). Keep in sync with it.
-    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-credits"];
+    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-about", "show-credits"];
     var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
     // per-app extras: a Restart hook + a runtime-running predicate (Kill greys out until true)
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-about": "__killMonitorAbout", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -46802,7 +46903,7 @@ setOfficeProgress("pc", false);
     var CLASS_TO_ID = {
       "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "mines", "show-pacman": "pacman",
       "show-tattoo": "tattoo", "show-life": "life", "show-code": "code", "show-calendar": "calendar", "show-clock": "clock",
-      "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music", "show-credits": "credits"
+      "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music", "show-about": "about", "show-credits": "credits"
     };
     var menuEl = null;
     function activeMonitorApp() {

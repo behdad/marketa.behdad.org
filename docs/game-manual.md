@@ -407,12 +407,14 @@ the pink flat cap on behdad and the blue baker cap on Markéta by tapping a cap
 and then a portrait, dragging it, or using `Tab`, the arrow keys, and `Enter`.
 An intentional Caps Lock on/off cycle also unlocks it. The lock affects only the
 computer and survives leaving the monitor and continuing after a reload. **Reboot** and
-**Shut down** perform a clean power cycle and clear running app sessions. **Credits**
+**Shut down** perform a clean power cycle and clear running app sessions. **About**
+introduces The Loft without leaving the game. **Credits**
 rolls the people and open-source software behind the loft over its ever-burning fire.
 
 Typing an app name while the desktop or screensaver is visible opens an
 autocomplete search bar. `Enter` or `Tab` accepts the suggestion; `Escape` clears
-it. Search recognizes localized app labels where a translation exists. In apps
+it. About and Credits are searchable apps even though they have no desktop tiles.
+Search recognizes localized app labels where a translation exists. In apps
 with their own search field, `/` focuses that field when it will not overwrite an
 active draft.
 

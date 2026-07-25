@@ -218,7 +218,9 @@ var HARNESS = [
   "    showApp('show-linux'); var lo=document.getElementById('monitor-linux-out'); lo.innerHTML='<div>old</div>'; var lxThrew=null;",
   "    try { window.__restartMonitorLinux(); } catch(e){ lxThrew=String(e); }",
   "    S('linux_restart_threw', lxThrew); S('linux_restart_flash_started', mon().classList.contains('death-linux'));",
-  "    await sleep(2800);",  // wait out the BSOD flash (dur 2600) → destroyLinux clears the console
+  "    await sleep(2800);",
+  "    S('linux_restart_bsod_lingers', mon().classList.contains('death-linux') && /old/.test(lo.textContent));",
+  "    await sleep(1600);",  // the extended BSOD (dur 4200) now finishes and destroys Linux
   "    S('linux_restart_cleared_out', !/old/.test(lo.textContent));",
   // Python Restart now runs the Monty Python Black Knight flash, THEN destroys (clears the output +
   // drops show-python) and would reopen a fresh REPL (no show-caps here → openPython no-ops); verify flash-then-teardown.
@@ -361,7 +363,7 @@ check("doom fs button present", s.doom_fs_btn_present === true);
 check("doom fs button calls requestFullscreen on the canvas", s.doom_fs_called_on_canvas === true, s.doom_fs_calls);
 console.log(" restart teardown (no throws, real state reset):");
 check("doom restart runs the flash then tears down + swaps a fresh canvas (id kept)", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_swapped_canvas === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
-check("linux restart runs the BSOD flash then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
+check("linux restart holds the BSOD longer, then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_bsod_lingers === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
 check("python restart runs the Black Knight flash then destroys + clears the console", s.python_restart_threw === null && s.python_restart_flash_started === true && s.python_restart_cleared_out === true && s.python_restart_torn_down === true, s.python_restart_threw);
 check("console restart runs the flatline flash then refreshes + clears the console", s.console_restart_threw === null && s.console_restart_flash_started === true && (s.console_restart_cleared_out === true || s.console_restart_cleared_out === "no-console-out") && s.console_restart_torn_down === true, s.console_restart_threw);
 check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.errors.length === 0, rep.errors);

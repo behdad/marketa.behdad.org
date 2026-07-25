@@ -42,6 +42,15 @@ var harness = String.raw`<script>
     window.__setGardenParty(true, false);
     check("the fairy stops guiding once phase 2 begins",
       window.__gardenClueTarget() === null);
+    click(fairy);
+    var rumi = document.querySelector(".egg-bubble.rumi-bubble");
+    check("phase-two fairy starts a Rumi exchange instead of another Hafez reading",
+      rumi && rumi.querySelector(".rumi-speaker") &&
+      rumi.querySelector(".rumi-speaker").textContent === "markéta" &&
+      rumi.querySelector(".rumi-fa") && !rumi.querySelector(".fal-fa"),
+      rumi && rumi.textContent);
+    check("the Rumi exchange does not add a public command",
+      typeof window.rumi === "undefined");
   } catch (error) {
     out.errors.push(String(error && error.stack || error));
   }

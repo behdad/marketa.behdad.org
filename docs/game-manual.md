@@ -239,6 +239,8 @@ by Orit Shimoni.
 
 The fairy hidden in the witchy table can provide an optional hint during the
 garden puzzle. Clicking them sends a trail of sparkles toward the next clue.
+After phase 2 begins, the fairy prompts Markéta and behdad to trade Rumi lines
+instead.
 The plant grow light follows the loft clock automatically, staying on from
 11:00 to 17:00; clicking it overrides the schedule until the next boundary.
 

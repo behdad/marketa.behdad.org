@@ -167,6 +167,11 @@ footer{margin-top:2.6rem}
 /* the fāl couplet's Persian original: RTL, a touch larger and airier than the bubble body so the
    Arabic-script marks have room (system Persian fonts; nothing is fetched for this) */
 .egg-bubble .fal-fa{display:block; direction:rtl; text-align:right; font-size:1.08em; line-height:1.9; margin:.25em 0}
+.egg-bubble.rumi-bubble{max-width:250px}
+.egg-bubble .rumi-speaker{display:block; color:var(--pink); font-weight:700; margin-bottom:.1em}
+.egg-bubble .rumi-fa{display:block; direction:rtl; text-align:right; font-size:1.12em; line-height:1.8}
+.egg-bubble .rumi-reading{display:block; margin-top:.15em}
+.egg-bubble .rumi-credit{display:block; margin-top:.25em; color:var(--rule); font-size:.82em}
 /* white "who is this?" popup — the inverse roster: tapping a figure on the floor names them in a
    roster-styled card (paper/ink, not the dark egg bubble) while everyone else freezes for 3s */
 .egg-bubble.who-pop{
@@ -26078,6 +26083,11 @@ var T = {
       "Come, cupbearer, pass the cup and offer it round —<br>for love looked easy at first, and then the hard part came.",
       "Plant the tree of friendship — it bears the heart’s desire.<br>Tear out the sapling of enmity — it bears grief past counting."
     ],
+    rumi_lines: [
+      ["I can do without everyone; without you, I cannot.", "My heart bears your mark; it cannot go anywhere else."],
+      ["My wine and my longing; my garden and my spring.", "My sleep and my peace; without you, I cannot."],
+      ["If you are not my beloved, all my world falls apart.", "My companion and comfort; without you, I cannot."]
+    ],
     watch_loft: "▷ Trailer", watch_autoplay: "⟳ Autoplay",
     watch_skip: "□ Take over",
     contact: "Questions? Write to us:",
@@ -27072,6 +27082,11 @@ var T = {
       "Ztracený Josef se vrátí do Kanaánu — nermuť se.<br>Z domu smutku bude jednou růžová zahrada — nermuť se.",
       "Nuže, šenkýři, nalej pohár a podej jej dál —<br>láska se zprvu zdála snadná, a pak přišly ty těžkosti.",
       "Zasaď strom přátelství — ponese, po čem srdce touží.<br>Vytrhni výhonek nepřátelství — ponese žal bez počtu."
+    ],
+    rumi_lines: [
+      ["Bez všech ostatních se obejdu; bez tebe ne.", "Mé srdce nese tvé znamení; jinam už nemůže."],
+      ["Mé víno a má touha; má zahrada a mé jaro.", "Můj spánek a můj klid; bez tebe nemohu být."],
+      ["Když nejsi mou láskou, celý můj svět se rozpadá.", "Má společnice a útěcha; bez tebe nemohu být."]
     ],
     watch_loft: "▷ Upoutávka", watch_autoplay: "⟳ Autoplay",
     watch_skip: "□ Převzít",
@@ -64151,6 +64166,51 @@ async def localfont(name):
     return "📖 " + HAFEZ_FA[i][0] + "\n   " + HAFEZ_FA[i][1] + "\n" + lines[i].replace(/<br>/g, "\n");
   };
 })();
+// The garden fairy's phase-two answer is not another fāl. Markéta and behdad trade one
+// Rumi couplet instead: three pairs from Divan-e Shams, Ghazal 553. The public faal()
+// command above remains exclusively Hafez.
+(function () {
+  var RUMI_FA = [
+    ["\u0628\u06cc\u200c\u0647\u0645\u06af\u0627\u0646 \u0628\u0647 \u0633\u0631 \u0634\u0648\u062f\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f", "\u062f\u0627\u063a\u0650 \u062a\u0648 \u062f\u0627\u0631\u062f \u0627\u06cc\u0646 \u062f\u0644\u0645\u060c \u062c\u0627\u06cc \u062f\u06af\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"],
+    ["\u062e\u064e\u0645\u0631\u0650 \u0645\u0646 \u0648 \u062e\u064f\u0645\u0627\u0631\u0650 \u0645\u0646\u060c \u0628\u0627\u063a\u0650 \u0645\u0646 \u0648 \u0628\u0647\u0627\u0631\u0650 \u0645\u0646", "\u062e\u0648\u0627\u0628\u0650 \u0645\u0646 \u0648 \u0642\u0631\u0627\u0631\u0650 \u0645\u0646\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"],
+    ["\u06af\u064e\u0631 \u062a\u0648 \u0646\u0628\u0627\u0634\u06cc \u06cc\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u06af\u064e\u0634\u062a \u062e\u0631\u0627\u0628 \u06a9\u0627\u0631\u0650 \u0645\u0646", "\u0645\u0648\u0646\u0633\u0650 \u0648 \u063a\u064e\u0645\u200c\u06af\u064f\u0633\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"]
+  ];
+  var lastRumi = -1, rumiReplyTimer = null;
+  function rumiPick() {
+    if (RUMI_FA.length < 2) return 0;
+    var i = lastRumi;
+    while (i === lastRumi) i = (Math.random() * RUMI_FA.length) | 0;
+    return (lastRumi = i);
+  }
+  function hostAnchor(selector, fallback) {
+    var guests = document.getElementById("garden-guests");
+    var el = guests && guests.classList.contains("guests-in") && guests.querySelector(selector);
+    return el && window.currentStageName === "garden" ? el : fallback;
+  }
+  function rumiHtml(speaker, fa, reading, credit) {
+    return '<span class="rumi-speaker">' + speaker + '</span>' +
+      '<span dir="rtl" lang="fa" class="rumi-fa">' + fa + '</span>' +
+      '<span class="rumi-reading">' + reading + '</span>' +
+      (credit ? '<span class="rumi-credit">— Rumi, Ghazal 553</span>' : "");
+  }
+  function showRumi(anchor, speaker, fa, reading, credit) {
+    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top");
+    if (bubble) bubble.classList.add("rumi-bubble");
+    return bubble;
+  }
+  window.__offerRumiAt = function (fallback) {
+    clearTimeout(rumiReplyTimer);
+    var i = rumiPick();
+    var t = T[document.documentElement.lang] || T.en;
+    var readings = t.rumi_lines || T.en.rumi_lines;
+    showRumi(hostAnchor(".g-marketa", fallback), "markéta", RUMI_FA[i][0], readings[i][0], false);
+    rumiReplyTimer = setTimeout(function () {
+      if (window.currentStageName !== "garden") return;
+      showRumi(hostAnchor(".g-behdad", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true);
+    }, 2600);
+    return i;
+  };
+})();
 (function () {
   var desk = document.getElementById("office-desk");
   if (!desk) return;
@@ -64997,7 +65057,8 @@ async def localfont(name):
       playFairyChimeSound("witchy-chest-fairy");
       var target = window.__gardenClueTarget && window.__gardenClueTarget();
       if (target && spawnFairyClueTrail(document.getElementById("loft-game-strip"), fairy, target)) return;
-      if (window.__offerFaalAt) window.__offerFaalAt(fairy);
+      if (window.__secondRound && window.__offerRumiAt) window.__offerRumiAt(fairy);
+      else if (window.__offerFaalAt) window.__offerFaalAt(fairy);
     });
   }
   // the hanging-pan edge glimpsed through the pass-through clinks + swings like the real pans

@@ -14,6 +14,14 @@ var harness = String.raw`<script>
     var name = card && card.firstElementChild;
     return name ? name.textContent.trim() : "";
   }
+  function cardPlacement() {
+    var card = document.querySelector(".egg-bubble.who-pop");
+    return card ? {
+      left: card.style.left,
+      top: card.style.top,
+      anchor: card._anchor && card._anchor.id
+    } : null;
+  }
   function click(el) { if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
   try {
     window.__setGardenParty(true, false);
@@ -40,6 +48,46 @@ var harness = String.raw`<script>
     click(cuddlyBehdad);
     check("clicking a Cuddly resident opens their individual bio", cardName() === "behdad", cardName());
     check("a direct Cuddly bio points at the person", !!cuddlyBehdad.querySelector(".guest-spot-arrow"));
+
+    var pragueDaniel = document.getElementById("laptop-garden-daniel");
+    var pragueFelix = document.getElementById("laptop-garden-felix");
+    click(pragueDaniel);
+    var praguePlacement = cardPlacement();
+    check("the widened Prague gathering uses the laptop screen's fixed bio position",
+      cardName() === "Daniel" && praguePlacement && praguePlacement.anchor === "laptop-call-remote",
+      JSON.stringify(praguePlacement));
+    check("Prague call bios never draw a person arrow",
+      !document.querySelector("#laptop-call-scene .guest-spot-arrow"));
+    click(pragueFelix);
+    var pragueFelixPlacement = cardPlacement();
+    check("every Prague gathering member reuses exactly the same card coordinates",
+      cardName() === "Felix" && pragueFelixPlacement &&
+      pragueFelixPlacement.left === praguePlacement.left && pragueFelixPlacement.top === praguePlacement.top,
+      JSON.stringify({ first: praguePlacement, second: pragueFelixPlacement }));
+
+    var luebMadla = document.getElementById("laptop-lueb-sister");
+    var luebRobert = document.getElementById("laptop-lueb-husband");
+    click(luebMadla);
+    var luebPlacement = cardPlacement();
+    click(luebRobert);
+    var luebRobertPlacement = cardPlacement();
+    check("Lübeck family bios share one fixed, arrow-free screen position",
+      cardName() === "Robert" && luebPlacement && luebRobertPlacement &&
+      luebPlacement.anchor === "laptop-call-remote" &&
+      luebRobertPlacement.left === luebPlacement.left && luebRobertPlacement.top === luebPlacement.top &&
+      !document.querySelector("#laptop-lueb-scene .guest-spot-arrow"),
+      JSON.stringify({ first: luebPlacement, second: luebRobertPlacement }));
+
+    var monitorSelfLeaks = 0, laptopSelfLeaks = 0;
+    document.getElementById("office-monitor").addEventListener("click", function () { monitorSelfLeaks++; });
+    document.getElementById("office-laptop").addEventListener("click", function () { laptopSelfLeaks++; });
+    click(document.getElementById("monitor-family-self"));
+    click(document.getElementById("monitor-tehran-scene"));
+    click(document.getElementById("laptop-call-self"));
+    click(document.getElementById("laptop-call-remote"));
+    check("computer call surfaces do not fall through to device chrome",
+      monitorSelfLeaks === 0 && laptopSelfLeaks === 0,
+      "monitor=" + monitorSelfLeaks + " laptop=" + laptopSelfLeaks);
 
     var armL = bar && bar.querySelector(".bc-arm-l");
     var armR = bar && bar.querySelector(".bc-arm-r");

@@ -351,9 +351,9 @@ The current phone apps are:
 
 ### Notifications and the message badge
 
-A notification click always opens Messages and centers the exact message. It does
-not perform the message's scene action. To start an action, open the message and
-use its visible action control.
+A notification card opens Messages and centers the exact message. When the message
+has an attached action, its separate arrow runs that action directly; the card itself
+never runs it automatically.
 
 The unread badge is red and shows a count. After messages are read, it remains as
 a quieter blue Messages launcher so the thread is still easy to reopen.

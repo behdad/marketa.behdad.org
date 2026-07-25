@@ -5365,9 +5365,13 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .msg-thumb-ico{flex:none; width:46px; height:46px; border-radius:13px; background:#6d8ba3; display:flex; align-items:center; justify-content:center; font-size:26px; overflow:hidden}
 .msg-thumb-ico.has-img{background:none} /* a photo message: the picture fills the icon */
 .msg-thumb-ico img{width:100%; height:100%; object-fit:cover; display:block}
-.msg-thumb-txt{display:flex; flex-direction:column; min-width:0}
+.msg-thumb-txt{display:flex; flex:1; flex-direction:column; min-width:0}
 .msg-thumb-from{font-size:16px; font-weight:600; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .msg-thumb-body{font-size:22px; color:var(--ink); line-height:1.25; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden} /* up to two lines, then ellipsis */
+.msg-thumb-act{display:none; flex:none; width:34px; height:34px; border-radius:50%; background:var(--wine); color:#fff; align-items:center; justify-content:center; box-shadow:0 2px 7px rgba(142,58,74,.32); cursor:pointer}
+.msg-thumb.actionable .msg-thumb-act{display:flex}
+.msg-thumb-act:hover,.msg-thumb-act:focus-visible{background:#743143; outline:2px solid rgba(142,58,74,.25); outline-offset:1px}
+.msg-thumb-act svg{width:18px; height:18px}
 .msg-thumb-x{position:absolute; top:-8px; right:-8px; width:27px; height:27px; border-radius:50%; background:var(--muted); color:var(--paper); display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1; cursor:pointer; box-shadow:0 2px 7px rgba(0,0,0,.32)}
 .msg-thumb-x:hover,.msg-thumb-x:focus-visible{background:var(--wine); outline:none}
 @keyframes msg-thumb-pulse{0%,100%{box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule)} 50%{box-shadow:0 7px 27px rgba(142,58,74,.5), inset 0 0 0 1px var(--rule)}}
@@ -58982,8 +58986,13 @@ async def localfont(name):
         msgThumbEl = document.createElement("button");
         msgThumbEl.type = "button";
         msgThumbEl.className = "msg-thumb";
-        msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span><span class="msg-thumb-x" role="button" tabindex="0">✕</span>';
+        msgThumbEl.innerHTML = '<span class="msg-thumb-ico">💬</span><span class="msg-thumb-txt"><span class="msg-thumb-from"></span><span class="msg-thumb-body"></span></span><span class="msg-thumb-act" role="button" tabindex="0"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="msg-thumb-x" role="button" tabindex="0">✕</span>';
         msgThumbEl.addEventListener("click", function () { openMessagesAt(curThumbId); });
+        var thumbAct = msgThumbEl.querySelector(".msg-thumb-act");
+        if (thumbAct) {
+          thumbAct.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(curThumbId); });
+          thumbAct.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); runMsgAction(curThumbId); } });
+        }
         var thumbX = msgThumbEl.querySelector(".msg-thumb-x"); // a dismiss ✕ — swat the notification away without opening the app
         if (thumbX) {
           thumbX.setAttribute("aria-label", tr("install_dismiss"));
@@ -58998,6 +59007,14 @@ async def localfont(name):
       var ico = msgThumbEl.querySelector(".msg-thumb-ico"); // a photo message shows its picture as the icon; otherwise the 💬 glyph
       if (m.img) { ico.classList.add("has-img"); ico.innerHTML = '<img src="' + m.img + '" alt="">'; }
       else { ico.classList.remove("has-img"); ico.textContent = "💬"; }
+      var actionable = messageActionAvailable(id, m);
+      msgThumbEl.classList.toggle("actionable", actionable);
+      var actionButton = msgThumbEl.querySelector(".msg-thumb-act");
+      if (actionButton) {
+        actionButton.setAttribute("aria-label", tr("mon_ctx_open"));
+        actionButton.setAttribute("title", tr("mon_ctx_open"));
+        actionButton.setAttribute("tabindex", actionable ? "0" : "-1");
+      }
       msgThumbEl.setAttribute("aria-label", tr("app_messages") + " — " + msgFrom(m) + ": " + msgBody(m).replace(/<[^>]+>/g, ""));
       msgThumbEl.classList.remove("show"); void msgThumbEl.offsetWidth; // restart the slide/pulse if one's still up
       msgThumbEl.classList.add("show");

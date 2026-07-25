@@ -376,6 +376,13 @@ computer's menu bar to open it. The live time beside it opens Clock, with the
 same city times, wedding countdowns, play time, and game-time controls as the
 phone Clock.
 
+The `m ∞ b` wordmark opens the computer's system menu. **Sleep** keeps apps
+running and wakes on ordinary activity. **Lock** starts CAPS LOCK: put the pink
+flat cap on behdad and the blue baker cap on Markéta by tapping a cap and then a
+portrait, dragging it, or using `Tab`, the arrow keys, and `Enter`. The lock
+survives leaving the monitor and continuing after a reload. **Reboot** and
+**Shut down** perform a clean power cycle and clear running app sessions.
+
 Typing an app name while the desktop or screensaver is visible opens an
 autocomplete search bar. `Enter` or `Tab` accepts the suggestion; `Escape` clears
 it. Search recognizes localized app labels where a translation exists. In apps

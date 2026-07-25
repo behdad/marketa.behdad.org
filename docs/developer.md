@@ -544,6 +544,15 @@ The monitor is an SVG/`foreignObject` computer with a desktop, dock, screensaver
 is represented mainly by `show-*` classes on `#office-monitor`. Search for
 `__openMonitorApp`, `__closeTopMonitorApp`, `resetMonitorAppState`, and `REAL_APPS`.
 
+The native-SVG `m ∞ b` system menu delegates Sleep to the existing Julia saver and
+Reboot/Shut down to the physical PC tower, so there is no second power-state owner.
+CAPS LOCK is the one new state: `monitorLocked` blocks wake gestures and app entry
+points while the cap-matching layer is modal. Its small
+`localStorage["loftMonitorCapsLock"]` record holds the randomized layout and partial
+matches across Continue/reload. Normal monitor unzoom preserves it; the shared
+`shutdownMonitorApps()` teardown and a full game reset clear it. The focused lifecycle
+probe is `node tests/systemmenu.js`.
+
 Opening an app boots/pans the monitor if necessary, closes incompatible surfaces, and calls the app's
 own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
 view gets the first chance to step back, then the app closes to the desktop. A normal close can

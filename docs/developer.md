@@ -133,6 +133,34 @@ Cloud; it is an identifier for the public browser integration, not a server secr
 require network access even though Pyodide, HarfBuzz, fontTools, Brotli, and the other runtimes are
 served locally.
 
+### Script Editor languages and Turtle
+
+The Editor is one UI with two execution paths. JavaScript preserves the original
+`localStorage["deskScripts"]` map and executes through the Loft's async-IIFE
+runner. Python uses `localStorage["deskPythonScripts"]` and hands the complete
+buffer to the existing Python app through `__runPythonEditor`. The recoverable
+`deskEditorDraft` object includes its language. Explicit `.js` and `.py`
+filenames select a runtime; an extensionless name retains the manually selected
+one. Keep these stores outside checkpoint/reset state.
+
+Python Editor jobs queue while self-hosted Pyodide loads, then execute serially
+through `runPythonAsync` in the Python console's persistent namespace. stdout,
+stderr, results, and tracebacks therefore use the existing Python scrollback.
+Closing the app preserves the interpreter and drawing; the Python app's Kill or
+Restart path drops queued jobs, the interpreter, and the Turtle surface. Python
+execution is still on the browser main thread: the DOM command cap limits
+rendered output, but it is not a worker-level interrupt for arbitrary CPU loops.
+
+The standard-library archive omits desktop `turtle`/Tkinter, so
+`installPythonTurtle` writes a small compatibility module into Pyodide's virtual
+filesystem before user code runs. That module sends sanitized commands through
+`__loftTurtleCommand` to a native SVG surface. Do not replace the surface with a
+canvas inside the scaled monitor `foreignObject`; WebKit can paint it blank.
+Line, fill, mark, and cursor layers are separate, and retained drawing nodes are
+capped at 6,000. The compatibility API intentionally covers common teaching
+operations, not Tk windows or event bindings. Update `PYTHON_EDITOR_INSTRUCTIONS`
+in `chat.js` whenever the supported Python/Turtle surface changes.
+
 ## Game state model
 
 There is no central store. State is distributed across:
@@ -906,6 +934,7 @@ Use these search terms in `rsvp.html` rather than relying on line numbers:
 | Photographer/album | `__updateGardenPhotographer`, `albumPhotoSvg`, `__photoMomentNow` |
 | Weather | `api.open-meteo.com`, `__realOutdoorC`, `refreshWeatherText` |
 | Public console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.volume` |
+| Script Editor/Python Turtle | `ED_STORE_KEYS`, `edSetLanguage`, `__runPythonEditor`, `PY_TURTLE_MODULE` |
 | Autoplay/cinematic | `AP_SEQUENCE_LIBRARY`, `AP_MOOD_TRANSITIONS`, `__autoplayModel`, `apParam`, `window.__cinematic` |
 
 Worker-side searches in `chat.js`: `ACTION_SPECS`, `cleanContext`, `cleanGroupChat`,

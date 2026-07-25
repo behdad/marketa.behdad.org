@@ -400,10 +400,11 @@ freeze the dancing.
 
 ### Computer-only environments
 
-The monitor includes a JavaScript Console, a Python environment, and a Linux-like
-command environment. These are optional toys for technically curious players.
-The Python and Linux apps use browser-hosted, pinned runtimes rather than a shell
-on the visitor's device. HarfBuzz and font-tool demonstrations are included.
+The monitor includes a JavaScript Console, a shared JavaScript/Python Script
+Editor, a Python environment, and a Linux-like command environment. These are
+optional toys for technically curious players. The Python and Linux apps use
+browser-hosted, pinned runtimes rather than a shell on the visitor's device.
+HarfBuzz and font-tool demonstrations are included.
 
 On iOS and some WebKit versions, canvas, video, live-camera, or embedded-frame
 monitor apps can appear blank because of platform rendering restrictions. The
@@ -728,10 +729,12 @@ ordinary JavaScript syntax.
 
 ### Script Editor
 
-The monitor's **Editor** app is a small workspace for writing named JavaScript scripts that control
-the loft. A first-time blank editor includes a runnable example. Scripts use the same human-oriented
-commands as the console, and the editor accepts top-level `await`, so timed sequences can be written
-directly:
+The monitor's **Editor** app is a small workspace for named JavaScript and Python
+files. Use the **JS** and **PY** controls to choose a language; a `.js` or `.py`
+filename chooses it automatically. Each language starts with a runnable example.
+
+JavaScript files use the same human-oriented commands as the console, and accept
+top-level `await`, so timed loft sequences can be written directly:
 
 ```js
 caption("hello from the editor", { blink: 1000, hold: 2500 })
@@ -741,9 +744,28 @@ await sleep(1600)
 dance("salsa")
 ```
 
-Naming a script enables autosave. Saved scripts are stored in this browser and survive reloads,
-game resets, and simulated computer reboots. The editor can also create, duplicate, delete, import,
-download, email, or run its current script.
+Python files run in the monitor's real CPython environment. The bundled
+browser-compatible Turtle module draws into the Python app:
+
+```python
+import turtle
+
+t = turtle.Turtle()
+t.color("#8e3a4a")
+for _ in range(5):
+    t.forward(80)
+    t.right(144)
+```
+
+Turtle graphics open automatically when drawing begins. Use the small **gfx** /
+**>>>** control in the Python app to switch between the drawing and console.
+Common movement, pen, color, fill, circle, dot, write, and screen-background
+operations are supported. It does not open a desktop Tk window.
+
+Naming a file enables autosave. Saved JavaScript and Python files are stored in
+this browser and survive reloads, game resets, and simulated computer reboots.
+The editor can also create, duplicate, delete, import, download, email, or run
+its current file.
 
 From either JavaScript console:
 
@@ -755,9 +777,11 @@ repeat("welcome") // keep running it until stopped
 stop()             // stop a running or repeating script
 ```
 
-The Editor's Run button executes the current buffer even before it has been named. While a script is
-repeating, the button becomes Stop; `Escape` and `stop()` also end the loop. Repeating scripts pause
-while the browser is hidden. As with the console, do not import or run untrusted code.
+The Editor's Run button executes the current buffer even before it has been
+named. A Python run switches to the Python app, where output and errors appear.
+While a JavaScript script is repeating, the button becomes Stop; `Escape` and
+`stop()` also end the loop. Repeating scripts pause while the browser is hidden.
+As with the consoles, do not import or run untrusted code.
 
 ## Supported JavaScript status and action API
 

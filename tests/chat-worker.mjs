@@ -628,6 +628,36 @@ const wrongRoleResponse = await worker.fetch(makeRequest("/chat", {
 const wrongRoleReply = JSON.parse((await wrongRoleResponse.json()).reply);
 check(wrongRoleReply.sender === "Athena" && wrongRoleReply.reply_to_id === null && wrongRoleReply.action === null, "music actions from a non-DJ sender and invented quote targets are discarded", wrongRoleReply);
 
+openAIReply = JSON.stringify({ text: "Draws a square.", suggestion: "", replace: false, edits: [] });
+const pythonEditorResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "editor_assist",
+    message: "explain this",
+    turnstile_token: "python-editor-token",
+    context: { scripting_api: { globals: [{ name: "party" }] } },
+    editor: {
+      language: "python",
+      operation: "explain",
+      code: "import turtle\nturtle.forward(80)",
+      selected: "turtle.forward(80)",
+      selection_start: 14,
+      selection_end: 32,
+      cursor: 32,
+    },
+  }),
+}), makeEnv());
+const pythonEditorReply = JSON.parse((await pythonEditorResponse.json()).reply);
+check(pythonEditorResponse.status === 200 && pythonEditorReply.text === "Draws a square.",
+  "Python Editor assistance keeps the existing normalized reply envelope", pythonEditorReply);
+check(/CPython 3\.14/.test(captured.body.instructions) &&
+      /browser-compatible turtle/.test(captured.body.instructions) &&
+      /Do not suggest tkinter/.test(captured.body.instructions) &&
+      !/"name":"party"/.test(captured.body.instructions),
+  "Python Editor receives its bounded runtime/Turtle prompt without the Loft JavaScript API",
+  captured.body.instructions.slice(0, 500));
+
 turnstileSuccess = false;
 const callsBeforeRejection = openAICalls;
 const rejected = await worker.fetch(makeRequest("/chat", {

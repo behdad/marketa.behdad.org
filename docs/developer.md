@@ -361,6 +361,12 @@ ketamine, then iboga (`Shift+1` through `Shift+8`). Keep that order aligned acro
 handler, `trip()` scripting API, typed `trip.start` schema, Worker action schema, translated
 shortcut copy, and lifecycle tests when adding or reordering a variant.
 
+Ketamine schedules the roaming ghost four seconds into the trip. Its six-second
+catch window is bounded both by `animationend` and a tracked `tripEffectTimers`
+timeout, because reduced motion presents the ghost as a static target and emits
+no animation event. Catching it removes the hit target before unlocking Pac-Man;
+interruption/reset still clears it through `clearPriorTripEffects`.
+
 ### Media transitions
 
 `setMusicPausedState` is the only writer of the shared transport-pause mirror and synchronizes its
@@ -566,6 +572,26 @@ own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBa
 view gets the first chance to step back, then the app closes to the desktop. A normal close can
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
+
+Pac-Man is the exception to the desktop's normally static app catalog. Its
+`locked` predicate hides it from the dock, type-to-open search, Chat app catalog,
+and unknown-app listing until `__unlockPacman` runs from the ketamine ghost.
+`__pacmanCapture`/`__pacmanRestore` include discovery and the live maze in the
+loft checkpoint. Normal close retains the board and parks its one bounded
+`setTimeout`; reopening or returning focus resumes a running maze. Kill routes
+through the ordinary monitor task registry, resets the board without relocking
+the discovery, and full loft reset calls `__resetPacmanUnlock`.
+
+The maze is DOM/CSS grid rather than canvas because replaced elements inside the
+scaled monitor `foreignObject` do not composite in WebKit. Its overlapping cells
+depend on grid source order: do not add `position`, `transform`, `z-index`,
+`opacity`, or `filter` to the HTML actors or board. Those create the same
+RenderLayer failure as other monitor apps. Keyboard repeat must only ensure the
+single simulation timeout exists, never clear and re-arm it; otherwise a held
+direction starves every tick. The loop gates each step on the open app, focus,
+visibility, and the Kill state. `node tests/pacman.js` covers discovery, input,
+pause/resume, checkpoint restore, context-menu Close/Kill behavior, and reduced
+motion.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;
@@ -954,7 +980,7 @@ Use these search terms in `rsvp.html` rather than relying on line numbers:
 | Localization | `var T =`, `function setLang` |
 | Date and occasion source | `window.__now`, `__weddingOccasion`, `persianOcc` |
 | Shared audio | `function getAudioCtx`, `audioBusProxy`, `__updateSharedAudioIdle` |
-| Monitor desktop/apps | `REAL_APPS`, `__openMonitorApp`, `__closeTopMonitorApp` |
+| Monitor desktop/apps | `REAL_APPS`, `__openMonitorApp`, `__closeTopMonitorApp`, `PAC_MAZE` |
 | Phone shell/apps | `function openApp`, `function navBack`, `messageAppReturn` |
 | Chat context/client | `window.__chatContext`, `askChat`, `CHAT_PROXY_URL` |
 | Typed game API | `initLoftApi`, `register({ id:`, `actions_available` |

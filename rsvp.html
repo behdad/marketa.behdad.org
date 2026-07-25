@@ -4316,11 +4316,6 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .browser-page{flex:1; min-height:0; background:#fffdf8; display:grid} /* single-cell grid (was position:relative): overlays stack via grid-area with no RenderLayer, so they paint under the monitor's scaled foreignObject (WebKit bug 23113). The scaled iframe keeps its own positioning context in .browser-frame-holder — that holder is the one layer, isolating the (WebKit-unpaintable) iframe from the HTML overlays. */
 .browser-frame-holder{grid-area:1/1; position:relative; overflow:hidden}
 .browser-loading{grid-area:1/1; display:flex; align-items:center; justify-content:center; color:#a89a87; font-family:sans-serif; font-size:4.8px}
-/* framing-refused hint, dim like the loading line: only visitor-typed sites (.dyn) get
-   it — X-Frame-Options blanks are common and silent */
-.browser-noframe{grid-area:1/1; align-self:end; justify-self:stretch; margin:0 20px 0.8px; display:none; text-align:center; color:#f4efe4; background:rgba(69,58,49,0.78); border-radius:1.6px; padding:0.6px 1.6px; font-family:sans-serif; font-size:2px; line-height:1.45; pointer-events:none; transition:opacity 1.2s ease}
-.browser-wrap.dyn .browser-noframe{display:block} /* floats OVER the iframe: a refused site paints its own opaque error page, which used to bury this exact explanation */
-.browser-wrap.dyn .browser-noframe.hint-done{opacity:0}
 /* new-tab address form: opaque over the page zone (and the loading lines) while the
    active visitor tab hasn't navigated yet */
 .browser-newtab{grid-area:1/1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
@@ -4339,7 +4334,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 /* the frame lays the site out on a 496px-wide virtual viewport and scales it down —
    at 1:1 the 124px screen triggers sites' narrowest breakpoints and the monitor zoom
    then blows that up comically ("ridiculously zoomed-in") */
-.browser-frame{position:absolute; left:0; top:0; width:1265.3px; height:347px; transform:scale(0.098); transform-origin:0 0; border:0; display:block; background:transparent}
+.browser-frame{position:absolute; left:0; top:0; width:1265.3px; height:367.4px; transform:scale(0.098); transform-origin:0 0; border:0; display:block; background:transparent}
 #office-monitor.show-browser #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 #office-monitor.photobooth #monitor-browser{opacity:0 !important; visibility:hidden; pointer-events:none !important}
 /* family-call app: a little dialer on Behdad's own machine that calls one of two
@@ -21411,7 +21406,6 @@ section{margin:1.9rem 0}
 <div class="browser-page">
 <div class="browser-loading" data-i="browser_loading">loading&#8230;</div>
 <div class="browser-frame-holder"><iframe id="monitor-browser-frame" class="browser-frame"></iframe></div>
-<div class="browser-noframe" data-i="browser_noframe">if it stays blank, that site refuses to live in a picture frame &#8212; most big ones do</div>
 <div id="monitor-browser-newtab" class="browser-newtab">
 <div class="url-wrap">
 <input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search or enter address" data-ph-i="browser_omni_ph"/>
@@ -48520,9 +48514,6 @@ setOfficeProgress("pc", false);
     if (browserExternalEl) browserExternalEl.classList.toggle("open-dead", !tab.url);
     if (browserWrap) {
       browserWrap.classList.toggle("newtab", !!tab.dyn && !tab.url); // unnavigated visitor tab = address form
-      browserWrap.classList.toggle("dyn", !!(tab.dyn && tab.url)); // framing-refused hint, visitor sites only
-      var nf = browserWrap.querySelector(".browser-noframe");
-      if (nf && tab.dyn && tab.url) { nf.classList.remove("hint-done"); clearTimeout(nf._t); nf._t = setTimeout(function () { nf.classList.add("hint-done"); }, 4500); } // the chip explains, then gets out of the way
     }
     // fixed tabs share the one original frame; each navigated visitor tab keeps its
     // own, so switching tabs shows/hides frames instead of reloading them
@@ -48860,7 +48851,7 @@ setOfficeProgress("pc", false);
     }
     restoreFixedBrowserTabs(); // closed fixed tabs are session state too — a power-off brings the whole strip back
     if (!findBrowserTab(browserActiveTab)) browserActiveTab = "loft"; // the next boot's open lands somewhere real
-    if (browserWrap) browserWrap.classList.remove("newtab", "dyn");
+    if (browserWrap) browserWrap.classList.remove("newtab");
     if (browserUrlIn) browserUrlIn.value = "";
   }
   if (browserWrap) {

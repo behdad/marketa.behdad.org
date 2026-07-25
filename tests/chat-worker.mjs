@@ -435,6 +435,40 @@ check(/Wedding crew group chat/.test(groupCapture.body.instructions) && /"party_
 check(/"id":"washrooms","location":"by the entrance"/.test(groupCapture.body.instructions) && /physical directions/.test(groupCapture.body.instructions), "the crew responder receives verified venue facts and the no-invented-directions rule");
 check(!/^You are Charlie/.test(groupCapture.body.instructions) && /Music, dance, track, and DJ actions/.test(groupCapture.body.instructions) && /dad jokes and puns/.test(groupCapture.body.instructions), "group mode is distinct from Charlie, assigns music actions to DJs, and grounds humor in cast details");
 
+openAIReply = JSON.stringify({
+  en: "official score for this dance floor: a perfect 10/10 🤸",
+  cs: "oficiální známka pro tenhle parket: dokonalých 10/10 🤸",
+});
+const rewriteResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "message_rewrite",
+    message: "official gymnastics score for this dance floor: 10/10 🤸",
+    turnstile_token: "rewrite-turnstile-token",
+    history: [{ role: "assistant", text: "Private history must not leak." }],
+    rewrite: {
+      sender: "Hannah",
+      en: "official gymnastics score for this dance floor: 10/10 🤸",
+      cs: "oficiální gymnastická známka pro tenhle parket: 10/10 🤸",
+      ignored: "drop me",
+    },
+  }),
+}), makeEnv());
+const rewriteResult = await rewriteResponse.json();
+const rewriteReply = JSON.parse(rewriteResult.reply);
+const rewriteCapture = captures.at(-1);
+check(rewriteResponse.status === 200 &&
+  rewriteReply.en === "official score for this dance floor: a perfect 10/10 🤸" &&
+  rewriteReply.cs === "oficiální známka pro tenhle parket: dokonalých 10/10 🤸",
+  "authored-message rewrite mode returns one bounded English/Czech pair", rewriteResult);
+check(rewriteCapture.body.input.length === 1 &&
+  /rephrase one authored Wedding crew message/.test(rewriteCapture.body.instructions) &&
+  /Keep exactly the same meaning/.test(rewriteCapture.body.instructions) &&
+  /\"sender\":\"Hannah\"/.test(rewriteCapture.body.instructions) &&
+  !/Private history|drop me/.test(rewriteCapture.body.instructions),
+  "rewrite mode receives only sanitized authored copy and strict content-preservation guidance");
+
 openAIReply = JSON.stringify({ sender: "Danesh", text: "It’s the last song, so make it count.", reply_to_id: null, action: null });
 const partyOffResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",

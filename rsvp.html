@@ -49829,6 +49829,10 @@ setOfficeProgress("pc", false);
         payload.mode = "group_chat";
         payload.group_chat = message.groupChat || {};
         payload.history = []; // the wedding thread is supplied explicitly; Charlie's private chat history must not leak into this mode
+      } else if (message.mode === "message_rewrite") {
+        payload.mode = "message_rewrite";
+        payload.rewrite = message.rewrite || {};
+        payload.history = [];
       }
       payload.turnstile_token = String(token);
       return transport(payload);
@@ -49886,7 +49890,7 @@ setOfficeProgress("pc", false);
     var prompt = String(options.prompt == null ? text : options.prompt).trim() || text;
     var resolveMessage, rejectMessage;
     var completion = new Promise(function (resolve, reject) { resolveMessage = resolve; rejectMessage = reject; });
-    var message = { role: "user", text: text, prompt: prompt, mode: options.mode, groupChat: options.groupChat, replyDisplay: options.replyDisplay, silent: !!options.silent, retryHistory: options.retryHistory || null, resolve: resolveMessage, reject: rejectMessage, settled: false };
+    var message = { role: "user", text: text, prompt: prompt, mode: options.mode, groupChat: options.groupChat, rewrite: options.rewrite, replyDisplay: options.replyDisplay, silent: !!options.silent, retryHistory: options.retryHistory || null, resolve: resolveMessage, reject: rejectMessage, settled: false };
     if (!message.silent && !options.omitHistory) chatHistory.push(message);
     chatQueue.push(message);
     if (!message.silent) { chatError = ""; chatRetryMessage = null; }
@@ -49962,6 +49966,12 @@ setOfficeProgress("pc", false);
   window.__monitorChatAsk = askChat;
   window.__monitorChatAskContext = function (displayText, prompt, replyDisplay) { return askChat(displayText, { prompt: prompt, replyDisplay: replyDisplay }); };
   window.__monitorGroupChatAsk = function (text, groupChat, replyDisplay) { return askChat(text, { mode: "group_chat", groupChat: groupChat, replyDisplay: replyDisplay, silent: true }); };
+  window.__monitorMessageRewrite = function (rewrite) {
+    rewrite = rewrite || {};
+    return askChat(rewrite.en || rewrite.cs || "Rewrite this message.", {
+      mode: "message_rewrite", rewrite: rewrite, silent: true
+    });
+  };
   window.__monitorChatWasOpened = function () { return chatEverOpened; };
   window.__monitorChatHistory = function () { return chatHistory.map(function (m) { return { role: m.role, text: m.text }; }); };
   window.__monitorChatKillState = function () {
@@ -56158,12 +56168,18 @@ async def localfont(name):
       var name = (m && m.from != null) ? m.from : tr(m.fromKey);
       return name === "Behdad" ? "behdad" : name; // Messages uses the couple's lowercase sender styling; canonical cast data stays Behdad.
     }
+    function authoredBodyForLang(m, lang) {
+      var dict = T[lang] || T.en;
+      var s = (dict && dict[m.bodyKey]) || (T.en && T.en[m.bodyKey]) || m.bodyKey || "";
+      if (m && m.bdName != null) s = s.replace("{name}", m.bdName);
+      if (m && m.suffixKey) s += " " + ((dict && dict[m.suffixKey]) || (T.en && T.en[m.suffixKey]) || m.suffixKey);
+      return s;
+    }
     function msgBody(m) {
       if (m && m.body != null) return m.body;
-      var s = tr(m.bodyKey);
-      if (m && m.bdName != null) s = s.replace("{name}", m.bdName); // birthday texts fill {name} from the person's display name, re-substituted on every language flip
-      if (m && m.suffixKey) s += " " + tr(m.suffixKey);
-      return s;
+      var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+      if (m && m.rewrittenBodies && m.rewrittenBodies[lang]) return m.rewrittenBodies[lang];
+      return authoredBodyForLang(m, lang);
     }
     // case- + accent-insensitive fold for the search box: lower-case, strip combining marks
     // (é→e, ř→r) so "rene" finds "Irène" and a bare "marketa" finds "markéta".
@@ -56447,7 +56463,7 @@ async def localfont(name):
           bub.appendChild(quote);
         }
         var txt = document.createElement("span"); txt.className = "pm-msg-text";
-        if (m.body != null) txt.textContent = msgBody(m); else txt.innerHTML = msgBody(m); // generated/visitor copy is literal; authored dictionary copy may carry <em>
+        if (m.body != null || m.rewrittenBodies) txt.textContent = msgBody(m); else txt.innerHTML = msgBody(m); // generated/rewritten copy is literal; untouched authored dictionary copy may carry <em>
         bub.appendChild(txt);
         if (m.chatActionFailed) {
           var actionError = document.createElement("span"); actionError.className = "pm-msg-action-error"; actionError.textContent = tr("chat_action_failed"); bub.appendChild(actionError);
@@ -57936,6 +57952,7 @@ async def localfont(name):
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
     var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
     var deferredAutonomousMessages = [], deferredAutonomousTimer = null;
+    var pendingAuthoredRewrites = {}, messageRewriteGeneration = 0;
     var charlieIntroTimer = null, charlieIntroOffered = false; // one quiet, delayed introduction per page session; never part of a random pool
     var phaseTwoHeldMessages = []; // one-shot birthday/occasion texts requested during the solve are held; recurring drips simply retry later
     var msgUnreadOnly = false, msgSearchQ = "", msgDraft = "", msgReplyTarget = null, msgReplySeq = 0, albumSearchQ = ""; // sticky message composer/filter state + Photos search; survive close/reopen, clear on reset
@@ -58046,6 +58063,10 @@ async def localfont(name):
               fromKey: m.fromKey || null, bodyKey: m.bodyKey || null,
               from: m.from != null ? String(m.from).slice(0, 120) : null,
               body: m.body != null ? String(m.body).slice(0, 1200) : null,
+              rewrittenBodies: m.rewrittenBodies ? {
+                en: String(m.rewrittenBodies.en || "").slice(0, 700),
+                cs: String(m.rewrittenBodies.cs || "").slice(0, 700)
+              } : null,
               outgoing: !!m.outgoing, replyTo: m.replyTo || null,
               act: m.act || null, apiAction: m.apiAction || null, chatAction: m.chatAction || null,
               bdName: m.bdName || null
@@ -58076,6 +58097,12 @@ async def localfont(name):
         ["fromKey", "bodyKey", "replyTo", "act", "bdName"].forEach(function (key) { if (saved[key] != null) m[key] = saved[key]; });
         if (saved.from != null) m.from = String(saved.from).slice(0, 120);
         if (saved.body != null) m.body = String(saved.body).slice(0, 1200);
+        if (saved.rewrittenBodies && saved.rewrittenBodies.en && saved.rewrittenBodies.cs) {
+          m.rewrittenBodies = {
+            en: String(saved.rewrittenBodies.en).slice(0, 700),
+            cs: String(saved.rewrittenBodies.cs).slice(0, 700)
+          };
+        }
         m.outgoing = !!saved.outgoing;
         if (saved.apiAction && typeof saved.apiAction === "object") m.apiAction = saved.apiAction;
         if (saved.chatAction && typeof saved.chatAction === "object") m.chatAction = saved.chatAction;
@@ -59522,11 +59549,13 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodies; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];
       recentsReturnApp = null;
+      messageRewriteGeneration++;
+      pendingAuthoredRewrites = {};
       deferredAutonomousMessages = [];
       if (deferredAutonomousTimer) { clearTimeout(deferredAutonomousTimer); deferredAutonomousTimer = null; }
       return resetPhoneAppsBase();
@@ -59860,7 +59889,7 @@ async def localfont(name):
       if (msgThumbEl.parentNode !== host) host.appendChild(msgThumbEl);
       msgThumbEl.querySelector(".msg-thumb-from").textContent = msgFrom(m);
       var thumbBody = msgThumbEl.querySelector(".msg-thumb-body");
-      if (m.body != null) thumbBody.textContent = msgBody(m); else thumbBody.innerHTML = msgBody(m); // visitor/AI copy is literal; authored dictionary copy may carry <em>
+      if (m.body != null || m.rewrittenBodies) thumbBody.textContent = msgBody(m); else thumbBody.innerHTML = msgBody(m); // visitor/AI/rewritten copy is literal; untouched authored dictionary copy may carry <em>
       var ico = msgThumbEl.querySelector(".msg-thumb-ico"); // a photo message shows its picture as the icon; otherwise the 💬 glyph
       if (m.img) { ico.classList.add("has-img"); ico.innerHTML = '<img src="' + m.img + '" alt="">'; }
       else { ico.classList.remove("has-img"); ico.textContent = "💬"; }
@@ -60024,6 +60053,52 @@ async def localfont(name):
       if (!/^(bd_|occ_|hol_)/.test(id) && id !== "bbq") return; // May 2's direct Behdad invitation is the one authored early-party exception
       if (phaseTwoHeldMessages.indexOf(id) === -1) phaseTwoHeldMessages.push(id);
     }
+    function freezeAuthoredMessage(m) {
+      if (m.bodyKeys && !m.bodyKey) m.bodyKey = m.bodyKeys[Math.floor(Math.random() * m.bodyKeys.length)];
+      if (m.fromKeys && !m.fromKey) m.fromKey = m.fromKeys[Math.floor(Math.random() * m.fromKeys.length)];
+    }
+    function plainAuthoredBody(m, lang) {
+      return String(authoredBodyForLang(m, lang) || "").replace(/<[^>]+>/g, "");
+    }
+    function deliverAutonomousRewritten(id) {
+      if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1 || pendingAuthoredRewrites[id]) return false;
+      var m = MESSAGES[id];
+      freezeAuthoredMessage(m);
+      if (m.body != null || !m.bodyKey || typeof window.__monitorMessageRewrite !== "function") {
+        return window.__deliverPhoneMessage(id);
+      }
+      var request = {
+        sender: msgFrom(m),
+        en: plainAuthoredBody(m, "en"),
+        cs: plainAuthoredBody(m, "cs")
+      };
+      var generation = messageRewriteGeneration;
+      pendingAuthoredRewrites[id] = true;
+      Promise.resolve().then(function () {
+        return window.__monitorMessageRewrite(request);
+      }).then(function (answer) {
+        var parsed = answer;
+        if (typeof parsed === "string") {
+          try { parsed = JSON.parse(parsed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
+          catch (_error) { parsed = null; }
+        }
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
+            Object.keys(parsed).length !== 2 || typeof parsed.en !== "string" ||
+            typeof parsed.cs !== "string" || !parsed.en.trim() || !parsed.cs.trim()) {
+          throw new Error("invalid authored-message rewrite");
+        }
+        m.rewrittenBodies = { en: parsed.en.trim().slice(0, 700), cs: parsed.cs.trim().slice(0, 700) };
+      }).catch(function () {
+        // The authored dictionary copy is the fail-safe. A chatbot/Turnstile/network/model
+        // failure changes no message state and the original lands through the same path below.
+      }).then(function () {
+        delete pendingAuthoredRewrites[id];
+        if (generation !== messageRewriteGeneration || messagesThread.indexOf(id) !== -1) return;
+        window.__deliverPhoneMessage(id);
+      });
+      return true;
+    }
+    window.__messageRewritePending = function () { return Object.keys(pendingAuthoredRewrites); };
     window.__deliverPhoneMessage = function (id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false; // unknown, or already received (fire once)
       if (id === "charlie" && !charlieIntroEligible()) return false; // never let a test/nudge make Charlie the first message
@@ -60035,8 +60110,7 @@ async def localfont(name):
       // varied copy: entries with a bodyKeys POOL (the friend-duo "are you home?" texts) pick ONE
       // line at delivery and freeze it into bodyKey, so it varies per delivery but stays stable
       // across language flips + live re-renders (renderers read m.bodyKey each time).
-      if (m.bodyKeys && !m.bodyKey) m.bodyKey = m.bodyKeys[Math.floor(Math.random() * m.bodyKeys.length)];
-      if (m.fromKeys && !m.fromKey) m.fromKey = m.fromKeys[Math.floor(Math.random() * m.fromKeys.length)]; // freeze one sender per delivery (moment texts rotate among the coordinators)
+      freezeAuthoredMessage(m); // freeze pooled copy/sender once, before rendering or any autonomous rewrite
       applyMessageArrival(m); // state announcements describe what just happened; they never wait for a tap
       messagesThread.push(id);
       if (id === "charlie") charlieIntroOffered = true;
@@ -60087,7 +60161,7 @@ async def localfont(name):
       }
       if (deliverAt === -1) { scheduleDeferredAutonomousMessages(1000); return 0; }
       var id = deferredAutonomousMessages.splice(deliverAt, 1)[0];
-      var delivered = messagesThread.indexOf(id) === -1 && window.__deliverPhoneMessage(id) ? 1 : 0;
+      var delivered = messagesThread.indexOf(id) === -1 && deliverAutonomousRewritten(id) ? 1 : 0;
       if (deferredAutonomousMessages.length) scheduleDeferredAutonomousMessages(4200);
       return delivered;
     }
@@ -60095,7 +60169,7 @@ async def localfont(name):
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false;
       if (!partyTextAllowedToday(id)) return false;
       if (!window.__secondRound) return window.__deliverPhoneMessage(id);
-      if (!autonomousMessageDeferred(id)) return window.__deliverPhoneMessage(id);
+      if (!autonomousMessageDeferred(id)) return deliverAutonomousRewritten(id);
       if (deferredAutonomousMessages.indexOf(id) === -1) deferredAutonomousMessages.push(id);
       scheduleDeferredAutonomousMessages(1000);
       return true;
@@ -60111,7 +60185,7 @@ async def localfont(name):
       if (!window.__secondRound || !phaseTwoHeldMessages.length) return 0;
       var held = phaseTwoHeldMessages; phaseTwoHeldMessages = [];
       var delivered = 0;
-      held.forEach(function (id) { if (window.__deliverPhoneMessage(id)) delivered++; });
+      held.forEach(function (id) { if (deliverAutonomousRewritten(id)) delivered++; });
       return delivered;
     };
     // ── birthday-announcement texts ── when a guest's birthday window opens (the 'b'/console axis
@@ -60194,7 +60268,9 @@ async def localfont(name):
     };
     // has this message already arrived (is it in the thread)? — the cuddly-visitor drip uses this
     // to avoid re-sending a duo's "are you home?" text and to stop its timer once all four are in.
-    window.__phoneMessageReceived = function (id) { return messagesThread.indexOf(id) !== -1; };
+    window.__phoneMessageReceived = function (id) {
+      return messagesThread.indexOf(id) !== -1 || !!pendingAuthoredRewrites[id];
+    };
     function charlieIntroEligible() {
       return !charlieIntroOffered && messagesThread.length > 0 &&
         !(window.__monitorChatWasOpened && window.__monitorChatWasOpened());
@@ -60269,7 +60345,7 @@ async def localfont(name):
           Date.now() - window.__partyStartedAt < 25000) return false;
       return true;
     }
-    function cuePending() { var out = []; for (var i = 0; i < CUE_POOL.length; i++) if (messagesThread.indexOf(CUE_POOL[i]) === -1 && partyTextAllowedToday(CUE_POOL[i])) out.push(CUE_POOL[i]); return out; } // un-sent, date-appropriate cues (keeps the drip alive across time/state gates so a gated-out one stays reachable)
+    function cuePending() { var out = []; for (var i = 0; i < CUE_POOL.length; i++) if (!window.__phoneMessageReceived(CUE_POOL[i]) && partyTextAllowedToday(CUE_POOL[i])) out.push(CUE_POOL[i]); return out; } // un-sent/unrewriting, date-appropriate cues (keeps the drip alive across time/state gates so a gated-out one stays reachable)
     function partyTabChoices(onlyUnsent) {
       var b = document.getElementById("stage-balcony"), night = !!(b && b.classList.contains("dusk"));
       var out = [];

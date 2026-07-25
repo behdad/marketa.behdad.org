@@ -474,6 +474,11 @@ unread-only filter kept at the top and the composer at the bottom. The composer
 receives focus when Messages opens. Press `Escape` to leave the composer; press
 `/` while it is empty to focus message search.
 
+Before an autonomous authored message arrives, Chat may casually rephrase its
+English and Czech wording without changing any information. If verification,
+the network, or the chatbot fails, the original authored message arrives
+unchanged.
+
 Right-click a message, or long-press it on touch, to:
 
 - reply;

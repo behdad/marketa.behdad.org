@@ -450,6 +450,7 @@ var PROBE_HARNESS = [
   "  function nearestId(n) { while (n && n.nodeType === 1) { if (n.id) return n.id; n = n.parentNode; } return '?'; }",
   "  async function run() {",
   "    var strip = document.getElementById('loft-game-strip');",
+  "    window.__monitorMessageRewrite = function () { return Promise.reject(new Error('offline state harness')); };",
   // The auto day/night default follows Edmonton's real clock, so it would flip the loft to
   // night when the suite runs after dark and invert the manual-dusk probes. Pin the clock to
   // noon (deterministic day, same spirit as seedRandom) so dusk stays a manual-only toggle

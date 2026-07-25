@@ -41,7 +41,7 @@ var s = result.steps;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.before.delivered === false && !s.before.received, "Charlie cannot be the first text", s.before);
 check(s.delivery.ordinary === true && s.delivery.intro === true && s.delivery.received, "Charlie can introduce themself after an ordinary phase-two text", s.delivery);
-check(/Esc escapes a situation\. In fullscreen, use Backspace\.$/.test(s.copy || "") && (s.copy.match(/Esc escapes/g) || []).length === 1, "the varied introduction appends one exact shared control tip", s.copy);
+check(!!s.copy && !/Esc escapes|Backspace/.test(s.copy), "the varied introduction stays conversational instead of appending keyboard instructions", s.copy);
 check(s.action.room === "office" && s.action.chat && s.action.opened, "tapping Charlie's text opens Chat on the office computer", s.action);
 check(s.once.redelivered === false && !s.once.received, "the introduction does not repeat after Chat was opened or phone state was reset", s.once);
 

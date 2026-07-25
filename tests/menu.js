@@ -57,6 +57,10 @@ var HARNESS = [
   // browser Kill is the one non-runtime app that flashes: Chrome's ~2.2s 'Aw, Snap!' crash (death-browser),
   // THEN closes. Menu shows only an enabled Kill (no Restart); the flash starts immediately, show-browser
   // stays up during it, and is torn down only after. Mirrors the doom kill shape (flash-then-close).
+  // Code gets its own QBasic → DOS send-off. The app stays open under the overlay until the
+  // sequence ends, then its unnamed live buffer/draft are cleared while saved files remain.
+  "    showApp('show-code'); var codeTa=document.getElementById('monitor-code-code'); var codeName=document.getElementById('monitor-code-name'); if(codeTa) codeTa.value='unsaved work'; if(codeName) codeName.value=''; localStorage.setItem('deskCodeUnsaved',JSON.stringify({code:'unsaved work',language:'js'})); localStorage.setItem('deskCodeDraft',JSON.stringify({code:'unsaved work',language:'js'}));",
+  "    ctxAt(mon()); if(monKill()) monKill().click(); await sleep(40); S('code_kill_flash_started', mon().classList.contains('death-code')); S('code_kill_still_open_during_flash', mon().classList.contains('show-code')); await sleep(1800); var dos=document.getElementById('monitor-qbasic-dos'); S('code_kill_reached_dos', !!dos && Number(dos.getAttribute('opacity'))>0); await sleep(700); S('code_kill_closed_app', !mon().classList.contains('show-code')); S('code_kill_flash_ended', !mon().classList.contains('death-code')); S('code_kill_cleared_live_buffer', !!codeTa && codeTa.value==='' && localStorage.getItem('deskCodeUnsaved')===null && localStorage.getItem('deskCodeDraft')===null);",
   "    showApp('show-browser'); ctxAt(mon()); S('browser_items', monItems()); S('browser_kill_enabled', monKill()?!monKill().disabled:false); S('browser_has_restart', !!monRestart());",
   "    if(monKill()) monKill().click(); await sleep(40); S('browser_kill_hid_menu', !monMenu()); S('browser_kill_flash_started', mon().classList.contains('death-browser')); S('browser_kill_still_open_during_flash', mon().classList.contains('show-browser')); await sleep(2400); S('browser_kill_closed_app', !mon().classList.contains('show-browser')); S('browser_kill_flash_ended', !mon().classList.contains('death-browser'));",
   // ---- PYTHON (console-ctx) ----
@@ -221,6 +225,7 @@ check("browser menu shows only an enabled Kill, no Restart", Array.isArray(s.bro
 check("browser Kill runs the Aw-Snap flash then closes the app", s.browser_kill_hid_menu === true && s.browser_kill_flash_started === true && s.browser_kill_still_open_during_flash === true && s.browser_kill_closed_app === true && s.browser_kill_flash_ended === true, { hid: s.browser_kill_hid_menu, flash: s.browser_kill_flash_started, during: s.browser_kill_still_open_during_flash, closed: s.browser_kill_closed_app, ended: s.browser_kill_flash_ended });
 console.log(" python / linux (folded into the console menu):");
 check("contextmenu suppresses native menu over python console", s.py_contextmenu_prevented === true);
+check("Code Kill runs the QBasic → DOS send-off, then clears its live buffer", s.code_kill_flash_started === true && s.code_kill_still_open_during_flash === true && s.code_kill_reached_dos === true && s.code_kill_closed_app === true && s.code_kill_flash_ended === true && s.code_kill_cleared_live_buffer === true, { flash: s.code_kill_flash_started, during: s.code_kill_still_open_during_flash, dos: s.code_kill_reached_dos, closed: s.code_kill_closed_app, ended: s.code_kill_flash_ended, cleared: s.code_kill_cleared_live_buffer });
 check("console menu appears over python", s.py_menu_present === true);
 check("Restart item visible for python", s.py_restart_visible === true);
 check("Kill item visible for python", s.py_kill_visible === true);

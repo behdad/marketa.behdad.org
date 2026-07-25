@@ -4141,6 +4141,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-linux #monitor-bsod{opacity:1}
 #office-monitor.death-python #monitor-pymonty{opacity:1}
 #office-monitor.death-console #monitor-js{opacity:1}
+#office-monitor.death-code #monitor-qbasic{opacity:1}
 #office-monitor.death-browser #monitor-awsnap{opacity:1}
 /* Browser is the one app defined AFTER #monitor-deathfx (it paints above), and .browser-wrap is
    opaque, so hide the frozen browser + its bezel nav arrows under the Aw-Snap overlay during the
@@ -20982,6 +20983,23 @@ section{margin:1.9rem 0}
 <text x="259" y="191.5" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="3.9" fill="#3f6b46">-- signal lost --</text>
 <rect id="monitor-js-fade" x="254" y="154" width="124" height="42" fill="#000" opacity="0"/>
 </g>
+<!-- Code killed → back to where behdad started: QBasic runs END, asks for any key, then
+     returns to a DOS prompt. The late black layer is faded in by codeDeathFlash(). -->
+<g id="monitor-qbasic">
+<rect x="254" y="154" width="124" height="42" fill="#0000aa"/>
+<rect x="254" y="154" width="124" height="5.5" fill="#c0c0c0"/>
+<text x="257" y="158.1" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="2.5" font-weight="700" fill="#000000">File  Edit  View  Search  Run  Debug  Options  Help</text>
+<rect x="257" y="161.7" width="118" height="24.5" fill="none" stroke="#ffffff" stroke-width="0.55"/>
+<rect x="258.4" y="163.2" width="115.2" height="2.9" fill="#c0c0c0"/>
+<text x="316" y="165.5" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="2.35" font-weight="700" fill="#000000">Loft Code</text>
+<text x="262" y="173.8" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="5.6" font-weight="700" fill="#ffff55">END</text>
+<rect x="254" y="188.6" width="124" height="7.4" fill="#00aaaa"/>
+<text x="316" y="193.5" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="3.3" font-weight="700" fill="#000000">Press any key to continue . . .</text>
+<g id="monitor-qbasic-dos" opacity="0">
+<rect x="254" y="154" width="124" height="42" fill="#050505"/>
+<text x="259" y="164.5" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="5.2" fill="#c7c7c7">C:\LOFT&gt;_</text>
+</g>
+</g>
 <!-- Browser (chrome) killed → Chrome's classic "Aw, Snap!" crash page: the sad rounded-page face
      (tilted a touch), the dark-gray "Aw, Snap!" heading + a small explainer line, and a decorative
      (non-functional) Reload pill. Native SVG (no foreignObject font-subset risk). Fills the 254/154
@@ -25602,6 +25620,7 @@ var T = {
       df_python_quip1: "'Tis but a scratch!", // caption beat 1 under the Monty Python Black Knight (Python kill)
       df_python_quip2: "It's just a flesh wound!", // caption beat 2 under the Monty Python Black Knight (Python kill)
       df_console_quip: "undefined is not a function.", // caption under the on-screen JS-console flatline (console kill); a literal JS error — same in both languages (code, not prose)
+      df_code_quip: "Back to BASICs.", // caption under the QBasic → DOS send-off (Code kill)
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Turn on La Maz → run El Maz → brew.",
       kitchen_grind: "Now grind coffee.",
@@ -26519,6 +26538,7 @@ var T = {
       df_python_quip1: "To je jen škrábnutí!", // caption beat 1 under the Monty Python Black Knight (Python kill)
       df_python_quip2: "Je to jenom škrábnutí!", // caption beat 2 under the Monty Python Black Knight (Python kill)
       df_console_quip: "undefined is not a function.", // literal JS error string — same in both languages (a code token, not translated prose)
+      df_code_quip: "Zpátky k BASICům.", // caption under the QBasic → DOS send-off (Code kill)
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
       kitchen_grind: "Teď umel kávu.",
@@ -43774,8 +43794,30 @@ setOfficeProgress("pc", false);
     if (codeName) { try { codeName.blur(); } catch (e) {} }
     scheduleSaver();
   }
-  window.__openMonitorEditor = openEditor; // consoles launched by Run use Back to restore this buffer
-  window.__closeMonitorEditor = closeEditor; // other monitor apps close the editor before taking the screen
+  window.__openMonitorCode = openCode; // consoles launched by Run use Back to restore this buffer
+  window.__closeMonitorCode = closeCode; // other monitor apps close Code before taking the screen
+  // Kill is deliberately different from the quiet ✕: the modern IDE falls all the way back
+  // to QBasic (where behdad learned to program), executes END, then drops to C:\LOFT>.
+  function codeDeathFlash() {
+    var finish = function () {
+      if (window.resetMonitorAppState) window.resetMonitorAppState("code");
+      else closeCode();
+    };
+    if (!monitor.classList.contains("show-code") || !window.__runMonitorDeathFlash) { finish(); return; }
+    var dos = document.getElementById("monitor-qbasic-dos");
+    if (dos) dos.setAttribute("opacity", "0");
+    window.__runMonitorDeathFlash({
+      screenClass: "death-code",
+      beats: [{ key: "df_code_quip", at: 280 }],
+      dur: 2400,
+      sound: function () { playQBasicExitSound("office-monitor"); },
+      tick: function (t) {
+        if (dos) dos.setAttribute("opacity", Math.max(0, Math.min(1, (t - 0.72) / 0.08)).toFixed(3));
+      },
+      close: finish
+    });
+  }
+  window.__killMonitorCode = codeDeathFlash;
   // console commands (globals, evaluated by the REPL). Defined here so they share the
   // Code's storage/openCode; kept OUT of the console-toys region so a parent edit there
   // never collides. Require run("name")/edit("name") — no bare-identifier script calls.
@@ -44730,7 +44772,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a death-flash
     // instead of the silent generic close — the browser flashes Chrome's "Aw, Snap!" then closes.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -68595,6 +68637,21 @@ function playGlassClinkSound(pitchMult, panId) {
     [{ f: 2600, g: 0.15, d: 0.4 }, { f: 3400, g: 0.11, d: 0.34 }, { f: 5200, g: 0.045, d: 0.2 }].forEach(function (p) {
       var osc = ctx.createOscillator();
       osc.type = "sine";
+// Code → QBasic → DOS: a tiny PC-speaker acknowledgement, then the lower "returned to DOS"
+// chirp timed to the black prompt. Square waves keep it fondly primitive.
+function playQBasicExitSound(panId) {
+  try {
+    var ctx = getSfxCtx(); if (!ctx) return;
+    var t = ctx.currentTime, out = pannedOut(ctx, panId);
+    [{ f: 880, at: 0, d: 0.10, gain: 0.07 }, { f: 440, at: 1.72, d: 0.14, gain: 0.065 }].forEach(function (n) {
+      var o = ctx.createOscillator(); o.type = "square"; o.frequency.value = n.f;
+      var g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t + n.at);
+      g.gain.exponentialRampToValueAtTime(n.gain, t + n.at + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + n.at + n.d);
+      o.connect(g); g.connect(out); o.start(t + n.at); o.stop(t + n.at + n.d + 0.02);
+    });
+  } catch (e) {}
+}
       osc.frequency.value = p.f * mult;
       var gain = ctx.createGain();
       gain.gain.setValueAtTime(0.0001, t);

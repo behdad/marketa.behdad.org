@@ -31,6 +31,10 @@ var harness = String.raw`<script>
     check("clicking the fairy creates a visible clue trail",
       trail && trail.getAttribute("data-target") === "garden-monstera",
       trail && trail.getAttribute("data-target"));
+    check("the trail paints in the visible garden coordinate space",
+      trail && trail.parentNode && trail.parentNode.id === "stage-garden" &&
+      trail.getAttribute("data-coordinate-space") === "stage-garden",
+      trail && trail.parentNode && trail.parentNode.id);
     check("the strengthened trail contains sixteen sparkles",
       trail && trail.children.length === 16,
       trail && String(trail.children.length));

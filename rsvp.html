@@ -66126,13 +66126,20 @@ function spawnFairyClueTrail(svg, fromEl, toEl) {
   if (!svg || !fromEl || !toEl || document.hidden) return false;
   var old = document.getElementById("fairy-clue-trail");
   if (old && old.parentNode) old.parentNode.removeChild(old);
+  var stage = toEl.closest && toEl.closest("#stage-garden");
+  if (!stage) return false;
   function centre(el) {
     try {
-      var box = el.getBBox(), matrix = el.getCTM(), point = svg.createSVGPoint();
+      // Read the live screen position, then map it back through the static garden
+      // stage. getCTM() on the moving five-room strip includes its CSS slide in
+      // some engines; treating those screen coordinates as strip-local applies
+      // that slide twice and paints the trail outside the visible room.
+      var box = el.getBoundingClientRect();
+      var matrix = stage.getScreenCTM(), point = svg.createSVGPoint();
       if (!matrix || !box.width || !box.height) return null;
-      point.x = box.x + box.width / 2;
-      point.y = box.y + box.height / 2;
-      return point.matrixTransform(matrix);
+      point.x = box.left + box.width / 2;
+      point.y = box.top + box.height / 2;
+      return point.matrixTransform(matrix.inverse());
     } catch (_error) { return null; }
   }
   var from = centre(fromEl), to = centre(toEl);
@@ -66141,9 +66148,10 @@ function spawnFairyClueTrail(svg, fromEl, toEl) {
   var group = document.createElementNS(ns, "g");
   group.id = "fairy-clue-trail";
   group.setAttribute("data-target", toEl.id || "");
+  group.setAttribute("data-coordinate-space", "stage-garden");
   group.setAttribute("pointer-events", "none");
   group.setAttribute("aria-hidden", "true");
-  svg.appendChild(group);
+  stage.appendChild(group);
   var count = 16, reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   for (var i = 0; i < count; i++) {
     var t = (i + 1) / (count + 1);
@@ -66180,8 +66188,8 @@ function spawnFairyClueTrail(svg, fromEl, toEl) {
   }, lifetime + 120);
   setTimeout(function () {
     if (!group.parentNode) return;
-    spawnSparkFlare(svg, to.x, to.y);
-    setTimeout(function () { spawnSparkFlare(svg, to.x, to.y); }, 180);
+    spawnSparkFlare(stage, to.x, to.y);
+    setTimeout(function () { spawnSparkFlare(stage, to.x, to.y); }, 180);
   }, reduced ? 260 : Math.max(0, lifetime - 360));
   return true;
 }

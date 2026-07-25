@@ -573,16 +573,19 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
-Pac-Man is an internal `DESKTOP_APPS` entry with `hidden:true`: it never receives
-a dock tile and stays out of type-to-open search, the Chat app catalog, and
-unknown-app listings even after `__unlockPacman` runs from the ketamine ghost.
-The ghost is its sole entry path; it passes the private hidden-app allowance to
-`__openMonitorApp` so the ordinary public app-opening surfaces cannot launch it.
+Pac-Man is an internal `DESKTOP_APPS` entry with `searchOnly:true`: it never
+receives a dock tile, but type-to-open search, the Chat app catalog, and
+`__openMonitorApp("pacman")` can launch it at any time. This is the same
+no-desktop-icon model used by the Weather and Clock toolbar apps. The ketamine
+ghost is a direct cinematic shortcut rather than an access gate.
 `__pacmanCapture`/`__pacmanRestore` include discovery and the live maze in the
 loft checkpoint. Normal close retains the board and parks its one bounded
-`setTimeout`; catching the ghost again or returning focus resumes a running maze.
+`setTimeout`; reopening through search, catching the ghost, or returning focus
+resumes a running maze.
 Kill routes through the ordinary monitor task registry and resets the board;
-full loft reset calls `__resetPacmanUnlock`.
+full loft reset calls `__resetPacmanUnlock`. Its personal best instead lives in
+the separate `localStorage["pacmanHigh"]` key, following Invaders and Flair Catch,
+so New, Kill, shutdown, and loft reset do not erase it.
 
 The maze is DOM/CSS grid rather than canvas because replaced elements inside the
 scaled monitor `foreignObject` do not composite in WebKit. Its overlapping cells

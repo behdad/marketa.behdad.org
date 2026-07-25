@@ -3757,10 +3757,11 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pac-player[data-dir="right"]{--mouth:0deg}.pac-player[data-dir="down"]{--mouth:90deg}.pac-player[data-dir="left"]{--mouth:180deg}.pac-player[data-dir="up"]{--mouth:270deg}
 .pac-ghost{width:3px;height:3px;border-radius:1.5px 1.5px .6px .6px;background:var(--ghost);box-shadow:inset 0 -1px 0 rgba(255,255,255,.28)}
 .pac-fright .pac-ghost{background:#325cff}
-.pac-info{grid-area:info;display:grid;grid-template-rows:auto auto 1fr;gap:1.4px;min-width:0;padding:2px 1px;text-align:center}
+.pac-info{grid-area:info;display:grid;grid-template-rows:auto auto auto 1fr;gap:1.2px;min-width:0;padding:2px 1px;text-align:center}
 .pac-actions{grid-area:actions;display:grid;grid-template-rows:1fr auto;gap:1.5px;min-width:0;padding:2px 1px;text-align:center}
 .pac-title{color:#ffd83d;font-size:3.5px;font-weight:800;letter-spacing:0}
 .pac-score{font-size:2.25px;line-height:1.2;white-space:nowrap}
+.pac-high{color:#f5d7a1;font-size:1.9px;line-height:1.2;white-space:nowrap}
 .pac-message{align-self:center;color:#ffb4c1;font-size:2.25px;line-height:1.25}
 .pac-controls{align-self:center;display:grid;grid-template:repeat(3,6px)/repeat(3,6px);justify-content:center;gap:.7px}
 .pac-btn,.pac-new{border:0;border-radius:1px;background:#182252;color:#f8f5ec;font:3px/1 ui-monospace,monospace;padding:0}
@@ -42008,8 +42009,8 @@ setOfficeProgress("pc", false);
     // games row: the tattoo studio, minesweeper, Game of Life, DOOM sit together
     { id: "tattoo", icon: "tattoo", labelKey: "app_tattoo", glyph: "🖊️", tile: "#c68e95", glyphSize: "5.2", open: function () { openTattooApp(); } },
     { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
-    { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", hidden: true,
-      open: function () { openPacmanApp(); } },
+    { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true,
+      open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
     { id: "doom", labelKey: "app_doom", glyph: "🎮", tile: "#7e2323", color: "#e8c060", glyphSize: "5.2", open: function () { openDoom(); } },
     { id: "code", labelKey: "app_code", glyph: "</>", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "3.5", open: function () { openCode(); } },
@@ -42023,8 +42024,8 @@ setOfficeProgress("pc", false);
   ];
   window.__chatMonitorApps = function () {
     var dict = T[document.documentElement.lang] || T.en;
-    var apps = DESKTOP_APPS.filter(function (app) { return !app.hidden && (!app.locked || !app.locked()); }).map(function (app) {
-      return { id: app.id, label: dict[app.labelKey] || T.en[app.labelKey] || app.id, access: "desktop" };
+    var apps = DESKTOP_APPS.filter(function (app) { return !app.locked || !app.locked(); }).map(function (app) {
+      return { id: app.id, label: dict[app.labelKey] || T.en[app.labelKey] || app.id, access: app.searchOnly ? "search" : "desktop" };
     });
     // Weather and Clock deliberately have no desktop tiles; their live menu-bar
     // readouts are their quieter entry points.
@@ -42279,7 +42280,7 @@ setOfficeProgress("pc", false);
     dockGrid.addEventListener("wheel", function (e) { e.stopPropagation(); });
     dockGrid.addEventListener("touchmove", function (e) { e.stopPropagation(); }, { passive: true });
     DESKTOP_APPS.forEach(function (app) {
-      if (app.hidden) return;
+      if (app.searchOnly) return;
       var cell = document.createElement("div");
       cell.className = "dock-app dock-app-" + app.id;
       if (app.locked && app.locked()) cell.classList.add("dock-app-locked");
@@ -42679,7 +42680,7 @@ setOfficeProgress("pc", false);
     if (!dockGrid || !dockSearch || !dockSearchText) return;
     var query = normalizeDockSearch(dockSearchQuery), bestScore = Infinity;
     dockSearchBest = null; dockSearchCompletion = "";
-    var searchableApps = DESKTOP_APPS.filter(function (app) { return !app.hidden && (!app.locked || !app.locked()); }).concat(TOOLBAR_APPS);
+    var searchableApps = DESKTOP_APPS.filter(function (app) { return !app.locked || !app.locked(); }).concat(TOOLBAR_APPS);
     for (var i = 0; i < searchableApps.length; i++) {
       var app = searchableApps[i], match = dockAppMatch(app, query);
       var cell = dockCells[app.id];
@@ -45826,10 +45827,14 @@ setOfficeProgress("pc", false);
   var PAC_DIRS = { left: [0, -1], right: [0, 1], up: [-1, 0], down: [1, 0] };
   var PAC_REVERSE = { left: "right", right: "left", up: "down", down: "up" };
   var pacWrap = document.getElementById("monitor-pacman-wrap");
-  var pacBoard = null, pacScoreEl = null, pacMessageEl = null, pacNewEl = null;
+  var pacBoard = null, pacScoreEl = null, pacHighEl = null, pacMessageEl = null, pacNewEl = null;
   var pacPlayerEl = null, pacGhostEls = [], pacPelletEls = [];
   var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacCheckpointTicks = 0, pacDying = false;
   var pacState = null;
+  var PAC_HIGH_KEY = "pacmanHigh"; // personal best survives New, Kill, shutdown, and full loft reset
+  function pacHigh() { try { return parseInt(localStorage.getItem(PAC_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
+  function pacSetHigh(n) { try { localStorage.setItem(PAC_HIGH_KEY, String(n)); } catch (e) {} }
+  function pacBankHigh() { if (pacState && pacState.score > pacHigh()) pacSetHigh(pacState.score); }
   function pacFreshState() {
     var pellets = [];
     for (var r = 0; r < PAC_MAZE.length; r++) for (var c = 0; c < PAC_MAZE[r].length; c++) pellets.push(PAC_MAZE[r][c] === "." || PAC_MAZE[r][c] === "o");
@@ -45860,6 +45865,7 @@ setOfficeProgress("pc", false);
   function pacPaintText() {
     if (!pacBuilt || !pacState) return;
     if (pacScoreEl) pacScoreEl.textContent = String(pacState.score).padStart(6, "0") + " · ♥" + pacState.lives;
+    if (pacHighEl) pacHighEl.textContent = "★ " + String(Math.max(pacHigh(), pacState.score)).padStart(6, "0");
     if (pacMessageEl) {
       var key = pacState.status === "win" ? "pacman_win" : pacState.status === "over" ? "pacman_over" : pacState.status === "ready" ? "pacman_ready" : "";
       pacMessageEl.textContent = key ? pacText(key) : "";
@@ -45883,6 +45889,7 @@ setOfficeProgress("pc", false);
     var info = document.createElement("div"); info.className = "pac-info"; pacWrap.appendChild(info);
     var title = document.createElement("div"); title.className = "pac-title"; title.textContent = "PAC-MAN"; info.appendChild(title);
     pacScoreEl = document.createElement("div"); pacScoreEl.className = "pac-score"; info.appendChild(pacScoreEl);
+    pacHighEl = document.createElement("div"); pacHighEl.className = "pac-high"; info.appendChild(pacHighEl);
     pacMessageEl = document.createElement("div"); pacMessageEl.className = "pac-message"; info.appendChild(pacMessageEl);
     pacBoard = document.createElement("div"); pacBoard.className = "pac-board"; pacWrap.appendChild(pacBoard);
     for (var r = 0; r < PAC_MAZE.length; r++) for (var c = 0; c < PAC_MAZE[r].length; c++) {
@@ -45939,6 +45946,7 @@ setOfficeProgress("pc", false);
       if (ghost.r !== pacState.player.r || ghost.c !== pacState.player.c) continue;
       if (pacState.fright > 0) {
         pacState.score += 200; ghost.r = ghost.homeR; ghost.c = ghost.homeC; ghost.dir = "up";
+        pacBankHigh();
         pacSaveSoon(true); return false;
       }
       pacState.lives--;
@@ -45973,6 +45981,7 @@ setOfficeProgress("pc", false);
     var idx = pacCellIndex(pacState.player.r, pacState.player.c);
     if (pacState.pellets[idx]) {
       pacState.pellets[idx] = false; pacState.score += PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? 50 : 10;
+      pacBankHigh();
       if (PAC_MAZE[pacState.player.r][pacState.player.c] === "o") pacState.fright = 42;
       pacSaveSoon(false);
     }
@@ -46019,10 +46028,10 @@ setOfficeProgress("pc", false);
   }
   window.__closeMonitorPacman = closePacmanApp;
   window.__pacmanUnlocked = function () { return pacUnlocked; };
-  window.__pacmanState = function () { return pacState ? { unlocked: pacUnlocked, status: pacState.status, score: pacState.score, lives: pacState.lives, remaining: pacRemaining(), running: !!pacTimer, dying: pacDying } : { unlocked: pacUnlocked, status: "fresh", score: 0, lives: 3, remaining: 0, running: false, dying: false }; };
+  window.__pacmanState = function () { return pacState ? { unlocked: pacUnlocked, status: pacState.status, score: pacState.score, high: Math.max(pacHigh(), pacState.score), lives: pacState.lives, remaining: pacRemaining(), running: !!pacTimer, dying: pacDying } : { unlocked: pacUnlocked, status: "fresh", score: 0, high: pacHigh(), lives: 3, remaining: 0, running: false, dying: false }; };
   window.__unlockPacman = function (open) {
     if (!pacUnlocked) { pacUnlocked = true; pacSyncUnlock(); pacResetBoard(false); pacSaveSoon(true); }
-    if (open !== false && window.__openMonitorApp) window.__openMonitorApp("pacman", true);
+    if (open !== false && window.__openMonitorApp) window.__openMonitorApp("pacman");
     return true;
   };
   window.__pacmanCapture = function () {
@@ -51579,7 +51588,7 @@ async def localfont(name):
     }
     return null;
   }
-  window.__openMonitorApp = function (name, allowHidden) {
+  window.__openMonitorApp = function (name) {
     if (!pcTower) return "no computer here.";
     if (monitorLocked) {
       if (window.goToStage) window.goToStage("office");
@@ -51592,7 +51601,7 @@ async def localfont(name):
     var app;
     if (q === "california" || q === "tehran") { pendingMonitorCallee = q; app = monitorAppByName("call"); }
     else app = monitorAppByName(name);
-    if (!app || (app.hidden && !allowHidden)) return DESKTOP_APPS.filter(function (a) { return !a.hidden && (!a.locked || !a.locked()); }).concat(TOOLBAR_APPS).map(function (a) { return a.id; }); // a bad/hidden name → the discoverable app ids
+    if (!app) return DESKTOP_APPS.filter(function (a) { return !a.locked || !a.locked(); }).concat(TOOLBAR_APPS).map(function (a) { return a.id; }); // a bad name → every searchable app id
     if (app.locked && app.locked()) return "🔒 " + app.id + " is still hidden.";
     if (window.goToStage) window.goToStage("office"); // the monitor lives in the office — bring it on screen
     // PC off → power on (spark + fan + boot Fedora → caps); the boot-complete hook opens the queued app.

@@ -372,12 +372,13 @@ The main monitor desktop contains these app tiles:
 Every monitor app has its own Kill gag. Right-click an open app and choose **Kill**
 to terminate it with its own send-off instead of closing it silently.
 
-Pac-Man never appears on the desktop. During the ketamine magic-box trip, catch
-the roaming Behdad ghost to open the hidden game. Use the arrow keys or `WASD`,
+Pac-Man never occupies a desktop tile, but typing its name in the computer's app
+search opens it at any time. During the ketamine magic-box trip, catching the
+roaming Behdad ghost opens it directly. Use the arrow keys or `WASD`,
 the on-screen direction pad, or a swipe across the maze. A blocked direction is
 remembered until the next junction. Closing the app retains the current maze,
-but catching the ghost during another ketamine trip is the only way back in.
-Right-clicking the open game and choosing **Kill** starts a fresh maze.
+and its star score keeps a persistent personal best. Right-clicking the open game
+and choosing **Kill** starts a fresh maze without erasing that best.
 
 Weather does not occupy a desktop tile. Click the Edmonton weather item in the
 computer's menu bar to open it. The live time beside it opens Clock, with the
@@ -635,8 +636,9 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   starts the game. Move to aim and fire at the invaders; close it with its visible
   close control.
 - **Minesweeper:** Available on both phone and monitor.
-- **Pac-Man:** Catch the roaming ghost during the ketamine trip to enter the
-  hidden monitor game. Clear the pellets while avoiding the three ghosts; the larger
+- **Pac-Man:** Type its name in the computer's app search, or catch the roaming
+  ghost during the ketamine trip to jump directly into the monitor game. Clear
+  the pellets while avoiding the three ghosts; the larger
   corner pellets briefly make the ghosts edible.
 - **Game of Life and Doom:** Available on the monitor.
 - **Bouquet toss:** A fictional, game-only party moment with its own aiming
@@ -647,7 +649,7 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   `Unlock` bar to check the answer; merely landing on the right digits does not open
   it. `T` cycles trips and `Shift+1` through `Shift+8` selects directly. Some variants
   are deliberately unavailable through typed actions while the party is active.
-  The ketamine trip's roaming ghost is also the one discovery path for Pac-Man.
+  The ketamine trip's roaming ghost is also a direct shortcut into Pac-Man.
 
 ## Calendar, special days, weather, and sky
 

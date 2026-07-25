@@ -61,7 +61,7 @@ var URL_KEYS = [
   '<script>(function(){',
   'var seen=[];document.addEventListener("keydown",function(e){if(e.key==="["||e.key==="]")seen.push("down:"+e.key);});document.addEventListener("keyup",function(e){if(e.key==="["||e.key==="]")seen.push("up:"+e.key);});',
   'localStorage.setItem("loftCheckpoint:v1",JSON.stringify({version:1,savedAt:Date.now(),progress:{room:"office",maxUnlocked:4,phase2:true,party:true,daylight:false,bbq:false},puzzle:{},phone:null,album:null}));',
-  'window.addEventListener("load",function(){setTimeout(function(){var state=window.__urlKeysState();document.getElementById("__report").textContent=JSON.stringify({gate:!!document.getElementById("loft-recovery-gate"),checkpointBeforePlay:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound,party:!!window.__gardenPartyOn,started:window.__gameStarted(),state:state,seen:seen,errors:(window.__errs||[]).slice()});},2100);});',
+  'window.addEventListener("load",function(){setTimeout(function(){var state=window.__urlKeysState();document.getElementById("__report").textContent=JSON.stringify({gate:!!document.getElementById("loft-recovery-gate"),intro:!!document.getElementById("click-me-overlay"),introChrome:!!document.querySelector(".intro-active"),checkpointBeforePlay:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound,party:!!window.__gardenPartyOn,started:window.__gameStarted(),state:state,seen:seen,errors:(window.__errs||[]).slice()});},2100);});',
   '})();</script>'
 ].join("\n");
 
@@ -97,10 +97,11 @@ check(recoveryAutoplay && recoveryAutoplay.waiting && !recoveryAutoplay.gate &&
   "#autoplay waits behind recovery, then continues from the restored room", recoveryAutoplay);
 check(recoveryTrailer && !recoveryTrailer.gate && recoveryTrailer.cinematic && recoveryTrailer.checkpoint,
   "#trailer starts across recovery without discarding the saved checkpoint", recoveryTrailer);
-check(urlKeys && !urlKeys.gate && urlKeys.room === "kitchen" && !urlKeys.phase2 && !urlKeys.party &&
+check(urlKeys && !urlKeys.gate && !urlKeys.intro && !urlKeys.introChrome &&
+    urlKeys.room === "kitchen" && !urlKeys.phase2 && !urlKeys.party &&
     urlKeys.started && urlKeys.state && urlKeys.state.done &&
     urlKeys.seen.join("|") === "down:[|up:[|down:]|up:]",
-  "?keys starts fresh without recovery and dispatches paired keyboard gestures in order", urlKeys);
+  "?keys starts directly in fresh play and dispatches paired keyboard gestures in order", urlKeys);
 [play, trailer, autoplay].forEach(function (report) {
   check(report && report.errors.length === 0,
     (report && report.hash || "missing entry") + " has no uncaught page errors",

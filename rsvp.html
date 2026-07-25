@@ -81323,9 +81323,9 @@ function spawnDustMote(container) {
   window.__endAttract = endAttract;
   // Deterministic test URLs may preload a short sequence of ordinary keyboard gestures:
   // `?keys=p3cm`. Presence of a non-empty sequence explicitly requests a FRESH game, so discard
-  // the gameplay checkpoint before deciding whether to show recovery. Each character still travels
-  // through the real keyboard listeners (including the first-key intro handoff); no game API is
-  // called directly. Scripts/messages and date/time overrides are separate durable/context state.
+  // the gameplay checkpoint and skip both recovery and the CLICK ME introduction. Each character
+  // still travels through the real keyboard listeners; no game API is called directly.
+  // Scripts/messages and date/time overrides are separate durable/context state.
   var urlKeys = "";
   try { urlKeys = new URLSearchParams(location.search).get("keys") || ""; } catch (_error) {}
   var urlKeyChars = Array.from(urlKeys), urlKeyIndex = 0, urlKeysStarted = false, urlKeysTimer = null;
@@ -81396,7 +81396,12 @@ function spawnDustMote(container) {
   window.addEventListener("pagehide", function () { saveCheckpoint(); });
   setInterval(function () { if (!document.hidden) saveCheckpoint(); }, 2500); // catches stable internal changes that do not publish a state event
   goToStage("kitchen"); // sets the initial room/caption before either opening gate goes on
-  if (!showRecoveryGate(loadCheckpoint())) showHuntIntro();
+  if (urlKeyChars.length) {
+    endAttract();
+    revealEntrySurface();
+  } else if (!showRecoveryGate(loadCheckpoint())) {
+    showHuntIntro();
+  }
 })();
 (function () {
   // Once the chest cat is loose (.out), it FOLLOWS the player from room to room. There is

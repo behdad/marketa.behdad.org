@@ -238,10 +238,11 @@ checkpoint gate, then starts from the restored or reset state only after that mo
 completed. `#play` only selects the game shell; `#trailer` starts the fixed cinematic through its
 checkpoint-preserving entry path.
 
-For deterministic manual repros, `?keys=p3cm` starts a fresh game with no recovery prompt and sends
-those ordinary unmodified key gestures in order after entry settles. Characters are spaced by
-180 ms and pass through the real keyboard handlers; URL-encode punctuation when necessary. This
-clears only the gameplay checkpoint, preserving `?date=`, `?time=`, scripts, and other durable apps.
+For deterministic manual repros, `?keys=p3cm` starts directly in a fresh game with neither the
+recovery prompt nor the `CLICK ME` introduction, then sends those ordinary unmodified key gestures
+in order after entry settles. Characters are spaced by 180 ms and pass through the real keyboard
+handlers; URL-encode punctuation when necessary. This clears only the gameplay checkpoint,
+preserving `?date=`, `?time=`, scripts, and other durable apps.
 
 Inspection and deterministic test hooks are `__autoplayMachine()`, `__autoplayModel()`,
 `__autoplayCatalog()`, `__autoplaySeed(seed)`, `__autoplayPlan(seed, count)`, and

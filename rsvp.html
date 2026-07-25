@@ -64509,7 +64509,14 @@ async def localfont(name):
     ["\u062e\u064e\u0645\u0631\u0650 \u0645\u0646 \u0648 \u062e\u064f\u0645\u0627\u0631\u0650 \u0645\u0646\u060c \u0628\u0627\u063a\u0650 \u0645\u0646 \u0648 \u0628\u0647\u0627\u0631\u0650 \u0645\u0646", "\u062e\u0648\u0627\u0628\u0650 \u0645\u0646 \u0648 \u0642\u0631\u0627\u0631\u0650 \u0645\u0646\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"],
     ["\u06af\u064e\u0631 \u062a\u0648 \u0646\u0628\u0627\u0634\u06cc \u06cc\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u06af\u064e\u0634\u062a \u062e\u0631\u0627\u0628 \u06a9\u0627\u0631\u0650 \u0645\u0646", "\u0645\u0648\u0646\u0633\u0650 \u0648 \u063a\u064e\u0645\u200c\u06af\u064f\u0633\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"]
   ];
-  var lastRumi = -1, rumiReplyTimer = null, rumiFollowRaf = null;
+  // Shuffle once at load, then deal every pair before wrapping to the start of that fixed
+  // order. A visitor gets the whole small Rumi set instead of repeat-avoiding random draws.
+  var rumiOrder = RUMI_FA.map(function (_, i) { return i; });
+  for (var ri = rumiOrder.length - 1; ri > 0; ri--) {
+    var rj = Math.floor(Math.random() * (ri + 1));
+    var rt = rumiOrder[ri]; rumiOrder[ri] = rumiOrder[rj]; rumiOrder[rj] = rt;
+  }
+  var rumiCursor = 0, rumiReplyTimer = null, rumiFollowRaf = null;
   var rumiWakeTimer = null, rumiWakeHeld = false;
   function endRumiWake() {
     clearTimeout(rumiWakeTimer); rumiWakeTimer = null;
@@ -64519,11 +64526,14 @@ async def localfont(name):
   }
   window.__endRumiWake = endRumiWake;
   function rumiPick() {
-    if (RUMI_FA.length < 2) return 0;
-    var i = lastRumi;
-    while (i === lastRumi) i = (Math.random() * RUMI_FA.length) | 0;
-    return (lastRumi = i);
+    if (!rumiOrder.length) return 0;
+    var i = rumiOrder[rumiCursor];
+    rumiCursor = (rumiCursor + 1) % rumiOrder.length;
+    return i;
   }
+  window.__rumiCycleState = function () {
+    return { order: rumiOrder.slice(), cursor: rumiCursor };
+  };
   function hostAnchor(id, fallback) {
     var el = document.getElementById(id);
     var couple = document.getElementById("cuddly-couple");

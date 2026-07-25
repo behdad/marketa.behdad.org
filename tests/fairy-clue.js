@@ -66,7 +66,18 @@ var harness = String.raw`<script>
         check("the fairy settles above the couple once the party is quiet at night",
           cameo && cameo.classList.contains("present") &&
           cameo.getAttribute("aria-hidden") === "false");
+        var rumiCycleBefore = window.__rumiCycleState();
+        check("Rumi pairs are shuffled into one complete load-time deck",
+          rumiCycleBefore.cursor === 0 &&
+          rumiCycleBefore.order.length === 3 &&
+          rumiCycleBefore.order.slice().sort().join(",") === "0,1,2",
+          JSON.stringify(rumiCycleBefore));
         click(cameo);
+        var rumiCycleAfter = window.__rumiCycleState();
+        check("the Rumi deck advances one slot instead of drawing again",
+          rumiCycleAfter.cursor === 1 &&
+          rumiCycleAfter.order.join(",") === rumiCycleBefore.order.join(","),
+          JSON.stringify(rumiCycleAfter));
         var rumi = document.querySelector(".egg-bubble.rumi-bubble");
         check("clicking the cuddly fairy starts Markéta and behdad's Rumi exchange",
           rumi && rumi._rumiSpeaker === "markéta" &&

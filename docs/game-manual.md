@@ -669,8 +669,10 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 - **Pac-Man:** Type its name in the computer's app search, or catch the roaming
   ghost during the ketamine trip to jump directly into the monitor game. Clear
   the pellets while avoiding the three ghosts; the larger
-  corner pellets briefly make the ghosts edible. Movement follows the original
-  arcade game's level-one pace while turns remain buffered at maze corners.
+  corner pellets briefly make the ghosts edible. Movement, ghost personalities,
+  staggered releases, scatter/chase phases, and the wrap tunnel adapt the
+  original arcade game's level-one rules while turns remain buffered at maze
+  corners. Press `Space` to pause or resume.
 - **Game of Life and Doom:** Available on the monitor. Space pauses or resumes
   Life, which also pauses when its board goes empty.
 - **Bouquet toss:** A fictional, game-only party moment with its own aiming

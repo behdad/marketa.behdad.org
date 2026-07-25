@@ -626,16 +626,35 @@ The maze is DOM/CSS grid rather than canvas because replaced elements inside the
 scaled monitor `foreignObject` do not composite in WebKit. Its overlapping cells
 depend on grid source order: do not add `position`, `transform`, `z-index`,
 `opacity`, or `filter` to the HTML actors or board. Those create the same
-RenderLayer failure as other monitor apps. The authoritative simulation advances
-one tile every 150 ms, approximating the original arcade level-one dot-eating
-speed. A nested 12-subcell grid interpolates the four actor visuals with rAF while
-collisions, buffered turns, saves, and pellets remain tile-based; reduced motion
-snaps directly to each tile. Keyboard repeat must only ensure the single
-simulation timeout exists, never clear and re-arm it; otherwise a held direction
-starves every tick. The loop gates each step on the open app, focus, visibility,
-and the Kill state. `node tests/pacman.js` covers hidden-only entry, smooth
-transform-free movement, input, pause/resume, checkpoint restore, context-menu
-Kill behavior, and reduced motion.
+RenderLayer failure as other monitor apps. The authoritative simulation uses one
+bounded 20 ms scheduler with independent tile credits for Pac-Man and each ghost.
+Its level-one timing follows the arcade speed table: Pac-Man takes 150 ms while
+eating and 133 ms through a cleared corridor (135/118 ms while ghosts are
+frightened, plus the energizer pause); normal ghosts take 142 ms,
+frightened ghosts 213 ms, tunnel ghosts 266 ms, and returning eyes 107 ms. A
+nested 12-subcell grid interpolates each tile move with rAF while collisions,
+buffered turns, saves, and pellets remain tile-based; reduced motion snaps
+directly to each tile.
+
+The compact maze deliberately omits Pinky but preserves the other level-one
+systems: Blinky starts outside, Inky and Clyde release after scaled dot counts
+(18/35) with the arcade four-second inactivity fallback, and scatter/chase
+phases run 7/20/7/20/5/20/5 seconds before permanent chase. Phase changes and
+energizers request a reversal; frightened turns are random; eyes return home.
+Blinky targets Pac-Man and gains both Cruise Elroy steps, Inky uses the doubled
+Blinky-to-two-tiles-ahead vector (including the original upward overflow quirk),
+and Clyde chases outside eight tiles but retreats to his corner inside that
+radius. The middle row is the wrap tunnel and owns the tunnel slowdown.
+
+Keyboard repeat must only ensure the single simulation timeout exists, never
+clear and re-arm it; otherwise held input starves every tick. The loop gates each
+step on the open app, focus, visibility, and Kill state. `node tests/pacman.js`
+covers hidden-only entry, the arcade cadence/release contract, early survival,
+smooth transform-free movement, input, pause/resume, checkpoint restore,
+context-menu Kill behavior, and reduced motion.
+Space pauses/resumes only an active Pac-Man round. The capture-phase Pac-Man
+handler is registered before the page-wide music Space handler and delegates to
+`__pacmanTogglePause`; do not move it later without preserving that ordering.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;

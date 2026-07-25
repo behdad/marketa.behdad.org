@@ -3875,8 +3875,9 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pac-actor{grid-row:var(--ar)/span 12;grid-column:var(--ac)/span 12;min-width:0;min-height:0;place-self:center}
 .pac-player{width:3px;height:3px;border-radius:50%;background:conic-gradient(from var(--mouth),#ffd83d 0 42%,transparent 42% 58%,#ffd83d 58% 100%)}
 .pac-player[data-dir="right"]{--mouth:0deg}.pac-player[data-dir="down"]{--mouth:90deg}.pac-player[data-dir="left"]{--mouth:180deg}.pac-player[data-dir="up"]{--mouth:270deg}
-.pac-ghost{width:3px;height:3px;border-radius:1.5px 1.5px .6px .6px;background:var(--ghost);box-shadow:inset 0 -1px 0 rgba(255,255,255,.28)}
-.pac-fright .pac-ghost{background:#325cff}
+.pac-ghost{width:3px;height:3px;border-radius:1.5px 1.5px .6px .6px;background:radial-gradient(circle at 35% 37%,#172d96 0 9%,transparent 10%),radial-gradient(circle at 65% 37%,#172d96 0 9%,transparent 10%),radial-gradient(circle at 35% 36%,#fff 0 20%,transparent 21%),radial-gradient(circle at 65% 36%,#fff 0 20%,transparent 21%),linear-gradient(var(--ghost),var(--ghost));box-shadow:inset 0 -1px 0 rgba(255,255,255,.3),0 0 .8px rgba(255,255,255,.32)}
+.pac-ghost.frightened{background:radial-gradient(circle at 35% 39%,#fff 0 10%,transparent 11%),radial-gradient(circle at 65% 39%,#fff 0 10%,transparent 11%),linear-gradient(#4164ff,#253fc8);box-shadow:inset 0 -1px 0 rgba(255,255,255,.3),0 0 1px rgba(65,100,255,.8)}
+.pac-ghost.eyes{background:radial-gradient(circle at 35% 50%,#172d96 0 12%,transparent 13%),radial-gradient(circle at 65% 50%,#172d96 0 12%,transparent 13%),radial-gradient(circle at 35% 48%,#fff 0 27%,transparent 28%),radial-gradient(circle at 65% 48%,#fff 0 27%,transparent 28%);box-shadow:none}
 .pac-info{grid-area:info;display:grid;grid-template-rows:auto auto auto 1fr;gap:1.2px;min-width:0;padding:2px 1px;text-align:center}
 .pac-actions{grid-area:actions;display:grid;grid-template-rows:1fr auto;gap:1.5px;min-width:0;padding:2px 1px;text-align:center}
 .pac-title{color:#ffd83d;font-size:3.5px;font-weight:800;letter-spacing:0}
@@ -46656,7 +46657,7 @@ setOfficeProgress("pc", false);
     "#.##.#.#####.#.##.#",
     "#....#...#...#....#",
     "####.###...###.####",
-    "#......#...#......#",
+    ".......#...#.......",
     "####.###.#.###.####",
     "#....#...#...#....#",
     "#.##.#.#####.#.##.#",
@@ -46670,12 +46671,21 @@ setOfficeProgress("pc", false);
   var pacWrap = document.getElementById("monitor-pacman-wrap");
   var pacBoard = null, pacScoreEl = null, pacHighEl = null, pacMessageEl = null, pacNewEl = null;
   var pacPlayerEl = null, pacGhostEls = [], pacPelletEls = [];
-  // Arcade level one moves Pac-Man at about 71% speed while eating dots: roughly
-  // 6.7 tiles/second. Keep collision/state updates on tiles and interpolate the
-  // four actors through a transform-free subcell grid between those decisions.
-  var PAC_STEP_MS = 150, PAC_VISUAL_SUBSTEPS = 12;
+  // Compact adaptation of the arcade's level-one timing. Pac-Man runs at 80% in
+  // an empty corridor and 71% while eating; ghosts run at 75%, slow to 50% when
+  // frightened and 40% in the tunnel, while returning eyes use 100%.
+  var PAC_PLAYER_DOT_MS = 150, PAC_PLAYER_CLEAR_MS = 133, PAC_GHOST_MS = 142;
+  var PAC_PLAYER_FRIGHT_DOT_MS = 135, PAC_PLAYER_FRIGHT_CLEAR_MS = 118, PAC_PLAYER_POWER_MS = 168;
+  var PAC_GHOST_FRIGHT_MS = 213, PAC_GHOST_TUNNEL_MS = 266, PAC_GHOST_EYES_MS = 107;
+  var PAC_LOOP_MS = 20, PAC_VISUAL_SUBSTEPS = 12;
+  var PAC_MODE_SCHEDULE = [
+    { mode: "scatter", ms: 7000 }, { mode: "chase", ms: 20000 },
+    { mode: "scatter", ms: 7000 }, { mode: "chase", ms: 20000 },
+    { mode: "scatter", ms: 5000 }, { mode: "chase", ms: 20000 },
+    { mode: "scatter", ms: 5000 }, { mode: "chase", ms: Infinity }
+  ];
   var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacFrame = null, pacCheckpointTicks = 0, pacDying = false;
-  var pacState = null;
+  var pacState = null, pacClock = null;
   var PAC_HIGH_KEY = "pacmanHigh"; // personal best survives New, Kill, shutdown, and full loft reset
   function pacHigh() { try { return parseInt(localStorage.getItem(PAC_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
   function pacSetHigh(n) { try { localStorage.setItem(PAC_HIGH_KEY, String(n)); } catch (e) {} }
@@ -46684,12 +46694,13 @@ setOfficeProgress("pc", false);
     var pellets = [];
     for (var r = 0; r < PAC_MAZE.length; r++) for (var c = 0; c < PAC_MAZE[r].length; c++) pellets.push(PAC_MAZE[r][c] === "." || PAC_MAZE[r][c] === "o");
     return {
-      score: 0, lives: 3, level: 1, status: "ready", direction: "left", desired: "left", fright: 0,
+      score: 0, lives: 3, level: 1, status: "ready", paused: false, direction: "left", desired: "left", fright: 0,
+      modeIndex: 0, modeElapsed: 0, dotsEaten: 0, releaseIdle: 0, playerAte: true,
       player: { r: 13, c: 9 },
       ghosts: [
-        { r: 7, c: 8, homeR: 7, homeC: 8, dir: "left", color: "#e85d75" },
-        { r: 7, c: 9, homeR: 7, homeC: 9, dir: "up", color: "#64d7e8" },
-        { r: 7, c: 10, homeR: 7, homeC: 10, dir: "right", color: "#f4a261" }
+        { name: "blinky", r: 6, c: 9, homeR: 6, homeC: 9, dir: "left", color: "#e85d75", released: true, releaseAt: 0, eaten: false, reverse: false },
+        { name: "inky", r: 7, c: 8, homeR: 7, homeC: 8, dir: "up", color: "#64d7e8", released: false, releaseAt: 18, eaten: false, reverse: false },
+        { name: "clyde", r: 7, c: 10, homeR: 7, homeC: 10, dir: "up", color: "#f4a261", released: false, releaseAt: 35, eaten: false, reverse: false }
       ],
       pellets: pellets
     };
@@ -46697,6 +46708,13 @@ setOfficeProgress("pc", false);
   function pacText(key) { var d = T[document.documentElement.lang] || T.en; return d[key] || T.en[key] || key; }
   function pacCellIndex(r, c) { return r * PAC_MAZE[0].length + c; }
   function pacOpenCell(r, c) { return !!PAC_MAZE[r] && c >= 0 && c < PAC_MAZE[r].length && PAC_MAZE[r][c] !== "#"; }
+  function pacNextCell(actor, dir) {
+    var d = PAC_DIRS[dir]; if (!d) return null;
+    var r = actor.r + d[0], c = actor.c + d[1];
+    if (actor.r === 7 && dir === "left" && actor.c === 0) c = PAC_MAZE[0].length - 1;
+    else if (actor.r === 7 && dir === "right" && actor.c === PAC_MAZE[0].length - 1) c = 0;
+    return { r: r, c: c };
+  }
   function pacRemaining() {
     if (!pacState) return 0;
     var n = 0; for (var i = 0; i < pacState.pellets.length; i++) if (pacState.pellets[i]) n++;
@@ -46741,7 +46759,7 @@ setOfficeProgress("pc", false);
     var visual = el.__pacVisual || from;
     el.__pacMotion = {
       fromR: visual.r, fromC: visual.c, toR: actor.r, toC: actor.c,
-      started: performance.now(), duration: PAC_STEP_MS
+      started: performance.now(), duration: actor.moveMs || PAC_PLAYER_DOT_MS
     };
     if (!pacFrame) pacFrame = requestAnimationFrame(pacVisualFrame);
   }
@@ -46750,7 +46768,7 @@ setOfficeProgress("pc", false);
     if (pacScoreEl) pacScoreEl.textContent = String(pacState.score).padStart(6, "0") + " · ♥" + pacState.lives;
     if (pacHighEl) pacHighEl.textContent = "★ " + String(Math.max(pacHigh(), pacState.score)).padStart(6, "0");
     if (pacMessageEl) {
-      var key = pacState.status === "win" ? "pacman_win" : pacState.status === "over" ? "game_over" : pacState.status === "ready" ? "game_ready" : "";
+      var key = pacState.paused ? "game_paused" : pacState.status === "win" ? "pacman_win" : pacState.status === "over" ? "game_over" : pacState.status === "ready" ? "game_ready" : "";
       pacMessageEl.textContent = key ? pacText(key) : "";
     }
     if (pacNewEl) {
@@ -46772,8 +46790,12 @@ setOfficeProgress("pc", false);
     for (var i = 0; i < pacPelletEls.length; i++) if (pacPelletEls[i]) pacPelletEls[i].style.visibility = pacState.pellets[i] ? "visible" : "hidden";
     pacPlayerEl.setAttribute("data-dir", pacState.direction || pacState.desired || "left");
     pacPlaceActor(pacPlayerEl, pacState.player, previous && previous.player);
-    for (var g = 0; g < pacGhostEls.length; g++) pacPlaceActor(pacGhostEls[g], pacState.ghosts[g], previous && previous.ghosts[g]);
-    pacWrap.classList.toggle("pac-fright", pacState.fright > 0);
+    for (var g = 0; g < pacGhostEls.length; g++) {
+      var ghost = pacState.ghosts[g], ghostEl = pacGhostEls[g];
+      pacPlaceActor(ghostEl, ghost, previous && previous.ghosts[g]);
+      ghostEl.classList.toggle("frightened", pacState.fright > 0 && ghost.released && !ghost.eaten);
+      ghostEl.classList.toggle("eyes", !!ghost.eaten);
+    }
     pacPaintText();
   }
   function pacBuild() {
@@ -46827,45 +46849,117 @@ setOfficeProgress("pc", false);
     pacRender();
   }
   function pacCan(actor, dir) {
-    var d = PAC_DIRS[dir]; return !!d && pacOpenCell(actor.r + d[0], actor.c + d[1]);
+    var next = pacNextCell(actor, dir); return !!next && pacOpenCell(next.r, next.c);
   }
   function pacMove(actor, dir) {
-    var d = PAC_DIRS[dir]; if (!d || !pacCan(actor, dir)) return false;
-    actor.r += d[0]; actor.c += d[1]; actor.dir = dir; return true;
+    var next = pacNextCell(actor, dir); if (!next || !pacOpenCell(next.r, next.c)) return false;
+    actor.r = next.r; actor.c = next.c; actor.dir = dir; return true;
   }
-  function pacResetActors() {
+  function pacResetActors(afterLife) {
     pacState.player = { r: 13, c: 9 };
-    pacState.direction = "left"; pacState.desired = "left"; pacState.fright = 0;
-    pacState.ghosts.forEach(function (g) { g.r = g.homeR; g.c = g.homeC; });
+    pacState.direction = "left"; pacState.desired = "left"; pacState.fright = 0; pacState.paused = false; pacState.playerAte = true;
+    pacState.modeIndex = 0; pacState.modeElapsed = 0; pacState.releaseIdle = 0;
+    pacState.ghosts.forEach(function (g, i) {
+      g.r = g.homeR; g.c = g.homeC; g.dir = i === 0 ? "left" : "up";
+      g.released = i === 0; g.eaten = false; g.reverse = false; g.releaseForced = false;
+      g.releaseAt = i === 0 ? 0 : pacState.dotsEaten + (afterLife ? (i === 1 ? 7 : 17) : (i === 1 ? 18 : 35));
+    });
   }
   function pacCollision() {
     for (var i = 0; i < pacState.ghosts.length; i++) {
       var ghost = pacState.ghosts[i];
       if (ghost.r !== pacState.player.r || ghost.c !== pacState.player.c) continue;
+      if (ghost.eaten || !ghost.released) continue;
       if (pacState.fright > 0) {
-        pacState.score += 200; ghost.r = ghost.homeR; ghost.c = ghost.homeC; ghost.dir = "up";
+        pacState.score += 200; ghost.eaten = true; ghost.reverse = false;
         pacBankHigh();
         pacSaveSoon(true); return false;
       }
       pacState.lives--;
       if (pacState.lives <= 0) { pacState.status = "over"; pacStopLoop(); }
-      else { pacState.status = "ready"; pacResetActors(); pacStopLoop(); }
+      else { pacState.status = "ready"; pacResetActors(true); pacStopLoop(); }
       pacSaveSoon(true);
       return true;
     }
     return false;
   }
-  function pacGhostDirection(ghost) {
-    var choices = Object.keys(PAC_DIRS).filter(function (dir) { return pacCan(ghost, dir); });
+  function pacAhead(n) {
+    var dir = pacState.direction || pacState.desired || "left", d = PAC_DIRS[dir] || PAC_DIRS.left;
+    var r = pacState.player.r + d[0] * n, c = pacState.player.c + d[1] * n;
+    // Preserve the original game's famous up-direction overflow quirk.
+    if (dir === "up") c -= n;
+    return { r: r, c: c };
+  }
+  function pacGhostTarget(ghost, index) {
+    if (ghost.eaten) return { r: ghost.homeR, c: ghost.homeC };
+    var mode = PAC_MODE_SCHEDULE[pacState.modeIndex].mode;
+    if (mode === "scatter" && !(index === 0 && pacRemaining() <= 20)) {
+      return index === 0 ? { r: -3, c: 18 } : index === 1 ? { r: 17, c: 20 } : { r: 17, c: -3 };
+    }
+    if (index === 0) return { r: pacState.player.r, c: pacState.player.c };
+    if (index === 1) {
+      var ahead = pacAhead(2), blinky = pacState.ghosts[0];
+      return { r: ahead.r * 2 - blinky.r, c: ahead.c * 2 - blinky.c };
+    }
+    var dr = ghost.r - pacState.player.r, dc = ghost.c - pacState.player.c;
+    return dr * dr + dc * dc >= 64 ? { r: pacState.player.r, c: pacState.player.c } : { r: 17, c: -3 };
+  }
+  function pacGhostDirection(ghost, index) {
+    if (ghost.reverse && pacCan(ghost, PAC_REVERSE[ghost.dir])) {
+      ghost.reverse = false; return PAC_REVERSE[ghost.dir];
+    }
+    ghost.reverse = false;
+    var priority = ["up", "left", "down", "right"];
+    var choices = priority.filter(function (dir) { return pacCan(ghost, dir); });
     if (choices.length > 1) choices = choices.filter(function (dir) { return dir !== PAC_REVERSE[ghost.dir]; });
     if (!choices.length) return PAC_REVERSE[ghost.dir] || "left";
+    if (pacState.fright > 0 && !ghost.eaten) return choices[Math.floor(Math.random() * choices.length)];
+    var target = pacGhostTarget(ghost, index);
     choices.sort(function (a, b) {
       var da = PAC_DIRS[a], db = PAC_DIRS[b];
-      var ad = Math.abs(ghost.r + da[0] - pacState.player.r) + Math.abs(ghost.c + da[1] - pacState.player.c);
-      var bd = Math.abs(ghost.r + db[0] - pacState.player.r) + Math.abs(ghost.c + db[1] - pacState.player.c);
-      return pacState.fright > 0 ? bd - ad : ad - bd;
+      var ar = ghost.r + da[0] - target.r, ac = ghost.c + da[1] - target.c;
+      var br = ghost.r + db[0] - target.r, bc = ghost.c + db[1] - target.c;
+      return ar * ar + ac * ac - (br * br + bc * bc);
     });
-    return Math.random() < 0.68 ? choices[0] : choices[Math.floor(Math.random() * choices.length)];
+    return choices[0];
+  }
+  function pacGhostInterval(ghost, index) {
+    if (!ghost.released) return PAC_GHOST_FRIGHT_MS;
+    if (ghost.eaten) return PAC_GHOST_EYES_MS;
+    if (pacState.fright > 0) return PAC_GHOST_FRIGHT_MS;
+    if (ghost.r === 7 && (ghost.c <= 1 || ghost.c >= 17)) return PAC_GHOST_TUNNEL_MS;
+    if (index === 0 && pacRemaining() <= 10) return 125;
+    if (index === 0 && pacRemaining() <= 20) return PAC_PLAYER_CLEAR_MS;
+    return PAC_GHOST_MS;
+  }
+  function pacReleaseGhost(ghost) {
+    if (ghost.released) return false;
+    if (!ghost.releaseForced && pacState.dotsEaten < ghost.releaseAt) return false;
+    if (!pacMove(ghost, "up")) return false;
+    ghost.released = true; ghost.releaseForced = false; ghost.moveMs = PAC_GHOST_FRIGHT_MS;
+    return true;
+  }
+  function pacReverseReleasedGhosts() {
+    pacState.ghosts.forEach(function (ghost) { if (ghost.released && !ghost.eaten) ghost.reverse = true; });
+  }
+  function pacAdvanceMode(dt) {
+    if (pacState.fright > 0) {
+      pacState.fright = Math.max(0, pacState.fright - dt);
+      return;
+    }
+    pacState.modeElapsed += dt;
+    var phase = PAC_MODE_SCHEDULE[pacState.modeIndex];
+    while (isFinite(phase.ms) && pacState.modeElapsed >= phase.ms && pacState.modeIndex < PAC_MODE_SCHEDULE.length - 1) {
+      pacState.modeElapsed -= phase.ms; pacState.modeIndex++; pacReverseReleasedGhosts();
+      phase = PAC_MODE_SCHEDULE[pacState.modeIndex];
+    }
+  }
+  function pacAdvanceRelease(dt) {
+    pacState.releaseIdle += dt;
+    if (pacState.releaseIdle < 4000) return;
+    var waiting = pacState.ghosts.filter(function (ghost) { return !ghost.released; });
+    if (waiting.length) waiting[0].releaseForced = true;
+    pacState.releaseIdle = 0;
   }
   function pacSaveSoon(force) {
     pacCheckpointTicks++;
@@ -46873,44 +46967,83 @@ setOfficeProgress("pc", false);
   }
   function pacStep() {
     pacTimer = null;
-    if (!pacState || pacState.status !== "running" || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    if (!pacState || pacState.status !== "running" || pacState.paused || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    var now = performance.now();
+    if (!pacClock) pacClock = { last: now, player: 0, ghosts: [0, 0, 0] };
+    var dt = Math.max(0, Math.min(50, now - pacClock.last)); pacClock.last = now;
+    var wasFrightened = pacState.fright > 0;
+    pacAdvanceMode(dt); pacAdvanceRelease(dt);
     var previous = {
       player: { r: pacState.player.r, c: pacState.player.c },
       ghosts: pacState.ghosts.map(function (g) { return { r: g.r, c: g.c }; })
     };
-    if (pacCan(pacState.player, pacState.desired)) pacState.direction = pacState.desired;
-    pacMove(pacState.player, pacState.direction);
-    var idx = pacCellIndex(pacState.player.r, pacState.player.c);
-    if (pacState.pellets[idx]) {
-      pacState.pellets[idx] = false; pacState.score += PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? 50 : 10;
-      pacBankHigh();
-      if (PAC_MAZE[pacState.player.r][pacState.player.c] === "o") pacState.fright = 42;
-      pacSaveSoon(false);
+    var changed = false;
+    var playerInterval = pacState.playerAte === "power" ? PAC_PLAYER_POWER_MS :
+      pacState.fright > 0 ? (pacState.playerAte ? PAC_PLAYER_FRIGHT_DOT_MS : PAC_PLAYER_FRIGHT_CLEAR_MS) :
+      pacState.playerAte ? PAC_PLAYER_DOT_MS : PAC_PLAYER_CLEAR_MS;
+    pacClock.player += dt;
+    if (pacClock.player >= playerInterval) {
+      pacClock.player -= playerInterval;
+      if (pacCan(pacState.player, pacState.desired)) pacState.direction = pacState.desired;
+      pacState.player.moveMs = playerInterval;
+      if (pacMove(pacState.player, pacState.direction)) {
+        changed = true;
+        var idx = pacCellIndex(pacState.player.r, pacState.player.c);
+        pacState.playerAte = pacState.pellets[idx] ? (PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? "power" : true) : false;
+        if (pacState.playerAte) {
+          pacState.pellets[idx] = false; pacState.dotsEaten++; pacState.releaseIdle = 0;
+          pacState.score += PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? 50 : 10;
+          pacBankHigh();
+          if (PAC_MAZE[pacState.player.r][pacState.player.c] === "o") { pacState.fright = 6000; pacReverseReleasedGhosts(); }
+          pacSaveSoon(false);
+        }
+        if (pacCollision()) changed = true;
+      }
     }
-    if (!pacCollision()) {
-      for (var g = 0; g < pacState.ghosts.length; g++) { var ghost = pacState.ghosts[g]; pacMove(ghost, pacGhostDirection(ghost)); if (pacCollision()) break; }
+    if (pacState.status === "running") for (var g = 0; g < pacState.ghosts.length; g++) {
+      var ghost = pacState.ghosts[g], ghostInterval = pacGhostInterval(ghost, g);
+      if (!ghost.released && !ghost.releaseForced && pacState.dotsEaten < ghost.releaseAt) { pacClock.ghosts[g] = 0; continue; }
+      pacClock.ghosts[g] += dt;
+      if (pacClock.ghosts[g] < ghostInterval) continue;
+      pacClock.ghosts[g] -= ghostInterval; ghost.moveMs = ghostInterval;
+      if (!ghost.released) changed = pacReleaseGhost(ghost) || changed;
+      else {
+        changed = pacMove(ghost, pacGhostDirection(ghost, g)) || changed;
+        if (ghost.eaten && ghost.r === ghost.homeR && ghost.c === ghost.homeC) {
+          ghost.eaten = false; ghost.released = false; ghost.releaseForced = true; ghost.dir = "up";
+        }
+        if (pacCollision()) break;
+      }
     }
-    if (pacState.fright > 0) pacState.fright--;
     if (pacRemaining() === 0 && pacState.status !== "over") { pacState.status = "win"; pacStopLoop(); pacSaveSoon(true); }
-    pacRender(previous);
-    if (pacState.status === "running") pacTimer = setTimeout(pacStep, PAC_STEP_MS);
+    if (changed || wasFrightened !== (pacState.fright > 0)) pacRender(previous);
+    if (pacState.status === "running") pacTimer = setTimeout(pacStep, PAC_LOOP_MS);
   }
-  function pacStopLoop() { if (pacTimer) clearTimeout(pacTimer); pacTimer = null; pacStopVisuals(true); }
+  function pacStopLoop() { if (pacTimer) clearTimeout(pacTimer); pacTimer = null; pacClock = null; pacStopVisuals(true); }
   function pacStartLoop() {
-    if (pacTimer || !pacState || pacState.status !== "running" || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
-    pacTimer = setTimeout(pacStep, PAC_STEP_MS);
+    if (pacTimer || !pacState || pacState.status !== "running" || pacState.paused || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    pacClock = { last: performance.now(), player: 0, ghosts: [0, 0, 0] };
+    pacTimer = setTimeout(pacStep, PAC_LOOP_MS);
   }
   function pacChoose(dir) {
     if (!pacUnlocked || !pacState || pacDying || !PAC_DIRS[dir]) return false;
     pacState.desired = dir;
     if (pacState.status === "ready") {
       if (!pacCan(pacState.player, dir)) { pacRender(); return false; }
-      pacState.status = "running"; pacState.direction = dir;
+      pacState.status = "running"; pacState.paused = false; pacState.direction = dir;
     }
     else if (pacState.status === "win" || pacState.status === "over") return false;
     if (pacPlayerEl) pacPlayerEl.setAttribute("data-dir", pacState.direction || pacState.desired || "left");
     pacPaintText(); pacStartLoop(); return true;
   }
+  function pacTogglePause() {
+    if (!pacState || pacState.status !== "running" || pacDying || !monitor.classList.contains("show-pacman")) return false;
+    pacState.paused = !pacState.paused;
+    if (pacState.paused) pacStopLoop(); else pacStartLoop();
+    pacPaintText(); pacSaveSoon(true);
+    return pacState.paused;
+  }
+  window.__pacmanTogglePause = pacTogglePause;
   function pacResetBoard(save) {
     pacStopLoop(); pacState = pacFreshState(); if (pacBuilt) { pacWrap.classList.remove("pac-killed"); pacRender(); }
     if (save) pacSaveSoon(true);
@@ -46931,7 +47064,23 @@ setOfficeProgress("pc", false);
   }
   window.__closeMonitorPacman = closePacmanApp;
   window.__pacmanUnlocked = function () { return pacUnlocked; };
-  window.__pacmanState = function () { return pacState ? { unlocked: pacUnlocked, status: pacState.status, score: pacState.score, high: Math.max(pacHigh(), pacState.score), lives: pacState.lives, remaining: pacRemaining(), running: !!pacTimer, dying: pacDying } : { unlocked: pacUnlocked, status: "fresh", score: 0, high: pacHigh(), lives: 3, remaining: 0, running: false, dying: false }; };
+  window.__pacmanState = function () {
+    return pacState ? {
+      unlocked: pacUnlocked, status: pacState.status, score: pacState.score, high: Math.max(pacHigh(), pacState.score),
+      lives: pacState.lives, remaining: pacRemaining(), running: !!pacTimer, paused: !!pacState.paused, dying: pacDying,
+      mode: PAC_MODE_SCHEDULE[pacState.modeIndex].mode, fright: pacState.fright, dotsEaten: pacState.dotsEaten,
+      ghosts: pacState.ghosts.map(function (ghost) { return { name: ghost.name, r: ghost.r, c: ghost.c, released: ghost.released, eaten: ghost.eaten }; })
+    } : { unlocked: pacUnlocked, status: "fresh", score: 0, high: pacHigh(), lives: 3, remaining: 0, running: false, paused: false, dying: false };
+  };
+  window.__pacmanRules = function () {
+    return {
+      playerDotMs: PAC_PLAYER_DOT_MS, playerClearMs: PAC_PLAYER_CLEAR_MS, ghostMs: PAC_GHOST_MS,
+      playerFrightDotMs: PAC_PLAYER_FRIGHT_DOT_MS, playerFrightClearMs: PAC_PLAYER_FRIGHT_CLEAR_MS, playerPowerMs: PAC_PLAYER_POWER_MS,
+      frightenedMs: PAC_GHOST_FRIGHT_MS, tunnelMs: PAC_GHOST_TUNNEL_MS, eyesMs: PAC_GHOST_EYES_MS,
+      releaseDots: [0, 18, 35], modes: PAC_MODE_SCHEDULE.map(function (phase) { return { mode: phase.mode, ms: phase.ms }; }),
+      targets: pacState ? pacState.ghosts.map(function (ghost, i) { return pacGhostTarget(ghost, i); }) : []
+    };
+  };
   window.__unlockPacman = function (open) {
     if (!pacUnlocked) { pacUnlocked = true; pacSyncUnlock(); pacResetBoard(false); pacSaveSoon(true); }
     if (open !== false && window.__openMonitorApp) window.__openMonitorApp("pacman");
@@ -46939,23 +47088,41 @@ setOfficeProgress("pc", false);
   };
   window.__pacmanCapture = function () {
     if (!pacUnlocked || !pacState) return { unlocked: false };
-    return { unlocked: true, score: pacState.score, lives: pacState.lives, status: pacState.status, direction: pacState.direction, desired: pacState.desired, fright: pacState.fright, player: pacState.player, ghosts: pacState.ghosts, pellets: pacState.pellets };
+    return {
+      unlocked: true, score: pacState.score, lives: pacState.lives, status: pacState.status, paused: !!pacState.paused,
+      direction: pacState.direction, desired: pacState.desired, fright: pacState.fright,
+      modeIndex: pacState.modeIndex, modeElapsed: pacState.modeElapsed, dotsEaten: pacState.dotsEaten,
+      releaseIdle: pacState.releaseIdle, playerAte: pacState.playerAte,
+      player: pacState.player, ghosts: pacState.ghosts, pellets: pacState.pellets
+    };
   };
   window.__pacmanRestore = function (saved) {
     pacStopLoop(); pacDying = false; pacUnlocked = !!(saved && saved.unlocked); pacSyncUnlock();
     if (!pacUnlocked) { pacState = pacFreshState(); return false; }
     var fresh = pacFreshState();
+    var initialPellets = fresh.pellets.slice();
     if (saved && Array.isArray(saved.pellets) && saved.pellets.length === fresh.pellets.length) fresh.pellets = saved.pellets.map(Boolean);
     fresh.score = Math.max(0, +saved.score || 0);
     fresh.status = ["ready", "running", "win", "over"].indexOf(saved.status) >= 0 ? saved.status : "ready";
+    fresh.paused = fresh.status === "running" && !!saved.paused;
     var savedLives = Number(saved.lives);
     if (!isFinite(savedLives)) savedLives = 3;
     fresh.lives = fresh.status === "over" ? 0 : Math.max(1, Math.min(3, savedLives));
     fresh.direction = PAC_DIRS[saved.direction] ? saved.direction : "left"; fresh.desired = PAC_DIRS[saved.desired] ? saved.desired : fresh.direction;
-    fresh.fright = Math.max(0, Math.min(60, +saved.fright || 0));
+    fresh.fright = Math.max(0, Math.min(6000, +saved.fright || 0));
+    fresh.modeIndex = Math.max(0, Math.min(PAC_MODE_SCHEDULE.length - 1, +saved.modeIndex || 0));
+    fresh.modeElapsed = Math.max(0, +saved.modeElapsed || 0);
+    fresh.dotsEaten = isFinite(+saved.dotsEaten) ? Math.max(0, +saved.dotsEaten) : initialPellets.filter(function (on, i) { return on && !fresh.pellets[i]; }).length;
+    fresh.releaseIdle = Math.max(0, Math.min(4000, +saved.releaseIdle || 0));
+    fresh.playerAte = saved.playerAte === "power" ? "power" : saved.playerAte !== false;
     if (saved.player && pacOpenCell(+saved.player.r, +saved.player.c)) fresh.player = { r: +saved.player.r, c: +saved.player.c };
     if (Array.isArray(saved.ghosts) && saved.ghosts.length === fresh.ghosts.length) saved.ghosts.forEach(function (g, i) {
-      if (g && pacOpenCell(+g.r, +g.c)) { fresh.ghosts[i].r = +g.r; fresh.ghosts[i].c = +g.c; fresh.ghosts[i].dir = PAC_DIRS[g.dir] ? g.dir : fresh.ghosts[i].dir; }
+      if (g && pacOpenCell(+g.r, +g.c)) {
+        fresh.ghosts[i].r = +g.r; fresh.ghosts[i].c = +g.c; fresh.ghosts[i].dir = PAC_DIRS[g.dir] ? g.dir : fresh.ghosts[i].dir;
+        fresh.ghosts[i].released = g.released == null ? fresh.ghosts[i].released : !!g.released;
+        fresh.ghosts[i].eaten = !!g.eaten; fresh.ghosts[i].reverse = !!g.reverse; fresh.ghosts[i].releaseForced = !!g.releaseForced;
+        fresh.ghosts[i].releaseAt = isFinite(+g.releaseAt) ? Math.max(0, +g.releaseAt) : fresh.ghosts[i].releaseAt;
+      }
     });
     pacState = fresh; if (pacBuilt) pacRender(); return true;
   };
@@ -46976,6 +47143,12 @@ setOfficeProgress("pc", false);
   if (pacClose) { pacClose.addEventListener("click", function (e) { e.stopPropagation(); closePacmanApp(); playLaptopClickSound("office-monitor"); }); pacClose.addEventListener("dblclick", function (e) { e.stopPropagation(); }); }
   document.addEventListener("keydown", function (e) {
     if (!monitor.classList.contains("show-pacman") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === " " || e.key === "Spacebar") {
+      if (pacState && pacState.status === "running") {
+        e.preventDefault(); e.stopImmediatePropagation(); pacTogglePause();
+      }
+      return;
+    }
     var map = { ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right", ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down" };
     if (!map[e.key]) return; e.preventDefault(); e.stopImmediatePropagation(); pacChoose(map[e.key]);
   }, true);

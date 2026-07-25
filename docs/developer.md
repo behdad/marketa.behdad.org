@@ -88,11 +88,13 @@ saved language/full `navigator.languages` list, advances an ARIA progressbar, co
 `DOMContentLoaded` with a minimum readable dwell, and removes the overlay. Browser mode removes the
 node synchronously and sets test hooks without painting it.
 
-The capture-phase room keyboard controller owns one `activateCurrentRoom()` transition used by
-`Enter` and by an otherwise-unconsumed top-level `Escape`. The existing Backspace alias dispatches
-a synthetic Escape, so it reaches the same transition even while browser fullscreen consumes the
-physical Escape key. Window-level phone/monitor closers and component menu/dialog handlers retain
-first refusal; typing fields never fall through to a room action. CLICK ME is checked before
+The capture-phase room keyboard controller owns one phase-one `activateCurrentRoom()` transition
+used by `Enter` and by an otherwise-unconsumed top-level `Escape`. The existing Backspace alias
+dispatches a synthetic Escape, so it reaches the same transition even while browser fullscreen
+consumes the physical Escape key. Once `__secondRound` is set, all three stop operating rooms:
+Escape/Backspace remain dismiss/back gestures and Enter becomes inert. Window-level phone/monitor
+closers and component menu/dialog handlers retain first refusal; typing fields never fall through
+to a room action. CLICK ME is checked before
 `activateCurrentRoom()`: Enter/Escape, including the synthetic Backspace alias, dismisses the
 invitation and advances its caption handoff without touching the room underneath.
 `dispatchEscape()` is also the single entry point for the top-left back control on every
@@ -235,6 +237,11 @@ cursor are unconditionally removed at boundaries/stop.
 checkpoint gate, then starts from the restored or reset state only after that modal decision has
 completed. `#play` only selects the game shell; `#trailer` starts the fixed cinematic through its
 checkpoint-preserving entry path.
+
+For deterministic manual repros, `?keys=p3cm` starts a fresh game with no recovery prompt and sends
+those ordinary unmodified key gestures in order after entry settles. Characters are spaced by
+180 ms and pass through the real keyboard handlers; URL-encode punctuation when necessary. This
+clears only the gameplay checkpoint, preserving `?date=`, `?time=`, scripts, and other durable apps.
 
 Inspection and deterministic test hooks are `__autoplayMachine()`, `__autoplayModel()`,
 `__autoplayCatalog()`, `__autoplaySeed(seed)`, `__autoplayPlan(seed, count)`, and

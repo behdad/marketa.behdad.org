@@ -184,8 +184,14 @@ footer{margin-top:2.6rem}
    An at-a-glance list of everyone in the room ON SCREEN right now — a tidy overlay
    complementing the per-figure name cards. Toggled by the corner button, the 'h'/'w'
    keys, __toggleRoster(), or roster(); it renders from window.__whoIsHere(). HTML
-   overlay (not SVG), lives inside .hunt-viewport so it rides along into fullscreen;
-   pointer-events only on the panel itself. */
+   overlay (not SVG), lives inside .hunt-viewport so it rides along into fullscreen.
+   A dim click-catching backdrop makes the open roster modal: the scene and its room
+   navigation wait until the visitor closes it. */
+.roster-backdrop{
+  position:absolute; z-index:21; inset:0; background:rgba(69,58,49,.28);
+  opacity:0; pointer-events:none; transition:opacity .2s ease; cursor:default;
+}
+.roster-backdrop.show{opacity:1; pointer-events:auto}
 /* A WIDE, SHORT banner across the TOP rather than a tall side column — so the list never sits
    on top of the people it names (a guest under a side panel couldn't be seen when you clicked
    to arrow them). Names flow into as many ~15rem columns as the width allows. */
@@ -207,8 +213,8 @@ footer{margin-top:2.6rem}
 .roster-panel.show{opacity:1; transform:translateY(0); pointer-events:auto}
 .roster-panel.show.spot-hide{opacity:0; pointer-events:none} /* temporarily hidden during a guest flash on small screens (see spotlightGuests) */
 .roster-panel h3{
-  font-family:"Fraunces",serif; font-weight:700; font-size:1rem; letter-spacing:.01em;
-  color:var(--wine); margin:0 0 .4rem; padding:0;
+  font-family:"Fraunces",serif; font-weight:700; font-size:1rem; letter-spacing:0;
+  color:var(--wine); margin:0 1.6rem .35rem 0; padding:0;
 }
 /* up to 4 wide columns (≥15rem each so no name+role ever wraps) — a big fullscreen gets all 4,
    narrower screens trim to 3/2/1 automatically; the panel scrolls (overflow:auto above) if the
@@ -244,10 +250,12 @@ footer{margin-top:2.6rem}
 /* roster rows that map to a garden figure are clickable — tap to single that guest out on the floor */
 .roster-panel li.roster-pick{cursor:pointer; border-radius:5px; padding:.1rem .28rem; margin:0 -.28rem; transition:background .15s ease}
 .roster-panel li.roster-pick:hover,.roster-panel li.roster-pick:focus-visible{background:var(--rule); outline:none}
-/* The open garden roster is an intentional adult freeze-frame: occupancy is already held while the
-   player reads it, so the grown-ups hold still too. The eight party kids keep dancing; a picked
-   adult temporarily joins them. dance-frozen remains stronger when music/photo/first-dance state
-   independently pauses. */
+.roster-picked{animation:rosterPicked .65s ease-out}
+.roster-picked em{font-weight:800 !important; color:var(--wine) !important}
+@keyframes rosterPicked{0%,100%{background:transparent}35%{background:#e5bcc4; color:var(--wine)}}
+/* The open garden roster is a complete occupancy freeze-frame. Nobody may finish an arrival,
+   departure or room assignment while the player is reading it. A picked person gets a dedicated
+   in-place wiggle below; it never resumes their gate-walk or positional dance wrappers. */
 #stage-garden.roster-freeze #garden-guests,
 #stage-garden.roster-freeze #garden-guests *,
 #stage-garden.roster-freeze #trip-melt-dancers,
@@ -256,14 +264,16 @@ footer{margin-top:2.6rem}
 #stage-garden.roster-freeze #garden-djbooth *,
 #stage-garden.roster-freeze #garden-photographer,
 #stage-garden.roster-freeze #garden-photographer *{animation-play-state:paused !important}
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest:is(.g-irene,.g-robin,.g-navid,.g-elisabeth,.g-felix,.g-patricia-son,.g-patricia-daughter,.g-hannah),
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest:is(.g-irene,.g-robin,.g-navid,.g-elisabeth,.g-felix,.g-patricia-son,.g-patricia-daughter,.g-hannah) *{animation-play-state:running !important}
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest.spotlighted,
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest.spotlighted *,
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-djbooth.spotlighted,
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-djbooth.spotlighted *,
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-photographer.spotlighted,
-#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-photographer.spotlighted *{animation-play-state:running !important}
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest.spotlighted .guest-react,
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-djbooth.spotlighted #garden-dj,
+#loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-photographer.spotlighted{
+  animation:roster-person-wiggle .68s ease-in-out !important;
+  animation-play-state:running !important;
+  transform-box:fill-box;
+  transform-origin:center;
+}
+#stage-garden.roster-freeze .guest-spot-arrow{animation-play-state:running !important}
+@keyframes roster-person-wiggle{0%,100%{rotate:0deg}25%{rotate:-3deg}55%{rotate:3deg}78%{rotate:-1.5deg}}
 /* SINGLED-OUT GUEST: for a few seconds, freeze EVERYONE ELSE while the picked one keeps dancing,
    and float a bobbing arrow above the pick. The .solo-spot flag on the container scopes the freeze;
    the .spotlighted pick is exempt so it dances on alone (the inverse of the old freeze-the-pick). */
@@ -5245,7 +5255,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-dressup .pmd-chip .pmd-emo{font-size:14px}
 .pm-dressup .pmd-chip.on{background:var(--wine); color:#fff; border-color:var(--wine)}
 .pm-dressup .pmd-chip:active{transform:scale(.95)}
-.pm-dressup .pmd-reset{align-self:center; margin-top:2px; background:none; border:1px solid var(--rule); border-radius:12px; padding:5px 16px; cursor:pointer; font:inherit; font-size:12px; color:var(--muted)}
+.pm-dressup .pmd-reset{align-self:center; margin-top:2px; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; background:none; border:1px solid var(--rule); border-radius:50%; padding:0; cursor:pointer; font:20px/1 "Source Serif 4",serif; color:var(--muted)}
 .pm-dressup .pmd-reset:hover{color:var(--ink); border-color:var(--soft)}
 @media (prefers-reduced-motion: reduce){.pm-dressup .pmd-chip:active{transform:none}}
 /* photobooth: consent → live selfie preview → composed polaroid with look + frame chips.
@@ -16984,7 +16994,7 @@ section{margin:1.9rem 0}
 <!-- fan tail (behind body) -->
 <path d="M-15 -2 Q-24 -9 -26 -6 Q-29 1 -26 5 Q-24 10 -15 4 Z" fill="#9cc4d1" stroke="#5c8797" stroke-width="0.8" stroke-linejoin="round"/>
 <!-- body: static fill only shows under reduced-motion; the puffer-color loop
-     cycles it pink<->blue (his/her suit) and drives Fishu's voice pitch -->
+     cycles it pink<->blue (the couple's suit colours) and drives Fishu's voice pitch -->
 <ellipse class="puffer-fill" cx="0" cy="0" rx="18" ry="14" fill="#8bb3c2" stroke="#5c8797" stroke-width="1.5"/>
 <ellipse cx="2" cy="5.5" rx="12.5" ry="7.5" fill="#eef5ef" opacity="0.9"/>
 <ellipse cx="-4" cy="-6.5" rx="7.5" ry="4" fill="#ffffff" opacity="0.16"/>
@@ -27958,12 +27968,38 @@ function positionEggBubble(b, anchor, placement, yOffset, xOffset) {
   if (placement === "left") {
     left = Math.max(8, r.left - bW - 10);
     top = Math.max(8, Math.min(window.innerHeight - bH - 8, r.top));
+  } else if (placement === "side") {
+    // Person cards share the top-of-head area with the roster spotlight arrow. Put the card in
+    // whichever side gutter is roomier and wrap it to that gutter, so the two never overlap.
+    var gap = 12;
+    var leftRoom = Math.max(0, r.left - gap - 8);
+    var rightRoom = Math.max(0, window.innerWidth - r.right - gap - 8);
+    var useRight = rightRoom >= leftRoom;
+    var room = useRight ? rightRoom : leftRoom;
+    if (room >= 96) {
+      // max-width is content-box; leave room for the card's horizontal padding and border.
+      b.style.maxWidth = Math.max(70, Math.min(220, room - 26)) + "px";
+      bW = b.offsetWidth || bW;
+      bH = b.offsetHeight || bH;
+      left = useRight ? Math.min(window.innerWidth - bW - 8, r.right + gap)
+                      : Math.max(8, r.left - gap - bW);
+      top = Math.max(8, Math.min(window.innerHeight - bH - 8, r.top + r.height / 2 - bH / 2));
+    } else {
+      // An extremely narrow viewport has no side gutter; stay above the complete arrow instead.
+      left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
+      top = Math.max(8, r.top - 44 - bH);
+    }
   } else if (placement === "bottomleft") { // tuck the card into the anchor's lower-left corner (used by the video-call name cards so they never cover the birthday figure's hat or the ∞-heart cheer overlay)
     left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + 8 + xo));
     top = Math.max(8, Math.min(window.innerHeight - bH - 8, r.bottom - bH - 8));
   } else if (placement === "top") {
     left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
     top = Math.max(8, r.top - 8 - bH);
+  } else if (placement === "above-arrow") {
+    // A person spotlight draws a 31px arrow ending 3px above their bounds. Leave a clean
+    // 10px gap above that arrow instead of stacking the bio card on top of it.
+    left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
+    top = Math.max(8, r.top - 44 - bH);
   } else {
     left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
     if (r.bottom + 8 + bH <= window.innerHeight) {
@@ -28000,7 +28036,12 @@ function eggBubble(anchor, text, placement, yOffset, xOffset) {
   return b;
 }
 function dismissEggBubble(b) {
+  if (!b) return;
   clearTimeout(b._t);
+  if (b._off) {
+    document.removeEventListener("click", b._off, true);
+    b._off = null;
+  }
   b.classList.remove("show");
   setTimeout(function () { if (b.parentNode) b.remove(); }, 300);
 }
@@ -29187,10 +29228,10 @@ setMusicPausedState(false);
   // do-mi-so-mi / la-so-mi contour with a soft plucked-bass root under each bar. Own composition,
   // not derived from any existing theme. Wired like the night-sky Satie bed: chord-events
   // {c:[[semisFromA4, ring, isMel]...], d}, a warm rounded triangle+sine pluck voice, a look-ahead
-  // scheduler on the audio clock (no pile-up in a background tab), whole-loft gate on chan-stars's
-  // sibling chan-totoro, and transport-integrated (space / play-pause / OS media keys). It's a
+  // scheduler on the audio clock (no pile-up in a background tab), cuddly-room gate on chan-totoro,
+  // and transport-integrated (space / play-pause / OS media keys). It's a
   // separate small bed from the rain ctx above — the rain keeps going when the melody is paused.
-  var totoroMelodyCtx = null, totoroMelTimer = null, totoroMelIdx = 0, totoroMelNext = 0, totoroMelSuspended = false;
+  var totoroMelodyCtx = null, totoroMelTimer = null, totoroMelIdx = 0, totoroMelNext = 0, totoroMelSuspended = false, totoroMelInCuddly = false;
   var TOTORO_MEL_RATE = 1.0; // time scale for the whole tune (tempo + note-length handle)
   // chord-events: c = notes at this onset, each [semitonesFromA4, ring seconds, 1 if melody voice
   // / 0 if bass], d = seconds to the next event. ~19s A–B–A' tune, then a breath, loops.
@@ -29199,7 +29240,7 @@ setMusicPausedState(false);
     {c:[[10,0.4,1],[-12,1.3,0]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[15,0.6,1]],d:0.36},{c:[[12,0.4,1]],d:0.18},{c:[[10,0.4,1],[-14,1.3,0]],d:0.18},{c:[[7,0.5,1]],d:0.36},{c:[[10,0.4,1],[-17,1.3,0]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[15,0.4,1]],d:0.18},{c:[[17,0.75,1],[-19,1.3,0]],d:0.36},{c:[[15,0.4,1]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[10,1.0,1],[-12,1.3,0]],d:0.36},{c:[],d:0.36},{c:[[12,0.4,1],[-14,1.3,0]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[12,0.75,1],[-19,1.3,0]],d:0.36},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1],[-12,1.3,0]],d:0.18},{c:[[3,1.2,1],[-21,1.5,0]],d:0.54},{c:[],d:0.36},
     // A' reprise: the A idea, ornamented up to A5, closing on a longer C resolve + breath, then loops
     {c:[[3,0.4,1],[-21,1.3,0]],d:0.27},{c:[[7,0.25,1]],d:0.09},{c:[[10,0.4,1]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[10,0.75,1],[-12,1.3,0]],d:0.36},{c:[[7,0.4,1]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[12,0.4,1],[-14,1.3,0]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[3,1.0,1],[-21,1.3,0]],d:0.36},{c:[],d:0.18},{c:[[5,0.4,1],[-14,1.3,0]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[10,0.5,1]],d:0.18},{c:[[12,0.75,1],[-12,1.3,0]],d:0.36},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[3,1.6,1],[-21,1.6,0]],d:0.72},{c:[],d:0.18},{c:[],d:1.4}];
-  function totoroMelWant() { return screen.classList.contains("chan-totoro"); } // whole-loft, like the night sky
+  function totoroMelWant() { return screen.classList.contains("chan-totoro") && totoroMelInCuddly; } // the repeating woodland tune stays with its projector
   function totoroMelVol() { return 0.16 * (window.__songVolume ? window.__songVolume() : 0.5); } // gentle over the rain
   // rounded pluck voice: a triangle edged softer by a co-tuned sine, struck then decayed —
   // articulates like a warm mallet/marimba. isMel sits above the bass root.
@@ -29248,7 +29289,7 @@ setMusicPausedState(false);
       if (!totoroMelodyCtx) return;
       try { var p = totoroMelodyCtx.resume && totoroMelodyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       // triangle+sine voices → a soft lowpass (rounds the tone) → one master gain (volume + fade),
-      // centered as a whole-loft track
+      // sourced from the projector; the room gate stops it entirely after leaving cuddly-puddly
       var lp = totoroMelodyCtx.createBiquadFilter();
       lp.type = "lowpass"; lp.frequency.value = 2600; // warm, soft-edged
       var master = totoroMelodyCtx.createGain();
@@ -29289,6 +29330,7 @@ setMusicPausedState(false);
   };
   window.__totoroMelodyPlaying = function () { return !!totoroMelodyCtx && !totoroMelSuspended; }; // live: bed up & not suspended
   window.__updateTotoroMelody = function (inCuddly, fadeSecs) {
+    if (typeof inCuddly === "boolean") totoroMelInCuddly = inCuddly;
     var want = totoroMelWant();
     if (want && !totoroMelodyCtx) startTotoroMel();
     else if (!want && totoroMelodyCtx) stopTotoroMel(fadeSecs);
@@ -36340,11 +36382,18 @@ function gameTapsNear(a, b) {
     var m = CALL_FIGS[lid]; return m ? "<em>" + m[0] + "</em> · " + tipText(m[1]) + relLine(m[0]) + funFact(m[0]) : null;
   }
   window.__callFigLabel = figHtml; // the pocket-phone call clones (data-lid) reuse these exact labels
-  var CALL_SURFACE_SEL = "#monitor-tehran-scene,#monitor-california-scene,#laptop-call-scene,#laptop-prague-gathering,#madla-call-scene"; // the video-call scenes: name cards anchor to a surface's lower-left, clear of the birthday hat / cheer overlay
+  var CALL_SURFACE_SEL = "#monitor-tehran-scene,#monitor-california-scene,#laptop-call-scene,#madla-call-scene"; // compact call scenes anchor cards to the surface's lower-left, clear of birthday/cheer overlays; the wide Prague gathering has room around each figure and anchors to the person.
   function callSurface(el) { return (el && el.closest) ? el.closest(CALL_SURFACE_SEL) : null; }
   Object.keys(CALL_FIGS).concat(Object.keys(GARDEN_COUPLE)).forEach(function (lid) {
     var el = document.getElementById(lid); if (!el) return;
-    el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, figHtml(lid), callSurface(el)); }); // tap → white card at the call surface's lower-left (no stopPropagation, so the global dismisser's contains-check keeps it up)
+    el.addEventListener("click", function () {
+      if (!window.__whoPop) return;
+      // The wide garden gathering has enough room to point to the actual person. Its figures sit
+      // inside #laptop-call-scene too, so a plain closest() would otherwise anchor every card to
+      // the shared screen corner, far away from several tiny figures.
+      var surface = lid.indexOf("laptop-garden-") === 0 ? null : callSurface(el);
+      window.__whoPop(el, figHtml(lid), surface);
+    }); // no stopPropagation: the global dismisser's contains-check keeps the new card up
   });
 })();
 (function () {
@@ -42339,7 +42388,7 @@ setOfficeProgress("pc", false);
     guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's man-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
     aligoli: "aligoli — alias for guests; try `help guests`",
     arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
-    roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it holds arrivals and departures while open; on the garden floor the adults freeze while the kids keep dancing. click a name for their card and a 3s spotlight that releases that adult under an arrow (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
+    roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it freezes attendance and garden positions while open. click a name for their card, an in-place wiggle and a 3s arrow (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
     autoplay: "autoplay(true) — PERSISTENT ATTRACT MODE for the wedding BBQ screen: the loft composes an endless show from 30 short authored stories — espresso and bar rituals, music, arrivals, wedding moments, photos, projector/toy scenes, calls, computer and phone apps, weather, the BBQ, and cross-room relays. A seeded weighted Markov director moves between eight narrative moods; hard recent-history and coverage rules keep exact stories from repeating and bring back any room that's been away too long. A visible ghost cursor shows each interaction. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen), opens with a short room sweep, then plays the first full story where it found you. Phone notifications INTERRUPT to be opened + acted on, then the exact story/beat RESUMES. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys; pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open with #autoplay to boot straight into it (?autoplay remains supported)",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
@@ -42418,10 +42467,10 @@ setOfficeProgress("pc", false);
       "EVERY sound takes an optional panId — a scene element id (e.g. \"office-monitor\", \"balcony-phone\") or a -1..1 number (left..right, 0 = center). it defaults to that sound's own on-screen source, so a bare sound(\"grind\") already plays from the grinder; sound(\"grind\", 0.9) hard-pans it right, sound(\"grind\", \"balcony-phone\") pans it to another object. a hidden/offscreen source centers.",
       "for sounds with no extra args the panId is the only argument. the few that take extra args (panId keeps the position shown), e.g. sound(\"iloveyou\", \"office-laptop\", 1.2, 0.7):",
       "  iloveyou/love(panId, pitchMul=1, gainMul=1) · ouch(panId, pitchMul=1, gainMul=1) · chop(pitchMult=1, hitCount=3, panId) · glass-clink(pitchMult=1, panId) · rooster(intensity=1, panId) · fart(pitchMult=1, durMult=1, panId)",
-      "  typewriter(pitchMult=1, panId) · chair-whirl(pitchMult=1, panId) · thunder(volume=1, panId) · cough(pitch=1, panId) · windchime(stormy=false, throughDoor=false, panId) · genie(reverse=false, panId) · alo/phone-voice(panId) · fishu(phrase)"
+      "  typewriter(pitchMult=1, panId) · chair-whirl(pitchMult=1, panId) · thunder(volume=1, panId) · cough(pitch=1, panId) · windchime(stormy=false, throughDoor=false, panId) · genie(reverse=false, panId) · alo/phone-voice(panId) · fishu(count)"
     ],
     speech: "speech(\"text\"[, opts]) — text-to-speech via the browser synth. opts is {pitch:0-2, rate:0.1-10, volume:0-1, voice:\"male\"|\"female\"|name-substring}; a bare number 2nd arg is a pitch shorthand, e.g. speech(\"hello\", 1.4). ranges clamp; returns the spoken text",
-    fishu: "fishu — say Fishu's name via the browser speech synth (sound(\"fishu\") too; sound(\"fishu\", \"phrase\") speaks that phrase). see speech() for arbitrary text",
+    fishu: "fishu([count]) — puff Fishu and call them once; fishu(2) says \"fish fishu\", fishu(5) says four \"fish\" then \"fishu\". count is capped at 20. sound(\"fishu\") works too; use speech() for arbitrary text",
     laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
     computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
     reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
@@ -53151,7 +53200,9 @@ async def localfont(name):
       var reset = document.createElement("button");
       reset.type = "button";
       reset.className = "pmd-reset";
-      reset.textContent = tr("du_reset");
+      reset.textContent = "↺";
+      reset.setAttribute("aria-label", tr("du_reset"));
+      reset.setAttribute("title", tr("du_reset"));
       reset.addEventListener("click", function () {
         dressupOn = {}; // clear the session-saved outfit too, so a reopen stays bare
         var onChips = chips.querySelectorAll(".pmd-chip.on");
@@ -56874,8 +56925,9 @@ async def localfont(name):
       if (window.__setUvParty) window.__setUvParty(false);
       if (window.__setGardenParty) window.__setGardenParty(false, true);
     }
-    function setPartyMode(on, immediate) {
+    function setPartyMode(on, immediate, userInitiated) {
       on = !!on;
+      if (userInitiated == null) userInitiated = true;
       partyswitch.classList.toggle("on", on);
       if (on) {
         // Toggling back ON — cancel any pending graceful teardown and walk the leaving guests back in.
@@ -56886,7 +56938,7 @@ async def localfont(name):
         var daytimeBBQ = !!window.__bbqDayPartyOn || !!(window.__bbqDateNow && window.__bbqDateNow());
         if (daytimeBBQ) setBBQDayPartyState(true);
         if (window.__setUvParty) window.__setUvParty(!daytimeBBQ);
-        if (window.__setGardenParty) window.__setGardenParty(true, true); // every party still drops into the garden; May 2's flag keeps that entrance in daylight
+        if (window.__setGardenParty) window.__setGardenParty(true, userInitiated); // every party still drops into the garden; May 2's flag keeps that entrance in daylight
         if (daytimeBBQ && window.__setDayNight) window.__setDayNight(false);
         return;
       }
@@ -60222,6 +60274,17 @@ async def localfont(name):
     else if (window.currentStageName === "cuddly") puffCuddly();
     sayFishu(phrase);
     return true;
+  };
+  // Public scripting command. Fishu's speech is deliberately limited to their own name;
+  // speech() remains the API for arbitrary text.
+  window.fishu = function (count) {
+    var n = Math.floor(Number(count));
+    if (!isFinite(n) || n < 1) n = 1;
+    n = Math.min(n, 20);
+    var words = [];
+    for (var i = 1; i < n; i++) words.push("fish");
+    words.push("fishu");
+    return window.__speakFishu(words.join(" "));
   };
 })();
 var animateCapsSwap = (function () {
@@ -68481,8 +68544,9 @@ function spawnDustMote(container) {
   };
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name) {
+    if (rosterHoldsOccupants() && name !== window.currentStageName) return false; // Who's here is modal: close it before moving the room underneath its roster.
     var idx = STAGES.indexOf(name);
-    if (idx === -1) return;
+    if (idx === -1) return false;
     var fromIdx = stageIndex;
     stageIndex = idx;
     unlockThrough(idx);
@@ -68617,6 +68681,7 @@ function spawnDustMote(container) {
     // entry still receives the complete finale. Autoplay is ordinary game state and keeps it.
     if (name === "balcony" && !window.__cinematic) triggerBalconyFinale();
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(name); // wedding-day sky (balcony/garden), else stops
+    return true;
   }
   window.goToStage = goToStage;
   // A solve animation may finish after the player has already navigated elsewhere. Its
@@ -68915,6 +68980,10 @@ function spawnDustMote(container) {
       if (ae && ae.blur && ae !== document.body) ae.blur();
       return;
     }
+    // The shared room-action keys are phase-one solve aids only. Once the party has been observed
+    // every room is unlocked, so Enter stops auto-operating toys and an otherwise-unconsumed
+    // Escape remains a pure dismiss/back gesture.
+    if (window.__secondRound) return;
     var did = activateCurrentRoom();
     if (did) { e.preventDefault(); e.stopPropagation(); if (ae && ae.blur && ae !== document.body) ae.blur(); } // suppress the focused scene object's activation + drop its focus
   }, true); // capture — ahead of scene objects' onActivate
@@ -70738,6 +70807,7 @@ function spawnDustMote(container) {
   }
   function bringRotatedGuests(incoming) {
     if (rosterHoldsOccupants()) { setTimeout(function () { bringRotatedGuests(incoming); }, 1000); return; }
+    if (document.hidden || !document.hasFocus()) { setTimeout(function () { bringRotatedGuests(incoming); }, 1000); return; }
     if (window.__bbqSplitOn) return; // a pre-invitation garden swap must not land after the BBQ controller takes attendance over
     if (!guestsWanted()) return;
     incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); });
@@ -70787,6 +70857,7 @@ function spawnDustMote(container) {
       var g = document.getElementById("garden-guests");
       if (!g) return;
       if (!window.__gardenPartyOn) { armTrickle(1400); return; } // party off — hold. NOTE: no longer gated on being IN the garden — the fill keeps going in the BACKGROUND while you're in another room (off-screen arrivals are instant, see walkFigureIn), so the party GROWS and is bigger when you return
+      if (document.hidden || !document.hasFocus()) { armTrickle(1000); return; } // an unattended tab freezes the roster; never instant-fill a crowd behind the player's back
       if (rosterHoldsOccupants()) { armTrickle(1000); return; }
       if (window.__bbqSplitOn) { armTrickle(1000); return; } // May-2 attendance is rotating through its garden/balcony controller
       if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped
@@ -72269,7 +72340,10 @@ function spawnDustMote(container) {
     var stationIndex = 0, roamTimer = null, groupHeld = false;
     function stage() { return document.getElementById("stage-garden"); }
     function hasSubjects() { return !window.__roomHasPhotoSubjects || window.__roomHasPhotoSubjects("garden"); }
-    function active() { return !groupHeld && gardenPartyActive() && document.hasFocus() && hasSubjects(); }
+    function active() {
+      return !groupHeld && !rosterHoldsOccupants() &&
+        gardenPartyActive() && document.hasFocus() && hasSubjects();
+    }
     function clearRoam() { if (roamTimer) { clearTimeout(roamTimer); roamTimer = null; } }
     function applyStation(index) {
       stationIndex = Math.max(0, Math.min(STATIONS.length - 1, index | 0));
@@ -72431,6 +72505,17 @@ function spawnDustMote(container) {
     }, source || "ui");
   }
   function shotSig(members) { return (members || []).map(function (m) { return m.key; }).sort().join(","); } // canonical key for a group (host-anchored, so hosts excluded)
+  // A room photograph is distinct when the room or its people change. Small lighting differences
+  // (office day/night/UV, a darker bar wall, etc.) are metadata for rendering, not another photo:
+  // treating them as identity let Aspen fill the album with scenes a person reads as duplicates.
+  function roomShotSig(room, people) {
+    return "room:" + room + ":" + (people || []).map(function (p) { return p.key; }).sort().join(",");
+  }
+  function portraitRecordSig(rec) {
+    var roomTag = rec && rec.room === "balcony" ? "@balcony" : "";
+    var others = ((rec && rec.people) || []).filter(function (person) { return person.key !== "hosts"; });
+    return shotSig(others) + roomTag;
+  }
   function revokeAlbumRecord(rec) {
     if (!rec || !rec.selfieUrl || typeof URL === "undefined" || !URL.revokeObjectURL) return;
     try { URL.revokeObjectURL(rec.selfieUrl); } catch (_error) {}
@@ -72446,12 +72531,25 @@ function spawnDustMote(container) {
     albumTaken = {};
     albumShots.forEach(function (rec) {
       if (!rec || rec.selfie || rec.groupPhoto) return;
-      if (rec.roomShot) { if (rec.subjectId) albumTaken[rec.subjectId] = 1; return; }
+      if (rec.roomShot) {
+        albumTaken[roomShotSig(rec.room || "", rec.people || [])] = 1;
+        if (rec.subjectId) albumTaken[rec.subjectId] = 1; // retain compatibility with older saved records
+        return;
+      }
       var roomTag = rec.room === "balcony" ? "@balcony" : "";
       var others = (rec.people || []).filter(function (person) { return person.key !== "hosts"; });
       albumTaken[shotSig(others) + roomTag] = 1;
       if (!rec.shoot && rec.subjectId) albumTaken["subj:" + rec.subjectId + roomTag] = 1;
     });
+  }
+  function pruneAlbumShots(match) {
+    var kept = [], removed = [];
+    albumShots.forEach(function (rec) { (match(rec) ? removed : kept).push(rec); });
+    if (!removed.length) return 0;
+    removed.forEach(revokeAlbumRecord);
+    albumShots = kept;
+    rebuildAlbumTaken();
+    return removed.length;
   }
   // Couple groupings among the guests/kids: both members must be present to shoot them as a couple;
   // a member whose partner is absent becomes an individual subject instead. Everyone not listed here
@@ -72676,7 +72774,15 @@ function spawnDustMote(container) {
     if (subject) albumLastSubject = subject.id;
     var subjectId = subject ? subject.id : ""; // "" = the hosts alone
     var sig = sigFor(subject);
-    if (albumTaken[sig] && !force) return null; // autonomous shots never duplicate; a direct request may
+    if (albumTaken[sig] && !force) return null; // autonomous shots never duplicate
+    if (force) {
+      // A deliberate shutter always lands as the newest card, but never grows the catalogue with
+      // a duplicate: replace the older card of this exact portrait composition.
+      pruneAlbumShots(function (rec) {
+        return !!(rec && !rec.selfie && !rec.shoot && !rec.groupPhoto && !rec.roomShot &&
+          portraitRecordSig(rec) === sig);
+      });
+    }
     albumTaken[sig] = 1;
     if (subject) albumTaken["subj:" + subject.id + roomTag] = 1; // ...and never a second card of the same subject under a different subset
     // people = the hosts (always, if present) + the chosen subject's members — the intimate portrait.
@@ -72725,12 +72831,17 @@ function spawnDustMote(container) {
     var people = (window.__roomOccupants && window.__roomOccupants(room)) || [];
     if (!people.length) return null;
     var sky = albumSkyState(room);
-    // The room's LIGHT is part of the shot's identity only as far as the room's own card paints it
-    // (ALBUM_SKY_SIG): the nook really does go from daylight terracotta to evening brown, while the
-    // bar's back wall shifts a single shade and stays the same photograph.
-    var sig = "room:" + room + ":" + albumSkySig(room, sky) + ":" +
-              people.map(function (p) { return p.key; }).sort().join(",");
+    // Dedupe the human-visible composition, not incidental light. `force` used to bypass this for
+    // every tap on Aspen, which is why repeated direct clicks still produced low-difference copies.
+    // A direct click replaces that composition in-place conceptually, then appends the new record so
+    // the photo the visitor just took is always the newest card.
+    var sig = roomShotSig(room, people);
     if (albumTaken[sig] && !force) return null;
+    if (force) {
+      pruneAlbumShots(function (rec) {
+        return !!(rec && rec.roomShot && roomShotSig(rec.room || "", rec.people || []) === sig);
+      });
+    }
     albumTaken[sig] = 1;
     var rec = {
       id: ++albumSeq, t: Date.now(), people: people, subjectId: sig, roomShot: true,
@@ -73098,6 +73209,7 @@ function spawnDustMote(container) {
   function partyKidFormationTick() {
     partyKidFormationTimer = null;
     if (!window.__gardenPartyOn) return;
+    if (document.hidden || !document.hasFocus()) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
     if (rosterHoldsOccupants()) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
     // Placement and floor formation are independent: first decide each child's room from their
     // parents' live floor state, then arrange whichever godkids rolled a dance turn.
@@ -73144,10 +73256,16 @@ function spawnDustMote(container) {
   function clearGardenKid(el) {
     if (!el) return;
     el.classList.remove("chasing");
-    var run = el.querySelector(".gk-run"); if (run) run.classList.remove("gk-run-l", "gk-run-r");
+    var run = el.querySelector(".gk-run"); if (run) { run.classList.remove("gk-run-l", "gk-run-r"); run.style.removeProperty("animation-delay"); }
     var flip = el.querySelector(".gk-flip"); if (flip) flip.classList.remove("flipped");
   }
+  var gardenChaseLaunchTimers = [];
+  function clearGardenChaseLaunchTimers() {
+    gardenChaseLaunchTimers.forEach(clearTimeout);
+    gardenChaseLaunchTimers.length = 0;
+  }
   function resetGardenChaseRunners() {
+    clearGardenChaseLaunchTimers();
     gardenChaseRunning = false;
     GARDEN_RUNNERS.forEach(function (n) { clearGardenKid(gardenKidEl(n)); });
     syncKidsParty(); // every runner's .chasing is cleared → the matching party figures return
@@ -73216,24 +73334,26 @@ function spawnDustMote(container) {
       var run = el.querySelector(".gk-run");
       var flip = el.querySelector(".gk-flip");
       el.style.setProperty("--gk-dur", dur + "s");
-      // a chaser starts a touch behind the one ahead (delay) so they string out across the lawn
-      run.style.animationDelay = (k * 0.42) + "s";
-      if (run) { run.classList.remove("gk-run-l", "gk-run-r"); void run.getBBox(); run.classList.add(rightward ? "gk-run-l" : "gk-run-r"); }
-      if (flip) flip.classList.toggle("flipped", !rightward); // figures face right; flip for a right→left dash
-      el.classList.add("chasing");
-      if (name === "bahareh") {
-        syncBaharehParty(); // she's off chasing the kids now → pull her party figure off the floor
-        return;             // an adult herding — no kid giggle; her run is the gag
+      // Launch each runner at their real staggered start. A CSS animation-delay made every
+      // runner visible before their timeline began and let a throttled/hidden tab reveal one
+      // halfway across. The standing figure now hands off on this exact tick too.
+      function launchRunner() {
+        if (!gardenChaseRunning || document.hidden || !chaseKidsAllowed()) return;
+        if (run) { run.classList.remove("gk-run-l", "gk-run-r"); void run.getBBox(); run.classList.add(rightward ? "gk-run-l" : "gk-run-r"); }
+        if (flip) flip.classList.toggle("flipped", !rightward); // figures face right; flip for a right→left dash
+        el.classList.add("chasing");
+        syncKidsParty(); // standing figure disappears only when its runner paints at the edge
+        if (name === "bahareh") return; // an adult herding — no kid giggle; her run is the gag
+        if (!document.hidden && document.hasFocus()) {
+          setTimeout(function () {
+            if (!document.hidden && document.hasFocus() && el.classList.contains("chasing")) playGiggleSound("garden-kid-" + name);
+          }, 300 + Math.random() * 500);
+        }
       }
-      // giggle as they pass — crickets-rule gated (getSfxCtx blocks hidden; guard focus too),
-      // panned to that runner's own on-screen element. Staggered with the start delay.
-      if (!document.hidden && document.hasFocus()) {
-        setTimeout(function () {
-          if (!document.hidden && document.hasFocus() && el.classList.contains("chasing")) playGiggleSound("garden-kid-" + name);
-        }, 300 + k * 420 + Math.random() * 500);
-      }
+      var delay = k * 420;
+      if (delay) gardenChaseLaunchTimers.push(setTimeout(launchRunner, delay));
+      else launchRunner();
     });
-    syncPartyChildren(); // pull every selected child off the standing dance floor before the cross paints
   }
   function gardenChaseTick() {
     gardenChaseTimer = null;
@@ -73253,7 +73373,7 @@ function spawnDustMote(container) {
     else startGardenChaseDriver();
   };
   document.addEventListener("visibilitychange", function () {
-    if (document.hidden && !rosterHoldsOccupants()) clearGardenChase(); // no paused run or timer pile-up in a hidden tab
+    if (document.hidden) clearGardenChase(); // no paused run or timer pile-up in a hidden tab, even if the roster is open
     else if (!document.hidden && window.__gardenPartyOn && !window.__bbqSplitOn && window.currentStageName === "garden") startGardenChaseDriver();
   });
   // The garden party itself: whisk to the garden (user click only), light the disco
@@ -80629,7 +80749,11 @@ function spawnDustMote(container) {
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
-    if (p.party && window.__setGardenParty) window.__setGardenParty(true, false);
+    // Restore through the complete party-mode owner, not only its scene half. The balcony
+    // switch and persistent UV intent are also toggle state: if they remain at their fresh-page
+    // defaults, the first `p` after Continue only reconciles the switch and cannot stop the party.
+    if (window.__setPartyMode) window.__setPartyMode(!!p.party, true, false);
+    else if (p.party && window.__setGardenParty) window.__setGardenParty(true, false);
     if (p.bbq && window.bbq) window.bbq(true);
     if (window.__setDayNight) window.__setDayNight(!p.daylight);
     goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
@@ -80851,6 +80975,44 @@ function spawnDustMote(container) {
     releaseAttract();
   }
   window.__endAttract = endAttract;
+  // Deterministic test URLs may preload a short sequence of ordinary keyboard gestures:
+  // `?keys=p3cm`. Presence of a non-empty sequence explicitly requests a FRESH game, so discard
+  // the gameplay checkpoint before deciding whether to show recovery. Each character still travels
+  // through the real keyboard listeners (including the first-key intro handoff); no game API is
+  // called directly. Scripts/messages and date/time overrides are separate durable/context state.
+  var urlKeys = "";
+  try { urlKeys = new URLSearchParams(location.search).get("keys") || ""; } catch (_error) {}
+  var urlKeyChars = Array.from(urlKeys), urlKeyIndex = 0, urlKeysStarted = false, urlKeysTimer = null;
+  function urlKeyCode(key) {
+    if (/^[a-z]$/i.test(key)) return "Key" + key.toUpperCase();
+    if (/^[0-9]$/.test(key)) return "Digit" + key;
+    if (key === " ") return "Space";
+    if (key === "/") return "Slash";
+    if (key === "`") return "Backquote";
+    return "";
+  }
+  function urlKeysState() {
+    return { sequence: urlKeys, index: urlKeyIndex, running: !!urlKeysTimer, started: urlKeysStarted, done: !!urlKeysStarted && urlKeyIndex >= urlKeyChars.length };
+  }
+  function startUrlKeys() {
+    if (!urlKeyChars.length || urlKeysStarted || recoveryGate) return false;
+    urlKeysStarted = true;
+    function next() {
+      urlKeysTimer = null;
+      if (urlKeyIndex >= urlKeyChars.length) return;
+      var key = urlKeyChars[urlKeyIndex++], code = urlKeyCode(key);
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: key, code: code, bubbles: true, cancelable: true }));
+      document.dispatchEvent(new KeyboardEvent("keyup", { key: key, code: code, bubbles: true, cancelable: true }));
+      if (urlKeyIndex < urlKeyChars.length) urlKeysTimer = setTimeout(next, 180);
+    }
+    next();
+    return true;
+  }
+  window.__urlKeysState = urlKeysState;
+  if (urlKeyChars.length) {
+    clearCheckpoint();
+    setTimeout(startUrlKeys, 1500); // normal entry paint + listeners settle before the first gesture
+  }
   // Open (and re-open on reset) on a blinking "wandering without aim" invitation; the first strip
   // tap hands it off to the caption guide via stopHintBlink, then the real first instruction. The
   // espresso-machine invite arrow stays hidden through both intro steps. Skipped mid-cinematic (the show
@@ -82849,7 +83011,9 @@ function spawnDustMote(container) {
               key: dj ? djName().toLowerCase() : (r.relKey || r.key),
               name: dj ? djName() : r.name,
               roleKey: r.roleKey,
-              el: document.querySelector(dj ? "#garden-djbooth" : (activeSel.charAt(0) === "." ? "#garden-guests " + activeSel : activeSel)),
+              // The DJ's card/hit geometry belongs to the person, not the entire booth. The
+              // spotlight controller still owns its booth-level arrow/class separately.
+              el: document.querySelector(dj ? "#garden-dj" : (activeSel.charAt(0) === "." ? "#garden-guests " + activeSel : activeSel)),
               sels: pickable ? [r.sel] : null
             });
           });
@@ -82954,7 +83118,7 @@ function spawnDustMote(container) {
     };
     window.__whoIsHere = managedOccupants;
 
-    var panel = null, toggleBtn = null, open = false;
+    var panel = null, backdrop = null, toggleBtn = null, open = false, returnFocus = null;
 
     // Singling a guest out from the roster: freeze EVERYONE ELSE while the pick keeps dancing, and
     // float an arrow over the pick for 3s. Only one at a time. The arrow is a child of the figure's
@@ -82998,6 +83162,28 @@ function spawnDustMote(container) {
       arrow.appendChild(p);
       return arrow;
     }
+    // Bar and office visitors are drawn inside 1.67×–2× enlarged cameo groups. An arrow appended
+    // there inherits that scale unless we cancel it, which made those roster arrows enormous.
+    // Normalize only enlarged coordinate spaces back to the owning SVG's scene scale; ordinary
+    // garden figures retain their established arrow size.
+    function appendSpotArrow(host, cx, tipY) {
+      var arrow = makeSpotArrow(cx, tipY);
+      host.appendChild(arrow);
+      try {
+        var hc = host.getScreenCTM && host.getScreenCTM();
+        var rc = host.ownerSVGElement && host.ownerSVGElement.getScreenCTM();
+        if (hc && rc) {
+          var hs = Math.max(Math.hypot(hc.a, hc.b), Math.hypot(hc.c, hc.d));
+          var rs = Math.max(Math.hypot(rc.a, rc.b), Math.hypot(rc.c, rc.d));
+          var inherited = rs ? hs / rs : 1;
+          if (inherited > 1.15) {
+            var inv = 1 / inherited;
+            arrow.setAttribute("transform", "translate(" + cx + " " + tipY + ") scale(" + inv + ") translate(" + (-cx) + " " + (-tipY) + ")");
+          }
+        }
+      } catch (_error) {}
+      return arrow;
+    }
     // crew targets aren't ".g-*" dancing figures — they carry their own host group + arrow anchor
     // (in that group's own view-box coords). The DJ arrow floats over the booth head; the
     // photographer arrow over her crown. They don't dance, so no .spotlighted self-exemption is
@@ -83010,7 +83196,7 @@ function spawnDustMote(container) {
       var g = document.getElementById("garden-guests");
       if (!g || !sels) return;
       clearSpotlight(); // replace any current spotlight — one guest at a time
-      var any = false;
+      var any = false, firstArrow = null;
       sels.forEach(function (sel) {
         var crew = CREW_SPOTS[sel];
         if (crew) { // DJ / photographer: arrow over their own group, freeze-others via .solo-spot
@@ -83018,21 +83204,22 @@ function spawnDustMote(container) {
           if (!host) return;
           any = true;
           host.classList.add("spotlighted");
-          host.appendChild(makeSpotArrow(crew.cx, crew.tipY));
+          var crewArrow = appendSpotArrow(host, crew.cx, crew.tipY);
+          if (!firstArrow) firstArrow = crewArrow;
           return;
         }
         var el = g.querySelector(sel);
         if (!el || !el.classList.contains("guest")) return;
         any = true;
         el.classList.add("spotlighted"); // exempts THIS guest from the .solo-spot freeze (keeps dancing)
-        // sit the arrow just above THIS figure's own top, so it rides lower on shorter guests/kids and
-        // higher on taller ones (getBBox is the figure's local box, before its own translate/scale).
-        var abx = 0, aty = 147;
-        try { var bb = el.getBBox(); if (bb && bb.height) { abx = bb.x + bb.width / 2; aty = bb.y - 3; } } catch (e) {}
-        // append INTO the figure's moving wrapper (no static transform, same origin as the group) so the
-        // arrow rides the guest's dance instead of sitting at their base spot
+        // Append and measure in the SAME inner-wrapper coordinate space. Measuring the outer
+        // translated guest but inserting into .guest-move offset Ali's arrow (and any guest whose
+        // wrapper geometry differed from the outer group).
         var mover = el.querySelector(".guest-move") || el.querySelector(".guest-react") || el;
-        mover.appendChild(makeSpotArrow(abx, aty));
+        var abx = 0, aty = 147;
+        try { var bb = mover.getBBox(); if (bb && bb.height) { abx = bb.x + bb.width / 2; aty = bb.y - 3; } } catch (e) {}
+        var guestArrow = appendSpotArrow(mover, abx, aty);
+        if (!firstArrow) firstArrow = guestArrow;
       });
       if (any) {
         g.classList.add("solo-spot"); // freeze the named guests but the pick (the .spotlighted one dances on)
@@ -83042,6 +83229,7 @@ function spawnDustMote(container) {
         if (open && smallScreen()) panel.classList.add("spot-hide");
         spotlightTimer = setTimeout(clearSpotlight, 3000); // flash for 3s
       }
+      return firstArrow;
     }
     // Point at ONE figure in any room. The garden floor has a crowd to freeze around the pick
     // (spotlightGuests, above); everywhere else there's just the person, so this is the plain
@@ -83057,9 +83245,10 @@ function spawnDustMote(container) {
       var bb = null;
       try { bb = el.getBBox(); } catch (e) { return; }
       if (!bb || !bb.height) return; // nothing drawn to point at (hidden, or a cameo mid-fade)
-      el.appendChild(makeSpotArrow(bb.x + bb.width / 2, bb.y - 3));
+      var arrow = appendSpotArrow(el, bb.x + bb.width / 2, bb.y - 3);
       if (open && smallScreen()) panel.classList.add("spot-hide");
       spotlightTimer = setTimeout(clearSpotlight, 3000);
+      return arrow;
     }
     window.__spotlightGuest = spotlightGuests; // test/console hook
     window.__spotlightFigure = spotlightFigure; // test/console hook — the any-room arrow
@@ -83070,13 +83259,18 @@ function spawnDustMote(container) {
     // white roster-styled popup for 3s AND singles them out (freezes everyone else, arrows the
     // pick). The popup rides the guest's dance via a follow loop; it's an HTML overlay appended
     // outside #loft-game-strip, so the UV blacklight never tints it.
-    function showWhoPop(anchor, html, posEl) {
+    function showWhoPop(anchor, html, posEl, placement) {
       var old = document.querySelector(".egg-bubble.who-pop"); if (old) { if (old._t) clearTimeout(old._t); if (old._off) document.removeEventListener("click", old._off, true); old.remove(); }
       // posEl (the enclosing call surface, when given): anchor the card at the surface's lower-left
       // corner instead of over the figure, so a video-call card never covers the birthday hat / the
       // ∞-heart cheer overlay. anchor-contains dismissal still works (the figure sits inside posEl).
-      var b = eggBubble(posEl || anchor, html, posEl ? "bottomleft" : "top"); // reuse the bubble's positioning + markup support
+      var b = eggBubble(posEl || anchor, html, placement || (posEl ? "bottomleft" : "top")); // reuse the bubble's positioning + markup support
       b.classList.add("who-pop"); // ...but paint it white like the roster (see .egg-bubble.who-pop)
+      // Text/font layout can settle a frame after insertion. Re-measure once so an above-arrow
+      // card keeps its intended gap instead of growing downward over the arrow after positioning.
+      requestAnimationFrame(function () {
+        if (b && b.isConnected) positionEggBubble(b, posEl || anchor, placement || (posEl ? "bottomleft" : "top"));
+      });
       clearTimeout(b._t);
       b._t = setTimeout(function () { dismissEggBubble(b); }, 10000); // a click card lingers ~10s (was 3s)…
       b._off = function () { if (b._t) clearTimeout(b._t); document.removeEventListener("click", b._off, true); dismissEggBubble(b); }; // …or dismisses on the next click anywhere (incl. the card itself)
@@ -83084,6 +83278,12 @@ function spawnDustMote(container) {
       // NB: positioned ONCE at tap time and left STATIC — the guest keeps dancing under it, but a
       // bubble that jitters along with the dance is hard to read (owner feedback), so it stays put.
     }
+    window.__dismissWhoPop = function () {
+      var b = document.querySelector(".egg-bubble.who-pop");
+      if (!b) return false;
+      dismissEggBubble(b);
+      return true;
+    };
     function guestInspect(el) {
       var g = document.getElementById("garden-guests");
       if (!g || !el) return;
@@ -83092,13 +83292,22 @@ function spawnDustMote(container) {
       // leave the crowd frozen after the music comes back). Just name them. spot() no-ops when frozen.
       var strip = document.getElementById("loft-game-strip");
       var frozen = !!(strip && strip.classList.contains("dance-frozen"));
-      function spot(sels) { if (!frozen) spotlightGuests(sels); }
+      function spot(sels) { return frozen ? null : spotlightGuests(sels); }
+      function reveal(sels, html) {
+        // Defer past the originating figure click. The new card otherwise becomes visible to a
+        // later click-away listener in the same event. The arrow is the positioning anchor, so the
+        // card sits immediately above it without either overlapping or floating unnecessarily high.
+        setTimeout(function () {
+          var arrow = spot(sels);
+          showWhoPop(el, html, arrow, arrow ? "top" : "above-arrow");
+        }, 0);
+      }
       // Hosts name themselves INDIVIDUALLY on the floor: the ROSTER pairs them into one "markéta &
       // behdad" row, but a tap on Markéta says "markéta" and a tap on Behdad says "behdad" (owner
       // request — separate them). Each still singles out just that one figure.
       var beh = g.querySelector(".g-behdad"), mar = g.querySelector(".g-marketa");
-      if (beh && (beh === el || beh.contains(el))) { spot([".g-behdad"]); showWhoPop(el, "<em>behdad</em> · " + tipText("role_groom") + relLine("behdad") + funFact("behdad")); return; }
-      if (mar && (mar === el || mar.contains(el))) { spot([".g-marketa"]); showWhoPop(el, "<em>markéta</em> · " + tipText("role_bride") + relLine("marketa") + funFact("marketa")); return; }
+      if (beh && (beh === el || beh.contains(el))) { reveal([".g-behdad"], "<em>behdad</em> · " + tipText("role_groom") + relLine("behdad") + funFact("behdad")); return; }
+      if (mar && (mar === el || mar.contains(el))) { reveal([".g-marketa"], "<em>markéta</em> · " + tipText("role_bride") + relLine("marketa") + funFact("marketa")); return; }
       for (var i = 0; i < ROSTER.length; i++) {
         var r = ROSTER[i];
         if (r.sel === "__dj" || r.sel.charAt(0) === "#" || r.pair) continue; // crew + chase runners keep their own handlers; the paired-host row is handled individually above
@@ -83106,8 +83315,7 @@ function spawnDustMote(container) {
         if (cand && (cand === el || cand.contains(el))) {
           var name = r.pair ? "markéta & behdad" : r.name; // the hosts share one card, like their tooltip
           var role = r.pair ? "" : tipText(r.roleKey);
-          spot([r.sel]);
-          showWhoPop(el, "<em>" + name + "</em>" + (role ? " · " + role : "") + relLine(r.relKey || r.key) + funFact(r.relKey || r.key));
+          reveal([r.sel], "<em>" + name + "</em>" + (role ? " · " + role : "") + relLine(r.relKey || r.key) + funFact(r.relKey || r.key));
           return;
         }
       }
@@ -83135,23 +83343,90 @@ function spawnDustMote(container) {
         toggleBtn.addEventListener("click", function (e) { e.preventDefault(); toggle(); });
         host.appendChild(toggleBtn);
       }
+      if (!backdrop) {
+        backdrop = document.createElement("div");
+        backdrop.className = "roster-backdrop";
+        backdrop.setAttribute("aria-hidden", "true");
+        backdrop.addEventListener("click", function (e) {
+          // This click belongs entirely to the modal. We inspect the painted scene below only to
+          // identify a person; no ancestor scene/navigation handler may also act on the same click.
+          e.preventDefault();
+          e.stopPropagation();
+          // Look through the modal backdrop at this coordinate. People remain selectable while
+          // every prop, navigation control and empty part of the room stays blocked.
+          var room = window.currentStageName || "kitchen";
+          var people = orderedPeople(room, stablePeople(room, window.__whoIsHere(room)));
+          var painted = null;
+          backdrop.hidden = true;
+          try { painted = document.elementFromPoint(e.clientX, e.clientY); } catch (_error) {}
+          backdrop.hidden = false;
+          if (painted) {
+            for (var exact = 0; exact < people.length; exact++) {
+              var exactPerson = people[exact];
+              if (exactPerson.el && (painted === exactPerson.el || exactPerson.el.contains(painted))) {
+                pickRow(exactPerson);
+                return;
+              }
+            }
+          }
+          var hits = [];
+          for (var i = 0; i < people.length; i++) {
+            var p = people[i];
+            if (!p.el) continue;
+            var rect;
+            try { rect = p.el.getBoundingClientRect(); } catch (_error) { continue; }
+            if (!rect || (!rect.width && !rect.height)) continue;
+            if (e.clientX < rect.left || e.clientX > rect.right ||
+                e.clientY < rect.top || e.clientY > rect.bottom) continue;
+            var cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            var nx = (e.clientX - cx) / Math.max(1, rect.width);
+            var ny = (e.clientY - cy) / Math.max(1, rect.height);
+            hits.push({ p: p, distance: nx * nx + ny * ny, area: Math.max(1, rect.width * rect.height) });
+          }
+          if (hits.length) {
+            // Overlapping dancers are common. The figure whose centre is nearest the tap is the
+            // one the player is pointing at; area breaks the rare exact tie.
+            hits.sort(function (a, b) { return (a.distance - b.distance) || (a.area - b.area); });
+            pickRow(hits[0].p); // bio + in-place wiggle + matching roster-row pulse
+            return;
+          }
+          // An empty click dismisses a roster-summoned bio first, without also closing the
+          // roster. A second empty click is the conventional backdrop-close gesture.
+          if (window.__dismissWhoPop && window.__dismissWhoPop()) return;
+          // Empty backdrop is the conventional modal-dismiss gesture.
+          setOpen(false);
+        });
+        host.appendChild(backdrop);
+      }
       if (!panel) {
         panel = document.createElement("div");
         panel.className = "roster-panel";
         panel.id = "roster-panel";
         panel.setAttribute("role", "dialog");
-        panel.setAttribute("aria-modal", "false"); // non-trapping overlay
-        panel.setAttribute("aria-label", tipText("roster_title")); // no visible header (saved space) → label for a11y
+        panel.setAttribute("aria-modal", "true");
+        panel.setAttribute("aria-labelledby", "roster-heading");
         panel.setAttribute("tabindex", "-1");
         panel.hidden = true;
+        var heading = document.createElement("h3");
+        heading.id = "roster-heading";
+        heading.textContent = tipText("roster_title");
+        panel.appendChild(heading);
         var close = document.createElement("button");
         close.type = "button";
         close.className = "roster-close";
         close.innerHTML = "&times;";
+        close.setAttribute("aria-label", "Close");
+        close.setAttribute("title", "Close");
         close.addEventListener("click", function (e) { e.preventDefault(); setOpen(false); });
         panel.appendChild(close);
         panel.addEventListener("keydown", function (e) {
-          if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setOpen(false); if (toggleBtn) toggleBtn.focus(); }
+          if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setOpen(false); return; }
+          if (e.key !== "Tab") return;
+          var focusable = panel.querySelectorAll('button:not([disabled]),[href],input:not([disabled]),[tabindex]:not([tabindex="-1"])');
+          if (!focusable.length) { e.preventDefault(); panel.focus(); return; }
+          var first = focusable[0], last = focusable[focusable.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+          else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
         });
         host.appendChild(panel);
       }
@@ -83168,12 +83443,21 @@ function spawnDustMote(container) {
     // every other room there's no crowd to freeze, so the pick just gets the arrow. Either way
     // it also pops that person's white name card.
     function pickRow(p) {
-      if (p.sels) spotlightGuests(p.sels);
-      else spotlightFigure(p.el);
-      // deferred a tick: the card is anchored on the FIGURE, but the click that asked for it is on
-      // the roster row, so the global egg-bubble dismisser (a document click listener that drops
-      // any bubble whose anchor doesn't contain the target) would kill it on the way up.
-      if (p.el) setTimeout(function () { showWhoPop(p.el, rosterCard(p)); }, 0);
+      var row = rowNodes[p.key];
+      if (row) {
+        row.classList.remove("roster-picked");
+        void row.offsetWidth;
+        row.classList.add("roster-picked");
+        setTimeout(function () { row.classList.remove("roster-picked"); }, 700);
+      }
+      // Create on the next task so the click that requested the card cannot also reach its
+      // click-anywhere dismisser. Measure first, then begin the reaction: this preserves the
+      // approved roster-card position without measuring a mid-wiggle figure.
+      setTimeout(function () {
+        if (!open) return;
+        var arrow = p.sels ? spotlightGuests(p.sels) : spotlightFigure(p.el);
+        if (p.el) showWhoPop(p.el, rosterCard(p), arrow, arrow ? "top" : "above-arrow");
+      }, 0);
     }
     // Rebuild only when the room, the language, or the set of people actually changed — the
     // availability poll calls this every 1.5s under an open panel, and blindly re-rendering
@@ -83339,8 +83623,12 @@ function spawnDustMote(container) {
       if (!open) clearSpotlight();
       if (garden) garden.classList.toggle("roster-freeze", open && window.currentStageName === "garden" && !!window.__gardenPartyOn);
       if (open) {
+        returnFocus = document.activeElement;
+        if (window.__dismissWhoPop) window.__dismissWhoPop();
+        if (window.__hideMessageThumb) window.__hideMessageThumb();
         if (window.__closeDjPicker) window.__closeDjPicker(); // roster + jukebox are mutually exclusive
         render(true);
+        if (backdrop) backdrop.classList.add("show");
         panel.hidden = false;
         // let display flip before the opacity/transform transition
         requestAnimationFrame(function () { if (panel) panel.classList.add("show"); });
@@ -83349,9 +83637,17 @@ function spawnDustMote(container) {
       } else {
         panel.classList.remove("show");
         panel.hidden = true;
+        if (backdrop) backdrop.classList.remove("show");
         if (toggleBtn) toggleBtn.classList.remove("roster-open");
+        if (returnFocus && returnFocus.focus) {
+          try { returnFocus.focus({ preventScroll: true }); } catch (_error) { try { returnFocus.focus(); } catch (_error2) {} }
+        }
+        returnFocus = null;
       }
       if (window.__autonomousMessageGateChanged) window.__autonomousMessageGateChanged();
+      // Aspen owns a separate station timer rather than the guest-attendance scheduler. Pause it
+      // with the same modal freeze and re-arm it only after the roster closes.
+      if (window.__updateGardenPhotographer) window.__updateGardenPhotographer();
     }
     function toggle() { setOpen(!open); }
 
@@ -83377,6 +83673,8 @@ function spawnDustMote(container) {
         chipLabel = label;
         toggleBtn.textContent = label;
         toggleBtn.setAttribute("aria-label", label);
+        var heading = panel && panel.querySelector("h3");
+        if (heading) heading.textContent = label;
       }
       var expanded = open ? "true" : "false";
       if (expanded !== chipExpanded) { chipExpanded = expanded; toggleBtn.setAttribute("aria-expanded", expanded); }
@@ -83474,6 +83772,17 @@ function spawnDustMote(container) {
       e.preventDefault();
       window.__toggleRoster();
     });
+    // The roster is modal even after the player clicks through its backdrop to inspect a person.
+    // That interaction can move focus away from the panel, so the panel-local Escape handler is
+    // no longer sufficient. Catch Escape at the window before the scene's general back handler:
+    // one press dismisses both the summoned bio and the roster, wherever focus currently lives.
+    window.addEventListener("keydown", function (e) {
+      if (!open || (e.key !== "Escape" && e.key !== "Esc")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.__dismissWhoPop) window.__dismissWhoPop();
+      setOpen(false);
+    }, true);
 
     // Re-render on a language flip if the panel's open (roles are live-language); refresh the
     // chip label either way. setLang() calls window.refreshRoster at the end (same idiom as the
@@ -84685,7 +84994,7 @@ function spawnDustMote(container) {
     love: function () { playILoveYouSound.apply(null, arguments); },
     iloveyou: function () { playILoveYouSound.apply(null, arguments); }, // alias for love — the synthesized "I love you"
     alo: function () { playPhoneVoiceSound.apply(null, arguments.length ? arguments : ["balcony-phone"]); }, // the phone's little "alo?"
-    fishu: function () { sayFishu.apply(null, arguments); } // Fishu's name, via the browser speech synth (see speech())
+    fishu: function (count) { if (window.fishu) return window.fishu(count); return sayFishu(); } // Fishu's bounded name-call; speech() owns arbitrary text
   };
   window.sound = function (id) {
     var names = Object.keys(SFX);

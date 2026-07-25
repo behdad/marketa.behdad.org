@@ -111,8 +111,9 @@ the first `Escape` generally removes focus and preserves an unsent draft rather
 than closing the whole app.
 
 At room level, with no app, menu, dialog, or text field consuming the key,
-`Escape` and `Backspace` invoke the same main room action as `Enter`: they
-"escape the situation" by doing the next guided step or the solved room's toy.
+`Escape` and `Backspace` invoke the same guided room action as `Enter` during
+phase 1. After the party has unlocked phase 2, these keys stop operating rooms:
+`Escape` and `Backspace` remain back/close controls, and `Enter` is inert.
 
 When the scene or API opens a phone app directly, `Escape` or `Backspace` closes
 the phone instead of exposing its launcher. This applies to
@@ -147,8 +148,8 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `?` | Show or hide keyboard help |
 | `Left` / `Right` | Previous or next room |
 | `1` through `5` | Go directly to a room, unlocking through it if needed |
-| `Enter` | Perform the current room's main action |
-| `Escape` / `Backspace` | Back or close; at room level, perform the main room action |
+| `Enter` | During phase 1, perform the current room's guided action |
+| `Escape` / `Backspace` | Back or close; during phase 1, also perform the guided room action |
 | `M` | Open or close the main computer monitor |
 | `L` | Open or close the laptop |
 | `C` | Open or close the phone |

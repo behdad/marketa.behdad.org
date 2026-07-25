@@ -56,6 +56,15 @@ function runRecovery(hash, harness) {
   });
 }
 
+var URL_KEYS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var seen=[];document.addEventListener("keydown",function(e){if(e.key==="["||e.key==="]")seen.push("down:"+e.key);});document.addEventListener("keyup",function(e){if(e.key==="["||e.key==="]")seen.push("up:"+e.key);});',
+  'localStorage.setItem("loftCheckpoint:v1",JSON.stringify({version:1,savedAt:Date.now(),progress:{room:"office",maxUnlocked:4,phase2:true,party:true,daylight:false,bbq:false},puzzle:{},phone:null,album:null}));',
+  'window.addEventListener("load",function(){setTimeout(function(){var state=window.__urlKeysState();document.getElementById("__report").textContent=JSON.stringify({gate:!!document.getElementById("loft-recovery-gate"),checkpointBeforePlay:!!localStorage.getItem("loftCheckpoint:v1"),room:window.currentStageName,phase2:!!window.__secondRound,party:!!window.__gardenPartyOn,started:window.__gameStarted(),state:state,seen:seen,errors:(window.__errs||[]).slice()});},2100);});',
+  '})();</script>'
+].join("\n");
+
 var failures = 0;
 function check(ok, msg, detail) {
   if (ok) console.log("  \u2713 " + msg);
@@ -71,6 +80,11 @@ var trailer = run("#trailer");
 var autoplay = run("#autoplay");
 var recoveryAutoplay = runRecovery("#autoplay", RECOVERY_AUTOPLAY);
 var recoveryTrailer = runRecovery("#trailer", RECOVERY_TRAILER);
+var urlKeys = lib.runPageSync("rsvp.html", URL_KEYS, 2900, {
+  patchRaf: true,
+  forceMotion: true,
+  urlSuffix: "?keys=%5B%5D#play"
+});
 
 check(play && !play.revealed && !play.cinematic && !play.autoplay,
   "#play is game-only and starts no presentation", play);
@@ -83,6 +97,10 @@ check(recoveryAutoplay && recoveryAutoplay.waiting && !recoveryAutoplay.gate &&
   "#autoplay waits behind recovery, then continues from the restored room", recoveryAutoplay);
 check(recoveryTrailer && !recoveryTrailer.gate && recoveryTrailer.cinematic && recoveryTrailer.checkpoint,
   "#trailer starts across recovery without discarding the saved checkpoint", recoveryTrailer);
+check(urlKeys && !urlKeys.gate && urlKeys.room === "kitchen" && !urlKeys.phase2 && !urlKeys.party &&
+    urlKeys.started && urlKeys.state && urlKeys.state.done &&
+    urlKeys.seen.join("|") === "down:[|up:[|down:]|up:]",
+  "?keys starts fresh without recovery and dispatches paired keyboard gestures in order", urlKeys);
 [play, trailer, autoplay].forEach(function (report) {
   check(report && report.errors.length === 0,
     (report && report.hash || "missing entry") + " has no uncaught page errors",
@@ -92,6 +110,7 @@ check(recoveryAutoplay && recoveryAutoplay.errors.length === 0 &&
     recoveryTrailer && recoveryTrailer.errors.length === 0,
   "recovery URL entries have no uncaught page errors",
   { autoplay: recoveryAutoplay && recoveryAutoplay.errors, trailer: recoveryTrailer && recoveryTrailer.errors });
+check(urlKeys && urlKeys.errors.length === 0, "?keys has no uncaught page errors", urlKeys && urlKeys.errors);
 
 console.log("");
 if (failures) {

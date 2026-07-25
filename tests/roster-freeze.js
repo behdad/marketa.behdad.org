@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 "use strict";
 
-// The garden roster is a deliberate freeze-frame. Its existing row spotlight may temporarily
-// release one named guest, but closing the spotlight must return to the roster freeze.
+// The garden roster is a deliberate occupancy freeze-frame. A picked person gets a dedicated
+// in-place reaction, but their arrival/departure wrapper must remain paused.
 var lib = require("./lib");
 
 var harness = String.raw`<script>
 (function () {
   var out = { checks: [], errors: [] };
+  var pending = false;
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   function report() {
     out.errors = out.errors.concat((window.__errs || []).slice());
@@ -29,28 +30,87 @@ var harness = String.raw`<script>
     var goli = document.querySelector("#garden-guests .g-goli");
     var irene = document.querySelector("#garden-guests .g-irene");
     var aliPart = animatedPart(ali), goliPart = animatedPart(goli), irenePart = animatedPart(irene);
+    var aliWalk = ali.querySelector(".guest-walk"), aliReact = ali.querySelector(".guest-react");
+    var aliMover = ali.querySelector(".guest-move"), aliBox = aliMover.getBBox();
 
     window.roster(true);
     check("opening the garden roster applies the adult freeze", stage.classList.contains("roster-freeze"));
     check("the open roster pauses named guests", state(aliPart) === "paused" && state(goliPart) === "paused",
       state(aliPart) + "/" + state(goliPart));
-    check("party children keep dancing through the adult freeze", state(irenePart) === "running", state(irenePart));
+    check("party children cannot change position while the roster is open", state(irenePart) === "paused", state(irenePart));
 
     window.__spotlightGuest([".g-ali"]);
-    check("a roster pick releases only the selected guest",
-      state(aliPart) === "running" && state(goliPart) === "paused", state(aliPart) + "/" + state(goliPart));
+    var aliArrow = aliMover.querySelector(".guest-spot-arrow");
+    var arrowBox = aliArrow && aliArrow.getBBox();
+    check("a roster pick reacts in place without resuming its gate walk",
+      state(aliReact) === "running" && state(aliWalk) === "paused" && state(goliPart) === "paused",
+      state(aliReact) + "/" + state(aliWalk) + "/" + state(goliPart));
+    check("the picked guest arrow uses the same SVG coordinate space as the figure",
+      arrowBox && Math.abs((arrowBox.x + arrowBox.width / 2) - (aliBox.x + aliBox.width / 2)) < 0.2 &&
+        Math.abs((arrowBox.y + arrowBox.height) - (aliBox.y - 3)) < 0.2,
+      arrowBox ? JSON.stringify({ arrow: arrowBox, person: aliBox }) : "missing");
 
     window.__clearGuestSpotlight();
     check("the roster freeze remains after the short spotlight",
       stage.classList.contains("roster-freeze") && state(aliPart) === "paused", state(aliPart));
 
+    var backdrop = document.querySelector(".roster-backdrop");
+    var aliRect = ali.getBoundingClientRect();
+    backdrop.dispatchEvent(new MouseEvent("click", {
+      bubbles: true,
+      clientX: aliRect.left + aliRect.width / 2,
+      clientY: aliRect.top + aliRect.height / 2
+    }));
+    var pickedRow = document.querySelector(".roster-list li.roster-picked");
+    check("clicking a person through the modal keeps it open and pulses their roster entry",
+      window.__rosterOpen() && pickedRow && state(aliWalk) === "paused",
+      String(window.__rosterOpen()) + "/" + !!pickedRow + "/" + state(aliWalk));
+
+    window.__clearGuestSpotlight();
+    window.__spotlightGuest(["__dj"]);
+    var booth = document.getElementById("garden-djbooth");
+    var dj = document.getElementById("garden-dj");
+    check("selecting the DJ wiggles the person without rotating the booth or decks",
+      getComputedStyle(dj).animationName === "roster-person-wiggle" &&
+        getComputedStyle(booth).animationName !== "roster-person-wiggle",
+      getComputedStyle(dj).animationName + "/" + getComputedStyle(booth).animationName);
+
     window.roster(false);
     check("closing the roster removes its freeze", !stage.classList.contains("roster-freeze") && state(aliPart) === "running",
       state(aliPart));
+
+    window.roster(true);
+    backdrop.dispatchEvent(new MouseEvent("click", {
+      bubbles: true,
+      clientX: aliRect.left + aliRect.width / 2,
+      clientY: aliRect.top + aliRect.height / 2
+    }));
+    pending = true;
+    setTimeout(function () {
+      try {
+        var pop = document.querySelector(".egg-bubble.who-pop");
+        var arrow = document.querySelector(".guest-spot-arrow");
+        var pr = pop && pop.getBoundingClientRect(), ar = arrow && arrow.getBoundingClientRect();
+        check("the roster card sits just above rather than over the arrow",
+          pr && ar && pr.bottom <= ar.top + 1 && ar.top - pr.bottom <= 12,
+          pr && ar ? JSON.stringify({ popupBottom: pr.bottom, arrowTop: ar.top }) : "missing");
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+        var fading = document.querySelector(".egg-bubble.who-pop");
+        check("Escape closes the roster and starts dismissing its person card after a backdrop pick",
+          !window.__rosterOpen() && (!fading || !fading.classList.contains("show")),
+          String(window.__rosterOpen()) + "/" + !!(fading && fading.classList.contains("show")));
+      } catch (error) {
+        out.errors.push("async: " + (error && error.stack || error));
+      }
+      setTimeout(function () {
+        check("the dismissed roster card is removed after its fade", !document.querySelector(".egg-bubble.who-pop"));
+        report();
+      }, 340);
+    }, 80);
   } catch (error) {
     out.errors.push("setup: " + (error && error.stack || error));
   }
-  report();
+  if (!pending) report();
 })();
 </script>`;
 

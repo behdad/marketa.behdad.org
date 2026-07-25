@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // Keyboard room-control test: Enter is "do the next thing in this room"; an
-// unconsumed room-level Escape/Backspace uses the same action.
+// unconsumed room-level Escape/Backspace uses the same action during phase one; after the party
+// unlocks phase two they remain dismiss/back gestures and never operate a room.
 //   - UNSOLVED room  -> Enter presses the next step of that room's solve sequence, so
 //     repeated Enter solves the room and moves on (kitchen espresso, garden water/music/
 //     candles, cuddly octopus/open-balcony-door/blanket, office call/hang-up/monitor/dismiss/
 //     lamps/butterfly).
-//   - SOLVED room    -> Enter fires that room's toy toggle: kitchen day/night (kitchen<->bar),
-//     garden party, cuddly projector channel, office monitor zoom.
+//   - PHASE TWO      -> all rooms are already unlocked, so Enter stops auto-operating room toys
+//     and Escape/Backspace remain pure dismiss/back gestures.
 // Drives ONLY the document-level Enter (the capture-phase handler), never per-element clicks,
 // so it guards the whole walk + toggle wiring. Same one-shot headless runner as play.js.
 //
@@ -35,11 +36,12 @@ var HARNESS = [
   "    window.goToStage('cuddly');report.reached.cuddly=await pressUntil(2,12,900);report.after2=window.currentStageIndex;",
   "    window.goToStage('office');await sleep(400);report.reached.office=await pressUntil(3,25,1500);await sleep(2500);report.after3=window.currentStageIndex;",
   "    report.solvedFinalIdx=window.currentStageIndex;",
-  // ── Part 2: in each now-solved room, Enter fires the toy toggle ──
-  "    window.goToStage('kitchen');await sleep(300);var d0=dusk();enter();await sleep(500);var d1=dusk();key('Escape');await sleep(500);var d2=dusk();key('Backspace');await sleep(500);var d3=dusk();report.toggles.kitchenDayNight=(d0!==d1);report.toggles.escapeAliases=(d1!==d2&&d2!==d3);",
-  "    window.goToStage('garden');await sleep(300);var p0=!!(window.party&&window.party());enter();await sleep(500);report.toggles.gardenParty=(p0!==!!(window.party&&window.party()));",
-  "    window.goToStage('cuddly');await sleep(400);var c0=proj();enter();await sleep(600);var c1=proj();enter();await sleep(600);var c2=proj();report.toggles.cuddlyProjector=((c0!==c1)&&(c1!==c2));",
-  "    window.goToStage('office');await sleep(400);var zs=[];for(var k=0;k<3;k++){enter();await sleep(500);zs.push(!!(window.__monitorZoomed&&window.__monitorZoomed()));}report.toggles.officeZoom=(zs.indexOf(true)>=0);", // a saver-wake may eat the first press; zoom must appear within 3
+  // ── Part 2: after the party unlocks phase two, room-action keys become inert ──
+  "    if(window.party)window.party(true);await sleep(500);report.phaseTwo=!!window.__secondRound;",
+  "    window.goToStage('kitchen');await sleep(300);var d0=dusk();enter();await sleep(300);var d1=dusk();key('Escape');await sleep(300);var d2=dusk();key('Backspace');await sleep(300);var d3=dusk();report.toggles.kitchenIdle=(d0===d1&&d1===d2&&d2===d3);",
+  "    window.goToStage('garden');await sleep(300);var p0=!!(window.party&&window.party());enter();await sleep(300);report.toggles.gardenIdle=(p0===!!(window.party&&window.party()));",
+  "    window.goToStage('cuddly');await sleep(300);var c0=proj();enter();await sleep(300);report.toggles.cuddlyIdle=(c0===proj());",
+  "    window.goToStage('office');await sleep(300);var z0=!!(window.__monitorZoomed&&window.__monitorZoomed());enter();await sleep(300);report.toggles.officeIdle=(z0===!!(window.__monitorZoomed&&window.__monitorZoomed()));",
   "  }",
   "  window.addEventListener('load',function(){setTimeout(function(){run().catch(function(e){window.__errs.push('harness:'+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);});},400);});",
   "})();",
@@ -61,16 +63,9 @@ if (!r) {
   else fail("Enter walks the whole game to the balcony", "stage progression: " + JSON.stringify({ after0: r.after0, after1: r.after1, after2: r.after2, after3: r.after3, reached: r.reached }));
   if (r.gardenEnterGuitar) pass("garden music step: Enter clicks the guitar, not the ukulele");
   else fail("garden music step: Enter clicks the guitar, not the ukulele");
-  if (r.toggles.kitchenDayNight) pass("solved kitchen: Enter toggles day/night (kitchen ⇄ bar)");
-  else fail("solved kitchen: Enter toggles day/night");
-  if (r.toggles.escapeAliases) pass("room-level Escape and Backspace invoke the same action as Enter");
-  else fail("room-level Escape and Backspace invoke the same action as Enter");
-  if (r.toggles.gardenParty) pass("solved garden: Enter toggles the party");
-  else fail("solved garden: Enter toggles the party");
-  if (r.toggles.cuddlyProjector) pass("solved cuddly: Enter cycles the projector channel");
-  else fail("solved cuddly: Enter cycles the projector channel (regression: __cuddlyDoNext must return null once the blanket is done)");
-  if (r.toggles.officeZoom) pass("solved office: Enter toggles the monitor zoom");
-  else fail("solved office: Enter toggles the monitor zoom");
+  if (r.phaseTwo && r.toggles.kitchenIdle && r.toggles.gardenIdle && r.toggles.cuddlyIdle && r.toggles.officeIdle)
+    pass("phase-two Enter, Escape, and Backspace do not operate room solves or toys");
+  else fail("phase-two room-action keys stay inert", JSON.stringify(r.toggles));
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));
 }

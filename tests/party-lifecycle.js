@@ -16,6 +16,9 @@ var harness = String.raw`<script>
 
   var patrons = document.getElementById("kitchen-bar-patrons");
   if (patrons) patrons.style.setProperty("transition", "none", "important");
+  // The calm night bar is a phase-two projection. Phase one deliberately keeps
+  // the espresso kitchen at night until the first party has unlocked free play.
+  if (window.__setSecondRound) window.__setSecondRound(true, { releaseHeld: false });
   if (window.__setDayNight) window.__setDayNight(false);
   check("the unnamed regulars stay out of the daytime kitchen", patrons && getComputedStyle(patrons).opacity === "0");
   if (window.__setDayNight) window.__setDayNight(true);

@@ -183,7 +183,7 @@ var HARNESS = [
   "    report.phase5.actedRoom = window.currentStageName;",
   "    report.phase5.landedOffice = landedOffice;",
 "    report.phase5.lastHandled = window.__autoplayLastHandledMsg();",
-  "    for(var settle=0;settle<5;settle++){hush();await sleep(700);}", // let the completed interrupt cross its explicit RESUMING state before inspecting the trace
+"    for(var settle=0;settle<20;settle++){ var mt=window.__autoplayMachine(); if(mt.trace.some(function(x){return x.to==='resuming';})) break; hush(); await sleep(700); }", // wait for the completed interrupt to cross its explicit RESUMING state; fixed wall time became stale as the authored scene grew
   "    report.phase5.machine = window.__autoplayMachine();",
   // ── Phase 6: hide → paused, no accumulation; resume; unfocused pauses too ──
   "    var stepsBeforeHide = window.__autoplaySteps();",

@@ -2,7 +2,8 @@
 /* Zero-dependency DOM-shim harness for the cuddly-nook game-kids feature.
    Headless Chrome is wedged on this box (state/play/enter/menu can't run), so this proves the
    three owner requests against the real code sliced out of rsvp.html:
-     1) each kid's tap → window.__whoPop with the right "<em>Name</em> · role" line
+     1) each kid's tap → the shared direct person card with the right
+        "<em>Name</em> · role" line
      2) the trip classes swap the kids' .kg-tilt to the kg-trip-wiggle keyframes (CSS assertions)
      3) randomization varies the layout across .playing activations, and nothing strands on teardown
    It builds a tiny shim DOM mirroring the real structure, extracts the __updateKidGames IIFE and the
@@ -128,6 +129,9 @@ function kidAgeLine() { return ""; }
 function relLine() { return ""; }
 // kid popups also append a fun-fact line via the global funFact(); stub it here (defined outside the sliced IIFE)
 function funFact() { return ""; }
+// The production helper also owns popup positioning and dismissal. This sliced
+// harness only needs to preserve its observable card payload and anchor.
+function showDirectPersonCard(anchor, html) { winShim.__whoPop(anchor, html); }
 
 /* hoverTooltip stub: record (element, htmlFn, placement) so we can assert the dark-bubble wiring
    without a browser. The real one attaches mouseenter/leave; here we capture the html-producing fn
@@ -152,9 +156,9 @@ ok(/window\.__updateKidGames\s*=\s*apply/.test(iife), "sliced the real __updateK
 
 /* run it inside a Function with our shims in scope */
 function runIIFE() {
-  var fn = new Function("document", "window", "tipText", "hoverTooltip", "kidAgeLine", "relLine", "funFact",
+  var fn = new Function("document", "window", "tipText", "hoverTooltip", "kidAgeLine", "relLine", "funFact", "showDirectPersonCard",
     iife + "\nreturn { apply: window.__updateKidGames, reshuffle: window.__kidGamesReshuffle, inGame: window.__kidInGamesNow, now: window.__kidGamesNow };");
-  return fn(docShim, winShim, tipText, hoverTooltip, kidAgeLine, relLine, funFact);
+  return fn(docShim, winShim, tipText, hoverTooltip, kidAgeLine, relLine, funFact, showDirectPersonCard);
 }
 
 /* ══ TEST 1: name-card taps ═════════════════════════════════════════════════ */

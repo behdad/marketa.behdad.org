@@ -56178,7 +56178,7 @@ async def localfont(name):
     function msgBody(m) {
       if (m && m.body != null) return m.body;
       var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-      if (m && m.rewrittenBodies && m.rewrittenBodies[lang]) return m.rewrittenBodies[lang];
+      if (m && m.rewrittenBodyEn && lang === "en") return m.rewrittenBodyEn;
       return authoredBodyForLang(m, lang);
     }
     // case- + accent-insensitive fold for the search box: lower-case, strip combining marks
@@ -56463,7 +56463,7 @@ async def localfont(name):
           bub.appendChild(quote);
         }
         var txt = document.createElement("span"); txt.className = "pm-msg-text";
-        if (m.body != null || m.rewrittenBodies) txt.textContent = msgBody(m); else txt.innerHTML = msgBody(m); // generated/rewritten copy is literal; untouched authored dictionary copy may carry <em>
+        if (m.body != null || (m.rewrittenBodyEn && document.documentElement.lang === "en")) txt.textContent = msgBody(m); else txt.innerHTML = msgBody(m); // generated/rewritten English copy is literal; untouched authored dictionary copy may carry <em>
         bub.appendChild(txt);
         if (m.chatActionFailed) {
           var actionError = document.createElement("span"); actionError.className = "pm-msg-action-error"; actionError.textContent = tr("chat_action_failed"); bub.appendChild(actionError);
@@ -58063,10 +58063,7 @@ async def localfont(name):
               fromKey: m.fromKey || null, bodyKey: m.bodyKey || null,
               from: m.from != null ? String(m.from).slice(0, 120) : null,
               body: m.body != null ? String(m.body).slice(0, 1200) : null,
-              rewrittenBodies: m.rewrittenBodies ? {
-                en: String(m.rewrittenBodies.en || "").slice(0, 700),
-                cs: String(m.rewrittenBodies.cs || "").slice(0, 700)
-              } : null,
+              rewrittenBodyEn: m.rewrittenBodyEn ? String(m.rewrittenBodyEn).slice(0, 700) : null,
               outgoing: !!m.outgoing, replyTo: m.replyTo || null,
               act: m.act || null, apiAction: m.apiAction || null, chatAction: m.chatAction || null,
               bdName: m.bdName || null
@@ -58097,12 +58094,7 @@ async def localfont(name):
         ["fromKey", "bodyKey", "replyTo", "act", "bdName"].forEach(function (key) { if (saved[key] != null) m[key] = saved[key]; });
         if (saved.from != null) m.from = String(saved.from).slice(0, 120);
         if (saved.body != null) m.body = String(saved.body).slice(0, 1200);
-        if (saved.rewrittenBodies && saved.rewrittenBodies.en && saved.rewrittenBodies.cs) {
-          m.rewrittenBodies = {
-            en: String(saved.rewrittenBodies.en).slice(0, 700),
-            cs: String(saved.rewrittenBodies.cs).slice(0, 700)
-          };
-        }
+        if (saved.rewrittenBodyEn) m.rewrittenBodyEn = String(saved.rewrittenBodyEn).slice(0, 700);
         m.outgoing = !!saved.outgoing;
         if (saved.apiAction && typeof saved.apiAction === "object") m.apiAction = saved.apiAction;
         if (saved.chatAction && typeof saved.chatAction === "object") m.chatAction = saved.chatAction;
@@ -59549,7 +59541,7 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodies; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];
@@ -59889,7 +59881,7 @@ async def localfont(name):
       if (msgThumbEl.parentNode !== host) host.appendChild(msgThumbEl);
       msgThumbEl.querySelector(".msg-thumb-from").textContent = msgFrom(m);
       var thumbBody = msgThumbEl.querySelector(".msg-thumb-body");
-      if (m.body != null || m.rewrittenBodies) thumbBody.textContent = msgBody(m); else thumbBody.innerHTML = msgBody(m); // visitor/AI/rewritten copy is literal; untouched authored dictionary copy may carry <em>
+      if (m.body != null || (m.rewrittenBodyEn && document.documentElement.lang === "en")) thumbBody.textContent = msgBody(m); else thumbBody.innerHTML = msgBody(m); // visitor/AI/rewritten English copy is literal; untouched authored dictionary copy may carry <em>
       var ico = msgThumbEl.querySelector(".msg-thumb-ico"); // a photo message shows its picture as the icon; otherwise the 💬 glyph
       if (m.img) { ico.classList.add("has-img"); ico.innerHTML = '<img src="' + m.img + '" alt="">'; }
       else { ico.classList.remove("has-img"); ico.textContent = "💬"; }
@@ -60069,8 +60061,7 @@ async def localfont(name):
       }
       var request = {
         sender: msgFrom(m),
-        en: plainAuthoredBody(m, "en"),
-        cs: plainAuthoredBody(m, "cs")
+        en: plainAuthoredBody(m, "en")
       };
       var generation = messageRewriteGeneration;
       pendingAuthoredRewrites[id] = true;
@@ -60083,11 +60074,10 @@ async def localfont(name):
           catch (_error) { parsed = null; }
         }
         if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
-            Object.keys(parsed).length !== 2 || typeof parsed.en !== "string" ||
-            typeof parsed.cs !== "string" || !parsed.en.trim() || !parsed.cs.trim()) {
+            Object.keys(parsed).length !== 1 || typeof parsed.en !== "string" || !parsed.en.trim()) {
           throw new Error("invalid authored-message rewrite");
         }
-        m.rewrittenBodies = { en: parsed.en.trim().slice(0, 700), cs: parsed.cs.trim().slice(0, 700) };
+        m.rewrittenBodyEn = parsed.en.trim().slice(0, 700);
       }).catch(function () {
         // The authored dictionary copy is the fail-safe. A chatbot/Turnstile/network/model
         // failure changes no message state and the original lands through the same path below.

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Autonomous authored Messages are rewritten bilingually when Chat succeeds and
-// fall back to the untouched dictionary copy on any request failure.
+// Autonomous authored Messages rewrite English when Chat succeeds, always keep the
+// authored Czech translation, and fall back to English dictionary copy on failure.
 "use strict";
 
 var lib = require("./lib");
@@ -14,7 +14,7 @@ var harness = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push(String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
   ' window.__secondRound=true;var request=null;',
-  ' window.__monitorMessageRewrite=function(value){request=value;return Promise.resolve(JSON.stringify({en:"Hannah gives this dance floor a perfect 10/10 🤸",cs:"Hannah dává tomuhle parketu perfektních 10/10 🤸"}));};',
+  ' window.__monitorMessageRewrite=function(value){request=value;return Promise.resolve(JSON.stringify({en:"Hannah gives this dance floor a perfect 10/10 🤸"}));};',
   ' var accepted=window.__deliverAutonomousPhoneMessage("hannah_banter");var duplicate=window.__deliverAutonomousPhoneMessage("hannah_banter");var pending=window.__messageRewritePending();',
   ' await sleep(40);if(window.__hideMessageThumb)window.__hideMessageThumb();window.__openMessagesAt("hannah_banter");await sleep(40);',
   ' var en=row("hannah_banter");var english=en&&en.textContent;document.documentElement.lang="cs";if(window.refreshPhoneText)window.refreshPhoneText();await sleep(30);var cs=row("hannah_banter");',
@@ -45,13 +45,13 @@ check(success.accepted && !success.duplicate && success.pending.join(",") === "h
   "one autonomous message owns one in-flight rewrite", success);
 check(success.request && success.request.sender === "Hannah" &&
   /official gymnastics score/.test(success.request.en) &&
-  /oficiální gymnastická známka/.test(success.request.cs),
-  "the chatbot receives the sender and both authored language variants", success.request);
+  !Object.prototype.hasOwnProperty.call(success.request, "cs"),
+  "the chatbot receives the sender and English authored copy only", success.request);
 check(success.thread.join(",") === "hannah_banter" &&
   success.en === "Hannah gives this dance floor a perfect 10/10 🤸" &&
-  success.cs === "Hannah dává tomuhle parketu perfektních 10/10 🤸" &&
+  success.cs === "oficiální gymnastická známka pro tenhle parket: 10/10 🤸" &&
   success.remaining.length === 0,
-  "a valid bilingual rewrite lands once and follows later language switches", success);
+  "the English rewrite lands once while Czech stays on its authored translation", success);
 check(fallback.accepted && fallback.thread.join(",") === "cue_mail" &&
   fallback.body === "did you check the mail? 💌 there's a letter for you" &&
   fallback.pending.length === 0,

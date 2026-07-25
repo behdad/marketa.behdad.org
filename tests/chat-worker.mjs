@@ -437,7 +437,6 @@ check(!/^You are Charlie/.test(groupCapture.body.instructions) && /Music, dance,
 
 openAIReply = JSON.stringify({
   en: "official score for this dance floor: a perfect 10/10 🤸",
-  cs: "oficiální známka pro tenhle parket: dokonalých 10/10 🤸",
 });
 const rewriteResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
@@ -450,7 +449,6 @@ const rewriteResponse = await worker.fetch(makeRequest("/chat", {
     rewrite: {
       sender: "Hannah",
       en: "official gymnastics score for this dance floor: 10/10 🤸",
-      cs: "oficiální gymnastická známka pro tenhle parket: 10/10 🤸",
       ignored: "drop me",
     },
   }),
@@ -460,8 +458,8 @@ const rewriteReply = JSON.parse(rewriteResult.reply);
 const rewriteCapture = captures.at(-1);
 check(rewriteResponse.status === 200 &&
   rewriteReply.en === "official score for this dance floor: a perfect 10/10 🤸" &&
-  rewriteReply.cs === "oficiální známka pro tenhle parket: dokonalých 10/10 🤸",
-  "authored-message rewrite mode returns one bounded English/Czech pair", rewriteResult);
+  Object.keys(rewriteReply).length === 1,
+  "authored-message rewrite mode returns one bounded English rewrite", rewriteResult);
 check(rewriteCapture.body.input.length === 1 &&
   /rephrase one authored Wedding crew message/.test(rewriteCapture.body.instructions) &&
   /Keep exactly the same meaning/.test(rewriteCapture.body.instructions) &&

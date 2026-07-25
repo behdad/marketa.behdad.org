@@ -813,13 +813,14 @@ Charlie discovery, party lifecycle prompts, and chained authored follow-ups. The
   player.
 
 Once an autonomous authored ID clears those gates, `deliverAutonomousRewritten` freezes any pooled
-sender/body choice and sends the resolved English and Czech originals through the shared Chat queue
+sender/body choice and sends only the resolved English original through the shared Chat queue
 in `message_rewrite` mode. The Worker uses a dedicated no-actions prompt that permits rephrasing
-only and requires the exact `{en,cs}` response shape. A valid pair is stored on the authored message
-and remains language-live; a Turnstile, transport, timeout, upstream, parsing, or shape failure
+only and requires the exact `{en}` response shape. A valid English rewrite is stored on the authored
+message; Czech always remains the existing reviewed dictionary translation. A Turnstile, transport,
+timeout, upstream, parsing, or shape failure
 falls through to the original dictionary copy. Pending IDs count as received for scheduler
 deduplication, do not enter the thread until the request settles, and are generation-cancelled by
-phone/game reset. Checkpoint rows retain a completed bilingual rewrite, while in-flight work remains
+phone/game reset. Checkpoint rows retain a completed English rewrite, while in-flight work remains
 session-only.
 
 `__deliverAutonomousPhoneMessage` is the single deferral boundary for those sources, including

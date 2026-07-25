@@ -475,9 +475,9 @@ receives focus when Messages opens. Press `Escape` to leave the composer; press
 `/` while it is empty to focus message search.
 
 Before an autonomous authored message arrives, Chat may casually rephrase its
-English and Czech wording without changing any information. If verification,
-the network, or the chatbot fails, the original authored message arrives
-unchanged.
+English wording without changing any information. Czech always uses the
+existing authored translation. If verification, the network, or the chatbot
+fails, the original authored English message arrives unchanged.
 
 Right-click a message, or long-press it on touch, to:
 

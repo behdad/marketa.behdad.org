@@ -117,6 +117,38 @@ var HARNESS = String.raw`<script>
     });
 
     if (window.__resetPhoneApps) window.__resetPhoneApps();
+    if (window.__closePhoneModal) window.__closePhoneModal(true);
+    window.__secondRound = true;
+    window.__deliverPhoneMessage("cue_mail");
+    window.__loftStateChanged("minigame.change", { game: "invaders", active: true }, "ui");
+    window.__deliverPhoneMessage("cue_calendar");
+    window.__loftStateChanged("minigame.change", { game: "window-tetris", active: true }, "ui");
+    var heldDuring = window.__messageNotificationsHeld();
+    step("action_game_hold", {
+      received: window.__phoneMessageReceived("cue_mail") && window.__phoneMessageReceived("cue_calendar"),
+      games: heldDuring.active.slice().sort(),
+      messages: heldDuring.messages.slice().sort(),
+      thumb: !!document.querySelector(".msg-thumb.show"),
+      badge: !!document.querySelector(".msg-badge.show"),
+      balconyBadge: document.getElementById("balcony-phone-badge").style.display
+    });
+    window.__loftStateChanged("minigame.change", { game: "invaders", active: false }, "ui");
+    await sleep(520);
+    step("action_game_overlap", {
+      held: window.__messageNotificationsHeld(),
+      thumb: !!document.querySelector(".msg-thumb.show"),
+      badge: !!document.querySelector(".msg-badge.show")
+    });
+    window.__loftStateChanged("minigame.change", { game: "window-tetris", active: false }, "ui");
+    await sleep(520);
+    step("action_game_release", {
+      held: window.__messageNotificationsHeld(),
+      thumb: !!document.querySelector(".msg-thumb.show"),
+      badge: !!document.querySelector(".msg-badge.show"),
+      body: document.querySelector(".msg-thumb-body") && document.querySelector(".msg-thumb-body").textContent
+    });
+
+    if (window.__resetPhoneApps) window.__resetPhoneApps();
     window.__secondRound = true; window.__gardenPartyOn = true;
     var attended = 0, realPartyLifecycleState = window.__partyLifecycleState;
     window.__partyLifecycleState = function () { return { attended: attended }; };
@@ -207,6 +239,16 @@ check(s.moment_delivery.direct && s.moment_delivery.directReceived && !s.moment_
 check(s.roster_hold.accepted && s.roster_hold.held && !s.roster_hold.autonomousDelivered && s.roster_hold.direct && !s.roster_hold.thumb && !s.roster_hold.badge && s.roster_hold.balconyBadge === "none",
   "Who's here holds autonomous arrivals and suppresses every message notification surface", s.roster_hold);
 check(s.roster_release.autonomousDelivered && s.roster_release.badge, "closing Who's here resumes the held queue and restores the unread badge", s.roster_release);
+check(s.action_game_hold.received && s.action_game_hold.games.join(",") === "invaders,window-tetris" &&
+  s.action_game_hold.messages.join(",") === "cue_calendar,cue_mail" && !s.action_game_hold.thumb &&
+  !s.action_game_hold.badge && s.action_game_hold.balconyBadge === "none",
+  "overlapping action games keep arrivals unread while suppressing notification previews and badges", s.action_game_hold);
+check(s.action_game_overlap.held.active.length === 1 && s.action_game_overlap.held.active[0] === "window-tetris" &&
+  !s.action_game_overlap.thumb && !s.action_game_overlap.badge,
+  "ending one action game does not release notifications while another remains active", s.action_game_overlap);
+check(!s.action_game_release.held.active.length && !s.action_game_release.held.messages.length &&
+  s.action_game_release.thumb && s.action_game_release.badge && /calendar/i.test(s.action_game_release.body || ""),
+  "ending the final action game restores the unread badge and previews the latest held message", s.action_game_release);
 check(s.formal_early.accepted && !s.formal_early.ready && s.formal_early.held && !s.formal_early.delivered,
   "formal-moment texts wait through the party's opening stretch", s.formal_early);
 check(s.formal_mature.ready && s.formal_mature.delivered, "formal-moment texts release after 45 attended party seconds", s.formal_mature);

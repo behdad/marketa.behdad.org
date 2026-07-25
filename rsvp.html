@@ -47130,10 +47130,12 @@ setOfficeProgress("pc", false);
     stopSaver(); clearTimeout(saverTimer); saverTimer = null; pacBuild(); monitor.classList.add("show-pacman");
     if (pacState.status === "running") pacStartLoop();
     playLaptopClickSound("office-monitor");
+    if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: true }, "ui");
   }
   function closePacmanApp() {
     if (!monitor.classList.contains("show-pacman")) { pacStopLoop(); return; }
     monitor.classList.remove("show-pacman"); pacStopLoop(); pacSaveSoon(true); scheduleSaver();
+    if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: false, score: pacState ? pacState.score : 0 }, "ui");
   }
   window.__closeMonitorPacman = closePacmanApp;
   window.__pacmanUnlocked = function () { return pacUnlocked; };
@@ -59734,15 +59736,51 @@ async def localfont(name):
       return true;
     };
     var msgThumbEl = null, msgThumbT = null, curThumbId = null;
-    function hideMessageThumb() {
+    var notificationActionGames = Object.create(null), heldMessageThumbIds = [], heldMessageReleaseT = null;
+    function actionGameHoldsNotifications() {
+      return Object.keys(notificationActionGames).some(function (game) { return notificationActionGames[game]; });
+    }
+    function holdMessageThumb(id) {
+      if (id && heldMessageThumbIds.indexOf(id) === -1) heldMessageThumbIds.push(id);
+    }
+    function hideMessageThumb(quiet) {
       var wasShowing = !!(msgThumbEl && msgThumbEl.classList.contains("show"));
       if (msgThumbT) { clearTimeout(msgThumbT); msgThumbT = null; }
       if (msgThumbEl) msgThumbEl.classList.remove("show");
-      if (wasShowing) scheduleMsgBadgeCoach(); // teach the persistent unread bubble three seconds after the preview is gone
+      if (wasShowing && !quiet) scheduleMsgBadgeCoach(); // teach the persistent unread bubble three seconds after the preview is gone
+    }
+    function releaseHeldMessageThumbs() {
+      heldMessageReleaseT = null;
+      if (actionGameHoldsNotifications()) return;
+      var id = null;
+      while (heldMessageThumbIds.length) {
+        var candidate = heldMessageThumbIds.pop();
+        if (!messagesRead[candidate] && MESSAGES[candidate]) { id = candidate; break; }
+      }
+      heldMessageThumbIds.length = 0; // one latest preview represents the held batch; the badge retains the full unread count
+      updateMsgBadge();
+      if (id) showMessageThumb(id);
+    }
+    function syncActionGameNotificationHold(game, active) {
+      if (!game) return;
+      if (active) {
+        notificationActionGames[game] = true;
+        if (heldMessageReleaseT) { clearTimeout(heldMessageReleaseT); heldMessageReleaseT = null; }
+        if (msgThumbEl && msgThumbEl.classList.contains("show")) holdMessageThumb(curThumbId);
+        hideMessageThumb(true);
+        hideMsgBadgeCoach();
+        updateMsgBadge();
+        return;
+      }
+      delete notificationActionGames[game];
+      if (actionGameHoldsNotifications()) return;
+      if (heldMessageReleaseT) clearTimeout(heldMessageReleaseT);
+      heldMessageReleaseT = setTimeout(releaseHeldMessageThumbs, 450);
     }
     function showMessageThumb(id) {
       if (document.hidden || !document.hasFocus()) return; // unattended → the text waits in the app; no ghost thumbnail/buzz
       if (isOpen()) return; // phone's already up → no notification toast over it (the text lands in the thread; the app live-refreshes)
+      if (actionGameHoldsNotifications()) { holdMessageThumb(id); return; } // action games keep the scene clear; release one current preview afterwards
       var m = MESSAGES[id]; if (!m) return;
       cancelMsgBadgeCoachDelay();
       if (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show")) msgBadgeCoachSeen = false; // a popup that immediately covers the coach did not give the player a fair look; retry after this popup leaves
@@ -59793,6 +59831,15 @@ async def localfont(name):
       msgThumbT = setTimeout(hideMessageThumb, 7000);
     }
     window.__hideMessageThumb = hideMessageThumb;
+    window.__messageNotificationsHeld = function () {
+      return { active: Object.keys(notificationActionGames), messages: heldMessageThumbIds.slice() };
+    };
+    window.addEventListener("loft:statechange", function (event) {
+      var detail = event && event.detail, args = detail && detail.args;
+      if (!detail || detail.id !== "minigame.change" || !args ||
+          ["invaders", "flair-catch", "window-tetris", "pacman"].indexOf(args.game) === -1) return;
+      syncActionGameNotificationHold(args.game, !!args.active);
+    });
     // ── messages shortcut / unread-count badge ── a small red count while messages are unread,
     // then a quiet blue chat icon once the thread is caught up. It appears only after the first
     // message and stays hidden while the phone itself is open; tapping always opens the thread.
@@ -59839,7 +59886,10 @@ async def localfont(name):
         msgBadgeEl.addEventListener("click", function () { hideMsgBadgeCoach(); openMessagesAt(null); });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
-      if (n > 0 && !isOpen() && !rosterOpen) {
+      if (actionGameHoldsNotifications()) {
+        msgBadgeEl.classList.remove("idle", "show");
+        hideMsgBadgeCoach();
+      } else if (n > 0 && !isOpen() && !rosterOpen) {
         msgBadgeEl.classList.remove("idle");
         msgBadgeEl.textContent = n >= 8 ? "∞" : String(n);
         msgBadgeEl.setAttribute("aria-label", n + " unread — " + tr("app_messages"));
@@ -59859,7 +59909,7 @@ async def localfont(name):
       if (balBadge) {
         var bt = balBadge.querySelector("text");
         if (bt) bt.textContent = n >= 8 ? "∞" : String(n); // the real count until the 8 cap, then ∞
-        balBadge.style.display = (n > 0 && !isOpen() && !rosterOpen) ? "" : "none";
+        balBadge.style.display = (n > 0 && !isOpen() && !rosterOpen && !actionGameHoldsNotifications()) ? "" : "none";
       }
     }
     window.__updateMsgBadge = updateMsgBadge;

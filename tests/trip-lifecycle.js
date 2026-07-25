@@ -17,7 +17,7 @@ var HARNESS = [
   ' window.__startTrip("shrooms");window.__stopTrip(true);await sleep(100);S("stale",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes(),bloom:window.__tripBloomLoopRunning&&window.__tripBloomLoopRunning()});',
   ' window.__startTrip("shrooms");await sleep(80);window.__startTrip("acid");await sleep(100);S("interrupt",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes()});',
   ' window.__stopTrip(true);S("stop",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes(),creatures:document.querySelectorAll(".trip-creature-show").length,cards:document.querySelectorAll(".mol-show").length});',
-  ' window.__startTrip("acid");await sleep(3200);S("natural",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes()});',
+  ' window.__startTrip("acid");await sleep(4700);S("natural",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes()});',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit1",shiftKey:true,bubbles:true}));await sleep(2100);S("firstHotkey",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show")});window.__stopTrip(true);',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit8",shiftKey:true,bubbles:true}));await sleep(100);S("lastHotkey",{state:window.__tripState(),classes:classes()});window.__stopTrip(true);',
   ' TRIP_DURATIONS.nitrous=500;document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(200);S("whipperHiss",{state:window.__tripState(),squeezed:document.getElementById("kitchen-whipper").classList.contains("dispensing")});await sleep(900);document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));S("whipper",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show"),bubble:!!document.querySelector(".egg-bubble"),ghost:getComputedStyle(document.getElementById("kitchen-whipper-laugh-ghost")).animationName,jaw:getComputedStyle(document.getElementById("kitchen-whipper-laugh-jaw")).animationName});window.__stopTrip(true);',
@@ -35,7 +35,7 @@ function check(ok, msg, detail) {
 }
 
 console.log("rsvp.html trip lifecycle:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true });
+var result = lib.runPageSync("rsvp.html", HARNESS, 11000, { patchRaf: true });
 if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);

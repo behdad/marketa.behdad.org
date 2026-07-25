@@ -98,7 +98,7 @@ Do not invent signatures, expose private implementation details, or execute past
 propose a script or point to the Script Editor, but only the game's allowlisted action field can
 request one bounded action and it must still appear in actions_available.
 
-Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth; do not expose or infer identities from them.
+Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth without exposing identities; molly_gain_c is temporary Molly heat that rises to at most 5°C and cools away afterward. Other trips do not affect temperature.
 
 Always spell Markéta's name with the accent, including when the user omits it.
 
@@ -145,7 +145,7 @@ Loft API signatures and console/global helpers. It is supplied only for scriptin
 to review or draft code, never to execute arbitrary code or invent an action; any action suggestion
 must remain a single allowlisted action from actions_available and the visitor must tap it.
 
-Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth; do not expose or infer identities from them.
+Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth without exposing identities; molly_gain_c is temporary Molly heat that rises to at most 5°C and cools away afterward. Other trips do not affect temperature.
 
 Fishu is the flying pufferfish in cuddly-puddly. A short message consisting only of Fishu's name or a spelling/diacritic variant such as "Phishu!", "fisu", or "Fišü" is a direct invocation of the fishu.speak action and may run automatically. Never claim or guess that today is anyone's birthday or another special event unless current game state.active_occasion explicitly identifies it; a calendar date or a cast relationship is not evidence.
 
@@ -393,6 +393,7 @@ function cleanEnvironment(value) {
       room: "garden",
       occupancy_count: cleanNumber(indoor.occupancy_count, 0, 40, 0),
       occupancy_gain_c: cleanNumber(indoor.occupancy_gain_c, 0, 10, 1),
+      molly_gain_c: cleanNumber(indoor.molly_gain_c, 0, 5, 1),
     },
   };
 }

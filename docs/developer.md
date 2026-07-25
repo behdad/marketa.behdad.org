@@ -596,6 +596,12 @@ median temperature and modal weather family from the five most recent matching c
 The UI marks these reconstructed Edmonton readings with `≈`, and the approximation metadata is
 included in Charlie's context. Hour changes reuse cached hourly archive rows.
 
+The garden mini-split's indoor reading combines the weather-derived/furnace baseline, blind and AC,
+storm leakage, a lagged one-degree-per-three-person occupancy gain, and a small random walk. Trips
+are thermally neutral except Molly: `mollyGain` rises one degree per 1.2-second thermal tick to a
+five-degree ceiling, then sheds half a degree per tick after Molly ends. The exposed
+`__indoorTempState()` includes both occupancy and Molly contributions.
+
 The implementation also retrieves aviation observations, Edmonton air quality, and geomagnetic
 forecast data for scene effects. Search for `api.open-meteo.com`, `archive-api.open-meteo.com`,
 `__realWx`, `__weatherApprox`, `__realOutdoorC`, `__realPragueC`, and `__realDaily`. Missing or

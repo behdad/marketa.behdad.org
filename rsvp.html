@@ -6552,7 +6552,7 @@ body.bd-patricia-daughter .bd-hat-patricia-daughter{opacity:1; visibility:visibl
 #loft-game-strip.shrooms #garden-peacelily{animation-delay:.3s}
 #loft-game-strip.shrooms #garden-dieffenbachia{animation-delay:.6s}
 #loft-game-strip.shrooms #garden-snakeplant{animation-delay:.9s}
-#loft-game-strip.acid{animation:acid-trip 3s steps(1, end)}
+#loft-game-strip.acid{animation:acid-trip 4.5s steps(1, end)}
 @keyframes acid-trip{
   0%{filter:brightness(1) contrast(1) hue-rotate(0deg)}
   4%{filter:brightness(2.6) contrast(1.7) hue-rotate(30deg) saturate(2.2)}
@@ -6589,7 +6589,7 @@ body.bd-patricia-daughter .bd-hat-patricia-daughter{opacity:1; visibility:visibl
   100%{filter:saturate(1) brightness(1) sepia(0)}
 }
 .trip-acid-flash{opacity:0; pointer-events:none; fill:#ffffff}
-#loft-game-strip.acid .trip-acid-flash{animation:trip-acid-flash 3s steps(1,end)}
+#loft-game-strip.acid .trip-acid-flash{animation:trip-acid-flash 4.5s steps(1,end)}
 @keyframes trip-acid-flash{
   0%{opacity:0}
   4%{opacity:.9} 8%{opacity:0}
@@ -6634,7 +6634,7 @@ body.bd-patricia-daughter .bd-hat-patricia-daughter{opacity:1; visibility:visibl
 #loft-game-strip.nitrous #loft-float{filter:url(#nitrous-haze)}
 #trip-acid-kaleido-layer{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4; mix-blend-mode:screen}
 #trip-acid-kaleido{opacity:0; transform-box:view-box; transform-origin:340px 170px}
-body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 3s ease-in-out}
+body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 4.5s ease-in-out}
 @keyframes acid-kaleido{
   0%{opacity:0; transform:rotate(0deg) scale(0.85)}
   22%{opacity:.55}
@@ -24297,7 +24297,7 @@ section{margin:1.9rem 0}
          (same layering trick as the buddha) so it auto-centres on whichever room shows
          (viewBox 0 0 680 340, slice) and the acid brightness/hue flash can't wash its
          colours out. Twelve mirrored rainbow wedges + a bright core, screen-blended over
-         the room; the group fades in, rotates, and fades out across the 3s acid trip, gated
+         the room; the group fades in, rotates, and fades out across the 4.5s acid trip, gated
          purely on body:has(.acid) so removing the class tears it fully down (no JS). -->
     <svg id="trip-acid-kaleido-layer" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
 <defs>
@@ -57513,17 +57513,19 @@ async def localfont(name):
   // loft up so the base rises with the outside air instead. On top of the base: sun
   // through the raised blind adds a few degrees by day (no sun to let in after dark);
   // the AC pulls it down; a crowded garden/party room warms it gradually; a storm leaks
-  // a little cold through the old windows; a molly trip pins the gauge at 40.
+  // a little cold through the old windows. Trips are thermally neutral except Molly,
+  // whose temporary body heat ramps five degrees up, then dissipates after the trip.
   var OUT_DAY = 16, OUT_NIGHT = 5, STORM_OUT = -4, STORM_IN = -1;
-  var IN_BASE = 22, NIGHT_SETBACK = -3, SUN_GAIN = 3, AC_COOL = -4, TRIP_TARGET = 40; // molly pins the gauge
+  var IN_BASE = 22, NIGHT_SETBACK = -3, SUN_GAIN = 3, AC_COOL = -4;
   var PEOPLE_PER_DEGREE = 3, OCCUPANCY_GAIN_MAX = 10, OCCUPANCY_STEP = 0.25;
+  var MOLLY_GAIN_MAX = 5, MOLLY_HEAT_STEP = 1, MOLLY_COOL_STEP = 0.5;
   // -40 is Edmonton's real winter floor (and where °C and °F meet), not a display convenience:
   // the old -20 truncated genuine cold CYEG readings, and it sits exactly on the sun-dog
   // threshold, so a set -25 would have shown as -20 on the tube.
   var HARD_MIN = -40, HARD_MAX = 40;
   // slow random walks so the numbers feel alive instead of pinned to constants
   var wanderOut = 0, wanderIn = 0;
-  var occupancyGain = 0;
+  var occupancyGain = 0, mollyGain = 0;
   function wander(w, amp) {
     w += (Math.random() - 0.5) * 0.5;
     return Math.max(-amp, Math.min(amp, w));
@@ -57576,8 +57578,18 @@ async def localfont(name):
     if (occupancyGain < target) occupancyGain = Math.min(target, occupancyGain + OCCUPANCY_STEP);
     else if (occupancyGain > target) occupancyGain = Math.max(target, occupancyGain - OCCUPANCY_STEP);
   }
+  function mollyActive() {
+    if (typeof window.__tripState !== "function") return false;
+    try {
+      var state = window.__tripState();
+      return !!(state && state.active && state.variant === "molly");
+    } catch (_error) { return false; }
+  }
+  function easeMollyHeat() {
+    if (mollyActive()) mollyGain = Math.min(MOLLY_GAIN_MAX, mollyGain + MOLLY_HEAT_STEP);
+    else mollyGain = Math.max(0, mollyGain - MOLLY_COOL_STEP);
+  }
   function indoorTarget() {
-    if (window.__tripActive) return TRIP_TARGET; // overshoots past everything
     var air = outdoorAir();
     // Base tracks the outdoor air on a hot day (the loft heats up), but never drops
     // below the heated 22 in cool/cold weather — the furnace holds it there.
@@ -57595,14 +57607,14 @@ async def localfont(name):
     // storm leak stays on top; on a hot stormy day it double-counts a little with the
     // STORM_OUT already in `air`, but that's the asked-for draft-through-old-windows cue
     if (window.__balconyStorm) t += STORM_IN;
-    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + occupancyGain + wanderIn)));
+    return Math.round(Math.max(HARD_MIN, Math.min(HARD_MAX, t + occupancyGain + mollyGain + wanderIn)));
   }
 
   function lerp(a, b, f) { return Math.round(a + (b - a) * f); }
   function hex2(v) { v = Math.max(0, Math.min(255, v)).toString(16); return v.length < 2 ? "0" + v : v; }
   var COLD = [111, 176, 224], MILD = [143, 208, 112], HOT = [224, 96, 60];
   // blue below the ramp's midpoint, green at it, tipping orange/red above — the indoor
-  // ramp only leaves green in the trip-only zone, so a soaring reading looks "off"
+  // ramp leaves green once accumulated sun, crowd or Molly heat makes the loft run warm
   function ramp(t, lo, mid, hi) {
     var f, a, b;
     if (t <= mid) { f = (t - lo) / (mid - lo); a = COLD; b = MILD; }
@@ -57649,11 +57661,13 @@ async def localfont(name):
       temperature_c: shownIn,
       room: "garden",
       occupancy_count: indoorOccupancy(),
-      occupancy_gain_c: Number(occupancyGain.toFixed(1))
+      occupancy_gain_c: Number(occupancyGain.toFixed(1)),
+      molly_gain_c: Number(mollyGain.toFixed(1))
     };
   };
   window.__resetIndoorTempModel = function () {
     occupancyGain = 0;
+    mollyGain = 0;
     return window.__loftTempSet();
   };
   window.__loftTempSet();
@@ -57769,6 +57783,7 @@ async def localfont(name):
     wanderOut = wander(wanderOut, 1.5);
     wanderIn = wander(wanderIn, 0.7);
     easeOccupancy();
+    easeMollyHeat();
     var ti = indoorTarget(), to = outdoorTarget();
     if (shownIn < ti) paintIndoor(++shownIn);
     else if (shownIn > ti) paintIndoor(--shownIn);
@@ -62159,7 +62174,7 @@ function playTripMelody(variant) {
     }
     // how long each variant runs, and a two-sweep swirl over exactly that — wide, and
     // starting from a random side (see swirlBus); note() feeds every voice into the swirl.
-    var DUR = { acid: 3.16, froggies: 4.8, molly: 5.4, ketamine: 6.0, shrooms: 7.1, iboga: 19.0 };
+    var DUR = { acid: 4.66, froggies: 4.8, molly: 5.4, ketamine: 6.0, shrooms: 7.1, iboga: 19.0 };
     var dur = DUR[variant] || 3;
     var cycles = variant === "acid" ? 8 : 2; // acid: lots of quick back-and-forth pans
     var bus = swirlBus(ctx, t0, dur, cycles, (variant === "froggies" || variant === "ketamine" || variant === "iboga") ? 0.98 : 0.92);
@@ -62181,9 +62196,9 @@ function playTripMelody(variant) {
     }
     if (variant === "acid") {
       var sn = [523, 659, 784, 659, 880, 698, 932, 784], sd = 0.08;
-      for (var sr = 0; sr < 4; sr++) sn.forEach(function (f, i) { note("square", f, t0 + (sr * sn.length + i) * sd, 0.04, sd * 0.9); });
+      for (var sr = 0; sr < 6; sr++) sn.forEach(function (f, i) { note("square", f, t0 + (sr * sn.length + i) * sd, 0.04, sd * 0.9); });
       // come-down: a bright square blip skidding down and fading, right after the flicker stops
-      var sTail = t0 + 4 * sn.length * sd - 0.02;
+      var sTail = t0 + 6 * sn.length * sd - 0.02;
       var sOsc = ctx.createOscillator();
       sOsc.type = "square";
       sOsc.frequency.setValueAtTime(700, sTail);
@@ -62274,7 +62289,7 @@ var TRIP_VARIANTS = ["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "
   }
 })();
 var tripVariantIndex = 0;
-var TRIP_DURATIONS = { nitrous: 11000, shrooms: 6000, acid: 3000, froggies: 5000, dmt: 6000, molly: 7000, ketamine: 18000, iboga: 20000 };
+var TRIP_DURATIONS = { nitrous: 11000, shrooms: 6000, acid: 4500, froggies: 5000, dmt: 6000, molly: 7000, ketamine: 18000, iboga: 20000 };
 var tripActive = false;
 var tripEndTimer = null;
 var currentTripVariant = null;

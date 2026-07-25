@@ -4305,6 +4305,9 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .bezel-nav:hover .seg-hover{opacity:.5}
 .browser-tabs .browser-tab:nth-child(-n+3){flex-shrink:1} /* the couple's own three tabs give ground 4x more slowly than visitors' tabs */
 .browser-tab-plus{flex:none; width:4px; padding-left:0; padding-right:0; justify-content:center; color:#7a6f60}
+#monitor-browser-external{cursor:pointer}
+#monitor-browser-external:hover .seg-hover{opacity:.45}
+#monitor-browser-external.open-dead{opacity:.38; cursor:default}
 /* refusal shake, shared by the + stub (tab cap reached) and the URL input (unparsable) */
 .browser-wrap .shake{animation:browser-shake .25s ease}
 @keyframes browser-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-0.8px)}75%{transform:translateX(0.8px)}}
@@ -21407,7 +21410,7 @@ section{margin:1.9rem 0}
 <div class="browser-noframe" data-i="browser_noframe">if it stays blank, that site refuses to live in a picture frame &#8212; most big ones do</div>
 <div id="monitor-browser-newtab" class="browser-newtab">
 <div class="url-wrap">
-<input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a URL&#8230;" data-ph-i="browser_url_ph"/>
+<input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search or enter address" data-ph-i="browser_omni_ph"/>
 </div>
 <button id="monitor-browser-go" class="browser-go" type="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2.2 6 L9.4 6 M6.6 2.9 L9.8 6 L6.6 9.1" fill="none" stroke="#fffdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </div>
@@ -21420,6 +21423,12 @@ section{margin:1.9rem 0}
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#1e4c9e" opacity="0"/>
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#ffffff" stroke-width="0.6" stroke-linecap="round"/>
+</g>
+<g id="monitor-browser-external" transform="translate(76.0,29.3) scale(0.8)" data-aria-i="browser_open_tab" data-title-i="browser_open_tab" aria-label="Open in a real tab">
+<rect class="mini-hit" x="363.7" y="155" width="7.2" height="9" fill="#000" opacity="0"/>
+<rect x="365.1" y="156.8" width="5" height="5" rx="1.2" fill="#b9b1a2" stroke="#8f877a" stroke-width="0.35"/>
+<rect class="seg-hover" x="365.1" y="156.8" width="5" height="5" rx="1.2" fill="#fffdf8" opacity="0"/>
+<path d="M366.25 160.55 L368.9 157.9 M367.35 157.9 H368.9 V159.45 M366.25 158.95 V160.55 H367.85" fill="none" stroke="#5d5347" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </g>
 <!-- LOFT PHOTOBOOTH: the visitor's own camera, live inside the monitor. Shown only while a
@@ -48475,6 +48484,7 @@ setOfficeProgress("pc", false);
     if (f) { f.addEventListener("click", function (e) { e.stopPropagation(); step(false); }); f.addEventListener("dblclick", function (e) { e.stopPropagation(); }); }
   })();
   var browserPage = browserWrap ? browserWrap.querySelector(".browser-page") : null;
+  var browserFrameHolder = browserWrap ? browserWrap.querySelector(".browser-frame-holder") : null;
   var browserUrlIn = document.getElementById("monitor-browser-url");
 
   var browserGoBtn = document.getElementById("monitor-browser-go");
@@ -48491,7 +48501,7 @@ setOfficeProgress("pc", false);
   var BROWSER_DYN_MAX = 3;
   var browserTabEls = {};
   var browserActiveTab = "loft";
-  var browserPlusEl = null;
+  var browserPlusEl = null, browserExternalEl = null;
   var browserClosedFixed = {}; // fixed tab ids closed for the session via the tab right-click menu; restored on power-off or a reopen onto an empty strip
   function findBrowserTab(tabId) {
     var all = BROWSER_TABS.concat(browserDynTabs);
@@ -48503,6 +48513,7 @@ setOfficeProgress("pc", false);
     if (!tab) return;
     browserActiveTab = tab.id;
     for (var id in browserTabEls) browserTabEls[id].classList.toggle("active", id === tab.id);
+    if (browserExternalEl) browserExternalEl.classList.toggle("open-dead", !tab.url);
     if (browserWrap) {
       browserWrap.classList.toggle("newtab", !!tab.dyn && !tab.url); // unnavigated visitor tab = address form
       browserWrap.classList.toggle("dyn", !!(tab.dyn && tab.url)); // framing-refused hint, visitor sites only
@@ -48545,6 +48556,17 @@ setOfficeProgress("pc", false);
     return el;
   }
   function browserT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  browserExternalEl = document.getElementById("monitor-browser-external");
+  if (browserExternalEl) {
+    browserExternalEl.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var tab = findBrowserTab(browserActiveTab);
+      if (!tab || !tab.url) return;
+      try { window.open(tab.url, "_blank", "noopener"); } catch (err) {}
+      playLaptopClickSound("office-monitor");
+    });
+    browserExternalEl.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
   if (browserTabsBar) {
     BROWSER_TABS.forEach(function (t) { browserTabsBar.appendChild(makeBrowserTabEl(t)); });
     browserPlusEl = document.createElement("div");
@@ -48731,7 +48753,7 @@ setOfficeProgress("pc", false);
     tab.frame.className = "browser-frame";
     tab.frame.addEventListener("load", function () { if (window.__browserFrameLoaded) window.__browserFrameLoaded(tab.frame); });
     tab.frame.setAttribute("src", u.href);
-    if (browserPage) browserPage.appendChild(tab.frame);
+    if (browserFrameHolder) browserFrameHolder.appendChild(tab.frame);
     browserUrlIn.value = "";
     setBrowserTab(tab.id); // repaints form/frame visibility now that the tab has a page
   }

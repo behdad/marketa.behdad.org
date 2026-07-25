@@ -89,19 +89,32 @@ var harness = String.raw`<script>
           rumi && rumi._rumiSpeaker === "markéta" &&
           rumi.querySelector(".rumi-fa") && !rumi.querySelector(".fal-fa"),
           rumi && rumi.textContent);
-        check("Markéta's cumulative Rumi offset is 60px right and 5px down",
-          rumi && rumi._rumiOffset && rumi._rumiOffset.x === 60 && rumi._rumiOffset.y === 5,
+        check("Markéta's balanced Rumi bubble keeps its 5px vertical nudge",
+          rumi && rumi._rumiOffset && rumi._rumiOffset.x === 0 && rumi._rumiOffset.y === 5,
           rumi && (rumi.style.left + "," + rumi.style.top));
         check("Markéta's Rumi bubble has a tail aimed at her",
           rumi && rumi._rumiTailAnchor &&
           rumi._rumiTailAnchor.id === "cuddly-marketa-head" &&
           !!rumi.style.getPropertyValue("--rumi-tail-x") &&
-          rumi._rumiFollowing === true);
+          rumi._rumiFollowing === true &&
+          Math.abs(parseFloat(rumi.style.getPropertyValue("--rumi-tail-x")) /
+            rumi.offsetWidth - .25) < .02,
+          rumi && JSON.stringify({ tail: rumi.style.getPropertyValue("--rumi-tail-x"),
+            width: rumi.offsetWidth, left: rumi.style.left }));
         check("Markéta's pointed Rumi bubble needs no visible speaker label",
           rumi && !rumi.querySelector(".rumi-speaker"));
         check("the Rumi exchange uses enlarged type",
           rumi && getComputedStyle(rumi).fontSize === "16px",
           rumi && getComputedStyle(rumi).fontSize);
+        var rumiPersian = rumi && rumi.querySelector(".rumi-fa");
+        check("the desktop Rumi bubble keeps its Persian verse on one line",
+          rumiPersian && rumiPersian.scrollWidth <= rumiPersian.clientWidth &&
+          rumiPersian.getBoundingClientRect().height <= parseFloat(getComputedStyle(rumiPersian).lineHeight) + 1,
+          rumiPersian && JSON.stringify({
+            width: rumiPersian.clientWidth, scrollWidth: rumiPersian.scrollWidth,
+            height: rumiPersian.getBoundingClientRect().height,
+            lineHeight: getComputedStyle(rumiPersian).lineHeight
+          }));
         check("Markéta's recitation identifies the Rumi source",
           rumi && rumi.querySelector(".rumi-credit") &&
           rumi.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal " + rumi._rumiGhazal);
@@ -116,8 +129,8 @@ var harness = String.raw`<script>
             check("behdad's reply replaces Markéta's Rumi bubble",
               reply && reply._rumiSpeaker === "behdad",
               reply && reply.textContent);
-            check("behdad's manual Rumi adjustment is 55px right and 48px down",
-              reply && reply._rumiOffset && reply._rumiOffset.x === 55 &&
+            check("behdad's balanced Rumi bubble keeps its 48px vertical nudge",
+              reply && reply._rumiOffset && reply._rumiOffset.x === 0 &&
               reply._rumiOffset.y === 48 &&
               reply._rumiLayout === "head-top-left",
               reply && (reply.style.left + "," + reply.style.top));
@@ -125,7 +138,11 @@ var harness = String.raw`<script>
               reply && reply._rumiTailAnchor &&
               reply._rumiTailAnchor.id === "cuddly-behdad-head" &&
               !!reply.style.getPropertyValue("--rumi-tail-x") &&
-              reply._rumiFollowing === true);
+              reply._rumiFollowing === true &&
+              Math.abs(parseFloat(reply.style.getPropertyValue("--rumi-tail-x")) /
+                reply.offsetWidth - .75) < .02,
+              reply && JSON.stringify({ tail: reply.style.getPropertyValue("--rumi-tail-x"),
+                width: reply.offsetWidth, left: reply.style.left }));
             check("behdad's pointed Rumi bubble needs no visible speaker label",
               reply && !reply.querySelector(".rumi-speaker"));
             check("behdad's recitation identifies the Rumi source",

@@ -167,14 +167,17 @@ footer{margin-top:2.6rem}
 /* the fāl couplet's Persian original: RTL, a touch larger and airier than the bubble body so the
    Arabic-script marks have room (system Persian fonts; nothing is fetched for this) */
 .egg-bubble .fal-fa{display:block; direction:rtl; text-align:right; font-size:1.08em; line-height:1.9; margin:.25em 0}
-.egg-bubble.rumi-bubble{max-width:250px; font-size:1rem}
+.egg-bubble.rumi-bubble{
+  width:max-content; max-width:min(480px,calc(100vw - 24px)); font-size:1rem;
+}
 .egg-bubble.rumi-bubble::after{
   content:""; position:absolute; top:100%; left:var(--rumi-tail-x,50%);
   width:0; height:0; transform:translateX(-50%);
   border-left:7px solid transparent; border-right:7px solid transparent;
   border-top:9px solid var(--ink);
 }
-.egg-bubble .rumi-fa{display:block; direction:rtl; text-align:right; font-size:1.12em; line-height:1.8}
+.egg-bubble .rumi-fa{display:block; direction:rtl; text-align:right; font-size:1.12em; line-height:1.8; white-space:nowrap}
+@media(max-width:519px){.egg-bubble .rumi-fa{white-space:normal}}
 .egg-bubble .rumi-reading{display:block; margin-top:.15em}
 .egg-bubble .rumi-credit{display:block; margin-top:.25em; color:var(--rule); font-size:.82em}
 /* white "who is this?" popup — the inverse roster: tapping a figure on the floor names them in a
@@ -64565,13 +64568,13 @@ async def localfont(name):
   function positionRumiBubble(bubble, anchor, yOffset, xOffset, layout) {
     positionEggBubble(bubble, anchor, "top", yOffset, xOffset);
     var anchorRect = anchor.getBoundingClientRect();
+    var tailRatio = layout === "head-top-left" ? .75 : .25;
+    var balancedLeft = anchorRect.left + anchorRect.width / 2 - bubble.offsetWidth * tailRatio;
+    bubble.style.left = Math.max(8, Math.min(window.innerWidth - bubble.offsetWidth - 8, balancedLeft)) + "px";
     if (layout === "head-top-left") {
-      bubble.style.left = Math.max(8, anchorRect.left - bubble.offsetWidth - 10 + xOffset) + "px";
       bubble.style.top = Math.max(8, anchorRect.top - bubble.offsetHeight - 10 + yOffset) + "px";
     }
-    var bubbleLeft = parseFloat(bubble.style.left) || 0;
-    var tailX = anchorRect.left + anchorRect.width / 2 - bubbleLeft;
-    tailX = Math.max(12, Math.min(bubble.offsetWidth - 12, tailX));
+    var tailX = bubble.offsetWidth * tailRatio;
     bubble.style.setProperty("--rumi-tail-x", tailX + "px");
   }
   function showRumi(anchor, speaker, fa, reading, credit, yOffset, xOffset, layout) {
@@ -64605,13 +64608,13 @@ async def localfont(name):
     var i = rumiPick();
     var t = T[document.documentElement.lang] || T.en;
     var readings = t.rumi_lines || T.en.rumi_lines;
-    showRumi(hostAnchor("cuddly-marketa-head", fallback), "markéta", RUMI_FA[i][0], readings[i][0], RUMI_GHAZAL[i], 5, 60);
+    showRumi(hostAnchor("cuddly-marketa-head", fallback), "markéta", RUMI_FA[i][0], readings[i][0], RUMI_GHAZAL[i], 5, 0);
     rumiReplyTimer = setTimeout(function () {
       if (window.currentStageName !== "cuddly" || window.__gardenPartyOn) {
         endRumiWake();
         return;
       }
-      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], RUMI_GHAZAL[i], 48, 55, "head-top-left");
+      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], RUMI_GHAZAL[i], 48, 0, "head-top-left");
       rumiWakeTimer = setTimeout(endRumiWake, 6400);
     }, 5200);
     return i;

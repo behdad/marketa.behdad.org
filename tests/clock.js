@@ -20,6 +20,7 @@ var HARNESS = [
   "    var m=mon(); m.classList.add('screen-on','show-caps'); m.classList.remove('show-saver','show-fedora'); window.currentStageName='office';",
   "    var toolbar=openClock(); await sleep(30); var wrap=document.getElementById('monitor-clock-wrap');",
   "    S('opened',!!toolbar&&m.classList.contains('show-clock'));",
+  "    var leakedClicks=0; m.addEventListener('click',function(){leakedClicks++;}); wrap.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); S('click_contained',leakedClicks===0);",
   "    S('shared_ui',!!wrap&&!!wrap.querySelector('.pm-clock.mon-clock')&&!!wrap.querySelector('.pmk-e-t')&&!!wrap.querySelector('.pmk-p-t')&&!!wrap.querySelector('.pmk-t-t')&&!!wrap.querySelector('.pmk-l-t')&&!!wrap.querySelector('.pmk-e-cd')&&!!wrap.querySelector('.pmk-p-cd')&&!!wrap.querySelector('.pmk-pt')&&!!wrap.querySelector('.pmk-slider')&&!!wrap.querySelector('.pmk-timelapse'));",
   "    var cards=wrap.querySelectorAll('.pmk-cd'), slider=wrap.querySelector('.pmk-slider'), reset=wrap.querySelector('.pmk-treset'), resetRow=wrap.querySelector('.pmk-trow2');",
   "    S('world_clocks',cards.length===4&&cards[0].getAttribute('data-time-zone')==='America/Edmonton'&&cards[1].getAttribute('data-time-zone')==='Europe/Prague'&&cards[2].getAttribute('data-time-zone')==='Asia/Tehran'&&cards[3].getAttribute('data-time-zone')==='Europe/Berlin'&&cards[2].textContent.indexOf('Tehran')>=0&&cards[3].textContent.indexOf('Lübeck')>=0&&!!wrap.querySelector('.pmk-t-t').textContent&&!!wrap.querySelector('.pmk-l-t').textContent);",
@@ -55,6 +56,7 @@ var s=rep.steps||{},fails=0;
 function check(name,ok,detail){if(ok)console.log("  ✓ "+name);else{fails++;console.log("  ✗ "+name+(detail!==undefined?"   ["+JSON.stringify(detail)+"]":""));}}
 console.log("monitor Clock:");
 check("toolbar time opens Clock",s.opened===true);
+check("Clock surface clicks stay inside the app",s.click_contained===true);
 check("monitor uses the full shared city/countdown/playtime/time-control renderer",s.shared_ui===true);
 check("Edmonton, Prague, Tehran, and Lübeck render as four live world clocks",s.world_clocks===true);
 check("monitor range exposes 1-minute precision",s.monitor_precision===true);

@@ -4143,6 +4143,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-console #monitor-js{opacity:1}
 #office-monitor.death-code #monitor-qbasic{opacity:1}
 #office-monitor.death-life #monitor-life-farewell{opacity:1}
+#office-monitor.death-tattoo #monitor-tattoo-farewell{opacity:1}
 #office-monitor.death-browser #monitor-awsnap{opacity:1}
 /* Browser is the one app defined AFTER #monitor-deathfx (it paints above), and .browser-wrap is
    opaque, so hide the frozen browser + its bezel nav arrows under the Aw-Snap overlay during the
@@ -21014,6 +21015,30 @@ section{margin:1.9rem 0}
 <g id="monitor-life-farewell-glider"></g>
 <rect id="monitor-life-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
 </g>
+<!-- Tattoo killed → a tiny machine permanently inks NO REGRETS, then underlines it. -->
+<g id="monitor-tattoo-farewell">
+<defs>
+<linearGradient id="monitor-tattoo-skin" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#e4b58e"/>
+<stop offset="1" stop-color="#c88968"/>
+</linearGradient>
+<clipPath id="monitor-tattoo-ink-clip">
+<rect id="monitor-tattoo-ink-reveal" x="271" y="158" width="0" height="31"/>
+</clipPath>
+</defs>
+<rect x="254" y="154" width="124" height="42" fill="url(#monitor-tattoo-skin)"/>
+<g clip-path="url(#monitor-tattoo-ink-clip)" fill="#35251f" stroke="#35251f">
+<text x="316" y="178.5" text-anchor="middle" font-family="Impact,Arial Black,sans-serif" font-size="9.2" letter-spacing="0.7">NO REGRETS</text>
+<path d="M278 183 Q316 187 354 183" fill="none" stroke-width="1.5" stroke-linecap="round"/>
+</g>
+<g id="monitor-tattoo-machine">
+<path d="M0 -5 L5 -5 L7 0 L2 2 L-2 -1 Z" fill="#4a453d" stroke="#241d1a" stroke-width="0.5"/>
+<circle cx="1" cy="-2" r="1.2" fill="#8e3a4a"/>
+<rect x="5.5" y="-0.5" width="6" height="1.2" rx="0.6" fill="#77716a"/>
+<path d="M11.5 0 L13.5 1.3" fill="none" stroke="#241d1a" stroke-width="0.55"/>
+</g>
+<rect id="monitor-tattoo-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
+</g>
 <!-- Browser (chrome) killed → Chrome's classic "Aw, Snap!" crash page: the sad rounded-page face
      (tilted a touch), the dark-gray "Aw, Snap!" heading + a small explainer line, and a decorative
      (non-functional) Reload pill. Native SVG (no foreignObject font-subset risk). Fills the 254/154
@@ -25636,6 +25661,7 @@ var T = {
       df_console_quip: "undefined is not a function.", // caption under the on-screen JS-console flatline (console kill); a literal JS error — same in both languages (code, not prose)
       df_code_quip: "Back to BASICs.", // caption under the QBasic → DOS send-off (Code kill)
       df_life_quip: "The point of the game is the playing.", // Alan Watts-inspired caption under the departing glider (Life kill)
+      df_tattoo_quip: "No regrets.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Turn on La Maz → run El Maz → brew.",
       kitchen_grind: "Now grind coffee.",
@@ -26555,6 +26581,7 @@ var T = {
       df_console_quip: "undefined is not a function.", // literal JS error string — same in both languages (a code token, not translated prose)
       df_code_quip: "Zpátky k BASICům.", // caption under the QBasic → DOS send-off (Code kill)
       df_life_quip: "Smyslem hry je samotné hraní.", // Alan Watts-inspired caption under the departing glider (Life kill)
+      df_tattoo_quip: "Bez výčitek.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
       kitchen_grind: "Teď umel kávu.",
@@ -44788,7 +44815,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a death-flash
     // instead of the silent generic close — the browser flashes Chrome's "Aw, Snap!" then closes.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -45383,6 +45410,37 @@ setOfficeProgress("pc", false);
     scheduleSaver();
   }
   window.__closeMonitorTattoo = closeTattooApp; // other monitor apps close the studio before taking the screen
+  function tattooDeathFlash() {
+    var finish = function () {
+      if (window.resetMonitorAppState) window.resetMonitorAppState("tattoo");
+      else closeTattooApp();
+    };
+    if (!monitor.classList.contains("show-tattoo") || !window.__runMonitorDeathFlash) { finish(); return; }
+    var reveal = document.getElementById("monitor-tattoo-ink-reveal");
+    var machine = document.getElementById("monitor-tattoo-machine");
+    var dim = document.getElementById("monitor-tattoo-farewell-dim");
+    if (reveal) reveal.setAttribute("width", "0");
+    if (machine) machine.setAttribute("opacity", "1");
+    if (dim) dim.setAttribute("opacity", "0");
+    window.__runMonitorDeathFlash({
+      screenClass: "death-tattoo",
+      beats: [{ key: "df_tattoo_quip", at: 250 }],
+      dur: 2450,
+      freeze: tattooDismissDialog,
+      tick: function (t) {
+        var write = Math.max(0, Math.min(1, t / .72));
+        var width = 90 * write;
+        if (reveal) reveal.setAttribute("width", width.toFixed(2));
+        if (machine) {
+          machine.setAttribute("transform", "translate(" + (270 + width) + " " + (180 + Math.sin(write * 42) * .45) + ") rotate(-18)");
+          machine.setAttribute("opacity", t < .76 ? "1" : "0");
+        }
+        if (dim) dim.setAttribute("opacity", (Math.max(0, (t - .88) / .12) * .55).toFixed(3));
+      },
+      close: finish
+    });
+  }
+  window.__killMonitorTattoo = tattooDeathFlash;
   window.refreshTattooText = function () { if (monitor.classList.contains("show-tattoo")) renderTattoo(); };
   if (tattooWrap) {
     tattooWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // screen taps never reach the monitor's boot gag

@@ -66,6 +66,8 @@ var HARNESS = [
   "    ctxAt(mon()); if(monKill()) monKill().click(); await sleep(40); S('code_kill_flash_started', mon().classList.contains('death-code')); S('code_kill_still_open_during_flash', mon().classList.contains('show-code')); await sleep(1800); var dos=document.getElementById('monitor-qbasic-dos'); S('code_kill_reached_dos', !!dos && Number(dos.getAttribute('opacity'))>0); await sleep(700); S('code_kill_closed_app', !mon().classList.contains('show-code')); S('code_kill_flash_ended', !mon().classList.contains('death-code')); S('code_kill_cleared_live_buffer', !!codeTa && codeTa.value==='' && localStorage.getItem('deskCodeUnsaved')===null && localStorage.getItem('deskCodeDraft')===null);",
   // Life Kill evolves a real five-cell B3/S23 glider before the app closes.
   "    showApp('show-life'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(50); S('life_kill_flash_started', mon().classList.contains('death-life')); S('life_kill_still_open_during_flash', mon().classList.contains('show-life')); await sleep(1000); var glider=document.getElementById('monitor-life-farewell-glider'); S('life_kill_glider_alive', !!glider && glider.querySelectorAll('rect').length===5 && Number(glider.getAttribute('data-generation'))>0); await sleep(1700); S('life_kill_closed_app', !mon().classList.contains('show-life')); S('life_kill_flash_ended', !mon().classList.contains('death-life'));",
+  // Tattoo Kill writes NO REGRETS before resetting the studio.
+  "    showApp('show-tattoo'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(50); S('tattoo_kill_flash_started', mon().classList.contains('death-tattoo')); S('tattoo_kill_still_open_during_flash', mon().classList.contains('show-tattoo')); await sleep(900); var ink=document.getElementById('monitor-tattoo-ink-reveal'); S('tattoo_kill_is_inking', !!ink && Number(ink.getAttribute('width'))>20); await sleep(1600); S('tattoo_kill_closed_app', !mon().classList.contains('show-tattoo')); S('tattoo_kill_flash_ended', !mon().classList.contains('death-tattoo'));",
   "    showApp('show-browser'); ctxAt(mon()); S('browser_items', monItems()); S('browser_kill_enabled', monKill()?!monKill().disabled:false); S('browser_has_restart', !!monRestart());",
   "    if(monKill()) monKill().click(); await sleep(40); S('browser_kill_hid_menu', !monMenu()); S('browser_kill_flash_started', mon().classList.contains('death-browser')); S('browser_kill_still_open_during_flash', mon().classList.contains('show-browser')); await sleep(2400); S('browser_kill_closed_app', !mon().classList.contains('show-browser')); S('browser_kill_flash_ended', !mon().classList.contains('death-browser'));",
   // ---- PYTHON (console-ctx) ----
@@ -211,7 +213,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 30000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 33000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -233,6 +235,7 @@ console.log(" python / linux (folded into the console menu):");
 check("contextmenu suppresses native menu over python console", s.py_contextmenu_prevented === true);
 check("Code Kill runs the QBasic → DOS send-off, then clears its live buffer", s.code_kill_flash_started === true && s.code_kill_still_open_during_flash === true && s.code_kill_reached_dos === true && s.code_kill_closed_app === true && s.code_kill_flash_ended === true && s.code_kill_cleared_live_buffer === true, { flash: s.code_kill_flash_started, during: s.code_kill_still_open_during_flash, dos: s.code_kill_reached_dos, closed: s.code_kill_closed_app, ended: s.code_kill_flash_ended, cleared: s.code_kill_cleared_live_buffer });
 check("Life Kill evolves a real five-cell glider, then closes the app", s.life_kill_flash_started === true && s.life_kill_still_open_during_flash === true && s.life_kill_glider_alive === true && s.life_kill_closed_app === true && s.life_kill_flash_ended === true, { flash: s.life_kill_flash_started, during: s.life_kill_still_open_during_flash, alive: s.life_kill_glider_alive, closed: s.life_kill_closed_app, ended: s.life_kill_flash_ended });
+check("Tattoo Kill inks NO REGRETS, then resets and closes the studio", s.tattoo_kill_flash_started === true && s.tattoo_kill_still_open_during_flash === true && s.tattoo_kill_is_inking === true && s.tattoo_kill_closed_app === true && s.tattoo_kill_flash_ended === true, { flash: s.tattoo_kill_flash_started, during: s.tattoo_kill_still_open_during_flash, ink: s.tattoo_kill_is_inking, closed: s.tattoo_kill_closed_app, ended: s.tattoo_kill_flash_ended });
 check("console menu appears over python", s.py_menu_present === true);
 check("Restart item visible for python", s.py_restart_visible === true);
 check("Kill item visible for python", s.py_kill_visible === true);

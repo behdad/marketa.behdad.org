@@ -371,7 +371,7 @@ The main monitor desktop contains these app tiles:
 - Python
 - Linux
 
-While **Doom**, **Console**, **Python**, **Linux**, **Code**, **Life**, or **Browser
+While **Doom**, **Console**, **Python**, **Linux**, **Code**, **Life**, **Tattoo**, or **Browser
 (Chrome)** is open, right-click the app and choose **Kill** to terminate it with
 a gag display instead of closing it silently.
 

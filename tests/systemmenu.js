@@ -21,8 +21,9 @@ var HARNESS = [
   "  S('menu_open',menu.classList.contains('open'));",
   "  S('menu_actions',[].map.call(menu.querySelectorAll('[data-action]'),function(n){return n.getAttribute('data-action');}));",
   "  S('tagline',[].map.call(menu.querySelectorAll('.desk-system-tagline'),function(n){return n.textContent;}).join(' '));",
-  "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); window.__monitorSystemAction('sleep');",
+  "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); if(window.__monitorZoomIn)window.__monitorZoomIn(); window.__monitorSystemAction('sleep');",
   "  S('sleep_suspended',window.__monitorSleeping()&&mon.classList.contains('monitor-sleeping')&&mon.classList.contains('screen-on')&&!mon.classList.contains('show-saver'));",
+  "  S('sleep_unzoomed',!mon.classList.contains('dev-zoomed'));",
   "  S('sleep_kept_apps',window.__monitorAppRunning('mail')&&mon.classList.contains('show-mail'));",
   "  mon.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true})); await sleep(30);",
   "  S('sleep_woke',!window.__monitorSleeping()&&!mon.classList.contains('monitor-sleeping')&&mon.classList.contains('show-mail'));",
@@ -73,7 +74,7 @@ ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
 ok("menu exposes Website, Lock, Sleep, Reboot, Shut down", JSON.stringify(s.menu_actions) === JSON.stringify(["website","lock","sleep","reboot","shutdown"]));
 ok("About footer carries the Loft tagline", s.tagline === "where artificial meets higher intelligence.");
-ok("Sleep suspends only the live monitor and a press wakes it", s.sleep_suspended === true && s.sleep_woke === true);
+ok("Sleep suspends and unzooms only the live monitor, then a press wakes it", s.sleep_suspended === true && s.sleep_unzoomed === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);
 ok("Lock starts and persists", s.lock_started === true && s.lock_saved === true);
 ok("Lock leaves browser shortcuts alone", s.lock_kept_browser_keys === true);

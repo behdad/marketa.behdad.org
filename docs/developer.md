@@ -546,7 +546,7 @@ is represented mainly by `show-*` classes on `#office-monitor`. Search for
 
 The native-SVG `m ∞ b` system menu delegates Reboot/Shut down to the physical PC
 tower, so there is no second machine-power owner. Sleep is the separate
-monitor-local `monitorSleeping` state: it stops monitor animation loops and covers the
+monitor-local `monitorSleeping` state: it stops monitor animation loops, unzooms, and covers the
 display with a native-SVG dark layer without touching the active `show-*` app classes
 or the physical PC. The first pointer press wakes and is consumed, preventing the same
 gesture from activating the app below it. `clearBoot()` clears suspension during a

@@ -626,12 +626,16 @@ The maze is DOM/CSS grid rather than canvas because replaced elements inside the
 scaled monitor `foreignObject` do not composite in WebKit. Its overlapping cells
 depend on grid source order: do not add `position`, `transform`, `z-index`,
 `opacity`, or `filter` to the HTML actors or board. Those create the same
-RenderLayer failure as other monitor apps. Keyboard repeat must only ensure the
-single simulation timeout exists, never clear and re-arm it; otherwise a held
-direction starves every tick. The loop gates each step on the open app, focus,
-visibility, and the Kill state. `node tests/pacman.js` covers hidden-only entry,
-input, pause/resume, checkpoint restore, context-menu Kill behavior, and reduced
-motion.
+RenderLayer failure as other monitor apps. The authoritative simulation advances
+one tile every 150 ms, approximating the original arcade level-one dot-eating
+speed. A nested 12-subcell grid interpolates the four actor visuals with rAF while
+collisions, buffered turns, saves, and pellets remain tile-based; reduced motion
+snaps directly to each tile. Keyboard repeat must only ensure the single
+simulation timeout exists, never clear and re-arm it; otherwise a held direction
+starves every tick. The loop gates each step on the open app, focus, visibility,
+and the Kill state. `node tests/pacman.js` covers hidden-only entry, smooth
+transform-free movement, input, pause/resume, checkpoint restore, context-menu
+Kill behavior, and reduced motion.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;

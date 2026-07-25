@@ -3861,11 +3861,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #monitor-pacman-close:hover .seg-hover{opacity:.55}
 .pac-wrap{width:100%;height:100%;box-sizing:border-box;display:grid;grid-template:"info board actions" 1fr/29.5px 61px 29.5px;gap:1px;padding:1px;background:#050711;color:#f8f5ec;font:2.3px/1 ui-monospace,monospace;user-select:none;touch-action:none}
 .pac-board{grid-area:board;display:grid;grid-template:repeat(15,minmax(0,1fr))/repeat(19,minmax(0,1fr));min-width:0;min-height:0;background:#02030a;border:.45px solid #253fc8;border-radius:1px;overflow:hidden}
-.pac-cell,.pac-actor{grid-row:var(--r);grid-column:var(--c);min-width:0;min-height:0}
+.pac-cell{grid-row:var(--r);grid-column:var(--c);min-width:0;min-height:0}
 .pac-wall{background:#172d96;box-shadow:inset 0 0 0 .18px #4164ff}
 .pac-dot,.pac-power{grid-row:var(--r);grid-column:var(--c);place-self:center;border-radius:50%;background:#f5d7a1}
 .pac-dot{width:1px;height:1px}.pac-power{width:2px;height:2px;box-shadow:0 0 1px #fff}
-.pac-actor{place-self:center}
+.pac-actors{grid-area:1/1/16/20;display:grid;grid-template:repeat(180,minmax(0,1fr))/repeat(228,minmax(0,1fr));min-width:0;min-height:0;pointer-events:none}
+.pac-actor{grid-row:var(--ar)/span 12;grid-column:var(--ac)/span 12;min-width:0;min-height:0;place-self:center}
 .pac-player{width:3px;height:3px;border-radius:50%;background:conic-gradient(from var(--mouth),#ffd83d 0 42%,transparent 42% 58%,#ffd83d 58% 100%)}
 .pac-player[data-dir="right"]{--mouth:0deg}.pac-player[data-dir="down"]{--mouth:90deg}.pac-player[data-dir="left"]{--mouth:180deg}.pac-player[data-dir="up"]{--mouth:270deg}
 .pac-ghost{width:3px;height:3px;border-radius:1.5px 1.5px .6px .6px;background:var(--ghost);box-shadow:inset 0 -1px 0 rgba(255,255,255,.28)}
@@ -46520,8 +46521,11 @@ setOfficeProgress("pc", false);
   var pacWrap = document.getElementById("monitor-pacman-wrap");
   var pacBoard = null, pacScoreEl = null, pacHighEl = null, pacMessageEl = null, pacNewEl = null;
   var pacPlayerEl = null, pacGhostEls = [], pacPelletEls = [];
-  var PAC_STEP_MS = 175;
-  var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacCheckpointTicks = 0, pacDying = false;
+  // Arcade level one moves Pac-Man at about 71% speed while eating dots: roughly
+  // 6.7 tiles/second. Keep collision/state updates on tiles and interpolate the
+  // four actors through a transform-free subcell grid between those decisions.
+  var PAC_STEP_MS = 150, PAC_VISUAL_SUBSTEPS = 12;
+  var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacFrame = null, pacCheckpointTicks = 0, pacDying = false;
   var pacState = null;
   var PAC_HIGH_KEY = "pacmanHigh"; // personal best survives New, Kill, shutdown, and full loft reset
   function pacHigh() { try { return parseInt(localStorage.getItem(PAC_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
@@ -46549,10 +46553,48 @@ setOfficeProgress("pc", false);
     var n = 0; for (var i = 0; i < pacState.pellets.length; i++) if (pacState.pellets[i]) n++;
     return n;
   }
-  function pacPlaceActor(el, actor) {
+  function pacSetActorVisual(el, r, c) {
+    if (!el) return;
+    el.__pacVisual = { r: r, c: c };
+    el.style.setProperty("--ar", String(Math.round(r * PAC_VISUAL_SUBSTEPS) + 1));
+    el.style.setProperty("--ac", String(Math.round(c * PAC_VISUAL_SUBSTEPS) + 1));
+  }
+  function pacStopVisuals(snap) {
+    if (pacFrame) cancelAnimationFrame(pacFrame);
+    pacFrame = null;
+    [pacPlayerEl].concat(pacGhostEls).forEach(function (el) {
+      if (!el) return;
+      el.__pacMotion = null;
+    });
+    if (snap && pacState && pacPlayerEl) {
+      pacSetActorVisual(pacPlayerEl, pacState.player.r, pacState.player.c);
+      for (var g = 0; g < pacGhostEls.length; g++) pacSetActorVisual(pacGhostEls[g], pacState.ghosts[g].r, pacState.ghosts[g].c);
+    }
+  }
+  function pacVisualFrame(now) {
+    pacFrame = null;
+    var active = false;
+    [pacPlayerEl].concat(pacGhostEls).forEach(function (el) {
+      var motion = el && el.__pacMotion;
+      if (!motion) return;
+      var t = Math.max(0, Math.min(1, (now - motion.started) / motion.duration));
+      pacSetActorVisual(el, motion.fromR + (motion.toR - motion.fromR) * t, motion.fromC + (motion.toC - motion.fromC) * t);
+      if (t < 1) active = true;
+      else el.__pacMotion = null;
+    });
+    if (active && !pacDying && monitor.classList.contains("show-pacman") && !document.hidden && document.hasFocus()) pacFrame = requestAnimationFrame(pacVisualFrame);
+  }
+  function pacPlaceActor(el, actor, from) {
     if (!el || !actor) return;
-    el.style.setProperty("--r", String(actor.r + 1));
-    el.style.setProperty("--c", String(actor.c + 1));
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var distance = from ? Math.abs(actor.r - from.r) + Math.abs(actor.c - from.c) : 0;
+    if (reduce || distance !== 1) { el.__pacMotion = null; pacSetActorVisual(el, actor.r, actor.c); return; }
+    var visual = el.__pacVisual || from;
+    el.__pacMotion = {
+      fromR: visual.r, fromC: visual.c, toR: actor.r, toC: actor.c,
+      started: performance.now(), duration: PAC_STEP_MS
+    };
+    if (!pacFrame) pacFrame = requestAnimationFrame(pacVisualFrame);
   }
   function pacPaintText() {
     if (!pacBuilt || !pacState) return;
@@ -46565,12 +46607,12 @@ setOfficeProgress("pc", false);
     if (pacNewEl) pacNewEl.textContent = pacText("pacman_new");
   }
   window.refreshPacmanText = pacPaintText;
-  function pacRender() {
+  function pacRender(previous) {
     if (!pacBuilt || !pacState) return;
     for (var i = 0; i < pacPelletEls.length; i++) if (pacPelletEls[i]) pacPelletEls[i].style.visibility = pacState.pellets[i] ? "visible" : "hidden";
     pacPlayerEl.setAttribute("data-dir", pacState.direction || pacState.desired || "left");
-    pacPlaceActor(pacPlayerEl, pacState.player);
-    for (var g = 0; g < pacGhostEls.length; g++) pacPlaceActor(pacGhostEls[g], pacState.ghosts[g]);
+    pacPlaceActor(pacPlayerEl, pacState.player, previous && previous.player);
+    for (var g = 0; g < pacGhostEls.length; g++) pacPlaceActor(pacGhostEls[g], pacState.ghosts[g], previous && previous.ghosts[g]);
     pacWrap.classList.toggle("pac-fright", pacState.fright > 0);
     pacPaintText();
   }
@@ -46593,9 +46635,10 @@ setOfficeProgress("pc", false);
         pellet.style.setProperty("--r", String(r + 1)); pellet.style.setProperty("--c", String(c + 1)); pacBoard.appendChild(pellet); pacPelletEls[idx] = pellet;
       }
     }
-    pacPlayerEl = document.createElement("b"); pacPlayerEl.className = "pac-cell pac-actor pac-player"; pacBoard.appendChild(pacPlayerEl);
+    var actors = document.createElement("div"); actors.className = "pac-actors"; pacBoard.appendChild(actors);
+    pacPlayerEl = document.createElement("b"); pacPlayerEl.className = "pac-actor pac-player"; actors.appendChild(pacPlayerEl);
     ["#e85d75", "#64d7e8", "#f4a261"].forEach(function (color) {
-      var ghost = document.createElement("b"); ghost.className = "pac-cell pac-actor pac-ghost"; ghost.style.setProperty("--ghost", color); pacBoard.appendChild(ghost); pacGhostEls.push(ghost);
+      var ghost = document.createElement("b"); ghost.className = "pac-actor pac-ghost"; ghost.style.setProperty("--ghost", color); actors.appendChild(ghost); pacGhostEls.push(ghost);
     });
     var actions = document.createElement("div"); actions.className = "pac-actions"; pacWrap.appendChild(actions);
     var controls = document.createElement("div"); controls.className = "pac-controls"; actions.appendChild(controls);
@@ -46668,6 +46711,10 @@ setOfficeProgress("pc", false);
   function pacStep() {
     pacTimer = null;
     if (!pacState || pacState.status !== "running" || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    var previous = {
+      player: { r: pacState.player.r, c: pacState.player.c },
+      ghosts: pacState.ghosts.map(function (g) { return { r: g.r, c: g.c }; })
+    };
     if (pacCan(pacState.player, pacState.desired)) pacState.direction = pacState.desired;
     pacMove(pacState.player, pacState.direction);
     var idx = pacCellIndex(pacState.player.r, pacState.player.c);
@@ -46682,10 +46729,10 @@ setOfficeProgress("pc", false);
     }
     if (pacState.fright > 0) pacState.fright--;
     if (pacRemaining() === 0 && pacState.status !== "over") { pacState.status = "win"; pacStopLoop(); pacSaveSoon(true); }
-    pacRender();
+    pacRender(previous);
     if (pacState.status === "running") pacTimer = setTimeout(pacStep, PAC_STEP_MS);
   }
-  function pacStopLoop() { if (pacTimer) clearTimeout(pacTimer); pacTimer = null; }
+  function pacStopLoop() { if (pacTimer) clearTimeout(pacTimer); pacTimer = null; pacStopVisuals(true); }
   function pacStartLoop() {
     if (pacTimer || !pacState || pacState.status !== "running" || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
     pacTimer = setTimeout(pacStep, PAC_STEP_MS);
@@ -46698,7 +46745,8 @@ setOfficeProgress("pc", false);
       pacState.status = "running"; pacState.direction = dir;
     }
     else if (pacState.status === "win" || pacState.status === "over") return false;
-    pacRender(); pacStartLoop(); return true;
+    if (pacPlayerEl) pacPlayerEl.setAttribute("data-dir", pacState.direction || pacState.desired || "left");
+    pacPaintText(); pacStartLoop(); return true;
   }
   function pacResetBoard(save) {
     pacStopLoop(); pacState = pacFreshState(); if (pacBuilt) { pacWrap.classList.remove("pac-killed"); pacRender(); }

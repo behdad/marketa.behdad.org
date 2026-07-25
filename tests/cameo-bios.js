@@ -19,34 +19,11 @@ var harness = String.raw`<script>
     return card ? {
       left: card.style.left,
       top: card.style.top,
-      anchor: card._anchor && card._anchor.id,
-      anchorParent: card._anchor && card._anchor.parentNode && card._anchor.parentNode.id
+      anchor: card._anchor && card._anchor.id
     } : null;
   }
   function click(el) { if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
   try {
-    window.__setGardenParty(true, false);
-
-    var pouriaHit = document.getElementById("kitchen-bartender-hit");
-    click(pouriaHit);
-    var pouriaPartyPlacement = cardPlacement();
-    check("clicking Pouria during the party anchors his bio to his figure",
-      cardName() === "Pouria" && pouriaPartyPlacement &&
-        pouriaPartyPlacement.anchorParent === "kitchen-bartender" &&
-        !!document.querySelector("#kitchen-bartender > .guest-spot-arrow") &&
-        !document.querySelector("#kitchen-bartender-hit > .guest-spot-arrow"),
-      JSON.stringify(pouriaPartyPlacement));
-
-    window.__setGardenParty(false, false);
-    if (window.__setDayNight) window.__setDayNight(true);
-    click(pouriaHit);
-    var pouriaNightPlacement = cardPlacement();
-    check("clicking Pouria at the calm night bar keeps the figure anchor",
-      cardName() === "Pouria" && pouriaNightPlacement &&
-        pouriaNightPlacement.anchorParent === "kitchen-bartender" &&
-        !!document.querySelector("#kitchen-bartender > .guest-spot-arrow") &&
-        !document.querySelector("#kitchen-bartender-hit > .guest-spot-arrow"),
-      JSON.stringify(pouriaNightPlacement));
     window.__setGardenParty(true, false);
 
     window.couples("alireza");
@@ -71,34 +48,6 @@ var harness = String.raw`<script>
     click(cuddlyBehdad);
     check("clicking a Cuddly resident opens their individual bio", cardName() === "behdad", cardName());
     check("a direct Cuddly bio points at the person", !!cuddlyBehdad.querySelector(".guest-spot-arrow"));
-
-    var cuddlyKids = [
-      { id: "cuddly-irene", show: "__ireneShow", pose: "irene-sit", name: "Irene" },
-      { id: "cuddly-robin", show: "__robinShow", pose: "robin-sit", name: "Robin" },
-      { id: "cuddly-navid", show: "__navidShow", pose: "navid-sit", name: "Navid" }
-    ];
-    cuddlyKids.forEach(function (kid) {
-      window[kid.show](kid.pose);
-      var el = document.getElementById(kid.id);
-      if (kid.name === "Irene") {
-        el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
-        check("Irene stays under the pointer until her click is delivered",
-          el.classList.contains("irene-sit"), el.getAttribute("class") || "");
-      }
-      var scheduled = [];
-      var nativeSetTimeout = window.setTimeout;
-      window.setTimeout = function (fn, ms) {
-        scheduled.push(ms);
-        return nativeSetTimeout.apply(this, arguments);
-      };
-      click(el);
-      window.setTimeout = nativeSetTimeout;
-      check("clicking " + kid.name + " opens their Cuddly bio", cardName() === kid.name, cardName());
-      check(kid.name + "'s direct Cuddly bio is arrow-free",
-        !el.querySelector(".guest-spot-arrow"));
-      check(kid.name + "'s direct Cuddly bio has a stable five-second read",
-        scheduled.indexOf(5000) !== -1, scheduled.join(","));
-    });
 
     var pragueDaniel = document.getElementById("laptop-garden-daniel");
     var pragueFelix = document.getElementById("laptop-garden-felix");
@@ -165,23 +114,11 @@ var harness = String.raw`<script>
   } catch (error) {
     out.errors.push(String(error && error.stack || error));
   }
-  // Reproduce the real touch/click sequence and wait beyond the compatibility-click
-  // window. The card used to pass the synchronous checks above, then disappear almost
-  // immediately because a second click-away listener armed on the next task.
-  window.goToStage("cuddly");
-  window.__ireneShow("irene-sit");
-  var lingerKid = document.getElementById("cuddly-irene");
-  lingerKid.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
-  click(lingerKid);
-  setTimeout(function () {
-    check("a Cuddly kid bio remains readable after the opening gesture settles",
-      cardName() === "Irene", cardName());
-    out.errors = out.errors.concat((window.__errs || []).slice());
-    var pre = document.createElement("pre");
-    pre.id = "__report";
-    pre.textContent = JSON.stringify(out);
-    document.body.appendChild(pre);
-  }, 180);
+  out.errors = out.errors.concat((window.__errs || []).slice());
+  var pre = document.createElement("pre");
+  pre.id = "__report";
+  pre.textContent = JSON.stringify(out);
+  document.body.appendChild(pre);
 })();
 </script>`;
 

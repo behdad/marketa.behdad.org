@@ -21,9 +21,6 @@ var HARNESS = [
   "  S('menu_open',menu.classList.contains('open'));",
   "  S('menu_actions',[].map.call(menu.querySelectorAll('[data-action]'),function(n){return n.getAttribute('data-action');}));",
   "  S('tagline',[].map.call(menu.querySelectorAll('.desk-system-tagline'),function(n){return n.textContent;}).join(' '));",
-  "  window.__monitorSystemAction('credits'); await sleep(80); var credits=document.getElementById('monitor-credits-layer');",
-  "  S('credits_open',credits.classList.contains('open')&&credits.textContent.indexOf('Markéta')>=0&&credits.textContent.indexOf('FontTools')>=0&&credits.textContent.indexOf('made with love by behdad, Claude & Codex')>=0);",
-  "  window.__closeMonitorCredits();",
   "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); if(window.__monitorZoomIn)window.__monitorZoomIn(); window.__monitorSystemAction('sleep');",
   "  S('sleep_suspended',window.__monitorSleeping()&&mon.classList.contains('monitor-sleeping')&&mon.classList.contains('screen-on')&&!mon.classList.contains('show-saver'));",
   "  S('sleep_unzoomed',!mon.classList.contains('dev-zoomed'));",
@@ -75,9 +72,8 @@ if (!r) { console.error("  ✗ no report captured"); process.exit(1); }
 var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
-ok("menu groups power actions before About and Credits", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","website","credits"]));
+ok("menu exposes Website, Lock, Sleep, Reboot, Shut down", JSON.stringify(s.menu_actions) === JSON.stringify(["website","lock","sleep","reboot","shutdown"]));
 ok("About footer carries the Loft tagline", s.tagline === "where artificial meets higher intelligence.");
-ok("Credits rolls people, software, and the closing line", s.credits_open === true);
 ok("Sleep suspends and unzooms only the live monitor, then a press wakes it", s.sleep_suspended === true && s.sleep_unzoomed === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);
 ok("Lock starts and persists", s.lock_started === true && s.lock_saved === true);

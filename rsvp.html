@@ -27678,6 +27678,7 @@ function setLang(l) {
   if (window.__refreshCuddlyCountdown) window.__refreshCuddlyCountdown();
   if (window.__refreshDatePill) window.__refreshDatePill();
   if (window.__refreshTimePill) window.__refreshTimePill();
+  if (window.refreshEntryText) window.refreshEntryText();
   if (window.refreshWeatherText) window.refreshWeatherText();
   if (window.refreshPhoneText) window.refreshPhoneText();
   if (window.refreshTattooText) window.refreshTattooText();
@@ -83589,6 +83590,7 @@ function spawnDustMote(container) {
   var LOFT_CHECKPOINT_VERSION = 1;
   var LOFT_CHECKPOINT_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
   var checkpointWriteTimer = null, recoveryGate = null, recoverySaved = null, recoveryKeyHandler = null;
+  var recoveryBrand = null, recoveryTitle = null, recoveryContinueBtn = null, recoveryRestartBtn = null;
   var recoveryReleaseHandler = null, recoveryBlurHandler = null;
   var introWatchParent = null, introWatchNext = null;
   var cinematicRecoveryRaw = null;
@@ -83780,6 +83782,7 @@ function spawnDustMote(container) {
     if (recoveryGate && recoveryGate.parentNode) recoveryGate.parentNode.removeChild(recoveryGate);
     recoveryGate = null;
     recoverySaved = null;
+    recoveryBrand = recoveryTitle = recoveryContinueBtn = recoveryRestartBtn = null;
     if (recoveryArea) recoveryArea.classList.remove("recovery-active");
     restoreIntroWatchControls();
     if (hadRecoveryGate) {
@@ -83864,11 +83867,11 @@ function spawnDustMote(container) {
     dockIntroWatchControls(recoveryArea);
     var gate = document.createElement("div"); recoveryGate = gate;
     gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title"); gate.setAttribute("aria-describedby", "hunt-caption");
-    var brand = document.createElement("p"); brand.className = "loft-entry-brand"; brand.setAttribute("data-i", "hunt_title"); brand.textContent = huntTitleText();
-    var title = document.createElement("div"); title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
+    var brand = document.createElement("p"); recoveryBrand = brand; brand.className = "loft-entry-brand"; brand.setAttribute("data-i", "hunt_title"); brand.textContent = huntTitleText();
+    var title = document.createElement("div"); recoveryTitle = title; title.id = "loft-recovery-title"; title.className = "loft-recovery-title"; title.textContent = huntText("recovery_title");
     var actions = document.createElement("div"); actions.className = "loft-recovery-actions";
-    var continueBtn = document.createElement("button"); continueBtn.type = "button"; continueBtn.className = "loft-recovery-btn primary selected"; continueBtn.textContent = huntText("recovery_continue");
-    var restartBtn = document.createElement("button"); restartBtn.type = "button"; restartBtn.className = "loft-recovery-btn"; restartBtn.textContent = huntText("recovery_restart");
+    var continueBtn = document.createElement("button"); recoveryContinueBtn = continueBtn; continueBtn.type = "button"; continueBtn.className = "loft-recovery-btn primary selected"; continueBtn.textContent = huntText("recovery_continue");
+    var restartBtn = document.createElement("button"); recoveryRestartBtn = restartBtn; restartBtn.type = "button"; restartBtn.className = "loft-recovery-btn"; restartBtn.textContent = huntText("recovery_restart");
     actions.appendChild(continueBtn); actions.appendChild(restartBtn); gate.appendChild(brand); gate.appendChild(title); gate.appendChild(actions); host.appendChild(gate);
     showRecoveryCaption(saved);
     var buttons = [continueBtn, restartBtn], selected = 0;
@@ -83901,7 +83904,7 @@ function spawnDustMote(container) {
     return true;
   }
 
-  var clickMeEl = null, clickMeWord = null, clickMeRaf = 0, clickMeStart = 0;
+  var clickMeEl = null, clickMeBrand = null, clickMeWord = null, clickMeRaf = 0, clickMeStart = 0;
   var CLICKME_MELT_MS = 2500; // one direction; a full ping-pong is 2×
   var CLICKME_MELT_MAX_MS = 15000; // stop the rAF melt after 15s: an unclicked intro shouldn't churn variable-font instances forever. The invitation stays put (frozen at the reduced-motion mid-melt frame) until a real tap.
   function clickMeReduceMotion() {
@@ -83931,7 +83934,7 @@ function spawnDustMote(container) {
     if (clickMeRaf) { cancelAnimationFrame(clickMeRaf); clickMeRaf = 0; }
     if (clickMeEl) clickMeEl.removeEventListener("click", clickMeDismiss);
     if (clickMeEl && clickMeEl.parentNode) clickMeEl.parentNode.removeChild(clickMeEl);
-    clickMeEl = null; clickMeWord = null;
+    clickMeEl = null; clickMeBrand = null; clickMeWord = null;
     // the invitation persists until an actual click/key, so its dismiss listeners are separate from
     // the caption's grace-timeout teardown — pull them here (covers tap, key, room-change, reset)
     document.removeEventListener("keydown", introKeyDismiss, true);
@@ -83955,6 +83958,7 @@ function spawnDustMote(container) {
     clickMeEl.setAttribute("role", "button");
     clickMeEl.setAttribute("aria-label", huntTitleText() + ". " + huntText("clickme"));
     var brand = document.createElement("p");
+    clickMeBrand = brand;
     brand.className = "loft-entry-brand";
     brand.setAttribute("data-i", "hunt_title");
     brand.textContent = huntTitleText();
@@ -83973,6 +83977,20 @@ function spawnDustMote(container) {
     clickMeRaf = requestAnimationFrame(clickMeStep);
   }
   window.__removeClickMe = removeClickMe; // room-change / reset paths reach the teardown too
+  window.refreshEntryText = function () {
+    if (recoveryGate) {
+      if (recoveryBrand) recoveryBrand.textContent = huntTitleText();
+      if (recoveryTitle) recoveryTitle.textContent = huntText("recovery_title");
+      if (recoveryContinueBtn) recoveryContinueBtn.textContent = huntText("recovery_continue");
+      if (recoveryRestartBtn) recoveryRestartBtn.textContent = huntText("recovery_restart");
+      if (recoverySaved) showRecoveryCaption(recoverySaved);
+    }
+    if (clickMeEl) {
+      clickMeEl.setAttribute("aria-label", huntTitleText() + ". " + huntText("clickme"));
+      if (clickMeBrand) clickMeBrand.textContent = huntTitleText();
+      if (clickMeWord) clickMeWord.textContent = huntText("clickme");
+    }
+  };
 
   var hintBlinkTimer = null;
   function dismissOpeningGuide() { finishOpeningGuide(); }

@@ -26,6 +26,12 @@ var harness = String.raw`<script>
   try {
     window.__setGardenParty(true, false);
 
+    click(document.getElementById("kitchen-bartender-hit"));
+    check("clicking Pouria opens his bio", cardName() === "Pouria", cardName());
+    check("Pouria's direct bio points at his visible figure",
+      !!document.querySelector("#kitchen-bartender > .guest-spot-arrow") &&
+      !document.querySelector("#kitchen-bartender-hit .guest-spot-arrow"));
+
     window.couples("alireza");
     var bar = document.querySelector("#kitchen-bar-couples .bc-alirezamahzad");
     click(bar && bar.querySelector(".bc-p1"));

@@ -890,7 +890,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #stage-balcony.tetris-on #balcony-building-beam{opacity:0}
 #balcony-tetris-ui{display:none;pointer-events:none}
 #stage-balcony.tetris-on #balcony-tetris-ui{display:inline;pointer-events:all}
-#stage-balcony.tetris-result #balcony-tetris-ui{display:inline;pointer-events:none}
+#stage-balcony.tetris-result #balcony-tetris-ui{display:inline;pointer-events:all}
 #stage-balcony.tetris-result #balcony-tetris-ui .tetris-shield{opacity:0}
 #stage-balcony.tetris-on #balcony-wobble,
 #stage-balcony.tetris-on #balcony-wobble *{animation-play-state:paused !important}
@@ -26087,7 +26087,9 @@ var T = {
     tetris_best: "BEST",
     tetris_lines: "LINES",
     tetris_controls: "← → · ↓ · ↑ · SPACE",
+    tetris_touch_controls: "TAP: ROTATE · SWIPE: MOVE/DROP",
     tetris_restart: "GAME OVER · ENTER TO RESTART",
+    tetris_touch_restart: "GAME OVER · TAP TO RESTART",
     restart_confirm: "Restart the loft from the beginning? You'll lose your progress.",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
@@ -27068,7 +27070,9 @@ var T = {
     tetris_best: "REKORD",
     tetris_lines: "ŘADY",
     tetris_controls: "← → · ↓ · ↑ · MEZERNÍK",
+    tetris_touch_controls: "KLEPNI: OTOČ · TÁHNI: POSUŇ/SHOĎ",
     tetris_restart: "KONEC HRY · ENTER HRAJE ZNOVU",
+    tetris_touch_restart: "KONEC HRY · KLEPNUTÍ HRAJE ZNOVU",
     restart_confirm: "Restartovat loft od začátku? Přijdeš o svůj postup.",
     caps_aria: "Růžová bekovka a modrá osmidílná bekovka, zkřížené",
     laptop_date: "10. 7.",
@@ -60040,12 +60044,16 @@ async def localfont(name):
     function setHighScore(n) {
       try { localStorage.setItem(HIGH_KEY, String(n)); } catch (e) {}
     }
+    var coarseInput = !!((window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+      (navigator && navigator.maxTouchPoints > 0));
     function refreshHudText() {
       hud.title.textContent = text("tetris_title");
       hud.scoreLabel.textContent = text("tetris_score");
       hud.highLabel.textContent = text("tetris_best");
       hud.linesLabel.textContent = text("tetris_lines");
-      hud.status.textContent = resultVisible ? text("tetris_restart") : text("tetris_controls");
+      hud.status.textContent = resultVisible
+        ? text(coarseInput ? "tetris_touch_restart" : "tetris_restart")
+        : text(coarseInput ? "tetris_touch_controls" : "tetris_controls");
     }
     function updateHud() {
       refreshHudText();
@@ -60322,11 +60330,55 @@ async def localfont(name):
     // Keyboard-only by design: while the building owns the room, no outside
     // button/object click may mutate the scene underneath or navigate away.
     document.addEventListener("click", function (e) {
-      if (!active) return;
-      if (e.target && e.target.closest && e.target.closest(".tetris-close")) stopGame(false);
+      if (!active && !resultVisible) return;
+      if (e.target && e.target.closest && e.target.closest(".tetris-close")) {
+        if (active) stopGame(false); else dismissResult(true);
+      }
       e.preventDefault();
       e.stopImmediatePropagation();
     }, true);
+
+    // The game owns only its full-room SVG shield, so touch gestures cannot collide with the
+    // ordinary room controls. SVG children ignore touch-action in several mobile engines:
+    // cancel movement explicitly from this delegated non-passive listener instead.
+    var touchStart = null;
+    function applyTouchGesture(dx, dy, elapsed) {
+      if (resultVisible) { startGame(); return "restart"; }
+      if (!active) return "";
+      var ax = Math.abs(dx), ay = Math.abs(dy);
+      if (ax < 12 && ay < 12) { rotate(1); return "rotate"; }
+      if (ax > ay) {
+        var moves = Math.max(1, Math.min(4, Math.round(ax / 28)));
+        for (var i = 0; i < moves; i++) move(dx < 0 ? -1 : 1, 0);
+        return dx < 0 ? "left" : "right";
+      }
+      if (dy > 0) {
+        if (dy >= 90 || (dy >= 55 && elapsed <= 220)) { hardDrop(); return "hard-drop"; }
+        var drops = Math.max(1, Math.min(4, Math.round(dy / 24)));
+        for (var j = 0; j < drops; j++) stepDown(true);
+        return "soft-drop";
+      }
+      rotate(-1);
+      return "rotate-back";
+    }
+    ui.addEventListener("touchstart", function (e) {
+      if ((!active && !resultVisible) || e.touches.length !== 1) return;
+      if (e.target && e.target.closest && e.target.closest(".tetris-close")) return;
+      var t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY, at: performance.now() };
+    }, { passive: true });
+    ui.addEventListener("touchmove", function (e) {
+      if (!touchStart || e.touches.length !== 1) return;
+      e.preventDefault();
+    }, { passive: false });
+    ui.addEventListener("touchend", function (e) {
+      if (!touchStart || !e.changedTouches.length) return;
+      var start = touchStart, t = e.changedTouches[0];
+      touchStart = null;
+      e.preventDefault();
+      applyTouchGesture(t.clientX - start.x, t.clientY - start.y, performance.now() - start.at);
+    }, { passive: false });
+    ui.addEventListener("touchcancel", function () { touchStart = null; });
 
     document.addEventListener("keydown", function (e) {
       if (!active && !resultVisible) return;
@@ -60376,6 +60428,12 @@ async def localfont(name):
         render(); return window.__balconyTetrisState();
       }
       if (command === "drop") { hardDrop(); return window.__balconyTetrisState(); }
+      if (command === "touch" && value) {
+        return {
+          gesture: applyTouchGesture(Number(value.dx) || 0, Number(value.dy) || 0, Number(value.ms) || 300),
+          state: window.__balconyTetrisState()
+        };
+      }
       return window.__balconyTetrisState();
     };
   })();

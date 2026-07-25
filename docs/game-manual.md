@@ -657,8 +657,9 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   close control.
 - **Window Tetris:** On the balcony, double-click any across-the-street office
   window. The forty physical windows become a 10×16 board with four square lamps
-  per window. It is keyboard-only so the scene stays uncluttered;
-  its controls, score, lines, and persistent best score appear in the room.
+  per window. Arrow keys move and rotate pieces, and Space drops them. On touchscreens,
+  tap to rotate, swipe sideways to move, swipe down to lower a piece, or flick down
+  to drop it. Its controls, score, lines, and persistent best score appear in the room.
 - **Minesweeper:** Available on both phone and monitor.
 - **Pac-Man:** Type its name in the computer's app search, or catch the roaming
   ghost during the ketamine trip to jump directly into the monitor game. Clear

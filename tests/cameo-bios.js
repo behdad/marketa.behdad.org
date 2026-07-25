@@ -49,12 +49,20 @@ var harness = String.raw`<script>
       /0px$/.test(leftOrigin) && /0px$/.test(rightOrigin),
       leftOrigin + "/" + rightOrigin);
 
-    var baharehFlip = document.querySelector("#garden-kid-bahareh .gk-flip");
-    var baharehStyle = baharehFlip && getComputedStyle(baharehFlip);
-    check("Bahareh's left-facing mirror uses a fixed SVG-space pivot",
-      baharehStyle && baharehStyle.transformBox === "view-box" &&
-        /^0px 0px/.test(baharehStyle.transformOrigin),
-      baharehStyle ? baharehStyle.transformBox + "/" + baharehStyle.transformOrigin : "missing");
+    var runners = document.querySelectorAll('[id^="garden-kid-"] > .gk-run');
+    var unstable = [];
+    runners.forEach(function (run) {
+      [run, run.querySelector(".gk-flip"), run.querySelector(".gk-body-bob")].forEach(function (node) {
+        var style = node && getComputedStyle(node);
+        if (!style || style.transformBox !== "view-box" || !/^0px 0px/.test(style.transformOrigin)) {
+          unstable.push((run.parentNode && run.parentNode.id || "runner") + ":" +
+            (node && node.getAttribute("class") || "missing"));
+        }
+      });
+    });
+    check("every chase runner uses fixed SVG-space movement pivots",
+      runners.length === 10 && unstable.length === 0,
+      "runners=" + runners.length + " unstable=" + unstable.join(","));
   } catch (error) {
     out.errors.push(String(error && error.stack || error));
   }

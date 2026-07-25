@@ -3483,6 +3483,11 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .ed-empty{flex:none; font-size:1.8px; color:#5f7a5f; padding:0.6px 0.8px}
 .ed-main{position:relative; flex:1; min-width:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:1px} /* grid (not flex+position:relative — that composited a RenderLayer that vanished under the monitor's scaled foreignObject, WebKit bug 23113). The autocomplete popup overlays via grid-area + JS margin offset instead of absolute left/top. */
 .ed-top{grid-row:1; grid-column:1; display:flex; align-items:center; gap:0.6px; padding:0 8px 0 1px} /* right pad clears the shrunk close pill parked in the top-right corner */
+.ed-lang{flex:none; display:flex; height:4px; border:.3px solid #2b3a3a; border-radius:.8px; overflow:hidden}
+.ed-lang-btn{width:5px; border:0; border-right:.3px solid #2b3a3a; padding:0; background:#151d19; color:#6f8a6f; font:1.5px/3.5px ui-monospace,Menlo,monospace; cursor:pointer}
+.ed-lang-btn:last-child{border-right:0}
+.ed-lang-btn.active{background:#294234; color:#c6f0ad}
+.ed-lang-btn:hover{color:#c6f0ad}
 .ed-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .ed-name::placeholder{color:#5f7a5f}
 .ed-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer} /* same keycap metrics as .ed-side-btn so the whole toolbar reads as one even set */
@@ -4072,6 +4077,11 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.show-python #monitor-python{opacity:1; pointer-events:auto}
 #monitor-py-close{cursor:pointer}
 #monitor-py-close:hover .seg-hover{opacity:.55}
+#monitor-py-turtle{display:none}
+#monitor-python.turtle-view #monitor-py-turtle{display:inline}
+#monitor-python.turtle-view #monitor-py-wrap{visibility:hidden}
+#monitor-py-view-toggle{cursor:pointer}
+#monitor-py-view-toggle:hover .py-view-hover{opacity:.35}
 .py-wrap{background:#0e1520; color:#d9e4f0}
 .py-wrap .console-ps{color:#ffd43b}
 .py-wrap .console-caret{background:#ffd43b}
@@ -19881,11 +19891,10 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#8fd070" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- EDITOR app: a tiny local-script editor (sibling to the console). A left sidebar lists
-     saved script names (click to load, active one highlighted) with a +/− header (new/delete);
-     a top strip holds the filename + Save/Run/download controls over a code textarea. Scripts
-     persist in localStorage["deskScripts"] and are run by the console's run("name"). Same
-     mini close pill as the console, in the same console green. -->
+<!-- EDITOR app: a tiny local JavaScript/Python editor. A left sidebar lists the active
+     language's saved files; the top strip holds Run, language, and filename controls.
+     Each language persists independently. JavaScript remains callable through run("name");
+     Python hands execution to the Python app. -->
 <g id="monitor-editor">
 <foreignObject x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-ed-wrap" class="ed-wrap">
@@ -19903,8 +19912,9 @@ section{margin:1.9rem 0}
 <div class="ed-main">
 <div class="ed-top">
 <button id="monitor-ed-run" class="ed-btn ed-btn-run" type="button" title="Run">&#9654;</button>
+<div class="ed-lang" role="group" aria-label="Script language"><button id="monitor-ed-lang-js" class="ed-lang-btn active" type="button" title="JavaScript">JS</button><button id="monitor-ed-lang-py" class="ed-lang-btn" type="button" title="Python">PY</button></div>
 <input id="monitor-ed-name" class="ed-name" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="filename"/>
-<input id="monitor-ed-file" type="file" accept=".js,.txt,text/javascript" style="display:none"/>
+<input id="monitor-ed-file" type="file" accept=".js,.py,.txt,text/javascript,text/x-python" style="display:none"/>
 </div>
 <textarea id="monitor-ed-code" class="ed-ta" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="// a script — e.g. party(true); await sleep(400); dance(&quot;salsa&quot;)"></textarea>
 <div class="ed-ai-tools"><span class="ed-ai-label">AI:</span><input id="monitor-ed-ask" class="ed-ai-ask" type="text" placeholder="describe a change…" autocomplete="off" spellcheck="true"/><button id="monitor-ed-ask-btn" class="ed-ai-btn" type="button" title="Ask AI about this script">ask</button><button id="monitor-ed-explain" class="ed-ai-btn" type="button" title="Explain selected code">?</button><button id="monitor-ed-fix" class="ed-ai-btn" type="button" title="Suggest a fix">fix</button><button id="monitor-ed-complete" class="ed-ai-btn" type="button" title="Suggest the next code">next</button><span id="monitor-ed-ai-status" class="ed-ai-status">AI ready</span></div>
@@ -20833,9 +20843,8 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- PYTHON app: a real CPython REPL (Pyodide/WebAssembly, lazy-loaded from the CDN the
-     first time it opens — the page's one deliberate CDN exception). Same shell as the
-     console above, python-blue accents. -->
+<!-- PYTHON app: a real CPython REPL (self-hosted Pyodide/WebAssembly, lazy-loaded the
+     first time it opens). Same shell as the console above, python-blue accents. -->
 <g id="monitor-python">
 <foreignObject x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-py-wrap" class="console-wrap py-wrap">
@@ -20843,6 +20852,24 @@ section{margin:1.9rem 0}
 <div class="console-row"><span class="console-ps">&gt;&gt;&gt;</span><input id="monitor-py-in" class="console-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false"/></div>
 </div>
 </foreignObject>
+<!-- Browser Turtle surface: native SVG, rather than a canvas inside the scaled
+     foreignObject (which WebKit cannot composite). Python's compatibility module
+     sends bounded drawing commands to these layers. -->
+<g id="monitor-py-turtle">
+<rect id="monitor-py-turtle-bg" x="254" y="154" width="124" height="42" fill="#fffdf8"/>
+<svg x="254" y="154" width="124" height="42" viewBox="-310 -105 620 210" preserveAspectRatio="xMidYMid meet" overflow="hidden">
+<g id="monitor-py-turtle-fills" transform="scale(1,-1)"></g>
+<g id="monitor-py-turtle-lines" transform="scale(1,-1)"></g>
+<g id="monitor-py-turtle-marks" transform="scale(1,-1)"></g>
+<g id="monitor-py-turtle-cursors" transform="scale(1,-1)"></g>
+</svg>
+</g>
+<g id="monitor-py-view-toggle" transform="translate(255.2,154.8)">
+<title>Show Turtle graphics</title>
+<rect width="9" height="4.2" rx="0.8" fill="#172331" stroke="#306998" stroke-width="0.35"/>
+<rect class="py-view-hover" width="9" height="4.2" rx="0.8" fill="#ffd43b" opacity="0"/>
+<text id="monitor-py-view-label" x="4.5" y="2.9" text-anchor="middle" font-family="ui-monospace,monospace" font-size="1.9" fill="#ffd43b">gfx</text>
+</g>
 <g id="monitor-py-close" transform="translate(76.0,29.3) scale(0.8)">
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#306998" stroke="#255277" stroke-width="0.5"/>
@@ -43255,14 +43282,15 @@ setOfficeProgress("pc", false);
     syncConsoleTab(); // ▶ closed / ▼ open, plus the matching label
   })();
   // ── EDITOR APP ───────────────────────────────────────────────────────────────────
-  // A tiny local-script editor, sibling to the console: write JS, name it, save it. The
-  // saved scripts live in localStorage["deskScripts"] as a JSON { name: code } map — they
-  // are FILES, so they deliberately survive reset()/reboot() (this key is never touched by
-  // the game-state snapshot/reset, so tests/state.js stays reset==load). The console runs
-  // them by name via run("name"); the Run button runs the current buffer.
+  // A tiny local-script editor, sibling to the consoles: write JavaScript or Python, name
+  // it, and autosave it. Each language has a localStorage { name: code } file map; both are
+  // deliberately outside game state, so reset()/reboot() never removes them. JavaScript
+  // files run here (or by name through run()); Python files hand off to the Python app.
   var edWrap = document.getElementById("monitor-ed-wrap");
   var edName = document.getElementById("monitor-ed-name");
   var edCode = document.getElementById("monitor-ed-code");
+  var edLangJsBtn = document.getElementById("monitor-ed-lang-js");
+  var edLangPyBtn = document.getElementById("monitor-ed-lang-py");
   var edList = document.getElementById("monitor-ed-list");
   var edRunBtn = document.getElementById("monitor-ed-run");
   var edDlBtn = document.getElementById("monitor-ed-dl");
@@ -43280,27 +43308,44 @@ setOfficeProgress("pc", false);
   var edAskBtn = document.getElementById("monitor-ed-ask-btn");
   var edAiStatus = document.getElementById("monitor-ed-ai-status");
   var edAiPanel = document.getElementById("monitor-ed-ai-panel");
-  function readScripts() {
-    try { var raw = localStorage.getItem("deskScripts"); var o = raw ? JSON.parse(raw) : null; return (o && typeof o === "object") ? o : {}; } catch (e) { return {}; }
+  var ED_STORE_KEYS = { js: "deskScripts", python: "deskPythonScripts" };
+  var ED_LANG_KEY = "deskEditorLanguage";
+  function readEditorLanguage() { try { return localStorage.getItem(ED_LANG_KEY) === "python" ? "python" : "js"; } catch (e) { return "js"; } }
+  var edLanguage = readEditorLanguage();
+  function edExplicitLanguage(name) {
+    name = String(name || "");
+    return /\.py$/i.test(name) ? "python" : /\.js$/i.test(name) ? "js" : "";
   }
-  function writeScripts(o) {
-    try { localStorage.setItem("deskScripts", JSON.stringify(o)); } catch (e) {}
+  function readScripts(language) {
+    var lang = language === "python" ? "python" : "js";
+    try { var raw = localStorage.getItem(ED_STORE_KEYS[lang]); var o = raw ? JSON.parse(raw) : null; return (o && typeof o === "object") ? o : {}; } catch (e) { return {}; }
   }
+  function writeScripts(o, language) {
+    var lang = language === "python" ? "python" : "js";
+    try { localStorage.setItem(ED_STORE_KEYS[lang], JSON.stringify(o)); } catch (e) {}
+  }
+  function edPaintLanguage() {
+    if (edLangJsBtn) edLangJsBtn.classList.toggle("active", edLanguage === "js");
+    if (edLangPyBtn) edLangPyBtn.classList.toggle("active", edLanguage === "python");
+    if (edCode) edCode.placeholder = edLanguage === "python" ? "# Python — try: import turtle" : "// a script — e.g. party(true); await sleep(400); dance(\"salsa\")";
+    if (edFileInput) edFileInput.accept = edLanguage === "python" ? ".py,.txt,text/x-python" : ".js,.txt,text/javascript";
+  }
+  function edRememberLanguage() { try { localStorage.setItem(ED_LANG_KEY, edLanguage); } catch (e) {} edPaintLanguage(); }
   var ED_DRAFT_KEY = "deskEditorDraft", edDraftTimer = null;
   function readEditorDraft() { try { var raw = localStorage.getItem(ED_DRAFT_KEY), d = raw ? JSON.parse(raw) : null; return d && typeof d === "object" ? d : null; } catch (e) { return null; } }
-  function writeEditorDraft() { if (!edName || !edCode) return; try { localStorage.setItem(ED_DRAFT_KEY, JSON.stringify({ name: edName.value || "", code: edCode.value || "", saved_at: Date.now() })); } catch (e) {} }
+  function writeEditorDraft() { if (!edName || !edCode) return; try { localStorage.setItem(ED_DRAFT_KEY, JSON.stringify({ name: edName.value || "", code: edCode.value || "", language: edLanguage, saved_at: Date.now() })); } catch (e) {} }
   function clearEditorDraft() { try { localStorage.removeItem(ED_DRAFT_KEY); } catch (e) {} }
   function edScheduleDraft() { clearTimeout(edDraftTimer); edDraftTimer = setTimeout(function () { edDraftTimer = null; writeEditorDraft(); }, 120); }
   function edFlushDraft() { clearTimeout(edDraftTimer); edDraftTimer = null; writeEditorDraft(); }
-  function scriptNames() { return Object.keys(readScripts()).sort(); }
-  function scriptsListStr() {
-    var names = scriptNames();
+  function scriptNames(language) { return Object.keys(readScripts(language || edLanguage)).sort(); }
+  function scriptsListStr(language) {
+    var names = scriptNames(language || "js");
     return names.length ? "saved scripts: " + names.join(", ") : "no saved scripts yet.";
   }
   // rebuild the sidebar list; `sel` (if a saved name) is highlighted as the active file
   function edRefreshPicker(sel) {
     if (!edList) return;
-    var names = scriptNames();
+    var names = scriptNames(edLanguage);
     edList.innerHTML = "";
     if (!names.length) {
       var empty = document.createElement("div");
@@ -43312,19 +43357,45 @@ setOfficeProgress("pc", false);
       var it = document.createElement("div");
       it.className = "ed-item" + (n === sel ? " active" : "");
       it.textContent = n; it.title = n;
-      it.addEventListener("click", function (e) { e.stopPropagation(); edLoad(n); });
+      it.addEventListener("click", function (e) { e.stopPropagation(); edLoad(n, edLanguage); });
       edList.appendChild(it);
     });
   }
-  // The name under which the current buffer is persisted in deskScripts. Tracked so a
+  // The name under which the current buffer is persisted in its language store. Tracked so a
   // rename (autosave off the filename field) can drop the stale old-name entry instead of
   // leaving a duplicate. null = the buffer isn't saved under any name yet (fresh/new).
-  var edLastSavedName = null;
-  function edLoad(name) {
-    var scr = readScripts(), has = Object.prototype.hasOwnProperty.call(scr, name);
+  var edLastSavedName = null, edLastSavedLanguage = edLanguage;
+  function edSetLanguage(language, preserveBuffer) {
+    var next = language === "python" ? "python" : "js";
+    if (next === edLanguage) { edPaintLanguage(); return; }
+    if (!preserveBuffer) edFlushAutoSave();
+    var oldName = edName ? edName.value.trim() : "", code = edCode ? edCode.value : "";
+    var nextName = oldName;
+    if (/\.js$/i.test(nextName) && next === "python") nextName = nextName.replace(/\.js$/i, ".py");
+    else if (/\.py$/i.test(nextName) && next === "js") nextName = nextName.replace(/\.py$/i, ".js");
+    if (!preserveBuffer && edLastSavedName) {
+      var oldStore = readScripts(edLastSavedLanguage);
+      if (Object.prototype.hasOwnProperty.call(oldStore, edLastSavedName)) { delete oldStore[edLastSavedName]; writeScripts(oldStore, edLastSavedLanguage); }
+    }
+    edLanguage = next; edRememberLanguage();
+    if (edName) edName.value = nextName;
+    if (!preserveBuffer && nextName) {
+      var nextStore = readScripts(next); nextStore[nextName] = code; writeScripts(nextStore, next);
+      edLastSavedName = nextName; edLastSavedLanguage = next;
+    } else if (preserveBuffer) {
+      edLastSavedName = null; edLastSavedLanguage = next;
+    }
+    edRefreshPicker(edLastSavedName);
+    edScheduleDraft();
+  }
+  function edLoad(name, language) {
+    var lang = edExplicitLanguage(name) || (language === "python" ? "python" : "js");
+    edLanguage = lang; edRememberLanguage();
+    var scr = readScripts(lang), has = Object.prototype.hasOwnProperty.call(scr, name);
     if (edName) edName.value = name;
     if (edCode) edCode.value = has ? scr[name] : ""; // unknown name = a fresh file pre-named
     edLastSavedName = has ? name : null;
+    edLastSavedLanguage = lang;
     clearEditorDraft();
     edRefreshPicker(has ? name : null);
   }
@@ -43332,6 +43403,7 @@ setOfficeProgress("pc", false);
     if (edName) edName.value = "";
     if (edCode) edCode.value = "";
     edLastSavedName = null;
+    edLastSavedLanguage = edLanguage;
     clearEditorDraft();
     edRefreshPicker(null);
     if (edName) { try { edName.focus(); } catch (e) {} }
@@ -43340,25 +43412,35 @@ setOfficeProgress("pc", false);
     if (!edName || !edCode) return;
     var name = edName.value.trim();
     if (!name) { try { edName.focus(); } catch (e) {} return; } // no nameless files
-    var scr = readScripts();
+    var inferred = edExplicitLanguage(name);
+    if (inferred && inferred !== edLanguage) { edLanguage = inferred; edRememberLanguage(); }
+    var scr = readScripts(edLanguage);
     scr[name] = edCode.value; // same-name save overwrites — it's the same file
-    writeScripts(scr);
+    writeScripts(scr, edLanguage);
     edName.value = name; // reflect the trimmed name back
     edLastSavedName = name;
+    edLastSavedLanguage = edLanguage;
     clearEditorDraft();
     edRefreshPicker(name);
   }
-  // Write the buffer to deskScripts, dropping a stale prior-name entry on rename so a
+  // Write the buffer to its language store, dropping a stale prior-name entry on rename so a
   // rename never leaves a duplicate under the old key. `prev` is the name it was last
   // saved as; `name`/`code` are the pair captured when the save was scheduled.
-  function edWriteBuffer(name, code, prev) {
+  function edWriteBuffer(name, code, prev, language, prevLanguage) {
     if (!name) return;
-    var scr = readScripts();
+    var lang = language === "python" ? "python" : "js";
+    var oldLang = prevLanguage === "python" ? "python" : "js";
+    if (prev && oldLang !== lang) {
+      var oldStore = readScripts(oldLang);
+      if (Object.prototype.hasOwnProperty.call(oldStore, prev)) { delete oldStore[prev]; writeScripts(oldStore, oldLang); }
+    }
+    var scr = readScripts(lang);
     if (prev && prev !== name && Object.prototype.hasOwnProperty.call(scr, prev)) delete scr[prev];
     scr[name] = code;
-    writeScripts(scr);
+    writeScripts(scr, lang);
     clearEditorDraft();
     edLastSavedName = name;
+    edLastSavedLanguage = lang;
   }
   // Debounced autosave, fired by typing in the code buffer OR renaming in the filename
   // field (Save is gone). Capture name+code+prev at schedule time so a mid-type selection
@@ -43371,12 +43453,13 @@ setOfficeProgress("pc", false);
   function edScheduleAutoSave() {
     if (!edName || !edCode) return;
     clearTimeout(edAutoTimer); edAutoTimer = null; edPendingCommit = null;
-    var name = edName.value.trim();
+    var name = edName.value.trim(), inferred = edExplicitLanguage(name);
+    if (inferred && inferred !== edLanguage) { edLanguage = inferred; edRememberLanguage(); }
     if (!name) return; // never persist a nameless buffer
-    var code = edCode.value, prev = edLastSavedName;
+    var code = edCode.value, prev = edLastSavedName, lang = edLanguage, prevLang = edLastSavedLanguage;
     edPendingCommit = function () {
       edAutoTimer = null; edPendingCommit = null;
-      edWriteBuffer(name, code, prev);
+      edWriteBuffer(name, code, prev, lang, prevLang);
       edRefreshPicker(edName ? edName.value.trim() : null); // keep whatever's active highlighted
     };
     edAutoTimer = setTimeout(edPendingCommit, 250);
@@ -43385,31 +43468,35 @@ setOfficeProgress("pc", false);
   // commits the captured pending pair, NOT the on-screen buffer, so a switch-then-close
   // still saves the file that was actually being edited.
   function edFlushAutoSave() { if (edPendingCommit) edPendingCommit(); }
-  // Load a script's text from a picked file: basename (minus .js/.txt) → filename field,
-  // contents → code buffer, then persist via edSave (which refreshes the sidebar).
+  // Load a script's text from a picked file. Explicit .js/.py names select the language;
+  // extensionless/.txt imports retain the currently selected language.
   function edOpenFile(file) {
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function () {
       var text = String(reader.result == null ? "" : reader.result);
-      var base = String(file.name || "script").replace(/\.(js|txt)$/i, "");
-      if (edName) edName.value = base;
+      var name = String(file.name || (edLanguage === "python" ? "script.py" : "script.js"));
+      var inferred = edExplicitLanguage(name);
+      if (inferred) { edLanguage = inferred; edRememberLanguage(); }
+      if (edName) edName.value = name;
       if (edCode) edCode.value = text;
+      edLastSavedName = null; edLastSavedLanguage = edLanguage;
       edSave();
     };
     try { reader.readAsText(file); } catch (e) {}
   }
   function edDelete() {
     if (!edName) return;
-    var name = edName.value.trim(), scr = readScripts();
+    var name = edName.value.trim(), scr = readScripts(edLanguage);
     var known = name && Object.prototype.hasOwnProperty.call(scr, name);
     // confirm before removing a saved file (silent delete lost work before)
     if (known && !window.confirm("Delete \"" + name + "\"?")) return;
     // drop any pending autosave first — else it resurrects the file we just deleted
     clearTimeout(edAutoTimer); edAutoTimer = null; edPendingCommit = null;
-    if (known) { delete scr[name]; writeScripts(scr); }
+    if (known) { delete scr[name]; writeScripts(scr, edLanguage); }
     edName.value = ""; if (edCode) edCode.value = "";
     edLastSavedName = null;
+    edLastSavedLanguage = edLanguage;
     clearEditorDraft();
     edRefreshPicker(null);
   }
@@ -43424,6 +43511,8 @@ setOfficeProgress("pc", false);
     next = String(next).trim();
     if (!next) return;
     edName.value = next; // becomes the active buffer name
+    var inferred = edExplicitLanguage(next);
+    if (inferred) { edLanguage = inferred; edRememberLanguage(); }
     edSave();            // persist current code under `next`, select it (original kept)
   }
   // Surface a script error: to the console scrollback if it's the console that's open (the
@@ -43454,7 +43543,16 @@ setOfficeProgress("pc", false);
     else finish();
   }
   function edRunCurrent() {
-    edRunCode((edName && edName.value.trim()) || "(editor)", edCode ? edCode.value : "");
+    var name = (edName && edName.value.trim()) || (edLanguage === "python" ? "(python editor)" : "(editor)");
+    var code = edCode ? edCode.value : "";
+    edFlushAutoSave(); edFlushDraft();
+    if (edLanguage === "python") {
+      edAiSetStatus("Opening Python…", false);
+      if (typeof window.__runPythonEditor === "function") window.__runPythonEditor(name, code);
+      else edAiSetStatus("Python unavailable", false);
+      return;
+    }
+    edRunCode(name, code);
   }
   // Editor assistance is deliberately separate from Chat's conversation queue. It sends only
   // bounded code/context to the same verified Worker and renders a review panel; Apply is always
@@ -43502,21 +43600,23 @@ setOfficeProgress("pc", false);
     var a = edCode.selectionStart || 0, b = edCode.selectionEnd || a;
     edAiStart = a; edAiEnd = b; edAiSourceCode = edCode.value;
     var context = typeof window.__chatContext === "function" ? window.__chatContext("Script Editor " + operation) : { scripting_api: null };
+    if (edLanguage === "python") context.scripting_api = null; // Python gets its own bounded runtime/turtle context from the Worker payload.
     Promise.resolve(challenge()).then(function (token) {
-      return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: userRequest || "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { operation: operation, request: userRequest || "", code: edCode.value, selected: edCode.value.slice(a, b), selection_start: a, selection_end: b, cursor: a, error: window.__lastEditorError || "" } }) });
+      return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: userRequest || "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { language: edLanguage, operation: operation, request: userRequest || "", code: edCode.value, selected: edCode.value.slice(a, b), selection_start: a, selection_end: b, cursor: a, error: window.__lastEditorError || "" } }) });
     }).then(function (response) { if (!response.ok) throw new Error("AI " + response.status); return response.json(); }).then(function (body) {
       var raw = body && (body.reply || body.text || ""), data; try { data = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { data = { text: String(raw), suggestion: "" }; } edAiRender(data || {});
     }).catch(function (error) { edAiSetStatus(error && error.message === "AI 403" ? "Verify again" : "AI unavailable", false); }).finally(function () { edAiBusy = false; [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
   }
-  // download the current buffer as a .js file (Blob + a synthetic <a download> click)
+  // download the current buffer with the active language's conventional extension.
   function edDownload() {
     if (!edCode) return;
     var name = (edName && edName.value.trim()) || "script";
     var fn = name.replace(/[^\w.\-]+/g, "_"); // filesystem-safe
-    if (!/\.js$/i.test(fn)) fn += ".js";
+    var ext = edLanguage === "python" ? ".py" : ".js";
+    if (!/\.(js|py)$/i.test(fn)) fn += ext;
     var url;
     try {
-      var blob = new Blob([edCode.value], { type: "text/javascript" });
+      var blob = new Blob([edCode.value], { type: edLanguage === "python" ? "text/x-python" : "text/javascript" });
       url = URL.createObjectURL(blob);
       var a = document.createElement("a");
       a.href = url; a.download = fn;
@@ -43538,13 +43638,24 @@ setOfficeProgress("pc", false);
     "dance(\"salsa\");",
     ""
   ].join("\n");
-  var edStarterSeeded = false;
+  var ED_PY_STARTER = [
+    "# Python in the loft — hit Run ▶",
+    "import turtle",
+    "",
+    "t = turtle.Turtle()",
+    "t.color(\"#8e3a4a\")",
+    "for _ in range(5):",
+    "    t.forward(80)",
+    "    t.right(144)",
+    ""
+  ].join("\n");
+  var edStarterSeeded = { js: false, python: false };
   function edMaybeSeedStarter() {
-    if (edStarterSeeded || !edCode || !edName) return;
+    if (edStarterSeeded[edLanguage] || !edCode || !edName) return;
     if (edCode.value !== "" || (edName.value || "").trim() !== "") return; // buffer already has content or a name
-    if (Object.keys(readScripts()).length) return;                        // a returning author with saved files — leave it blank
-    edStarterSeeded = true;
-    edCode.value = ED_STARTER;
+    if (Object.keys(readScripts(edLanguage)).length) return;              // a returning author with saved files — leave it blank
+    edStarterSeeded[edLanguage] = true;
+    edCode.value = edLanguage === "python" ? ED_PY_STARTER : ED_STARTER;
     try { edCode.setSelectionRange(0, 0); } catch (e) {}                    // caret at the top, on the friendly comment
   }
   function openEditor() {
@@ -43558,16 +43669,20 @@ setOfficeProgress("pc", false);
     // sees the final buffer state and only fills a genuinely blank first-visit slate.
     if (edCode) setTimeout(function () {
       var draft = readEditorDraft();
-      if (draft && edCode.value === "" && !(edName.value || "").trim() && (draft.code || draft.name)) { edName.value = String(draft.name || ""); edCode.value = String(draft.code || ""); edLastSavedName = null; edRefreshPicker(null); }
+      if (draft && edCode.value === "" && !(edName.value || "").trim() && (draft.code || draft.name)) {
+        edLanguage = edExplicitLanguage(draft.name) || (draft.language === "python" ? "python" : "js"); edRememberLanguage();
+        edName.value = String(draft.name || ""); edCode.value = String(draft.code || ""); edLastSavedName = null; edLastSavedLanguage = edLanguage; edRefreshPicker(null);
+      }
       edMaybeSeedStarter(); try { edCode.focus({ preventScroll: true }); } catch (e) {}
     }, 60);
     playLaptopClickSound("office-monitor");
   }
-  window.__setMonitorEditorDraft = function (code, name) {
+  window.__setMonitorEditorDraft = function (code, name, language) {
     if (!edCode || !monitor.classList.contains("show-editor")) return false;
     if (edName) edName.value = String(name || "chat-draft");
+    edLanguage = edExplicitLanguage(name) || (language === "python" ? "python" : "js"); edRememberLanguage();
     edCode.value = String(code || "");
-    edLastSavedName = null;
+    edLastSavedName = null; edLastSavedLanguage = edLanguage;
     edScheduleDraft();
     edRefreshPicker(null);
     try { edCode.focus({ preventScroll: true }); edCode.setSelectionRange(0, 0); } catch (e) {}
@@ -43587,11 +43702,11 @@ setOfficeProgress("pc", false);
   // console commands (globals, evaluated by the REPL). Defined here so they share the
   // editor's storage/openEditor; kept OUT of the console-toys region so a parent edit there
   // never collides. Require run("name")/edit("name") — no bare-identifier script calls.
-  window.scripts = function () { return scriptsListStr(); };
+  window.scripts = function () { return scriptsListStr("js"); };
   window.run = function (name) {
-    if (name == null || String(name).trim() === "") return "run(\"name\") — which one? " + scriptsListStr();
-    var key = String(name), scr = readScripts();
-    if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr();
+    if (name == null || String(name).trim() === "") return "run(\"name\") — which one? " + scriptsListStr("js");
+    var key = String(name), scr = readScripts("js");
+    if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr("js");
     edStopRepeat(); // a one-shot run supersedes any active loop
     edRunCode(key, scr[key]);
     return "▶ running " + key + "…";
@@ -43626,11 +43741,11 @@ setOfficeProgress("pc", false);
     edStopRepeat();
     var key, code;
     if (name == null || String(name).trim() === "") {
-      if (edCode && edCode.value.trim()) { key = (edName && edName.value.trim()) || "(editor)"; code = edCode.value; } // no arg → loop the current buffer
-      else return "repeat(\"name\") — which script? " + scriptsListStr();
+      if (edLanguage === "js" && edCode && edCode.value.trim()) { key = (edName && edName.value.trim()) || "(editor)"; code = edCode.value; } // no arg → loop the current JS buffer
+      else return "repeat(\"name\") — which script? " + scriptsListStr("js");
     } else {
-      key = String(name); var scr = readScripts();
-      if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr();
+      key = String(name); var scr = readScripts("js");
+      if (!Object.prototype.hasOwnProperty.call(scr, key)) return "no script named \"" + key + "\". " + scriptsListStr("js");
       code = scr[key];
     }
     var tok = ++edRepeatToken; edRepeatOn = true;
@@ -43645,7 +43760,11 @@ setOfficeProgress("pc", false);
     if (window.__closeMonitorPython) window.__closeMonitorPython();
     if (window.__closeMonitorLinux) window.__closeMonitorLinux();
     openEditor();
-    if (name != null && String(name).trim() !== "") { edLoad(String(name)); return "editing \"" + String(name) + "\""; }
+    if (name != null && String(name).trim() !== "") {
+      var key = String(name), lang = edExplicitLanguage(key);
+      if (!lang) lang = Object.prototype.hasOwnProperty.call(readScripts("python"), key) ? "python" : "js";
+      edLoad(key, lang); return "editing \"" + key + "\"";
+    }
     edNew();
     return "editor — new script";
   };
@@ -43664,7 +43783,13 @@ setOfficeProgress("pc", false);
   if (edAskInput) edAskInput.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); if (edAskBtn) edAskBtn.click(); } });
   [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.addEventListener("mousedown", function (e) { e.preventDefault(); }); });
   if (edCode) edCode.addEventListener("input", function () { edScheduleAutoSave(); edScheduleDraft(); });
-  if (edName) edName.addEventListener("input", function () { edScheduleAutoSave(); edScheduleDraft(); }); // rename persists too (Save is gone)
+  if (edName) edName.addEventListener("input", function () {
+    var inferred = edExplicitLanguage(edName.value);
+    if (inferred && inferred !== edLanguage) { edLanguage = inferred; edRememberLanguage(); }
+    edScheduleAutoSave(); edScheduleDraft();
+  }); // rename persists too (Save is gone), with .js/.py selecting its runtime
+  if (edLangJsBtn) edLangJsBtn.addEventListener("click", function (e) { e.stopPropagation(); edSetLanguage("js", false); });
+  if (edLangPyBtn) edLangPyBtn.addEventListener("click", function (e) { e.stopPropagation(); edSetLanguage("python", false); });
   // ── editor autocomplete ──────────────────────────────────────────────────────────
   // A caret-anchored popup that completes loft console command NAMES as you type in the code
   // buffer, each row showing the command + its (dimmed, truncated) help line. Reads the SAME
@@ -43680,13 +43805,43 @@ setOfficeProgress("pc", false);
     var i = s.indexOf(" — ");
     return i >= 0 ? s.slice(i + 3) : s;
   }
-  // one {name, help, fn} row per documented command; fn = append "(" on insert (not a bareword).
+  var ED_PY_CMDS = [
+    ["print", "print(value) — write to the Python Console", "value"],
+    ["range", "range(stop) or range(start, stop, step)", "stop"],
+    ["len", "len(value) — number of items", "value"],
+    ["Turtle", "Turtle() — create an independent drawing turtle", ""],
+    ["Screen", "Screen() — access the Turtle drawing surface", ""],
+    ["forward", "forward(distance) — move and draw", "distance"],
+    ["backward", "backward(distance) — move backward", "distance"],
+    ["left", "left(angle) — turn counterclockwise", "angle"],
+    ["right", "right(angle) — turn clockwise", "angle"],
+    ["goto", "goto(x, y) — move to coordinates", "x, y"],
+    ["circle", "circle(radius, extent=None, steps=None)", "radius"],
+    ["dot", "dot(size=None, color=None)", ""],
+    ["color", "color(pencolor, fillcolor=None)", "pencolor"],
+    ["pencolor", "pencolor(color=None)", ""],
+    ["fillcolor", "fillcolor(color=None)", ""],
+    ["pensize", "pensize(width=None)", ""],
+    ["penup", "penup() — move without drawing", ""],
+    ["pendown", "pendown() — resume drawing", ""],
+    ["begin_fill", "begin_fill() — begin a filled polygon", ""],
+    ["end_fill", "end_fill() — finish the current fill", ""],
+    ["speed", "speed(value=None) — set Turtle animation speed", ""],
+    ["clear", "clear() — erase this turtle's drawing", ""],
+    ["reset", "reset() — erase and return home", ""],
+    ["write", "write(text, move=False, align='left', font=None)", "text"]
+  ];
+  // one {name, help, fn, sig?} row per documented command.
   function edCmdList() {
+    if (edLanguage === "python") return ED_PY_CMDS.map(function (x) { return { name: x[0], help: x[1], fn: true, sig: x[2] }; });
     return CONSOLE_CMDS.map(function (n) {
       return { name: n, help: edHelpDesc(CONSOLE_HELP[n]), fn: !CONSOLE_CMDS_BARE[n] };
     });
   }
-  window.__loftCommands = edCmdList; // {name, help, fn}[] — the shared roster+help, also handy for tests
+  window.__editorCommands = edCmdList; // active language's completion catalog
+  window.__loftCommands = function () { // preserve the public/test hook as the Loft JS roster
+    return CONSOLE_CMDS.map(function (n) { return { name: n, help: edHelpDesc(CONSOLE_HELP[n]), fn: !CONSOLE_CMDS_BARE[n] }; });
+  };
   // the identifier token immediately BEFORE the caret (caret must sit at its end, and it must not
   // follow a "." — no completing member access). null = nothing to complete here.
   function edTokenAtCaret() {
@@ -43723,6 +43878,7 @@ setOfficeProgress("pc", false);
   // console's fmtOut). cmd.fn is just an is-a-function flag, so look the real function up on window.
   function edFnSig(cmd) {
     if (!cmd.fn) return cmd.name;                    // bareword command — no parens
+    if (edLanguage === "python") return cmd.name + "(" + (cmd.sig || "") + ")";
     var fn = window[cmd.name];
     if (typeof fn !== "function") return "ƒ " + cmd.name + "()";
     var fs = String(fn);
@@ -43914,7 +44070,7 @@ setOfficeProgress("pc", false);
     var name = (edName && edName.value.trim()) || "";
     var base = d.ed_email_subject || "Look what I built!";
     var subject = name ? base.replace(/[!.\s]+$/, "") + ": " + name : base; // "Look what I built: Ali's BD"
-    var body = (d.ed_email_intro || "") + "\n\n// " + (name || "script.js") + "\n\n" + edCode.value;
+    var body = (d.ed_email_intro || "") + "\n\n" + (edLanguage === "python" ? "# " : "// ") + (name || (edLanguage === "python" ? "script.py" : "script.js")) + "\n\n" + edCode.value;
     window.__mailCompose(subject, body); // device-aware: desktop→Gmail, mobile→native mail
   }
   if (edEmailBtn) edEmailBtn.addEventListener("click", function (e) { e.stopPropagation(); edEmail(); playLaptopClickSound("office-monitor"); });
@@ -43929,6 +44085,7 @@ setOfficeProgress("pc", false);
     edCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeEditor(); playLaptopClickSound("office-monitor"); });
     edCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  edPaintLanguage();
   edRefreshPicker(null); // populate the sidebar list once, before the editor's first open
   // ── MAIL APP ─────────────────────────────────────────────────────────────────────
   // A tiny three-message inbox: a list view (sender · subject · unread dot) that opens
@@ -46812,7 +46969,373 @@ setOfficeProgress("pc", false);
   var pyRuntime = null, pyReprFn = null;
   var pyLoadState = ""; // "" → "loading" → "ready" | "failed" (reopening after a failure retries)
   var pyBusy = false, pyLastCmd = "";
+  var pyEditorQueue = [];
   var PYODIDE_URL = "pyodide/pyodide.js";
+  var pyTurtleBg = document.getElementById("monitor-py-turtle-bg");
+  var pyTurtleFills = document.getElementById("monitor-py-turtle-fills");
+  var pyTurtleLines = document.getElementById("monitor-py-turtle-lines");
+  var pyTurtleMarks = document.getElementById("monitor-py-turtle-marks");
+  var pyTurtleCursors = document.getElementById("monitor-py-turtle-cursors");
+  var pyTurtleToggle = document.getElementById("monitor-py-view-toggle");
+  var pyTurtleToggleLabel = document.getElementById("monitor-py-view-label");
+  var PY_TURTLE_NODE_LIMIT = 6000, pyTurtleNodes = 0;
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function pyTurtleView(on) {
+    var root = document.getElementById("monitor-python");
+    if (!root) return;
+    root.classList.toggle("turtle-view", !!on);
+    if (pyTurtleToggleLabel) pyTurtleToggleLabel.textContent = on ? ">>>" : "gfx";
+    if (pyTurtleToggle) {
+      var title = pyTurtleToggle.querySelector("title");
+      if (title) title.textContent = on ? "Show Python Console" : "Show Turtle graphics";
+    }
+  }
+  if (pyTurtleToggle) {
+    pyTurtleToggle.addEventListener("click", function (e) { e.stopPropagation(); pyTurtleView(!document.getElementById("monitor-python").classList.contains("turtle-view")); });
+    pyTurtleToggle.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  function pyTurtleNumber(v) {
+    v = Number(v);
+    return Number.isFinite(v) ? Math.max(-100000, Math.min(100000, v)) : 0;
+  }
+  function pyTurtleColor(value, fallback) {
+    var s = String(value == null ? "" : value).slice(0, 80);
+    try { if (window.CSS && CSS.supports && CSS.supports("color", s)) return s; } catch (e) {}
+    return fallback || "#453a31";
+  }
+  function pyTurtleAppend(parent, tag, attrs, turtleId) {
+    if (!parent) return null;
+    if (pyTurtleNodes >= PY_TURTLE_NODE_LIMIT) {
+      var oldest = (pyTurtleFills && pyTurtleFills.firstElementChild) || (pyTurtleLines && pyTurtleLines.firstElementChild) || (pyTurtleMarks && pyTurtleMarks.firstElementChild);
+      if (oldest) { oldest.remove(); pyTurtleNodes--; }
+    }
+    var el = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (key) { el.setAttribute(key, attrs[key]); });
+    if (turtleId != null) el.setAttribute("data-turtle", String(turtleId));
+    parent.appendChild(el); pyTurtleNodes++;
+    return el;
+  }
+  function pyTurtleClearLayer(layer, turtleId) {
+    if (!layer) return;
+    if (turtleId == null) { pyTurtleNodes -= layer.children.length; layer.textContent = ""; return; }
+    var nodes = layer.querySelectorAll('[data-turtle="' + String(turtleId).replace(/[^\d-]/g, "") + '"]');
+    for (var i = 0; i < nodes.length; i++) { nodes[i].remove(); pyTurtleNodes--; }
+  }
+  function pyTurtleClear(turtleId) {
+    pyTurtleClearLayer(pyTurtleFills, turtleId); pyTurtleClearLayer(pyTurtleLines, turtleId); pyTurtleClearLayer(pyTurtleMarks, turtleId);
+  }
+  function pyTurtleCursor(id, x, y, heading, color, visible) {
+    if (!pyTurtleCursors) return;
+    var old = pyTurtleCursors.querySelector('[data-turtle="' + String(id).replace(/[^\d-]/g, "") + '"]');
+    if (old) old.remove();
+    if (!visible) return;
+    var p = document.createElementNS(SVGNS, "path");
+    p.setAttribute("data-turtle", String(id));
+    p.setAttribute("d", "M 9 0 L -6 5 L -2 0 L -6 -5 Z");
+    p.setAttribute("fill", pyTurtleColor(color, "#306998"));
+    p.setAttribute("stroke", "#172331"); p.setAttribute("stroke-width", "1");
+    p.setAttribute("transform", "translate(" + pyTurtleNumber(x) + " " + pyTurtleNumber(y) + ") rotate(" + pyTurtleNumber(heading) + ")");
+    pyTurtleCursors.appendChild(p);
+  }
+  window.__loftTurtleCommand = function (op) {
+    var a = Array.prototype.slice.call(arguments, 1), id = a[0];
+    if (op !== "cursor" && op !== "hide" && op !== "clear" && op !== "screen_clear" && op !== "bg") pyTurtleView(true);
+    if (op === "line") {
+      pyTurtleAppend(pyTurtleLines, "line", { x1: pyTurtleNumber(a[1]), y1: pyTurtleNumber(a[2]), x2: pyTurtleNumber(a[3]), y2: pyTurtleNumber(a[4]), stroke: pyTurtleColor(a[5]), "stroke-width": Math.max(.5, Math.min(24, pyTurtleNumber(a[6]))), "stroke-linecap": "round" }, id);
+    } else if (op === "poly") {
+      var pts = String(a[1] || "").slice(0, 50000);
+      if (/^[-+0-9.,\s]+$/.test(pts)) pyTurtleAppend(pyTurtleFills, "polygon", { points: pts, fill: pyTurtleColor(a[2]), stroke: "none" }, id);
+    } else if (op === "dot") {
+      pyTurtleAppend(pyTurtleMarks, "circle", { cx: pyTurtleNumber(a[1]), cy: pyTurtleNumber(a[2]), r: Math.max(.5, Math.min(100, pyTurtleNumber(a[3]) / 2)), fill: pyTurtleColor(a[4]) }, id);
+    } else if (op === "write") {
+      var text = pyTurtleAppend(pyTurtleMarks, "text", { x: 0, y: 0, transform: "translate(" + pyTurtleNumber(a[1]) + " " + pyTurtleNumber(a[2]) + ") scale(1,-1)", fill: pyTurtleColor(a[4]), "font-family": "ui-monospace,monospace", "font-size": Math.max(6, Math.min(80, pyTurtleNumber(a[5]) || 16)), "text-anchor": a[6] === "center" ? "middle" : a[6] === "right" ? "end" : "start" }, id);
+      if (text) text.textContent = String(a[3] == null ? "" : a[3]).slice(0, 1000);
+    } else if (op === "cursor") {
+      pyTurtleCursor(id, a[1], a[2], a[3], a[4], a[5] !== false);
+    } else if (op === "hide") {
+      pyTurtleCursor(id, 0, 0, 0, "", false);
+    } else if (op === "clear") {
+      pyTurtleClear(id);
+    } else if (op === "screen_clear") {
+      pyTurtleClear(null); if (pyTurtleCursors) pyTurtleCursors.textContent = ""; pyTurtleNodes = 0;
+    } else if (op === "bg") {
+      if (pyTurtleBg) pyTurtleBg.setAttribute("fill", pyTurtleColor(id, "#fffdf8")); pyTurtleView(true);
+    }
+    return true;
+  };
+  var PY_TURTLE_MODULE = `
+"""A compact browser Turtle implementation for the Loft's Pyodide console."""
+import math as _math
+import js as _js
+
+_next_id = 0
+_screen = None
+_default = None
+_colormode = 1.0
+
+def _command(*args):
+    return getattr(_js, "__loftTurtleCommand")(*args)
+
+def _new_id():
+    global _next_id
+    _next_id += 1
+    return _next_id
+
+def _colour(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (tuple, list)) and len(value) >= 3:
+        vals = [float(v) for v in value[:3]]
+        if max(vals) <= 1.0:
+            vals = [v * 255 for v in vals]
+        return "rgb({},{},{})".format(*[max(0, min(255, round(v))) for v in vals])
+    return str(value)
+
+class _Screen:
+    def __init__(self):
+        self._bg = "#fffdf8"
+        self._tracer = 1
+    def bgcolor(self, *args):
+        if not args:
+            return self._bg
+        self._bg = _colour(args if len(args) >= 3 else args[0])
+        _command("bg", self._bg)
+        return self._bg
+    def clear(self):
+        _command("screen_clear")
+    clearscreen = clear
+    def reset(self):
+        self.clear()
+        for t in list(Turtle._all):
+            t._reset_state(False)
+    resetscreen = reset
+    def tracer(self, n=None, delay=None):
+        if n is None:
+            return self._tracer
+        self._tracer = n
+    def update(self):
+        return None
+    def setup(self, *args, **kwargs):
+        return None
+    def screensize(self, canvwidth=None, canvheight=None, bg=None):
+        if bg is not None:
+            self.bgcolor(bg)
+        return (620, 210)
+    def window_width(self):
+        return 620
+    def window_height(self):
+        return 210
+    def title(self, *args):
+        return None
+    def bye(self):
+        self.clear()
+    def mainloop(self):
+        return None
+    done = mainloop
+    def exitonclick(self):
+        return None
+
+def Screen():
+    global _screen
+    if _screen is None:
+        _screen = _Screen()
+    return _screen
+
+class Turtle:
+    _all = []
+    def __init__(self, shape="classic", visible=True):
+        self._id = _new_id()
+        Turtle._all.append(self)
+        self._reset_state(False)
+        self._visible = bool(visible)
+        self._cursor()
+    def _reset_state(self, clear=True):
+        if clear:
+            _command("clear", self._id)
+        self._x = 0.0; self._y = 0.0; self._heading = 0.0
+        self._down = True; self._pensize = 1.5
+        self._pencolor = "#453a31"; self._fillcolor = "#8e3a4a"
+        self._visible = True; self._speed = 3
+        self._filling = False; self._fillpoints = []
+        self._cursor()
+    def _cursor(self):
+        _command("cursor", self._id, self._x, self._y, self._heading, self._pencolor, self._visible)
+    def _go(self, x, y):
+        x = float(x); y = float(y)
+        if self._down:
+            _command("line", self._id, self._x, self._y, x, y, self._pencolor, self._pensize)
+        self._x = x; self._y = y
+        if self._filling:
+            self._fillpoints.append((x, y))
+        self._cursor()
+    def forward(self, distance):
+        r = _math.radians(self._heading)
+        self._go(self._x + _math.cos(r) * float(distance), self._y + _math.sin(r) * float(distance))
+    fd = forward
+    def backward(self, distance):
+        self.forward(-float(distance))
+    bk = backward; back = backward
+    def left(self, angle):
+        self._heading = (self._heading + float(angle)) % 360; self._cursor()
+    lt = left
+    def right(self, angle):
+        self.left(-float(angle))
+    rt = right
+    def goto(self, x, y=None):
+        if y is None:
+            x, y = x
+        self._go(x, y)
+    setpos = setposition = goto
+    def setx(self, x):
+        self._go(x, self._y)
+    def sety(self, y):
+        self._go(self._x, y)
+    def home(self):
+        self.goto(0, 0); self.setheading(0)
+    def position(self):
+        return (self._x, self._y)
+    pos = position
+    def xcor(self):
+        return self._x
+    def ycor(self):
+        return self._y
+    def heading(self):
+        return self._heading
+    def setheading(self, angle):
+        self._heading = float(angle) % 360; self._cursor()
+    seth = setheading
+    def towards(self, x, y=None):
+        if y is None:
+            x, y = x
+        return _math.degrees(_math.atan2(float(y) - self._y, float(x) - self._x)) % 360
+    def distance(self, x, y=None):
+        if y is None:
+            x, y = x
+        return _math.hypot(float(x) - self._x, float(y) - self._y)
+    def penup(self):
+        self._down = False
+    pu = up = penup
+    def pendown(self):
+        self._down = True
+    pd = down = pendown
+    def isdown(self):
+        return self._down
+    def pensize(self, width=None):
+        if width is None:
+            return self._pensize
+        self._pensize = max(.5, min(24, float(width)))
+    width = pensize
+    def pencolor(self, *args):
+        if not args:
+            return self._pencolor
+        self._pencolor = _colour(args if len(args) >= 3 else args[0]); self._cursor()
+        return self._pencolor
+    def fillcolor(self, *args):
+        if not args:
+            return self._fillcolor
+        self._fillcolor = _colour(args if len(args) >= 3 else args[0])
+        return self._fillcolor
+    def color(self, *args):
+        if not args:
+            return (self._pencolor, self._fillcolor)
+        if len(args) == 1:
+            self.pencolor(args[0]); self.fillcolor(args[0])
+        elif len(args) == 2:
+            self.pencolor(args[0]); self.fillcolor(args[1])
+        else:
+            self.pencolor(args); self.fillcolor(args)
+    def begin_fill(self):
+        self._filling = True; self._fillpoints = [(self._x, self._y)]
+    def end_fill(self):
+        if self._filling and len(self._fillpoints) >= 3:
+            points = " ".join("{:.3f},{:.3f}".format(x, y) for x, y in self._fillpoints)
+            _command("poly", self._id, points, self._fillcolor)
+        self._filling = False; self._fillpoints = []
+    def filling(self):
+        return self._filling
+    def circle(self, radius, extent=None, steps=None):
+        radius = float(radius); extent = 360.0 if extent is None else float(extent)
+        if steps is None:
+            steps = max(1, int(abs(extent) / 8) + 1)
+        steps = max(1, min(720, int(steps)))
+        angle = extent / steps
+        direction = 1 if radius >= 0 else -1
+        chord = 2 * abs(radius) * _math.sin(_math.radians(abs(angle)) / 2)
+        self.left(direction * angle / 2)
+        for _ in range(steps):
+            self.forward(chord)
+            self.left(direction * angle)
+        self.right(direction * angle / 2)
+    def dot(self, size=None, *color):
+        size = max(self._pensize + 4, self._pensize * 2) if size is None else float(size)
+        c = _colour(color if len(color) >= 3 else color[0]) if color else self._pencolor
+        _command("dot", self._id, self._x, self._y, size, c)
+    def write(self, arg, move=False, align="left", font=None):
+        size = 16
+        if isinstance(font, (tuple, list)) and len(font) > 1:
+            try: size = float(font[1])
+            except Exception: pass
+        _command("write", self._id, self._x, self._y, str(arg), self._pencolor, size, align)
+    def speed(self, value=None):
+        if value is None:
+            return self._speed
+        names = {"fastest": 0, "fast": 10, "normal": 6, "slow": 3, "slowest": 1}
+        self._speed = names[value] if value in names else max(0, min(10, int(value)))
+        return self._speed
+    def hideturtle(self):
+        self._visible = False; _command("hide", self._id)
+    ht = hideturtle
+    def showturtle(self):
+        self._visible = True; self._cursor()
+    st = showturtle
+    def isvisible(self):
+        return self._visible
+    def clear(self):
+        _command("clear", self._id); self._cursor()
+    def reset(self):
+        self._reset_state(True)
+
+RawTurtle = RawPen = Pen = Turtle
+
+def _default_turtle():
+    global _default
+    if _default is None:
+        _default = Turtle()
+    return _default
+
+def _wrap(name):
+    def call(*args, **kwargs):
+        return getattr(_default_turtle(), name)(*args, **kwargs)
+    call.__name__ = name
+    return call
+
+for _name in "forward fd backward back bk left lt right rt goto setpos setposition setx sety home position pos xcor ycor heading setheading seth towards distance penup pu up pendown pd down isdown pensize width pencolor fillcolor color begin_fill end_fill filling circle dot write speed hideturtle ht showturtle st isvisible clear reset".split():
+    globals()[_name] = _wrap(_name)
+
+def bgcolor(*args): return Screen().bgcolor(*args)
+def tracer(*args): return Screen().tracer(*args)
+def update(): return Screen().update()
+def screensize(*args, **kwargs): return Screen().screensize(*args, **kwargs)
+def window_width(): return Screen().window_width()
+def window_height(): return Screen().window_height()
+def clearscreen(): return Screen().clear()
+def resetscreen(): return Screen().reset()
+def done(): return Screen().mainloop()
+def mainloop(): return Screen().mainloop()
+def exitonclick(): return Screen().exitonclick()
+def colormode(mode=None):
+    global _colormode
+    if mode is None: return _colormode
+    _colormode = float(mode)
+    return _colormode
+`;
+  function installPythonTurtle(py) {
+    try {
+      py.FS.mkdirTree("/home/pyodide/loft");
+      py.FS.writeFile("/home/pyodide/loft/turtle.py", PY_TURTLE_MODULE);
+      py.runPython("import sys\np='/home/pyodide/loft'\nif p not in sys.path: sys.path.insert(0,p)\nsys.modules.pop('turtle', None)");
+    } catch (e) { pyPrint("Turtle could not be initialized: " + (e && e.message ? e.message : e), "console-err"); }
+  }
   function pyT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function updatePythonTile() {
     // the Python dock icon always wears the >>> prompt (owner: not the last command)
@@ -46830,6 +47353,7 @@ setOfficeProgress("pc", false);
   }
   function pyLoadFailed() {
     pyLoadState = "failed";
+    pyEditorQueue.length = 0;
     pyPrint(pyT("py_fail"), "console-err");
   }
   function loadPythonRuntime() {
@@ -46860,11 +47384,13 @@ setOfficeProgress("pc", false);
         return py.loadPackage("micropip").then(function () { return py.runPythonAsync("import micropip"); }).then(function () { return py; }, function () { return py; });
       }).then(function (py) {
         pyRuntime = py;
+        installPythonTurtle(py);
         try { pyReprFn = py.runPython("repr"); } catch (e) {}
         pyLoadState = "ready";
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}
         pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
+        pyDrainEditorQueue();
         // (the old /fonts woff2 mount was dropped — googlefonts() below supersedes it)
         // the shell shows what it's about to run on its own behalf, THEN runs it —
         // the invocations are visible even mid-install or if the install dies
@@ -47000,10 +47526,13 @@ async def localfont(name):
     if (pyOut) pyOut.innerHTML = "";
     pyHist = []; pyHistIdx = 0; pyLastCmd = "";
     pyBusy = false;
+    pyEditorQueue.length = 0;
     pyRuntime = null; pyReprFn = null;
     pyLoadState = ""; // "" lets loadPythonRuntime re-init on the next open
     pyWelcomed = false; // next open re-prints the welcome — it's a fresh interpreter
     if (pyIn) { pyIn.value = ""; try { pyIn.blur(); } catch (e) {} }
+    if (window.__loftTurtleCommand) window.__loftTurtleCommand("screen_clear");
+    pyTurtleView(false);
     updatePythonTile();
     monitor.classList.remove("show-python");
     scheduleSaver();
@@ -47031,6 +47560,34 @@ async def localfont(name):
     if (r && typeof r.destroy === "function") { try { r.destroy(); } catch (e) {} }
     return String(s);
   }
+  function pyDrainEditorQueue() {
+    if (pyBusy || pyLoadState !== "ready" || !pyEditorQueue.length) return;
+    var job = pyEditorQueue.shift();
+    pyBusy = true;
+    pyLastCmd = job.name;
+    updatePythonTile();
+    pyPrint(">>> run " + job.name, "console-dim");
+    pyRuntime.runPythonAsync(job.code).then(function (r) {
+      pyBusy = false;
+      if (r !== undefined) pyPrint(pyResultText(r));
+      pyDrainEditorQueue();
+    }, function (e) {
+      pyBusy = false;
+      pyPrint(e && e.message ? String(e.message).replace(/\s+$/, "") : String(e), "console-err");
+      pyDrainEditorQueue();
+    });
+  }
+  window.__runPythonEditor = function (name, code) {
+    var job = {
+      name: String(name || "(python editor)").slice(0, 120),
+      code: String(code == null ? "" : code)
+    };
+    pyEditorQueue.push(job);
+    if (window.__closeMonitorEditor) window.__closeMonitorEditor();
+    openPython();
+    if (pyLoadState === "ready") pyDrainEditorQueue();
+    return true;
+  };
   function pyRun(cmd) {
     pyPrint(">>> " + cmd);
     var c = cmd.trim();
@@ -47044,11 +47601,12 @@ async def localfont(name):
     pyBusy = true;
     pyRuntime.runPythonAsync(cmd).then(function (r) {
       pyBusy = false;
-      if (r === undefined) return; // statements and None print nothing, like the real REPL
-      pyPrint(pyResultText(r));
+      if (r !== undefined) pyPrint(pyResultText(r)); // statements and None print nothing, like the real REPL
+      pyDrainEditorQueue();
     }, function (e) {
       pyBusy = false;
       pyPrint(e && e.message ? String(e.message).replace(/\s+$/, "") : String(e), "console-err");
+      pyDrainEditorQueue();
     });
   }
   if (pyIn) {
@@ -49376,11 +49934,11 @@ async def localfont(name):
       case "editor":
         closeEditor();
         clearTimeout(edAutoTimer); edAutoTimer = null; edPendingCommit = null; // drop a pending autosave so it can't resurrect the cleared buffer
-        // fresh empty buffer — but the SAVED scripts (deskScripts in localStorage) are FILES,
+        // fresh empty buffer — but the SAVED scripts in both language stores are FILES,
         // deliberately kept (they survive reset()/reboot() too). Inline clear, never edNew()
         // (its trailing edName.focus() would trap the keyboard in an off-screen input).
         if (edName) edName.value = ""; if (edCode) edCode.value = "";
-        edLastSavedName = null; edRefreshPicker(null);
+        edLastSavedName = null; edLastSavedLanguage = edLanguage; edRefreshPicker(null);
         break;
       case "video":
         closeVideoApp();

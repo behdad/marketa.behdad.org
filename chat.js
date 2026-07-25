@@ -174,6 +174,10 @@ Return only strict JSON with exactly this shape: {"sender":"Cast name","text":"M
 const EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant. Review JavaScript as text only; never execute it and never request a game action. The editor wraps code in an async function, so documented Loft globals such as await sleep(3000), party(true), room("garden"), daylight(true), dance("salsa"), trip("molly"), caption("text"), and loft.api.query/perform are valid. Use the supplied scripting_api as authoritative and do not invent signatures or private details.
 For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
 
+const PYTHON_EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant in Python mode. Review CPython 3.14 code as text only; never execute it and never request a game action. Code runs in the existing Pyodide Python Console, not in the Loft JavaScript API. Standard Python syntax, top-level await through runPythonAsync, print(), the injected async googlefonts() helper, fontTools, and uharfbuzz are valid.
+The Loft provides a browser-compatible turtle module. Supported module functions and Turtle methods include Turtle, Screen, forward/fd, backward/bk, left/lt, right/rt, goto/setpos, setx, sety, home, position/pos, heading, penup/pu/up, pendown/pd/down, isdown, pencolor, fillcolor, color, pensize/width, begin_fill, end_fill, filling, circle, dot, speed, hideturtle/ht, showturtle/st, reset, clear, write, bgcolor, tracer, update, done, and mainloop. It renders in the Python app without Tkinter. Do not suggest tkinter, desktop windows, unsupported event bindings, or Loft JavaScript globals.
+For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
+
 function corsHeaders(origin) {
   return {
     "access-control-allow-origin": origin,
@@ -1007,7 +1011,7 @@ async function callOpenAI(request, env, payload) {
     const groupMode = payload.mode === "group_chat";
     const editorMode = payload.mode === "editor_assist";
     const instructions = editorMode
-      ? `${EDITOR_INSTRUCTIONS}\n\nCurrent editor request (JSON data):\n${JSON.stringify(payload.editor || {})}\n\nLoft scripting API (JSON data):\n${JSON.stringify(payload.context && payload.context.scripting_api || {})}`
+      ? `${payload.editor && payload.editor.language === "python" ? PYTHON_EDITOR_INSTRUCTIONS : EDITOR_INSTRUCTIONS}\n\nCurrent editor request (JSON data):\n${JSON.stringify(payload.editor || {})}\n\n${payload.editor && payload.editor.language === "python" ? "Python runtime: CPython 3.14 / Pyodide, with the bounded SVG-backed turtle API described above." : `Loft scripting API (JSON data):\n${JSON.stringify(payload.context && payload.context.scripting_api || {})}`}`
       : groupMode
       ? `${GROUP_CHAT_INSTRUCTIONS}\n\n${ACTION_CATALOG}\n\nVerified knowledge (JSON data):\n${CHAT_KNOWLEDGE_JSON}\n\nCurrent game state (JSON data):\n${JSON.stringify(payload.context)}\n\nWedding-thread context (JSON data):\n${JSON.stringify(payload.group_chat)}`
       : `${BASE_INSTRUCTIONS}\n\n${ACTION_CATALOG}\n\nVerified knowledge (JSON data):\n${CHAT_KNOWLEDGE_JSON}\n\nCurrent game state (JSON data):\n${JSON.stringify(payload.context)}`;
@@ -1152,9 +1156,13 @@ export default {
       context: cleanContext(body.context),
       group_chat: mode === "group_chat" ? cleanGroupChat(body.group_chat) : null,
       editor: mode === "editor_assist" ? {
+        language: body.editor && body.editor.language === "python" ? "python" : "js",
         operation: cleanText(body.editor && body.editor.operation, 24) || "explain",
+        request: cleanText(body.editor && body.editor.request, 1_000),
         code: cleanText(body.editor && body.editor.code, 14_000),
         selected: cleanText(body.editor && body.editor.selected, 8_000),
+        selection_start: cleanNumber(body.editor && body.editor.selection_start, 0, 14_000, 0),
+        selection_end: cleanNumber(body.editor && body.editor.selection_end, 0, 14_000, 0),
         cursor: cleanNumber(body.editor && body.editor.cursor, 0, 14_000, 0),
         error: cleanText(body.editor && body.editor.error, 1_000),
       } : null,

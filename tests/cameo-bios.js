@@ -23,6 +23,13 @@ var harness = String.raw`<script>
     } : null;
   }
   function click(el) { if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  function finish() {
+    out.errors = out.errors.concat((window.__errs || []).slice());
+    var pre = document.createElement("pre");
+    pre.id = "__report";
+    pre.textContent = JSON.stringify(out);
+    document.body.appendChild(pre);
+  }
   try {
     window.__setGardenParty(true, false);
 
@@ -60,7 +67,7 @@ var harness = String.raw`<script>
     click(pragueDaniel);
     var praguePlacement = cardPlacement();
     check("the widened Prague gathering uses the laptop screen's fixed bio position",
-      cardName() === "Daniel" && praguePlacement && praguePlacement.anchor === "laptop-call-remote",
+      cardName() === "Daniel" && praguePlacement && praguePlacement.anchor === "laptop-garden-daniel",
       JSON.stringify(praguePlacement));
     check("Prague call bios never draw a person arrow",
       !document.querySelector("#laptop-call-scene .guest-spot-arrow"));
@@ -79,7 +86,8 @@ var harness = String.raw`<script>
     var luebRobertPlacement = cardPlacement();
     check("Lübeck family bios share one fixed, arrow-free screen position",
       cardName() === "Robert" && luebPlacement && luebRobertPlacement &&
-      luebPlacement.anchor === "laptop-call-remote" &&
+      luebPlacement.anchor === "laptop-lueb-sister" &&
+      luebRobertPlacement.anchor === "laptop-lueb-husband" &&
       luebRobertPlacement.left === luebPlacement.left && luebRobertPlacement.top === luebPlacement.top &&
       !document.querySelector("#laptop-lueb-scene .guest-spot-arrow"),
       JSON.stringify({ first: luebPlacement, second: luebRobertPlacement }));
@@ -117,20 +125,44 @@ var harness = String.raw`<script>
     check("every chase runner uses fixed SVG-space movement pivots",
       runners.length === 10 && unstable.length === 0,
       "runners=" + runners.length + " unstable=" + unstable.join(","));
+
+    window.goToStage("cuddly");
+    window.__cuddlyVisit("ali", true);
+    click(document.getElementById("cuddly-vis-ali"));
+    setTimeout(function () {
+      try {
+        var visitorCard = document.querySelector(".egg-bubble.who-pop");
+        check("a directly clicked Cuddly visitor bio survives its opening click",
+          cardName() === "Ali" && !!visitorCard && visitorCard.classList.contains("show"),
+          cardName());
+        click(document.getElementById("cuddly-irene"));
+        setTimeout(function () {
+          try {
+            var kidCard = document.querySelector(".egg-bubble.who-pop");
+            check("a directly clicked Cuddly child bio survives its opening click",
+              cardName() === "Irene" && !!kidCard && kidCard.classList.contains("show"),
+              cardName());
+          } catch (error) {
+            out.errors.push(String(error && error.stack || error));
+          }
+          finish();
+        }, 80);
+      } catch (error) {
+        out.errors.push(String(error && error.stack || error));
+        finish();
+      }
+    }, 80);
   } catch (error) {
     out.errors.push(String(error && error.stack || error));
+    finish();
   }
-  out.errors = out.errors.concat((window.__errs || []).slice());
-  var pre = document.createElement("pre");
-  pre.id = "__report";
-  pre.textContent = JSON.stringify(out);
-  document.body.appendChild(pre);
 })();
 </script>`;
 
 var report = lib.runPageSync("rsvp.html", harness, 4000, {
   forceMotion: true,
-  seedRandom: true
+  seedRandom: true,
+  patchRaf: true
 });
 
 if (!report) { console.error("cameo bios: no report"); process.exit(1); }

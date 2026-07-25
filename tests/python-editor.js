@@ -38,6 +38,15 @@ check(/window\.__runPythonEditor[\s\S]*?pyEditorQueue\.push\(job\)[\s\S]*?openPy
 check(/id="monitor-ed-explain"[^>]*>explain<\/button>/.test(html) &&
       /id="monitor-ed-ai-status"[^>]*>ready<\/span>/.test(html),
   "Editor AI controls use explicit, compact labels");
+check(/js\["hello\.js"\]\s*=\s*ED_STARTER/.test(html) &&
+      /py\["square\.py"\]\s*=\s*ED_PY_STARTER/.test(html) &&
+      /caption\(\\"hello from the loft/.test(html) &&
+      /for _ in range\(4\):[\s\S]*?t\.forward\(60\)[\s\S]*?t\.right\(90\)/.test(html),
+  "one-time editable hello.js and square.py examples are preloaded without overwriting user files");
+check(/error:\s*edGetRunError\(edLanguage\)/.test(html) &&
+      /edSetRunError\("python",\s*msg\)/.test(html) &&
+      /edSetRunError\("js",\s*msg\)/.test(html),
+  "AI reviews receive only the active language's latest runtime error");
 check(/pyPrint\(">>> import turtle  # browser graphics"/.test(html) &&
       /id="monitor-py-view-toggle" transform="translate\(363\.2,154\.8\)"/.test(html),
   "Python's ready banner names Turtle and the gfx control sits beside Close");

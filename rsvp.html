@@ -43327,6 +43327,14 @@ setOfficeProgress("pc", false);
   var edAskBtn = document.getElementById("monitor-ed-ask-btn");
   var edAiStatus = document.getElementById("monitor-ed-ai-status");
   var edAiPanel = document.getElementById("monitor-ed-ai-panel");
+  var editorRunErrors = window.__lastEditorErrors || { js: "", python: "" };
+  window.__lastEditorErrors = editorRunErrors;
+  function edSetRunError(language, text) {
+    var lang = language === "python" ? "python" : "js";
+    editorRunErrors[lang] = String(text || "");
+    if (lang === "js") window.__lastEditorError = editorRunErrors.js; // legacy console/tests
+  }
+  function edGetRunError(language) { return editorRunErrors[language === "python" ? "python" : "js"] || ""; }
   var ED_STORE_KEYS = { js: "deskScripts", python: "deskPythonScripts" };
   var ED_LANG_KEY = "deskEditorLanguage";
   function readEditorLanguage() { try { return localStorage.getItem(ED_LANG_KEY) === "python" ? "python" : "js"; } catch (e) { return "js"; } }
@@ -43539,7 +43547,7 @@ setOfficeProgress("pc", false);
     if (err && err.__scriptStop) return ""; // a deliberate stop() abort, not a real error — stay quiet
     var detail = err && (err.stack || err.message) ? String(err.stack || err.message) : String(err);
     var msg = "✗ " + name + ":\n" + detail.slice(0, 6000);
-    if (editorRun || monitor.classList.contains("show-editor")) window.__lastEditorError = msg;
+    if (editorRun || monitor.classList.contains("show-editor")) edSetRunError("js", msg);
     if (monitor.classList.contains("show-console")) consolePrint(msg, "console-err");
     else if (window.console && console.error) console.error("[run] " + name + ":", err);
     return msg;
@@ -43552,7 +43560,7 @@ setOfficeProgress("pc", false);
     var trackEditor = !!options.editorRun || monitor.classList.contains("show-editor"), runToken = 0;
     if (trackEditor) {
       edStopOneShot();
-      edOneShotOn = true; runToken = ++edOneShotToken; edUpdateRunBtn(); edAiSetStatus("Running script…", false);
+      edOneShotOn = true; runToken = ++edOneShotToken; edUpdateRunBtn(); edAiSetStatus("running script…", false);
     }
     function finish(err) {
       var stopped = err && err.__scriptStop;
@@ -43560,7 +43568,7 @@ setOfficeProgress("pc", false);
       if (trackEditor && runToken === edOneShotToken) {
         edOneShotOn = false;
         edUpdateRunBtn();
-        edAiSetStatus(err ? (stopped ? "Script stopped" : "Script failed — fix can help") : "Script finished", !err);
+        edAiSetStatus(err ? (stopped ? "script stopped" : "script failed — fix can help") : "script finished", !err);
       }
       if (!err && options.console && monitor.classList.contains("show-console")) consolePrint("✓ " + name + " finished.", "console-dim");
       return !err;
@@ -43577,12 +43585,12 @@ setOfficeProgress("pc", false);
     var code = edCode ? edCode.value : "";
     edFlushAutoSave(); edFlushDraft();
     if (edLanguage === "python") {
-      edAiSetStatus("Opening Python…", false);
+      edAiSetStatus("opening python…", false);
       if (typeof window.__runPythonEditor === "function") window.__runPythonEditor(name, code);
-      else edAiSetStatus("Python unavailable", false);
+      else edAiSetStatus("python unavailable", false);
       return;
     }
-    window.__lastEditorError = "";
+    edSetRunError("js", "");
     closeEditor();
     openConsole(true);
     consolePrint(">>> run " + name, "console-dim");
@@ -43612,34 +43620,34 @@ setOfficeProgress("pc", false);
       var diffTitle = document.createElement("div"); diffTitle.className = "ed-ai-diff-title"; diffTitle.textContent = "Preview"; edAiPanel.appendChild(diffTitle);
       edAiEdits.forEach(function (edit, i) { var ep = document.createElement("pre"); ep.className = "ed-ai-diff"; var oldText = edAiSourceCode.slice(edit.start, edit.end); var lines = ["#" + (i + 1) + " [" + edit.start + "–" + edit.end + "]"]; lines.push(oldText ? "- " + oldText.replace(/\n/g, "\n- ") : "- (nothing)"); lines.push(edit.text ? "+ " + edit.text.replace(/\n/g, "\n+ ") : "+ (deleted)"); ep.textContent = lines.join("\n"); edAiPanel.appendChild(ep); });
       var applyEdits = document.createElement("button"); applyEdits.className = "ed-ai-btn"; applyEdits.type = "button"; applyEdits.textContent = "apply edits";
-      applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!edCode || edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var out = edCode.value; var sorted = edAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { edAiSetStatus("Edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } edCode.value = out; edScheduleAutoSave(); edScheduleDraft(); edAiClosePanel(); edAiSetStatus("Applied " + sorted.length + " edits", true); try { edCode.focus(); } catch (_) {} });
+      applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!edCode || edCode.value !== edAiSourceCode) { edAiSetStatus("code changed — request again", false); return; } var out = edCode.value; var sorted = edAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { edAiSetStatus("edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } edCode.value = out; edScheduleAutoSave(); edScheduleDraft(); edAiClosePanel(); edAiSetStatus("applied " + sorted.length + " edits", true); try { edCode.focus(); } catch (_) {} });
       edAiPanel.appendChild(applyEdits);
     }
     if (edAiSuggestion) {
       var pre = document.createElement("pre"); pre.textContent = edAiSuggestion; pre.style.margin = "1px 0"; edAiPanel.appendChild(pre);
       var apply = document.createElement("button"); apply.className = "ed-ai-btn"; apply.type = "button"; apply.textContent = edAiReplace ? (edAiStart === edAiEnd ? "replace script" : "replace selection") : "insert at cursor";
-      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!edAiSuggestion || !edCode) return; if (edCode.value !== edAiSourceCode) { edAiSetStatus("Code changed — request again", false); return; } var a = edAiStart, b = edAiEnd; if (edAiReplace && a === b) { a = 0; b = edCode.value.length; } edCode.value = edAiReplace ? edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(b) : edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(a); edScheduleAutoSave(); edScheduleDraft(); edAiClosePanel(); edAiSetStatus("Applied", true); try { edCode.focus(); edCode.setSelectionRange(a + edAiSuggestion.length, a + edAiSuggestion.length); } catch (_) {} });
+      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!edAiSuggestion || !edCode) return; if (edCode.value !== edAiSourceCode) { edAiSetStatus("code changed — request again", false); return; } var a = edAiStart, b = edAiEnd; if (edAiReplace && a === b) { a = 0; b = edCode.value.length; } edCode.value = edAiReplace ? edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(b) : edCode.value.slice(0, a) + edAiSuggestion + edCode.value.slice(a); edScheduleAutoSave(); edScheduleDraft(); edAiClosePanel(); edAiSetStatus("applied", true); try { edCode.focus(); edCode.setSelectionRange(a + edAiSuggestion.length, a + edAiSuggestion.length); } catch (_) {} });
       edAiPanel.appendChild(apply);
       var copy = document.createElement("button"); copy.className = "ed-ai-btn"; copy.type = "button"; copy.textContent = "copy";
-      copy.addEventListener("click", function (e) { e.stopPropagation(); try { navigator.clipboard.writeText(edAiSuggestion); edAiSetStatus("Copied", true); } catch (_) {} }); edAiPanel.appendChild(copy);
+      copy.addEventListener("click", function (e) { e.stopPropagation(); try { navigator.clipboard.writeText(edAiSuggestion); edAiSetStatus("copied", true); } catch (_) {} }); edAiPanel.appendChild(copy);
     }
-    edAiPanel.classList.add("open"); edAiSetStatus("Review suggestion", true);
+    edAiPanel.classList.add("open"); edAiSetStatus("review suggestion", true);
   }
   function edAiRequest(operation, userRequest) {
     if (edAiBusy || !edCode) return;
     var challenge = window.__monitorChatTurnstile;
     var transport = window.fetch, endpoint = window.__monitorChatEndpoint || "https://marketa.behdad.org/chat";
-    if (typeof challenge !== "function" || typeof transport !== "function") { edAiSetStatus("AI unavailable", false); return; }
-    edAiBusy = true; [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); edAiClosePanel(); edAiSetStatus("Thinking…", false);
+    if (typeof challenge !== "function" || typeof transport !== "function") { edAiSetStatus("ai unavailable", false); return; }
+    edAiBusy = true; [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); edAiClosePanel(); edAiSetStatus("thinking…", false);
     var a = edCode.selectionStart || 0, b = edCode.selectionEnd || a;
     edAiStart = a; edAiEnd = b; edAiSourceCode = edCode.value;
     var context = typeof window.__chatContext === "function" ? window.__chatContext("Script Editor " + operation) : { scripting_api: null };
     if (edLanguage === "python") context.scripting_api = null; // Python gets its own bounded runtime/turtle context from the Worker payload.
     Promise.resolve(challenge()).then(function (token) {
-      return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: userRequest || "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { language: edLanguage, operation: operation, request: userRequest || "", code: edCode.value, selected: edCode.value.slice(a, b), selection_start: a, selection_end: b, cursor: a, error: window.__lastEditorError || "" } }) });
+      return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: userRequest || "Review this script using the requested operation.", mode: "editor_assist", turnstile_token: token, context: context, editor: { language: edLanguage, operation: operation, request: userRequest || "", code: edCode.value, selected: edCode.value.slice(a, b), selection_start: a, selection_end: b, cursor: a, error: edGetRunError(edLanguage) } }) });
     }).then(function (response) { if (!response.ok) throw new Error("AI " + response.status); return response.json(); }).then(function (body) {
       var raw = body && (body.reply || body.text || ""), data; try { data = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { data = { text: String(raw), suggestion: "" }; } edAiRender(data || {});
-    }).catch(function (error) { edAiSetStatus(error && error.message === "AI 403" ? "Verify again" : "AI unavailable", false); }).finally(function () { edAiBusy = false; [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
+    }).catch(function (error) { edAiSetStatus(error && error.message === "AI 403" ? "verify again" : "ai unavailable", false); }).finally(function () { edAiBusy = false; [edAskBtn, edExplainBtn, edFixBtn, edCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
   }
   // download the current buffer with the active language's conventional extension.
   function edDownload() {
@@ -43658,38 +43666,41 @@ setOfficeProgress("pc", false);
     } catch (e) {}
     if (url) setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 0);
   }
-  // First-visit starter: a short, runnable demo of the loft's own scripting API, so opening the
-  // editor on a blank slate shows something to Run ▶ instead of an empty box. Seeded ONCE per
-  // session, and only when there's nothing to clobber — a saved file OR text/name already in the
-  // buffer keeps its place. It's a genuine default VALUE (editable, runnable, clearable), not the
-  // grey placeholder. English only (it's code). Every command here is a real loft global.
+  // First-visit examples are ordinary editable files. They are inserted once, never overwrite
+  // a same-named user file, and stay deleted if the visitor later removes them.
   var ED_STARTER = [
-    "// ✎ your loft playground — hit Run ▶",
-    "caption(\"hello, world 👋\", { blink: 1000, hold: 2500 });",
-    "await sleep(900);",
-    "party(true);",
-    "await sleep(1600);",
-    "dance(\"salsa\");",
+    "caption(\"hello from the loft 👋\");",
     ""
   ].join("\n");
   var ED_PY_STARTER = [
-    "# Python in the loft — hit Run ▶",
     "import turtle",
     "",
     "t = turtle.Turtle()",
-    "t.color(\"#8e3a4a\")",
-    "for _ in range(5):",
-    "    t.forward(80)",
-    "    t.right(144)",
+    "for _ in range(4):",
+    "    t.forward(60)",
+    "    t.right(90)",
     ""
   ].join("\n");
+  var ED_EXAMPLES_KEY = "deskEditorExamplesV1";
+  var edExamplesAdded = { js: false, python: false };
+  function edSeedExamples() {
+    try {
+      if (localStorage.getItem(ED_EXAMPLES_KEY)) return;
+      var js = readScripts("js"), py = readScripts("python");
+      if (!Object.prototype.hasOwnProperty.call(js, "hello.js")) { js["hello.js"] = ED_STARTER; edExamplesAdded.js = true; }
+      if (!Object.prototype.hasOwnProperty.call(py, "square.py")) { py["square.py"] = ED_PY_STARTER; edExamplesAdded.python = true; }
+      writeScripts(js, "js"); writeScripts(py, "python");
+      localStorage.setItem(ED_EXAMPLES_KEY, "1");
+    } catch (e) {}
+  }
+  edSeedExamples();
   var edStarterSeeded = { js: false, python: false };
   function edMaybeSeedStarter() {
     if (edStarterSeeded[edLanguage] || !edCode || !edName) return;
     if (edCode.value !== "" || (edName.value || "").trim() !== "") return; // buffer already has content or a name
-    if (Object.keys(readScripts(edLanguage)).length) return;              // a returning author with saved files — leave it blank
+    if (!edExamplesAdded[edLanguage]) return;                             // only auto-open a newly installed example
     edStarterSeeded[edLanguage] = true;
-    edCode.value = edLanguage === "python" ? ED_PY_STARTER : ED_STARTER;
+    edLoad(edLanguage === "python" ? "square.py" : "hello.js", edLanguage);
     try { edCode.setSelectionRange(0, 0); } catch (e) {}                    // caret at the top, on the friendly comment
   }
   function openEditor() {
@@ -43757,7 +43768,7 @@ setOfficeProgress("pc", false);
     edRunBtn.title = active ? "Stop" : "Run";
     edRunBtn.classList.toggle("ed-btn-stop", active);
   }
-  function edStopOneShot() { if (!edOneShotOn) return false; edOneShotOn = false; edOneShotToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; edUpdateRunBtn(); edAiSetStatus("Script stopped", true); return true; }
+  function edStopOneShot() { if (!edOneShotOn) return false; edOneShotOn = false; edOneShotToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; edUpdateRunBtn(); edAiSetStatus("script stopped", true); return true; }
   function edStopRepeat() { var was = edRepeatOn; edRepeatOn = false; edRepeatToken++; window.__scriptAbortN = (window.__scriptAbortN | 0) + 1; edUpdateRunBtn(); return was; } // also aborts any in-flight one-shot script at its next await sleep()
   window.__stopRepeat = edStopRepeat; // reset/other hooks end the loop through here
   function edLoopStep(tok, name, code) {
@@ -47617,6 +47628,7 @@ async def localfont(name):
     var job = pyEditorQueue.shift();
     pyBusy = true;
     pyLastCmd = job.name;
+    edSetRunError("python", "");
     updatePythonTile();
     pyPrint(">>> run " + job.name, "console-dim");
     pyRuntime.runPythonAsync(job.code).then(function (r) {
@@ -47625,7 +47637,9 @@ async def localfont(name):
       pyDrainEditorQueue();
     }, function (e) {
       pyBusy = false;
-      pyPrint(e && e.message ? String(e.message).replace(/\s+$/, "") : String(e), "console-err");
+      var msg = e && e.message ? String(e.message).replace(/\s+$/, "") : String(e);
+      edSetRunError("python", msg);
+      pyPrint(msg, "console-err");
       pyDrainEditorQueue();
     });
   }

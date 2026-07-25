@@ -60052,11 +60052,16 @@ async def localfont(name):
     function plainAuthoredBody(m, lang) {
       return String(authoredBodyForLang(m, lang) || "").replace(/<[^>]+>/g, "");
     }
+    var AUTHORED_KEEP_ORIGINAL_CHANCE = 0.25;
+    var AUTHORED_REWRITE_BLOCKLIST = { pouria_farhang: true, hamid_verse: true, hamid_verse2: true };
     function deliverAutonomousRewritten(id) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1 || pendingAuthoredRewrites[id]) return false;
       var m = MESSAGES[id];
       freezeAuthoredMessage(m);
       if (m.body != null || !m.bodyKey || typeof window.__monitorMessageRewrite !== "function") {
+        return window.__deliverPhoneMessage(id);
+      }
+      if (AUTHORED_REWRITE_BLOCKLIST[id] || Math.random() < AUTHORED_KEEP_ORIGINAL_CHANCE) {
         return window.__deliverPhoneMessage(id);
       }
       var request = {

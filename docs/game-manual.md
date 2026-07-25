@@ -475,9 +475,12 @@ receives focus when Messages opens. Press `Escape` to leave the composer; press
 `/` while it is empty to focus message search.
 
 Before an autonomous authored message arrives, Chat may casually rephrase its
-English wording without changing any information. Czech always uses the
+English wording without changing any information. One quarter of English
+messages deliberately keep their authored wording. Czech always uses the
 existing authored translation. If verification, the network, or the chatbot
 fails, the original authored English message arrives unchanged.
+Pouria's message to Farhang and both parts of Hamid's Persian verse always keep
+their authored wording.
 
 Right-click a message, or long-press it on touch, to:
 

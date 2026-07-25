@@ -813,7 +813,8 @@ Charlie discovery, party lifecycle prompts, and chained authored follow-ups. The
   player.
 
 Once an autonomous authored ID clears those gates, `deliverAutonomousRewritten` freezes any pooled
-sender/body choice and sends only the resolved English original through the shared Chat queue
+sender/body choice. A 25% roll keeps the authored wording; otherwise it sends only the resolved
+English original through the shared Chat queue
 in `message_rewrite` mode. The Worker uses a dedicated no-actions prompt that permits rephrasing
 only and requires the exact `{en}` response shape. A valid English rewrite is stored on the authored
 message; Czech always remains the existing reviewed dictionary translation. A Turnstile, transport,
@@ -822,6 +823,10 @@ falls through to the original dictionary copy. Pending IDs count as received for
 deduplication, do not enter the thread until the request settles, and are generation-cancelled by
 phone/game reset. Checkpoint rows retain a completed English rewrite, while in-flight work remains
 session-only.
+
+`AUTHORED_REWRITE_BLOCKLIST` bypasses Chat unconditionally for wording that must remain verbatim.
+It currently contains Pouria's `pouria_farhang` line and both halves of Hamid's Persian verse
+(`hamid_verse`, `hamid_verse2`).
 
 The `Tab` context-message shortcut uses the same rewrite trip when the interface language is
 English, including cloned repeats after a catalog ID has already arrived. In Czech it deliberately

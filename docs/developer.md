@@ -355,7 +355,9 @@ checkpoint restore and reset. `setMonitorShorted` owns both the wet-monitor flag
 rendering class; drying and reset call the same transition.
 The released garden fairy's Cuddly cameo is projected by `syncRumiFairy`: it requires phase two,
 night, a stopped party, and the couple's presence. Phase, party, room, and both manual and automatic
-day/night transitions re-run that projection.
+day/night transitions re-run that projection. Its two Rumi bubbles use one bounded rAF follower to
+stay attached to the speakers' live head geometry; opening the reply cancels the prior follower, and
+detachment stops the loop.
 
 ### Party lifetime
 

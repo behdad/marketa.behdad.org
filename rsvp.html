@@ -3454,7 +3454,7 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .desk-system-rule{stroke:#cbb5aa; stroke-width:.3}
 .desk-system-tagline{fill:#81766b; font:1.08px/1 "Source Serif 4",serif; pointer-events:none}
 .monitor-lock-layer{opacity:0; visibility:hidden; pointer-events:none}
-#office-monitor.monitor-locked .monitor-lock-layer{opacity:1; visibility:visible; pointer-events:auto}
+#office-monitor.monitor-locked.monitor-lock-awake .monitor-lock-layer{opacity:1; visibility:visible; pointer-events:auto}
 .monitor-lock-bg{fill:#17131d}
 .monitor-lock-title{fill:#f8f5ec; font:600 3.1px/1 Fraunces,serif; letter-spacing:.18px}
 .monitor-lock-prompt,.monitor-lock-unlocked{fill:#d8d4c8; font:2.2px/1 "Source Serif 4",serif}
@@ -26648,7 +26648,7 @@ var T = {
     mon_sys_tagline_1: "where artificial meets",
     mon_sys_tagline_2: "higher intelligence.",
     mon_lock_title: "CAPS LOCK",
-    mon_lock_prompt: "Put each cap where it belongs.",
+    mon_lock_prompt: "Match the caps, or press Caps Lock twice.",
     mon_lock_unlocked: "unlocked",
     mon_lock_pink: "Behdad’s pink flat cap",
     mon_lock_blue: "Markéta’s blue baker cap",
@@ -27593,7 +27593,7 @@ var T = {
     mon_sys_tagline_1: "kde se setkává umělá",
     mon_sys_tagline_2: "a vyšší inteligence.",
     mon_lock_title: "CAPS LOCK",
-    mon_lock_prompt: "Nasaďte každou čepici správné osobě.",
+    mon_lock_prompt: "Přiřaďte čepice nebo dvakrát stiskněte Caps Lock.",
     mon_lock_unlocked: "odemčeno",
     mon_lock_pink: "Behdadova růžová placatá čepice",
     mon_lock_blue: "Markétina modrá bekovka",
@@ -40402,7 +40402,9 @@ setOfficeProgress("pc", false);
   var monitorLockMatched = monitorLockSaved && monitorLockSaved.matched ?
     { pink: !!monitorLockSaved.matched.pink, blue: !!monitorLockSaved.matched.blue } :
     { pink: false, blue: false };
-  var monitorLockSelected = null, monitorLockFinishTimer = null;
+  var monitorLockSelected = null, monitorLockFinishTimer = null, monitorLockIdleTimer = null;
+  var monitorLockCapsState = null, monitorLockCapsPresses = 0;
+  var MONITOR_LOCK_IDLE_MS = 10000;
   var monitorLockCaps = {}, monitorLockPortraits = {};
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function stopSaver() {
@@ -40415,10 +40417,37 @@ setOfficeProgress("pc", false);
     clearTimeout(saverTimer);
     saverTimer = setTimeout(startSaver, ms || 8000);
   }
+  function clearMonitorLockIdle() {
+    clearTimeout(monitorLockIdleTimer);
+    monitorLockIdleTimer = null;
+  }
+  function showMonitorLockSaver() {
+    if (!monitorLocked) return false;
+    clearMonitorLockIdle();
+    monitor.classList.remove("monitor-lock-awake");
+    saverCameFrom = "desktop";
+    if (!monitor.classList.contains("show-caps")) monitor.classList.add("show-caps");
+    startSaver();
+    return monitor.classList.contains("show-saver");
+  }
+  function scheduleMonitorLockIdle() {
+    clearMonitorLockIdle();
+    if (!monitorLocked || !monitor.classList.contains("monitor-lock-awake")) return;
+    monitorLockIdleTimer = setTimeout(showMonitorLockSaver, MONITOR_LOCK_IDLE_MS);
+  }
+  function wakeMonitorLock() {
+    if (!monitorLocked) return false;
+    stopSaver();
+    monitor.classList.add("show-caps", "monitor-lock-awake");
+    monitorUrl = CAPS_URL;
+    paintMonitorLock();
+    scheduleMonitorLockIdle();
+    return true;
+  }
   // wake the screensaver back to the desktop (same as clicking the monitor while it's saving) —
   // used by the office Enter shortcut. Returns true if it actually dismissed a running saver.
   window.__wakeMonitorSaver = function () {
-    if (monitorLocked) return false;
+    if (monitorLocked) return wakeMonitorLock();
     if (!monitor.classList.contains("show-saver")) return false;
     stopSaver();
     monitor.classList.add("show-caps");
@@ -40460,11 +40489,11 @@ setOfficeProgress("pc", false);
   }
   function monitorLockPortraitX(person) {
     var marketaFirst = !(monitorLockSeed & 1);
-    return person === "marketa" ? (marketaFirst ? 275 : 294) : (marketaFirst ? 294 : 275);
+    return person === "marketa" ? (marketaFirst ? 280 : 300) : (marketaFirst ? 300 : 280);
   }
   function monitorLockCapHomeX(cap) {
     var pinkFirst = !(monitorLockSeed & 2);
-    return cap === "pink" ? (pinkFirst ? 327 : 349) : (pinkFirst ? 349 : 327);
+    return cap === "pink" ? (pinkFirst ? 332 : 352) : (pinkFirst ? 352 : 332);
   }
   function monitorLockOwner(cap) { return cap === "pink" ? "behdad" : "marketa"; }
   function paintMonitorLock() {
@@ -40473,7 +40502,7 @@ setOfficeProgress("pc", false);
     ["marketa", "behdad"].forEach(function (person) {
       var portrait = monitorLockPortraits[person];
       if (portrait) {
-        portrait.setAttribute("transform", "translate(" + monitorLockPortraitX(person) + ",174)");
+        portrait.setAttribute("transform", "translate(" + monitorLockPortraitX(person) + ",175)");
         portrait.classList.toggle("target", !!monitorLockSelected && monitorLockOwner(monitorLockSelected) === person);
       }
     });
@@ -40482,7 +40511,7 @@ setOfficeProgress("pc", false);
       if (!group) return;
       var matched = !!monitorLockMatched[cap];
       var x = matched ? monitorLockPortraitX(monitorLockOwner(cap)) : monitorLockCapHomeX(cap);
-      var y = matched ? 161.8 : 174;
+      var y = matched ? 162.8 : 175;
       group.setAttribute("transform", "translate(" + x + "," + y + ")");
       group.classList.toggle("matched", matched);
       group.classList.toggle("selected", monitorLockSelected === cap);
@@ -40490,9 +40519,11 @@ setOfficeProgress("pc", false);
   }
   function clearMonitorLock() {
     clearTimeout(monitorLockFinishTimer); monitorLockFinishTimer = null;
+    clearMonitorLockIdle();
     monitorLocked = false; monitorLockSelected = null;
     monitorLockMatched = { pink: false, blue: false };
-    monitor.classList.remove("monitor-locked");
+    monitorLockCapsState = null; monitorLockCapsPresses = 0;
+    monitor.classList.remove("monitor-locked", "monitor-lock-awake");
     var layer = document.getElementById("monitor-lock-layer");
     if (layer) layer.classList.remove("complete");
     saveMonitorLock();
@@ -40539,27 +40570,32 @@ setOfficeProgress("pc", false);
     monitorLockSeed = Date.now();
     monitorLockMatched = { pink: false, blue: false };
     monitorLockSelected = null;
+    monitorLockCapsState = null;
+    monitorLockCapsPresses = 0;
     monitorLocked = true;
     monitor.classList.add("monitor-locked");
+    monitor.classList.remove("monitor-lock-awake");
     saveMonitorLock();
     paintMonitorLock();
-    saverCameFrom = "desktop";
-    startSaver();
+    showMonitorLockSaver();
     if (window.__monitorZoomIn) window.__monitorZoomIn();
   }
   function resumeMonitorLock() {
     if (!monitorLocked) return false;
     monitor.classList.add("monitor-locked");
+    monitor.classList.remove("monitor-lock-awake");
     paintMonitorLock();
-    saverCameFrom = "desktop";
-    startSaver();
+    showMonitorLockSaver();
     return true;
   }
   window.__monitorLocked = function () { return monitorLocked; };
   window.__monitorLockState = function () {
     return { locked: monitorLocked, seed: monitorLockSeed, selected: monitorLockSelected,
+      awake: monitor.classList.contains("monitor-lock-awake"),
       matched: { pink: !!monitorLockMatched.pink, blue: !!monitorLockMatched.blue } };
   };
+  window.__wakeMonitorLock = wakeMonitorLock;
+  window.__showMonitorLockSaver = showMonitorLockSaver;
   window.__clearMonitorLock = clearMonitorLock;
   window.__resumeMonitorLock = resumeMonitorLock;
   // Julia-set renderer — escape-time, smooth-colored, glowing on near-black
@@ -42428,7 +42464,7 @@ setOfficeProgress("pc", false);
         try { g.releasePointerCapture(pointerId); } catch (err) {}
         var p = svgPoint(e), nearest = null, best = 1e9;
         ["marketa", "behdad"].forEach(function (person) {
-          var dx = p.x - monitorLockPortraitX(person), dy = p.y - 174, d = dx * dx + dy * dy;
+          var dx = p.x - monitorLockPortraitX(person), dy = p.y - 175, d = dx * dx + dy * dy;
           if (d < best) { best = d; nearest = person; }
         });
         if (best <= 95) tryMonitorCapOn(nearest);
@@ -42448,7 +42484,9 @@ setOfficeProgress("pc", false);
     makeLockCap("blue");
     lockLayer.addEventListener("click", function (e) { e.stopPropagation(); });
     lockLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    lockLayer.addEventListener("pointerdown", scheduleMonitorLockIdle);
     lockLayer.addEventListener("keydown", function (e) {
+      scheduleMonitorLockIdle();
       if (!/^Arrow/.test(e.key)) return;
       var choices = Array.prototype.slice.call(lockLayer.querySelectorAll('[tabindex="0"]'))
         .filter(function (el) { return !el.classList.contains("matched"); });
@@ -42476,12 +42514,23 @@ setOfficeProgress("pc", false);
         return;
       }
     }
-    // A locked desktop still lets Esc unzoom the monitor and lets the lock's own
-    // controls receive keyboard navigation. Everything else is swallowed before a
-    // room/app shortcut can alter the screen underneath the modal layer.
-    if (monitorLocked && !["Escape", "Esc", "Tab", "Enter", " ", "ArrowLeft",
-        "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
-      e.preventDefault(); e.stopImmediatePropagation();
+    // CAPS LOCK is an alternate monitor-only unlock: one deliberate on/off cycle.
+    // Do not swallow the event (or any other key) — locking the office monitor must
+    // never disable room shortcuts or browser commands such as Ctrl+R.
+    if (monitorLocked && e.key === "CapsLock" && !e.repeat) {
+      if (!monitor.classList.contains("monitor-lock-awake")) wakeMonitorLock();
+      else scheduleMonitorLockIdle();
+      var capsOn = e.getModifierState ? e.getModifierState("CapsLock") : null;
+      if (!monitorLockCapsPresses) {
+        monitorLockCapsState = capsOn;
+        monitorLockCapsPresses = 1;
+      } else if (capsOn === null || capsOn !== monitorLockCapsState) {
+        monitorLockCapsPresses = 2;
+        completeMonitorUnlock();
+      } else {
+        monitorLockCapsState = capsOn;
+        monitorLockCapsPresses = 1;
+      }
     }
   }, true);
   function normalizeDockSearch(value) {
@@ -51186,6 +51235,7 @@ async def localfont(name):
   var monClickTimer = null;
   monitor.addEventListener("dblclick", function () {
     clearTimeout(monClickTimer);
+    if (monitorLocked) return;
     if (monitor.classList.contains("photobooth")) return; // don't swap to the typewriter mid-photobooth
     // a habitual desktop double-click on a dock icon swaps the screen layer between the
     // two clicks — the second click must not banish the monitor to the typewriter
@@ -51193,7 +51243,11 @@ async def localfont(name):
     swap(false);
   });
   monitor.addEventListener("pointermove", function () {
-    if (monitorLocked) return;
+    if (monitorLocked) {
+      if (!monitor.classList.contains("monitor-lock-awake")) wakeMonitorLock();
+      else scheduleMonitorLockIdle();
+      return;
+    }
     if (!monitor.classList.contains("show-saver")) return;
     stopSaver();
     monitor.classList.add("show-caps");
@@ -51218,12 +51272,18 @@ async def localfont(name):
   });
   monitor.addEventListener("click", function () {
     clearTimeout(monClickTimer);
+    if (monitorLocked) {
+      if (!monitor.classList.contains("monitor-lock-awake")) {
+        wakeMonitorLock();
+        playLaptopClickSound("office-monitor");
+      } else scheduleMonitorLockIdle();
+      return;
+    }
     if (monitor.classList.contains("photobooth")) return; // the booth owns the screen; its own controls handle clicks (tapping the video cycles filters)
     if (monitor.classList.contains("pb-confirm") || monitor.classList.contains("pb-error")) {
       hidePbConfirm(); hidePbError(); return; // a stray click (screen or bezel) dismisses the booth's panel, never runs the boot gag under it
     }
     if (monitor.classList.contains("show-saver")) {
-      if (monitorLocked) return;
       stopSaver();
       monitor.classList.add("show-caps");
       // wake back to whatever the saver covered: the player only if it was up before

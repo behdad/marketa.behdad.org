@@ -382,10 +382,12 @@ controls remain visible, then return to their usual URL-driven visibility when
 the day stops.
 
 The `m ∞ b` wordmark opens the computer's system menu. **Sleep** keeps apps
-running and wakes on ordinary activity. **Lock** starts CAPS LOCK: put the pink
-flat cap on behdad and the blue baker cap on Markéta by tapping a cap and then a
-portrait, dragging it, or using `Tab`, the arrow keys, and `Enter`. The lock
-survives leaving the monitor and continuing after a reload. **Reboot** and
+running and wakes on ordinary activity. **Lock** starts at the screensaver;
+activity reveals CAPS LOCK, and another idle stretch returns to the saver. Put
+the pink flat cap on behdad and the blue baker cap on Markéta by tapping a cap
+and then a portrait, dragging it, or using `Tab`, the arrow keys, and `Enter`.
+An intentional Caps Lock on/off cycle also unlocks it. The lock affects only the
+computer and survives leaving the monitor and continuing after a reload. **Reboot** and
 **Shut down** perform a clean power cycle and clear running app sessions.
 
 Typing an app name while the desktop or screensaver is visible opens an

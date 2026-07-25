@@ -544,10 +544,13 @@ The monitor is an SVG/`foreignObject` computer with a desktop, dock, screensaver
 is represented mainly by `show-*` classes on `#office-monitor`. Search for
 `__openMonitorApp`, `__closeTopMonitorApp`, `resetMonitorAppState`, and `REAL_APPS`.
 
-The native-SVG `m ∞ b` system menu delegates Sleep to the existing Julia saver and
-Reboot/Shut down to the physical PC tower, so there is no second power-state owner.
-CAPS LOCK is the one new state: `monitorLocked` blocks wake gestures and app entry
-points while the cap-matching layer is modal. Its small
+The native-SVG `m ∞ b` system menu delegates Sleep to the monitor lifecycle and
+Reboot/Shut down to the physical PC tower, so there is no second machine-power owner.
+CAPS LOCK is a monitor-local state: `monitorLocked` blocks monitor app entry points,
+but never captures room or browser shortcuts. Lock initially leaves the Julia saver
+visible; monitor activity calls `wakeMonitorLock()` to reveal the cap-matching layer,
+and `monitorLockIdleTimer` returns it to the saver. The cap puzzle and an intentional
+Caps Lock on/off cycle are equivalent unlock paths. Its small
 `localStorage["loftMonitorCapsLock"]` record holds the randomized layout and partial
 matches across Continue/reload. Normal monitor unzoom preserves it; the shared
 `shutdownMonitorApps()` teardown and a full game reset clear it. The focused lifecycle

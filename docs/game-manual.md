@@ -297,9 +297,10 @@ a repeatable coffee loop. They are not required for the initial solve.
 
 ### Balcony solution
 
-Reaching the balcony completes the main guided traversal. Its finale leads into
-the phone and party arc. Once the party starts, phase 2 remains unlocked even
-after the party is later stopped.
+Reaching the balcony completes the main guided traversal. Its finale points to
+the party switch; if left alone, the game continues into the party after about
+20 seconds of attended play. Once the party starts, phase 2 remains unlocked
+even after the party is later stopped.
 
 ## Phone
 

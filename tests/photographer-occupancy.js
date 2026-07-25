@@ -16,6 +16,31 @@ var harness = String.raw`<script>
   }
 
   try {
+    // Occupancy reads painted state. Remove the authored fades so this synchronous harness
+    // observes the settled party/night endpoints rather than the first transition frame.
+    var settled = document.createElement("style");
+    settled.textContent = "#kitchen-bar,.room-photog{transition:none!important}";
+    document.head.appendChild(settled);
+    window.__setGardenParty(true, false);
+    window.goToStage("kitchen");
+    var kitchenAspen = document.getElementById("kitchen-photographer");
+    var partyKitchenNames = window.__whoIsHere("kitchen").map(function (person) { return person.name; });
+    check("Aspen still works the occupied kitchen during the party",
+      kitchenAspen && kitchenAspen.classList.contains("showing") &&
+        getComputedStyle(kitchenAspen).visibility === "visible" &&
+        partyKitchenNames.indexOf("Aspen") !== -1,
+      partyKitchenNames.join(","));
+
+    window.__setGardenParty(false, false);
+    if (window.__setDayNight) window.__setDayNight(true);
+    var nightKitchenNames = window.__whoIsHere("kitchen").map(function (person) { return person.name; });
+    check("the calm night bar has Pouria but no Aspen",
+      kitchenAspen && !kitchenAspen.classList.contains("showing") &&
+        getComputedStyle(kitchenAspen).visibility === "hidden" &&
+        nightKitchenNames.indexOf("Pouria") !== -1 &&
+        nightKitchenNames.indexOf("Aspen") === -1,
+      nightKitchenNames.join(",") + "/visibility=" + (kitchenAspen && getComputedStyle(kitchenAspen).visibility));
+
     window.__setGardenParty(true, false);
     window.goToStage("office");
     window.officefolks(false);

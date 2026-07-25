@@ -1278,6 +1278,11 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    based, never id-based, so one rule serves every copy. */
 .room-photog{opacity:0; pointer-events:none; transition:opacity .6s ease; cursor:pointer}
 .room-photog.showing{opacity:1; pointer-events:auto}
+/* The kitchen also has a non-party night bar. When that replaces the wedding party, Aspen is
+   no longer working the room: remove her clone immediately instead of leaving a fading figure
+   beside Pouria that can still look present (and briefly leak into computed occupancy). */
+#kitchen-photographer{visibility:hidden}
+#kitchen-photographer.showing{visibility:visible}
 .rp-bloom{opacity:0; transform-box:fill-box; transform-origin:center; mix-blend-mode:screen}
 .rp-bloom.flashing{animation:garden-flash-pop .5s ease-out}
 /* the camera RAISE that precedes each shot. It rides .photog-cam — a node distinct from
@@ -1359,23 +1364,23 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 /* ...and Aspen, working the bar with her camera — also a direct child group of the stage,
    so the same `> g` fade would swallow her. Whitelisted under BOTH bar modes. */
 #loft-game-strip.party-on #stage-kitchen > .room-photog.showing,
-#stage-kitchen.dusk > .room-photog.showing{opacity:1; pointer-events:auto}
+#stage-kitchen.night-bar > .room-photog.showing{opacity:1; pointer-events:auto}
 /* ── NIGHT BAR ───────────────────────────────────────────────────────────────
-   The bar also comes up at NIGHT (kitchen at dusk, party or not): a live-but-calm
-   cocktail bar rather than the loud party one. Same espresso→bar swap as above, but
-   keyed on #stage-kitchen.dusk (set by toggleDusk / the kitchen-window click). The
+   After phase 2, the bar also comes up at NIGHT: a live-but-calm cocktail bar rather
+   than the loud party one. Same espresso→bar swap as above, but keyed on the derived
+   #stage-kitchen.night-bar state. Phase 1 may be dark, but remains the puzzle kitchen. The
    window stars (#kitchen-stars) and the dusk tint (#kitchen-dusk) out-specify the
    `> g` fade with their two-id selectors, so night lighting survives over the bar.
    The party's extra festivities (UV, dancers, disco, music) stay .party-on-only. */
-#stage-kitchen.dusk > g{opacity:0; pointer-events:none; transition:opacity .5s ease}
-#stage-kitchen.dusk > #kitchen-post,
-#stage-kitchen.dusk > #kitchen-extinguisher{opacity:1; pointer-events:auto}
+#stage-kitchen.night-bar > g{opacity:0; pointer-events:none; transition:opacity .5s ease}
+#stage-kitchen.night-bar > #kitchen-post,
+#stage-kitchen.night-bar > #kitchen-extinguisher{opacity:1; pointer-events:auto}
 /* the "…be there?" imprint wobbles when its poking-out "?" is tapped (raises the shortcuts card) */
 #kitchen-there-q{transform-box:fill-box; transform-origin:center}
 #kitchen-there-q.kq-wob{animation:kq-wob .5s ease-in-out}
 @keyframes kq-wob{0%,100%{transform:rotate(0)}25%{transform:rotate(-5deg) scale(1.08)}55%{transform:rotate(4deg) scale(1.05)}80%{transform:rotate(-1.5deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-there-q.kq-wob{animation:none}}
-#stage-kitchen.dusk > #kitchen-bar{opacity:1}
+#stage-kitchen.night-bar > #kitchen-bar{opacity:1}
 /* the "hydration station" neon. TWO layers (see the SVG): the inner #kitchen-bar-neon-tube
    carries the GLOW (a bright near-white core + a soft aqua halo, layered drop-shadows) and an
    irregular flicker; the outer #kitchen-bar-neon carries the RAINBOW hue cycle. Kept separate
@@ -1384,11 +1389,11 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 /* the whole sign slowly cycles through the spectrum like a fancy bar sign — hue only, so it stays
    as legible as the aqua base; runs whenever the bar's up (party OR calm night). */
 #loft-game-strip.party-on #kitchen-bar-neon,
-#stage-kitchen.dusk #kitchen-bar-neon{animation:bar-neon-rainbow 14s steps(14,end) infinite} /* steps, not linear: the hue SWAPS once a second rather than sweeping — a filter recompute 14×/loop, not every frame (was flickery on mobile) */
+#stage-kitchen.night-bar #kitchen-bar-neon{animation:bar-neon-rainbow 14s steps(14,end) infinite} /* steps, not linear: the hue SWAPS once a second rather than sweeping — a filter recompute 14×/loop, not every frame (was flickery on mobile) */
 @keyframes bar-neon-rainbow{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
 /* real neon flickers IRREGULARLY (a quick hum-dip, not a steady sine) — only while the bar's up */
 #loft-game-strip.party-on #kitchen-bar-neon-tube,
-#stage-kitchen.dusk #kitchen-bar-neon-tube{animation:bar-neon-flicker 6.3s steps(1,end) infinite}
+#stage-kitchen.night-bar #kitchen-bar-neon-tube{animation:bar-neon-flicker 6.3s steps(1,end) infinite}
 @keyframes bar-neon-flicker{
   0%,6%,6.6%,7.4%,41%,41.5%,78%,100%{opacity:1}
   6.3%,7%,41.2%,78.3%{opacity:0.55}
@@ -1396,8 +1401,8 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 }
 /* reduced motion: a calm, steady multicoloured-but-static aqua glow — no cycle, no flicker */
 @media (prefers-reduced-motion: reduce){
-  #loft-game-strip.party-on #kitchen-bar-neon, #stage-kitchen.dusk #kitchen-bar-neon,
-  #loft-game-strip.party-on #kitchen-bar-neon-tube, #stage-kitchen.dusk #kitchen-bar-neon-tube{animation:none}
+  #loft-game-strip.party-on #kitchen-bar-neon, #stage-kitchen.night-bar #kitchen-bar-neon,
+  #loft-game-strip.party-on #kitchen-bar-neon-tube, #stage-kitchen.night-bar #kitchen-bar-neon-tube{animation:none}
 }
 /* the bartop's spooky pumpkin: same one-shot wobble as the counter's, pivoting at its base on
    the inner wrapper. Tappable only while the bar shows — ancestor #kitchen-bar is
@@ -1405,7 +1410,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 #kitchen-bar-pumpkin{transform-box:fill-box; transform-origin:50% 100%}
 #kitchen-bar-pumpkin.wobble{animation:pumpkin-wobble .6s ease-in-out}
 #loft-game-strip.party-on #kitchen-bar-pumpkin,
-#stage-kitchen.dusk #kitchen-bar-pumpkin{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-pumpkin{pointer-events:auto; cursor:pointer}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-pumpkin.wobble{animation:none}}
 /* the back-bar bottles are tappable ONLY while the bar is showing (party on): each is wrapped
    in a <g class="bar-bottle"> that pivots at its base (fill-box), so the one-shot wobble never
@@ -1413,12 +1418,12 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    re-enabling it on the wrappers under .party-on makes just the bottles hittable. */
 #kitchen-bar-bottles > g.bar-bottle{transform-box:fill-box; transform-origin:50% 100%}
 #loft-game-strip.party-on #kitchen-bar-bottles > g.bar-bottle{pointer-events:auto; cursor:pointer}
-#stage-kitchen.dusk #kitchen-bar-bottles > g.bar-bottle{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-bottles > g.bar-bottle{pointer-events:auto; cursor:pointer}
 /* draft-beer taps: click a tap head to pour a beer (a self-clearing glass + amber fill + foam).
    Same bar-up gate as the bottles — ancestor #kitchen-bar is pointer-events:none, re-enabled per
    tap only with the party on or the kitchen at night. */
 #loft-game-strip.party-on #kitchen-bar-taps > g.beer-tap{pointer-events:auto; cursor:pointer}
-#stage-kitchen.dusk #kitchen-bar-taps > g.beer-tap{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-taps > g.beer-tap{pointer-events:auto; cursor:pointer}
 #kitchen-bar-bottles > g.bar-bottle.tipsy{animation:bar-bottle-tip .55s ease-in-out}
 @keyframes bar-bottle-tip{0%,100%{transform:rotate(0)}20%{transform:rotate(5deg)}46%{transform:rotate(-4deg)}70%{transform:rotate(2.4deg)}88%{transform:rotate(-1.1deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-bottles > g.bar-bottle.tipsy{animation:none}}
@@ -1480,15 +1485,15 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 #kitchen-bar-glassware > g.bar-glass, #kitchen-bar-usedglasses > g.bar-glass{transform-box:fill-box; transform-origin:50% 100%}
 #loft-game-strip.party-on #kitchen-bar-glassware > g.bar-glass,
 #loft-game-strip.party-on #kitchen-bar-usedglasses > g.bar-glass{pointer-events:auto; cursor:pointer}
-#stage-kitchen.dusk #kitchen-bar-glassware > g.bar-glass,
-#stage-kitchen.dusk #kitchen-bar-usedglasses > g.bar-glass{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-glassware > g.bar-glass,
+#stage-kitchen.night-bar #kitchen-bar-usedglasses > g.bar-glass{pointer-events:auto; cursor:pointer}
 #kitchen-bar-glassware > g.bar-glass.tipsy, #kitchen-bar-usedglasses > g.bar-glass.tipsy{animation:bar-bottle-tip .55s ease-in-out}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-glassware > g.bar-glass.tipsy, #kitchen-bar-usedglasses > g.bar-glass.tipsy{animation:none}}
 /* bar stools: each <g class="bar-stool"> rocks on its legs — pivot at the floor (fill-box base),
    a gentler side-to-side tip than the glass wobble. Same party-on pointer-events gate. */
 #kitchen-bar-stools > g.bar-stool{transform-box:fill-box; transform-origin:50% 100%}
 #loft-game-strip.party-on #kitchen-bar-stools > g.bar-stool{pointer-events:auto; cursor:pointer}
-#stage-kitchen.dusk #kitchen-bar-stools > g.bar-stool{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-stools > g.bar-stool{pointer-events:auto; cursor:pointer}
 #kitchen-bar-stools > g.bar-stool.tipsy{animation:bar-stool-rock .6s ease-in-out}
 @keyframes bar-stool-rock{0%,100%{transform:rotate(0)}22%{transform:rotate(3.2deg)}48%{transform:rotate(-2.6deg)}72%{transform:rotate(1.5deg)}90%{transform:rotate(-0.6deg)}}
 @media (prefers-reduced-motion: reduce){#kitchen-bar-stools > g.bar-stool.tipsy{animation:none}}
@@ -1507,7 +1512,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 /* the vintage Coca-Cola rolling cooler at the bar's left end. Same bar-up pointer-events gate as
    the bottles — party OR calm night — so it's inert whenever the bar is down. */
 #loft-game-strip.party-on #kitchen-bar-cooler,
-#stage-kitchen.dusk #kitchen-bar-cooler{pointer-events:auto}
+#stage-kitchen.night-bar #kitchen-bar-cooler{pointer-events:auto}
 /* the left lid hinges on its own outer edge. transform-box:fill-box makes 6%/50% land on that
    edge at mid-thickness; the group carries no transform attribute, so nothing is clobbered. */
 #kitchen-bar-cooler-lid-l{transform-box:fill-box; transform-origin:6% 50%; transition:transform .42s cubic-bezier(.34,1.16,.64,1)}
@@ -1523,7 +1528,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 /* the MENU paper on the pillar → opens the cocktails app. Same bar-up pointer-events gate as the
    bottles (ancestor #kitchen-bar is pointer-events:none; re-enabled here while the bar's up). */
 #loft-game-strip.party-on #kitchen-bar-menu,
-#stage-kitchen.dusk #kitchen-bar-menu{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-menu{pointer-events:auto; cursor:pointer}
 /* the tacked paper swings from its pushpin when tapped, as the cocktails phone opens (wobble
    rides an inner wrapper so it composes with — never clobbers — the outer static tilt) */
 #kitchen-bar-menu-wob{transform-box:fill-box; transform-origin:50% 2%}
@@ -1541,21 +1546,21 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    topple. Reduced-motion stills them. */
 #kitchen-bar-patron-a, #kitchen-bar-patron-b{transform-box:fill-box; transform-origin:50% 72%}
 #kitchen-bar-patrons{opacity:0; transition:opacity .5s ease}
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patrons{opacity:1}
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a,
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b{pointer-events:auto; cursor:pointer}
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a{animation:patron-sway-a 4.6s ease-in-out infinite}
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b{animation:patron-sway-b 5.3s ease-in-out infinite}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patrons{opacity:1}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a,
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b{pointer-events:auto; cursor:pointer}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a{animation:patron-sway-a 4.6s ease-in-out infinite}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b{animation:patron-sway-b 5.3s ease-in-out infinite}
 @keyframes patron-sway-a{0%,100%{transform:rotate(-1.1deg)}50%{transform:rotate(1deg) translateY(-0.4px)}}
 @keyframes patron-sway-b{0%,100%{transform:rotate(1.2deg)}50%{transform:rotate(-1deg) translateY(-0.4px)}}
 /* tap reaction: a quick tipsy hiccup jolt. Id-qualified with .hiccup + declared AFTER the idle
    sway so this one-shot adds a state class AND out-orders the infinite state animation
    (the grooving/one-shot cascade bug class); cleared on animationend, whereupon the sway resumes.
    Same fill-box/origin as the sway, so no transform-attribute clobber. Reduced-motion drops it. */
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a.hiccup,
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b.hiccup{animation:patron-hiccup .62s ease-in-out}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a.hiccup,
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b.hiccup{animation:patron-hiccup .62s ease-in-out}
 @keyframes patron-hiccup{0%{transform:rotate(0)}22%{transform:translateY(-2.5px) rotate(-4.5deg)}52%{transform:translateY(-1px) rotate(3.5deg)}78%{transform:rotate(-1.5deg)}100%{transform:rotate(0)}}
-@media (prefers-reduced-motion: reduce){#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a,#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b{animation:none}#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a.hiccup,#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b.hiccup{animation:none}}
+@media (prefers-reduced-motion: reduce){#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a,#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b{animation:none}#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a.hiccup,#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b.hiccup{animation:none}}
 /* the pair are DRAGGABLE along the bar (their bodies are handles for their bound stools — JS): each
    patron rides its OWN css `translate` property (the horizontal ride), a DIFFERENT property from the
    sway/hiccup `transform`, so they compose without clobber. When the two stools close to touching JS
@@ -1565,19 +1570,19 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    `animation` property —
    which IS gating the idle sway off while they lean/topple (no separate sway-disable needed). .kissing
    holds its pose (forwards); it's cleared by JS (the drag parts them / a reset), not on animationend. */
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a.kissing{animation:patron-kiss-a .42s ease-out forwards}
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b.kissing{animation:patron-kiss-b .42s ease-out forwards}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a.kissing{animation:patron-kiss-a .42s ease-out forwards}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b.kissing{animation:patron-kiss-b .42s ease-out forwards}
 @keyframes patron-kiss-a{from{transform:rotate(-1.1deg)}to{transform:rotate(13deg) translateY(-1.5px)}}
 @keyframes patron-kiss-b{from{transform:rotate(1.2deg)}to{transform:rotate(-13deg) translateY(-1.5px)}}
 /* and SOMETIMES, when a kiss ends, one of them comically topples BACKWARD off the stool onto the floor,
    lies a beat, then pops back on the seat (a one-shot that returns to upright at 100%, so the class is
    simply dropped on animationend — the topple composes with the ride `translate`). .tumbling sits after
    .kissing so it wins if they ever coexist. Reduced-motion suppresses the tumble entirely in JS. */
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a.tumbling{animation:patron-tumble-a 2.2s ease-in-out}
-#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b.tumbling{animation:patron-tumble-b 2.2s ease-in-out}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a.tumbling{animation:patron-tumble-a 2.2s ease-in-out}
+#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b.tumbling{animation:patron-tumble-b 2.2s ease-in-out}
 @keyframes patron-tumble-a{0%{transform:rotate(0)}16%{transform:translate(-11px,7px) rotate(-42deg)}32%{transform:translate(-24px,21px) rotate(-88deg)}70%{transform:translate(-24px,21px) rotate(-88deg)}86%{transform:translate(-5px,-2px) rotate(6deg)}100%{transform:rotate(0)}}
 @keyframes patron-tumble-b{0%{transform:rotate(0)}16%{transform:translate(11px,7px) rotate(42deg)}32%{transform:translate(24px,21px) rotate(88deg)}70%{transform:translate(24px,21px) rotate(88deg)}86%{transform:translate(5px,-2px) rotate(-6deg)}100%{transform:rotate(0)}}
-@media (prefers-reduced-motion: reduce){#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-a.kissing{animation:none;transform:rotate(13deg)}#loft-game-strip:not(.party-on) #stage-kitchen.dusk #kitchen-bar-patron-b.kissing{animation:none;transform:rotate(-13deg)}}
+@media (prefers-reduced-motion: reduce){#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-a.kissing{animation:none;transform:rotate(13deg)}#loft-game-strip:not(.party-on) #stage-kitchen.night-bar #kitchen-bar-patron-b.kissing{animation:none;transform:rotate(-13deg)}}
 /* a little kiss 💋 that floats up between the pair (JS-spawned, into #kitchen-bar-patrons so it shares
    the patrons' coordinate system; capped/self-removing so it can't accumulate in a backgrounded tab) */
 #kitchen-bar-patrons .bar-kiss{pointer-events:none}
@@ -1613,8 +1618,8 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    #kitchen-bar's pointer-events:none is re-enabled on his hit rect when the kitchen's at dusk,
    mirroring the .party-on rule above (the back-bar props — bottles, glassware, used glasses,
    stools — are likewise tappable at the night bar via their own dusk-scoped rules) */
-#stage-kitchen.dusk #kitchen-bartender-hit{pointer-events:auto; cursor:grab}
-#stage-kitchen.dusk #kitchen-bartender-hit.grabbing{cursor:grabbing}
+#stage-kitchen.night-bar #kitchen-bartender-hit{pointer-events:auto; cursor:grab}
+#stage-kitchen.night-bar #kitchen-bartender-hit.grabbing{cursor:grabbing}
 @media (prefers-reduced-motion: reduce){#kitchen-bartender-shaker.tossing{animation:none}}
 /* Flair-Catch spotlight: dim the room while the bar mini-game runs, keeping the bar+bartender
    lit (the dim <rect> paints before #kitchen-bar). Mirrors #stage-office.arcade #office-alien-dim.
@@ -1652,12 +1657,12 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 #kitchen-bar-mixer{pointer-events:none}
 #kitchen-bar-mixer > .mixer-bottle{transform-box:fill-box; transform-origin:50% 100%}
 #loft-game-strip.party-on #kitchen-bar-mixer > .mixer-bottle,
-#stage-kitchen.dusk #kitchen-bar-mixer > .mixer-bottle{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-mixer > .mixer-bottle{pointer-events:auto; cursor:pointer}
 #kitchen-bar-mixer .pouring{animation:mixer-bottle-tip .5s ease-in-out}
 @keyframes mixer-bottle-tip{0%,100%{transform:rotate(0)}45%{transform:rotate(-11deg)}}
 #kitchen-bar-mixer .mx-station{transition:opacity .3s ease}
 #loft-game-strip.party-on #kitchen-bar-mixer .mx-shakerwrap.ready,
-#stage-kitchen.dusk #kitchen-bar-mixer .mx-shakerwrap.ready{pointer-events:auto; cursor:pointer}
+#stage-kitchen.night-bar #kitchen-bar-mixer .mx-shakerwrap.ready{pointer-events:auto; cursor:pointer}
 #kitchen-bar-mixer .mx-shaker{transform-box:fill-box; transform-origin:50% 100%}
 #kitchen-bar-mixer .shaking{animation:mixer-shake .4s ease-in-out 3}
 @keyframes mixer-shake{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-10deg)}75%{transform:translateY(-3px) rotate(10deg)}}
@@ -2203,9 +2208,11 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    through the base arm animation). Snappier easing than her ambient vogue so the tap punches. */
 .g-goli .guest-react.goli-flare{animation:guest-goli-flare .8s cubic-bezier(.5,0,.2,1)}
 @keyframes guest-goli-flare{0%,100%{transform:translate(0,0) rotate(0) scaleX(1)} 22%{transform:translate(5px,-5px) rotate(-5deg) scaleX(.68)} 46%{transform:translate(0,-9px) rotate(4deg) scaleX(.48)} 70%{transform:translate(-4px,-4px) rotate(6deg) scaleX(.7)}}
-/* Spencer: the giant ducks down as if he's too tall, holds a beat, then pops back up. */
+/* Spencer: the giant ducks down as if he's too tall, holds a beat, then pops back up.
+   transform-origin is at his feet, so scaleY alone lowers his head while keeping his shoes
+   planted; a positive translateY here would push the whole figure through the floor. */
 .g-spencer .guest-react.spencer-flare{animation:guest-spencer-flare .85s cubic-bezier(.34,1.4,.64,1)}
-@keyframes guest-spencer-flare{0%{transform:translateY(0) scaleY(1)} 22%{transform:translateY(30px) scaleY(.8)} 55%{transform:translateY(30px) scaleY(.8)} 78%{transform:translateY(-6px) scaleY(1.06)} 100%{transform:translateY(0) scaleY(1)}}
+@keyframes guest-spencer-flare{0%{transform:scaleY(1)} 22%{transform:scaleY(.8)} 55%{transform:scaleY(.8)} 78%{transform:scaleY(1.06)} 100%{transform:scaleY(1)}}
 /* Jay: a gentle raised-palm benediction dip + his halo pulses brighter (a one-shot over the
    looping shimmer — class-qualified AND later in source than the shimmer rule so it wins the
    cascade; cleared on animationend, whereupon the shimmer resumes). */
@@ -3454,6 +3461,25 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .desk-system-item.danger .desk-system-label{fill:#8e3a4a}
 .desk-system-rule{stroke:#cbb5aa; stroke-width:.3}
 .desk-system-tagline{fill:#81766b; font:1.08px/1 "Source Serif 4",serif; pointer-events:none}
+.monitor-credits-layer{opacity:0;visibility:hidden;pointer-events:none}
+.monitor-credits-layer.open{opacity:1;visibility:visible;pointer-events:auto}
+.monitor-credits-bg{fill:#17131d}
+.monitor-credits-fire{opacity:.62;mix-blend-mode:screen}
+.monitor-credits-shade{fill:#17131d;opacity:.58}
+.monitor-credits-roll{text-anchor:middle;pointer-events:none}
+#monitor-credits-layer.open #monitor-credits-roll{animation:monitor-credits-roll 22s linear forwards}
+.monitor-credits-title{fill:#fffdf8;font:600 3.2px/1 Fraunces,serif}
+.monitor-credits-name{fill:#fffdf8;font:600 2.2px/1 Fraunces,serif}
+.monitor-credits-role{fill:#d9c9bc;font:1.35px/1 "Source Serif 4",serif}
+.monitor-credits-section{fill:#d9a6a6;font:600 1.75px/1 Fraunces,serif}
+.monitor-credits-software{fill:#f8f5ec;font:1.35px/1 "Source Serif 4",serif}
+.monitor-credits-notice{fill:#b8aca0;font:1.05px/1 "Source Serif 4",serif}
+.monitor-credits-made{fill:#fffdf8;font:600 1.55px/1 Fraunces,serif}
+.monitor-credits-close{cursor:pointer;outline:none}
+.monitor-credits-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
+.monitor-credits-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
+.monitor-credits-close:hover circle,.monitor-credits-close:focus circle{fill:#a94a5d;stroke-width:.62}
+@keyframes monitor-credits-roll{from{transform:translateY(0)}to{transform:translateY(-100px)}}
 .monitor-lock-layer{opacity:0; visibility:hidden; pointer-events:none}
 #office-monitor.monitor-locked.monitor-lock-awake .monitor-lock-layer{opacity:1; visibility:visible; pointer-events:auto}
 .monitor-lock-bg{fill:#17131d}
@@ -4603,6 +4629,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 #office-monitor.photobooth #monitor-photobooth,
 #office-monitor.pb-confirm #monitor-pb-confirm,
 #office-monitor.pb-error #monitor-pb-error{opacity:1; pointer-events:auto}
+/* An unzoomed monitor owns the first tap. Modal Photobooth surfaces must not
+   intercept it; they become interactive again once the desk zoom is active. */
+#office-monitor:not(.dev-zoomed).pb-confirm #monitor-pb-confirm,
+#office-monitor:not(.dev-zoomed).pb-error #monitor-pb-error{pointer-events:none}
 #office-monitor.photobooth.death-photobooth #monitor-photobooth{opacity:0; pointer-events:none}
 /* while live, the booth owns the whole screen — hide every boot/site/transport layer under it */
 #office-monitor.photobooth .boot-logo,
@@ -4651,9 +4681,9 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 #monitor-pb-picker{opacity:0; pointer-events:none; transition:opacity .2s ease}
 #office-monitor.picking #monitor-pb-picker{opacity:1; pointer-events:auto}
 #office-monitor.picking #monitor-pb-shutter{opacity:0; pointer-events:none} /* can't re-snap while choosing */
-#office-monitor.picking #monitor-pb-close{opacity:0; pointer-events:none} /* choosing means picking or retaking — a close x here read as "cancel" and testers bailed */
-/* photobooth close: the same mini close pill as the other monitor apps (orange, its dock-tile family), parked in the screen's top-right corner. Uses the shared seg-hover fade, not the pb-ctrl scale, so its positioning transform is never overridden. */
-#monitor-pb-close{cursor:pointer}
+/* photobooth close: the same mini close pill as the other monitor apps (orange, its dock-tile family), parked in the screen's top-right corner and kept available over the picker. Escape/Backspace steps back from the picker to the live view; this explicit app dismiss exits the booth. Uses the shared seg-hover fade, not the pb-ctrl scale, so its positioning transform is never overridden. */
+#monitor-pb-close{opacity:0; pointer-events:none; cursor:pointer}
+#office-monitor.photobooth #monitor-pb-close{opacity:1; pointer-events:auto}
 #monitor-pb-close:hover .seg-hover{opacity:.55}
 /* the "pick one" nudge: only fades in when someone lingers on the picker without choosing
    (the screen's too small for an always-on caption) */
@@ -5266,14 +5296,14 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-img.tappable{cursor:pointer}
 .pm-msg-img.tappable:hover{border-color:var(--wine)}
 /* the new-message thumbnail: a small pulsating phone card, top-centre, ~7s, tap to open messages */
-.msg-thumb{position:absolute; top:14px; left:50%; z-index:60; transform:translateX(-50%) translateY(-30px); display:flex; align-items:center; gap:13px; max-width:min(440px,94vw); padding:13px 20px 13px 14px; border:none; cursor:pointer; text-align:left; font:inherit; color:var(--ink); background:var(--paper); border-radius:20px; box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.6,1)}
+.msg-thumb{position:absolute; top:14px; left:50%; z-index:60; transform:translateX(-50%) translateY(-30px); display:flex; align-items:center; gap:10px; max-width:min(440px,94vw); padding:9px 16px 9px 10px; border:none; cursor:pointer; text-align:left; font:inherit; color:var(--ink); background:var(--paper); border-radius:20px; box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s cubic-bezier(.34,1.4,.6,1)}
 .msg-thumb.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; animation:msg-thumb-pulse 1.15s ease-in-out infinite}
 .msg-thumb-ico{flex:none; width:46px; height:46px; border-radius:13px; background:#6d8ba3; display:flex; align-items:center; justify-content:center; font-size:26px; overflow:hidden}
 .msg-thumb-ico.has-img{background:none} /* a photo message: the picture fills the icon */
 .msg-thumb-ico img{width:100%; height:100%; object-fit:cover; display:block}
 .msg-thumb-txt{display:flex; flex-direction:column; min-width:0}
-.msg-thumb-from{font-size:16px; font-weight:600; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.msg-thumb-body{font-size:22px; color:var(--ink); line-height:1.25; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden} /* up to two lines, then ellipsis */
+.msg-thumb-from{font-size:13px; font-weight:600; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.msg-thumb-body{font-size:16px; color:var(--ink); line-height:1.3; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden} /* up to two lines, then ellipsis */
 .msg-thumb-x{position:absolute; top:-8px; right:-8px; width:27px; height:27px; border-radius:50%; background:var(--muted); color:var(--paper); display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1; cursor:pointer; box-shadow:0 2px 7px rgba(0,0,0,.32)}
 .msg-thumb-x:hover,.msg-thumb-x:focus-visible{background:var(--wine); outline:none}
 @keyframes msg-thumb-pulse{0%,100%{box-shadow:0 6px 22px rgba(0,0,0,.28), inset 0 0 0 1px var(--rule)} 50%{box-shadow:0 7px 27px rgba(142,58,74,.5), inset 0 0 0 1px var(--rule)}}
@@ -6342,7 +6372,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 #loft-game-strip.bd-felix .bd-crown-felix,
 #loft-game-strip.bd-madla .bd-crown-madla,
 #loft-game-strip.bd-robert .bd-crown-robert{opacity:1; visibility:visible}
-/* Markéta's Prague parents + Baka wear theirs inside the laptop CALL scene, which the pocket
+/* Markéta's Prague parents + Báka wear theirs inside the laptop CALL scene, which the pocket
    phone re-renders into a modal hanging off <body>, outside the strip — so their crowns read the
    body copy of the class (applyBirthdays sets it for every video-call person). Body is an
    ancestor of the strip as well, so this one rule dresses the office laptop and the phone alike;
@@ -9185,12 +9215,12 @@ section{margin:1.9rem 0}
    the bug-class note), pivoting near the feet. pointer-events:auto re-enables each kid inside its
    pointer-events:none scene group; visibility:hidden (scene off) still gates them out. */
 #balcony-snowman-kidL, #balcony-snowman-kidR, #balcony-leafpile-kidL, #balcony-leafpile-kidR,
-#balcony-blossom-kidL, #balcony-blossom-kidR, #balcony-sprinkler-kidL, #balcony-sprinkler-kidR{pointer-events:auto; cursor:pointer; transform-box:fill-box; transform-origin:50% 88%}
+#balcony-blossom-kidL, #balcony-blossom-kidR, #balcony-sprinkler-kidL, #balcony-sprinkler-kidR{pointer-events:auto; cursor:pointer}
+.balcony-kid-react{transform-box:fill-box; transform-origin:center bottom}
 .balcony-kid-empty{display:none}
-#balcony-snowman-kidL.tickled, #balcony-snowman-kidR.tickled, #balcony-leafpile-kidL.tickled, #balcony-leafpile-kidR.tickled,
-#balcony-blossom-kidL.tickled, #balcony-blossom-kidR.tickled, #balcony-sprinkler-kidL.tickled, #balcony-sprinkler-kidR.tickled{animation:balcony-kid-tickle .5s ease-in-out}
+.balcony-kid-react.tickled{animation:balcony-kid-tickle .5s ease-in-out}
 @keyframes balcony-kid-tickle{0%,100%{rotate:0deg}22%{rotate:-9deg}44%{rotate:8deg}66%{rotate:-5deg}84%{rotate:3deg}}
-@media (prefers-reduced-motion: reduce){#balcony-snowman-kidL.tickled, #balcony-snowman-kidR.tickled, #balcony-leafpile-kidL.tickled, #balcony-leafpile-kidR.tickled, #balcony-blossom-kidL.tickled, #balcony-blossom-kidR.tickled, #balcony-sprinkler-kidL.tickled, #balcony-sprinkler-kidR.tickled{animation:none}}
+@media (prefers-reduced-motion: reduce){.balcony-kid-react.tickled{animation:none}}
 /* The three OTHER seasons' outdoor play scenes, each the daytime counterpart the brick-wall
    dblclick summons in its own season — the snowman's siblings: AUTUMN a leaf pile the kids
    leap into (.leafpile-on), SPRING a blossom toss (.blossom-on), SUMMER a sprinkler romp
@@ -21506,14 +21536,6 @@ section{margin:1.9rem 0}
 </g>
 <!-- big 3-2-1 countdown before the capture, centered over the video zone -->
 <text id="monitor-pb-count" x="285" y="184" text-anchor="middle" style="font-size:26px; fill:#fffdf8; paint-order:stroke; stroke:rgba(0,0,0,0.55); stroke-width:2.4px; stroke-linejoin:round"></text>
-<!-- close (x), top-right -->
-<g id="monitor-pb-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
-<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#d3822f" stroke="#a56525" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7f4e1c" opacity="0"/>
-<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
-</g>
 <!-- retake (re-run the countdown), top-left; shown only in .picking -->
 <g id="monitor-pb-retake" class="pb-ctrl">
 <circle cx="260" cy="159.5" r="4.6" fill="#000" fill-opacity="0.45"/>
@@ -21536,6 +21558,15 @@ section{margin:1.9rem 0}
 </g>
 <!-- white snap flash (topmost, click-through) -->
 <rect id="monitor-pb-flash" x="254" y="154" width="124" height="42" fill="#ffffff" opacity="0" pointer-events="none"/>
+</g>
+<!-- Keep the close above the picker's foreignObject compositing layer. Inside
+     #monitor-photobooth it can be painted underneath that replaced element. -->
+<g id="monitor-pb-close" transform="translate(76.0,29.3) scale(0.8)">
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#d3822f" stroke="#a56525" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7f4e1c" opacity="0"/>
+<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 <!-- photobooth pre-permission confirm: an ON-SCREEN ask (no popup, no getUserMedia yet) —
      only the "Open camera" button click calls getUserMedia, inside that user gesture.
@@ -21759,7 +21790,7 @@ section{margin:1.9rem 0}
 <rect x="417.35" y="180.1" width="1.65" height="1.15" rx="0.5" fill="#2a2622"/>
 <path d="M416.65 180.6 L417.35 180.6" stroke="#2a2622" stroke-width="0.3"/>
 <path d="M416.1 182.5 Q417 183.2 417.9 182.5" stroke="#6d4a33" stroke-width="0.35" fill="none" stroke-linecap="round"/>
-<!-- Baka's (Markéta's grandmother) birthday crown — tiny gold band with coral gems complementing her teal scarf, rides her head-nod on the Prague call during her week. -->
+<!-- Báka's (Markéta's grandmother) birthday crown — tiny gold band with coral gems complementing her teal scarf, rides her head-nod on the Prague call during her week. -->
 <g class="bd-adorn bd-crown-baka" transform="rotate(-7 417 178)">
 <path d="M414.4 178 L414.4 176.2 L415.3 173.4 L416.2 175.5 L417 172.4 L417.8 175.5 L418.7 173.4 L419.6 176.2 L419.6 178 Q417 178.9 414.4 178 Z" fill="#d9b45c" stroke="#b9954a" stroke-width="0.35" stroke-linejoin="round"/>
 <circle cx="415.3" cy="177.1" r="0.45" fill="#cf6636"/><circle cx="417" cy="177.1" r="0.55" fill="#ef8a5a"/><circle cx="418.7" cy="177.1" r="0.45" fill="#cf6636"/>
@@ -25882,7 +25913,7 @@ var T = {
     rel_bahareh: "Irene's mom", rel_baharak: "Hannah's mom", rel_payman: "Hannah's dad",
     rel_madla: "Elisabeth & Felix's mom", rel_robert: "Elisabeth & Felix's dad", rel_patricia: "Patricia’s son & Patricia’s daughter's mom",
     rel_ashraf: "Behdad, Bahareh & Baharak's mom", rel_mohsen: "Behdad, Bahareh & Baharak's dad",
-    rel_daniel: "Markéta & Madla's dad · Baka's son", rel_marie: "Markéta & Madla's mom", rel_baka: "Markéta & Madla's grandmother · Daniel's mom",
+    rel_daniel: "Markéta & Madla's dad · Báka's son", rel_marie: "Markéta & Madla's mom", rel_baka: "Markéta & Madla's grandmother · Daniel's mom",
     rel_irene: "Bahareh's daughter", rel_hannah: "Baharak & Payman's daughter",
     rel_elisabeth: "Madla & Robert's daughter", rel_felix: "Madla & Robert's son", rel_patricia_son: "Patricia's son", rel_patricia_daughter: "Patricia's daughter",
     // The two visiting musicians' cards carry their CREDIT here (their role line names each other
@@ -26707,8 +26738,16 @@ var T = {
     mon_sys_sleep: "Sleep",
     mon_sys_reboot: "Reboot",
     mon_sys_shutdown: "Shut down",
+    mon_sys_credits: "Credits",
     mon_sys_tagline_1: "where artificial meets",
     mon_sys_tagline_2: "higher intelligence.",
+    credits_title: "Credits",
+    credits_thanks: "with thanks",
+    credits_codesigner: "co-designer",
+    credits_qa: "QA lead",
+    credits_tester: "tester",
+    credits_open_source: "Open-source software",
+    credits_licenses: "License notices are included with the software.",
     mon_lock_title: "CAPS LOCK",
     mon_lock_prompt: "Match the caps, or press Caps Lock twice.",
     mon_lock_unlocked: "unlocked",
@@ -26849,7 +26888,7 @@ var T = {
     rel_bahareh: "Irenina máma", rel_baharak: "Hannina máma", rel_payman: "Hannin táta",
     rel_madla: "máma Elisabeth a Felixe", rel_robert: "táta Elisabeth a Felixe", rel_patricia: "máma Patriciina syna a Patriciině dceři",
     rel_ashraf: "máma Behdada, Bahareh a Baharak", rel_mohsen: "táta Behdada, Bahareh a Baharak",
-    rel_daniel: "táta Markéty a Madly · syn Baky", rel_marie: "máma Markéty a Madly", rel_baka: "babička Markéty a Madly · Danielova máma",
+    rel_daniel: "táta Markéty a Madly · syn Báky", rel_marie: "máma Markéty a Madly", rel_baka: "babička Markéty a Madly · Danielova máma",
     rel_irene: "dcera Bahareh", rel_hannah: "dcera Baharak a Paymana",
     rel_elisabeth: "dcera Madly a Roberta", rel_felix: "syn Madly a Roberta", rel_patricia_son: "Patriciin syn", rel_patricia_daughter: "Patriciina dcera",
     // Karty obou hostujících hudebníků nesou svůj KREDIT tady (jejich role jmenuje toho druhého).
@@ -27659,8 +27698,16 @@ var T = {
     mon_sys_sleep: "Uspat",
     mon_sys_reboot: "Restartovat",
     mon_sys_shutdown: "Vypnout",
+    mon_sys_credits: "Titulky",
     mon_sys_tagline_1: "kde se setkává umělá",
     mon_sys_tagline_2: "a vyšší inteligence.",
+    credits_title: "Titulky",
+    credits_thanks: "s poděkováním",
+    credits_codesigner: "spolutvůrkyně designu",
+    credits_qa: "vedoucí testování",
+    credits_tester: "tester",
+    credits_open_source: "Open-source software",
+    credits_licenses: "Licenční informace jsou přiloženy k softwaru.",
     mon_lock_title: "CAPS LOCK",
     mon_lock_prompt: "Přiřaďte čepice nebo dvakrát stiskněte Caps Lock.",
     mon_lock_unlocked: "odemčeno",
@@ -27695,6 +27742,36 @@ var T = {
     phone_lock_ok: "Odemknout",
   }
 };
+var LOFT_CREDITS = Object.freeze({
+  people: Object.freeze([
+    Object.freeze({ name: "Markéta", role: "credits_codesigner" }),
+    Object.freeze({ name: "Athena", role: "credits_qa" }),
+    Object.freeze({ name: "Kasra", role: "credits_tester" }),
+    Object.freeze({ name: "Garret", role: "credits_tester" }),
+    Object.freeze({ name: "Mahzad", role: "credits_tester" }),
+    Object.freeze({ name: "Ali", role: "credits_tester" })
+  ]),
+  software: Object.freeze([
+    "Pyodide · CPython",
+    "v86 · Linux · BusyBox",
+    "HarfBuzz · FontTools",
+    "Chocolate Doom · FreeDoom"
+  ]),
+  closing: "made with love by behdad, Claude & Codex"
+});
+window.LOFT_CREDITS = LOFT_CREDITS;
+function loftCreditsLines(lang) {
+  var dict = T[lang || document.documentElement.lang] || T.en;
+  var lines = [dict.credits_thanks || T.en.credits_thanks];
+  LOFT_CREDITS.people.forEach(function (person) {
+    lines.push("  " + person.name + " · " + (dict[person.role] || T.en[person.role]));
+  });
+  lines.push("", dict.credits_open_source || T.en.credits_open_source);
+  LOFT_CREDITS.software.forEach(function (name) { lines.push("  " + name); });
+  lines.push(dict.credits_licenses || T.en.credits_licenses, "", LOFT_CREDITS.closing);
+  return lines;
+}
+window.__loftCreditsLines = loftCreditsLines;
 function setLang(l) {
   if (!T[l]) l = "en";
   document.documentElement.lang = l;
@@ -33135,6 +33212,11 @@ setMusicPausedState(false);
     var url = canvas.toDataURL();
     flameImg.setAttribute("href", url);
     flameImg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); // older WebKit builds still key off xlink:href
+    var creditsFire = document.getElementById("monitor-credits-fire");
+    if (creditsFire) {
+      creditsFire.setAttribute("href", url);
+      creditsFire.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url);
+    }
   }
   var W = canvas.width, H = canvas.height, N = W * H;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -33391,10 +33473,19 @@ setMusicPausedState(false);
   };
   window.__clearCuddlyProjectorSlow = clearProjectorSlow; // reset hook
   // OFF is a genuine stop: excluded here so frame() self-cancels and the handle goes null
-  function shouldRun() { return window.currentStageName === "cuddly" && !document.hidden && current !== "off" && !chanObj[current].svg; }
+  function creditsFireOn() {
+    var layer = document.getElementById("monitor-credits-layer");
+    return !!layer && layer.classList.contains("open");
+  }
+  function shouldRun() {
+    return !document.hidden && (creditsFireOn() ||
+      (window.currentStageName === "cuddly" && current !== "off" && !chanObj[current].svg));
+  }
   function frame(t) {
     if (!shouldRun()) { raf = null; clearProjectorSlow(); return; } // leaving the room / hiding / off → self-cancel, no leftover timer
-    if (slowFactor > 1 && current === "fire") {
+    if (creditsFireOn()) {
+      if (t - lastDraw >= DRAW_MS) { lastDraw = t; fire.frame(); blitFlame(); }
+    } else if (slowFactor > 1 && current === "fire") {
       // Stoned time-dilation on the fire channel: no frame-rate throttle — repaint every rAF as a
       // cross-fade between doom-fire sim states that only step every DRAW_MS*slowFactor ms, so the
       // flame slides up in smooth slow motion instead of jumping at ~2fps (which read as choppy).
@@ -33404,10 +33495,15 @@ setMusicPausedState(false);
   }
   function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); blitFlame(); }
   function start() {
+    var credits = creditsFireOn();
     // powered down — no loop. Don't clobber an in-flight power-off fade (canvasFadeTimer);
     // only blank instantly when there's nothing fading (e.g. entering the nook already off)
-    if (current === "off") { if (!canvasFadeTimer) { ctx.clearRect(0, 0, W, H); blitFlame(); flameImg.style.opacity = ""; } return; }
-    if (reduceMotion) { if (window.currentStageName === "cuddly") renderStill(); return; }
+    if (current === "off" && !credits) { if (!canvasFadeTimer) { ctx.clearRect(0, 0,W, H); blitFlame(); flameImg.style.opacity = ""; } return; }
+    if (reduceMotion) {
+      if (credits) { fire.still(); blitFlame(); }
+      else if (window.currentStageName === "cuddly") renderStill();
+      return;
+    }
     if (raf || !shouldRun()) return; // already live, or not runnable right now
     lastDraw = 0; raf = requestAnimationFrame(frame);
   }
@@ -33958,7 +34054,10 @@ setMusicPausedState(false);
   irene.addEventListener("animationend", function (e) {
     if (e.animationName === "irene-giggle") irene.classList.remove("giggling");
   });
-  irene.addEventListener("pointerdown", function () { giggle(); });
+  // Use click, not pointerdown: Irene may change pose/reparent during giggle(). Moving the
+  // pointerdown target before pointerup suppresses the browser's synthesized click, which made
+  // her direct bio card unreachable while Robin's and Navid's happened to work.
+  irene.addEventListener("click", function () { giggle(); });
   // full visit (appear → two actions → leave); used by the console irene() + the wall double-
   // click. Reset the auto-appearance scheduler so a manual summon gives a clean standalone
   // visit: cancel any pending auto-show, count this as her first appearance (firstDone) so the
@@ -34185,7 +34284,7 @@ setMusicPausedState(false);
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = setTimeout(function () { hideTimer = null; leave(); }, 3000 + Math.random() * 1500); }
   }
   robin.addEventListener("animationend", function (e) { if (e.animationName === "irene-giggle") robin.classList.remove("robin-giggling"); });
-  robin.addEventListener("pointerdown", function () { giggle(); });
+  robin.addEventListener("click", function () { giggle(); });
 })();
 // Navid (owner's other god-son, ~7-8) — a THIRD cuddly-nook cameo, DRIVEN BY Irene's shared
 // scheduler (see her IIFE: when the cameo fires it's Irene ~1/2, Robin ~1/4, Navid ~1/4, and never
@@ -34378,7 +34477,7 @@ setMusicPausedState(false);
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = setTimeout(function () { hideTimer = null; leave(); }, 3000 + Math.random() * 1500); }
   }
   navid.addEventListener("animationend", function (e) { if (e.animationName === "irene-giggle") navid.classList.remove("navid-giggling"); });
-  navid.addEventListener("pointerdown", function () { giggle(); });
+  navid.addEventListener("click", function () { giggle(); });
 })();
 // Birthday hat/crown on the cuddly-VISIT figures too. The same #loft-game-strip.bd-<who> CSS that
 // lights a person's garden/nook birthday adornment reaches ANY .bd-hat-<who> / .bd-crown-<who>
@@ -34617,12 +34716,12 @@ setMusicPausedState(false);
     }
   }
   // Bring a duo in. Gated on the nook + no meal + not already this duo showing.
-  function visit(id, forced) {
+  function visit(id, forced, ignoreDay) {
     var duo = CUDDLY_DUOS[id];
     if (!duo) return false;
     if (!forced) {                      // a forced visit (e.g. a kid's birthday reveal) overrides both gates
       if (mealOn()) return false;       // owner rule: no visitors while food is served
-      if (!isDay()) return false;       // owner rule: visitors only drop by during the day
+      if (!ignoreDay && !isDay()) return false; // autonomous/message visits remain daytime-only
     }
     if (activeDuo === id && !forced) return true;
     reset();                            // clear any prior duo (+ its Irene half) first
@@ -34751,10 +34850,10 @@ setMusicPausedState(false);
     if (!roof) return;
     roof.addEventListener("dblclick", function () {
       var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); // next in the shuffled rotation
-      visit(pick, false);
+      visit(pick, false, true); // a deliberate roof summon works at night too
     });
   })();
-  window.__cuddlyRoofSummon = function () { var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); return visit(pick, false); }; // test/console hook
+  window.__cuddlyRoofSummon = function () { var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); return visit(pick, false, true); }; // test/console hook
   schedule();
 })();
 // Totoro co-watch controller: outside a party the three core-kid cameos sit together. During a
@@ -35185,16 +35284,33 @@ window.__setSprinkler = function (on) {
   var bstage = document.getElementById("stage-balcony");
   if (!bstage) return;
   var KIDS = ["balcony-snowman-kidL", "balcony-snowman-kidR", "balcony-leafpile-kidL", "balcony-leafpile-kidR", "balcony-blossom-kidL", "balcony-blossom-kidR", "balcony-sprinkler-kidL", "balcony-sprinkler-kidR"];
-  var kidSet = {}; KIDS.forEach(function (id) { kidSet[id] = 1; });
+  var kidSet = {}, reactions = {};
+  KIDS.forEach(function (id) {
+    kidSet[id] = 1;
+    var kid = document.getElementById(id);
+    if (!kid) return;
+    // The outer kid owns permanent SVG placement. The inner transform-free wrapper
+    // gives the one-shot a local feet pivot instead of the SVG viewport.
+    var react = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    react.setAttribute("class", "balcony-kid-react");
+    while (kid.firstChild) react.appendChild(kid.firstChild);
+    kid.appendChild(react);
+    reactions[id] = react;
+  });
   function tickle(kid) {
-    kid.classList.remove("tickled"); void kid.getBBox(); kid.classList.add("tickled");
+    var react = reactions[kid.id];
+    if (!react) return;
+    react.classList.remove("tickled"); void react.getBBox(); react.classList.add("tickled");
     if (typeof playGiggleSound === "function") playGiggleSound(kid.id);
   }
   bstage.addEventListener("click", function (e) {
     var t = e.target;
     while (t && t !== bstage) { if (t.id && kidSet[t.id]) { tickle(t); return; } t = t.parentNode; }
   });
-  KIDS.forEach(function (id) { var k = document.getElementById(id); if (k) k.addEventListener("animationend", function () { k.classList.remove("tickled"); }); });
+  KIDS.forEach(function (id) {
+    var react = reactions[id];
+    if (react) react.addEventListener("animationend", function () { react.classList.remove("tickled"); });
+  });
 })();
 (function () {
   var bottom = document.getElementById("cuddly-behdad-bottom");
@@ -36151,6 +36267,10 @@ function gameTapsNear(a, b) {
   var scoops = document.getElementById("kitchen-scoops");
   if (scoops) {
     function clinkScoops(e) {
+      // The shared hit area covers both hanging scoops. Its delegated tap acknowledgement
+      // would otherwise blink that whole rectangle after the chosen scoop swings, making
+      // both utensils appear to flash together.
+      if (e && e.stopPropagation) e.stopPropagation();
       var rect = scoops.getBoundingClientRect();
       var ratio = (rect.height && e && typeof e.clientY === "number") ? (e.clientY - rect.top) / rect.height : 0.5;
       ratio = Math.max(0, Math.min(1, ratio));
@@ -36544,9 +36664,9 @@ function gameTapsNear(a, b) {
     var timer = null;
     function place() { roach.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)"; }
     function faceIt() { face.style.transform = "scaleX(" + facing + ")"; } // instant flip, no transition
-    function barUp() { // night/party cocktail bar overlay covers the espresso counter
+    function barUp() { // phase-2 night/party cocktail bar overlay covers the espresso counter
       var k = document.getElementById("stage-kitchen");
-      return !!window.__gardenPartyOn || !!(k && k.classList.contains("dusk"));
+      return !!window.__gardenPartyOn || !!(k && k.classList.contains("night-bar"));
     }
     function shouldRun() {
       return state === "roaming" && window.currentStageName === "kitchen" &&
@@ -36815,18 +36935,31 @@ function gameTapsNear(a, b) {
   // inverse roster, mirrored from the party floor — owner request). No freeze-others here: the nook
   // has no dance crowd to pause, so it is the shared arrow + short name card. (People are
   // click-only; the old hover bubble is kept for props.)
-  function nameTip(id, html, shouldOpen) {
+  function nameTip(id, html, shouldOpen, options) {
     var el = document.getElementById(id); if (!el) return;
     el.addEventListener("click", function () {
       if (typeof shouldOpen === "function" && !shouldOpen()) return;
-      showDirectPersonCard(el, html);
+      // Pouria's transparent hit rect is the interaction target, not a container: an SVG
+      // arrow appended inside <rect> has no painted geometry, so its card clamps to a viewport
+      // corner. Point at the enclosing person group, matching the roster's canonical anchor.
+      var figure = id === "kitchen-bartender-hit" ? document.getElementById("kitchen-bartender") : el;
+      var content = typeof html === "function" ? html() : html;
+      // Cuddly drop-in visitors share the stable, arrow-free card used by the three
+      // daytime kids. Their greeting animation moves the figure itself; anchoring an
+      // arrow to that live geometry made the card flash away or jump.
+      var noArrow = (options && options.noArrow) || id.indexOf("cuddly-vis-") === 0;
+      if (noArrow && window.__whoPop) {
+        window.__whoPop(figure || el, content, null, "top", options.lifetime || 5000);
+      } else {
+        showDirectPersonCard(figure || el, content);
+      }
     }); // anchor on el so the global egg-bubble dismisser sees the click inside the anchor and keeps it up
   }
   nameTip("cuddly-behdad", function () { return "<em>behdad</em>" + relLine("behdad") + funFact("behdad"); }, "top", 12, 0, "cuddly-behdad-head"); // +y: his head rides ~10u higher than hers, so match her sit
   nameTip("cuddly-marketa", function () { return "<em>markéta</em>" + relLine("marketa") + funFact("marketa"); }, "top");
-  nameTip("cuddly-irene", function () { return "<em>Irene</em> · " + tipText("role_niece") + kidAgeLine("Irene") + relLine("Irene") + funFact("Irene"); }, "top");
-  nameTip("cuddly-robin", function () { return "<em>Robin</em> · " + tipText("role_godson") + kidAgeLine("Robin") + relLine("Robin") + funFact("Robin"); }, "top"); // gated by his pointer-events: named only while he's .showing
-  nameTip("cuddly-navid", function () { return "<em>Navid</em> · " + tipText("role_godson") + kidAgeLine("Navid") + relLine("Navid") + funFact("Navid"); }, "top"); // gated by his pointer-events: named only while he's .showing
+  nameTip("cuddly-irene", function () { return "<em>Irene</em> · " + tipText("role_niece") + kidAgeLine("Irene") + relLine("Irene") + funFact("Irene"); }, null, { noArrow: true, lifetime: 5000 });
+  nameTip("cuddly-robin", function () { return "<em>Robin</em> · " + tipText("role_godson") + kidAgeLine("Robin") + relLine("Robin") + funFact("Robin"); }, null, { noArrow: true, lifetime: 5000 }); // gated by his pointer-events: named only while he's .showing
+  nameTip("cuddly-navid", function () { return "<em>Navid</em> · " + tipText("role_godson") + kidAgeLine("Navid") + relLine("Navid") + funFact("Navid"); }, null, { noArrow: true, lifetime: 5000 }); // gated by his pointer-events: named only while he's .showing
   // adult friend-duo drop-ins (name · role, bilingual) — named only while .showing (pointer-events gate)
   nameTip("cuddly-vis-ali", function () { return "<em>Ali</em> · " + tipText("role_bestman") + relLine("Ali") + funFact("Ali"); }, "top");
   nameTip("cuddly-vis-goli", function () { return "<em>Goli</em> · " + tipText("role_fashion") + relLine("Goli") + funFact("Goli"); }, "top");
@@ -37265,33 +37398,51 @@ function gameTapsNear(a, b) {
   }
   function makeThrowable(el, wobbleFn) {
     if (!el) return;
-    var dragging = false, dragMoved = false, releasePt = null, dragStartPt = null;
+    var dragging = false, dragMoved = false, releasePt = null, dragStartPt = null, activePointerId = null;
+    function removeWindowDragListeners() {
+      window.removeEventListener("pointermove", onThrowablePointerMove, true);
+      window.removeEventListener("pointerup", onThrowablePointerUp, true);
+      window.removeEventListener("pointercancel", onThrowablePointerCancel, true);
+      window.removeEventListener("blur", onThrowableBlur);
+    }
     el.addEventListener("pointerdown", function (e) {
       if (e.button && e.button !== 0) return; // ignore right/middle presses; no phantom throw
+      if (dragging || e.isPrimary === false) return;
       dragging = true;
       dragMoved = false;
+      releasePt = null;
+      activePointerId = e.pointerId;
       dragStartPt = pointerSvgPointGlobal(e);
       el.style.transition = "none";
+      // Capture normally keeps the knife attached outside the SVG. Window listeners are
+      // also needed when capture setup fails or the browser revokes it mid-gesture.
+      window.addEventListener("pointermove", onThrowablePointerMove, true);
+      window.addEventListener("pointerup", onThrowablePointerUp, true);
+      window.addEventListener("pointercancel", onThrowablePointerCancel, true);
+      window.addEventListener("blur", onThrowableBlur);
       try { el.setPointerCapture(e.pointerId); } catch (err) {}
     });
-    el.addEventListener("pointermove", function (e) {
-      if (!dragging) return;
+    function onThrowablePointerMove(e) {
+      if (!dragging || e.pointerId !== activePointerId) return;
       dragMoved = true;
       var cur = pointerSvgPointGlobal(e);
       el.style.translate = (cur.x - dragStartPt.x) + "px " + (cur.y - dragStartPt.y) + "px";
       releasePt = cur;
-    });
-    function onThrowablePointerUp(e) {
-      if (!dragging) return;
+    }
+    function finishThrowableDrag(e, allowHit) {
+      if (!dragging || (e && "pointerId" in e && e.pointerId !== activePointerId)) return;
       dragging = false;
-      try { el.releasePointerCapture(e.pointerId); } catch (err) {}
+      removeWindowDragListeners();
+      var pointerId = activePointerId;
+      activePointerId = null;
+      try { el.releasePointerCapture(pointerId); } catch (err) {}
       // read the pan at the drag position BEFORE resetting translate — panForElId reads
       // live layout, so it must run while the knife is still visually at the drop point
       var releasePan = dragMoved ? panForElId(el.id) : null;
       el.style.transition = "";
       el.style.translate = "0px 0px";
       wobbleFn(e, releasePan);
-      if (dragMoved && releasePt) {
+      if (allowHit && dragMoved && releasePt) {
         var ic = ireneHitCenter(); // when she's around, she's in front → check her before the couple
         if (Math.hypot(releasePt.x - THROW_TARGETS.fishu.x, releasePt.y - THROW_TARGETS.fishu.y) <= 45) {
           triggerFishuFlyOut();
@@ -37306,8 +37457,11 @@ function gameTapsNear(a, b) {
         }
       }
     }
-    el.addEventListener("pointerup", onThrowablePointerUp);
-    el.addEventListener("pointercancel", onThrowablePointerUp);
+    function onThrowablePointerUp(e) { finishThrowableDrag(e, true); }
+    function onThrowablePointerCancel(e) { finishThrowableDrag(e, false); }
+    function onThrowableBlur() { finishThrowableDrag(null, false); }
+    window.addEventListener("pagehide", onThrowableBlur);
+    el.addEventListener("lostpointercapture", onThrowablePointerCancel);
     el.addEventListener("click", function (e) { e.stopPropagation(); });
   }
   // The two knives on the magnetic board are the throwables (the utensils'
@@ -38311,11 +38465,11 @@ function gameTapsNear(a, b) {
   var bartenderShaker = document.getElementById("kitchen-bartender-shaker");
   var bartenderHit = document.getElementById("kitchen-bartender-hit");
   if (bartender && bartenderShaker) {
-    // "the bar is up" = the garden PARTY is on OR the kitchen is at NIGHT (dusk). The bartender is
+    // "the bar is up" = the garden PARTY is on OR the phase-2 kitchen is the calm NIGHT bar. The bartender is
     // present + interactive in both; nightBarNow() is the calm night-only mode (no party festivities).
-    function kitchenDusk() { var k = document.getElementById("stage-kitchen"); return !!(k && k.classList.contains("dusk")); }
-    function barUpNow() { return !!window.__gardenPartyOn || kitchenDusk(); }
-    function nightBarNow() { return !window.__gardenPartyOn && kitchenDusk(); }
+    function kitchenNightBar() { var k = document.getElementById("stage-kitchen"); return !!(k && k.classList.contains("night-bar")); }
+    function barUpNow() { return !!window.__gardenPartyOn || kitchenNightBar(); }
+    function nightBarNow() { return !window.__gardenPartyOn && kitchenNightBar(); }
     function tossShaker() { // re-triggerable one-shot: clear + double-rAF re-add so it always replays
       bartenderShaker.classList.remove("tossing");
       requestAnimationFrame(function () {
@@ -39110,9 +39264,9 @@ function gameTapsNear(a, b) {
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function dragging() { return !!(window.__bartenderDragging && window.__bartenderDragging()); }
   function flairBusy() { return !!(window.__flairState && window.__flairState().active); } // the Flair-Catch game owns the bartender — no cocktail-making then
-  // "the bar is up" = garden PARTY on OR the kitchen's at NIGHT (dusk). A make can run in either;
+  // "the bar is up" = garden PARTY on OR the phase-2 kitchen's calm NIGHT bar. A make can run in either;
   // barPresent means the bar's up AND you're standing at it (kitchen, visible tab).
-  function kitchenNight() { var k = document.getElementById("stage-kitchen"); return !!(k && k.classList.contains("dusk")); }
+  function kitchenNight() { var k = document.getElementById("stage-kitchen"); return !!(k && k.classList.contains("night-bar")); }
   function barUpNow() { return !!window.__gardenPartyOn || kitchenNight(); }
   function barPresent() { return barUpNow() && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
 
@@ -42119,18 +42273,38 @@ setOfficeProgress("pc", false);
     return n;
   }
   var monitorSystemMenu = null;
+  var monitorCreditsLayer = null;
   function closeMonitorSystemMenu() {
     if (!monitorSystemMenu) return;
     monitorSystemMenu.classList.remove("open");
     var brand = document.getElementById("monitor-system-brand");
     if (brand) brand.setAttribute("aria-expanded", "false");
   }
+  function closeMonitorCredits() {
+    if (!monitorCreditsLayer) return;
+    monitorCreditsLayer.classList.remove("open");
+    if (window.startCuddlyFlame) window.startCuddlyFlame();
+  }
+  function openMonitorCredits() {
+    if (!monitorCreditsLayer) return false;
+    closeMonitorSystemMenu();
+    monitorCreditsLayer.classList.remove("open");
+    void monitorCreditsLayer.getBBox();
+    monitorCreditsLayer.classList.add("open");
+    if (window.startCuddlyFlame) window.startCuddlyFlame();
+    var close = monitorCreditsLayer.querySelector(".monitor-credits-close");
+    if (close) try { close.focus(); } catch (e) {}
+    return true;
+  }
+  window.__openMonitorCredits = openMonitorCredits;
+  window.__closeMonitorCredits = closeMonitorCredits;
   function monitorSystemAction(action) {
     closeMonitorSystemMenu();
     if (action === "website") {
       try { window.open(CAPS_URL, "_blank"); } catch (e) {}
       return true;
     }
+    if (action === "credits") return openMonitorCredits();
     if (action === "sleep") {
       return sleepMonitor();
     }
@@ -42419,23 +42593,33 @@ setOfficeProgress("pc", false);
     // The top-left wordmark is the loft OS's system menu. Native SVG keeps it correctly
     // layered under WebKit's scaled monitor, where another foreignObject would disappear.
     monitorSystemMenu = mkEl("g", { id: "monitor-system-menu", "class": "desk-system-menu", role: "menu" }, dock);
-    mkEl("rect", { x: 255, y: 159.5, width: 33.5, height: 24.6, rx: 1.3, "class": "desk-system-panel" }, monitorSystemMenu);
+    mkEl("rect", { x: 255, y: 159.5, width: 33.5, height: 28.9, rx: 1.3, "class": "desk-system-panel" }, monitorSystemMenu);
     mkEl("path", { d: "M256.3 159.5 H287.2 Q288.5 159.5 288.5 160.8 V163 H255 V160.8 Q255 159.5 256.3 159.5 Z",
       "class": "desk-system-head" }, monitorSystemMenu);
     var sysDict = T[document.documentElement.lang] || T.en;
     var sysTitle = mkEl("text", { x: 257, y: 161.9, "class": "desk-system-title",
       "data-i": "mon_sys_title" }, monitorSystemMenu);
     sysTitle.textContent = sysDict.mon_sys_title || T.en.mon_sys_title;
-    [
-      ["website", "mon_sys_website", false],
+    var sysRows = [
       ["lock", "mon_sys_lock", false],
       ["sleep", "mon_sys_sleep", false],
       ["reboot", "mon_sys_reboot", false],
-      ["shutdown", "mon_sys_shutdown", true]
-    ].forEach(function (item, i) {
+      ["shutdown", "mon_sys_shutdown", true],
+      null,
+      ["website", "mon_sys_website", false],
+      ["credits", "mon_sys_credits", false]
+    ];
+    var sysY = 163.3;
+    sysRows.forEach(function (item) {
+      if (!item) {
+        mkEl("line", { x1: 257, y1: sysY + .15, x2: 286.5, y2: sysY + .15,
+          "class": "desk-system-rule" }, monitorSystemMenu);
+        sysY += .7;
+        return;
+      }
       var g = mkEl("g", { "class": "desk-system-item" + (item[2] ? " danger" : ""), role: "menuitem", tabindex: "0", "data-action": item[0] }, monitorSystemMenu);
-      mkEl("rect", { x: 256, y: 163.3 + i * 3.2, width: 31.5, height: 3, rx: .55, "class": "desk-system-hit" }, g);
-      var label = mkEl("text", { x: 257.5, y: 165.42 + i * 3.2, "class": "desk-system-label", "data-i": item[1] }, g);
+      mkEl("rect", { x: 256, y: sysY, width: 31.5, height: 3, rx: .55, "class": "desk-system-hit" }, g);
+      var label = mkEl("text", { x: 257.5, y: sysY + 2.12, "class": "desk-system-label", "data-i": item[1] }, g);
       var dict = T[document.documentElement.lang] || T.en;
       label.textContent = dict[item[1]] || T.en[item[1]];
       function activate(e) {
@@ -42447,10 +42631,11 @@ setOfficeProgress("pc", false);
         if (e.key === "Enter" || e.key === " ") activate(e);
       });
       g.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      sysY += 3.2;
     });
-    mkEl("line", { x1: 257, y1: 179.55, x2: 286.5, y2: 179.55, "class": "desk-system-rule" }, monitorSystemMenu);
+    mkEl("line", { x1: 257, y1: sysY + .1, x2: 286.5, y2: sysY + .1, "class": "desk-system-rule" }, monitorSystemMenu);
     ["mon_sys_tagline_1", "mon_sys_tagline_2"].forEach(function (key, i) {
-      var tagline = mkEl("text", { x: 257.5, y: 181.7 + i * 1.35, "class": "desk-system-tagline",
+      var tagline = mkEl("text", { x: 257.5, y: sysY + 2.2 + i * 1.35, "class": "desk-system-tagline",
         "data-i": key }, monitorSystemMenu);
       tagline.textContent = sysDict[key] || T.en[key];
     });
@@ -42459,6 +42644,56 @@ setOfficeProgress("pc", false);
       if (monitorSystemMenu.classList.contains("open") &&
           !monitorSystemMenu.contains(e.target) && !brandG.contains(e.target)) closeMonitorSystemMenu();
     });
+
+    monitorCreditsLayer = mkEl("g", { id: "monitor-credits-layer",
+      "class": "monitor-credits-layer", role: "dialog", "aria-modal": "true",
+      "aria-labelledby": "monitor-credits-title" }, dock);
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
+      "class": "monitor-credits-bg" }, monitorCreditsLayer);
+    mkEl("image", { id: "monitor-credits-fire", x: 254, y: 154, width: 124, height: 42,
+      preserveAspectRatio: "xMidYMid slice", "class": "monitor-credits-fire" }, monitorCreditsLayer);
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
+      "class": "monitor-credits-shade" }, monitorCreditsLayer);
+    var creditsClip = mkEl("clipPath", { id: "monitor-credits-clip" }, monitorCreditsLayer);
+    mkEl("rect", { x: 255, y: 155, width: 122, height: 40, rx: 1 }, creditsClip);
+    var creditsViewport = mkEl("g", { "clip-path": "url(#monitor-credits-clip)" }, monitorCreditsLayer);
+    var creditsRoll = mkEl("g", { id: "monitor-credits-roll", "class": "monitor-credits-roll" }, creditsViewport);
+    function creditsLine(y, cls, key, value) {
+      var attrs = { x: 316, y: y, "class": cls };
+      if (key) attrs["data-i"] = key;
+      var text = mkEl("text", attrs, creditsRoll);
+      text.textContent = value || ((T[document.documentElement.lang] || T.en)[key] || T.en[key]);
+      return text;
+    }
+    creditsLine(200, "monitor-credits-title", "credits_title");
+    creditsLine(204, "monitor-credits-section", "credits_thanks");
+    var creditY = 209;
+    LOFT_CREDITS.people.forEach(function (person) {
+      creditsLine(creditY, "monitor-credits-name", null, person.name);
+      creditsLine(creditY + 2.5, "monitor-credits-role", person.role);
+      creditY += 7;
+    });
+    creditsLine(252, "monitor-credits-section", "credits_open_source");
+    LOFT_CREDITS.software.forEach(function (name, i) {
+      creditsLine(256 + i * 3, "monitor-credits-software", null, name);
+    });
+    creditsLine(269, "monitor-credits-notice", "credits_licenses");
+    creditsLine(276, "monitor-credits-made", null, LOFT_CREDITS.closing);
+    var creditsClose = mkEl("g", { "class": "monitor-credits-close", role: "button",
+      tabindex: "0", "data-aria-i": "install_dismiss",
+      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorCreditsLayer);
+    mkEl("circle", { cx: 375, cy: 157, r: 2.15 }, creditsClose);
+    var creditsX = mkEl("text", { x: 375, y: 158.15 }, creditsClose); creditsX.textContent = "×";
+    function dismissCredits(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      closeMonitorCredits();
+    }
+    creditsClose.addEventListener("click", dismissCredits);
+    creditsClose.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") dismissCredits(e);
+    });
+    monitorCreditsLayer.addEventListener("click", function (e) { e.stopPropagation(); });
+    monitorCreditsLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
 
   }
   // CAPS LOCK: a tiny, pointer-and-keyboard cap-matching lock screen. It sits above the
@@ -42613,6 +42848,10 @@ setOfficeProgress("pc", false);
     mkEl("circle", { cx: 376, cy: 194, r: .45, "class": "monitor-sleep-led" }, monitorSleepLayer);
   }
   window.addEventListener("keydown", function (e) {
+    if (monitorCreditsLayer && monitorCreditsLayer.classList.contains("open") &&
+        (e.key === "Escape" || e.key === "Esc" || e.key === "Backspace")) {
+      e.preventDefault(); e.stopImmediatePropagation(); closeMonitorCredits(); return;
+    }
     if (monitorSystemMenu && monitorSystemMenu.classList.contains("open")) {
       if (e.key === "Escape" || e.key === "Esc") {
         e.preventDefault(); e.stopImmediatePropagation(); closeMonitorSystemMenu();
@@ -43977,16 +44216,7 @@ setOfficeProgress("pc", false);
     }
     // `credits` — a quiet thank-you to the people behind the loft (bareword, no parens)
     if (/^credits$/i.test(c)) {
-      [
-        "with thanks —",
-        "  Markéta · co-design",
-        "  Athena · QA lead",
-        "  Kasra · testing",
-        "  Garret · testing",
-        "  Mahzad · testing",
-        "  Ali · testing",
-        "made with love by behdad, Claude & Codex"
-      ].forEach(function (line) { consolePrint(line, "console-dim"); });
+      loftCreditsLines().forEach(function (line) { consolePrint(line, "console-dim"); });
       return;
     }
     if (/^whoami$/.test(c)) { consolePrint("someone we love.", "console-dim"); return; }
@@ -59438,6 +59668,12 @@ async def localfont(name):
   var duskSun = document.getElementById("balcony-sun");
   var stageBalcony = document.getElementById("stage-balcony");
   if (duskSun && stageBalcony) {
+    function syncKitchenNightBar() {
+      var kitchen = document.getElementById("stage-kitchen");
+      if (!kitchen) return;
+      kitchen.classList.toggle("night-bar", !!window.__secondRound && kitchen.classList.contains("dusk"));
+    }
+    window.__syncKitchenNightBar = syncKitchenNightBar;
     // clicking the sun flips the balcony to evening and lights the lamps
     function toggleDusk(silent) {
       var dusk = stageBalcony.classList.toggle("dusk");
@@ -59445,6 +59681,7 @@ async def localfont(name):
         var st = document.getElementById(id);
         if (st) st.classList.toggle("dusk", dusk); // night is night everywhere
       });
+      syncKitchenNightBar();
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx(); // sun shafts are a day thing
       if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // the door-nudge hint is a day thing too
       if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // dusk → Behdad snoozes; day → the couple's back to normal
@@ -59535,11 +59772,10 @@ async def localfont(name):
     // so a backgrounded/blurred tab never flips on its own); on return, focus/visibility runs a
     // non-destructive catch-up that applies a crossing missed while away. That gate also keeps
     // every headless test on the untouched daytime baseline.
-    // Starts STOPPED: the opening kitchen is a forced-DAY intro regardless of the real clock.
-    // Auto day/night arms when the kitchen is first solved (goToStage's 0→1 frontier step calls
-    // __startAutoDayNight) and then tracks Edmonton's real (or the advancing ?time=) clock across
-    // every room; a manual flip persists until the crossing, party/?date=/trip/autoplay override.
-    var autoStopped = true, crossTimer = null, twilightForced = false, segNight = null; // segNight: the auto-clock's day/night verdict as of the last sync — a manual flip leaves it untouched, so a re-check only re-stamps the scene when a real crossing has moved it (that's what makes a manual set PERSIST until the next sunrise/sunset)
+    // Starts armed and tracks Edmonton's real (or the advancing ?time=) clock across every room.
+    // Night remains the puzzle kitchen until phase 2; a manual flip persists until the next
+    // crossing, while party/?date=/trip/autoplay may temporarily own the sky.
+    var autoStopped = false, crossTimer = null, twilightForced = false, segNight = null; // segNight: the auto-clock's day/night verdict as of the last sync — a manual flip leaves it untouched, so a re-check only re-stamps the scene when a real crossing has moved it (that's what makes a manual set PERSIST until the next sunrise/sunset)
     // ?time=HH:MM (also ?time=HH, and the #time= hash form) sets the time-of-day the auto
     // day/night/twilight system computes against, without freezing the scene the way ?date=
     // does (it is deliberately NOT in autoOverridden — the auto loop stays live and reflects
@@ -59762,6 +59998,7 @@ async def localfont(name):
       stampNightDepth(); // the date may have moved under us (?date=, the pill, a season preview)
       if (stageBalcony.classList.contains("dusk") !== night) { toggleDusk(true); return; } // silent: an autonomous flip shouldn't chime
       ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) { var s = document.getElementById(id); if (s) s.classList.toggle("dusk", night); });
+      syncKitchenNightBar();
     }
     // DELIBERATE apply (kitchen-solve arm, ?time= jump, time-lapse step): force the scene to the
     // clock's verdict now, record it as the current segment, and (re)arm the next crossing.
@@ -59788,8 +60025,8 @@ async def localfont(name):
       armCrossing();
     }
     window.__catchUpDayNight = catchUpDayNight;
-    window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(crossTimer); crossTimer = null; if (!twilightForced) stageBalcony.classList.remove("twilight"); }; // disarm: the forced-day intro, the scripted cinematic, a fresh game
-    window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; applyAutoDayNight(true); }; // arm + force the clock's verdict now (kitchen-solve / ?time= set / pill reset), so day/night lands even if the window isn't focused; applyAutoDayNight arms the crossing
+    window.__stopAutoDayNight = function () { autoStopped = true; clearTimeout(crossTimer); crossTimer = null; if (!twilightForced) stageBalcony.classList.remove("twilight"); }; // disarm while a scripted cinematic owns the sky
+    window.__startAutoDayNight = function () { autoStopped = false; twilightForced = false; applyAutoDayNight(true); }; // arm + force the clock's verdict now, so day/night lands even if the window isn't focused; applyAutoDayNight arms the crossing
     // the game reset, once the auto loop is already stopped: drop the invisible carry-over state
     // a re-arm would otherwise inherit — a stale segNight makes the next crossing check see "no
     // change" and leave the scene wrongly day/night, and twilightForced keeps the loop hands-off.
@@ -59853,6 +60090,12 @@ async def localfont(name):
       if (window.__applyDateOccasion) window.__applyDateOccasion(); // a TIME-gated happening (the May-2 BBQ's 16:00–22:00 window) lights/clears as the advancing clock crosses its edge (latched → cheap no-op otherwise)
     }
     setInterval(timeAdvanceTick, 15000);
+    // Paint the opening scene from Edmonton's real/selected clock after the rest of this
+    // monolithic script has initialized. Phase 1 still remains the puzzle kitchen because
+    // syncKitchenNightBar derives the calm bar separately from the phase-2 latch.
+    setTimeout(function () {
+      if (!window.__cinematic && window.__startAutoDayNight) window.__startAutoDayNight();
+    }, 0);
     // click the night sky (not the moon) to wish on a shooting star; by day on Canada Day the
     // same rect calls in the Hornets instead — the two are dusk-exclusive, so neither shadows
     // the other, and off-season the daytime sky stays inert
@@ -63357,6 +63600,7 @@ async def localfont(name):
     // (owner: the wiggle hints "open me" by day) — give the leaf a gentle come-hither nudge; drop
     // it the instant the door opens, the room solves, or night falls. Reduced-motion drops via CSS.
     window.__cuddlyDoorNeeded = function () {
+      if (window.__secondRound) return false;
       var oct = document.getElementById("cuddly-octopus");
       var bl = document.getElementById("cuddly-blanket");
       return !!(oct && oct.classList.contains("played") && !cuddlyDoor.classList.contains("open") && !(bl && bl.classList.contains("done")));
@@ -67274,8 +67518,9 @@ function updateOfficeNudges() {
   var callLive = !!(lap && ["calling", "connecting", "connected"]
     .some(function (c) { return lap.classList.contains(c); })) ||
     !!(window.__familyCallLive && window.__familyCallLive()); // any call (laptop Prague/Lübeck or monitor Tehran) quiets the nudges
-  var wantLaptop = !done && !window.__pragueCalled;
-  var wantPc = !done && !callLive && !!window.__pragueCalled && !window.__pcPlayed;
+  var phaseOne = !window.__secondRound;
+  var wantLaptop = phaseOne && !done && !window.__pragueCalled;
+  var wantPc = phaseOne && !done && !callLive && !!window.__pragueCalled && !window.__pcPlayed;
   if (wantLaptop) { if (window.__inviteLaptop) window.__inviteLaptop(); }
   else if (window.__stopLaptopInvite) window.__stopLaptopInvite();
   var pc = document.getElementById("office-pc-desk-trio");
@@ -71676,6 +71921,15 @@ function spawnDustMote(container) {
     return maxUnlocked;
   };
   updateDots();
+  function phaseOneSolveCaption(key) {
+    if (typeof key !== "string") return false;
+    return key === "kitchen" ||
+      (key.indexOf("kitchen_") === 0 && key !== "kitchen_bar" && key !== "kitchen_bar_night") ||
+      key === "garden" || key.indexOf("garden_need_") === 0 ||
+      key === "cuddly_hint" || key === "cuddly_door" || key === "cuddly_pull" ||
+      key === "office_call" || key === "office_computer" || key === "office_find" ||
+      key === "office_hint";
+  }
   function setCaption(key, force) {
     // While the "Watch the loft" cinematic runs it OWNS the caption: the scripted
     // interactions it fires (watering, music, calling Prague…) would otherwise stomp the
@@ -71685,6 +71939,7 @@ function spawnDustMote(container) {
     // showRsvpNudge stays unguarded, so the finale's graceful RSVP landing still lands.
     if (window.__cinematic && !force) return;
     if ((huntIntroShowing || openingGuideShowing) && !force) return; // opening prompt/guide owns the caption until its handoff completes
+    if (window.__secondRound && phaseOneSolveCaption(key) && !force) return;
     captionKey = key;
     caption.classList.remove("rsvp-nudge");
     // innerHTML, not textContent: caption copy carries markup — <em> round the cast's names, the
@@ -72211,6 +72466,7 @@ function spawnDustMote(container) {
   // A solve animation may finish after the player has already navigated elsewhere. Its
   // destination still unlocks, but the stale timer must not pull them out of their current room.
   window.__unlockSolvedRoom = function (name) {
+    if (window.__secondRound) return false;
     var toIdx = STAGES.indexOf(name);
     if (toIdx === -1) return false;
     unlockThrough(toIdx);
@@ -72218,8 +72474,10 @@ function spawnDustMote(container) {
     return true;
   };
   window.__finishSolveAdvance = function (from, to) {
+    if (window.__secondRound) return false;
     if (STAGES[stageIndex] === from) goToStage(to);
     else window.__unlockSolvedRoom(to);
+    return true;
   };
   window.__maxUnlocked = function () { return maxUnlocked; }; // furthest room reached — autoplay reads it to know which rooms are solved
   if (prevBtn) prevBtn.addEventListener("click", function () {
@@ -72396,6 +72654,7 @@ function spawnDustMote(container) {
   // handlers get first refusal and prevent/stop Escape before it arrives here. Backspace dispatches
   // the existing fullscreen-safe synthetic Escape below, so it shares this exact path.
   function activateCurrentRoom() {
+    if (window.__secondRound) return false;
     var er = window.currentStageName, did = true;
     if (er === "kitchen") { if (stageIndex < maxUnlocked) { if (window.__toggleDayNight) window.__toggleDayNight(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // solved → toggle day/night (kitchen ⇄ bar); unsolved → walk the espresso solve (a no-op mid warm-up/brew, so Enter never flips to night then). NB: __kitchenDoNext returns null transiently, not just when solved, so gate the toggle on the room being solved, not on its return.
     else if (er === "garden") { if (!(window.__gardenDoNext && window.__gardenDoNext())) { if (window.party) window.party(!window.party()); } } // advance the solve (water→music→candles); once solved, toggle the party
@@ -72644,7 +72903,7 @@ function spawnDustMote(container) {
   }
   function updateKitchenInvite() {
     var next = null;
-    if (!huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line
+    if (!window.__secondRound && !huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line
       if (!kitchenPowered) next = "kitchen-lamarzocco";
       else if (!kitchenWarmedUp) next = null; // warming up — nothing's actionable yet
       else if (portafilterSpent) next = "kitchen-knockbox";
@@ -72694,6 +72953,7 @@ function spawnDustMote(container) {
   // points at (same order as updateKitchenInvite). Clicking an element runs its onActivate,
   // which drives the fly-to/step animations, so this advances the sequence one beat.
   window.__kitchenDoNext = function () {
+    if (window.__secondRound) return null;
     if (window.__barUpNow && window.__barUpNow()) return null; // bar's up → no coffee step (Enter makes a cocktail instead)
     var nx = null;
     if (!kitchenPowered) nx = "kitchen-lamarzocco";
@@ -72920,6 +73180,7 @@ function spawnDustMote(container) {
 
   var gardenState = { water: false, music: false, candles: false };
   function updateGardenHint() {
+    if (window.__secondRound) return;
     if (window.__gardenPartyOn) return; // the party owns the caption (see refreshGardenCaption)
     var missing = [];
     if (!gardenState.water) missing.push("water");
@@ -72937,11 +73198,12 @@ function spawnDustMote(container) {
     var beat = window.__actBeatHint ? window.__actBeatHint("garden") : null;
     if (beat) { setCaption(beat); return; }
     if (window.__gardenPartyOn) setCaption("garden_party");
+    else if (window.__secondRound) showExploration("garden");
     else { setCaption("garden"); updateGardenHint(); }
   };
   function checkGardenDone() {
     updateGardenHint();
-    if (window.__cinematic) return; // the cinematic drives room changes itself
+    if (window.__cinematic || window.__secondRound) return; // the cinematic drives room changes itself; phase two has no solve trail
     if (gardenState.water && gardenState.music && gardenState.candles) {
       setTimeout(function () { window.__finishSolveAdvance("garden", "cuddly"); }, 700);
     }
@@ -72983,6 +73245,7 @@ function spawnDustMote(container) {
   // __kitchenDoNext: click the next pending element so its own onActivate runs. Returns the id it
   // fired, or null when nothing's pending (solved) — the Enter handler falls through to the toggle.
   window.__gardenDoNext = function () {
+    if (window.__secondRound) return null;
     var nx = null;
     if (!gardenState.water) nx = "garden-monstera";
     else if (!gardenState.music) nx = "garden-guitar";
@@ -72994,6 +73257,7 @@ function spawnDustMote(container) {
     return nx;
   };
   window.__gardenClueTarget = function () {
+    if (window.__secondRound) return null;
     // The fairy only guides the still-locked garden solve. Once cuddly-puddly is
     // available, their click becomes a fāl instead of pointing at already-finished work.
     if ((window.__maxUnlocked && window.__maxUnlocked()) >= STAGES.indexOf("cuddly")) return null;
@@ -73738,6 +74002,7 @@ function spawnDustMote(container) {
     options = options || {};
     var previous = !!window.__secondRound;
     window.__secondRound = !!on;
+    if (window.__syncKitchenNightBar) window.__syncKitchenNightBar();
     if (window.__secondRound) {
       if (window.__unlockAllRooms) window.__unlockAllRooms();
       if (!previous && options.releaseHeld !== false) {
@@ -73745,6 +74010,8 @@ function spawnDustMote(container) {
         if (window.__retryShareAutoShow) window.__retryShareAutoShow();
       }
     }
+    if (window.__updateOfficeNudges) window.__updateOfficeNudges();
+    if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint();
     if (window.__syncRosterAvail) window.__syncRosterAvail();
     return previous;
   }
@@ -79603,6 +79870,7 @@ function spawnDustMote(container) {
         });
         playSwishSound(id);
       }
+      if (window.__secondRound) return;
       var octopus = document.getElementById("cuddly-octopus");
       if (!octopus || !octopus.classList.contains("played")) {
         setCaption("cuddly_hint");
@@ -79617,8 +79885,7 @@ function spawnDustMote(container) {
       }
       el.classList.add("done");
       setTimeout(function () {
-        if (stageIndex === 2) goToStage("office");
-        else window.__unlockSolvedRoom("office");
+        window.__finishSolveAdvance("cuddly", "office");
       }, 700);
     }
     var dragging = false, dragStartPt = null, dragStartOffset = { x: 0, y: 0 }, dragMoved = false;
@@ -79668,6 +79935,7 @@ function spawnDustMote(container) {
   // door, then pull the blanket off the couple. Same idea as __kitchenDoNext/__gardenDoNext;
   // returns the id it fired.
   window.__cuddlyDoNext = function () {
+    if (window.__secondRound) return null;
     var oct = document.getElementById("cuddly-octopus");
     if (!(oct && oct.classList.contains("played"))) { if (oct) oct.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "cuddly-octopus"; }
     // middle step: open the balcony door before the blanket counts (see triggerBlanketPull's gate)
@@ -79716,6 +79984,7 @@ function spawnDustMote(container) {
   window.butterfly = function () { if (window.goToStage) window.goToStage("office"); var completion = flapButterfly(); if (window.echo) window.echo("🦋 the stained-glass butterfly stirs its wings."); return completion; }; // console toy: go to the office and flutter the stained-glass butterfly
   onActivate(glass, function () {
     if (window.__cinematic) return; // the cinematic drives goToStage("balcony") itself
+    if (window.__secondRound) { flapButterfly(); return; }
     if (!window.__pragueCalled) { // the finale gates on calling Prague first
       setCaption("office_call");
       flapButterfly();
@@ -79739,8 +80008,7 @@ function spawnDustMote(container) {
     if (officeDim) officeDim.style.opacity = "0.72";
     setCaption("complete");
     setTimeout(function () {
-      if (stageIndex === 3) goToStage("balcony");
-      else window.__unlockSolvedRoom("balcony");
+      window.__finishSolveAdvance("office", "balcony");
     }, 2000);
     setTimeout(function () { if (officeDim) officeDim.style.opacity = "0"; }, 3000);
   });
@@ -79752,6 +80020,7 @@ function spawnDustMote(container) {
   // mid-ring, so a rapid Enter waits rather than re-dialing or falling through to the zoom —
   // and null once the office is solved (the glass carries `done`), so Enter then toggles zoom.
   window.__officeDoNext = function () {
+    if (window.__secondRound) return null;
     var glass = document.getElementById("office-stainedglass");
     if (glass && glass.classList.contains("done")) return null; // solved → Enter toggles the monitor zoom instead
     var callLive = !!(window.__laptopCallLive && window.__laptopCallLive());
@@ -79968,8 +80237,8 @@ function spawnDustMote(container) {
     if (window.__cuddlyProjector && window.__cuddlyProjector.channel() !== "fire") window.__cuddlyProjector.set("fire");
     setMusicPausedState(false); // clear any spacebar pause state
     setMaxUnlocked(0, true);
-    if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // a fresh game returns to the forced-DAY intro kitchen; auto day/night re-arms when the kitchen is solved again
-    if (window.__resetDayNightState) window.__resetDayNightState(); // after the stop, so nothing re-stamps: forget the held segment verdict + any twilight() force
+    if (window.__resetDayNightState) window.__resetDayNightState(); // forget the held segment verdict + any twilight() force
+    if (window.__startAutoDayNight) window.__startAutoDayNight(); // a fresh game follows Edmonton's real/selected sky immediately
     goToStage("kitchen");
     if (window.__showHuntIntro) {
       window.__showHuntIntro(); // every fresh run keeps the clean CLICK ME introduction
@@ -80289,7 +80558,7 @@ function spawnDustMote(container) {
     { who: "hamid",     m: 7,  d: 12, before: 1, after: 1, name: "Hamid",     type: "hat",   venue: "garden" }, // Aug 9–15
     { who: "mohsen",    m: 7,  d: 23, before: 1, after: 1, name: "Mohsen",    type: "hat",   venue: "tehran" }, // Aug 20–26 (Behdad's dad — Tehran call only)
     { who: "danesh",    m: 7,  d: 28, before: 0, after: 19, name: "Danesh",   type: "hat",   venue: "dj-danesh" }, // Aug 28 – Sep 16; custom asymmetric decor window
-    { who: "baka",      m: 8,  d: 8,  before: 1, after: 1, name: "Baka",      type: "crown", venue: "prague" }, // Sep 5–11 (Markéta's grandmother — Prague call only)
+    { who: "baka",      m: 8,  d: 8,  before: 1, after: 1, name: "Báka",      type: "crown", venue: "prague" }, // Sep 5–11 (Markéta's grandmother — Prague call only)
     { who: "baharak",   m: 8,  d: 10, before: 1, after: 1, name: "Baharak",   type: "hat",   venue: "tehran" }, // Sep 7–13 (Behdad's sister — Tehran call only)
     { who: "lauren",    m: 8,  d: 16, before: 1, after: 1, name: "Lauren",    type: "hat",   venue: "garden" }, // Sep 15–17 (Farhang's partner; the last day of Danesh's window falls on hers)
     { who: "behdad",    m: 8,  d: 27, before: 6, after: 0, name: "Behdad",    type: "hat",   venue: "garden" }, // Sept 21–27
@@ -80737,7 +81006,7 @@ function spawnDustMote(container) {
       });
       return;
     }
-    if (v === "prague") { // Markéta's parents + Baka — their headwear rides the Prague laptop call
+    if (v === "prague") { // Markéta's parents + Báka — their headwear rides the Prague laptop call
       // Place the Prague call unless it's already live (a live call is the app on-screen; re-dialing
       // would hang it up). __laptopCall only auto-zooms when it has to OPEN the lid, so an already-open
       // lid (call live, or ended-but-still-open) never re-zooms on its own — pull the view up to the
@@ -86848,8 +87117,9 @@ function spawnDustMote(container) {
       clearTimeout(b._t);
       b._t = setTimeout(function () { dismissEggBubble(b); },
         typeof lifetime === "number" ? lifetime : 10000); // normal cards linger; compact cameo picks retire with their arrow
-      b._off = function () { if (b._t) clearTimeout(b._t); document.removeEventListener("click", b._off, true); dismissEggBubble(b); }; // …or dismisses on the next click anywhere (incl. the card itself)
-      setTimeout(function () { document.addEventListener("click", b._off, true); }, 0); // armed on the next tick so the tap that opened it doesn't close it
+      // The shared anchor-aware document click handler owns click-away dismissal.
+      // A second capture listener here used to consume the next compatibility click
+      // after a kid's wiggle, making their card appear for only a fraction of a second.
       // NB: positioned ONCE at tap time and left STATIC — the guest keeps dancing under it, but a
       // bubble that jitters along with the dance is hard to read (owner feedback), so it stays put.
       return b;

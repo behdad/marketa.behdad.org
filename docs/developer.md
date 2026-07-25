@@ -535,7 +535,9 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
 - `attendedGuestNames` records lifetime attendance for one party run, independently of the
   floor-only `.arrived` class. Adult rotation must not clear an attending child's `.arrived`;
   `assignPartyKids()` then gives every attending child exactly one persistent dance/Cuddly/sleep
-  home. The ordinary Irene/Robin/Navid Cuddly cameo scheduler is party-off only.
+  home. The ordinary Irene/Robin/Navid Cuddly cameo scheduler is party-off and daylight-only.
+  `__updateCuddlyKidCameosForDay` hard-clears those three figures at night and re-evaluates the
+  non-party Totoro audience; forced pose/test hooks deliberately remain available.
 - Persistent bar, office, balcony, and grillmaster figures use presence classes with opacity plus
   delayed `visibility`, not `display`, so both arrival and departure can paint as fades. The balcony
   layout preferentially retains eligible visible figures across a BBQ split change. Hamid's
@@ -555,7 +557,7 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   between sides instead of consuming the slot array left-to-right. `partyKidFormationTick()` keeps
   its 9–14 second off-room cadence but uses 30–45 seconds while Cuddly is watched. During party Totoro,
   `__totoroWatchActive` overrides eligibility/sleep and assigns all eight to the same persistent
-  Cuddly layer; outside a party the original three cameo figures own the co-watch. Keep
+  Cuddly layer; outside a party the original three cameo figures own the daylight-only co-watch. Keep
   `PARTY_FLOOR_KIDS`, `KID_WHO`, runner SVG nodes, `ROSTER.runSel`, and the people manager in
   parity when adding a child.
 - S'mores and seasonal balcony play use `__balconyBorrowedKids` as another temporary projection

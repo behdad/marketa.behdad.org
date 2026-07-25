@@ -93,9 +93,9 @@ var harness = String.raw`<script>
               reply && reply.querySelector(".rumi-speaker") &&
               reply.querySelector(".rumi-speaker").textContent === "behdad",
               reply && reply.textContent);
-            check("behdad's manual Rumi adjustment is 43px right and 23px down",
-              reply && reply._rumiOffset && reply._rumiOffset.x === 43 &&
-              reply._rumiOffset.y === 23 &&
+            check("behdad's manual Rumi adjustment is 53px right and 43px down",
+              reply && reply._rumiOffset && reply._rumiOffset.x === 53 &&
+              reply._rumiOffset.y === 43 &&
               reply._rumiLayout === "head-top-left",
               reply && (reply.style.left + "," + reply.style.top));
             check("behdad's Rumi bubble has a tail aimed at him",

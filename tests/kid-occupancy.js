@@ -14,6 +14,36 @@ var harness = String.raw`<script>
   }
   try {
     var kids = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
+    window.goToStage("cuddly");
+    window.__setDayNight(false);
+    window.__ireneShow("irene-sit");
+    window.__setDayNight(true);
+    check("night immediately clears an ordinary child cameo",
+      ["irene", "robin", "navid"].every(function (name) {
+        return !document.getElementById("cuddly-" + name).classList.contains("showing");
+      }));
+    window.__robinAppear("robin-sit");
+    window.__navidAppear("navid-sit");
+    window.__ireneSummon();
+    check("ordinary child cameos cannot appear at night",
+      ["irene", "robin", "navid"].every(function (name) {
+        return !document.getElementById("cuddly-" + name).classList.contains("showing");
+      }));
+    window.__cuddlyProjector.set("totoro");
+    check("the non-party Totoro cameo audience stays out at night",
+      ["irene", "robin", "navid"].every(function (name) {
+        return !document.getElementById("cuddly-" + name).classList.contains("showing");
+      }));
+    window.__setDayNight(false);
+    check("daylight restores the non-party Totoro cameo audience",
+      ["irene", "robin", "navid"].every(function (name) {
+        return document.getElementById("cuddly-" + name).classList.contains("showing");
+      }));
+    window.__cuddlyProjector.set("fire");
+    window.__resetIrene();
+    window.__resetRobin();
+    window.__resetNavid();
+
     window.__setGardenParty(true, false);
     if (window.__ireneSummon) window.__ireneSummon();
     if (window.__robinAppear) window.__robinAppear();

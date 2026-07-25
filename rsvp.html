@@ -33909,6 +33909,11 @@ setMusicPausedState(false);
   var BEHAVIORS = ["irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-swing"]; // catplay appended only when the cat's here; hugb = the "daaeee" hug of uncle Behdad; swing = hangs from the pulley rope (always available)
   var showTimer = null, hideTimer = null, catPlayTimer = null, octiReactTimer = null, fadeTimer = null, firstDone = false, lastBeh = null, firstWasRoam = false;
   function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
+  function daytime() {
+    var stage = document.getElementById("stage-cuddly");
+    return !!(stage && !stage.classList.contains("dusk"));
+  }
+  window.__cuddlyKidCameosDaytime = daytime;
   function catLoose() {
     var w = document.getElementById("witchy-chest-cat-walk");
     return !!(w && w.classList.contains("out")); // .out = the chest cat is loose (see the follow IIFE)
@@ -34091,6 +34096,7 @@ setMusicPausedState(false);
   function show(forced) {
     if (window.__gardenPartyOn) return; // party children are placed only by the shared dance/Cuddly/sleep inventory
     if (window.__kidsAsleep) return; // kids asleep → no nook cameo
+    if (!daytime()) return; // the ordinary kid cameos visit only during daylight
     if (irene.classList.contains("showing")) return;
     if (window.__resetRobin) window.__resetRobin(); // mutual exclusion: Irene, Robin & Navid never show at once
     if (window.__resetNavid) window.__resetNavid();
@@ -34142,7 +34148,7 @@ setMusicPausedState(false);
   function tick() {
     showTimer = null;
     if (rosterHoldsOccupants()) { schedule(); return; }
-    if (!window.__gardenPartyOn && onScreen() && !irene.classList.contains("showing") && !robinShowing() && !navidShowing()) {
+    if (!window.__gardenPartyOn && daytime() && onScreen() && !irene.classList.contains("showing") && !robinShowing() && !navidShowing()) {
       // Build the eligible cameo set, dropping any kid currently seated in a game (one-room rule).
       // When the games are playing all three are seated → the set is empty → skip this tick (no
       // cameo, just reschedule) so the nook isn't crowded with two of the same child. firstDone
@@ -34188,6 +34194,17 @@ setMusicPausedState(false);
     firstDone = false;
     ireneBag = []; // fresh pose rotation on the next visit
     schedule();
+  };
+  // Day/night owner: night hard-clears the three ordinary cameo figures immediately. Their
+  // shared timer stays armed but its daytime gate prevents another appearance until dawn.
+  // Explicit pose/debug hooks remain available; party children use their separate inventory.
+  window.__updateCuddlyKidCameosForDay = function () {
+    if (!daytime()) {
+      window.__resetIrene();
+      if (window.__resetRobin) window.__resetRobin();
+      if (window.__resetNavid) window.__resetNavid();
+    }
+    if (window.__updateTotoroWatch) window.__updateTotoroWatch();
   };
   // test/verify hook: force ONE specific behavior and hold it (no auto-chain / no leave),
   // so a pose is deterministically screenshottable (falls back to hug if catplay is asked
@@ -34300,6 +34317,7 @@ setMusicPausedState(false);
   // single timer fresh from now — she won't auto-pop right back on top of the summon.
   window.__ireneSummon = function () {
     if (window.__gardenPartyOn) return; // ordinary cameos are daytime/party-off visits
+    if (!daytime()) return; // the wall/console summon follows the ordinary daylight rule
     if (window.__totoroWatchActive) return; // don't break up the totoro co-watch (all three kids seated)
     if (window.__resetRobin) window.__resetRobin(); // mutual exclusion: a summon on top of a scheduler-spawned Robin
     if (window.__resetNavid) window.__resetNavid(); // ...or Navid
@@ -34473,6 +34491,7 @@ setMusicPausedState(false);
   window.__robinAppear = function (forced) {
     if (window.__gardenPartyOn) return; // party placement belongs to the shared child inventory
     if (window.__kidsAsleep) return; // kids asleep → no nook cameo
+    if (window.__cuddlyKidCameosDaytime && !window.__cuddlyKidCameosDaytime()) return;
     if (window.__totoroWatchActive) return; // during a totoro co-watch he's already seated — don't let the scheduler re-pose him
     if (robin.classList.contains("showing")) return;
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
@@ -34666,6 +34685,7 @@ setMusicPausedState(false);
   window.__navidAppear = function (forced) {
     if (window.__gardenPartyOn) return; // party placement belongs to the shared child inventory
     if (window.__kidsAsleep) return; // kids asleep → no nook cameo
+    if (window.__cuddlyKidCameosDaytime && !window.__cuddlyKidCameosDaytime()) return;
     if (window.__totoroWatchActive) return; // during a totoro co-watch he's already seated — don't let the scheduler re-pose him
     if (navid.classList.contains("showing")) return;
     if (fadeTimer) { clearTimeout(fadeTimer); fadeTimer = null; }
@@ -35097,7 +35117,7 @@ setMusicPausedState(false);
 // that stretch of floor. Driven by channel, room, and party transitions.
 (function () {
   window.__totoroWatchActive = false;
-  var lastPartyMode = false;
+  var lastPartyMode = false, lastCameoWatch = false;
   function want() {
     var ws = document.getElementById("cuddly-wallscreen");
     var strip = document.getElementById("loft-game-strip");
@@ -35108,10 +35128,12 @@ setMusicPausedState(false);
   window.__updateTotoroWatch = function () {
     var on = want();
     var partyMode = !!window.__gardenPartyOn;
-    if (on === window.__totoroWatchActive && partyMode === lastPartyMode) return;
+    var daytime = !window.__cuddlyKidCameosDaytime || window.__cuddlyKidCameosDaytime();
+    var cameoWatch = on && !partyMode && daytime;
+    if (on === window.__totoroWatchActive && partyMode === lastPartyMode && cameoWatch === lastCameoWatch) return;
     window.__totoroWatchActive = on;
     lastPartyMode = partyMode;
-    var cameoWatch = on && !partyMode;
+    lastCameoWatch = cameoWatch;
     if (window.__ireneWatch) window.__ireneWatch(cameoWatch);
     if (window.__robinWatch) window.__robinWatch(cameoWatch);
     if (window.__navidWatch) window.__navidWatch(cameoWatch);
@@ -35119,7 +35141,8 @@ setMusicPausedState(false);
     else if (window.__updateKidGames) window.__updateKidGames(); // totoro co-watch owns/releases the same floor
   };
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && window.__totoroWatchActive && !window.__gardenPartyOn) { // party mode uses the persistent eight-child layer
+    if (!document.hidden && window.__totoroWatchActive && !window.__gardenPartyOn &&
+        (!window.__cuddlyKidCameosDaytime || window.__cuddlyKidCameosDaytime())) { // party mode uses the persistent eight-child layer
       if (window.__ireneWatch) window.__ireneWatch(true);
       if (window.__robinWatch) window.__robinWatch(true);
       if (window.__navidWatch) window.__navidWatch(true);
@@ -61275,6 +61298,7 @@ async def localfont(name):
       if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // the door-nudge hint is a day thing too
       if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // dusk → Behdad snoozes; day → the couple's back to normal
       if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy(); // the fairy visits only at night
+      if (window.__updateCuddlyKidCameosForDay) window.__updateCuddlyKidCameosForDay(); // ordinary kid cameos visit only by day
       if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // dusk raises the calm night bar (day lowers it): swap the kitchen caption + clear/restore the coffee arrows
       if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
       if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(); // birds quiet down at dusk
@@ -61343,6 +61367,7 @@ async def localfont(name):
       if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // day forced back → re-evaluate the door-nudge hint
       if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // day forced back → Behdad wakes from his snooze
       if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy(); // forced day sends the fairy away
+      if (window.__updateCuddlyKidCameosForDay) window.__updateCuddlyKidCameosForDay(); // daylight re-opens the ordinary cameo cadence
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
@@ -61592,6 +61617,7 @@ async def localfont(name):
       if (stageBalcony.classList.contains("dusk") !== night) { toggleDusk(true); return; } // silent: an autonomous flip shouldn't chime
       ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) { var s = document.getElementById(id); if (s) s.classList.toggle("dusk", night); });
       if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy(); // a sibling-only clock sync still owns the fairy's night gate
+      if (window.__updateCuddlyKidCameosForDay) window.__updateCuddlyKidCameosForDay(); // and the ordinary kids' inverse daylight gate
     }
     // DELIBERATE apply (kitchen-solve arm, ?time= jump, time-lapse step): force the scene to the
     // clock's verdict now, record it as the current segment, and (re)arm the next crossing.
@@ -64558,7 +64584,7 @@ async def localfont(name):
         endRumiWake();
         return;
       }
-      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true, 23, 43, "head-top-left");
+      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true, 43, 53, "head-top-left");
       rumiWakeTimer = setTimeout(endRumiWake, 6400);
     }, 5200);
     return i;

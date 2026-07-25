@@ -563,11 +563,13 @@ During the party:
 - Bahareh may follow the running children;
 - named guests occasionally perform their authored visual reactions on their
   own while the player watches the garden;
-- the ordinary Irene, Robin, and Navid Cuddly-puddly cameos occur only while the
-  party is off. During a party, the shared child inventory owns their presence;
+- the ordinary Irene, Robin, and Navid Cuddly-puddly cameos occur only during
+  daylight while the party is off. Night dismisses an active cameo. During a
+  party, the shared child inventory owns their presence;
 - Totoro is the exception to ordinary party placement: while its projector
   channel is playing, all eight children sit in Cuddly-puddly to watch, even if
-  they had been dancing or marked sleepy;
+  they had been dancing or marked sleepy. Outside a party, its three-child
+  cameo audience is daylight-only;
 - party music becomes quieter when a projector, video, piano, or other foreground
   media experience is active;
 - opening **Who's here** freezes guest arrivals, departures, room changes, and

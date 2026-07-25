@@ -362,7 +362,6 @@ The main monitor desktop contains these app tiles:
 - Calendar
 - Tattoo
 - Mines
-- Pac-Man, after it has been discovered
 - Life
 - Doom
 - Code
@@ -373,12 +372,12 @@ The main monitor desktop contains these app tiles:
 Every monitor app has its own Kill gag. Right-click an open app and choose **Kill**
 to terminate it with its own send-off instead of closing it silently.
 
-Pac-Man begins hidden. During the ketamine magic-box trip, catch the roaming
-Behdad ghost to reveal the tile and open the game. Use the arrow keys or `WASD`,
+Pac-Man never appears on the desktop. During the ketamine magic-box trip, catch
+the roaming Behdad ghost to open the hidden game. Use the arrow keys or `WASD`,
 the on-screen direction pad, or a swipe across the maze. A blocked direction is
-remembered until the next junction. Closing the app retains the current maze;
-right-clicking it and choosing **Kill** starts a fresh maze but keeps the app
-discovered. A full game reset hides it again.
+remembered until the next junction. Closing the app retains the current maze,
+but catching the ghost during another ketamine trip is the only way back in.
+Right-clicking the open game and choosing **Kill** starts a fresh maze.
 
 Weather does not occupy a desktop tile. Click the Edmonton weather item in the
 computer's menu bar to open it. The live time beside it opens Clock, with the
@@ -636,8 +635,8 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   starts the game. Move to aim and fire at the invaders; close it with its visible
   close control.
 - **Minesweeper:** Available on both phone and monitor.
-- **Pac-Man:** Catch the roaming ghost during the ketamine trip to unlock the
-  monitor game. Clear the pellets while avoiding the three ghosts; the larger
+- **Pac-Man:** Catch the roaming ghost during the ketamine trip to enter the
+  hidden monitor game. Clear the pellets while avoiding the three ghosts; the larger
   corner pellets briefly make the ghosts edible.
 - **Game of Life and Doom:** Available on the monitor.
 - **Bouquet toss:** A fictional, game-only party moment with its own aiming

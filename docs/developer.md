@@ -573,14 +573,16 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
-Pac-Man is the exception to the desktop's normally static app catalog. Its
-`locked` predicate hides it from the dock, type-to-open search, Chat app catalog,
-and unknown-app listing until `__unlockPacman` runs from the ketamine ghost.
+Pac-Man is an internal `DESKTOP_APPS` entry with `hidden:true`: it never receives
+a dock tile and stays out of type-to-open search, the Chat app catalog, and
+unknown-app listings even after `__unlockPacman` runs from the ketamine ghost.
+The ghost is its sole entry path; it passes the private hidden-app allowance to
+`__openMonitorApp` so the ordinary public app-opening surfaces cannot launch it.
 `__pacmanCapture`/`__pacmanRestore` include discovery and the live maze in the
 loft checkpoint. Normal close retains the board and parks its one bounded
-`setTimeout`; reopening or returning focus resumes a running maze. Kill routes
-through the ordinary monitor task registry, resets the board without relocking
-the discovery, and full loft reset calls `__resetPacmanUnlock`.
+`setTimeout`; catching the ghost again or returning focus resumes a running maze.
+Kill routes through the ordinary monitor task registry and resets the board;
+full loft reset calls `__resetPacmanUnlock`.
 
 The maze is DOM/CSS grid rather than canvas because replaced elements inside the
 scaled monitor `foreignObject` do not composite in WebKit. Its overlapping cells
@@ -589,8 +591,8 @@ depend on grid source order: do not add `position`, `transform`, `z-index`,
 RenderLayer failure as other monitor apps. Keyboard repeat must only ensure the
 single simulation timeout exists, never clear and re-arm it; otherwise a held
 direction starves every tick. The loop gates each step on the open app, focus,
-visibility, and the Kill state. `node tests/pacman.js` covers discovery, input,
-pause/resume, checkpoint restore, context-menu Close/Kill behavior, and reduced
+visibility, and the Kill state. `node tests/pacman.js` covers hidden-only entry,
+input, pause/resume, checkpoint restore, context-menu Kill behavior, and reduced
 motion.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The

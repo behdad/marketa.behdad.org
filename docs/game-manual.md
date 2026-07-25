@@ -160,7 +160,6 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `N` | Play the next applicable song or music selection |
 | `G` | Show the next phone hint |
 | `Tab` | Send a random, context-appropriate test message |
-| `A` | Toggle autoplay |
 | `D` | Toggle day and night |
 | `Up` / `Down` | Set day or night |
 | `Shift+Left` / `Shift+Right` | Previous or next significant calendar day |

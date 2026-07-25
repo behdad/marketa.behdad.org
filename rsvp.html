@@ -26205,7 +26205,6 @@ var T = {
     kbd_f: "fullscreen",
     kbd_watch: "who’s here? (roster for this room)",
     kbd_tab: "send a random text",
-    kbd_autoplay: "autoplay (loops on its own)",
     autoplay_badge: "auto",
     kbd_party: "throw the garden party",
     kbd_u: "toggle the UV / blacklight",
@@ -27120,7 +27119,6 @@ var T = {
     kbd_f: "celá obrazovka",
     kbd_watch: "kdo je tady? (soupiska téhle místnosti)",
     kbd_tab: "poslat náhodnou zprávu",
-    kbd_autoplay: "autoplay (běží samo dokola)",
     autoplay_badge: "auto",
     kbd_party: "spustit zahradní večírek",
     kbd_u: "přepnout UV / černé světlo",
@@ -27888,7 +27886,6 @@ window.addEventListener("hashchange", function () {
       ["<kbd>f</kbd>", "kbd_f"],
       ["<kbd>w</kbd>", "kbd_watch"],
       ["<kbd>Tab</kbd>", "kbd_tab"],
-      ["<kbd>a</kbd>", "kbd_autoplay"],
       ["<kbd>Space</kbd>", "kbd_space"],
       ["<kbd>n</kbd>", "kbd_n"],
       ["<kbd>g</kbd>", "kbd_g"],
@@ -42525,20 +42522,20 @@ setOfficeProgress("pc", false);
   // copy to drift. tests/check.js parity-checks these keys against the CONSOLE_CMDS roster.
   var CONSOLE_HELP = {
     help: "help [command] — this list, or details for one command",
-    capabilities: "capabilities() — list the typed loft API; capabilities(\"query\") or capabilities(\"action\") filters it",
-    loftstatus: "loftstatus() — bounded live game status from loft.api",
+    capabilities: "capabilities() — list loft.api commands; capabilities(\"query\") or capabilities(\"action\") filters them",
+    loftstatus: "loftstatus() — show the current room, phase, environment, media, calls and minigames",
     clear: "clear — wipe the scrollback",
-    shortcuts: "shortcuts() — pop up the keyboard-shortcuts card (the one the '?' key shows); call it again to close it. returns whether the card ended up open",
+    shortcuts: "shortcuts() — toggle the keyboard-shortcuts card; returns whether it is open",
     keyboard: "keyboard(…) — alias for shortcuts(…), by the other name",
     laser: "laser(true) — loose a red dot the cat chases; laser(false) turns it off; laser() reports whether it's on",
     party: "party(true) throws the garden party; party(false) ends it; party() reports whether it's on",
-    chase: "chase() — send the three godkids (Irene, Robin & Navid), plus any visiting family kids whose parents have arrived, darting across the garden + giggling; lights the party + heads to the garden first if needed. they also run on their own now and then while the party's lit",
-    guests: "guests(true) — the three VIP guests crash the party and steal the show, dancing dead-centre floor: Ali (best man, long grey beard), Goli (Ali's fashionista girlfriend, platinum bob) & Spencer (Markéta's man-of-honor, the giant of the group). lights the party + heads to the garden first if needed. guests(false) sends them off (party rolls on); guests() reports whether they're on the floor. they also arrive on their own a beat after the party lights. aligoli() is an alias",
+    chase: "chase() — send Irene, Robin, Navid and any eligible visiting kids running across the garden; starts the party and goes there first if needed",
+    guests: "guests(true) — bring Ali, Goli and Spencer onto the dance floor; guests(false) sends them off; guests() reports whether they are there. starts the party and goes to the garden if needed. alias: aligoli()",
     aligoli: "aligoli — alias for guests; try `help guests`",
-    arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — a duo (or the single Bahareh) STROLLS IN through the garden gate onto the dance floor, an entrance moment. arrive() walks in a random duo. lights the party + heads to the garden first if needed. the duos also trickle in on their own, one per beat, as the party fills up. (ali = Ali & Goli, spencer = Spencer & Jay, alireza = Alireza & Mahzad, farhang = Farhang & Lauren, bahareh = Bahareh solo)",
-    roster: "roster() — toggle the \"who's here?\" panel: a live at-a-glance list of everyone in the room you're LOOKING AT right now (name · role), kids included — the dance floor, the bar couple + Pouria, the nook's residents/visitors/playing kids, the office pair, the deck crowd + Hamid at the grill. it freezes attendance and garden positions while open. click a name for their card, an in-place wiggle and a 3s arrow (works for the DJ + photographer too). roster(true) opens it, roster(false) closes it. the 'h' and 'w' keys do the same. window.__whoIsHere(\"office\") returns the same list for any room",
+    arrive: "arrive(\"ali\"|\"spencer\"|\"alireza\"|\"farhang\"|\"bahareh\") — walk that guest group into the party; arrive() chooses one randomly. ali includes Goli, spencer includes Jay, alireza includes Mahzad, and farhang includes Lauren",
+    roster: "roster(true) — open \"who's here?\" for the current room; roster(false) closes it; roster() toggles it. attendance and positions stay fixed while it is open",
     reset: "reset() — restart the whole loft from the top (no confirmation — you typed it)",
-    autoplay: "autoplay(true) — PERSISTENT ATTRACT MODE for the wedding BBQ screen: the loft composes an endless show from 30 short authored stories — espresso and bar rituals, music, arrivals, wedding moments, photos, projector/toy scenes, calls, computer and phone apps, weather, the BBQ, and cross-room relays. A seeded weighted Markov director moves between eight narrative moods; hard recent-history and coverage rules keep exact stories from repeating and bring back any room that's been away too long. A visible ghost cursor shows each interaction. It TAKES OVER FROM WHEREVER THE GAME IS (never resets to the kitchen), opens with a short room sweep, then plays the first full story where it found you. Phone notifications INTERRUPT to be opened + acted on, then the exact story/beat RESUMES. This is NOT the fixed Trailer reel (that's the ▷ Trailer button). autoplay(false) or the 'a' key stop it for good; autoplay() toggles; the □ Take over control hands you the wheel but leaves the screen to drift back to attract after a quiet spell. It does NOT stop on stray clicks/keys; pauses cleanly when the tab is hidden or unfocused, and honours prefers-reduced-motion. Open with #autoplay to boot straight into it (?autoplay remains supported)",
+    autoplay: "autoplay(true) — let the loft run itself from the current room; autoplay(false) stops it; autoplay() reports whether it is running. Use Take over to resume playing",
     quit: "quit (or exit) — shut the console down (refresh, back to the desktop)",
     blacklight: "blacklight(true) — UV wash over the whole loft; blacklight(false) off; blacklight() reports whether it's on",
     uv: "uv — alias for blacklight; try `help blacklight`",
@@ -42550,8 +42547,8 @@ setOfficeProgress("pc", false);
     daylight: "daylight(true) — bring the day back; daylight(false) — dusk; daylight() reports whether it's day. day()/night() are aliases",
     night: "night() — dusk (alias for daylight(false))",
     day: "day() — daylight (alias for daylight(true))",
-    season: "season(\"name\") — a season by name in quotes, e.g. season(\"spooky\"), or season() for a surprise. each is a pretend-date driving the dressing, the snow-vs-rain odds, the smoke and the new-year sky. seasons: \"wedding\" · \"summer\" · \"smoky\" · \"autumn\" · \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"spring\" · \"auto\" (the 's' key cycles from the May 1 wedding forward around the year). birthdays are their OWN axis now — see birthday()",
-    birthday: "birthday(\"name\") — wear a friend or family member's party hat (or crown) and pan to where they are, e.g. birthday(\"ali\"). time-travels the loft to their birthday, so the day's real season dresses around the hat. birthday() with no arg advances to the next in the ring (same as the 'b' key; Shift+B walks it back); birthday(\"list\") prints everyone. Markéta's Czech family (Markéta, Madla, Robert, Elisabeth, Felix) get crowns; everyone else a cone. call-only family (Ashraf/Mohsen in Tehran, Daniel/Marie/Baka in Prague) show their headwear on the video call",
+    season: "season(\"name\") — preview a season and its pretend date; season() chooses one. names: \"wedding\" · \"summer\" · \"smoky\" · \"autumn\" · \"spooky\" · \"holiday\" · \"newyear\" · \"winter\" · \"valentines\" · \"spring\" · \"auto\"",
+    birthday: "birthday(\"name\") — time-travel to that person's birthday and show their birthday scene; birthday() advances to the next person; birthday(\"list\") prints everyone",
     play: "play() — resume the music if it's paused",
     pause: "pause() — pause the music if something's playing",
     temp: "temp() — the indoor + outdoor thermometer reading. temp(-25) SETS the outside temperature in °C (-40…40) and the loft's whole outdoor model follows it; temp(false) hands it back to Edmonton's real weather. Clicking the outdoor thermometer on the balcony wall opens the same control, in 5° steps. Take it to -20 or colder on a clear winter day and sun dogs (parhelia) come out beside the sun in the OFFICE window — the one window in the loft that doesn't look north",
@@ -42565,7 +42562,7 @@ setOfficeProgress("pc", false);
     rain: "rain(true) — falling rain over the balcony (drops in the sky + streaks down every window + a rain hiss), day or night; rain(false) clears it; rain() reports whether it's raining. Independent of storm() — rain alone is a plain shower, rain(true)+storm(true) is a thunderstorm",
     overcast: "overcast(true) — a grey overcast cloud wash over the whole loft (steps to the balcony + brings the day back, since the wash reads against daylight); overcast(false) clears it; overcast() reports whether it's overcast. Independent of rain()/storm()",
     dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or 1–12, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"persian\" · \"polka\" · \"horah\" · \"bulgar\" · \"dupak\" · \"cumbia\"",
-    jukebox: "jukebox(\"salsa\") — request a garden-party style, the console twin of tapping the DJ booth (same styles as dance(); also 1–12 or random()). jukebox() lists them with the current one starred. throws a DJ scratch + re-arms the auto-rotation. run party(true) first",
+    jukebox: "jukebox(\"salsa\") — request a garden-party style with the DJ scratch; accepts the same names and numbers as dance(), or random(). jukebox() lists them with the current style starred. run party(true) first",
     dj: "dj(\"sina\"|\"danesh\") — who spins at the party (or 1–2, or random()); dj() returns the current DJ {n, name}. sina wears the cap, danesh the afro",
     firstdance: "firstdance() — the hosts' first dance: the crowd rings the floor + pauses, the UV blacklight drops, and Behdad & Markéta sway centre-floor alone under a soft spotlight for ~13s, then everyone resumes. lights the party + heads to the garden + crashes the crowd first if needed. firstdance(false) ends it early",
     slowdance: "slowdance() — a slow-song lull: the WHOLE floor pairs off (the couples sway together in a close hold, the generic dancers pair too), the UV blacklight softens to a warm golden wash, and everyone sways slowly for ~24s, then the party rolls back on. lights the party + heads to the garden + crashes the crowd first if needed. slowdance(false) ends it early",
@@ -42577,8 +42574,8 @@ setOfficeProgress("pc", false);
     chairlift: "chairlift() — the chair-lift hora: the crowd hoists Behdad & Markéta up on chairs and rings around bouncing (Persian/Jewish tradition), then lowers them (~12s). lights the party + heads to the garden + crashes the crowd first if needed. chairlift(false) ends it early",
     cocktail: "cocktail(\"negroni\") — Pouria mixes that real drink from the bar's menu (partial name ok); cocktail() makes the featured signature drink. lights the party + steps behind the bar first if it's dark. he also mixes on his own while you watch the bar. alias: drink()",
     mixer: "mixer() — the hands-on cocktail toy: instead of watching Pouria, YOU dose a shaker at the bar. Tap the little ingredient bottles (gin · Campari · sweet vermouth · blue curaçao) to fill + tint the shaker, then tap the shaker to shake it and it pours into a glass Pouria presents. Any combo makes a drink; hitting a real recipe (gin+Campari+vermouth → Negroni; gin+vermouth+curaçao → Yale) names it, the rest are a house pour. mixer() runs a self-mixing demo of a random named drink; mixer(\"negroni\") mixes that one; mixer(\"gin\") improvises. raises the bar + steps behind it first if it's dark",
-    couples: "couples(true) — bring a random named guest couple to groove at the bar now; couples(\"madla\") forces a specific couple (by member or couple name); couples(false) clears them; couples() reports who's there. a couple rotates through on its own most of the party (needs it lit + the kitchen on screen), skipping anyone already dancing in the garden.",
-    officefolks: "officefolks(true) — a named cast couple slips into the quiet office to hang out, drinks in hand; officefolks(\"madla\") forces a specific couple (by member or couple name); officefolks(false) clears them; officefolks() reports who's there. a couple drifts in occasionally on its own during the party (needs the office on screen), skipping anyone already dancing in the garden, at the bar, or on the balcony.",
+    couples: "couples(true) — bring a random guest couple to the bar; couples(\"madla\") chooses by member or couple name; couples(false) clears them; couples() reports who is there",
+    officefolks: "officefolks(true) — bring a random guest couple to the office; officefolks(\"madla\") chooses by member or couple name; officefolks(false) clears them; officefolks() reports who is there",
     lang: "lang(\"cs\"|\"en\") — switch the page language; lang() prints the current one",
     caption: "caption(\"text\"[, {blink:ms, hold:ms}]) — overwrite the hint line above the scene and return the previous line; caption() reads it. blink pulses the line to catch the eye; hold restores the previous line after that long. also caption(text, blinkMs, holdMs). a room change or hint reclaims it",
     volume: "volume(v) — master volume over ALL the loft's audio (sound effects, songs, and every music bed), on a 0–1 scale (0 = mute, 1 = full, out-of-range clamps); returns the OLD level so it's restorable. volume() reports the current level. session-only — a reload resets to 1",
@@ -42589,26 +42586,26 @@ setOfficeProgress("pc", false);
     countdown: "countdown() — days left until each wedding",
     fullscreen: "fullscreen(true) — fill the screen with the loft; fullscreen(false) leaves; fullscreen() reports whether it's on",
     rainbow: "rainbow() — arc a rainbow over the balcony",
-    aurora: "aurora(true) — the northern lights over the garden window (steps into the garden, falls to a clear night first); aurora(false) fades them and unpins the index; aurora(0–9) drives a chosen planetary Kp — ~2 is a faint smudge low in the north, 5 a real display, 7+ a storm reaching up the sky with its red crown; aurora() reports whether they're showing, the Kp driving them and why. They also come out on their own: year-round (they don't care about the season), gated on real darkness — so effectively never through the bright midsummer nights — with the odds riding the live NOAA Kp forecast, clustered around the equinoxes, and never through cloud",
-    twilight: "twilight(true) — the warm dawn/dusk sky-wash over the balcony (steps out to the balcony); twilight(false) clears it; twilight() reports its state. It also ramps up on its own around Edmonton's real sunrise/sunset, over a window computed from the sun's actual angle for the date — roughly 2.5h either side at midsummer, ~1.25h at the equinoxes",
+    aurora: "aurora(true) — show the northern lights from the garden on a clear night; aurora(false) clears them; aurora(0–9) chooses the Kp intensity; aurora() reports their state. Live Kp may also bring them out automatically",
+    twilight: "twilight(true) — show the warm dawn/dusk sky from the balcony; twilight(false) clears it; twilight() reports its state. It also follows Edmonton sunrise and sunset automatically",
     timelapse: "timelapse() — \"a day in the loft\": fast-forward the clock through a full 24h in ~30s so the balcony sky cycles dawn → midday → sunset → moonrise → night, looping until you stop it (steps out to the balcony first). timelapse(false) stops it and restores the real clock; Esc or stop() also end it. alias: daylapse()",
     smoker: "smoker(true) — fire up the balcony smoker, low and slow; smoker(false) shuts it down; smoker() reports whether it's on (bbq is an alias)",
     bbq: "bbq(true) — start the whole BBQ (lid up + coals lit); bbq(false) shuts it down; bbq() reports whether it's smoking. For just the firebox or just the lid, see smoker / smokerlid",
     smokerlid: "smokerlid(true) — raise the smoker lid; smokerlid(false) lowers it; smokerlid() reports whether it's open",
     smores: "smores(true) — light the balcony bonfire with two kids (Irene + a random boy) roasting marshmallows; smores(false) puts it out; smores() reports whether it's lit (auto-wraps up after ~30s)",
-    snowman: "snowman(true) — build a snowman on the balcony deck with two godkids lobbing a snowball around it; snowman(false) melts it; snowman() reports whether it's up. The daytime-winter counterpart to smores — the brick-wall dblclick builds it by day in winter, lights s'mores after dark",
-    leafpile: "leafpile(true) — rake an autumn leaf pile on the balcony deck with two godkids leaping in, leaves puffing up; leafpile(false) sweeps it away; leafpile() reports whether it's up. The daytime-autumn play scene — the brick-wall dblclick rakes it by day in autumn (s'mores after dark). One scene at a time",
-    blossomplay: "blossomplay(true) — a spring blossom toss on the balcony deck with two godkids chasing petals back and forth; blossomplay(false) clears it; blossomplay() reports whether it's up. The daytime-spring play scene — the brick-wall dblclick starts it by day in spring (s'mores after dark). One scene at a time",
-    sprinkler: "sprinkler(true) — a summer sprinkler romp on the balcony deck with two godkids darting through a sweeping arc of water; sprinkler(false) shuts it off; sprinkler() reports whether it's on. The daytime-summer play scene — the brick-wall dblclick turns it on by day in summer (s'mores after dark). One scene at a time",
+    snowman: "snowman(true) — build a snowman on the balcony with two kids; snowman(false) melts it; snowman() reports whether it is up",
+    leafpile: "leafpile(true) — start the kids' autumn leaf-pile scene on the balcony; leafpile(false) clears it; leafpile() reports whether it is up",
+    blossomplay: "blossomplay(true) — start the kids' spring blossom scene on the balcony; blossomplay(false) clears it; blossomplay() reports whether it is up",
+    sprinkler: "sprinkler(true) — start the kids' summer sprinkler scene on the balcony; sprinkler(false) clears it; sprinkler() reports whether it is on",
     kidsAsleep: "kidsAsleep(true) — the kids are finally asleep 😴 Cuddly clears, cameos/chases/balcony play stop, and each child has only a small chance to stay up dancing. kidsAsleep(false) wakes them; kidsAsleep() reports whether they're down. Auto-wakes after ~1–2 min (or tap the 'kids on the loose' text). The same thing a mom's phone text does",
     cooked: "cooked(1|2|3) — is that burger done yet (bool)? cooked() — all three, as [bool, bool, bool]",
     beans: "beans() — coffee beans left in the grinder hopper (0..22); beans(n) sets the level (fresh heap to match) and returns the previous count",
     gong: "gong() — head to the kitchen and strike the gong: full ring, echoes, room rattle, and the same chance of knocking down a pan as a click",
     servefood: "servefood() — serve a cooked burger (opens the lid if needed); servefood(random()) picks a random ready one. returns true if one was served",
     phone: "phone(true) — bring up the pocket phone; phone(false) puts it away; phone() reports whether it's up. phone(\"cocktails\")/phone(\"weather\") open that phone app (skips the lockscreen); a bad name lists them",
-    album: "album() — open the pocket-phone wedding album: Aspen's captured party polaroids, newest first. she snaps one every short photo-pose moment and whenever you tap her at the garden party; each is an intimate portrait — the couple + one guest (or a guest couple). She also works the OTHER rooms during the party (see snap()), and those cards show that room and exactly who was in it. album() also echoes the photo count",
-    snap: "snap() — Aspen photographs the room you're in RIGHT NOW: she lifts the camera, the flash pops, the shutter goes, and a keepsake of exactly whoever is in that room lands in your phone album — on that room's own backdrop. snap(\"office\")/snap(\"kitchen\")/snap(\"cuddly\")/snap(\"balcony\")/snap(\"garden\") heads there first so you can watch her take it. Lights the party if it's dark (she only works the party). She takes these on her own rounds too, every ~26-44s, in whichever room you're standing in",
-    madla: "madla() — after phase 2, while the party is off, Markéta's sister (a doctor in Germany, bored on a night shift) rings your phone: a pulsing call card drops top-centre for 15s (tap to answer → pan to the cuddly room, then the video call; ignore it to miss the call). madla(true) answers straight away under the same gate. she's incoming-only — you can't dial her back",
+    album: "album() — open the pocket-phone wedding album and report its photo count",
+    snap: "snap() — have Aspen photograph the current room into the album; snap(\"office\") or another room name goes there first. starts the party if needed",
+    madla: "madla() — Madla, a bored hospital doctor in Germany, rings your phone; madla(true) answers immediately",
     saturday: "saturday() — Markéta's parents ring from Prague for the standing Saturday call: the same call card, tap to answer (or the × to let it go). saturday(true) answers straight away. left alone it comes on its own, once per Saturday in the loft, between 08:00 and 14:00 here — their Saturday evening; date(\"YYYY-MM-DD\") a Saturday and clock(9) to see it",
     sound: [
       "sound(\"id\"[, …args]) — play a loft sound effect by id, e.g. sound(\"gong\"). sound() lists every id; sound(\"prefix\") lists the ids starting with that prefix — try sound(\"cat\") · sound(\"phone\").",
@@ -42663,7 +42660,7 @@ setOfficeProgress("pc", false);
     irene: "irene(true) — the niece skips in for a random visit; irene(false) sends her away; irene(\"pose\") forces one: \"roam\" · \"bounce\" · \"sit\" · \"hug\" · \"hugb\" · \"catplay\" · \"catjump\" · \"octiplay\" · \"swing\"; irene() reports whether she's visiting",
     visitors: "visitors(\"duo\") — a friend duo drops by the cuddly-puddly: \"ali\" (+ Goli) · \"spencer\" (+ Jay) · \"alireza\" (+ Mahzad) · \"bahareh\" (+ Irene). visitors(\"duo\",\"text\") just sends their \"are you home?\" text to the phone instead. visitors(false) sends whoever's here away; visitors() lists the duos. (suppressed on meal days — no visitors while food's served)",
     message: "message(\"your text\") — send a message as the player to the wedding crew; it lands in Messages and may receive an asynchronous reply.",
-    mouses: "mouses(true) — summon Madla's kids Elisabeth & Felix to the party (they only visit ~1 in 3 loads on their own). mouses(false) sends them home; mouses() reports whether they're visiting.",
+    mouses: "mouses(true) — bring Madla's kids Elisabeth and Felix to the party; mouses(false) sends them home; mouses() reports whether they are visiting",
     piano: "piano(\"piece\") — the night-sky piano; a piece by name in quotes, e.g. piano(\"bach\"), or 1–5: \"satie\" · \"chopin\" · \"beethoven\" · \"bach\" · \"mozart\". piano() plays a random one (classic is an alias)",
     classic: "classic — alias for piano; try `help piano`",
     kitten: "kitten — alias for cat; try `help cat`",
@@ -55817,36 +55814,43 @@ async def localfont(name):
       prague: { fromKey: "laptop_place", subKey: "sat_call_sub" }
     };
     var callRingWho = "madla";
+    var callRingForced = false; // explicit script/outlet calls may bypass the autonomous phase/party gate
     var callRingEl = null, callRingHideT = null, callRingT = [];
     function clearCallRingTimers() { callRingT.forEach(clearTimeout); callRingT = []; }
     function hideCallRing() {
       clearCallRingTimers();
       if (callRingHideT) { clearTimeout(callRingHideT); callRingHideT = null; }
       if (callRingEl) callRingEl.classList.remove("show");
+      callRingForced = false;
     }
     function callRingUp() { return !!(callRingEl && callRingEl.classList.contains("show")); }
     // Answers whoever the card is currently showing — read at click time, so the one listener
     // bound to the card serves every caller.
     function answerRing() {
       var who = callRingWho;
+      var forced = callRingForced;
       hideCallRing();
-      if (who === "madla" && !madlaAvailable()) return false;
+      if (who === "madla" && !forced && !madlaAvailable()) return false;
       if (callee || anyExternalCall()) return; // a call already up (raced the ring) → let it be
-      if (window.goToStage) window.goToStage("cuddly"); // pan to the cuddly room first, then the phone
+      // Madla is a pocket-phone call and overlays whichever room the player is in. Keep Prague's
+      // authored incoming sequence, which deliberately arrives after the Cuddly room pan.
+      if (who !== "madla" && window.goToStage) window.goToStage("cuddly");
       setTimeout(function () {
         if (window.__openPhoneModal) window.__openPhoneModal(true); // launcher, skip the lockscreen (this is a live incoming call, not a cold open)
         openIncall(who);
-      }, 620); // let the room slide settle before the phone overlays it
+      }, who === "madla" ? 0 : 620); // Prague waits for its room slide; Madla opens in place
       return true;
     }
-    function answerMadla() {
-      if (!madlaAvailable()) { if (callRingWho === "madla") hideCallRing(); return false; }
+    function answerMadla(force) {
+      if (!force && !madlaAvailable()) { if (callRingWho === "madla") hideCallRing(); return false; }
       callRingWho = "madla";
+      callRingForced = !!force;
       return answerRing();
     }
     function answerPrague() { callRingWho = "prague"; answerRing(); }
-    function showCallRing(who) {
+    function showCallRing(who, forced) {
       callRingWho = RING_CALLERS[who] ? who : "madla";
+      callRingForced = !!forced;
       if (document.hidden || !document.hasFocus()) return; // unattended → they'd call back; no ghost ring
       if (callRingUp() || callee || anyExternalCall() || isOpen()) return; // don't ring over a live call or an open phone
       var host = document.querySelector(".hunt-viewport") || document.body;
@@ -55887,24 +55891,26 @@ async def localfont(name):
     window.__hideCallRing = hideCallRing;
     // trigger an incoming ring (used by both schedules + the madla()/saturday() console hooks).
     // Refuses while a call's already live or the phone's open (they'd just get a busy tone).
-    function ringCall(who) {
+    function ringCall(who, forced) {
       if (callee || anyExternalCall() || isOpen() || callRingUp()) return false;
-      showCallRing(who);
+      showCallRing(who, forced);
       return callRingUp();
     }
     function madlaAvailable() {
       return !!window.__secondRound && !window.__gardenPartyOn;
     }
     function ringMadla() { return madlaAvailable() && ringCall("madla"); }
+    function ringMadlaForced() { return ringCall("madla", true); }
     window.__madlaAvailable = madlaAvailable;
-    window.__madlaRing = ringMadla;   // console/test hook: fire the incoming ring on demand
+    window.__madlaRing = ringMadla;   // autonomous path: phase 2, party off
+    window.__madlaRingForced = ringMadlaForced; // explicit script/outlet path: bypasses only that autonomous gate
     window.__answerMadla = answerMadla; // test hook: answer as if the ring were tapped
     window.__pragueRing = function () { return ringCall("prague"); };
     window.__answerPrague = answerPrague;
-    // Poking the cuddly outlet schedules Madla on demand, but shares the same phase-two +
-    // party-off gate as every other Madla entry point.
+    // Poking the cuddly outlet is an explicit discovery path, so it always tries the authored
+    // incoming call; only the random scheduler observes the phase-two + party-off gate.
     window.__madlaFromOutlet = function () {
-      return ringMadla();
+      return ringMadlaForced();
     };
     // ── daytime schedule ── a single self-rescheduling timer that RARELY fires Madla's incoming
     // ring during attended phase-two daytime play (day, no party, visible+focused, not cinematic, no call
@@ -69185,13 +69191,6 @@ function spawnDustMote(container) {
       // its button, not a key. No-op in the first round (before a party has lit this session) — the
       // roster is sealed then, so the key does nothing rather than flashing an empty panel.
       if (window.roster && window.__secondRound) window.roster();
-    } else if (e.key === "a" || e.key === "A") {
-      e.preventDefault();
-      // 'a' → toggle autoplay (attract mode): the self-driving BBQ loop. Nothing else exits it —
-      // stray clicks and keys are deliberately harmless so the BBQ kiosk survives being poked at
-      // (this key and autoplay(false) stop the show for good; □ Take over hands the wheel to a
-      // human but lets the kiosk drift back to attract after a quiet spell).
-      if (window.autoplay) window.autoplay();
     }
   });
 
@@ -79552,8 +79551,8 @@ function spawnDustMote(container) {
   // handling time, so the same text can never be taken twice.
   //
   // KIOSK CONTRACT. Stray clicks and keys do NOT stop autoplay (the owner must be able to click
-  // for fullscreen without killing the show). Only the □ Take over control, autoplay(false) and
-  // the 'a' key stop it.
+  // for fullscreen without killing the show). Only the □ Take over control and autoplay(false)
+  // stop it.
   var ROOM_RING = ["kitchen", "garden", "cuddly", "office", "balcony"];
   var AUTOPLAY_TICK_MS = 700;       // driver cadence while idling (paused) — cheap enough to sit for hours
   var AUTOPLAY_BEAT_MS = 2000;      // default pause after a beat when a scene doesn't specify one
@@ -80541,8 +80540,7 @@ function spawnDustMote(container) {
   }
 
   // A trusted human gesture takes over: exit the loop but keep idle-resume armed so the kiosk comes
-  // back. The autoplay toggle key ('a') is handled in the main keydown handler and must NOT count as
-  // a takeover, so it's excluded there before this ever sees it.
+  // back.
   function apOnUserGesture() {
     if (apOn) stopAutoplay(true);             // hand over the wheel, keep drift-back armed
     else if (apIdleResume) apArmIdleResume(); // already handed over — push the drift-back timer out
@@ -80550,19 +80548,16 @@ function spawnDustMote(container) {
   window.__autoplayTakeover = apOnUserGesture; // kept for tests / programmatic takeover
   // NB: autoplay deliberately does NOT stop on arbitrary clicks/keys — on the BBQ kiosk the owner
   // needs to click (e.g. go fullscreen) without killing the show. It yields ONLY to the explicit
-  // "Take over" control (which keeps the drift-back armed), autoplay(false) or the 'a' key (both of
-  // which turn the feature off for good). There is no global pointerdown/keydown
-  // takeover handler, and adding one would break the kiosk contract.
+  // "Take over" control (which keeps the drift-back armed) or autoplay(false), which turns the
+  // feature off for good. There is no global pointerdown/keydown takeover handler, and adding one
+  // would break the kiosk contract.
   document.addEventListener("visibilitychange", function () { if (apOn && !document.hidden) apArmDriver(300); });
   window.addEventListener("focus", function () { if (apOn) apArmDriver(300); });
 
-  // Public entry: autoplay() / autoplay(true) starts (and arms idle-resume), autoplay(false) stops
-  // for good, autoplay() with no arg toggles. Also the console command + the 'a' key.
+  // Public entry: autoplay() reports state; autoplay(true) starts (and arms idle-resume);
+  // autoplay(false) stops for good.
   window.autoplay = function (arg) {
-    if (arguments.length === 0) {
-      if (apOn) { stopAutoplay(false); return "⏹ autoplay off."; }
-      apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; use □ Take over to step in.";
-    }
+    if (arguments.length === 0) return apOn;
     if (arg) { apIdleResume = true; startAutoplay(); return "▶ autoplay on — the loft drives itself from here, forever; use □ Take over to step in."; }
     stopAutoplay(false); return "⏹ autoplay off.";
   };
@@ -80839,7 +80834,7 @@ function spawnDustMote(container) {
     // "Take over" hands the wheel to a human but KEEPS the drift-back armed, so the BBQ screen
     // returns to attract after a quiet spell. (It used to call autoplay(false), which clears
     // idle-resume for good — that made the 90s drift-back dead outside the tests.) A deliberate
-    // autoplay(false) / the 'a' key are still the way to turn the feature off for good.
+    // autoplay(false) is still the way to turn the feature off for good.
     if (window.__autoplayOn && window.__autoplayOn()) { window.__autoplayTakeover(); return; }
     stopCinematic();
   });
@@ -85165,12 +85160,11 @@ function spawnDustMote(container) {
 
   // Madla — Markéta's sister, a doctor in Germany, calling on her night shift. INCOMING-ONLY:
   // there's no way to dial HER (she's off the phone dialer + CITY_ORDER on purpose). This console
-  // hook just triggers the incoming ring the way the daytime schedule does. madla(true) answers
-  // straight away (pan to the cuddly room + open into the connecting call); a bare madla() rings.
+  // hook explicitly triggers the incoming ring regardless of phase/party. madla(true) answers
+  // straight away in the current room; a bare madla() rings.
   window.madla = function (arg) {
-    if (!(window.__madlaAvailable && window.__madlaAvailable())) return "📞 Madla only calls during phase 2 while the party is off.";
     if (arg === true) {
-      if (window.__answerMadla && window.__answerMadla()) {
+      if (window.__answerMadla && window.__answerMadla(true)) {
         if (window.echo) window.echo("📞 answering Madla — her night-shift call from Germany.");
         return window.__loftAwaitLifecycle(function () { return !!(window.__loftCallBusy && window.__loftCallBusy()); }, {
           label: "Madla call", startTimeout: 3000, timeout: Infinity, settle: 900, value: { completed: true, caller: "madla" }
@@ -85178,7 +85172,7 @@ function spawnDustMote(container) {
       }
       return "the call hook isn't ready yet.";
     }
-    if (window.__madlaRing && window.__madlaRing()) {
+    if (window.__madlaRingForced && window.__madlaRingForced()) {
       if (window.echo) window.echo("📞 Madla's calling — that's her ringing top-centre. Tap to answer (or ignore for 15s to miss it).");
       return window.__loftAwaitLifecycle(function () { return !!(window.__loftCallBusy && window.__loftCallBusy()); }, {
         label: "Madla call", startTimeout: 3000, timeout: Infinity, settle: 900, value: { completed: true, caller: "madla" }

@@ -572,10 +572,11 @@ The launcher owns touch gestures that begin on app icons because those icons use
 holding briefly before movement enters icon-reorder mode. Keep that distinction when changing the
 grid so short phone screens do not leave only the gaps as usable scroll targets.
 
-Madla's incoming call has one availability boundary, `__madlaAvailable()`: phase 2 must be latched
-and the party must be off. The random scheduler, cuddly outlet, console command, typed action, and
-answer hook all route through `__madlaRing`/`__answerMadla`, so no entry point may reproduce or
-bypass that condition.
+Madla's autonomous incoming call observes `__madlaAvailable()`: phase 2 must be latched and the
+party must be off. Explicit discovery/scripting paths (`madla()` and the cuddly outlet) use
+`__madlaRingForced()` and may bypass only that phase/party gate; busy calls and an open phone still
+prevent a second call. The forced flag follows the ring into `__answerMadla(true)`, so an explicitly
+requested call remains answerable if the party or phase has not changed.
 
 ## Dates, calendar, weather, and time
 

@@ -68,6 +68,14 @@ var HARNESS = [
   "    await sleep(460); chatKill=window.__monitorChatKillState(); S('chat_kill_tokens', chatKill.stage==='collapse' && chatKill.tokens>0);",
   "    await sleep(660); chatKill=window.__monitorChatKillState(); S('chat_kill_context_cleared', chatKill.stage==='cleared' && chatKill.system==='[context cleared]' && chatKill.systemVisible===true); S('chat_kill_caption', document.getElementById('hunt-caption').textContent==='Charlie has left the chat.');",
   "    await sleep(520); chatKill=window.__monitorChatKillState(); var chatInput=document.getElementById('monitor-chat-input'); S('chat_kill_teardown', chatKill.active===false && chatKill.stage==='' && !mon().classList.contains('show-chat') && !mon().classList.contains('death-chat') && window.__monitorChatHistory().length===0 && chatInput.value==='' && chatInput.disabled===false);",
+  // Call Kill cancels the pending connect, drops the signal bars strongest-first, cuts the
+  // waveform to a flat line, then silently tears down the call.
+  "    showApp('show-family'); document.documentElement.lang='en'; if(window.__placeMonitorCall) window.__placeMonitorCall('tehran'); await sleep(20);",
+  "    ctxAt(mon()); if(monKill()) monKill().click(); await sleep(40); var callKill=window.__monitorCallKillState?window.__monitorCallKillState():{};",
+  "    S('call_kill_started', mon().classList.contains('death-call') && mon().classList.contains('show-family') && callKill.active===true && callKill.bars===4 && callKill.wave>0.9);",
+  "    await sleep(520); callKill=window.__monitorCallKillState(); S('call_kill_signal_dropping', callKill.stage==='signal' && callKill.bars>0 && callKill.bars<4);",
+  "    await sleep(650); callKill=window.__monitorCallKillState(); S('call_kill_wave_cut', callKill.stage==='flatline' && callKill.bars===0 && callKill.wave<0.05 && callKill.flat>0.95); S('call_kill_caption', document.getElementById('hunt-caption').textContent==='It’s not you. It’s the connection.');",
+  "    await sleep(1100); callKill=window.__monitorCallKillState(); S('call_kill_teardown', callKill.active===false && callKill.call===false && !mon().classList.contains('show-family') && !mon().classList.contains('death-call'));",
   // browser Kill is the one non-runtime app that flashes: Chrome's ~2.2s 'Aw, Snap!' crash (death-browser),
   // THEN closes. Menu shows only an enabled Kill (no Restart); the flash starts immediately, show-browser
   // stays up during it, and is torn down only after. Mirrors the doom kill shape (flash-then-close).
@@ -234,7 +242,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 45000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 49000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -256,6 +264,10 @@ check("Chat Kill stops exactly at “I think, therefore I…”", s.chat_kill_st
 check("Chat Kill collapses the conversation into context tokens", s.chat_kill_tokens === true);
 check("Chat Kill ends on the exact cleared-system line and caption", s.chat_kill_context_cleared === true && s.chat_kill_caption === true);
 check("Chat Kill resets history and input, removes death state, and closes", s.chat_kill_teardown === true);
+check("Call Kill starts with the live call frozen behind a full signal", s.call_kill_started === true);
+check("Call Kill drops its signal bars one at a time", s.call_kill_signal_dropping === true);
+check("Call Kill cuts the waveform to a flat line and shows its exact caption", s.call_kill_wave_cut === true && s.call_kill_caption === true, { wave: s.call_kill_wave_cut, caption: s.call_kill_caption });
+check("Call Kill silently ends the call and removes its death state", s.call_kill_teardown === true);
 check("browser menu shows only an enabled Kill, no Restart", Array.isArray(s.browser_items) && s.browser_items.length === 1 && /kill/i.test(s.browser_items[0] || "") && s.browser_kill_enabled === true && s.browser_has_restart === false, { items: s.browser_items, enabled: s.browser_kill_enabled, restart: s.browser_has_restart });
 check("browser Kill runs the Aw-Snap flash then closes the app", s.browser_kill_hid_menu === true && s.browser_kill_flash_started === true && s.browser_kill_still_open_during_flash === true && s.browser_kill_closed_app === true && s.browser_kill_flash_ended === true, { hid: s.browser_kill_hid_menu, flash: s.browser_kill_flash_started, during: s.browser_kill_still_open_during_flash, closed: s.browser_kill_closed_app, ended: s.browser_kill_flash_ended });
 console.log(" python / linux (folded into the console menu):");

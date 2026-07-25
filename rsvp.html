@@ -4163,6 +4163,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-life #monitor-life-farewell{opacity:1}
 #office-monitor.death-tattoo #monitor-tattoo-farewell{opacity:1}
 #office-monitor.death-video #monitor-video-farewell{opacity:1}
+#office-monitor.death-call #monitor-call-farewell{opacity:1}
 #office-monitor.death-browser #monitor-awsnap{opacity:1}
 /* Browser is the one app defined AFTER #monitor-deathfx (it paints above), and .browser-wrap is
    opaque, so hide the frozen browser + its bezel nav arrows under the Aw-Snap overlay during the
@@ -21076,6 +21077,24 @@ section{margin:1.9rem 0}
 <g id="monitor-video-farewell-crowd"></g>
 <rect id="monitor-video-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
 </g>
+<!-- Call killed → the connection degrades in three beats: the strongest signal bar drops
+     first, then the rest; the live waveform cuts to a flat line; finally the call closes. -->
+<g id="monitor-call-farewell">
+<rect x="254" y="154" width="124" height="42" fill="#10251c" fill-opacity="0.94"/>
+<circle cx="273" cy="175" r="10.5" fill="#1c3527" stroke="#3b7659" stroke-width="0.7"/>
+<path d="M267.4 168.8 Q269.8 176.2 277.3 180.4" fill="none" stroke="#a9d6b8" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M267.2 168.9 Q270.4 167.7 272.2 169.6 L269.9 173 Q268.2 171.4 267.2 168.9 Z" fill="#a9d6b8"/>
+<path d="M277.2 180.5 Q278.7 177.9 276.5 176.2 L273.4 178.8 Q275.2 180.2 277.2 180.5 Z" fill="#a9d6b8"/>
+<g id="monitor-call-signal" fill="#8fd0a8">
+<rect class="call-signal-bar" x="352" y="181" width="3.8" height="6" rx="0.8"/>
+<rect class="call-signal-bar" x="357.2" y="176.5" width="3.8" height="10.5" rx="0.8"/>
+<rect class="call-signal-bar" x="362.4" y="172" width="3.8" height="15" rx="0.8"/>
+<rect class="call-signal-bar" x="367.6" y="167.5" width="3.8" height="19.5" rx="0.8"/>
+</g>
+<path id="monitor-call-wave" d="M289 176 H296 L299 170 L303 183 L307 167 L311 179 L315 172 L319 180 L323 169 L327 183 L331 176 H344" fill="none" stroke="#8fd0a8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="monitor-call-flat" d="M289 176 H344" fill="none" stroke="#8fd0a8" stroke-width="1.2" stroke-linecap="round" opacity="0"/>
+<text x="316" y="191.5" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="3.2" fill="#6f9a7f" data-i="df_call_lost">CONNECTION LOST</text>
+</g>
 <!-- Browser (chrome) killed → Chrome's classic "Aw, Snap!" crash page: the sad rounded-page face
      (tilted a touch), the dark-gray "Aw, Snap!" heading + a small explainer line, and a decorative
      (non-functional) Reload pill. Native SVG (no foreignObject font-subset risk). Fills the 254/154
@@ -25701,6 +25720,8 @@ var T = {
       df_tattoo_quip: "No regrets.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Dance like the whole world is watching.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "You found them.", // caption under the Mines board's forced reveal and detonation chain
+      df_call_quip: "It’s not you. It’s the connection.", // caption after the Call signal drops
+      df_call_lost: "CONNECTION LOST", // status inside the Call kill overlay
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie has left the chat.", // caption after Chat's context collapses and clears
       kitchen: "Turn on La Maz → run El Maz → brew.",
@@ -26624,6 +26645,8 @@ var T = {
       df_tattoo_quip: "Bez výčitek.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Tancuj, jako by se díval celý svět.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "Našel jsi je.", // caption under the Mines board's forced reveal and detonation chain
+      df_call_quip: "Není to tebou. Zlobí spojení.", // caption after the Call signal drops
+      df_call_lost: "SPOJENÍ PŘERUŠENO", // status inside the Call kill overlay
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie odešel z chatu.", // caption after Chat's context collapses and clears
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
@@ -45041,7 +45064,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -46077,7 +46100,7 @@ setOfficeProgress("pc", false);
     if (callee && CALLEES[callee]) { placeCall(callee); return; } // deep-link straight to a call
     if (familyG) familyG.classList.add("picking"); // otherwise show the two-contact picker
   }
-  var familyHangingUp = false;
+  var familyHangingUp = false, familyKillActive = false;
   // silent = the screen itself is going away (no tone, no screensaver); quiet = an ordinary
   // hang-up nobody's around to hear, so only the tone goes
   function dropFamilyCall(silent, quiet) {
@@ -46095,6 +46118,7 @@ setOfficeProgress("pc", false);
   }
   function closeFamilyCall(silent, auto) {
     if (silent) { familyHangingUp = false; dropFamilyCall(true); return; }
+    if (familyKillActive) return; // the connection-loss send-off owns teardown until its last frame
     if (familyHangingUp) return; // the goodbye is already playing — ignore repeat taps
     if (!familyLive()) return;
     var quiet = !!auto && (document.hidden || !document.hasFocus());
@@ -46105,13 +46129,84 @@ setOfficeProgress("pc", false);
       familyHangingUp = true;
       playILoveYouSound("office-monitor", 0.8);
       var tSelf = document.getElementById("monitor-family-self"); // Behdad's mouth moves as he whispers it
-      if (tSelf) { tSelf.classList.add("saying"); setTimeout(function () { tSelf.classList.remove("saying"); }, 1500); }
-      setTimeout(function () { familyHangingUp = false; dropFamilyCall(); }, 1500);
+      if (tSelf) {
+        tSelf.classList.add("saying");
+        familyTimers.push(setTimeout(function () { tSelf.classList.remove("saying"); }, 1500));
+      }
+      familyTimers.push(setTimeout(function () { familyHangingUp = false; dropFamilyCall(); }, 1500));
     } else {
       dropFamilyCall(false, quiet); // mid-ring, or nobody there to hear it: no goodbye
     }
   }
+  // Kill is distinct from the normal ✕: freeze the call immediately, then let its own signal
+  // fail visibly before the shared death-flash lifecycle performs the silent final hang-up.
+  function callDeathFlash() {
+    if (!familyLive() || familyKillActive) return;
+    var overlay = document.getElementById("monitor-call-farewell");
+    var bars = [].slice.call(document.querySelectorAll("#monitor-call-signal .call-signal-bar"));
+    var wave = document.getElementById("monitor-call-wave");
+    var flat = document.getElementById("monitor-call-flat");
+    function resetVisual() {
+      bars.forEach(function (bar) { bar.setAttribute("opacity", "1"); bar.removeAttribute("transform"); });
+      if (wave) wave.setAttribute("opacity", "1");
+      if (flat) flat.setAttribute("opacity", "0");
+      if (overlay) overlay.setAttribute("data-stage", "");
+    }
+    resetVisual();
+    familyKillActive = true;
+    window.__runMonitorDeathFlash({
+      screenClass: "death-call",
+      beats: [{ key: "df_call_quip", at: 1020 }],
+      dur: 2200,
+      freeze: function () {
+        familyHangingUp = false;
+        clearFamilyTimers();
+        stopCallAmbient();
+        if (window.__stopTehranMelody) window.__stopTehranMelody();
+        if (familyG) familyG.classList.remove("party-cheer");
+        var self = document.getElementById("monitor-family-self");
+        if (self) self.classList.remove("saying");
+      },
+      tick: function (t) {
+        var fallen = 0;
+        bars.forEach(function (bar, i) {
+          var threshold = 0.08 + (bars.length - 1 - i) * 0.09; // strongest bar falls first
+          var p = Math.max(0, Math.min(1, (t - threshold) / 0.075));
+          bar.setAttribute("opacity", String(1 - p));
+          bar.setAttribute("transform", "translate(0 " + (p * 8).toFixed(2) + ")");
+          if (p >= 0.98) fallen++;
+        });
+        var cut = Math.max(0, Math.min(1, (t - 0.47) / 0.055));
+        if (wave) wave.setAttribute("opacity", String(1 - cut));
+        if (flat) flat.setAttribute("opacity", String(cut));
+        if (overlay) overlay.setAttribute("data-stage", fallen < bars.length ? "signal" : cut < 0.98 ? "cutting" : "flatline");
+      },
+      close: function () {
+        familyKillActive = false;
+        resetVisual();
+        dropFamilyCall(true);
+        scheduleSaver();
+      }
+    });
+  }
   window.__closeMonitorFamily = closeFamilyCall; // Esc's app layer + every screen-teardown owner
+  window.__killMonitorFamily = callDeathFlash;
+  window.__monitorCallKillState = function () {
+    var overlay = document.getElementById("monitor-call-farewell");
+    var bars = [].slice.call(document.querySelectorAll("#monitor-call-signal .call-signal-bar"));
+    return {
+      active: familyKillActive,
+      stage: overlay ? (overlay.getAttribute("data-stage") || "") : "",
+      bars: bars.filter(function (bar) { return Number(bar.getAttribute("opacity") || 0) > 0.05; }).length,
+      wave: waveOpacity("monitor-call-wave"),
+      flat: waveOpacity("monitor-call-flat"),
+      call: familyLive()
+    };
+    function waveOpacity(id) {
+      var el = document.getElementById(id);
+      return el ? Number(el.getAttribute("opacity") || 0) : 0;
+    }
+  };
   window.__placeMonitorCall = placeCall; // __openMonitorApp("california") deep-links reach the callee here
   if (familyCloseBtn) {
     familyCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeFamilyCall(); });

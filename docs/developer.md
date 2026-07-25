@@ -544,8 +544,13 @@ The monitor is an SVG/`foreignObject` computer with a desktop, dock, screensaver
 is represented mainly by `show-*` classes on `#office-monitor`. Search for
 `__openMonitorApp`, `__closeTopMonitorApp`, `resetMonitorAppState`, and `REAL_APPS`.
 
-The native-SVG `m ∞ b` system menu delegates Sleep to the monitor lifecycle and
-Reboot/Shut down to the physical PC tower, so there is no second machine-power owner.
+The native-SVG `m ∞ b` system menu delegates Reboot/Shut down to the physical PC
+tower, so there is no second machine-power owner. Sleep is the separate
+monitor-local `monitorSleeping` state: it stops monitor animation loops and covers the
+display with a native-SVG dark layer without touching the active `show-*` app classes
+or the physical PC. The first pointer press wakes and is consumed, preventing the same
+gesture from activating the app below it. `clearBoot()` clears suspension during a
+real shutdown or reboot.
 CAPS LOCK is a monitor-local state: `monitorLocked` blocks monitor app entry points,
 but never captures room or browser shortcuts. Lock initially leaves the Julia saver
 visible; monitor activity calls `wakeMonitorLock()` to reveal the cap-matching layer,

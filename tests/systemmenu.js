@@ -13,18 +13,20 @@ var HARNESS = [
   " var report={errors:window.__errs||[],steps:{}}; function S(k,v){report.steps[k]=v;}",
   " async function run(){",
   "  if(window.goToStage)window.goToStage('office'); await sleep(100);",
-  "  var mon=document.getElementById('office-monitor'),brand=document.getElementById('monitor-system-brand');",
+  "  var mon=document.getElementById('office-monitor'),brand=document.getElementById('monitor-system-brand'),tower=document.getElementById('office-pc-desk-trio');",
+  "  if(tower&&!tower.classList.contains('on'))tower.classList.add('on');",
   "  mon.classList.add('screen-on','show-caps');",
   "  brand.dispatchEvent(new MouseEvent('click',{bubbles:true}));",
   "  var menu=document.getElementById('monitor-system-menu');",
   "  S('menu_open',menu.classList.contains('open'));",
   "  S('menu_actions',[].map.call(menu.querySelectorAll('[data-action]'),function(n){return n.getAttribute('data-action');}));",
   "  S('tagline',[].map.call(menu.querySelectorAll('.desk-system-tagline'),function(n){return n.textContent;}).join(' '));",
-  "  window.__markMonitorAppRunning('mail'); window.__monitorSystemAction('sleep');",
-  "  S('sleep_saver',mon.classList.contains('show-saver'));",
-  "  mon.dispatchEvent(new PointerEvent('pointermove',{bubbles:true})); await sleep(30);",
-  "  S('sleep_woke',!mon.classList.contains('show-saver')&&mon.classList.contains('show-caps'));",
-  "  S('sleep_kept_apps',window.__monitorAppRunning('mail'));",
+  "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); window.__monitorSystemAction('sleep');",
+  "  S('sleep_suspended',window.__monitorSleeping()&&mon.classList.contains('monitor-sleeping')&&mon.classList.contains('screen-on')&&!mon.classList.contains('show-saver'));",
+  "  S('sleep_kept_apps',window.__monitorAppRunning('mail')&&mon.classList.contains('show-mail'));",
+  "  mon.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true})); await sleep(30);",
+  "  S('sleep_woke',!window.__monitorSleeping()&&!mon.classList.contains('monitor-sleeping')&&mon.classList.contains('show-mail'));",
+  "  window.__closeTopMonitorApp(); await sleep(500);",
   "  window.__monitorSystemAction('lock'); await sleep(30);",
   "  S('lock_started',window.__monitorLocked()&&mon.classList.contains('monitor-locked')&&mon.classList.contains('show-saver')&&!mon.classList.contains('monitor-lock-awake'));",
   "  S('lock_saved',!!JSON.parse(localStorage.getItem('loftMonitorCapsLock')||'null'));",
@@ -51,7 +53,6 @@ var HARNESS = [
   "  S('caps_cycle_unlocked',!window.__monitorLocked()&&mon.classList.contains('show-caps'));",
   "  window.__monitorSystemAction('lock'); var seed=window.__monitorLockState().seed; mon.classList.remove('monitor-locked');",
   "  S('resume_lock',window.__resumeMonitorLock()&&mon.classList.contains('monitor-locked')&&window.__monitorLockState().seed===seed);",
-  "  var tower=document.getElementById('office-pc-desk-trio'); if(tower&&!tower.classList.contains('on'))tower.classList.add('on');",
   "  window.__monitorSystemAction('shutdown'); await sleep(40);",
   "  S('shutdown_off',!!tower&&!tower.classList.contains('on'));",
   "  S('shutdown_cleared_lock',!window.__monitorLocked()&&localStorage.getItem('loftMonitorCapsLock')===null);",
@@ -72,7 +73,7 @@ ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
 ok("menu exposes Website, Lock, Sleep, Reboot, Shut down", JSON.stringify(s.menu_actions) === JSON.stringify(["website","lock","sleep","reboot","shutdown"]));
 ok("About footer carries the Loft tagline", s.tagline === "where artificial meets higher intelligence.");
-ok("Sleep enters the saver and pointer activity wakes it", s.sleep_saver === true && s.sleep_woke === true);
+ok("Sleep suspends only the live monitor and a press wakes it", s.sleep_suspended === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);
 ok("Lock starts and persists", s.lock_started === true && s.lock_saved === true);
 ok("Lock leaves browser shortcuts alone", s.lock_kept_browser_keys === true);
@@ -85,5 +86,9 @@ ok("matching both caps unlocks to the desktop", s.matched_unlocked === true && s
 ok("a Caps Lock on/off cycle unlocks", s.caps_cycle_unlocked === true);
 ok("a persisted lock resumes with its layout", s.resume_lock === true);
 ok("Shut down powers off and clears lock/apps", s.shutdown_off === true && s.shutdown_cleared_lock === true && s.shutdown_cleared_apps === true);
-if (fail) { console.error("\n" + fail + " system-menu check(s) failed."); process.exit(1); }
+if (fail) {
+  console.error("\n" + fail + " system-menu check(s) failed.");
+  console.error(JSON.stringify(s, null, 2));
+  process.exit(1);
+}
 console.log("\nAll monitor system-menu checks passed.");

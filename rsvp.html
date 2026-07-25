@@ -3472,6 +3472,10 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-lock-cap.wrong .monitor-lock-cap-art{animation:monitor-cap-no .38s ease}
 @keyframes monitor-cap-no{0%,100%{translate:0 0}30%{translate:-1.5px 0}65%{translate:1.2px 0}}
 @media (prefers-reduced-motion:reduce){.monitor-lock-cap.wrong .monitor-lock-cap-art{animation:none}}
+.monitor-sleep-layer{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.monitor-sleeping .monitor-sleep-layer{opacity:1; visibility:visible}
+.monitor-sleep-bg{fill:#08090b}
+.monitor-sleep-led{fill:#8e3a4a; opacity:.48}
 .dock-tile{width:11px; height:11px; transform-origin:50% 50%; transition:transform .15s ease; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:grid} /* single-cell grid: glyph + overlays stack on one grid-area with NO position/transform layer, so they paint in place under the monitor's scaled foreignObject (WebKit bug 23113) */
 .dock-tile > *{grid-area:1/1; min-width:0}
 .dock-running-dot{width:1.7px; height:1.7px; margin:0 .35px .35px 0; place-self:end end; overflow:visible; opacity:0; pointer-events:none; transition:opacity .15s ease}
@@ -40405,6 +40409,7 @@ setOfficeProgress("pc", false);
   var monitorLockSelected = null, monitorLockFinishTimer = null, monitorLockIdleTimer = null;
   var monitorLockCapsState = null, monitorLockCapsPresses = 0;
   var MONITOR_LOCK_IDLE_MS = 10000;
+  var monitorSleeping = false, monitorSleepWakeUntil = 0;
   var monitorLockCaps = {}, monitorLockPortraits = {};
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function stopSaver() {
@@ -40415,7 +40420,31 @@ setOfficeProgress("pc", false);
   }
   function scheduleSaver(ms) {
     clearTimeout(saverTimer);
+    if (monitorSleeping) { saverTimer = null; return; }
     saverTimer = setTimeout(startSaver, ms || 8000);
+  }
+  function sleepMonitor() {
+    if (monitorSleeping || !monitor.classList.contains("screen-on")) return monitorSleeping;
+    stopSaver();
+    monitorSleeping = true;
+    monitor.classList.add("monitor-sleeping");
+    if (window.__syncMonitorEqLoop) window.__syncMonitorEqLoop();
+    return true;
+  }
+  function wakeMonitorSleep() {
+    if (!monitorSleeping) return false;
+    monitorSleeping = false;
+    monitorSleepWakeUntil = Date.now() + 450;
+    monitor.classList.remove("monitor-sleeping");
+    if (monitor.classList.contains("show-caps")) scheduleSaver();
+    else if (monitor.classList.contains("show-nowplaying")) scheduleSaver(15000);
+    if (window.__syncMonitorEqLoop) window.__syncMonitorEqLoop();
+    return true;
+  }
+  function clearMonitorSleep() {
+    monitorSleeping = false;
+    monitorSleepWakeUntil = 0;
+    monitor.classList.remove("monitor-sleeping");
   }
   function clearMonitorLockIdle() {
     clearTimeout(monitorLockIdleTimer);
@@ -40456,6 +40485,7 @@ setOfficeProgress("pc", false);
     return true;
   };
   function startSaver() {
+    if (monitorSleeping) return;
     if (monitor.classList.contains("show-console") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-video") || monitor.classList.contains("show-family") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-chat") || monitor.classList.contains("show-code") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, chatting, reading mail, a minesweeper game, the film, playing doom, editing a script, the tattoo studio, a life sim, or a live call
     if (monitor.classList.contains("show-calendar") || monitor.classList.contains("show-clock")) { scheduleSaver(30000); return; } // nor over the open calendar / clock
     if (monitor.classList.contains("show-browser")) { scheduleSaver(30000); return; } // nor over someone browsing
@@ -40589,6 +40619,8 @@ setOfficeProgress("pc", false);
     return true;
   }
   window.__monitorLocked = function () { return monitorLocked; };
+  window.__monitorSleeping = function () { return monitorSleeping; };
+  window.__wakeMonitorSleep = wakeMonitorSleep;
   window.__monitorLockState = function () {
     return { locked: monitorLocked, seed: monitorLockSeed, selected: monitorLockSelected,
       awake: monitor.classList.contains("monitor-lock-awake"),
@@ -40721,6 +40753,7 @@ setOfficeProgress("pc", false);
   window.addEventListener("focus", syncMonitorSaverLoop);
   window.addEventListener("blur", syncMonitorSaverLoop);
   function clearBoot() {
+    clearMonitorSleep();
     closeConsole(); // blurs the REPL input too — an invisible focused input eats every keyboard shortcut
     closeLinux(); // stops the VM's CPU too — no emulation behind a dark screen
     closeDoom(); // pauses DOOM's run loop too — no engine spinning behind a dark screen
@@ -41575,7 +41608,7 @@ setOfficeProgress("pc", false);
   }
   var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser"];
   function eqVisualWant() {
-    if (!eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
+    if (monitorSleeping || !eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
         !monitor.classList.contains("here") || !monitor.classList.contains("screen-on")) return false;
     if (monitor.classList.contains("show-nowplaying") || monitor.classList.contains("show-saver")) return true;
     if (!monitor.classList.contains("show-caps")) return false;
@@ -42029,11 +42062,10 @@ setOfficeProgress("pc", false);
       return true;
     }
     if (action === "sleep") {
-      saverCameFrom = "desktop";
-      startSaver();
-      return monitor.classList.contains("show-saver");
+      return sleepMonitor();
     }
     if (action === "lock") {
+      wakeMonitorSleep();
       beginMonitorLock();
       return monitorLocked;
     }
@@ -42496,6 +42528,13 @@ setOfficeProgress("pc", false);
       choices[(at + (e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1) + choices.length) % choices.length].focus();
     });
     paintMonitorLock();
+  }
+  if (dock && dock.parentNode) {
+    var monitorSleepLayer = mkEl("g", { id: "monitor-sleep-layer", "class": "monitor-sleep-layer",
+      "aria-hidden": "true" }, dock.parentNode);
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
+      "class": "monitor-sleep-bg" }, monitorSleepLayer);
+    mkEl("circle", { cx: 376, cy: 194, r: .45, "class": "monitor-sleep-led" }, monitorSleepLayer);
   }
   window.addEventListener("keydown", function (e) {
     if (monitorSystemMenu && monitorSystemMenu.classList.contains("open")) {
@@ -51235,6 +51274,7 @@ async def localfont(name):
   var monClickTimer = null;
   monitor.addEventListener("dblclick", function () {
     clearTimeout(monClickTimer);
+    if (Date.now() < monitorSleepWakeUntil) return;
     if (monitorLocked) return;
     if (monitor.classList.contains("photobooth")) return; // don't swap to the typewriter mid-photobooth
     // a habitual desktop double-click on a dock icon swaps the screen layer between the
@@ -51243,6 +51283,7 @@ async def localfont(name):
     swap(false);
   });
   monitor.addEventListener("pointermove", function () {
+    if (monitorSleeping) return;
     if (monitorLocked) {
       if (!monitor.classList.contains("monitor-lock-awake")) wakeMonitorLock();
       else scheduleMonitorLockIdle();
@@ -51258,7 +51299,7 @@ async def localfont(name):
   // keystroke pushes a PENDING saver timer back out (never arms one that isn't pending)
   var saverNudgeTs = 0;
   function nudgeSaver() {
-    if (monitorLocked) return;
+    if (monitorSleeping || monitorLocked) return;
     if (!monitor.classList.contains("screen-on") || monitor.classList.contains("show-saver")) return;
     if (!saverTimer) return;
     var now = Date.now();
@@ -51270,8 +51311,21 @@ async def localfont(name):
   document.addEventListener("keydown", function () {
     if (window.currentStageName === "office") nudgeSaver();
   });
+  monitor.addEventListener("pointerdown", function (e) {
+    if (!monitorSleeping) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    wakeMonitorSleep();
+    playLaptopClickSound("office-monitor");
+  }, true);
+  monitor.addEventListener("click", function (e) {
+    if (Date.now() >= monitorSleepWakeUntil) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
   monitor.addEventListener("click", function () {
     clearTimeout(monClickTimer);
+    if (Date.now() < monitorSleepWakeUntil) return;
     if (monitorLocked) {
       if (!monitor.classList.contains("monitor-lock-awake")) {
         wakeMonitorLock();

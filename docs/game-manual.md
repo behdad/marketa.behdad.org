@@ -381,9 +381,10 @@ half-hour steps. While **Day at the Loft** runs, both scene-corner date and time
 controls remain visible, then return to their usual URL-driven visibility when
 the day stops.
 
-The `m ∞ b` wordmark opens the computer's system menu. **Sleep** keeps apps
-running and wakes on ordinary activity. **Lock** starts at the screensaver;
-activity reveals CAPS LOCK, and another idle stretch returns to the saver. Put
+The `m ∞ b` wordmark opens the computer's system menu. **Sleep** darkens only
+the monitor; press it to wake with every app exactly where it was. **Lock**
+starts at the screensaver; activity reveals CAPS LOCK, and another idle stretch
+returns to the saver. Put
 the pink flat cap on behdad and the blue baker cap on Markéta by tapping a cap
 and then a portrait, dragging it, or using `Tab`, the arrow keys, and `Enter`.
 An intentional Caps Lock on/off cycle also unlocks it. The lock affects only the

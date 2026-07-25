@@ -4292,9 +4292,9 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 /* right padding keeps the strip clear of the app's ✕ pill (x369–378 over the bezel);
    tabs squeeze chrome-style — labels ellipsize — so a full strip still fits */
 .browser-tabs{flex:none; display:flex; align-items:flex-end; gap:.55px; height:6px; padding:0 8px 0 2px; box-sizing:border-box}
-.browser-tab{flex:0 1 auto; width:max-content; max-width:26px; min-width:0; height:5.15px; box-sizing:border-box; display:flex; align-items:center; gap:.65px; padding:.55px 1.45px .7px; border-radius:2px 2px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:2.3px; line-height:1.05; letter-spacing:0.1px; cursor:pointer}
+.browser-tab{flex:0 1 auto; width:max-content; max-width:26px; min-width:0; height:5.15px; box-sizing:border-box; display:flex; align-items:center; gap:.65px; padding:.72px 1.45px .48px; border-radius:2px 2px 0 0; background:#c8c1b2; color:#5d5347; font-family:sans-serif; font-size:2.3px; line-height:1.05; letter-spacing:0.1px; cursor:pointer}
 .browser-tab > span:first-of-type{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:.08em}
-.tab-fav{flex:none; width:2.7px; height:2.7px; display:block; object-fit:contain; border-radius:.55px}
+.tab-fav{flex:0 0 2.7px; width:2.7px; height:2.7px; aspect-ratio:1/1; display:block; object-fit:contain; border-radius:.55px}
 .browser-tab:hover{background:#d2ccbd}
 .browser-tab.active{background:#fffdf8; color:#453a31}
 .browser-tab.active:hover{background:#fffdf8}
@@ -48857,6 +48857,20 @@ setOfficeProgress("pc", false);
     browserWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // screen taps never reach the monitor's boot gag
     browserWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  // A cross-origin iframe is its own event world: its clicks never bubble to the SVG
+  // monitor, but focusing it does blur the parent window. Treat that focus hand-off as
+  // the unzoomed monitor click. Wheel scrolling remains native because it does not move
+  // focus, while a deliberate page click brings the monitor forward.
+  window.addEventListener("blur", function () {
+    setTimeout(function () {
+      var active = document.activeElement;
+      if (!active || active.tagName !== "IFRAME" || !active.closest ||
+          !active.closest("#monitor-browser") || !monitor.classList.contains("show-browser") ||
+          (window.__monitorZoomed && window.__monitorZoomed())) return;
+      if (window.__monitorZoomIn) window.__monitorZoomIn();
+      try { window.focus(); } catch (e) {}
+    }, 0);
+  });
   if (browserCloseBtn) {
     browserCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeBrowser(); playLaptopClickSound("office-monitor"); });
     browserCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });

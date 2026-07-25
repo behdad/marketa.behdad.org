@@ -264,6 +264,13 @@ footer{margin-top:2.6rem}
 #stage-garden.roster-freeze #garden-djbooth *,
 #stage-garden.roster-freeze #garden-photographer,
 #stage-garden.roster-freeze #garden-photographer *{animation-play-state:paused !important}
+/* Chase sprites are deliberately siblings of #stage-garden so they can cross its full width.
+   Freeze them from the shared SVG root; otherwise the roster holds their rows while the actual
+   figures keep running out of the room. Closing the roster resumes the same CSS timeline. */
+#loft-game-strip.roster-freeze-runners [id^="garden-kid-"].chasing,
+#loft-game-strip.roster-freeze-runners [id^="garden-kid-"].chasing *{
+  animation-play-state:paused !important;
+}
 #loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-guests .guest.spotlighted .guest-react,
 #loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-djbooth.spotlighted #garden-dj,
 #loft-game-strip:not(.dance-frozen) #stage-garden.roster-freeze #garden-photographer.spotlighted{
@@ -272,7 +279,10 @@ footer{margin-top:2.6rem}
   transform-box:fill-box;
   transform-origin:center;
 }
-#stage-garden.roster-freeze .guest-spot-arrow{animation-play-state:running !important}
+#stage-garden.roster-freeze .guest-spot-arrow,
+#loft-game-strip.roster-freeze-runners [id^="garden-kid-"].chasing .guest-spot-arrow{
+  animation-play-state:running !important;
+}
 @keyframes roster-person-wiggle{0%,100%{rotate:0deg}25%{rotate:-3deg}55%{rotate:3deg}78%{rotate:-1.5deg}}
 /* SINGLED-OUT GUEST: for a few seconds, freeze EVERYONE ELSE while the picked one keeps dancing,
    and float a bobbing arrow above the pick. The .solo-spot flag on the container scopes the freeze;
@@ -83696,13 +83706,19 @@ function spawnDustMote(container) {
       });
     }
 
+    function syncGardenRosterFreeze() {
+      var freeze = open && window.currentStageName === "garden" && !!window.__gardenPartyOn;
+      var garden = document.getElementById("stage-garden");
+      var strip = document.getElementById("loft-game-strip");
+      if (garden) garden.classList.toggle("roster-freeze", freeze);
+      if (strip) strip.classList.toggle("roster-freeze-runners", freeze);
+    }
     function setOpen(v) {
       if (!ensureNodes()) return;
       if (v && !window.__secondRound) return; // first round (no party yet this session): refuse to open — an empty/early roster only confuses. This is the sole choke point, so it covers the h/w keys, roster(true), __toggleRoster(true) and the autoplay/cinematic beats alike. Closing (v=false) is always allowed.
       open = !!v;
-      var garden = document.getElementById("stage-garden");
       if (!open) clearSpotlight();
-      if (garden) garden.classList.toggle("roster-freeze", open && window.currentStageName === "garden" && !!window.__gardenPartyOn);
+      syncGardenRosterFreeze();
       if (open) {
         returnFocus = document.activeElement;
         if (window.__dismissWhoPop) window.__dismissWhoPop();
@@ -83747,8 +83763,7 @@ function spawnDustMote(container) {
     var chipLabel = null, chipExpanded = null;
     function syncAvailability() {
       if (!ensureNodes()) return;
-      var garden = document.getElementById("stage-garden");
-      if (garden) garden.classList.toggle("roster-freeze", open && window.currentStageName === "garden" && !!window.__gardenPartyOn);
+      syncGardenRosterFreeze();
       var label = tipText("roster_title");
       if (label !== chipLabel) {
         chipLabel = label;

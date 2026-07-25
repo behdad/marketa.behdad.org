@@ -33,7 +33,14 @@ var harness = String.raw`<script>
     var aliWalk = ali.querySelector(".guest-walk"), aliReact = ali.querySelector(".guest-react");
     var aliMover = ali.querySelector(".guest-move"), aliBox = aliMover.getBBox();
 
+    window.__startGardenChase(true);
+    var liveRunner = document.querySelector('[id^="garden-kid-"].chasing');
+    var liveCross = liveRunner && liveRunner.querySelector(".gk-run");
     window.roster(true);
+    check("opening the roster pauses an active chase sprite in place",
+      liveCross && state(liveCross) === "paused" &&
+        document.getElementById("loft-game-strip").classList.contains("roster-freeze-runners"),
+      (liveRunner && liveRunner.id || "missing") + "/" + state(liveCross));
     check("opening the garden roster applies the adult freeze", stage.classList.contains("roster-freeze"));
     check("the open roster pauses named guests", state(aliPart) === "paused" && state(goliPart) === "paused",
       state(aliPart) + "/" + state(goliPart));
@@ -76,6 +83,11 @@ var harness = String.raw`<script>
       getComputedStyle(dj).animationName + "/" + getComputedStyle(booth).animationName);
 
     window.roster(false);
+    check("closing the roster resumes the same chase timeline",
+      liveCross && state(liveCross) === "running" &&
+        !document.getElementById("loft-game-strip").classList.contains("roster-freeze-runners"),
+      state(liveCross));
+    if (window.__clearGardenChase) window.__clearGardenChase();
     check("closing the roster removes its freeze", !stage.classList.contains("roster-freeze") && state(aliPart) === "running",
       state(aliPart));
 

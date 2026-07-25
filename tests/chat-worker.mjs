@@ -166,6 +166,10 @@ check(captured.body.model === "gpt-5.6-luna" && captured.body.reasoning.effort =
 check(captured.body.input.length === 3 && captured.body.input[0].role === "user" && captured.body.input[2].content === "Kde je party?", "valid history and the latest message are forwarded in order", captured.body.input);
 check(/latest message/.test(captured.body.instructions) && /\"room\":\"garden\"/.test(captured.body.instructions) && /\"active_occasion\":\"wedding-prague\"/.test(captured.body.instructions), "language rule and sanitized occasion-aware game context reach the developer instructions");
 check(/You are Charlie/.test(captured.body.instructions) && /Always spell Markéta/.test(captured.body.instructions) && /kitchen\/bar/.test(captured.body.instructions) && /garden\/party/.test(captured.body.instructions) && /cuddly-puddly/.test(captured.body.instructions), "Charlie's identity and official room names reach the chatbot instructions");
+check(/faal\(\) returns one random Hafez reading/.test(captured.body.instructions) &&
+  /rumi\(\) consumes the next load-time-shuffled Rumi pair/.test(captured.body.instructions) &&
+  /Do not invent poet arguments/.test(captured.body.instructions),
+  "Chat understands the distinct Hafez return and scene-gated Rumi recitation helpers");
 check(/Allowed optional actions/.test(captured.body.instructions) && /\"actions_available\":\[\"room.go\",\"music.play\"\]/.test(captured.body.instructions) && !/not\.real/.test(captured.body.instructions), "the model sees the canonical action catalog and only sanitized currently available IDs");
 check(/fishu\.speak/.test(captured.body.instructions) && /Never claim or guess that today is anyone's birthday/.test(captured.body.instructions), "Fishu's action and the no-invented-birthdays rule reach the model");
 check(/can we do some acid\?/.test(captured.body.instructions) && /MUST attach the corresponding trip\.start action/.test(captured.body.instructions) && /never merely tell the user to tap the physical box/.test(captured.body.instructions), "natural trip requests require a validated model-selected action rather than physical-box instructions");

@@ -245,7 +245,10 @@ Once released, they fly from the garden as phase 2 begins. When the party is off
 they float above the couple in cuddly-puddly at night and prompt a Rumi exchange.
 Markéta's verse wakes Behdad, who stays awake through his reply. The available
 Rumi pairs are shuffled once when the page loads, then dealt in that order so
-every pair appears before the cycle repeats.
+every pair appears before the cycle repeats. In the console, `faal()` returns a
+random Hafez reading without changing the scene. `rumi()` deals from this same
+Rumi deck and starts the attached exchange when the nighttime fairy is present;
+elsewhere it waits without consuming a pair.
 The plant grow light follows the loft clock automatically, staying on from
 11:00 to 17:00; clicking it overrides the schedule until the next boundary.
 

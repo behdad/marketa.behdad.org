@@ -358,7 +358,12 @@ night, a stopped party, and the couple's presence. Phase, party, room, and both 
 day/night transitions re-run that projection. Its two Rumi bubbles use one bounded rAF follower to
 stay attached to the speakers' live head geometry; opening the reply cancels the prior follower, and
 detachment stops the loop. `rumiOrder` is Fisher–Yates shuffled once at load; `rumiPick` advances a
-wrapping cursor through that fixed deck instead of making per-exchange random draws. The exchange
+wrapping cursor through that fixed deck instead of making per-exchange random draws. Each entry's
+parallel `RUMI_GHAZAL` value drives its visible source label. The Hafez-owned `faal()` is a
+side-effect-free random reading. The later `rumi()` global consumes the same deck and starts the
+scene exchange only when its nighttime fairy is present; outside that projection it returns a
+waiting status without advancing `rumiCursor`. Both helpers are mirrored in the console manifest
+and `chat.js` scripting guidance. The exchange
 holds the existing `behdad-awake` projection from Markéta's
 verse through the end of Behdad's reply, then releases it through the normal wake owner; reset and
 an interrupted reply clear the same hold.

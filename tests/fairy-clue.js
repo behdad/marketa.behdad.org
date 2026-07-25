@@ -69,15 +69,21 @@ var harness = String.raw`<script>
         var rumiCycleBefore = window.__rumiCycleState();
         check("Rumi pairs are shuffled into one complete load-time deck",
           rumiCycleBefore.cursor === 0 &&
-          rumiCycleBefore.order.length === 3 &&
-          rumiCycleBefore.order.slice().sort().join(",") === "0,1,2",
+          rumiCycleBefore.order.length === 7 &&
+          rumiCycleBefore.order.slice().sort().join(",") === "0,1,2,3,4,5,6" &&
+          rumiCycleBefore.entries === 7 && rumiCycleBefore.readings === 7 &&
+          rumiCycleBefore.ghazals.join(",") === "553,553,553,162,4,1403,1798",
           JSON.stringify(rumiCycleBefore));
-        click(cameo);
+        var rumiConsole = window.rumi();
         var rumiCycleAfter = window.__rumiCycleState();
         check("the Rumi deck advances one slot instead of drawing again",
           rumiCycleAfter.cursor === 1 &&
           rumiCycleAfter.order.join(",") === rumiCycleBefore.order.join(","),
           JSON.stringify(rumiCycleAfter));
+        check("rumi() reports its source and starts the visible exchange",
+          /^📖 Rumi — Ghazal (4|162|553|1403|1798)\n/.test(rumiConsole) &&
+          document.querySelector(".egg-bubble.rumi-bubble"),
+          rumiConsole);
         var rumi = document.querySelector(".egg-bubble.rumi-bubble");
         check("clicking the cuddly fairy starts Markéta and behdad's Rumi exchange",
           rumi && rumi._rumiSpeaker === "markéta" &&
@@ -93,13 +99,16 @@ var harness = String.raw`<script>
           rumi._rumiFollowing === true);
         check("Markéta's pointed Rumi bubble needs no visible speaker label",
           rumi && !rumi.querySelector(".rumi-speaker"));
+        check("the Rumi exchange uses enlarged type",
+          rumi && getComputedStyle(rumi).fontSize === "16px",
+          rumi && getComputedStyle(rumi).fontSize);
         check("Markéta's recitation identifies the Rumi source",
           rumi && rumi.querySelector(".rumi-credit") &&
-          rumi.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal 553");
+          rumi.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal " + rumi._rumiGhazal);
         check("Markéta's recitation wakes Behdad for the exchange",
           document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
-        check("the Rumi exchange does not add a public command",
-          typeof window.rumi === "undefined");
+        check("the Rumi exchange has its own public command",
+          typeof window.rumi === "function");
 
         setTimeout(function () {
           try {
@@ -121,7 +130,9 @@ var harness = String.raw`<script>
               reply && !reply.querySelector(".rumi-speaker"));
             check("behdad's recitation identifies the Rumi source",
               reply && reply.querySelector(".rumi-credit") &&
-              reply.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal 553");
+              reply.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal " + reply._rumiGhazal);
+            check("both halves cite the same ghazal",
+              reply && rumi && reply._rumiGhazal === rumi._rumiGhazal);
             check("Behdad stays awake while reciting his reply",
               document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
             window.__setDayNight(false);
@@ -138,6 +149,12 @@ var harness = String.raw`<script>
             check("opening the fairy door after phase 2 starts also begins the flight",
               fairy.classList.contains("released") &&
               fairy.parentNode.classList.contains("departing"));
+            var offRoomCycle = window.__rumiCycleState();
+            check("rumi() waits without consuming its deck outside the recitation scene",
+              /^🧚 rumi\(\) waits/.test(window.rumi()) &&
+              window.__rumiCycleState().cursor === offRoomCycle.cursor);
+            check("faal() returns a random Hafez reading without arguments",
+              /^📖 /.test(window.faal()));
           } catch (error) {
             out.errors.push(String(error && error.stack || error));
           }

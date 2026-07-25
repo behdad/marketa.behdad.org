@@ -3495,10 +3495,12 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .desk-search-button{cursor:pointer}
 .desk-search-button .desk-search-icon{fill:none;stroke:#f8f5ec;stroke-width:.55;stroke-linecap:round;stroke-linejoin:round}
 .desk-search-button:hover .desk-search-icon,.desk-search-button:focus .desk-search-icon{stroke:#d9a6a6}
-/* Android only raises its keyboard reliably for a user-focused input with a real box.
-   Keep that box effectively invisible and outside the SVG while its value mirrors the
-   native monitor finder. */
-.dock-search-keyboard{position:fixed;left:50%;top:50%;width:36px;height:20px;opacity:.01;pointer-events:none;font-size:16px;border:0;padding:0;background:transparent;color:transparent;caret-color:transparent;outline:none}
+/* A real input overlays the SVG finder while it is open. Android then treats both the
+   first icon tap and later field taps as ordinary editable-input gestures. Its text is
+   transparent because the SVG underneath paints the typed + autocompleted value. */
+.dock-search-keyboard{display:none;position:fixed;z-index:10020;box-sizing:border-box;min-width:36px;min-height:20px;opacity:1;pointer-events:auto;-webkit-appearance:none;appearance:none;font-size:16px;border:0;padding:0;background:transparent;color:transparent;caret-color:#8e3a4a;outline:none}
+.dock-search-keyboard.active{display:block}
+.dock-search-keyboard::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
 .desk-bar-text{fill:#f8f5ec; font-family:sans-serif; font-size:3.2px; letter-spacing:0.2px}
 .desk-brand{cursor:pointer}
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
@@ -42582,7 +42584,14 @@ setOfficeProgress("pc", false);
       openDockSearch(true);
     }
     searchButton.addEventListener("pointerdown", function (e) {
-      if (e.pointerType === "touch") activateDockSearch(e);
+      if (e.pointerType !== "touch") return;
+      // Cancelling Android's initiating pointerdown can focus the input without raising
+      // its software keyboard, so only stop propagation on this direct user gesture.
+      e.stopPropagation();
+      if (!dockSearchReady()) return;
+      if (monitorSystemMenu) monitorSystemMenu.classList.remove("open");
+      brandG.setAttribute("aria-expanded", "false");
+      openDockSearch(true);
     });
     searchButton.addEventListener("click", activateDockSearch);
     searchButton.addEventListener("dblclick", function (e) { e.stopPropagation(); });
@@ -42802,7 +42811,7 @@ setOfficeProgress("pc", false);
     // an app finder. SVG paints the finder; a nearly invisible real input mirrors it so
     // a direct touch can summon mobile keyboards without changing the desktop layout.
     dockSearch = mkEl("g", { id: "monitor-dock-search" }, dock);
-    mkEl("rect", { x: 254.5, y: 154.4, width: 123, height: 4.7, rx: 1.1, "class": "desk-search-bg" }, dockSearch);
+    var dockSearchBg = mkEl("rect", { x: 254.5, y: 154.4, width: 123, height: 4.7, rx: 1.1, "class": "desk-search-bg" }, dockSearch);
     var searchGlyph = mkEl("text", { x: 257, y: 157.9, "class": "desk-search-text", "aria-hidden": "true" }, dockSearch);
     searchGlyph.textContent = "⌕";
     dockSearchText = mkEl("text", { id: "monitor-dock-search-text", x: 262, y: 157.9, "class": "desk-search-text" }, dockSearch);
@@ -42816,11 +42825,22 @@ setOfficeProgress("pc", false);
     dockSearchInput.setAttribute("data-aria-i", "desk_search_apps_aria");
     dockSearchInput.setAttribute("aria-label", (T[document.documentElement.lang] || T.en).desk_search_apps_aria || T.en.desk_search_apps_aria);
     document.body.appendChild(dockSearchInput);
+    function placeDockSearchInput() {
+      if (!dockSearchInput || !dockSearchBg || !dockSearchInput.classList.contains("active")) return;
+      var r = dockSearchBg.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      var glyphSpace = Math.max(18, r.width * .055);
+      dockSearchInput.style.left = (r.left + glyphSpace) + "px";
+      dockSearchInput.style.top = r.top + "px";
+      dockSearchInput.style.width = Math.max(36, r.width - glyphSpace) + "px";
+      dockSearchInput.style.height = Math.max(20, r.height) + "px";
+    }
     dockSearchInput.addEventListener("input", function () {
       dockSearchQuery = dockSearchInput.value.slice(0, 28);
       dockSearchOpen = true;
       paintDockSearch();
     });
+    dockSearchInput.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
     dockSearchInput.addEventListener("keydown", function (e) {
       if (e.key === "Escape" || e.key === "Esc") {
         e.preventDefault(); e.stopPropagation(); clearDockSearch(); return;
@@ -43260,6 +43280,7 @@ setOfficeProgress("pc", false);
     if (dockSearchInput) {
       dockSearchInput.value = "";
       if (document.activeElement === dockSearchInput) dockSearchInput.blur();
+      dockSearchInput.classList.remove("active");
     }
     if (dockGrid) dockGrid.classList.remove("searching");
     if (dockSearch) dockSearch.classList.remove("active");
@@ -43274,6 +43295,8 @@ setOfficeProgress("pc", false);
     paintDockSearch();
     if (focusKeyboard && dockSearchInput) {
       dockSearchInput.value = dockSearchQuery;
+      dockSearchInput.classList.add("active");
+      placeDockSearchInput();
       try { dockSearchInput.focus({ preventScroll: true }); } catch (e) { dockSearchInput.focus(); }
     }
     return true;
@@ -43332,7 +43355,7 @@ setOfficeProgress("pc", false);
   // control back immediately; a later return to the desktop always starts clean.
   document.addEventListener("pointerdown", function (e) {
     if (!dockSearchOpen && !dockSearchQuery) return;
-    if ((dockSearch && dockSearch.contains(e.target)) || (searchButton && searchButton.contains(e.target))) return;
+    if (e.target === dockSearchInput || (dockSearch && dockSearch.contains(e.target)) || (searchButton && searchButton.contains(e.target))) return;
     clearDockSearch();
   }, true);
   window.__monitorDockSearch = function () { return { open: dockSearchOpen, query: dockSearchQuery, match: dockSearchBest && dockSearchBest.id, completion: dockSearchCompletion }; };

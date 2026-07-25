@@ -29,7 +29,9 @@ ME** invitation inside that enlarged view.
    and may enter fullscreen on its first tap. A narrow portrait phone shows only
    a landscape prompt; rotate manually or tap **Try landscape**.
 2. Follow the instruction line above the scene. It is the authoritative current
-   hint.
+   hint. Its first-location guide clears quickly during ordinary entry, but stays
+   longer when that same first interaction enters fullscreen so browser chrome
+   cannot cover it for its entire visit.
 3. Solve the highlighted activity in each room. The right room arrow unlocks as
    you make progress.
 4. Completing the first trip through the loft starts phase 2. Every room is then

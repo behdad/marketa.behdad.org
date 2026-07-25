@@ -476,13 +476,20 @@ var PROBE_HARNESS = [
   "    ok('opening guide: next scene click dismisses without waiting', !(window.__openingGuideShowing && window.__openingGuideShowing()) && has('kitchen-lamarzocco', 'invite-pulse'));",
   "    if (window.__showHuntIntro) window.__showHuntIntro();",
   "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
-  "    ok('opening guide: reset path re-arms the timed guide', !!(window.__openingGuideShowing && window.__openingGuideShowing()));",
+  "    ok('opening guide: ordinary entry uses the short timeout', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideDuration && window.__openingGuideDuration() === 4000);",
+  "    await sleep(4200);",
+  "    ok('opening guide: ordinary entry clears promptly', !(window.__openingGuideShowing && window.__openingGuideShowing()) && !has('hunt-caption', 'intro-guide'));",
+  "    if (window.__showHuntIntro) window.__showHuntIntro();",
+  "    if (window.__toggleFullscreen) window.__toggleFullscreen();",
+  "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    ok('opening guide: same-interaction fullscreen entry uses the long timeout', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideDuration && window.__openingGuideDuration() === 8000);",
   "    await sleep(5200);",
   "    ok('opening guide: caption remains after fullscreen browser chrome clears', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && has('hunt-caption', 'intro-guide'));",
   "    await sleep(3000);",
   "    ok('opening guide: caption tutorial outlasts fullscreen chrome, then ends', !(window.__openingGuideShowing && window.__openingGuideShowing()) && !has('hunt-caption', 'intro-guide'));",
   "    ok('opening guide: normal kitchen instruction returns', window.__captionKey && window.__captionKey() === 'kitchen', 'caption=' + (window.__captionKey && window.__captionKey()));",
   "    ok('opening guide: espresso-machine cue follows the caption tutorial', has('kitchen-lamarzocco', 'invite-pulse'));",
+  "    if (el('hunt-fullscreen-area') && el('hunt-fullscreen-area').classList.contains('is-fullscreen') && window.__toggleFullscreen) window.__toggleFullscreen();",
   "",
   "    // instruments + shared three-song catalog -> cross-room grooving",
   "    var guitar = el('garden-guitar'), tumbala = el('tumbala-song-audio');",
@@ -1145,7 +1152,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 35000, CHROME_OPTS); // includes the real eight-second opening guide + latest-popup-aware message-coach delay
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 40000, CHROME_OPTS); // includes the real four/eight-second opening-guide paths + latest-popup-aware message-coach delay
   if (!ONLY || "sharegate".indexOf(ONLY) === 0) jobs.sharegate = lib.runPage("loft-day.html", SHARE_GATE_HARNESS, 5000, CHROME_OPTS);
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);

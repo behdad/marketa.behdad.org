@@ -80,7 +80,9 @@ headless geometry does not prove that the chrome is visually balanced.
 `setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, Trailer, or Autoplay hands
 over control; that uses a larger height fit without setting `.is-fullscreen`. Direct web play never
 auto-enters true fullscreen; only an installed PWA may use its first interaction for that
-transition. The fullscreen button and `F` remain explicit. The synchronous mode bootstrap also
+transition. `enterFs()` timestamps that transition; the post-CLICK-ME caption-location guide reads
+it within the same interaction window and uses eight seconds only then, versus four seconds for an
+ordinary entry. The fullscreen button and `F` remain explicit. The synchronous mode bootstrap also
 adds `.installed-app` from the display-mode/navigator standalone signals.
 Immediately inside `<body>`, `#installed-load` uses that already-set class to paint a standalone-only
 loading screen before the large game DOM parses. Its small inline controller localizes from the

@@ -28302,6 +28302,7 @@ window.addEventListener("hashchange", function () {
   // from the real API state so the fullscreenchange handler can tell an Esc/back exit of
   // real fullscreen (which must also drop the class-fill) from a request we never made.
   var manualFs = false, portraitLockActive = false, preserveFillUntil = 0;
+  var lastFullscreenEnterAt = -Infinity;
   var resumeFsOnClick = false, fsOutboundUntil = 0;
   function isFullscreen() {
     return (document.fullscreenElement || document.webkitFullscreenElement) === area;
@@ -28451,6 +28452,7 @@ window.addEventListener("hashchange", function () {
     if (window.__phoneBeginFullscreenTransition) window.__phoneBeginFullscreenTransition();
   }
   function enterFs() {
+    lastFullscreenEnterAt = Date.now();
     beginPhoneFsTransition();
     // Class-fill first — this alone fills the viewport and works on mobile regardless of
     // the Fullscreen API; refreshLabel() flips the glyph to ✕ and sizes the room to fill.
@@ -28469,6 +28471,9 @@ window.addEventListener("hashchange", function () {
     }
     return requestPromise;
   }
+  window.__fullscreenEnteredRecently = function (maxAge) {
+    return Date.now() - lastFullscreenEnterAt <= (maxAge == null ? 250 : maxAge);
+  };
   function exitFsFull() {
     beginPhoneFsTransition();
     clearFsReturn();
@@ -73696,7 +73701,8 @@ function spawnDustMote(container) {
   var maxUnlocked = 0;
   var captionKey = "kitchen";
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
-  var openingGuideShowing = false, openingGuideTimer = null, openingGuideArmTimer = null; // then briefly teach where the live instruction line is before pointing into the scene
+  var openingGuideShowing = false, openingGuideTimer = null, openingGuideArmTimer = null;
+  var openingGuideDuration = 0; // brief normally; longer only when the same entry gesture also triggered fullscreen browser chrome
   // The prompt is armed at the very END of this script, but date-driven notifications (the birthday
   // announcement, via applyBirthdays) fire EARLIER in the same parse — so the window before the
   // prompt exists must read as "not started", or a load-time text slides in over it. introPending
@@ -86667,7 +86673,10 @@ function spawnDustMote(container) {
     caption.innerHTML = huntText("intro_guide");
     caption.classList.add("intro-guide");
     updateKitchenInvite();
-    openingGuideTimer = setTimeout(finishOpeningGuide, 8000); // outlast the browser's first-fullscreen "Press Esc" notice
+    var enteredFullscreenTogether = window.__fullscreenEnteredRecently &&
+      window.__fullscreenEnteredRecently(250);
+    openingGuideDuration = enteredFullscreenTogether ? 8000 : 4000;
+    openingGuideTimer = setTimeout(finishOpeningGuide, openingGuideDuration);
     // Arm after the initiating pointerdown has fully returned. The click that entered the game must
     // reveal the guide, not instantly consume it; the NEXT scene click dismisses before its action.
     openingGuideArmTimer = setTimeout(function () {
@@ -86676,6 +86685,7 @@ function spawnDustMote(container) {
     }, 0);
   }
   window.__openingGuideShowing = function () { return openingGuideShowing; }; // regression/test hook
+  window.__openingGuideDuration = function () { return openingGuideDuration; };
   window.__finishOpeningGuide = finishOpeningGuide;
   // the grace timeout only CALMS the pulse — the "wandering without aim" line and the melting
   // CLICK ME both stay put until a real tap (stopHintBlink) hands off to the caption guide

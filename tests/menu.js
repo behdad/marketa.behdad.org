@@ -270,7 +270,7 @@ var HARNESS = [
   // Host tile with runtime RUNNING → Open + Kill (Open first).
   "    window.__doomRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('doom')); S('desk_doom_running_items', monItems()); S('desk_doom_running_has_open', !!monOpen()); S('desk_doom_running_has_kill', !!monKill());",
   // The runtime keeps its own hook, while the registry/dot are cleared immediately.
-  "    window.__killMonitorDoom=function(){window.__deskKill='doom';}; window.__deskKill=null; if(monKill()) monKill().click(); await sleep(20); S('desk_doom_kill_called',window.__deskKill==='doom'); S('desk_doom_kill_cleared',!reg('doom')&&!dot('doom')); S('desk_doom_kill_hid_menu',!monMenu());",
+  "    window.__killMonitorDoom=function(){window.__deskKill='doom';}; window.__deskKill=null; if(monKill()) monKill().click(); await sleep(20); S('desk_doom_kill_called',window.__deskKill==='doom'); S('desk_doom_kill_foregrounded_gag',mon().classList.contains('show-doom')); S('desk_doom_kill_cleared',!reg('doom')&&!dot('doom')); S('desk_doom_kill_hid_menu',!monMenu());",
   // Each remaining host maps to its own predicate + kill hook.
   "    window.__lxRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('linux')); S('desk_linux_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
   "    window.__pyRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('python')); S('desk_python_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
@@ -384,7 +384,7 @@ check("every registered plain app, including Browser and Console, offers Kill", 
 check("every plain desktop Kill dispatches to that app's exact themed hook and clears its task", s.desk_exact_plain_kill_hooks === true);
 check("registered runtime with engine STOPPED remains Open only", s.desk_doom_stopped_prevented === true && Array.isArray(s.desk_doom_stopped_items) && s.desk_doom_stopped_items.length === 1 && s.desk_doom_stopped_has_kill === false, s.desk_doom_stopped_items);
 check("registered runtime with engine RUNNING exposes Open + Kill", Array.isArray(s.desk_doom_running_items) && s.desk_doom_running_items.length === 2 && /open/i.test(s.desk_doom_running_items[0] || "") && /kill/i.test(s.desk_doom_running_items[1] || "") && s.desk_doom_running_has_open === true && s.desk_doom_running_has_kill === true, s.desk_doom_running_items);
-check("desktop runtime Kill calls its own hook, clears the registry/dot, and hides the menu", s.desk_doom_kill_called === true && s.desk_doom_kill_cleared === true && s.desk_doom_kill_hid_menu === true);
+check("desktop runtime Kill foregrounds its gag, calls its hook, clears the registry/dot, and hides the menu", s.desk_doom_kill_called === true && s.desk_doom_kill_foregrounded_gag === true && s.desk_doom_kill_cleared === true && s.desk_doom_kill_hid_menu === true);
 check("registered, live Linux and Python runtimes offer Kill", s.desk_linux_running_has_kill === true && s.desk_python_running_has_kill === true);
 check("desktop right-click a non-icon surface shows no custom menu", s.desk_nontile_prevented === true && s.desk_nontile_no_menu === true, { prevented: s.desk_nontile_prevented });
 

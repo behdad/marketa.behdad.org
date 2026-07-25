@@ -60359,6 +60359,13 @@ async def localfont(name):
         return !onlyUnsent || messagesThread.indexOf(id) === -1;
       });
     }
+    function deliverTabMessage(id) {
+      // Tab is an explicit test shortcut: English takes the authored-message rewrite trip,
+      // while Czech lands immediately from the reviewed dictionary translation.
+      return document.documentElement.lang === "en"
+        ? deliverAutonomousRewritten(id)
+        : window.__deliverPhoneMessage(id);
+    }
     function cloneTabMessage(sourceId) {
       var src = MESSAGES[sourceId], id = "custom_tab_" + (++tabTextSeq), copy = {};
       if (!src) return null;
@@ -60369,7 +60376,7 @@ async def localfont(name):
       if (src.replyTo) copy.replyTo = src.replyTo;
       if (src.next) { copy.next = src.next; copy.nextDelay = src.nextDelay; }
       MESSAGES[id] = copy;
-      window.__deliverPhoneMessage(id);
+      deliverTabMessage(id);
       return id;
     }
     window.__deliverRandomContextText = function () {
@@ -60379,7 +60386,7 @@ async def localfont(name):
       if (!choices.length) return null;
       var id = choices[Math.floor(Math.random() * choices.length)];
       if (messagesThread.indexOf(id) !== -1) return cloneTabMessage(id);
-      window.__deliverPhoneMessage(id);
+      deliverTabMessage(id);
       return id;
     };
     function scheduleCueDrip() {

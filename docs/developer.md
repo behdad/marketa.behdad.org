@@ -823,6 +823,11 @@ deduplication, do not enter the thread until the request settles, and are genera
 phone/game reset. Checkpoint rows retain a completed English rewrite, while in-flight work remains
 session-only.
 
+The `Tab` context-message shortcut uses the same rewrite trip when the interface language is
+English, including cloned repeats after a catalog ID has already arrived. In Czech it deliberately
+uses direct authored delivery, so the reviewed Czech dictionary text is immediate and never sent
+to Chat.
+
 `__deliverAutonomousPhoneMessage` is the single deferral boundary for those sources, including
 birthday and date/BBQ occasion producers. While the Who's Here roster is open, it queues autonomous
 messages without adding thread rows; the scene preview, floating unread launcher, and balcony-phone

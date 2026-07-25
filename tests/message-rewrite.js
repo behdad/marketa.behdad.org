@@ -23,6 +23,11 @@ var harness = [
   ' window.__monitorMessageRewrite=function(){return Promise.reject(new Error("offline"));};',
   ' var fallbackAccepted=window.__deliverAutonomousPhoneMessage("cue_mail");await sleep(40);if(window.__hideMessageThumb)window.__hideMessageThumb();window.__openMessagesAt("cue_mail");await sleep(40);',
   ' var fallback=row("cue_mail");S("fallback",{accepted:fallbackAccepted,thread:window.__phoneMessageThread(),body:fallback&&fallback.textContent,pending:window.__messageRewritePending()});',
+  ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;',
+  ' var oldRandom=Math.random,tabRequest=null;Math.random=function(){return 0;};window.__monitorMessageRewrite=function(value){tabRequest=value;return Promise.resolve(JSON.stringify({en:"AI-rephrased Tab message"}));};',
+  ' var tabEnId=window.__deliverRandomContextText();await sleep(40);window.__openMessagesAt(tabEnId);await sleep(30);var tabEnBody=row(tabEnId);S("tabEn",{id:tabEnId,request:tabRequest,body:tabEnBody&&tabEnBody.textContent,pending:window.__messageRewritePending()});',
+  ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="cs";window.__secondRound=true;var czechRewriteCalls=0;window.__monitorMessageRewrite=function(){czechRewriteCalls++;return Promise.resolve(JSON.stringify({en:"must not be used"}));};',
+  ' var tabCsId=window.__deliverRandomContextText();window.__openMessagesAt(tabCsId);await sleep(30);var tabCsBody=row(tabCsId);S("tabCs",{id:tabCsId,rewriteCalls:czechRewriteCalls,body:tabCsBody&&tabCsBody.textContent,pending:window.__messageRewritePending()});Math.random=oldRandom;',
   '}',
   '})();</script>'
 ].join("\n");
@@ -41,6 +46,7 @@ if (!result) {
 }
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 var success = result.steps.success || {}, fallback = result.steps.fallback || {};
+var tabEn = result.steps.tabEn || {}, tabCs = result.steps.tabCs || {};
 check(success.accepted && !success.duplicate && success.pending.join(",") === "hannah_banter",
   "one autonomous message owns one in-flight rewrite", success);
 check(success.request && success.request.sender === "Hannah" &&
@@ -56,6 +62,14 @@ check(fallback.accepted && fallback.thread.join(",") === "cue_mail" &&
   fallback.body === "did you check the mail? 💌 there's a letter for you" &&
   fallback.pending.length === 0,
   "a failed chatbot request delivers the original authored copy unchanged", fallback);
+check(tabEn.id === "cue_mail" && tabEn.request &&
+  tabEn.request.en === "did you check the mail? 💌 there's a letter for you" &&
+  tabEn.body === "AI-rephrased Tab message" && tabEn.pending.length === 0,
+  "the English Tab shortcut takes the message-rewrite trip", tabEn);
+check(tabCs.id === "cue_mail" && tabCs.rewriteCalls === 0 &&
+  tabCs.body === "koukl(a) jsi do pošty? 💌 máš tam dopis" &&
+  tabCs.pending.length === 0,
+  "the Czech Tab shortcut immediately uses its authored translation", tabCs);
 
 console.log("");
 if (failures) {

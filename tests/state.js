@@ -522,6 +522,8 @@ var PROBE_HARNESS = [
   "    click('garden-ukulele');",
   "    await sleep(350);",
   "    ok('instrument: second ukulele tap pauses Orit', oritSong && oritSong.paused);",
+  "    if (oritSong) oritSong.currentTime = 1;", // headless media time does not advance; explicitly reproduce a resumable paused selection
+  "    ok('music toast: a selected but paused loft song is not now-playing', window.__phoneMusicId && window.__phoneMusicId() === 'ukulele-song-audio' && window.__nowPlayingLabel && window.__nowPlayingLabel() === '');",
   "    ok('instrument: .playing sway stops with the song', !has('garden-ukulele', 'playing'));",
   "    ok('music chrome: play state returns to its quiet style', railPlay && railPlay.classList.contains('paused') && getComputedStyle(railPlay).backgroundColor === quietPlayBg);",
   "    GROOVERS.forEach(function (id) {",

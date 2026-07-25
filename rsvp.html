@@ -51279,9 +51279,11 @@ async def localfont(name):
       if (ws.classList.contains("chan-aqua")) return np.aqua;
     }
     if (window.__phoneMusicId && window.__phoneMusicId() && window.__phoneMusicTitle) {
-      // the garden party owns the foreground music (and pauses loft songs) — don't let its bed crossfades pop a paused loft song's name; a genuinely-playing song still names itself
-      if (window.__gardenPartyOn && !(window.__phoneMusicPlaying && window.__phoneMusicPlaying())) return "";
-      return window.__phoneMusicTitle(); // playing, or paused-with-progress while no party owns the foreground
+      // A selected-but-paused song remains resumable in the players, but is not "now playing".
+      // In particular, leaving a projector channel or ending the party must not reveal and
+      // announce an older paused loft song.
+      if (!(window.__phoneMusicPlaying && window.__phoneMusicPlaying())) return "";
+      return window.__phoneMusicTitle();
     }
     return "";
   };
@@ -51317,6 +51319,11 @@ async def localfont(name):
   })();
   window.__announceNowPlaying = function () { // toast only on a real change (dedup covers pause/resume, reveals, room hops)
     var label = window.__nowPlayingLabel ? window.__nowPlayingLabel() : "";
+    // Preserve the last song across a plain pause so resuming it does not re-toast. A paused
+    // song is still selected in the transport, but it must not surface when some other source
+    // (projector / party bed) disappears.
+    if (!label && window.__phoneMusicId && window.__phoneMusicId() &&
+        !(window.__phoneMusicPlaying && window.__phoneMusicPlaying())) return;
     if (label === lastNP) return;
     lastNP = label;
     if (label) nowPlayingToast(label); // only announce a genuine, non-empty track

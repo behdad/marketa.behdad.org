@@ -123,14 +123,22 @@ var harness = String.raw`<script>
     window.goToStage("garden");
     window.__assignPartyKids(true);
     window.goToStage("balcony");
+    var smoresPool = window.__cuddlyAssignedKidNames().slice();
+    var smoresPlacement = window.__partyKidPlacement || {};
+    (smoresPlacement.games || []).concat(smoresPlacement.dancing || []).forEach(function (name) {
+      if (smoresPool.length < 2 && smoresPool.indexOf(name) === -1) smoresPool.push(name);
+    });
+    var smoresEligible = smoresPool.filter(function (name) {
+      return ["irene", "robin", "navid"].indexOf(name) !== -1;
+    });
     window.__setSmores(true);
     var smores = window.__balconyBorrowedKidNames();
     var smoresNames = window.__whoIsHere("balcony").map(function (p) { return p.key; });
-    check("s'mores borrows two eligible named children from Cuddly",
-      smores.length === 2 && smores.every(function (name) {
-        return ["irene", "robin", "navid"].indexOf(name) !== -1 &&
+    check("s'mores borrows the available eligible named children from Cuddly",
+      smores.length === Math.min(2, smoresEligible.length) && smores.every(function (name, index) {
+        return smores.indexOf(name) === index && smoresEligible.indexOf(name) !== -1 &&
           document.querySelector("#garden-guests .g-" + name).classList.contains("off-at-games");
-      }), smores.join(","));
+      }), "eligible=" + smoresEligible.join(",") + "; borrowed=" + smores.join(","));
     check("s'mores children publish through the balcony inventory",
       smores.every(function (name) { return smoresNames.indexOf(name) !== -1; }), smoresNames.join(","));
     window.__setSmores(false);

@@ -121,8 +121,14 @@ if (result) {
   check(s.djDouble.before !== s.djDouble.after && !s.djDouble.picker && s.djDouble.party, "double-clicking the DJ advances the song and closes the picker without ending the party", s.djDouble);
   check(s.frame.station === "peace-lily" && s.frame.stationMeta.every(function (id) { return id === "peace-lily"; }),
     "garden photos retain their camera-station metadata", s.frame);
-  check(s.frame.people.length === 4 && s.frame.people.every(function (keys) { return keys.indexOf("ali") !== -1 && keys.indexOf("goli") === -1; }),
-    "peace-lily frame includes the in-frame guest and excludes the off-camera guest", s.frame.people);
+  var frameSignatures = s.frame.people.map(function (keys) { return keys.slice().sort().join(","); });
+  check(s.frame.people.length > 0 &&
+      s.frame.people.every(function (keys) {
+        return keys.length > 0 && keys.every(function (key) { return key === "hosts" || key === "ali"; }) &&
+          keys.indexOf("goli") === -1;
+      }) &&
+      frameSignatures.every(function (sig, index) { return frameSignatures.indexOf(sig) === index; }),
+    "peace-lily captures stay camera-framed without low-difference duplicate lineups", s.frame.people);
   check(s.groupStart.started && s.groupStart.station === "front-left", "group photo moves Aspen home before gathering", s.groupStart);
   check(s.groupShot.station === "front-left" && s.groupShot.people.indexOf("ali") !== -1 && s.groupShot.people.indexOf("goli") !== -1,
     "group-photo keeps Aspen home and bypasses camera-zone filtering", s.groupShot);

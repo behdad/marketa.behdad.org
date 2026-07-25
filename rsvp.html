@@ -78103,6 +78103,7 @@ function spawnDustMote(container) {
         var el = layer.querySelector("." + current.cls);
         if (el) el.classList.remove("present");
         current = null;
+        if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
       }
     }
     function stop() {
@@ -78122,6 +78123,7 @@ function spawnDustMote(container) {
       if (!el) return false;
       el.classList.add("present");
       current = c;
+      if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
       return true;
     }
     // swap: retire the current couple, bring on a fresh eligible one (or, rarely / when none
@@ -79593,12 +79595,19 @@ function spawnDustMote(container) {
     });
     function attended() { return !document.hidden && document.hasFocus(); }
     function hasSubjects(room) { return !!(window.__roomHasPhotoSubjects && window.__roomHasPhotoSubjects(room)); }
+    function hasAmbientSubjects(room) {
+      if (!hasSubjects(room)) return false;
+      // Pouria is a valid explicit bar-photo subject, but working alone behind the counter is not
+      // a roomful for Aspen to follow. Her ambient rounds begin only when somebody joins him.
+      if (room !== "kitchen" || !window.__roomOccupants) return true;
+      return window.__roomOccupants(room).some(function (person) { return person.key !== "pouria"; });
+    }
     var lastWhere = ""; // the (room, party-on) pair update() last saw — an ARRIVAL is a change in it
     function update() { // she's out wherever the party is, in whichever of her three rooms is on screen
       Object.keys(mounted).forEach(function (room) {
-        mounted[room].g.classList.toggle("showing", !!window.__gardenPartyOn && window.currentStageName === room && hasSubjects(room));
+        mounted[room].g.classList.toggle("showing", !!window.__gardenPartyOn && window.currentStageName === room && hasAmbientSubjects(room));
       });
-      var occupied = hasSubjects(window.currentStageName);
+      var occupied = hasAmbientSubjects(window.currentStageName);
       var where = window.currentStageName + "|" + !!window.__gardenPartyOn + "|" + occupied;
       if (where === lastWhere) return; // a blur/focus/visibility re-run is not an arrival
       lastWhere = where;
@@ -79623,7 +79632,7 @@ function spawnDustMote(container) {
     // would double-fire both the flash and the keepsake.
     function shootHere() {
       var room = window.currentStageName;
-      if (!window.__gardenPartyOn || room === "garden" || !attended() || !hasSubjects(room)) return;
+      if (!window.__gardenPartyOn || room === "garden" || !attended() || !hasAmbientSubjects(room)) return;
       window.__photogSnap(room, true);                            // silent: an ambient flash, never an autonomous shutter
     }
     function armRound() { if (roundTimer) clearTimeout(roundTimer); roundTimer = setTimeout(roundTick, 22000 + Math.random() * 18000); }

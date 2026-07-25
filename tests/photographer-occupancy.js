@@ -17,6 +17,16 @@ var harness = String.raw`<script>
 
   try {
     window.__setGardenParty(true, false);
+    window.goToStage("kitchen");
+    window.couples(false);
+    var barAspen = document.getElementById("kitchen-photographer");
+    check("the bar can settle with no guest couple", window.__barCoupleNow() === null);
+    check("Aspen stays away while Pouria works alone", barAspen && !barAspen.classList.contains("showing"));
+    window.couples("alireza");
+    check("Aspen joins when bar guests arrive", barAspen.classList.contains("showing"));
+    window.couples(false);
+    check("Aspen leaves when the bar returns to Pouria alone", !barAspen.classList.contains("showing"));
+
     window.goToStage("office");
     window.officefolks(false);
     var aspen = document.getElementById("office-photographer");

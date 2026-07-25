@@ -94,6 +94,31 @@ var harness = String.raw`<script>
         check("the roster card sits just above rather than over the arrow",
           pr && ar && pr.bottom <= ar.top + 1 && ar.top - pr.bottom <= 12,
           pr && ar ? JSON.stringify({ popupBottom: pr.bottom, arrowTop: ar.top }) : "missing");
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+        check("ArrowRight changes rooms while keeping the roster open",
+          window.currentStageName === "cuddly" && window.__rosterOpen(),
+          window.currentStageName + "/" + window.__rosterOpen());
+        document.getElementById("hunt-next").click();
+        check("the next button changes rooms while keeping the roster open",
+          window.currentStageName === "office" && window.__rosterOpen(),
+          window.currentStageName + "/" + window.__rosterOpen());
+        document.getElementById("hunt-prev").click();
+        check("the previous button changes rooms while keeping the roster open",
+          window.currentStageName === "cuddly" && window.__rosterOpen(),
+          window.currentStageName + "/" + window.__rosterOpen());
+        document.querySelectorAll(".hunt-dot")[4].click();
+        check("a room dot changes rooms while keeping the roster open",
+          window.currentStageName === "balcony" && window.__rosterOpen(),
+          window.currentStageName + "/" + window.__rosterOpen());
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true, cancelable: true }));
+        check("number keys change rooms while keeping the roster open",
+          window.currentStageName === "kitchen" && window.__rosterOpen(),
+          window.currentStageName + "/" + window.__rosterOpen());
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true }));
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, cancelable: true }));
+        check("ArrowLeft changes rooms while keeping the roster open",
+          window.currentStageName === "kitchen" && window.__rosterOpen(),
+          window.currentStageName + "/" + window.__rosterOpen());
         window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
         var fading = document.querySelector(".egg-bubble.who-pop");
         check("Escape closes the roster and starts dismissing its person card after a backdrop pick",

@@ -373,8 +373,12 @@ to terminate it with its own send-off instead of closing it silently.
 
 Weather does not occupy a desktop tile. Click the Edmonton weather item in the
 computer's menu bar to open it. The live time beside it opens Clock, with the
-same city times, wedding countdowns, play time, and game-time controls as the
-phone Clock.
+same Edmonton, Prague, Tehran, and Lübeck times, wedding countdowns, play time,
+and game-time controls as the phone Clock. Reset appears only after choosing a
+pretend time. The monitor slider moves minute by minute; the phone keeps larger
+half-hour steps. While **Day at the Loft** runs, both scene-corner date and time
+controls remain visible, then return to their usual URL-driven visibility when
+the day stops.
 
 The `m ∞ b` wordmark opens the computer's system menu. **Sleep** keeps apps
 running and wakes on ordinary activity. **Lock** starts CAPS LOCK: put the pink

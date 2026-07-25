@@ -562,7 +562,10 @@ Screensaver and expensive canvas/DOM loops are gated while an app owns the scree
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;
 surface-specific activity and close callbacks own interval lifetime and sunrise/
-sunset navigation without duplicating time, countdown, or time-travel logic.
+sunset navigation without duplicating the four-city time grid, countdown, or
+time-travel logic. Its monitor range uses minute units while the pocket-phone
+range uses half-hour units. Reset visibility is derived from an explicit
+`?time=` override, not the synthetic day-lapse clock.
 
 The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat, and
 Browser their own staged gag before teardown. They all use `__runMonitorDeathFlash` so

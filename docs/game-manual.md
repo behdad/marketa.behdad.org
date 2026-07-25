@@ -154,7 +154,7 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `/` | Open Messages; inside searchable apps, focus search when appropriate |
 | `W` | Show or hide Who's here during phase 2 |
 | `F` | Toggle fullscreen |
-| `Space` | Play or pause foreground audio |
+| `Space` | Game action, or play or pause foreground media |
 | `N` | Play the next applicable song or music selection |
 | `G` | Show the next phone hint |
 | `Tab` | Send a random, context-appropriate test message |
@@ -652,11 +652,10 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 - **Flair-Catch:** In the kitchen/bar, repeat a nearby click on Pouria to begin,
   or use its message/API action. Pouria follows the pointer while the player
   catches garnishes and avoids the wasp. Clicking Pouria during the game does not
-  open his personal card. Flair-Catch is unavailable when reduced motion is
-  requested.
+  open his personal card. Space pauses or resumes the run. Flair-Catch is unavailable
+  when reduced motion is requested.
 - **Invaders:** A hidden office-chair gesture, message action, or API action
-  starts the game. Move to aim and fire at the invaders; close it with its visible
-  close control.
+  starts the game. Move to aim; Space fires while auto-fire remains active.
 - **Window Tetris:** On the balcony, double-click any across-the-street office
   window. The forty physical windows become a 10×16 board with four square lamps
   per window. Arrow keys move and rotate pieces, and Space drops them. On touchscreens,

@@ -30,7 +30,7 @@ if (start >= 0 && end > start) {
 }
 var T = sandbox.T || { en: {}, cs: {} };
 var shared = [
-  "game_score", "game_best", "game_ready", "game_over", "game_cleared",
+  "game_score", "game_best", "game_ready", "game_over", "game_paused", "game_cleared",
   "game_new", "game_play_again", "game_exit",
   "game_move_up", "game_move_down", "game_move_left", "game_move_right"
 ];
@@ -64,9 +64,11 @@ check(/data-tkey", pair\[2\]/.test(html) && /lifeT\(tk\[i\]\.getAttribute\("data
   "Pac-Man and Life control labels refresh with the language");
 check(T.en.hunt.flair_hint.indexOf("Esc or × exits") >= 0 &&
       T.en.hunt.arcade_hint.indexOf("Esc or × exits") >= 0 &&
+      T.en.hunt.flair_hint.indexOf("Space pauses") >= 0 &&
+      T.en.hunt.arcade_hint.indexOf("Space fires") >= 0 &&
       T.cs.hunt.flair_hint.indexOf("Esc nebo ×") >= 0 &&
       T.cs.hunt.arcade_hint.indexOf("Esc nebo ×") >= 0,
-  "scene-game captions name the same exit controls in both languages");
+  "scene-game captions name action and exit controls in both languages");
 check(T.en.du_reset === "Reset outfit" && T.en.quiz_again === "Take quiz again",
   "Dress-up and Quiz repeat actions name their scope");
 check(/^Loading DOOM/.test(T.en.doom_loading) && /Close and reopen to try again\.$/.test(T.en.doom_fail),
@@ -82,13 +84,20 @@ var harness = [
   'close.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));',
   'window.goToStage("office");window.__arcadeTest(1,16);',
   'var arcadeClose=document.querySelector("#office-alien-layer .game-close-btn"),arcadeHud=document.querySelector("#office-alien-layer [role=img]");',
-  'out.arcade={close:arcadeClose&&arcadeClose.getAttribute("aria-label"),hud:arcadeHud&&arcadeHud.getAttribute("aria-label")};',
+  'var shotsBefore=window.__arcadeState().shots,musicBefore=window.__musicPaused;',
+  'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
+  'out.arcade={close:arcadeClose&&arcadeClose.getAttribute("aria-label"),hud:arcadeHud&&arcadeHud.getAttribute("aria-label"),spaceFired:window.__arcadeState().shots===shotsBefore+1,musicHeld:window.__musicPaused===musicBefore};',
   'arcadeClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
   'out.arcade.closed=!window.__arcadeState().active;',
   'window.setLang("en");window.goToStage("kitchen");window.__flairTest(1,16);',
   'var flairClose=document.querySelector("#kitchen-flair-layer .game-close-btn"),flairHud=document.querySelector("#kitchen-flair-layer [role=img]");',
-  'out.flair={close:flairClose&&flairClose.getAttribute("aria-label"),hud:flairHud&&flairHud.getAttribute("aria-label")};',
-  'flairClose.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
+  'var flairMusicBefore=window.__musicPaused;',
+  'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
+  'var pauseLabel=document.querySelector("#kitchen-flair-layer .game-pause-label");',
+  'out.flair={close:flairClose&&flairClose.getAttribute("aria-label"),hud:flairHud&&flairHud.getAttribute("aria-label"),paused:window.__flairState().paused,pauseLabel:pauseLabel&&pauseLabel.textContent,musicHeld:window.__musicPaused===flairMusicBefore};',
+  'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
+  'out.flair.resumed=!window.__flairState().paused;',
+  'flairClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
   'out.flair.closed=!window.__flairState().active;',
   'var face=document.querySelector(".mines-face"),faceClicks=0;face.addEventListener("click",function(){faceClicks++;});',
   'var faceKey=new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true});',
@@ -111,12 +120,15 @@ check(rendered && rendered.enTetris.close === "Exit game" &&
   "Window Tetris labels switch language and fit the HUD",
   rendered && JSON.stringify({ en: rendered.enTetris, cs: rendered.csTetris }));
 check(rendered && rendered.arcade.close === "Ukončit hru" &&
-      /^SKÓRE 0\. REKORD /.test(rendered.arcade.hud || "") && rendered.arcade.closed,
-  "Invaders exposes localized HUD/exit names and keyboard dismissal",
+      /^SKÓRE 0\. REKORD /.test(rendered.arcade.hud || "") && rendered.arcade.spaceFired &&
+      rendered.arcade.musicHeld && rendered.arcade.closed,
+  "Invaders owns Space without changing media playback",
   rendered && JSON.stringify(rendered.arcade));
 check(rendered && rendered.flair.close === "Exit game" &&
-      /^SCORE 0\. BEST /.test(rendered.flair.hud || "") && rendered.flair.closed,
-  "Flair-Catch exposes localized HUD/exit names and keyboard dismissal",
+      /^SCORE 0\. BEST /.test(rendered.flair.hud || "") && rendered.flair.paused &&
+      rendered.flair.pauseLabel === "PAUSED" && rendered.flair.musicHeld &&
+      rendered.flair.resumed && rendered.flair.closed,
+  "Flair-Catch owns Space for pause and resume",
   rendered && JSON.stringify(rendered.flair));
 check(rendered && rendered.mines.label === "NEW GAME" && rendered.mines.title === "NEW GAME" &&
       rendered.mines.keyboard,

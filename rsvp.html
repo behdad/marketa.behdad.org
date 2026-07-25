@@ -26107,6 +26107,7 @@ var T = {
     game_best: "BEST",
     game_ready: "READY!",
     game_over: "GAME OVER",
+    game_paused: "PAUSED",
     game_cleared: "CLEARED!",
     game_new: "NEW GAME",
     game_play_again: "PLAY AGAIN",
@@ -26194,8 +26195,8 @@ var T = {
       kitchen_bar: "Bar's open — watch <em>Pouria</em> mix a drink. Or order one. 🍸",
       kitchen_bar_night: "Bar is open. Ask <em>Pouria</em> for a drink… 🍸",
       intro_guide: "Your next clue appears here. Or just explore.",
-      flair_hint: "Move Pouria to catch garnishes; dodge the wasp. Esc or × exits. 🍋",
-      arcade_hint: "Move the chair to aim and fire. Esc or × exits. 👾",
+      flair_hint: "Move Pouria to catch garnishes; dodge the wasp. Space pauses; Esc or × exits. 🍋",
+      arcade_hint: "Move the chair to aim; Space fires. Esc or × exits. 👾",
       tetris_hint: "Move: ← → · rotate: ↑ · drop: Space · exit: Esc.",
       tetris_touch_hint: "Tap to rotate; swipe to move or drop. × exits.",
       tetris_game_over: "Game over · Enter: play again · Esc: exit.",
@@ -26800,7 +26801,7 @@ var T = {
     browser_noframe: "if it stays blank, that site refuses to live in a picture frame — most big ones do",
     eq_off_note: "This browser plays the songs directly — there's no audio pipeline for the equalizer to pull on. Try it on another device 🎚",
     kbd_title: "Keyboard shortcuts",
-    kbd_space: "play / pause the music or video",
+    kbd_space: "game action, or play / pause media",
     kbd_esc: "go back / advance puzzle",
     kbd_f: "fullscreen",
     kbd_watch: "who’s here? (roster for this room)",
@@ -27101,6 +27102,7 @@ var T = {
     game_best: "REKORD",
     game_ready: "PŘIPRAVEN!",
     game_over: "KONEC HRY",
+    game_paused: "POZASTAVENO",
     game_cleared: "HOTOVO!",
     game_new: "NOVÁ HRA",
     game_play_again: "HRÁT ZNOVU",
@@ -27188,8 +27190,8 @@ var T = {
       kitchen_bar: "Bar je otevřený — sleduj, jak <em>Pouria</em> míchá drink. Nebo si nějaký objednej. 🍸",
       kitchen_bar_night: "Bar je otevřený. Řekni si <em>Pouriovi</em> o drink… 🍸",
       intro_guide: "Tady se objeví další nápověda. Nebo se jen tak toulej.",
-      flair_hint: "Pohybuj Pouriou, chytej ozdoby a vyhni se vosě. Esc nebo × ukončí hru. 🍋",
-      arcade_hint: "Pohybuj křeslem, zamiř a pal. Esc nebo × ukončí hru. 👾",
+      flair_hint: "Pohybuj Pouriou, chytej ozdoby a vyhni se vosě. Mezerník pozastaví; Esc nebo × ukončí hru. 🍋",
+      arcade_hint: "Pohybuj křeslem a zamiř; mezerník vystřelí. Esc nebo × ukončí hru. 👾",
       tetris_hint: "Pohyb: ← → · otočení: ↑ · pád: mezerník · konec: Esc.",
       tetris_touch_hint: "Klepnutím otáčej; tažením posouvej nebo shazuj. × ukončí hru.",
       tetris_game_over: "Konec hry · Enter: hrát znovu · Esc: ukončit.",
@@ -27789,7 +27791,7 @@ var T = {
     browser_noframe: "když zůstane prázdná, ten web se odmítá nastěhovat do obrázkového rámečku — většina velkých to tak má",
     eq_off_note: "Tenhle prohlížeč přehrává písničky napřímo — ekvalizér tu nemá za co tahat. Zkus to na jiném zařízení 🎚",
     kbd_title: "Klávesové zkratky",
-    kbd_space: "přehrát / pozastavit hudbu nebo video",
+    kbd_space: "akce ve hře nebo přehrát / pozastavit média",
     kbd_esc: "zpět / pokračovat v hádance",
     kbd_f: "celá obrazovka",
     kbd_watch: "kdo je tady? (soupiska téhle místnosti)",
@@ -35767,6 +35769,8 @@ function gameTapsNear(a, b) {
       buttons[i].setAttribute("aria-label", label);
       buttons[i].setAttribute("title", label);
     }
+    var paused = document.querySelectorAll(".game-pause-label");
+    for (var j = 0; j < paused.length; j++) paused[j].textContent = window.__gameText("game_paused");
   };
   // Register before the later room-level Enter handler: these compact SVG/HTML game
   // controls own Enter/Space and must not also advance or toggle the room underneath.
@@ -36104,10 +36108,17 @@ function gameTapsNear(a, b) {
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
     document.addEventListener("visibilitychange", function () { if (document.hidden) stopArcade(); });
     window.addEventListener("blur", function () { stopArcade(); });
-    // Esc ends a run (shows the final "game over ·×N"); capture + stopPropagation so it doesn't
-    // also back the desk-zoom out from under the game
+    // The action game owns its action keys while active, ahead of the global media transport.
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && arcadeActive) { stopArcade(); e.stopPropagation(); } // a deliberate quit ends silently — no "game over"
+      if (!arcadeActive) return;
+      if (e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        fireShot();
+      } else if (e.key === "Escape") {
+        stopArcade();
+        e.stopPropagation(); // a deliberate quit ends silently — no "game over"
+      }
     }, true);
 
     // headless test hook: deterministically arms the game and runs N logic ticks with a
@@ -38829,11 +38840,11 @@ function gameTapsNear(a, b) {
       { bad: true,  svg: '<ellipse rx="6" ry="8" fill="#e8c33a" stroke="#3a2f28" stroke-width="1"/><rect x="-6" y="-3" width="12" height="2.4" fill="#3a2f28"/><rect x="-6" y="1.4" width="12" height="2.4" fill="#3a2f28"/><ellipse cx="-7" cy="-4" rx="5" ry="3" fill="#e8f4ff" opacity="0.55" stroke="#9bb2b8" stroke-width="0.6"/><ellipse cx="7" cy="-4" rx="5" ry="3" fill="#e8f4ff" opacity="0.55" stroke="#9bb2b8" stroke-width="0.6"/>' } // wasp — do NOT catch
     ];
 
-    var flairActive = false, flairRaf = null, flairLastT = 0;
+    var flairActive = false, flairPaused = false, flairRaf = null, flairLastT = 0;
     var flairItems = [], flairLastSpawn = 0, flairElapsed = 0;
     var flairScore = 0, flairMiss = 0;
     var FLAIR_MILESTONE = 10; // reward a chime + shockwave every this-many catches (aligned with the speed step)
-    var flairHud = null, flairHudScore = null, flairHudHigh = null, flairHudLives = null;
+    var flairHud = null, flairHudScore = null, flairHudHigh = null, flairHudLives = null, flairPauseLabel = null;
 
     function flairShakerX() { return 336 + barOffsetX; } // shaker-mouth centre in stage-local coords (kitchen-bar has no transform)
     function flairHigh() { try { return parseInt(localStorage.getItem(FLAIR_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
@@ -38871,6 +38882,33 @@ function gameTapsNear(a, b) {
       for (var i = 0; i < flairHudLives.length; i++) {
         flairHudLives[i].setAttribute("fill", i < (FLAIR_MAX_MISS - flairMiss) ? "#c0392b" : "none");
       }
+    }
+
+    function flairRenderPause() {
+      if (flairPauseLabel && flairPauseLabel.parentNode) flairPauseLabel.parentNode.removeChild(flairPauseLabel);
+      flairPauseLabel = null;
+      if (!flairPaused || !flairLayer) return;
+      var g = document.createElementNS(SVGNS_FLAIR, "g");
+      g.setAttribute("transform", "translate(340,150)");
+      var text = document.createElementNS(SVGNS_FLAIR, "text");
+      text.setAttribute("class", "game-pause-label");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("font-family", "Fraunces, Georgia, serif");
+      text.setAttribute("font-size", "24");
+      text.setAttribute("font-weight", "700");
+      text.setAttribute("fill", "#f4efe6");
+      text.textContent = window.__gameText("game_paused");
+      g.appendChild(text);
+      flairLayer.appendChild(g);
+      flairPauseLabel = g;
+    }
+
+    function toggleFlairPause() {
+      if (!flairActive) return false;
+      flairPaused = !flairPaused;
+      flairLastT = 0;
+      flairRenderPause();
+      return flairPaused;
     }
 
     function flairSpawn() {
@@ -38955,7 +38993,7 @@ function gameTapsNear(a, b) {
       if (!flairActive || window.currentStageName !== "kitchen" || !barUpNow() || document.hidden) { stopFlairCatch(); return; }
       var dt = flairLastT ? Math.min(50, t - flairLastT) : 16;
       flairLastT = t;
-      flairStep(dt);
+      if (!flairPaused) flairStep(dt);
       if (!flairActive) return; // a third miss ended the run inside the step — don't reschedule
       flairRaf = requestAnimationFrame(flairFrame);
     }
@@ -38966,6 +39004,7 @@ function gameTapsNear(a, b) {
       // is born the same tick the game starts. Drop it once the click cycle settles.
       setTimeout(function () { var c = document.querySelector(".egg-bubble.who-pop"); if (c) dismissEggBubble(c); }, 0);
       flairActive = true;
+      flairPaused = false;
       barDragStartX = flairShakerX(); barDragStartOffset = barOffsetX; // seed the paddle-follow frame so it tracks the cursor immediately (same fix as the arcade chair — a launch without a grab, e.g. the phone "I'm bored" message)
       flairScore = 0; flairMiss = 0; flairElapsed = 0;
       flairClearLayer();
@@ -39036,6 +39075,7 @@ function gameTapsNear(a, b) {
       if (flairRaf) { cancelAnimationFrame(flairRaf); flairRaf = null; }
       var wasActive = flairActive, finalScore = flairScore;
       flairActive = false;
+      flairPaused = false;
       if (barDragging) {
         barDragging = false;
         if (bartenderHit) bartenderHit.classList.remove("grabbing");
@@ -39043,7 +39083,7 @@ function gameTapsNear(a, b) {
       if (wasActive && finalScore > flairHigh()) flairSetHigh(finalScore); // bank the high on any teardown
       flairClearLayer();                    // hard-clear — never trust per-particle onfinish for teardown
       flairItems.length = 0;
-      flairHud = null; flairHudScore = null; flairHudHigh = null; flairHudLives = null;
+      flairHud = null; flairHudScore = null; flairHudHigh = null; flairHudLives = null; flairPauseLabel = null;
       if (stageKitchen) stageKitchen.classList.remove("flair-on");
       bartender.style.transition = ""; // restore the smooth glide once the paddle game's over
       if (wasActive && window.restoreStageHint) window.restoreStageHint("kitchen"); // put the room/bar hint back
@@ -39055,17 +39095,23 @@ function gameTapsNear(a, b) {
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
     document.addEventListener("visibilitychange", function () { if (document.hidden) stopFlairCatch(); });
     window.addEventListener("blur", function () { stopFlairCatch(); });
-    // Esc quits a run silently (no "last call" flourish); capture + stopPropagation so it doesn't
-    // also back the device-zoom out from under the game. Backspace arrives here too — the global
-    // capture handler re-dispatches it as a synthetic Escape keydown, which this reads like any Esc.
+    // The action game owns its action keys while active, ahead of the global media transport.
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && flairActive) { stopFlairCatch(); e.stopPropagation(); }
+      if (!flairActive) return;
+      if (e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        toggleFlairPause();
+      } else if (e.key === "Escape") {
+        stopFlairCatch();
+        e.stopPropagation();
+      }
     }, true);
 
     // headless test hook: deterministically arms the game and runs N logic ticks with a fixed dt
     // WITHOUT scheduling rAF, so a screenshot can capture the dim + falling items + HUD.
     window.__flairTest = function (steps, dt) {
-      flairActive = true; flairScore = 0; flairMiss = 0; flairElapsed = 0;
+      flairActive = true; flairPaused = false; flairScore = 0; flairMiss = 0; flairElapsed = 0;
       flairClearLayer(); flairItems.length = 0;
       if (stageKitchen) stageKitchen.classList.add("flair-on");
       flairBuildHud();
@@ -39074,8 +39120,9 @@ function gameTapsNear(a, b) {
       return { active: flairActive, items: flairItems.length, score: flairScore, miss: flairMiss };
     };
     window.__flairStop = stopFlairCatch;
+    window.__flairTogglePause = toggleFlairPause;
     window.__startFlairCatch = startFlairCatch; // a phone message ("I'm bored" from Pouria) can kick off Flair-Catch
-    window.__flairState = function () { return { active: flairActive, raf: flairRaf, items: flairItems.length, score: flairScore, miss: flairMiss, high: flairHigh() }; };
+    window.__flairState = function () { return { active: flairActive, paused: flairPaused, raf: flairRaf, items: flairItems.length, score: flairScore, miss: flairMiss, high: flairHigh() }; };
 
     // ── cinematic autopilot ──────────────────────────────────────────────────
     // The guided tour can't perform a real shaker shuffle, so this arms Flair-Catch and

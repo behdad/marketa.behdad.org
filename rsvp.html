@@ -3701,12 +3701,17 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #office-monitor.show-mines #monitor-mines{opacity:1; pointer-events:auto}
 #monitor-mines-close{cursor:pointer}
 #monitor-mines-close:hover .seg-hover{opacity:.55}
+#office-monitor.death-mines #monitor-mines{pointer-events:none}
 .mines-wrap{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:96px 1fr; grid-template-rows:42px; background:#cfc9bb; font-family:sans-serif; color:#453a31; overflow:hidden} /* grid (was flex+position:relative): board/side/msg stack without a RenderLayer under the monitor's scaled foreignObject (WebKit bug 23113) */
 .mines-board{flex:none; grid-column:1; grid-row:1; display:grid; grid-template-columns:repeat(16,6px); grid-auto-rows:6px; width:96px; height:42px}
 .mines-cell{box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-size:3.8px; font-weight:700; line-height:1; background:#c8c2b4; box-shadow:inset 0.7px 0.7px 0 rgba(255,255,255,0.72), inset -0.7px -0.7px 0 rgba(69,58,49,0.38); cursor:pointer}
 .mines-cell.open{background:#d8d2c4; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.16); cursor:default}
 .mines-cell.flag, .mines-cell.ring{font-size:2.9px; font-weight:400; overflow:hidden} /* emoji ascent overshoots the 6px cell — keep the glyph inside its own tile */
 .mines-cell.boom{background:#c14b3e}
+.kill-reveal{animation:mines-kill-flip .16s ease-out both}
+.mines-cell.kill-detonated{background:#c14b3e; color:#fff; box-shadow:inset 0 0 0 .35px #7a3020}
+.mines-cell.kill-last{box-shadow:inset 0 0 0 .65px #e0604e, 0 0 1.4px #e0604e}
+@keyframes mines-kill-flip{0%{transform:scaleX(1)}48%{transform:scaleX(.08)}52%{transform:scaleX(.08)}100%{transform:scaleX(1)}}
 /* classic number colors, tuned to the site palette but kept apart */
 .mines-cell.n1{color:#4a6b94}
 .mines-cell.n2{color:#2b7a4b}
@@ -25695,6 +25700,7 @@ var T = {
       df_life_quip: "The point of the game is the playing.", // Alan Watts-inspired caption under the departing glider (Life kill)
       df_tattoo_quip: "No regrets.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Dance like the whole world is watching.", // Sasquatch 2009 lone-dancer homage (Video kill)
+      df_mines_quip: "You found them.", // caption under the Mines board's forced reveal and detonation chain
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie has left the chat.", // caption after Chat's context collapses and clears
       kitchen: "Turn on La Maz → run El Maz → brew.",
@@ -26617,6 +26623,7 @@ var T = {
       df_life_quip: "Smyslem hry je samotné hraní.", // Alan Watts-inspired caption under the departing glider (Life kill)
       df_tattoo_quip: "Bez výčitek.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Tancuj, jako by se díval celý svět.", // Sasquatch 2009 lone-dancer homage (Video kill)
+      df_mines_quip: "Našel jsi je.", // caption under the Mines board's forced reveal and detonation chain
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie odešel z chatu.", // caption after Chat's context collapses and clears
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
@@ -44626,6 +44633,106 @@ setOfficeProgress("pc", false);
     scheduleSaver();
   }
   window.__closeMonitorMines = closeMinesApp; // other monitor apps close the board before taking the screen
+  // Kill turns the live board against itself: unopened cells sweep open, every ring but one
+  // detonates across the grid, the reset face goes X-eyed, and the last ring blinks before it
+  // joins the chain. The real game timer is stopped before the first frame and input is locked
+  // by minesOver + death-mines; teardown then takes the normal reset path to a clean board.
+  function minesDeathFlash() {
+    var finish = function () {
+      minesClearKillVisual();
+      if (minesWrap) { minesWrap.removeAttribute("data-kill-stage"); minesWrap.removeAttribute("data-kill-timer"); }
+      if (window.resetMonitorAppState) window.resetMonitorAppState("mines");
+      else { minesSeeded = false; minesNewGame(); closeMinesApp(); }
+    };
+    if (!monitor.classList.contains("show-mines") || !window.__runMonitorDeathFlash) { finish(); return; }
+    if (!minesGrid.length) minesNewGame();
+    minesSeeded = true; // ensure the normal Kill reset path re-deals even if a test opened by class
+    if (!minesPlaced) minesPlace(-1); // a never-clicked board still needs a real mine field to reveal
+    var remaining = [], mineOrder = [];
+    for (var i = 0; i < minesGrid.length; i++) {
+      if (!minesGrid[i].open) remaining.push(i);
+      if (minesGrid[i].mine) mineOrder.push(i);
+    }
+    mineOrder.sort(function (a, b) { return a - b; }); // rapid left-to-right chain across the board
+    var lastMine = mineOrder.pop();
+    var revealed = 0, detonated = 0, faceDead = false, finalPopped = false;
+    var chainSound = false, finalSound = false;
+    function minesClearKillVisual() {
+      minesCells.forEach(function (cell) {
+        cell.classList.remove("kill-reveal", "kill-detonated", "kill-last");
+        cell.style.removeProperty("opacity");
+      });
+    }
+    function revealCell(idx) {
+      var data = minesGrid[idx], cell = minesCells[idx];
+      if (!data || !cell) return;
+      cell.classList.remove("flag", "boom");
+      cell.classList.add("open", "kill-reveal");
+      if (data.mine) { cell.classList.add("ring"); cell.textContent = "💍"; }
+      else {
+        cell.classList.remove("ring");
+        cell.textContent = data.n ? String(data.n) : "";
+        if (data.n) cell.classList.add("n" + data.n);
+      }
+    }
+    function detonateMine(idx) {
+      var cell = minesCells[idx];
+      if (!cell) return;
+      cell.classList.remove("flag", "kill-last");
+      cell.classList.add("open", "ring", "kill-detonated");
+      cell.style.opacity = "1";
+      cell.textContent = "💥";
+    }
+    minesClearKillVisual();
+    window.__runMonitorDeathFlash({
+      screenClass: "death-mines",
+      beats: [{ key: "df_mines_quip", at: 250 }],
+      dur: 3200,
+      freeze: function () {
+        minesStopTimer();
+        minesOver = true;
+        if (minesWrap) { minesWrap.setAttribute("data-kill-stage", "reveal"); minesWrap.setAttribute("data-kill-timer", "frozen"); }
+      },
+      tick: function (t) {
+        // 1. Sweep every still-covered tile open during the first sixth of the send-off.
+        var revealTarget = Math.min(remaining.length, Math.floor(Math.min(1, t / 0.16) * remaining.length));
+        while (revealed < revealTarget) revealCell(remaining[revealed++]);
+        if (t < 0.20) return;
+        // 2. Detonate every ring except the held-back finale in a quick board-wide chain.
+        if (minesWrap && t < 0.60) minesWrap.setAttribute("data-kill-stage", "chain");
+        var chainTarget = Math.min(mineOrder.length, Math.floor(Math.min(1, (t - 0.20) / 0.40) * mineOrder.length));
+        if (chainTarget && !chainSound) {
+          chainSound = true;
+          if (!document.hidden && document.hasFocus()) playThunderSound(0.08, "office-monitor");
+        }
+        while (detonated < chainTarget) detonateMine(mineOrder[detonated++]);
+        if (t < 0.60) return;
+        // 3–4. X-eyes, then let the one unexploded ring blink on its own.
+        if (!faceDead) { faceDead = true; if (minesFaceEl) minesFaceEl.textContent = "😵"; }
+        var finalCell = minesCells[lastMine];
+        if (t < 0.90) {
+          if (minesWrap) minesWrap.setAttribute("data-kill-stage", "blink");
+          if (finalCell) {
+            finalCell.classList.add("kill-last");
+            finalCell.style.opacity = (Math.floor((t - 0.60) / 0.055) % 2) ? "0.2" : "1";
+          }
+          return;
+        }
+        // 5. The blinking holdout finally pops; leave the tableau up for the last beat.
+        if (!finalPopped) {
+          finalPopped = true;
+          detonateMine(lastMine);
+          if (!finalSound) {
+            finalSound = true;
+            if (!document.hidden && document.hasFocus()) playThunderSound(0.12, "office-monitor");
+          }
+        }
+        if (minesWrap) minesWrap.setAttribute("data-kill-stage", "final");
+      },
+      close: finish
+    });
+  }
+  window.__killMonitorMines = minesDeathFlash;
   // Phone Mines re-places this one HTML board into the pocket screen and back — the
   // monitor and phone never show it at once (different rooms), so they share the node.
   var __minesInPhone = false, minesPhoneHost = null;
@@ -44934,7 +45041,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-chat": "__killMonitorChat", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;

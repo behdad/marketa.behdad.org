@@ -327,12 +327,11 @@ particles, photographer state, and phone/monitor ownership.
 
 Search for `balconyBuildingTetris`, `#balcony-building-window-grid`, and
 `__balconyTetrisState`. The controller generates 5×8 clickable physical
-apartments, each containing a 2×2 set of square SVG cells. Normal mode applies
-one `.lit` state to all four cells in an apartment. Its single self-rescheduling
+office windows, each containing a 2×2 set of square SVG cells. Normal mode applies
+one `.lit` state to all four cells in a window. Its single self-rescheduling
 ambient timer exists only while the balcony is visible and the document is
-focused; manual clicks toggle exactly one apartment and are the only events that
-enter the launch detector. Three clicks on the same apartment within 1.1 seconds
-start the game.
+focused; a manual click toggles exactly one window and a double-click starts the
+game.
 
 The minigame owns a 10×16 board, seven-bag pieces, rotation/wall kicks,
 line/level scoring, and `localStorage["balconyTetrisHigh"]`. That personal best

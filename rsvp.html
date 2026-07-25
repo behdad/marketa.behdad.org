@@ -876,13 +876,17 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   fill:#172735 !important;
   opacity:.88 !important
 }
-#stage-balcony.tetris-on .balcony-building-cell.tetris-i{fill:#62c9d5 !important;opacity:1 !important}
-#stage-balcony.tetris-on .balcony-building-cell.tetris-j{fill:#668bd6 !important;opacity:1 !important}
-#stage-balcony.tetris-on .balcony-building-cell.tetris-l{fill:#e59a55 !important;opacity:1 !important}
-#stage-balcony.tetris-on .balcony-building-cell.tetris-o{fill:#e5c451 !important;opacity:1 !important}
-#stage-balcony.tetris-on .balcony-building-cell.tetris-s{fill:#72b96c !important;opacity:1 !important}
-#stage-balcony.tetris-on .balcony-building-cell.tetris-t{fill:#aa78bf !important;opacity:1 !important}
-#stage-balcony.tetris-on .balcony-building-cell.tetris-z{fill:#d86f70 !important;opacity:1 !important}
+#stage-balcony.tetris-on .balcony-building-cell[class*="tetris-"]{
+  opacity:1 !important;stroke:#fffdf8;stroke-opacity:.55;stroke-width:.7;
+  filter:drop-shadow(0 0 1.2px rgba(255,255,255,.58))
+}
+#stage-balcony.tetris-on .balcony-building-cell.tetris-i{fill:#35d8ea !important}
+#stage-balcony.tetris-on .balcony-building-cell.tetris-j{fill:#4e7ff0 !important}
+#stage-balcony.tetris-on .balcony-building-cell.tetris-l{fill:#f39a3f !important}
+#stage-balcony.tetris-on .balcony-building-cell.tetris-o{fill:#f2d238 !important}
+#stage-balcony.tetris-on .balcony-building-cell.tetris-s{fill:#55c95d !important}
+#stage-balcony.tetris-on .balcony-building-cell.tetris-t{fill:#b769d2 !important}
+#stage-balcony.tetris-on .balcony-building-cell.tetris-z{fill:#ed5960 !important}
 #stage-balcony.tetris-on #balcony-building-beam{opacity:0}
 #balcony-tetris-ui{display:none;pointer-events:none}
 #stage-balcony.tetris-on #balcony-tetris-ui{display:inline;pointer-events:all}
@@ -898,6 +902,10 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #balcony-tetris-ui .tetris-label{font-size:6px;fill:#d8d4cc}
 #balcony-tetris-ui .tetris-value{font-family:"DejaVu Sans Mono",ui-monospace,monospace;font-size:9px;font-weight:700}
 #balcony-tetris-ui .tetris-status{font-size:6px;fill:#f1cf78}
+#balcony-tetris-ui .tetris-close{cursor:pointer}
+#balcony-tetris-ui .tetris-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:1}
+#balcony-tetris-ui .tetris-close:hover circle{fill:#a94a5d}
+#balcony-tetris-ui .tetris-close path{stroke:#fffdf8;stroke-width:1.5;stroke-linecap:round;pointer-events:none}
 @media (prefers-reduced-motion:reduce){.balcony-building-cell{transition:none}}
 .growlight-bulb, .growlight-beam{transition:opacity .3s ease, fill .3s ease}
 #garden-growlight.off .growlight-bulb{fill:#8a8a8a}
@@ -24770,8 +24778,8 @@ section{margin:1.9rem 0}
      balcony cannot be clicked while the across-street windows own input. -->
 <g id="balcony-tetris-ui" aria-hidden="true">
 <rect class="tetris-shield" x="0" y="0" width="680" height="340"/>
-<g transform="translate(452,12)">
-<rect class="tetris-hud-bg" x="0" y="0" width="124" height="74" rx="5"/>
+<g transform="translate(420,12)">
+<rect class="tetris-hud-bg" x="0" y="0" width="156" height="74" rx="5"/>
 <text class="tetris-title" x="9" y="16">WINDOW STACK</text>
 <text class="tetris-label tetris-score-label" x="9" y="30">SCORE</text>
 <text class="tetris-value tetris-score-value" x="50" y="30">0</text>
@@ -24780,6 +24788,10 @@ section{margin:1.9rem 0}
 <text class="tetris-label tetris-lines-label" x="9" y="54">LINES</text>
 <text class="tetris-value tetris-lines-value" x="50" y="54">0</text>
 <text class="tetris-status" x="9" y="66">← → · ↓ · ↑ · SPACE · ESC</text>
+<g class="tetris-close" role="button" aria-label="Close">
+<circle cx="146" cy="10" r="6"/>
+<path d="M143.5 7.5 L148.5 12.5 M148.5 7.5 L143.5 12.5"/>
+</g>
 </g>
 </g>
 </g><!-- /#balcony-wobble -->
@@ -59872,29 +59884,25 @@ async def localfont(name):
       if (active) gameRaf = requestAnimationFrame(frame);
     }
 
-    var triggerWindow = -1, triggerTimes = [];
     grid.addEventListener("click", function (e) {
       var apartment = e.target && e.target.closest ? e.target.closest(".balcony-building-window") : null;
       if (!apartment || active) return;
       e.stopPropagation();
-      var index = parseInt(apartment.getAttribute("data-building-window"), 10);
       apartment.classList.toggle("lit");
       playLaptopClickSound("balcony-cityview");
-      var now = Date.now();
-      if (index !== triggerWindow || (triggerTimes.length && now - triggerTimes[triggerTimes.length - 1] > 600)) {
-        triggerWindow = index; triggerTimes = [];
-      }
-      triggerTimes.push(now);
-      while (triggerTimes.length && now - triggerTimes[0] > 1100) triggerTimes.shift();
-      if (triggerTimes.length >= 3) {
-        triggerTimes = []; triggerWindow = -1;
-        startGame();
-      }
+    });
+    grid.addEventListener("dblclick", function (e) {
+      var apartment = e.target && e.target.closest ? e.target.closest(".balcony-building-window") : null;
+      if (!apartment || active) return;
+      e.preventDefault();
+      e.stopPropagation();
+      startGame();
     });
     // Keyboard-only by design: while the building owns the room, no outside
     // button/object click may mutate the scene underneath or navigate away.
     document.addEventListener("click", function (e) {
       if (!active) return;
+      if (e.target && e.target.closest && e.target.closest(".tetris-close")) stopGame(false);
       e.preventDefault();
       e.stopImmediatePropagation();
     }, true);

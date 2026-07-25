@@ -260,13 +260,13 @@ day/night celestial control, smoking-area details, and the main BBQ activity.
 Double-click the sun or moon for the matching eclipse effect; a single click
 changes day or night.
 
-The building across the street has forty independently lit apartment windows.
-Clicking one window toggles only that apartment; unattended apartments also
-change gently on their own while the balcony is visible and focused. Three rapid
-clicks on the same apartment start **Window Tetris** on the facade's 10×16 lamp
+The building across the street has forty independently lit office windows.
+Clicking one window toggles only that window; unattended lights also change
+gently on their own while the balcony is visible and focused. Double-clicking
+any window starts **Window Tetris** on the facade's 10×16 lamp
 grid. During the game, use `Left`/`Right` to move, `Down` to soft-drop,
 `Up` or `X` to rotate clockwise, `Z` to rotate counter-clockwise, `Space` to
-hard-drop, and `Escape` to quit. Game over restores the apartment lights and
+hard-drop, and `Escape` or the visible close button to quit. Game over restores the office lights and
 briefly accepts `Enter` to restart. The best score persists across visits.
 
 ## Puzzle solutions
@@ -648,9 +648,9 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 - **Invaders:** A hidden office-chair gesture, message action, or API action
   starts the game. Move to aim and fire at the invaders; close it with its visible
   close control.
-- **Window Tetris:** On the balcony, click the same across-the-street apartment
-  three times quickly. The forty physical windows become a 10×16 board with four
-  square lamps per apartment. It is keyboard-only so the scene stays uncluttered;
+- **Window Tetris:** On the balcony, double-click any across-the-street office
+  window. The forty physical windows become a 10×16 board with four square lamps
+  per window. It is keyboard-only so the scene stays uncluttered;
   its controls, score, lines, and persistent best score appear in the room.
 - **Minesweeper:** Available on both phone and monitor.
 - **Pac-Man:** Type its name in the computer's app search, or catch the roaming

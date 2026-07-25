@@ -369,7 +369,8 @@ The main monitor desktop contains these app tiles:
 - Linux
 
 While **Doom**, **Console**, **Python**, **Linux**, **Code**, **Life**, **Tattoo**,
-**Video**, **Call**, **Music**, **Chat**, **Mines**, **Photobooth**, **Calendar**, or **Browser (Chrome)** is open, right-click the app and choose **Kill**
+**Video**, **Call**, **Music**, **Chat**, **Mines**, **Photobooth**, **Calendar**,
+**Weather**, or **Browser (Chrome)** is open, right-click the app and choose **Kill**
 to terminate it with a gag display instead of closing it silently.
 
 Weather does not occupy a desktop tile. Click the Edmonton weather item in the

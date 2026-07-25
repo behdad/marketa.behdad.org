@@ -47,7 +47,7 @@ allowed exception, owner-confirmed.)
   `</g>` that silently broke every stage after the edited one, dictionary keys added to
   one language and not the other). Add more checks to it over time as new bug classes
   turn up — it's meant to grow, not stay frozen at today's coverage. `tests/` is blocked
-  from public access via `.htaccess`, same treatment as `agents.md` and its `CLAUDE.md` symlink.
+  from public access via `.htaccess`, same treatment as `AGENTS.md` and its `CLAUDE.md` symlink.
 - **Run `node tests/play.js` after changes touching rsvp.html game logic/interactions.**
   Headless end-to-end playthrough (~2s): solves the whole game kitchen→balcony, then
   click-storms every `.hunt-hit` (click + dblclick + Enter), failing on any uncaught JS
@@ -88,7 +88,7 @@ allowed exception, owner-confirmed.)
   a torn read is far likelier than a real break after a burst of deploys, and the symptom (whole-
   page loss of layout) rarely matches whatever change is suspected. Deploying several times in
   quick succession widens the window.
-- **`agents.md` and its `CLAUDE.md` compatibility symlink are blocked from public access via
+- **`AGENTS.md` and its `CLAUDE.md` compatibility symlink are blocked from public access via
   `.htaccess`** (the old file was once reachable at `/CLAUDE.md` — the git working tree = web
   root means anything not explicitly blocked is served). If you add other files that
   shouldn't be public (notes, drafts, source assets), block them the same way rather

@@ -238,6 +238,7 @@ var HARNESS = [
   "    function escMenu(){ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); }",
   // A fresh desktop has no killable tasks and no dots; adding the overlay must not resize cells.
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-caps'); await sleep(0);",
+  "    var desktopDock=document.getElementById('monitor-desktop-dock'); mon().classList.remove('tap-blink'); desktopDock.dispatchEvent(new MouseEvent('click',{bubbles:true})); S('desk_blank_click_no_flicker',!mon().classList.contains('tap-blink'));",
   "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','calendar','tattoo','mines','life','doom','code','console','python','linux']; var freshOpenOnly=true;",
   "    for(var di=0;di<allTiles.length;di++){ctxAt(deskTile(allTiles[di])); if(!monOpen()||monKill()) freshOpenOnly=false; escMenu();}",
   "    S('desk_fresh_all_open_only',freshOpenOnly); S('desk_fresh_no_dots',allTiles.every(function(id){return !dot(id);}));",
@@ -370,6 +371,7 @@ check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.e
 
 // ==== DESKTOP TASK REGISTRY + DOCK-ICON CONTEXT MENU ====
 console.log(" desktop running-app registry + dock-icon menu:");
+check("blank desktop and menu-bar clicks do not blink the whole monitor", s.desk_blank_click_no_flicker === true);
 check("fresh app tiles all expose Open only and have no running dots", s.desk_fresh_all_open_only === true && s.desk_fresh_no_dots === true);
 check("real desktop Open registers and dots Mail", s.desk_mail_open_registered === true);
 check("normal close backgrounds Mail without clearing its registry entry or dot", s.desk_mail_close_kept_running === true);

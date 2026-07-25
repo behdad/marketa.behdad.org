@@ -53,10 +53,8 @@ var HARNESS = [
   // Exercise the physical black bezel itself, not merely synthetic coordinates inside the
   // monitor's bounding box: scaled SVG layouts can route those through different targets.
   "    showApp('show-mail'); if(window.__toggleMonitorZoom && !window.__monitorZoomed()) window.__toggleMonitorZoom(); await sleep(20); var bezel=document.getElementById('office-monitor-bezel'), glass=document.getElementById('office-monitor-bg'), br=bezel&&bezel.getBoundingClientRect(), gr=glass&&glass.getBoundingClientRect(); var rx=br&&gr?br.left+Math.max(1,(gr.left-br.left)/2):0, ry=br?(br.top+br.bottom)/2:0; if(bezel) bezel.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,button:2,buttons:2,clientX:rx,clientY:ry})); S('rim_right_pointer_kept_zoom', !!(window.__monitorZoomed&&window.__monitorZoomed())); var rimEvt=(br&&gr)?new MouseEvent('contextmenu',{bubbles:true,cancelable:true,button:2,clientX:rx,clientY:ry}):null; S('rim_context_prevented', rimEvt?!bezel.dispatchEvent(rimEvt):false); S('rim_menu_present', !!monMenu()); escMenu(); if(window.__monitorZoomed&&window.__monitorZoomed()) window.__toggleMonitorZoom(); await sleep(20);",
-  // one full close through the generalized Kill (mon-ctx -> __closeTopMonitorApp)
-  "    showApp('show-mail'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(80);",
-  "    S('mail_kill_closed_app', !mon().classList.contains('show-mail'));",
-  "    S('mail_kill_hid_menu', !monMenu());",
+  // Mail Kill folds three envelopes into paper airplanes, collides them, then leaves an empty tray.
+  "    if(window.MAILS) window.MAILS.forEach(function(m){m.read=true;}); showApp('show-mail'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(50); var mailFlight=document.getElementById('monitor-mail-farewell-flight'); S('mail_kill_started', mon().classList.contains('death-mail') && mon().classList.contains('show-mail')); S('mail_kill_hid_menu', !monMenu()); S('mail_kill_envelopes', !!mailFlight && Number(mailFlight.getAttribute('data-envelopes'))===3); await sleep(700); S('mail_kill_launched', !!mailFlight && Number(mailFlight.getAttribute('data-airborne'))>=2 && Number(mailFlight.getAttribute('data-envelopes'))>=1); S('mail_kill_caption', document.getElementById('hunt-caption').textContent==='You’ve got no mail.'); await sleep(800); S('mail_kill_collision', !!mailFlight && mailFlight.getAttribute('data-collided')==='1' && Number(mailFlight.getAttribute('data-airborne'))===3); await sleep(750); S('mail_kill_empty_tray', !!mailFlight && Number(mailFlight.getAttribute('data-airborne'))===0 && Number(mailFlight.getAttribute('data-fallen'))===3); await sleep(300); S('mail_kill_teardown', !mon().classList.contains('show-mail') && !mon().classList.contains('death-mail') && (!window.MAILS || window.MAILS.every(function(m){return !m.read;})));",
   // Chat Kill freezes a pending request, types Charlie's interrupted thought, collapses the
   // rendered conversation into context tokens, clears it, then resets and closes.
   "    showApp('show-chat'); document.documentElement.lang='en'; if(window.refreshChatText) window.refreshChatText();",
@@ -267,7 +265,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 65000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 70000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -282,7 +280,8 @@ check("right-click on the bare monitor desktop eats the native menu, shows no cu
 console.log(" non-runtime apps (mail/chat/weather/mines/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("right-clicking the zoomed monitor rim keeps zoom and exposes the active app menu", s.rim_right_pointer_kept_zoom === true && s.rim_context_prevented === true && s.rim_menu_present === true, { zoom: s.rim_right_pointer_kept_zoom, prevented: s.rim_context_prevented, menu: s.rim_menu_present });
-check("generalized Kill closes a non-runtime app (mail) + hides the menu", s.mail_kill_closed_app === true && s.mail_kill_hid_menu === true);
+check("Mail Kill launches envelopes as planes and hides its menu", s.mail_kill_started === true && s.mail_kill_hid_menu === true && s.mail_kill_envelopes === true && s.mail_kill_launched === true);
+check("Mail Kill collides the planes, empties the tray, resets unread state, and closes", s.mail_kill_caption === true && s.mail_kill_collision === true && s.mail_kill_empty_tray === true && s.mail_kill_teardown === true, { caption: s.mail_kill_caption, collision: s.mail_kill_collision, empty: s.mail_kill_empty_tray, teardown: s.mail_kill_teardown });
 check("Chat Kill starts on the open app and types the interrupted sentence", s.chat_kill_started === true && s.chat_kill_still_open === true && s.chat_kill_typing_stage === true);
 check("Chat Kill safely cancels pending and queued work", s.chat_kill_cancelled_pending === true);
 check("Chat Kill stops exactly at “I think, therefore I…”", s.chat_kill_stopped_thought === true);

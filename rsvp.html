@@ -4163,6 +4163,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-code #monitor-qbasic{opacity:1}
 #office-monitor.death-life #monitor-life-farewell{opacity:1}
 #office-monitor.death-calendar #monitor-calendar-farewell{opacity:1}
+#office-monitor.death-mail #monitor-mail-farewell{opacity:1}
 #office-monitor.death-tattoo #monitor-tattoo-farewell{opacity:1}
 #office-monitor.death-video #monitor-video-farewell{opacity:1}
 #office-monitor.death-call #monitor-call-farewell{opacity:1}
@@ -21056,6 +21057,19 @@ section{margin:1.9rem 0}
 <g id="monitor-calendar-farewell-pages"></g>
 <rect id="monitor-calendar-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
 </g>
+<!-- Mail killed → envelopes fold into paper airplanes, meet in mid-air, then tumble
+     behind an inbox tray that is left conspicuously empty. -->
+<g id="monitor-mail-farewell">
+<rect x="254" y="154" width="124" height="42" fill="#dce8ed"/>
+<path d="M254 187 Q278 181 300 187 Q326 179 350 186 Q365 181 378 184 L378 196 L254 196 Z" fill="#c5d7dc"/>
+<g id="monitor-mail-farewell-flight"></g>
+<g id="monitor-mail-farewell-tray">
+<path d="M286 179 L294 193 H338 L346 179 L338 178 L333 187 H299 L294 178 Z" fill="#f8f5ec" stroke="#6f8f9d" stroke-width="0.9" stroke-linejoin="round"/>
+<path d="M299 187 H333" fill="none" stroke="#9bb2bb" stroke-width="0.65"/>
+<circle cx="316" cy="190.5" r="1.2" fill="none" stroke="#9bb2bb" stroke-width="0.55"/>
+</g>
+<rect id="monitor-mail-farewell-dim" x="254" y="154" width="124" height="42" fill="#241d22" opacity="0"/>
+</g>
 <!-- Tattoo killed → a tiny machine permanently inks NO REGRETS, then underlines it. -->
 <g id="monitor-tattoo-farewell">
 <defs>
@@ -25840,6 +25854,7 @@ var T = {
       df_code_quip: "Back to BASICs.", // caption under the QBasic → DOS send-off (Code kill)
       df_life_quip: "The point of the game is the playing.", // Alan Watts-inspired caption under the departing glider (Life kill)
       df_calendar_quip: "Your days are numbered.", // caption under Calendar's accelerating tear-off pages
+      df_mail_quip: "You’ve got no mail.", // caption after Mail's paper airplanes leave an empty inbox
       df_tattoo_quip: "No regrets.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Dance like the whole world is watching.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "You found them.", // caption under the Mines board's forced reveal and detonation chain
@@ -26769,6 +26784,7 @@ var T = {
       df_code_quip: "Zpátky k BASICům.", // caption under the QBasic → DOS send-off (Code kill)
       df_life_quip: "Smyslem hry je samotné hraní.", // Alan Watts-inspired caption under the departing glider (Life kill)
       df_calendar_quip: "Tvé dny jsou sečteny.", // caption under Calendar's accelerating tear-off pages
+      df_mail_quip: "Nemáš žádnou poštu.", // caption after Mail's paper airplanes leave an empty inbox
       df_tattoo_quip: "Bez výčitek.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Tancuj, jako by se díval celý svět.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "Našel jsi je.", // caption under the Mines board's forced reveal and detonation chain
@@ -44562,6 +44578,94 @@ setOfficeProgress("pc", false);
     scheduleSaver();
   }
   window.__closeMonitorMail = closeMailApp; // other monitor apps close the inbox before taking the screen
+  function mailDeathFlash() {
+    var finish = function () {
+      if (window.resetMonitorAppState) window.resetMonitorAppState("mail");
+      else closeMailApp();
+    };
+    if (!monitor.classList.contains("show-mail") || !window.__runMonitorDeathFlash) { finish(); return; }
+    var layer = document.getElementById("monitor-mail-farewell-flight");
+    var dim = document.getElementById("monitor-mail-farewell-dim");
+    var letters = [
+      { x: 262, y: 162, launch: .08, color: "#8e3a4a" },
+      { x: 262, y: 175, launch: .21, color: "#4a6b94" },
+      { x: 262, y: 188, launch: .34, color: "#6e8c72" }
+    ];
+    function svgEl(name, attrs) {
+      var el = document.createElementNS("http://www.w3.org/2000/svg", name);
+      Object.keys(attrs).forEach(function (key) { el.setAttribute(key, attrs[key]); });
+      return el;
+    }
+    function envelope(x, y, color, fold) {
+      var g = svgEl("g", { transform: "translate(" + x + " " + y + ") scale(" + (1 - fold * .18).toFixed(3) + ")" });
+      g.appendChild(svgEl("rect", { x: "-5.5", y: "-3.4", width: "11", height: "6.8", rx: ".7", fill: "#fffdf8", stroke: color, "stroke-width": ".65" }));
+      g.appendChild(svgEl("path", { d: "M-5 -2.7 L0 1.1 L5 -2.7", fill: "none", stroke: color, "stroke-width": ".55", "stroke-linejoin": "round" }));
+      if (fold > 0) g.setAttribute("transform", g.getAttribute("transform") + " rotate(" + (-fold * 13).toFixed(2) + ")");
+      return g;
+    }
+    function plane(x, y, color, rotation, scale) {
+      var g = svgEl("g", { transform: "translate(" + x + " " + y + ") rotate(" + rotation + ") scale(" + (scale || 1) + ")" });
+      g.appendChild(svgEl("path", { d: "M-6 -2.7 L7 0 L-4.7 4.2 L-1.7 .7 Z", fill: "#fffdf8", stroke: color, "stroke-width": ".65", "stroke-linejoin": "round" }));
+      g.appendChild(svgEl("path", { d: "M-1.7 .7 L7 0 L-2.2 -1.1", fill: "none", stroke: color, "stroke-width": ".45", "stroke-linejoin": "round" }));
+      return g;
+    }
+    function draw(t) {
+      if (!layer) return;
+      while (layer.firstChild) layer.removeChild(layer.firstChild);
+      var envelopes = 0, airborne = 0, fallen = 0;
+      letters.forEach(function (letter, index) {
+        if (t < letter.launch) {
+          envelopes++;
+          layer.appendChild(envelope(letter.x, letter.y, letter.color, Math.max(0, (t - letter.launch + .055) / .055)));
+          return;
+        }
+        if (t < .58) {
+          airborne++;
+          var flight = Math.min(1, (t - letter.launch) / (.58 - letter.launch));
+          var x = letter.x + (316 - letter.x) * flight;
+          var targetY = 169 + index * 3.5;
+          var y = letter.y + (targetY - letter.y) * flight - Math.sin(flight * Math.PI) * (8 - index);
+          layer.appendChild(plane(x, y, letter.color, -18 + flight * (22 + index * 7), .92));
+          return;
+        }
+        var fall = Math.min(1, (t - .58) / .30);
+        if (fall >= 1) { fallen++; return; } // behind the tray: the inbox now reads empty
+        airborne++;
+        var spread = (index - 1) * 8 * fall;
+        var fy = 172.5 + fall * 21;
+        layer.appendChild(plane(316 + spread, fy, letter.color, (index - 1) * 22 + fall * (index % 2 ? 155 : -145), .92 - fall * .2));
+      });
+      if (t >= .55 && t < .68) {
+        var burst = Math.min(1, (t - .55) / .08);
+        for (var ray = 0; ray < 8; ray++) {
+          var a = ray * Math.PI / 4, r1 = 2 + burst * 2, r2 = 4 + burst * 4;
+          layer.appendChild(svgEl("path", {
+            d: "M" + (316 + Math.cos(a) * r1).toFixed(2) + " " + (172.5 + Math.sin(a) * r1).toFixed(2) +
+               " L" + (316 + Math.cos(a) * r2).toFixed(2) + " " + (172.5 + Math.sin(a) * r2).toFixed(2),
+            fill: "none", stroke: "#d29b36", "stroke-width": ".8", "stroke-linecap": "round",
+            opacity: String(Math.max(0, 1 - (t - .55) / .13))
+          }));
+        }
+      }
+      layer.setAttribute("data-envelopes", String(envelopes));
+      layer.setAttribute("data-airborne", String(airborne));
+      layer.setAttribute("data-collided", t >= .58 ? "1" : "0");
+      layer.setAttribute("data-fallen", String(fallen));
+    }
+    draw(0);
+    if (dim) dim.setAttribute("opacity", "0");
+    window.__runMonitorDeathFlash({
+      screenClass: "death-mail",
+      beats: [{ key: "df_mail_quip", at: 160 }],
+      dur: 2500,
+      tick: function (t) {
+        draw(t);
+        if (dim) dim.setAttribute("opacity", (Math.max(0, (t - .94) / .06) * .18).toFixed(3));
+      },
+      close: finish
+    });
+  }
+  window.__killMonitorMail = mailDeathFlash;
   if (mailWrap) {
     mailWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // screen taps never reach the monitor's boot gag
     mailWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
@@ -45194,7 +45298,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-weather": "__killMonitorWeather", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-weather": "__killMonitorWeather", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;

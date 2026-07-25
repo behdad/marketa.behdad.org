@@ -123,6 +123,10 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
   hidden-tab choke point that silences all one-shots (and autonomous timer-driven ambients)
   without per-call-site guards. Autonomous one-shots additionally guard on
   `document.hidden || !document.hasFocus()` themselves (X11 gives no occlusion signal).
+- **The office laptop's automatic update** keeps animating while the desktop monitor is
+  zoomed, but its update click and reboot chime are suppressed at callback time. The
+  monitor fan remains audible, and player-triggered app, call, music, and toy sounds are
+  unaffected.
 - **Background-safe beds** (channel-only `want()`) intentionally ignore focus/visibility and
   keep playing — the refcount keeps the context alive under them.
 

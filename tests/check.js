@@ -1002,6 +1002,24 @@ function checkSharedStateOwners(file, script) {
   else pass(file + ": shared state has one named transition owner (10 scalars, 10 party moments, people manager)");
 }
 
+// The laptop's unattended update is decorative; while the player is working on the
+// zoomed monitor it must not chirp over that session. Keep the two delayed one-shots
+// behind the same callback-time gate so a timer armed before zoom cannot leak later.
+function checkLaptopUpdateSoundGate(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var start = script.indexOf("function runLaptopUpdate()");
+  var end = script.indexOf("// Call the Prague garden:", start);
+  var body = start >= 0 && end > start ? script.slice(start, end) : "";
+  var gatedClick = /if\s*\(laptopUpdateSoundAllowed\(\)\)\s*playLaptopClickSound\("office-laptop"\)/.test(body);
+  var gatedChime = /if\s*\(laptopUpdateSoundAllowed\(\)\)\s*playBootChimeSound\(\)/.test(body);
+  var readsZoom = /function laptopUpdateSoundAllowed\(\)\s*\{[\s\S]*?__monitorZoomed/.test(script);
+  if (!gatedClick || !gatedChime || !readsZoom) {
+    fail(file + ": automatic laptop update sounds are muted during monitor zoom");
+  } else {
+    pass(file + ": automatic laptop update sounds are muted during monitor zoom");
+  }
+}
+
 // A leftover git merge marker in CSS/HTML slips past `node --check` (which only sees
 // the inline <script>) and the other structural checks — one reached production once.
 // Precise forms only, so decorative "====" comment rules don't false-positive.
@@ -1055,6 +1073,7 @@ FILES.forEach(function (file) {
     checkTapHaloGuards(file, script);
     checkAlbumSkySig(file, script);
     checkSharedStateOwners(file, script);
+    checkLaptopUpdateSoundGate(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

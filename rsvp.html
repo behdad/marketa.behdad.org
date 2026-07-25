@@ -42577,22 +42577,18 @@ setOfficeProgress("pc", false);
       "class": "desk-search-icon" }, searchButton);
     mkEl("rect", { x: 281, y: 154, width: 16, height: 5.5, fill: "transparent" }, searchButton);
     function activateDockSearch(e) {
-      if (e) { e.preventDefault(); e.stopPropagation(); }
+      if (e) {
+        // Pointer clicks must retain their native activation so Android will raise the
+        // keyboard for the input focused below. Keyboard activation still suppresses
+        // Space's page-scroll default.
+        if (e.type === "keydown") e.preventDefault();
+        e.stopPropagation();
+      }
       if (!dockSearchReady()) return;
       if (monitorSystemMenu) monitorSystemMenu.classList.remove("open");
       brandG.setAttribute("aria-expanded", "false");
       openDockSearch(true);
     }
-    searchButton.addEventListener("pointerdown", function (e) {
-      if (e.pointerType !== "touch") return;
-      // Cancelling Android's initiating pointerdown can focus the input without raising
-      // its software keyboard, so only stop propagation on this direct user gesture.
-      e.stopPropagation();
-      if (!dockSearchReady()) return;
-      if (monitorSystemMenu) monitorSystemMenu.classList.remove("open");
-      brandG.setAttribute("aria-expanded", "false");
-      openDockSearch(true);
-    });
     searchButton.addEventListener("click", activateDockSearch);
     searchButton.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     searchButton.addEventListener("keydown", function (e) {

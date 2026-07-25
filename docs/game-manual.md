@@ -393,7 +393,8 @@ to terminate it with its own send-off instead of closing it silently.
 Pac-Man never occupies a desktop tile, but typing its name in the computer's app
 search opens it at any time. During the ketamine magic-box trip, catching the
 roaming Behdad ghost opens it directly. Use the arrow keys or `WASD`,
-the on-screen direction pad, or a swipe across the maze. A blocked direction is
+the on-screen direction pad (tap or drag without lifting), or a swipe across the
+maze. A blocked direction is
 remembered until the next junction. Closing the app retains the current maze,
 and its star score keeps a persistent personal best. Right-clicking the open game
 and choosing **Kill** starts a fresh maze without erasing that best.

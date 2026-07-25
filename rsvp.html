@@ -3902,7 +3902,10 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pac-score{font-size:2.25px;line-height:1.2;white-space:nowrap}
 .pac-high{color:#f5d7a1;font-size:1.9px;line-height:1.2;white-space:nowrap}
 .pac-message{align-self:center;color:#ffb4c1;font-size:2.25px;line-height:1.25}
-.pac-controls{align-self:center;display:grid;grid-template:repeat(3,6px)/repeat(3,6px);justify-content:center;gap:.7px}
+.pac-controls{align-self:center;display:grid;grid-template:repeat(3,6px)/repeat(3,6px);justify-content:center;gap:.7px;border-radius:2px;touch-action:none;cursor:grab;background:linear-gradient(90deg,transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%),linear-gradient(transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%)}
+.pac-controls::before{content:"";grid-area:2/2;width:3.2px;height:3.2px;place-self:center;border:.45px solid #6579dc;border-radius:50%;background:#253fc8;box-shadow:0 0 1px rgba(65,100,255,.75);pointer-events:none}
+.pac-controls.dragging{cursor:grabbing}
+.pac-controls.dragging::before{background:#ffd83d;border-color:#f5d7a1;box-shadow:0 0 1.5px rgba(255,216,61,.85)}
 .pac-btn,.pac-new{border:0;border-radius:1px;background:#182252;color:#f8f5ec;font:3px/1 ui-monospace,monospace;padding:0}
 .pac-btn[data-dir="up"]{grid-area:1/2}.pac-btn[data-dir="left"]{grid-area:2/1}.pac-btn[data-dir="right"]{grid-area:2/3}.pac-btn[data-dir="down"]{grid-area:3/2}
 .pac-new{width:100%;height:6px;font-size:2.15px;background:#8e3a4a}
@@ -46858,10 +46861,51 @@ setOfficeProgress("pc", false);
       btn.setAttribute("aria-label", pacText(pair[2]));
       btn.setAttribute("title", pacText(pair[2]));
       btn.setAttribute("data-tkey", pair[2]);
-      btn.addEventListener("pointerdown", function (e) { e.preventDefault(); e.stopPropagation(); pacChoose(pair[0]); });
-      btn.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); pacChoose(pair[0]); });
+      btn.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (e.detail && btn.__pacPointerChosen) { btn.__pacPointerChosen = false; return; }
+        pacChoose(pair[0]);
+      });
       controls.appendChild(btn);
     });
+    var pacDrag = null;
+    function endPacDrag(e) {
+      if (!pacDrag || (e && e.pointerId !== pacDrag.pointerId)) return;
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      var pointerId = pacDrag.pointerId;
+      pacDrag = null; controls.classList.remove("dragging");
+      try { controls.releasePointerCapture(pointerId); } catch (ignore) {}
+    }
+    controls.addEventListener("pointerdown", function (e) {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault(); e.stopPropagation();
+      var btn = e.target && e.target.closest ? e.target.closest(".pac-btn[data-dir]") : null;
+      var rect = controls.getBoundingClientRect();
+      pacDrag = {
+        pointerId: e.pointerId, x: e.clientX, y: e.clientY,
+        lastDir: btn ? btn.getAttribute("data-dir") : null,
+        threshold: Math.max(3, Math.min(7, Math.min(rect.width, rect.height) * .16))
+      };
+      controls.classList.add("dragging");
+      try { controls.setPointerCapture(e.pointerId); } catch (ignore) {}
+      if (btn) { btn.__pacPointerChosen = true; pacChoose(pacDrag.lastDir); }
+    });
+    controls.addEventListener("pointermove", function (e) {
+      if (!pacDrag || e.pointerId !== pacDrag.pointerId) return;
+      e.preventDefault(); e.stopPropagation();
+      var dx = e.clientX - pacDrag.x, dy = e.clientY - pacDrag.y;
+      var ax = Math.abs(dx), ay = Math.abs(dy);
+      if (Math.max(ax, ay) < pacDrag.threshold || (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
+      var dir = ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+      var needed = pacDrag.lastDir && PAC_REVERSE[pacDrag.lastDir] === dir ? pacDrag.threshold * 1.55 : pacDrag.threshold;
+      if (Math.max(ax, ay) < needed) return;
+      pacDrag.x = e.clientX; pacDrag.y = e.clientY;
+      if (dir === pacDrag.lastDir) return;
+      pacDrag.lastDir = dir; pacChoose(dir);
+    });
+    controls.addEventListener("pointerup", endPacDrag);
+    controls.addEventListener("pointercancel", endPacDrag);
+    controls.addEventListener("lostpointercapture", endPacDrag);
     pacNewEl = document.createElement("button"); pacNewEl.type = "button"; pacNewEl.className = "pac-new";
     pacNewEl.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); pacResetBoard(true); }); actions.appendChild(pacNewEl);
     pacWrap.addEventListener("click", function (e) { e.stopPropagation(); });

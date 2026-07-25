@@ -776,7 +776,8 @@ ordinary JavaScript syntax.
 
 The monitor's **Code** app is a small workspace for named JavaScript and Python
 files. Use the **JS** and **PY** controls to choose a language; a `.js` or `.py`
-filename chooses it automatically. Each language starts with a runnable example.
+filename chooses it automatically. Each language starts with runnable examples;
+Python includes `square.py` and the centered recursive `space-filler.py`.
 
 JavaScript files use the same human-oriented commands as the console, and accept
 top-level `await`, so timed loft sequences can be written directly:

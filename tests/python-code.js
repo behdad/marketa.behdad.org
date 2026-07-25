@@ -43,6 +43,11 @@ check(/js\["hello\.js"\]\s*=\s*CODE_STARTER/.test(html) &&
       /caption\(\\"hello from the loft/.test(html) &&
       /for _ in range\(4\):[\s\S]*?t\.forward\(60\)[\s\S]*?t\.right\(90\)/.test(html),
   "one-time editable hello.js and square.py examples are preloaded without overwriting user files");
+check(/py\["space-filler\.py"\]\s*=\s*CODE_PY_SPACE_FILLER/.test(html) &&
+      /CODE_SPACE_FILLER_KEY\s*=\s*"deskCodeSpaceFillerV1"/.test(html) &&
+      /t\.goto\(-75,\s*-75\)/.test(html) &&
+      /fill\(4\)/.test(html),
+  "the centered space-filler turtle reaches existing players through its own one-time migration");
 check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),

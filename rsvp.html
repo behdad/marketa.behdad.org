@@ -68637,6 +68637,18 @@ function playGlassClinkSound(pitchMult, panId) {
     [{ f: 2600, g: 0.15, d: 0.4 }, { f: 3400, g: 0.11, d: 0.34 }, { f: 5200, g: 0.045, d: 0.2 }].forEach(function (p) {
       var osc = ctx.createOscillator();
       osc.type = "sine";
+      osc.frequency.value = p.f * mult;
+      var gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(p.g, t + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
+      osc.connect(gain);
+      gain.connect(out);
+      osc.start(t);
+      osc.stop(t + p.d + 0.03);
+    });
+  } catch (e) {}
+}
 // Code → QBasic → DOS: a tiny PC-speaker acknowledgement, then the lower "returned to DOS"
 // chirp timed to the black prompt. Square waves keep it fondly primitive.
 function playQBasicExitSound(panId) {
@@ -68649,18 +68661,6 @@ function playQBasicExitSound(panId) {
       g.gain.exponentialRampToValueAtTime(n.gain, t + n.at + 0.008);
       g.gain.exponentialRampToValueAtTime(0.0001, t + n.at + n.d);
       o.connect(g); g.connect(out); o.start(t + n.at); o.stop(t + n.at + n.d + 0.02);
-    });
-  } catch (e) {}
-}
-      osc.frequency.value = p.f * mult;
-      var gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(p.g, t + 0.006);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + p.d);
-      osc.connect(gain);
-      gain.connect(out);
-      osc.start(t);
-      osc.stop(t + p.d + 0.03);
     });
   } catch (e) {}
 }

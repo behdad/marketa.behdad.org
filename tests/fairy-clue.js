@@ -79,7 +79,8 @@ var harness = String.raw`<script>
         check("Markéta's Rumi bubble has a tail aimed at her",
           rumi && rumi._rumiTailAnchor &&
           rumi._rumiTailAnchor.id === "cuddly-marketa-head" &&
-          !!rumi.style.getPropertyValue("--rumi-tail-x"));
+          !!rumi.style.getPropertyValue("--rumi-tail-x") &&
+          rumi._rumiFollowing === true);
         check("the Rumi exchange does not add a public command",
           typeof window.rumi === "undefined");
 
@@ -98,7 +99,8 @@ var harness = String.raw`<script>
             check("behdad's Rumi bubble has a tail aimed at him",
               reply && reply._rumiTailAnchor &&
               reply._rumiTailAnchor.id === "cuddly-behdad-head" &&
-              !!reply.style.getPropertyValue("--rumi-tail-x"));
+              !!reply.style.getPropertyValue("--rumi-tail-x") &&
+              reply._rumiFollowing === true);
             window.__setDayNight(false);
             check("dawn sends the cuddly fairy away again",
               !cameo.classList.contains("present") &&

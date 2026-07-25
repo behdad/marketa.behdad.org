@@ -64478,7 +64478,7 @@ async def localfont(name):
     ["\u062e\u064e\u0645\u0631\u0650 \u0645\u0646 \u0648 \u062e\u064f\u0645\u0627\u0631\u0650 \u0645\u0646\u060c \u0628\u0627\u063a\u0650 \u0645\u0646 \u0648 \u0628\u0647\u0627\u0631\u0650 \u0645\u0646", "\u062e\u0648\u0627\u0628\u0650 \u0645\u0646 \u0648 \u0642\u0631\u0627\u0631\u0650 \u0645\u0646\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"],
     ["\u06af\u064e\u0631 \u062a\u0648 \u0646\u0628\u0627\u0634\u06cc \u06cc\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u06af\u064e\u0634\u062a \u062e\u0631\u0627\u0628 \u06a9\u0627\u0631\u0650 \u0645\u0646", "\u0645\u0648\u0646\u0633\u0650 \u0648 \u063a\u064e\u0645\u200c\u06af\u064f\u0633\u0627\u0631\u0650 \u0645\u064e\u0646\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"]
   ];
-  var lastRumi = -1, rumiReplyTimer = null;
+  var lastRumi = -1, rumiReplyTimer = null, rumiFollowRaf = null;
   function rumiPick() {
     if (RUMI_FA.length < 2) return 0;
     var i = lastRumi;
@@ -64497,23 +64497,38 @@ async def localfont(name):
       '<span class="rumi-reading">' + reading + '</span>' +
       (credit ? '<span class="rumi-credit">— Rumi, Ghazal 553</span>' : "");
   }
-  function showRumi(anchor, speaker, fa, reading, credit, yOffset, xOffset, layout) {
-    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top", yOffset, xOffset, 6400);
-    if (bubble) {
-      bubble.classList.add("rumi-bubble");
-      bubble._rumiOffset = { y: yOffset || 0, x: xOffset || 0 };
-      var anchorRect = anchor.getBoundingClientRect();
-      if (layout === "head-top-left") {
-        bubble.style.left = Math.max(8, anchorRect.left - bubble.offsetWidth - 10) + "px";
-        bubble.style.top = Math.max(8, anchorRect.top - bubble.offsetHeight - 10) + "px";
-        bubble._rumiLayout = layout;
-      }
-      var bubbleLeft = parseFloat(bubble.style.left) || 0;
-      var tailX = anchorRect.left + anchorRect.width / 2 - bubbleLeft;
-      tailX = Math.max(12, Math.min(bubble.offsetWidth - 12, tailX));
-      bubble.style.setProperty("--rumi-tail-x", tailX + "px");
-      bubble._rumiTailAnchor = anchor;
+  function positionRumiBubble(bubble, anchor, yOffset, xOffset, layout) {
+    positionEggBubble(bubble, anchor, "top", yOffset, xOffset);
+    var anchorRect = anchor.getBoundingClientRect();
+    if (layout === "head-top-left") {
+      bubble.style.left = Math.max(8, anchorRect.left - bubble.offsetWidth - 10) + "px";
+      bubble.style.top = Math.max(8, anchorRect.top - bubble.offsetHeight - 10) + "px";
     }
+    var bubbleLeft = parseFloat(bubble.style.left) || 0;
+    var tailX = anchorRect.left + anchorRect.width / 2 - bubbleLeft;
+    tailX = Math.max(12, Math.min(bubble.offsetWidth - 12, tailX));
+    bubble.style.setProperty("--rumi-tail-x", tailX + "px");
+  }
+  function showRumi(anchor, speaker, fa, reading, credit, yOffset, xOffset, layout) {
+    if (rumiFollowRaf) cancelAnimationFrame(rumiFollowRaf);
+    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top", yOffset, xOffset, 6400);
+    if (!bubble) return bubble;
+    bubble.classList.add("rumi-bubble");
+    bubble._rumiOffset = { y: yOffset || 0, x: xOffset || 0 };
+    bubble._rumiLayout = layout || "head-top-right";
+    bubble._rumiTailAnchor = anchor;
+    bubble._rumiFollowing = true;
+    function followHead() {
+      if (!bubble.isConnected) {
+        bubble._rumiFollowing = false;
+        rumiFollowRaf = null;
+        return;
+      }
+      positionRumiBubble(bubble, anchor, yOffset, xOffset, layout);
+      rumiFollowRaf = requestAnimationFrame(followHead);
+    }
+    positionRumiBubble(bubble, anchor, yOffset, xOffset, layout);
+    rumiFollowRaf = requestAnimationFrame(followHead);
     return bubble;
   }
   window.__offerRumiAt = function (fallback) {

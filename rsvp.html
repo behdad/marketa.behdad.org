@@ -64212,6 +64212,7 @@ async def localfont(name):
     // (owner: the wiggle hints "open me" by day) — give the leaf a gentle come-hither nudge; drop
     // it the instant the door opens, the room solves, or night falls. Reduced-motion drops via CSS.
     window.__cuddlyDoorNeeded = function () {
+      if (window.__secondRound) return false;
       var oct = document.getElementById("cuddly-octopus");
       var bl = document.getElementById("cuddly-blanket");
       return !!(oct && oct.classList.contains("played") && !cuddlyDoor.classList.contains("open") && !(bl && bl.classList.contains("done")));
@@ -68129,8 +68130,9 @@ function updateOfficeNudges() {
   var callLive = !!(lap && ["calling", "connecting", "connected"]
     .some(function (c) { return lap.classList.contains(c); })) ||
     !!(window.__familyCallLive && window.__familyCallLive()); // any call (laptop Prague/Lübeck or monitor Tehran) quiets the nudges
-  var wantLaptop = !done && !window.__pragueCalled;
-  var wantPc = !done && !callLive && !!window.__pragueCalled && !window.__pcPlayed;
+  var phaseOne = !window.__secondRound;
+  var wantLaptop = phaseOne && !done && !window.__pragueCalled;
+  var wantPc = phaseOne && !done && !callLive && !!window.__pragueCalled && !window.__pcPlayed;
   if (wantLaptop) { if (window.__inviteLaptop) window.__inviteLaptop(); }
   else if (window.__stopLaptopInvite) window.__stopLaptopInvite();
   var pc = document.getElementById("office-pc-desk-trio");
@@ -72531,6 +72533,15 @@ function spawnDustMote(container) {
     return maxUnlocked;
   };
   updateDots();
+  function phaseOneSolveCaption(key) {
+    if (typeof key !== "string") return false;
+    return key === "kitchen" ||
+      (key.indexOf("kitchen_") === 0 && key !== "kitchen_bar" && key !== "kitchen_bar_night") ||
+      key === "garden" || key.indexOf("garden_need_") === 0 ||
+      key === "cuddly_hint" || key === "cuddly_door" || key === "cuddly_pull" ||
+      key === "office_call" || key === "office_computer" || key === "office_find" ||
+      key === "office_hint";
+  }
   function setCaption(key, force) {
     // While the "Watch the loft" cinematic runs it OWNS the caption: the scripted
     // interactions it fires (watering, music, calling Prague…) would otherwise stomp the
@@ -72540,6 +72551,7 @@ function spawnDustMote(container) {
     // showRsvpNudge stays unguarded, so the finale's graceful RSVP landing still lands.
     if (window.__cinematic && !force) return;
     if ((huntIntroShowing || openingGuideShowing) && !force) return; // opening prompt/guide owns the caption until its handoff completes
+    if (window.__secondRound && phaseOneSolveCaption(key) && !force) return;
     captionKey = key;
     caption.classList.remove("rsvp-nudge");
     // innerHTML, not textContent: caption copy carries markup — <em> round the cast's names, the
@@ -73071,6 +73083,7 @@ function spawnDustMote(container) {
   // A solve animation may finish after the player has already navigated elsewhere. Its
   // destination still unlocks, but the stale timer must not pull them out of their current room.
   window.__unlockSolvedRoom = function (name) {
+    if (window.__secondRound) return false;
     var toIdx = STAGES.indexOf(name);
     if (toIdx === -1) return false;
     unlockThrough(toIdx);
@@ -73078,8 +73091,10 @@ function spawnDustMote(container) {
     return true;
   };
   window.__finishSolveAdvance = function (from, to) {
+    if (window.__secondRound) return false;
     if (STAGES[stageIndex] === from) goToStage(to);
     else window.__unlockSolvedRoom(to);
+    return true;
   };
   window.__maxUnlocked = function () { return maxUnlocked; }; // furthest room reached — autoplay reads it to know which rooms are solved
   if (prevBtn) prevBtn.addEventListener("click", function () {
@@ -73256,6 +73271,7 @@ function spawnDustMote(container) {
   // handlers get first refusal and prevent/stop Escape before it arrives here. Backspace dispatches
   // the existing fullscreen-safe synthetic Escape below, so it shares this exact path.
   function activateCurrentRoom() {
+    if (window.__secondRound) return false;
     var er = window.currentStageName, did = true;
     if (er === "kitchen") { if (stageIndex < maxUnlocked) { if (window.__toggleDayNight) window.__toggleDayNight(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // solved → toggle day/night (kitchen ⇄ bar); unsolved → walk the espresso solve (a no-op mid warm-up/brew, so Enter never flips to night then). NB: __kitchenDoNext returns null transiently, not just when solved, so gate the toggle on the room being solved, not on its return.
     else if (er === "garden") { if (!(window.__gardenDoNext && window.__gardenDoNext())) { if (window.party) window.party(!window.party()); } } // advance the solve (water→music→candles); once solved, toggle the party
@@ -73504,7 +73520,7 @@ function spawnDustMote(container) {
   }
   function updateKitchenInvite() {
     var next = null;
-    if (!huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line
+    if (!window.__secondRound && !huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line
       if (!kitchenPowered) next = "kitchen-lamarzocco";
       else if (!kitchenWarmedUp) next = null; // warming up — nothing's actionable yet
       else if (portafilterSpent) next = "kitchen-knockbox";
@@ -73554,6 +73570,7 @@ function spawnDustMote(container) {
   // points at (same order as updateKitchenInvite). Clicking an element runs its onActivate,
   // which drives the fly-to/step animations, so this advances the sequence one beat.
   window.__kitchenDoNext = function () {
+    if (window.__secondRound) return null;
     if (window.__barUpNow && window.__barUpNow()) return null; // bar's up → no coffee step (Enter makes a cocktail instead)
     var nx = null;
     if (!kitchenPowered) nx = "kitchen-lamarzocco";
@@ -73780,6 +73797,7 @@ function spawnDustMote(container) {
 
   var gardenState = { water: false, music: false, candles: false };
   function updateGardenHint() {
+    if (window.__secondRound) return;
     if (window.__gardenPartyOn) return; // the party owns the caption (see refreshGardenCaption)
     var missing = [];
     if (!gardenState.water) missing.push("water");
@@ -73797,11 +73815,12 @@ function spawnDustMote(container) {
     var beat = window.__actBeatHint ? window.__actBeatHint("garden") : null;
     if (beat) { setCaption(beat); return; }
     if (window.__gardenPartyOn) setCaption("garden_party");
+    else if (window.__secondRound) showExploration("garden");
     else { setCaption("garden"); updateGardenHint(); }
   };
   function checkGardenDone() {
     updateGardenHint();
-    if (window.__cinematic) return; // the cinematic drives room changes itself
+    if (window.__cinematic || window.__secondRound) return; // the cinematic drives room changes itself; phase two has no solve trail
     if (gardenState.water && gardenState.music && gardenState.candles) {
       setTimeout(function () { window.__finishSolveAdvance("garden", "cuddly"); }, 700);
     }
@@ -73843,6 +73862,7 @@ function spawnDustMote(container) {
   // __kitchenDoNext: click the next pending element so its own onActivate runs. Returns the id it
   // fired, or null when nothing's pending (solved) — the Enter handler falls through to the toggle.
   window.__gardenDoNext = function () {
+    if (window.__secondRound) return null;
     var nx = null;
     if (!gardenState.water) nx = "garden-monstera";
     else if (!gardenState.music) nx = "garden-guitar";
@@ -73854,6 +73874,7 @@ function spawnDustMote(container) {
     return nx;
   };
   window.__gardenClueTarget = function () {
+    if (window.__secondRound) return null;
     // The fairy only guides the still-locked garden solve. Once cuddly-puddly is
     // available, their click becomes a fāl instead of pointing at already-finished work.
     if ((window.__maxUnlocked && window.__maxUnlocked()) >= STAGES.indexOf("cuddly")) return null;
@@ -74605,6 +74626,8 @@ function spawnDustMote(container) {
         if (window.__retryShareAutoShow) window.__retryShareAutoShow();
       }
     }
+    if (window.__updateOfficeNudges) window.__updateOfficeNudges();
+    if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint();
     if (window.__syncRosterAvail) window.__syncRosterAvail();
     return previous;
   }
@@ -80463,6 +80486,7 @@ function spawnDustMote(container) {
         });
         playSwishSound(id);
       }
+      if (window.__secondRound) return;
       var octopus = document.getElementById("cuddly-octopus");
       if (!octopus || !octopus.classList.contains("played")) {
         setCaption("cuddly_hint");
@@ -80477,8 +80501,7 @@ function spawnDustMote(container) {
       }
       el.classList.add("done");
       setTimeout(function () {
-        if (stageIndex === 2) goToStage("office");
-        else window.__unlockSolvedRoom("office");
+        window.__finishSolveAdvance("cuddly", "office");
       }, 700);
     }
     var dragging = false, dragStartPt = null, dragStartOffset = { x: 0, y: 0 }, dragMoved = false;
@@ -80528,6 +80551,7 @@ function spawnDustMote(container) {
   // door, then pull the blanket off the couple. Same idea as __kitchenDoNext/__gardenDoNext;
   // returns the id it fired.
   window.__cuddlyDoNext = function () {
+    if (window.__secondRound) return null;
     var oct = document.getElementById("cuddly-octopus");
     if (!(oct && oct.classList.contains("played"))) { if (oct) oct.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "cuddly-octopus"; }
     // middle step: open the balcony door before the blanket counts (see triggerBlanketPull's gate)
@@ -80576,6 +80600,10 @@ function spawnDustMote(container) {
   window.butterfly = function () { if (window.goToStage) window.goToStage("office"); var completion = flapButterfly(); if (window.echo) window.echo("🦋 the stained-glass butterfly stirs its wings."); return completion; }; // console toy: go to the office and flutter the stained-glass butterfly
   onActivate(glass, function () {
     if (window.__cinematic) return; // the cinematic drives goToStage("balcony") itself
+    if (window.__secondRound) {
+      flapButterfly().catch(function () {}); // a UI flourish may be skipped; only the scripting API exposes lifecycle failure
+      return;
+    }
     if (!window.__pragueCalled) { // the finale gates on calling Prague first
       setCaption("office_call");
       flapButterfly();
@@ -80599,8 +80627,7 @@ function spawnDustMote(container) {
     if (officeDim) officeDim.style.opacity = "0.72";
     setCaption("complete");
     setTimeout(function () {
-      if (stageIndex === 3) goToStage("balcony");
-      else window.__unlockSolvedRoom("balcony");
+      window.__finishSolveAdvance("office", "balcony");
     }, 2000);
     setTimeout(function () { if (officeDim) officeDim.style.opacity = "0"; }, 3000);
   });
@@ -80612,6 +80639,7 @@ function spawnDustMote(container) {
   // mid-ring, so a rapid Enter waits rather than re-dialing or falling through to the zoom —
   // and null once the office is solved (the glass carries `done`), so Enter then toggles zoom.
   window.__officeDoNext = function () {
+    if (window.__secondRound) return null;
     var glass = document.getElementById("office-stainedglass");
     if (glass && glass.classList.contains("done")) return null; // solved → Enter toggles the monitor zoom instead
     var callLive = !!(window.__laptopCallLive && window.__laptopCallLive());

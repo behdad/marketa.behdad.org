@@ -366,7 +366,7 @@ The main monitor desktop contains these app tiles:
 - Mines
 - Life
 - Doom
-- Editor
+- Code
 - Console
 - Python
 - Linux
@@ -401,7 +401,7 @@ freeze the dancing.
 ### Computer-only environments
 
 The monitor includes a JavaScript Console, a shared JavaScript/Python Script
-Editor, a Python environment, and a Linux-like command environment. These are
+Code, a Python environment, and a Linux-like command environment. These are
 optional toys for technically curious players. The Python and Linux apps use
 browser-hosted, pinned runtimes rather than a shell on the visitor's device.
 HarfBuzz and font-tool demonstrations are included.
@@ -727,9 +727,9 @@ shortcuts()            // print keyboard shortcuts
 the wedding crew thread. These slash commands are for the pro console, not
 ordinary JavaScript syntax.
 
-### Script Editor
+### Code
 
-The monitor's **Editor** app is a small workspace for named JavaScript and Python
+The monitor's **Code** app is a small workspace for named JavaScript and Python
 files. Use the **JS** and **PY** controls to choose a language; a `.js` or `.py`
 filename chooses it automatically. Each language starts with a runnable example.
 
@@ -737,7 +737,7 @@ JavaScript files use the same human-oriented commands as the console, and accept
 top-level `await`, so timed loft sequences can be written directly:
 
 ```js
-caption("hello from the editor", { blink: 1000, hold: 2500 })
+caption("hello from the Code", { blink: 1000, hold: 2500 })
 await sleep(900)
 party(true)
 await sleep(1600)
@@ -764,20 +764,20 @@ operations are supported. It does not open a desktop Tk window.
 
 Naming a file enables autosave. Saved JavaScript and Python files are stored in
 this browser and survive reloads, game resets, and simulated computer reboots.
-The editor can also create, duplicate, delete, import, download, email, or run
+Code can also create, duplicate, delete, import, download, email, or run
 its current file.
 
 From either JavaScript console:
 
 ```js
 scripts()          // list saved script names
-edit("welcome")   // open a named script in the Editor
+edit("welcome")   // open a named script in the Code
 run("welcome")    // run it once
 repeat("welcome") // keep running it until stopped
 stop()             // stop a running or repeating script
 ```
 
-The Editor's Run button executes the current buffer even before it has been
+The Code's Run button executes the current buffer even before it has been
 named. A Python run switches to the Python app, where output and errors appear.
 While a JavaScript script is repeating, the button becomes Stop; `Escape` and
 `stop()` also end the loop. Repeating scripts pause while the browser is hidden.

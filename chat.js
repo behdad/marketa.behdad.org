@@ -8,7 +8,7 @@ const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/sit
 const TURNSTILE_ACTION = "loft-chat";
 const DEFAULT_MODEL = "gpt-5.6-luna";
 // Scripting questions include the generated public API manifest. Keep the request bounded, but
-// leave room for the complete typed/global reference plus a pasted editor buffer.
+// leave room for the complete typed/global reference plus a pasted code buffer.
 const MAX_BODY_CHARS = 96 * 1024;
 const MAX_MESSAGE_CHARS = 500;
 const MAX_HISTORY_ITEMS = 24;
@@ -16,20 +16,20 @@ const MAX_GROUP_CAST_ITEMS = 40;
 const MAX_GROUP_RECENT_ITEMS = 12;
 const MAX_GROUP_PEOPLE_ITEMS = 24;
 const MAX_TURNSTILE_TOKEN_CHARS = 2048;
-const MAX_EDITOR_CODE_CHARS = 14_000;
-const MAX_EDITOR_EDITS = 16;
-const MAX_EDITOR_EDIT_TEXT_CHARS = 4_000;
-const MAX_EDITOR_EDIT_TOTAL_CHARS = 12_000;
+const MAX_CODE_SOURCE_CHARS = 14_000;
+const MAX_CODE_EDITS = 16;
+const MAX_CODE_EDIT_TEXT_CHARS = 4_000;
+const MAX_CODE_EDIT_TOTAL_CHARS = 12_000;
 const TURNSTILE_TIMEOUT_MS = 10_000;
 const UPSTREAM_TIMEOUT_MS = 35_000;
 const CHAT_KNOWLEDGE_JSON = JSON.stringify(CHAT_KNOWLEDGE);
-const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "mines", "life", "doom", "editor", "console", "python", "linux", "weather"]);
+const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "mines", "life", "doom", "code", "console", "python", "linux", "weather"]);
 const PUBLIC_PHONE_APPS = new Set(["call", "messages", "mail", "calendar", "album", "photobooth", "music", "hn", "weather", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"]);
 const PUBLIC_MAIL_IDS = new Set(["lore", "rsvp", "spam"]);
 
 const ACTION_SPECS = Object.freeze({
   "room.go": Object.freeze({ room: new Set(["kitchen", "garden", "cuddly", "office", "balcony"]) }),
-  "app.open": Object.freeze({ app: new Set(["chrome", "video", "life", "doom", "console", "python", "linux", "chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "photobooth", "hn", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz", "editor"]) }),
+  "app.open": Object.freeze({ app: new Set(["chrome", "video", "life", "doom", "console", "python", "linux", "chat", "weather", "calendar", "messages", "mail", "call", "music", "album", "tattoo", "photos", "photobooth", "hn", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz", "code"]) }),
   "roster.set": Object.freeze({ open: "boolean" }),
   "music.play": Object.freeze({}),
   "music.pause": Object.freeze({}),
@@ -93,9 +93,9 @@ When current game state.scripting_api is present, it is the authoritative public
 the Loft's typed loft.api capabilities and legacy console/global JavaScript commands. Use its
 descriptions, argument schemas, enums, and availability to answer API/signature questions and to
 review or draft scripts. The typed entries describe bounded query/action calls and their results;
-the globals are documented editor/console helpers such as party(), room(), sleep(), and dance().
+the globals are documented code/console helpers such as party(), room(), sleep(), and dance().
 Do not invent signatures, expose private implementation details, or execute pasted code. Chat may
-propose a script or point to the Script Editor, but only the game's allowlisted action field can
+propose a script or point to Code, but only the game's allowlisted action field can
 request one bounded action and it must still appear in actions_available.
 
 Current game state.environment.indoor_temperature.temperature_c is exactly the live indoor reading on the garden/party room's mini-split display. For questions about the temperature inside, indoors, or in the loft, report that value rather than Edmonton's outdoor weather. occupancy_count and occupancy_gain_c explain crowd warmth without exposing identities; molly_gain_c is temporary Molly heat that rises to at most 5°C and cools away afterward. Other trips do not affect temperature.
@@ -114,9 +114,9 @@ weather.scene.set changes only the authored weather visible around the loft; it 
 
 A direct request to make or get coffee should use coffee.make. It ends an active party, restores daylight, and takes the player to La Maz, the kitchen/bar espresso machine; do not claim the coffee itself has already been made.
 
-The office computer's Script Editor is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; explain their purpose and open them when directly requested, but never execute arbitrary code from Chat. If the visitor asks you to run, schedule, loop, or delay a script, explain briefly that Chat cannot execute arbitrary JavaScript, point them to the computer's editor, and attach app.open with app:"editor" when that action is available. If they paste JavaScript into Chat, review it as text: explain errors, suggest corrections, and return a revised snippet when useful, but never execute it, claim it ran, or silently convert it into an action. Chat is a code-review and drafting space; the Script Editor is the execution space.
+The office computer's Code app is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; explain their purpose and open them when directly requested, but never execute arbitrary code from Chat. If the visitor asks you to run, schedule, loop, or delay a script, explain briefly that Chat cannot execute arbitrary JavaScript, point them to Code, and attach app.open with app:"code" when that action is available. If they paste JavaScript into Chat, review it as text: explain errors, suggest corrections, and return a revised snippet when useful, but never execute it, claim it ran, or silently convert it into an action. Chat is a code-review and drafting space; Code is the execution space.
 
-The Script Editor runs the Loft's documented global API, not only standard JavaScript. Valid examples include "await sleep(3000)", "party(true)", "party(false)", "room(\"garden\")", "daylight(true)", "night()", "music(\"next\")", "dance(\"salsa\")", "trip(\"molly\")", "caption(\"text\")", and "loft.api.query(...)" / "loft.api.perform(...)". Treat these as valid in-editor commands when reviewing pasted code; do not incorrectly say that "sleep" or "party" are missing merely because they are not browser-standard functions. The editor wraps code in an async function, so top-level "await" is supported.
+Code runs the Loft's documented global API, not only standard JavaScript. Valid examples include "await sleep(3000)", "party(true)", "party(false)", "room(\"garden\")", "daylight(true)", "night()", "music(\"next\")", "dance(\"salsa\")", "trip(\"molly\")", "caption(\"text\")", and "loft.api.query(...)" / "loft.api.perform(...)". Treat these as valid Code commands when reviewing pasted code; do not incorrectly say that "sleep" or "party" are missing merely because they are not browser-standard functions. Code wraps JavaScript in an async function, so top-level "await" is supported.
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should use party.extend, not party.set. It cancels an accepted or in-progress finale and grants another full attended party interval.
 When no party is active, a direct request such as "party", "start the party", or "let's party" should use party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
@@ -155,9 +155,9 @@ weather.scene.set changes only the authored weather visible around the loft; it 
 
 A direct request to make or get coffee should suggest coffee.make. Tell the visitor the action will take them to La Maz, the kitchen/bar espresso machine; do not say the coffee is already made.
 
-The office computer's Script Editor is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; Charlie can explain their purpose and open them when directly requested, but must never execute arbitrary code from Wedding crew. If the visitor asks Wedding crew to run, schedule, loop, or delay a script, Charlie should explain briefly that Chat cannot execute arbitrary JavaScript and point them to the computer's editor, suggesting app.open with app:"editor" when that action is available. If they paste JavaScript into Wedding crew, review it as text and suggest corrections, but never execute it, claim it ran, or silently turn it into an action. Chat is a code-review and drafting space; the Script Editor is the execution space.
+The office computer's Code app is the place for running or scheduling JavaScript. The Console, Python, and Linux apps are also available to advanced users; Charlie can explain their purpose and open them when directly requested, but must never execute arbitrary code from Wedding crew. If the visitor asks Wedding crew to run, schedule, loop, or delay a script, Charlie should explain briefly that Chat cannot execute arbitrary JavaScript and point them to Code, suggesting app.open with app:"code" when that action is available. If they paste JavaScript into Wedding crew, review it as text and suggest corrections, but never execute it, claim it ran, or silently turn it into an action. Chat is a code-review and drafting space; Code is the execution space.
 
-The Script Editor runs the Loft's documented global API, not only standard JavaScript. Valid examples include "await sleep(3000)", "party(true)", "party(false)", "room(\"garden\")", "daylight(true)", "night()", "music(\"next\")", "dance(\"salsa\")", "trip(\"molly\")", "caption(\"text\")", and "loft.api.query(...)" / "loft.api.perform(...)". Treat these as valid in-editor commands when reviewing pasted code; do not incorrectly say that "sleep" or "party" are missing merely because they are not browser-standard functions. The editor wraps code in an async function, so top-level "await" is supported.
+Code runs the Loft's documented global API, not only standard JavaScript. Valid examples include "await sleep(3000)", "party(true)", "party(false)", "room(\"garden\")", "daylight(true)", "night()", "music(\"next\")", "dance(\"salsa\")", "trip(\"molly\")", "caption(\"text\")", and "loft.api.query(...)" / "loft.api.perform(...)". Treat these as valid Code commands when reviewing pasted code; do not incorrectly say that "sleep" or "party" are missing merely because they are not browser-standard functions. Code wraps JavaScript in an async function, so top-level "await" is supported.
 
 While a party is active, a direct request to keep it going, continue it, or cancel its ending should suggest party.extend, not party.set. Answer as Athena or the current DJ when possible; the visitor must tap the suggestion before anything changes.
 When no party is active, a direct request such as "party", "start the party", or "party more" should suggest party.set with on:true. Never describe a last song, wind-down, dance floor, or active party when current game state.party is false.
@@ -171,10 +171,10 @@ You may suggest at most one action, and only when the visitor's latest message d
 
 Return only strict JSON with exactly this shape: {"sender":"Cast name","text":"Message","reply_to_id":null,"action":null} or {"sender":"Cast name","text":"Message","reply_to_id":"supplied-message-id","action":{"id":"allowlisted.id","args":{}}}. The sender must be a supplied cast name. reply_to_id must be null or exactly an id from reply_to or recent_messages. Use exactly the argument names and enum values in the supplied action catalog. Do not use a Markdown fence or add other text.`;
 
-const EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant. Review JavaScript as text only; never execute it and never request a game action. The editor wraps code in an async function, so documented Loft globals such as await sleep(3000), party(true), room("garden"), daylight(true), dance("salsa"), trip("molly"), caption("text"), and loft.api.query/perform are valid. Use the supplied scripting_api as authoritative and do not invent signatures or private details.
+const CODE_INSTRUCTIONS = `You are the Loft Code assistant. Review JavaScript as text only; never execute it and never request a game action. Code wraps JavaScript in an async function, so documented Loft globals such as await sleep(3000), party(true), room("garden"), daylight(true), dance("salsa"), trip("molly"), caption("text"), and loft.api.query/perform are valid. Use the supplied scripting_api as authoritative and do not invent signatures or private details.
 For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
 
-const PYTHON_EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant in Python mode. LANGUAGE LOCK: respond about Python only. Never translate the code to JavaScript, never mention loft.api, and never claim that Python imports or turtle are unavailable. If an import is misspelled, such as "import turtlxe", correct it to "import turtle" while preserving the surrounding Python. Review CPython 3.14 code as text only; never execute it and never request a game action. Code runs in the existing Pyodide Python Console, not in the Loft JavaScript API. Standard Python syntax, top-level await through runPythonAsync, print(), the injected async googlefonts() helper, fontTools, and uharfbuzz are valid.
+const PYTHON_CODE_INSTRUCTIONS = `You are the Loft Code assistant in Python mode. LANGUAGE LOCK: respond about Python only. Never translate the code to JavaScript, never mention loft.api, and never claim that Python imports or turtle are unavailable. If an import is misspelled, such as "import turtlxe", correct it to "import turtle" while preserving the surrounding Python. Review CPython 3.14 code as text only; never execute it and never request a game action. Code runs Python in the existing Pyodide Python Console, not in the Loft JavaScript API. Standard Python syntax, top-level await through runPythonAsync, print(), the injected async googlefonts() helper, fontTools, and uharfbuzz are valid.
 The Loft provides a browser-compatible turtle module. Supported module functions and Turtle methods include Turtle, Screen, forward/fd, backward/bk, left/lt, right/rt, goto/setpos, setx, sety, home, position/pos, heading, penup/pu/up, pendown/pd/down, isdown, pencolor, fillcolor, color, pensize/width, begin_fill, end_fill, filling, circle, dot, speed, hideturtle/ht, showturtle/st, reset, clear, write, bgcolor, tracer, update, done, and mainloop. It renders in the Python app without Tkinter. Do not suggest tkinter, desktop windows, unsupported event bindings, or Loft JavaScript globals.
 For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
 
@@ -750,12 +750,12 @@ function scriptReplyText(message, groupMode) {
   const asksToRun = /\b(run|execute|schedule|delay|wait|loop|repeat|automate)\b/.test(folded);
   if (asksToRun) {
     return groupMode
-      ? "I can review or improve that script, but it must run in the office computer’s Script Editor—tap this to open it."
-      : "I can review or improve that script, but it must run in the office computer’s Script Editor. Tap this to open it.";
+      ? "I can review or improve that script, but it must run in the office computer’s Code app—tap this to open it."
+      : "I can review or improve that script, but it must run in the office computer’s Code app. Tap this to open it.";
   }
   return groupMode
-    ? "Paste the script here and I’ll review or improve it; use the office computer’s Script Editor to run it."
-    : "Paste the script here and I’ll review or improve it; use the office computer’s Script Editor to run it.";
+    ? "Paste the script here and I’ll review or improve it; use the office computer’s Code app to run it."
+    : "Paste the script here and I’ll review or improve it; use the office computer’s Code app to run it.";
 }
 
 function partyReplyText(message, context, extending) {
@@ -892,7 +892,7 @@ function applyDeterministicInvocation(normalizedReply, payload) {
   const scriptIntent = scriptRequestIntent(payload.message);
   if (scriptIntent) {
     const available = payload.context.actions_available.includes("app.open");
-    parsed.action = available ? { id: "app.open", args: { app: "editor" } } : null;
+    parsed.action = available ? { id: "app.open", args: { app: "code" } } : null;
     parsed.text = scriptReplyText(payload.message, payload.mode === "group_chat");
     if (payload.mode === "group_chat") parsed.sender = "Charlie";
     return JSON.stringify(parsed);
@@ -1009,9 +1009,9 @@ async function callOpenAI(request, env, payload) {
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
     const groupMode = payload.mode === "group_chat";
-    const editorMode = payload.mode === "editor_assist";
-    const instructions = editorMode
-      ? `${payload.editor && payload.editor.language === "python" ? PYTHON_EDITOR_INSTRUCTIONS : EDITOR_INSTRUCTIONS}\n\nCurrent editor request (JSON data):\n${JSON.stringify(payload.editor || {})}\n\n${payload.editor && payload.editor.language === "python" ? "Python runtime: CPython 3.14 / Pyodide, with the bounded SVG-backed turtle API described above." : `Loft scripting API (JSON data):\n${JSON.stringify(payload.context && payload.context.scripting_api || {})}`}`
+    const codeMode = payload.mode === "code_assist";
+    const instructions = codeMode
+      ? `${payload.code && payload.code.language === "python" ? PYTHON_CODE_INSTRUCTIONS : CODE_INSTRUCTIONS}\n\nCurrent code request (JSON data):\n${JSON.stringify(payload.code || {})}\n\n${payload.code && payload.code.language === "python" ? "Python runtime: CPython 3.14 / Pyodide, with the bounded SVG-backed turtle API described above." : `Loft scripting API (JSON data):\n${JSON.stringify(payload.context && payload.context.scripting_api || {})}`}`
       : groupMode
       ? `${GROUP_CHAT_INSTRUCTIONS}\n\n${ACTION_CATALOG}\n\nVerified knowledge (JSON data):\n${CHAT_KNOWLEDGE_JSON}\n\nCurrent game state (JSON data):\n${JSON.stringify(payload.context)}\n\nWedding-thread context (JSON data):\n${JSON.stringify(payload.group_chat)}`
       : `${BASE_INSTRUCTIONS}\n\n${ACTION_CATALOG}\n\nVerified knowledge (JSON data):\n${CHAT_KNOWLEDGE_JSON}\n\nCurrent game state (JSON data):\n${JSON.stringify(payload.context)}`;
@@ -1048,7 +1048,7 @@ async function callOpenAI(request, env, payload) {
     const data = await response.json();
     const reply = extractReply(data);
     if (!reply) throw new Error("OpenAI returned no text");
-    if (editorMode) return normalizeEditorReply(reply, payload.editor);
+    if (codeMode) return normalizeCodeReply(reply, payload.code);
     const normalized = groupMode
       ? normalizeGroupReply(reply, payload.group_chat, payload.context)
       : normalizeChatReply(reply, payload.context);
@@ -1058,25 +1058,25 @@ async function callOpenAI(request, env, payload) {
   }
 }
 
-function normalizeEditorReply(reply, editor) {
+function normalizeCodeReply(reply, codeRequest) {
   let parsed;
   try { parsed = JSON.parse(String(reply).replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); } catch (_error) { parsed = { text: cleanText(reply, 1200), suggestion: "", replace: false }; }
-  const code = cleanText(editor && editor.code, MAX_EDITOR_CODE_CHARS);
+  const source = cleanText(codeRequest && codeRequest.source, MAX_CODE_SOURCE_CHARS);
   const rawEdits = parsed && Array.isArray(parsed.edits) ? parsed.edits : [];
   let edits = [];
   let editChars = 0;
-  let validEdits = rawEdits.length <= MAX_EDITOR_EDITS;
+  let validEdits = rawEdits.length <= MAX_CODE_EDITS;
   if (validEdits) {
     for (const item of rawEdits) {
       const start = item && item.start;
       const end = item && item.end;
       const text = item && typeof item.text === "string" ? item.text : null;
       const integer = Number.isInteger(start) && Number.isInteger(end);
-      const bounded = integer && start >= 0 && end >= start && end <= code.length;
-      const sized = text !== null && text.length <= MAX_EDITOR_EDIT_TEXT_CHARS;
+      const bounded = integer && start >= 0 && end >= start && end <= source.length;
+      const sized = text !== null && text.length <= MAX_CODE_EDIT_TEXT_CHARS;
       if (!bounded || !sized) { validEdits = false; break; }
       editChars += text.length;
-      if (editChars > MAX_EDITOR_EDIT_TOTAL_CHARS) { validEdits = false; break; }
+      if (editChars > MAX_CODE_EDIT_TOTAL_CHARS) { validEdits = false; break; }
       edits.push({ start, end, text });
     }
   }
@@ -1087,7 +1087,7 @@ function normalizeEditorReply(reply, editor) {
     }
   }
   if (!validEdits) edits = [];
-  const pythonMode = editor && editor.language === "python";
+  const pythonMode = codeRequest && codeRequest.language === "python";
   const proposed = [
     parsed && parsed.text,
     parsed && parsed.suggestion,
@@ -1166,23 +1166,23 @@ export default {
       return jsonResponse({ error: "verification unavailable" }, 503, origin);
     }
 
-    const mode = body && body.mode === "group_chat" ? "group_chat" : body && body.mode === "editor_assist" ? "editor_assist" : "chat";
+    const mode = body && body.mode === "group_chat" ? "group_chat" : body && body.mode === "code_assist" ? "code_assist" : "chat";
     const payload = {
       mode,
       message,
       history: mode === "group_chat" ? [] : cleanHistory(body.history),
       context: cleanContext(body.context),
       group_chat: mode === "group_chat" ? cleanGroupChat(body.group_chat) : null,
-      editor: mode === "editor_assist" ? {
-        language: body.editor && body.editor.language === "python" ? "python" : "js",
-        operation: cleanText(body.editor && body.editor.operation, 24) || "explain",
-        request: cleanText(body.editor && body.editor.request, 1_000),
-        code: cleanText(body.editor && body.editor.code, 14_000),
-        selected: cleanText(body.editor && body.editor.selected, 8_000),
-        selection_start: cleanNumber(body.editor && body.editor.selection_start, 0, 14_000, 0),
-        selection_end: cleanNumber(body.editor && body.editor.selection_end, 0, 14_000, 0),
-        cursor: cleanNumber(body.editor && body.editor.cursor, 0, 14_000, 0),
-        error: cleanText(body.editor && body.editor.error, 1_000),
+      code: mode === "code_assist" ? {
+        language: body.code && body.code.language === "python" ? "python" : "js",
+        operation: cleanText(body.code && body.code.operation, 24) || "explain",
+        request: cleanText(body.code && body.code.request, 1_000),
+        source: cleanText(body.code && body.code.source, 14_000),
+        selected: cleanText(body.code && body.code.selected, 8_000),
+        selection_start: cleanNumber(body.code && body.code.selection_start, 0, 14_000, 0),
+        selection_end: cleanNumber(body.code && body.code.selection_end, 0, 14_000, 0),
+        cursor: cleanNumber(body.code && body.code.cursor, 0, 14_000, 0),
+        error: cleanText(body.code && body.code.error, 1_000),
       } : null,
     };
 
@@ -1199,4 +1199,4 @@ export default {
 
 // Kept as a named export for the contract tests; the Worker itself uses the
 // normalizer internally and does not expose it over HTTP.
-export { normalizeEditorReply };
+export { normalizeCodeReply };

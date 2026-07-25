@@ -629,18 +629,18 @@ const wrongRoleReply = JSON.parse((await wrongRoleResponse.json()).reply);
 check(wrongRoleReply.sender === "Athena" && wrongRoleReply.reply_to_id === null && wrongRoleReply.action === null, "music actions from a non-DJ sender and invented quote targets are discarded", wrongRoleReply);
 
 openAIReply = JSON.stringify({ text: "Draws a square.", suggestion: "", replace: false, edits: [] });
-const pythonEditorResponse = await worker.fetch(makeRequest("/chat", {
+const pythonCodeResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
-    mode: "editor_assist",
+    mode: "code_assist",
     message: "explain this",
-    turnstile_token: "python-editor-token",
+    turnstile_token: "python-code-token",
     context: { scripting_api: { globals: [{ name: "party" }] } },
-    editor: {
+    code: {
       language: "python",
       operation: "explain",
-      code: "import turtle\nturtle.forward(80)",
+      source: "import turtle\nturtle.forward(80)",
       selected: "turtle.forward(80)",
       selection_start: 14,
       selection_end: 32,
@@ -648,15 +648,15 @@ const pythonEditorResponse = await worker.fetch(makeRequest("/chat", {
     },
   }),
 }), makeEnv());
-const pythonEditorReply = JSON.parse((await pythonEditorResponse.json()).reply);
-check(pythonEditorResponse.status === 200 && pythonEditorReply.text === "Draws a square.",
-  "Python Editor assistance keeps the existing normalized reply envelope", pythonEditorReply);
+const pythonCodeReply = JSON.parse((await pythonCodeResponse.json()).reply);
+check(pythonCodeResponse.status === 200 && pythonCodeReply.text === "Draws a square.",
+  "Python Code assistance keeps the existing normalized reply envelope", pythonCodeReply);
 check(/CPython 3\.14/.test(captured.body.instructions) &&
       /LANGUAGE LOCK/.test(captured.body.instructions) &&
       /browser-compatible turtle/.test(captured.body.instructions) &&
       /Do not suggest tkinter/.test(captured.body.instructions) &&
       !/"name":"party"/.test(captured.body.instructions),
-  "Python Editor receives its bounded runtime/Turtle prompt without the Loft JavaScript API",
+  "Python Code receives its bounded runtime/Turtle prompt without the Loft JavaScript API",
   captured.body.instructions.slice(0, 500));
 
 openAIReply = JSON.stringify({
@@ -669,13 +669,13 @@ const wrongLanguageResponse = await worker.fetch(makeRequest("/chat", {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
-    mode: "editor_assist",
+    mode: "code_assist",
     message: "fix this",
     turnstile_token: "python-language-lock-token",
-    editor: {
+    code: {
       language: "python",
       operation: "fix",
-      code: "import turtlxe",
+      source: "import turtlxe",
       selected: "turtlxe",
       selection_start: 7,
       selection_end: 14,
@@ -686,7 +686,7 @@ const wrongLanguageResponse = await worker.fetch(makeRequest("/chat", {
 const wrongLanguageReply = JSON.parse((await wrongLanguageResponse.json()).reply);
 check(wrongLanguageReply.suggestion === "" && wrongLanguageReply.edits.length === 0 &&
       /Python mode uses CPython/.test(wrongLanguageReply.text),
-  "Python Editor rejects a wrong-language JavaScript review before it reaches the UI",
+  "Python Code rejects a wrong-language JavaScript review before it reaches the UI",
   wrongLanguageReply);
 
 turnstileSuccess = false;

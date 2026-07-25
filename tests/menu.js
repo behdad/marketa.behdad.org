@@ -35,7 +35,7 @@ var HARNESS = [
   "  function monRestart(){ var m=monMenu(); return m?m.querySelector('button.ctx-restart'):null; }",
   "  function monKillDisabled(){ var b=monKill(); return !!(b&&b.disabled); }",
   "  function mon(){ return document.getElementById('office-monitor'); }",
-  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-video','show-tattoo','show-life','show-editor','show-browser','show-family','photobooth','show-python','show-linux','show-console','show-doom'];",
+  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-video','show-tattoo','show-life','show-code','show-browser','show-family','photobooth','show-python','show-linux','show-console','show-doom'];",
   "  function showApp(cls){ var m=mon(); APP_CLASSES.forEach(function(c){m.classList.remove(c);}); m.classList.add('screen-on'); if(cls) m.classList.add(cls); window.currentStageName='office'; }",
   "  async function run(){",
   "    if (window.goToStage) window.goToStage('office');",

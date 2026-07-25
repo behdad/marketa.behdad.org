@@ -728,11 +728,11 @@ function checkConsoleOutClipSlack(file, style) {
 
 // The console's Tab-autocomplete roster (`CONSOLE_CMDS`, a static array in the console
 // setup) must stay a mirror of the documented command set — the keys of the `CONSOLE_HELP`
-// object (hoisted to the shared console/editor scope so BOTH the console AND the editor
+// object (hoisted to the shared console/code scope so BOTH the console AND the code
 // app's autocomplete read the same source). This parity check keeps the two in lockstep, so
 // a command added to (or removed from) CONSOLE_HELP that isn't reflected in the roster fails
 // loudly here (naming the offending keys) instead of silently not completing. It also guards
-// that every bareword in CONSOLE_CMDS_BARE (the set of non-function commands — the editor
+// that every bareword in CONSOLE_CMDS_BARE (the set of non-function commands — the code
 // autocomplete reads it to decide whether to append "(" on insert) is a real command, so a
 // typo'd bareword can't slip a "(" onto a paren-less command (or vice-versa).
 function checkConsoleCmdRoster(file, script) {
@@ -758,7 +758,7 @@ function checkConsoleCmdRoster(file, script) {
       (missing.length ? "missing from roster: " + missing.join(", ") + "\n" : "") +
       (extra.length ? "roster has non-command(s): " + extra.join(", ") : ""));
   }
-  // Every bareword must be a documented command (a key of CONSOLE_HELP), else the editor
+  // Every bareword must be a documented command (a key of CONSOLE_HELP), else the code
   // autocomplete's "append (" decision is keyed off a phantom.
   var bareM = script.match(/var CONSOLE_CMDS_BARE = \{([\s\S]*?)\};/);
   if (!bareM) { fail(file + ": CONSOLE_CMDS_BARE set not found for bareword parity check"); return; }

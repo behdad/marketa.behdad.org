@@ -51505,6 +51505,10 @@ async def localfont(name):
   // reaching that listener at all, rather than racing it for preventDefault().
   document.addEventListener("keydown", function (e) {
     if ((e.key !== " " && e.key !== "Spacebar") || e.defaultPrevented) return;
+    // Window Tetris registers its capture listener later. Let that listener own Space
+    // instead of toggling music before the hard-drop handler gets the same event.
+    var tetrisState = window.__balconyTetrisState && window.__balconyTetrisState();
+    if (tetrisState && (tetrisState.active || tetrisState.result)) return;
     // The recovery gate owns Space. Its dynamically-installed capture listener runs later
     // than this long-lived music listener, so bail while the gate is visible; once accepted,
     // the held-key flag keeps auto-repeat inert until the matching keyup.

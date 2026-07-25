@@ -550,13 +550,15 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
-The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Chat, and Browser
-their own staged gag before teardown. They all use `__runMonitorDeathFlash` so cancellation,
-caption ownership, reduced-motion behavior, and the final close share one lifecycle. Call first
-clears every owned connect/goodbye timer and ambient source, then drops its signal bars and
-waveform before the silent hang-up. Chat freezes pending transport and verification work, types
-its interrupted thought, collapses rendered rows into context tokens, displays
-`[context cleared]`, then resets its history and closes.
+The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat, and
+Browser their own staged gag before teardown. They all use `__runMonitorDeathFlash` so
+cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.
+Call first clears every owned connect/goodbye timer and ambient source, then drops its signal bars
+and waveform before the silent hang-up. Music cancels track fades/snippets, scratches and slows the
+live media element while its SVG notes leave the staff, then pauses and rewinds every catalog track,
+clears the current selection, and flattens the manual EQ. Chat freezes pending transport and
+verification work, types its interrupted thought, collapses rendered rows into context tokens,
+displays `[context cleared]`, then resets its history and closes.
 
 The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
 low delivery with `html.frame-rate-low`. It samples only while the document is

@@ -4166,6 +4166,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-video #monitor-video-farewell{opacity:1}
 #office-monitor.death-call #monitor-call-farewell{opacity:1}
 #office-monitor.death-photobooth #monitor-photobooth-farewell{opacity:1}
+#office-monitor.death-music #monitor-music-farewell{opacity:1}
 #office-monitor.death-browser #monitor-awsnap{opacity:1}
 /* Browser is the one app defined AFTER #monitor-deathfx (it paints above), and .browser-wrap is
    opaque, so hide the frozen browser + its bezel nav arrows under the Aw-Snap overlay during the
@@ -21150,6 +21151,35 @@ section{margin:1.9rem 0}
 </g>
 <rect id="monitor-pb-farewell-flash" x="254" y="154" width="124" height="42" fill="#fff" opacity="0"/>
 </g>
+<!-- Music killed → a scratched record loses speed while the melody falls apart: the notes
+     tumble off their staff, leaving the player visibly and audibly silent. -->
+<g id="monitor-music-farewell">
+<rect x="254" y="154" width="124" height="42" fill="#1a1420"/>
+<g id="monitor-music-record">
+<circle cx="273" cy="175" r="13.2" fill="#09080b" stroke="#413547" stroke-width="0.7"/>
+<circle cx="273" cy="175" r="10.4" fill="none" stroke="#332b37" stroke-width="0.45"/>
+<circle cx="273" cy="175" r="7.2" fill="none" stroke="#332b37" stroke-width="0.45"/>
+<circle cx="273" cy="175" r="4.2" fill="#8e3a4a"/>
+<circle cx="273" cy="175" r="1.15" fill="#f8f5ec"/>
+<path d="M263.6 166.1 A13.2 13.2 0 0 1 282.3 165.6" fill="none" stroke="#fffdf8" stroke-opacity="0.25" stroke-width="0.8" stroke-linecap="round"/>
+</g>
+<g id="monitor-music-needle">
+<circle cx="290" cy="161.5" r="2.1" fill="#b8aebe"/>
+<path d="M290 162 L281.5 177.5" fill="none" stroke="#d7ceda" stroke-width="1.2" stroke-linecap="round"/>
+<path d="M280.4 176.8 L283.1 178.2" fill="none" stroke="#e8b0c8" stroke-width="1.7" stroke-linecap="round"/>
+</g>
+<g id="monitor-music-staff" fill="none" stroke="#7f6b84" stroke-width="0.55">
+<path d="M299 164 H369 M299 169 H369 M299 174 H369 M299 179 H369 M299 184 H369"/>
+</g>
+<g id="monitor-music-falling-notes" fill="#e8b0c8" stroke="#e8b0c8" stroke-width="0.8" stroke-linecap="round">
+<g class="music-falling-note"><ellipse cx="306" cy="179" rx="2.5" ry="1.8" transform="rotate(-18 306 179)"/><path d="M308 178 V166"/></g>
+<g class="music-falling-note"><ellipse cx="317" cy="171" rx="2.5" ry="1.8" transform="rotate(-18 317 171)"/><path d="M319 170 V159"/></g>
+<g class="music-falling-note"><ellipse cx="329" cy="181" rx="2.5" ry="1.8" transform="rotate(-18 329 181)"/><path d="M331 180 V168"/></g>
+<g class="music-falling-note"><ellipse cx="341" cy="174" rx="2.5" ry="1.8" transform="rotate(-18 341 174)"/><path d="M343 173 V162"/></g>
+<g class="music-falling-note"><ellipse cx="353" cy="166" rx="2.5" ry="1.8" transform="rotate(-18 353 166)"/><path d="M355 165 V155"/></g>
+<g class="music-falling-note"><ellipse cx="364" cy="179" rx="2.5" ry="1.8" transform="rotate(-18 364 179)"/><path d="M366 178 V166"/></g>
+</g>
+</g>
 <!-- Browser (chrome) killed → Chrome's classic "Aw, Snap!" crash page: the sad rounded-page face
      (tilted a touch), the dark-gray "Aw, Snap!" heading + a small explainer line, and a decorative
      (non-functional) Reload pill. Native SVG (no foreignObject font-subset risk). Fills the 254/154
@@ -25779,6 +25809,7 @@ var T = {
       df_call_quip: "It’s not you. It’s the connection.", // caption after the Call signal drops
       df_call_lost: "CONNECTION LOST", // status inside the Call kill overlay
       df_photobooth_quip: "Nobody blinked.", // caption under the empty-chair photo strip (Photobooth kill)
+      df_music_quip: "The rest is silence.", // caption after the Music notes fall from their staff
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie has left the chat.", // caption after Chat's context collapses and clears
       kitchen: "Turn on La Maz → run El Maz → brew.",
@@ -26706,6 +26737,7 @@ var T = {
       df_call_quip: "Není to tebou. Zlobí spojení.", // caption after the Call signal drops
       df_call_lost: "SPOJENÍ PŘERUŠENO", // status inside the Call kill overlay
       df_photobooth_quip: "Nikdo nemrkl.", // caption under the empty-chair photo strip (Photobooth kill)
+      df_music_quip: "Dál už jen ticho.", // caption after the Music notes fall from their staff
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie odešel z chatu.", // caption after Chat's context collapses and clears
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
@@ -45123,7 +45155,7 @@ setOfficeProgress("pc", false);
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -49771,6 +49803,137 @@ async def localfont(name):
     meqRepaints.forEach(function (fn) { fn(); });
   }
   window.__resetManualEq = resetManualEqFlat;
+  // Music Kill owns more than the visible player: a catalog track can keep playing after the
+  // window closes, and skip/snippet fades can still have timers in flight. The staged send-off
+  // captures the live elements, bends their real playback rate down, then this reset leaves the
+  // shared monitor/phone transport genuinely fresh.
+  var musicKillActive = false, musicKillScratch = false, musicKillSilenced = false, musicKillTracks = [];
+  function resetMusicKillVisual() {
+    var overlay = document.getElementById("monitor-music-farewell");
+    var record = document.getElementById("monitor-music-record");
+    var needle = document.getElementById("monitor-music-needle");
+    var staff = document.getElementById("monitor-music-staff");
+    var notes = document.querySelectorAll("#monitor-music-falling-notes .music-falling-note");
+    if (overlay) overlay.setAttribute("data-stage", "");
+    if (record) record.removeAttribute("transform");
+    if (needle) needle.removeAttribute("transform");
+    if (staff) staff.setAttribute("opacity", "1");
+    for (var i = 0; i < notes.length; i++) {
+      notes[i].removeAttribute("transform");
+      notes[i].removeAttribute("data-fall");
+      notes[i].setAttribute("opacity", "1");
+    }
+  }
+  function resetMonitorMusicState() {
+    clearSongSnippet();
+    projSuspendedIdx = -1; // a killed track must not revive when the projector changes channel
+    for (var i = 0; i < songAudios.length; i++) {
+      var a = songAudios[i];
+      if (!a) continue;
+      if (a._fadeTimer) { clearInterval(a._fadeTimer); a._fadeTimer = null; }
+      try {
+        if (!a.paused) a.pause();
+        a.playbackRate = 1;
+        a.currentTime = 0;
+        setSongLevel(a, window.__songVolume ? window.__songVolume() : 0.5);
+      } catch (e) {}
+    }
+    selectedSongAudio = null;
+    resetManualEqFlat();
+    stopEq();
+    clearMediaSession();
+    monitor.classList.remove("song-paused", "show-nowplaying");
+    if (window.__phoneMusicChanged) window.__phoneMusicChanged();
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+    syncLoftSongState("stop");
+    scheduleSaver();
+  }
+  function musicDeathFlash() {
+    if (musicKillActive || !monitor.classList.contains("show-nowplaying")) return;
+    var overlay = document.getElementById("monitor-music-farewell");
+    var record = document.getElementById("monitor-music-record");
+    var needle = document.getElementById("monitor-music-needle");
+    var staff = document.getElementById("monitor-music-staff");
+    var notes = [].slice.call(document.querySelectorAll("#monitor-music-falling-notes .music-falling-note"));
+    resetMusicKillVisual();
+    musicKillActive = true; musicKillScratch = false; musicKillSilenced = false;
+    musicKillTracks = songAudios.filter(function (a) { return a && !a.paused; }).map(function (a) {
+      return { el: a, rate: Number(a.playbackRate) || 1 };
+    });
+    window.__runMonitorDeathFlash({
+      screenClass: "death-music",
+      beats: [{ key: "df_music_quip", at: 1550 }],
+      dur: 2400,
+      freeze: function () {
+        clearSongSnippet();
+        projSuspendedIdx = -1;
+        songAudios.forEach(function (a) {
+          if (a && a._fadeTimer) { clearInterval(a._fadeTimer); a._fadeTimer = null; }
+        });
+      },
+      sound: function () {
+        musicKillScratch = true;
+        playRecordScratchSound("office-monitor");
+      },
+      tick: function (t) {
+        var slow = Math.max(0, Math.min(1, t / 0.52));
+        var eased = slow * slow * (3 - 2 * slow);
+        musicKillTracks.forEach(function (track) {
+          if (!track.el.paused) {
+            try { track.el.playbackRate = Math.max(0.18, track.rate * (1 - 0.82 * eased)); } catch (e) {}
+          }
+        });
+        if (record) {
+          var spin = 760 * (1 - Math.pow(1 - Math.min(1, t / 0.64), 2));
+          record.setAttribute("transform", "rotate(" + spin.toFixed(2) + " 273 175)");
+        }
+        if (needle) {
+          var scratch = t < 0.3 ? Math.sin(t * 95) * (1 - t / 0.3) * 5 : 0;
+          needle.setAttribute("transform", "rotate(" + scratch.toFixed(2) + " 290 161.5)");
+        }
+        notes.forEach(function (note, i) {
+          var start = 0.27 + i * 0.035;
+          var p = Math.max(0, Math.min(1, (t - start) / 0.52));
+          var dx = (i % 2 ? 1 : -1) * p * (3 + i * 0.7);
+          var dy = p * p * (27 + i * 2);
+          note.setAttribute("transform", "translate(" + dx.toFixed(2) + " " + dy.toFixed(2) + ") rotate(" + ((i % 2 ? 1 : -1) * p * (55 + i * 7)).toFixed(2) + ")");
+          note.setAttribute("data-fall", p.toFixed(3));
+          note.setAttribute("opacity", String(1 - Math.max(0, (p - 0.62) / 0.38)));
+        });
+        if (staff) staff.setAttribute("opacity", String(1 - Math.max(0, (t - 0.48) / 0.42) * 0.82));
+        if (!musicKillSilenced && t >= 0.58) {
+          musicKillSilenced = true;
+          musicKillTracks.forEach(function (track) { try { track.el.pause(); } catch (e) {} });
+          stopEq();
+        }
+        if (overlay) overlay.setAttribute("data-stage", t < 0.12 ? "scratch" : t < 0.32 ? "slowing" : t < 0.62 ? "falling" : "silence");
+      },
+      close: function () {
+        musicKillActive = false;
+        resetMusicKillVisual();
+        resetMonitorMusicState();
+        musicKillTracks = [];
+        musicKillScratch = false;
+        musicKillSilenced = false;
+      }
+    });
+  }
+  window.__resetMonitorMusic = resetMonitorMusicState;
+  window.__killMonitorMusic = musicDeathFlash;
+  window.__monitorMusicKillState = function () {
+    var overlay = document.getElementById("monitor-music-farewell");
+    var notes = [].slice.call(document.querySelectorAll("#monitor-music-falling-notes .music-falling-note"));
+    return {
+      active: musicKillActive,
+      stage: overlay ? (overlay.getAttribute("data-stage") || "") : "",
+      scratch: musicKillScratch,
+      rate: musicKillTracks.length ? Number(musicKillTracks[0].el.playbackRate) : 1,
+      playing: musicKillTracks.some(function (track) { return !track.el.paused; }),
+      moving: notes.filter(function (note) { return Number(note.getAttribute("data-fall") || 0) > 0.02; }).length,
+      visible: notes.filter(function (note) { return Number(note.getAttribute("opacity") || 0) > 0.05; }).length,
+      silenced: musicKillSilenced
+    };
+  };
   if (eqResetBtn) {
     eqResetBtn.addEventListener("click", function (e) {
       e.stopPropagation();
@@ -50878,9 +51041,7 @@ async def localfont(name):
         if (vidEl) { try { vidEl.pause(); vidEl.currentTime = 0; } catch (e) {} } // rewind to the first frame
         break;
       case "music":
-        songAudios.forEach(function (a) { if (a && !a.paused) { try { a.pause(); } catch (e) {} } });
-        if (window.__resetManualEq) window.__resetManualEq(); // flatten the manual EQ the visitor dialed in (shared with the pocket-phone player)
-        if (monitor.classList.contains("show-nowplaying")) { monitor.classList.remove("show-nowplaying"); scheduleSaver(); }
+        if (window.__resetMonitorMusic) window.__resetMonitorMusic();
         break;
       case "family":
         if (window.__closeMonitorFamily) window.__closeMonitorFamily(true); // silent hang-up (no goodbye tone)

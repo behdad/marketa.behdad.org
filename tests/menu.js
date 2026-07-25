@@ -78,6 +78,16 @@ var HARNESS = [
   "    await sleep(1100); callKill=window.__monitorCallKillState(); S('call_kill_teardown', callKill.active===false && callKill.call===false && !mon().classList.contains('show-family') && !mon().classList.contains('death-call'));",
   // Calendar Kill tears pages away at shortening intervals until only its backing remains.
   "    showApp('show-calendar'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(50); var calPages=document.getElementById('monitor-calendar-farewell-pages'); S('calendar_kill_started', mon().classList.contains('death-calendar') && mon().classList.contains('show-calendar')); S('calendar_kill_full_pad', !!calPages && Number(calPages.getAttribute('data-pages'))===12); await sleep(1450); S('calendar_kill_accelerating', !!calPages && Number(calPages.getAttribute('data-pages'))<8 && Number(calPages.getAttribute('data-pages'))>1); await sleep(1000); S('calendar_kill_bare', !!calPages && Number(calPages.getAttribute('data-pages'))===0); await sleep(180); S('calendar_kill_closed', !mon().classList.contains('show-calendar') && !mon().classList.contains('death-calendar'));",
+  // Music Kill scratches, slows the real media element, sends the notes off their staff,
+  // then pauses/rewinds playback and flattens the retained app state.
+  "    showApp('show-nowplaying'); var killSong=document.getElementById('guitar-song-audio'); window.__musicTestPaused=false;",
+  "    if(killSong){ try{Object.defineProperty(killSong,'paused',{configurable:true,get:function(){return window.__musicTestPaused;}});}catch(e){} killSong.pause=function(){window.__musicTestPaused=true;killSong.dispatchEvent(new Event('pause'));}; killSong.currentTime=12; killSong.playbackRate=1; killSong.dispatchEvent(new Event('play')); }",
+  "    ctxAt(mon()); if(monKill()) monKill().click(); await sleep(40); var musicKill=window.__monitorMusicKillState?window.__monitorMusicKillState():{};",
+  "    S('music_kill_started', mon().classList.contains('death-music') && mon().classList.contains('show-nowplaying') && musicKill.active===true && musicKill.stage==='scratch' && musicKill.scratch===true && musicKill.playing===true);",
+  "    await sleep(520); musicKill=window.__monitorMusicKillState(); S('music_kill_slowed', musicKill.stage==='slowing' && musicKill.rate<0.95 && musicKill.rate>0.18 && musicKill.playing===true);",
+  "    await sleep(620); musicKill=window.__monitorMusicKillState(); S('music_kill_notes_falling', musicKill.stage==='falling' && musicKill.moving>2 && musicKill.visible>0);",
+  "    await sleep(400); musicKill=window.__monitorMusicKillState(); S('music_kill_silence', musicKill.stage==='silence' && musicKill.silenced===true && musicKill.playing===false); S('music_kill_caption', document.getElementById('hunt-caption').textContent==='The rest is silence.');",
+  "    await sleep(900); musicKill=window.__monitorMusicKillState(); S('music_kill_teardown', musicKill.active===false && !mon().classList.contains('show-nowplaying') && !mon().classList.contains('death-music') && !!killSong && killSong.currentTime===0 && killSong.playbackRate===1 && window.__phoneMusicId()===null);",
   // browser Kill is the one non-runtime app that flashes: Chrome's ~2.2s 'Aw, Snap!' crash (death-browser),
   // THEN closes. Menu shows only an enabled Kill (no Restart); the flash starts immediately, show-browser
   // stays up during it, and is torn down only after. Mirrors the doom kill shape (flash-then-close).
@@ -251,7 +261,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 57000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 61000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -278,6 +288,11 @@ check("Call Kill drops its signal bars one at a time", s.call_kill_signal_droppi
 check("Call Kill cuts the waveform to a flat line and shows its exact caption", s.call_kill_wave_cut === true && s.call_kill_caption === true, { wave: s.call_kill_wave_cut, caption: s.call_kill_caption });
 check("Call Kill silently ends the call and removes its death state", s.call_kill_teardown === true);
 check("Calendar Kill accelerates through a full pad to bare backing, then closes", s.calendar_kill_started === true && s.calendar_kill_full_pad === true && s.calendar_kill_accelerating === true && s.calendar_kill_bare === true && s.calendar_kill_closed === true, { started: s.calendar_kill_started, full: s.calendar_kill_full_pad, accelerating: s.calendar_kill_accelerating, bare: s.calendar_kill_bare, closed: s.calendar_kill_closed });
+check("Music Kill starts with its record scratch over live playback", s.music_kill_started === true);
+check("Music Kill bends the live media element’s playback rate down", s.music_kill_slowed === true);
+check("Music Kill sends the notes tumbling off their staff", s.music_kill_notes_falling === true);
+check("Music Kill reaches silence with its exact caption", s.music_kill_silence === true && s.music_kill_caption === true, { silent: s.music_kill_silence, caption: s.music_kill_caption });
+check("Music Kill rewinds the catalog, clears selection, and closes cleanly", s.music_kill_teardown === true);
 check("browser menu shows only an enabled Kill, no Restart", Array.isArray(s.browser_items) && s.browser_items.length === 1 && /kill/i.test(s.browser_items[0] || "") && s.browser_kill_enabled === true && s.browser_has_restart === false, { items: s.browser_items, enabled: s.browser_kill_enabled, restart: s.browser_has_restart });
 check("browser Kill runs the Aw-Snap flash then closes the app", s.browser_kill_hid_menu === true && s.browser_kill_flash_started === true && s.browser_kill_still_open_during_flash === true && s.browser_kill_closed_app === true && s.browser_kill_flash_ended === true, { hid: s.browser_kill_hid_menu, flash: s.browser_kill_flash_started, during: s.browser_kill_still_open_during_flash, closed: s.browser_kill_closed_app, ended: s.browser_kill_flash_ended });
 console.log(" python / linux (folded into the console menu):");

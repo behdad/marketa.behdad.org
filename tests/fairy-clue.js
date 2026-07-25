@@ -81,6 +81,8 @@ var harness = String.raw`<script>
           rumi._rumiTailAnchor.id === "cuddly-marketa-head" &&
           !!rumi.style.getPropertyValue("--rumi-tail-x") &&
           rumi._rumiFollowing === true);
+        check("Markéta's Rumi name uses her blue",
+          rumi && getComputedStyle(rumi.querySelector(".rumi-speaker")).color === "rgb(127, 158, 192)");
         check("Markéta's recitation wakes Behdad for the exchange",
           document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
         check("the Rumi exchange does not add a public command",
@@ -103,6 +105,8 @@ var harness = String.raw`<script>
               reply._rumiTailAnchor.id === "cuddly-behdad-head" &&
               !!reply.style.getPropertyValue("--rumi-tail-x") &&
               reply._rumiFollowing === true);
+            check("behdad's Rumi name keeps his pink",
+              reply && getComputedStyle(reply.querySelector(".rumi-speaker")).color === "rgb(217, 166, 166)");
             check("Behdad stays awake while reciting his reply",
               document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
             window.__setDayNight(false);

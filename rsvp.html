@@ -4131,23 +4131,6 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .mon-ctx button:hover:not(:disabled), .mon-ctx button:focus-visible:not(:disabled){background:var(--cream)}
 .mon-ctx button.ctx-kill{color:var(--wine)}
 .mon-ctx button.ctx-kill:hover:not(:disabled), .mon-ctx button.ctx-kill:focus-visible:not(:disabled){background:#f4e6e6}
-/* scene right-click D-pad: four arrow buttons in a plus/cross (↑ day, ↓ night, ← prev room,
-   → next room), riding the .mon-ctx card chrome (so the shared Esc "an open menu owns Esc"
-   guard sees it) but overriding the list-item button layout with a 3×3 grid. */
-.nav-dpad{min-width:0; padding:5px; display:grid; grid-template-columns:repeat(3,30px); grid-template-rows:repeat(3,30px); gap:3px}
-.nav-dpad button{display:flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border-radius:6px; font-size:16px; line-height:1; color:var(--ink)}
-.nav-dpad button:hover:not(:disabled), .nav-dpad button:focus-visible:not(:disabled){background:var(--cream)}
-.nav-dpad .dpad-up{grid-column:2; grid-row:1}
-.nav-dpad .dpad-left{grid-column:1; grid-row:2}
-.nav-dpad .dpad-right{grid-column:3; grid-row:2}
-.nav-dpad .dpad-down{grid-column:2; grid-row:3}
-.nav-dpad .dpad-dot{grid-column:2; grid-row:2; width:30px; height:30px; padding:0; border:none; background:transparent; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center} /* fills the centre cell; tap to dismiss */
-.nav-dpad .dpad-dot::after{content:""; width:6px; height:6px; border-radius:50%; background:var(--soft)}
-.nav-dpad .dpad-dot:hover{background:var(--cream)} .nav-dpad .dpad-dot:hover::after{background:var(--wine)}
-.nav-dpad .dpad-arrow{width:15px; height:15px; display:block} /* one drawn chevron (points up), rotated per direction so all four match */
-.nav-dpad .dpad-right .dpad-arrow{transform:rotate(90deg)}
-.nav-dpad .dpad-down .dpad-arrow{transform:rotate(180deg)}
-.nav-dpad .dpad-left .dpad-arrow{transform:rotate(-90deg)}
 .mon-ctx button:disabled{opacity:.4; cursor:default}
 .mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
 /* runtime death-flash (Kill a self-hosted runtime → a themed ~2s send-off, see __runMonitorDeathFlash).
@@ -35379,7 +35362,7 @@ function gameTapsNear(a, b) {
     };
 
     chair.addEventListener("pointerdown", function (e) {
-      if (e.button && e.button !== 0) return; // right/middle press → the scene D-pad menu handles it, no phantom drag
+      if (e.button && e.button !== 0) return; // ignore right/middle presses; no phantom drag
       chairDragging = true;
       chairDragMoved = false;
       chairDragStartX = pointerSvgX(e);
@@ -36797,7 +36780,7 @@ function gameTapsNear(a, b) {
     if (!el) return;
     var dragging = false, dragMoved = false, releasePt = null, dragStartPt = null;
     el.addEventListener("pointerdown", function (e) {
-      if (e.button && e.button !== 0) return; // right/middle press → the scene D-pad menu handles it, no phantom throw
+      if (e.button && e.button !== 0) return; // ignore right/middle presses; no phantom throw
       dragging = true;
       dragMoved = false;
       dragStartPt = pointerSvgPointGlobal(e);
@@ -37906,7 +37889,7 @@ function gameTapsNear(a, b) {
     };
     if (bartenderHit) {
       bartenderHit.addEventListener("pointerdown", function (e) {
-        if (e.button && e.button !== 0) return; // right/middle press → the scene D-pad menu handles it, no phantom drag
+        if (e.button && e.button !== 0) return; // ignore right/middle presses; no phantom drag
         if (!barUpNow()) return; // only draggable while the bar's up (party OR calm night bar)
         barDragging = true;
         barDragMoved = false;
@@ -50780,12 +50763,10 @@ async def localfont(name):
     // Right-click (contextmenu) menu on the phone-at-rest: one item — "Open" — that runs the
     // very same buzz() as a normal tap (pickup buzz → __openPhoneModal boots the pocket OS), so
     // it summons the phone identically. A .mon-ctx card with the shared dismiss wiring; the
-    // openMenu/closeMenu helpers of the monitor/D-pad IIFEs aren't in scope here, so the small
+    // openMenu/closeMenu helpers of the monitor menus aren't in scope here, so the small
     // pattern is replicated locally (mirroring the balcony door's menu). This listener registers
-    // before the scene D-pad's (that IIFE runs later in source), so the preventDefault() below
-    // trips its `if (e.defaultPrevented) return;` guard and the phone menu WINS over the D-pad
-    // for a phone target; a right-click anywhere else on the balcony still falls through to the
-    // D-pad untouched, and the door is a different target so the two menus never cross-fire.
+    // before the scene's catch-all contextmenu suppression, so preventDefault() below claims
+    // the phone target. The door owns its own independent target and menu.
     (function () {
       var phCtxEl = null;
       var PH_OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
@@ -50827,8 +50808,8 @@ async def localfont(name):
         window.addEventListener("resize", phCtxClose);
       }
       document.addEventListener("contextmenu", function (e) {
-        if (!e.target || !e.target.closest || !e.target.closest("#balcony-phone")) return; // only over the phone itself → else the scene D-pad handles it
-        e.preventDefault(); // claim the right-click so the later scene-D-pad handler stands down
+        if (!e.target || !e.target.closest || !e.target.closest("#balcony-phone")) return;
+        e.preventDefault(); // claim the right-click before the scene's catch-all suppression
         phCtxOpen([phCtxItem(PH_OPEN_ICO, phCtxTr("mon_ctx_open"), function () { buzz(); })], e.clientX, e.clientY);
       });
     })();
@@ -56953,7 +56934,7 @@ async def localfont(name):
     // Before Edmonton's sunrise or after its sunset → night; daytime → day, with a ~40-min
     // warm/purple twilight wash over the balcony sky around each crossing. There is NO periodic
     // polling: a single timer (armCrossing) is scheduled to the very next sunrise/sunset and
-    // flips + reschedules AT that crossing. A manual flip (the sun, the 'd' key, the D-pad,
+    // flips + reschedules AT that crossing. A manual flip (the sun, the 'd' key,
     // day()/night(), the garden switch) is a TEMPORARY look — the crossing scheduler stays armed,
     // so the next real crossing still flips the scene over the manual set. It steps aside for a
     // season/birthday preview, a ?date= jump, a drug trip, the attract kiosk, and the garden
@@ -60706,12 +60687,10 @@ async def localfont(name):
     // Right-click (contextmenu) menu on the balcony door: one item — "Close" when the door
     // is open, "Open" when it's shut — that runs the very same toggleBalconyDoor() as a
     // normal click (so the swing + acoustics/party/projector/cat updates all match). A .mon-ctx
-    // card with the shared dismiss wiring; the openMenu/closeMenu helpers of the monitor/D-pad
+    // card with the shared dismiss wiring; the openMenu/closeMenu helpers of the monitor menus
     // IIFEs aren't in scope here, so the small pattern is replicated locally (like the laptop's).
-    // This listener registers before the scene D-pad's (that IIFE runs later in source), so the
-    // preventDefault() below trips its `if (e.defaultPrevented) return;` guard and the door menu
-    // WINS over the D-pad for a door target; a right-click anywhere else on the balcony still
-    // falls through to the D-pad untouched.
+    // This listener registers before the scene's catch-all contextmenu suppression, so the
+    // door menu wins for its own target.
     (function () {
       var bdMenuEl = null;
       var DOOR_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1.6" width="6" height="8.8" rx="0.6"/><circle cx="7.3" cy="6" r="0.5" fill="currentColor" stroke="none"/></svg>';
@@ -60753,8 +60732,8 @@ async def localfont(name):
         window.addEventListener("resize", bdCloseMenu);
       }
       document.addEventListener("contextmenu", function (e) {
-        if (!e.target || !e.target.closest || !e.target.closest("#balcony-door")) return; // only over the door itself → else the scene D-pad handles it
-        e.preventDefault(); // claim the right-click so the later scene-D-pad handler stands down
+        if (!e.target || !e.target.closest || !e.target.closest("#balcony-door")) return;
+        e.preventDefault(); // claim the right-click before the scene's catch-all suppression
         var key = balconyDoor.classList.contains("open") ? "tab_ctx_close" : "mon_ctx_open"; // read fresh each time
         bdOpenMenu([bdItem(DOOR_ICO, bdTr(key), function () { toggleBalconyDoor(); })], e.clientX, e.clientY);
       });
@@ -60807,7 +60786,7 @@ async def localfont(name):
     // "Close" when it's open, "Open" when it's shut — running the very same toggleCuddlyDoor()
     // as a normal click (so the swing + FX/cat sync all match). Mirrors the balcony-room door
     // menu; helpers replicated locally (the other IIFE's aren't in scope), and preventDefault()
-    // claims the right-click so the later scene D-pad stands down over the door target.
+    // claims the right-click before the scene's catch-all suppression.
     (function () {
       var cdMenuEl = null;
       var CD_DOOR_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1.6" width="6" height="8.8" rx="0.6"/><circle cx="7.3" cy="6" r="0.5" fill="currentColor" stroke="none"/></svg>';
@@ -60849,8 +60828,8 @@ async def localfont(name):
         window.addEventListener("resize", cdCloseMenu);
       }
       document.addEventListener("contextmenu", function (e) {
-        if (!e.target || !e.target.closest || !e.target.closest("#cuddly-balcony-door")) return; // only over the door itself → else the scene D-pad handles it
-        e.preventDefault(); // claim the right-click so the later scene-D-pad handler stands down
+        if (!e.target || !e.target.closest || !e.target.closest("#cuddly-balcony-door")) return;
+        e.preventDefault(); // claim the right-click before the scene's catch-all suppression
         var key = cuddlyDoor.classList.contains("open") ? "tab_ctx_close" : "mon_ctx_open"; // read fresh each time
         cdOpenMenu([cdItem(CD_DOOR_ICO, cdTr(key), function () { toggleCuddlyDoor(); })], e.clientX, e.clientY);
       });
@@ -69648,85 +69627,17 @@ function spawnDustMote(container) {
       navigateWithRoster(STAGES[stageIndex + 1]);
     }
   });
-  // ── scene right-click D-pad ─────────────────────────────────────────────────────────────
-  // Right-clicking the general game scene (room backdrop / floor / walls / ordinary scene
-  // objects — everything EXCEPT the surfaces that own their own right-click menu) pops a
-  // four-way D-pad: ← previous room, → next room, ↑ day, ↓ night. Prev/Next reuse the exact
-  // ‹ › nav-button logic (and its no-wrap gating) by .click()ing those buttons; a disabled
-  // #hunt-prev at the kitchen simply doesn't fire, and a locked #hunt-next is a no-op on a
-  // single synthetic click (event.detail 0) — same as one arrow click. Day/night use the same
-  // __setDayNight hook the sun and the party use. The menu is a .mon-ctx card (so the shared
-  // Esc "an open menu owns Esc" guard, which queries '.mon-ctx', stands down room-nav for it)
-  // with a .nav-dpad grid override. Registered after the monitor/console/laptop/phone context
-  // handlers, so `e.defaultPrevented` is true whenever one of them already claimed the click.
-  (function () {
-    var dpadEl = null;
-    function tr(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || key; }
-    function closeMenu() {
-      if (!dpadEl) return;
-      try { if (dpadEl.parentNode) dpadEl.parentNode.removeChild(dpadEl); } catch (e) {}
-      dpadEl = null;
-      document.removeEventListener("keydown", onKey, true);
-      document.removeEventListener("mousedown", onAway, true);
-      document.removeEventListener("scroll", closeMenu, true);
-      window.removeEventListener("blur", closeMenu);
-      window.removeEventListener("resize", closeMenu);
-    }
-    function onAway(e) { if (dpadEl && !dpadEl.contains(e.target)) closeMenu(); } // click-away (the menu's own clicks stay)
-    function onKey(e) { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); closeMenu(); } } // Esc closes the D-pad, not the room
-    function clickNav(id) { var el = document.getElementById(id); if (el) el.click(); } // reuse the ‹ › handler + its gating verbatim
-    // one drawn chevron (points up); CSS rotates it per direction so all four arrows are identical
-    var DPAD_ARROW = '<svg class="dpad-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 L8 5.5 L12 10.5"/></svg>';
-    function mkBtn(dir, glyph, key, fn) {
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "dpad-" + dir;
-      b.innerHTML = DPAD_ARROW;
-      b.setAttribute("aria-label", tr(key)); b.title = tr(key);
-      b.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); fn(); });
-      return b;
-    }
-    function openMenu(x, y) {
-      closeMenu();
-      dpadEl = document.createElement("div");
-      dpadEl.className = "mon-ctx nav-dpad"; dpadEl.setAttribute("role", "menu");
-      dpadEl.appendChild(mkBtn("up", "↑", "dpad_day", function () { if (window.__setDayNight) window.__setDayNight(false); }));
-      dpadEl.appendChild(mkBtn("left", "←", "dpad_prev", function () { if (stageIndex > 0) navigateWithRoster(STAGES[stageIndex - 1]); }));
-      var dot = document.createElement("button"); dot.type = "button"; dot.className = "dpad-dot"; dot.setAttribute("aria-label", "close");
-      dot.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); }); // tapping the centre dismisses
-      dot.addEventListener("contextmenu", function (e) { e.stopPropagation(); e.preventDefault(); closeMenu(); }); // right-clicking the centre dismisses too (not a reopen)
-      dpadEl.appendChild(dot);
-      dpadEl.appendChild(mkBtn("right", "→", "dpad_next", function () { if (stageIndex < STAGES.length - 1) navigateWithRoster(STAGES[stageIndex + 1]); })); // the D-pad always advances, unlocking the frontier
-      dpadEl.appendChild(mkBtn("down", "↓", "dpad_night", function () { if (window.__setDayNight) window.__setDayNight(true); }));
-      dpadEl.style.visibility = "hidden";
-      document.body.appendChild(dpadEl);
-      // centre the D-pad ON the pointer (so the cursor sits over the middle dot), then clamp to the viewport
-      var r = dpadEl.getBoundingClientRect();
-      dpadEl.style.left = Math.max(4, Math.min(x - r.width / 2, window.innerWidth - r.width - 4)) + "px";
-      dpadEl.style.top = Math.max(4, Math.min(y - r.height / 2, window.innerHeight - r.height - 4)) + "px";
-      dpadEl.style.visibility = "";
-      document.addEventListener("keydown", onKey, true);
-      document.addEventListener("mousedown", onAway, true);
-      document.addEventListener("scroll", closeMenu, true);
-      window.addEventListener("blur", closeMenu);
-      window.addEventListener("resize", closeMenu);
-    }
-    // surfaces with their own right-click menu / meaning: the monitor (mon-ctx + console-ctx +
-    // desktop dock), the office laptop, the open pocket phone, and (transitively, plus its own
-    // handler) the minesweeper board — the D-pad stands down over all of them.
-    var EXCLUDE = "#office-monitor, #office-laptop, #laptop-call, .phone-backdrop, .phone-shell";
-    document.addEventListener("contextmenu", function (e) {
-      if (e.defaultPrevented) return;                 // a more-specific menu already claimed this right-click
-      var t = e.target;
-      if (!t || !t.closest) return;
-      if (!t.closest("#loft-game-strip")) return;     // only the game scene strip; page chrome / HTML overlays keep native
-      if (t.closest(EXCLUDE)) return;                 // a special surface → let it handle its own contextmenu
-      e.preventDefault();
-      openMenu(e.clientX, e.clientY);
-    });
-  })();
+  // General scene right-clicks deliberately do nothing, but stay captured so the browser's
+  // native menu does not cover the game. Target-specific menus register on their own elements
+  // and claim the event before it bubbles here.
+  document.addEventListener("contextmenu", function (e) {
+    if (e.defaultPrevented) return;
+    var t = e.target;
+    if (t && t.closest && t.closest("#loft-game-strip")) e.preventDefault();
+  });
   // Right-clicking an EMPTY area of any custom context menu shouldn't summon the native browser
   // menu on top of it. One capture-phase guard covers them all (every custom menu carries .mon-ctx
-  // — mon-ctx/desktop/laptop/phone/D-pad — or .console-ctx).
+  // — mon-ctx/desktop/laptop/phone — or .console-ctx).
   document.addEventListener("contextmenu", function (e) {
     if (e.target && e.target.closest && e.target.closest(".mon-ctx, .console-ctx")) e.preventDefault();
   }, true);
@@ -87337,7 +87248,7 @@ function spawnDustMote(container) {
 })();
 (function () {
   // Touch devices have no right-click, so every .mon-ctx / .console-ctx context menu (monitor
-  // desktop-dock, console, phone app-icons, in-scene D-pad, browser tabs, minesweeper, laptop)
+  // desktop-dock, console, phone app-icons, browser tabs, minesweeper, laptop)
   // is unreachable. A TWO-FINGER TAP — two fingers down, released quickly without much drift —
   // synthesizes a `contextmenu` at the touch midpoint on the element there, so every existing
   // right-click menu opens exactly as the mouse does. Pinch-zoom, single-finger taps and object

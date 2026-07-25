@@ -69,8 +69,7 @@ var harness = String.raw`<script>
         click(cameo);
         var rumi = document.querySelector(".egg-bubble.rumi-bubble");
         check("clicking the cuddly fairy starts Markéta and behdad's Rumi exchange",
-          rumi && rumi.querySelector(".rumi-speaker") &&
-          rumi.querySelector(".rumi-speaker").textContent === "markéta" &&
+          rumi && rumi._rumiSpeaker === "markéta" &&
           rumi.querySelector(".rumi-fa") && !rumi.querySelector(".fal-fa"),
           rumi && rumi.textContent);
         check("Markéta's cumulative Rumi offset is 60px right and 5px down",
@@ -81,8 +80,11 @@ var harness = String.raw`<script>
           rumi._rumiTailAnchor.id === "cuddly-marketa-head" &&
           !!rumi.style.getPropertyValue("--rumi-tail-x") &&
           rumi._rumiFollowing === true);
-        check("Markéta's Rumi name uses her blue",
-          rumi && getComputedStyle(rumi.querySelector(".rumi-speaker")).color === "rgb(127, 158, 192)");
+        check("Markéta's pointed Rumi bubble needs no visible speaker label",
+          rumi && !rumi.querySelector(".rumi-speaker"));
+        check("Markéta's recitation identifies the Rumi source",
+          rumi && rumi.querySelector(".rumi-credit") &&
+          rumi.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal 553");
         check("Markéta's recitation wakes Behdad for the exchange",
           document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
         check("the Rumi exchange does not add a public command",
@@ -92,8 +94,7 @@ var harness = String.raw`<script>
           try {
             var reply = document.querySelector(".egg-bubble.rumi-bubble");
             check("behdad's reply replaces Markéta's Rumi bubble",
-              reply && reply.querySelector(".rumi-speaker") &&
-              reply.querySelector(".rumi-speaker").textContent === "behdad",
+              reply && reply._rumiSpeaker === "behdad",
               reply && reply.textContent);
             check("behdad's manual Rumi adjustment is 55px right and 48px down",
               reply && reply._rumiOffset && reply._rumiOffset.x === 55 &&
@@ -105,8 +106,11 @@ var harness = String.raw`<script>
               reply._rumiTailAnchor.id === "cuddly-behdad-head" &&
               !!reply.style.getPropertyValue("--rumi-tail-x") &&
               reply._rumiFollowing === true);
-            check("behdad's Rumi name keeps his pink",
-              reply && getComputedStyle(reply.querySelector(".rumi-speaker")).color === "rgb(217, 166, 166)");
+            check("behdad's pointed Rumi bubble needs no visible speaker label",
+              reply && !reply.querySelector(".rumi-speaker"));
+            check("behdad's recitation identifies the Rumi source",
+              reply && reply.querySelector(".rumi-credit") &&
+              reply.querySelector(".rumi-credit").textContent === "— Rumi, Ghazal 553");
             check("Behdad stays awake while reciting his reply",
               document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
             window.__setDayNight(false);

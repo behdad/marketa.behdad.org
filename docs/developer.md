@@ -301,7 +301,10 @@ The normal first phase is a linear solve:
 `stageIndex` tracks the current room and `maxUnlocked` the furthest unlocked room. Normal solve paths
 use `__finishSolveAdvance(from, to)`: a delayed completion navigates only if the player is still in
 the source room, while still unlocking the destination if the player moved elsewhere. This stale
-timer guard is important for keyboard, double-click, and click-storm behavior.
+timer guard is important for keyboard, double-click, and click-storm behavior. It is also the
+phase boundary: once `__secondRound` is true it returns without unlocking or navigating. Every
+`__*DoNext` solve walker and clue target has the same phase guard, and object-specific delayed
+completions (including the cuddly blanket and office butterfly) route through this helper.
 
 `goToStage(name)` is intentionally permissive for scripting and test use: it calls `unlockThrough`,
 so directly going to a later room unlocks the intervening rooms. Normal UI arrows and dots remain
@@ -310,8 +313,10 @@ gated; a double-click on a locked room dot is an intentional shortcut.
 `window.__gameStarted` means the opening/attract prompt has been dismissed. It does not mean phase
 two. `window.__secondRound` latches when the garden party first starts. That transition unlocks all
 rooms, reveals and synchronizes the party population/roster, releases phase-two-held occasion texts,
-and makes solved rooms exploratory instead of linear puzzle gates. Turning the party off does not
-return to phase one; only a full reset clears that session progression.
+clears the remaining phase-one device/door nudges, and retires the entire linear puzzle mechanism.
+Turning the party off does not return to phase one; only a full reset clears that session
+progression. Explicit room navigation remains available in phase two through dots, arrows, room
+number keys, and `goToStage`.
 
 The first balcony arrival owns the one-time finale/Act Two transition. Subsequent solved-room visits
 use exploration captions and rotating hints. `goToStage` is also the central room-change re-gate: it
@@ -435,6 +440,9 @@ examples. Do not add an uncapped interval-driven SVG/WAAPI emitter.
   in both specificity and source order.
 - SVG children do not reliably honor `touch-action`; delegated, non-passive `touchmove` prevention
   on the strip is the established drag pattern.
+- Throwable drags request pointer capture and keep window-level move/up/cancel fallbacks for the
+  life of the gesture. Capture loss, window blur, or pagehide must restore the object's transition
+  and position without applying a drop-target hit.
 - The garden magic-box date lock keeps wheel selection and answer submission separate. Its engraved
   date opens the shared in-place phone Calendar; only the full-width submit control compares the
   selected wheels and starts the unlock sequence.
@@ -566,6 +574,11 @@ Caps Lock on/off cycle are equivalent unlock paths. Its small
 matches across Continue/reload. Normal monitor unzoom preserves it; the shared
 `shutdownMonitorApps()` teardown and a full game reset clear it. The focused lifecycle
 probe is `node tests/systemmenu.js`.
+
+`LOFT_CREDITS` is the single structured source for the system-menu credits roll and the
+console's bare `credits` command. Human names and package names remain language-neutral;
+their roles and the surrounding labels come from `T`. Full third-party notices and
+corresponding-source pointers remain in each runtime's public `COPYING` file.
 
 Opening an app boots/pans the monitor if necessary, closes incompatible surfaces, and calls the app's
 own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
@@ -900,6 +913,7 @@ Run focused tests for the changed surface. Important examples:
 - `tests/chat.js`, `tests/chat-context.js`, `tests/chat-worker.mjs`,
   `tests/safe-actions.js`, and `tests/safe-actions-worker.mjs` for assistant/action boundaries;
 - `tests/performance.js` and `tests/leak.js` for lifecycle regressions;
+- `tests/knife-drag.js` for throwable pointer capture, outside-frame release, and interruption cleanup;
 - `tests/bar-layout.js` for the calm-night patrons, occupied stools, and hands-on mixer paint order;
 - `tests/album-axis.mjs`, `tests/album-render.mjs`, `tests/album-ui.js`, and
   `tests/photographer-occupancy.js` for photography;

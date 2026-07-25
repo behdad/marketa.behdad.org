@@ -26,13 +26,6 @@ older ones never disappear. `loft-day.html` and `egg-hunt.html` are just the cur
 - **[Developer guide](docs/developer.md)** — architecture, state, rendering, testing,
   deployment, and the main subsystem entry points.
 
-## Acknowledgments
-
-With thanks to the people who helped shape this:
-
-- **Markéta** — co-design
-- **Kasra**, **Garret**, **Mahzad**, & **Ali** — testing
-
 ## A note for visitors
 
 This repo is public because the site is public and hobbyist-friendly — poke around if

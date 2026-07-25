@@ -79,6 +79,7 @@ dot to unlock through that room and jump there.
 Starting the party marks phase 2 as reached. From that point onward:
 
 - all five rooms remain unlocked;
+- the phase 1 clue prompts, solve walkers, and automatic next-room advances stop;
 - phone messages and their actions become available;
 - guests can arrive and move between rooms;
 - the party, BBQ, formal moments, calls, music, apps, and minigames can overlap;
@@ -397,7 +398,8 @@ the pink flat cap on behdad and the blue baker cap on Markéta by tapping a cap
 and then a portrait, dragging it, or using `Tab`, the arrow keys, and `Enter`.
 An intentional Caps Lock on/off cycle also unlocks it. The lock affects only the
 computer and survives leaving the monitor and continuing after a reload. **Reboot** and
-**Shut down** perform a clean power cycle and clear running app sessions.
+**Shut down** perform a clean power cycle and clear running app sessions. **Credits**
+rolls the people and open-source software behind the loft over its ever-burning fire.
 
 Typing an app name while the desktop or screensaver is visible opens an
 autocomplete search bar. `Enter` or `Tab` accepts the suggestion; `Escape` clears
@@ -407,7 +409,9 @@ active draft.
 
 `Escape` or `Backspace` follows app hierarchy. For example, Tattoo detail returns
 to the tattoo gallery, and an open Mail message returns to the inbox, before the
-app itself closes.
+app itself closes. In the monitor Photobooth's look picker, either key returns to
+the live camera view; the orange top-right dismiss button remains available there
+to exit the app directly.
 
 The Tattoo detail view includes the design, artist portrait, and the artist's
 name and relationship. The gallery stays compact. The Album and Photobooth share

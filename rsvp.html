@@ -25818,6 +25818,9 @@ var T = {
     album_cap_with: "with", // "markéta & behdad · with Ali & Goli"
     album_cap_and: "&",     // joins a couple in a caption: "Ali & Goli"
     album_cap_group: "the group photo · everyone 🎉", // the whole-crowd keepsake from groupphoto()
+    group_photo_callout_1: "Say cheese! 🧀",
+    group_photo_callout_2: "Smile! 📸",
+    group_photo_callout_3: "Everyone look here! 👀",
     album_cap_selfie: "photobooth selfie",
     album_remove: "remove photo",
     album_compact: "compact grid",
@@ -26730,6 +26733,9 @@ var T = {
     album_cap_with: "s", // "markéta & behdad · s Ali & Goli"
     album_cap_and: "&",  // spojuje pár v popisku: "Ali & Goli"
     album_cap_group: "společné foto · všichni 🎉", // celoskupinová památka z groupphoto()
+    group_photo_callout_1: "Sýr! 🧀",
+    group_photo_callout_2: "Úsměv! 📸",
+    group_photo_callout_3: "Všichni sem! 👀",
     album_cap_selfie: "selfie z fotokoutku",
     album_remove: "odstranit fotku",
     album_compact: "kompaktní mřížka",
@@ -72131,10 +72137,12 @@ function spawnDustMote(container) {
     });
     // ── GROUP PHOTO ── the whole crowd + hosts gather + face front (.gm-group-photo pauses their
     //    dance), Aspen fires the big flash, and a distinct WHOLE-CROWD keepsake lands in the album.
-    var groupPhotoTimers = [], groupPhotoOn = false;
+    var groupPhotoTimers = [], groupPhotoOn = false, groupPhotoCallout = null;
     function clearGroupPhotoTimers() { groupPhotoTimers.forEach(clearTimeout); groupPhotoTimers = []; }
     function endGroupPhoto() {
       clearGroupPhotoTimers(); groupPhotoOn = false; setPartyMomentState("groupPhoto", false);
+      if (groupPhotoCallout) dismissEggBubble(groupPhotoCallout);
+      groupPhotoCallout = null;
       group.classList.remove("gm-group-photo", "gm-gp-settle");
       if (window.__trimFloorToCap) window.__trimFloorToCap(); // the extra guests drift back off, down to capacity
       var gardenStage = document.getElementById("stage-garden");
@@ -72150,6 +72158,15 @@ function spawnDustMote(container) {
       var rm = reducedMotion();
       group.classList.add("gm-group-photo");
       group.classList.remove("gm-gp-settle"); void group.getBBox; group.classList.add("gm-gp-settle"); // the "say cheese" settle
+      // The crowd deliberately holds still for Aspen. Say so in-scene, so the brief freeze reads
+      // as posing for the photograph rather than a stalled party animation.
+      groupPhotoTimers.push(setTimeout(function () {
+        if (!groupPhotoOn) return;
+        var aspen = document.getElementById("garden-photographer");
+        if (!aspen) return;
+        var callouts = ["group_photo_callout_1", "group_photo_callout_2", "group_photo_callout_3"];
+        groupPhotoCallout = eggBubble(aspen, tr(callouts[Math.floor(Math.random() * callouts.length)]), "top");
+      }, 40)); // let the aspen-home station transform settle before measuring her screen position
       // the flash + the keepsake land a beat in (everyone's gathered); silent auto-flash reuse + a shutter sound
       groupPhotoTimers.push(setTimeout(function () {
         if (!groupPhotoOn) return;

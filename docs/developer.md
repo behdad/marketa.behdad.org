@@ -323,6 +323,29 @@ use exploration captions and rotating hints. `goToStage` is also the central roo
 collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,
 particles, photographer state, and phone/monitor ownership.
 
+### Across-street windows and Window Tetris
+
+Search for `balconyBuildingTetris`, `#balcony-building-window-grid`, and
+`__balconyTetrisState`. The controller generates 5×8 clickable physical
+apartments, each containing a 2×2 set of square SVG cells. Normal mode applies
+one `.lit` state to all four cells in an apartment. Its single self-rescheduling
+ambient timer exists only while the balcony is visible and the document is
+focused; manual clicks toggle exactly one apartment and are the only events that
+enter the launch detector. Three clicks on the same apartment within 1.1 seconds
+start the game.
+
+The minigame owns a 10×16 board, seven-bag pieces, rotation/wall kicks,
+line/level scoring, and `localStorage["balconyTetrisHigh"]`. That personal best
+is intentionally outside checkpoint/reset state, matching Invaders, Flair-Catch,
+and Pac-Man. Starting snapshots the forty apartment states, pauses running
+balcony animations, adds `.tetris-on`, installs the topmost click shield, and
+uses a capture-phase keyboard handler so arrows, Space, and Escape cannot reach
+global room/audio controls. Escape, blur, hidden-tab transition, reset, and
+programmatic room leave cancel the sole rAF driver and restore the exact snapshot.
+Game over performs the same restore, then exposes a bounded `.tetris-result`
+state in which Enter can restart. `__balconyTetrisTest` is the narrow deterministic
+board/line-clear hook used by `tests/balcony-tetris.js`; it is not a public API.
+
 ### Progression transitions
 
 `setSecondRound` owns the phase-two latch, full-room unlock, roster availability and release of held
@@ -908,6 +931,8 @@ Run focused tests for the changed surface. Important examples:
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
 - `tests/party-lifecycle.js` for attended party timing and finales;
+- `tests/balcony-tetris.js` for facade window independence, ambient focus gates, the hidden launch
+  gesture, keyboard ownership, scoring/high score, and teardown restoration;
 - `tests/message-context.js`, `tests/message-launcher.js`, and
   `tests/message-resilience.js` for Messages behavior;
 - `tests/chat.js`, `tests/chat-context.js`, `tests/chat-worker.mjs`,

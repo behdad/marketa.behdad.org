@@ -669,7 +669,8 @@ state remains visually quiet. `N` selects the next applicable track or scene.
   the pellets while avoiding the three ghosts; the larger
   corner pellets briefly make the ghosts edible. Movement follows the original
   arcade game's level-one pace while turns remain buffered at maze corners.
-- **Game of Life and Doom:** Available on the monitor.
+- **Game of Life and Doom:** Available on the monitor. Space pauses or resumes
+  Life, which also pauses when its board goes empty.
 - **Bouquet toss:** A fictional, game-only party moment with its own aiming
   interaction. No bouquet toss is planned for either real wedding celebration.
 - **Magic box:** The garden's magic box contains a set of optional visual trips.

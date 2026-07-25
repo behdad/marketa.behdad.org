@@ -48139,6 +48139,7 @@ setOfficeProgress("pc", false);
   function lifePaintGen() { if (lifeGenEl) lifeGenEl.textContent = lifeT("life_gen") + " " + lifeGen; }
   function lifeAdvance() {
     var next = new Uint8Array(LIFE_COLS * LIFE_ROWS);
+    var alive = false;
     for (var r = 0; r < LIFE_ROWS; r++) for (var c = 0; c < LIFE_COLS; c++) {
       var n = 0;
       for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
@@ -48148,8 +48149,10 @@ setOfficeProgress("pc", false);
       }
       var i = r * LIFE_COLS + c;
       next[i] = lifeGridArr[i] ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0); // B3/S23
+      if (next[i]) alive = true;
     }
     lifeGridArr = next; lifeGen++; lifePaintGen(); lifeRender();
+    if (!alive) lifePause();
   }
   function lifeArmTimer() { if (lifeTimer) clearInterval(lifeTimer); lifeTimer = setInterval(lifeStep, LIFE_SPEEDS[lifeSpeedIdx]); }
   function lifeStep() {
@@ -48376,9 +48379,18 @@ setOfficeProgress("pc", false);
     });
   }
   window.__killMonitorLife = lifeDeathFlash;
+  window.__lifeState = function () { return { playing: lifePlaying, generation: lifeGen, alive: lifeGridArr.some(function (cell) { return !!cell; }) }; };
+  window.__lifeAdvance = lifeAdvance;
   window.__pauseMonitorLife = function () { if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; } }; // room-leave: stop the loop but keep lifePlaying so it resumes on return
   window.__resumeMonitorLife = function () { if (lifePlaying && !lifeTimer && monitor.classList.contains("show-life") && document.visibilityState !== "hidden") lifeArmTimer(); };
   window.refreshLifeText = function () { lifeRefreshLabels(); };
+  // Life owns Space anywhere while its app is open, before the page-wide music transport.
+  document.addEventListener("keydown", function (e) {
+    if ((e.key !== " " && e.key !== "Spacebar") || !monitor.classList.contains("show-life") || window.currentStageName !== "office") return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (!e.repeat) lifeToggle();
+  }, true);
   document.addEventListener("visibilitychange", function () {
     // a hidden tab throttles/pauses timers; drop it so nothing accumulates, re-arm on return
     if (document.hidden) { if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; } }

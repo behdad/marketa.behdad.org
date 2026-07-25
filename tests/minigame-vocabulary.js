@@ -104,9 +104,14 @@ var harness = [
   'out.mines={label:face&&face.getAttribute("aria-label"),title:face&&face.getAttribute("title"),keyboard:!face.dispatchEvent(faceKey)&&faceClicks===1};',
   'window.goToStage("office");var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");',
   'if(tower)tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__openMonitorApp("life");',
-  'var life=document.querySelector(".life-btn"),lifeClicks=0;life.addEventListener("click",function(){lifeClicks++;});',
-  'var lifeKey=new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true});',
-  'out.life={label:life&&life.getAttribute("aria-label"),keyboard:!life.dispatchEvent(lifeKey)&&lifeClicks===1};',
+  'var life=document.querySelector(".life-btn"),lifeButtons=document.querySelectorAll(".life-btn"),lifeMusicBefore=window.__musicPaused;',
+  'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
+  'var lifePaused=!window.__lifeState().playing;',
+  'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
+  'var lifeResumed=window.__lifeState().playing;',
+  'lifeButtons[3].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));',
+  'lifeButtons[0].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__lifeAdvance();',
+  'out.life={label:life&&life.getAttribute("aria-label"),paused:lifePaused,resumed:lifeResumed,musicHeld:window.__musicPaused===lifeMusicBefore,extinctPaused:!window.__lifeState().playing&&!window.__lifeState().alive};',
   'document.getElementById("__report").textContent=JSON.stringify(out);',
   '},350);});</script>'
 ].join("\n");
@@ -134,8 +139,9 @@ check(rendered && rendered.mines.label === "NEW GAME" && rendered.mines.title ==
       rendered.mines.keyboard,
   "Mines names its face control New game and accepts keyboard activation",
   rendered && JSON.stringify(rendered.mines));
-check(rendered && rendered.life.label === "Play" && rendered.life.keyboard,
-  "Life exposes localized action names and keyboard activation",
+check(rendered && rendered.life.label === "Play" && rendered.life.paused && rendered.life.resumed &&
+      rendered.life.musicHeld && rendered.life.extinctPaused,
+  "Life owns Space and pauses when its board goes extinct",
   rendered && JSON.stringify(rendered.life));
 
 console.log("");

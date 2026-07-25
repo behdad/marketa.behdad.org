@@ -26,7 +26,7 @@ check(!/garden-photographer-cover|class="photog-cover/.test(html),
 var harness = String.raw`<script>
 (function () {
   var report = { errs: window.__errs, steps: {} };
-  function click(el) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  function click(el, detail) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: detail == null ? 1 : detail })); }
   function dblclick(el) { el.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true })); }
   window.goToStage("garden");
   window.__setGardenParty(true, false);
@@ -44,7 +44,8 @@ var harness = String.raw`<script>
   click(foot);
   report.steps.foot = { station: stage.getAttribute("data-photog-station"), photos: photos, opens: opens, who: who };
   click(body);
-  report.steps.body = { station: stage.getAttribute("data-photog-station"), photos: photos, who: who };
+  setTimeout(function () {
+    report.steps.body = { station: stage.getAttribute("data-photog-station"), photos: photos, who: who };
 
   var dj = document.getElementById("garden-dj-a");
   click(dj);
@@ -80,6 +81,9 @@ var harness = String.raw`<script>
     people: framed.map(function (shot) { return shot.people.map(function (p) { return p.key; }); })
   };
 
+  click(body, 1); click(body, 2); dblclick(body);
+  report.steps.bodyDouble = { photoFreeze: !!window.__photoFreeze, photos: photos };
+  if (window.__stopPhotoMoment) window.__stopPhotoMoment();
   var started = window.__startGroupPhoto();
   report.steps.groupStart = { started: started, station: stage.getAttribute("data-photog-station") };
   setTimeout(function () {
@@ -100,6 +104,7 @@ var harness = String.raw`<script>
     report.steps.mirrorThree = { party: !!window.__gardenPartyOn };
     var pre = document.createElement("pre"); pre.id = "__report"; pre.textContent = JSON.stringify(report); document.body.appendChild(pre);
   }, 1250);
+  }, 320);
 })();
 </script>`;
 
@@ -117,6 +122,8 @@ if (result) {
     "foot click advances Aspen without shutter, Album, or bio", s.foot);
   check(s.body.station === "potstand" && s.body.photos === 1 && s.body.who === 0,
     "body click takes exactly one photo without a bio popup", s.body);
+  check(s.bodyDouble.photoFreeze && s.bodyDouble.photos === 1,
+    "body double-click cancels the portrait and starts a short photo pose", s.bodyDouble);
   check(s.dj.picker && s.dj.pickerRight < 560 && s.dj.who === 0, "DJ head opens its picker fully left of the booth without a bio popup", s.dj);
   check(s.djDouble.before !== s.djDouble.after && !s.djDouble.picker && s.djDouble.party, "double-clicking the DJ advances the song and closes the picker without ending the party", s.djDouble);
   check(s.frame.station === "peace-lily" && s.frame.stationMeta.every(function (id) { return id === "peace-lily"; }),

@@ -25818,9 +25818,9 @@ var T = {
     album_cap_with: "with", // "markéta & behdad · with Ali & Goli"
     album_cap_and: "&",     // joins a couple in a caption: "Ali & Goli"
     album_cap_group: "the group photo · everyone 🎉", // the whole-crowd keepsake from groupphoto()
-    group_photo_callout_1: "Say cheese! 🧀",
-    group_photo_callout_2: "Smile! 📸",
-    group_photo_callout_3: "Everyone look here! 👀",
+    photo_pose_callout_1: "Say cheese! 🧀",
+    photo_pose_callout_2: "Smile! 📸",
+    photo_pose_callout_3: "Everyone look here! 👀",
     album_cap_selfie: "photobooth selfie",
     album_remove: "remove photo",
     album_compact: "compact grid",
@@ -26733,9 +26733,9 @@ var T = {
     album_cap_with: "s", // "markéta & behdad · s Ali & Goli"
     album_cap_and: "&",  // spojuje pár v popisku: "Ali & Goli"
     album_cap_group: "společné foto · všichni 🎉", // celoskupinová památka z groupphoto()
-    group_photo_callout_1: "Sýr! 🧀",
-    group_photo_callout_2: "Úsměv! 📸",
-    group_photo_callout_3: "Všichni sem! 👀",
+    photo_pose_callout_1: "Sýr! 🧀",
+    photo_pose_callout_2: "Úsměv! 📸",
+    photo_pose_callout_3: "Všichni sem! 👀",
     album_cap_selfie: "selfie z fotokoutku",
     album_remove: "odstranit fotku",
     album_compact: "kompaktní mřížka",
@@ -72158,15 +72158,13 @@ function spawnDustMote(container) {
       var rm = reducedMotion();
       group.classList.add("gm-group-photo");
       group.classList.remove("gm-gp-settle"); void group.getBBox; group.classList.add("gm-gp-settle"); // the "say cheese" settle
-      // The crowd deliberately holds still for Aspen. Say so in-scene, so the brief freeze reads
-      // as posing for the photograph rather than a stalled party animation.
       groupPhotoTimers.push(setTimeout(function () {
         if (!groupPhotoOn) return;
         var aspen = document.getElementById("garden-photographer");
         if (!aspen) return;
-        var callouts = ["group_photo_callout_1", "group_photo_callout_2", "group_photo_callout_3"];
+        var callouts = ["photo_pose_callout_1", "photo_pose_callout_2", "photo_pose_callout_3"];
         groupPhotoCallout = eggBubble(aspen, tr(callouts[Math.floor(Math.random() * callouts.length)]), "top");
-      }, 40)); // let the aspen-home station transform settle before measuring her screen position
+      }, 40)); // let Aspen's return-home transform settle before measuring her screen position
       // the flash + the keepsake land a beat in (everyone's gathered); silent auto-flash reuse + a shutter sound
       groupPhotoTimers.push(setTimeout(function () {
         if (!groupPhotoOn) return;
@@ -72382,19 +72380,39 @@ function spawnDustMote(container) {
     var cam = document.getElementById("garden-photog-cam"); // ...and the camera-raise one-shot with them
     if (cam) cam.addEventListener("animationend", function () { cam.classList.remove("aiming"); });
   })();
-  (function () { // click her to take a photo: a flash NOW + a shutter sound (the ambient auto-flash stays silent)
+  (function () { // click her for a portrait; double-click her to cue a short party photo pose
     var photog = document.getElementById("garden-photographer");
     if (!photog) return;
+    var portraitTimer = null;
+    function canShoot() {
+      return !!(window.__gardenPartyOn &&
+        (!window.__roomHasPhotoSubjects || window.__roomHasPhotoSubjects("garden")));
+    }
     photog.addEventListener("click", function (e) {
-      if (!window.__gardenPartyOn || (window.__roomHasPhotoSubjects && !window.__roomHasPhotoSubjects("garden"))) return;
+      if (!canShoot()) return;
       e.stopPropagation();
-      fireGardenFlash();
-      playCameraShutterSound();
-      if (window.__albumAdd) window.__albumAdd(true); // a deliberate tap always makes a fresh keepsake
-      // she's the photographer: tap her → the shot syncs to your phone. Raise the pocket phone on
-      // the album app (scene-agnostic modal) so the just-taken portrait sits right on top, newest-
-      // first. A short beat lets the shutter/flash read before the phone slides up.
-      setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album", true); }, 260);
+      clearTimeout(portraitTimer);
+      if (e.detail > 1) return; // the second click belongs to the group-photo gesture below
+      portraitTimer = setTimeout(function () {
+        portraitTimer = null;
+        fireGardenFlash();
+        playCameraShutterSound();
+        if (window.__albumAdd) window.__albumAdd(true); // a deliberate tap always makes a fresh keepsake
+        // she's the photographer: tap her → the shot syncs to your phone. Raise the pocket phone on
+        // the album app (scene-agnostic modal) so the just-taken portrait sits right on top, newest-
+        // first. A short beat lets the shutter/flash read before the phone slides up.
+        setTimeout(function () { if (window.__openPhoneAppHere) window.__openPhoneAppHere("album", true); }, 260);
+      }, 280);
+    });
+    photog.addEventListener("dblclick", function (e) {
+      // Her shoes remain a movement control even if someone clicks them rapidly.
+      if (e.target && e.target.id === "garden-photog-move-hit") return;
+      if (!canShoot()) return;
+      e.preventDefault();
+      e.stopPropagation();
+      clearTimeout(portraitTimer);
+      portraitTimer = null;
+      if (window.__photoMomentNow) window.__photoMomentNow();
     });
   })();
   // Aspen works the garden from a few authored camera stations instead of standing at the same
@@ -72500,15 +72518,17 @@ function spawnDustMote(container) {
     if (wash) wash.classList.remove("flashing");
   }
   // ── AUTONOMOUS PHOTO-MOMENT ──────────────────────────────────────────────────
-  // Every once in a while the party holds a short ~4s photography pose: the dancing holds still
+  // Every once in a while the party holds a short ~2.6s photography pose: the dancing holds still
   // (dance-frozen via __photoFreeze), the blacklight drops, and Aspen works the frozen crowd
   // with near-continuous flashes — then it resumes. Same self-rescheduling, party-gated,
   // crickets-safe idiom as the flash/chase: skips a round while unattended or while the visitor
   // has already paused the music themselves (they're inspecting). The music keeps playing — the
   // crowd just strikes a pose for the camera.
-  var photoFreezeTimer = null;
+  var photoFreezeTimer = null, photoMomentCallout = null;
   function endPhotoMoment() {
     photoFreezeTimer = null;
+    if (photoMomentCallout) dismissEggBubble(photoMomentCallout);
+    photoMomentCallout = null;
     setPartyMomentState("photoFreeze", false);
     if (window.__albumMomentReset) window.__albumMomentReset(); // next freeze snaps a fresh keepsake
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
@@ -72520,8 +72540,13 @@ function spawnDustMote(container) {
     if (document.hidden || !document.hasFocus() || window.__musicPaused) { schedulePhotoMoment(); return; } // unattended, or the visitor's already frozen it → try later
     setPartyMomentState("photoFreeze", true);
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
+    var aspen = document.getElementById("garden-photographer");
+    if (aspen) {
+      var callouts = ["photo_pose_callout_1", "photo_pose_callout_2", "photo_pose_callout_3"];
+      photoMomentCallout = eggBubble(aspen, tipText(callouts[Math.floor(Math.random() * callouts.length)]), "top");
+    }
     if (window.__albumCaptureMoment) window.__albumCaptureMoment(); // one keepsake per photo-moment (not per flash)
-    photoFreezeTimer = setTimeout(endPhotoMoment, 4200); // enough for the camera raise + a readable pose, never a long stall
+    photoFreezeTimer = setTimeout(endPhotoMoment, 2600); // two or three shutter pops, long enough to read as a pose without looking stalled
   }
   function schedulePhotoMoment() {
     if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; }
@@ -72531,6 +72556,8 @@ function spawnDustMote(container) {
   window.__startPhotoMoment = schedulePhotoMoment;
   window.__stopPhotoMoment = function () {
     if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; }
+    if (photoMomentCallout) dismissEggBubble(photoMomentCallout);
+    photoMomentCallout = null;
     if (window.__photoFreeze) { setPartyMomentState("photoFreeze", false); if (window.__syncDanceFreeze) window.__syncDanceFreeze(); }
   };
   window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // console/test: trigger one now

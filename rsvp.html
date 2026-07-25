@@ -26210,7 +26210,7 @@ var T = {
       act_p1: "<em>Pouria</em>'s back behind the bar — go get the drink you skipped this morning. 🍸",
       act_p2: "<em>DJ Sina</em> and <em>DJ Danesh</em> are trading the decks. The garden's dancing — stay for the next one. 💃",
       act_p3: "Grab a strip for the album — there's a booth on your phone<span class=\"kbd-hint\">, just press <kbd>c</kbd></span>, & one on the PC. 📷",
-      act_w1: "The party's easing off — someone's playing piano in the cuddly-puddly, under the stars. 🎹",
+      act_w1: "Piano in the cuddly-puddly. 🎹",
       act_w2: "One more turn of the sun and it's tomorrow. Go on — bring the morning back. 🌄",
       act_w2_dawn: "Morning again. Same loft, same coffee. It does this every day. ☕",
       // ── cinematic narration (the "Watch the loft" autoplay owns the caption while it runs) ──
@@ -27191,7 +27191,7 @@ var T = {
       act_p1: "<em>Pouria</em> je zpátky za barem — dojdi si pro drink, cos ráno vynechal(a). 🍸",
       act_p2: "<em>DJ Sina</em> a <em>DJ Danesh</em> si předávají gramofony. Zahrada tančí — zůstaň na další. 💃",
       act_p3: "Vyfoť se do alba — jeden fotokoutek máš v telefonu<span class=\"kbd-hint\">, stačí zmáčknout <kbd>c</kbd></span>, a druhý na PC. 📷",
-      act_w1: "Párty pomalu doznívá — někdo hraje v cuddly-puddly na klavír, pod hvězdami. 🎹",
+      act_w1: "V cuddly-puddly zní klavír. 🎹",
       act_w2: "Ještě jedno otočení slunce a je zítra. No tak — přiveď ráno zpátky. 🌄",
       act_w2_dawn: "Zase ráno. Stejný loft, stejná káva. Dělá to tak každý den. ☕",
       // ── titulky filmečku (autoplay „Prohlédnout byt“ řídí titulek, dokud běží) ──
@@ -90531,7 +90531,7 @@ function spawnDustMote(container) {
       done: function () { return !!latched.dj; }, after: function () { latched.dj = true; } },
     { id: "act_p3", room: "garden", claimMs: 90000, afterMs: 150000,
       done: function () { return !!latched.booth; }, after: function () { latched.booth = true; } },
-    { id: "act_w1", room: "garden", claimMs: 90000, afterMs: 150000,
+    { id: "act_w1", room: "garden", claimMs: 90000, afterMs: 150000, silent: true,
       done: function () { return latch("stars", starsOn); }, after: function () { latched.stars = true; } },
     // dawn only counts once there's been a night to come back from
     { id: "act_w2", room: "balcony", claimMs: 60000, afterMs: 90000,
@@ -90544,7 +90544,7 @@ function spawnDustMote(container) {
 
   function speak() {
     var b = beat(live);
-    if (!b || window.__cinematic || document.hidden) return;
+    if (!b || b.silent || window.__cinematic || document.hidden) return;
     if (window.currentStageName !== b.room) return; // it'll get its say when you walk in (see __actBeatHint)
     if (b.id === "rsvp_exit") { if (window.__showRsvpNudge) window.__showRsvpNudge(); return; }
     if (window.setCaption) window.setCaption(b.id);
@@ -90602,6 +90602,7 @@ function spawnDustMote(container) {
   window.__actBeatHint = function (room) {
     if (!armed || !live || window.__cinematic) return null;
     var b = beat(live);
+    if (b && b.silent) return null;
     if (b && b.id === "act_b2" && room !== "balcony" && liveMs >= 60000) return "act_b2_return";
     if (!b || b.room !== room || liveMs >= b.claimMs) return null;
     return b.id;

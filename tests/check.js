@@ -1012,7 +1012,7 @@ function checkLaptopUpdateSoundGate(file, script) {
   var body = start >= 0 && end > start ? script.slice(start, end) : "";
   var gatedClick = /if\s*\(laptopUpdateSoundAllowed\(\)\)\s*playLaptopClickSound\("office-laptop"\)/.test(body);
   var gatedChime = /if\s*\(laptopUpdateSoundAllowed\(\)\)\s*playBootChimeSound\(\)/.test(body);
-  var readsZoom = /function laptopUpdateSoundAllowed\(\)\s*\{[\s\S]*?__monitorZoomed/.test(script);
+  var readsZoom = /function laptopUpdateSoundAllowed\(\)\s*\{[\s\S]*?__monitorAttention/.test(script);
   if (!gatedClick || !gatedChime || !readsZoom) {
     fail(file + ": automatic laptop update sounds are muted during monitor zoom");
   } else {

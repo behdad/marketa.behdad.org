@@ -40205,7 +40205,7 @@ setOfficeProgress("pc", false);
     // as her machine rudely interrupting her translating. Every 3rd update installs
     // something sweet instead: release notes + a heart where the apple logo should be.
     function laptopUpdateSoundAllowed() {
-      return !(window.__monitorZoomed && window.__monitorZoomed());
+      return !(window.__monitorAttention && window.__monitorAttention());
     }
     function runLaptopUpdate() {
       if (!laptop.classList.contains("open")) return;
@@ -53408,6 +53408,7 @@ async def localfont(name):
   var laptop = document.getElementById("office-laptop");
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
+  var monitorIntentUntil = 0; // a dark-screen tap declares attention before boot makes zoom eligible
   var lastZoomPose = "", refitRaf = 0, refitRetryTimer = null, zoomOutTimer = null;
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
   // bboxes include stands/keyboards, which pulled the view down and out — the owner's
@@ -53448,6 +53449,7 @@ async def localfont(name):
     if (!t || !t.el || !t.when()) return;
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
     zoomEl = el;
+    if (el === monitor) monitorIntentUntil = 0;
     lastZoomPose = "";
     vp.classList.add("device-zoomed");
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
@@ -53458,6 +53460,7 @@ async def localfont(name):
     if (refitRaf) { cancelAnimationFrame(refitRaf); refitRaf = 0; }
     if (refitRetryTimer) { clearTimeout(refitRetryTimer); refitRetryTimer = null; }
     if (zoomOutTimer) { clearTimeout(zoomOutTimer); zoomOutTimer = null; }
+    if (zoomEl === monitor) monitorIntentUntil = 0;
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
     lastZoomPose = "";
@@ -53484,6 +53487,7 @@ async def localfont(name):
     if (monitor) monitor.classList.remove("dev-zoomed");
     if (laptop) laptop.classList.remove("dev-zoomed");
     zoomEl = null; lastZoomPose = "";
+    monitorIntentUntil = 0;
     vp.classList.remove("device-zoomed");
     var prevTransition = strip.style.transition;
     strip.style.transition = "none";
@@ -53528,6 +53532,7 @@ async def localfont(name):
   window.__monitorZoomOut = zoomOut;
   window.__toggleMonitorZoom = function () { if (zoomEl === monitor) zoomOut(); else zoomIn(monitor); }; // 'Enter' in the office toggles the monitor zoom
   window.__monitorZoomed = function () { return zoomEl === monitor; }; // is the monitor currently zoomed in? (the office Enter-walk's open/dismiss beats read this)
+  window.__monitorAttention = function () { return zoomEl === monitor || Date.now() < monitorIntentUntil; };
   window.__laptopZoomIn = function () { if (laptop) zoomIn(laptop); }; // the office Enter-walk's call beat pulls the view up to the laptop (the lid may have auto-opened un-zoomed)
   window.__laptopZoomed = function () { return zoomEl === laptop; };
   // each device's bezel ✕ dismisses its own zoom. pointerdown + stopPropagation so it
@@ -53578,7 +53583,11 @@ async def localfont(name):
       armZoomClickSuppress(); // the generic monitor click would otherwise play a sound and repaint the screen
       return;
     }
-    if (!zoomEl) { zoomIn(monitor); if (zoomEl === monitor) armZoomClickSuppress(); } // only if it actually zoomed — an OFF monitor doesn't zoom, and that click must still boot the PC
+    if (!zoomEl) {
+      monitorIntentUntil = Date.now() + 1500; // silence nearby autonomous props from the first intentional tap
+      zoomIn(monitor);
+      if (zoomEl === monitor) armZoomClickSuppress();
+    } // only swallow if it actually zoomed — an OFF monitor must still receive the click that boots the PC
   });
   monitor.addEventListener("click", swallowZoomClick, true);
   if (laptop) {

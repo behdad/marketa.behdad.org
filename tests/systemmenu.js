@@ -60,7 +60,7 @@ var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
 ok("menu exposes Website, Lock, Sleep, Reboot, Shut down", JSON.stringify(s.menu_actions) === JSON.stringify(["website","lock","sleep","reboot","shutdown"]));
-ok("About footer carries the Loft tagline", s.tagline === "where artificial and higher intelligence meet.");
+ok("About footer carries the Loft tagline", s.tagline === "where artificial meets higher intelligence.");
 ok("Sleep enters the saver and pointer activity wakes it", s.sleep_saver === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);
 ok("Lock starts and persists", s.lock_started === true && s.lock_saved === true);

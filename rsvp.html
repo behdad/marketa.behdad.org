@@ -4673,10 +4673,6 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 #office-monitor.photobooth #monitor-photobooth,
 #office-monitor.pb-confirm #monitor-pb-confirm,
 #office-monitor.pb-error #monitor-pb-error{opacity:1; pointer-events:auto}
-/* An unzoomed monitor owns the first tap. Modal Photobooth surfaces must not
-   intercept it; they become interactive again once the desk zoom is active. */
-#office-monitor:not(.dev-zoomed).pb-confirm #monitor-pb-confirm,
-#office-monitor:not(.dev-zoomed).pb-error #monitor-pb-error{pointer-events:none}
 #office-monitor.photobooth.death-photobooth #monitor-photobooth{opacity:0; pointer-events:none}
 /* while live, the booth owns the whole screen — hide every boot/site/transport layer under it */
 #office-monitor.photobooth .boot-logo,
@@ -4725,9 +4721,9 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 #monitor-pb-picker{opacity:0; pointer-events:none; transition:opacity .2s ease}
 #office-monitor.picking #monitor-pb-picker{opacity:1; pointer-events:auto}
 #office-monitor.picking #monitor-pb-shutter{opacity:0; pointer-events:none} /* can't re-snap while choosing */
-/* photobooth close: the same mini close pill as the other monitor apps (orange, its dock-tile family), parked in the screen's top-right corner and kept available over the picker. Escape/Backspace steps back from the picker to the live view; this explicit app dismiss exits the booth. Uses the shared seg-hover fade, not the pb-ctrl scale, so its positioning transform is never overridden. */
-#monitor-pb-close{opacity:0; pointer-events:none; cursor:pointer}
-#office-monitor.photobooth #monitor-pb-close{opacity:1; pointer-events:auto}
+#office-monitor.picking #monitor-pb-close{opacity:0; pointer-events:none} /* choosing means picking or retaking — a close x here read as "cancel" and testers bailed */
+/* photobooth close: the same mini close pill as the other monitor apps (orange, its dock-tile family), parked in the screen's top-right corner. Uses the shared seg-hover fade, not the pb-ctrl scale, so its positioning transform is never overridden. */
+#monitor-pb-close{cursor:pointer}
 #monitor-pb-close:hover .seg-hover{opacity:.55}
 /* the "pick one" nudge: only fades in when someone lingers on the picker without choosing
    (the screen's too small for an always-on caption) */
@@ -21580,6 +21576,14 @@ section{margin:1.9rem 0}
 </g>
 <!-- big 3-2-1 countdown before the capture, centered over the video zone -->
 <text id="monitor-pb-count" x="285" y="184" text-anchor="middle" style="font-size:26px; fill:#fffdf8; paint-order:stroke; stroke:rgba(0,0,0,0.55); stroke-width:2.4px; stroke-linejoin:round"></text>
+<!-- close (x), top-right -->
+<g id="monitor-pb-close" transform="translate(76.0,29.3) scale(0.8)">
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#d3822f" stroke="#a56525" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7f4e1c" opacity="0"/>
+<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
+</g>
 <!-- retake (re-run the countdown), top-left; shown only in .picking -->
 <g id="monitor-pb-retake" class="pb-ctrl">
 <circle cx="260" cy="159.5" r="4.6" fill="#000" fill-opacity="0.45"/>
@@ -21602,15 +21606,6 @@ section{margin:1.9rem 0}
 </g>
 <!-- white snap flash (topmost, click-through) -->
 <rect id="monitor-pb-flash" x="254" y="154" width="124" height="42" fill="#ffffff" opacity="0" pointer-events="none"/>
-</g>
-<!-- Keep the close above the picker's foreignObject compositing layer. Inside
-     #monitor-photobooth it can be painted underneath that replaced element. -->
-<g id="monitor-pb-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
-<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#d3822f" stroke="#a56525" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7f4e1c" opacity="0"/>
-<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 <!-- photobooth pre-permission confirm: an ON-SCREEN ask (no popup, no getUserMedia yet) —
      only the "Open camera" button click calls getUserMedia, inside that user gesture.
@@ -53234,9 +53229,7 @@ async def localfont(name):
   }
   function monitorChromePointer(e) {
     if (!e || !e.target || (e.target.closest && e.target.closest(".bezel-nav,.bezel-close,[role='button'],button,input,textarea,select"))) return false;
-    // Measure the painted glass, not the invisible zoom-fit guide. The guide's
-    // client rect can lag the live SVG transform and misclassify app clicks as bezel.
-    var screen = document.getElementById("office-monitor-bg");
+    var screen = document.getElementById("monitor-zoom-box");
     if (!screen) return false;
     var r = screen.getBoundingClientRect();
     return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;

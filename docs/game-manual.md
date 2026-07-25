@@ -418,8 +418,9 @@ rolls the people and open-source software behind the loft over its ever-burning 
 
 Tap the magnifying glass in the desktop menu bar, or type an app name while the
 desktop or screensaver is visible, to open autocomplete search. `Enter` or `Tab`
-accepts the suggestion; `Escape` clears it. About and Credits are searchable apps
-even though they have no desktop tiles.
+accepts the suggestion. Its close control or `Escape` dismisses it; `Backspace`
+dismisses it once the field is empty. About and Credits are searchable apps even
+though they have no desktop tiles.
 Search recognizes localized app labels where a translation exists. In apps
 with their own search field, `/` focuses that field when it will not overwrite an
 active draft.

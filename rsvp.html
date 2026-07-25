@@ -44885,6 +44885,33 @@ setOfficeProgress("pc", false);
       }
       openMenu(items, x, y);
     }
+    // The visible black rim is its own SVG rect behind the screen. Bind it directly: relying
+    // only on the document-level geometry fallback missed real bezel events in some scaled
+    // SVG/mobile layouts even though synthetic coordinates inside the monitor passed tests.
+    var monitorBezel = document.getElementById("office-monitor-bezel");
+    if (monitorBezel) monitorBezel.addEventListener("contextmenu", function (e) {
+      var app = activeMonitorApp();
+      if (!app) return;
+      e.preventDefault();
+      e.stopPropagation();
+      buildMenu(app, e.clientX, e.clientY);
+    });
+    // SVG hit-testing can report a neighbouring room element for the painted bezel after the
+    // monitor is CSS/SVG-scaled. Capture by geometry as the backstop: the physical rim is the
+    // bezel rectangle minus the glass rectangle, independent of event.target.
+    document.addEventListener("contextmenu", function (e) {
+      var app = activeMonitorApp();
+      if (!app || !monitorBezel) return;
+      var glass = document.getElementById("office-monitor-bg");
+      if (!glass) return;
+      var b = monitorBezel.getBoundingClientRect(), g = glass.getBoundingClientRect();
+      var inBezel = e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+      var inGlass = e.clientX >= g.left && e.clientX <= g.right && e.clientY >= g.top && e.clientY <= g.bottom;
+      if (!inBezel || inGlass) return;
+      e.preventDefault();
+      e.stopPropagation();
+      buildMenu(app, e.clientX, e.clientY);
+    }, true);
     document.addEventListener("contextmenu", function (e) {
       var app = activeMonitorApp();
       if (app) { // an app is OPEN on the monitor → close/restart/kill it
@@ -50428,6 +50455,7 @@ async def localfont(name):
     return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
   }
   monitor.addEventListener("pointerdown", function (e) {
+    if (e.button != null && e.button !== 0) return; // right-click belongs to the active app's context menu
     if (zoomEl === monitor && monitorChromePointer(e)) {
       e.preventDefault();
       e.stopImmediatePropagation();

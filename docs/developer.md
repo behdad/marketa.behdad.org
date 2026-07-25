@@ -353,6 +353,9 @@ phone state separately. `setMaxUnlocked` owns the room frontier and navigation p
 `setOfficeProgress` owns the Prague-call and PC-played milestones across play, Enter automation,
 checkpoint restore and reset. `setMonitorShorted` owns both the wet-monitor flag and `.shorted`
 rendering class; drying and reset call the same transition.
+The released garden fairy's Cuddly cameo is projected by `syncRumiFairy`: it requires phase two,
+night, a stopped party, and the couple's presence. Phase, party, room, and both manual and automatic
+day/night transitions re-run that projection.
 
 ### Party lifetime
 

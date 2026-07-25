@@ -58,7 +58,12 @@ var harness = String.raw`<script>
         window.__setGardenParty(false, false);
         window.goToStage("cuddly");
         var cameo = document.getElementById("cuddly-rumi-fairy");
-        check("the fairy settles above the couple once the party is quiet",
+        window.__setDayNight(false);
+        check("the fairy stays away during the day after the party",
+          cameo && !cameo.classList.contains("present") &&
+          cameo.getAttribute("aria-hidden") === "true");
+        window.__setDayNight(true);
+        check("the fairy settles above the couple once the party is quiet at night",
           cameo && cameo.classList.contains("present") &&
           cameo.getAttribute("aria-hidden") === "false");
         click(cameo);
@@ -68,20 +73,51 @@ var harness = String.raw`<script>
           rumi.querySelector(".rumi-speaker").textContent === "markéta" &&
           rumi.querySelector(".rumi-fa") && !rumi.querySelector(".fal-fa"),
           rumi && rumi.textContent);
+        check("Markéta's cumulative Rumi offset is 60px right and 5px down",
+          rumi && rumi._rumiOffset && rumi._rumiOffset.x === 60 && rumi._rumiOffset.y === 5,
+          rumi && (rumi.style.left + "," + rumi.style.top));
+        check("Markéta's Rumi bubble has a tail aimed at her",
+          rumi && rumi._rumiTailAnchor &&
+          rumi._rumiTailAnchor.id === "cuddly-marketa-head" &&
+          !!rumi.style.getPropertyValue("--rumi-tail-x"));
         check("the Rumi exchange does not add a public command",
           typeof window.rumi === "undefined");
 
-        window.__resetRumiFairy();
-        window.goToStage("garden");
-        door.classList.remove("open");
-        click(door);
-        check("opening the fairy door after phase 2 starts also begins the flight",
-          fairy.classList.contains("released") &&
-          fairy.parentNode.classList.contains("departing"));
+        setTimeout(function () {
+          try {
+            var reply = document.querySelector(".egg-bubble.rumi-bubble");
+            check("behdad's reply replaces Markéta's Rumi bubble",
+              reply && reply.querySelector(".rumi-speaker") &&
+              reply.querySelector(".rumi-speaker").textContent === "behdad",
+              reply && reply.textContent);
+            check("behdad's Rumi bubble uses the stable top-left-of-head layout",
+              reply && reply._rumiLayout === "head-top-left",
+              reply && (reply.style.left + "," + reply.style.top));
+            check("behdad's Rumi bubble has a tail aimed at him",
+              reply && reply._rumiTailAnchor &&
+              reply._rumiTailAnchor.id === "cuddly-behdad-head" &&
+              !!reply.style.getPropertyValue("--rumi-tail-x"));
+            window.__setDayNight(false);
+            check("dawn sends the cuddly fairy away again",
+              !cameo.classList.contains("present") &&
+              cameo.getAttribute("aria-hidden") === "true");
+
+            window.__resetRumiFairy();
+            window.goToStage("garden");
+            door.classList.remove("open");
+            click(door);
+            check("opening the fairy door after phase 2 starts also begins the flight",
+              fairy.classList.contains("released") &&
+              fairy.parentNode.classList.contains("departing"));
+          } catch (error) {
+            out.errors.push(String(error && error.stack || error));
+          }
+          finish();
+        }, 5350);
       } catch (error) {
         out.errors.push(String(error && error.stack || error));
+        finish();
       }
-      finish();
     }, 1850);
   } catch (error) {
     out.errors.push(String(error && error.stack || error));
@@ -90,7 +126,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 4200, {
+var result = lib.runPageSync("rsvp.html", harness, 7800, {
   patchRaf: true,
   forceMotion: true
 });

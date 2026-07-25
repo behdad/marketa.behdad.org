@@ -168,6 +168,12 @@ footer{margin-top:2.6rem}
    Arabic-script marks have room (system Persian fonts; nothing is fetched for this) */
 .egg-bubble .fal-fa{display:block; direction:rtl; text-align:right; font-size:1.08em; line-height:1.9; margin:.25em 0}
 .egg-bubble.rumi-bubble{max-width:250px}
+.egg-bubble.rumi-bubble::after{
+  content:""; position:absolute; top:100%; left:var(--rumi-tail-x,50%);
+  width:0; height:0; transform:translateX(-50%);
+  border-left:7px solid transparent; border-right:7px solid transparent;
+  border-top:9px solid var(--ink);
+}
 .egg-bubble .rumi-speaker{display:block; color:var(--pink); font-weight:700; margin-bottom:.1em}
 .egg-bubble .rumi-fa{display:block; direction:rtl; text-align:right; font-size:1.12em; line-height:1.8}
 .egg-bubble .rumi-reading{display:block; margin-top:.15em}
@@ -16831,7 +16837,7 @@ section{margin:1.9rem 0}
      after phase 2 and waits for a quiet, party-off Rumi exchange. The static placement
      and floating motion live on separate wrappers so their transforms compose. -->
 <g id="cuddly-rumi-fairy" aria-hidden="true">
-<g transform="translate(-430,-195) scale(1.25)">
+<g transform="translate(-540,-230) scale(1.25)">
 <g id="cuddly-rumi-fairy-float">
 <use href="#witchy-chest-fairy" xlink:href="#witchy-chest-fairy"/>
 </g>
@@ -61262,6 +61268,7 @@ async def localfont(name):
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx(); // sun shafts are a day thing
       if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // the door-nudge hint is a day thing too
       if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // dusk → Behdad snoozes; day → the couple's back to normal
+      if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy(); // the fairy visits only at night
       if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // dusk raises the calm night bar (day lowers it): swap the kitchen caption + clear/restore the coffee arrows
       if (window.__updateGrowlightForNight) window.__updateGrowlightForNight(); // grow light off at night
       if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(); // birds quiet down at dusk
@@ -61329,6 +61336,7 @@ async def localfont(name):
       if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx();
       if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // day forced back → re-evaluate the door-nudge hint
       if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // day forced back → Behdad wakes from his snooze
+      if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy(); // forced day sends the fairy away
       var wallLampEl = document.getElementById("balcony-walllamp");
       if (wallLampEl) wallLampEl.classList.remove("on");
       if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle();
@@ -61577,6 +61585,7 @@ async def localfont(name):
       stampNightDepth(); // the date may have moved under us (?date=, the pill, a season preview)
       if (stageBalcony.classList.contains("dusk") !== night) { toggleDusk(true); return; } // silent: an autonomous flip shouldn't chime
       ["stage-garden", "stage-kitchen", "stage-cuddly", "stage-office"].forEach(function (id) { var s = document.getElementById(id); if (s) s.classList.toggle("dusk", night); });
+      if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy(); // a sibling-only clock sync still owns the fairy's night gate
     }
     // DELIBERATE apply (kitchen-solve arm, ?time= jump, time-lapse step): force the scene to the
     // clock's verdict now, record it as the current segment, and (re)arm the next crossing.
@@ -64488,9 +64497,23 @@ async def localfont(name):
       '<span class="rumi-reading">' + reading + '</span>' +
       (credit ? '<span class="rumi-credit">— Rumi, Ghazal 553</span>' : "");
   }
-  function showRumi(anchor, speaker, fa, reading, credit) {
-    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top", 0, 0, 6400);
-    if (bubble) bubble.classList.add("rumi-bubble");
+  function showRumi(anchor, speaker, fa, reading, credit, yOffset, xOffset, layout) {
+    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top", yOffset, xOffset, 6400);
+    if (bubble) {
+      bubble.classList.add("rumi-bubble");
+      bubble._rumiOffset = { y: yOffset || 0, x: xOffset || 0 };
+      var anchorRect = anchor.getBoundingClientRect();
+      if (layout === "head-top-left") {
+        bubble.style.left = Math.max(8, anchorRect.left - bubble.offsetWidth - 10) + "px";
+        bubble.style.top = Math.max(8, anchorRect.top - bubble.offsetHeight - 10) + "px";
+        bubble._rumiLayout = layout;
+      }
+      var bubbleLeft = parseFloat(bubble.style.left) || 0;
+      var tailX = anchorRect.left + anchorRect.width / 2 - bubbleLeft;
+      tailX = Math.max(12, Math.min(bubble.offsetWidth - 12, tailX));
+      bubble.style.setProperty("--rumi-tail-x", tailX + "px");
+      bubble._rumiTailAnchor = anchor;
+    }
     return bubble;
   }
   window.__offerRumiAt = function (fallback) {
@@ -64498,10 +64521,10 @@ async def localfont(name):
     var i = rumiPick();
     var t = T[document.documentElement.lang] || T.en;
     var readings = t.rumi_lines || T.en.rumi_lines;
-    showRumi(hostAnchor("cuddly-marketa", fallback), "markéta", RUMI_FA[i][0], readings[i][0], false);
+    showRumi(hostAnchor("cuddly-marketa-head", fallback), "markéta", RUMI_FA[i][0], readings[i][0], false, 5, 60);
     rumiReplyTimer = setTimeout(function () {
       if (window.currentStageName !== "cuddly" || window.__gardenPartyOn) return;
-      showRumi(hostAnchor("cuddly-behdad", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true);
+      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true, 0, 0, "head-top-left");
     }, 5200);
     return i;
   };
@@ -65013,7 +65036,9 @@ async def localfont(name):
     var departed = fairy.classList.contains("departed");
     fairyDance.classList.toggle("away", departed && !fairyDance.classList.contains("departing"));
     var couple = document.getElementById("cuddly-couple");
+    var cuddlyStage = document.getElementById("stage-cuddly");
     var present = departed && !!window.__secondRound && !window.__gardenPartyOn &&
+      !!(cuddlyStage && cuddlyStage.classList.contains("dusk")) &&
       !(couple && couple.classList.contains("at-party"));
     cuddlyFairy.classList.toggle("present", present);
     cuddlyFairy.setAttribute("aria-hidden", present ? "false" : "true");

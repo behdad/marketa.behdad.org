@@ -20,7 +20,11 @@ var HARNESS = [
   "  var menu=document.getElementById('monitor-system-menu');",
   "  S('menu_open',menu.classList.contains('open'));",
   "  S('menu_actions',[].map.call(menu.querySelectorAll('[data-action]'),function(n){return n.getAttribute('data-action');}));",
-  "  S('tagline',[].map.call(menu.querySelectorAll('.desk-system-tagline'),function(n){return n.textContent;}).join(' '));",
+  "  S('tagline_removed',menu.querySelector('.desk-system-tagline')===null);",
+  "  window.__monitorSystemAction('credits'); await sleep(80); var credits=document.getElementById('monitor-credits-layer');",
+  "  S('credits_open',credits.classList.contains('open')&&credits.textContent.indexOf('Markéta')>=0&&credits.textContent.indexOf('Kasra')<credits.textContent.indexOf('Irene')&&credits.textContent.indexOf('FontTools')>=0&&credits.textContent.indexOf('made with love by behdad, Claude & Codex')>=0&&credits.textContent.indexOf('July 2026')>=0);",
+  "  window.__killMonitorCredits(); await sleep(80); S('credits_killing',credits.classList.contains('killing')&&credits.textContent.indexOf('the gratitude survives.')>=0);",
+  "  await sleep(3000); S('credits_killed',!credits.classList.contains('open')&&!mon.classList.contains('show-credits')&&!window.__monitorAppRunning('credits')&&mon.classList.contains('show-caps'));",
   "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); if(window.__monitorZoomIn)window.__monitorZoomIn(); window.__monitorSystemAction('sleep');",
   "  S('sleep_suspended',window.__monitorSleeping()&&mon.classList.contains('monitor-sleeping')&&mon.classList.contains('screen-on')&&!mon.classList.contains('show-saver'));",
   "  S('sleep_unzoomed',!mon.classList.contains('dev-zoomed'));",
@@ -64,7 +68,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var r = lib.runPageSync("rsvp.html", HARNESS, 5000, { patchRaf: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 8500, { patchRaf: true });
 var fail = 0;
 function ok(name, cond) { console.log((cond ? "  ✓ " : "  ✗ ") + name); if (!cond) fail++; }
 console.log("monitor system menu + CAPS LOCK:");
@@ -72,8 +76,10 @@ if (!r) { console.error("  ✗ no report captured"); process.exit(1); }
 var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
-ok("menu exposes Website, Lock, Sleep, Reboot, Shut down", JSON.stringify(s.menu_actions) === JSON.stringify(["website","lock","sleep","reboot","shutdown"]));
-ok("About footer carries the Loft tagline", s.tagline === "where artificial meets higher intelligence.");
+ok("menu groups power actions before About and Credits", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","website","credits"]));
+ok("compact menu leaves the motto for About", s.tagline_removed === true);
+ok("Credits rolls people, software, and the closing line", s.credits_open === true);
+ok("Credits Kill flares, preserves gratitude, and returns to desktop", s.credits_killing === true && s.credits_killed === true);
 ok("Sleep suspends and unzooms only the live monitor, then a press wakes it", s.sleep_suspended === true && s.sleep_unzoomed === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);
 ok("Lock starts and persists", s.lock_started === true && s.lock_saved === true);

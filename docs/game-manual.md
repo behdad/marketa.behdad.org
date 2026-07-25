@@ -34,9 +34,9 @@ ME** invitation inside that enlarged view.
    cannot cover it for its entire visit.
 3. Solve the highlighted activity in each room. The right room arrow unlocks as
    you make progress.
-4. Completing the first trip through the loft starts phase 2. Every room is then
-   unlocked, Messages become active, and the party and other free-play systems
-   become available.
+4. When you are ready, start the party. The first party begins phase 2: every
+   room unlocks, Messages become active, and the other free-play systems become
+   available.
 5. Keep exploring after the party. Ending the party does not end the game.
 
 The five rooms are:
@@ -98,6 +98,7 @@ but their notification cards and badges wait until the action game ends.
 
 - Click or tap objects in the room to interact with them.
 - Change rooms with the side navigation arrows or room dots.
+- Tap a named guest, child, or Who's here entry for a brief relationship card.
 - Use the lower media control to pause or resume the current foreground music.
 - Right-click supported objects for a context menu.
 - On a touch screen, a two-finger tap provides the general context-menu gesture.
@@ -156,11 +157,11 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `L` | Open or close the laptop |
 | `C` | Open or close the phone |
 | `/` | Open Messages; inside searchable apps, focus search when appropriate |
-| `W` | Show or hide Who's here during phase 2 |
+| `W` / `H` | Show or hide Who's here during phase 2 |
 | `F` | Toggle fullscreen |
 | `Space` | Game action, or play or pause foreground media |
 | `N` | Play the next applicable song or music selection |
-| `G` | Show the next phone hint |
+| `G` | Send the next catalog message |
 | `Tab` | Send a random, context-appropriate test message (Chat may rephrase it in English; Czech stays authored) |
 | `D` | Toggle day and night |
 | `Up` / `Down` | Set day or night |
@@ -168,7 +169,8 @@ Press `?` in the game for the live shortcut overlay. Current global shortcuts ar
 | `Shift+Up` / `Shift+Down` | Move the game clock by 30 minutes |
 | `P` | Toggle the party |
 | `U` | Toggle ultraviolet party lighting |
-| `S` | Cycle the season |
+| `S` / `Shift+S` | Next or previous season |
+| `B` / `Shift+B` | Next or previous birthday scene |
 | `T` | Start the next magic-box trip |
 | `Shift+1` through `Shift+8` | Select a particular magic-box trip |
 | `K` | Repeat the cat activity |
@@ -198,8 +200,8 @@ without advancing while the tab is hidden or unfocused and uses a calmer motion
 profile when reduced motion is requested.
 
 Stray clicks and keys do not stop a kiosk show. Use **Take over** to return control
-temporarily; after a quiet interval the kiosk resumes. Press `A` or run
-`autoplay(false)` in the console to stop it deliberately.
+temporarily; after a quiet interval the kiosk resumes. Run `autoplay(false)` in
+the console to stop it deliberately.
 
 The direct game entries have distinct purposes:
 
@@ -257,15 +259,20 @@ The plant grow light follows the loft clock automatically, staying on from
 ### Cuddly-puddly
 
 Cuddly-puddly contains soft furnishings, Octi, a balcony door, children's play,
-and a projector. After its guided activity, the projector can cycle among several
-visual programs. It can temporarily take ownership of the foreground media
-controls and lower the party music.
+and a projector. The wall screen cycles through fireplace, workout, night-sky
+piano, aquarium, Totoro, and off. It can temporarily take ownership of the
+foreground media controls and lower the party music. The witchy chest can also
+release the cat; further taps, or `K`, prompt another antic.
 
 ### Office
 
 The office contains the laptop, the main computer monitor, lamps, the Prague and
 Lübeck call experience, a stained-glass detail, and the hidden Invaders minigame.
 The computer is also the main home of the game's larger apps and pro tools.
+
+The laptop's two contact tiles place Prague and Lübeck calls. Its context menu
+can open a tile, end a live call, wake a closed laptop, or translate the
+on-screen *L'amour* heading.
 
 At room scale, the first click on a monitor or laptop zooms it. A second click
 interacts with its screen. This prevents an accidental click-through while the
@@ -342,6 +349,11 @@ the launcher to scroll; press and hold an app icon briefly before dragging to
 rearrange it. Most app and navigation state lasts for the current browser
 session; the full game reset restores the initial layout.
 
+Right-click an app icon, or use the two-finger touch gesture, for **Open**,
+**Stop**, and **Uninstall**. Stop clears that app's current session but keeps its
+icon. Uninstall leaves an empty launcher slot until the game is reset or
+reloaded.
+
 The current phone apps are:
 
 | App | What it contains |
@@ -397,8 +409,10 @@ The main monitor desktop contains these app tiles:
 - Python
 - Linux
 
-Every monitor app has its own Kill gag. Right-click an open app and choose **Kill**
-to terminate it with its own send-off instead of closing it silently.
+Every monitor app has its own Kill gag. A normal close leaves the app marked as
+running. Right-click its desktop tile or open surface and choose **Kill** to
+clear that session with its own send-off. Runtime apps also offer **Restart**
+when appropriate.
 
 Pac-Man never occupies a desktop tile, but typing its name in the computer's app
 search opens it at any time. During the ketamine magic-box trip, catching the
@@ -474,13 +488,9 @@ unread-only filter kept at the top and the composer at the bottom. The composer
 receives focus when Messages opens. Press `Escape` to leave the composer; press
 `/` while it is empty to focus message search.
 
-Before an autonomous authored message arrives, Chat may casually rephrase its
-English wording without changing any information. One quarter of English
-messages deliberately keep their authored wording. Czech always uses the
-existing authored translation. If verification, the network, or the chatbot
-fails, the original authored English message arrives unchanged.
-Pouria's message to Farhang and both parts of Hamid's Persian verse always keep
-their authored wording.
+Some automatic English messages are lightly rephrased by Chat; others
+intentionally keep their authored wording. Czech always uses the authored
+translation. If Chat is unavailable, the original English message arrives.
 
 Right-click a message, or long-press it on touch, to:
 
@@ -554,45 +564,19 @@ day and night. After phase 2, it changes between daytime free play and the party
 During the party:
 
 - guests arrive and rotate among the five rooms as appropriate;
-- once a family arrives, its members remain party attendees even when the adults
-  rotate off the visible dance floor;
-- all eight children share the same party inventory and may dance, play in
-  Cuddly-puddly, or run through the party room;
-- every attending child always has one persistent home: dancing,
-  Cuddly-puddly, or asleep. Short runs and balcony activities borrow a child
-  from that home rather than creating another copy;
-- a child is more likely to dance while at least one represented parent is
-  dancing. Otherwise they usually take an available Cuddly-puddly seat; the
-  seated assignment persists while another room is on screen. Partial groups
-  are balanced across both game clusters, with the children randomized between
-  sides. While Cuddly-puddly is on screen, placement changes slow to roughly
-  every 30–45 seconds;
-- children assigned to Cuddly-puddly may make a brief run across the party room
-  and return to the same seat. Children currently dancing do not join that run;
-  occasionally all eight seated children run together;
-- s'mores and seasonal balcony play borrow children assigned to Cuddly-puddly;
-  a child dancing on the party floor does not simultaneously appear in the
-  balcony activity;
-- after a “kids are asleep” message, Cuddly-puddly clears. A child has only a
-  small chance to stay up dancing; the others remain asleep until the wake-up;
-- Bahareh may follow the running children;
+- children may dance, play in Cuddly-puddly, run through the party room, join
+  balcony activities, or go to sleep as the evening changes;
 - named guests occasionally perform their authored visual reactions on their
   own while the player watches the garden;
 - the ordinary Irene, Robin, and Navid Cuddly-puddly cameos occur only during
-  daylight while the party is off. Night dismisses an active cameo. During a
-  party, the shared child inventory owns their presence;
-- Totoro is the exception to ordinary party placement: while its projector
-  channel is playing, all eight children sit in Cuddly-puddly to watch, even if
-  they had been dancing or marked sleepy. Outside a party, its three-child
-  cameo audience is daylight-only;
+  daylight while the party is off. Night dismisses an active cameo;
+- Totoro gathers the children in Cuddly-puddly to watch. Its smaller non-party
+  audience is also daylight-only;
 - party music becomes quieter when a projector, video, piano, or other foreground
   media experience is active;
 - opening **Who's here** freezes guest arrivals, departures, room changes, and
-  the adults dancing on the party floor; the children keep dancing. Selecting
-  an adult briefly releases that person under the pointer, then returns the
-  adults to their frozen pose. The roster also pauses autonomous Messages
-  delivery; message previews and both unread-count badges stay hidden, and held
-  texts resume at a paced interval after the roster closes.
+  adult dance-floor motion. It also pauses automatic message delivery and hides
+  message previews until the roster closes.
 
 ### Party ending
 
@@ -635,14 +619,9 @@ The balcony smoker is interactive: open the firebox or lid, light it, allow it t
 heat, and cook or serve food. During a party, a lit smoker activates BBQ mode.
 Selected adults then split naturally between the balcony and garden/party while
 children may keep playing elsewhere. BBQ mode remains active across later
-day/night changes; extinguishing the smoker or ending the party ends it. People
-already on the balcony are retained where possible when the split changes, while
-arrivals and departures fade rather than popping in or out. Hamid tends the grill
-in Behdad's green-yellow jacket, so the matching jacket disappears from its hooks
-in the garden and balcony-door views until he leaves the BBQ. Behdad and Markéta
-move as a pair between the party floor and balcony: daytime BBQ rotations place
-them outside about 75% of the time, while night BBQ rotations place them inside
-about 75% of the time.
+day/night changes; extinguishing the smoker or ending the party ends it. Hamid
+tends the grill, and Behdad and Markéta move together between the party floor
+and balcony.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 
@@ -743,6 +722,8 @@ room illustration. Heavy effects pause or limit work when their room is not
 visible or the browser is in the background.
 
 The Calendar and Clock apps provide friendly controls for simulated game time.
+**Day at the Loft** runs the balcony sky through a full day in about 30 seconds
+and repeats until stopped; press `Escape` or its Stop control to end it.
 Power users can also use the `?date=` and `?time=` URL parameters. The lower
 date/time overlay appears only when at least one of those parameters is present.
 Its `◀`/`▶` controls move one day at a time, while `◀◀`/`▶▶` jump between
@@ -902,24 +883,33 @@ can always run.
 
 | Query | Purpose |
 | --- | --- |
+| `api.info` | API version and current state revision |
+| `api.capabilities` | Discover registered queries/actions and current availability |
 | `game.snapshot` | Broad current snapshot; convenient but more likely to grow over time |
+| `game.status` | Bounded overview of progress, room, activity, and session |
 | `game.progress` | Phase and room-trail progress |
 | `game.busy` | Major transition or cinematic state |
 | `room.current` | Current room |
 | `room.list` | Room catalog and navigation state |
 | `room.occupants` | Occupants of the current or requested room |
 | `people.locations` | Current public character locations |
+| `person.list`, `person.get` | Public cast profiles |
+| `attendance.status` | Current public room attendance |
 | `party.status` | Party, dance, DJ, and BBQ status |
 | `bbq.status` | Smoker and BBQ split status |
 | `audio.status` | Foreground audio owner and playback state |
+| `media.status` | Combined music, video, dance, projector, and volume state |
 | `projector.status` | Cuddly-puddly projector mode |
 | `app.current` | Currently open phone or monitor app |
 | `apps.list` | Discoverable app catalog |
+| `apps.status` | Current device apps and their public catalogs |
 | `calls.status` | Active and incoming call state |
 | `messages.summary` | Counts and metadata, deliberately excluding message bodies |
+| `messages.recent` | A bounded list of recent wedding-thread messages |
 | `minigames.status` | Minigame availability and activity |
 | `scene.environment` | Daylight, weather, season, sky, and eclipse state |
 | `calendar.events` | Runtime special-day and event data |
+| `calendar.upcoming` | A bounded list of upcoming public occasions |
 | `weather.cities` | Edmonton and Prague weather and forecasts |
 | `album.list` | Album metadata, not photo pixels |
 | `tattoos.catalog` | Tattoo designs and public artist credits |
@@ -937,6 +927,8 @@ families are:
 | --- | --- |
 | `room.go` | `{ room }` using a canonical room id |
 | `app.open` | `{ app }` from the API's allowlisted app subset |
+| `message.send` | `{ text }`; send as the visitor to the wedding thread |
+| `volume.set` | `{ level }` from 0 to 1 |
 | `roster.set` | `{ open: true/false }` |
 | `music.play`, `music.pause`, `music.skip`, `music.previous` | Shared music transport; skip can be unavailable during party ownership |
 | `video.pause` | Pause Markéta's monitor film when it is playing |
@@ -992,8 +984,9 @@ the action. Tap the action control inside that message.
 
 ### Messages have not arrived
 
-Ordinary messages are held until phase 2. Finish the room trail or start the
-party. On special dates, the first event message is also held until phase 2.
+Ordinary messages are held until phase 2. Reach the balcony and let its finale
+continue, or start the party yourself. On special dates, the first event
+message is also held until phase 2.
 
 ### Charlie or a crew reply keeps waiting
 

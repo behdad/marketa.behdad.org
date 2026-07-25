@@ -10,15 +10,20 @@ noted.
 - `save-the-dates.html` is the invitation/save-the-date page.
 - `rsvp.html` is the interactive loft game. Its HTML, CSS, inline SVG, localization dictionaries,
   state, controllers, apps, and scripting console live in one large file.
-- `egg-hunt.html` and `loft-day.html` are public symlinks to those two current drops. Keep the
-  symlinks aligned if a current drop is renamed.
+- `rsvp`/`loft-day` and their `.html` aliases point to `rsvp.html`;
+  `save-the-dates`/`egg-hunt` and their `.html` aliases point to `save-the-dates.html`. These are
+  public symlinks, not generated routes; keep every alias aligned if a current drop is renamed.
 - There is no application framework, package build, or bundling step. Both pages are intended to
   remain directly loadable documents.
 - `art/` contains the normal media assets. `pyodide/`, `linux/`, `doom/`, and `harfbuzzjs/` contain
   pinned, self-hosted browser runtimes and their provenance. Treat those directories as versioned
-  deliverables, not generated build output.
+  deliverables, not generated build output; root `BUILD.md` indexes their rebuild records.
+- `manifest.v2.webmanifest` is the installable Loft Day shell metadata. Its start URL is the
+  extensionless `loft-day` alias and its standalone/landscape settings participate in entry-mode
+  behavior.
 - `chat.js` is the Cloudflare Worker behind `/chat`; `chat-knowledge.json` is the stable knowledge
-  supplied to that Worker.
+  supplied to that Worker, and `wrangler.jsonc` owns its route, model selection, secrets contract,
+  and edge rate-limit binding.
 - `tests/` contains zero-dependency Node/headless-Chrome tests. `tests/lib.js` is the shared runner.
 - Markdown, test files, Worker source/configuration, and local environment files are denied by
   `.htaccess`; the static host otherwise serves files from the Git working tree.
@@ -119,7 +124,8 @@ regenerate or upgrade them casually. Preserve their self-hosted, zero-CDN operat
 ### Google Fonts integration
 
 Google Fonts is the deliberate network exception to the self-hosted runtime policy. The page loads
-Fraunces, Source Serif 4, and a small Noto Serif subset through the normal Google Fonts stylesheets.
+Fraunces and Source Serif 4 for the main interface, Caveat and Climate Crisis for special game
+surfaces, and a small Noto Serif IPA subset through normal Google Fonts stylesheets.
 The loft's font-programming tools also expose the Google Fonts Developer API at runtime:
 
 - The JavaScript and dropdown consoles provide `googlefonts(family, opts)`. It returns a
@@ -531,9 +537,8 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   roster, chat, and typed API consumers therefore share the same normalized records.
 - The Who's Here UI is phase-two-only. It polls cheaply and mutates only when occupancy changes.
   Arrivals appear immediately; departures have a short hysteresis to avoid flicker during movement.
-  The accessor itself remains instantaneous.
-- Display order is based on current left-to-right geometry, while preserving existing order and
-  inserting newcomers to reduce churn.
+  The accessor itself remains instantaneous; display order follows geometry without gratuitously
+  reordering existing rows.
 - Opening the roster holds autonomous arrivals/departures. In the garden it also adds
   `.roster-freeze` to the stage, pausing the adult cast while the eight party children remain
   animated; the existing row spotlight temporarily exempts `.spotlighted`. Check
@@ -544,46 +549,27 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
 - `attendedGuestNames` records lifetime attendance for one party run, independently of the
   floor-only `.arrived` class. Adult rotation must not clear an attending child's `.arrived`;
   `assignPartyKids()` then gives every attending child exactly one persistent dance/Cuddly/sleep
-  home. The ordinary Irene/Robin/Navid Cuddly cameo scheduler is party-off and daylight-only.
-  `__updateCuddlyKidCameosForDay` hard-clears those three figures at night and re-evaluates the
-  non-party Totoro audience; forced pose/test hooks deliberately remain available.
+  home. The ordinary Irene/Robin/Navid Cuddly cameo scheduler is party-off and daylight-only;
+  `__updateCuddlyKidCameosForDay` is its day/night projection owner.
 - Persistent bar, office, balcony, and grillmaster figures use presence classes with opacity plus
-  delayed `visibility`, not `display`, so both arrival and departure can paint as fades. The balcony
-  layout preferentially retains eligible visible figures across a BBQ split change. Hamid's
-  grillmaster paint owns `#loft-game-strip.hamid-wearing-jacket`, which fades both views of the
-  shared hanging jacket while he is assigned to the BBQ.
+  delayed `visibility`, not `display`, so both arrival and departure can paint as fades.
 - The BBQ controller's `bbqHostsOnBalcony` is the single paired-location state for Behdad and
-  Markéta. Both `layoutBBQ()` and `applyBBQGardenSplit()` consume it. Each rotation and active-BBQ
-  day/night change rerolls against a 0.75 daytime / 0.25 nighttime balcony probability, keeping
-  their deck figures and garden exclusions atomic.
+  Markéta. Both balcony layout and the garden split consume it, keeping their two figures and
+  garden exclusions atomic.
 - One eight-child inventory drives standing dancers, Cuddly seats, chase sprites, and sleep.
-  `assignPartyKids()` owns the persistent `off-at-games` / `off-asleep` assignment. A represented
-  parent on the live floor raises that child's dance chance from 0.25 to 0.70; after the sleep
-  message every Cuddly seat clears and the dance chance falls to 0.08. Chase handoffs remain a
-  temporary `off-with-kids` projection of a child whose persistent home is `off-at-games`; dancers
-  are excluded from the chase pool, and a full-pack roll can run all eight seated children. The
-  Cuddly layout balances partial assignments across its two clusters and randomizes identities
-  between sides instead of consuming the slot array left-to-right. `partyKidFormationTick()` keeps
-  its 9–14 second off-room cadence but uses 30–45 seconds while Cuddly is watched. During party Totoro,
-  `__totoroWatchActive` overrides eligibility/sleep and assigns all eight to the same persistent
-  Cuddly layer; outside a party the original three cameo figures own the daylight-only co-watch. Keep
-  `PARTY_FLOOR_KIDS`, `KID_WHO`, runner SVG nodes, `ROSTER.runSel`, and the people manager in
-  parity when adding a child.
+  `assignPartyKids()` owns persistent assignments; chase borrows from them temporarily, while
+  party Totoro explicitly overrides them with the shared Cuddly audience. Keep
+  `PARTY_FLOOR_KIDS`, `KID_WHO`, runner SVG nodes, `ROSTER.runSel`, and the people manager in parity
+  when adding a child.
 - S'mores and seasonal balcony play use `__balconyBorrowedKids` as another temporary projection
-  from the persistent Cuddly assignment. Identity-specific s'mores art selects eligible godkids;
-  the seasonal two-slot art can represent any assigned children. `__balconyPlayKidsNow` publishes
-  the generic slots to the people manager, and teardown clears the borrowing without rerolling
-  unrelated dancers. `__reconcileBalconyKidsPlay()` deterministically derives the daytime activity
-  from door, phase, sleep, date, and temperature state: freezing air gives the snowman; Apr 2–29
-  gives blossom play; Jun 1–Aug 31 gives sprinkler play; and Sep 15–Oct 15 gives leaf-pile play.
-  Date, weather, day/night, and either view of the physical balcony door all invoke that one owner.
+  from the persistent assignment. `__balconyPlayKidsNow` publishes borrowed slots to the people
+  manager; `__reconcileBalconyKidsPlay()` is the single projection from door, phase, sleep, date,
+  temperature, and daylight state.
 - Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck
   contexts. `__roomHasPhotoSubjects(room)` excludes working crew and gates her visible clone,
   camera/flash, shutter, and Album write together; an empty room must not show her or create a
-  keepsake. Population controllers refresh photographer gates after assignment changes; the
-  garden can be empty during an active party, and Aspen returns with the first subject. Automatic
-  rounds and explicit `photo.take` use that same occupancy truth. The occasional dance freeze is
-  about 4.2 seconds; ordinary automatic captures do not freeze the floor.
+  keepsake. Population controllers, automatic rounds, and explicit `photo.take` all use that same
+  occupancy truth.
 - Named-guest ambient flares use one self-rescheduling visual-only driver. It runs only while the
   active garden party is visible, focused, and outside a major moment; it never owns sound.
 
@@ -626,53 +612,22 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
-Pac-Man is an internal `DESKTOP_APPS` entry with `searchOnly:true`: it never
-receives a dock tile, but type-to-open search, the Chat app catalog, and
-`__openMonitorApp("pacman")` can launch it at any time. This is the same
-no-desktop-icon model used by the Weather and Clock toolbar apps. The ketamine
-ghost is a direct cinematic shortcut rather than an access gate.
-`__pacmanCapture`/`__pacmanRestore` include discovery and the live maze in the
-loft checkpoint. Normal close retains the board and parks its one bounded
-`setTimeout`; reopening through search, catching the ghost, or returning focus
-resumes a running maze.
-Kill routes through the ordinary monitor task registry and resets the board;
-full loft reset calls `__resetPacmanUnlock`. Its personal best instead lives in
-the separate `localStorage["pacmanHigh"]` key, following Invaders and Flair Catch,
-so New, Kill, shutdown, and loft reset do not erase it.
+Pac-Man is a `searchOnly` monitor app: search, Chat, test hooks, or the ketamine ghost can open it,
+but it has no desktop tile and the ghost is not an access gate. The live board is checkpoint state;
+normal close parks and retains it, Kill/New reset it, and the separate
+`localStorage["pacmanHigh"]` personal best survives those resets.
 
-The maze is DOM/CSS grid rather than canvas because replaced elements inside the
-scaled monitor `foreignObject` do not composite in WebKit. Its overlapping cells
-depend on grid source order: do not add `position`, `transform`, `z-index`,
-`opacity`, or `filter` to the HTML actors or board. Those create the same
-RenderLayer failure as other monitor apps. The authoritative simulation uses one
-bounded 20 ms scheduler with independent tile credits for Pac-Man and each ghost.
-Its level-one timing follows the arcade speed table: Pac-Man takes 150 ms while
-eating and 133 ms through a cleared corridor (135/118 ms while ghosts are
-frightened, plus the energizer pause); normal ghosts take 142 ms,
-frightened ghosts 213 ms, tunnel ghosts 266 ms, and returning eyes 107 ms. A
-nested 12-subcell grid interpolates each tile move with rAF while collisions,
-buffered turns, saves, and pellets remain tile-based; reduced motion snaps
-directly to each tile.
+The maze uses a DOM/CSS grid because canvas does not composite reliably in the scaled WebKit
+`foreignObject`. Its actors depend on grid source order and must not gain RenderLayer-producing
+styles such as positioning, transforms, opacity, filters, or z-index. One bounded scheduler owns
+the tile simulation; rAF only interpolates display. Input may update the buffered direction but
+must never clear/re-arm that scheduler, or held input starves the simulation. The loop gates on app
+ownership, focus, visibility, and Kill state.
 
-The compact maze deliberately omits Pinky but preserves the other level-one
-systems: Blinky starts outside, Inky and Clyde release after scaled dot counts
-(18/35) with the arcade four-second inactivity fallback, and scatter/chase
-phases run 7/20/7/20/5/20/5 seconds before permanent chase. Phase changes and
-energizers request a reversal; frightened turns are random; eyes return home.
-Blinky targets Pac-Man and gains both Cruise Elroy steps, Inky uses the doubled
-Blinky-to-two-tiles-ahead vector (including the original upward overflow quirk),
-and Clyde chases outside eight tiles but retreats to his corner inside that
-radius. The middle row is the wrap tunnel and owns the tunnel slowdown.
-
-Keyboard repeat must only ensure the single simulation timeout exists, never
-clear and re-arm it; otherwise held input starves every tick. The loop gates each
-step on the open app, focus, visibility, and Kill state. `node tests/pacman.js`
-covers hidden-only entry, the arcade cadence/release contract, early survival,
-smooth transform-free movement, input, pause/resume, checkpoint restore,
-context-menu Kill behavior, and reduced motion.
-Space pauses/resumes only an active Pac-Man round. The capture-phase Pac-Man
-handler is registered before the page-wide music Space handler and delegates to
-`__pacmanTogglePause`; do not move it later without preserving that ordering.
+Pac-Man's capture-phase handler must remain ahead of the page-wide transport handler so active-game
+Space pauses Pac-Man rather than music. Pointer buttons and drag gestures feed the same direction
+owner. `tests/pacman.js` owns simulation cadence, input, pause/resume, checkpoint, Kill, and
+reduced-motion coverage.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;
@@ -868,14 +823,21 @@ outside this deferral queue, but still passes the shared phase and deduplication
   orphaning one side. Generated `MESSAGES` records are deleted with their rows.
 - Only the 12 most recent rows are assembled as group-chat context, even though more rows may remain
   visible locally.
+- Invaders, Flair-Catch, Window Tetris, and Pac-Man publish `minigame.change` state. While any is
+  active, Messages still records incoming rows and unread state but suppresses previews and badges;
+  one current preview is released after the last game exits. This is presentation hold, not message
+  deferral. Keep new action games on the same state-event boundary.
 
 An action returned in group-chat mode is a suggestion attached to the incoming message. It runs only
 after the visitor taps it and the client re-validates it through `loft.api`.
 
 ## Charlie and the chat Worker
 
-The office Chat app and Messages group replies share one serialized client queue and one `/chat`
-Worker endpoint. Search for `askChat`, `__chatContext`, `group_chat`, and `CHAT_PROXY_URL`.
+Private Chat, Messages replies, Code assistance, and authored-message rewriting share one serialized
+client queue and one `/chat` Worker endpoint. Their modes deliberately have different prompts,
+context envelopes, output schemas, and execution policy; do not merge them into one permissive
+conversation path. Search for `askChat`, `__chatContext`, `group_chat`, `code_assist`,
+`message_rewrite`, and `CHAT_PROXY_URL`.
 
 ### Client context
 
@@ -891,7 +853,8 @@ The client lazy-loads Turnstile, obtains a token for the chat action, and prewar
 token. Requests use `AbortController` and a roughly 20-second browser timeout. The app renders
 configuration, verification, rate-limit, timeout, and upstream failures as user-facing errors.
 Failed private Chat turns have a visible Retry control that reuses the original turn and does not
-append a duplicate user message.
+append a duplicate user message. Silent modes surface failure to their caller instead: group replies
+retain Retry state, and authored rewrites fall back to the original English copy.
 
 ### Worker boundary
 
@@ -971,7 +934,8 @@ media, browser APIs, and `/chat` integration because browsers restrict some `fil
 The Worker is developed separately with Wrangler and platform-provided local bindings/secrets; do
 not place credentials in tracked files.
 
-Mandatory tests for HTML changes are documented in `CLAUDE.md`:
+Mandatory tests for HTML changes are documented in `AGENTS.md` (`CLAUDE.md` is its compatibility
+symlink):
 
 ```sh
 node tests/check.js
@@ -984,22 +948,26 @@ For `rsvp.html` game logic or interactions also run:
 node tests/play.js
 ```
 
-Run focused tests for the changed surface. Important examples:
+Run focused tests for the changed ownership boundary. The main routes are:
 
-- `tests/enter.js` for room-level Enter progression;
-- `tests/menu.js` and `tests/laptopmenu.js` for context menus/Kill behavior;
-- `tests/navigation.js` for room/device navigation;
+- `tests/enter.js`, `tests/navigation.js`, `tests/delayed-pan.js`,
+  `tests/rapid-navigation.js`, `tests/phase2-progression.js`, and
+  `tests/progression-transitions.js` for room progression and navigation ownership;
+- `tests/menu.js`, `tests/laptopmenu.js`, `tests/systemmenu.js`, `tests/monitor-search.js`,
+  `tests/phone-direct-launch.js`, `tests/phone-lock.js`, and `tests/phone-recents.js` for
+  monitor/phone shell, context-menu, launch, and teardown behavior;
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
 - `tests/party-lifecycle.js` for attended party timing and finales;
-- `tests/balcony-tetris.js` for facade window independence, ambient focus gates, the hidden launch
-  gesture, keyboard ownership, scoring/high score, and teardown restoration;
+- `tests/balcony-tetris.js`, `tests/pacman.js`, and `tests/minigame-vocabulary.js` for action-game
+  lifecycle, keyboard ownership, notification holds, persistence, and shared terminology;
 - `tests/message-context.js`, `tests/message-launcher.js`, and
-  `tests/message-resilience.js` for Messages behavior;
+  `tests/message-resilience.js`, `tests/message-rewrite.js`, `tests/message-longpress.js`, and
+  `tests/message-typed-actions.js` for Messages behavior;
 - `tests/chat.js`, `tests/chat-context.js`, `tests/chat-worker.mjs`,
-  `tests/safe-actions.js`, and `tests/safe-actions-worker.mjs` for assistant/action boundaries;
+  `tests/assistant-behavior.mjs`, `tests/chat-code-protocol.mjs`, `tests/safe-actions.js`, and
+  `tests/safe-actions-worker.mjs` for assistant modes and action boundaries;
 - `tests/performance.js` and `tests/leak.js` for lifecycle regressions;
-- `tests/knife-drag.js` for throwable pointer capture, outside-frame release, and interruption cleanup;
 - `tests/bar-layout.js` for the calm-night patrons, occupied stools, and hands-on mixer paint order;
 - `tests/album-axis.mjs`, `tests/album-render.mjs`, `tests/album-ui.js`, and
   `tests/photographer-occupancy.js` for photography;
@@ -1067,7 +1035,8 @@ Start with the subsystem's state hook, then inspect its DOM classes and owning t
 - audio: `loft.api.query("audio.status")`, `__updateSharedAudioIdle()`;
 - people: `__whoIsHere(room)`, `__rosterPresence()`, `loft.api.query("people.locations")`;
 - messages: `__phoneMessageThread()`, `__latestUnreadMessage()`,
-  `__deferredPhoneMessages()`;
+  `__deferredPhoneMessages()`, `__messageRewritePending()`,
+  `__messageNotificationsHeld()`;
 - date/time: `__now()`, `__ovClock()`, `__weddingOccasion()`;
 - weather: `loft.api.query("weather.cities")`, `__realWx`, `__realDaily`;
 - assistant context: `__chatContext()` and `loft.api.capabilities()`.
@@ -1086,10 +1055,10 @@ Use these search terms in `rsvp.html` rather than relying on line numbers:
 | Date and occasion source | `window.__now`, `__weddingOccasion`, `persianOcc` |
 | Shared audio | `function getAudioCtx`, `audioBusProxy`, `__updateSharedAudioIdle` |
 | Monitor desktop/apps | `REAL_APPS`, `__openMonitorApp`, `__closeTopMonitorApp`, `PAC_MAZE` |
-| Phone shell/apps | `function openApp`, `function navBack`, `messageAppReturn` |
-| Chat context/client | `window.__chatContext`, `askChat`, `CHAT_PROXY_URL` |
+| Phone shell/apps | `function openApp`, `function navBack`, `phoneAppReturn`, `setPhoneAppReturn` |
+| Chat context/client | `window.__chatContext`, `askChat`, `CHAT_PROXY_URL`, `message_rewrite` |
 | Typed game API | `initLoftApi`, `register({ id:`, `actions_available` |
-| Messages catalog/schedulers | `var MESSAGES`, `CUE_POOL`, `scheduleDayDrip` |
+| Messages catalog/schedulers | `var MESSAGES`, `CUE_POOL`, `scheduleDayDrip`, `deliverAutonomousRewritten` |
 | Message deferral/retention | `__deliverAutonomousPhoneMessage`, `MSG_CAP`, `trimMessageThread` |
 | Party lifetime | `PARTY LIFECYCLE`, `__partyLifecycleState` |
 | Room navigation | `var STAGES`, `function goToStage`, `__finishSolveAdvance` |

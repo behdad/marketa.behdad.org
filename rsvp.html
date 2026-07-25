@@ -60357,12 +60357,40 @@ async def localfont(name):
     // ordinary room controls. SVG children ignore touch-action in several mobile engines:
     // cancel movement explicitly from this delegated non-passive listener instead.
     var touchStart = null;
-    function applyTouchGesture(dx, dy, elapsed) {
+    function beginTouchGesture(x, y, at) {
+      touchStart = {
+        x: x, y: y, at: at,
+        axis: null,
+        appliedColumns: 0
+      };
+    }
+    function horizontalTouchColumns(dx) {
+      if (Math.abs(dx) < 12) return 0;
+      return (dx < 0 ? -1 : 1) * Math.max(1, Math.min(4, Math.round(Math.abs(dx) / 28)));
+    }
+    function updateTouchGesture(x, y) {
+      if (!touchStart || !active) return "";
+      var dx = x - touchStart.x, dy = y - touchStart.y;
+      var ax = Math.abs(dx), ay = Math.abs(dy);
+      if (!touchStart.axis && Math.max(ax, ay) >= 12) {
+        touchStart.axis = ax > ay ? "horizontal" : "vertical";
+      }
+      if (touchStart.axis !== "horizontal") return "";
+
+      var targetColumns = horizontalTouchColumns(dx);
+      while (touchStart.appliedColumns !== targetColumns) {
+        var step = targetColumns > touchStart.appliedColumns ? 1 : -1;
+        if (!move(step, 0)) break;
+        touchStart.appliedColumns += step;
+      }
+      return dx < 0 ? "left" : "right";
+    }
+    function applyTouchGesture(dx, dy, elapsed, lockedAxis) {
       if (resultVisible) { startGame(); return "restart"; }
       if (!active) return "";
       var ax = Math.abs(dx), ay = Math.abs(dy);
       if (ax < 12 && ay < 12) { rotate(1); return "rotate"; }
-      if (ax > ay) {
+      if (lockedAxis === "horizontal" || (!lockedAxis && ax > ay)) {
         var moves = Math.max(1, Math.min(4, Math.round(ax / 28)));
         for (var i = 0; i < moves; i++) move(dx < 0 ? -1 : 1, 0);
         return dx < 0 ? "left" : "right";
@@ -60376,22 +60404,33 @@ async def localfont(name):
       rotate(-1);
       return "rotate-back";
     }
+    function finishTouchGesture(x, y, at) {
+      if (!touchStart) return "";
+      var start = touchStart;
+      var dx = x - start.x, dy = y - start.y;
+      touchStart = null;
+      // Horizontal columns have already followed the finger. Replaying the complete
+      // swipe here would double the movement at release.
+      if (start.axis === "horizontal") return dx < 0 ? "left" : "right";
+      return applyTouchGesture(dx, dy, at - start.at, start.axis);
+    }
     ui.addEventListener("touchstart", function (e) {
       if ((!active && !resultVisible) || e.touches.length !== 1) return;
       if (e.target && e.target.closest && e.target.closest(".tetris-close")) return;
       var t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY, at: performance.now() };
+      beginTouchGesture(t.clientX, t.clientY, performance.now());
     }, { passive: true });
     ui.addEventListener("touchmove", function (e) {
       if (!touchStart || e.touches.length !== 1) return;
       e.preventDefault();
+      var t = e.touches[0];
+      updateTouchGesture(t.clientX, t.clientY);
     }, { passive: false });
     ui.addEventListener("touchend", function (e) {
       if (!touchStart || !e.changedTouches.length) return;
-      var start = touchStart, t = e.changedTouches[0];
-      touchStart = null;
+      var t = e.changedTouches[0];
       e.preventDefault();
-      applyTouchGesture(t.clientX - start.x, t.clientY - start.y, performance.now() - start.at);
+      finishTouchGesture(t.clientX, t.clientY, performance.now());
     }, { passive: false });
     ui.addEventListener("touchcancel", function () { touchStart = null; });
 
@@ -60446,6 +60485,22 @@ async def localfont(name):
       if (command === "touch" && value) {
         return {
           gesture: applyTouchGesture(Number(value.dx) || 0, Number(value.dy) || 0, Number(value.ms) || 300),
+          state: window.__balconyTetrisState()
+        };
+      }
+      if (command === "touch-begin" && value) {
+        beginTouchGesture(Number(value.x) || 0, Number(value.y) || 0, Number(value.at) || performance.now());
+        return window.__balconyTetrisState();
+      }
+      if (command === "touch-move" && value) {
+        return {
+          gesture: updateTouchGesture(Number(value.x) || 0, Number(value.y) || 0),
+          state: window.__balconyTetrisState()
+        };
+      }
+      if (command === "touch-end" && value) {
+        return {
+          gesture: finishTouchGesture(Number(value.x) || 0, Number(value.y) || 0, Number(value.at) || performance.now()),
           state: window.__balconyTetrisState()
         };
       }

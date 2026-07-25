@@ -26089,8 +26089,7 @@ var T = {
     rsvp_email_subject: "we're coming 💌",
     rsvp_email_body: "who we are:\n\nwhich celebration (one or both — all welcome): Edmonton · May 1  /  Prague · July 10\n\nhow many of us:\n\nanything you should know — food, little ones, a song we have to hear:\n\ncan't wait,",
     flight_note: "Edmonton → Prague — about 10 weeks (and one ocean) apart.",
-    rsvp_nudge_link: "Don’t forget to RSVP — but wander first ↓",
-    // the second act's last beat: the same link, but the wandering's done now (see showRsvpNudge)
+    // the second act's last beat, once the wandering is done (see showRsvpNudge)
     rsvp_exit_link: "You’ve seen the whole day — one thing left: tell us you’ll come ↓",
     typewriter_lines: [
       "Vows: first draft. Deleted.",
@@ -27039,7 +27038,6 @@ var T = {
     rsvp_email_subject: "přijedeme 💌",
     rsvp_email_body: "kdo jsme:\n\nna kterou oslavu (jednu, nebo obě — všichni vítáni): Edmonton · 1. května  /  Praha · 10. července\n\nkolik nás přijede:\n\ncokoliv byste měli vědět — jídlo, malé děti, píseň, kterou prostě musíme slyšet:\n\ntěšíme se,",
     flight_note: "Edmonton → Praha — asi 10 týdnů (a jeden oceán) od sebe.",
-    rsvp_nudge_link: "Nezapomeňte na RSVP — ale nejdřív se toulejte ↓",
     rsvp_exit_link: "Viděli jste celý den — zbývá jediné: dejte nám vědět, že přijdete ↓",
     typewriter_lines: [
       "Sliby: první verze. Smazáno.",
@@ -47758,9 +47756,8 @@ setOfficeProgress("pc", false);
       var text = chatPlainInstruction(hunt[key]);
       if (text) out[key] = text;
     });
-    // These two captions live outside `hunt` because they are links, but they occupy the same
-    // instruction line and are part of the assistant's complete localized reference catalog.
-    out.rsvp_nudge = chatPlainInstruction(dict.rsvp_nudge_link || T.en.rsvp_nudge_link);
+    // This caption lives outside `hunt` because it is a link, but it occupies the same
+    // instruction line and is part of the assistant's complete localized reference catalog.
     out.rsvp_exit = chatPlainInstruction(dict.rsvp_exit_link || T.en.rsvp_exit_link);
     return out;
   }
@@ -58028,7 +58025,7 @@ async def localfont(name):
       if (act === "lanterns") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setDayNight) window.__setDayNight(true); if (window.__releaseLanterns) window.__releaseLanterns(); }, 760); return; } // pan to the balcony, set night, then release wish-lanterns
       if (act === "magicbox") { if (window.goToStage) window.goToStage("garden"); setTimeout(function () { if (window.__drugsboxTap) window.__drugsboxTap(); }, 760); return; } // pan to the garden, then tap the magic box (date lock the first time)
       if (act === "flair") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); if (window.__startFlairCatch) window.__startFlairCatch(); }, 720); return; } // pan to the bar (raise it if needed), then launch Flair-Catch
-      if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); if (window.__openRsvpMail) window.__openRsvpMail(); return; }
+      if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge(); if (window.__openRsvpMail) window.__openRsvpMail(); return; }
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
       // friend-duo "are you home?" → answering pans to the cuddly nook and brings that PAIR in to
       // visit (the #cuddly-visitors mechanism). Suppressed on meal days by __cuddlyVisit's own gate.
@@ -71251,11 +71248,10 @@ function spawnDustMote(container) {
     }
     return prev;
   };
-  // The RSVP CTA. Two flavours, same link: "rsvp_nudge" (the finale's, and the balcony
-  // rotation's) invites you to wander first; "rsvp_exit" is the second act's last beat,
-  // where the wandering IS done. The key rides captionKey so a language flip re-renders it.
-  function showRsvpNudge(key) {
-    captionKey = (key === "rsvp_exit") ? "rsvp_exit" : "rsvp_nudge";
+  // The RSVP CTA is the second act's last beat, once the wandering is done. The key rides
+  // captionKey so a language flip re-renders it.
+  function showRsvpNudge() {
+    captionKey = "rsvp_exit";
     var l = document.documentElement.lang, lk = captionKey + "_link";
     var link = (T[l] && T[l][lk]) || T.en[lk];
     caption.innerHTML = '<a href="#rsvp-anchor">' + link + '</a>';
@@ -71269,15 +71265,15 @@ function spawnDustMote(container) {
 
   window.refreshHuntCaption = function () {
     if (recoveryGate && recoverySaved) { showRecoveryCaption(recoverySaved); return; }
-    if (captionKey === "rsvp_nudge" || captionKey === "rsvp_exit") { showRsvpNudge(captionKey); return; }
+    if (captionKey === "rsvp_exit") { showRsvpNudge(); return; }
     caption.innerHTML = huntText(captionKey);
   };
   var finaleTimers = [];
   var balconyIntroSeen = false;
   window.__balconyUnlocked = function () { return balconyIntroSeen; }; // "first phase over" = the balcony's been properly reached (gates the autonomous kids-outside chance)
   function triggerBalconyFinale() {
-    // the arrival flourish (butterfly, sun-shower, rainbow, fireworks, chime,
-    // RSVP nudge) plays only the FIRST time the balcony is shown per page load;
+    // the arrival flourish (butterfly, sun-shower, rainbow, fireworks, chime)
+    // plays only the FIRST time the balcony is shown per page load;
     // every other balcony behavior (day/night, storm, ambient) runs on each visit
     if (balconyIntroSeen) return;
     balconyIntroSeen = true;
@@ -71312,8 +71308,7 @@ function spawnDustMote(container) {
     // days / anniversaries, where the ambient controller (window.__updateSkyFireworks,
     // driven from goToStage) runs them the whole time you're on the balcony or garden.
     // On ordinary days the finale runs without them.
-    finaleTimers.push(setTimeout(function () { showRsvpNudge(); }, 9100));
-    // ...and once the RSVP link has had its moment, the second act picks the thread back up.
+    // Once the arrival flourish has had its moment, the second act picks the thread back up.
     finaleTimers.push(setTimeout(function () { if (window.__armActTwo) window.__armActTwo(); }, 16000));
   }
   // Post-unlock exploration captions. Once a room is solved (it sits behind the unlock
@@ -71334,15 +71329,13 @@ function spawnDustMote(container) {
     // balconyIntroSeen, by which time the arc is often already mid-beat, and a beat that lost
     // to "Enjoy wandering" would go unheard until the room was entered twice. A beat only
     // claims the line for a bounded stretch of attended time (see __actBeatHint); once it
-    // yields, everything below resumes — including the balcony's rsvp_nudge sentinel, which
-    // is what guarantees no beat can ever strand the player away from the RSVP.
+    // yields, the room's ordinary exploration copy resumes.
     var beat = window.__actBeatHint ? window.__actBeatHint(name) : null;
-    if (beat === "rsvp_exit") { showRsvpNudge("rsvp_exit"); return; }
+    if (beat === "rsvp_exit") { showRsvpNudge(); return; }
     if (beat) { setCaption(beat); return; }
     if (!exploreSeen[name]) { exploreSeen[name] = true; setCaption("explore_" + name); return; } // first solved-entry this page load → base "Enjoy wandering" line
     var k = window.__nextExploreHint ? window.__nextExploreHint(name, true) : null;              // each subsequent solved-entry → advance to the next surviving nudge
-    if (k === "rsvp_nudge") showRsvpNudge();                                                     // balcony's RSVP link is one rotation item (innerHTML link, not a plain caption key)
-    else if (k) setCaption(k);
+    if (k) setCaption(k);
     else setCaption("explore_" + name);
   }
   window.__resetExplore = function () { exploreSeen = {}; }; // resetHunt (this IIFE) calls it; explorePtr is reset via its own brick-IIFE hook
@@ -81851,10 +81844,9 @@ function spawnDustMote(container) {
     if (cinematicTeardown) { cinematicTeardown(); cinematicTeardown = null; }
     if (skipBtn) skipBtn.hidden = true;
     if (watchBtn) { watchBtn.hidden = false; watchBtn.classList.remove("nudge"); }
-    // Restore the ordinary caption for whatever room we cancelled on — but keep a
-    // graceful RSVP-nudge landing (reduced-motion ends on it; the finale holds on it
-    // until the encore takes over).
-    if (captionKey !== "rsvp_nudge") {
+    // Restore the ordinary caption for whatever room we cancelled on, except when the
+    // completed second act already owns the line with its RSVP link.
+    if (captionKey !== "rsvp_exit") {
       var here = STAGES[stageIndex];
       setCaption(here);
       restoreStageHint(here);
@@ -88838,8 +88830,8 @@ function spawnDustMote(container) {
 
   // Dispenser + auto-dismiss/toggle. A tap shows the current room's next un-retired,
   // in-context hint for ~5s, then RESTORES the room's own caption (setCaption +
-  // restoreStageHint + refreshHuntCaption — the last rebuilds the balcony RSVP-nudge
-  // link, the one key only refreshHuntCaption repairs). A second tap (any brick)
+  // restoreStageHint + refreshHuntCaption — the last rebuilds the final RSVP link
+  // when that beat owns the line). A second tap (any brick)
   // dismisses immediately. The hint rides the captionKey path, so a language flip while
   // it's up re-renders it. All of a room's offered hints retired → the all-done line.
   var HINT_HOLD = 3000;
@@ -88849,13 +88841,10 @@ function spawnDustMote(container) {
   // solved its puzzle-hints' done() all latch true, so only the optional-toy nudges (drinks,
   // projector, arcade, phone apps…) survive the scan — exactly the exploration copy we want,
   // already written and translated. Own pointer (NOT hintPtr — the brick dispenser's), so
-  // revisits rotate independently of loose-brick taps. Balcony carries an extra rsvp_nudge
-  // sentinel so the RSVP CTA is one rotation position, resurfacing periodically.
+  // revisits rotate independently of loose-brick taps.
   var explorePtr = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 };
   function explorePool(room) {
-    var pool = (ROOM_HINTS[room] || []).slice();
-    if (room === "balcony") pool.push({ id: "rsvp_nudge", done: function () { return false; } }); // always-surviving CTA step
-    return pool;
+    return (ROOM_HINTS[room] || []).slice();
   }
   window.__nextExploreHint = function (room, advance) {
     var list = explorePool(room), n = list.length, ptr = explorePtr[room] || 0, key = "hint_alldone";
@@ -88874,7 +88863,7 @@ function spawnDustMote(container) {
     var name = window.currentStageName;
     if (window.setCaption) window.setCaption(hintSavedKey != null ? hintSavedKey : name);
     if (window.restoreStageHint) window.restoreStageHint(name);
-    if (window.refreshHuntCaption) window.refreshHuntCaption(); // rebuilds the rsvp-nudge link for that one key; a plain re-render for the rest
+    if (window.refreshHuntCaption) window.refreshHuntCaption(); // rebuilds the RSVP link for that one key; a plain re-render for the rest
   }
   function dismissHint() {
     clearHintTimer();
@@ -88943,10 +88932,7 @@ function spawnDustMote(container) {
   //  2. COMPLETION AND CAPTION-OWNERSHIP ARE SEPARATE. A beat owns its room's caption for a
   //     bounded stretch of ATTENDED time (claimMs), then yields it back to the room's own
   //     rotation while staying live, so it still completes if they get round to it later.
-  //     That yield is the no-wedge guarantee — the balcony rotation's rsvp_nudge sentinel
-  //     always comes back round, so no order of play can strand the player away from the
-  //     RSVP. It's what lets B2 refuse to auto-complete (the hinge must be the player's to
-  //     pull) without ever trapping anyone behind it.
+  //     The final RSVP beat takes the line only after the whole arc has completed.
   //
   // Per-session, never localStorage: a ~10-minute experience, and a returning visitor who
   // knows the trick shouldn't have the surprise re-explained to them.
@@ -88994,7 +88980,7 @@ function spawnDustMote(container) {
     var b = beat(live);
     if (!b || window.__cinematic || document.hidden) return;
     if (window.currentStageName !== b.room) return; // it'll get its say when you walk in (see __actBeatHint)
-    if (b.id === "rsvp_exit") { if (window.__showRsvpNudge) window.__showRsvpNudge("rsvp_exit"); return; }
+    if (b.id === "rsvp_exit") { if (window.__showRsvpNudge) window.__showRsvpNudge(); return; }
     if (window.setCaption) window.setCaption(b.id);
   }
   // beats that carry a phone text → the message id delivered (once) the moment the beat goes live

@@ -697,6 +697,7 @@ var PROBE_HARNESS = [
   "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    await sleep(40);",
   "    ok('garden switch: phase one still flips day to night without starting the party', !window.__gardenPartyOn && el('stage-garden').classList.contains('dusk'));",
+  "    ok('kitchen: phase one night keeps the espresso kitchen instead of raising the bar', !(window.__barUpNow && window.__barUpNow()) && !strip.classList.contains('second-round') && getComputedStyle(el('kitchen-bar')).opacity === '0');",
   "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    await sleep(40);",
   "    ok('garden switch: phase one still flips night back to day', !window.__gardenPartyOn && !el('stage-garden').classList.contains('dusk'));",

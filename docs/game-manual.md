@@ -215,12 +215,13 @@ Exact solutions follow in the clearly marked spoiler section.
 ### Kitchen/bar
 
 The **La Maz** espresso machine and **El Maz** grinder form the first guided
-activity. Later, the same room becomes
-the bar, with Pouria, cocktail tools, a cocktail menu, and the Flair-Catch
-minigame. The unnamed seated regulars belong to the calm night bar; the active
-party bar instead uses the named guests who rotate through the room. The
-kitchen/bar also contains personal details, props, and small repeat interactions
-that are not required for progression.
+activity. The kitchen keeps its espresso setup throughout phase 1, even when the
+windows reflect Edmonton at night. After the first party unlocks phase 2, the
+same room can become the bar, with Pouria, cocktail tools, a cocktail menu, and
+the Flair-Catch minigame. The unnamed seated regulars belong to the calm night
+bar; the active party bar instead uses the named guests who rotate through the
+room. The kitchen/bar also contains personal details, props, and small repeat
+interactions that are not required for progression.
 
 ### Garden/party
 

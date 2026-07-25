@@ -1307,6 +1307,10 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 @keyframes gk-cross-r{from{transform:translateX(740px)} to{transform:translateX(-70px)}}
 .gk-flip{transform-box:fill-box; transform-origin:center}
 .gk-flip.flipped{transform:scaleX(-1)}
+/* Bahareh's long animated limbs noticeably change her fill-box while running. Mirroring around
+   that moving box made only her left-facing pass hop sideways; her art is drawn around x=0, so a
+   fixed SVG-space pivot keeps the reflection stable without changing the approved rightward run. */
+#garden-kid-bahareh .gk-flip{transform-box:view-box; transform-origin:0 0}
 .gk-body-bob{transform-box:fill-box; transform-origin:bottom center}
 .gk-leg-a, .gk-leg-b, .gk-arm-a, .gk-arm-b{transform-box:fill-box; transform-origin:top center}
 .chasing .gk-leg-a{animation:gk-leg-a .34s ease-in-out infinite}
@@ -6761,8 +6765,8 @@ body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 4.5s e
 #kitchen-bar-couples .bar-couple{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .8s ease,visibility 0s linear .8s}
 #kitchen-bar-couples .bar-couple.present{opacity:0.94; visibility:visible; pointer-events:auto; cursor:pointer; transition-delay:0s} /* the shown couple is hoverable/clickable for its name popup */
 #kitchen-bar-couples .bc-sway{transform-box:fill-box; transform-origin:center bottom}
-#kitchen-bar-couples .bc-arm-l{transform-box:fill-box; transform-origin:right bottom}
-#kitchen-bar-couples .bc-arm-r{transform-box:fill-box; transform-origin:left bottom}
+#kitchen-bar-couples .bc-arm-l{transform-box:fill-box; transform-origin:right top}
+#kitchen-bar-couples .bc-arm-r{transform-box:fill-box; transform-origin:left top}
 #kitchen-bar-couples .bar-couple.present .bc-sway{animation:bc-sway 1.2s ease-in-out infinite}
 #kitchen-bar-couples .bar-couple.present .bc-arm-l{animation:bc-arm-l .96s ease-in-out infinite}
 #kitchen-bar-couples .bar-couple.present .bc-arm-r{animation:bc-arm-r .96s ease-in-out infinite}
@@ -28096,6 +28100,25 @@ function funFact(key) {
   var l = document.documentElement.lang;
   var t = (T[l] && T[l]["fun_" + key]) || T.en["fun_" + key] || "";
   return t ? '<span class="tip-fun">' + t + '</span>' : "";
+}
+// Canonical individual cast card for reused cameo art (bar / office). The roster table is
+// installed later in this file but is always ready by interaction time; keeping this lookup live
+// makes a direct figure click show the same name, role, relationship and fun fact as its roster row.
+function castPersonCard(key) {
+  key = String(key || "").toLowerCase();
+  var info = (window.__rosterPersonInfo && window.__rosterPersonInfo(key)) || null;
+  var name = (info && info.name) || (key.charAt(0).toUpperCase() + key.slice(1));
+  var role = info && info.roleKey ? tipText(info.roleKey) : "";
+  return "<em>" + name + "</em>" + (role ? " · " + role : "") +
+    kidAgeLine(name) + relLine(key) + funFact(key);
+}
+function showDirectCastPerson(fig, key) {
+  // Match a roster pick: point at the individual, place their card above the arrow, and retire
+  // both together. showWhoPop arms its click-away listener on the next task, so opening is safe.
+  var arrow = window.__spotlightFigure ? window.__spotlightFigure(fig) : null;
+  if (window.__whoPop) {
+    window.__whoPop(fig, castPersonCard(key), arrow, arrow ? "top" : "above-arrow", 3000);
+  }
 }
 // A hover tooltip is just an eggBubble shown on mouseenter and dismissed on mouseleave
 // instead of on click+timeout — reuses its positioning/styling/innerHTML support
@@ -73630,13 +73653,20 @@ function spawnDustMote(container) {
     var guests = document.getElementById("garden-guests");
     var timer = null;
     var current = null; // the COUPLES entry currently .present, or null
-    // name each couple (hover tooltip + click white card, like the floor/cuddly/balcony cast)
+    // Each reused figure names THEMSELVES, not the enclosing couple. The roster already exposes
+    // these two member nodes separately; direct clicks now use the same individual card.
     COUPLES.forEach(function (c) {
       var el = layer.querySelector("." + c.cls);
       if (!el) return;
-      var nm = c.members.map(function (m) { return m.charAt(0).toUpperCase() + m.slice(1); });
-      var html = "<em>" + nm[0] + "</em> &amp; <em>" + nm[1] + "</em>";
-      el.addEventListener("click", function (e) { if (e) e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, html); }); // people are click-only (props keep hover)
+      var figures = el.querySelectorAll(".bc-person");
+      c.members.forEach(function (member, i) {
+        var fig = figures[i];
+        if (!fig) return;
+        fig.addEventListener("click", function (e) {
+          if (e) e.stopPropagation();
+          showDirectCastPerson(fig, member);
+        });
+      });
     });
     function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
@@ -75261,13 +75291,20 @@ function spawnDustMote(container) {
     var guests = document.getElementById("garden-guests");
     var timer = null;
     var current = null; // the COUPLES entry currently .present, or null
-    // name each couple (hover tooltip + click white card, exactly like the bar cameos they mirror)
+    // Each reused figure names THEMSELVES, matching its individual roster row rather than
+    // collapsing both people into one couple card.
     COUPLES.forEach(function (c) {
       var el = layer.querySelector("." + c.cls);
       if (!el) return;
-      var nm = c.members.map(function (m) { return m.charAt(0).toUpperCase() + m.slice(1); });
-      var html = "<em>" + nm[0] + "</em> &amp; <em>" + nm[1] + "</em>";
-      el.addEventListener("click", function (e) { if (e) e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, html); }); // people are click-only (props keep hover)
+      var figures = el.querySelectorAll(".of-person");
+      c.members.forEach(function (member, i) {
+        var fig = figures[i];
+        if (!fig) return;
+        fig.addEventListener("click", function (e) {
+          if (e) e.stopPropagation();
+          showDirectCastPerson(fig, member);
+        });
+      });
     });
     function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
@@ -83271,7 +83308,7 @@ function spawnDustMote(container) {
     // white roster-styled popup for 3s AND singles them out (freezes everyone else, arrows the
     // pick). The popup rides the guest's dance via a follow loop; it's an HTML overlay appended
     // outside #loft-game-strip, so the UV blacklight never tints it.
-    function showWhoPop(anchor, html, posEl, placement) {
+    function showWhoPop(anchor, html, posEl, placement, lifetime) {
       var old = document.querySelector(".egg-bubble.who-pop"); if (old) { if (old._t) clearTimeout(old._t); if (old._off) document.removeEventListener("click", old._off, true); old.remove(); }
       // posEl (the enclosing call surface, when given): anchor the card at the surface's lower-left
       // corner instead of over the figure, so a video-call card never covers the birthday hat / the
@@ -83284,11 +83321,13 @@ function spawnDustMote(container) {
         if (b && b.isConnected) positionEggBubble(b, posEl || anchor, placement || (posEl ? "bottomleft" : "top"));
       });
       clearTimeout(b._t);
-      b._t = setTimeout(function () { dismissEggBubble(b); }, 10000); // a click card lingers ~10s (was 3s)…
+      b._t = setTimeout(function () { dismissEggBubble(b); },
+        typeof lifetime === "number" ? lifetime : 10000); // normal cards linger; compact cameo picks retire with their arrow
       b._off = function () { if (b._t) clearTimeout(b._t); document.removeEventListener("click", b._off, true); dismissEggBubble(b); }; // …or dismisses on the next click anywhere (incl. the card itself)
       setTimeout(function () { document.addEventListener("click", b._off, true); }, 0); // armed on the next tick so the tap that opened it doesn't close it
       // NB: positioned ONCE at tap time and left STATIC — the guest keeps dancing under it, but a
       // bubble that jitters along with the dance is hard to read (owner feedback), so it stays put.
+      return b;
     }
     window.__dismissWhoPop = function () {
       var b = document.querySelector(".egg-bubble.who-pop");

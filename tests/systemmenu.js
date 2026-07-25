@@ -19,6 +19,7 @@ var HARNESS = [
   "  var menu=document.getElementById('monitor-system-menu');",
   "  S('menu_open',menu.classList.contains('open'));",
   "  S('menu_actions',[].map.call(menu.querySelectorAll('[data-action]'),function(n){return n.getAttribute('data-action');}));",
+  "  S('tagline',[].map.call(menu.querySelectorAll('.desk-system-tagline'),function(n){return n.textContent;}).join(' '));",
   "  window.__markMonitorAppRunning('mail'); window.__monitorSystemAction('sleep');",
   "  S('sleep_saver',mon.classList.contains('show-saver'));",
   "  mon.dispatchEvent(new PointerEvent('pointermove',{bubbles:true})); await sleep(30);",
@@ -59,6 +60,7 @@ var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
 ok("menu exposes Website, Lock, Sleep, Reboot, Shut down", JSON.stringify(s.menu_actions) === JSON.stringify(["website","lock","sleep","reboot","shutdown"]));
+ok("About footer carries the Loft tagline", s.tagline === "where artificial and higher intelligence meet.");
 ok("Sleep enters the saver and pointer activity wakes it", s.sleep_saver === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);
 ok("Lock starts and persists", s.lock_started === true && s.lock_saved === true);

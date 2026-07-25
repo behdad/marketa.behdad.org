@@ -23,6 +23,12 @@ var harness = String.raw`<script>
     } : null;
   }
   function click(el) { if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  function pointerClick(el) {
+    if (!el) return;
+    el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  }
   function finish() {
     out.errors = out.errors.concat((window.__errs || []).slice());
     var pre = document.createElement("pre");
@@ -61,6 +67,13 @@ var harness = String.raw`<script>
     click(cuddlyBehdad);
     check("clicking a Cuddly resident opens their individual bio", cardName() === "behdad", cardName());
     check("a direct Cuddly bio points at the person", !!cuddlyBehdad.querySelector(".guest-spot-arrow"));
+
+    window.__ireneShow("irene-sit");
+    var cuddlyIrene = document.getElementById("cuddly-irene");
+    pointerClick(cuddlyIrene);
+    check("one real pointer click opens Irene's cameo bio", cardName() === "Irene", cardName());
+    check("Irene can react without swallowing her bio click",
+      cuddlyIrene.classList.contains("giggling") && !!cuddlyIrene.querySelector(".guest-spot-arrow"));
 
     var pragueDaniel = document.getElementById("laptop-garden-daniel");
     var pragueFelix = document.getElementById("laptop-garden-felix");

@@ -92,16 +92,13 @@ normal notifications rather than all taking over the scene at once.
 ### Mouse and touch
 
 - Click or tap objects in the room to interact with them.
-- Use the side arrows or room dots to navigate.
+- Change rooms with the side navigation arrows or room dots.
 - Use the lower media control to pause or resume the current foreground music.
 - Right-click supported objects for a context menu.
 - On a touch screen, a two-finger tap provides the general context-menu gesture.
 - In Messages, press and hold one message with one finger for message actions.
 - Drag only objects that visibly respond to dragging, such as garden water
   bottles.
-
-There is currently no room-swipe gesture. The scene contains many small
-interactive objects, so room swipes would compete with taps and drags.
 
 ### Back, Escape, and fullscreen
 
@@ -371,9 +368,9 @@ The main monitor desktop contains these app tiles:
 - Python
 - Linux
 
-While **Doom**, **Console**, **Python**, **Linux**, **Code**, **Life**, **Tattoo**, **Video**, or **Browser
-(Chrome)** is open, right-click the app and choose **Kill** to terminate it with
-a gag display instead of closing it silently.
+While **Doom**, **Console**, **Python**, **Linux**, **Code**, **Life**, **Tattoo**,
+**Video**, **Chat**, or **Browser (Chrome)** is open, right-click the app and choose **Kill**
+to terminate it with a gag display instead of closing it silently.
 
 Weather does not occupy a desktop tile. Click the Edmonton weather item in the
 computer's menu bar to open it.

@@ -57,6 +57,17 @@ var HARNESS = [
   "    showApp('show-mail'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(80);",
   "    S('mail_kill_closed_app', !mon().classList.contains('show-mail'));",
   "    S('mail_kill_hid_menu', !monMenu());",
+  // Chat Kill freezes a pending request, types Charlie's interrupted thought, collapses the
+  // rendered conversation into context tokens, clears it, then resets and closes.
+  "    showApp('show-chat'); document.documentElement.lang='en'; if(window.refreshChatText) window.refreshChatText();",
+  "    window.__monitorChatTurnstile=function(){return Promise.resolve('menu-test-token');}; window.__monitorChatTransport=function(){return new Promise(function(){});}; window.__chatKillPendingSettled=false;",
+  "    if(window.__monitorChatAsk) window.__monitorChatAsk('keep this pending').catch(function(){window.__chatKillPendingSettled=true;}); await sleep(30);",
+  "    ctxAt(mon()); if(monKill()) monKill().click(); await sleep(40); var chatKill=window.__monitorChatKillState?window.__monitorChatKillState():{};",
+  "    S('chat_kill_started', mon().classList.contains('death-chat')); S('chat_kill_still_open', mon().classList.contains('show-chat')); S('chat_kill_typing_stage', chatKill.stage==='typing' && chatKill.thought.length>0 && 'I think, therefore I…'.indexOf(chatKill.thought)===0); S('chat_kill_cancelled_pending', chatKill.pending===false && chatKill.queued===0 && window.__chatKillPendingSettled===true);",
+  "    await sleep(820); chatKill=window.__monitorChatKillState(); S('chat_kill_stopped_thought', chatKill.stage==='stopped' && chatKill.thought==='I think, therefore I…');",
+  "    await sleep(460); chatKill=window.__monitorChatKillState(); S('chat_kill_tokens', chatKill.stage==='collapse' && chatKill.tokens>0);",
+  "    await sleep(660); chatKill=window.__monitorChatKillState(); S('chat_kill_context_cleared', chatKill.stage==='cleared' && chatKill.system==='[context cleared]' && chatKill.systemVisible===true); S('chat_kill_caption', document.getElementById('hunt-caption').textContent==='Charlie has left the chat.');",
+  "    await sleep(520); chatKill=window.__monitorChatKillState(); var chatInput=document.getElementById('monitor-chat-input'); S('chat_kill_teardown', chatKill.active===false && chatKill.stage==='' && !mon().classList.contains('show-chat') && !mon().classList.contains('death-chat') && window.__monitorChatHistory().length===0 && chatInput.value==='' && chatInput.disabled===false);",
   // browser Kill is the one non-runtime app that flashes: Chrome's ~2.2s 'Aw, Snap!' crash (death-browser),
   // THEN closes. Menu shows only an enabled Kill (no Restart); the flash starts immediately, show-browser
   // stays up during it, and is torn down only after. Mirrors the doom kill shape (flash-then-close).
@@ -215,7 +226,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var rep = lib.runPageSync("rsvp.html", HARNESS, 37000, { patchRaf: true });
+var rep = lib.runPageSync("rsvp.html", HARNESS, 41000, { patchRaf: true });
 if (!rep) { console.log("  ✗ harness produced no report (page error before load, or budget too small)"); process.exit(1); }
 
 var fails = 0;
@@ -231,6 +242,12 @@ console.log(" non-runtime apps (mail/chat/weather/mines/music) — Kill only, en
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("right-clicking the zoomed monitor rim keeps zoom and exposes the active app menu", s.rim_right_pointer_kept_zoom === true && s.rim_context_prevented === true && s.rim_menu_present === true, { zoom: s.rim_right_pointer_kept_zoom, prevented: s.rim_context_prevented, menu: s.rim_menu_present });
 check("generalized Kill closes a non-runtime app (mail) + hides the menu", s.mail_kill_closed_app === true && s.mail_kill_hid_menu === true);
+check("Chat Kill starts on the open app and types the interrupted sentence", s.chat_kill_started === true && s.chat_kill_still_open === true && s.chat_kill_typing_stage === true);
+check("Chat Kill safely cancels pending and queued work", s.chat_kill_cancelled_pending === true);
+check("Chat Kill stops exactly at “I think, therefore I…”", s.chat_kill_stopped_thought === true);
+check("Chat Kill collapses the conversation into context tokens", s.chat_kill_tokens === true);
+check("Chat Kill ends on the exact cleared-system line and caption", s.chat_kill_context_cleared === true && s.chat_kill_caption === true);
+check("Chat Kill resets history and input, removes death state, and closes", s.chat_kill_teardown === true);
 check("browser menu shows only an enabled Kill, no Restart", Array.isArray(s.browser_items) && s.browser_items.length === 1 && /kill/i.test(s.browser_items[0] || "") && s.browser_kill_enabled === true && s.browser_has_restart === false, { items: s.browser_items, enabled: s.browser_kill_enabled, restart: s.browser_has_restart });
 check("browser Kill runs the Aw-Snap flash then closes the app", s.browser_kill_hid_menu === true && s.browser_kill_flash_started === true && s.browser_kill_still_open_during_flash === true && s.browser_kill_closed_app === true && s.browser_kill_flash_ended === true, { hid: s.browser_kill_hid_menu, flash: s.browser_kill_flash_started, during: s.browser_kill_still_open_during_flash, closed: s.browser_kill_closed_app, ended: s.browser_kill_flash_ended });
 console.log(" python / linux (folded into the console menu):");

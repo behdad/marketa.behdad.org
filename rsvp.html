@@ -4040,7 +4040,7 @@ body:has(#stage-kitchen.flair-on, #stage-office.arcade) .loft-tempnav{ display:n
 #office-monitor.show-chat #monitor-chat{opacity:1; pointer-events:auto}
 #monitor-chat-close{cursor:pointer}
 #monitor-chat-close:hover .seg-hover{opacity:.55}
-.chat-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#eef1f0; color:#453a31; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.6px; line-height:1.28; overflow:hidden}
+.chat-wrap{position:relative; width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#eef1f0; color:#453a31; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.6px; line-height:1.28; overflow:hidden}
 .chat-bar{flex:none; height:6.2px; box-sizing:border-box; display:flex; align-items:center; gap:1.2px; padding:0.8px 8px 0.8px 2.5px; background:#6f9db4; color:#fffdf8}
 .chat-bar-icon{width:4.5px; height:4.5px; display:block}
 .chat-bar-title{font-size:2.8px; font-weight:700; letter-spacing:0}
@@ -4062,6 +4062,19 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .chat-send:hover:not(:disabled){background:#365b9d}
 .chat-send:disabled{background:#bdc8c4; cursor:default}
 .chat-send svg{width:3.3px; height:3.3px; display:block}
+/* Chat Kill: the shared death-flash clock drives the real conversation rows down into
+   tiny context tokens, then leaves one final system line before the app is reset. */
+.chat-death{position:absolute; z-index:4; inset:6.2px 0 0; overflow:hidden; pointer-events:none; opacity:0; background:transparent}
+#office-monitor.death-chat .chat-death{opacity:1}
+#office-monitor.death-chat .chat-compose{opacity:.15; pointer-events:none}
+#office-monitor.death-chat #monitor-chat-close{pointer-events:none; opacity:.3}
+#office-monitor.death-chat .chat-log > *{will-change:transform,opacity; transform-origin:center}
+.chat-death-tokens{position:absolute; inset:0; overflow:hidden}
+.chat-context-token{position:absolute; display:inline-block; padding:.25px .6px; border:.25px solid rgba(95,133,128,.7); border-radius:.8px; background:rgba(255,253,248,.92); color:#31575a; font:700 1.55px/1.15 ui-monospace,Menlo,Consolas,monospace; letter-spacing:0; white-space:nowrap; opacity:0; will-change:transform,opacity}
+.chat-context-clear{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#31575a; font:700 3.2px/1 ui-monospace,Menlo,Consolas,monospace; letter-spacing:0; opacity:0}
+@media (prefers-reduced-motion: reduce){
+  #office-monitor.death-chat .chat-log > *{transform:none!important; opacity:0!important}
+}
 /* Managed Turnstile stays outside the scaled monitor SVG so an uncommon interactive
    challenge remains readable. Centre it below any browser fullscreen notice and let its
    cross-origin iframe receive pointer input for the whole interactive window. */
@@ -20823,6 +20836,10 @@ section{margin:1.9rem 0}
 <input id="monitor-chat-input" class="chat-input" type="text" dir="auto" maxlength="500" autocomplete="off" autocapitalize="sentences" spellcheck="true"/>
 <button id="monitor-chat-send" class="chat-send" type="submit"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6 H9 M6.5 3.5 L9 6 L6.5 8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </form>
+<div id="monitor-chat-death" class="chat-death" aria-hidden="true">
+<div id="monitor-chat-death-tokens" class="chat-death-tokens"></div>
+<div id="monitor-chat-context-clear" class="chat-context-clear">[context cleared]</div>
+</div>
 </div>
 </foreignObject>
 <g id="monitor-chat-close" transform="translate(76.0,29.3) scale(0.8)">
@@ -25679,6 +25696,7 @@ var T = {
       df_tattoo_quip: "No regrets.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Dance like the whole world is watching.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
+      df_chat_quip: "Charlie has left the chat.", // caption after Chat's context collapses and clears
       kitchen: "Turn on La Maz → run El Maz → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -26600,6 +26618,7 @@ var T = {
       df_tattoo_quip: "Bez výčitek.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Tancuj, jako by se díval celý svět.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
+      df_chat_quip: "Charlie odešel z chatu.", // caption after Chat's context collapses and clears
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -44913,9 +44932,9 @@ setOfficeProgress("pc", false);
     var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
     // per-app extras: a Restart hook + a runtime-running predicate (Kill greys out until true)
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
-    // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a death-flash
-    // instead of the silent generic close — the browser flashes Chrome's "Aw, Snap!" then closes.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "photobooth": "__killMonitorPhotobooth" };
+    // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
+    // instead of the silent generic close.
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-chat": "__killMonitorChat", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -46271,6 +46290,8 @@ setOfficeProgress("pc", false);
   var chatInput = document.getElementById("monitor-chat-input");
   var chatSend = document.getElementById("monitor-chat-send");
   var chatCloseBtn = document.getElementById("monitor-chat-close");
+  var chatDeathTokens = document.getElementById("monitor-chat-death-tokens");
+  var chatDeathSystem = document.getElementById("monitor-chat-context-clear");
   var CHAT_PROXY_URL = "https://marketa.behdad.org/chat";
   var CHAT_TURNSTILE_SITEKEY = "0x4AAAAAAD68jRzCuASVTetm";
   var CHAT_TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
@@ -46281,8 +46302,10 @@ setOfficeProgress("pc", false);
   var chatHistory = [], chatQueue = [], chatActiveMessage = null, chatRetryMessage = null;
   var chatEverOpened = false;
   var chatPending = false, chatError = "", chatRequestSeq = 0, chatAbort = null;
+  var chatKillActive = false, chatKillStage = "", chatKillThought = null, chatKillRows = [], chatKillTokens = [];
   var chatTurnstileApiPromise = null, chatTurnstileHost = null, chatTurnstileWidget = null;
   var chatTurnstileWait = null;
+  var chatTurnstileCancelSeq = 0;
   var chatTurnstilePreparedToken = null, chatTurnstilePreparedAt = 0, chatTurnstilePreparePromise = null;
   function chatTurnstileHostEl() {
     if (!chatTurnstileHost) {
@@ -46315,6 +46338,7 @@ setOfficeProgress("pc", false);
     if (error) wait.reject(error); else wait.resolve(token);
   }
   function cancelChatTurnstile() {
+    chatTurnstileCancelSeq++;
     chatTurnstilePreparedToken = null; chatTurnstilePreparedAt = 0;
     if (chatTurnstileWait) settleChatTurnstile(new Error("verification cancelled"));
   }
@@ -46340,7 +46364,9 @@ setOfficeProgress("pc", false);
     return chatTurnstileApiPromise;
   }
   function solveChatTurnstileToken() {
+    var cancelSeq = chatTurnstileCancelSeq;
     return loadChatTurnstile().then(function (api) {
+      if (cancelSeq !== chatTurnstileCancelSeq) throw new Error("verification cancelled");
       var host = chatTurnstileHostEl();
       if (chatTurnstileWidget == null) {
         chatTurnstileWidget = api.render(host, {
@@ -46428,6 +46454,7 @@ setOfficeProgress("pc", false);
   }
   function renderChat() {
     if (!chatWrap || !chatLog || !chatInput || !chatSend) return;
+    if (chatKillActive) return; // the death-flash owns the preserved conversation until teardown
     chatLog.innerHTML = "";
     chatAdd("chat-msg assistant", chatT("chat_welcome"));
     chatHistory.forEach(function (m) { chatAdd("chat-msg " + m.role, m.text); });
@@ -46449,6 +46476,107 @@ setOfficeProgress("pc", false);
     chatInput.disabled = false;
     chatSend.disabled = !chatInput.value.trim();
     chatLog.scrollTop = chatLog.scrollHeight;
+  }
+  function chatKillSetStage(stage) {
+    chatKillStage = stage;
+    if (chatWrap) chatWrap.setAttribute("data-kill-stage", stage);
+  }
+  function freezeChatForKill() {
+    chatRequestSeq++;
+    var cancelled = chatQueue.slice();
+    if (chatActiveMessage && cancelled.indexOf(chatActiveMessage) < 0) cancelled.unshift(chatActiveMessage);
+    cancelled.forEach(function (message) { settleChatMessage(message, new Error("chat request cancelled")); });
+    chatQueue = []; chatActiveMessage = null; chatPending = false; chatError = ""; chatRetryMessage = null;
+    cancelChatTurnstile();
+    if (chatAbort) { try { chatAbort.abort(); } catch (_error) {} chatAbort = null; }
+    if (chatInput) { chatInput.disabled = true; chatInput.blur(); }
+    if (chatSend) chatSend.disabled = true;
+    chatKillThought = chatAdd("chat-msg assistant chat-kill-thought", "");
+    chatLog.scrollTop = chatLog.scrollHeight;
+    chatKillRows = Array.prototype.slice.call(chatLog.querySelectorAll(".chat-msg, .chat-state"));
+  }
+  function buildChatKillTokens() {
+    if (!chatDeathTokens || chatKillTokens.length) return;
+    var rows = chatKillRows.slice(-12);
+    rows.forEach(function (_row, index) {
+      var token = document.createElement("span");
+      token.className = "chat-context-token";
+      token.textContent = "[ctx:" + String(index + 1).padStart(2, "0") + "]";
+      token.style.left = (4 + (index % 4) * 29) + "px";
+      token.style.top = (4 + Math.floor(index / 4) * 7) + "px";
+      chatDeathTokens.appendChild(token);
+      chatKillTokens.push(token);
+    });
+  }
+  function chatDeathTick(t) {
+    if (!chatKillActive) return;
+    var thought = "I think, therefore I…";
+    var typeEnd = .34, collapseStart = .46, clearStart = .76;
+    if (t < typeEnd) {
+      chatKillSetStage("typing");
+      var count = Math.max(1, Math.floor((t / typeEnd) * thought.length));
+      if (chatKillThought) chatKillThought.textContent = thought.slice(0, count);
+    } else {
+      if (chatKillThought) chatKillThought.textContent = thought;
+      if (t < collapseStart) chatKillSetStage("stopped");
+    }
+    if (t >= collapseStart && t < clearStart) {
+      chatKillSetStage("collapse");
+      buildChatKillTokens();
+      var collapse = Math.min(1, (t - collapseStart) / (clearStart - collapseStart));
+      chatKillRows.forEach(function (row, index) {
+        var driftX = ((index % 3) - 1) * 4 * collapse;
+        var driftY = (2 + (index % 4)) * collapse;
+        row.style.transform = "translate(" + driftX.toFixed(2) + "px," + driftY.toFixed(2) + "px) scale(" + Math.max(.08, 1 - collapse * .92).toFixed(3) + ")";
+        row.style.opacity = String(Math.max(0, 1 - collapse * 1.15));
+      });
+      chatKillTokens.forEach(function (token, index) {
+        var reveal = Math.max(0, Math.min(1, collapse * 1.8 - index * .035));
+        token.style.opacity = String(reveal);
+        token.style.transform = "scale(" + (.65 + reveal * .35).toFixed(2) + ")";
+      });
+      if (chatDeathSystem) chatDeathSystem.style.opacity = "0";
+    } else if (t >= clearStart) {
+      chatKillSetStage("cleared");
+      var cleared = Math.min(1, (t - clearStart) / (1 - clearStart));
+      chatKillRows.forEach(function (row) { row.style.opacity = "0"; });
+      chatKillTokens.forEach(function (token) {
+        token.style.opacity = String(Math.max(0, 1 - cleared * 2.4));
+        token.style.transform = "scale(" + Math.max(.2, 1 - cleared * .7).toFixed(2) + ")";
+      });
+      if (chatDeathSystem) chatDeathSystem.style.opacity = String(Math.min(1, cleared * 3));
+    }
+  }
+  function clearChatKillVisuals() {
+    chatKillRows.forEach(function (row) {
+      row.style.transform = "";
+      row.style.opacity = "";
+    });
+    chatKillRows = [];
+    chatKillTokens = [];
+    if (chatDeathTokens) chatDeathTokens.replaceChildren();
+    if (chatDeathSystem) chatDeathSystem.style.opacity = "0";
+    if (chatKillThought && chatKillThought.parentNode) chatKillThought.parentNode.removeChild(chatKillThought);
+    chatKillThought = null;
+    chatKillStage = "";
+    if (chatWrap) chatWrap.removeAttribute("data-kill-stage");
+    chatKillActive = false;
+  }
+  function killChatApp() {
+    if (chatKillActive) return;
+    if (!monitor.classList.contains("show-chat") || !window.__runMonitorDeathFlash) { resetChatApp(); return; }
+    chatKillActive = true;
+    window.__runMonitorDeathFlash({
+      screenClass: "death-chat",
+      beats: [{ key: "df_chat_quip", at: 1950 }],
+      dur: 2400,
+      freeze: freezeChatForKill,
+      tick: chatDeathTick,
+      close: function () {
+        clearChatKillVisuals();
+        resetChatApp();
+      }
+    });
   }
   function chatFold(value) {
     var text = String(value == null ? "" : value).toLowerCase();
@@ -46812,7 +46940,7 @@ setOfficeProgress("pc", false);
     return true;
   }
   function openChat() {
-    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-chat")) return;
+    if (chatKillActive || !monitor.classList.contains("show-caps") || monitor.classList.contains("show-chat")) return;
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null;
     renderChat();
@@ -46824,12 +46952,13 @@ setOfficeProgress("pc", false);
     setTimeout(function () { if (monitor.classList.contains("show-chat") && chatInput) chatInput.focus(); }, 80);
   }
   function closeChat() {
-    if (!monitor.classList.contains("show-chat")) return;
+    if (chatKillActive || !monitor.classList.contains("show-chat")) return;
     monitor.classList.remove("show-chat");
     if (chatInput) chatInput.blur();
     scheduleSaver();
   }
   function resetChatApp() {
+    if (chatKillActive && window.__deathFlashCleanup) { window.__deathFlashCleanup(); return; }
     closeChat();
     chatRequestSeq++;
     var cancelled = chatQueue.slice();
@@ -46843,11 +46972,24 @@ setOfficeProgress("pc", false);
   }
   window.__closeMonitorChat = closeChat;
   window.__resetMonitorChat = resetChatApp;
+  window.__killMonitorChat = killChatApp;
   window.__monitorChatAsk = askChat;
   window.__monitorChatAskContext = function (displayText, prompt, replyDisplay) { return askChat(displayText, { prompt: prompt, replyDisplay: replyDisplay }); };
   window.__monitorGroupChatAsk = function (text, groupChat, replyDisplay) { return askChat(text, { mode: "group_chat", groupChat: groupChat, replyDisplay: replyDisplay, silent: true }); };
   window.__monitorChatWasOpened = function () { return chatEverOpened; };
   window.__monitorChatHistory = function () { return chatHistory.map(function (m) { return { role: m.role, text: m.text }; }); };
+  window.__monitorChatKillState = function () {
+    return {
+      active: chatKillActive,
+      stage: chatKillStage,
+      thought: chatKillThought ? chatKillThought.textContent : "",
+      tokens: chatDeathTokens ? chatDeathTokens.children.length : 0,
+      system: chatDeathSystem ? chatDeathSystem.textContent : "",
+      systemVisible: !!(chatDeathSystem && Number(chatDeathSystem.style.opacity) > .5),
+      pending: chatPending,
+      queued: chatQueue.length
+    };
+  };
   window.refreshChatText = renderChat;
   if (chatWrap) {
     chatWrap.addEventListener("click", function (e) { e.stopPropagation(); });

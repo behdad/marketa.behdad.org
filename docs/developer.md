@@ -550,6 +550,12 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
+The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Chat, and Browser their
+own staged gag before teardown. They all use `__runMonitorDeathFlash` so cancellation, caption
+ownership, reduced-motion behavior, and the final close share one lifecycle. Chat freezes pending
+transport and verification work, types its interrupted thought, collapses rendered rows into context
+tokens, displays `[context cleared]`, then resets its history and closes.
+
 The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
 low delivery with `html.frame-rate-low`. It samples only while the document is
 visible and focused, requires two 1.2-second windows below 22 FPS to enter slow

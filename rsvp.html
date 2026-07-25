@@ -2906,7 +2906,25 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
   50%{transform:translate(0,-1px) rotate(0)}
   75%{transform:translate(2px,-3px) rotate(8deg)}
 }
-@media (prefers-reduced-motion: reduce){#witchy-chest-fairy-dance.grooving{animation:none}}
+#witchy-chest-fairy-dance.departing{animation:fairy-depart 1.55s cubic-bezier(.3,.05,.55,1) forwards}
+#witchy-chest-fairy-dance.away{visibility:hidden;pointer-events:none}
+@keyframes fairy-depart{
+  0%{transform:translate(0,0) scale(1) rotate(0);opacity:1}
+  28%{transform:translate(10px,-13px) scale(1.08) rotate(-8deg);opacity:1}
+  100%{transform:translate(92px,-58px) scale(.48) rotate(18deg);opacity:0}
+}
+#cuddly-rumi-fairy{opacity:0;visibility:hidden;pointer-events:none;cursor:pointer;transition:opacity .35s ease}
+#cuddly-rumi-fairy.present{opacity:1;visibility:visible;pointer-events:auto}
+#cuddly-rumi-fairy-float{transform-box:fill-box;transform-origin:center;animation:cuddly-rumi-float 5.8s ease-in-out infinite}
+@keyframes cuddly-rumi-float{
+  0%,100%{transform:translate(0,0) rotate(-2deg)}
+  45%{transform:translate(18px,-7px) rotate(4deg)}
+  72%{transform:translate(27px,-2px) rotate(1deg)}
+}
+@media (prefers-reduced-motion: reduce){
+  #witchy-chest-fairy-dance.grooving,#witchy-chest-fairy-dance.departing,
+  #cuddly-rumi-fairy-float{animation:none}
+}
 /* the chest cat, once let out (door 2 opened), strolls the garden floor and turns at
    each end; it pauses that stroll and sways in place while a song plays. Walk on the
    outer wrapper, sway on the inner, so neither clobbers the cat's own click-wobble. */
@@ -16806,6 +16824,17 @@ section{margin:1.9rem 0}
 </g>
 </g>
 
+<!-- Once released from the garden chest, the fairy settles above the couple here
+     after phase 2 and waits for a quiet, party-off Rumi exchange. The static placement
+     and floating motion live on separate wrappers so their transforms compose. -->
+<g id="cuddly-rumi-fairy" aria-hidden="true">
+<g transform="translate(-430,-195) scale(1.25)">
+<g id="cuddly-rumi-fairy-float">
+<use href="#witchy-chest-fairy" xlink:href="#witchy-chest-fairy"/>
+</g>
+</g>
+</g>
+
 <!-- Irene (owner's niece, ~10): an occasional untracked cameo. She leans in from the
      nook's left edge and hugs the daybed's back — dark loose curls, olive skin, her
      raglan reindeer tee (grey body, black sleeves), buffalo-plaid pants, white sneakers.
@@ -28810,7 +28839,7 @@ function positionEggBubble(b, anchor, placement, yOffset, xOffset) {
   b.style.left = left + "px";
   b.style.top = (top + (yOffset || 0)) + "px";
 }
-function eggBubble(anchor, text, placement, yOffset, xOffset) {
+function eggBubble(anchor, text, placement, yOffset, xOffset, duration) {
   var old = document.querySelector(".egg-bubble");
   if (old) old.remove();
   var b = document.createElement("div");
@@ -28829,7 +28858,7 @@ function eggBubble(anchor, text, placement, yOffset, xOffset) {
   clearTimeout(b._t);
   b._t = setTimeout(function () {
     dismissEggBubble(b);
-  }, 5000);
+  }, duration || 5000);
   return b;
 }
 function dismissEggBubble(b) {
@@ -64339,9 +64368,9 @@ async def localfont(name):
     return "📖 " + HAFEZ_FA[i][0] + "\n   " + HAFEZ_FA[i][1] + "\n" + lines[i].replace(/<br>/g, "\n");
   };
 })();
-// The garden fairy's phase-two answer is not another fāl. Markéta and behdad trade one
-// Rumi couplet instead: three pairs from Divan-e Shams, Ghazal 553. The public faal()
-// command above remains exclusively Hafez.
+// Once the released fairy has moved into the quiet nook, Markéta and behdad trade one
+// Rumi couplet: three pairs from Divan-e Shams, Ghazal 553. The public faal() command
+// above remains exclusively Hafez.
 (function () {
   var RUMI_FA = [
     ["\u0628\u06cc\u200c\u0647\u0645\u06af\u0627\u0646 \u0628\u0647 \u0633\u0631 \u0634\u0648\u062f\u060c \u0628\u06cc\u200c\u062a\u0648 \u0628\u0647 \u0633\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f", "\u062f\u0627\u063a\u0650 \u062a\u0648 \u062f\u0627\u0631\u062f \u0627\u06cc\u0646 \u062f\u0644\u0645\u060c \u062c\u0627\u06cc \u062f\u06af\u0631 \u0646\u0645\u06cc\u200c\u0634\u0648\u062f"],
@@ -64355,10 +64384,11 @@ async def localfont(name):
     while (i === lastRumi) i = (Math.random() * RUMI_FA.length) | 0;
     return (lastRumi = i);
   }
-  function hostAnchor(selector, fallback) {
-    var guests = document.getElementById("garden-guests");
-    var el = guests && guests.classList.contains("guests-in") && guests.querySelector(selector);
-    return el && window.currentStageName === "garden" ? el : fallback;
+  function hostAnchor(id, fallback) {
+    var el = document.getElementById(id);
+    var couple = document.getElementById("cuddly-couple");
+    return el && window.currentStageName === "cuddly" &&
+      !(couple && couple.classList.contains("at-party")) ? el : fallback;
   }
   function rumiHtml(speaker, fa, reading, credit) {
     return '<span class="rumi-speaker">' + speaker + '</span>' +
@@ -64367,7 +64397,7 @@ async def localfont(name):
       (credit ? '<span class="rumi-credit">— Rumi, Ghazal 553</span>' : "");
   }
   function showRumi(anchor, speaker, fa, reading, credit) {
-    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top");
+    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top", 0, 0, 6400);
     if (bubble) bubble.classList.add("rumi-bubble");
     return bubble;
   }
@@ -64376,11 +64406,11 @@ async def localfont(name):
     var i = rumiPick();
     var t = T[document.documentElement.lang] || T.en;
     var readings = t.rumi_lines || T.en.rumi_lines;
-    showRumi(hostAnchor(".g-marketa", fallback), "markéta", RUMI_FA[i][0], readings[i][0], false);
+    showRumi(hostAnchor("cuddly-marketa", fallback), "markéta", RUMI_FA[i][0], readings[i][0], false);
     rumiReplyTimer = setTimeout(function () {
-      if (window.currentStageName !== "garden") return;
-      showRumi(hostAnchor(".g-behdad", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true);
-    }, 2600);
+      if (window.currentStageName !== "cuddly" || window.__gardenPartyOn) return;
+      showRumi(hostAnchor("cuddly-behdad", fallback), "behdad", RUMI_FA[i][1], readings[i][1], true);
+    }, 5200);
     return i;
   };
 })();
@@ -64856,6 +64886,61 @@ async def localfont(name):
   }
   var cat = document.getElementById("witchy-chest-cat");
   var fairy = document.getElementById("witchy-chest-fairy");
+  var fairyDance = document.getElementById("witchy-chest-fairy-dance");
+  var cuddlyFairy = document.getElementById("cuddly-rumi-fairy");
+  var fairyDepartureTimer = null;
+  function finishFairyDeparture() {
+    clearTimeout(fairyDepartureTimer); fairyDepartureTimer = null;
+    if (!fairy || !fairyDance) return;
+    fairy.classList.add("departed");
+    fairyDance.classList.remove("departing", "grooving");
+    fairyDance.classList.add("away");
+    syncRumiFairy({ noDepart: true });
+    if (window.__loftStateChanged) window.__loftStateChanged("fairy.depart", {}, "internal");
+  }
+  function departFairy(immediate) {
+    if (!fairy || !fairyDance || !fairy.classList.contains("released") ||
+        fairy.classList.contains("departed") || fairyDance.classList.contains("departing")) return false;
+    var reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (immediate || reduced || window.currentStageName !== "garden") {
+      finishFairyDeparture();
+      return true;
+    }
+    fairyDance.classList.remove("grooving", "away");
+    fairyDance.classList.add("departing");
+    spawnFairyDepartureTrail(document.getElementById("loft-game-strip"), fairy);
+    playFairyChimeSound("witchy-chest-fairy");
+    fairyDepartureTimer = setTimeout(finishFairyDeparture, 1700);
+    return true;
+  }
+  function syncRumiFairy(options) {
+    options = options || {};
+    if (!fairy || !fairyDance || !cuddlyFairy) return;
+    if (!options.noDepart && window.__secondRound && fairy.classList.contains("released") &&
+        !fairy.classList.contains("departed")) departFairy(!!options.immediate);
+    var departed = fairy.classList.contains("departed");
+    fairyDance.classList.toggle("away", departed && !fairyDance.classList.contains("departing"));
+    var couple = document.getElementById("cuddly-couple");
+    var present = departed && !!window.__secondRound && !window.__gardenPartyOn &&
+      !(couple && couple.classList.contains("at-party"));
+    cuddlyFairy.classList.toggle("present", present);
+    cuddlyFairy.setAttribute("aria-hidden", present ? "false" : "true");
+  }
+  window.__updateCuddlyRumiFairy = syncRumiFairy;
+  window.__resetRumiFairy = function () {
+    clearTimeout(fairyDepartureTimer); fairyDepartureTimer = null;
+    if (fairy) fairy.classList.remove("released", "departed", "wobbling");
+    if (fairyDance) fairyDance.classList.remove("departing", "away", "grooving");
+    syncRumiFairy({ noDepart: true });
+  };
+  if (cuddlyFairy) {
+    cuddlyFairy.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!cuddlyFairy.classList.contains("present") || window.currentStageName !== "cuddly") return;
+      playFairyChimeSound("cuddly-rumi-fairy");
+      if (window.__offerRumiAt) window.__offerRumiAt(cuddlyFairy);
+    });
+  }
   // Move the whole chest to just before the first plant so the cat (in front of the
   // chest box, inside the chest) passes BEHIND the plants/bottles/boxes when it roams
   // left. The chest's own x-range (560-660) doesn't overlap the plants (140-500), so
@@ -65211,7 +65296,11 @@ async def localfont(name):
       // the cat still being INSIDE (releaseCat's own guard): re-opening the door while
       // it's already loose must not snap a wandering cat back to the emergence pose.
       if (id === "witchy-door-1" && el.classList.contains("open") && !catSlippedIn) releaseCat(); // cat lives behind the moon door
-      if (id === "witchy-door-2" && el.classList.contains("open") && fairy) wobbleEl(fairy); // fairy behind the sun door
+      if (id === "witchy-door-2" && el.classList.contains("open") && fairy) {
+        fairy.classList.add("released");
+        wobbleEl(fairy);
+        syncRumiFairy(); // phase 2: sparkle out now; phase 1: wait here until the party begins
+      }
       if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // revealing/hiding starts/stops their dance
     }
     el.addEventListener("click", toggleWitchyDoor);
@@ -65230,8 +65319,7 @@ async def localfont(name):
       playFairyChimeSound("witchy-chest-fairy");
       var target = window.__gardenClueTarget && window.__gardenClueTarget();
       if (target && spawnFairyClueTrail(document.getElementById("loft-game-strip"), fairy, target)) return;
-      if (window.__secondRound && window.__offerRumiAt) window.__offerRumiAt(fairy);
-      else if (window.__offerFaalAt) window.__offerFaalAt(fairy);
+      if (!window.__secondRound && window.__offerFaalAt) window.__offerFaalAt(fairy);
     });
   }
   // the hanging-pan edge glimpsed through the pass-through clinks + swings like the real pans
@@ -67032,6 +67120,46 @@ function spawnFairyClueTrail(svg, fromEl, toEl) {
     spawnSparkFlare(stage, to.x, to.y);
     setTimeout(function () { spawnSparkFlare(stage, to.x, to.y); }, 180);
   }, reduced ? 260 : Math.max(0, lifetime - 360));
+  return true;
+}
+function spawnFairyDepartureTrail(svg, fromEl) {
+  if (!svg || !fromEl || document.hidden || window.currentStageName !== "garden") return false;
+  var stage = document.getElementById("stage-garden");
+  if (!stage) return false;
+  var old = document.getElementById("fairy-departure-trail");
+  if (old) old.remove();
+  var box = fromEl.getBoundingClientRect(), matrix = stage.getScreenCTM(), point = svg.createSVGPoint();
+  if (!matrix || !box.width || !box.height) return false;
+  point.x = box.left + box.width / 2; point.y = box.top + box.height / 2;
+  var from;
+  try { from = point.matrixTransform(matrix.inverse()); } catch (_error) { return false; }
+  var ns = "http://www.w3.org/2000/svg", group = document.createElementNS(ns, "g");
+  group.id = "fairy-departure-trail";
+  group.setAttribute("pointer-events", "none");
+  group.setAttribute("aria-hidden", "true");
+  stage.appendChild(group);
+  var reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  for (var i = 0; i < 18; i++) {
+    var t = i / 17, x = from.x + 104 * t, y = from.y - 54 * t - Math.sin(Math.PI * t) * 12;
+    var star = document.createElementNS(ns, "text");
+    star.setAttribute("x", x); star.setAttribute("y", y);
+    star.setAttribute("text-anchor", "middle"); star.setAttribute("dominant-baseline", "central");
+    star.setAttribute("font-size", 4.5 + (i % 3));
+    star.setAttribute("fill", i % 2 ? "#fff2a1" : "#f2c9ff");
+    star.textContent = "✦";
+    star.style.opacity = reduced ? ".9" : "0";
+    star.style.transformBox = "view-box";
+    star.style.transformOrigin = x + "px " + y + "px";
+    group.appendChild(star);
+    if (star.animate && !reduced) {
+      star.animate([
+        { opacity: 0, transform: "scale(.35)" },
+        { opacity: 1, transform: "scale(1.15)", offset: .3 },
+        { opacity: 0, transform: "scale(.45)" }
+      ], { duration: 720, delay: i * 52, easing: "ease-out", fill: "both" });
+    }
+  }
+  setTimeout(function () { if (group.parentNode) group.remove(); }, reduced ? 900 : 1700);
   return true;
 }
 function spawnPaneGleam(svg, pane) {
@@ -73888,6 +74016,7 @@ function spawnDustMote(container) {
     if (name === "cuddly" && window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (name === "cuddly" && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // re-arm the door-nudge hint if the door's the next step
     if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // resolve the couple's presence for the new room's day/night/party truth
+    if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy();
     if (name === "cuddly" && window.startCuddlyFlame) window.startCuddlyFlame(); // light the fireplace's fractal flames
     if (name === "cuddly" && window.resetFishu) window.resetFishu();
     if (name !== "cuddly" && window.__resetIrene) window.__resetIrene(); // Irene's cameo doesn't ride along out of the nook
@@ -75546,6 +75675,7 @@ function spawnDustMote(container) {
     if (window.__updateOfficeNudges) window.__updateOfficeNudges();
     if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint();
     if (window.__syncRosterAvail) window.__syncRosterAvail();
+    if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy();
     if (previous !== window.__secondRound && window.__refreshKitchenBar) window.__refreshKitchenBar();
     return previous;
   }
@@ -78848,6 +78978,7 @@ function spawnDustMote(container) {
     updateAllPartyDances(); // start/stop every registered dance's bed with the party (each self-gates on its want)
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // start/stop the garden groovers (incl. the bartender's party groove)
     if (window.__updateCuddlyPresence) window.__updateCuddlyPresence(); // party on → the couple's off at the garden (hide both); party off → they're back in the nook
+    if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy();
     if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // swap party-off three-cameo viewing for the party's full eight-child audience
     if (window.__updateKidGames) window.__updateKidGames(); // party on → the kids play games in the now-empty nook; party off → they clear
     if (window.__refreshKitchenBar) window.__refreshKitchenBar(); // party on/off swaps the kitchen bar↔espresso caption + arrows
@@ -80966,7 +81097,10 @@ function spawnDustMote(container) {
     var fairyDance = document.getElementById("witchy-chest-fairy-dance");
     var witchyDoor2 = document.getElementById("witchy-door-2");
     if (fairyDance) {
-      if (anyPlaying && witchyDoor2 && witchyDoor2.classList.contains("open")) setGroove(fairyDance, durations.toe);
+      if (anyPlaying && witchyDoor2 && witchyDoor2.classList.contains("open") &&
+          !fairyDance.classList.contains("departing") && !fairyDance.classList.contains("away")) {
+        setGroove(fairyDance, durations.toe);
+      }
       else fairyDance.classList.remove("grooving");
     }
     // the roamed-out cat stops mid-stride and sways in place while a song plays
@@ -81626,6 +81760,7 @@ function spawnDustMote(container) {
     if (window.__stowCat) window.__stowCat(); // cat back in the chest, wherever it had wandered
     if (window.dog) window.dog(false); // drop any dog() override + send Whistler home (party-off below also hides him)
     if (window.__resetCuddlyCabinet) window.__resetCuddlyCabinet(); // fresh game: cabinet shut, mouse back in the box + re-armed for its one dash
+    if (window.__resetRumiFairy) window.__resetRumiFairy(); // fairy back behind the sun door; phase-two departure can happen again
     if (window.__laserOff) window.__laserOff(); // any console laser dot mid-dart goes with it
     if (window.__stopPragueGathering) window.__stopPragueGathering(); // a fresh game disarms the Prague garden gathering (and drops its pending widen)
     if (window.__resetRoosterEgg) window.__resetRoosterEgg(); // no golden egg left mid-shimmer at the rooster's feet
@@ -85895,7 +86030,9 @@ function spawnDustMote(container) {
       garden: {
         water: !!gardenState.water, music: !!gardenState.music, candles: !!gardenState.candles,
         done: Object.keys(plantSpots).concat(Object.keys(instrumentSpots)).filter(function (id) { return checkpointClass(id, "done"); }),
-        candle1: !!candlesLit["garden-candle-1"], candle2: !!candlesLit["garden-candle-2"]
+        candle1: !!candlesLit["garden-candle-1"], candle2: !!candlesLit["garden-candle-2"],
+        fairyReleased: checkpointClass("witchy-chest-fairy", "released"),
+        fairyDeparted: checkpointClass("witchy-chest-fairy", "departed")
       },
       cuddly: {
         octopus: checkpointClass("cuddly-octopus", "played"), door: checkpointClass("cuddly-balcony-door", "open"),
@@ -85943,6 +86080,9 @@ function spawnDustMote(container) {
       checkpointToggle(id, "lit", !!candlesLit[id]); checkpointToggle(id, "done", !!candlesLit[id]);
     });
     checkpointToggle("stage-garden", "g-c1-lit", !!g.candle1); checkpointToggle("stage-garden", "g-c2-lit", !!g.candle2);
+    checkpointToggle("witchy-chest-fairy", "released", !!g.fairyReleased);
+    checkpointToggle("witchy-chest-fairy", "departed", !!g.fairyDeparted);
+    if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy({ immediate: true });
 
     var c = puzzle.cuddly || {}, blankets = Array.isArray(c.blankets) ? c.blankets : [];
     checkpointToggle("cuddly-octopus", "played", !!c.octopus);

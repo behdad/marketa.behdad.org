@@ -22,6 +22,10 @@ var harness = String.raw`<script>
   try {
     window.goToStage("garden");
     var fairy = document.getElementById("witchy-chest-fairy");
+    var door = document.getElementById("witchy-door-2");
+    click(door);
+    check("opening the sun door releases the fairy",
+      fairy && fairy.classList.contains("released"));
     var target = window.__gardenClueTarget();
     check("the fairy initially points to an unwatered plant",
       target && target.id === "garden-monstera", target && target.id);
@@ -42,23 +46,51 @@ var harness = String.raw`<script>
     window.__setGardenParty(true, false);
     check("the fairy stops guiding once phase 2 begins",
       window.__gardenClueTarget() === null);
-    click(fairy);
-    var rumi = document.querySelector(".egg-bubble.rumi-bubble");
-    check("phase-two fairy starts a Rumi exchange instead of another Hafez reading",
-      rumi && rumi.querySelector(".rumi-speaker") &&
-      rumi.querySelector(".rumi-speaker").textContent === "markéta" &&
-      rumi.querySelector(".rumi-fa") && !rumi.querySelector(".fal-fa"),
-      rumi && rumi.textContent);
-    check("the Rumi exchange does not add a public command",
-      typeof window.rumi === "undefined");
+    var departure = document.getElementById("fairy-departure-trail");
+    check("starting phase 2 sends the released fairy toward cuddly-puddly",
+      fairy && fairy.parentNode && fairy.parentNode.classList.contains("departing") &&
+      departure && departure.children.length === 18);
+    setTimeout(function () {
+      try {
+        check("the garden fairy is gone after the flight",
+          fairy.classList.contains("departed") &&
+          fairy.parentNode.classList.contains("away"));
+        window.__setGardenParty(false, false);
+        window.goToStage("cuddly");
+        var cameo = document.getElementById("cuddly-rumi-fairy");
+        check("the fairy settles above the couple once the party is quiet",
+          cameo && cameo.classList.contains("present") &&
+          cameo.getAttribute("aria-hidden") === "false");
+        click(cameo);
+        var rumi = document.querySelector(".egg-bubble.rumi-bubble");
+        check("clicking the cuddly fairy starts Markéta and behdad's Rumi exchange",
+          rumi && rumi.querySelector(".rumi-speaker") &&
+          rumi.querySelector(".rumi-speaker").textContent === "markéta" &&
+          rumi.querySelector(".rumi-fa") && !rumi.querySelector(".fal-fa"),
+          rumi && rumi.textContent);
+        check("the Rumi exchange does not add a public command",
+          typeof window.rumi === "undefined");
+
+        window.__resetRumiFairy();
+        window.goToStage("garden");
+        door.classList.remove("open");
+        click(door);
+        check("opening the fairy door after phase 2 starts also begins the flight",
+          fairy.classList.contains("released") &&
+          fairy.parentNode.classList.contains("departing"));
+      } catch (error) {
+        out.errors.push(String(error && error.stack || error));
+      }
+      finish();
+    }, 1850);
   } catch (error) {
     out.errors.push(String(error && error.stack || error));
+    finish();
   }
-  finish();
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 1800, {
+var result = lib.runPageSync("rsvp.html", harness, 4200, {
   patchRaf: true,
   forceMotion: true
 });

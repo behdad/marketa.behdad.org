@@ -3443,6 +3443,8 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
 .dock-tile{width:11px; height:11px; transform-origin:50% 50%; transition:transform .15s ease; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:grid} /* single-cell grid: glyph + overlays stack on one grid-area with NO position/transform layer, so they paint in place under the monitor's scaled foreignObject (WebKit bug 23113) */
 .dock-tile > *{grid-area:1/1; min-width:0}
+.dock-running-dot{width:1.2px; height:1.2px; margin-bottom:-1.7px; border-radius:50%; place-self:end center; background:#8e3a4a; box-shadow:0 0 0 .25px rgba(255,253,248,.9); opacity:0; pointer-events:none; transition:opacity .15s ease}
+.dock-app.is-running .dock-running-dot{opacity:1}
 .dock-glyph{font-family:sans-serif; line-height:1; color:#f8f5ec; display:flex; align-items:center; justify-content:center} /* flex-centres the icon/glyph within the stretched grid cell */
 .cal-tile{border-radius:3px; overflow:hidden; display:flex; flex-direction:column}
 .cal-tile-head{flex:none; height:4.4px; background:#c14b3e; color:#fffdf8; font-family:Arial,"Helvetica Neue",sans-serif; font-size:2.4px; line-height:1.4; padding-top:1.2px; display:flex; align-items:center; justify-content:center; letter-spacing:0.1px; font-weight:600} /* Arial pinned: generic sans-serif resolves to metric-DIFFERENT fonts per OS (DejaVu vs Helvetica), which see-sawed this label's optical centering between Linux and Mac */ /* taller band + padding-top drops the month clear of the tile's overflow clip: at the old 3.4px height the line box filled the band edge-to-edge and the capital tops shaved off */
@@ -41611,6 +41613,73 @@ setOfficeProgress("pc", false);
   var dock = document.getElementById("monitor-desktop-dock");
   var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
   var dockCells = {};
+  // Session-scoped task registry. The monitor's show-* classes are the one launch boundary
+  // shared by dock icons, toolbar shortcuts, story beats and console commands, so observing
+  // them catches every way an app can open without teaching each app about the desktop.
+  // Removing a class is only a foreground change: normal close/app-switch leaves the task
+  // registered. Kill/reset explicitly clears it through the hooks below.
+  var MONITOR_APP_CLASSES = {
+    chrome: "show-browser", music: "show-nowplaying", photobooth: "photobooth",
+    video: "show-video", call: "show-family", chat: "show-chat", mail: "show-mail",
+    calendar: "show-calendar", tattoo: "show-tattoo", mines: "show-mines",
+    life: "show-life", doom: "show-doom", code: "show-code", console: "show-console",
+    python: "show-python", linux: "show-linux", weather: "show-weather"
+  };
+  var MONITOR_APP_KILLS = {
+    chrome: "__killMonitorBrowser", music: "__killMonitorMusic",
+    photobooth: "__killMonitorPhotobooth", video: "__killMonitorVideo",
+    call: "__killMonitorFamily", chat: "__killMonitorChat", mail: "__killMonitorMail",
+    calendar: "__killMonitorCalendar", tattoo: "__killMonitorTattoo",
+    mines: "__killMonitorMines", life: "__killMonitorLife", doom: "__killMonitorDoom",
+    code: "__killMonitorCode", console: "__killMonitorConsole",
+    python: "__killMonitorPython", linux: "__killMonitorLinux",
+    weather: "__killMonitorWeather"
+  };
+  var monitorRunningApps = Object.create(null);
+  var monitorKillingApps = Object.create(null);
+  function monitorRegistryId(id) { return id === "family" ? "call" : id; }
+  function paintMonitorRunning(id) {
+    var cell = dockCells[id];
+    if (cell) cell.classList.toggle("is-running", !!monitorRunningApps[id]);
+  }
+  function setMonitorAppRunning(id, running) {
+    id = monitorRegistryId(id);
+    if (!MONITOR_APP_CLASSES[id]) return;
+    if (running) monitorRunningApps[id] = true;
+    else delete monitorRunningApps[id];
+    paintMonitorRunning(id);
+  }
+  function markMonitorAppRunning(id) {
+    id = monitorRegistryId(id);
+    delete monitorKillingApps[id];
+    setMonitorAppRunning(id, true);
+  }
+  function markMonitorAppKilled(id, suppressForeground) {
+    id = monitorRegistryId(id);
+    if (suppressForeground || monitor.classList.contains(MONITOR_APP_CLASSES[id])) monitorKillingApps[id] = true;
+    else delete monitorKillingApps[id];
+    setMonitorAppRunning(id, false);
+  }
+  function clearMonitorRunningApps() {
+    Object.keys(monitorRunningApps).forEach(function (id) { setMonitorAppRunning(id, false); });
+    Object.keys(monitorKillingApps).forEach(function (id) { delete monitorKillingApps[id]; });
+  }
+  function syncMonitorRunningApps() {
+    Object.keys(MONITOR_APP_CLASSES).forEach(function (id) {
+      var showing = monitor.classList.contains(MONITOR_APP_CLASSES[id]);
+      if (showing && !monitorKillingApps[id]) setMonitorAppRunning(id, true);
+      else if (!showing && monitorKillingApps[id]) delete monitorKillingApps[id];
+    });
+  }
+  window.__monitorAppRunning = function (id) { return !!monitorRunningApps[monitorRegistryId(id)]; };
+  window.__monitorRunningApps = function () { return Object.keys(monitorRunningApps); };
+  window.__markMonitorAppRunning = markMonitorAppRunning;
+  window.__markMonitorAppKilled = markMonitorAppKilled;
+  window.__clearMonitorRunningApps = clearMonitorRunningApps;
+  if (monitor && window.MutationObserver) {
+    new MutationObserver(syncMonitorRunningApps).observe(monitor, { attributes: true, attributeFilter: ["class"] });
+    syncMonitorRunningApps();
+  }
   var dockGrid = null, dockSearch = null, dockSearchText = null;
   var dockSearchQuery = "", dockSearchBest = null, dockSearchCompletion = "";
   var tileCamVideo = null, tileCamGroup = null;
@@ -41816,6 +41885,11 @@ setOfficeProgress("pc", false);
         });
         tile.appendChild(mini);
       }
+      var runningDot = document.createElement("span");
+      runningDot.className = "dock-running-dot";
+      runningDot.setAttribute("aria-hidden", "true");
+      tile.appendChild(runningDot);
+      paintMonitorRunning(app.id);
       var label = document.createElement("div");
       label.className = "dock-label";
       label.setAttribute("data-i", app.labelKey);
@@ -45348,18 +45422,17 @@ setOfficeProgress("pc", false);
     var RESTART_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 3.4 A4 4 0 1 0 10.3 6.2"/><path d="M10 1.8 L10 3.6 L8.2 3.6"/></svg>';
     var KILL_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M3.4 3.4 L8.6 8.6 M8.6 3.4 L3.4 8.6"/></svg>';
     var OPEN_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2.2 H9.8 V5.5"/><path d="M9.8 2.2 L5.6 6.4"/><path d="M9 6.7 V9.3 A0.6 0.6 0 0 1 8.4 9.9 H2.7 A0.6 0.6 0 0 1 2.1 9.3 V3.6 A0.6 0.6 0 0 1 2.7 3 H5"/></svg>';
-    // Desktop dock hosts: the three self-hosted runtimes that can run backgrounded. Each maps
-    // to its running-predicate (Kill appears only when true) + its silent (no death-flash) kill
-    // hook — a desktop/task-manager kill of a backgrounded host, not the on-screen app.
+    // Desktop dock hosts: the three self-hosted runtimes have an additional live-engine
+    // predicate. Opening one registers the task like every other app, but Kill only becomes
+    // available once its actual engine is ready.
     var DESKTOP_HOSTS = {
       doom: { running: "__doomRunning", kill: "__killMonitorDoom" },
       linux: { running: "__lxRunning", kill: "__killMonitorLinux" },
       python: { running: "__pyRunning", kill: "__killMonitorPython" }
     };
-    // Host/runtime app ids — these keep their own death-flash / task-manager kills (doom/linux/
-    // python are the backgroundable DESKTOP_HOSTS above, gated on a running predicate; chrome +
-    // console are never desktop-killable). Every OTHER (non-host) dock icon gets a plain reset-Kill.
-    var HOST_IDS = ["chrome", "console", "doom", "python", "linux"];
+    // Every desktop app reuses its established in-app Kill hook. A backgrounded plain app is
+    // briefly surfaced before invoking it so the same staged gag plays instead of silently
+    // resetting state. Runtime hosts retain their background-aware teardown behavior.
     // fnName may be a window-global name (string) or a direct closure fn
     function makeItem(cls, ico, label, fnName, disabled) {
       var b = document.createElement("button");
@@ -45396,18 +45469,32 @@ setOfficeProgress("pc", false);
       if (app.restart) items.push(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
       openMenu(items, x, y);
     }
-    // desktop (show-caps) menu for a right-clicked dock icon: Open always; Kill only for a
-    // host runtime that is actually running in the background (a stopped host = Open only)
+    function killDesktopApp(appObj, host) {
+      var id = appObj.id;
+      var hookName = (host && host.kill) || MONITOR_APP_KILLS[id];
+      if (!hookName) return;
+      markMonitorAppKilled(id, true);
+      if (!host) {
+        // The normal close kept the session but removed its foreground class. Put that layer
+        // back for the duration of the existing themed Kill; the registry tombstone above
+        // prevents the observer from mistaking this staging class for a new launch.
+        var cls = MONITOR_APP_CLASSES[id];
+        if (cls) monitor.classList.add(cls);
+      }
+      var fn = window[hookName];
+      if (fn) fn();
+    }
+    // Desktop (show-caps) menu for a right-clicked dock icon: Open always. Kill appears only
+    // after that app has run in this powered-on session; runtime hosts additionally need their
+    // real engine-running predicate.
     function buildDesktopMenu(appObj, x, y) {
       var items = [];
       items.push(makeItem("ctx-open", OPEN_ICO, tr("mon_ctx_open"), function () { appOpenTs = Date.now(); appObj.open(); }, false));
       var host = DESKTOP_HOSTS[appObj.id];
-      if (host && window[host.running] && window[host.running]()) {
-        items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), host.kill, false)); // running backgroundable host → task-manager kill
-      } else if (HOST_IDS.indexOf(appObj.id) < 0) {
-        // every non-host icon → Kill = reset that app's retained state to fresh (and close it if
-        // it's the on-screen app). Always offered, whether or not the app is currently open.
-        items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), function () { window.resetMonitorAppState(appObj.id); }, false));
+      var registered = window.__monitorAppRunning && window.__monitorAppRunning(appObj.id);
+      var hostReady = !host || !!(window[host.running] && window[host.running]());
+      if (registered && hostReady && MONITOR_APP_KILLS[appObj.id]) {
+        items.push(makeItem("ctx-kill", KILL_ICO, tr("mon_ctx_kill"), function () { killDesktopApp(appObj, host); }, false));
       }
       openMenu(items, x, y);
     }
@@ -51186,6 +51273,28 @@ async def localfont(name):
     gmail: openGmailCompose,       // opens the Gmail web composer to marketa@behdad.org
     mailto: openMailto             // native mail client, same subject/body
   };
+  // Route every public Kill entry point (in-app menus, console process commands and desktop
+  // task menu) through the registry. Restarts deliberately are not wrapped: they replace the
+  // process and remain running. The desktop dispatcher also marks first so test/runtime hook
+  // substitutions cannot leave a stale task dot behind.
+  (function installMonitorKillRegistryHooks() {
+    Object.keys(MONITOR_APP_KILLS).forEach(function (id) {
+      var name = MONITOR_APP_KILLS[id];
+      var original = window[name];
+      if (typeof original !== "function" || original.__monitorRegistryWrapped) return;
+      var wrapped = function () {
+        markMonitorAppKilled(id);
+        try { return original.apply(this, arguments); }
+        finally {
+          // A fallback/background kill has no foreground class whose removal can release
+          // the tombstone. Foreground staged kills release it through the class observer.
+          if (!monitor.classList.contains(MONITOR_APP_CLASSES[id])) delete monitorKillingApps[id];
+        }
+      };
+      wrapped.__monitorRegistryWrapped = true;
+      window[name] = wrapped;
+    });
+  })();
   // ── Reset a monitor app's retained session state to fresh ─────────────────────────────
   // Parallel to the phone's resetAppState: the regular (non-host) desktop apps keep their
   // state across a normal close+reopen (a plain ✕ / Esc / app-switch), and ONLY a Kill (from
@@ -51194,6 +51303,7 @@ async def localfont(name):
   // absent), then clears the retained vars so the next open starts clean. The self-hosted
   // hosts (doom/python/linux/browser/console) keep their own death-flash kills — not here.
   function resetMonitorAppState(id) {
+    markMonitorAppKilled(id);
     switch (id) {
       case "life":
         closeLifeApp();
@@ -51277,6 +51387,7 @@ async def localfont(name):
     if (doomLoadState) destroyDoom();
     if (pyLoadState) destroyPython();
     if (lxLoadState) destroyLinux();
+    clearMonitorRunningApps();
     stopSaver();
   }
   window.resetOfficeMonitor = function () {

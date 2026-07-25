@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Focused test for the monitor right-click Kill/Restart menus + restart teardown + the
-// DOOM fullscreen button. Uses the same one-shot headless-Chrome runner as play.js
+// Focused test for the monitor running-app registry, right-click Kill/Restart menus,
+// restart teardown and the DOOM fullscreen button. Uses the same one-shot headless-Chrome runner as play.js
 // (--dump-dom, no long-lived process, so it runs in-sandbox).
 //
 // Two menus by design (kept split to avoid a double menu on the console apps):
 //   • .console-ctx — python/linux/console fold Kill (and, for the runtimes, Restart) into
 //     their existing copy/paste menu.
 //   • .mon-ctx — every other real app (mail, chat, weather, mines, music, video, …) plus DOOM
-//     (a canvas, no copy/paste) gets this standalone menu. Kill delegates to
-//     __closeTopMonitorApp; Restart appears only for DOOM.
+//     (a canvas, no copy/paste) gets this standalone menu. Desktop Kill is available only
+//     after launch and reuses the app's in-app themed hook; Restart appears only for DOOM.
 // Kill on a self-hosted runtime (doom/python/linux) is DISABLED until the runtime is
 // actually running — the running predicates (__doomRunning/__pyRunning/__lxRunning) are
 // window-exposed so this harness can flip them (it can't boot the real WASM runtimes,
@@ -35,6 +35,8 @@ var HARNESS = [
   "  function monRestart(){ var m=monMenu(); return m?m.querySelector('button.ctx-restart'):null; }",
   "  function monKillDisabled(){ var b=monKill(); return !!(b&&b.disabled); }",
   "  function mon(){ return document.getElementById('office-monitor'); }",
+  "  function reg(id){ return !!(window.__monitorAppRunning&&window.__monitorAppRunning(id)); }",
+  "  function dot(id){ var c=document.getElementById('monitor-dock-'+id); return !!(c&&c.classList.contains('is-running')); }",
   "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-video','show-tattoo','show-life','show-code','show-browser','show-family','photobooth','show-python','show-linux','show-console','show-doom'];",
   "  function showApp(cls){ var m=mon(); APP_CLASSES.forEach(function(c){m.classList.remove(c);}); m.classList.add('screen-on'); if(cls) m.classList.add(cls); window.currentStageName='office'; }",
   "  async function run(){",
@@ -54,7 +56,7 @@ var HARNESS = [
   // monitor's bounding box: scaled SVG layouts can route those through different targets.
   "    showApp('show-mail'); if(window.__toggleMonitorZoom && !window.__monitorZoomed()) window.__toggleMonitorZoom(); await sleep(20); var bezel=document.getElementById('office-monitor-bezel'), glass=document.getElementById('office-monitor-bg'), br=bezel&&bezel.getBoundingClientRect(), gr=glass&&glass.getBoundingClientRect(); var rx=br&&gr?br.left+Math.max(1,(gr.left-br.left)/2):0, ry=br?(br.top+br.bottom)/2:0; if(bezel) bezel.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,button:2,buttons:2,clientX:rx,clientY:ry})); S('rim_right_pointer_kept_zoom', !!(window.__monitorZoomed&&window.__monitorZoomed())); var rimEvt=(br&&gr)?new MouseEvent('contextmenu',{bubbles:true,cancelable:true,button:2,clientX:rx,clientY:ry}):null; S('rim_context_prevented', rimEvt?!bezel.dispatchEvent(rimEvt):false); S('rim_menu_present', !!monMenu()); escMenu(); if(window.__monitorZoomed&&window.__monitorZoomed()) window.__toggleMonitorZoom(); await sleep(20);",
   // Mail Kill folds three envelopes into paper airplanes, collides them, then leaves an empty tray.
-  "    if(window.MAILS) window.MAILS.forEach(function(m){m.read=true;}); showApp('show-mail'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(50); var mailFlight=document.getElementById('monitor-mail-farewell-flight'); S('mail_kill_started', mon().classList.contains('death-mail') && mon().classList.contains('show-mail')); S('mail_kill_hid_menu', !monMenu()); S('mail_kill_envelopes', !!mailFlight && Number(mailFlight.getAttribute('data-envelopes'))===3); await sleep(700); S('mail_kill_launched', !!mailFlight && Number(mailFlight.getAttribute('data-airborne'))>=2 && Number(mailFlight.getAttribute('data-envelopes'))>=1); S('mail_kill_caption', document.getElementById('hunt-caption').textContent==='You’ve got no mail.'); await sleep(800); S('mail_kill_collision', !!mailFlight && mailFlight.getAttribute('data-collided')==='1' && Number(mailFlight.getAttribute('data-airborne'))===3); await sleep(750); S('mail_kill_empty_tray', !!mailFlight && Number(mailFlight.getAttribute('data-airborne'))===0 && Number(mailFlight.getAttribute('data-fallen'))===3); await sleep(300); S('mail_kill_teardown', !mon().classList.contains('show-mail') && !mon().classList.contains('death-mail') && (!window.MAILS || window.MAILS.every(function(m){return !m.read;})));",
+  "    if(window.MAILS) window.MAILS.forEach(function(m){m.read=true;}); showApp('show-mail'); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(50); var mailFlight=document.getElementById('monitor-mail-farewell-flight'); S('mail_kill_started', mon().classList.contains('death-mail') && mon().classList.contains('show-mail')); S('mail_kill_hid_menu', !monMenu()); S('mail_kill_registry_cleared', !reg('mail') && !dot('mail')); S('mail_kill_envelopes', !!mailFlight && Number(mailFlight.getAttribute('data-envelopes'))===3); await sleep(700); S('mail_kill_launched', !!mailFlight && Number(mailFlight.getAttribute('data-airborne'))>=2 && Number(mailFlight.getAttribute('data-envelopes'))>=1); S('mail_kill_caption', document.getElementById('hunt-caption').textContent==='You’ve got no mail.'); await sleep(800); S('mail_kill_collision', !!mailFlight && mailFlight.getAttribute('data-collided')==='1' && Number(mailFlight.getAttribute('data-airborne'))===3); await sleep(750); S('mail_kill_empty_tray', !!mailFlight && Number(mailFlight.getAttribute('data-airborne'))===0 && Number(mailFlight.getAttribute('data-fallen'))===3); await sleep(300); S('mail_kill_teardown', !mon().classList.contains('show-mail') && !mon().classList.contains('death-mail') && (!window.MAILS || window.MAILS.every(function(m){return !m.read;})));",
   // Chat Kill freezes a pending request, types Charlie's interrupted thought, collapses the
   // rendered conversation into context tokens, clears it, then resets and closes.
   "    showApp('show-chat'); document.documentElement.lang='en'; if(window.refreshChatText) window.refreshChatText();",
@@ -225,30 +227,50 @@ var HARNESS = [
   "    S('python_restart_threw', pyThrew); S('python_restart_flash_started', mon().classList.contains('death-python'));",
   "    await sleep(2700);",  // wait out the ~2.6s flash → destroyPython clears the output + drops show-python
   "    S('python_restart_cleared_out', !/old-py/.test(po.textContent)); S('python_restart_torn_down', !mon().classList.contains('show-python') && !mon().classList.contains('death-python'));",
-  // ==== DESKTOP DOCK-ICON CONTEXT MENU (Open / Kill) — appended block ====
-  // On the show-caps home screen, right-clicking a dock APP ICON pops a .mon-ctx with Open
-  // (always) and — only for a self-hosted host runtime (doom/linux/python) that is actually
-  // RUNNING in the background — Kill. Non-hosts, and stopped hosts, get Open only. Right-
-  // clicking a non-icon desktop surface keeps the native menu.
+  // ==== DESKTOP TASK REGISTRY + DOCK-ICON CONTEXT MENU ====
+  // Open is universal. Kill appears only for an app registered by a real foreground launch;
+  // a normal close/switch keeps that task registered. Heavy runtimes additionally need their
+  // live-engine predicate. Desktop Kill must run the same themed hook as in-app Kill.
   "    function deskTile(id){ return document.getElementById('monitor-dock-'+id); }",
   "    function monOpen(){ var m=monMenu(); return m?m.querySelector('button.ctx-open'):null; }",
   "    function escMenu(){ document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); }",
-  // non-host tile (mail) → Open + Kill (Open first); Kill resets the app's retained state
-  "    showApp('show-caps'); var mailTile=deskTile('mail'); S('desk_mail_prevented', ctxAt(mailTile)); S('desk_mail_items', monItems()); S('desk_mail_has_open', !!monOpen()); S('desk_mail_has_kill', !!monKill());",
-  // clicking Kill on a non-host desktop icon calls resetMonitorAppState(id) (spied) + hides the menu
-  "    (function(){ var _o=window.resetMonitorAppState; window.__resetCalls=[]; window.resetMonitorAppState=function(id){ window.__resetCalls.push(id); return _o&&_o.apply(this,arguments); }; })();",
-  "    if(monKill()) monKill().click(); await sleep(30); S('desk_mail_kill_called', (window.__resetCalls||[]).indexOf('mail')>=0); S('desk_mail_kill_hid_menu', !monMenu()); escMenu(); await sleep(20);",
-  // host tile with runtime STOPPED → Open only
+  // A fresh desktop has no killable tasks and no dots; adding the overlay must not resize cells.
+  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-caps'); await sleep(0);",
+  "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','calendar','tattoo','mines','life','doom','code','console','python','linux']; var freshOpenOnly=true;",
+  "    for(var di=0;di<allTiles.length;di++){ctxAt(deskTile(allTiles[di])); if(!monOpen()||monKill()) freshOpenOnly=false; escMenu();}",
+  "    S('desk_fresh_all_open_only',freshOpenOnly); S('desk_fresh_no_dots',allTiles.every(function(id){return !dot(id);}));",
+  "    var mailTile=deskTile('mail'), mailBox0=mailTile.getBoundingClientRect();",
+  // Open Mail through the real desktop path, then close normally. It stays registered/dotted.
+  "    ctxAt(mailTile); if(monOpen()) monOpen().click(); await sleep(30); S('desk_mail_open_registered',mon().classList.contains('show-mail')&&reg('mail')&&dot('mail'));",
+  "    if(window.__closeTopMonitorApp) window.__closeTopMonitorApp(); await sleep(20); var mailBox1=mailTile.getBoundingClientRect();",
+  "    S('desk_mail_close_kept_running',!mon().classList.contains('show-mail')&&reg('mail')&&dot('mail')); S('desk_dot_no_layout_shift',mailBox0.width===mailBox1.width&&mailBox0.height===mailBox1.height);",
+  "    S('desk_mail_prevented',ctxAt(mailTile)); S('desk_mail_items',monItems()); S('desk_mail_has_open',!!monOpen()); S('desk_mail_has_kill',!!monKill());",
+  // Kill the backgrounded Mail task. It is surfaced and runs the same paper-airplane gag.
+  "    if(monKill()) monKill().click(); await sleep(40); S('desk_mail_kill_same_gag',mon().classList.contains('show-mail')&&mon().classList.contains('death-mail')); S('desk_mail_kill_cleared',!reg('mail')&&!dot('mail')); S('desk_mail_kill_hid_menu',!monMenu());",
+  "    if(window.__deathFlashCleanup) window.__deathFlashCleanup(); await sleep(20);",
+  // A foreground switch registers both apps and backgrounds the first without clearing it.
+  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-mail'); await sleep(0); showApp('show-mines'); await sleep(0); showApp('show-caps'); await sleep(0);",
+  "    S('desk_switch_kept_both_running',reg('mail')&&reg('mines')&&dot('mail')&&dot('mines'));",
+  // Every monitor class, including toolbar-only Weather and the three runtime consoles, maps in.
+  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['tattoo','show-tattoo'],['mines','show-mines'],['life','show-life'],['doom','show-doom'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather']];",
+  "    for(var ri=0;ri<regApps.length;ri++){showApp(regApps[ri][1]); await sleep(0);} showApp('show-caps'); await sleep(0);",
+  "    S('desk_every_app_registered',regApps.every(function(a){return reg(a[0]);})); S('desk_every_tiled_app_dotted',regApps.filter(function(a){return a[0]!=='weather';}).every(function(a){return dot(a[0]);}));",
+  // Every registered plain app, including Browser and Console, exposes its established Kill.
+  "    var plainIds=['chrome','music','photobooth','video','call','chat','mail','calendar','tattoo','mines','life','code','console']; var plainKill=true;",
+  "    for(var pi=0;pi<plainIds.length;pi++){ctxAt(deskTile(plainIds[pi])); if(!monKill()) plainKill=false; escMenu();} S('desk_registered_plain_apps_have_kill',plainKill);",
+  // Verify every desktop action dispatches to that app's exact themed hook (Mail's real gag
+  // above covers the visual integration; spies keep this full mapping check fast).
+  "    var hookApps=[['chrome','__killMonitorBrowser'],['music','__killMonitorMusic'],['photobooth','__killMonitorPhotobooth'],['video','__killMonitorVideo'],['call','__killMonitorFamily'],['chat','__killMonitorChat'],['mail','__killMonitorMail'],['calendar','__killMonitorCalendar'],['tattoo','__killMonitorTattoo'],['mines','__killMonitorMines'],['life','__killMonitorLife'],['code','__killMonitorCode'],['console','__killMonitorConsole']]; var exactHooks=true;",
+  "    for(var hi=0;hi<hookApps.length;hi++){var hp=hookApps[hi], oldHook=window[hp[1]], called=''; (function(id,name){window[name]=function(){called=id;};})(hp[0],hp[1]); ctxAt(deskTile(hp[0])); if(monKill()) monKill().click(); else exactHooks=false; if(called!==hp[0]||reg(hp[0])||dot(hp[0])) exactHooks=false; showApp('show-caps'); await sleep(0); window[hp[1]]=oldHook;} S('desk_exact_plain_kill_hooks',exactHooks);",
+  // Host tile with runtime STOPPED remains Open-only even though its task is registered.
   "    window.__doomRunning=function(){return false;}; showApp('show-caps'); S('desk_doom_stopped_prevented', ctxAt(deskTile('doom'))); S('desk_doom_stopped_items', monItems()); S('desk_doom_stopped_has_kill', !!monKill()); escMenu(); await sleep(20);",
-  // host tile with runtime RUNNING → Open + Kill (Open first)
+  // Host tile with runtime RUNNING → Open + Kill (Open first).
   "    window.__doomRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('doom')); S('desk_doom_running_items', monItems()); S('desk_doom_running_has_open', !!monOpen()); S('desk_doom_running_has_kill', !!monKill());",
-  // clicking Kill calls the SILENT host kill hook (spied — no real death flash) + hides menu
-  "    window.__killMonitorDoom=function(){ window.__deskKill='doom'; }; window.__deskKill=null; if(monKill()) monKill().click(); await sleep(20); S('desk_doom_kill_called', window.__deskKill==='doom'); S('desk_doom_kill_hid_menu', !monMenu());",
-  // each host maps to its OWN predicate + kill hook — linux + python offer Kill when running
+  // The runtime keeps its own hook, while the registry/dot are cleared immediately.
+  "    window.__killMonitorDoom=function(){window.__deskKill='doom';}; window.__deskKill=null; if(monKill()) monKill().click(); await sleep(20); S('desk_doom_kill_called',window.__deskKill==='doom'); S('desk_doom_kill_cleared',!reg('doom')&&!dot('doom')); S('desk_doom_kill_hid_menu',!monMenu());",
+  // Each remaining host maps to its own predicate + kill hook.
   "    window.__lxRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('linux')); S('desk_linux_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
   "    window.__pyRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('python')); S('desk_python_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
-  // clicking Open launches the app (mines → show-mines, pure JS) + hides the menu
-  "    showApp('show-caps'); ctxAt(deskTile('mines')); if(monOpen()) monOpen().click(); await sleep(60); S('desk_open_launched', mon().classList.contains('show-mines')); S('desk_open_hid_menu', !monMenu());",
   // right-clicking a NON-icon desktop surface (the menu-bar brand) → no custom menu, native kept
   "    showApp('show-caps'); var brand=document.querySelector('#monitor-desktop-dock .desk-brand'); S('desk_nontile_prevented', brand?ctxAt(brand):'no-brand'); S('desk_nontile_no_menu', !monMenu());",
   // Console Restart now runs the JS-crash flatline flash, THEN refreshes (clears the scrollback +
@@ -280,7 +302,7 @@ check("right-click on the bare monitor desktop eats the native menu, shows no cu
 console.log(" non-runtime apps (mail/chat/weather/mines/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("right-clicking the zoomed monitor rim keeps zoom and exposes the active app menu", s.rim_right_pointer_kept_zoom === true && s.rim_context_prevented === true && s.rim_menu_present === true, { zoom: s.rim_right_pointer_kept_zoom, prevented: s.rim_context_prevented, menu: s.rim_menu_present });
-check("Mail Kill launches envelopes as planes and hides its menu", s.mail_kill_started === true && s.mail_kill_hid_menu === true && s.mail_kill_envelopes === true && s.mail_kill_launched === true);
+check("Mail Kill launches envelopes as planes, clears its task dot, and hides its menu", s.mail_kill_started === true && s.mail_kill_hid_menu === true && s.mail_kill_registry_cleared === true && s.mail_kill_envelopes === true && s.mail_kill_launched === true);
 check("Mail Kill collides the planes, empties the tray, resets unread state, and closes", s.mail_kill_caption === true && s.mail_kill_collision === true && s.mail_kill_empty_tray === true && s.mail_kill_teardown === true, { caption: s.mail_kill_caption, collision: s.mail_kill_collision, empty: s.mail_kill_empty_tray, teardown: s.mail_kill_teardown });
 check("Chat Kill starts on the open app and types the interrupted sentence", s.chat_kill_started === true && s.chat_kill_still_open === true && s.chat_kill_typing_stage === true);
 check("Chat Kill safely cancels pending and queued work", s.chat_kill_cancelled_pending === true);
@@ -343,17 +365,24 @@ check("python restart runs the Black Knight flash then destroys + clears the con
 check("console restart runs the flatline flash then refreshes + clears the console", s.console_restart_threw === null && s.console_restart_flash_started === true && (s.console_restart_cleared_out === true || s.console_restart_cleared_out === "no-console-out") && s.console_restart_torn_down === true, s.console_restart_threw);
 check("no uncaught JS errors during the run", Array.isArray(rep.errors) && rep.errors.length === 0, rep.errors);
 
-// ==== DESKTOP DOCK-ICON CONTEXT MENU (Open / Kill) — appended assertions ====
-console.log(" desktop dock-icon menu (Open / Kill):");
-check("desktop right-click a non-host tile (mail) → Open + Kill (Open first)", s.desk_mail_prevented === true && Array.isArray(s.desk_mail_items) && s.desk_mail_items.length === 2 && /open/i.test(s.desk_mail_items[0] || "") && /kill/i.test(s.desk_mail_items[1] || "") && s.desk_mail_has_open === true && s.desk_mail_has_kill === true, s.desk_mail_items);
-check("desktop non-host Kill invokes resetMonitorAppState(id) + hides the menu", s.desk_mail_kill_called === true && s.desk_mail_kill_hid_menu === true, { called: s.desk_mail_kill_called, hid: s.desk_mail_kill_hid_menu });
-check("desktop host tile with runtime STOPPED → Open only", s.desk_doom_stopped_prevented === true && Array.isArray(s.desk_doom_stopped_items) && s.desk_doom_stopped_items.length === 1 && s.desk_doom_stopped_has_kill === false, s.desk_doom_stopped_items);
-check("desktop host tile with runtime RUNNING → Open + Kill (Open first)", Array.isArray(s.desk_doom_running_items) && s.desk_doom_running_items.length === 2 && /open/i.test(s.desk_doom_running_items[0] || "") && /kill/i.test(s.desk_doom_running_items[1] || "") && s.desk_doom_running_has_open === true && s.desk_doom_running_has_kill === true, s.desk_doom_running_items);
-check("desktop Kill calls the silent host kill hook + hides the menu", s.desk_doom_kill_called === true && s.desk_doom_kill_hid_menu === true);
-check("desktop Kill offered for a running linux host", s.desk_linux_running_has_kill === true);
-check("desktop Kill offered for a running python host", s.desk_python_running_has_kill === true);
-check("desktop Open launches the app (mines) + hides the menu", s.desk_open_launched === true && s.desk_open_hid_menu === true);
-check("desktop right-click a non-icon surface (brand) → no custom menu, native eaten", s.desk_nontile_prevented === true && s.desk_nontile_no_menu === true, { prevented: s.desk_nontile_prevented });
+// ==== DESKTOP TASK REGISTRY + DOCK-ICON CONTEXT MENU ====
+console.log(" desktop running-app registry + dock-icon menu:");
+check("fresh app tiles all expose Open only and have no running dots", s.desk_fresh_all_open_only === true && s.desk_fresh_no_dots === true);
+check("real desktop Open registers and dots Mail", s.desk_mail_open_registered === true);
+check("normal close backgrounds Mail without clearing its registry entry or dot", s.desk_mail_close_kept_running === true);
+check("running dot does not change the dock cell dimensions", s.desk_dot_no_layout_shift === true);
+check("backgrounded Mail exposes Open + Kill (Open first)", s.desk_mail_prevented === true && Array.isArray(s.desk_mail_items) && s.desk_mail_items.length === 2 && /open/i.test(s.desk_mail_items[0] || "") && /kill/i.test(s.desk_mail_items[1] || "") && s.desk_mail_has_open === true && s.desk_mail_has_kill === true, s.desk_mail_items);
+check("desktop Mail Kill runs the same paper-airplane gag, clears its task, and hides the menu", s.desk_mail_kill_same_gag === true && s.desk_mail_kill_cleared === true && s.desk_mail_kill_hid_menu === true, { gag: s.desk_mail_kill_same_gag, cleared: s.desk_mail_kill_cleared, hid: s.desk_mail_kill_hid_menu });
+check("switching foreground apps keeps both tasks registered and dotted", s.desk_switch_kept_both_running === true);
+check("all 17 monitor apps, including toolbar Weather, register from their foreground class", s.desk_every_app_registered === true);
+check("all 16 desktop apps receive a running dot", s.desk_every_tiled_app_dotted === true);
+check("every registered plain app, including Browser and Console, offers Kill", s.desk_registered_plain_apps_have_kill === true);
+check("every plain desktop Kill dispatches to that app's exact themed hook and clears its task", s.desk_exact_plain_kill_hooks === true);
+check("registered runtime with engine STOPPED remains Open only", s.desk_doom_stopped_prevented === true && Array.isArray(s.desk_doom_stopped_items) && s.desk_doom_stopped_items.length === 1 && s.desk_doom_stopped_has_kill === false, s.desk_doom_stopped_items);
+check("registered runtime with engine RUNNING exposes Open + Kill", Array.isArray(s.desk_doom_running_items) && s.desk_doom_running_items.length === 2 && /open/i.test(s.desk_doom_running_items[0] || "") && /kill/i.test(s.desk_doom_running_items[1] || "") && s.desk_doom_running_has_open === true && s.desk_doom_running_has_kill === true, s.desk_doom_running_items);
+check("desktop runtime Kill calls its own hook, clears the registry/dot, and hides the menu", s.desk_doom_kill_called === true && s.desk_doom_kill_cleared === true && s.desk_doom_kill_hid_menu === true);
+check("registered, live Linux and Python runtimes offer Kill", s.desk_linux_running_has_kill === true && s.desk_python_running_has_kill === true);
+check("desktop right-click a non-icon surface shows no custom menu", s.desk_nontile_prevented === true && s.desk_nontile_no_menu === true, { prevented: s.desk_nontile_prevented });
 
 console.log("\n" + (fails ? ("FAILED " + fails + " check(s)") : "All menu checks passed."));
 console.log("captured console menu HTML: " + (s.menu_html || "(none)"));

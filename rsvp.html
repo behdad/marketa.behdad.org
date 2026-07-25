@@ -3487,15 +3487,18 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .dock-grid.searching .dock-app.search-match{opacity:1}
 .dock-app.search-match .dock-tile{box-shadow:inset 0 0 0 .7px #8e3a4a,0 0 0 .7px rgba(255,253,248,.95)}
 #monitor-dock-search{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease}
-#monitor-dock-search.active{opacity:1;visibility:visible}
+#monitor-dock-search.active{opacity:1;visibility:visible;pointer-events:auto}
 .desk-search-bg{fill:#fffdf8;stroke:#8e3a4a;stroke-width:.45}
 .desk-search-text{fill:#453a31;font-family:sans-serif;font-size:3px;letter-spacing:0}
 .desk-search-completion{fill:#9a9288}
 .desk-search-text.no-match{fill:#8e3a4a}
 .desk-search-button{cursor:pointer}
-.desk-search-button .desk-search-icon{fill:none;stroke:#f8f5ec;stroke-width:.62;stroke-linecap:round;opacity:.82}
-.desk-search-button:hover .desk-search-icon,.desk-search-button:focus .desk-search-icon{stroke:#d9a6a6;opacity:1}
-.dock-search-keyboard{position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:0;pointer-events:none;font-size:16px;border:0;padding:0}
+.desk-search-button .desk-search-icon{fill:none;stroke:#f8f5ec;stroke-width:.55;stroke-linecap:round;stroke-linejoin:round}
+.desk-search-button:hover .desk-search-icon,.desk-search-button:focus .desk-search-icon{stroke:#d9a6a6}
+/* Android only raises its keyboard reliably for a user-focused input with a real box.
+   Keep that box effectively invisible and outside the SVG while its value mirrors the
+   native monitor finder. */
+.dock-search-keyboard{position:fixed;left:50%;top:50%;width:36px;height:20px;opacity:.01;pointer-events:none;font-size:16px;border:0;padding:0;background:transparent;color:transparent;caret-color:transparent;outline:none}
 .desk-bar-text{fill:#f8f5ec; font-family:sans-serif; font-size:3.2px; letter-spacing:0.2px}
 .desk-brand{cursor:pointer}
 .desk-brand:hover .desk-bar-text{fill:#d9a6a6}
@@ -42568,8 +42571,8 @@ setOfficeProgress("pc", false);
     var searchButton = mkEl("g", { id: "monitor-desk-search-button", "class": "desk-search-button",
       role: "button", tabindex: "0", "data-aria-i": "desk_search_apps_aria",
       "aria-label": (T[document.documentElement.lang] || T.en).desk_search_apps_aria || T.en.desk_search_apps_aria }, dock);
-    mkEl("circle", { cx: 288.8, cy: 156.6, r: 1.22, "class": "desk-search-icon" }, searchButton);
-    mkEl("path", { d: "M289.72 157.52 L291.25 159.05", "class": "desk-search-icon" }, searchButton);
+    mkEl("path", { d: "M291.18 156.45 A1.18 1.18 0 1 1 288.82 156.45 A1.18 1.18 0 1 1 291.18 156.45 M289.15 157.3 L287.65 158.8",
+      "class": "desk-search-icon" }, searchButton);
     mkEl("rect", { x: 281, y: 154, width: 16, height: 5.5, fill: "transparent" }, searchButton);
     function activateDockSearch(e) {
       if (e) { e.preventDefault(); e.stopPropagation(); }
@@ -42578,6 +42581,9 @@ setOfficeProgress("pc", false);
       brandG.setAttribute("aria-expanded", "false");
       openDockSearch(true);
     }
+    searchButton.addEventListener("pointerdown", function (e) {
+      if (e.pointerType === "touch") activateDockSearch(e);
+    });
     searchButton.addEventListener("click", activateDockSearch);
     searchButton.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     searchButton.addEventListener("keydown", function (e) {
@@ -42793,8 +42799,8 @@ setOfficeProgress("pc", false);
       dockGrid.appendChild(cell);
     });
     // Typing while zoomed onto the bare desktop temporarily replaces the menu bar with
-    // an app finder. It is SVG text rather than a real input: the global capture handler
-    // owns the short query, so the field cannot steal focus from an app after it opens.
+    // an app finder. SVG paints the finder; a nearly invisible real input mirrors it so
+    // a direct touch can summon mobile keyboards without changing the desktop layout.
     dockSearch = mkEl("g", { id: "monitor-dock-search" }, dock);
     mkEl("rect", { x: 254.5, y: 154.4, width: 123, height: 4.7, rx: 1.1, "class": "desk-search-bg" }, dockSearch);
     var searchGlyph = mkEl("text", { x: 257, y: 157.9, "class": "desk-search-text", "aria-hidden": "true" }, dockSearch);
@@ -42824,6 +42830,9 @@ setOfficeProgress("pc", false);
       var app = dockSearchBest;
       clearDockSearch();
       if (app) { appOpenTs = Date.now(); app.open(); }
+    });
+    dockSearch.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); e.stopPropagation(); openDockSearch(true);
     });
 
     // The top-left wordmark is the loft OS's system menu. Native SVG keeps it correctly
@@ -43321,7 +43330,11 @@ setOfficeProgress("pc", false);
   }, true);
   // Search is a transient desktop mode, not persistent desktop state. Any pointer gesture hands
   // control back immediately; a later return to the desktop always starts clean.
-  document.addEventListener("pointerdown", function () { if (dockSearchOpen || dockSearchQuery) clearDockSearch(); }, true);
+  document.addEventListener("pointerdown", function (e) {
+    if (!dockSearchOpen && !dockSearchQuery) return;
+    if ((dockSearch && dockSearch.contains(e.target)) || (searchButton && searchButton.contains(e.target))) return;
+    clearDockSearch();
+  }, true);
   window.__monitorDockSearch = function () { return { open: dockSearchOpen, query: dockSearchQuery, match: dockSearchBest && dockSearchBest.id, completion: dockSearchCompletion }; };
   // ── CONSOLE APP ─────────────────────────────────────────────────────────────────
   // A real (tiny) JavaScript REPL: input line + scrollback, evaluated with indirect

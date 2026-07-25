@@ -3402,7 +3402,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    No need to touch the other boot-logos' pointer-events: monitor clicks still delegate up. */
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
-#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-console #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-family #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-clock #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-chat #monitor-desktop-dock, #office-monitor.show-code #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock, #office-monitor.show-doom #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-console #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-pacman #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-family #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-clock #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-chat #monitor-desktop-dock, #office-monitor.show-code #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock, #office-monitor.show-doom #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
 /* the dock is an HTML app grid in a foreignObject below the menu bar: 8 columns, and a
    thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
    only then). overscroll-behavior + the grid's own wheel/touchmove stopPropagation keep
@@ -3424,6 +3424,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 .dock-grid{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}
 }
 .dock-app{display:flex; flex-direction:column; align-items:center; gap:0.3px; padding-top:0.4px; cursor:default; transition:transform .15s ease}
+.dock-app.dock-app-locked{display:none}
 #office-monitor.dev-zoomed .dock-app{cursor:pointer}
 #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:scale(1.09)} /* only advertise app launching once clicks reach the icons; plain scale avoids translateZ/will-change (WebKit bug 23113) */
 /* ...but ANY transform still makes a RenderLayer → the hovered tile blinks out under the monitor
@@ -3738,6 +3739,34 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #office-monitor.show-mines #monitor-mines{opacity:1; pointer-events:auto}
 #monitor-mines-close{cursor:pointer}
 #monitor-mines-close:hover .seg-hover{opacity:.55}
+/* Pac-Man is pure HTML/CSS rather than canvas: replaced elements inside the scaled
+   monitor foreignObject disappear in WebKit. Grid stacking keeps every maze tile,
+   pellet and actor in the same compositor-safe flow. */
+#monitor-pacman{opacity:0;pointer-events:none}
+#office-monitor.show-pacman #monitor-pacman{opacity:1;pointer-events:auto}
+#monitor-pacman-close{cursor:pointer}
+#monitor-pacman-close:hover .seg-hover{opacity:.55}
+.pac-wrap{width:100%;height:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) 25px;gap:1px;padding:1px;background:#050711;color:#f8f5ec;font:2.3px/1 ui-monospace,monospace;user-select:none;touch-action:none}
+.pac-board{display:grid;grid-template:repeat(15,minmax(0,1fr))/repeat(19,minmax(0,1fr));min-width:0;min-height:0;background:#02030a;border:.45px solid #253fc8;border-radius:1px;overflow:hidden}
+.pac-cell,.pac-actor{grid-row:var(--r);grid-column:var(--c);min-width:0;min-height:0}
+.pac-wall{background:#172d96;box-shadow:inset 0 0 0 .18px #4164ff}
+.pac-dot,.pac-power{grid-row:var(--r);grid-column:var(--c);place-self:center;border-radius:50%;background:#f5d7a1}
+.pac-dot{width:1px;height:1px}.pac-power{width:2px;height:2px;box-shadow:0 0 1px #fff}
+.pac-actor{z-index:2;place-self:center}
+.pac-player{width:3px;height:3px;border-radius:50%;background:conic-gradient(from var(--mouth),#ffd83d 0 42%,transparent 42% 58%,#ffd83d 58% 100%)}
+.pac-player[data-dir="right"]{--mouth:0deg}.pac-player[data-dir="down"]{--mouth:90deg}.pac-player[data-dir="left"]{--mouth:180deg}.pac-player[data-dir="up"]{--mouth:270deg}
+.pac-ghost{width:3px;height:3px;border-radius:1.5px 1.5px .6px .6px;background:var(--ghost);box-shadow:inset 0 -1px 0 rgba(255,255,255,.28)}
+.pac-fright .pac-ghost{background:#325cff}
+.pac-side{display:grid;grid-template-rows:auto auto 1fr auto;gap:1px;min-width:0;text-align:center}
+.pac-title{color:#ffd83d;font-size:3.1px;font-weight:800;letter-spacing:.2px}
+.pac-score{font-size:2.15px;line-height:1.2;white-space:nowrap}
+.pac-message{align-self:center;color:#ffb4c1;font-size:2.1px;line-height:1.25}
+.pac-controls{display:grid;grid-template:repeat(3,5px)/repeat(3,5px);justify-content:center;gap:.5px}
+.pac-btn,.pac-new{border:0;border-radius:1px;background:#182252;color:#f8f5ec;font:2.7px/1 ui-monospace,monospace;padding:0}
+.pac-btn[data-dir="up"]{grid-area:1/2}.pac-btn[data-dir="left"]{grid-area:2/1}.pac-btn[data-dir="right"]{grid-area:2/3}.pac-btn[data-dir="down"]{grid-area:3/2}
+.pac-new{height:5px;font-size:2px;background:#8e3a4a}
+.pac-wrap.pac-killed .pac-board{filter:grayscale(1)}
+.pac-wrap.pac-killed .pac-message{font-size:2.5px;color:#ffd83d}
 #office-monitor.death-mines #monitor-mines{pointer-events:none}
 .mines-wrap{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:96px 1fr; grid-template-rows:42px; background:#cfc9bb; font-family:sans-serif; color:#453a31; overflow:hidden} /* grid (was flex+position:relative): board/side/msg stack without a RenderLayer under the monitor's scaled foreignObject (WebKit bug 23113) */
 .mines-board{flex:none; grid-column:1; grid-row:1; display:grid; grid-template-columns:repeat(16,6px); grid-auto-rows:6px; width:96px; height:42px}
@@ -7932,7 +7961,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #office-laptop.rebooting.sweet #laptop-boot-apple{opacity:0}
 #rsvp-trip-ghost{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:4}
 #rsvp-trip-ghost-inner{opacity:0; transform-box:fill-box; transform-origin:center; filter:blur(1.5px)}
-#rsvp-trip-ghost-inner.roaming{animation:trip-ghost-roam 6s ease-in-out}
+#rsvp-trip-ghost-inner.roaming{animation:trip-ghost-roam 6s ease-in-out;pointer-events:all;cursor:pointer}
 @keyframes trip-ghost-roam{
   0%{transform:translate(-60px,10px) scale(1.3); opacity:0}
   15%{opacity:1}
@@ -20033,6 +20062,20 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#453a31" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
+<!-- PAC-MAN: unlocked by catching Behdad's drifting ketamine ghost. The board is
+     DOM/CSS-grid based so it remains playable in WebKit's scaled foreignObject. -->
+<g id="monitor-pacman">
+<foreignObject x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-pacman-wrap" class="pac-wrap"></div>
+</foreignObject>
+<g id="monitor-pacman-close" transform="translate(76.0,29.3) scale(0.8)">
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#172d96" stroke="#0b185d" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.24"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#081047" opacity="0"/>
+<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#ffd83d" stroke-width="0.6" stroke-linecap="round"/>
+</g>
+</g>
 <!-- VIDEO app: markéta's identity-dance film, letterboxed in a foreignObject over the
      screen, with the same mini close pill as the player. The <video> gets its src on
      first open (openVideoApp); .absent on the wrap swaps in the bilingual
@@ -24874,6 +24917,7 @@ section{margin:1.9rem 0}
     <svg id="rsvp-trip-ghost" aria-hidden="true" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice">
 <g id="rsvp-trip-ghost-inner">
 <g id="rsvp-trip-ghost-pos" transform="translate(340,170) scale(0.65)">
+<circle cx="0" cy="0" r="72" fill="transparent" pointer-events="all"/>
 <path d="M-32 -22 Q-26 -52 0 -54 Q26 -52 32 -22 Q0 -32 -32 -22 Z" fill="#eceeea"/>
 <path d="M-32 -21 Q2 -10 36 -22 L28 -12 Q0 -4 -26 -12 Z" fill="#d6dad4"/>
 <circle cx="0" cy="0" r="27" fill="#f2f2ec"/>
@@ -25961,6 +26005,7 @@ var T = {
       df_tattoo_quip: "No regrets.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Dance like the whole world is watching.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "You found them.", // caption under the Mines board's forced reveal and detonation chain
+      df_pacman_quip: "Game over. Insert another ghost.", // caption under Pac-Man's ghost takeover
       df_call_quip: "It’s not you. It’s the connection.", // caption after the Call signal drops
       df_call_lost: "CONNECTION LOST", // status inside the Call kill overlay
       df_photobooth_quip: "Nobody blinked.", // caption under the empty-chair photo strip (Photobooth kill)
@@ -26328,6 +26373,12 @@ var T = {
     console_laser: "bzzzt — red dot on the loose, shadowing your cursor. laser(false) calls it off. good luck, cat.",
     app_mail: "mail",
     app_mines: "mines",
+    app_pacman: "pac-man",
+    pacman_ready: "READY!",
+    pacman_win: "MAZE CLEARED",
+    pacman_over: "GAME OVER",
+    pacman_kill: "GHOSTS WIN",
+    pacman_new: "NEW",
     mines_lose: "you set off the ring! (it was always going to happen)",
     mines_win: "cleared! the ring stays a surprise",
     app_life: "life",
@@ -26912,6 +26963,7 @@ var T = {
       df_tattoo_quip: "Bez výčitek.", // caption under the NO REGRETS tattoo (Tattoo kill)
       df_video_quip: "Tancuj, jako by se díval celý svět.", // Sasquatch 2009 lone-dancer homage (Video kill)
       df_mines_quip: "Našel jsi je.", // caption under the Mines board's forced reveal and detonation chain
+      df_pacman_quip: "Konec hry. Vlož dalšího ducha.", // caption under Pac-Man's ghost takeover
       df_call_quip: "Není to tebou. Zlobí spojení.", // caption after the Call signal drops
       df_call_lost: "SPOJENÍ PŘERUŠENO", // status inside the Call kill overlay
       df_photobooth_quip: "Nikdo nemrkl.", // caption under the empty-chair photo strip (Photobooth kill)
@@ -27275,6 +27327,12 @@ var T = {
     console_laser: "bzzzt — červená tečka je venku a sleduje kurzor. laser(false) ji odvolá. hodně štěstí, kočko.",
     app_mail: "pošta",
     app_mines: "miny",
+    app_pacman: "pac-man",
+    pacman_ready: "PŘIPRAVEN!",
+    pacman_win: "BLUDIŠTĚ HOTOVO",
+    pacman_over: "KONEC HRY",
+    pacman_kill: "DUCHOVÉ VYHRÁLI",
+    pacman_new: "NOVÁ",
     mines_lose: "spustili jste prsten! (stejně k tomu jednou dojít muselo)",
     mines_win: "vyčištěno! prsten zůstává překvapením",
     app_life: "život",
@@ -27671,6 +27729,7 @@ function setLang(l) {
   if (window.refreshWeddingText) window.refreshWeddingText();
   if (window.refreshMailText) window.refreshMailText();
   if (window.refreshMinesText) window.refreshMinesText();
+  if (window.refreshPacmanText) window.refreshPacmanText();
   if (window.refreshFamilyText) window.refreshFamilyText();
   if (window.refreshCalendarText) window.refreshCalendarText();
   if (window.refreshMonitorClockText) window.refreshMonitorClockText();
@@ -40487,7 +40546,7 @@ setOfficeProgress("pc", false);
   };
   function startSaver() {
     if (monitorSleeping) return;
-    if (monitor.classList.contains("show-console") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-video") || monitor.classList.contains("show-family") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-chat") || monitor.classList.contains("show-code") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, chatting, reading mail, a minesweeper game, the film, playing doom, editing a script, the tattoo studio, a life sim, or a live call
+    if (monitor.classList.contains("show-console") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-pacman") || monitor.classList.contains("show-video") || monitor.classList.contains("show-family") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-chat") || monitor.classList.contains("show-code") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, chatting, reading mail, a live game, the film, playing doom, editing a script, the tattoo studio, a life sim, or a live call
     if (monitor.classList.contains("show-calendar") || monitor.classList.contains("show-clock")) { scheduleSaver(30000); return; } // nor over the open calendar / clock
     if (monitor.classList.contains("show-browser")) { scheduleSaver(30000); return; } // nor over someone browsing
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
@@ -40760,6 +40819,7 @@ setOfficeProgress("pc", false);
     closeDoom(); // pauses DOOM's run loop too — no engine spinning behind a dark screen
     closeMailApp();
     closeMinesApp(); // stops the game timer too — nothing ticks behind a dark screen
+    closePacmanApp(); // parks its maze loop without discarding the retained board
     closeVideoApp(); // pauses the film too — it never plays behind a dark/rebooting screen
     closeTattooApp(); // drops the studio (and any open send dialog) before the screen goes dark
     closeLifeApp(); // stops the Game-of-Life loop too — nothing ticks behind a dark screen
@@ -40770,7 +40830,7 @@ setOfficeProgress("pc", false);
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -41607,7 +41667,7 @@ setOfficeProgress("pc", false);
     eqFrame = frame;
     syncEqVisualLoop();
   }
-  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser"];
+  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser"];
   function eqVisualWant() {
     if (monitorSleeping || !eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
         !monitor.classList.contains("here") || !monitor.classList.contains("screen-on")) return false;
@@ -41942,6 +42002,9 @@ setOfficeProgress("pc", false);
     // games row: the tattoo studio, minesweeper, Game of Life, DOOM sit together
     { id: "tattoo", icon: "tattoo", labelKey: "app_tattoo", glyph: "🖊️", tile: "#c68e95", glyphSize: "5.2", open: function () { openTattooApp(); } },
     { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
+    { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2",
+      locked: function () { return !window.__pacmanUnlocked || !window.__pacmanUnlocked(); },
+      open: function () { openPacmanApp(); } },
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
     { id: "doom", labelKey: "app_doom", glyph: "🎮", tile: "#7e2323", color: "#e8c060", glyphSize: "5.2", open: function () { openDoom(); } },
     { id: "code", labelKey: "app_code", glyph: "</>", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "3.5", open: function () { openCode(); } },
@@ -41955,7 +42018,7 @@ setOfficeProgress("pc", false);
   ];
   window.__chatMonitorApps = function () {
     var dict = T[document.documentElement.lang] || T.en;
-    var apps = DESKTOP_APPS.map(function (app) {
+    var apps = DESKTOP_APPS.filter(function (app) { return !app.locked || !app.locked(); }).map(function (app) {
       return { id: app.id, label: dict[app.labelKey] || T.en[app.labelKey] || app.id, access: "desktop" };
     });
     // Weather and Clock deliberately have no desktop tiles; their live menu-bar
@@ -41976,7 +42039,7 @@ setOfficeProgress("pc", false);
   var MONITOR_APP_CLASSES = {
     chrome: "show-browser", music: "show-nowplaying", photobooth: "photobooth",
     video: "show-video", call: "show-family", chat: "show-chat", mail: "show-mail",
-    calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", mines: "show-mines",
+    calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", mines: "show-mines", pacman: "show-pacman",
     life: "show-life", doom: "show-doom", code: "show-code", console: "show-console",
     python: "show-python", linux: "show-linux", weather: "show-weather"
   };
@@ -41985,7 +42048,7 @@ setOfficeProgress("pc", false);
     photobooth: "__killMonitorPhotobooth", video: "__killMonitorVideo",
     call: "__killMonitorFamily", chat: "__killMonitorChat", mail: "__killMonitorMail",
     calendar: "__killMonitorCalendar", clock: "__killMonitorClock", tattoo: "__killMonitorTattoo",
-    mines: "__killMonitorMines", life: "__killMonitorLife", doom: "__killMonitorDoom",
+    mines: "__killMonitorMines", pacman: "__killMonitorPacman", life: "__killMonitorLife", doom: "__killMonitorDoom",
     code: "__killMonitorCode", console: "__killMonitorConsole",
     python: "__killMonitorPython", linux: "__killMonitorLinux",
     weather: "__killMonitorWeather"
@@ -42213,6 +42276,7 @@ setOfficeProgress("pc", false);
     DESKTOP_APPS.forEach(function (app) {
       var cell = document.createElement("div");
       cell.className = "dock-app dock-app-" + app.id;
+      if (app.locked && app.locked()) cell.classList.add("dock-app-locked");
       cell.id = "monitor-dock-" + app.id; // stable handle for the cinematic's ghost-cursor taps (dock tiles are otherwise class-only)
       dockCells[app.id] = cell;
       var tile = document.createElement("div");
@@ -42328,7 +42392,11 @@ setOfficeProgress("pc", false);
       var lang = document.documentElement.lang;
       label.textContent = (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || "";
       cell.appendChild(label);
-      cell.addEventListener("click", function (e) { e.stopPropagation(); clearDockSearch(); appOpenTs = Date.now(); app.open(); });
+      cell.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (app.locked && app.locked()) return;
+        clearDockSearch(); appOpenTs = Date.now(); app.open();
+      });
       cell.addEventListener("dblclick", function (e) { e.stopPropagation(); });
       dockGrid.appendChild(cell);
     });
@@ -42987,7 +43055,7 @@ setOfficeProgress("pc", false);
         ["show-chat", "chat"], ["show-weather", "weather"], ["show-calendar", "calendar"], ["show-clock", "clock"], ["show-mail", "mail"],
         ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
         ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-code", "code"],
-        ["show-mines", "mines"], ["show-life", "life"], ["show-doom", "doom"], ["show-video", "video"],
+        ["show-mines", "mines"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "doom"], ["show-video", "video"],
         ["show-browser", "browser"]
       ];
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
@@ -45729,6 +45797,260 @@ setOfficeProgress("pc", false);
     });
   }
   window.__killMonitorMines = minesDeathFlash;
+  // Pac-Man is the ketamine ghost's hidden monitor game. One bounded timeout owns the
+  // simulation; closing the app, hiding/blurring the page, or powering down the monitor
+  // clears it immediately, so a background tab can never accumulate queued game steps.
+  var PAC_MAZE = [
+    "###################",
+    "#o.......#.......o#",
+    "#.###.##.#.##.###.#",
+    "#.................#",
+    "#.##.#.#####.#.##.#",
+    "#....#...#...#....#",
+    "####.###...###.####",
+    "#......#...#......#",
+    "####.###.#.###.####",
+    "#....#...#...#....#",
+    "#.##.#.#####.#.##.#",
+    "#.................#",
+    "#.###.##.#.##.###.#",
+    "#o..#.........#..o#",
+    "###################"
+  ];
+  var PAC_DIRS = { left: [0, -1], right: [0, 1], up: [-1, 0], down: [1, 0] };
+  var PAC_REVERSE = { left: "right", right: "left", up: "down", down: "up" };
+  var pacWrap = document.getElementById("monitor-pacman-wrap");
+  var pacBoard = null, pacScoreEl = null, pacMessageEl = null, pacNewEl = null;
+  var pacPlayerEl = null, pacGhostEls = [], pacPelletEls = [];
+  var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacCheckpointTicks = 0;
+  var pacState = null;
+  function pacFreshState() {
+    var pellets = [];
+    for (var r = 0; r < PAC_MAZE.length; r++) for (var c = 0; c < PAC_MAZE[r].length; c++) pellets.push(PAC_MAZE[r][c] === "." || PAC_MAZE[r][c] === "o");
+    return {
+      score: 0, lives: 3, level: 1, status: "ready", direction: "left", desired: "left", fright: 0,
+      player: { r: 13, c: 9 },
+      ghosts: [
+        { r: 7, c: 8, homeR: 7, homeC: 8, dir: "left", color: "#e85d75" },
+        { r: 7, c: 9, homeR: 7, homeC: 9, dir: "up", color: "#64d7e8" },
+        { r: 7, c: 10, homeR: 7, homeC: 10, dir: "right", color: "#f4a261" }
+      ],
+      pellets: pellets
+    };
+  }
+  function pacText(key) { var d = T[document.documentElement.lang] || T.en; return d[key] || T.en[key] || key; }
+  function pacCellIndex(r, c) { return r * PAC_MAZE[0].length + c; }
+  function pacOpenCell(r, c) { return !!PAC_MAZE[r] && c >= 0 && c < PAC_MAZE[r].length && PAC_MAZE[r][c] !== "#"; }
+  function pacRemaining() {
+    if (!pacState) return 0;
+    var n = 0; for (var i = 0; i < pacState.pellets.length; i++) if (pacState.pellets[i]) n++;
+    return n;
+  }
+  function pacPlaceActor(el, actor) {
+    if (!el || !actor) return;
+    el.style.setProperty("--r", String(actor.r + 1));
+    el.style.setProperty("--c", String(actor.c + 1));
+  }
+  function pacPaintText() {
+    if (!pacBuilt || !pacState) return;
+    if (pacScoreEl) pacScoreEl.textContent = String(pacState.score).padStart(6, "0") + " · ♥" + pacState.lives;
+    if (pacMessageEl) {
+      var key = pacState.status === "win" ? "pacman_win" : pacState.status === "over" ? "pacman_over" : pacState.status === "ready" ? "pacman_ready" : "";
+      pacMessageEl.textContent = key ? pacText(key) : "";
+    }
+    if (pacNewEl) pacNewEl.textContent = pacText("pacman_new");
+  }
+  window.refreshPacmanText = pacPaintText;
+  function pacRender() {
+    if (!pacBuilt || !pacState) return;
+    for (var i = 0; i < pacPelletEls.length; i++) if (pacPelletEls[i]) pacPelletEls[i].style.visibility = pacState.pellets[i] ? "visible" : "hidden";
+    pacPlayerEl.setAttribute("data-dir", pacState.direction || pacState.desired || "left");
+    pacPlaceActor(pacPlayerEl, pacState.player);
+    for (var g = 0; g < pacGhostEls.length; g++) pacPlaceActor(pacGhostEls[g], pacState.ghosts[g]);
+    pacWrap.classList.toggle("pac-fright", pacState.fright > 0);
+    pacPaintText();
+  }
+  function pacBuild() {
+    if (pacBuilt || !pacWrap) return;
+    pacBuilt = true;
+    pacWrap.textContent = "";
+    pacBoard = document.createElement("div"); pacBoard.className = "pac-board"; pacWrap.appendChild(pacBoard);
+    for (var r = 0; r < PAC_MAZE.length; r++) for (var c = 0; c < PAC_MAZE[r].length; c++) {
+      var idx = pacCellIndex(r, c), ch = PAC_MAZE[r][c];
+      var cell = document.createElement("div"); cell.className = "pac-cell" + (ch === "#" ? " pac-wall" : "");
+      cell.style.setProperty("--r", String(r + 1)); cell.style.setProperty("--c", String(c + 1)); pacBoard.appendChild(cell);
+      if (ch === "." || ch === "o") {
+        var pellet = document.createElement("i"); pellet.className = ch === "o" ? "pac-power" : "pac-dot";
+        pellet.style.setProperty("--r", String(r + 1)); pellet.style.setProperty("--c", String(c + 1)); pacBoard.appendChild(pellet); pacPelletEls[idx] = pellet;
+      }
+    }
+    pacPlayerEl = document.createElement("b"); pacPlayerEl.className = "pac-cell pac-actor pac-player"; pacBoard.appendChild(pacPlayerEl);
+    ["#e85d75", "#64d7e8", "#f4a261"].forEach(function (color) {
+      var ghost = document.createElement("b"); ghost.className = "pac-cell pac-actor pac-ghost"; ghost.style.setProperty("--ghost", color); pacBoard.appendChild(ghost); pacGhostEls.push(ghost);
+    });
+    var side = document.createElement("div"); side.className = "pac-side"; pacWrap.appendChild(side);
+    var title = document.createElement("div"); title.className = "pac-title"; title.textContent = "PAC-MAN"; side.appendChild(title);
+    pacScoreEl = document.createElement("div"); pacScoreEl.className = "pac-score"; side.appendChild(pacScoreEl);
+    pacMessageEl = document.createElement("div"); pacMessageEl.className = "pac-message"; side.appendChild(pacMessageEl);
+    var controls = document.createElement("div"); controls.className = "pac-controls"; side.appendChild(controls);
+    [["up", "↑"], ["left", "←"], ["right", "→"], ["down", "↓"]].forEach(function (pair) {
+      var btn = document.createElement("button"); btn.type = "button"; btn.className = "pac-btn"; btn.setAttribute("data-dir", pair[0]); btn.textContent = pair[1];
+      btn.addEventListener("pointerdown", function (e) { e.preventDefault(); e.stopPropagation(); pacChoose(pair[0]); }); controls.appendChild(btn);
+    });
+    pacNewEl = document.createElement("button"); pacNewEl.type = "button"; pacNewEl.className = "pac-new";
+    pacNewEl.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); pacResetBoard(true); }); side.appendChild(pacNewEl);
+    pacWrap.addEventListener("click", function (e) { e.stopPropagation(); });
+    pacWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    var sx = 0, sy = 0;
+    pacBoard.addEventListener("touchstart", function (e) { if (!e.touches || !e.touches[0]) return; sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    pacBoard.addEventListener("touchend", function (e) {
+      if (!e.changedTouches || !e.changedTouches[0]) return;
+      var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 8) return;
+      pacChoose(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+    }, { passive: true });
+    if (!pacState) pacState = pacFreshState();
+    pacRender();
+  }
+  function pacCan(actor, dir) {
+    var d = PAC_DIRS[dir]; return !!d && pacOpenCell(actor.r + d[0], actor.c + d[1]);
+  }
+  function pacMove(actor, dir) {
+    var d = PAC_DIRS[dir]; if (!d || !pacCan(actor, dir)) return false;
+    actor.r += d[0]; actor.c += d[1]; actor.dir = dir; return true;
+  }
+  function pacResetActors() {
+    pacState.player = { r: 13, c: 9 };
+    pacState.direction = "left"; pacState.desired = "left"; pacState.fright = 0;
+    pacState.ghosts.forEach(function (g) { g.r = g.homeR; g.c = g.homeC; });
+  }
+  function pacCollision() {
+    for (var i = 0; i < pacState.ghosts.length; i++) {
+      var ghost = pacState.ghosts[i];
+      if (ghost.r !== pacState.player.r || ghost.c !== pacState.player.c) continue;
+      if (pacState.fright > 0) { pacState.score += 200; ghost.r = ghost.homeR; ghost.c = ghost.homeC; ghost.dir = "up"; return false; }
+      pacState.lives--;
+      if (pacState.lives <= 0) { pacState.status = "over"; pacStopLoop(); }
+      else { pacState.status = "ready"; pacResetActors(); pacStopLoop(); }
+      return true;
+    }
+    return false;
+  }
+  function pacGhostDirection(ghost) {
+    var choices = Object.keys(PAC_DIRS).filter(function (dir) { return pacCan(ghost, dir); });
+    if (choices.length > 1) choices = choices.filter(function (dir) { return dir !== PAC_REVERSE[ghost.dir]; });
+    if (!choices.length) return PAC_REVERSE[ghost.dir] || "left";
+    choices.sort(function (a, b) {
+      var da = PAC_DIRS[a], db = PAC_DIRS[b];
+      var ad = Math.abs(ghost.r + da[0] - pacState.player.r) + Math.abs(ghost.c + da[1] - pacState.player.c);
+      var bd = Math.abs(ghost.r + db[0] - pacState.player.r) + Math.abs(ghost.c + db[1] - pacState.player.c);
+      return pacState.fright > 0 ? bd - ad : ad - bd;
+    });
+    return Math.random() < 0.68 ? choices[0] : choices[Math.floor(Math.random() * choices.length)];
+  }
+  function pacSaveSoon(force) {
+    pacCheckpointTicks++;
+    if ((force || pacCheckpointTicks >= 10) && window.__saveLoftCheckpoint) { pacCheckpointTicks = 0; window.__saveLoftCheckpoint(); }
+  }
+  function pacStep() {
+    pacTimer = null;
+    if (!pacState || pacState.status !== "running" || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    if (pacCan(pacState.player, pacState.desired)) pacState.direction = pacState.desired;
+    pacMove(pacState.player, pacState.direction);
+    var idx = pacCellIndex(pacState.player.r, pacState.player.c);
+    if (pacState.pellets[idx]) {
+      pacState.pellets[idx] = false; pacState.score += PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? 50 : 10;
+      if (PAC_MAZE[pacState.player.r][pacState.player.c] === "o") pacState.fright = 42;
+      pacSaveSoon(false);
+    }
+    if (!pacCollision()) {
+      for (var g = 0; g < pacState.ghosts.length; g++) { var ghost = pacState.ghosts[g]; pacMove(ghost, pacGhostDirection(ghost)); if (pacCollision()) break; }
+    }
+    if (pacState.fright > 0) pacState.fright--;
+    if (pacRemaining() === 0 && pacState.status !== "over") { pacState.status = "win"; pacStopLoop(); pacSaveSoon(true); }
+    pacRender();
+    if (pacState.status === "running") pacTimer = setTimeout(pacStep, 155);
+  }
+  function pacStopLoop() { if (pacTimer) clearTimeout(pacTimer); pacTimer = null; }
+  function pacStartLoop() {
+    pacStopLoop();
+    if (!pacState || pacState.status !== "running" || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    pacTimer = setTimeout(pacStep, 155);
+  }
+  function pacChoose(dir) {
+    if (!pacUnlocked || !pacState || !PAC_DIRS[dir]) return false;
+    pacState.desired = dir;
+    if (pacState.status === "ready") { pacState.status = "running"; pacState.direction = dir; }
+    else if (pacState.status === "win" || pacState.status === "over") return false;
+    pacRender(); pacStartLoop(); return true;
+  }
+  function pacResetBoard(save) {
+    pacStopLoop(); pacState = pacFreshState(); if (pacBuilt) { pacWrap.classList.remove("pac-killed"); pacRender(); }
+    if (save) pacSaveSoon(true);
+  }
+  function pacSyncUnlock() {
+    var cell = dockCells && dockCells.pacman;
+    if (cell) cell.classList.toggle("dock-app-locked", !pacUnlocked);
+  }
+  function openPacmanApp() {
+    if (!pacUnlocked || !monitor.classList.contains("show-caps") || monitor.classList.contains("show-pacman")) return;
+    stopSaver(); clearTimeout(saverTimer); saverTimer = null; pacBuild(); monitor.classList.add("show-pacman");
+    if (pacState.status === "running") pacStartLoop();
+    playLaptopClickSound("office-monitor");
+  }
+  function closePacmanApp() {
+    if (!monitor.classList.contains("show-pacman")) { pacStopLoop(); return; }
+    monitor.classList.remove("show-pacman"); pacStopLoop(); pacSaveSoon(true); scheduleSaver();
+  }
+  window.__closeMonitorPacman = closePacmanApp;
+  window.__pacmanUnlocked = function () { return pacUnlocked; };
+  window.__pacmanState = function () { return pacState ? { unlocked: pacUnlocked, status: pacState.status, score: pacState.score, lives: pacState.lives, remaining: pacRemaining(), running: !!pacTimer } : { unlocked: pacUnlocked, status: "fresh", score: 0, lives: 3, remaining: 0, running: false }; };
+  window.__unlockPacman = function (open) {
+    if (!pacUnlocked) { pacUnlocked = true; pacSyncUnlock(); pacResetBoard(false); pacSaveSoon(true); }
+    if (open !== false && window.__openMonitorApp) window.__openMonitorApp("pacman");
+    return true;
+  };
+  window.__pacmanCapture = function () {
+    if (!pacUnlocked || !pacState) return { unlocked: false };
+    return { unlocked: true, score: pacState.score, lives: pacState.lives, status: pacState.status, direction: pacState.direction, desired: pacState.desired, fright: pacState.fright, player: pacState.player, ghosts: pacState.ghosts, pellets: pacState.pellets };
+  };
+  window.__pacmanRestore = function (saved) {
+    pacStopLoop(); pacUnlocked = !!(saved && saved.unlocked); pacSyncUnlock();
+    if (!pacUnlocked) { pacState = pacFreshState(); return false; }
+    var fresh = pacFreshState();
+    if (saved && Array.isArray(saved.pellets) && saved.pellets.length === fresh.pellets.length) fresh.pellets = saved.pellets.map(Boolean);
+    fresh.score = Math.max(0, +saved.score || 0); fresh.lives = Math.max(1, Math.min(3, +saved.lives || 3));
+    fresh.status = ["ready", "running", "win", "over"].indexOf(saved.status) >= 0 ? saved.status : "ready";
+    fresh.direction = PAC_DIRS[saved.direction] ? saved.direction : "left"; fresh.desired = PAC_DIRS[saved.desired] ? saved.desired : fresh.direction;
+    fresh.fright = Math.max(0, Math.min(60, +saved.fright || 0));
+    if (saved.player && pacOpenCell(+saved.player.r, +saved.player.c)) fresh.player = { r: +saved.player.r, c: +saved.player.c };
+    if (Array.isArray(saved.ghosts) && saved.ghosts.length === fresh.ghosts.length) saved.ghosts.forEach(function (g, i) {
+      if (g && pacOpenCell(+g.r, +g.c)) { fresh.ghosts[i].r = +g.r; fresh.ghosts[i].c = +g.c; fresh.ghosts[i].dir = PAC_DIRS[g.dir] ? g.dir : fresh.ghosts[i].dir; }
+    });
+    pacState = fresh; if (pacBuilt) pacRender(); return true;
+  };
+  window.__resetPacmanUnlock = function () { pacStopLoop(); pacUnlocked = false; pacState = pacFreshState(); pacSyncUnlock(); if (pacBuilt) pacRender(); };
+  function pacmanDeathFlash() {
+    var finish = function () { if (pacWrap) pacWrap.classList.remove("pac-killed"); if (window.resetMonitorAppState) window.resetMonitorAppState("pacman"); else { pacResetBoard(false); closePacmanApp(); } };
+    if (!monitor.classList.contains("show-pacman") || !window.__runMonitorDeathFlash) { finish(); return; }
+    window.__runMonitorDeathFlash({ screenClass: "death-pacman", beats: [{ key: "df_pacman_quip", at: 220 }], dur: 2300,
+      freeze: function () { pacStopLoop(); if (pacWrap) pacWrap.classList.add("pac-killed"); if (pacMessageEl) pacMessageEl.textContent = pacText("pacman_kill"); }, close: finish });
+  }
+  window.__killMonitorPacman = pacmanDeathFlash;
+  var pacClose = document.getElementById("monitor-pacman-close");
+  if (pacClose) { pacClose.addEventListener("click", function (e) { e.stopPropagation(); closePacmanApp(); playLaptopClickSound("office-monitor"); }); pacClose.addEventListener("dblclick", function (e) { e.stopPropagation(); }); }
+  document.addEventListener("keydown", function (e) {
+    if (!monitor.classList.contains("show-pacman") || e.ctrlKey || e.metaKey || e.altKey) return;
+    var map = { ArrowLeft: "left", a: "left", A: "left", ArrowRight: "right", d: "right", D: "right", ArrowUp: "up", w: "up", W: "up", ArrowDown: "down", s: "down", S: "down" };
+    if (!map[e.key]) return; e.preventDefault(); e.stopImmediatePropagation(); pacChoose(map[e.key]);
+  }, true);
+  function pacVisibilityChanged() { if (document.hidden || !document.hasFocus()) pacStopLoop(); else pacStartLoop(); }
+  document.addEventListener("visibilitychange", pacVisibilityChanged); window.addEventListener("focus", pacVisibilityChanged); window.addEventListener("blur", pacVisibilityChanged);
+  var ketGhost = document.getElementById("rsvp-trip-ghost-inner");
+  if (ketGhost) ketGhost.addEventListener("click", function (e) {
+    if (!ketGhost.classList.contains("roaming")) return;
+    e.preventDefault(); e.stopPropagation(); ketGhost.classList.remove("roaming"); window.__unlockPacman(true);
+  });
   // Phone Mines re-places this one HTML board into the pocket screen and back — the
   // monitor and phone never show it at once (different rooms), so they share the node.
   var __minesInPhone = false, minesPhoneHost = null;
@@ -46032,7 +46354,7 @@ setOfficeProgress("pc", false);
     if (monitor.classList.contains("show-calendar") && stepBack && window.__calendarBack && window.__calendarBack()) return true;
     if (monitor.classList.contains("show-console")) { closeConsole(!!stepBack); return true; }
     if (monitor.classList.contains("show-python") && window.__closeMonitorPython) { window.__closeMonitorPython(!!stepBack); return true; }
-    var apps = [["show-video", closeVideoApp], ["show-mines", closeMinesApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-doom", closeDoom], ["show-browser", closeBrowser]];
+    var apps = [["show-video", closeVideoApp], ["show-mines", closeMinesApp], ["show-pacman", closePacmanApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-doom", closeDoom], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
     if (monitor.classList.contains("show-clock") && window.__closeMonitorClock) { window.__closeMonitorClock(); return true; }
@@ -46111,19 +46433,19 @@ setOfficeProgress("pc", false);
   (function () {
     // Real closable apps this menu serves — the exact set __closeTopMonitorApp knows how to
     // close, minus the three console apps (console-ctx owns those). Keep in sync with it.
-    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-tattoo", "show-life", "show-code", "show-doom", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying"];
+    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying"];
     var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
     // per-app extras: a Restart hook + a runtime-running predicate (Kill greys out until true)
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-weather": "__killMonitorWeather", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
     // python/linux/console owned by console-ctx).
     var CLASS_TO_ID = {
-      "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "mines",
+      "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "mines", "show-pacman": "pacman",
       "show-tattoo": "tattoo", "show-life": "life", "show-code": "code", "show-calendar": "calendar", "show-clock": "clock",
       "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music"
     };
@@ -51245,6 +51567,7 @@ async def localfont(name):
     if (q === "california" || q === "tehran") { pendingMonitorCallee = q; app = monitorAppByName("call"); }
     else app = monitorAppByName(name);
     if (!app) return DESKTOP_APPS.concat(TOOLBAR_APPS).map(function (a) { return a.id; }); // a bad name → the list of app ids to pick from
+    if (app.locked && app.locked()) return "🔒 " + app.id + " is still hidden.";
     if (window.goToStage) window.goToStage("office"); // the monitor lives in the office — bring it on screen
     // PC off → power on (spark + fan + boot Fedora → caps); the boot-complete hook opens the queued app.
     if (!pcTower.classList.contains("on")) { pendingBootApp = app.id; pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "🖥 booting the PC → " + app.id + "…"; }
@@ -52200,6 +52523,10 @@ async def localfont(name):
         closeMinesApp();
         if (minesSeeded) { minesSeeded = false; if (minesBoardEl && !__minesInPhone) minesNewGame(); } // only re-deal if it had actually been dealt (keeps reset==load)
         break;
+      case "pacman":
+        closePacmanApp();
+        pacResetBoard(true); // Kill starts a new maze but does not erase the discovered app.
+        break;
       case "mail":
         closeMailApp();
         for (var mi = 0; mi < MAILS.length; mi++) MAILS[mi].read = false; // every message unread again
@@ -52261,7 +52588,7 @@ async def localfont(name):
     clearMonitorLock();
     pbFxIndex = 0; pbBaseFrame = null; // a kill drops the retained look + captured photo (closePhotobooth keeps them)
     closePhotobooth(); // never leave the camera running
-    ["life", "mines", "mail", "tattoo", "code", "video", "music", "weather", "chat", "calendar", "clock", "family"].forEach(resetMonitorAppState);
+    ["life", "mines", "pacman", "mail", "tattoo", "code", "video", "music", "weather", "chat", "calendar", "clock", "family"].forEach(resetMonitorAppState);
     // the plain console's scrollback + welcome state lives in its own IIFE (no runtime to tear
     // down), so clear that session — a reopened console then greets fresh
     if (window.__resetMonitorTermSession) window.__resetMonitorTermSession();
@@ -79427,6 +79754,7 @@ function spawnDustMote(container) {
     var enterPageMode = !!options.enterPageMode;
     var resetDateTime = options.resetDateTime === true;
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
+    if (window.__resetPacmanUnlock) window.__resetPacmanUnlock(); // a fresh loft hides the ketamine ghost's game again
     setOfficeProgress("prague", false);
     setOfficeProgress("pc", false);
     if (window.__setSecondRound) window.__setSecondRound(false, { releaseHeld: false }); // back to phase one; reseal the roster until a party lights again
@@ -83794,7 +84122,8 @@ function spawnDustMote(container) {
       },
       puzzle: checkpointPuzzleState(),
       phone: window.__checkpointPhoneCapture ? window.__checkpointPhoneCapture() : null,
-      album: window.__checkpointAlbumCapture ? window.__checkpointAlbumCapture() : null
+      album: window.__checkpointAlbumCapture ? window.__checkpointAlbumCapture() : null,
+      pacman: window.__pacmanCapture ? window.__pacmanCapture() : null
     };
   }
   function saveCheckpoint() {
@@ -83933,6 +84262,7 @@ function spawnDustMote(container) {
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
+    if (window.__pacmanRestore) window.__pacmanRestore(saved.pacman);
     // Restore through the complete party-mode owner, not only its scene half. The balcony
     // switch and persistent UV intent are also toggle state: if they remain at their fresh-page
     // defaults, the first `p` after Continue only reconciles the switch and cannot stop the party.

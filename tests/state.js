@@ -166,12 +166,12 @@ var RESET_DIFF_ALLOW = [
   // land between snapshot and diff and a reset must not clear the real sky.
   "#loft-game-strip +climate-overcast",
   "#loft-game-strip -climate-overcast",
-  // Known reset gap: __updateGrowlightForNight() turns the grow light off at
-  // dusk, but resetHunt()/resetBalconyDusk() clears dusk without re-running it,
-  // so a reset from nighttime leaves the grow light dark in daytime. Self-heals
-  // when the ~20-50s grow-cycle timer next fires; harmless, but if resetHunt
-  // ever calls __updateGrowlightForNight, drop this entry.
-  "#garden-growlight +off"
+  // The plant light is derived from the effective Edmonton clock (on 11:00–17:00).
+  // This suite changes __edmNowMins after taking its load snapshot; reset correctly
+  // re-evaluates that new time, so either class direction may differ legitimately.
+  // tests/growlight-schedule.js owns the exact boundary and reset assertions.
+  "#garden-growlight +off",
+  "#garden-growlight -off"
 ];
 
 // ── cascade harness ─────────────────────────────────────────────────────────

@@ -60504,6 +60504,7 @@ async def localfont(name):
       if (window.__reanchorTimeOverride) window.__reanchorTimeOverride();
       if (window.__startAutoDayNight) window.__startAutoDayNight();
       if (window.__applyAutoDayNight) window.__applyAutoDayNight();
+      if (window.__syncGrowlightSchedule) window.__syncGrowlightSchedule(true);
       if (window.__refreshTimePill) window.__refreshTimePill();
       if (window.__paintPhoneStatusClock) window.__paintPhoneStatusClock();
       if (window.__paintBalconyPhoneClock) window.__paintBalconyPhoneClock();
@@ -63983,36 +63984,52 @@ async def localfont(name):
   }
   var growlight = document.getElementById("garden-growlight");
   var growTimer = null;
-  // the grow light runs itself on a timer (long on-phase, shorter off), like a
-  // real plant light; a manual click just resets the schedule from there
-  function scheduleGrowCycle() {
-    if (!growlight) return;
-    clearTimeout(growTimer);
-    var on = !growlight.classList.contains("off");
-    var dur = on ? (34000 + Math.random() * 16000) : (20000 + Math.random() * 12000);
-    growTimer = setTimeout(function () {
-      if (document.visibilityState !== "hidden") {
-        var gs = document.getElementById("stage-garden");
-        if (gs && gs.classList.contains("dusk")) growlight.classList.add("off"); // off at night
-        else growlight.classList.toggle("off");
-      }
-      scheduleGrowCycle();
-    }, dur);
+  var growManual = false;
+  var GROW_ON = 11 * 60, GROW_OFF = 17 * 60;
+  function growMinsNow() {
+    if (window.__loftMinsNow) return window.__loftMinsNow();
+    var now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
   }
-  // the grow light is dark at night, lit by day
-  window.__updateGrowlightForNight = function () {
-    var gs = document.getElementById("stage-garden");
-    if (!growlight || !gs) return;
-    if (gs.classList.contains("dusk")) growlight.classList.add("off");
-    else growlight.classList.remove("off");
-  };
-  function toggleGrowlight() { growlight.classList.toggle("off"); playLaptopClickSound("garden-growlight"); scheduleGrowCycle(); }
+  function growScheduledOn() {
+    var mins = growMinsNow();
+    return mins >= GROW_ON && mins < GROW_OFF;
+  }
+  function armGrowBoundary() {
+    clearTimeout(growTimer);
+    if (!growlight) return;
+    var mins = growMinsNow();
+    var next = mins < GROW_ON ? GROW_ON : (mins < GROW_OFF ? GROW_OFF : GROW_ON + 1440);
+    growTimer = setTimeout(function () {
+      growManual = false;
+      syncGrowlightSchedule();
+    }, Math.max(250, (next - mins) * 60000));
+  }
+  // The real loft's plant lights run 11:00–17:00. This follows the game's
+  // effective Edmonton clock, independent of whether the scene was manually
+  // painted day or night. A manual click holds only until the next boundary.
+  function syncGrowlightSchedule(resetManual) {
+    if (!growlight) return;
+    if (resetManual) growManual = false;
+    if (!growManual) growlight.classList.toggle("off", !growScheduledOn());
+    armGrowBoundary();
+  }
+  window.__syncGrowlightSchedule = syncGrowlightSchedule;
+  // Kept as the existing day/night call site, but the schedule no longer follows
+  // the decorative dusk class.
+  window.__updateGrowlightForNight = function () { syncGrowlightSchedule(false); };
+  function toggleGrowlight() {
+    growManual = true;
+    growlight.classList.toggle("off");
+    playLaptopClickSound("garden-growlight");
+    armGrowBoundary();
+  }
   if (growlight) {
     growlight.addEventListener("click", toggleGrowlight);
     growlight.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleGrowlight(); }
     });
-    scheduleGrowCycle();
+    syncGrowlightSchedule(true);
   }
   var cat = document.getElementById("witchy-chest-cat");
   var fairy = document.getElementById("witchy-chest-fairy");
@@ -80918,6 +80935,7 @@ function spawnDustMote(container) {
     if (window.resetLaptop) window.resetLaptop();
     if (window.__resetPhoneApps) window.__resetPhoneApps(); // restore any "Uninstall"ed phone apps
     if (window.resetBalconyDusk) window.resetBalconyDusk();
+    if (window.__syncGrowlightSchedule) window.__syncGrowlightSchedule(true);
     if (window.__stopBalconyStormCycle) window.__stopBalconyStormCycle(); // cancel any in-flight storm + drop its .storming on every stage (real-weather's own .storming re-applies within a tick if it's genuinely raining out)
     if (window.__setBalconyOvercast) window.__setBalconyOvercast(false); // the storm cycle's clearAll deliberately spares overcast(), so a console grey-wash needs its own drop
     if (window.__setAurora) window.__setAurora(); // no arg: drop any aurora force/hide back to the natural roll

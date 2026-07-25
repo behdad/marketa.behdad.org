@@ -35,6 +35,12 @@ var harness = String.raw`<script>
     click(office && office.querySelector(".of-p2"));
     check("clicking the second office figure opens Jay's bio", cardName() === "Jay", cardName());
 
+    window.goToStage("cuddly");
+    var cuddlyBehdad = document.getElementById("cuddly-behdad");
+    click(cuddlyBehdad);
+    check("clicking a Cuddly resident opens their individual bio", cardName() === "behdad", cardName());
+    check("a direct Cuddly bio points at the person", !!cuddlyBehdad.querySelector(".guest-spot-arrow"));
+
     var armL = bar && bar.querySelector(".bc-arm-l");
     var armR = bar && bar.querySelector(".bc-arm-r");
     var leftOrigin = armL ? getComputedStyle(armL).transformOrigin : "";

@@ -28112,13 +28112,18 @@ function castPersonCard(key) {
   return "<em>" + name + "</em>" + (role ? " · " + role : "") +
     kidAgeLine(name) + relLine(key) + funFact(key);
 }
-function showDirectCastPerson(fig, key) {
-  // Match a roster pick: point at the individual, place their card above the arrow, and retire
-  // both together. showWhoPop arms its click-away listener on the next task, so opening is safe.
+function showDirectPersonCard(fig, html) {
+  // One direct-person interaction across every room: point at the individual, place their card
+  // above the arrow, and retire both together. Compact call screens deliberately keep using their
+  // surface-anchored layout instead; there is not enough room around their tiny callers.
   var arrow = window.__spotlightFigure ? window.__spotlightFigure(fig) : null;
   if (window.__whoPop) {
-    window.__whoPop(fig, castPersonCard(key), arrow, arrow ? "top" : "above-arrow", 3000);
+    window.__whoPop(fig, typeof html === "function" ? html() : html,
+      arrow, arrow ? "top" : "above-arrow", 3000);
   }
+}
+function showDirectCastPerson(fig, key) {
+  showDirectPersonCard(fig, castPersonCard(key));
 }
 // A hover tooltip is just an eggBubble shown on mouseenter and dismissed on mouseleave
 // instead of on click+timeout — reuses its positioning/styling/innerHTML support
@@ -34469,7 +34474,8 @@ setMusicPausedState(false);
       var who = null;
       for (var i = 0; i < NAMES.length; i++) { if (rock.classList.contains(NAMES[i])) { who = KID_WHO[NAMES[i]]; break; } }
       if (!who || !window.__whoPop) return;
-      window.__whoPop(rock, "<em>" + who.name + "</em> · " + tipText(who.role) + kidAgeLine(who.name) + relLine(who.name) + funFact(who.name));
+      showDirectPersonCard(rock, "<em>" + who.name + "</em> · " + tipText(who.role) +
+        kidAgeLine(who.name) + relLine(who.name) + funFact(who.name));
     });
   })();
   // each kid fades with the wrapper opacity while hidden; on re-show re-evaluate (party may have
@@ -36282,13 +36288,13 @@ function gameTapsNear(a, b) {
   // only surfaces while that character is actually present.
   // In the cuddly nook, tapping a visitor pops their name in a static white roster-style card (the
   // inverse roster, mirrored from the party floor — owner request). No freeze-others here: the nook
-  // has no dance crowd to pause, so it's just the name card. (People are click-only — the tap card
-  // carries name·role·age·relation·fact and lingers ~10s; the old hover bubble is kept for props.)
+  // has no dance crowd to pause, so it is the shared arrow + short name card. (People are
+  // click-only; the old hover bubble is kept for props.)
   function nameTip(id, html, shouldOpen) {
     var el = document.getElementById(id); if (!el) return;
     el.addEventListener("click", function () {
       if (typeof shouldOpen === "function" && !shouldOpen()) return;
-      if (window.__whoPop) window.__whoPop(el, typeof html === "function" ? html() : html);
+      showDirectPersonCard(el, html);
     }); // anchor on el so the global egg-bubble dismisser sees the click inside the anchor and keeps it up
   }
   nameTip("cuddly-behdad", function () { return "<em>behdad</em>" + relLine("behdad") + funFact("behdad"); }, "top", 12, 0, "cuddly-behdad-head"); // +y: his head rides ~10u higher than hers, so match her sit
@@ -36332,7 +36338,7 @@ function gameTapsNear(a, b) {
   // pointer-events are gated to .chasing in CSS, so a tap only lands while a runner is actually
   // crossing; it pops the same white name-card the floor guests get (no .g-* figure → not in the
   // guestInspect roster, so each carries its own click→__whoPop).
-  function chaseName(id, htmlFn) { var el = document.getElementById(id); if (el) el.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(el, htmlFn()); }); }
+  function chaseName(id, htmlFn) { var el = document.getElementById(id); if (el) el.addEventListener("click", function () { showDirectPersonCard(el, htmlFn); }); }
   chaseName("garden-kid-irene", function () { return "<em>Irene</em> · " + tipText("role_niece") + kidAgeLine("Irene") + relLine("Irene") + funFact("Irene"); });
   chaseName("garden-kid-robin", function () { return "<em>Robin</em> · " + tipText("role_godson") + kidAgeLine("Robin") + relLine("Robin") + funFact("Robin"); });
   chaseName("garden-kid-navid", function () { return "<em>Navid</em> · " + tipText("role_godson") + kidAgeLine("Navid") + relLine("Navid") + funFact("Navid"); });
@@ -36415,7 +36421,8 @@ function gameTapsNear(a, b) {
       // inside #laptop-call-scene too, so a plain closest() would otherwise anchor every card to
       // the shared screen corner, far away from several tiny figures.
       var surface = lid.indexOf("laptop-garden-") === 0 ? null : callSurface(el);
-      window.__whoPop(el, figHtml(lid), surface);
+      if (surface) window.__whoPop(el, figHtml(lid), surface);
+      else showDirectPersonCard(el, figHtml(lid)); // wide garden gathering has room for the normal arrow
     }); // no stopPropagation: the global dismisser's contains-check keeps the new card up
   });
 })();
@@ -73078,14 +73085,14 @@ function spawnDustMote(container) {
     return FAMILY_KIDS.filter(function (kid) {
       if (kid.visiting && !mousesVisiting()) return false;
       var floor = g.querySelector(".g-" + kid.name);
-      return !!(floor && kidAtParty(kid.name) && floor.classList.contains("off-at-games"));
+      return !!(floor && kidAtParty(kid.name) && !floor.classList.contains("off-asleep"));
     }).map(function (kid) { return kid.name; });
   }
   function coreKidRunners() {
     var g = document.getElementById("garden-guests");
     return GARDEN_KIDS.filter(function (name) {
       var floor = g && g.querySelector(".g-" + name);
-      return !!(floor && kidAtParty(name) && floor.classList.contains("off-at-games"));
+      return !!(floor && kidAtParty(name) && !floor.classList.contains("off-asleep"));
     });
   }
   window.__gardenChaseEligible = function () { return coreKidRunners().concat(familyKidRunners()); };
@@ -73199,7 +73206,10 @@ function spawnDustMote(container) {
       }
       el.classList.toggle("off-at-games", nook);
       el.classList.toggle("off-asleep", sleeping);
-      if (nook || sleeping) clearGardenKid(gardenKidEl(name));
+      // A placement tick may choose this runner's eventual home while they are crossing. Do not
+      // cancel the live CSS animation: its animationend owns cleanup and releases the chase lock.
+      var runner = gardenKidEl(name);
+      if ((nook || sleeping) && !(runner && runner.classList.contains("chasing"))) clearGardenKid(runner);
       if (nook) atGames.push(name);
       else if (sleeping) asleep.push(name);
       else if (dance) dancing.push(name);
@@ -73250,6 +73260,7 @@ function spawnDustMote(container) {
     if (!window.__gardenPartyOn) return;
     if (document.hidden || !document.hasFocus()) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
     if (rosterHoldsOccupants()) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
+    if (gardenChaseRunning) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
     // Placement and floor formation are independent: first decide each child's room from their
     // parents' live floor state, then arrange whichever godkids rolled a dance turn.
     assignPartyKids(false);
@@ -73299,12 +73310,17 @@ function spawnDustMote(container) {
     var flip = el.querySelector(".gk-flip"); if (flip) flip.classList.remove("flipped");
   }
   var gardenChaseLaunchTimers = [];
+  var gardenChaseWatchdog = null;
   function clearGardenChaseLaunchTimers() {
     gardenChaseLaunchTimers.forEach(clearTimeout);
     gardenChaseLaunchTimers.length = 0;
   }
+  function clearGardenChaseWatchdog() {
+    if (gardenChaseWatchdog) { clearTimeout(gardenChaseWatchdog); gardenChaseWatchdog = null; }
+  }
   function resetGardenChaseRunners() {
     clearGardenChaseLaunchTimers();
+    clearGardenChaseWatchdog();
     gardenChaseRunning = false;
     GARDEN_RUNNERS.forEach(function (n) { clearGardenKid(gardenKidEl(n)); });
     syncKidsParty(); // every runner's .chasing is cleared → the matching party figures return
@@ -73347,8 +73363,8 @@ function spawnDustMote(container) {
     // A Cuddly assignment is the child's home base, not a lock: any assigned child may make this
     // brief run while the garden is on screen, then returns to the same seat.
     resetGardenChaseRunners();                 // fresh slate without killing the ambient driver
-    gardenChaseRunning = true;
     var pool = coreKidRunners().concat(familyKidRunners());
+    if (!pool.length) return;                  // never strand the active lock on an empty roster
     for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
     // chase() is the inspection/testing toy, so a forced pass shows every currently eligible kid.
     // Ambient passes usually stay small and readable, but once both visiting families have arrived
@@ -73365,6 +73381,7 @@ function spawnDustMote(container) {
     var nook = document.getElementById("cuddly-vis-bahareh");
     var baharehBusyInNook = !!(nook && nook.classList.contains("showing"));
     if (!baharehBusyInNook && (force || Math.random() < (ireneOut ? 0.6 : 0.25))) runners.push("bahareh"); // at the back → herding them
+    gardenChaseRunning = true;
     var rightward = Math.random() < 0.5;          // whole pack runs one way, a chase not a scatter
     var dur = 4.2 + Math.random() * 1.4;          // ~4.2–5.6s crossing
     runners.forEach(function (name, k) {
@@ -73393,6 +73410,16 @@ function spawnDustMote(container) {
       if (delay) gardenChaseLaunchTimers.push(setTimeout(launchRunner, delay));
       else launchRunner();
     });
+    // Animation cancellation normally comes through room/visibility teardown, but browser
+    // throttling or a future scene toggle must not leave the scheduler locked forever.
+    gardenChaseWatchdog = setTimeout(function finishInterruptedChase() {
+      gardenChaseWatchdog = null;
+      if (rosterHoldsOccupants()) {
+        gardenChaseWatchdog = setTimeout(finishInterruptedChase, 1000);
+        return;
+      }
+      if (gardenChaseRunning) resetGardenChaseRunners();
+    }, dur * 1000 + Math.max(0, runners.length - 1) * 420 + 1200);
   }
   function gardenChaseTick() {
     gardenChaseTimer = null;
@@ -74786,7 +74813,7 @@ function spawnDustMote(container) {
       var tip = function () { return figTip(r); };
       g.addEventListener("click", function (e) { // people are click-only (props keep hover)
         e.stopPropagation();
-        if (window.__whoPop) window.__whoPop(g, tip());
+        showDirectPersonCard(g, tip);
       });
     });
     // the perched ashtray stays clickable while it's up: tap/Enter spins it and flicks a puff of
@@ -75038,7 +75065,7 @@ function spawnDustMote(container) {
         ((typeof relLine === "function") ? relLine("Hamid") : "") +
         ((typeof funFact === "function") ? funFact("Hamid") : "");
     };
-    el.addEventListener("click", function (e) { e.stopPropagation(); if (window.__whoPop) window.__whoPop(el, hamidTip()); }); // people are click-only (props keep hover)
+    el.addEventListener("click", function (e) { e.stopPropagation(); showDirectPersonCard(el, hamidTip); }); // people are click-only (props keep hover)
     document.addEventListener("visibilitychange", update);
     window.addEventListener("blur", update);
     window.addEventListener("focus", update);

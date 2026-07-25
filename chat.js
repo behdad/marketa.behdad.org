@@ -174,7 +174,7 @@ Return only strict JSON with exactly this shape: {"sender":"Cast name","text":"M
 const EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant. Review JavaScript as text only; never execute it and never request a game action. The editor wraps code in an async function, so documented Loft globals such as await sleep(3000), party(true), room("garden"), daylight(true), dance("salsa"), trip("molly"), caption("text"), and loft.api.query/perform are valid. Use the supplied scripting_api as authoritative and do not invent signatures or private details.
 For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
 
-const PYTHON_EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant in Python mode. Review CPython 3.14 code as text only; never execute it and never request a game action. Code runs in the existing Pyodide Python Console, not in the Loft JavaScript API. Standard Python syntax, top-level await through runPythonAsync, print(), the injected async googlefonts() helper, fontTools, and uharfbuzz are valid.
+const PYTHON_EDITOR_INSTRUCTIONS = `You are the Loft Script Editor assistant in Python mode. LANGUAGE LOCK: respond about Python only. Never translate the code to JavaScript, never mention loft.api, and never claim that Python imports or turtle are unavailable. If an import is misspelled, such as "import turtlxe", correct it to "import turtle" while preserving the surrounding Python. Review CPython 3.14 code as text only; never execute it and never request a game action. Code runs in the existing Pyodide Python Console, not in the Loft JavaScript API. Standard Python syntax, top-level await through runPythonAsync, print(), the injected async googlefonts() helper, fontTools, and uharfbuzz are valid.
 The Loft provides a browser-compatible turtle module. Supported module functions and Turtle methods include Turtle, Screen, forward/fd, backward/bk, left/lt, right/rt, goto/setpos, setx, sety, home, position/pos, heading, penup/pu/up, pendown/pd/down, isdown, pencolor, fillcolor, color, pensize/width, begin_fill, end_fill, filling, circle, dot, speed, hideturtle/ht, showturtle/st, reset, clear, write, bgcolor, tracer, update, done, and mainloop. It renders in the Python app without Tkinter. Do not suggest tkinter, desktop windows, unsupported event bindings, or Loft JavaScript globals.
 For explain, briefly explain the selected code or likely error. For fix, if selected code is non-empty, return only a corrected replacement for that selection (never the surrounding script); if nothing is selected, return a corrected complete script. For complete, return a short continuation from the cursor. When a request needs changes at multiple locations, return an explicit edits array instead of guessing one insertion point: each edit is {"start":number,"end":number,"text":"code"}, using offsets into the complete code string. Edits must be non-overlapping, ordered by start, and include only the changed ranges. Keep suggestions runnable and bounded. Return strict JSON only: {"text":"brief explanation","suggestion":"code or empty string","replace":true|false,"edits":[{"start":0,"end":0,"text":"code"}]}. The suggestion field must contain code only, with no Markdown fences; use an empty edits array when edits are not needed.`;
 
@@ -1087,6 +1087,24 @@ function normalizeEditorReply(reply, editor) {
     }
   }
   if (!validEdits) edits = [];
+  const pythonMode = editor && editor.language === "python";
+  const proposed = [
+    parsed && parsed.text,
+    parsed && parsed.suggestion,
+    ...edits.map((edit) => edit.text),
+  ].filter(Boolean).join("\n");
+  if (pythonMode && (
+    /\bloft\.api\b/i.test(proposed) ||
+    /\b(?:let|const|var)\s+[A-Za-z_$][\w$]*/.test(proposed) ||
+    /Loft scripts use JavaScript|not Python imports|turtle APIs? (?:are|is) (?:not|unavailable)/i.test(proposed)
+  )) {
+    return JSON.stringify({
+      text: "Python mode uses CPython and includes the browser-compatible turtle module. Please retry this review.",
+      suggestion: "",
+      replace: false,
+      edits: [],
+    });
+  }
   return JSON.stringify({
     text: cleanText(parsed && parsed.text, 1200) || "I couldn't produce a useful review.",
     suggestion: cleanText(parsed && parsed.suggestion, 12000),

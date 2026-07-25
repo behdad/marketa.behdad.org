@@ -652,11 +652,42 @@ const pythonEditorReply = JSON.parse((await pythonEditorResponse.json()).reply);
 check(pythonEditorResponse.status === 200 && pythonEditorReply.text === "Draws a square.",
   "Python Editor assistance keeps the existing normalized reply envelope", pythonEditorReply);
 check(/CPython 3\.14/.test(captured.body.instructions) &&
+      /LANGUAGE LOCK/.test(captured.body.instructions) &&
       /browser-compatible turtle/.test(captured.body.instructions) &&
       /Do not suggest tkinter/.test(captured.body.instructions) &&
       !/"name":"party"/.test(captured.body.instructions),
   "Python Editor receives its bounded runtime/Turtle prompt without the Loft JavaScript API",
   captured.body.instructions.slice(0, 500));
+
+openAIReply = JSON.stringify({
+  text: "Loft scripts use JavaScript, not Python imports.",
+  suggestion: 'await loft.api.perform("move_forward", { distance: 60 });',
+  replace: true,
+  edits: [],
+});
+const wrongLanguageResponse = await worker.fetch(makeRequest("/chat", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    mode: "editor_assist",
+    message: "fix this",
+    turnstile_token: "python-language-lock-token",
+    editor: {
+      language: "python",
+      operation: "fix",
+      code: "import turtlxe",
+      selected: "turtlxe",
+      selection_start: 7,
+      selection_end: 14,
+      cursor: 14,
+    },
+  }),
+}), makeEnv());
+const wrongLanguageReply = JSON.parse((await wrongLanguageResponse.json()).reply);
+check(wrongLanguageReply.suggestion === "" && wrongLanguageReply.edits.length === 0 &&
+      /Python mode uses CPython/.test(wrongLanguageReply.text),
+  "Python Editor rejects a wrong-language JavaScript review before it reaches the UI",
+  wrongLanguageReply);
 
 turnstileSuccess = false;
 const callsBeforeRejection = openAICalls;

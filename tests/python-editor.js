@@ -33,8 +33,17 @@ check(/editor:\s*\{\s*language:\s*edLanguage/.test(html) &&
       /PYTHON_EDITOR_INSTRUCTIONS/.test(worker) &&
       /payload\.editor\.language === "python"/.test(worker),
   "Editor assistance carries language through to a Python-specific Worker prompt");
-check(/window\.__runPythonEditor[\s\S]*?pyEditorQueue\.push\(job\)[\s\S]*?openPython\(\)/.test(html),
+check(/window\.__runPythonEditor[\s\S]*?pyEditorQueue\.push\(job\)[\s\S]*?openPython\(true\)/.test(html),
   "Python Run hands the complete buffer to the existing Python app");
+check(/id="monitor-ed-explain"[^>]*>explain<\/button>/.test(html) &&
+      /id="monitor-ed-ai-status"[^>]*>ready<\/span>/.test(html),
+  "Editor AI controls use explicit, compact labels");
+check(/pyPrint\(">>> import turtle  # browser graphics"/.test(html) &&
+      /id="monitor-py-view-toggle" transform="translate\(363\.2,154\.8\)"/.test(html),
+  "Python's ready banner names Turtle and the gfx control sits beside Close");
+check(/pyReturnToEditor[\s\S]*?paintPythonClose[\s\S]*?openPython\(true\)/.test(html) &&
+      /consoleReturnToEditor[\s\S]*?paintConsoleClose[\s\S]*?openConsole\(true\)/.test(html),
+  "Editor-launched Python and JavaScript consoles expose a Back path");
 
 var turtleMatch = /var PY_TURTLE_MODULE = `([\s\S]*?)`;\n  function installPythonTurtle/.exec(html);
 check(!!turtleMatch, "a self-hosted browser Turtle compatibility module is embedded");
@@ -89,6 +98,11 @@ var harness = [
   '  out.routed=routed; out.pythonActive=py.classList.contains("active");',
   '  out.pythonCompletion=window.__editorCommands().some(function(c){return c.name==="Turtle"});',
   '  out.loftRosterStable=window.__loftCommands().some(function(c){return c.name==="party"}) && !window.__loftCommands().some(function(c){return c.name==="Turtle"});',
+  '  document.getElementById("monitor-ed-lang-js").click(); name.value="broken.js"; code.value="throw new Error(\\\"editor boom\\\")";',
+  '  document.getElementById("monitor-ed-run").click(); await new Promise(function(r){setTimeout(r,80)});',
+  '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastEditorError;',
+  '  document.getElementById("monitor-console-close").dispatchEvent(new MouseEvent("click",{bubbles:true})); await new Promise(function(r){setTimeout(r,20)});',
+  '  out.editorReturned=mon.classList.contains("show-editor"); out.failedStatus=document.getElementById("monitor-ed-ai-status").textContent;',
   '  document.body.innerHTML="<pre id=\\"__report\\"></pre>"; document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e)})});',
   '<\/script>',
@@ -105,6 +119,10 @@ if (state && !state.error) {
     "Run routes the exact Python name and buffer", state.routed);
   check(state.pythonActive && state.pythonCompletion && state.loftRosterStable,
     "selector styling and completion catalogs track Python without changing the Loft JS hook", state);
+  check(state.jsConsole && /editor boom/.test(state.jsError) && /editor boom/.test(state.lastError),
+    "a JavaScript Editor exception opens the JS Console with the actual error", state);
+  check(state.editorReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
+    "Back returns to the Editor and failure is not overwritten by a success status", state);
 }
 
 if (failures) {

@@ -18,6 +18,12 @@ var HARNESS = [
   " report.control=!!external;",
   " report.label=external&&external.getAttribute('aria-label');",
   " report.opened=opened;",
+  " var fixedTabs=document.querySelectorAll('.browser-tab [data-i^=\"tab_\"]');",
+  " report.fixedCloseButtons=[].every.call(fixedTabs,function(label){return !!label.closest('.browser-tab').querySelector('.tab-x');});",
+  " var marketaTab=marketa&&marketa.closest('.browser-tab');var marketaX=marketaTab&&marketaTab.querySelector('.tab-x');if(marketaX)marketaX.click();",
+  " report.fixedClosed=!document.querySelector('.browser-tab [data-i=\"tab_marketa\"]')&&document.querySelectorAll('.browser-tab [data-i^=\"tab_\"]').length===3;",
+  " var browserClose=document.getElementById('monitor-browser-close'),chromeColors=browserClose&&browserClose.querySelectorAll('.browser-close-chrome>path');",
+  " report.chromeDismiss=!!(browserClose&&browserClose.classList.contains('chrome-host')&&chromeColors.length===3&&[].map.call(chromeColors,function(p){return p.getAttribute('fill');}).join('|')==='#ea4335|#34a853|#fbbc05');",
   " var input=document.getElementById('monitor-browser-url');",
   " report.placeholder=input&&input.getAttribute('placeholder');",
   " var plus=document.querySelector('.browser-tab-plus'); if(plus)plus.click();",
@@ -43,6 +49,9 @@ ok("external-tab control is labelled", r.control && r.label === "Open in a real 
 ok("external-tab control opens the active tab safely",
   r.opened && r.opened.url === "https://marketajakesova.ca/" &&
   r.opened.target === "_blank" && r.opened.features === "noopener");
+ok("every preloaded tab has its own close control", r.fixedCloseButtons === true);
+ok("closing a preloaded tab removes only that tab for the session", r.fixedClosed === true);
+ok("Chrome hosts get the red, green, and yellow Browser dismiss pill", r.chromeDismiss === true);
 ok("address field advertises search", r.placeholder === "Search or enter address");
 ok("visible arrow submits search text", r.pointerGo === true);
 var src = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");

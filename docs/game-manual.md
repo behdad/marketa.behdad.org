@@ -371,7 +371,7 @@ The current phone apps are:
 | **News** | A compact Hacker News reader |
 | **Weather** | Edmonton and Prague current conditions and three-day forecasts |
 | **Clock** | City clocks, event countdowns, play time, and game-time controls |
-| **Calculator** | A standard calculator |
+| **Calculator** | A calculator with a live, animated abacus |
 | **Currency** | Currency conversion |
 | **Notes** | Authored notes and a local draft/composition surface |
 | **Cards** | An English/Czech phrase-card set |

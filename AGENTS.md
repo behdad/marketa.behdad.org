@@ -24,6 +24,10 @@ allowed exception, owner-confirmed.)
   multiple agents at the primary checkout or let agents share a writable worktree.
   Review and integrate each agent's finished commit explicitly into the primary branch;
   remove the temporary worktree only after integration.
+- **Integrate returned agent work early.** After a quick scope and syntax sanity check,
+  merge it into the primary branch and deploy it while full verification continues, so
+  the owner can test in parallel. Handle follow-up feedback directly or send it back to
+  the same agent in its isolated worktree.
 - **Commit and deploy after every discrete change**, not in one big batch at the end.
   Push with `git puff` (an alias for `git push --force-with-lease`, already configured —
   just run it, don't second-guess it), then `ssh behdad "cd w && git pull"` to deploy.

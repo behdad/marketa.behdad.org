@@ -18,6 +18,7 @@ var HARNESS = [
   ' var before=ymd(),href=location.href;',
   ' window.__openPhoneAppHere("calendar");await sleep(40);',
   ' var ph=document.querySelector(".calx-phone");var prow=ph.querySelectorAll(".calx-card-row")[0];prow.click();await sleep(30);ph=document.querySelector(".calx-phone");',
+  ' var pday=day(ph,1);if(pday)pday.dispatchEvent(new MouseEvent("mouseenter",{bubbles:false}));await sleep(240);var tip=document.querySelector(".egg-bubble.phone-tooltip");S("phoneTip",{shown:!!tip,text:tip&&tip.textContent,z:tip&&getComputedStyle(tip).zIndex});if(pday)pday.dispatchEvent(new MouseEvent("mouseleave",{bubbles:false}));',
   ' S("phone",{title:title(ph),sameDate:ymd()===before,sameHref:location.href===href,selected:selected(ph),open:!!ph});',
   ' var mon=document.getElementById("office-monitor"),pc=document.getElementById("office-pc-desk-trio");pc.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__openMonitorApp("calendar");await sleep(40);',
   ' var mh=document.getElementById("monitor-cal-body"),mrows=mh.querySelectorAll(".calx-card-row"),mrow=mrows[mrows.length-1];mrow.click();await sleep(30);',
@@ -37,6 +38,7 @@ if(!r){console.log("  ✗ harness produced no report");process.exit(1);}
 var s=r.steps;
 check(r.errors.length===0,"no uncaught page errors",r.errors);
 check(s.phone&&/May|květ/i.test(s.phone.title||"")&&s.phone.sameDate&&s.phone.sameHref&&!s.phone.selected&&s.phone.open,"phone event card reveals May without activating its date",s.phone);
+check(s.phoneTip&&s.phoneTip.shown&&s.phoneTip.text&&Number(s.phoneTip.z)>65,"phone occasion and birthday tooltips paint above the phone",s.phoneTip);
 check(s.monitor&&/July|červenec/i.test(s.monitor.title||"")&&s.monitor.sameDate&&s.monitor.sameHref&&!s.monitor.selected,"monitor event card reveals July without activating its date",s.monitor);
 check(s.grid&&s.grid.date==="2027-07-12"&&s.grid.selected==="12","calendar grid day still activates its date",s.grid);
 

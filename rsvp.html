@@ -38852,6 +38852,7 @@ function gameTapsNear(a, b) {
   function requestDance(id) {
     if (!window.__gardenPartyOn) return false;
     if (!window.__setPartyDance || !window.__setPartyDance(id)) return false; // unknown id / party dark
+    if (window.__fadeLoftSongOut) window.__fadeLoftSongOut(700); // the requested DJ bed takes over from any guitar/uke song
     if (window.__djScratchNow) window.__djScratchNow(true); // a little scratch on the request (userInitiated → no focus gate)
     markCurrent();
     return true;
@@ -53563,6 +53564,17 @@ async def localfont(name):
     }, 40);
   }
   window.__fadeSongTo = fadeSongTo; // shared with the cinematic's song switch
+  window.__fadeLoftSongOut = function (ms) {
+    var idx = currentSongIndex();
+    var a = idx >= 0 ? songAudios[idx] : null;
+    if (!a || a.paused) return false;
+    clearSongSnippet();
+    var appVol = window.__songVolume ? window.__songVolume() : 0.5;
+    fadeSongTo(a, 0, ms == null ? 700 : ms, function () {
+      try { a.pause(); setSongLevel(a, appVol); } catch (e) {}
+    });
+    return true;
+  };
   // Poking an instrument in passing is a light gesture, so it gets a taste, not the whole song:
   // the tap arms a timer that fades the song out and pauses it AT POSITION for a resume.
   // Opt-IN — only the tap arms, so every other play path plays in full with no exception.
@@ -81520,8 +81532,10 @@ function spawnDustMote(container) {
       // playing so the two musics don't fight — the party bed plays whole-loft while the party's
       // lit, so it ALWAYS takes over (unconditional: the old __partyMusicWant() gate let songs
       // slip through into a cacophony when the party started from another room)
-      if (window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__phoneMusicToggle) {
-        window.__phoneMusicToggle();
+      if (window.__phoneMusicPlaying && window.__phoneMusicPlaying()) {
+        if (!window.__fadeLoftSongOut || !window.__fadeLoftSongOut(700)) {
+          if (window.__phoneMusicToggle) window.__phoneMusicToggle();
+        }
       }
     } else {
       if (window.__bbqSplitOn && window.__setBalconyBBQCrowd) window.__setBalconyBBQCrowd(false); // ending any BBQ party reunites attendance too

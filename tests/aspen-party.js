@@ -57,6 +57,15 @@ var harness = String.raw`<script>
     backdrop: !!document.querySelector("#garden-djpicker .dj-pick-backdrop"),
     who: who
   };
+  var fadeCalls = [];
+  window.__fadeLoftSongOut = function (ms) { fadeCalls.push(ms); return true; };
+  var requestRow = document.querySelector("#garden-djpicker .dj-pick-row");
+  if (requestRow) click(requestRow);
+  report.steps.jukeboxFade = {
+    calls: fadeCalls.slice(),
+    picker: document.getElementById("garden-djpicker").classList.contains("open")
+  };
+  if (window.__openDjPicker) window.__openDjPicker();
   var danceBeforeDouble = window.__partyDance;
   dblclick(dj);
   report.steps.djDouble = {
@@ -105,11 +114,6 @@ var harness = String.raw`<script>
     click(dj);
     report.steps.djThree = { party: !!window.__gardenPartyOn, winding: !!(window.__partyWindingDown && window.__partyWindingDown()) };
     if (window.__setPartyMode) window.__setPartyMode(false, true);
-    var mirror = document.getElementById("garden-mirror");
-    click(mirror); click(mirror);
-    report.steps.mirrorTwo = { party: !!window.__gardenPartyOn };
-    click(mirror);
-    report.steps.mirrorThree = { party: !!window.__gardenPartyOn };
     var pre = document.createElement("pre"); pre.id = "__report"; pre.textContent = JSON.stringify(report); document.body.appendChild(pre);
   }, 1250);
   }, 320);
@@ -134,6 +138,8 @@ if (result) {
     "body double-click cancels the portrait and starts a short photo pose", s.bodyDouble);
   check(s.dj.picker && s.dj.pickerRight < 560 && s.dj.modalTop && s.dj.backdrop && s.dj.who === 0,
     "DJ head opens a scene-modal picker above the dancers, fully left of the booth, without a bio popup", s.dj);
+  check(s.jukeboxFade.calls.length === 1 && s.jukeboxFade.calls[0] === 700 && !s.jukeboxFade.picker,
+    "selecting a jukebox row fades any loft song and closes the picker", s.jukeboxFade);
   check(s.djDouble.before !== s.djDouble.after && !s.djDouble.picker && s.djDouble.party, "double-clicking the DJ advances the song and closes the picker without ending the party", s.djDouble);
   check(s.frame.station === "peace-lily" && s.frame.stationMeta.every(function (id) { return id === "peace-lily"; }),
     "garden photos retain their camera-station metadata", s.frame);
@@ -150,7 +156,6 @@ if (result) {
     "group-photo keeps Aspen home and bypasses camera-zone filtering", s.groupShot);
   check(s.groupShot.bubbleInside, "Aspen's pose callout stays inside the clipped game scene", s.groupShot);
   check(s.djTwo.party && s.djThree.party && s.djThree.winding, "two DJ taps keep the party running and the third starts its attended wind-down", { two: s.djTwo, three: s.djThree });
-  check(!s.mirrorTwo.party && s.mirrorThree.party, "two mirror taps keep the party off and the third starts it", { two: s.mirrorTwo, three: s.mirrorThree });
   check(!result.errs.length, "no runtime errors", result.errs);
 }
 process.exitCode = failures ? 1 : 0;

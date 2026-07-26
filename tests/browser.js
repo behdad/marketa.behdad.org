@@ -26,6 +26,7 @@ var HARNESS = [
   " report.fixedClosed=!document.querySelector('.browser-tab [data-i=\"tab_marketa\"]')&&document.querySelectorAll('.browser-tab [data-i^=\"tab_\"]').length===3;",
   " var browserClose=document.getElementById('monitor-browser-close'),chromeColors=browserClose&&browserClose.querySelectorAll('.browser-close-chrome>path');",
   " report.chromeDismiss=!!(browserClose&&browserClose.classList.contains('chrome-host')&&chromeColors.length===3&&[].map.call(chromeColors,function(p){return p.getAttribute('fill');}).join('|')==='#ea4335|#34a853|#fbbc05');",
+  " var mon=document.getElementById('office-monitor'),siteClose=document.getElementById('monitor-site-close'),siteCloseBase=siteClose&&siteClose.querySelector('.site-close-base'),siteCloseX=siteClose&&siteClose.querySelector('.site-close-x');mon.classList.add('screen-on','show-harfbuzz');report.visitedSiteTheme=!!(siteClose&&siteClose.getAttribute('transform')==='translate(0,-2)'&&getComputedStyle(siteCloseBase).fill==='rgb(202, 169, 106)'&&getComputedStyle(siteCloseX).stroke==='rgb(36, 22, 17)');mon.classList.remove('show-harfbuzz');mon.classList.add('show-behdad');if(siteClose)siteClose.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));report.visitedSiteDismiss=!!(siteClose&&mon.classList.contains('show-caps')&&!mon.classList.contains('show-behdad'));",
   " var input=document.getElementById('monitor-browser-url');",
   " report.placeholder=input&&input.getAttribute('placeholder');",
   " var plus=document.querySelector('.browser-tab-plus'); if(plus)plus.click();",
@@ -55,6 +56,8 @@ ok("every preloaded tab has its own close control", r.fixedCloseButtons === true
 ok("tab titles leave antialiasing room before their first glyph", r.titleInset >= 0.25);
 ok("closing a preloaded tab removes only that tab for the session", r.fixedClosed === true);
 ok("Chrome hosts get the red, green, and yellow Browser dismiss pill", r.chromeDismiss === true);
+ok("the behdad.org / harfbuzz landing display has a working dismiss control", r.visitedSiteDismiss === true);
+ok("the landing-display close control sits high and adopts HarfBuzz World's brass palette", r.visitedSiteTheme === true);
 ok("address field advertises search", r.placeholder === "Search or enter address");
 ok("visible arrow submits search text", r.pointerGo === true);
 var src = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");

@@ -3558,6 +3558,13 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 #office-monitor.show-behdad #monitor-logo-behdad{opacity:1}
 #office-monitor.show-nowplaying #monitor-logo-nowplaying{opacity:1}
 #office-monitor.show-saver #monitor-saver{opacity:1}
+#monitor-site-close{opacity:0;visibility:hidden;pointer-events:none;cursor:pointer}
+#office-monitor.show-harfbuzz #monitor-site-close,
+#office-monitor.show-behdad #monitor-site-close{opacity:1;visibility:visible;pointer-events:auto}
+#monitor-site-close:hover .seg-hover{opacity:.55}
+#office-monitor.show-harfbuzz #monitor-site-close .site-close-base{fill:#caa96a;stroke:#5a3d24}
+#office-monitor.show-harfbuzz #monitor-site-close .seg-hover{fill:#e0bd5c}
+#office-monitor.show-harfbuzz #monitor-site-close .site-close-x{stroke:#241611}
 /* the caps "home" screen is a little desktop: a dock of app launchers (built by JS from
    DESKTOP_APPS). It's the topmost screen child, so gate ITS OWN hit-testing to the caps
    state and hide it whenever an app or the screensaver owns the screen — show-nowplaying
@@ -20243,6 +20250,12 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-logo-behdad" class="boot-logo">
 <text x="316" y="178.5" text-anchor="middle" style="fill:#f0eee8; font-family:monospace; font-size:9px; font-weight:bold">behdad.org</text>
+</g>
+<g id="monitor-site-close" transform="translate(0,-2)" data-aria-i="share_close" aria-label="Close">
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="site-close-base" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#8e3a4a" stroke="#6f2837" stroke-width="0.5"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#d9a6a6" opacity="0"/>
+<path class="site-close-x" d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#ffffff" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 <g id="monitor-logo-nowplaying" class="boot-logo">
 <rect x="254" y="154" width="124" height="42" rx="1.5" fill="#1a1420"/>
@@ -53738,6 +53751,25 @@ async def localfont(name):
     return monitor.classList.contains("screen-on") &&
       (monitor.classList.contains("show-caps") || monitor.classList.contains("show-harfbuzz") ||
        monitor.classList.contains("show-behdad"));
+  }
+  function closeVisitedMonitorSite() {
+    if (!monitor.classList.contains("show-harfbuzz") && !monitor.classList.contains("show-behdad")) return false;
+    monitor.classList.remove("show-harfbuzz", "show-behdad");
+    monitor.classList.add("show-caps");
+    monitorUrl = CAPS_URL;
+    scheduleSaver();
+    playLaptopClickSound("office-monitor");
+    return true;
+  }
+  window.__closeVisitedMonitorSite = closeVisitedMonitorSite;
+  var monitorSiteClose = document.getElementById("monitor-site-close");
+  if (monitorSiteClose) {
+    monitorSiteClose.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeVisitedMonitorSite();
+    });
+    monitorSiteClose.addEventListener("dblclick", function (e) { e.preventDefault(); e.stopPropagation(); });
   }
   window.navigateMonitor = function (siteKey, url) {
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) return false;

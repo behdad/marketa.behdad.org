@@ -636,6 +636,12 @@ Life compares each computed generation with its source board. An empty board or 
 fixed point pauses through the normal `lifePause` owner; period-two and longer oscillators keep
 running. Every direct board mutation clears the diagnostic `lifeStationary` flag.
 
+Doom executes the pinned non-modular Emscripten glue from fetched source so Kill/Restart can create
+a fresh private runtime scope. `prepareDoomGlueSource` also neutralizes that glue's single
+`document.title` assignment before execution: the embedded game does not own the host tab title.
+The pinned file in `doom/` remains unmodified, and preparation fails closed if its expected shape
+changes.
+
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;
 surface-specific activity and close callbacks own interval lifetime and sunrise/
@@ -980,8 +986,9 @@ Run focused tests for the changed ownership boundary. The main routes are:
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
 - `tests/party-lifecycle.js` for attended party timing and finales;
-- `tests/balcony-tetris.js`, `tests/pacman.js`, and `tests/minigame-vocabulary.js` for action-game
-  lifecycle, keyboard ownership, notification holds, persistence, and shared terminology;
+- `tests/balcony-tetris.js`, `tests/pacman.js`, `tests/doom-title.js`, and
+  `tests/minigame-vocabulary.js` for action-game lifecycle, keyboard/title ownership,
+  notification holds, persistence, and shared terminology;
 - `tests/message-context.js`, `tests/message-launcher.js`, and
   `tests/message-resilience.js`, `tests/message-rewrite.js`, `tests/message-longpress.js`, and
   `tests/message-typed-actions.js` for Messages behavior;

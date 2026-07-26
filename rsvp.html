@@ -51687,6 +51687,14 @@ async def localfont(name):
     try { (new Function("Module", doomGlueSrc))(doomModule); }
     catch (e) { doomFail(); }
   }
+  function prepareDoomGlueSource(txt) {
+    // Emscripten's browser shell treats the host document as its own window and lets SDL's
+    // caption replace document.title. This runtime is an embedded app, so neutralize that
+    // one global write in memory; keep the pinned doom/doom.js deliverable byte-for-byte.
+    var titleWrite = "document.title = title;";
+    if (String(txt).split(titleWrite).length !== 2) return null; // fail closed if the pinned glue's shape unexpectedly changes
+    return String(txt).replace(titleWrite, "void title;");
+  }
   function loadDoom() {
     if (doomLoadState === "loading" || doomLoadState === "ready") return;
     doomLoadState = "loading";
@@ -51696,7 +51704,9 @@ async def localfont(name):
     if (doomReady) { doomSync(); return; }
     if (doomGlueSrc) { bootDoom(); return; } // glue text already cached → reboot in a fresh scope
     fetch(DOOM_ASSETS.glue).then(function (r) { return r.text(); }).then(function (txt) {
-      doomGlueSrc = txt + "\n;try{Module.callMain=callMain;}catch(e){}"; // expose callMain past the wrapper's scope
+      var prepared = prepareDoomGlueSource(txt);
+      if (!prepared) { doomFail(); return; }
+      doomGlueSrc = prepared + "\n;try{Module.callMain=callMain;}catch(e){}"; // expose callMain past the wrapper's scope
       bootDoom();
     }, function () { doomFail(); }); // a true fetch failure surfaces the offline/retry line
   }

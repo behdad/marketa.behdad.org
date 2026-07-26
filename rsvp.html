@@ -3601,10 +3601,11 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-credits-layer{opacity:0;visibility:hidden;pointer-events:none}
 .monitor-credits-layer.open{opacity:1;visibility:visible;pointer-events:auto}
 .monitor-credits-bg{fill:#17131d}
-.monitor-credits-fire{opacity:.62;mix-blend-mode:screen}
+.monitor-credits-fire{opacity:.62;mix-blend-mode:screen;transition:opacity .8s ease,filter .8s ease}
 .monitor-credits-shade{fill:#17131d;opacity:.58}
 .monitor-credits-roll{text-anchor:middle;pointer-events:none}
-#monitor-credits-layer.open #monitor-credits-roll{animation:credits-roll-motion 22s linear forwards}
+#monitor-credits-layer.open #monitor-credits-roll{animation:credits-roll-motion var(--credits-duration,22s) linear forwards}
+#monitor-credits-layer.finished #monitor-credits-fire{opacity:.9;filter:saturate(1.8) hue-rotate(-18deg) brightness(.92)}
 .monitor-credits-title{fill:#fffdf8;font:600 3.2px/1 Fraunces,serif}
 .monitor-credits-name{fill:#fffdf8;font:600 2.2px/1 Fraunces,serif}
 .monitor-credits-role{fill:#d9c9bc;font:1.35px/1 "Source Serif 4",serif}
@@ -3623,7 +3624,7 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-credits-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
 .monitor-credits-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
 .monitor-credits-close:hover circle,.monitor-credits-close:focus circle{fill:#a94a5d;stroke-width:.62}
-@keyframes credits-roll-motion{from{transform:translateY(0)}to{transform:translateY(-126px)}}
+@keyframes credits-roll-motion{from{transform:translateY(0)}to{transform:translateY(var(--credits-travel,-126px))}}
 @keyframes credits-fire-flare-motion{from{filter:saturate(1)}to{filter:saturate(1.45) brightness(1.25)}}
 @keyframes credits-kill-reveal-motion{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
 .monitor-lock-layer{opacity:0; visibility:hidden; pointer-events:none}
@@ -28114,6 +28115,28 @@ var LOFT_CREDITS = Object.freeze({
   date: "July 2026"
 });
 window.LOFT_CREDITS = LOFT_CREDITS;
+function loftCreditsLayout(testerCount, otherPeopleCount) {
+  testerCount = Math.max(0, +testerCount || 0);
+  otherPeopleCount = Math.max(0, +otherPeopleCount || 0);
+  var peopleY = 209;
+  var testersHeadingY = peopleY + otherPeopleCount * 7;
+  var testersStartY = testersHeadingY + 4;
+  var softwareHeadingY = testersStartY + testerCount * 4.5 + 2.5;
+  var dateY = softwareHeadingY + 28;
+  var travel = -(dateY - 152); // finish with even the final line fully above the y=155 clipped screen
+  return {
+    peopleY: peopleY,
+    testersHeadingY: testersHeadingY,
+    testersStartY: testersStartY,
+    softwareHeadingY: softwareHeadingY,
+    noticeY: softwareHeadingY + 17,
+    closingY: softwareHeadingY + 24,
+    dateY: dateY,
+    travel: travel,
+    duration: Math.max(22, Math.abs(travel) * 22 / 126)
+  };
+}
+window.__loftCreditsLayout = loftCreditsLayout;
 function loftCreditsLines(lang) {
   var dict = T[lang || document.documentElement.lang] || T.en;
   var lines = [dict.credits_thanks || T.en.credits_thanks];
@@ -33856,7 +33879,7 @@ setMusicPausedState(false);
   window.__clearCuddlyProjectorSlow = clearProjectorSlow; // reset hook
   function creditsFireOn() {
     var layer = document.getElementById("monitor-credits-layer");
-    return !!layer && layer.classList.contains("open") && !layer.classList.contains("finished");
+    return !!layer && layer.classList.contains("open");
   }
   // OFF is a genuine stop unless Credits is borrowing the fire simulation.
   function shouldRun() {
@@ -43917,26 +43940,30 @@ setOfficeProgress("pc", false);
     }
     creditsLine(200, "monitor-credits-title", "credits_title");
     creditsLine(204, "monitor-credits-section", "credits_thanks");
-    var creditY = 209;
-    LOFT_CREDITS.people.filter(function (person) { return person.role !== "credits_tester"; }).forEach(function (person) {
+    var otherPeople = LOFT_CREDITS.people.filter(function (person) { return person.role !== "credits_tester"; });
+    var testers = LOFT_CREDITS.people.filter(function (person) { return person.role === "credits_tester"; });
+    var creditsLayout = loftCreditsLayout(testers.length, otherPeople.length);
+    var creditY = creditsLayout.peopleY;
+    otherPeople.forEach(function (person) {
       creditsLine(creditY, "monitor-credits-name", null, person.name);
       creditsLine(creditY + 2.5, "monitor-credits-role", person.role);
       creditY += 7;
     });
-    creditsLine(creditY, "monitor-credits-section", "credits_testers");
-    creditY += 4;
-    LOFT_CREDITS.people.filter(function (person) { return person.role === "credits_tester"; }).forEach(function (person) {
+    creditsLine(creditsLayout.testersHeadingY, "monitor-credits-section", "credits_testers");
+    creditY = creditsLayout.testersStartY;
+    testers.forEach(function (person) {
       creditsLine(creditY, "monitor-credits-name", null, person.name);
       creditY += 4.5;
     });
-    var softwareHeadingY = creditY + 2.5; // preserve breathing room as the tester roll grows
-    creditsLine(softwareHeadingY, "monitor-credits-section", "credits_open_source");
+    creditsLine(creditsLayout.softwareHeadingY, "monitor-credits-section", "credits_open_source");
     LOFT_CREDITS.software.forEach(function (name, i) {
-      creditsLine(softwareHeadingY + 4 + i * 3, "monitor-credits-software", null, name);
+      creditsLine(creditsLayout.softwareHeadingY + 4 + i * 3, "monitor-credits-software", null, name);
     });
-    creditsLine(softwareHeadingY + 17, "monitor-credits-notice", "credits_licenses");
-    creditsLine(softwareHeadingY + 24, "monitor-credits-made", null, LOFT_CREDITS.closing);
-    creditsLine(softwareHeadingY + 28, "monitor-credits-notice", null, LOFT_CREDITS.date);
+    creditsLine(creditsLayout.noticeY, "monitor-credits-notice", "credits_licenses");
+    creditsLine(creditsLayout.closingY, "monitor-credits-made", null, LOFT_CREDITS.closing);
+    creditsLine(creditsLayout.dateY, "monitor-credits-notice", null, LOFT_CREDITS.date);
+    creditsRoll.style.setProperty("--credits-travel", creditsLayout.travel + "px");
+    creditsRoll.style.setProperty("--credits-duration", creditsLayout.duration + "s");
     var creditsKill = mkEl("g", { id: "monitor-credits-kill", "class": "monitor-credits-kill" }, creditsViewport);
     var creditsKillTitle = mkEl("text", { x: 316, y: 173.5, "class": "monitor-credits-kill-title",
       "data-i": "credits_killed" }, creditsKill);

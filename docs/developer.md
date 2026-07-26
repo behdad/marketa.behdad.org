@@ -632,6 +632,10 @@ Space pauses Pac-Man rather than music. Pointer buttons and drag gestures feed t
 owner. `tests/pacman.js` owns simulation cadence, input, pause/resume, checkpoint, Kill, and
 reduced-motion coverage.
 
+Life compares each computed generation with its source board. An empty board or a non-empty
+fixed point pauses through the normal `lifePause` owner; period-two and longer oscillators keep
+running. Every direct board mutation clears the diagnostic `lifeStationary` flag.
+
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;
 surface-specific activity and close callbacks own interval lifetime and sunrise/

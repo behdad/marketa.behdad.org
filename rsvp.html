@@ -4031,6 +4031,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .life-btn:hover{background:#d3cbb7}
 .life-btn:active{box-shadow:inset 0.5px 0.5px 0 rgba(69,58,49,0.3), inset -0.5px -0.5px 0 rgba(255,255,255,0.62)}
 .life-btn.on{background:#8e3a4a; color:#fffdf8; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.35)}
+.life-step{font-size:3px; letter-spacing:-0.8px; padding-right:1px}
 .life-preset{font-size:2.5px}
 .life-gen{font-size:2.8px; line-height:1; text-align:center; color:#5c5142; padding:0.4px 0 0.2px}
 .life-spd{font-size:3.4px}
@@ -48449,7 +48450,7 @@ setOfficeProgress("pc", false);
   var LIFE_SPEEDS = [300, 140, 60]; // slow / medium / fast, ms per generation
   var lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
   var lifeCanvas = null, lifeCtx = null, lifeBuilt = false;
-  var lifePlaying = false, lifeTimer = null, lifeSpeedIdx = 1, lifeGen = 0;
+  var lifePlaying = false, lifeTimer = null, lifeSpeedIdx = 1, lifeGen = 0, lifeStationary = false;
   var lifeSeeded = false; // session retention: the board/gen/play-state survive a close+reopen; only a first-ever open or a Kill/reset re-seeds a fresh random soup
   var lifePlayBtn = null, lifeGenEl = null;
   var lifeSpeedBtns = [], lifePresetBtns = [];
@@ -48487,7 +48488,7 @@ setOfficeProgress("pc", false);
   function lifePaintGen() { if (lifeGenEl) lifeGenEl.textContent = lifeT("life_gen") + " " + lifeGen; }
   function lifeAdvance() {
     var next = new Uint8Array(LIFE_COLS * LIFE_ROWS);
-    var alive = false;
+    var alive = false, changed = false;
     for (var r = 0; r < LIFE_ROWS; r++) for (var c = 0; c < LIFE_COLS; c++) {
       var n = 0;
       for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
@@ -48498,9 +48499,10 @@ setOfficeProgress("pc", false);
       var i = r * LIFE_COLS + c;
       next[i] = lifeGridArr[i] ? (n === 2 || n === 3 ? 1 : 0) : (n === 3 ? 1 : 0); // B3/S23
       if (next[i]) alive = true;
+      if (next[i] !== lifeGridArr[i]) changed = true;
     }
-    lifeGridArr = next; lifeGen++; lifePaintGen(); lifeRender();
-    if (!alive) lifePause();
+    lifeGridArr = next; lifeGen++; lifeStationary = alive && !changed; lifePaintGen(); lifeRender();
+    if (!alive || lifeStationary) lifePause();
   }
   function lifeArmTimer() { if (lifeTimer) clearInterval(lifeTimer); lifeTimer = setInterval(lifeStep, LIFE_SPEEDS[lifeSpeedIdx]); }
   function lifeStep() {
@@ -48529,9 +48531,9 @@ setOfficeProgress("pc", false);
   function lifeStepOnce() { lifePause(); lifeAdvance(); }
   function lifeRandom() {
     for (var i = 0; i < lifeGridArr.length; i++) lifeGridArr[i] = Math.random() < 0.32 ? 1 : 0;
-    lifeGen = 0; lifePaintGen(); lifeRender();
+    lifeGen = 0; lifeStationary = false; lifePaintGen(); lifeRender();
   }
-  function lifeClear() { lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS); lifeGen = 0; lifePause(); lifePaintGen(); lifeRender(); }
+  function lifeClear() { lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS); lifeGen = 0; lifeStationary = false; lifePause(); lifePaintGen(); lifeRender(); }
   function lifeDropPreset(name) {
     var p = LIFE_PRESETS[name]; if (!p) return;
     lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
@@ -48543,7 +48545,7 @@ setOfficeProgress("pc", false);
       var r = baseR + o[0], c = baseC + o[1];
       if (r >= 0 && r < LIFE_ROWS && c >= 0 && c < LIFE_COLS) lifeGridArr[r * LIFE_COLS + c] = 1;
     });
-    lifeGen = 0; lifePaintGen(); lifeRender(); // swap grid in place; preserve play/pause state
+    lifeGen = 0; lifeStationary = false; lifePaintGen(); lifeRender(); // swap grid in place; preserve play/pause state
   }
   function lifeSetSpeed(idx) {
     lifeSpeedIdx = idx;
@@ -48589,7 +48591,7 @@ setOfficeProgress("pc", false);
     var side = document.createElement("div"); side.className = "life-side"; lifeWrap.appendChild(side);
     var row1 = document.createElement("div"); row1.className = "life-row"; side.appendChild(row1);
     lifePlayBtn = lifeBtn(row1, "", "▶", "life_play", lifeToggle);
-    lifeBtn(row1, "", "⏭", "life_step", lifeStepOnce);
+    lifeBtn(row1, "life-step", "▶│", "life_step", lifeStepOnce);
     lifeBtn(row1, "", "🎲", "life_random", lifeRandom);
     lifeBtn(row1, "", "✕", "life_clear", lifeClear);
     lifeGenEl = document.createElement("div"); lifeGenEl.className = "life-gen"; side.appendChild(lifeGenEl);
@@ -48611,6 +48613,7 @@ setOfficeProgress("pc", false);
       e.stopPropagation();
       var i = lifeCellFromEvent(e); if (i < 0) return;
       lifePainting = true; lifePaintVal = lifeGridArr[i] ? 0 : 1; lifeGridArr[i] = lifePaintVal;
+      lifeStationary = false;
       try { lifeCanvas.setPointerCapture(e.pointerId); } catch (er) {}
       lifeRender();
     });
@@ -48618,7 +48621,7 @@ setOfficeProgress("pc", false);
       if (!lifePainting) return;
       e.stopPropagation();
       var i = lifeCellFromEvent(e); if (i < 0) return;
-      if (lifeGridArr[i] !== lifePaintVal) { lifeGridArr[i] = lifePaintVal; lifeRender(); }
+      if (lifeGridArr[i] !== lifePaintVal) { lifeGridArr[i] = lifePaintVal; lifeStationary = false; lifeRender(); }
     });
     function endPaint() { lifePainting = false; }
     lifeCanvas.addEventListener("pointerup", endPaint);
@@ -48727,7 +48730,7 @@ setOfficeProgress("pc", false);
     });
   }
   window.__killMonitorLife = lifeDeathFlash;
-  window.__lifeState = function () { return { playing: lifePlaying, generation: lifeGen, alive: lifeGridArr.some(function (cell) { return !!cell; }) }; };
+  window.__lifeState = function () { return { playing: lifePlaying, generation: lifeGen, alive: lifeGridArr.some(function (cell) { return !!cell; }), stationary: lifeStationary }; };
   window.__lifeAdvance = lifeAdvance;
   window.__pauseMonitorLife = function () { if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; } }; // room-leave: stop the loop but keep lifePlaying so it resumes on return
   window.__resumeMonitorLife = function () { if (lifePlaying && !lifeTimer && monitor.classList.contains("show-life") && document.visibilityState !== "hidden") lifeArmTimer(); };
@@ -53837,7 +53840,7 @@ async def localfont(name):
         closeLifeApp();
         if (lifeTimer) { clearInterval(lifeTimer); lifeTimer = null; }
         lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
-        lifeGen = 0; lifePlaying = false; lifeSpeedIdx = 1; lifeSeeded = false;
+        lifeGen = 0; lifePlaying = false; lifeStationary = false; lifeSpeedIdx = 1; lifeSeeded = false;
         if (lifeBuilt) { lifeSetSpeed(1); lifePaintGen(); lifePaintPlayBtn(); lifeRender(); }
         break;
       case "mines":

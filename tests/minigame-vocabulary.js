@@ -120,6 +120,11 @@ var harness = [
   'lifeButtons[3].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));',
   'lifeButtons[0].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__lifeAdvance();',
   'out.life={label:life&&life.getAttribute("aria-label"),paused:lifePaused,resumed:lifeResumed,musicHeld:window.__musicPaused===lifeMusicBefore,extinctPaused:!window.__lifeState().playing&&!window.__lifeState().alive};',
+  'var lifeCanvas=document.querySelector(".life-board"),lr=lifeCanvas.getBoundingClientRect();',
+  'function paintLifeCell(r,c,id){var x=lr.left+(c+.5)*lr.width/30,y=lr.top+(r+.5)*lr.height/14;lifeCanvas.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:id,clientX:x,clientY:y}));lifeCanvas.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:id,clientX:x,clientY:y}));}',
+  'paintLifeCell(6,14,1);paintLifeCell(6,15,2);paintLifeCell(7,14,3);paintLifeCell(7,15,4);var stillStartGen=window.__lifeState().generation;',
+  'lifeButtons[0].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__lifeAdvance();var still=window.__lifeState();out.life.still=still;out.life.stepFace=lifeButtons[1].textContent;out.life.stationaryPaused=!still.playing&&still.alive&&still.stationary&&still.generation===stillStartGen+1;',
+  'lifeButtons[8].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));lifeButtons[0].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__lifeAdvance();var oscillator=window.__lifeState();out.life.oscillatorContinues=oscillator.playing&&oscillator.alive&&!oscillator.stationary;lifeButtons[0].dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));',
   'document.getElementById("__report").textContent=JSON.stringify(out);',
   '},350);});</script>'
 ].join("\n");
@@ -148,8 +153,9 @@ check(rendered && rendered.mines.label === "NEW GAME" && rendered.mines.title ==
   "Mines names its face control New game and accepts keyboard activation",
   rendered && JSON.stringify(rendered.mines));
 check(rendered && rendered.life.label === "Play" && rendered.life.paused && rendered.life.resumed &&
-      rendered.life.musicHeld && rendered.life.extinctPaused,
-  "Life owns Space and pauses when its board goes extinct",
+      rendered.life.musicHeld && rendered.life.extinctPaused && rendered.life.stationaryPaused &&
+      rendered.life.oscillatorContinues && rendered.life.stepFace === "▶│",
+  "Life owns Space and pauses when its board goes extinct or reaches a fixed point",
   rendered && JSON.stringify(rendered.life));
 
 console.log("");

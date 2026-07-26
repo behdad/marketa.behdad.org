@@ -55359,7 +55359,13 @@ async def localfont(name):
         if (b.__servings >= BBQ_SERVINGS_PER_SPOT) {
           b.classList.add("depleted");
           var food = bbqFoodState();
-          if (food.empty && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("hamid_bbq_done");
+          if (food.empty) {
+            if (window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("hamid_bbq_done");
+            // Hamid has served the twelfth and final plate: use the normal stop lifecycle so
+            // the fire goes out, the lid comes down, he steps away, and inventory is fresh for
+            // the next lighting rather than leaving an unattended hot, open smoker.
+            if (window.__stopBBQ) window.__stopBBQ("internal");
+          }
         } else if (smoking) setTimeout(function () { cookBurger(b); }, 500);
       }, 450);
       return kind;
@@ -55372,7 +55378,12 @@ async def localfont(name):
     window.__balconyServeReadyBurger = function () {
       var b = document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)");
       if (!b) return null;
+      if (!smoker.classList.contains("open")) toggleLid(true); // serving is always done with the lid raised
       return serveBurger(b, null);
+    };
+    window.__openBBQLid = function () {
+      if (!smoker.classList.contains("open")) toggleLid(true);
+      return smoker.classList.contains("open");
     };
     // Fire up the BBQ on demand (Behdad's "let's start the BBQ" text): lid up + fire on, idempotent.
     window.__startBBQ = function (source) {
@@ -82190,11 +82201,12 @@ function spawnDustMote(container) {
     // (crickets rule); a single persistent food node (opacity toggled) → nothing accumulates.
     var armEl = document.getElementById("balcony-grill-arm");
     var plateEl = document.getElementById("balcony-grill-plate");
-    function foodReady() { return smoker.classList.contains("open") && !!document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)"); }
+    function foodReady() { return !!document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)"); }
     if (armEl) armEl.addEventListener("animationend", function (e) { if (e.animationName === "grill-serve-swing") armEl.classList.remove("serving"); });
     if (plateEl) plateEl.addEventListener("animationend", function (e) { if (e.animationName === "grill-food-plate") plateEl.classList.remove("plated"); });
     function serveOne() {
       if (!armEl || !plateEl) return;
+      if (window.__openBBQLid) window.__openBBQLid(); // lift before the spatula reaches in, even if somebody closed it during cooking
       armEl.classList.remove("serving");
       void armEl.getBoundingClientRect(); // restart the one-shot swing
       armEl.classList.add("serving");

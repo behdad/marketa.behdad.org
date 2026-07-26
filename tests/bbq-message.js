@@ -47,7 +47,10 @@ var harness = String.raw`<script>
     var postSatisfactionHandoff = window.__balconyGuestTakePlate("tofu");
     check("satisfied Jay stops monopolizing the tofu", postSatisfactionHandoff && postSatisfactionHandoff.recipient !== "jay", JSON.stringify(postSatisfactionHandoff));
     document.querySelectorAll("#balcony-hangout .bh-served-plate").forEach(function (plate) { plate.remove(); });
+    document.getElementById("balcony-smoker-lid").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    check("the smoker can be closed over cooked food", !document.getElementById("balcony-smoker").classList.contains("open"));
     var firstKind = window.__balconyServeReadyBurger();
+    check("serving always raises the smoker lid", document.getElementById("balcony-smoker").classList.contains("open"));
     var handoff = window.__balconyLastFoodHandoff();
     var heldPlate = document.querySelector("#balcony-hangout .bh-fig.bh-present .bh-served-plate");
     check("a real serving places the matching food with a present balcony guest",
@@ -87,15 +90,21 @@ var harness = String.raw`<script>
   }, 27400);
   setTimeout(function () {
     var final = window.__bbqFoodState(), ids = window.__phoneMessageThread();
-    check("twelve servings visibly exhaust all three grate positions", final.served === 12 && final.capacity === 12 && final.depleted === 3 && final.empty, JSON.stringify(final));
+    var smoker = document.getElementById("balcony-smoker");
+    check("after the twelfth serving Hamid turns the grill off and closes its lid",
+      !final.on && !smoker.classList.contains("smoking") && !smoker.classList.contains("open"),
+      JSON.stringify({ food: final, classes: smoker.getAttribute("class") }));
+    check("Hamid's shutdown replenishes all three grate positions for the next cookout",
+      final.served === 0 && final.capacity === 12 && final.depleted === 0 && !final.empty,
+      JSON.stringify(final));
     check("Hamid signs off when the smoker is empty", window.__phoneMessageReceived("hamid_bbq_done"), ids.join(","));
     check("the closing message is also one-shot", ids.filter(function (id) { return id === "hamid_bbq_done"; }).length === 1, ids.join(","));
     document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    var off = window.__bbqFoodState();
-    check("turning the grill off replenishes its inventory", off.served === 0 && off.depleted === 0 && !off.empty, JSON.stringify(off));
-    document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
     var on = window.__bbqFoodState();
     check("relighting begins with the fresh inventory intact", on.served === 0 && on.depleted === 0 && !on.empty, JSON.stringify(on));
+    document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    var off = window.__bbqFoodState();
+    check("turning the grill off keeps its inventory replenished", off.served === 0 && off.depleted === 0 && !off.empty, JSON.stringify(off));
     window.resetSmoker();
     report();
   }, 28300);

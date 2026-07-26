@@ -60529,6 +60529,13 @@ async def localfont(name):
       m.chatActionFailed = true;
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
     }
+    function messageActionUsesDjBooth(action) {
+      return !!(action && (
+        action.id === "party.music.next" ||
+        action.id === "party.dance.request" ||
+        action.id === "party.dj.set"
+      ));
+    }
     function runTypedMsgAction(id, m, action) {
       if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") {
         renderMsgActionFailure(m);
@@ -60538,6 +60545,9 @@ async def localfont(name):
       var phoneTarget = action.id === "app.open" && args.app !== "messages" ? phoneAppByName(args.app) : null;
       var returnDirectly = phoneAppReturnsByClosing("messages");
       delete m.chatActionFailed;
+      // DJ song offers act at the booth: reveal the party floor before accepting the
+      // requested tune, just like the authored "requests are open" message.
+      if (messageActionUsesDjBooth(action) && window.goToStage && window.currentStageName !== "garden") window.goToStage("garden");
       return window.loft.api.perform(action.id, args, { source: "messages-chat" }).then(function (result) {
         if (!result || !result.ok) { renderMsgActionFailure(m); return false; }
         if (messageActionIsOneShot(m, action)) consumeMessageAction(id);

@@ -20,6 +20,8 @@ var HARNESS = [
   " report.opened=opened;",
   " var fixedTabs=document.querySelectorAll('.browser-tab [data-i^=\"tab_\"]');",
   " report.fixedCloseButtons=[].every.call(fixedTabs,function(label){return !!label.closest('.browser-tab').querySelector('.tab-x');});",
+  " var behdad=document.querySelector('.browser-tab [data-i=\"tab_behdad\"]'),behdadStyle=behdad&&getComputedStyle(behdad);",
+  " report.titleInset=behdadStyle&&parseFloat(behdadStyle.paddingLeft);",
   " var marketaTab=marketa&&marketa.closest('.browser-tab');var marketaX=marketaTab&&marketaTab.querySelector('.tab-x');if(marketaX)marketaX.click();",
   " report.fixedClosed=!document.querySelector('.browser-tab [data-i=\"tab_marketa\"]')&&document.querySelectorAll('.browser-tab [data-i^=\"tab_\"]').length===3;",
   " var browserClose=document.getElementById('monitor-browser-close'),chromeColors=browserClose&&browserClose.querySelectorAll('.browser-close-chrome>path');",
@@ -50,6 +52,7 @@ ok("external-tab control opens the active tab safely",
   r.opened && r.opened.url === "https://marketajakesova.ca/" &&
   r.opened.target === "_blank" && r.opened.features === "noopener");
 ok("every preloaded tab has its own close control", r.fixedCloseButtons === true);
+ok("tab titles leave antialiasing room before their first glyph", r.titleInset >= 0.25);
 ok("closing a preloaded tab removes only that tab for the session", r.fixedClosed === true);
 ok("Chrome hosts get the red, green, and yellow Browser dismiss pill", r.chromeDismiss === true);
 ok("address field advertises search", r.placeholder === "Search or enter address");

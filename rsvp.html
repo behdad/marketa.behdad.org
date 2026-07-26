@@ -5594,7 +5594,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* First unread only: teach the badge in place, without stealing the main scene caption. The
    shared custom property is the exact espresso arrow used by the opening-caption guide. */
 .msg-badge.coached{animation:msg-badge-coach-pulse .9s ease-in-out infinite}
-.msg-badge-coach{position:absolute; top:94px; left:max(4px, calc(50% - 254px)); z-index:62; width:max-content; max-width:calc(100% - 8px); padding:7px 10px; border-radius:7px; background:var(--ink); color:var(--paper); box-shadow:0 3px 10px rgba(0,0,0,.28); font:600 13px/1.25 "Source Serif 4",serif; overflow-wrap:anywhere; pointer-events:none; opacity:0; transform:translateY(-3px); transition:opacity .2s ease, transform .2s ease}
+.msg-badge-coach{position:absolute; top:94px; left:max(4px, calc(50% - 254px)); z-index:62; width:max-content; max-width:calc(100% - 8px); padding:7px 10px; border-radius:7px; background:var(--ink); color:var(--paper); box-shadow:0 3px 10px rgba(0,0,0,.28); font:600 26px/1.25 "Source Serif 4",serif; overflow-wrap:anywhere; pointer-events:none; opacity:0; transform:translateY(-3px); transition:opacity .2s ease, transform .2s ease}
 .msg-badge-coach.show{opacity:1; transform:translateY(0)}
 .msg-badge-coach::before{content:""; position:absolute; left:-5px; bottom:calc(100% + 3px); width:40px; height:48px; background:center / contain no-repeat var(--espresso-arrow-up); filter:drop-shadow(0 1px 1px rgba(69,58,49,.35)); animation:msg-badge-arrow-bob .8s ease-in-out infinite}
 @keyframes msg-badge-coach-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14); box-shadow:0 3px 12px rgba(192,57,43,.55)}}
@@ -61156,7 +61156,10 @@ async def localfont(name):
       if (actionGameHoldsNotifications()) { holdMessageThumb(id); return; } // action games keep the scene clear; release one current preview afterwards
       var m = MESSAGES[id]; if (!m) return;
       cancelMsgBadgeCoachDelay();
-      if (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show")) msgBadgeCoachSeen = false; // a popup that immediately covers the coach did not give the player a fair look; retry after this popup leaves
+      if (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show")) {
+        msgBadgeCoachShown = false; // a popup that immediately covers the coach did not give the player a fair look; retry after this popup leaves
+        cancelMsgBadgeCoachRepeat();
+      }
       hideMsgBadgeCoach(); // never stack the coach over a newer live notification preview
       curThumbId = id; // the whole notification opens and centres this exact message
       // anchor to the scene (.hunt-viewport) so the card drops down from the top of the LOFT, not
@@ -61216,10 +61219,14 @@ async def localfont(name):
     // ── messages shortcut / unread-count badge ── a small red count while messages are unread,
     // then a quiet blue chat icon once the thread is caught up. It appears only after the first
     // message and stays hidden while the phone itself is open; tapping always opens the thread.
-    var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachT = null, msgBadgeCoachDelayT = null, msgBadgeCoachSeen = false;
+    var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachT = null, msgBadgeCoachDelayT = null, msgBadgeCoachRepeatT = null;
+    var msgBadgeCoachShown = false, msgBadgeCoachAcknowledged = false;
     function unreadCount() { expireStaleMessageActions(); var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
     function cancelMsgBadgeCoachDelay() {
       if (msgBadgeCoachDelayT) { clearTimeout(msgBadgeCoachDelayT); msgBadgeCoachDelayT = null; }
+    }
+    function cancelMsgBadgeCoachRepeat() {
+      if (msgBadgeCoachRepeatT) { clearTimeout(msgBadgeCoachRepeatT); msgBadgeCoachRepeatT = null; }
     }
     function hideMsgBadgeCoach() {
       if (msgBadgeCoachT) { clearTimeout(msgBadgeCoachT); msgBadgeCoachT = null; }
@@ -61227,8 +61234,8 @@ async def localfont(name):
       if (msgBadgeEl) msgBadgeEl.classList.remove("coached");
     }
     function showMsgBadgeCoach(host) {
-      if (msgBadgeCoachSeen || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic || (window.__autoplayOn && window.__autoplayOn())) return;
-      msgBadgeCoachSeen = true;
+      if (msgBadgeCoachAcknowledged || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic || (window.__autoplayOn && window.__autoplayOn())) return false;
+      msgBadgeCoachShown = true;
       if (!msgBadgeCoachEl) {
         msgBadgeCoachEl = document.createElement("div");
         msgBadgeCoachEl.className = "msg-badge-coach";
@@ -61240,12 +61247,27 @@ async def localfont(name):
       msgBadgeCoachEl.classList.add("show");
       if (msgBadgeEl) msgBadgeEl.classList.add("coached");
       msgBadgeCoachT = setTimeout(hideMsgBadgeCoach, 8000);
+      cancelMsgBadgeCoachRepeat();
+      msgBadgeCoachRepeatT = setTimeout(repeatMsgBadgeCoach, 60000);
+      return true;
     }
     function maybeShowMsgBadgeCoach() {
-      if (!msgBadgeCoachSeen && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
+      if (!msgBadgeCoachAcknowledged && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) return showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
+      return false;
     }
+    function repeatMsgBadgeCoach() {
+      msgBadgeCoachRepeatT = null;
+      if (msgBadgeCoachAcknowledged) return;
+      maybeShowMsgBadgeCoach();
+      if (!msgBadgeCoachRepeatT) msgBadgeCoachRepeatT = setTimeout(repeatMsgBadgeCoach, 60000); // busy/covered now: try again next minute
+    }
+    window.__repeatMsgBadgeCoach = function () { // test hook: simulate the next minute without making the suite wait
+      cancelMsgBadgeCoachRepeat();
+      hideMsgBadgeCoach();
+      repeatMsgBadgeCoach();
+    };
     function scheduleMsgBadgeCoach() {
-      if (msgBadgeCoachSeen) return;
+      if (msgBadgeCoachAcknowledged || msgBadgeCoachShown) return;
       cancelMsgBadgeCoachDelay();
       msgBadgeCoachDelayT = setTimeout(function () { msgBadgeCoachDelayT = null; maybeShowMsgBadgeCoach(); }, 3000);
     }
@@ -61256,7 +61278,13 @@ async def localfont(name):
         msgBadgeEl = document.createElement("button");
         msgBadgeEl.type = "button";
         msgBadgeEl.className = "msg-badge";
-        msgBadgeEl.addEventListener("click", function () { hideMsgBadgeCoach(); openMessagesAt(null); });
+        msgBadgeEl.addEventListener("click", function () {
+          msgBadgeCoachAcknowledged = true;
+          cancelMsgBadgeCoachDelay();
+          cancelMsgBadgeCoachRepeat();
+          hideMsgBadgeCoach();
+          openMessagesAt(null);
+        });
       }
       if (msgBadgeEl.parentNode !== host) host.appendChild(msgBadgeEl);
       if (actionGameHoldsNotifications()) {

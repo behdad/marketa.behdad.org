@@ -10,6 +10,7 @@ var harness = [
   '<script>(function(){',
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
+  'var aiLogs=[];console.info=function(){aiLogs.push({level:"info",args:[].slice.call(arguments)});};console.warn=function(){aiLogs.push({level:"warn",args:[].slice.call(arguments)});};',
   'function row(id){return document.querySelector(".pm-msg-row[data-message-id="+id+"] .pm-msg-text");}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push(String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
@@ -18,11 +19,11 @@ var harness = [
   ' var accepted=window.__deliverAutonomousPhoneMessage("hannah_banter");var duplicate=window.__deliverAutonomousPhoneMessage("hannah_banter");var pending=window.__messageRewritePending();',
   ' await sleep(40);if(window.__hideMessageThumb)window.__hideMessageThumb();window.__openMessagesAt("hannah_banter");await sleep(40);',
   ' var en=row("hannah_banter");var english=en&&en.textContent;document.documentElement.lang="cs";if(window.refreshPhoneText)window.refreshPhoneText();await sleep(30);var cs=row("hannah_banter");',
-  ' S("success",{accepted:accepted,duplicate:duplicate,pending:pending,request:request,thread:window.__phoneMessageThread(),en:english,cs:cs&&cs.textContent,remaining:window.__messageRewritePending()});',
+  ' S("success",{accepted:accepted,duplicate:duplicate,pending:pending,request:request,logs:aiLogs.splice(0),thread:window.__phoneMessageThread(),en:english,cs:cs&&cs.textContent,remaining:window.__messageRewritePending()});',
   ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;',
   ' window.__monitorMessageRewrite=function(){return Promise.reject(new Error("offline"));};',
   ' var fallbackAccepted=window.__deliverAutonomousPhoneMessage("cue_mail");await sleep(40);if(window.__hideMessageThumb)window.__hideMessageThumb();window.__openMessagesAt("cue_mail");await sleep(40);',
-  ' var fallback=row("cue_mail");S("fallback",{accepted:fallbackAccepted,thread:window.__phoneMessageThread(),body:fallback&&fallback.textContent,pending:window.__messageRewritePending()});',
+  ' var fallback=row("cue_mail");S("fallback",{accepted:fallbackAccepted,logs:aiLogs.splice(0),thread:window.__phoneMessageThread(),body:fallback&&fallback.textContent,pending:window.__messageRewritePending()});',
   ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;',
   ' var originalCalls=0;Math.random=function(){return 0;};window.__monitorMessageRewrite=function(){originalCalls++;return Promise.resolve(JSON.stringify({en:"must not be used"}));};var originalAccepted=window.__deliverAutonomousPhoneMessage("hannah_banter");window.__openMessagesAt("hannah_banter");await sleep(30);var originalBody=row("hannah_banter");S("originalRoll",{accepted:originalAccepted,rewriteCalls:originalCalls,body:originalBody&&originalBody.textContent,pending:window.__messageRewritePending()});',
   ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;',
@@ -58,6 +59,15 @@ check(success.request && success.request.sender === "Hannah" &&
   /official gymnastics score/.test(success.request.en) &&
   !Object.prototype.hasOwnProperty.call(success.request, "cs"),
   "the chatbot receives the sender and English authored copy only", success.request);
+check(success.logs && success.logs.length === 2 &&
+  success.logs[0].level === "info" && success.logs[0].args[0] === "[Messages AI rewrite] sent" &&
+  success.logs[0].args[1].id === "hannah_banter" &&
+  success.logs[0].args[1].sender === "Hannah" &&
+  /official gymnastics score/.test(success.logs[0].args[1].original) &&
+  success.logs[1].level === "info" && success.logs[1].args[0] === "[Messages AI rewrite] received" &&
+  success.logs[1].args[1].id === "hannah_banter" &&
+  /perfect 10\/10/.test(success.logs[1].args[1].response),
+  "the console records each outgoing rewrite request and returned response", success.logs);
 check(success.thread.join(",") === "hannah_banter" &&
   success.en === "Hannah gives this dance floor a perfect 10/10 🤸" &&
   success.cs === "oficiální gymnastická známka pro tenhle parket: 10/10 🤸" &&
@@ -67,6 +77,14 @@ check(fallback.accepted && fallback.thread.join(",") === "cue_mail" &&
   fallback.body === "did you check the mail? 💌 there's a letter for you" &&
   fallback.pending.length === 0,
   "a failed chatbot request delivers the original authored copy unchanged", fallback);
+check(fallback.logs && fallback.logs.length === 2 &&
+  fallback.logs[0].level === "info" && fallback.logs[0].args[0] === "[Messages AI rewrite] sent" &&
+  fallback.logs[0].args[1].id === "cue_mail" &&
+  fallback.logs[1].level === "warn" &&
+  fallback.logs[1].args[0] === "[Messages AI rewrite] no usable response; using original" &&
+  fallback.logs[1].args[1].id === "cue_mail" &&
+  fallback.logs[1].args[1].error === "offline",
+  "the console records a missing AI response and the authored-copy fallback", fallback.logs);
 check(originalRoll.accepted && originalRoll.rewriteCalls === 0 &&
   originalRoll.body === "official gymnastics score for this dance floor: 10/10 🤸" &&
   originalRoll.pending.length === 0,

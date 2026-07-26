@@ -61310,8 +61310,17 @@ async def localfont(name):
       var generation = messageRewriteGeneration;
       pendingAuthoredRewrites[id] = true;
       Promise.resolve().then(function () {
+        console.info("[Messages AI rewrite] sent", {
+          id: id,
+          sender: request.sender,
+          original: request.en
+        });
         return window.__monitorMessageRewrite(request);
       }).then(function (answer) {
+        console.info("[Messages AI rewrite] received", {
+          id: id,
+          response: answer
+        });
         var parsed = answer;
         if (typeof parsed === "string") {
           try { parsed = JSON.parse(parsed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); }
@@ -61322,7 +61331,11 @@ async def localfont(name):
           throw new Error("invalid authored-message rewrite");
         }
         m.rewrittenBodyEn = parsed.en.trim().slice(0, 700);
-      }).catch(function () {
+      }).catch(function (error) {
+        console.warn("[Messages AI rewrite] no usable response; using original", {
+          id: id,
+          error: String(error && error.message || error)
+        });
         // The authored dictionary copy is the fail-safe. A chatbot/Turnstile/network/model
         // failure changes no message state and the original lands through the same path below.
       }).then(function () {

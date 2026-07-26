@@ -164,6 +164,11 @@ footer{margin-top:2.6rem}
   pointer-events:none; text-align:left;
 }
 .egg-bubble.show{opacity:1}
+.egg-bubble.balcony-audience-callout::after{
+  content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent;
+  border-top:8px solid var(--ink);
+}
 /* the fāl couplet's Persian original: RTL, a touch larger and airier than the bubble body so the
    Arabic-script marks have room (system Persian fonts; nothing is fetched for this) */
 .egg-bubble .fal-fa{display:block; direction:rtl; text-align:right; font-size:1.08em; line-height:1.9; margin:.25em 0}
@@ -26533,6 +26538,7 @@ var T = {
     photo_pose_callout_1: "Say cheese! 🧀",
     photo_pose_callout_2: "Smile! 📸",
     photo_pose_callout_3: "Everyone look here! 👀",
+    balcony_audience_callout: "Smile — we have an audience! 👀",
     album_cap_selfie: "photobooth selfie",
     album_remove: "remove photo",
     album_compact: "compact grid",
@@ -27550,6 +27556,7 @@ var T = {
     photo_pose_callout_1: "Sýr! 🧀",
     photo_pose_callout_2: "Úsměv! 📸",
     photo_pose_callout_3: "Všichni sem! 👀",
+    balcony_audience_callout: "Úsměv — máme publikum! 👀",
     album_cap_selfie: "selfie z fotokoutku",
     album_remove: "odstranit fotku",
     album_compact: "kompaktní mřížka",
@@ -61899,6 +61906,7 @@ async def localfont(name):
       watchingWindow = windows[idx];
       watchingWasLit = watchingWindow.classList.contains("lit");
       watchingWindow.classList.add("lit", "watching");
+      if (window.__balconyAudienceNoticed) window.__balconyAudienceNoticed(false);
       watcherTimer = setTimeout(function () {
         clearWatchers(true);
         scheduleAmbient();
@@ -81559,6 +81567,23 @@ function spawnDustMote(container) {
       });
       return out;
     };
+    // Once per visit, an actual smoker may notice the silhouettes watching from the building
+    // opposite. The facade controller calls this only while its watcher cameo is visible.
+    var audienceCommented = false;
+    window.__balconyAudienceNoticed = function (force) {
+      if (audienceCommented || !hangout.classList.contains("on") ||
+          document.hidden || !document.hasFocus() || document.querySelector(".egg-bubble")) return null;
+      var smokers = ROSTER.filter(function (r) { return r.smoker && figurePresent(r); });
+      if (!smokers.length || (!force && Math.random() >= 0.42)) return null;
+      var speaker = smokers[(Math.random() * smokers.length) | 0];
+      var anchor = document.getElementById(speaker.id);
+      if (!anchor) return null;
+      audienceCommented = true;
+      var bubble = eggBubble(anchor, tipText("balcony_audience_callout"), "scene-top", 0, 0, 4300);
+      bubble.classList.add("balcony-audience-callout");
+      bubble.setAttribute("data-speaker", figKey(speaker));
+      return figKey(speaker);
+    };
     // ── name popups: each figure names itself on click, in the shared white name-card __whoPop —
     // same card, and now the same name · role · relationship · fun-fact text, as the garden/cuddly
     // cast (people are click-only; props keep hover). The tip HTML is a live function so the
@@ -81603,6 +81628,9 @@ function spawnDustMote(container) {
     function hide() {
       hangout.classList.remove("on");
       clearGuestFoodPlates();
+      var audienceBubble = document.querySelector(".egg-bubble.balcony-audience-callout");
+      if (audienceBubble) dismissEggBubble(audienceBubble);
+      audienceCommented = false;
       shownOnce = false; // next appearance re-rolls the couple + the whole layout
       shownSmokerNames = []; // nobody's out → the bar/floor stop excluding balcony names
       // clear every held drink so none strands into the next (freshly-rolled) appearance

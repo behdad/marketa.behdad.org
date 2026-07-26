@@ -92,6 +92,21 @@ var harness = String.raw`<script>
           var cs = getComputedStyle(g);
           return cs.display !== "none" && cs.transitionProperty.indexOf("opacity") !== -1;
         }));
+      try {
+        var farhang = document.getElementById("bh-farhang"), farhangWasPresent = farhang.classList.contains("bh-present");
+        document.querySelectorAll("#balcony-hangout .bh-smoker.bh-present").forEach(function (el) { el.classList.remove("bh-present"); });
+        farhang.classList.add("bh-present");
+        var audienceSpeaker = window.__balconyAudienceNoticed(true);
+        var audienceBubble = document.querySelector(".egg-bubble.balcony-audience-callout");
+        check("a smoker can notice the audience across the street",
+          audienceSpeaker === "farhang" && audienceBubble &&
+          audienceBubble.getAttribute("data-speaker") === "farhang" &&
+          /Smile.*audience/.test(audienceBubble.textContent), audienceSpeaker + " / " + (audienceBubble && audienceBubble.textContent));
+        if (audienceBubble) audienceBubble.remove();
+        farhang.classList.toggle("bh-present", farhangWasPresent);
+      } catch (audienceError) {
+        check("a smoker can notice the audience across the street", false, String(audienceError && audienceError.stack || audienceError));
+      }
       check("hosts are not published as smokers", (window.__balconySmokerNow() || []).indexOf("behdad") === -1 && (window.__balconySmokerNow() || []).indexOf("marketa") === -1);
       check("grill is lit", document.getElementById("balcony-smoker").classList.contains("smoking"));
       var plateBox = document.getElementById("balcony-grill-plate").getBoundingClientRect();

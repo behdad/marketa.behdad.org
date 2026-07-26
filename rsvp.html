@@ -884,6 +884,26 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .balcony-building-window.lit .balcony-building-cell{fill:#f1cf78;opacity:.9}
 #stage-balcony.dusk .balcony-building-cell{fill:#172b3b;opacity:.8}
 #stage-balcony.dusk .balcony-building-window.lit .balcony-building-cell{fill:#ffd978;opacity:1}
+.balcony-building-onlooker{
+  opacity:0;fill:#17232b;pointer-events:none;
+  transition:opacity .5s ease
+}
+.balcony-building-window.watching .balcony-building-onlooker{opacity:.82}
+.balcony-building-cell.tetris-attract{
+  opacity:1!important;transition:fill .16s ease,opacity .16s ease;
+  stroke:#fffdf8;stroke-opacity:.45;stroke-width:.55
+}
+.balcony-building-cell.tetris-attract.tetris-i{fill:#35d8ea!important}
+.balcony-building-cell.tetris-attract.tetris-j{fill:#4e7ff0!important}
+.balcony-building-cell.tetris-attract.tetris-l{fill:#f39a3f!important}
+.balcony-building-cell.tetris-attract.tetris-o{fill:#f2d238!important}
+.balcony-building-cell.tetris-attract.tetris-s{fill:#55c95d!important}
+.balcony-building-cell.tetris-attract.tetris-t{fill:#b769d2!important}
+.balcony-building-cell.tetris-attract.tetris-z{fill:#ed5960!important}
+#stage-balcony.tetris-on .balcony-building-onlooker{opacity:0!important}
+@media (prefers-reduced-motion: reduce){
+  .balcony-building-onlooker,.balcony-building-cell.tetris-attract{transition:none}
+}
 #stage-balcony.tetris-on .balcony-building-cell{
   transition:none;
   fill:#172735 !important;
@@ -61575,6 +61595,24 @@ async def localfont(name):
             cells[boardRow * BOARD_COLS + boardCol] = cell;
           }
         }
+        var onlookers = svgEl("g", { "class": "balcony-building-onlooker", "aria-hidden": "true" });
+        onlookers.appendChild(svgEl("circle", {
+          cx: (wx + 6).toFixed(2), cy: (wy + 7.1).toFixed(2), r: "1.45"
+        }));
+        onlookers.appendChild(svgEl("path", {
+          d: "M" + (wx + 2.9) + " " + (wy + 14.2) + " Q" + (wx + 3.3) + " " + (wy + 9.2) +
+            " " + (wx + 6) + " " + (wy + 9.1) + " Q" + (wx + 8.6) + " " + (wy + 9.2) +
+            " " + (wx + 9) + " " + (wy + 14.2) + "Z"
+        }));
+        onlookers.appendChild(svgEl("circle", {
+          cx: (wx + 10.6).toFixed(2), cy: (wy + 7.7).toFixed(2), r: "1.25"
+        }));
+        onlookers.appendChild(svgEl("path", {
+          d: "M" + (wx + 8) + " " + (wy + 14.2) + " Q" + (wx + 8.2) + " " + (wy + 9.8) +
+            " " + (wx + 10.6) + " " + (wy + 9.7) + " Q" + (wx + 13.1) + " " + (wy + 9.8) +
+            " " + (wx + 13.5) + " " + (wy + 14.2) + "Z"
+        }));
+        apartment.appendChild(onlookers);
         apartment.appendChild(svgEl("rect", {
           "class": "balcony-building-window-hit",
           x: wx, y: wy, width: WINDOW_SIZE, height: WINDOW_SIZE
@@ -61585,10 +61623,13 @@ async def localfont(name):
     }
 
     var ambientTimer = null, onBalcony = false, lastAmbientWindow = -1;
+    var attractTimer = null, attractCells = [], ambientUntilAttract = 0;
+    var watcherTimer = null, watchingWindow = null, watchingWasLit = false;
     var active = false, resultVisible = false, gameRaf = null, lastFrame = 0, gravityElapsed = 0;
     var resultTimer = null, savedCaption = null, captionSaved = false, normalWindowState = null;
     var pausedSceneAnimations = [];
     var board = [], piece = null, bag = [], score = 0, lines = 0, level = 0;
+    var tetrisReducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var HIGH_KEY = "balconyTetrisHigh";
     var PIECES = {
       i: { size: 4, cells: [[0,1],[1,1],[2,1],[3,1]] },
@@ -61648,32 +61689,114 @@ async def localfont(name):
 
     function attended() {
       return onBalcony && window.currentStageName === "balcony" &&
-        !document.hidden && document.hasFocus() && !active;
+        !document.hidden && document.hasFocus() && !active && !resultVisible;
+    }
+    function clearAttractCells() {
+      attractCells.forEach(function (cell) {
+        cell.classList.remove("tetris-attract", "tetris-i", "tetris-j", "tetris-l",
+          "tetris-o", "tetris-s", "tetris-t", "tetris-z");
+      });
+      attractCells = [];
+    }
+    function clearAttract() {
+      clearTimeout(attractTimer); attractTimer = null;
+      clearAttractCells();
+    }
+    function clearWatchers(restoreLight) {
+      clearTimeout(watcherTimer); watcherTimer = null;
+      if (watchingWindow) {
+        watchingWindow.classList.remove("watching");
+        if (restoreLight) watchingWindow.classList.toggle("lit", watchingWasLit);
+      }
+      watchingWindow = null;
+    }
+    function clearAmbientEffects(restoreLight) {
+      clearAttract();
+      clearWatchers(restoreLight);
+    }
+    function paintAttract(type, row, col) {
+      clearAttractCells();
+      rotatedCells(PIECES[type], 0).forEach(function (xy) {
+        var x = col + xy[0], y = row + xy[1];
+        if (x < 0 || x >= BOARD_COLS || y < 0 || y >= BOARD_ROWS) return;
+        var cell = cells[y * BOARD_COLS + x];
+        cell.classList.add("tetris-attract", "tetris-" + type);
+        attractCells.push(cell);
+      });
+    }
+    function startAttract(previewOnly) {
+      clearAmbientEffects(true);
+      if (!attended()) return;
+      var types = Object.keys(PIECES), type = types[Math.floor(Math.random() * types.length)];
+      var spec = PIECES[type], col = Math.floor(Math.random() * (BOARD_COLS - spec.size + 1));
+      var row = previewOnly || tetrisReducedMotion ? BOARD_ROWS - spec.size - 1 : -spec.size;
+      var endRow = BOARD_ROWS - spec.size - 1;
+      function fall() {
+        attractTimer = null;
+        if (!attended()) { clearAttract(); return; }
+        paintAttract(type, row, col);
+        if (previewOnly) return;
+        if (row < endRow && !tetrisReducedMotion) {
+          row++;
+          attractTimer = setTimeout(fall, 145);
+        } else {
+          attractTimer = setTimeout(function () {
+            clearAttract();
+            scheduleAmbient();
+          }, tetrisReducedMotion ? 1250 : 850);
+        }
+      }
+      fall();
+    }
+    function showWatchers(forcedIndex) {
+      clearAmbientEffects(true);
+      if (!attended()) return;
+      var idx = typeof forcedIndex === "number" ? forcedIndex : Math.floor(Math.random() * windows.length);
+      watchingWindow = windows[idx];
+      watchingWasLit = watchingWindow.classList.contains("lit");
+      watchingWindow.classList.add("lit", "watching");
+      watcherTimer = setTimeout(function () {
+        clearWatchers(true);
+        scheduleAmbient();
+      }, 3600 + Math.random() * 1800);
     }
     function scheduleAmbient() {
       clearTimeout(ambientTimer);
       ambientTimer = null;
-      if (!attended()) return;
+      if (!attended() || attractTimer || watcherTimer) return;
       ambientTimer = setTimeout(ambientTick, 2800 + Math.random() * 4200);
     }
-    function ambientTick() {
+    function ambientTick(forcePlain) {
       ambientTimer = null;
       if (!attended()) return;
+      if (!forcePlain && ambientUntilAttract <= 0) {
+        ambientUntilAttract = 2;
+        startAttract(false);
+        return;
+      }
+      if (!forcePlain && window.__gardenPartyOn && Math.random() < .45) {
+        ambientUntilAttract--;
+        showWatchers();
+        return;
+      }
       var idx;
       do { idx = Math.floor(Math.random() * windows.length); } while (idx === lastAmbientWindow && windows.length > 1);
       lastAmbientWindow = idx;
       windows[idx].classList.toggle("lit");
+      if (!forcePlain) ambientUntilAttract--;
       scheduleAmbient();
     }
     window.__updateBalconyWindows = function (isBalcony) {
       if (typeof isBalcony === "boolean") onBalcony = isBalcony;
       clearTimeout(ambientTimer); ambientTimer = null;
+      if (!attended()) clearAmbientEffects(true);
       if (attended()) scheduleAmbient();
     };
     document.addEventListener("visibilitychange", function () { window.__updateBalconyWindows(); });
     window.addEventListener("focus", function () { window.__updateBalconyWindows(); });
     window.addEventListener("blur", function () {
       clearTimeout(ambientTimer); ambientTimer = null;
+      clearAmbientEffects(true);
       if (active) stopGame(false);
     });
 
@@ -61871,6 +61994,7 @@ async def localfont(name):
         captionSaved = true;
       }
       clearTimeout(ambientTimer); ambientTimer = null;
+      clearAmbientEffects(true);
       normalWindowState = windows.map(function (windowEl) { return windowEl.classList.contains("lit"); });
       pauseScene();
       active = true; board = emptyBoard(); bag = []; score = 0; lines = 0; level = 0;
@@ -61900,6 +62024,7 @@ async def localfont(name):
       var apartment = e.target && e.target.closest ? e.target.closest(".balcony-building-window") : null;
       if (!apartment || active) return;
       e.stopPropagation();
+      clearAmbientEffects(true);
       apartment.classList.toggle("lit");
       playLaptopClickSound("balcony-cityview");
     });
@@ -62039,11 +62164,26 @@ async def localfont(name):
         active: active, result: resultVisible, score: score, high: highScore(), lines: lines, level: level,
         piece: piece ? { type: piece.type, rotation: piece.rotation, x: piece.x, y: piece.y } : null,
         board: board.map(function (row) { return row.slice(); }),
-        windows: windows.map(function (windowEl) { return windowEl.classList.contains("lit"); })
+        windows: windows.map(function (windowEl) { return windowEl.classList.contains("lit"); }),
+        attract: attractCells.length,
+        watchers: windows.filter(function (windowEl) { return windowEl.classList.contains("watching"); }).length
       };
     };
     window.__balconyTetrisTest = function (command, value) {
-      if (command === "ambient") { ambientTick(); return window.__balconyTetrisState(); }
+      if (command === "ambient") {
+        clearTimeout(ambientTimer); ambientTimer = null;
+        ambientTick(true);
+        return window.__balconyTetrisState();
+      }
+      if (command === "cameos") {
+        startAttract(true);
+        var attractState = window.__balconyTetrisState();
+        clearAttract();
+        showWatchers(7);
+        var watcherState = window.__balconyTetrisState();
+        clearAmbientEffects(true);
+        return { attract: attractState.attract, watchers: watcherState.watchers, state: window.__balconyTetrisState() };
+      }
       if (command === "gameover") { stopGame(true); return window.__balconyTetrisState(); }
       if (command === "set" && value) {
         board = value.board ? value.board.map(function (row) { return row.slice(); }) : emptyBoard();

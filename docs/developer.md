@@ -341,8 +341,11 @@ Search for `balconyBuildingTetris`, `#balcony-building-window-grid`, and
 office windows, each containing a 2×2 set of square SVG cells. Normal mode applies
 one `.lit` state to all four cells in a window. Its single self-rescheduling
 ambient timer exists only while the balcony is visible and the document is
-focused; a manual click toggles exactly one window and a double-click starts the
-game.
+focused. It interleaves ordinary single-window changes with a bounded falling
+tetromino attract cue; while the party is active it may instead reveal a
+temporary silhouetted pair without changing the underlying apartment state.
+Room/focus/game transitions clear both effects synchronously. A manual click
+toggles exactly one window and a double-click starts the game.
 
 The minigame owns a 10×16 board, seven-bag pieces, rotation/wall kicks,
 line/level scoring, and `localStorage["balconyTetrisHigh"]`. That personal best

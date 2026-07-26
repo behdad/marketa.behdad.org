@@ -5460,6 +5460,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-retry:hover,.pm-msg-retry:focus-visible{background:#f1e6dc; outline:2px solid rgba(142,58,74,.18); outline-offset:1px}
 .pm-msg-act{flex:none; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:var(--wine); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(142,58,74,.28)}
 .pm-msg-act:hover,.pm-msg-act:focus-visible{background:#743143; outline:2px solid rgba(142,58,74,.25); outline-offset:1px}
+.pm-msg-act.used{background:transparent; color:var(--soft); border:1px solid var(--rule); box-shadow:none}
+.pm-msg-act.used:hover,.pm-msg-act.used:focus-visible{background:rgba(142,58,74,.08); color:var(--wine)}
 .pm-msg-act svg{width:15px; height:15px}
 .pm-msg-text{display:block}
 .pm-msg-quote{display:block; width:100%; margin:0 0 4px; padding:2px 5px; border:0; border-left:2px solid currentColor; border-radius:0; background:none; color:inherit; opacity:.72; font:inherit; font-size:10px; line-height:1.25; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer}
@@ -57187,6 +57189,7 @@ async def localfont(name):
       delete messagesRead[id];
       delete messageReactions[id];
       delete messageActionState[id];
+      delete messageActionUsed[id];
       delete messagesArrivedAt[id];
       if (/^reply_/.test(id)) delete MESSAGES[id];
       if (window.__updateMsgBadge) window.__updateMsgBadge();
@@ -57494,7 +57497,7 @@ async def localfont(name):
             bub.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(id); });
             bub.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); runMsgAction(id); } });
           }
-          var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act";
+          var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act" + (messageActionUsed[id] ? " used" : "");
           actBtn.setAttribute("aria-label", tr("mon_ctx_open")); actBtn.setAttribute("title", tr("mon_ctx_open"));
           actBtn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
           actBtn.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(id); });
@@ -59013,7 +59016,7 @@ async def localfont(name):
     var notesDraft = ""; // the typed note — session-scoped: survives a language rebuild AND a normal close/reopen; cleared only on a kill (uninstallApp / __resetPhoneApps)
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
-    var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
+    var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
     var deferredAutonomousMessages = [], deferredAutonomousTimer = null;
     var pendingAuthoredRewrites = {}, messageRewriteGeneration = 0;
     var charlieIntroTimer = null, charlieIntroOffered = false; // one quiet, delayed introduction per page session; never part of a random pool
@@ -59131,6 +59134,7 @@ async def localfont(name):
             id: id,
             read: !!messagesRead[id],
             actionState: messageActionState[id] || null,
+            actionUsed: !!messageActionUsed[id],
             reactions: (messageReactions[id] || []).slice(0, 8),
             arrivedAt: +messagesArrivedAt[id] || 0,
             message: {
@@ -59159,7 +59163,7 @@ async def localfont(name):
         allowed.forEach(function (id) { if (!seenSlots[id]) phoneSlots.push(id); });
       }
       mailRead = state.mailRead && typeof state.mailRead === "object" ? Object.assign({}, state.mailRead) : {};
-      messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {};
+      messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {};
       (Array.isArray(state.rows) ? state.rows : []).slice(-40).forEach(function (row) {
         if (!row || typeof row.id !== "string") return;
         var id = row.id.slice(0, 120), saved = row.message || {}, m = MESSAGES[id];
@@ -59175,6 +59179,7 @@ async def localfont(name):
         messagesThread.push(id);
         messagesRead[id] = !!row.read;
         if (row.actionState === "done" || row.actionState === "expired") messageActionState[id] = row.actionState;
+        if (row.actionUsed) messageActionUsed[id] = true;
         messageReactions[id] = Array.isArray(row.reactions) ? row.reactions.slice(0, 8) : [];
         messagesArrivedAt[id] = +row.arrivedAt || 0;
       });
@@ -60615,7 +60620,7 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];
@@ -60752,8 +60757,9 @@ async def localfont(name):
       expireStaleMessageActions();
       return messageActionState[id] || null;
     };
-    function renderMsgActionFailure(m) {
+    function renderMsgActionFailure(id, m) {
       if (!m) return;
+      delete messageActionUsed[id];
       m.chatActionFailed = true;
       if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
     }
@@ -60766,7 +60772,7 @@ async def localfont(name):
     }
     function runTypedMsgAction(id, m, action) {
       if (!window.loft || !window.loft.api || typeof window.loft.api.perform !== "function") {
-        renderMsgActionFailure(m);
+        renderMsgActionFailure(id, m);
         return Promise.resolve(false);
       }
       var args = action.args || {};
@@ -60777,13 +60783,14 @@ async def localfont(name):
       // requested tune, just like the authored "requests are open" message.
       if (messageActionUsesDjBooth(action) && window.goToStage && window.currentStageName !== "garden") window.goToStage("garden");
       return window.loft.api.perform(action.id, args, { source: "messages-chat" }).then(function (result) {
-        if (!result || !result.ok) { renderMsgActionFailure(m); return false; }
+        if (!result || !result.ok) { renderMsgActionFailure(id, m); return false; }
+        messageActionUsed[id] = true;
         if (messageActionIsOneShot(m, action)) consumeMessageAction(id);
         // Opening a phone app resets its prior navigation state, so install this only afterward.
         if (phoneTarget && currentApp === phoneTarget.id) setPhoneAppReturn("messages", phoneTarget.id, returnDirectly);
         else if (!phoneTarget && !(action.id === "app.open" && args.app === "messages")) close(true);
         return true;
-      }, function () { renderMsgActionFailure(m); return false; });
+      }, function () { renderMsgActionFailure(id, m); return false; });
     }
     // Where a tapped message ROW takes you. Notifications only open/position the thread;
     // app links open that app in the current scene; the rest close the phone and go there.
@@ -60796,6 +60803,7 @@ async def localfont(name):
       var typedAction = m && (m.chatAction || m.apiAction || legacyTypedMsgAction(act));
       if (typedAction) { runTypedMsgAction(id, m, typedAction); return; }
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }
+      messageActionUsed[id] = true;
       if (messageActionIsOneShot(m, null)) consumeMessageAction(id);
       if (act.indexOf("app:") === 0) {
         var returnDirect = phoneAppReturnsByClosing("messages");

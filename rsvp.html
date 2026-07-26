@@ -59980,10 +59980,16 @@ async def localfont(name):
         body.appendChild(actions);
       }
     }
-    function renderMailComposeForm(body, subjKey, bodyKey) {
+    function renderMailComposeForm(body, subjKey, bodyKey, preset) {
       body.scrollTop = 0;
       body.innerHTML = "";
-      var state = { to: "marketa@behdad.org", cc: "", subject: tr(subjKey), body: bodyKey ? tr(bodyKey) : "" };
+      preset = preset || {};
+      var state = {
+        to: preset.to || "marketa@behdad.org",
+        cc: preset.cc || "",
+        subject: preset.subject != null ? preset.subject : tr(subjKey),
+        body: preset.body != null ? preset.body : (bodyKey ? tr(bodyKey) : "")
+      };
       var actions = document.createElement("div");
       actions.className = "pm-mail-actions";
       var back = document.createElement("button");
@@ -60046,6 +60052,19 @@ async def localfont(name):
         body.appendChild(row);
       });
     }
+    window.__openPhoneRsvpCompose = function () {
+      var d = T[document.documentElement.lang] || T.en;
+      open(true);
+      openApp("mail", "app_mail", function (body) {
+        renderMailComposeForm(body, null, null, {
+          to: "marketa@behdad.org",
+          subject: d.rsvp_email_subject,
+          body: d.rsvp_email_body
+        });
+      });
+      setPhoneAppReturn("close", "mail");
+      return true;
+    };
     function openMail(body, m) {
       body.scrollTop = 0;
       body.innerHTML = "";
@@ -61086,7 +61105,7 @@ async def localfont(name):
       if (act === "lanterns") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setDayNight) window.__setDayNight(true); if (window.__releaseLanterns) window.__releaseLanterns(); }, 760); return; } // pan to the balcony, set night, then release wish-lanterns
       if (act === "magicbox") { if (window.goToStage) window.goToStage("garden"); setTimeout(function () { if (window.__drugsboxTap) window.__drugsboxTap(); }, 760); return; } // pan to the garden, then tap the magic box (date lock the first time)
       if (act === "flair") { if (window.goToStage) window.goToStage("kitchen"); setTimeout(function () { if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true); if (window.__startFlairCatch) window.__startFlairCatch(); }, 720); return; } // pan to the bar (raise it if needed), then launch Flair-Catch
-      if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge(); if (window.__openRsvpMail) window.__openRsvpMail(); return; }
+      if (act === "rsvp") { if (window.goToStage) window.goToStage("balcony"); if (window.__showRsvpNudge) window.__showRsvpNudge(); if (window.__openPhoneRsvpCompose) window.__openPhoneRsvpCompose(); else if (window.__openRsvpMail) window.__openRsvpMail(); return; }
       if (act === "games") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.computer && !window.computer()) window.computer(true); else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); }, 420); return; }
       // friend-duo "are you home?" → answering pans to the cuddly nook and brings that PAIR in to
       // visit (the #cuddly-visitors mechanism). Suppressed on meal days by __cuddlyVisit's own gate.
@@ -75573,7 +75592,12 @@ function spawnDustMote(container) {
     caption.innerHTML = '<a href="#rsvp-anchor">' + link + '</a>';
     caption.classList.add("rsvp-nudge");
     var rsvpA = caption.querySelector("a");
-    if (rsvpA) rsvpA.addEventListener("click", function () { if (window.__openRsvpMail) window.__openRsvpMail(); }); // clicking the RSVP caption composes the RSVP email too (not just the jump to the RSVP section)
+    if (rsvpA) rsvpA.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation(); // do not let the opening click bubble into the newly mounted phone's outside-click closer
+      if (window.__openPhoneRsvpCompose) window.__openPhoneRsvpCompose();
+      else if (window.__openRsvpMail) window.__openRsvpMail();
+    }); // the in-game RSVP caption opens the phone Mail composer; its Send button owns the external handoff
   }
   window.__showRsvpNudge = showRsvpNudge; // the beat sequencer paints its exit beat through here
   window.setCaption = setCaption;

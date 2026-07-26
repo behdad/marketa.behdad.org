@@ -40,6 +40,9 @@ check(shared.every(function (key) { return T.en[key] && T.cs[key]; }),
   shared.filter(function (key) { return !T.en[key] || !T.cs[key]; }).join(", "));
 check(T.en.game_over === "GAME OVER" && T.cs.game_over === "KONEC HRY",
   "Game over has one canonical bilingual label");
+check(T.en.mines_lose.includes("<br>") && T.cs.mines_lose.includes("<br>") &&
+      /minesMsgEl\.innerHTML\s*=/.test(html),
+  "Mines authors a clean bilingual break before its game-over aside");
 check(T.en.game_new === "NEW GAME" && T.en.game_play_again === "PLAY AGAIN",
   "New game and Play again remain distinct round actions");
 check(T.en.game_exit === "Exit game" && T.cs.game_exit === "Ukončit hru",

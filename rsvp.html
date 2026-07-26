@@ -26114,6 +26114,7 @@ var T = {
     // would join the RTL run and mirror, so they stay outside it in the sentence's own direction.
     tip_haftsin: "<em>haft-sin</em> (<bdi>هفت‌سین</bdi>), the <em>nowruz</em> (<bdi>نوروز</bdi>) table",
     tip_carodejnice: "<em>Čarodějnice</em>, burning of the witches",
+    tip_smores: "s’mores by the fire",
     tip_svatojanska: "<em>Svatojánská noc</em>, St John's Eve — the fire you jump hand in hand",
     fern_legend: "Fern. They say it flowers one midnight a year — tonight, if you believe the story — and whoever finds the flower comes into luck.",
     fern_found: "The fern flower. You were standing here at midnight on the one night it opens. That's the whole trick, and it's supposed to be luck.",
@@ -27146,6 +27147,7 @@ var T = {
     share_mail_clip: "(Obrázek karty máte ve schránce — vložte jej do e-mailu jako přílohu.)",
     tip_haftsin: "<em>haft-sín</em> (<bdi>هفت‌سین</bdi>), <em>nourúzský</em> (<bdi>نوروز</bdi>) stůl",
     tip_carodejnice: "<em>Čarodějnice</em>, <em>filipojakubská noc</em>",
+    tip_smores: "opékání marshmallows u ohně",
     tip_svatojanska: "<em>Svatojánská noc</em> — oheň, který se přeskakuje za ruce",
     fern_legend: "Kapradí. Prý kvete jednu půlnoc do roka — dnes v noci, jestli té pověsti věříš — a kdo ten květ najde, má štěstí.",
     fern_found: "Květ kapradí. Stál jsi tady o půlnoci té jediné noci, kdy se otevírá. V tom to celé je — a prý to nosí štěstí.",
@@ -65056,12 +65058,17 @@ async def localfont(name):
     en: { chaharshanbe: "https://en.m.wikipedia.org/wiki/Chaharshanbe_Suri", carodejnice: "https://en.m.wikipedia.org/wiki/Walpurgis_Night", svatojanska: "https://en.m.wikipedia.org/wiki/Saint_John's_Eve" },
     cs: { chaharshanbe: "https://cs.m.wikipedia.org/wiki/Čaháršanba-súrí", carodejnice: "https://cs.m.wikipedia.org/wiki/Pálení_čarodějnic", svatojanska: "https://cs.m.wikipedia.org/wiki/Svatojánská_noc" }
   };
+  function bonfireTipKey() {
+    return window.__smoresOn ? "tip_smores" : "tip_" + (fireFest() || "carodejnice");
+  }
   function fireWikiUrl() {
+    if (window.__smoresOn) return null; // this is a snack fire right now, not a holiday lookup
     var l = document.documentElement.lang === "cs" ? "cs" : "en";
     return FIRE_WIKI[l][fireFest() || "carodejnice"]; // no festival lit means the witches' fire — the only one that burns un-jumped
   }
   var fireHit = document.getElementById("balcony-bonfire-hit");
-  if (fireHit) hoverTooltip(fireHit, function () { return tipText("tip_" + (fireFest() || "carodejnice")); }, "top");
+  if (fireHit) hoverTooltip(fireHit, function () { return tipText(bonfireTipKey()); }, "top");
+  window.__bonfireTipKey = bonfireTipKey;
   glow.addEventListener("animationend", function (e) { if (e.animationName === "sn-fire-flare") glow.classList.remove("fire-flare"); });
   // A single click summons the leap; a double click looks the festival up instead. dblclick fires
   // click first, so the summon waits out the double-click window and a second click cancels it and
@@ -65085,7 +65092,7 @@ async def localfont(name):
     e.stopPropagation();
     clearTimeout(summonTimer); summonTimer = null; // the summon was never what this click wanted
     var url = fireWikiUrl();
-    if (window.__showUrlInPhone) window.__showUrlInPhone(url);
+    if (url && window.__showUrlInPhone) window.__showUrlInPhone(url);
   });
   // ── the kid at the fire: Irene, or Robin ~1/3 of the time ──
   // ONE kid, ever: a leap only starts when neither is already showing, so a double-click mid-arc is

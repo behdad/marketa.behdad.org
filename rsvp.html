@@ -1685,8 +1685,8 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 #kitchen-bar-cooler-lid-r{transform-box:fill-box; transition:transform .42s cubic-bezier(.34,1.16,.64,1)}
 #kitchen-bar-cooler-lid-l{transform-origin:100% 50%}
 #kitchen-bar-cooler-lid-r{transform-origin:0% 50%}
-#kitchen-bar-cooler.lid-up #kitchen-bar-cooler-lid-l{transform:rotate(52deg)}
-#kitchen-bar-cooler.lid-up #kitchen-bar-cooler-lid-r{transform:rotate(-52deg)}
+#kitchen-bar-cooler.lid-l-up #kitchen-bar-cooler-lid-l{transform:rotate(52deg)}
+#kitchen-bar-cooler.lid-r-up #kitchen-bar-cooler-lid-r{transform:rotate(-52deg)}
 #kitchen-bar-cooler-inside{opacity:0; transition:opacity .2s ease .12s}
 #kitchen-bar-cooler.lid-up #kitchen-bar-cooler-inside{opacity:1}
 /* the popped cap and the cold-air wisps are JS-spawned into #kitchen-bar-cooler itself (stage-local
@@ -40570,7 +40570,7 @@ function gameTapsNear(a, b) {
 (function () {
   // ── The vintage Coca-Cola rolling cooler at the bar's left end ───────────────────────────────
   // Two one-shot beats, both gated on the bar being up and you standing at it, like the taps:
-  // tapping the chest lifts its left lid off bottles standing in ice (a cold breath, a bottle
+  // tapping either lid lifts that half off bottles standing in ice (a cold breath, a bottle
   // clink), and tapping the wall opener pops a cap that spins down into the catcher cup (a psst,
   // a metal ting). Every particle is spawned into #kitchen-bar-cooler itself — the group that owns
   // the art, in the same untransformed stage coords — and is cleared before the next spawn as well
@@ -40580,6 +40580,8 @@ function gameTapsNear(a, b) {
   if (!cooler) return;
   var opener = document.getElementById("kitchen-bar-cooler-opener");
   var catcher = document.getElementById("kitchen-bar-cooler-catcher");
+  var lidL = document.getElementById("kitchen-bar-cooler-lid-l");
+  var lidR = document.getElementById("kitchen-bar-cooler-lid-r");
   var SVGNS = "http://www.w3.org/2000/svg";
   var VAPOUR_N = 5;
   var timers = [], capNode = null;
@@ -40607,13 +40609,13 @@ function gameTapsNear(a, b) {
   function coolerOffset() { return parseFloat(cooler.style.translate) || 0; }
 
   // one short breath of cold air off the ice, five wisps rising out of the opened half
-  function breathe() {
+  function breathe(side) {
     drop(".cooler-vapour");
     if (reduced()) return;
     for (var i = 0; i < VAPOUR_N; i++) (function (i) {
       var w = document.createElementNS(SVGNS, "ellipse");
       w.setAttribute("class", "cooler-vapour");
-      w.setAttribute("cx", 34 + i * 6.4);
+      w.setAttribute("cx", (side === "right" ? 68 : 34) + i * 6.4);
       w.setAttribute("cy", 266.5);
       w.setAttribute("rx", 2.6);
       w.setAttribute("ry", 1.7);
@@ -40631,13 +40633,23 @@ function gameTapsNear(a, b) {
     })(i);
   }
 
-  function toggleLid() {
+  function syncLids() {
+    cooler.classList.toggle("lid-up",
+      cooler.classList.contains("lid-l-up") || cooler.classList.contains("lid-r-up"));
+  }
+
+  function toggleLid(cls, side) {
     if (!present()) return;
     clearTimers();
-    var up = cooler.classList.toggle("lid-up");
+    var up = cooler.classList.toggle(cls);
+    syncLids();
     sfx(function () { playBoxlockClunkSound("kitchen-bar-cooler"); });
-    if (!up) { drop(".cooler-vapour"); return; }
-    breathe();
+    if (!up) {
+      drop(".cooler-vapour");
+      if (cooler.classList.contains("lid-up")) breathe(cls === "lid-l-up" ? "right" : "left");
+      return;
+    }
+    breathe(side);
     at(reduced() ? 0 : 260, function () { sfx(function () { playGlassClinkSound(1.24 + Math.random() * 0.1, "kitchen-bar-cooler"); }); }); // the bottles settle against each other
   }
 
@@ -40683,7 +40695,9 @@ function gameTapsNear(a, b) {
     e.stopPropagation();
     var t = e.target;
     if ((opener && opener.contains(t)) || (catcher && catcher.contains(t))) popCap();
-    else toggleLid();
+    else if (lidR && lidR.contains(t)) toggleLid("lid-r-up", "right");
+    else if (lidL && lidL.contains(t)) toggleLid("lid-l-up", "left");
+    else toggleLid("lid-l-up", "left");
   });
   cooler.addEventListener("pointerdown", function (e) {
     if ((e.button && e.button !== 0) || !present()) return;
@@ -40724,7 +40738,7 @@ function gameTapsNear(a, b) {
     dragMoved = false;
     cooler.classList.remove("dragging");
     if (moveHome) cooler.style.translate = "";
-    cooler.classList.remove("lid-up");
+    cooler.classList.remove("lid-up", "lid-l-up", "lid-r-up");
     drop(".cooler-vapour");
     drop(".cooler-cap");
     capNode = null;

@@ -1244,6 +1244,14 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   60%{transform:translateY(0) scale(.95,1.05)}
 }
 @media (prefers-reduced-motion: reduce){#garden-deer.bouncing{animation:none}}
+/* Every third tap lets the little wooden giraffe fold its long neck into Hannah's gloriously
+   impossible deep bend. The body/legs stay fixed; two authored neck poses crossfade, avoiding a
+   path-morph dependency and keeping the party-groove + outer click-bounce on separate wrappers. */
+#garden-deer-neck-rest,#garden-deer-neck-bent{transition:opacity .14s ease}
+#garden-deer-neck-bent{opacity:0}
+#garden-deer.bending #garden-deer-neck-rest{opacity:0}
+#garden-deer.bending #garden-deer-neck-bent{opacity:1}
+@media (prefers-reduced-motion: reduce){#garden-deer-neck-rest,#garden-deer-neck-bent{transition:none}}
 /* the giraffe bobs to the beat: the groove lives on a wrapper distinct from #garden-deer
    (which carries the click-bounce one-shot), so the two animate separate nodes and compose */
 #garden-deer-groove{transform-box:fill-box; transform-origin:bottom center}
@@ -12573,6 +12581,7 @@ section{margin:1.9rem 0}
 <rect x="433.5" y="221" width="2.6" height="11" fill="#f2c11e"/>
 <rect x="436.6" y="221" width="2.6" height="11" fill="#d81f2a"/>
 <rect x="439.7" y="221" width="2.6" height="11" fill="#f2c11e"/>
+<g id="garden-deer-neck-rest">
 <!-- long neck angled up toward the head -->
 <polygon points="442,225 447,223 455,190 450.5,189.5" fill="#ddc198" stroke="#c7a575" stroke-width="0.8"/>
 <!-- painted neck bands: perpendicular to the neck (angle down toward the right), centred on it -->
@@ -12585,6 +12594,28 @@ section{margin:1.9rem 0}
 <path d="M452 187 L451 182 L454 186 Z" fill="#ddc198" stroke="#c7a575" stroke-width="0.6"/>
 <path d="M455 186.5 L457 182 L458.4 187 Z" fill="#ddc198" stroke="#c7a575" stroke-width="0.6"/>
 <circle cx="456" cy="190.6" r="0.95" fill="#2a2320"/>
+</g>
+<!-- alternate deep-bend pose: the neck arches up, curls back over the body, and drops the head
+     nose-first, echoing Hannah's painted giraffe without replacing this toy's striped-wood look -->
+<g id="garden-deer-neck-bent" aria-hidden="true">
+<path d="M444.5 224.5 C448 212 449 197 440 191 C430 185 419 191 420 207"
+      fill="none" stroke="#c7a575" stroke-width="6.6" stroke-linecap="round"/>
+<path d="M444.5 224.5 C448 212 449 197 440 191 C430 185 419 191 420 207"
+      fill="none" stroke="#ddc198" stroke-width="5" stroke-linecap="round"/>
+<!-- the familiar red/yellow paint becomes spots around the impossible curve -->
+<circle cx="446" cy="215" r="1.55" fill="#f2c11e"/>
+<circle cx="447" cy="206" r="1.55" fill="#d81f2a"/>
+<circle cx="444" cy="197.5" r="1.55" fill="#f2c11e"/>
+<circle cx="437" cy="190" r="1.55" fill="#d81f2a"/>
+<circle cx="428" cy="189" r="1.55" fill="#f2c11e"/>
+<circle cx="421.5" cy="197" r="1.55" fill="#d81f2a"/>
+<!-- hanging head: muzzle left, ears above the inward-facing crown, eye still visible -->
+<path d="M421 204.5 L416 203 L412 206.5 L414 210.5 L420 211 L423 207.5 Z"
+      fill="#e6cfa2" stroke="#c7a575" stroke-width="0.7"/>
+<path d="M417.5 203.5 L415.5 199.5 L419 202.5 Z" fill="#ddc198" stroke="#c7a575" stroke-width="0.55"/>
+<path d="M420.5 204 L421 200 L423 203.5 Z" fill="#ddc198" stroke="#c7a575" stroke-width="0.55"/>
+<circle cx="415.8" cy="206.5" r="0.8" fill="#2a2320"/>
+</g>
 </g>
 </g>
 </g>
@@ -67113,8 +67144,18 @@ async def localfont(name):
   }
   var deer = document.getElementById("garden-deer");
   if (deer) {
+    var deerClicks = 0, deerBendTimer = null;
     function bounceDeer() {
       playDryClickSound("garden-deer"); // a dry wooden knock — it's a little wooden giraffe
+      deerClicks++;
+      if (deerClicks % 3 === 0) {
+        if (deerBendTimer) clearTimeout(deerBendTimer);
+        deer.classList.add("bending");
+        deerBendTimer = setTimeout(function () {
+          deerBendTimer = null;
+          deer.classList.remove("bending");
+        }, 1900);
+      }
       deer.classList.remove("bouncing");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { deer.classList.add("bouncing"); });

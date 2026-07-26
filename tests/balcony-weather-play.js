@@ -27,6 +27,9 @@ var HARNESS = [
   ' window.__jumpToDate(2027,9,16);report.steps.oct16=playState();',
   ' function ch(y,m,d){window.__jumpToDate(y,m,d);return document.getElementById("loft-game-strip").classList.contains("season-chaharshanbe");}',
   ' report.steps.chaharshanbe={mar16:ch(2026,2,16),mar17:ch(2026,2,17),mar18:ch(2026,2,18)};',
+  ' var host=document.getElementById("bh-behdad");host.classList.add("bh-present");',
+  ' function hostDisplay(y,m,d){window.__jumpToDate(y,m,d);return getComputedStyle(host).display;}',
+  ' report.steps.fireHosts={ordinary:hostDisplay(2026,2,16),chaharshanbe:hostDisplay(2026,2,17),svatojanska:hostDisplay(2027,5,23)};',
   ' window.__jumpToDate(2027,5,2);window.__calStepDay(1);var nextDay=window.__now();window.__calStepDay(-1);var prevDay=window.__now();report.steps.daySteps={buttons:!!document.getElementById("loft-dateprevday")&&!!document.getElementById("loft-datenextday"),next:[nextDay.getFullYear(),nextDay.getMonth(),nextDay.getDate()],back:[prevDay.getFullYear(),prevDay.getMonth(),prevDay.getDate()]};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},450);});',
   '})();</script>'
@@ -62,6 +65,8 @@ check(s.oct16 && !s.oct16.snowman && !s.oct16.leafpile && !s.oct16.blossom && !s
   "leaf-pile play ends after October 15", s.oct16);
 check(s.chaharshanbe && !s.chaharshanbe.mar16 && s.chaharshanbe.mar17 && !s.chaharshanbe.mar18,
   "Chaharshanbe Suri decor is limited to its computed day", s.chaharshanbe);
+check(s.fireHosts && s.fireHosts.ordinary !== "none" && s.fireHosts.chaharshanbe === "none" && s.fireHosts.svatojanska === "none",
+  "the ordinary balcony hosts disappear while their fire-jumping doubles are active", s.fireHosts);
 check(s.daySteps && s.daySteps.buttons && s.daySteps.next.join("-") === "2027-5-3" && s.daySteps.back.join("-") === "2027-5-2",
   "the date control exposes stable previous/next-day steps", s.daySteps);
 

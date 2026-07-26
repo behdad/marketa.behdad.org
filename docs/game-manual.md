@@ -256,6 +256,8 @@ Rumi deck and starts the attached exchange when the nighttime fairy is present;
 elsewhere it waits without consuming a pair.
 The plant grow light follows the loft clock automatically, staying on from
 11:00 to 17:00; clicking it overrides the schedule until the next boundary.
+Click the mini-split's temperature display to switch it between Celsius and
+Fahrenheit without switching the unit itself on or off.
 
 ### Cuddly-puddly
 
@@ -285,6 +287,8 @@ The balcony contains the smoker and grill, weather and sky interactions, the
 day/night celestial control, smoking-area details, and the main BBQ activity.
 Double-click the sun or moon for the matching eclipse effect; a single click
 changes day or night.
+The wall thermometer carries Fahrenheit markings on the left and Celsius on
+the right. Open its controls, then click the numeric reading to switch units.
 
 The building across the street has forty independently lit office windows.
 Clicking one window toggles only that window; unattended lights also change

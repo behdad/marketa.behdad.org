@@ -21,9 +21,12 @@ var HARNESS = [
   ' people=Array.from({length:9},function(_,i){return {key:"p"+i,name:"P"+i};});for(var k=0;k<8;k++)window.__loftTempTick();var beforeReset=window.__indoorTempState();window.__resetIndoorTempModel();var reset=window.__indoorTempState();',
   ' var context=window.__chatContext("what is the temperature inside?").environment.indoor_temperature;',
   ' var lcd=document.getElementById("garden-thermo-text").textContent;',
+  ' var lcdHit=document.getElementById("garden-thermo-lcd"),acWasOn=unit.classList.contains("on");lcdHit.dispatchEvent(new MouseEvent("click",{bubbles:true}));var indoorF=document.getElementById("garden-thermo-text").textContent,acAfterUnitClick=unit.classList.contains("on");',
+  ' window.__toggleTempPop();var popRead=document.querySelector(".loft-temppill");popRead.click();var outdoorF={scene:document.getElementById("balcony-thermo-text").textContent,popup:popRead.textContent,units:window.__tempDisplayUnits()};window.__closeTempPop();',
+  ' window.__resetTempDisplayUnits();var resetUnits={units:window.__tempDisplayUnits(),indoor:document.getElementById("garden-thermo-text").textContent,outdoor:document.getElementById("balcony-thermo-text").textContent};',
   ' function columnAt(v){window.__setOutdoorTemp(v);var c=document.getElementById("balcony-thermo-column");return {value:v,y:+c.getAttribute("y"),height:+c.getAttribute("height")};}',
   ' var tube={cold:columnAt(-40),belowOldFloor:columnAt(-20),mild:columnAt(0),hot:columnAt(40)};',
-  ' S("temperature",{base:base,neutralTrips:neutralTrips,mollyHot:mollyHot,mollyFirstCool:mollyFirstCool,mollyCool:mollyCool,first:first,warm:warm,firstCool:firstCool,cool:cool,beforeReset:beforeReset,reset:reset,context:context,lcd:lcd,tube:tube});',
+  ' S("temperature",{base:base,neutralTrips:neutralTrips,mollyHot:mollyHot,mollyFirstCool:mollyFirstCool,mollyCool:mollyCool,first:first,warm:warm,firstCool:firstCool,cool:cool,beforeReset:beforeReset,reset:reset,context:context,lcd:lcd,indoorF:indoorF,acWasOn:acWasOn,acAfterUnitClick:acAfterUnitClick,outdoorF:outdoorF,resetUnits:resetUnits,tube:tube});',
   ' Math.random=oldRandom;window.__whoIsHere=oldWho;',
   '}',
   '})();</script>'
@@ -53,6 +56,13 @@ check(t.firstCool && t.firstCool.occupancy_gain_c === 2.8 && t.firstCool.tempera
 check(t.beforeReset && t.beforeReset.occupancy_gain_c > 0 && t.reset && t.reset.occupancy_gain_c === 0 && t.reset.temperature_c === 22, "a full model reset clears retained body heat", { before: t.beforeReset, after: t.reset });
 check(t.context && t.context.temperature_c === t.reset.temperature_c && t.context.room === "garden" && t.context.occupancy_count === 9 && !Object.prototype.hasOwnProperty.call(t.context, "people"), "chat context carries only the bounded live reading and aggregate occupancy", t.context);
 check(t.lcd === t.reset.temperature_c + "°C", "the chatbot reading is exactly the visible mini-split LCD", { lcd: t.lcd, context: t.context });
+check(t.indoorF === Math.round(t.reset.temperature_c * 9 / 5 + 32) + "°F" && t.acWasOn === t.acAfterUnitClick,
+  "clicking the indoor LCD converts its display without toggling the mini-split", { display: t.indoorF, before: t.acWasOn, after: t.acAfterUnitClick });
+check(t.outdoorF && t.outdoorF.scene === "50°F" && t.outdoorF.popup === "50 °F" && t.outdoorF.units.indoor === "F" && t.outdoorF.units.outdoor === "F",
+  "the outdoor control switches its popup and wall readout to Fahrenheit", t.outdoorF);
+check(t.resetUnits && t.resetUnits.units.indoor === "C" && t.resetUnits.units.outdoor === "C" &&
+  t.resetUnits.indoor === t.reset.temperature_c + "°C" && t.resetUnits.outdoor === "10°C",
+  "a full display reset restores Celsius without changing the underlying temperatures", t.resetUnits);
 check(t.tube && t.tube.cold.y === 148 && t.tube.belowOldFloor.y < t.tube.cold.y &&
   t.tube.belowOldFloor.y > t.tube.mild.y && t.tube.hot.y === 114,
   "the outdoor thermometer column uses the full -40…40°C range", t.tube);

@@ -796,6 +796,8 @@ storm leakage, a lagged one-degree-per-three-person occupancy gain, and a small 
 are thermally neutral except Molly: `mollyGain` rises one degree per 1.2-second thermal tick to a
 five-degree ceiling, then sheds half a degree per tick after Molly ends. The exposed
 `__indoorTempState()` includes both occupancy and Molly contributions.
+Indoor and outdoor models remain Celsius internally; their independent C/F display preferences
+affect only the mini-split LCD, wall readout, and outdoor control.
 
 The implementation also retrieves aviation observations, Edmonton air quality, and geomagnetic
 forecast data for scene effects. Search for `api.open-meteo.com`, `archive-api.open-meteo.com`,

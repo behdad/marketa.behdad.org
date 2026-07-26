@@ -26,6 +26,11 @@ older ones never disappear. `loft-day.html` and `egg-hunt.html` are just the cur
 - **[Developer guide](docs/developer.md)** — architecture, state, rendering, testing,
   deployment, and the main subsystem entry points.
 
+## Vibe coded
+
+This whole repository is vibe coded. Humans direct, review, and play-test it, but never
+touch the code: AI agents author and maintain the implementation. They own it.
+
 ## A note for visitors
 
 This repo is public because the site is public and hobbyist-friendly — poke around if

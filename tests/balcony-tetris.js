@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Across-the-street apartment lights + hidden Window Tetris regression.
+// Across-the-street apartment lights + hidden Block Party regression.
 // Proves the 5x8 physical facade / 10x16 game mapping, independent manual and
 // ambient lights, same-window launch gesture, keyboard ownership, scoring,
 // persistence, and teardown restoration.
@@ -54,7 +54,7 @@ var HARNESS = [
   'var touchRestart=window.__balconyTetrisTest("touch",{dx:0,dy:0,ms:80});S("touch_restarts",touchRestart.gesture==="restart"&&touchRestart.state.active&&touchRestart.state.score===0);window.__balconyTetrisTest("gameover");',
   'var restartPrevented=key("Enter"),restarted=window.__balconyTetrisState();S("enter_restarts",restartPrevented&&restarted.active&&restarted.score===0&&restarted.high===100);',
   'report.debug.restarted={prevented:restartPrevented,active:restarted.active,score:restarted.score,high:restarted.high};',
-  'window.setLang("cs");S("czech_hud",document.querySelector(".tetris-title").textContent==="OKENNÍ TETRIS"&&document.querySelector(".tetris-score-label").textContent==="SKÓRE");',
+  'window.setLang("cs");S("czech_hud",document.querySelector(".tetris-title").textContent==="BLOCK PARTY"&&document.querySelector(".tetris-score-label").textContent==="SKÓRE");',
   'var exitPrevented=key("Escape"),exited=window.__balconyTetrisState();S("escape_restores",exitPrevented&&!exited.active&&!exited.result&&same(exited.windows,gameNormal)&&!stage.classList.contains("tetris-on")&&window.__captionKey&&window.__captionKey()===preCaption);',
   'window.setLang("en");var beforeLeave=window.__balconyTetrisState().windows.slice();window.__startBalconyTetris();window.goToStage("kitchen");var left=window.__balconyTetrisState();S("room_leave_restores",!left.active&&!left.result&&!stage.classList.contains("tetris-on")&&same(left.windows,beforeLeave));',
   'window.goToStage("balcony");var beforeBlur=window.__balconyTetrisState().windows.slice();window.__startBalconyTetris();focused=false;window.dispatchEvent(new Event("blur"));var blurred=window.__balconyTetrisState();S("blur_restores",!blurred.active&&!stage.classList.contains("tetris-on")&&same(blurred.windows,beforeBlur));',
@@ -72,7 +72,7 @@ function fail(msg, detail) {
   if (detail) console.log("      " + String(detail).split("\n").join("\n      "));
 }
 
-console.log("rsvp.html balcony Window Tetris:");
+console.log("rsvp.html balcony Block Party:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 5000, { patchRaf: true, forceMotion: true, seedRandom: true });
 if (!r) fail("harness reported");
 else {

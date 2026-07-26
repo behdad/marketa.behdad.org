@@ -291,7 +291,7 @@ Clicking one window toggles only that window; unattended lights also change
 gently on their own while the balcony is visible and focused. Its lights
 occasionally form a falling shape, and during the party a neighbour or two may
 appear at a lit window to watch—more often when the deck is crowded. Double-clicking
-any window starts **Window Tetris** on the facade's 10×16 lamp
+any window starts **Block Party** on the facade's 10×16 lamp
 grid. During the game, use `Left`/`Right` to move, `Down` to soft-drop,
 `Up` or `X` to rotate clockwise, `Z` to rotate counter-clockwise, `Space` to
 hard-drop, and `Escape` or the visible close button to quit. Game over restores the office lights and
@@ -679,7 +679,7 @@ ordinary game shortcuts are suspended until the player exits.
 - **Invaders:** A hidden office-chair gesture, message action, or API action
   starts the game. Move the chair or use Left/Right arrows to aim; Space fires
   while auto-fire remains active.
-- **Window Tetris:** On the balcony, double-click any across-the-street office
+- **Block Party:** On the balcony, double-click any across-the-street office
   window. The forty physical windows become a 10×16 board with four square lamps
   per window. Arrow keys move and rotate pieces, and Space drops them. On touchscreens,
   tap to rotate, drag sideways to move through columns, swipe down to lower a piece,

@@ -58,7 +58,7 @@ check(/mailT\(key === "mines_win" \? "game_cleared" : "game_over"\)/.test(html) 
   "Mines distinguishes cleared/lost results and new/repeat actions");
 check(/hud\.scoreLabel\.textContent = text\("game_score"\)/.test(html) &&
       /hud\.highLabel\.textContent = text\("game_best"\)/.test(html),
-  "Window Tetris uses the shared Score and Best labels");
+  "Block Party uses the shared Score and Best labels");
 check(/window\.__gameText\("game_over"\)/.test(html) &&
       /window\.__gameText\("game_score"\)/.test(html) &&
       !/game over · ×/.test(html),
@@ -147,7 +147,7 @@ check(rendered && (!rendered.errors || rendered.errors.length === 0),
 check(rendered && rendered.enTetris.close === "Exit game" &&
       rendered.csTetris.close === "Ukončit hru" &&
       rendered.enTetris.width <= 140 && rendered.csTetris.width <= 140,
-  "Window Tetris labels switch language and fit the HUD",
+  "Block Party labels switch language and fit the HUD",
   rendered && JSON.stringify({ en: rendered.enTetris, cs: rendered.csTetris }));
 check(rendered && rendered.arcade.close === "Ukončit hru" &&
       /^SKÓRE 0\. REKORD /.test(rendered.arcade.hud || "") && rendered.arcade.spaceFired &&

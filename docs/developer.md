@@ -347,7 +347,7 @@ Every real serve calls `__balconyGuestTakePlate`: it attaches a short-lived,
 opacity-only plate to a present figure's own `.bh-idle` coordinate space, caps
 concurrent plates at three, and clears them on room exit.
 
-### Across-street windows and Window Tetris
+### Across-street windows and Block Party
 
 Search for `balconyBuildingTetris`, `#balcony-building-window-grid`, and
 `__balconyTetrisState`. The controller generates 5×8 clickable physical
@@ -898,7 +898,7 @@ outside this deferral queue, but still passes the shared phase and deduplication
   orphaning one side. Generated `MESSAGES` records are deleted with their rows.
 - Only the 12 most recent rows are assembled as group-chat context, even though more rows may remain
   visible locally.
-- Invaders, Flair-Catch, Window Tetris, and Pac-Man publish `minigame.change` state. While any is
+- Invaders, Flair-Catch, Block Party, and Pac-Man publish `minigame.change` state. While any is
   active, Messages still records incoming rows and unread state but suppresses previews and badges;
   one current preview is released after the last game exits. This is presentation hold, not message
   deferral. Keep new action games on the same state-event boundary.

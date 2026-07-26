@@ -634,7 +634,7 @@ a cheer from the balcony and a couple of replies in the thread. The grate emptie
 across twelve servings, after which Hamid signs off. Behdad and Markéta move together
 between the party floor and balcony. Extinguishing and relighting the grill starts
 with a fresh batch. As Hamid serves, plates briefly appear with guests who are
-currently outside.
+currently outside; tofu goes to Jay first when he is there.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 

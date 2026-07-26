@@ -37,6 +37,10 @@ var harness = String.raw`<script>
     check("Hamid announces the first cooked batch", window.__phoneMessageReceived("hamid_food"), ids.join(","));
     check("the simultaneous patties produce one announcement", ids.filter(function (id) { return id === "hamid_food"; }).length === 1, ids.join(","));
     check("the first-ready announcement prompts one balcony reaction", cheerCalls === 1, String(cheerCalls));
+    document.getElementById("bh-jay").classList.add("bh-present");
+    var tofuHandoff = window.__balconyGuestTakePlate("tofu");
+    check("tofu preferentially goes to vegetarian Jay when he is outside", tofuHandoff && tofuHandoff.recipient === "jay", JSON.stringify(tofuHandoff));
+    var tofuPlate = document.querySelector("#bh-jay .bh-served-plate"); if (tofuPlate) tofuPlate.remove();
     var firstKind = window.__balconyServeReadyBurger();
     var handoff = window.__balconyLastFoodHandoff();
     var heldPlate = document.querySelector("#balcony-hangout .bh-fig.bh-present .bh-served-plate");

@@ -57390,6 +57390,21 @@ async def localfont(name):
         };
       });
     }
+    function authoredRewriteSenderBio(sender) {
+      var folded = String(sender || "").toLocaleLowerCase();
+      var cast = groupChatCast();
+      for (var i = 0; i < cast.length; i++) {
+        if (cast[i].name.toLocaleLowerCase() !== folded) continue;
+        return {
+          name: cast[i].name,
+          role: cast[i].role,
+          relationship: cast[i].relationship,
+          fun_fact: cast[i].fun_fact,
+          notes: cast[i].notes
+        };
+      }
+      return { name: String(sender || "") };
+    }
     function groupChatPeopleHere() {
       if (typeof window.__whoIsHere !== "function") return [];
       try {
@@ -61338,12 +61353,14 @@ async def localfont(name):
         sender: msgFrom(m),
         en: plainAuthoredBody(m, "en")
       };
+      request.sender_bio = authoredRewriteSenderBio(request.sender);
       var generation = messageRewriteGeneration;
       pendingAuthoredRewrites[id] = true;
       Promise.resolve().then(function () {
         console.info("[Messages AI rewrite] sent", {
           id: id,
           sender: request.sender,
+          sender_bio: request.sender_bio,
           original: request.en
         });
         return window.__monitorMessageRewrite(request);

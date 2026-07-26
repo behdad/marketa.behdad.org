@@ -824,12 +824,13 @@ Charlie discovery, party lifecycle prompts, and chained authored follow-ups. The
   player.
 
 Once an autonomous authored ID clears those gates, `deliverAutonomousRewritten` freezes any pooled
-sender/body choice. A 25% roll keeps the authored wording; otherwise it sends only the resolved
-English original through the shared Chat queue
+sender/body choice. A 25% roll keeps the authored wording; otherwise it sends the resolved
+English original and that sender's bounded `groupChatCast()` bio through the shared Chat queue
 in `message_rewrite` mode. The Worker uses a dedicated no-actions prompt for visibly different,
 cheerful, playful, lightly mischievous phrasing while preserving the authored facts, intent,
-concrete details, certainty, and point of view. Emoji are stylistic and may be added, removed, or
-swapped when meaning is unchanged. The Worker requires the exact `{en}` response shape. A valid
+concrete details, certainty, and point of view. The bio may color voice but cannot contribute new
+message facts. Emoji are stylistic and may be added, removed, or swapped when meaning is unchanged.
+The Worker requires the exact `{en}` response shape. A valid
 English rewrite is stored on the authored message; Czech always remains the existing reviewed
 dictionary translation. A Turnstile, transport,
 timeout, upstream, parsing, or shape failure

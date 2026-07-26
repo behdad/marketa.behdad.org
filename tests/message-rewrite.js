@@ -57,12 +57,17 @@ check(success.accepted && !success.duplicate && success.pending.join(",") === "h
   "one autonomous message owns one in-flight rewrite", success);
 check(success.request && success.request.sender === "Hannah" &&
   /official gymnastics score/.test(success.request.en) &&
+  success.request.sender_bio && success.request.sender_bio.name === "Hannah" &&
+  success.request.sender_bio.role === "Behdad's niece" &&
+  success.request.sender_bio.relationship === "Baharak & Payman's daughter" &&
+  success.request.sender_bio.fun_fact === "the gymnast" &&
   !Object.prototype.hasOwnProperty.call(success.request, "cs"),
-  "the chatbot receives the sender and English authored copy only", success.request);
+  "the chatbot receives the sender's bounded bio and English authored copy only", success.request);
 check(success.logs && success.logs.length === 2 &&
   success.logs[0].level === "info" && success.logs[0].args[0] === "[Messages AI rewrite] sent" &&
   success.logs[0].args[1].id === "hannah_banter" &&
   success.logs[0].args[1].sender === "Hannah" &&
+  success.logs[0].args[1].sender_bio.fun_fact === "the gymnast" &&
   /official gymnastics score/.test(success.logs[0].args[1].original) &&
   success.logs[1].level === "info" && success.logs[1].args[0] === "[Messages AI rewrite] received" &&
   success.logs[1].args[1].id === "hannah_banter" &&

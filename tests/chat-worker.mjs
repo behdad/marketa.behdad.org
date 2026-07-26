@@ -449,6 +449,14 @@ const rewriteResponse = await worker.fetch(makeRequest("/chat", {
     rewrite: {
       sender: "Hannah",
       en: "official gymnastics score for this dance floor: 10/10 🤸",
+      sender_bio: {
+        name: "Wrong injected name",
+        role: "Behdad's niece",
+        relationship: "Baharak & Payman's daughter",
+        fun_fact: "the gymnast",
+        notes: "Old enough to text the group, but does so rarely.",
+        secret: "drop this too",
+      },
       ignored: "drop me",
     },
   }),
@@ -467,8 +475,11 @@ check(rewriteCapture.body.input.length === 1 &&
   /cheerful, playful, lightly mischievous/.test(rewriteCapture.body.instructions) &&
   /noticeably reworded/.test(rewriteCapture.body.instructions) &&
   /\"sender\":\"Hannah\"/.test(rewriteCapture.body.instructions) &&
-  !/Private history|drop me/.test(rewriteCapture.body.instructions),
-  "rewrite mode receives only sanitized authored copy and bounded but flexible rephrasing guidance");
+  /\"sender_bio\":\{\"name\":\"Hannah\",\"role\":\"Behdad's niece\",\"relationship\":\"Baharak & Payman's daughter\",\"fun_fact\":\"the gymnast\",\"notes\":\"Old enough to text the group, but does so rarely\.\"\}/.test(rewriteCapture.body.instructions) &&
+  /only to individualize the sender's voice/.test(rewriteCapture.body.instructions) &&
+  /never insert, mention, imply, or allude/.test(rewriteCapture.body.instructions) &&
+  !/Private history|drop me|Wrong injected name|drop this too/.test(rewriteCapture.body.instructions),
+  "rewrite mode receives the sanitized sender bio for voice only, authored copy, and bounded but flexible rephrasing guidance");
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "It’s the last song, so make it count.", reply_to_id: null, action: null });
 const partyOffResponse = await worker.fetch(makeRequest("/chat", {

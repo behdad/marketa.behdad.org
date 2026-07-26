@@ -734,7 +734,8 @@ its search results activates that date and any associated scene.
 Wedding-day invitations arrive through Messages and run only when explicitly
 opened. Prague dates prepare the family gathering and Prague call. Birthday and
 anniversary scenes can add greetings or cake, but private birthday dates are not
-part of assistant answers.
+part of assistant answers. Selecting World Polyamory Day on November 23 stops an
+active party and gathers Chinnel, Raffi, Markéta, and Behdad in Cuddly-puddly.
 
 The seasonal engine includes wedding, Pride, summer-solstice, St. John's Eve,
 Canada Day, summer, smoky, autumn, Mehregan, Halloween, St. Martin's Day and

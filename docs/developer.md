@@ -782,7 +782,8 @@ The shared calendar renderer serves monitor and phone views. Canonical wedding e
 also generate calendar downloads and external calendar links. Birthday/occasion definitions and
 Persian dates are runtime code; avoid duplicating dates in another UI data source. Wedding event
 cards update only the renderer's displayed month; grid days and search results own date activation
-and special-day scene dispatch.
+and special-day scene dispatch. `__activatePolyamoryDay` explicitly ends party mode before the
+Cuddly-puddly pan so the four-person couch scene is not hidden by party occupancy.
 
 Weather is fetched client-side for Edmonton and Prague, with current conditions and multi-day data.
 When `?date=` or `?time=` selects another Edmonton moment, the current Edmonton reading is replaced
@@ -1051,7 +1052,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
 - `tests/bar-layout.js` for the calm-night patrons, occupied stools, and hands-on mixer paint order;
 - `tests/album-axis.mjs`, `tests/album-render.mjs`, `tests/album-ui.js`, and
   `tests/photographer-occupancy.js` for photography;
-- `tests/weather.js`, `tests/birthday.js`, and `tests/bbq-days.js` for date/weather gates.
+- `tests/weather.js`, `tests/birthday.js`, `tests/bbq-days.js`, and `tests/polyamory-day.js` for
+  date/weather gates and special-day room dispatch.
 
 `tests/lib.js` starts a fresh headless Chrome profile, loads a scratch page, injects narrow setup and
 assertion hooks, captures page errors/rejections, and provides deterministic motion/focus/random

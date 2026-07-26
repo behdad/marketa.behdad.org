@@ -4176,6 +4176,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .life-step{font-size:3px; letter-spacing:-0.8px; padding-right:1px}
 .life-preset{font-size:2.5px}
 .life-gen{font-size:2.8px; line-height:1; text-align:center; color:#5c5142; padding:0.4px 0 0.2px}
+.life-help-btn{flex:none; width:5px; height:5px; padding:0; font-size:3px; border-radius:50%}
+.life-help{display:none; width:100%; height:100%; box-sizing:border-box; flex-direction:column; justify-content:center; align-items:center; gap:2.2px; padding:3px 8px; background:#efe6cf; text-align:center}
+.life-wrap.help-open>.life-board,.life-wrap.help-open>.life-side{display:none}
+.life-wrap.help-open>.life-help{display:flex}
+.life-help-title{font-size:4.2px; font-weight:700; color:#8e3a4a}
+.life-help-copy{font-size:3px; line-height:1.25; max-width:106px}
+.life-help-back{flex:none; min-width:20px; height:5.5px; font-size:2.8px}
 .life-spd{font-size:3.4px}
 .vid-wrap.absent .vid-el, .vid-wrap.absent .vid-play{display:none}
 /* ── video control strip (begin) — self-contained with the .vid-ctrl div and its JS
@@ -27055,6 +27062,10 @@ var T = {
     life_blinker: "blinker",
     life_pulsar: "pulsar",
     life_gen: "GEN",
+    life_help: "How to play",
+    life_help_title: "Conway’s Game of Life",
+    life_help_copy: "A cell is born with 3 neighbours and survives with 2 or 3. Draw cells, then play, step, change speed, or try a pattern. Space pauses.",
+    life_help_back: "Back",
     tehran_place: "Tehran",
     california_place: "California",
     mail_inbox_title: "inbox",
@@ -28093,6 +28104,10 @@ var T = {
     life_blinker: "blikač",
     life_pulsar: "pulzar",
     life_gen: "GEN",
+    life_help: "Jak hrát",
+    life_help_title: "Conwayova Hra života",
+    life_help_copy: "Buňka se narodí se 3 sousedy a přežije se 2 nebo 3. Nakreslete buňky, pak spusťte hru, krokujte, změňte rychlost nebo zkuste vzor. Mezerník pozastaví hru.",
+    life_help_back: "Zpět",
     tehran_place: "Teherán",
     california_place: "Kalifornie",
     mail_inbox_title: "doručená",
@@ -48800,6 +48815,7 @@ setOfficeProgress("pc", false);
     if (monitor.classList.contains("show-calendar") && stepBack && window.__calendarBack && window.__calendarBack()) return true;
     if (monitor.classList.contains("show-console")) { closeConsole(!!stepBack); return true; }
     if (monitor.classList.contains("show-python") && window.__closeMonitorPython) { window.__closeMonitorPython(!!stepBack); return true; }
+    if (monitor.classList.contains("show-life") && stepBack && window.__closeMonitorLifeHelp && window.__closeMonitorLifeHelp()) return true;
     var apps = [["show-video", closeVideoApp], ["show-mines", closeMinesApp], ["show-pacman", closePacmanApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-doom", closeDoom], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
@@ -49697,7 +49713,8 @@ setOfficeProgress("pc", false);
   var lifeCanvas = null, lifeCtx = null, lifeBuilt = false;
   var lifePlaying = false, lifeTimer = null, lifeSpeedIdx = 1, lifeGen = 0, lifeStationary = false;
   var lifeSeeded = false; // session retention: the board/gen/play-state survive a close+reopen; only a first-ever open or a Kill/reset re-seeds a fresh random soup
-  var lifePlayBtn = null, lifeGenEl = null;
+  var lifePlayBtn = null, lifeGenEl = null, lifeHelpEl = null, lifeHelpTitleEl = null, lifeHelpCopyEl = null, lifeHelpBackBtn = null;
+  var lifeHelpWasPlaying = false;
   var lifeSpeedBtns = [], lifePresetBtns = [];
   var lifePainting = false, lifePaintVal = 1;
   function lifeT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
@@ -49823,6 +49840,25 @@ setOfficeProgress("pc", false);
     parent.appendChild(b);
     return b;
   }
+  function lifeOpenHelp() {
+    if (!lifeWrap || lifeWrap.classList.contains("help-open")) return;
+    lifeHelpWasPlaying = lifePlaying;
+    lifePause();
+    lifeWrap.classList.add("help-open");
+  }
+  function lifeCloseHelp(resume) {
+    if (!lifeWrap || !lifeWrap.classList.contains("help-open")) return false;
+    lifeWrap.classList.remove("help-open");
+    var shouldPlay = lifeHelpWasPlaying;
+    lifeHelpWasPlaying = false;
+    if (shouldPlay) {
+      lifePlaying = true;
+      lifePaintPlayBtn();
+      if (resume && monitor.classList.contains("show-life")) lifeArmTimer();
+    }
+    return true;
+  }
+  window.__closeMonitorLifeHelp = function () { return lifeCloseHelp(true); };
   function lifeBuildUI() {
     if (lifeBuilt || !lifeWrap) return;
     lifeBuilt = true;
@@ -49853,6 +49889,12 @@ setOfficeProgress("pc", false);
       b.setAttribute("data-preset", name);
       return b;
     });
+    lifeBtn(rowP, "life-help-btn", "?", "life_help", lifeOpenHelp);
+    lifeHelpEl = document.createElement("div"); lifeHelpEl.className = "life-help"; lifeHelpEl.setAttribute("role", "dialog"); lifeHelpEl.setAttribute("aria-modal", "true");
+    lifeHelpTitleEl = document.createElement("div"); lifeHelpTitleEl.className = "life-help-title"; lifeHelpEl.appendChild(lifeHelpTitleEl);
+    lifeHelpCopyEl = document.createElement("div"); lifeHelpCopyEl.className = "life-help-copy"; lifeHelpEl.appendChild(lifeHelpCopyEl);
+    lifeHelpBackBtn = lifeBtn(lifeHelpEl, "life-help-back", lifeT("life_help_back"), "life_help_back", function () { lifeCloseHelp(true); });
+    lifeWrap.appendChild(lifeHelpEl);
     // pointer painting: toggle the first cell, then paint that value across the drag
     lifeCanvas.addEventListener("pointerdown", function (e) {
       e.stopPropagation();
@@ -49887,6 +49929,9 @@ setOfficeProgress("pc", false);
       tk[i].setAttribute("aria-label", label);
     }
     lifePresetBtns.forEach(function (b) { b.textContent = lifeT("life_" + b.getAttribute("data-preset")); });
+    if (lifeHelpTitleEl) lifeHelpTitleEl.textContent = lifeT("life_help_title");
+    if (lifeHelpCopyEl) lifeHelpCopyEl.textContent = lifeT("life_help_copy");
+    if (lifeHelpBackBtn) lifeHelpBackBtn.textContent = lifeT("life_help_back");
   }
   function openLifeApp() {
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-life")) return;
@@ -49907,6 +49952,7 @@ setOfficeProgress("pc", false);
   }
   function closeLifeApp() {
     if (!monitor.classList.contains("show-life")) return;
+    lifeCloseHelp(false);
     monitor.classList.remove("show-life");
     // stop the loop but KEEP lifePlaying (and the board/gen) so a reopen resumes exactly where it
     // left off — nothing ticks behind a closed app since lifeStep/__resume gate on show-life

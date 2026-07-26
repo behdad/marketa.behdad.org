@@ -695,7 +695,8 @@ ordinary game shortcuts are suspended until the player exits.
   corners. Press `Space` to pause or resume.
 - **Game of Life and Doom:** Available on the monitor. Space pauses or resumes
   Life, which also pauses when its board goes empty or reaches a stationary
-  arrangement. Oscillating patterns continue to run.
+  arrangement. Oscillating patterns continue to run; the `?` button explains
+  its rules and controls.
 - **Bouquet toss:** A fictional, game-only party moment with its own aiming
   interaction. No bouquet toss is planned for either real wedding celebration.
 - **Magic box:** The garden's magic box contains a set of optional visual trips.

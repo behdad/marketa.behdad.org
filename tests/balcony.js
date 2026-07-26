@@ -17,8 +17,7 @@
 //      balcony; a name returned by __barCoupleNow() is never shown either.
 //   3. __balconySmokerNow() — returns the names actually smoking on the deck
 //      (DJ resolved live to Sina/Danesh), and null when nobody's out / hidden.
-//   4. DRINKS — some (not all, not always) non-smokers hold a beer or a flute;
-//      smokers never do; the fraction with a drink varies across showings.
+//   4. DRINKS — optional drinks vary, while named preferences stay correct.
 //   5. TEARDOWN — after hide(), nothing is left shown/stranded (no .on, no drink
 //      classes, __balconySmokerNow() null).
 //
@@ -54,11 +53,12 @@ assert(/function placeLane/.test(body), "slice missing placeLane() — wrong reg
 
 // ── the roster the SVG actually declares (ids + which are smokers) ────────────
 // (mirrors the authored #balcony-hangout figures; the harness builds fake nodes for these)
-var CROWD = ["bh-patricia-son", "bh-patricia-daughter", "bh-elisabeth"];
+var CROWD = ["bh-patricia-son", "bh-patricia-daughter", "bh-elisabeth", "bh-mahzad", "bh-jay"];
 var SMOKERS = ["bh-farhang", "bh-alireza", "bh-dj", "bh-behdad", "bh-marketa"];
 // figure id → garden .g-<name> key used by the one-room exclusion
 var NAME = {
   "bh-patricia-son": "bahareh", "bh-patricia-daughter": "patricia", "bh-elisabeth": "lauren",
+  "bh-mahzad": "mahzad", "bh-jay": "jay",
   "bh-farhang": "farhang", "bh-alireza": "alireza", "bh-dj": "dj",
   "bh-behdad": "behdad", "bh-marketa": "marketa"
 };
@@ -141,11 +141,14 @@ ALL.forEach(function (id) {
   var fig = mk(id, ["bh-fig"].concat(isSmoker ? ["bh-smoker"] : ["bh-crowd"]));
   if (id === "bh-behdad" || id === "bh-marketa") fig.classList.add("bh-host");
   fig.style.display = ""; // authored: visible until layout hides
-  // non-smokers carry the two drink graphics the controller toggles
+  // non-smokers carry beer/wine; the host smokers carry their free-hand Diet Coke can
   if (!isSmoker) {
     var idle = new El("g"); idle.classList.add("bh-idle"); fig.appendChild(idle);
     var beer = new El("g"); beer.classList.add("bh-drink"); beer.classList.add("bh-beer"); idle.appendChild(beer);
     var flute = new El("g"); flute.classList.add("bh-drink"); flute.classList.add("bh-flute"); idle.appendChild(flute);
+  } else if (id === "bh-behdad" || id === "bh-marketa") {
+    var hostIdle = new El("g"); hostIdle.classList.add("bh-idle"); fig.appendChild(hostIdle);
+    var diet = new El("g"); diet.classList.add("bh-drink"); diet.classList.add("bh-diet"); hostIdle.appendChild(diet);
   }
   hangout.appendChild(fig);
 });
@@ -173,6 +176,10 @@ win.__djB = false;                 // false → Sina spins? our code: __djB=fals
 win.__barCoupleNow = function () { return win.__barCoupleNowValue || null; };
 win.__barCoupleNowValue = null;
 win.__partyGuestAttended = function () { return true; }; // current controller admits only arrived party guests
+win.__partyDrinkPreference = function (name) {
+  return ({ jay: "beer", spencer: "beer", bahareh: "wine", madla: "wine", athena: "wine",
+    lauren: "wine", marketa: "diet-coke", behdad: "diet-coke", hamid: "any" })[name] || "any";
+};
 win.requestAnimationFrame = function () { return 0; }; // never actually loops in this harness
 win.cancelAnimationFrame = function () {};
 win.addEventListener = function () {};
@@ -361,11 +368,12 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   setArrived("farhang", false);
 })();
 
-// ── 4. DRINKS: some non-smokers, not all, varying; smokers never ──────────────
+// ── 4. DRINKS: optional, but authored preferences never drift ────────────────
 (function () {
   ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
-  var drinkFractions = {}, everDrink = false, everNoDrink = false, smokerDrinkSeen = false;
+  var drinkFractions = {}, everDrink = false, everNoDrink = false, wrongDrink = false;
+  var sawBaharehWine = false, sawJayBeer = false, sawHostDiet = false;
   var N = 300;
   for (var k = 0; k < N; k++) {
     leave(); activate();
@@ -376,20 +384,32 @@ console.log("balcony-hangout controller (Node DOM-shim):");
       var beerOn = fig.querySelector(".bh-beer") && fig.querySelector(".bh-beer").classList.contains("on");
       var fluteOn = fig.querySelector(".bh-flute") && fig.querySelector(".bh-flute").classList.contains("on");
       // never BOTH at once
-      if (beerOn && fluteOn) smokerDrinkSeen = true; // reuse flag: a figure with two drinks is a fail
+      if (beerOn && fluteOn) wrongDrink = true;
       if (beerOn || fluteOn) { withDrink++; everDrink = true; } else { everNoDrink = true; }
+      if (id === "bh-patricia-son" && (beerOn || fluteOn)) {
+        if (!fluteOn || !fig.querySelector(".bh-flute").classList.contains("wine")) wrongDrink = true;
+        else sawBaharehWine = true;
+      }
+      if (id === "bh-jay" && (beerOn || fluteOn)) {
+        if (!beerOn) wrongDrink = true; else sawJayBeer = true;
+      }
     });
     if (crowdShown.length) drinkFractions[withDrink + "/" + crowdShown.length] = true;
-    // smokers must never carry a drink graphic (they have none, but assert nothing sneaks on)
+    // Markéta and Behdad can use their free hand for Diet Coke; other smokers have no drink.
     shownIds().filter(function (id) { return SMOKERS.indexOf(id) !== -1; }).forEach(function (id) {
+      var d = byId[id].querySelector(".bh-diet");
+      if (d && d.classList.contains("on")) sawHostDiet = true;
       var b = byId[id].querySelector(".bh-beer"), f = byId[id].querySelector(".bh-flute");
-      if ((b && b.classList.contains("on")) || (f && f.classList.contains("on"))) smokerDrinkSeen = true;
+      if ((b && b.classList.contains("on")) || (f && f.classList.contains("on"))) wrongDrink = true;
     });
   }
   ok("SOME non-smokers hold a drink (beer or flute) sometimes", everDrink);
   ok("NOT all non-smokers always hold a drink (some are dry)", everNoDrink);
   ok("the drink fraction VARIES across showings (" + Object.keys(drinkFractions).length + " distinct)", Object.keys(drinkFractions).length >= 3);
-  ok("no figure ever holds two drinks, and no smoker ever holds one", !smokerDrinkSeen);
+  ok("Bahareh's shown drink is wine", sawBaharehWine);
+  ok("Jay's shown drink is beer", sawJayBeer);
+  ok("Markéta/Behdad can appear with Diet Coke", sawHostDiet);
+  ok("no authored preference ever renders as the wrong drink", !wrongDrink);
 })();
 
 // ── 5. NAME CARDS: the deck names people as fully as every other room ─────────

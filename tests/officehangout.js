@@ -7,7 +7,7 @@
 //   1) rotation varies the couple across showings,
 //   2) the one-room exclusion holds (skips anyone on the garden floor / at the bar / on the balcony),
 //   3) __officeCoupleNow() reports the current couple's member ids (and null when empty),
-//   4) drinks roll per showing (beer / flute / none, and p1/p2/both),
+//   4) drinks roll per showing and respect the actual holder's preference,
 //   5) teardown (reset/party-off/room-leave) strands nothing (no timers left, DOM cleared).
 //
 // Zero deps, like check.js. Run: node tests/officehangout.js
@@ -55,13 +55,29 @@ function El(classes) {
     for (var c = 0; c < el._children.length; c++) if (el._children[c]._classes.indexOf(want) !== -1) return el._children[c];
     return null;
   };
+  el.querySelectorAll = function (sel) {
+    var want = sel.replace(/^\./, ""), out = [];
+    function walk(node) {
+      for (var i = 0; i < node._children.length; i++) {
+        var child = node._children[i];
+        if (child._classes.indexOf(want) !== -1) out.push(child);
+        walk(child);
+      }
+    }
+    walk(el);
+    return out;
+  };
   return el;
 }
 
 // office-hangout layer with one <g> per couple (class = of-<key>)
 var officeLayer = El("");
 var COUPLE_CLASSES = ["of-aligoli","of-spencerjay","of-farhanglauren","of-alirezamahzad","of-hamidathena","of-baharakpayman","of-madlarobert"];
-COUPLE_CLASSES.forEach(function (c) { officeLayer._children.push(El("of-couple " + c)); });
+COUPLE_CLASSES.forEach(function (c) {
+  var couple = El("of-couple " + c);
+  couple._children.push(El("of-person of-p1"), El("of-person of-p2"));
+  officeLayer._children.push(couple);
+});
 
 // garden-guests: each member gets a .g-<name> child so onFloor() can find them
 var GUESTS = ["ali","goli","spencer","jay","farhang","lauren","alireza","mahzad","hamid","athena","baharak","payman","madla","robert"];
@@ -110,6 +126,10 @@ sandbox.setTimeout = setTimeoutShim;
 sandbox.clearTimeout = clearTimeoutShim;
 sandbox.rosterHoldsOccupants = function () { return false; }; // the extracted controller normally reads the page-global roster gate
 sandbox.__partyGuestAttended = function () { return true; }; // every shim couple has already entered this party
+sandbox.__partyDrinkPreference = function (name) {
+  return ({ jay: "beer", spencer: "beer", bahareh: "wine", madla: "wine", athena: "wine",
+    lauren: "wine", marketa: "diet-coke", behdad: "diet-coke", hamid: "any" })[name] || "any";
+};
 
 // evaluate the extracted IIFE in the sandbox
 var vm = require("vm");
@@ -128,7 +148,7 @@ ok(typeof sandbox.__officeCoupleNow === "function", "__officeCoupleNow published
 ok(typeof sandbox.officefolks === "function", "officefolks() console hook published");
 
 function presentClass() {
-  for (var k = 0; k < officeLayer._children.length; k++) if (officeLayer._children[k]._classes.indexOf("present") !== -1) return officeLayer._children[k]._classes.filter(function (c) { return c !== "of-couple" && c !== "present" && c.indexOf("of-drink") !== 0 && c !== "of-beer" && c !== "of-flute"; })[0];
+  for (var k = 0; k < officeLayer._children.length; k++) if (officeLayer._children[k]._classes.indexOf("present") !== -1) return officeLayer._children[k]._classes.filter(function (c) { return c !== "of-couple" && c !== "present" && c.indexOf("of-drink") !== 0 && c !== "of-beer" && c !== "of-wine" && c !== "of-cocktail"; })[0];
   return null;
 }
 function presentEl() { for (var k = 0; k < officeLayer._children.length; k++) if (officeLayer._children[k]._classes.indexOf("present") !== -1) return officeLayer._children[k]; return null; }
@@ -144,25 +164,59 @@ var presentCount = officeLayer._children.filter(function (e) { return e._classes
 ok(presentCount === 1, "only one couple is present at a time (" + presentCount + ")");
 ok(JSON.stringify(sandbox.__officeCoupleNow()) === JSON.stringify(who), "__officeCoupleNow() matches the shown couple");
 
-// 3) drinks roll per showing — sample many forced shows, expect beer, flute AND empty to appear,
+// 3) unspecified drinks still roll — sample many forced shows, expect beer, wine AND empty,
 //    and p1-only / p2-only / both variants to all occur.
-var sawBeer = false, sawFlute = false, sawEmpty = false, sawP1 = false, sawP2 = false, sawBoth = false;
+var sawBeer = false, sawWine = false, sawEmpty = false, sawP1 = false, sawP2 = false, sawBoth = false;
 for (var s = 0; s < 400; s++) {
   sandbox.officefolks("aligoli"); // force same couple so only the drink roll varies
   var el = presentEl();
-  var hasBeer = el._classes.indexOf("of-beer") !== -1, hasFlute = el._classes.indexOf("of-flute") !== -1;
+  var hasBeer = el._classes.indexOf("of-beer") !== -1, hasWine = el._classes.indexOf("of-wine") !== -1;
   var p1only = el._classes.indexOf("of-drink-p1-only") !== -1, p2only = el._classes.indexOf("of-drink-p2-only") !== -1;
   if (hasBeer) sawBeer = true;
-  if (hasFlute) sawFlute = true;
-  if (!hasBeer && !hasFlute) sawEmpty = true;
-  if ((hasBeer || hasFlute) && p1only) sawP1 = true;
-  if ((hasBeer || hasFlute) && p2only) sawP2 = true;
-  if ((hasBeer || hasFlute) && !p1only && !p2only) sawBoth = true;
+  if (hasWine) sawWine = true;
+  if (!hasBeer && !hasWine) sawEmpty = true;
+  if ((hasBeer || hasWine) && p1only) sawP1 = true;
+  if ((hasBeer || hasWine) && p2only) sawP2 = true;
+  if ((hasBeer || hasWine) && !p1only && !p2only) sawBoth = true;
 }
 ok(sawBeer, "drinks roll: beer appears across showings");
-ok(sawFlute, "drinks roll: champagne flute appears across showings");
+ok(sawWine, "drinks roll: wine appears across showings");
 ok(sawEmpty, "drinks roll: sometimes empty-handed (just chatting)");
 ok(sawP1 && sawP2 && sawBoth, "drinks roll: p1-only, p2-only AND both-hold-a-drink all occur");
+
+// Named preferences follow the actual holder, not merely the enclosing couple.
+function preferenceProbe(couple, preferredIndex, expected) {
+  var saw = false, wrong = false;
+  for (var n = 0; n < 300; n++) {
+    sandbox.officefolks(couple);
+    var el = presentEl();
+    var empty = el._classes.indexOf("of-beer") === -1 && el._classes.indexOf("of-wine") === -1 && el._classes.indexOf("of-cocktail") === -1;
+    var preferredHolds = preferredIndex === 0
+      ? el._classes.indexOf("of-drink-p2-only") === -1
+      : el._classes.indexOf("of-drink-p1-only") === -1;
+    if (!empty && preferredHolds) {
+      saw = true;
+      if (el._classes.indexOf("of-" + expected) === -1) wrong = true;
+    }
+  }
+  ok(saw && !wrong, couple + ": the preferred holder always receives " + expected);
+}
+preferenceProbe("spencerjay", 0, "beer");
+preferenceProbe("spencerjay", 1, "beer");
+preferenceProbe("madlarobert", 0, "wine");
+preferenceProbe("farhanglauren", 1, "wine");
+preferenceProbe("hamidathena", 1, "wine");
+
+var sawHamidCocktail = false;
+for (var h = 0; h < 500; h++) {
+  sandbox.officefolks("hamidathena");
+  var hamidEl = presentEl();
+  if (hamidEl._classes.indexOf("of-drink-p1-only") !== -1 && hamidEl._classes.indexOf("of-cocktail") !== -1) {
+    sawHamidCocktail = true;
+    break;
+  }
+}
+ok(sawHamidCocktail, "Hamid's random anything-pool includes cocktails");
 
 // 4) rotation varies the couple: many autonomous swaps should surface >1 distinct couple.
 sandbox.officefolks(false); // clear

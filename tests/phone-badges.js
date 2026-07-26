@@ -19,6 +19,7 @@ var HARNESS = [
   ' window.__openPhoneAppHere("album");await sleep(50);document.querySelector(".pnav-home").click();await sleep(50);S("albumSeen",{count:+document.querySelector("#phone-app-album").getAttribute("data-notification-count"),hidden:document.querySelector("#phone-app-album .pat-badge").hidden});',
   ' document.querySelector("#phone-app-mail").click();await sleep(30);var firstMail=document.querySelector(".pm-mail-row.unread");if(firstMail)firstMail.click();document.querySelector(".pnav-home").click();await sleep(40);S("mailRead",{count:+document.querySelector("#phone-app-mail").getAttribute("data-notification-count")});',
   ' setLang("cs");await sleep(50);S("czech",{mail:document.querySelector("#phone-app-mail").getAttribute("aria-label"),messages:document.querySelector("#phone-app-messages").getAttribute("aria-label")});',
+  ' document.querySelector("#phone-app-messages").click();await sleep(40);var beforeRows=document.querySelectorAll(".pm-msg-row").length,readAll=document.querySelector(".pm-msg-read-all"),titleLabel=document.querySelector(".pm-msg-title-label"),titleTools=document.querySelector(".pm-msg-title-tools"),labelRect=titleLabel&&titleLabel.getBoundingClientRect(),toolsRect=titleTools&&titleTools.getBoundingClientRect();var readAllLabel=readAll&&readAll.textContent;if(readAll)readAll.click();await sleep(30);S("readAll",{label:readAllLabel,aria:readAll&&readAll.getAttribute("aria-label"),labelRect:labelRect&&{left:labelRect.left,right:labelRect.right,height:labelRect.height},toolsRect:toolsRect&&{left:toolsRect.left,right:toolsRect.right,height:toolsRect.height},singleLine:!!(labelRect&&toolsRect&&labelRect.right<toolsRect.left),count:window.__phoneNotificationCounts().messages,rows:document.querySelectorAll(".pm-msg-row").length,beforeRows:beforeRows,unreadRows:document.querySelectorAll(".pm-msg-row.unread").length,disabled:!!(readAll&&readAll.disabled)});',
   ' window.__resetPhoneApps();await sleep(50);var reset=window.__phoneNotificationCounts();S("reset",{messages:reset.messages,mail:reset.mail,album:reset.album});',
   '}',
   '})();</script>'
@@ -36,12 +37,13 @@ if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.initial.tiles > 0 && s.initial.tiles === s.initial.badges, "every installed app tile owns a notification badge slot", s.initial);
-check(s.initial.messages === 2 && s.initial.mail === 3 && s.initial.album === 1 && s.initial.photo, "Messages, Mail, and new Album photos project their real unread counts", s.initial);
+check(s.initial.messages === 1 && s.initial.mail === 3 && s.initial.album === 1 && s.initial.photo, "Messages, Mail, and new Album photos project their real unread counts", s.initial);
 check(s.initial.zeroHidden, "zero-count badges stay hidden while nonzero badges show", s.initial);
-check(s.live.count === 3 && s.live.text === "3", "a message arriving on the launcher updates its badge in place", s.live);
+check(s.live.count === 2 && s.live.text === "2", "a message arriving on the launcher updates its badge in place", s.live);
 check(s.albumSeen.count === 0 && s.albumSeen.hidden, "opening Album clears only its unseen-photo count", s.albumSeen);
 check(s.mailRead.count === 2, "reading one Mail item decrements its launcher count", s.mailRead);
-check(/2 oznámení/.test(s.czech.mail) && /3 oznámení/.test(s.czech.messages), "badge accessibility labels follow Czech", s.czech);
+check(/2 oznámení/.test(s.czech.mail) && /2 oznámení/.test(s.czech.messages), "badge accessibility labels follow Czech", s.czech);
+check(s.readAll.label === "✓ vše" && /všechny zprávy/.test(s.readAll.aria || "") && s.readAll.singleLine && s.readAll.count === 0 && s.readAll.rows === s.readAll.beforeRows && s.readAll.unreadRows === 0 && s.readAll.disabled, "mark all read stays in the title row, clears the badge without deleting the thread, and follows Czech", s.readAll);
 check(s.reset.messages === 0 && s.reset.mail === 3 && s.reset.album === 0, "full reset restores each app's fresh count", s.reset);
 
 console.log("");

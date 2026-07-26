@@ -491,7 +491,8 @@ rest of the game remains usable.
 ## Messages and crew replies
 
 Messages are held until phase 2. The thread is chronological, with search and the
-unread-only filter kept at the top and the composer at the bottom. The composer
+unread-only filter and a mark-all-read control kept at the top and the composer
+at the bottom. Marking all read clears the badge without deleting the thread. The composer
 receives focus when Messages opens. Press `Escape` to leave the composer; press
 `/` while it is empty to focus message search.
 

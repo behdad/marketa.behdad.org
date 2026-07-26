@@ -865,6 +865,7 @@ outside this deferral queue, but still passes the shared phase and deduplication
   session/checkpoint state.
 - Opening a notification scrolls to its exact row but does not run that message's action. Opening or
   selecting the row marks it read; the separate action affordance performs the action.
+- The bulk read action clears unread pressure while preserving the chronological thread.
 - `messageActionState` records one-shot completion or expiry. `setGardenParty` retires actions whose
   context has permanently passed, marks those rows read, and removes their action affordance without
   deleting the historical text. `unreadCount()` and `__latestUnreadMessage()` re-run the same expiry

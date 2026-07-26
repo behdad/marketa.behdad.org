@@ -5363,8 +5363,13 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* Room title + filters stay together at the top while the chronological thread scrolls under
    them. The input bar independently sticks to the bottom, like a compact native chat app. */
 .pm-msg-top{position:sticky; top:0; z-index:2; margin:-6px -16px 2px; padding:0 16px 5px; background:var(--cream); border-bottom:1px solid var(--rule)}
-.pm-msg-title{position:relative; padding:6px 0 4px; font-family:"Fraunces",serif; font-size:18px; font-weight:700; color:var(--ink)}
-.pm-msg-title .pm-msg-unread{position:absolute; right:0; top:50%; transform:translateY(-50%); margin:0; font-family:"Source Serif 4",serif; font-size:10.5px; font-weight:400}
+.pm-msg-title{display:flex; align-items:center; gap:6px; padding:6px 0 4px; font-family:"Fraunces",serif; font-size:18px; font-weight:700; color:var(--ink)}
+.pm-msg-title-label{min-width:0; white-space:nowrap}
+.pm-msg-title-tools{margin-left:auto; flex:none; display:flex; align-items:center; gap:7px; font-family:"Source Serif 4",serif; font-size:10.5px; font-weight:400}
+.pm-msg-title .pm-msg-unread{position:static; transform:none; margin:0}
+.pm-msg-read-all{border:0; padding:2px 6px; border-radius:9px; background:rgba(142,58,74,.1); color:var(--wine); font:inherit; line-height:1.2; cursor:pointer}
+.pm-msg-read-all:hover,.pm-msg-read-all:focus-visible{background:rgba(142,58,74,.18); outline:none}
+.pm-msg-read-all:disabled{opacity:.38; cursor:default}
 .pm-msg-controls{display:flex; flex-direction:column; gap:3px}
 /* messages search: a small round search field under the title, live-filters the thread by
    sender name + message text. Same styling as the album search bar so it feels native. */
@@ -26770,6 +26775,9 @@ var T = {
     msg_new_divider: "New",
     msg_earlier_divider: "Earlier",
     msg_unread_only: "unread only",
+    msg_unread_only_short: "unread",
+    msg_mark_all_read: "Mark all messages as read",
+    msg_mark_all_read_short: "✓ all",
     msg_reply: "Reply…",
     msg_copy: "Copy message",
     msg_replying_to: "Replying to {name}",
@@ -27785,6 +27793,9 @@ var T = {
     msg_new_divider: "Nové",
     msg_earlier_divider: "Starší",
     msg_unread_only: "jen nepřečtené",
+    msg_unread_only_short: "nové",
+    msg_mark_all_read: "Označit všechny zprávy jako přečtené",
+    msg_mark_all_read_short: "✓ vše",
     msg_reply: "Odpovědět…",
     msg_copy: "Kopírovat zprávu",
     msg_replying_to: "Odpovídáš {name}",
@@ -56951,6 +56962,19 @@ async def localfont(name):
       if (i >= 0 && window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "dismissed", id: id }, "ui");
     }
     window.__dismissMessage = dismissMessage; // test hook
+    function markAllMessagesRead() {
+      var changed = false;
+      messagesThread.forEach(function (id) {
+        if (!messagesRead[id]) { messagesRead[id] = true; changed = true; }
+      });
+      if (!changed) return false;
+      msgUnreadOnly = false;
+      hideMessageThumb();
+      updateMsgBadge();
+      if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "read-all" }, "ui");
+      return true;
+    }
+    window.__markAllPhoneMessagesRead = markAllMessagesRead;
     function plainMessageText(m) { return String(msgBody(m) || "").replace(/<[^>]+>/g, ""); }
     var GROUP_CHAT_CAST = [
       { key: "marketa", name: "Markéta", roleKey: "role_bride" },
@@ -57161,12 +57185,18 @@ async def localfont(name):
       top.className = "pm-msg-top";
       var title = document.createElement("div"); // the whole app IS one chat room, "Wedding crowd"
       title.className = "pm-msg-title";
-      title.textContent = tr("msg_group_from");
-      // "unread only" now occupies the former + button's compact title-row slot.
+      var titleLabel = document.createElement("span"); titleLabel.className = "pm-msg-title-label"; titleLabel.textContent = tr("msg_group_from"); title.appendChild(titleLabel);
+      var titleTools = document.createElement("div"); titleTools.className = "pm-msg-title-tools";
+      var readAll = document.createElement("button"); readAll.type = "button"; readAll.className = "pm-msg-read-all";
+      readAll.textContent = tr("msg_mark_all_read_short"); readAll.setAttribute("aria-label", tr("msg_mark_all_read")); readAll.setAttribute("title", tr("msg_mark_all_read"));
+      readAll.disabled = unreadCount() === 0;
       var unreadWrap = document.createElement("label"); unreadWrap.className = "pm-msg-unread";
+      unreadWrap.setAttribute("title", tr("msg_unread_only"));
       var unreadChk = document.createElement("input"); unreadChk.type = "checkbox"; unreadChk.className = "pm-msg-unread-chk"; unreadChk.checked = msgUnreadOnly;
-      var unreadLbl = document.createElement("span"); unreadLbl.textContent = tr("msg_unread_only");
-      unreadWrap.appendChild(unreadChk); unreadWrap.appendChild(unreadLbl); title.appendChild(unreadWrap); top.appendChild(title);
+      unreadChk.setAttribute("aria-label", tr("msg_unread_only"));
+      var unreadLbl = document.createElement("span"); unreadLbl.textContent = tr("msg_unread_only_short");
+      unreadWrap.appendChild(unreadChk); unreadWrap.appendChild(unreadLbl);
+      titleTools.appendChild(readAll); titleTools.appendChild(unreadWrap); title.appendChild(titleTools); top.appendChild(title);
       var controls = document.createElement("div"); controls.className = "pm-msg-controls";
       var search = document.createElement("div"); search.className = "pm-msg-search";
       var input = document.createElement("input"); input.type = "search"; input.className = "pm-ms-input"; input.value = msgSearchQ;
@@ -57368,6 +57398,12 @@ async def localfont(name):
         if (e.key === "Backspace") { e.preventDefault(); messageInput.focus(); }
       });
       unreadChk.addEventListener("change", function () { msgUnreadOnly = unreadChk.checked; applyFilter(); });
+      readAll.addEventListener("click", function () {
+        if (!markAllMessagesRead()) return;
+        unreadChk.checked = false;
+        readAll.disabled = true;
+        applyFilter();
+      });
       clr.addEventListener("click", function () { input.value = ""; msgSearchQ = ""; applyFilter(); input.focus(); });
 
       var composer = document.createElement("div"); composer.className = "pm-msg-composebar";

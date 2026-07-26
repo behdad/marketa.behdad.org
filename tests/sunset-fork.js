@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-// The sunset observation starts an authored late-night choice: end the party,
-// or follow the counterproposal to the garden magic box.
+// The sunset observation starts an authored late-night choice: Athena hands the
+// wall switch to the last person awake, or the magic box keeps things going.
 var fs = require("fs");
 var path = require("path");
 var lib = require("./lib");
@@ -38,7 +38,7 @@ var harness = String.raw`<script>
     window.__deliverPhoneMessage("sunset_magicbox");
     var thread = window.__chatMessagesKnowledge();
     check("sunset fork adds all six late-night replies",
-      thread.some(function (m) { return /calling it a night/.test(m.text); }) &&
+      thread.some(function (m) { return m.sender === "Athena" && /I'm going to sleep/.test(m.text) && /switch is on the wall/.test(m.text); }) &&
       thread.some(function (m) { return /turtle art in Python/.test(m.text); }) &&
       thread.some(function (m) { return m.sender === "Bahareh" && /why are you still awake/.test(m.text); }) &&
       thread.some(function (m) { return /draw your next tattoo/.test(m.text); }) &&
@@ -66,11 +66,15 @@ var harness = String.raw`<script>
       window.__runMsgAction("sunset_bed");
     }, 220);
     setTimeout(function () {
-      check("sleep reply ends the party", !window.__gardenPartyOn);
-      window.__setPartyMode(true, true);
+      check("Athena's bedtime reply leaves the last guest in charge",
+        window.currentStageName === "garden" && window.__gardenPartyOn,
+        window.currentStageName + " / party=" + window.__gardenPartyOn);
+      check("Athena's bedtime reply points out the wall switch",
+        document.getElementById("garden-lightswitch").classList.contains("invite-pulse"),
+        document.getElementById("garden-lightswitch").getAttribute("class"));
       window.goToStage("office");
       window.__runMsgAction("sunset_magicbox");
-    }, 420);
+    }, 1050);
     setTimeout(function () {
       check("magic-box reply pans back to the party room",
         window.currentStageName === "garden", window.currentStageName);
@@ -78,7 +82,7 @@ var harness = String.raw`<script>
         document.getElementById("garden-boxlock").classList.contains("showing"),
         "locked=" + window.__drugsboxLocked() + " class=" + document.getElementById("garden-boxlock").getAttribute("class"));
       report();
-    }, 1400);
+    }, 2050);
   } catch (error) {
     out.errors.push("setup: " + (error && error.stack || error));
     report();
@@ -86,7 +90,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 2500, {
+var result = lib.runPageSync("rsvp.html", harness, 3200, {
   forceMotion: true,
   seedRandom: true
 });

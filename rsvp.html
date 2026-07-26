@@ -26863,7 +26863,7 @@ var T = {
     msg_trip_body_e: "party supplies are in the magic box 🎁",
     msg_trip_body_f: "take a little trip? 🌈",
     msg_sunset_body: "this sunset is UNREAL 🌅 get on the balcony",
-    msg_sunset_bed_body: "okay, sunset admired. are we getting some sleep and calling it a night? 😴",
+    msg_sunset_bed_body: "I'm going to sleep. Last person up, turn the party off — the switch is on the wall. 😴",
     msg_sunset_irene_code_body: "can I draw some turtle art in Python on the computer? 🐢🐍🎨",
     msg_sunset_bahareh_awake_body: "Irene! why are you still awake?! 😳",
     msg_sunset_hannah_tattoo_body: "can I draw your next tattoo? ✍️🖋️",
@@ -27889,7 +27889,7 @@ var T = {
     msg_trip_body_e: "párty výbava je v kouzelné krabici 🎁",
     msg_trip_body_f: "dáme si malý výlet? 🌈",
     msg_sunset_body: "ten západ slunce je NESKUTEČNÝ 🌅 pojď na balkon",
-    msg_sunset_bed_body: "dobře, západ slunce obdivován. jdeme se vyspat a zabalíme to? 😴",
+    msg_sunset_bed_body: "Jdu spát. Poslední vzhůru ať vypne párty — vypínač je na zdi. 😴",
     msg_sunset_irene_code_body: "můžu na počítači v Pythonu nakreslit něco želvou? 🐢🐍🎨",
     msg_sunset_bahareh_awake_body: "Irene! proč jsi ještě vzhůru?! 😳",
     msg_sunset_hannah_tattoo_body: "můžu ti nakreslit další tetování? ✍️🖋️",
@@ -58902,7 +58902,7 @@ async def localfont(name):
       lanterns:      { fromKey: "msg_bahareh_from", bodyKey: "msg_lanterns_body",  act: "lanterns" },      // Bahareh (fire-festival kin) → taps: balcony (night) + a wish-lantern release
       sina_helpers:  { fromKeys: TRIP_SENDERS, bodyKeys: TRIP_BODIES, act: "magicbox" }, // random friend/host trip nudge → garden magic box (locked → date lock the first time)
       sunset:        { fromKeys: ADULT_SENDERS,     bodyKey: "msg_sunset_body",   apiAction: { id: "room.go", args: { room: "balcony" } }, next: "sunset_bed", nextDelay: 6200 },   // the view starts a late-night fork: sleep, or let the magic box keep things going
-      sunset_bed:    { fromKey: "msg_athena_from",  bodyKey: "msg_sunset_bed_body", apiAction: { id: "party.set", args: { on: false } }, replyTo: "sunset", next: "sunset_irene_code", nextDelay: 4800 },
+      sunset_bed:    { fromKey: "msg_athena_from",  bodyKey: "msg_sunset_bed_body", act: "party_switch", replyTo: "sunset", next: "sunset_irene_code", nextDelay: 4800 },
       sunset_irene_code: { fromKey: "msg_irene_from", bodyKey: "msg_sunset_irene_code_body", apiAction: { id: "app.open", args: { app: "code" } }, replyTo: "sunset_bed", next: "sunset_bahareh_awake", nextDelay: 2400 },
       sunset_bahareh_awake: { fromKey: "msg_bahareh_from", bodyKey: "msg_sunset_bahareh_awake_body", replyTo: "sunset_irene_code", next: "sunset_hannah_tattoo", nextDelay: 2800 },
       sunset_hannah_tattoo: { fromKey: "msg_hannah_from", bodyKey: "msg_sunset_hannah_tattoo_body", apiAction: { id: "app.open", args: { app: "tattoo" } }, replyTo: "sunset_bahareh_awake", next: "sunset_baharak_awake", nextDelay: 2400 },
@@ -60569,7 +60569,7 @@ async def localfont(name):
     function messageActionIsOneShot(m, action) {
       return !!((action && action.id === "party.moment.start") ||
         (action && action.id === "party.set" && action.args && action.args.on === false) ||
-        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "party")));
+        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "party" || m.act === "party_switch")));
     }
     window.__expireStaleMessageActions = function () {
       var changed = expireStaleMessageActions();
@@ -60648,6 +60648,15 @@ async def localfont(name):
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
       if (act === "party") { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); return; } // a post-party invitation only restarts once the visitor accepts it
+      if (act === "party_switch") { // Athena leaves the last awake guest in charge: show the wall control without flipping it for them
+        if (window.goToStage) window.goToStage("garden");
+        setTimeout(function () {
+          var sw = document.getElementById("garden-lightswitch");
+          if (sw && window.__gardenPartyOn) sw.classList.add("invite-pulse");
+          if (window.__refreshGardenCaption) window.__refreshGardenCaption();
+        }, window.currentStageName === "garden" ? 80 : 700);
+        return;
+      }
       if (act === "lastdance") { // Athena's close cue: a final slow dance, then an attended-time wind-down
         if (!window.__gardenPartyOn) return;
         if (window.slowdance) window.slowdance();

@@ -828,9 +828,10 @@ sender/body choice. A 25% roll keeps the authored wording; otherwise it sends on
 English original through the shared Chat queue
 in `message_rewrite` mode. The Worker uses a dedicated no-actions prompt for visibly different,
 cheerful, playful, lightly mischievous phrasing while preserving the authored facts, intent,
-concrete details, certainty, emoji, and point of view; it requires the exact `{en}` response shape.
-A valid English rewrite is stored on the authored message; Czech always remains the existing
-reviewed dictionary translation. A Turnstile, transport,
+concrete details, certainty, and point of view. Emoji are stylistic and may be added, removed, or
+swapped when meaning is unchanged. The Worker requires the exact `{en}` response shape. A valid
+English rewrite is stored on the authored message; Czech always remains the existing reviewed
+dictionary translation. A Turnstile, transport,
 timeout, upstream, parsing, or shape failure
 falls through to the original dictionary copy. Pending IDs count as received for scheduler
 deduplication, do not enter the thread until the request settles, and are generation-cancelled by

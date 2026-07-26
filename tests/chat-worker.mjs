@@ -463,6 +463,7 @@ check(rewriteResponse.status === 200 &&
 check(rewriteCapture.body.input.length === 1 &&
   /rephrase one authored Wedding crew message/.test(rewriteCapture.body.instructions) &&
   /same core content/.test(rewriteCapture.body.instructions) &&
+  /add, remove, or swap emoji/.test(rewriteCapture.body.instructions) &&
   /cheerful, playful, lightly mischievous/.test(rewriteCapture.body.instructions) &&
   /noticeably reworded/.test(rewriteCapture.body.instructions) &&
   /\"sender\":\"Hannah\"/.test(rewriteCapture.body.instructions) &&

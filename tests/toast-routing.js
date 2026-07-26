@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+"use strict";
+
+// Toast speakers stay in their real room: Ali begins inside, then the camera
+// follows Farhang to the balcony when the BBQ split has assigned him there.
+var lib = require("./lib");
+
+var harness = String.raw`<script>
+(function () {
+  var out = { checks: [], errors: [] };
+  function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
+  function report() {
+    out.errors = (window.__errs || []).slice();
+    var pre = document.createElement("pre"); pre.id = "__report"; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
+  }
+
+  try {
+  window.__gameStarted = function () { return true; };
+  window.__secondRound = true;
+  window.__setGardenParty(true, true);
+  window.goToStage("garden");
+  window.__summonGuests();
+  window.goToStage("balcony");
+  for (var attempt = 0; attempt < 24; attempt++) {
+    window.__setBalconyBBQCrowd(false);
+    window.__setBalconyBBQCrowd(true);
+    if (window.__bbqSplitState().guests.indexOf("farhang") !== -1) break;
+  }
+  var split = window.__bbqSplitState();
+  check("test setup assigns Farhang to the balcony", split.guests.indexOf("farhang") !== -1, split.guests.join(","));
+  var plan = window.__toastSpeakerPlan();
+  check("toast plan keeps Ali inside and Farhang outside", plan[0].key === "ali" && plan[0].room === "garden" && plan[1].key === "farhang" && plan[1].room === "balcony", JSON.stringify(plan));
+  check("room-aware toast sequence starts", window.__startToasts() && window.__toastsOn);
+
+  setTimeout(function () {
+    var bubble = document.querySelector(".egg-bubble.party-toast-tour");
+    check("the first toast pans to Ali in the garden",
+      window.currentStageName === "garden" && bubble && bubble.getAttribute("data-speaker") === "ali",
+      window.currentStageName + " / " + (bubble && bubble.getAttribute("data-speaker")));
+  }, 1100);
+  setTimeout(function () {
+    var bubble = document.querySelector(".egg-bubble.party-toast-tour");
+    check("the second toast pans to Farhang on the balcony",
+      window.currentStageName === "balcony" && bubble && bubble.getAttribute("data-speaker") === "farhang",
+      window.currentStageName + " / " + (bubble && bubble.getAttribute("data-speaker")));
+  }, 5700);
+  setTimeout(function () {
+    check("toast tour ends cleanly", !window.__toastsOn && !document.querySelector(".egg-bubble.party-toast-tour"));
+    window.__setBalconyBBQCrowd(false);
+    report();
+  }, 9800);
+  } catch (error) {
+    check("toast routing setup completes", false, String(error && error.stack || error));
+    report();
+  }
+})();
+</script>`;
+
+var report = lib.runPageSync("rsvp.html", harness, 11000, {
+  forceMotion: true,
+  seedRandom: true,
+  urlSuffix: "?date=2031-05-02&time=18:00"
+});
+
+if (!report) { console.error("toast-routing: no report"); process.exit(1); }
+var failed = false;
+report.checks.forEach(function (c) {
+  console.log("  " + (c.pass ? "✓" : "✗") + " " + c.name + (c.pass || !c.detail ? "" : " — " + c.detail));
+  if (!c.pass) failed = true;
+});
+if (report.errors.length) { failed = true; console.error("runtime errors:\n  " + report.errors.join("\n  ")); }
+if (failed) process.exit(1);
+console.log("toast-routing: all " + report.checks.length + " checks passed");

@@ -620,6 +620,9 @@ conversation to establish the party first. Available moments include:
 - bouquet toss (a fictional, game-only event);
 - chair lift.
 
+The toast sequence follows Ali and Farhang to the rooms they actually occupy,
+panning between them when they are apart.
+
 Only one major moment runs at a time. Routine automatic texts wait until the
 moment is over, while a direct player action remains immediate.
 

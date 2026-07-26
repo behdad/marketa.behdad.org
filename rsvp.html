@@ -164,11 +164,13 @@ footer{margin-top:2.6rem}
   pointer-events:none; text-align:left;
 }
 .egg-bubble.show{opacity:1}
-.egg-bubble.balcony-audience-callout::after{
+.egg-bubble.balcony-audience-callout::after,
+.egg-bubble.party-toast-tour::after{
   content:""; position:absolute; top:100%; left:50%; transform:translateX(-50%);
   width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent;
   border-top:8px solid var(--ink);
 }
+.egg-bubble.party-toast-tour{max-width:260px; font-size:1rem; text-align:center}
 /* the fāl couplet's Persian original: RTL, a touch larger and airier than the bubble body so the
    Arabic-script marks have room (system Persian fonts; nothing is fetched for this) */
 .egg-bubble .fal-fa{display:block; direction:rtl; text-align:right; font-size:1.08em; line-height:1.9; margin:.25em 0}
@@ -78713,7 +78715,7 @@ function spawnDustMote(container) {
     group.addEventListener("animationend", function (e) {
       if (e.target && e.target.classList && e.target.classList.contains("gm-clinking")) e.target.classList.remove("gm-clinking");
     });
-    var toastTimers = [], toastOn = false;
+    var toastTimers = [], toastOn = false, toastTourOn = false, toastTourNavigating = false, toastTourBubble = null;
     function clearToastTimers() { toastTimers.forEach(clearTimeout); toastTimers = []; }
     // Each speech bubble's DEFAULT tail x in garden-guests coords (the path as authored). We hang the
     // bubble over the toaster by translating its NON-animated positioning wrapper (#gm-toast-*-pos) by
@@ -78738,12 +78740,76 @@ function spawnDustMote(container) {
       if (a) a.removeAttribute("transform");
       if (f) f.removeAttribute("transform");
     }
+    function toastSpeakerRoom(key) {
+      var bbq = window.__bbqSplitState && window.__bbqSplitState();
+      if (bbq && bbq.on && bbq.guests && bbq.guests.indexOf(key) !== -1) return "balcony";
+      if (window.__peopleManager && window.__peopleManager.locate) {
+        var located = window.__peopleManager.locate(key);
+        if (located && located.rooms && located.rooms.length) return located.rooms[0];
+      }
+      return "garden";
+    }
+    function toastSpeakerPlan() {
+      return [
+        { key: "ali", room: toastSpeakerRoom("ali"), k1: "gm_toast_ali_1", k2: "gm_toast_ali_2" },
+        { key: "farhang", room: toastSpeakerRoom("farhang"), k1: "gm_toast_farhang_1", k2: "gm_toast_farhang_2" }
+      ];
+    }
+    function toastTourNeeded() {
+      return toastSpeakerPlan().some(function (speaker) { return speaker.room !== "garden"; });
+    }
+    function toastSpeakerAnchor(speaker) {
+      if (window.__peopleManager && window.__peopleManager.locate) {
+        var located = window.__peopleManager.locate(speaker.key);
+        if (located && located.people) {
+          for (var i = 0; i < located.people.length; i++) {
+            if (located.people[i].room === speaker.room && located.people[i].el) return located.people[i].el;
+          }
+        }
+      }
+      return speaker.room === "garden" ? group.querySelector(".g-" + speaker.key) : null;
+    }
+    function showTourSpeaker(plan, index) {
+      if (!toastTourOn || index >= plan.length) { endToasts(); return; }
+      var speaker = plan[index];
+      toastTourNavigating = true;
+      if (window.goToStage) window.goToStage(speaker.room);
+      toastTourNavigating = false;
+      toastTimers.push(setTimeout(function () {
+        if (!toastTourOn || !window.__gardenPartyOn) { endToasts(); return; }
+        if (speaker.room === "garden" && window.__summonGuests) window.__summonGuests();
+        toastTimers.push(setTimeout(function () {
+          if (!toastTourOn) return;
+          var anchor = toastSpeakerAnchor(speaker);
+          if (anchor) {
+            if (toastTourBubble) dismissEggBubble(toastTourBubble);
+            toastTourBubble = eggBubble(anchor, tipText(speaker.k1) + "<br>" + tipText(speaker.k2), "scene-top", 0, 0, 3600);
+            toastTourBubble.classList.add("party-toast-tour");
+            toastTourBubble.setAttribute("data-speaker", speaker.key);
+            playToastClink(340);
+            if (speaker.room === "garden") crowdClink();
+          }
+          toastTimers.push(setTimeout(function () { showTourSpeaker(plan, index + 1); }, 3900));
+        }, speaker.room === "garden" ? 140 : 80));
+      }, 520));
+    }
+    function startToastTour(plan) {
+      if (toastOn) return true;
+      toastOn = true; toastTourOn = true; setPartyMomentState("toasts", true);
+      showTourSpeaker(plan, 0);
+      return true;
+    }
     function endToasts() {
       clearToastTimers(); toastOn = false; setPartyMomentState("toasts", false);
+      toastTourOn = false; toastTourNavigating = false;
+      if (toastTourBubble) dismissEggBubble(toastTourBubble);
+      toastTourBubble = null;
       group.classList.remove("gm-toasting", "gm-toast-p1", "gm-toast-p2");
       resetToastBubblePos();
     }
     function startToasts() {
+      var plan = toastSpeakerPlan();
+      if (plan.some(function (speaker) { return speaker.room !== "garden"; })) return startToastTour(plan);
       if (!onFloor()) return false;      // inert off the floor — nothing to leak
       if (toastOn) return true;          // idempotent / storm-safe
       // Each phase only runs if THAT toaster is on the dance floor (the revolving door rotates guests
@@ -78780,6 +78846,7 @@ function spawnDustMote(container) {
     }
     window.__startToasts = startToasts;
     window.__endToasts = endToasts;
+    window.__toastSpeakerPlan = toastSpeakerPlan;
     // A deliberate double-click on either speaker still raises the toast sequence directly.
     ["g-ali", "g-farhang"].forEach(function (cls) {
       var fig = document.querySelector("." + cls);
@@ -78916,12 +78983,13 @@ function spawnDustMote(container) {
     var priorTeardown = window.__gardenMomentsTeardown;
     window.__gardenMomentsTeardown = function () {
       if (typeof priorTeardown === "function") { try { priorTeardown(); } catch (e) {} }
-      endToasts(); endGroupPhoto(); endSparklers();
+      if (!toastTourNavigating) endToasts();
+      endGroupPhoto(); endSparklers();
     };
     // a tab going hidden while a moment runs off the floor (shouldn't happen, but belt-and-braces):
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) return; // returning is fine; the spark spawner self-gates
-      if ((window.__toastsOn || window.__groupPhotoOn || window.__sparklersOn) && !onFloor()) window.__gardenMomentsTeardown();
+      if (((window.__toastsOn && !toastTourOn) || window.__groupPhotoOn || window.__sparklersOn) && !onFloor()) window.__gardenMomentsTeardown();
     });
 
     // ── console commands ── each lights the party + heads to the garden + summons the crowd if
@@ -78949,7 +79017,25 @@ function spawnDustMote(container) {
         value: function () { return { completed: true, moment: label }; }
       });
     }
-    window.toasts = function (arg) { return stageAndRun(function () { return startToasts(); }, "🥂 Ali raises a glass, then Farhang — the crowd clinks all around.", "the floor's dark — run party(true) first.", endToasts, arg, function () { return !!window.__toastsOn; }, "toasts"); };
+    window.toasts = function (arg) {
+      if (arg === false) {
+        endToasts();
+        if (window.echo) window.echo("the moment winds down — the party rolls on.");
+        return Promise.resolve({ completed: true, stopped: true, moment: "toasts" });
+      }
+      if (!toastTourNeeded()) {
+        return stageAndRun(function () { return startToasts(); }, "🥂 Ali raises a glass, then Farhang — the crowd clinks all around.", "the floor's dark — run party(true) first.", endToasts, arg, function () { return !!window.__toastsOn; }, "toasts");
+      }
+      if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
+      setTimeout(function () {
+        var ok = startToasts();
+        if (window.echo) window.echo(ok ? "🥂 the room follows Ali, then Farhang, for their toasts." : "the party has nobody ready to toast.");
+      }, 60);
+      return window.__loftAwaitLifecycle(function () { return !!window.__toastsOn; }, {
+        label: "toasts", startTimeout: 3000,
+        value: function () { return { completed: true, moment: "toasts" }; }
+      });
+    };
     window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.", "the floor's dark — run party(true) first.", endGroupPhoto, arg, function () { return !!window.__groupPhotoOn; }, "group photo"); };
     window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "✨ the guests raise sparklers into a tunnel — the couple stand through it.", "the floor's dark — run party(true) first.", endSparklers, arg, function () { return !!window.__sparklersOn; }, "sparklers"); };
   })();

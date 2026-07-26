@@ -406,6 +406,10 @@ finales. An accepted last-dance/last-song action or cake completion can schedule
 and `party.extend` cancels that pending finale. A later autonomous invitation may offer to restart a
 stopped party, but it does not restart by itself.
 
+The toast moment snapshots Ali and Farhang through the people manager before it
+starts. A split-room toast follows those assignments instead of animating an
+off-room garden figure.
+
 The `setGardenParty(false)` branch is also the authoritative visual teardown boundary. It clears the
 balcony switch, persistent UV intent and `.uv-mode` before stopping the disco stepper, camera flash,
 photo moments, guest movement, and other party-only drivers. Callers may use `setPartyMode(false)` for

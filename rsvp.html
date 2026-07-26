@@ -59872,8 +59872,18 @@ async def localfont(name):
     // the people cards, so coverage checks cannot drift into a second private data source.
     window.__quizQuestions = function () { return QUIZ_QUESTIONS.map(function (q) { return { q: q.q, multi: !!q.multi, a: q.a.map(function (a) { return { k: a.k, who: a.who.slice() }; }) }; }); };
     function quizName(w) { return QUIZ_NAMES[w] || (w.charAt(0).toUpperCase() + w.slice(1)); }
-    var quizSelections = [];
-    function quizReset() { quizStep = 0; quizTally = {}; quizResult = null; quizSelections = []; }
+    var quizSelections = [], quizRunQuestions = [];
+    function quizReset() {
+      quizStep = 0; quizTally = {}; quizResult = null; quizSelections = [];
+      quizRunQuestions = QUIZ_QUESTIONS.slice();
+      for (var i = quizRunQuestions.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var swap = quizRunQuestions[i]; quizRunQuestions[i] = quizRunQuestions[j]; quizRunQuestions[j] = swap;
+      }
+      quizRunQuestions = quizRunQuestions.slice(0, 6);
+    }
+    window.__quizReset = quizReset;
+    window.__quizRunQuestions = function () { return quizRunQuestions.map(function (q) { return q.q; }); };
     function quizPick() {
       var best = -1, top = [];
       for (var w in quizTally) {
@@ -59919,10 +59929,10 @@ async def localfont(name):
         body.appendChild(wrap);
         return;
       }
-      var Q = QUIZ_QUESTIONS[quizStep];
+      var Q = quizRunQuestions[quizStep];
       var prog = document.createElement("div");
       prog.className = "pm-quiz-prog";
-      prog.textContent = tr("quiz_qword") + " " + (quizStep + 1) + " / " + QUIZ_QUESTIONS.length;
+      prog.textContent = tr("quiz_qword") + " " + (quizStep + 1) + " / " + quizRunQuestions.length;
       body.appendChild(prog);
       var q = document.createElement("div");
       q.className = "pm-quiz-q";
@@ -59940,7 +59950,7 @@ async def localfont(name):
         });
         quizSelections = [];
         quizStep++;
-        if (quizStep >= QUIZ_QUESTIONS.length) quizResult = quizPick();
+        if (quizStep >= quizRunQuestions.length) quizResult = quizPick();
         rerenderQuiz();
       }
       Q.a.forEach(function (ans, idx) {

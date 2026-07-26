@@ -16,6 +16,7 @@ var harness = String.raw`<script>
   var patronA = document.getElementById("kitchen-bar-patron-a");
   var patronB = document.getElementById("kitchen-bar-patron-b");
   var cooler = document.getElementById("kitchen-bar-cooler");
+  var dietCans = cooler ? cooler.querySelectorAll("#kitchen-bar-cooler-inside .diet-coke-can") : [];
   function pointer(type, x) {
     cooler.dispatchEvent(new PointerEvent(type, {
       bubbles: true, cancelable: true, pointerId: 7, pointerType: "mouse",
@@ -44,7 +45,12 @@ var harness = String.raw`<script>
     shifts: [innerShift(stool1), innerShift(stool3), innerShift(patronA), innerShift(patronB)],
     coolerAfterDrag: coolerAfterDrag,
     coolerTapOpens: coolerTapOpens,
-    coolerReset: window.__cokeCoolerOffset() === 0 && !cooler.classList.contains("lid-up")
+    coolerReset: window.__cokeCoolerOffset() === 0 && !cooler.classList.contains("lid-up"),
+    dietCans: dietCans.length,
+    dietLabels: Array.prototype.map.call(dietCans, function (can) {
+      var label = can.querySelector("text");
+      return label && label.textContent;
+    })
   };
   var pre = document.createElement("pre");
   pre.id = "__report";
@@ -73,5 +79,7 @@ if (result) {
     "rolling the Coca-Cola cooler moves it without also opening its lid", result.coolerAfterDrag);
   check(result.coolerTapOpens, "a plain cooler tap still opens its lid");
   check(result.coolerReset, "a game reset returns the cooler home with its lid down");
+  check(result.dietCans === 3 && result.dietLabels.every(function (label) { return label === "diet"; }),
+    "the opened Coca-Cola cooler contains three Diet Coke cans", result.dietLabels);
 }
 process.exitCode = failures ? 1 : 0;

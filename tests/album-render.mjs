@@ -78,7 +78,9 @@ const SUBJECTS = [
   // `sub` is either a seeded subjectId (looked up in __albumList) or a `{...}` record literal, so the
   // same measurement path covers ROOM shots, which have no seeded record to find.
   async function renderAndMeasure(sub, forceMode) {
-    const recExpr = sub.trim()[0] === '{' ? sub : `(window.__albumList().find(function(r){return r.subjectId===${JSON.stringify(sub)};}))`;
+    const recExpr = sub.trim()[0] === '{' ? sub : `(window.__albumList().find(function(r){return r.subjectId===${JSON.stringify(sub)};}) ||
+      (function(s){return s&&{id:1,t:0,people:s.people,subjectId:s.subjectId,dance:"",season:"summer",uv:false,shoot:true};})
+      (window.__albumSeedPool().find(function(r){return r.subjectId===${JSON.stringify(sub)};})))`;
     const expr = `(function(){
       window.__albumForceMode = ${forceMode ? JSON.stringify(forceMode) : 'null'};
       var rec = ${recExpr};
@@ -277,7 +279,8 @@ const SUBJECTS = [
   }
   await eval1('window.__albumForceMode=null');
 
-  const stab = await eval1(`(function(){var rec=window.__albumList().find(function(r){return r.subjectId==='shoot-family';});
+  const stab = await eval1(`(function(){var s=window.__albumSeedPool().find(function(r){return r.subjectId==='shoot-family';});
+    var rec={id:1,t:0,people:s.people,subjectId:s.subjectId,dance:"",season:"summer",uv:false,shoot:true};
     var a=new XMLSerializer().serializeToString(window.__albumPhotoSvg(rec));
     var b=new XMLSerializer().serializeToString(window.__albumPhotoSvg(rec));
     return a===b ? 'STABLE' : 'UNSTABLE';})()`);

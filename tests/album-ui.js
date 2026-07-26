@@ -11,7 +11,7 @@ var HARNESS = [
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
-  ' var initial=window.__albumList().length;',
+  ' var initialList=window.__albumList(),initial=initialList.length;S("preroll",{count:initial,unique:(new Set(initialList.map(function(x){return x.subjectId;}))).size,allShoot:initialList.every(function(x){return x.shoot;}),couple:initialList.some(function(x){return x.subjectId==="shoot-couple";}),aspen:initialList.some(function(x){return x.subjectId==="shoot-aspen";})});',
   ' var first=window.__albumAddSelfie(new Blob(["first"],{type:"image/png"}),{source:"phone",filter:"none",frame:"none"});',
   ' var firstUrl=first&&first.selfieUrl;',
   ' var updated=window.__albumAddSelfie(new Blob(["second"],{type:"image/png"}),{id:first&&first.id,source:"phone",filter:"sepia(1)",frame:"hearts"});',
@@ -43,6 +43,7 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 3000, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
+check(s.preroll.count === 7 && s.preroll.unique === 7 && s.preroll.allShoot && s.preroll.couple && s.preroll.aspen, "a fresh album pins the first two portraits and adds five distinct shuffled pre-wedding portraits", s.preroll);
 check(s.store.count === s.store.initial + 1 && s.store.id === s.store.updatedId && s.store.urlChanged && s.store.filter === "sepia(1)", "a selfie is added once and styling updates the same session record", s.store);
 check(s.store.kind === "selfie" && !s.store.leaks, "chat receives only selfie metadata, never pixels, blobs, or object URLs", s.store);
 check(s.compact.pressed === "true" && s.compact.grid && s.compact.cards === s.compact.deleteButtons && s.compact.selfie, "compact mode makes a two-column roll and every picture has a remove button", s.compact);

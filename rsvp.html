@@ -58004,7 +58004,8 @@ async def localfont(name):
       // figure's ~153). Clone the group, drop the sway-animation class + her hit rect + the camera-
       // flash bloom so she stands still (keeping the camera she's holding — a photographer with a
       // camera reads nicely), strip ids/classes, then scale her UP about her feet so she stands at
-      // roughly the couple's height and plant her feet on the shared line: map (37,337)→(0,332) at k≈1.75.
+      // roughly the couple's height, face her back toward the couple, and plant her feet on the
+      // shared line: map (37,337)→(0,332) at k≈1.75, mirrored around that centre line.
       if (sel === "#garden-photographer") {
         var ph = document.getElementById("garden-photographer");
         if (!ph) return null;
@@ -58018,7 +58019,7 @@ async def localfont(name):
         // Her art is ~87 local units tall (bbox y249.6→337) vs a host figure's ~153 (y181→334), so
         // scale ~1.75 stands her at the couple's height; centre x≈37 (bbox x16 w42), feet y≈337.
         var ak = 1.75;
-        pwrap.setAttribute("transform", "translate(0 332) scale(" + ak + ") translate(-37 -337)");
+        pwrap.setAttribute("transform", "translate(0 332) scale(" + (-ak) + " " + ak + ") translate(-37 -337)");
         pwrap.appendChild(pg);
         return pwrap;
       }
@@ -80357,15 +80358,15 @@ function spawnDustMote(container) {
     if (window.__albumRefresh) window.__albumRefresh();
     return true;
   };
-  // Pre-populate the album with a few PRE-WEDDING PHOTOSHOOT keepsakes (a garden shoot before the
-  // day): the couple alone, with the mouses, and with the godkids. Seeded at load + re-seeded on
-  // reset — the OLDEST entries, so live party snaps stack above them. Calm daytime portraits:
+  // Pre-populate the album with the couple + couple-with-Aspen portraits, then five randomly
+  // chosen PRE-WEDDING PHOTOSHOOT keepsakes (a garden shoot before the day). Seeded at load +
+  // freshly re-seeded on reset — the OLDEST entries, so live party snaps stack above them.
+  // Calm daytime portraits:
   // dance:"" (quiet ∞ mark, no disco ball), true-colour, no party clock (shoot:true), garden tint.
   function albumPerson(key, name) { return { key: key, grp: "", name: name, roleKey: "" }; }
-  function seedAlbum() {
-    if (albumShots.length) return; // only seed a fresh/empty roll
+  function albumSeedSets() {
     var HOSTS = albumPerson("hosts", "markéta & behdad");
-    var sets = [
+    return [
       { subjectId: "shoot-couple",  people: [HOSTS] },
       { subjectId: "shoot-aspen",   people: [HOSTS, albumPerson("aspen", "Aspen")] }, // the couple with the photographer (she stepped in front of the lens for one)
       { subjectId: "shoot-mouses",  people: [HOSTS, albumPerson("elisabeth", "Elisabeth"), albumPerson("felix", "Felix")] },
@@ -80380,7 +80381,17 @@ function spawnDustMote(container) {
       { subjectId: "shoot-baharak", people: [HOSTS, albumPerson("baharak", "Baharak"), albumPerson("payman", "Payman")] }, // just the couple with Baharak & Payman
       { subjectId: "shoot-cousins", people: [HOSTS, albumPerson("hannah", "Hannah"), albumPerson("irene", "Irene")] } // Hannah & Irene — the two cousins (Irene clones from #cuddly-irene via ALBUM_FIG_SEL)
     ];
-    sets.forEach(function (s) {
+  }
+  window.__albumSeedPool = albumSeedSets; // test hook: the visual audit still checks every possible pre-roll portrait
+  function seedAlbum() {
+    if (albumShots.length) return; // only seed a fresh/empty roll
+    var sets = albumSeedSets();
+    var pinned = sets.slice(0, 2), shuffled = sets.slice(2);
+    for (var i = shuffled.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var swap = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = swap;
+    }
+    pinned.concat(shuffled.slice(0, 5)).forEach(function (s) {
       albumShots.push({ id: ++albumSeq, t: 0, people: s.people, subjectId: s.subjectId, dance: "", season: "summer", uv: false, shoot: true });
       albumTaken[shotSig(s.people.filter(function (p) { return p.key !== "hosts"; }))] = 1; // a live shot must never duplicate a seeded group
     });

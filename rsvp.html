@@ -33669,11 +33669,14 @@ setMusicPausedState(false);
       var winter = strip && strip.classList.contains("season-holiday");
       var spooky = strip && strip.classList.contains("season-spooky");
       var dusk = stageCuddly && stageCuddly.classList.contains("dusk");
-      var mul = winter ? 1.4 : spooky ? 1.3 : dusk ? 1.0 : 0.7; // day = low glowing embers
+      var creditsLayer = document.getElementById("monitor-credits-layer");
+      var wild = !!creditsLayer && creditsLayer.classList.contains("open") &&
+        creditsLayer.classList.contains("finished");
+      var mul = wild ? 2.25 : winter ? 1.4 : spooky ? 1.3 : dusk ? 1.0 : 0.7; // rolled credits erupt; day = low glowing embers
       var beat = 0, music = false;
       var m = window.__cuddlyMusic && window.__cuddlyMusic();
       if (m && m.playing) { music = true; beat = Math.pow(1 - m.phase, 2.2); } // spike just after each beat
-      return { mul: mul, music: music, beat: beat };
+      return { mul: mul, music: music, beat: beat, wild: wild };
     }
     function seedBottom(it, damp) {
       // full-width hot bottom row (the doom-fire seed); brightness scales with season + beat.
@@ -33740,10 +33743,14 @@ setMusicPausedState(false);
         var cool = COOL0 / it.mul; if (it.music) cool *= (1 - 0.25 * it.beat);
         var burst = 0;
         if (popCooldown > 0) popCooldown--;
-        else if (Math.random() < 0.012) { popFrames = 3 + (Math.random() * 3 | 0); burst = 5 + (Math.random() * 4 | 0); popCooldown = 40; } // random crackle flare
+        else if (Math.random() < (it.wild ? 0.09 : 0.012)) {
+          popFrames = (it.wild ? 6 : 3) + (Math.random() * (it.wild ? 6 : 3) | 0);
+          burst = (it.wild ? 10 : 5) + (Math.random() * (it.wild ? 8 : 4) | 0);
+          popCooldown = it.wild ? 8 : 40;
+        } // random crackle flare; the empty credits screen burns exuberantly
         if (it.music && it.beat > 0.6 && popFrames <= 0) { popFrames = 2; if (burst < 3) burst = 3; } // a flare kicked on the beat
         seedBottom(it); spread(cool); paint();
-        updateSparks(burst, 0.08 + 0.10 * it.mul + 0.10 * it.beat); drawSparks();
+        updateSparks(burst, it.wild ? 0.62 : 0.08 + 0.10 * it.mul + 0.10 * it.beat); drawSparks();
       },
       // ---- stoned slow-motion (fire only) --------------------------------------------------
       // The choppy trap was throttling to ~2fps: each drawn frame was a fresh, unrelated random
@@ -43923,7 +43930,7 @@ setOfficeProgress("pc", false);
     mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
       "class": "monitor-credits-bg" }, monitorCreditsLayer);
     mkEl("image", { id: "monitor-credits-fire", x: 254, y: 154, width: 124, height: 42,
-      preserveAspectRatio: "xMidYMid slice", "class": "monitor-credits-fire" }, monitorCreditsLayer);
+      preserveAspectRatio: "xMidYMax slice", "class": "monitor-credits-fire" }, monitorCreditsLayer);
     mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
       "class": "monitor-credits-shade" }, monitorCreditsLayer);
     var creditsClip = mkEl("clipPath", { id: "monitor-credits-clip" }, monitorCreditsLayer);

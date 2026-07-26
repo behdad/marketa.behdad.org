@@ -26189,6 +26189,7 @@ var T = {
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
     cal_bicycle_day: "Bicycle Day (LSD)",
+    cal_marijuana_day: "420 (Marijuana)",
     season_carodejnice: "🔥 witches' night",
     season_solstice: "☀️ summer solstice",
     season_svatojanska: "🔥 St John's Eve",
@@ -27251,6 +27252,7 @@ var T = {
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
     cal_bicycle_day: "Den na kole (LSD)",
+    cal_marijuana_day: "420 (marihuana)",
     season_carodejnice: "🔥 pálení čarodějnic",
     season_solstice: "☀️ letní slunovrat",
     season_svatojanska: "🔥 svatojánská noc",
@@ -83659,7 +83661,7 @@ function spawnDustMote(container) {
   // Pending setTimeouts for the in-flight toke sequence, so cancelBehdadJoint (called
   // when the music stops mid-sequence) can kill the rest of it instead of letting him
   // keep puffing/releasing smoke into a now-silent room.
-  var behdadJointSeqTimers = [];
+  var behdadJointSeqTimers = [], behdadJointRun = 0;
   // Running tally of Behdad's tokes across the whole session. Every 3rd puff lands the
   // "stoned chemistry" beat: on the 2nd toke of each smoking round, the THC card flashes and
   // the wall-screen projector fire slows to a smooth crawl for a few seconds (see triggerWeedChem).
@@ -83715,7 +83717,8 @@ function spawnDustMote(container) {
     var wrap = document.getElementById("cuddly-behdad-joint-toke");
     var prop = document.getElementById("cuddly-behdad-joint-prop");
     var head = document.getElementById("cuddly-behdad-head");
-    if (!behdad || !wrap || behdad.classList.contains("smoking-joint")) return;
+    if (!behdad || !wrap || behdad.classList.contains("smoking-joint")) return null;
+    var run = ++behdadJointRun;
     behdad.classList.add("smoking-joint"); // re-entrancy flag only — see the CSS comment on .lit for why
     if (prop) prop.classList.add("lit");
     spawnSteamWisps(strip, 1570, 260, 0.28, 1, -1, 1, 0.3); // he's lit it — a first faint curl, at the ember's rest position
@@ -83759,6 +83762,7 @@ function spawnDustMote(container) {
       if (head) head.classList.remove("pleased");
       behdadJointSeqTimers = [];
     }, t + 900)); // settle back to his normal grooving pose
+    return run;
   }
   // Rolls every ~25-45s while music keeps playing and he's under his per-song cap — a
   // miss just reschedules itself, so he eventually lights up on any long enough
@@ -84307,6 +84311,7 @@ function spawnDustMote(container) {
     if (window.__resetDrugsbox) window.__resetDrugsbox(); // a fresh game re-locks the magic box (and re-rolls which wedding its lock asks about)
     if (window.__stopTrip) window.__stopTrip(true); // one transition cancels the timer/rAF generation, flags, effects, creatures, cards and tolerance
     if (window.__resetBicycleDay) window.__resetBicycleDay(); // replace April 19's old cadence after the reset has cleared its trip
+    if (window.__resetMarijuanaDay) window.__resetMarijuanaDay(); // same for April 20's Cuddly smoking cadence
     if (window.__clearCuddlyProjectorSlow) window.__clearCuddlyProjectorSlow(); // drop any stoned time-dilation on the projector
     if (window.__resetWineSips) window.__resetWineSips();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
@@ -84988,9 +84993,69 @@ function spawnDustMote(container) {
     bicycleDayStop();
     bicycleDaySchedule(); // a reset on Apr 19 starts one fresh ten-second cadence, never the old one
   };
+  // April 20's calendar action brings Behdad home to the nook for one joint now, then
+  // offers another every ten seconds while the player remains there. The owned run token
+  // prevents date/reset teardown from cancelling a later joint started by another path.
+  var marijuanaDayTimer = null, marijuanaDayJointRun = null;
+  function isMarijuanaDay(s) { return !!s && s.m === 3 && s.d === 20; }
+  function marijuanaDayStopOwnedJoint() {
+    var behdad = document.getElementById("cuddly-behdad");
+    if (marijuanaDayJointRun != null && behdadJointRun === marijuanaDayJointRun &&
+        behdad && behdad.classList.contains("smoking-joint")) cancelBehdadJoint();
+    marijuanaDayJointRun = null;
+  }
+  function marijuanaDayStop() {
+    clearTimeout(marijuanaDayTimer); marijuanaDayTimer = null;
+    marijuanaDayStopOwnedJoint();
+  }
+  function marijuanaDaySchedule() {
+    if (marijuanaDayTimer || !isMarijuanaDay(seasonDate())) return;
+    marijuanaDayTimer = setTimeout(marijuanaDayTick, 10000);
+  }
+  function marijuanaDayStart() {
+    var canRun = !document.hidden && document.hasFocus() &&
+      (!window.__gameStarted || window.__gameStarted()) &&
+      !(window.__autoplayOn && window.__autoplayOn()) &&
+      !window.__tripActive && window.currentStageName === "cuddly";
+    if (!canRun) return false;
+    var run = startBehdadJoint();
+    if (run == null) return false;
+    marijuanaDayJointRun = run;
+    return true;
+  }
+  function marijuanaDayTick() {
+    clearTimeout(marijuanaDayTimer); marijuanaDayTimer = null;
+    if (!isMarijuanaDay(seasonDate())) { marijuanaDayStop(); return false; }
+    var started = marijuanaDayStart();
+    marijuanaDaySchedule();
+    return started;
+  }
+  function activateMarijuanaDay() {
+    if (!isMarijuanaDay(seasonDate())) return false;
+    marijuanaDayStop();
+    if (window.party && window.party()) window.party(false);
+    if (window.goToStage) window.goToStage("cuddly");
+    marijuanaDayStart();
+    marijuanaDaySchedule();
+    return true;
+  }
+  function reconcileMarijuanaDay(s) {
+    if (!isMarijuanaDay(s)) marijuanaDayStop();
+    else marijuanaDaySchedule();
+  }
+  window.__marijuanaDayTick = marijuanaDayTick;
+  window.__activateMarijuanaDay = activateMarijuanaDay;
+  window.__marijuanaDayStatus = function () {
+    return { active: isMarijuanaDay(seasonDate()), pending: !!marijuanaDayTimer, ownsJoint: marijuanaDayJointRun != null };
+  };
+  window.__resetMarijuanaDay = function () {
+    marijuanaDayStop();
+    marijuanaDaySchedule();
+  };
   function applySeasonDate() {
     var s = seasonDate();
     reconcileBicycleDay(s);
+    reconcileMarijuanaDay(s);
     window.__setSeason(decorForDate(s.m, s.d, s.y));
     applyBirthdays(s); // an overlay: it rides whatever __setSeason just dressed the loft in
     applyMeals(s);     // same deal: the low table comes out for the dinners, inside or outside a season
@@ -85378,6 +85443,7 @@ function spawnDustMote(container) {
     "1-14":  { icon: "💗", sk: "season_valentines" },
     // Chaharshanbe Suri / Nowruz / Sizdah Bedar drift year to year → stamped per render year via persianCalOcc(), not here
     "3-19":  { icon: "🚲", sk: "cal_bicycle_day" },
+    "3-20":  { icon: "🌿", sk: "cal_marijuana_day" },
     "3-30":  { icon: "🧹", sk: "season_carodejnice" },
     "4-1":   { icon: "💍", sk: "season_wedding", city: "cal_edmonton" },
     "4-2":   { icon: "🍖", sk: "cal_bbq", city: "cal_edmonton" },
@@ -85692,6 +85758,7 @@ function spawnDustMote(container) {
     var bds = CAL_BD_BY_DAY[mo + "-" + d];
     if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true; // birthday outranks the season
     if (mo === 3 && d === 19 && window.__activateBicycleDay) return window.__activateBicycleDay();
+    if (mo === 3 && d === 20 && window.__activateMarijuanaDay) return window.__activateMarijuanaDay();
     var oc = (window.__isOccasionDate && window.__isOccasionDate()) || (window.__dateOccasion && window.__dateOccasion()); // time-gate-agnostic: a deliberate May-2 click summons the BBQ even outside its 4–10pm window (force then jumps the clock in)
     if (oc && oc.indexOf("bd:") !== 0) {
       if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons

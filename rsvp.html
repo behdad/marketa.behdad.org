@@ -7696,6 +7696,12 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    to the plant groups themselves, so the trip-bloom canvases (siblings inside the same
    lift wrapper) are untouched. */
 #garden-monstera, #garden-peacelily, #garden-dieffenbachia, #garden-snakeplant, #garden-potstand, #kitchen-plant{filter:saturate(1.16) brightness(1.02)}
+#garden-monstera.overwatered, #garden-peacelily.overwatered,
+#garden-dieffenbachia.overwatered, #garden-snakeplant.overwatered,
+#garden-smallpots.overwatered, #garden-potstand.overwatered{
+  filter:sepia(.82) saturate(.58) hue-rotate(330deg) brightness(.76);
+  transition:filter 1.2s ease;
+}
 /* caps-lock flips a UV / blacklight "party mode" over the whole strip: a dark, cool violet
    wash with everything shifted + oversaturated (toggled by the caps-lock keydown handler,
    which is the only place the lock state is readable). Instant flip — a filter transition
@@ -26684,6 +26690,7 @@ var T = {
     photo_pose_callout_2: "Smile! 📸",
     photo_pose_callout_3: "Everyone look here! 👀",
     balcony_audience_callout: "Smile — we have an audience! 👀",
+    plant_overwatered: "Overwatered. The roots are plotting revenge. 🪰",
     album_cap_selfie: "photobooth selfie",
     album_remove: "remove photo",
     album_compact: "compact grid",
@@ -27709,6 +27716,7 @@ var T = {
     photo_pose_callout_2: "Úsměv! 📸",
     photo_pose_callout_3: "Všichni sem! 👀",
     balcony_audience_callout: "Úsměv — máme publikum! 👀",
+    plant_overwatered: "Přelito. Kořeny plánují pomstu. 🪰",
     album_cap_selfie: "selfie z fotokoutku",
     album_remove: "odstranit fotku",
     album_compact: "kompaktní mřížka",
@@ -76880,6 +76888,7 @@ function spawnDustMote(container) {
     "garden-smallpots": { x: 1148, y: 215 },
     "garden-potstand": { x: 820, y: 180 }
   };
+  var plantWaterCounts = {};
   function waterSpecificPlant(id, drainFn) {
     var el = document.getElementById(id);
     var spot = plantSpots[id];
@@ -76897,6 +76906,11 @@ function spawnDustMote(container) {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { el.classList.add("watered"); });
     });
+    plantWaterCounts[id] = (plantWaterCounts[id] || 0) + 1;
+    if (plantWaterCounts[id] === 3) {
+      el.classList.add("overwatered");
+      eggBubble(el, tipText("plant_overwatered"), "scene-top");
+    }
     checkGardenDone();
     return true;
   }
@@ -84060,7 +84074,8 @@ function spawnDustMote(container) {
     if (window.__resetKitchenRoach) window.__resetKitchenRoach(); // fresh game: hide/stop the cabinet cockroach
     Object.keys(plantSpots).forEach(function (id) {
       var el = document.getElementById(id);
-      if (el) el.classList.remove("done", "watered");
+      if (el) el.classList.remove("done", "watered", "overwatered");
+      plantWaterCounts[id] = 0;
     });
     Object.keys(instrumentSpots).forEach(function (id) {
       var el = document.getElementById(id);

@@ -125,6 +125,10 @@ var harness = [
   '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastCodeError;',
   '  document.getElementById("monitor-console-close").dispatchEvent(new MouseEvent("click",{bubbles:true})); await new Promise(function(r){setTimeout(r,20)});',
   '  out.codeReturned=mon.classList.contains("show-code"); out.failedStatus=document.getElementById("monitor-code-ai-status").textContent;',
+  '  mon.classList.remove("show-code","show-console"); mon.classList.add("here","show-caps","show-python");',
+  '  document.getElementById("monitor-python").classList.add("turtle-view"); var gfx=document.getElementById("monitor-py-turtle"),gfxClicks=0;',
+  '  mon.addEventListener("click",function(){gfxClicks++}); gfx.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true})); gfx.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));',
+  '  out.gfxOwned=gfxClicks===0 && mon.classList.contains("here") && mon.classList.contains("show-python");',
   '  document.body.innerHTML="<pre id=\\"__report\\"></pre>"; document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e)})});',
   '<\/script>',
@@ -145,6 +149,8 @@ if (state && !state.error) {
     "a JavaScript Code exception opens the JS Console with the actual error", state);
   check(state.codeReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
     "Back returns to the Code and failure is not overwritten by a success status", state);
+  check(state.gfxOwned,
+    "clicking or double-clicking Turtle graphics stays inside Python instead of reaching the monitor repaint/swap handlers", state);
 }
 
 if (failures) {

@@ -165,9 +165,12 @@ filesystem before user code runs. That module sends sanitized commands through
 `__loftTurtleCommand` to a native SVG surface. Do not replace the surface with a
 canvas inside the scaled monitor `foreignObject`; WebKit can paint it blank.
 Line, fill, mark, and cursor layers are separate, and retained drawing nodes are
-capped at 6,000. The compatibility API intentionally covers common teaching
-operations, not Tk windows or event bindings. Update `PYTHON_CODE_INSTRUCTIONS`
-in `chat.js` whenever the supported Python/Turtle surface changes.
+capped at 6,000. The SVG surface owns click and double-click propagation just as
+the console `foreignObject` does; otherwise monitor-level click/swap behavior
+flickers through the drawing. The compatibility API intentionally covers common
+teaching operations, not Tk windows or event bindings. Update
+`PYTHON_CODE_INSTRUCTIONS` in `chat.js` whenever the supported Python/Turtle
+surface changes.
 
 ## Game state model
 

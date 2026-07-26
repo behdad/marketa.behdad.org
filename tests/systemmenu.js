@@ -18,15 +18,21 @@ var HARNESS = [
   "  mon.classList.add('screen-on','show-caps');",
   "  brand.dispatchEvent(new MouseEvent('click',{bubbles:true}));",
   "  var menu=document.getElementById('monitor-system-menu');",
+  "  function inside(bg,nodes){var b=bg.getBBox();return [].every.call(nodes,function(n){var r=n.getBBox();return r.x>=b.x&&r.x+r.width<=b.x+b.width&&r.y>=b.y&&r.y+r.height<=b.y+b.height;});}",
   "  S('menu_open',menu.classList.contains('open'));",
   "  S('menu_actions',[].map.call(menu.querySelectorAll('[data-action]'),function(n){return n.getAttribute('data-action');}));",
   "  S('tagline_removed',menu.querySelector('.desk-system-tagline')===null);",
+  "  S('menu_type',parseFloat(getComputedStyle(menu.querySelector('.desk-system-label')).fontSize));",
+  "  S('menu_fit_en',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.setLang('cs'); S('menu_fit_cs',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.setLang('en');",
   "  window.__monitorSystemAction('about'); await sleep(30); var about=document.getElementById('monitor-about-layer');",
-  "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('where artificial meets higher intelligence.')>=0);",
+  "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('The Loft: where artificial meets higher intelligence.')>=0);",
+  "  S('about_type',{title:parseFloat(getComputedStyle(about.querySelector('.monitor-about-title')).fontSize),copy:parseFloat(getComputedStyle(about.querySelector('.monitor-about-copy')).fontSize),motto:parseFloat(getComputedStyle(about.querySelector('.monitor-about-motto')).fontSize)});",
+  "  S('about_fit_en',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.setLang('cs'); S('about_fit_cs',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.setLang('en');",
   "  window.__killMonitorAbout(); await sleep(40); S('about_killing',about.classList.contains('killing')&&about.textContent.indexOf('about:blank')>=0);",
   "  await sleep(2400); S('about_killed',!about.classList.contains('open')&&!mon.classList.contains('show-about')&&!window.__monitorAppRunning('about')&&mon.classList.contains('show-caps'));",
   "  window.__monitorSystemAction('credits'); await sleep(80); var credits=document.getElementById('monitor-credits-layer');",
   "  S('credits_open',credits.classList.contains('open')&&credits.textContent.indexOf('Markéta')>=0&&credits.textContent.indexOf('Kasra')<credits.textContent.indexOf('Irene')&&credits.textContent.indexOf('FontTools')>=0&&credits.textContent.indexOf('made with love by behdad, Claude & Codex')>=0&&credits.textContent.indexOf('July 2026')>=0);",
+  "  S('credits_type',{title:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-title')).fontSize),name:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-name')).fontSize),body:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-software')).fontSize)});",
   "  window.__killMonitorCredits(); await sleep(80); S('credits_killing',credits.classList.contains('killing')&&credits.textContent.indexOf('the gratitude survives.')>=0);",
   "  await sleep(3000); S('credits_killed',!credits.classList.contains('open')&&!mon.classList.contains('show-credits')&&!window.__monitorAppRunning('credits')&&mon.classList.contains('show-caps'));",
   "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); if(window.__monitorZoomIn)window.__monitorZoomIn(); window.__monitorSystemAction('sleep');",
@@ -82,8 +88,13 @@ ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
 ok("menu groups power actions before About and Credits", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","about","credits"]));
 ok("compact menu leaves the motto for About", s.tagline_removed === true);
+ok("system-menu labels use the enlarged type", s.menu_type >= 2.2);
+ok("enlarged system-menu type fits in English and Czech", s.menu_fit_en === true && s.menu_fit_cs === true);
 ok("About is a searchable running app with an about:blank Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
+ok("About title, copy, and motto use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.motto >= 2.2);
+ok("enlarged About copy fits in English and Czech", s.about_fit_en === true && s.about_fit_cs === true);
 ok("Credits rolls people, software, and the closing line", s.credits_open === true);
+ok("Credits title, names, and body use the enlarged type", s.credits_type && s.credits_type.title >= 4 && s.credits_type.name >= 2.75 && s.credits_type.body >= 1.7);
 ok("Credits Kill flares, preserves gratitude, and returns to desktop", s.credits_killing === true && s.credits_killed === true);
 ok("Sleep suspends and unzooms only the live monitor, then a press wakes it", s.sleep_suspended === true && s.sleep_unzoomed === true && s.sleep_woke === true);
 ok("Sleep preserves running apps", s.sleep_kept_apps === true);

@@ -30,10 +30,21 @@ var harness = String.raw`<script>
   report.afterThree = window.__insectVisionActive();
   window.__insectVision(false);
   report.cleared = !window.__insectVisionActive() && !overlay.classList.contains("show");
-  var pre = document.createElement("pre");
-  pre.id = "__report";
-  pre.textContent = JSON.stringify(report);
-  document.body.appendChild(pre);
+  window.goToStage("office");
+  window.__startTrip("acid");
+  setTimeout(function () {
+    report.acid = {
+      active: window.__insectVisionActive(),
+      overlay: overlay.classList.contains("show"),
+      officeFilter: getComputedStyle(document.getElementById("stage-office")).filter
+    };
+    window.__stopTrip(true);
+    report.acidCleared = !window.__insectVisionActive() && !overlay.classList.contains("show");
+    var pre = document.createElement("pre");
+    pre.id = "__report";
+    pre.textContent = JSON.stringify(report);
+    document.body.appendChild(pre);
+  }, 80);
 })();
 </script>`;
 
@@ -59,5 +70,8 @@ if (result) {
   check(result.gardenFilter && result.gardenFilter !== "none",
     "the active garden uses the compound-eye displacement/color filter", result.gardenFilter);
   check(result.cleared, "the effect clears without leaving its room state behind");
+  check(result.acid && result.acid.active && result.acid.overlay && result.acid.officeFilter && result.acid.officeFilter !== "none",
+    "acid borrows compound-eye vision in the currently viewed room", result.acid);
+  check(result.acidCleared, "stopping acid releases its borrowed insect vision");
 }
 process.exitCode = failures ? 1 : 0;

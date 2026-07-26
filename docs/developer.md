@@ -431,6 +431,10 @@ their second and later eligible clicks start their respective uncarded variants.
 gas also reveals the whipper's calendar-style Behdad apparition; its jaw and whole-figure rise use
 separate wrappers so their transforms compose.
 
+Acid also borrows the ladybug's compound-eye overlay and applies its displacement filter to the
+currently viewed room. `clearPriorTripEffects` releases that borrowed effect before replacement,
+while acid's natural completion releases it directly; explicit stop/reset reaches the same cleanup.
+
 The canonical direct-selection order is laughing gas, shrooms, acid, froggies, DMT, molly,
 ketamine, then iboga (`Shift+1` through `Shift+8`). Keep that order aligned across the keyboard
 handler, `trip()` scripting API, typed `trip.start` schema, Worker action schema, translated

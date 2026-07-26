@@ -583,8 +583,8 @@ metadata, and photo composition.
 
 ### Office monitor
 
-The monitor is an SVG/`foreignObject` computer with a desktop, dock, alternating Julia/Pipes
-screensavers, and apps. App state
+The monitor is an SVG/`foreignObject` computer with a desktop, dock, rotating
+Julia/Pipes/Flower Box screensavers, and apps. App state
 is represented mainly by `show-*` classes on `#office-monitor`. Search for
 `__openMonitorApp`, `__closeTopMonitorApp`, `resetMonitorAppState`, and `REAL_APPS`.
 
@@ -614,11 +614,12 @@ Opening an app boots/pans the monitor if necessary, closes incompatible surfaces
 own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
 view gets the first chance to step back, then the app closes to the desktop. A normal close can
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
-The Julia and Pipes savers share one 4× off-DOM Canvas 2D surface and blit into
-separate native SVG images; this is the WebKit-safe composition boundary. A single
-`saverRaf` owns whichever saver is selected, and each fresh idle cycle alternates
-the selection. Screensaver and expensive canvas/DOM loops are gated while an app
-owns the screen.
+Julia and Pipes share one 4× off-DOM Canvas 2D surface. Flower Box owns one lazy
+WebGL 1 canvas with a shader-deformed, lit mesh and a Canvas 2D fallback. All
+three blit into separate native SVG images; this is the WebKit-safe composition
+boundary. A single `saverRaf` owns whichever saver is selected, and each fresh
+idle cycle advances Julia → Pipes → Flower Box. Screensaver and expensive
+canvas/DOM loops are gated while an app owns the screen.
 
 Pac-Man is a `searchOnly` monitor app: search, Chat, test hooks, or the ketamine ghost can open it,
 but it has no desktop tile and the ghost is not an access gate. The live board is checkpoint state;

@@ -17,6 +17,8 @@ var HARNESS = [
   ' S("julia",{kind:julia.kind,painted:julia.painted,running:julia.running,pipesClass:mon.classList.contains("saver-pipes")});',
   ' window.__wakeMonitorSaver();window.__startMonitorSaver();await sleep(1150);var pipes=window.__monitorSaverState();',
   ' S("pipes",{kind:pipes.kind,painted:pipes.painted,running:pipes.running,segments:pipes.segments,pipesClass:mon.classList.contains("saver-pipes")});',
+  ' window.__wakeMonitorSaver();window.__startMonitorSaver();await sleep(420);var flower=window.__monitorSaverState();',
+  ' S("flower",{kind:flower.kind,painted:flower.painted,running:flower.running,backend:flower.backend,flowerClass:mon.classList.contains("saver-flower")});',
   ' window.goToStage("garden");await sleep(80);S("parked",{running:window.__monitorSaverLoopRunning(),state:window.__monitorSaverState()});',
   '}',
   '})();</script>'
@@ -26,7 +28,7 @@ var REDUCED_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>window.addEventListener("load",function(){setTimeout(function(){',
   'window.goToStage("office");var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");',
-  'window.__startMonitorSaver("pipes");document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,state:window.__monitorSaverState()});',
+  'window.__startMonitorSaver("flower");document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,state:window.__monitorSaverState()});',
   '},350);});</script>'
 ].join("\n");
 
@@ -54,6 +56,10 @@ check(r && r.steps.pipes.kind === "pipes" && r.steps.pipes.painted &&
   r.steps.pipes.running && r.steps.pipes.segments >= 5 &&
   r.steps.pipes.pipesClass,
   "next idle cycle grows Pipes and selects its SVG image", r && r.steps.pipes);
+check(r && r.steps.flower.kind === "flower" && r.steps.flower.painted &&
+  r.steps.flower.running && /^(webgl|canvas)$/.test(r.steps.flower.backend || "") &&
+  r.steps.flower.flowerClass,
+  "third idle cycle paints Flower Box through WebGL or its fallback", r && r.steps.flower);
 check(r && !r.steps.parked.running,
   "the shared saver loop stops when the office is parked", r && r.steps.parked);
 var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1200, {
@@ -61,9 +67,10 @@ var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1200, {
   forceReduce: true,
   seedRandom: true
 });
-check(reduced && reduced.errors.length === 0 && reduced.state.kind === "pipes" &&
-  reduced.state.painted && !reduced.state.running && reduced.state.segments > 0,
-  "reduced motion gets a complete static Pipes frame without a live loop",
+check(reduced && reduced.errors.length === 0 && reduced.state.kind === "flower" &&
+  reduced.state.painted && !reduced.state.running &&
+  /^(webgl|canvas)$/.test(reduced.state.backend || ""),
+  "reduced motion gets a complete static Flower Box frame without a live loop",
   reduced && reduced.state);
 
 console.log("");

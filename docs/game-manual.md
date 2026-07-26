@@ -434,8 +434,8 @@ half-hour steps. While **Day at the Loft** runs, both scene-corner date and time
 controls remain visible, then return to their usual URL-driven visibility when
 the day stops.
 
-The monitor alternates a live Julia fractal and a growing 3D Pipes display when
-left idle. The `m ∞ b` wordmark opens the computer's system menu. **Sleep**
+The idle monitor rotates through a live Julia fractal, growing 3D Pipes, and a
+deforming 3D Flower Box. The `m ∞ b` wordmark opens the computer's system menu. **Sleep**
 darkens and unzooms only the monitor; press it to wake with every app exactly
 where it was. **Lock** starts at the screensaver; activity reveals CAPS LOCK,
 and another idle stretch returns to the saver. Put

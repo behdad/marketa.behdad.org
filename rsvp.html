@@ -26211,6 +26211,7 @@ var T = {
     season_canada: "🍁 canada day",
     season_summer: "☀ summer",
     season_autumn: "🍂 autumn",
+    cal_mushroom_day: "International Mushroom Day",
     season_spring: "🌸 spring",
     season_smoky: "🔥 smoky season",
     season_holiday: "🎄 holiday season",
@@ -27274,6 +27275,7 @@ var T = {
     season_canada: "🍁 den Kanady",
     season_summer: "☀ léto",
     season_autumn: "🍂 podzim",
+    cal_mushroom_day: "Mezinárodní den hub",
     season_spring: "🌸 jaro",
     season_smoky: "🔥 kouřová sezóna",
     season_holiday: "🎄 svátky",
@@ -84312,6 +84314,7 @@ function spawnDustMote(container) {
     if (window.__stopTrip) window.__stopTrip(true); // one transition cancels the timer/rAF generation, flags, effects, creatures, cards and tolerance
     if (window.__resetBicycleDay) window.__resetBicycleDay(); // replace April 19's old cadence after the reset has cleared its trip
     if (window.__resetMarijuanaDay) window.__resetMarijuanaDay(); // same for April 20's Cuddly smoking cadence
+    if (window.__resetMushroomDay) window.__resetMushroomDay(); // and September 20's room-following shroom cadence
     if (window.__clearCuddlyProjectorSlow) window.__clearCuddlyProjectorSlow(); // drop any stoned time-dilation on the projector
     if (window.__resetWineSips) window.__resetWineSips();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
@@ -85052,10 +85055,70 @@ function spawnDustMote(container) {
     marijuanaDayStop();
     marijuanaDaySchedule();
   };
+  // September 20 follows the viewed room with a mushroom trip immediately on calendar
+  // activation and every ten seconds thereafter. Its generation token lets date/reset
+  // teardown stop only a trip this occasion started.
+  var mushroomDayTimer = null, mushroomDayTripGeneration = null;
+  function isMushroomDay(s) { return !!s && s.m === 8 && s.d === 20; }
+  function mushroomDayStopOwnedTrip() {
+    if (mushroomDayTripGeneration != null &&
+        currentTripVariant === "shrooms" &&
+        tripGeneration === mushroomDayTripGeneration &&
+        window.__stopTrip) window.__stopTrip(false);
+    mushroomDayTripGeneration = null;
+  }
+  function mushroomDayStop() {
+    clearTimeout(mushroomDayTimer); mushroomDayTimer = null;
+    mushroomDayStopOwnedTrip();
+  }
+  function mushroomDaySchedule() {
+    if (mushroomDayTimer || !isMushroomDay(seasonDate())) return;
+    mushroomDayTimer = setTimeout(mushroomDayTick, 10000);
+  }
+  function mushroomDayStart(allowInterrupt) {
+    var canRun = !document.hidden && document.hasFocus() &&
+      (!window.__gameStarted || window.__gameStarted()) &&
+      !(window.__autoplayOn && window.__autoplayOn()) &&
+      (allowInterrupt || !window.__tripActive);
+    var started = false;
+    if (canRun && window.__startTrip) {
+      started = !!window.__startTrip("shrooms");
+      if (started) mushroomDayTripGeneration = tripGeneration;
+    }
+    return started;
+  }
+  function mushroomDayTick() {
+    clearTimeout(mushroomDayTimer); mushroomDayTimer = null;
+    if (!isMushroomDay(seasonDate())) { mushroomDayStop(); return false; }
+    var started = mushroomDayStart(false);
+    mushroomDaySchedule();
+    return started;
+  }
+  function activateMushroomDay() {
+    if (!isMushroomDay(seasonDate())) return false;
+    mushroomDayStop();
+    var started = mushroomDayStart(true);
+    mushroomDaySchedule();
+    return started;
+  }
+  function reconcileMushroomDay(s) {
+    if (!isMushroomDay(s)) mushroomDayStop();
+    else mushroomDaySchedule();
+  }
+  window.__mushroomDayTick = mushroomDayTick;
+  window.__activateMushroomDay = activateMushroomDay;
+  window.__mushroomDayStatus = function () {
+    return { active: isMushroomDay(seasonDate()), pending: !!mushroomDayTimer, ownsTrip: mushroomDayTripGeneration != null };
+  };
+  window.__resetMushroomDay = function () {
+    mushroomDayStop();
+    mushroomDaySchedule();
+  };
   function applySeasonDate() {
     var s = seasonDate();
     reconcileBicycleDay(s);
     reconcileMarijuanaDay(s);
+    reconcileMushroomDay(s);
     window.__setSeason(decorForDate(s.m, s.d, s.y));
     applyBirthdays(s); // an overlay: it rides whatever __setSeason just dressed the loft in
     applyMeals(s);     // same deal: the low table comes out for the dinners, inside or outside a season
@@ -85451,6 +85514,7 @@ function spawnDustMote(container) {
     "6-1":   { icon: "🍁", sk: "season_canada" },
     "6-10":  { icon: "💍", sk: "season_wedding", city: "cal_prague" },
     "6-11":  { icon: "🍳", sk: "cal_brunch", city: "cal_prague" },
+    "8-20":  { icon: "🍄", sk: "cal_mushroom_day" },
     "9-31":  { icon: "🎃", sk: "season_spooky" },
     "10-11": { icon: "🍷", sk: "season_martin" },
     // Shab-e Yalda drifts Dec 20–21 with the solstice → stamped per render year via persianCalOcc(), not here
@@ -85759,6 +85823,7 @@ function spawnDustMote(container) {
     if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true; // birthday outranks the season
     if (mo === 3 && d === 19 && window.__activateBicycleDay) return window.__activateBicycleDay();
     if (mo === 3 && d === 20 && window.__activateMarijuanaDay) return window.__activateMarijuanaDay();
+    if (mo === 8 && d === 20 && window.__activateMushroomDay) return window.__activateMushroomDay();
     var oc = (window.__isOccasionDate && window.__isOccasionDate()) || (window.__dateOccasion && window.__dateOccasion()); // time-gate-agnostic: a deliberate May-2 click summons the BBQ even outside its 4–10pm window (force then jumps the clock in)
     if (oc && oc.indexOf("bd:") !== 0) {
       if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons

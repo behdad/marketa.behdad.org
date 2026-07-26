@@ -3557,6 +3557,8 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    element's transform property, same fix as everywhere else in this file that pairs a
    looping state effect with a one-shot gesture. */
 #office-headphones-cups{transform-box:fill-box; transform-origin:center}
+#office-headphones .headphone-halo{opacity:0;fill:none;stroke:#78d5a1;stroke-width:2.6;transition:opacity .25s ease}
+#office-headphones.listening .headphone-halo{opacity:var(--headphone-glow,.55)}
 /* the ultrawide monitor is the office default; a double-click reveals its secret
    alter ego, the typewriter (and double-clicking the typewriter swaps back) */
 #office-monitor{opacity:0; pointer-events:none}
@@ -22522,6 +22524,8 @@ section{margin:1.9rem 0}
 <path d="M201 242 L199 247" stroke="#8a8a8a" stroke-width="1.5" stroke-linecap="round"/>
 <path d="M219 242 L221 247" stroke="#8a8a8a" stroke-width="1.5" stroke-linecap="round"/>
 <g id="office-headphones-cups">
+<circle class="headphone-halo" cx="198" cy="248" r="11"/>
+<circle class="headphone-halo" cx="222" cy="248" r="11"/>
 <circle cx="198" cy="248" r="8.6" fill="#242424" stroke="#0f0f0f" stroke-width="0.7"/>
 <circle cx="198" cy="248" r="8.6" fill="none" stroke="#9c9c9c" stroke-width="1.1"/>
 <circle cx="198" cy="248" r="6.1" fill="none" stroke="#666666" stroke-width="0.6"/>
@@ -36190,9 +36194,6 @@ function gameTapsNear(a, b) {
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { headphones.classList.add("wobbling"); });
       });
-      // PC off → the headphones are a shortcut: boot straight into the music player,
-      // song started inside this same gesture
-      if (window.__bootToMusic && window.__bootToMusic()) return;
       var ids = ["tumbala-song-audio", "guitar-song-audio", "ukulele-song-audio"], playing = null;
       for (var i = 0; i < ids.length; i++) {
         var a = document.getElementById(ids[i]);
@@ -41499,9 +41500,6 @@ setOfficeProgress("pc", false);
   // superseded by a direct navigation, or a game reset) so a later plain power-on still
   // ends on caps.
   var pendingBootSite = null;
-  // A headphones click while the PC is off asks the boot to finish on the music player
-  // instead of the desktop (see __bootToMusic below).
-  var pendingBootMusic = false;
   // __whiskToConsole (below) asks a fresh boot to finish by opening the in-world monitor
   // console on the caps desktop instead of just landing on it. (Backtick no longer whisks —
   // it toggles the scene-agnostic drop-down terminal instead; __whiskToConsole is kept for
@@ -42429,7 +42427,6 @@ setOfficeProgress("pc", false);
     if (window.__monitorShorted) return; // wet/shorted → the screen stays dark until it dries out
     if (!monitor.classList.contains("here") || !pcTower || !pcTower.classList.contains("on")) {
       pendingBootSite = null; // no boot will run to land these, so drop any queued targets
-      pendingBootMusic = false;
       pendingBootConsole = false;
       return;
     }
@@ -42470,17 +42467,12 @@ setOfficeProgress("pc", false);
       }
       scheduleSaver();
       var resumedMonitorLock = resumeMonitorLock();
-      // the boot always lands on the desktop, even mid-song — the dock is how visitors
-      // find the photobooth. Only a headphones-summoned boot goes straight to the player
-      // (a later play/pause still re-opens it via updateNowPlaying's own listeners).
-      if (!resumedMonitorLock && pendingBootMusic) { pendingBootMusic = false; updateNowPlaying(); }
       // a '`'-summoned boot opens the console once the desktop lands (openConsole
       // needs show-caps, which the branch above has just added)
       if (!resumedMonitorLock && pendingBootConsole) { pendingBootConsole = false; openConsole(); }
       // a computer("app")/monitor("app") device-command queued a dock app to open once caps lands
       if (!resumedMonitorLock && pendingBootApp) { var _pbApp = monitorAppByName(pendingBootApp); pendingBootApp = null; if (_pbApp) _pbApp.open(); }
       if (resumedMonitorLock) {
-        pendingBootMusic = false;
         pendingBootConsole = false;
         pendingBootApp = null;
       }
@@ -42826,13 +42818,7 @@ setOfficeProgress("pc", false);
       console.warn("[song-audio] capture failed for " + audioEl.id + ":", e);
     }
   };
-  // The headphone cups pulse to the ACTUAL beat while headphone mode is on: reads real
-  // low-frequency (kick/bass range) energy off the SAME analyser the equalizer bars use
-  // (eqAudioEl._eqAnalyser, populated by startEq regardless of whether the monitor
-  // happens to be booted — see updateNowPlaying) every frame, the same technique as the
-  // bars' own driveBars, not a precomputed fixed-BPM loop. Falls back to
-  // window.__songBeatKick() (the BPM-phase-locked envelope also used by e.g. the
-  // balcony string lights) only on platforms with no live analyser wired.
+  // Drive the headphone cups and halo from live bass energy.
   var headphoneBeatRAF = null, headphoneBeatData = null;
   function headphoneBeatWant() {
     return headphoneModeOn && window.currentStageName === "office" && !document.hidden && document.hasFocus();
@@ -42856,7 +42842,9 @@ setOfficeProgress("pc", false);
     } else if (window.__songBeatKick) {
       kick = window.__songBeatKick();
     }
-    cups.style.transform = "scale(" + (1 + Math.max(0, Math.min(1, kick)) * 0.16).toFixed(3) + ")";
+    kick = Math.max(0, Math.min(1, kick));
+    cups.style.transform = "scale(" + (1 + kick * 0.16).toFixed(3) + ")";
+    cups.style.setProperty("--headphone-glow", (0.3 + kick * 0.7).toFixed(3));
     headphoneBeatRAF = requestAnimationFrame(headphoneBeatFrame);
   }
   function ensureHeadphoneBeat() {
@@ -42883,6 +42871,8 @@ setOfficeProgress("pc", false);
     if (!USE_LIVE_ANALYSER) return; // audio pipeline off (kill switch or sniffed-broken platform): headphones stay inert -- no state flip, cup-pulse, or EQ
     headphoneModeOn = !!on;
     window.__headphonesOn = headphoneModeOn;              // office party-duck reads this
+    var headphones = document.getElementById("office-headphones");
+    if (headphones) headphones.classList.toggle("listening", headphoneModeOn);
     if (window.__setPartyDuck) window.__setPartyDuck();   // dim the party in the office while cans are on (or swell it back)
     if (on) {
       ensureHeadphoneBeat();
@@ -42891,7 +42881,7 @@ setOfficeProgress("pc", false);
       if (!anyPlaying && window.__playSongAt) window.__playSongAt(0);
     } else {
       var cups = document.getElementById("office-headphones-cups");
-      if (cups) cups.style.transform = ""; // settle back flat -- the rAF loop above stops itself on its next tick
+      if (cups) { cups.style.transform = ""; cups.style.removeProperty("--headphone-glow"); }
     }
     if (!eqAudioCtx || !eqBassShelf) return; // don't force-build a graph just to ramp effects nothing's routed through
     var now = eqAudioCtx.currentTime;
@@ -53921,26 +53911,6 @@ async def localfont(name):
   // supersedes the in-flight boot and jumps straight to the site). Otherwise queue the
   // target and kick off the real power-on / monitor swap-in; updateScreen then boots
   // Fedora and lands on the queued page instead of the caps default.
-  // Headphones shortcut: PC off → start a song inside THIS gesture (a play() four
-  // seconds later, after the boot, would fall outside the user-activation window and
-  // risk an autoplay block), queue the player as the boot target, and power on.
-  // Returns false when the PC is already on so the caller keeps its normal behavior.
-  window.__bootToMusic = function () {
-    if (!pcTower || pcTower.classList.contains("on")) return false;
-    pendingBootMusic = true;
-    var current = songAudios.some(function (a) { return a && !a.paused && !a.ended; });
-    var idle = songAudios.filter(function (a) { return a && a.paused; });
-    if (!current && idle.length) {
-      var pick = idle[Math.floor(Math.random() * idle.length)];
-      try {
-        setSongLevel(pick, window.__songVolume ? window.__songVolume() : 0.5);
-        if (window.__captureSongAudio) window.__captureSongAudio(pick);
-        var p = pick.play(); if (p && p.catch) p.catch(function (e) { console.warn("[song-audio] play() rejected (headphones boot) for " + pick.id + ":", e); });
-      } catch (e) {}
-    }
-    pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    return true;
-  };
   window.bootToSite = function (siteKey, url) {
     if (window.navigateMonitor && window.navigateMonitor(siteKey, url)) {
       pendingBootSite = null; // a direct navigation supersedes any queued boot target

@@ -615,11 +615,13 @@ own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBa
 view gets the first chance to step back, then the app closes to the desktop. A normal close can
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 Julia and Pipes share one 4× off-DOM Canvas 2D surface. Flower Box owns one lazy
-WebGL 1 canvas with a shader-deformed, lit mesh and a Canvas 2D fallback. All
-three blit into separate native SVG images; this is the WebKit-safe composition
-boundary. A single `saverRaf` owns whichever saver is selected, and each fresh
-idle cycle advances Julia → Pipes → Flower Box. Screensaver and expensive
-canvas/DOM loops are gated while an app owns the screen.
+WebGL 1 canvas; its source-derived radial cube morph is updated on the CPU so the
+WebGL path and Canvas 2D fallback share geometry, smooth normals, and a slow
+24-second hue rotation across the six distinct face colours. All three
+blit into separate native SVG images, the WebKit-safe composition boundary. A
+single `saverRaf` owns whichever saver is selected. Each fresh page load shuffles
+the three-item order once, then idle cycles walk and wrap that stable order.
+Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
 
 Pac-Man is a `searchOnly` monitor app: search, Chat, test hooks, or the ketamine ghost can open it,
 but it has no desktop tile and the ghost is not an access gate. The live board is checkpoint state;

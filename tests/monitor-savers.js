@@ -15,13 +15,9 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
   'async function run(){',
   ' window.goToStage("office");await sleep(920);',
-  ' var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");mon.classList.remove("show-saver","saver-pipes");',
-  ' window.__startMonitorSaver();await sleep(260);var julia=window.__monitorSaverState();',
-  ' S("julia",{kind:julia.kind,painted:julia.painted,running:julia.running,pipesClass:mon.classList.contains("saver-pipes")});',
-  ' window.__wakeMonitorSaver();window.__startMonitorSaver();await sleep(1150);var pipes=window.__monitorSaverState();',
-  ' S("pipes",{kind:pipes.kind,painted:pipes.painted,running:pipes.running,segments:pipes.segments,pipesClass:mon.classList.contains("saver-pipes")});',
-  ' window.__wakeMonitorSaver();window.__startMonitorSaver();await sleep(420);var flower=window.__monitorSaverState();',
-  ' S("flower",{kind:flower.kind,painted:flower.painted,running:flower.running,backend:flower.backend,flowerClass:mon.classList.contains("saver-flower")});',
+  ' var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");mon.classList.remove("show-saver","saver-pipes","saver-flower");',
+  ' var cycles=[];for(var i=0;i<4;i++){window.__startMonitorSaver();await sleep(360);var state=window.__monitorSaverState();cycles.push({kind:state.kind,painted:state.painted,running:state.running,segments:state.segments,backend:state.backend,order:state.order,next:state.next,pipesClass:mon.classList.contains("saver-pipes"),flowerClass:mon.classList.contains("saver-flower")});if(i<3)window.__wakeMonitorSaver();}',
+  ' S("cycles",cycles);',
   ' window.goToStage("garden");await sleep(80);S("parked",{running:window.__monitorSaverLoopRunning(),state:window.__monitorSaverState()});',
   '}',
   '})();</script>'
@@ -46,27 +42,31 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html monitor screensavers:");
-check(/attribute vec2 aUv;attribute float aFace;/.test(html) &&
-  /float ridge=max\(0\.0,1\.0-max\(abs\(s\.x\),abs\(s\.y\)\)\)/.test(html) &&
-  /vec3 p=n\*\.72\+tu\*s\.x\*\.72\+tv\*s\.y\*\.72-n\*pull/.test(html),
-  "Flower Box pulls each pinned cube face through to an opposing point");
+check(/vlen\.push\(\(1 - d\) \/ d\)/.test(html) &&
+  /var f = 1 \+ mesh\.vlen\[i\] \* sf/.test(html) &&
+  /var min = -1\.1, span = 6\.2/.test(html) &&
+  /seconds \/ 24/.test(html) &&
+  /gl\.enable\(gl\.CULL_FACE\)/.test(html),
+  "Flower Box uses the source-derived radial cube projection, slow hue cycle, and render defaults");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4000, {
   patchRaf: true,
   forceMotion: true,
   seedRandom: true
 });
 check(r && r.errors.length === 0, "all screensavers run without uncaught errors", r && r.errors);
-check(r && r.steps.julia.kind === "julia" && r.steps.julia.painted &&
-  r.steps.julia.running && !r.steps.julia.pipesClass,
-  "first idle cycle paints Julia through its selected SVG image", r && r.steps.julia);
-check(r && r.steps.pipes.kind === "pipes" && r.steps.pipes.painted &&
-  r.steps.pipes.running && r.steps.pipes.segments >= 5 &&
-  r.steps.pipes.pipesClass,
-  "next idle cycle grows Pipes and selects its SVG image", r && r.steps.pipes);
-check(r && r.steps.flower.kind === "flower" && r.steps.flower.painted &&
-  r.steps.flower.running && /^(webgl|canvas)$/.test(r.steps.flower.backend || "") &&
-  r.steps.flower.flowerClass,
-  "third idle cycle paints Flower Box through WebGL or its fallback", r && r.steps.flower);
+var cycles = r && r.steps.cycles || [], firstOrder = cycles[0] && cycles[0].order || [];
+check(cycles.length === 4 && firstOrder.length === 3 &&
+  firstOrder.slice().sort().join("|") === "flower|julia|pipes" &&
+  cycles.slice(0, 3).map(function (x) { return x.kind; }).join("|") === firstOrder.join("|") &&
+  cycles[3].kind === cycles[0].kind,
+  "load-time shuffle yields one complete stable cycle, then wraps", cycles);
+check(cycles.every(function (x) {
+  var selected = x.kind === "pipes" ? x.pipesClass && !x.flowerClass :
+    (x.kind === "flower" ? x.flowerClass && !x.pipesClass : !x.pipesClass && !x.flowerClass);
+  var healthy = x.kind === "pipes" ? x.segments >= 5 :
+    (x.kind === "flower" ? /^(webgl|canvas)$/.test(x.backend || "") : true);
+  return x.painted && x.running && selected && healthy;
+}), "every shuffled saver paints through its selected SVG image", cycles);
 check(r && !r.steps.parked.running,
   "the shared saver loop stops when the office is parked", r && r.steps.parked);
 var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1200, {
@@ -76,6 +76,7 @@ var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1200, {
 });
 check(reduced && reduced.errors.length === 0 && reduced.state.kind === "flower" &&
   reduced.state.painted && !reduced.state.running &&
+  reduced.state.flowerScale > 3 && reduced.state.flowerScale < 4 &&
   /^(webgl|canvas)$/.test(reduced.state.backend || ""),
   "reduced motion gets a complete static Flower Box frame without a live loop",
   reduced && reduced.state);

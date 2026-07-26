@@ -56522,22 +56522,23 @@ async def localfont(name):
       phMenuEl = document.createElement("div");
       phMenuEl.className = "mon-ctx phone-ctx message-read-ctx"; phMenuEl.setAttribute("role", "menu");
       phMenuEl.appendChild(phMakeItem("ctx-reply", PH_REPLY_ICO, tr("msg_reply"), function () {
-        messagesRead[id] = true;
-        updateMsgBadge();
+        markMessagesReadThrough(id);
         if (reply) reply(); else if (refresh) refresh();
       }));
       phMenuEl.appendChild(phMakeItem("ctx-copy", PH_COPY_ICO, tr("msg_copy"), function () {
+        markMessagesReadThrough(id);
         var text = message ? plainMessageText(message) : "";
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function () {});
         else {
           var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
           try { document.execCommand("copy"); } catch (_error) {} ta.remove();
         }
+        if (refresh) refresh();
       }));
       if (message && !message.outgoing) {
         phMenuEl.appendChild(phMakeItem("ctx-open", PH_READ_ICO, tr(isRead ? "msg_mark_unread" : "msg_mark_read"), function () {
-          if (isRead) delete messagesRead[id]; else messagesRead[id] = true;
-          updateMsgBadge();
+          if (isRead) { delete messagesRead[id]; updateMsgBadge(); }
+          else markMessagesReadThrough(id);
           if (refresh) refresh();
         }));
       }
@@ -56549,6 +56550,7 @@ async def localfont(name):
         b.textContent = emoji; b.setAttribute("aria-label", tr("msg_react") + " " + emoji); b.setAttribute("aria-pressed", selectedReactions.indexOf(emoji) !== -1 ? "true" : "false");
         b.addEventListener("click", function (e) {
           e.preventDefault(); e.stopPropagation();
+          markMessagesReadThrough(id);
           var reactions = (messageReactions[id] || []).slice(), at = reactions.indexOf(emoji);
           if (at === -1) reactions.push(emoji); else reactions.splice(at, 1);
           if (reactions.length) messageReactions[id] = reactions; else delete messageReactions[id];
@@ -57277,6 +57279,22 @@ async def localfont(name):
       return true;
     }
     window.__markAllPhoneMessagesRead = markAllMessagesRead;
+    // A chronological thread follows the familiar chat rule: deliberately using a row means
+    // the visitor has caught up through that point. Newer rows stay untouched; an explicit
+    // "Mark as unread" remains a one-row exception and can create a hole again.
+    function markMessagesReadThrough(id) {
+      var through = messagesThread.indexOf(id), changed = false;
+      if (through < 0) return false;
+      for (var i = 0; i <= through; i++) {
+        var rowId = messagesThread[i];
+        if (!messagesRead[rowId]) { messagesRead[rowId] = true; changed = true; }
+      }
+      if (!changed) return false;
+      updateMsgBadge();
+      if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "read-through", id: id }, "ui");
+      return true;
+    }
+    window.__markPhoneMessagesReadThrough = markMessagesReadThrough;
     function plainMessageText(m) { return String(msgBody(m) || "").replace(/<[^>]+>/g, ""); }
     var GROUP_CHAT_CAST = [
       { key: "marketa", name: "Markéta", roleKey: "role_bride" },
@@ -57524,7 +57542,7 @@ async def localfont(name):
         var head = document.createElement("div"); head.className = "pm-msg-head";
         var from = document.createElement("span"); from.className = "pm-msg-from"; from.textContent = msgFrom(m); head.appendChild(from);
         var xb = document.createElement("button"); xb.type = "button"; xb.className = "pm-msg-x"; xb.textContent = "✕"; xb.setAttribute("aria-label", tr("install_dismiss"));
-        xb.addEventListener("click", function (e) { e.stopPropagation(); dismissMessage(id); }); head.appendChild(xb);
+        xb.addEventListener("click", function (e) { e.stopPropagation(); markMessagesReadThrough(id); dismissMessage(id); }); head.appendChild(xb);
         var bub = document.createElement("div"); bub.className = "pm-msg-bubble";
         var replySource = m.replyTo && MESSAGES[m.replyTo];
         var replyFrom = replySource ? msgFrom(replySource) : m.replyFrom;
@@ -57534,7 +57552,7 @@ async def localfont(name):
           if (m.replyTo) {
             quote.type = "button";
             quote.setAttribute("aria-label", replyFrom + ": " + replyBody);
-            quote.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); jumpToMessage(m.replyTo); });
+            quote.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); markMessagesReadThrough(id); jumpToMessage(m.replyTo); });
           }
           bub.appendChild(quote);
         }
@@ -57548,9 +57566,14 @@ async def localfont(name):
           var im = document.createElement("img"); im.className = "pm-msg-img"; im.src = m.img; im.alt = plainMessageText(m); im.loading = "lazy"; bub.appendChild(im);
           if (m.share) {
             im.classList.add("tappable"); im.setAttribute("role", "button"); im.setAttribute("tabindex", "0");
-            var openCard = function (e) { e.stopPropagation(); if (window.shareCard) window.shareCard(m.shareOcc); };
+            var openCard = function (e) {
+              e.stopPropagation();
+              var caughtUp = markMessagesReadThrough(id);
+              if (window.shareCard) window.shareCard(m.shareOcc);
+              if (caughtUp) applyFilter();
+            };
             im.addEventListener("click", openCard);
-            im.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); if (window.shareCard) window.shareCard(m.shareOcc); } });
+            im.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCard(e); } });
           }
           if (!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
             try { im.animate([{ opacity: 0, filter: "contrast(.7) brightness(1.4) saturate(.5)" }, { offset: .45, opacity: 1 }, { opacity: 1, filter: "none" }], { duration: 1100, easing: "ease-out" }); } catch (e) {}
@@ -57578,6 +57601,7 @@ async def localfont(name):
           retryReply.setAttribute("aria-label", tr("chat_retry"));
           retryReply.addEventListener("click", function (e) {
             e.preventDefault(); e.stopPropagation();
+            if (markMessagesReadThrough(id)) applyFilter();
             requestCrewReply(id, m.crewResponseId, plainMessageText(m), m.crewTargetId);
           });
           requestError.appendChild(retryReply); row.appendChild(requestError);
@@ -57590,8 +57614,16 @@ async def localfont(name):
         }
         if (readable) {
           function markRead() {
-            messagesRead[id] = true; updateMsgBadge(); row.classList.remove("unread");
-            row.removeAttribute("role"); row.removeAttribute("tabindex");
+            if (!markMessagesReadThrough(id)) return;
+            if (unreadChk.checked) { applyFilter(); return; }
+            var unreadRows = list.querySelectorAll(".pm-msg-row.unread");
+            for (var ri = 0; ri < unreadRows.length; ri++) {
+              var readRow = unreadRows[ri], readId = readRow.getAttribute("data-message-id");
+              if (!messagesRead[readId]) continue;
+              readRow.classList.remove("unread");
+              readRow.removeAttribute("role");
+              readRow.removeAttribute("tabindex");
+            }
           }
           row.addEventListener("click", markRead);
           row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); markRead(); } });
@@ -60864,7 +60896,7 @@ async def localfont(name):
     function runMsgAction(id) {
       hideMessageThumb();
       hideMsgBadgeCoach();
-      if (id) { messagesRead[id] = true; updateMsgBadge(); } // tapping marks the message read (unread = bold until then)
+      if (id) markMessagesReadThrough(id);
       var m = id && MESSAGES[id], act = m && m.act;
       if (m && messageHasAction(m) && !messageActionAvailable(id, m)) return false;
       var typedAction = m && (m.chatAction || m.apiAction || legacyTypedMsgAction(act));

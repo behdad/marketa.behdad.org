@@ -39159,7 +39159,7 @@ function gameTapsNear(a, b) {
       flairHudHigh = flairHud.querySelector(".flair-high");
       flairHudLives = flairHud.querySelectorAll(".flair-life");
       flairUpdateHud();
-      window.__makeGameCloseBtn(flairLayer, function () { stopFlairCatch(); }); // top-right close button → quit silently (also cleared on teardown)
+      window.__makeGameCloseBtn(flairLayer, function () { stopFlairCatch(false, true); }); // top-right close button → player-ended run (also cleared on teardown)
     }
     function flairUpdateHud() {
       if (!flairHud) return;
@@ -39359,7 +39359,7 @@ function gameTapsNear(a, b) {
       anim.onfinish = function () { if (g.parentNode) g.parentNode.removeChild(g); };
     }
 
-    function stopFlairCatch(gameOver) {
+    function stopFlairCatch(gameOver, playerEnded) {
       if (flairRaf) { cancelAnimationFrame(flairRaf); flairRaf = null; }
       var wasActive = flairActive, finalScore = flairScore;
       flairActive = false;
@@ -39376,6 +39376,10 @@ function gameTapsNear(a, b) {
       bartender.style.transition = ""; // restore the smooth glide once the paddle game's over
       if (wasActive && window.restoreStageHint) window.restoreStageHint("kitchen"); // put the room/bar hint back
       if (wasActive && gameOver) flairFlourish(finalScore); // three misses → "last call"; leaving/hiding ends it silently
+      // Flair-Catch is an endless score run, not a game with a win state: ANY way out counts
+      // as "after the game." The self-serve helper still requires a visible, live bar with
+      // Pouria alone, so room/tab/bar teardown paths naturally decline once their state is gone.
+      if (wasActive && window.__bartenderDrinkAlone) window.__bartenderDrinkAlone();
       if (wasActive && window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "flair-catch", active: false, score: finalScore }, "ui");
     }
     window.stopFlairCatch = stopFlairCatch;
@@ -39398,7 +39402,7 @@ function gameTapsNear(a, b) {
       } else if (e.key === "Escape") {
         e.preventDefault();
         e.stopImmediatePropagation();
-        stopFlairCatch();
+        stopFlairCatch(false, true);
       } else {
         // Flair-Catch is modal like Window Tetris: swallow every other unmodified
         // key so ↑/↓ cannot change the light and room/app shortcuts stay frozen.
@@ -39982,6 +39986,13 @@ function gameTapsNear(a, b) {
     if (selfServe) return startMake(randomRow(), { selfServe: true });
     return false;
   }
+  function drinkAlone() {
+    if (!barPresent() || making || dragging() || flairBusy() ||
+        (window.phone && window.phone()) ||
+        (window.__userMixing && window.__userMixing()) ||
+        !aloneAtBar()) return false;
+    return startMake(randomRow(), { selfServe: true });
+  }
   // The crickets rule: an autonomous timer must not sound on a visible-but-UNFOCUSED tab —
   // getSfxCtx()'s hidden gate doesn't cover that, and its resume() would undo the blur suspend.
   // hasFocus() is therefore checked HERE, in the callback, not where the giggle was scheduled.
@@ -40004,6 +40015,7 @@ function gameTapsNear(a, b) {
   window.__bartenderPhoning = function () { return phoning; }; // his idle flair skips its toss while the shaker's down
   window.__bartenderBored = startBored;                       // test hook: skips the 20-40s wait, keeps the whole fire-time gate; returns whether it fired
   window.__bartenderFinishBored = finishBored;                // focused test hook: completes the phone beat without waiting out its timer
+  window.__bartenderDrinkAlone = drinkAlone;                  // a completed Flair-Catch run uses the same roster-gated self-serve
 
   // ---- ambient loop: one self-rescheduling poll timer (mirrors the bartender's autoFlare) ----
   // It never piles up (a single live timer) and self-gates every tick: it only starts a make

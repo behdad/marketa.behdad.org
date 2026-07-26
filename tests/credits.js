@@ -14,6 +14,8 @@ var harness = String.raw`<script>
     }).map(function (person) { return person.name; });
     check("Nima appears in the language-neutral tester roster",
       names.indexOf("Nima") !== -1, names.join(", "));
+    check("Goli appears in the language-neutral tester roster",
+      names.indexOf("Goli") !== -1, names.join(", "));
 
     var current = window.__loftCreditsLayout(names.length, 2);
     var crowded = window.__loftCreditsLayout(50, 2);

@@ -9897,7 +9897,31 @@ section{margin:1.9rem 0}
    duration, dropping the flag back onto the wrong side of the pole while it waved. */
 #office-pride-flag-wave, #office-canada-flag-wave{transform-box:fill-box; transform-origin:50% 0}
 #office-pride-flag-wave.waving, #office-canada-flag-wave.waving{animation:flag-wave 2.4s ease-in-out}
-@media (prefers-reduced-motion: reduce){#office-pride-flag-wave.waving, #office-canada-flag-wave.waving{animation:none}}
+/* Every third Pride tap catches a stronger indoor gust. ID qualification and source order
+   keep this one-shot above the shared .waving rule when both classes briefly coexist. */
+#office-pride-flag-wave.pride-celebrating{animation:office-pride-flag-celebrate 1.8s cubic-bezier(.2,.8,.25,1)}
+@keyframes office-pride-flag-celebrate{
+  0%,100%{transform:none}
+  13%{transform:skewX(-14deg) scaleY(.97)}
+  29%{transform:skewX(10deg) scaleY(1.025)}
+  46%{transform:skewX(-7deg) scaleY(.985)}
+  64%{transform:skewX(4deg) scaleY(1.01)}
+  82%{transform:skewX(-2deg)}
+}
+/* A low-opacity band of the flag's own muted colors crosses the room once, above the
+   scene's lighting overlays but below its interaction-free arcade effects. */
+#office-pride-wash{opacity:0;pointer-events:none;transform-box:fill-box;transform-origin:center}
+#office-pride-wash.pride-celebrating{animation:office-pride-wash 2s ease-out}
+@keyframes office-pride-wash{
+  0%{opacity:0;transform:translateX(-70px)}
+  18%{opacity:.15}
+  58%{opacity:.1}
+  100%{opacity:0;transform:translateX(70px)}
+}
+@media (prefers-reduced-motion: reduce){
+  #office-pride-flag-wave.waving, #office-canada-flag-wave.waving, #office-pride-flag-wave.pride-celebrating{animation:none}
+  #office-pride-wash.pride-celebrating{animation:none;opacity:.1}
+}
 /* valentine's: the string goes soft pink, matching the nook's paper hearts */
 #loft-game-strip.season-valentines .balcony-bulb{fill:#e8a8b4; stroke:#c68e95}
 #loft-game-strip.season-valentines .balcony-bulb-glow{fill:#e8a8b4}
@@ -22967,6 +22991,14 @@ section{margin:1.9rem 0}
 <rect x="0" y="0" width="680" height="340" fill="#3a5a7a" opacity="0.08" pointer-events="none"/>
 <rect class="overcast-room" x="0" y="0" width="680" height="340" fill="#8b95a1" pointer-events="none" aria-hidden="true"/>
 <rect id="office-dusk" x="0" y="0" width="680" height="340" fill="#141830" opacity="0" pointer-events="none"/>
+<defs>
+<linearGradient id="office-pride-wash-gradient" gradientUnits="userSpaceOnUse" x1="-100" y1="0" x2="780" y2="340">
+<stop offset="0" stop-color="#b4574f"/><stop offset=".2" stop-color="#cf8a4c"/>
+<stop offset=".4" stop-color="#d9bb63"/><stop offset=".6" stop-color="#6f9c6a"/>
+<stop offset=".8" stop-color="#5d80a8"/><stop offset="1" stop-color="#7a6394"/>
+</linearGradient>
+</defs>
+<rect id="office-pride-wash" x="-100" y="0" width="880" height="340" fill="url(#office-pride-wash-gradient)" aria-hidden="true"/>
 <!-- Topmost office layer: JS-spawned alien saucers + chair projectiles for the
      hidden drag-the-chair arcade. Always empty at rest; hard-cleared on teardown. -->
 <g id="office-alien-layer" pointer-events="none"></g>
@@ -66173,22 +66205,65 @@ async def localfont(name):
   document.addEventListener("visibilitychange", function () { if (document.hidden) window.__resetMehregan(); });
 })();
 // The two seasonal office masts wave when tapped — the same one-shot the balcony's flying flag
-// gives a click, so the game's flags all answer a tap alike. Only one mast is ever on screen.
+// gives a click, so the game's flags all answer a tap alike. Pride's third valid tap catches a
+// bigger gust and sends one muted rainbow wash through the office. Only one mast is ever on screen.
 (function () {
+  var strip = document.getElementById("loft-game-strip");
+  var wash = document.getElementById("office-pride-wash");
+  var prideClicks = 0, clothTimer = null, washTimer = null;
+  function resetPrideFlag() {
+    prideClicks = 0;
+    clearTimeout(clothTimer); clothTimer = null;
+    clearTimeout(washTimer); washTimer = null;
+    var prideCloth = document.getElementById("office-pride-flag-wave");
+    if (prideCloth) prideCloth.classList.remove("waving", "pride-celebrating");
+    if (wash) wash.classList.remove("pride-celebrating");
+  }
+  window.__resetOfficePrideFlag = resetPrideFlag;
   [
-    { hit: "office-pride-flag-hit", cloth: "office-pride-flag-wave", pan: "office-pride-mast" },
+    { hit: "office-pride-flag-hit", cloth: "office-pride-flag-wave", pan: "office-pride-mast", pride: true },
     { hit: "office-canada-flag-hit", cloth: "office-canada-flag-wave", pan: "office-canada-mast" }
   ].forEach(function (spec) {
     var hit = document.getElementById(spec.hit);
     var cloth = document.getElementById(spec.cloth);
     if (!hit || !cloth) return;
-    cloth.addEventListener("animationend", function () { cloth.classList.remove("waving"); });
+    cloth.addEventListener("animationend", function () {
+      cloth.classList.remove("waving", "pride-celebrating");
+      if (spec.pride) { clearTimeout(clothTimer); clothTimer = null; }
+    });
     hit.addEventListener("click", function (e) {
       e.stopPropagation();
-      cloth.classList.remove("waving"); // a re-tap mid-wave restarts it rather than being swallowed
+      if (spec.pride && (!strip || !strip.classList.contains("season-pride"))) {
+        resetPrideFlag(); // synthetic/queued taps cannot celebrate after the seasonal mast is gone
+        return;
+      }
+      var celebrate = false;
+      if (spec.pride) {
+        prideClicks = (prideClicks + 1) % 3;
+        celebrate = prideClicks === 0;
+      }
+      cloth.classList.remove("waving", "pride-celebrating"); // a re-tap mid-wave restarts it rather than being swallowed
+      if (spec.pride) { clearTimeout(clothTimer); clothTimer = null; }
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () { cloth.classList.add("waving"); });
+        requestAnimationFrame(function () { cloth.classList.add(celebrate ? "pride-celebrating" : "waving"); });
       });
+      if (celebrate) {
+        clothTimer = setTimeout(function () {
+          cloth.classList.remove("pride-celebrating");
+          clothTimer = null;
+        }, 1900); // reduced motion has no animationend; keep its state one-shot too
+      }
+      if (celebrate && wash) {
+        clearTimeout(washTimer);
+        wash.classList.remove("pride-celebrating");
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { wash.classList.add("pride-celebrating"); });
+        });
+        washTimer = setTimeout(function () {
+          wash.classList.remove("pride-celebrating");
+          washTimer = null;
+        }, 2100); // also clears the static reduced-motion wash, which has no animationend
+      }
       playSwishSound(spec.pan);
     });
   });
@@ -84658,6 +84733,7 @@ function spawnDustMote(container) {
     if (window.__resetMealPlates) window.__resetMealPlates(); // fresh game: the low table's feast is untouched again
     if (window.__resetSadeh) window.__resetSadeh(); // ...and Sadeh's mound is back to what was gathered, unfed
     if (window.__resetMehregan) window.__resetMehregan(); // ...and no noghl left lying on the sofreh
+    if (window.__resetOfficePrideFlag) window.__resetOfficePrideFlag(); // three-tap flourish starts fresh, even when reset keeps a Pride launch date
     kitchenPowered = false;
     kitchenWarmedUp = false;
     clearTimeout(warmupTimer);
@@ -85363,8 +85439,10 @@ function spawnDustMote(container) {
   window.__setSeason = function (name) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
+    var wasPride = strip.classList.contains("season-pride");
     strip.classList.remove("season-holiday", "season-spooky", "season-autumn", "season-spring", "season-valentines", "season-nowruz", "season-chaharshanbe", "season-carodejnice", "season-pride", "season-canada", "season-martin");
     if (name) strip.classList.add("season-" + name);
+    if (wasPride !== strip.classList.contains("season-pride") && window.__resetOfficePrideFlag) window.__resetOfficePrideFlag();
     // The season just moved under them: clear any leap in flight and re-arm. applySeasonDate calls
     // this BEFORE it toggles the svatojanska overlay, so a date walking off the fire tears the rig
     // down first and only then undresses — which is why neither June day needs a reset of its own.

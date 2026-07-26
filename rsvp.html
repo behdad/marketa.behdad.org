@@ -48859,6 +48859,7 @@ setOfficeProgress("pc", false);
   var tattooColor = TATTOO_COLORS[0], tattooSize = TATTOO_SIZES[1], tattooErasing = false;
   var tattooDrawing = false, tattooLast = null, tattooUndo = [];
   var tattooDialog = null, tattooDialogUrl = null;
+  var tattooMenuEl = null;
   function tattooT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function tattooDiv(cls, parent, text) { var d = document.createElement("div"); d.className = cls; if (text != null) d.textContent = text; if (parent) parent.appendChild(d); return d; }
   // a send button's label as two flex items — emoji and text sit on the same centre line
@@ -48901,6 +48902,12 @@ setOfficeProgress("pc", false);
   function bindTattooCanvas() {
     if (tattooBoundCanvas) return; tattooBoundCanvas = true;
     tattooCanvas.addEventListener("pointerdown", function (e) {
+      // Secondary-button pointerdown precedes contextmenu. It owns the Copy menu below,
+      // never the ink surface (the old unconditional path left a dot on every right-click).
+      if (e.button !== 0 || e.isPrimary === false) {
+        e.stopPropagation();
+        return;
+      }
       e.stopPropagation();
       tattooDrawing = true; tattooPushUndo();
       try { tattooCanvas.setPointerCapture(e.pointerId); } catch (er) {}
@@ -48930,6 +48937,61 @@ setOfficeProgress("pc", false);
       }
       if (img.complete && img.naturalWidth) go(); else img.addEventListener("load", go, { once: true });
     });
+  }
+  function tattooCanvasBlob() {
+    return new Promise(function (resolve) {
+      try { tattooCanvas.toBlob(function (b) { resolve(b); }, "image/png"); }
+      catch (e) { resolve(null); }
+    });
+  }
+  var TATTOO_COPY_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linejoin="round"><rect x="3.6" y="3.6" width="6.2" height="6.2" rx=".7"/><path d="M2.2 8.2 H1.8 A.7.7 0 0 1 1.1 7.5 V1.8 A.7.7 0 0 1 1.8 1.1 H7.5 A.7.7 0 0 1 8.2 1.8 V2.2"/></svg>';
+  function tattooCloseMenu() {
+    if (!tattooMenuEl) return;
+    if (tattooMenuEl.parentNode) tattooMenuEl.parentNode.removeChild(tattooMenuEl);
+    tattooMenuEl = null;
+    document.removeEventListener("keydown", tattooMenuOnKey, true);
+    document.removeEventListener("mousedown", tattooMenuOnAway, true);
+    document.removeEventListener("scroll", tattooCloseMenu, true);
+    window.removeEventListener("blur", tattooCloseMenu);
+    window.removeEventListener("resize", tattooCloseMenu);
+  }
+  function tattooMenuOnAway(e) { if (tattooMenuEl && !tattooMenuEl.contains(e.target)) tattooCloseMenu(); }
+  function tattooMenuOnKey(e) {
+    if (e.key !== "Escape") return;
+    e.preventDefault(); e.stopPropagation(); tattooCloseMenu();
+  }
+  function tattooOpenCopyMenu(e, blobFactory) {
+    e.preventDefault(); e.stopPropagation();
+    tattooCloseMenu();
+    var menu = document.createElement("div");
+    menu.className = "mon-ctx tattoo-ctx"; menu.setAttribute("role", "menu");
+    var copy = document.createElement("button");
+    copy.type = "button"; copy.className = "ctx-copy"; copy.setAttribute("role", "menuitem");
+    copy.innerHTML = TATTOO_COPY_ICO + "<span>" + tattooT("mon_ctx_copy") + "</span>";
+    copy.addEventListener("click", function (clickEvent) {
+      clickEvent.preventDefault(); clickEvent.stopPropagation();
+      var blob = blobFactory();
+      tattooCloseMenu();
+      tattooCopyClipboard(blob);
+    });
+    menu.appendChild(copy);
+    menu.style.visibility = "hidden";
+    var host = document.fullscreenElement || document.webkitFullscreenElement ||
+      document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    host.appendChild(menu);
+    tattooMenuEl = menu;
+    var r = menu.getBoundingClientRect();
+    menu.style.left = Math.max(4, Math.min(e.clientX, window.innerWidth - r.width - 4)) + "px";
+    menu.style.top = Math.max(4, Math.min(e.clientY, window.innerHeight - r.height - 4)) + "px";
+    menu.style.visibility = "";
+    document.addEventListener("keydown", tattooMenuOnKey, true);
+    document.addEventListener("mousedown", tattooMenuOnAway, true);
+    document.addEventListener("scroll", tattooCloseMenu, true);
+    window.addEventListener("blur", tattooCloseMenu);
+    window.addEventListener("resize", tattooCloseMenu);
+  }
+  function tattooBindCopyTarget(el, blobFactory) {
+    el.addEventListener("contextmenu", function (e) { tattooOpenCopyMenu(e, blobFactory); });
   }
   // The real young artists behind each design, as tiny recognizable head-and-shoulders —
   // colours/hair/hats lifted from their full figures elsewhere in the file so a mini Irene
@@ -49055,6 +49117,7 @@ setOfficeProgress("pc", false);
   window.__bdPortrait = bdPortrait;
   function renderTattoo() {
     if (!tattooWrap) return;
+    tattooCloseMenu();
     tattooWrap.innerHTML = "";
     if (tattooView !== "gallery") {
       var bar = tattooDiv("tattoo-bar", tattooWrap);
@@ -49076,6 +49139,7 @@ setOfficeProgress("pc", false);
       var img = document.createElement("img");
       img.className = "tattoo-thumb"; img.alt = ""; img.src = "art/tattoo/" + id + ".jpg";
       cell.appendChild(img);
+      tattooBindCopyTarget(img, function () { return tattooImageBlob(img); });
       tattooDiv("tattoo-cap", cell, tattooT("tt_by") + " " + TATTOO_ARTISTS[id]);
       cell.addEventListener("click", function (e) { e.stopPropagation(); tattooShowDesign(id); playLaptopClickSound("office-monitor"); });
     });
@@ -49085,6 +49149,7 @@ setOfficeProgress("pc", false);
     var img = document.createElement("img");
     img.alt = tattooT("tt_design_" + tattooDesign); img.src = "art/tattoo/" + tattooDesign + ".jpg";
     prev.appendChild(img);
+    tattooBindCopyTarget(img, function () { return tattooImageBlob(img); });
     var fig = tattooArtistFigure(TATTOO_ARTISTS[tattooDesign]);
     if (fig) prev.appendChild(fig);
     tattooDiv("tattoo-credit", tattooWrap, tattooDetailCredit(TATTOO_ARTISTS[tattooDesign]));
@@ -49095,6 +49160,7 @@ setOfficeProgress("pc", false);
     var paint = tattooDiv("tattoo-paint", tattooWrap);
     var cwrap = tattooDiv("tattoo-canvas-wrap", paint);
     cwrap.appendChild(tattooCanvas); // the SAME element every render — the drawing rides along
+    tattooBindCopyTarget(tattooCanvas, tattooCanvasBlob);
     var tools = tattooDiv("tattoo-tools", paint);
     TATTOO_COLORS.forEach(function (col) {
       var sw = tattooDiv("tattoo-swatch", tools); sw.title = tattooT("tt_tip_color");
@@ -49223,6 +49289,7 @@ setOfficeProgress("pc", false);
   function closeTattooApp(fromPill) {
     if (!monitor.classList.contains("show-tattoo")) return;
     if (fromPill && tattooView !== "gallery") { tattooShowGallery(); return; } // ✕ steps a sub-view back to the gallery first, like mail
+    tattooCloseMenu();
     tattooDismissDialog();
     monitor.classList.remove("show-tattoo");
     scheduleSaver();
@@ -49244,7 +49311,7 @@ setOfficeProgress("pc", false);
       screenClass: "death-tattoo",
       beats: [{ key: "df_tattoo_quip", at: 250 }],
       dur: 2450,
-      freeze: tattooDismissDialog,
+      freeze: function () { tattooCloseMenu(); tattooDismissDialog(); },
       tick: function (t) {
         var write = Math.max(0, Math.min(1, t / .72));
         var width = 90 * write;

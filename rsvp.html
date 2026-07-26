@@ -1548,10 +1548,14 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    irregular flicker; the outer #kitchen-bar-neon carries the RAINBOW hue cycle. Kept separate
    because an element has only one `filter` — nesting composites the hue-rotate over the glow. */
 #kitchen-bar-neon-tube{filter:drop-shadow(0 0 0.8px #ffffff) drop-shadow(0 0 2.4px #c8f6ff) drop-shadow(0 0 5px #5fd8ff) drop-shadow(0 0 9px #35bfe8)}
+#kitchen-bar-neon{cursor:pointer}
+#kitchen-bar-neon .sn-pamenar{display:none}
+#kitchen-bar-neon.pamenar :is(.sn-hydration,.sn-rehydration){display:none}
+#kitchen-bar-neon.pamenar .sn-pamenar{display:inline}
 /* the whole sign slowly cycles through the spectrum like a fancy bar sign — hue only, so it stays
    as legible as the aqua base; runs whenever the bar's up (party OR calm night). */
 #loft-game-strip.party-on #kitchen-bar-neon,
-#loft-game-strip.second-round #stage-kitchen.dusk #kitchen-bar-neon{animation:bar-neon-rainbow 14s steps(14,end) infinite} /* steps, not linear: the hue SWAPS once a second rather than sweeping — a filter recompute 14×/loop, not every frame (was flickery on mobile) */
+#loft-game-strip.second-round #stage-kitchen.dusk #kitchen-bar-neon{animation:bar-neon-rainbow 14s steps(14,end) infinite;pointer-events:auto} /* steps, not linear: the hue SWAPS once a second rather than sweeping — a filter recompute 14×/loop, not every frame (was flickery on mobile) */
 @keyframes bar-neon-rainbow{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
 /* real neon flickers IRREGULARLY (a quick hum-dip, not a steady sine) — only while the bar's up */
 #loft-game-strip.party-on #kitchen-bar-neon-tube,
@@ -11311,12 +11315,7 @@ section{margin:1.9rem 0}
 <g class="bar-bottle"><use href="#kitchen-bar-bottleB" x="480" y="206" fill="#b8863c"/></g>
 <g class="bar-bottle"><use href="#kitchen-bar-bottleA" x="524" y="206" fill="#7f9ec0"/></g>
 </g>
-<!-- neon sign: a glowing water-drop + the deadpan words "hydration station". Real-neon look —
-     a bright near-white inner core with a soft coloured halo (layered drop-shadows on the inner
-     #kitchen-bar-neon-tube), an irregular flicker, and a slow RAINBOW hue cycle on the OUTER
-     group. The split is deliberate: an element has only ONE `filter`, so the glow lives on the
-     inner group and the hue-rotate on the outer — nesting composites both without clobbering.
-     Language-neutral. -->
+<!-- neon sign; nested groups keep its glow and hue-cycle filters independent -->
 <g id="kitchen-bar-neon" transform="translate(20,-10)">
 <g id="kitchen-bar-neon-tube">
 <!-- water-drop tube: a slightly darker/thicker coloured outer stroke with a thin near-white
@@ -11330,6 +11329,8 @@ section{margin:1.9rem 0}
 <text class="sn-hydration" x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="#f0fdff" stroke="#eafcff" stroke-width="0.6">hydration station</text>
 <text class="sn-rehydration" x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="none" stroke="#7fe4ff" stroke-width="2.4" stroke-linejoin="round">rehydration station</text>
 <text class="sn-rehydration" x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="#f0fdff" stroke="#eafcff" stroke-width="0.6">rehydration station</text>
+<text class="sn-pamenar" x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="none" stroke="#7fe4ff" stroke-width="2.4" stroke-linejoin="round">Café Pamenar</text>
+<text class="sn-pamenar" x="176" y="56" font-family="Fraunces,serif" font-style="italic" font-weight="700" font-size="29" letter-spacing="0.4" fill="#f0fdff" stroke="#eafcff" stroke-width="0.6">Café Pamenar</text>
 </g>
 </g>
 <!-- Flair-Catch spotlight dim: nested inside #kitchen-bar right AFTER the back-bar (backdrop,
@@ -39150,6 +39151,16 @@ function gameTapsNear(a, b) {
     }
     window.__resetBarPatrons = resetPatrons;
     window.__resetStools = function () { ORDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.translate = ""; }); resetPatrons(); };
+  })();
+  (function () {
+    var neon = document.getElementById("kitchen-bar-neon");
+    if (!neon) return;
+    neon.addEventListener("click", function (e) {
+      e.stopPropagation();
+      neon.classList.toggle("pamenar");
+      playDryClickSound("kitchen-bar-neon");
+    });
+    window.__resetBarNeon = function () { neon.classList.remove("pamenar"); };
   })();
   // the MENU paper tacked to the pillar → summons the pocket-phone cocktails app to its drink menu,
   // opened IN-PLACE at the bar (no room jump). CSS gates pointer-events to the bar being up, so this
@@ -84345,6 +84356,7 @@ function spawnDustMote(container) {
     if (window.__bartenderPhoneAway) window.__bartenderPhoneAway(); // fresh game: phone pocketed, his shaker back in hand
     if (window.__resetCokeCooler) window.__resetCokeCooler();  // fresh game: cooler lid back down, no vapour or cap in flight
     if (window.__resetStools) window.__resetStools();          // fresh game: stools back to default x
+    if (window.__resetBarNeon) window.__resetBarNeon();
     if (window.__resetKitchenRoach) window.__resetKitchenRoach(); // fresh game: hide/stop the cabinet cockroach
     Object.keys(plantSpots).forEach(function (id) {
       var el = document.getElementById(id);

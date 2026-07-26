@@ -69697,13 +69697,21 @@ function playTripMelody(variant) {
 }
 var TRIP_VARIANTS = ["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"];
 (function shuffleTripVariants() {
-  for (var i = TRIP_VARIANTS.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = TRIP_VARIANTS[i];
-    TRIP_VARIANTS[i] = TRIP_VARIANTS[j];
-    TRIP_VARIANTS[j] = tmp;
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
   }
+  // These four already have physical shortcuts elsewhere in the loft. Keep both opening
+  // magic-box surprises for variants that can only be reached through the box itself.
+  var elsewhere = { nitrous: true, shrooms: true, froggies: true, ketamine: true };
+  var boxOnly = shuffle(TRIP_VARIANTS.filter(function (v) { return !elsewhere[v]; }));
+  var later = shuffle(TRIP_VARIANTS.filter(function (v) { return elsewhere[v]; }).concat(boxOnly.splice(2)));
+  TRIP_VARIANTS = boxOnly.concat(later);
 })();
+window.__tripOrder = function () { return TRIP_VARIANTS.slice(); }; // test/console inspection
 var tripVariantIndex = 0;
 var TRIP_DURATIONS = { nitrous: 11000, shrooms: 6000, acid: 4500, froggies: 5000, dmt: 6000, molly: 7000, ketamine: 18000, iboga: 20000 };
 var tripActive = false;

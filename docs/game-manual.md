@@ -291,7 +291,7 @@ The building across the street has forty independently lit office windows.
 Clicking one window toggles only that window; unattended lights also change
 gently on their own while the balcony is visible and focused. Its lights
 occasionally form a falling shape, and during the party a neighbour or two may
-appear at a lit window to watch. Double-clicking
+appear at a lit window to watch—more often when the deck is crowded. Double-clicking
 any window starts **Window Tetris** on the facade's 10×16 lamp
 grid. During the game, use `Left`/`Right` to move, `Down` to soft-drop,
 `Up` or `X` to rotate clockwise, `Z` to rotate counter-clockwise, `Space` to

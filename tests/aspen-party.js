@@ -90,9 +90,15 @@ var harness = String.raw`<script>
   report.steps.groupStart = { started: started, station: stage.getAttribute("data-photog-station") };
   setTimeout(function () {
     var group = window.__albumList().filter(function (shot) { return shot.groupPhoto; })[0];
+    var bubble = document.querySelector(".egg-bubble");
+    var bubbleRect = bubble && bubble.getBoundingClientRect();
+    var viewportRect = document.querySelector(".hunt-viewport").getBoundingClientRect();
     report.steps.groupShot = {
       station: stage.getAttribute("data-photog-station"),
-      people: group ? group.people.map(function (p) { return p.key; }) : []
+      people: group ? group.people.map(function (p) { return p.key; }) : [],
+      bubbleInside: !!(bubbleRect && bubbleRect.left >= viewportRect.left &&
+        bubbleRect.right <= viewportRect.right && bubbleRect.top >= viewportRect.top &&
+        bubbleRect.bottom <= viewportRect.bottom)
     };
     click(dj); click(dj);
     report.steps.djTwo = { party: !!window.__gardenPartyOn };
@@ -142,6 +148,7 @@ if (result) {
   check(s.groupStart.started && s.groupStart.station === "front-left", "group photo moves Aspen home before gathering", s.groupStart);
   check(s.groupShot.station === "front-left" && s.groupShot.people.indexOf("ali") !== -1 && s.groupShot.people.indexOf("goli") !== -1,
     "group-photo keeps Aspen home and bypasses camera-zone filtering", s.groupShot);
+  check(s.groupShot.bubbleInside, "Aspen's pose callout stays inside the clipped game scene", s.groupShot);
   check(s.djTwo.party && s.djThree.party && s.djThree.winding, "two DJ taps keep the party running and the third starts its attended wind-down", { two: s.djTwo, three: s.djThree });
   check(!s.mirrorTwo.party && s.mirrorThree.party, "two mirror taps keep the party off and the third starts it", { two: s.mirrorTwo, three: s.mirrorThree });
   check(!result.errs.length, "no runtime errors", result.errs);

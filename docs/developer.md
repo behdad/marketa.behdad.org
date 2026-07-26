@@ -344,6 +344,8 @@ ambient timer exists only while the balcony is visible and the document is
 focused. It interleaves ordinary single-window changes with a bounded falling
 tetromino attract cue; while the party is active it may instead reveal a
 temporary silhouetted pair without changing the underlying apartment state.
+Watcher probability and idle cadence derive from `__whoIsHere("balcony")`, so
+either the main party or BBQ naturally draws more attention as the deck fills.
 Room/focus/game transitions clear both effects synchronously. A manual click
 toggles exactly one window and a double-click starts the game.
 

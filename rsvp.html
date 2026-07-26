@@ -28899,6 +28899,17 @@ function positionEggBubble(b, anchor, placement, yOffset, xOffset) {
   } else if (placement === "bottomleft") { // tuck the card into the anchor's lower-left corner (used by the video-call name cards so they never cover the birthday figure's hat or the ∞-heart cheer overlay)
     left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + 8 + xo));
     top = Math.max(8, Math.min(window.innerHeight - bH - 8, r.bottom - bH - 8));
+  } else if (placement === "scene-top") {
+    // Autonomous in-scene speech must stay inside the clipped game screen. Viewport
+    // clamping alone lets a top-edge speaker put their bubble in the caption/page chrome.
+    var sceneViewport = anchor.closest && anchor.closest(".hunt-viewport");
+    var vr = sceneViewport ? sceneViewport.getBoundingClientRect() : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth };
+    b.style.boxSizing = "border-box";
+    b.style.maxWidth = Math.max(80, vr.width - 16) + "px";
+    bW = b.offsetWidth || bW;
+    bH = b.offsetHeight || bH;
+    left = Math.max(vr.left + 8, Math.min(vr.right - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
+    top = Math.max(vr.top + 8, Math.min(vr.bottom - bH - 8, r.top - 8 - bH));
   } else if (placement === "top") {
     left = Math.max(8, Math.min(window.innerWidth - bW - 8, r.left + r.width / 2 - bW / 2 + xo));
     top = Math.max(8, r.top - 8 - bH);
@@ -61760,23 +61771,38 @@ async def localfont(name):
         scheduleAmbient();
       }, 3600 + Math.random() * 1800);
     }
+    function watcherChanceFor(population) {
+      population = Math.max(0, Number(population) || 0);
+      return population ? Math.min(.96, .12 + population * .12) : 0;
+    }
+    function balconyPopulation() {
+      try {
+        return window.__whoIsHere ? window.__whoIsHere("balcony").length : 0;
+      } catch (e) {
+        return 0;
+      }
+    }
     function scheduleAmbient() {
       clearTimeout(ambientTimer);
       ambientTimer = null;
       if (!attended() || attractTimer || watcherTimer) return;
-      ambientTimer = setTimeout(ambientTick, 2800 + Math.random() * 4200);
+      var population = balconyPopulation();
+      var delay = population >= 6 ? (1300 + Math.random() * 1700) :
+        (population >= 3 ? (1800 + Math.random() * 2600) :
+          (population ? (2400 + Math.random() * 3400) : (2800 + Math.random() * 4200)));
+      ambientTimer = setTimeout(ambientTick, delay);
     }
     function ambientTick(forcePlain) {
       ambientTimer = null;
       if (!attended()) return;
+      if (!forcePlain && Math.random() < watcherChanceFor(balconyPopulation())) {
+        ambientUntilAttract--;
+        showWatchers();
+        return;
+      }
       if (!forcePlain && ambientUntilAttract <= 0) {
         ambientUntilAttract = 2;
         startAttract(false);
-        return;
-      }
-      if (!forcePlain && window.__gardenPartyOn && Math.random() < .45) {
-        ambientUntilAttract--;
-        showWatchers();
         return;
       }
       var idx;
@@ -62183,6 +62209,9 @@ async def localfont(name):
         var watcherState = window.__balconyTetrisState();
         clearAmbientEffects(true);
         return { attract: attractState.attract, watchers: watcherState.watchers, state: window.__balconyTetrisState() };
+      }
+      if (command === "watcher-policy") {
+        return { empty: watcherChanceFor(0), couple: watcherChanceFor(2), crowd: watcherChanceFor(7) };
       }
       if (command === "gameover") { stopGame(true); return window.__balconyTetrisState(); }
       if (command === "set" && value) {
@@ -78643,7 +78672,7 @@ function spawnDustMote(container) {
         var aspen = document.getElementById("garden-photographer");
         if (!aspen) return;
         var callouts = ["photo_pose_callout_1", "photo_pose_callout_2", "photo_pose_callout_3"];
-        groupPhotoCallout = eggBubble(aspen, tr(callouts[Math.floor(Math.random() * callouts.length)]), "top");
+        groupPhotoCallout = eggBubble(aspen, tr(callouts[Math.floor(Math.random() * callouts.length)]), "scene-top");
       }, 40)); // let Aspen's return-home transform settle before measuring her screen position
       // the flash + the keepsake land a beat in (everyone's gathered); silent auto-flash reuse + a shutter sound
       groupPhotoTimers.push(setTimeout(function () {
@@ -79031,7 +79060,7 @@ function spawnDustMote(container) {
     var aspen = document.getElementById("garden-photographer");
     if (aspen) {
       var callouts = ["photo_pose_callout_1", "photo_pose_callout_2", "photo_pose_callout_3"];
-      photoMomentCallout = eggBubble(aspen, tipText(callouts[Math.floor(Math.random() * callouts.length)]), "top");
+      photoMomentCallout = eggBubble(aspen, tipText(callouts[Math.floor(Math.random() * callouts.length)]), "scene-top");
     }
     if (window.__albumCaptureMoment) window.__albumCaptureMoment(); // one keepsake per photo-moment (not per flash)
     photoFreezeTimer = setTimeout(endPhotoMoment, 2600); // two or three shutter pops, long enough to read as a pose without looking stalled

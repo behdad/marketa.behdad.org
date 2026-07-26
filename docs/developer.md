@@ -583,7 +583,8 @@ metadata, and photo composition.
 
 ### Office monitor
 
-The monitor is an SVG/`foreignObject` computer with a desktop, dock, screensaver, and apps. App state
+The monitor is an SVG/`foreignObject` computer with a desktop, dock, alternating Julia/Pipes
+screensavers, and apps. App state
 is represented mainly by `show-*` classes on `#office-monitor`. Search for
 `__openMonitorApp`, `__closeTopMonitorApp`, `resetMonitorAppState`, and `REAL_APPS`.
 
@@ -613,7 +614,11 @@ Opening an app boots/pans the monitor if necessary, closes incompatible surfaces
 own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
 view gets the first chance to step back, then the app closes to the desktop. A normal close can
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
-Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
+The Julia and Pipes savers share one 4× off-DOM Canvas 2D surface and blit into
+separate native SVG images; this is the WebKit-safe composition boundary. A single
+`saverRaf` owns whichever saver is selected, and each fresh idle cycle alternates
+the selection. Screensaver and expensive canvas/DOM loops are gated while an app
+owns the screen.
 
 Pac-Man is a `searchOnly` monitor app: search, Chat, test hooks, or the ketamine ghost can open it,
 but it has no desktop tile and the ghost is not an access gate. The live board is checkpoint state;
@@ -986,7 +991,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
 - `tests/party-lifecycle.js` for attended party timing and finales;
-- `tests/balcony-tetris.js`, `tests/pacman.js`, `tests/doom-title.js`, and
+- `tests/balcony-tetris.js`, `tests/pacman.js`, `tests/doom-title.js`,
+  `tests/monitor-savers.js`, and
   `tests/minigame-vocabulary.js` for action-game lifecycle, keyboard/title ownership,
   notification holds, persistence, and shared terminology;
 - `tests/message-context.js`, `tests/message-launcher.js`, and

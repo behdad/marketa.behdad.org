@@ -4729,9 +4729,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
    children stay pointer-transparent otherwise, so hidden layers can't eat clicks) */
 #monitor-np-marquee-hit, #monitor-eq-hit{pointer-events:none; cursor:pointer}
 #office-monitor.show-nowplaying #monitor-np-marquee-hit, #office-monitor.show-nowplaying #monitor-eq-hit{pointer-events:auto}
-/* the idle screensaver: a live Julia fractal */
-#monitor-saver-fractal{opacity:0; pointer-events:none; transition:opacity .3s ease} /* clicks pass through to wake the monitor; waking snaps back fast */
-#office-monitor.show-saver #monitor-saver-fractal{opacity:1; transition:opacity 3.5s ease} /* ...but the saver itself drifts in slowly */
+/* the alternating idle screensavers: live Julia + classic 3D Pipes */
+#monitor-saver-fractal, #monitor-saver-pipes{opacity:0; pointer-events:none; transition:opacity .3s ease} /* clicks pass through to wake the monitor; waking snaps back fast */
+#office-monitor.show-saver:not(.saver-pipes) #monitor-saver-fractal,
+#office-monitor.show-saver.saver-pipes #monitor-saver-pipes{opacity:1; transition:opacity 3.5s ease} /* ...but the selected saver itself drifts in slowly */
 /* mini corner equalizer over the screensaver: only while a song's actually playing
    (JS toggles "eq-live" on #office-monitor alongside the shared startEq/stopEq loop) */
 #monitor-saver-eq{opacity:0; pointer-events:none}
@@ -20022,11 +20023,12 @@ section{margin:1.9rem 0}
 <g transform="translate(273.5,149.5) scale(0.5)"><use href="#cap-pink"/><use href="#cap-blue"/></g>
 </g>
 <g id="monitor-saver" class="boot-logo">
-<!-- the Julia screensaver: a native SVG <image> fed from an OFF-DOM canvas (see
-     startFractalSaver's blit). A <canvas> inside a <foreignObject> never composites in
-     WebKit -- the bitmap draws fine but the screen shows black -- whereas an <image> paints
-     (and scales under the monitor zoom) in every engine. -->
+<!-- Both screensavers are native SVG <image>s fed from one OFF-DOM canvas. A <canvas>
+     inside a <foreignObject> never composites in WebKit -- the bitmap draws fine but the
+     screen shows black -- whereas an <image> paints (and scales under monitor zoom) in every
+     engine. The selected image is class-gated on #office-monitor. -->
 <image id="monitor-saver-fractal" x="254" y="154" width="124" height="42" preserveAspectRatio="none"/>
+<image id="monitor-saver-pipes" x="254" y="154" width="124" height="42" preserveAspectRatio="none"/>
 <!-- mini equalizer accent: bottom-left corner of the screen, on top of the fractal
      (later sibling paints over it). Shown only while a song's still playing under the
      screensaver — see the "eq-live" class toggled by startEq/stopEq. -->
@@ -41019,9 +41021,11 @@ setOfficeProgress("pc", false);
   // the family-call app opens on its picker by default; a deep-link ("california" / "tehran")
   // stashes the callee here so the tehran-app open() dials straight through (cleared on read).
   var pendingMonitorCallee = null;
-  // After the caps site idles a while, a live Julia-set fractal screensaver takes
-  // over ("electric sheep" nod). Any click on the monitor wakes it.
-  var saverTimer = null, saverRaf = null, monFractalState = null, monFractalFrame = null;
+  // After the caps site idles, Julia and classic 3D Pipes alternate. Both render
+  // off-DOM and blit into native SVG images; any click on the monitor wakes them.
+  var saverTimer = null, saverRaf = null, monSaverFrame = null;
+  var monFractalState = null, monPipesState = null;
+  var monitorSaverKind = null, monitorSaverNext = "julia";
   var saverCameFrom = "desktop"; // which screen the saver took over (see startSaver/wake)
   var MONITOR_LOCK_KEY = "loftMonitorCapsLock";
   var monitorLockSaved = (function () {
@@ -41044,8 +41048,8 @@ setOfficeProgress("pc", false);
   function stopSaver() {
     clearTimeout(saverTimer);
     saverTimer = null;
-    stopFractalSaver(true);
-    monitor.classList.remove("show-saver");
+    stopMonitorSaver(true);
+    monitor.classList.remove("show-saver", "saver-pipes");
   }
   function scheduleSaver(ms) {
     clearTimeout(saverTimer);
@@ -41114,7 +41118,7 @@ setOfficeProgress("pc", false);
     scheduleSaver();
     return true;
   };
-  function startSaver() {
+  function startSaver(forcedKind) {
     if (monitorSleeping) return;
     var creditsLayer = document.getElementById("monitor-credits-layer");
     if (creditsLayer && creditsLayer.classList.contains("open")) { scheduleSaver(30000); return; }
@@ -41138,7 +41142,11 @@ setOfficeProgress("pc", false);
     saverCameFrom = fromNowPlaying ? "nowplaying" : "desktop"; // waking restores whichever app the saver covered
     monitor.classList.remove("show-caps");
     monitor.classList.add("show-saver");
-    startFractalSaver();
+    var forced = forcedKind === "julia" || forcedKind === "pipes";
+    monitorSaverKind = forced ? forcedKind : monitorSaverNext;
+    if (!forced) monitorSaverNext = monitorSaverKind === "julia" ? "pipes" : "julia";
+    monitor.classList.toggle("saver-pipes", monitorSaverKind === "pipes");
+    startMonitorSaver();
   }
   function saveMonitorLock() {
     try {
@@ -41330,41 +41338,47 @@ setOfficeProgress("pc", false);
     var period = 60 / bpm; if (period < 0.4) period *= 2; // match the kick's half-time for fast songs
     return (period - (eqAudioEl.currentTime % period)) * 1000;
   };
-  // The screensaver renders into an OFF-DOM canvas and blits it into the SVG <image>
-  // (#monitor-saver-fractal). Canvas-in-foreignObject doesn't composite in WebKit; an
-  // <image> fed by toDataURL() does. The canvas is 4x the on-screen size for crispness.
-  var monFractalCanvas = null, monFractalImg = null;
-  function getMonFractalCanvas() {
-    if (!monFractalCanvas) { monFractalCanvas = document.createElement("canvas"); monFractalCanvas.width = 496; monFractalCanvas.height = 168; }
-    return monFractalCanvas;
+  // Both screensavers render into one OFF-DOM canvas and blit into native SVG
+  // <image>s. Canvas-in-foreignObject doesn't composite in WebKit; an <image> fed
+  // by toDataURL() does. The canvas is 4x the on-screen size for crispness.
+  var monSaverCanvas = null, monSaverImgs = {};
+  function getMonSaverCanvas() {
+    if (!monSaverCanvas) { monSaverCanvas = document.createElement("canvas"); monSaverCanvas.width = 496; monSaverCanvas.height = 168; }
+    return monSaverCanvas;
   }
-  function blitMonFractal() {
-    if (!monFractalImg) monFractalImg = document.getElementById("monitor-saver-fractal");
-    if (!monFractalImg || !monFractalCanvas) return;
-    var url = monFractalCanvas.toDataURL();
-    monFractalImg.setAttribute("href", url);
-    monFractalImg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); // older WebKit builds still key off xlink:href
+  function blitMonitorSaver(kind) {
+    var img = monSaverImgs[kind];
+    if (!img) img = monSaverImgs[kind] = document.getElementById(kind === "pipes" ? "monitor-saver-pipes" : "monitor-saver-fractal");
+    if (!img || !monSaverCanvas) return;
+    var url = monSaverCanvas.toDataURL();
+    img.setAttribute("href", url);
+    img.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", url); // older WebKit builds still key off xlink:href
   }
   function monitorSaverCanRun() {
     return monitor.classList.contains("show-saver") && window.currentStageName === "office" &&
       !document.hidden && document.hasFocus();
   }
-  function stopFractalSaver(resetState) {
+  function stopMonitorSaver(resetState) {
     if (saverRaf != null) cancelAnimationFrame(saverRaf);
     saverRaf = null;
-    if (resetState) { monFractalState = null; monFractalFrame = null; }
+    if (resetState) {
+      monFractalState = null;
+      monPipesState = null;
+      monSaverFrame = null;
+      monitorSaverKind = null;
+    }
   }
   function syncMonitorSaverLoop() {
-    if (reduceMotion || !monFractalFrame) return;
-    if (!monitorSaverCanRun()) stopFractalSaver(false);
-    else if (saverRaf == null) saverRaf = requestAnimationFrame(monFractalFrame);
+    if (reduceMotion || !monSaverFrame) return;
+    if (!monitorSaverCanRun()) stopMonitorSaver(false);
+    else if (saverRaf == null) saverRaf = requestAnimationFrame(monSaverFrame);
   }
-  function startFractalSaver() {
-    var canvas = getMonFractalCanvas();
+  function startJuliaSaver() {
+    var canvas = getMonSaverCanvas();
     var R = 0.7885;
     if (!monFractalState) monFractalState = { theta: Math.random() * 6.283, hueBase: Math.random(), lastDraw: 0 };
-    if (reduceMotion) { renderJulia(canvas, R * Math.cos(monFractalState.theta), R * Math.sin(monFractalState.theta), 90, 1.3, monFractalState.hueBase, false, fractalBeatKick()); blitMonFractal(); return; }
-    monFractalFrame = function (t) {
+    if (reduceMotion) { renderJulia(canvas, R * Math.cos(monFractalState.theta), R * Math.sin(monFractalState.theta), 90, 1.3, monFractalState.hueBase, false, fractalBeatKick()); blitMonitorSaver("julia"); return; }
+    monSaverFrame = function (t) {
       saverRaf = null;
       if (!monitorSaverCanRun()) return;
       var state = monFractalState;
@@ -41373,14 +41387,198 @@ setOfficeProgress("pc", false);
         state.theta += 0.02;              // shape morphs (full c-orbit ~ every 14s)
         state.hueBase = (state.hueBase + 0.003) % 1; // colour drifts through the spectrum ~ every 15s
         renderJulia(canvas, R * Math.cos(state.theta), R * Math.sin(state.theta), 90, 1.3, state.hueBase, false, fractalBeatKick());
-        blitMonFractal();
+        blitMonitorSaver("julia");
       }
-      saverRaf = requestAnimationFrame(monFractalFrame);
+      saverRaf = requestAnimationFrame(monSaverFrame);
     };
     syncMonitorSaverLoop();
   }
+
+  // Canvas-2D 3D Pipes: the path really grows on an X/Y/Z lattice, then an
+  // isometric camera projects and depth-sorts it. Metallic gradients and shaded
+  // elbow spheres sell the cylinders at the monitor's tiny final resolution
+  // without paying for a WebGL context. A boxed-in head starts another pipe;
+  // a full lattice fades and clears. Rare elbow joints carry the crossed caps.
+  var PIPE_STEP_MS = 170, PIPE_MAX_SEGMENTS = 68;
+  var PIPE_DIRS = [
+    { x: 1, y: 0, z: 0 }, { x: -1, y: 0, z: 0 },
+    { x: 0, y: 1, z: 0 }, { x: 0, y: -1, z: 0 },
+    { x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 }
+  ];
+  var PIPE_COLORS = [
+    { base: "#d9a6a6", light: "#ffe6df", dark: "#713747" },
+    { base: "#7f9ec0", light: "#dcecff", dark: "#2f4f78" },
+    { base: "#d7b46a", light: "#fff0b5", dark: "#76511f" },
+    { base: "#88ae8d", light: "#e0f5d7", dark: "#365d43" }
+  ];
+  function pipePoint(x, y, z) { return { x: x, y: y, z: z }; }
+  function pipeKey(p) { return p.x + "," + p.y + "," + p.z; }
+  function pipeCopy(p) { return pipePoint(p.x, p.y, p.z); }
+  function pipeInside(p) { return Math.abs(p.x) <= 5 && Math.abs(p.y) <= 2 && Math.abs(p.z) <= 3; }
+  function pipeProject(p, w, h) {
+    var s = 31;
+    return { x: w / 2 + (p.x - p.z) * s, y: h / 2 + (p.x + p.z) * s * 0.235 - p.y * s * 0.78,
+      depth: p.x + p.z + p.y * 0.35 };
+  }
+  function newPipesState() {
+    var p = pipePoint(0, 0, 0), occupied = Object.create(null);
+    occupied[pipeKey(p)] = true;
+    return { segments: [], occupied: occupied, pos: p, dir: PIPE_DIRS[0], color: Math.floor(Math.random() * PIPE_COLORS.length),
+      fresh: true, lastStep: null, lastDraw: 0, fadeAt: 0 };
+  }
+  function pipeSpawn(state) {
+    for (var tries = 0; tries < 80; tries++) {
+      var p = pipePoint(Math.floor(Math.random() * 11) - 5, Math.floor(Math.random() * 5) - 2, Math.floor(Math.random() * 7) - 3);
+      if (state.occupied[pipeKey(p)]) continue;
+      state.pos = p;
+      state.dir = PIPE_DIRS[Math.floor(Math.random() * PIPE_DIRS.length)];
+      state.color = (state.color + 1 + Math.floor(Math.random() * (PIPE_COLORS.length - 1))) % PIPE_COLORS.length;
+      state.occupied[pipeKey(p)] = true;
+      state.fresh = true;
+      return true;
+    }
+    return false;
+  }
+  function pipeAdvance(state, at) {
+    if (state.segments.length >= PIPE_MAX_SEGMENTS) { state.fadeAt = at; return; }
+    var options = [];
+    for (var i = 0; i < PIPE_DIRS.length; i++) {
+      var d = PIPE_DIRS[i];
+      if (state.dir && d.x === -state.dir.x && d.y === -state.dir.y && d.z === -state.dir.z) continue;
+      var q = pipePoint(state.pos.x + d.x, state.pos.y + d.y, state.pos.z + d.z);
+      if (pipeInside(q) && !state.occupied[pipeKey(q)]) options.push({ dir: d, pos: q });
+    }
+    if (!options.length) {
+      if (!pipeSpawn(state)) state.fadeAt = at;
+      return;
+    }
+    var pick = null;
+    if (state.dir && Math.random() < 0.42) {
+      for (var j = 0; j < options.length; j++) {
+        if (options[j].dir === state.dir) { pick = options[j]; break; }
+      }
+    }
+    if (!pick) pick = options[Math.floor(Math.random() * options.length)];
+    var turned = !!state.dir && pick.dir !== state.dir;
+    state.segments.push({ a: pipeCopy(state.pos), b: pipeCopy(pick.pos), color: state.color,
+      born: at, turn: turned, start: state.fresh, caps: turned && Math.random() < 0.055 });
+    state.pos = pick.pos;
+    state.dir = pick.dir;
+    state.fresh = false;
+    state.occupied[pipeKey(state.pos)] = true;
+  }
+  function pipeStroke(ctx, a, b, color) {
+    var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var nx = -dy / len, ny = dx / len;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "rgba(0,0,0,.72)";
+    ctx.lineWidth = 27;
+    ctx.beginPath(); ctx.moveTo(a.x + 3, a.y + 5); ctx.lineTo(b.x + 3, b.y + 5); ctx.stroke();
+    var grad = ctx.createLinearGradient(a.x - nx * 10, a.y - ny * 10, a.x + nx * 10, a.y + ny * 10);
+    grad.addColorStop(0, color.dark); grad.addColorStop(0.28, color.base);
+    grad.addColorStop(0.48, color.light); grad.addColorStop(0.7, color.base); grad.addColorStop(1, color.dark);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 19;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,.36)";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(a.x - nx * 4, a.y - ny * 4); ctx.lineTo(b.x - nx * 4, b.y - ny * 4); ctx.stroke();
+  }
+  function pipeJoint(ctx, p, color) {
+    var grad = ctx.createRadialGradient(p.x - 4, p.y - 5, 1, p.x, p.y, 13);
+    grad.addColorStop(0, color.light); grad.addColorStop(0.34, color.base); grad.addColorStop(1, color.dark);
+    ctx.fillStyle = "rgba(0,0,0,.62)"; ctx.beginPath(); ctx.arc(p.x + 3, p.y + 5, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI * 2); ctx.fill();
+  }
+  function pipeCapsJoint(ctx, p) {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(0.78, 0.78);
+    function cap(fill, angle, dx) {
+      ctx.save(); ctx.rotate(angle); ctx.translate(dx, 0);
+      ctx.fillStyle = fill; ctx.beginPath(); ctx.ellipse(0, -1, 9, 6, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(5, 2, 7, 2.8, -0.18, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    cap("#d9a6a6", -0.55, -3); cap("#7f9ec0", 0.55, 3);
+    ctx.restore();
+  }
+  function renderPipes(canvas, state, t) {
+    var ctx = canvas.getContext("2d"), w = canvas.width, h = canvas.height;
+    if (!ctx) return;
+    var bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, "#02050a"); bg.addColorStop(1, "#090611");
+    ctx.globalAlpha = 1; ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+    var fade = state.fadeAt ? Math.max(0, 1 - (t - state.fadeAt) / 650) : 1;
+    ctx.save(); ctx.globalAlpha = fade;
+    var draw = state.segments.map(function (seg) {
+      var progress = Math.max(0, Math.min(1, (t - seg.born) / PIPE_STEP_MS));
+      var end = pipePoint(seg.a.x + (seg.b.x - seg.a.x) * progress,
+        seg.a.y + (seg.b.y - seg.a.y) * progress, seg.a.z + (seg.b.z - seg.a.z) * progress);
+      var a = pipeProject(seg.a, w, h), b = pipeProject(end, w, h);
+      return { seg: seg, a: a, b: b, progress: progress, depth: (a.depth + b.depth) / 2 };
+    }).sort(function (a, b) { return a.depth - b.depth; });
+    for (var i = 0; i < draw.length; i++) {
+      var item = draw[i], color = PIPE_COLORS[item.seg.color];
+      pipeStroke(ctx, item.a, item.b, color);
+      if (item.seg.start) pipeJoint(ctx, item.a, color);
+      if (item.seg.turn) {
+        pipeJoint(ctx, item.a, color);
+        if (item.seg.caps) pipeCapsJoint(ctx, item.a);
+      }
+    }
+    if (state.segments.length) {
+      var newest = state.segments[state.segments.length - 1];
+      var headProgress = Math.max(0, Math.min(1, (t - newest.born) / PIPE_STEP_MS));
+      var headPoint = pipePoint(newest.a.x + (newest.b.x - newest.a.x) * headProgress,
+        newest.a.y + (newest.b.y - newest.a.y) * headProgress,
+        newest.a.z + (newest.b.z - newest.a.z) * headProgress);
+      pipeJoint(ctx, pipeProject(headPoint, w, h), PIPE_COLORS[newest.color]);
+    }
+    ctx.restore();
+  }
+  function startPipesSaver() {
+    var canvas = getMonSaverCanvas();
+    monPipesState = newPipesState();
+    if (reduceMotion) {
+      for (var i = 0; i < 34 && !monPipesState.fadeAt; i++) pipeAdvance(monPipesState, -1000);
+      renderPipes(canvas, monPipesState, 1000);
+      blitMonitorSaver("pipes");
+      return;
+    }
+    monSaverFrame = function (t) {
+      saverRaf = null;
+      if (!monitorSaverCanRun()) return;
+      var state = monPipesState;
+      if (state.lastStep == null) state.lastStep = t - PIPE_STEP_MS * 5;
+      while (!state.fadeAt && t - state.lastStep >= PIPE_STEP_MS) {
+        state.lastStep += PIPE_STEP_MS;
+        pipeAdvance(state, state.lastStep);
+      }
+      if (state.fadeAt && t - state.fadeAt >= 680) {
+        monPipesState = state = newPipesState();
+        state.lastStep = t - PIPE_STEP_MS;
+      }
+      if (t - state.lastDraw >= 50) {
+        state.lastDraw = t;
+        renderPipes(canvas, state, t);
+        blitMonitorSaver("pipes");
+      }
+      saverRaf = requestAnimationFrame(monSaverFrame);
+    };
+    syncMonitorSaverLoop();
+  }
+  function startMonitorSaver() {
+    stopMonitorSaver(false);
+    if (monitorSaverKind === "pipes") startPipesSaver();
+    else startJuliaSaver();
+  }
   window.__syncMonitorSaverLoop = syncMonitorSaverLoop;
   window.__monitorSaverLoopRunning = function () { return saverRaf != null; };
+  window.__monitorSaverState = function () {
+    return { kind: monitorSaverKind, running: saverRaf != null,
+      segments: monPipesState ? monPipesState.segments.length : 0,
+      painted: !!(monSaverImgs[monitorSaverKind] && monSaverImgs[monitorSaverKind].getAttribute("href")) };
+  };
+  window.__startMonitorSaver = function (kind) { startSaver(kind); return window.__monitorSaverState(); };
   document.addEventListener("visibilitychange", syncMonitorSaverLoop);
   window.addEventListener("focus", syncMonitorSaverLoop);
   window.addEventListener("blur", syncMonitorSaverLoop);

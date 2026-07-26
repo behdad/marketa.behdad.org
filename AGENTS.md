@@ -98,6 +98,28 @@ allowed exception, owner-confirmed.)
   shouldn't be public (notes, drafts, source assets), block them the same way rather
   than assuming they're private by default.
 
+### Testing / bug-fixing hackathon
+
+- Maintain two explicit task lists: **todo** for incoming/unstarted issues and **fixed, awaiting
+  confirmation** for completed issues the owner has not yet accepted. When the owner sends another
+  issue while work is in progress, add it to todo without abandoning or mixing it into the active
+  issue.
+- Always take the smallest outstanding issue next. A genuinely trivial new issue (for example,
+  a safe one-line correction) may briefly preempt the active issue when it can be finished
+  immediately.
+- For larger tasks, suggest delegation or assign bounded, independent work to subagents when that
+  will help. The primary agent still owns the task lists, validation, owner confirmation, and
+  one-issue-per-commit boundary.
+- When a subagent's work returns, prioritize reviewing and integrating it so completed parallel
+  work does not sit stale. Preserve that issue's own validation, confirmation, and isolated commit.
+- Handle one issue at a time and never combine unrelated issues in one commit.
+- Finish and validate the issue, report the result to the owner, and move it to **fixed, awaiting
+  confirmation**. Do not idle while waiting: begin the smallest issue still in todo.
+- Commit an issue only after the owner confirms it. Keep confirmed commits isolated even when
+  other completed-but-unconfirmed changes are present in the working tree.
+- Keep each report scoped to the issue just completed so acceptance and commit history remain
+  unambiguous.
+
 ## Recurring bug classes (each of these has bitten more than once)
 
 - **One-shot animations lose the cascade to id-based state rules.** Infinite state

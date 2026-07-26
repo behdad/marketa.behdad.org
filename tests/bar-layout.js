@@ -16,6 +16,7 @@ var harness = String.raw`<script>
   var patronA = document.getElementById("kitchen-bar-patron-a");
   var patronB = document.getElementById("kitchen-bar-patron-b");
   var cooler = document.getElementById("kitchen-bar-cooler");
+  var opener = document.getElementById("kitchen-bar-cooler-opener");
   var dietCans = cooler ? cooler.querySelectorAll("#kitchen-bar-cooler-inside .diet-coke-can") : [];
   function pointer(type, x) {
     cooler.dispatchEvent(new PointerEvent(type, {
@@ -31,8 +32,19 @@ var harness = String.raw`<script>
     offset: window.__cokeCoolerOffset(),
     lidUp: cooler.classList.contains("lid-up")
   };
-  cooler.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  var coolerTapOpens = cooler.classList.contains("lid-up");
+  var lidHitL = document.getElementById("kitchen-bar-cooler-lid-hit-l");
+  var lidHitR = document.getElementById("kitchen-bar-cooler-lid-hit-r");
+  function tap(el) { el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  tap(lidHitR);
+  var coolerRightOnly = cooler.classList.contains("lid-r-up") && !cooler.classList.contains("lid-l-up");
+  tap(lidHitL);
+  var coolerBoth = cooler.classList.contains("lid-r-up") && cooler.classList.contains("lid-l-up");
+  tap(lidHitR);
+  var coolerLeftOnly = !cooler.classList.contains("lid-r-up") && cooler.classList.contains("lid-l-up");
+  tap(lidHitL);
+  var coolerBothClosed = !cooler.classList.contains("lid-up");
+  tap(opener);
+  var coolerOpenerWorks = !!cooler.querySelector(".cooler-cap");
   window.__resetCokeCooler();
   function innerShift(el) {
     return el && el.firstElementChild ? el.firstElementChild.getAttribute("transform") : null;
@@ -44,7 +56,11 @@ var harness = String.raw`<script>
     vermouthBody: bottles[2] && bottles[2].querySelector("rect") ? bottles[2].querySelector("rect").getAttribute("fill") : null,
     shifts: [innerShift(stool1), innerShift(stool3), innerShift(patronA), innerShift(patronB)],
     coolerAfterDrag: coolerAfterDrag,
-    coolerTapOpens: coolerTapOpens,
+    coolerRightOnly: coolerRightOnly,
+    coolerBoth: coolerBoth,
+    coolerLeftOnly: coolerLeftOnly,
+    coolerBothClosed: coolerBothClosed,
+    coolerOpenerWorks: coolerOpenerWorks,
     coolerReset: window.__cokeCoolerOffset() === 0 && !cooler.classList.contains("lid-up"),
     dietCans: dietCans.length,
     dietLabels: Array.prototype.map.call(dietCans, function (can) {
@@ -77,7 +93,14 @@ if (result) {
     "both occupied stools and both patrons share the 15-unit default left shift", result.shifts);
   check(result.coolerAfterDrag.offset > 0 && !result.coolerAfterDrag.lidUp,
     "rolling the Coca-Cola cooler moves it without also opening its lid", result.coolerAfterDrag);
-  check(result.coolerTapOpens, "a plain cooler tap still opens its lid");
+  check(result.coolerRightOnly && result.coolerBoth && result.coolerLeftOnly && result.coolerBothClosed,
+    "each visible cooler lid toggles independently", {
+      rightOnly: result.coolerRightOnly,
+      both: result.coolerBoth,
+      leftOnly: result.coolerLeftOnly,
+      bothClosed: result.coolerBothClosed
+    });
+  check(result.coolerOpenerWorks, "the cooler's wall opener still pops a bottle cap");
   check(result.coolerReset, "a game reset returns the cooler home with its lid down");
   check(result.dietCans === 3 && result.dietLabels.every(function (label) { return label === "diet"; }),
     "the opened Coca-Cola cooler contains three Diet Coke cans", result.dietLabels);

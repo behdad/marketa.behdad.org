@@ -11543,6 +11543,7 @@ section{margin:1.9rem 0}
 <path d="M30 261.6 L96 261.6 L96 270 Q63 272.6 30 270 Z" fill="#2a1610"/>
 <path d="M31 267.4 Q38 264.8 45 267.4 Q52 264.8 63 267 Q74 264.8 82 267.4 Q89 265 95 267 L95 270.2 Q63 272.6 31 270.2 Z" fill="#dfeef4"/>
 <path d="M33 267.2 L36.4 265.8 L38.4 268.2 Z M41 268 L44.2 266.2 L46.6 268.6 Z M49 267 L52.6 265.6 L54.6 268 Z M68 267.4 L71.4 265.8 L73.4 268.2 Z M77 268 L80.2 266.2 L82.6 268.6 Z M86 267 L89.6 265.6 L91.6 268 Z" fill="#f7fdff"/>
+<g id="kitchen-bar-cooler-cans-left">
 <g class="diet-coke-can">
 <rect x="33.2" y="258.8" width="7.2" height="11.4" rx="1.5" fill="#dce1e4" stroke="#9ca3a8" stroke-width="0.45"/>
 <ellipse cx="36.8" cy="259.2" rx="3.35" ry="0.85" fill="#f1f3f4" stroke="#9ca3a8" stroke-width="0.4"/>
@@ -11568,19 +11569,25 @@ section{margin:1.9rem 0}
 <path d="M52.4 260.1 L52.4 267.7" stroke="#ffffff" stroke-width="0.65" opacity="0.55"/>
 </g>
 </g>
+<use href="#kitchen-bar-cooler-cans-left" xlink:href="#kitchen-bar-cooler-cans-left" transform="translate(34,0)"/>
+</g>
 <!-- split lid, two halves meeting at their shared centre hinge, each with a chrome knob. -->
 <g id="kitchen-bar-cooler-lid-l">
+<path d="M28.4 257.8 L61.4 257.8 L61.4 263.4 L26.2 263.4 L26.2 260 Q26.2 257.8 28.4 257.8 Z" fill="#d51733" stroke="#8f0a1e" stroke-width="0.5"/>
 <path d="M28.4 261.4 L61.4 261.4 L61.4 269.4 L26.2 269.4 L26.2 263.6 Q26.2 261.4 28.4 261.4 Z" fill="#d51733" stroke="#8f0a1e" stroke-width="0.5"/>
 <path d="M28.4 261.4 L61.4 261.4 L61.4 263.4 L26.4 263.4 Q26.6 261.4 28.4 261.4 Z" fill="#f07a8c" opacity="0.55"/>
 <ellipse cx="33.6" cy="261.4" rx="3" ry="1.5" fill="#cdd3d9" stroke="#9aa1a8" stroke-width="0.5"/>
 <ellipse cx="33" cy="261" rx="1.2" ry="0.6" fill="#f2f5f8"/>
 </g>
 <g id="kitchen-bar-cooler-lid-r">
+<path d="M62.6 257.8 L97.6 257.8 Q99.8 257.8 99.8 260 L99.8 263.4 L62.6 263.4 Z" fill="#d51733" stroke="#8f0a1e" stroke-width="0.5"/>
 <path d="M62.6 261.4 L97.6 261.4 Q99.8 261.4 99.8 263.6 L99.8 269.4 L62.6 269.4 Z" fill="#d51733" stroke="#8f0a1e" stroke-width="0.5"/>
 <path d="M62.6 261.4 L97.6 261.4 Q99.4 261.4 99.6 263.4 L62.6 263.4 Z" fill="#f07a8c" opacity="0.55"/>
 <ellipse cx="92.4" cy="261.4" rx="3" ry="1.5" fill="#cdd3d9" stroke="#9aa1a8" stroke-width="0.5"/>
 <ellipse cx="91.8" cy="261" rx="1.2" ry="0.6" fill="#f2f5f8"/>
 </g>
+<rect id="kitchen-bar-cooler-lid-hit-l" x="26" y="258" width="36.5" height="12" fill="transparent"/>
+<rect id="kitchen-bar-cooler-lid-hit-r" x="62.5" y="258" width="37.5" height="12" fill="transparent"/>
 </g>
 <!-- a pair of draft-beer tap towers rising off the bar top: a brass font with a domed cap, a
      gooseneck faucet curving out the front over a drip tray, and a handle (wine / blue knob).
@@ -40591,6 +40598,8 @@ function gameTapsNear(a, b) {
   var catcher = document.getElementById("kitchen-bar-cooler-catcher");
   var lidL = document.getElementById("kitchen-bar-cooler-lid-l");
   var lidR = document.getElementById("kitchen-bar-cooler-lid-r");
+  var lidHitL = document.getElementById("kitchen-bar-cooler-lid-hit-l");
+  var lidHitR = document.getElementById("kitchen-bar-cooler-lid-hit-r");
   var SVGNS = "http://www.w3.org/2000/svg";
   var VAPOUR_N = 5;
   var timers = [], capNode = null;
@@ -40704,8 +40713,8 @@ function gameTapsNear(a, b) {
     e.stopPropagation();
     var t = e.target;
     if ((opener && opener.contains(t)) || (catcher && catcher.contains(t))) popCap();
-    else if (lidR && lidR.contains(t)) toggleLid("lid-r-up", "right");
-    else if (lidL && lidL.contains(t)) toggleLid("lid-l-up", "left");
+    else if (t === lidHitR || (lidR && lidR.contains(t))) toggleLid("lid-r-up", "right");
+    else if (t === lidHitL || (lidL && lidL.contains(t))) toggleLid("lid-l-up", "left");
     else toggleLid("lid-l-up", "left");
   });
   cooler.addEventListener("pointerdown", function (e) {
@@ -40715,12 +40724,14 @@ function gameTapsNear(a, b) {
     dragStartX = localX(e);
     dragStartOffset = coolerOffset();
     cooler.classList.add("dragging");
-    try { cooler.setPointerCapture(e.pointerId); } catch (err) {}
   });
   cooler.addEventListener("pointermove", function (e) {
     if (!dragging) return;
     var dx = localX(e) - dragStartX;
-    if (Math.abs(dx) > 2) dragMoved = true;
+    if (!dragMoved && Math.abs(dx) > 2) {
+      dragMoved = true;
+      try { cooler.setPointerCapture(e.pointerId); } catch (err) {}
+    }
     var off = Math.max(COOLER_MIN_OFFSET, Math.min(COOLER_MAX_OFFSET, dragStartOffset + dx));
     cooler.style.translate = off ? (off + "px 0px") : "";
   });

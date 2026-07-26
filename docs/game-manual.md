@@ -658,11 +658,12 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 
 - **Flair-Catch:** In the kitchen/bar, repeat a nearby click on Pouria to begin,
   or use its message/API action. Pouria follows the pointer while the player
-  catches garnishes and avoids the wasp. Clicking Pouria during the game does not
-  open his personal card. Space pauses or resumes the run. Flair-Catch is unavailable
-  when reduced motion is requested.
+  catches garnishes and avoids the wasp; Left/Right arrows move him too. Clicking
+  Pouria during the game does not open his personal card. Space pauses or resumes
+  the run. Flair-Catch is unavailable when reduced motion is requested.
 - **Invaders:** A hidden office-chair gesture, message action, or API action
-  starts the game. Move to aim; Space fires while auto-fire remains active.
+  starts the game. Move the chair or use Left/Right arrows to aim; Space fires
+  while auto-fire remains active.
 - **Window Tetris:** On the balcony, double-click any across-the-street office
   window. The forty physical windows become a 10×16 board with four square lamps
   per window. Arrow keys move and rotate pieces, and Space drops them. On touchscreens,

@@ -66,8 +66,12 @@ check(T.en.hunt.flair_hint.indexOf("Esc or × exits") >= 0 &&
       T.en.hunt.arcade_hint.indexOf("Esc or × exits") >= 0 &&
       T.en.hunt.flair_hint.indexOf("Space pauses") >= 0 &&
       T.en.hunt.arcade_hint.indexOf("Space fires") >= 0 &&
+      T.en.hunt.flair_hint.indexOf("← →") >= 0 &&
+      T.en.hunt.arcade_hint.indexOf("← →") >= 0 &&
       T.cs.hunt.flair_hint.indexOf("Esc nebo ×") >= 0 &&
-      T.cs.hunt.arcade_hint.indexOf("Esc nebo ×") >= 0,
+      T.cs.hunt.arcade_hint.indexOf("Esc nebo ×") >= 0 &&
+      T.cs.hunt.flair_hint.indexOf("← →") >= 0 &&
+      T.cs.hunt.arcade_hint.indexOf("← →") >= 0,
   "scene-game captions name action and exit controls in both languages");
 check(T.en.du_reset === "Reset outfit" && T.en.quiz_again === "Take quiz again",
   "Dress-up and Quiz repeat actions name their scope");
@@ -85,8 +89,9 @@ var harness = [
   'window.goToStage("office");window.__arcadeTest(1,16);',
   'var arcadeClose=document.querySelector("#office-alien-layer .game-close-btn"),arcadeHud=document.querySelector("#office-alien-layer [role=img]");',
   'var shotsBefore=window.__arcadeState().shots,musicBefore=window.__musicPaused;',
+  'var arcadeX0=window.__arcadeState().playerX,arcadeLeftOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true})),arcadeX1=window.__arcadeState().playerX,arcadeRightOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,cancelable:true})),arcadeX2=window.__arcadeState().playerX;',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
-  'out.arcade={close:arcadeClose&&arcadeClose.getAttribute("aria-label"),hud:arcadeHud&&arcadeHud.getAttribute("aria-label"),spaceFired:window.__arcadeState().shots===shotsBefore+1,musicHeld:window.__musicPaused===musicBefore};',
+  'out.arcade={close:arcadeClose&&arcadeClose.getAttribute("aria-label"),hud:arcadeHud&&arcadeHud.getAttribute("aria-label"),arrows:arcadeLeftOwned&&arcadeRightOwned&&arcadeX1<arcadeX0&&arcadeX2===arcadeX0,spaceFired:window.__arcadeState().shots===shotsBefore+1,musicHeld:window.__musicPaused===musicBefore};',
   'arcadeClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
   'out.arcade.closed=!window.__arcadeState().active;',
   'window.__arcadeTest(1,16);var arcadeEscLeaked=0;',
@@ -96,9 +101,10 @@ var harness = [
   'window.setLang("en");window.goToStage("kitchen");window.__flairTest(1,16);',
   'var flairClose=document.querySelector("#kitchen-flair-layer .game-close-btn"),flairHud=document.querySelector("#kitchen-flair-layer [role=img]");',
   'var flairMusicBefore=window.__musicPaused;',
+  'var flairX0=window.__flairState().playerX,flairLeftOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true})),flairX1=window.__flairState().playerX,flairRightOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,cancelable:true})),flairX2=window.__flairState().playerX;',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
   'var pauseLabel=document.querySelector("#kitchen-flair-layer .game-pause-label");',
-  'out.flair={close:flairClose&&flairClose.getAttribute("aria-label"),hud:flairHud&&flairHud.getAttribute("aria-label"),paused:window.__flairState().paused,pauseLabel:pauseLabel&&pauseLabel.textContent,musicHeld:window.__musicPaused===flairMusicBefore};',
+  'out.flair={close:flairClose&&flairClose.getAttribute("aria-label"),hud:flairHud&&flairHud.getAttribute("aria-label"),arrows:flairLeftOwned&&flairRightOwned&&flairX1<flairX0&&flairX2===flairX0,paused:window.__flairState().paused,pauseLabel:pauseLabel&&pauseLabel.textContent,musicHeld:window.__musicPaused===flairMusicBefore};',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
   'out.flair.resumed=!window.__flairState().paused;',
   'flairClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
@@ -139,13 +145,13 @@ check(rendered && rendered.enTetris.close === "Exit game" &&
   rendered && JSON.stringify({ en: rendered.enTetris, cs: rendered.csTetris }));
 check(rendered && rendered.arcade.close === "Ukončit hru" &&
       /^SKÓRE 0\. REKORD /.test(rendered.arcade.hud || "") && rendered.arcade.spaceFired &&
-      rendered.arcade.musicHeld && rendered.arcade.closed && rendered.arcade.escapeOwned,
+      rendered.arcade.arrows && rendered.arcade.musicHeld && rendered.arcade.closed && rendered.arcade.escapeOwned,
   "Invaders owns its action and exit keys",
   rendered && JSON.stringify(rendered.arcade));
 check(rendered && rendered.flair.close === "Exit game" &&
       /^SCORE 0\. BEST /.test(rendered.flair.hud || "") && rendered.flair.paused &&
       rendered.flair.pauseLabel === "PAUSED" && rendered.flair.musicHeld &&
-      rendered.flair.resumed && rendered.flair.closed && rendered.flair.escapeOwned,
+      rendered.flair.arrows && rendered.flair.resumed && rendered.flair.closed && rendered.flair.escapeOwned,
   "Flair-Catch owns its action and exit keys",
   rendered && JSON.stringify(rendered.flair));
 check(rendered && rendered.mines.label === "NEW GAME" && rendered.mines.title === "NEW GAME" &&

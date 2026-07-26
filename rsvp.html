@@ -38696,8 +38696,9 @@ function gameTapsNear(a, b) {
   // x/y would be clobbered by a transform) and plays a light glassy tink, panned to the
   // bottle's on-screen x. Only hittable while the bar shows (CSS gates pointer-events to
   // .party-on); the delegated handler is harmless if a synthetic click lands with the bar hidden.
-  // ...and a tap that keeps coming KNOCKS THE BOTTLE OFF: each bottle counts its own clicks, and
-  // once it's been poked BOTTLE_FALL_AT times it topples off the shelf and shatters on the bartop —
+  // ...and taps across the whole shelf eventually KNOCK THE CURRENT BOTTLE OFF: the bottles share
+  // one counter, so exploring different bottles still builds toward a break. Runs alternate
+  // between four and five taps —
   // a WAAPI tumble on the <g class="bar-bottle"> wrapper (which carries no transform attribute, so
   // the fall can't clobber the <use x=y=> positioning), then .broken hides the shelf bottle while a
   // burst of glass shards + a splash of its liquid colour lands in #kitchen-bar-shatter (drawn in
@@ -38708,8 +38709,8 @@ function gameTapsNear(a, b) {
     var SVGNS_BAR = "http://www.w3.org/2000/svg";
     var bottleReduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var bottleFallAnims = [];
-    var bottleClicks = new WeakMap();
-    var BOTTLE_FALL_AT = 5;      // clicks before it comes off (a tap or two is safe)
+    var bottleClicks = 0;
+    var bottleFallAt = 4;
     var BOTTLE_LAND_Y = 240;     // the bartop surface (stage-local y), where a toppled bottle lands
     function bottlePan(u) {
       var bx = u ? parseFloat(u.getAttribute("x")) : 300;
@@ -38786,9 +38787,13 @@ function gameTapsNear(a, b) {
       if (!w || w.parentNode !== barBottles) return;
       e.stopPropagation();
       if (w.classList.contains("fallen")) return; // a toppled bottle is inert
-      var n = (bottleClicks.get(w) || 0) + 1;
-      bottleClicks.set(w, n);
-      if (n >= BOTTLE_FALL_AT) { shatterBottle(w); return; } // this poke knocks it off the shelf
+      bottleClicks += 1;
+      if (bottleClicks >= bottleFallAt) {
+        bottleClicks = 0;
+        bottleFallAt = bottleFallAt === 4 ? 5 : 4;
+        shatterBottle(w);
+        return;
+      }
       w.classList.remove("tipsy");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { w.classList.add("tipsy"); });
@@ -38799,15 +38804,19 @@ function gameTapsNear(a, b) {
       var w = e.target;
       if (w && w.parentNode === barBottles && w.classList.contains("tipsy")) w.classList.remove("tipsy");
     });
-    // a full reset restores every bottle to its shelf + zeroes the click counts, cancels in-flight
+    window.__barBottleBreakState = function () {
+      return { clicks: bottleClicks, threshold: bottleFallAt };
+    };
+    // a full reset restores every bottle to its shelf + zeroes the shared click count, cancels in-flight
     // falls/shards, and empties the debris layer (state.js: reset class-state must match load).
     window.__resetBarBottles = function () {
       bottleFallAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
       bottleFallAnims = [];
+      bottleClicks = 0;
+      bottleFallAt = 4;
       Array.prototype.forEach.call(barBottles.querySelectorAll(".bar-bottle"), function (w) {
         w.classList.remove("fallen", "broken", "tipsy");
         w.style.transform = "";
-        bottleClicks["delete"](w);
       });
       if (barShatter) while (barShatter.firstChild) barShatter.removeChild(barShatter.firstChild);
     };

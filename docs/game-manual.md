@@ -656,6 +656,9 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 
 ## Minigames and optional activities
 
+While an action game is running, its keyboard controls take priority and other
+ordinary game shortcuts are suspended until the player exits.
+
 - **Flair-Catch:** In the kitchen/bar, repeat a nearby click on Pouria to begin,
   or use its message/API action. Pouria follows the pointer while the player
   catches garnishes and avoids the wasp; Left/Right arrows move him too. Clicking

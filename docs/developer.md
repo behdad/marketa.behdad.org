@@ -425,10 +425,11 @@ used by the trailer's deliberately non-gameplay bloom. `tripGeneration` invalida
 and double-rAF class additions when a trip is interrupted or reset.
 
 The magic box and keyboard shortcuts show molecule cards. Physical prop entries intentionally may
-not: the kitchen cream whipper starts uncarded laughing gas after its hiss, while every frog or
-mushroom tap deterministically starts its own uncarded variant. Active laughing gas also reveals
-the whipper's calendar-style Behdad apparition; its jaw and whole-figure rise use separate wrappers
-so their transforms compose.
+not: the kitchen cream whipper starts uncarded laughing gas after its hiss. The garden frog and
+mushroom each use their first click only for their ordinary rasp/wobble and arm independently;
+their second and later eligible clicks start their respective uncarded variants. Active laughing
+gas also reveals the whipper's calendar-style Behdad apparition; its jaw and whole-figure rise use
+separate wrappers so their transforms compose.
 
 The canonical direct-selection order is laughing gas, shrooms, acid, froggies, DMT, molly,
 ketamine, then iboga (`Shift+1` through `Shift+8`). Keep that order aligned across the keyboard

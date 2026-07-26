@@ -21,8 +21,8 @@ var HARNESS = [
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit1",shiftKey:true,bubbles:true}));await sleep(2100);S("firstHotkey",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show")});window.__stopTrip(true);',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit8",shiftKey:true,bubbles:true}));await sleep(100);S("lastHotkey",{state:window.__tripState(),classes:classes()});window.__stopTrip(true);',
   ' TRIP_DURATIONS.nitrous=500;document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(200);S("whipperHiss",{state:window.__tripState(),squeezed:document.getElementById("kitchen-whipper").classList.contains("dispensing")});await sleep(900);document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));S("whipper",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show"),bubble:!!document.querySelector(".egg-bubble"),ghost:getComputedStyle(document.getElementById("kitchen-whipper-laugh-ghost")).animationName,jaw:getComputedStyle(document.getElementById("kitchen-whipper-laugh-jaw")).animationName});window.__stopTrip(true);',
-  ' TRIP_DURATIONS.froggies=500;document.getElementById("garden-frog").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("frog",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-froggies.mol-show")});window.__stopTrip(true);',
-  ' TRIP_DURATIONS.shrooms=500;document.getElementById("garden-mushroom").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("mushroom",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-shrooms.mol-show")});window.__stopTrip(true);',
+  ' TRIP_DURATIONS.froggies=500;var frog=document.getElementById("garden-frog");frog.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("frogFirst",{state:window.__tripState(),classes:classes()});frog.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("frog",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-froggies.mol-show")});window.__stopTrip(true);frog.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("frogLater",{state:window.__tripState(),classes:classes()});window.__stopTrip(true);',
+  ' TRIP_DURATIONS.shrooms=500;var mushroom=document.getElementById("garden-mushroom");mushroom.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("mushroomFirst",{state:window.__tripState(),classes:classes()});mushroom.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("mushroom",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-shrooms.mol-show")});window.__stopTrip(true);mushroom.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);S("mushroomLater",{state:window.__tripState(),classes:classes()});window.__stopTrip(true);',
   ' var veil=document.getElementById("trip-tolerance-veil"),beforeVeil=veil&&veil.style.opacity;TRIP_DURATIONS.nitrous=80;window.__startTrip("nitrous");await sleep(150);S("neutral",{state:window.__tripState(),before:beforeVeil,after:veil&&veil.style.opacity});',
   '}',
   '})();</script>'
@@ -59,10 +59,18 @@ check(s.whipper && !s.whipper.bubble,
   "an uncarded cream-whipper request stays silent while a trip is active", s.whipper);
 check(s.whipper && s.whipper.ghost === "kitchen-whipper-ghost-rise" && s.whipper.jaw === "kitchen-whipper-laugh-jaw",
   "laughing gas animates Behdad's dispenser apparition and jaw", s.whipper);
+check(s.frogFirst && !s.frogFirst.state.active && !s.frogFirst.classes.length,
+  "the frog's first tap only rasps and arms it", s.frogFirst);
 check(s.frog && s.frog.state.active && s.frog.state.variant === "froggies" && s.frog.classes.join(",") === "froggies" && !s.frog.card,
-  "every frog tap starts its uncarded trip", s.frog);
+  "the frog's second tap starts its uncarded trip", s.frog);
+check(s.frogLater && s.frogLater.state.active && s.frogLater.state.variant === "froggies" && s.frogLater.classes.join(",") === "froggies",
+  "later frog taps remain armed", s.frogLater);
+check(s.mushroomFirst && !s.mushroomFirst.state.active && !s.mushroomFirst.classes.length,
+  "the mushroom's first tap only wobbles and arms it", s.mushroomFirst);
 check(s.mushroom && s.mushroom.state.active && s.mushroom.state.variant === "shrooms" && s.mushroom.classes.join(",") === "shrooms" && !s.mushroom.card,
-  "every mushroom tap starts its uncarded trip", s.mushroom);
+  "the mushroom's second tap starts its uncarded trip", s.mushroom);
+check(s.mushroomLater && s.mushroomLater.state.active && s.mushroomLater.state.variant === "shrooms" && s.mushroomLater.classes.join(",") === "shrooms",
+  "later mushroom taps remain armed", s.mushroomLater);
 check(s.neutral && !s.neutral.state.active && s.neutral.before === s.neutral.after,
   "laughing gas ends without adding a gray tolerance veil", s.neutral);
 

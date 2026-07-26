@@ -1729,11 +1729,23 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 #kitchen-bar-make .mk-pour{transition:opacity .16s ease}
 #kitchen-bar-make .mk-glasshost{transform-box:fill-box; transform-origin:50% 100%; transition:transform .3s ease}
 #kitchen-bar-make .mk-glasshost.presenting{transform:translateY(2px) scale(1.07)}
+/* When the quiet bar is genuinely empty, Pouria follows his phone break by making one for
+   himself. The glass travels on its inner host — the outer make station keeps its live
+   translate aligned with his draggable position, so this one-shot cannot clobber it. */
+#kitchen-bar-make .self-drinking{animation:mk-self-drink 2.45s ease-in-out forwards}
+@keyframes mk-self-drink{
+  0%{transform:translateY(2px) scale(1.07)}
+  22%{transform:translate(-44px,-35px) rotate(-14deg) scale(.96)}
+  43%{transform:translate(-47px,-38px) rotate(-31deg) scale(.96)}
+  66%{transform:translate(-44px,-35px) rotate(-14deg) scale(.96)}
+  100%{transform:translateY(2px) scale(1.07)}
+}
 #kitchen-bar-make .mk-swizzle{transform-box:fill-box; transform-origin:50% 100%; transition:opacity .2s ease}
 #kitchen-bar-make .stirring{animation:mk-stir .55s ease-in-out 2 alternate}
 @keyframes mk-stir{from{transform:rotate(-15deg)}to{transform:rotate(15deg)}}
 @media (prefers-reduced-motion: reduce){
-  #kitchen-bar-make .mk-glasshost, #kitchen-bar-make .mk-glasshost.presenting{transition:none; transform:none}
+  #kitchen-bar-make .mk-glasshost, #kitchen-bar-make .mk-glasshost.presenting,
+  #kitchen-bar-make .self-drinking{transition:none; animation:none; transform:none}
   #kitchen-bar-make .stirring{animation:none}
 }
 /* the PLAYER'S hands-on cocktail mixer at Pouria's end of the bar: a row of tappable ingredient
@@ -39762,7 +39774,8 @@ function gameTapsNear(a, b) {
       showGarnish: function () { garn.style.opacity = "1"; },
       stir: function () { swz.style.opacity = "1"; swz.classList.remove("stirring"); try { swz.getBBox(); } catch (e) {} swz.classList.add("stirring"); }, // getBBox forces a reflow so the swirl always (re)starts
       stirEnd: function () { swz.style.opacity = "0"; swz.classList.remove("stirring"); },
-      present: function () { host.classList.add("presenting"); }
+      present: function () { host.classList.add("presenting"); },
+      drink: function () { host.classList.remove("self-drinking"); try { host.getBBox(); } catch (e) {} host.classList.add("self-drinking"); }
     };
   }
 
@@ -39807,18 +39820,20 @@ function gameTapsNear(a, b) {
   function barPresent() { return barUpNow() && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
 
   // ---- the make sequence -----------------------------------------------------------------
-  var making = false, makeTimers = [], cooldownUntil = 0;
+  var making = false, selfServing = false, makeTimers = [], cooldownUntil = 0;
   window.__ambientMaking = function () { return making; }; // the player-mixer checks this so it never fights an in-flight ambient make for the bartender's .mixing state
+  window.__bartenderSelfServing = function () { return making && selfServing; }; // focused test/inspection hook
   function after(ms, fn) { var id = setTimeout(fn, ms); makeTimers.push(id); return id; }
   function clearMakeTimers() { for (var i = 0; i < makeTimers.length; i++) clearTimeout(makeTimers[i]); makeTimers = []; }
   function stopBartenderStir() { if (window.__bartenderStir) window.__bartenderStir(false); } // never leave him stirring after a make ends
   function endBartenderMake() { stopBartenderStir(); if (window.__bartenderMixing) window.__bartenderMixing(false); } // back to idle: sway resumes, clear any stir
-  function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); hideCocktailToast(); making = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
-  function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) { makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); } hideCocktailToast(); making = false; }
+  function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); hideCocktailToast(); making = false; selfServing = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
+  function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) { makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); } hideCocktailToast(); making = false; selfServing = false; }
 
-  function startMake(row) {
+  function startMake(row, opts) {
     if (making || !row) return false;
     making = true;
+    selfServing = !!(opts && opts.selfServe);
     endBored(); // an order is an order: phone away, shaker back, before a drop is poured
     if (window.__retireHint) window.__retireHint("hint_cocktail"); // loose-brick hint: retire once a drink's been mixed
     if (window.__actPing) window.__actPing("drink"); // second act: the drink you skipped this morning — that's the bar beat done (P1)
@@ -39842,6 +39857,7 @@ function gameTapsNear(a, b) {
     if (reduced()) { // static: fill instantly, garnish, hold, clear (no animation)
       ctx.setLevel(1, color); ctx.showGarnish();
       playGlassClinkSound(1.15 + Math.random() * 0.2, "kitchen-bartender"); // one soft "here you go" clink (sfx still play under reduced motion)
+      if (selfServing) after(900, function () { ctx.setLevel(0, color); });
       after(1600, finishMake);
       return true;
     }
@@ -39894,6 +39910,11 @@ function gameTapsNear(a, b) {
     }
     after(t, function () { ctx.showGarnish(); playGlassClinkSound(1.9 + Math.random() * 0.3, BAR_PAN); }); t += 340 * SP; // tiny garnish tap on the rim
     after(t, function () { ctx.present(); playGlassClinkSound(1.05 + Math.random() * 0.15, BAR_PAN); }); t += 950 * SP; // the finished drink set down — a gentle clink
+    if (selfServing) {
+      after(t, function () { ctx.drink(); });                   // lift it from the bar to his mouth
+      after(t + 1050, function () { ctx.setLevel(0, color); }); // the visible liquid disappears during the sip
+      t += 2450;
+    }
     after(t, finishMake);
     return true;
   }
@@ -39943,6 +39964,23 @@ function gameTapsNear(a, b) {
     if (boredBartender) boredBartender.classList.remove("phoning");
     nextBoredAt = boredRoll();
   }
+  function aloneAtBar() {
+    if (typeof window.__whoIsHere !== "function") return false;
+    try {
+      var people = window.__whoIsHere("kitchen") || [];
+      return people.length === 1 && people[0] && people[0].key === "pouria";
+    } catch (e) { return false; }
+  }
+  // Only the NATURAL end of his phone diversion can lead here. Work, a room change, a hidden tab,
+  // or any other interruption still calls endBored() and puts the phone away without rewarding
+  // the interruption with a drink. If he finishes and is the only rostered person at the bar,
+  // however, he always mixes one and drinks it himself.
+  function finishBored() {
+    var selfServe = phoning && boredOk() && aloneAtBar();
+    endBored();
+    if (selfServe) return startMake(randomRow(), { selfServe: true });
+    return false;
+  }
   // The crickets rule: an autonomous timer must not sound on a visible-but-UNFOCUSED tab —
   // getSfxCtx()'s hidden gate doesn't cover that, and its resume() would undo the blur suspend.
   // hasFocus() is therefore checked HERE, in the callback, not where the giggle was scheduled.
@@ -39957,13 +39995,14 @@ function gameTapsNear(a, b) {
     if (boredBartender) boredBartender.classList.add("phoning");
     boredAfter(900, boredGiggle);                                                                   // he gets to the funny bit
     boredAfter(2300 + Math.random() * 800, function () { if (Math.random() < 0.6) boredGiggle(); }); // and sometimes back into it
-    boredAfter(4600 + Math.random() * 1800, endBored);                                              // phone away, shaker back up
+    boredAfter(4600 + Math.random() * 1800, finishBored);                                           // phone away; alone means one for himself
     return true;
   }
   nextBoredAt = boredRoll();
   window.__bartenderPhoneAway = endBored;                     // real bar work (a player dose, an ordered drink) puts it away at once
   window.__bartenderPhoning = function () { return phoning; }; // his idle flair skips its toss while the shaker's down
   window.__bartenderBored = startBored;                       // test hook: skips the 20-40s wait, keeps the whole fire-time gate; returns whether it fired
+  window.__bartenderFinishBored = finishBored;                // focused test hook: completes the phone beat without waiting out its timer
 
   // ---- ambient loop: one self-rescheduling poll timer (mirrors the bartender's autoFlare) ----
   // It never piles up (a single live timer) and self-gates every tick: it only starts a make

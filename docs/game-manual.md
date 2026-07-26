@@ -627,8 +627,10 @@ heat, and cook or serve food. During a party, a lit smoker activates BBQ mode.
 Selected adults then split naturally between the balcony and garden/party while
 children may keep playing elsewhere. BBQ mode remains active across later
 day/night changes; extinguishing the smoker or ending the party ends it. Hamid
-tends the grill and announces the first cooked batch in the group chat. Behdad
-and Markéta move together between the party floor and balcony.
+tends the grill and announces the first cooked batch in the group chat, prompting
+a cheer from the balcony. The grate empties across six servings, after which
+Hamid signs off. Behdad and Markéta move together between the party floor and
+balcony.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 

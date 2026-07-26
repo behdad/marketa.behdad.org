@@ -1040,7 +1040,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .grill-marks{opacity:0; transition:opacity 2s ease}
 .smoker-burger.done .grill-marks{opacity:0.7}
 .smoker-burger{transform-box:fill-box; transform-origin:center; transition:transform .4s ease, opacity .4s ease}
-.smoker-burger.served{transform:translate(0,-16px) scale(0.25); opacity:0; pointer-events:none}
+.smoker-burger.served,.smoker-burger.depleted{transform:translate(0,-16px) scale(0.25); opacity:0; pointer-events:none}
 @media (prefers-reduced-motion: reduce){.grill-marks{transition:none} .smoker-burger{transition:none}}
 @media (prefers-reduced-motion: reduce){#balcony-smoker-lid{transition:none} .grill-patty{transition:none}}
 #kitchen-tongs-left, #kitchen-tongs-right{transform-origin:597px 138px}
@@ -9562,6 +9562,13 @@ section{margin:1.9rem 0}
 #balcony-hangout .bh-ember{filter:none}
 #balcony-hangout.on .bh-ember{animation:bh-ember-glow 3.4s ease-in-out infinite}
 @keyframes bh-ember-glow{0%,100%{opacity:0.85; r:1.1}50%{opacity:1; r:1.3}}
+/* Hamid's first-ready call briefly overrides the deck's looping sways with one shared
+   cheer. These id-qualified one-shots sit after every looping state rule so they retain
+   the cascade; both animated nodes are transform-free inner wrappers. */
+#balcony-hangout.food-cheer .bh-idle{animation:bbq-food-cheer 1.35s cubic-bezier(.2,.8,.3,1)}
+#balcony-hangout.food-cheer .bh-arm-gesture{animation:bbq-food-wave 1.35s ease-in-out}
+@keyframes bbq-food-cheer{0%,100%{transform:translateY(0) rotate(0)}28%{transform:translateY(-8px) rotate(-2deg)}55%{transform:translateY(-3px) rotate(2deg)}}
+@keyframes bbq-food-wave{0%,100%{transform:rotate(0)}30%{transform:rotate(-24deg)}58%{transform:rotate(12deg)}}
 /* optional drink in a non-smoker's hand: hidden until the controller reveals ONE (a beer OR a
    flute) on that figure for a given showing — see layout()'s per-figure drink roll. Sits inside
    the .bh-idle wrapper so it sways with the figure; static under reduced motion like everything. */
@@ -9580,7 +9587,8 @@ section{margin:1.9rem 0}
 @media (prefers-reduced-motion: reduce){#balcony-ashtray-perch.spinning{animation:none}}
 /* Reduced motion: everyone stands still, no drags, no ember pulse (JS also skips smoke). */
 @media (prefers-reduced-motion: reduce){
-  #balcony-hangout .bh-idle, #balcony-hangout .bh-arm-gesture, #balcony-hangout .bh-toke-arm, #balcony-hangout .bh-ember{animation:none}
+  #balcony-hangout .bh-idle, #balcony-hangout .bh-arm-gesture, #balcony-hangout .bh-toke-arm, #balcony-hangout .bh-ember,
+  #balcony-hangout.food-cheer .bh-idle, #balcony-hangout.food-cheer .bh-arm-gesture{animation:none}
   #balcony-hangout,#balcony-hangout .bh-fig,#balcony-grillmaster,#garden-jacket-inner,#balcony-hallway-jacket-inner{transition:none}
 }
 /* ═══ OFFICE HANGOUT COUPLE ═══════════════════════════════════════════════════
@@ -26816,6 +26824,7 @@ var T = {
     msg_albumfull_body: "been snapping all night 📸 your album's filling up — take a look",
     msg_bbq_body: "let's start the BBQ 🔥🍔",
     msg_hamid_food_body: "grill's open — first batch is ready, come get it while it's hot 🔥🍔🌽",
+    msg_hamid_bbq_done_body: "grill defeated. nobody leaves hungry on my watch 🔥✅",
     msg_fireworks_body: "FINALE TIME 🎆 get out on the balcony!",
     msg_lanterns_body: "let's send up wish-lanterns 🏮 make a wish ✨",
     msg_trip_body_a: "Vitamin time? 💊",
@@ -27826,6 +27835,7 @@ var T = {
     msg_albumfull_body: "cvakám celý večer 📸 album se ti plní — mrkni na něj",
     msg_bbq_body: "jdeme roztopit gril 🔥🍔",
     msg_hamid_food_body: "gril je otevřený — první várka je hotová, pojďte si pro ni, dokud je teplá 🔥🍔🌽",
+    msg_hamid_bbq_done_body: "gril poražen. pod mým dohledem nikdo neodejde hladový 🔥✅",
     msg_fireworks_body: "ČAS NA FINÁLE 🎆 pojď ven na balkon!",
     msg_lanterns_body: "pustíme lampiony přání 🏮 něco si přej ✨",
     msg_trip_body_a: "Čas na vitamíny? 💊",
@@ -54939,6 +54949,7 @@ async def localfont(name):
   if (smoker && smokerFirebox && smokerLid) {
     var smoking = false, lidOpen = false, fireOn = false, firstLightDone = false, firstLidDone = false;
     var sizzleTimer = null, tempTimer = null, temp = 0;
+    var BBQ_SERVINGS_PER_SPOT = 2;
     var burgers = smoker.querySelectorAll(".smoker-burger");
     var tempEl = document.getElementById("balcony-smoker-temp");
     function bbqState() { return { on: !!smoking, open: !!lidOpen, temperature: temp }; }
@@ -55006,7 +55017,7 @@ async def localfont(name):
     function seedSmoke() { while (smokeCount < 6) smokePuff(); } // top the plume up to ~6
     function cookBurger(b) {
       // food only cooks once the grill is hot enough (≥300°); it then browns over ~5s (not instantly)
-      if (!(smoking && temp >= 300) || b.classList.contains("served") || b.classList.contains("done") || b.__cooking) return;
+      if (!(smoking && temp >= 300) || b.classList.contains("served") || b.classList.contains("depleted") || b.classList.contains("done") || b.__cooking) return;
       b.__cooking = true;
       setTimeout(function () {
         b.__cooking = false;
@@ -55014,7 +55025,9 @@ async def localfont(name):
           b.classList.add("done"); // re-checked at fire time
           // The message id is its own one-shot latch, so all patties may finish together
           // without Hamid announcing the same first batch more than once.
-          if (window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("hamid_food");
+          if (window.__deliverAutonomousPhoneMessage &&
+              window.__deliverAutonomousPhoneMessage("hamid_food") &&
+              window.__balconyFoodReadyReaction) window.__balconyFoodReadyReaction();
         }
       }, 5000);
     }
@@ -55063,23 +55076,38 @@ async def localfont(name):
     smokerLid.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleLid(); }
     });
-    // with the lid up, clicking a cooked burger serves it; a fresh raw patty
-    // takes its place and re-cooks if the fire's still going
+    function bbqFoodState() {
+      var served = 0, depleted = 0;
+      burgers.forEach(function (b) {
+        served += b.__servings || 0;
+        if (b.classList.contains("depleted")) depleted++;
+      });
+      return { served: served, capacity: burgers.length * BBQ_SERVINGS_PER_SPOT, depleted: depleted, empty: depleted === burgers.length };
+    }
+    window.__bbqFoodState = bbqFoodState;
+    // With the lid up, clicking a cooked item serves it. Each grate position
+    // replenishes once, then remains visibly empty: six plates make one cookout.
     function serveBurger(b, e) {
       if (!smoker.classList.contains("open")) return;
       if (!b.classList.contains("done") || b.classList.contains("served")) return;
       if (e) e.stopPropagation();
       b.classList.add("served");
+      b.__servings = (b.__servings || 0) + 1;
       playChopSound(0.7, 1, "balcony-smoker");
       spawnSteamWisps(strip, 3176, 178, 0.4, 1, -1, 1, 0.4);
       setTimeout(function () {
-        // reset to raw with no fill fade (it's hidden mid-hop), then drop back in
+        // Reset to raw with no fill fade while hidden. After its second plate,
+        // this position stays empty and the three positions progressively deplete.
         var parts = Array.prototype.slice.call(b.querySelectorAll(".grill-patty, .grill-tofu, .grill-marks"));
         parts.forEach(function (el) { if (el) el.style.transition = "none"; });
         b.classList.remove("done");
         parts.forEach(function (el) { if (el) { void el.getBoundingClientRect(); el.style.transition = ""; } });
         b.classList.remove("served");
-        if (smoking) setTimeout(function () { cookBurger(b); }, 500);
+        if (b.__servings >= BBQ_SERVINGS_PER_SPOT) {
+          b.classList.add("depleted");
+          var food = bbqFoodState();
+          if (food.empty && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("hamid_bbq_done");
+        } else if (smoking) setTimeout(function () { cookBurger(b); }, 500);
       }, 450);
     }
     burgers.forEach(function (b) {
@@ -55121,7 +55149,12 @@ async def localfont(name):
       firstLightDone = false;
       firstLidDone = false;
       smoker.classList.remove("smoking", "open");
-      burgers.forEach(function (b) { b.classList.remove("served", "done"); b.style.transition = ""; });
+      burgers.forEach(function (b) {
+        b.__servings = 0;
+        b.__cooking = false;
+        b.classList.remove("served", "done", "depleted");
+        b.style.transition = "";
+      });
       if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // a cold BBQ has no grillmaster
       if (window.__syncPartyBBQ) window.__syncPartyBBQ();
       reportBBQ(before, "internal");
@@ -58740,6 +58773,7 @@ async def localfont(name):
       album_full:    { fromKey: "msg_aspen_from",    bodyKey: "msg_albumfull_body", apiAction: { id: "app.open", args: { app: "album" } } },     // Aspen, once the album hits ≥5 shots → taps: the phone album (not in a drip pool — count-triggered)
       bbq:           { fromKey: "msg_behdad_from",  bodyKey: "msg_bbq_body",       act: "bbq" },           // behdad → taps: balcony + open the smoker lid + light it
       hamid_food:    { fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_food_body" },                       // first cooked BBQ batch → Hamid calls everyone to the grill
+      hamid_bbq_done:{ fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_bbq_done_body" },                   // sixth plate empties the smoker → Hamid closes the cookout
       fireworks:     { fromKey: "msg_danesh_from",  bodyKey: "msg_fireworks_body", act: "fireworks" },     // DJ Danesh calls the finale → taps: balcony (night) + the fireworks finale over the city
       lanterns:      { fromKey: "msg_bahareh_from", bodyKey: "msg_lanterns_body",  act: "lanterns" },      // Bahareh (fire-festival kin) → taps: balcony (night) + a wish-lantern release
       sina_helpers:  { fromKeys: TRIP_SENDERS, bodyKeys: TRIP_BODIES, act: "magicbox" }, // random friend/host trip nudge → garden magic box (locked → date lock the first time)
@@ -81644,6 +81678,20 @@ function spawnDustMote(container) {
       }, 2000 + Math.random() * 800);
     })();
     window.__balconyServeNow = serveOne; // console/test hook: force one serve
+    var foodCheerTimer = null;
+    window.__balconyFoodReadyReaction = function () {
+      var hangout = document.getElementById("balcony-hangout");
+      if (!hangout || !hangout.classList.contains("on")) return false;
+      clearTimeout(foodCheerTimer);
+      hangout.classList.remove("food-cheer");
+      void hangout.getBoundingClientRect();
+      hangout.classList.add("food-cheer");
+      foodCheerTimer = setTimeout(function () { hangout.classList.remove("food-cheer"); }, 1500);
+      return true;
+    };
+    document.getElementById("balcony-hangout").addEventListener("animationend", function (e) {
+      if (e.animationName === "bbq-food-cheer") e.currentTarget.classList.remove("food-cheer");
+    });
     // name popup: click white card, like the deck crowd — and the same relationship + fun-fact
     // lines they carry, so the man at the grill is as fully named as the people watching him
     var hamidTip = function () {

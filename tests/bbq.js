@@ -20,6 +20,7 @@ var harness = String.raw`<script>
   // Exercise the player path: the date invite queues during phase one, then the real balcony
   // switch starts the party. No forced occasion setup is allowed to pre-seed BBQ state here.
   window.__gameStarted = function () { return true; };
+  window.__monitorMessageRewrite = null; // this integration owns BBQ state, not an external Chat request
   try { localStorage.setItem("dateInvite:bbq:4-2", "1"); } catch (e) {} // simulate an earlier May-2 playthrough in this browser
   if (window.__deliverDateInvite) window.__deliverDateInvite();
   check("BBQ message waits during phase one", !(window.__phoneMessageReceived && window.__phoneMessageReceived("bbq")) && !window.__secondRound);

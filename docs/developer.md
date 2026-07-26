@@ -334,6 +334,13 @@ use exploration captions and rotating hints. `goToStage` is also the central roo
 collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,
 particles, photographer state, and phone/monitor ownership.
 
+### BBQ inventory and grillmaster
+
+The smoker owns food inventory: each of its three persistent grate nodes yields
+two servings, then keeps a `.depleted` visual state until the normal smoker reset.
+The first cooked batch and exhausted inventory trigger Hamid's two one-shot
+Messages entries; the first also invokes the deck's bounded `.food-cheer` reaction.
+
 ### Across-street windows and Window Tetris
 
 Search for `balconyBuildingTetris`, `#balcony-building-window-grid`, and

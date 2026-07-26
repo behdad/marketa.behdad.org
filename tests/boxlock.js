@@ -15,6 +15,8 @@ var HARNESS = [
   ' window.goToStage("garden");window.__setDrugsboxMonth(5);window.__drugsboxTap();',
   ' var lock=document.getElementById("garden-boxlock"),date=document.getElementById("garden-boxlock-date-hit"),submit=document.getElementById("garden-boxlock-submit");',
   ' S("shape",{date:date.previousElementSibling.previousElementSibling.textContent,submit:submit.querySelector("text").textContent,wheels:lock.querySelectorAll(".boxlock-hit").length,submits:lock.querySelectorAll(".boxlock-submit").length});',
+  ' var clips=[document.querySelector("#garden-boxlock-clip-t rect"),document.querySelector("#garden-boxlock-clip-u rect")],button=submit.querySelector("rect"),frame=Array.from(lock.children).find(function(el){return el.tagName==="rect"&&el.getAttribute("x")==="199";}),fades=Array.from(lock.querySelectorAll("rect")).filter(function(el){return /^url\\(#garden-boxlock-fade-/.test(el.getAttribute("fill")||"");});',
+  ' S("layout",{rounded:clips.every(function(el){return el&&el.getAttribute("rx")==="7";}),raised:clips.every(function(el){return el&&el.getAttribute("y")==="150";}),fadesClipped:fades.length===4&&fades.every(function(el){return !!el.getAttribute("clip-path");}),buttonBottom:+button.getAttribute("y") + +button.getAttribute("height"),frameBottom:+frame.getAttribute("y") + +frame.getAttribute("height")});',
   ' tap(date);await sleep(40);S("clue",{phone:!!document.querySelector(".calx-phone"),lock:lock.classList.contains("showing")});',
   ' var shell=document.querySelector(".phone-shell");if(shell){shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));}await sleep(260);S("clueBack",{phone:!!document.querySelector(".phone-backdrop.show")});window.__drugsboxTap();',
   ' tap(document.getElementById("garden-boxlock-hit-u"));S("selected",{locked:window.__drugsboxLocked(),unit:document.getElementById("garden-boxlock-drum-u").style.transform});',
@@ -36,6 +38,8 @@ if(!r){console.log("  \u2717 harness produced no report");process.exit(1);}
 var s=r.steps;
 check(r.errors.length===0,"no uncaught page errors",r.errors);
 check(s.shape&&s.shape.date==="2027-05-??"&&s.shape.submit==="UNLOCK"&&s.shape.wheels===2&&s.shape.submits===1,"lock shows a partial date, two wheels, and one submit control",s.shape);
+check(s.layout&&s.layout.rounded&&s.layout.raised&&s.layout.fadesClipped,"both digit drums and their fades are clipped to rounded windows",s.layout);
+check(s.layout&&s.layout.frameBottom-s.layout.buttonBottom>=6,"Unlock button clears the lock's inner frame",s.layout);
 check(s.clue&&s.clue.phone&&!s.clue.lock,"partial date opens the phone Calendar clue",s.clue);
 check(s.clueBack&&!s.clueBack.phone,"Escape closes the magic-box Calendar instead of exposing the launcher",s.clueBack);
 check(s.selected&&s.selected.locked&&/-40px/.test(s.selected.unit||""),"selecting the correct May digits does not auto-unlock",s.selected);

@@ -82,7 +82,7 @@ var HARNESS = [
   "    report.steps.daniel = { bd: hasCls('bd-daniel'), room: window.currentStageName };",
   "    // Navid — a cuddly-nook CAMEO kid: reveal must land in the cuddly-puddly with him showing",
   "    window.birthday('navid'); await sleep(250);",
-  "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.currentStageName, showing: !!(document.getElementById('cuddly-navid')||{classList:{contains:function(){return false;}}}).classList.contains('showing') };",
+  "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.currentStageName, showing: !!(document.getElementById('cuddly-navid')||{classList:{contains:function(){return false;}}}).classList.contains('showing'), parkedRunnerHat: vis('#garden-kid-navid .bd-hat-navid') };",
   "    // Hannah — Baharak & Payman's daughter: Tehran call-only now (NOT the cuddly), routes to the office",
   "    window.birthday('hannah'); await sleep(250);",
   "    report.steps.hannah = { bd: hasCls('bd-hannah'), room: window.currentStageName };",
@@ -122,7 +122,7 @@ else {
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));
   if (s.hannah && s.hannah.bd && s.hannah.room === "office") pass("Hannah (Tehran family now) routes to the office, not the cuddly"); else fail("Hannah tehran reveal", JSON.stringify(s.hannah));
   if (s.daniel && s.daniel.bd && s.daniel.room === "office") pass("Daniel (Prague call) pans to the office"); else fail("Daniel prague reveal", JSON.stringify(s.daniel));
-  if (s.navid && s.navid.bd && s.navid.room === "cuddly" && s.navid.showing) pass("Navid (cameo kid) reveals in the cuddly-puddly, showing"); else fail("Navid cuddly reveal", JSON.stringify(s.navid));
+  if (s.navid && s.navid.bd && s.navid.room === "cuddly" && s.navid.showing && s.navid.parkedRunnerHat === "hidden") pass("Navid reveals in the cuddly-puddly without leaving his parked chase hat in the garden"); else fail("Navid cuddly reveal / parked runner hat hidden", JSON.stringify(s.navid));
   if (s.seasonClears && s.seasonClears.anyBd === false) pass("season() clears the birthday axis (no stray bd-* class)"); else fail("season clears bd axis", JSON.stringify(s.seasonClears));
   if (typeof s.list === "string" && /marketa/.test(s.list)) pass("birthday('list') prints the ring"); else fail("birthday list", JSON.stringify(s.list));
   if (r.errors.length === 0) pass("no uncaught JS errors across the run"); else fail("no uncaught JS errors", r.errors.slice(0,12).join("\n"));

@@ -1285,6 +1285,28 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @keyframes ladybug-lwing{0%,100%{transform:rotate(0)}30%,55%{transform:rotate(40deg)}}
 @keyframes ladybug-rwing{0%,100%{transform:rotate(0)}30%,55%{transform:rotate(-40deg)}}
 @media (prefers-reduced-motion: reduce){#garden-ladybug.buzzing #garden-ladybug-inner, #garden-ladybug.buzzing #garden-ladybug-lwing, #garden-ladybug.buzzing #garden-ladybug-rwing{animation:none}}
+/* A rapid second/third ladybug tap borrows its compound eyes for a few seconds. The SVG filter
+   lowers fine spatial detail and separates colour; the HTML overlay supplies individually tinted
+   hex facets plus peripheral falloff. It never accepts input, so the room stays playable beneath. */
+.hunt-viewport.insect-seeing #stage-garden{filter:url(#insect-eye-filter)}
+.insect-vision-overlay{
+  position:absolute; inset:0; z-index:14; overflow:hidden; pointer-events:none;
+  opacity:0; visibility:hidden; transition:opacity .18s ease;
+}
+.insect-vision-overlay.show{opacity:1;visibility:visible}
+.insect-vision-facet{
+  position:absolute; width:14%; height:24%;
+  clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);
+  -webkit-backdrop-filter:saturate(1.55) contrast(1.12) hue-rotate(var(--iv-hue)) blur(.35px);
+  backdrop-filter:saturate(1.55) contrast(1.12) hue-rotate(var(--iv-hue)) blur(.35px);
+  background:radial-gradient(circle at 34% 27%,rgba(255,255,255,.14),rgba(65,100,48,.035) 54%,rgba(18,25,14,.14));
+  box-shadow:inset 0 0 0 1px rgba(244,239,221,.24),inset 0 0 12px rgba(24,37,19,.18);
+}
+.insect-vision-overlay::after{
+  content:"";position:absolute;inset:-2px;
+  background:radial-gradient(ellipse at center,transparent 34%,rgba(28,42,20,.12) 68%,rgba(12,18,10,.58) 100%);
+}
+@media (prefers-reduced-motion: reduce){.insect-vision-overlay{transition:none}}
 /* ── PARTY MODE (blacklight garden party) ─────────────────────────────────────
    The balcony party switch (#balcony-partyswitch) turns on the UV/blacklight AND
    whisks the view to the garden, where it throws an atmosphere party: sweeping
@@ -10295,6 +10317,15 @@ section{margin:1.9rem 0}
 <animate attributeName="baseFrequency" values="0.004 0.09;0.006 0.13;0.004 0.09" dur="2.4s" repeatCount="indefinite"/>
 </feTurbulence>
 <feDisplacementMap in="SourceGraphic" in2="turb" scale="45" xChannelSelector="A" yChannelSelector="G"/>
+</filter>
+<!-- ladybug compound-eye view: broad, low-frequency displacement sacrifices fine detail while
+     a slight channel rebalance makes greens/blues more prominent. The visible facets themselves
+     are the pointer-transparent HTML overlay; keeping the expensive SVG filter to one room makes
+     the short effect gentle enough for phones. -->
+<filter id="insect-eye-filter" x="-4%" y="-8%" width="108%" height="116%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency="0.027 0.04" numOctaves="1" seed="23" result="iv-noise"/>
+<feDisplacementMap in="SourceGraphic" in2="iv-noise" scale="7" xChannelSelector="R" yChannelSelector="G" result="iv-warp"/>
+<feColorMatrix in="iv-warp" type="matrix" values="0.92 0.08 0 0 0.015  0.02 1.08 0.06 0 0.01  0.02 0.12 1.08 0 0.015  0 0 0 1 0"/>
 </filter>
 <!-- acid trip: the walls ooze/drip. A soft, large-scale turbulence whose
      displacement scale pulses so edges melt and run. Hung on #loft-float (a neutral
@@ -66954,9 +66985,49 @@ async def localfont(name):
   // ambient accumulation to guard against.
   var ladybug = document.getElementById("garden-ladybug");
   if (ladybug) {
+    var insectViewport = document.querySelector(".hunt-viewport");
+    var insectOverlay = null, insectTimer = 0, insectHideTimer = 0;
+    var ladybugTapCount = 0, ladybugTapTimer = 0;
     var reducedMotion = function () {
       return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     };
+    function buildInsectOverlay() {
+      if (insectOverlay || !insectViewport) return insectOverlay;
+      insectOverlay = document.createElement("div");
+      insectOverlay.className = "insect-vision-overlay";
+      insectOverlay.setAttribute("aria-hidden", "true");
+      for (var row = 0; row < 6; row++) {
+        for (var col = 0; col < 9; col++) {
+          var facet = document.createElement("span");
+          facet.className = "insect-vision-facet";
+          facet.style.left = (-2 + col * 11.5 + (row % 2 ? 5.75 : 0)) + "%";
+          facet.style.top = (-4 + row * 18.5) + "%";
+          facet.style.setProperty("--iv-hue", (((row * 9 + col) % 5) * 7 - 14) + "deg");
+          insectOverlay.appendChild(facet);
+        }
+      }
+      insectViewport.appendChild(insectOverlay);
+      return insectOverlay;
+    }
+    function insectVision(on) {
+      clearTimeout(insectTimer);
+      clearTimeout(insectHideTimer);
+      if (on === false) {
+        if (insectViewport) insectViewport.classList.remove("insect-seeing");
+        if (insectOverlay) insectOverlay.classList.remove("show");
+        insectHideTimer = setTimeout(function () {
+          if (insectOverlay && !insectOverlay.classList.contains("show")) insectOverlay.style.visibility = "hidden";
+        }, reducedMotion() ? 0 : 220);
+        return false;
+      }
+      var overlay = buildInsectOverlay();
+      if (!overlay || !insectViewport) return false;
+      overlay.style.visibility = "visible";
+      insectViewport.classList.add("insect-seeing");
+      overlay.classList.add("show");
+      insectTimer = setTimeout(function () { insectVision(false); }, 4200);
+      return true;
+    }
     var emitLadybugHeart = function () {
       if (reducedMotion()) return;
       var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -66992,6 +67063,12 @@ async def localfont(name):
       });
       emitLadybugHeart();
       if (!quiet) playLadybugSound(); // quiet=true when the loose cat pounces at it in an unfocused window
+      if (e && e.type === "click") {
+        ladybugTapCount++;
+        clearTimeout(ladybugTapTimer);
+        if (ladybugTapCount >= 2) insectVision(true); // both the second and third rapid tap retrigger the view
+        ladybugTapTimer = setTimeout(function () { ladybugTapCount = 0; }, 650);
+      }
     };
     ladybug.addEventListener("click", buzzLadybug);
     ladybug.addEventListener("keydown", function (e) {
@@ -67000,6 +67077,8 @@ async def localfont(name):
     // the loose chest cat occasionally pounces at the bug from the garden floor (see the
     // cat IIFE's startBugPounce) — expose its flee reaction so it lives in one place.
     window.__buzzLadybug = buzzLadybug;
+    window.__insectVision = insectVision;
+    window.__insectVisionActive = function () { return !!(insectViewport && insectViewport.classList.contains("insect-seeing")); };
     ladybug.addEventListener("animationend", function (e) {
       if (e.animationName === "ladybug-hop") ladybug.classList.remove("buzzing");
     });

@@ -48650,10 +48650,11 @@ setOfficeProgress("pc", false);
       return { cls: openCls, close: closeFn, restart: extra ? extra.restart : null, running: extra ? extra.running : null };
     }
     function contextIsOnMonitor(e) {
-      if (e.target && e.target.closest && e.target.closest("#office-monitor")) return true;
-      if (!monitor) return false;
-      var r = monitor.getBoundingClientRect();
-      return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      // The monitor group's geometry is intentionally larger than its painted screen in some
+      // scaled/unzoomed layouts, so a coordinate fallback can claim unrelated office props.
+      // Real screen descendants are stable event targets; the troublesome painted bezel has
+      // its own direct listener plus the rim-only geometry backstop below.
+      return !!(e.target && e.target.closest && e.target.closest("#office-monitor"));
     }
     function closeMenu() {
       if (!menuEl) return;

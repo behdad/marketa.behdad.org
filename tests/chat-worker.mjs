@@ -462,10 +462,12 @@ check(rewriteResponse.status === 200 &&
   "authored-message rewrite mode returns one bounded English rewrite", rewriteResult);
 check(rewriteCapture.body.input.length === 1 &&
   /rephrase one authored Wedding crew message/.test(rewriteCapture.body.instructions) &&
-  /Keep exactly the same meaning/.test(rewriteCapture.body.instructions) &&
+  /same core content/.test(rewriteCapture.body.instructions) &&
+  /cheerful, playful, lightly mischievous/.test(rewriteCapture.body.instructions) &&
+  /noticeably reworded/.test(rewriteCapture.body.instructions) &&
   /\"sender\":\"Hannah\"/.test(rewriteCapture.body.instructions) &&
   !/Private history|drop me/.test(rewriteCapture.body.instructions),
-  "rewrite mode receives only sanitized authored copy and strict content-preservation guidance");
+  "rewrite mode receives only sanitized authored copy and bounded but flexible rephrasing guidance");
 
 openAIReply = JSON.stringify({ sender: "Danesh", text: "It’s the last song, so make it count.", reply_to_id: null, action: null });
 const partyOffResponse = await worker.fetch(makeRequest("/chat", {

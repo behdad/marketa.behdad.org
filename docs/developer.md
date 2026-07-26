@@ -826,9 +826,11 @@ Charlie discovery, party lifecycle prompts, and chained authored follow-ups. The
 Once an autonomous authored ID clears those gates, `deliverAutonomousRewritten` freezes any pooled
 sender/body choice. A 25% roll keeps the authored wording; otherwise it sends only the resolved
 English original through the shared Chat queue
-in `message_rewrite` mode. The Worker uses a dedicated no-actions prompt that permits rephrasing
-only and requires the exact `{en}` response shape. A valid English rewrite is stored on the authored
-message; Czech always remains the existing reviewed dictionary translation. A Turnstile, transport,
+in `message_rewrite` mode. The Worker uses a dedicated no-actions prompt for visibly different,
+cheerful, playful, lightly mischievous phrasing while preserving the authored facts, intent,
+concrete details, certainty, emoji, and point of view; it requires the exact `{en}` response shape.
+A valid English rewrite is stored on the authored message; Czech always remains the existing
+reviewed dictionary translation. A Turnstile, transport,
 timeout, upstream, parsing, or shape failure
 falls through to the original dictionary copy. Pending IDs count as received for scheduler
 deduplication, do not enter the thread until the request settles, and are generation-cancelled by

@@ -17,13 +17,11 @@ var HARNESS = [
   ' window.__jumpToDate(2027,3,19);',
   ' window.__openPhoneAppHere("calendar");await sleep(40);',
   ' var ph=document.querySelector(".calx-phone"),d19=day(ph,19);',
-  ' S("english",{label:d19&&d19.getAttribute("aria-label"),icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent,status:window.__bicycleDayStatus()});',
+  ' S("english",{label:d19&&d19.getAttribute("aria-label"),icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent,status:window.__bicycleDayStatus()});',
   ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d19=day(ph,19);',
   ' S("czech",{label:d19&&d19.getAttribute("aria-label"),icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent});',
-  ' setLang("en");if(window.__closePhoneModal)window.__closePhoneModal(true);',
-  ' window.goToStage("office");var roomBefore=window.currentStageName;',
-  ' var started=window.__bicycleDayTick(),trip=window.__tripState&&window.__tripState();',
-  ' S("tick",{started:started,roomBefore:roomBefore,roomAfter:window.currentStageName,trip:trip,status:window.__bicycleDayStatus()});',
+  ' setLang("en");ph=document.querySelector(".calx-phone");d19=day(ph,19);d19.click();await sleep(60);var trip=window.__tripState&&window.__tripState();',
+  ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:trip,status:window.__bicycleDayStatus()});',
   ' window.__jumpToDate(2027,3,20);',
   ' S("leave",{trip:window.__tripState&&window.__tripState(),status:window.__bicycleDayStatus(),tick:window.__bicycleDayTick()});',
   ' window.__jumpToDate(2027,3,19);var resetCalls=0,baseReset=window.__resetBicycleDay;',
@@ -45,14 +43,15 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 3200, { patchRaf: true, seedRandom
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(s.english && /Bicycle Day.*acid/i.test(s.english.label || "") && /🚲/.test(s.english.icon || "") &&
+check(s.english && s.english.label === "19. Bicycle Day (LSD)" && /🚲/.test(s.english.icon || "") &&
+  s.english.banner === "Bicycle Day (LSD)" &&
   s.english.status.active && s.english.status.pending,
   "April 19 is labelled and arms its cadence in the English calendar", s.english);
-check(s.czech && /Den na kole.*LSD/i.test(s.czech.label || "") && /🚲/.test(s.czech.icon || ""),
+check(s.czech && s.czech.label === "19. Den na kole (LSD)" && /🚲/.test(s.czech.icon || ""),
   "the April 19 label is localized in the Czech calendar", s.czech);
-check(s.tick && s.tick.started && s.tick.roomBefore === "office" && s.tick.roomAfter === "office" &&
-  s.tick.trip && s.tick.trip.active && s.tick.trip.variant === "acid" && s.tick.status.pending,
-  "a cadence tick starts acid in whichever room is currently shown and schedules the next pass", s.tick);
+check(s.activate && !s.activate.phone && s.activate.room === "garden" &&
+  s.activate.trip && s.activate.trip.active && s.activate.trip.variant === "acid" && s.activate.status.pending,
+  "activating April 19 closes Calendar, pans to the party room, starts acid and schedules the next pass", s.activate);
 check(s.leave && s.leave.trip && !s.leave.trip.active && !s.leave.status.active &&
   !s.leave.status.pending && !s.leave.tick,
   "leaving April 19 stops its owned trip and pending cadence", s.leave);

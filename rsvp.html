@@ -26188,7 +26188,7 @@ var T = {
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
-    cal_bicycle_day: "🚲 Bicycle Day · acid",
+    cal_bicycle_day: "Bicycle Day (LSD)",
     season_carodejnice: "🔥 witches' night",
     season_solstice: "☀️ summer solstice",
     season_svatojanska: "🔥 St John's Eve",
@@ -27250,7 +27250,7 @@ var T = {
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
-    cal_bicycle_day: "🚲 Den na kole · LSD",
+    cal_bicycle_day: "Den na kole (LSD)",
     season_carodejnice: "🔥 pálení čarodějnic",
     season_solstice: "☀️ letní slunovrat",
     season_svatojanska: "🔥 svatojánská noc",
@@ -84948,18 +84948,30 @@ function spawnDustMote(container) {
     if (bicycleDayTimer || !isBicycleDay(seasonDate())) return;
     bicycleDayTimer = setTimeout(bicycleDayTick, 10000);
   }
-  function bicycleDayTick() {
-    clearTimeout(bicycleDayTimer); bicycleDayTimer = null;
-    if (!isBicycleDay(seasonDate())) { bicycleDayStop(); return false; }
+  function bicycleDayStart(allowInterrupt) {
     var canRun = !document.hidden && document.hasFocus() &&
       (!window.__gameStarted || window.__gameStarted()) &&
       !(window.__autoplayOn && window.__autoplayOn()) &&
-      !window.__tripActive;
+      (allowInterrupt || !window.__tripActive);
     var started = false;
     if (canRun && window.__startTrip) {
       started = !!window.__startTrip("acid");
       if (started) bicycleDayTripGeneration = tripGeneration;
     }
+    return started;
+  }
+  function bicycleDayTick() {
+    clearTimeout(bicycleDayTimer); bicycleDayTimer = null;
+    if (!isBicycleDay(seasonDate())) { bicycleDayStop(); return false; }
+    var started = bicycleDayStart(false);
+    bicycleDaySchedule();
+    return started;
+  }
+  function activateBicycleDay() {
+    if (!isBicycleDay(seasonDate())) return false;
+    bicycleDayStop(); // re-clicking restarts both the visible trip and its ten-second cadence
+    if (window.goToStage) window.goToStage("garden");
+    var started = bicycleDayStart(true);
     bicycleDaySchedule();
     return started;
   }
@@ -84968,6 +84980,7 @@ function spawnDustMote(container) {
     else bicycleDaySchedule();
   }
   window.__bicycleDayTick = bicycleDayTick; // focused regression test hook
+  window.__activateBicycleDay = activateBicycleDay;
   window.__bicycleDayStatus = function () {
     return { active: isBicycleDay(seasonDate()), pending: !!bicycleDayTimer, ownsTrip: bicycleDayTripGeneration != null };
   };
@@ -85464,6 +85477,8 @@ function spawnDustMote(container) {
     };
     var fixedKey = fixed[s.m + "-" + s.d];
     if (fixedKey) return { key: fixedKey };
+    var fixedOccasion = CAL_OCC[s.m + "-" + s.d];
+    if (fixedOccasion) return { key: fixedOccasion.sk };
     if (isSizdah(s.m, s.d, s.y)) return { key: "season_sizdah" };
     var birthdays = CAL_BD_BY_DAY[s.m + "-" + s.d] || [];
     if (birthdays.length) {
@@ -85676,6 +85691,7 @@ function spawnDustMote(container) {
     if (y == null) y = curCalYear();
     var bds = CAL_BD_BY_DAY[mo + "-" + d];
     if (bds && bds.length && window.__birthdayGoto && window.__birthdayGoto(bds[0].who)) return true; // birthday outranks the season
+    if (mo === 3 && d === 19 && window.__activateBicycleDay) return window.__activateBicycleDay();
     var oc = (window.__isOccasionDate && window.__isOccasionDate()) || (window.__dateOccasion && window.__dateOccasion()); // time-gate-agnostic: a deliberate May-2 click summons the BBQ even outside its 4–10pm window (force then jumps the clock in)
     if (oc && oc.indexOf("bd:") !== 0) {
       if (window.__applyDateOccasion) window.__applyDateOccasion(true); // force past the latch so a deliberate (re-)click always re-summons

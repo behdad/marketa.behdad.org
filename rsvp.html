@@ -81593,7 +81593,7 @@ function spawnDustMote(container) {
       { id: "bh-patricia-daughter",     name: "patricia", smoker: false, s: 0.72 * UP, by: 323, label: "Patricia",  role: "role_sisterinlaw" },
       { id: "bh-elisabeth",name: "lauren",   smoker: false, s: 0.70 * UP, by: 326, label: "Lauren",    role: "role_business" },
       { id: "bh-mahzad",   name: "mahzad",   smoker: false, s: 0.66 * UP, by: 326, label: "Mahzad",    role: "role_travelbuddy_f" },
-      { id: "bh-jay",      name: "jay",      smoker: false, s: 0.72 * UP, by: 326, label: "Jay",       role: "role_officiant" },
+      { id: "bh-jay",      name: "jay",      smoker: false, vegetarian: true, s: 0.72 * UP, by: 326, label: "Jay", role: "role_officiant" },
       // smokers (right lane) — each with its ember local xy (used for the live-position smoke)
       { id: "bh-farhang",  name: "farhang",  smoker: true,  s: 0.76 * UP, by: 327, ember: { x: 20,  y: 199 },   op: 0.34, label: "Farhang", role: "role_mc" },
       { id: "bh-alireza",  name: "alireza",  smoker: true,  s: 0.66 * UP, by: 328, ember: { x: 22,  y: 203 },   op: 0.30, label: "Alireza", role: "role_travelbuddy_m" },
@@ -81718,8 +81718,13 @@ function spawnDustMote(container) {
     }
     window.__balconyGuestTakePlate = function (kind) {
       if (!hangout.classList.contains("on")) return null;
-      var pool = ROSTER.filter(function (r) { return figurePresent(r) && !r.smoker; });
-      if (!pool.length) pool = ROSTER.filter(figurePresent);
+      // Decide dietary eligibility before choosing a lane or a random recipient. Tofu is
+      // for everyone; burgers never go to a vegetarian, even if Jay is the only non-smoker.
+      var eligible = ROSTER.filter(function (r) {
+        return figurePresent(r) && (kind === "tofu" || !r.vegetarian);
+      });
+      var pool = eligible.filter(function (r) { return !r.smoker; });
+      if (!pool.length) pool = eligible;
       if (!pool.length) return null;
       var jay = kind === "tofu" && jayTofuPlates < 2 && pool.filter(function (r) { return r.name === "jay"; });
       if (jay && jay.length) pool = jay; // Jay gets first refusal until satisfied; Madla's off-deck tofu is reserved in the chat reply

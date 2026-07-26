@@ -38,6 +38,8 @@ var harness = String.raw`<script>
     check("the simultaneous patties produce one announcement", ids.filter(function (id) { return id === "hamid_food"; }).length === 1, ids.join(","));
     check("the first-ready announcement prompts one balcony reaction", cheerCalls === 1, String(cheerCalls));
     document.getElementById("bh-jay").classList.add("bh-present");
+    var burgerHandoff = window.__balconyGuestTakePlate("burger");
+    check("vegetarian Jay is never handed a burger", !burgerHandoff || burgerHandoff.recipient !== "jay", JSON.stringify(burgerHandoff));
     var tofuHandoff = window.__balconyGuestTakePlate("tofu");
     check("tofu preferentially goes to vegetarian Jay when he is outside", tofuHandoff && tofuHandoff.recipient === "jay", JSON.stringify(tofuHandoff));
     check("Jay stays quiet after his first tofu plate", !window.__phoneMessageReceived("jay_bbq_satisfied"));

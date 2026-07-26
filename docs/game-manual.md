@@ -631,7 +631,7 @@ children may keep playing elsewhere. BBQ mode remains active across later
 day/night changes; extinguishing the smoker or ending the party ends it. Hamid
 tends the grill and announces the first cooked batch in the group chat, prompting
 a cheer from the balcony and a couple of replies in the thread. The grate empties
-across six servings, after which Hamid signs off. Behdad and Markéta move together
+across twelve servings, after which Hamid signs off. Behdad and Markéta move together
 between the party floor and balcony. Extinguishing and relighting the grill starts
 with a fresh batch.
 

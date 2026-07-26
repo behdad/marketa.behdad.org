@@ -337,7 +337,7 @@ particles, photographer state, and phone/monitor ownership.
 ### BBQ inventory and grillmaster
 
 The smoker owns food inventory: each of its three persistent grate nodes yields
-two servings, then keeps a `.depleted` visual state until the fire cycles off or
+four servings, then keeps a `.depleted` visual state until the fire cycles off or
 the normal smoker reset runs. Inventory reset also invalidates each node's pending
 cook generation, preventing an old timeout from browning a newly replenished batch.
 The first cooked batch and exhausted inventory trigger Hamid's two one-shot

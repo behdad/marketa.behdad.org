@@ -55,8 +55,19 @@ var harness = String.raw`<script>
     for (var last = 0; last < 3; last++) window.__balconyServeReadyBurger();
   }, 14200);
   setTimeout(function () {
+    var midpoint = window.__bbqFoodState();
+    check("six servings leave half the cookout still to serve", midpoint.served === 6 && midpoint.capacity === 12 && midpoint.depleted === 0 && !midpoint.empty, JSON.stringify(midpoint));
+    check("Hamid does not sign off at the old six-serving limit", !window.__phoneMessageReceived("hamid_bbq_done"));
+  }, 15000);
+  setTimeout(function () {
+    for (var third = 0; third < 3; third++) window.__balconyServeReadyBurger();
+  }, 20800);
+  setTimeout(function () {
+    for (var fourth = 0; fourth < 3; fourth++) window.__balconyServeReadyBurger();
+  }, 27400);
+  setTimeout(function () {
     var final = window.__bbqFoodState(), ids = window.__phoneMessageThread();
-    check("six servings visibly exhaust all three grate positions", final.served === 6 && final.depleted === 3 && final.empty, JSON.stringify(final));
+    check("twelve servings visibly exhaust all three grate positions", final.served === 12 && final.capacity === 12 && final.depleted === 3 && final.empty, JSON.stringify(final));
     check("Hamid signs off when the smoker is empty", window.__phoneMessageReceived("hamid_bbq_done"), ids.join(","));
     check("the closing message is also one-shot", ids.filter(function (id) { return id === "hamid_bbq_done"; }).length === 1, ids.join(","));
     document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -67,11 +78,11 @@ var harness = String.raw`<script>
     check("relighting begins with the fresh inventory intact", on.served === 0 && on.depleted === 0 && !on.empty, JSON.stringify(on));
     window.resetSmoker();
     report();
-  }, 15000);
+  }, 28300);
 })();
 </script>`;
 
-var report = lib.runPageSync("rsvp.html", harness, 16500, {
+var report = lib.runPageSync("rsvp.html", harness, 30000, {
   forceMotion: true,
   seedRandom: true,
   urlSuffix: "?date=2031-05-02&time=18:00"

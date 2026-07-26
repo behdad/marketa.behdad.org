@@ -26176,6 +26176,7 @@ var T = {
     tagline: "We’re getting married<br><strong>Will you be there?</strong>",
     season_winter: "❄ winter",
     season_valentines: "💕 valentine's",
+    cal_bicycle_day: "🚲 Bicycle Day · acid",
     season_carodejnice: "🔥 witches' night",
     season_solstice: "☀️ summer solstice",
     season_svatojanska: "🔥 St John's Eve",
@@ -27237,6 +27238,7 @@ var T = {
     tagline: "Budeme se brát<br><strong>Budete tam?</strong>",
     season_winter: "❄ zima",
     season_valentines: "💕 valentýn",
+    cal_bicycle_day: "🚲 Den na kole · LSD",
     season_carodejnice: "🔥 pálení čarodějnic",
     season_solstice: "☀️ letní slunovrat",
     season_svatojanska: "🔥 svatojánská noc",
@@ -84281,6 +84283,7 @@ function spawnDustMote(container) {
     if (gsReset) gsReset.classList.remove("g-c1-lit", "g-c2-lit");
     if (window.__resetDrugsbox) window.__resetDrugsbox(); // a fresh game re-locks the magic box (and re-rolls which wedding its lock asks about)
     if (window.__stopTrip) window.__stopTrip(true); // one transition cancels the timer/rAF generation, flags, effects, creatures, cards and tolerance
+    if (window.__resetBicycleDay) window.__resetBicycleDay(); // replace April 19's old cadence after the reset has cleared its trip
     if (window.__clearCuddlyProjectorSlow) window.__clearCuddlyProjectorSlow(); // drop any stoned time-dilation on the projector
     if (window.__resetWineSips) window.__resetWineSips();
     ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
@@ -84900,8 +84903,58 @@ function spawnDustMote(container) {
     if (window.__resetBalconyIrene) window.__resetBalconyIrene(); // the kids leap Chaharshanbe's fire alone
     if (window.__resetBalconyCouple) window.__resetBalconyCouple(); // the pair leap both fires
   };
+  // April 19 commemorates Albert Hofmann's bicycle ride: while that day is selected, the
+  // current room gets a fresh acid pass every ten seconds. One owned timeout (rather than an
+  // interval) makes re-applying weather/date state idempotent and lets a date change or reset
+  // tear down both the next pass and an in-flight pass without touching a trip the player
+  // started separately.
+  var bicycleDayTimer = null, bicycleDayTripGeneration = null;
+  function isBicycleDay(s) { return !!s && s.m === 3 && s.d === 19; }
+  function bicycleDayStopOwnedTrip() {
+    if (bicycleDayTripGeneration != null &&
+        currentTripVariant === "acid" &&
+        tripGeneration === bicycleDayTripGeneration &&
+        window.__stopTrip) window.__stopTrip(false);
+    bicycleDayTripGeneration = null;
+  }
+  function bicycleDayStop() {
+    clearTimeout(bicycleDayTimer); bicycleDayTimer = null;
+    bicycleDayStopOwnedTrip();
+  }
+  function bicycleDaySchedule() {
+    if (bicycleDayTimer || !isBicycleDay(seasonDate())) return;
+    bicycleDayTimer = setTimeout(bicycleDayTick, 10000);
+  }
+  function bicycleDayTick() {
+    clearTimeout(bicycleDayTimer); bicycleDayTimer = null;
+    if (!isBicycleDay(seasonDate())) { bicycleDayStop(); return false; }
+    var canRun = !document.hidden && document.hasFocus() &&
+      (!window.__gameStarted || window.__gameStarted()) &&
+      !(window.__autoplayOn && window.__autoplayOn()) &&
+      !window.__tripActive;
+    var started = false;
+    if (canRun && window.__startTrip) {
+      started = !!window.__startTrip("acid");
+      if (started) bicycleDayTripGeneration = tripGeneration;
+    }
+    bicycleDaySchedule();
+    return started;
+  }
+  function reconcileBicycleDay(s) {
+    if (!isBicycleDay(s)) bicycleDayStop();
+    else bicycleDaySchedule();
+  }
+  window.__bicycleDayTick = bicycleDayTick; // focused regression test hook
+  window.__bicycleDayStatus = function () {
+    return { active: isBicycleDay(seasonDate()), pending: !!bicycleDayTimer, ownsTrip: bicycleDayTripGeneration != null };
+  };
+  window.__resetBicycleDay = function () {
+    bicycleDayStop();
+    bicycleDaySchedule(); // a reset on Apr 19 starts one fresh ten-second cadence, never the old one
+  };
   function applySeasonDate() {
     var s = seasonDate();
+    reconcileBicycleDay(s);
     window.__setSeason(decorForDate(s.m, s.d, s.y));
     applyBirthdays(s); // an overlay: it rides whatever __setSeason just dressed the loft in
     applyMeals(s);     // same deal: the low table comes out for the dinners, inside or outside a season
@@ -85288,6 +85341,7 @@ function spawnDustMote(container) {
   var CAL_OCC = { // "month0-day" → occasion icon + the season T key that names it on hover
     "1-14":  { icon: "💗", sk: "season_valentines" },
     // Chaharshanbe Suri / Nowruz / Sizdah Bedar drift year to year → stamped per render year via persianCalOcc(), not here
+    "3-19":  { icon: "🚲", sk: "cal_bicycle_day" },
     "3-30":  { icon: "🧹", sk: "season_carodejnice" },
     "4-1":   { icon: "💍", sk: "season_wedding", city: "cal_edmonton" },
     "4-2":   { icon: "🍖", sk: "cal_bbq", city: "cal_edmonton" },

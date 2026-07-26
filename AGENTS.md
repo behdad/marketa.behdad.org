@@ -33,6 +33,8 @@ allowed exception, owner-confirmed.)
   Keep `docs/game-manual.md` and `docs/developer.md` concise and relevant to their
   audiences. Add focused tests for meaningful regression risks, not exhaustive coverage
   of every small copy or cosmetic adjustment.
+- **Add a `Co-Authored-By` trailer to every commit** with the agent name and model
+  family: `Co-Authored-By: Codex (GPT-5) <noreply@openai.com>`.
 - **Commit and deploy after every discrete change**, not in one big batch at the end.
   Push with `git puff` (an alias for `git push --force-with-lease`, already configured —
   just run it, don't second-guess it), then `ssh behdad "cd w && git pull"` to deploy.

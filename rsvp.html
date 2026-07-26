@@ -26815,6 +26815,7 @@ var T = {
     msg_aspen_from: "Aspen",
     msg_albumfull_body: "been snapping all night 📸 your album's filling up — take a look",
     msg_bbq_body: "let's start the BBQ 🔥🍔",
+    msg_hamid_food_body: "grill's open — first batch is ready, come get it while it's hot 🔥🍔🌽",
     msg_fireworks_body: "FINALE TIME 🎆 get out on the balcony!",
     msg_lanterns_body: "let's send up wish-lanterns 🏮 make a wish ✨",
     msg_trip_body_a: "Vitamin time? 💊",
@@ -27824,6 +27825,7 @@ var T = {
     msg_aspen_from: "Aspen",
     msg_albumfull_body: "cvakám celý večer 📸 album se ti plní — mrkni na něj",
     msg_bbq_body: "jdeme roztopit gril 🔥🍔",
+    msg_hamid_food_body: "gril je otevřený — první várka je hotová, pojďte si pro ni, dokud je teplá 🔥🍔🌽",
     msg_fireworks_body: "ČAS NA FINÁLE 🎆 pojď ven na balkon!",
     msg_lanterns_body: "pustíme lampiony přání 🏮 něco si přej ✨",
     msg_trip_body_a: "Čas na vitamíny? 💊",
@@ -55008,7 +55010,12 @@ async def localfont(name):
       b.__cooking = true;
       setTimeout(function () {
         b.__cooking = false;
-        if (smoking && temp >= 300 && !b.classList.contains("served") && !b.classList.contains("done")) b.classList.add("done"); // re-checked at fire time
+        if (smoking && temp >= 300 && !b.classList.contains("served") && !b.classList.contains("done")) {
+          b.classList.add("done"); // re-checked at fire time
+          // The message id is its own one-shot latch, so all patties may finish together
+          // without Hamid announcing the same first batch more than once.
+          if (window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("hamid_food");
+        }
       }, 5000);
     }
     // A covered smoker cooks with the lid down: once the fire's lit each raw
@@ -58732,6 +58739,7 @@ async def localfont(name):
       jukebox:       { fromKey: "msg_sina_from",     bodyKey: "msg_jukebox_body",   act: "jukebox" },       // DJ Sina: requests open → taps: the DJ-booth song picker
       album_full:    { fromKey: "msg_aspen_from",    bodyKey: "msg_albumfull_body", apiAction: { id: "app.open", args: { app: "album" } } },     // Aspen, once the album hits ≥5 shots → taps: the phone album (not in a drip pool — count-triggered)
       bbq:           { fromKey: "msg_behdad_from",  bodyKey: "msg_bbq_body",       act: "bbq" },           // behdad → taps: balcony + open the smoker lid + light it
+      hamid_food:    { fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_food_body" },                       // first cooked BBQ batch → Hamid calls everyone to the grill
       fireworks:     { fromKey: "msg_danesh_from",  bodyKey: "msg_fireworks_body", act: "fireworks" },     // DJ Danesh calls the finale → taps: balcony (night) + the fireworks finale over the city
       lanterns:      { fromKey: "msg_bahareh_from", bodyKey: "msg_lanterns_body",  act: "lanterns" },      // Bahareh (fire-festival kin) → taps: balcony (night) + a wish-lantern release
       sina_helpers:  { fromKeys: TRIP_SENDERS, bodyKeys: TRIP_BODIES, act: "magicbox" }, // random friend/host trip nudge → garden magic box (locked → date lock the first time)

@@ -5025,8 +5025,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 /* Icon touches are handled locally: a quick vertical drag scrolls the launcher,
    while a short hold followed by movement rearranges the icon. */
 .phone-app-tile{display:flex; flex-direction:column; align-items:center; gap:5px; background:none; border:none; cursor:pointer; padding:0; font:inherit; touch-action:none; -webkit-user-select:none; user-select:none}
-.phone-app-tile .pat-ico{width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
+.phone-app-tile .pat-ico{position:relative; width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 2px 5px rgba(0,0,0,.18)}
 .phone-app-tile .pat-ico svg{width:32px; height:32px; display:block}
+.phone-app-tile .pat-badge{position:absolute; right:-7px; top:-7px; z-index:2; min-width:19px; height:19px; padding:0 4px; box-sizing:border-box; border:2px solid var(--cream); border-radius:10px; background:#d33a34; color:#fff; font:700 10.5px/15px system-ui,sans-serif; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,.28)}
+.phone-app-tile .pat-badge[hidden]{display:none}
 .phone-app-tile .pat-label{font-size:10.5px; color:var(--ink); text-align:center; line-height:1.1; max-width:62px}
 .phone-app-tile:active .pat-ico{transform:scale(.94)}
 /* per-app chrome: a titled header + a scrolling body */
@@ -26992,6 +26994,8 @@ var T = {
     phone_nav_recents: "Recent apps",
     phone_recents_title: "Recent apps",
     phone_recents_empty: "No recently opened apps.",
+    phone_notification_one: "1 notification",
+    phone_notification_many: "{count} notifications",
     phone_lock_title: "Unlock",
     phone_lock_del: "Delete",
     phone_lock_ok: "Unlock",
@@ -27997,6 +28001,8 @@ var T = {
     phone_nav_recents: "Nedávné aplikace",
     phone_recents_title: "Nedávné aplikace",
     phone_recents_empty: "Žádné nedávno otevřené aplikace.",
+    phone_notification_one: "1 oznámení",
+    phone_notification_many: "{count} oznámení",
     phone_lock_title: "Odemknout",
     phone_lock_del: "Smazat",
     phone_lock_ok: "Odemknout",
@@ -54833,6 +54839,53 @@ async def localfont(name):
     var phoneSlots = null; // lazily inited to phoneDefaultSlots() on first render
     function ensurePhoneSlots() { if (!phoneSlots) phoneSlots = phoneDefaultSlots(); return phoneSlots; }
     function phoneAppById(id) { for (var i = 0; i < PHONE_APPS.length; i++) if (PHONE_APPS[i].id === id) return PHONE_APPS[i]; return null; }
+    function phoneAppNotificationCount(id) {
+      if (id === "messages") return unreadCount();
+      if (id === "mail") {
+        var mailUnread = 0;
+        MAILS.forEach(function (mail) { if (!mailRead[mail.id]) mailUnread++; });
+        return mailUnread;
+      }
+      if (id === "album") {
+        var shots = (window.__albumList && window.__albumList()) || [], albumUnread = 0;
+        shots.forEach(function (shot) {
+          if (!shot.shoot && (parseInt(shot.id, 10) || 0) > albumSeenMaxId) albumUnread++;
+        });
+        return albumUnread;
+      }
+      return 0;
+    }
+    function phoneNotificationText(n) {
+      return tr(n === 1 ? "phone_notification_one" : "phone_notification_many").replace("{count}", String(n));
+    }
+    function paintPhoneAppBadge(tile, app) {
+      if (!tile || !app) return;
+      var n = Math.max(0, phoneAppNotificationCount(app.id) | 0);
+      var badge = tile.querySelector(".pat-badge");
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "pat-badge";
+        var icon = tile.querySelector(".pat-ico");
+        if (icon) icon.appendChild(badge);
+      }
+      badge.hidden = n === 0;
+      badge.textContent = n > 99 ? "99+" : String(n);
+      tile.setAttribute("data-notification-count", String(n));
+      var label = tr(app.labelKey);
+      tile.setAttribute("aria-label", n ? label + ", " + phoneNotificationText(n) : label);
+    }
+    function updatePhoneHomeBadges() {
+      if (!shell || !shell.classList.contains("pm-home")) return;
+      PHONE_APPS.forEach(function (app) {
+        paintPhoneAppBadge(shell.querySelector("#phone-app-" + app.id), app);
+      });
+    }
+    window.__phoneNotificationCounts = function () {
+      var out = {};
+      PHONE_APPS.forEach(function (app) { out[app.id] = phoneAppNotificationCount(app.id); });
+      return out;
+    };
+    window.__updatePhoneHomeBadges = updatePhoneHomeBadges;
     var phDrag = null;            // live icon-drag state (see phStartDrag) or null
     var phSuppressClick = false;  // set on a real drag so the pointerup's trailing click doesn't open the app
 
@@ -55253,6 +55306,7 @@ async def localfont(name):
           tile.innerHTML = '<span class="pat-ico" style="background:' + app.tile + '">' + ico + '</span>' +
             '<span class="pat-label">' + tr(app.labelKey) + '</span>';
         }
+        paintPhoneAppBadge(tile, app);
         // A tap opens; a drag (past the movement threshold) moves the icon to another
         // slot. phSuppressClick eats the click that trails a real drag's pointerup.
         tile.addEventListener("click", function () { if (phSuppressClick) { phSuppressClick = false; return; } launchApp(app); });
@@ -57360,6 +57414,9 @@ async def localfont(name):
       var wrap = document.createElement("div");
       wrap.className = "pm-album";
       var shots = (window.__albumList && window.__albumList()) || []; // newest-first
+      shots.forEach(function (shot) {
+        if (!shot.shoot) albumSeenMaxId = Math.max(albumSeenMaxId, parseInt(shot.id, 10) || 0);
+      });
       if (!shots.length) {
         var empty = document.createElement("div");
         empty.className = "pm-album-empty";
@@ -58190,7 +58247,7 @@ async def localfont(name):
     // cleared only on a kill (uninstallApp("photobooth") / __resetPhoneApps). The frame is a
     // frozen canvas, camera-independent, so nothing of the live camera lingers.
     var pbSavedFrame = null, pbSavedFilter = "none", pbSavedFrameId = "none", pbSavedAlbumId = null;
-    var albumCompact = false, albumRecapOpen = false;
+    var albumCompact = false, albumRecapOpen = false, albumSeenMaxId = 0;
     function renderNotes(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-notes";
@@ -59617,7 +59674,7 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and clears Album view/filter state; the flashlight intent and every retained app session return to fresh
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];
@@ -60057,6 +60114,7 @@ async def localfont(name):
         if (bt) bt.textContent = n >= 8 ? "∞" : String(n); // the real count until the 8 cap, then ∞
         balBadge.style.display = (n > 0 && !isOpen() && !rosterOpen && !actionGameHoldsNotifications()) ? "" : "none";
       }
+      updatePhoneHomeBadges();
     }
     window.__updateMsgBadge = updateMsgBadge;
     window.addEventListener("focus", scheduleMsgBadgeCoach);
@@ -78316,6 +78374,7 @@ function spawnDustMote(container) {
   var albumLastSubject = "";          // the last shot's subject-id, so we don't shoot the same subject twice running
   var albumTaken = {};                // every group already photographed (by people-signature) — NEVER shoot the same group twice
   function reportAlbumChange(reason, rec, source) {
+    if (window.__updatePhoneHomeBadges) window.__updatePhoneHomeBadges();
     if (!window.__loftStateChanged) return;
     window.__loftStateChanged("album.changed", {
       reason: reason,

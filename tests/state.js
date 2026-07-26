@@ -454,9 +454,12 @@ var PROBE_HARNESS = [
   // The auto day/night default follows Edmonton's real clock, so it would flip the loft to
   // night when the suite runs after dark and invert the manual-dusk probes. Pin the clock to
   // noon (deterministic day, same spirit as seedRandom) so dusk stays a manual-only toggle
-  // here; the real-time logic is exercised in the feature's own fake-clock verification.
+  // here. Pin real weather clear too: an Edmonton thunderstorm can otherwise add a legitimate
+  // ambient flash between the load/reset snapshots. Those live systems have focused tests.
   "    window.__edmNowMins = function () { return 720; };",
+  "    window.__realWxActive = function () { return null; };",
   "    if (window.__applyAutoDayNight) window.__applyAutoDayNight();",
+  "    if (window.__applyRealWx) window.__applyRealWx();",
   "    await sleep(900);",
   "    ok('entry paint gate: full RSVP settles on the intro without remaining concealed', document.documentElement.classList.contains('loft-entry-ready') && !document.documentElement.classList.contains('loft-entry-pending') && !!el('click-me-overlay'));",
   "    // load-time class snapshot of every element under the strip (element",

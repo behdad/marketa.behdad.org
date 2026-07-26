@@ -91,6 +91,8 @@ Some delayed messages may arrive soon after phase 2 begins. They are released as
 normal notifications rather than all taking over the scene at once.
 During Invaders, Flair-Catch, Tetris, and Pac-Man, incoming messages remain unread
 but their notification cards and badges wait until the action game ends.
+On the phone launcher, red badges show unread Messages, unread Mail, and new
+Album photos. Opening Album marks the photos currently there as seen.
 
 ## Controls
 

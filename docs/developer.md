@@ -693,6 +693,13 @@ photobooth output, and similar state. Kill, uninstall, or full reset must clear 
 retained state. Adding an app therefore requires an open path, a teardown path, Back semantics,
 context-menu behavior, and reset coverage.
 
+Launcher badges are a projection of their owning stores, not a parallel notification ledger.
+`phoneAppNotificationCount` derives Messages from `unreadCount()`, Mail from `mailRead`, and Album
+from non-`shoot` record ids newer than the session-local `albumSeenMaxId`; zero counts stay hidden.
+Store mutations call `updatePhoneHomeBadges` when the launcher may already be visible, while a fresh
+`renderHome` recomputes every installed tile. Opening Album advances its seen watermark without
+altering the Album records.
+
 Album recap is a derived presentation, not another photo store: after phase 2, while the party is
 off, it groups existing non-`shoot` records by semantic record kind. Seed photos remain in the full
 roll only. `albumRecapOpen` is session UI state and must not leak into checkpoint records or
@@ -960,7 +967,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
   `tests/rapid-navigation.js`, `tests/phase2-progression.js`, and
   `tests/progression-transitions.js` for room progression and navigation ownership;
 - `tests/menu.js`, `tests/laptopmenu.js`, `tests/systemmenu.js`, `tests/monitor-search.js`,
-  `tests/phone-direct-launch.js`, `tests/phone-lock.js`, and `tests/phone-recents.js` for
+  `tests/phone-direct-launch.js`, `tests/phone-lock.js`, `tests/phone-recents.js`, and
+  `tests/phone-badges.js` for
   monitor/phone shell, context-menu, launch, and teardown behavior;
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;

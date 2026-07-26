@@ -80964,11 +80964,6 @@ function spawnDustMote(container) {
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName); // party on → contain the loose cat to the nook; party off → let it roam again (never stows it)
     if (window.__updateWhistler) window.__updateWhistler(); // party on + Farhang/Lauren arrived → let Whistler out; party off → send him home
     if (window.__partyLifecycleChanged) window.__partyLifecycleChanged(on, wasOn); // attended pacing + explicit finales; repeated idempotent sets never reset its clock
-    // Second act: THE hinge. Pinged from the tail — every ignition path (the balcony switch,
-    // the garden light switch, the disco ball, the mask) funnels through here, and by now the
-    // whisk's goToStage("garden") has already run and set its own caption, so the reveal line
-    // the ping paints is the last word rather than something goToStage stomps a frame later.
-    if (on && window.__actPing) window.__actPing("party");
     updateCallCheer(); // party on/off → the far-away call families cheer along (or settle back down)
     if (window.__updateBalconyHangout) window.__updateBalconyHangout(); // party on → the deck crowd + smokers step out (self-gates on being ON the balcony); party off → they clear
     if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // party on → Hamid may be tending a lit BBQ (self-gates on balcony + smoking); party off → he clears
@@ -80977,6 +80972,10 @@ function spawnDustMote(container) {
     if (on && window.__offerDayPartyBBQ) window.__offerDayPartyBBQ(); // programmatic daytime parties get the same early Behdad prompt
     if (on && window.__refreshStageAnimationParking) window.__refreshStageAnimationParking(); // pause every newly-busy off-room CSS timeline in one batched animation snapshot
     if (wasOn !== on && window.__loftStateChanged) window.__loftStateChanged("party.change", { on: on }, userInitiated ? "ui" : "internal");
+    // Second act: THE hinge, and deliberately the LAST caption-producing action. Every ignition
+    // path funnels through here; goToStage and the state-change subscribers have already repainted
+    // their ordinary garden/party lines, so the reveal now survives for its intended beat.
+    if (on && window.__actPing) window.__actPing("party");
   }
   window.__setGardenParty = setGardenParty;
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The
@@ -93589,6 +93588,9 @@ function spawnDustMote(container) {
   // reports something that happened; the sequencer decides whether it mattered.
   window.__actPing = function (what) {
     if (!armed || window.__cinematic) return;
+    // Starting the party also forces night, whose day/night ping arrives before the dedicated
+    // party ping. Do not let that incidental ping skip B2 and erase its reveal.
+    if (what === "daynight" && live === "act_b2" && partyOn()) return;
     if (what === "sky") latched.wish = true;
     else if (what === "drink") latched.drink = true;
     else if (what === "dj") latched.dj = true;

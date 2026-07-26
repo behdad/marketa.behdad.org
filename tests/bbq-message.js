@@ -45,9 +45,9 @@ var harness = String.raw`<script>
   setTimeout(function () {
     var ids = window.__phoneMessageThread();
     var rows = window.__checkpointPhoneCapture().rows;
-    var replies = rows.filter(function (row) { return row.id === "bbq_cheer_marketa" || row.id === "bbq_cheer_pouria"; });
+    var replies = rows.filter(function (row) { return row.id === "bbq_cheer_madla" || row.id === "bbq_cheer_pouria"; });
     var hamid = rows.filter(function (row) { return row.id === "hamid_food"; })[0];
-    check("Markéta and Pouria answer Hamid's food-ready call", ids.indexOf("bbq_cheer_marketa") !== -1 && ids.indexOf("bbq_cheer_pouria") !== -1, ids.join(","));
+    check("Madla and Pouria answer Hamid's food-ready call", ids.indexOf("bbq_cheer_madla") !== -1 && ids.indexOf("bbq_cheer_pouria") !== -1, ids.join(","));
     check("both cheerful answers quote Hamid's message", replies.length === 2 && replies.every(function (row) { return row.message.replyTo === "hamid_food"; }), JSON.stringify(replies));
     check("the wedding crowd emoji-reacts to Hamid's call", hamid && ["🔥", "🎉", "❤️"].every(function (emoji) { return hamid.reactions.indexOf(emoji) !== -1; }), hamid && JSON.stringify(hamid.reactions));
   }, 13200);

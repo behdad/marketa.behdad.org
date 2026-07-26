@@ -20,6 +20,10 @@ allowed exception, owner-confirmed.)
 
 ## Workflow (read this first)
 
+- **Every delegated agent must work in its own git worktree and branch.** Never point
+  multiple agents at the primary checkout or let agents share a writable worktree.
+  Review and integrate each agent's finished commit explicitly into the primary branch;
+  remove the temporary worktree only after integration.
 - **Commit and deploy after every discrete change**, not in one big batch at the end.
   Push with `git puff` (an alias for `git push --force-with-lease`, already configured —
   just run it, don't second-guess it), then `ssh behdad "cd w && git pull"` to deploy.

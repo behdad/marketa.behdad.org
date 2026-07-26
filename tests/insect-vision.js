@@ -14,12 +14,16 @@ var harness = String.raw`<script>
   tap(2);
   var viewport = document.querySelector(".hunt-viewport");
   var overlay = viewport.querySelector(".insect-vision-overlay");
+  var facet = overlay && overlay.querySelector(".insect-vision-facet");
+  var facetStyle = facet && getComputedStyle(facet);
   var report = {
     errors: window.__errs,
     afterOne: afterOne,
     afterTwo: window.__insectVisionActive(),
     facets: overlay ? overlay.querySelectorAll(".insect-vision-facet").length : 0,
     pointerEvents: overlay ? getComputedStyle(overlay).pointerEvents : "",
+    facetClip: facetStyle ? (facetStyle.clipPath || facetStyle.webkitClipPath) : "",
+    facetBackdrop: facetStyle ? (facetStyle.backdropFilter || facetStyle.webkitBackdropFilter || "none") : "",
     gardenFilter: getComputedStyle(document.getElementById("stage-garden")).filter
   };
   tap(3);
@@ -48,6 +52,10 @@ if (result) {
     "one tap stays a flutter while the second and third rapid taps activate/retrigger insect vision", result);
   check(result.facets === 54 && result.pointerEvents === "none",
     "the compound-eye overlay has 54 non-interactive facets", result);
+  check(result.facetClip && result.facetClip.indexOf("polygon") !== -1,
+    "the compound-eye facets retain their hexagonal clip", result.facetClip);
+  check(result.facetBackdrop === "none",
+    "the facets avoid the compositor-unstable backdrop filter", result.facetBackdrop);
   check(result.gardenFilter && result.gardenFilter !== "none",
     "the active garden uses the compound-eye displacement/color filter", result.gardenFilter);
   check(result.cleared, "the effect clears without leaving its room state behind");

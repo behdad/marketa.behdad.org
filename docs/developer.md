@@ -823,6 +823,10 @@ Charlie discovery, party lifecycle prompts, and chained authored follow-ups. The
 - still add an unread row when appropriate, but buzz/show a scene notification only for an attended
   player.
 
+Autonomous deliveries remember the preceding autonomous authored row. A small delivery-time roll
+either quotes that row or adds a quiet emoji reaction to it; authored `replyTo` chains always take
+priority. The runtime-only links clear on reset and are flattened into checkpoint rows when saved.
+
 Once an autonomous authored ID clears those gates, `deliverAutonomousRewritten` freezes any pooled
 sender/body choice. A 25% roll keeps the authored wording; otherwise it sends the resolved
 English original and that sender's bounded `groupChatCast()` bio through the shared Chat queue

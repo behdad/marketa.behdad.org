@@ -57598,15 +57598,16 @@ async def localfont(name):
         var xb = document.createElement("button"); xb.type = "button"; xb.className = "pm-msg-x"; xb.textContent = "✕"; xb.setAttribute("aria-label", tr("install_dismiss"));
         xb.addEventListener("click", function (e) { e.stopPropagation(); markMessagesReadThrough(id); dismissMessage(id); }); head.appendChild(xb);
         var bub = document.createElement("div"); bub.className = "pm-msg-bubble";
-        var replySource = m.replyTo && MESSAGES[m.replyTo];
+        var replyId = m.replyTo || autonomousReplyLinks[id];
+        var replySource = replyId && MESSAGES[replyId];
         var replyFrom = replySource ? msgFrom(replySource) : m.replyFrom;
         var replyBody = replySource ? plainMessageText(replySource) : m.replyBody;
         if (replyFrom) {
-          var quote = document.createElement(m.replyTo ? "button" : "span"); quote.className = "pm-msg-quote"; quote.textContent = replyFrom + ": " + replyBody;
-          if (m.replyTo) {
+          var quote = document.createElement(replyId ? "button" : "span"); quote.className = "pm-msg-quote"; quote.textContent = replyFrom + ": " + replyBody;
+          if (replyId) {
             quote.type = "button";
             quote.setAttribute("aria-label", replyFrom + ": " + replyBody);
-            quote.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); markMessagesReadThrough(id); jumpToMessage(m.replyTo); });
+            quote.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); markMessagesReadThrough(id); jumpToMessage(replyId); });
           }
           bub.appendChild(quote);
         }
@@ -59170,6 +59171,7 @@ async def localfont(name):
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
     var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
+    var lastAutonomousAuthoredId = null, autonomousReplyLinks = {}; // light conversational continuity between otherwise independent scheduled texts
     var deferredAutonomousMessages = [], deferredAutonomousTimer = null;
     var pendingAuthoredRewrites = {}, messageRewriteGeneration = 0;
     var charlieIntroTimer = null, charlieIntroOffered = false; // one quiet, delayed introduction per page session; never part of a random pool
@@ -59296,7 +59298,7 @@ async def localfont(name):
               from: m.from != null ? String(m.from).slice(0, 120) : null,
               body: m.body != null ? String(m.body).slice(0, 1200) : null,
               rewrittenBodyEn: m.rewrittenBodyEn ? String(m.rewrittenBodyEn).slice(0, 700) : null,
-              outgoing: !!m.outgoing, replyTo: m.replyTo || null,
+              outgoing: !!m.outgoing, replyTo: m.replyTo || autonomousReplyLinks[id] || null,
               act: m.act || null, apiAction: m.apiAction || null, chatAction: m.chatAction || null,
               bdName: m.bdName || null
             }
@@ -60782,6 +60784,8 @@ async def localfont(name):
       messageRewriteGeneration++;
       pendingAuthoredRewrites = {};
       deferredAutonomousMessages = [];
+      lastAutonomousAuthoredId = null;
+      autonomousReplyLinks = {};
       if (deferredAutonomousTimer) { clearTimeout(deferredAutonomousTimer); deferredAutonomousTimer = null; }
       return resetPhoneAppsBase();
     };
@@ -61323,6 +61327,27 @@ async def localfont(name):
         if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "reaction", id: id }, "autonomous");
       }, 700 + (id.length % 5) * 180);
     }
+    function connectAutonomousMessage(id) {
+      var previous = lastAutonomousAuthoredId;
+      lastAutonomousAuthoredId = id;
+      if (!previous || previous === id || messagesThread.indexOf(previous) === -1 || !MESSAGES[previous]) return;
+      var m = MESSAGES[id], roll = Math.random();
+      // Authored reply chains keep their intended target. Otherwise a minority of scheduled
+      // texts visibly answer the preceding scheduled text; another minority reacts to it.
+      if (!m.replyTo && roll < 0.24) {
+        autonomousReplyLinks[id] = previous;
+      } else if (roll < 0.45) {
+        setTimeout(function () {
+          if (messagesThread.indexOf(previous) === -1) return;
+          var current = (messageReactions[previous] || []).slice();
+          var emoji = MESSAGE_REACTIONS[Math.floor(Math.random() * MESSAGE_REACTIONS.length)];
+          if (current.indexOf(emoji) === -1) current.push(emoji);
+          messageReactions[previous] = current.slice(0, 8);
+          repaintMessages();
+          if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "reaction", id: previous }, "autonomous");
+        }, 650);
+      }
+    }
     // Nothing may notify a player still looking at the "CLICK ME!" invitation — a text sliding in
     // over the untouched attract prompt reads as a bug, not an invitation. Every AUTONOMOUS channel
     // in this IIFE checks this at FIRE time (not schedule time), so dismissing the prompt takes
@@ -61351,10 +61376,10 @@ async def localfont(name):
       var m = MESSAGES[id];
       freezeAuthoredMessage(m);
       if (m.body != null || !m.bodyKey || typeof window.__monitorMessageRewrite !== "function") {
-        return window.__deliverPhoneMessage(id);
+        return window.__deliverPhoneMessage(id, true);
       }
       if (AUTHORED_REWRITE_BLOCKLIST[id] || Math.random() < AUTHORED_KEEP_ORIGINAL_CHANCE) {
-        return window.__deliverPhoneMessage(id);
+        return window.__deliverPhoneMessage(id, true);
       }
       var request = {
         sender: msgFrom(m),
@@ -61396,12 +61421,12 @@ async def localfont(name):
       }).then(function () {
         delete pendingAuthoredRewrites[id];
         if (generation !== messageRewriteGeneration || messagesThread.indexOf(id) !== -1) return;
-        window.__deliverPhoneMessage(id);
+        window.__deliverPhoneMessage(id, true);
       });
       return true;
     }
     window.__messageRewritePending = function () { return Object.keys(pendingAuthoredRewrites); };
-    window.__deliverPhoneMessage = function (id) {
+    window.__deliverPhoneMessage = function (id, autonomous) {
       if (!MESSAGES[id] || messagesThread.indexOf(id) !== -1) return false; // unknown, or already received (fire once)
       if (id === "charlie" && !charlieIntroEligible()) return false; // never let a test/nudge make Charlie the first message
       // Phase one belongs entirely to solving the loft. This shared boundary covers autonomous
@@ -61414,6 +61439,7 @@ async def localfont(name):
       // across language flips + live re-renders (renderers read m.bodyKey each time).
       freezeAuthoredMessage(m); // freeze pooled copy/sender once, before rendering or any autonomous rewrite
       applyMessageArrival(m); // state announcements describe what just happened; they never wait for a tap
+      if (autonomous) connectAutonomousMessage(id);
       messagesThread.push(id);
       scheduleMessageReactions(id, m);
       if (id === "charlie") charlieIntroOffered = true;

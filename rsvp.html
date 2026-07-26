@@ -852,18 +852,6 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 @media (prefers-reduced-motion: reduce){#autoplay-badge .ap-dot{animation:none; opacity:.8}}
 .hunt-hit{cursor:pointer}
 .hunt-hit:focus, .hunt-hit:focus-visible{outline:none}
-/* Tap acknowledgement. A finger gets no hover, so a tap on an object whose reaction is
-   subtle, delayed or state-gated reads as "the game ignored me". A brief dip confirms the
-   hit landed. OPACITY, never a transform (a transform animation replaces the element's
-   transform attribute for its duration, and most of these objects are positioned by one)
-   and never a CSS filter function (a no-op on SVG containers in WebKit). Deliberately low
-   specificity and early in source so ANY object with a reaction animation of its own wins
-   the cascade — the JS also declines to add the class when the element is already
-   animating, so this only ever fills the silence. Named .tap-blink, not .tapped: that one
-   is taken by the instrument bump above. */
-@keyframes hunt-tap-blink{0%{opacity:1}45%{opacity:.4}100%{opacity:1}}
-.tap-blink{animation:hunt-tap-blink .14s ease-out}
-@media (prefers-reduced-motion: reduce){.tap-blink{animation:none}}
 /* the game strip is a mouse/touch playground — no focus rings on any of its art */
 #loft-game-strip :focus, #loft-game-strip :focus-visible{outline:none}
 #kitchen-lamarzocco.done, #kitchen-grinder.done, #kitchen-portafilter.done{opacity:.55}
@@ -94712,24 +94700,6 @@ function spawnDustMote(container) {
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });
-  // Tap acknowledgement, delegated so it covers both a direct hit and a halo's
-  // re-dispatched click. Runs on the bubble phase, AFTER the object's own handler, so the
-  // computed animation-name read below already reflects any reaction that handler started:
-  // an object that reacted on its own is left alone and only a silent tap gets the blink.
-  // The timer is the belt to animationend's braces — under prefers-reduced-motion the rule
-  // resolves to animation:none and no animationend ever fires.
-  strip.addEventListener("click", function (e) {
-    var el = e.target && e.target.closest && e.target.closest(".hunt-hit");
-    if (!el || el.classList.contains("tap-blink")) return;
-    var anim = "";
-    try { anim = getComputedStyle(el).animationName; } catch (err) { return; }
-    if (anim && anim !== "none") return;
-    el.classList.add("tap-blink");
-    var drop = function () { el.classList.remove("tap-blink"); };
-    el.addEventListener("animationend", drop, { once: true });
-    setTimeout(drop, 400);
-  });
-
   // ── TAP HALOS ──────────────────────────────────────────────────────────────────────
   // A room is one viewport wide, so on a 390px phone 680 SVG units render into ~265 CSS px
   // — an object drawn 20 units across lands at ~8px on screen, well under a fingertip. Most

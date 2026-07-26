@@ -70257,8 +70257,9 @@ function startDmt() {
 // ── Molecule cards ─────────────────────────────────────────────────────────
 // Each trip variant has a small paper card (top-right, on #molecule-layer above the
 // strip) showing the substance's name + skeletal structure — a chemistry-nerd wink.
-// It fades in a beat after the trip look lands and fades out before the trip ends;
-// the timing is derived from TRIP_DURATIONS (not hardcoded per variant). Gated on
+// It normally fades in a beat after the trip look lands and fades out before the trip ends;
+// calendar occasions can ask for it immediately so the card lands with every scheduled trip.
+// The timing is derived from TRIP_DURATIONS (not hardcoded per variant). Gated on
 // currentTripVariant (set synchronously by startTripVariant, incl. the cinematic's
 // scripted bloom trip which does NOT set tripActive), so every trip path shows a card.
 var moleculeShowTimer = null, moleculeHideTimer = null, molFlashTimer = null;
@@ -70290,7 +70291,7 @@ function flashMolCard(variant, holdMs) {
   molFlashTimer = setTimeout(function () { card.classList.remove("mol-show"); molFlashTimer = null; }, holdMs);
 }
 window.__flashMolCard = flashMolCard;
-function showMoleculeCard(variant) {
+function showMoleculeCard(variant, immediate) {
   hideMoleculeCards();
   var card = document.getElementById("mol-card-" + variant);
   if (!card) return;
@@ -70300,10 +70301,14 @@ function showMoleculeCard(variant) {
   var showAt = Math.min(2000, Math.round(dur * 0.2));
   var hideAt = dur - 4000;
   if (hideAt < showAt + 1800) hideAt = Math.round(dur * 0.72);
-  moleculeShowTimer = setTimeout(function () {
-    if (currentTripVariant !== variant) return; // trip ended/switched before the card landed
+  if (immediate) {
     card.classList.add("mol-show");
-  }, showAt);
+  } else {
+    moleculeShowTimer = setTimeout(function () {
+      if (currentTripVariant !== variant) return; // trip ended/switched before the card landed
+      card.classList.add("mol-show");
+    }, showAt);
+  }
   moleculeHideTimer = setTimeout(function () {
     card.classList.remove("mol-show");
   }, hideAt);
@@ -70334,7 +70339,7 @@ function bumpTripTolerance() {
 }
 // noCard runs the trip with its molecule card suppressed — the garden's frog/mushroom take
 // that path, so nothing on screen names a substance when one of them sets the room off.
-function startTripVariant(variant, noCard) {
+function startTripVariant(variant, noCard, immediateCard) {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
   if (window.__gardenPartyOn && (variant === "ketamine" || variant === "iboga")) { // ketamine + iboga are heavy — they sit out the garden party; a lighter trip stands in
@@ -70347,7 +70352,7 @@ function startTripVariant(variant, noCard) {
   var generation = ++tripGeneration;
   stopDmt(); // clear any leftover dmt elves/sparkles/warp before a new trip (dmt→other switch)
   showTripCreatures(variant);
-  if (!noCard) showMoleculeCard(variant);
+  if (!noCard) showMoleculeCard(variant, immediateCard);
   else hideMoleculeCards();
   strip.classList.remove("nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga");
   requestAnimationFrame(function () {
@@ -70451,10 +70456,10 @@ function startTripVariant(variant, noCard) {
     else if (variant !== "nitrous" && variant !== "iboga") bumpTripTolerance();
   }, TRIP_DURATIONS[variant] || 3000);
 }
-function beginTrip(variant, noCard) {
+function beginTrip(variant, noCard, immediateCard) {
   if (TRIP_VARIANTS.indexOf(variant) < 0) return false;
   setTripActiveState(true);
-  startTripVariant(variant, noCard);
+  startTripVariant(variant, noCard, immediateCard);
   if (variant === "shrooms") startTripBlooms();
   return true;
 }
@@ -70476,6 +70481,9 @@ function stopTrip(resetToleranceToo) {
   return true;
 }
 window.__startTrip = beginTrip;
+window.__startTripWithImmediateCard = function (variant) {
+  return beginTrip(variant, false, true);
+};
 window.__stopTrip = stopTrip;
 function triggerRsvpTrip(e) {
   var strip = document.getElementById("loft-game-strip");
@@ -84995,8 +85003,8 @@ function spawnDustMote(container) {
       !(window.__autoplayOn && window.__autoplayOn()) &&
       (allowInterrupt || !window.__tripActive);
     var started = false;
-    if (canRun && window.__startTrip) {
-      started = !!window.__startTrip("acid");
+    if (canRun && window.__startTripWithImmediateCard) {
+      started = !!window.__startTripWithImmediateCard("acid");
       if (started) bicycleDayTripGeneration = tripGeneration;
     }
     return started;
@@ -85114,8 +85122,8 @@ function spawnDustMote(container) {
       !(window.__autoplayOn && window.__autoplayOn()) &&
       (allowInterrupt || !window.__tripActive);
     var started = false;
-    if (canRun && window.__startTrip) {
-      started = !!window.__startTrip("shrooms");
+    if (canRun && window.__startTripWithImmediateCard) {
+      started = !!window.__startTripWithImmediateCard("shrooms");
       if (started) mushroomDayTripGeneration = tripGeneration;
     }
     return started;

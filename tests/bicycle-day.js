@@ -21,9 +21,12 @@ var HARNESS = [
   ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d19=day(ph,19);',
   ' S("czech",{label:d19&&d19.getAttribute("aria-label"),icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent});',
   ' setLang("en");ph=document.querySelector(".calx-phone");d19=day(ph,19);d19.click();await sleep(60);var trip=window.__tripState&&window.__tripState();',
-  ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:trip,status:window.__bicycleDayStatus()});',
+  ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:trip,card:document.getElementById("mol-card-acid").classList.contains("mol-show"),status:window.__bicycleDayStatus()});',
   ' window.__jumpToDate(2027,3,20);',
   ' S("leave",{trip:window.__tripState&&window.__tripState(),status:window.__bicycleDayStatus(),tick:window.__bicycleDayTick()});',
+  ' window.__jumpToDate(2027,3,19);var repeated=window.__bicycleDayTick();',
+  ' S("repeat",{started:repeated,card:document.getElementById("mol-card-acid").classList.contains("mol-show"),trip:window.__tripState&&window.__tripState()});',
+  ' window.__jumpToDate(2027,3,20);',
   ' window.__jumpToDate(2027,3,19);var resetCalls=0,baseReset=window.__resetBicycleDay;',
   ' window.__resetBicycleDay=function(){resetCalls++;return baseReset();};window.__activateExtinguisher();await sleep(850);',
   ' S("reset",{calls:resetCalls,status:window.__bicycleDayStatus(),trip:window.__tripState&&window.__tripState()});',
@@ -50,11 +53,15 @@ check(s.english && s.english.label === "19. Bicycle Day (LSD)" && /🚲/.test(s.
 check(s.czech && s.czech.label === "19. Den na kole (LSD)" && /🚲/.test(s.czech.icon || ""),
   "the April 19 label is localized in the Czech calendar", s.czech);
 check(s.activate && !s.activate.phone && s.activate.room === "garden" &&
-  s.activate.trip && s.activate.trip.active && s.activate.trip.variant === "acid" && s.activate.status.pending,
-  "activating April 19 closes Calendar, pans to the party room, starts acid and schedules the next pass", s.activate);
+  s.activate.trip && s.activate.trip.active && s.activate.trip.variant === "acid" &&
+  s.activate.card && s.activate.status.pending,
+  "activating April 19 closes Calendar, pans to the party room, and starts acid with its chemistry card", s.activate);
 check(s.leave && s.leave.trip && !s.leave.trip.active && !s.leave.status.active &&
   !s.leave.status.pending && !s.leave.tick,
   "leaving April 19 stops its owned trip and pending cadence", s.leave);
+check(s.repeat && s.repeat.started && s.repeat.card &&
+  s.repeat.trip && s.repeat.trip.active && s.repeat.trip.variant === "acid",
+  "every April 19 cadence pass immediately shows the acid chemistry card", s.repeat);
 check(s.reset && s.reset.calls === 1 && s.reset.status.active && s.reset.status.pending &&
   s.reset.trip && !s.reset.trip.active,
   "a loft reset replaces the old April 19 cadence without preserving its trip", s.reset);

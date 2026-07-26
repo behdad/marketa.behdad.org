@@ -18,10 +18,10 @@ var HARNESS = [
   ' S("english",{label:d20&&d20.getAttribute("aria-label"),icon:d20&&d20.querySelector(".calx-mk")&&d20.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
   ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d20=day(ph,20);S("czech",{label:d20&&d20.getAttribute("aria-label")});',
   ' setLang("en");ph=document.querySelector(".calx-phone");d20=day(ph,20);d20.click();await sleep(60);',
-  ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:window.__tripState&&window.__tripState(),status:window.__mushroomDayStatus()});',
+  ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:window.__tripState&&window.__tripState(),card:document.getElementById("mol-card-shrooms").classList.contains("mol-show"),status:window.__mushroomDayStatus()});',
   ' window.__jumpToDate(2027,8,21);S("leave",{trip:window.__tripState&&window.__tripState(),status:window.__mushroomDayStatus(),tick:window.__mushroomDayTick()});',
   ' window.__jumpToDate(2027,8,20);window.goToStage("balcony");var repeated=window.__mushroomDayTick();',
-  ' S("repeat",{started:repeated,room:window.currentStageName,trip:window.__tripState&&window.__tripState(),status:window.__mushroomDayStatus()});',
+  ' S("repeat",{started:repeated,room:window.currentStageName,trip:window.__tripState&&window.__tripState(),card:document.getElementById("mol-card-shrooms").classList.contains("mol-show"),status:window.__mushroomDayStatus()});',
   ' var resetCalls=0,baseReset=window.__resetMushroomDay;window.__resetMushroomDay=function(){resetCalls++;return baseReset();};window.__activateExtinguisher();await sleep(850);',
   ' S("reset",{calls:resetCalls,trip:window.__tripState&&window.__tripState(),status:window.__mushroomDayStatus()});',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
@@ -46,14 +46,16 @@ check(s.english && s.english.label === "20. International Mushroom Day" &&
 check(s.czech && /Mezinárodní den hub/.test(s.czech.label || ""),
   "September 20 has a natural Czech calendar name", s.czech);
 check(s.activate && !s.activate.phone && s.activate.room === "office" &&
-  s.activate.trip && s.activate.trip.active && s.activate.trip.variant === "shrooms" && s.activate.status.pending,
-  "activation closes Calendar and immediately starts shrooms without changing rooms", s.activate);
+  s.activate.trip && s.activate.trip.active && s.activate.trip.variant === "shrooms" &&
+  s.activate.card && s.activate.status.pending,
+  "activation closes Calendar and immediately starts shrooms with its chemistry card", s.activate);
 check(s.leave && s.leave.trip && !s.leave.trip.active && !s.leave.status.active &&
   !s.leave.status.pending && !s.leave.tick,
   "leaving September 20 stops its owned trip and cadence", s.leave);
 check(s.repeat && s.repeat.started && s.repeat.room === "balcony" &&
-  s.repeat.trip && s.repeat.trip.active && s.repeat.trip.variant === "shrooms" && s.repeat.status.pending,
-  "the repeat cadence follows whichever room is current", s.repeat);
+  s.repeat.trip && s.repeat.trip.active && s.repeat.trip.variant === "shrooms" &&
+  s.repeat.card && s.repeat.status.pending,
+  "the repeat cadence follows the current room and immediately shows the shrooms chemistry card", s.repeat);
 check(s.reset && s.reset.calls === 1 && s.reset.trip && !s.reset.trip.active &&
   s.reset.status.active && s.reset.status.pending,
   "reset clears the current shroom trip and replaces the September 20 cadence", s.reset);

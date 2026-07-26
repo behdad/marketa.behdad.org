@@ -4163,8 +4163,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    array, so a language toggle repaints labels without disturbing the cells. */
 #monitor-life{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-life #monitor-life{opacity:1; pointer-events:auto}
-#monitor-life-close{cursor:pointer}
-#monitor-life-close:hover .seg-hover{opacity:.55}
+#monitor-life-close,#monitor-life-help-button{cursor:pointer}
+#monitor-life-close:hover .seg-hover,#monitor-life-help-button:hover .seg-hover{opacity:.55}
 .life-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; background:#efe6cf; font-family:sans-serif; color:#453a31; overflow:hidden}
 .life-board{flex:none; width:90px; height:42px; display:block; background:#fffdf8; cursor:crosshair; touch-action:none; image-rendering:pixelated; image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges} /* sharp cells: the monitor's desk-zoom upscales this canvas, so keep the scaling nearest-neighbour (paired with a hi-res backing store + imageSmoothingEnabled=false) */
 .life-side{flex:1; display:flex; flex-direction:column; align-items:stretch; gap:0.9px; padding:11px 2px 1.6px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
@@ -4176,7 +4176,6 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .life-step{font-size:3px; letter-spacing:-0.8px; padding-right:1px}
 .life-preset{font-size:2.5px}
 .life-gen{font-size:2.8px; line-height:1; text-align:center; color:#5c5142; padding:0.4px 0 0.2px}
-.life-help-btn{flex:none; width:5px; height:5px; padding:0; font-size:3px; border-radius:50%}
 .life-help{display:none; width:100%; height:100%; box-sizing:border-box; flex-direction:column; justify-content:center; align-items:center; gap:2.2px; padding:3px 8px; background:#efe6cf; text-align:center}
 .life-wrap.help-open>.life-board,.life-wrap.help-open>.life-side{display:none}
 .life-wrap.help-open>.life-help{display:flex}
@@ -20708,6 +20707,13 @@ section{margin:1.9rem 0}
 <foreignObject x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-life-wrap" class="life-wrap"></div>
 </foreignObject>
+<g id="monitor-life-help-button" transform="translate(76.0,29.3) scale(0.8)" role="button" tabindex="0">
+<rect class="mini-hit" x="359" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<circle cx="363.5" cy="159.25" r="2.5" fill="#c8bfa9" stroke="#8f866f" stroke-width="0.5"/>
+<circle cx="363.5" cy="158.7" r="1.8" fill="#ffffff" opacity="0.24"/>
+<circle class="seg-hover" cx="363.5" cy="159.25" r="2.5" fill="#8f866f" opacity="0"/>
+<text x="363.5" y="160.45" text-anchor="middle" font-family="sans-serif" font-size="3.6" font-weight="700" fill="#453a31" pointer-events="none">?</text>
+</g>
 <g id="monitor-life-close" transform="translate(76.0,29.3) scale(0.8)">
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.5"/>
@@ -49742,6 +49748,7 @@ setOfficeProgress("pc", false);
   // is the belt-and-suspenders net under all of it.
   var lifeWrap = document.getElementById("monitor-life-wrap");
   var lifeCloseBtn = document.getElementById("monitor-life-close");
+  var lifeHelpBtn = document.getElementById("monitor-life-help-button");
   var LIFE_COLS = 30, LIFE_ROWS = 14, LIFE_CELL = 18; // hi-res backing (540×252) so the desk-zoom upscale stays crisp
   var LIFE_SPEEDS = [300, 140, 60]; // slow / medium / fast, ms per generation
   var lifeGridArr = new Uint8Array(LIFE_COLS * LIFE_ROWS);
@@ -49924,7 +49931,6 @@ setOfficeProgress("pc", false);
       b.setAttribute("data-preset", name);
       return b;
     });
-    lifeBtn(rowP, "life-help-btn", "?", "life_help", lifeOpenHelp);
     lifeHelpEl = document.createElement("div"); lifeHelpEl.className = "life-help"; lifeHelpEl.setAttribute("role", "dialog"); lifeHelpEl.setAttribute("aria-modal", "true");
     lifeHelpTitleEl = document.createElement("div"); lifeHelpTitleEl.className = "life-help-title"; lifeHelpEl.appendChild(lifeHelpTitleEl);
     lifeHelpCopyEl = document.createElement("div"); lifeHelpCopyEl.className = "life-help-copy"; lifeHelpEl.appendChild(lifeHelpCopyEl);
@@ -49964,6 +49970,10 @@ setOfficeProgress("pc", false);
       tk[i].setAttribute("aria-label", label);
     }
     lifePresetBtns.forEach(function (b) { b.textContent = lifeT("life_" + b.getAttribute("data-preset")); });
+    if (lifeHelpBtn) {
+      lifeHelpBtn.setAttribute("aria-label", lifeT("life_help"));
+      lifeHelpBtn.setAttribute("title", lifeT("life_help"));
+    }
     if (lifeHelpTitleEl) lifeHelpTitleEl.textContent = lifeT("life_help_title");
     if (lifeHelpCopyEl) lifeHelpCopyEl.textContent = lifeT("life_help_copy");
     if (lifeHelpBackBtn) lifeHelpBackBtn.textContent = lifeT("life_help_back");
@@ -50082,6 +50092,19 @@ setOfficeProgress("pc", false);
   if (lifeCloseBtn) {
     lifeCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLifeApp(); playLaptopClickSound("office-monitor"); });
     lifeCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  if (lifeHelpBtn) {
+    function activateLifeHelp(e) {
+      if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (lifeWrap.classList.contains("help-open")) lifeCloseHelp(true);
+      else lifeOpenHelp();
+      playLaptopClickSound("office-monitor");
+    }
+    lifeHelpBtn.addEventListener("click", activateLifeHelp);
+    lifeHelpBtn.addEventListener("keydown", activateLifeHelp);
+    lifeHelpBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── FAMILY-CALL APP (the monitor dialer) ───────────────────────────────────────────
   // A little two-contact dialer on Behdad's own machine: open it and it shows a PICKER

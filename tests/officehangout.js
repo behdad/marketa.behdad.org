@@ -72,7 +72,7 @@ function El(classes) {
 
 // office-hangout layer with one <g> per couple (class = of-<key>)
 var officeLayer = El("");
-var COUPLE_CLASSES = ["of-aligoli","of-spencerjay","of-farhanglauren","of-alirezamahzad","of-hamidathena","of-baharakpayman","of-madlarobert"];
+var COUPLE_CLASSES = ["of-aligoli","of-spencerjay","of-farhanglauren","of-alirezamahzad","of-chinnelraffi","of-hamidathena","of-baharakpayman","of-madlarobert"];
 COUPLE_CLASSES.forEach(function (c) {
   var couple = El("of-couple " + c);
   couple._children.push(El("of-person of-p1"), El("of-person of-p2"));
@@ -80,7 +80,7 @@ COUPLE_CLASSES.forEach(function (c) {
 });
 
 // garden-guests: each member gets a .g-<name> child so onFloor() can find them
-var GUESTS = ["ali","goli","spencer","jay","farhang","lauren","alireza","mahzad","hamid","athena","baharak","payman","madla","robert"];
+var GUESTS = ["ali","goli","spencer","jay","farhang","lauren","alireza","mahzad","chinnel","raffi","hamid","athena","baharak","payman","madla","robert"];
 var gardenGuests = El("");
 GUESTS.forEach(function (n) { gardenGuests._children.push(El("g-" + n)); });
 
@@ -163,6 +163,9 @@ ok(presentClass() === "of-madlarobert", "exactly the madlarobert couple is .pres
 var presentCount = officeLayer._children.filter(function (e) { return e._classes.indexOf("present") !== -1; }).length;
 ok(presentCount === 1, "only one couple is present at a time (" + presentCount + ")");
 ok(JSON.stringify(sandbox.__officeCoupleNow()) === JSON.stringify(who), "__officeCoupleNow() matches the shown couple");
+var travelBuddies = sandbox.officefolks("chinnel");
+ok(!!travelBuddies && travelBuddies[0] === "chinnel" && travelBuddies[1] === "raffi" &&
+  presentClass() === "of-chinnelraffi", "Chinnel+Raffi participate in forced office visits");
 
 // 3) unspecified drinks still roll — sample many forced shows, expect beer, wine AND empty,
 //    and p1-only / p2-only / both variants to all occur.
@@ -232,7 +235,7 @@ ok(distinct >= 3, "rotation surfaces multiple distinct couples over time (" + di
 
 // 5) one-room exclusion: the office excludes the BAR and the BALCONY, but deliberately NOT the
 //    garden dance floor — the floor is off-screen while you're in the office, and floor(8)+bar+
-//    balcony would consume all 7 couples and leave the office permanently empty (see eligible()).
+//    balcony would consume all eight couples and leave the office permanently empty (see eligible()).
 sandbox.officefolks(false);
 // Ali+Goli on the garden floor — still eligible for the office:
 gardenGuests.querySelector(".g-ali").classList.add("arrived");

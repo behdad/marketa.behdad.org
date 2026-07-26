@@ -22,7 +22,9 @@ var harness = String.raw`<script>
     cheerCalls++;
     return originalCheer ? originalCheer() : false;
   };
+  window.__setGardenParty(true, true);
   window.goToStage("balcony");
+  window.__setBalconyBBQCrowd(true);
   document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
   setTimeout(function () {
@@ -35,8 +37,16 @@ var harness = String.raw`<script>
     check("Hamid announces the first cooked batch", window.__phoneMessageReceived("hamid_food"), ids.join(","));
     check("the simultaneous patties produce one announcement", ids.filter(function (id) { return id === "hamid_food"; }).length === 1, ids.join(","));
     check("the first-ready announcement prompts one balcony reaction", cheerCalls === 1, String(cheerCalls));
+    var firstKind = window.__balconyServeReadyBurger();
+    var handoff = window.__balconyLastFoodHandoff();
+    var heldPlate = document.querySelector("#balcony-hangout .bh-fig.bh-present .bh-served-plate");
+    check("a real serving places the matching food with a present balcony guest",
+      !!firstKind && !!handoff && handoff.kind === firstKind && !!heldPlate &&
+      heldPlate.getAttribute("data-kind") === firstKind && heldPlate.getAttribute("data-recipient") === handoff.recipient,
+      JSON.stringify({ kind: firstKind, handoff: handoff, hangout: document.getElementById("balcony-hangout").getAttribute("class"), present: document.querySelectorAll("#balcony-hangout .bh-fig.bh-present").length }));
     window.goToStage("cuddly"); // keep Hamid's ambient serve loop from racing this inventory probe
-    for (var first = 0; first < 3; first++) window.__balconyServeReadyBurger();
+    check("leaving the balcony clears brief held plates", !document.querySelector("#balcony-hangout .bh-served-plate"));
+    for (var first = 1; first < 3; first++) window.__balconyServeReadyBurger();
   }, 7600);
   setTimeout(function () {
     var refill = window.__bbqFoodState();

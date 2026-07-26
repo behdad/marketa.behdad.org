@@ -194,6 +194,9 @@ function spawnSteamWisps(target, cx, cy, s, a, b, c, op) { spawnCalls.push({ cx:
 var hoverWired = [];
 function hoverTooltip(el, htmlFn) { hoverWired.push({ el: el, htmlFn: htmlFn }); }
 function tipText(key) { return "TIP:" + key; }
+function showDirectPersonCard(el, htmlFn) {
+  if (win.__whoPop) win.__whoPop(el, typeof htmlFn === "function" ? htmlFn() : htmlFn);
+}
 // Stand-ins for the page's dict-driven person lines, shaped like the real ones (a wrapped span
 // when the key exists, "" when it doesn't). REL deliberately has no dj entry: the DJs are crew
 // with no rel_ string, so a card for them must still compose cleanly.
@@ -207,12 +210,12 @@ function funFact(key) { var t = FUN[String(key).toLowerCase()]; return t ? '<spa
 // hoverTooltip, tipText, document, window) resolve to our shims, and `window`
 // property assignments land on our win object.
 var runner = new Function(
-  "window", "document", "strip", "spawnSteamWisps", "hoverTooltip", "tipText", "relLine", "funFact",
+  "window", "document", "strip", "spawnSteamWisps", "hoverTooltip", "tipText", "relLine", "funFact", "showDirectPersonCard",
   "requestAnimationFrame", "cancelAnimationFrame", "setTimeout", "clearTimeout", "getComputedStyle", "matchMedia",
   "(function balconyHangout() {" + body + "})();"
 );
 runner(
-  win, doc, strip, spawnSteamWisps, hoverTooltip, tipText, relLine, funFact,
+  win, doc, strip, spawnSteamWisps, hoverTooltip, tipText, relLine, funFact, showDirectPersonCard,
   win.requestAnimationFrame, win.cancelAnimationFrame,
   function () { return 0; }, function () {}, // setTimeout/clearTimeout — no ambient timers needed for logic
   function () { return { opacity: "1", display: "" }; },

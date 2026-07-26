@@ -9574,6 +9574,11 @@ section{margin:1.9rem 0}
    the .bh-idle wrapper so it sways with the figure; static under reduced motion like everything. */
 #balcony-hangout .bh-drink{display:none}
 #balcony-hangout .bh-drink.on{display:inline}
+/* A served item briefly appears on a real present guest's waist-level plate. The
+   node is inserted inside that figure's transform-free .bh-idle group, uses only
+   authored coordinates, and animates opacity alone. */
+#balcony-hangout .bh-served-plate{opacity:0; pointer-events:none; animation:bh-food-plate 3.8s ease}
+@keyframes bh-food-plate{0%{opacity:0}10%,78%{opacity:1}100%{opacity:0}}
 /* name popups: each figure takes pointer events (hover tooltip + click-to-reveal name card)
    only while the crowd's shown — the parent #balcony-hangout stays pointer-events:none so it
    never blocks page scroll where nobody's drawn (only the painted figures hit-test). */
@@ -9589,6 +9594,7 @@ section{margin:1.9rem 0}
 @media (prefers-reduced-motion: reduce){
   #balcony-hangout .bh-idle, #balcony-hangout .bh-arm-gesture, #balcony-hangout .bh-toke-arm, #balcony-hangout .bh-ember,
   #balcony-hangout.food-cheer .bh-idle, #balcony-hangout.food-cheer .bh-arm-gesture{animation:none}
+  #balcony-hangout .bh-served-plate{animation:none;opacity:1}
   #balcony-hangout,#balcony-hangout .bh-fig,#balcony-grillmaster,#garden-jacket-inner,#balcony-hallway-jacket-inner{transition:none}
 }
 /* ═══ OFFICE HANGOUT COUPLE ═══════════════════════════════════════════════════
@@ -55104,13 +55110,15 @@ async def localfont(name):
     // With the lid up, clicking a cooked item serves it. Each grate position
     // replenishes three times, then remains visibly empty: twelve plates make one cookout.
     function serveBurger(b, e) {
-      if (!smoker.classList.contains("open")) return;
-      if (!b.classList.contains("done") || b.classList.contains("served")) return;
+      if (!smoker.classList.contains("open")) return null;
+      if (!b.classList.contains("done") || b.classList.contains("served")) return null;
       if (e) e.stopPropagation();
+      var kind = b.querySelector(".grill-tofu") ? "tofu" : "burger";
       b.classList.add("served");
       b.__servings = (b.__servings || 0) + 1;
       playChopSound(0.7, 1, "balcony-smoker");
       spawnSteamWisps(strip, 3176, 178, 0.4, 1, -1, 1, 0.4);
+      if (window.__balconyGuestTakePlate) window.__balconyGuestTakePlate(kind);
       setTimeout(function () {
         // Reset to raw with no fill fade while hidden. After its fourth plate,
         // this position stays empty and the three positions progressively deplete.
@@ -55125,6 +55133,7 @@ async def localfont(name):
           if (food.empty && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("hamid_bbq_done");
         } else if (smoking) setTimeout(function () { cookBurger(b); }, 500);
       }, 450);
+      return kind;
     }
     burgers.forEach(function (b) {
       b.addEventListener("click", function (e) { serveBurger(b, e); });
@@ -55134,9 +55143,7 @@ async def localfont(name):
     window.__balconyServeReadyBurger = function () {
       var b = document.querySelector("#balcony-smoker .smoker-burger.done:not(.served)");
       if (!b) return null;
-      var isTofu = !!b.querySelector(".grill-tofu");
-      serveBurger(b, null);
-      return isTofu ? "tofu" : "burger";
+      return serveBurger(b, null);
     };
     // Fire up the BBQ on demand (Behdad's "let's start the BBQ" text): lid up + fire on, idempotent.
     window.__startBBQ = function (source) {
@@ -81273,6 +81280,45 @@ function spawnDustMote(container) {
         if (g) g.classList.toggle("bh-present", !!ids[r.id]);
       });
     }
+    var lastFoodHandoff = null;
+    function clearGuestFoodPlates() {
+      var plates = hangout.querySelectorAll(".bh-served-plate");
+      for (var i = 0; i < plates.length; i++) plates[i].remove();
+    }
+    window.__balconyGuestTakePlate = function (kind) {
+      if (!hangout.classList.contains("on")) return null;
+      var pool = ROSTER.filter(function (r) { return figurePresent(r) && !r.smoker; });
+      if (!pool.length) pool = ROSTER.filter(figurePresent);
+      if (!pool.length) return null;
+      var alternatives = pool.filter(function (r) { return !lastFoodHandoff || figKey(r) !== lastFoodHandoff.recipient; });
+      if (alternatives.length) pool = alternatives;
+      var r = pool[(Math.random() * pool.length) | 0];
+      var fig = document.getElementById(r.id);
+      var idle = fig && fig.querySelector(".bh-idle");
+      if (!idle) return null;
+      var existing = fig.querySelector(".bh-served-plate");
+      if (existing) existing.remove();
+      var active = hangout.querySelectorAll(".bh-served-plate");
+      while (active.length >= 3) { active[0].remove(); active = hangout.querySelectorAll(".bh-served-plate"); }
+      var plate = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      plate.setAttribute("class", "bh-served-plate");
+      plate.setAttribute("data-kind", kind === "tofu" ? "tofu" : "burger");
+      plate.setAttribute("data-recipient", figKey(r));
+      plate.innerHTML =
+        '<ellipse cx="0" cy="248" rx="10" ry="3.2" fill="#e8e4da" stroke="#9f9788" stroke-width="0.8"/>' +
+        '<ellipse cx="0" cy="247.3" rx="6.8" ry="1.8" fill="#f8f5ec"/>' +
+        (kind === "tofu"
+          ? '<rect x="-4.8" y="243.2" width="4.2" height="4.2" rx="0.8" fill="#e6c98a" stroke="#a9793f" stroke-width="0.6"/><rect x="0.2" y="242.5" width="4.2" height="4.2" rx="0.8" fill="#c99a5a" stroke="#8f6234" stroke-width="0.6"/>'
+          : '<ellipse cx="0" cy="244.4" rx="5.2" ry="2.1" fill="#dda75e"/><rect x="-4.8" y="244" width="9.6" height="2" rx="0.8" fill="#6b4630"/><ellipse cx="0" cy="246.1" rx="5.2" ry="1.5" fill="#e8b96d"/>');
+      idle.appendChild(plate); // same coordinate system as the recipient; no getBBox projection
+      lastFoodHandoff = { recipient: figKey(r), kind: kind === "tofu" ? "tofu" : "burger" };
+      plate.addEventListener("animationend", function (e) { if (e.animationName === "bh-food-plate" && plate.parentNode) plate.remove(); });
+      setTimeout(function () { if (plate.parentNode) plate.remove(); }, 4000); // reduced-motion / interrupted-animation fallback
+      return { recipient: lastFoodHandoff.recipient, kind: lastFoodHandoff.kind };
+    };
+    window.__balconyLastFoodHandoff = function () {
+      return lastFoodHandoff ? { recipient: lastFoodHandoff.recipient, kind: lastFoodHandoff.kind } : null;
+    };
     function preferPresent(pool, count) {
       var staying = shuffle(pool.filter(figurePresent));
       var incoming = shuffle(pool.filter(function (r) { return !figurePresent(r); }));
@@ -81507,6 +81553,7 @@ function spawnDustMote(container) {
     }
     function hide() {
       hangout.classList.remove("on");
+      clearGuestFoodPlates();
       shownOnce = false; // next appearance re-rolls the couple + the whole layout
       shownSmokerNames = []; // nobody's out → the bar/floor stop excluding balcony names
       // clear every held drink so none strands into the next (freshly-rolled) appearance

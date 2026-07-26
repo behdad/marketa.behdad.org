@@ -633,7 +633,8 @@ tends the grill and announces the first cooked batch in the group chat, promptin
 a cheer from the balcony and a couple of replies in the thread. The grate empties
 across twelve servings, after which Hamid signs off. Behdad and Markéta move together
 between the party floor and balcony. Extinguishing and relighting the grill starts
-with a fresh batch.
+with a fresh batch. As Hamid serves, plates briefly appear with guests who are
+currently outside.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 

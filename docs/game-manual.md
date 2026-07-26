@@ -594,9 +594,9 @@ Elapsed time does not end the party. It continues while the player works in
 another window or leaves the game occluded. The attended clock still paces later
 messages and explicit finales, but it does not impose a deadline.
 
-Accepting a final-song or final-dance cue schedules a graceful ending after its
-authored beat. Completing the wedding-cake sequence can also end the party
-gracefully. The wall switch ends it immediately.
+Accepting a final-song, final-dance, or sparkler send-off cue schedules a
+graceful ending after its authored beat. Completing the wedding-cake sequence
+can also end the party gracefully. The wall switch ends it immediately.
 
 Ending the party does not reset progress or end the game. Rooms, phone and
 computer apps, music, minigames, and exploration remain available. A later

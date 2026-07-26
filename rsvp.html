@@ -59210,6 +59210,7 @@ async def localfont(name):
       lastdance:       { fromKey: "msg_athena_from", bodyKey: "msg_lastdance_body", act: "lastdance" }, // 2:30 close cue; tap runs a final slow dance, then winds down
       lastsong_sina:   { fromKey: "msg_sina_from", bodyKey: "msg_lastsong_body", act: "lastsong" },
       lastsong_danesh: { fromKey: "msg_danesh_from", bodyKey: "msg_lastsong_body", act: "lastsong" },
+      lastsparklers:   { fromKey: "msg_bahareh_from", bodyKey: "msg_sparklers_body", act: "lastsparklers" }, // third close cue: the existing sparkler tunnel becomes the send-off
       firstdance:    { fromKeys: MOMENT_SENDERS, bodyKey: "msg_firstdance_body", apiAction: { id: "party.moment.start", args: { moment: "first-dance" } } },    // a coordinator → taps: the garden party + the hosts' first dance
       slowdance:     { fromKeys: MOMENT_SENDERS, bodyKey: "msg_slowdance_body", apiAction: { id: "party.moment.start", args: { moment: "slow-dance" } } },       // a coordinator → taps: the garden party + a slow-song lull (the whole floor pairs off)
       cake:          { fromKeys: MOMENT_SENDERS, bodyKey: "msg_cake_body",      apiAction: { id: "party.moment.start", args: { moment: "cake" } } },         // a coordinator → taps: the garden party + the cake cutting
@@ -60856,7 +60857,7 @@ async def localfont(name):
     }
     var PARTY_BOUND_MESSAGE_ACTIONS = {
       group: true, danesh: true, smores: true, lastdance: true,
-      lastsong_sina: true, lastsong_danesh: true, jukebox: true,
+      lastsong_sina: true, lastsong_danesh: true, lastsparklers: true, jukebox: true,
       fireworks: true, lanterns: true, sunset_bed: true
     };
     function messageHasAction(m) { return !!(m && !m.outgoing && (m.act || m.apiAction || m.chatAction)); }
@@ -60896,7 +60897,7 @@ async def localfont(name):
     function messageActionIsOneShot(m, action) {
       return !!((action && action.id === "party.moment.start") ||
         (action && action.id === "party.set" && action.args && action.args.on === false) ||
-        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "party" || m.act === "party_switch")));
+        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "lastsparklers" || m.act === "party" || m.act === "party_switch")));
     }
     window.__expireStaleMessageActions = function () {
       var changed = expireStaleMessageActions();
@@ -60998,6 +60999,12 @@ async def localfont(name):
         if (window.goToStage) window.goToStage("garden");
         if (window.__nextPartyDance) window.__nextPartyDance();
         if (window.__schedulePartyFinale) window.__schedulePartyFinale(15, "lastsong");
+        return;
+      }
+      if (act === "lastsparklers") { // Bahareh's send-off: form the existing sparkler tunnel, then let the party close behind it
+        if (!window.__gardenPartyOn) return;
+        if (window.sparklers) window.sparklers();
+        if (window.__schedulePartyFinale) window.__schedulePartyFinale(24, "lastsparklers");
         return;
       }
       if (act === "roster") { // Danesh's shout-out is about the DANCE FLOOR, so light the party + head to the garden before opening (the panel itself now rosters whatever room it's in)
@@ -76802,7 +76809,7 @@ function spawnDustMote(container) {
     var sw = document.getElementById("garden-lightswitch");
     if (!sw) return;
     var attendedSeconds = 0, timer = null, active = false, finishing = false;
-    var finaleAt = null, finaleReason = null, finaleTextOffered = false;
+    var finaleAt = null, finaleReason = null, finaleTextOffered = false, finaleDeck = [];
     var suppressNextStop = false, inviteTimer = null;
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
     function clearInvite() { if (inviteTimer) { clearTimeout(inviteTimer); inviteTimer = null; } }
@@ -76818,7 +76825,18 @@ function spawnDustMote(container) {
       if (finaleTextOffered || !window.__gardenPartyOn || !window.__deliverPhoneMessage) return false;
       if (window.__bbqDateNow && window.__bbqDateNow()) return false; // open cookouts skip formal reception moments
       finaleTextOffered = true;
-      var id = Math.random() < 0.5 ? "lastdance" : (window.__djB ? "lastsong_danesh" : "lastsong_sina");
+      // Deal all three distinct send-offs before repeating: Athena's slow dance, the active
+      // DJ's last song, or Bahareh's sparkler tunnel. Refill + shuffle per cycle so several
+      // party stints feel varied without making any one ending rarer than the others.
+      if (!finaleDeck.length) {
+        finaleDeck = ["lastdance", "lastsong", "lastsparklers"];
+        for (var i = finaleDeck.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1)), tmp = finaleDeck[i];
+          finaleDeck[i] = finaleDeck[j]; finaleDeck[j] = tmp;
+        }
+      }
+      var kind = finaleDeck.shift();
+      var id = kind === "lastsong" ? (window.__djB ? "lastsong_danesh" : "lastsong_sina") : kind;
       return !!(window.__deliverAutonomousPhoneMessage && window.__deliverAutonomousPhoneMessage(id));
     }
     function finish(reason) {
@@ -76875,6 +76893,7 @@ function spawnDustMote(container) {
     };
     window.__partyExitHintActive = function () { return !!(active && window.__gardenPartyOn); };
     window.__showPartyExitHint = function () { return show(false); }; // deterministic state-test hook (does not manufacture a phone cue)
+    window.__offerPartyFinaleText = offerFinaleText; // focused test hook: deal the next closing message without waiting on party pacing
     window.__consumePartyExitHint = function () { active = false; paint(); };
     window.__partyLifecycleChanged = function (on, wasOn) {
       if (on && !wasOn) startFresh();

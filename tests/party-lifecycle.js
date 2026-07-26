@@ -85,6 +85,17 @@ var harness = String.raw`<script>
   if (inviteId && window.__runMsgAction) window.__runMsgAction(inviteId);
   check("accepting the invitation deliberately restarts it", !!window.__gardenPartyOn);
 
+  var realSparklers = window.sparklers, sparklerCalls = 0;
+  window.sparklers = function () { sparklerCalls++; };
+  if (window.__deliverPhoneMessage) window.__deliverPhoneMessage("lastsparklers");
+  if (window.__runMsgAction) window.__runMsgAction("lastsparklers");
+  var sparklerFinale = window.__partyLifecycleState();
+  check("the third closing cue starts a sparkler send-off and schedules its graceful ending",
+    sparklerCalls === 1 && sparklerFinale.finaleAt > sparklerFinale.attended && sparklerFinale.finaleReason === "lastsparklers",
+    { calls: sparklerCalls, state: sparklerFinale });
+  window.sparklers = realSparklers;
+  if (window.__extendPartyLifecycle) window.__extendPartyLifecycle();
+
   window.__advancePartyLifecycle(150);
   window.__schedulePartyFinale(5, "lastsong");
   var extended = window.__extendPartyLifecycle && window.__extendPartyLifecycle();

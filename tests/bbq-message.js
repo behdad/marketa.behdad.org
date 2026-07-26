@@ -43,6 +43,15 @@ var harness = String.raw`<script>
     check("the first three plates replenish once", refill.served === 3 && refill.depleted === 0 && !refill.empty, JSON.stringify(refill));
   }, 8500);
   setTimeout(function () {
+    var ids = window.__phoneMessageThread();
+    var rows = window.__checkpointPhoneCapture().rows;
+    var replies = rows.filter(function (row) { return row.id === "bbq_cheer_marketa" || row.id === "bbq_cheer_pouria"; });
+    var hamid = rows.filter(function (row) { return row.id === "hamid_food"; })[0];
+    check("Markéta and Pouria answer Hamid's food-ready call", ids.indexOf("bbq_cheer_marketa") !== -1 && ids.indexOf("bbq_cheer_pouria") !== -1, ids.join(","));
+    check("both cheerful answers quote Hamid's message", replies.length === 2 && replies.every(function (row) { return row.message.replyTo === "hamid_food"; }), JSON.stringify(replies));
+    check("the wedding crowd emoji-reacts to Hamid's call", hamid && ["🔥", "🎉", "❤️"].every(function (emoji) { return hamid.reactions.indexOf(emoji) !== -1; }), hamid && JSON.stringify(hamid.reactions));
+  }, 13200);
+  setTimeout(function () {
     for (var last = 0; last < 3; last++) window.__balconyServeReadyBurger();
   }, 14200);
   setTimeout(function () {
@@ -50,9 +59,13 @@ var harness = String.raw`<script>
     check("six servings visibly exhaust all three grate positions", final.served === 6 && final.depleted === 3 && final.empty, JSON.stringify(final));
     check("Hamid signs off when the smoker is empty", window.__phoneMessageReceived("hamid_bbq_done"), ids.join(","));
     check("the closing message is also one-shot", ids.filter(function (id) { return id === "hamid_bbq_done"; }).length === 1, ids.join(","));
+    document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    var off = window.__bbqFoodState();
+    check("turning the grill off replenishes its inventory", off.served === 0 && off.depleted === 0 && !off.empty, JSON.stringify(off));
+    document.getElementById("balcony-smoker-firebox").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    var on = window.__bbqFoodState();
+    check("relighting begins with the fresh inventory intact", on.served === 0 && on.depleted === 0 && !on.empty, JSON.stringify(on));
     window.resetSmoker();
-    var reset = window.__bbqFoodState();
-    check("the normal smoker reset restores a full fresh inventory", reset.served === 0 && reset.depleted === 0 && !reset.empty, JSON.stringify(reset));
     report();
   }, 15000);
 })();

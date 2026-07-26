@@ -337,9 +337,12 @@ particles, photographer state, and phone/monitor ownership.
 ### BBQ inventory and grillmaster
 
 The smoker owns food inventory: each of its three persistent grate nodes yields
-two servings, then keeps a `.depleted` visual state until the normal smoker reset.
+two servings, then keeps a `.depleted` visual state until the fire cycles off or
+the normal smoker reset runs. Inventory reset also invalidates each node's pending
+cook generation, preventing an old timeout from browning a newly replenished batch.
 The first cooked batch and exhausted inventory trigger Hamid's two one-shot
-Messages entries; the first also invokes the deck's bounded `.food-cheer` reaction.
+Messages entries; the first also invokes the deck's bounded `.food-cheer` reaction
+and chains two authored replies quoting Hamid's row.
 
 ### Across-street windows and Window Tetris
 
@@ -840,6 +843,11 @@ messages without adding thread rows; the scene preview, floating unread launcher
 badge are also suppressed. Closing the roster resumes eligible queued messages at the normal paced
 drain, while explicit `__deliverPhoneMessage` calls remain immediate but visually quiet behind the
 roster.
+
+Incoming authored rows may gain bounded crew reactions after delivery.
+`messageReactionPlan` hashes the message id rather than consuming gameplay randomness;
+an entry's `arrivalReactions` overrides that plan for intentional beats. Reaction arrival
+re-renders an open thread but does not alter unread state or raise a notification.
 
 Wedding-moment messages are routed through the same boundary and remain ineligible until 45 seconds
 of attended party time from `__partyLifecycleState()`. While first dance,

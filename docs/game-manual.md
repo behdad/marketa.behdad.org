@@ -507,6 +507,8 @@ Right-click a message, or long-press it on touch, to:
 - add a reaction.
 
 A reply can quote an earlier message. Tapping the quote finds the original.
+Some incoming texts also collect quiet emoji reactions from the wedding crowd;
+these do not create another notification or change unread state.
 
 Messages may include scene actions such as starting a party moment, visiting a
 room, or beginning an activity. These actions never run just because a
@@ -628,9 +630,10 @@ Selected adults then split naturally between the balcony and garden/party while
 children may keep playing elsewhere. BBQ mode remains active across later
 day/night changes; extinguishing the smoker or ending the party ends it. Hamid
 tends the grill and announces the first cooked batch in the group chat, prompting
-a cheer from the balcony. The grate empties across six servings, after which
-Hamid signs off. Behdad and Markéta move together between the party floor and
-balcony.
+a cheer from the balcony and a couple of replies in the thread. The grate empties
+across six servings, after which Hamid signs off. Behdad and Markéta move together
+between the party floor and balcony. Extinguishing and relighting the grill starts
+with a fresh batch.
 
 Three open-cookout dates use a daytime, no-UV party presentation:
 

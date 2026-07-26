@@ -26824,6 +26824,8 @@ var T = {
     msg_albumfull_body: "been snapping all night 📸 your album's filling up — take a look",
     msg_bbq_body: "let's start the BBQ 🔥🍔",
     msg_hamid_food_body: "grill's open — first batch is ready, come get it while it's hot 🔥🍔🌽",
+    msg_bbq_cheer_marketa_body: "running — save me the crispy tofu 🔥",
+    msg_bbq_cheer_pouria_body: "too late, I'm already holding a plate 🍽️",
     msg_hamid_bbq_done_body: "grill defeated. nobody leaves hungry on my watch 🔥✅",
     msg_fireworks_body: "FINALE TIME 🎆 get out on the balcony!",
     msg_lanterns_body: "let's send up wish-lanterns 🏮 make a wish ✨",
@@ -27835,6 +27837,8 @@ var T = {
     msg_albumfull_body: "cvakám celý večer 📸 album se ti plní — mrkni na něj",
     msg_bbq_body: "jdeme roztopit gril 🔥🍔",
     msg_hamid_food_body: "gril je otevřený — první várka je hotová, pojďte si pro ni, dokud je teplá 🔥🍔🌽",
+    msg_bbq_cheer_marketa_body: "běžím — schovej mi opečené tofu 🔥",
+    msg_bbq_cheer_pouria_body: "pozdě, už držím talíř 🍽️",
     msg_hamid_bbq_done_body: "gril poražen. pod mým dohledem nikdo neodejde hladový 🔥✅",
     msg_fireworks_body: "ČAS NA FINÁLE 🎆 pojď ven na balkon!",
     msg_lanterns_body: "pustíme lampiony přání 🏮 něco si přej ✨",
@@ -55018,8 +55022,10 @@ async def localfont(name):
     function cookBurger(b) {
       // food only cooks once the grill is hot enough (≥300°); it then browns over ~5s (not instantly)
       if (!(smoking && temp >= 300) || b.classList.contains("served") || b.classList.contains("depleted") || b.classList.contains("done") || b.__cooking) return;
+      var generation = b.__cookGeneration || 0;
       b.__cooking = true;
       setTimeout(function () {
+        if ((b.__cookGeneration || 0) !== generation) return; // an off/on cycle replaced this batch
         b.__cooking = false;
         if (smoking && temp >= 300 && !b.classList.contains("served") && !b.classList.contains("done")) {
           b.classList.add("done"); // re-checked at fire time
@@ -55047,6 +55053,7 @@ async def localfont(name):
     function toggleFire(silentReport) {
       var before = bbqState();
       smoking = !smoking;
+      if (!smoking || bbqFoodState().empty) resetFoodInventory(); // every fresh fire cycle starts with a full grate
       smoker.classList.toggle("smoking", smoking);
       setFire(smoking); // heats up, or starts the slow cool-down
       if (smoking) {
@@ -55083,6 +55090,15 @@ async def localfont(name):
         if (b.classList.contains("depleted")) depleted++;
       });
       return { served: served, capacity: burgers.length * BBQ_SERVINGS_PER_SPOT, depleted: depleted, empty: depleted === burgers.length };
+    }
+    function resetFoodInventory() {
+      burgers.forEach(function (b) {
+        b.__cookGeneration = (b.__cookGeneration || 0) + 1;
+        b.__servings = 0;
+        b.__cooking = false;
+        b.classList.remove("served", "done", "depleted");
+        b.style.transition = "";
+      });
     }
     window.__bbqFoodState = bbqFoodState;
     // With the lid up, clicking a cooked item serves it. Each grate position
@@ -55149,12 +55165,7 @@ async def localfont(name):
       firstLightDone = false;
       firstLidDone = false;
       smoker.classList.remove("smoking", "open");
-      burgers.forEach(function (b) {
-        b.__servings = 0;
-        b.__cooking = false;
-        b.classList.remove("served", "done", "depleted");
-        b.style.transition = "";
-      });
+      resetFoodInventory();
       if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // a cold BBQ has no grillmaster
       if (window.__syncPartyBBQ) window.__syncPartyBBQ();
       reportBBQ(before, "internal");
@@ -58772,7 +58783,9 @@ async def localfont(name):
       jukebox:       { fromKey: "msg_sina_from",     bodyKey: "msg_jukebox_body",   act: "jukebox" },       // DJ Sina: requests open → taps: the DJ-booth song picker
       album_full:    { fromKey: "msg_aspen_from",    bodyKey: "msg_albumfull_body", apiAction: { id: "app.open", args: { app: "album" } } },     // Aspen, once the album hits ≥5 shots → taps: the phone album (not in a drip pool — count-triggered)
       bbq:           { fromKey: "msg_behdad_from",  bodyKey: "msg_bbq_body",       act: "bbq" },           // behdad → taps: balcony + open the smoker lid + light it
-      hamid_food:    { fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_food_body" },                       // first cooked BBQ batch → Hamid calls everyone to the grill
+      hamid_food:    { fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_food_body", arrivalReactions: ["🔥", "🎉", "❤️"], next: "bbq_cheer_marketa", nextDelay: 2200 }, // first cooked batch → Hamid calls everyone; the crew reacts and two guests answer in-thread
+      bbq_cheer_marketa: { fromKey: "msg_marketa_from", bodyKey: "msg_bbq_cheer_marketa_body", replyTo: "hamid_food", next: "bbq_cheer_pouria", nextDelay: 2600 },
+      bbq_cheer_pouria:  { fromKey: "msg_pouria_from",  bodyKey: "msg_bbq_cheer_pouria_body",  replyTo: "hamid_food" },
       hamid_bbq_done:{ fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_bbq_done_body" },                   // sixth plate empties the smoker → Hamid closes the cookout
       fireworks:     { fromKey: "msg_danesh_from",  bodyKey: "msg_fireworks_body", act: "fireworks" },     // DJ Danesh calls the finale → taps: balcony (night) + the fireworks finale over the city
       lanterns:      { fromKey: "msg_bahareh_from", bodyKey: "msg_lanterns_body",  act: "lanterns" },      // Bahareh (fire-festival kin) → taps: balcony (night) + a wish-lantern release
@@ -60807,6 +60820,35 @@ async def localfont(name):
         if (window.__wakeKids) window.__wakeKids();
       }
     }
+    // Authored incoming texts can quietly collect crew emoji reactions. The id hash keeps
+    // the selection stable without consuming gameplay randomness; explicitly authored
+    // reactions (such as Hamid's food-ready cheer) always win. Reactions change no unread
+    // state and never produce another notification.
+    function messageReactionPlan(id, m) {
+      if (m && Array.isArray(m.arrivalReactions)) return m.arrivalReactions.slice(0, 3);
+      if (!m || m.outgoing || m.generated) return [];
+      var hash = 0;
+      for (var i = 0; i < id.length; i++) hash = ((hash * 31) + id.charCodeAt(i)) >>> 0;
+      if (hash % 100 >= 42) return [];
+      var plan = [MESSAGE_REACTIONS[hash % MESSAGE_REACTIONS.length]];
+      if (hash % 3 === 0) {
+        var second = MESSAGE_REACTIONS[(hash + 2) % MESSAGE_REACTIONS.length];
+        if (second !== plan[0]) plan.push(second);
+      }
+      return plan;
+    }
+    function scheduleMessageReactions(id, m) {
+      var plan = messageReactionPlan(id, m);
+      if (!plan.length) return;
+      setTimeout(function () {
+        if (messagesThread.indexOf(id) === -1 || !MESSAGES[id]) return;
+        var current = (messageReactions[id] || []).slice();
+        plan.forEach(function (emoji) { if (current.indexOf(emoji) === -1) current.push(emoji); });
+        messageReactions[id] = current.slice(0, 8);
+        if (isOpen() && currentApp === "messages") openApp("messages", "app_messages", renderMessages);
+        if (window.__loftStateChanged) window.__loftStateChanged("messages.changed", { reason: "reaction", id: id }, "autonomous");
+      }, 700 + (id.length % 5) * 180);
+    }
     // Nothing may notify a player still looking at the "CLICK ME!" invitation — a text sliding in
     // over the untouched attract prompt reads as a bug, not an invitation. Every AUTONOMOUS channel
     // in this IIFE checks this at FIRE time (not schedule time), so dismissing the prompt takes
@@ -60884,6 +60926,7 @@ async def localfont(name):
       freezeAuthoredMessage(m); // freeze pooled copy/sender once, before rendering or any autonomous rewrite
       applyMessageArrival(m); // state announcements describe what just happened; they never wait for a tap
       messagesThread.push(id);
+      scheduleMessageReactions(id, m);
       if (id === "charlie") charlieIntroOffered = true;
       messagesArrivedAt[id] = Date.now();
       if (id === "bbq" && window.__bbqDateNow && window.__bbqDateNow()) {

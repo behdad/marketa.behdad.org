@@ -28,6 +28,11 @@ allowed exception, owner-confirmed.)
   merge it into the primary branch and deploy it while full verification continues, so
   the owner can test in parallel. Handle follow-up feedback directly or send it back to
   the same agent in its isolated worktree.
+- **Keep commentary, docs, and tests proportional.** Code comments should explain only
+  non-obvious current invariants—not narrate obsolete behavior or routine mechanics.
+  Keep `docs/game-manual.md` and `docs/developer.md` concise and relevant to their
+  audiences. Add focused tests for meaningful regression risks, not exhaustive coverage
+  of every small copy or cosmetic adjustment.
 - **Commit and deploy after every discrete change**, not in one big batch at the end.
   Push with `git puff` (an alias for `git push --force-with-lease`, already configured —
   just run it, don't second-guess it), then `ssh behdad "cd w && git pull"` to deploy.

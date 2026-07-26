@@ -26832,6 +26832,8 @@ var T = {
     msg_hamid_food_body: "grill's open — first batch is ready, come get it while it's hot 🔥🍔🌽",
     msg_bbq_cheer_madla_body: "running — save me the crispy tofu 🔥",
     msg_bbq_cheer_pouria_body: "too late, I'm already holding a plate 🍽️",
+    msg_jay_from: "Jay",
+    msg_jay_bbq_satisfied_body: "By the power vested in me, I hereby declare my hunger officially satisfied. 🌿⚖️",
     msg_hamid_bbq_done_body: "grill defeated. nobody leaves hungry on my watch 🔥✅",
     msg_fireworks_body: "FINALE TIME 🎆 get out on the balcony!",
     msg_lanterns_body: "let's send up wish-lanterns 🏮 make a wish ✨",
@@ -27845,6 +27847,8 @@ var T = {
     msg_hamid_food_body: "gril je otevřený — první várka je hotová, pojďte si pro ni, dokud je teplá 🔥🍔🌽",
     msg_bbq_cheer_madla_body: "běžím — schovej mi opečené tofu 🔥",
     msg_bbq_cheer_pouria_body: "pozdě, už držím talíř 🍽️",
+    msg_jay_from: "Jay",
+    msg_jay_bbq_satisfied_body: "Z moci mně svěřené tímto oficiálně prohlašuji svůj hlad za ukojený. 🌿⚖️",
     msg_hamid_bbq_done_body: "gril poražen. pod mým dohledem nikdo neodejde hladový 🔥✅",
     msg_fireworks_body: "ČAS NA FINÁLE 🎆 pojď ven na balkon!",
     msg_lanterns_body: "pustíme lampiony přání 🏮 něco si přej ✨",
@@ -58793,6 +58797,7 @@ async def localfont(name):
       hamid_food:    { fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_food_body", arrivalReactions: ["🔥", "🎉", "❤️"], next: "bbq_cheer_madla", nextDelay: 2200 }, // first cooked batch → Hamid calls everyone; the crew reacts and two guests answer in-thread
       bbq_cheer_madla:   { fromKey: "msg_madla_from",   bodyKey: "msg_bbq_cheer_madla_body",   replyTo: "hamid_food", next: "bbq_cheer_pouria", nextDelay: 2600 },
       bbq_cheer_pouria:  { fromKey: "msg_pouria_from",  bodyKey: "msg_bbq_cheer_pouria_body",  replyTo: "hamid_food" },
+      jay_bbq_satisfied: { fromKey: "msg_jay_from",     bodyKey: "msg_jay_bbq_satisfied_body" },             // Jay's second tofu plate satisfies him → the officiant makes it official
       hamid_bbq_done:{ fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_bbq_done_body" },                   // twelfth plate empties the smoker → Hamid closes the cookout
       fireworks:     { fromKey: "msg_danesh_from",  bodyKey: "msg_fireworks_body", act: "fireworks" },     // DJ Danesh calls the finale → taps: balcony (night) + the fireworks finale over the city
       lanterns:      { fromKey: "msg_bahareh_from", bodyKey: "msg_lanterns_body",  act: "lanterns" },      // Bahareh (fire-festival kin) → taps: balcony (night) + a wish-lantern release
@@ -81280,7 +81285,7 @@ function spawnDustMote(container) {
         if (g) g.classList.toggle("bh-present", !!ids[r.id]);
       });
     }
-    var lastFoodHandoff = null;
+    var lastFoodHandoff = null, jayTofuPlates = 0;
     function clearGuestFoodPlates() {
       var plates = hangout.querySelectorAll(".bh-served-plate");
       for (var i = 0; i < plates.length; i++) plates[i].remove();
@@ -81290,8 +81295,8 @@ function spawnDustMote(container) {
       var pool = ROSTER.filter(function (r) { return figurePresent(r) && !r.smoker; });
       if (!pool.length) pool = ROSTER.filter(figurePresent);
       if (!pool.length) return null;
-      var jay = kind === "tofu" && pool.filter(function (r) { return r.name === "jay"; });
-      if (jay && jay.length) pool = jay; // Jay is vegetarian; Madla's off-deck tofu is reserved in the chat reply
+      var jay = kind === "tofu" && jayTofuPlates < 2 && pool.filter(function (r) { return r.name === "jay"; });
+      if (jay && jay.length) pool = jay; // Jay gets first refusal until satisfied; Madla's off-deck tofu is reserved in the chat reply
       var alternatives = pool.filter(function (r) { return !lastFoodHandoff || figKey(r) !== lastFoodHandoff.recipient; });
       if (alternatives.length) pool = alternatives;
       var r = pool[(Math.random() * pool.length) | 0];
@@ -81314,6 +81319,12 @@ function spawnDustMote(container) {
           : '<ellipse cx="0" cy="244.4" rx="5.2" ry="2.1" fill="#dda75e"/><rect x="-4.8" y="244" width="9.6" height="2" rx="0.8" fill="#6b4630"/><ellipse cx="0" cy="246.1" rx="5.2" ry="1.5" fill="#e8b96d"/>');
       idle.appendChild(plate); // same coordinate system as the recipient; no getBBox projection
       lastFoodHandoff = { recipient: figKey(r), kind: kind === "tofu" ? "tofu" : "burger" };
+      if (lastFoodHandoff.recipient === "jay" && lastFoodHandoff.kind === "tofu") {
+        jayTofuPlates++;
+        if (jayTofuPlates === 2 && window.__deliverAutonomousPhoneMessage) {
+          window.__deliverAutonomousPhoneMessage("jay_bbq_satisfied");
+        }
+      }
       plate.addEventListener("animationend", function (e) { if (e.animationName === "bh-food-plate" && plate.parentNode) plate.remove(); });
       setTimeout(function () { if (plate.parentNode) plate.remove(); }, 4000); // reduced-motion / interrupted-animation fallback
       return { recipient: lastFoodHandoff.recipient, kind: lastFoodHandoff.kind };

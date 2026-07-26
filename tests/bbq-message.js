@@ -40,7 +40,13 @@ var harness = String.raw`<script>
     document.getElementById("bh-jay").classList.add("bh-present");
     var tofuHandoff = window.__balconyGuestTakePlate("tofu");
     check("tofu preferentially goes to vegetarian Jay when he is outside", tofuHandoff && tofuHandoff.recipient === "jay", JSON.stringify(tofuHandoff));
-    var tofuPlate = document.querySelector("#bh-jay .bh-served-plate"); if (tofuPlate) tofuPlate.remove();
+    check("Jay stays quiet after his first tofu plate", !window.__phoneMessageReceived("jay_bbq_satisfied"));
+    var secondTofuHandoff = window.__balconyGuestTakePlate("tofu");
+    check("Jay receives a second tofu plate while still hungry", secondTofuHandoff && secondTofuHandoff.recipient === "jay", JSON.stringify(secondTofuHandoff));
+    check("the officiant officially declares his hunger satisfied", window.__phoneMessageReceived("jay_bbq_satisfied"), window.__phoneMessageThread().join(","));
+    var postSatisfactionHandoff = window.__balconyGuestTakePlate("tofu");
+    check("satisfied Jay stops monopolizing the tofu", postSatisfactionHandoff && postSatisfactionHandoff.recipient !== "jay", JSON.stringify(postSatisfactionHandoff));
+    document.querySelectorAll("#balcony-hangout .bh-served-plate").forEach(function (plate) { plate.remove(); });
     var firstKind = window.__balconyServeReadyBurger();
     var handoff = window.__balconyLastFoodHandoff();
     var heldPlate = document.querySelector("#balcony-hangout .bh-fig.bh-present .bh-served-plate");

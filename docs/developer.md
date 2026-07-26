@@ -345,8 +345,7 @@ Messages entries; the first also invokes the deck's bounded `.food-cheer` reacti
 and chains two authored replies quoting Hamid's row.
 Every real serve calls `__balconyGuestTakePlate`: it attaches a short-lived,
 opacity-only plate to a present figure's own `.bh-idle` coordinate space, caps
-concurrent plates at three, and clears them on room exit. Its tofu selection
-prefers Jay when his balcony figure is present.
+concurrent plates at three, and clears them on room exit.
 
 ### Across-street windows and Window Tetris
 

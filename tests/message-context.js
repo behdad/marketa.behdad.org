@@ -47,13 +47,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html message read/unread context menu:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 7000, { patchRaf: true });
-if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.notification_open.app && s.notification_open.room === "garden" && s.notification_open.row && s.notification_open.visible && s.notification_open.unread && s.notification_open.action, "an actionable notification shows its arrow; tapping the card still opens and positions the unread message without running it", s.notification_open);
@@ -89,7 +89,7 @@ check(s.crew_action_failed.phone && s.crew_action_failed.messages && /couldn.t d
 check(s.fishu_action.room === "cuddly" && !s.fishu_action.phone && s.fishu_action.calls === 1, "accepting a Fishu suggestion closes Messages, pans to cuddly-puddly, then makes Fishu speak", s.fishu_action);
 check(s.kids_sleep_info.asleep && s.kids_sleep_info.late && !s.kids_sleep_info.action, "the kids-asleep announcement applies its state on arrival and remains informational", s.kids_sleep_info);
 check(!s.kids_wake_info.asleep && !s.kids_wake_info.action, "the kids-awake announcement applies its state on arrival and remains informational", s.kids_wake_info);
-check(s.czech.labels.join("|") === "Odpov\u011bd\u011bt…|Kop\u00edrovat|Ozna\u010dit jako nep\u0159e\u010dten\u00e9." && /svatebn\u00ed part\u011b/.test(s.czech.placeholder), "context actions and composer follow the Czech UI language", s.czech);
+check(s.czech.labels.join("|") === "Odpovědět…|Kopírovat|Označit jako nepřečtené." && /svatební partě/.test(s.czech.placeholder), "context actions and composer follow the Czech UI language", s.czech);
 check(s.calendar_search.active === "calx-search-input" && s.calendar_search.on, "/ enters and focuses Calendar search even before its field exists", s.calendar_search);
 check(s.icon_drag.ghost && s.icon_drag.selectionBlocked && s.icon_drag.userSelect === "none", "dragging a phone app icon cannot start native text selection", s.icon_drag);
 check(s.icon_touch_scroll.scrollTop > 0 && !s.icon_touch_scroll.ghost, "a quick touch-drag beginning on an app icon scrolls the launcher instead of rearranging it", s.icon_touch_scroll);

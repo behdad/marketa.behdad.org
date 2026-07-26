@@ -22,13 +22,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html phone recent-app switcher:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 1800, { patchRaf: true });
-if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.first.screen && s.first.labels[0] === "notes", "Recents opens with the current app first", s.first);

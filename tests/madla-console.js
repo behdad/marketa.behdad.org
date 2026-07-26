@@ -34,7 +34,7 @@ if (!report) {
 
 var failures = 0;
 function check(pass, message, detail) {
-  console.log("  " + (pass ? "\u2713" : "\u2717") + " " + message + (pass || detail == null ? "" : " — " + JSON.stringify(detail)));
+  console.log("  " + (pass ? "✓" : "✗") + " " + message + (pass || detail == null ? "" : " — " + JSON.stringify(detail)));
   if (!pass) failures++;
 }
 

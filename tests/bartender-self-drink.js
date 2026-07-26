@@ -67,8 +67,8 @@ var harness = String.raw`<script>
 
 var failures = 0;
 function check(ok, message, detail) {
-  if (ok) console.log("  \u2713 " + message);
-  else { failures++; console.log("  \u2717 " + message + (detail == null ? "" : " [" + JSON.stringify(detail) + "]")); }
+  if (ok) console.log("  ✓ " + message);
+  else { failures++; console.log("  ✗ " + message + (detail == null ? "" : " [" + JSON.stringify(detail) + "]")); }
 }
 
 console.log("rsvp.html Pouria self-serve:");

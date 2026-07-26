@@ -13,7 +13,7 @@ var HARNESS = [
 var r = lib.runPageSync("rsvp.html", HARNESS, 2500, { patchRaf: true });
 if (!r) { console.error("quiz harness produced no report"); process.exit(1); }
 var failures = 0;
-function check(ok, msg, detail) { if (ok) console.log("  \u2713 " + msg); else { failures++; console.log("  \u2717 " + msg + (detail ? " [" + JSON.stringify(detail) + "]" : "")); } }
+function check(ok, msg, detail) { if (ok) console.log("  ✓ " + msg); else { failures++; console.log("  ✗ " + msg + (detail ? " [" + JSON.stringify(detail) + "]" : "")); } }
 var qs = r.questions || [], ids = r.ids || [];
 var expected = ["marketa","behdad","ali","goli","spencer","jay","farhang","lauren","alireza","mahzad","bahareh","danbern","oritshimoni","aspen","elisabeth","felix","patricia","patricia-son","patricia-daughter","madla","robert","hamid","athena","baharak","payman","hannah","irene","robin","navid","ashraf","mohsen","daniel","marie","baka","pouria","sina","danesh"];
 check(!r.errors || !r.errors.length, "quiz page has no uncaught errors", r.errors);

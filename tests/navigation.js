@@ -24,14 +24,14 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 function isWine(state) { return state && state.background === "rgb(142, 58, 74)"; }
 
 console.log("rsvp.html room navigation state:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 1800, { patchRaf: true });
-if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.initial.locked && !isWine(s.initial), "the unopened next room starts pale and locked", s.initial);

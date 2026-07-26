@@ -125,7 +125,7 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
     "  var prevOut = activeConsoleOut;",
     "  activeConsoleOut = ctx.out || consoleOut;",
     "  try {",
-    "    consolePrint('\\u276f ' + cmd);",           // the prompt echo
+    "    consolePrint('❯ ' + cmd);",           // the prompt echo
     "    var c = (cmd||'').trim(); if(!c) return;",
     "    var hist = ctx.hist || consoleHist;",
     "    hist.push(cmd); if(ctx.setHistIdx) ctx.setHistIdx(hist.length); else consoleHistIdx = hist.length;",

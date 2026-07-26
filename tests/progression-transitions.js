@@ -24,13 +24,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html progression transitions:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 3200, { patchRaf: true });
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.unlock && s.unlock.max === 2 && s.unlock.locked.slice(0, 3).every(function (x) { return !x; }) && s.unlock.locked.slice(3).every(Boolean),

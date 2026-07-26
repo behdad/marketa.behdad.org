@@ -1035,6 +1035,27 @@ function checkNoConflictMarkers(file, html) {
   else pass(file + ": no leftover merge conflict markers");
 }
 
+// Authored source is UTF-8. Keep printable characters visible instead of hiding them
+// behind backslash-u escapes; this also keeps Persian/Czech copy and regex endpoints
+// reviewable as the characters the browser actually sees.
+function checkNoUnicodeEscapes() {
+  var names = execSync("git ls-files -z", { cwd: ROOT }).toString("utf8").split("\0").filter(Boolean);
+  var re = new RegExp(String.fromCharCode(92, 92) + "u(?:\\{[0-9A-Fa-f]+\\}|[0-9A-Fa-f]{4})", "g");
+  var hits = [];
+  names.forEach(function (name) {
+    var buf = fs.readFileSync(path.join(ROOT, name));
+    if (buf.indexOf(0) !== -1) return; // pinned binary payload
+    var text = buf.toString("utf8"), match;
+    re.lastIndex = 0;
+    while ((match = re.exec(text))) {
+      hits.push(name + ":" + ((text.slice(0, match.index).match(/\n/g) || []).length + 1));
+      if (hits.length >= 12) return;
+    }
+  });
+  if (hits.length) fail("repository source contains no backslash-u escapes", hits.join("\n"));
+  else pass("repository source contains no backslash-u escapes");
+}
+
 // The landscape-phone chrome overlap: the caption and dots rows each straddle the scene edge
 // by half their own height so the freed pixels become room width. Three things make that
 // work, and each fails SILENTLY if broken — the scene just quietly shrinks back, or a tap
@@ -1050,6 +1071,9 @@ function checkNoConflictMarkers(file, html) {
 // Plus the hit-testing hazard: both overlapping rows must be pointer-transparent, with their
 // own controls taking pointer events back, or the half covering the scene eats the strip's
 // background-tap (stopHintBlink, which dismisses the opening prompt on a tap anywhere).
+
+checkNoUnicodeEscapes();
+console.log("");
 
 FILES.forEach(function (file) {
   console.log(file + ":");

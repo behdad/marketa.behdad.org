@@ -36,13 +36,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html Charlie app context:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4000, { patchRaf: true });
-if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps, sources = s.sources || {}, env = s.environment || {};
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(sources.mail && sources.mail.length === 3 && sources.mail.some(function (m) { return m.id === "lore" && /getting married/.test(m.body); }) && sources.mail.every(function (m) { return !Object.prototype.hasOwnProperty.call(m, "draft"); }), "Mail exposes only the three authored inbox messages", sources.mail);

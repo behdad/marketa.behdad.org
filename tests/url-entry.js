@@ -67,10 +67,10 @@ var URL_KEYS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
+  if (ok) console.log("  ✓ " + msg);
   else {
     failures++;
-    console.log("  \u2717 " + msg + (detail ? " [" + JSON.stringify(detail) + "]" : ""));
+    console.log("  ✗ " + msg + (detail ? " [" + JSON.stringify(detail) + "]" : ""));
   }
 }
 

@@ -30,11 +30,11 @@ var HARNESS = [
 ].join("\n");
 
 var failures=0;
-function check(ok,msg,detail){if(ok)console.log("  \u2713 "+msg);else{failures++;console.log("  \u2717 "+msg+(detail?"   ["+JSON.stringify(detail)+"]":""));}}
+function check(ok,msg,detail){if(ok)console.log("  ✓ "+msg);else{failures++;console.log("  ✗ "+msg+(detail?"   ["+JSON.stringify(detail)+"]":""));}}
 
 console.log("rsvp.html garden magic-box lock:");
 var r=lib.runPageSync("rsvp.html",HARNESS,2200,{patchRaf:true});
-if(!r){console.log("  \u2717 harness produced no report");process.exit(1);}
+if(!r){console.log("  ✗ harness produced no report");process.exit(1);}
 var s=r.steps;
 check(r.errors.length===0,"no uncaught page errors",r.errors);
 check(s.shape&&s.shape.date==="2027-05-??"&&s.shape.submit==="UNLOCK"&&s.shape.wheels===2&&s.shape.submits===1,"lock shows a partial date, two wheels, and one submit control",s.shape);

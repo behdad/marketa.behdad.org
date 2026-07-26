@@ -27,13 +27,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html bounded status and environment API:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 3200, { patchRaf: true });
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var q = result.steps.queries || {}, a = result.steps.actions || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(q.progress.ok && q.progress.value.phase === 2 && q.progress.value.current_room === "office" && q.progress.value.unlocked_rooms.length === 4 && q.progress.value.solved_rooms.length === 3, "game.progress reports only canonical progression state", q.progress);

@@ -26,13 +26,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html phone direct-launch returns:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true });
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {}, bad = (s.direct || []).filter(function (step) { return !step.ok || !step.opened || !step.closed; });
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check((s.direct || []).length === 15 && bad.length === 0, "every API-launched phone app closes on Escape or Backspace", bad);

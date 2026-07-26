@@ -54,13 +54,13 @@ var RESET_CONTEXT_HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html checkpoint recovery:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
-if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.gate.shown && !s.gate.clickMe && s.gate.primary, "a valid save replaces CLICK ME with Continue selected", s.gate);

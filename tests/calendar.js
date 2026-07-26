@@ -29,11 +29,11 @@ var HARNESS = [
 ].join("\n");
 
 var failures=0;
-function check(ok,msg,detail){if(ok)console.log("  \u2713 "+msg);else{failures++;console.log("  \u2717 "+msg+(detail?"   ["+JSON.stringify(detail)+"]":""));}}
+function check(ok,msg,detail){if(ok)console.log("  ✓ "+msg);else{failures++;console.log("  ✗ "+msg+(detail?"   ["+JSON.stringify(detail)+"]":""));}}
 
 console.log("rsvp.html calendar event navigation:");
 var r=lib.runPageSync("rsvp.html",HARNESS,2200,{patchRaf:true});
-if(!r){console.log("  \u2717 harness produced no report");process.exit(1);}
+if(!r){console.log("  ✗ harness produced no report");process.exit(1);}
 var s=r.steps;
 check(r.errors.length===0,"no uncaught page errors",r.errors);
 check(s.phone&&/May|květ/i.test(s.phone.title||"")&&s.phone.sameDate&&s.phone.sameHref&&!s.phone.selected&&s.phone.open,"phone event card reveals May without activating its date",s.phone);

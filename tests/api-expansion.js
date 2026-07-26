@@ -27,13 +27,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html expanded typed API:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 3500, { patchRaf: true });
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var q = result.steps.queries || {}, v = result.steps.versions || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(q.info.ok && q.info.value.version === 3 && Number.isInteger(q.info.value.stateVersion) && q.caps.ok && q.caps.value.every(function (cap) { return cap.kind === "query"; }), "API self-description reports version and filtered capabilities", { info: q.info, count: q.caps && q.caps.value && q.caps.value.length });

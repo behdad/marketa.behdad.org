@@ -69,13 +69,13 @@ var FRAME_HEALTH_HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html scene performance:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 6000, { patchRaf: true, forceMotion: true, chromeFlags: "--autoplay-policy=no-user-gesture-required" });
-if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.initial.visible.join("|") === "kitchen" && s.initial.gardenVisibility === "hidden", "only the current room paints at rest", s.initial);
@@ -93,7 +93,7 @@ check(s.instrument_return.notes && s.instrument_return.strings === 1, "garden in
 check(s.bloom_garden && !s.bloom_parked && s.bloom_return, "garden trip fractals pause off-room and resume without rebuilding", { garden: s.bloom_garden, parked: s.bloom_parked, returned: s.bloom_return });
 
 var audit = lib.runPageSync("rsvp.html", AUDIT_HARNESS, 14000, { patchRaf: true, forceMotion: true, seedRandom: true, chromeFlags: "--autoplay-policy=no-user-gesture-required" });
-if (!audit) { console.log("  \u2717 audit harness produced no report"); process.exit(1); }
+if (!audit) { console.log("  ✗ audit harness produced no report"); process.exit(1); }
 var a = audit.steps;
 check(audit.errors.length === 0, "numeric performance probes complete without page errors", audit.errors);
 check(a.parked_descendants.visible === 0, "parked room descendants cannot opt back into visibility", a.parked_descendants);
@@ -108,7 +108,7 @@ check(a.garden_hidden_parking.mousePaused === "paused" && a.garden_hidden_parkin
 console.log("  metrics: " + JSON.stringify({ cuddly: a.cuddly_channels, seasonPhase: a.season_phase, gardenHeld: a.garden_held_growth, gardenHidden: a.garden_hidden_parking, officeRunning: a.office_running, balconyRunning: a.balcony_running, parkedVisibleDescendants: a.parked_descendants.visible }));
 
 var health = lib.runPageSync("rsvp.html", FRAME_HEALTH_HARNESS, 2500, { patchRaf: true, forceMotion: true, seedRandom: true });
-if (!health) { console.log("  \u2717 frame-health harness produced no report"); process.exit(1); }
+if (!health) { console.log("  ✗ frame-health harness produced no report"); process.exit(1); }
 var h = health.steps.health;
 check(health.errors.length === 0 && h.slowTransitions === 0 && h.healthyTransitions === 0, "device zoom never runs the whole-strip transform transition", h);
 check(!h.first.slow && h.second.slow && h.slowState.slow && h.recovering.slow && !h.recovered.slow, "frame-health mode enters and recovers with asymmetric hysteresis", h);

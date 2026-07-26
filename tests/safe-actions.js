@@ -29,13 +29,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html safe typed actions:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 2600, { patchRaf: true });
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.moment.moment.ok && s.moment.calls[0] === "first-dance" && !s.moment.overlap.ok && s.moment.overlap.code === "NOT_AVAILABLE" && !s.moment.bad.ok && s.moment.bad.code === "INVALID_ARGUMENT", "party moments are enum-validated and cannot overlap", s.moment);

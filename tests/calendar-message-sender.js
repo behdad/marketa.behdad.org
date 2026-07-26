@@ -37,7 +37,7 @@ var result = lib.runPageSync("rsvp.html", harness, 1800, { patchRaf: true });
 var ok = result && result.errors.length === 0 &&
   result.senders.join("|") === "markéta|behdad";
 console.log("rsvp.html calendar-message sender:");
-console.log("  " + (ok ? "\u2713" : "\u2717") + " each host can send the couple's calendar reminder" +
+console.log("  " + (ok ? "✓" : "✗") + " each host can send the couple's calendar reminder" +
   (ok ? "" : " [" + JSON.stringify(result) + "]"));
 if (!ok) process.exit(1);
 console.log("\nAll checks passed.");

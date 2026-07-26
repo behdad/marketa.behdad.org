@@ -23,14 +23,14 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, message, detail) {
-  if (ok) console.log("  \u2713 " + message);
-  else { failures++; console.log("  \u2717 " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + message);
+  else { failures++; console.log("  ✗ " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html authored typed message actions:");
 var source = fs.readFileSync("rsvp.html", "utf8");
 var result = lib.runPageSync("rsvp.html", HARNESS, 3600, { patchRaf: true });
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.row_click.room === "garden" && s.row_click.phone && s.row_click.read && s.row_click.action && !s.row_click.bubbleAction, "row click only marks an authored action read; its arrow remains explicit", s.row_click);

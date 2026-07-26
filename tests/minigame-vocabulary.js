@@ -13,10 +13,10 @@ var html = fs.readFileSync(path.join(root, "rsvp.html"), "utf8");
 var failures = 0;
 
 function check(ok, label, detail) {
-  if (ok) console.log("  \u2713 " + label);
+  if (ok) console.log("  ✓ " + label);
   else {
     failures++;
-    console.log("  \u2717 " + label);
+    console.log("  ✗ " + label);
     if (detail) console.log("      " + detail);
   }
 }

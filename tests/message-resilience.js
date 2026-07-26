@@ -222,12 +222,12 @@ var HARNESS = String.raw`<script>
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, { patchRaf: true });
 var failures = 0;
 function check(ok, message, detail) {
-  if (ok) console.log("  \u2713 " + message);
-  else { failures++; console.log("  \u2717 " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + message);
+  else { failures++; console.log("  ✗ " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html message resilience:");
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.chat_failed.attempts === 1 && s.chat_failed.users === 1 && !s.chat_failed.thinking && s.chat_failed.error && s.chat_failed.retry, "Chat keeps the failed turn and exposes Retry instead of leaving a thinking state", s.chat_failed);

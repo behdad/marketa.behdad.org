@@ -49,8 +49,8 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 function one(step, id, source) {
   return step && step.delta === 1 && step.events.length === 1 && step.events[0].id === id && (!source || step.events[0].source === source);
@@ -58,7 +58,7 @@ function one(step, id, source) {
 
 console.log("rsvp.html API v3 semantic state events:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 8500, { patchRaf: true, forceMotion: true, chromeFlags: "--autoplay-policy=no-user-gesture-required" });
-if (!result) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps.state || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.version === 3, "API advertises state-event contract version 3", s.version);

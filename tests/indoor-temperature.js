@@ -31,13 +31,13 @@ var HARNESS = [
 
 var failures = 0;
 function check(ok, msg, detail) {
-  if (ok) console.log("  \u2713 " + msg);
-  else { failures++; console.log("  \u2717 " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + msg);
+  else { failures++; console.log("  ✗ " + msg + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html indoor temperature model:");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4000, { patchRaf: true });
-if (!r) { console.log("  \u2717 harness produced no report"); process.exit(1); }
+if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var t = r.steps.temperature || {};
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(t.base && t.base.temperature_c === 22 && t.base.occupancy_gain_c === 0, "an empty room starts at the climate-model baseline", t.base);

@@ -194,17 +194,17 @@ var result = lib.runPageSync("rsvp.html", harness, 7800, {
   forceMotion: true
 });
 if (!result) {
-  console.log("  \u2717 harness produced no report");
+  console.log("  ✗ harness produced no report");
   process.exit(1);
 }
 var failures = 0;
 result.checks.forEach(function (item) {
-  console.log("  " + (item.pass ? "\u2713" : "\u2717") + " " + item.name +
+  console.log("  " + (item.pass ? "✓" : "✗") + " " + item.name +
     (!item.pass && item.detail ? " (" + item.detail + ")" : ""));
   if (!item.pass) failures++;
 });
 if (result.errors.length) {
-  console.log("  \u2717 uncaught page errors: " + result.errors.join("; "));
+  console.log("  ✗ uncaught page errors: " + result.errors.join("; "));
   failures++;
 }
 if (failures) process.exit(1);

@@ -41,8 +41,8 @@ var harness = String.raw`<pre id="__report">pending</pre>
 var result = lib.runPageSync("rsvp.html", harness, 2600, { patchRaf: true });
 var failures = 0;
 function check(ok, message, detail) {
-  if (ok) console.log("  \u2713 " + message);
-  else { failures++; console.log("  \u2717 " + message + (detail ? " [" + JSON.stringify(detail) + "]" : "")); }
+  if (ok) console.log("  ✓ " + message);
+  else { failures++; console.log("  ✗ " + message + (detail ? " [" + JSON.stringify(detail) + "]" : "")); }
 }
 
 console.log("rsvp.html scheduled-message continuity:");

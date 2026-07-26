@@ -215,7 +215,7 @@ function cleanText(value, max) {
 function isFishuInvocation(value) {
   const folded = cleanText(value, MAX_MESSAGE_CHARS)
     .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z]/g, "");
   return folded === "fishu" || folded === "phishu" || folded === "fisu";
@@ -235,7 +235,7 @@ const TRIP_ALIASES = Object.freeze({
 function tripRequestIntent(value) {
   const folded = cleanText(value, MAX_MESSAGE_CHARS)
     .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[’']/g, "")
     .replace(/[^a-z0-9]+/g, " ")
@@ -253,7 +253,7 @@ function tripRequestIntent(value) {
 
 function vitaminIntent(value) {
   const original = cleanText(value, MAX_MESSAGE_CHARS);
-  const folded = original.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
+  const folded = original.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim().replace(/\s+/g, " ");
   const mentions = /\bvitamin(?:s|y)?\b/.test(folded) || /ویتامین/.test(original);
   if (!mentions) return null;
   const question = /\b(where|what|which|find|located|location)\b/.test(folded) || /\b(kde|co)\b/.test(folded) || /کجا|چیست|چیه/.test(original);
@@ -739,8 +739,8 @@ function normalizeMessageRewrite(reply) {
 
 function partyRequestIntent(value) {
   const original = cleanText(value, MAX_MESSAGE_CHARS);
-  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
-  const persian = /[\u0600-\u06ff]/.test(original);
+  const folded = original.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  const persian = /[؀-ۿ]/.test(original);
   const hasParty = /\bparty\b/.test(folded) || original.includes("مهمانی");
   if (!hasParty || /\b(when|where|what time|how long|kdy|kde|v kolik)\b/.test(folded) || /چه زمانی|کجا/.test(original)) return null;
   if ((persian && /ادامه|بیشتر|دوباره|تمام نکن/.test(original)) || /\b(keep|continue|more|another|again|dont stop|cancel the end|jeste|pokrac|nezastav|znovu)\b/.test(folded)) return "continue";
@@ -750,7 +750,7 @@ function partyRequestIntent(value) {
 
 function scriptRequestIntent(value) {
   const folded = cleanText(value, MAX_MESSAGE_CHARS)
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .toLocaleLowerCase();
   // Treat the whole message as a coding request before inspecting embedded commands.
   // This prevents "write a script ... start the party" from becoming party.set.
@@ -760,7 +760,7 @@ function scriptRequestIntent(value) {
 
 function callRequestIntent(value) {
   const original = cleanText(value, MAX_MESSAGE_CHARS);
-  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']s\b/g, "").replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  const folded = original.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase().replace(/[’']s\b/g, "").replace(/[’']/g, "").replace(/\s+/g, " ").trim();
   const incoming = /\b(have|ask|make|let)\b.*\b(madla|prague|praha)\b.*\b(call|ring|phone)\b.*\b(me|us)\b/.test(folded) ||
     /\b(madla|prague|praha)\b.*\b(call|ring)\b.*\b(me|us)\b/.test(folded) ||
     /\b(call|ring)\b.*\b(madla|prague|praha)\b.*\b(me|us)\b/.test(folded);
@@ -795,10 +795,10 @@ function scriptReplyText(message, groupMode) {
 }
 
 function partyReplyText(message, context, extending) {
-  if (/[\u0600-\u06ff]/.test(message)) return extending
+  if (/[؀-ۿ]/.test(message)) return extending
     ? "یک دور دیگر—اینجا بزن تا مهمانی ادامه پیدا کند. 🎉"
     : "بزن بریم—اینجا بزن تا مهمانی را شروع کنیم. 🎉";
-  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const folded = message.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase();
   const czech = context.site_language === "cs" || /\b(jeste|pokrac|nezastav|znovu|zapni|spust|zacni|rozjed)\b/.test(folded);
   if (czech) return extending
     ? "Ještě jedno kolo—klepni sem a jedeme dál. 🎉"
@@ -810,7 +810,7 @@ function partyReplyText(message, context, extending) {
 
 function daylightRequest(value) {
   const original = cleanText(value, MAX_MESSAGE_CHARS);
-  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  const folded = original.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
   if (/\b(what time|when|how long|kolik je hodin|kdy)\b/.test(folded) || /چه زمانی|ساعت چند/.test(original)) return null;
   if (/^(night|night time|nighttime|dusk|make it night|switch to night|noc|nocni rezim|udelat noc)$/.test(folded) || /^(شب|شب شود)$/.test(original.trim())) return false;
   if (/^(day|day time|daytime|daylight|make it day|bring back daylight|switch to day|den|denni rezim|udelat den)$/.test(folded) || /^(روز|روز شود)$/.test(original.trim())) return true;
@@ -818,11 +818,11 @@ function daylightRequest(value) {
 }
 
 function daylightReplyText(message, context, wantDaylight, alreadyThere) {
-  if (/[\u0600-\u06ff]/.test(message)) {
+  if (/[؀-ۿ]/.test(message)) {
     if (alreadyThere) return wantDaylight ? "الان روز است. ☀️" : "الان شب است. 🌙";
     return wantDaylight ? "اینجا بزن تا روز شود. ☀️" : "اینجا بزن تا شب شود. 🌙";
   }
-  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const folded = message.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase();
   const czech = context.site_language === "cs" || /^(noc|nocni|udelat|den|denni)/.test(folded);
   if (czech) {
     if (alreadyThere) return wantDaylight ? "Už je den. ☀️" : "Už je noc. 🌙";
@@ -834,7 +834,7 @@ function daylightReplyText(message, context, wantDaylight, alreadyThere) {
 
 function indoorTemperatureRequest(value) {
   const original = cleanText(value, MAX_MESSAGE_CHARS);
-  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
+  const folded = original.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase().replace(/[’']/g, "").replace(/\s+/g, " ").trim();
   if (/\b(outside|outdoor|edmonton|prague|forecast|venku|vnejsi)\b/.test(folded) || /بیرون|ادمونتون|پراگ|پیش.?بینی/.test(original)) return false;
   return /\b(indoor|inside|in the loft|loft temperature|temperature in here|temperature indoors|how (hot|cold|warm) is it (in here|inside|indoors))\b/.test(folded) ||
     /\b(teplota (uvnitr|v loftu)|kolik je (uvnitr|v loftu)|jak (teplo|chladno) je (uvnitr|v loftu))\b/.test(folded) ||
@@ -843,15 +843,15 @@ function indoorTemperatureRequest(value) {
 
 function videoPauseRequest(value) {
   const original = cleanText(value, MAX_MESSAGE_CHARS);
-  const folded = original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
+  const folded = original.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase().replace(/[.!?]+$/g, "").replace(/\s+/g, " ").trim();
   return /^(stop|pause)( the)? (video|film|movie)$/.test(folded) ||
     /^(zastav|pozastav)( to)? (video|film)$/.test(folded) ||
     /^(ویدیو|فیلم) را (متوقف|قطع) کن$/.test(original.trim());
 }
 
 function videoPauseReplyText(message, available, groupMode) {
-  if (/[\u0600-\u06ff]/.test(message)) return available ? (groupMode ? "برای توقف ویدیو اینجا بزن." : "ویدیو را متوقف می‌کنم.") : "الان ویدیویی پخش نمی‌شود.";
-  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  if (/[؀-ۿ]/.test(message)) return available ? (groupMode ? "برای توقف ویدیو اینجا بزن." : "ویدیو را متوقف می‌کنم.") : "الان ویدیویی پخش نمی‌شود.";
+  const folded = message.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase();
   if (/\b(zastav|pozastav|video|film)\b/.test(folded) && /\b(zastav|pozastav)\b/.test(folded)) return available ? (groupMode ? "Klepnutím sem video pozastavíš." : "Pozastavuji video.") : "Žádné video se teď nepřehrává.";
   return available ? (groupMode ? "Tap this to pause the video." : "Pausing the video.") : "The video isn’t playing.";
 }
@@ -860,12 +860,12 @@ function indoorTemperatureReplyText(message, context) {
   const indoor = context.environment && context.environment.indoor_temperature;
   const value = indoor && indoor.temperature_c;
   if (typeof value !== "number") {
-    if (/[\u0600-\u06ff]/.test(message)) return "نمایشگر دمای داخل هنوز آماده نیست.";
+    if (/[؀-ۿ]/.test(message)) return "نمایشگر دمای داخل هنوز آماده نیست.";
     if (context.site_language === "cs") return "Vnitřní teploměr ještě není připravený.";
     return "The indoor temperature display isn’t ready yet.";
   }
-  if (/[\u0600-\u06ff]/.test(message)) return `نمایشگر کولر داخل ${value} درجهٔ سانتی‌گراد را نشان می‌دهد.`;
-  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  if (/[؀-ۿ]/.test(message)) return `نمایشگر کولر داخل ${value} درجهٔ سانتی‌گراد را نشان می‌دهد.`;
+  const folded = message.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase();
   if (context.site_language === "cs" || /\b(teplota|uvnitr|v loftu|teplo|chladno)\b/.test(folded)) return `Displej klimatizace uvnitř ukazuje ${value} °C.`;
   return `The mini-split reads ${value}°C inside.`;
 }
@@ -873,14 +873,14 @@ function indoorTemperatureReplyText(message, context) {
 function tripReplyText(message, context, variant, reason, groupMode) {
   const label = variant === "dmt" ? "DMT" : variant === "nitrous" ? "Laughing gas" : variant.charAt(0).toUpperCase() + variant.slice(1);
   const current = context.trip && context.trip.variant;
-  if (/[\u0600-\u06ff]/.test(message)) {
+  if (/[؀-ۿ]/.test(message)) {
     if (reason === "party") return `${label} در مهمانی در دسترس نیست—بعد از مهمانی امتحانش کن.`;
     if (reason === "active") return `یکی یکی—اول بگذار ${current || "این یکی"} تمام شود.`;
     if (reason === "phase") return "جعبهٔ جادویی در مرحلهٔ دوم باز می‌شود.";
     if (reason === "unavailable") return "الان این سفر در دسترس نیست.";
     return groupMode ? `وقت ${label} است—اینجا بزن و یک چیز نرم را بگیر.` : `وقت ${label} است—یک چیز نرم را بگیر.`;
   }
-  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const folded = message.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase();
   const czech = context.site_language === "cs" || /\b(cas|zkus|spust|dej si)\b/.test(folded);
   if (czech) {
     if (reason === "party") return `${label} si během párty dává pauzu—zkus to, až párty skončí.`;
@@ -897,8 +897,8 @@ function tripReplyText(message, context, variant, reason, groupMode) {
 }
 
 function vitaminReplyText(message, context, intent, reason, groupMode) {
-  const persian = /[\u0600-\u06ff]/.test(message);
-  const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+  const persian = /[؀-ۿ]/.test(message);
+  const folded = message.normalize("NFD").replace(/[̀-ͯ]/g, "").toLocaleLowerCase();
   const czech = /\b(kde|co|vitaminy|cas|dej|muzeme)\b/.test(folded);
   if (intent === "location") {
     if (persian) return "«ویتامین‌ها» همان محتویات جعبهٔ جادویی در اتاق باغ/مهمانی هستند.";

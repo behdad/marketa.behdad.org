@@ -30,6 +30,10 @@ allowed exception, owner-confirmed.)
   `T.cs` (or a static HTML fallback) drift out of sync, even for a one-word tweak.
   Markéta (native Czech speaker) reviews all Czech copy at the end, so don't hold back
   on proposing/editing CS text — she'll correct anything off.
+- **Write printable Unicode characters directly as UTF-8.** Do not encode letters,
+  diacritics, symbols, emoji, combining marks, or script-range endpoints as backslash-u
+  escapes in authored source, tests, or pinned text tables. Non-printable protocol
+  controls may use a hexadecimal byte escape instead.
 - **Keep the maintained documentation synchronized with the implementation.** Update
   `docs/game-manual.md` when player-visible controls, rules, rooms, apps, or workflows change;
   update `docs/developer.md` when architecture, state ownership, testing, deployment, or subsystem

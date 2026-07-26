@@ -13,10 +13,10 @@ const originalFetch = globalThis.fetch;
 let failures = 0;
 
 function check(ok, message, detail) {
-  if (ok) console.log(`  \u2713 ${message}`);
+  if (ok) console.log(`  ✓ ${message}`);
   else {
     failures++;
-    console.log(`  \u2717 ${message}${detail ? `   [${JSON.stringify(detail)}]` : ""}`);
+    console.log(`  ✗ ${message}${detail ? `   [${JSON.stringify(detail)}]` : ""}`);
   }
 }
 

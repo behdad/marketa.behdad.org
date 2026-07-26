@@ -41574,8 +41574,10 @@ setOfficeProgress("pc", false);
     syncMonitorSaverLoop();
   }
 
-  // Actual WebGL Flower Box. A UV sphere is deformed into a breathing five-lobed
-  // surface in the vertex shader, then rotated, depth-tested, lit, and hue-cycled.
+  // Actual WebGL Flower Box. Each subdivided cube face keeps its square perimeter
+  // while its centre pulls inward, crosses the cube, and emerges as a sharp point
+  // beyond the opposite face. The six-face mesh is rotated, depth-tested, lit,
+  // hue-cycled, and sent drifting across the black screen like the original.
   // The WebGL canvas is separate from the shared 2D canvas because a canvas can own
   // only one context type. We still blit its finished frame into native SVG for the
   // same scaled-foreignObject WebKit safety as Julia/Pipes. Canvas 2D supplies a
@@ -41612,25 +41614,37 @@ setOfficeProgress("pc", false);
     });
     if (!gl) return null;
     var vs = flowerShader(gl, gl.VERTEX_SHADER,
-      "attribute vec2 aUv;" +
+      "attribute vec2 aUv;attribute float aFace;" +
       "uniform float uTime;" +
       "varying vec3 vNormal;" +
       "varying float vHue;" +
       "void main(){" +
-        "float pi=3.14159265359,th=aUv.x*pi*2.0,ph=(aUv.y-.5)*pi;" +
-        "float cp=cos(ph),sp=sin(ph),ct=cos(th),st=sin(th);" +
-        "vec3 sphere=vec3(cp*ct,sp,cp*st);" +
-        "float petal=.5+.5*cos(th*5.0+uTime*.72);" +
-        "float fold=.5+.5*cos(ph*4.0-uTime*.83);" +
-        "float r=.48+.52*petal*cp*cp+.13*fold;" +
-        "vec3 p=sphere*r;p.x*=1.25;p.y*=1.08;" +
+        "vec3 n,tu,tv;" +
+        "if(aFace<.5){n=vec3(1,0,0);tu=vec3(0,1,0);tv=vec3(0,0,1);}" +
+        "else if(aFace<1.5){n=vec3(-1,0,0);tu=vec3(0,1,0);tv=vec3(0,0,-1);}" +
+        "else if(aFace<2.5){n=vec3(0,1,0);tu=vec3(0,0,1);tv=vec3(1,0,0);}" +
+        "else if(aFace<3.5){n=vec3(0,-1,0);tu=vec3(0,0,1);tv=vec3(-1,0,0);}" +
+        "else if(aFace<4.5){n=vec3(0,0,1);tu=vec3(1,0,0);tv=vec3(0,1,0);}" +
+        "else{n=vec3(0,0,-1);tu=vec3(-1,0,0);tv=vec3(0,1,0);}" +
+        "vec2 s=aUv*2.0-1.0;" +
+        "float ridge=max(0.0,1.0-max(abs(s.x),abs(s.y)));" +
+        "float bloom=.5-.5*cos(uTime*.72);" +
+        "float pull=2.18*bloom*ridge;" +
+        "vec3 p=n*.72+tu*s.x*.72+tv*s.y*.72-n*pull;" +
+        "float dwu=0.0,dwv=0.0;" +
+        "if(abs(s.x)>abs(s.y))dwu=-sign(s.x);else dwv=-sign(s.y);" +
+        "vec3 du=tu*.72-n*(2.18*bloom*dwu);" +
+        "vec3 dv=tv*.72-n*(2.18*bloom*dwv);" +
+        "vec3 surfaceNormal=normalize(cross(du,dv));" +
+        "if(dot(surfaceNormal,n)<0.0)surfaceNormal=-surfaceNormal;" +
         "float ay=uTime*.34,ax=.48+sin(uTime*.21)*.22;" +
         "mat3 ry=mat3(cos(ay),0.0,-sin(ay),0.0,1.0,0.0,sin(ay),0.0,cos(ay));" +
         "mat3 rx=mat3(1.0,0.0,0.0,0.0,cos(ax),sin(ax),0.0,-sin(ax),cos(ax));" +
-        "vec3 q=rx*ry*p,n=normalize(rx*ry*sphere);" +
+        "vec3 q=rx*ry*p,litNormal=normalize(rx*ry*surfaceNormal);" +
         "float perspective=1.8/(3.35-q.z);" +
         "gl_Position=vec4(q.x*perspective*.52,q.y*perspective*1.52,q.z*.28,1.0);" +
-        "vNormal=n;vHue=fract(aUv.x+petal*.12+uTime*.035);" +
+        "gl_Position.xy+=vec2(sin(uTime*.27)*.32,sin(uTime*.21+1.7)*.16);" +
+        "vNormal=litNormal;vHue=fract(aFace/6.0+ridge*.08+uTime*.035);" +
       "}");
     var fs = flowerShader(gl, gl.FRAGMENT_SHADER,
       "precision mediump float;" +
@@ -41655,24 +41669,31 @@ setOfficeProgress("pc", false);
       gl.deleteProgram(program);
       throw new Error(linkMessage);
     }
-    var lat = 28, lon = 52, uv = [], indices = [];
-    for (var y = 0; y <= lat; y++) {
-      for (var x = 0; x <= lon; x++) uv.push(x / lon, y / lat);
-    }
-    for (var row = 0; row < lat; row++) {
-      for (var col = 0; col < lon; col++) {
-        var a = row * (lon + 1) + col, b = a + lon + 1;
-        indices.push(a, b, a + 1, b, b + 1, a + 1);
+    var subdiv = 12, uv = [], faces = [], indices = [], faceStride = (subdiv + 1) * (subdiv + 1);
+    for (var face = 0; face < 6; face++) {
+      for (var y = 0; y <= subdiv; y++) {
+        for (var x = 0; x <= subdiv; x++) { uv.push(x / subdiv, y / subdiv); faces.push(face); }
+      }
+      var offset = face * faceStride;
+      for (var row = 0; row < subdiv; row++) {
+        for (var col = 0; col < subdiv; col++) {
+          var a = offset + row * (subdiv + 1) + col, b = a + subdiv + 1;
+          indices.push(a, b, a + 1, b, b + 1, a + 1);
+        }
       }
     }
     var uvBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), gl.STATIC_DRAW);
+    var faceBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, faceBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(faces), gl.STATIC_DRAW);
     var indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-    monFlowerGL = { gl: gl, program: program, uv: uvBuffer, indices: indexBuffer,
+    monFlowerGL = { gl: gl, program: program, uv: uvBuffer, faces: faceBuffer, indices: indexBuffer,
       count: indices.length, aUv: gl.getAttribLocation(program, "aUv"),
+      aFace: gl.getAttribLocation(program, "aFace"),
       uTime: gl.getUniformLocation(program, "uTime") };
     return monFlowerGL;
   }
@@ -41690,6 +41711,9 @@ setOfficeProgress("pc", false);
     gl.bindBuffer(gl.ARRAY_BUFFER, state.uv);
     gl.enableVertexAttribArray(state.aUv);
     gl.vertexAttribPointer(state.aUv, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, state.faces);
+    gl.enableVertexAttribArray(state.aFace);
+    gl.vertexAttribPointer(state.aFace, 1, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.indices);
     gl.uniform1f(state.uTime, seconds);
     gl.drawElements(gl.TRIANGLES, state.count, gl.UNSIGNED_SHORT, 0);
@@ -41701,19 +41725,24 @@ setOfficeProgress("pc", false);
     var bg = ctx.createLinearGradient(0, 0, 0, h);
     bg.addColorStop(0, "#040514"); bg.addColorStop(1, "#12091b");
     ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
-    ctx.save(); ctx.translate(w / 2, h / 2); ctx.rotate(seconds * 0.18);
-    for (var layer = 9; layer >= 0; layer--) {
-      var radius = 18 + layer * 6.4, hue = (seconds * 24 + layer * 31) % 360;
-      ctx.fillStyle = "hsla(" + hue + ",72%," + (42 + layer * 2) + "%,.72)";
-      ctx.beginPath();
-      for (var i = 0; i <= 120; i++) {
-        var a = i / 120 * Math.PI * 2;
-        var r = radius * (0.74 + 0.22 * Math.sin(a * 5 + seconds * 0.9 + layer * 0.16));
-        var x = Math.cos(a) * r, y = Math.sin(a) * r * 0.48;
-        if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
+    var bloom = 0.5 - 0.5 * Math.cos(seconds * 0.72), size = 45, spike = 28 + bloom * 72;
+    ctx.save();
+    ctx.translate(w / 2 + Math.sin(seconds * 0.27) * 72, h / 2 + Math.sin(seconds * 0.21 + 1.7) * 24);
+    ctx.rotate(seconds * 0.16);
+    function poly(fill, points) {
+      ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]);
+      for (var i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
       ctx.closePath(); ctx.fill();
     }
+    // Three visible cube faces.
+    poly("#614a91", [[0,-size],[-size,-20],[-size,38],[0,55]]);
+    poly("#3f7895", [[0,-size],[size,-20],[size,38],[0,55]]);
+    poly("#99445f", [[-size,38],[0,55],[size,38],[0,8]]);
+    // The pulled-through face centres, shown at the fully legible opposing axes.
+    poly("#d455a1", [[-size,-8],[-size,20],[-spike,6]]);
+    poly("#df8858", [[size,-8],[size,20],[spike,6]]);
+    poly("#45bd73", [[-16,-20],[16,-20],[0,-spike]]);
+    poly("#55a6cf", [[-16,40],[16,40],[0,spike]]);
     ctx.restore();
   }
   function paintFlowerFrame(t) {

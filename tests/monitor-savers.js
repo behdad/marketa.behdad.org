@@ -2,7 +2,10 @@
 // Monitor saver rotation + shared bitmap-loop lifecycle.
 "use strict";
 
+var fs = require("fs");
+var path = require("path");
 var lib = require("./lib");
+var html = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 
 var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
@@ -43,12 +46,16 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html monitor screensavers:");
+check(/attribute vec2 aUv;attribute float aFace;/.test(html) &&
+  /float ridge=max\(0\.0,1\.0-max\(abs\(s\.x\),abs\(s\.y\)\)\)/.test(html) &&
+  /vec3 p=n\*\.72\+tu\*s\.x\*\.72\+tv\*s\.y\*\.72-n\*pull/.test(html),
+  "Flower Box pulls each pinned cube face through to an opposing point");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4000, {
   patchRaf: true,
   forceMotion: true,
   seedRandom: true
 });
-check(r && r.errors.length === 0, "both savers run without uncaught errors", r && r.errors);
+check(r && r.errors.length === 0, "all screensavers run without uncaught errors", r && r.errors);
 check(r && r.steps.julia.kind === "julia" && r.steps.julia.painted &&
   r.steps.julia.running && !r.steps.julia.pipesClass,
   "first idle cycle paints Julia through its selected SVG image", r && r.steps.julia);

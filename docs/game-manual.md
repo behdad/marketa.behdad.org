@@ -362,7 +362,7 @@ The current phone apps are:
 | **Messages** | Wedding crew thread, search, unread filter, composer, replies, reactions, and explicit message actions |
 | **Mail** | Authored inbox messages plus compose and reply through the device's email client |
 | **Calendar** | Wedding events, calendar export, Google Calendar links, date/time controls, and search |
-| **Album** | Session photos plus Aspen and photobooth captures; search, grid, delete, and share controls |
+| **Album** | Session photos plus Aspen and photobooth captures; search, grid, delete, share, and an after-party contact sheet |
 | **Photobooth** | Camera capture, filters, and frames, subject to browser camera permission |
 | **Music** | The shared three-song loft catalog |
 | **News** | A compact Hacker News reader |
@@ -462,6 +462,8 @@ to exit the app directly.
 The Tattoo detail view includes the design, artist portrait, and the artist's
 name and relationship. The gallery stays compact. The Album and Photobooth share
 captured photo metadata, while live camera pixels remain local to the browser.
+After a party ends, **Tonight at the loft** groups that party's keepsakes into a
+compact recap without mixing in the older pre-wedding photoshoot.
 During the party, Aspen follows people into the loft's rooms and deck. She does
 not enter, flash, or create an Album keepsake when a room has no subjects.
 The party itself may therefore continue while Aspen is absent from an empty

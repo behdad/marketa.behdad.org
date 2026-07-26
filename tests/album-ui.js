@@ -25,6 +25,9 @@ var HARNESS = [
   ' window.__openPhoneAppHere("album",true);await sleep(40);shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));await sleep(260);S("directEscape",{phone:!!document.querySelector(".phone-backdrop.show")});',
   ' window.__openPhoneAppHere("album",true);await sleep(40);shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"Backspace",bubbles:true,cancelable:true}));await sleep(260);S("directBackspace",{phone:!!document.querySelector(".phone-backdrop.show")});',
   ' window.phone("album");await sleep(80);card=document.querySelector(".pm-pol-selfie");var del=card&&card.querySelector(".pm-pol-delete");if(del)del.click();await sleep(80);S("remove",{count:window.__albumList().length,selfie:!!document.querySelector(".pm-pol-selfie"),stillAlbum:!!document.querySelector(".pm-album")});',
+  ' window.__setSecondRound(true,{releaseHeld:false});window.__setGardenParty(true,false);var portrait=window.__albumAdd(true);var group=window.__albumAddGroupPhoto();window.__setGardenParty(false,true);window.__albumRefresh();await sleep(80);',
+  ' var recap=document.querySelector(".pm-album-recap-toggle");var liveCount=window.__albumList().filter(function(x){return !x.shoot;}).length;if(recap)recap.click();await sleep(80);var headings=Array.prototype.map.call(document.querySelectorAll(".pm-album-section h3"),function(x){return x.textContent;});S("recap",{available:!!recap,portrait:!!portrait,group:!!group,open:document.querySelector(".pm-album-grid").classList.contains("recap"),sections:headings,cards:document.querySelectorAll(".pm-album-section-grid .pm-polaroid").length,live:liveCount,seededInside:Array.prototype.some.call(document.querySelectorAll(".pm-album-section-grid .pm-polaroid"),function(card){return /shoot-/.test(card.getAttribute("aria-label")||"");})});',
+  ' setLang("cs");await sleep(80);S("recapCs",{title:document.querySelector(".pm-album-recap b").textContent,headings:Array.prototype.map.call(document.querySelectorAll(".pm-album-section h3"),function(x){return x.textContent;})});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -47,6 +50,9 @@ check(s.slash.active === "pm-as-input", "/ focuses the Album search field", s.sl
 check(s.back.phone && s.back.home, "Backspace in an empty Album search performs the app's normal back navigation", s.back);
 check(!s.directEscape.phone && !s.directBackspace.phone, "Escape and Backspace close a directly opened Aspen Album", { escape: s.directEscape, backspace: s.directBackspace });
 check(s.remove.count === s.store.initial && !s.remove.selfie && s.remove.stillAlbum, "removing a selfie updates the open Album without leaving it", s.remove);
+check(s.recap.available && s.recap.portrait && s.recap.group && s.recap.open && s.recap.cards === s.recap.live && !s.recap.seededInside, "after the party, the recap groups every live keepsake and excludes pre-wedding seed photos", s.recap);
+check(s.recap.sections.indexOf("everyone together") !== -1 && s.recap.sections.indexOf("portraits") !== -1, "the recap separates the group keepsake from party portraits", s.recap);
+check(s.recapCs.title === "dnešní večer v loftu" && s.recapCs.headings.indexOf("všichni společně") !== -1, "the open recap relabels in Czech without losing its view", s.recapCs);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

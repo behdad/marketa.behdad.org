@@ -5451,11 +5451,23 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-album-view svg{display:block; width:100%; height:100%}
 .pm-album-view[aria-pressed="true"]{background:var(--wine); border-color:var(--wine); color:#fff}
 .pm-album-view:focus-visible{outline:2px solid var(--wine); outline-offset:2px}
+.pm-album-recap{display:grid; gap:4px; margin:0 6px; padding:11px 12px; border:1px solid var(--rule); border-radius:12px; background:linear-gradient(135deg,rgba(217,166,166,.18),rgba(127,158,192,.14)); color:var(--ink)}
+.pm-album-recap b{font-family:"Fraunces",serif; font-size:15px}
+.pm-album-recap span{font-size:11.5px; line-height:1.35; color:var(--muted)}
+.pm-album-recap button{justify-self:start; margin-top:3px; padding:6px 10px; border:0; border-radius:12px; background:var(--wine); color:#fff; font:600 11.5px/1.2 "Source Serif 4",serif; cursor:pointer}
+.pm-album-recap button:focus-visible{outline:2px solid var(--wine); outline-offset:2px}
 .pm-album-grid{display:flex; flex-direction:column; gap:16px}
 .pm-album-grid.compact{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:start}
 .pm-album-grid.compact .pm-polaroid{width:100%; box-sizing:border-box; transform:none}
 .pm-album-grid.compact .pm-polaroid .pm-pol-cap{padding:7px 2px 9px; font-size:10.5px}
 .pm-album-grid.compact .pm-polaroid .pm-pol-delete{top:3px; right:3px; width:22px; height:22px; line-height:20px}
+.pm-album-grid.recap{display:flex; flex-direction:column; gap:15px}
+.pm-album-section{display:grid; gap:7px}
+.pm-album-section h3{margin:0 4px; color:var(--wine); font:600 13px/1.2 "Fraunces",serif}
+.pm-album-section-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:start}
+.pm-album-section-grid .pm-polaroid{width:100%; box-sizing:border-box; transform:none}
+.pm-album-section-grid .pm-polaroid .pm-pol-cap{padding:7px 2px 9px; font-size:10.5px}
+.pm-album-section-grid .pm-polaroid .pm-pol-delete{top:3px; right:3px; width:22px; height:22px; line-height:20px}
 .pm-album-nomatch{margin:14px auto; color:var(--muted); font-size:12.5px; text-align:center; line-height:1.5; max-width:80%}
 .pm-polaroid{position:relative; align-self:center; width:196px; max-width:100%; background:#fffdf8; padding:9px 9px 0; border:none; border-radius:3px; box-shadow:0 3px 12px rgba(69,58,49,.22), inset 0 0 0 1px rgba(69,58,49,.06); cursor:pointer; font:inherit; text-align:center; display:block}
 .pm-polaroid:nth-of-type(odd){transform:rotate(-1.4deg)} /* a lightly-tossed stack; static (not animated) */
@@ -26478,6 +26490,14 @@ var T = {
     album_cap_selfie: "photobooth selfie",
     album_remove: "remove photo",
     album_compact: "compact grid",
+    album_recap_title: "tonight at the loft",
+    album_recap_sub: "A contact sheet from this party.",
+    album_recap_open: "View party recap",
+    album_recap_back: "Back to the full album",
+    album_recap_group: "everyone together",
+    album_recap_portraits: "portraits",
+    album_recap_rooms: "around the loft",
+    album_recap_selfies: "our selfies",
     // ROOM SHOTS — Aspen works the whole loft, so a card headed by the room it was taken in:
     // "the bar · Ali & Goli". Also what the album search matches such a card on.
     album_room_kitchen: "the bar",
@@ -27476,6 +27496,14 @@ var T = {
     album_cap_selfie: "selfie z fotokoutku",
     album_remove: "odstranit fotku",
     album_compact: "kompaktní mřížka",
+    album_recap_title: "dnešní večer v loftu",
+    album_recap_sub: "Kontaktní arch z téhle párty.",
+    album_recap_open: "Zobrazit rekapitulaci párty",
+    album_recap_back: "Zpět do celého alba",
+    album_recap_group: "všichni společně",
+    album_recap_portraits: "portréty",
+    album_recap_rooms: "po celém loftu",
+    album_recap_selfies: "naše selfie",
     album_empty_sub: "Aspen zatím nic nevyfotila — projdi se po loftu a album se začne plnit.",
     // FOTKY PODLE MÍSTNOSTI — Aspen fotí celý loft, takže kartu uvádí místnost, kde vznikla:
     // „u baru · Ali & Goli“. Podle toho se taková karta i vyhledává v albu.
@@ -57322,6 +57350,12 @@ async def localfont(name):
       if (rec.subjectId) hay.push(String(rec.subjectId).replace(/[-_]/g, " ")); // "shoot-godkids" → "shoot godkids"
       return hay.join(" \n ").toLowerCase().indexOf(q) !== -1;
     }
+    function albumRecapGroup(rec) {
+      if (rec.groupPhoto) return "group";
+      if (rec.roomShot) return "rooms";
+      if (rec.selfie) return "selfies";
+      return "portraits";
+    }
     function renderAlbum(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-album";
@@ -57334,7 +57368,30 @@ async def localfont(name):
         body.appendChild(wrap);
         return;
       }
+      var liveShots = shots.filter(function (rec) { return !rec.shoot; });
+      var recapAvailable = !!window.__secondRound && !window.__gardenPartyOn && !!liveShots.length;
+      if (!recapAvailable) albumRecapOpen = false;
       var reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      if (recapAvailable) {
+        var recap = document.createElement("div");
+        recap.className = "pm-album-recap";
+        var recapTitle = document.createElement("b");
+        recapTitle.textContent = tr("album_recap_title");
+        var recapSub = document.createElement("span");
+        recapSub.textContent = tr("album_recap_sub");
+        var recapToggle = document.createElement("button");
+        recapToggle.type = "button";
+        recapToggle.className = "pm-album-recap-toggle";
+        recapToggle.textContent = tr(albumRecapOpen ? "album_recap_back" : "album_recap_open");
+        recapToggle.addEventListener("click", function () {
+          albumRecapOpen = !albumRecapOpen;
+          openApp("album", "app_album", renderAlbum);
+        });
+        recap.appendChild(recapTitle);
+        recap.appendChild(recapSub);
+        recap.appendChild(recapToggle);
+        wrap.appendChild(recap);
+      }
       // ── search bar ── a real <input type="search"> that live-filters the roll by the people in each shot
       var search = document.createElement("div");
       search.className = "pm-album-search";
@@ -57358,6 +57415,7 @@ async def localfont(name):
       view.setAttribute("aria-label", tr("album_compact"));
       view.setAttribute("title", tr("album_compact"));
       view.setAttribute("aria-pressed", albumCompact ? "true" : "false");
+      if (albumRecapOpen) view.style.display = "none";
       view.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="4.5" height="4.5" rx=".7" fill="currentColor"/><rect x="9.5" y="2" width="4.5" height="4.5" rx=".7" fill="currentColor"/><rect x="2" y="9.5" width="4.5" height="4.5" rx=".7" fill="currentColor"/><rect x="9.5" y="9.5" width="4.5" height="4.5" rx=".7" fill="currentColor"/></svg>';
       search.appendChild(input);
       search.appendChild(clr);
@@ -57366,7 +57424,7 @@ async def localfont(name):
       // ── grid + no-match line ── polaroids live in their own container so the search bar doesn't
       // disturb their nth-of-type toss rotation
       var grid = document.createElement("div");
-      grid.className = "pm-album-grid" + (albumCompact ? " compact" : "");
+      grid.className = "pm-album-grid" + (albumRecapOpen ? " recap" : (albumCompact ? " compact" : ""));
       wrap.appendChild(grid);
       var nomatch = document.createElement("div");
       nomatch.className = "pm-album-nomatch";
@@ -57410,11 +57468,29 @@ async def localfont(name):
         search.classList.toggle("has-q", !!q);
         var shown = 0;
         grid.textContent = "";
-        shots.forEach(function (rec) {
-          if (!albumRecMatches(rec, q)) return;
-          grid.appendChild(buildCard(rec, firstPaint)); // only the initial (unfiltered) paint gets the develop fade
-          shown++;
-        });
+        var source = albumRecapOpen ? liveShots : shots;
+        if (albumRecapOpen) {
+          ["group", "portraits", "rooms", "selfies"].forEach(function (kind) {
+            var members = source.filter(function (rec) { return albumRecapGroup(rec) === kind && albumRecMatches(rec, q); });
+            if (!members.length) return;
+            var section = document.createElement("section");
+            section.className = "pm-album-section";
+            var heading = document.createElement("h3");
+            heading.textContent = tr("album_recap_" + kind);
+            var sectionGrid = document.createElement("div");
+            sectionGrid.className = "pm-album-section-grid";
+            members.forEach(function (rec) { sectionGrid.appendChild(buildCard(rec, firstPaint)); shown++; });
+            section.appendChild(heading);
+            section.appendChild(sectionGrid);
+            grid.appendChild(section);
+          });
+        } else {
+          source.forEach(function (rec) {
+            if (!albumRecMatches(rec, q)) return;
+            grid.appendChild(buildCard(rec, firstPaint)); // only the initial (unfiltered) paint gets the develop fade
+            shown++;
+          });
+        }
         firstPaint = false;
         nomatch.style.display = shown ? "none" : "";
       }
@@ -58114,7 +58190,7 @@ async def localfont(name):
     // cleared only on a kill (uninstallApp("photobooth") / __resetPhoneApps). The frame is a
     // frozen canvas, camera-independent, so nothing of the live camera lingers.
     var pbSavedFrame = null, pbSavedFilter = "none", pbSavedFrameId = "none", pbSavedAlbumId = null;
-    var albumCompact = false;
+    var albumCompact = false, albumRecapOpen = false;
     function renderNotes(body) {
       var wrap = document.createElement("div");
       wrap.className = "pm-notes";
@@ -59541,7 +59617,7 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and drops EVERY app's retained session state back to fresh: phrasebook to card 1, notes draft, photobooth polaroid, currency amount/codes, calculator display, dress-up outfit, mail read-marks/reactions, and the flashlight (intent forgotten + beam/torch off)
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default full slot layout (re-installs every "Uninstall"ed app, drops any reordering) and clears Album view/filter state; the flashlight intent and every retained app session return to fresh
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];

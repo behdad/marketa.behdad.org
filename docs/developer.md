@@ -693,6 +693,12 @@ photobooth output, and similar state. Kill, uninstall, or full reset must clear 
 retained state. Adding an app therefore requires an open path, a teardown path, Back semantics,
 context-menu behavior, and reset coverage.
 
+Album recap is a derived presentation, not another photo store: after phase 2, while the party is
+off, it groups existing non-`shoot` records by semantic record kind. Seed photos remain in the full
+roll only. `albumRecapOpen` is session UI state and must not leak into checkpoint records or
+`album.list`; record ownership, caps, object-URL cleanup, and recovery remain with the ordinary
+Album store.
+
 The launcher owns touch gestures that begin on app icons because those icons use
 `touch-action:none` for rearrangement. A quick vertical drag updates the launcher scroll position;
 holding briefly before movement enters icon-reorder mode. Keep that distinction when changing the

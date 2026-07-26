@@ -219,8 +219,8 @@ const SUBJECTS = [
     h.classList.add('on'); h.classList.remove('couple-out','dj-off-sina','dj-off-danesh');
     ${cls ? `h.classList.add(${JSON.stringify(cls)});` : ''}
     ['bh-patricia-son','bh-patricia-daughter','bh-elisabeth','bh-mahzad','bh-jay','bh-farhang','bh-alireza','bh-dj','bh-behdad','bh-marketa']
-      .forEach(function(i){var g=document.getElementById(i); if(g) g.style.display='none';});
-    ${JSON.stringify(ids)}.forEach(function(i){var g=document.getElementById(i); if(g) g.style.display='';});
+      .forEach(function(i){var g=document.getElementById(i); if(g) g.classList.remove('bh-present');});
+    ${JSON.stringify(ids)}.forEach(function(i){var g=document.getElementById(i); if(g) g.classList.add('bh-present');});
     var occ=(window.__roomOccupants&&window.__roomOccupants('balcony'))||[];
     return JSON.stringify({keys:occ.map(function(p){return p.key;}), ok: (occ.length>0)===${expectNonEmpty},
       aspen: occ.some(function(p){return p.key==='aspen';})});})()`;

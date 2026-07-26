@@ -1600,7 +1600,8 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
 /* the vintage Coca-Cola rolling cooler at the bar's left end. Same bar-up pointer-events gate as
    the bottles — party OR calm night — so it's inert whenever the bar is down. */
 #loft-game-strip.party-on #kitchen-bar-cooler,
-#loft-game-strip.second-round #stage-kitchen.dusk #kitchen-bar-cooler{pointer-events:auto}
+#loft-game-strip.second-round #stage-kitchen.dusk #kitchen-bar-cooler{pointer-events:auto;cursor:grab}
+#kitchen-bar-cooler.dragging{cursor:grabbing}
 /* the left lid hinges on its own outer edge. transform-box:fill-box makes 6%/50% land on that
    edge at mid-thickness; the group carries no transform attribute, so nothing is clobbered. */
 #kitchen-bar-cooler-lid-l{transform-box:fill-box; transform-origin:6% 50%; transition:transform .42s cubic-bezier(.34,1.16,.64,1)}
@@ -40152,6 +40153,9 @@ function gameTapsNear(a, b) {
   var SVGNS = "http://www.w3.org/2000/svg";
   var VAPOUR_N = 5;
   var timers = [], capNode = null;
+  var strip = document.getElementById("loft-game-strip");
+  var dragStartX = 0, dragStartOffset = 0, dragMoved = false, dragging = false;
+  var COOLER_MIN_OFFSET = 0, COOLER_MAX_OFFSET = 476; // roll from its home at the bar's left edge to the far end, without leaving the counter
 
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function present() { return !!(window.__barUpNow && window.__barUpNow()) && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
@@ -40163,6 +40167,14 @@ function gameTapsNear(a, b) {
     var old = cooler.querySelectorAll(sel);
     for (var i = 0; i < old.length; i++) if (old[i].parentNode) old[i].parentNode.removeChild(old[i]);
   }
+  function localX(e) {
+    try {
+      var pt = strip.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      return pt.matrixTransform(strip.getScreenCTM().inverse()).x;
+    } catch (err) { return e.clientX; }
+  }
+  function coolerOffset() { return parseFloat(cooler.style.translate) || 0; }
 
   // one short breath of cold air off the ice, five wisps rising out of the opened half
   function breathe() {
@@ -40243,17 +40255,53 @@ function gameTapsNear(a, b) {
     if ((opener && opener.contains(t)) || (catcher && catcher.contains(t))) popCap();
     else toggleLid();
   });
+  cooler.addEventListener("pointerdown", function (e) {
+    if ((e.button && e.button !== 0) || !present()) return;
+    dragging = true;
+    dragMoved = false;
+    dragStartX = localX(e);
+    dragStartOffset = coolerOffset();
+    cooler.classList.add("dragging");
+    try { cooler.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  cooler.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var dx = localX(e) - dragStartX;
+    if (Math.abs(dx) > 2) dragMoved = true;
+    var off = Math.max(COOLER_MIN_OFFSET, Math.min(COOLER_MAX_OFFSET, dragStartOffset + dx));
+    cooler.style.translate = off ? (off + "px 0px") : "";
+  });
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    cooler.classList.remove("dragging");
+    try { cooler.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  cooler.addEventListener("pointerup", endDrag);
+  cooler.addEventListener("pointercancel", endDrag);
+  // Capture before the lid/opener handler above: rolling the chest must not also operate it.
+  cooler.addEventListener("click", function (e) {
+    if (!dragMoved) return;
+    dragMoved = false;
+    e.stopImmediatePropagation();
+    e.preventDefault();
+  }, true);
   hoverTooltip(cooler, function () { return tipText("tip_cokecooler"); }, "top");
 
-  function reset() {
+  function reset(moveHome) {
     clearTimers();
+    dragging = false;
+    dragMoved = false;
+    cooler.classList.remove("dragging");
+    if (moveHome) cooler.style.translate = "";
     cooler.classList.remove("lid-up");
     drop(".cooler-vapour");
     drop(".cooler-cap");
     capNode = null;
   }
-  window.__resetCokeCooler = reset;
-  document.addEventListener("visibilitychange", function () { if (document.hidden) reset(); });
+  window.__cokeCoolerOffset = coolerOffset; // focused test/inspection hook
+  window.__resetCokeCooler = function () { reset(true); };
+  document.addEventListener("visibilitychange", function () { if (document.hidden) reset(false); });
 })();
 (function () {
   // ======================================================================================
@@ -93191,7 +93239,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons";
+  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons, #kitchen-bar-cooler";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

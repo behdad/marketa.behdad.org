@@ -106,7 +106,7 @@ Album photos. Opening Album marks the photos currently there as seen.
 - On a touch screen, a two-finger tap provides the general context-menu gesture.
 - In Messages, press and hold one message with one finger for message actions.
 - Drag only objects that visibly respond to dragging, such as garden water
-  bottles.
+  bottles and the wheeled bar cooler.
 
 ### Back, Escape, and fullscreen
 

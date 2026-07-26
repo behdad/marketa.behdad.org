@@ -5,6 +5,7 @@ var lib = require("./lib");
 var harness = String.raw`<script>
 (function () {
   window.goToStage("kitchen");
+  if (window.__setSecondRound) window.__setSecondRound(true, { releaseHeld: false });
   if (window.__setPartyMode) window.__setPartyMode(false, true);
   if (window.__setDayNight) window.__setDayNight(true);
   var mixer = document.getElementById("kitchen-bar-mixer");
@@ -14,6 +15,24 @@ var harness = String.raw`<script>
   var stool3 = document.getElementById("kitchen-bar-stool-3");
   var patronA = document.getElementById("kitchen-bar-patron-a");
   var patronB = document.getElementById("kitchen-bar-patron-b");
+  var cooler = document.getElementById("kitchen-bar-cooler");
+  function pointer(type, x) {
+    cooler.dispatchEvent(new PointerEvent(type, {
+      bubbles: true, cancelable: true, pointerId: 7, pointerType: "mouse",
+      button: 0, buttons: type === "pointerup" ? 0 : 1, clientX: x, clientY: 460
+    }));
+  }
+  pointer("pointerdown", 120);
+  pointer("pointermove", 220);
+  pointer("pointerup", 220);
+  cooler.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  var coolerAfterDrag = {
+    offset: window.__cokeCoolerOffset(),
+    lidUp: cooler.classList.contains("lid-up")
+  };
+  cooler.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  var coolerTapOpens = cooler.classList.contains("lid-up");
+  window.__resetCokeCooler();
   function innerShift(el) {
     return el && el.firstElementChild ? el.firstElementChild.getAttribute("transform") : null;
   }
@@ -22,7 +41,10 @@ var harness = String.raw`<script>
     mixerBeforePatrons: !!(mixer && patrons && (mixer.compareDocumentPosition(patrons) & Node.DOCUMENT_POSITION_FOLLOWING)),
     bottleCount: bottles.length,
     vermouthBody: bottles[2] && bottles[2].querySelector("rect") ? bottles[2].querySelector("rect").getAttribute("fill") : null,
-    shifts: [innerShift(stool1), innerShift(stool3), innerShift(patronA), innerShift(patronB)]
+    shifts: [innerShift(stool1), innerShift(stool3), innerShift(patronA), innerShift(patronB)],
+    coolerAfterDrag: coolerAfterDrag,
+    coolerTapOpens: coolerTapOpens,
+    coolerReset: window.__cokeCoolerOffset() === 0 && !cooler.classList.contains("lid-up")
   };
   var pre = document.createElement("pre");
   pre.id = "__report";
@@ -47,5 +69,9 @@ if (result) {
   check(result.vermouthBody === "#5f8a52", "the vermouth bottle uses distinct green glass", result.vermouthBody);
   check(result.shifts.length === 4 && result.shifts.every(function (v) { return v === "translate(-15,0)"; }),
     "both occupied stools and both patrons share the 15-unit default left shift", result.shifts);
+  check(result.coolerAfterDrag.offset > 0 && !result.coolerAfterDrag.lidUp,
+    "rolling the Coca-Cola cooler moves it without also opening its lid", result.coolerAfterDrag);
+  check(result.coolerTapOpens, "a plain cooler tap still opens its lid");
+  check(result.coolerReset, "a game reset returns the cooler home with its lid down");
 }
 process.exitCode = failures ? 1 : 0;

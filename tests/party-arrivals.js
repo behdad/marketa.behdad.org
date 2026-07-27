@@ -37,6 +37,15 @@ var harness = String.raw`<script>
       return guest && guest.classList.contains("arrived") && !guest.classList.contains("leaving");
     }).map(function (unit) { return unit[0]; });
   }
+  function ordinaryGuestInCenter() {
+    var group = document.getElementById("garden-guests");
+    return Array.prototype.map.call(group.querySelectorAll(".guest.arrived:not(.leaving)"), function (guest) {
+      if (/g-(behdad|marketa|robin|navid)\b/.test(guest.getAttribute("class") || "") || guest.classList.contains("bd-cutter")) return null;
+      var m = /translate\(\s*([-\d.]+)/.exec(guest.getAttribute("transform") || "");
+      var x = (m ? parseFloat(m[1]) : 0) + (parseFloat(guest.style.getPropertyValue("--balance-x")) || 0);
+      return x > 255 && x < 405 ? { className: guest.getAttribute("class"), x: x } : null;
+    }).filter(Boolean);
+  }
 
   document.hasFocus = function () { return false; };
   window.addEventListener("load", function () {
@@ -54,6 +63,9 @@ var harness = String.raw`<script>
         var beforeCount = arrivedCount(), before = presentUnits();
         check("the unattended initial fill reaches the eight-guest floor capacity",
           beforeCount >= 8, JSON.stringify({ count: beforeCount, units: before }));
+        var centerGuests = ordinaryGuestInCenter();
+        check("ordinary guests leave the couple's center lane clear",
+          centerGuests.length === 0, JSON.stringify(centerGuests));
 
         await sleep(10000);
         var after = presentUnits();

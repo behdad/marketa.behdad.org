@@ -82138,7 +82138,7 @@ function spawnDustMote(container) {
   // and their homes cluster). The nudge rides --balance-x on the .g-* group (CSS `translate`
   // property; composes with the static position transform). slotXBySel remembers each figure's
   // current slot so its gate walk-in/out uses the SLOT distance (GATE_X − slot), not the home.
-  var SPREAD_L = 60, SPREAD_R = 620; // the balanced band across the floor width
+  var SPREAD_L = 60, SPREAD_L_R = 255, SPREAD_R_L = 405, SPREAD_R = 620;
   var slotXBySel = {}; // sel -> current on-floor slot x (present figures only)
   function setBalance(g, sel, slot, home) {
     var el = g.querySelector(sel);
@@ -82161,20 +82161,39 @@ function spawnDustMote(container) {
     var list = fullArrivals();
     var units = presentUnits(g, list).slice();
     (incoming || []).forEach(function (u) { if (units.indexOf(u) < 0) units.push(u); });
-    // members in left→right order (units sorted by their leftmost home; members keep unit order)
+    // Keep whole arrival units together on either side of the hosts. The middle belongs to the
+    // hosts, the birthday honoree, and the authored Robin/Navid godson formation.
     units.sort(function (a, b) { return Math.min.apply(null, a.homes) - Math.min.apply(null, b.homes); });
-    var members = [];
-    units.forEach(function (u) { for (var i = 0; i < u.sels.length; i++) {
-      var mel = g.querySelector(u.sels[i]);
-      if (mel && mel.classList.contains("bd-cutter")) continue; // a birthday cutter is HELD at the cake centre by startBdCakeCutting — leave its --balance-x alone so a mid-cake arrival/rotation can't glide it off to a slot (which read as "Madla walks to the corner right after reaching the cake")
-      members.push({ sel: u.sels[i], home: u.homes[i] });
-    } });
-    var n = members.length;
-    if (!n) return;
-    for (var i = 0; i < n; i++) {
-      var slot = (n === 1) ? (SPREAD_L + SPREAD_R) / 2 : Math.round(SPREAD_L + (SPREAD_R - SPREAD_L) * i / (n - 1));
-      setBalance(g, members[i].sel, slot, members[i].home);
+    var placedUnits = units.map(function (u) {
+      var members = [];
+      for (var i = 0; i < u.sels.length; i++) {
+        var mel = g.querySelector(u.sels[i]);
+        if (mel && mel.classList.contains("bd-cutter")) continue;
+        members.push({ sel: u.sels[i], home: u.homes[i] });
+      }
+      return { members: members, mean: u.homes.reduce(function (sum, x) { return sum + x; }, 0) / u.homes.length };
+    }).filter(function (u) { return u.members.length; });
+    if (!placedUnits.length) return;
+    var cut = 0;
+    if (placedUnits.length === 1) cut = placedUnits[0].mean < (SPREAD_L_R + SPREAD_R_L) / 2 ? 1 : 0;
+    else {
+      var total = placedUnits.reduce(function (sum, u) { return sum + u.members.length; }, 0), leftN = 0, best = Infinity;
+      for (var c = 1; c < placedUnits.length; c++) {
+        leftN += placedUnits[c - 1].members.length;
+        var imbalance = Math.abs(total - leftN * 2);
+        if (imbalance < best) { best = imbalance; cut = c; }
+      }
     }
+    function placeSide(side, lo, hi) {
+      var members = [];
+      side.forEach(function (u) { members = members.concat(u.members); });
+      for (var i = 0; i < members.length; i++) {
+        var slot = members.length === 1 ? Math.round((lo + hi) / 2) : Math.round(lo + (hi - lo) * i / (members.length - 1));
+        setBalance(g, members[i].sel, slot, members[i].home);
+      }
+    }
+    placeSide(placedUnits.slice(0, cut), SPREAD_L, SPREAD_L_R);
+    placeSide(placedUnits.slice(cut), SPREAD_R_L, SPREAD_R);
     if (window.__syncPartyKidFormation) window.__syncPartyKidFormation(); // Irene tracks Bahareh's live balanced slot in family formation
   }
   var arrivalOrder = null; // a per-party, lightly-shuffled copy of ARRIVALS (each duo nudged up/down a slot or two)

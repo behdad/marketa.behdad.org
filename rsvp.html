@@ -1112,6 +1112,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 }
 @media (prefers-reduced-motion: reduce){#cuddly-outlet.sparking{animation:none}}
 #cuddly-countdown-pop{transform-box:fill-box; transform-origin:center}
+#cuddly-countdown{cursor:pointer}
 #cuddly-countdown-pop.pop{animation:cuddly-cd-pop .75s ease-in-out}
 @keyframes cuddly-cd-pop{0%,100%{transform:scale(1) rotate(0)} 28%{transform:scale(1.11) rotate(-1.6deg)} 58%{transform:scale(1.05) rotate(1.1deg)} 82%{transform:scale(1.02) rotate(-.4deg)}}
 @media (prefers-reduced-motion: reduce){#cuddly-countdown-pop.pop{animation:none}}
@@ -16838,7 +16839,7 @@ section{margin:1.9rem 0}
      text and reveals it (except on valentine's / the wedding weeks, which have their own decor).
      The milestone .pop rides the #cuddly-countdown-pop wrapper — the sign's parts are positioned
      by baked coords, never a transform attribute, so the pop's scale can't clobber their spot. -->
-<g id="cuddly-countdown" aria-hidden="true" pointer-events="none" style="display:none">
+<g id="cuddly-countdown" role="button" tabindex="-1" style="display:none">
 <g id="cuddly-countdown-pop">
 <circle cx="335" cy="21" r="1.8" fill="#716455"/>
 <line x1="335" y1="21" x2="250" y2="35" stroke="#7d6e5d" stroke-width="1"/>
@@ -86747,6 +86748,9 @@ function spawnDustMote(container) {
     }
     host.style.display = "";
     if (txt) txt.textContent = cdbPhrase(days, which);
+    var calendarLabel = (T[cdbLang()] && T[cdbLang()].app_calendar) || T.en.app_calendar || "calendar";
+    host.setAttribute("aria-label", (txt ? txt.textContent : "") + " · " + calendarLabel);
+    host.setAttribute("title", calendarLabel);
     // Milestone celebration — a sign pop + a confetti burst, fired once per value and only while
     // the nook is actually on screen (so entering the room on a milestone day still gets it, even
     // if the count was first computed from another room). Reduced motion / a hidden tab: no pop,
@@ -86764,6 +86768,12 @@ function spawnDustMote(container) {
   (function () {
     var pop = document.getElementById("cuddly-countdown-pop");
     if (pop) pop.addEventListener("animationend", function () { pop.classList.remove("pop"); });
+    var host = document.getElementById("cuddly-countdown");
+    if (host) host.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar", true);
+      else if (window.phone) window.phone("calendar");
+    });
   })();
   refreshCuddlyCountdown();
   function calOverrideDate() { // the time-travelled day, if a ?date=/#date= override is live

@@ -770,6 +770,7 @@ date/time overlay appears only when at least one of those parameters is present.
 Its `◀`/`▶` controls move one day at a time, while `◀◀`/`▶▶` jump between
 significant dates. Selecting the date opens Calendar; selecting the top occasion
 banner activates that day's celebration.
+The hanging wedding countdown in Cuddly-puddly opens Calendar.
 For a pretend Edmonton date or time, the game uses historical weather to
 approximate the selected moment. An `≈` before the Edmonton temperature marks a
 reconstructed reading rather than today's live weather.

@@ -360,7 +360,10 @@ temporary silhouetted pair without changing the underlying apartment state.
 Watcher probability and idle cadence derive from `__whoIsHere("balcony")`, so
 either the main party or BBQ naturally draws more attention as the deck fills.
 Room/focus/game transitions clear both effects synchronously. A manual click
-toggles exactly one window and a double-click starts the game.
+toggles exactly one window and two nearby clicks within one second start the game.
+`wireNearbyDoubleTap` provides the same screen-space tolerance for the garden chase.
+`quickReversalGesture` recognizes the chair and bartender launch shuffles only after
+two 18px direction changes within 1.1 seconds, leaving one-way drags and jitter inert.
 
 The minigame owns a 10×16 board, seven-bag pieces, rotation/wall kicks,
 line/level scoring, and `localStorage["balconyTetrisHigh"]`. That personal best

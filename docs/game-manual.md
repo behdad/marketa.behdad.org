@@ -683,17 +683,19 @@ ordinary game shortcuts are suspended until the player exits.
 
 Setting a new personal best in one of the four arcades may put an unplayed
 arcade recommendation in Messages. Its action arrow takes the player straight
-to that game; each arcade recommends another only once.
+to that game; later personal bests can recommend another remaining game.
 
-- **Flair Catch:** In the kitchen/bar, repeat a nearby click on Pouria to begin,
+- **Flair Catch:** In the kitchen/bar, repeat a nearby click on Pouria or quickly
+  drag him back and forth to begin,
   or use its message/API action. Pouria follows the pointer while the player
   catches garnishes and avoids the wasp; Left/Right arrows move him too. Clicking
   Pouria during the game does not open his personal card. Space pauses or resumes
   the run. Flair Catch is unavailable when reduced motion is requested.
-- **Alien Resources:** A hidden office-chair gesture, message action, or API action
-  starts the game. Move the chair or use Left/Right arrows to aim; Space fires
+- **Alien Resources:** Two nearby office-chair clicks or a quick back-and-forth
+  chair drag starts the game; message and API actions can also launch it. Move the
+  chair or use Left/Right arrows to aim; Space fires
   while auto-fire remains active.
-- **Block Party:** On the balcony, double-click any across-the-street office
+- **Block Party:** On the balcony, click twice near the same across-the-street office
   window. The forty physical windows become a 10×16 board with four square lamps
   per window. Arrow keys move and rotate pieces, and Space drops them. On touchscreens,
   tap to rotate, drag sideways to move through columns, swipe down to lower a piece,

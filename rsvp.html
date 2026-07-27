@@ -36832,17 +36832,78 @@ window.__setSprinkler = function (on) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tickle(e); }
   });
 });
-/* Both hidden mini-games — the office chair's invaders and the bar's Flair-Catch — start on
-   TWO taps landing NEAR each other. Proximity, not timing or velocity, is what separates the
-   gesture from a DRAG: a drag ends somewhere else by definition, so it can never be two nearby
-   taps. That keeps both objects freely draggable (you must be able to just reposition the
-   bartender), which is why neither drag arms anything any more.
-   Tune GAME_TAP_NEAR_PX to taste: generous enough for a shaky hand or a phone thumb, tight
-   enough that two deliberate taps at opposite ends of the object aren't one gesture. Screen
-   px — what the user actually feels — not SVG units, which would drift with the room zoom. */
-var GAME_TAP_NEAR_PX = 30;
+/* Hidden-game discovery gestures use screen pixels, so the tolerance does not drift with room
+   zoom. Nearby double-taps allow a shaky hand; quick reversals require enough travel that pointer
+   jitter cannot accidentally launch a game during an ordinary drag. */
+var GAME_TAP_NEAR_PX = 30, GAME_TAP_WINDOW = 1000;
 function gameTapsNear(a, b) {
   return !!a && !!b && Math.hypot(b.x - a.x, b.y - a.y) <= GAME_TAP_NEAR_PX;
+}
+function wireNearbyDoubleTap(el, action, resolveTarget) {
+  var last = null, timer = null;
+  el.addEventListener("click", function (e) {
+    var target = resolveTarget ? resolveTarget(e) : el;
+    if (!target) return;
+    var pt;
+    if (e.clientX || e.clientY) pt = { x: e.clientX, y: e.clientY };
+    else {
+      var rect = target.getBoundingClientRect();
+      pt = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    }
+    if (last && performance.now() - last.at <= GAME_TAP_WINDOW && gameTapsNear(last, pt)) {
+      last = null;
+      clearTimeout(timer);
+      action(e, target);
+      return;
+    }
+    last = { x: pt.x, y: pt.y, at: performance.now() };
+    clearTimeout(timer);
+    timer = setTimeout(function () { last = null; }, GAME_TAP_WINDOW);
+  });
+  // The second click has already launched through the tolerant path; consume the browser's
+  // stricter synthetic dblclick so it cannot bubble into another scene gesture.
+  el.addEventListener("dblclick", function (e) { e.preventDefault(); e.stopPropagation(); });
+}
+function quickReversalGesture(action) {
+  var MIN_TRAVEL = 18, WINDOW_MS = 1100;
+  var startAt = null, anchorX = 0, extremeX = 0, direction = 0, reversals = 0;
+  function reset() { startAt = null; direction = 0; reversals = 0; }
+  return {
+    begin: function (x) {
+      startAt = performance.now();
+      anchorX = extremeX = x;
+      direction = 0;
+      reversals = 0;
+    },
+    move: function (x) {
+      if (startAt == null) return false;
+      if (performance.now() - startAt > WINDOW_MS) {
+        this.begin(x);
+        return false;
+      }
+      if (!direction) {
+        var first = x - anchorX;
+        if (Math.abs(first) >= MIN_TRAVEL) {
+          direction = first < 0 ? -1 : 1;
+          extremeX = x;
+        }
+        return false;
+      }
+      if ((direction > 0 && x > extremeX) || (direction < 0 && x < extremeX)) {
+        extremeX = x;
+        return false;
+      }
+      if (Math.abs(x - extremeX) < MIN_TRAVEL) return false;
+      direction *= -1;
+      extremeX = x;
+      reversals++;
+      if (reversals < 2) return false;
+      reset();
+      action();
+      return true;
+    },
+    reset: reset
+  };
 }
 (function () {
   var typewriter = document.getElementById("office-typewriter");
@@ -37109,7 +37170,8 @@ function gameTapsNear(a, b) {
     // gesture, both outcomes, exactly what the caption promises ("the chair swivels — invaders
     // inbound!"). Hanging the dizzy swirl off a rarer third click would have hidden it from
     // almost everyone; composing them means whoever finds the gesture gets the whole thing.
-    // A single tap still just swirls. Dragging arms nothing — see gameTapsNear.
+    // A single tap still just swirls. An ordinary one-way drag only repositions it; a deliberate
+    // quick back-and-forth also launches through chairReversals below.
     var CHAIR_ARCADE_TAPS = 2, CHAIR_TAP_WINDOW = 900;
     var chairTapStreak = 0, chairTapTimer = null, chairLastTap = null;
     function spinChair(e) {
@@ -37132,6 +37194,9 @@ function gameTapsNear(a, b) {
     var CHAIR_Y_OFFSET = -5;
     var chairOffsetX = 0;
     var chairDragging = false, chairDragStartX = 0, chairDragStartOffset = 0, chairDragMoved = false;
+    var chairReversals = quickReversalGesture(function () {
+      if (!arcadeActive) startArcade();
+    });
     function pointerSvgX(e) {
       var svg = document.getElementById("loft-game-strip");
       var pt = svg.createSVGPoint();
@@ -37161,9 +37226,9 @@ function gameTapsNear(a, b) {
        hide the tab; releasing the pointer just stops dragging — re-grab the
        chair any time to keep moving it and lining up shots.
 
-       Dragging deliberately does NOT arm the game: the chair is a draggable, and a
-       drag that launches something is a trap — you could never just reposition it.
-       Clicks start the game, drags only move. Same rule for the bartender.
+       Ordinary drags only move the chair. Two quick, substantial direction changes are
+       a second deliberate launch gesture; one-way repositioning and small jitter remain inert.
+       The bartender follows the same rule.
 
        All positions are written as SVG transform ATTRIBUTES from a single rAF
        loop (never CSS transforms — those would clash with the transform attr),
@@ -37497,6 +37562,7 @@ function gameTapsNear(a, b) {
       if (e.button && e.button !== 0) return; // ignore right/middle presses; no phantom drag
       chairDragging = true;
       chairDragMoved = false;
+      chairReversals.begin(e.clientX);
       chairDragStartX = pointerSvgX(e);
       chairDragStartOffset = chairOffsetX;
       chair.style.transition = "none";
@@ -37509,10 +37575,12 @@ function gameTapsNear(a, b) {
       if (Math.abs(dx) > 2) chairDragMoved = true; // sticky: any real drag suppresses the click, so a drag never counts toward the 2-tap launch
       setChairOffset(chairDragStartOffset + dx);
       if (window.__chairCatFollow) window.__chairCatFollow(); // dragging is instant (no transition) — resync every move
+      if (!arcadeActive) chairReversals.move(e.clientX);
     });
     function onChairPointerUp(e) {
       if (!chairDragging) return;
       chairDragging = false;
+      chairReversals.reset();
       // releasing no longer ends the arcade — the survival loop keeps running
       // until a saucer gets through (game over) or you leave the office / hide
       // the tab. Re-grab the chair to keep moving it and lining up shots.
@@ -38753,7 +38821,7 @@ function gameTapsNear(a, b) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sparkOutlet(); }
   });
 })();
-// Brick-wall gestures: double-click the GARDEN wall to summon a kids' chase (any time of day/night,
+// Brick-wall gestures: two nearby clicks on the GARDEN wall summon a kids' chase (any time of day/night,
 // party or not — force skips the ambient party gate), and the BALCONY wall to start s'mores AT NIGHT
 // or, BY DAY, whichever season's outdoor play scene fits — the day/night pair: a fire after dark,
 // and by daylight a snowman (freezing air), a leaf pile to leap into (autumn), a blossom toss (spring),
@@ -38763,7 +38831,7 @@ function gameTapsNear(a, b) {
 // (The cuddly wall's own dblclick already summons a nook kid; the outlet handles Madla.)
 (function () {
   var gw = document.getElementById("garden-wall");
-  if (gw) gw.addEventListener("dblclick", function () { if (window.__startGardenChase) window.__startGardenChase(true); });
+  if (gw) wireNearbyDoubleTap(gw, function () { if (window.__startGardenChase) window.__startGardenChase(true); });
   var bw = document.getElementById("balcony-wall");
   if (bw) bw.addEventListener("dblclick", function () {
     var b = document.getElementById("stage-balcony");
@@ -40085,12 +40153,15 @@ function gameTapsNear(a, b) {
     // his body stays behind the counter. The inner #kitchen-bartender-shake (idle) and
     // #kitchen-bartender-shaker (toss) animate `transform` on DIFFERENT nodes, so the
     // drag translate never fights them (the documented transform-clobber bug class).
-    // A genuine tap still throws the shaker; only a real drag moves him, and it suppresses
-    // the tap so dragging can never launch Flair-Catch — he must stay freely repositionable.
+    // A genuine tap still throws the shaker; a real drag suppresses that tap. One-way motion
+    // freely repositions him, while a deliberate quick back-and-forth launches Flair-Catch.
     var BARTENDER_MIN_X = -240, BARTENDER_MAX_X = 210; // hit rect [270,348] vs counter [14,574] → margin both ends
     var BARTENDER_Y_OFFSET = 0;                        // no vertical shift; he stays on his baseline
     var barOffsetX = 0;
     var barDragging = false, barDragStartX = 0, barDragStartOffset = 0, barDragMoved = false;
+    var bartenderReversals = quickReversalGesture(function () {
+      if (!flairActive && !flairReduce && barUpNow() && window.currentStageName === "kitchen") startFlairCatch();
+    });
     function bartenderSvgX(e) { // clientX → strip-SVG coords (own copy; chair's pointerSvgX is out of scope here)
       var svg = document.getElementById("loft-game-strip");
       var pt = svg.createSVGPoint();
@@ -40117,6 +40188,7 @@ function gameTapsNear(a, b) {
         if (!barUpNow()) return; // only draggable while the bar's up (party OR calm night bar)
         barDragging = true;
         barDragMoved = false;
+        bartenderReversals.begin(e.clientX);
         barDragStartX = bartenderSvgX(e);
         barDragStartOffset = barOffsetX;
         bartender.style.transition = "none"; // track the pointer instantly (no glide) while dragging
@@ -40129,10 +40201,12 @@ function gameTapsNear(a, b) {
         var dx = px - barDragStartX;
         if (Math.abs(dx) > 2) { barDragMoved = true; if (window.__retireHint) window.__retireHint("hint_barman"); } // sticky: a real drag suppresses the tap, so dragging never counts toward the launch
         setBartenderOffset(barDragStartOffset + dx);
+        if (!flairActive) bartenderReversals.move(e.clientX);
       });
       function onBartenderPointerUp(e) {
         if (!barDragging) return;
         barDragging = false;
+        bartenderReversals.reset();
         bartenderHit.classList.remove("grabbing");
         bartender.style.transition = flairActive ? "none" : ""; // stay instant while the game runs; restore the glide otherwise
         try { bartenderHit.releasePointerCapture(e.pointerId); } catch (err) {}
@@ -40187,7 +40261,8 @@ function gameTapsNear(a, b) {
     });
 
     /* ==== Flair-Catch — hidden bar mini-game ===============================
-       Tap the bartender twice near the same spot (see bartenderTapLaunch) and the room
+       Tap the bartender twice near the same spot (see bartenderTapLaunch), or quickly drag him
+       back and forth, and the room
        dims to a spotlight and bar items rain down: limes,
        ice cubes, bottles, olives, cherries, citrus wedges (plus a rare wasp you must
        NOT catch). Line the cocktail-shaker's mouth up under a falling good item to
@@ -64075,12 +64150,13 @@ async def localfont(name):
       apartment.classList.toggle("lit");
       playLaptopClickSound("balcony-cityview");
     });
-    grid.addEventListener("dblclick", function (e) {
-      var apartment = e.target && e.target.closest ? e.target.closest(".balcony-building-window") : null;
+    wireNearbyDoubleTap(grid, function (e, apartment) {
       if (!apartment || active) return;
       e.preventDefault();
       e.stopPropagation();
       startGame();
+    }, function (e) {
+      return e.target && e.target.closest ? e.target.closest(".balcony-building-window") : null;
     });
     // Keyboard-only by design: while the building owns the room, no outside
     // button/object click may mutate the scene underneath or navigate away.

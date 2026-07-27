@@ -812,6 +812,7 @@ var PROBE_HARNESS = [
   "    if (window.__retuneDancers) window.__retuneDancers('techno');",
   "    var ireneArmDur = parseFloat(getComputedStyle(document.querySelector('#garden-guests .g-irene .guest-arm-l')).animationDuration) || 0;",
   "    ok('party kids: Robin and Navid retain the same happy dance tempo as Irene', ['robin', 'navid'].every(function (name) { var fig = document.querySelector('#garden-guests .g-' + name); return getComputedStyle(fig.querySelector('.guest-move')).animationName === 'guest-mouse-sway' && Math.abs((parseFloat(getComputedStyle(fig.querySelector('.guest-arm-l')).animationDuration) || 0) - ireneArmDur) < .01; }));",
+  "    if (window.__clearGardenChase) window.__clearGardenChase();",
   "    if (window.__setPartyKidFormation) window.__setPartyKidFormation('play');",
   "    var eligible = window.__gardenChaseEligible ? window.__gardenChaseEligible().slice().sort() : [];",
   "    ok('party kids: all eight Cuddly-assigned children are eligible to run', eligible.join('|') === allRunningKids.slice().sort().join('|'), 'eligible=' + eligible.join(','));",

@@ -3071,6 +3071,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
    each end; it pauses that stroll and sways in place while a song plays. Walk on the
    outer wrapper, sway on the inner, so neither clobbers the cat's own click-wobble. */
 #witchy-chest-cat-walk{transform-box:fill-box; transform-origin:bottom center}
+#witchy-chest-cat-walk.gone{visibility:hidden;pointer-events:none}
 #witchy-chest-cat-walk.roaming{animation:cat-roam 13s ease-in-out infinite}
 @keyframes cat-roam{
   0%,100%{transform:translateX(0) translateY(0)}
@@ -6981,6 +6982,7 @@ body.bd-patricia-daughter .bd-hat-patricia-daughter{opacity:1; visibility:visibl
   100%{transform:rotate(0) scale(1)}
 }
 #cuddly-octopus.falling-in{animation:octopus-fall-in 1s ease-in forwards}
+#cuddly-octopus.in-chest{opacity:0;pointer-events:none}
 @keyframes octopus-fall-in{
   0%{transform:translateY(0); opacity:1}
   25%{transform:translateY(-14px); opacity:1}
@@ -35393,9 +35395,9 @@ setMusicPausedState(false);
     var stage = document.getElementById("stage-cuddly");
     return !!(catLoose() && pos && stage && stage.contains(pos));
   }
-  function octiOut() { // Octi is out (available to play with) unless he's tucked into the trunk (.falling-in)
+  function octiOut() { // Octi is out unless he's falling into or settled inside the trunk
     var o = document.getElementById("cuddly-octopus");
-    return !!(o && !o.classList.contains("falling-in"));
+    return !!(o && !o.classList.contains("falling-in") && !o.classList.contains("in-chest"));
   }
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -39152,7 +39154,7 @@ function quickReversalGesture(action) {
       var nextClass = octopusInChest ? "popping-out" : "falling-in";
       var prevClass = octopusInChest ? "falling-in" : "popping-out";
       var alreadyPlayed = octopus.classList.contains("played");
-      octopus.classList.remove(prevClass, "wobble");
+      octopus.classList.remove(prevClass, "wobble", "in-chest");
       octopus.classList.add(nextClass);
       if (nextClass === "falling-in") {
         octopus.classList.add("played");
@@ -39161,6 +39163,7 @@ function quickReversalGesture(action) {
         if (!alreadyPlayed && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // Octi's in the chest but "played" → nudge the door as the next step
       }
       octopusInChest = !octopusInChest;
+      if (window.__checkpointChanged) window.__checkpointChanged();
     }
   }
   trunk.addEventListener("click", openTrunk);
@@ -39170,7 +39173,28 @@ function quickReversalGesture(action) {
   window.resetOctopusChest = function () {
     octopusInChest = false;
     trunk.classList.remove("opening");
-    if (octopus) octopus.classList.remove("falling-in", "popping-out", "wobble", "played");
+    if (octopus) octopus.classList.remove("falling-in", "popping-out", "in-chest", "wobble", "played");
+  };
+  if (octopus) octopus.addEventListener("animationend", function (e) {
+    if (e.animationName === "octopus-fall-in" && octopusInChest) {
+      octopus.classList.remove("falling-in");
+      octopus.classList.add("in-chest");
+    } else if (e.animationName === "octopus-pop-out" && !octopusInChest) {
+      octopus.classList.remove("popping-out");
+    }
+  });
+  // Physical trunk ownership is distinct from Octi's `.played` puzzle milestone.
+  // Recovery writes a final visible/hidden pose and never replays the fall/pop one-shots.
+  window.__octiCheckpointCapture = function () { return { inside: octopusInChest }; };
+  window.__octiCheckpointRestore = function (state) {
+    octopusInChest = !!(state && state.inside);
+    trunk.classList.remove("opening");
+    if (octopus) {
+      octopus.classList.remove("falling-in", "popping-out", "wobble", "twitch", "sneezing", "ouch", "stabbed");
+      octopus.classList.toggle("in-chest", octopusInChest);
+    }
+    if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    return octopusInChest;
   };
   // Irene's play may spook Octi into the trunk. Tuck him in only if he's out (openTrunk with
   // octopusInChest false ⇒ falling-in). Returns whether he actually dove in.
@@ -69209,7 +69233,8 @@ async def localfont(name):
   // loose or the node is missing — so it never double-releases.
   function releaseCat(skipWobble) {
     var catWalk = document.getElementById("witchy-chest-cat-walk");
-    if (!cat || !catWalk || catWalk.classList.contains("out")) return false;
+    if (!cat || !catWalk || catWalk.classList.contains("out") ||
+        (window.__catGoneForever && window.__catGoneForever())) return false;
     // skipWobble: the 'c' shortcut homes the cat into the current room right after this,
     // so the deferred out-of-the-bag shiver would fire mid-glide and read as a flicker
     if (!skipWobble) wobbleEl(cat);
@@ -69224,6 +69249,7 @@ async def localfont(name):
       var doorFront = document.getElementById("witchy-door-2");
       if (doorFront && doorFront.parentNode === catPos.parentNode) catPos.parentNode.insertBefore(catPos, doorFront.nextSibling);
     }
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   // console/devtools hook: swing the moon door open (so it reads as the cat letting itself
@@ -92504,7 +92530,9 @@ function spawnDustMote(container) {
       clearTimeout(jumpTimer);
       walk.style.animationPlayState = "";
       walk.classList.remove("roaming", "roaming-sm", "out");
+      walk.classList.add("gone");
       jumping = false; jumpAnim = null;
+      if (window.__checkpointChanged) window.__checkpointChanged();
     };
   }
   // A one-off reaction to the cuddly cabinet's hidden mouse (see toggleCuddlyCabinet,
@@ -92704,6 +92732,7 @@ function spawnDustMote(container) {
     }
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); // re-sync its music sway to the new room
     scheduleAntic(); // (re)arm the naughty-antic loop now that the cat is out and in a room (a re-release routes through here)
+    if (changed && window.__checkpointChanged) window.__checkpointChanged();
   };
   // The chest doors are physical: with BOTH shut the cat can neither come out nor get
   // back in. Emergence already lives inside witchy-door-1's own open handler (so it
@@ -92725,6 +92754,7 @@ function spawnDustMote(container) {
     if (!chestDoorsOpen()) {
       stowWaiting = true;
       window.__homeCat("garden");
+      if (window.__checkpointChanged) window.__checkpointChanged();
       return;
     }
     stowWaiting = false;
@@ -92733,6 +92763,7 @@ function spawnDustMote(container) {
     pos.setAttribute("transform", "translate(-46,0)"); // the native inside-the-chest pose, behind the moon door
     if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
     catRoom = "garden";
+    if (window.__checkpointChanged) window.__checkpointChanged();
   };
   // called by the chest-door toggles: a waiting cat slips in through the first door
   // that opens. Returns true when it did, so witchy-door-1's open handler can treat
@@ -93059,6 +93090,71 @@ function spawnDustMote(container) {
     }
   }
   window.__catWeatherReact = catWeatherReact;
+  window.__catGoneForever = function () { return catGoneForever; };
+  window.__catCheckpointCapture = function () {
+    return { loose: walk.classList.contains("out"), room: catRoom, gone: catGoneForever };
+  };
+  function settleCatCheckpoint(state) {
+    var rooms = ["kitchen", "garden", "cuddly", "office", "balcony"];
+    var room = state && rooms.indexOf(state.room) !== -1 ? state.room : "garden";
+    var gone = !!(state && state.gone), loose = !gone && !!(state && state.loose);
+    cancelJump();
+    clearTimeout(jumpTimer); clearTimeout(fidgetTimer); clearTimeout(anticTimer);
+    jumpTimer = fidgetTimer = anticTimer = null;
+    clearStaleAntics();
+    stowWaiting = false; wxSheltering = false;
+    [
+      ["witchy-chest-cat", ["wobbling"]],
+      ["witchy-chest-cat-breathe", ["napping", "stretching"]],
+      ["witchy-chest-cat-tail", ["flicking"]],
+      ["witchy-chest-cat-groom", ["grooming"]],
+      ["witchy-chest-cat-ear-l", ["twitching"]],
+      ["witchy-chest-cat-pounce", ["pouncing", "swatting"]]
+    ].forEach(function (entry) {
+      var el = document.getElementById(entry[0]);
+      if (el) el.classList.remove.apply(el.classList, entry[1]);
+    });
+    walk.style.animationPlayState = "";
+    walk.style.animationDelay = "";
+    walk.classList.remove("out", "roaming", "roaming-sm", "gone");
+    catGoneForever = gone;
+    if (gone) {
+      walk.classList.add("gone");
+      pos.setAttribute("transform", "translate(-46,0)");
+      if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
+      catRoom = "garden";
+    } else if (loose) {
+      walk.classList.add("out");
+      if (room === "garden") catRoom = "garden";
+      window.__homeCat(room, true);
+    } else {
+      pos.setAttribute("transform", "translate(-46,0)");
+      if (pos.parentNode !== homeParent || pos.nextSibling !== homeNext) homeParent.insertBefore(pos, homeNext);
+      catRoom = "garden";
+    }
+    scheduleJump();
+    clearTimeout(fidgetTimer); idleFidget();
+    scheduleAntic();
+    if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+  }
+  window.__catCheckpointRestore = settleCatCheckpoint;
+  if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("creatures", {
+    capture: function () {
+      return {
+        cat: window.__catCheckpointCapture(),
+        octi: window.__octiCheckpointCapture ? window.__octiCheckpointCapture() : { inside: false }
+      };
+    },
+    restore: function (state, phase) {
+      if (phase !== "afterStage") return;
+      settleCatCheckpoint(state && state.cat);
+      if (window.__octiCheckpointRestore) window.__octiCheckpointRestore(state && state.octi);
+    },
+    reset: function () {
+      settleCatCheckpoint(null);
+      if (window.__octiCheckpointRestore) window.__octiCheckpointRestore(null);
+    }
+  });
 })();
 (function () {
   // ── WHISTLER, Farhang & Lauren's dog ──────────────────────────────────────

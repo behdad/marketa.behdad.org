@@ -20,6 +20,7 @@ var HARNESS = [
   "  function pressB(shift){document.dispatchEvent(new KeyboardEvent('keydown',{key: shift?'B':'b', shiftKey:!!shift, bubbles:true, cancelable:true}));}",
   "  function toastText(){var ts=document.querySelectorAll('.season-toast');return ts.length?ts[ts.length-1].textContent:'';}",
   "  function vis(sel){var el=document.querySelector(sel);return el?getComputedStyle(el).visibility:'(absent)';}",
+  "  function floorCount(){return document.querySelectorAll('#garden-guests .guest.arrived:not(.leaving):not(.off-with-kids):not(.off-at-games):not(.off-asleep):not(.off-at-bbq)').length;}",
   "  var report={errors:[],steps:{}};",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness: '+String(e&&e.stack||e));}).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
   "  async function run(){",
@@ -57,8 +58,12 @@ var HARNESS = [
   "    if (window.__summonGuests) window.__summonGuests(); await sleep(350);",
   "    report.steps.madlaHold = { bxWas: bxBefore, bxNow: gm?gm.style.getPropertyValue('--balance-x'):'', balanceSame: !!(gm && bxBefore && gm.style.getPropertyValue('--balance-x')===bxBefore), leaving: !!(gm&&gm.classList.contains('leaving')), stillCutter: !!(gm&&gm.classList.contains('bd-cutter')), stillVis: gm?getComputedStyle(gm).visibility:'(absent)' };",
   "    var trimFloor=window.__trimFloorToCap, trimCalls=0; window.__trimFloorToCap=function(){trimCalls++;return trimFloor?trimFloor():0;};",
+  "    var fullFloorBeforeTrim=floorCount();",
   "    window.__endBdCakeCutting(); window.__trimFloorToCap=trimFloor;",
-  "    report.steps.madlaTrim = { calls: trimCalls };",
+  "    var firstLeaver=document.querySelector('#garden-guests .guest.leaving .guest-walk');",
+  "    var trimStarted={ leaving:document.querySelectorAll('#garden-guests .guest.leaving').length, staying:document.querySelectorAll('#garden-guests .guest.arrived:not(.leaving)').length, animation:firstLeaver?getComputedStyle(firstLeaver).animationName:'' };",
+  "    await sleep(3400);",
+  "    report.steps.madlaTrim = { calls: trimCalls, before: fullFloorBeforeTrim, started: trimStarted, after: floorCount(), leavingAfter:document.querySelectorAll('#garden-guests .guest.leaving').length };",
   "    // Any birthday person with a real dance-floor model goes to the party cake, regardless of age.",
   "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(300);",
   "    window.birthday('goli'); await sleep(700);",
@@ -125,7 +130,7 @@ else {
   if (s.madlaPre && s.madlaPre.guestsIn && s.madlaPre.madlaHidden === "hidden") pass("bug precondition set: floor populated (guests-in) with Madla still hidden off-floor"); else fail("Madla precondition (guests-in + madla hidden)", JSON.stringify(s.madlaPre));
   if (s.madla && s.madla.party && s.madla.room === "garden" && s.madla.cutter && s.madla.arrived && s.madla.figVis === "visible" && s.madla.crownVis === "visible") pass("populated-floor birthday (Madla): startBdCakeCutting FORCE-arrives the figure — visible under its crown (no floating crown)"); else fail("Madla populated-floor regression (arrived+visible under crown)", JSON.stringify(s.madla));
   if (s.madlaHold && s.madlaHold.balanceSame && !s.madlaHold.leaving && s.madlaHold.stillCutter && s.madlaHold.stillVis === "visible") pass("Madla HOLDS at the cake through a rebalance — the cutter isn't glided off to a slot/corner"); else fail("Madla holds at cake through rebalance (no drift to corner)", JSON.stringify(s.madlaHold));
-  if (s.madlaTrim && s.madlaTrim.calls === 1) pass("ending the birthday cake trims forced arrivals back to the floor cap"); else fail("birthday cake end trims floor", JSON.stringify(s.madlaTrim));
+  if (s.madlaTrim && s.madlaTrim.calls === 1 && s.madlaTrim.before > 8 && s.madlaTrim.after <= 8) pass("ending the birthday cake releases the forced crowd back to the floor cap"); else fail("birthday cake end releases forced crowd", JSON.stringify(s.madlaTrim));
   if (s.goli && s.goli.bd && s.goli.room === "garden" && s.goli.party && s.goli.cakeOn && s.goli.cutter && s.goli.hatVisible === "visible") pass("Goli's dance-floor model routes her birthday to the cake"); else fail("Goli floor-model birthday", JSON.stringify(s.goli));
   if (s.elisabeth && s.elisabeth.bd && s.elisabeth.room === "garden" && s.elisabeth.party && s.elisabeth.cakeOn && s.elisabeth.cutter && s.elisabeth.crownVisible === "visible") pass("Elisabeth's dance-floor model routes her birthday to the cake"); else fail("Elisabeth floor-model birthday", JSON.stringify(s.elisabeth));
   if (s.madlaCall && s.madlaCall.bd && s.madlaCall.room === "garden" && s.madlaCall.cakeOn && s.madlaCall.cutter && s.madlaCall.crownVis === "visible") pass("Madla's dance-floor model routes her birthday to the cake"); else fail("Madla floor-model birthday", JSON.stringify(s.madlaCall));

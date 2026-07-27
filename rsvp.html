@@ -82212,11 +82212,11 @@ function spawnDustMote(container) {
     el.classList.remove("walking");
     el.classList.remove("leaving"); void walk.getBoundingClientRect(); el.classList.add("leaving"); // restart cleanly
   }
-  function leaveEntry(entry) {
+  function leaveEntry(entry, releaseWholeUnit) {
     var g = document.getElementById("garden-guests");
     if (!g) return;
     for (var i = 0; i < entry.sels.length; i++) {
-      if (arrivalSelIsChild(entry.sels[i]) && attendedGuestNames.has(guestNameFromSel(entry.sels[i]))) {
+      if (!releaseWholeUnit && arrivalSelIsChild(entry.sels[i]) && attendedGuestNames.has(guestNameFromSel(entry.sels[i]))) {
         clearBalance(g, entry.sels[i]); // children stay assigned to dance/Cuddly/sleep after their adults leave the visible floor
         continue;
       }
@@ -82448,9 +82448,31 @@ function spawnDustMote(container) {
     });
     var walked = 0;
     for (var i = 0; i < order.length && over > 0; i++) {
-      leaveEntry(order[i]);                 // strolls out from its slot; rebalanceFloor closes the gap
-      over -= order[i].sels.length;         // a couple frees 2 figures
+      var before = presentGuestFigures(g);
+      leaveEntry(order[i], true);           // forced overflow releases the whole summoned unit, including children
+      over -= before - presentGuestFigures(g);
       walked++;
+    }
+    // Independently managed child dancers are not ARRIVALS units, but they still count toward the
+    // floor cap. Release any remaining over-cap figures through the same gate walk.
+    var extras = g.querySelectorAll(".guest.arrived:not(.leaving)");
+    for (var e = extras.length - 1; e >= 0 && over > 0; e--) {
+      var el = extras[e];
+      if (el.classList.contains("g-behdad") || el.classList.contains("g-marketa") ||
+          el.classList.contains("off-with-kids") || el.classList.contains("off-at-games") ||
+          el.classList.contains("off-asleep") || el.classList.contains("off-at-bbq")) continue;
+      var sel = null;
+      for (var c = 0; c < el.classList.length; c++) if (el.classList[c].indexOf("g-") === 0) { sel = "." + el.classList[c]; break; }
+      if (!sel) continue;
+      var home = homeXBySel[sel];
+      if (home == null) {
+        var match = /translate\(\s*([-\d.]+)/.exec(el.getAttribute("transform") || "");
+        home = match ? parseFloat(match[1]) || 0 : 0;
+      }
+      var countBefore = presentGuestFigures(g);
+      walkFigureOut(g, sel, home);
+      var freed = countBefore - presentGuestFigures(g);
+      if (freed > 0) { over -= freed; walked++; }
     }
     // hand the floor back to the normal revolving door: re-arm the fill/rotation driver so it
     // tops the ring back up to the cap (if the trim overshot by evicting a couple) and keeps

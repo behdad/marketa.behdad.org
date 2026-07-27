@@ -47,7 +47,8 @@ var harness = String.raw`<script>
     }).filter(Boolean);
   }
 
-  document.hasFocus = function () { return false; };
+  var focused = false;
+  document.hasFocus = function () { return focused; };
   window.addEventListener("load", function () {
     setTimeout(function () {
       (async function () {
@@ -75,6 +76,18 @@ var harness = String.raw`<script>
           arrived.length > 0, JSON.stringify({ before: before, after: after, arrived: arrived }));
         check("the revolving door completes a departure while the page is unfocused",
           departed.length > 0, JSON.stringify({ before: before, after: after, departed: departed }));
+
+        focused = true;
+        window.__duoArrive("ali");
+        await sleep(100);
+        window.__duoDepart("ali");
+        var leavingAtBlur = document.querySelectorAll("#garden-guests .guest.leaving").length;
+        focused = false;
+        window.__settleGuestLeavers();
+        await sleep(20);
+        check("blur settles any departure that began while the window was focused",
+          leavingAtBlur > 0 && document.querySelectorAll("#garden-guests .guest.leaving").length === 0,
+          JSON.stringify({ leavingAtBlur: leavingAtBlur, afterBlur: document.querySelectorAll("#garden-guests .guest.leaving").length }));
         report();
       })().catch(function (error) {
         out.errors.push("harness: " + (error && error.stack || error));

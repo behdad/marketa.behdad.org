@@ -82931,12 +82931,21 @@ function spawnDustMote(container) {
   function waitingUnits(g, list) { return list.filter(function (u) { return unitIsWaiting(g, u); }); }
   function noteArrival(u) { recentArrivals.push(unitKey(u)); while (recentArrivals.length > 3) recentArrivals.shift(); }
   function shuffleArr(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function finishFigureOut(g, el) {
+    if (!el || el.classList.contains("bd-honoree")) return;
+    el.classList.remove("leaving", "arrived", "walking");
+    for (var i = 0; i < el.classList.length; i++) {
+      var cl = el.classList[i];
+      if (cl.indexOf("g-") === 0) delete slotXBySel["." + cl];
+    }
+    el.style.removeProperty("--balance-x");
+  }
   // walk ONE figure back OUT to the gate; JS drops .arrived on animationend (→ hidden by .trickle)
   function walkFigureOut(g, sel, home) {
     var el = g.querySelector(sel);
     if (!el || !el.classList.contains("arrived") || el.classList.contains("bd-honoree")) return;
     var walk = el.querySelector(".guest-walk");
-    if (!walk || reducedMotionGuests() || document.hidden) { el.classList.remove("arrived", "walking", "leaving"); return; } // no anim / hidden tab: just vanish NOW. Critical for the hidden case — the gate-leave animation is PAUSED while hidden, so its animationend (which drops .arrived) never fires; without this, leavers never actually leave while arrivals keep coming → the floor piles up (owner: "room gets very crowded")
+    if (!walk || reducedMotionGuests() || document.hidden || !document.hasFocus()) { finishFigureOut(g, el); return; }
     walk.style.setProperty("--walk-x", walkDistFor(sel, home) + "px"); // stroll OUT from this figure's SLOT back to the gate
     el.classList.remove("walking");
     el.classList.remove("leaving"); void walk.getBoundingClientRect(); el.classList.add("leaving"); // restart cleanly
@@ -83302,14 +83311,22 @@ function spawnDustMote(container) {
       if (e.animationName === "guest-gate-leave") { // a figure finished strolling OUT — now hide it (drop .arrived) so the floor has room
         var figo = e.target.closest ? e.target.closest(".guest") : null;
         if (figo && !figo.classList.contains("bd-honoree")) {
-          figo.classList.remove("leaving", "arrived");
-          // forget its slot + drop --balance-x so a later fresh re-arrival recomputes from the gate
-          for (var s = 0; s < figo.classList.length; s++) { var cl = figo.classList[s]; if (cl.indexOf("g-") === 0) delete slotXBySel["." + cl]; }
-          figo.style.removeProperty("--balance-x");
+          finishFigureOut(g, figo);
           syncCrowdClear(); // the crowd just shrank — the generics may need to come back (fell below 4)
         }
       }
     });
+    function settlePausedLeavers() {
+      if (!g.isConnected) return;
+      var leavers = g.querySelectorAll(".guest.leaving");
+      if (!leavers.length) return;
+      for (var i = 0; i < leavers.length; i++) finishFigureOut(g, leavers[i]);
+      rebalanceFloor(g);
+      syncCrowdClear();
+    }
+    window.__settleGuestLeavers = settlePausedLeavers;
+    window.addEventListener("blur", settlePausedLeavers);
+    document.addEventListener("visibilitychange", function () { if (document.hidden) settlePausedLeavers(); });
   })();
   // a hidden tab drops the crashers (no paused-animation pile-up); they re-appear on return
   document.addEventListener("visibilitychange", updateGardenGuests);

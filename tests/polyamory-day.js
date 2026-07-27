@@ -17,10 +17,11 @@ var HARNESS = [
   ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d23=day(ph,23);S("czech",{label:d23&&d23.getAttribute("aria-label")});',
   ' setLang("en");ph=document.querySelector(".calx-phone");d23=day(ph,23);party(true);await sleep(30);d23.click();await sleep(900);',
   ' var pair=document.getElementById("cuddly-polyamory-pair");S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,day:document.getElementById("loft-game-strip").classList.contains("polyamory-day"),partyOn:document.getElementById("loft-game-strip").classList.contains("party-on"),opacity:getComputedStyle(pair).opacity,roster:(window.__whoIsHere("cuddly")||[]).map(function(p){return p.key;})});',
-  ' var rp=document.getElementById("cuddly-poly-raffi"),cp=document.getElementById("cuddly-poly-chinnel"),rh=document.getElementById("cuddly-poly-raffi-head"),cb=document.getElementById("cuddly-poly-chinnel-body");',
-  ' S("couch",{raffiFirst:!!(rp.compareDocumentPosition(cp)&Node.DOCUMENT_POSITION_FOLLOWING),chinnelRight:cp.transform.baseVal.consolidate().matrix.e>0,knife1:getComputedStyle(document.getElementById("cuddly-knife-1")).visibility,knife2:getComputedStyle(document.getElementById("cuddly-knife-2")).visibility,headHit:getComputedStyle(rh).pointerEvents,bodyHit:getComputedStyle(cb).pointerEvents});',
+  ' var rp=document.getElementById("cuddly-poly-raffi"),cp=document.getElementById("cuddly-poly-chinnel"),rh=document.getElementById("cuddly-poly-raffi-head"),cb=document.getElementById("cuddly-poly-chinnel-body"),board=document.getElementById("cuddly-knifeboard"),daybed=document.getElementById("cuddly-daybed"),k1=document.getElementById("cuddly-knife-1"),k2=document.getElementById("cuddly-knife-2"),hair=document.getElementById("cuddly-poly-chinnel-hair"),hairBox=hair.getBBox();',
+  ' S("couch",{raffiFirst:!!(rp.compareDocumentPosition(cp)&Node.DOCUMENT_POSITION_FOLLOWING),chinnelRight:cp.transform.baseVal.consolidate().matrix.e>0,knife1:getComputedStyle(k1).visibility,knife2:getComputedStyle(k2).visibility,backgroundBeforeKnives:!!(board.compareDocumentPosition(k1)&Node.DOCUMENT_POSITION_FOLLOWING)&&!!(daybed.compareDocumentPosition(k2)&Node.DOCUMENT_POSITION_FOLLOWING),knivesBeforePeople:!!(k1.compareDocumentPosition(pair)&Node.DOCUMENT_POSITION_FOLLOWING)&&!!(k2.compareDocumentPosition(pair)&Node.DOCUMENT_POSITION_FOLLOWING),hair:{width:hairBox.width,height:hairBox.height,circles:hair.querySelectorAll("circle").length},headHit:getComputedStyle(rh).pointerEvents,bodyHit:getComputedStyle(cb).pointerEvents});',
   ' rh.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);S("headReact",{kissing:pair.classList.contains("poly-kissing"),heart:!!pair.querySelector(".poly-heart")});await sleep(1000);S("headCleanup",{kissing:pair.classList.contains("poly-kissing")});',
   ' cb.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);S("bodyReact",{snuggling:pair.classList.contains("poly-snuggling"),heart:!!pair.querySelector(".poly-heart")});await sleep(1000);S("bodyCleanup",{snuggling:pair.classList.contains("poly-snuggling")});',
+  ' var blanket=document.getElementById("cuddly-blanket"),fairy=document.getElementById("cuddly-rumi-fairy"),br=blanket.getBoundingClientRect(),bx=br.left+br.width/2,by=br.top+br.height/2;blanket.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:31,pointerType:"mouse",button:0,buttons:1,clientX:bx,clientY:by}));S("blanketLayer",{afterPair:!!(pair.compareDocumentPosition(blanket)&Node.DOCUMENT_POSITION_FOLLOWING),beforeFairy:!!(blanket.compareDocumentPosition(fairy)&Node.DOCUMENT_POSITION_FOLLOWING)});blanket.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:31,pointerType:"mouse",button:0,buttons:0,clientX:bx,clientY:by}));',
   ' party(true);await sleep(80);S("party",{visibility:getComputedStyle(pair).visibility,on:document.getElementById("loft-game-strip").classList.contains("party-on")});party(false);',
   ' window.__jumpToDate(2027,10,24);await sleep(700);S("leave",{day:document.getElementById("loft-game-strip").classList.contains("polyamory-day"),opacity:getComputedStyle(pair).opacity});',
   ' var raffiArm=document.querySelector(".g-raffi .guest-arm-l"),raffiOrigin=raffiArm&&getComputedStyle(raffiArm).transformOrigin.split(" ");',
@@ -50,13 +51,19 @@ check(s.czech && s.czech.label === "23. Světový den polyamorie", "the occasion
 check(s.activate && !s.activate.phone && s.activate.room === "cuddly" && s.activate.day && !s.activate.partyOn &&
   s.activate.opacity === "1" && s.activate.roster.indexOf("chinnel") >= 0 && s.activate.roster.indexOf("raffi") >= 0,
   "activating the day stops the party, closes Calendar and gathers all four people in Cuddly", s.activate);
-check(s.couch && s.couch.raffiFirst && s.couch.chinnelRight && s.couch.knife1 === "hidden" && s.couch.knife2 === "hidden" &&
+check(s.couch && s.couch.raffiFirst && s.couch.chinnelRight && s.couch.knife1 === "visible" &&
+  s.couch.knife2 === "visible" && s.couch.backgroundBeforeKnives && s.couch.knivesBeforePeople &&
   s.couch.headHit !== "none" && s.couch.bodyHit !== "none",
-  "Raffi sits first, Chinnel sits to his right, both are clickable, and the loose knives stay behind the gathering", s.couch);
+  "the friends remain clickable while both knives paint over their board and behind the gathering", s.couch);
+check(s.couch && s.couch.hair && s.couch.hair.width >= 62 && s.couch.hair.height <= 66 &&
+  s.couch.hair.circles === 0,
+  "Chinnel's Cuddly hair has a broad, shallow triangular curl mass without detached round blobs", s.couch && s.couch.hair);
 check(s.headReact && s.headReact.kissing && s.headReact.heart && s.headCleanup && !s.headCleanup.kissing,
   "a head tap starts and cleans up the kiss reaction", { start: s.headReact, cleanup: s.headCleanup });
 check(s.bodyReact && s.bodyReact.snuggling && s.bodyReact.heart && s.bodyCleanup && !s.bodyCleanup.snuggling,
   "a body tap starts and cleans up the cuddle reaction", { start: s.bodyReact, cleanup: s.bodyCleanup });
+check(s.blanketLayer && s.blanketLayer.afterPair && s.blanketLayer.beforeFairy,
+  "a moved blanket paints in front of both couples without covering later cameos", s.blanketLayer);
 check(s.party && s.party.on && s.party.visibility === "hidden", "the couch pair yields to party mode", s.party);
 check(s.leave && !s.leave.day && s.leave.opacity === "0", "leaving November 23 tears down the couch scene", s.leave);
 check(s.models && s.models.floor && s.models.bar && s.models.office && s.models.balcony && s.models.raffiArmTop,

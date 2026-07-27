@@ -9966,10 +9966,14 @@ section{margin:1.9rem 0}
 /* valentine's: the string goes soft pink, matching the nook's paper hearts */
 #loft-game-strip.season-valentines .balcony-bulb{fill:#e8a8b4; stroke:#c68e95}
 #loft-game-strip.season-valentines .balcony-bulb-glow{fill:#e8a8b4}
-/* nowruz: the haft-sin's candle flames breathe — infinite, constant count, nothing to
-   accumulate and nothing to remove */
+/* nowruz: each haft-sin candle can be snuffed and relit independently. Its fixed flame/glow
+   breathes while lit — infinite, constant count, nothing to accumulate or remove. */
+.sn-hs-candle .sn-hs-flame, .sn-hs-candle .sn-hs-glow{opacity:0;transition:opacity .28s ease}
+.sn-hs-candle.lit .sn-hs-flame{opacity:1}
+.sn-hs-candle.lit .sn-hs-glow{opacity:.28}
 .sn-hs-flame{transform-box:fill-box; transform-origin:50% 100%; animation:sn-hs-flame 2.3s ease-in-out infinite}
 .sn-hs-flame.f2{animation-delay:-1.1s; animation-duration:2.9s}
+.sn-hs-candle:not(.lit) .sn-hs-flame{animation:none}
 @keyframes sn-hs-flame{0%,100%{transform:scaleY(1) scaleX(1)}50%{transform:scaleY(1.14) scaleX(.93)}}
 @media (prefers-reduced-motion: reduce){.sn-hs-flame{animation:none}}
 /* the haft-sin's tap zones: #office-haftsin is pointer-events:none so the room behind
@@ -20302,25 +20306,31 @@ section{margin:1.9rem 0}
 </g>
 </g>
 <path d="M606 237 Q607 233 611 232" fill="none" stroke="#fffdf8" stroke-width="1.4" opacity="0.6"/>
-<!-- candles: lit, breathing on an infinite CSS loop (no timers, nothing to accumulate) -->
-<ellipse cx="633" cy="229" rx="5" ry="6" fill="#f0c46a" opacity="0.22"/>
+<!-- candles: independently snuffable, lit by default, and breathing on an infinite CSS loop -->
+<g id="office-hs-candle-1" class="sn-hs-candle lit">
+<ellipse class="sn-hs-glow" cx="633" cy="229" rx="5" ry="6" fill="#f0c46a"/>
 <rect x="630.5" y="234" width="5" height="16" rx="1" fill="#fffdf8" stroke="#e8dfcc" stroke-width="0.7"/>
 <path d="M633 234 v-1.5" stroke="#6f4c24" stroke-width="0.7"/>
 <path class="sn-hs-flame" d="M633 233 Q630.6 229 633 224.5 Q635.4 229 633 233 Z" fill="#f4c95a"/>
-<ellipse cx="641.75" cy="234" rx="4" ry="5" fill="#f0c46a" opacity="0.22"/>
+</g>
+<g id="office-hs-candle-2" class="sn-hs-candle lit">
+<ellipse class="sn-hs-glow" cx="641.75" cy="234" rx="4" ry="5" fill="#f0c46a"/>
 <rect x="639.5" y="239" width="4.5" height="11" rx="1" fill="#fffdf8" stroke="#e8dfcc" stroke-width="0.7"/>
 <path d="M641.75 239 v-1.5" stroke="#6f4c24" stroke-width="0.7"/>
 <path class="sn-hs-flame f2" d="M641.75 238 Q639.75 234.5 641.75 230.5 Q643.75 234.5 641.75 238 Z" fill="#f4c95a"/>
+</g>
 <!-- tap zones last so they sit above the art; #office-haftsin is pointer-events:none, so
      only these tight transparent shapes opt back in and room clicks behind still land -->
 <!-- the cloth: one broad zone over the whole spread, looking the haft-sin up. It comes FIRST so
      the three item zones below paint over it and win their own taps — only bare cloth (and the
-     items with no reaction of their own: apple, eggs, candles) reaches this. Nothing but the
+     items with no reaction of their own: apple and eggs) reaches this. Nothing but the
      office's background art sits behind it, so it steals no room click. -->
 <rect id="office-hs-cloth-hit" class="sn-hs-hit" x="508" y="218" width="148" height="86" fill="transparent"/>
 <rect id="office-hs-sabzeh-hit" class="sn-hs-hit" x="520" y="224" width="25" height="28" fill="transparent"/>
 <rect id="office-hs-mirror-hit" class="sn-hs-hit" x="561" y="220" width="20" height="31" fill="transparent"/>
 <rect id="office-hs-bowl-hit" class="sn-hs-hit" x="601" y="230" width="22" height="23" fill="transparent"/>
+<rect id="office-hs-candle-1-hit" class="sn-hs-hit" x="624" y="219" width="14" height="35" fill="transparent"/>
+<rect id="office-hs-candle-2-hit" class="sn-hs-hit" x="638" y="225" width="15" height="29" fill="transparent"/>
 </g>
 <!-- mehregan: the autumn sofreh, on the haft-sin's own table — same legs, same apron, same
      corner of the office, half a year apart. The haft-sin already concedes that seven items
@@ -66277,6 +66287,7 @@ async def localfont(name):
   var fish = document.getElementById("office-hs-fish-dart");
   var sabzeh = document.getElementById("office-hs-sabzeh-sway");
   var glint = document.getElementById("office-hs-mirror-glint");
+  var strip = document.getElementById("loft-game-strip");
   if (!fish || !sabzeh || !glint) return;
   function oneShot(el, cls) {
     el.classList.remove(cls);
@@ -66303,6 +66314,33 @@ async def localfont(name):
     oneShot(glint, "flashing");
     playFairyChimeSound("office-haftsin");
   });
+  var candleIds = ["office-hs-candle-1", "office-hs-candle-2"];
+  function nowruzActive() { return !!(strip && strip.classList.contains("season-nowruz")); }
+  function setCandle(id, lit, sound) {
+    var candle = document.getElementById(id);
+    if (!candle) return false;
+    candle.classList.toggle("lit", !!lit);
+    if (lit && sound) playCandleLightSound(id);
+    return candle.classList.contains("lit");
+  }
+  candleIds.forEach(function (id) {
+    var hit = document.getElementById(id + "-hit");
+    if (hit) hit.addEventListener("click", function (e) {
+      if (!nowruzActive()) return;
+      e.stopPropagation();
+      var candle = document.getElementById(id);
+      setCandle(id, !(candle && candle.classList.contains("lit")), true);
+    });
+  });
+  window.__resetNowruzCandles = function () {
+    candleIds.forEach(function (id) { setCandle(id, true, false); });
+  };
+  window.__nowruzCandleState = function () {
+    return candleIds.map(function (id) {
+      var candle = document.getElementById(id);
+      return !!(candle && candle.classList.contains("lit"));
+    });
+  };
   // The cloth names the spread on hover and looks it up on tap — most guests have never seen a
   // haft-sin, and nothing else in the game can tell them. Czech Wikipedia has no haft-sin article
   // (checked); its Nourúz one describes the "Hafte Sin" table, so CS readers get that rather than
@@ -85122,6 +85160,7 @@ function spawnDustMote(container) {
     if (window.__resetMealPlates) window.__resetMealPlates(); // fresh game: the low table's feast is untouched again
     if (window.__resetSadeh) window.__resetSadeh(); // ...and Sadeh's mound is back to what was gathered, unfed
     if (window.__resetMehregan) window.__resetMehregan(); // ...and no noghl left lying on the sofreh
+    if (window.__resetNowruzCandles) window.__resetNowruzCandles(); // a fresh haft-sin starts with both candles lit
     if (window.__resetOfficePrideFlag) window.__resetOfficePrideFlag(); // three-tap flourish starts fresh, even when reset keeps a Pride launch date
     if (window.__resetPrideDayWash) window.__resetPrideDayWash(); // Pride recurrence waits for the next game-start after a full reset
     kitchenPowered = false;
@@ -85831,11 +85870,14 @@ function spawnDustMote(container) {
     var strip = document.getElementById("loft-game-strip");
     if (!strip) return;
     var wasPride = strip.classList.contains("season-pride");
+    var wasNowruz = strip.classList.contains("season-nowruz");
     strip.classList.remove("season-holiday", "season-spooky", "season-autumn", "season-spring", "season-valentines", "season-nowruz", "season-chaharshanbe", "season-carodejnice", "season-pride", "season-canada", "season-martin");
     if (name) strip.classList.add("season-" + name);
     var isPride = strip.classList.contains("season-pride");
+    var isNowruz = strip.classList.contains("season-nowruz");
     if (wasPride !== isPride && window.__resetOfficePrideFlag) window.__resetOfficePrideFlag();
     if (window.__setPrideDayWashEnabled) window.__setPrideDayWashEnabled(isPride);
+    if (wasNowruz !== isNowruz && window.__resetNowruzCandles) window.__resetNowruzCandles();
     // The season just moved under them: clear any leap in flight and re-arm. applySeasonDate calls
     // this BEFORE it toggles the svatojanska overlay, so a date walking off the fire tears the rig
     // down first and only then undresses — which is why neither June day needs a reset of its own.

@@ -44333,13 +44333,23 @@ setOfficeProgress("pc", false);
   // Face centres therefore stay put while the rest of the subdivided cube folds
   // through the origin. sf walks linearly between -1.1 and 5.1; the six distinct
   // side colours, smooth averaged normals, back-face culling, spin, and moving
-  // square viewport mirror the sample, with its optional colour cycling slowed.
+  // square viewport mirror the sample; the face palette follows the six-stripe flag.
   // The WebGL canvas is separate from the shared 2D canvas because a canvas can own
   // only one context type. We still blit its finished frame into native SVG for the
   // same scaled-foreignObject WebKit safety as Julia/Pipes. Canvas 2D supplies a
   // software rendering fallback of the same mesh if WebGL creation/restoration fails.
   var monFlowerCanvas = null, monFlowerGL = null, monFlowerMesh = null;
-  var FLOWER_HUES = [0, 1 / 3, 2 / 3, 5 / 6, 1 / 2, 1 / 6];
+  // Plane order is front, back, top, bottom, right, left. This arrangement walks the
+  // six-stripe rainbow through adjacent faces and gives opposite pairs red/green,
+  // orange/blue, and yellow/violet.
+  var FLOWER_COLORS = [
+    [0xe4 / 255, 0x03 / 255, 0x03 / 255],
+    [0x00 / 255, 0x80 / 255, 0x26 / 255],
+    [0xff / 255, 0xed / 255, 0x00 / 255],
+    [0x75 / 255, 0x07 / 255, 0x87 / 255],
+    [0xff / 255, 0x8c / 255, 0x00 / 255],
+    [0x00 / 255, 0x4d / 255, 0xff / 255]
+  ];
   var FLOWER_PLANES = [
     [-.5,-.5, .5,  1, 0, 0,  0, 1, 0],
     [ .5,-.5,-.5, -1, 0, 0,  0, 1, 0],
@@ -44428,16 +44438,7 @@ setOfficeProgress("pc", false);
     var span = 1.18, phase = (seconds * 0.12) % (span * 2);
     return -.59 + (phase <= span ? phase : span * 2 - phase);
   }
-  function flowerColorAt(face, seconds) {
-    var h = (FLOWER_HUES[face] + seconds / 24) % 1, sector = h * 6;
-    var x = 1 - Math.abs(sector % 2 - 1);
-    if (sector < 1) return [1, x, 0];
-    if (sector < 2) return [x, 1, 0];
-    if (sector < 3) return [0, 1, x];
-    if (sector < 4) return [0, x, 1];
-    if (sector < 5) return [x, 0, 1];
-    return [1, 0, x];
-  }
+  function flowerColorAt(face) { return FLOWER_COLORS[face]; }
   function flowerRotate(x, y, z, ax, ay) {
     var cy = Math.cos(ay), sy = Math.sin(ay), cx = Math.cos(ax), sx = Math.sin(ax);
     var rx = x * cy + z * sy, rz = -x * sy + z * cy;
@@ -44475,7 +44476,7 @@ setOfficeProgress("pc", false);
     if (!gl) return null;
     var vs = flowerShader(gl, gl.VERTEX_SHADER,
       "attribute vec3 aPosition;attribute vec3 aNormal;attribute float aFace;" +
-      "uniform float uTime;uniform float uOffset;uniform float uHue;" +
+      "uniform float uTime;uniform float uOffset;" +
       "varying vec3 vNormal;" +
       "varying float vFace;" +
       "void main(){" +
@@ -44491,17 +44492,15 @@ setOfficeProgress("pc", false);
       "}");
     var fs = flowerShader(gl, gl.FRAGMENT_SHADER,
       "precision mediump float;" +
-      "varying vec3 vNormal;varying float vFace;uniform float uHue;" +
-      "vec3 hsv(float h){" +
-        "vec3 p=abs(fract(vec3(h)+vec3(0.0,0.6666667,0.3333333))*6.0-3.0);" +
-        "return clamp(p-1.0,0.0,1.0);" +
-      "}" +
+      "varying vec3 vNormal;varying float vFace;" +
       "void main(){" +
-        "float hue;" +
-        "if(vFace<.5)hue=0.0;else if(vFace<1.5)hue=.3333333;" +
-        "else if(vFace<2.5)hue=.6666667;else if(vFace<3.5)hue=.8333333;" +
-        "else if(vFace<4.5)hue=.5;else hue=.1666667;" +
-        "vec3 base=hsv(fract(hue+uHue));" +
+        "vec3 base;" +
+        "if(vFace<.5)base=vec3(.8941176,.0117647,.0117647);" +
+        "else if(vFace<1.5)base=vec3(0.,.5019608,.1490196);" +
+        "else if(vFace<2.5)base=vec3(1.,.9294118,0.);" +
+        "else if(vFace<3.5)base=vec3(.4588235,.027451,.5294118);" +
+        "else if(vFace<4.5)base=vec3(1.,.5490196,0.);" +
+        "else base=vec3(0.,.3019608,1.);" +
         "vec3 n=normalize(vNormal),light=normalize(vec3(.2,.2,1.0));" +
         "float diff=max(dot(n,light),0.0);" +
         "float spec=pow(max(dot(reflect(-light,n),vec3(0,0,1)),0.0),30.0);" +
@@ -44535,8 +44534,7 @@ setOfficeProgress("pc", false);
       aNormal: gl.getAttribLocation(program, "aNormal"),
       aFace: gl.getAttribLocation(program, "aFace"),
       uTime: gl.getUniformLocation(program, "uTime"),
-      uOffset: gl.getUniformLocation(program, "uOffset"),
-      uHue: gl.getUniformLocation(program, "uHue") };
+      uOffset: gl.getUniformLocation(program, "uOffset") };
     return monFlowerGL;
   }
   function renderFlowerGL(seconds) {
@@ -44568,7 +44566,6 @@ setOfficeProgress("pc", false);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, state.indices);
     gl.uniform1f(state.uTime, seconds);
     gl.uniform1f(state.uOffset, flowerOffsetAt(seconds));
-    gl.uniform1f(state.uHue, (seconds / 24) % 1);
     gl.drawElements(gl.TRIANGLES, state.count, gl.UNSIGNED_SHORT, 0);
     return monFlowerCanvas;
   }
@@ -44606,7 +44603,7 @@ setOfficeProgress("pc", false);
       };
       var nl = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z) || 1;
       var diffuse = Math.max(0, (normal.x * .2 + normal.y * .2 + normal.z) / (nl * 1.039));
-      var rgb = flowerColorAt(tri.face, seconds), light = .18 + .82 * diffuse;
+      var rgb = flowerColorAt(tri.face), light = .18 + .82 * diffuse;
       ctx.fillStyle = "rgb(" + Math.round(rgb[0] * light * 255) + "," +
         Math.round(rgb[1] * light * 255) + "," + Math.round(rgb[2] * light * 255) + ")";
       ctx.beginPath(); ctx.moveTo(tri.a.x, tri.a.y); ctx.lineTo(tri.b.x, tri.b.y);

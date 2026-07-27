@@ -45,9 +45,14 @@ console.log("rsvp.html monitor screensavers:");
 check(/vlen\.push\(\(1 - d\) \/ d\)/.test(html) &&
   /var f = 1 \+ mesh\.vlen\[i\] \* sf/.test(html) &&
   /var min = -1\.1, span = 6\.2/.test(html) &&
-  /seconds \/ 24/.test(html) &&
+  /0xe4 \/ 255, 0x03 \/ 255, 0x03 \/ 255/.test(html) &&
+  /0xff \/ 255, 0x8c \/ 255, 0x00 \/ 255/.test(html) &&
+  /0xff \/ 255, 0xed \/ 255, 0x00 \/ 255/.test(html) &&
+  /0x00 \/ 255, 0x80 \/ 255, 0x26 \/ 255/.test(html) &&
+  /0x00 \/ 255, 0x4d \/ 255, 0xff \/ 255/.test(html) &&
+  /0x75 \/ 255, 0x07 \/ 255, 0x87 \/ 255/.test(html) &&
   /gl\.enable\(gl\.CULL_FACE\)/.test(html),
-  "Flower Box uses the source-derived radial cube projection, slow hue cycle, and render defaults");
+  "Flower Box uses the source-derived radial cube projection and six exact rainbow-flag face colors");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4000, {
   patchRaf: true,
   forceMotion: true,

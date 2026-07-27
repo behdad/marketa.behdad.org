@@ -38571,13 +38571,34 @@ function quickReversalGesture(action) {
   }
   var surpriseWrap = document.getElementById("kitchen-cabinet-surprise"); // position wrapper
   // sometimes a goat lives in the cabinet instead of the ghost — one or the other per visit
-  var goat = Math.random() < 0.3;
-  var critter = document.getElementById(goat ? "kitchen-cabinet-goat" : "kitchen-cabinet-ghost");
-  var otherCritter = document.getElementById(goat ? "kitchen-cabinet-ghost" : "kitchen-cabinet-goat");
-  if (otherCritter) otherCritter.style.display = "none";
-  var playSurpriseSound = goat ? playGoatBleatSound : playGhostBooSound;
+  var ghostCritter = document.getElementById("kitchen-cabinet-ghost");
+  var goatCritter = document.getElementById("kitchen-cabinet-goat");
+  var goat = Math.random() < 0.3, critter, playSurpriseSound;
   var ghostCabinetIndex = Math.floor(Math.random() * 4);
-  if (surpriseWrap) surpriseWrap.style.transform = "translateX(" + ((ghostCabinetIndex - 1) * 150) + "px)";
+  function settleCabinetSurprise(kind, cabinet) {
+    if (kind !== "goat" && kind !== "ghost") return false;
+    if (!Number.isInteger(cabinet) || cabinet < 0 || cabinet > 3) return false;
+    goat = kind === "goat";
+    critter = goat ? goatCritter : ghostCritter;
+    playSurpriseSound = goat ? playGoatBleatSound : playGhostBooSound;
+    if (goatCritter) goatCritter.style.display = goat ? "" : "none";
+    if (ghostCritter) ghostCritter.style.display = goat ? "none" : "";
+    ghostCabinetIndex = cabinet;
+    if (surpriseWrap) {
+      surpriseWrap.style.transition = "";
+      surpriseWrap.style.opacity = "";
+      surpriseWrap.style.transform = "translateX(" + ((ghostCabinetIndex - 1) * 150) + "px)";
+    }
+    if (roachCabinetIndex === ghostCabinetIndex) roachCabinetIndex = (ghostCabinetIndex + 1) % 4;
+    return true;
+  }
+  settleCabinetSurprise(goat ? "goat" : "ghost", ghostCabinetIndex);
+  window.__kitchenCabinetSurpriseState = function () {
+    return { kind: goat ? "goat" : "ghost", cabinet: ghostCabinetIndex };
+  };
+  window.__restoreKitchenCabinetSurprise = function (state) {
+    return !!(state && settleCabinetSurprise(state.kind, state.cabinet));
+  };
   // a cockroach lurks in a DIFFERENT cabinet than the ghost/goat — open it and it darts out
   // onto the counter (see the roach IIFE just below). Cabinet i spans x=[i*150 .. i*150+150].
   var roachCabinetIndex; do { roachCabinetIndex = Math.floor(Math.random() * 4); } while (roachCabinetIndex === ghostCabinetIndex);
@@ -38616,15 +38637,18 @@ function quickReversalGesture(action) {
       surpriseWrap.style.opacity = "";
       setTimeout(function () { surpriseWrap.style.transition = ""; }, 220);
     }, 210);
+    if (window.__checkpointChanged) window.__checkpointChanged();
   }
-  if (critter) {
-    critter.style.cursor = "pointer";
-    critter.addEventListener("click", function () {
+  [ghostCritter, goatCritter].forEach(function (candidate) {
+    if (!candidate) return;
+    candidate.style.cursor = "pointer";
+    candidate.addEventListener("click", function () {
+      if (candidate !== critter) return;
       wobbleCritter();
       playSurpriseSound();
       if (surpriseWrap && Math.random() < 0.5) jumpCabinet(); // half the time it hops away
     });
-  }
+  });
   // ── cabinet cockroach ──────────────────────────────────────────────────────────────────
   // Darts out of #kitchen-roach-cabinet when opened, then wanders the counter in quick dart-
   // then-freeze hops; a click sends it bolting off-screen and gone. Gated on room+focus+bar so
@@ -69603,6 +69627,9 @@ async def localfont(name):
     }
     function settle(state) {
       var open = validOpen(state), hasRow = !!state;
+      if (state && window.__restoreKitchenCabinetSurprise) {
+        window.__restoreKitchenCabinetSurprise(state.surprise);
+      }
       ids.forEach(function (id) {
         // Before this adapter existed, the puzzle row owned the shared balcony door.
         // Preserve that one legacy value when an old checkpoint has no openings row.
@@ -69632,12 +69659,14 @@ async def localfont(name):
     if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("openings", {
       capture: function () {
         var grill = window.__coveredGrillState ? window.__coveredGrillState() : {};
+        var surprise = window.__kitchenCabinetSurpriseState ? window.__kitchenCabinetSurpriseState() : null;
         return {
           open: ids.filter(function (id) {
             var el = document.getElementById(id);
             return !!(el && el.classList.contains("open"));
           }),
-          grill: { uncovered: !!grill.uncovered, open: !!grill.open }
+          grill: { uncovered: !!grill.uncovered, open: !!grill.open },
+          surprise: surprise
         };
       },
       restore: function (state, phase) {

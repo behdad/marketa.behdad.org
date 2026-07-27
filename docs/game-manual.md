@@ -656,7 +656,8 @@ Three open-cookout dates use a daytime, no-UV party presentation:
 On those dates Behdad's BBQ invitation is delivered early in phase 2. Tapping it
 pans to the balcony and starts the BBQ workflow. Open cookouts omit the formal
 reception-moment text sequence. A BBQ invitation can also start BBQ mode during a
-night party without changing the time of day.
+night party without changing the time of day. Selecting Canada Day through
+Calendar or the season controls starts its daytime balcony cookout immediately.
 
 ## Music and foreground media
 

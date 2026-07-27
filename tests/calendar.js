@@ -26,6 +26,7 @@ var HARNESS = [
   ' var mon=document.getElementById("office-monitor"),pc=document.getElementById("office-pc-desk-trio");pc.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__openMonitorApp("calendar");await sleep(40);',
   ' var mh=document.getElementById("monitor-cal-body"),mrows=mh.querySelectorAll(".calx-card-row"),mrow=mrows[mrows.length-1];mrow.click();await sleep(30);',
   ' S("monitor",{title:title(mh),sameDate:ymd()===before,sameHref:location.href===href,selected:selected(mh)});',
+  ' var canada=day(mh,1);canada.click();await sleep(160);mh=document.getElementById("monitor-cal-body");S("canada",{date:new URL(location.href).searchParams.get("date"),room:window.currentStageName,party:!!window.__gardenPartyOn,dusk:document.getElementById("stage-balcony").classList.contains("dusk"),smoking:document.getElementById("balcony-smoker").classList.contains("smoking")});',
   ' var d=day(mh,12);d.click();await sleep(40);S("grid",{date:new URL(location.href).searchParams.get("date"),selected:selected(mh)});',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',
@@ -45,6 +46,7 @@ check(s.phoneTip&&s.phoneTip.shown&&s.phoneTip.text&&Number(s.phoneTip.z)>65,"ph
 check(s.phoneKeyTip&&s.phoneKeyTip.shown&&/Ali/.test(s.phoneKeyTip.text||"")&&s.phoneKeyTip.focus,"phone birthday tooltip opens promptly from keyboard focus",s.phoneKeyTip);
 check(s.phoneTouchTip&&s.phoneTouchTip.shown&&/Ali/.test(s.phoneTouchTip.text||"")&&s.phoneTouchTip.prevented,"phone birthday tooltip opens on long press without also activating the date",s.phoneTouchTip);
 check(s.monitor&&/July|červenec/i.test(s.monitor.title||"")&&s.monitor.sameDate&&s.monitor.sameHref&&!s.monitor.selected,"monitor event card reveals July without activating its date",s.monitor);
+check(s.canada&&s.canada.date==="2027-07-01"&&s.canada.room==="balcony"&&s.canada.party&&!s.canada.dusk&&s.canada.smoking,"Canada Day selection opens a daytime balcony BBQ party",s.canada);
 check(s.grid&&s.grid.date==="2027-07-12"&&s.grid.selected==="12","calendar grid day still activates its date",s.grid);
 
 console.log("");

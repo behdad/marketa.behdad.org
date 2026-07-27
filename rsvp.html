@@ -3559,7 +3559,7 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
   #garden-tensegrity.wobbling #garden-tensegrity-top,
   #garden-tensegrity.wobbling .tenseg-cords{animation:none}
 }
-#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife{touch-action:none}
+#office-desk, #office-chair, #garden-bottles, #garden-watering-can, #garden-plant-mister, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife{touch-action:none}
 #office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio, #office-headphones{transition:translate .6s ease}
 #office-headphones{transform-origin:210px 219px}
 #office-headphones.wobbling{animation:headphones-wobble .6s ease-in-out}
@@ -70111,29 +70111,77 @@ async def localfont(name):
     }
     bottles.addEventListener("pointerup", onBottlesPointerUp);
     bottles.addEventListener("pointercancel", onBottlesPointerUp);
-    var wateringCan = document.getElementById("garden-watering-can");
-    if (wateringCan) wateringCan.addEventListener("click", function () {
+    function randomPlantId() {
       var spots = window.gardenPlantSpots || {};
       var ids = Object.keys(spots);
-      if (!ids.length || !window.waterSpecificPlant) return;
-      var id = ids[Math.floor(Math.random() * ids.length)];
-      // The can carries its own water supply, so use the normal plant animation/solve path
-      // without consuming one of the three draggable Topo Chico bottles.
-      window.waterSpecificPlant(id, function () { return true; });
-    });
+      return ids.length ? ids[Math.floor(Math.random() * ids.length)] : null;
+    }
     var plantMister = document.getElementById("garden-plant-mister");
     var plantMisterTimer = null;
-    if (plantMister) {
-      plantMister.addEventListener("click", function () {
+    function sprayMister() {
+      if (plantMister) {
         plantMister.classList.remove("spraying");
         void plantMister.getBoundingClientRect();
         plantMister.classList.add("spraying");
         clearTimeout(plantMisterTimer);
         plantMisterTimer = setTimeout(function () { plantMister.classList.remove("spraying"); }, 560);
-        // It sits beside the snake plant, so its own fine mist uses the same plant-water
-        // owner without draining one of the three pourable bottles.
-        if (window.waterSpecificPlant) window.waterSpecificPlant("garden-snakeplant", function () { return true; });
+      }
+    }
+    function wireReusableWaterTool(tool, defaultPlant, beforeWater) {
+      if (!tool) return;
+      var dragging = false, moved = false, start = null, current = null, suppressClick = false;
+      tool.addEventListener("pointerdown", function (e) {
+        if (e.button !== 0) return;
+        dragging = true; moved = false;
+        start = current = svgPointFromClient(e.clientX, e.clientY);
+        tool.style.transition = "none";
+        try { tool.setPointerCapture(e.pointerId); } catch (err) {}
       });
+      tool.addEventListener("pointermove", function (e) {
+        if (!dragging) return;
+        current = svgPointFromClient(e.clientX, e.clientY);
+        var dx = current.x - start.x, dy = current.y - start.y;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
+        tool.style.translate = dx + "px " + dy + "px";
+      });
+      function finish(e, cancelled) {
+        if (!dragging) return;
+        dragging = false;
+        try { tool.releasePointerCapture(e.pointerId); } catch (err) {}
+        if (moved) {
+          suppressClick = true;
+          setTimeout(function () { suppressClick = false; }, 0);
+          if (!cancelled) {
+            var spots = window.gardenPlantSpots || {}, nearestId = null, bestDist = Infinity;
+            Object.keys(spots).forEach(function (id) {
+              var s = spots[id], d = Math.hypot(s.x - current.x, s.y - current.y);
+              if (d < bestDist) { bestDist = d; nearestId = id; }
+            });
+            if (nearestId && bestDist <= 70 && window.waterSpecificPlant) {
+              if (beforeWater) beforeWater();
+              window.waterSpecificPlant(nearestId, function () { return true; });
+            } else {
+              playDryClickSound(tool.id);
+            }
+          }
+        }
+        tool.style.transition = "";
+        tool.style.translate = "0px 0px";
+      }
+      tool.addEventListener("pointerup", function (e) { finish(e, false); });
+      tool.addEventListener("pointercancel", function (e) { finish(e, true); });
+      tool.addEventListener("click", function (e) {
+        if (suppressClick) { e.preventDefault(); e.stopPropagation(); return; }
+        var id = typeof defaultPlant === "function" ? defaultPlant() : defaultPlant;
+        if (!id || !window.waterSpecificPlant) return;
+        if (beforeWater) beforeWater();
+        window.waterSpecificPlant(id, function () { return true; });
+      });
+    }
+    var wateringCan = document.getElementById("garden-watering-can");
+    wireReusableWaterTool(wateringCan, randomPlantId);
+    wireReusableWaterTool(plantMister, "garden-snakeplant", sprayMister);
+    if (plantMister) {
       plantMister.addEventListener("animationend", function (e) {
         if (e.animationName === "garden-mister-cloud") plantMister.classList.remove("spraying");
       });
@@ -98567,7 +98615,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #cuddly-polyamory-pair, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons, #kitchen-bar-cooler";
+  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #garden-watering-can, #garden-plant-mister, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #cuddly-polyamory-pair, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons, #kitchen-bar-cooler";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

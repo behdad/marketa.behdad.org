@@ -178,6 +178,7 @@ footer{margin-top:2.6rem}
 .egg-bubble.rumi-bubble{
   width:max-content; max-width:min(480px,calc(100vw - 24px)); font-size:1rem;
 }
+.egg-bubble.rumi-bubble.rumi-waiting.show{opacity:0}
 .egg-bubble.rumi-bubble::after{
   content:""; position:absolute; top:100%; left:var(--rumi-tail-x,50%);
   width:0; height:0; transform:translateX(-50%);
@@ -69431,9 +69432,12 @@ async def localfont(name):
   }
   function showRumi(anchor, speaker, fa, reading, credit, yOffset, xOffset, layout) {
     if (rumiFollowRaf) cancelAnimationFrame(rumiFollowRaf);
-    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top", yOffset, xOffset, 6400);
+    var bubble = eggBubble(anchor, rumiHtml(speaker, fa, reading, credit), "top", yOffset, xOffset, 7800);
     if (!bubble) return bubble;
-    bubble.classList.add("rumi-bubble");
+    bubble.classList.add("rumi-bubble", "rumi-waiting");
+    setTimeout(function () {
+      if (bubble.isConnected) bubble.classList.remove("rumi-waiting");
+    }, 1400);
     bubble._rumiSpeaker = speaker;
     bubble._rumiGhazal = credit;
     bubble._rumiOffset = { y: yOffset || 0, x: xOffset || 0 };
@@ -69460,14 +69464,19 @@ async def localfont(name):
     var i = rumiPick();
     var t = T[document.documentElement.lang] || T.en;
     var readings = t.rumi_lines || T.en.rumi_lines;
-    showRumi(hostAnchor("cuddly-marketa-head", fallback), "markéta", RUMI_FA[i][0], readings[i][0], RUMI_GHAZAL[i], 5, 0);
+    var strip = document.getElementById("loft-game-strip");
+    var marketa = hostAnchor("cuddly-marketa-head", fallback);
+    var behdad = hostAnchor("cuddly-behdad-head", fallback);
+    spawnFairyClueTrail(strip, fallback, marketa);
+    showRumi(marketa, "markéta", RUMI_FA[i][0], readings[i][0], RUMI_GHAZAL[i], 5, 0);
     rumiReplyTimer = setTimeout(function () {
       if (window.currentStageName !== "cuddly" || window.__gardenPartyOn) {
         endRumiWake();
         return;
       }
-      showRumi(hostAnchor("cuddly-behdad-head", fallback), "behdad", RUMI_FA[i][1], readings[i][1], RUMI_GHAZAL[i], 48, 0, "head-top-left");
-      rumiWakeTimer = setTimeout(endRumiWake, 6400);
+      spawnFairyClueTrail(strip, fallback, behdad);
+      showRumi(behdad, "behdad", RUMI_FA[i][1], readings[i][1], RUMI_GHAZAL[i], 48, 0, "head-top-left");
+      rumiWakeTimer = setTimeout(endRumiWake, 7800);
     }, 5200);
     return i;
   };
@@ -72400,7 +72409,7 @@ function spawnFairyClueTrail(svg, fromEl, toEl) {
   if (!svg || !fromEl || !toEl || document.hidden) return false;
   var old = document.getElementById("fairy-clue-trail");
   if (old && old.parentNode) old.parentNode.removeChild(old);
-  var stage = toEl.closest && toEl.closest("#stage-garden");
+  var stage = toEl.closest && toEl.closest("[id^='stage-']");
   if (!stage) return false;
   function centre(el) {
     try {
@@ -72422,7 +72431,7 @@ function spawnFairyClueTrail(svg, fromEl, toEl) {
   var group = document.createElementNS(ns, "g");
   group.id = "fairy-clue-trail";
   group.setAttribute("data-target", toEl.id || "");
-  group.setAttribute("data-coordinate-space", "stage-garden");
+  group.setAttribute("data-coordinate-space", stage.id);
   group.setAttribute("pointer-events", "none");
   group.setAttribute("aria-hidden", "true");
   stage.appendChild(group);

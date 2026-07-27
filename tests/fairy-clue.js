@@ -76,6 +76,7 @@ var harness = String.raw`<script>
           JSON.stringify(rumiCycleBefore));
         var rumiConsole = window.rumi();
         var rumiCycleAfter = window.__rumiCycleState();
+        var rumiTrail = document.getElementById("fairy-clue-trail");
         check("the Rumi deck advances one slot instead of drawing again",
           rumiCycleAfter.cursor === 1 &&
           rumiCycleAfter.order.join(",") === rumiCycleBefore.order.join(","),
@@ -85,6 +86,10 @@ var harness = String.raw`<script>
           document.querySelector(".egg-bubble.rumi-bubble"),
           rumiConsole);
         var rumi = document.querySelector(".egg-bubble.rumi-bubble");
+        check("the fairy casts toward Markéta before her delayed line",
+          rumiTrail && rumiTrail.parentNode.id === "stage-cuddly" &&
+          rumiTrail.getAttribute("data-target") === "cuddly-marketa-head" &&
+          rumi && rumi.classList.contains("rumi-waiting"));
         check("clicking the cuddly fairy starts Markéta and behdad's Rumi exchange",
           rumi && rumi._rumiSpeaker === "markéta" &&
           rumi.querySelector(".rumi-fa") && !rumi.querySelector(".fal-fa"),
@@ -126,9 +131,14 @@ var harness = String.raw`<script>
         setTimeout(function () {
           try {
             var reply = document.querySelector(".egg-bubble.rumi-bubble");
+            var replyTrail = document.getElementById("fairy-clue-trail");
             check("behdad's reply replaces Markéta's Rumi bubble",
               reply && reply._rumiSpeaker === "behdad",
               reply && reply.textContent);
+            check("the fairy casts toward Behdad before his delayed reply",
+              replyTrail && replyTrail.parentNode.id === "stage-cuddly" &&
+              replyTrail.getAttribute("data-target") === "cuddly-behdad-head" &&
+              reply && reply.classList.contains("rumi-waiting"));
             check("behdad's balanced Rumi bubble keeps its 48px vertical nudge",
               reply && reply._rumiOffset && reply._rumiOffset.x === 0 &&
               reply._rumiOffset.y === 48 &&

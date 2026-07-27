@@ -66,6 +66,9 @@ lowpass) lives only in the song pipeline — music-only, deliberately not applie
 Speech ("fishu" TTS) uses the browser **`speechSynthesis`** API — separate from Web Audio,
 never counted against the context cap. The formant/vocal-tract synths (giggle, espresso
 "aahh", phone "alo?") take a `ctx` param fed by `getSfxCtx()`, so they ride the SFX bus.
+Trip cues use that same SFX handle too. DMT has its own six-second glassy drone-and-bells
+soundscape; its teardown fades and stops only those oscillator nodes when the trip ends,
+is reset, or is interrupted, leaving the shared context and every other consumer alone.
 
 ## Per-consumer lifecycle maps to NODES, not the context
 

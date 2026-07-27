@@ -71638,7 +71638,7 @@ function playHeartsSound(panId) {
     });
   } catch (e) {}
 }
-var nitrousBuzzStop = null;
+var nitrousBuzzStop = null, dmtAudioStop = null;
 function playTripMelody(variant) {
   try {
     var ctx = getSfxCtx();
@@ -71683,7 +71683,7 @@ function playTripMelody(variant) {
     }
     // how long each variant runs, and a two-sweep swirl over exactly that — wide, and
     // starting from a random side (see swirlBus); note() feeds every voice into the swirl.
-    var DUR = { acid: 4.66, froggies: 4.8, molly: 5.4, ketamine: 6.0, shrooms: 7.1, iboga: 19.0 };
+    var DUR = { acid: 4.66, froggies: 4.8, dmt: 6.0, molly: 5.4, ketamine: 6.0, shrooms: 7.1, iboga: 19.0 };
     var dur = DUR[variant] || 3;
     var cycles = variant === "acid" ? 8 : 2; // acid: lots of quick back-and-forth pans
     var bus = swirlBus(ctx, t0, dur, cycles, (variant === "froggies" || variant === "ketamine" || variant === "iboga") ? 0.98 : 0.92);
@@ -71752,6 +71752,87 @@ function playTripMelody(variant) {
     } else if (variant === "molly") {
       // molly's arpeggio is broken out per kiss — one cycle plays from each heart burst
       // (see the heart loop in startTripVariant → playMollyArpCycle); no upfront melody here.
+    } else if (variant === "dmt") {
+      // DMT gets a glassy, non-diatonic machine-elf soundscape instead of the shrooms
+      // tune: a breathing low fifth, a high harmonic halo, and sparse bell partials.
+      // Everything is scheduled on the shared SFX context; dmtAudioStop only fades and
+      // stops these nodes when the trip is interrupted — it never suspends the context.
+      var dmtMaster = ctx.createGain();
+      dmtMaster.gain.setValueAtTime(0.0001, t0);
+      dmtMaster.gain.exponentialRampToValueAtTime(0.72, t0 + 0.55);
+      dmtMaster.gain.setValueAtTime(0.72, t0 + dur - 1.2);
+      dmtMaster.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      dmtMaster.connect(bus);
+      var dmtSources = [];
+      [73.42, 110].forEach(function (freq, i) {
+        var drone = ctx.createOscillator();
+        drone.type = i ? "triangle" : "sine";
+        drone.frequency.value = freq;
+        drone.detune.value = i ? 7 : -5;
+        var dg = ctx.createGain();
+        dg.gain.value = i ? 0.035 : 0.055;
+        var breath = ctx.createOscillator();
+        breath.type = "sine";
+        breath.frequency.value = i ? 0.17 : 0.11;
+        var breathDepth = ctx.createGain();
+        breathDepth.gain.value = i ? 0.012 : 0.018;
+        breath.connect(breathDepth);
+        breathDepth.connect(dg.gain);
+        drone.connect(dg);
+        dg.connect(dmtMaster);
+        drone.start(t0); drone.stop(t0 + dur + 0.05);
+        breath.start(t0); breath.stop(t0 + dur + 0.05);
+        dmtSources.push(drone, breath);
+      });
+      // A high halo folds through a resonant low-pass sweep, giving the bed an airy
+      // shimmer without adding a timer-driven particle/sound loop.
+      var halo = ctx.createOscillator();
+      halo.type = "sawtooth";
+      halo.frequency.value = 1760;
+      var haloFilter = ctx.createBiquadFilter();
+      haloFilter.type = "lowpass";
+      haloFilter.Q.value = 8;
+      haloFilter.frequency.setValueAtTime(520, t0);
+      haloFilter.frequency.exponentialRampToValueAtTime(3400, t0 + dur * 0.48);
+      haloFilter.frequency.exponentialRampToValueAtTime(700, t0 + dur);
+      var haloGain = ctx.createGain();
+      haloGain.gain.value = 0.016;
+      halo.connect(haloFilter);
+      haloFilter.connect(haloGain);
+      haloGain.connect(dmtMaster);
+      halo.start(t0); halo.stop(t0 + dur + 0.05);
+      dmtSources.push(halo);
+      [[0.35, 369.99], [1.48, 554.37], [2.42, 830.61], [3.7, 466.16], [4.55, 1108.73]].forEach(function (bell) {
+        [1, 2.73].forEach(function (ratio, partial) {
+          var chime = ctx.createOscillator();
+          chime.type = "sine";
+          chime.frequency.value = bell[1] * ratio;
+          var cg = ctx.createGain();
+          var at = t0 + bell[0];
+          var tail = partial ? 0.85 : 1.55;
+          cg.gain.setValueAtTime(0.0001, at);
+          cg.gain.exponentialRampToValueAtTime(partial ? 0.018 : 0.045, at + 0.018);
+          cg.gain.exponentialRampToValueAtTime(0.0001, at + tail);
+          chime.connect(cg);
+          cg.connect(dmtMaster);
+          chime.start(at); chime.stop(at + tail + 0.05);
+          dmtSources.push(chime);
+        });
+      });
+      dmtAudioStop = function () {
+        try {
+          var now = ctx.currentTime;
+          dmtMaster.gain.cancelScheduledValues(now);
+          var unattended = document.hidden || !document.hasFocus();
+          if (unattended) dmtMaster.gain.setValueAtTime(0, now);
+          else {
+            dmtMaster.gain.setValueAtTime(Math.max(0.0001, dmtMaster.gain.value), now);
+            dmtMaster.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+          }
+          dmtSources.forEach(function (source) { try { source.stop(now + (unattended ? 0 : 0.14)); } catch (e) {} });
+        } catch (e) {}
+        dmtAudioStop = null;
+      };
     } else if (variant === "ketamine") {
       var kd = 0.9, ka = [220, 196, 174.6, 146.8, 130.8, 146.8];
       ka.forEach(function (f, i) { note("sine", f, t0 + i * kd, 0.05, kd * 1.6, 0.3, 4); });
@@ -71961,6 +72042,7 @@ var dmtStageEl = null; // the stage element currently carrying the .dmt-wobbling
 var DMT_SPARKLE_COUNT = 16;
 var DMT_STAGE_IDS = ["stage-kitchen", "stage-garden", "stage-cuddly", "stage-office", "stage-balcony"];
 function stopDmt() {
+  if (dmtAudioStop) dmtAudioStop();
   var elves = document.getElementById("trip-dmt-elves");
   if (elves) elves.classList.remove("dmt-elves-in");
   if (dmtStageEl) { dmtStageEl.classList.remove("dmt-wobbling"); dmtStageEl = null; }

@@ -77,6 +77,26 @@ function checkSvgTagBalance(file, html) {
   }
 }
 
+// Only inspect authored tags. IDs quoted in comments, CSS, or JS strings do not enter
+// the static DOM and must not make this check noisy.
+function checkStaticDomIds(file, html) {
+  var markup = html
+    .replace(/<!--[\s\S]*?-->/g, function (s) { return s.replace(/[^\n]/g, " "); })
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, function (s) { return s.replace(/[^\n]/g, " "); });
+  var seen = new Map();
+  var duplicates = [];
+  var tagRe = /<[A-Za-z][^>]*\bid\s*=\s*(["'])([^"']+)\1[^>]*>/g;
+  var match;
+  while ((match = tagRe.exec(markup))) {
+    var id = match[2];
+    var line = (markup.slice(0, match.index).match(/\n/g) || []).length + 1;
+    if (seen.has(id)) duplicates.push(id + " (lines " + seen.get(id) + " and " + line + ")");
+    else seen.set(id, line);
+  }
+  if (duplicates.length) fail(file + ": duplicate static DOM id(s)", duplicates.join("\n"));
+  else pass(file + ": static DOM ids are unique (" + seen.size + ")");
+}
+
 // Extracts the top-level keys of a `en: { ... }` / `cs: { ... }` object literal
 // by brace-depth scanning from the line where it starts. Good enough for this
 // file's hand-written dictionaries; not a general JS parser.
@@ -1105,6 +1125,7 @@ FILES.forEach(function (file) {
   checkTransformClobber(file, style, html);
   checkConsoleOutClipSlack(file, style);
   checkSvgTagBalance(file, html);
+  checkStaticDomIds(file, html);
   console.log("");
 });
 

@@ -711,6 +711,10 @@ to that game; later personal bests can recommend another remaining game.
   chair drag starts the game; message and API actions can also launch it. Move the
   chair or use Left/Right arrows to aim; Space fires
   while auto-fire remains active.
+- **Octi's Escape:** After playing with Octi once, squeeze him twice more to start
+  a three-hide cushion game. Watch which of the daybed's real cushions he slips
+  behind, then tap it; `1`–`3` also choose, Left/Right + Enter move and confirm,
+  and `Esc` leaves him on his trunk perch.
 - **Block Party:** On the balcony, click twice near the same across-the-street office
   window. The forty physical windows become a 10×16 board with four square lamps
   per window. Arrow keys move and rotate pieces, and Space drops them. On touchscreens,

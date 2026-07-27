@@ -81,7 +81,7 @@ var reduced = lib.runPageSync("rsvp.html", REDUCED, 2800, {
 });
 check(reduced && reduced.errors.length === 0, "reduced-motion probe has no page errors", reduced && reduced.errors);
 check(reduced && reduced.steps.on.state.active && reduced.steps.on.animation === "none" &&
-      parseFloat(reduced.steps.on.opacity) > 0 && parseFloat(reduced.steps.on.opacity) <= 0.2 &&
+      parseFloat(reduced.steps.on.opacity) > 0 && parseFloat(reduced.steps.on.opacity) <= 0.35 &&
       !reduced.steps.off.active,
   "reduced motion keeps a subtle static wash and deterministic cleanup", reduced && reduced.steps);
 

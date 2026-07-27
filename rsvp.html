@@ -85158,12 +85158,10 @@ function spawnDustMote(container) {
       dragStartPt = pointerSvgPoint(e);
       dragStartOffset = { x: blanketOffsets[id].x, y: blanketOffsets[id].y };
       el.style.transition = "none";
-      // A moved blanket belongs in front of both couch couples, but behind cameos.
+      // A moved blanket is the final Cuddly foreground, above people, creatures and props.
       if (el.parentNode) {
-        var fairy = document.getElementById("cuddly-rumi-fairy");
-        var vLayer = document.getElementById("cuddly-visitors-layer");
-        if (fairy && fairy.parentNode === el.parentNode) el.parentNode.insertBefore(el, fairy);
-        else if (vLayer && vLayer.parentNode === el.parentNode) el.parentNode.insertBefore(el, vLayer);
+        var cuddlyStage = document.getElementById("stage-cuddly");
+        if (cuddlyStage) cuddlyStage.appendChild(el);
         else el.parentNode.appendChild(el);
       }
       try { el.setPointerCapture(e.pointerId); } catch (err) {}
@@ -95719,10 +95717,16 @@ function spawnDustMote(container) {
   // proximity to the screen, only while the nook is on-screen and the fire is on.
   var ws = document.getElementById("cuddly-wallscreen");
   var pf = document.getElementById("cuddly-puffer-wrap");
-  var foreground = document.getElementById("cuddly-knife-1");
-  // Couch occupants and moved bedding must paint after the projector.
-  if (ws && foreground && ws.parentNode === foreground.parentNode) ws.parentNode.insertBefore(ws, foreground);
+  var hosts = document.getElementById("cuddly-couple");
+  var stage = document.getElementById("stage-cuddly");
+  var k1 = document.getElementById("cuddly-knife-1");
+  var k2 = document.getElementById("cuddly-knife-2");
+  // The projector is room furnishing; people paint over it, then the loose knives paint over
+  // every person and creature. A moved blanket is appended after both knives on pointer-down.
+  if (ws && hosts && ws.parentNode === hosts.parentNode) ws.parentNode.insertBefore(ws, hosts);
   if (ws && pf && ws.parentNode) ws.parentNode.insertBefore(pf, ws.nextSibling);
+  if (stage && k1) stage.appendChild(k1);
+  if (stage && k2) stage.appendChild(k2);
   var body = pf && pf.querySelector(".puffer-body");
   var halo = document.getElementById("fishu-fire-halo");
   if (!ws || !body || !halo) return;

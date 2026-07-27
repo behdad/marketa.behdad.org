@@ -55703,6 +55703,16 @@ async def localfont(name):
   // reaching that listener at all, rather than racing it for preventDefault().
   document.addEventListener("keydown", function (e) {
     if ((e.key !== " " && e.key !== "Spacebar") || e.defaultPrevented) return;
+    // This long-lived capture listener is registered before the intro's temporary
+    // key-dismiss listener, so it must yield here itself: stopping Space later cannot
+    // undo a music toggle that already happened.
+    if (document.getElementById("click-me-overlay")) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (window.__removeClickMe) window.__removeClickMe();
+      if (window.__stopHintBlink) window.__stopHintBlink();
+      return;
+    }
     // Window Tetris registers its capture listener later. Let that listener own Space
     // instead of toggling music before the hard-drop handler gets the same event.
     var tetrisState = window.__balconyTetrisState && window.__balconyTetrisState();
@@ -80328,6 +80338,15 @@ function spawnDustMote(container) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+    if (document.getElementById("click-me-overlay") &&
+        (e.key === " " || e.key === "Spacebar" || e.key === "Enter" ||
+         e.key === "Escape" || e.key === "Esc" || e.key === "Backspace")) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (window.__removeClickMe) window.__removeClickMe();
+      if (window.__stopHintBlink) window.__stopHintBlink();
+      return;
+    }
     if (e.shiftKey) { // Shift+arrows time-travel the loft: ←/→ = significant prev/next day, ↑/↓ = clock +/−30 min (plain arrows stay room-nav / day-night)
       if (e.key === "ArrowLeft") { e.preventDefault(); if (window.__calStepSignificant) window.__calStepSignificant(-1); return; }
       if (e.key === "ArrowRight") { e.preventDefault(); if (window.__calStepSignificant) window.__calStepSignificant(1); return; }

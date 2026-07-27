@@ -58,7 +58,7 @@ var HARNESS = [
   'var exitPrevented=key("Escape"),exited=window.__balconyTetrisState();S("escape_restores",exitPrevented&&!exited.active&&!exited.result&&same(exited.windows,gameNormal)&&!stage.classList.contains("tetris-on")&&window.__captionKey&&window.__captionKey()===preCaption);',
   'window.setLang("en");var beforeLeave=window.__balconyTetrisState().windows.slice();window.__startBalconyTetris();window.goToStage("kitchen");var left=window.__balconyTetrisState();S("room_leave_restores",!left.active&&!left.result&&!stage.classList.contains("tetris-on")&&same(left.windows,beforeLeave));',
   'window.goToStage("balcony");var beforeBlur=window.__balconyTetrisState().windows.slice();window.__startBalconyTetris();focused=false;window.dispatchEvent(new Event("blur"));var blurred=window.__balconyTetrisState();S("blur_restores",!blurred.active&&!stage.classList.contains("tetris-on")&&same(blurred.windows,beforeBlur));',
-  'focused=true;window.goToStage("kitchen");var commandRun=window.tetris();await sleep(100);var commandStarted=window.__balconyTetrisState();S("console_command",window.currentStageName==="balcony"&&commandStarted.active&&commandRun&&typeof commandRun.then==="function");document.querySelector(".tetris-close").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await commandRun;',
+  'focused=true;window.goToStage("kitchen");window.__openDropTerm();var commandRun=window.tetris();await sleep(100);var commandStarted=window.__balconyTetrisState();S("console_command",window.currentStageName==="balcony"&&commandStarted.active&&commandRun&&typeof commandRun.then==="function");S("console_handoff",!window.__dropTermOpen());document.querySelector(".tetris-close").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await commandRun;',
   '}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness:"+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},350);});',
   '})();',
@@ -102,7 +102,8 @@ else {
     escape_restores: "Escape exits and restores the exact apartment-light/caption snapshot",
     room_leave_restores: "programmatic room leave tears down and restores synchronously",
     blur_restores: "window blur tears down without background simulation",
-    console_command: "tetris() pans to the balcony, starts Block Party, and returns a completion Promise"
+    console_command: "tetris() pans to the balcony, starts Block Party, and returns a completion Promise",
+    console_handoff: "tetris() closes the dropdown console before the game owns its controls"
   };
   Object.keys(checks).forEach(function (key) {
     if (r.steps[key]) pass(checks[key]);

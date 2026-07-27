@@ -89035,6 +89035,7 @@ function spawnDustMote(container) {
     var enterPageMode = !!options.enterPageMode;
     var resetDateTime = options.resetDateTime === true;
     try { localStorage.removeItem("loftExtinguisherWarned"); } catch (error) {}
+    if (window.__resetShareAutoShow) window.__resetShareAutoShow();
     window.__runTransientResetHooks();
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     if (window.__resetCheckpointSystems) window.__resetCheckpointSystems();
@@ -91546,6 +91547,14 @@ function spawnDustMote(container) {
     window.shareCard();
   }
   window.__retryShareAutoShow = shareAutoShow;
+  window.__resetShareAutoShow = function () {
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf("shareAutoShown:") === 0) localStorage.removeItem(key);
+      }
+    } catch (e) {}
+  };
   setTimeout(shareAutoShow, 1200); // let the scene settle before it opens
 
   var extinguisher = document.getElementById("kitchen-extinguisher");

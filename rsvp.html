@@ -74710,21 +74710,16 @@ function playSizzleSound(panId) {
     noise.stop(t + dur);
   } catch (e) {}
 }
-// The flypast's distant roar. This one is AUTONOMOUS — a timer spawns it, no click behind it —
-// so it needs the crickets/crane rule: getSfxCtx only refuses while the tab is HIDDEN (and it
-// resume()s the context on every call), so a visible-but-unfocused window would still sound
-// without the hasFocus() half. Room-gated too: silent from the kitchen, audible only from the
-// sky room the jets actually cross.
+// The flypast is seen through two windows, but its roar belongs to the open balcony.
 function playJetPassSound(room, dur) {
+  if (room !== "balcony") return;
   if (document.hidden || !document.hasFocus()) return;
-  if (window.currentStageName !== room) return;
+  if (window.currentStageName !== "balcony") return;
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t = ctx.currentTime;
     var secs = (dur || 7000) / 1000;
-    // brown noise (weighted to the low end, no hiss) — a turbine heard from a long way off.
-    // A short looped buffer rather than one the length of the pass: same bed, a fraction of the memory.
     var sr = ctx.sampleRate, n = Math.floor(sr * 2);
     var buf = ctx.createBuffer(1, n, sr);
     var data = buf.getChannelData(0), last = 0;
@@ -74738,26 +74733,49 @@ function playJetPassSound(room, dur) {
     src.loop = true;
     var lp = ctx.createBiquadFilter();
     lp.type = "lowpass";
-    lp.frequency.setValueAtTime(260, t);
-    lp.frequency.linearRampToValueAtTime(640, t + secs * 0.5); // brighter at the near point, dull again as they go
-    lp.frequency.linearRampToValueAtTime(220, t + secs);
-    var g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.05, t + secs * 0.5); // subtle on purpose: a flypast, not a runway
-    g.gain.linearRampToValueAtTime(0.0001, t + secs);
+    lp.frequency.setValueAtTime(420, t);
+    lp.frequency.linearRampToValueAtTime(1250, t + secs * 0.48);
+    lp.frequency.exponentialRampToValueAtTime(300, t + secs);
+    var master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, t);
+    master.gain.linearRampToValueAtTime(0.16, t + secs * 0.42);
+    master.gain.linearRampToValueAtTime(0.11, t + secs * 0.55);
+    master.gain.exponentialRampToValueAtTime(0.0001, t + secs);
     src.connect(lp);
-    lp.connect(g);
+    lp.connect(master);
+    var turbine = ctx.createOscillator();
+    var turbineGain = ctx.createGain();
+    turbine.type = "sawtooth";
+    turbine.frequency.setValueAtTime(92, t);
+    turbine.frequency.exponentialRampToValueAtTime(155, t + secs * 0.44);
+    turbine.frequency.exponentialRampToValueAtTime(72, t + secs);
+    turbineGain.gain.setValueAtTime(0.0001, t);
+    turbineGain.gain.linearRampToValueAtTime(0.022, t + secs * 0.45);
+    turbineGain.gain.exponentialRampToValueAtTime(0.0001, t + secs);
+    turbine.connect(turbineGain);
+    turbineGain.connect(master);
     if (ctx.createStereoPanner) {
       var pan = ctx.createStereoPanner();
       pan.pan.setValueAtTime(-0.85, t);
       pan.pan.linearRampToValueAtTime(0.85, t + secs); // travels with the formation, left to right
-      g.connect(pan);
+      master.connect(pan);
       pan.connect(ctx.destination);
     } else {
-      g.connect(ctx.destination); // old Safari: mono, same as pannedOut's fallback
+      master.connect(ctx.destination);
     }
     src.start(t);
+    turbine.start(t);
     src.stop(t + secs);
+    turbine.stop(t + secs);
+    var guard = setInterval(function () {
+      if (!document.hidden && document.hasFocus() && window.currentStageName === "balcony") return;
+      clearInterval(guard);
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.025);
+      try { src.stop(ctx.currentTime + 0.12); } catch (e) {}
+      try { turbine.stop(ctx.currentTime + 0.12); } catch (e) {}
+    }, 120);
+    src.onended = function () { clearInterval(guard); };
   } catch (e) {}
 }
 function playPackDropSound(panId) {

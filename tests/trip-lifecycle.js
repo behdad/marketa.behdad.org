@@ -18,6 +18,7 @@ var HARNESS = [
   ' window.__startTrip("shrooms");await sleep(80);window.__startTrip("acid");await sleep(100);S("interrupt",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes()});',
   ' window.__stopTrip(true);S("stop",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes(),creatures:document.querySelectorAll(".trip-creature-show").length,cards:document.querySelectorAll(".mol-show").length});',
   ' window.__startTrip("acid");await sleep(4700);S("natural",{state:window.__tripState(),mirror:!!window.__tripActive,classes:classes()});',
+  ' window.__gardenPartyOn=true;window.goToStage("garden");window.__unlockDrugsbox();window.__openTripPicker();document.querySelector("#garden-trip-picker [data-trip=ketamine]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(100);S("partyChoice",{state:window.__tripState(),classes:classes(),pickerOpen:window.__tripPickerOpen()});window.__stopTrip(true);window.__gardenPartyOn=false;',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit1",shiftKey:true,bubbles:true}));await sleep(2100);S("firstHotkey",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show")});window.__stopTrip(true);',
   ' document.dispatchEvent(new KeyboardEvent("keydown",{code:"Digit8",shiftKey:true,bubbles:true}));await sleep(100);S("lastHotkey",{state:window.__tripState(),classes:classes()});window.__stopTrip(true);',
   ' TRIP_DURATIONS.nitrous=500;document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(200);S("whipperHiss",{state:window.__tripState(),squeezed:document.getElementById("kitchen-whipper").classList.contains("dispensing")});await sleep(900);document.getElementById("kitchen-whipper").dispatchEvent(new MouseEvent("click",{bubbles:true}));S("whipper",{state:window.__tripState(),classes:classes(),card:!!document.querySelector("#mol-card-nitrous.mol-show"),bubble:!!document.querySelector(".egg-bubble"),ghost:getComputedStyle(document.getElementById("kitchen-whipper-laugh-ghost")).animationName,jaw:getComputedStyle(document.getElementById("kitchen-whipper-laugh-jaw")).animationName});window.__stopTrip(true);',
@@ -47,6 +48,8 @@ check(s.stop && !s.stop.state.active && s.stop.state.variant === null && !s.stop
   "explicit stop clears flags, variant, classes, creatures and cards together", s.stop);
 check(s.natural && !s.natural.state.active && s.natural.state.variant === null && !s.natural.mirror && !s.natural.classes.length,
   "natural completion uses the same settled state", s.natural);
+check(s.partyChoice && s.partyChoice.state.active && s.partyChoice.state.variant === "ketamine" && s.partyChoice.classes.join(",") === "ketamine" && !s.partyChoice.pickerOpen,
+  "a vitamins choice overrides the party's lighter automatic picks", s.partyChoice);
 check(s.firstHotkey && s.firstHotkey.state.active && s.firstHotkey.state.variant === "nitrous" && s.firstHotkey.classes.join(",") === "nitrous" && s.firstHotkey.card,
   "Shift+1 launches laughing gas and shows its molecule card", s.firstHotkey);
 check(s.lastHotkey && s.lastHotkey.state.active && s.lastHotkey.state.variant === "iboga" && s.lastHotkey.classes.join(",") === "iboga",

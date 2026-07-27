@@ -74197,10 +74197,10 @@ function bumpTripTolerance() {
 }
 // noCard runs the trip with its molecule card suppressed — the garden's frog/mushroom take
 // that path, so nothing on screen names a substance when one of them sets the room off.
-function startTripVariant(variant, noCard, immediateCard) {
+function startTripVariant(variant, noCard, immediateCard, explicitChoice) {
   var strip = document.getElementById("loft-game-strip");
   if (!strip) return;
-  if (window.__gardenPartyOn && (variant === "ketamine" || variant === "iboga")) { // ketamine + iboga are heavy — they sit out the garden party; a lighter trip stands in
+  if (!explicitChoice && window.__gardenPartyOn && (variant === "ketamine" || variant === "iboga")) { // automatic party picks stay light; a named choice wins
     var lightTrips = ["nitrous", "shrooms", "acid", "froggies", "dmt", "molly"];
     variant = lightTrips[Math.floor(Math.random() * lightTrips.length)];
   }
@@ -74316,10 +74316,10 @@ function startTripVariant(variant, noCard, immediateCard) {
     else if (variant !== "nitrous" && variant !== "iboga") bumpTripTolerance();
   }, TRIP_DURATIONS[variant] || 3000);
 }
-function beginTrip(variant, noCard, immediateCard) {
+function beginTrip(variant, noCard, immediateCard, explicitChoice) {
   if (TRIP_VARIANTS.indexOf(variant) < 0) return false;
   setTripActiveState(true);
-  startTripVariant(variant, noCard, immediateCard);
+  startTripVariant(variant, noCard, immediateCard, explicitChoice);
   if (variant === "shrooms") startTripBlooms();
   return true;
 }
@@ -74341,9 +74341,11 @@ function stopTrip(resetToleranceToo) {
   if (window.__updateGardenAurora) window.__updateGardenAurora();
   return true;
 }
-window.__startTrip = beginTrip;
+window.__startTrip = function (variant, noCard, immediateCard) {
+  return beginTrip(variant, noCard, immediateCard, true);
+};
 window.__startTripWithImmediateCard = function (variant) {
-  return beginTrip(variant, false, true);
+  return beginTrip(variant, false, true, true);
 };
 window.__stopTrip = stopTrip;
 function triggerRsvpTrip(e) {
@@ -74351,7 +74353,7 @@ function triggerRsvpTrip(e) {
   if (!strip) return;
   if (tripActive) {
     if (e && e.detail >= 2 && currentTripVariant) {
-      startTripVariant(currentTripVariant);
+      startTripVariant(currentTripVariant, false, false, true);
       return;
     }
     var drugsBox = document.getElementById("garden-drugsbox");
@@ -74371,7 +74373,7 @@ window.__nextTrip = function () {
   if (window.__unlockDrugsbox) window.__unlockDrugsbox(); // the 't' key skips the lock; leave the box open behind it rather than lying about the world
   var variant = TRIP_VARIANTS[tripVariantIndex % TRIP_VARIANTS.length];
   tripVariantIndex++;
-  beginTrip(variant);
+  beginTrip(variant, false, false, true);
 };
 // Shift+1..8 launches a SPECIFIC trip (canonical order: nitrous, shrooms, acid,
 // froggies, dmt, molly, ketamine, iboga — the pre-shuffle TRIP_VARIANTS order). Unlike the drugs
@@ -74639,7 +74641,7 @@ document.addEventListener("keydown", function (e) {
       label.setAttribute("font-family", "'Source Serif 4', Georgia, serif"); label.setAttribute("font-size", "9");
       label.textContent = tripName(id); row.appendChild(label);
       row.addEventListener("click", function (e) {
-        e.stopPropagation(); closeTripPicker(); beginTrip(id);
+        e.stopPropagation(); closeTripPicker(); beginTrip(id, false, false, true);
       });
       panel.appendChild(row);
     });
@@ -97143,7 +97145,7 @@ function spawnDustMote(container) {
       variant = TRIP_VARIANTS[(Math.random() * TRIP_VARIANTS.length) | 0];
     }
     if (window.goToStage) window.goToStage("garden"); // trips play best in the garden — head there
-    beginTrip(variant);
+    beginTrip(variant, false, false, name != null && name !== "");
     if (window.echo) window.echo("◑ " + variant + " — hold on to something soft. it wears off on its own.");
     return window.__loftAwaitLifecycle(function () { return !!window.__tripActive; }, {
       label: variant + " trip",

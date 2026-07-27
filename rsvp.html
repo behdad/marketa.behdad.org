@@ -82150,6 +82150,16 @@ function spawnDustMote(container) {
       { opacity: 0 }
     ];
   }
+  function animateRainDrop(line, moving, peak, timing, active, done) {
+    function run() {
+      var anim = line.animate(rainDropFrames(moving, peak), timing);
+      anim.onfinish = function () {
+        if (window.__frameHealthSlow && window.__frameHealthSlow() && active()) run();
+        else done();
+      };
+    }
+    run();
+  }
   // rain in the garden window during the (shared) storm — self-replenishing so the
   // count stays constant and spawning naturally pauses with the frames on a hidden tab
   var GARDEN_RAIN_DROPS = 13;
@@ -82177,15 +82187,14 @@ function spawnDustMote(container) {
     line.setAttribute("stroke-linecap", "round");
     container.appendChild(line);
     if (line.animate) {
-      var anim = line.animate(rainDropFrames([
+      animateRainDrop(line, [
         { transform: "translate(0px,0px)", opacity: 0 },
         { transform: "translate(-4px," + (fallDist * 0.4) + "px)", opacity: 0.65, offset: 0.3 },
         { transform: "translate(-10px," + fallDist + "px)", opacity: 0 }
-      ], 0.65), { duration: 700 + Math.random() * 340, easing: "ease-in", delay: Math.random() * 400 });
-      anim.onfinish = function () {
+      ], 0.65, { duration: 700 + Math.random() * 340, easing: "ease-in", delay: Math.random() * 400 }, gardenRainActive, function () {
         if (line.parentNode) line.remove();
         if (gardenRainActive()) spawnGardenRainDrop(); // replenish 1:1
-      };
+      });
     } else {
       setTimeout(function () { if (line.parentNode) line.remove(); }, 1300);
     }
@@ -86295,15 +86304,14 @@ function spawnDustMote(container) {
     line.setAttribute("stroke-linecap", "round");
     container.appendChild(line);
     if (line.animate) {
-      var anim = line.animate(rainDropFrames([
+      animateRainDrop(line, [
         { transform: "translate(0px,0px)", opacity: 0 },
         { transform: "translate(-18px," + (fallDist * 0.4) + "px)", opacity: 0.6, offset: 0.3 },
         { transform: "translate(-44px," + fallDist + "px)", opacity: 0 }
-      ], 0.6), { duration: 720 + Math.random() * 340, easing: "ease-in", delay: Math.random() * 400 });
-      anim.onfinish = function () {
+      ], 0.6, { duration: 720 + Math.random() * 340, easing: "ease-in", delay: Math.random() * 400 }, cuddlyRainActive, function () {
         if (line.parentNode) line.remove();
         if (cuddlyRainActive()) spawnCuddlyRainDrop(); // replenish 1:1
-      };
+      });
     } else {
       setTimeout(function () { if (line.parentNode) line.remove(); }, 1300);
     }
@@ -86594,15 +86602,14 @@ function spawnDustMote(container) {
       line.classList.add("balc-drop"); // rain counts toward the same live total as snow — the sky can hold a mix
       strip.appendChild(line);
       if (line.animate) {
-        var anim = line.animate(rainDropFrames([
+        animateRainDrop(line, [
           { transform: "translate(0px,0px)", opacity: 0 },
           { transform: "translate(-6px," + (fallDist * 0.4) + "px)", opacity: 0.8, offset: 0.3 },
           { transform: "translate(-14px," + fallDist + "px)", opacity: 0 }
-        ], 0.8), { duration: 760 + Math.random() * 360, easing: "ease-in", delay: Math.random() * 400 });
-        anim.onfinish = function () {
+        ], 0.8, { duration: 760 + Math.random() * 360, easing: "ease-in", delay: Math.random() * 400 }, rainActive, function () {
           if (line.parentNode) line.remove();
           dropDone();
-        };
+        });
       } else {
         setTimeout(function () { if (line.parentNode) line.remove(); dropDone(); }, 1400);
       }

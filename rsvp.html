@@ -37939,6 +37939,7 @@ function quickReversalGesture(action) {
   if (shotcup) {
     function sipShotcup() {
       if (!shotcup.classList.contains("filled")) return;
+      coffeeSipPending = true;
       if (window.__retireHint) window.__retireHint("hint_coffee"); // loose-brick hint: retire once an espresso's been sipped
       shotcup.classList.remove("filled");
       shotcup.classList.remove("sipping");
@@ -37959,6 +37960,7 @@ function quickReversalGesture(action) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sipShotcup(); }
     });
     window.resetShotcup = function () {
+      coffeeSipPending = false;
       shotcup.classList.remove("filled", "sipping");
     };
   }
@@ -79068,6 +79070,7 @@ function spawnDustMote(container) {
   var kitchenGround = false; // fresh grounds are in the basket, tamp/brew pending or in progress
   var grinding = false;
   var brewing = false;
+  var coffeeSipPending = false;
   var tamped = false;
   var portafilterSpent = false; // brewed & sipped; old grounds still in the basket, needs a knockout
   var portafilterPos = "grouphead"; // "grouphead" | "grinder" | "tamper" | "knockbox" — where it's currently docked
@@ -79201,6 +79204,83 @@ function spawnDustMote(container) {
   function kitchenReducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
+  function captureKitchenCoffeeState() {
+    var shotcupEl = document.getElementById("kitchen-shotcup");
+    var step;
+    // Timer-driven actions are not checkpoint states. Roll each one back to the last
+    // actionable step; the sip is the exception because its safe retry is the finished shot.
+    if (coffeeSipPending || (shotcupEl && shotcupEl.classList.contains("sipping"))) step = "brewed";
+    else if (!kitchenPowered || !kitchenWarmedUp) step = "off";
+    else if (brewing) step = "tamped";
+    else if (grinding) step = "ready";
+    else if (portafilterFlying) step = portafilterSpent ? "spent" : tamped ? "ground" : "ready";
+    else if (portafilterSpent) step = "spent";
+    else if (!kitchenGround) step = "ready";
+    else if (!tamped) step = "ground";
+    else if (portafilter && portafilter.classList.contains("done") &&
+             shotcupEl && shotcupEl.classList.contains("filled")) step = "brewed";
+    else step = "tamped";
+    return { step: step, rounds: Math.max(0, Math.min(20, parseInt(kitchenRounds, 10) || 0)) };
+  }
+  function setKitchenCoffeeState(state) {
+    state = state && typeof state === "object" ? state : {};
+    var valid = ["off", "ready", "ground", "tamped", "brewed", "spent"];
+    var step = valid.indexOf(state.step) !== -1 ? state.step : "off";
+    kitchenRounds = Math.max(0, Math.min(20, parseInt(state.rounds, 10) || 0));
+    clearTimeout(warmupTimer); warmupTimer = null;
+    clearTimeout(knockboxInviteTimer); knockboxInviteTimer = null;
+    grinding = brewing = portafilterFlying = coffeeSipPending = false;
+    kitchenPowered = step !== "off";
+    kitchenWarmedUp = kitchenPowered;
+    kitchenGround = step === "ground" || step === "tamped" || step === "brewed";
+    tamped = step === "tamped" || step === "brewed";
+    portafilterSpent = step === "spent";
+    portafilterPos = step === "ground" ? "grinder" : "grouphead";
+    if (lamarzocco) {
+      lamarzocco.classList.toggle("powered-on", kitchenPowered);
+      lamarzocco.classList.toggle("done", kitchenWarmedUp);
+      lamarzocco.classList.remove("warming-up");
+    }
+    ["kitchen-gauge-needle-1", "kitchen-gauge-needle-2"].forEach(function (id) {
+      var needle = document.getElementById(id);
+      if (needle) needle.classList.toggle("zero", !kitchenPowered);
+    });
+    if (grinder) {
+      grinder.classList.remove("grinding");
+      grinder.classList.toggle("done", kitchenGround);
+    }
+    if (portafilter) {
+      portafilter.classList.remove("brewing", "done", "has-grounds", "spent", "grounds-flat");
+      portafilter.classList.toggle("done", step === "brewed");
+      portafilter.classList.toggle("has-grounds", kitchenGround);
+      portafilter.classList.toggle("grounds-flat", tamped);
+      portafilter.classList.toggle("spent", portafilterSpent);
+    }
+    var shotcupEl = document.getElementById("kitchen-shotcup");
+    if (shotcupEl) {
+      shotcupEl.classList.remove("sipping");
+      shotcupEl.classList.toggle("filled", step === "brewed");
+    }
+    if (portafilterFly) {
+      portafilterFly.classList.remove("flying-grouphead-to-grinder", "flying-grinder-to-grouphead",
+        "flying-grinder-to-tamper", "flying-tamper-to-grouphead",
+        "flying-grouphead-to-knockbox", "flying-knockbox-to-grouphead",
+        "at-grinder", "at-tamper", "at-knockbox", "knocking");
+      portafilterFly.classList.toggle("at-grinder", step === "ground");
+    }
+    updateKitchenInvite();
+    return step;
+  }
+  window.__captureKitchenCoffeeState = captureKitchenCoffeeState;
+  window.__setKitchenCoffeeState = setKitchenCoffeeState;
+  if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("coffee", {
+    capture: captureKitchenCoffeeState,
+    restore: function (state, phase) {
+      if (phase === "beforeStage") setKitchenCoffeeState(state);
+      else if (window.currentStageName === "kitchen") window.__refreshKitchenBar();
+    },
+    reset: function () { setKitchenCoffeeState(null); }
+  });
   // Flies the portafilter wrapper between its three docks. Only ever called once the
   // caller's own gating has confirmed the move is legal; portafilterFlying blocks any
   // overlapping flight. Reduced motion skips straight to the landed state (a snap, not
@@ -79242,19 +79322,21 @@ function spawnDustMote(container) {
     if (portafilter && !portafilter.classList.contains("done")) return "kitchen_brew";
     return "kitchen_sip";
   }
+  function kitchenCoffeeNext() {
+    if (!kitchenPowered) return "kitchen-lamarzocco";
+    if (!kitchenWarmedUp) return null;
+    if (portafilterSpent) return "kitchen-knockbox";
+    if (!kitchenGround) return "kitchen-grinder";
+    if (!tamped) return "kitchen-tamper";
+    if (!portafilter || !portafilter.classList.contains("done")) return "kitchen-portafilter";
+    var shotcupEl = document.getElementById("kitchen-shotcup");
+    return shotcupEl && shotcupEl.classList.contains("filled") ? "kitchen-shotcup" : null;
+  }
+  window.__kitchenCoffeeNext = kitchenCoffeeNext;
   function updateKitchenInvite() {
     var next = null;
     if (!window.__secondRound && !huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line
-      if (!kitchenPowered) next = "kitchen-lamarzocco";
-      else if (!kitchenWarmedUp) next = null; // warming up — nothing's actionable yet
-      else if (portafilterSpent) next = "kitchen-knockbox";
-      else if (!kitchenGround) next = "kitchen-grinder";
-      else if (!tamped) next = "kitchen-tamper";
-      else if (!portafilter || !portafilter.classList.contains("done")) next = "kitchen-portafilter";
-      else {
-        var shotcupEl = document.getElementById("kitchen-shotcup");
-        next = (shotcupEl && shotcupEl.classList.contains("filled")) ? "kitchen-shotcup" : null;
-      }
+      next = kitchenCoffeeNext();
     }
     // while the bar's up (garden PARTY or the calm NIGHT bar) the kitchen is a cocktail bar, not an
     // espresso station: no coffee invite arrows at all. Force next=null and fall through to the
@@ -79296,18 +79378,12 @@ function spawnDustMote(container) {
   window.__kitchenDoNext = function () {
     if (window.__secondRound) return null;
     if (window.__barUpNow && window.__barUpNow()) return null; // bar's up → no coffee step (Enter makes a cocktail instead)
-    var nx = null;
-    if (!kitchenPowered) nx = "kitchen-lamarzocco";
-    else if (!kitchenWarmedUp) nx = null; // warming up — nothing actionable yet
-    else if (portafilterSpent) nx = "kitchen-knockbox";
-    else if (!kitchenGround) nx = "kitchen-grinder";
-    else if (!tamped) nx = "kitchen-tamper";
-    else if (!portafilter || !portafilter.classList.contains("done")) nx = "kitchen-portafilter";
-    else { var sc = document.getElementById("kitchen-shotcup"); nx = (sc && sc.classList.contains("filled")) ? "kitchen-shotcup" : null; }
+    var nx = kitchenCoffeeNext();
     if (nx) { var el = document.getElementById(nx); if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
     return nx;
   };
   window.resetCoffeeSequence = function () {
+    coffeeSipPending = false;
     kitchenRounds++;
     kitchenGround = false;
     tamped = false;
@@ -79440,15 +79516,8 @@ function spawnDustMote(container) {
   });
   onActivate(portafilter, function () {
     if (portafilterFlying || brewing) return;
-    var routineNext = null;
-    if (!kitchenPowered) routineNext = lamarzocco;
-    else if (kitchenWarmedUp && portafilterSpent) routineNext = knockbox;
-    else if (kitchenWarmedUp && !kitchenGround) routineNext = grinder;
-    else if (kitchenWarmedUp && !tamped) routineNext = tamper;
-    else if (portafilter && portafilter.classList.contains("done")) {
-      var readyShot = document.getElementById("kitchen-shotcup");
-      if (readyShot && readyShot.classList.contains("filled")) routineNext = readyShot;
-    }
+    var routineNextId = kitchenCoffeeNext();
+    var routineNext = routineNextId && routineNextId !== "kitchen-portafilter" ? document.getElementById(routineNextId) : null;
     if (routineNext) {
       routineNext.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       return;
@@ -86726,12 +86795,7 @@ function spawnDustMote(container) {
     if (window.__resetNowruzCandles) window.__resetNowruzCandles(); // a fresh haft-sin starts with both candles lit
     if (window.__resetOfficePrideFlag) window.__resetOfficePrideFlag(); // three-tap flourish starts fresh, even when reset keeps a Pride launch date
     if (window.__resetPrideDayWash) window.__resetPrideDayWash(); // Pride recurrence waits for the next game-start after a full reset
-    kitchenPowered = false;
-    kitchenWarmedUp = false;
-    clearTimeout(warmupTimer);
-    kitchenGround = false;
-    kitchenRounds = 0;
-    clearTimeout(knockboxInviteTimer);
+    setKitchenCoffeeState(null);
     grinderBeansLeft = GRINDER_BEAN_USES;
     saveGrinderBeans(); // rewrite the persisted level back to full on a game reset
     GRINDER_BEAN_IDS.forEach(function (id) {
@@ -86739,23 +86803,6 @@ function spawnDustMote(container) {
       if (bean) bean.classList.remove("used");
     });
     randomizeGrinderBeans(); // fresh heap + recomputed consume order, so the two can't desync
-    grinding = false;
-    brewing = false;
-    tamped = false;
-    portafilterSpent = false;
-    portafilterPos = "grouphead";
-    portafilterFlying = false;
-    if (lamarzocco) lamarzocco.classList.remove("powered-on", "done", "warming-up");
-    ["kitchen-gauge-needle-1", "kitchen-gauge-needle-2"].forEach(function (id) {
-      var needle = document.getElementById(id);
-      if (needle) needle.classList.add("zero");
-    });
-    if (grinder) grinder.classList.remove("grinding", "done");
-    if (portafilter) portafilter.classList.remove("brewing", "done", "has-grounds", "spent", "grounds-flat");
-    if (portafilterFly) portafilterFly.classList.remove("flying-grouphead-to-grinder", "flying-grinder-to-grouphead",
-      "flying-grinder-to-tamper", "flying-tamper-to-grouphead",
-      "flying-grouphead-to-knockbox", "flying-knockbox-to-grouphead", "at-grinder", "at-tamper", "at-knockbox", "knocking");
-    updateKitchenInvite();
     var pcTowerReset = document.getElementById("office-pc-desk-trio");
     if (pcTowerReset) pcTowerReset.classList.remove("on");
     if (window.stopPcFan) window.stopPcFan();
@@ -91235,12 +91282,15 @@ function spawnDustMote(container) {
   function checkpointClass(id, name) { var el = document.getElementById(id); return !!(el && el.classList.contains(name)); }
   function checkpointToggle(id, name, on) { var el = document.getElementById(id); if (el) el.classList.toggle(name, !!on); }
   function checkpointPuzzleState() {
+    var coffee = captureKitchenCoffeeState(), coffeeStep = coffee.step;
     return {
       kitchen: {
-        powered: !!kitchenPowered, warmed: !!kitchenWarmedUp, ground: !!kitchenGround,
-        tamped: !!tamped, spent: !!portafilterSpent, rounds: kitchenRounds || 0,
-        portafilterPos: portafilterPos || "grouphead", portafilterDone: checkpointClass("kitchen-portafilter", "done"),
-        shotFilled: checkpointClass("kitchen-shotcup", "filled")
+        powered: coffeeStep !== "off", warmed: coffeeStep !== "off",
+        ground: coffeeStep === "ground" || coffeeStep === "tamped" || coffeeStep === "brewed",
+        tamped: coffeeStep === "tamped" || coffeeStep === "brewed",
+        spent: coffeeStep === "spent", rounds: coffee.rounds,
+        portafilterPos: coffeeStep === "ground" ? "grinder" : "grouphead",
+        portafilterDone: coffeeStep === "brewed", shotFilled: coffeeStep === "brewed"
       },
       garden: {
         water: !!gardenState.water, music: !!gardenState.music, candles: !!gardenState.candles,
@@ -91263,29 +91313,10 @@ function spawnDustMote(container) {
   function restoreCheckpointPuzzle(puzzle) {
     puzzle = puzzle || {};
     var k = puzzle.kitchen || {};
-    kitchenPowered = !!k.powered; kitchenWarmedUp = !!k.warmed; kitchenGround = !!k.ground;
-    tamped = !!k.tamped; portafilterSpent = !!k.spent; kitchenRounds = Math.max(0, Math.min(20, parseInt(k.rounds, 10) || 0));
-    portafilterPos = ["grouphead", "grinder", "tamper", "knockbox"].indexOf(k.portafilterPos) !== -1 ? k.portafilterPos : "grouphead";
-    if (lamarzocco) {
-      lamarzocco.classList.toggle("powered-on", kitchenPowered);
-      lamarzocco.classList.toggle("done", kitchenPowered && kitchenWarmedUp);
-      lamarzocco.classList.remove("warming-up");
-    }
-    ["kitchen-gauge-needle-1", "kitchen-gauge-needle-2"].forEach(function (id) { checkpointToggle(id, "zero", !kitchenPowered); });
-    if (grinder) grinder.classList.toggle("done", kitchenGround);
-    if (portafilter) {
-      portafilter.classList.toggle("done", !!k.portafilterDone);
-      portafilter.classList.toggle("has-grounds", kitchenGround);
-      portafilter.classList.toggle("grounds-flat", kitchenGround && tamped);
-      portafilter.classList.toggle("spent", portafilterSpent);
-    }
-    checkpointToggle("kitchen-shotcup", "filled", !!k.shotFilled);
-    if (portafilterFly) {
-      portafilterFly.classList.remove("at-grinder", "at-tamper", "at-knockbox");
-      if (portafilterPos === "grinder") portafilterFly.classList.add("at-grinder");
-      if (portafilterPos === "tamper") portafilterFly.classList.add("at-tamper");
-      if (portafilterPos === "knockbox") portafilterFly.classList.add("at-knockbox");
-    }
+    var kitchenStep = !k.powered || !k.warmed ? "off" : k.spent ? "spent" :
+      !k.ground ? "ready" : !k.tamped ? "ground" :
+      k.portafilterDone && k.shotFilled ? "brewed" : "tamped";
+    setKitchenCoffeeState({ step: kitchenStep, rounds: k.rounds });
 
     var g = puzzle.garden || {}, done = Array.isArray(g.done) ? g.done : [];
     gardenState.water = !!g.water; gardenState.music = !!g.music; gardenState.candles = !!g.candles;

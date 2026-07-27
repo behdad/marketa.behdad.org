@@ -236,6 +236,10 @@ effects; the older puzzle balcony-door field remains only as a missing-row compa
 These incidental toggles call `__checkpointChanged()` directly so they schedule a save without
 advancing the public semantic `stateVersion`.
 
+The coffee adapter stores one of six actionable routine steps; captures during warmup, grinding,
+tamping, brewing, or knockout roll back to the preceding step, while a mid-sip capture restores the
+finished shot so recovery never resumes a timer or strands the portafilter between docks.
+
 ### Trailer lifecycle
 
 Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a

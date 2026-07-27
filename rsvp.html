@@ -8425,15 +8425,16 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   40%{fill:#f7d97a}
 }
 @media (prefers-reduced-motion: reduce){#garden-lamp.glowing #garden-lamp-tip{animation:none}}
-#garden-genie{opacity:0; transform-box:fill-box; transform-origin:bottom center}
-#garden-lamp.genie-out #garden-genie{animation:genie-pop 2.4s ease-out}
+#garden-genie{opacity:0; pointer-events:none; transform-box:fill-box; transform-origin:bottom center}
+#garden-lamp.genie-out #garden-genie{cursor:pointer; pointer-events:auto; animation:genie-pop 2.4s ease-out}
+#garden-genie:focus-visible > circle:first-of-type{stroke:#fffdf8; stroke-width:2}
 @keyframes genie-pop{
-  0%{opacity:0; transform:scale(0.3) translateY(10px)}
-  15%{opacity:1; transform:scale(1) translateY(0)}
-  70%{opacity:1; transform:scale(1.05) translateY(-4px)}
-  100%{opacity:0; transform:scale(0.9) translateY(-15px)}
+  0%{opacity:0; transform:scale(0.6) translateY(10px)}
+  15%{opacity:1; transform:scale(2) translateY(0)}
+  70%{opacity:1; transform:scale(2.1) translateY(-4px)}
+  100%{opacity:0; transform:scale(1.8) translateY(-15px)}
 }
-@media (prefers-reduced-motion: reduce){#garden-lamp.genie-out #garden-genie{animation:none}}
+@media (prefers-reduced-motion: reduce){#garden-lamp.genie-out #garden-genie{opacity:1; transform:scale(2); animation:none}}
 #balcony-dustpan{transform-box:fill-box; transform-origin:50% 3%}
 #balcony-dustpan.wiggling{animation:dustpan-swing .7s ease-in-out}
 @keyframes dustpan-swing{
@@ -13772,7 +13773,8 @@ section{margin:1.9rem 0}
 <ellipse id="garden-palosanto-tip" cx="613" cy="233" rx="3" ry="3.2" fill="#3a2a1f" transform="translate(0,4) rotate(-15 602 233)"/>
 </g>
 </g>
-<g id="garden-lamp" class="hunt-hit">
+<g id="garden-lamp" class="hunt-hit" role="button" tabindex="-1"
+   aria-label="Rub the lamp" data-aria-i="garden_lamp_rub">
 <rect x="622" y="214" width="38" height="28" fill="transparent"/>
 <defs>
 <radialGradient id="garden-lamp-body-grad" cx="0.6" cy="0.3" r="0.92">
@@ -13797,7 +13799,8 @@ section{margin:1.9rem 0}
 <path d="M20 10 Q19 16 23 20" fill="none" stroke="#8a6420" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
 <path d="M24 8 Q34 6.5 40 10" fill="none" stroke="#8a6420" stroke-width="1" stroke-linecap="round" opacity="0.7"/>
 <circle id="garden-lamp-tip" cx="2" cy="1.5" r="1.3" fill="#a8813e"/>
-<g id="garden-genie" aria-hidden="true">
+<g id="garden-genie" role="button" tabindex="-1" aria-hidden="true"
+   aria-label="Follow the genie into the k-hole" data-aria-i="garden_genie_trip">
 <path d="M2 1.5 Q-2 -10 4 -20 Q10 -30 2 -38 Q-6 -30 0 -20 Q4 -10 2 1.5 Z" fill="#9c6bb8"/>
 <circle cx="2" cy="-45" r="9" fill="#a97bc4"/>
 <path d="M-4 -50 Q2 -56 8 -50 Q2 -52 -4 -50 Z" fill="#7a4fa0"/>
@@ -27235,6 +27238,8 @@ var T = {
     trip_caption_molly: "Everyone is suddenly your favorite person.",
     trip_caption_ketamine: "It’s just a game, within a game, within a game, ...",
     trip_caption_iboga: "Somewhere behind you, the past is still loading.",
+    garden_lamp_rub: "Rub the lamp",
+    garden_genie_trip: "Follow the genie into the k-hole",
     mol_street_nitrous: "laughing gas",
     mol_street_shrooms: "shrooms",
     mol_street_acid: "acid",
@@ -28315,6 +28320,8 @@ var T = {
     trip_caption_molly: "Najednou je každý tvůj nejoblíbenější člověk.",
     trip_caption_ketamine: "Je to jen hra ve hře, ve hře, ...",
     trip_caption_iboga: "Někde za tebou se minulost pořád načítá.",
+    garden_lamp_rub: "Promni lampu",
+    garden_genie_trip: "Následuj džina do k-hole",
     mol_street_nitrous: "rajský plyn",
     mol_street_shrooms: "houbičky",
     mol_street_acid: "kyselina",
@@ -68503,16 +68510,38 @@ async def localfont(name):
     });
   });
   var lamp = document.getElementById("garden-lamp");
+  var genie = document.getElementById("garden-genie");
   var lampRubCount = 0;
-  function summonGenie() {
+  var genieHideTimer = null;
+  function setGenieAvailable(available) {
+    if (!genie) return;
+    genie.setAttribute("aria-hidden", available ? "false" : "true");
+    genie.setAttribute("tabindex", available ? "0" : "-1");
+  }
+  function dismissGenie(restoreFocus) {
+    clearTimeout(genieHideTimer);
+    genieHideTimer = null;
     lamp.classList.remove("genie-out");
+    setGenieAvailable(false);
+    if (restoreFocus && lamp) lamp.focus();
+  }
+  function summonGenie(focusGenie) {
+    clearTimeout(genieHideTimer);
+    lamp.classList.remove("genie-out");
+    setGenieAvailable(false);
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { lamp.classList.add("genie-out"); });
+      requestAnimationFrame(function () {
+        lamp.classList.add("genie-out");
+        setGenieAvailable(true);
+        if (focusGenie && genie) genie.focus();
+        // Reduced motion suppresses animationend, so both paths share a bounded hit window.
+        genieHideTimer = setTimeout(function () { dismissGenie(document.activeElement === genie); }, 2450);
+      });
     });
     playGeniePoofSound(false, "garden-lamp");
     spawnSteamWisps(strip, 1337, 228, 0.9, 1, -1, 8, 0.7);
   }
-  function rubLamp() {
+  function rubLamp(focusGenie) {
     lamp.classList.remove("glowing");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { lamp.classList.add("glowing"); });
@@ -68522,13 +68551,31 @@ async def localfont(name):
     lampRubCount++;
     if (lampRubCount >= 3) {
       lampRubCount = 0;
-      summonGenie();
+      summonGenie(focusGenie);
     }
   }
+  function enterGenie(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation(); // the genie lives inside the lamp; do not count this as another rub
+    }
+    var restoreFocus = !!(e && e.type === "keydown");
+    dismissGenie(restoreFocus);
+    if (window.__startTrip) window.__startTrip("ketamine", true);
+  }
   if (lamp) {
-    lamp.addEventListener("click", rubLamp);
+    lamp.addEventListener("click", function () { rubLamp(false); });
     lamp.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); rubLamp(); }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); rubLamp(true); }
+    });
+  }
+  if (genie) {
+    genie.addEventListener("click", enterGenie);
+    genie.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") enterGenie(e);
+    });
+    genie.addEventListener("animationend", function (e) {
+      if (e.animationName === "genie-pop") dismissGenie(document.activeElement === genie);
     });
   }
   var mask = document.getElementById("garden-mask");
@@ -96559,8 +96606,8 @@ function spawnDustMote(container) {
   // The game is a mouse/touch playground; keyboard-tabbing through its hundreds of SVG
   // hit-targets scrolls off-screen rooms into view (which breaks the strip's translate
   // transform) and paints focus rings on the art. Drop every strip element out of the
-  // tab order — still clickable, just not tab-focusable. The projector piano's live-state
-  // sync later restores its single tab stop only while that keybed is actually on-screen.
+  // tab order — still clickable, just not tab-focusable. Live-state controls such as the
+  // projector piano and summoned genie restore a tab stop only while actually on-screen.
   strip.querySelectorAll("[tabindex]").forEach(function (el) { el.setAttribute("tabindex", "-1"); });
   // touch-action:none is ignored on SVG children (no CSS layout box), so
   // dragging an object would pan the page on touch screens. touchmove events

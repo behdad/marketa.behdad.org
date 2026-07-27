@@ -269,6 +269,8 @@ The plant grow light follows the loft clock automatically, staying on from
 11:00 to 17:00; clicking it overrides the schedule until the next boundary.
 Click the mini-split's temperature display to switch it between Celsius and
 Fahrenheit without switching the unit itself on or off.
+Rub the brass lamp three times to summon its genie. The genie is briefly
+clickable and starts an uncarded ketamine trip.
 
 ### Cuddly-puddly
 

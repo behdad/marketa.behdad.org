@@ -435,9 +435,10 @@ molecule-card reset clear only their own caption owner.
 The magic box and keyboard shortcuts show molecule cards. Physical prop entries intentionally may
 not: the kitchen cream whipper starts uncarded laughing gas after its hiss. The garden frog and
 mushroom each use their first click only for their ordinary rasp/wobble and arm independently;
-their second and later eligible clicks start their respective uncarded variants. Active laughing
-gas also reveals the whipper's calendar-style Behdad apparition; its jaw and whole-figure rise use
-separate wrappers so their transforms compose.
+their second and later eligible clicks start their respective uncarded variants. Three lamp rubs
+briefly expose the genie as a focusable control; activating it starts uncarded ketamine. Active
+laughing gas also reveals the whipper's calendar-style Behdad apparition; its jaw and whole-figure
+rise use separate wrappers so their transforms compose.
 
 Acid also borrows the ladybug's compound-eye overlay and applies its displacement filter to the
 currently viewed room. `clearPriorTripEffects` releases that borrowed effect before replacement,

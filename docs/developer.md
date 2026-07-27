@@ -230,7 +230,8 @@ validates its compact row and restores around the room transition (`beforeStage`
 for geometry-dependent state); a missing row means that subsystem's fresh default. Continue restores
 durable intent and settled identity. Stable room utilities may resume once their normal room/focus
 gates allow it. Live observations and derived rolls remain fresh; calls, cameras, dialogs, active
-timers, spawned effects, runtimes, and live minigame loops stay stopped.
+timers, spawned effects, runtimes, and live minigame loops stay stopped. Geometry owners capture only
+validated settled state and restore it in `afterStage`, never transient drag motion or reactions.
 
 ### Trailer lifecycle
 

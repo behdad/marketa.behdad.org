@@ -30897,6 +30897,45 @@ setMusicPausedState(false);
     (window.__pendingCheckpointAdapters || (window.__pendingCheckpointAdapters = [])).push([id, adapter]);
     return true;
   };
+  // Stable player-arranged scene geometry shares one checkpoint row. Each prop controller
+  // remains the positioning authority: it validates/clamps its own compact state and settles
+  // it without replaying the gesture that produced it.
+  (function () {
+    var owners = Object.create(null), order = [];
+    window.__registerArrangementOwner = function (id, owner) {
+      if (!/^[a-z][a-z0-9-]*$/.test(id || "") || !owner ||
+          typeof owner.capture !== "function" || typeof owner.settle !== "function") return false;
+      if (!owners[id]) order.push(id);
+      owners[id] = owner;
+      return true;
+    };
+    window.__deferCheckpointAdapter("arrangements", {
+      capture: function () {
+        var row = {};
+        order.forEach(function (id) {
+          try {
+            var state = owners[id].capture();
+            if (state && typeof state === "object") row[id] = state;
+          } catch (_error) {}
+        });
+        return Object.keys(row).length ? row : null;
+      },
+      restore: function (row, phase) {
+        if (phase !== "afterStage") return;
+        row = row && typeof row === "object" ? row : {};
+        order.forEach(function (id) {
+          try {
+            owners[id].settle(Object.prototype.hasOwnProperty.call(row, id) ? row[id] : null);
+          } catch (_error) {}
+        });
+      },
+      reset: function () {
+        order.forEach(function (id) {
+          try { owners[id].settle(null); } catch (_error) {}
+        });
+      }
+    });
+  })();
 
   // Ambient fire sound: a soft low roar (looping lowpassed noise, gently breathing via a
   // slow LFO) plus sparse bright bandpassed crackle pops — like sitting by a fireplace.
@@ -37573,6 +37612,8 @@ function quickReversalGesture(action) {
       return pt.matrixTransform(svg.getScreenCTM().inverse()).x;
     }
     function setChairOffset(x) {
+      x = Number(x);
+      if (!isFinite(x)) x = 0;
       chairOffsetX = Math.max(CHAIR_MIN_X, Math.min(CHAIR_MAX_X, x));
       chair.style.translate = chairOffsetX + "px " + CHAIR_Y_OFFSET + "px";
     }
@@ -37954,6 +37995,7 @@ function quickReversalGesture(action) {
       // the tab. Re-grab the chair to keep moving it and lining up shots.
       try { chair.releasePointerCapture(e.pointerId); } catch (err) {}
       chair.style.transition = arcadeActive ? "none" : ""; // keep instant tracking while the game runs
+      if (chairDragMoved && !arcadeActive && window.__checkpointChanged) window.__checkpointChanged();
       if (!chairDragMoved && !arcadeActive) spinChair(e);
     }
     chair.addEventListener("pointerup", onChairPointerUp);
@@ -37971,6 +38013,19 @@ function quickReversalGesture(action) {
     chair.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spinChair(); }
     });
+    if (window.__registerArrangementOwner) window.__registerArrangementOwner("chair", {
+      capture: function () { return Math.abs(chairOffsetX) > 0.01 ? { x: chairOffsetX } : null; },
+      settle: function (row) {
+        chairDragging = false;
+        chairDragMoved = false;
+        chair.style.transition = "none";
+        setChairOffset(row && typeof row.x === "number" ? row.x : 0);
+        if (window.__chairCatFollow) window.__chairCatFollow();
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { chair.style.transition = arcadeActive ? "none" : ""; });
+        });
+      }
+    });
   }
   var lounger = document.getElementById("balcony-lounger");
   var loungerBack = document.getElementById("balcony-lounger-back");
@@ -37978,14 +38033,23 @@ function quickReversalGesture(action) {
     // click cycles the backrest through recline notches (default = middle)
     var reclineNotches = [-2, -12, -22];
     var reclineIdx = 1;
-    function adjustRecline() {
-      reclineIdx = (reclineIdx + 1) % reclineNotches.length;
+    function settleRecline(idx) {
+      idx = Number.isInteger(idx) && idx >= 0 && idx < reclineNotches.length ? idx : 1;
+      reclineIdx = idx;
       loungerBack.style.transform = "rotate(" + reclineNotches[reclineIdx] + "deg)";
+    }
+    function adjustRecline() {
+      settleRecline((reclineIdx + 1) % reclineNotches.length);
       playCreakSound("balcony-lounger");
+      if (window.__checkpointChanged) window.__checkpointChanged();
     }
     lounger.addEventListener("click", adjustRecline);
     lounger.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); adjustRecline(); }
+    });
+    if (window.__registerArrangementOwner) window.__registerArrangementOwner("lounger", {
+      capture: function () { return reclineIdx !== 1 ? { notch: reclineIdx } : null; },
+      settle: function (row) { settleRecline(row && row.notch); }
     });
   }
   var shotcup = document.getElementById("kitchen-shotcup");
@@ -40387,7 +40451,27 @@ function quickReversalGesture(action) {
       var off = parseFloat(st.style.translate) || 0;
       p.style.translate = off ? (off + "px 0px") : "";
     }
-    function setStool(id, ex) { var el = document.getElementById(id); if (el) el.style.translate = (ex - BASE[id]) + "px 0px"; syncPatron(id); }
+    function setStool(id, ex) {
+      var el = document.getElementById(id);
+      if (!el || !Object.prototype.hasOwnProperty.call(BASE, id)) return;
+      ex = Number(ex);
+      if (!isFinite(ex)) ex = BASE[id];
+      el.style.translate = (ex - BASE[id]) + "px 0px";
+      syncPatron(id);
+    }
+    function settleStools(row) {
+      var requested = row && Array.isArray(row.x) ? row.x : [];
+      var xs = ORDER.map(function (id, i) {
+        var x = typeof requested[i] === "number" && isFinite(requested[i]) ? requested[i] : BASE[id];
+        return Math.max(MIN_X, Math.min(MAX_X, x));
+      });
+      for (var i = 1; i < xs.length; i++) xs[i] = Math.max(xs[i], xs[i - 1] + GAP);
+      xs[xs.length - 1] = Math.min(xs[xs.length - 1], MAX_X);
+      for (var j = xs.length - 2; j >= 0; j--) xs[j] = Math.min(xs[j], xs[j + 1] - GAP);
+      xs[0] = Math.max(xs[0], MIN_X);
+      resetPatrons();
+      ORDER.forEach(function (id, i) { setStool(id, xs[i]); });
+    }
     function spawnKissHeart() { // one 💋 floating up between the pair; capped + self-removing (backgrounded-tab safe)
       if (reduceMotion() || !patrons) return;
       Array.prototype.forEach.call(patrons.querySelectorAll(".bar-kiss"), function (n) { n.remove(); }); // clear any leftover before spawning: cap = 1
@@ -40479,6 +40563,7 @@ function quickReversalGesture(action) {
       var w = dragEl; dragEl = null;
       stools.classList.remove("dragging");
       try { w.releasePointerCapture(e.pointerId); } catch (err) {}
+      if (dragMoved && window.__checkpointChanged) window.__checkpointChanged();
     }
     stools.addEventListener("pointerup", endDrag);
     stools.addEventListener("pointercancel", endDrag);
@@ -40532,7 +40617,14 @@ function quickReversalGesture(action) {
       if (patrons) Array.prototype.forEach.call(patrons.querySelectorAll(".bar-kiss"), function (n) { n.remove(); });
     }
     window.__resetBarPatrons = resetPatrons;
-    window.__resetStools = function () { ORDER.forEach(function (id) { var el = document.getElementById(id); if (el) el.style.translate = ""; }); resetPatrons(); };
+    window.__resetStools = function () { settleStools(null); };
+    if (window.__registerArrangementOwner) window.__registerArrangementOwner("stools", {
+      capture: function () {
+        var xs = ORDER.map(effX);
+        return xs.some(function (x, i) { return Math.abs(x - BASE[ORDER[i]]) > 0.01; }) ? { x: xs } : null;
+      },
+      settle: settleStools
+    });
   })();
   (function () {
     var neon = document.getElementById("kitchen-bar-neon");
@@ -41857,6 +41949,12 @@ function quickReversalGesture(action) {
     } catch (err) { return e.clientX; }
   }
   function coolerOffset() { return parseFloat(cooler.style.translate) || 0; }
+  function setCoolerOffset(value) {
+    value = Number(value);
+    if (!isFinite(value)) value = 0;
+    var off = Math.max(COOLER_MIN_OFFSET, Math.min(COOLER_MAX_OFFSET, value));
+    cooler.style.translate = off ? (off + "px 0px") : "";
+  }
 
   // one short breath of cold air off the ice, five wisps rising out of the opened half
   function breathe(side) {
@@ -41964,14 +42062,14 @@ function quickReversalGesture(action) {
       dragMoved = true;
       try { cooler.setPointerCapture(e.pointerId); } catch (err) {}
     }
-    var off = Math.max(COOLER_MIN_OFFSET, Math.min(COOLER_MAX_OFFSET, dragStartOffset + dx));
-    cooler.style.translate = off ? (off + "px 0px") : "";
+    setCoolerOffset(dragStartOffset + dx);
   });
   function endDrag(e) {
     if (!dragging) return;
     dragging = false;
     cooler.classList.remove("dragging");
     try { cooler.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (dragMoved && window.__checkpointChanged) window.__checkpointChanged();
   }
   cooler.addEventListener("pointerup", endDrag);
   cooler.addEventListener("pointercancel", endDrag);
@@ -41997,6 +42095,16 @@ function quickReversalGesture(action) {
   }
   window.__cokeCoolerOffset = coolerOffset; // focused test/inspection hook
   window.__resetCokeCooler = function () { reset(true); };
+  if (window.__registerArrangementOwner) window.__registerArrangementOwner("cooler", {
+    capture: function () {
+      var x = coolerOffset();
+      return x ? { x: x } : null;
+    },
+    settle: function (row) {
+      reset(false);
+      setCoolerOffset(row && typeof row.x === "number" ? row.x : 0);
+    }
+  });
   document.addEventListener("visibilitychange", function () { if (document.hidden) reset(false); });
 })();
 (function () {
@@ -86795,7 +86903,44 @@ function spawnDustMote(container) {
     return pt.matrixTransform(svg.getScreenCTM().inverse());
   }
   var blanketOffsets = {};
-  ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
+  var blanketIds = ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"];
+  var blanketHomes = Object.create(null);
+  blanketIds.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) blanketHomes[id] = { parent: el.parentNode, next: el.nextSibling };
+  });
+  function homeBlankets() {
+    blanketIds.slice().reverse().forEach(function (id) {
+      var el = document.getElementById(id), home = blanketHomes[id];
+      if (!el || !home || !home.parent) return;
+      home.parent.insertBefore(el, home.next && home.next.parentNode === home.parent ? home.next : null);
+    });
+  }
+  function placeBlanket(el) {
+    if (!el || !el.parentNode) return;
+    var strip = document.getElementById("loft-game-strip");
+    var pair = document.getElementById("cuddly-polyamory-pair");
+    var knife = document.getElementById("cuddly-knife-1");
+    var vLayer = document.getElementById("cuddly-visitors-layer");
+    if (strip && strip.classList.contains("polyamory-day") && !strip.classList.contains("party-on") &&
+        pair && knife && pair.parentNode === el.parentNode && knife.parentNode === el.parentNode) {
+      el.parentNode.insertBefore(el, knife);
+    } else if (vLayer && vLayer.parentNode === el.parentNode) el.parentNode.insertBefore(el, vLayer);
+    else el.parentNode.appendChild(el);
+  }
+  function setBlanketOffset(id, x, y) {
+    var el = document.getElementById(id);
+    if (!el || !blanketOffsets[id]) return;
+    x = Number(x); y = Number(y);
+    if (!isFinite(x)) x = 0;
+    if (!isFinite(y)) y = 0;
+    x = Math.max(-220, Math.min(220, x));
+    y = Math.max(-50, Math.min(50, y));
+    blanketOffsets[id].x = x;
+    blanketOffsets[id].y = y;
+    el.style.translate = x + "px " + y + "px";
+  }
+  blanketIds.forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
     blanketOffsets[id] = { x: 0, y: 0 };
@@ -86848,17 +86993,7 @@ function spawnDustMote(container) {
       el.style.transition = "none";
       // Dragged blankets paint over the couch, but stay below visitors; on Polyamory Day
       // they stop just below the knives so they can cover all four friends.
-      if (el.parentNode) {
-        var strip = document.getElementById("loft-game-strip");
-        var pair = document.getElementById("cuddly-polyamory-pair");
-        var knife = document.getElementById("cuddly-knife-1");
-        var vLayer = document.getElementById("cuddly-visitors-layer");
-        if (strip && strip.classList.contains("polyamory-day") && !strip.classList.contains("party-on") &&
-            pair && knife && pair.parentNode === el.parentNode && knife.parentNode === el.parentNode) {
-          el.parentNode.insertBefore(el, knife);
-        } else if (vLayer && vLayer.parentNode === el.parentNode) el.parentNode.insertBefore(el, vLayer);
-        else el.parentNode.appendChild(el);
-      }
+      placeBlanket(el);
       try { el.setPointerCapture(e.pointerId); } catch (err) {}
     });
     el.addEventListener("pointermove", function (e) {
@@ -86867,15 +87002,14 @@ function spawnDustMote(container) {
       var dx = Math.max(-220, Math.min(220, dragStartOffset.x + (cur.x - dragStartPt.x)));
       var dy = Math.max(-50, Math.min(50, dragStartOffset.y + (cur.y - dragStartPt.y)));
       if (Math.abs(dx - dragStartOffset.x) > 4 || Math.abs(dy - dragStartOffset.y) > 4) dragMoved = true;
-      blanketOffsets[id].x = dx;
-      blanketOffsets[id].y = dy;
-      el.style.translate = dx + "px " + dy + "px";
+      setBlanketOffset(id, dx, dy);
     });
     function onBlanketPointerUp(e) {
       if (!dragging) return;
       dragging = false;
       try { el.releasePointerCapture(e.pointerId); } catch (err) {}
       el.style.transition = "";
+      if (dragMoved && window.__checkpointChanged) window.__checkpointChanged();
       var offLap = Math.hypot(blanketOffsets[id].x, blanketOffsets[id].y) >= 28;
       triggerBlanketPull(offLap);
     }
@@ -86905,12 +87039,11 @@ function spawnDustMote(container) {
     return null;
   };
   window.resetBlanketPositions = function () {
-    ["cuddly-blanket", "cuddly-yellowblanket", "cuddly-lapblanket"].forEach(function (id) {
+    blanketIds.forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
-      if (blanketOffsets[id]) { blanketOffsets[id].x = 0; blanketOffsets[id].y = 0; }
       el.style.transition = "none";
-      el.style.translate = "0px 0px";
+      setBlanketOffset(id, 0, 0);
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { el.style.transition = ""; });
       });
@@ -86918,6 +87051,55 @@ function spawnDustMote(container) {
     var mcat = document.getElementById("garden-caterpillar");
     if (mcat) mcat.classList.remove("metamorphosed"); // a reset brings the caterpillar back
   };
+  function blanketRaised(id) {
+    var el = document.getElementById(id);
+    var anchor = document.getElementById(id === "cuddly-lapblanket" ? "cuddly-behdad" : "cuddly-couple");
+    if (!el || !anchor || el.parentNode !== anchor.parentNode) return false;
+    var siblings = Array.prototype.slice.call(el.parentNode.children);
+    return siblings.indexOf(el) > siblings.indexOf(anchor);
+  }
+  function raisedBlanketOrder() {
+    return blanketIds.filter(blanketRaised).sort(function (a, b) {
+      var ae = document.getElementById(a), be = document.getElementById(b);
+      if (!ae || !be) return 0;
+      return ae.compareDocumentPosition(be) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+    });
+  }
+  function settleBlankets(row) {
+    var items = row && Array.isArray(row.items) ? row.items : [];
+    var byId = Object.create(null);
+    items.forEach(function (item) {
+      if (item && blanketIds.indexOf(item.id) !== -1 && !byId[item.id]) byId[item.id] = item;
+    });
+    blanketIds.forEach(function (id) {
+      var el = document.getElementById(id), item = byId[id];
+      if (el) el.style.transition = "none";
+      setBlanketOffset(id, item && typeof item.x === "number" ? item.x : 0,
+        item && typeof item.y === "number" ? item.y : 0);
+    });
+    homeBlankets();
+    var requested = row && Array.isArray(row.order) ? row.order.filter(function (id, i) {
+      return blanketIds.indexOf(id) !== -1 && row.order.indexOf(id) === i;
+    }) : [];
+    requested.forEach(function (id) { placeBlanket(document.getElementById(id)); });
+    blanketIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) requestAnimationFrame(function () {
+        requestAnimationFrame(function () { el.style.transition = ""; });
+      });
+    });
+  }
+  if (window.__registerArrangementOwner) window.__registerArrangementOwner("blankets", {
+    capture: function () {
+      var items = blanketIds.map(function (id) {
+        return { id: id, x: blanketOffsets[id].x, y: blanketOffsets[id].y };
+      });
+      var order = raisedBlanketOrder();
+      var moved = items.some(function (item) { return Math.abs(item.x) > 0.01 || Math.abs(item.y) > 0.01; });
+      return moved || order.length ? { items: items, order: order } : null;
+    },
+    settle: settleBlankets
+  });
 
   var glass = document.getElementById("office-stainedglass");
   var officeDim = document.getElementById("office-dim-overlay");

@@ -57702,6 +57702,7 @@ async def localfont(name):
     function openIncall(city) {
       if (callee || anyExternalCall()) return; // one call at a time (this phone or the monitor/laptop)
       if (!shell) build();
+      noteRecentApp("call");
       callee = city;
       callConnected = false; callHangingUp = false; callIncoming = true;
       if (window.__syncLoftCallState) window.__syncLoftCallState("answered", "ui");
@@ -61810,6 +61811,7 @@ async def localfont(name):
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];
+      madlaRingCount = 0;
       recentsReturnApp = null;
       messageRewriteGeneration++;
       pendingAuthoredRewrites = {};
@@ -62849,6 +62851,7 @@ async def localfont(name):
       prague: { fromKey: "laptop_place", subKey: "sat_call_sub" }
     };
     var callRingWho = "madla";
+    var madlaRingCount = 0;
     var callRingForced = false; // explicit script/outlet calls may bypass the autonomous phase/party gate
     var callRingEl = null, callRingHideT = null, callRingT = [];
     function clearCallRingTimers() { callRingT.forEach(clearTimeout); callRingT = []; }
@@ -62928,7 +62931,9 @@ async def localfont(name):
     // Refuses while a call's already live or the phone's open (they'd just get a busy tone).
     function ringCall(who, forced) {
       if (callee || anyExternalCall() || isOpen() || callRingUp()) return false;
+      if (who === "madla" && madlaRingCount >= 2) return false;
       showCallRing(who, forced);
+      if (who === "madla" && callRingUp()) madlaRingCount++;
       return callRingUp();
     }
     function madlaAvailable() {

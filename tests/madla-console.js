@@ -50,8 +50,8 @@ check(s.answer && s.answer.answered && s.answer.room === "office" && s.answer.ph
   s.answer);
 check(s.explicitParty && s.explicitParty.promise && s.explicitParty.ring,
   "madla() rings explicitly while the party is on", s.explicitParty);
-check(s.outlet && s.outlet.result && s.outlet.ring,
-  "the outlet remains an unconditional explicit Madla trigger", s.outlet);
+check(s.outlet && !s.outlet.result && !s.outlet.ring,
+  "a third Madla ring attempt is refused until reset", s.outlet);
 check(s.aKeyAutoplay && s.aKeyAutoplay.active === false,
   "the A key no longer starts autoplay", s.aKeyAutoplay.active);
 check(s.aKeyAutoplay && s.aKeyAutoplay.query === false,

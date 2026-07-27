@@ -20,7 +20,7 @@ var HARNESS = String.raw`<script>
   window.__setPartyMode(false, true);
   if (window.__dismissGuests) window.__dismissGuests();
   window.goToStage("cuddly");
-  document.getElementById("stage-cuddly").classList.remove("dusk");
+  document.getElementById("stage-cuddly").classList.add("dusk");
 
   var roof = document.getElementById("cuddly-ceiling");
   roof.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
@@ -44,6 +44,9 @@ var HARNESS = String.raw`<script>
     check("the outlet summons a Cuddly visitor group without starting the party",
       !window.__gardenPartyOn && window.currentStageName === "cuddly" && window.__cuddlyVisitorsNow().length >= 2,
       window.currentStageName + "/" + window.__gardenPartyOn + "/" + window.__cuddlyVisitorsNow().length);
+    check("the explicit outlet visit works at night",
+      document.getElementById("stage-cuddly").classList.contains("dusk"),
+      document.getElementById("stage-cuddly").className.baseVal);
     check("the outlet keeps its spark and explains the result",
       document.getElementById("cuddly-outlet").classList.contains("sparking") &&
       window.__captionKey() === "cuddly_outlet_visit",

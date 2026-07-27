@@ -20,10 +20,12 @@ var HARNESS = String.raw`<script>
   window.__setPartyMode(false, true);
   if (window.__dismissGuests) window.__dismissGuests();
   window.goToStage("cuddly");
+  document.getElementById("stage-cuddly").classList.remove("dusk");
 
   var roof = document.getElementById("cuddly-ceiling");
   roof.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
   for (var i = 0; i < 3; i++) roof.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  var roofVisitors = window.__cuddlyVisitorsNow().length;
 
   var realGuests = window.guests, guestCalls = 0, madlaCalls = 0;
   window.guests = function () {
@@ -35,16 +37,16 @@ var HARNESS = String.raw`<script>
 
   setTimeout(function () {
     check("the roof no longer summons a visitor duo",
-      !window.__cuddlyRoofSummon && window.__cuddlyVisitorsNow().length === 0,
-      String(window.__cuddlyVisitorsNow().length));
-    check("the outlet uses the canonical guests transition", guestCalls === 1, String(guestCalls));
+      !window.__cuddlyRoofSummon && roofVisitors === 0,
+      String(roofVisitors));
+    check("the outlet does not summon the dance-floor roster", guestCalls === 0, String(guestCalls));
     check("the outlet no longer triggers Madla", madlaCalls === 0, String(madlaCalls));
-    check("the outlet starts the party and fills its guest floor",
-      window.__gardenPartyOn && window.currentStageName === "garden" && window.__guestsIn(),
-      window.currentStageName + "/" + window.__gardenPartyOn + "/" + window.__guestsIn());
+    check("the outlet summons a Cuddly visitor group without starting the party",
+      !window.__gardenPartyOn && window.currentStageName === "cuddly" && window.__cuddlyVisitorsNow().length >= 2,
+      window.currentStageName + "/" + window.__gardenPartyOn + "/" + window.__cuddlyVisitorsNow().length);
     check("the outlet keeps its spark and explains the result",
       document.getElementById("cuddly-outlet").classList.contains("sparking") &&
-      window.__captionKey() === "cuddly_outlet_party",
+      window.__captionKey() === "cuddly_outlet_visit",
       window.__captionKey());
     report();
   }, 500);

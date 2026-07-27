@@ -18,7 +18,8 @@ checkpoint, while Autoplay continues from it. Use the buttons, arrow keys,
 recovery choice itself is the confirmation; the in-game Restart control still
 asks before discarding active progress. Both recovery choices enter the enlarged
 page mode immediately. **Start over** preserves the clean fresh-game **CLICK
-ME** invitation inside that enlarged view.
+ME** invitation inside that enlarged view. Continue restores an open phone to its
+launcher; its app data remains available.
 
 ## Quick start
 

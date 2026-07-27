@@ -84,7 +84,7 @@ check(s.continued.frontDoor && s.continued.nookDoor, "Continue restores both vie
 check(s.continued.devices && s.continued.devices.pc && s.continued.devices.monitor &&
   s.continued.devices.running.length === 0 && s.continued.devices.monitorZoom &&
   s.continued.devices.laptopOpen && !s.continued.devices.laptopZoom &&
-  s.continued.devices.phoneOpen && s.continued.devices.phoneApp &&
+  s.continued.devices.phoneOpen && !s.continued.devices.phoneApp &&
   !s.continued.devices.call && !s.continued.devices.camera && !s.continued.devices.videoPlaying,
   "Continue restores device shells while the monitor returns to its empty desktop", s.continued.devices);
 check(s.continued.devices && s.continued.devices.persisted &&
@@ -93,7 +93,7 @@ check(s.continued.devices && s.continued.devices.persisted &&
   !("foreground" in s.continued.devices.persisted.monitor) &&
   !("running" in s.continued.devices.persisted.monitor) &&
   s.continued.devices.persisted["phone-shell"].open &&
-  s.continued.devices.persisted["phone-shell"].app === "notes",
+  !("app" in s.continued.devices.persisted["phone-shell"]),
   "the post-Continue checkpoint captures the restored subsystem rows again", s.continued.devices && s.continued.devices.persisted);
 check(s.continued.utilities && s.continued.utilities.projector === "stars" && !s.continued.utilities.projectorPaused &&
   !s.continued.utilities.projectorPlaying && s.continued.utilities.candle &&

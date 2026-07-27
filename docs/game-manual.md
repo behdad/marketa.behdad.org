@@ -119,6 +119,11 @@ At room level, with no app, menu, dialog, or text field consuming the key,
 phase 1. After the party has unlocked phase 2, these keys stop operating rooms:
 `Escape` and `Backspace` remain back/close controls, and `Enter` is inert.
 
+Right-click an interactive scene object (or use a two-finger tap on touch) for
+room actions. At the unsolved phase-one frontier the menu offers **Hint** and
+**Solve** (one guided step); **Back** appears after the kitchen. Objects with
+their own menu use that instead, and other scene areas retain the browser menu.
+
 When the scene or API opens a phone app directly, `Escape` or `Backspace` closes
 the phone instead of exposing its launcher. This applies to
 Aspen's post-shutter Album, the magic-box Calendar clue, and the scene date/time

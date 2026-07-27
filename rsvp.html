@@ -4539,6 +4539,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .mon-ctx button.ctx-sep{margin-top:3px; border-top:1px solid var(--rule); border-radius:0 0 4px 4px}
 .mon-ctx button:disabled{opacity:.4; cursor:default}
 .mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
+.scene-ctx{position:absolute}
 /* runtime death-flash (Kill a self-hosted runtime → a themed ~2s send-off, see __runMonitorDeathFlash).
    The killed line rides the caption bar; the on-screen visual is a #monitor-deathfx overlay per death. */
 #hunt-caption.caption-death{transition:none}
@@ -27004,7 +27005,7 @@ var T = {
       kitchen_warming_up: "Let it warm up first.",
       kitchen_bar: "Bar's open — watch <em>Pouria</em> mix a drink. Or order one. 🍸",
       kitchen_bar_night: "Bar is open. Ask <em>Pouria</em> for a drink… 🍸",
-      intro_guide: "Clues appear here. Click to continue.",
+      intro_guide: "Clues appear here. Right-click — or two-finger tap — objects for more. Click to continue.",
       flair_hint: "Move Pouria or use ← → to catch garnishes; dodge the wasp. Space pauses; Esc or × exits. 🍋",
       arcade_hint: "Move the chair or use ← → to aim; Space fires. Esc or × exits. 👾",
       tetris_hint: "Move: ← → · rotate: ↑ · drop: Space · exit: Esc.",
@@ -27723,6 +27724,9 @@ var T = {
     mon_ctx_copy: "Copy",
     mon_ctx_paste: "Paste",
     mon_ctx_select_all: "Select all",
+    scene_ctx_back: "Back",
+    scene_ctx_hint: "Hint",
+    scene_ctx_solve: "Solve",
     mon_sys_website: "About",
     mon_sys_title: "The Loft",
     mon_sys_lock: "Lock",
@@ -28072,7 +28076,7 @@ var T = {
       kitchen_warming_up: "Nejdřív ho nech zahřát.",
       kitchen_bar: "Bar je otevřený — sleduj, jak <em>Pouria</em> míchá drink. Nebo si nějaký objednej. 🍸",
       kitchen_bar_night: "Bar je otevřený. Řekni si <em>Pouriovi</em> o drink… 🍸",
-      intro_guide: "Tady se objevují nápovědy. Klikni a pokračuj.",
+      intro_guide: "Tady se objevují nápovědy. Klikni na předměty pravým tlačítkem — nebo dvěma prsty — pro další možnosti. Klikni a pokračuj.",
       flair_hint: "Pohybuj Pouriou nebo použij ← →, chytej ozdoby a vyhni se vosě. Mezerník pozastaví; Esc nebo × ukončí hru. 🍋",
       arcade_hint: "Pohybuj křeslem nebo použij ← → a zamiř; mezerník vystřelí. Esc nebo × ukončí hru. 👾",
       tetris_hint: "Pohyb: ← → · otočení: ↑ · pád: mezerník · konec: Esc.",
@@ -28786,6 +28790,9 @@ var T = {
     mon_ctx_copy: "Kopírovat",
     mon_ctx_paste: "Vložit",
     mon_ctx_select_all: "Vybrat vše",
+    scene_ctx_back: "Zpět",
+    scene_ctx_hint: "Nápověda",
+    scene_ctx_solve: "Vyřešit",
     mon_sys_website: "O nás",
     mon_sys_title: "The Loft",
     mon_sys_lock: "Zamknout",
@@ -77786,6 +77793,7 @@ function spawnDustMote(container) {
     var rosterOpen = rosterHoldsOccupants();
     var rosterNavigation = !!(opts && opts.rosterNavigation);
     if (rosterOpen && name !== window.currentStageName && !rosterNavigation) return false;
+    if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     var idx = STAGES.indexOf(name);
     if (idx === -1) return false;
     if (name !== "balcony" && window.__balconyTetrisState &&
@@ -77969,14 +77977,108 @@ function spawnDustMote(container) {
       navigateWithRoster(STAGES[stageIndex + 1]);
     }
   });
-  // General scene right-clicks deliberately do nothing, but stay captured so the browser's
-  // native menu does not cover the game. Target-specific menus register on their own elements
-  // and claim the event before it bubbles here.
-  document.addEventListener("contextmenu", function (e) {
-    if (e.defaultPrevented) return;
-    var t = e.target;
-    if (t && t.closest && t.closest("#loft-game-strip")) e.preventDefault();
-  });
+  // Interactive scene objects share a small room-action fallback. Target-specific menus
+  // (DJ, devices, magic box…) claim the event first; bare scenery and solved kitchen objects
+  // keep the native browser menu when this fallback has nothing useful to offer.
+  (function () {
+    var menu = null;
+    function tr(key) {
+      var l = document.documentElement.lang;
+      return (T[l] && T[l][key]) || T.en[key] || key;
+    }
+    function closeMenu() {
+      if (!menu) return;
+      menu.remove();
+      menu = null;
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("mousedown", onAway, true);
+      document.removeEventListener("scroll", closeMenu, true);
+      window.removeEventListener("blur", closeMenu);
+      window.removeEventListener("resize", closeMenu);
+    }
+    function onAway(e) { if (menu && !menu.contains(e.target)) closeMenu(); }
+    function onKey(e) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      closeMenu();
+    }
+    function item(cls, icon, key, fn) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = cls;
+      b.setAttribute("role", "menuitem");
+      b.innerHTML = '<span class="ctx-ico" aria-hidden="true">' + icon + '</span><span>' + tr(key) + "</span>";
+      b.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeMenu();
+        fn();
+      });
+      return b;
+    }
+    function phaseOneFrontier() {
+      return !window.__secondRound && stageIndex === maxUnlocked && stageIndex < STAGES.length - 1;
+    }
+    function showHint() {
+      restoreStageHint(STAGES[stageIndex]);
+      caption.classList.remove("hint-blink");
+      requestAnimationFrame(function () {
+        caption.classList.add("hint-blink");
+        setTimeout(function () { caption.classList.remove("hint-blink"); }, 1800);
+      });
+    }
+    function solveNext() {
+      var room = STAGES[stageIndex];
+      var fn = window["__" + room + "DoNext"];
+      if (typeof fn === "function") fn();
+    }
+    function openMenu(x, y) {
+      closeMenu();
+      var items = [];
+      if (stageIndex > 0) {
+        items.push(item("ctx-back", "←", "scene_ctx_back", function () {
+          navigateWithRoster(STAGES[stageIndex - 1]);
+        }));
+      }
+      if (phaseOneFrontier()) {
+        items.push(item("ctx-hint" + (items.length ? " ctx-sep" : ""), "?", "scene_ctx_hint", showHint));
+        items.push(item("ctx-solve", "✓", "scene_ctx_solve", solveNext));
+      }
+      if (!items.length) return false;
+      menu = document.createElement("div");
+      menu.className = "mon-ctx scene-ctx";
+      menu.setAttribute("role", "menu");
+      items.forEach(function (b) { menu.appendChild(b); });
+      menu.style.visibility = "hidden";
+      var viewport = document.querySelector(".hunt-viewport");
+      if (!viewport) { menu = null; return false; }
+      viewport.appendChild(menu);
+      var r = menu.getBoundingClientRect();
+      var vr = viewport.getBoundingClientRect();
+      menu.style.left = Math.max(4, Math.min(x - vr.left, vr.width - r.width - 4)) + "px";
+      menu.style.top = Math.max(4, Math.min(y - vr.top, vr.height - r.height - 4)) + "px";
+      menu.style.visibility = "";
+      document.addEventListener("keydown", onKey, true);
+      document.addEventListener("mousedown", onAway, true);
+      document.addEventListener("scroll", closeMenu, true);
+      window.addEventListener("blur", closeMenu);
+      window.addEventListener("resize", closeMenu);
+      return true;
+    }
+    document.addEventListener("contextmenu", function (e) {
+      if (e.defaultPrevented || !e.target || !e.target.closest) return;
+      var object = e.target.closest(".hunt-hit");
+      var stage = object && object.closest('[id^="stage-"]');
+      if (!stage || stage.id !== "stage-" + STAGES[stageIndex]) return;
+      if (!openMenu(e.clientX, e.clientY)) return;
+      e.preventDefault();
+    });
+    window.__sceneContextMenu = function () {
+      return menu ? [].map.call(menu.querySelectorAll("button span:last-child"), function (s) { return s.textContent; }) : [];
+    };
+    window.__closeSceneContextMenu = closeMenu;
+  })();
   // Right-clicking an EMPTY area of any custom context menu shouldn't summon the native browser
   // menu on top of it. One capture-phase guard covers them all (every custom menu carries .mon-ctx
   // — mon-ctx/desktop/laptop/phone — or .console-ctx).

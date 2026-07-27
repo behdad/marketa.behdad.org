@@ -29,7 +29,7 @@ var HARNESS = [
   "  function ccVisible(sel){ var m=ccMenu(); if(!m) return false; var b=m.querySelector(sel); return !!b && b.style.display!=='none'; }",
   "  function ccText(sel){ var m=ccMenu(); var b=m&&m.querySelector(sel); return b?b.textContent:''; }",
   "  function ccKillDisabled(){ var m=ccMenu(); var b=m&&m.querySelector('.cc-kill'); return !!(b&&b.disabled); }",
-  "  function monMenu(){ return document.querySelector('.mon-ctx'); }",                    // doom + every non-console app menu
+  "  function monMenu(){ return document.querySelector('.mon-ctx:not(.scene-ctx)'); }",     // doom + every non-console app menu
   "  function monItems(){ var m=monMenu(); return m?[].map.call(m.querySelectorAll('button span'),function(s){return s.textContent;}):[]; }",
   "  function monKill(){ var m=monMenu(); return m?m.querySelector('button.ctx-kill'):null; }",
   "  function monRestart(){ var m=monMenu(); return m?m.querySelector('button.ctx-restart'):null; }",

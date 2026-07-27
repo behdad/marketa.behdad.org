@@ -42060,6 +42060,46 @@ function quickReversalGesture(action) {
 // gives up on its own this long after it's dialled. Wall-clock, not attended time — the
 // abandoned call is exactly the one that never accrues attended time. Tune freely.
 var ABANDONED_CALL_MS = 30000;
+// Subsystems own their checkpoint rows. The recovery controller only asks every adapter
+// to capture, then restores their rows on either side of the room change.
+(function () {
+  var adapters = Object.create(null), order = [];
+  var phases = ["beforeStage", "afterStage"];
+  window.__registerCheckpointAdapter = function (id, adapter) {
+    if (!/^[a-z][a-z0-9_.-]*$/.test(id || "") || !adapter ||
+        typeof adapter.capture !== "function" || typeof adapter.restore !== "function") return false;
+    if (!adapters[id]) order.push(id);
+    adapters[id] = adapter;
+    return true;
+  };
+  window.__captureCheckpointSystems = function () {
+    var out = {};
+    order.forEach(function (id) {
+      try {
+        var row = adapters[id].capture();
+        if (row && typeof row === "object") out[id] = row;
+      } catch (_error) {}
+    });
+    return out;
+  };
+  window.__restoreCheckpointSystems = function (systems, phase) {
+    if (phases.indexOf(phase) === -1) return false;
+    systems = systems && typeof systems === "object" ? systems : {};
+    order.forEach(function (id) {
+      try {
+        var row = Object.prototype.hasOwnProperty.call(systems, id) &&
+          systems[id] && typeof systems[id] === "object" ? systems[id] : null;
+        adapters[id].restore(row, phase);
+      } catch (_error) {}
+    });
+    return true;
+  };
+  window.__resetCheckpointSystems = function () {
+    order.forEach(function (id) {
+      try { if (typeof adapters[id].reset === "function") adapters[id].reset(); } catch (_error) {}
+    });
+  };
+})();
 // Cross-controller office solve milestones. Laptop call, monitor boot, Enter automation,
 // checkpoint restore and reset all route through this one owner instead of writing mirrors.
 function setOfficeProgress(kind, on) {
@@ -42609,6 +42649,26 @@ setOfficeProgress("pc", false);
       // laptop invite matches the load snapshot instead of stranding a diff
       if (window.__updateOfficeNudges) window.__updateOfficeNudges();
     };
+    if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("laptop", {
+      capture: function () {
+        return {
+          open: laptop.classList.contains("open"),
+          zoomed: !!(window.__laptopZoomed && window.__laptopZoomed())
+        };
+      },
+      restore: function (state, phase) {
+        var saved = !!state;
+        state = state || {};
+        if (phase === "beforeStage") {
+          endLaptopUpdate();
+          laptop.classList.remove("inviting");
+          laptop.classList.toggle("open", !!state.open);
+          window.__officeLaptopAutoOpened = saved;
+        } else if (state.open && state.zoomed && window.currentStageName === "office" && window.__laptopZoomIn) {
+          window.__laptopZoomIn();
+        }
+      }
+    });
     // The session's FIRST office entry opens the lid once, so visitors discover the laptop
     // is interactive. Unconditional on how the office was entered — walking, the 1-5 keys,
     // the console, a script all count; don't re-add an entry-path gate. The lid is ALL it
@@ -42707,6 +42767,14 @@ setOfficeProgress("pc", false);
   pcTower.addEventListener("click", togglePc);
   pcTower.addEventListener("keydown", function (e) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); togglePc(); }
+  });
+  if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("pc", {
+    capture: function () { return { powered: pcTower.classList.contains("on") }; },
+    restore: function (state, phase) {
+      if (phase !== "beforeStage") return;
+      pcTower.classList.toggle("on", !!(state && state.powered));
+      window.__updatePcFan();
+    }
   });
 })();
 (function () {
@@ -56435,6 +56503,61 @@ async def localfont(name):
     clearMonitorRunningApps();
     stopSaver();
   }
+  function checkpointMonitorForeground() {
+    if (monitor.classList.contains("show-harfbuzz")) return "site:harfbuzz";
+    if (monitor.classList.contains("show-behdad")) return "site:behdad";
+    var ids = Object.keys(MONITOR_APP_CLASSES);
+    for (var i = 0; i < ids.length; i++) {
+      if (monitor.classList.contains(MONITOR_APP_CLASSES[ids[i]])) return ids[i];
+    }
+    return "desktop";
+  }
+  if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("monitor", {
+    capture: function () {
+      return {
+        surface: monitor.classList.contains("here") ? "monitor" : "typewriter",
+        screenOn: monitor.classList.contains("screen-on"),
+        foreground: checkpointMonitorForeground(),
+        running: Object.keys(monitorRunningApps),
+        zoomed: !!(window.__monitorZoomed && window.__monitorZoomed())
+      };
+    },
+    restore: function (state, phase) {
+      state = state || {};
+      if (phase === "beforeStage") {
+        clearBoot();
+        var toMonitor = state.surface !== "typewriter";
+        monitor.classList.toggle("here", toMonitor);
+        typewriter.classList.toggle("away", toMonitor);
+        clearMonitorRunningApps();
+        var running = Array.isArray(state.running) ? state.running : [];
+        running.forEach(function (id) {
+          id = monitorRegistryId(String(id || ""));
+          if (MONITOR_APP_CLASSES[id]) setMonitorAppRunning(id, true);
+        });
+        if (!state.screenOn || !toMonitor || !pcTower || !pcTower.classList.contains("on") || window.__monitorShorted) return;
+        monitor.classList.add("screen-on");
+        var foreground = typeof state.foreground === "string" ? state.foreground : "desktop";
+        if (foreground === "site:harfbuzz") {
+          monitor.classList.add("show-harfbuzz");
+          monitorUrl = "https://harfbuzz-world.cc/";
+        } else if (foreground === "site:behdad") {
+          monitor.classList.add("show-behdad");
+          monitorUrl = "https://behdad.org/";
+        } else if (MONITOR_APP_CLASSES[monitorRegistryId(foreground)]) {
+          foreground = monitorRegistryId(foreground);
+          monitor.classList.add(MONITOR_APP_CLASSES[foreground]);
+          setMonitorAppRunning(foreground, true);
+        } else {
+          monitor.classList.add("show-caps");
+          monitorUrl = CAPS_URL;
+        }
+      } else if (state.zoomed && window.currentStageName === "office" &&
+          monitor.classList.contains("screen-on") && window.__monitorZoomIn) {
+        window.__monitorZoomIn();
+      }
+    }
+  });
   window.resetOfficeMonitor = function () {
     if (window.__clearMonitorShort) window.__clearMonitorShort(); // dry out any sprinkler short so a reset can power the PC on again
     clearBoot(); // powers the screen dark and closes every app (console/REPL/VM console included)
@@ -62679,6 +62802,31 @@ async def localfont(name):
       seatPhoneInFullscreenHost();
     };
     window.__cineShowPhone = function () { open(true); }; // cinematic: open to the launcher, no lock, booted untouched
+    if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("phone-shell", {
+      capture: function () {
+        return {
+          unlocked: !!booted,
+          open: !!(isOpen() && !closing),
+          app: currentApp && phoneAppById(currentApp) ? currentApp : null
+        };
+      },
+      restore: function (state, phase) {
+        if (phase !== "afterStage") return;
+        state = state || {};
+        booted = !!state.unlocked;
+        if (!state.open) {
+          if (isOpen()) close(true);
+          return;
+        }
+        if (callee) dropCall(true);
+        open(booted);
+        var safeApps = ["messages", "mail", "calendar", "album", "music", "hn", "weather", "clock",
+          "calculator", "currency", "notes", "cards", "browser", "cocktails", "dressup"];
+        var appId = typeof state.app === "string" && safeApps.indexOf(state.app) !== -1 ? state.app : null;
+        var app = appId && phoneAppById(appId);
+        if (booted && app && ensurePhoneSlots().indexOf(app.id) !== -1 && app.open) app.open();
+      }
+    });
     // ── new-message thumbnail (top-centre, ~7s, pulsating) + delivery ──────────────────────
     // A text lands via window.__deliverPhoneMessage(id): appended to the thread (always), and —
     // if the tab's attended (crickets rule) — a small pulsating phone card slides in top-centre
@@ -91107,7 +91255,8 @@ function spawnDustMote(container) {
       puzzle: checkpointPuzzleState(),
       phone: window.__checkpointPhoneCapture ? window.__checkpointPhoneCapture() : null,
       album: window.__checkpointAlbumCapture ? window.__checkpointAlbumCapture() : null,
-      pacman: window.__pacmanCapture ? window.__pacmanCapture() : null
+      pacman: window.__pacmanCapture ? window.__pacmanCapture() : null,
+      systems: window.__captureCheckpointSystems ? window.__captureCheckpointSystems() : undefined
     };
   }
   function saveCheckpoint() {
@@ -91247,6 +91396,7 @@ function spawnDustMote(container) {
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
     if (window.__pacmanRestore) window.__pacmanRestore(saved.pacman);
+    if (window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "beforeStage");
     // Restore through the complete party-mode owner, not only its scene half. The balcony
     // switch and persistent UV intent are also toggle state: if they remain at their fresh-page
     // defaults, the first `p` after Continue only reconciles the switch and cannot stop the party.
@@ -91255,6 +91405,7 @@ function spawnDustMote(container) {
     if (p.bbq && window.bbq) window.bbq(true);
     if (window.__setDayNight) window.__setDayNight(!p.daylight);
     goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
+    if (window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "afterStage");
     endAttract();
     saveCheckpoint();
   }

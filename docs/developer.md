@@ -225,6 +225,12 @@ re-arms CLICK ME without dropping the enlarged view. These contextual reset path
 `resetDateTime:true` and returns to the real clock. Cinematic/fresh-load resets omit the option and
 retain their own page-mode behavior.
 
+Checkpoint payloads may carry a `systems` map populated by subsystem-owned adapters. Each adapter
+validates its compact row and restores around the room transition (`beforeStage`, then `afterStage`
+for geometry-dependent state); a missing row means that subsystem's fresh default. Continue restores
+durable UI identity, not activity: device power, surfaces, and app shells may return, while calls,
+cameras, media playback, dialogs, progress animations, runtimes, and live minigame loops stay stopped.
+
 ### Trailer lifecycle
 
 Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a

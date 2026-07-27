@@ -88,7 +88,7 @@ Starting the party marks phase 2 as reached. From that point onward:
 
 Some delayed messages may arrive soon after phase 2 begins. They are released as
 normal notifications rather than all taking over the scene at once.
-During Invaders, Flair-Catch, Tetris, and Pac-Man, incoming messages remain unread
+During Invaders, Flair-Catch, Tetris, and Hack-Man, incoming messages remain unread
 but their notification cards and badges wait until the action game ends.
 On the phone launcher, red badges show unread Messages, unread Mail, and new
 Album photos. Opening Album marks the photos currently there as seen.
@@ -426,7 +426,7 @@ running. Right-click its desktop tile or open surface and choose **Kill** to
 clear that session with its own send-off. Runtime apps also offer **Restart**
 when appropriate.
 
-Pac-Man never occupies a desktop tile, but typing its name in the computer's app
+Hack-Man never occupies a desktop tile, but typing `pacman` in the computer's app
 search opens it at any time. During the ketamine magic-box trip, catching the
 roaming Behdad ghost opens it directly. Use the arrow keys or `WASD`,
 the on-screen direction pad (tap or drag without lifting), or a swipe across the
@@ -696,7 +696,7 @@ ordinary game shortcuts are suspended until the player exits.
   or flick down to drop it. Its controls, score, lines, and persistent best score
   appear in the room.
 - **Minesweeper:** Available on both phone and monitor.
-- **Pac-Man:** Type its name in the computer's app search, or catch the roaming
+- **Hack-Man:** Type `pacman` in the computer's app search, or catch the roaming
   ghost during the ketamine trip to jump directly into the monitor game. Clear
   the pellets while avoiding the three ghosts; the larger
   corner pellets briefly make the ghosts edible. Movement, ghost personalities,
@@ -717,7 +717,7 @@ ordinary game shortcuts are suspended until the player exits.
   are deliberately unavailable through typed actions while the party is active.
   Each trip briefly borrows the clue line for its own caption, then restores the
   previous clue; THC and alcohol use the same treatment. The ketamine trip's roaming
-  ghost is also a direct shortcut into Pac-Man.
+  ghost is also a direct shortcut into Hack-Man.
 
 ## Calendar, special days, weather, and sky
 

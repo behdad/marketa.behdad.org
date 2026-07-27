@@ -26917,6 +26917,10 @@ var T = {
     game_exit: "Exit game",
     game_flair_title: "FLAIR CATCH",
     game_alien_title: "ALIEN RESOURCES",
+    arcade_offer_flair: "New best! Flair Catch is serving the next round. 🍸",
+    arcade_offer_invaders: "New best! Alien Resources has an opening. 👾",
+    arcade_offer_tetris: "New best! Block Party is lighting up. 🧱",
+    arcade_offer_pacman: "New best! Hack-Man has entered the chat. ᗧ",
     game_move_up: "Move up",
     game_move_down: "Move down",
     game_move_left: "Move left",
@@ -27979,6 +27983,10 @@ var T = {
     game_exit: "Ukončit hru",
     game_flair_title: "FLAIR CATCH",
     game_alien_title: "ALIEN RESOURCES",
+    arcade_offer_flair: "Nový rekord! Flair Catch servíruje další kolo. 🍸",
+    arcade_offer_invaders: "Nový rekord! Alien Resources má volné místo. 👾",
+    arcade_offer_tetris: "Nový rekord! Block Party se rozsvěcí. 🧱",
+    arcade_offer_pacman: "Nový rekord! Hack-Man vstoupil do chatu. ᗧ",
     game_move_up: "Nahoru",
     game_move_down: "Dolů",
     game_move_left: "Doleva",
@@ -37039,6 +37047,66 @@ function gameTapsNear(a, b) {
     }
     return g;
   };
+  var ARCADE_CROSS_IDS = ["flair", "invaders", "tetris", "pacman"];
+  var ARCADE_PLAYED_KEY = "loftArcadesPlayed", ARCADE_SUGGESTED_KEY = "loftArcadesSuggested",
+    ARCADE_PROMOTED_KEY = "loftArcadesPromoted";
+  function arcadeCrossSet(key) {
+    try {
+      var saved = JSON.parse(localStorage.getItem(key) || "[]");
+      return Array.isArray(saved) ? saved.filter(function (id) { return ARCADE_CROSS_IDS.indexOf(id) !== -1; }) : [];
+    } catch (e) { return []; }
+  }
+  function arcadeCrossRemember(key, id) {
+    var saved = arcadeCrossSet(key);
+    if (saved.indexOf(id) === -1) saved.push(id);
+    try { localStorage.setItem(key, JSON.stringify(saved)); } catch (e) {}
+    return saved;
+  }
+  window.__arcadeRunStarted = function (id) {
+    if (ARCADE_CROSS_IDS.indexOf(id) === -1) return false;
+    arcadeCrossRemember(ARCADE_PLAYED_KEY, id);
+    return true;
+  };
+  window.__arcadeOfferNext = function (current) {
+    if (ARCADE_CROSS_IDS.indexOf(current) === -1 ||
+        arcadeCrossSet(ARCADE_PROMOTED_KEY).indexOf(current) !== -1) return null;
+    window.__arcadeRunStarted(current);
+    var played = arcadeCrossSet(ARCADE_PLAYED_KEY), suggested = arcadeCrossSet(ARCADE_SUGGESTED_KEY);
+    var choices = ARCADE_CROSS_IDS.filter(function (id) {
+      return id !== current && played.indexOf(id) === -1 && suggested.indexOf(id) === -1;
+    });
+    if (!choices.length || typeof window.__deliverArcadeOffer !== "function") return null;
+    var target = choices[Math.floor(Math.random() * choices.length)];
+    if (!window.__deliverArcadeOffer(target)) return null;
+    arcadeCrossRemember(ARCADE_SUGGESTED_KEY, target);
+    arcadeCrossRemember(ARCADE_PROMOTED_KEY, current);
+    return target;
+  };
+  window.__arcadeCrossPromotionState = function () {
+    return {
+      played: arcadeCrossSet(ARCADE_PLAYED_KEY),
+      suggested: arcadeCrossSet(ARCADE_SUGGESTED_KEY),
+      promoted: arcadeCrossSet(ARCADE_PROMOTED_KEY)
+    };
+  };
+  window.__launchArcadeGame = function (id) {
+    if (ARCADE_CROSS_IDS.indexOf(id) === -1) return false;
+    var room = id === "flair" ? "kitchen" : id === "tetris" ? "balcony" : "office";
+    if (window.goToStage) window.goToStage(room);
+    setTimeout(function () {
+      if (id === "flair") {
+        if ((!window.__barUpNow || !window.__barUpNow()) && window.__setDayNight) window.__setDayNight(true);
+        if (window.__startFlairCatch) window.__startFlairCatch();
+      } else if (id === "invaders") {
+        if (window.__startArcade) window.__startArcade();
+      } else if (id === "tetris") {
+        if (window.__startBalconyTetris) window.__startBalconyTetris();
+      } else if (window.__unlockPacman) {
+        window.__unlockPacman(true);
+      }
+    }, window.currentStageName === room ? 80 : 720);
+    return true;
+  };
   var chair = document.getElementById("office-chair");
   if (chair) {
     // Two nearby taps (GAME_TAP_NEAR_PX) spin the chair dizzy AND launch the invaders — one
@@ -37263,6 +37331,7 @@ function gameTapsNear(a, b) {
     function startArcade() {
       if (arcadeActive) return;
       arcadeActive = true;
+      if (window.__arcadeRunStarted) window.__arcadeRunStarted("invaders");
       // seed the pointer-follow frame from the chair's CURRENT on-screen position, in the SAME
       // strip-SVG space pointermove uses (via pointerSvgX) — a drag-launch set these through
       // pointerdown, but a launch WITHOUT a grab (the phone "invaders" message) left them stale and
@@ -37341,6 +37410,7 @@ function gameTapsNear(a, b) {
       }
       if (wasActive && gameOver) arcadeFlourish(finalScore, true, newBest); // terminal result when a saucer gets through; leaving the room ends silently
       if (wasActive && window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "invaders", active: false, score: finalScore }, "ui");
+      if (newBest && window.__arcadeOfferNext) window.__arcadeOfferNext("invaders");
     }
 
     // tear down if the tab hides or the window loses focus mid-game (pointerup may never come)
@@ -40163,7 +40233,7 @@ function gameTapsNear(a, b) {
 
     var flairActive = false, flairPaused = false, flairRaf = null, flairLastT = 0;
     var flairItems = [], flairLastSpawn = 0, flairElapsed = 0;
-    var flairScore = 0, flairMiss = 0;
+    var flairScore = 0, flairMiss = 0, flairRunStartingHigh = 0;
     var FLAIR_MILESTONE = 10; // reward a chime + shockwave every this-many catches (aligned with the speed step)
     var flairHud = null, flairHudScore = null, flairHudHigh = null, flairHudLives = null, flairPauseLabel = null;
 
@@ -40325,6 +40395,8 @@ function gameTapsNear(a, b) {
       // is born the same tick the game starts. Drop it once the click cycle settles.
       setTimeout(function () { var c = document.querySelector(".egg-bubble.who-pop"); if (c) dismissEggBubble(c); }, 0);
       flairActive = true;
+      flairRunStartingHigh = flairHigh();
+      if (window.__arcadeRunStarted) window.__arcadeRunStarted("flair");
       flairPaused = false;
       barDragStartX = flairShakerX(); barDragStartOffset = barOffsetX; // seed the paddle-follow frame so it tracks the cursor immediately (same fix as the arcade chair — a launch without a grab, e.g. the phone "I'm bored" message)
       flairScore = 0; flairMiss = 0; flairElapsed = 0;
@@ -40396,6 +40468,7 @@ function gameTapsNear(a, b) {
     function stopFlairCatch(gameOver, playerEnded) {
       if (flairRaf) { cancelAnimationFrame(flairRaf); flairRaf = null; }
       var wasActive = flairActive, finalScore = flairScore;
+      var newBest = wasActive && finalScore > flairRunStartingHigh;
       flairActive = false;
       flairPaused = false;
       if (barDragging) {
@@ -40415,6 +40488,7 @@ function gameTapsNear(a, b) {
       // Pouria alone, so room/tab/bar teardown paths naturally decline once their state is gone.
       if (wasActive && window.__bartenderDrinkAlone) window.__bartenderDrinkAlone();
       if (wasActive && window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "flair-catch", active: false, score: finalScore }, "ui");
+      if (newBest && window.__arcadeOfferNext) window.__arcadeOfferNext("flair");
     }
     window.stopFlairCatch = stopFlairCatch;
 
@@ -48680,10 +48754,23 @@ setOfficeProgress("pc", false);
   ];
   var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacFrame = null, pacCheckpointTicks = 0, pacDying = false;
   var pacState = null, pacClock = null;
+  var pacRunStartingHigh = 0, pacRunActive = false;
   var PAC_HIGH_KEY = "pacmanHigh"; // personal best survives New, Kill, shutdown, and full loft reset
   function pacHigh() { try { return parseInt(localStorage.getItem(PAC_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
   function pacSetHigh(n) { try { localStorage.setItem(PAC_HIGH_KEY, String(n)); } catch (e) {} }
   function pacBankHigh() { if (pacState && pacState.score > pacHigh()) pacSetHigh(pacState.score); }
+  function pacTrackRun() {
+    if (pacRunActive) return;
+    pacRunActive = true;
+    pacRunStartingHigh = pacHigh();
+    if (window.__arcadeRunStarted) window.__arcadeRunStarted("pacman");
+  }
+  function pacOfferBest() {
+    if (!pacRunActive) return;
+    var newBest = pacState && pacState.score > pacRunStartingHigh;
+    pacRunActive = false;
+    if (newBest && window.__arcadeOfferNext) window.__arcadeOfferNext("pacman");
+  }
   function pacFreshState() {
     var pellets = [];
     for (var r = 0; r < PAC_MAZE.length; r++) for (var c = 0; c < PAC_MAZE[r].length; c++) pellets.push(PAC_MAZE[r][c] === "." || PAC_MAZE[r][c] === "o");
@@ -48911,7 +48998,7 @@ setOfficeProgress("pc", false);
         pacSaveSoon(true); return false;
       }
       pacState.lives--;
-      if (pacState.lives <= 0) { pacState.status = "over"; pacStopLoop(); }
+      if (pacState.lives <= 0) { pacState.status = "over"; pacStopLoop(); pacOfferBest(); }
       else { pacState.status = "ready"; pacResetActors(true); pacStopLoop(); }
       pacSaveSoon(true);
       return true;
@@ -49050,7 +49137,7 @@ setOfficeProgress("pc", false);
         if (pacCollision()) break;
       }
     }
-    if (pacRemaining() === 0 && pacState.status !== "over") { pacState.status = "win"; pacStopLoop(); pacSaveSoon(true); }
+    if (pacRemaining() === 0 && pacState.status !== "over") { pacState.status = "win"; pacStopLoop(); pacSaveSoon(true); pacOfferBest(); }
     if (changed || wasFrightened !== (pacState.fright > 0)) pacRender(previous);
     if (pacState.status === "running") pacTimer = setTimeout(pacStep, PAC_LOOP_MS);
   }
@@ -49065,6 +49152,7 @@ setOfficeProgress("pc", false);
     pacState.desired = dir;
     if (pacState.status === "ready") {
       if (!pacCan(pacState.player, dir)) { pacRender(); return false; }
+      pacTrackRun();
       pacState.status = "running"; pacState.paused = false; pacState.direction = dir;
     }
     else if (pacState.status === "win" || pacState.status === "over") return false;
@@ -49080,6 +49168,7 @@ setOfficeProgress("pc", false);
   }
   window.__pacmanTogglePause = pacTogglePause;
   function pacResetBoard(save) {
+    pacOfferBest();
     pacStopLoop(); pacState = pacFreshState(); if (pacBuilt) { pacWrap.classList.remove("pac-killed"); pacRender(); }
     if (save) pacSaveSoon(true);
   }
@@ -49090,12 +49179,13 @@ setOfficeProgress("pc", false);
   function openPacmanApp() {
     if (!pacUnlocked || !monitor.classList.contains("show-caps") || monitor.classList.contains("show-pacman")) return;
     stopSaver(); clearTimeout(saverTimer); saverTimer = null; pacBuild(); monitor.classList.add("show-pacman");
-    if (pacState.status === "running") pacStartLoop();
+    if (pacState.status === "running") { pacTrackRun(); pacStartLoop(); }
     playLaptopClickSound("office-monitor");
     if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: true }, "ui");
   }
   function closePacmanApp() {
     if (!monitor.classList.contains("show-pacman")) { pacStopLoop(); return; }
+    pacOfferBest();
     monitor.classList.remove("show-pacman"); pacStopLoop(); pacSaveSoon(true); scheduleSaver();
     if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: false, score: pacState ? pacState.score : 0 }, "ui");
   }
@@ -60286,6 +60376,10 @@ async def localfont(name):
       storm:         { fromKey: "msg_bahareh_from", bodyKey: "msg_storm_body",     act: "storm" },         // Bahareh's warning → tap: balcony + storm
       invaders:      { fromKey: "msg_behdad_from",  bodyKey: "msg_invaders_body",  act: "invaders" },      // behdad tasks Irene → the office; taps to LAUNCH the chair alien-arcade
       flair:         { fromKey: "msg_pouria_from",  bodyKey: "msg_flair_body",     act: "flair" },         // Pouria bored → taps to LAUNCH Flair-Catch at the bar
+      arcade_offer_flair:    { from: "loft arcade", bodyKey: "arcade_offer_flair",    act: "arcade:flair" },
+      arcade_offer_invaders: { from: "loft arcade", bodyKey: "arcade_offer_invaders", act: "arcade:invaders" },
+      arcade_offer_tetris:   { from: "loft arcade", bodyKey: "arcade_offer_tetris",   act: "arcade:tetris" },
+      arcade_offer_pacman:   { from: "loft arcade", bodyKey: "arcade_offer_pacman",   act: "arcade:pacman" },
       smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" },        // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
       kids_asleep:   { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsasleep_body_a", "msg_kidsasleep_body_b"], arrival: "kidsleep" }, // informative state: delivery itself puts every kid to sleep; no action affordance
       kids_loose:    { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsloose_body_a", "msg_kidsloose_body_b"],   arrival: "kidwake" },  // informative state: the auto-wake has already happened; direct/test delivery also wakes them
@@ -62263,6 +62357,7 @@ async def localfont(name):
       if (act.indexOf("season:") === 0) { if (window.season) window.season(act.slice(7)); return; } // holiday invite → dress the decor + pan to its room
       if (act === "eclipse") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__runBalconyEclipse) window.__runBalconyEclipse(); }, 760); return; } // pan first, then darken the sky
       if (act === "storm") { if (window.storm) window.storm(true); if (window.rain) window.rain(true); return; } // Bahareh's warning → a CLASSIC thunderstorm (lightning + rain); storm()/rain() pan to the balcony + set dusk themselves
+      if (act.indexOf("arcade:") === 0) { if (window.__launchArcadeGame) window.__launchArcadeGame(act.slice(7)); return; }
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
       if (act === "party") { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); return; } // a post-party invitation only restarts once the visitor accepts it
@@ -62768,6 +62863,9 @@ async def localfont(name):
       if (m.next && MESSAGES[m.next]) setTimeout(function () { window.__deliverAutonomousPhoneMessage(m.next); }, m.nextDelay || 4200); // chained followup text (e.g. Hamid's 2nd stanza lands a few seconds after the 1st)
       if (id !== "charlie") scheduleCharlieIntro(); // Charlie follows a real text; she is never the first notification
       return true;
+    };
+    window.__deliverArcadeOffer = function (game) {
+      return window.__deliverPhoneMessage("arcade_offer_" + game);
     };
     function majorMessageMomentActive() {
       return !!(window.__firstDanceOn || window.__slowDanceOn || window.__toastsOn || window.__groupPhotoOn ||
@@ -63561,7 +63659,7 @@ async def localfont(name):
     var active = false, resultVisible = false, gameRaf = null, lastFrame = 0, gravityElapsed = 0;
     var resultTimer = null, savedCaption = null, captionSaved = false, normalWindowState = null;
     var pausedSceneAnimations = [];
-    var board = [], piece = null, bag = [], score = 0, lines = 0, level = 0;
+    var board = [], piece = null, bag = [], score = 0, lines = 0, level = 0, runStartingHigh = 0;
     var tetrisReducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var HIGH_KEY = "balconyTetrisHigh";
     var PIECES = {
@@ -63914,6 +64012,7 @@ async def localfont(name):
     function stopGame(gameOver) {
       if (gameRaf) { cancelAnimationFrame(gameRaf); gameRaf = null; }
       var wasActive = active, hadResult = resultVisible, finalScore = score;
+      var newBest = wasActive && finalScore > runStartingHigh;
       active = false; piece = null;
       if (finalScore > highScore()) setHighScore(finalScore);
       stage.classList.remove("tetris-on");
@@ -63934,6 +64033,7 @@ async def localfont(name):
       if (wasActive && window.__loftStateChanged) {
         window.__loftStateChanged("minigame.change", { game: "window-tetris", active: false, score: finalScore }, "ui");
       }
+      if (newBest && window.__arcadeOfferNext) window.__arcadeOfferNext("tetris");
     }
     function startGame() {
       if (active || window.currentStageName !== "balcony") return false;
@@ -63946,7 +64046,9 @@ async def localfont(name):
       clearAmbientEffects(true);
       normalWindowState = windows.map(function (windowEl) { return windowEl.classList.contains("lit"); });
       pauseScene();
+      runStartingHigh = highScore();
       active = true; board = emptyBoard(); bag = []; score = 0; lines = 0; level = 0;
+      if (window.__arcadeRunStarted) window.__arcadeRunStarted("tetris");
       stage.classList.add("tetris-on");
       ui.setAttribute("aria-hidden", "false");
       if (window.setCaption) window.setCaption(coarseInput ? "tetris_touch_hint" : "tetris_hint", true);

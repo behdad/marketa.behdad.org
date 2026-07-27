@@ -681,6 +681,10 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 While an action game is running, its keyboard controls take priority and other
 ordinary game shortcuts are suspended until the player exits.
 
+Setting a new personal best in one of the four arcades may put an unplayed
+arcade recommendation in Messages. Its action arrow takes the player straight
+to that game; each arcade recommends another only once.
+
 - **Flair Catch:** In the kitchen/bar, repeat a nearby click on Pouria to begin,
   or use its message/API action. Pouria follows the pointer while the player
   catches garnishes and avoids the wasp; Left/Right arrows move him too. Clicking

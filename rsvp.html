@@ -991,18 +991,22 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .boxlock-drum.snapping{transition:none} /* the 9→0 wrap: roll onto the clone digit, then jump back with no animation */
 #garden-boxlock-submit.denied{animation:boxlock-submit-denied .32s ease-in-out}
 @keyframes boxlock-submit-denied{0%,100%{opacity:1}50%{opacity:.35}}
-#garden-boxlock-shackle{transform-box:fill-box; transform-origin:100% 100%} /* the right leg's foot — the shackle lifts, then swings open around it */
+#garden-boxlock-shackle{transform-box:fill-box; transform-origin:100% 100%} /* pivot on the seated right leg: the left leg clears the body without sending the tall arch out of frame */
+#garden-boxlock-shackle.open{transform:rotate(20deg)}
 #garden-boxlock-shackle.popped{animation:boxlock-shackle-pop .55s cubic-bezier(.2,1.5,.4,1) forwards}
 @keyframes boxlock-shackle-pop{
   0%{transform:translateY(0) rotate(0deg)}
-  40%{transform:translateY(-18px) rotate(0deg)}
-  100%{transform:translateY(-18px) rotate(24deg)}
+  40%{transform:translateY(-4px) rotate(0deg)}
+  100%{transform:rotate(20deg)}
 }
+.boxlock-mini-shackle-open{opacity:0}
+#garden-drugsbox.unlocked .boxlock-mini-shackle-closed{opacity:0}
+#garden-drugsbox.unlocked .boxlock-mini-shackle-open{opacity:1}
 @media (prefers-reduced-motion: reduce){
   #garden-boxlock{transition:none}
   .boxlock-drum{transition:none}
   #garden-boxlock-submit.denied{animation:none}
-  #garden-boxlock-shackle.popped{animation:none; transform:translateY(-18px) rotate(24deg)}
+  #garden-boxlock-shackle.popped{animation:none; transform:rotate(20deg)}
 }
 #balcony-ashtray{transform-box:fill-box; transform-origin:center}
 #balcony-ashtray.spinning{animation:ashtray-spin 1s ease-in-out}
@@ -13552,8 +13556,12 @@ section{margin:1.9rem 0}
 <line class="boxuv-metal" x1="539" y1="300" x2="539" y2="320" stroke="#8a8a8a" stroke-width="1"/>
 <line class="boxuv-metal" x1="545" y1="298" x2="545" y2="320" stroke="#8a8a8a" stroke-width="1"/>
 <line class="boxuv-metal" x1="551" y1="300" x2="551" y2="320" stroke="#8a8a8a" stroke-width="1"/>
-<rect class="boxuv-metal" x="541" y="318" width="8" height="7" rx="1.5" fill="#2a2a2a" stroke="#8a8a8a" stroke-width="0.6"/>
-<circle class="boxuv-metal" cx="545" cy="318" r="1.8" fill="none" stroke="#8a8a8a" stroke-width="0.7"/>
+<rect x="537" y="309" width="16" height="19" rx="3" fill="#24150f" stroke="#4c382d" stroke-width="0.6"/>
+<path class="boxuv-metal boxlock-mini-shackle-closed" d="M541 318 V314.6 A4 4 0 0 1 549 314.6 V318" fill="none" stroke="#a3a3a3" stroke-width="1.2" stroke-linecap="round"/>
+<path class="boxuv-metal boxlock-mini-shackle-open" d="M541 318 V314.6 A4 4 0 0 1 550.5 310.6" fill="none" stroke="#a3a3a3" stroke-width="1.2" stroke-linecap="round"/>
+<rect class="boxuv-metal" x="539" y="317.5" width="12" height="9" rx="1.8" fill="#2a2a2a" stroke="#9b9b9b" stroke-width="0.8"/>
+<circle class="boxuv-metal" cx="545" cy="321" r="1" fill="#a3a3a3"/>
+<path class="boxuv-metal" d="M545 321.8 V324" stroke="#a3a3a3" stroke-width="0.8" stroke-linecap="round"/>
 </g>
 <g id="garden-growlight" class="hunt-hit">
 <rect x="498" y="160" width="40" height="132" fill="transparent"/>
@@ -73798,21 +73806,37 @@ document.addEventListener("keydown", function (e) {
   }
   function resetWheels() {
     ["t", "u"].forEach(function (w) { wheels[w] = 0; park(w, 0, false); });
+  }
+  function syncLockVisual(animate) {
+    var p = panel();
+    var box = document.getElementById("garden-drugsbox");
     var sh = document.getElementById("garden-boxlock-shackle");
-    if (sh) sh.classList.remove("popped");
+    if (p) p.classList.toggle("unlocked", !boxLocked);
+    if (box) box.classList.toggle("unlocked", !boxLocked);
+    if (!sh) return;
+    sh.classList.remove("popped");
+    sh.classList.toggle("open", !boxLocked);
+    if (animate && !boxLocked) {
+      void sh.getBoundingClientRect();
+      sh.classList.add("popped");
+    }
   }
   function unlock(fanfare) {
     if (!boxLocked) return;
     boxLocked = false;
     clearOpenTimers();
     var p = panel();
+    syncLockVisual(!!fanfare);
+    if (window.__checkpointChanged) window.__checkpointChanged();
     if (!fanfare) { if (p) p.classList.remove("showing"); resetWheels(); return; }
     playBoxlockClunkSound();
-    var sh = document.getElementById("garden-boxlock-shackle");
-    if (sh) { sh.classList.remove("popped"); void sh.getBoundingClientRect(); sh.classList.add("popped"); }
     openTimers.push(setTimeout(function () {
       if (p) p.classList.remove("showing");
-      openTimers.push(setTimeout(function () { resetWheels(); triggerRsvpTrip(); }, 320)); // the dial IS the entry — clear the panel first so it can't sit on top of the trip
+      openTimers.push(setTimeout(function () {
+        resetWheels();
+        syncLockVisual(false);
+        triggerRsvpTrip();
+      }, 320)); // the dial IS the entry — clear the panel first so it can't sit on top of the trip
     }, 800));
   }
   // Every rejected answer earns a clue. The third names the rolled wedding explicitly, then
@@ -73998,6 +74022,7 @@ document.addEventListener("keydown", function (e) {
   });
   applyMonth();
   resetWheels(); // park both drums explicitly, so the first tap transitions from a real value
+  syncLockVisual(false);
   window.__drugsboxTap = function (e) {
     if (!boxLocked) { triggerRsvpTrip(e); return; }
     openLockPanel();
@@ -74017,8 +74042,27 @@ document.addEventListener("keydown", function (e) {
     var p = panel();
     if (p) p.classList.remove("showing");
     resetWheels();
+    syncLockVisual(false);
     applyMonth();
   };
+  function settleCheckpoint(unlocked) {
+    clearOpenTimers();
+    closeContext(); closeTripPicker();
+    boxLocked = !unlocked;
+    failures = 0;
+    var p = panel();
+    if (p) p.classList.remove("showing");
+    resetWheels();
+    syncLockVisual(false);
+    applyMonth();
+  }
+  if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("magic-box", {
+    capture: function () { return { unlocked: !boxLocked }; },
+    restore: function (row, phase) {
+      if (phase === "afterStage") settleCheckpoint(!!(row && row.unlocked));
+    },
+    reset: function () { settleCheckpoint(false); }
+  });
   // The lock closeup must sit above EVERYTHING while it's up — including the party dancers, which
   // are a strip-level overlay painted after all the rooms. It normally lives inside #stage-garden
   // (translate(680,0)); hoist it ONCE to the end of the strip with that same translate baked on, so

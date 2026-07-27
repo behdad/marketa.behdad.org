@@ -131,6 +131,23 @@ function checkDictParity(file, script) {
   }
   var enSet = new Set(enKeys);
   var csSet = new Set(csKeys);
+  function duplicates(keys) {
+    var seen = new Set();
+    return Array.from(new Set(keys.filter(function (key) {
+      if (seen.has(key)) return true;
+      seen.add(key);
+      return false;
+    })));
+  }
+  var enDupes = duplicates(enKeys);
+  var csDupes = duplicates(csKeys);
+  if (enDupes.length || csDupes.length) {
+    fail(file + ": duplicate dictionary key(s)",
+      (enDupes.length ? "EN: " + enDupes.join(", ") + "\n" : "") +
+      (csDupes.length ? "CS: " + csDupes.join(", ") : ""));
+  } else {
+    pass(file + ": EN/CS dictionaries contain no duplicate keys");
+  }
   var enOnly = enKeys.filter(function (k) { return !csSet.has(k); });
   var csOnly = csKeys.filter(function (k) { return !enSet.has(k); });
   if (enOnly.length === 0 && csOnly.length === 0) {
@@ -146,12 +163,73 @@ function checkEggTotal(html, script) {
   var totalMatch = script.match(/EGG_TOTAL\s*=\s*(\d+)/);
   if (!totalMatch) return; // not applicable (rsvp.html)
   var declared = parseInt(totalMatch[1], 10);
-  var liCount = (html.match(/<li[^>]*data-egg="/g) || []).length;
-  if (declared === liCount) {
-    pass("save-the-dates.html: EGG_TOTAL matches cheatsheet <li data-egg> count (" + declared + ")");
-  } else {
-    fail("save-the-dates.html: EGG_TOTAL (" + declared + ") does not match cheatsheet <li data-egg> count (" + liCount + ")");
+  var cheatIds = [], cheatMatch, cheatRe = /<li[^>]*data-egg=["']([^"']+)["']/g;
+  while ((cheatMatch = cheatRe.exec(html))) cheatIds.push(cheatMatch[1]);
+  var foundIds = [], callMatch, callRe = /\bmarkFound\s*\(([^)]*)\)/g;
+  while ((callMatch = callRe.exec(script))) {
+    var literalMatch, literalRe = /["']([^"']+)["']/g;
+    while ((literalMatch = literalRe.exec(callMatch[1]))) foundIds.push(literalMatch[1]);
   }
+  var cheatSet = new Set(cheatIds);
+  var foundSet = new Set(foundIds);
+  var missingCall = cheatIds.filter(function (id) { return !foundSet.has(id); });
+  var missingCheat = Array.from(foundSet).filter(function (id) { return !cheatSet.has(id); });
+  var duplicateCheats = cheatIds.filter(function (id, i) { return cheatIds.indexOf(id) !== i; });
+  if (declared === cheatSet.size && !missingCall.length && !missingCheat.length && !duplicateCheats.length) {
+    pass("save-the-dates.html: EGG_TOTAL, cheatsheet, and literal markFound ids match (" + declared + ")");
+  } else {
+    fail("save-the-dates.html: EGG_TOTAL / cheatsheet / markFound identity mismatch",
+      "EGG_TOTAL: " + declared + "; unique cheats: " + cheatSet.size +
+      (duplicateCheats.length ? "\nduplicate cheats: " + Array.from(new Set(duplicateCheats)).join(", ") : "") +
+      (missingCall.length ? "\ncheats never passed literally to markFound: " + missingCall.join(", ") : "") +
+      (missingCheat.length ? "\nmarkFound ids absent from cheatsheet: " + missingCheat.join(", ") : ""));
+  }
+}
+
+function checkTrackedSymlinks() {
+  var tracked = execSync("git ls-files -s -z", { cwd: ROOT }).toString("utf8").split("\0").filter(Boolean);
+  var trackedNames = new Set(tracked.map(function (line) { return line.slice(line.indexOf("\t") + 1); }));
+  var links = tracked.filter(function (line) { return line.slice(0, 6) === "120000"; });
+  var issues = [];
+  links.forEach(function (line) {
+    var name = line.slice(line.indexOf("\t") + 1);
+    var linkPath = path.join(ROOT, name);
+    var target = fs.readlinkSync(linkPath);
+    var resolved = path.resolve(path.dirname(linkPath), target);
+    var rel = path.relative(ROOT, resolved);
+    if (rel.indexOf("..") === 0 || path.isAbsolute(rel)) issues.push(name + " escapes the repository: " + target);
+    else if (!fs.existsSync(resolved)) issues.push(name + " has a missing target: " + target);
+    else if (!trackedNames.has(rel)) issues.push(name + " targets an untracked path: " + target);
+  });
+  if (issues.length) fail("tracked symlink targets exist and are tracked", issues.join("\n"));
+  else pass("tracked symlink targets exist and are tracked (" + links.length + ")");
+}
+
+function checkLiteralLocalAssets() {
+  var roots = "(?:art|docs|doom|pyodide|linux|harfbuzzjs)";
+  var refs = new Map();
+  function remember(file, value) {
+    var clean = value.split(/[?#]/)[0];
+    if (clean) refs.set(clean, file);
+  }
+  FILES.concat(["chat.js"]).forEach(function (file) {
+    var text = fs.readFileSync(path.join(ROOT, file), "utf8");
+    var match;
+    var attrRe = /\b(?:src|href|poster)\s*=\s*(["'])([^"']+)\1/gi;
+    while ((match = attrRe.exec(text))) {
+      var value = match[2];
+      if (/^[A-Za-z0-9._~+@%/-]+(?:[?#].*)?$/.test(value) &&
+          !/^(?:#|[A-Za-z][A-Za-z0-9+.-]*:|\/\/)/.test(value)) remember(file, value);
+    }
+    var rootRe = new RegExp("([\"'`])((?:\\.\\.?/)?" + roots + "/[A-Za-z0-9_@%+.,()/-]+)\\1", "g");
+    while ((match = rootRe.exec(text))) remember(file, match[2]);
+  });
+  var missing = [];
+  refs.forEach(function (file, ref) {
+    if (!fs.existsSync(path.resolve(ROOT, ref))) missing.push(file + ": " + ref);
+  });
+  if (missing.length) fail("literal local asset references resolve", missing.join("\n"));
+  else pass("literal local asset references resolve (" + refs.size + ")");
 }
 
 // Recurring historical bug (fixed 3x: 4886f92, dd525fe, 6650508): an SVG element
@@ -1093,6 +1171,8 @@ function checkNoUnicodeEscapes() {
 // background-tap (stopHintBlink, which dismisses the opening prompt on a tap anywhere).
 
 checkNoUnicodeEscapes();
+checkTrackedSymlinks();
+checkLiteralLocalAssets();
 console.log("");
 
 FILES.forEach(function (file) {

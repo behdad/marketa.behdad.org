@@ -35,8 +35,9 @@ var HARNESS = [
   ' window.__jumpToDate(2027,10,24);await sleep(700);S("leave",{day:document.getElementById("loft-game-strip").classList.contains("polyamory-day"),opacity:getComputedStyle(pair).opacity,home:hosts.nextElementSibling===pair&&pair.nextElementSibling===fairy});',
   ' var raffiArm=document.querySelector(".g-raffi .guest-arm-l"),raffiOrigin=raffiArm&&getComputedStyle(raffiArm).transformOrigin.split(" ");',
   ' var chBal=document.getElementById("bh-chinnel"),raBal=document.getElementById("bh-raffi"),adultBal=document.getElementById("bh-patricia-son"),chBox=chBal.getBBox(),raBox=raBal.getBBox(),adultBox=adultBal.getBBox();',
-  ' S("models",{floor:!!document.querySelector(".g-chinnel")&&!!document.querySelector(".g-raffi"),bar:!!document.querySelector(".bc-chinnelraffi"),office:!!document.querySelector(".of-chinnelraffi"),balcony:!!chBal&&!!raBal,raffiArmTop:!!raffiOrigin&&Math.abs(parseFloat(raffiOrigin[1]))<0.1,balconyScale:{chinnel:chBox.height,raffi:raBox.height,adult:adultBox.height,chinnelRatio:chBox.height/adultBox.height,raffiRatio:raBox.height/adultBox.height}});',
-  ' window.__jumpToDate(2027,7,26);S("chinnelBirthday",{active:document.getElementById("loft-game-strip").classList.contains("bd-chinnel"),bust:/calx-bust/.test(window.__bdPortrait({who:"chinnel",type:"hat"}))});',
+  ' var floorHair=document.getElementById("garden-chinnel-hair"),barHair=document.getElementById("bar-chinnel-hair"),floorHairBox=floorHair.getBBox(),barHairBox=barHair.getBBox();',
+  ' S("models",{floor:!!document.querySelector(".g-chinnel")&&!!document.querySelector(".g-raffi"),bar:!!document.querySelector(".bc-chinnelraffi"),office:!!document.querySelector(".of-chinnelraffi"),balcony:!!chBal&&!!raBal,raffiArmTop:!!raffiOrigin&&Math.abs(parseFloat(raffiOrigin[1]))<0.1,hair:{floor:{width:floorHairBox.width,height:floorHairBox.height,circles:floorHair.querySelectorAll("circle").length},shared:{width:barHairBox.width,height:barHairBox.height,circles:barHair.querySelectorAll("circle").length}},balconyScale:{chinnel:chBox.height,raffi:raBox.height,adult:adultBox.height,chinnelRatio:chBox.height/adultBox.height,raffiRatio:raBox.height/adultBox.height}});',
+  ' window.__jumpToDate(2027,7,26);var bust=window.__bdPortrait({who:"chinnel",type:"hat"}),bustHost=document.createElement("div");bustHost.innerHTML=bust;var bustHair=bustHost.querySelector(".portrait-triangle-curls");S("chinnelBirthday",{active:document.getElementById("loft-game-strip").classList.contains("bd-chinnel"),bust:/calx-bust/.test(bust),triangle:!!bustHair,circles:bustHair&&bustHair.querySelectorAll("circle").length});',
   ' window.__jumpToDate(2027,8,26);S("raffiBirthday",{active:document.getElementById("loft-game-strip").classList.contains("bd-raffi"),bust:/calx-bust/.test(window.__bdPortrait({who:"raffi",type:"hat"}))});',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',
@@ -97,8 +98,13 @@ check(s.models && s.models.balconyScale && s.models.balconyScale.chinnelRatio > 
   s.models.balconyScale.chinnelRatio < 1.35 && s.models.balconyScale.raffiRatio > 0.7 &&
   s.models.balconyScale.raffiRatio < 1.35,
   "their rendered balcony figures stay within normal adult scale", s.models && s.models.balconyScale);
-check(s.chinnelBirthday && s.chinnelBirthday.active && s.chinnelBirthday.bust,
-  "Chinnel's August 26 birthday has a portrait", s.chinnelBirthday);
+check(s.models && s.models.hair && s.models.hair.floor.width >= 45 && s.models.hair.floor.height <= 55 &&
+  s.models.hair.floor.circles === 0 && s.models.hair.shared.width >= 30 &&
+  s.models.hair.shared.height <= 40 && s.models.hair.shared.circles === 0,
+  "Chinnel's dance, bar, balcony and office art share the approved broad curl silhouette", s.models && s.models.hair);
+check(s.chinnelBirthday && s.chinnelBirthday.active && s.chinnelBirthday.bust &&
+  s.chinnelBirthday.triangle && s.chinnelBirthday.circles === 0,
+  "Chinnel's August 26 portrait uses the same broad curl silhouette", s.chinnelBirthday);
 check(s.raffiBirthday && s.raffiBirthday.active && s.raffiBirthday.bust,
   "Raffi's September 26 birthday has a portrait", s.raffiBirthday);
 

@@ -91,12 +91,12 @@ var harness = [
   'window.setLang("cs");out.csTetris={text:status.textContent,width:status.getComputedTextLength(),close:close.getAttribute("aria-label")};',
   'close.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));',
   'window.goToStage("office");window.__arcadeTest(1,16);',
-  'var arcadeClose=document.querySelector("#office-alien-layer .game-close-btn"),arcadeHud=document.querySelector("#office-alien-layer [role=img]");',
+  'var arcadeClose=document.querySelector("#office-alien-layer .game-close-btn"),arcadeHud=document.querySelector("#office-alien-layer [role=img]"),arcadeTitle=document.querySelector("#office-alien-layer .game-title-splash text");',
   'var shotsBefore=window.__arcadeState().shots,musicBefore=window.__musicPaused;',
   'var arcadeX0=window.__arcadeState().playerX,arcadeLeftOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true})),arcadeX1=window.__arcadeState().playerX,arcadeRightOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,cancelable:true})),arcadeX2=window.__arcadeState().playerX;',
   'var arcadeNight=document.getElementById("stage-balcony").classList.contains("dusk"),arcadeShortcutsOwned=modalOwns(["ArrowUp","ArrowDown","Tab","c","n"]);',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
-  'out.arcade={close:arcadeClose&&arcadeClose.getAttribute("aria-label"),hud:arcadeHud&&arcadeHud.getAttribute("aria-label"),arrows:arcadeLeftOwned&&arcadeRightOwned&&arcadeX1<arcadeX0&&arcadeX2===arcadeX0,shortcutsHeld:arcadeShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===arcadeNight,spaceFired:window.__arcadeState().shots===shotsBefore+1,musicHeld:window.__musicPaused===musicBefore};',
+  'out.arcade={title:arcadeTitle&&arcadeTitle.textContent,close:arcadeClose&&arcadeClose.getAttribute("aria-label"),hud:arcadeHud&&arcadeHud.getAttribute("aria-label"),arrows:arcadeLeftOwned&&arcadeRightOwned&&arcadeX1<arcadeX0&&arcadeX2===arcadeX0,shortcutsHeld:arcadeShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===arcadeNight,spaceFired:window.__arcadeState().shots===shotsBefore+1,musicHeld:window.__musicPaused===musicBefore};',
   'arcadeClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
   'out.arcade.closed=!window.__arcadeState().active;',
   'window.__arcadeTest(1,16);var arcadeEscLeaked=0;',
@@ -104,13 +104,13 @@ var harness = [
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
   'out.arcade.escapeOwned=!window.__arcadeState().active&&arcadeEscLeaked===0;',
   'window.setLang("en");window.goToStage("kitchen");window.__flairTest(1,16);',
-  'var flairClose=document.querySelector("#kitchen-flair-layer .game-close-btn"),flairHud=document.querySelector("#kitchen-flair-layer [role=img]");',
+  'var flairClose=document.querySelector("#kitchen-flair-layer .game-close-btn"),flairHud=document.querySelector("#kitchen-flair-layer [role=img]"),flairTitle=document.querySelector("#kitchen-flair-layer .game-title-splash text");',
   'var flairMusicBefore=window.__musicPaused;',
   'var flairX0=window.__flairState().playerX,flairLeftOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true})),flairX1=window.__flairState().playerX,flairRightOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,cancelable:true})),flairX2=window.__flairState().playerX;',
   'var flairNight=document.getElementById("stage-balcony").classList.contains("dusk"),flairShortcutsOwned=modalOwns(["ArrowUp","ArrowDown","Tab","c","n"]);',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
   'var pauseLabel=document.querySelector("#kitchen-flair-layer .game-pause-label");',
-  'out.flair={close:flairClose&&flairClose.getAttribute("aria-label"),hud:flairHud&&flairHud.getAttribute("aria-label"),arrows:flairLeftOwned&&flairRightOwned&&flairX1<flairX0&&flairX2===flairX0,shortcutsHeld:flairShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===flairNight,paused:window.__flairState().paused,pauseLabel:pauseLabel&&pauseLabel.textContent,musicHeld:window.__musicPaused===flairMusicBefore};',
+  'out.flair={title:flairTitle&&flairTitle.textContent,close:flairClose&&flairClose.getAttribute("aria-label"),hud:flairHud&&flairHud.getAttribute("aria-label"),arrows:flairLeftOwned&&flairRightOwned&&flairX1<flairX0&&flairX2===flairX0,shortcutsHeld:flairShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===flairNight,paused:window.__flairState().paused,pauseLabel:pauseLabel&&pauseLabel.textContent,musicHeld:window.__musicPaused===flairMusicBefore};',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
   'out.flair.resumed=!window.__flairState().paused;',
   'flairClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
@@ -149,18 +149,20 @@ check(rendered && rendered.enTetris.close === "Exit game" &&
       rendered.enTetris.width <= 140 && rendered.csTetris.width <= 140,
   "Block Party labels switch language and fit the HUD",
   rendered && JSON.stringify({ en: rendered.enTetris, cs: rendered.csTetris }));
-check(rendered && rendered.arcade.close === "Ukončit hru" &&
+check(rendered && rendered.arcade.title === "ALIEN RESOURCES" &&
+      rendered.arcade.close === "Ukončit hru" &&
       /^SKÓRE 0\. REKORD /.test(rendered.arcade.hud || "") && rendered.arcade.spaceFired &&
       rendered.arcade.arrows && rendered.arcade.shortcutsHeld && rendered.arcade.musicHeld &&
       rendered.arcade.closed && rendered.arcade.escapeOwned,
-  "Invaders owns its action and exit keys",
+  "Alien Resources owns its action and exit keys",
   rendered && JSON.stringify(rendered.arcade));
-check(rendered && rendered.flair.close === "Exit game" &&
+check(rendered && rendered.flair.title === "FLAIR CATCH" &&
+      rendered.flair.close === "Exit game" &&
       /^SCORE 0\. BEST /.test(rendered.flair.hud || "") && rendered.flair.paused &&
       rendered.flair.pauseLabel === "PAUSED" && rendered.flair.musicHeld &&
       rendered.flair.arrows && rendered.flair.shortcutsHeld && rendered.flair.resumed &&
       rendered.flair.closed && rendered.flair.escapeOwned,
-  "Flair-Catch owns its action and exit keys",
+  "Flair Catch owns its action and exit keys",
   rendered && JSON.stringify(rendered.flair));
 check(rendered && rendered.mines.label === "NEW GAME" && rendered.mines.title === "NEW GAME" &&
       rendered.mines.keyboard,

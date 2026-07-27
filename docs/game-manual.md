@@ -88,7 +88,7 @@ Starting the party marks phase 2 as reached. From that point onward:
 
 Some delayed messages may arrive soon after phase 2 begins. They are released as
 normal notifications rather than all taking over the scene at once.
-During Invaders, Flair-Catch, Tetris, and Hack-Man, incoming messages remain unread
+During Alien Resources, Flair Catch, Block Party, and Hack-Man, incoming messages remain unread
 but their notification cards and badges wait until the action game ends.
 On the phone launcher, red badges show unread Messages, unread Mail, and new
 Album photos. Opening Album marks the photos currently there as seen.
@@ -681,12 +681,12 @@ state remains visually quiet. `N` selects the next applicable track or scene.
 While an action game is running, its keyboard controls take priority and other
 ordinary game shortcuts are suspended until the player exits.
 
-- **Flair-Catch:** In the kitchen/bar, repeat a nearby click on Pouria to begin,
+- **Flair Catch:** In the kitchen/bar, repeat a nearby click on Pouria to begin,
   or use its message/API action. Pouria follows the pointer while the player
   catches garnishes and avoids the wasp; Left/Right arrows move him too. Clicking
   Pouria during the game does not open his personal card. Space pauses or resumes
-  the run. Flair-Catch is unavailable when reduced motion is requested.
-- **Invaders:** A hidden office-chair gesture, message action, or API action
+  the run. Flair Catch is unavailable when reduced motion is requested.
+- **Alien Resources:** A hidden office-chair gesture, message action, or API action
   starts the game. Move the chair or use Left/Right arrows to aim; Space fires
   while auto-fire remains active.
 - **Block Party:** On the balcony, double-click any across-the-street office

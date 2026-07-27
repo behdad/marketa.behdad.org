@@ -26915,6 +26915,8 @@ var T = {
     game_new: "NEW GAME",
     game_play_again: "PLAY AGAIN",
     game_exit: "Exit game",
+    game_flair_title: "FLAIR CATCH",
+    game_alien_title: "ALIEN RESOURCES",
     game_move_up: "Move up",
     game_move_down: "Move down",
     game_move_left: "Move left",
@@ -27975,6 +27977,8 @@ var T = {
     game_new: "NOVÁ HRA",
     game_play_again: "HRÁT ZNOVU",
     game_exit: "Ukončit hru",
+    game_flair_title: "FLAIR CATCH",
+    game_alien_title: "ALIEN RESOURCES",
     game_move_up: "Nahoru",
     game_move_down: "Dolů",
     game_move_left: "Doleva",
@@ -37004,7 +37008,37 @@ function gameTapsNear(a, b) {
     layer.appendChild(g);
     window.refreshSceneMinigameText();
     return g;
-  }
+  };
+  window.__showSceneGameTitle = function (layer, key) {
+    if (!layer) return null;
+    var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "game-title-splash");
+    g.setAttribute("transform", "translate(340,82)");
+    g.setAttribute("pointer-events", "none");
+    g.setAttribute("aria-hidden", "true");
+    g.innerHTML =
+      '<g class="game-title-splash-inner">' +
+        '<rect x="-125" y="-25" width="250" height="50" rx="14" fill="#302b29" fill-opacity=".92" stroke="#d9b48a" stroke-width="1.5"/>' +
+        '<rect x="-119" y="-19" width="238" height="16" rx="8" fill="#fffdf8" opacity=".08"/>' +
+        '<text text-anchor="middle" dominant-baseline="central" font-family="Fraunces, Georgia, serif" font-size="24" font-weight="700" letter-spacing="1" fill="#f4efe6"></text>' +
+      '</g>';
+    g.querySelector("text").textContent = window.__gameText(key);
+    layer.appendChild(g);
+    var inner = g.firstElementChild;
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (inner.animate && !reduced) {
+      var anim = inner.animate([
+        { opacity: 0, scale: .9 },
+        { opacity: 1, scale: 1, offset: .18 },
+        { opacity: 1, scale: 1, offset: .68 },
+        { opacity: 0, scale: 1.04 }
+      ], { duration: 1500, easing: "ease-out" });
+      anim.onfinish = function () { if (g.parentNode) g.parentNode.removeChild(g); };
+    } else {
+      setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 1500);
+    }
+    return g;
+  };
   var chair = document.getElementById("office-chair");
   if (chair) {
     // Two nearby taps (GAME_TAP_NEAR_PX) spin the chair dizzy AND launch the invaders — one
@@ -37240,6 +37274,7 @@ function gameTapsNear(a, b) {
       arcadeScore = 0;
       arcadeClearLayer();
       arcadeBuildHud();                 // live score + persisted high, drawn into the alien layer
+      window.__showSceneGameTitle(alienLayer, "game_alien_title");
       arcadeAliens.length = 0; arcadeShots.length = 0;
       arcadeLastSpawn = ALIEN_SPAWN_MS; // spawn promptly on the first tick
       arcadeLastShot = SHOT_MS;         // fire promptly on the first tick
@@ -37343,6 +37378,7 @@ function gameTapsNear(a, b) {
       arcadeActive = true; arcadeScore = 0;
       arcadeClearLayer();
       arcadeBuildHud();
+      window.__showSceneGameTitle(alienLayer, "game_alien_title");
       arcadeAliens.length = 0; arcadeShots.length = 0;
       if (stageOffice) stageOffice.classList.add("arcade");
       if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // arcade undoes the UV — drop any eased inline filter now
@@ -40299,6 +40335,7 @@ function gameTapsNear(a, b) {
       bartender.style.transition = "none"; // paddle-follow needs to track the cursor with no glide lag
       if (window.setCaption) window.setCaption("flair_hint", true); // instruction line above the scene
       flairBuildHud();
+      window.__showSceneGameTitle(flairLayer, "game_flair_title");
       flairLastT = 0;
       flairRaf = requestAnimationFrame(flairFrame);
       if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "flair-catch", active: true }, "ui");
@@ -40415,6 +40452,7 @@ function gameTapsNear(a, b) {
       flairClearLayer(); flairItems.length = 0;
       if (stageKitchen) stageKitchen.classList.add("flair-on");
       flairBuildHud();
+      window.__showSceneGameTitle(flairLayer, "game_flair_title");
       flairLastSpawn = 0;
       for (var k = 0; k < (steps || 1); k++) { if (!flairActive) break; flairStep(dt || 16); }
       return { active: flairActive, items: flairItems.length, score: flairScore, miss: flairMiss };

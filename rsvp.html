@@ -41382,6 +41382,7 @@ function quickReversalGesture(action) {
       if (el && el.classList && el.classList.contains("office-window")) {
         e.stopPropagation();       // a real window was tapped — toggle its light
         el.classList.toggle("lit");
+        if (window.__checkpointChanged) window.__checkpointChanged();
       }
     });
   }
@@ -64495,6 +64496,7 @@ async def localfont(name):
   if (lights) {
     function toggleLights() {
       lights.classList.toggle("off");
+      if (window.__checkpointChanged) window.__checkpointChanged();
       playLaptopClickSound("balcony-lights");
       if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(); // re-check: pulsing a dark string is pointless
     }
@@ -67774,6 +67776,7 @@ async def localfont(name):
   });
   onHit("office-tree-pot-hit", function () {
     tree.classList.toggle("lights-off");
+    if (window.__checkpointChanged) window.__checkpointChanged();
     playDryClickSound("office-tree"); // a switch click at the plug
   });
 })();
@@ -70042,12 +70045,58 @@ async def localfont(name):
   }
   var blind = document.getElementById("garden-blind");
   if (blind) {
-    function toggleBlind() { blind.classList.toggle("raised"); playSwishSound("garden-blind"); }
+    function toggleBlind() {
+      blind.classList.toggle("raised");
+      if (window.__checkpointChanged) window.__checkpointChanged();
+      playSwishSound("garden-blind");
+    }
     blind.addEventListener("click", toggleBlind);
     blind.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleBlind(); }
     });
   }
+  // These settled switches share one compact row. Restore runs after party/day-night and
+  // room owners, which may legitimately establish their own presentation first; the saved
+  // manual choice then wins without replaying a click, sound, or tree reaction.
+  (function () {
+    var balconyLights = document.getElementById("balcony-lights");
+    var gardenBlind = document.getElementById("garden-blind");
+    var officeTree = document.getElementById("office-tree");
+    function officeWindows() {
+      return Array.prototype.slice.call(document.querySelectorAll("#office-buildings .office-window"));
+    }
+    function bool(value, fresh) {
+      return typeof value === "boolean" ? value : fresh;
+    }
+    function settle(row) {
+      row = row && typeof row === "object" ? row : {};
+      var windows = officeWindows();
+      var bits = typeof row.officeWindows === "string" &&
+        row.officeWindows.length === windows.length && /^[01]+$/.test(row.officeWindows) ?
+        row.officeWindows : new Array(windows.length + 1).join("0");
+      if (balconyLights) balconyLights.classList.toggle("off", !bool(row.balconyLights, true));
+      if (gardenBlind) gardenBlind.classList.toggle("raised", bool(row.gardenBlind, false));
+      windows.forEach(function (windowEl, i) { windowEl.classList.toggle("lit", bits.charAt(i) === "1"); });
+      if (officeTree) officeTree.classList.toggle("lights-off", !bool(row.officeTreeLights, true));
+      if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse();
+    }
+    if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("scene-switches", {
+      capture: function () {
+        return {
+          balconyLights: !!(balconyLights && !balconyLights.classList.contains("off")),
+          gardenBlind: !!(gardenBlind && gardenBlind.classList.contains("raised")),
+          officeWindows: officeWindows().map(function (windowEl) {
+            return windowEl.classList.contains("lit") ? "1" : "0";
+          }).join(""),
+          officeTreeLights: !!(officeTree && !officeTree.classList.contains("lights-off"))
+        };
+      },
+      restore: function (row, phase) {
+        if (phase === "afterStage") settle(row);
+      },
+      reset: function () { settle(null); }
+    });
+  })();
   var jacket = document.getElementById("garden-jacket");
   if (jacket) {
     function swayJacket() {

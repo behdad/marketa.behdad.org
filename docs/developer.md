@@ -237,6 +237,8 @@ validated settled state and restore it in `afterStage`, never transient drag mot
 Finite quantities are bounded, and in-flight actions normalize to a safe settled state before capture.
 When a larger scene owner can establish presentation during recovery, its manual-state adapter also
 settles in `afterStage`, after that owner, so the visitor's saved choice has final authority.
+Conditionally rendered keepsakes carry their effective date and restore only after that same date
+has rendered the matching scene again; a mismatch settles the scene's fresh default.
 Device checkpoints store physical shell state rather than painted app activity; restored shells land
 on a normal desktop or launcher so their next action always follows the ordinary fresh path.
 Separately owned compact app data uses fixed, bounded row allowlists; no additional foreground

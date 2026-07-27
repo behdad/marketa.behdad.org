@@ -67933,6 +67933,7 @@ async def localfont(name):
       e.stopPropagation();
       var candle = document.getElementById(id);
       setCandle(id, !(candle && candle.classList.contains("lit")), true);
+      if (window.__checkpointChanged) window.__checkpointChanged();
     });
   });
   window.__resetNowruzCandles = function () {
@@ -67943,6 +67944,22 @@ async def localfont(name):
       var candle = document.getElementById(id);
       return !!(candle && candle.classList.contains("lit"));
     });
+  };
+  window.__restoreNowruzCandleState = function (state) {
+    var lit = state && Array.isArray(state.lit) && state.lit.length === candleIds.length &&
+      state.lit.every(function (on) { return typeof on === "boolean"; }) ? state.lit : [true, true];
+    var quiet = [];
+    candleIds.forEach(function (id) {
+      var candle = document.getElementById(id);
+      if (candle) Array.prototype.forEach.call(candle.querySelectorAll(".sn-hs-flame,.sn-hs-glow"), function (el) {
+        quiet.push([el, el.style.transition]);
+        el.style.transition = "none";
+      });
+    });
+    candleIds.forEach(function (id, i) { setCandle(id, lit[i], false); });
+    if (strip) strip.getBoundingClientRect();
+    quiet.forEach(function (row) { row[0].style.transition = row[1]; });
+    return window.__nowruzCandleState();
   };
   // The cloth names the spread on hover and looks it up on tap — most guests have never seen a
   // haft-sin, and nothing else in the game can tell them. Czech Wikipedia has no haft-sin article
@@ -68550,16 +68567,21 @@ async def localfont(name):
   // lays the fire fresh. __resetSadeh below is called on every day that ISN'T Sadeh.
   var fedDay = null, fed = 0;
   function today() { var s = window.__seasonDate ? window.__seasonDate() : null; return s ? s.y + "-" + s.m + "-" + s.d : ""; }
+  function settleFed(level, day) {
+    fed = Number.isInteger(level) ? Math.max(0, Math.min(2, level)) : 0;
+    fedDay = fed ? day : null;
+    strip.classList.toggle("sadeh-fed-1", fed >= 1);
+    strip.classList.toggle("sadeh-fed-2", fed >= 2);
+  }
   function feed() {
     var d = today();
-    if (d !== fedDay) { fedDay = d; fed = 0; }
+    if (d !== fedDay) settleFed(0, null);
     if (fed >= 2) return; // capped: two armfuls and the mound is built
-    fed += 1;
-    strip.classList.add("sadeh-fed-" + fed);
+    settleFed(fed + 1, d);
+    if (window.__checkpointChanged) window.__checkpointChanged();
   }
   window.__resetSadeh = function () {
-    fedDay = null; fed = 0;
-    strip.classList.remove("sadeh-fed-1", "sadeh-fed-2");
+    settleFed(0, null);
     glow.classList.remove("fire-flare");
     var wraps = ["balcony-sadeh-flint-wobble", "balcony-sadeh-wood-wobble"];
     wraps.forEach(function (id) {
@@ -68568,6 +68590,26 @@ async def localfont(name):
       w.classList.remove("wobbling");
       if (w.parentNode) w.parentNode.querySelectorAll(".sadeh-spark").forEach(function (n) { n.remove(); });
     });
+  };
+  window.__sadehFedState = function () { return { day: fedDay, level: fed }; };
+  window.__restoreSadehFedState = function (state) {
+    var level = state && Number.isInteger(state.level) ? Math.max(0, Math.min(2, state.level)) : 0;
+    var quiet = Array.prototype.map.call(document.querySelectorAll(".sd-fed"), function (el) {
+      var row = [el, el.style.transition];
+      el.style.transition = "none";
+      return row;
+    });
+    settleFed(level, level ? today() : null);
+    strip.getBoundingClientRect();
+    quiet.forEach(function (row) { row[0].style.transition = row[1]; });
+    glow.classList.remove("fire-flare");
+    ["balcony-sadeh-flint-wobble", "balcony-sadeh-wood-wobble"].forEach(function (id) {
+      var w = document.getElementById(id);
+      if (!w) return;
+      w.classList.remove("wobbling");
+      if (w.parentNode) w.parentNode.querySelectorAll(".sadeh-spark").forEach(function (n) { n.remove(); });
+    });
+    return window.__sadehFedState();
   };
   // ── the fire itself ──
   // A tap flares the pool and sizzles, exactly like the bonfire's — and then STOPS. There is no
@@ -68588,7 +68630,16 @@ async def localfont(name):
     var l = document.documentElement.lang === "cs" ? "cs" : "en";
     if (window.__showUrlInPhone) window.__showUrlInPhone(SADEH_WIKI[l] || SADEH_WIKI.en);
   });
-  document.addEventListener("visibilitychange", function () { if (document.hidden) window.__resetSadeh(); });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) return;
+    glow.classList.remove("fire-flare");
+    ["balcony-sadeh-flint-wobble", "balcony-sadeh-wood-wobble"].forEach(function (id) {
+      var w = document.getElementById(id);
+      if (!w) return;
+      w.classList.remove("wobbling");
+      if (w.parentNode) w.parentNode.querySelectorAll(".sadeh-spark").forEach(function (n) { n.remove(); });
+    });
+  });
 })();
 // Markéta and Behdad leaping the fire together. Deliberately NOT wired to the fire's click: the
 // bonfire's gestures are already spoken for (a tap flares it and cues Irene), and a third meaning
@@ -68804,7 +68855,10 @@ async def localfont(name):
     eatTarget = dish;
     eatTimer = setTimeout(function () {
       eatTimer = null;
-      if (eatTarget) eatTarget.classList.add("eaten");
+      if (eatTarget) {
+        eatTarget.classList.add("eaten");
+        if (window.__checkpointChanged) window.__checkpointChanged();
+      }
       eatTarget = null;
     }, MEAL_DBL_MS);
   });
@@ -68821,6 +68875,42 @@ async def localfont(name):
     clearTimeout(eatTimer); eatTimer = null; eatTarget = null;
     var dishes = setting.querySelectorAll(".dish.eaten");
     for (var i = 0; i < dishes.length; i += 1) dishes[i].classList.remove("eaten");
+  };
+  window.__mealPlateState = function () {
+    var meal = curMeal();
+    if (!meal) return null;
+    var dishes = setting.querySelectorAll("#cuddly-meal-" + meal + " .dish.eaten");
+    return {
+      meal: meal,
+      eaten: Array.prototype.map.call(dishes, function (dish) { return dish.getAttribute("data-dish"); })
+    };
+  };
+  window.__restoreMealPlateState = function (state) {
+    var quiet = Array.prototype.map.call(setting.querySelectorAll(".dish-full,.dish-done"), function (el) {
+      var row = [el, el.style.transition];
+      el.style.transition = "none";
+      return row;
+    });
+    function finish(value) {
+      setting.getBoundingClientRect();
+      quiet.forEach(function (row) { row[0].style.transition = row[1]; });
+      return value;
+    }
+    window.__resetMealPlates();
+    var meal = curMeal();
+    if (!state || MEAL_KEYS.indexOf(state.meal) === -1 || state.meal !== meal || !Array.isArray(state.eaten)) return finish(null);
+    var allowed = Array.prototype.map.call(
+      setting.querySelectorAll("#cuddly-meal-" + meal + " .dish"),
+      function (dish) { return dish.getAttribute("data-dish"); }
+    );
+    var eaten = state.eaten.filter(function (dish, i) {
+      return typeof dish === "string" && allowed.indexOf(dish) !== -1 && state.eaten.indexOf(dish) === i;
+    }).slice(0, allowed.length);
+    eaten.forEach(function (dish) {
+      var el = setting.querySelector("#cuddly-meal-" + meal + " .dish[data-dish=\"" + dish + "\"]");
+      if (el) el.classList.add("eaten");
+    });
+    return finish(window.__mealPlateState());
   };
 })();
 // فال حافظ — the Yalda-night custom: you open the Divan at random, and the couplet your thumb
@@ -69708,23 +69798,30 @@ async def localfont(name):
     });
   });
   var PLATE_CRACK_CLICKS = 4; // quiet bonus find: enough clicks and one plate in the stack cracks for good
-  ["cuddly-passthrough-plates-1", "cuddly-passthrough-plates-2"].forEach(function (id) {
+  var plateIds = ["cuddly-passthrough-plates-1", "cuddly-passthrough-plates-2"];
+  var plateClicks = [0, 0];
+  var plateWobbleGeneration = [0, 0];
+  plateIds.forEach(function (id, index) {
     var plates = document.getElementById(id);
     if (!plates) return;
     var crack = document.getElementById(id + "-crack");
-    var plateClicks = 0;
     function wobblePlates() {
+      var generation = ++plateWobbleGeneration[index];
       plates.classList.remove("wobbling");
       requestAnimationFrame(function () {
-        requestAnimationFrame(function () { plates.classList.add("wobbling"); });
+        requestAnimationFrame(function () {
+          if (generation === plateWobbleGeneration[index]) plates.classList.add("wobbling");
+        });
       });
       if (crack && !crack.classList.contains("cracked")) {
-        plateClicks++;
-        if (plateClicks >= PLATE_CRACK_CLICKS) {
+        plateClicks[index] = Math.min(PLATE_CRACK_CLICKS, plateClicks[index] + 1);
+        if (plateClicks[index] >= PLATE_CRACK_CLICKS) {
           crack.classList.add("cracked"); // permanent — never removed once set
+          if (window.__checkpointChanged) window.__checkpointChanged();
           playGlassClinkSound(1.7, id); // sharper/higher-pitched than the normal clink, reads as a crack
           return;
         }
+        if (window.__checkpointChanged) window.__checkpointChanged();
       }
       playGlassClinkSound(null, id);
     }
@@ -69733,6 +69830,27 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wobblePlates(); }
     });
   });
+  window.__passthroughPlateState = function () { return { clicks: plateClicks.slice() }; };
+  window.__restorePassthroughPlateState = function (state) {
+    var clicks = state && Array.isArray(state.clicks) && state.clicks.length === plateIds.length ? state.clicks : [];
+    var quiet = [];
+    plateIds.forEach(function (id, i) {
+      var n = Number.isInteger(clicks[i]) ? Math.max(0, Math.min(PLATE_CRACK_CLICKS, clicks[i])) : 0;
+      var plates = document.getElementById(id), crack = document.getElementById(id + "-crack");
+      plateClicks[i] = n;
+      plateWobbleGeneration[i] += 1;
+      if (plates) plates.classList.remove("wobbling");
+      if (crack) {
+        quiet.push([crack, crack.style.transition]);
+        crack.style.transition = "none";
+        crack.classList.toggle("cracked", n >= PLATE_CRACK_CLICKS);
+      }
+    });
+    var strip = document.getElementById("loft-game-strip");
+    if (strip) strip.getBoundingClientRect();
+    quiet.forEach(function (row) { row[0].style.transition = row[1]; });
+    return window.__passthroughPlateState();
+  };
   var JACKET_SWAY_VARIANTS = ["swaying", "swaying2", "swaying3"];
   var packHasDropped = false;
   function swayJacketVariant(el) {
@@ -88499,6 +88617,56 @@ function spawnDustMote(container) {
   var lastShowerKey = null;
   window.__applySeasonDate = applySeasonDate; // re-apply --smoke when late data (real air quality) lands
   applySeasonDate();
+  // Stable keepsakes owned by date-driven scenes restore only when that exact effective day
+  // renders the same occasion again. The pass-through plates are physical room state, so their
+  // bounded crack progress is deliberately independent of the calendar.
+  (function () {
+    var strip = document.getElementById("loft-game-strip");
+    function dayKey() {
+      var s = seasonDate();
+      function two(n) { return n < 10 ? "0" + n : String(n); }
+      return Number.isInteger(s.y) && Number.isInteger(s.m) && Number.isInteger(s.d) &&
+        s.m >= 0 && s.m <= 11 && s.d >= 1 && s.d <= 31 ?
+        s.y + "-" + two(s.m + 1) + "-" + two(s.d) : "";
+    }
+    function active(cls) { return !!(strip && strip.classList.contains(cls)); }
+    function sameDay(row, day) {
+      return !!(row && typeof row === "object" && typeof row.day === "string" && row.day === day);
+    }
+    function settle(row) {
+      row = row && typeof row === "object" ? row : {};
+      var day = dayKey();
+      if (window.__restorePassthroughPlateState) window.__restorePassthroughPlateState(row.plates);
+      if (window.__restoreNowruzCandleState) {
+        window.__restoreNowruzCandleState(sameDay(row.nowruz, day) && active("season-nowruz") ? row.nowruz : null);
+      }
+      if (window.__restoreMealPlateState) {
+        window.__restoreMealPlateState(sameDay(row.meal, day) ? row.meal : null);
+      }
+      if (window.__restoreSadehFedState) {
+        window.__restoreSadehFedState(sameDay(row.sadeh, day) && active("sadeh") ? row.sadeh : null);
+      }
+    }
+    if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("occasion-keepsakes", {
+      capture: function () {
+        var day = dayKey(), row = {
+          plates: window.__passthroughPlateState ? window.__passthroughPlateState() : { clicks: [0, 0] }
+        };
+        if (day && active("season-nowruz") && window.__nowruzCandleState) {
+          row.nowruz = { day: day, lit: window.__nowruzCandleState() };
+        }
+        var meal = window.__mealPlateState ? window.__mealPlateState() : null;
+        if (day && meal) row.meal = { day: day, meal: meal.meal, eaten: meal.eaten };
+        var sadeh = window.__sadehFedState ? window.__sadehFedState() : null;
+        if (day && active("sadeh") && sadeh) row.sadeh = { day: day, level: sadeh.level };
+        return row;
+      },
+      restore: function (row, phase) {
+        if (phase === "afterStage") settle(row);
+      },
+      reset: function () { settle(null); }
+    });
+  })();
   // 's' cycles the previews forward, in calendar order STARTING FROM the May 1 wedding and going
   // around the year: today → wedding → pride → canada → summer → smoky → autumn → spooky → štědrý
   // večer → christmas → new year → winter → valentine's → chaharshanbe suri → nowruz → sizdah

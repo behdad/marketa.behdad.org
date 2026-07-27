@@ -808,7 +808,8 @@ not block the main room trail.
 
 The dropdown JavaScript console is intentionally hidden from ordinary players.
 It becomes discoverable after the monitor Console has received input or after
-the backtick shortcut has been used. Press backtick to show it.
+the backtick shortcut has been used. Press backtick to show it; drag its lower
+edge to change its height for this visit.
 
 The console evaluates JavaScript in the page. Do not paste code from an untrusted
 source. Internal names beginning with `__` are implementation details and are not

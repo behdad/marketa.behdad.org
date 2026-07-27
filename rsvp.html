@@ -3919,7 +3919,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    console: the sizing below wins over the shared .console-out/.console-in monitor rules. */
 #dropterm{
   position:absolute; left:0; right:0; top:0; z-index:60;
-  max-height:48%; display:flex; flex-direction:column;
+  max-height:var(--dropterm-max-height, 48%); display:flex; flex-direction:column;
   background:rgba(24,20,16,.96); color:#e9e2d3;
   font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; line-height:1.5;
   border-bottom:2px solid var(--wine, #8e3a4a);
@@ -3954,6 +3954,17 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
   flex:1; min-width:0; background:transparent; border:none; outline:none; padding:0;
   color:#f4efe4; font:inherit; height:auto; line-height:1.5; caret-color:#8fd070;
 }
+#dropterm-resize{
+  position:absolute; left:0; right:0; bottom:-6px; z-index:2; height:12px;
+  cursor:ns-resize; touch-action:none;
+}
+#dropterm-resize::after{
+  content:""; position:absolute; left:50%; bottom:4px; width:38px; height:2px;
+  border-radius:2px; translate:-50% 0; background:rgba(233,226,211,.38);
+  transition:background .15s, width .15s;
+}
+#dropterm-resize:hover::after,#dropterm-resize:active::after{width:52px; background:rgba(233,226,211,.72)}
+#dropterm.resizing{transition:none; user-select:none}
 @media (max-width:760px){ #dropterm{font-size:11px} #dropterm-row .console-ps{font-size:11px} }
 /* mail app: a tiny three-message inbox over the screen (list view → reading view) */
 #monitor-mail{opacity:0; pointer-events:none; transition:opacity .25s ease}
@@ -26413,6 +26424,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <div id="dropterm-fps" aria-label="Rendered frames per second">FPS --</div>
       <div id="dropterm-out" class="console-out" role="log" aria-live="polite"></div>
       <div id="dropterm-row"><span class="console-ps" aria-hidden="true">&#10095;</span><input id="dropterm-in" class="console-in" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Console input"/></div>
+      <div id="dropterm-resize" role="separator" aria-orientation="horizontal" aria-label="Drag to resize console" title="Drag to resize console" data-aria-i="console_resize" data-title-i="console_resize" aria-valuemin="20" aria-valuemax="82" aria-valuenow="48"></div>
     </div>
   </div>
   <div class="hunt-right" id="hunt-right">
@@ -27223,6 +27235,7 @@ var T = {
     tempnav_reset: "Hand the temperature back to Edmonton’s real weather",
     console_hint: "Open the drop-down console",
     console_hint_close: "Close the drop-down console",
+    console_resize: "Drag to resize console",
     app_chat: "chat",
     app_call: "call",
     chat_welcome: "Hi! I’m Charlie, your wedding assistant. I know this loft and how it works. Ask me anything.",
@@ -28278,6 +28291,7 @@ var T = {
     tempnav_reset: "Vrátit skutečnou teplotu v Edmontonu",
     console_hint: "Otevřít rozbalovací konzoli",
     console_hint_close: "Zavřít rozbalovací konzoli",
+    console_resize: "Přetažením změnit výšku konzole",
     app_chat: "chat",
     app_call: "volání",
     chat_welcome: "Ahoj! Jsem Charlie, tvůj svatební průvodce. Znám tenhle loft a vím, jak to tu funguje. Zeptej se mě na cokoli.",
@@ -46882,8 +46896,10 @@ setOfficeProgress("pc", false);
   var dtOut   = document.getElementById("dropterm-out");
   var dtIn    = document.getElementById("dropterm-in");
   var dtFps   = document.getElementById("dropterm-fps");
+  var dtResize = document.getElementById("dropterm-resize");
   var dtHist = [], dtHistIdx = 0, dtWelcomed = false;
   var dtFpsRaf = null, dtFpsStarted = 0, dtFpsFrames = 0;
+  var dtResizePointer = null;
   var consoleTabDiscovered = false;
   var dtCtx = {
     out: dtOut, hist: dtHist, isMonitor: false,
@@ -46930,6 +46946,7 @@ setOfficeProgress("pc", false);
   }
   function closeDropTerm() {
     if (!dtPanel || !dtOpen()) return;
+    finishDropTermResize();
     dtPanel.classList.remove("open");
     dtPanel.setAttribute("aria-hidden", "true");
     stopDropTermFps();
@@ -46968,6 +46985,38 @@ setOfficeProgress("pc", false);
     if (!dtOpen()) return;
     if (document.hidden) stopDropTermFps(); else startDropTermFps();
   });
+  function resizeDropTerm(clientY) {
+    if (!dtPanel || !dtPanel.parentElement) return;
+    var r = dtPanel.parentElement.getBoundingClientRect();
+    if (!r.height) return;
+    var pct = Math.max(20, Math.min(82, (clientY - r.top) / r.height * 100));
+    dtPanel.style.setProperty("--dropterm-max-height", pct.toFixed(2) + "%");
+    if (dtResize) dtResize.setAttribute("aria-valuenow", String(Math.round(pct)));
+  }
+  function finishDropTermResize(pointerId) {
+    if (dtResizePointer == null || (pointerId != null && pointerId !== dtResizePointer)) return;
+    if (dtResize) { try { dtResize.releasePointerCapture(dtResizePointer); } catch (e) {} }
+    dtResizePointer = null;
+    if (dtPanel) dtPanel.classList.remove("resizing");
+  }
+  if (dtResize) {
+    dtResize.addEventListener("pointerdown", function (e) {
+      if (!dtOpen() || (e.button != null && e.button !== 0)) return;
+      e.preventDefault(); e.stopPropagation();
+      dtResizePointer = e.pointerId;
+      dtPanel.classList.add("resizing");
+      try { dtResize.setPointerCapture(e.pointerId); } catch (err) {}
+      resizeDropTerm(e.clientY);
+    });
+    dtResize.addEventListener("pointermove", function (e) {
+      if (dtResizePointer == null || e.pointerId !== dtResizePointer) return;
+      e.preventDefault(); e.stopPropagation();
+      resizeDropTerm(e.clientY);
+    });
+    dtResize.addEventListener("pointerup", function (e) { finishDropTermResize(e.pointerId); });
+    dtResize.addEventListener("pointercancel", function (e) { finishDropTermResize(e.pointerId); });
+    dtResize.addEventListener("click", function (e) { e.stopPropagation(); });
+  }
   if (dtIn) {
     dtIn.addEventListener("keydown", function (e) {
       e.stopPropagation(); // game shortcuts don't fire while typing here

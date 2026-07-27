@@ -7,10 +7,11 @@
 // Node against a tiny fake DOM, the three behaviours that don't need a real browser:
 //
 //   1. Backtick TOGGLES the drop-down open/closed (via window.__toggleDropTerm), on any scene.
-//   2. Esc closes it.
+//   2. Esc stays inside it while backtick closes it.
 //   3. A line typed into the drop-down runs through the SHARED interpreter (consoleRun) and
 //      its output lands in the DROP-DOWN's own scrollback (#dropterm-out), not the monitor's —
 //      proving the activeConsoleOut re-pointing + ctx wiring actually route the print.
+//   4. Dragging the lower edge changes a session-only, bounded height.
 //
 // It does this by EXTRACTING the real source of consolePrint + the drop-down block (openDropTerm/
 // closeDropTerm/toggleDropTerm/dtCtx + the #dropterm-in keydown handler) straight out of
@@ -50,8 +51,10 @@ assert(/consoleTabComplete\(dtIn\)/.test(html), "the drop-down Tab handler reuse
 // ── 3. The panel HTML + reset hook exist ────────────────────────────────────────────────
 assert(/<div id="dropterm"[\s\S]*?id="dropterm-out"[\s\S]*?id="dropterm-in"/.test(html), "drop-down panel HTML (#dropterm / -out / -in) is present in .hunt-viewport");
 assert(/id="dropterm-fps"[^>]*>FPS --</.test(html), "drop-down panel includes a top-corner FPS readout");
+assert(/id="dropterm-resize"[^>]*role="separator"/.test(html), "drop-down panel includes a lower-edge resize handle");
 assert(/#dropterm\{[\s\S]*?transform:translateY\(-102%\)/.test(html), "#dropterm slides in from the top (transform:translateY off-screen by default)");
 assert(/#dropterm\.open\{transform:translateY\(0\)/.test(html), "#dropterm.open slides down into view");
+assert(/max-height:var\(--dropterm-max-height, 48%\)/.test(html), "drop-down height is a session-only CSS value with a 48% default");
 assert(/function startDropTermFps\(\)[\s\S]*?elapsed >= 750/.test(html), "FPS readout uses a rolling requestAnimationFrame sample");
 assert(/function openDropTerm\(\)[\s\S]*?startDropTermFps\(\)/.test(html) && /function closeDropTerm\(\)[\s\S]*?stopDropTermFps\(\)/.test(html), "FPS sampling starts and stops with the drop-down panel");
 assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) window\.__resetDropTerm\(\);/.test(html), "the game reset wipes the drop-down session (__resetDropTerm wired into reset)");
@@ -63,6 +66,12 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
     this.id = id || ""; this.value = ""; this.childNodes = []; this._cls = {};
     this.className = ""; this.selectionStart = 0; this.scrollTop = 0; this.scrollHeight = 0;
     this._listeners = {};
+    this._style = {};
+    this.style = {
+      setProperty: function (k, v) { this._owner._style[k] = v; },
+      getPropertyValue: function (k) { return this._owner._style[k] || ""; },
+      _owner: this
+    };
   }
   El.prototype.appendChild = function (n) { this.childNodes.push(n); };
   El.prototype.removeChild = function (n) { var i = this.childNodes.indexOf(n); if (i >= 0) this.childNodes.splice(i, 1); };
@@ -71,6 +80,8 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
   El.prototype.setSelectionRange = function () {};
   El.prototype.focus = function () {};
   El.prototype.blur = function () {};
+  El.prototype.setPointerCapture = function (id) { this._captured = id; };
+  El.prototype.releasePointerCapture = function (id) { if (this._captured === id) this._captured = null; };
   El.prototype.addEventListener = function (t, fn) { (this._listeners[t] = this._listeners[t] || []).push(fn); };
   El.prototype.dispatch = function (t, ev) { (this._listeners[t] || []).forEach(function (fn) { fn(ev); }); };
   Object.defineProperty(El.prototype, "textContent", { set: function (v) { this._text = v; }, get: function () { return this._text; } });
@@ -84,9 +95,13 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
   var dFps = new El("dropterm-fps");
   var dOut = new El("dropterm-out");
   var dIn = new El("dropterm-in");
+  var dResize = new El("dropterm-resize");
+  var viewport = new El("viewport");
+  viewport.getBoundingClientRect = function () { return { top: 100, height: 1000 }; };
+  dropterm.parentElement = viewport;
   var monOut = new El("monitor-console-out"); // the monitor console's scrollback — must NOT receive the drop-down's output
 
-  var byId = { "dropterm": dropterm, "dropterm-fps": dFps, "dropterm-out": dOut, "dropterm-in": dIn, "monitor-console-out": monOut };
+  var byId = { "dropterm": dropterm, "dropterm-fps": dFps, "dropterm-out": dOut, "dropterm-in": dIn, "dropterm-resize": dResize, "monitor-console-out": monOut };
   var timers = [];
   var rafs = {}, nextRaf = 1;
   var sandbox = {
@@ -165,6 +180,16 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
   assert(/^FPS (59|60|61)$/.test(dFps._text), "the rolling sampler reports rendered-frame FPS", dFps._text);
   var welcomedInDrop = dOut.childNodes.length === 1 && dOut.childNodes[0]._text === "welcome to the loft console";
   assert(welcomedInDrop, "opening prints the welcome into the DROP-DOWN scrollback (not the monitor)", "monitor lines=" + monOut.childNodes.length);
+  var pev = function (id, y) { return { pointerId:id, button:0, clientY:y, preventDefault:function(){}, stopPropagation:function(){} }; };
+  dResize.dispatch("pointerdown", pev(7, 800));
+  assert(dropterm.style.getPropertyValue("--dropterm-max-height") === "70.00%" && dropterm.classList.contains("resizing"),
+    "lower-edge drag sets the open height from the viewport");
+  dResize.dispatch("pointermove", pev(7, 2000));
+  assert(dropterm.style.getPropertyValue("--dropterm-max-height") === "82.00%", "resize clamps at the lower-edge maximum");
+  dResize.dispatch("pointermove", pev(7, 0));
+  assert(dropterm.style.getPropertyValue("--dropterm-max-height") === "20.00%", "resize clamps at the lower-edge minimum");
+  dResize.dispatch("pointerup", pev(7, 0));
+  assert(!dropterm.classList.contains("resizing") && dResize._captured == null, "pointer release ends the resize cleanly");
   win.__toggleDropTerm();
   assert(!dropterm.classList.contains("open"), "backtick (toggle) again CLOSES the drop-down");
   assert(!win.__dropTermFpsRunning() && Object.keys(rafs).length === 0, "closing cancels the FPS sampler");

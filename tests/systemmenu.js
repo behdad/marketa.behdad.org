@@ -41,8 +41,9 @@ var HARNESS = [
   "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('The Loft: where artificial meets higher intelligence.')>=0);",
   "  S('about_type',{title:parseFloat(getComputedStyle(about.querySelector('.monitor-about-title')).fontSize),copy:parseFloat(getComputedStyle(about.querySelector('.monitor-about-copy')).fontSize),motto:parseFloat(getComputedStyle(about.querySelector('.monitor-about-motto')).fontSize)});",
   "  S('about_fit_en',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.setLang('cs'); S('about_fit_cs',inside(about.querySelector('.monitor-about-bg'),about.querySelectorAll('.monitor-about-mark,.monitor-about-title,.monitor-about-copy,.monitor-about-motto'))); window.setLang('en');",
-  "  window.__killMonitorAbout(); await sleep(40); S('about_killing',about.classList.contains('killing')&&about.textContent.indexOf('about:blank')>=0);",
-  "  await sleep(2400); S('about_killed',!about.classList.contains('open')&&!mon.classList.contains('show-about')&&!window.__monitorAppRunning('about')&&mon.classList.contains('show-caps'));",
+  "  window.__killMonitorAbout(); await sleep(300); var aboutRings=about.querySelectorAll('.monitor-about-portal-ring');",
+  "  S('about_killing',about.classList.contains('killing')&&about.textContent.indexOf('about:eternity')>=0&&about.textContent.indexOf('about:blank')<0&&aboutRings.length===4&&!!about.querySelector('.monitor-about-portal-core')&&document.getElementById('hunt-caption').textContent==='Have you tried turning reality off and on again?'&&T.cs.hunt.df_about_quip==='Zkoušeli jste realitu vypnout a znovu zapnout?');",
+  "  await sleep(2200); S('about_killed',!about.classList.contains('open')&&!mon.classList.contains('show-about')&&!window.__monitorAppRunning('about')&&mon.classList.contains('show-caps'));",
   "  window.__monitorSystemAction('credits'); await sleep(80); var credits=document.getElementById('monitor-credits-layer');",
   "  S('credits_open',credits.classList.contains('open')&&credits.textContent.indexOf('Markéta')>=0&&credits.textContent.indexOf('Kasra')<credits.textContent.indexOf('Irene')&&credits.textContent.indexOf('FontTools')>=0&&credits.textContent.indexOf('made with love by behdad, Claude & Codex')>=0&&credits.textContent.indexOf('July 2026')>=0);",
   "  S('credits_type',{title:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-title')).fontSize),name:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-name')).fontSize),body:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-software')).fontSize)});",
@@ -106,7 +107,7 @@ ok("enlarged system-menu type fits in English and Czech", s.menu_fit_en === true
 ok("System reports live diagnostics, fits both languages, and ordinary close retains its task", s.system_open === true && s.system_fit_en === true && s.system_fit_cs === true && s.system_closed === true);
 ok("System is searchable without receiving a desktop tile", s.system_search === true);
 ok("System context-menu Kill prints escaping bugs, owns bilingual copy, and clears its task", s.system_context === true && s.system_killing === true && s.system_killed === true);
-ok("About is a searchable running app with an about:blank Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
+ok("About is a searchable running app with an about:eternity portal Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
 ok("About title, copy, and motto use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.motto >= 2.2);
 ok("enlarged About copy fits in English and Czech", s.about_fit_en === true && s.about_fit_cs === true);
 ok("Credits rolls people, software, and the closing line", s.credits_open === true);

@@ -736,7 +736,8 @@ range uses half-hour units. Reset visibility is derived from an explicit
 `?time=` override, not the synthetic day-lapse clock.
 
 The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat,
-Browser, and System their own staged gag before teardown. They all use `__runMonitorDeathFlash` so
+Browser, System, and About their own staged gag before teardown. They all use
+`__runMonitorDeathFlash` so
 cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.
 Call first clears every owned connect/goodbye timer and ambient source, then drops its signal bars
 and waveform before the silent hang-up. Music cancels track fades/snippets, scratches and slows the

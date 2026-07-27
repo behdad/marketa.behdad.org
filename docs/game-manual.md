@@ -475,7 +475,8 @@ and then a portrait, dragging it, or using `Tab`, the arrow keys, and `Enter`.
 An intentional Caps Lock on/off cycle also unlocks it. The lock affects only the
 computer and survives leaving the monitor and continuing after a reload. **Reboot** and
 **Shut down** perform a clean power cycle and clear running app sessions. **About**
-introduces The Loft without leaving the game. **Credits**
+introduces The Loft without leaving the game; its **Kill** opens a brief infinity
+portal to `about:eternity`. **Credits**
 rolls the people and open-source software behind the loft over its ever-burning fire.
 
 Tap the magnifying glass in the desktop menu bar, or type an app name while the

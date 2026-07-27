@@ -3715,13 +3715,29 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-about-title{fill:#453a31;font:600 5px/1 Fraunces,serif}
 .monitor-about-copy{fill:#5f5348;font:2.4px/1 "Source Serif 4",serif}
 .monitor-about-motto{fill:#8e3a4a;font:italic 2.2px/1 "Source Serif 4",serif}
-.monitor-about-blank{opacity:0;fill:#453a31;font:2.8px/1 monospace;text-anchor:middle;pointer-events:none}
+.monitor-about-eternity{opacity:0;pointer-events:none}
+.monitor-about-eternity-label{fill:#453a31;font:2.8px/1 monospace;text-anchor:middle}
+.monitor-about-portal-ring{fill:none;stroke-linecap:round}
+.monitor-about-portal-ring.wine{stroke:#8e3a4a}
+.monitor-about-portal-ring.blue{stroke:#4a6b94}
+.monitor-about-portal-core{fill:none;stroke:#8e3a4a;stroke-width:.75;stroke-linecap:round;stroke-linejoin:round}
 .monitor-about-layer.killing .monitor-about-normal{opacity:0}
-.monitor-about-layer.killing .monitor-about-blank{opacity:1}
+.monitor-about-layer.killing .monitor-about-eternity{opacity:1}
+#monitor-about-layer.killing #monitor-about-ring-1{animation:about-portal-ring-a 1.15s ease-in-out infinite}
+#monitor-about-layer.killing #monitor-about-ring-2{animation:about-portal-ring-b 1.15s .12s ease-in-out infinite}
+#monitor-about-layer.killing #monitor-about-ring-3{animation:about-portal-ring-a 1.15s .24s ease-in-out infinite}
+#monitor-about-layer.killing #monitor-about-ring-4{animation:about-portal-ring-b 1.15s .36s ease-in-out infinite}
+#monitor-about-layer.killing #monitor-about-portal-core{animation:about-portal-core-motion 1.15s ease-in-out infinite}
 .monitor-about-close{cursor:pointer;outline:none}
 .monitor-about-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
 .monitor-about-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
 .monitor-about-close:hover circle,.monitor-about-close:focus circle{fill:#a94a5d;stroke-width:.62}
+@keyframes about-portal-ring-a{0%,100%{opacity:.3;stroke-width:.35}50%{opacity:1;stroke-width:1.1}}
+@keyframes about-portal-ring-b{0%,100%{opacity:.85;stroke-width:.9}50%{opacity:.25;stroke-width:.3}}
+@keyframes about-portal-core-motion{0%,100%{opacity:.65;stroke-width:.65}50%{opacity:1;stroke-width:1.15}}
+@media (prefers-reduced-motion:reduce){
+#monitor-about-layer.killing #monitor-about-ring-1,#monitor-about-layer.killing #monitor-about-ring-2,#monitor-about-layer.killing #monitor-about-ring-3,#monitor-about-layer.killing #monitor-about-ring-4,#monitor-about-layer.killing #monitor-about-portal-core{animation:none}
+}
 .monitor-system-info-layer{opacity:0;visibility:hidden;pointer-events:none}
 .monitor-system-info-layer.open{opacity:1;visibility:visible;pointer-events:auto;cursor:default}
 .monitor-system-info-bg{fill:#f4ecdf;stroke:#8e3a4a;stroke-width:.42}
@@ -27292,6 +27308,7 @@ var T = {
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie has left the chat.", // caption after Chat's context collapses and clears
       df_system_quip: "System killed. The bugs survived.", // caption under System's escaping bug-report receipt
+      df_about_quip: "Have you tried turning reality off and on again?", // caption under About's infinity portal
       kitchen: "Turn on La Maz → run El Maz → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -28406,6 +28423,7 @@ var T = {
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie odešel z chatu.", // caption after Chat's context collapses and clears
       df_system_quip: "Systém ukončen. Chyby přežily.", // caption under System's escaping bug-report receipt
+      df_about_quip: "Zkoušeli jste realitu vypnout a znovu zapnout?", // caption under About's infinity portal
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -46138,6 +46156,8 @@ setOfficeProgress("pc", false);
   }
   function openMonitorAbout() {
     if (!monitorAboutLayer) return false;
+    if (monitorAboutLayer.classList.contains("killing") && window.__deathFlashCleanup)
+      window.__deathFlashCleanup();
     closeMonitorSystemMenu();
     stopSaver();
     clearTimeout(monitorAboutKillTimer);
@@ -46155,12 +46175,23 @@ setOfficeProgress("pc", false);
     if (!monitorAboutLayer) return false;
     if (!monitorAboutLayer.classList.contains("open")) openMonitorAbout();
     clearTimeout(monitorAboutKillTimer);
+    monitorAboutLayer.classList.remove("killing");
+    void monitorAboutLayer.getBBox();
     monitorAboutLayer.classList.add("killing");
-    monitorAboutKillTimer = setTimeout(function () {
+    var finish = function () {
       monitorAboutKillTimer = null;
       closeMonitorAbout();
       monitor.classList.add("show-caps");
-    }, 2400);
+    };
+    if (!window.__runMonitorDeathFlash) {
+      monitorAboutKillTimer = setTimeout(finish, 2400);
+      return true;
+    }
+    window.__runMonitorDeathFlash({
+      beats: [{ key: "df_about_quip", at: 220 }],
+      dur: 2400,
+      close: finish
+    });
     return true;
   }
   window.__killMonitorAbout = killMonitorAbout;
@@ -46688,11 +46719,26 @@ setOfficeProgress("pc", false);
     var aboutMotto = mkEl("text", { x: 260, y: 186.5, "class": "monitor-about-motto",
       "data-i": "mon_sys_tagline_1" }, aboutNormal);
     aboutMotto.textContent = (T[document.documentElement.lang] || T.en).mon_sys_tagline_1;
-    var aboutBlank = mkEl("text", { x: 316, y: 176.5, "class": "monitor-about-blank" }, monitorAboutLayer);
-    aboutBlank.textContent = "about:blank";
+    var aboutEternity = mkEl("g", { "class": "monitor-about-eternity" }, monitorAboutLayer);
+    [
+      [1, 8, 4, "wine", .7],
+      [2, 14, 7, "blue", .55],
+      [3, 21, 10, "wine", .45],
+      [4, 29, 13.5, "blue", .35]
+    ].forEach(function (ring) {
+      mkEl("ellipse", { id: "monitor-about-ring-" + ring[0], cx: 316, cy: 173,
+        rx: ring[1], ry: ring[2], "class": "monitor-about-portal-ring " + ring[3],
+        "stroke-width": ring[4] }, aboutEternity);
+    });
+    mkEl("path", { id: "monitor-about-portal-core",
+      d: "M306 173 C309 167 313 167 316 173 C319 179 323 179 326 173 C323 167 319 167 316 173 C313 179 309 179 306 173 Z",
+      "class": "monitor-about-portal-core" }, aboutEternity);
+    var aboutEternityLabel = mkEl("text", { x: 316, y: 192,
+      "class": "monitor-about-eternity-label" }, aboutEternity);
+    aboutEternityLabel.textContent = "about:eternity";
     var aboutClose = mkEl("g", { "class": "monitor-about-close", role: "button",
       tabindex: "0", "data-aria-i": "install_dismiss",
-      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorAboutLayer);
+      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, aboutNormal);
     mkEl("circle", { cx: 375, cy: 157, r: 2.15 }, aboutClose);
     var aboutX = mkEl("text", { x: 375, y: 158.15 }, aboutClose); aboutX.textContent = "×";
     function dismissAbout(e) {

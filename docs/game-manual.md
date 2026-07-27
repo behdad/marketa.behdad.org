@@ -753,6 +753,7 @@ On Valentine's Day, Markéta carries roses in Cuddly-puddly, and tapping the
 heart garland sends kisses into the room.
 During Pride, a muted rainbow wash crosses the current room every ten seconds
 while the game is attended; trips and chemistry-card effects take visual priority.
+Selecting the summer solstice starts a daytime BBQ on the balcony.
 On Nowruz, the two haft-seen candles in the office can be snuffed and relit
 individually.
 

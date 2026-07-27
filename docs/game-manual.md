@@ -285,6 +285,9 @@ camera is moving.
 
 The balcony contains the smoker and grill, weather and sky interactions, the
 day/night celestial control, smoking-area details, and the main BBQ activity.
+The quiet grill beside the smoker keeps its dusty response while covered.
+Double-click it to remove or replace the fitted cover; while exposed, a single
+click opens or closes its real stainless lid.
 Double-click the sun or moon for the matching eclipse effect; a single click
 changes day or night.
 The wall thermometer carries Fahrenheit markings on the left and Celsius on

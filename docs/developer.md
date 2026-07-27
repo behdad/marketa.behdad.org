@@ -233,8 +233,8 @@ gates allow it. Live observations and derived rolls remain fresh; calls, cameras
 timers, spawned effects, runtimes, and live minigame loops stay stopped. Geometry owners capture only
 validated settled state and restore it in `afterStage`, never transient drag motion or reactions.
 Finite quantities are bounded, and in-flight actions normalize to a safe settled state before capture.
-App registries explicitly allowlist checkpoint-safe identities during both capture and restore; a
-foreground shell must always rebuild over its normal desktop so dismissal has a valid destination.
+Device checkpoints store physical shell state rather than painted app activity; restored shells land
+on a normal desktop or launcher so their next action always follows the ordinary fresh path.
 
 ### Trailer lifecycle
 

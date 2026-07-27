@@ -55,6 +55,9 @@ var HARNESS = [
   "    var bxBefore = gm ? gm.style.getPropertyValue('--balance-x') : '';",
   "    if (window.__summonGuests) window.__summonGuests(); await sleep(350);",
   "    report.steps.madlaHold = { bxWas: bxBefore, bxNow: gm?gm.style.getPropertyValue('--balance-x'):'', balanceSame: !!(gm && bxBefore && gm.style.getPropertyValue('--balance-x')===bxBefore), leaving: !!(gm&&gm.classList.contains('leaving')), stillCutter: !!(gm&&gm.classList.contains('bd-cutter')), stillVis: gm?getComputedStyle(gm).visibility:'(absent)' };",
+  "    var trimFloor=window.__trimFloorToCap, trimCalls=0; window.__trimFloorToCap=function(){trimCalls++;return trimFloor?trimFloor():0;};",
+  "    window.__endBdCakeCutting(); window.__trimFloorToCap=trimFloor;",
+  "    report.steps.madlaTrim = { calls: trimCalls };",
   "    // Goli is a GARDEN-figure adult who ALSO has a nook figure (the Ali+Goli duo). Per",
   "    // the owner's routing rule, with the party OFF her birthday brings her to the CUDDLY nook (NOT a",
   "    // party): the same instant the hat turns on, her nook figure is shown under it (the hard rule —",
@@ -115,6 +118,7 @@ else {
   if (s.madlaPre && s.madlaPre.guestsIn && s.madlaPre.madlaHidden === "hidden") pass("bug precondition set: floor populated (guests-in) with Madla still hidden off-floor"); else fail("Madla precondition (guests-in + madla hidden)", JSON.stringify(s.madlaPre));
   if (s.madla && s.madla.party && s.madla.room === "garden" && s.madla.cutter && s.madla.arrived && s.madla.figVis === "visible" && s.madla.crownVis === "visible") pass("populated-floor birthday (Madla): startBdCakeCutting FORCE-arrives the figure — visible under its crown (no floating crown)"); else fail("Madla populated-floor regression (arrived+visible under crown)", JSON.stringify(s.madla));
   if (s.madlaHold && s.madlaHold.balanceSame && !s.madlaHold.leaving && s.madlaHold.stillCutter && s.madlaHold.stillVis === "visible") pass("Madla HOLDS at the cake through a rebalance — the cutter isn't glided off to a slot/corner"); else fail("Madla holds at cake through rebalance (no drift to corner)", JSON.stringify(s.madlaHold));
+  if (s.madlaTrim && s.madlaTrim.calls === 1) pass("ending the birthday cake trims forced arrivals back to the floor cap"); else fail("birthday cake end trims floor", JSON.stringify(s.madlaTrim));
   if (s.goli && s.goli.bd && s.goli.room === "cuddly" && s.goli.party === false && !s.goli.cakeOn && s.goli.figShown && s.goli.hatVisible === "visible") pass("party-OFF garden-adult reveal (Goli) brings her to the NOOK — figure shown AND hat on it (no floating adornment)"); else fail("Goli nook reveal + hat-on-figure", JSON.stringify(s.goli));
   if (s.elisabeth && s.elisabeth.bd && s.elisabeth.room === "office" && s.elisabeth.bodyBd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("non-party Elisabeth routes to the Lübeck call wearing her crown"); else fail("Elisabeth Lübeck-call crown", JSON.stringify(s.elisabeth));
   if (s.madlaCall && s.madlaCall.bd && s.madlaCall.room === "office" && s.madlaCall.bodyBd && s.madlaCall.crownVis === "visible") pass("non-party Madla (Lübeck) → LAPTOP call (office), her crown lit on the figure IN the call scene"); else fail("Madla lübeck-call crown", JSON.stringify(s.madlaCall));

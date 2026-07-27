@@ -67721,6 +67721,14 @@ async def localfont(name):
       else window.setCaption(!window.__pragueCalled ? "office_call" : (!window.__pcPlayed ? "office_computer" : "office_hint")); // lights back on: keep pointing at the current step
     }
   }
+  function settleLampState(lampDimmed, pendantDimmed) {
+    var states = [!!lampDimmed, !!pendantDimmed];
+    lampIds.forEach(function (id, index) {
+      var el = document.getElementById(id);
+      if (el) el.classList.toggle("dimmed", states[index]);
+    });
+    updateRoomDim();
+  }
   lampIds.forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -67732,9 +67740,9 @@ async def localfont(name):
   // light both office lamps AND clear the room-dim scrim in one shot (the party uses this — just
   // removing .dimmed leaves #office-lamp-dim stuck dark, which read as "broken")
   window.__lightOfficeLamps = function () {
-    lampIds.forEach(function (id) { var el = document.getElementById(id); if (el) el.classList.remove("dimmed"); });
-    updateRoomDim();
+    settleLampState(false, false);
   };
+  window.__settleOfficeLamps = settleLampState;
 })();
 // The holiday tree's three tap zones. Click-only by design: the scene takes no keydown
 // (Space/Enter are claimed document-capture), and the group carries no a11y attrs.
@@ -91978,7 +91986,11 @@ function spawnDustMote(container) {
 
     var o = puzzle.office || {};
     setOfficeProgress("prague", !!o.prague); setOfficeProgress("pc", !!o.pc);
-    checkpointToggle("office-lamp", "dimmed", !!o.lamp); checkpointToggle("office-pendant", "dimmed", !!o.pendant);
+    if (window.__settleOfficeLamps) window.__settleOfficeLamps(!!o.lamp, !!o.pendant);
+    else {
+      checkpointToggle("office-lamp", "dimmed", !!o.lamp);
+      checkpointToggle("office-pendant", "dimmed", !!o.pendant);
+    }
     checkpointToggle("office-stainedglass", "done", !!o.glass);
     if (window.__updateOfficeNudges) window.__updateOfficeNudges();
     updateKitchenInvite();
@@ -92133,6 +92145,11 @@ function spawnDustMote(container) {
   function applyCheckpoint(saved) {
     hideRecoveryGate();
     restoreCheckpointPuzzle(saved.puzzle);
+    // A checkpoint predating the adapter registry (including the deliberately compact portable
+    // handoff) has no systems property at all. Its legacy puzzle fields remain authoritative
+    // until the save below captures a modern systems map. A present map is modern: missing rows
+    // inside it intentionally settle those subsystems to their fresh defaults.
+    var hasSystems = Object.prototype.hasOwnProperty.call(saved, "systems");
     var p = saved.progress || {}, savedMax = Math.max(0, Math.min(STAGES.length - 1, parseInt(p.maxUnlocked, 10) || 0));
     setMaxUnlocked(0, true); unlockThrough(savedMax);
     setSecondRound(!!p.phase2, { releaseHeld: false });
@@ -92140,16 +92157,16 @@ function spawnDustMote(container) {
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
     if (window.__pacmanRestore) window.__pacmanRestore(saved.pacman);
-    if (window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "beforeStage");
+    if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "beforeStage");
     // Restore through the complete party-mode owner, not only its scene half. The balcony
     // switch and persistent UV intent are also toggle state: if they remain at their fresh-page
     // defaults, the first `p` after Continue only reconciles the switch and cannot stop the party.
     if (window.__setPartyMode) window.__setPartyMode(!!p.party, true, false);
     else if (p.party && window.__setGardenParty) window.__setGardenParty(true, false);
-    if (p.bbq && window.bbq) window.bbq(true);
+    if (window.bbq) window.bbq(!!p.bbq);
     if (window.__setDayNight) window.__setDayNight(!p.daylight);
     goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
-    if (window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "afterStage");
+    if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "afterStage");
     endAttract();
     saveCheckpoint();
   }

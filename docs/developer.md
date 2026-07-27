@@ -227,7 +227,9 @@ retain their own page-mode behavior.
 
 Checkpoint payloads may carry a `systems` map populated by subsystem-owned adapters. Each adapter
 validates its compact row and restores around the room transition (`beforeStage`, then `afterStage`
-for geometry-dependent state); a missing row means that subsystem's fresh default. Continue restores
+for geometry-dependent state). An absent map identifies a legacy/portable payload, so compatibility
+fields remain authoritative until the post-restore save migrates it; a missing row inside a present
+map means that subsystem's fresh default. Continue restores
 durable intent and settled identity. Stable room utilities may resume once their normal room/focus
 gates allow it. Live observations and derived rolls remain fresh; calls, cameras, dialogs, active
 timers, spawned effects, runtimes, and live minigame loops stay stopped. Geometry owners capture only

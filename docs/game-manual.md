@@ -440,7 +440,7 @@ computer's menu bar to open it. The live time beside it opens Clock, with the
 same Edmonton, Prague, Tehran, and Lübeck times, wedding countdowns, play time,
 and game-time controls as the phone Clock. Reset appears only after choosing a
 pretend time. The monitor slider moves minute by minute; the phone keeps larger
-half-hour steps. While **Day at the Loft** runs, both scene-corner date and time
+half-hour steps. While **Timelapse** runs, both scene-corner date and time
 controls remain visible, then return to their usual URL-driven visibility when
 the day stops.
 
@@ -766,7 +766,7 @@ room illustration. Heavy effects pause or limit work when their room is not
 visible or the browser is in the background.
 
 The Calendar and Clock apps provide friendly controls for simulated game time.
-**Day at the Loft** runs the balcony sky through a full day in about 30 seconds
+**Timelapse** runs the balcony sky through a full day in about 30 seconds
 and repeats until stopped; press `Escape` or its Stop control to end it.
 Power users can also use the `?date=` and `?time=` URL parameters. The lower
 date/time overlay appears only when at least one of those parameters is present.

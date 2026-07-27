@@ -46936,16 +46936,28 @@ setOfficeProgress("pc", false);
   // WebKit scaled-foreignObject caveats apply. It REUSES the same interpreter: every line
   // typed here runs through consoleRun(line, ctx) with ctx pointing at THIS surface's
   // scrollback/history/clear/quit, and Tab runs the shared consoleTabComplete on this input.
-  // Its own scrollback, history, and welcome are self-contained; nothing accumulates.
+  // Its own history is session-local; scrollback survives reloads until a full reset.
   var dtPanel = document.getElementById("dropterm");
   var dtOut   = document.getElementById("dropterm-out");
   var dtIn    = document.getElementById("dropterm-in");
   var dtFps   = document.getElementById("dropterm-fps");
   var dtResize = document.getElementById("dropterm-resize");
   var dtHist = [], dtHistIdx = 0, dtWelcomed = false;
+  var DT_SCROLL_KEY = "loftDropTermScrollback";
   var dtFpsRaf = null, dtFpsStarted = 0, dtFpsFrames = 0;
   var dtResizePointer = null;
   var consoleTabDiscovered = false;
+  if (dtOut) {
+    try {
+      var dtSaved = localStorage.getItem(DT_SCROLL_KEY);
+      if (dtSaved) { dtOut.innerHTML = dtSaved; dtWelcomed = true; }
+    } catch (e) {}
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        try { localStorage.setItem(DT_SCROLL_KEY, dtOut.innerHTML); } catch (e) {}
+      }).observe(dtOut, { childList: true, subtree: true, characterData: true });
+    }
+  }
   var dtCtx = {
     out: dtOut, hist: dtHist, isMonitor: false,
     setHistIdx: function (n) { dtHistIdx = n; },
@@ -47015,6 +47027,7 @@ setOfficeProgress("pc", false);
   // __resetMonitorTermSession): empty scrollback, no history, welcome re-armed, closed.
   window.__resetDropTerm = function () {
     if (dtOut) dtOut.innerHTML = "";
+    try { localStorage.removeItem(DT_SCROLL_KEY); } catch (e) {}
     dtHist.length = 0; dtHistIdx = 0; dtWelcomed = false;
     if (dtIn) dtIn.value = "";
     closeDropTerm();

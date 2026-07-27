@@ -58,6 +58,9 @@ assert(/max-height:var\(--dropterm-max-height, 48%\)/.test(html), "drop-down hei
 assert(/function startDropTermFps\(\)[\s\S]*?elapsed >= 750/.test(html), "FPS readout uses a rolling requestAnimationFrame sample");
 assert(/function openDropTerm\(\)[\s\S]*?startDropTermFps\(\)/.test(html) && /function closeDropTerm\(\)[\s\S]*?stopDropTermFps\(\)/.test(html), "FPS sampling starts and stops with the drop-down panel");
 assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) window\.__resetDropTerm\(\);/.test(html), "the game reset wipes the drop-down session (__resetDropTerm wired into reset)");
+assert(/loftDropTermScrollback/.test(html) && /localStorage\.getItem\(DT_SCROLL_KEY\)/.test(html), "drop-down scrollback restores from localStorage");
+assert(/MutationObserver[\s\S]*?localStorage\.setItem\(DT_SCROLL_KEY, dtOut\.innerHTML\)/.test(html), "drop-down scrollback persists as output changes");
+assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset removes persisted drop-down scrollback");
 
 // ── 4. Functional: extract the REAL drop-down block + consolePrint and drive it ──────────
 (function () {

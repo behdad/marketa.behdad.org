@@ -279,7 +279,7 @@ and a projector. The wall screen cycles through fireplace, workout, night-sky
 piano, aquarium, Totoro, and off. It can temporarily take ownership of the
 foreground media controls and lower the party music. The piano channel reveals
 a one-octave play-along keyboard across the projection: tap its keys, or focus
-it and use the printed A–K/WETYU map. Pausing the backing channel leaves the
+it and use the printed ASDF/JKL; and WE/UIO map. Pausing the backing channel leaves the
 keys playable for a solo, including during the party. Hannah may also text an
 actionable invitation that opens this channel. The witchy chest can release the
 cat; further taps, or `K`, prompt another antic.

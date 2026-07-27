@@ -74025,6 +74025,7 @@ document.addEventListener("keydown", function (e) {
   var wheels = { t: 0, u: 0 };             // 00 is never an answer, so the lock can't open on load
   var shown = { t: 0, u: 0 };              // the drum's rendered index — equals wheels[], except while parked on the wrap clone
   var failures = 0;
+  var contextUnlockOnly = false;
   var openTimers = [];   // the unlock's staged pop → fade → trip; a reset in the middle must not let them land
   function rollMonth() { return Math.random() < 0.5 ? 5 : 7; }
   function clearOpenTimers() { openTimers.forEach(clearTimeout); openTimers = []; }
@@ -74071,7 +74072,7 @@ document.addEventListener("keydown", function (e) {
       sh.classList.add("popped");
     }
   }
-  function unlock(fanfare) {
+  function unlock(fanfare, skipTrip) {
     if (!boxLocked) return;
     boxLocked = false;
     clearOpenTimers();
@@ -74085,7 +74086,7 @@ document.addEventListener("keydown", function (e) {
       openTimers.push(setTimeout(function () {
         resetWheels();
         syncLockVisual(false);
-        triggerRsvpTrip();
+        if (!skipTrip) triggerRsvpTrip();
       }, 320)); // the dial IS the entry — clear the panel first so it can't sit on top of the trip
     }, 800));
   }
@@ -74116,7 +74117,12 @@ document.addEventListener("keydown", function (e) {
       var p = panel();
       if (!p || !p.classList.contains("showing") || !boxLocked) return;
       var want = LOCK_DAY[boxLockMonth];
-      if (wheels.t === want[0] && wheels.u === want[1]) { unlock(true); return; }
+      if (wheels.t === want[0] && wheels.u === want[1]) {
+        var skipTrip = contextUnlockOnly;
+        contextUnlockOnly = false;
+        unlock(true, skipTrip);
+        return;
+      }
       playBoxlockDetentSound();
       submit.classList.remove("denied"); void submit.getBoundingClientRect(); submit.classList.add("denied");
       failedHint();
@@ -74170,7 +74176,8 @@ document.addEventListener("keydown", function (e) {
     button.type = "button"; button.className = "ctx-open"; button.setAttribute("role", "menuitem");
     button.innerHTML = CTX_UNLOCK_ICO + "<span>" + tr("boxlock_ctx_unlock") + "</span>";
     button.addEventListener("click", function (e) {
-      e.stopPropagation(); e.preventDefault(); closeContext(); unlock(false);
+      e.stopPropagation(); e.preventDefault(); closeContext();
+      openLockPanel(true);
     });
     ctxMenu.appendChild(button);
     ctxMenu.style.visibility = "hidden";
@@ -74259,8 +74266,9 @@ document.addEventListener("keydown", function (e) {
     tripPicker.setAttribute("aria-hidden", "false");
     document.addEventListener("keydown", tripPickerKey, true);
   }
-  function openLockPanel() {
+  function openLockPanel(fromContext) {
     if (!boxLocked) return;
+    contextUnlockOnly = !!fromContext;
     applyMonth();
     var p = panel();
     if (p) p.classList.add("showing");

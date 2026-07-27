@@ -741,7 +741,8 @@ to that game; later personal bests can recommend another remaining game.
   opens the phone Calendar as a clue. Set both day wheels, then press the single
   `Unlock` bar to check the answer; merely landing on the right digits does not open
   it. Each wrong answer shows a rotating clue. Right-clicking the locked box or
-  padlock offers **Unlock** without starting a trip; after it is open, right-clicking the box opens a trip
+  padlock offers **Unlock** for the same puzzle, but solving it there does not
+  immediately start a trip; after it is open, right-clicking the box opens a trip
   chooser. `T` cycles trips and `Shift+1` through `Shift+8` selects directly. Some
   variants are deliberately unavailable through typed actions while the party is active.
   Each trip briefly borrows the clue line for its own caption, then restores the

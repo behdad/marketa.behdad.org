@@ -744,7 +744,8 @@ opened. Prague dates prepare the family gathering and Prague call. Birthday and
 anniversary scenes can add greetings or cake, but private birthday dates are not
 part of assistant answers. Selecting World Polyamory Day on November 23 stops an
 active party and gathers Chinnel, Raffi, Markéta, and Behdad in Cuddly-puddly.
-Tap Chinnel or Raffi there for an affectionate couch reaction.
+Tap Chinnel or Raffi there for an affectionate couch reaction, or slide either
+of them sideways along the couch.
 
 The seasonal engine includes wedding, Pride, summer-solstice, St. John's Eve,
 Canada Day, summer, smoky, autumn, Mehregan, Halloween, St. Martin's Day and

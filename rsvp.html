@@ -6223,7 +6223,8 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .cuddly-visitor.vis-gifted .vis-gift{visibility:visible}
 #cuddly-polyamory-pair{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .6s ease}
 #loft-game-strip.polyamory-day:not(.party-on) #cuddly-polyamory-pair{opacity:1;visibility:visible;pointer-events:auto}
-#loft-game-strip.polyamory-day:not(.party-on) #cuddly-polyamory-pair .poly-hit{pointer-events:all;cursor:pointer}
+#loft-game-strip.polyamory-day:not(.party-on) #cuddly-polyamory-pair .poly-hit{pointer-events:all;cursor:grab}
+#loft-game-strip.polyamory-day:not(.party-on) #cuddly-polyamory-pair .poly-person.dragging .poly-hit{cursor:grabbing}
 #cuddly-polyamory-pair .poly-breathe{transform-box:fill-box;transform-origin:center bottom;animation:poly-couch-breathe 4.8s ease-in-out infinite}
 #cuddly-polyamory-pair .poly-raffi .poly-breathe{animation-delay:-2.4s}
 @keyframes poly-couch-breathe{0%,100%{transform:translateY(0) rotate(-.5deg)}50%{transform:translateY(-1.5px) rotate(.5deg)}}
@@ -30475,6 +30476,37 @@ document.addEventListener("click", function (e) {
   var pair = document.getElementById("cuddly-polyamory-pair");
   if (!pair) return;
   var reactionTimer = null;
+  var people = {
+    "cuddly-poly-raffi": { base: 318, min: 306, max: 344, offset: 0 },
+    "cuddly-poly-chinnel": { base: 366, min: 350, max: 412, offset: 0 }
+  };
+  var MIN_GAP = 38;
+  var drag = null, suppressClick = false;
+  function active() {
+    var strip = document.getElementById("loft-game-strip");
+    return !!(strip && strip.classList.contains("polyamory-day") && !strip.classList.contains("party-on"));
+  }
+  function localX(e) {
+    try {
+      var p = pair.ownerSVGElement.createSVGPoint();
+      p.x = e.clientX; p.y = e.clientY;
+      return p.matrixTransform(pair.getScreenCTM().inverse()).x;
+    } catch (err) { return e.clientX; }
+  }
+  function setOffset(person, value) {
+    var state = people[person.id];
+    if (!state) return;
+    var center = Math.max(state.min, Math.min(state.max, state.base + value));
+    if (person.id === "cuddly-poly-raffi") {
+      var chinnel = people["cuddly-poly-chinnel"];
+      center = Math.min(center, chinnel.base + chinnel.offset - MIN_GAP);
+    } else {
+      var raffi = people["cuddly-poly-raffi"];
+      center = Math.max(center, raffi.base + raffi.offset + MIN_GAP);
+    }
+    state.offset = center - state.base;
+    person.style.translate = state.offset ? state.offset + "px 0px" : "";
+  }
   function clearReaction() {
     clearTimeout(reactionTimer);
     reactionTimer = null;
@@ -30506,9 +30538,48 @@ document.addEventListener("click", function (e) {
     playHeartsSound(kind === "head" ? "cuddly-poly-raffi-head" : "cuddly-poly-chinnel-body");
     reactionTimer = setTimeout(clearReaction, 960);
   }
+  pair.addEventListener("pointerdown", function (e) {
+    if (drag || !active() || (e.button && e.button !== 0)) return;
+    var hit = e.target.closest && e.target.closest(".poly-hit");
+    var person = hit && hit.closest(".poly-person");
+    if (!person || !people[person.id]) return;
+    clearReaction();
+    suppressClick = false;
+    drag = { person: person, hit: hit, pointerId: e.pointerId, startX: localX(e), startOffset: people[person.id].offset, moved: false };
+    person.classList.add("dragging");
+    try { hit.setPointerCapture(e.pointerId); } catch (err) {}
+    e.stopPropagation();
+  });
+  pair.addEventListener("pointermove", function (e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    var dx = localX(e) - drag.startX;
+    if (Math.abs(dx) > 4) drag.moved = true;
+    if (drag.moved) {
+      suppressClick = true;
+      setOffset(drag.person, drag.startOffset + dx);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+  function endDrag(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    var finished = drag;
+    drag = null;
+    finished.person.classList.remove("dragging");
+    try { finished.hit.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  pair.addEventListener("pointerup", endDrag);
+  pair.addEventListener("pointercancel", endDrag);
+  pair.addEventListener("lostpointercapture", endDrag);
   pair.addEventListener("click", function (e) {
     var hit = e.target.closest && e.target.closest(".poly-hit");
     if (!hit) return;
+    if (suppressClick) {
+      suppressClick = false;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     e.stopPropagation();
     react(hit.getAttribute("data-poly-reaction"));
   });
@@ -95363,7 +95434,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons, #kitchen-bar-cooler";
+  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #cuddly-polyamory-pair, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons, #kitchen-bar-cooler";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

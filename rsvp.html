@@ -36509,6 +36509,20 @@ setMusicPausedState(false);
 // figures are identity-specific; the seasonal scenes have two generic kid slots that can represent
 // any two assigned children. Borrowing locks the home assignment until the scene ends.
 var __balconyBorrowedKids = [], __balconyPlayKind = "";
+window.__balconySmokingPolicy = function () {
+  if (__balconyPlayKind && __balconyBorrowedKids.length) return "none";
+  var strip = document.getElementById("loft-game-strip");
+  var fireOn = !!window.__smoresOn || !!(strip && (
+    strip.classList.contains("season-carodejnice") ||
+    strip.classList.contains("season-chaharshanbe") ||
+    strip.classList.contains("svatojanska") ||
+    strip.classList.contains("sadeh")
+  ));
+  return fireOn ? "dj-only" : "all";
+};
+function balconyAttendanceChanged() {
+  if (window.__balconyHangoutAttendanceChanged) window.__balconyHangoutAttendanceChanged();
+}
 function balconyAssignedKids() {
   var out = window.__cuddlyAssignedKidNames ? window.__cuddlyAssignedKidNames().slice() : [];
   // Outside a party there is no dance-floor assignment to borrow from, but the resident
@@ -36543,6 +36557,7 @@ function setSeasonalBalconyKids(kind, on) {
   if (!on) {
     if (__balconyPlayKind === kind) { __balconyBorrowedKids = []; __balconyPlayKind = ""; }
     if (window.__assignPartyKids) window.__assignPartyKids(false); // release borrowed dancers back to the party/nook allocation
+    balconyAttendanceChanged();
     return [];
   }
   __balconyBorrowedKids = pickBalconyKids(balconyAssignedKids(), 2);
@@ -36552,6 +36567,7 @@ function setSeasonalBalconyKids(kind, on) {
     if (el) el.classList.toggle("balcony-kid-empty", i >= __balconyBorrowedKids.length);
   });
   if (window.__assignPartyKids) window.__assignPartyKids(false); // move borrowed dancers off the floor while they play outside
+  balconyAttendanceChanged();
   return __balconyBorrowedKids.slice();
 }
 window.__balconyBorrowedKidNames = function () { return __balconyBorrowedKids.slice(); };
@@ -36594,6 +36610,7 @@ window.__setSmores = function (on) {
     if (navid) navid.classList.remove("showing");
     if (window.__updateBalconyPhotog) window.__updateBalconyPhotog();
   }
+  balconyAttendanceChanged();
 };
 // Winter snowman: build it on demand on the balcony deck, two godkids playing a small snowball
 // toss around it. The DAYTIME winter counterpart to s'mores (the after-dark bonfire): the brick
@@ -84023,6 +84040,13 @@ function spawnDustMote(container) {
     var SMOKER_LANE = { lo: 508, hi: 648 };
     function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
     function onScreen() { return window.currentStageName === "balcony" && (!!window.__gardenPartyOn || bbqCrowdOn); }
+    function smokingPolicy() {
+      return window.__balconySmokingPolicy ? window.__balconySmokingPolicy() : "all";
+    }
+    function smokerAllowed(r) {
+      var policy = smokingPolicy();
+      return policy === "all" || (policy === "dj-only" && !!r.dj);
+    }
     // the smoke may only puff when the room is actually being watched AND focused (crickets rule)
     function smokeOk() { return onScreen() && !document.hidden && document.hasFocus() && !reduceMotion(); }
     function coupleOut() { return hangout.classList.contains("couple-out"); }
@@ -84196,6 +84220,7 @@ function spawnDustMote(container) {
       // wandered onto the floor/bar); the couple joins on the couple-out roll. Shuffle L→R. ──
       var smokerPool = ROSTER.filter(function (r) {
         if (!r.smoker) return false;
+        if (!smokerAllowed(r)) return false;
         if (r.couple && !coupleOut()) return false;   // couple only when the roll says so
         if (!r.dj && !r.couple && (!window.__partyGuestAttended || !window.__partyGuestAttended(r.name))) return false;
         if (elsewhere(r.name)) return false;          // one-room rule (dj name never matches → kept)
@@ -84236,8 +84261,8 @@ function spawnDustMote(container) {
       var hosts = bbqHostsOnBalcony ? ROSTER.filter(function (r) { return !!r.couple; }) : [];
       var dj = rosterByName("dj");
       var social = chosen.filter(function (r) { return !r.smoker; }).concat(hosts);
-      var smokers = chosen.filter(function (r) { return r.smoker; });
-      if (dj) smokers.push(dj);
+      var smokers = chosen.filter(function (r) { return r.smoker && smokerAllowed(r); });
+      if (dj && smokerAllowed(dj)) smokers.push(dj);
       var shown = social.concat(smokers);
       showFigures(shown);
       placeLane(shuffle(social.slice()), { lo: 58, hi: 302 });
@@ -84392,14 +84417,18 @@ function spawnDustMote(container) {
       perch.addEventListener("keydown", function (e) { if ((e.key === "Enter" || e.key === " ") && perch.classList.contains("up")) { e.preventDefault(); spinPerch(); } });
       perch.addEventListener("animationend", function () { perch.classList.remove("spinning"); });
     }
-    var shownOnce = false, preserveNextLayout = false;
+    var shownOnce = false, preserveNextLayout = false, shownSmokingPolicy = null;
     function show() {
       if (!shownOnce) {
         if (bbqCrowdOn) layoutBBQ();
         else { rollCouple(); layout(preserveNextLayout); }
         preserveNextLayout = false;
         shownOnce = true;
-      } // fresh roll of faces/order/spacing
+      } else if (shownSmokingPolicy !== smokingPolicy()) {
+        if (bbqCrowdOn) layoutBBQ();
+        else layout(true);
+      }
+      shownSmokingPolicy = smokingPolicy();
       resolveDj();
       hangout.classList.add("on");
       if (perch) { perch.classList.add("up", "hunt-hit"); perch.style.opacity = "1"; perch.style.pointerEvents = "auto"; perch.setAttribute("tabindex", "0"); perch.setAttribute("role", "button"); perch.removeAttribute("aria-hidden"); }
@@ -84412,6 +84441,7 @@ function spawnDustMote(container) {
       if (audienceBubble) dismissEggBubble(audienceBubble);
       audienceCommented = false;
       shownOnce = false; // next appearance re-rolls the couple + the whole layout
+      shownSmokingPolicy = null;
       shownSmokerNames = []; // nobody's out → the bar/floor stop excluding balcony names
       // clear every held drink so none strands into the next (freshly-rolled) appearance
       var drinks = hangout.querySelectorAll(".bh-drink.on");
@@ -84423,6 +84453,7 @@ function spawnDustMote(container) {
     // The single re-gate: called on party on/off (setGardenParty tail) and room change (goToStage).
     function update() { if (onScreen()) show(); else hide(); }
     window.__updateBalconyHangout = update;
+    window.__balconyHangoutAttendanceChanged = update;
     function setBBQSplit(on) {
       on = !!on;
       window.__balconyBBQOn = on;
@@ -86941,6 +86972,7 @@ function spawnDustMote(container) {
       if (!mehregan && window.__resetMehregan) window.__resetMehregan();
     }
     if (window.__reconcileBalconyKidsPlay) window.__reconcileBalconyKidsPlay();
+    if (window.__balconyHangoutAttendanceChanged) window.__balconyHangoutAttendanceChanged();
     if (window.__stampNightDepth) window.__stampNightDepth(); // the new date may never get properly dark
     if (window.__stampFernHour) window.__stampFernHour();      // ...and ?time= may have landed on midnight
     if (window.__updateSkyFireworks) window.__updateSkyFireworks(window.currentStageName); // new-year sky follows the preview

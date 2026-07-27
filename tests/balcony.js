@@ -176,6 +176,8 @@ win.__djB = false;                 // false → Sina spins? our code: __djB=fals
 win.__barCoupleNow = function () { return win.__barCoupleNowValue || null; };
 win.__barCoupleNowValue = null;
 win.__partyGuestAttended = function () { return true; }; // current controller admits only arrived party guests
+win.__balconySmokingPolicyValue = "all";
+win.__balconySmokingPolicy = function () { return win.__balconySmokingPolicyValue; };
 win.__partyDrinkPreference = function (name) {
   return ({ jay: "beer", spencer: "beer", bahareh: "wine", madla: "wine", athena: "wine",
     lauren: "wine", marketa: "diet-coke", behdad: "diet-coke", hamid: "any" })[name] || "any";
@@ -232,6 +234,7 @@ runner(
 assert(typeof win.__updateBalconyHangout === "function", "__updateBalconyHangout not published");
 assert(typeof win.__balconySmokerNow === "function", "__balconySmokerNow not published");
 assert(typeof win.__resetBalconyHangout === "function", "__resetBalconyHangout not published");
+assert(typeof win.__balconyHangoutAttendanceChanged === "function", "__balconyHangoutAttendanceChanged not published");
 
 // ── helpers to drive a fresh appearance ──────────────────────────────────────
 function shownIds() {
@@ -368,7 +371,28 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   setArrived("farhang", false);
 })();
 
-// ── 4. DRINKS: optional, but authored preferences never drift ────────────────
+// ── 4. FIRE / KID SAFETY: narrow the active smoker roster immediately ────────
+(function () {
+  win.__barCoupleNowValue = null;
+  ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
+  leave(); activate();
+  win.__balconySmokingPolicyValue = "dj-only";
+  win.__balconyHangoutAttendanceChanged();
+  var fireSmokers = shownIds().filter(function (id) { return SMOKERS.indexOf(id) !== -1; });
+  ok("a balcony fire leaves only the off-duty DJ smoking",
+    fireSmokers.length === 1 && fireSmokers[0] === "bh-dj" &&
+    JSON.stringify(win.__balconySmokerNow()) === JSON.stringify([win.__djB ? "sina" : "danesh"]));
+
+  win.__balconySmokingPolicyValue = "none";
+  win.__balconyHangoutAttendanceChanged();
+  ok("kids playing in the balcony corner clear every smoker",
+    shownIds().filter(function (id) { return SMOKERS.indexOf(id) !== -1; }).length === 0 &&
+    win.__balconySmokerNow() === null);
+  win.__balconySmokingPolicyValue = "all";
+  win.__balconyHangoutAttendanceChanged();
+})();
+
+// ── 5. DRINKS: optional, but authored preferences never drift ────────────────
 (function () {
   ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;
@@ -412,7 +436,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   ok("no authored preference ever renders as the wrong drink", !wrongDrink);
 })();
 
-// ── 5. NAME CARDS: the deck names people as fully as every other room ─────────
+// ── 6. NAME CARDS: the deck names people as fully as every other room ─────────
 // Tapping a figure pops the shared white card (window.__whoPop). It must carry the same
 // name · role · relationship · fun-fact the garden/cuddly/bar cast get — not a bare
 // "name · role" — and must read the RIGHT key: the roster's `name` is the one-room
@@ -456,7 +480,7 @@ console.log("balcony-hangout controller (Node DOM-shim):");
   delete win.__whoPop;
 })();
 
-// ── 6. TEARDOWN: nothing stranded after hide ─────────────────────────────────
+// ── 7. TEARDOWN: nothing stranded after hide ─────────────────────────────────
 (function () {
   ["bahareh", "patricia", "lauren", "farhang", "alireza", "behdad", "marketa"].forEach(function (n) { setArrived(n, false); });
   win.__barCoupleNowValue = null;

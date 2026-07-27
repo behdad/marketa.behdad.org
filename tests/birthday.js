@@ -98,6 +98,8 @@ var HARNESS = [
   "    var navidFig=document.querySelector('#garden-guests .g-navid');",
   "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(navidFig&&navidFig.classList.contains('bd-cutter')), arrived: !!(navidFig&&navidFig.classList.contains('arrived')), hatVisible: vis('#garden-guests .g-navid .bd-hat-navid') };",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
+  "    if (window.__setPartyKidFormation) window.__setPartyKidFormation('play'); await sleep(80);",
+  "    report.steps.navidAfterCake = { arrived: !!(navidFig&&navidFig.classList.contains('arrived')), honoree: !!(navidFig&&navidFig.classList.contains('bd-honoree')), cutter: !!(navidFig&&navidFig.classList.contains('bd-cutter')), away: !!(navidFig&&(navidFig.classList.contains('off-with-kids')||navidFig.classList.contains('off-at-games')||navidFig.classList.contains('off-asleep')||navidFig.classList.contains('off-at-bbq'))) };",
   "    // Hannah has a dance-floor model too, so the model-derived rule routes her to the cake.",
   "    window.birthday('hannah'); await sleep(250);",
   "    report.steps.hannah = { bd: hasCls('bd-hannah'), room: window.currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-hannah.bd-cutter'), hatVis: vis('#garden-guests .g-hannah .bd-hat-hannah') };",
@@ -140,6 +142,7 @@ else {
   if (s.daniel && s.daniel.bd && s.daniel.room === "office") pass("Daniel (Prague call) pans to the office"); else fail("Daniel prague reveal", JSON.stringify(s.daniel));
   if (s.chinnel && s.chinnel.room === "garden" && s.chinnel.party && s.chinnel.cakeOn && s.chinnel.cutter && s.chinnel.hatVis === "visible") pass("one Chinnel birthday activation starts the party and cake"); else fail("Chinnel one-activation birthday cake", JSON.stringify(s.chinnel));
   if (s.navid && s.navid.bd && s.navid.room === "garden" && s.navid.party && s.navid.cakeOn && s.navid.cutter && s.navid.arrived && s.navid.hatVisible === "visible") pass("Navid's birthday starts the party and brings him to the cake in his hat"); else fail("Navid party-room birthday cake", JSON.stringify(s.navid));
+  if (s.navidAfterCake && s.navidAfterCake.arrived && s.navidAfterCake.honoree && !s.navidAfterCake.cutter && !s.navidAfterCake.away) pass("the birthday honoree stays dancing after cake and cannot be reassigned"); else fail("birthday honoree persists all night", JSON.stringify(s.navidAfterCake));
   if (s.seasonClears && s.seasonClears.anyBd === false) pass("season() clears the birthday axis (no stray bd-* class)"); else fail("season clears bd axis", JSON.stringify(s.seasonClears));
   if (typeof s.list === "string" && /marketa/.test(s.list)) pass("birthday('list') prints the ring"); else fail("birthday list", JSON.stringify(s.list));
   if (r.errors.length === 0) pass("no uncaught JS errors across the run"); else fail("no uncaught JS errors", r.errors.slice(0,12).join("\n"));

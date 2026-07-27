@@ -82225,7 +82225,7 @@ function spawnDustMote(container) {
   function unitKey(u) { return u.id || u.sels[0]; }
   function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
   function unitIsWaiting(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && !el.classList.contains("arrived")); }
-  function unitHasCutter(g, u) { for (var i = 0; i < u.sels.length; i++) { var el = g.querySelector(u.sels[i]); if (el && el.classList.contains("bd-cutter")) return true; } return false; } // a unit currently cutting its birthday cake — never rotate it out mid-cut
+  function unitIsBirthdayHeld(g, u) { for (var i = 0; i < u.sels.length; i++) { var el = g.querySelector(u.sels[i]); if (el && (el.classList.contains("bd-cutter") || el.classList.contains("bd-honoree"))) return true; } return false; }
   function presentUnits(g, list) { return list.filter(function (u) { return unitIsPresent(g, u); }); }
   function waitingUnits(g, list) { return list.filter(function (u) { return unitIsWaiting(g, u); }); }
   function noteArrival(u) { recentArrivals.push(unitKey(u)); while (recentArrivals.length > 3) recentArrivals.shift(); }
@@ -82233,18 +82233,18 @@ function spawnDustMote(container) {
   // walk ONE figure back OUT to the gate; JS drops .arrived on animationend (→ hidden by .trickle)
   function walkFigureOut(g, sel, home) {
     var el = g.querySelector(sel);
-    if (!el || !el.classList.contains("arrived")) return;
+    if (!el || !el.classList.contains("arrived") || el.classList.contains("bd-honoree")) return;
     var walk = el.querySelector(".guest-walk");
     if (!walk || reducedMotionGuests() || document.hidden) { el.classList.remove("arrived", "walking", "leaving"); return; } // no anim / hidden tab: just vanish NOW. Critical for the hidden case — the gate-leave animation is PAUSED while hidden, so its animationend (which drops .arrived) never fires; without this, leavers never actually leave while arrivals keep coming → the floor piles up (owner: "room gets very crowded")
     walk.style.setProperty("--walk-x", walkDistFor(sel, home) + "px"); // stroll OUT from this figure's SLOT back to the gate
     el.classList.remove("walking");
     el.classList.remove("leaving"); void walk.getBoundingClientRect(); el.classList.add("leaving"); // restart cleanly
   }
-  function leaveEntry(entry, releaseWholeUnit) {
+  function leaveEntry(entry) {
     var g = document.getElementById("garden-guests");
     if (!g) return;
     for (var i = 0; i < entry.sels.length; i++) {
-      if (!releaseWholeUnit && arrivalSelIsChild(entry.sels[i]) && attendedGuestNames.has(guestNameFromSel(entry.sels[i]))) {
+      if (arrivalSelIsChild(entry.sels[i]) && attendedGuestNames.has(guestNameFromSel(entry.sels[i]))) {
         clearBalance(g, entry.sels[i]); // children stay assigned to dance/Cuddly/sleep after their adults leave the visible floor
         continue;
       }
@@ -82262,8 +82262,8 @@ function spawnDustMote(container) {
   // units in. Prefer not to evict someone who only just arrived.
   function rotateGuests(g, present, waiting) {
     var k = (Math.random() < 0.35 ? 2 : 1);
-    var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0 && !unitHasCutter(g, u); });
-    if (evictable.length < k) evictable = present.filter(function (u) { return !unitHasCutter(g, u); }); // never send the birthday cutter out the gate mid-cake
+    var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0 && !unitIsBirthdayHeld(g, u); });
+    if (evictable.length < k) evictable = present.filter(function (u) { return !unitIsBirthdayHeld(g, u); });
     var leaving = shuffleArr(evictable).slice(0, Math.min(k, evictable.length));
     leaving.forEach(function (u) { leaveEntry(u); });
     var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));
@@ -82391,8 +82391,8 @@ function spawnDustMote(container) {
   window.__updateGardenGuests = updateGardenGuests;
   function clearAllArrived(g) { // wipe every per-figure arrival flag + walk distance + balance slot (teardown)
     if (!g) return;
-    var walkers = g.querySelectorAll(".guest.arrived, .guest.walking, .guest.leaving");
-    for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving"); }
+    var walkers = g.querySelectorAll(".guest.arrived, .guest.walking, .guest.leaving, .guest.bd-honoree");
+    for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving", "bd-honoree"); }
     recentArrivals.length = 0;
     attendedGuestNames.clear();
     var walks = g.querySelectorAll(".guest-walk");
@@ -82471,35 +82471,14 @@ function spawnDustMote(container) {
     if (over <= 0) return 0;
     // prefer to evict the most-recently-arrived units first (the first-dance summon overflow),
     // so the earlier-settled ring is the one that stays. recentArrivals holds the newest keys.
-    var order = present.slice().sort(function (a, b) {
+    var order = present.filter(function (u) { return !unitIsBirthdayHeld(g, u); }).sort(function (a, b) {
       return recentArrivals.indexOf(unitKey(b)) - recentArrivals.indexOf(unitKey(a)); // newest (higher index) first
     });
     var walked = 0;
     for (var i = 0; i < order.length && over > 0; i++) {
       var before = presentGuestFigures(g);
-      leaveEntry(order[i], true);           // forced overflow releases the whole summoned unit, including children
-      over -= before - presentGuestFigures(g);
-      walked++;
-    }
-    // Independently managed child dancers are not ARRIVALS units, but they still count toward the
-    // floor cap. Release any remaining over-cap figures through the same gate walk.
-    var extras = g.querySelectorAll(".guest.arrived:not(.leaving)");
-    for (var e = extras.length - 1; e >= 0 && over > 0; e--) {
-      var el = extras[e];
-      if (el.classList.contains("g-behdad") || el.classList.contains("g-marketa") ||
-          el.classList.contains("off-with-kids") || el.classList.contains("off-at-games") ||
-          el.classList.contains("off-asleep") || el.classList.contains("off-at-bbq")) continue;
-      var sel = null;
-      for (var c = 0; c < el.classList.length; c++) if (el.classList[c].indexOf("g-") === 0) { sel = "." + el.classList[c]; break; }
-      if (!sel) continue;
-      var home = homeXBySel[sel];
-      if (home == null) {
-        var match = /translate\(\s*([-\d.]+)/.exec(el.getAttribute("transform") || "");
-        home = match ? parseFloat(match[1]) || 0 : 0;
-      }
-      var countBefore = presentGuestFigures(g);
-      walkFigureOut(g, sel, home);
-      var freed = countBefore - presentGuestFigures(g);
+      leaveEntry(order[i]);
+      var freed = before - presentGuestFigures(g);
       if (freed > 0) { over -= freed; walked++; }
     }
     // hand the floor back to the normal revolving door: re-arm the fill/rotation driver so it
@@ -82556,7 +82535,7 @@ function spawnDustMote(container) {
     guestsArrived = true;
     if (!g.classList.contains("guests-in")) { g.classList.add("guests-in", "trickle"); startHostSolo(); syncCrowdClear(); if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); }
     // re-enter tastefully: drop the members' .arrived so the walk restarts from the gate
-    for (var s = 0; s < entry.sels.length; s++) { var el = g.querySelector(entry.sels[s]); if (el) el.classList.remove("arrived"); }
+    for (var s = 0; s < entry.sels.length; s++) { var el = g.querySelector(entry.sels[s]); if (el && !el.classList.contains("bd-honoree")) el.classList.remove("arrived"); }
     arriveEntry(entry);
     if (everyoneArrived(g)) g.classList.remove("trickle"); // manual arrivals can complete the floor
     return entry.id;
@@ -82580,7 +82559,7 @@ function spawnDustMote(container) {
       }
       if (e.animationName === "guest-gate-leave") { // a figure finished strolling OUT — now hide it (drop .arrived) so the floor has room
         var figo = e.target.closest ? e.target.closest(".guest") : null;
-        if (figo) {
+        if (figo && !figo.classList.contains("bd-honoree")) {
           figo.classList.remove("leaving", "arrived");
           // forget its slot + drop --balance-x so a later fresh re-arrival recomputes from the gate
           for (var s = 0; s < figo.classList.length; s++) { var cl = figo.classList[s]; if (cl.indexOf("g-") === 0) delete slotXBySel["." + cl]; }
@@ -82897,7 +82876,7 @@ function spawnDustMote(container) {
       // bring the WHOLE roster onto the floor so the full crowd rings the couple for their first
       // dance (temporarily over GUEST_CAP; endFirstDance trims it back). __summonGuests crashes
       // everyone in at once (fillAllNow → rebalanceFloor spreads them evenly across the band).
-      if (window.__summonGuests) window.__summonGuests();
+      if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
       // remember the current dance, then switch to the reserved TANGO bed for the first dance
       // (crossfades the beds via the want-gates, glides the dancers into the couple formation).
       firstDancePrevDance = window.__partyDance || null;
@@ -83110,6 +83089,8 @@ function spawnDustMote(container) {
       var hb = group.querySelector(".g-behdad"), hm = group.querySelector(".g-marketa");
       var cx = (hb && hm) ? (figCenterX(hb) + figCenterX(hm)) / 2 : 328; // hosts sit at ~300 & ~356 → centre ~328
       var GAP = 42; // two birthday people flank the centre by this much each side
+      var priorHonorees = group.querySelectorAll(".bd-honoree");
+      for (var h = 0; h < priorHonorees.length; h++) priorHonorees[h].classList.remove("bd-honoree");
       bdCutters = []; bdSaved = [];
       list.forEach(function (w, i) {
         var g = group.querySelector(".g-" + w); if (!g) return;
@@ -83118,8 +83099,8 @@ function spawnDustMote(container) {
         // populated, so __bdCakeCut's guests-in-gated summon was skipped — the body stays
         // visibility:hidden while the crown floats over an empty spot. Force them arrived (the same
         // idiom slideGuestsIn/arriveEntry use); endBdCakeCutting → __trimFloorToCap thins any excess.
-        g.classList.remove("leaving"); g.classList.add("arrived");
-        g.classList.add("bd-cutter"); bdCutters.push(g);
+        g.classList.remove("leaving", "off-with-kids", "off-at-games", "off-asleep", "off-at-bbq");
+        g.classList.add("arrived", "bd-cutter", "bd-honoree"); bdCutters.push(g);
         bdSaved.push({ el: g, bx: g.style.getPropertyValue("--balance-x") }); // remember their spot to restore on end
         var target = (list.length > 1) ? (cx + (i === 0 ? -GAP : GAP)) : cx; // single centres; shared-day pair flanks
         g.style.setProperty("--balance-x", (target - authoredX(g)).toFixed(1) + "px"); // glide them between the hosts (CSS translate; no transform clobber)
@@ -84678,7 +84659,10 @@ function spawnDustMote(container) {
   }
   function syncBaharehParty() {
     var pg = document.querySelector("#garden-guests .g-bahareh");
-    if (pg) pg.classList.toggle("off-with-kids", baharehWithKids());
+    if (pg) {
+      if (pg.classList.contains("bd-honoree")) pg.classList.remove("off-with-kids");
+      else pg.classList.toggle("off-with-kids", baharehWithKids());
+    }
   }
   window.__syncBaharehParty = syncBaharehParty; // the cuddly-visit toggle pings this too (see the observer below)
   // ── EACH CHILD'S PRESENCE (never in two places at once) ──────────────────────
@@ -84688,6 +84672,7 @@ function spawnDustMote(container) {
     PARTY_KIDS.forEach(function (name) {
       var pg = document.querySelector("#garden-guests .g-" + name);
       if (!pg) return;
+      if (pg.classList.contains("bd-honoree")) { pg.classList.remove("off-with-kids"); return; }
       var run = gardenKidEl(name);
       pg.classList.toggle("off-with-kids", !!(run && run.classList.contains("chasing")));
     });
@@ -84758,6 +84743,11 @@ function spawnDustMote(container) {
     PARTY_FLOOR_KIDS.forEach(function (name) {
       var el = document.querySelector("#garden-guests .g-" + name);
       if (!el) return;
+      if (el.classList.contains("bd-honoree")) {
+        el.classList.remove("off-at-games", "off-asleep", "off-with-kids");
+        dancing.push(name);
+        return;
+      }
       var totoroWatch = !!window.__totoroWatchActive;
       var here = totoroWatch || kidAtParty(name);
       var dance = here && !forceNook && !window.__bbqSplitOn && Math.random() < kidDanceChance(name);
@@ -86415,9 +86405,9 @@ function spawnDustMote(container) {
       gameKids.forEach(function (name) { var el = gardenFigure(name); if (el) el.classList.remove("off-at-games"); });
       if (on) {
         bbqSelected.concat(bbqHostsOnBalcony ? ["behdad", "marketa", "hamid"] : ["hamid"]).forEach(function (name) {
-          var el = gardenFigure(name); if (el) el.classList.add("off-at-bbq");
+          var el = gardenFigure(name); if (el && !el.classList.contains("bd-honoree")) el.classList.add("off-at-bbq");
         });
-        gameKids.forEach(function (name) { var el = gardenFigure(name); if (el) el.classList.add("off-at-games"); });
+        gameKids.forEach(function (name) { var el = gardenFigure(name); if (el && !el.classList.contains("bd-honoree")) el.classList.add("off-at-games"); });
       } else {
         var formation = guests && guests.getAttribute("data-kid-formation");
         if (formation && window.__setPartyKidFormation) window.__setPartyKidFormation(formation); // restore the godsons' ordinary play/dance state
@@ -96259,7 +96249,7 @@ function spawnDustMote(container) {
     if (window.goToStage) window.goToStage("garden");
     setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before cutting
       if (!window.__gardenPartyOn) return;
-      if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
+      if (window.__summonGuests) window.__summonGuests();
       setTimeout(function () {
         if (!window.__gardenPartyOn) return;
         var ok = window.__startBdCakeCutting && window.__startBdCakeCutting(who);

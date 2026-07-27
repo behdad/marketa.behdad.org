@@ -120,10 +120,12 @@ At room level, with no app, menu, dialog, or text field consuming the key,
 phase 1. After the party has unlocked phase 2, these keys stop operating rooms:
 `Escape` and `Backspace` remain back/close controls, and `Enter` is inert.
 
-Right-click an interactive scene object (or use a two-finger tap on touch) for
-room actions. At the unsolved phase-one frontier the menu offers **Hint** and
-**Solve** (one guided step); **Back** appears after the kitchen. Objects with
-their own menu use that instead, and other scene areas retain the browser menu.
+Right-click anywhere in the scene (or use a two-finger tap on touch) for room
+actions. At the unsolved phase-one frontier the menu offers **Hint** and
+**Solve** (one guided step). **Escape** appears only when a current layer can
+consume it, and performs the same action as the keyboard key; it never changes
+rooms. Objects with their own menu use that instead, and the browser menu never
+covers the loft.
 
 When the scene or API opens a phone app directly, `Escape` or `Backspace` closes
 the phone instead of exposing its launcher. This applies to

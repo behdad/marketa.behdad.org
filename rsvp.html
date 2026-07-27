@@ -4539,7 +4539,6 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .mon-ctx button.ctx-sep{margin-top:3px; border-top:1px solid var(--rule); border-radius:0 0 4px 4px}
 .mon-ctx button:disabled{opacity:.4; cursor:default}
 .mon-ctx .ctx-ico{flex:0 0 auto; width:13px; height:13px; display:block}
-.scene-ctx{position:absolute}
 /* runtime death-flash (Kill a self-hosted runtime → a themed ~2s send-off, see __runMonitorDeathFlash).
    The killed line rides the caption bar; the on-screen visual is a #monitor-deathfx overlay per death. */
 #hunt-caption.caption-death{transition:none}
@@ -27005,7 +27004,7 @@ var T = {
       kitchen_warming_up: "Let it warm up first.",
       kitchen_bar: "Bar's open — watch <em>Pouria</em> mix a drink. Or order one. 🍸",
       kitchen_bar_night: "Bar is open. Ask <em>Pouria</em> for a drink… 🍸",
-      intro_guide: "Clues appear here. Right-click — or two-finger tap — objects for more. Click to continue.",
+      intro_guide: "Clues appear here. Right-click — or two-finger tap — in the scene for more. Click to continue.",
       flair_hint: "Move Pouria or use ← → to catch garnishes; dodge the wasp. Space pauses; Esc or × exits. 🍋",
       arcade_hint: "Move the chair or use ← → to aim; Space fires. Esc or × exits. 👾",
       tetris_hint: "Move: ← → · rotate: ↑ · drop: Space · exit: Esc.",
@@ -27725,7 +27724,7 @@ var T = {
     mon_ctx_copy: "Copy",
     mon_ctx_paste: "Paste",
     mon_ctx_select_all: "Select all",
-    scene_ctx_back: "Back",
+    scene_ctx_escape: "Escape",
     scene_ctx_hint: "Hint",
     scene_ctx_solve: "Solve",
     mon_sys_website: "About",
@@ -28077,7 +28076,7 @@ var T = {
       kitchen_warming_up: "Nejdřív ho nech zahřát.",
       kitchen_bar: "Bar je otevřený — sleduj, jak <em>Pouria</em> míchá drink. Nebo si nějaký objednej. 🍸",
       kitchen_bar_night: "Bar je otevřený. Řekni si <em>Pouriovi</em> o drink… 🍸",
-      intro_guide: "Tady se objevují nápovědy. Klikni na předměty pravým tlačítkem — nebo dvěma prsty — pro další možnosti. Klikni a pokračuj.",
+      intro_guide: "Tady se objevují nápovědy. Klikni ve scéně pravým tlačítkem — nebo dvěma prsty — pro další možnosti. Klikni a pokračuj.",
       flair_hint: "Pohybuj Pouriou nebo použij ← →, chytej ozdoby a vyhni se vosě. Mezerník pozastaví; Esc nebo × ukončí hru. 🍋",
       arcade_hint: "Pohybuj křeslem nebo použij ← → a zamiř; mezerník vystřelí. Esc nebo × ukončí hru. 👾",
       tetris_hint: "Pohyb: ← → · otočení: ↑ · pád: mezerník · konec: Esc.",
@@ -28792,7 +28791,7 @@ var T = {
     mon_ctx_copy: "Kopírovat",
     mon_ctx_paste: "Vložit",
     mon_ctx_select_all: "Vybrat vše",
-    scene_ctx_back: "Zpět",
+    scene_ctx_escape: "Escape",
     scene_ctx_hint: "Nápověda",
     scene_ctx_solve: "Vyřešit",
     mon_sys_website: "O nás",
@@ -77967,11 +77966,11 @@ function spawnDustMote(container) {
       navigateWithRoster(STAGES[stageIndex + 1]);
     }
   });
-  // Interactive scene objects share a small room-action fallback. Target-specific menus
-  // (DJ, devices, magic box…) claim the event first; bare scenery and solved kitchen objects
-  // keep the native browser menu when this fallback has nothing useful to offer.
+  // The whole loft shares a small room-action fallback. Target-specific menus (DJ, devices,
+  // magic box…) claim the event first; every other right-click inside the scene gets this menu
+  // so browser chrome never covers the game.
   (function () {
-    var menu = null;
+    var menu = null, menuEscapeTarget = null;
     function tr(key) {
       var l = document.documentElement.lang;
       return (T[l] && T[l][key]) || T.en[key] || key;
@@ -77980,6 +77979,7 @@ function spawnDustMote(container) {
       if (!menu) return;
       menu.remove();
       menu = null;
+      menuEscapeTarget = null;
       document.removeEventListener("keydown", onKey, true);
       document.removeEventListener("mousedown", onAway, true);
       document.removeEventListener("scroll", closeMenu, true);
@@ -78002,13 +78002,39 @@ function spawnDustMote(container) {
       b.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
+        var escapeTarget = menuEscapeTarget;
         closeMenu();
-        fn();
+        fn(escapeTarget);
       });
       return b;
     }
     function phaseOneFrontier() {
       return !window.__secondRound && stageIndex === maxUnlocked && stageIndex < STAGES.length - 1;
+    }
+    function escapeHasLayer() {
+      if ((window.__monitorZoomed && window.__monitorZoomed()) ||
+          (window.__laptopZoomed && window.__laptopZoomed()) ||
+          (window.__rosterOpen && window.__rosterOpen()) ||
+          (window.__laptopCallLive && window.__laptopCallLive()) ||
+          document.querySelector(".pb-dialog-backdrop, #sharecard-modal, .phone-backdrop.show")) return true;
+      var game = (window.__flairState && window.__flairState()) ||
+        (window.__arcadeState && window.__arcadeState()) ||
+        (window.__balconyTetrisState && window.__balconyTetrisState());
+      if (game && (game.active || game.result)) return true;
+      var monitor = document.getElementById("office-monitor");
+      if (monitor && typeof MONITOR_APP_CLASSES === "object") {
+        for (var id in MONITOR_APP_CLASSES) {
+          if (monitor.classList.contains(MONITOR_APP_CLASSES[id])) return true;
+        }
+      }
+      return false;
+    }
+    function semanticEscape(target) {
+      // Let the menu's own click finish after it has been removed, then hand off to the exact
+      // Escape state owner used by keyboard/Backspace (app → desktop → zoom → room).
+      setTimeout(function () {
+        if (window.__dispatchEscape) window.__dispatchEscape(target && target.isConnected ? target : null);
+      }, 0);
     }
     function showHint() {
       restoreStageHint(STAGES[stageIndex]);
@@ -78026,28 +78052,29 @@ function spawnDustMote(container) {
     function openMenu(x, y) {
       closeMenu();
       var items = [];
-      if (stageIndex > 0) {
-        items.push(item("ctx-back", "←", "scene_ctx_back", function () {
-          navigateWithRoster(STAGES[stageIndex - 1]);
-        }));
+      var canEscape = escapeHasLayer();
+      if (canEscape) items.push(item("ctx-escape", "←", "scene_ctx_escape", semanticEscape));
+      else {
+        items.push(item("ctx-hint", "?", "scene_ctx_hint", showHint));
       }
-      if (phaseOneFrontier()) {
-        items.push(item("ctx-hint" + (items.length ? " ctx-sep" : ""), "?", "scene_ctx_hint", showHint));
+      if (!canEscape && phaseOneFrontier()) {
         items.push(item("ctx-solve", "✓", "scene_ctx_solve", solveNext));
       }
-      if (!items.length) return false;
       menu = document.createElement("div");
+      menuEscapeTarget = document.activeElement;
       menu.className = "mon-ctx scene-ctx";
       menu.setAttribute("role", "menu");
       items.forEach(function (b) { menu.appendChild(b); });
       menu.style.visibility = "hidden";
       var viewport = document.querySelector(".hunt-viewport");
       if (!viewport) { menu = null; return false; }
-      viewport.appendChild(menu);
+      var host = document.fullscreenElement || document.webkitFullscreenElement ||
+        document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+      host.appendChild(menu);
       var r = menu.getBoundingClientRect();
       var vr = viewport.getBoundingClientRect();
-      menu.style.left = Math.max(4, Math.min(x - vr.left, vr.width - r.width - 4)) + "px";
-      menu.style.top = Math.max(4, Math.min(y - vr.top, vr.height - r.height - 4)) + "px";
+      menu.style.left = Math.max(vr.left + 4, Math.min(x, vr.right - r.width - 4)) + "px";
+      menu.style.top = Math.max(vr.top + 4, Math.min(y, vr.bottom - r.height - 4)) + "px";
       menu.style.visibility = "";
       document.addEventListener("keydown", onKey, true);
       document.addEventListener("mousedown", onAway, true);
@@ -78057,10 +78084,12 @@ function spawnDustMote(container) {
       return true;
     }
     document.addEventListener("contextmenu", function (e) {
-      if (e.defaultPrevented || !e.target || !e.target.closest) return;
-      var object = e.target.closest(".hunt-hit");
-      var stage = object && object.closest('[id^="stage-"]');
-      if (!stage || stage.id !== "stage-" + STAGES[stageIndex]) return;
+      if (e.defaultPrevented) return;
+      var viewport = document.querySelector(".hunt-viewport");
+      var vr = viewport && viewport.getBoundingClientRect();
+      var targetInside = !!(e.target && e.target.closest && e.target.closest(".hunt-viewport"));
+      var pointInside = !!(vr && e.clientX >= vr.left && e.clientX <= vr.right && e.clientY >= vr.top && e.clientY <= vr.bottom);
+      if (!targetInside && !pointInside) return;
       if (!openMenu(e.clientX, e.clientY)) return;
       e.preventDefault();
     });

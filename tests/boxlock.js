@@ -53,8 +53,8 @@ check(s.may&&!s.may.locked&&s.may.popped&&s.may.open&&s.may.panel&&s.may.box&&s.
 check(s.wrong&&s.wrong.locked&&s.wrong.denied,"submit rejects an incorrect July answer",s.wrong);
 check(s.wrong&&JSON.stringify(s.wrong.clues)===JSON.stringify(["It’s one of our wedding dates, try again.","Click on the date above.","July 10, 2027 — Prague."]),"every failed attempt shows the next useful clue",s.wrong);
 check(s.julySelected&&s.july,"correct July 10 remains locked until submit",{selected:s.julySelected,submitted:s.july});
-check(s.tripPicker&&s.tripPicker.prevented&&s.tripPicker.open&&s.tripPicker.title==="Inventory"&&s.tripPicker.ids.join(",")==="nitrous,shrooms,acid,froggies,dmt,molly,ketamine,iboga","unlocked box context opens the complete trip chooser",s.tripPicker);
-check(s.tripPickerKeys&&s.tripPickerKeys.escPrevented&&s.tripPickerKeys.escClosed&&s.tripPickerKeys.backPrevented&&s.tripPickerKeys.backClosed&&s.tripPickerKeys.advances===0,"Escape and Backspace dismiss Inventory without advancing the room",s.tripPickerKeys);
+check(s.tripPicker&&s.tripPicker.prevented&&s.tripPicker.open&&s.tripPicker.title==="vitamins"&&s.tripPicker.ids.join(",")==="nitrous,shrooms,acid,froggies,dmt,molly,ketamine,iboga","unlocked box context opens the complete trip chooser",s.tripPicker);
+check(s.tripPickerKeys&&s.tripPickerKeys.escPrevented&&s.tripPickerKeys.escClosed&&s.tripPickerKeys.backPrevented&&s.tripPickerKeys.backClosed&&s.tripPickerKeys.advances===0,"Escape and Backspace dismiss vitamins without advancing the room",s.tripPickerKeys);
 check(s.tripPick&&!s.tripPick.open&&s.tripPick.state.active&&s.tripPick.state.variant==="acid","choosing a trip starts it and dismisses the chooser",s.tripPick);
 check(s.cs&&s.cs.submit==="ODEMKNOUT"&&s.cs.unlock==="Odemknout","padlock and context action follow the Czech language",s.cs);
 

@@ -17,6 +17,13 @@ var HARNESS = [
   ' window.__registerTransientResetHook("test-last",function(){order.push("last");});',
   ' window.__activateExtinguisher();await sleep(850);',
   ' report.steps.order=order.slice();',
+  ' var whipper=document.getElementById("kitchen-whipper");',
+  ' whipper.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(100);',
+  ' report.steps.whipperStarted=whipper.classList.contains("dispensing");',
+  ' window.__runTransientResetHooks();',
+  ' report.steps.whipperSettled=!whipper.classList.contains("dispensing");',
+  ' await sleep(1000);',
+  ' report.steps.whipperStayedReset=!window.__tripState().active&&!document.getElementById("loft-game-strip").classList.contains("nitrous");',
   '}',
   '})();</script>'
 ].join("\n");
@@ -31,7 +38,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html transient reset hooks:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 2000, { patchRaf: true });
+var result = lib.runPageSync("rsvp.html", HARNESS, 3500, { patchRaf: true });
 if (!result) {
   console.log("  ✗ harness produced no report");
   process.exit(1);
@@ -40,6 +47,9 @@ check(result.errors.length === 0, "a throwing hook does not escape the reset", r
 check(result.steps.api, "the registration API is available");
 check(result.steps.order && result.steps.order.join(",") === "first,broken,last",
   "hooks run additively in registration order and continue after an exception", result.steps.order);
+check(result.steps.whipperStarted, "the cream whipper enters its dispensing delay");
+check(result.steps.whipperSettled, "reset clears the cream whipper's dispensing state immediately");
+check(result.steps.whipperStayedReset, "reset cancels the cream whipper's delayed laughing-gas trip");
 
 console.log("");
 if (failures) {

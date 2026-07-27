@@ -40124,11 +40124,19 @@ function quickReversalGesture(action) {
   if (!whipper) return;
   var squeezeTimer = 0;
   var tripStartTimer = 0;
+  var activationGeneration = 0;
   function releaseLever() {
     clearTimeout(squeezeTimer);
     squeezeTimer = 0;
     whipper.classList.remove("dispensing");
   }
+  function resetWhipper() {
+    activationGeneration++;
+    clearTimeout(tripStartTimer);
+    tripStartTimer = 0;
+    releaseLever();
+  }
+  window.__registerTransientResetHook("kitchen-cream-whipper", resetWhipper);
   whipper.addEventListener("animationend", releaseLever);
   whipper.addEventListener("click", function () {
     // Physical, uncarded trip props stay quiet while another trip (or this
@@ -40136,14 +40144,16 @@ function quickReversalGesture(action) {
     // don't-mix warning because it is a deliberate trip-selection surface.
     if (tripActive || tripStartTimer) return;
     releaseLever();
+    var generation = ++activationGeneration;
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
+        if (generation !== activationGeneration) return;
         whipper.classList.add("dispensing");
         squeezeTimer = setTimeout(releaseLever, 550);
         playPressureReleaseHissSound("kitchen-whipper");
         tripStartTimer = setTimeout(function () {
           tripStartTimer = 0;
-          if (!tripActive) beginTrip("nitrous", true);
+          if (generation === activationGeneration && !tripActive) beginTrip("nitrous", true);
         }, 900);
       });
     });

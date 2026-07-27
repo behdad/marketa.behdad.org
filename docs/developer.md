@@ -461,7 +461,9 @@ mushroom each use their first click only for their ordinary rasp/wobble and arm 
 their second and later eligible clicks start their respective uncarded variants. Three lamp rubs
 briefly expose the genie as a focusable control; activating it starts uncarded ketamine. Active
 laughing gas also reveals the whipper's calendar-style Behdad apparition; its jaw and whole-figure
-rise use separate wrappers so their transforms compose.
+rise use separate wrappers so their transforms compose. The whipper owns its pending hiss-to-trip
+timer and dispensing class through a transient reset hook, so a reset during the squeeze cannot
+start laughing gas afterward.
 
 Acid also borrows the ladybug's compound-eye overlay and applies its displacement filter to the
 currently viewed room. `clearPriorTripEffects` releases that borrowed effect before replacement,

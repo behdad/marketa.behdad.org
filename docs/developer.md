@@ -699,6 +699,12 @@ but it has no desktop tile and the ghost is not an access gate. The live board i
 normal close parks and retains it, Kill/New reset it, and the separate
 `localStorage["pacmanHigh"]` personal best survives those resets.
 
+System Information is also a `searchOnly` `DESKTOP_APPS` entry. Its `show-system`
+class participates in the same running-app registry and in-app context menu as
+the tiled apps: ordinary close removes only the foreground class, while
+`__killMonitorSystem` clears the registry and runs the diagnostic-receipt
+send-off. The status value itself owns the browser-specific GitHub issue link.
+
 The maze uses a DOM/CSS grid because canvas does not composite reliably in the scaled WebKit
 `foreignObject`. Its actors depend on grid source order and must not gain RenderLayer-producing
 styles such as positioning, transforms, opacity, filters, or z-index. One bounded scheduler owns
@@ -729,8 +735,8 @@ time-travel logic. Its monitor range uses minute units while the pocket-phone
 range uses half-hour units. Reset visibility is derived from an explicit
 `?time=` override, not the synthetic day-lapse clock.
 
-The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat, and
-Browser their own staged gag before teardown. They all use `__runMonitorDeathFlash` so
+The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat,
+Browser, and System their own staged gag before teardown. They all use `__runMonitorDeathFlash` so
 cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.
 Call first clears every owned connect/goodbye timer and ambient source, then drops its signal bars
 and waveform before the silent hang-up. Music cancels track fades/snippets, scratches and slows the

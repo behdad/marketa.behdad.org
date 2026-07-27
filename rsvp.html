@@ -3732,10 +3732,29 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-system-info-status-link{cursor:pointer}
 .monitor-system-info-status-link:hover .monitor-system-info-value,.monitor-system-info-status-link:focus .monitor-system-info-value{text-decoration:underline;fill:#a94a5d}
 .monitor-system-info-recommendation{fill:#716455;font:italic 1.65px/1 "Source Serif 4",serif}
+.monitor-system-info-kill{opacity:0;pointer-events:none}
+.monitor-system-info-kill-receipt{fill:#fffdf8;stroke:#8e3a4a;stroke-width:.45}
+.monitor-system-info-kill-fold{fill:#e8dfcc}
+.monitor-system-info-kill-rule{stroke:#7f9ec0;stroke-width:.55;stroke-linecap:round}
+.monitor-system-info-kill-rule.err{stroke:#8e3a4a}
+.monitor-system-info-kill-bug{fill:#453a31;stroke:#453a31;stroke-width:.45;stroke-linecap:round;transform-box:fill-box;transform-origin:center}
+.monitor-system-info-layer.killing .monitor-system-info-normal{opacity:0}
+.monitor-system-info-layer.killing .monitor-system-info-kill{opacity:1}
+#monitor-system-info-layer.killing #monitor-system-kill-receipt{animation:system-kill-receipt-motion 2.1s ease-out both}
+#monitor-system-info-layer.killing #monitor-system-kill-bug-left{animation:system-kill-bug-left 2.1s ease-in-out both}
+#monitor-system-info-layer.killing #monitor-system-kill-bug-right{animation:system-kill-bug-right 2.1s .12s ease-in-out both}
+#monitor-system-info-layer.killing #monitor-system-kill-bug-top{animation:system-kill-bug-top 2.1s .24s ease-in-out both}
 .monitor-system-info-close{cursor:pointer;outline:none}
 .monitor-system-info-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
 .monitor-system-info-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
 .monitor-system-info-close:hover circle,.monitor-system-info-close:focus circle{fill:#a94a5d;stroke-width:.62}
+@keyframes system-kill-receipt-motion{0%{opacity:0}12%,88%{opacity:1}100%{opacity:.3}}
+@keyframes system-kill-bug-left{0%,12%{transform:translate(0,0) rotate(0);opacity:0}20%{opacity:1}100%{transform:translate(-28px,-9px) rotate(-28deg);opacity:1}}
+@keyframes system-kill-bug-right{0%,12%{transform:translate(0,0) rotate(0);opacity:0}20%{opacity:1}100%{transform:translate(30px,8px) rotate(32deg);opacity:1}}
+@keyframes system-kill-bug-top{0%,12%{transform:translate(0,0) rotate(0);opacity:0}20%{opacity:1}100%{transform:translate(12px,-20px) rotate(18deg);opacity:1}}
+@media (prefers-reduced-motion:reduce){
+#monitor-system-info-layer.killing #monitor-system-kill-receipt,#monitor-system-info-layer.killing #monitor-system-kill-bug-left,#monitor-system-info-layer.killing #monitor-system-kill-bug-right,#monitor-system-info-layer.killing #monitor-system-kill-bug-top{animation:none}
+}
 .monitor-credits-layer{opacity:0;visibility:hidden;pointer-events:none}
 .monitor-credits-layer.open{opacity:1;visibility:visible;pointer-events:auto}
 .monitor-credits-bg{fill:#17131d}
@@ -27272,6 +27291,7 @@ var T = {
       df_weather_quip: "Under the weather.", // caption after the forecast's terminal lightning strike (Weather kill)
       df_browser_quip: "Aw, Snap! The tab gave up.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie has left the chat.", // caption after Chat's context collapses and clears
+      df_system_quip: "System killed. The bugs survived.", // caption under System's escaping bug-report receipt
       kitchen: "Turn on La Maz → run El Maz → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -28385,6 +28405,7 @@ var T = {
       df_weather_quip: "Počasí pod psa.", // caption after the forecast's terminal lightning strike (Weather kill)
       df_browser_quip: "Ajaj! Panel to vzdal.", // caption under the on-screen Chrome "Aw, Snap!" crash (browser kill)
       df_chat_quip: "Charlie odešel z chatu.", // caption after Chat's context collapses and clears
+      df_system_quip: "Systém ukončen. Chyby přežily.", // caption under System's escaping bug-report receipt
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -44671,10 +44692,11 @@ setOfficeProgress("pc", false);
     closeFamilyCall(true); // a dark screen can't keep the family call (or its camera/ambient) alive
     closeBrowser();
     blankBrowser(); // a powered-off PC isn't secretly running a site in the iframe
+    if (monitorSystemInfoLayer) monitorSystemInfoLayer.classList.remove("open", "killing");
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-about", "show-credits");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-credits");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -45503,7 +45525,7 @@ setOfficeProgress("pc", false);
     eqFrame = frame;
     syncEqVisualLoop();
   }
-  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-about", "show-credits"];
+  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-credits"];
   function eqVisualWant() {
     if (monitorSleeping || !eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
         !monitor.classList.contains("here") || !monitor.classList.contains("screen-on")) return false;
@@ -45840,6 +45862,8 @@ setOfficeProgress("pc", false);
     { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
     { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true,
       open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
+    { id: "system", labelKey: "mon_sys_system", glyph: "⚙", tile: "#f4ecdf", color: "#4a6b94", glyphSize: "5.2", searchOnly: true,
+      open: function () { openMonitorSystemInfo(); } },
     { id: "about", labelKey: "mon_sys_website", glyph: "i", tile: "#f4ecdf", color: "#8e3a4a", glyphSize: "5.2", searchOnly: true,
       open: function () { openMonitorAbout(); } },
     { id: "credits", labelKey: "mon_sys_credits", glyph: "✦", tile: "#17131d", color: "#d9a6a6", glyphSize: "5.2", searchOnly: true,
@@ -45880,7 +45904,8 @@ setOfficeProgress("pc", false);
     video: "show-video", call: "show-family", chat: "show-chat", mail: "show-mail",
     calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", mines: "show-mines", pacman: "show-pacman",
     life: "show-life", doom: "show-doom", code: "show-code", console: "show-console",
-    python: "show-python", linux: "show-linux", weather: "show-weather", about: "show-about", credits: "show-credits"
+    python: "show-python", linux: "show-linux", weather: "show-weather",
+    system: "show-system", about: "show-about", credits: "show-credits"
   };
   var MONITOR_APP_KILLS = {
     chrome: "__killMonitorBrowser", music: "__killMonitorMusic",
@@ -45890,7 +45915,8 @@ setOfficeProgress("pc", false);
     mines: "__killMonitorMines", pacman: "__killMonitorPacman", life: "__killMonitorLife", doom: "__killMonitorDoom",
     code: "__killMonitorCode", console: "__killMonitorConsole",
     python: "__killMonitorPython", linux: "__killMonitorLinux",
-    weather: "__killMonitorWeather", about: "__killMonitorAbout", credits: "__killMonitorCredits"
+    weather: "__killMonitorWeather", system: "__killMonitorSystem",
+    about: "__killMonitorAbout", credits: "__killMonitorCredits"
   };
   var monitorRunningApps = Object.create(null);
   var monitorKillingApps = Object.create(null);
@@ -46062,7 +46088,8 @@ setOfficeProgress("pc", false);
   }
   function closeMonitorSystemInfo() {
     if (!monitorSystemInfoLayer) return;
-    monitorSystemInfoLayer.classList.remove("open");
+    monitorSystemInfoLayer.classList.remove("open", "killing");
+    monitor.classList.remove("show-system");
     scheduleSaver();
   }
   function openMonitorSystemInfo() {
@@ -46070,6 +46097,8 @@ setOfficeProgress("pc", false);
     closeMonitorSystemMenu();
     stopSaver();
     paintMonitorSystemInfo();
+    monitorSystemInfoLayer.classList.remove("killing");
+    monitor.classList.add("show-system");
     monitorSystemInfoLayer.classList.add("open");
     var close = monitorSystemInfoLayer.querySelector(".monitor-system-info-close");
     if (close) try { close.focus(); } catch (e) {}
@@ -46077,6 +46106,28 @@ setOfficeProgress("pc", false);
   }
   window.__openMonitorSystemInfo = openMonitorSystemInfo;
   window.__closeMonitorSystemInfo = closeMonitorSystemInfo;
+  function killMonitorSystem() {
+    if (!monitorSystemInfoLayer) return false;
+    if (!monitorSystemInfoLayer.classList.contains("open")) openMonitorSystemInfo();
+    monitorSystemInfoLayer.classList.remove("killing");
+    void monitorSystemInfoLayer.getBBox();
+    monitorSystemInfoLayer.classList.add("killing");
+    var finish = function () {
+      closeMonitorSystemInfo();
+      monitor.classList.add("show-caps");
+    };
+    if (!window.__runMonitorDeathFlash) {
+      setTimeout(finish, 2200);
+      return true;
+    }
+    window.__runMonitorDeathFlash({
+      beats: [{ key: "df_system_quip", at: 220 }],
+      dur: 2200,
+      close: finish
+    });
+    return true;
+  }
+  window.__killMonitorSystem = killMonitorSystem;
   function closeMonitorAbout() {
     if (!monitorAboutLayer) return;
     clearTimeout(monitorAboutKillTimer);
@@ -46660,8 +46711,9 @@ setOfficeProgress("pc", false);
       "aria-labelledby": "monitor-system-info-title" }, dock);
     mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
       "class": "monitor-system-info-bg" }, monitorSystemInfoLayer);
+    var systemInfoNormal = mkEl("g", { "class": "monitor-system-info-normal" }, monitorSystemInfoLayer);
     var systemInfoTitle = mkEl("text", { id: "monitor-system-info-title", x: 260, y: 162,
-      "class": "monitor-system-info-title", "data-i": "mon_system_info_title" }, monitorSystemInfoLayer);
+      "class": "monitor-system-info-title", "data-i": "mon_system_info_title" }, systemInfoNormal);
     systemInfoTitle.textContent = (T[document.documentElement.lang] || T.en).mon_system_info_title;
     [
       ["browser", "mon_system_info_browser"],
@@ -46673,12 +46725,12 @@ setOfficeProgress("pc", false);
     ].forEach(function (row, index) {
       var y = 168 + index * 4.2;
       var label = mkEl("text", { x: 260, y: y, "class": "monitor-system-info-label",
-        "data-i": row[1] }, monitorSystemInfoLayer);
+        "data-i": row[1] }, systemInfoNormal);
       label.textContent = (T[document.documentElement.lang] || T.en)[row[1]];
-      var valueParent = monitorSystemInfoLayer;
+      var valueParent = systemInfoNormal;
       if (row[0] === "status") {
         monitorSystemStatusLink = mkEl("a", { href: "https://github.com/behdad/marketa.behdad.org/issues",
-          target: "_blank", rel: "noopener", tabindex: "0", "class": "monitor-system-info-status-link" }, monitorSystemInfoLayer);
+          target: "_blank", rel: "noopener", tabindex: "0", "class": "monitor-system-info-status-link" }, systemInfoNormal);
         valueParent = monitorSystemStatusLink;
       }
       monitorSystemInfoValues[row[0]] = mkEl("text", { x: 287, y: y,
@@ -46686,15 +46738,46 @@ setOfficeProgress("pc", false);
     });
     var systemRecommendation = mkEl("text", { x: 260, y: 194,
       "class": "monitor-system-info-recommendation",
-      "data-i": "mon_system_info_recommendation" }, monitorSystemInfoLayer);
+      "data-i": "mon_system_info_recommendation" }, systemInfoNormal);
     systemRecommendation.textContent =
       (T[document.documentElement.lang] || T.en).mon_system_info_recommendation;
     var systemInfoClose = mkEl("g", { "class": "monitor-system-info-close", role: "button",
       tabindex: "0", "data-aria-i": "install_dismiss",
-      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorSystemInfoLayer);
+      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, systemInfoNormal);
     mkEl("circle", { cx: 375, cy: 157, r: 2.15 }, systemInfoClose);
     var systemInfoX = mkEl("text", { x: 375, y: 158.15 }, systemInfoClose);
     systemInfoX.textContent = "×";
+    var systemInfoKill = mkEl("g", { "class": "monitor-system-info-kill" }, monitorSystemInfoLayer);
+    var receipt = mkEl("g", { id: "monitor-system-kill-receipt", "class": "monitor-system-info-kill-receipt-wrap",
+      transform: "rotate(-2 316 175)" }, systemInfoKill);
+    mkEl("path", { d: "M290 157.5 H338 V190 L335 187.7 L332 190 L329 187.7 L326 190 L323 187.7 L320 190 L317 187.7 L314 190 L311 187.7 L308 190 L305 187.7 L302 190 L299 187.7 L296 190 L293 187.7 L290 190 Z",
+      "class": "monitor-system-info-kill-receipt" }, receipt);
+    mkEl("path", { d: "M332 157.5 H338 V163.5 Z", "class": "monitor-system-info-kill-fold" }, receipt);
+    [
+      [295, 163, 328, 163, false],
+      [295, 167, 322, 167, false],
+      [295, 171, 333, 171, true],
+      [295, 175, 316, 175, false],
+      [295, 179, 329, 179, true],
+      [295, 183, 310, 183, false]
+    ].forEach(function (line) {
+      mkEl("line", { x1: line[0], y1: line[1], x2: line[2], y2: line[3],
+        "class": "monitor-system-info-kill-rule" + (line[4] ? " err" : "") }, receipt);
+    });
+    function drawSystemKillBug(x, y, direction) {
+      var bug = mkEl("g", { id: "monitor-system-kill-bug-" + direction,
+        "class": "monitor-system-info-kill-bug " + direction }, systemInfoKill);
+      mkEl("ellipse", { cx: x, cy: y, rx: 1.45, ry: 2.1 }, bug);
+      mkEl("line", { x1: x, y1: y - 2.1, x2: x - .9, y2: y - 3.1 }, bug);
+      mkEl("line", { x1: x, y1: y - 2.1, x2: x + .9, y2: y - 3.1 }, bug);
+      [-1.2, 0, 1.2].forEach(function (dy) {
+        mkEl("line", { x1: x - 1.1, y1: y + dy, x2: x - 2.35, y2: y + dy - .65 }, bug);
+        mkEl("line", { x1: x + 1.1, y1: y + dy, x2: x + 2.35, y2: y + dy + .65 }, bug);
+      });
+    }
+    drawSystemKillBug(294, 182, "left");
+    drawSystemKillBug(334, 181, "right");
+    drawSystemKillBug(320, 161, "top");
     function dismissSystemInfo(e) {
       if (e) { e.preventDefault(); e.stopPropagation(); }
       closeMonitorSystemInfo();
@@ -47447,7 +47530,7 @@ setOfficeProgress("pc", false);
         ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
         ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-code", "code"],
         ["show-mines", "mines"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "doom"], ["show-video", "video"],
-        ["show-browser", "browser"], ["show-about", "about"], ["show-credits", "credits"]
+        ["show-browser", "browser"], ["show-system", "system"], ["show-about", "about"], ["show-credits", "credits"]
       ];
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
       return monitor && monitor.classList.contains("show-caps") ? "desktop" : null;
@@ -51306,13 +51389,13 @@ setOfficeProgress("pc", false);
   (function () {
     // Real closable apps this menu serves — the exact set __closeTopMonitorApp knows how to
     // close, minus the three console apps (console-ctx owns those). Keep in sync with it.
-    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-about", "show-credits"];
+    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-system", "show-about", "show-credits"];
     var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
     // per-app extras: a Restart hook + a runtime-running predicate (Kill greys out until true)
     var RUNTIME_EXTRAS = { "show-doom": { restart: "__restartMonitorDoom", running: "__doomRunning", kill: "__killMonitorDoom" } };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-about": "__killMonitorAbout", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-system": "__killMonitorSystem", "show-about": "__killMonitorAbout", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -51320,7 +51403,8 @@ setOfficeProgress("pc", false);
     var CLASS_TO_ID = {
       "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "mines", "show-pacman": "pacman",
       "show-tattoo": "tattoo", "show-life": "life", "show-code": "code", "show-calendar": "calendar", "show-clock": "clock",
-      "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music", "show-about": "about", "show-credits": "credits"
+      "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music",
+      "show-system": "system", "show-about": "about", "show-credits": "credits"
     };
     var menuEl = null;
     function activeMonitorApp() {

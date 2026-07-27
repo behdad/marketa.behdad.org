@@ -10,6 +10,7 @@ var HARNESS = [
   "<script>",
   "(function(){",
   " function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
+  " function key(k){document.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));}",
   " var report={errors:window.__errs||[],steps:{}}; function S(k,v){report.steps[k]=v;}",
   " async function run(){",
   "  if(window.goToStage)window.goToStage('office'); await sleep(100);",
@@ -28,7 +29,14 @@ var HARNESS = [
   "  var statusLink=sysinfo.querySelector('.monitor-system-info-status-link');",
   "  S('system_open',sysinfo.classList.contains('open')&&/Browser/.test(sysinfo.textContent)&&/Graphics/.test(sysinfo.textContent)&&/Performance/.test(sysinfo.textContent)&&/Hardware/.test(sysinfo.textContent)&&/Best in the latest desktop Chrome\\./.test(sysinfo.textContent)&&statusLink&&/is%3Aissue%20is%3Aopen%20Chrome/.test(statusLink.getAttribute('href')));",
   "  S('system_fit_en',inside(sysinfo.querySelector('.monitor-system-info-bg'),sysinfo.querySelectorAll('.monitor-system-info-title,.monitor-system-info-label,.monitor-system-info-value,.monitor-system-info-recommendation'))); window.setLang('cs'); window.__openMonitorSystemInfo(); S('system_fit_cs',inside(sysinfo.querySelector('.monitor-system-info-bg'),sysinfo.querySelectorAll('.monitor-system-info-title,.monitor-system-info-label,.monitor-system-info-value,.monitor-system-info-recommendation'))); window.setLang('en');",
-  "  window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); S('system_closed',!sysinfo.classList.contains('open'));",
+  "  window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); await sleep(20); S('system_closed',!sysinfo.classList.contains('open')&&!mon.classList.contains('show-system')&&window.__monitorAppRunning('system'));",
+  "  var systemApps=window.__chatMonitorApps(); if(window.__monitorZoomIn)window.__monitorZoomIn(); ['s','y','s'].forEach(key); var systemSearch=window.__monitorDockSearch(); key('Enter'); await sleep(40);",
+  "  S('system_search',systemSearch.match==='system'&&!document.getElementById('monitor-dock-system')&&systemApps.some(function(app){return app.id==='system'&&app.access==='search';})&&sysinfo.classList.contains('open')&&mon.classList.contains('show-system')&&window.__monitorAppRunning('system'));",
+  "  sysinfo.querySelector('.monitor-system-info-bg').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:120,clientY:80})); var systemCtx=document.querySelector('.mon-ctx');",
+  "  S('system_context',!!systemCtx&&!!systemCtx.querySelector('button.ctx-kill')&&!systemCtx.querySelector('button.ctx-restart')); systemCtx.querySelector('button.ctx-kill').click(); await sleep(300);",
+  "  var bugs=sysinfo.querySelectorAll('.monitor-system-info-kill-bug'),receipt=sysinfo.querySelector('.monitor-system-info-kill-receipt');",
+  "  S('system_killing',sysinfo.classList.contains('killing')&&!!receipt&&bugs.length===3&&document.getElementById('hunt-caption').textContent==='System killed. The bugs survived.'&&T.cs.hunt.df_system_quip==='Systém ukončen. Chyby přežily.');",
+  "  await sleep(2000); S('system_killed',!sysinfo.classList.contains('open')&&!mon.classList.contains('show-system')&&!window.__monitorAppRunning('system')&&mon.classList.contains('show-caps'));",
   "  window.__monitorSystemAction('about'); await sleep(30); var about=document.getElementById('monitor-about-layer');",
   "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('The Loft: where artificial meets higher intelligence.')>=0);",
   "  S('about_type',{title:parseFloat(getComputedStyle(about.querySelector('.monitor-about-title')).fontSize),copy:parseFloat(getComputedStyle(about.querySelector('.monitor-about-copy')).fontSize),motto:parseFloat(getComputedStyle(about.querySelector('.monitor-about-motto')).fontSize)});",
@@ -83,7 +91,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var r = lib.runPageSync("rsvp.html", HARNESS, 11500, { patchRaf: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 14500, { patchRaf: true });
 var fail = 0;
 function ok(name, cond) { console.log((cond ? "  ✓ " : "  ✗ ") + name); if (!cond) fail++; }
 console.log("monitor system menu + CAPS LOCK:");
@@ -95,7 +103,9 @@ ok("menu groups power actions before About, Credits, and System", JSON.stringify
 ok("compact menu leaves the motto for About", s.tagline_removed === true);
 ok("system-menu labels use the enlarged type", s.menu_type >= 2.2);
 ok("enlarged system-menu type fits in English and Czech", s.menu_fit_en === true && s.menu_fit_cs === true);
-ok("System reports live diagnostics, fits both languages, and closes with Escape", s.system_open === true && s.system_fit_en === true && s.system_fit_cs === true && s.system_closed === true);
+ok("System reports live diagnostics, fits both languages, and ordinary close retains its task", s.system_open === true && s.system_fit_en === true && s.system_fit_cs === true && s.system_closed === true);
+ok("System is searchable without receiving a desktop tile", s.system_search === true);
+ok("System context-menu Kill prints escaping bugs, owns bilingual copy, and clears its task", s.system_context === true && s.system_killing === true && s.system_killed === true);
 ok("About is a searchable running app with an about:blank Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
 ok("About title, copy, and motto use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.motto >= 2.2);
 ok("enlarged About copy fits in English and Czech", s.about_fit_en === true && s.about_fit_cs === true);

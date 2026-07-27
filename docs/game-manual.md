@@ -463,7 +463,10 @@ the day stops.
 The idle monitor rotates through a live Julia fractal, growing 3D Pipes, and a
 deforming 3D Flower Box. The `m ∞ b` wordmark opens the computer's system menu.
 **System** reports the browser, graphics mode, measured rendering health, and
-available device details, with a link to matching known issues. **Sleep**
+available device details; its status links to matching known issues for the
+detected browser. System has no desktop tile, but monitor search opens it like
+an app. A normal close leaves it running; right-click the open report and choose
+**Kill** to print its final diagnostic while the bugs escape. **Sleep**
 darkens and unzooms only the monitor; press it to wake with every app exactly
 where it was. **Lock** starts at the screensaver; activity reveals CAPS LOCK,
 and another idle stretch returns to the saver. Put
@@ -478,8 +481,8 @@ rolls the people and open-source software behind the loft over its ever-burning 
 Tap the magnifying glass in the desktop menu bar, or type an app name while the
 desktop or screensaver is visible, to open autocomplete search. `Enter` or `Tab`
 accepts the suggestion. Its close control or `Escape` dismisses it; `Backspace`
-dismisses it once the field is empty. About and Credits are searchable apps even
-though they have no desktop tiles.
+dismisses it once the field is empty. System, About, and Credits are searchable
+apps even though they have no desktop tiles.
 Search recognizes localized app labels where a translation exists. In apps
 with their own search field, `/` focuses that field when it will not overwrite an
 active draft.

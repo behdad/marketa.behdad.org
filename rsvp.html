@@ -45329,6 +45329,11 @@ setOfficeProgress("pc", false);
   var monitorRunningApps = Object.create(null);
   var monitorKillingApps = Object.create(null);
   function monitorRegistryId(id) { return id === "family" ? "call" : id; }
+  var MONITOR_CHECKPOINT_UNSAFE = { doom: true, python: true, linux: true };
+  function monitorCheckpointAppId(id) {
+    id = monitorRegistryId(String(id || ""));
+    return MONITOR_APP_CLASSES[id] && !MONITOR_CHECKPOINT_UNSAFE[id] ? id : null;
+  }
   function paintMonitorRunning(id) {
     var cell = dockCells[id];
     if (cell) cell.classList.toggle("is-running", !!monitorRunningApps[id]);
@@ -50405,7 +50410,8 @@ setOfficeProgress("pc", false);
   // Esc's app layer: ends the live call or closes whichever app owns the screen.
   // Returns true if it consumed the press (checked before the zoom backs out).
   window.__closeTopMonitorApp = function (stepBack) {
-    if (monitorAboutLayer && monitorAboutLayer.classList.contains("open")) { closeMonitorAbout(); return true; }
+    if ((monitorAboutLayer && monitorAboutLayer.classList.contains("open")) ||
+        monitor.classList.contains("show-about")) { closeMonitorAbout(); return true; }
     if (monitor.classList.contains("show-family") && window.__closeMonitorFamily) { window.__closeMonitorFamily(); return true; }
     if (monitor.classList.contains("photobooth")) {
       if (stepBack && window.__backOfficePhotobooth && window.__backOfficePhotobooth()) return true;
@@ -56884,7 +56890,9 @@ async def localfont(name):
     if (monitor.classList.contains("show-behdad")) return "site:behdad";
     var ids = Object.keys(MONITOR_APP_CLASSES);
     for (var i = 0; i < ids.length; i++) {
-      if (monitor.classList.contains(MONITOR_APP_CLASSES[ids[i]])) return ids[i];
+      if (monitor.classList.contains(MONITOR_APP_CLASSES[ids[i]])) {
+        return monitorCheckpointAppId(ids[i]) || "desktop";
+      }
     }
     return "desktop";
   }
@@ -56894,7 +56902,7 @@ async def localfont(name):
         surface: monitor.classList.contains("here") ? "monitor" : "typewriter",
         screenOn: monitor.classList.contains("screen-on"),
         foreground: checkpointMonitorForeground(),
-        running: Object.keys(monitorRunningApps),
+        running: Object.keys(monitorRunningApps).filter(monitorCheckpointAppId),
         zoomed: !!(window.__monitorZoomed && window.__monitorZoomed())
       };
     },
@@ -56908,8 +56916,8 @@ async def localfont(name):
         clearMonitorRunningApps();
         var running = Array.isArray(state.running) ? state.running : [];
         running.forEach(function (id) {
-          id = monitorRegistryId(String(id || ""));
-          if (MONITOR_APP_CLASSES[id]) setMonitorAppRunning(id, true);
+          id = monitorCheckpointAppId(id);
+          if (id) setMonitorAppRunning(id, true);
         });
         if (!state.screenOn || !toMonitor || !pcTower || !pcTower.classList.contains("on") || window.__monitorShorted) return;
         monitor.classList.add("screen-on");
@@ -56920,9 +56928,12 @@ async def localfont(name):
         } else if (foreground === "site:behdad") {
           monitor.classList.add("show-behdad");
           monitorUrl = "https://behdad.org/";
-        } else if (MONITOR_APP_CLASSES[monitorRegistryId(foreground)]) {
-          foreground = monitorRegistryId(foreground);
-          monitor.classList.add(MONITOR_APP_CLASSES[foreground]);
+        } else if (monitorCheckpointAppId(foreground)) {
+          foreground = monitorCheckpointAppId(foreground);
+          // Normal launches leave the desktop beneath the app. Recovery must preserve
+          // that invariant so the app's ordinary close cannot reveal a blank lit screen.
+          monitor.classList.add("show-caps", MONITOR_APP_CLASSES[foreground]);
+          monitorUrl = CAPS_URL;
           setMonitorAppRunning(foreground, true);
         } else {
           monitor.classList.add("show-caps");

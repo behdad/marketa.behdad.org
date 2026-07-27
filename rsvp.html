@@ -34627,6 +34627,9 @@ setMusicPausedState(false);
   // force-ON also drops a pinned aurora(N) index, so a reset/cinematic-end strands nothing.
   // Returns whether any window is shown now.
   window.__setAurora = function (on) {
+    var source = arguments.length > 1 ? arguments[1] : null;
+    if (source === "ui") auroraCheckpointOverride = on === true ? "on" : on === false ? "off" : null;
+    else if (!arguments.length || source === "reset") auroraCheckpointOverride = null;
     if (on !== true) forcedKp = null;
     targets.forEach(function (tg) {
       if (on === true) { tg.stage.classList.add("aurora-force"); tg.stage.classList.remove("aurora-hide"); }
@@ -34644,6 +34647,25 @@ setMusicPausedState(false);
     return forcedKp;
   };
   window.__auroraKp = function () { return auroraTargetKp(); }; // the index driving the display right now
+  var auroraCheckpointOverride = null;
+  window.__auroraCheckpointState = function () {
+    return auroraCheckpointOverride ? {
+      mode: auroraCheckpointOverride,
+      kp: auroraCheckpointOverride === "on" && forcedKp != null ? forcedKp : null
+    } : null;
+  };
+  window.__restoreAuroraCheckpointState = function (row) {
+    var valid = row && (row.mode === "on" || row.mode === "off") &&
+      (row.kp == null || (row.mode === "on" && typeof row.kp === "number" && isFinite(row.kp) && row.kp >= 0 && row.kp <= 9));
+    auroraCheckpointOverride = null;
+    window.__setAuroraKp(null);
+    window.__setAurora();
+    if (!valid) return false;
+    if (row.mode === "on") window.__setAuroraKp(row.kp);
+    window.__setAurora(row.mode === "on");
+    auroraCheckpointOverride = row.mode;
+    return true;
+  };
   window.__auroraShowing = auroraVisible; // pure status query (no override side-effect), for aurora() with no arg
   // everything aurora() needs to report: whether they're showing, the index driving them and
   // where it came from, and — honestly, even while forced — the sky that would decide it
@@ -66922,11 +66944,13 @@ async def localfont(name):
   function toggleIndoorUnit() {
     indoorUnit = indoorUnit === "C" ? "F" : "C";
     paintIndoor(shownIn);
+    if (window.__checkpointChanged) window.__checkpointChanged();
   }
   function toggleOutdoorUnit() {
     outdoorUnit = outdoorUnit === "C" ? "F" : "C";
     paintOutdoor(shownOut);
     paintTempPop();
+    if (window.__checkpointChanged) window.__checkpointChanged();
   }
   window.__toggleIndoorTempUnit = toggleIndoorUnit;
   window.__toggleOutdoorTempUnit = toggleOutdoorUnit;
@@ -66935,6 +66959,16 @@ async def localfont(name):
     paintIndoor(shownIn);
     paintOutdoor(shownOut);
     paintTempPop();
+  };
+  window.__setTempDisplayUnits = function (units) {
+    if (!units || (units.indoor !== "C" && units.indoor !== "F") ||
+        (units.outdoor !== "C" && units.outdoor !== "F")) return false;
+    indoorUnit = units.indoor;
+    outdoorUnit = units.outdoor;
+    paintIndoor(shownIn);
+    paintOutdoor(shownOut);
+    paintTempPop();
+    return true;
   };
   window.__indoorTempState = function () {
     return {
@@ -66972,6 +67006,7 @@ async def localfont(name):
     window.__loftTempSet(); // snap, rather than let the 1°-per-1.2s drift crawl there
     paintTempPop();
     if (window.__updateSunDogs) window.__updateSunDogs(); // set -25 on a clear winter noon and the pair is there before you look up
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return tempOverride;
   };
   window.__tempLimits = function () { return { min: HARD_MIN, max: HARD_MAX, step: TEMP_STEP }; };
@@ -84578,6 +84613,7 @@ function spawnDustMote(container) {
   // 2-3 thunders, passes, then the whole thing repeats a minute or two later.
   (function balconyStorm() {
     var timers = [];
+    var checkpointWeather = { rain: null, storm: null, overcast: null };
     var SVGNS = "http://www.w3.org/2000/svg";
     var RAIN_DROPS = 14;
     function isDuskBalcony() {
@@ -84647,6 +84683,10 @@ function spawnDustMote(container) {
       else if (window.__updateGardenAurora) window.__updateGardenAurora();
     }
     function weatherLayers() { return { rain: !!window.__wxRain, storm: !!window.__wxStorm, overcast: !!window.__wxOvercast }; }
+    function rememberWeather(key, on, source) {
+      if (source === "ui") checkpointWeather[key] = !!on;
+      else if (source !== "restore") checkpointWeather[key] = null;
+    }
     function reportWeatherLayers(before, source) {
       var after = weatherLayers();
       if (before.rain === after.rain && before.storm === after.storm && before.overcast === after.overcast) return;
@@ -84659,6 +84699,7 @@ function spawnDustMote(container) {
     window.__setBalconyRain = function (on, source) {
       var before = weatherLayers();
       window.__wxRain = !!on;
+      rememberWeather("rain", on, source);
       apply();
       if (on) topUpDrops(); // fill the sky, counting whatever's still falling
       reportWeatherLayers(before, source);
@@ -84667,6 +84708,7 @@ function spawnDustMote(container) {
     window.__setBalconyStormLayer = function (on, source) {
       var before = weatherLayers();
       window.__wxStorm = !!on; // the scheduler flashes/rumbles while this is set on a dusk balcony
+      rememberWeather("storm", on, source);
       apply();
       reportWeatherLayers(before, source);
       return !!window.__wxStorm;
@@ -84674,6 +84716,7 @@ function spawnDustMote(container) {
     window.__setBalconyOvercast = function (on, source) {
       var before = weatherLayers();
       window.__wxOvercast = !!on;
+      rememberWeather("overcast", on, source);
       apply();
       reportWeatherLayers(before, source);
       return !!window.__wxOvercast;
@@ -84682,6 +84725,7 @@ function spawnDustMote(container) {
       var before = weatherLayers();
       timers.forEach(clearTimeout);
       timers = [];
+      checkpointWeather.rain = checkpointWeather.storm = null;
       window.__wxRain = false;   // drops stop replenishing -> rain fades in ~1s
       window.__wxStorm = false;  // lightning scheduler goes quiet
       apply();
@@ -84689,6 +84733,7 @@ function spawnDustMote(container) {
     }
     function endStorm() {
       var before = weatherLayers();
+      checkpointWeather.rain = checkpointWeather.storm = null;
       window.__wxRain = false;
       window.__wxStorm = false;
       apply();
@@ -84703,6 +84748,7 @@ function spawnDustMote(container) {
       if (window.__cinematic) { timers.push(setTimeout(startStorm, 8000)); return; }
       if (!isDuskBalcony()) { clearAll(); return; }
       var before = weatherLayers();
+      checkpointWeather.rain = checkpointWeather.storm = null;
       var wet = Math.random() < 0.7; // roll each storm: mostly a classic downpour+lightning, sometimes a DRY lightning storm
       window.__wxRain = wet;     // wet roll → rain drops + streaks; dry roll → lightning only
       window.__wxStorm = true;   // the continuous thunder scheduler picks up the flashes/rumble either way
@@ -84721,6 +84767,27 @@ function spawnDustMote(container) {
       clearAll();     // cancel any pending scheduled storm/timers first
       startStorm();   // begins immediately (self-guards on a dusk balcony; clears if not dusk)
       return !!window.__balconyStorm;
+    };
+    window.__weatherCheckpointState = function () {
+      var row = {};
+      ["rain", "storm", "overcast"].forEach(function (key) {
+        if (typeof checkpointWeather[key] === "boolean") row[key] = checkpointWeather[key];
+      });
+      return Object.keys(row).length ? row : null;
+    };
+    window.__restoreWeatherCheckpointState = function (row) {
+      row = row && typeof row === "object" ? row : null;
+      var valid = row && ["rain", "storm", "overcast"].every(function (key) {
+        return !Object.prototype.hasOwnProperty.call(row, key) || typeof row[key] === "boolean";
+      });
+      checkpointWeather = { rain: null, storm: null, overcast: null };
+      window.__setBalconyRain(valid && row.rain === true, "restore");
+      window.__setBalconyStormLayer(valid && row.storm === true, "restore");
+      window.__setBalconyOvercast(valid && row.overcast === true, "restore");
+      if (valid) ["rain", "storm", "overcast"].forEach(function (key) {
+        if (Object.prototype.hasOwnProperty.call(row, key)) checkpointWeather[key] = row[key];
+      });
+      return !!valid;
     };
     // Precip that falls with no game storm to start it — winter snow, and real weather (rain or
     // snow) driving the default sky — self-seeds here: whenever the balcony wants drops and none
@@ -87997,6 +88064,7 @@ function spawnDustMote(container) {
   }
   window.__applySeason = applySeasonPreview; // console season() drives the same path as 's'
   window.__applySeasonSilent = function (name) { applySeasonPreview(name, true); }; // autoplay: vary the season with no toast
+  window.__seasonPreviewName = function () { return seasonPreview; };
   document.addEventListener("keydown", function (e) {
     if ((e.key !== "s" && e.key !== "S") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
@@ -88006,6 +88074,42 @@ function spawnDustMote(container) {
     applySeasonPreview(SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + dir + n) % n]);
   });
   window.__seasonStep = function (dir) { var n = SEASON_CYCLE.length; applySeasonPreview(SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + (dir || 1) + n) % n]); return seasonPreview; }; // console season() with no arg advances the ring (like the 's' key)
+  if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("environment", {
+    capture: function () {
+      var row = {}, weather = window.__weatherCheckpointState && window.__weatherCheckpointState();
+      var aurora = window.__auroraCheckpointState && window.__auroraCheckpointState();
+      var units = window.__tempDisplayUnits && window.__tempDisplayUnits();
+      var temp = window.__outdoorTempOverride && window.__outdoorTempOverride();
+      if (weather) row.weather = weather;
+      if (aurora) row.aurora = aurora;
+      if (window.__seasonPreviewName && window.__seasonPreviewName() === "smoky") row.smoke = true;
+      if (typeof temp === "number") row.outdoorC = temp;
+      if (units && (units.indoor === "F" || units.outdoor === "F")) row.units = units;
+      return Object.keys(row).length ? row : null;
+    },
+    restore: function (row, phase) {
+      if (phase !== "afterStage") return;
+      row = row && typeof row === "object" ? row : null;
+      if (window.__restoreWeatherCheckpointState) window.__restoreWeatherCheckpointState(row && row.weather);
+      if (window.__restoreAuroraCheckpointState) window.__restoreAuroraCheckpointState(row && row.aurora);
+      if (row && row.smoke === true && window.__applySeasonSilent) window.__applySeasonSilent("smoky");
+      else if (window.__seasonPreviewName && window.__seasonPreviewName() === "smoky" && window.__applySeasonSilent) window.__applySeasonSilent(null);
+      var limits = window.__tempLimits && window.__tempLimits();
+      var outdoorC = row && typeof row.outdoorC === "number" && isFinite(row.outdoorC) &&
+        (!limits || (row.outdoorC >= limits.min && row.outdoorC <= limits.max)) ? row.outdoorC : null;
+      if (window.__setOutdoorTemp) window.__setOutdoorTemp(outdoorC);
+      if (!window.__setTempDisplayUnits || !window.__setTempDisplayUnits(row && row.units)) {
+        if (window.__resetTempDisplayUnits) window.__resetTempDisplayUnits();
+      }
+    },
+    reset: function () {
+      if (window.__restoreWeatherCheckpointState) window.__restoreWeatherCheckpointState(null);
+      if (window.__restoreAuroraCheckpointState) window.__restoreAuroraCheckpointState(null);
+      if (window.__seasonPreviewName && window.__seasonPreviewName() === "smoky" && window.__applySeasonSilent) window.__applySeasonSilent(null);
+      if (window.__setOutdoorTemp) window.__setOutdoorTemp(null);
+      if (window.__resetTempDisplayUnits) window.__resetTempDisplayUnits();
+    }
+  });
   // ── the birthday axis: the 'b' key + birthday() console command ────────────
   // Its OWN ring, independent of the seasons: every datable person in calendar order, ROTATED to
   // lead with Markéta (Jan 20). Each stop
@@ -95424,13 +95528,13 @@ function spawnDustMote(container) {
     var beforeSky = consoleSkyState();
     var kp = typeof arg === "number" ? arg : null;
     if (kp != null && (!isFinite(kp) || kp < 0 || kp > 9)) return "🌌 the planetary Kp index runs 0–9 — aurora(2) is a faint smudge, aurora(5) a real display, aurora(8) a storm.";
-    if (kp == null && !arg) { var r = window.__setAurora(false); narrate(r, "", "🌌 the northern lights fade out."); reportConsoleSky(beforeSky); return r; }
+    if (kp == null && !arg) { var r = window.__setAurora(false, "ui"); narrate(r, "", "🌌 the northern lights fade out."); reportConsoleSky(beforeSky); return r; }
     if (window.goToStage) window.goToStage("garden");     // the aurora hangs in the garden window
     if (window.__forceBalconyStorm) window.__forceBalconyStorm(false); // a clear night — no rain/lightning over the aurora
     if (window.__setBalconyOvercast) window.__setBalconyOvercast(false); // …and no grey overcast either
     if (window.__setDayNight) window.__setDayNight(true); // the lights need the night sky
     if (window.__setAuroraKp) window.__setAuroraKp(kp);   // a bare aurora(true) hands the index back to the sky (which floors a summoned one into storm territory)
-    var shown = window.__setAurora(true);
+    var shown = window.__setAurora(true, "ui");
     if (kp == null) { narrate(shown, "🌌 the northern lights ripple over the garden.", "🌌 the northern lights are drifting somewhere overhead."); reportConsoleSky(beforeSky); return shown; }
     var look = kp >= 7 ? "a full storm — curtains climbing the sky under a red crown"
       : kp >= 4.5 ? "a real display, folding and drifting"

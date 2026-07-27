@@ -229,8 +229,8 @@ Checkpoint payloads may carry a `systems` map populated by subsystem-owned adapt
 validates its compact row and restores around the room transition (`beforeStage`, then `afterStage`
 for geometry-dependent state); a missing row means that subsystem's fresh default. Continue restores
 durable intent and settled identity. Stable room utilities may resume once their normal room/focus
-gates allow it, while calls, cameras, dialogs, progress animations, runtimes, and live minigame loops
-stay stopped.
+gates allow it. Live observations and derived rolls remain fresh; calls, cameras, dialogs, active
+timers, spawned effects, runtimes, and live minigame loops stay stopped.
 
 ### Trailer lifecycle
 

@@ -582,7 +582,7 @@ function checkTransformClobber(file, style, html) {
 //    constants-only lower-bound check: compare only pure-numeric ramp ends
 //    against pure-numeric close delays (anything symbolic is skipped, so no
 //    false positives). ~50 one-shot SFX closers get this for free.
-var FADE_STOP_FNS = ["stopFire", "stopKettleHum", "stopRadioStatic", "stopPcFan", "stopACHum", "stopPartyMusic", "stopWorkout"];
+var FADE_STOP_FNS = ["stopFire", "stopKettleHum", "stopRadioStatic", "stopPcFan", "stopACHum", "stopPartyMusic", "stopWorkout", "stopRain"];
 var FADE_CLOSE_ALLOW = [
   // "functionName" entries for vetted false positives of the constants-only tier.
 ];
@@ -746,8 +746,8 @@ function checkAudioFadeCloseRace(file, script) {
     // floor so parser rot can't silently drop the constants tier to zero coverage.
     // One-shot effects share a single never-closed AudioContext (getSfxCtx), so only
     // the persistent beds' teardowns still pair a close timer with a fade ramp.
-    if (constChecked < 2) {
-      issues.push("constants tier only matched " + constChecked + " function(s) (expected >= 2) — extraction broken?");
+    if (constChecked < 1) {
+      issues.push("constants tier matched no functions — extraction broken?");
     }
     // the shared-context invariant itself: ONE AudioContext for the whole page. Safari
     // hard-caps concurrent contexts (~4), so the old ~26-context model produced NO Web

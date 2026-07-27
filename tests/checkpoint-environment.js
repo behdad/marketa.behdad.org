@@ -6,7 +6,7 @@ var lib = require("./lib");
 var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
-  'var saved={version:1,savedAt:Date.now()-1000,progress:{room:"office",maxUnlocked:4,phase2:true,party:false,daylight:true,bbq:false},puzzle:{},systems:{environment:{weather:{rain:true,storm:true,overcast:false},aurora:{mode:"on",kp:7},smoke:true,outdoorC:-25,units:{indoor:"F",outdoor:"F"}}}};',
+  'var saved={version:1,savedAt:Date.now()-1000,progress:{room:"kitchen",maxUnlocked:4,phase2:true,party:false,daylight:true,bbq:false},puzzle:{},systems:{environment:{weather:{rain:true,storm:true,overcast:false},aurora:{mode:"on",kp:7},smoke:true,outdoorC:-25,units:{indoor:"F",outdoor:"F"}}}};',
   'if(!sessionStorage.getItem("checkpoint-environment-seeded")){sessionStorage.setItem("checkpoint-environment-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   'var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn");if(button)button.click();',
@@ -38,10 +38,10 @@ if (!result) {
 }
 
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(result.restored && result.restored.room === "office" &&
+check(result.restored && result.restored.room === "kitchen" &&
   result.restored.weather && result.restored.weather.rain && result.restored.weather.storm &&
-  result.restored.weather.overcast === false,
-  "Continue restores authored weather layers after the saved room", result.restored);
+  result.restored.weather.overcast === false && result.restored.particles.rain === 0,
+  "Continue restores rainy weather without painting balcony rain in the kitchen", result.restored);
 check(result.restored && result.restored.aurora && result.restored.aurora.mode === "on" &&
   result.restored.aurora.kp === 7 && result.restored.season === "smoky",
   "Continue restores deliberate sky and smoke overrides", result.restored);

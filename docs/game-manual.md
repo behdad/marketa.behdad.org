@@ -339,7 +339,7 @@ a repeatable coffee loop. They are not required for the initial solve.
 
 ### Garden/party solution
 
-1. Water any plant with a bottle.
+1. Water any plant with a bottle, or use the tiny shelf mister.
 2. Start the guitar music.
 3. Light both candles.
 

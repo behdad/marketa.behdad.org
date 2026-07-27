@@ -128,6 +128,34 @@ else {
   if (r.errors.length === 0) pass("no uncaught JS errors across the run"); else fail("no uncaught JS errors", r.errors.slice(0,12).join("\n"));
 }
 
+var reducedHarness = [
+  "<pre id=\"__report\" style=\"position:fixed;left:-9999px\">pending</pre>",
+  "<script>",
+  "window.addEventListener('load',function(){setTimeout(function(){",
+  "  birthday('navid');",
+  "  var g=document.getElementById('stage-garden'),r=document.getElementById('garden-kid-navid');",
+  "  if(g)g.style.setProperty('visibility','visible','important');",
+  "  if(r)r.classList.add('chasing');",
+  "  var h=r&&r.querySelector('.bd-hat-navid');",
+  "  document.getElementById('__report').textContent=JSON.stringify({hat:h?getComputedStyle(h).visibility:'(absent)',opacity:h?getComputedStyle(h).opacity:'',errors:window.__errs});",
+  "},500);});",
+  "</script>"
+].join("\n");
+var reduced = lib.runPageSync("rsvp.html", reducedHarness, 4000, {
+  patchRaf: true,
+  chromeFlags: "--force-prefers-reduced-motion=reduce"
+});
+if (reduced && reduced.hat === "hidden") pass("reduced-motion suppression cannot leave an active runner's birthday hat floating"); else fail("reduced-motion runner hat suppression", JSON.stringify(reduced));
+if (reduced && reduced.errors && reduced.errors.length === 0) pass("no uncaught JS errors in reduced-motion runner probe"); else fail("reduced-motion probe errors", JSON.stringify(reduced && reduced.errors));
+
+var source = require("fs").readFileSync(require("path").join(__dirname, "..", "rsvp.html"), "utf8");
+if (source.indexOf('#stage-garden > [id^="garden-kid-"]:not(.chasing) .bd-adorn') >= 0 &&
+    source.indexOf('#loft-game-strip [id^="garden-kid-"]:not(.chasing) .bd-adorn') < 0) {
+  pass("parked-runner gate targets outer runners without catching their *-body descendants");
+} else {
+  fail("parked-runner selector scope");
+}
+
 console.log("");
 if (failures > 0) { console.log(failures + " check(s) failed."); process.exit(1); }
 else { console.log("All checks passed."); }

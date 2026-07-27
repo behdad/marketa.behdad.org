@@ -796,6 +796,12 @@ cards update only the renderer's displayed month; grid days and search results o
 and special-day scene dispatch. `__activatePolyamoryDay` explicitly ends party mode before the
 Cuddly-puddly pan so the four-person couch scene is not hidden by party occupancy.
 
+Birthday adornments are nested inside each rendered figure so they inherit its authored transforms.
+Chase-runner adornments have an additional outer-runner gate: a parked or reduced-motion-suppressed
+runner must hide its child hat, while `.chasing` reveals the hat with the moving figure. Keep that
+selector scoped to the direct `#stage-garden` runner children; their `garden-kid-*-body` descendants
+never carry `.chasing`.
+
 Weather is fetched client-side for Edmonton and Prague, with current conditions and multi-day data.
 When `?date=` or `?time=` selects another Edmonton moment, the current Edmonton reading is replaced
 by Open-Meteo archive data. Past dates use their exact archive day; current or future dates use the

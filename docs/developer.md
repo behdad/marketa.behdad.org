@@ -748,7 +748,7 @@ displays `[context cleared]`, then resets its history and closes.
 
 The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
 low delivery with `html.frame-rate-low`. It samples only while the document is
-visible and focused, requires two 1.2-second windows below 30 FPS to enter slow
+visible and focused, requires two 1.2-second windows at or below 40 FPS to enter slow
 mode, and three windows at or above 50 FPS to recover. The garden disco pools and
 night constellations use that state: healthy delivery runs their continuous CSS
 motion, while low-frame mode replaces it with roughly one-second discrete steps.

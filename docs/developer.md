@@ -475,6 +475,12 @@ The scene is inline SVG, with CSS animations, Web Animations API effects, SMIL w
 WebKit, and JavaScript-created transient nodes. Treat all four mechanisms as lifecycle-managed
 resources.
 
+The Pride Day viewport wash uses one self-rescheduling timeout owned by
+`__setPrideDayWashEnabled`. It starts only after `loft:gamestart`, pauses and clears on
+blur/visibility loss, yields immediately to trip or molecule-card classes, and is destroyed on
+season exit/reset. The office flag's third tap calls the same immediate paint path and never owns
+a recurrence timer.
+
 ### Room parking
 
 Search for `stage-far`, `stageAnimationParkingActive`, and `__stageParkingState`.

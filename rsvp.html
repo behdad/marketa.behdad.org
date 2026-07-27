@@ -27193,6 +27193,8 @@ var T = {
     tetris_again_key: "ENTER",
     tetris_touch_again_key: "TAP",
     restart_confirm: "Restart the loft from the beginning? You'll lose your progress.",
+    extinguisher_warning: "I wouldn't.",
+    extinguisher_reset: "You would. You did. Game reset.",
     caps_aria: "A pink flat cap and a blue baker boy cap, crossed",
     laptop_date: "July 10",
     desk_to: "to",
@@ -28284,6 +28286,8 @@ var T = {
     tetris_again_key: "ENTER",
     tetris_touch_again_key: "KLEPNI",
     restart_confirm: "Restartovat loft od začátku? Přijdeš o svůj postup.",
+    extinguisher_warning: "Radši ne.",
+    extinguisher_reset: "Tak přece. A je to. Hra resetována.",
     caps_aria: "Růžová bekovka a modrá osmidílná bekovka, zkřížené",
     laptop_date: "10. 7.",
     desk_to: "do",
@@ -88502,6 +88506,7 @@ function spawnDustMote(container) {
     options = options || {};
     var enterPageMode = !!options.enterPageMode;
     var resetDateTime = options.resetDateTime === true;
+    try { localStorage.removeItem("loftExtinguisherWarned"); } catch (error) {}
     window.__runTransientResetHooks();
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     if (window.__resetCheckpointSystems) window.__resetCheckpointSystems();
@@ -91006,6 +91011,7 @@ function spawnDustMote(container) {
   var extinguisher = document.getElementById("kitchen-extinguisher");
   var wipe = document.getElementById("hunt-wipe");
   if (extinguisher) {
+    var extinguisherWarningKey = "loftExtinguisherWarned";
     function activateExtinguisher(options) {
       var resetDateTime = !!(options && options.resetDateTime === true);
       var enterPageMode = !!(window.__gameOnlyEntered && window.__gameOnlyEntered());
@@ -91015,6 +91021,7 @@ function spawnDustMote(container) {
       setTimeout(function () {
         resetHunt({ enterPageMode: enterPageMode, resetDateTime: resetDateTime });
         if (wipe) wipe.classList.remove("active");
+        if (window.__flashCaptionKey) window.__flashCaptionKey("extinguisher_reset", 4000, "extinguisher");
       }, 700);
     }
     window.__activateExtinguisher = activateExtinguisher; // 'r' key routes the reset through the extinguisher
@@ -91042,7 +91049,18 @@ function spawnDustMote(container) {
       escapeBtn.blur();
       dispatchEscape(document);
     });
-    extinguisher.addEventListener("click", activateExtinguisher);
+    extinguisher.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (e.detail === 0) activateExtinguisher();
+      else {
+        var warned = false;
+        try { warned = localStorage.getItem(extinguisherWarningKey) === "1"; } catch (error) {}
+        if (!warned) {
+          try { localStorage.setItem(extinguisherWarningKey, "1"); } catch (error) {}
+          if (window.__flashCaptionKey) window.__flashCaptionKey("extinguisher_warning", 2500, "extinguisher");
+        } else activateExtinguisher();
+      }
+    });
     extinguisher.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activateExtinguisher(); }
     });

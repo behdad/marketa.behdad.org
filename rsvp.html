@@ -82020,6 +82020,7 @@ function spawnDustMote(container) {
   // on the garden floor". Keeping those concepts separate lets an adult rotate to another room
   // without making their children disappear from the shared party/Cuddly inventory.
   var attendedGuestNames = new Set();
+  var bdCrowdBefore = null, bdAttendedBefore = null;
   function guestsWanted() { // on the floor when: party lit + in the garden. NOT gated on tab visibility/focus:
     // The party keeps running unattended (owner: guests should keep arriving/leaving even when the
     // window is unfocused or hidden — the BBQ-kiosk case). Safe here because arrivals are silent CSS
@@ -82395,6 +82396,7 @@ function spawnDustMote(container) {
     for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving", "bd-honoree"); }
     recentArrivals.length = 0;
     attendedGuestNames.clear();
+    bdCrowdBefore = bdAttendedBefore = null;
     var walks = g.querySelectorAll(".guest-walk");
     for (var k = 0; k < walks.length; k++) walks[k].style.removeProperty("--walk-x");
     slotXBySel = {}; // forget all slots
@@ -82433,6 +82435,46 @@ function spawnDustMote(container) {
     if (!guestsWanted()) return false;
     guestsArrived = true; slideGuestsIn();
     return true;
+  };
+  window.__prepareBdCakeCrowd = function () {
+    if (bdCrowdBefore) return;
+    var g = document.getElementById("garden-guests");
+    bdCrowdBefore = new Set(g ? Array.from(g.querySelectorAll(".guest.arrived:not(.leaving)")) : []);
+    bdAttendedBefore = new Set(attendedGuestNames);
+  };
+  window.__releaseBdCakeCrowd = function () {
+    var g = document.getElementById("garden-guests");
+    if (!g || !bdCrowdBefore) return window.__trimFloorToCap ? window.__trimFloorToCap() : 0;
+    var held = new Set();
+    fullArrivals().forEach(function (u) {
+      if (!unitIsBirthdayHeld(g, u)) return;
+      u.sels.forEach(function (sel) { var el = g.querySelector(sel); if (el) held.add(el); });
+    });
+    var extras = g.querySelectorAll(".guest.arrived:not(.leaving)"), released = 0;
+    for (var i = 0; i < extras.length; i++) {
+      var el = extras[i];
+      if (bdCrowdBefore.has(el) || held.has(el) || el.classList.contains("bd-honoree")) continue;
+      var sel = null;
+      for (var c = 0; c < el.classList.length; c++) if (el.classList[c].indexOf("g-") === 0) { sel = "." + el.classList[c]; break; }
+      if (!sel) continue;
+      var home = homeXBySel[sel];
+      if (home == null) {
+        var match = /translate\(\s*([-\d.]+)/.exec(el.getAttribute("transform") || "");
+        home = match ? parseFloat(match[1]) || 0 : 0;
+      }
+      walkFigureOut(g, sel, home);
+      if (el.classList.contains("leaving") || !el.classList.contains("arrived")) released++;
+    }
+    attendedGuestNames.clear();
+    bdAttendedBefore.forEach(function (name) { attendedGuestNames.add(name); });
+    g.querySelectorAll(".guest.bd-honoree").forEach(function (el) {
+      for (var c = 0; c < el.classList.length; c++) if (el.classList[c].indexOf("g-") === 0) attendedGuestNames.add(el.classList[c].slice(2));
+    });
+    bdCrowdBefore = bdAttendedBefore = null;
+    rebalanceFloor(g);
+    syncCrowdClear();
+    if (released) { g.classList.add("trickle"); armTrickle(10000 + Math.random() * 6000); }
+    return released;
   };
   // Bring the normal revolving floor up to its cap immediately without summoning the whole
   // wedding. May 2 uses this before its invitation lands, so there are enough settled adults
@@ -83077,7 +83119,8 @@ function spawnDustMote(container) {
       var ck = document.getElementById("garden-bd-cake");
       if (ck && bdCakeAnchor && bdCakeAnchor.parentNode === group) group.insertBefore(ck, bdCakeAnchor);
       bdCakeAnchor = null;
-      if (window.__trimFloorToCap) window.__trimFloorToCap();
+      if (window.__releaseBdCakeCrowd) window.__releaseBdCakeCrowd();
+      else if (window.__trimFloorToCap) window.__trimFloorToCap();
     }
     function startBdCakeCutting(who) {
       if (!onFloor()) return false;                 // only meaningful with the crowd on the floor
@@ -96249,6 +96292,7 @@ function spawnDustMote(container) {
     if (window.goToStage) window.goToStage("garden");
     setTimeout(function () { // let goToStage settle the room, then make sure the crowd's up before cutting
       if (!window.__gardenPartyOn) return;
+      if (window.__prepareBdCakeCrowd) window.__prepareBdCakeCrowd();
       if (window.__summonGuests) window.__summonGuests();
       setTimeout(function () {
         if (!window.__gardenPartyOn) return;

@@ -38122,7 +38122,7 @@ function quickReversalGesture(action) {
   // it (the big pan rattling the cutting boards), "clatter" is a plain drop onto the counter (target
   // may be null → a straight drop to landY). Each pan lands on the item directly below it, so no pan
   // ever flies across the scene.
-  function fallenPanTarget(panId, targetId, offsetX, offsetY, effect, landY) {
+  function fallenPanTarget(panId, targetId, offsetX, offsetY, effect, landY, silent) {
     var pan = document.getElementById(panId);
     var target = targetId ? document.getElementById(targetId) : null;
     if (!pan) return;
@@ -38148,6 +38148,11 @@ function quickReversalGesture(action) {
       }
     } catch (e) {}
     pan.classList.add("fallen"); // stops it swinging along with the rest afterward
+    if (silent) {
+      pan.style.transform = "translate(" + dx + "px," + (dy - 3) + "px) rotate(264deg)";
+      if (target && effect === "break") target.classList.add("broken");
+      return;
+    }
     if (pan.animate && !panFallReducedMotion()) {
       var anim = pan.animate([
         { transform: "translate(0px,0px) rotate(0deg)" },
@@ -38162,6 +38167,7 @@ function quickReversalGesture(action) {
     }
     setTimeout(function () {
       playPanCrashSound(targetId || panId);
+      if (window.__checkpointChanged) window.__checkpointChanged();
       if (!target || effect === "clatter") return; // a plain clatter onto the counter — nothing below to react
       if (effect === "wobble") {                    // rattle the item (cutting boards) without breaking it
         target.classList.remove("rattling");
@@ -38203,6 +38209,7 @@ function quickReversalGesture(action) {
     if (spec.flag === "kettle") { if (typeof kettleSteaming !== "undefined" && kettleSteaming && typeof toggleKettle === "function") toggleKettle(); kettleBroken = true; } // off cleanly before it's marked broken
     if (spec.flag === "soda") sodaBroken = true;
     fallenPanTarget(spec.pan, spec.target, spec.ox || 0, spec.oy || 0, spec.effect, spec.landY);
+    if (window.__checkpointChanged) window.__checkpointChanged();
   }
   // Which pan comes down. A direct tap usually knocks loose the pan you actually hit, so the hit
   // reads as causal; the rest of the time a neighbour goes instead, keeping it playful. Callers
@@ -38241,7 +38248,7 @@ function quickReversalGesture(action) {
   // "forwards" otherwise keeps holding the last keyframe after the class is gone),
   // clear the fallback inline transform, and drop the fallen/broken visuals so the
   // scene starts clean on replay.
-  window.__resetKitchenPans = function () {
+  function clearKitchenDamageVisuals(resetWater) {
     waterBottleBroken = false;
     kettleBroken = false;
     sodaBroken = false;
@@ -38258,7 +38265,10 @@ function quickReversalGesture(action) {
     });
     var boards = document.getElementById("kitchen-boards");
     if (boards) boards.classList.remove("rattling");
-    if (window.resetWaterBottle) window.resetWaterBottle();
+    if (resetWater && window.resetWaterBottle) window.resetWaterBottle();
+  }
+  window.__resetKitchenPans = function () {
+    clearKitchenDamageVisuals(true);
   };
   var pans = document.getElementById("kitchen-pans");
   if (pans) {
@@ -38408,12 +38418,19 @@ function quickReversalGesture(action) {
   if (waterbottle) {
     var waterBottleLeft = 4;
     var waterBottleLiquid = document.getElementById("kitchen-waterbottle-liquid");
+    function setKitchenWaterLevel(level, leaking) {
+      waterBottleLeft = Math.max(0, Math.min(4, level));
+      if (waterBottleLiquid) {
+        waterBottleLiquid.style.transition = leaking && !panFallReducedMotion() ? "transform 2.8s ease-in" : "";
+        waterBottleLiquid.style.transform = "scaleY(" + (waterBottleLeft / 4) + ")";
+      }
+    }
     function clinkWaterBottle() {
       if (waterBottleBroken) { playDryClickSound("kitchen-waterbottle"); return; }
       playGlassClinkSound(1 + (4 - waterBottleLeft) * 0.1, "kitchen-waterbottle");
       if (waterBottleLeft > 0) {
-        waterBottleLeft--;
-        if (waterBottleLiquid) waterBottleLiquid.style.transform = "scaleY(" + (waterBottleLeft / 4) + ")";
+        setKitchenWaterLevel(waterBottleLeft - 1, false);
+        if (window.__checkpointChanged) window.__checkpointChanged();
       }
     }
     waterbottle.addEventListener("click", clinkWaterBottle);
@@ -38423,17 +38440,57 @@ function quickReversalGesture(action) {
     // Called once, right as the fallen pan lands on it (see fallenPanTarget) — drains
     // whatever was left over a couple seconds rather than snapping straight to empty.
     window.__leakWaterBottle = function () {
-      waterBottleLeft = 0;
+      setKitchenWaterLevel(0, true);
       playWaterLeakSound();
-      if (!waterBottleLiquid) return;
-      waterBottleLiquid.style.transition = panFallReducedMotion() ? "none" : "transform 2.8s ease-in";
-      waterBottleLiquid.style.transform = "scaleY(0)";
+      if (window.__checkpointChanged) window.__checkpointChanged();
     };
     window.resetWaterBottle = function () {
-      waterBottleLeft = 4;
-      if (waterBottleLiquid) { waterBottleLiquid.style.transition = ""; waterBottleLiquid.style.transform = ""; }
+      setKitchenWaterLevel(4, false);
     };
+    window.__kitchenWaterState = function () { return { level: waterBottleLeft }; };
+    window.__deferCheckpointAdapter("kitchen-water", {
+      capture: window.__kitchenWaterState,
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        setKitchenWaterLevel(row && Number.isInteger(row.level) && row.level >= 0 && row.level <= 4 ? row.level : 4, false);
+      },
+      reset: window.resetWaterBottle
+    });
   }
+  function kitchenDamageState() {
+    var fallen = [];
+    PAN_FALLS.forEach(function (spec) {
+      var pan = document.getElementById(spec.pan);
+      if (pan && pan.classList.contains("fallen")) fallen.push(spec.pan);
+    });
+    return { fallen: fallen };
+  }
+  function restoreKitchenDamage(row) {
+    var allowed = PAN_FALLS.map(function (spec) { return spec.pan; });
+    var fallen = row && Array.isArray(row.fallen) &&
+      row.fallen.every(function (id, i, all) { return allowed.indexOf(id) !== -1 && all.indexOf(id) === i; }) ? row.fallen : [];
+    clearKitchenDamageVisuals(false);
+    PAN_FALLS.forEach(function (spec) {
+      if (fallen.indexOf(spec.pan) === -1) return;
+      if (spec.flag === "waterBottle") waterBottleBroken = true;
+      if (spec.flag === "kettle") kettleBroken = true;
+      if (spec.flag === "soda") sodaBroken = true;
+      fallenPanTarget(spec.pan, spec.target, spec.ox || 0, spec.oy || 0, spec.effect, spec.landY, true);
+    });
+    if (fallen.length) {
+      panFallQueue = shufflePanFalls().filter(function (spec) { return fallen.indexOf(spec.pan) === -1; });
+      nextPanFallAt = 5 + Math.floor(Math.random() * 4);
+    }
+    if (waterBottleBroken && window.__kitchenWaterState && window.__kitchenWaterState().level !== 0) {
+      setKitchenWaterLevel(0, false);
+    }
+  }
+  window.__kitchenDamageState = kitchenDamageState;
+  window.__deferCheckpointAdapter("kitchen-damage", {
+    capture: kitchenDamageState,
+    restore: function (row, phase) { if (phase === "afterStage") restoreKitchenDamage(row); },
+    reset: function () { clearKitchenDamageVisuals(true); }
+  });
   var kettle = document.getElementById("kitchen-kettle");
   if (kettle) {
     var kettleSteaming = false;
@@ -40250,14 +40307,9 @@ function quickReversalGesture(action) {
     function spawnBottleShards(cx, cy, color) {
       if (!barShatter) return;
       // a liquid splash that stays as the evidence
-      var puddle = document.createElementNS(SVGNS_BAR, "ellipse");
-      puddle.setAttribute("class", "bar-splash");
-      puddle.setAttribute("cx", cx); puddle.setAttribute("cy", cy + 6);
-      puddle.setAttribute("rx", bottleReduce ? 15 : 3); puddle.setAttribute("ry", bottleReduce ? 3.4 : 1.5);
-      puddle.setAttribute("fill", color); puddle.setAttribute("opacity", "0.5");
-      barShatter.appendChild(puddle);
+      var puddle = appendBottlePuddle(cx, cy, color);
       if (bottleReduce) return; // reduced motion: broken puddle only, no flying shards
-      if (puddle.animate) puddle.animate([{ rx: "3px", ry: "1.5px" }, { rx: "16px", ry: "3.6px" }], { duration: 500, easing: "ease-out", fill: "forwards" });
+      if (puddle && puddle.animate) puddle.animate([{ rx: "3px", ry: "1.5px" }, { rx: "16px", ry: "3.6px" }], { duration: 500, easing: "ease-out", fill: "forwards" });
       for (var i = 0; i < 7; i++) {          // a short, capped burst of glass shards
         var s = document.createElementNS(SVGNS_BAR, "polygon");
         s.setAttribute("class", "bar-shard");
@@ -40281,6 +40333,16 @@ function quickReversalGesture(action) {
         })(s, cx, cy, ex, ey, Math.random() * 720 - 360);
       }
     }
+    function appendBottlePuddle(cx, cy, color) {
+      if (!barShatter) return;
+      var puddle = document.createElementNS(SVGNS_BAR, "ellipse");
+      puddle.setAttribute("class", "bar-splash");
+      puddle.setAttribute("cx", cx); puddle.setAttribute("cy", cy + 6);
+      puddle.setAttribute("rx", "15"); puddle.setAttribute("ry", "3.4");
+      puddle.setAttribute("fill", color); puddle.setAttribute("opacity", "0.5");
+      barShatter.appendChild(puddle);
+      return puddle;
+    }
     function shatterBottle(w) {
       var u = w.querySelector("use");
       if (!u) return;
@@ -40295,6 +40357,7 @@ function quickReversalGesture(action) {
         if (landed) return; landed = true;
         w.classList.add("broken");          // hide the shelf bottle — it's shattered now
         spawnBottleShards(bx, BOTTLE_LAND_Y, color);
+        if (window.__checkpointChanged) window.__checkpointChanged();
         playGlassClinkSound(0.42 + Math.random() * 0.1, pan); // a low glass smash cluster
         setTimeout(function () { playGlassClinkSound(0.6 + Math.random() * 0.2, pan); }, 60);
         setTimeout(function () { playGlassClinkSound(0.5 + Math.random() * 0.2, pan); }, 130);
@@ -40318,6 +40381,7 @@ function quickReversalGesture(action) {
       e.stopPropagation();
       if (w.classList.contains("fallen")) return; // a toppled bottle is inert
       bottleClicks += 1;
+      if (window.__checkpointChanged) window.__checkpointChanged();
       if (bottleClicks >= bottleFallAt) {
         bottleClicks = 0;
         bottleFallAt = bottleFallAt === 4 ? 5 : 4;
@@ -40350,6 +40414,36 @@ function quickReversalGesture(action) {
       });
       if (barShatter) while (barShatter.firstChild) barShatter.removeChild(barShatter.firstChild);
     };
+    function barBottleInventoryState() {
+      var broken = [];
+      Array.prototype.forEach.call(barBottles.querySelectorAll(".bar-bottle"), function (w, i) {
+        if (w.classList.contains("fallen") || w.classList.contains("broken")) broken.push(i);
+      });
+      return { broken: broken, clicks: bottleClicks, threshold: bottleFallAt };
+    }
+    function restoreBarBottleInventory(row) {
+      var all = Array.prototype.slice.call(barBottles.querySelectorAll(".bar-bottle"));
+      var broken = row && Array.isArray(row.broken) &&
+        row.broken.every(function (i, at, list) { return Number.isInteger(i) && i >= 0 && i < all.length && list.indexOf(i) === at; }) ? row.broken : [];
+      var threshold = row && (row.threshold === 4 || row.threshold === 5) ? row.threshold : 4;
+      var clicks = row && Number.isInteger(row.clicks) && row.clicks >= 0 && row.clicks < threshold ? row.clicks : 0;
+      window.__resetBarBottles();
+      bottleFallAt = threshold;
+      bottleClicks = clicks;
+      broken.forEach(function (i) {
+        var w = all[i], u = w && w.querySelector("use");
+        if (!w || !u) return;
+        w.classList.add("fallen", "broken");
+        var bx = parseFloat(u.getAttribute("x")); if (!isFinite(bx)) bx = 300;
+        appendBottlePuddle(bx, BOTTLE_LAND_Y, u.getAttribute("fill") || "#8e3a4a");
+      });
+    }
+    window.__barBottleInventoryState = barBottleInventoryState;
+    window.__deferCheckpointAdapter("bar-bottles", {
+      capture: barBottleInventoryState,
+      restore: function (row, phase) { if (phase === "beforeStage") restoreBarBottleInventory(row); },
+      reset: window.__resetBarBottles
+    });
   }
   // The rest of the party bar's props (bartop glassware, the used glasses, the stools) react
   // to a tap the same way the back-bar bottles do: one delegated listener per group wobbles the
@@ -57339,6 +57433,7 @@ async def localfont(name):
         b.__cooking = false;
         if (smoking && temp >= 300 && !b.classList.contains("served") && !b.classList.contains("done")) {
           b.classList.add("done"); // re-checked at fire time
+          if (window.__checkpointChanged) window.__checkpointChanged();
           // The message id is its own one-shot latch, so all patties may finish together
           // without Hamid announcing the same first batch more than once.
           if (window.__deliverAutonomousPhoneMessage &&
@@ -57395,11 +57490,16 @@ async def localfont(name):
     });
     function bbqFoodState() {
       var served = 0, depleted = 0;
+      var spots = [];
       burgers.forEach(function (b) {
         served += b.__servings || 0;
         if (b.classList.contains("depleted")) depleted++;
+        spots.push({
+          servings: b.__servings || 0,
+          cooked: b.classList.contains("done") && !b.classList.contains("served")
+        });
       });
-      return { served: served, capacity: burgers.length * BBQ_SERVINGS_PER_SPOT, depleted: depleted, empty: depleted === burgers.length };
+      return { served: served, capacity: burgers.length * BBQ_SERVINGS_PER_SPOT, depleted: depleted, empty: depleted === burgers.length, spots: spots };
     }
     function resetFoodInventory() {
       burgers.forEach(function (b) {
@@ -57411,6 +57511,26 @@ async def localfont(name):
       });
     }
     window.__bbqFoodState = bbqFoodState;
+    function restoreFoodInventory(row) {
+      var spots = row && Array.isArray(row.spots) && row.spots.length === burgers.length ? row.spots : null;
+      if (spots && !spots.every(function (spot) {
+        return spot && Number.isInteger(spot.servings) && spot.servings >= 0 &&
+          spot.servings <= BBQ_SERVINGS_PER_SPOT && typeof spot.cooked === "boolean";
+      })) spots = null;
+      resetFoodInventory();
+      if (!spots) return;
+      burgers.forEach(function (b, i) {
+        var spot = spots[i];
+        b.__servings = spot.servings;
+        b.classList.toggle("depleted", spot.servings === BBQ_SERVINGS_PER_SPOT);
+        b.classList.toggle("done", spot.servings < BBQ_SERVINGS_PER_SPOT && spot.cooked);
+      });
+    }
+    window.__deferCheckpointAdapter("bbq-food", {
+      capture: function () { return { spots: bbqFoodState().spots }; },
+      restore: function (row, phase) { if (phase === "afterStage") restoreFoodInventory(row); },
+      reset: resetFoodInventory
+    });
     // With the lid up, clicking a cooked item serves it. Each grate position
     // replenishes three times, then remains visibly empty: twelve plates make one cookout.
     function serveBurger(b, e) {
@@ -57442,6 +57562,7 @@ async def localfont(name):
             if (window.__stopBBQ) window.__stopBBQ("internal");
           }
         } else if (smoking) setTimeout(function () { cookBurger(b); }, 500);
+        if (window.__checkpointChanged) window.__checkpointChanged();
       }, 450);
       return kind;
     }
@@ -65911,6 +66032,7 @@ async def localfont(name):
       var wasFull = !wineglass.classList.contains("empty");
       if (wasFull) {
         wineglass.classList.add("empty");
+        if (window.__checkpointChanged) window.__checkpointChanged();
         playSipSound("balcony-wineglass");
       }
       playGlassClinkSound(wasFull ? 1 : 1.35, "balcony-wineglass");
@@ -65944,6 +66066,10 @@ async def localfont(name):
   if (winebottle) {
     var winePoursLeft = 3;
     var wineLiquid = document.getElementById("balcony-winebottle-liquid");
+    function setWinePoursLeft(level) {
+      winePoursLeft = Math.max(0, Math.min(3, level));
+      if (wineLiquid) wineLiquid.style.transform = "scaleY(" + (winePoursLeft / 3) + ")";
+    }
     function refillGlass() {
       playGlassClinkSound(1 + (3 - winePoursLeft) * 0.15, "balcony-winebottle");
       winebottle.classList.remove("wobbling");
@@ -65952,14 +66078,33 @@ async def localfont(name):
       });
       if (!wineglass || !wineglass.classList.contains("empty")) return;
       if (winePoursLeft <= 0) return;
-      winePoursLeft--;
-      if (wineLiquid) wineLiquid.style.transform = "scaleY(" + (winePoursLeft / 3) + ")";
+      setWinePoursLeft(winePoursLeft - 1);
       wineglass.classList.remove("empty");
+      if (window.__checkpointChanged) window.__checkpointChanged();
       setTimeout(playPourSound, 120);
     }
     winebottle.addEventListener("click", refillGlass);
     winebottle.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); refillGlass(); }
+    });
+  }
+  if (wineglass || winebottle) {
+    window.__wineInventoryState = function () {
+      return { pours: winebottle ? winePoursLeft : 3, glassEmpty: !!(wineglass && wineglass.classList.contains("empty")) };
+    };
+    window.__deferCheckpointAdapter("balcony-wine", {
+      capture: window.__wineInventoryState,
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        var pours = row && Number.isInteger(row.pours) && row.pours >= 0 && row.pours <= 3 ? row.pours : 3;
+        var empty = !!row && row.glassEmpty === true;
+        if (winebottle) setWinePoursLeft(pours);
+        if (wineglass) wineglass.classList.toggle("empty", empty);
+      },
+      reset: function () {
+        if (winebottle) setWinePoursLeft(3);
+        if (wineglass) wineglass.classList.remove("empty");
+      }
     });
   }
   var coveredgrill = document.getElementById("balcony-coveredgrill");
@@ -69128,6 +69273,12 @@ async def localfont(name):
       var liquid = document.getElementById("garden-bottle-liquid-" + (idx + 1));
       if (liquid) liquid.style.transform = "scaleY(" + (bottlesWaterLeft[idx] / 4) + ")";
     }
+    function setBottleLevels(levels) {
+      for (var i = 0; i < bottlesWaterLeft.length; i++) {
+        bottlesWaterLeft[i] = levels[i];
+        updateBottleLiquid(i);
+      }
+    }
     window.drainRandomBottle = function () {
       var available = [];
       bottlesWaterLeft.forEach(function (n, i) { if (n > 0) available.push(i); });
@@ -69135,6 +69286,7 @@ async def localfont(name):
       var idx = available[Math.floor(Math.random() * available.length)];
       bottlesWaterLeft[idx]--;
       updateBottleLiquid(idx);
+      if (window.__checkpointChanged) window.__checkpointChanged();
       // clink belongs to a direct bottle click only (see clinkBottles), not
       // to plant-side watering
       return true;
@@ -69143,13 +69295,11 @@ async def localfont(name):
       if (bottlesWaterLeft[idx] <= 0) return false;
       bottlesWaterLeft[idx]--;
       updateBottleLiquid(idx);
+      if (window.__checkpointChanged) window.__checkpointChanged();
       return true;
     };
     window.resetBottles = function () {
-      for (var i = 0; i < bottlesWaterLeft.length; i++) {
-        bottlesWaterLeft[i] = 4;
-        updateBottleLiquid(i);
-      }
+      setBottleLevels([4, 4, 4]);
     };
     // console toy: water() reports the three watering bottles' levels (0–4 each);
     // water(true) tips a full bottle over a plant (splash + garden watered) and returns the new levels.
@@ -69162,6 +69312,7 @@ async def localfont(name):
           var idx = avail[Math.floor(Math.random() * avail.length)];
           bottlesWaterLeft[idx]--;
           updateBottleLiquid(idx);
+          if (window.__checkpointChanged) window.__checkpointChanged();
           var spot = bottlesPlantSpots[Math.floor(Math.random() * bottlesPlantSpots.length)];
           spawnWaterDroplets(document.getElementById("loft-game-strip"), spot.x, spot.y);
           playWaterSound("garden-bottles");
@@ -69190,6 +69341,7 @@ async def localfont(name):
       if (bottlesWaterLeft[nearestIdx] > 0) {
         bottlesWaterLeft[nearestIdx]--;
         updateBottleLiquid(nearestIdx);
+        if (window.__checkpointChanged) window.__checkpointChanged();
         var spot = bottlesPlantSpots[Math.floor(Math.random() * bottlesPlantSpots.length)];
         spawnWaterDroplets(document.getElementById("loft-game-strip"), spot.x, spot.y);
         playWaterSound("garden-bottles");
@@ -69265,6 +69417,17 @@ async def localfont(name):
       // The can carries its own water supply, so use the normal plant animation/solve path
       // without consuming one of the three draggable Topo Chico bottles.
       window.waterSpecificPlant(id, function () { return true; });
+    });
+    window.__gardenWaterInventoryState = function () { return { levels: bottlesWaterLeft.slice() }; };
+    window.__deferCheckpointAdapter("garden-water", {
+      capture: window.__gardenWaterInventoryState,
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        var levels = row && Array.isArray(row.levels) && row.levels.length === 3 &&
+          row.levels.every(function (n) { return Number.isInteger(n) && n >= 0 && n <= 4; }) ? row.levels : [4, 4, 4];
+        setBottleLevels(levels);
+      },
+      reset: window.resetBottles
     });
   }
   var growlight = document.getElementById("garden-growlight");
@@ -79997,10 +80160,38 @@ function spawnDustMote(container) {
       el.classList.add("overwatered");
       eggBubble(el, tipText("plant_overwatered"), "scene-top");
     }
+    if (window.__checkpointChanged) window.__checkpointChanged();
     checkGardenDone();
     return true;
   }
   window.waterSpecificPlant = waterSpecificPlant;
+  function plantWaterState() {
+    var counts = {};
+    Object.keys(plantSpots).forEach(function (id) { counts[id] = Math.min(3, plantWaterCounts[id] || 0); });
+    return { counts: counts };
+  }
+  function restorePlantWater(row) {
+    var counts = row && row.counts && typeof row.counts === "object" ? row.counts : null;
+    var valid = !!counts && Object.keys(counts).every(function (id) {
+      return Object.prototype.hasOwnProperty.call(plantSpots, id) &&
+        Number.isInteger(counts[id]) && counts[id] >= 0 && counts[id] <= 3;
+    });
+    Object.keys(plantSpots).forEach(function (id) {
+      var count = valid && Object.prototype.hasOwnProperty.call(counts, id) ? counts[id] : 0;
+      plantWaterCounts[id] = count;
+      var el = document.getElementById(id);
+      if (el) {
+        el.classList.remove("watered");
+        el.classList.toggle("overwatered", count >= 3);
+      }
+    });
+  }
+  window.__plantWaterState = plantWaterState;
+  window.__deferCheckpointAdapter("plant-water", {
+    capture: plantWaterState,
+    restore: function (row, phase) { if (phase === "beforeStage") restorePlantWater(row); },
+    reset: function () { restorePlantWater(null); }
+  });
   // 'Enter' in the garden advances the solve one beat (water → music → candles), same idea as
   // __kitchenDoNext: click the next pending element so its own onActivate runs. Returns the id it
   // fired, or null when nothing's pending (solved) — the Enter handler falls through to the toggle.

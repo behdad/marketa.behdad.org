@@ -232,6 +232,7 @@ durable intent and settled identity. Stable room utilities may resume once their
 gates allow it. Live observations and derived rolls remain fresh; calls, cameras, dialogs, active
 timers, spawned effects, runtimes, and live minigame loops stay stopped. Geometry owners capture only
 validated settled state and restore it in `afterStage`, never transient drag motion or reactions.
+Finite quantities are bounded, and in-flight actions normalize to a safe settled state before capture.
 
 ### Trailer lifecycle
 

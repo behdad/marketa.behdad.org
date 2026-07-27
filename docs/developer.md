@@ -424,11 +424,10 @@ interactive trip entry calls `beginTrip`; `startTripVariant` remains the lower-l
 used by the trailer's deliberately non-gameplay bloom. `tripGeneration` invalidates stale end timers
 and double-rAF class additions when a trip is interrupted or reset.
 
-`#trip-caption` is a separate localized status row from the room-hint caption, so room navigation
-cannot displace a running trip's line. `startTripVariant` replaces it with the active variant's
-`trip_caption_*` key; natural completion and `stopTrip` clear it. Fullscreen sizing subtracts the
-row's live height only while it is visible. THC and ethanol are ambient chemistry-card experiences,
-not timed trip variants, so their captions live directly on those two cards.
+Trip and ambient chemistry captions use the shared temporary-caption owner above the scene.
+`__flashCaptionKey` snapshots the current clue, renders a translated key briefly, and restores the
+snapshot only if no room change or newer hint has reclaimed the line. Trip teardown and the
+molecule-card reset clear only their own caption owner.
 
 The magic box and keyboard shortcuts show molecule cards. Physical prop entries intentionally may
 not: the kitchen cream whipper starts uncarded laughing gas after its hiss. The garden frog and

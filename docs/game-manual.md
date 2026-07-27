@@ -712,10 +712,9 @@ ordinary game shortcuts are suspended until the player exits.
   `Unlock` bar to check the answer; merely landing on the right digits does not open
   it. `T` cycles trips and `Shift+1` through `Shift+8` selects directly. Some variants
   are deliberately unavailable through typed actions while the party is active.
-  Each trip shows its own short caption above the scene in every room; the caption
-  leaves when the trip ends or the loft resets. The ketamine trip's roaming ghost is
-  also a direct shortcut into Pac-Man. The separate THC and alcohol chemistry cards
-  carry their own captions too.
+  Each trip briefly borrows the clue line for its own caption, then restores the
+  previous clue; THC and alcohol use the same treatment. The ketamine trip's roaming
+  ghost is also a direct shortcut into Pac-Man.
 
 ## Calendar, special days, weather, and sky
 

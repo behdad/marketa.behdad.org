@@ -768,7 +768,8 @@ and repeats until stopped; press `Escape` or its Stop control to end it.
 Power users can also use the `?date=` and `?time=` URL parameters. The lower
 date/time overlay appears only when at least one of those parameters is present.
 Its `◀`/`▶` controls move one day at a time, while `◀◀`/`▶▶` jump between
-significant dates; selecting the date or the top occasion banner opens Calendar.
+significant dates. Selecting the date opens Calendar; selecting the top occasion
+banner activates that day's celebration.
 For a pretend Edmonton date or time, the game uses historical weather to
 approximate the selected moment. An `≈` before the Edmonton temperature marks a
 reconstructed reading rather than today's live weather.

@@ -27199,6 +27199,7 @@ var T = {
     app_video: "video",
     video_absent: "the film isn’t loaded yet — come back soon",
     app_calendar: "calendar",
+    occasion_activate: "activate this day",
     desk_search_apps: "search apps…",
     desk_search_apps_aria: "Search apps",
     datenav_prev: "Jump to the previous day of significance",
@@ -28253,6 +28254,7 @@ var T = {
     app_video: "video",
     video_absent: "film ještě není nahraný — vraťte se brzy",
     app_calendar: "kalendář",
+    occasion_activate: "spustit tento den",
     desk_search_apps: "hledat aplikace…",
     desk_search_apps_aria: "Hledat aplikace",
     datenav_prev: "Přejít na předchozí významný den",
@@ -86932,6 +86934,10 @@ function spawnDustMote(container) {
     if (!CAL_AMBIENT[sk] && window.season) { window.season(sk); return true; }
     return false;
   }
+  window.__summonCurrentFestivity = function () {
+    var s = seasonDate();
+    return calSummonFestivity(s.m, s.d, s.y);
+  };
   function calGoToDate(y, mo, d, container, surface) {
     jumpToDate(y, mo, d);
     calView = { y: y, m: mo };
@@ -91843,13 +91849,12 @@ function spawnDustMote(container) {
         b = document.createElement("button"); b.type = "button"; b.id = "occasion-banner"; b.className = "occasion-banner";
         b.addEventListener("click", function (e) {
           e.stopPropagation();
-          if (window.__openPhoneAppHere) window.__openPhoneAppHere("calendar", true);
-          else if (window.phone) window.phone("calendar");
+          if (window.__summonCurrentFestivity) window.__summonCurrentFestivity();
         });
         vp.appendChild(b);
       }
       var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
-      var calendarLabel = (T[lang] && T[lang].app_calendar) || T.en.app_calendar || "Calendar";
+      var actionLabel = (T[lang] && T[lang].occasion_activate) || T.en.occasion_activate || "activate this day";
       if (info.key) {
         b.setAttribute("data-i", info.key);
         b.innerHTML = (T[lang] && T[lang][info.key]) || T.en[info.key] || "";
@@ -91857,8 +91862,8 @@ function spawnDustMote(container) {
         b.removeAttribute("data-i");
         b.textContent = info.text;
       }
-      b.title = calendarLabel;
-      b.setAttribute("aria-label", b.textContent + " · " + calendarLabel);
+      b.title = actionLabel;
+      b.setAttribute("aria-label", b.textContent + " · " + actionLabel);
       b.getBoundingClientRect(); // reflow so the fade-in transition takes
       b.classList.add("show");
     }

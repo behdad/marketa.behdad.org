@@ -26725,6 +26725,24 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 </footer>
 
 <script>
+// Closure-local timers and one-shot classes can join the full reset without exposing a
+// subsystem reset API. Hooks stay additive and ordered; one broken cleanup must not keep
+// later owners from settling.
+var transientResetHooks = [];
+window.__registerTransientResetHook = function (id, reset) {
+  if (typeof id !== "string" || !id || typeof reset !== "function") return false;
+  transientResetHooks.push({ id: id, reset: reset });
+  return true;
+};
+window.__runTransientResetHooks = function () {
+  transientResetHooks.slice().forEach(function (hook) {
+    try { hook.reset(); }
+    catch (error) {
+      if (window.console && console.error) console.error("Transient reset hook failed (" + hook.id + ")", error);
+    }
+  });
+};
+
 // ── Shared AudioContext ─────────────────────────────────────────────────────
 // Safari hard-caps concurrent AudioContexts (~4); this page used to spin up ~26 (one
 // per ambient bed / projector-music channel / dance / the song pipeline / SFX), so past
@@ -88134,6 +88152,7 @@ function spawnDustMote(container) {
     options = options || {};
     var enterPageMode = !!options.enterPageMode;
     var resetDateTime = options.resetDateTime === true;
+    window.__runTransientResetHooks();
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     if (window.__resetCheckpointSystems) window.__resetCheckpointSystems();
     if (window.__resetPacmanUnlock) window.__resetPacmanUnlock(); // a fresh loft hides the ketamine ghost's game again

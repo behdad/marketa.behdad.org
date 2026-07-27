@@ -191,6 +191,10 @@ UI, typed API, console, restore, reset, cinematic and autoplay paths call that o
 assigning its `window.__...` mirror or rendering classes directly. Private animation counters and
 closure-local timers remain local. When a transition schedules delayed work, its stop/reset path
 must cancel the handles or invalidate callbacks with a generation token.
+Small transient controllers whose state is entirely closure-local may register cleanup with
+`__registerTransientResetHook(id, reset)`. Full resets run these hooks in registration order and
+isolate exceptions so one failed cleanup cannot strand later controllers. Existing subsystem reset
+owners remain explicit; the registry is an additive path, not a replacement for them.
 
 `loft.api` has a registry of typed queries and actions. It validates argument shapes and enum values,
 reports capability/availability information, and emits `loft:statechange` after a semantic state

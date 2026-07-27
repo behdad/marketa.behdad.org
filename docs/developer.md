@@ -228,17 +228,9 @@ retain their own page-mode behavior.
 Checkpoint payloads may carry a `systems` map populated by subsystem-owned adapters. Each adapter
 validates its compact row and restores around the room transition (`beforeStage`, then `afterStage`
 for geometry-dependent state); a missing row means that subsystem's fresh default. Continue restores
-durable UI identity, not activity: device power, surfaces, and app shells may return, while calls,
-cameras, media playback, dialogs, progress animations, runtimes, and live minigame loops stay stopped.
-The `openings` row owns settled cabinet, passthrough, chest, balcony-door, and covered-grill
-positions. It writes final classes without replaying the creatures, vapour, sounds, or other open-time
-effects; the older puzzle balcony-door field remains only as a missing-row compatibility fallback.
-These incidental toggles call `__checkpointChanged()` directly so they schedule a save without
-advancing the public semantic `stateVersion`.
-
-The coffee adapter stores one of six actionable routine steps; captures during warmup, grinding,
-tamping, brewing, or knockout roll back to the preceding step, while a mid-sip capture restores the
-finished shot so recovery never resumes a timer or strands the portafilter between docks.
+durable intent and settled identity. Stable room utilities may resume once their normal room/focus
+gates allow it, while calls, cameras, dialogs, progress animations, runtimes, and live minigame loops
+stay stopped.
 
 ### Trailer lifecycle
 

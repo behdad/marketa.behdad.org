@@ -30888,6 +30888,14 @@ setMusicPausedState(false);
   var screen = document.getElementById("cuddly-wallscreen");
   if (!screen) return;
 
+  // Room subsystems below are authored before the recovery controller. Queue their adapters
+  // until that controller installs the registry; later subsystems register immediately.
+  window.__deferCheckpointAdapter = function (id, adapter) {
+    if (window.__registerCheckpointAdapter) return window.__registerCheckpointAdapter(id, adapter);
+    (window.__pendingCheckpointAdapters || (window.__pendingCheckpointAdapters = [])).push([id, adapter]);
+    return true;
+  };
+
   // Ambient fire sound: a soft low roar (looping lowpassed noise, gently breathing via a
   // slow LFO) plus sparse bright bandpassed crackle pops — like sitting by a fireplace.
   // Modeled on startPcFan (looping filtered-noise bed with a fade in/out, gated to its
@@ -30901,7 +30909,7 @@ setMusicPausedState(false);
     // stream open, and an unattended-but-"visible" window (covered on X11 — no
     // occlusion detection) would otherwise hold it forever, where it underruns
     // into crackle on Linux; same rule as the one-shot spawners (crickets/crane)
-    return fireInCuddly && screen.classList.contains("chan-fire") &&
+    return !window.__projectorRestorePaused && fireInCuddly && screen.classList.contains("chan-fire") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popCrackle() {
@@ -31031,7 +31039,7 @@ setMusicPausedState(false);
   // focus gate and fade-and-close teardown as the fire bed above.
   var aquaCtx = null, bloopTimer = null, aquaInCuddly = false;
   function aquaWant() {
-    return aquaInCuddly && screen.classList.contains("chan-aqua") &&
+    return !window.__projectorRestorePaused && aquaInCuddly && screen.classList.contains("chan-aqua") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popBloop() {
@@ -31153,7 +31161,7 @@ setMusicPausedState(false);
     // background-safe WITHIN the nook (the look-ahead scheduler queues on the audio clock, so a
     // throttled/unfocused tab won't stutter it while you're in the room). Matches the bubbling
     // ambient's room gate.
-    return screen.classList.contains("chan-aqua") && window.currentStageName === "cuddly";
+    return !window.__projectorRestorePaused && screen.classList.contains("chan-aqua") && window.currentStageName === "cuddly";
   }
   // Shimmery bell/celesta voice: a rounded sine fundamental + a quiet octave-up sine sparkle,
   // plus a faintly detuned twin for a watery chorus shimmer, through a soft bell envelope
@@ -31266,7 +31274,7 @@ setMusicPausedState(false);
   // sparse gentle drips. Same gate/teardown shape as the aquarium bed.
   var totoroCtx = null, dripTimer = null, totoroInCuddly = false;
   function totoroWant() {
-    return totoroInCuddly && screen.classList.contains("chan-totoro") &&
+    return !window.__projectorRestorePaused && totoroInCuddly && screen.classList.contains("chan-totoro") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popDrip() {
@@ -31355,7 +31363,7 @@ setMusicPausedState(false);
     {c:[[10,0.4,1],[-12,1.3,0]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[15,0.6,1]],d:0.36},{c:[[12,0.4,1]],d:0.18},{c:[[10,0.4,1],[-14,1.3,0]],d:0.18},{c:[[7,0.5,1]],d:0.36},{c:[[10,0.4,1],[-17,1.3,0]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[15,0.4,1]],d:0.18},{c:[[17,0.75,1],[-19,1.3,0]],d:0.36},{c:[[15,0.4,1]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[10,1.0,1],[-12,1.3,0]],d:0.36},{c:[],d:0.36},{c:[[12,0.4,1],[-14,1.3,0]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[12,0.75,1],[-19,1.3,0]],d:0.36},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1],[-12,1.3,0]],d:0.18},{c:[[3,1.2,1],[-21,1.5,0]],d:0.54},{c:[],d:0.36},
     // A' reprise: the A idea, ornamented up to A5, closing on a longer C resolve + breath, then loops
     {c:[[3,0.4,1],[-21,1.3,0]],d:0.27},{c:[[7,0.25,1]],d:0.09},{c:[[10,0.4,1]],d:0.18},{c:[[12,0.4,1]],d:0.18},{c:[[10,0.75,1],[-12,1.3,0]],d:0.36},{c:[[7,0.4,1]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[12,0.4,1],[-14,1.3,0]],d:0.18},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[3,1.0,1],[-21,1.3,0]],d:0.36},{c:[],d:0.18},{c:[[5,0.4,1],[-14,1.3,0]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[10,0.5,1]],d:0.18},{c:[[12,0.75,1],[-12,1.3,0]],d:0.36},{c:[[10,0.4,1]],d:0.18},{c:[[7,0.4,1]],d:0.18},{c:[[5,0.4,1]],d:0.18},{c:[[3,1.6,1],[-21,1.6,0]],d:0.72},{c:[],d:0.18},{c:[],d:1.4}];
-  function totoroMelWant() { return screen.classList.contains("chan-totoro") && totoroMelInCuddly; } // the repeating woodland tune stays with its projector
+  function totoroMelWant() { return !window.__projectorRestorePaused && screen.classList.contains("chan-totoro") && totoroMelInCuddly; } // the repeating woodland tune stays with its projector
   function totoroMelVol() { return 0.16 * (window.__songVolume ? window.__songVolume() : 0.5); } // gentle over the rain
   // rounded pluck voice: a triangle edged softer by a co-tuned sine, struck then decayed —
   // articulates like a warm mallet/marimba. isMel sits above the bass root.
@@ -31498,7 +31506,7 @@ setMusicPausedState(false);
     // but cuddly-ONLY once the garden party is on — so it leads in the nook while the party ducks
     // into the background, instead of two whole-loft musics. Background-safe within wherever it's
     // allowed (the look-ahead scheduler queues on the audio clock, so a throttled tab won't stutter).
-    return screen.classList.contains("chan-stars") && (!window.__gardenPartyOn || window.currentStageName === "cuddly");
+    return !window.__projectorRestorePaused && screen.classList.contains("chan-stars") && (!window.__gardenPartyOn || window.currentStageName === "cuddly");
   }
   // Soft triangle voice with a struck-note envelope — a quick strike, a fast initial decay to a
   // lower body, then a slow tail, so it articulates like a felt piano rather than a held tone.
@@ -31777,7 +31785,7 @@ setMusicPausedState(false);
   function workoutVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5); }
   function workoutWant() {
     // cuddly-ONLY (a projector channel's audio belongs to the nook); background-safe within the room.
-    return screen.classList.contains("chan-workout") && window.currentStageName === "cuddly";
+    return !window.__projectorRestorePaused && screen.classList.contains("chan-workout") && window.currentStageName === "cuddly";
   }
   function wkNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -34910,6 +34918,7 @@ setMusicPausedState(false);
   };
   var chanObj = { fire: fire, workout: svgChan, aqua: svgChan, totoro: svgChan, stars: svgChan, off: off };
   var current = "fire"; // the projector always opens on the fire channel (tapping still cycles within the session)
+  window.__projectorRestorePaused = false;
 
   function applyChannelClass() {
     for (var i = 0; i < order.length; i++) screen.classList.remove("chan-" + order[i]);
@@ -35028,7 +35037,7 @@ setMusicPausedState(false);
     // to fire/off -> restore; a music->music switch does nothing (song stays suspended, so no
     // restore-then-re-suspend that would strand projSuspendedIdx).
     var wasMusic = !!MUSIC_CHANNELS[prev], nowMusic = !!MUSIC_CHANNELS[name];
-    if (nowMusic && !wasMusic) { if (window.__suspendSongForProjector) window.__suspendSongForProjector(); }
+    if (nowMusic && !wasMusic && !window.__projectorRestorePaused) { if (window.__suspendSongForProjector) window.__suspendSongForProjector(); }
     else if (!nowMusic && wasMusic) { if (window.__restoreSongAfterProjector) window.__restoreSongAfterProjector(); }
     if (window.__updateFireSound) window.__updateFireSound(); // crackle audio follows the fire channel
     if (window.__updateAquaSound) window.__updateAquaSound(); // underwater bed follows the aquarium channel
@@ -35047,7 +35056,27 @@ setMusicPausedState(false);
   applyChannelClass();
 
   window.startCuddlyFlame = start; // kept name: goToStage + the tap handler call this to (re)start the loop
-  window.__cuddlyProjector = { cycle: function () { var i = order.indexOf(current); setChannel(order[(i + 1) % order.length], true); }, set: function (n) { setChannel(n, true); }, channel: function () { return current; } };
+  function resumeRestoredProjector() {
+    if (!window.__projectorRestorePaused) return;
+    window.__projectorRestorePaused = false;
+    if (MUSIC_CHANNELS[current] && window.__suspendSongForProjector) window.__suspendSongForProjector();
+  }
+  window.__cuddlyProjector = {
+    cycle: function () { resumeRestoredProjector(); var i = order.indexOf(current); setChannel(order[(i + 1) % order.length], true); },
+    set: function (n) { resumeRestoredProjector(); setChannel(n, true); },
+    channel: function () { return current; }
+  };
+  window.__deferCheckpointAdapter("projector", {
+    capture: function () { return { channel: current }; },
+    restore: function (row, phase) {
+      if (phase !== "beforeStage") return;
+      var channel = row && order.indexOf(row.channel) !== -1 ? row.channel : "fire";
+      window.__projectorRestorePaused = false;
+      setChannel(channel, false);
+      if (window.__setPartyDuck) window.__setPartyDuck(false);
+    },
+    reset: function () { window.__projectorRestorePaused = false; setChannel("fire", false); }
+  });
   window.__cuddlyFlameRaf = function () { return raf; }; // test hook: null when the loop is stopped
   document.addEventListener("visibilitychange", function () { if (!document.hidden) start(); });
 })();
@@ -38271,6 +38300,21 @@ function quickReversalGesture(action) {
     kitchenCandle.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleKitchenCandle(); }
     });
+    window.__deferCheckpointAdapter("kitchen-candle", {
+      capture: function () { return { lit: kitchenCandle.classList.contains("lit") }; },
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        var lit = !!row && row.lit === true;
+        kitchenCandle.classList.toggle("lit", lit);
+        var ks = document.getElementById("stage-kitchen");
+        if (ks) ks.classList.toggle("k-candle-lit", lit);
+      },
+      reset: function () {
+        kitchenCandle.classList.remove("lit");
+        var ks = document.getElementById("stage-kitchen");
+        if (ks) ks.classList.remove("k-candle-lit");
+      }
+    });
   }
   var waterbottle = document.getElementById("kitchen-waterbottle");
   if (waterbottle) {
@@ -38305,6 +38349,7 @@ function quickReversalGesture(action) {
   var kettle = document.getElementById("kitchen-kettle");
   if (kettle) {
     var kettleSteaming = false;
+    var kettleRestorePaused = false;
     var kettleInterval = null;
     var kettleCtx = null, kettleSource = null, kettleGain = null;
     function kettlePuff() {
@@ -38365,13 +38410,20 @@ function quickReversalGesture(action) {
       // hasFocus too (all the continuous beds share this rule): a bed left on in an
       // unattended-but-"visible" window (covered on X11) holds a live OS audio
       // stream open indefinitely, where it underruns into crackle on Linux
-      var want = kettleSteaming && kettleInKitchen && !document.hidden && document.hasFocus();
+      var want = kettleSteaming && !kettleRestorePaused && kettleInKitchen && !document.hidden && document.hasFocus();
       if (want && !kettleCtx) startKettleHum();
       else if (!want && kettleCtx) stopKettleHum(fadeSecs);
     };
     document.addEventListener("visibilitychange", function () { window.__updateKettleHum(); });
     function toggleKettle() {
       if (kettleBroken) { playDryClickSound("kitchen-kettle"); return; }
+      if (kettleRestorePaused && kettleSteaming) {
+        kettleRestorePaused = false;
+        kettlePuff();
+        kettleInterval = setInterval(kettlePuff, 1300);
+        window.__updateKettleHum();
+        return;
+      }
       kettleSteaming = !kettleSteaming;
       kettle.classList.toggle("steaming", kettleSteaming);
       if (kettleSteaming) {
@@ -38394,9 +38446,22 @@ function quickReversalGesture(action) {
       if (kettleInterval) clearInterval(kettleInterval);
       kettleInterval = null;
       kettleSteaming = false;
+      kettleRestorePaused = false;
       kettle.classList.remove("steaming");
       stopKettleHum();
     };
+    window.__deferCheckpointAdapter("kitchen-kettle", {
+      capture: function () { return { on: kettleSteaming }; },
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        window.resetKettle();
+        kettleSteaming = !!row && row.on === true;
+        kettleRestorePaused = false;
+        kettle.classList.toggle("steaming", kettleSteaming);
+      },
+      reset: window.resetKettle
+    });
+    window.__kettleCheckpointState = function () { return { on: kettleSteaming, paused: kettleRestorePaused, audio: !!kettleCtx }; };
   }
   var gong = document.getElementById("kitchen-gong");
   if (gong) {
@@ -38716,6 +38781,7 @@ function quickReversalGesture(action) {
   var radio = document.getElementById("kitchen-scale");
   if (radio) {
     var radioOn = false;
+    var radioRestorePaused = false;
     var radioCtx = null, radioSource = null, radioGain = null;
     var radioTuneInTimeout = null, radioMelodyInterval = null, radioMelodyGain = null;
     // Beethoven's "Ode to Joy" (main theme, up an octave for a tinny transistor-radio timbre)
@@ -38815,12 +38881,17 @@ function quickReversalGesture(action) {
     window.__updateRadioSound = function (inKitchen, fadeSecs) {
       if (typeof inKitchen === "boolean") radioInKitchen = inKitchen;
       // hasFocus: continuous-bed rule, see __updateKettleHum
-      var want = radioOn && radioInKitchen && !document.hidden && document.hasFocus();
+      var want = radioOn && !radioRestorePaused && radioInKitchen && !document.hidden && document.hasFocus();
       if (want && !radioCtx) startRadioStatic();
       else if (!want && radioCtx) stopRadioStatic(fadeSecs);
     };
     document.addEventListener("visibilitychange", function () { window.__updateRadioSound(); });
     function toggleRadio() {
+      if (radioRestorePaused && radioOn) {
+        radioRestorePaused = false;
+        window.__updateRadioSound();
+        return;
+      }
       radioOn = !radioOn;
       radio.classList.toggle("on", radioOn);
       window.__updateRadioSound(); // start/stop based on the current room + radioOn
@@ -38830,8 +38901,21 @@ function quickReversalGesture(action) {
     window.resetRadio = function () {
       stopRadioStatic();
       radioOn = false;
+      radioRestorePaused = false;
       radio.classList.remove("on");
     };
+    window.__deferCheckpointAdapter("kitchen-radio", {
+      capture: function () { return { on: radioOn }; },
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        window.resetRadio();
+        radioOn = !!row && row.on === true;
+        radioRestorePaused = false;
+        radio.classList.toggle("on", radioOn);
+      },
+      reset: window.resetRadio
+    });
+    window.__radioCheckpointState = function () { return { on: radioOn, paused: radioRestorePaused, audio: !!radioCtx }; };
     radio.addEventListener("click", toggleRadio);
     radio.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleRadio(); }
@@ -40360,6 +40444,13 @@ function quickReversalGesture(action) {
       playDryClickSound("office-window-faith");
     });
     window.__resetOfficeFaith = function () { symbol.classList.remove("crescent"); };
+    window.__deferCheckpointAdapter("office-faith", {
+      capture: function () { return { symbol: symbol.classList.contains("crescent") ? "crescent" : "cross" }; },
+      restore: function (row, phase) {
+        if (phase === "beforeStage") symbol.classList.toggle("crescent", !!row && row.symbol === "crescent");
+      },
+      reset: window.__resetOfficeFaith
+    });
   })();
     window.__forceBarTumble = function (which) { tumble(which === "b" ? "kitchen-bar-patron-b" : "kitchen-bar-patron-a"); }; // test hook: force the tumble path
     function resetPatrons() { // fresh game: reseat both patrons at default x, drop any kiss/tumble state + stray hearts
@@ -40382,6 +40473,13 @@ function quickReversalGesture(action) {
       playDryClickSound("kitchen-bar-neon");
     });
     window.__resetBarNeon = function () { neon.classList.remove("pamenar"); };
+    window.__deferCheckpointAdapter("bar-neon", {
+      capture: function () { return { label: neon.classList.contains("pamenar") ? "pamenar" : "hydration" }; },
+      restore: function (row, phase) {
+        if (phase === "beforeStage") neon.classList.toggle("pamenar", !!row && row.label === "pamenar");
+      },
+      reset: window.__resetBarNeon
+    });
   })();
   // the MENU paper tacked to the pillar → summons the pocket-phone cocktails app to its drink menu,
   // opened IN-PLACE at the bar (no room jump). CSS gates pointer-events to the bar being up, so this
@@ -42075,6 +42173,9 @@ var ABANDONED_CALL_MS = 30000;
     adapters[id] = adapter;
     return true;
   };
+  (window.__pendingCheckpointAdapters || []).splice(0).forEach(function (row) {
+    window.__registerCheckpointAdapter(row[0], row[1]);
+  });
   window.__captureCheckpointSystems = function () {
     var out = {};
     order.forEach(function (id) {
@@ -65763,6 +65864,17 @@ async def localfont(name):
     wallLamp.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleWallLamp(); }
     });
+    window.__registerCheckpointAdapter("balcony-lamp", {
+      capture: function () { return { on: wallLamp.classList.contains("on") }; },
+      restore: function (row, phase) {
+        if (phase !== "afterStage") return;
+        var balcony = document.getElementById("stage-balcony");
+        var freshOn = !!(balcony && balcony.classList.contains("dusk"));
+        wallLamp.classList.toggle("on", row ? row.on === true : freshOn);
+        wallLamp.classList.remove("flash");
+      },
+      reset: function () { wallLamp.classList.remove("on", "flash"); }
+    });
   }
   var dustpan = document.getElementById("balcony-dustpan");
   if (dustpan) {
@@ -65939,6 +66051,7 @@ async def localfont(name):
   var acOutdoor = document.getElementById("balcony-minisplit");
   if (ac) {
     var acOn = false;
+    var acRestorePaused = false;
     var acCtx = null, acSource = null, acGain = null;
     function startACHum() {
       try {
@@ -65997,12 +66110,17 @@ async def localfont(name):
         if (acInAudibleRoom) acRoom = roomName; // remember which unit to pan toward
       }
       // hasFocus: continuous-bed rule, see __updateKettleHum
-      var wantHum = acOn && acInAudibleRoom && !document.hidden && document.hasFocus();
+      var wantHum = acOn && !acRestorePaused && acInAudibleRoom && !document.hidden && document.hasFocus();
       if (wantHum && !acCtx) startACHum();
       else if (!wantHum && acCtx) stopACHum(fadeSecs);
     };
     document.addEventListener("visibilitychange", function () { window.__updateACHum(); });
     function toggleAC() {
+      if (acRestorePaused && acOn) {
+        acRestorePaused = false;
+        window.__updateACHum();
+        return;
+      }
       acOn = !acOn;
       ac.classList.toggle("on", acOn);
       if (acOutdoor) acOutdoor.classList.toggle("on", acOn);
@@ -66011,6 +66129,7 @@ async def localfont(name):
     window.resetAC = function () {
       stopACHum();
       acOn = false;
+      acRestorePaused = false;
       ac.classList.remove("on");
       if (acOutdoor) acOutdoor.classList.remove("on");
     };
@@ -66018,6 +66137,19 @@ async def localfont(name):
     ac.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleAC(); }
     });
+    window.__registerCheckpointAdapter("garden-ac", {
+      capture: function () { return { on: acOn }; },
+      restore: function (row, phase) {
+        if (phase !== "beforeStage") return;
+        window.resetAC();
+        acOn = !!row && row.on === true;
+        acRestorePaused = false;
+        ac.classList.toggle("on", acOn);
+        if (acOutdoor) acOutdoor.classList.toggle("on", acOn);
+      },
+      reset: window.resetAC
+    });
+    window.__acCheckpointState = function () { return { on: acOn, paused: acRestorePaused, audio: !!acCtx }; };
   }
 })();
 (function realWeather() {
@@ -86763,6 +86895,7 @@ function spawnDustMote(container) {
     var enterPageMode = !!options.enterPageMode;
     var resetDateTime = options.resetDateTime === true;
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
+    if (window.__resetCheckpointSystems) window.__resetCheckpointSystems();
     if (window.__resetPacmanUnlock) window.__resetPacmanUnlock(); // a fresh loft hides the ketamine ghost's game again
     setOfficeProgress("prague", false);
     setOfficeProgress("pc", false);

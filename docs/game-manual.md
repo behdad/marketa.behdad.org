@@ -720,8 +720,10 @@ to that game; later personal bests can recommend another remaining game.
   Its first click opens a two-digit wedding-date lock. The partial date at the top
   opens the phone Calendar as a clue. Set both day wheels, then press the single
   `Unlock` bar to check the answer; merely landing on the right digits does not open
-  it. `T` cycles trips and `Shift+1` through `Shift+8` selects directly. Some variants
-  are deliberately unavailable through typed actions while the party is active.
+  it. Each wrong answer shows a rotating clue. Right-clicking the locked box or
+  padlock offers **Unlock**; after it is open, right-clicking the box opens a trip
+  chooser. `T` cycles trips and `Shift+1` through `Shift+8` selects directly. Some
+  variants are deliberately unavailable through typed actions while the party is active.
   Each trip briefly borrows the clue line for its own caption, then restores the
   previous clue; THC and alcohol use the same treatment. The ketamine trip's roaming
   ghost is also a direct shortcut into Hack-Man.

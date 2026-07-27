@@ -10,10 +10,12 @@ var HARNESS = [
   '<script>(function(){',
   'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'function tap(el){el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
+  'function ctx(el){var r=el.getBoundingClientRect();return !el.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:r.left+r.width/2,clientY:r.top+r.height/2}));}',
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' window.goToStage("garden");window.__setDrugsboxMonth(5);window.__drugsboxTap();',
-  ' var lock=document.getElementById("garden-boxlock"),date=document.getElementById("garden-boxlock-date-hit"),submit=document.getElementById("garden-boxlock-submit");',
+  ' window.goToStage("garden");window.__setDrugsboxMonth(5);',
+  ' var box=document.getElementById("garden-drugsbox"),lock=document.getElementById("garden-boxlock"),date=document.getElementById("garden-boxlock-date-hit"),submit=document.getElementById("garden-boxlock-submit");',
+  ' var lockedPrevented=ctx(box),lockedMenu=document.querySelector(".mon-ctx"),lockedItems=lockedMenu?[].map.call(lockedMenu.querySelectorAll("button span"),function(x){return x.textContent;}):[];S("lockedCtx",{prevented:lockedPrevented,items:lockedItems});if(lockedMenu)lockedMenu.querySelector("button").click();await sleep(20);S("lockedCtxOpen",lock.classList.contains("showing"));',
   ' S("shape",{date:date.previousElementSibling.previousElementSibling.textContent,submit:submit.querySelector("text").textContent,wheels:lock.querySelectorAll(".boxlock-hit").length,submits:lock.querySelectorAll(".boxlock-submit").length});',
   ' var clips=[document.querySelector("#garden-boxlock-clip-t rect"),document.querySelector("#garden-boxlock-clip-u rect")],button=submit.querySelector("rect"),frame=Array.from(lock.children).find(function(el){return el.tagName==="rect"&&el.getAttribute("x")==="199";}),fades=Array.from(lock.querySelectorAll("rect")).filter(function(el){return /^url\\(#garden-boxlock-fade-/.test(el.getAttribute("fill")||"");});',
   ' S("layout",{rounded:clips.every(function(el){return el&&el.getAttribute("rx")==="7";}),raised:clips.every(function(el){return el&&el.getAttribute("y")==="150";}),fadesClipped:fades.length===4&&fades.every(function(el){return !!el.getAttribute("clip-path");}),buttonBottom:+button.getAttribute("y") + +button.getAttribute("height"),frameBottom:+frame.getAttribute("y") + +frame.getAttribute("height")});',
@@ -21,9 +23,10 @@ var HARNESS = [
   ' var shell=document.querySelector(".phone-shell");if(shell){shell.focus();shell.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));}await sleep(260);S("clueBack",{phone:!!document.querySelector(".phone-backdrop.show")});window.__drugsboxTap();',
   ' tap(document.getElementById("garden-boxlock-hit-u"));S("selected",{locked:window.__drugsboxLocked(),unit:document.getElementById("garden-boxlock-drum-u").style.transform});',
   ' tap(submit);S("may",{locked:window.__drugsboxLocked(),popped:document.getElementById("garden-boxlock-shackle").classList.contains("popped")});',
-  ' window.__resetDrugsbox();window.__setDrugsboxMonth(7);window.__drugsboxTap();tap(submit);S("wrong",{locked:window.__drugsboxLocked(),denied:submit.classList.contains("denied")});',
+  ' window.__resetDrugsbox();window.__setDrugsboxMonth(7);window.__drugsboxTap();tap(submit);await sleep(20);var b1=document.querySelector(".egg-bubble");var clues=[b1&&b1.textContent.trim()];tap(submit);await sleep(20);var b2=document.querySelector(".egg-bubble");clues.push(b2&&b2.textContent.trim());tap(submit);await sleep(20);var b3=document.querySelector(".egg-bubble");clues.push(b3&&b3.textContent.trim());S("wrong",{locked:window.__drugsboxLocked(),denied:submit.classList.contains("denied"),clues:clues});',
   ' tap(document.getElementById("garden-boxlock-hit-t"));S("julySelected",window.__drugsboxLocked());tap(submit);S("july",!window.__drugsboxLocked());',
-  ' setLang("cs");S("cs",submit.querySelector("text").textContent);',
+  ' var openPrevented=ctx(box),picker=document.getElementById("garden-trip-picker"),rows=picker?[].slice.call(picker.querySelectorAll("[data-trip]")):[];S("tripPicker",{prevented:openPrevented,open:window.__tripPickerOpen(),title:picker&&picker.querySelector(".dj-pick-panel>text").textContent,ids:rows.map(function(x){return x.getAttribute("data-trip");})});var acid=picker&&picker.querySelector("[data-trip=acid]");if(acid)tap(acid);S("tripPick",{open:window.__tripPickerOpen(),state:window.__tripState()});',
+  ' window.__resetDrugsbox();setLang("cs");ctx(box);var csMenu=document.querySelector(".mon-ctx");S("cs",{submit:submit.querySelector("text").textContent,unlock:csMenu&&csMenu.textContent.trim()});',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',
   '})();</script>'
@@ -42,11 +45,16 @@ check(s.layout&&s.layout.rounded&&s.layout.raised&&s.layout.fadesClipped,"both d
 check(s.layout&&s.layout.frameBottom-s.layout.buttonBottom>=6,"Unlock button clears the lock's inner frame",s.layout);
 check(s.clue&&s.clue.phone&&!s.clue.lock,"partial date opens the phone Calendar clue",s.clue);
 check(s.clueBack&&!s.clueBack.phone,"Escape closes the magic-box Calendar instead of exposing the launcher",s.clueBack);
+check(s.lockedCtx&&s.lockedCtx.prevented&&s.lockedCtx.items.length===1&&s.lockedCtx.items[0]==="Unlock","locked box context menu contains only Unlock",s.lockedCtx);
+check(s.lockedCtxOpen,"the locked context action opens the ordinary padlock",s.lockedCtxOpen);
 check(s.selected&&s.selected.locked&&/-40px/.test(s.selected.unit||""),"selecting the correct May digits does not auto-unlock",s.selected);
 check(s.may&&!s.may.locked&&s.may.popped,"submit unlocks a correct May 01 answer",s.may);
 check(s.wrong&&s.wrong.locked&&s.wrong.denied,"submit rejects an incorrect July answer",s.wrong);
+check(s.wrong&&JSON.stringify(s.wrong.clues)===JSON.stringify(["It’s one of our wedding dates, try again.","Click on the date above.","July 10, 2027 — Prague."]),"every failed attempt shows the next useful clue",s.wrong);
 check(s.julySelected&&s.july,"correct July 10 remains locked until submit",{selected:s.julySelected,submitted:s.july});
-check(s.cs==="ODEMKNOUT","submit label follows the Czech language",s.cs);
+check(s.tripPicker&&s.tripPicker.prevented&&s.tripPicker.open&&s.tripPicker.title==="Choose a trip"&&s.tripPicker.ids.join(",")==="nitrous,shrooms,acid,froggies,dmt,molly,ketamine,iboga","unlocked box context opens the complete trip chooser",s.tripPicker);
+check(s.tripPick&&!s.tripPick.open&&s.tripPick.state.active&&s.tripPick.state.variant==="acid","choosing a trip starts it and dismisses the chooser",s.tripPick);
+check(s.cs&&s.cs.submit==="ODEMKNOUT"&&s.cs.unlock==="Odemknout","padlock and context action follow the Czech language",s.cs);
 
 console.log("");
 if(failures){console.log(failures+" check(s) failed.");process.exit(1);}

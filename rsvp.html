@@ -10329,6 +10329,7 @@ section{margin:1.9rem 0}
 #garden-bd-cake.blown #garden-bd-cake-sparkle{opacity:0; animation:none !important}
 /* the birthday person(s) lean in over the cake (translate property → composes with sway/flare) */
 #garden-guests.bd-cake-cutting .bd-cutter .guest-react{translate:0 3px; transition:translate .7s cubic-bezier(.4,0,.2,1)}
+#garden-guests.bd-cake-cutting.bd-candles-blow .bd-cutter .guest-react{translate:0 9px}
 #garden-guests .bd-cutter .guest-react{transition:translate .7s cubic-bezier(.4,0,.2,1)} /* ease back out too */
 @media (prefers-reduced-motion: reduce){
   #garden-bd-cake{transition:none}
@@ -83105,7 +83106,7 @@ function spawnDustMote(container) {
     function endBdCakeCutting() {
       if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
       setPartyMomentState("bdCake", false);
-      group.classList.remove("bd-cake-cutting");
+      group.classList.remove("bd-cake-cutting", "bd-candles-blow");
       var ckEl = document.getElementById("garden-bd-cake");
       if (ckEl) ckEl.classList.remove("blown"); // relight for the next cutting (flames fade back up)
       for (var i = 0; i < bdCutters.length; i++) if (bdCutters[i]) bdCutters[i].classList.remove("bd-cutter");
@@ -83157,8 +83158,7 @@ function spawnDustMote(container) {
       if (ck) { bdCakeAnchor = ck.nextSibling; group.appendChild(ck); }
       cheerCrowd(list.map(function (w) { return ".g-" + w; })); // the crowd flares (the birthday people are busy at the cake)
       playCheerSfx();
-      // hold until the candles are blown out (blowOutBdCandles ends it) OR 15s passes, whichever first
-      bdCakeTimer = setTimeout(endBdCakeCutting, reducedMotion() ? 6000 : 15000);
+      bdCakeTimer = setTimeout(beginBdCandleBlow, reducedMotion() ? 2600 : 5200);
       return true;
     }
     // tap the candled cake → blow the flames out: fade + kill the flicker (CSS .blown), puff a wisp of
@@ -83180,13 +83180,23 @@ function spawnDustMote(container) {
       bdCakeTimer = setTimeout(endBdCakeCutting, reducedMotion() ? 500 : 1600); // linger a beat on the smoke, then rejoin the floor
       return true;
     }
+    function beginBdCandleBlow() {
+      if (!window.__bdCakeOn) return false;
+      var cake = document.getElementById("garden-bd-cake");
+      if (!cake || cake.classList.contains("blown")) return false;
+      group.classList.add("bd-candles-blow");
+      if (bdCakeTimer) { clearTimeout(bdCakeTimer); bdCakeTimer = null; }
+      bdCakeTimer = setTimeout(blowOutBdCandles, reducedMotion() ? 250 : 700);
+      return true;
+    }
     (function () {
       var cake = document.getElementById("garden-bd-cake");
       if (!cake) return;
-      cake.addEventListener("click", function () { if (window.__bdCakeOn) blowOutBdCandles(); });
+      cake.addEventListener("click", function () { if (window.__bdCakeOn) beginBdCandleBlow(); });
     })();
     setPartyMomentState("bdCake", false);
     window.__blowOutBdCandles = blowOutBdCandles;
+    window.__beginBdCandleBlow = beginBdCandleBlow;
     window.__startBdCakeCutting = startBdCakeCutting;
     window.__endBdCakeCutting = endBdCakeCutting;
 

@@ -94846,10 +94846,6 @@ function spawnDustMote(container) {
         done: function () { return isRetired("hint_switch"); } }                                    // the balcony/party switch used
     ]
   };
-  // Shared handoff once a room's current hint pool is exhausted.
-  var HINT_ALLDONE = { en: "No clues left. Keep exploring.",
-                       cs: "Žádné další nápovědy. Objevuj dál." };
-
   // Inject the hint captions into the shared hunt dict (both languages) so
   // setCaption(key) / refreshHuntCaption() render + re-render them on a language flip
   // exactly like any room caption. Done at load, off the pools — the T.hunt LITERAL is
@@ -94861,8 +94857,6 @@ function spawnDustMote(container) {
         if (T.cs && T.cs.hunt) T.cs.hunt[h.id] = h.cs;
       });
     });
-    if (T.en && T.en.hunt) T.en.hunt.hint_alldone = HINT_ALLDONE.en;
-    if (T.cs && T.cs.hunt) T.cs.hunt.hint_alldone = HINT_ALLDONE.cs;
   } catch (e) {}
 
   // A tap on an object a new hint points at retires that hint the first time it's touched
@@ -94918,13 +94912,20 @@ function spawnDustMote(container) {
     return (ROOM_HINTS[room] || []).slice();
   }
   window.__nextExploreHint = function (room, advance) {
-    var list = explorePool(room), n = list.length, ptr = explorePtr[room] || 0, key = "hint_alldone";
+    var list = explorePool(room), n = list.length, ptr = explorePtr[room] || 0, key = null;
     for (var i = 0; i < n; i++) {
       var h = list[(ptr + i) % n];
       if (h.rel && !h.rel()) continue;                                     // gated out of this state (e.g. bar hints with the bar down)
       if (!h.done()) { key = h.id; if (advance) explorePtr[room] = (ptr + i + 1) % n; break; } // surviving nudge — advance the pointer only when asked
     }
-    return key;
+    if (!key) for (var j = 0; j < n; j++) {
+      var old = list[(ptr + j) % n];
+      if (old.rel && !old.rel()) continue;
+      key = old.id;
+      if (advance) explorePtr[room] = (ptr + j + 1) % n;
+      break;
+    }
+    return key || room;
   };
   window.__resetExplorePtr = function () { explorePtr = { kitchen: 0, garden: 0, cuddly: 0, office: 0, balcony: 0 }; }; // resetHunt hook (explorePtr lives in this IIFE)
   var hintTimer = null, hintShowing = false, hintCurKey = null, hintSavedKey = null, hintOwnerBrick = null;
@@ -94949,12 +94950,20 @@ function spawnDustMote(container) {
   function showRoomHint(room) {
     if (!window.setCaption) return;
     var list = ROOM_HINTS[room] || [];
-    var n = list.length, ptr = hintPtr[room] || 0, key = "hint_alldone";
+    var n = list.length, ptr = hintPtr[room] || 0, key = null;
     for (var i = 0; i < n; i++) {
       var h = list[(ptr + i) % n];
       if (h.rel && !h.rel()) continue;   // gated out of this state (e.g. bar hints with the bar down)
       if (!h.done()) { key = h.id; hintPtr[room] = (ptr + i + 1) % n; break; }
     }
+    if (!key) for (var j = 0; j < n; j++) {
+      var old = list[(ptr + j) % n];
+      if (old.rel && !old.rel()) continue;
+      key = old.id;
+      hintPtr[room] = (ptr + j + 1) % n;
+      break;
+    }
+    if (!key) return;
     hintSavedKey = window.__captionKey ? window.__captionKey() : null;
     window.setCaption(key);
     if (window.__captionKey && window.__captionKey() !== key) { hintSavedKey = null; return; } // a guard (cinematic/intro) swallowed it — don't latch a phantom hint

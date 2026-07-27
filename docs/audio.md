@@ -44,9 +44,13 @@ their volume controls never double-scale:
    apply the volume-button level at their own in-graph `_masterGain` (`__songVolume()`);
    ambient environmental beds (fire, aqua hush, wind…) sit at fixed low levels and are NOT
    scaled by the button.
-2. **One-shot SFX** → `getSfxCtx()`. A persistent handle whose `.destination` is one **SFX
-   master gain** (`_volMaster`) → `ac.destination`. The console `volume()` command
-   (`__audioMaster`) scales this; `__applySfxMaster()` pushes changes onto it.
+2. **One-shot SFX and the projector play-along piano** → `getSfxCtx()`. A persistent
+   handle whose `.destination` is one **SFX master gain** (`_volMaster`) →
+   `ac.destination`. The piano keeps one filtered output bus on that handle and gives
+   each pressed key short, self-terminating oscillator voices. It is deliberately
+   independent of the night-sky backing bed, so transport pause silences the score but
+   not live keys. The console `volume()` command (`__audioMaster`) scales this;
+   `__applySfxMaster()` pushes changes onto it.
 3. **Songs (real recordings)** → the **pipeline** (`eqAudioCtx`), which uses the **raw
    shared context** (not a handle — it needs real `suspend/resume` and, crucially,
    `createMediaElementSource`, which irreversibly captures an `<audio>` element). Graph:
@@ -123,6 +127,10 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
   hidden-tab choke point that silences all one-shots (and autonomous timer-driven ambients)
   without per-call-site guards. Autonomous one-shots additionally guard on
   `document.hidden || !document.hasFocus()` themselves (X11 gives no occlusion signal).
+- **Projector piano voices** start only from focused keyboard or pointer input and have a
+  fixed natural decay. Pointer/key release, focus loss, room/channel change, and tab hide
+  all release the active voice set; party start/stop does not, because playing along is
+  supported during the party.
 - **The office laptop's automatic update** keeps animating while the desktop monitor is
   being engaged or is zoomed, but its update click and reboot chime are suppressed at
   callback time. Attention begins on the initiating monitor tap, including the brief
@@ -163,4 +171,5 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
   cap, so it can't reproduce the silence; the fix is correct-by-construction + this proof).
 - **Regression:** `node tests/check.js` (new-Ctx == 1, fade/close race), `tests/state.js`
   (drone start/fade-stop storm, pause/groove), `tests/play.js` (full playthrough + click
-  storm). All must pass.
+  storm), and `tests/piano-message.js` (message transition, layered keys, polyphony,
+  backing-pause independence, and party continuity). All must pass.

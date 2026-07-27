@@ -34,6 +34,9 @@ var HARNESS = [
   " var go=document.getElementById('monitor-browser-go');",
   " if(go)go.dispatchEvent(new PointerEvent('pointerdown',{button:0,bubbles:true,cancelable:true}));",
   " report.pointerGo=!!document.querySelector('.browser-frame-holder iframe:not(#monitor-browser-frame)')&&!input.value;",
+  " mon.classList.add('show-browser');",
+  " document.querySelectorAll('.browser-tab:not(.browser-tab-plus) .tab-x').forEach(function(x){x.click();});",
+  " report.lastTabKeepsChrome=mon.classList.contains('show-browser')&&document.querySelectorAll('.browser-tab:not(.browser-tab-plus)').length===1&&document.getElementById('monitor-browser-wrap').classList.contains('newtab');",
   " } catch(e) { report.harnessError=String(e&&e.stack||e); }",
   " document.getElementById('__report').textContent=JSON.stringify(report);",
   "})();",
@@ -60,6 +63,7 @@ ok("the behdad.org / harfbuzz landing display has a working dismiss control", r.
 ok("the landing-display close control sits high and adopts HarfBuzz World's brass palette", r.visitedSiteTheme === true);
 ok("address field advertises search", r.placeholder === "Search or enter address");
 ok("visible arrow submits search text", r.pointerGo === true);
+ok("closing the final tab leaves Chrome open on a fresh tab", r.lastTabKeepsChrome === true);
 var src = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ok("search frames stay inside the frame holder",
   src.indexOf("browserFrameHolder.appendChild(tab.frame)") !== -1 &&

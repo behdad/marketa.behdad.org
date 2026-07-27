@@ -54164,10 +54164,10 @@ setOfficeProgress("pc", false);
     browserTabsBar.appendChild(browserPlusEl);
   }
   function focusBrowserUrl() { if (browserUrlIn) { try { browserUrlIn.focus({ preventScroll: true }); } catch (e) {} } }
-  function openDynBrowserTab() {
+  function openDynBrowserTab(silent) {
     // an untouched new tab is already where + would land — just activate it
     for (var i = 0; i < browserDynTabs.length; i++) {
-      if (!browserDynTabs[i].url) { setBrowserTab(browserDynTabs[i].id); focusBrowserUrl(); playLaptopClickSound("office-monitor"); return; }
+      if (!browserDynTabs[i].url) { setBrowserTab(browserDynTabs[i].id); focusBrowserUrl(); if (!silent) playLaptopClickSound("office-monitor"); return; }
     }
     if (browserDynTabs.length >= BROWSER_DYN_MAX) {
       // full house: a shake instead of a fourth tab (the strip is only 124px wide)
@@ -54179,7 +54179,7 @@ setOfficeProgress("pc", false);
     browserTabsBar.insertBefore(makeBrowserTabEl(t), browserPlusEl);
     setBrowserTab(t.id);
     focusBrowserUrl();
-    playLaptopClickSound("office-monitor");
+    if (!silent) playLaptopClickSound("office-monitor");
   }
   function closeDynBrowserTab(t) {
     var idx = browserDynTabs.indexOf(t);
@@ -54192,7 +54192,7 @@ setOfficeProgress("pc", false);
     if (wasActive) {
       var fb = idx > 0 ? browserDynTabs[idx - 1].id : null; // an earlier visitor tab, else the last OPEN fixed tab
       if (fb == null) for (var fi = BROWSER_TABS.length - 1; fi >= 0; fi--) if (browserTabEls[BROWSER_TABS[fi].id]) { fb = BROWSER_TABS[fi].id; break; }
-      if (fb != null) setBrowserTab(fb); else closeBrowser(); // every fixed tab was also closed → nothing left to show, close the app
+      if (fb != null) setBrowserTab(fb); else openDynBrowserTab(true);
     }
   }
   // ── tab right-click menu (Reload / Close) ──────────────────────────────────────────
@@ -54298,7 +54298,7 @@ setOfficeProgress("pc", false);
     browserClosedFixed[tab.id] = true;
     if (tab.el && tab.el.parentNode) tab.el.parentNode.removeChild(tab.el);
     delete browserTabEls[tab.id];
-    if (wasActive) { if (neighbor) setBrowserTab(neighbor); else closeBrowser(); }
+    if (wasActive) { if (neighbor) setBrowserTab(neighbor); else openDynBrowserTab(true); }
     playLaptopClickSound("office-monitor");
   }
   if (browserTabsBar) browserTabsBar.addEventListener("contextmenu", function (e) {

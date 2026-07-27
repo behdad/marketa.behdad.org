@@ -79494,10 +79494,10 @@ function spawnDustMote(container) {
   // without making their children disappear from the shared party/Cuddly inventory.
   var attendedGuestNames = new Set();
   function guestsWanted() { // on the floor when: party lit + in the garden. NOT gated on tab visibility/focus:
-    // the party keeps running unattended (owner: guests should keep arriving/leaving even when the window
-    // is unfocused or hidden — the BBQ-kiosk case). Safe here because arrivals are silent CSS class
-    // toggles, not spawned/particle effects — nothing accumulates in a hidden tab (crickets rule still
-    // guards every SOUND + WAAPI spawner elsewhere). Paused CSS walks just resume + settle on return.
+    // The party keeps running unattended (owner: guests should keep arriving/leaving even when the
+    // window is unfocused or hidden — the BBQ-kiosk case). Safe here because arrivals are silent CSS
+    // class toggles, not spawned/particle effects — nothing accumulates in a hidden tab (crickets rule
+    // still guards every SOUND + WAAPI spawner elsewhere). Paused CSS walks just resume + settle on return.
     return !!window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden");
   }
   function clearGuestArriveTimer() { if (guestArriveTimer) { clearTimeout(guestArriveTimer); guestArriveTimer = null; } }
@@ -79727,7 +79727,6 @@ function spawnDustMote(container) {
   }
   function bringRotatedGuests(incoming) {
     if (rosterHoldsOccupants()) { setTimeout(function () { bringRotatedGuests(incoming); }, 1000); return; }
-    if (document.hidden || !document.hasFocus()) { setTimeout(function () { bringRotatedGuests(incoming); }, 1000); return; }
     if (window.__bbqSplitOn) return; // a pre-invitation garden swap must not land after the BBQ controller takes attendance over
     if (!guestsWanted()) return;
     incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); });
@@ -79766,9 +79765,8 @@ function spawnDustMote(container) {
     return true;
   }
   // self-rescheduling driver: FILL the floor up to GUEST_CAP figures (one unit per beat), then switch to
-  // ROTATION (swap 1–2 in for 1–2 out every ~20s). Party-gated (guestsWanted covers party-lit +
-  // in-garden + tab-visible) and crickets-safe (also pauses while merely unfocused) so nothing
-  // accumulates in a background tab; picks back up on return. Keeps .trickle on the whole party so
+  // ROTATION (swap 1–2 in for 1–2 out every ~20s). Both phases keep going while hidden or unfocused,
+  // using walkFigureIn/walkFigureOut's instant hidden-tab paths. Keeps .trickle on the whole party so
   // the waiting units stay hidden (:not(.arrived)); only drops it if the whole roster fits under cap.
   function armTrickle(ms) {
     if (trickleTimer) return; // one timer only (idempotent under storm-clicks / re-entry)
@@ -79777,7 +79775,6 @@ function spawnDustMote(container) {
       var g = document.getElementById("garden-guests");
       if (!g) return;
       if (!window.__gardenPartyOn) { armTrickle(1400); return; } // party off — hold. NOTE: no longer gated on being IN the garden — the fill keeps going in the BACKGROUND while you're in another room (off-screen arrivals are instant, see walkFigureIn), so the party GROWS and is bigger when you return
-      if (document.hidden || !document.hasFocus()) { armTrickle(1000); return; } // an unattended tab freezes the roster; never instant-fill a crowd behind the player's back
       if (rosterHoldsOccupants()) { armTrickle(1000); return; }
       if (window.__bbqSplitOn) { armTrickle(1000); return; } // May-2 attendance is rotating through its garden/balcony controller
       if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped

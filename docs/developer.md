@@ -584,6 +584,10 @@ for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__roster
   `.roster-freeze` to the stage, pausing the adult cast while the eight party children remain
   animated; the existing row spotlight temporarily exempts `.spotlighted`. Check
   `rosterHoldsOccupants` before adding another population timer.
+- The garden trickle and revolving door deliberately continue while the page is hidden or
+  unfocused. Attendance uses persistent classes only; hidden-tab arrival/departure paths settle
+  immediately instead of stranding CSS walks. The open roster and the May 2 BBQ split remain
+  explicit occupancy holds, and autonomous sound/particle systems retain their separate focus gates.
 - Party entry/exit controllers move guests to and from the floor. CSS variables help balance crowd
   placement. Avoid rendering the same person in standing, dance, visitor, and kid-activity layers at
   the same time.

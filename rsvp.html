@@ -3721,6 +3721,19 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-about-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
 .monitor-about-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
 .monitor-about-close:hover circle,.monitor-about-close:focus circle{fill:#a94a5d;stroke-width:.62}
+.monitor-system-info-layer{opacity:0;visibility:hidden;pointer-events:none}
+.monitor-system-info-layer.open{opacity:1;visibility:visible;pointer-events:auto;cursor:default}
+.monitor-system-info-bg{fill:#f4ecdf;stroke:#8e3a4a;stroke-width:.42}
+.monitor-system-info-title{fill:#453a31;font:600 5px/1 Fraunces,serif}
+.monitor-system-info-label{fill:#716455;font:2px/1 "Source Serif 4",serif}
+.monitor-system-info-value{fill:#453a31;font:600 2.15px/1 "Source Serif 4",serif}
+.monitor-system-info-value.warning{fill:#8e3a4a}
+.monitor-system-info-issues{fill:#8e3a4a;font:600 2px/1 "Source Serif 4",serif;text-anchor:end;cursor:pointer}
+.monitor-system-info-issues:hover,.monitor-system-info-issues:focus{text-decoration:underline;fill:#a94a5d}
+.monitor-system-info-close{cursor:pointer;outline:none}
+.monitor-system-info-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
+.monitor-system-info-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
+.monitor-system-info-close:hover circle,.monitor-system-info-close:focus circle{fill:#a94a5d;stroke-width:.62}
 .monitor-credits-layer{opacity:0;visibility:hidden;pointer-events:none}
 .monitor-credits-layer.open{opacity:1;visibility:visible;pointer-events:auto}
 .monitor-credits-bg{fill:#17131d}
@@ -28019,6 +28032,25 @@ var T = {
     mon_sys_reboot: "Reboot",
     mon_sys_shutdown: "Shut down",
     mon_sys_credits: "Credits",
+    mon_sys_system: "System",
+    mon_system_info_title: "System Information",
+    mon_system_info_browser: "Browser",
+    mon_system_info_status: "Status",
+    mon_system_info_graphics: "Graphics",
+    mon_system_info_performance: "Performance",
+    mon_system_info_hardware: "Hardware",
+    mon_system_info_input: "Input",
+    mon_system_info_ready: "No known warning",
+    mon_system_info_upgrade: "Update recommended",
+    mon_system_info_limitations: "Known limitations",
+    mon_system_info_measuring: "measuring…",
+    mon_system_info_full: "full detail",
+    mon_system_info_reduced: "reduced detail",
+    mon_system_info_unreported: "not reported",
+    mon_system_info_touch: "touch + pointer",
+    mon_system_info_pointer: "pointer",
+    mon_system_info_motion_reduced: "reduced motion",
+    mon_system_info_motion_standard: "standard motion",
     mon_sys_tagline_1: "The Loft: where artificial meets higher intelligence.",
     mon_sys_tagline_2: "",
     mon_about_title: "Welcome to The Loft",
@@ -29107,6 +29139,25 @@ var T = {
     mon_sys_reboot: "Restartovat",
     mon_sys_shutdown: "Vypnout",
     mon_sys_credits: "Titulky",
+    mon_sys_system: "Systém",
+    mon_system_info_title: "Systémové informace",
+    mon_system_info_browser: "Prohlížeč",
+    mon_system_info_status: "Stav",
+    mon_system_info_graphics: "Grafika",
+    mon_system_info_performance: "Výkon",
+    mon_system_info_hardware: "Hardware",
+    mon_system_info_input: "Ovládání",
+    mon_system_info_ready: "Bez známého varování",
+    mon_system_info_upgrade: "Doporučujeme aktualizovat",
+    mon_system_info_limitations: "Známá omezení",
+    mon_system_info_measuring: "měříme…",
+    mon_system_info_full: "plné detaily",
+    mon_system_info_reduced: "omezené detaily",
+    mon_system_info_unreported: "nezjištěno",
+    mon_system_info_touch: "dotyk + ukazatel",
+    mon_system_info_pointer: "ukazatel",
+    mon_system_info_motion_reduced: "omezený pohyb",
+    mon_system_info_motion_standard: "běžný pohyb",
     mon_sys_tagline_1: "The Loft: kde se setkává umělá a vyšší inteligence.",
     mon_sys_tagline_2: "",
     mon_about_title: "Vítejte v The Loft",
@@ -45900,6 +45951,9 @@ setOfficeProgress("pc", false);
     return n;
   }
   var monitorSystemMenu = null;
+  var monitorSystemInfoLayer = null;
+  var monitorSystemInfoValues = Object.create(null);
+  var monitorSystemIssuesLink = null;
   var monitorAboutLayer = null;
   var monitorAboutKillTimer = null;
   var monitorCreditsLayer = null;
@@ -45910,6 +45964,115 @@ setOfficeProgress("pc", false);
     var brand = document.getElementById("monitor-system-brand");
     if (brand) brand.setAttribute("aria-expanded", "false");
   }
+  function systemBrowserInfo() {
+    var ua = navigator.userAgent || "";
+    var match = ua.match(/EdgA?\/([\d.]+)/);
+    if (match) return { name: "Edge", version: match[1], chromium: true, webkit: false };
+    match = ua.match(/OPR\/([\d.]+)/);
+    if (match) return { name: "Opera", version: match[1], chromium: true, webkit: false };
+    match = ua.match(/(?:Chrome|CriOS)\/([\d.]+)/);
+    if (match) return { name: "Chrome", version: match[1], chromium: !/CriOS/.test(ua), webkit: /CriOS/.test(ua) };
+    match = ua.match(/(?:Firefox|FxiOS)\/([\d.]+)/);
+    if (match) return { name: "Firefox", version: match[1], chromium: false, webkit: /FxiOS/.test(ua) };
+    match = ua.match(/Version\/([\d.]+).*Safari/);
+    if (match) return { name: "Safari", version: match[1], chromium: false, webkit: true };
+    return { name: navigator.appName || "Browser", version: "", chromium: false, webkit: /AppleWebKit/.test(ua) };
+  }
+  function systemGraphicsInfo() {
+    var canvas = document.createElement("canvas");
+    var gl = null, label = "Basic";
+    try {
+      gl = canvas.getContext("webgl2");
+      if (gl) label = "WebGL 2";
+      else {
+        gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        if (gl) label = "WebGL";
+      }
+      if (gl) {
+        var lose = gl.getExtension("WEBGL_lose_context");
+        if (lose) lose.loseContext();
+      }
+    } catch (e) {}
+    return label;
+  }
+  function paintSystemBrowser(browser, dict) {
+    var major = parseInt(browser.version, 10) || 0;
+    var upgrade = browser.chromium && major && major < 150;
+    var limitations = !!browser.webkit;
+    if (monitorSystemInfoValues.browser)
+      monitorSystemInfoValues.browser.textContent = browser.name + (browser.version ? " " + browser.version : "");
+    if (monitorSystemInfoValues.status) {
+      monitorSystemInfoValues.status.textContent = upgrade ? dict.mon_system_info_upgrade :
+        limitations ? dict.mon_system_info_limitations : dict.mon_system_info_ready;
+      monitorSystemInfoValues.status.classList.toggle("warning", upgrade || limitations);
+    }
+    var issueTerm = browser.name === "Safari" ? "Safari" :
+      browser.name === "Firefox" ? "Firefox" :
+      browser.name === "Chrome" && browser.webkit ? "iOS" :
+      browser.webkit ? "WebKit" : browser.name;
+    if (monitorSystemIssuesLink)
+      monitorSystemIssuesLink.setAttribute("href", "https://github.com/behdad/marketa.behdad.org/issues?q=" +
+        encodeURIComponent("is:issue is:open " + issueTerm));
+  }
+  function requestFullBrowserInfo(dict) {
+    var data = navigator.userAgentData;
+    if (!data || !data.getHighEntropyValues) return;
+    data.getHighEntropyValues(["fullVersionList", "uaFullVersion"]).then(function (values) {
+      var brands = values.fullVersionList || [];
+      var preferred = brands.find(function (brand) {
+        return /Google Chrome|Microsoft Edge|Opera/.test(brand.brand);
+      }) || brands.find(function (brand) { return brand.brand === "Chromium"; });
+      var version = preferred && preferred.version || values.uaFullVersion;
+      if (!version) return;
+      var name = preferred ? preferred.brand.replace("Google ", "").replace("Microsoft ", "") : "Chrome";
+      paintSystemBrowser({ name: name, version: version, chromium: true, webkit: false }, dict);
+    }).catch(function () {});
+  }
+  function paintMonitorSystemInfo() {
+    if (!monitorSystemInfoLayer) return;
+    var dict = T[document.documentElement.lang] || T.en;
+    var browser = systemBrowserInfo();
+    var health = window.__frameHealthState ? window.__frameHealthState() : null;
+    var performance = health && health.slow ? dict.mon_system_info_reduced : dict.mon_system_info_full;
+    if (!health || health.fps == null) performance = dict.mon_system_info_measuring;
+    else performance += " · " + Math.round(health.fps) + " fps";
+    var hardware = [];
+    if (navigator.hardwareConcurrency) hardware.push(navigator.hardwareConcurrency + " cores");
+    if (navigator.deviceMemory) hardware.push(navigator.deviceMemory + " GB");
+    var input = navigator.maxTouchPoints > 0 ? dict.mon_system_info_touch : dict.mon_system_info_pointer;
+    input += " · " + (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches ?
+      dict.mon_system_info_motion_reduced : dict.mon_system_info_motion_standard);
+    var values = {
+      graphics: systemGraphicsInfo(),
+      performance: performance,
+      hardware: hardware.join(" · ") || dict.mon_system_info_unreported,
+      input: input
+    };
+    Object.keys(values).forEach(function (key) {
+      var el = monitorSystemInfoValues[key];
+      if (!el) return;
+      el.textContent = values[key];
+    });
+    paintSystemBrowser(browser, dict);
+    requestFullBrowserInfo(dict);
+  }
+  function closeMonitorSystemInfo() {
+    if (!monitorSystemInfoLayer) return;
+    monitorSystemInfoLayer.classList.remove("open");
+    scheduleSaver();
+  }
+  function openMonitorSystemInfo() {
+    if (!monitorSystemInfoLayer) return false;
+    closeMonitorSystemMenu();
+    stopSaver();
+    paintMonitorSystemInfo();
+    monitorSystemInfoLayer.classList.add("open");
+    var close = monitorSystemInfoLayer.querySelector(".monitor-system-info-close");
+    if (close) try { close.focus(); } catch (e) {}
+    return true;
+  }
+  window.__openMonitorSystemInfo = openMonitorSystemInfo;
+  window.__closeMonitorSystemInfo = closeMonitorSystemInfo;
   function closeMonitorAbout() {
     if (!monitorAboutLayer) return;
     clearTimeout(monitorAboutKillTimer);
@@ -45989,6 +46152,7 @@ setOfficeProgress("pc", false);
   window.__killMonitorCredits = killMonitorCredits;
   function monitorSystemAction(action) {
     closeMonitorSystemMenu();
+    if (action === "system") return openMonitorSystemInfo();
     if (action === "about") return openMonitorAbout();
     if (action === "credits") return openMonitorCredits();
     if (action === "sleep") {
@@ -46397,7 +46561,7 @@ setOfficeProgress("pc", false);
     // The top-left wordmark is the loft OS's system menu. Native SVG keeps it correctly
     // layered under WebKit's scaled monitor, where another foreignObject would disappear.
     monitorSystemMenu = mkEl("g", { id: "monitor-system-menu", "class": "desk-system-menu", role: "menu" }, dock);
-    mkEl("rect", { x: 255, y: 159.5, width: 25.1, height: 25.2, rx: 1.3, "class": "desk-system-panel" }, monitorSystemMenu);
+    mkEl("rect", { x: 255, y: 159.5, width: 25.1, height: 28.4, rx: 1.3, "class": "desk-system-panel" }, monitorSystemMenu);
     mkEl("path", { d: "M256.3 159.5 H278.8 Q280.1 159.5 280.1 160.8 V163 H255 V160.8 Q255 159.5 256.3 159.5 Z",
       "class": "desk-system-head" }, monitorSystemMenu);
     var sysDict = T[document.documentElement.lang] || T.en;
@@ -46411,7 +46575,8 @@ setOfficeProgress("pc", false);
       ["shutdown", "mon_sys_shutdown", false],
       null,
       ["about", "mon_sys_website", false],
-      ["credits", "mon_sys_credits", false]
+      ["credits", "mon_sys_credits", false],
+      ["system", "mon_sys_system", false]
     ];
     var sysY = 163.3;
     sysRows.forEach(function (item) {
@@ -46485,6 +46650,54 @@ setOfficeProgress("pc", false);
     });
     monitorAboutLayer.addEventListener("click", function (e) { e.stopPropagation(); });
     monitorAboutLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+
+    monitorSystemInfoLayer = mkEl("g", { id: "monitor-system-info-layer",
+      "class": "monitor-system-info-layer", role: "dialog", "aria-modal": "true",
+      "aria-labelledby": "monitor-system-info-title" }, dock);
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
+      "class": "monitor-system-info-bg" }, monitorSystemInfoLayer);
+    var systemInfoTitle = mkEl("text", { id: "monitor-system-info-title", x: 260, y: 162,
+      "class": "monitor-system-info-title", "data-i": "mon_system_info_title" }, monitorSystemInfoLayer);
+    systemInfoTitle.textContent = (T[document.documentElement.lang] || T.en).mon_system_info_title;
+    [
+      ["browser", "mon_system_info_browser"],
+      ["status", "mon_system_info_status"],
+      ["graphics", "mon_system_info_graphics"],
+      ["performance", "mon_system_info_performance"],
+      ["hardware", "mon_system_info_hardware"],
+      ["input", "mon_system_info_input"]
+    ].forEach(function (row, index) {
+      var y = 168 + index * 4.2;
+      var label = mkEl("text", { x: 260, y: y, "class": "monitor-system-info-label",
+        "data-i": row[1] }, monitorSystemInfoLayer);
+      label.textContent = (T[document.documentElement.lang] || T.en)[row[1]];
+      monitorSystemInfoValues[row[0]] = mkEl("text", { x: 287, y: y,
+        "class": "monitor-system-info-value", "data-system-info": row[0] }, monitorSystemInfoLayer);
+    });
+    monitorSystemIssuesLink = mkEl("a", { href: "https://github.com/behdad/marketa.behdad.org/issues",
+      target: "_blank", rel: "noopener" }, monitorSystemInfoLayer);
+    var systemIssuesText = mkEl("text", { x: 372, y: 194, "class": "monitor-system-info-issues",
+      "data-i": "bugs_aria" }, monitorSystemIssuesLink);
+    systemIssuesText.textContent = (T[document.documentElement.lang] || T.en).bugs_aria;
+    var systemInfoClose = mkEl("g", { "class": "monitor-system-info-close", role: "button",
+      tabindex: "0", "data-aria-i": "install_dismiss",
+      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorSystemInfoLayer);
+    mkEl("circle", { cx: 375, cy: 157, r: 2.15 }, systemInfoClose);
+    var systemInfoX = mkEl("text", { x: 375, y: 158.15 }, systemInfoClose);
+    systemInfoX.textContent = "×";
+    function dismissSystemInfo(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      closeMonitorSystemInfo();
+    }
+    systemInfoClose.addEventListener("click", dismissSystemInfo);
+    systemInfoClose.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") dismissSystemInfo(e);
+    });
+    monitorSystemInfoLayer.addEventListener("click", function (e) { e.stopPropagation(); });
+    monitorSystemInfoLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    window.addEventListener("framehealthchange", function () {
+      if (monitorSystemInfoLayer && monitorSystemInfoLayer.classList.contains("open")) paintMonitorSystemInfo();
+    });
 
     monitorCreditsLayer = mkEl("g", { id: "monitor-credits-layer",
       "class": "monitor-credits-layer", role: "dialog", "aria-modal": "true",
@@ -46713,6 +46926,10 @@ setOfficeProgress("pc", false);
     mkEl("circle", { cx: 376, cy: 194, r: .45, "class": "monitor-sleep-led" }, monitorSleepLayer);
   }
   window.addEventListener("keydown", function (e) {
+    if (monitorSystemInfoLayer && monitorSystemInfoLayer.classList.contains("open") &&
+        (e.key === "Escape" || e.key === "Esc" || e.key === "Backspace")) {
+      e.preventDefault(); e.stopImmediatePropagation(); closeMonitorSystemInfo(); return;
+    }
     if (monitorCreditsLayer && monitorCreditsLayer.classList.contains("open") &&
         (e.key === "Escape" || e.key === "Esc" || e.key === "Backspace")) {
       e.preventDefault(); e.stopImmediatePropagation(); closeMonitorCredits(); return;
@@ -50979,6 +51196,7 @@ setOfficeProgress("pc", false);
   // Esc's app layer: ends the live call or closes whichever app owns the screen.
   // Returns true if it consumed the press (checked before the zoom backs out).
   window.__closeTopMonitorApp = function (stepBack) {
+    if (monitorSystemInfoLayer && monitorSystemInfoLayer.classList.contains("open")) { closeMonitorSystemInfo(); return true; }
     if (monitorAboutLayer && monitorAboutLayer.classList.contains("open")) { closeMonitorAbout(); return true; }
     if (monitor.classList.contains("show-family") && window.__closeMonitorFamily) { window.__closeMonitorFamily(); return true; }
     if (monitor.classList.contains("photobooth")) {

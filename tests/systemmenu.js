@@ -24,6 +24,10 @@ var HARNESS = [
   "  S('tagline_removed',menu.querySelector('.desk-system-tagline')===null);",
   "  S('menu_type',parseFloat(getComputedStyle(menu.querySelector('.desk-system-label')).fontSize));",
   "  S('menu_fit_en',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.setLang('cs'); S('menu_fit_cs',inside(menu.querySelector('.desk-system-panel'),menu.querySelectorAll('.desk-system-title,.desk-system-label'))); window.setLang('en');",
+  "  window.__monitorSystemAction('system'); await sleep(30); var sysinfo=document.getElementById('monitor-system-info-layer');",
+  "  S('system_open',sysinfo.classList.contains('open')&&/Browser/.test(sysinfo.textContent)&&/Graphics/.test(sysinfo.textContent)&&/Performance/.test(sysinfo.textContent)&&/Hardware/.test(sysinfo.textContent)&&/is%3Aissue%20is%3Aopen%20Chrome/.test(sysinfo.querySelector('.monitor-system-info-issues').closest('a').getAttribute('href')));",
+  "  S('system_fit_en',inside(sysinfo.querySelector('.monitor-system-info-bg'),sysinfo.querySelectorAll('.monitor-system-info-title,.monitor-system-info-label,.monitor-system-info-value,.monitor-system-info-issues'))); window.setLang('cs'); window.__openMonitorSystemInfo(); S('system_fit_cs',inside(sysinfo.querySelector('.monitor-system-info-bg'),sysinfo.querySelectorAll('.monitor-system-info-title,.monitor-system-info-label,.monitor-system-info-value,.monitor-system-info-issues'))); window.setLang('en');",
+  "  window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); S('system_closed',!sysinfo.classList.contains('open'));",
   "  window.__monitorSystemAction('about'); await sleep(30); var about=document.getElementById('monitor-about-layer');",
   "  S('about_open',about.classList.contains('open')&&mon.classList.contains('show-about')&&window.__monitorAppRunning('about')&&about.textContent.indexOf('the place we (Markéta & behdad) call home.')>=0&&about.textContent.indexOf('The Loft: where artificial meets higher intelligence.')>=0);",
   "  S('about_type',{title:parseFloat(getComputedStyle(about.querySelector('.monitor-about-title')).fontSize),copy:parseFloat(getComputedStyle(about.querySelector('.monitor-about-copy')).fontSize),motto:parseFloat(getComputedStyle(about.querySelector('.monitor-about-motto')).fontSize)});",
@@ -86,10 +90,11 @@ if (!r) { console.error("  ✗ no report captured"); process.exit(1); }
 var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("wordmark opens the system menu", s.menu_open === true);
-ok("menu groups power actions before About and Credits", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","about","credits"]));
+ok("menu groups power actions before About, Credits, and System", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","about","credits","system"]));
 ok("compact menu leaves the motto for About", s.tagline_removed === true);
 ok("system-menu labels use the enlarged type", s.menu_type >= 2.2);
 ok("enlarged system-menu type fits in English and Czech", s.menu_fit_en === true && s.menu_fit_cs === true);
+ok("System reports live diagnostics, fits both languages, and closes with Escape", s.system_open === true && s.system_fit_en === true && s.system_fit_cs === true && s.system_closed === true);
 ok("About is a searchable running app with an about:blank Kill gag", s.about_open === true && s.about_killing === true && s.about_killed === true);
 ok("About title, copy, and motto use the enlarged type", s.about_type && s.about_type.title >= 5 && s.about_type.copy >= 2.4 && s.about_type.motto >= 2.2);
 ok("enlarged About copy fits in English and Czech", s.about_fit_en === true && s.about_fit_cs === true);

@@ -3729,8 +3729,9 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-system-info-label{fill:#716455;font:2px/1 "Source Serif 4",serif}
 .monitor-system-info-value{fill:#453a31;font:600 2.15px/1 "Source Serif 4",serif}
 .monitor-system-info-value.warning{fill:#8e3a4a}
-.monitor-system-info-issues{fill:#8e3a4a;font:600 2px/1 "Source Serif 4",serif;text-anchor:end;cursor:pointer}
-.monitor-system-info-issues:hover,.monitor-system-info-issues:focus{text-decoration:underline;fill:#a94a5d}
+.monitor-system-info-status-link{cursor:pointer}
+.monitor-system-info-status-link:hover .monitor-system-info-value,.monitor-system-info-status-link:focus .monitor-system-info-value{text-decoration:underline;fill:#a94a5d}
+.monitor-system-info-recommendation{fill:#716455;font:italic 1.65px/1 "Source Serif 4",serif}
 .monitor-system-info-close{cursor:pointer;outline:none}
 .monitor-system-info-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
 .monitor-system-info-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
@@ -28041,17 +28042,18 @@ var T = {
     mon_system_info_performance: "Performance",
     mon_system_info_hardware: "Hardware",
     mon_system_info_input: "Input",
-    mon_system_info_ready: "No known warning",
+    mon_system_info_ready: "No known issues",
     mon_system_info_upgrade: "Update recommended",
     mon_system_info_limitations: "Known limitations",
-    mon_system_info_measuring: "measuring…",
-    mon_system_info_full: "full detail",
-    mon_system_info_reduced: "reduced detail",
-    mon_system_info_unreported: "not reported",
-    mon_system_info_touch: "touch + pointer",
-    mon_system_info_pointer: "pointer",
-    mon_system_info_motion_reduced: "reduced motion",
-    mon_system_info_motion_standard: "standard motion",
+    mon_system_info_measuring: "Measuring…",
+    mon_system_info_full: "Full detail",
+    mon_system_info_reduced: "Reduced detail",
+    mon_system_info_unreported: "Not reported",
+    mon_system_info_touch: "Touch + pointer",
+    mon_system_info_pointer: "Pointer",
+    mon_system_info_motion_reduced: "Reduced motion",
+    mon_system_info_motion_standard: "Standard motion",
+    mon_system_info_recommendation: "Best in the latest desktop Chrome.",
     mon_sys_tagline_1: "The Loft: where artificial meets higher intelligence.",
     mon_sys_tagline_2: "",
     mon_about_title: "Welcome to The Loft",
@@ -29148,17 +29150,18 @@ var T = {
     mon_system_info_performance: "Výkon",
     mon_system_info_hardware: "Hardware",
     mon_system_info_input: "Ovládání",
-    mon_system_info_ready: "Bez známého varování",
+    mon_system_info_ready: "Bez známých potíží",
     mon_system_info_upgrade: "Doporučujeme aktualizovat",
     mon_system_info_limitations: "Známá omezení",
-    mon_system_info_measuring: "měříme…",
-    mon_system_info_full: "plné detaily",
-    mon_system_info_reduced: "omezené detaily",
-    mon_system_info_unreported: "nezjištěno",
-    mon_system_info_touch: "dotyk + ukazatel",
-    mon_system_info_pointer: "ukazatel",
-    mon_system_info_motion_reduced: "omezený pohyb",
-    mon_system_info_motion_standard: "běžný pohyb",
+    mon_system_info_measuring: "Měříme…",
+    mon_system_info_full: "Plné detaily",
+    mon_system_info_reduced: "Omezené detaily",
+    mon_system_info_unreported: "Nezjištěno",
+    mon_system_info_touch: "Dotyk + ukazatel",
+    mon_system_info_pointer: "Ukazatel",
+    mon_system_info_motion_reduced: "Omezený pohyb",
+    mon_system_info_motion_standard: "Běžný pohyb",
+    mon_system_info_recommendation: "Nejlépe funguje v nejnovějším Chromu pro počítače.",
     mon_sys_tagline_1: "The Loft: kde se setkává umělá a vyšší inteligence.",
     mon_sys_tagline_2: "",
     mon_about_title: "Vítejte v The Loft",
@@ -45954,7 +45957,7 @@ setOfficeProgress("pc", false);
   var monitorSystemMenu = null;
   var monitorSystemInfoLayer = null;
   var monitorSystemInfoValues = Object.create(null);
-  var monitorSystemIssuesLink = null;
+  var monitorSystemStatusLink = null;
   var monitorAboutLayer = null;
   var monitorAboutKillTimer = null;
   var monitorCreditsLayer = null;
@@ -46011,9 +46014,12 @@ setOfficeProgress("pc", false);
       browser.name === "Firefox" ? "Firefox" :
       browser.name === "Chrome" && browser.webkit ? "iOS" :
       browser.webkit ? "WebKit" : browser.name;
-    if (monitorSystemIssuesLink)
-      monitorSystemIssuesLink.setAttribute("href", "https://github.com/behdad/marketa.behdad.org/issues?q=" +
-        encodeURIComponent("is:issue is:open " + issueTerm));
+    var issuesHref = "https://github.com/behdad/marketa.behdad.org/issues?q=" +
+      encodeURIComponent("is:issue is:open " + issueTerm);
+    if (monitorSystemStatusLink) {
+      monitorSystemStatusLink.setAttribute("href", issuesHref);
+      monitorSystemStatusLink.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", issuesHref);
+    }
   }
   function requestFullBrowserInfo(dict) {
     var data = navigator.userAgentData;
@@ -46672,14 +46678,20 @@ setOfficeProgress("pc", false);
       var label = mkEl("text", { x: 260, y: y, "class": "monitor-system-info-label",
         "data-i": row[1] }, monitorSystemInfoLayer);
       label.textContent = (T[document.documentElement.lang] || T.en)[row[1]];
+      var valueParent = monitorSystemInfoLayer;
+      if (row[0] === "status") {
+        monitorSystemStatusLink = mkEl("a", { href: "https://github.com/behdad/marketa.behdad.org/issues",
+          target: "_blank", rel: "noopener", tabindex: "0", "class": "monitor-system-info-status-link" }, monitorSystemInfoLayer);
+        valueParent = monitorSystemStatusLink;
+      }
       monitorSystemInfoValues[row[0]] = mkEl("text", { x: 287, y: y,
-        "class": "monitor-system-info-value", "data-system-info": row[0] }, monitorSystemInfoLayer);
+        "class": "monitor-system-info-value", "data-system-info": row[0] }, valueParent);
     });
-    monitorSystemIssuesLink = mkEl("a", { href: "https://github.com/behdad/marketa.behdad.org/issues",
-      target: "_blank", rel: "noopener" }, monitorSystemInfoLayer);
-    var systemIssuesText = mkEl("text", { x: 372, y: 194, "class": "monitor-system-info-issues",
-      "data-i": "bugs_aria" }, monitorSystemIssuesLink);
-    systemIssuesText.textContent = (T[document.documentElement.lang] || T.en).bugs_aria;
+    var systemRecommendation = mkEl("text", { x: 260, y: 194,
+      "class": "monitor-system-info-recommendation",
+      "data-i": "mon_system_info_recommendation" }, monitorSystemInfoLayer);
+    systemRecommendation.textContent =
+      (T[document.documentElement.lang] || T.en).mon_system_info_recommendation;
     var systemInfoClose = mkEl("g", { "class": "monitor-system-info-close", role: "button",
       tabindex: "0", "data-aria-i": "install_dismiss",
       "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorSystemInfoLayer);

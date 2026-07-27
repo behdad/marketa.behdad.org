@@ -29763,8 +29763,9 @@ function showDirectCastPerson(fig, key) {
 // `html` may be a function, resolved at hover time instead of at wiring time: the wiring runs once
 // at load, so a tooltip whose text depends on live state (the visitor's language, or which season
 // is dressing a shared prop) would otherwise be frozen at whatever it read on load.
-// Touch has no hover, so a LONG PRESS (the touch block at the end) opens the same bubble — without
-// it every one of these tooltips is unreachable on iOS, where all browsers are WebKit.
+// Keyboard focus opens the same bubble for focus-visible targets. Touch has no hover, so a LONG
+// PRESS (the touch block at the end) does likewise — without it every one of these tooltips is
+// unreachable on iOS, where all browsers are WebKit.
 function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
   if (!el) return;
   var bubble = null, followRaf = null, showTimer = null;
@@ -29774,7 +29775,7 @@ function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
     // eggBubble self-dismisses after 5s, and any other bubble opening removes this one. The mouse
     // path always gets a mouseleave to stop the loop; a long press has no such exit, so without
     // this the rAF would spin forever on a detached node (the accumulation bug class).
-    if (!bubble.isConnected) { clearTip(); return; }
+    if (!bubble.isConnected || !at.isConnected) { clearTip(); return; }
     positionEggBubble(bubble, at, placement, yOffset, xOffset);
     followRaf = requestAnimationFrame(follow);
   }
@@ -29797,12 +29798,21 @@ function hoverTooltip(el, html, placement, yOffset, xOffset, posEl) {
     }
     followRaf = requestAnimationFrame(follow);
   }
-  el.addEventListener("mouseenter", function () {
+  function scheduleTip() {
     clearTimeout(showTimer);
     // a brief dwell filters accidental flyovers without making the label feel reluctant
     showTimer = setTimeout(function () { showTimer = null; showTip(); }, 180);
-  });
+  }
+  el.addEventListener("mouseenter", scheduleTip);
   el.addEventListener("mouseleave", clearTip);
+  el.addEventListener("focus", function () {
+    // Mouse/touch focus should not reopen the tooltip that mousedown clears. :focus-visible is the
+    // platform's own keyboard-focus signal; if an older engine cannot evaluate it, showing is the
+    // accessible fallback.
+    try { if (el.matches && !el.matches(":focus-visible")) return; } catch (e) {}
+    scheduleTip();
+  });
+  el.addEventListener("blur", clearTip);
   // a click/tap means they're interacting (e.g. powering the machine on), not lingering —
   // cancel the pending tooltip and dismiss any shown one so it doesn't pop over the action
   el.addEventListener("mousedown", clearTip);

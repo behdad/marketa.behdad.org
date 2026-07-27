@@ -104,6 +104,7 @@ Album photos. Opening Album marks the photos currently there as seen.
 - Right-click supported objects for a context menu.
 - On a touch screen, a two-finger tap provides the general context-menu gesture.
 - In Messages, press and hold one message with one finger for message actions.
+- Double-click the loose, roaming cat to turn its laser dot on or off.
 - Drag only objects that visibly respond to dragging, such as garden water
   bottles and the wheeled bar cooler.
 

@@ -27246,6 +27246,7 @@ var T = {
     balcony_marketa_groceries: "Groceries are always on her.",
     plant_overwatered: "Overwatered. The roots are plotting revenge. 🪰",
     album_cap_selfie: "photobooth selfie",
+    album_cap_dressup: "our dressed-up couple",
     album_remove: "remove photo",
     album_compact: "compact grid",
     album_recap_title: "tonight at the loft",
@@ -27472,6 +27473,10 @@ var T = {
     mix_house: "House Pour",
     app_dressup: "dress-up",
     du_reset: "Reset outfit",
+    du_copy: "Copy",
+    du_save: "Save",
+    du_download: "Download",
+    du_save_tip: "Save adds this outfit to Album.",
     du_tophats: "top hats",
     du_shades: "shades",
     du_partyhats: "party hats",
@@ -28314,6 +28319,7 @@ var T = {
     balcony_marketa_groceries: "Nákupy jsou vždycky na ní.",
     plant_overwatered: "Přelito. Kořeny plánují pomstu. 🪰",
     album_cap_selfie: "selfie z fotokoutku",
+    album_cap_dressup: "náš převlečený pár",
     album_remove: "odstranit fotku",
     album_compact: "kompaktní mřížka",
     album_recap_title: "dnešní večer v loftu",
@@ -28541,6 +28547,10 @@ var T = {
     mix_house: "Domácí míchanice",
     app_dressup: "oblékačka",
     du_reset: "Sundat doplňky",
+    du_copy: "Kopírovat",
+    du_save: "Uložit",
+    du_download: "Stáhnout",
+    du_save_tip: "Uložit přidá tento outfit do Alba.",
     du_tophats: "cylindry",
     du_shades: "sluneční brýle",
     du_partyhats: "party čepice",
@@ -57774,6 +57784,8 @@ async def localfont(name):
     var PH_READ_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="2.6" width="8.8" height="6.8" rx="1"/><path d="M2.1 3.4 L6 6.3 L9.9 3.4"/></svg>';
     var PH_REPLY_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3 L2 6 L5 9"/><path d="M2.4 6 H7.2 A2.8 2.8 0 0 1 10 8.8"/></svg>';
     var PH_COPY_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"><rect x="4" y="3.5" width="5.2" height="6" rx=".8"/><path d="M3 8.5 H2.8 A.8.8 0 0 1 2 7.7 V2.8 A.8.8 0 0 1 2.8 2 H7 A.8.8 0 0 1 7.8 2.8 V3"/></svg>';
+    var PH_SAVE_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"><path d="M2 2.2 H8.7 L10 3.5 V9.8 H2 Z"/><path d="M4 2.2 V5 H8 V2.2"/><path d="M4 9.8 V7 H8 V9.8"/></svg>';
+    var PH_DOWNLOAD_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.8 V7.5"/><path d="M3.8 5.5 L6 7.7 L8.2 5.5"/><path d="M2.2 9.7 H9.8"/></svg>';
     var MESSAGE_REACTIONS = ["👍", "❤️", "😂", "🎉", "🔥"];
     function phCloseMenu() {
       if (phMenuEl && phMenuEl.parentNode) phMenuEl.parentNode.removeChild(phMenuEl);
@@ -59144,7 +59156,7 @@ async def localfont(name):
     // record after the hosts (a couple → "Ali & Goli", an individual → "Bahareh"); hosts alone
     // drops the "with" clause. e.g. "markéta & behdad · with Ali & Goli · Techno · 00:42".
     function albumCaption(rec) {
-      if (rec.selfie) return { line: tr("album_cap_selfie"), time: "" };
+      if (rec.selfie) return { line: tr(rec.subjectId === "dressup" ? "album_cap_dressup" : "album_cap_selfie"), time: "" };
       // A ROOM SHOT has no host anchor — it's whoever was in that room — so it captions itself
       // "<the room> · Ali & Goli" instead of "markéta & behdad · with …".
       if (rec.roomShot) {
@@ -59752,7 +59764,10 @@ async def localfont(name):
     function albumRecMatches(rec, q) {
       if (!q) return true;
       var hay = (rec.people || []).map(function (p) { return p && p.name ? p.name : ""; });
-      if (rec.selfie) hay.push(tr("album_cap_selfie"), tr("app_photobooth"), "selfie photobooth");
+      if (rec.selfie) {
+        if (rec.subjectId === "dressup") hay.push(tr("album_cap_dressup"), tr("app_dressup"), "dress up outfit");
+        else hay.push(tr("album_cap_selfie"), tr("app_photobooth"), "selfie photobooth");
+      }
       if (!rec.roomShot) hay.push("markéta & behdad"); // the hosts anchor every portrait — searchable by name even if people[0] renders differently. A room shot only holds whoever was in the room, so it must NOT claim them.
       if (rec.roomShot) hay.push(tr("album_room_" + rec.room)); // …but it IS searchable by its room, in either language
       if (rec.subjectId) hay.push(String(rec.subjectId).replace(/[-_]/g, " ")); // "shoot-godkids" → "shoot godkids"
@@ -60309,6 +60324,84 @@ async def localfont(name):
       svg.appendChild(layer);
       stage.appendChild(svg);
       wrap.appendChild(stage);
+
+      function outfitBlob() {
+        return new Promise(function (resolve, reject) {
+          try {
+            var shot = svg.cloneNode(true);
+            shot.setAttribute("xmlns", SVGNS);
+            shot.setAttribute("width", "732");
+            shot.setAttribute("height", "732");
+            var bg = document.createElementNS(SVGNS, "rect");
+            bg.setAttribute("x", "158"); bg.setAttribute("y", "138");
+            bg.setAttribute("width", "122"); bg.setAttribute("height", "122");
+            bg.setAttribute("fill", "#fbf7ec");
+            shot.insertBefore(bg, shot.firstChild);
+            var source = new XMLSerializer().serializeToString(shot);
+            var image = new Image();
+            image.onload = function () {
+              try {
+                var canvas = document.createElement("canvas");
+                canvas.width = 732; canvas.height = 732;
+                var ctx = canvas.getContext("2d");
+                ctx.fillStyle = "#fbf7ec"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(function (blob) { blob ? resolve(blob) : reject(new Error("no blob")); }, "image/png");
+              } catch (error) { reject(error); }
+            };
+            image.onerror = function () { reject(new Error("outfit image load failed")); };
+            image.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+          } catch (error) { reject(error); }
+        });
+      }
+      function downloadOutfit(blob) {
+        if (!blob) return;
+        try {
+          var url = URL.createObjectURL(blob), now = new Date();
+          var two = function (n) { return (n < 10 ? "0" : "") + n; };
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = "loft-dress-up-" + now.getFullYear() + "-" + two(now.getMonth() + 1) + "-" + two(now.getDate()) +
+            "-" + two(now.getHours()) + two(now.getMinutes()) + two(now.getSeconds()) + ".png";
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        } catch (error) {}
+      }
+      function openOutfitMenu(x, y) {
+        phCloseMenu();
+        phMenuEl = document.createElement("div");
+        phMenuEl.className = "mon-ctx phone-ctx dressup-ctx";
+        phMenuEl.setAttribute("role", "menu");
+        phMenuEl.appendChild(phMakeItem("ctx-copy", PH_COPY_ICO, tr("du_copy"), function () {
+          var PB = window.__phonePB;
+          if (PB && PB.copy) PB.copy(outfitBlob());
+        }));
+        var save = phMakeItem("ctx-save", PH_SAVE_ICO, tr("du_save"), function () {
+          outfitBlob().then(function (blob) {
+            if (window.__albumAddSelfie) window.__albumAddSelfie(blob, { source: "phone", subjectId: "dressup" });
+          }, function () {});
+        });
+        save.setAttribute("title", tr("du_save_tip"));
+        save.setAttribute("aria-label", tr("du_save") + " — " + tr("du_save_tip"));
+        phMenuEl.appendChild(save);
+        phMenuEl.appendChild(phMakeItem("ctx-download", PH_DOWNLOAD_ICO, tr("du_download"), function () {
+          outfitBlob().then(downloadOutfit, function () {});
+        }));
+        phMenuEl.style.visibility = "hidden";
+        phContextHost().appendChild(phMenuEl);
+        var rect = phMenuEl.getBoundingClientRect();
+        phMenuEl.style.left = Math.max(4, Math.min(x, window.innerWidth - rect.width - 4)) + "px";
+        phMenuEl.style.top = Math.max(4, Math.min(y, window.innerHeight - rect.height - 4)) + "px";
+        phMenuEl.style.visibility = "";
+        document.addEventListener("mousedown", phOnAway, true);
+        document.addEventListener("scroll", phCloseMenu, true);
+        window.addEventListener("blur", phCloseMenu);
+        window.addEventListener("resize", phCloseMenu);
+      }
+      stage.addEventListener("contextmenu", function (event) {
+        event.preventDefault(); event.stopPropagation();
+        openOutfitMenu(event.clientX, event.clientY);
+      });
 
       var chips = document.createElement("div");
       chips.className = "pmd-chips";
@@ -82413,7 +82506,7 @@ function spawnDustMote(container) {
       revokeAlbumRecord(oldest);
     }
     var rec = {
-      id: ++albumSeq, t: Date.now(), people: [], subjectId: "selfie", selfie: true,
+      id: ++albumSeq, t: Date.now(), people: [], subjectId: options.subjectId === "dressup" ? "dressup" : "selfie", selfie: true,
       selfieBlob: blob, selfieUrl: url, source: options.source === "monitor" ? "monitor" : "phone",
       filter: String(options.filter || "none").slice(0, 80), frame: String(options.frame || "none").slice(0, 24)
     };

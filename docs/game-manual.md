@@ -396,7 +396,7 @@ The current phone apps are:
 | **Flashlight** | Screen light and, when supported and permitted, the camera torch |
 | **Browser** | A small fixed set of loft, Markéta, Behdad, and HarfBuzz pages |
 | **Cocktails** | Drink recipes used by the bar |
-| **Dress-up** | A playful outfit activity |
+| **Dress-up** | A playful outfit activity; right-click the finished outfit to copy, save it to Album, or download it |
 | **Mines** | A compact Minesweeper game |
 | **Quiz** | A small quiz |
 

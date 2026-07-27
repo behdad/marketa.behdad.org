@@ -91808,15 +91808,24 @@ function spawnDustMote(container) {
     clearTimeout(jumpTimer);
     startJump();
   });
-  if (catArt) catArt.addEventListener("dblclick", function (e) {
+  function toggleRoamingCatLaser() {
     var stage = document.getElementById("stage-" + catRoom);
     var roaming = walk.classList.contains("roaming") || walk.classList.contains("roaming-sm");
     if (catGoneForever || !walk.classList.contains("out") || !roaming ||
         window.currentStageIndex !== IDX[catRoom] || !stage || !stage.contains(pos) ||
-        getComputedStyle(pos).visibility === "hidden" || typeof window.laser !== "function") return;
+        getComputedStyle(pos).visibility === "hidden" || typeof window.laser !== "function") return false;
+    window.laser(!window.laser());
+    return true;
+  }
+  if (catArt) catArt.addEventListener("dblclick", function (e) {
+    if (!toggleRoamingCatLaser()) return;
     e.preventDefault();
     e.stopPropagation();
-    window.laser(!window.laser());
+  });
+  var gameStrip = document.getElementById("loft-game-strip");
+  if (gameStrip) gameStrip.addEventListener("dblclick", function (e) {
+    if (e.defaultPrevented || (e.target.closest && e.target.closest(".hunt-hit,[role=button],button,input,textarea,select,a"))) return;
+    if (toggleRoamingCatLaser()) e.preventDefault();
   });
   // ── NAUGHTY ANTICS ─────────────────────────────────────────────────────────
   // The loose cat is a real troublemaker now: on its OWN self-rescheduling timer it

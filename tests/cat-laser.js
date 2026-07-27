@@ -19,6 +19,10 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   window.cat(true);
   cat.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
   report.steps.single = window.laser();
+  dblclick(document.getElementById("stage-kitchen"));
+  report.steps.bareFirst = window.laser();
+  dblclick(document.getElementById("stage-kitchen"));
+  report.steps.bareSecond = window.laser();
   dblclick(cat);
   report.steps.firstDouble = window.laser();
   dblclick(cat);
@@ -55,6 +59,8 @@ if (!result) {
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(result.steps.stowed === false, "the stowed cat cannot turn on the laser", result.steps);
 check(result.steps.single === false, "a single cat click leaves the laser alone", result.steps);
+check(result.steps.bareFirst === true && result.steps.bareSecond === false,
+  "double-clicking bare scenery toggles the laser while the roaming cat is visible", result.steps);
 check(result.steps.firstDouble === true && result.steps.secondDouble === false,
   "double-clicking the visible roaming cat toggles the existing laser state", result.steps);
 check(result.steps.offRoom === false, "the cat hit area cannot toggle from another room", result.steps);

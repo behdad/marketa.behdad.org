@@ -748,6 +748,8 @@ The seasonal engine includes wedding, Pride, summer-solstice, St. John's Eve,
 Canada Day, summer, smoky, autumn, Mehregan, Halloween, St. Martin's Day and
 Remembrance Day, Christmas, Yalda, New Year, winter, Sadeh, Valentine's Day,
 Chaharshanbe Suri, Nowruz, Sizdah Bedar, spring, and Witches' Night treatments.
+On Valentine's Day, Markéta carries roses in Cuddly-puddly, and tapping the
+heart garland sends kisses into the room.
 During Pride, a muted rainbow wash crosses the current room every ten seconds
 while the game is attended; trips and chemistry-card effects take visual priority.
 On Nowruz, the two haft-seen candles in the office can be snuffed and relit

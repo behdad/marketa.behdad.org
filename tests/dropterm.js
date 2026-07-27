@@ -50,13 +50,13 @@ assert(/consoleTabComplete\(dtIn\)/.test(html), "the drop-down Tab handler reuse
 
 // ── 3. The panel HTML + reset hook exist ────────────────────────────────────────────────
 assert(/<div id="dropterm"[\s\S]*?id="dropterm-out"[\s\S]*?id="dropterm-in"/.test(html), "drop-down panel HTML (#dropterm / -out / -in) is present in .hunt-viewport");
-assert(/id="dropterm-fps"[^>]*>FPS --</.test(html), "drop-down panel includes a top-corner FPS readout");
+assert(/id="dropterm-fps"[^>]*>FPS --</.test(html), "viewport includes an FPS readout beside the console tab");
 assert(/id="dropterm-resize"[^>]*role="separator"/.test(html), "drop-down panel includes a lower-edge resize handle");
 assert(/#dropterm\{[\s\S]*?transform:translateY\(-102%\)/.test(html), "#dropterm slides in from the top (transform:translateY off-screen by default)");
 assert(/#dropterm\.open\{transform:translateY\(0\)/.test(html), "#dropterm.open slides down into view");
 assert(/max-height:var\(--dropterm-max-height, 48%\)/.test(html), "drop-down height is a session-only CSS value with a 48% default");
 assert(/function startDropTermFps\(\)[\s\S]*?elapsed >= 750/.test(html), "FPS readout uses a rolling requestAnimationFrame sample");
-assert(/function openDropTerm\(\)[\s\S]*?startDropTermFps\(\)/.test(html) && /function closeDropTerm\(\)[\s\S]*?stopDropTermFps\(\)/.test(html), "FPS sampling starts and stops with the drop-down panel");
+assert(/function revealConsoleTab\(\)[\s\S]*?startDropTermFps\(\)/.test(html) && /#dropterm-fps\.discovered\{display:block\}/.test(html), "FPS sampling and visibility begin when the console tab is discovered");
 assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) window\.__resetDropTerm\(\);/.test(html), "the game reset wipes the drop-down session (__resetDropTerm wired into reset)");
 assert(/loftDropTermScrollback/.test(html) && /localStorage\.getItem\(DT_SCROLL_KEY\)/.test(html), "drop-down scrollback restores from localStorage");
 assert(/MutationObserver[\s\S]*?localStorage\.setItem\(DT_SCROLL_KEY, dtOut\.innerHTML\)/.test(html), "drop-down scrollback persists as output changes");
@@ -95,7 +95,7 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
   }
 
   var dropterm = new El("dropterm"); dropterm.classList = clsList(dropterm);
-  var dFps = new El("dropterm-fps");
+  var dFps = new El("dropterm-fps"); dFps.classList = clsList(dFps);
   var dOut = new El("dropterm-out");
   var dIn = new El("dropterm-in");
   var dResize = new El("dropterm-resize");
@@ -172,10 +172,11 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
   assert(typeof win.__closeDropTerm === "function", "window.__closeDropTerm exported");
   assert(typeof win.__resetDropTerm === "function", "window.__resetDropTerm exported");
 
-  // (1) backtick toggle: open, then close
+  // (1) console discovery starts the persistent FPS meter; backtick still toggles the panel
+  win.__revealConsoleTab();
+  assert(win.__dropTermFpsRunning() && dFps.classList.contains("discovered"), "console discovery reveals and starts the FPS meter");
   win.__toggleDropTerm();
   assert(dropterm.classList.contains("open"), "backtick (toggle) OPENS the drop-down");
-  assert(win.__dropTermFpsRunning(), "opening starts the FPS sampler");
   for (var frame = 1; frame <= 50; frame++) {
     var ids = Object.keys(rafs), id = ids[0], fn = rafs[id]; delete rafs[id];
     fn(frame * 16.67);
@@ -195,7 +196,7 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
   assert(!dropterm.classList.contains("resizing") && dResize._captured == null, "pointer release ends the resize cleanly");
   win.__toggleDropTerm();
   assert(!dropterm.classList.contains("open"), "backtick (toggle) again CLOSES the drop-down");
-  assert(!win.__dropTermFpsRunning() && Object.keys(rafs).length === 0, "closing cancels the FPS sampler");
+  assert(win.__dropTermFpsRunning() && Object.keys(rafs).length === 1, "closing leaves the discovered FPS sampler running");
 
   // (2) run a command through the shared interpreter via the drop-down input keydown
   win.__toggleDropTerm(); // open again

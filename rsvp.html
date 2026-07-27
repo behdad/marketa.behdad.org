@@ -83628,10 +83628,23 @@ function spawnDustMote(container) {
     bdCake: "bdCakeOn", bouquet: "bouquetOn", chairLift: "chairLiftOn",
     photoFreeze: "photoFreeze"
   };
+  var PARTY_MOMENT_ECHO = {
+    firstDance: "💞 the floor clears — Behdad & Markéta take their first dance, everyone ringed around.",
+    slowDance: "💞 the lights dim, the music slows — everyone pairs off and sways close.",
+    toasts: "🥂 the room follows Ali, then Farhang, for their toasts.",
+    groupPhoto: "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.",
+    sparklers: "✨ the guests raise sparklers into a tunnel — the couple stand through it.",
+    cake: "🍰 the cake wheels out — Behdad & Markéta cut the first slice together, the crowd cheers.",
+    bdCake: "🎂 happy birthday! the candles are lit — everyone gathers behind the cake.",
+    bouquet: "💐 Bouquet toss! Aim it — the bouquet tracks your cursor; click or tap to send it sailing.",
+    chairLift: "🪑 up they go! the crowd hoists Behdad & Markéta on chairs and rings around for the hora."
+  };
   function setPartyMomentState(name, on) {
     var prop = PARTY_MOMENT_STATE[name];
     if (!prop) return false;
+    var was = !!window["__" + prop];
     window["__" + prop] = !!on;
+    if (on && !was && PARTY_MOMENT_ECHO[name] && window.echo) window.echo(PARTY_MOMENT_ECHO[name]);
     return window["__" + prop];
   }
   window.__setPartyMomentState = setPartyMomentState;
@@ -84602,7 +84615,7 @@ function spawnDustMote(container) {
 
     // ── console commands ── each lights the party + heads to the garden + summons the crowd if
     //    needed, then plays. Mirror the firstdance() shape. (arg===false ends the moment early.)
-    function stageAndRun(runHook, echoOk, echoNo, endHook, arg, stateFn, label) {
+    function stageAndRun(runHook, echoNo, endHook, arg, stateFn, label) {
       if (arg === false) {
         if (endHook) endHook();
         if (window.echo) window.echo("the moment winds down — the party rolls on.");
@@ -84616,7 +84629,7 @@ function spawnDustMote(container) {
         setTimeout(function () {
           if (!window.__gardenPartyOn) return; // never resurrect a moment after party teardown
           var ok = runHook();
-          if (window.echo) window.echo(ok ? echoOk : echoNo);
+          if (!ok && window.echo) window.echo(echoNo);
         }, 140);
       }, 60);
       return window.__loftAwaitLifecycle(stateFn, {
@@ -84632,20 +84645,20 @@ function spawnDustMote(container) {
         return Promise.resolve({ completed: true, stopped: true, moment: "toasts" });
       }
       if (!toastTourNeeded()) {
-        return stageAndRun(function () { return startToasts(); }, "🥂 Ali raises a glass, then Farhang — the crowd clinks all around.", "the floor's dark — run party(true) first.", endToasts, arg, function () { return !!window.__toastsOn; }, "toasts");
+        return stageAndRun(function () { return startToasts(); }, "the floor's dark — run party(true) first.", endToasts, arg, function () { return !!window.__toastsOn; }, "toasts");
       }
       if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
       setTimeout(function () {
         var ok = startToasts();
-        if (window.echo) window.echo(ok ? "🥂 the room follows Ali, then Farhang, for their toasts." : "the party has nobody ready to toast.");
+        if (!ok && window.echo) window.echo("the party has nobody ready to toast.");
       }, 60);
       return window.__loftAwaitLifecycle(function () { return !!window.__toastsOn; }, {
         label: "toasts", startTimeout: 3000,
         value: function () { return { completed: true, moment: "toasts" }; }
       });
     };
-    window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "📸 everyone gathers, Aspen fires the flash — the group photo's in your album.", "the floor's dark — run party(true) first.", endGroupPhoto, arg, function () { return !!window.__groupPhotoOn; }, "group photo"); };
-    window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "✨ the guests raise sparklers into a tunnel — the couple stand through it.", "the floor's dark — run party(true) first.", endSparklers, arg, function () { return !!window.__sparklersOn; }, "sparklers"); };
+    window.groupphoto = function (arg) { return stageAndRun(function () { return startGroupPhoto(); }, "the floor's dark — run party(true) first.", endGroupPhoto, arg, function () { return !!window.__groupPhotoOn; }, "group photo"); };
+    window.sparklers = function (arg) { return stageAndRun(function () { return startSparklers(); }, "the floor's dark — run party(true) first.", endSparklers, arg, function () { return !!window.__sparklersOn; }, "sparklers"); };
   })();
   // ── PARTY MODE disco pools (garden) — low frame delivery uses discrete steps. A continuous
   // sweep of these big screen-blended ellipses repaints every frame. When frame health drops,
@@ -97100,7 +97113,7 @@ function spawnDustMote(container) {
       setTimeout(function () {
         if (!window.__gardenPartyOn) return;
         var ok = window.__firstDance && window.__firstDance();
-        if (window.echo) window.echo(ok ? "💞 the floor clears — Behdad & Markéta take their first dance, everyone ringed around." : "the floor's dark — run party(true) first.");
+        if (!ok && window.echo) window.echo("the floor's dark — run party(true) first.");
       }, 120);
     }, 60);
     return window.__loftAwaitLifecycle(function () { return !!window.__firstDanceOn; }, {
@@ -97111,7 +97124,7 @@ function spawnDustMote(container) {
   // cake() / bouquet() / chairlift() — GARDEN MOMENTS II. Same wrapper shape as firstdance():
   // light the party + head to the garden + summon the crowd first (so there's a floor to play
   // to), then run the beat once the floor's set. Each takes an optional `false` to end it early.
-  function cbhMoment(startFn, endFn, stateFn, label, okMsg, endMsg) {
+  function cbhMoment(startFn, endFn, stateFn, label, endMsg) {
     return function (arg) {
       if (arg === false) { if (endFn) endFn(); if (window.echo) window.echo(endMsg); return Promise.resolve({ completed: true, stopped: true, moment: label }); }
       if (!window.__gardenPartyOn) { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); }
@@ -97122,7 +97135,7 @@ function spawnDustMote(container) {
         setTimeout(function () {
           if (!window.__gardenPartyOn) return;
           var ok = startFn && startFn();
-          if (window.echo) window.echo(ok ? okMsg : "the floor's dark — run party(true) first.");
+          if (!ok && window.echo) window.echo("the floor's dark — run party(true) first.");
         }, 120);
       }, 60);
       return window.__loftAwaitLifecycle(stateFn, {
@@ -97135,7 +97148,6 @@ function spawnDustMote(container) {
     function () { return window.__startCakeCutting && window.__startCakeCutting(); },
     function () { return window.__endCakeCutting && window.__endCakeCutting(); },
     function () { return !!window.__cakeOn; }, "cake cutting",
-    "🍰 the cake wheels out — Behdad & Markéta cut the first slice together, the crowd cheers.",
     "the cake's cleared away — the party rolls on.");
   // cake() (or cake(false)/cake(true)) is the WEDDING cake, unchanged. cake("<name>") throws a
   // BIRTHDAY cake for that person by reusing the birthday router: a garden-floor guest gets the
@@ -97155,13 +97167,11 @@ function spawnDustMote(container) {
     function () { return window.__startBouquetToss && window.__startBouquetToss(); },
     function () { return window.__endBouquetToss && window.__endBouquetToss(); },
     function () { return !!window.__bouquetOn; }, "bouquet toss",
-    "💐 Bouquet toss! Aim it — the bouquet tracks your cursor; click (or tap) to send it sailing, and whoever's nearest LEAPS to catch it. (auto-tosses under reduced-motion / autoplay.)",
     "the bouquet toss winds down — the party rolls on.");
   window.chairlift = cbhMoment(
     function () { return window.__startChairLift && window.__startChairLift(); },
     function () { return window.__endChairLift && window.__endChairLift(); },
     function () { return !!window.__chairLiftOn; }, "chair lift",
-    "🪑 up they go! the crowd hoists Behdad & Markéta on chairs and rings around for the hora.",
     "the couple come back down — the party rolls on.");
   // __bdCakeCut(who) — a garden BIRTHDAY cake cutting: light the party + head to the garden +
   // summon the crowd first (so the birthday person's floor figure is present), then cut a candled
@@ -97179,7 +97189,7 @@ function spawnDustMote(container) {
       setTimeout(function () {
         if (!window.__gardenPartyOn) return;
         var ok = window.__startBdCakeCutting && window.__startBdCakeCutting(who);
-        if (window.echo) window.echo(ok ? "🎂 happy birthday! the candles are lit — everyone gathers behind the cake." : "no garden birthday to celebrate right now.");
+        if (!ok && window.echo) window.echo("no garden birthday to celebrate right now.");
       }, 140);
     }, 60);
     return true;
@@ -97210,7 +97220,7 @@ function spawnDustMote(container) {
       setTimeout(function () {
         if (!window.__gardenPartyOn) return;
         var ok = window.__slowDance && window.__slowDance(true);
-        if (window.echo) window.echo(ok ? "💞 the lights dim, the music slows — everyone pairs off and sways close." : "the floor's dark — run party(true) first.");
+        if (!ok && window.echo) window.echo("the floor's dark — run party(true) first.");
       }, 120);
     }, 60);
     return window.__loftAwaitLifecycle(function () { return !!window.__slowDanceOn; }, {

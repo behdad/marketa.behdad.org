@@ -8,6 +8,8 @@ var lib = require("./lib");
 var harness = String.raw`<script>
 (function () {
   var out = { checks: [], errors: [] };
+  var momentEchoes = [];
+  window.say = function (message) { momentEchoes.push(String(message)); };
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   function report() {
     out.errors = (window.__errs || []).slice();
@@ -31,6 +33,9 @@ var harness = String.raw`<script>
   var plan = window.__toastSpeakerPlan();
   check("toast plan keeps Ali inside and Farhang outside", plan[0].key === "ali" && plan[0].room === "garden" && plan[1].key === "farhang" && plan[1].room === "balcony", JSON.stringify(plan));
   check("room-aware toast sequence starts", window.__startToasts() && window.__toastsOn);
+  check("a directly-started moment echoes once",
+    momentEchoes.filter(function (line) { return line.indexOf("🥂") !== -1; }).length === 1,
+    momentEchoes.join(" | "));
 
   setTimeout(function () {
     var bubble = document.querySelector(".egg-bubble.party-toast-tour");

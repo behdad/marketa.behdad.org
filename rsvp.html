@@ -67528,6 +67528,7 @@ async def localfont(name):
   window.__wxRain = false;
   window.__wxStorm = false;
   window.__wxOvercast = false;
+  window.__wxSuppressed = { rain: false, storm: false, overcast: false };
   window.__realWxRainy = function () {
     // WMO: 51-67 drizzle/rain (incl. freezing), 80-82 showers, 95+ thunderstorm
     var w = window.__realWx;
@@ -67555,14 +67556,22 @@ async def localfont(name):
     return false;
   }
   window.__realWxActive = function () { return realWxOverridden() ? null : window.__realWxMode; };
+  window.__weatherLayerActive = function (layer) {
+    var forced = layer === "rain" ? window.__wxRain : layer === "storm" ? window.__wxStorm : window.__wxOvercast;
+    if (forced) return true;
+    if (window.__wxSuppressed && window.__wxSuppressed[layer]) return false;
+    var mode = window.__realWxActive();
+    if (layer === "rain") return mode === "rain" || (mode === "storm" && window.__realStormWet !== false);
+    if (layer === "storm") return mode === "storm";
+    return mode === "overcast";
+  };
   var reduceMotionMq = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
   // The heavy-particle contribution of real weather (falling rain/snow), gated on reduced-motion:
   // the class-driven overcast/storm sky look stays either way — only the particles go.
   window.__realWxPrecip = function () {
     if (reduceMotionMq && reduceMotionMq.matches) return null;
     var m = window.__realWxActive();
-    if (m === "rain") return "rain";
-    if (m === "storm") return (window.__realStormWet !== false) ? "rain" : null; // a DRY thunderstorm: lightning, no drops
+    if ((m === "rain" || m === "storm") && window.__weatherLayerActive("rain")) return "rain";
     return m === "snow" ? "snow" : null;
   };
   // the one WMO code -> glyph map, shared by the monitor's menu bar (which layers its
@@ -67997,10 +68006,9 @@ async def localfont(name):
   // instead of fighting (they read the same flags).
   function applyRealWx() {
     var mode = window.__realWxActive ? window.__realWxActive() : null;
-    var realStormWet = mode === "storm" && window.__realStormWet !== false; // a real thunderstorm brings rain only on a WET roll
-    var rain = !!window.__wxRain || mode === "rain" || realStormWet;
-    var storm = !!window.__wxStorm || mode === "storm"; // lightning fires on any real thunderstorm, wet or dry
-    var overcast = !!window.__wxOvercast || mode === "overcast";
+    var rain = window.__weatherLayerActive ? window.__weatherLayerActive("rain") : !!window.__wxRain;
+    var storm = window.__weatherLayerActive ? window.__weatherLayerActive("storm") : !!window.__wxStorm;
+    var overcast = window.__weatherLayerActive ? window.__weatherLayerActive("overcast") : !!window.__wxOvercast;
     var storming = rain || storm;              // .storming = a cloudy precip/lightning sky (rain OR dry storm)
     // Overcast is the BASE cloud state every other sky is built on, not a fourth exclusive mode:
     // rain, a storm and snow all arrive under the same flat grey deck, and then add their own
@@ -68026,16 +68034,13 @@ async def localfont(name):
   // "is the sky cloudy?" — no shooting stars when it is (overcast/rain/storm/snow hide the stars),
   // whether that's a game-forced layer or the real Edmonton sky.
   window.__skyCloudy = function () {
-    if (window.__wxRain || window.__wxStorm || window.__wxOvercast) return true;
     var m = window.__realWxActive ? window.__realWxActive() : null;
-    return m === "overcast" || m === "rain" || m === "storm" || m === "snow";
+    return (window.__weatherLayerActive && (window.__weatherLayerActive("rain") || window.__weatherLayerActive("storm") || window.__weatherLayerActive("overcast"))) || m === "snow";
   };
   // "is the LIGHTNING layer live?" — the continuous thunder scheduler fires while it is (a forced
   // dry/real storm, or the game storm cycle); triggerBalconyThunder self-gates dusk + focus.
   window.__stormLightningActive = function () {
-    if (window.__wxStorm) return true;
-    var m = window.__realWxActive ? window.__realWxActive() : null;
-    return m === "storm";
+    return window.__weatherLayerActive ? window.__weatherLayerActive("storm") : !!window.__wxStorm;
   };
   (function tick() { applyRealWx(); setTimeout(tick, 1000); })();
 })();
@@ -86542,7 +86547,10 @@ function spawnDustMote(container) {
     }
     function weatherLayers() { return { rain: !!window.__wxRain, storm: !!window.__wxStorm, overcast: !!window.__wxOvercast }; }
     function rememberWeather(key, on, source) {
-      if (source === "ui") checkpointWeather[key] = !!on;
+      if (source === "ui") {
+        checkpointWeather[key] = !!on;
+        window.__wxSuppressed[key] = !on;
+      }
       else if (source !== "restore") checkpointWeather[key] = null;
     }
     function reportWeatherLayers(before, source) {
@@ -86639,12 +86647,17 @@ function spawnDustMote(container) {
         return !Object.prototype.hasOwnProperty.call(row, key) || typeof row[key] === "boolean";
       });
       checkpointWeather = { rain: null, storm: null, overcast: null };
+      window.__wxSuppressed = { rain: false, storm: false, overcast: false };
       window.__setBalconyRain(valid && row.rain === true, "restore");
       window.__setBalconyStormLayer(valid && row.storm === true, "restore");
       window.__setBalconyOvercast(valid && row.overcast === true, "restore");
       if (valid) ["rain", "storm", "overcast"].forEach(function (key) {
-        if (Object.prototype.hasOwnProperty.call(row, key)) checkpointWeather[key] = row[key];
+        if (Object.prototype.hasOwnProperty.call(row, key)) {
+          checkpointWeather[key] = row[key];
+          window.__wxSuppressed[key] = row[key] === false;
+        }
       });
+      apply();
       return !!valid;
     };
     // Precip that falls with no game storm to start it — winter snow, and real weather (rain or
@@ -97421,7 +97434,7 @@ function spawnDustMote(container) {
   //   day()/night() — the sky's time-of-day, fully independent of the weather levers above
   // rain(true)+storm(true) together = a classic thunderstorm. Each reports its own state with no arg.
   window.storm = function (arg) {
-    var prev = !!window.__wxStorm;
+    var prev = window.__weatherLayerActive ? window.__weatherLayerActive("storm") : !!window.__wxStorm;
     if (arguments.length === 0 || !window.__setBalconyStormLayer) return prev; // no arg → is the lightning storm on?
     var on = !!arg; // storm(true) → dry lightning storm on; storm(false) → off; returns the previous state
     if (!on) { window.__setBalconyStormLayer(false, "ui"); narrate(false, "", "🌤 the lightning passes — the storm quiets."); return prev; }
@@ -97431,7 +97444,7 @@ function spawnDustMote(container) {
     return prev;
   };
   window.rain = function (arg) {
-    var prev = !!window.__wxRain;
+    var prev = window.__weatherLayerActive ? window.__weatherLayerActive("rain") : !!window.__wxRain;
     if (arguments.length === 0 || !window.__setBalconyRain) return prev; // no arg → is it raining?
     var on = !!arg; // rain(true) → precip on; rain(false) → off; returns the previous state
     if (!on) { window.__setBalconyRain(false, "ui"); narrate(false, "", "🌤 the rain lets up."); return prev; }
@@ -97441,7 +97454,7 @@ function spawnDustMote(container) {
     return prev;
   };
   window.overcast = function (arg) {
-    var prev = !!window.__wxOvercast;
+    var prev = window.__weatherLayerActive ? window.__weatherLayerActive("overcast") : !!window.__wxOvercast;
     if (arguments.length === 0 || !window.__setBalconyOvercast) return prev; // no arg → is it overcast?
     var on = !!arg; // overcast(true) → grey cloud wash on; overcast(false) → off; returns the previous state
     if (on && window.goToStage) window.goToStage("balcony");

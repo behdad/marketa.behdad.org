@@ -33,7 +33,13 @@ addEventListener("load", function () {
       var ev = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
       report.contextCancelled = !head.dispatchEvent(ev);
       report.contextOpen = picker.classList.contains("open");
-      head.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 }));
+      var second = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2 });
+      report.openContextCancelled = !head.dispatchEvent(second);
+      var sceneMenu = document.querySelector(".scene-ctx");
+      var escapeLabel = sceneMenu && sceneMenu.querySelector("button span:last-child");
+      report.escapeOffered = !!escapeLabel && escapeLabel.textContent.trim() === "Escape";
+      var escape = sceneMenu && sceneMenu.querySelector("button");
+      if (escape) escape.click();
       report.contextClosed = !picker.classList.contains("open");
       var originalMatchMedia = window.matchMedia;
       window.matchMedia = function (q) {
@@ -73,7 +79,9 @@ if (result) {
     "the right-click coach appears only once", result.repeat);
   check(result.contextCancelled && result.contextOpen,
     "right-click suppresses the native menu and opens requests", result);
-  check(result.contextClosed, "a second right-click closes requests", result);
+  check(result.openContextCancelled && result.escapeOffered,
+    "right-clicking open requests offers the shared Escape action", result);
+  check(result.contextClosed, "the Escape action closes requests", result);
   check(result.touchOpen, "touch retains a direct tap route", result);
 }
 

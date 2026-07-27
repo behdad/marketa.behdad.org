@@ -748,12 +748,12 @@ displays `[context cleared]`, then resets its history and closes.
 
 The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
 low delivery with `html.frame-rate-low`. It samples only while the document is
-visible and focused, requires two 1.2-second windows below 22 FPS to enter slow
-mode, and three windows at or above 42 FPS to recover. The garden disco pools use
-that state: healthy delivery runs their continuous CSS sweep, while low-frame mode
-replaces it with the existing roughly one-second JS position stepper. Asymmetric
-thresholds plus consecutive sampling windows keep the cost change itself from
-flapping the mode.
+visible and focused, requires two 1.2-second windows below 30 FPS to enter slow
+mode, and three windows at or above 50 FPS to recover. The garden disco pools and
+night constellations use that state: healthy delivery runs their continuous CSS
+motion, while low-frame mode replaces it with roughly one-second discrete steps.
+Asymmetric thresholds plus consecutive sampling windows keep the cost change
+itself from flapping the mode.
 
 Desk zoom is unconditionally transition-free. Testing on current Chrome and
 Chrome 138 showed that interpolating the whole scaled SVG could white-flash and

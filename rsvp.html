@@ -9105,6 +9105,18 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #stage-balcony.dusk .const-lines, #stage-garden.dusk .const-lines{animation:const-lines-pulse 4.5s ease-in-out infinite}
 @keyframes const-lines-pulse{0%,100%{opacity:.1}50%{opacity:.34}}
 @media (prefers-reduced-motion: reduce){#stage-balcony.dusk .const-lines, #stage-garden.dusk .const-lines{animation:none; opacity:.22}}
+html.frame-rate-low #stage-balcony.dusk #balcony-stars .twinkle,
+html.frame-rate-low #stage-garden.dusk #garden-stars .twinkle{animation:none !important; opacity:.2; transform:scale(.62)}
+html.frame-rate-low.constellation-step #stage-balcony.dusk #balcony-stars .twinkle,
+html.frame-rate-low.constellation-step #stage-garden.dusk #garden-stars .twinkle{opacity:1; transform:scale(1.12)}
+html.frame-rate-low #stage-balcony.dusk #balcony-stars .twinkle.t2,
+html.frame-rate-low #stage-garden.dusk #garden-stars .twinkle.t2{opacity:1; transform:scale(1.12)}
+html.frame-rate-low.constellation-step #stage-balcony.dusk #balcony-stars .twinkle.t2,
+html.frame-rate-low.constellation-step #stage-garden.dusk #garden-stars .twinkle.t2{opacity:.2; transform:scale(.62)}
+html.frame-rate-low #stage-balcony.dusk .const-lines,
+html.frame-rate-low #stage-garden.dusk .const-lines{animation:none !important; opacity:.1}
+html.frame-rate-low.constellation-step #stage-balcony.dusk .const-lines,
+html.frame-rate-low.constellation-step #stage-garden.dusk .const-lines{opacity:.34}
 #balcony-sun-disc, #balcony-moon{transition:opacity .8s ease}
 #stage-balcony.dusk #balcony-sun-disc{opacity:0}
 /* daytime sun: a soft amber halo pulses and the rays turn slowly. Both live INSIDE
@@ -57979,6 +57991,39 @@ async def localfont(name):
   window.__frameHealthSlow = function () { return slow; };
   window.__frameHealthFeed = evaluate; // deterministic performance regression tests
   restart();
+})();
+// Slow devices keep the constellations alive as one shared one-second beat instead of
+// repainting every independently animated star and connector line on every frame.
+(function () {
+  var timer = null, step = false;
+  function activeSky() {
+    if (document.hidden) return false;
+    var room = window.currentStageName;
+    var stage = room === "balcony" || room === "garden" ? document.getElementById("stage-" + room) : null;
+    return !!(stage && stage.classList.contains("dusk"));
+  }
+  function paint() {
+    timer = null;
+    if (!(window.__frameHealthSlow && window.__frameHealthSlow())) return;
+    if (activeSky()) {
+      step = !step;
+      document.documentElement.classList.toggle("constellation-step", step);
+    }
+    timer = setTimeout(paint, 1000);
+  }
+  function sync() {
+    var slow = !!(window.__frameHealthSlow && window.__frameHealthSlow());
+    if (!slow) {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      step = false;
+      document.documentElement.classList.remove("constellation-step");
+      return;
+    }
+    if (!timer) paint();
+  }
+  window.addEventListener("framehealthchange", sync);
+  window.__constellationStepState = function () { return { running: !!timer, step: step }; };
 })();
 // ── DESK ZOOM ── while an office device holds attention, the room view glides up to
 // it: the MONITOR (engaged by the PC booting or tapping the lit screen) and the LAPTOP

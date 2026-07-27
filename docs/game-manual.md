@@ -133,8 +133,9 @@ zoomed, matching when a click can launch the app.
 Triple-click or triple-tap the ceramic mask in the garden to open the drop-down
 console on a device without a hardware keyboard. This permanently reveals the
 console's top-left open/close button for the rest of the page visit. The console
-shows the current rendered FPS. Double-clicking the mask does not start or stop
-the party.
+shows the current rendered FPS. Close it with backtick or its open/close button;
+`Escape` and `Backspace` leave it open. Double-clicking the mask does not start
+or stop the party.
 
 `F` toggles fullscreen, except when the Video app owns that key for its player. If
 opening an external tab causes the browser to leave fullscreen, the first click

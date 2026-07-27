@@ -46868,7 +46868,7 @@ setOfficeProgress("pc", false);
   };
   window.__openDropTerm = openDropTerm;       // idempotent scene/mobile entry points
   window.__toggleDropTerm = toggleDropTerm;   // the backtick key calls this
-  window.__closeDropTerm = closeDropTerm;     // Esc / other closers
+  window.__closeDropTerm = closeDropTerm;     // reset / explicit callers
   window.__dropTermOpen = dtOpen;
   window.__dropTermFpsRunning = function () { return dtFpsRaf != null; };
   window.__revealConsoleTab = revealConsoleTab;
@@ -46884,7 +46884,7 @@ setOfficeProgress("pc", false);
       if (e.key === "Tab") { e.preventDefault(); var p = activeConsoleOut; activeConsoleOut = dtOut; consoleTabComplete(dtIn); activeConsoleOut = p; return; }
       if (e.key === "Enter") { var v = dtIn.value; dtIn.value = ""; consoleRun(v, dtCtx); }
       else if (e.key === "`") { e.preventDefault(); closeDropTerm(); } // backtick toggles the panel shut even while its input is focused (Quake convention — the toggle key never types)
-      else if (e.key === "Escape") { e.preventDefault(); closeDropTerm(); }
+      else if (e.key === "Escape") { e.preventDefault(); }
       else if (e.key === "ArrowUp") { e.preventDefault(); if (dtHistIdx > 0) { dtHistIdx--; dtIn.value = dtHist[dtHistIdx] || ""; } }
       else if (e.key === "ArrowDown") { e.preventDefault(); if (dtHistIdx < dtHist.length) { dtHistIdx++; dtIn.value = dtHist[dtHistIdx] || ""; } }
     });
@@ -46893,10 +46893,14 @@ setOfficeProgress("pc", false);
     // click the panel (but not on a live text selection) focuses the input, like the monitor console
     dtPanel.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; if (dtIn) { try { dtIn.focus({ preventScroll: true }); } catch (err) {} } });
     dtPanel.addEventListener("dblclick", function (e) { e.stopPropagation(); });
-    // Esc closes the drop-down even if focus drifted off its input (the input's own keydown
-    // handles the focused case). Capture-phase + stopPropagation so it wins over the room.
+    // The open console owns Escape and a stray Backspace so neither dismisses the panel nor
+    // reaches the room/browser. Backspace inside its input still edits normally.
     document.addEventListener("keydown", function (e) {
-      if ((e.key === "Escape" || e.key === "Esc") && dtOpen()) { closeDropTerm(); e.stopPropagation(); e.preventDefault(); }
+      if (!dtOpen()) return;
+      if (e.key === "Escape" || e.key === "Esc" || (e.key === "Backspace" && e.target !== dtIn)) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
     }, true);
   }
   (function () { // a very subtle top-left chevron: a discoverable hint that pulls the drop-down console down

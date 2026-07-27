@@ -183,9 +183,11 @@ assert(/window\.__resetDropTerm/.test(html) && /if \(window\.__resetDropTerm\) w
   // history recorded on the drop-down's own stack (via ctx.setHistIdx), not the monitor's
   assert(sandbox.consoleHist.length === 0, "the drop-down does NOT push into the monitor console's history array");
 
-  // (3) Esc closes
+  // (3) Esc stays inside the console; only the Quake toggle closes it
   dIn.dispatch("keydown", { key: "Escape", stopPropagation: function () {}, preventDefault: function () {} });
-  assert(!dropterm.classList.contains("open"), "Esc closes the drop-down");
+  assert(dropterm.classList.contains("open"), "Esc leaves the drop-down open");
+  dIn.dispatch("keydown", { key: "`", stopPropagation: function () {}, preventDefault: function () {} });
+  assert(!dropterm.classList.contains("open"), "backtick still closes the drop-down from its input");
 
   // (4) reset wipes + closes
   win.__toggleDropTerm();

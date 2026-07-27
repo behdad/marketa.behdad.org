@@ -57887,6 +57887,8 @@ async def localfont(name):
     var cardsIndex = 0;             // phrasebook deck position — session-scoped: persists across a normal close/reopen (resume); zeroed only on a kill (uninstallApp / __resetPhoneApps)
     // More session-scoped app state, same model as cardsIndex/notesDraft: survives a normal
     // close/reopen (the render seeds from these; handlers commit back), cleared only on a kill.
+    var PHONE_CURRENCY_CODES = ["CAD", "CZK", "USD", "EUR"];
+    var PHONE_DRESSUP_IDS = ["tophats", "shades", "partyhats", "mustache", "monocle", "necktie", "flowercrown", "earrings", "bouquet", "veil"];
     var curAmount = "100", curFrom = "CAD", curTo = "CZK"; // currency: typed amount + the two picked codes
     var calcState = null;           // calculator: {acc, pending, cur, fresh, errored} snapshot, or null = fresh
     var dressupOn = {};             // dress-up: map of accessory-id → true for every chip currently ON
@@ -59273,12 +59275,11 @@ async def localfont(name):
     // a hardcoded fallback table keeps the math working offline / headless (weather-app
     // pattern). rates are per 1 CAD, so amount / rates[from] * rates[to] converts through CAD.
     function renderCurrency(body) {
-      var CODES = ["CAD", "CZK", "USD", "EUR"];
       var rates = { CAD: 1, USD: 0.73, EUR: 0.68, CZK: 16.9 }; // offline fallback (approx)
       var live = false;
       var wrap = document.createElement("div");
       wrap.className = "pm-cur";
-      var opts = CODES.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join("");
+      var opts = PHONE_CURRENCY_CODES.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join("");
       wrap.innerHTML =
         '<input class="pmu-amt" type="number" inputmode="decimal" value="100" min="0" aria-label="' + tr("cur_amount") + '">' +
         '<div class="pmu-row"><select class="pmu-from">' + opts + '</select><span style="color:var(--muted); font-size:16px">→</span><select class="pmu-to">' + opts + '</select></div>' +
@@ -59297,14 +59298,15 @@ async def localfont(name):
         var per = (f && t) ? (t / f).toFixed(3) : "—";
         sub.textContent = "1 " + from.value + " = " + per + " " + to.value + (live ? "" : " " + tr("cur_offline"));
       }
-      [amt, from, to].forEach(function (el) { el.addEventListener("input", recompute); el.addEventListener("change", recompute); });
+      function changed() { recompute(); if (window.__checkpointChanged) window.__checkpointChanged(); }
+      [amt, from, to].forEach(function (el) { el.addEventListener("input", changed); el.addEventListener("change", changed); });
       recompute();
       try {
         if (window.fetch) window.fetch("https://open.er-api.com/v6/latest/CAD")
           .then(function (r) { return r && r.ok ? r.json() : null; })
           .then(function (j) {
             if (currentApp !== "currency" || !j || !j.rates) return; // torn down or bad payload → keep fallback
-            CODES.forEach(function (c) { if (typeof j.rates[c] === "number" && isFinite(j.rates[c])) rates[c] = j.rates[c]; });
+            PHONE_CURRENCY_CODES.forEach(function (c) { if (typeof j.rates[c] === "number" && isFinite(j.rates[c])) rates[c] = j.rates[c]; });
             rates.CAD = 1;
             live = true;
             recompute();
@@ -60563,9 +60565,11 @@ async def localfont(name):
       var wrap = document.createElement("div");
       wrap.className = "pm-album";
       var shots = (window.__albumList && window.__albumList()) || []; // newest-first
+      var oldSeenMaxId = albumSeenMaxId;
       shots.forEach(function (shot) {
         if (!shot.shoot) albumSeenMaxId = Math.max(albumSeenMaxId, parseInt(shot.id, 10) || 0);
       });
+      if (albumSeenMaxId !== oldSeenMaxId && window.__checkpointChanged) window.__checkpointChanged();
       if (!shots.length) {
         var empty = document.createElement("div");
         empty.className = "pm-album-empty";
@@ -60711,6 +60715,7 @@ async def localfont(name):
         albumCompact = !albumCompact;
         view.setAttribute("aria-pressed", albumCompact ? "true" : "false");
         grid.classList.toggle("compact", albumCompact);
+        if (window.__checkpointChanged) window.__checkpointChanged();
       });
       applyFilter();
       body.appendChild(wrap);
@@ -60944,6 +60949,7 @@ async def localfont(name):
       function go(delta) {
         var wasFlipped = card.classList.contains("flipped");
         cardsIndex = (cardsIndex + delta + PHRASE_CARDS.length) % PHRASE_CARDS.length;
+        if (window.__checkpointChanged) window.__checkpointChanged();
         card.classList.remove("flipped"); // always land on the English side after moving
         var c = PHRASE_CARDS[cardsIndex];
         front.textContent = c.en; // front is hidden until the flip passes 90°, safe to swap now
@@ -61215,6 +61221,7 @@ async def localfont(name):
           var g = layer.querySelector('[data-acc="' + it.id + '"]');
           if (g) g.style.display = on ? "block" : "none";
           syncHidden();
+          if (window.__checkpointChanged) window.__checkpointChanged();
         });
         chips.appendChild(chip);
       });
@@ -61234,6 +61241,7 @@ async def localfont(name):
         var gs = layer.querySelectorAll("[data-acc]");
         for (var j = 0; j < gs.length; j++) gs[j].style.display = "none";
         syncHidden();
+        if (window.__checkpointChanged) window.__checkpointChanged();
       });
       wrap.appendChild(reset);
 
@@ -61419,16 +61427,64 @@ async def localfont(name):
     var CUE_POOL = ["cue_cocktails", "cue_calendar", "storm", "invaders", "flair", "smores", "sina_helpers", "firstdance", "slowdance", "cake", "bouquet", "chairlift", "jukebox", "hamid_verse", "pouria_farhang", "ali_love", "aspen_banter", "athena_banter", "pouria_banter", "farhang_banter", "irene_banter", "hannah_banter", "hannah_piano", "alireza_vitamin", "fireworks", "lanterns", "toasts", "groupphoto", "sparklers", "bbq", "kids_asleep", "sunset", "sunrise"]; // the random party (night) drip (shuffled: each drip picks a random un-sent one); the two kid lines are rare single slots; Aspen's line chains Behdad's quoted dad joke; action-free banter adds personality without moving the player
     var DAY_POOL = ["cue_mail", "hannah_piano", "sunset"]; // the DAYTIME drip — texts that belong to daylight hours with no party. Hannah's piano request also lives in CUE_POOL because the instrument remains playable during a party. Sunset is gated by nearSunset().
     var TAB_CALM_POOL = DAY_POOL.concat(["visit_ali", "visit_spencer", "visit_alireza", "visit_bahareh", "visit_patricia", "visit_madla", "visit_hamid", "visit_baharak", "visit_farhang"]); // no party: quiet app/day cues + friends asking whether the couple is home
+    function checkpointPhoneAmount(value) {
+      if (value == null) return null;
+      var text = String(value).trim();
+      if (text === "") return "";
+      if (text.length > 32 || !/^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(text)) return null;
+      var number = Number(text);
+      return isFinite(number) && number >= 0 && number <= 1e15 ? text : null;
+    }
+    function checkpointCalcNumber(value) {
+      return typeof value === "number" && isFinite(value) && Math.abs(value) <= 1e100 ? value : null;
+    }
+    function checkpointCalcSnapshot(value) {
+      if (!value || typeof value !== "object" || typeof value.cur !== "string" ||
+          typeof value.fresh !== "boolean" || typeof value.errored !== "boolean") return null;
+      var cur = value.cur;
+      if (cur.length > 24 || !/^-?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(cur) || !isFinite(Number(cur))) return null;
+      var pending = value.pending == null ? null : value.pending;
+      if (pending !== null && ["+", "-", "*", "/"].indexOf(pending) === -1) return null;
+      var acc = value.acc == null ? null : checkpointCalcNumber(value.acc);
+      if ((value.acc != null && acc === null) || (pending === null) !== (acc === null)) return null;
+      if (value.errored && (pending !== null || acc !== null || !value.fresh)) return null;
+      var lastCalc = null;
+      if (value.lastCalc != null) {
+        var saved = value.lastCalc;
+        if (!saved || typeof saved !== "object" || ["+", "-", "*", "/"].indexOf(saved.op) === -1) return null;
+        var a = checkpointCalcNumber(saved.a), b = checkpointCalcNumber(saved.b), result = checkpointCalcNumber(saved.result);
+        if (a === null || b === null || result === null) return null;
+        lastCalc = { a: a, op: saved.op, b: b, result: result };
+      }
+      if (value.errored && lastCalc) return null;
+      return { acc: acc, pending: pending, cur: cur, fresh: value.fresh, errored: value.errored, lastCalc: lastCalc };
+    }
     // Durable checkpoint adapter. Authored rows keep their dictionary-backed identity; generated
-    // visitor/crew replies carry their bounded literal payload. Runtime-only timers, an open app,
-    // search focus and in-flight AI work deliberately do not cross a reload.
+    // visitor/crew replies carry their bounded literal payload. Compact app rows are fixed and
+    // validated independently; runtime-only timers, an open app, search focus and in-flight AI
+    // work deliberately do not cross a reload.
     window.__checkpointPhoneCapture = function () {
+      var amount = checkpointPhoneAmount(curAmount);
+      var cleanCalc = calcState ? checkpointCalcSnapshot(calcState) : null;
+      var cleanCardIndex = typeof cardsIndex === "number" && isFinite(cardsIndex) &&
+        Math.floor(cardsIndex) === cardsIndex && cardsIndex >= 0 && cardsIndex < PHRASE_CARDS.length ? cardsIndex : 0;
       return {
         notesDraft: notesDraft,
         msgDraft: msgDraft,
         msgReplySeq: msgReplySeq,
         phoneSlots: (phoneSlots || phoneDefaultSlots()).slice(),
         mailRead: Object.assign({}, mailRead),
+        appRows: [
+          { id: "cards", index: cleanCardIndex },
+          {
+            id: "currency", amount: amount === null ? "100" : amount,
+            from: PHONE_CURRENCY_CODES.indexOf(curFrom) !== -1 ? curFrom : "CAD",
+            to: PHONE_CURRENCY_CODES.indexOf(curTo) !== -1 ? curTo : "CZK"
+          },
+          { id: "calculator", state: cleanCalc },
+          { id: "dressup", on: PHONE_DRESSUP_IDS.filter(function (id) { return dressupOn[id] === true; }) },
+          { id: "album", compact: !!albumCompact, seenMaxId: Math.max(0, Math.min(1e9, Math.floor(+albumSeenMaxId || 0))) }
+        ],
         rows: messagesThread.map(function (id) {
           var m = MESSAGES[id] || {};
           return {
@@ -61463,6 +61519,35 @@ async def localfont(name):
         }).slice(0, allowed.length);
         allowed.forEach(function (id) { if (!seenSlots[id]) phoneSlots.push(id); });
       }
+      cardsIndex = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK";
+      calcState = null; dressupOn = {}; albumCompact = false; albumSeenMaxId = 0;
+      var seenAppRows = {};
+      (Array.isArray(state.appRows) ? state.appRows : []).slice(0, 5).forEach(function (row) {
+        if (!row || typeof row.id !== "string" || seenAppRows[row.id]) return;
+        seenAppRows[row.id] = true;
+        if (row.id === "cards") {
+          if (typeof row.index === "number" && isFinite(row.index) && Math.floor(row.index) === row.index &&
+              row.index >= 0 && row.index < PHRASE_CARDS.length) cardsIndex = row.index;
+        } else if (row.id === "currency") {
+          var amount = checkpointPhoneAmount(row.amount);
+          if (amount !== null && PHONE_CURRENCY_CODES.indexOf(row.from) !== -1 &&
+              PHONE_CURRENCY_CODES.indexOf(row.to) !== -1) {
+            curAmount = amount; curFrom = row.from; curTo = row.to;
+          }
+        } else if (row.id === "calculator") {
+          calcState = row.state == null ? null : checkpointCalcSnapshot(row.state);
+        } else if (row.id === "dressup") {
+          (Array.isArray(row.on) ? row.on : []).slice(0, PHONE_DRESSUP_IDS.length).forEach(function (id) {
+            if (PHONE_DRESSUP_IDS.indexOf(id) !== -1) dressupOn[id] = true;
+          });
+        } else if (row.id === "album") {
+          albumCompact = row.compact === true;
+          if (typeof row.seenMaxId === "number" && isFinite(row.seenMaxId) &&
+              Math.floor(row.seenMaxId) === row.seenMaxId && row.seenMaxId >= 0 && row.seenMaxId <= 1e9) {
+            albumSeenMaxId = row.seenMaxId;
+          }
+        }
+      });
       mailRead = state.mailRead && typeof state.mailRead === "object" ? Object.assign({}, state.mailRead) : {};
       messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {};
       (Array.isArray(state.rows) ? state.rows : []).slice(-40).forEach(function (row) {
@@ -62814,6 +62899,7 @@ async def localfont(name):
             else if (spec.k === "clear") clearAll();
             else if (spec.k === "neg") negate();
             else if (spec.k === "back") backspace();
+            if (window.__checkpointChanged) window.__checkpointChanged();
           });
           keys.appendChild(b);
         });

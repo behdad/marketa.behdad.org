@@ -239,6 +239,8 @@ When a larger scene owner can establish presentation during recovery, its manual
 settles in `afterStage`, after that owner, so the visitor's saved choice has final authority.
 Device checkpoints store physical shell state rather than painted app activity; restored shells land
 on a normal desktop or launcher so their next action always follows the ordinary fresh path.
+Separately owned compact app data uses fixed, bounded row allowlists; no additional foreground
+drafts, focus, scroll, live media, runtime frames, or other transient state ride with the device shell.
 
 ### Trailer lifecycle
 

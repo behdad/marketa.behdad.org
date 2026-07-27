@@ -694,7 +694,8 @@ ordinary game shortcuts are suspended until the player exits.
   per window. Arrow keys move and rotate pieces, and Space drops them. On touchscreens,
   tap to rotate, drag sideways to move through columns, swipe down to lower a piece,
   or flick down to drop it. Its controls, score, lines, and persistent best score
-  appear in the room.
+  appear in the room. The console command `tetris()` pans to the balcony and starts
+  a run.
 - **Minesweeper:** Available on both phone and monitor.
 - **Hack-Man:** Type `pacman` in the computer's app search, or catch the roaming
   ghost during the ketamine trip to jump directly into the monitor game. Clear

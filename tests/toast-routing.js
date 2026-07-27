@@ -46,6 +46,13 @@ var harness = String.raw`<script>
   }, 5700);
   setTimeout(function () {
     check("toast tour ends cleanly", !window.__toastsOn && !document.querySelector(".egg-bubble.party-toast-tour"));
+    var floorCount = Array.from(document.querySelectorAll("#garden-guests .guest.arrived:not(.leaving)")).filter(function (el) {
+      return !el.classList.contains("off-with-kids") &&
+             !el.classList.contains("off-at-games") &&
+             !el.classList.contains("off-asleep") &&
+             !el.classList.contains("off-at-bbq");
+    }).length;
+    check("toast tour releases its summoned crowd", floorCount <= 8, String(floorCount));
     window.__setBalconyBBQCrowd(false);
     report();
   }, 9800);

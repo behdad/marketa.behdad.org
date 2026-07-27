@@ -18,15 +18,16 @@ var HARNESS = [
   "  function strip(){return document.getElementById('loft-game-strip');}",
   "  function hasCls(c){return strip().classList.contains(c);}",
   "  function pressB(shift){document.dispatchEvent(new KeyboardEvent('keydown',{key: shift?'B':'b', shiftKey:!!shift, bubbles:true, cancelable:true}));}",
-  "  function toastText(){var t=document.querySelector('.season-toast');return t?t.textContent:'';}",
+  "  function toastText(){var ts=document.querySelectorAll('.season-toast');return ts.length?ts[ts.length-1].textContent:'';}",
   "  function vis(sel){var el=document.querySelector(sel);return el?getComputedStyle(el).visibility:'(absent)';}",
   "  var report={errors:[],steps:{}};",
   "  window.addEventListener('load', function(){ setTimeout(function(){ run().catch(function(e){window.__errs.push('harness: '+String(e&&e.stack||e));}).then(function(){ report.errors=window.__errs; document.getElementById('__report').textContent=JSON.stringify(report); }); }, 400); });",
   "  async function run(){",
   "    report.steps.hasHooks = (typeof window.birthday==='function') && (typeof window.__stepBirthday==='function');",
   "    // first 'b' → the ring leader, Markéta (Jan 20)",
-  "    pressB(false); await sleep(150);",
+  "    pressB(false);",
   "    report.steps.first = { bdMarketa: hasCls('bd-marketa'), toast: toastText(), sd: window.__seasonDate && window.__seasonDate() };",
+  "    await sleep(150);",
   "    report.steps.first.crownVisible = vis('.bd-crown-marketa');",
   "    report.steps.first.plainHat = (document.querySelector('.bd-hat-marketa') ? vis('.bd-hat-marketa') : 'none');",
   "    // console jump to Ali (holiday decor) with the party ON — a garden stop: garden floor",
@@ -58,37 +59,43 @@ var HARNESS = [
   "    var trimFloor=window.__trimFloorToCap, trimCalls=0; window.__trimFloorToCap=function(){trimCalls++;return trimFloor?trimFloor():0;};",
   "    window.__endBdCakeCutting(); window.__trimFloorToCap=trimFloor;",
   "    report.steps.madlaTrim = { calls: trimCalls };",
-  "    // Goli is a GARDEN-figure adult who ALSO has a nook figure (the Ali+Goli duo). Per",
-  "    // the owner's routing rule, with the party OFF her birthday brings her to the CUDDLY nook (NOT a",
-  "    // party): the same instant the hat turns on, her nook figure is shown under it (the hard rule —",
-  "    // no adornment floating over an empty spot). The party-ON garden+cake path is covered by Ali above.",
+  "    // Any birthday person with a real dance-floor model goes to the party cake, regardless of age.",
   "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(300);",
   "    window.birthday('goli'); await sleep(700);",
-  "    var pFig=document.getElementById('cuddly-vis-goli');",
-  "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, figShown: !!(pFig && pFig.classList.contains('showing')), hatVisible: vis('#cuddly-vis-goli .bd-hat-goli') };",
-  "    // Elisabeth — a Czech-family CROWN kid. With the party off, her birthday routes to the",
-  "    // Lübeck laptop call, so verify the visible in-call crown rather than the hidden garden clone.",
-  "    window.birthday('elisabeth'); await sleep(200);",
-  "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), room: window.currentStageName, bodyBd: document.body.classList.contains('bd-elisabeth'), crownVisible: vis('#laptop-lueb-scene .bd-crown-elisabeth'), plainHat: (document.querySelector('.bd-hat-elisabeth')?'exists':'none') };",
-  "    // NON-PARTY REMOTE-FAMILY calls: Madla's Lübeck family (crowns) rides the LAPTOP video call, and",
-  "    // Behdad's California brother's family (hats) rides the MONITOR call — NOT the cuddly. The",
-  "    // adornment lights on their figure INSIDE the call scene (body.bd-<who>). Party is off here (Goli).",
+  "    var pFig=document.querySelector('#garden-guests .g-goli');",
+  "    report.steps.goli = { bd: hasCls('bd-goli'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(pFig&&pFig.classList.contains('bd-cutter')), hatVisible: vis('#garden-guests .g-goli .bd-hat-goli') };",
+  "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
+  "    // Elisabeth also has a dance-floor model, so her crown belongs at the cake.",
+  "    window.birthday('elisabeth'); await sleep(450);",
+  "    var eFig=document.querySelector('#garden-guests .g-elisabeth');",
+  "    report.steps.elisabeth = { bd: hasCls('bd-elisabeth'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(eFig&&eFig.classList.contains('bd-cutter')), crownVisible: vis('#garden-guests .g-elisabeth .bd-crown-elisabeth') };",
+  "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
+  "    // Adults with floor models use the same structural rule, even if they also have a family call.",
   "    window.birthday('madla'); await sleep(450);",
-  "    report.steps.madlaCall = { bd: hasCls('bd-madla'), room: window.currentStageName, bodyBd: document.body.classList.contains('bd-madla'), crownVis: vis('#laptop-lueb-scene .bd-crown-madla') };",
+  "    report.steps.madlaCall = { bd: hasCls('bd-madla'), room: window.currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-madla.bd-cutter'), crownVis: vis('#garden-guests .g-madla .bd-crown-madla') };",
+  "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
   "    window.birthday('patricia'); await sleep(450);",
-  "    report.steps.patriciaCall = { bd: hasCls('bd-patricia'), room: window.currentStageName, bodyBd: document.body.classList.contains('bd-patricia'), hatVis: vis('#monitor-california-scene .bd-hat-patricia') };",
+  "    report.steps.patriciaCall = { bd: hasCls('bd-patricia'), room: window.currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-patricia.bd-cutter'), hatVis: vis('#garden-guests .g-patricia .bd-hat-patricia') };",
+  "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
   "    // Ashraf — Tehran call-only; venue routes to the office + tehran call",
   "    window.birthday('ashraf'); await sleep(200);",
   "    report.steps.ashraf = { bd: hasCls('bd-ashraf'), room: window.currentStageName, hatVisible: vis('.bd-hat-ashraf') };",
   "    // Daniel — Prague call-only",
   "    window.birthday('daniel'); await sleep(200);",
   "    report.steps.daniel = { bd: hasCls('bd-daniel'), room: window.currentStageName };",
-  "    // Navid — a cuddly-nook CAMEO kid: reveal must land in the cuddly-puddly with him showing",
+  "    // From a clean, party-off state, one Chinnel birthday activation must reach the cake.",
+  "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(120);",
+  "    window.birthday('chinnel'); await sleep(250);",
+  "    report.steps.chinnel = { room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-chinnel.bd-cutter'), hatVis: vis('#garden-guests .g-chinnel .bd-hat-chinnel') };",
+  "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
+  "    // Navid has a full dance-floor figure, so his birthday starts the party and brings him to the cake.",
   "    window.birthday('navid'); await sleep(250);",
-  "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.currentStageName, showing: !!(document.getElementById('cuddly-navid')||{classList:{contains:function(){return false;}}}).classList.contains('showing'), parkedRunnerHat: vis('#garden-kid-navid .bd-hat-navid') };",
-  "    // Hannah — Baharak & Payman's daughter: Tehran call-only now (NOT the cuddly), routes to the office",
+  "    var navidFig=document.querySelector('#garden-guests .g-navid');",
+  "    report.steps.navid = { bd: hasCls('bd-navid'), room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!(navidFig&&navidFig.classList.contains('bd-cutter')), arrived: !!(navidFig&&navidFig.classList.contains('arrived')), hatVisible: vis('#garden-guests .g-navid .bd-hat-navid') };",
+  "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
+  "    // Hannah has a dance-floor model too, so the model-derived rule routes her to the cake.",
   "    window.birthday('hannah'); await sleep(250);",
-  "    report.steps.hannah = { bd: hasCls('bd-hannah'), room: window.currentStageName };",
+  "    report.steps.hannah = { bd: hasCls('bd-hannah'), room: window.currentStageName, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-hannah.bd-cutter'), hatVis: vis('#garden-guests .g-hannah .bd-hat-hannah') };",
   "    // a season() must CLEAR the birthday axis (mutually exclusive pretend-dates)",
   "    window.season('summer'); await sleep(150);",
   "    report.steps.seasonClears = { anyBd: /\\bbd-[a-z]+\\b/.test(strip().className), summer: hasCls('season-pride')||true, sd: window.__seasonDate() };",
@@ -119,14 +126,15 @@ else {
   if (s.madla && s.madla.party && s.madla.room === "garden" && s.madla.cutter && s.madla.arrived && s.madla.figVis === "visible" && s.madla.crownVis === "visible") pass("populated-floor birthday (Madla): startBdCakeCutting FORCE-arrives the figure — visible under its crown (no floating crown)"); else fail("Madla populated-floor regression (arrived+visible under crown)", JSON.stringify(s.madla));
   if (s.madlaHold && s.madlaHold.balanceSame && !s.madlaHold.leaving && s.madlaHold.stillCutter && s.madlaHold.stillVis === "visible") pass("Madla HOLDS at the cake through a rebalance — the cutter isn't glided off to a slot/corner"); else fail("Madla holds at cake through rebalance (no drift to corner)", JSON.stringify(s.madlaHold));
   if (s.madlaTrim && s.madlaTrim.calls === 1) pass("ending the birthday cake trims forced arrivals back to the floor cap"); else fail("birthday cake end trims floor", JSON.stringify(s.madlaTrim));
-  if (s.goli && s.goli.bd && s.goli.room === "cuddly" && s.goli.party === false && !s.goli.cakeOn && s.goli.figShown && s.goli.hatVisible === "visible") pass("party-OFF garden-adult reveal (Goli) brings her to the NOOK — figure shown AND hat on it (no floating adornment)"); else fail("Goli nook reveal + hat-on-figure", JSON.stringify(s.goli));
-  if (s.elisabeth && s.elisabeth.bd && s.elisabeth.room === "office" && s.elisabeth.bodyBd && s.elisabeth.crownVisible === "visible" && s.elisabeth.plainHat === "none") pass("non-party Elisabeth routes to the Lübeck call wearing her crown"); else fail("Elisabeth Lübeck-call crown", JSON.stringify(s.elisabeth));
-  if (s.madlaCall && s.madlaCall.bd && s.madlaCall.room === "office" && s.madlaCall.bodyBd && s.madlaCall.crownVis === "visible") pass("non-party Madla (Lübeck) → LAPTOP call (office), her crown lit on the figure IN the call scene"); else fail("Madla lübeck-call crown", JSON.stringify(s.madlaCall));
-  if (s.patriciaCall && s.patriciaCall.bd && s.patriciaCall.room === "office" && s.patriciaCall.bodyBd && s.patriciaCall.hatVis === "visible") pass("non-party Patricia (California) → MONITOR call (office), her hat lit on the figure IN the call scene"); else fail("Patricia california-call hat", JSON.stringify(s.patriciaCall));
+  if (s.goli && s.goli.bd && s.goli.room === "garden" && s.goli.party && s.goli.cakeOn && s.goli.cutter && s.goli.hatVisible === "visible") pass("Goli's dance-floor model routes her birthday to the cake"); else fail("Goli floor-model birthday", JSON.stringify(s.goli));
+  if (s.elisabeth && s.elisabeth.bd && s.elisabeth.room === "garden" && s.elisabeth.party && s.elisabeth.cakeOn && s.elisabeth.cutter && s.elisabeth.crownVisible === "visible") pass("Elisabeth's dance-floor model routes her birthday to the cake"); else fail("Elisabeth floor-model birthday", JSON.stringify(s.elisabeth));
+  if (s.madlaCall && s.madlaCall.bd && s.madlaCall.room === "garden" && s.madlaCall.cakeOn && s.madlaCall.cutter && s.madlaCall.crownVis === "visible") pass("Madla's dance-floor model routes her birthday to the cake"); else fail("Madla floor-model birthday", JSON.stringify(s.madlaCall));
+  if (s.patriciaCall && s.patriciaCall.bd && s.patriciaCall.room === "garden" && s.patriciaCall.cakeOn && s.patriciaCall.cutter && s.patriciaCall.hatVis === "visible") pass("Patricia's dance-floor model routes her birthday to the cake"); else fail("Patricia floor-model birthday", JSON.stringify(s.patriciaCall));
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));
-  if (s.hannah && s.hannah.bd && s.hannah.room === "office") pass("Hannah (Tehran family now) routes to the office, not the cuddly"); else fail("Hannah tehran reveal", JSON.stringify(s.hannah));
+  if (s.hannah && s.hannah.bd && s.hannah.room === "garden" && s.hannah.cakeOn && s.hannah.cutter && s.hannah.hatVis === "visible") pass("Hannah's dance-floor model routes her birthday to the cake"); else fail("Hannah floor-model birthday", JSON.stringify(s.hannah));
   if (s.daniel && s.daniel.bd && s.daniel.room === "office") pass("Daniel (Prague call) pans to the office"); else fail("Daniel prague reveal", JSON.stringify(s.daniel));
-  if (s.navid && s.navid.bd && s.navid.room === "cuddly" && s.navid.showing && s.navid.parkedRunnerHat === "hidden") pass("Navid reveals in the cuddly-puddly without leaving his parked chase hat in the garden"); else fail("Navid cuddly reveal / parked runner hat hidden", JSON.stringify(s.navid));
+  if (s.chinnel && s.chinnel.room === "garden" && s.chinnel.party && s.chinnel.cakeOn && s.chinnel.cutter && s.chinnel.hatVis === "visible") pass("one Chinnel birthday activation starts the party and cake"); else fail("Chinnel one-activation birthday cake", JSON.stringify(s.chinnel));
+  if (s.navid && s.navid.bd && s.navid.room === "garden" && s.navid.party && s.navid.cakeOn && s.navid.cutter && s.navid.arrived && s.navid.hatVisible === "visible") pass("Navid's birthday starts the party and brings him to the cake in his hat"); else fail("Navid party-room birthday cake", JSON.stringify(s.navid));
   if (s.seasonClears && s.seasonClears.anyBd === false) pass("season() clears the birthday axis (no stray bd-* class)"); else fail("season clears bd axis", JSON.stringify(s.seasonClears));
   if (typeof s.list === "string" && /marketa/.test(s.list)) pass("birthday('list') prints the ring"); else fail("birthday list", JSON.stringify(s.list));
   if (r.errors.length === 0) pass("no uncaught JS errors across the run"); else fail("no uncaught JS errors", r.errors.slice(0,12).join("\n"));

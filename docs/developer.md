@@ -824,6 +824,8 @@ and special-day scene dispatch. `__activatePolyamoryDay` explicitly ends party m
 Cuddly-puddly pan so the four-person couch scene is not hidden by party occupancy.
 
 Birthday adornments are nested inside each rendered figure so they inherit its authored transforms.
+Birthday cake eligibility is derived from matching `.g-<who>` figures on the dance floor; station-
+and call-only people retain their authored venue without a parallel eligibility roster.
 Chase-runner adornments have an additional outer-runner gate: a parked or reduced-motion-suppressed
 runner must hide its child hat, while `.chasing` reveals the hat with the moving figure. Keep that
 selector scoped to the direct `#stage-garden` runner children; their `garden-kid-*-body` descendants

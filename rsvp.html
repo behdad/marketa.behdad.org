@@ -89271,35 +89271,12 @@ function spawnDustMote(container) {
   var bdIndex = 0, bdStarted = false;
   // Bring the person into view WEARING their hat: light + walk to their venue so the overlay
   // isn't just a class on an off-screen figure. Best-effort — every hook is guarded.
-  // ── Where each birthday person's crown/hat is REVEALED, one consistent tree (owner's rule; see
-  //    bdReveal). Two nook-summon maps, read only for LOCAL people (the remote video-call venues
-  //    return before them): Irene/Robin/Navid are held nook CAMEOS via their own __*Show hooks;
-  //    everyone else with a cuddly-vis-<who> figure rides in with their couple/family DUO.
-  var BD_CUDDLY_CAMEO = { irene: ["__ireneShow", "irene-sit"], robin: ["__robinShow", "robin-sit"], navid: ["__navidShow", "navid-sit"] };
-  // person → the CUDDLY_DUOS id that walks them into the nook (a couple/family arrives together).
-  // Covers EVERY local person who has a cuddly-vis figure — the kids AND the garden-floor adults, so
-  // a no-party birthday brings them to the nook rather than lighting the party. The Tehran family
-  // (Baharak/Payman/Hannah) have nook figures too, but a BIRTHDAY calls them — venue "tehran"
-  // returns first, before this map is read — so they're deliberately omitted. Farhang/Lauren are the
-  // newest pair (their nook figures were just added so they stop being the odd force-the-party case).
-  var BD_CUDDLY_DUO = {
-    ali: "ali", goli: "ali",
-    spencer: "spencer", jay: "spencer",
-    alireza: "alireza", mahzad: "alireza",
-    bahareh: "bahareh",
-    patricia: "patricia", "patricia-son": "patricia", "patricia-daughter": "patricia",
-    madla: "madla", robert: "madla", elisabeth: "madla", felix: "madla",
-    hamid: "hamid", athena: "hamid",
-    farhang: "farhang", lauren: "farhang"
-  };
-  // Garden-floor birthday people who have their OWN dance-floor figure (.g-<who>): a party-lit
-  // garden reveal cuts them a candled birthday cake, standing behind it. The DJ-deck / kitchen-bar
-  // birthdays (Sina, Danesh, Pouria) have no floor figure, so they get the party but no cake.
-  var BD_GARDEN_FIG = {
-    farhang: 1, lauren: 1, marketa: 1, jay: 1, alireza: 1, robert: 1, madla: 1, hamid: 1, behdad: 1,
-    bahareh: 1, mahzad: 1, athena: 1, spencer: 1, patricia: 1, goli: 1, ali: 1,
-    chinnel: 1, raffi: 1
-  };
+  // A birthday person is cake-eligible exactly when the party floor has a model for them.
+  // Derive this from the scene instead of maintaining a second roster that can drift.
+  var BD_GARDEN_FIG = {};
+  BIRTHDAYS.forEach(function (b) {
+    if (document.querySelector("#garden-guests .g-" + b.who)) BD_GARDEN_FIG[b.who] = 1;
+  });
   window.__bdGardenFigures = BD_GARDEN_FIG; // shared with the garden cake IIFE + the date-occasion orchestrator
   // the garden-figure birthday who-ids whose EXACT day is (m,d) — the date-occasion orchestrator
   // (a separate closure, no BIRTHDAYS in scope) reads this to auto-throw the party + cake.
@@ -89329,10 +89306,10 @@ function spawnDustMote(container) {
   function bdReveal(b) {
     var v = b.venue || "garden", who = b.who, party = !!window.__gardenPartyOn;
     clearTimeout(bdOfficeTimer); bdOfficeTimer = null; // this reveal supersedes any pending office device-work
-    // ── REMOTE first (Tehran video call / Prague laptop call), in BOTH party states. A party can't
-    //    make someone in Iran or Prague appear on the floor, so their headwear always rides the call.
-    //    The Tehran family (Baharak/Payman/Hannah) have nook figures too, but a BIRTHDAY calls them:
-    //    "remote → call" wins over "has a nook figure" (owner's rule).
+    // A real dance-floor model always wins: light the party, bring that figure in and cut the cake.
+    // People represented only at the bar, DJ decks or in a call fall through to those venues.
+    if (BD_GARDEN_FIG[who] && window.__bdCakeCut) { window.__bdCakeCut(who); return; }
+    // People without a floor model retain their authored remote or station venue.
     if (v === "tehran") { // Behdad's Tehran family (Ashraf/Mohsen/Baharak/Payman/Hannah) — the hat rides the Tehran video call
       // Already mid-call on the monitor: openFamilyCall would bail (one call at a time), so just pull
       // the view back up — the seat of honour is CSS-keyed on the bd-<who> class showBirthday already
@@ -89368,25 +89345,6 @@ function spawnDustMote(container) {
       });
       return;
     }
-    // ── HOSTS — party OFF, they wear their adornment on their nook figures in the cuddly-puddly;
-    //    party ON they're out on the garden floor, so fall through to the garden-figure path below.
-    if ((who === "behdad" || who === "marketa") && !party) {
-      if (window.goToStage) window.goToStage("cuddly");
-      return;
-    }
-    // ── LOCAL people. The hard rule: a hat/crown must NEVER be a class floating over an empty spot,
-    //    so every destination SHOWS the wearer's figure at the same moment the bd-<who> class turns
-    //    its adornment on. In the nook the adornment is a CHILD of the figure group (its opacity
-    //    gates the hat), so the only job is to summon/show that figure.
-    var cameo = BD_CUDDLY_CAMEO[who], duo = BD_CUDDLY_DUO[who];
-    var cuddlyAble = !!(cameo || duo);      // has a nook figure we can summon (kids + garden-floor adults)
-    var gardenFig = !!BD_GARDEN_FIG[who];   // has a garden dance-floor figure (.g-<who>)
-    function goCuddly() {
-      if (window.goToStage) window.goToStage("cuddly");
-      if (window.__kidsAsleep && window.__wakeKids) window.__wakeKids(); // wake them so the visit can show
-      if (cameo) { var fn = window[cameo[0]]; if (fn) fn(cameo[1]); } // held pose, bypasses the day/asleep gates
-      else if (duo && window.__cuddlyVisit) window.__cuddlyVisit(duo, true); // forced: held, bypasses the meal/day gates
-    }
     // The DJ decks (Sina/Danesh) + the bar (Pouria) have no figure of their own until their station
     // is up. Owner's rule — just go to their room and put the hat on them:
     //   DJ  → the decks only exist once the party's lit, so START the party (if dark) + take the decks.
@@ -89404,21 +89362,7 @@ function spawnDustMote(container) {
       if (v === "dj-sina" && window.dj) window.dj("sina");
       else if (v === "dj-danesh" && window.dj) window.dj("danesh");
     }
-    if (party) {
-      // PARTY ON: a garden-figure person cuts a candled cake — __bdCakeCut summons the crowd FIRST,
-      // so the figure is present behind the cake (Ali/Goli/Jay/Spencer/Farhang/Lauren/Bahareh/
-      // Alireza/Mahzad/Hamid/Athena/Patricia/Madla/Robert + the hosts). A cuddly-only person (the
-      // kids — no floor figure) still goes to the nook. The deck/bar crew take their station.
-      if (gardenFig && window.__bdCakeCut) { window.__bdCakeCut(who); return; }
-      if (cuddlyAble) { goCuddly(); return; }
-      goStation();
-      return;
-    }
-    // PARTY OFF: a REMOTE family (Lübeck / California) is home — their birthday rides a video call,
-    // not the nook. The hat/crown shows on their figure INSIDE the call scene (body.bd-<who>). Mirror
-    // the Tehran (monitor) / Prague (laptop) handlers: bring up the office, drop the OTHER device's
-    // live call so this one can land, dial, and zoom. (Party ON they're physically here → garden cake
-    // above.) Checked before the cuddly fallthrough, which is the behaviour we're overriding.
+    // A call-only person has no floor model, so their birthday rides the family call.
     if (b.call === "california") { // Behdad's brother's family — the monitor's California video call
       bdOfficeReveal(function () {
         if (window.__laptopCallLive && window.__laptopCallLive() && window.__endLaptopCall) window.__endLaptopCall(true);
@@ -89435,10 +89379,6 @@ function spawnDustMote(container) {
       });
       return;
     }
-    // PARTY OFF: a cuddly-able person → the nook, wearing the hat/crown on a real, shown figure.
-    if (cuddlyAble) { goCuddly(); return; }
-    // The DJ decks / bar — no nook figure. goStation lights the party (DJ) or flips to night (bar)
-    // so the hat lands on a present figure, never floating over an empty spot.
     goStation();
   }
   function showBirthday(b) {

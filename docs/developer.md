@@ -230,6 +230,11 @@ validates its compact row and restores around the room transition (`beforeStage`
 for geometry-dependent state); a missing row means that subsystem's fresh default. Continue restores
 durable UI identity, not activity: device power, surfaces, and app shells may return, while calls,
 cameras, media playback, dialogs, progress animations, runtimes, and live minigame loops stay stopped.
+The `openings` row owns settled cabinet, passthrough, chest, balcony-door, and covered-grill
+positions. It writes final classes without replaying the creatures, vapour, sounds, or other open-time
+effects; the older puzzle balcony-door field remains only as a missing-row compatibility fallback.
+These incidental toggles call `__checkpointChanged()` directly so they schedule a save without
+advancing the public semantic `stateVersion`.
 
 ### Trailer lifecycle
 

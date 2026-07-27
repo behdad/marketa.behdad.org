@@ -38524,6 +38524,7 @@ function quickReversalGesture(action) {
     if (!el) return;
     function toggleCabinet() {
       el.classList.toggle("open");
+      if (window.__checkpointChanged) window.__checkpointChanged();
       playCreakSound(id);
       if (i === ghostCabinetIndex && el.classList.contains("open")) wobbleCritter();
       if (i === roachCabinetIndex && el.classList.contains("open") && window.__emergeKitchenRoach) {
@@ -65695,6 +65696,7 @@ async def localfont(name):
     function toggleRealGrillLid() {
       realGrillLidOpen = !realGrillLidOpen;
       syncCoveredGrill();
+      if (window.__checkpointChanged) window.__checkpointChanged();
       playMetalClinkSound(realGrillLidOpen ? 0.8 : 0.65, "balcony-coveredgrill");
       if (realGrillLidOpen) spawnSteamWisps(strip, 3021, 212, 0.35);
     }
@@ -65707,6 +65709,7 @@ async def localfont(name):
       grillUncovered = !!on;
       realGrillLidOpen = false; // a cover only goes back over the real grill after its lid closes
       syncCoveredGrill();
+      if (window.__checkpointChanged) window.__checkpointChanged();
       playPaperShuffleSound("balcony-coveredgrill");
     }
     coveredgrill.addEventListener("click", function (e) {
@@ -65728,6 +65731,12 @@ async def localfont(name):
       }
     });
     window.__coveredGrillState = function () { return { uncovered: grillUncovered, open: realGrillLidOpen }; };
+    window.__restoreCoveredGrill = function (state) {
+      clearTimeout(coveredGrillTimer); coveredGrillTimer = null;
+      grillUncovered = !!(state && state.uncovered);
+      realGrillLidOpen = grillUncovered && !!(state && state.open);
+      syncCoveredGrill();
+    };
     window.__resetCoveredGrill = function () {
       clearTimeout(coveredGrillTimer); coveredGrillTimer = null;
       grillUncovered = false; realGrillLidOpen = false;
@@ -69087,7 +69096,11 @@ async def localfont(name):
   // out) and release. goToStage's own __homeCat then walks it into whatever room you view.
   window.__releaseCat = function (skipWobble) {
     var d1 = document.getElementById("witchy-door-1");
-    if (d1 && !d1.classList.contains("open")) { d1.classList.add("open"); if (window.updateCuddlyGrooving) window.updateCuddlyGrooving(); }
+    if (d1 && !d1.classList.contains("open")) {
+      d1.classList.add("open");
+      if (window.__checkpointChanged) window.__checkpointChanged();
+      if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    }
     return releaseCat(skipWobble);
   };
   var mouseHasRun = false;
@@ -69096,6 +69109,7 @@ async def localfont(name):
     if (!el) return;
     function toggleCuddlyCabinet() {
       el.classList.toggle("open");
+      if (window.__checkpointChanged) window.__checkpointChanged();
       playCreakSound(id);
       if (el.classList.contains("open") && !mouseHasRun) {
         mouseHasRun = true;
@@ -69131,6 +69145,7 @@ async def localfont(name):
     if (!el) return;
     function togglePassthroughDoor() {
       el.classList.toggle("open");
+      if (window.__checkpointChanged) window.__checkpointChanged();
       playCreakSound(id);
     }
     el.addEventListener("click", togglePassthroughDoor);
@@ -69387,6 +69402,7 @@ async def localfont(name):
     if (!el) return;
     function toggleWitchyDoor() {
       el.classList.toggle("open");
+      if (window.__checkpointChanged) window.__checkpointChanged();
       playCreakSound(id);
       // a cat left waiting outside (a reset fired while both doors were shut) slips
       // back in through whichever door just opened — and that open is "used up" by
@@ -69409,6 +69425,67 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleWitchyDoor(); }
     });
   });
+  // A single checkpoint row owns stable physical openings. Restore writes the settled
+  // classes directly: opening a cabinet on Continue must not replay its mouse, roach,
+  // cat, fairy, vapour or lid sounds.
+  (function () {
+    var ids = [
+      "kitchen-cabinet-1", "kitchen-cabinet-2", "kitchen-cabinet-3", "kitchen-cabinet-4",
+      "cuddly-passthrough-door-1", "cuddly-passthrough-door-2",
+      "cuddly-cabinet-door-1", "cuddly-cabinet-door-2",
+      "witchy-door-1", "witchy-door-2", "balcony-door"
+    ];
+    function validOpen(state) {
+      var requested = state && Array.isArray(state.open) ? state.open : [];
+      return requested.filter(function (id, i) {
+        return ids.indexOf(id) !== -1 && requested.indexOf(id) === i;
+      });
+    }
+    function settle(state) {
+      var open = validOpen(state), hasRow = !!state;
+      ids.forEach(function (id) {
+        // Before this adapter existed, the puzzle row owned the shared balcony door.
+        // Preserve that one legacy value when an old checkpoint has no openings row.
+        if (!hasRow && id === "balcony-door") return;
+        var el = document.getElementById(id);
+        if (el) el.classList.toggle("open", open.indexOf(id) !== -1);
+      });
+      var balconyOpen = document.getElementById("balcony-door");
+      var nookDoor = document.getElementById("cuddly-balcony-door");
+      if (nookDoor && balconyOpen) nookDoor.classList.toggle("open", balconyOpen.classList.contains("open"));
+      if (window.__restoreCoveredGrill) {
+        var grill = state && state.grill;
+        window.__restoreCoveredGrill({
+          uncovered: !!(grill && grill.uncovered),
+          open: !!(grill && grill.uncovered && grill.open)
+        });
+      }
+      if (window.__updateCuddlyDoorFx) window.__updateCuddlyDoorFx();
+      if (window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint();
+      if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics();
+      if (window.__updatePartyRoom) window.__updatePartyRoom();
+      if (window.__updateProjectorPans) window.__updateProjectorPans();
+      if (window.__updateWhistler) window.__updateWhistler();
+      if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+      if (window.__reconcileBalconyKidsPlay) window.__reconcileBalconyKidsPlay();
+    }
+    if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("openings", {
+      capture: function () {
+        var grill = window.__coveredGrillState ? window.__coveredGrillState() : {};
+        return {
+          open: ids.filter(function (id) {
+            var el = document.getElementById(id);
+            return !!(el && el.classList.contains("open"));
+          }),
+          grill: { uncovered: !!grill.uncovered, open: !!grill.open }
+        };
+      },
+      restore: function (state, phase) {
+        if (phase === "beforeStage") settle(state);
+      },
+      reset: function () { settle({}); }
+    });
+  })();
   if (cat) {
     cat.style.cursor = "pointer";
     cat.addEventListener("click", function () { wobbleEl(cat); playCatMeowSound(); });
@@ -91269,6 +91346,9 @@ function spawnDustMote(container) {
     clearTimeout(checkpointWriteTimer);
     checkpointWriteTimer = setTimeout(function () { checkpointWriteTimer = null; saveCheckpoint(); }, 350);
   }
+  // Incidental physical closures are checkpoint-worthy but intentionally do not advance
+  // loft.api's semantic state revision.
+  window.__checkpointChanged = scheduleCheckpoint;
   function clearCheckpoint() {
     clearTimeout(checkpointWriteTimer); checkpointWriteTimer = null;
     try { localStorage.removeItem(LOFT_CHECKPOINT_KEY); } catch (_error) {}

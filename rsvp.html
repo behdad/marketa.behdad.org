@@ -2680,6 +2680,12 @@ html:not(.frame-rate-low) #stage-garden.garden-party .disco-pool.dp4{animation-d
   #trip-melt-dancers.slow-dance .melt-dancer{transition:none}
   #garden-slowdance-wash{transition:none}
 }
+/* Low-end fallback keeps the crowd moving while avoiding a per-frame inherited custom-property
+   update across every figure's arms. Orbits and signature moves remain intact. */
+@keyframes guest-sway-low{0%,100%{transform:rotate(-2.5deg) translateX(-.7px)}50%{transform:rotate(2.5deg) translateX(.7px)}}
+html.frame-rate-low #garden-guests.guests-in .guest-sway{animation-name:guest-sway-low !important}
+html.frame-rate-low #garden-guests.guests-in .guest-arm-l,
+html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !important}
 /* Garden party swaps the witchy altar+mirror for a DJ booth. Same gate the disco pools
    use (#stage-garden.garden-party). Fade with opacity (not display) so the ritual props'
    hunt-hit getBBox reads stay valid and the cat-roam math never sees a zeroed chest. */
@@ -57908,7 +57914,7 @@ async def localfont(name):
 // with asymmetric hysteresis: sustained poor delivery opts expensive transitions out
 // quickly, while recovery must remain healthy long enough to avoid mode-flapping.
 (function () {
-  var SAMPLE_MS = 1200, LOW_FPS = 22, RECOVER_FPS = 42;
+  var SAMPLE_MS = 1200, LOW_FPS = 30, RECOVER_FPS = 50;
   var LOW_WINDOWS = 2, RECOVER_WINDOWS = 3;
   var raf = 0, started = 0, frames = 0, lowWindows = 0, recoverWindows = 0;
   var slow = false, fps = null;
@@ -57930,7 +57936,9 @@ async def localfont(name):
     } else if (fps >= RECOVER_FPS) {
       recoverWindows++;
       lowWindows = 0;
-      if (recoverWindows >= RECOVER_WINDOWS) publish(false);
+      var strip = document.getElementById("loft-game-strip");
+      var partyActive = strip && strip.classList.contains("party-on");
+      if (recoverWindows >= RECOVER_WINDOWS && !partyActive) publish(false);
     } else {
       lowWindows = 0;
       recoverWindows = 0;

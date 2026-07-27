@@ -69516,9 +69516,8 @@ function spawnCrystalSparkle() {
   }
 }
 // ── wedding-day sky fireworks ─────────────────────────────────────────────────
-// Visual-only (no boom, no crackle — both read as noise, per the owner). Only ever
-// fire on a wedding day / anniversary (window.__isWeddingDay); on ordinary days the
-// balcony finale runs without them. On the day they're AMBIENT — gentle looping
+// Wedding-day ambient bursts stay quiet; New Year and Canada Day reuse the balcony
+// finale's boom. On those dates they're AMBIENT — gentle looping
 // volleys the whole time you're viewing the balcony or the garden window (both look on
 // the same Edmonton sky), the sky celebrating the couple. Full chrysanthemum bursts:
 // a rising rocket trail, a soft flash, a wide multi-colour ring with gravity-fall
@@ -69611,6 +69610,10 @@ function spawnCrystalSparkle() {
       trail.remove();
       if (!fwActive() || host !== fwHost || !attended()) return;
       fwBurst(host, cx, cy, s, color, false);
+      if (fwSoundSeason() && window.__playFireworkBoom) {
+        var soundX = fwRoom === "garden" ? 430 + ((cx - 150) / 320) * 162 : cx;
+        window.__playFireworkBoom(s, soundX);
+      }
     };
   }
 
@@ -69629,6 +69632,10 @@ function spawnCrystalSparkle() {
     return !!(window.__isWeddingDay
       || (window.__isNewYearSky && window.__isNewYearSky())
       || (window.__isCanadaDaySky && window.__isCanadaDaySky())); // hooks land later in source than this
+  }
+  function fwSoundSeason() {
+    return !!((window.__isNewYearSky && window.__isNewYearSky())
+      || (window.__isCanadaDaySky && window.__isCanadaDaySky()));
   }
   function fwActive() {
     return !!(fwSeason() && fwHost && fwHost.isConnected &&
@@ -70027,6 +70034,7 @@ function spawnCrystalSparkle() {
       osc.start(t); osc.stop(t + 0.46);
     } catch (e) {}
   }
+  window.__playFireworkBoom = playFireworkBoom;
 })();
 function spawnBalconyRain(svg) {
   if (!svg) return;

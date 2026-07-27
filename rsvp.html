@@ -78679,6 +78679,20 @@ function spawnDustMote(container) {
     });
   });
   onActivate(portafilter, function () {
+    if (portafilterFlying || brewing) return;
+    var routineNext = null;
+    if (!kitchenPowered) routineNext = lamarzocco;
+    else if (kitchenWarmedUp && portafilterSpent) routineNext = knockbox;
+    else if (kitchenWarmedUp && !kitchenGround) routineNext = grinder;
+    else if (kitchenWarmedUp && !tamped) routineNext = tamper;
+    else if (portafilter && portafilter.classList.contains("done")) {
+      var readyShot = document.getElementById("kitchen-shotcup");
+      if (readyShot && readyShot.classList.contains("filled")) routineNext = readyShot;
+    }
+    if (routineNext) {
+      routineNext.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      return;
+    }
     if (!kitchenPowered) {
       setCaption("kitchen_need_power");
       playDryClickSound("kitchen-portafilter");
@@ -78694,7 +78708,7 @@ function spawnDustMote(container) {
       playDryClickSound("kitchen-portafilter");
       return;
     }
-    if (portafilterFlying || brewing || (portafilter && portafilter.classList.contains("done"))) return;
+    if (portafilter && portafilter.classList.contains("done")) return;
     brewing = true;
     if (portafilter) portafilter.classList.add("brewing");
     if (portafilterFly) portafilterFly.classList.remove("invite-pulse");

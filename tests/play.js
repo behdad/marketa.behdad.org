@@ -62,11 +62,11 @@ var RSVP_HARNESS = [
   "  var report = { errors: [], solve: {}, stormClicked: 0, missing: [] };",
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function solve() {",
-  "    click(expect('kitchen-lamarzocco'));",
+  "    click(expect('kitchen-portafilter'));",       // the portafilter advances whichever coffee step comes next
   "    await sleep(2800);",                         // the espresso machine must finish warming before the grinder accepts input
-  "    click(expect('kitchen-grinder'));",           // flies to the grinder (FLY_MS), then grinds (GRIND_MS)
+  "    click(expect('kitchen-portafilter'));",       // flies to the grinder (FLY_MS), then grinds (GRIND_MS)
   "    await sleep(2100);",
-  "    click(expect('kitchen-tamper'));",            // tamps, then flies back to the grouphead (FLY_MS)
+  "    click(expect('kitchen-portafilter'));",       // tamps, then flies back to the grouphead (FLY_MS)
   "    await sleep(2100);",
   "    click(expect('kitchen-portafilter'));",
   "    await sleep(2700);",

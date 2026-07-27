@@ -80207,7 +80207,7 @@ function spawnDustMote(container) {
   }
   function hiddenGardenRoots() {
     var garden = document.getElementById("stage-garden"), guests = document.getElementById("garden-guests"), melt = document.getElementById("trip-melt-dancers"), roots = [];
-    function add(node) { if (node && gardenNodePaintHidden(node) && roots.indexOf(node) < 0) roots.push(node); }
+    function add(node, force) { if (node && (force || gardenNodePaintHidden(node)) && roots.indexOf(node) < 0) roots.push(node); }
     if (melt) {
       if (melt.classList.contains("crowd-clear")) add(melt);
       add(melt.querySelector(".md-d2")); // permanently display:none, but its dance selectors still match
@@ -80217,11 +80217,12 @@ function spawnDustMote(container) {
         add(guests.querySelector(".g-elisabeth")); add(guests.querySelector(".g-felix"));
       }
       var away = guests.querySelectorAll(".guest.off-with-kids,.guest.off-at-games,.guest.off-asleep,.guest.off-at-bbq");
-      for (var i = 0; i < away.length; i++) add(away[i]);
+      for (var i = 0; i < away.length; i++) add(away[i], true);
     }
     if (garden && garden.classList.contains("garden-party")) {
       add(document.getElementById("garden-mirror")); add(document.getElementById("garden-lamp"));
     }
+    add(document.getElementById("garden-stars"));
     if (garden && (garden.classList.contains("dusk") || garden.classList.contains("storming"))) add(document.getElementById("garden-birds"));
     return roots;
   }
@@ -80262,14 +80263,21 @@ function spawnDustMote(container) {
   }
   function gardenVisibilityStateNode(node) {
     if (!node || node.nodeType !== 1) return false;
-    if (node.id === "stage-garden" || node.id === "garden-guests" || node.id === "trip-melt-dancers" || node.id === "garden-mirror" || node.id === "garden-lamp" || node.id === "garden-birds") return true;
+    if (node.id === "stage-garden" || node.id === "garden-guests" || node.id === "trip-melt-dancers" || node.id === "garden-mirror" || node.id === "garden-lamp" || node.id === "garden-stars" || node.id === "garden-birds") return true;
     return !!(node.classList && (node.classList.contains("guest") || node.classList.contains("md-d2")));
   }
   var gardenPerformanceStage = document.getElementById("stage-garden");
   if (gardenPerformanceStage) {
-    new MutationObserver(function (records) {
+    var gardenVisibilityObserver = new MutationObserver(function (records) {
       for (var i = 0; i < records.length; i++) if (gardenVisibilityStateNode(records[i].target)) { queueHiddenGardenAnimationRefresh(); return; }
-    }).observe(gardenPerformanceStage, { attributes: true, subtree: true, attributeFilter: ["class"] });
+    });
+    gardenVisibilityObserver.observe(gardenPerformanceStage, { attributes: true, subtree: true, attributeFilter: ["class"] });
+    new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var wasOvercast = (" " + (records[i].oldValue || "") + " ").indexOf(" climate-overcast ") >= 0;
+        if (wasOvercast !== strip.classList.contains("climate-overcast")) { queueHiddenGardenAnimationRefresh(); return; }
+      }
+    }).observe(strip, { attributes: true, attributeFilter: ["class"], attributeOldValue: true });
     gardenPerformanceStage.addEventListener("transitionend", function (e) {
       if ((e.propertyName === "opacity" || e.propertyName === "visibility") && gardenVisibilityStateNode(e.target)) queueHiddenGardenAnimationRefresh();
     }, true);
@@ -82510,6 +82518,7 @@ function spawnDustMote(container) {
         el.style.animationDelay = (-(((phase - stagger) % dur + dur) % dur)).toFixed(3) + "s";
       }
     });
+    if (window.__refreshHiddenGardenAnimationParking) window.__refreshHiddenGardenAnimationParking();
   }
   window.__retuneDancers = retuneDancers;
   var WALTZ_PERIOD_MS = 15000;

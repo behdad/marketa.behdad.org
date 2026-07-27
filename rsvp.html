@@ -16820,7 +16820,7 @@ section{margin:1.9rem 0}
 <polygon points="635,150 635,158 628,158" fill="#8f5740" opacity="0.38"/>
 <circle cx="430" cy="55" r="2.2" fill="#a4654a" opacity="0.4"/>
 </g>
-<rect id="cuddly-ceiling" x="0" y="0" width="680" height="18" fill="#ece8e0" style="cursor:pointer"/>
+<rect id="cuddly-ceiling" x="0" y="0" width="680" height="18" fill="#ece8e0"/>
 <rect x="300" y="60" width="26" height="13" fill="#8a4a35" class="hunt-hit wall-brick"/>
 <rect x="420" y="120" width="26" height="13" fill="#d49a75" class="hunt-hit wall-brick"/>
 <rect x="620" y="70" width="26" height="13" fill="#8a4a35" class="hunt-hit wall-brick"/>
@@ -27014,6 +27014,7 @@ var T = {
       tetris_touch_game_over: "Game over · Tap: play again · ×: exit.",
       garden: "Water a plant, play music, light candles.",
       garden_party: "Party's on — dance like nobody's watering. 💃🌱",
+      cuddly_outlet_party: "That outlet powers the whole party. Everyone's here. 🎉",
       party_exit_hint: "Wall switch ends the party, not the game. Loft and apps stay open.",
       party_ended: "Party's over for now, not the game. Keep exploring; apps stay open.",
       farhang_toast: "To the happy couple! 🥂",
@@ -28085,6 +28086,7 @@ var T = {
       tetris_touch_game_over: "Konec hry · Klepni: hrát znovu · ×: ukončit.",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
+      cuddly_outlet_party: "Tahleta zásuvka napájí celou párty. Všichni jsou tady. 🎉",
       party_exit_hint: "Vypínač ukončí párty, ne hru. Loft i aplikace zůstávají otevřené.",
       party_ended: "Párty prozatím skončila, hra ne. Objevuj dál; aplikace zůstávají otevřené.",
       farhang_toast: "Na šťastný pár! 🥂",
@@ -35959,9 +35961,8 @@ setMusicPausedState(false);
     baharak:  { texter: "Baharak",  members: [{ name: "Baharak", role: "role_sister", el: "cuddly-vis-baharak" }, { name: "Payman", role: "role_bril", el: "cuddly-vis-payman" }, { name: "Hannah", role: "role_niece", el: "cuddly-vis-hannah" }] } // Tehran family
   };
   var DUO_IDS = Object.keys(CUDDLY_DUOS);
-  // A shuffled ROTATION so everyone comes by — the order is shuffled once at startup and consumed in
-  // turn (roof-summons + the autonomous text drip both draw from it); after a full pass it reshuffles,
-  // so every duo visits before any repeats but the order still varies each round.
+  // A shuffled ROTATION for the autonomous text drip. After a full pass it reshuffles, so every
+  // duo visits before any repeats but the order still varies each round.
   function shuffleDuos(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   var visitQueue = shuffleDuos(DUO_IDS.slice()), visitIdx = 0;
   function nextInRotation() {
@@ -36247,17 +36248,6 @@ setMusicPausedState(false);
     });
     return out;
   };
-  // Double-click the nook's ROOF (the pale ceiling strip along the very top — NOT the brick wall)
-  // → a duo drops by unannounced. The daytime + no-meal rules are enforced inside visit(). Fresh duo each time.
-  (function () {
-    var roof = document.getElementById("cuddly-ceiling");
-    if (!roof) return;
-    roof.addEventListener("dblclick", function () {
-      var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); // next in the shuffled rotation
-      visit(pick, false);
-    });
-  })();
-  window.__cuddlyRoofSummon = function () { var pick = nextInRotation(); if (pick === activeDuo) pick = nextInRotation(); return visit(pick, false); }; // test/console hook
   schedule();
 })();
 // Totoro co-watch controller: outside a party the three core-kid cameos sit together. During a
@@ -38827,7 +38817,10 @@ function quickReversalGesture(action) {
       requestAnimationFrame(function () { outlet.classList.add("sparking"); });
     });
     playOutletBuzzSound();
-    if (window.__madlaFromOutlet) window.__madlaFromOutlet(); // poking the plug rings Markéta's sister Madla (day/night, not during the party)
+    if (window.guests) {
+      window.guests(true);
+      setTimeout(function () { if (window.setCaption) window.setCaption("cuddly_outlet_party"); }, 90);
+    }
   }
   outlet.addEventListener("click", sparkOutlet);
   outlet.addEventListener("keydown", function (e) {
@@ -38841,7 +38834,6 @@ function quickReversalGesture(action) {
 // or a sprinkler romp (summer). A day in a season with no scene of its own does nothing. Season is
 // read from the strip's .season-autumn/.season-spring class for those two and the
 // __summerSeason() predicate for summer; the live thermometer decides whether snow can be built.
-// (The cuddly wall's own dblclick already summons a nook kid; the outlet handles Madla.)
 (function () {
   var gw = document.getElementById("garden-wall");
   if (gw) wireNearbyDoubleTap(gw, function () { if (window.__startGardenChase) window.__startGardenChase(true); });
@@ -63376,15 +63368,10 @@ async def localfont(name):
     function ringMadlaForced() { return ringCall("madla", true); }
     window.__madlaAvailable = madlaAvailable;
     window.__madlaRing = ringMadla;   // autonomous path: phase 2, party off
-    window.__madlaRingForced = ringMadlaForced; // explicit script/outlet path: bypasses only that autonomous gate
+    window.__madlaRingForced = ringMadlaForced; // explicit script path: bypasses only that autonomous gate
     window.__answerMadla = answerMadla; // test hook: answer as if the ring were tapped
     window.__pragueRing = function () { return ringCall("prague"); };
     window.__answerPrague = answerPrague;
-    // Poking the cuddly outlet is an explicit discovery path, so it always tries the authored
-    // incoming call; only the random scheduler observes the phase-two + party-off gate.
-    window.__madlaFromOutlet = function () {
-      return ringMadlaForced();
-    };
     // ── daytime schedule ── a single self-rescheduling timer that RARELY fires Madla's incoming
     // ring during attended phase-two daytime play (day, no party, visible+focused, not cinematic, no call
     // already up). Kept to a single timer (no pile-up); armed at load and re-armed on the phone

@@ -16,7 +16,7 @@ var HARNESS = [
   ' if(window.__hangupPhoneCall)window.__hangupPhoneCall();if(window.__closePhoneModal)window.__closePhoneModal(true);await wait(300);',
   ' window.__secondRound=true;window.__gardenPartyOn=true;report.steps.autoParty=window.__madlaRing();',
   ' var explicitParty=window.madla();await wait(30);report.steps.explicitParty={promise:!!(explicitParty&&typeof explicitParty.then==="function"),ring:!!document.querySelector(".call-ring.show")};window.__hideCallRing();await wait(30);',
-  ' window.__secondRound=false;window.__gardenPartyOn=true;var outlet=window.__madlaFromOutlet();await wait(30);report.steps.outlet={result:outlet,ring:!!document.querySelector(".call-ring.show")};window.__hideCallRing();',
+  ' window.__secondRound=false;window.__gardenPartyOn=true;var forced=window.__madlaRingForced();await wait(30);report.steps.forced={result:forced,ring:!!document.querySelector(".call-ring.show")};window.__hideCallRing();',
   ' window.autoplay(false);document.dispatchEvent(new KeyboardEvent("keydown",{key:"a",code:"KeyA",bubbles:true,cancelable:true}));await wait(30);report.steps.aKeyAutoplay={active:window.__autoplayOn(),query:window.autoplay()};',
   '}',
   '})();</script>'
@@ -50,8 +50,8 @@ check(s.answer && s.answer.answered && s.answer.room === "office" && s.answer.ph
   s.answer);
 check(s.explicitParty && s.explicitParty.promise && s.explicitParty.ring,
   "madla() rings explicitly while the party is on", s.explicitParty);
-check(s.outlet && !s.outlet.result && !s.outlet.ring,
-  "a third Madla ring attempt is refused until reset", s.outlet);
+check(s.forced && !s.forced.result && !s.forced.ring,
+  "a third Madla ring attempt is refused until reset", s.forced);
 check(s.aKeyAutoplay && s.aKeyAutoplay.active === false,
   "the A key no longer starts autoplay", s.aKeyAutoplay.active);
 check(s.aKeyAutoplay && s.aKeyAutoplay.query === false,

@@ -377,6 +377,10 @@ cook generation, preventing an old timeout from browning a newly replenished bat
 The first cooked batch and exhausted inventory trigger Hamid's two one-shot
 Messages entries; the first also invokes the deck's bounded `.food-cheer` reaction
 and chains two authored replies quoting Hamid's row.
+Lighting the smoker latches the grillmaster projection for that complete fire
+cycle. Room/focus gates may temporarily hide the projection, but ambient drift
+cannot re-roll Hamid (and his nested serving plate) away while the smoker remains
+lit; extinguishing or resetting the smoker clears the latch.
 Every real serve calls `__balconyGuestTakePlate`: it attaches a short-lived,
 opacity-only plate to a present figure's own `.bh-idle` coordinate space, caps
 concurrent plates at three, and clears them on room exit.

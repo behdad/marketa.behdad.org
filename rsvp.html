@@ -88630,14 +88630,12 @@ function spawnDustMote(container) {
     update(); // initial state (usually hidden — party's off at load)
   })();
   // ── BALCONY GRILLMASTER (Hamid at the BBQ) ───────────────────────────────────────────────
-  // Hamid is the grillmaster: while the smoker's LIT during the garden party and you're out on
-  // the balcony, he SOMETIMES stands by the firebox tending it. An ephemeral roster like the
-  // bar/office cameos — it yields to the one-room rule (skips him when he's already on the garden
-  // floor, at the bar, or in the office) and publishes __balconyGrillmasterNow() so the others
-  // can reciprocate. His presence is re-rolled per balcony visit and drifts over a long stay on a
-  // self-rescheduling timer; every gate is re-checked at fire time (crickets rule), so a hidden/
-  // unfocused tab or a cold BBQ shows nobody. A blur hides him without losing the roll (he's back,
-  // the same, on refocus); a real room-leave / party-off / BBQ-off re-rolls fresh next time.
+  // Hamid is the grillmaster: lighting the smoker summons him for that whole fire cycle. While
+  // you're out on the balcony he stays beside the firebox, so neither he nor his serving plate
+  // blinks away between cooking and serving. He still yields to the one-room rule (skips himself
+  // when already on the garden floor / at the bar / in the office) and publishes
+  // __balconyGrillmasterNow() so those controllers can reciprocate. A blur or room leave only
+  // hides the projection; the fire-cycle latch survives so he returns with the still-lit smoker.
   (function balconyGrillmaster() {
     var el = document.getElementById("balcony-grillmaster");
     var smoker = document.getElementById("balcony-smoker");
@@ -88645,6 +88643,7 @@ function spawnDustMote(container) {
     if (!el || !smoker) return;
     var present = false; // rolled: is Hamid grilling this visit?
     var visited = false; // has this on-screen visit rolled yet?
+    var summoned = false; // lighting owns Hamid until this fire cycle ends
     var shown = false;   // is he actually painted right now?
     function attended() { return !document.hidden && document.hasFocus(); }
     function inRoom() {
@@ -88681,24 +88680,31 @@ function spawnDustMote(container) {
     function update() {
       if (rosterHoldsOccupants() && window.currentStageName === "balcony") return;
       if (inRoom()) {
-        if (window.__bbqSplitOn) { visited = true; present = true; } // May 2: Hamid owns the grill for the whole balcony split
+        if (summoned || window.__bbqSplitOn) { visited = true; present = true; }
         else if (!visited) { visited = true; present = Math.random() < 0.5; }
       } // roll once per genuine ordinary visit (a blur must not reshuffle)
-      else { visited = false; }
+      else {
+        visited = false;
+        if (!smoker.classList.contains("smoking")) { summoned = false; present = false; }
+      }
       paint();
     }
     window.__updateBalconyGrillmaster = update;
-    window.__forceBalconyGrillmaster = function () { visited = true; present = true; paint(); }; // behdad's "let's start the BBQ" text summons Hamid to tend it (bypasses the ~50% roll)
-    window.__resetBalconyGrillmaster = function () { visited = false; present = false; paint(); };
-    // a slow self-rescheduling timer: over a long balcony stay Hamid steps to/from the grill so
-    // he's not a fixture. Re-gated every fire (crickets rule); a no-op while off the balcony.
+    window.__forceBalconyGrillmaster = function () { summoned = true; visited = true; present = true; paint(); };
+    window.__resetBalconyGrillmaster = function () { summoned = false; visited = false; present = false; paint(); };
+    // Keep the old slow re-gate so focus, one-room ownership, and an externally restored smoker
+    // still reconcile. A summoned grillmaster cannot be randomly re-rolled off mid-cook.
+    function drift() {
+      if (!rosterHoldsOccupants() && inRoom() && attended()) {
+        if (summoned || window.__bbqSplitOn) present = true;
+        else if (!elsewhere()) present = Math.random() < 0.5;
+        paint();
+      }
+    }
+    window.__balconyGrillmasterDriftNow = drift;
     (function loop() {
       setTimeout(function () {
-        if (!rosterHoldsOccupants() && inRoom() && attended()) {
-          if (window.__bbqSplitOn) present = true;
-          else if (!elsewhere()) present = Math.random() < 0.5;
-          paint();
-        }
+        drift();
         loop();
       }, 20000 + Math.random() * 16000);
     })();

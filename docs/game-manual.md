@@ -206,9 +206,9 @@ context actions when something seems suggestive.
 
 The loft includes a drop-down JavaScript console and the monitor's **Console**
 and **Code** apps. They are optional play spaces, not part of the main game.
-Once discovered, press backtick to open the drop-down console and type `help` or
-`shortcuts()` to get oriented. The Code app can run JavaScript and Python files;
-named files are saved in this browser.
+Press backtick to open the drop-down console and type `help` or `shortcuts()` to
+get oriented. The Code app can run JavaScript and Python files; named files are
+saved in this browser.
 
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.

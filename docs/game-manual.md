@@ -123,9 +123,9 @@ Reaching the balcony completes the main traversal. Use its party switch or press
 
 ### Phone, computer, and Messages
 
-Open the pocket phone from the scene or with `C`. Its first ordinary opening has
-a small math lock; three failed attempts open it automatically. Home, Back, and
-Recents work like their familiar phone equivalents.
+Open the pocket phone from the balcony table or with `C`. Its first ordinary
+opening has a small math lock; three failed attempts open it automatically.
+Home, Back, and Recents work like their familiar phone equivalents.
 
 The phone holds Messages, Mail, Calendar, Album, camera and music tools, small
 utilities, and games. Right-click or two-finger tap an app icon to open, stop,

@@ -83070,6 +83070,17 @@ function spawnDustMote(container) {
   function unitIsBirthdayHeld(g, u) { for (var i = 0; i < u.sels.length; i++) { var el = g.querySelector(u.sels[i]); if (el && (el.classList.contains("bd-cutter") || el.classList.contains("bd-honoree"))) return true; } return false; }
   function presentUnits(g, list) { return list.filter(function (u) { return unitIsPresent(g, u); }); }
   function waitingUnits(g, list) { return list.filter(function (u) { return unitIsWaiting(g, u); }); }
+  function rosterUnitLabel(u) {
+    return (u.sels || []).map(function (sel) {
+      var name = guestNameFromSel(sel);
+      return name ? name.charAt(0).toUpperCase() + name.slice(1) : "";
+    }).filter(Boolean).join(" + ");
+  }
+  function echoRosterMove(direction, u, g) {
+    if (!window.echo) return;
+    window.echo("[party roster] " + direction + ": " + rosterUnitLabel(u) +
+      " · " + presentUnits(g, fullArrivals()).length + "/" + GUEST_UNIT_CAP + " units");
+  }
   function noteArrival(u) { recentArrivals.push(unitKey(u)); while (recentArrivals.length > 3) recentArrivals.shift(); }
   function shuffleArr(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function finishFigureOut(g, el) {
@@ -83102,12 +83113,13 @@ function spawnDustMote(container) {
       walkFigureOut(g, entry.sels[i], entry.homes[i]); // adults stroll out from their current slot (still in slotXBySel)
     }
     rebalanceFloor(g); // the remaining present guests glide to close the gap (the leaver already has .leaving → excluded)
+    echoRosterMove("out", entry, g);
   }
   function bringRotatedGuests(incoming) {
     if (rosterHoldsOccupants()) { setTimeout(function () { bringRotatedGuests(incoming); }, 1000); return; }
     if (window.__bbqSplitOn) return; // a pre-invitation garden swap must not land after the BBQ controller takes attendance over
     if (!guestsWanted()) return;
-    incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); });
+    incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); echoRosterMove("in", u, document.getElementById("garden-guests")); });
   }
   // one rotation beat: send 1–2 present units out, then (after a gap) walk the same number of waiting
   // units in. Prefer not to evict someone who only just arrived.
@@ -83160,7 +83172,7 @@ function spawnDustMote(container) {
       var present = presentUnits(g, list), waiting = waitingUnits(g, list);
       if (!waiting.length) { if (everyoneArrived(g)) g.classList.remove("trickle"); return; } // whole roster fits → full floor, stop
       if (present.length < GUEST_UNIT_CAP) { // FILL: one family/couple/solo is one unit
-        arriveEntry(waiting[0]); noteArrival(waiting[0]);
+        arriveEntry(waiting[0]); noteArrival(waiting[0]); echoRosterMove("in", waiting[0], g);
         var nearCap = present.length + 1 >= GUEST_UNIT_CAP;
         // The ease used to drop straight to the ROTATION cadence, which stalled the floor at six for
         // 16-25s — long enough to read as "that's everyone", right when the party should still feel

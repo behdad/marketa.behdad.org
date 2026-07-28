@@ -119,6 +119,8 @@ Each runtime has a `BUILD.md` recording its provenance and build process:
 - [`doom/`](../doom/BUILD.md) contains the WebAssembly build of Doom.
 - [`duke/`](../duke/BUILD.md) contains emduke32 plus the unchanged official shareware archive.
 - [`q3/`](../q3/BUILD.md) contains ioquake3 plus the reduced OpenArena arena payload.
+- [`dos/`](../dos/BUILD.md) contains js-dos/DOSBox, the NGE Nibbles bundle,
+  exact upstream packages and corresponding source archives.
 - [`harfbuzzjs/`](../harfbuzzjs/BUILD.md) contains HarfBuzz compiled for the browser.
 
 These directories are pinned, versioned deliverables rather than generated build output. Do not
@@ -711,6 +713,10 @@ but it has no desktop tile and the ghost is not an access gate. The live board i
 normal close parks and retains it, Kill/New reset it, and the separate
 `localStorage["pacmanHigh"]` personal best survives those resets.
 
+Calendar is also `searchOnly` on the monitor desktop. Its centered date/countdown
+menu-bar control remains the primary pointer entry point; the phone launcher is a
+separate catalog and is unchanged.
+
 System Information is also a `searchOnly` `DESKTOP_APPS` entry. Its `show-system`
 class participates in the same running-app registry and in-app context menu as
 the tiled apps: ordinary close removes only the foreground class, while
@@ -758,6 +764,16 @@ mapping: those desktop-oriented paths do not render the OA lightmaps correctly i
 this Emscripten/WebGL build. Like every
 canvas/video/iframe inside the scaled monitor `foreignObject`, these game rasters
 remain a known blank-compositing limitation on WebKit.
+
+The `show-snakes` app lazily creates one same-origin `dos/player.html` iframe.
+The child owns js-dos and DOSBox; parent `snakes-control` messages pause, resume,
+or stop it. Normal close pauses and retains the frame. Kill/Restart calls
+`player.stop()` and removes the iframe, which releases the WASM machine and all
+child listeners. Child readiness gates runtime Kill, and a normalized
+`snakes-context` bridge reuses the monitor’s ordinary Restart/Kill menu. The
+bundle autoexec runs NGE Nibbles once and deliberately leaves DOSBox’s internal
+shell at `C:\>` after the game exits. Repacking and complete license/source
+provenance live in `dos/BUILD.md`.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;

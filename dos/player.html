@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>snakes</title>
+<link rel="stylesheet" href="runtime/js-dos.css">
+<style>
+html,body,#dos{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
+body{font-family:ui-monospace,Menlo,Consolas,monospace;touch-action:none}
+#dos{position:relative}
+#status{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;box-sizing:border-box;background:#000;color:#8fd070;text-align:center;font-size:clamp(10px,4vw,16px);line-height:1.35}
+#status[hidden]{display:none}
+.emulator-root,.emulator-container,.emulator-canvas{width:100%!important;height:100%!important}
+canvas{image-rendering:pixelated}
+</style>
+<script src="runtime/js-dos.js"></script>
+</head>
+<body>
+<div id="dos"></div>
+<div id="status">loading DOS…</div>
+<script>
+(function () {
+  "use strict";
+  var status = document.getElementById("status");
+  var lang = new URLSearchParams(location.search).get("lang") === "cs" ? "cs" : "en";
+  var text = {
+    en: { loading: "loading DOS…", failed: "DOS could not start. Restart the app to retry." },
+    cs: { loading: "načítám DOS…", failed: "DOS se nepodařilo spustit. Zkuste aplikaci restartovat." }
+  };
+  status.textContent = text[lang].loading;
+  function tell(type, extra) {
+    try { parent.postMessage(Object.assign({ type: type }, extra || {}), location.origin); } catch (_error) {}
+  }
+  var player;
+  try {
+    player = Dos(document.getElementById("dos"), {
+      url: "snakes.jsdos?v=a60a399d",
+      pathPrefix: "runtime/emulators/",
+      backend: "dosbox",
+      backendLocked: true,
+      autoStart: true,
+      autoSave: false,
+      kiosk: true,
+      imageRendering: "pixelated",
+      renderBackend: "canvas",
+      renderAspect: "4/3",
+      mouseCapture: false,
+      noCursor: true,
+      volume: 0,
+      theme: "black",
+      lang: "en",
+      onEvent: function (event) {
+        if (event === "ci-ready" || event === "bnd-play") {
+          status.hidden = true;
+          tell("snakes-ready");
+        }
+      }
+    });
+  } catch (_error) {
+    status.textContent = text[lang].failed;
+    tell("snakes-failed");
+  }
+  window.addEventListener("error", function () {
+    status.hidden = false;
+    status.textContent = text[lang].failed;
+    tell("snakes-failed");
+  });
+  window.addEventListener("message", function (event) {
+    if (event.origin !== location.origin || !event.data || event.data.type !== "snakes-control" || !player) return;
+    if (event.data.action === "pause") player.setPaused(true);
+    else if (event.data.action === "resume") player.setPaused(false);
+    else if (event.data.action === "stop") Promise.resolve(player.stop()).catch(function () {});
+  });
+  document.addEventListener("contextmenu", function (event) {
+    event.preventDefault();
+    tell("snakes-context", {
+      x: Math.max(0, Math.min(1, event.clientX / Math.max(1, innerWidth))),
+      y: Math.max(0, Math.min(1, event.clientY / Math.max(1, innerHeight)))
+    });
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      tell("snakes-close");
+    }
+  }, true);
+}());
+</script>
+</body>
+</html>

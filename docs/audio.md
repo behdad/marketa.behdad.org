@@ -159,6 +159,10 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 
 ## Adding a new sound
 
+The monitor’s `snakes` DOS bundle is deliberately silent: NGE Nibbles has no
+music or effects, and `dos/player.html` starts js-dos with volume zero and DOSBox
+sound devices disabled. It does not create or join the loft’s shared audio graph.
+
 - **A one-shot effect** → get the context via `getSfxCtx()` (returns null → bail; every
   caller already handles that). Connect to `ctx.destination` (the SFX master) directly or
   via `pannedOut(ctx, elId)`. Never construct your own context.

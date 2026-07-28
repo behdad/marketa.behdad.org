@@ -434,20 +434,29 @@ The main monitor desktop contains these app tiles:
 - Call
 - Chat
 - Mail
-- Calendar
 - Tattoo
-- Mines
 - Life
+- Mines
 - shoot
+- snakes
 - Code
 - Console
 - Python
 - Linux
 
-Every monitor app has its own Kill gag. A normal close leaves the app marked as
-running. Right-click its desktop tile or open surface and choose **Kill** to
-clear that session with its own send-off. Runtime apps also offer **Restart**
+Every monitor app supports Kill, and most have their own Kill gag. A normal close
+leaves the app marked as running. Right-click its desktop tile or open surface
+and choose **Kill** to clear that session. Runtime apps also offer **Restart**
 when appropriate.
+
+Calendar has no desktop tile. Select the centered wedding date/countdown in the
+desktop menu bar, or search for Calendar, to open it. The phone Calendar is unchanged.
+
+The **snakes** tile boots a real DOSBox session directly into the GPL NGE Nibbles
+game. Press `Enter` to start, steer with the arrow keys, and press `Esc` to leave
+the game at the `C:\>` DOS prompt. Normal close pauses the machine; **Kill** tears
+it down, and **Restart** starts a fresh DOS session. App search recognizes
+`snakes`, `nibbles`, and `dos`.
 
 The **shoot** tile opens Doom, Duke, and Quake III in that order. Doom is
 Chocolate Doom with FreeDM; Duke is EDuke32 with the official 1.3d shareware
@@ -534,7 +543,8 @@ freeze the dancing.
 ### Computer-only environments
 
 The monitor includes a JavaScript Console, a shared JavaScript/Python Script
-Code, a Python environment, and a Linux-like command environment. These are
+Code, a Python environment, a Linux-like command environment, and the DOS
+session behind snakes. These are
 optional toys for technically curious players. The Python and Linux apps use
 browser-hosted, pinned runtimes rather than a shell on the visitor's device.
 HarfBuzz and font-tool demonstrations are included.

@@ -4543,6 +4543,7 @@ body:has(#stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on
 .chat-log{flex:1; min-height:0; display:flex; flex-direction:column; gap:1px; overflow-y:auto; padding:2px 3px 1.5px; scrollbar-width:none; overscroll-behavior:contain}
 .chat-log::-webkit-scrollbar{display:none}
 html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers mispaint in WebKit; JS still scrolls the newest line into view */
+.chat-log,.chat-log *,.chat-input{-webkit-user-select:text;user-select:text}
 .chat-msg{max-width:82%; box-sizing:border-box; padding:1.2px 1.8px; border-radius:2px; white-space:pre-wrap; overflow-wrap:anywhere}
 .chat-msg.assistant{align-self:flex-start; background:#fffdf8; border:0.3px solid #d6ddda; color:#453a31}
 .chat-msg.user{align-self:flex-end; background:#8e3a4a; color:#fffdf8}
@@ -52340,6 +52341,23 @@ setOfficeProgress("pc", false);
       if (!el || !el.closest || !el.closest("#monitor-code-wrap")) return null;
       return el.matches("textarea, input:not([type]), input[type='text']") ? el : null;
     }
+    function chatEditTarget(node) {
+      var el = node && (node.nodeType === 1 ? node : node.parentElement);
+      if (!el || !el.closest) return null;
+      return el.closest("#monitor-chat-input");
+    }
+    function chatTextTarget(node) {
+      var el = node && (node.nodeType === 1 ? node : node.parentElement);
+      return el && el.closest ? el.closest(".chat-msg") : null;
+    }
+    function selectNodeText(node) {
+      if (!node || !window.getSelection || !document.createRange) return;
+      var range = document.createRange();
+      range.selectNodeContents(node);
+      var selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
     function editSelection(target) {
       var start = target && target.selectionStart != null ? target.selectionStart : 0;
       var end = target && target.selectionEnd != null ? target.selectionEnd : start;
@@ -52382,7 +52400,10 @@ setOfficeProgress("pc", false);
     }
     function buildMenu(app, x, y, target) {
       var items = [];
-      var edit = app.cls === "show-code" ? editSelection(codeEditTarget(target)) : null;
+      var editTarget = app.cls === "show-code" ? codeEditTarget(target)
+        : (app.cls === "show-chat" ? chatEditTarget(target) : null);
+      var edit = editSelection(editTarget);
+      var chatText = app.cls === "show-chat" ? chatTextTarget(target) : null;
       var targetEl = target && (target.nodeType === 1 ? target : target.parentElement);
       var onEq = app.cls === "show-nowplaying" && targetEl && targetEl.closest &&
         targetEl.closest("#monitor-manual-eq, #monitor-eq-hit, #monitor-logo-nowplaying .eq-bar");
@@ -52396,6 +52417,16 @@ setOfficeProgress("pc", false);
           edit.start = 0; edit.end = edit.target.value.length; restoreEditSelection(edit);
         }, !edit.target.value));
       }
+      if (chatText) {
+        items.push(makeItem("ctx-copy", COPY_ICO, tr("mon_ctx_copy"), function () {
+          var selection = window.getSelection && window.getSelection();
+          var selected = selection && selection.anchorNode && chatText.contains(selection.anchorNode) ? selection.toString() : "";
+          writeEditClipboard(selected || chatText.textContent || "");
+        }, !(chatText.textContent || "").trim()));
+        items.push(makeItem("ctx-select-all", SELECT_ICO, tr("mon_ctx_select_all"), function () {
+          selectNodeText(chatText);
+        }, !(chatText.textContent || "").trim()));
+      }
       if (onEq) {
         var eqFlat = manualEqDb.every(function (db) { return db === 0; });
         items.push(makeItem("ctx-reset-eq", EQ_RESET_ICO, tr("mon_ctx_reset_eq"), function () {
@@ -52405,7 +52436,7 @@ setOfficeProgress("pc", false);
         }, !USE_LIVE_ANALYSER || eqFlat));
       }
       var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
-      items.push(makeItem("ctx-kill" + ((edit && edit.target) || onEq ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
+      items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
       if (app.restart) items.push(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
       openMenu(items, x, y);
     }

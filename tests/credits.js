@@ -39,6 +39,16 @@ var harness = String.raw`<script>
       roll.style.getPropertyValue("--credits-duration") === current.duration + "s",
       roll.getAttribute("style"));
     window.__openMonitorCredits();
+    var layer = document.getElementById("monitor-credits-layer");
+    layer.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    check("clicking the credits display pauses the roll",
+      layer.classList.contains("paused") && getComputedStyle(roll).animationPlayState === "paused");
+    layer.querySelector(".monitor-credits-close").dispatchEvent(
+      new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+    check("Space resumes the roll without closing Credits",
+      layer.classList.contains("open") && !layer.classList.contains("paused") &&
+      getComputedStyle(roll).animationPlayState === "running",
+      layer.getAttribute("class") + " / " + getComputedStyle(roll).animationPlayState);
     roll.dispatchEvent(new Event("animationend"));
     check("the fire keeps running after the credits finish",
       document.getElementById("monitor-credits-layer").classList.contains("finished") &&

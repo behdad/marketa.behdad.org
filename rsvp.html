@@ -3798,6 +3798,7 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-credits-shade{fill:#17131d;opacity:.58}
 .monitor-credits-roll{text-anchor:middle;pointer-events:none}
 #monitor-credits-layer.open #monitor-credits-roll{animation:credits-roll-motion var(--credits-duration,22s) linear forwards}
+#monitor-credits-layer.paused #monitor-credits-roll{animation-play-state:paused}
 #monitor-credits-layer.finished #monitor-credits-fire{opacity:1;filter:saturate(1.45) brightness(1.25)}
 #monitor-credits-layer.finished .monitor-credits-shade{opacity:.28}
 .monitor-credits-title{fill:#fffdf8;font:600 4px/1 Fraunces,serif}
@@ -46480,7 +46481,7 @@ setOfficeProgress("pc", false);
     if (!monitorCreditsLayer) return;
     clearTimeout(monitorCreditsKillTimer);
     monitorCreditsKillTimer = null;
-    monitorCreditsLayer.classList.remove("open", "finished", "killing");
+    monitorCreditsLayer.classList.remove("open", "finished", "killing", "paused");
     monitor.classList.remove("show-credits");
     if (window.startCuddlyFlame) window.startCuddlyFlame();
     scheduleSaver();
@@ -46491,7 +46492,7 @@ setOfficeProgress("pc", false);
     stopSaver();
     clearTimeout(monitorCreditsKillTimer);
     monitorCreditsKillTimer = null;
-    monitorCreditsLayer.classList.remove("open", "finished", "killing");
+    monitorCreditsLayer.classList.remove("open", "finished", "killing", "paused");
     void monitorCreditsLayer.getBBox();
     monitor.classList.add("show-credits");
     monitorCreditsLayer.classList.add("open");
@@ -46502,11 +46503,17 @@ setOfficeProgress("pc", false);
   }
   window.__openMonitorCredits = openMonitorCredits;
   window.__closeMonitorCredits = closeMonitorCredits;
+  function toggleMonitorCreditsPause() {
+    if (!monitorCreditsLayer || !monitorCreditsLayer.classList.contains("open") ||
+        monitorCreditsLayer.classList.contains("finished") || monitorCreditsLayer.classList.contains("killing")) return false;
+    monitorCreditsLayer.classList.toggle("paused");
+    return true;
+  }
   function killMonitorCredits() {
     if (!monitorCreditsLayer) return false;
     if (!monitorCreditsLayer.classList.contains("open")) openMonitorCredits();
     clearTimeout(monitorCreditsKillTimer);
-    monitorCreditsLayer.classList.remove("finished");
+    monitorCreditsLayer.classList.remove("finished", "paused");
     monitorCreditsLayer.classList.add("killing");
     if (window.startCuddlyFlame) window.startCuddlyFlame();
     monitorCreditsKillTimer = setTimeout(function () {
@@ -47192,9 +47199,12 @@ setOfficeProgress("pc", false);
     }
     creditsClose.addEventListener("click", dismissCredits);
     creditsClose.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") dismissCredits(e);
+      if (e.key === "Enter") dismissCredits(e);
     });
-    monitorCreditsLayer.addEventListener("click", function (e) { e.stopPropagation(); });
+    monitorCreditsLayer.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleMonitorCreditsPause();
+    });
     monitorCreditsLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
 
   }
@@ -47350,6 +47360,12 @@ setOfficeProgress("pc", false);
     mkEl("circle", { cx: 376, cy: 194, r: .45, "class": "monitor-sleep-led" }, monitorSleepLayer);
   }
   window.addEventListener("keydown", function (e) {
+    if (monitorCreditsLayer && monitorCreditsLayer.classList.contains("open") && e.key === " ") {
+      if (toggleMonitorCreditsPause()) {
+        e.preventDefault(); e.stopImmediatePropagation();
+      }
+      return;
+    }
     if (monitorSystemInfoLayer && monitorSystemInfoLayer.classList.contains("open") &&
         (e.key === "Escape" || e.key === "Esc" || e.key === "Backspace")) {
       e.preventDefault(); e.stopImmediatePropagation(); closeMonitorSystemInfo(); return;

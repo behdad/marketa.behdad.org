@@ -114,8 +114,8 @@ If you want exact answers, open the spoilers below.
 <details>
 <summary><strong>Balcony solution</strong></summary>
 
-Reaching the balcony completes the main traversal. Use its party switch, press
-`Enter`, or wait for the finale to lead into the party.
+Reaching the balcony completes the main traversal. Use its party switch or press
+`Enter` to start the party.
 
 </details>
 

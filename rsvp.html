@@ -83014,13 +83014,13 @@ function spawnDustMote(container) {
     if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); // tempo-lock the newly-arrived figure's wrappers into phase with the rest
   }
   // ── REVOLVING DOOR ──────────────────────────────────────────────────────────
-  // The floor holds at most GUEST_CAP guest FIGURES (people, EXCL. the two hosts — a couple = 2, a
-  // solo = 1) at a time; the
+  // The floor holds at most four arrival units at a time; a family or couple counts as one unit.
+  // The
   // rest wait off-scene and rotate through — every so often 1–2 present units stroll OUT the gate and
   // 1–2 waiting units stroll IN, so a big guest list never crowds the dance floor. Hosts + crew never
   // rotate (they aren't ARRIVALS units). The whole thing rides the same party/focus/visibility gate
   // as the trickle, so nothing runs (or piles up) in a hidden/unfocused tab.
-  var GUEST_CAP = 8; // guest FIGURES on the floor at once (excl. the 2 hosts) — owner: "8 guests plus hosts"
+  var GUEST_UNIT_CAP = 4;
   var recentArrivals = []; // unit keys that JUST walked in — don't send them straight back out
   function unitKey(u) { return u.id || u.sels[0]; }
   function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
@@ -83100,7 +83100,7 @@ function spawnDustMote(container) {
     }
     return true;
   }
-  // self-rescheduling driver: FILL the floor up to GUEST_CAP figures (one unit per beat), then switch to
+  // self-rescheduling driver: FILL the floor up to GUEST_UNIT_CAP units (one unit per beat), then switch to
   // ROTATION (swap 1–2 in for 1–2 out every ~20s). Both phases keep going while hidden or unfocused,
   // using walkFigureIn/walkFigureOut's instant hidden-tab paths. Keeps .trickle on the whole party so
   // the waiting units stay hidden (:not(.arrived)); only drops it if the whole roster fits under cap.
@@ -83117,9 +83117,9 @@ function spawnDustMote(container) {
       var list = fullArrivals();
       var present = presentUnits(g, list), waiting = waitingUnits(g, list);
       if (!waiting.length) { if (everyoneArrived(g)) g.classList.remove("trickle"); return; } // whole roster fits → full floor, stop
-      if (presentGuestFigures(g) < GUEST_CAP) { // FILL: walk in the next waiting unit (jittered list order) — cap is a FIGURE count (guests, excl. hosts), so a couple counts as 2
+      if (present.length < GUEST_UNIT_CAP) { // FILL: one family/couple/solo is one unit
         arriveEntry(waiting[0]); noteArrival(waiting[0]);
-        var nearCap = presentGuestFigures(g) + 2 >= GUEST_CAP; // ~a couple away from full → ease off the fill cadence
+        var nearCap = present.length + 1 >= GUEST_UNIT_CAP;
         // The ease used to drop straight to the ROTATION cadence, which stalled the floor at six for
         // 16-25s — long enough to read as "that's everyone", right when the party should still feel
         // like it's growing. Slow down into the last couple instead of stopping dead; the steady
@@ -83295,7 +83295,7 @@ function spawnDustMote(container) {
     g.classList.add("guests-in", "trickle");
     if (!arrivalOrder) arrivalOrder = jitterArrivals();
     var added = 0, waiting = waitingUnits(g, fullArrivals());
-    while (waiting.length && presentGuestFigures(g) < GUEST_CAP) {
+    while (waiting.length && presentUnits(g, fullArrivals()).length < GUEST_UNIT_CAP) {
       arriveEntry(waiting[0]); noteArrival(waiting[0]); added += waiting[0].sels.length;
       waiting = waitingUnits(g, fullArrivals());
     }
@@ -83305,7 +83305,7 @@ function spawnDustMote(container) {
     return added;
   };
   window.__dismissGuests = function () { guestsArrived = false; clearGardenGuests(); }; // send them off without ending the party
-  // TRIM the floor back down to GUEST_CAP figures — walk the excess units OUT the gate (same
+  // TRIM the floor back down to GUEST_UNIT_CAP families/couples/solos — walk excess units OUT the gate (same
   // stroll the revolving door uses), newest-first so the just-summoned first-dance overflow
   // leaves and the settled ring stays. After the hosts' first dance packs the WHOLE roster in
   // (see firstDance → __summonGuests), this actively thins it back to a normal ~8-figure floor
@@ -83316,8 +83316,7 @@ function spawnDustMote(container) {
     var g = document.getElementById("garden-guests");
     if (!g) return 0;
     var present = presentUnits(g, fullArrivals());
-    // count FIGURES present (a couple = 2), and how many figures we're over the cap by.
-    var over = presentGuestFigures(g) - GUEST_CAP;
+    var over = present.length - GUEST_UNIT_CAP;
     if (over <= 0) return 0;
     // prefer to evict the most-recently-arrived units first (the first-dance summon overflow),
     // so the earlier-settled ring is the one that stays. recentArrivals holds the newest keys.
@@ -83326,10 +83325,8 @@ function spawnDustMote(container) {
     });
     var walked = 0;
     for (var i = 0; i < order.length && over > 0; i++) {
-      var before = presentGuestFigures(g);
       leaveEntry(order[i]);
-      var freed = before - presentGuestFigures(g);
-      if (freed > 0) { over -= freed; walked++; }
+      over--; walked++;
     }
     // hand the floor back to the normal revolving door: re-arm the fill/rotation driver so it
     // tops the ring back up to the cap (if the trim overshot by evicting a couple) and keeps
@@ -83745,7 +83742,7 @@ function spawnDustMote(container) {
       if (window.__firstDanceOn) return true; // already running — idempotent (storm-safe)
       setPartyMomentState("firstDance", true);
       // bring the WHOLE roster onto the floor so the full crowd rings the couple for their first
-      // dance (temporarily over GUEST_CAP; endFirstDance trims it back). __summonGuests crashes
+      // dance (temporarily over GUEST_UNIT_CAP; endFirstDance trims it back). __summonGuests crashes
       // everyone in at once (fillAllNow → rebalanceFloor spreads them evenly across the band).
       if (window.__guestsIn && !window.__guestsIn() && window.__summonGuests) window.__summonGuests();
       // remember the current dance, then switch to the reserved TANGO bed for the first dance

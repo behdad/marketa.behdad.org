@@ -21,7 +21,9 @@ var harness = String.raw`<script>
     var group = document.getElementById("garden-guests");
     if (!group) return 0;
     return Array.prototype.filter.call(group.querySelectorAll(".guest.arrived:not(.leaving)"), function (guest) {
-      return !guest.classList.contains("g-behdad") && !guest.classList.contains("g-marketa");
+      return !guest.classList.contains("g-behdad") && !guest.classList.contains("g-marketa") &&
+        !guest.classList.contains("off-with-kids") && !guest.classList.contains("off-at-games") &&
+        !guest.classList.contains("off-asleep") && !guest.classList.contains("off-at-bbq");
     }).length;
   }
   var units = [
@@ -62,8 +64,8 @@ var harness = String.raw`<script>
 
         await sleep(12000);
         var beforeCount = arrivedCount(), before = presentUnits();
-        check("the unattended initial fill reaches the eight-guest floor capacity",
-          beforeCount >= 8, JSON.stringify({ count: beforeCount, units: before }));
+        check("the unattended initial fill reaches the four-family floor capacity",
+          before.length === 4, JSON.stringify({ count: beforeCount, units: before }));
         var centerGuests = ordinaryGuestInCenter();
         check("ordinary guests leave the couple's center lane clear",
           centerGuests.length === 0, JSON.stringify(centerGuests));
@@ -76,6 +78,8 @@ var harness = String.raw`<script>
           arrived.length > 0, JSON.stringify({ before: before, after: after, arrived: arrived }));
         check("the revolving door completes a departure while the page is unfocused",
           departed.length > 0, JSON.stringify({ before: before, after: after, departed: departed }));
+        check("the revolving door never drifts above the four-family floor capacity",
+          after.length <= 4, JSON.stringify({ count: arrivedCount(), units: after }));
 
         focused = true;
         window.__duoArrive("ali");

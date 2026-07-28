@@ -40406,6 +40406,13 @@ function quickReversalGesture(action) {
   function makeThrowable(el, wobbleFn) {
     if (!el) return;
     var dragging = false, dragMoved = false, releasePt = null, dragStartPt = null;
+    function cancelThrowableDrag() {
+      if (!dragging) return;
+      dragging = false;
+      el.style.transition = "";
+      el.style.translate = "0px 0px";
+      releasePt = null;
+    }
     el.addEventListener("pointerdown", function (e) {
       if (e.button && e.button !== 0) return; // ignore right/middle presses; no phantom throw
       dragging = true;
@@ -40448,6 +40455,10 @@ function quickReversalGesture(action) {
     }
     el.addEventListener("pointerup", onThrowablePointerUp);
     el.addEventListener("pointercancel", onThrowablePointerUp);
+    el.addEventListener("lostpointercapture", cancelThrowableDrag);
+    document.addEventListener("pointerup", onThrowablePointerUp);
+    document.addEventListener("pointercancel", cancelThrowableDrag);
+    window.addEventListener("blur", cancelThrowableDrag);
     el.addEventListener("click", function (e) { e.stopPropagation(); });
   }
   // The two knives on the magnetic board are the throwables (the utensils'

@@ -88,10 +88,10 @@ var HARNESS = [
   "    // Daniel — Prague call-only",
   "    window.birthday('daniel'); await sleep(200);",
   "    report.steps.daniel = { bd: hasCls('bd-daniel'), room: window.currentStageName };",
-  "    // From a clean, party-off state, one Chinnel birthday activation must reach the cake.",
+  "    // From a clean, party-off state, one Chinnell birthday activation must reach the cake.",
   "    if (window.__setGardenParty) window.__setGardenParty(false, true); await sleep(120);",
-  "    window.birthday('chinnel'); await sleep(250);",
-  "    report.steps.chinnel = { room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-chinnel.bd-cutter'), hatVis: vis('#garden-guests .g-chinnel .bd-hat-chinnel') };",
+  "    window.birthday('chinnell'); await sleep(250);",
+  "    report.steps.chinnell = { room: window.currentStageName, party: !!window.__gardenPartyOn, cakeOn: !!window.__bdCakeOn, cutter: !!document.querySelector('#garden-guests .g-chinnell.bd-cutter'), hatVis: vis('#garden-guests .g-chinnell .bd-hat-chinnell') };",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();",
   "    // Navid has a full dance-floor figure, so his birthday starts the party and brings him to the cake.",
   "    window.birthday('navid'); await sleep(250);",
@@ -143,7 +143,7 @@ else {
   if (s.ashraf && s.ashraf.bd && s.ashraf.room === "office") pass("Ashraf (Tehran call) pans to the office + shows her hat class"); else fail("Ashraf tehran reveal", JSON.stringify(s.ashraf));
   if (s.hannah && s.hannah.bd && s.hannah.room === "garden" && s.hannah.cakeOn && s.hannah.cutter && s.hannah.hatVis === "visible") pass("Hannah's dance-floor model routes her birthday to the cake"); else fail("Hannah floor-model birthday", JSON.stringify(s.hannah));
   if (s.daniel && s.daniel.bd && s.daniel.room === "office") pass("Daniel (Prague call) pans to the office"); else fail("Daniel prague reveal", JSON.stringify(s.daniel));
-  if (s.chinnel && s.chinnel.room === "garden" && s.chinnel.party && s.chinnel.cakeOn && s.chinnel.cutter && s.chinnel.hatVis === "visible") pass("one Chinnel birthday activation starts the party and cake"); else fail("Chinnel one-activation birthday cake", JSON.stringify(s.chinnel));
+  if (s.chinnell && s.chinnell.room === "garden" && s.chinnell.party && s.chinnell.cakeOn && s.chinnell.cutter && s.chinnell.hatVis === "visible") pass("one Chinnell birthday activation starts the party and cake"); else fail("Chinnell one-activation birthday cake", JSON.stringify(s.chinnell));
   if (s.navid && s.navid.bd && s.navid.room === "garden" && s.navid.party && s.navid.cakeOn && s.navid.cutter && s.navid.arrived && s.navid.hatVisible === "visible") pass("Navid's birthday starts the party and brings him to the cake in his hat"); else fail("Navid party-room birthday cake", JSON.stringify(s.navid));
   if (s.navidBlow && s.navidBlow.started && s.navidBlow.leaned && s.navidBlow.blown) pass("the birthday honoree leans in and blows out the candles"); else fail("birthday honoree blows out candles", JSON.stringify(s.navidBlow));
   if (s.navidAfterCake && s.navidAfterCake.arrived && s.navidAfterCake.honoree && !s.navidAfterCake.cutter && !s.navidAfterCake.away) pass("the birthday honoree stays dancing after cake and cannot be reassigned"); else fail("birthday honoree persists all night", JSON.stringify(s.navidAfterCake));

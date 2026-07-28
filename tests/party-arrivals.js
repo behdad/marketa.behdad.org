@@ -27,7 +27,7 @@ var harness = String.raw`<script>
     }).length;
   }
   var units = [
-    ["chinnel", ".g-chinnel"], ["alireza", ".g-alireza"], ["ali", ".g-ali"],
+    ["chinnell", ".g-chinnell"], ["alireza", ".g-alireza"], ["ali", ".g-ali"],
     ["spencer", ".g-spencer"], ["farhang", ".g-farhang"], ["patricia", ".g-patricia"],
     ["madla", ".g-madla"], ["hamid", ".g-hamid"], ["baharak", ".g-baharak"],
     ["bahareh", ".g-bahareh"], ["musicians", ".g-danbern"]

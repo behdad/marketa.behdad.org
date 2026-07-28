@@ -119,8 +119,10 @@ Each runtime has a `BUILD.md` recording its provenance and build process:
 - [`doom/`](../doom/BUILD.md) contains the WebAssembly build of Doom.
 - [`duke/`](../duke/BUILD.md) contains emduke32 plus the unchanged official shareware archive.
 - [`q3/`](../q3/BUILD.md) contains ioquake3 plus the reduced OpenArena arena payload.
-- [`dos/`](../dos/BUILD.md) contains js-dos/DOSBox, the NGE Nibbles bundle,
-  exact upstream packages and corresponding source archives.
+- [`dos/`](../dos/BUILD.md) contains js-dos/DOSBox and the owner-supplied
+  historical four-player Nibbles executable. The runtime’s corresponding source
+  archives are pinned alongside it; no source or open-source claim is made for
+  the game executable.
 - [`harfbuzzjs/`](../harfbuzzjs/BUILD.md) contains HarfBuzz compiled for the browser.
 
 These directories are pinned, versioned deliverables rather than generated build output. Do not
@@ -771,8 +773,9 @@ or stop it. Normal close pauses and retains the frame. Kill/Restart calls
 `player.stop()` and removes the iframe, which releases the WASM machine and all
 child listeners. Child readiness gates runtime Kill, and a normalized
 `snakes-context` bridge reuses the monitor’s ordinary Restart/Kill menu. The
-bundle autoexec runs NGE Nibbles once and deliberately leaves DOSBox’s internal
-shell at `C:\>` after the game exits. Repacking and complete license/source
+bundle autoexec runs the owner-supplied historical Nibbles build once; that
+build was modified by `bigbug` for four-player support. It deliberately leaves
+DOSBox’s internal shell at `C:\>` after the game exits. Repacking, hashes, and
 provenance live in `dos/BUILD.md`.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The

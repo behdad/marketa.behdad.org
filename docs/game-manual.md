@@ -452,11 +452,12 @@ when appropriate.
 Calendar has no desktop tile. Select the centered wedding date/countdown in the
 desktop menu bar, or search for Calendar, to open it. The phone Calendar is unchanged.
 
-The **snakes** tile boots a real DOSBox session directly into the GPL NGE Nibbles
-game. Press `Enter` to start, steer with the arrow keys, and press `Esc` to leave
-the game at the `C:\>` DOS prompt. Normal close pauses the machine; **Kill** tears
-it down, and **Restart** starts a fresh DOS session. App search recognizes
-`snakes`, `nibbles`, and `dos`.
+The **snakes** tile boots a real DOSBox session directly into an owner-supplied
+historical MS-DOS Nibbles build, modified by `bigbug` to support up
+to four players. Follow its on-screen setup prompts; `Esc` leaves the game at the
+`C:\>` DOS prompt. Normal close pauses the machine; **Kill** tears it down, and
+**Restart** starts a fresh DOS session. App search recognizes `snakes`, `nibbles`,
+and `dos`.
 
 The **shoot** tile opens Doom, Duke, and Quake III in that order. Doom is
 Chocolate Doom with FreeDM; Duke is EDuke32 with the official 1.3d shareware

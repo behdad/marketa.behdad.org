@@ -1,10 +1,7 @@
 SNAKES
 ======
 
-NGE Nibbles 0.1.0a by Andrea Fazzi
+Historical MS-DOS Nibbles build supplied by the site owner.
+Modified by bigbug to support up to four players.
 
-Enter starts. Arrow keys steer. Esc quits to the C:\> prompt.
-
-NGE Nibbles and CWSDPMI are free software under GPL version 2.
-Their license notices and complete corresponding source packages are
-available beside this bundle in /dos/source/ on the wedding website.
+Follow the on-screen setup prompts. Esc exits to the C:\> prompt.

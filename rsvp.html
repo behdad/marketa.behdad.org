@@ -4641,6 +4641,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-linux #monitor-bsod{opacity:1}
 #office-monitor.death-python #monitor-pymonty{opacity:1}
 #office-monitor.death-console #monitor-js{opacity:1}
+#office-monitor.death-snakes #monitor-snakes-farewell{opacity:1}
 #office-monitor.death-code #monitor-qbasic{opacity:1}
 #office-monitor.death-life #monitor-life-farewell{opacity:1}
 #office-monitor.death-calendar #monitor-calendar-farewell{opacity:1}
@@ -22311,6 +22312,13 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" class="fatality-wrap"><span class="fatality-word" id="monitor-fatality-word">FATALITY</span></div>
 </foreignObject>
 </g>
+<g id="monitor-snakes-farewell">
+<rect x="254" y="154" width="124" height="42" fill="#07170d"/>
+<path id="monitor-snakes-kill-body" d="M270 160 H362 V190 H276 V165 H356 V185 H282 V170 H350 V180 H288 V175 H344" fill="none" stroke="#54c56d" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+<circle id="monitor-snakes-kill-head" cx="270" cy="160" r="2.7" fill="#8ee89e"/>
+<circle id="monitor-snakes-kill-eye" cx="271" cy="159.2" r=".45" fill="#07170d"/>
+<rect id="monitor-snakes-kill-pixel" x="313.7" y="172.7" width="4.6" height="4.6" rx=".5" fill="#54c56d" opacity="0"/>
+</g>
 <!-- Linux killed → a Windows BSOD (the penguin bluescreens); the witty line rides the caption bar -->
 <g id="monitor-bsod">
 <foreignObject x="254" y="154" width="124" height="42">
@@ -27409,6 +27417,7 @@ var T = {
       recovery_hours: "{n} hr ago",
       recovery_days: "{n} d ago",
       df_doom_quip: "kill -9 — flawless victory.", // caption under the on-screen FATALITY melt (DOOM kill)
+      df_snakes_quip: "GAME OVER · It ate the process.",
       df_linux_q1: "First they ignore you…", // BSOD caption beat 1 (Linux kill)
       df_linux_q2: "…then you win.", // BSOD caption beat 2 (Linux kill)
       df_python_quip1: "'Tis but a scratch!", // caption beat 1 under the Monty Python Black Knight (Python kill)
@@ -28534,6 +28543,7 @@ var T = {
       recovery_hours: "před {n} h",
       recovery_days: "před {n} d",
       df_doom_quip: "kill -9 — dokonalé vítězství.", // caption under the on-screen FATALITY melt (DOOM kill)
+      df_snakes_quip: "KONEC HRY · Sežralo to proces.",
       df_linux_q1: "Nejdřív si tě nevšímají…", // BSOD caption beat 1 (Linux kill)
       df_linux_q2: "…a pak vyhraješ.", // BSOD caption beat 2 (Linux kill)
       df_python_quip1: "To je jen škrábnutí!", // caption beat 1 under the Monty Python Black Knight (Python kill)
@@ -55959,9 +55969,35 @@ async def localfont(name):
     monitor.classList.remove("show-snakes");
     scheduleSaver();
   }
+  function snakesDeathFlash() {
+    if (!monitor.classList.contains("show-snakes") || !window.__runMonitorDeathFlash) { destroySnakes(); return; }
+    var body = document.getElementById("monitor-snakes-kill-body");
+    var head = document.getElementById("monitor-snakes-kill-head");
+    var eye = document.getElementById("monitor-snakes-kill-eye");
+    var pixel = document.getElementById("monitor-snakes-kill-pixel");
+    var length = body ? body.getTotalLength() : 0;
+    if (body) { body.style.strokeDasharray = ""; body.style.strokeDashoffset = ""; }
+    if (pixel) pixel.setAttribute("opacity", "0");
+    window.__runMonitorDeathFlash({
+      screenClass: "death-snakes",
+      beats: [{ key: "df_snakes_quip", at: 600 }],
+      dur: 2100,
+      freeze: function () { snakesControl("pause"); },
+      tick: function (t) {
+        if (!body || !length) return;
+        var p = body.getPointAtLength(length * t);
+        body.style.strokeDasharray = (length * (1 - t)) + " " + length;
+        body.style.strokeDashoffset = String(-length * t);
+        if (head) { head.setAttribute("cx", p.x); head.setAttribute("cy", p.y); head.setAttribute("opacity", t < .94 ? "1" : "0"); }
+        if (eye) { eye.setAttribute("cx", p.x + .8); eye.setAttribute("cy", p.y - .8); eye.setAttribute("opacity", t < .94 ? "1" : "0"); }
+        if (pixel) pixel.setAttribute("opacity", t >= .94 ? String(Math.min(1, (t - .94) / .03)) : "0");
+      },
+      close: destroySnakes
+    });
+  }
   window.__closeMonitorSnakes = closeSnakes;
   window.__snakesRunning = function () { return snakesState === "ready"; };
-  window.__killMonitorSnakes = destroySnakes;
+  window.__killMonitorSnakes = snakesDeathFlash;
   window.__restartMonitorSnakes = function () { destroySnakes(); openSnakes(); };
   window.__snakesState = function () {
     return { open: monitor.classList.contains("show-snakes"), state: snakesState,

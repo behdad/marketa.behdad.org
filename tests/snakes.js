@@ -23,7 +23,7 @@ var HARNESS = [
   ' var oldReady=window.__snakesRunning;window.__snakesRunning=function(){return true;};mon.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:500,clientY:500}));var menu=document.querySelector(".mon-ctx"),labels=menu?[].slice.call(menu.querySelectorAll("button")).map(function(b){return b.textContent.trim();}):[];S("menu",{labels:labels,kill:!!(menu&&menu.querySelector(".ctx-kill:not(:disabled)")),restart:!!(menu&&menu.querySelector(".ctx-restart:not(:disabled)"))});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));window.__snakesRunning=oldReady;',
   ' window.__closeMonitorSnakes();await sleep(10);S("close",{open:mon.classList.contains("show-snakes"),retained:document.querySelector("#monitor-snakes-wrap iframe")===first});',
   ' mon.classList.add("show-caps");window.__restartMonitorSnakes();await sleep(20);var second=document.querySelector("#monitor-snakes-wrap iframe");S("restart",{open:mon.classList.contains("show-snakes"),fresh:!!second&&second!==first});',
-  ' window.__killMonitorSnakes();await sleep(10);S("kill",{open:mon.classList.contains("show-snakes"),frame:!!document.querySelector("#monitor-snakes-wrap iframe"),state:window.__snakesState()});',
+  ' window.__killMonitorSnakes();await sleep(20);S("killGag",{active:mon.classList.contains("death-snakes")});await sleep(2200);S("kill",{open:mon.classList.contains("show-snakes"),frame:!!document.querySelector("#monitor-snakes-wrap iframe"),state:window.__snakesState()});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -48,7 +48,7 @@ check(crypto.createHash("sha256").update(bundle).digest("hex") === "15f35bb40c08
   "the complete DOS bundle matches its documented pinned hash");
 check(JSON.stringify(bundleEntries) === JSON.stringify([".jsdos/dosbox.conf", "NIBBLES.EXE", "README.TXT"]),
   "the DOS bundle contains only its configuration, historical executable, and provenance note", bundleEntries);
-var r = lib.runPageSync("rsvp.html", HARNESS, 2200, { patchRaf: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 4500, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
@@ -67,6 +67,7 @@ check(s.menu.kill && s.menu.restart && s.menu.labels.length === 2,
   "the open DOS surface exposes enabled Kill and Restart actions", s.menu);
 check(!s.close.open && s.close.retained, "normal close pauses and retains the DOS machine", s.close);
 check(s.restart.open && s.restart.fresh, "Restart replaces it with a fresh DOS machine", s.restart);
+check(s.killGag.active, "Kill starts the self-devouring snake farewell", s.killGag);
 check(!s.kill.open && !s.kill.frame && s.kill.state.state === "cold", "Kill tears the DOS machine down", s.kill);
 
 console.log("");

@@ -28377,6 +28377,7 @@ var T = {
     mon_sys_shutdown: "Shut down",
     mon_sys_credits: "Credits",
     mon_sys_system: "System",
+    mon_lang_switch: "Switch language",
     mon_system_info_title: "System Information",
     mon_system_info_browser: "Browser",
     mon_system_info_status: "Status",
@@ -29506,6 +29507,7 @@ var T = {
     mon_sys_shutdown: "Vypnout",
     mon_sys_credits: "Titulky",
     mon_sys_system: "Systém",
+    mon_lang_switch: "Přepnout jazyk",
     mon_system_info_title: "Systémové informace",
     mon_system_info_browser: "Prohlížeč",
     mon_system_info_status: "Stav",
@@ -29706,6 +29708,7 @@ function setLang(l) {
   if (window.refreshRoster) window.refreshRoster();
   if (window.__refreshOccasionBanner) window.__refreshOccasionBanner();
   if (window.refreshRoomDots) window.refreshRoomDots();
+  if (window.__refreshMonitorLanguageButton) window.__refreshMonitorLanguageButton();
 }
 // The Who's Here panel is defined later in the script. Population controllers use this small
 // feature-detected read so their autonomous arrivals/departures pause while somebody is reading it.
@@ -46900,13 +46903,31 @@ setOfficeProgress("pc", false);
       if (e.key === "Enter" || e.key === " ") activateDockSearch(e);
     });
     var clockG = mkEl("g", { id: "monitor-desk-clock", "class": "desk-brand", role: "button", tabindex: "0", "data-aria-i": "app_clock", "aria-label": (T[document.documentElement.lang] || T.en).app_clock || T.en.app_clock }, dock);
-    var deskClock = mkEl("text", { x: 366, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text" }, clockG);
-    mkEl("rect", { x: 354.5, y: 154.5, width: 23, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, clockG);
+    var deskClock = mkEl("text", { x: 362, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text" }, clockG);
+    mkEl("rect", { x: 354.5, y: 154.5, width: 15, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, clockG);
     clockG.addEventListener("click", function (e) { e.stopPropagation(); openClockApp(); });
     clockG.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     clockG.addEventListener("keydown", function (e) {
       if (e.key !== "Enter" && e.key !== " ") return;
       e.preventDefault(); e.stopPropagation(); openClockApp();
+    });
+    var languageG = mkEl("g", { id: "monitor-desk-language", "class": "desk-brand",
+      role: "button", tabindex: "0", "data-aria-i": "mon_lang_switch",
+      "aria-label": (T[document.documentElement.lang] || T.en).mon_lang_switch || T.en.mon_lang_switch }, dock);
+    var deskLanguage = mkEl("text", { x: 373.9, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text" }, languageG);
+    mkEl("rect", { x: 370.25, y: 154.5, width: 7.25, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, languageG);
+    window.__refreshMonitorLanguageButton = function () {
+      deskLanguage.textContent = document.documentElement.lang === "cs" ? "CZ" : "EN";
+    };
+    window.__refreshMonitorLanguageButton();
+    function toggleDeskLanguage(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      setLang(document.documentElement.lang === "cs" ? "en" : "cs");
+    }
+    languageG.addEventListener("click", toggleDeskLanguage);
+    languageG.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    languageG.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") toggleDeskLanguage(e);
     });
     // Edmonton weather remains glanceable after its desktop tile gives the slot to Chat;
     // clicking this readout is now the forecast's one deliberately tucked-away monitor route.

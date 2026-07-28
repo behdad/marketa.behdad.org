@@ -504,6 +504,8 @@ the day stops.
 
 The idle monitor rotates through a live Julia fractal, growing 3D Pipes, and a
 deforming 3D Flower Box. The `m ∞ b` wordmark opens the computer's system menu.
+The `EN`/`CZ` indicator beside the clock switches the authored interface
+language; existing chat and message history keeps the language in which it arrived.
 **System** reports the browser, graphics mode, measured rendering health, and
 available device details; its status links to matching known issues for the
 detected browser. System has no desktop tile, but monitor search opens it like

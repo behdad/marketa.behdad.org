@@ -497,6 +497,11 @@ writer.
 `setPartyDanceState` owns the active dance mirror, both SVG `data-dance` projections, formation,
 tempo retuning, flare cleanup and bed crossfade. Rotation, explicit selection, party start and party
 stop all use it.
+Each registered synth dance also needs one `DANCE_BPM` entry, one `DANCE_MOOD` entry, localized
+`np` labels, an `AudioTransport` source, volume reapplication, and the typed action/console
+allowlists. `checkDanceParity` enforces the registry/BPM/mood portion. The Czech `furiant` bed
+states its 2+2+2/3+3 hemiola in both audio and dancer motion; `bandari` is a separate rolling
+Persian 6/8 source rather than an alternate label for `persian`.
 
 ## Rendering and performance lifecycle
 

@@ -47,7 +47,7 @@ const ACTION_SPECS = Object.freeze({
   "fishu.speak": Object.freeze({}),
   "trip.next": Object.freeze({}),
   "trip.start": Object.freeze({ variant: new Set(["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]) }),
-  "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "polka", "horah", "bulgar", "dupak", "cumbia"]) }),
+  "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "bandari", "polka", "horah", "bulgar", "dupak", "furiant", "cumbia"]) }),
   "party.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
   "projector.set": Object.freeze({ mode: new Set(["off", "stars", "workout", "totoro", "aqua"]) }),
   "weather.scene.set": Object.freeze({ mode: new Set(["clear", "rain", "thunderstorm", "overcast"]) }),

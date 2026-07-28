@@ -169,7 +169,7 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 
 - **One-context proof:** `scratchpad/pw/ctxcount.mjs` monkeypatches the `AudioContext`
   constructor to count instantiations and routes all output through a probe analyser, then
-  drives beds + all 9 dances + SFX clicks and asserts the count is **1** with live analyser
+  drives beds + every registered dance + SFX clicks and asserts the count is **1** with live analyser
   signal — on **both** Chromium and WebKit (Playwright-WebKit does NOT enforce Safari's
   cap, so it can't reproduce the silence; the fix is correct-by-construction + this proof).
 - **Regression:** `node tests/check.js` (new-Ctx == 1, fade/close race), `tests/state.js`

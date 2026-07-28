@@ -4553,6 +4553,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #monitor-py-close:hover .seg-hover{opacity:.55}
 #monitor-py-turtle{display:none}
 #monitor-python.turtle-view #monitor-py-turtle{display:inline}
+#monitor-py-turtle, #monitor-py-turtle *{cursor:default}
 #monitor-python.turtle-view #monitor-py-wrap{visibility:hidden}
 #monitor-py-view-toggle{cursor:pointer}
 #monitor-py-view-toggle:hover .py-view-hover{opacity:.35}
@@ -22194,6 +22195,7 @@ section{margin:1.9rem 0}
 <g id="monitor-py-turtle-fills" transform="scale(1,-1)"></g>
 <g id="monitor-py-turtle-lines" transform="scale(1,-1)"></g>
 <g id="monitor-py-turtle-marks" transform="scale(1,-1)"></g>
+<g id="monitor-py-svg-display"></g>
 <g id="monitor-py-turtle-cursors" transform="scale(1,-1)"></g>
 </svg>
 </g>
@@ -49850,8 +49852,46 @@ setOfficeProgress("pc", false);
     "turtle.done()",
     ""
   ].join("\n");
+  var CODE_PY_FRAUNCES_SVG = [
+    "import io",
+    "import uharfbuzz as hb",
+    "from fontTools.ttLib import TTFont",
+    "from fontTools.pens.svgPathPen import SVGPathPen",
+    "from loftgfx import display_svg",
+    "",
+    "data = await googlefonts(\"Fraunces\")",
+    "font = TTFont(io.BytesIO(data))",
+    "glyphs = font.getGlyphSet()",
+    "hb_font = hb.Font(hb.Face(data))",
+    "buffer = hb.Buffer()",
+    "buffer.add_str(\"Loft Day\")",
+    "buffer.guess_segment_properties()",
+    "hb.shape(hb_font, buffer)",
+    "extents = hb_font.get_font_extents(\"ltr\")",
+    "ascent, descent = extents.ascender, extents.descender",
+    "",
+    "x = 0",
+    "paths = []",
+    "for info, position in zip(buffer.glyph_infos, buffer.glyph_positions):",
+    "    name = font.getGlyphName(info.codepoint)",
+    "    pen = SVGPathPen(glyphs)",
+    "    glyphs[name].draw(pen)",
+    "    gx = x + position.x_offset",
+    "    gy = position.y_offset",
+    "    paths.append(f'<path d=\"{pen.getCommands()}\" transform=\"translate({gx} {gy})\"/>')",
+    "    x += position.x_advance",
+    "",
+    "height = ascent - descent",
+    "svg = f'''<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {x} {height}\">",
+    "<g transform=\"translate(0 {ascent}) scale(1 -1)\" fill=\"#8e3a4a\">",
+    "{''.join(paths)}",
+    "</g></svg>'''",
+    "display_svg(svg)",
+    ""
+  ].join("\n");
   var CODE_EXAMPLES_KEY = "deskCodeExamplesV1";
   var CODE_SPACE_FILLER_KEY = "deskCodeSpaceFillerV1";
+  var CODE_FRAUNCES_SVG_KEY = "deskCodeLoftTypeV2";
   var codeExamplesAdded = { js: false, python: false };
   function codeSeedExamples() {
     try {
@@ -49864,6 +49904,10 @@ setOfficeProgress("pc", false);
       if (!localStorage.getItem(CODE_SPACE_FILLER_KEY)) {
         if (!Object.prototype.hasOwnProperty.call(py, "space-filler.py")) { py["space-filler.py"] = CODE_PY_SPACE_FILLER; codeExamplesAdded.python = true; }
         localStorage.setItem(CODE_SPACE_FILLER_KEY, "1");
+      }
+      if (!localStorage.getItem(CODE_FRAUNCES_SVG_KEY)) {
+        if (!Object.prototype.hasOwnProperty.call(py, "loft-type.py")) { py["loft-type.py"] = CODE_PY_FRAUNCES_SVG; codeExamplesAdded.python = true; }
+        localStorage.setItem(CODE_FRAUNCES_SVG_KEY, "1");
       }
       writeScripts(js, "js"); writeScripts(py, "python");
     } catch (e) {}
@@ -54999,6 +55043,7 @@ setOfficeProgress("pc", false);
   var pyTurtleFills = document.getElementById("monitor-py-turtle-fills");
   var pyTurtleLines = document.getElementById("monitor-py-turtle-lines");
   var pyTurtleMarks = document.getElementById("monitor-py-turtle-marks");
+  var pySvgDisplay = document.getElementById("monitor-py-svg-display");
   var pyTurtleCursors = document.getElementById("monitor-py-turtle-cursors");
   var pyTurtleSurface = document.getElementById("monitor-py-turtle");
   var pyTurtleToggle = document.getElementById("monitor-py-view-toggle");
@@ -55056,6 +55101,31 @@ setOfficeProgress("pc", false);
   function pyTurtleClear(turtleId) {
     pyTurtleClearLayer(pyTurtleFills, turtleId); pyTurtleClearLayer(pyTurtleLines, turtleId); pyTurtleClearLayer(pyTurtleMarks, turtleId);
   }
+  function pyDisplaySvg(source) {
+    if (!pySvgDisplay) return false;
+    var doc;
+    try { doc = new DOMParser().parseFromString(String(source || ""), "image/svg+xml"); } catch (e) { return false; }
+    var root = doc && doc.documentElement;
+    if (!root || root.localName !== "svg" || root.querySelector("parsererror")) return false;
+    root.querySelectorAll("script,foreignObject,iframe,object,embed,audio,video,style").forEach(function (node) { node.remove(); });
+    [root].concat(Array.prototype.slice.call(root.querySelectorAll("*"))).forEach(function (node) {
+      Array.prototype.slice.call(node.attributes || []).forEach(function (attr) {
+        var name = attr.name.toLowerCase(), value = attr.value.trim();
+        if (name === "style" || name.indexOf("on") === 0 ||
+            ((name === "href" || name === "xlink:href") && value.charAt(0) !== "#") ||
+            (/url\s*\(/i.test(value) && !/url\s*\(\s*#/.test(value))) node.removeAttribute(attr.name);
+      });
+    });
+    root.setAttribute("x", "-310"); root.setAttribute("y", "-105");
+    root.setAttribute("width", "620"); root.setAttribute("height", "210");
+    root.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    pyTurtleClear(null);
+    if (pyTurtleCursors) pyTurtleCursors.textContent = "";
+    pySvgDisplay.textContent = "";
+    pySvgDisplay.appendChild(document.importNode(root, true));
+    pyTurtleView(true);
+    return true;
+  }
   function pyTurtleCursor(id, x, y, heading, color, visible) {
     if (!pyTurtleCursors) return;
     var old = pyTurtleCursors.querySelector('[data-turtle="' + String(id).replace(/[^\d-]/g, "") + '"]');
@@ -55099,12 +55169,26 @@ setOfficeProgress("pc", false);
     } else if (op === "clear") {
       pyTurtleClear(id);
     } else if (op === "screen_clear") {
-      pyTurtleClear(null); if (pyTurtleCursors) pyTurtleCursors.textContent = ""; pyTurtleNodes = 0;
+      pyTurtleClear(null); if (pyTurtleCursors) pyTurtleCursors.textContent = ""; if (pySvgDisplay) pySvgDisplay.textContent = ""; pyTurtleNodes = 0;
+    } else if (op === "svg") {
+      return pyDisplaySvg(id);
     } else if (op === "bg") {
       if (pyTurtleBg) pyTurtleBg.setAttribute("fill", pyTurtleColor(id, "#fffdf8")); pyTurtleView(true);
     }
     return true;
   };
+  var PY_LOFTGFX_MODULE = `
+"""Native SVG output for the Loft's Python graphics display."""
+import js as _js
+
+def display_svg(source):
+    """Fit an SVG document into the graphics display."""
+    if not getattr(_js, "__loftTurtleCommand")("svg", str(source)):
+        raise ValueError("display_svg() needs a valid SVG document")
+
+def clear():
+    getattr(_js, "__loftTurtleCommand")("screen_clear")
+`;
   var PY_TURTLE_MODULE = `
 """A compact browser Turtle implementation for the Loft's Pyodide console."""
 import math as _math
@@ -55375,6 +55459,7 @@ def colormode(mode=None):
     try {
       py.FS.mkdirTree("/home/pyodide/loft");
       py.FS.writeFile("/home/pyodide/loft/turtle.py", PY_TURTLE_MODULE);
+      py.FS.writeFile("/home/pyodide/loft/loftgfx.py", PY_LOFTGFX_MODULE);
       py.runPython("import sys\np='/home/pyodide/loft'\nif p not in sys.path: sys.path.insert(0,p)\nsys.modules.pop('turtle', None)");
     } catch (e) { pyPrint("Turtle could not be initialized: " + (e && e.message ? e.message : e), "console-err"); }
   }
@@ -55428,12 +55513,8 @@ def colormode(mode=None):
         pyRuntime = py;
         installPythonTurtle(py);
         try { pyReprFn = py.runPython("repr"); } catch (e) {}
-        pyLoadState = "ready";
         var ver = "";
         try { ver = py.runPython("__import__('sys').version.split()[0]"); } catch (e) {}
-        pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
-        pyPrint(">>> import turtle  # browser graphics", "console-dim");
-        pyDrainCodeQueue();
         // (the old /fonts woff2 mount was dropped — googlefonts() below supersedes it)
         // the shell shows what it's about to run on its own behalf, THEN runs it —
         // the invocations are visible even mid-install or if the install dies
@@ -55518,7 +55599,7 @@ async def localfont(name):
 `;
         pyPrint(">>> import micropip; await micropip.install(['fonttools', 'brotli'])", "console-dim");
         pyPrint(">>> from fontTools.ttLib import TTFont", "console-dim");
-        py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
+        return py.runPythonAsync("import micropip\nawait micropip.install(['fonttools', 'brotli'])\nimport fontTools\nfrom fontTools.ttLib import TTFont\nfontTools.version")
           .then(function (v) {
             pyPrint(pyT("py_fonttools").replace("{v}", String(v)), "console-dim");
             // uharfbuzz (the groom's own) — installed from the self-hosted wheel via the FS, which
@@ -55539,7 +55620,13 @@ async def localfont(name):
               pyPrint(">>> hb.Face(await googlefonts('Anton'))  # any family — weight=700, italic=True; googlefonts.list('mono')", "console-dim");
             }, function () {});
           })
-          .catch(function () {});
+          .catch(function () {})
+          .then(function () {
+            pyLoadState = "ready";
+            pyPrint(pyT("py_ready").replace("{v}", ver || "3"), "console-dim");
+            pyPrint(">>> import turtle  # browser graphics", "console-dim");
+            pyDrainCodeQueue();
+          });
       }).catch(function () { pyLoadFailed(); });
   }
   function openPython(fromCode) {

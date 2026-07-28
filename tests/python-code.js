@@ -48,6 +48,15 @@ check(/py\["space-filler\.py"\]\s*=\s*CODE_PY_SPACE_FILLER/.test(html) &&
       /t\.goto\(-75,\s*-75\)/.test(html) &&
       /fill\(4\)/.test(html),
   "the centered space-filler turtle reaches existing players through its own one-time migration");
+check(/py\["loft-type\.py"\]\s*=\s*CODE_PY_FRAUNCES_SVG/.test(html) &&
+      /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV2"/.test(html) &&
+      /SVGPathPen/.test(html) &&
+      /import uharfbuzz as hb/.test(html) &&
+      /hb\.shape\(hb_font, buffer\)/.test(html) &&
+      /hb_font\.get_font_extents\(\\"ltr\\"\)/.test(html) &&
+      /await googlefonts\(\\"Fraunces\\"\)/.test(html) &&
+      /buffer\.add_str\(\\"Loft Day\\"\)/.test(html),
+  "the saved HarfBuzz + FontTools example renders Loft Day from Fraunces outlines");
 check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),
@@ -76,8 +85,10 @@ check(/class", "py-turtle-cursor"/.test(html) &&
       /py-turtle-cursor-shell/.test(html),
   "Turtle drawings end with a turtle-shaped SVG cursor");
 check(/installPythonTurtle\(py\)/.test(html) &&
+      /loftgfx\.py/.test(html) &&
+      /function pyDisplaySvg/.test(html) &&
       /sys\.path\.insert\(0,p\)/.test(html),
-  "the Turtle module is installed before user Python imports it");
+  "the Turtle and sanitized SVG modules are installed before user Python imports them");
 
 if (turtleMatch) {
   var smoke = [
@@ -132,6 +143,10 @@ var harness = [
   '  document.getElementById("monitor-python").classList.add("turtle-view"); var gfx=document.getElementById("monitor-py-turtle"),gfxClicks=0;',
   '  mon.addEventListener("click",function(){gfxClicks++}); gfx.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true})); gfx.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));',
   '  out.gfxOwned=gfxClicks===0 && mon.classList.contains("here") && mon.classList.contains("show-python");',
+  '  var shown=window.__loftTurtleCommand("svg",\'<svg viewBox="0 0 20 10" onload="bad()"><script>bad()<\\/script><path id="py-svg-probe" d="M0 0H20V10H0Z" onclick="bad()"/></svg>\');',
+  '  var svgHost=document.getElementById("monitor-py-svg-display"),svgRoot=svgHost.querySelector("svg"),svgPath=svgHost.querySelector("#py-svg-probe");',
+  '  out.svgDisplay=shown&&svgRoot&&svgRoot.getAttribute("viewBox")==="0 0 20 10"&&svgRoot.getAttribute("width")==="620"&&!svgRoot.hasAttribute("onload")&&!svgHost.querySelector("script")&&svgPath&&!svgPath.hasAttribute("onclick");',
+  '  window.__loftTurtleCommand("screen_clear"); out.svgClears=!svgHost.firstElementChild;',
   '  document.body.innerHTML="<pre id=\\"__report\\"></pre>"; document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e)})});',
   '<\/script>',
@@ -154,6 +169,8 @@ if (state && !state.error) {
     "Back returns to the Code and failure is not overwritten by a success status", state);
   check(state.gfxOwned,
     "clicking or double-clicking Turtle graphics stays inside Python instead of reaching the monitor repaint/swap handlers", state);
+  check(state.svgDisplay && state.svgClears,
+    "loftgfx SVG output is fitted, sanitized, and cleared on the native graphics surface", state);
 }
 
 if (failures) {

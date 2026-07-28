@@ -172,6 +172,10 @@ teaching operations, not Tk windows or event bindings. Update
 `PYTHON_CODE_INSTRUCTIONS` in `chat.js` whenever the supported Python/Turtle
 surface changes.
 
+`loftgfx.display_svg()` uses that same native graphics surface for complete SVG
+documents. Keep its DOM parser sanitizer at the page boundary; Python code should
+not insert raw markup into the monitor.
+
 ## Game state model
 
 There is no central store. State is distributed across:

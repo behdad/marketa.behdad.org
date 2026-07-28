@@ -297,6 +297,9 @@ cat; further taps, or `K`, prompt another antic.
 The office contains the laptop, the main computer monitor, lamps, the Prague and
 Lübeck call experience, a stained-glass detail, and the hidden Invaders minigame.
 The computer is also the main home of the game's larger apps and pro tools.
+The woven pouf below the stained-glass window holds two smaller matching poufs:
+lift the large and then the medium one, and use the small one to nest the set again.
+Seasonal displays temporarily take over that floor corner.
 
 The laptop's two contact tiles place Prague and Lübeck calls. Its context menu
 can open a tile, end a live call, wake a closed laptop, or translate the

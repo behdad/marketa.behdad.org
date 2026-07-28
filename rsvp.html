@@ -56394,10 +56394,12 @@ async def localfont(name):
     var songActive = !!(window.__phoneMusicId && window.__phoneMusicId()); // playing or paused-with-progress
     if (bedGatedOn || songActive) btn.classList.add("shown"); // reveal once there's music to control; never un-shows (matches the volume button)
     btn.classList.toggle("paused", !anyAudioPlaying()); // ▶ when everything's silent, ⏸ when anything plays
-    // the "next" skip shows whenever there's a skippable active source (a party dance, the night-sky
-    // piano, or a loft song) and un-shows otherwise (unlike play/pause, which never un-shows)
+    // The "next" control follows the foreground source. Piano changes piece; the other
+    // projector music channels advance channel; party and loft music advance track.
     var skipBtn = document.getElementById("hunt-skip-btn");
-    if (skipBtn) skipBtn.classList.toggle("shown", !!((ws && ws.classList.contains("chan-stars")) || window.__gardenPartyOn || songActive));
+    var projectorMusic = !!(ws && (ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") ||
+      ws.classList.contains("chan-aqua") || ws.classList.contains("chan-totoro")));
+    if (skipBtn) skipBtn.classList.toggle("shown", !!(projectorMusic || window.__gardenPartyOn || songActive));
   };
   (function wirePlayPauseBtn() {
     var btn = document.getElementById("hunt-playpause-btn");
@@ -56407,12 +56409,21 @@ async def localfont(name):
       toggleMusicPlayback();
     });
   })();
-  // one "next" for whatever's the foreground music: the party dance, else a playing loft song, else
-  // the night-sky piano piece. No "previous" — each source just cycles round.
+  // One "next" for the foreground source. The night sky owns multiple piano pieces;
+  // workout/aquarium/Totoro each own one soundtrack, so next advances their channel.
   window.__skipCurrentMusic = function () {
+    var projectorChannel = window.__cuddlyProjector && window.__cuddlyProjector.channel && window.__cuddlyProjector.channel();
+    if ((projectorChannel === "workout" || projectorChannel === "aqua" || projectorChannel === "totoro") &&
+        window.__cuddlyProjector.cycle) {
+      window.__cuddlyProjector.cycle();
+      return true;
+    }
+    if (projectorChannel === "stars" && window.__starsPlaying && window.__starsPlaying() && window.__skipStarsPiece) {
+      window.__skipStarsPiece();
+      return true;
+    }
     if (window.__gardenPartyOn && window.__nextPartyDance) { window.__nextPartyDance(); return true; }
     if (window.__phoneMusicPlaying && window.__phoneMusicPlaying() && window.__monitorSkip) { window.__monitorSkip(1); return true; }
-    if (window.__starsPlaying && window.__starsPlaying() && window.__skipStarsPiece) { window.__skipStarsPiece(); return true; }
     return false;
   };
   (function wireSkipBtn() {

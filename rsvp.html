@@ -7648,6 +7648,9 @@ body:has(#loft-game-strip.acid) #trip-acid-kaleido{animation:acid-kaleido 4.5s e
 #trip-melt-dancers.party-dancing[data-dance="bandari"] .md-move,
 #trip-melt-dancers.party-dancing[data-dance="bandari"] .md-arm-l,
 #trip-melt-dancers.party-dancing[data-dance="bandari"] .md-arm-r{animation-duration:.968s}
+#trip-melt-dancers.party-dancing[data-dance="persian"] .md-move,
+#trip-melt-dancers.party-dancing[data-dance="persian"] .md-arm-l,
+#trip-melt-dancers.party-dancing[data-dance="persian"] .md-arm-r{animation-duration:2.727s}
 @keyframes md-persian{0%{transform:translateX(-1.6px) rotate(-2deg)} 25%{transform:translateX(0) rotate(0)} 50%{transform:translateX(1.6px) rotate(2deg)} 75%{transform:translateX(0) rotate(0)} 100%{transform:translateX(-1.6px) rotate(-2deg)}}
 @keyframes md-persian-wrist-l{0%{transform:rotate(-28deg)} 50%{transform:rotate(-46deg)} 100%{transform:rotate(-28deg)}}
 @keyframes md-persian-wrist-r{0%{transform:rotate(28deg)} 50%{transform:rotate(46deg)} 100%{transform:rotate(28deg)}}
@@ -28087,7 +28090,7 @@ var T = {
     // loft-song titles are proper names, kept hardcoded in JS)
     np: {
       techno: "Techno", waltz: "Waltz", tango: "Tango", disco: "Disco", swing: "Swing", salsa: "Salsa",
-      bhangra: "Bhangra", persian: "Persian 6/8", bandari: "Bandari 6/8", polka: "Polka", horah: "Horah",
+      bhangra: "Bhangra", persian: "Reng-e Shur", bandari: "Bandari 6/8", polka: "Polka", horah: "Horah",
       bulgar: "Klezmer bulgar", dupak: "Dupák", furiant: "Bohemian furiant", cumbia: "Cumbia",
       workout: "Workout beat", totoro: "Woodland rain", aqua: "Aquarium ambient"
     },
@@ -29197,7 +29200,7 @@ var T = {
     // now-playing toast labels (viz EN np)
     np: {
       techno: "Techno", waltz: "Valčík", tango: "Tango", disco: "Disco", swing: "Swing", salsa: "Salsa",
-      bhangra: "Bhangra", persian: "Perský 6/8", bandari: "Bandari 6/8", polka: "Polka", horah: "Hora",
+      bhangra: "Bhangra", persian: "Reng-e Shur", bandari: "Bandari 6/8", polka: "Polka", horah: "Hora",
       bulgar: "Klezmer bulgar", dupak: "Dupák", furiant: "Český furiant", cumbia: "Cumbia",
       workout: "Rytmus na cvičení", totoro: "Lesní déšť", aqua: "Zvuky akvária"
     },
@@ -33752,30 +33755,53 @@ setMusicPausedState(false);
   (window.__partyDances = window.__partyDances || []).push({ id: "bhangra", formation: "solo", update: window.__updateBhangraMusic });
 })();
 (function () {
-  // ── PERSIAN 6/8 BED — the garden party's first Persian solo dance. ORIGINAL composition
-  // (my own, not derived from any existing/copyrighted song): a lilting 6/8 feel in D,
-  // Shur-flavored mode [D Eb F G A Bb C] (lowered 2nd = Eb), ~110 dotted-quarter BPM. A dumbek
-  // groove (dum on the two dotted beats, teks filling the offbeats) under a snaky, grace-
-  // ornamented santur-ish lead over a modal plucked bass. Same look-ahead scheduler / fade-
-  // and-close teardown / garden+dance want-gate as the waltz bed. Integrated as the "persian" source.
+  // ── RENG-E SHUR — an original, santur-led classical Persian dance composition.
+  // This is deliberately not the old eighth-note 6/8 loop and not Bandari's fast coastal
+  // groove: a slower 88 dotted-quarter pulse is articulated on a twelve-subdivision grid,
+  // with a ten-bar 3+4+3 form, changing tombak zarb, sparse tar-like bass answers and long
+  // Shur pedal spans. The A-based mode includes a koron-like second (B half-flat); hammered
+  // rolls and measured tremolos carry the melody instead of a sustained reed or vibrato lead.
   var pCtx = null, pTimer = null, pStep = 0, pNextTime = 0, pSuspended = false;
-  var P8 = 0.19;                                                  // an eighth-note, seconds (6/bar → bar ~1.14s)
-  var P_BASS = 73.42, P_LEAD = 587.33;                           // D2 bass / D5 lead register
-  var P_SCALE = [0, 1, 3, 5, 7, 8, 10];                          // Shur-ish on D: root b2 b3 4 5 b6 b7
-  var P_BROOT = [0, 0, 4, 4, 0, 0, 4, 3];                        // per-bar plucked-bass scale degree (tonic, dips to 5th/4th)
-  // lead: 6 eighths/bar × 8 bars, scale-degree index (+7 = octave, negative = below), null = rest.
-  // A snaky A–B–A line that coils around the b2/b3, runs up to the b6, then resolves home.
-  var P_MEL = [
-    0, null, 1, 2, null, 1,        // bar1: D  Eb F  Eb
-    2, null, 3, 4, null, 3,        // bar2: F  G  A  G
-    4, 3, 2, null, 1, null,        // bar3: A  G  F  Eb
-    0, null, -3, null, 0, null,    // bar4: D  ..A(low).. D
-    4, null, 5, 6, null, 5,        // bar5: A  Bb C  Bb
-    6, 5, 4, null, 3, null,        // bar6: C  Bb A  G
-    2, 3, 4, 3, 2, 1,              // bar7: F  G  A  G  F  Eb (run)
-    0, null, 1, 0, null, null      // bar8: D  Eb D  (resolve)
+  var P_BPM = 88, P16 = 60 / P_BPM / 6, P_STEPS = 120;            // 10 × 6/8 bars, six sixteenths per dotted beat
+  var P_BASS = 55, P_LEAD = 440;                                  // A1 bass / A4 santur register
+  var P_SCALE = [0, 1.5, 3, 5, 7, 8, 10];                        // Shur on A: A, B koron, C, D, E, F, G
+  var P_BASS_LINE = [
+    [0, 4], [0, -1], [-1, 3],                                   // A: tonic opens, then descends into the first cadence
+    [4, 1], [5, 4], [3, 2], [4, 3],                              // B: climb to E/F and answer through D/C
+    [0, -1], [2, 4], [1, 0]                                     // A′: return through C/E, B koron, home
   ];
-  function pFreq(base, deg) {                                     // scale-degree (with octave wrap) → Hz
+  // Each bar has its own tombak sentence. Events are [sixteenth, stroke, level], leaving
+  // real air between strokes instead of filling all six eighths like the former tune.
+  var P_ZARB = [
+    [[0,"tom",.44],[4,"tek",.12],[7,"tom",.24],[10,"tek",.10]],
+    [[0,"tom",.38],[5,"tek",.12],[8,"tom",.22],[11,"snap",.14]],
+    [[0,"tom",.42],[3,"brush",.07],[6,"tom",.20],[9,"tek",.13]],
+    [[0,"tom",.46],[2,"tek",.11],[5,"snap",.12],[7,"tom",.23],[11,"tek",.12]],
+    [[0,"tom",.40],[4,"brush",.07],[6,"tek",.13],[9,"tom",.22]],
+    [[0,"tom",.43],[3,"tek",.10],[7,"tom",.25],[8,"snap",.11],[11,"tek",.13]],
+    [[0,"tom",.38],[5,"tek",.13],[6,"tom",.26],[10,"brush",.07]],
+    [[0,"tom",.44],[4,"tek",.11],[7,"tom",.22],[11,"snap",.13]],
+    [[0,"tom",.40],[3,"brush",.07],[6,"tom",.23],[9,"tek",.12]],
+    [[0,"tom",.48],[5,"tek",.10],[8,"tom",.18],[10,"tek",.09]]
+  ];
+  // Sparse note events are [step, scale degree, length in sixteenths, articulation].
+  // The unequal 3+4+3 sections answer rather than repeat one fixed eight-bar melody.
+  var P_MEL = [
+    [2,0,2,"roll"], [6,1,2,"plain"], [9,2,3,"plain"],
+    [12,3,4,"plain"], [18,4,4,"trem"], [23,2,2,"plain"],
+    [25,1,2,"roll"], [29,0,4,"plain"], [34,-3,2,"plain"],
+    [36,4,3,"roll"], [41,5,2,"plain"], [44,6,2,"plain"], [47,7,2,"plain"],
+    [48,8,5,"trem"], [55,7,2,"plain"], [59,5,2,"plain"],
+    [60,4,3,"plain"], [64,3,2,"roll"], [69,2,3,"plain"],
+    [72,5,4,"plain"], [78,4,2,"trem"], [82,3,2,"plain"],
+    [85,0,2,"roll"], [89,2,2,"plain"], [93,4,3,"plain"],
+    [96,5,4,"trem"], [102,3,2,"plain"], [106,1,3,"plain"],
+    [108,2,2,"plain"], [112,1,2,"roll"], [116,0,4,"trem"]
+  ];
+  var P_MEL_AT = {};
+  for (var pmi = 0; pmi < P_MEL.length; pmi++) P_MEL_AT[P_MEL[pmi][0]] = P_MEL[pmi];
+  var P_SECTION = { 0: [0, 3], 36: [4, 4], 84: [0, 3] };          // pedal degree + bars for A / B / A′
+  function pFreq(base, deg) {
     var oct = Math.floor(deg / 7), s = P_SCALE[((deg % 7) + 7) % 7];
     return base * Math.pow(2, (s + 12 * oct) / 12);
   }
@@ -33785,50 +33811,101 @@ setMusicPausedState(false);
     for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
     return b;
   }
-  function pVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function pVol() { return 0.78 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function pWant() { return !!window.__gardenPartyOn && window.__partyDance === "persian"; }
-  function pDum(ctx, t) {                                         // dumbek "dum": a round low membrane hit
-    var o = ctx.createOscillator(); o.type = "sine";
-    o.frequency.setValueAtTime(180, t); o.frequency.exponentialRampToValueAtTime(72, t + 0.09);
-    var g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-    o.connect(g); g.connect(ctx._bus); o.start(t); o.stop(t + 0.18);
-  }
-  function pTek(ctx, t, accent) {                                 // dumbek "tek": a short filtered rim click
-    var s = ctx.createBufferSource(); s.buffer = pNoise(ctx, 0.03);
-    var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 3200; bp.Q.value = 1.4;
-    var g = ctx.createGain(); g.gain.value = accent ? 0.16 : 0.09;
+  function pZarb(ctx, t, kind, level) {                            // tombak: round tom, dry tek, or fingertip/brush articulation
+    if (kind === "tom") {
+      var o = ctx.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(58, t + 0.13);
+      var og = ctx.createGain();
+      og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(level, t + 0.005);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      o.connect(og); og.connect(ctx._bus); o.start(t); o.stop(t + 0.24);
+      return;
+    }
+    var s = ctx.createBufferSource(); s.buffer = pNoise(ctx, kind === "brush" ? 0.08 : 0.035);
+    var bp = ctx.createBiquadFilter(); bp.type = "bandpass";
+    bp.frequency.value = kind === "snap" ? 4300 : (kind === "brush" ? 1450 : 2850);
+    bp.Q.value = kind === "brush" ? 0.7 : 1.7;
+    var g = ctx.createGain(); g.gain.value = level;
     s.connect(bp); bp.connect(g); g.connect(ctx._bus); s.start(t);
+    if (kind === "snap") {
+      var s2 = ctx.createBufferSource(); s2.buffer = pNoise(ctx, 0.025);
+      var bp2 = ctx.createBiquadFilter(); bp2.type = "bandpass"; bp2.frequency.value = 4700; bp2.Q.value = 1.9;
+      var g2 = ctx.createGain(); g2.gain.value = level * 0.52;
+      s2.connect(bp2); bp2.connect(g2); g2.connect(ctx._bus); s2.start(t + 0.032);
+    }
   }
-  function pPluck(ctx, t, freq) {                                 // plucked modal bass on the beat
-    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
-    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 700; lp.Q.value = 0.8;
+  function pTar(ctx, t, freq, gain) {                             // low tar/bam answer: two dry strings, no held drone masquerading as bass
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 850; lp.Q.value = 0.65;
     var g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.015);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
-    o.connect(lp); lp.connect(g); g.connect(ctx._bus); o.start(t); o.stop(t + 0.45);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + P16 * 3.8);
+    lp.connect(g); g.connect(ctx._bus);
+    [[1,"triangle",0,1],[2,"sine",-7,.18]].forEach(function (v) {
+      var o = ctx.createOscillator(); o.type = v[1]; o.frequency.value = freq * v[0]; o.detune.value = v[2];
+      var pg = ctx.createGain(); pg.gain.value = v[3];
+      o.connect(pg); pg.connect(lp); o.start(t); o.stop(t + P16 * 4);
+    });
   }
-  function pSant(ctx, t, freq, dur, gain) {                       // santur-ish lead: bright triangle + a touch of vibrato
-    var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
-    var lfo = ctx.createOscillator(); lfo.type = "sine"; lfo.frequency.value = 6.5;
-    var lg = ctx.createGain(); lg.gain.value = freq * 0.008; lfo.connect(lg); lg.connect(o.frequency);
-    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3400; lp.Q.value = 0.8;
+  function pPedal(ctx, t, degree, bars) {                         // long section pedal: A/E, E/B, then A/E again
+    var dur = bars * 12 * P16;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900; lp.Q.value = 0.45;
     var g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.01);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.032, t + 0.12);
+    g.gain.setValueAtTime(0.032, t + dur - 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    lp.connect(g); g.connect(ctx._bus);
+    [degree + 7, degree + 11].forEach(function (d, i) {
+      var o = ctx.createOscillator(); o.type = i ? "sine" : "triangle";
+      o.frequency.value = pFreq(P_BASS, d); o.detune.value = i ? 3 : -3;
+      o.connect(lp); o.start(t); o.stop(t + dur + 0.03);
+    });
+  }
+  function pSanturStroke(ctx, t, freq, dur, gain, pan) {          // hammered strings: bright partials, fixed pitch, fast decay
+    var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 190;
+    var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 5200; lp.Q.value = 0.5;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.004);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(lp); lp.connect(g); g.connect(ctx._bus);
-    o.start(t); o.stop(t + dur + 0.02); lfo.start(t); lfo.stop(t + dur + 0.02);
+    hp.connect(lp); lp.connect(g);
+    var out = g;
+    if (ctx.createStereoPanner) {
+      var p = ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p;
+    }
+    out.connect(ctx._bus);
+    [[1,"triangle",0],[2.01,"sine",-6],[3.98,"sine",5]].forEach(function (v, i) {
+      var o = ctx.createOscillator(); o.type = v[1]; o.frequency.value = freq * v[0]; o.detune.value = v[2];
+      var pg = ctx.createGain(); pg.gain.value = i === 0 ? 1 : (i === 1 ? 0.26 : 0.08);
+      o.connect(pg); pg.connect(hp); o.start(t); o.stop(t + dur + 0.03);
+    });
+    var hit = ctx.createBufferSource(); hit.buffer = pNoise(ctx, 0.012);
+    var hg = ctx.createGain(); hg.gain.value = gain * 0.18;
+    hit.connect(hg); hg.connect(hp); hit.start(t);
+  }
+  function pSanturFigure(ctx, t, degree, steps, articulation, pan) {
+    var freq = pFreq(P_LEAD, degree), dur = Math.max(P16 * 1.7, steps * P16 * 0.92);
+    if (articulation === "roll") {
+      pSanturStroke(ctx, t, pFreq(P_LEAD, degree - 1), P16 * 0.9, 0.045, -pan);
+      pSanturStroke(ctx, t + P16 * 0.42, freq, dur, 0.105, pan);
+    } else if (articulation === "trem") {
+      var strokes = Math.min(8, Math.max(3, steps * 2));
+      for (var i = 0; i < strokes; i++) {
+        pSanturStroke(ctx, t + i * P16 * 0.48, freq, P16 * 1.25, 0.065 * (1 - i * 0.035), i % 2 ? -pan : pan);
+      }
+    } else {
+      pSanturStroke(ctx, t, freq, dur, 0.11, pan);
+    }
   }
   function pSchedStep(ctx, step, t) {
-    var inBar = step % 6, bar = (step / 6) | 0;
-    if (inBar === 0 || inBar === 3) { pDum(ctx, t); pPluck(ctx, t, pFreq(P_BASS, P_BROOT[bar])); }
-    else pTek(ctx, t, inBar === 5);                              // teks fill the offbeats, accent the bar pickup
-    var m = P_MEL[step];
-    if (m !== null && m !== undefined) {
-      if (inBar === 0 || inBar === 3) pSant(ctx, t - P8 * 0.28, pFreq(P_LEAD, m + 1), P8 * 0.42, 0.05); // a quick grace note above the beat
-      pSant(ctx, t, pFreq(P_LEAD, m), P8 * 1.7, 0.12);
-    }
+    var inBar = step % 12, bar = (step / 12) | 0;
+    var section = P_SECTION[step];
+    if (section) pPedal(ctx, t, section[0], section[1]);
+    var zarb = P_ZARB[bar];
+    for (var zi = 0; zi < zarb.length; zi++) if (zarb[zi][0] === inBar) pZarb(ctx, t, zarb[zi][1], zarb[zi][2]);
+    if (inBar === 0) pTar(ctx, t, pFreq(P_BASS, P_BASS_LINE[bar][0]), 0.3);
+    if (inBar === 7) pTar(ctx, t, pFreq(P_BASS, P_BASS_LINE[bar][1]), 0.2);
+    var m = P_MEL_AT[step];
+    if (m) pSanturFigure(ctx, t, m[1], m[2], m[3], (bar % 3 - 1) * 0.22);
   }
   function pSchedule() {
     pTimer = setTimeout(function () {
@@ -33838,8 +33915,8 @@ setMusicPausedState(false);
         var horizon = ctx.currentTime + 1.2, guard = 0;
         while (pNextTime < horizon && guard++ < 200) {
           pSchedStep(ctx, pStep, pNextTime);
-          pNextTime += P8;
-          pStep = (pStep + 1) % 48;                              // 8-bar loop
+          pNextTime += P16;
+          pStep = (pStep + 1) % P_STEPS;                         // ten-bar 3+4+3 form
         }
       } catch (e) {}
       pSchedule();
@@ -33849,7 +33926,7 @@ setMusicPausedState(false);
     try {
       pStop();
       setMusicPausedState(false); pSuspended = false;
-      pCtx = audioBed();                                          // Persian 6/8 bed
+      pCtx = audioBed();                                          // Reng-e Shur bed
       if (!pCtx) return;
       try { var pr = pCtx.resume && pCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = pCtx.currentTime;
@@ -56252,7 +56329,7 @@ async def localfont(name):
       pause: function () { if (window.__pauseBhangraMusic) window.__pauseBhangraMusic(true); },
       resume: function () { return !!(window.__pauseBhangraMusic && window.__pauseBhangraMusic(false)); }
     });
-    list.push({ // garden-party Persian 6/8 bed (one of the rotating dances); pause+resume like the others
+    list.push({ // garden-party Reng-e Shur bed (one of the rotating dances); pause+resume like the others
       id: "persian",
       isPlaying: function () { return !!(window.__persianPlaying && window.__persianPlaying()); },
       valid: function () { return !!(window.__gardenPartyOn && window.__partyDance === "persian"); },
@@ -82947,7 +83024,7 @@ function spawnDustMote(container) {
   // A 1.12 relaxation factor slows every synced move a touch (folded in here rather than
   // editing the ~84 CSS duration literals). Half-time above ~143bpm (period<0.42s) so the
   // fastest beds (salsa 190 / swing 180 / waltz 162) don't look frantic.
-  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 110, bandari: 124, polka: 130, horah: 146, bulgar: 150, dupak: 140, furiant: 144, cumbia: 95, tango: 120 };
+  var DANCE_BPM = { techno: 126, waltz: 162, disco: 120, swing: 180, salsa: 190, bhangra: 140, persian: 88, bandari: 124, polka: 130, horah: 146, bulgar: 150, dupak: 140, furiant: 144, cumbia: 95, tango: 120 };
   window.__DANCE_BPM = DANCE_BPM; // exposed so the console `beat()` reads ONE map, not a duplicate
   window.__danceBpm = function (id) { return DANCE_BPM[id]; };
   var DANCE_RELAX = 1.12;

@@ -43,7 +43,8 @@ their volume controls never double-scale:
    which is a per-bed unity **`_out` gain** → `ac.destination`. Music/projector/dance beds
    apply the volume-button level at their own in-graph `_masterGain` (`__songVolume()`);
    ambient environmental beds (fire, aqua hush, wind…) sit at fixed low levels and are NOT
-   scaled by the button.
+   scaled by the button. The `persian` source is the slower, santur-led **Reng-e Shur**
+   (ten-bar 3+4+3 form); the separate `bandari` source keeps its fast coastal 6/8 graph.
 2. **One-shot SFX and the projector play-along piano** → `getSfxCtx()`. A persistent
    handle whose `.destination` is one **SFX master gain** (`_volMaster`) →
    `ac.destination`. The piano keeps one filtered output bus on that handle and gives

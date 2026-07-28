@@ -501,7 +501,9 @@ Each registered synth dance also needs one `DANCE_BPM` entry, one `DANCE_MOOD` e
 `np` labels, an `AudioTransport` source, volume reapplication, and the typed action/console
 allowlists. `checkDanceParity` enforces the registry/BPM/mood portion. The Czech `furiant` bed
 states its 2+2+2/3+3 hemiola in both audio and dancer motion; `bandari` is a separate rolling
-Persian 6/8 source rather than an alternate label for `persian`.
+Persian 6/8 source rather than an alternate label for `persian`. The `persian` source is the
+slower `Reng-e Shur`: a ten-bar 3+4+3 form scheduled on sixteenth subdivisions, with its own
+tombak, modal bass, pedal and santur articulation tables.
 
 ## Rendering and performance lifecycle
 

@@ -31,9 +31,9 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 3500, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var en = r.steps.english, cs = r.steps.czech;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(en.length === 2 && en[0].from === "Alireza" && en[1].from === "markéta", "both trip cues draw independently from the six-sender pool in chronological order", en);
+check(en.length === 2 && en[0].from === "Alireza" && en[1].from === "Chinnell", "both trip cues draw independently from the seven-sender pool in chronological order", en);
 check(en[0].body === "Vitamin time? 💊" && en[1].body === "take a little trip? 🌈", "both trip cues draw independently from the six-line pool in chronological order", en);
-check(cs[0].from === "Alireza" && cs[1].from === "markéta" && cs[0].body === "Čas na vitamíny? 💊" && cs[1].body === "dáme si malý výlet? 🌈", "frozen choices retain their chronological identity across Czech translation", cs);
+check(cs[0].from === "Alireza" && cs[1].from === "Chinnell" && cs[0].body === "Čas na vitamíny? 💊" && cs[1].body === "dáme si malý výlet? 🌈", "frozen choices retain their chronological identity across Czech translation", cs);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

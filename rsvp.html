@@ -83121,18 +83121,19 @@ function spawnDustMote(container) {
     if (!guestsWanted()) return;
     incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); echoRosterMove("in", u, document.getElementById("garden-guests")); });
   }
-  // one rotation beat: send 1–2 present units out, then (after a gap) walk the same number of waiting
-  // units in. Prefer not to evict someone who only just arrived.
+  // one rotation beat: bring 1–2 waiting units in, then send the same number of present units out.
+  // The brief overlap keeps the floor lively; steady state still returns to GUEST_UNIT_CAP.
   function rotateGuests(g, present, waiting) {
     var k = (Math.random() < 0.35 ? 2 : 1);
     var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0 && !unitIsBirthdayHeld(g, u); });
     if (evictable.length < k) evictable = present.filter(function (u) { return !unitIsBirthdayHeld(g, u); });
     var leaving = shuffleArr(evictable).slice(0, Math.min(k, evictable.length));
-    leaving.forEach(function (u) { leaveEntry(u); });
     var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));
-    setTimeout(function () { // let a short, readable gap open before the next lot strolls in
-      if (!guestsWanted()) return; // party still wants a floor? (visibility/focus no longer gate — the party runs on unattended, see guestsWanted)
-      bringRotatedGuests(incoming);
+    bringRotatedGuests(incoming);
+    setTimeout(function retireUnits() {
+      if (rosterHoldsOccupants()) { setTimeout(retireUnits, 1000); return; }
+      if (!window.__gardenPartyOn || window.__bbqSplitOn) return;
+      leaving.forEach(function (u) { leaveEntry(u); });
     }, 1800);
   }
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)

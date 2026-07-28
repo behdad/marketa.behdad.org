@@ -252,12 +252,11 @@ DJ's physical reaction; right-click opens the modal song picker to the left of
 the booth, while touch keeps a direct tap route. A double-click skips to the
 next song.
 
-The picker’s synthesized set pairs the slower, santur-led classical
-**Reng-e Shur** with the faster, percussion-led **Bandari**. **Dupák** is the
-short name for the existing straight stamping tune; the separate **Bohemian
-furiant** shifts its accents between duple and triple groupings. All of them
-participate in the same automatic rotation, transport controls, volume,
-`dance()` and `jukebox()`.
+The picker’s synthesized set includes the percussion-led **Bandari**.
+**Dupák** is the short name for the straight stamping tune; the separate
+**Bohemian furiant** shifts its accents between duple and triple groupings.
+All of them participate in the same automatic rotation, transport controls,
+volume, `dance()` and `jukebox()`.
 
 The guitar always toggles **Tumbalalaika**, sung by Markéta Jakešová. The ukulele
 alternates between **I Need You** by Dan Bern and **Strange & Beautiful Things**

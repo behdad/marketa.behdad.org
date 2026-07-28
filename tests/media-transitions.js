@@ -13,9 +13,9 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   ' window.__setPartyMode(true,true);var strip=document.getElementById("loft-game-strip"),garden=document.getElementById("stage-garden");',
   ' window.__setMusicPaused(true);S("paused",{flag:!!window.__musicPaused,frozen:strip.classList.contains("dance-frozen")});window.__setMusicPaused(false);S("playing",{flag:!!window.__musicPaused,frozen:strip.classList.contains("dance-frozen")});',
-  ' window.__setPartyDance("persian");S("reng",{playing:!!(window.__persianPlaying&&window.__persianPlaying()),bandari:!!(window.__bandariPlaying&&window.__bandariPlaying()),labelEn:window.__nowPlayingLabel(),bpm:window.__DANCE_BPM&&window.__DANCE_BPM.persian,volume:typeof window.__applyPersianMusicVolume==="function"});',
-  ' window.__toggleMusicPlayback();S("rengPaused",{paused:!!window.__musicPaused,playing:!!window.__persianPlaying()});window.__toggleMusicPlayback();S("rengResumed",{paused:!!window.__musicPaused,playing:!!window.__persianPlaying()});',
-  ' setLang("cs");S("rengCs",window.__nowPlayingLabel());setLang("en");window.__setPartyDance("bandari");S("bandari",{playing:!!window.__bandariPlaying(),reng:!!window.__persianPlaying(),label:window.__nowPlayingLabel()});',
+  ' window.__setPartyDance("bandari");S("bandari",{playing:!!(window.__bandariPlaying&&window.__bandariPlaying()),label:window.__nowPlayingLabel(),bpm:window.__DANCE_BPM&&window.__DANCE_BPM.bandari,volume:typeof window.__applyBandariMusicVolume==="function"});',
+  ' window.__toggleMusicPlayback();S("bandariPaused",{paused:!!window.__musicPaused,playing:!!window.__bandariPlaying()});window.__toggleMusicPlayback();S("bandariResumed",{paused:!!window.__musicPaused,playing:!!window.__bandariPlaying()});',
+  ' setLang("cs");S("bandariCs",window.__nowPlayingLabel());setLang("en");',
   ' var set=window.__setPartyDance("salsa");S("dance",{set:set,mirror:window.__partyDance,stage:garden.getAttribute("data-partydance"),mode:document.getElementById("trip-melt-dancers").getAttribute("data-dance")});',
   ' var before=window.__partyDance;window.__nextPartyDance();S("advance",{before:before,after:window.__partyDance,stage:garden.getAttribute("data-partydance")});',
   ' window.__setPartyMode(false,true);S("off",{party:!!window.__gardenPartyOn,dance:window.__partyDance,stage:garden.getAttribute("data-partydance"),mode:document.getElementById("trip-melt-dancers").getAttribute("data-dance"),paused:!!window.__musicPaused});',
@@ -37,15 +37,14 @@ var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.paused && s.paused.flag && s.paused.frozen && s.playing && !s.playing.flag && !s.playing.frozen,
   "setMusicPaused keeps transport state and party freeze together", { paused: s.paused, playing: s.playing });
-check(s.reng && s.reng.playing && !s.reng.bandari && s.reng.labelEn === "Reng-e Shur" &&
-      s.reng.bpm === 88 && s.reng.volume,
-  "Reng-e Shur owns the persian source, localized label, tempo and volume hook", s.reng);
-check(s.rengPaused && s.rengPaused.paused && !s.rengPaused.playing &&
-      s.rengResumed && !s.rengResumed.paused && s.rengResumed.playing,
-  "Reng-e Shur pauses and resumes through the unified transport", { paused: s.rengPaused, resumed: s.rengResumed });
-check(s.rengCs === "Reng-e Shur" && s.bandari && s.bandari.playing && !s.bandari.reng &&
-      s.bandari.label === "Bandari",
-  "the Czech Reng title matches and switching hands the source cleanly to unchanged Bandari", { cs: s.rengCs, bandari: s.bandari });
+check(s.bandari && s.bandari.playing && s.bandari.label === "Bandari" &&
+      s.bandari.bpm === 124 && s.bandari.volume,
+  "Bandari owns its localized source, tempo and volume hook", s.bandari);
+check(s.bandariPaused && s.bandariPaused.paused && !s.bandariPaused.playing &&
+      s.bandariResumed && !s.bandariResumed.paused && s.bandariResumed.playing,
+  "Bandari pauses and resumes through the unified transport", { paused: s.bandariPaused, resumed: s.bandariResumed });
+check(s.bandariCs === "Bandari",
+  "the Czech Bandari title matches", s.bandariCs);
 check(s.dance && s.dance.set && s.dance.mirror === "salsa" && s.dance.stage === "salsa" && s.dance.mode === "salsa",
   "setPartyDance keeps its mirror and both SVG projections together", s.dance);
 check(s.advance && s.advance.after !== s.advance.before && s.advance.stage === s.advance.after,
@@ -54,6 +53,8 @@ check(s.off && !s.off.party && s.off.dance === "techno" && s.off.stage === "" &&
   "party teardown resets dance and transport projections", s.off);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
+check(!/Reng-e Shur|id:\s*"persian"|__persianPlaying|__applyPersianMusicVolume/.test(source),
+  "removed Reng source is absent from the party catalog and transport");
 check((source.match(/window\.__musicPaused\s*=(?!=)/g) || []).length === 1 &&
       (source.match(/window\.__partyDance\s*=(?!=)/g) || []).length === 1 &&
       /function setMusicPausedState\(on\)/.test(source) && /function setPartyDanceState\(id, options\)/.test(source),

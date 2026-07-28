@@ -472,9 +472,9 @@ episode, starting on E1L1; Quake III is ioquake3 with a local OpenArena
 `oa_shine` match and one bot. The top-right control closes shoot from the
 chooser and returns to the chooser from a game. That control and the desktop
 tile use the launcher's warm brown-and-gold palette. The small fullscreen
-control adopts the active game's colors and fullscreens that game's retained
-iframe. Normal close pauses and retains the runtime; **Kill** plays FATALITY and
-tears it down.
+control sits beside Back in a matching round brown pillow and fullscreens that
+game's retained iframe. Normal close pauses and retains the runtime; **Kill**
+plays FATALITY and tears it down.
 
 All three games use a centered 4:3 viewport. Click the game to capture the
 mouse; a note remains on the lower monitor bezel while a session is active to

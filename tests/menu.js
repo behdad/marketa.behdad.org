@@ -202,7 +202,7 @@ var HARNESS = [
   "    showApp('show-doom'); document.querySelector('[data-shoot-game=\"doom\"]').click(); await sleep(20);",
   "    window.__fsCalls=[]; HTMLIFrameElement.prototype.requestFullscreen=function(){window.__fsCalls.push(this.getAttribute('src')||'iframe');return Promise.resolve();};",
   "    var fsBtn=document.getElementById('monitor-doom-fs'); S('doom_fs_btn_present', !!fsBtn);",
-  "    fsBtn.click(); await sleep(40); S('doom_fs_called_on_iframe', (window.__fsCalls||[]).indexOf('doom/player.html')>=0); S('doom_fs_calls', window.__fsCalls);",
+  "    fsBtn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); await sleep(40); S('doom_fs_called_on_iframe', (window.__fsCalls||[]).indexOf('doom/player.html')>=0); S('doom_fs_calls', window.__fsCalls);",
   "    mon().classList.remove('show-caps');",
   // doom restart teardown — Restart now runs the FATALITY flash, THEN destroys (and would cold-boot,
   // but a real re-boot needs show-caps + the WASM runtime, out of scope here; no show-caps → openDoom

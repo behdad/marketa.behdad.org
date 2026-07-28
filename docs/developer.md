@@ -172,9 +172,9 @@ teaching operations, not Tk windows or event bindings. Update
 `PYTHON_CODE_INSTRUCTIONS` in `chat.js` whenever the supported Python/Turtle
 surface changes.
 
-`loftgfx.display_svg()` uses that same native graphics surface for complete SVG
-documents. Keep its DOM parser sanitizer at the page boundary; Python code should
-not insert raw markup into the monitor.
+`loft.display_svg()` uses that same native graphics surface for complete SVG
+documents, and `loft.clear_canvas()` clears it. Keep the DOM parser sanitizer at
+the page boundary; Python code should not insert raw markup into the monitor.
 
 ## Game state model
 

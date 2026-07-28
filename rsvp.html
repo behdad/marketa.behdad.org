@@ -49620,7 +49620,7 @@ setOfficeProgress("pc", false);
     "import uharfbuzz as hb",
     "from fontTools.ttLib import TTFont",
     "from fontTools.pens.svgPathPen import SVGPathPen",
-    "from loftgfx import display_svg",
+    "from loft import display_svg",
     "",
     "data = await googlefonts(\"Fraunces\")",
     "font = TTFont(io.BytesIO(data))",
@@ -49654,7 +49654,7 @@ setOfficeProgress("pc", false);
   ].join("\n");
   var CODE_EXAMPLES_KEY = "deskCodeExamplesV1";
   var CODE_SPACE_FILLER_KEY = "deskCodeSpaceFillerV1";
-  var CODE_FRAUNCES_SVG_KEY = "deskCodeLoftTypeV2";
+  var CODE_FRAUNCES_SVG_KEY = "deskCodeLoftTypeV3";
   var codeExamplesAdded = { js: false, python: false };
   function codeSeedExamples() {
     try {
@@ -49669,7 +49669,11 @@ setOfficeProgress("pc", false);
         localStorage.setItem(CODE_SPACE_FILLER_KEY, "1");
       }
       if (!localStorage.getItem(CODE_FRAUNCES_SVG_KEY)) {
-        if (!Object.prototype.hasOwnProperty.call(py, "loft-type.py")) { py["loft-type.py"] = CODE_PY_FRAUNCES_SVG; codeExamplesAdded.python = true; }
+        if (!Object.prototype.hasOwnProperty.call(py, "loft-type.py")) {
+          py["loft-type.py"] = CODE_PY_FRAUNCES_SVG; codeExamplesAdded.python = true;
+        } else if (/^from loft[a-z]* import display_svg$/m.test(py["loft-type.py"])) {
+          py["loft-type.py"] = py["loft-type.py"].replace(/^from loft[a-z]* import display_svg$/m, "from loft import display_svg");
+        }
         localStorage.setItem(CODE_FRAUNCES_SVG_KEY, "1");
       }
       writeScripts(js, "js"); writeScripts(py, "python");
@@ -54940,7 +54944,7 @@ setOfficeProgress("pc", false);
     }
     return true;
   };
-  var PY_LOFTGFX_MODULE = `
+  var PY_LOFT_MODULE = `
 """Native SVG output for the Loft's Python graphics display."""
 import js as _js
 
@@ -54949,7 +54953,7 @@ def display_svg(source):
     if not getattr(_js, "__loftTurtleCommand")("svg", str(source)):
         raise ValueError("display_svg() needs a valid SVG document")
 
-def clear():
+def clear_canvas():
     getattr(_js, "__loftTurtleCommand")("screen_clear")
 `;
   var PY_TURTLE_MODULE = `
@@ -55222,7 +55226,7 @@ def colormode(mode=None):
     try {
       py.FS.mkdirTree("/home/pyodide/loft");
       py.FS.writeFile("/home/pyodide/loft/turtle.py", PY_TURTLE_MODULE);
-      py.FS.writeFile("/home/pyodide/loft/loftgfx.py", PY_LOFTGFX_MODULE);
+      py.FS.writeFile("/home/pyodide/loft/loft.py", PY_LOFT_MODULE);
       py.runPython("import sys\np='/home/pyodide/loft'\nif p not in sys.path: sys.path.insert(0,p)\nsys.modules.pop('turtle', None)");
     } catch (e) { pyPrint("Turtle could not be initialized: " + (e && e.message ? e.message : e), "console-err"); }
   }
@@ -55469,6 +55473,7 @@ async def localfont(name):
     codeSetRunError("python", "");
     updatePythonTile();
     pyPrint(">>> run " + job.name, "console-dim");
+    window.__loftTurtleCommand("screen_clear");
     pyRuntime.runPythonAsync(job.code).then(function (r) {
       pyBusy = false;
       if (r !== undefined) pyPrint(pyResultText(r));

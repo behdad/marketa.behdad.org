@@ -35,6 +35,8 @@ check(/code:\s*\{\s*language:\s*codeLanguage/.test(html) &&
   "Code assistance carries language through to a Python-specific Worker prompt");
 check(/window\.__runPythonCode[\s\S]*?pyCodeQueue\.push\(job\)[\s\S]*?openPython\(true\)/.test(html),
   "Python Run hands the complete buffer to the existing Python app");
+check(/function pyDrainCodeQueue\(\)[\s\S]*?__loftTurtleCommand\("screen_clear"\)[\s\S]*?runPythonAsync\(job\.code\)/.test(html),
+  "each full Python script run starts with a clean graphics surface");
 check(/id="monitor-code-explain"[^>]*>explain<\/button>/.test(html) &&
       /id="monitor-code-ai-status"[^>]*>ready<\/span>/.test(html),
   "Code AI controls use explicit, compact labels");
@@ -49,7 +51,8 @@ check(/py\["space-filler\.py"\]\s*=\s*CODE_PY_SPACE_FILLER/.test(html) &&
       /fill\(4\)/.test(html),
   "the centered space-filler turtle reaches existing players through its own one-time migration");
 check(/py\["loft-type\.py"\]\s*=\s*CODE_PY_FRAUNCES_SVG/.test(html) &&
-      /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV2"/.test(html) &&
+      /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV3"/.test(html) &&
+      /from loft import display_svg/.test(html) &&
       /SVGPathPen/.test(html) &&
       /import uharfbuzz as hb/.test(html) &&
       /hb\.shape\(hb_font, buffer\)/.test(html) &&
@@ -85,7 +88,8 @@ check(/class", "py-turtle-cursor"/.test(html) &&
       /py-turtle-cursor-shell/.test(html),
   "Turtle drawings end with a turtle-shaped SVG cursor");
 check(/installPythonTurtle\(py\)/.test(html) &&
-      /loftgfx\.py/.test(html) &&
+      /loft\.py/.test(html) &&
+      /def clear_canvas\(\):/.test(html) &&
       /function pyDisplaySvg/.test(html) &&
       /sys\.path\.insert\(0,p\)/.test(html),
   "the Turtle and sanitized SVG modules are installed before user Python imports them");
@@ -170,7 +174,7 @@ if (state && !state.error) {
   check(state.gfxOwned,
     "clicking or double-clicking Turtle graphics stays inside Python instead of reaching the monitor repaint/swap handlers", state);
   check(state.svgDisplay && state.svgClears,
-    "loftgfx SVG output is fitted, sanitized, and cleared on the native graphics surface", state);
+    "loft SVG output is fitted, sanitized, and cleared on the native graphics surface", state);
 }
 
 if (failures) {

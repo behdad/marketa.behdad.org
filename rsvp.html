@@ -4636,6 +4636,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .shoot-logo{display:block; width:10px; height:10px}
 #monitor-shoot-host{grid-area:1/1; align-self:stretch; justify-self:stretch; display:none; overflow:hidden; background:#000}
 #monitor-shoot-host iframe{display:block; width:100%; height:100%; border:0; background:#000}
+#monitor-shoot-controls{grid-area:1/1; align-self:center; justify-self:center; height:100%; max-width:100%; aspect-ratio:4/3; display:grid; pointer-events:none}
 #monitor-shoot-coach{opacity:0; pointer-events:none; transition:opacity .18s ease}
 #monitor-shoot-coach.on{opacity:1}
 #monitor-doom-wrap[data-shoot-view="doom"] #monitor-shoot-picker,
@@ -4647,11 +4648,18 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .doom-msg{grid-area:1/1; align-self:center; justify-self:stretch; margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
 .doom-msg.err{color:#e0736a}
 .doom-msg:empty{display:none}
-/* Shoot's fullscreen button targets the active disposable game iframe. */
-.doom-fs{grid-area:1/1; place-self:start end; margin:1px; width:4px; height:4px; padding:0.6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:rgba(20,18,14,.5); border-radius:0.8px; cursor:pointer; opacity:.55; transition:opacity .15s ease}
-#monitor-doom-wrap[data-shoot-view="chooser"] .doom-fs{display:none}
+/* Each shooter gets its own themed control, but all three fullscreen the disposable
+   iframe itself so the engine, canvas, focus and pointer-lock context stay together. */
+.doom-fs{grid-area:1/1; place-self:start end; margin:1px; width:5px; height:5px; padding:.75px; box-sizing:border-box; display:none; align-items:center; justify-content:center; border:.35px solid; border-radius:1px; cursor:pointer; pointer-events:auto; opacity:.82; transition:opacity .15s ease}
+#monitor-doom-wrap[data-shoot-view="doom"] .doom-fs[data-shoot-fs="doom"],
+#monitor-doom-wrap[data-shoot-view="duke"] .doom-fs[data-shoot-fs="duke"],
+#monitor-doom-wrap[data-shoot-view="q3"] .doom-fs[data-shoot-fs="q3"]{display:flex}
+.doom-fs-doom{background:#805438;border-color:#e8a345;color:#fff3c4}
+.doom-fs-duke{background:#9b7424;border-color:#f2d43e;color:#fff3a2}
+.doom-fs-q3{background:#292624;border-color:#efc25d;color:#efc25d;box-shadow:inset 0 0 0 .3px #b33b2e}
 .doom-fs:hover{opacity:1}
 .doom-fs svg{width:100%; height:100%; display:block}
+.doom-fs svg path{stroke:currentColor}
 /* monitor-app context menu — a small flat right-click menu over a runtime app's screen
    (DOOM / linux / python) offering Restart + Kill. Fixed to the viewport at the cursor;
    dismissed on click-away / Esc / scroll. Paper card in the site's palette. */
@@ -22435,7 +22443,11 @@ section{margin:1.9rem 0}
 </div>
 <div id="monitor-shoot-host"></div>
 <p id="monitor-doom-msg" class="doom-msg"></p>
-<span id="monitor-doom-fs" class="doom-fs" data-title-i="doom_fs" data-aria-i="doom_fs" role="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke="#f8f5ec" stroke-width="1" stroke-linecap="round"/></svg></span>
+<div id="monitor-shoot-controls">
+<span id="monitor-doom-fs" class="doom-fs doom-fs-doom" data-shoot-fs="doom" data-title-i="doom_fs" data-aria-i="doom_fs" role="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke-width="1" stroke-linecap="round"/></svg></span>
+<span id="monitor-duke-fs" class="doom-fs doom-fs-duke" data-shoot-fs="duke" data-title-i="doom_fs" data-aria-i="doom_fs" role="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke-width="1" stroke-linecap="round"/></svg></span>
+<span id="monitor-q3-fs" class="doom-fs doom-fs-q3" data-shoot-fs="q3" data-title-i="doom_fs" data-aria-i="doom_fs" role="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke-width="1" stroke-linecap="round"/></svg></span>
+</div>
 </div>
 </foreignObject>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="shoot-left" x="254" y="154" width="34" height="42" fill="transparent"/>
@@ -56592,13 +56604,12 @@ async def localfont(name):
   }
   window.__killMonitorDoom = function () { doomDeathFlash(false); };    // Kill → flash → destroy (back to desktop)
   window.__restartMonitorDoom = function () { doomDeathFlash(true); };  // Restart → flash → destroy → fresh cold boot
-  // DOOM's explicit fullscreen (the 'f' key stays on the whole-loft toggle — owner dropped
-  // the flaky per-app 'f' path). The ⛶ button toggles real fullscreen on the canvas,
-  // resolved at click time (Restart replaces the canvas node), requested fresh so it
-  // transitions even from an already-fullscreen loft. Mirrors __videoFsToggle.
-  window.__doomFsToggle = function () {
+  // The per-game ⛶ controls share one iframe-level fullscreen path (the 'f' key remains
+  // the whole-loft toggle). Target resolution happens at click time because Back,
+  // chooser selection and Restart replace the iframe.
+  window.__shootFsToggle = function (game) {
     var c = shootFrame;
-    if (!c || shootView === "chooser") return;
+    if (!c || shootView === "chooser" || (game && game !== shootFrameGame)) return;
     try {
       if ((document.fullscreenElement || document.webkitFullscreenElement) === c) {
         if (document.exitFullscreen) document.exitFullscreen();
@@ -56607,14 +56618,17 @@ async def localfont(name):
       else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen();
     } catch (e) {}
   };
-  var doomFsBtn = document.getElementById("monitor-doom-fs");
-  if (doomFsBtn) doomFsBtn.addEventListener("click", function (e) {
+  window.__doomFsToggle = function () { window.__shootFsToggle(shootFrameGame); }; // established external/test hook
+  var shootFsButtons = document.querySelectorAll("[data-shoot-fs]");
+  for (var sfi = 0; sfi < shootFsButtons.length; sfi++) shootFsButtons[sfi].addEventListener("click", function (e) {
     e.stopPropagation(); e.preventDefault(); // don't let the canvas / keyguard swallow it
-    window.__doomFsToggle();
+    window.__shootFsToggle(this.getAttribute("data-shoot-fs"));
   });
   // hidden tab: pause the engine (and re-evaluate on return) — a WebGL run loop behind a
   // background tab would burn frames for nothing
   document.addEventListener("visibilitychange", shootSync);
+  document.addEventListener("fullscreenchange", shootSync);
+  document.addEventListener("webkitfullscreenchange", shootSync);
   window.addEventListener("focus", shootSync);
   window.addEventListener("blur", shootSync);
   window.addEventListener("message", function (event) {

@@ -91985,16 +91985,19 @@ function spawnDustMote(container) {
   function shareCloseModal() {
     if (!shareModalEl) return;
     var m = shareModalEl; shareModalEl = null;
+    var activateFestivity = !!m.__activateFestivityOnClose;
     if (m.__url) { try { URL.revokeObjectURL(m.__url); } catch (e) {} }
     window.removeEventListener("keydown", shareEsc, true);
     m.classList.remove("show");
     setTimeout(function () { if (m.parentNode) m.remove(); }, 260);
+    if (activateFestivity && window.__summonCurrentFestivity) window.__summonCurrentFestivity();
   }
   window.__shareCloseModal = shareCloseModal; // test / cleanup hook
-  function shareOpenModal() {
+  function shareOpenModal(options) {
     shareCloseModal();
     var overlay = document.createElement("div");
     overlay.className = "sharecard-modal"; overlay.id = "sharecard-modal";
+    overlay.__activateFestivityOnClose = !!(options && options.activateFestivityOnClose);
     overlay.innerHTML =
       '<div class="sharecard-box">' +
         '<button type="button" class="sharecard-x" aria-label="' + shareT("share_close") + '">✕</button>' +
@@ -92017,8 +92020,8 @@ function spawnDustMote(container) {
   // shareCard() — open the preview + generate the PNG; resolves to the PNG data-URL. An optional
   // occOverride renders the card for a specific person/occasion (a per-text postcard tap passes
   // the message's own occasion so the modal matches the thumbnail); no arg → the current occasion.
-  window.shareCard = function (occOverride) {
-    var overlay = shareOpenModal();
+  window.shareCard = function (occOverride, options) {
+    var overlay = shareOpenModal(options);
     var img = overlay.querySelector(".sharecard-img");
     var dl = overlay.querySelector(".sharecard-dl");
     var mailBtn = overlay.querySelector(".sharecard-mail");
@@ -92077,7 +92080,7 @@ function spawnDustMote(container) {
     if (!window.__secondRound) return; // phase one is for solving; setGardenParty retries this as phase two begins
     var mark = "shareAutoShown:" + id + ":" + shareLoftISO();
     try { if (localStorage.getItem(mark)) return; localStorage.setItem(mark, "1"); } catch (e) {}
-    window.shareCard();
+    window.shareCard(null, { activateFestivityOnClose: id.indexOf("bd-") === 0 });
   }
   window.__retryShareAutoShow = shareAutoShow;
   window.__resetShareAutoShow = function () {

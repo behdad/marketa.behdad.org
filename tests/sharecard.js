@@ -16,7 +16,7 @@ var HARNESS = [
   "<script>",
   "(function () {",
   "  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
-  "  var report = { errors: [], cards: [] };",
+  "  var report = { errors: [], cards: [], autoBirthdayActivations: 0 };",
   "  async function make(name, setup) {",
   "    try { if (setup) setup(); } catch (e) { report.errors.push('setup ' + name + ': ' + e); }",
   "    await sleep(60);",
@@ -43,6 +43,14 @@ var HARNESS = [
   "      make('default', null)",
   "        .then(function () { return make('season', function () { window.season('spooky'); }); })",
   "        .then(function () { return make('birthday', function () { window.birthday('ali'); }); })",
+  "        .then(async function () {",
+  "          var prior = window.__summonCurrentFestivity;",
+  "          window.__summonCurrentFestivity = function () { report.autoBirthdayActivations++; return true; };",
+  "          await window.shareCard(null, { activateFestivityOnClose: true });",
+  "          window.__shareCloseModal();",
+  "          await sleep(120);",
+  "          window.__summonCurrentFestivity = prior;",
+  "        })",
   "        .catch(function (e) { report.errors.push('harness: ' + (e && e.stack || e)); })",
   "        .then(function () { report.errors = report.errors.concat(window.__errs || []); document.getElementById('__report').textContent = JSON.stringify(report); });",
   "    }, 500);",
@@ -78,6 +86,8 @@ if (!r) {
   var se = byName.season;
   if (se && se.download === "marketa-behdad-spooky.png") pass("season badges the occasion (filename marketa-behdad-spooky.png)");
   else fail("season badges the occasion", se ? se.download : "no card");
+  if (r.autoBirthdayActivations === 1) pass("dismissing an automatic birthday postcard activates its festivity once");
+  else fail("dismissing an automatic birthday postcard activates its festivity once", r.autoBirthdayActivations);
   if ((r.errors || []).length === 0) pass("no uncaught JS errors across the run");
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));
 }

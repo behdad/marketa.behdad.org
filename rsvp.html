@@ -3789,6 +3789,13 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-help-manual{cursor:pointer;outline:none}
 .monitor-help-manual text{fill:#8e3a4a;font:600 3px/1 "Source Serif 4",serif;text-decoration:underline}
 .monitor-help-manual:hover text,.monitor-help-manual:focus text{fill:#a94a5d}
+#monitor-help-mark{fill:#8e3a4a;font:700 13px/1 Fraunces,serif;text-anchor:middle;transform-box:fill-box;transform-origin:center}
+#monitor-help-layer.killing #monitor-help-mark{animation:help-mark-fall 1.7s cubic-bezier(.45,.05,.9,.55) forwards}
+@keyframes help-mark-fall{
+  0%{transform:translate(0,0) rotate(0);opacity:1}
+  22%{transform:translate(-.8px,1px) rotate(-13deg);opacity:1}
+  100%{transform:translate(9px,27px) rotate(155deg);opacity:0}
+}
 .monitor-help-close{cursor:pointer;outline:none}
 .monitor-help-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
 .monitor-help-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
@@ -27647,6 +27654,8 @@ var T = {
       df_chat_quip: "Charlie has left the chat.", // caption after Chat's context collapses and clears
       df_system_quip: "System killed. The bugs survived.", // caption under System's escaping bug-report receipt
       df_about_quip: "Have you tried turning reality off and on again?", // caption under About's infinity portal
+      df_help_quip1: "You’ve been freed. You’re on your own.", // caption beats under Help's falling question mark
+      df_help_quip2: "Do you have a clue what happens now?",
       kitchen: "Turn on La Maz → run El Maz → brew.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
@@ -28790,6 +28799,8 @@ var T = {
       df_chat_quip: "Charlie odešel z chatu.", // caption after Chat's context collapses and clears
       df_system_quip: "Systém ukončen. Chyby přežily.", // caption under System's escaping bug-report receipt
       df_about_quip: "Zkoušeli jste realitu vypnout a znovu zapnout?", // caption under About's infinity portal
+      df_help_quip1: "Jsi na svobodě. Teď se musíš spolehnout na sebe.", // caption beats under Help's falling question mark
+      df_help_quip2: "Máš ponětí, co se stane teď?",
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
@@ -46542,7 +46553,7 @@ setOfficeProgress("pc", false);
     calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", mines: "show-mines", pacman: "show-pacman",
     life: "show-life", shoot: "show-doom", code: "show-code", console: "show-console",
     python: "show-python", linux: "show-linux", snakes: "show-snakes", weather: "show-weather",
-    system: "show-system", about: "show-about", credits: "show-credits"
+    system: "show-system", about: "show-about", help: "show-help", credits: "show-credits"
   };
   var MONITOR_APP_KILLS = {
     chrome: "__killMonitorBrowser", music: "__killMonitorMusic",
@@ -46553,7 +46564,7 @@ setOfficeProgress("pc", false);
     code: "__killMonitorCode", console: "__killMonitorConsole",
     python: "__killMonitorPython", linux: "__killMonitorLinux", snakes: "__killMonitorSnakes",
     weather: "__killMonitorWeather", system: "__killMonitorSystem",
-    about: "__killMonitorAbout", credits: "__killMonitorCredits"
+    about: "__killMonitorAbout", help: "__killMonitorHelp", credits: "__killMonitorCredits"
   };
   var monitorRunningApps = Object.create(null);
   var monitorKillingApps = Object.create(null);
@@ -46794,14 +46805,17 @@ setOfficeProgress("pc", false);
   window.__closeMonitorAbout = closeMonitorAbout;
   function closeMonitorHelp() {
     if (!monitorHelpLayer) return;
-    monitorHelpLayer.classList.remove("open");
+    monitorHelpLayer.classList.remove("open", "killing");
     monitor.classList.remove("show-help");
     scheduleSaver();
   }
   function openMonitorHelp() {
     if (!monitorHelpLayer) return false;
+    if (monitorHelpLayer.classList.contains("killing") && window.__deathFlashCleanup)
+      window.__deathFlashCleanup();
     closeMonitorSystemMenu();
     stopSaver();
+    monitorHelpLayer.classList.remove("killing");
     monitor.classList.add("show-help");
     monitorHelpLayer.classList.add("open");
     var close = monitorHelpLayer.querySelector(".monitor-help-close");
@@ -46810,6 +46824,31 @@ setOfficeProgress("pc", false);
   }
   window.__openMonitorHelp = openMonitorHelp;
   window.__closeMonitorHelp = closeMonitorHelp;
+  function killMonitorHelp() {
+    if (!monitorHelpLayer) return false;
+    if (!monitorHelpLayer.classList.contains("open")) openMonitorHelp();
+    monitorHelpLayer.classList.remove("killing");
+    void monitorHelpLayer.getBBox();
+    monitorHelpLayer.classList.add("killing");
+    var finish = function () {
+      closeMonitorHelp();
+      monitor.classList.add("show-caps");
+    };
+    if (!window.__runMonitorDeathFlash) {
+      setTimeout(finish, 3600);
+      return true;
+    }
+    window.__runMonitorDeathFlash({
+      beats: [
+        { key: "df_help_quip1", at: 220 },
+        { key: "df_help_quip2", at: 1800 }
+      ],
+      dur: 3600,
+      close: finish
+    });
+    return true;
+  }
+  window.__killMonitorHelp = killMonitorHelp;
   function killMonitorAbout() {
     if (!monitorAboutLayer) return false;
     if (!monitorAboutLayer.classList.contains("open")) openMonitorAbout();
@@ -47420,6 +47459,10 @@ setOfficeProgress("pc", false);
     var helpTitle = mkEl("text", { id: "monitor-help-title", x: 260, y: 164,
       "class": "monitor-help-title", "data-i": "mon_help_title" }, monitorHelpLayer);
     helpTitle.textContent = (T[document.documentElement.lang] || T.en).mon_help_title;
+    var helpMarkPos = mkEl("g", { transform: "translate(361 179)" }, monitorHelpLayer);
+    var helpMark = mkEl("g", { id: "monitor-help-mark" }, helpMarkPos);
+    var helpMarkText = mkEl("text", { x: 0, y: 0 }, helpMark);
+    helpMarkText.textContent = "?";
     [
       ["mon_help_clue", 171],
       ["mon_help_click", 177],
@@ -52337,7 +52380,7 @@ setOfficeProgress("pc", false);
   (function () {
     // Real closable apps this menu serves — the exact set __closeTopMonitorApp knows how to
     // close, minus the three console apps (console-ctx owns those). Keep in sync with it.
-    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-snakes", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-system", "show-about", "show-credits"];
+    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-snakes", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-system", "show-about", "show-help", "show-credits"];
     var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
     // per-app extras: a Restart hook + a runtime-running predicate (Kill greys out until true)
     var RUNTIME_EXTRAS = {
@@ -52346,7 +52389,7 @@ setOfficeProgress("pc", false);
     };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-system": "__killMonitorSystem", "show-about": "__killMonitorAbout", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-system": "__killMonitorSystem", "show-about": "__killMonitorAbout", "show-help": "__killMonitorHelp", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
@@ -52355,7 +52398,7 @@ setOfficeProgress("pc", false);
       "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "mines", "show-pacman": "pacman",
       "show-tattoo": "tattoo", "show-life": "life", "show-code": "code", "show-calendar": "calendar", "show-clock": "clock",
       "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music",
-      "show-system": "system", "show-about": "about", "show-credits": "credits"
+      "show-system": "system", "show-about": "about", "show-help": "help", "show-credits": "credits"
     };
     var menuEl = null;
     function activeMonitorApp() {

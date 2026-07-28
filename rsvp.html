@@ -82923,25 +82923,38 @@ function spawnDustMote(container) {
   // presence rides a per-figure .arrived class (visibility-gated by the .trickle CSS above);
   // the gate is at a fixed x, so each figure's walk distance (--walk-x = gateX − homeX) differs.
   var GATE_X = 648; // the gate's centre in the garden view-box (matches #garden-gate's opening, screen-right past every home x)
-  // trickle order: the FIVE duos, then the single Bahareh, then the mouses (only if visiting).
-  // Each entry lists the .g-* selectors that walk in together (a duo walks in as a pair). A
-  // "solo" flag marks Bahareh (walks in alone). The homes match the .g-* transform translates.
+  // Each entry is one arrival unit: a couple, family, or solo guest. Optional members use the
+  // same presence class that controls whether their figures are visiting this session.
+  function arrivalMember(sel, home, presentWhen) {
+    return { sel: sel, home: home, presentWhen: presentWhen || "" };
+  }
   var ARRIVALS = [
-    { id: "chinnel", sels: [".g-chinnel", ".g-raffi"], homes: [76, 116] },
-    { id: "alireza", sels: [".g-alireza", ".g-mahzad"], homes: [150, 200] }, // travel buddies cross the whole floor
-    { id: "ali",     sels: [".g-ali", ".g-goli"],      homes: [256, 434] }, // best man + fashionista
-    { id: "spencer", sels: [".g-spencer", ".g-jay"],    homes: [320, 378] }, // the giant + the officiant
-    { id: "farhang", sels: [".g-farhang", ".g-lauren"], homes: [490, 540] }, // the MC + his plus-one
-    { id: "family",  sels: [".g-patricia", ".g-patricia-son", ".g-patricia-daughter"], homes: [415, 448, 475] }, // Behdad's brother's family — Patricia + Patricia’s son + Patricia’s daughter, arrive together
-    { id: "madla",   sels: [".g-madla", ".g-robert"],   homes: [60, 100] }, // Markéta's sister Madla + husband Robert (Lübeck), arrive together
-    { id: "hamid",   sels: [".g-hamid", ".g-athena"],   homes: [138, 226] }, // Behdad's godson Hamid + his partner Athena (QA lead)
-    { id: "baharak", sels: [".g-baharak", ".g-payman", ".g-hannah"], homes: [8, 42, 74] }, // Behdad's Tehran sister Baharak + husband Payman + daughter Hannah, arrive together
-    { id: "bahareh", sels: [".g-bahareh"],              homes: [608], solo: 1 }, // Irene's mom, walks in alone
-    { id: "musicians", sels: [".g-danbern", ".g-oritshimoni"], homes: [514, 566] } // Dan Bern + Orit Shimoni — the touring songwriters, in together
+    { id: "chinnel", members: [arrivalMember(".g-chinnel", 76), arrivalMember(".g-raffi", 116)] },
+    { id: "alireza", members: [arrivalMember(".g-alireza", 150), arrivalMember(".g-mahzad", 200)] },
+    { id: "ali", members: [arrivalMember(".g-ali", 256), arrivalMember(".g-goli", 434)] },
+    { id: "spencer", members: [arrivalMember(".g-spencer", 320), arrivalMember(".g-jay", 378)] },
+    { id: "farhang", members: [arrivalMember(".g-farhang", 490), arrivalMember(".g-lauren", 540)] },
+    { id: "patricia", members: [arrivalMember(".g-patricia", 415), arrivalMember(".g-patricia-son", 448), arrivalMember(".g-patricia-daughter", 475)] },
+    { id: "madla", members: [
+      arrivalMember(".g-madla", 60), arrivalMember(".g-robert", 100),
+      arrivalMember(".g-elisabeth", 578, "mouses-visiting"), arrivalMember(".g-felix", 636, "mouses-visiting")
+    ] },
+    { id: "hamid", members: [arrivalMember(".g-hamid", 138), arrivalMember(".g-athena", 226)] },
+    { id: "baharak", members: [arrivalMember(".g-baharak", 8), arrivalMember(".g-payman", 42), arrivalMember(".g-hannah", 74)] },
+    { id: "bahareh", members: [arrivalMember(".g-bahareh", 608)], solo: 1 },
+    { id: "musicians", members: [arrivalMember(".g-danbern", 514), arrivalMember(".g-oritshimoni", 566)] }
   ];
-  var MOUSE_ARRIVALS = [ // the little ones — walk in last, only when they're visiting this session
-    { sel: ".g-elisabeth", home: 578 }, { sel: ".g-felix", home: 636 }
-  ];
+  function resolveArrival(entry, g) {
+    var members = entry.members.filter(function (member) {
+      return !member.presentWhen || !!(g && g.classList.contains(member.presentWhen));
+    });
+    return {
+      id: entry.id,
+      sels: members.map(function (member) { return member.sel; }),
+      homes: members.map(function (member) { return member.home; }),
+      solo: entry.solo
+    };
+  }
   var ARRIVAL_CHILD_NAMES = ["irene", "robin", "navid", "elisabeth", "felix", "patricia-son", "patricia-daughter", "hannah"];
   function guestNameFromSel(sel) { return String(sel || "").replace(/^\.g-/, ""); }
   function arrivalSelIsChild(sel) { return ARRIVAL_CHILD_NAMES.indexOf(guestNameFromSel(sel)) !== -1; }
@@ -83137,11 +83150,7 @@ function spawnDustMote(container) {
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
   function fullArrivals() {
     var g = document.getElementById("garden-guests");
-    var list = (arrivalOrder || ARRIVALS).slice();
-    if (g && g.classList.contains("mouses-visiting")) {
-      MOUSE_ARRIVALS.forEach(function (m) { list.push({ id: "mouse", sels: [m.sel], homes: [m.home] }); });
-    }
-    return list;
+    return (arrivalOrder || ARRIVALS).map(function (entry) { return resolveArrival(entry, g); });
   }
   function everyoneArrived(g) { // has the whole current roster landed? (drops .trickle when so)
     var list = fullArrivals();
@@ -83282,7 +83291,9 @@ function spawnDustMote(container) {
   window.__guestsIn = function () { var g = document.getElementById("garden-guests"); return !!(g && g.classList.contains("guests-in")); };
   // sel -> home x (from ARRIVALS), so a figure not currently rebalanced still resolves to its base x.
   var homeXBySel = {};
-  ARRIVALS.forEach(function (e) { for (var i = 0; i < e.sels.length; i++) homeXBySel[e.sels[i]] = e.homes[i]; });
+  ARRIVALS.forEach(function (entry) {
+    entry.members.forEach(function (member) { homeXBySel[member.sel] = member.home; });
+  });
   // Current on-floor head x for a guest figure (garden-guests local coords): its balanced SLOT if it
   // has one this rotation, else its fixed home x. Head sits at figure-local x≈0, so translate(x,0) +
   // --balance-x puts the head at slot (or home). Used by the toast to hang each speech bubble over
@@ -83431,9 +83442,10 @@ function spawnDustMote(container) {
   window.__duoArrive = function (id) {
     var g = document.getElementById("garden-guests");
     if (!g) return null;
-    var entry = null;
-    if (id) { for (var i = 0; i < ARRIVALS.length; i++) if (ARRIVALS[i].id === id) { entry = ARRIVALS[i]; break; } }
-    if (!entry) entry = ARRIVALS[Math.floor(Math.random() * ARRIVALS.length)]; // no/unknown id → a random duo
+    var spec = null;
+    if (id) { for (var i = 0; i < ARRIVALS.length; i++) if (ARRIVALS[i].id === id) { spec = ARRIVALS[i]; break; } }
+    if (!spec) spec = ARRIVALS[Math.floor(Math.random() * ARRIVALS.length)]; // no/unknown id → a random duo
+    var entry = resolveArrival(spec, g);
     if (!guestsWanted()) return null; // party dark / not in the garden / tab hidden — nothing to arrive onto
     guestsArrived = true;
     if (!g.classList.contains("guests-in")) { g.classList.add("guests-in", "trickle"); startHostSolo(); syncCrowdClear(); if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); if (window.__gardenPartyOn && window.__partyDance) retuneDancers(window.__partyDance); }
@@ -83444,9 +83456,10 @@ function spawnDustMote(container) {
     return entry.id;
   };
   window.__duoDepart = function (id) { // deterministic occupancy test hook: exercise the real rotation departure path
-    var entry = null;
-    for (var i = 0; i < ARRIVALS.length; i++) if (ARRIVALS[i].id === id) { entry = ARRIVALS[i]; break; }
-    if (!entry) return null;
+    var spec = null, g = document.getElementById("garden-guests");
+    for (var i = 0; i < ARRIVALS.length; i++) if (ARRIVALS[i].id === id) { spec = ARRIVALS[i]; break; }
+    if (!spec || !g) return null;
+    var entry = resolveArrival(spec, g);
     leaveEntry(entry);
     return entry.id;
   };
@@ -95917,7 +95930,7 @@ function spawnDustMote(container) {
     // duos in on the garden floor for when we come back off the line, then settle the view on the
     // office and place the call — the view HOLDS there, because the call is the happening now.
     // Every hook is guarded.
-    var PRAGUE_FAMILY = ["madla", "family", "hamid", "baharak", "bahareh"]; // Markéta's + Behdad's family ARRIVALS ids (friends — ali/spencer/alireza/farhang — left out)
+    var PRAGUE_FAMILY = ["madla", "patricia", "hamid", "baharak", "bahareh"]; // Markéta's + Behdad's family ARRIVALS ids (friends — ali/spencer/alireza/farhang — left out)
     function setupPrague() {
       if (window.party && !window.party()) window.party(true); // a festive family garden party
       // gather the FAMILY on the floor (weighted away from the friend cast) — they don't need the
@@ -96125,7 +96138,7 @@ function spawnDustMote(container) {
   // on their own, one per beat, as the party fills up — this is the manual trigger for the same move.
   var ARRIVE_LABEL = {
     ali: "Ali & Goli", spencer: "Spencer & Jay", alireza: "Alireza & Mahzad", chinnel: "Chinnel & Raffi",
-    farhang: "Farhang & Lauren", bahareh: "Bahareh"
+    farhang: "Farhang & Lauren", patricia: "Patricia, Patricia’s son & Patricia’s daughter", bahareh: "Bahareh"
   };
   window.arrive = function (id) {
     if (typeof id === "string") id = id.toLowerCase().trim();

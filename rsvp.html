@@ -91093,7 +91093,7 @@ function spawnDustMote(container) {
   // interval) makes re-applying weather/date state idempotent and lets a date change or reset
   // tear down both the next pass and an in-flight pass without touching a trip the player
   // started separately.
-  var bicycleDayTimer = null, bicycleDayTripGeneration = null;
+  var bicycleDayTimer = null, bicycleDayTripGeneration = null, bicycleDayWasActive = false;
   function isBicycleDay(s) { return !!s && s.m === 3 && s.d === 19; }
   function bicycleDayStopOwnedTrip() {
     if (bicycleDayTripGeneration != null &&
@@ -91108,7 +91108,7 @@ function spawnDustMote(container) {
   }
   function bicycleDaySchedule() {
     if (bicycleDayTimer || !isBicycleDay(seasonDate())) return;
-    bicycleDayTimer = setTimeout(bicycleDayTick, 10000);
+    bicycleDayTimer = setTimeout(bicycleDayTick, 60000);
   }
   function bicycleDayStart(allowInterrupt) {
     var canRun = !document.hidden && document.hasFocus() &&
@@ -91131,15 +91131,22 @@ function spawnDustMote(container) {
   }
   function activateBicycleDay() {
     if (!isBicycleDay(seasonDate())) return false;
-    bicycleDayStop(); // re-clicking restarts both the visible trip and its ten-second cadence
+    bicycleDayStop(); // re-clicking restarts both the visible trip and its one-minute cadence
     if (window.goToStage) window.goToStage("garden");
     var started = bicycleDayStart(true);
     bicycleDaySchedule();
     return started;
   }
   function reconcileBicycleDay(s) {
-    if (!isBicycleDay(s)) bicycleDayStop();
-    else bicycleDaySchedule();
+    var active = isBicycleDay(s);
+    if (!active) {
+      bicycleDayWasActive = false;
+      bicycleDayStop();
+    } else {
+      if (!bicycleDayWasActive) bicycleDayStart(true);
+      bicycleDayWasActive = true;
+      bicycleDaySchedule();
+    }
   }
   window.__bicycleDayTick = bicycleDayTick; // focused regression test hook
   window.__activateBicycleDay = activateBicycleDay;
@@ -91148,7 +91155,7 @@ function spawnDustMote(container) {
   };
   window.__resetBicycleDay = function () {
     bicycleDayStop();
-    bicycleDaySchedule(); // a reset on Apr 19 starts one fresh ten-second cadence, never the old one
+    bicycleDaySchedule(); // a reset on Apr 19 starts one fresh one-minute cadence, never the old one
   };
   // April 20's calendar action brings Behdad home to the nook for one joint now, then
   // offers another every ten seconds while the player remains there. The owned run token
@@ -91212,7 +91219,7 @@ function spawnDustMote(container) {
   // September 20 follows the viewed room with a mushroom trip immediately on calendar
   // activation and every ten seconds thereafter. Its generation token lets date/reset
   // teardown stop only a trip this occasion started.
-  var mushroomDayTimer = null, mushroomDayTripGeneration = null;
+  var mushroomDayTimer = null, mushroomDayTripGeneration = null, mushroomDayWasActive = false;
   function isMushroomDay(s) { return !!s && s.m === 8 && s.d === 20; }
   function mushroomDayStopOwnedTrip() {
     if (mushroomDayTripGeneration != null &&
@@ -91227,7 +91234,7 @@ function spawnDustMote(container) {
   }
   function mushroomDaySchedule() {
     if (mushroomDayTimer || !isMushroomDay(seasonDate())) return;
-    mushroomDayTimer = setTimeout(mushroomDayTick, 10000);
+    mushroomDayTimer = setTimeout(mushroomDayTick, 60000);
   }
   function mushroomDayStart(allowInterrupt) {
     var canRun = !document.hidden && document.hasFocus() &&
@@ -91256,8 +91263,15 @@ function spawnDustMote(container) {
     return started;
   }
   function reconcileMushroomDay(s) {
-    if (!isMushroomDay(s)) mushroomDayStop();
-    else mushroomDaySchedule();
+    var active = isMushroomDay(s);
+    if (!active) {
+      mushroomDayWasActive = false;
+      mushroomDayStop();
+    } else {
+      if (!mushroomDayWasActive) mushroomDayStart(true);
+      mushroomDayWasActive = true;
+      mushroomDaySchedule();
+    }
   }
   window.__mushroomDayTick = mushroomDayTick;
   window.__activateMushroomDay = activateMushroomDay;

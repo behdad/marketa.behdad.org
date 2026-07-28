@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // September 20 immediately starts shrooms in the viewed room, then maintains
-// one gated ten-second cadence until the date changes or the loft resets.
+// one gated one-minute cadence until the date changes or the loft resets.
 "use strict";
 
 var lib = require("./lib");
@@ -20,7 +20,7 @@ var HARNESS = [
   ' setLang("en");ph=document.querySelector(".calx-phone");d20=day(ph,20);d20.click();await sleep(60);',
   ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:window.__tripState&&window.__tripState(),card:document.getElementById("mol-card-shrooms").classList.contains("mol-show"),status:window.__mushroomDayStatus()});',
   ' window.__jumpToDate(2027,8,21);S("leave",{trip:window.__tripState&&window.__tripState(),status:window.__mushroomDayStatus(),tick:window.__mushroomDayTick()});',
-  ' window.__jumpToDate(2027,8,20);window.goToStage("balcony");var repeated=window.__mushroomDayTick();',
+  ' window.__jumpToDate(2027,8,20);window.__stopTrip(false);window.goToStage("balcony");var repeated=window.__mushroomDayTick();',
   ' S("repeat",{started:repeated,room:window.currentStageName,trip:window.__tripState&&window.__tripState(),card:document.getElementById("mol-card-shrooms").classList.contains("mol-show"),status:window.__mushroomDayStatus()});',
   ' var resetCalls=0,baseReset=window.__resetMushroomDay;window.__resetMushroomDay=function(){resetCalls++;return baseReset();};window.__activateExtinguisher();await sleep(850);',
   ' S("reset",{calls:resetCalls,trip:window.__tripState&&window.__tripState(),status:window.__mushroomDayStatus()});',

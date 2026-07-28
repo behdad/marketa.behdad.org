@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // April 19 is Bicycle Day in both calendar surfaces. Selecting it arms one
-// ten-second acid cadence for the room currently in view; leaving the date or
+// one-minute acid cadence for the room currently in view; leaving the date or
 // resetting the loft tears down the owned timer/trip cleanly.
 "use strict";
 
@@ -24,7 +24,7 @@ var HARNESS = [
   ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:trip,card:document.getElementById("mol-card-acid").classList.contains("mol-show"),status:window.__bicycleDayStatus()});',
   ' window.__jumpToDate(2027,3,20);',
   ' S("leave",{trip:window.__tripState&&window.__tripState(),status:window.__bicycleDayStatus(),tick:window.__bicycleDayTick()});',
-  ' window.__jumpToDate(2027,3,19);var repeated=window.__bicycleDayTick();',
+  ' window.__jumpToDate(2027,3,19);window.__stopTrip(false);var repeated=window.__bicycleDayTick();',
   ' S("repeat",{started:repeated,card:document.getElementById("mol-card-acid").classList.contains("mol-show"),trip:window.__tripState&&window.__tripState()});',
   ' window.__jumpToDate(2027,3,20);',
   ' window.__jumpToDate(2027,3,19);var resetCalls=0,baseReset=window.__resetBicycleDay;',

@@ -22604,7 +22604,7 @@ section{margin:1.9rem 0}
 <div id="monitor-browser-tabs" class="browser-tabs"></div>
 <div class="browser-page">
 <div class="browser-loading" data-i="browser_loading">loading&#8230;</div>
-<div class="browser-frame-holder"><iframe id="monitor-browser-frame" class="browser-frame"></iframe></div>
+<div class="browser-frame-holder"></div>
 <div id="monitor-browser-newtab" class="browser-newtab">
 <div class="url-wrap">
 <input id="monitor-browser-url" class="browser-url-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Search or enter address" data-ph-i="browser_omni_ph"/>
@@ -54056,19 +54056,17 @@ setOfficeProgress("pc", false);
   // #office-monitor). The dock's chrome tile opens it on the markéta tab; a click on a
   // visible fake wall-sign page opens it on that site's own tab instead of a new
   // browser tab (the m ∞ b menu-bar brand keeps its real new-tab link). The four
-  // fixed tabs share #monitor-browser-frame, whose src follows the active fixed tab
-  // and is only swapped when it actually changes — reopening the app or re-picking the
-  // current tab never reloads. Every fixed or visitor tab has a close ×; fixed-tab
+  // fixed tabs share a frame created only while the app is open. Every fixed or visitor tab
+  // has a close ×; fixed-tab
   // closures last for the powered-on session. The + stub opens up to three visitor tabs: each shows
   // the address form until it navigates, then keeps its own iframe (so tab switches
-  // show/hide frames instead of reloading them) and a ✕. Visitor tabs survive closing
-  // and reopening the app but not a power-off: clearBoot blanks the fixed frame and
-  // drops them, so a powered-off PC isn't secretly running a site. The dim loading
+  // show/hide frames instead of reloading them) and a ✕. Tab metadata survives a normal close,
+  // but every frame is removed until the browser reopens; a power-off also drops visitor tabs.
+  // The dim loading
   // line sits under the transparent iframes because cross-origin frames don't reliably
   // report failures; visitor tabs add the framing-refused hint since X-Frame-Options
   // blanks are common and just as silent.
-  var browserFrame = document.getElementById("monitor-browser-frame");
-  if (browserFrame) browserFrame.addEventListener("load", function () { if (window.__browserFrameLoaded) window.__browserFrameLoaded(browserFrame); });
+  var browserFrame = null;
   var browserWrap = document.getElementById("monitor-browser-wrap");
   var browserCloseBtn = document.getElementById("monitor-browser-close");
   if (browserCloseBtn) browserCloseBtn.classList.toggle("chrome-host", HOST_BROWSER === "chrome");
@@ -54107,6 +54105,27 @@ setOfficeProgress("pc", false);
   })();
   var browserPage = browserWrap ? browserWrap.querySelector(".browser-page") : null;
   var browserFrameHolder = browserWrap ? browserWrap.querySelector(".browser-frame-holder") : null;
+  function ensureBrowserFrame() {
+    if (browserFrame || !browserFrameHolder) return browserFrame;
+    browserFrame = document.createElement("iframe");
+    browserFrame.id = "monitor-browser-frame";
+    browserFrame.className = "browser-frame";
+    var frame = browserFrame;
+    frame.addEventListener("load", function () { if (window.__browserFrameLoaded) window.__browserFrameLoaded(frame); });
+    browserFrameHolder.appendChild(browserFrame);
+    return browserFrame;
+  }
+  function ensureDynBrowserFrame(tab) {
+    if (!tab || !tab.dyn || !tab.url || tab.frame || !browserFrameHolder) return tab && tab.frame;
+    tab.frame = document.createElement("iframe");
+    tab.frame.className = "browser-frame";
+    var frame = tab.frame;
+    frame.addEventListener("load", function () { if (window.__browserFrameLoaded) window.__browserFrameLoaded(frame); });
+    tab.frame.setAttribute("src", tab.url);
+    browserFrameHolder.appendChild(tab.frame);
+    tab.suspended = false;
+    return tab.frame;
+  }
   var browserUrlIn = document.getElementById("monitor-browser-url");
 
   var browserGoBtn = document.getElementById("monitor-browser-go");
@@ -54135,6 +54154,8 @@ setOfficeProgress("pc", false);
   function setBrowserTab(tabId) {
     var tab = findBrowserTab(tabId);
     if (!tab) return;
+    if (!tab.dyn) ensureBrowserFrame();
+    else ensureDynBrowserFrame(tab);
     browserActiveTab = tab.id;
     for (var id in browserTabEls) browserTabEls[id].classList.toggle("active", id === tab.id);
     if (browserExternalEl) browserExternalEl.classList.toggle("open-dead", !tab.url);
@@ -54144,7 +54165,14 @@ setOfficeProgress("pc", false);
     // fixed tabs share the one original frame; each navigated visitor tab keeps its
     // own, so switching tabs shows/hides frames instead of reloading them
     if (browserFrame) browserFrame.style.display = tab.dyn ? "none" : "";
-    browserDynTabs.forEach(function (t) { if (t.frame) t.frame.style.display = t.id === tab.id ? "" : "none"; });
+    browserDynTabs.forEach(function (t) {
+      if (!t.frame) return;
+      t.frame.style.display = t.id === tab.id ? "" : "none";
+      if (t.id === tab.id && t.suspended && t.url) {
+        t.suspended = false;
+        t.frame.setAttribute("src", t.url);
+      }
+    });
     if (!tab.dyn && browserFrame && browserFrame.getAttribute("src") !== tab.url) browserFrame.setAttribute("src", tab.url);
   }
   function makeBrowserTabEl(t) {
@@ -54156,7 +54184,7 @@ setOfficeProgress("pc", false);
     fav.addEventListener("error", function () { fav.style.display = "none"; });
     if (t.fav) fav.src = t.fav;
     else if (t.nofav) fav.style.display = "none";
-    else if (t.url) fav.src = t.url + "favicon.ico"; // each fixed-tab site serves one at the root (verified)
+    else if (t.url) fav.style.display = "none"; // external favicons load only after the browser app opens
     else fav.style.display = "none"; // a visitor tab earns its favicon when it navigates
     el.appendChild(fav);
     var lbl = document.createElement("span");
@@ -54174,6 +54202,11 @@ setOfficeProgress("pc", false);
     browserTabEls[t.id] = el;
     t.el = el; t.fav = fav; t.lbl = lbl;
     return el;
+  }
+  function loadBrowserTabFav(t) {
+    if (!t || !t.fav || t.fav.getAttribute("src") || t.nofav || !t.url) return;
+    t.fav.style.display = "";
+    t.fav.src = t.url + "favicon.ico";
   }
   function browserT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   browserExternalEl = document.getElementById("monitor-browser-external");
@@ -54306,6 +54339,7 @@ setOfficeProgress("pc", false);
     // (re-setting the same src is a no-op in some engines). _reloadPending swallows both
     // load events so a reload stays neutral on the back/forward depth.
     if (tab.dyn) {
+      if (!tab.frame && tab.url) ensureDynBrowserFrame(tab);
       if (!tab.frame || !tab.url) return; // an un-navigated new tab has no page to reload
       var f = tab.frame, u = tab.url;
       f._reloadPending = (f._reloadPending || 0) + 2;
@@ -54369,11 +54403,7 @@ setOfficeProgress("pc", false);
     tab.lbl.textContent = isSearch ? "🔍 " + raw : u.hostname.replace(/^www\./, "");
     tab.fav.style.display = "";
     tab.fav.src = u.origin + "/favicon.ico"; // onerror re-hides it for sites without one
-    tab.frame = document.createElement("iframe");
-    tab.frame.className = "browser-frame";
-    tab.frame.addEventListener("load", function () { if (window.__browserFrameLoaded) window.__browserFrameLoaded(tab.frame); });
-    tab.frame.setAttribute("src", u.href);
-    if (browserFrameHolder) browserFrameHolder.appendChild(tab.frame);
+    ensureDynBrowserFrame(tab);
     browserUrlIn.value = "";
     setBrowserTab(tab.id); // repaints form/frame visibility now that the tab has a page
   }
@@ -54415,6 +54445,7 @@ setOfficeProgress("pc", false);
     // closed this session, bring the strip back; if just the requested one was closed,
     // land on the first live tab (closing a specific tab persists across an app close).
     if (!anyFixedTabLive()) restoreFixedBrowserTabs();
+    BROWSER_TABS.forEach(loadBrowserTabFav);
     var landTab = tabId || "loft";
     if (!browserTabEls[landTab]) landTab = firstLiveTabId() || "loft";
     setBrowserTab(landTab);
@@ -54442,15 +54473,16 @@ setOfficeProgress("pc", false);
       monitor.classList.remove("show-chrome");
       monitor.classList.add("show-caps");
     }
-    if (!monitor.classList.contains("show-browser")) return;
+    if (!monitor.classList.contains("show-browser")) { suspendBrowserPages(); return; }
     monitor.classList.remove("show-browser");
+    suspendBrowserPages();
     scheduleSaver();
   }
   window.__closeMonitorBrowser = closeBrowser; // other monitor apps close the browser before taking the screen
   // Kill (from the app's right-click menu) → Chrome's "Aw, Snap!" crash page flashes over the frozen
   // browser (~2.2s), then it closes back to the desktop. The browser is a plain app, not a self-hosted
   // runtime, so Kill is the only affordance — no Restart. The silent ✕/app-switch close (closeBrowser)
-  // is left untouched. No freeze needed: the iframes idle harmlessly behind the opaque overlay.
+  // is left untouched.
   function browserDeathFlash() {
     if (!monitor.classList.contains("show-browser") || !window.__runMonitorDeathFlash) { closeBrowser(); return; }
     window.__runMonitorDeathFlash({
@@ -54462,11 +54494,20 @@ setOfficeProgress("pc", false);
     });
   }
   window.__killMonitorBrowser = browserDeathFlash; // Kill → Aw-Snap flash → close (back to desktop)
+  function suspendBrowserPages() {
+    if (browserFrame && browserFrame.parentNode) browserFrame.parentNode.removeChild(browserFrame);
+    browserFrame = null;
+    browserDynTabs.forEach(function (t) {
+      if (!t.frame) return;
+      t.suspended = true;
+      if (t.frame.parentNode) t.frame.parentNode.removeChild(t.frame);
+      t.frame = null;
+    });
+    if (window.__browserNavReset) window.__browserNavReset();
+  }
   function blankBrowser() {
     // about:blank (not a removed attribute) actually unloads the framed site
-    if (browserFrame && browserFrame.getAttribute("src")) browserFrame.setAttribute("src", "about:blank");
-    if (browserFrame) browserFrame._arrived = false;
-    if (window.__browserNavReset) window.__browserNavReset();
+    suspendBrowserPages();
     // visitor tabs are the running machine's session state: power-off drops them whole
     while (browserDynTabs.length) {
       var t = browserDynTabs.pop();

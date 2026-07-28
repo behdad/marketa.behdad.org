@@ -47,6 +47,14 @@ var HARNESS = [
   "    S('desktop_ctx_prevented', ctxAt(mon()));",     // should be false — native menu kept
   "    S('desktop_no_mon_menu', !monMenu());",
   "    S('desktop_no_cc_menu', !ccMenu());",
+  // The Loft OS dropdown is mouse-modal: the first outside click dismisses it without
+  // activating the desktop app underneath.
+  "    var sysBrand=document.getElementById('monitor-system-brand'), coveredMail=document.getElementById('monitor-dock-mail');",
+  "    if(sysBrand) sysBrand.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));",
+  "    S('system_menu_opened', !!(window.__monitorSystemMenuOpen&&window.__monitorSystemMenuOpen()));",
+  "    if(coveredMail) coveredMail.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));",
+  "    S('system_menu_outside_dismissed', !(window.__monitorSystemMenuOpen&&window.__monitorSystemMenuOpen()));",
+  "    S('system_menu_outside_blocked_app', !mon().classList.contains('show-mail'));",
   // ---- NON-RUNTIME APPS (mon-ctx): Kill only, enabled, no Restart ----
   "    var nonRt=['show-mail','show-chat','show-weather','show-mines','show-nowplaying','show-help'];",
   "    var nonRtOk=true, nonRtDetail={};",
@@ -312,6 +320,7 @@ var s = rep.steps;
 console.log("monitor right-click Kill/Restart menus + restart + fs button:");
 console.log(" desktop (no app open):");
 check("right-click on the bare monitor desktop eats the native menu, shows no custom menu", s.desktop_ctx_prevented === true && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
+check("outside click dismisses the Loft OS menu without activating the covered app", s.system_menu_opened === true && s.system_menu_outside_dismissed === true && s.system_menu_outside_blocked_app === true, { opened: s.system_menu_opened, dismissed: s.system_menu_outside_dismissed, blocked: s.system_menu_outside_blocked_app });
 console.log(" non-runtime apps (mail/chat/weather/mines/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("Help Kill drops its question mark through both caption beats and closes", s.help_kill_started === true && s.help_kill_first_caption === true && s.help_kill_second_caption === true && s.help_kill_closed === true, { started: s.help_kill_started, first: s.help_kill_first_caption, second: s.help_kill_second_caption, closed: s.help_kill_closed });

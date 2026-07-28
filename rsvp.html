@@ -66367,7 +66367,8 @@ async def localfont(name):
         : cueOpenerArmed ? (3000 + Math.floor(Math.random() * 3000))
                          : (24000 + Math.floor(Math.random() * 22000)) * msgDripSlowFactor()); // kiosk ~30–57s; a player gets ~3–6s to open, then ~24–46s apart, stretched once the thread is busy
     }
-    window.__startCueDrip = function () { cueFirstOfParty = true; scheduleCueDrip(); }; // each party gets its own opener
+    window.__startCueDrip = function (resuming) { cueFirstOfParty = !resuming; scheduleCueDrip(); }; // a live start gets the fast opener; checkpoint/cinematic restore resumes the ordinary cadence
+    window.__cueDripFastOpener = function () { return !!cueOpenerArmed; }; // focused recovery-state probe
     window.__stopCueDrip = function () { if (cueTimer) { clearTimeout(cueTimer); cueTimer = null; } };
     // ── DAYTIME ambient drip ── a pool SEPARATE from the night-party cues: texts for the daylight
     // hours, dripped at random while it's day, attended, and NO party is on. Armed at load; it keeps
@@ -87135,7 +87136,10 @@ function spawnDustMote(container) {
     // roster and unlock every room from here on. Latched — party-off never clears it (only resetHunt
     // does). Every party entry point routes through here, so any way the party lights agrees.
     if (on && !window.__secondRound) setSecondRound(true); // unlock rooms, reveal roster, and release phase-two-held messages/cards
-    if (on) { if (window.__startCueDrip) window.__startCueDrip(); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
+    // A restored/programmatic party resumes the ordinary drip cadence. Only a newly started,
+    // player-facing party gets the fast 3–6s opener; replaying that opener on Continue made its
+    // two-note phone chime sound like an unexplained startup beep.
+    if (on) { if (window.__startCueDrip) window.__startCueDrip(userInitiated === false); } else if (window.__stopCueDrip) window.__stopCueDrip(); // drip the app-cue phone texts only while the party's lit
     if (on) { if (window.__startGuestFlares) window.__startGuestFlares(); } else if (window.__stopGuestFlares) window.__stopGuestFlares(); // frequent silent named-guest reactions while the garden is watched
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
     if (!on && window.__stopBalconySky) window.__stopBalconySky(); // ...and any fireworks finale / wish-lanterns in flight

@@ -5207,13 +5207,15 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 }
 .phone-close:hover{background:var(--wine)}
 .phone-statusbar{
-  flex:none; display:flex; align-items:center; justify-content:space-between;
+  position:relative; flex:none; display:flex; align-items:center; justify-content:space-between;
   padding:6px 15px 5px; font-size:12px; color:var(--ink);
   background:var(--paper); border-bottom:1px solid var(--rule);
   touch-action:none; /* the empty bar is a drag handle for the phone — don't let a touch-drag pan the page */
 }
 .phone-statusbar .psb-right{display:flex; align-items:center; gap:6px}
 .phone-statusbar svg{display:block}
+.psb-date{position:absolute;left:33%;top:50%;translate:-50% -50%;max-width:68px;padding:2px 5px;border:0;border-radius:7px;background:transparent;color:var(--soft);font:600 10.5px/1 "Source Serif 4",serif;white-space:nowrap;cursor:pointer}
+.psb-date:hover,.psb-date:focus-visible{background:var(--rule);color:var(--wine);outline:none}
 .psb-sig-wrap{display:inline-flex; align-items:center}
 .psb-sig-bar.off{opacity:.2} /* bars beyond the current reception level (timezone distance from Edmonton) */
 .psb-brand{font-family:"Fraunces",serif; font-size:12px; color:var(--ink); cursor:pointer}
@@ -59467,6 +59469,7 @@ async def localfont(name):
     var STATUSBAR =
       '<div class="phone-statusbar">' +
         '<span class="psb-brand" role="link" tabindex="0" title="marketa.behdad.org">m<b>∞</b>b</span>' + // the loft's own OS, same wordmark as the desktop menu bar — taps out to the wedding site
+        '<button type="button" class="psb-date"></button>' +
         '<span class="psb-right">' +
           '<span class="psb-time">--:--</span>' +
           '<span class="psb-sig-wrap" title="m ∞ b">' + // the carrier: m ∞ b (fewer bars the farther your timezone is from Edmonton)
@@ -59610,6 +59613,11 @@ async def localfont(name):
         t.style.cursor = "pointer";
         t.addEventListener("click", function (e) { e.stopPropagation(); if (shell.classList.contains("pm-incall")) return; openApp("clock", "app_clock", renderClock); });
       })();
+      (function () { // the game-date readout is the Calendar's status-bar doorway
+        var d = modal.querySelector(".psb-date");
+        if (!d) return;
+        d.addEventListener("click", function (e) { e.stopPropagation(); if (shell.classList.contains("pm-incall")) return; openApp("calendar", "app_calendar", renderCalendar); });
+      })();
       (function () { // the front-camera punch-hole opens the photobooth
         var cam = modal.querySelector(".psb-cam");
         if (!cam) return;
@@ -59649,6 +59657,8 @@ async def localfont(name):
       modal.querySelector(".pnav-back").setAttribute("aria-label", tr("phone_nav_back"));
       modal.querySelector(".pnav-home").setAttribute("aria-label", tr("phone_nav_home"));
       modal.querySelector(".pnav-recents").setAttribute("aria-label", tr("phone_nav_recents"));
+      var dateButton = modal.querySelector(".psb-date");
+      if (dateButton) { dateButton.title = tr("app_calendar"); dateButton.setAttribute("aria-label", tr("app_calendar")); }
       modal.querySelector(".pb-del").setAttribute("aria-label", tr("phone_lock_del"));
       modal.querySelector(".pb-key.pb-ok").setAttribute("aria-label", tr("phone_lock_ok"));
     }
@@ -64582,7 +64592,19 @@ async def localfont(name):
       var ov = window.__ovClock && window.__ovClock(); // advancing ?time= override → the selected wall-clock, else the real clock
       c.textContent = ov || (z(d.getHours()) + ":" + z(d.getMinutes()));
     }
+    function paintStatusDate() {
+      if (!shell) return;
+      var el = shell.querySelector(".psb-date");
+      if (!el) return;
+      var d = window.__now ? window.__now() : new Date();
+      try {
+        el.textContent = d.toLocaleDateString(document.documentElement.lang === "cs" ? "cs-CZ" : "en-CA", { month: "short", day: "numeric" }).replace(/\.$/, "");
+      } catch (e) {
+        el.textContent = (d.getMonth() + 1) + "/" + d.getDate();
+      }
+    }
     window.__paintPhoneStatusClock = paintClock; // let the Clock app's slider/reset refresh the status bar immediately
+    window.__paintPhoneStatusDate = paintStatusDate;
     // The pocket phone mirrors the visitor's REAL battery when the browser exposes it
     // (getBattery is Chromium-only) — on a phone it feels like your own device; on a
     // desktop or an unsupporting browser it falls back to a full battery, never empty.
@@ -64610,7 +64632,7 @@ async def localfont(name):
         }, function () { paintBattery(); });
       } catch (e) { paintBattery(); }
     }
-    function startStatusClock() { paintClock(); paintBattery(); stopStatusClock(); statusClock = setInterval(paintClock, 30000); } // text-only, hidden-tab safe
+    function startStatusClock() { paintClock(); paintStatusDate(); paintBattery(); stopStatusClock(); statusClock = setInterval(function () { paintClock(); paintStatusDate(); }, 30000); } // text-only, hidden-tab safe
     function stopStatusClock() { if (statusClock) { clearInterval(statusClock); statusClock = null; } }
     function open(cineHome) {
       build();
@@ -91679,6 +91701,7 @@ function spawnDustMote(container) {
     var pillTxt = document.getElementById("loft-datepill-txt");
     if (pillTxt) pillTxt.textContent = txt; else pill.textContent = txt;
     if (window.__paintCalTile) window.__paintCalTile(); // fill the pill's live mini-calendar with the current loft month + day
+    if (window.__paintPhoneStatusDate) window.__paintPhoneStatusDate();
     pill.title = calStr("app_calendar");
     pill.setAttribute("aria-label", calStr("app_calendar"));
     var prev = document.getElementById("loft-dateprev"), next = document.getElementById("loft-datenext");

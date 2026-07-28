@@ -236,8 +236,8 @@ device mute and site permissions. Another foreground app may own the controls.
 support it, the page may lack permission, or the feature may require a secure
 connection. The main room trail still works.
 
-**The game feels slow.** Reduce the browser window size. The game automatically
-switches to a lighter mode when it detects a slow system.
+**The game feels slow.** The game automatically switches to a lighter mode when
+it detects a slow system. If issue persists, reduce browser window size.
 
 **I want a clean start.** Use Restart and confirm, or press `R`. This clears
 game progress and session UI state. Ending the party alone is not a reset.

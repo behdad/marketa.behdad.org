@@ -605,7 +605,7 @@ details.
 
 Charlie is the private wedding assistant in the monitor's **Chat** app. Charlie
 knows the loft's recognizable objects and interactions room by room, game
-systems, public wedding information, and gameplay hints. Charlie replies in the
+locations and saved personal bests, public wedding information, and gameplay hints. Charlie replies in the
 language used by the player, including English, Czech, and Persian.
 
 The Chat app warms its anti-bot check when opened. Follow-up messages can be
@@ -624,6 +624,7 @@ Relevant context can include:
 - day or night, eclipse, seasonal sky effect, and scene weather;
 - current conditions and forecasts for Edmonton and Prague;
 - the current song, projector, calls, minigames, and open app;
+- game locations, discovery controls, and saved high scores where available;
 - the runtime calendar, public people/role data, tattoo catalog and credits,
   authored public notes, and album captions/metadata without image pixels.
 

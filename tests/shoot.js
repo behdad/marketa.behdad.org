@@ -25,6 +25,7 @@ var HARNESS = [
   'report.steps.colors.doomIcon=getComputedStyle(doomIcon).fill;report.steps.colors.doomClose=getComputedStyle(closeBg).fill;',
   'window.__openMonitorApp("duke");snap("duke");report.steps.colors.dukeClose=getComputedStyle(closeBg).fill;',
   'window.__openMonitorApp("quake3");snap("quake3");report.steps.colors.q3Close=getComputedStyle(closeBg).fill;',
+  'var gutters=document.querySelectorAll("#monitor-doom .monitor-runtime-side-hit");gutters[1].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:850,clientY:450}));report.steps.gutters={count:gutters.length,menu:!!document.querySelector(".mon-ctx")};document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
   'var coach=document.getElementById("monitor-shoot-coach"),coachRect=coach.querySelector("rect"),screen=document.getElementById("office-monitor-bg");',
   'report.steps.coach={on:coach.classList.contains("on"),en:coach.querySelector("text").textContent,pointer:coach.getAttribute("pointer-events"),y:+coachRect.getAttribute("y"),screenBottom:+screen.getAttribute("y")+ +screen.getAttribute("height")};',
   'window.setLang("cs");report.steps.coach.cs=coach.querySelector("text").textContent;window.setLang("en");',
@@ -68,6 +69,8 @@ if (result) {
     "duke routes directly to its self-hosted player", s.duke);
   check(s.quake3.view === "q3" && s.quake3.src === "q3/player.html",
     "quake3 routes directly to Quake III", s.quake3);
+  check(s.gutters.count === 2 && s.gutters.menu,
+    "both 4:3 side gutters belong to the monitor context-menu surface", s.gutters);
   check(s.coach.on && s.coach.en === "Esc releases mouse" && s.coach.cs === "Esc uvolní myš",
     "mouse-release coach appears immediately with EN/CS copy", s.coach);
   check(s.coach.pointer === "none" && s.coach.y >= s.coach.screenBottom,

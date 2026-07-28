@@ -17,6 +17,7 @@ var HARNESS = [
   "  var mon=document.getElementById('office-monitor'),brand=document.getElementById('monitor-system-brand'),tower=document.getElementById('office-pc-desk-trio');",
   "  if(tower&&!tower.classList.contains('on'))tower.classList.add('on');",
   "  mon.classList.add('screen-on','show-caps');",
+  "  S('hidden_gutters_pass_through',[].every.call(document.querySelectorAll('.monitor-runtime-side-hit'),function(n){return getComputedStyle(n).pointerEvents==='none';}));",
   "  brand.dispatchEvent(new MouseEvent('click',{bubbles:true}));",
   "  var menu=document.getElementById('monitor-system-menu');",
   "  function inside(bg,nodes){var b=bg.getBBox();return [].every.call(nodes,function(n){var r=n.getBBox();return r.x>=b.x&&r.x+r.width<=b.x+b.width&&r.y>=b.y&&r.y+r.height<=b.y+b.height;});}",
@@ -99,6 +100,7 @@ console.log("monitor system menu + CAPS LOCK:");
 if (!r) { console.error("  ✗ no report captured"); process.exit(1); }
 var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
+ok("hidden runtime gutters cannot cover the system menu", s.hidden_gutters_pass_through === true);
 ok("wordmark opens the system menu", s.menu_open === true);
 ok("menu groups power actions before About, Credits, and System", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","about","credits","system"]));
 ok("compact menu leaves the motto for About", s.tagline_removed === true);

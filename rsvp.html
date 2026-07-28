@@ -83708,6 +83708,9 @@ function spawnDustMote(container) {
       " · " + presentUnits(g, fullArrivals()).length + "/" + GUEST_UNIT_CAP + " units");
   }
   function noteArrival(u) { recentArrivals.push(unitKey(u)); while (recentArrivals.length > 3) recentArrivals.shift(); }
+  function unitHasAttended(u) {
+    return u.sels.every(function (sel) { return attendedGuestNames.has(guestNameFromSel(sel)); });
+  }
   function shuffleArr(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function finishFigureOut(g, el) {
     if (!el || el.classList.contains("bd-honoree")) return;
@@ -83748,7 +83751,8 @@ function spawnDustMote(container) {
     var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0 && !unitIsBirthdayHeld(g, u); });
     if (!evictable.length) evictable = present.filter(function (u) { return !unitIsBirthdayHeld(g, u); });
     var leaving = shuffleArr(evictable)[0];
-    var incoming = shuffleArr(waiting.slice())[0];
+    var firstTimers = waiting.filter(function (u) { return !unitHasAttended(u); });
+    var incoming = shuffleArr((firstTimers.length ? firstTimers : waiting).slice())[0];
     if (!leaving || !incoming) return;
     guestHandoffPending = true;
     arriveEntry(incoming); noteArrival(incoming); echoRosterMove("in", incoming, g);
@@ -83759,6 +83763,15 @@ function spawnDustMote(container) {
       leaveEntry(leaving);
     }, 1800);
   }
+  window.__partyRosterRotateNow = function () {
+    clearTrickleTimer();
+    var g = document.getElementById("garden-guests");
+    if (!g || guestHandoffPending) return false;
+    var list = fullArrivals(), present = presentUnits(g, list), waiting = waitingUnits(g, list);
+    if (!waiting.length) return false;
+    rotateGuests(g, present, waiting);
+    return guestHandoffPending;
+  };
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
   function fullArrivals() {
     var g = document.getElementById("garden-guests");

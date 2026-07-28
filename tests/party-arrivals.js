@@ -70,7 +70,7 @@ var harness = String.raw`<script>
         check("ordinary guests leave the couple's center lane clear",
           centerGuests.length === 0, JSON.stringify(centerGuests));
 
-        await sleep(10000);
+        await sleep(12500);
         var after = presentUnits();
         var arrived = after.filter(function (unit) { return before.indexOf(unit) === -1; });
         var departed = before.filter(function (unit) { return after.indexOf(unit) === -1; });
@@ -80,6 +80,16 @@ var harness = String.raw`<script>
           departed.length > 0, JSON.stringify({ before: before, after: after, departed: departed }));
         check("the revolving door never drifts above the four-family floor capacity",
           after.length <= 4, JSON.stringify({ count: arrivedCount(), units: after }));
+
+        for (var rotation = 0; rotation < 7; rotation++) {
+          window.__partyRosterRotateNow();
+          await sleep(2000);
+        }
+        var neverArrived = units.filter(function (unit) {
+          return !window.__partyGuestAttended(unit[0] === "musicians" ? "danbern" : unit[0]);
+        }).map(function (unit) { return unit[0]; });
+        check("every guest unit gets a first turn before the revolving door repeats",
+          neverArrived.length === 0, JSON.stringify({ neverArrived: neverArrived }));
 
         focused = true;
         window.__duoArrive("ali");
@@ -102,7 +112,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 35000, {
+var result = lib.runPageSync("rsvp.html", harness, 52000, {
   forceMotion: true,
   patchRaf: true,
   seedRandom: true

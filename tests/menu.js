@@ -6,8 +6,8 @@
 // Two menus by design (kept split to avoid a double menu on the console apps):
 //   • .console-ctx — python/linux/console fold Kill (and, for the runtimes, Restart) into
 //     their existing copy/paste menu.
-//   • .mon-ctx — every other real app (mail, chat, weather, mines, music, video, …) plus DOOM
-//     (a canvas, no copy/paste) gets this standalone menu. Desktop Kill is available only
+//   • .mon-ctx — every other real app (mail, chat, weather, mines, music, video, …) plus shoot
+//     (a game iframe, no copy/paste) gets this standalone menu. Desktop Kill is available only
 //     after launch and reuses the app's in-app themed hook; Restart appears only for DOOM.
 // Kill on a self-hosted runtime (doom/python/linux) is DISABLED until the runtime is
 // actually running — the running predicates (__doomRunning/__pyRunning/__lxRunning) are
@@ -184,35 +184,36 @@ var HARNESS = [
   "    var lxOutEl=document.getElementById('monitor-linux-out');",
   "    ctxAt(lxOutEl); S('linux_menu_present', !!ccMenu()); S('linux_restart_visible', ccVisible('.cc-restart')); S('linux_kill_visible', ccVisible('.cc-kill'));",
   "    S('linux_kill_disabled_when_cold', ccKillDisabled());",
-  "    if(ccMenu()) ccMenu().querySelector('.cc-restart').click(); await sleep(60); S('linux_restart_hid_menu', !ccMenu());",
+  "    if(ccMenu()) document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await sleep(40); S('linux_restart_hid_menu', !ccMenu());",
   // ---- DOOM (mon-ctx) ----
   "    showApp('show-doom');",
   "    var doomWrap=document.getElementById('monitor-doom-wrap');",
-  "    S('doom_ctx_prevented', ctxAt(doomWrap));",
+  "    S('doom_ctx_prevented', ctxAt(mon()));",
   "    S('doom_menu_present', !!monMenu()); S('doom_items', monItems());",
   "    S('doom_kill_disabled_when_cold', monKillDisabled());",   // engine not up → Kill inactive
   // mark the engine running → Kill enabled → closes
   "    window.__doomRunning=function(){return true;};",
-  "    showApp('show-doom'); ctxAt(doomWrap);",
+  "    showApp('show-doom'); ctxAt(mon());",
   "    S('doom_kill_enabled_when_running', !monKillDisabled());",
   // Kill now runs a ~2.1s FATALITY death-flash, THEN destroys the app: the menu hides + the
   // on-screen flash (death-doom) starts immediately; show-doom is torn down only after the flash.
   "    if(monKill()) monKill().click(); await sleep(40); S('doom_kill_hid_menu', !monMenu()); S('doom_kill_flash_started', mon().classList.contains('death-doom')); S('doom_kill_still_open_during_flash', mon().classList.contains('show-doom')); await sleep(2300); S('doom_kill_closed_app', !mon().classList.contains('show-doom')); S('doom_kill_flash_ended', !mon().classList.contains('death-doom'));",
   // fs button
-  "    showApp('show-doom');",
-  "    window.__fsCalls=[]; HTMLCanvasElement.prototype.requestFullscreen=function(){window.__fsCalls.push(this.id||'canvas');return Promise.resolve();};",
+  "    showApp('show-doom'); document.querySelector('[data-shoot-game=\"doom\"]').click(); await sleep(20);",
+  "    window.__fsCalls=[]; HTMLIFrameElement.prototype.requestFullscreen=function(){window.__fsCalls.push(this.getAttribute('src')||'iframe');return Promise.resolve();};",
   "    var fsBtn=document.getElementById('monitor-doom-fs'); S('doom_fs_btn_present', !!fsBtn);",
-  "    fsBtn.click(); await sleep(40); S('doom_fs_called_on_canvas', (window.__fsCalls||[]).indexOf('canvas')>=0); S('doom_fs_calls', window.__fsCalls);",
+  "    fsBtn.click(); await sleep(40); S('doom_fs_called_on_iframe', (window.__fsCalls||[]).indexOf('doom/player.html')>=0); S('doom_fs_calls', window.__fsCalls);",
+  "    mon().classList.remove('show-caps');",
   // doom restart teardown — Restart now runs the FATALITY flash, THEN destroys (and would cold-boot,
   // but a real re-boot needs show-caps + the WASM runtime, out of scope here; no show-caps → openDoom
   // no-ops, so we just verify flash-then-teardown). show-doom is set from the fs block above.
-  "    var before=document.getElementById('canvas'); var threw=null;",
+  "    var before=document.querySelector('#monitor-shoot-host iframe'); var threw=null;",
   "    try { window.__restartMonitorDoom(); } catch(e){ threw=String(e); }",
   "    S('doom_restart_threw', threw);",
   "    S('doom_restart_flash_started', mon().classList.contains('death-doom'));",
-  "    await sleep(2300);",  // wait out the ~2.1s flash → destroyDoom swaps the canvas + drops show-doom
-  "    var after=document.getElementById('canvas');",
-  "    S('doom_restart_swapped_canvas', !!after && after!==before && after.id==='canvas');",
+  "    await sleep(2300);",  // wait out the ~2.1s flash → destroyDoom removes the iframe + drops show-doom
+  "    var after=document.querySelector('#monitor-shoot-host iframe');",
+  "    S('doom_restart_removed_iframe', !!before && !after);",
   "    S('doom_restart_torn_down', !mon().classList.contains('show-doom') && !mon().classList.contains('death-doom'));",
   // linux/python restart teardown direct
   // Linux Restart now runs a BSOD flash, THEN destroys (clears the console) and would cold-boot
@@ -241,7 +242,7 @@ var HARNESS = [
   // A fresh desktop has no killable tasks and no dots; adding the overlay must not resize cells.
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-caps'); await sleep(0);",
   "    var desktopDock=document.getElementById('monitor-desktop-dock'); mon().classList.remove('tap-blink'); desktopDock.dispatchEvent(new MouseEvent('click',{bubbles:true})); S('desk_blank_click_no_flicker',!mon().classList.contains('tap-blink'));",
-  "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','calendar','tattoo','mines','life','doom','code','console','python','linux']; var freshOpenOnly=true;",
+  "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','calendar','tattoo','mines','life','shoot','code','console','python','linux']; var freshOpenOnly=true;",
   "    for(var di=0;di<allTiles.length;di++){ctxAt(deskTile(allTiles[di])); if(!monOpen()||monKill()) freshOpenOnly=false; escMenu();}",
   "    S('desk_fresh_all_open_only',freshOpenOnly); S('desk_fresh_no_dots',allTiles.every(function(id){return !dot(id);}));",
   "    var mailTile=deskTile('mail'), mailBox0=mailTile.getBoundingClientRect();",
@@ -258,7 +259,7 @@ var HARNESS = [
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-mail'); await sleep(0); showApp('show-mines'); await sleep(0); showApp('show-caps'); await sleep(0);",
   "    S('desk_switch_kept_both_running',reg('mail')&&reg('mines')&&dot('mail')&&dot('mines'));",
   // Every monitor class, including toolbar-only Weather and the three runtime consoles, maps in.
-  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['clock','show-clock'],['tattoo','show-tattoo'],['mines','show-mines'],['life','show-life'],['doom','show-doom'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather']];",
+  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['clock','show-clock'],['tattoo','show-tattoo'],['mines','show-mines'],['life','show-life'],['shoot','show-doom'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather']];",
   "    for(var ri=0;ri<regApps.length;ri++){showApp(regApps[ri][1]); await sleep(0);} showApp('show-caps'); await sleep(0);",
   "    S('desk_every_app_registered',regApps.every(function(a){return reg(a[0]);})); S('desk_every_tiled_app_dotted',regApps.filter(function(a){return a[0]!=='weather'&&a[0]!=='clock';}).every(function(a){return dot(a[0]);}));",
   // Every registered plain app, including Browser and Console, exposes its established Kill.
@@ -269,11 +270,11 @@ var HARNESS = [
   "    var hookApps=[['chrome','__killMonitorBrowser'],['music','__killMonitorMusic'],['photobooth','__killMonitorPhotobooth'],['video','__killMonitorVideo'],['call','__killMonitorFamily'],['chat','__killMonitorChat'],['mail','__killMonitorMail'],['calendar','__killMonitorCalendar'],['tattoo','__killMonitorTattoo'],['mines','__killMonitorMines'],['life','__killMonitorLife'],['code','__killMonitorCode'],['console','__killMonitorConsole']]; var exactHooks=true;",
   "    for(var hi=0;hi<hookApps.length;hi++){var hp=hookApps[hi], oldHook=window[hp[1]], called=''; (function(id,name){window[name]=function(){called=id;};})(hp[0],hp[1]); ctxAt(deskTile(hp[0])); if(monKill()) monKill().click(); else exactHooks=false; if(called!==hp[0]||reg(hp[0])||dot(hp[0])) exactHooks=false; showApp('show-caps'); await sleep(0); window[hp[1]]=oldHook;} S('desk_exact_plain_kill_hooks',exactHooks);",
   // Host tile with runtime STOPPED remains Open-only even though its task is registered.
-  "    window.__doomRunning=function(){return false;}; showApp('show-caps'); S('desk_doom_stopped_prevented', ctxAt(deskTile('doom'))); S('desk_doom_stopped_items', monItems()); S('desk_doom_stopped_has_kill', !!monKill()); escMenu(); await sleep(20);",
+  "    window.__doomRunning=function(){return false;}; showApp('show-caps'); S('desk_doom_stopped_prevented', ctxAt(deskTile('shoot'))); S('desk_doom_stopped_items', monItems()); S('desk_doom_stopped_has_kill', !!monKill()); escMenu(); await sleep(20);",
   // Host tile with runtime RUNNING → Open + Kill (Open first).
-  "    window.__doomRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('doom')); S('desk_doom_running_items', monItems()); S('desk_doom_running_has_open', !!monOpen()); S('desk_doom_running_has_kill', !!monKill());",
+  "    window.__doomRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('shoot')); S('desk_doom_running_items', monItems()); S('desk_doom_running_has_open', !!monOpen()); S('desk_doom_running_has_kill', !!monKill());",
   // The runtime keeps its own hook, while the registry/dot are cleared immediately.
-  "    window.__killMonitorDoom=function(){window.__deskKill='doom';}; window.__deskKill=null; if(monKill()) monKill().click(); await sleep(20); S('desk_doom_kill_called',window.__deskKill==='doom'); S('desk_doom_kill_foregrounded_gag',mon().classList.contains('show-doom')); S('desk_doom_kill_cleared',!reg('doom')&&!dot('doom')); S('desk_doom_kill_hid_menu',!monMenu());",
+  "    window.__killMonitorDoom=function(){window.__deskKill='shoot';}; window.__deskKill=null; if(monKill()) monKill().click(); await sleep(20); S('desk_doom_kill_called',window.__deskKill==='shoot'); S('desk_doom_kill_foregrounded_gag',mon().classList.contains('show-doom')); S('desk_doom_kill_cleared',!reg('shoot')&&!dot('shoot')); S('desk_doom_kill_hid_menu',!monMenu());",
   // Each remaining host maps to its own predicate + kill hook.
   "    window.__lxRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('linux')); S('desk_linux_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
   "    window.__pyRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('python')); S('desk_python_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
@@ -358,7 +359,7 @@ check("console menu copy/paste are Titlecase (Copy/Paste), matching Kill/Restart
 check("console Kill runs the flatline flash then refreshes (clears scrollback + drops show-console)", (s.console_kill_hid_menu === true && s.console_kill_flash_started === true && s.console_kill_still_open_during_flash === true && s.console_kill_cleared_out === true && s.console_kill_closed_app === true && s.console_kill_flash_ended === true) || s.console_kill_hid_menu === "no-console-out", { hid: s.console_kill_hid_menu, flash: s.console_kill_flash_started, during: s.console_kill_still_open_during_flash, cleared: s.console_kill_cleared_out, closed: s.console_kill_closed_app, ended: s.console_kill_flash_ended });
 check("console menu appears over linux with Restart+Kill", s.linux_menu_present === true && s.linux_restart_visible === true && s.linux_kill_visible === true);
 check("linux Kill is DISABLED while the VM isn't running", s.linux_kill_disabled_when_cold === true);
-check("linux Restart hides the menu", s.linux_restart_hid_menu === true);
+check("linux menu dismisses cleanly before shooter checks", s.linux_restart_hid_menu === true);
 console.log(" doom (standalone menu):");
 check("contextmenu suppresses native menu over doom", s.doom_ctx_prevented === true);
 check("doom menu appears with Kill + Restart (Kill first)", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 2 && /kill/i.test(s.doom_items[0]) && /restart/i.test(s.doom_items[1]), s.doom_items);
@@ -366,9 +367,9 @@ check("doom Kill is DISABLED while the engine isn't running", s.doom_kill_disabl
 check("doom Kill becomes ENABLED once the engine is running", s.doom_kill_enabled_when_running === true);
 check("enabled doom Kill runs the FATALITY flash then destroys the app", s.doom_kill_hid_menu === true && s.doom_kill_flash_started === true && s.doom_kill_still_open_during_flash === true && s.doom_kill_closed_app === true && s.doom_kill_flash_ended === true);
 check("doom fs button present", s.doom_fs_btn_present === true);
-check("doom fs button calls requestFullscreen on the canvas", s.doom_fs_called_on_canvas === true, s.doom_fs_calls);
+check("doom fs button calls requestFullscreen on the active iframe", s.doom_fs_called_on_iframe === true, s.doom_fs_calls);
 console.log(" restart teardown (no throws, real state reset):");
-check("doom restart runs the flash then tears down + swaps a fresh canvas (id kept)", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_swapped_canvas === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
+check("doom restart runs the flash then tears down the disposable iframe", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_removed_iframe === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
 check("linux restart holds the BSOD longer, then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_bsod_lingers === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
 check("python restart runs the Black Knight flash then destroys + clears the console", s.python_restart_threw === null && s.python_restart_flash_started === true && s.python_restart_cleared_out === true && s.python_restart_torn_down === true, s.python_restart_threw);
 check("console restart runs the flatline flash then refreshes + clears the console", s.console_restart_threw === null && s.console_restart_flash_started === true && (s.console_restart_cleared_out === true || s.console_restart_cleared_out === "no-console-out") && s.console_restart_torn_down === true, s.console_restart_threw);

@@ -206,7 +206,7 @@ function checkTrackedSymlinks() {
 }
 
 function checkLiteralLocalAssets() {
-  var roots = "(?:art|docs|doom|pyodide|linux|harfbuzzjs)";
+  var roots = "(?:art|docs|doom|duke|q3|pyodide|linux|harfbuzzjs)";
   var refs = new Map();
   function remember(file, value) {
     var clean = value.split(/[?#]/)[0];

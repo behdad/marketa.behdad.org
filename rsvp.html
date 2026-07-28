@@ -4576,27 +4576,34 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .linux-wrap .console-ps{color:#f5c211; white-space:pre}
 .linux-wrap .console-caret{background:#f5c211}
 .linux-wrap .console-dim{color:#a2988a}
-/* doom app: a real GPL Chocolate-Doom (WebAssembly) running FreeDM (FreeDoom's deathmatch IWAD), rendered
-   into an HTML <canvas> in the foreignObject. Same lazy-load + close-pill shape as linux;
-   the run loop pauses off-screen/hidden and audio is muted (engine started with -nosound). */
+/* Shoot launcher: one monitor app owns three real, self-hosted browser shooters. Each game
+   lives in a disposable same-origin iframe so Back/Kill tears its engine and listeners down. */
 #monitor-doom{opacity:0; pointer-events:none; transition:opacity .25s ease}
 #office-monitor.show-doom #monitor-doom{opacity:1; pointer-events:auto}
 #monitor-doom-close{cursor:pointer}
-#monitor-doom-close:hover .seg-hover{opacity:.55}
-.doom-wrap{width:100%; height:100%; overflow:hidden; background:#000; display:grid; grid-template-rows:100%; place-items:center} /* grid+place-items (was flex+position:relative): the loading/error message stacks on the canvas via grid-area, no RenderLayer (WebKit bug 23113). The <canvas> raster stays blank on WebKit — a composited replaced element it can't paint under the g-scale. */
-/* The framebuffer is pinned to a fixed 4:3 (640×480 via doom/extra.cfg), so it never tracks the on-screen
-   canvas size — that was the super-blocky bug. The monitor screen is ultra-wide (124×42 ≈ 2.95:1), so letterbox
-   the 4:3 render centered with black bars L/R (the wrap's black fills them). !important beats any inline size
-   the SDL glue leaves on the element; pixelated keeps the upscale crisp-retro rather than blurry. The selector
-   targets the canvas by id "canvas" (mandatory for the SDL glue) — a stale #monitor-doom-canvas rule matched nothing. */
-#monitor-doom-wrap canvas{grid-area:1/1; width:auto !important; height:100% !important; max-width:100% !important; display:block; background:#000; image-rendering:pixelated}
+#monitor-doom-close .shoot-close-bg{fill:#805438;stroke:#5e3827}
+#monitor-doom-close:hover .seg-hover{opacity:.55;fill:#4b2d20}
+.doom-wrap{width:100%; height:100%; overflow:hidden; background:#000; display:grid; grid-template-rows:100%; place-items:center} /* grid avoids layered position:absolute descendants under the scaled foreignObject (WebKit bug 23113). Replaced canvases/iframes still cannot composite there on WebKit. */
+#monitor-shoot-picker{grid-area:1/1; align-self:stretch; justify-self:stretch; display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:5px 6px; box-sizing:border-box; background:radial-gradient(circle at 50% 35%,#30251b,#100d0a 72%)}
+.shoot-choice{min-width:0; border:.5px solid rgba(232,192,96,.55); border-radius:2px; background:rgba(68,43,29,.72); color:#f5e3a5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:1px; font:2.3px/1.05 "Source Serif 4",Georgia,serif; cursor:pointer}
+.shoot-choice:hover,.shoot-choice:focus-visible{background:#805438; outline:none}
+.shoot-logo{display:block; width:10px; height:10px}
+#monitor-shoot-host{grid-area:1/1; align-self:stretch; justify-self:stretch; display:none; overflow:hidden; background:#000}
+#monitor-shoot-host iframe{display:block; width:100%; height:100%; border:0; background:#000}
+#monitor-shoot-coach{opacity:0; pointer-events:none; transition:opacity .18s ease}
+#monitor-shoot-coach.on{opacity:1}
+#monitor-doom-wrap[data-shoot-view="doom"] #monitor-shoot-picker,
+#monitor-doom-wrap[data-shoot-view="duke"] #monitor-shoot-picker,
+#monitor-doom-wrap[data-shoot-view="q3"] #monitor-shoot-picker{display:none}
+#monitor-doom-wrap[data-shoot-view="doom"] #monitor-shoot-host,
+#monitor-doom-wrap[data-shoot-view="duke"] #monitor-shoot-host,
+#monitor-doom-wrap[data-shoot-view="q3"] #monitor-shoot-host{display:block}
 .doom-msg{grid-area:1/1; align-self:center; justify-self:stretch; margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
 .doom-msg.err{color:#e0736a}
 .doom-msg:empty{display:none}
-/* DOOM's own fullscreen button — a small ⛶ in the top-right corner of the app view,
-   over the canvas (mirrors the video app's ⛶). Toggles real fullscreen on #canvas. The
-   'f' key stays on the whole-loft toggle; this button is DOOM's explicit fullscreen. */
-.doom-fs{grid-area:1/1; place-self:start end; margin:1px; width:4px; height:4px; padding:0.6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:rgba(20,18,14,.5); border-radius:0.8px; cursor:pointer; opacity:.55; transition:opacity .15s ease} /* grid-placed top-right (was position:absolute+z-index — a layer that misplaced under the g-scale on WebKit and lost its anchor once .doom-wrap stopped being position:relative) */
+/* Shoot's fullscreen button targets the active disposable game iframe. */
+.doom-fs{grid-area:1/1; place-self:start end; margin:1px; width:4px; height:4px; padding:0.6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; background:rgba(20,18,14,.5); border-radius:0.8px; cursor:pointer; opacity:.55; transition:opacity .15s ease}
+#monitor-doom-wrap[data-shoot-view="chooser"] .doom-fs{display:none}
 .doom-fs:hover{opacity:1}
 .doom-fs svg{width:100%; height:100%; display:block}
 /* monitor-app context menu — a small flat right-click menu over a runtime app's screen
@@ -22225,24 +22232,34 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- DOOM app: a real GPL Chocolate-Doom compiled to WebAssembly (cloudflare/doom-wasm),
-     running FreeDM (FreeDoom's deathmatch IWAD), rendered into an HTML <canvas>. Lazy-loaded on first open,
-     same mini close pill as the console apps. The canvas id MUST be "canvas": the SDL2
-     glue hardcodes getElementById("canvas") for its event targets. -->
+<!-- Shoot launcher: Doom, Duke shareware, and Quake III/OpenArena. All three are real,
+     self-hosted WebAssembly games in disposable same-origin iframes. -->
 <g id="monitor-doom">
 <foreignObject x="254" y="154" width="124" height="42">
-<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-doom-wrap" class="doom-wrap">
-<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-doom-wrap" class="doom-wrap" data-shoot-view="chooser">
+<div id="monitor-shoot-picker">
+<button type="button" class="shoot-choice shoot-choice-doom" data-shoot-game="doom" data-aria-i="shoot_doom">
+<svg class="shoot-logo" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5 1.2 1.8 5.1 3.5 6 2.2h4l.9 1.3 3.9-1.7L13 5v6l-2.5 3h-5L3 11Z" fill="#805438" stroke="#e8a345" stroke-width=".8" stroke-linejoin="round"/><path d="M4.2 7.1 7 6.4l-1 2.1-1.8-.2Zm7.6 0L9 6.4l1 2.1 1.8-.2Z" fill="#ffd052"/><path d="m6 11 2-1 2 1-2 1.7Z" fill="#21130e"/></svg>
+<span data-i="shoot_doom">Doom</span></button>
+<button type="button" class="shoot-choice shoot-choice-duke" data-shoot-game="duke" data-aria-i="shoot_duke">
+<svg class="shoot-logo" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4.5V2l1.5-1h6L13 2v2.5" fill="#f2d43e"/><path d="M3.2 4.2h9.6v7.1L10.5 15h-5L3.2 11.3Z" fill="#d99a65" stroke="#7b401f" stroke-width=".7"/><path d="M2 5.2h5.5v3H4L2 6.7Zm12 0H8.5v3H12l2-1.5Z" fill="#17130f" stroke="#f2d43e" stroke-width=".55"/><path d="M7.5 6.3h1M6 11.2h4" fill="none" stroke="#7b401f" stroke-width=".7" stroke-linecap="round"/></svg>
+<span data-i="shoot_duke">Duke</span></button>
+<button type="button" class="shoot-choice shoot-choice-q3" data-shoot-game="q3" data-aria-i="shoot_q3">
+<svg class="shoot-logo" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="8" rx="6.3" ry="4.2" fill="none" stroke="#b8a487" stroke-width="1.2" transform="rotate(-24 8 8)"/><path d="m5 13 2.5-6.8 4.8-3-1.7 5.4Z" fill="#b33b2e" stroke="#efc25d" stroke-width=".65" stroke-linejoin="round"/><circle cx="9.7" cy="5.4" r=".8" fill="#f8e6a8"/><path d="m5.5 10.9-2.7 2.3 3.5-.8" fill="#ef7d32"/></svg>
+<span data-i="shoot_q3">Quake III</span></button>
+</div>
+<div id="monitor-shoot-host"></div>
 <p id="monitor-doom-msg" class="doom-msg"></p>
 <span id="monitor-doom-fs" class="doom-fs" data-title-i="doom_fs" data-aria-i="doom_fs" role="button" tabindex="-1"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke="#f8f5ec" stroke-width="1" stroke-linecap="round"/></svg></span>
 </div>
 </foreignObject>
-<g id="monitor-doom-close" transform="translate(76.0,29.3) scale(0.8)">
+<g id="monitor-doom-close" transform="translate(76.0,29.3) scale(0.8)" role="button" data-title-i="shoot_close" data-aria-i="shoot_close">
+<title id="monitor-doom-close-title" data-i="shoot_close">Close shoot</title>
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
-<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7e2323" stroke="#621b1b" stroke-width="0.5"/>
+<rect class="shoot-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4c1515" opacity="0"/>
-<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
+<path id="monitor-doom-close-mark" d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round" fill="none"/>
 </g>
 </g>
 <!-- runtime death-flash overlays (see __runMonitorDeathFlash): shown briefly over the screen when a
@@ -22751,6 +22768,10 @@ section{margin:1.9rem 0}
 <text id="monitor-pb-error-ok-text" x="316" y="184.3" text-anchor="middle" style="fill:#d8d3c8; font-size:4.6px; font-family:sans-serif"></text>
 </g>
 </g>
+</g>
+<g id="monitor-shoot-coach" pointer-events="none">
+<rect x="301.5" y="196.25" width="29" height="3.1" rx="1.55" fill="#0a0908" fill-opacity="0.78"/>
+<text x="316" y="198.35" text-anchor="middle" fill="#f8f5ec" font-family="Source Serif 4, Georgia, serif" font-size="1.75" data-i="shoot_mouse_coach">Esc releases mouse</text>
 </g>
 <!-- webcam launch target: a generous transparent hit area over the top bezel around the lens,
      kept entirely ABOVE the screen (y154) so it never steals the monitor's boot-gag clicks.
@@ -28114,7 +28135,14 @@ var T = {
     linux_wait: "still booting… the prompt appears once the kernel is up.",
     linux_hint: "try: hb-shape /root/test.ttf 'markéta ∞ behdad' · hb-info /root/test.ttf — the groom's text-shaping engine, shaping (and x-raying) the wedding's own Fraunces.",
     linux_fail: "linux couldn't boot — offline, or the download stalled. close and reopen to retry.",
-    app_doom: "doom",
+    app_shoot: "shoot",
+    app_doom: "Doom",
+    shoot_doom: "Doom",
+    shoot_duke: "Duke",
+    shoot_q3: "Quake III",
+    shoot_close: "Close shoot",
+    shoot_picker: "Back to shooters",
+    shoot_mouse_coach: "Esc releases mouse",
     doom_loading: "Loading DOOM… ~22 MB (first launch only)",
     doom_fail: "DOOM couldn't load — you may be offline, or the download stalled. Close and reopen to try again.",
     doom_fs: "Fullscreen",
@@ -29226,7 +29254,14 @@ var T = {
     linux_wait: "pořád bootujeme… prompt se ukáže, až jádro naběhne.",
     linux_hint: "zkuste: hb-shape /root/test.ttf 'markéta ∞ behdad' · hb-info /root/test.ttf — ženichova sázecí knihovna sází (a prosvěcuje) svatební písmo Fraunces.",
     linux_fail: "linux nenabootoval — offline, nebo se stahování zaseklo. zavřete a otevřete znovu.",
-    app_doom: "doom",
+    app_shoot: "shoot",
+    app_doom: "Doom",
+    shoot_doom: "Doom",
+    shoot_duke: "Duke",
+    shoot_q3: "Quake III",
+    shoot_close: "Zavřít shoot",
+    shoot_picker: "Zpět na střílečky",
+    shoot_mouse_coach: "Esc uvolní myš",
     doom_loading: "Načítáme DOOM… ~22 MB (jen při prvním spuštění)",
     doom_fail: "DOOM se nenačetl — možná jste offline nebo se stahování zaseklo. Zavřete ho a otevřete znovu.",
     doom_fs: "Celá obrazovka",
@@ -29338,7 +29373,9 @@ var LOFT_CREDITS = Object.freeze({
     "Pyodide · CPython",
     "v86 · Linux · BusyBox",
     "HarfBuzz · FontTools",
-    "Chocolate Doom · FreeDoom"
+    "Chocolate Doom (GPL-2.0) · FreeDM (BSD-3-Clause)",
+    "emduke32 (GPL-2.0) · Duke shareware (3D Realms)",
+    "ioquake3 · OpenArena (GPL-2.0)"
   ]),
   closing: "made with love by behdad, Claude & Codex",
   date: "July 2026"
@@ -29352,7 +29389,9 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
   var testersStartY = testersHeadingY + 4;
   var testerRows = Math.ceil(testerCount / 2);
   var softwareHeadingY = testersStartY + testerRows * 4.5 + 2.5;
-  var dateY = softwareHeadingY + 28;
+  var noticeY = softwareHeadingY + 5 + LOFT_CREDITS.software.length * 3;
+  var closingY = noticeY + 7;
+  var dateY = closingY + 4;
   var travel = -(dateY - 152); // finish with even the final line fully above the y=155 clipped screen
   return {
     peopleY: peopleY,
@@ -29360,8 +29399,8 @@ function loftCreditsLayout(testerCount, otherPeopleCount) {
     testersStartY: testersStartY,
     testerRows: testerRows,
     softwareHeadingY: softwareHeadingY,
-    noticeY: softwareHeadingY + 17,
-    closingY: softwareHeadingY + 24,
+    noticeY: noticeY,
+    closingY: closingY,
     dateY: dateY,
     travel: travel,
     duration: Math.max(22, Math.abs(travel) * 22 / 126)
@@ -30783,47 +30822,6 @@ document.addEventListener("keydown", function (e) {
   e.preventDefault();
   sw.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 });
-// While a monitor console is open (python / console / linux), keep the office+monitor in
-// view and the console input focused, and stop stray keys from firing game shortcuts. The
-// term inputs are tabindex="-1" in a scaled SVG foreignObject and lose focus easily, so a
-// leaked keydown (e.g. 'p') would otherwise trigger the party and strand the typist.
-(function () {
-  function consoleOpen() {
-    var m = document.getElementById("office-monitor");
-    return !!(m && (m.classList.contains("show-python") || m.classList.contains("show-console") || m.classList.contains("show-linux")));
-  }
-  function textConsoleInput() { // the python/console <input> the user types into (linux uses the v86 canvas)
-    var m = document.getElementById("office-monitor");
-    if (!m) return null;
-    if (m.classList.contains("show-python")) return document.getElementById("monitor-py-in");
-    if (m.classList.contains("show-console")) return document.getElementById("monitor-console-in");
-    return null;
-  }
-  // While zoomed into a device (monitor/laptop), keyboard shortcuts stay live — 'f' (fullscreen),
-  // 'p' (play/pause), arrows, etc. all still fire. Console prompts capture their own typing (each
-  // REPL input stopPropagations its own keydowns), so typing into a console never leaks to a
-  // shortcut. This capture-phase listener is kept as the hook point if a specific key ever needs
-  // intercepting here (e.g. an app that wants a key the game also binds).
-  document.addEventListener("keydown", function (e) {
-    var vp = document.querySelector(".hunt-viewport");
-    if (!vp || !vp.classList.contains("device-zoomed")) return; // nothing engaged → normal game keys
-    // DOOM is the one app that still needs the guard: its engine (SDL) listens on window in the
-    // BUBBLE phase (last of all), so we must NOT stopPropagation or the game would never see the
-    // key. Instead preventDefault — every game shortcut bails on e.defaultPrevented — which blocks
-    // the party/room-nav/song/season keys AND arrow/space page-scroll while the key still reaches
-    // DOOM. Escape falls through to close the app; ctrl/meta/alt stay real browser shortcuts. (The
-    // Shift+Digit trip hotkey, which has no defaultPrevented check, is guarded at its own listener.)
-    var dmon = document.getElementById("office-monitor");
-    if (dmon && dmon.classList.contains("show-doom")) {
-      if (e.key === "Escape" || e.key === "Esc") return; // Esc closes the app (window-capture closer)
-      if (e.ctrlKey || e.metaKey || e.altKey) return; // leave Ctrl+R / F-keys etc. as real browser shortcuts
-      e.preventDefault();
-      return;
-    }
-    // Otherwise (monitor console / laptop open) keyboard shortcuts stay live — see the comment
-    // above the listener; only DOOM needs to grab keys.
-  }, true); // capture — runs before the game-shortcut (room-nav / party) handlers
-})();
 (function () {
   // Right-click Copy/Paste menu for the office-monitor console/python consoles: copy the current
   // selection, or paste clipboard text into the console input at the caret. Lives in the fullscreen
@@ -46124,7 +46122,7 @@ setOfficeProgress("pc", false);
     { id: "chat", icon: "chat", labelKey: "app_chat", glyph: "✦", tile: "#4a72b8", glyphSize: "5.2", open: function () { openChat(); } },
     { id: "mail", icon: "mail", labelKey: "app_mail", glyph: "✉️", tile: "#7b5aa6", glyphSize: "5.2", open: function () { openMailApp(); } },
     { id: "calendar", labelKey: "app_calendar", glyph: "📅", tile: "#c68e95", glyphSize: "5.2", open: function () { openCalendar(); } },
-    // games row: the tattoo studio, minesweeper, Game of Life, DOOM sit together
+    // games row: the tattoo studio, minesweeper, Game of Life, and Shoot launcher sit together
     { id: "tattoo", icon: "tattoo", labelKey: "app_tattoo", glyph: "🖊️", tile: "#c68e95", glyphSize: "5.2", open: function () { openTattooApp(); } },
     { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", open: function () { openMinesApp(); } },
     { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true,
@@ -46136,7 +46134,11 @@ setOfficeProgress("pc", false);
     { id: "credits", labelKey: "mon_sys_credits", glyph: "✦", tile: "#17131d", color: "#d9a6a6", glyphSize: "5.2", searchOnly: true,
       open: function () { openMonitorCredits(); } },
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", open: function () { openLifeApp(); } },
-    { id: "doom", labelKey: "app_doom", glyph: "🎮", tile: "#7e2323", color: "#e8c060", glyphSize: "5.2", open: function () { openDoom(); } },
+    { id: "shoot", labelKey: "app_shoot", glyph: "🎮", tile: "#805438", color: "#e8c060", glyphSize: "5.2", open: function () { openShoot(); } },
+    { id: "doom", labelKey: "shoot_doom", glyph: "D", tile: "#805438", color: "#e8c060", glyphSize: "4.2", searchOnly: true, open: function () { openDoom(); } },
+    { id: "duke", labelKey: "shoot_duke", glyph: "⌐■-■", tile: "#9b7424", color: "#f5d44b", glyphSize: "3.2", searchOnly: true, open: function () { openShoot("duke"); } },
+    { id: "quake3", labelKey: "shoot_q3", glyph: "Q³", tile: "#292624", color: "#e4d3aa", glyphSize: "4.2", searchOnly: true, open: function () { openShoot("q3"); } },
+    { id: "quake", labelKey: "shoot_q3", glyph: "Q³", tile: "#292624", color: "#e4d3aa", glyphSize: "4.2", searchOnly: true, open: function () { openShoot("q3"); } },
     { id: "code", labelKey: "app_code", glyph: "</>", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "3.5", open: function () { openCode(); } },
     { id: "console", icon: "console", labelKey: "app_console", glyph: "❯_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openConsole(); } },
     { id: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
@@ -46170,7 +46172,7 @@ setOfficeProgress("pc", false);
     chrome: "show-browser", music: "show-nowplaying", photobooth: "photobooth",
     video: "show-video", call: "show-family", chat: "show-chat", mail: "show-mail",
     calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", mines: "show-mines", pacman: "show-pacman",
-    life: "show-life", doom: "show-doom", code: "show-code", console: "show-console",
+    life: "show-life", shoot: "show-doom", code: "show-code", console: "show-console",
     python: "show-python", linux: "show-linux", weather: "show-weather",
     system: "show-system", about: "show-about", credits: "show-credits"
   };
@@ -46179,7 +46181,7 @@ setOfficeProgress("pc", false);
     photobooth: "__killMonitorPhotobooth", video: "__killMonitorVideo",
     call: "__killMonitorFamily", chat: "__killMonitorChat", mail: "__killMonitorMail",
     calendar: "__killMonitorCalendar", clock: "__killMonitorClock", tattoo: "__killMonitorTattoo",
-    mines: "__killMonitorMines", pacman: "__killMonitorPacman", life: "__killMonitorLife", doom: "__killMonitorDoom",
+    mines: "__killMonitorMines", pacman: "__killMonitorPacman", life: "__killMonitorLife", shoot: "__killMonitorDoom",
     code: "__killMonitorCode", console: "__killMonitorConsole",
     python: "__killMonitorPython", linux: "__killMonitorLinux",
     weather: "__killMonitorWeather", system: "__killMonitorSystem",
@@ -46187,7 +46189,7 @@ setOfficeProgress("pc", false);
   };
   var monitorRunningApps = Object.create(null);
   var monitorKillingApps = Object.create(null);
-  function monitorRegistryId(id) { return id === "family" ? "call" : id; }
+  function monitorRegistryId(id) { return id === "family" ? "call" : id === "doom" ? "shoot" : id; }
   function paintMonitorRunning(id) {
     var cell = dockCells[id];
     if (cell) cell.classList.toggle("is-running", !!monitorRunningApps[id]);
@@ -47824,7 +47826,7 @@ setOfficeProgress("pc", false);
         ["show-chat", "chat"], ["show-weather", "weather"], ["show-calendar", "calendar"], ["show-clock", "clock"], ["show-mail", "mail"],
         ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
         ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-code", "code"],
-        ["show-mines", "mines"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "doom"], ["show-video", "video"],
+        ["show-mines", "mines"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "shoot"], ["show-video", "video"],
         ["show-browser", "browser"], ["show-system", "system"], ["show-about", "about"], ["show-credits", "credits"]
       ];
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
@@ -51667,7 +51669,8 @@ setOfficeProgress("pc", false);
     if (monitor.classList.contains("show-console")) { closeConsole(!!stepBack); return true; }
     if (monitor.classList.contains("show-python") && window.__closeMonitorPython) { window.__closeMonitorPython(!!stepBack); return true; }
     if (monitor.classList.contains("show-life") && stepBack && window.__closeMonitorLifeHelp && window.__closeMonitorLifeHelp()) return true;
-    var apps = [["show-video", closeVideoApp], ["show-mines", closeMinesApp], ["show-pacman", closePacmanApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-doom", closeDoom], ["show-browser", closeBrowser]];
+    if (monitor.classList.contains("show-doom")) { closeDoom(!!stepBack); return true; }
+    var apps = [["show-video", closeVideoApp], ["show-mines", closeMinesApp], ["show-pacman", closePacmanApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
     if (monitor.classList.contains("show-clock") && window.__closeMonitorClock) { window.__closeMonitorClock(); return true; }
@@ -51814,7 +51817,7 @@ setOfficeProgress("pc", false);
     // predicate. Opening one registers the task like every other app, but Kill only becomes
     // available once its actual engine is ready.
     var DESKTOP_HOSTS = {
-      doom: { running: "__doomRunning", kill: "__killMonitorDoom" },
+      shoot: { running: "__doomRunning", kill: "__killMonitorDoom" },
       linux: { running: "__lxRunning", kill: "__killMonitorLinux" },
       python: { running: "__pyRunning", kill: "__killMonitorPython" }
     };
@@ -55833,206 +55836,140 @@ async def localfont(name):
     lxCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeLinux(); playLaptopClickSound("office-monitor"); });
     lxCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  // ── DOOM app ─────────────────────────────────────────────────────────────────
-  // A real GPL Chocolate-Doom compiled to WebAssembly (cloudflare/doom-wasm, pinned build —
-  // provenance in doom/README.md), running FreeDM (FreeDoom's deathmatch IWAD), rendered straight into the
-  // foreignObject <canvas>. Lazy-loaded on first open and reused. Started with -nosound so
-  // the engine never opens an audio device (it can't fight the loft's beds; owner can add
-  // sound later by dropping the arg). The run loop pauses whenever the app isn't the live
-  // foreground: gated on show-doom && a visible tab && the office on-screen — mirrors the
-  // linux VM's stop/resume, but via Emscripten's pause/resumeMainLoop. Keys: DOOM's SDL
-  // listens on window in the bubble phase, so the device-zoomed capture guard up top lets
-  // them through (preventDefault, not stopPropagation) — see that handler.
-  var doomCanvas = document.getElementById("canvas"); // id is mandatory: the SDL glue hardcodes getElementById("canvas")
+  // ── shoot app ─────────────────────────────────────────────────────────────────
+  // Each genuine WebAssembly game owns its Emscripten globals, input listeners, main loop,
+  // and audio in one disposable same-origin iframe. Closing pauses a retained frame; Back,
+  // Kill, and Restart remove it, so no runtime listeners can leak into the loft document.
   var doomMsg = document.getElementById("monitor-doom-msg");
   var doomWrap = document.getElementById("monitor-doom-wrap");
   var doomCloseBtn = document.getElementById("monitor-doom-close");
-  var doomModule = null; // the Emscripten Module — built once, reused across open/close
-  var doomLoadState = ""; // "" → "loading" → "ready" | "failed"
-  var doomReady = false; // the runtime is up and callMain has started the main loop
-  var doomPaused = true; // the main loop is currently paused (kept in sync by doomSync)
-  var doomGlueSrc = null; // the glue's SOURCE TEXT, fetched once — each (re)boot runs it in a fresh function scope
-  var doomListeners = []; // window/document listeners SDL adds during callMain — captured so we can detach them
-  var doomListenersOn = false; // are the SDL input listeners currently attached to window/document?
-  // SDL's key/mouse listeners preventDefault the keys DOOM handles. Left attached while DOOM is
-  // merely BACKGROUNDED (app closed but engine alive), they swallow keystrokes meant for other apps
-  // — you couldn't type in the console. So attach them only while DOOM is the live foreground and
-  // detach otherwise (doomSync drives this alongside the engine pause/resume).
-  function setDoomListeners(on) {
-    if (on === doomListenersOn) return;
-    doomListeners.forEach(function (L) { try { on ? L.t.addEventListener(L.ty, L.fn, L.op) : L.t.removeEventListener(L.ty, L.fn, L.op); } catch (e) {} });
-    doomListenersOn = on;
-  }
-  var doomStallTimer = null; // load watchdog — cleared once the runtime is up
-  var DOOM_ASSETS = { // all self-hosted (pinned Chocolate-Doom wasm + FreeDoom — provenance in doom/README.md)
-    glue: "doom/doom.js",
-    wasm: "doom/doom.wasm",
-    wad: "doom/freedm.wad",
-    cfg: "doom/default.cfg",
-    extra: "doom/extra.cfg" // Chocolate-Doom's extended (video) config: pins a fixed render resolution so the framebuffer never tracks the on-screen canvas size
-  };
+  var shootHost = document.getElementById("monitor-shoot-host");
+  var shootCoach = document.getElementById("monitor-shoot-coach");
+  var shootCloseMark = document.getElementById("monitor-doom-close-mark");
+  var shootCloseTitle = document.getElementById("monitor-doom-close-title");
+  var shootView = "chooser";
+  var shootFrame = null;
+  var shootFrameGame = "";
+  var shootFrameState = "cold";
+  var shootEverOpened = false;
+  var shootFrozen = false;
   function doomT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function doomSetMsg(txt, isErr) { if (!doomMsg) return; doomMsg.textContent = txt || ""; doomMsg.className = "doom-msg" + (isErr ? " err" : ""); }
-  function doomShouldRun() {
-    return doomReady && monitor.classList.contains("show-doom") &&
-      document.visibilityState !== "hidden" && window.currentStageName === "office";
+  function showShootCoach() {
+    if (!shootCoach || shootView === "chooser") return;
+    shootCoach.classList.add("on");
   }
-  // single source of truth for "should the engine be ticking": resume when foreground,
-  // pause otherwise. Called from open/close, visibilitychange, and goToStage (room change).
-  function doomSync() {
-    if (!doomReady || !doomModule) return;
-    if (doomShouldRun()) {
-      if (doomPaused) { try { doomModule.resumeMainLoop(); } catch (e) {} doomPaused = false; }
-      setDoomListeners(true); // foreground → SDL input live
-    } else {
-      if (!doomPaused) { try { doomModule.pauseMainLoop(); } catch (e) {} doomPaused = true; }
-      setDoomListeners(false); // backgrounded → release the keyboard so other apps (console) can type
+  function shootShouldRun() {
+    return !shootFrozen && shootView !== "chooser" &&
+      monitor.classList.contains("show-doom") && document.visibilityState !== "hidden" &&
+      document.hasFocus() && window.currentStageName === "office";
+  }
+  function shootSync() {
+    if (!shootFrame || !shootFrame.contentWindow) return;
+    try {
+      shootFrame.contentWindow.postMessage({ kind: "shoot-control", active: shootShouldRun() }, location.origin);
+    } catch (e) {}
+  }
+  window.__syncMonitorDoom = shootSync;
+  function destroyShootFrame() {
+    if (shootCoach) shootCoach.classList.remove("on");
+    if (!shootFrame) { shootFrameGame = ""; shootFrameState = "cold"; return; }
+    try { shootFrame.contentWindow.postMessage({ kind: "shoot-control", active: false }, location.origin); } catch (e) {}
+    try { shootFrame.remove(); } catch (e) { if (shootFrame.parentNode) shootFrame.parentNode.removeChild(shootFrame); }
+    shootFrame = null; shootFrameGame = ""; shootFrameState = "cold";
+  }
+  function loadShootFrame(game) {
+    if (!shootHost) return;
+    if (shootFrame && shootFrameGame === game) { shootSync(); return; }
+    destroyShootFrame();
+    var frame = document.createElement("iframe");
+    frame.title = game === "doom" ? "Doom — FreeDM" : game === "duke" ? "Duke Nukem 3D shareware" : "Quake III — OpenArena";
+    frame.src = game === "doom" ? "doom/player.html" : game === "duke" ? "duke/player.html" : "q3/player.html";
+    frame.allow = "autoplay; fullscreen";
+    frame.setAttribute("allowfullscreen", "");
+    frame.addEventListener("load", function () {
+      shootSync();
+      if (shootFrame !== frame || shootView === "chooser" || !monitor.classList.contains("show-doom")) return;
+      try {
+        frame.contentWindow.focus();
+        var c = frame.contentDocument && frame.contentDocument.getElementById("canvas");
+        if (c) c.focus({ preventScroll: true });
+      } catch (e) {}
+    });
+    shootHost.appendChild(frame);
+    shootFrame = frame; shootFrameGame = game; shootFrameState = "loading";
+  }
+  function setShootView(view) {
+    shootView = view || "chooser";
+    if (doomWrap) doomWrap.setAttribute("data-shoot-view", shootView);
+    if (doomCloseBtn) doomCloseBtn.setAttribute("data-shoot-view", shootView);
+    var closeKey = shootView === "chooser" ? "shoot_close" : "shoot_picker";
+    if (doomCloseBtn) {
+      doomCloseBtn.setAttribute("data-title-i", closeKey);
+      doomCloseBtn.setAttribute("data-aria-i", closeKey);
+      doomCloseBtn.setAttribute("aria-label", doomT(closeKey));
     }
+    if (shootCloseTitle) {
+      shootCloseTitle.setAttribute("data-i", closeKey);
+      shootCloseTitle.textContent = doomT(closeKey);
+    }
+    if (shootCloseMark) shootCloseMark.setAttribute("d", shootView === "chooser"
+      ? "M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3"
+      : "M375.4 157.9 L373.5 159.25 L375.4 160.6");
+    doomSetMsg("", false);
+    if (shootView === "chooser") destroyShootFrame();
+    else { loadShootFrame(shootView); showShootCoach(); }
+    shootSync();
   }
-  window.__syncMonitorDoom = doomSync;
-  window.__doomShouldRun = doomShouldRun; // the global 'f' handler yields to DOOM's own (SDL canvas) fullscreen when DOOM is the live foreground
-  function doomFail() {
-    if (doomLoadState === "failed") return;
-    if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
-    doomLoadState = "failed";
-    doomSetMsg(doomT("doom_fail"), true);
-  }
-  // load watchdog: a hung fetch (bad route, intercepting proxy) must not sit on "loading…"
-  // forever — 60 s (the WAD is ~28 MB) with no runtime surfaces the retry line. A paused
-  // load (hidden tab / app closed mid-download) isn't a stall: re-arm.
-  function doomStallWatch() {
-    doomStallTimer = setTimeout(function () {
-      doomStallTimer = null;
-      if (doomLoadState === "ready" || doomLoadState === "failed") return;
-      if (document.hidden || !monitor.classList.contains("show-doom")) { doomStallWatch(); return; }
-      doomFail();
-    }, 60000);
-  }
-  function buildDoomModule() {
-    doomModule = {
-      // -nosound: no audio device (muted by design); -window/-nogui: no setup UI; freedm.wad is the IWAD
-      arguments: ["-iwad", "freedm.wad", "-window", "-nogui", "-nosound", "-nomusic", "-config", "default.cfg", "-extraconfig", "extra.cfg"],
-      noInitialRun: true,
-      locateFile: function (p) { return p === "websockets-doom.wasm" ? DOOM_ASSETS.wasm : p; }, // the glue asks for its build name; point it at doom/doom.wasm
-      preRun: [function () {
-        doomModule.FS.createPreloadedFile("", "freedm.wad", DOOM_ASSETS.wad, true, true);
-        doomModule.FS.createPreloadedFile("", "default.cfg", DOOM_ASSETS.cfg, true, true);
-        doomModule.FS.createPreloadedFile("", "extra.cfg", DOOM_ASSETS.extra, true, true);
-      }],
-      canvas: doomCanvas,
-      onRuntimeInitialized: function () {
-        if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
-        doomLoadState = "ready";
-        // SDL registers its keyboard/mouse listeners on window+document SYNCHRONOUSLY during main()
-        // (SDL_Init → video init, inside callMain). Capture exactly those by patching addEventListener
-        // just around callMain, so a Kill can removeEventListener them — otherwise the leaked keydown
-        // handler keeps calling preventDefault and swallows real browser shortcuts (Ctrl+R) after a kill.
-        doomListeners = [];
-        var tgs = [window, document], origAdd = tgs.map(function (t) { return t.addEventListener; });
-        tgs.forEach(function (t, i) { t.addEventListener = function (ty, fn, op) { doomListeners.push({ t: t, ty: ty, fn: fn, op: op }); return origAdd[i].call(t, ty, fn, op); }; });
-        try { (doomModule.callMain || window.callMain)(doomModule.arguments); } // callMain is a global in this build
-        catch (e) { tgs.forEach(function (t, i) { t.addEventListener = origAdd[i]; }); doomFail(); return; }
-        tgs.forEach(function (t, i) { t.addEventListener = origAdd[i]; }); // restore immediately — capture window closed
-        doomListenersOn = true; // SDL just attached them during callMain; doomSync will detach when backgrounded
-        doomReady = true;
-        doomPaused = false; // callMain started the loop running; doomSync pauses it if we're not foreground
-        doomSetMsg("");
-        doomSync();
-      },
-      onAbort: function () { doomFail(); },
-      print: function () {}, printErr: function () {}, setStatus: function () {}
-    };
-  }
-  // Boot (or REBOOT) DOOM by running the glue's source through a fresh function scope. This is
-  // what makes Kill/Restart actually recoverable: doom.js is a non-modularized Emscripten glue
-  // whose top-level `var`s (calledRun, ABORT, HEAP*, wasmMemory, runDependencies, …) live in the
-  // GLOBAL scope. Re-injecting the <script> reuses those stale globals, so the 2nd boot's run()
-  // early-returns on a leftover calledRun===true, never calls main, and the stall watchdog reports
-  // "offline" forever (bit Kill AND Restart). Running the text via `new Function("Module", src)`
-  // gives every boot its OWN scope — all that state is fresh. doom.js BYTES are untouched (pinned
-  // deliverable); we only wrap them, plus append one line lifting callMain out of the private scope
-  // (Module reads the param at glue line 1; args come from Module["arguments"]). NOTE: new Function
-  // is eval-family — safe only because rsvp.html ships no CSP (no script-src). Add 'unsafe-eval' if
-  // a CSP is ever introduced.
-  function bootDoom() {
-    buildDoomModule();
-    try { (new Function("Module", doomGlueSrc))(doomModule); }
-    catch (e) { doomFail(); }
-  }
-  function prepareDoomGlueSource(txt) {
-    // Emscripten's browser shell treats the host document as its own window and lets SDL's
-    // caption replace document.title. This runtime is an embedded app, so neutralize that
-    // one global write in memory; keep the pinned doom/doom.js deliverable byte-for-byte.
-    var titleWrite = "document.title = title;";
-    if (String(txt).split(titleWrite).length !== 2) return null; // fail closed if the pinned glue's shape unexpectedly changes
-    return String(txt).replace(titleWrite, "void title;");
-  }
-  function loadDoom() {
-    if (doomLoadState === "loading" || doomLoadState === "ready") return;
-    doomLoadState = "loading";
-    doomSetMsg(doomT("doom_loading"), false);
-    if (doomStallTimer) clearTimeout(doomStallTimer);
-    doomStallWatch();
-    if (doomReady) { doomSync(); return; }
-    if (doomGlueSrc) { bootDoom(); return; } // glue text already cached → reboot in a fresh scope
-    fetch(DOOM_ASSETS.glue).then(function (r) { return r.text(); }).then(function (txt) {
-      var prepared = prepareDoomGlueSource(txt);
-      if (!prepared) { doomFail(); return; }
-      doomGlueSrc = prepared + "\n;try{Module.callMain=callMain;}catch(e){}"; // expose callMain past the wrapper's scope
-      bootDoom();
-    }, function () { doomFail(); }); // a true fetch failure surfaces the offline/retry line
-  }
-  function openDoom() {
-    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-console") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
+  function openShoot(game) {
+    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-console") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux")) return;
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone playing
     monitor.classList.add("show-doom");
-    if (doomLoadState === "failed") { doomLoadState = ""; doomSetMsg("", false); } // reopening retries a failed fetch
-    loadDoom();
-    doomSync(); // resume the loop if the runtime is already up
+    shootEverOpened = true;
+    shootFrozen = false;
+    setShootView(game || "chooser");
     var ae = document.activeElement; if (ae && ae.blur && ae !== document.body) { try { ae.blur(); } catch (e) {} } // a focused console input would eat keys before SDL's window listener
     playLaptopClickSound("office-monitor");
   }
-  function closeDoom() {
+  function openDoom() {
+    openShoot("doom");
+  }
+  function closeDoom(stepBack) {
     if (!monitor.classList.contains("show-doom")) return;
+    if (stepBack && shootView !== "chooser") { setShootView("chooser"); return; }
     monitor.classList.remove("show-doom");
-    doomSync(); // pauses the loop — no engine spinning behind a closed app
+    shootSync();
     scheduleSaver();
   }
   window.__closeMonitorDoom = closeDoom; // other monitor apps / resets pause the engine before taking the screen
-  window.__doomRunning = function () { return doomReady; }; // engine up and looping — gates the context-menu Kill
-  // A true KILL (distinct from the ✕/close, which just pauses with RAM intact): tear the
-  // Emscripten runtime all the way down so the next open COLD-BOOTS a fresh DOOM. Same
-  // teardown as Restart, minus the re-init — null the global Module, drop the glue <script>
-  // (so it re-injects and re-runs on reopen), swap in a clean <canvas> for a fresh WebGL
-  // context, and forget the load state. Then back to the desktop.
+  window.__doomRunning = function () { return shootEverOpened; }; // the Shoot task exists even while its chooser is foreground
+  window.__shootState = function () {
+    return {
+      view: shootView,
+      open: monitor.classList.contains("show-doom"),
+      iframe: shootFrame ? { game: shootFrameGame, src: shootFrame.getAttribute("src"), state: shootFrameState } : null,
+      message: doomMsg ? doomMsg.textContent : ""
+    };
+  };
+  // A true Kill removes the active iframe. Its Emscripten heap, main loop, canvas,
+  // AudioContext, and input listeners disappear with that browsing context.
   function destroyDoom() {
-    if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} }
-    doomModule = null; doomReady = false; doomPaused = true; doomLoadState = "";
-    if (doomStallTimer) { clearTimeout(doomStallTimer); doomStallTimer = null; }
-    // pull SDL's leaked window/document key listeners so Ctrl+R (and other shortcuts) work again after the kill
-    doomListeners.forEach(function (L) { try { L.t.removeEventListener(L.ty, L.fn, L.op); } catch (e) {} });
-    doomListeners = []; doomListenersOn = false;
-    // keep doomGlueSrc cached — the next open reboots from it in a fresh scope (see bootDoom)
-    var oldCanvas = document.getElementById("canvas");
-    if (oldCanvas && oldCanvas.parentNode) {
-      var fresh = document.createElement("canvas");
-      fresh.id = "canvas"; fresh.tabIndex = -1;
-      fresh.setAttribute("oncontextmenu", "event.preventDefault()");
-      oldCanvas.parentNode.replaceChild(fresh, oldCanvas);
-      doomCanvas = fresh; // buildDoomModule reads this on the next cold boot
-    }
     doomSetMsg("", false);
+    destroyShootFrame();
+    shootView = "chooser"; shootFrozen = false; shootEverOpened = false;
+    if (doomWrap) doomWrap.setAttribute("data-shoot-view", "chooser");
     monitor.classList.remove("show-doom");
     scheduleSaver();
   }
-  // Kill AND Restart both run the FATALITY death-flash, then really destroy the runtime; Restart
-  // additionally cold-boots a fresh game afterwards (openDoom → loadDoom → bootDoom, now reliable).
+  // Kill AND Restart both run the FATALITY death-flash, then remove the runtime iframe; Restart
+  // additionally opens a fresh iframe for the same game.
   // The frozen game screen takes a red wash and "FATALITY" melts across it in the Climate Crisis
   // variable font (YEAR axis driven 1979→2050 — the word erodes away) while the caption bar drops a
   // dry one-liner. Freeze the engine first so it dies on a still frame.
   function doomDeathFlash(reopen) {
-    var finish = function () { destroyDoom(); if (reopen) openDoom(); };
+    var reopenView = shootView;
+    var finish = function () { destroyDoom(); if (reopen) openShoot(reopenView === "chooser" ? null : reopenView); };
     if (!monitor.classList.contains("show-doom") || !window.__runMonitorDeathFlash) { finish(); return; }
     var word = document.getElementById("monitor-fatality-word");
     if (word) word.style.fontVariationSettings = "'YEAR' 1979"; // clean start (a prior kill left it eroded at 2050)
@@ -56042,7 +55979,9 @@ async def localfont(name):
       dur: 2100,
       sound: function () { playFatalitySound("office-monitor"); },
       tick: function (t) { if (word) word.style.fontVariationSettings = "'YEAR' " + Math.round(1979 + (2050 - 1979) * t); },
-      freeze: function () { if (doomModule) { try { doomModule.pauseMainLoop(); } catch (e) {} doomPaused = true; } },
+      freeze: function () {
+        shootFrozen = true; shootSync();
+      },
       close: finish
     });
   }
@@ -56053,8 +55992,8 @@ async def localfont(name):
   // resolved at click time (Restart replaces the canvas node), requested fresh so it
   // transitions even from an already-fullscreen loft. Mirrors __videoFsToggle.
   window.__doomFsToggle = function () {
-    var c = document.getElementById("canvas");
-    if (!c) return;
+    var c = shootFrame;
+    if (!c || shootView === "chooser") return;
     try {
       if ((document.fullscreenElement || document.webkitFullscreenElement) === c) {
         if (document.exitFullscreen) document.exitFullscreen();
@@ -56070,29 +56009,38 @@ async def localfont(name):
   });
   // hidden tab: pause the engine (and re-evaluate on return) — a WebGL run loop behind a
   // background tab would burn frames for nothing
-  document.addEventListener("visibilitychange", function () { doomSync(); });
-  // Keyboard-capture guard. SDL/Emscripten installs a window-level (bubble-phase) keydown/keyup
-  // listener at DOOM init that preventDefault()s game keys — and it's never removed (the Module is
-  // built once and reused; pausing the loop doesn't detach DOM listeners), so once DOOM has been
-  // opened it keeps eating keys, breaking Ctrl+R and other browser shortcuts even after close. This
-  // guard is registered at load (before DOOM inits) so it runs first in the window-bubble phase, and
-  // stopImmediatePropagation() then keeps the event from ever reaching SDL. It fires at window level,
-  // AFTER every document-level rsvp shortcut handler has already run, so it never swallows our own keys.
-  // Blocked cases: (1) any Ctrl/Meta/Alt chord — browser shortcuts like Ctrl+R must always win, even
-  // mid-game; (2) DOOM not the live foreground app (closed, tab hidden, or away from the office).
-  function doomKeyGuard(e) {
-    if (!doomReady) return; // SDL hasn't attached its listener yet — nothing to guard
-    if (e.ctrlKey || e.metaKey || e.altKey) { e.stopImmediatePropagation(); return; }
-    if (!doomShouldRun()) e.stopImmediatePropagation();
-  }
-  window.addEventListener("keydown", doomKeyGuard, false);
-  window.addEventListener("keyup", doomKeyGuard, false);
+  document.addEventListener("visibilitychange", shootSync);
+  window.addEventListener("focus", shootSync);
+  window.addEventListener("blur", shootSync);
+  window.addEventListener("message", function (event) {
+    if (!shootFrame || event.source !== shootFrame.contentWindow || event.origin !== location.origin ||
+        !event.data || event.data.game !== shootFrameGame) return;
+    if (event.data.kind === "shoot-pointer-lock") { showShootCoach(); return; }
+    if (event.data.kind === "shoot-contextmenu" && doomWrap) {
+      var r = doomWrap.getBoundingClientRect();
+      doomWrap.dispatchEvent(new MouseEvent("contextmenu", {
+        bubbles: true, cancelable: true,
+        clientX: r.left + Math.max(0, Math.min(1, Number(event.data.x) || 0)) * r.width,
+        clientY: r.top + Math.max(0, Math.min(1, Number(event.data.y) || 0)) * r.height
+      }));
+      return;
+    }
+    if (event.data.kind !== "shoot-status") return;
+    shootFrameState = event.data.state || shootFrameState;
+  });
   if (doomWrap) {
     doomWrap.addEventListener("click", function (e) { e.stopPropagation(); }); // the canvas fire-click shouldn't reach the monitor's screen-swap
     doomWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  var shootChoices = document.querySelectorAll("[data-shoot-game]");
+  for (var sci = 0; sci < shootChoices.length; sci++) shootChoices[sci].addEventListener("click", function (e) {
+    e.stopPropagation();
+    var game = this.getAttribute("data-shoot-game");
+    setShootView(game);
+    playLaptopClickSound("office-monitor");
+  });
   if (doomCloseBtn) {
-    doomCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeDoom(); playLaptopClickSound("office-monitor"); });
+    doomCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeDoom(true); playLaptopClickSound("office-monitor"); });
     doomCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // The now-playing screen's pause/play toggle: pauses the current song, or resumes it
@@ -58252,7 +58200,7 @@ async def localfont(name):
     // playing to an empty room and would keep the runtime alive behind it. Gated on load-state so
     // a power-cycle costs nothing when a runtime never ran; each destroy also clears its own
     // session, and "" load-state lets the next open re-init from the already-fetched library.
-    if (doomLoadState) destroyDoom();
+    if (shootEverOpened) destroyDoom();
     if (pyLoadState) destroyPython();
     if (lxLoadState) destroyLinux();
     clearMonitorRunningApps();

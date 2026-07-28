@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quake III — OpenArena</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+body{display:grid;place-items:center}
+#canvas{grid-area:1/1;display:block;width:min(100vw,133.333vh)!important;height:auto!important;max-width:100vw!important;max-height:100vh!important;aspect-ratio:4/3!important;background:#000;outline:0}
+#status{grid-area:1/1;z-index:1;margin:0;padding:0 4px;color:#e8c060;text-align:center;font:11px/1.3 ui-monospace,monospace;pointer-events:none}
+#status.err{color:#e0736a}
+#status:empty{display:none}
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="0"></canvas>
+<p id="status">Loading arena…</p>
+<script type="module">
+const canvas = document.getElementById("canvas");
+const status = document.getElementById("status");
+let game = null;
+let parentActive = true;
+let paused = false;
+
+function tell(state) {
+  try { parent.postMessage({ kind: "shoot-status", game: "q3", state }, location.origin); } catch (_) {}
+}
+function setStatus(text, isError) {
+  status.textContent = text || "";
+  status.className = isError ? "err" : "";
+}
+function audioContext() {
+  return game && game.SDL2 && game.SDL2.audioContext;
+}
+function shouldRun() {
+  return parentActive && !document.hidden;
+}
+function sync() {
+  if (!game) return;
+  const run = shouldRun();
+  if (run && paused) {
+    try { game.resumeMainLoop(); } catch (_) {}
+    paused = false;
+  } else if (!run && !paused) {
+    try { game.pauseMainLoop(); } catch (_) {}
+    paused = true;
+  }
+  const ctx = audioContext();
+  if (ctx) {
+    try { run ? ctx.resume() : ctx.suspend(); } catch (_) {}
+  }
+}
+
+addEventListener("message", event => {
+  if (event.origin !== location.origin || !event.data || event.data.kind !== "shoot-control") return;
+  parentActive = !!event.data.active;
+  sync();
+});
+addEventListener("focus", sync);
+addEventListener("blur", sync);
+document.addEventListener("visibilitychange", sync);
+document.addEventListener("pointerdown", () => {
+  try { window.focus(); } catch (_) {}
+  try { canvas.focus({ preventScroll: true }); } catch (_) {}
+  sync();
+});
+document.addEventListener("contextmenu", event => {
+  event.preventDefault();
+  try { parent.postMessage({ kind: "shoot-contextmenu", game: "q3", x: event.clientX / innerWidth, y: event.clientY / innerHeight }, location.origin); } catch (_) {}
+});
+document.addEventListener("pointerlockchange", () => {
+  if (!document.pointerLockElement) return;
+  try { parent.postMessage({ kind: "shoot-pointer-lock", game: "q3" }, location.origin); } catch (_) {}
+});
+document.addEventListener("keydown", event => {
+  if (event.ctrlKey || event.metaKey || event.altKey) event.stopImmediatePropagation();
+}, true);
+
+try {
+  const ioquake3 = (await import("./ioquake3.js")).default;
+  const files = [
+    { src: "baseoa/pak0.pk3", dst: "/baseoa" },
+    { src: "baseoa/loft-shine.pk3", dst: "/baseoa" }
+  ];
+  const fetches = files.map(file => fetch(file.src));
+  game = await ioquake3({
+    canvas,
+    arguments: [
+      "+set", "sv_pure", "0",
+      "+set", "net_enabled", "0",
+      "+set", "com_basegame", "baseoa",
+      "+set", "cl_renderer", "opengl2",
+      "+set", "r_preferOpenGLES", "1",
+      "+set", "r_mode", "-1",
+      "+set", "r_customwidth", "960",
+      "+set", "r_customheight", "720",
+      "+set", "r_fullscreen", "0",
+      "+set", "r_hdr", "0",
+      "+set", "r_postProcess", "0",
+      "+set", "r_toneMap", "0",
+      "+set", "r_autoExposure", "0",
+      "+set", "r_normalMapping", "0",
+      "+set", "r_specularMapping", "0",
+      "+set", "r_deluxeMapping", "0",
+      "+set", "sensitivity", "0.8",
+      "+set", "cl_mouseAccel", "0",
+      "+set", "s_volume", "0.32",
+      "+set", "musicvolume", "0.18",
+      "+set", "g_gametype", "0",
+      "+set", "fraglimit", "5",
+      "+map", "oa_shine",
+      "+addbot", "sarge", "3"
+    ],
+    locateFile: file => "./" + file,
+    preRun: [async module => {
+      module.addRunDependency("loft-openarena-files");
+      try {
+        for (let i = 0; i < files.length; i++) {
+          const response = await fetches[i];
+          if (!response.ok) throw new Error(files[i].src + ": HTTP " + response.status);
+          module.FS.mkdirTree(files[i].dst);
+          module.FS.writeFile(
+            files[i].dst + "/" + files[i].src.split("/").pop(),
+            new Uint8Array(await response.arrayBuffer())
+          );
+        }
+      } finally {
+        module.removeRunDependency("loft-openarena-files");
+      }
+    }]
+  });
+  setStatus("");
+  tell("ready");
+  sync();
+  try { canvas.focus({ preventScroll: true }); } catch (_) {}
+} catch (error) {
+  console.error(error);
+  setStatus("Arena offline.", true);
+  tell("failed");
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Doom — FreeDM</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+body{display:grid;place-items:center}
+#canvas{grid-area:1/1;display:block;width:min(100vw,133.333vh)!important;height:auto!important;max-width:100vw!important;max-height:100vh!important;aspect-ratio:4/3!important;background:#000;outline:0;image-rendering:pixelated}
+#status{grid-area:1/1;z-index:1;margin:0;padding:0 4px;color:#e8c060;text-align:center;font:11px/1.3 ui-monospace,monospace;pointer-events:none}
+#status.err{color:#e0736a}
+#status:empty{display:none}
+</style>
+</head>
+<body>
+<canvas id="canvas" width="640" height="480" tabindex="0"></canvas>
+<p id="status">Loading Doom…</p>
+<script>
+(function () {
+  "use strict";
+  var canvas = document.getElementById("canvas");
+  var status = document.getElementById("status");
+  var parentActive = false;
+  var ready = false;
+  var paused = true;
+  var stallTimer = 0;
+
+  function tell(state) {
+    try { parent.postMessage({ kind: "shoot-status", game: "doom", state: state }, location.origin); } catch (_) {}
+  }
+  function setStatus(text, isError) {
+    status.textContent = text || "";
+    status.className = isError ? "err" : "";
+  }
+  function shouldRun() {
+    return parentActive && !document.hidden;
+  }
+  function sync() {
+    if (!ready || !window.Module) return;
+    var run = shouldRun();
+    if (run && paused) {
+      try { Module.resumeMainLoop(); } catch (_) {}
+      paused = false;
+    } else if (!run && !paused) {
+      try { Module.pauseMainLoop(); } catch (_) {}
+      paused = true;
+    }
+  }
+  function fail() {
+    if (stallTimer) clearTimeout(stallTimer);
+    setStatus("Doom is offline.", true);
+    tell("failed");
+  }
+
+  addEventListener("message", function (event) {
+    if (event.origin !== location.origin || !event.data || event.data.kind !== "shoot-control") return;
+    parentActive = !!event.data.active;
+    sync();
+  });
+  addEventListener("focus", sync);
+  addEventListener("blur", sync);
+  document.addEventListener("visibilitychange", sync);
+  document.addEventListener("pointerdown", function () {
+    try { window.focus(); } catch (_) {}
+    try { canvas.focus({ preventScroll: true }); } catch (_) {}
+    sync();
+  });
+  document.addEventListener("contextmenu", function (event) {
+    event.preventDefault();
+    try { parent.postMessage({ kind: "shoot-contextmenu", game: "doom", x: event.clientX / innerWidth, y: event.clientY / innerHeight }, location.origin); } catch (e) {}
+  });
+  document.addEventListener("pointerlockchange", function () {
+    if (!document.pointerLockElement) return;
+    try { parent.postMessage({ kind: "shoot-pointer-lock", game: "doom" }, location.origin); } catch (e) {}
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.ctrlKey || event.metaKey || event.altKey) event.stopImmediatePropagation();
+  }, true);
+
+  window.Module = {
+    arguments: [
+      "-iwad", "freedm.wad",
+      "-window", "-nogui", "-nosound", "-nomusic",
+      "-config", "default.cfg", "-extraconfig", "extra.cfg"
+    ],
+    noInitialRun: true,
+    locateFile: function (path) {
+      return path === "websockets-doom.wasm" ? "./doom.wasm" : path;
+    },
+    preRun: [function () {
+      Module.FS.createPreloadedFile("", "freedm.wad", "./freedm.wad", true, true);
+      Module.FS.createPreloadedFile("", "default.cfg", "./default.cfg", true, true);
+      Module.FS.createPreloadedFile("", "extra.cfg", "./extra.cfg", true, true);
+    }],
+    canvas: canvas,
+    onRuntimeInitialized: function () {
+      if (stallTimer) clearTimeout(stallTimer);
+      try {
+        (Module.callMain || window.callMain)(Module.arguments);
+        ready = true;
+        paused = false;
+        setStatus("");
+        tell("ready");
+        try { canvas.focus({ preventScroll: true }); } catch (_) {}
+        sync();
+      } catch (error) {
+        console.error(error);
+        fail();
+      }
+    },
+    onAbort: fail,
+    print: function () {},
+    printErr: function () {},
+    setStatus: function () {}
+  };
+
+  stallTimer = setTimeout(fail, 60000);
+  var script = document.createElement("script");
+  script.src = "./doom.js";
+  script.onerror = fail;
+  document.body.appendChild(script);
+})();
+</script>
+</body>
+</html>

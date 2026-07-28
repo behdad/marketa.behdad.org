@@ -15,7 +15,8 @@ noted.
   public symlinks, not generated routes; keep every alias aligned if a current drop is renamed.
 - There is no application framework, package build, or bundling step. Both pages are intended to
   remain directly loadable documents.
-- `art/` contains the normal media assets. `pyodide/`, `linux/`, `doom/`, and `harfbuzzjs/` contain
+- `art/` contains the normal media assets. `pyodide/`, `linux/`, `doom/`, `duke/`, `q3/`,
+  and `harfbuzzjs/` contain
   pinned, self-hosted browser runtimes and their provenance. Treat those directories as versioned
   deliverables, not generated build output; root `BUILD.md` indexes their rebuild records.
 - `manifest.v2.webmanifest` is the installable Loft Day shell metadata. Its start URL is the
@@ -116,6 +117,8 @@ Each runtime has a `BUILD.md` recording its provenance and build process:
 - [`pyodide/`](../pyodide/BUILD.md) contains CPython compiled to WebAssembly and the bundled wheels.
 - [`linux/`](../linux/BUILD.md) contains the v86 runtime and a repacked Linux disk image.
 - [`doom/`](../doom/BUILD.md) contains the WebAssembly build of Doom.
+- [`duke/`](../duke/BUILD.md) contains emduke32 plus the unchanged official shareware archive.
+- [`q3/`](../q3/BUILD.md) contains ioquake3 plus the reduced OpenArena arena payload.
 - [`harfbuzzjs/`](../harfbuzzjs/BUILD.md) contains HarfBuzz compiled for the browser.
 
 These directories are pinned, versioned deliverables rather than generated build output. Do not
@@ -730,11 +733,31 @@ Life compares each computed generation with its source board. An empty board or 
 fixed point pauses through the normal `lifePause` owner; period-two and longer oscillators keep
 running. Every direct board mutation clears the diagnostic `lifeStationary` flag.
 
-Doom executes the pinned non-modular Emscripten glue from fetched source so Kill/Restart can create
-a fresh private runtime scope. `prepareDoomGlueSource` also neutralizes that glue's single
-`document.title` assignment before execution: the embedded game does not own the host tab title.
-The pinned file in `doom/` remains unmodified, and preparation fails closed if its expected shape
-changes.
+The tiled **shoot** app retains the existing `show-doom` ownership class and FATALITY
+Kill hook, but its foreground state is `data-shoot-view="chooser|doom|duke|q3"`.
+Keeping one show-class preserves desktop task registration, context menus, monitor
+occlusion, and the established gag.
+
+All three engines run in one disposable same-origin iframe created lazily inside
+`#monitor-shoot-host`. Each `player.html` receives `shoot-control` messages and
+gates its main loop and engine-owned audio contexts on foreground, room, document
+visibility, and focus. A normal app close retains and pauses the current frame;
+Back, chooser selection, Kill, and Restart remove it. The iframe boundary therefore
+hard-stops each engine's heap, canvas, listeners, and document title without patching
+third-party glue. Every player uses the same centered 4:3 contain contract.
+
+The child reports pointer-lock acquisition to the parent. The parent shows the
+localized `Esc releases mouse` coach for the entire active game session; it is
+native SVG on the lower bezel, outside the clipped game screen, and never
+intercepts input. Returning to the chooser removes it.
+
+Quake III loads the OpenArena `oa_shine` arena and a local bot from the pinned
+minimal pack. Its WebGL path explicitly selects the OpenGL2 GLES renderer while
+disabling HDR, postprocessing, tonemapping, auto-exposure, and advanced material
+mapping: those desktop-oriented paths do not render the OA lightmaps correctly in
+this Emscripten/WebGL build. Like every
+canvas/video/iframe inside the scaled monitor `foreignObject`, these game rasters
+remain a known blank-compositing limitation on WebKit.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
 Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;

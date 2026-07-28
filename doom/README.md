@@ -47,17 +47,20 @@ license texts + attribution in `COPYING`.
 
 ## How it's wired (rsvp.html)
 
-The DOOM dock app lazy-loads `doom/doom.js` on first open; its Emscripten `Module` uses
+`player.html` is the same-origin iframe entry point. It lazy-loads `doom.js` on first
+open; its Emscripten `Module` uses
 `locateFile` → `doom/doom.wasm`, `preRun` → `createPreloadedFile` the WAD + cfg, and
-`canvas` = the foreignObject `<canvas id="canvas">` (the id is **mandatory** — the SDL2
-glue hardcodes `getElementById("canvas")`). Args:
+`canvas` = its local `<canvas id="canvas">` (the id is **mandatory** — the SDL2 glue
+hardcodes `getElementById("canvas")`). Args:
 `-iwad freedm.wad -window -nogui -nosound -nomusic -config default.cfg`. `-nosound` means
 no audio device is opened (muted by design; FreeDM keeps its sound lumps, so audio can be
-re-enabled by dropping the arg). The run loop pauses via `pauseMainLoop()`/`resumeMainLoop()`
-whenever the app isn't the live foreground (closed, tab hidden, or the office off-screen).
+re-enabled by dropping the arg). The player keeps a centered 4:3 viewport and receives
+`shoot-control` messages from `rsvp.html`; the run loop pauses via
+`pauseMainLoop()`/`resumeMainLoop()` whenever the app is not the live foreground.
+Back/Kill removes the whole iframe, including the engine's listeners and heap.
 
 ## Serving / caching
 
-`.htaccess` serves `doom/` with a 1-year immutable Cache-Control (it's in the
-`pyodide|linux|harfbuzzjs|doom` set) and `.wasm` as `application/wasm`. `BUILD.md` is
+.htaccess serves `doom/` with a 1-year immutable Cache-Control (it's in the
+`pyodide|linux|harfbuzzjs|doom|duke|q3` set) and `.wasm` as `application/wasm`. `BUILD.md` is
 blocked from public access by the shared `<Files "BUILD.md">` rule; `COPYING` stays served.

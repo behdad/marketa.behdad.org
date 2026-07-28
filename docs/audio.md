@@ -1,8 +1,16 @@
 # rsvp.html audio architecture
 
-All game sound is Web Audio, built on **one shared `AudioContext`**. This doc explains the
+All sound owned by `rsvp.html` is Web Audio built on **one shared `AudioContext`**. This doc explains the
 graph, the lifecycle rules, and the gotchas — read it before touching any `start*/stop*`
 sound function, `getSfxCtx`, the song pipeline, or the idle/focus gating.
+
+The shoot launcher has one contained exception: all three shooters run in disposable
+same-origin iframe documents. Duke and Quake III construct engine-owned SDL/MIDI
+contexts; Doom remains `-nosound`. Only one shooter iframe exists at a time. The
+child suspends its main loop and engine-owned contexts when shoot is not foregrounded
+or the tab is hidden; the parent also sends an inactive control state when the room
+or window is unfocused. Back/Kill removes the iframe completely. Those isolated
+engine contexts are not part of the host graph below.
 
 ## Why one context
 

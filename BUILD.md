@@ -3,7 +3,7 @@
 This site self-hosts several WebAssembly / emulated runtimes so `rsvp.html`'s consoles
 have **zero third-party origin** in their load path (Google Fonts CSS is the site's one
 allowed runtime CDN; none of these use it). Every blob is pinned and content-versioned —
-`.htaccess` serves `pyodide/`, `linux/` and `harfbuzzjs/` as `immutable`, and a rebuild
+`.htaccess` serves the runtime directories as `immutable`, and a rebuild
 ships under a new path rather than overwriting in place. These runtimes are the only
 compiled/packed deliverables; they are **pinned deliverables, not build outputs** — don't
 regenerate or "upgrade" them casually. When you do rebuild one, ship it under a new
@@ -32,6 +32,8 @@ what is **verified** (from the on-disk build tree / pins / shas) vs. **reconstru
 - [`harfbuzzjs/BUILD.md`](harfbuzzjs/BUILD.md) — HarfBuzz-in-WASM for the JS console
   `shape()` command, plus a re-subset Fraunces shaping TTF.
 - [`doom/BUILD.md`](doom/BUILD.md) — the DOOM runtime.
+- [`duke/BUILD.md`](duke/BUILD.md) — the emduke32 runtime and exact official shareware archive.
+- [`q3/BUILD.md`](q3/BUILD.md) — the ioquake3 runtime and reduced OpenArena arena pack.
 
 Each of these `BUILD.md` files is blocked from public access by `.htaccess`'s basename
 `<Files "BUILD.md">` rule (build recipes are internal). The `COPYING` license files that

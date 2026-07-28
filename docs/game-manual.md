@@ -438,7 +438,7 @@ The main monitor desktop contains these app tiles:
 - Tattoo
 - Mines
 - Life
-- Doom
+- shoot
 - Code
 - Console
 - Python
@@ -448,6 +448,24 @@ Every monitor app has its own Kill gag. A normal close leaves the app marked as
 running. Right-click its desktop tile or open surface and choose **Kill** to
 clear that session with its own send-off. Runtime apps also offer **Restart**
 when appropriate.
+
+The **shoot** tile opens Doom, Duke, and Quake III in that order. Doom is
+Chocolate Doom with FreeDM; Duke is EDuke32 with the official 1.3d shareware
+episode, starting on E1L1; Quake III is ioquake3 with a local OpenArena
+`oa_shine` match and one bot. The top-right control closes shoot from the
+chooser and returns to the chooser from a game. That control and the desktop
+tile use the launcher's warm brown-and-gold palette. The small fullscreen
+control targets the active game. Normal close pauses and retains the runtime;
+**Kill** plays FATALITY and tears it down.
+
+All three games use a centered 4:3 viewport. Click the game to capture the
+mouse; a note remains on the lower monitor bezel while a session is active to
+remind you that `Esc` releases it. `Esc` otherwise keeps each game's own menu
+behavior. Doom uses its normal
+arrow/Ctrl/Space controls. Duke accepts arrows or `WASD`, with `Ctrl` to fire
+and Space to open. Quake III uses `WASD`, mouse aim, mouse button to fire, and
+Space to jump. Duke and Quake III start with deliberately conservative mouse
+sensitivity; their in-game controls can still adjust it.
 
 Hack-Man never occupies a desktop tile, but typing `pacman` in the computer's app
 search opens it at any time. During the ketamine magic-box trip, catching the
@@ -743,10 +761,12 @@ to that game; later personal bests can recommend another remaining game.
   staggered releases, scatter/chase phases, and the wrap tunnel adapt the
   original arcade game's level-one rules while turns remain buffered at maze
   corners. Press `Space` to pause or resume.
-- **Game of Life and Doom:** Available on the monitor. Space pauses or resumes
-  Life, which also pauses when its board goes empty or reaches a stationary
-  arrangement. Oscillating patterns continue to run; the `?` button explains
-  its rules and controls.
+- **Game of Life and shoot:** Available on the monitor. shoot contains Doom,
+  Duke Nukem 3D shareware, and Quake III/OpenArena. The shooter controls and
+  mouse-release note are described in the monitor section above. Space pauses
+  or resumes Life, which also pauses when its board goes empty or reaches a
+  stationary arrangement. Oscillating patterns continue to run; the `?`
+  button explains its rules and controls.
 - **Bouquet toss:** A fictional, game-only party moment with its own aiming
   interaction. No bouquet toss is planned for either real wedding celebration.
 - **Magic box:** The garden's magic box contains a set of optional visual trips.

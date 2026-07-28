@@ -253,7 +253,7 @@ the booth, while touch keeps a direct tap route. A double-click skips to the
 next song.
 
 The picker’s synthesized set pairs the slower, santur-led classical
-**Reng-e Shur** with the faster, percussion-led Bandari 6/8. **Dupák** is the
+**Reng-e Shur** with the faster, percussion-led **Bandari**. **Dupák** is the
 short name for the existing straight stamping tune; the separate **Bohemian
 furiant** shifts its accents between duple and triple groupings. All of them
 participate in the same automatic rotation, transport controls, volume,

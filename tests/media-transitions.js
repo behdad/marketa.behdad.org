@@ -44,7 +44,7 @@ check(s.rengPaused && s.rengPaused.paused && !s.rengPaused.playing &&
       s.rengResumed && !s.rengResumed.paused && s.rengResumed.playing,
   "Reng-e Shur pauses and resumes through the unified transport", { paused: s.rengPaused, resumed: s.rengResumed });
 check(s.rengCs === "Reng-e Shur" && s.bandari && s.bandari.playing && !s.bandari.reng &&
-      s.bandari.label === "Bandari 6/8",
+      s.bandari.label === "Bandari",
   "the Czech Reng title matches and switching hands the source cleanly to unchanged Bandari", { cs: s.rengCs, bandari: s.bandari });
 check(s.dance && s.dance.set && s.dance.mirror === "salsa" && s.dance.stage === "salsa" && s.dance.mode === "salsa",
   "setPartyDance keeps its mirror and both SVG projections together", s.dance);

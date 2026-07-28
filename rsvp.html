@@ -83058,11 +83058,12 @@ function spawnDustMote(container) {
   // ── REVOLVING DOOR ──────────────────────────────────────────────────────────
   // The floor holds at most four arrival units at a time; a family or couple counts as one unit.
   // The
-  // rest wait off-scene and rotate through — every so often 1–2 present units stroll OUT the gate and
-  // 1–2 waiting units stroll IN, so a big guest list never crowds the dance floor. Hosts + crew never
+  // rest wait off-scene and rotate through — every so often one present unit strolls OUT the gate and
+  // one waiting unit strolls IN, so a big guest list never crowds the dance floor. Hosts + crew never
   // rotate (they aren't ARRIVALS units). The whole thing rides the same party/focus/visibility gate
   // as the trickle, so nothing runs (or piles up) in a hidden/unfocused tab.
   var GUEST_UNIT_CAP = 4;
+  var guestHandoffPending = false;
   var recentArrivals = []; // unit keys that JUST walked in — don't send them straight back out
   function unitKey(u) { return u.id || u.sels[0]; }
   function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
@@ -83115,25 +83116,22 @@ function spawnDustMote(container) {
     rebalanceFloor(g); // the remaining present guests glide to close the gap (the leaver already has .leaving → excluded)
     echoRosterMove("out", entry, g);
   }
-  function bringRotatedGuests(incoming) {
-    if (rosterHoldsOccupants()) { setTimeout(function () { bringRotatedGuests(incoming); }, 1000); return; }
-    if (window.__bbqSplitOn) return; // a pre-invitation garden swap must not land after the BBQ controller takes attendance over
-    if (!guestsWanted()) return;
-    incoming.forEach(function (u) { arriveEntry(u); noteArrival(u); echoRosterMove("in", u, document.getElementById("garden-guests")); });
-  }
-  // one rotation beat: bring 1–2 waiting units in, then send the same number of present units out.
+  // one rotation beat: bring one waiting unit in, then send one present unit out.
   // The brief overlap keeps the floor lively; steady state still returns to GUEST_UNIT_CAP.
   function rotateGuests(g, present, waiting) {
-    var k = (Math.random() < 0.35 ? 2 : 1);
+    if (guestHandoffPending) return;
     var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0 && !unitIsBirthdayHeld(g, u); });
-    if (evictable.length < k) evictable = present.filter(function (u) { return !unitIsBirthdayHeld(g, u); });
-    var leaving = shuffleArr(evictable).slice(0, Math.min(k, evictable.length));
-    var incoming = shuffleArr(waiting.slice()).slice(0, Math.min(leaving.length, waiting.length));
-    bringRotatedGuests(incoming);
+    if (!evictable.length) evictable = present.filter(function (u) { return !unitIsBirthdayHeld(g, u); });
+    var leaving = shuffleArr(evictable)[0];
+    var incoming = shuffleArr(waiting.slice())[0];
+    if (!leaving || !incoming) return;
+    guestHandoffPending = true;
+    arriveEntry(incoming); noteArrival(incoming); echoRosterMove("in", incoming, g);
     setTimeout(function retireUnits() {
       if (rosterHoldsOccupants()) { setTimeout(retireUnits, 1000); return; }
+      guestHandoffPending = false;
       if (!window.__gardenPartyOn || window.__bbqSplitOn) return;
-      leaving.forEach(function (u) { leaveEntry(u); });
+      leaveEntry(leaving);
     }, 1800);
   }
   // the full roster this party (the duos + the solo, plus the mouses only if they're visiting)
@@ -83171,6 +83169,8 @@ function spawnDustMote(container) {
       if (window.__syncMousesVisitingClass) window.__syncMousesVisitingClass(); // in case the visiting roll flipped
       var list = fullArrivals();
       var present = presentUnits(g, list), waiting = waitingUnits(g, list);
+      if (guestHandoffPending) { armTrickle(1000); return; }
+      if (present.length > GUEST_UNIT_CAP) { window.__trimFloorToCap(); return; }
       if (!waiting.length) { if (everyoneArrived(g)) g.classList.remove("trickle"); return; } // whole roster fits → full floor, stop
       if (present.length < GUEST_UNIT_CAP) { // FILL: one family/couple/solo is one unit
         arriveEntry(waiting[0]); noteArrival(waiting[0]); echoRosterMove("in", waiting[0], g);
@@ -83258,6 +83258,7 @@ function spawnDustMote(container) {
     var walkers = g.querySelectorAll(".guest.arrived, .guest.walking, .guest.leaving, .guest.bd-honoree");
     for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving", "bd-honoree"); }
     recentArrivals.length = 0;
+    guestHandoffPending = false;
     attendedGuestNames.clear();
     bdCrowdBefore = bdAttendedBefore = null;
     var walks = g.querySelectorAll(".guest-walk");

@@ -282,8 +282,8 @@ clickable and starts an uncarded ketamine trip.
 ### Cuddly-puddly
 
 Cuddly-puddly contains soft furnishings, Octi, a balcony door, children's play,
-and a projector. The wall screen cycles through fireplace, workout, night-sky
-piano, aquarium, Totoro, and off. It can temporarily take ownership of the
+and a projector. The wall screen cycles through fireplace, night-sky piano,
+workout, aquarium, Totoro, and off. It can temporarily take ownership of the
 foreground media controls and lower the party music. Next changes the piano
 piece on the night-sky channel and advances the other music channels. The piano channel reveals
 a one-octave play-along keyboard across the projection: tap its keys, or focus

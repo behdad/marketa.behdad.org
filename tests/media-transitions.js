@@ -19,7 +19,7 @@ var HARNESS = [
   ' var set=window.__setPartyDance("salsa");S("dance",{set:set,mirror:window.__partyDance,stage:garden.getAttribute("data-partydance"),mode:document.getElementById("trip-melt-dancers").getAttribute("data-dance")});',
   ' var before=window.__partyDance;window.__nextPartyDance();S("advance",{before:before,after:window.__partyDance,stage:garden.getAttribute("data-partydance")});',
   ' window.__setPartyMode(false,true);S("off",{party:!!window.__gardenPartyOn,dance:window.__partyDance,stage:garden.getAttribute("data-partydance"),mode:document.getElementById("trip-melt-dancers").getAttribute("data-dance"),paused:!!window.__musicPaused});',
-  ' var oldStarsPlaying=window.__starsPlaying,oldSkipStars=window.__skipStarsPiece,starSkips=0;window.__starsPlaying=function(){return true;};window.__skipStarsPiece=function(){starSkips++;};window.__cuddlyProjector.set("workout");window.__updatePlayPauseBtn();var projectorBefore=window.__cuddlyProjector.channel(),channelSkip=window.__skipCurrentMusic(),projectorAfter=window.__cuddlyProjector.channel();var pianoSkip=window.__skipCurrentMusic();S("projectorSkip",{before:projectorBefore,after:projectorAfter,channelHandled:channelSkip,pianoHandled:pianoSkip,stars:starSkips,final:window.__cuddlyProjector.channel(),shown:document.getElementById("hunt-skip-btn").classList.contains("shown")});window.__starsPlaying=oldStarsPlaying;window.__skipStarsPiece=oldSkipStars;window.__cuddlyProjector.set("fire");',
+  ' var oldStarsPlaying=window.__starsPlaying,oldSkipStars=window.__skipStarsPiece,starSkips=0;window.__starsPlaying=function(){return true;};window.__skipStarsPiece=function(){starSkips++;};window.__cuddlyProjector.set("workout");window.__updatePlayPauseBtn();var projectorBefore=window.__cuddlyProjector.channel(),channelSkip=window.__skipCurrentMusic(),projectorAfter=window.__cuddlyProjector.channel();window.__cuddlyProjector.set("stars");var pianoSkip=window.__skipCurrentMusic();S("projectorSkip",{before:projectorBefore,after:projectorAfter,channelHandled:channelSkip,pianoHandled:pianoSkip,stars:starSkips,final:window.__cuddlyProjector.channel(),shown:document.getElementById("hunt-skip-btn").classList.contains("shown")});window.__starsPlaying=oldStarsPlaying;window.__skipStarsPiece=oldSkipStars;window.__cuddlyProjector.set("fire");',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',
   '})();</script>'
@@ -52,7 +52,7 @@ check(s.advance && s.advance.after !== s.advance.before && s.advance.stage === s
   "automatic dance advance uses the same transition", s.advance);
 check(s.off && !s.off.party && s.off.dance === "techno" && s.off.stage === "" && s.off.mode === "" && !s.off.paused,
   "party teardown resets dance and transport projections", s.off);
-check(s.projectorSkip && s.projectorSkip.before === "workout" && s.projectorSkip.after === "stars" &&
+check(s.projectorSkip && s.projectorSkip.before === "workout" && s.projectorSkip.after === "aqua" &&
       s.projectorSkip.channelHandled && s.projectorSkip.pianoHandled && s.projectorSkip.stars === 1 &&
       s.projectorSkip.final === "stars" && s.projectorSkip.shown,
   "next advances non-piano projector channels but changes the piano piece in night-sky mode", s.projectorSkip);

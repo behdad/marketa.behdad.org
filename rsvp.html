@@ -3781,6 +3781,19 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .monitor-about-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
 .monitor-about-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
 .monitor-about-close:hover circle,.monitor-about-close:focus circle{fill:#a94a5d;stroke-width:.62}
+.monitor-help-layer{opacity:0;visibility:hidden;pointer-events:none}
+.monitor-help-layer.open{opacity:1;visibility:visible;pointer-events:auto;cursor:default}
+.monitor-help-bg{fill:#f4ecdf;stroke:#8e3a4a;stroke-width:.42}
+.monitor-help-title{fill:#453a31;font:700 5px/1 Fraunces,serif}
+.monitor-help-copy{fill:#453a31;font:3px/1.35 "Source Serif 4",serif}
+.monitor-help-key{fill:#8e3a4a;font:700 3.2px/1 ui-monospace,Menlo,monospace}
+.monitor-help-manual{cursor:pointer;outline:none}
+.monitor-help-manual text{fill:#8e3a4a;font:600 3px/1 "Source Serif 4",serif;text-decoration:underline}
+.monitor-help-manual:hover text,.monitor-help-manual:focus text{fill:#a94a5d}
+.monitor-help-close{cursor:pointer;outline:none}
+.monitor-help-close circle{fill:#8e3a4a;stroke:#fffdf8;stroke-width:.38}
+.monitor-help-close text{fill:#fffdf8;font:700 3.2px/1 sans-serif;text-anchor:middle;pointer-events:none}
+.monitor-help-close:hover circle,.monitor-help-close:focus circle{fill:#a94a5d;stroke-width:.62}
 @keyframes about-portal-ring-a{0%,100%{opacity:.3;stroke-width:.35}50%{opacity:1;stroke-width:1.1}}
 @keyframes about-portal-ring-b{0%,100%{opacity:.85;stroke-width:.9}50%{opacity:.25;stroke-width:.3}}
 @keyframes about-portal-core-motion{0%,100%{opacity:.65;stroke-width:.65}50%{opacity:1;stroke-width:1.15}}
@@ -28397,8 +28410,14 @@ var T = {
     mon_sys_sleep: "Sleep",
     mon_sys_reboot: "Reboot",
     mon_sys_shutdown: "Shut down",
+    mon_sys_help: "Help",
     mon_sys_credits: "Credits",
     mon_sys_system: "System",
+    mon_help_title: "Help",
+    mon_help_clue: "Follow the clue above the scene.",
+    mon_help_click: "Click everything! Right-click for more options.",
+    mon_help_keyboard: "Press ? for the full control list.",
+    mon_help_manual: "Game manual ↗",
     mon_lang_switch: "Switch language",
     mon_system_info_title: "System Information",
     mon_system_info_browser: "Browser",
@@ -29529,8 +29548,14 @@ var T = {
     mon_sys_sleep: "Uspat",
     mon_sys_reboot: "Restartovat",
     mon_sys_shutdown: "Vypnout",
+    mon_sys_help: "Nápověda",
     mon_sys_credits: "Titulky",
     mon_sys_system: "Systém",
+    mon_help_title: "Nápověda",
+    mon_help_clue: "Sleduj nápovědu nad scénou.",
+    mon_help_click: "Klikni na všechno! Pravé tlačítko nabízí další možnosti.",
+    mon_help_keyboard: "Stiskni ? pro úplný seznam ovládání.",
+    mon_help_manual: "Herní manuál ↗",
     mon_lang_switch: "Přepnout jazyk",
     mon_system_info_title: "Systémové informace",
     mon_system_info_browser: "Prohlížeč",
@@ -45268,10 +45293,11 @@ setOfficeProgress("pc", false);
     closeBrowser();
     blankBrowser(); // a powered-off PC isn't secretly running a site in the iframe
     if (monitorSystemInfoLayer) monitorSystemInfoLayer.classList.remove("open", "killing");
+    if (monitorHelpLayer) monitorHelpLayer.classList.remove("open");
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snakes", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-credits");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snakes", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-help", "show-credits");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -46100,7 +46126,7 @@ setOfficeProgress("pc", false);
     eqFrame = frame;
     syncEqVisualLoop();
   }
-  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snakes", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-credits"];
+  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snakes", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-help", "show-credits"];
   function eqVisualWant() {
     if (monitorSleeping || !eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
         !monitor.classList.contains("here") || !monitor.classList.contains("screen-on")) return false;
@@ -46583,6 +46609,7 @@ setOfficeProgress("pc", false);
   var monitorSystemStatusLink = null;
   var monitorAboutLayer = null;
   var monitorAboutKillTimer = null;
+  var monitorHelpLayer = null;
   var monitorCreditsLayer = null;
   var monitorCreditsKillTimer = null;
   function closeMonitorSystemMenu() {
@@ -46753,6 +46780,24 @@ setOfficeProgress("pc", false);
   }
   window.__openMonitorAbout = openMonitorAbout;
   window.__closeMonitorAbout = closeMonitorAbout;
+  function closeMonitorHelp() {
+    if (!monitorHelpLayer) return;
+    monitorHelpLayer.classList.remove("open");
+    monitor.classList.remove("show-help");
+    scheduleSaver();
+  }
+  function openMonitorHelp() {
+    if (!monitorHelpLayer) return false;
+    closeMonitorSystemMenu();
+    stopSaver();
+    monitor.classList.add("show-help");
+    monitorHelpLayer.classList.add("open");
+    var close = monitorHelpLayer.querySelector(".monitor-help-close");
+    if (close) try { close.focus(); } catch (e) {}
+    return true;
+  }
+  window.__openMonitorHelp = openMonitorHelp;
+  window.__closeMonitorHelp = closeMonitorHelp;
   function killMonitorAbout() {
     if (!monitorAboutLayer) return false;
     if (!monitorAboutLayer.classList.contains("open")) openMonitorAbout();
@@ -46828,6 +46873,7 @@ setOfficeProgress("pc", false);
     closeMonitorSystemMenu();
     if (action === "system") return openMonitorSystemInfo();
     if (action === "about") return openMonitorAbout();
+    if (action === "help") return openMonitorHelp();
     if (action === "credits") return openMonitorCredits();
     if (action === "sleep") {
       return sleepMonitor();
@@ -47248,7 +47294,7 @@ setOfficeProgress("pc", false);
     // The top-left wordmark is the loft OS's system menu. Native SVG keeps it correctly
     // layered under WebKit's scaled monitor, where another foreignObject would disappear.
     monitorSystemMenu = mkEl("g", { id: "monitor-system-menu", "class": "desk-system-menu", role: "menu" }, dock);
-    mkEl("rect", { x: 255, y: 159.5, width: 25.1, height: 28.4, rx: 1.3, "class": "desk-system-panel" }, monitorSystemMenu);
+    mkEl("rect", { x: 255, y: 159.5, width: 25.1, height: 31.6, rx: 1.3, "class": "desk-system-panel" }, monitorSystemMenu);
     mkEl("path", { d: "M256.3 159.5 H278.8 Q280.1 159.5 280.1 160.8 V163 H255 V160.8 Q255 159.5 256.3 159.5 Z",
       "class": "desk-system-head" }, monitorSystemMenu);
     var sysDict = T[document.documentElement.lang] || T.en;
@@ -47262,6 +47308,7 @@ setOfficeProgress("pc", false);
       ["shutdown", "mon_sys_shutdown", false],
       null,
       ["about", "mon_sys_website", false],
+      ["help", "mon_sys_help", false],
       ["credits", "mon_sys_credits", false],
       ["system", "mon_sys_system", false]
     ];
@@ -47352,6 +47399,48 @@ setOfficeProgress("pc", false);
     });
     monitorAboutLayer.addEventListener("click", function (e) { e.stopPropagation(); });
     monitorAboutLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+
+    monitorHelpLayer = mkEl("g", { id: "monitor-help-layer",
+      "class": "monitor-help-layer", role: "dialog", "aria-modal": "true",
+      "aria-labelledby": "monitor-help-title" }, dock);
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
+      "class": "monitor-help-bg" }, monitorHelpLayer);
+    var helpTitle = mkEl("text", { id: "monitor-help-title", x: 260, y: 164,
+      "class": "monitor-help-title", "data-i": "mon_help_title" }, monitorHelpLayer);
+    helpTitle.textContent = (T[document.documentElement.lang] || T.en).mon_help_title;
+    [
+      ["mon_help_clue", 171],
+      ["mon_help_click", 177],
+      ["mon_help_keyboard", 183]
+    ].forEach(function (line) {
+      var text = mkEl("text", { x: 260, y: line[1], "class": "monitor-help-copy",
+        "data-i": line[0] }, monitorHelpLayer);
+      text.textContent = (T[document.documentElement.lang] || T.en)[line[0]];
+    });
+    var helpManual = mkEl("a", {
+      href: "https://github.com/behdad/marketa.behdad.org/blob/main/docs/game-manual.md",
+      target: "_blank", rel: "noopener noreferrer", "class": "monitor-help-manual",
+      "aria-label": (T[document.documentElement.lang] || T.en).kbd_manual_aria,
+      "data-aria-i": "kbd_manual_aria"
+    }, monitorHelpLayer);
+    var helpManualText = mkEl("text", { x: 260, y: 190,
+      "data-i": "mon_help_manual" }, helpManual);
+    helpManualText.textContent = (T[document.documentElement.lang] || T.en).mon_help_manual;
+    var helpClose = mkEl("g", { "class": "monitor-help-close", role: "button",
+      tabindex: "0", "data-aria-i": "install_dismiss",
+      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorHelpLayer);
+    mkEl("circle", { cx: 375, cy: 157, r: 2.15 }, helpClose);
+    var helpX = mkEl("text", { x: 375, y: 158.15 }, helpClose); helpX.textContent = "×";
+    function dismissHelp(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      closeMonitorHelp();
+    }
+    helpClose.addEventListener("click", dismissHelp);
+    helpClose.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") dismissHelp(e);
+    });
+    monitorHelpLayer.addEventListener("click", function (e) { e.stopPropagation(); });
+    monitorHelpLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
 
     monitorSystemInfoLayer = mkEl("g", { id: "monitor-system-info-layer",
       "class": "monitor-system-info-layer", role: "dialog", "aria-modal": "true",
@@ -48311,7 +48400,7 @@ setOfficeProgress("pc", false);
         ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
         ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-snakes", "snakes"], ["show-code", "code"],
         ["show-mines", "mines"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "shoot"], ["show-video", "video"],
-        ["show-browser", "browser"], ["show-system", "system"], ["show-about", "about"], ["show-credits", "credits"]
+        ["show-browser", "browser"], ["show-system", "system"], ["show-about", "about"], ["show-help", "help"], ["show-credits", "credits"]
       ];
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
       return monitor && monitor.classList.contains("show-caps") ? "desktop" : null;
@@ -52135,6 +52224,7 @@ setOfficeProgress("pc", false);
   window.__closeTopMonitorApp = function (stepBack) {
     if (monitorSystemInfoLayer && monitorSystemInfoLayer.classList.contains("open")) { closeMonitorSystemInfo(); return true; }
     if (monitorAboutLayer && monitorAboutLayer.classList.contains("open")) { closeMonitorAbout(); return true; }
+    if (monitorHelpLayer && monitorHelpLayer.classList.contains("open")) { closeMonitorHelp(); return true; }
     if (monitor.classList.contains("show-family") && window.__closeMonitorFamily) { window.__closeMonitorFamily(); return true; }
     if (monitor.classList.contains("photobooth")) {
       if (stepBack && window.__backOfficePhotobooth && window.__backOfficePhotobooth()) return true;

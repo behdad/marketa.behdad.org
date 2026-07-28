@@ -3654,7 +3654,6 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
    WebKit honours for foreignObject painting) hides them whenever the office isn't viewed;
    in the office they fall back to their normal per-channel opacity gating. */
 #loft-game-strip:not(.viewing-office) #office-monitor foreignObject{visibility:hidden}
-#loft-game-strip:not(.viewing-balcony) > .balc-drop{visibility:hidden}
 #office-monitor .boot-logo{opacity:0; transition:opacity .4s ease}
 #office-monitor.show-fedora #monitor-logo-fedora{opacity:1}
 #office-monitor.show-chrome #monitor-logo-chrome{opacity:1}
@@ -25707,6 +25706,10 @@ section{margin:1.9rem 0}
 <!-- LUNAR eclipse (night): Earth's umbra sweeps across the moon (clipped to the disc), reddening it to a dim coppery blood moon at totality -->
 <g id="balcony-lunar" clip-path="url(#balcony-moon-clip)" pointer-events="none"><circle id="balcony-lunar-umbra" cx="510" cy="50" r="15" fill="#210d09"/></g>
 <g id="balcony-heartfx" pointer-events="none" aria-hidden="true"></g>
+<!-- Balcony precipitation lives inside its room, rather than as transformed children of the
+     five-room strip. This containment is the paint boundary; WebKit can otherwise composite a
+     restored WAAPI drop over the kitchen even after the strip has returned indoors. -->
+<g id="balcony-precipfx" clip-path="url(#balcony-sky-clip)" pointer-events="none" aria-hidden="true"></g>
 <g id="balcony-leaffx" pointer-events="none" aria-hidden="true"></g><!-- autumn leaves drift across the deck (spawnBalconyLeaf, self-replenishing → no hidden-tab pile-up) -->
 <g id="balcony-fireflyfx" pointer-events="none" aria-hidden="true"></g><!-- summer dusk/night fireflies over the deck (spawnFirefly, self-replenishing → no hidden-tab pile-up) -->
 <!-- pocket-phone flashlight beam: a warm radial glow spilled onto the deck while the
@@ -87801,10 +87804,12 @@ function spawnDustMote(container) {
     }
     function spawnDrop() {
       liveDrops++;
-      var cx = 2760 + Math.random() * 620, cy = 8 + Math.random() * 178;
+      var host = document.getElementById("balcony-precipfx");
+      if (!host) { liveDrops--; return; }
+      var cx = 40 + Math.random() * 620, cy = 8 + Math.random() * 178;
       if (fallsAsSnow()) { // this one drifts down the balcony sky as snow rather than rain
-        var f = makeSnowflake(strip, cx, cy + 18, 96 + Math.random() * 64, dropDone);
-        if (f) f.classList.add("balc-drop"); // marks a balcony drop for tests/debug (they share the strip, no container)
+        var f = makeSnowflake(host, cx, cy + 18, 96 + Math.random() * 64, dropDone);
+        if (f) f.classList.add("balc-drop"); // marks a balcony drop for tests/debug
         return;
       }
       var startY = cy + 18, dropLen = 14 + Math.random() * 8, fallDist = 72 + Math.random() * 44;
@@ -87815,8 +87820,8 @@ function spawnDustMote(container) {
       line.setAttribute("stroke-linecap", "round");
       line.style.transformBox = "fill-box"; line.style.transformOrigin = "center";
       line.style.pointerEvents = "none";
-      line.classList.add("balc-drop"); // rain counts toward the same live total as snow — the sky can hold a mix
-      strip.appendChild(line);
+      line.classList.add("balc-drop"); // rain counts toward the same live total as snow
+      host.appendChild(line);
       if (line.animate) {
         animateRainDrop(line, [
           { transform: "translate(0px,0px)", opacity: 0 },

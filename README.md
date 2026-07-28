@@ -11,7 +11,7 @@ part:
   an illustrated home you wander room by room. Little games are tucked inside (catch the
   garnishes at the bar, clear the invaders from the office chair…), there's a whole
   console DSL if you open the office monitor, and real self-hosted software runs in a few
-  corners — Python, a tiny Linux, Doom, a text shaper. It's the good stuff.
+  corners — Python, a tiny Linux, classic shooters, a text shaper. It's the good stuff.
 - **Egg Hunt** — [`egg-hunt.html`](egg-hunt.html) — a quieter page with a scattering of
   little hidden things to find.
 

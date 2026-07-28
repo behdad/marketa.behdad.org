@@ -50,28 +50,9 @@ whole room at once.
 
 ### Keyboard
 
-Press `?` in the game for the complete, current shortcut list. The essentials
-are:
-
-| Key | Action |
-| --- | --- |
-| `Left` / `Right` | Previous or next room |
-| `1`–`5` | Jump to a room, unlocking through it if needed |
-| `Enter` | Perform the next guided room action |
-| `Escape` / `Backspace` | Go back or close; during the guided trail, advance the room when nothing else is open |
-| `Space` | Current game action, or play/pause foreground media |
-| `C` / `M` / `L` | Phone / main monitor / laptop |
-| `/` | Open Messages, or focus search in a supported open app |
-| `W` | Open or close **Who's here** after the party has unlocked |
-| `F` | Toggle fullscreen |
-| `D` | Toggle day and night |
-| `P` | Toggle the party |
-| `N` | Next applicable song, dance, or projector selection |
-| `R` | Restart after confirmation |
-
-Shortcuts pause while you type in a field, and action games temporarily take
-over the keys they need. `Escape` may first leave browser fullscreen;
-`Backspace` provides the same in-game back action without doing that.
+Press `?` in the game for the complete, current shortcut list. Shortcuts pause
+while you type in a field, and action games temporarily take over the keys they
+need.
 
 ## The guided room trail
 

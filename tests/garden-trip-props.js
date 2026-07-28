@@ -11,6 +11,12 @@ var harness = String.raw`<script>
       for (var i = 0; i < 4; i++) window.waterSpecificPlant("garden-mushroom", function () { return true; }, "reusable");
       for (var j = 0; j < 2; j++) window.waterSpecificPlant("garden-frog", function () { return true; }, "reusable");
       report.grown = __gardenTripPropWaterState();
+      report.growthTransforms = {
+        mushroom: document.getElementById("garden-mushroom").getAttribute("transform"),
+        mushroomInner: document.getElementById("garden-mushroom-grow").getAttribute("transform"),
+        frog: document.getElementById("garden-frog").getAttribute("transform"),
+        frogInner: document.getElementById("garden-frog-grow").getAttribute("transform")
+      };
 
       var mushroom = document.getElementById("garden-mushroom");
       mushroom.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -65,6 +71,10 @@ check(!r.thrown, "the probe completes", r.thrown);
 check(r.grown && r.grown["garden-mushroom"].growth === 4 && !r.grown["garden-mushroom"].rotted,
   "four reusable waterings grow the mushroom by twenty percent", r.grown);
 check(r.grown && r.grown["garden-frog"].growth === 2, "the frog grows in five-percent reusable-tool steps", r.grown);
+check(r.growthTransforms && /translate\(399,288\) scale\(1\.2\)/.test(r.growthTransforms.mushroom) &&
+  /translate\(446,331\) scale\(1\.1\)/.test(r.growthTransforms.frog) &&
+  r.growthTransforms.mushroomInner === null && r.growthTransforms.frogInner === null,
+  "growth scales the stable placement wrappers, separate from animated inner groups", r.growthTransforms);
 check(r.mushroomTrip && r.mushroomTrip.trip.variant === "shrooms" && r.mushroomTrip.water.growth === 0,
   "starting the mushroom's trip restores its default size", r.mushroomTrip);
 check(r.rotted && r.rotted.water.rotted && r.rotted.water.growth === 4 && r.rotted.classed && !r.rotted.trip.active,

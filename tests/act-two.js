@@ -12,6 +12,8 @@ var HARNESS = [
   'window.goToStage("balcony");',
   'window.__resetActTwo();window.__armActTwo(true);',
   'report.steps.before={beat:window.__actBeat(),caption:window.__captionKey(),room:window.currentStageName};',
+  'for(var i=0;i<20;i++)window.__actTwoTick();',
+  'report.steps.waited={beat:window.__actBeat(),party:!!window.__gardenPartyOn};',
   'document.getElementById("balcony-partyswitch").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));',
   'report.steps.immediate={beat:window.__actBeat(),caption:window.__captionKey(),room:window.currentStageName,party:!!window.__gardenPartyOn};',
   'await sleep(250);',
@@ -38,6 +40,8 @@ if (result) {
   check(result.errors.length === 0, "no uncaught page errors", result.errors);
   check(result.steps.before.beat === "act_b2" && result.steps.before.caption === "act_b2",
     "the balcony switch cue owns the caption before ignition", result.steps.before);
+  check(result.steps.waited.beat === "act_b2" && !result.steps.waited.party,
+    "waiting on the switch cue never starts the party", result.steps.waited);
   check(result.steps.immediate.party && result.steps.immediate.room === "garden" &&
     result.steps.immediate.beat === "act_p1" && result.steps.immediate.caption === "act_b3",
     "first balcony ignition lands in the garden with the reveal still visible", result.steps.immediate);

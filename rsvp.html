@@ -99646,13 +99646,9 @@ function spawnDustMote(container) {
     { id: "act_b0", room: "balcony", claimMs: 60000, afterMs: 90000,
       done: function () { return latch("dusk", function () { return isDusk() || bbqDay(); }); },
       after: function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); } }, // idled through the nudge → the sun sets itself, once
-    { id: "act_b2", room: "balcony", claimMs: 90000, afterMs: 13000,
+    { id: "act_b2", room: "balcony", claimMs: 90000,
       done: function () { return latch("party", partyOn); },
-      enter: function () { switchPulse(true); }, exit: function () { switchPulse(false); },
-      after: function () {
-        if (window.__setPartyMode) window.__setPartyMode(true);
-        else if (window.__setGardenParty) window.__setGardenParty(true, true);
-      } }, // thirteen attended seconds after the switch cue = twenty seconds from balcony arrival
+      enter: function () { switchPulse(true); }, exit: function () { switchPulse(false); } },
     { id: "act_p1", room: "garden", claimMs: 90000, afterMs: 150000,
       done: function () { return !!latched.drink; }, after: function () { latched.drink = true; } },
     { id: "act_p2", room: "garden", claimMs: 60000, afterMs: 60000,
@@ -99713,8 +99709,8 @@ function spawnDustMote(container) {
   function tick() {
     if (!armed || !live) return;
     if (document.hidden || !document.hasFocus() || window.__cinematic) return;
-    // Window Tetris owns the balcony while it is active. Preserve the remaining
-    // attended-time delay so the automatic party handoff cannot interrupt a game.
+    // Window Tetris owns the balcony while it is active. Its play time should not advance
+    // the second-act caption pacing or the eventual return-to-balcony reminder.
     if (window.__balconyTetrisState && window.__balconyTetrisState().active) return;
     liveMs += 1000;
     var b = beat(live);

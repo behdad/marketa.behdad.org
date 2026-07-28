@@ -447,6 +447,10 @@ The main monitor desktop contains these app tiles:
 - Python
 - Linux
 
+Drag one desktop tile onto another to swap their positions; on touch, hold briefly
+before dragging. The custom arrangement survives Continue; starting the game over
+restores the original order.
+
 Every monitor app supports Kill, and most have their own Kill gag. A normal close
 leaves the app marked as running. Right-click its desktop tile or open surface
 and choose **Kill** to clear that session. Runtime apps also offer **Restart**

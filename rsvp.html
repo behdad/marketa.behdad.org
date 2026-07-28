@@ -3698,7 +3698,7 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 @supports not selector(::-webkit-scrollbar){
 .dock-grid{scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.35) transparent}
 }
-.dock-app{display:flex; flex-direction:column; align-items:center; gap:0.3px; padding-top:0.4px; cursor:default; transition:transform .15s ease}
+.dock-app{display:flex; flex-direction:column; align-items:center; gap:0.3px; padding-top:0.4px; cursor:default; transition:transform .15s ease; touch-action:none; -webkit-user-select:none; user-select:none}
 .dock-app.dock-app-locked{display:none}
 #office-monitor.dev-zoomed .dock-app{cursor:pointer}
 #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:scale(1.09)} /* only advertise app launching once clicks reach the icons; plain scale avoids translateZ/will-change (WebKit bug 23113) */
@@ -3708,6 +3708,10 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:hover .dock-tile{transform:n
 .dock-grid.searching .dock-app{opacity:.28}
 .dock-grid.searching .dock-app.search-match{opacity:1}
 .dock-app.search-match .dock-tile{box-shadow:inset 0 0 0 .7px #8e3a4a,0 0 0 .7px rgba(255,253,248,.95)}
+.dock-app.dragging{opacity:.28}
+.dock-app.drop-target .dock-tile{box-shadow:inset 0 0 0 .7px #8e3a4a,0 0 0 .7px rgba(255,253,248,.95)}
+.dock-drag-ghost{position:fixed; left:0; top:0; z-index:70; pointer-events:none; margin:0; transition:none; transform:translate(-50%,-50%) scale(var(--dock-drag-scale,1.12)); transform-origin:center; opacity:.96}
+.dock-drag-ghost .dock-tile{box-shadow:inset 0 0 0 .4px rgba(0,0,0,.18),0 1px 2px rgba(0,0,0,.32)}
 #monitor-dock-search{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease}
 #monitor-dock-search.active{opacity:1;visibility:visible;pointer-events:auto}
 .desk-search-bg{fill:#fffdf8;stroke:#8e3a4a;stroke-width:.45}
@@ -46437,6 +46441,29 @@ setOfficeProgress("pc", false);
   var dock = document.getElementById("monitor-desktop-dock");
   var dockGlyphEls = {}; // per-app glyph element, for tiles that show live state
   var dockCells = {};
+  function desktopDefaultOrder() {
+    return DESKTOP_APPS.filter(function (app) { return !app.searchOnly; }).map(function (app) { return app.id; });
+  }
+  function normalizeDockOrder(order) {
+    var allowed = desktopDefaultOrder(), seen = Object.create(null), clean = [];
+    (Array.isArray(order) ? order : []).forEach(function (id) {
+      if (allowed.indexOf(id) !== -1 && !seen[id]) { seen[id] = true; clean.push(id); }
+    });
+    allowed.forEach(function (id) { if (!seen[id]) clean.push(id); });
+    return clean;
+  }
+  var dockOrder = desktopDefaultOrder();
+  function arrangeDockCells(order) {
+    dockOrder = normalizeDockOrder(order);
+    if (!dockGrid) return;
+    dockOrder.forEach(function (id, slot) {
+      var cell = dockCells[id];
+      if (!cell) return;
+      cell.setAttribute("data-slot", slot);
+      dockGrid.appendChild(cell);
+    });
+  }
+  window.__monitorDockOrder = function () { return dockOrder.slice(); };
   // Session-scoped task registry. The monitor's show-* classes are the one launch boundary
   // shared by dock icons, toolbar shortcuts, story beats and console commands, so observing
   // them catches every way an app can open without teaching each app about the desktop.
@@ -46509,6 +46536,7 @@ setOfficeProgress("pc", false);
   var dockGrid = null, dockSearch = null, dockSearchText = null, dockSearchInput = null;
   var dockSearchQuery = "", dockSearchBest = null, dockSearchCompletion = "", dockSearchOpen = false;
   var tileCamVideo = null, tileCamGroup = null;
+  var dockDrag = null, dockSuppressClick = false;
   // stamped whenever a dock icon swaps the screen layer; the monitor's dblclick swap and
   // the photobooth's consent button both ignore inputs landing within this grace window,
   // so the second click of a double-click can't hit whatever appeared under it
@@ -47066,12 +47094,15 @@ setOfficeProgress("pc", false);
       cell.appendChild(label);
       cell.addEventListener("click", function (e) {
         e.stopPropagation();
+        if (dockSuppressClick) { dockSuppressClick = false; return; }
         if (app.locked && app.locked()) return;
         clearDockSearch(); appOpenTs = Date.now(); app.open();
       });
+      cell.addEventListener("pointerdown", function (e) { startDockDrag(e, cell, app.id); });
       cell.addEventListener("dblclick", function (e) { e.stopPropagation(); });
       dockGrid.appendChild(cell);
     });
+    arrangeDockCells(dockOrder);
     // Typing while zoomed onto the bare desktop temporarily replaces the menu bar with
     // an app finder. SVG paints the finder; a nearly invisible real input mirrors it so
     // a direct touch can summon mobile keyboards without changing the desktop layout.
@@ -47640,6 +47671,131 @@ setOfficeProgress("pc", false);
       }
     }
   }, true);
+  var DOCK_DRAG_THRESHOLD = 6;
+  var DOCK_TOUCH_HOLD_MS = 320;
+  function startDockDrag(e, cell, appId) {
+    if (e.button != null && e.button !== 0) return;
+    if (dockSearchOpen || dockSearchQuery) return;
+    cancelDockDrag();
+    dockSuppressClick = false;
+    dockDrag = {
+      cell: cell, appId: appId, pointerId: e.pointerId,
+      startX: e.clientX, startY: e.clientY,
+      active: false, mode: null, target: null, ghost: null,
+      isTouch: e.pointerType === "touch", holdReady: e.pointerType !== "touch",
+      holdTimer: null, startScrollTop: dockGrid ? dockGrid.scrollTop : 0
+    };
+    if (dockDrag.isTouch) {
+      dockDrag.holdTimer = setTimeout(function () {
+        if (dockDrag && dockDrag.pointerId === e.pointerId && !dockDrag.active) dockDrag.holdReady = true;
+      }, DOCK_TOUCH_HOLD_MS);
+    }
+    document.addEventListener("selectstart", blockDockDragSelection, true);
+    window.addEventListener("pointermove", moveDockDrag, true);
+    window.addEventListener("pointerup", finishDockDrag, true);
+    window.addEventListener("pointercancel", finishDockDrag, true);
+    window.addEventListener("blur", cancelDockDrag);
+  }
+  function clearDockDragHold(drag) {
+    if (drag && drag.holdTimer) { clearTimeout(drag.holdTimer); drag.holdTimer = null; }
+  }
+  function blockDockDragSelection(e) {
+    if (dockDrag) e.preventDefault();
+  }
+  function dockCellAt(x, y) {
+    if (dockDrag && dockDrag.ghost) dockDrag.ghost.style.visibility = "hidden";
+    var el = document.elementFromPoint(x, y);
+    if (dockDrag && dockDrag.ghost) dockDrag.ghost.style.visibility = "";
+    return el && el.closest ? el.closest(".dock-app") : null;
+  }
+  function clearDockDropTarget() {
+    if (!dockGrid) return;
+    var target = dockGrid.querySelector(".dock-app.drop-target");
+    if (target) target.classList.remove("drop-target");
+  }
+  function highlightDockTarget(e) {
+    var cell = dockCellAt(e.clientX, e.clientY);
+    var target = cell ? parseInt(cell.getAttribute("data-slot"), 10) : null;
+    if (!isFinite(target) || target === dockOrder.indexOf(dockDrag.appId)) target = null;
+    if (target === dockDrag.target) return;
+    clearDockDropTarget();
+    if (cell && target != null) cell.classList.add("drop-target");
+    dockDrag.target = target;
+  }
+  function beginDockReorder(e) {
+    clearDockSearch();
+    dockDrag.cell.classList.add("dragging");
+    var ghost = dockDrag.cell.cloneNode(true);
+    ghost.removeAttribute("id");
+    ghost.removeAttribute("data-slot");
+    ghost.classList.remove("dragging", "drop-target", "search-match");
+    ghost.classList.add("dock-drag-ghost");
+    var rect = dockDrag.cell.getBoundingClientRect();
+    ghost.style.width = Math.max(1, dockDrag.cell.offsetWidth) + "px";
+    ghost.style.height = Math.max(1, dockDrag.cell.offsetHeight) + "px";
+    var scale = rect.width / Math.max(1, dockDrag.cell.offsetWidth);
+    ghost.style.setProperty("--dock-drag-scale", String(scale * 1.08));
+    document.body.appendChild(ghost);
+    dockDrag.ghost = ghost;
+    moveDockGhost(e);
+  }
+  function moveDockGhost(e) {
+    if (!dockDrag || !dockDrag.ghost) return;
+    dockDrag.ghost.style.left = e.clientX + "px";
+    dockDrag.ghost.style.top = e.clientY + "px";
+  }
+  function moveDockDrag(e) {
+    if (!dockDrag || e.pointerId !== dockDrag.pointerId) return;
+    var dx = e.clientX - dockDrag.startX, dy = e.clientY - dockDrag.startY;
+    if (!dockDrag.active) {
+      if (Math.abs(dx) < DOCK_DRAG_THRESHOLD && Math.abs(dy) < DOCK_DRAG_THRESHOLD) return;
+      dockDrag.active = true;
+      dockDrag.mode = dockDrag.isTouch && !dockDrag.holdReady ? "scroll" : "reorder";
+      clearDockDragHold(dockDrag);
+      if (dockDrag.mode === "reorder") beginDockReorder(e);
+    }
+    e.preventDefault();
+    if (dockDrag.mode === "scroll") {
+      if (dockGrid) dockGrid.scrollTop = dockDrag.startScrollTop - dy;
+      return;
+    }
+    moveDockGhost(e);
+    highlightDockTarget(e);
+  }
+  function teardownDockDrag(drag) {
+    clearDockDragHold(drag);
+    document.removeEventListener("selectstart", blockDockDragSelection, true);
+    window.removeEventListener("pointermove", moveDockDrag, true);
+    window.removeEventListener("pointerup", finishDockDrag, true);
+    window.removeEventListener("pointercancel", finishDockDrag, true);
+    window.removeEventListener("blur", cancelDockDrag);
+    clearDockDropTarget();
+    if (drag && drag.cell) drag.cell.classList.remove("dragging");
+    if (drag && drag.ghost && drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
+  }
+  function finishDockDrag(e) {
+    if (!dockDrag || e.pointerId !== dockDrag.pointerId) return;
+    var drag = dockDrag;
+    var target = e.type === "pointercancel" || drag.mode !== "reorder" ? null : drag.target;
+    teardownDockDrag(drag);
+    dockDrag = null;
+    if (!drag.active) return;
+    dockSuppressClick = true;
+    if (target == null) return;
+    var from = dockOrder.indexOf(drag.appId);
+    if (from < 0 || from === target) return;
+    var tmp = dockOrder[target];
+    dockOrder[target] = dockOrder[from];
+    dockOrder[from] = tmp;
+    arrangeDockCells(dockOrder);
+    if (window.__checkpointChanged) window.__checkpointChanged();
+  }
+  function cancelDockDrag() {
+    if (!dockDrag) return;
+    var drag = dockDrag;
+    dockDrag = null;
+    teardownDockDrag(drag);
+  }
   function normalizeDockSearch(value) {
     var s = String(value == null ? "" : value).toLocaleLowerCase();
     try { s = s.normalize("NFD").replace(/[̀-ͯ]/g, ""); } catch (e) {}
@@ -58634,12 +58790,14 @@ async def localfont(name):
       return {
         surface: monitor.classList.contains("here") ? "monitor" : "typewriter",
         screenOn: monitor.classList.contains("screen-on"),
-        zoomed: !!(window.__monitorZoomed && window.__monitorZoomed())
+        zoomed: !!(window.__monitorZoomed && window.__monitorZoomed()),
+        dockOrder: dockOrder.slice()
       };
     },
     restore: function (state, phase) {
       state = state || {};
       if (phase === "beforeStage") {
+        arrangeDockCells(state.dockOrder || desktopDefaultOrder());
         clearBoot();
         var toMonitor = state.surface !== "typewriter";
         monitor.classList.toggle("here", toMonitor);
@@ -58654,7 +58812,8 @@ async def localfont(name):
           monitor.classList.contains("screen-on") && window.__monitorZoomIn) {
         window.__monitorZoomIn();
       }
-    }
+    },
+    reset: function () { arrangeDockCells(desktopDefaultOrder()); }
   });
   window.resetOfficeMonitor = function () {
     if (window.__clearMonitorShort) window.__clearMonitorShort(); // dry out any sprinkler short so a reset can power the PC on again

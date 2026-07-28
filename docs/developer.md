@@ -701,6 +701,8 @@ Opening an app boots/pans the monitor if necessary, closes incompatible surfaces
 own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
 view gets the first chance to step back, then the app closes to the desktop. A normal close can
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
+The visible dock order lives in the monitor checkpoint row; drag swaps fixed slots, Continue
+restores the order, and the adapter reset restores `DESKTOP_APPS` order.
 Julia and Pipes share one 4× off-DOM Canvas 2D surface. Flower Box owns one lazy
 WebGL 1 canvas; its source-derived radial cube morph is updated on the CPU so the
 WebGL path and Canvas 2D fallback share geometry, smooth normals, and a slow

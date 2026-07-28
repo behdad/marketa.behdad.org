@@ -26,6 +26,7 @@ const CHAT_KNOWLEDGE_JSON = JSON.stringify(CHAT_KNOWLEDGE);
 const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "mines", "life", "doom", "code", "console", "python", "linux", "weather"]);
 const PUBLIC_PHONE_APPS = new Set(["call", "messages", "mail", "calendar", "album", "photobooth", "music", "hn", "weather", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"]);
 const PUBLIC_MAIL_IDS = new Set(["lore", "rsvp", "spam"]);
+const PUBLIC_GAME_IDS = new Set(["flair-catch", "alien-resources", "block-party", "hack-man", "mines", "quiz", "life", "snakes", "shoot", "octi-escape"]);
 
 const ACTION_SPECS = Object.freeze({
   "room.go": Object.freeze({ room: new Set(["kitchen", "garden", "cuddly", "office", "balcony"]) }),
@@ -89,7 +90,7 @@ Verified knowledge.loft.rooms is Charlie's room guide. Use each room's objects a
 
 Current game state.current_hint is the instruction visible to the player now. Current game state.instructions is the complete localized catalog of possible instruction captions; use it as reference, but do not pretend a non-current caption is presently on screen.
 
-When current game state.apps.games is present, it is the authoritative game directory: use its names, locations, start instructions, and live persisted high_score values. Do not invent a high score for entries without that field.
+When current game state.apps.games is present, it is the authoritative game directory: use its exact public names, locations, how_to_open instructions, and live persisted high_score values. A broad question about what games exist MUST cover every supplied entry, not only games with currently available actions. Never substitute an internal/controller name such as "Invaders" for "Alien Resources", and never invent a Games menu or another location. Do not invent a high score for entries without that field.
 
 When current game state.scripting_api is present, it is the authoritative public reference for
 the Loft's typed loft.api capabilities and legacy console/global JavaScript commands. Use its
@@ -143,7 +144,7 @@ While a party is active, party_elapsed_seconds may gently affect adult guests' c
 
 Current game state.current_hint is the instruction visible to the visitor now. Current game state.instructions is the complete localized catalog of possible instruction captions; use it only as reference, and do not present a non-current caption as current.
 
-When current game state.apps.games is present, it is the authoritative game directory. Charlie may use its names, locations, start instructions, and live persisted high_score values; nobody should guess a score for entries without that field.
+When current game state.apps.games is present, it is the authoritative game directory. For a broad question about available games, Charlie must cover every supplied entry using its exact public name, location, how_to_open instructions, and live persisted high_score values—not only games with currently available actions. Never rename "Alien Resources" to "Invaders" or invent a Games menu. Nobody should guess a score for entries without that field.
 
 When current game state.scripting_api is present, use it as the authoritative public reference for
 Loft API signatures and console/global helpers. It is supplied only for scripting questions. Use it
@@ -488,6 +489,21 @@ function cleanAppCatalog(value) {
   };
 }
 
+function cleanGameKnowledge(value) {
+  return Array.isArray(value) ? value.slice(0, PUBLIC_GAME_IDS.size).flatMap((item) => {
+    const game = item && typeof item === "object" ? item : {};
+    const id = cleanText(game.id, 40);
+    const name = cleanText(game.name, 80);
+    const location = cleanText(game.location, 160);
+    const howToOpen = cleanText(game.how_to_open, 240);
+    if (!PUBLIC_GAME_IDS.has(id) || !name || !location || !howToOpen) return [];
+    const out = { id, name, location, how_to_open: howToOpen };
+    const highScore = cleanNumber(game.high_score, 0, 1_000_000_000, 0);
+    if (highScore !== null) out.high_score = highScore;
+    return [out];
+  }) : [];
+}
+
 function cleanAppKnowledge(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const out = {};
@@ -537,6 +553,7 @@ function cleanAppKnowledge(value) {
     }];
   });
   if (source.catalog) out.catalog = cleanAppCatalog(source.catalog);
+  if (source.games) out.games = cleanGameKnowledge(source.games);
   return out;
 }
 
@@ -1070,7 +1087,7 @@ async function callOpenAI(request, env, payload) {
         text: { verbosity: "low" },
         instructions,
         input: [...payload.history, { role: "user", content: payload.message }],
-        max_output_tokens: 220,
+        max_output_tokens: payload.context.apps.games ? 480 : 220,
         store: false,
         safety_identifier: await safetyIdentifier(request),
       }),

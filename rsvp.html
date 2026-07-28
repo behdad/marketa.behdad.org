@@ -970,6 +970,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #balcony-tetris-ui .tetris-label{font-size:6px;fill:#d8d4cc}
 #balcony-tetris-ui .tetris-value{font-family:"DejaVu Sans Mono",ui-monospace,monospace;font-size:9px;font-weight:700}
 #balcony-tetris-ui .tetris-status{font-size:6px;fill:#f1cf78}
+#balcony-tetris-ui .tetris-preview-frame{fill:#101a21;stroke:#65737c;stroke-width:.6}
+#balcony-tetris-ui .tetris-preview-cell{stroke:#fffdf8;stroke-opacity:.22;stroke-width:.35}
+#balcony-tetris-ui .tetris-preview-cell.tetris-i{fill:#35d8ea}
+#balcony-tetris-ui .tetris-preview-cell.tetris-j{fill:#4e7ff0}
+#balcony-tetris-ui .tetris-preview-cell.tetris-l{fill:#f39a3f}
+#balcony-tetris-ui .tetris-preview-cell.tetris-o{fill:#f2d238}
+#balcony-tetris-ui .tetris-preview-cell.tetris-s{fill:#55c95d}
+#balcony-tetris-ui .tetris-preview-cell.tetris-t{fill:#b769d2}
+#balcony-tetris-ui .tetris-preview-cell.tetris-z{fill:#ed5960}
 #balcony-tetris-ui .tetris-close{cursor:pointer}
 #balcony-tetris-ui .tetris-close circle{fill:#18242d;stroke:#f1cf78;stroke-width:1}
 #balcony-tetris-ui .tetris-close:hover circle{fill:#263844}
@@ -25991,6 +26000,11 @@ section{margin:1.9rem 0}
 <text class="tetris-value tetris-high-value" x="50" y="42">0</text>
 <text class="tetris-label tetris-lines-label" x="9" y="54">LINES</text>
 <text class="tetris-value tetris-lines-value" x="50" y="54">0</text>
+<g class="tetris-next-wrap">
+<text class="tetris-label tetris-next-label" x="106" y="22">NEXT</text>
+<rect class="tetris-preview-frame" x="104" y="25" width="29" height="24" rx="2"/>
+<g class="tetris-next-piece" aria-hidden="true"></g>
+</g>
 <text class="tetris-status" x="9" y="66">MOVE ←→ · ROTATE ↑ · DROP SPACE</text>
 <g class="tetris-close" role="button" tabindex="0" aria-label="Exit game">
 <circle cx="132" cy="10" r="6"/>
@@ -27298,6 +27312,7 @@ var T = {
     game_move_right: "Move right",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "LINES",
+    tetris_next: "NEXT",
     tetris_controls: "MOVE ←→ · ROTATE ↑ · DROP SPACE",
     tetris_touch_controls: "TAP ROTATE · SWIPE MOVE/DROP",
     tetris_again_key: "ENTER",
@@ -28414,6 +28429,7 @@ var T = {
     game_move_right: "Doprava",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "ŘADY",
+    tetris_next: "DALŠÍ",
     tetris_controls: "POHYB ←→ · OTOČ ↑ · PÁD MEZERNÍK",
     tetris_touch_controls: "KLEPNI OTOČ · TÁHNI POSUŇ/SHOĎ",
     tetris_again_key: "ENTER",
@@ -66116,6 +66132,9 @@ async def localfont(name):
       high: ui.querySelector(".tetris-high-value"),
       linesLabel: ui.querySelector(".tetris-lines-label"),
       lines: ui.querySelector(".tetris-lines-value"),
+      nextLabel: ui.querySelector(".tetris-next-label"),
+      nextPiece: ui.querySelector(".tetris-next-piece"),
+      nextWrap: ui.querySelector(".tetris-next-wrap"),
       status: ui.querySelector(".tetris-status"),
       close: ui.querySelector(".tetris-close")
     };
@@ -66136,6 +66155,7 @@ async def localfont(name):
       hud.scoreLabel.textContent = text("game_score");
       hud.highLabel.textContent = text("game_best");
       hud.linesLabel.textContent = text("tetris_lines");
+      hud.nextLabel.textContent = text("tetris_next");
       hud.status.textContent = resultVisible
         ? text("game_over") + " · " + text(coarseInput ? "tetris_touch_again_key" : "tetris_again_key") +
           ": " + text("game_play_again")
@@ -66317,12 +66337,43 @@ async def localfont(name):
       }
       return out;
     }
-    function nextPiece() {
+    function ensureBag() {
       if (!bag.length) bag = shuffledBag();
+    }
+    function queuedType() {
+      return bag.length ? bag[bag.length - 1] : null;
+    }
+    function nextPiece() {
+      ensureBag();
       var type = bag.pop(), spec = PIECES[type];
       piece = { type: type, rotation: 0, x: Math.floor((BOARD_COLS - spec.size) / 2), y: 0 };
       if (collides(piece)) { stopGame(true); return false; }
+      ensureBag();
       return true;
+    }
+    function renderNextPiece() {
+      if (!hud.nextPiece || !hud.nextWrap) return;
+      hud.nextPiece.replaceChildren();
+      var type = active ? queuedType() : null;
+      hud.nextWrap.style.display = type ? "" : "none";
+      if (!type) return;
+      var spec = PIECES[type], pts = rotatedCells(spec, 0);
+      var minX = Math.min.apply(null, pts.map(function (xy) { return xy[0]; }));
+      var maxX = Math.max.apply(null, pts.map(function (xy) { return xy[0]; }));
+      var minY = Math.min.apply(null, pts.map(function (xy) { return xy[1]; }));
+      var maxY = Math.max.apply(null, pts.map(function (xy) { return xy[1]; }));
+      var cellSize = 5, gap = .7;
+      var width = (maxX - minX + 1) * cellSize + (maxX - minX) * gap;
+      var height = (maxY - minY + 1) * cellSize + (maxY - minY) * gap;
+      var originX = 118.5 - width / 2, originY = 37 + height / 2;
+      pts.forEach(function (xy) {
+        hud.nextPiece.appendChild(svgEl("rect", {
+          "class": "tetris-preview-cell tetris-" + type,
+          x: (originX + (xy[0] - minX) * (cellSize + gap)).toFixed(2),
+          y: (originY - height + (xy[1] - minY) * (cellSize + gap)).toFixed(2),
+          width: cellSize, height: cellSize, rx: ".7"
+        }));
+      });
     }
     function paintCell(row, col, type) {
       var el = cells[row * BOARD_COLS + col];
@@ -66336,6 +66387,7 @@ async def localfont(name):
       if (piece) pieceCells(piece).forEach(function (xy) {
         if (xy[1] >= 0 && xy[1] < BOARD_ROWS && xy[0] >= 0 && xy[0] < BOARD_COLS) paintCell(xy[1], xy[0], piece.type);
       });
+      renderNextPiece();
       updateHud();
     }
     function move(dx, dy) {
@@ -66450,6 +66502,7 @@ async def localfont(name):
       var wasActive = active, hadResult = resultVisible, finalScore = score;
       var newBest = wasActive && finalScore > runStartingHigh;
       active = false; piece = null;
+      renderNextPiece();
       if (finalScore > highScore()) setHighScore(finalScore);
       stage.classList.remove("tetris-on");
       resumeScene();
@@ -66652,6 +66705,7 @@ async def localfont(name):
       return {
         active: active, result: resultVisible, score: score, high: highScore(), lines: lines, level: level,
         piece: piece ? { type: piece.type, rotation: piece.rotation, x: piece.x, y: piece.y } : null,
+        next: active ? queuedType() : null,
         board: board.map(function (row) { return row.slice(); }),
         windows: windows.map(function (windowEl) { return windowEl.classList.contains("lit"); }),
         attract: attractCells.length,

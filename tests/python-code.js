@@ -72,6 +72,9 @@ check(!!turtleMatch, "a self-hosted browser Turtle compatibility module is embed
 check(/<g id="monitor-py-turtle">[\s\S]*?<svg[\s\S]*?id="monitor-py-turtle-lines"/.test(html) &&
       /PY_TURTLE_NODE_LIMIT\s*=\s*6000/.test(html),
   "Turtle renders into a bounded native SVG surface");
+check(/class", "py-turtle-cursor"/.test(html) &&
+      /py-turtle-cursor-shell/.test(html),
+  "Turtle drawings end with a turtle-shaped SVG cursor");
 check(/installPythonTurtle\(py\)/.test(html) &&
       /sys\.path\.insert\(0,p\)/.test(html),
   "the Turtle module is installed before user Python imports it");

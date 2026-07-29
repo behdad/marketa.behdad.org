@@ -187,6 +187,9 @@ Octi's Escape, the balcony's Block Party, the garden magic box, and games on the
 phone and monitor. Each action game displays its own controls and temporarily
 owns the relevant keyboard input.
 
+In Block Party, click or tap the playfield to rotate a piece. Drag horizontally
+to move it, or drag down to drop it; the arrow keys and Space also work.
+
 Double-click any office butterfly to start a short Butterfly Chase.
 Keep pestering a butterfly and its artwork may need a moment to recover.
 

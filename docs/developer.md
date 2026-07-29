@@ -413,10 +413,13 @@ is intentionally outside checkpoint/reset state, matching Invaders, Flair-Catch,
 and Pac-Man. Starting snapshots the forty apartment states, pauses running
 balcony animations, adds `.tetris-on`, installs the topmost click shield, and
 uses a capture-phase keyboard handler so arrows, Space, and Escape cannot reach
-global room/audio controls. Escape, blur, hidden-tab transition, reset, and
+global room/audio controls. Touch and primary-button mouse input share the same
+axis-locking gesture path: a tap/click rotates, horizontal movement tracks crossed
+columns live without replaying them on release, and a downward drag soft- or
+hard-drops. Escape, blur, hidden-tab transition, reset, and
 programmatic room leave cancel the sole rAF driver and restore the exact snapshot.
 Game over performs the same restore, then exposes a bounded `.tetris-result`
-state in which Enter can restart. `__balconyTetrisTest` is the narrow deterministic
+state in which Enter or a tap/click can restart. `__balconyTetrisTest` is the narrow deterministic
 board/line-clear hook used by `tests/balcony-tetris.js`; it is not a public API.
 
 ### Progression transitions

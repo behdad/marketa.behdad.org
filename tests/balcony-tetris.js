@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Across-the-street apartment lights + hidden Block Party regression.
 // Proves the 5x8 physical facade / 10x16 game mapping, independent manual and
-// ambient lights, same-window launch gesture, keyboard ownership, scoring,
-// persistence, and teardown restoration.
+// ambient lights, same-window launch gesture, mouse/touch/keyboard ownership,
+// scoring, persistence, and teardown restoration.
 "use strict";
 
 var lib = require("./lib");
@@ -13,6 +13,7 @@ var HARNESS = [
   '(function(){',
   'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'function key(k){var e=new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true});return !document.dispatchEvent(e);}',
+  'function pointer(el,type,x,y,id){el.dispatchEvent(new PointerEvent(type,{pointerId:id||1,pointerType:"mouse",button:0,buttons:type==="pointerup"?0:1,clientX:x,clientY:y,bubbles:true,cancelable:true}));}',
   'function same(a,b){return JSON.stringify(a)===JSON.stringify(b);}',
   'function clicks(el,n){for(var i=0;i<n;i++)el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   'var report={errors:[],steps:{},debug:{}};function S(k,v){report.steps[k]=!!v;}',
@@ -38,6 +39,12 @@ var HARNESS = [
   'window.__balconyTetrisTest("set",{board:new Array(16).fill(null).map(function(){return new Array(10).fill(null);}),piece:{type:"i",rotation:0,x:4,y:0},score:0,lines:0});',
   'window.__balconyTetrisTest("touch-begin",{x:100,y:100,at:1000});var liveOne=window.__balconyTetrisTest("touch-move",{x:64,y:102}),liveMany=window.__balconyTetrisTest("touch-move",{x:20,y:104}),liveReverse=window.__balconyTetrisTest("touch-move",{x:70,y:103}),liveEnd=window.__balconyTetrisTest("touch-end",{x:70,y:103,at:1300});',
   'S("touch_tracks_live",liveOne.state.piece.x===3&&liveMany.state.piece.x===1&&liveReverse.state.piece.x===3&&liveEnd.state.piece.x===3&&liveEnd.gesture==="left");',
+  'var ui=document.getElementById("balcony-tetris-ui");window.__balconyTetrisTest("set",{board:new Array(16).fill(null).map(function(){return new Array(10).fill(null);}),piece:{type:"i",rotation:0,x:4,y:0},score:0,lines:0});',
+  'pointer(ui,"pointerdown",200,200,7);pointer(ui,"pointermove",164,202,7);pointer(ui,"pointermove",120,204,7);pointer(ui,"pointermove",170,203,7);pointer(ui,"pointerup",170,203,7);var mouseDrag=window.__balconyTetrisState();',
+  'pointer(ui,"pointerdown",200,200,8);pointer(ui,"pointerup",203,202,8);var mouseClick=window.__balconyTetrisState();',
+  'S("mouse_move_rotate",mouseDrag.piece.x===3&&mouseDrag.piece.rotation===0&&mouseClick.piece.x===3&&mouseClick.piece.rotation===1);',
+  'window.__balconyTetrisTest("set",{board:new Array(16).fill(null).map(function(){return new Array(10).fill(null);}),piece:{type:"o",rotation:0,x:4,y:0},score:0,lines:0});pointer(ui,"pointerdown",200,100,9);pointer(ui,"pointermove",202,130,9);pointer(ui,"pointerup",202,130,9);var mouseSoft=window.__balconyTetrisState();pointer(ui,"pointerdown",200,100,10);pointer(ui,"pointermove",202,200,10);pointer(ui,"pointerup",202,200,10);var mouseHard=window.__balconyTetrisState();',
+  'S("mouse_drop",mouseSoft.piece.y>0&&mouseSoft.score>0&&mouseHard.score>mouseSoft.score);',
   'document.querySelector(".tetris-close").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));S("close_button",!window.__balconyTetrisState().active);window.__startBalconyTetris();',
   'var nightBefore=document.getElementById("stage-balcony").classList.contains("dusk"),p0=started.piece,downPrevented=key("ArrowDown"),p1=window.__balconyTetrisState().piece,rotatePrevented=key("ArrowUp"),p2=window.__balconyTetrisState().piece;',
   'S("keys_captured",downPrevented&&rotatePrevented&&p1.y>=p0.y&&p2.rotation!==p1.rotation&&document.getElementById("stage-balcony").classList.contains("dusk")===nightBefore);',
@@ -88,6 +95,8 @@ else {
     party_timer_paused: "the automatic party countdown pauses while Tetris is active",
     touch_controls: "tap rotates and a horizontal swipe moves the active piece",
     touch_tracks_live: "horizontal touch dragging follows crossed columns, reverses, and does not replay on release",
+    mouse_move_rotate: "horizontal mouse dragging follows and reverses live without rotating on release; a click rotates",
+    mouse_drop: "downward mouse drags soft-drop and hard-drop the active piece",
     close_button: "the visible close button exits the game",
     keys_captured: "movement/rotation keys are captured before room navigation",
     line_scoring: "hard drop completes a line, scores it, and banks the high score",

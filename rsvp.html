@@ -28180,7 +28180,7 @@ var T = {
     tetris_title: "BLOCK PARTY",
     tetris_lines: "LINES",
     tetris_next: "NEXT",
-    tetris_controls: "MOVE ←→ · ROTATE ↑ · DROP SPACE",
+    tetris_controls: "CLICK ROTATE · DRAG MOVE/DROP",
     tetris_touch_controls: "TAP ROTATE · SWIPE MOVE/DROP",
     tetris_again_key: "ENTER",
     tetris_touch_again_key: "TAP",
@@ -28266,7 +28266,7 @@ var T = {
       intro_guide: "Here is where your clues appear. Click to continue.",
       flair_hint: "Move Pouria to catch garnishes 🍋; dodge the wasp 🐝.",
       arcade_hint: "Move the chair or use ← → to aim; Space fires. 👾",
-      tetris_hint: "Move: ← → · rotate: ↑ · drop: Space.",
+      tetris_hint: "Click to rotate; drag to move or drop. Keys: ← → ↑, Space.",
       tetris_touch_hint: "Tap to rotate; swipe to move or drop. × exits.",
       tetris_game_over: "Game over · Enter: play again · Esc: exit.",
       tetris_touch_game_over: "Game over · Tap: play again · ×: exit.",
@@ -29343,7 +29343,7 @@ var T = {
     tetris_title: "BLOCK PARTY",
     tetris_lines: "ŘADY",
     tetris_next: "DALŠÍ",
-    tetris_controls: "POHYB ←→ · OTOČ ↑ · PÁD MEZERNÍK",
+    tetris_controls: "KLIK OTOČ · TÁHNI POSUŇ/SHOĎ",
     tetris_touch_controls: "KLEPNI OTOČ · TÁHNI POSUŇ/SHOĎ",
     tetris_again_key: "ENTER",
     tetris_touch_again_key: "KLEPNI",
@@ -29429,7 +29429,7 @@ var T = {
       intro_guide: "Tady se objevují tvoje nápovědy. Klikni a pokračuj.",
       flair_hint: "Pohybuj Pouriou a chytej ozdoby 🍋; vyhni se vosě 🐝.",
       arcade_hint: "Pohybuj křeslem nebo použij ← → a zamiř; mezerník vystřelí. 👾",
-      tetris_hint: "Pohyb: ← → · otočení: ↑ · pád: mezerník.",
+      tetris_hint: "Kliknutím otáčej; tažením posouvej nebo shazuj. Klávesy: ← → ↑, mezerník.",
       tetris_touch_hint: "Klepnutím otáčej; tažením posouvej nebo shazuj. × ukončí hru.",
       tetris_game_over: "Konec hry · Enter: hrát znovu · Esc: ukončit.",
       tetris_touch_game_over: "Konec hry · Klepni: hrát znovu · ×: ukončit.",
@@ -69008,9 +69008,9 @@ async def localfont(name):
       e.stopImmediatePropagation();
     }, true);
 
-    // The game owns only its full-room SVG shield, so touch gestures cannot collide with the
+    // The game owns only its full-room SVG shield, so gestures cannot collide with the
     // ordinary room controls. SVG children ignore touch-action in several mobile engines:
-    // cancel movement explicitly from this delegated non-passive listener instead.
+    // cancel touch movement explicitly from this delegated non-passive listener instead.
     var touchStart = null;
     function beginTouchGesture(x, y, at) {
       touchStart = {
@@ -69088,6 +69088,34 @@ async def localfont(name):
       finishTouchGesture(t.clientX, t.clientY, performance.now());
     }, { passive: false });
     ui.addEventListener("touchcancel", function () { touchStart = null; });
+
+    // Mouse follows the same tap/drag thresholds as touch. Once updateTouchGesture locks
+    // an axis, finishTouchGesture cannot reinterpret the release as a click-to-rotate.
+    var mousePointerId = null;
+    ui.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "mouse" || e.button !== 0 || (!active && !resultVisible)) return;
+      if (e.target && e.target.closest && e.target.closest(".tetris-close")) return;
+      e.preventDefault();
+      mousePointerId = e.pointerId;
+      beginTouchGesture(e.clientX, e.clientY, performance.now());
+      try { ui.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    ui.addEventListener("pointermove", function (e) {
+      if (e.pointerType !== "mouse" || e.pointerId !== mousePointerId || !touchStart) return;
+      e.preventDefault();
+      updateTouchGesture(e.clientX, e.clientY);
+    });
+    ui.addEventListener("pointerup", function (e) {
+      if (e.pointerType !== "mouse" || e.pointerId !== mousePointerId || !touchStart) return;
+      e.preventDefault();
+      mousePointerId = null;
+      finishTouchGesture(e.clientX, e.clientY, performance.now());
+    });
+    ui.addEventListener("pointercancel", function (e) {
+      if (e.pointerType !== "mouse" || e.pointerId !== mousePointerId) return;
+      mousePointerId = null;
+      touchStart = null;
+    });
 
     document.addEventListener("keydown", function (e) {
       if (!active && !resultVisible) return;

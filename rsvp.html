@@ -3189,13 +3189,18 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 #cuddly-dog-tongue{opacity:0; transform-box:fill-box; transform-origin:top center}
 #cuddly-dog-tongue.lolling{animation:dog-loll 1.5s ease-in-out}
 @keyframes dog-loll{0%{opacity:0; transform:scaleY(.2)} 16%{opacity:1; transform:scaleY(1)} 80%{opacity:1; transform:scaleY(1)} 100%{opacity:0; transform:scaleY(.4)}}
+#cuddly-dog{transform-box:fill-box; transform-origin:center}
+#cuddly-dog.facing-grill{transform:scaleX(-1)}
+#cuddly-dog-sniff{transform-box:fill-box; transform-origin:bottom center}
+#cuddly-dog-sniff.sniffing{animation:dog-sniff .46s ease-in-out 5}
+@keyframes dog-sniff{0%,100%{transform:translate(0,0) rotate(0)} 50%{transform:translate(2px,1px) rotate(2deg)}}
 /* a cuddly kid leans in to pet him — a gentle one-shot on the kid's OUTER wrapper via the
    `rotate:` property so it composes with (never clobbers) the kid's static transform:scale */
 #cuddly-kidgames .kg-rock.petting{animation:kg-pet 1.1s ease-in-out}
 @keyframes kg-pet{0%,100%{rotate:0deg} 40%{rotate:-8deg} 70%{rotate:-4deg}}
 @media (prefers-reduced-motion: reduce){
   #cuddly-dog-walk.trotting,#cuddly-dog-hop.hopping,#cuddly-dog-tail.wagging,
-  #cuddly-dog-tongue.lolling,#cuddly-kidgames .kg-rock.petting{animation:none}
+  #cuddly-dog-tongue.lolling,#cuddly-dog-sniff.sniffing,#cuddly-kidgames .kg-rock.petting{animation:none}
 }
 /* ── NAUGHTY ANTICS ──────────────────────────────────────────────────────────
    The loose cat is a real troublemaker: on its own timer it knocks a cup off a
@@ -20403,7 +20408,7 @@ section{margin:1.9rem 0}
      the balcony when its door opens), the inner #cuddly-dog-walk the trot, #cuddly-dog-hop the
      pet-hop, and the tail/tongue their own nodes for the wag + panting loll. Hidden until the
      #cuddly-dog IIFE lets him out. Faces screen-left. -->
-<g id="cuddly-dog-pos" transform="translate(210,337)"><g id="cuddly-dog-walk"><g id="cuddly-dog-hop">
+<g id="cuddly-dog-pos" transform="translate(210,337)"><g id="cuddly-dog-walk"><g id="cuddly-dog-hop"><g id="cuddly-dog-sniff">
 <g id="cuddly-dog">
 <!-- Groomed poodle-style: a SLIM shaved torso (smooth) with FLUFFY curly cuffs at the paws,
      a big poofy curly head + floppy ears, and a shaved tail with a fluffy POM at the tip held
@@ -20450,7 +20455,7 @@ section{margin:1.9rem 0}
 <!-- happy panting tongue (hidden until he's petted) -->
 <g id="cuddly-dog-tongue"><path d="M-51 -22 Q-53 -16 -50 -13 Q-47 -16 -48 -22 Z" fill="#d98a94" stroke="#c67680" stroke-width="0.6"/></g>
 </g>
-</g></g></g>
+</g></g></g></g>
 </g>
 <g id="stage-office" transform="translate(2040,0)">
 
@@ -97947,6 +97952,7 @@ function spawnDustMote(container) {
   var tail = document.getElementById("cuddly-dog-tail");
   var tongue = document.getElementById("cuddly-dog-tongue");
   var hop = document.getElementById("cuddly-dog-hop");
+  var sniff = document.getElementById("cuddly-dog-sniff");
   if (!pos || !walk) return;
   var IDX = { cuddly: 2, balcony: 4 };
   var ROOMS = {
@@ -97958,7 +97964,7 @@ function spawnDustMote(container) {
   var seenOwner = false; // Farhang/Lauren spotted this party (latch, reset on party-off)
   var force = false;     // console/test override (dog(true))
   var dartAnim = null, darting = false;
-  var chaseTimer = null, petTimer = null, chaseTurn = 0;
+  var chaseTimer = null, petTimer = null, grillTimer = null, sniffDelay = null, chaseTurn = 0;
 
   function reducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function balconyDoorOpen() { var d = document.getElementById("balcony-door"); return !!(d && d.classList.contains("open")); }
@@ -97992,6 +97998,9 @@ function spawnDustMote(container) {
   function onScreen() { return dogRoom && window.currentStageIndex === IDX[dogRoom]; }
   function cancelDart() {
     if (dartAnim) { dartAnim.onfinish = null; dartAnim.cancel(); dartAnim = null; }
+    clearTimeout(sniffDelay); sniffDelay = null;
+    if (sniff) sniff.classList.remove("sniffing");
+    if (art) art.classList.remove("facing-grill");
     darting = false;
     walk.style.animationPlayState = "";
   }
@@ -98023,11 +98032,13 @@ function spawnDustMote(container) {
     walk.classList.add("trotting");
     scheduleChase();
     schedulePet();
+    scheduleGrill();
   }
   function hideDog() {
     cancelDart();
     clearTimeout(chaseTimer); chaseTimer = null;
     clearTimeout(petTimer); petTimer = null;
+    clearTimeout(grillTimer); grillTimer = null;
     walk.classList.remove("trotting");
     if (tail) tail.classList.remove("wagging");
     if (tongue) tongue.classList.remove("lolling");
@@ -98143,9 +98154,66 @@ function spawnDustMote(container) {
   }
   function schedulePet() { clearTimeout(petTimer); petTimer = setTimeout(petTick, 6000 + Math.random() * 6000); }
 
-  // a tap pets him: tongue out + tail wag + a happy hop
+  function grillActive() {
+    var grill = document.getElementById("balcony-smoker");
+    return !!(grill && (grill.classList.contains("smoking") || grill.classList.contains("open")));
+  }
+  function canInspectGrill() {
+    return out && dogRoom === "balcony" && !darting && !reducedMotion() && grillActive() &&
+      document.visibilityState !== "hidden" && document.hasFocus() && onScreen();
+  }
+  function inspectGrill() {
+    if (!canInspectGrill() || !walk.animate) return false;
+    var cur = curWalkOffset();
+    var besideGrill = { x: 36, y: 2 };
+    darting = true;
+    walk.style.animationPlayState = "paused";
+    art.classList.add("facing-grill");
+    dartAnim = walk.animate([
+      { offset: 0, transform: tf(cur.x, cur.y), easing: "cubic-bezier(.3,0,.35,1)" },
+      { offset: .24, transform: tf(besideGrill.x, besideGrill.y) },
+      { offset: .76, transform: tf(besideGrill.x, besideGrill.y), easing: "cubic-bezier(.4,0,.7,.5)" },
+      { offset: 1, transform: tf(cur.x, cur.y) }
+    ], { duration: 3900, fill: "none" });
+    sniffDelay = setTimeout(function () {
+      sniffDelay = null;
+      if (!darting || dogRoom !== "balcony") return;
+      sniff.classList.remove("sniffing");
+      void sniff.getBoundingClientRect();
+      sniff.classList.add("sniffing");
+    }, 800);
+    dartAnim.onfinish = function () {
+      dartAnim = null;
+      clearTimeout(sniffDelay); sniffDelay = null;
+      sniff.classList.remove("sniffing");
+      art.classList.remove("facing-grill");
+      darting = false;
+      walk.style.animationPlayState = "";
+      wag();
+    };
+    return true;
+  }
+  function grillTick() {
+    if (canInspectGrill()) inspectGrill();
+    grillTimer = setTimeout(grillTick, 11000 + Math.random() * 9000);
+  }
+  function scheduleGrill() {
+    clearTimeout(grillTimer);
+    grillTimer = setTimeout(grillTick, 7000 + Math.random() * 7000);
+  }
+  window.__whistlerInspectGrill = inspectGrill;
+
+  // a tap pets him: tongue out + tail wag + a happy hop and a little burst of hearts
   if (art) {
-    art.addEventListener("click", function () { petReaction(true); });
+    art.addEventListener("click", function () {
+      petReaction(true);
+      if (!dogRoom || !onScreen()) return;
+      var feet = dogFeetLocal();
+      var faceRight = art.classList.contains("facing-grill");
+      spawnHearts(document.getElementById("loft-game-strip"),
+        IDX[dogRoom] * 680 + feet.x + (faceRight ? 32 : -34), feet.y - 46);
+      if (typeof playHeartsSound === "function") playHeartsSound("cuddly-dog");
+    });
     if (typeof hoverTooltip === "function") {
       hoverTooltip(art, function () { return "<em>Whistler</em> · " + tipText("role_whistler") + relLine("whistler") + funFact("whistler"); }, "top");
     }

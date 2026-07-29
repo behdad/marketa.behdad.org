@@ -81,8 +81,9 @@ check(/CODE_UNSAVED_KEY\s*=\s*"deskCodeUnsaved"/.test(html) &&
       /code-item\.unsaved/.test(html),
   "an unnamed buffer remains available as an italic unsaved sidebar item");
 check(/pyPrint\(">>> import turtle  # browser graphics"/.test(html) &&
-      /id="monitor-py-view-toggle" transform="translate\(356\.5,154\.8\)"/.test(html),
-  "Python's ready banner names Turtle and leaves room for distinct Back, gfx, and Dismiss controls");
+      /id="monitor-py-view-toggle" transform="translate\(358\.5,154\.8\)"/.test(html) &&
+      /id="monitor-console-view-toggle" transform="translate\(358\.5,154\.8\)"/.test(html),
+  "both graphics toggles sit evenly beside their distinct Back and Dismiss controls");
 check(/pyReturnToCode[\s\S]*?paintPythonClose[\s\S]*?openPython\(true\)/.test(html) &&
       /consoleReturnToCode[\s\S]*?paintConsoleClose[\s\S]*?openConsole\(true\)/.test(html),
   "Code-launched Python and JavaScript consoles expose a Back path");

@@ -60366,10 +60366,23 @@ async def localfont(name):
     });
     npMarqueeHit.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  // the equalizer column doubles as a big play/pause toggle
+  // The equalizer column doubles as a big play/pause toggle for mouse users. Touch gets a
+  // deterministic context-menu target here; the visible transport already owns play/pause.
   var eqHit = document.getElementById("monitor-eq-hit");
   if (eqHit) {
-    eqHit.addEventListener("click", function (e) { e.stopPropagation(); scheduleSaver(15000); monitorTogglePause(); });
+    var eqHitTouched = false;
+    eqHit.addEventListener("pointerdown", function (e) { eqHitTouched = e.pointerType === "touch"; });
+    eqHit.addEventListener("click", function (e) {
+      e.stopPropagation();
+      scheduleSaver(15000);
+      var coarse = eqHitTouched || !!(window.matchMedia && window.matchMedia("(hover:none), (pointer:coarse)").matches);
+      eqHitTouched = false;
+      if (coarse && window.__openMonitorContextAt) {
+        window.__openMonitorContextAt(eqHit, e.clientX, e.clientY);
+        return;
+      }
+      monitorTogglePause();
+    });
     eqHit.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   var huntVolBtn = document.getElementById("hunt-volume-btn");

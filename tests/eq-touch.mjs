@@ -131,6 +131,23 @@ function check(ok, message, detail) {
   check(reset.length === 6 && reset.every(value => value === 0),
     "Reset EQ from the touch-opened menu flattens every band", reset);
 
+  const visualizer = await evaluate(`(function(){
+    var r=document.getElementById("monitor-eq-hit").getBoundingClientRect();
+    return{x:r.left+r.width/2,y:r.top+r.height/2};
+  })()`);
+  await send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x: visualizer.x, y: visualizer.y, radiusX: 4, radiusY: 4, force: 1 }]
+  });
+  await touchEnd();
+  await sleep(80);
+  const tapMenu = await evaluate(`(function(){
+    var m=document.querySelector(".mon-ctx");
+    return{open:!!m,reset:!!(m&&m.querySelector(".ctx-reset-eq")),kill:!!(m&&m.querySelector(".ctx-kill"))};
+  })()`);
+  check(tapMenu.open && tapMenu.reset && tapMenu.kill,
+    "tapping the EQ visualization reliably opens Reset EQ and Kill on touch", tapMenu);
+
   ws.close();
   cleanup();
   if (failures) process.exit(1);

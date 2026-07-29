@@ -236,7 +236,9 @@ Use the top-right **Back** control to return to the chooser.
 
 In the monitor music player, drag an equalizer band vertically to adjust it.
 Double-tap a band to zero that band. On touch devices, press and hold a band to
-open the same **Reset EQ** and **Kill** menu provided by right-click.
+open the same **Reset EQ** and **Kill** menu provided by right-click. If the
+device does not deliver SVG long-presses, tap the large animated equalizer
+visualization instead; the separate transport button still controls play/pause.
 
 The monitor's **snake** app runs the four-player DOS edition of Nibbles. It is
 also discoverable by searching for `nibbles` or `dos`.

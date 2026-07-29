@@ -47233,6 +47233,34 @@ setOfficeProgress("pc", false);
     paintSystemBrowser(browser, dict);
     requestFullBrowserInfo(dict);
   }
+  function copyMonitorSystemInfo() {
+    if (!monitorSystemInfoLayer) return false;
+    paintMonitorSystemInfo();
+    var lines = [];
+    var title = monitorSystemInfoLayer.querySelector(".monitor-system-info-title");
+    if (title) lines.push(title.textContent.trim());
+    monitorSystemInfoLayer.querySelectorAll(".monitor-system-info-label").forEach(function (label) {
+      var value = label.nextElementSibling;
+      if (value && value.tagName && value.tagName.toLowerCase() === "a")
+        value = value.querySelector(".monitor-system-info-value");
+      if (value) lines.push(label.textContent.trim() + ": " + value.textContent.trim());
+    });
+    var text = lines.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function () {});
+      return true;
+    }
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    ta.remove();
+    return true;
+  }
+  window.__copyMonitorSystemInfo = copyMonitorSystemInfo;
   function closeMonitorSystemInfo() {
     if (!monitorSystemInfoLayer) return;
     monitorSystemInfoLayer.classList.remove("open", "killing");
@@ -53158,8 +53186,11 @@ setOfficeProgress("pc", false);
           playLaptopClickSound("office-monitor");
         }, !USE_LIVE_ANALYSER || eqFlat));
       }
+      if (app.cls === "show-system") {
+        items.push(makeItem("ctx-copy", COPY_ICO, tr("mon_ctx_copy"), "__copyMonitorSystemInfo", false));
+      }
       var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
-      items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
+      items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq || app.cls === "show-system" ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
       if (app.restart) items.push(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
       openMenu(items, x, y);
     }

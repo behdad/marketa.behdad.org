@@ -60,6 +60,12 @@ var HARNESS = [
   "    var nonRtOk=true, nonRtDetail={};",
   "    for (var i=0;i<nonRt.length;i++){ var c=nonRt[i]; showApp(c); var prevented=ctxAt(mon()); var items=monItems(); var kill=monKill(); var ok = prevented===true && !!monMenu() && items.length===1 && /kill/i.test(items[0]||'') && !monRestart() && !!kill && kill.disabled===false; nonRtDetail[c]={prevented:prevented,items:items,hasRestart:!!monRestart(),killDisabled:kill?kill.disabled:'no-kill'}; if(!ok) nonRtOk=false; }",
   "    S('nonruntime_kill_only_enabled', nonRtOk); S('nonruntime_detail', nonRtDetail);",
+  // System Information adds Copy ahead of its normal Kill and copies the complete visible report.
+  "    showApp('show-system'); if(window.__openMonitorSystemInfo) window.__openMonitorSystemInfo(); window.__systemCopied='';",
+  "    try{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:function(text){window.__systemCopied=text;return Promise.resolve();}}});}catch(e){}",
+  "    ctxAt(mon()); var systemItems=monItems(); var systemCopy=monMenu()&&monMenu().querySelector('.ctx-copy'); S('system_context_items',systemItems); if(systemCopy) systemCopy.click(); await sleep(20);",
+  "    S('system_copy_report',/System Information/.test(window.__systemCopied)&&/Browser:/.test(window.__systemCopied)&&/Graphics:/.test(window.__systemCopied)&&/Performance:/.test(window.__systemCopied)&&/Hardware:/.test(window.__systemCopied)&&/Input:/.test(window.__systemCopied));",
+  "    S('system_copy_omits_recommendation',!/Best in latest desktop Chrome/.test(window.__systemCopied)); if(window.__closeMonitorSystemInfo) window.__closeMonitorSystemInfo();",
   // Help's standard Kill is a two-beat gag: its question mark falls before the app closes.
   "    showApp('show-help'); if(window.__openMonitorHelp) window.__openMonitorHelp(); ctxAt(mon()); if(monKill()) monKill().click(); await sleep(300);",
   "    S('help_kill_started', document.getElementById('monitor-help-layer').classList.contains('killing'));",
@@ -323,6 +329,7 @@ check("right-click on the bare monitor desktop eats the native menu, shows no cu
 check("outside click dismisses the Loft OS menu without activating the covered app", s.system_menu_opened === true && s.system_menu_outside_dismissed === true && s.system_menu_outside_blocked_app === true, { opened: s.system_menu_opened, dismissed: s.system_menu_outside_dismissed, blocked: s.system_menu_outside_blocked_app });
 console.log(" non-runtime apps (mail/chat/weather/mines/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
+check("System Information offers Copy before Kill and copies only the system fields", Array.isArray(s.system_context_items) && s.system_context_items.length === 2 && /copy/i.test(s.system_context_items[0] || "") && /kill/i.test(s.system_context_items[1] || "") && s.system_copy_report === true && s.system_copy_omits_recommendation === true, { items: s.system_context_items, report: s.system_copy_report, omittedRecommendation: s.system_copy_omits_recommendation });
 check("Help Kill drops its question mark through both caption beats and closes", s.help_kill_started === true && s.help_kill_first_caption === true && s.help_kill_second_caption === true && s.help_kill_closed === true, { started: s.help_kill_started, first: s.help_kill_first_caption, second: s.help_kill_second_caption, closed: s.help_kill_closed });
 check("an unzoomed app does not leak its Kill menu onto unrelated office props", s.outside_monitor_no_kill === true, { nativePreventedByProp: !s.outside_monitor_native, noMenu: s.outside_monitor_no_kill });
 check("right-clicking the zoomed monitor rim keeps zoom and exposes the active app menu", s.rim_right_pointer_kept_zoom === true && s.rim_context_prevented === true && s.rim_menu_present === true, { zoom: s.rim_right_pointer_kept_zoom, prevented: s.rim_context_prevented, menu: s.rim_menu_present });

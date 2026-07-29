@@ -770,7 +770,9 @@ same `contextmenu` event used by mouse input. Movement cancels the hold before
 any default is prevented, preserving scroll and drag; Mines cells and Messages
 rows stay excluded because their own holds flag and open message actions. The
 bridge suppresses only the compatibility mouse sequence after an existing
-context-menu handler claims the synthesized event.
+context-menu handler claims the synthesized event. All `.mon-ctx` builders mount
+through `contextMenuHost()`; appending to `document.body` makes an otherwise-open
+menu invisible while the game subtree owns browser fullscreen.
 The individual app surfaces remain de-layered and gated by `visibility` plus
 `pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
 and `node tests/classics-touch.mjs`.

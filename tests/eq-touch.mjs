@@ -95,7 +95,16 @@ function check(ok, message, detail) {
     tower.classList.add("on");mon.classList.add("here","screen-on","show-caps","show-nowplaying");
     window.__monitorZoomIn();
   })()`);
+  await send("Runtime.evaluate", {
+    expression: `document.getElementById("hunt-fullscreen-area").requestFullscreen()`,
+    awaitPromise: true, userGesture: true
+  });
   await sleep(100);
+  const fullscreen = await evaluate(`(function(){
+    var area=document.getElementById("hunt-fullscreen-area");
+    return{active:document.fullscreenElement===area,host:document.fullscreenElement&&document.fullscreenElement.id};
+  })()`);
+  check(fullscreen.active, "the touch probe runs in real browser fullscreen", fullscreen);
   const band = await evaluate(`(function(){
     var els=document.querySelectorAll("#monitor-manual-eq .meq-band rect[fill=transparent]");
     var r=els[0].getBoundingClientRect(),r2=els[1].getBoundingClientRect();
@@ -119,9 +128,9 @@ function check(ok, message, detail) {
   await sleep(80);
   const menu = await evaluate(`(function(){
     var m=document.querySelector(".mon-ctx"),reset=m&&m.querySelector(".ctx-reset-eq"),kill=m&&m.querySelector(".ctx-kill");
-    return{open:!!m,reset:!!reset,resetEnabled:!!reset&&!reset.disabled,kill:!!kill};
+    return{open:!!m,painted:!!(m&&document.fullscreenElement&&document.fullscreenElement.contains(m)),reset:!!reset,resetEnabled:!!reset&&!reset.disabled,kill:!!kill};
   })()`);
-  check(menu.open && menu.reset && menu.resetEnabled && menu.kill,
+  check(menu.open && menu.painted && menu.reset && menu.resetEnabled && menu.kill,
     "the EQ menu remains open after the held finger is released", menu);
 
   const reset = await evaluate(`(function(){
@@ -144,9 +153,9 @@ function check(ok, message, detail) {
   await sleep(80);
   const surfaceMenu = await evaluate(`(function(){
     var m=document.querySelector(".mon-ctx");
-    return{open:!!m,kill:!!(m&&m.querySelector(".ctx-kill"))};
+    return{open:!!m,painted:!!(m&&document.fullscreenElement&&document.fullscreenElement.contains(m)),kill:!!(m&&m.querySelector(".ctx-kill"))};
   })()`);
-  check(surfaceMenu.open && surfaceMenu.kill,
+  check(surfaceMenu.open && surfaceMenu.painted && surfaceMenu.kill,
     "a held touch on the app surface opens its shared Kill menu", surfaceMenu);
 
   ws.close();

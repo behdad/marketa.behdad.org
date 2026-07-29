@@ -813,6 +813,8 @@ visible and focused, requires two 1.2-second windows at or below 40 FPS to enter
 mode, and three windows at or above 50 FPS to recover. The garden disco pools and
 night constellations use that state: healthy delivery runs their continuous CSS
 motion, while low-frame mode replaces it with roughly one-second discrete steps.
+The garden's full-scene UV wash similarly becomes a slow four-step lighting cue; it
+still breathes, but no longer requests a blended full-scene repaint on every frame.
 Asymmetric thresholds plus consecutive sampling windows keep the cost change
 itself from flapping the mode.
 

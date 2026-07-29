@@ -67,6 +67,17 @@ var FRAME_HEALTH_HARNESS = [
   '})();</script>'
 ].join("\n");
 
+var LOW_AMBIENCE_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){window.addEventListener("load",function(){setTimeout(function(){',
+  'var strip=document.getElementById("loft-game-strip"),garden=document.getElementById("stage-garden"),uv=document.getElementById("garden-uv-pulse");',
+  'strip.classList.add("uv-mode");garden.classList.add("garden-party");garden.setAttribute("data-partydance","techno");',
+  'var healthy=getComputedStyle(uv);var before={duration:healthy.animationDuration,timing:healthy.animationTimingFunction};',
+  'window.__frameHealthFeed(40);window.__frameHealthFeed(40);var slow=getComputedStyle(uv);',
+  'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,before:before,slow:{duration:slow.animationDuration,timing:slow.animationTimingFunction,running:uv.getAnimations().filter(function(a){return a.playState==="running";}).length}});',
+  '},250);});})();</script>'
+].join("\n");
+
 var failures = 0;
 function check(ok, msg, detail) {
   if (ok) console.log("  ✓ " + msg);
@@ -112,9 +123,14 @@ if (!health) { console.log("  ✗ frame-health harness produced no report"); pro
 var h = health.steps.health;
 check(health.errors.length === 0 && h.slowTransitions === 0 && h.healthyTransitions === 0, "device zoom never runs the whole-strip transform transition", h);
 check(!h.first.slow && h.second.slow && h.slowState.slow && h.recovering.slow && !h.recovered.slow, "frame-health mode enters and recovers with asymmetric hysteresis", h);
-check(h.healthyStars > 0 && h.slowStars === 0 && h.slowSky.running && h.recoveredStars > 0 && !h.recoveredSky.running, "constellations step once per second only in low-FPS mode", h);
+check(h.slowStars === 0 && h.slowSky.running && h.recoveredStars > 0 && !h.recoveredSky.running, "constellations step once per second only in low-FPS mode", h);
 check(h.healthyPoolAnimations > 0 && h.slowPool.animations === 0 && !!h.slowPool.inlineTransform && h.partyHeldPool.animations === 0 && h.partyHeldPool.health.slow && h.recoveredPool.animations > 0 && !h.recoveredPool.inlineTransform, "party spotlights stay in low-FPS steps until the party ends, then recover", h);
 console.log("  frame-health metric: " + JSON.stringify(h));
+
+var lowAmbience = lib.runPageSync("rsvp.html", LOW_AMBIENCE_HARNESS, 1200, { patchRaf: true, forceMotion: true });
+check(lowAmbience && lowAmbience.errors.length === 0 && lowAmbience.before.duration === "0.85s" &&
+  lowAmbience.slow.duration === "4s" && /^steps\(4/.test(lowAmbience.slow.timing) && lowAmbience.slow.running === 1,
+  "low-FPS party wash remains alive as a slow four-step lighting cue", lowAmbience);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

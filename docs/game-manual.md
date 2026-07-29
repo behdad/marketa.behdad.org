@@ -137,7 +137,8 @@ The office monitor contains the larger apps, classic games, Chat, Code, Python,
 and a small Linux environment. These technical toys are optional and some have
 a substantial first-load download. Click the monitor once to zoom in, then
 click its screen to interact. Search from the desktop menu bar if you cannot
-find an app. Use the normal close control to leave an app; right-click its tile
+find an app. The menu bar also keeps music volume and the monitor-focus control
+within reach. Use the normal close control to leave an app; right-click its tile
 or open surface to manage or kill its current session. The laptop beside it
 handles video calls. Drag the headphones around the room to move the music with
 them. The monitor's Video app has a selector for **Downtown dance**,
@@ -231,7 +232,7 @@ get oriented. The Code app can run JavaScript and Python files; named files are
 saved in this browser. JavaScript and Python examples can open native SVG
 graphics views. Once a drawing exists, the small **gfx** control appears so you
 can switch between it and the Console output. When the office monitor is
-zoomed, the compact taskbar control immediately right of **EN/CZ** expands only
+zoomed, the compact taskbar control at the far right expands only
 the 124×42 display surface across the current browser viewport, preserving its
 aspect ratio against a black surround. Dismiss an open app to return to this
 taskbar control; tap the surround or press Escape to return directly. This does

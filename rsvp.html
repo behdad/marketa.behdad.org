@@ -91615,6 +91615,8 @@ function spawnDustMote(container) {
     // the cinema reel) drive their own view, the birthday axis never reaches here, and the
     // null/auto real-date reset stays put.
     if (!silent && seasonPreview && SEASON_ROOM[seasonPreview] && window.goToStage) window.goToStage(SEASON_ROOM[seasonPreview]);
+    if (window.__refreshDatePill) window.__refreshDatePill();
+    if (window.__refreshTimePill) window.__refreshTimePill();
   }
   window.__applySeason = applySeasonPreview; // console season() drives the same path as 's'
   window.__applySeasonSilent = function (name) { applySeasonPreview(name, true); }; // autoplay: vary the season with no toast
@@ -92081,7 +92083,7 @@ function spawnDustMote(container) {
     } catch (e) {}
   }
   function calRefreshOverrideNavs() {
-    var show = !!window.__lapseActive;
+    var show = !!window.__lapseActive || !!(window.__previewActive && window.__previewActive());
     try {
       var url = new URL(location.href);
       show = show || url.searchParams.has("date") || url.searchParams.has("time") || /(?:^|[#&])(?:date|time)=/.test(url.hash || "");
@@ -92612,6 +92614,10 @@ function spawnDustMote(container) {
     var pill = document.getElementById("loft-datepill");
     if (!pill) return;
     var n = window.__now ? window.__now() : new Date(), txt;
+    if (window.__previewActive && window.__previewActive() && window.__seasonDate) {
+      var s = window.__seasonDate();
+      if (s && Number.isInteger(s.y) && Number.isInteger(s.m) && Number.isInteger(s.d)) n = new Date(s.y, s.m, s.d, 12);
+    }
     try { txt = n.toLocaleDateString(calLoc(), { weekday: "short", month: "short", day: "numeric" }).replace(/\.$/, ""); } catch (e) { txt = (n.getMonth() + 1) + "/" + n.getDate(); }
     var pillTxt = document.getElementById("loft-datepill-txt");
     if (pillTxt) pillTxt.textContent = txt; else pill.textContent = txt;

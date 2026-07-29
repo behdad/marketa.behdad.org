@@ -8501,6 +8501,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 #office-laptop.calling #laptop-call, #office-laptop.connecting #laptop-call, #office-laptop.connected #laptop-call{pointer-events:auto}
 #laptop-call-close{pointer-events:auto; cursor:pointer} /* the close ✕ (top-right) — the only control that ends the call */
 #laptop-call-close:hover .seg-hover{opacity:.55}
+#laptop-call.no-local-self #laptop-call-self{display:none}
 #laptop-lueb-scene{display:none}
 #office-laptop.lueb #laptop-lueb-scene{display:block}
 #office-laptop.lueb #laptop-call-scene{display:none}
@@ -43910,6 +43911,14 @@ setOfficeProgress("pc", false);
       var el = document.getElementById("laptop-call-place");
       if (el) el.textContent = T[laptopLang()][callCallee === "lueb" ? "laptop_lplace" : "laptop_place"] || "";
     }
+    function syncCallSelfView() {
+      var call = document.getElementById("laptop-call");
+      if (!call) return;
+      var now = window.__now ? window.__now() : new Date();
+      var togetherInPrague = callCallee === "prague" && now.getMonth() === 6 &&
+        (now.getDate() === 10 || now.getDate() === 11);
+      call.classList.toggle("no-local-self", togetherInPrague);
+    }
     // The sequence advances when the call actually CONNECTS (the couple appears) —
     // not when the ring starts. The room hint otherwise only re-checks on a light
     // toggle or a glass click, so set it here too.
@@ -43932,6 +43941,7 @@ setOfficeProgress("pc", false);
       stopLaptopSaver();
       callCallee = callee === "lueb" ? "lueb" : "prague";
       laptop.classList.toggle("lueb", callCallee === "lueb"); // picks the remote scene
+      syncCallSelfView();
       paintCallPlace();
       laptop.classList.add("calling");
       setCallStatus("laptop_calling");

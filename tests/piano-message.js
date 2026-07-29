@@ -100,12 +100,22 @@ var HARNESS = String.raw`<script>
       window.__projectorPianoState().voices === 0 &&
       !keyC.classList.contains("is-down") && !keyE.classList.contains("is-down"));
 
-    piano.focus();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true }));
-    check("the printed computer-key map plays only while the keybed is focused",
+    check("the printed computer-key map plays whenever the piano channel is visible",
       window.__projectorPianoState().notes.join(",") === "60");
     document.dispatchEvent(new KeyboardEvent("keyup", { key: "a", bubbles: true }));
     check("computer-key release cannot strand a note", window.__projectorPianoState().voices === 0);
+    var seasonBefore = window.__seasonPreviewName();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "s", bubbles: true }));
+    check("S over the piano plays D4 instead of advancing the season",
+      window.__projectorPianoState().notes.join(",") === "62" &&
+      window.__seasonPreviewName() === seasonBefore);
+    document.dispatchEvent(new KeyboardEvent("keyup", { key: "s", bubbles: true }));
+    window.__cuddlyProjector.set("fire");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "s", bubbles: true }));
+    check("the keybed returns S to the season shortcut after its channel changes",
+      window.__projectorPianoState().voices === 0 &&
+      window.__seasonPreviewName() !== seasonBefore);
     report();
   }, 260);
 })();

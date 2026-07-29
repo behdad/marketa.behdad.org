@@ -4741,6 +4741,21 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.death-music #monitor-music-farewell{opacity:1}
 #office-monitor.death-weather #monitor-weather-farewell{opacity:1}
 #office-monitor.death-browser #monitor-awsnap{opacity:1}
+#monitor-powerfx > *{opacity:0;pointer-events:none}
+#office-monitor.power-rebooting #monitor-power-reboot{opacity:1}
+#office-monitor.power-shutting-down #monitor-power-shutdown{opacity:1}
+#office-monitor.power-rebooting .power-window{transform-box:fill-box;transform-origin:center;animation:power-window-close .9s cubic-bezier(.5,0,.9,.45) both}
+#office-monitor.power-rebooting .power-window.w2{animation-delay:.14s}
+#office-monitor.power-rebooting .power-window.w3{animation-delay:.28s}
+#office-monitor.power-shutting-down #monitor-power-sun{transform-box:fill-box;transform-origin:center;animation:power-sunset .9s ease-in both}
+#office-monitor.power-shutting-down #monitor-power-sun{animation-duration:1.4s}
+#office-monitor.power-shutting-down #monitor-power-night{animation:power-nightfall 1.4s ease-in both}
+@keyframes power-window-close{0%,18%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.04)}}
+@keyframes power-sunset{0%{transform:translateY(0)}100%{transform:translateY(13px)}}
+@keyframes power-nightfall{0%,35%{opacity:0}100%{opacity:.78}}
+@media (prefers-reduced-motion:reduce){
+  #office-monitor.power-rebooting .power-window,#office-monitor.power-shutting-down #monitor-power-sun,#office-monitor.power-shutting-down #monitor-power-night{animation:none}
+}
 /* Browser is the one app defined AFTER #monitor-deathfx (it paints above), and .browser-wrap is
    opaque, so hide the frozen browser + its bezel nav arrows under the Aw-Snap overlay during the
    flash. 2 classes beat the 1-class show rules, order-independently; auto-restores when death-browser clears. */
@@ -22965,6 +22980,38 @@ section{margin:1.9rem 0}
 <text x="362.25" y="190.9" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="3.5" font-weight="600" fill="#ffffff">Reload</text>
 </g>
 </g>
+<!-- System-menu power actions get one brief, screen-sized visual before the hardware changes state. -->
+<g id="monitor-powerfx" aria-hidden="true">
+<g id="monitor-power-reboot">
+<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#2d4058"/>
+<g class="power-window w1">
+<rect x="264" y="159" width="49" height="24" rx="2" fill="#f8f5ec" stroke="#7f9ec0" stroke-width="1"/>
+<rect x="264" y="159" width="49" height="5" rx="2" fill="#7f9ec0"/>
+<circle cx="268" cy="161.5" r="1" fill="#d9a6a6"/><circle cx="272" cy="161.5" r="1" fill="#e8c66d"/>
+</g>
+<g class="power-window w2">
+<rect x="296" y="166" width="56" height="25" rx="2" fill="#fffdf8" stroke="#8e3a4a" stroke-width="1"/>
+<rect x="296" y="166" width="56" height="5" rx="2" fill="#8e3a4a"/>
+<circle cx="300" cy="168.5" r="1" fill="#f8f5ec"/><circle cx="304" cy="168.5" r="1" fill="#d9a6a6"/>
+</g>
+<g class="power-window w3">
+<rect x="338" y="158" width="31" height="20" rx="2" fill="#f8f5ec" stroke="#c68e95" stroke-width="1"/>
+<rect x="338" y="158" width="31" height="5" rx="2" fill="#c68e95"/>
+<path d="M344 168 H363 M344 172 H357" stroke="#b6aa97" stroke-width="1.2" stroke-linecap="round"/>
+</g>
+</g>
+<g id="monitor-power-shutdown">
+<g id="monitor-power-sky">
+<rect x="254" y="154" width="124" height="42" rx="1.5" fill="#7b3855"/>
+<rect x="254" y="170" width="124" height="26" fill="#dc8060"/>
+<rect x="254" y="181" width="124" height="15" fill="#efb66f"/>
+</g>
+<circle id="monitor-power-sun" cx="316" cy="177" r="8" fill="#fff1b3"/>
+<path d="M254 189 H263 V181 H270 V187 H279 V176 H289 V185 H298 V180 H307 V190 H319 V183 H327 V187 H337 V178 H347 V185 H356 V181 H366 V188 H378 V196 H254 Z" fill="#252634"/>
+<g fill="#f2c976" opacity=".8"><rect x="282" y="180" width="2" height="2"/><rect x="341" y="182" width="2" height="2"/><rect x="361" y="185" width="2" height="2"/></g>
+<rect id="monitor-power-night" x="254" y="154" width="124" height="42" rx="1.5" fill="#111522" opacity="0"/>
+</g>
+</g>
 <!-- BROWSER (chrome) app: real web pages in iframes over the screen, behind a slim
      tab strip (markéta / behdad / harfbuzz, built by JS from BROWSER_TABS, plus a +
      stub for visitor-opened tabs — those show the address form below until navigated,
@@ -28569,6 +28616,8 @@ var T = {
     mon_sys_sleep: "Sleep",
     mon_sys_reboot: "Reboot",
     mon_sys_shutdown: "Shut down",
+    mon_reboot_gag: "Have you tried closing all windows?",
+    mon_shutdown_gag: "Have a lofty evening!",
     mon_sys_help: "Help",
     mon_sys_credits: "Credits",
     mon_sys_system: "System",
@@ -29717,6 +29766,8 @@ var T = {
     mon_sys_sleep: "Uspat",
     mon_sys_reboot: "Restartovat",
     mon_sys_shutdown: "Vypnout",
+    mon_reboot_gag: "Zkusili jste zavřít všechna okna?",
+    mon_shutdown_gag: "Krásný večer v loftu!",
     mon_sys_help: "Nápověda",
     mon_sys_credits: "Titulky",
     mon_sys_system: "Systém",
@@ -47222,6 +47273,15 @@ setOfficeProgress("pc", false);
     return true;
   }
   window.__killMonitorCredits = killMonitorCredits;
+  var monitorPowerTimers = [];
+  function beginMonitorPowerVisual(kind) {
+    monitorPowerTimers.forEach(clearTimeout);
+    monitorPowerTimers = [];
+    monitor.classList.remove("power-rebooting", "power-shutting-down");
+    var fx = document.getElementById("monitor-powerfx");
+    if (fx) monitor.appendChild(fx);
+    monitor.classList.add(kind === "reboot" ? "power-rebooting" : "power-shutting-down");
+  }
   function monitorSystemAction(action) {
     closeMonitorSystemMenu();
     if (action === "system") return openMonitorSystemInfo();
@@ -47237,18 +47297,30 @@ setOfficeProgress("pc", false);
       return monitorLocked;
     }
     if (action === "shutdown") {
-      if (pcTower && pcTower.classList.contains("on"))
-        pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      return !!pcTower && !pcTower.classList.contains("on");
+      beginMonitorPowerVisual("shutdown");
+      if (window.__flashCaptionKey)
+        window.__flashCaptionKey("mon_shutdown_gag", 5000, "monitor-power");
+      monitorPowerTimers.push(setTimeout(function () {
+        if (pcTower && pcTower.classList.contains("on"))
+          pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        monitor.classList.remove("power-shutting-down");
+      }, 1500));
+      return !!pcTower;
     }
     if (action === "reboot") {
       if (!pcTower) return false;
-      if (pcTower.classList.contains("on"))
-        pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      setTimeout(function () {
+      beginMonitorPowerVisual("reboot");
+      if (window.__flashCaptionKey)
+        window.__flashCaptionKey("mon_reboot_gag", 5000, "monitor-power");
+      monitorPowerTimers.push(setTimeout(function () {
+        if (pcTower.classList.contains("on"))
+          pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      }, 1080));
+      monitorPowerTimers.push(setTimeout(function () {
         if (pcTower && !pcTower.classList.contains("on") && !window.__monitorShorted)
           pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      }, 420);
+        monitor.classList.remove("power-rebooting");
+      }, 1500));
       return true;
     }
     return false;

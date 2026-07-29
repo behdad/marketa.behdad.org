@@ -73,8 +73,8 @@ check(/CODE_UNSAVED_KEY\s*=\s*"deskCodeUnsaved"/.test(html) &&
       /code-item\.unsaved/.test(html),
   "an unnamed buffer remains available as an italic unsaved sidebar item");
 check(/pyPrint\(">>> import turtle  # browser graphics"/.test(html) &&
-      /id="monitor-py-view-toggle" transform="translate\(363\.2,154\.8\)"/.test(html),
-  "Python's ready banner names Turtle and the gfx control sits beside Close");
+      /id="monitor-py-view-toggle" transform="translate\(356\.5,154\.8\)"/.test(html),
+  "Python's ready banner names Turtle and leaves room for distinct Back, gfx, and Dismiss controls");
 check(/pyReturnToCode[\s\S]*?paintPythonClose[\s\S]*?openPython\(true\)/.test(html) &&
       /consoleReturnToCode[\s\S]*?paintConsoleClose[\s\S]*?openConsole\(true\)/.test(html),
   "Code-launched Python and JavaScript consoles expose a Back path");
@@ -142,6 +142,9 @@ var harness = [
   '  document.getElementById("monitor-code-run").click(); await new Promise(function(r){setTimeout(r,80)});',
   '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastCodeError;',
   '  document.getElementById("monitor-console-close").dispatchEvent(new MouseEvent("click",{bubbles:true})); await new Promise(function(r){setTimeout(r,20)});',
+  '  out.consoleDismissed=!mon.classList.contains("show-console")&&!mon.classList.contains("show-code");',
+  '  window.__openMonitorCode();document.getElementById("monitor-code-run").click();await new Promise(function(r){setTimeout(r,80)});',
+  '  document.getElementById("monitor-console-back").dispatchEvent(new MouseEvent("click",{bubbles:true})); await new Promise(function(r){setTimeout(r,20)});',
   '  out.codeReturned=mon.classList.contains("show-code"); out.failedStatus=document.getElementById("monitor-code-ai-status").textContent;',
   '  var aiBody=null;window.__monitorChatTurnstile=function(){return Promise.resolve("code-test-token");};window.fetch=function(_url,opts){aiBody=JSON.parse(opts.body);return Promise.resolve(new Response(JSON.stringify({reply:JSON.stringify({text:"reviewed",suggestion:"",replace:false,edits:[]})}),{status:200,headers:{"Content-Type":"application/json"}}));};',
   '  document.getElementById("monitor-code-explain").click();await new Promise(function(r){setTimeout(r,100)});',
@@ -172,8 +175,8 @@ if (state && !state.error) {
     "selector styling and completion catalogs track Python without changing the Loft JS hook", state);
   check(state.jsConsole && /code boom/.test(state.jsError) && /code boom/.test(state.lastError),
     "a JavaScript Code exception opens the JS Console with the actual error", state);
-  check(state.codeReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
-    "Back returns to the Code and failure is not overwritten by a success status", state);
+  check(state.consoleDismissed && state.codeReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
+    "Dismiss leaves Code closed while the separate Back returns to it without overwriting failure status", state);
   check(state.codeAiApi && state.codeAiApi.mode === "code_assist" && state.codeAiApi.language === "js" &&
       /party\(true\)/.test(state.codeAiApi.party) && /marketa-czech/.test(state.codeAiApi.music) &&
       /top-level await/.test(state.codeAiApi.runtime) && state.codeAiApi.globals === state.codeAiApi.commands,

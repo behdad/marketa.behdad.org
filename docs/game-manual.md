@@ -236,8 +236,10 @@ your finger at its real size. It allows unlimited stock recycles and puts Behdad
 Markéta, and Jay on the kings, queens, and jacks.
 In Mines, tap a square to reveal it or press and hold to place or remove a flag.
 The `mines()` and `solitaire()` console commands open either game directly.
-In Classics and Shoot, **Back** returns to the app's game chooser; **Dismiss**
-closes the app while preserving the current game so reopening resumes it.
+In layered monitor apps, **Back** returns within the app while **Dismiss** closes
+it and preserves the current view. This applies to the game chooser in Classics
+and Shoot, messages and drafts in Mail, designs in Tattoo, Life's Help screen,
+and Console or Python sessions launched from Code.
 
 In the monitor music player, drag an equalizer band vertically to adjust it.
 Double-tap a band to zero that band. On touch devices, press and hold a band to

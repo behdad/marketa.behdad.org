@@ -7438,8 +7438,16 @@ body.bd-patricia-daughter .bd-hat-patricia-daughter{opacity:1; visibility:visibl
 @keyframes pendant-flicker{
   0%{opacity:1} 15%{opacity:.3} 30%{opacity:1} 45%{opacity:.35} 60%{opacity:.9} 75%{opacity:.3} 100%{opacity:1}
 }
+#loft-game-strip #stage-kitchen #kitchen-bar-neon-tube.thunder-flicker.thunder-flicker,
+#garden-growlight.thunder-flicker{animation:thunder-room-flicker .58s steps(7,end)}
+@keyframes thunder-room-flicker{
+  0%,20%,48%,72%,100%{opacity:1}
+  12%,36%,60%{opacity:.12}
+}
 @media (prefers-reduced-motion: reduce){
   #office-lamp.flicker .office-lamp-glow, #office-pendant.flicker .office-pendant-bulb, #office-pendant.flicker .office-pendant-filament{animation:none}
+  #loft-game-strip #stage-kitchen #kitchen-bar-neon-tube.thunder-flicker.thunder-flicker,
+  #garden-growlight.thunder-flicker{animation:none}
 }
 #office-lamp.dimmed .office-lamp-glow{opacity:0}
 #office-lamp.dimmed .office-lamp-bulb{fill:#9a948a; stroke:#7a746a}
@@ -27957,6 +27965,7 @@ var T = {
       tetris_touch_game_over: "Game over · Tap: play again · ×: exit.",
       garden: "Water a plant, play music, light candles.",
       garden_party: "Party's on — dance like nobody's watering. 💃🌱",
+      thunder_reaction: "<em>Behdad</em>: The loft flinched.",
       cuddly_outlet_visit: "Someone dropped by the cuddly-puddly. 👋",
       party_exit_hint: "Wall switch ends the party, not the game. Apps stay open.",
       party_ended: "Party's over for now, not the game. The loft and apps are still yours.",
@@ -29114,6 +29123,7 @@ var T = {
       tetris_touch_game_over: "Konec hry · Klepni: hrát znovu · ×: ukončit.",
       garden: "Zalij kytku, zahraj, zapal svíčky.",
       garden_party: "Párty jede — tanči, ať kytky počkají. 💃🌱",
+      thunder_reaction: "<em>Behdad</em>: Loft sebou trhl.",
       cuddly_outlet_visit: "Někdo se zastavil v mazlírně. 👋",
       party_exit_hint: "Vypínač ukončí párty, ne hru. Aplikace zůstávají otevřené.",
       party_ended: "Párty prozatím skončila, hra ne. Loft i aplikace jsou pořád tvoje.",
@@ -88576,6 +88586,25 @@ function spawnDustMote(container) {
   // reads fine either way). The bolt is seen through every window (balcony sky + the kitchen/
   // office windows), so the storm reads from any room; the rumble is full out on the balcony but
   // much quieter — muffled through glass — when you're inside another room.
+  var lastThunderRoomMoment = -Infinity;
+  function thunderRoomMoment() {
+    var now = Date.now();
+    if (now - lastThunderRoomMoment < 75000 || document.hidden || !document.hasFocus()) return;
+    lastThunderRoomMoment = now;
+    var name = STAGES[stageIndex], fixtures = [];
+    if (name === "office") fixtures = ["office-lamp", "office-pendant"];
+    else if (name === "kitchen") fixtures = ["kitchen-bar-neon-tube"];
+    else if (name === "garden") fixtures = ["garden-growlight"];
+    fixtures.forEach(function (id) {
+      var fixture = document.getElementById(id);
+      if (!fixture) return;
+      fixture.classList.remove("flicker", "thunder-flicker");
+      void fixture.getBoundingClientRect();
+      fixture.classList.add(name === "office" ? "flicker" : "thunder-flicker");
+      setTimeout(function () { fixture.classList.remove("flicker", "thunder-flicker"); }, 620);
+    });
+    if (window.__flashCaptionKey) window.__flashCaptionKey("thunder_reaction", 5000, "weather-thunder");
+  }
   window.triggerBalconyThunder = function () {
     var sb = document.getElementById("stage-balcony");
     if (!sb) return;                                      // the balcony scene owns the storm's flashes/thunder
@@ -88589,6 +88618,7 @@ function spawnDustMote(container) {
       });
     });
     var onBalcony = stageIndex === STAGES.indexOf("balcony");
+    thunderRoomMoment();
     setTimeout(function () {
       // re-check at PLAY time (the flash->rumble delay can straddle a hide), and require
       // focus too: the storm timers keep firing for a visible-but-unfocused window, and a

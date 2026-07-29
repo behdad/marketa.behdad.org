@@ -36641,8 +36641,10 @@ setMusicPausedState(false);
   if (!flameImg || !screen) return;
   // Render at 2× the projector's authored raster size. Credits borrows this texture and
   // crops it into a much wider panel, so the old 138×90 buffer left very little vertical
-  // detail after the slice; 276×180 stays light enough for the 30fps typed-array loop.
-  var canvas = document.createElement("canvas"); canvas.width = 276; canvas.height = 180;
+  // detail after the slice. Sustained healthy FPS may raise this to 3×, but never beyond
+  // half the visible consumer's actual device-pixel footprint.
+  var FIRE_BASE_W = 276, FIRE_BASE_H = 180, FIRE_MAX_SCALE = 1.5;
+  var canvas = document.createElement("canvas"); canvas.width = FIRE_BASE_W; canvas.height = FIRE_BASE_H;
   var ctx = canvas.getContext("2d");
   if (!ctx) return;
   function blitFlame() {
@@ -36765,6 +36767,15 @@ setMusicPausedState(false);
     }
     return {
       blend: "screen",
+      resize: function () {
+        N = W * H;
+        heat = new Float32Array(N);
+        heatPrev = new Float32Array(N);
+        img = ctx.createImageData(W, H);
+        data = img.data;
+        slowLast = 0;
+        for (var i = 0; i < SPARKS; i++) sparks[i].life = 0;
+      },
       reset: function () { heat.fill(0); for (var i = 0; i < SPARKS; i++) sparks[i].life = 0; popFrames = 0; popCooldown = 0; },
       frame: function () {
         var it = intensity();
@@ -36808,6 +36819,34 @@ setMusicPausedState(false);
       still: function () { heat.fill(0); for (var p = 0; p < H; p++) { seedBottom({ mul: 1, music: false, beat: 0 }); spread(COOL0); } paint(); }
     };
   })();
+
+  function fireConsumer() {
+    var creditsLayer = document.getElementById("monitor-credits-layer");
+    return creditsLayer && creditsLayer.classList.contains("open") ?
+      document.getElementById("monitor-credits-fire") : flameImg;
+  }
+  function syncFireCanvasSize() {
+    var scale = 1, consumer = fireConsumer();
+    if (window.__frameHealthHigh && window.__frameHealthHigh() && consumer) {
+      var r = consumer.getBoundingClientRect(), dpr = Math.max(1, window.devicePixelRatio || 1);
+      var allowed = Math.min(FIRE_MAX_SCALE,
+        (r.width * dpr * 0.5) / FIRE_BASE_W,
+        (r.height * dpr * 0.5) / FIRE_BASE_H);
+      scale = Math.max(1, Math.floor(allowed * 4) / 4);
+    }
+    var w = Math.round(FIRE_BASE_W * scale), h = Math.round(FIRE_BASE_H * scale);
+    if (canvas.width === w && canvas.height === h) return false;
+    canvas.width = w; canvas.height = h;
+    W = w; H = h;
+    fire.resize();
+    return true;
+  }
+  window.__fireCanvasState = function () {
+    var consumer = fireConsumer(), r = consumer && consumer.getBoundingClientRect();
+    return { width: W, height: H, high: !!(window.__frameHealthHigh && window.__frameHealthHigh()),
+      consumerWidth: r ? r.width : 0, consumerHeight: r ? r.height : 0,
+      dpr: Math.max(1, window.devicePixelRatio || 1) };
+  };
 
 
   // The aquarium, night-sky and workout channels are inline SVG (#cuddly-aqua /
@@ -36974,6 +37013,7 @@ setMusicPausedState(false);
   function renderStill() { ctx.clearRect(0, 0, W, H); (chanObj[current].still || chanObj[current].frame).call(chanObj[current]); blitFlame(); }
   function start() {
     syncCoffeeScenes();
+    syncFireCanvasSize();
     var credits = creditsFireOn();
     // powered down — no loop. Don't clobber an in-flight power-off fade (canvasFadeTimer);
     // only blank instantly when there's nothing fading (e.g. entering the nook already off)
@@ -36986,6 +37026,18 @@ setMusicPausedState(false);
     if (raf || !shouldRun()) return; // already live, or not runnable right now
     lastDraw = 0; raf = requestAnimationFrame(frame);
   }
+  function refreshFireResolution() {
+    if (!syncFireCanvasSize()) return;
+    lastDraw = 0;
+    if (reduceMotion) {
+      if (creditsFireOn()) { fire.still(); blitFlame(); }
+      else if (window.currentStageName === "cuddly" && current !== "off" && !chanObj[current].svg) renderStill();
+    } else if (!raf && shouldRun()) {
+      raf = requestAnimationFrame(frame);
+    }
+  }
+  window.addEventListener("framehealthchange", refreshFireResolution);
+  window.addEventListener("resize", refreshFireResolution);
   function setChannel(name, persist) {
     if (!chanObj[name]) return;
     if (persist === true) seasonalDefault = false;
@@ -46157,18 +46209,56 @@ setOfficeProgress("pc", false);
     var period = 60 / bpm; if (period < 0.4) period *= 2; // match the kick's half-time for fast songs
     return (period - (eqAudioEl.currentTime % period)) * 1000;
   };
-  // Both screensavers render into one OFF-DOM canvas and blit into native SVG
+  // The Canvas 2D screensavers render into one OFF-DOM canvas and blit into native SVG
   // <image>s. Canvas-in-foreignObject doesn't composite in WebKit; an <image> fed
-  // by toDataURL() does. The canvas is 4x the on-screen size for crispness.
+  // by toDataURL() does. All three savers start at 4× authored size and may rise to 6×
+  // only after sustained healthy FPS. The high tier is additionally capped at half
+  // the active image's actual device-pixel footprint, so it never computes detail the
+  // display cannot use.
+  var MON_SAVER_BASE_W = 496, MON_SAVER_BASE_H = 168, MON_SAVER_MAX_SCALE = 1.5;
   var monSaverCanvas = null, monSaverImgs = {};
-  function getMonSaverCanvas() {
-    if (!monSaverCanvas) { monSaverCanvas = document.createElement("canvas"); monSaverCanvas.width = 496; monSaverCanvas.height = 168; }
-    return monSaverCanvas;
-  }
-  function blitMonitorSaver(kind, sourceCanvas) {
+  function monitorSaverImage(kind) {
     var img = monSaverImgs[kind];
     if (!img) img = monSaverImgs[kind] = document.getElementById(
       kind === "pipes" ? "monitor-saver-pipes" : (kind === "flower" ? "monitor-saver-flower" : "monitor-saver-fractal"));
+    return img;
+  }
+  function monitorSaverScale(kind) {
+    var img = monitorSaverImage(kind);
+    if (!(window.__frameHealthHigh && window.__frameHealthHigh()) || !img) return 1;
+    var r = img.getBoundingClientRect(), dpr = Math.max(1, window.devicePixelRatio || 1);
+    var allowed = Math.min(MON_SAVER_MAX_SCALE,
+      (r.width * dpr * 0.5) / MON_SAVER_BASE_W,
+      (r.height * dpr * 0.5) / MON_SAVER_BASE_H);
+    return Math.max(1, Math.floor(allowed * 4) / 4); // stable quarter-step tiers avoid resize churn
+  }
+  function syncMonSaverCanvasSize(kind) {
+    if (!monSaverCanvas) monSaverCanvas = document.createElement("canvas");
+    var scale = monitorSaverScale(kind);
+    var w = Math.round(MON_SAVER_BASE_W * scale), h = Math.round(MON_SAVER_BASE_H * scale);
+    if (monSaverCanvas.width !== w || monSaverCanvas.height !== h) {
+      monSaverCanvas.width = w;
+      monSaverCanvas.height = h;
+    }
+    return scale;
+  }
+  function getMonSaverCanvas(kind) {
+    syncMonSaverCanvasSize(kind);
+    return monSaverCanvas;
+  }
+  window.__monitorSaverCanvasState = function (kind) {
+    kind = kind || monitorSaverKind || "julia";
+    var img = monitorSaverImage(kind), r = img && img.getBoundingClientRect();
+    var canvas = kind === "flower" && monFlowerCanvas &&
+      (!monFlowerState || monFlowerState.backend !== "canvas") ? monFlowerCanvas : monSaverCanvas;
+    return { kind: kind, width: canvas ? canvas.width : MON_SAVER_BASE_W,
+      height: canvas ? canvas.height : MON_SAVER_BASE_H,
+      high: !!(window.__frameHealthHigh && window.__frameHealthHigh()),
+      consumerWidth: r ? r.width : 0, consumerHeight: r ? r.height : 0,
+      dpr: Math.max(1, window.devicePixelRatio || 1) };
+  };
+  function blitMonitorSaver(kind, sourceCanvas) {
+    var img = monitorSaverImage(kind);
     var canvas = sourceCanvas || monSaverCanvas;
     if (!img || !canvas) return;
     var url = canvas.toDataURL();
@@ -46196,7 +46286,7 @@ setOfficeProgress("pc", false);
     else if (saverRaf == null) saverRaf = requestAnimationFrame(monSaverFrame);
   }
   function startJuliaSaver() {
-    var canvas = getMonSaverCanvas();
+    var canvas = getMonSaverCanvas("julia");
     var R = 0.7885;
     if (!monFractalState) monFractalState = { theta: Math.random() * 6.283, hueBase: Math.random(), lastDraw: 0 };
     if (reduceMotion) { renderJulia(canvas, R * Math.cos(monFractalState.theta), R * Math.sin(monFractalState.theta), 90, 1.3, monFractalState.hueBase, false, fractalBeatKick()); blitMonitorSaver("julia"); return; }
@@ -46206,6 +46296,7 @@ setOfficeProgress("pc", false);
       var state = monFractalState;
       if (t - state.lastDraw >= 60) { // ~16fps: plenty for a slow morph — the canvas carries 4x the pixels now
         state.lastDraw = t;
+        syncMonSaverCanvasSize("julia");
         state.theta += 0.02;              // shape morphs (full c-orbit ~ every 14s)
         state.hueBase = (state.hueBase + 0.003) % 1; // colour drifts through the spectrum ~ every 15s
         renderJulia(canvas, R * Math.cos(state.theta), R * Math.sin(state.theta), 90, 1.3, state.hueBase, false, fractalBeatKick());
@@ -46215,6 +46306,22 @@ setOfficeProgress("pc", false);
     };
     syncMonitorSaverLoop();
   }
+  function refreshMonitorSaverResolution() {
+    if (!monitorSaverKind) return;
+    var flowerFallback = monitorSaverKind === "flower" && monFlowerState && monFlowerState.backend === "canvas";
+    var canvas = monitorSaverKind === "flower" && !flowerFallback ? monFlowerCanvas : monSaverCanvas;
+    var beforeW = canvas ? canvas.width : 0, beforeH = canvas ? canvas.height : 0;
+    if (monitorSaverKind === "flower" && !flowerFallback) syncMonFlowerCanvasSize();
+    else syncMonSaverCanvasSize(monitorSaverKind);
+    canvas = monitorSaverKind === "flower" && !flowerFallback ? monFlowerCanvas : monSaverCanvas;
+    if (!canvas || (canvas.width === beforeW && canvas.height === beforeH)) return;
+    if (monFractalState) monFractalState.lastDraw = 0;
+    if (monPipesState) monPipesState.lastDraw = 0;
+    if (monFlowerState) monFlowerState.lastDraw = 0;
+    syncMonitorSaverLoop();
+  }
+  window.addEventListener("framehealthchange", refreshMonitorSaverResolution);
+  window.addEventListener("resize", refreshMonitorSaverResolution);
 
   // Canvas-2D 3D Pipes: the path really grows on an X/Y/Z lattice, then an
   // isometric camera projects and depth-sorts it. Metallic gradients and shaded
@@ -46358,7 +46465,7 @@ setOfficeProgress("pc", false);
     ctx.restore();
   }
   function startPipesSaver() {
-    var canvas = getMonSaverCanvas();
+    var canvas = getMonSaverCanvas("pipes");
     monPipesState = newPipesState();
     if (reduceMotion) {
       for (var i = 0; i < 34 && !monPipesState.fadeAt; i++) pipeAdvance(monPipesState, -1000);
@@ -46381,6 +46488,7 @@ setOfficeProgress("pc", false);
       }
       if (t - state.lastDraw >= 50) {
         state.lastDraw = t;
+        syncMonSaverCanvasSize("pipes");
         renderPipes(canvas, state, t);
         blitMonitorSaver("pipes");
       }
@@ -46400,6 +46508,14 @@ setOfficeProgress("pc", false);
   // same scaled-foreignObject WebKit safety as Julia/Pipes. Canvas 2D supplies a
   // software rendering fallback of the same mesh if WebGL creation/restoration fails.
   var monFlowerCanvas = null, monFlowerGL = null, monFlowerMesh = null;
+  function syncMonFlowerCanvasSize() {
+    if (!monFlowerCanvas) return false;
+    var scale = monitorSaverScale("flower");
+    var w = Math.round(MON_SAVER_BASE_W * scale), h = Math.round(MON_SAVER_BASE_H * scale);
+    if (monFlowerCanvas.width === w && monFlowerCanvas.height === h) return false;
+    monFlowerCanvas.width = w; monFlowerCanvas.height = h;
+    return true;
+  }
   // Plane order is front, back, top, bottom, right, left. This arrangement walks the
   // six-stripe rainbow through adjacent faces and gives opposite pairs red/green,
   // orange/blue, and yellow/violet.
@@ -46519,7 +46635,7 @@ setOfficeProgress("pc", false);
   function initFlowerGL() {
     if (!monFlowerCanvas) {
       monFlowerCanvas = document.createElement("canvas");
-      monFlowerCanvas.width = 496; monFlowerCanvas.height = 168;
+      syncMonFlowerCanvasSize();
       monFlowerCanvas.addEventListener("webglcontextlost", function (e) {
         e.preventDefault();
         monFlowerGL = null;
@@ -46529,6 +46645,7 @@ setOfficeProgress("pc", false);
         monFlowerGL = null; // the next frame rebuilds shaders/buffers
       });
     }
+    syncMonFlowerCanvasSize();
     if (monFlowerGL) return monFlowerGL;
     var gl = monFlowerCanvas.getContext("webgl", {
       alpha: false, antialias: true, depth: true, preserveDrawingBuffer: true,
@@ -46677,7 +46794,7 @@ setOfficeProgress("pc", false);
     var canvas = renderFlowerGL(seconds);
     if (canvas) monFlowerState.backend = "webgl";
     else {
-      canvas = getMonSaverCanvas();
+      canvas = getMonSaverCanvas("flower");
       renderFlowerFallback(canvas, seconds);
       monFlowerState.backend = "canvas";
     }
@@ -61888,7 +62005,7 @@ async def localfont(name):
   var SAMPLE_MS = 1200, LOW_FPS = 40, RECOVER_FPS = 50;
   var LOW_WINDOWS = 2, RECOVER_WINDOWS = 3;
   var raf = 0, started = 0, frames = 0, lowWindows = 0, recoverWindows = 0;
-  var slow = false, fps = null;
+  var slow = false, high = false, fps = null;
   function usable() {
     return !document.hidden && (!document.hasFocus || document.hasFocus());
   }
@@ -61898,9 +62015,16 @@ async def localfont(name):
     document.documentElement.classList.toggle("frame-rate-low", slow);
     window.dispatchEvent(new CustomEvent("framehealthchange", { detail: state() }));
   }
+  function publishHigh(next) {
+    next = !!next;
+    if (high === next) return;
+    high = next;
+    window.dispatchEvent(new CustomEvent("framehealthchange", { detail: state() }));
+  }
   function evaluate(value) {
     fps = Math.max(0, Number(value) || 0);
     if (fps <= LOW_FPS) {
+      publishHigh(false);
       lowWindows++;
       recoverWindows = 0;
       if (lowWindows >= LOW_WINDOWS) publish(true);
@@ -61909,17 +62033,22 @@ async def localfont(name):
       lowWindows = 0;
       var strip = document.getElementById("loft-game-strip");
       var partyActive = strip && strip.classList.contains("party-on");
-      if (recoverWindows >= RECOVER_WINDOWS && !partyActive) publish(false);
+      if (partyActive) publishHigh(false);
+      if (recoverWindows >= RECOVER_WINDOWS && !partyActive) {
+        publish(false);
+        publishHigh(true);
+      }
     } else {
+      publishHigh(false);
       lowWindows = 0;
       recoverWindows = 0;
     }
     return state();
   }
   function state() {
-    return { slow: slow, fps: fps, lowWindows: lowWindows, recoverWindows: recoverWindows };
+    return { slow: slow, high: high, fps: fps, lowWindows: lowWindows, recoverWindows: recoverWindows };
   }
-  function resetWindow() { started = 0; frames = 0; }
+  function resetWindow() { started = 0; frames = 0; publishHigh(false); }
   function sample(now) {
     if (!usable()) {
       resetWindow();
@@ -61944,6 +62073,7 @@ async def localfont(name):
   window.addEventListener("blur", resetWindow);
   window.__frameHealthState = state;
   window.__frameHealthSlow = function () { return slow; };
+  window.__frameHealthHigh = function () { return high; };
   window.__frameHealthFeed = evaluate; // deterministic performance regression tests
   restart();
 })();

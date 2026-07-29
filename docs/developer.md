@@ -722,14 +722,21 @@ view gets the first chance to step back, then the app closes to the desktop. A n
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
 The visible dock order lives in the monitor checkpoint row; drag swaps fixed slots, Continue
 restores the order, and the adapter reset restores `DESKTOP_APPS` order.
-Julia and Pipes share one 4× off-DOM Canvas 2D surface. Flower Box owns one lazy
+Julia and Pipes share one off-DOM Canvas 2D surface. Its baseline remains 4×
+authored size; after three healthy frame windows either saver may rise in
+quarter-step tiers as high as 6×. Flower Box owns one lazy
 WebGL 1 canvas; its source-derived radial cube morph is updated on the CPU so the
 WebGL path and Canvas 2D fallback share geometry, smooth normals, and a slow
-24-second hue rotation across the six distinct face colours. All three
+24-second hue rotation across the six distinct face colours. Its framebuffer
+uses the same adaptive 4×→6× policy. All three
 blit into separate native SVG images, the WebKit-safe composition boundary. A
 single `saverRaf` owns whichever saver is selected. Each fresh page load shuffles
 the three-item order once, then idle cycles walk and wrap that stable order.
 Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
+The shared projector/Credits Doom-fire canvas similarly starts at 2× and may
+rise to 3×. Every adaptive tier is capped per axis at half the visible
+consumer's measured CSS size × `devicePixelRatio`; a non-healthy sample or lost
+focus immediately restores the baseline.
 
 Pac-Man is a `searchOnly` monitor app: search, Chat, test hooks, or the ketamine ghost can open it,
 but it has no desktop tile and the ghost is not an access gate. The live board is checkpoint state;
@@ -866,7 +873,9 @@ variant and resets the playlist as before.
 The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
 low delivery with `html.frame-rate-low`. It samples only while the document is
 visible and focused, requires two 1.2-second windows at or below 40 FPS to enter slow
-mode, and three windows at or above 50 FPS to recover. The garden disco pools and
+mode, and three windows at or above 50 FPS to recover. Those same three healthy
+windows expose the `high` quality tier when the party is not active; one sample
+below 50 FPS, blur, or hiding the page drops it immediately. The garden disco pools and
 night constellations use that state: healthy delivery runs their continuous CSS
 motion, while low-frame mode replaces it with roughly one-second discrete steps.
 The garden's full-scene UV wash similarly becomes a slow four-step lighting cue; it

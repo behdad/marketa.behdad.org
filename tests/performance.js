@@ -67,6 +67,18 @@ var FRAME_HEALTH_HARNESS = [
   '})();</script>'
 ].join("\n");
 
+var CANVAS_QUALITY_HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var report={errors:[],steps:{}};',
+  'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("canvas-quality harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},250);});',
+  'function box(w,h){return{left:0,top:0,right:w,bottom:h,width:w,height:h,x:0,y:0,toJSON:function(){return this;}};}',
+  'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
+  'async function saver(mon,kind){if(mon.classList.contains("show-saver"))window.__wakeMonitorSaver();mon.classList.add("show-caps");window.__startMonitorSaver(kind);await sleep(100);return window.__monitorSaverCanvasState(kind);}',
+  'async function run(){window.goToStage("office");var mon=document.getElementById("office-monitor"),julia=document.getElementById("monitor-saver-fractal"),pipes=document.getElementById("monitor-saver-pipes"),flower=document.getElementById("monitor-saver-flower"),credits=document.getElementById("monitor-credits-fire");mon.classList.add("here","screen-on","show-caps");[julia,pipes,flower].forEach(function(img){img.getBoundingClientRect=function(){return box(1240,420);};});credits.getBoundingClientRect=function(){return box(690,450);};report.steps.base={health:window.__frameHealthState(),julia:await saver(mon,"julia"),pipes:await saver(mon,"pipes"),flower:await saver(mon,"flower"),fire:window.__fireCanvasState()};window.__frameHealthFeed(60);window.__frameHealthFeed(60);window.__frameHealthFeed(60);report.steps.high={health:window.__frameHealthState(),julia:await saver(mon,"julia"),pipes:await saver(mon,"pipes"),flower:await saver(mon,"flower")};window.__openMonitorCredits();report.steps.high.fire=window.__fireCanvasState();window.__frameHealthFeed(45);var fireDrop=window.__fireCanvasState();window.__closeMonitorCredits();report.steps.drop={health:window.__frameHealthState(),julia:await saver(mon,"julia"),pipes:await saver(mon,"pipes"),flower:await saver(mon,"flower"),fire:fireDrop};}',
+  '})();</script>'
+].join("\n");
+
 var LOW_AMBIENCE_HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){window.addEventListener("load",function(){setTimeout(function(){',
@@ -126,6 +138,29 @@ check(!h.first.slow && h.second.slow && h.slowState.slow && h.recovering.slow &&
 check(h.slowStars === 0 && h.slowSky.running && h.recoveredStars > 0 && !h.recoveredSky.running, "constellations step once per second only in low-FPS mode", h);
 check(h.healthyPoolAnimations > 0 && h.slowPool.animations === 0 && !!h.slowPool.inlineTransform && h.partyHeldPool.animations === 0 && h.partyHeldPool.health.slow && h.recoveredPool.animations > 0 && !h.recoveredPool.inlineTransform, "party spotlights stay in low-FPS steps until the party ends, then recover", h);
 console.log("  frame-health metric: " + JSON.stringify(h));
+
+var quality = lib.runPageSync("rsvp.html", CANVAS_QUALITY_HARNESS, 1800, { patchRaf: true, forceMotion: true, seedRandom: true });
+var q = quality && quality.steps;
+check(quality && quality.errors.length === 0, "adaptive canvas probe completes without page errors", quality && quality.errors);
+check(q && !q.base.health.high &&
+  ["julia", "pipes", "flower"].every(function (kind) { return q.base[kind].width === 496 && q.base[kind].height === 168; }) &&
+  q.base.fire.width === 276 && q.base.fire.height === 180,
+  "all monitor savers and Credits fire stay at their existing baselines before sustained health", q && q.base);
+check(q && q.high.health.high &&
+  ["julia", "pipes", "flower"].every(function (kind) { return q.high[kind].width === 620 && q.high[kind].height === 210; }) &&
+  q.high.fire.width === 345 && q.high.fire.height === 225,
+  "three healthy FPS windows raise all four canvases to the half-device-pixel cap", q && q.high);
+check(q && ["julia", "pipes", "flower"].every(function (kind) {
+  return q.high[kind].width <= q.high[kind].consumerWidth * q.high[kind].dpr * 0.5 &&
+    q.high[kind].height <= q.high[kind].consumerHeight * q.high[kind].dpr * 0.5;
+}) &&
+  q.high.fire.width <= q.high.fire.consumerWidth * q.high.fire.dpr * 0.5 &&
+  q.high.fire.height <= q.high.fire.consumerHeight * q.high.fire.dpr * 0.5,
+  "high tiers never exceed half their rendered containers' physical pixels", q && q.high);
+check(q && !q.drop.health.high &&
+  ["julia", "pipes", "flower"].every(function (kind) { return q.drop[kind].width === 496 && q.drop[kind].height === 168; }) &&
+  q.drop.fire.width === 276 && q.drop.fire.height === 180,
+  "one non-healthy sample immediately restores every baseline canvas", q && q.drop);
 
 var lowAmbience = lib.runPageSync("rsvp.html", LOW_AMBIENCE_HARNESS, 1200, { patchRaf: true, forceMotion: true });
 check(lowAmbience && lowAmbience.errors.length === 0 && lowAmbience.before.duration === "0.85s" &&

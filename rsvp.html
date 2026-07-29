@@ -4269,14 +4269,38 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .mail-cancel-btn{background:#e3dae4; color:#453a31}
 .mail-cancel-btn:hover{background:#d3c8d5}
 .mail-send-btn .btn-vc, .mail-cancel-btn .btn-vc{margin-top:0.6em} /* net +0.3em, see .btn-vc */
-/* minesweeper app: a classic 16×7 board over the screen, HTML grid in the foreignObject.
-   The mines are 💍 rings ("don't set off the ring"); side panel on the RIGHT so the
-   close pill sits over the panel, never over playable cells. Classic silver, warmed
-   to sit next to the palette. */
-#monitor-mines{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
-#office-monitor.show-mines #monitor-mines{opacity:1; pointer-events:auto}
+/* Classics holds the retained Mines board, the Klondike table and a two-game chooser.
+   The three HTML views stay de-layered under the scaled monitor foreignObject for WebKit. */
+#monitor-mines{opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--loft-os-surface-time) ease}
+#office-monitor.show-mines #monitor-mines{opacity:1;visibility:visible;pointer-events:auto}
 #monitor-mines-close{cursor:pointer}
 #monitor-mines-close:hover .seg-hover{opacity:.55}
+#monitor-mines .classics-back-arrow{display:none}
+#monitor-mines:not([data-view="chooser"]) .classics-close-x{display:none}
+#monitor-mines:not([data-view="chooser"]) .classics-back-arrow{display:inline}
+#monitor-mines[data-view="mines"] .classics-close-bg{fill:#8a8272;stroke:#6f675a}
+#monitor-mines[data-view="solitaire"] .classics-close-bg{fill:#2f6653;stroke:#183b31}
+#monitor-mines:not([data-view="chooser"]) .classics-close-shine{opacity:.16}
+#monitor-mines:not([data-view="chooser"]) .classics-back-arrow{stroke:#f8f5ec}
+#monitor-mines[data-view="mines"] #monitor-mines-close:hover .seg-hover{fill:#6f675a}
+#monitor-mines[data-view="solitaire"] #monitor-mines-close:hover .seg-hover{fill:#183b31}
+#monitor-mines .classics-chooser-fo,#monitor-mines .classics-mines-fo,#monitor-mines .classics-solitaire-fo{visibility:hidden;pointer-events:none}
+#monitor-mines[data-view="chooser"] .classics-chooser-fo,#monitor-mines[data-view="mines"] .classics-mines-fo,#monitor-mines[data-view="solitaire"] .classics-solitaire-fo{visibility:visible;pointer-events:inherit}
+.classics-view{width:124px;height:42px;box-sizing:border-box;overflow:hidden;font-family:Source Serif 4,Georgia,serif;color:#453a31}
+.classics-chooser{display:grid;grid-template:1fr/1fr;width:100%;height:100%;place-items:center;background:radial-gradient(circle at 28% 18%,rgba(217,166,166,.32),transparent 38%),radial-gradient(circle at 78% 82%,rgba(127,158,192,.3),transparent 40%),#f3ead9}
+.classics-choice{grid-area:1/1;width:51px;height:31px;box-sizing:border-box;border:.45px solid rgba(69,58,49,.24);border-radius:3px;background:#fffdf8;color:#453a31;display:grid;grid-template-rows:1fr auto;place-items:center;padding:2px 2px 2.4px;box-shadow:0 1px 2px rgba(69,58,49,.22),inset 0 .5px 0 #fff;cursor:pointer;font:700 3.4px/1 Fraunces,Georgia,serif;letter-spacing:.12px}
+.classics-choice-mines{margin-right:56px}.classics-choice-solitaire{margin-left:56px}
+.classics-choice:hover,.classics-choice:focus-visible{border-color:#8e3a4a;outline:none;background:#fffaf0}
+.classics-choice-icon{width:25px;height:20px;display:grid;place-items:center}
+.classics-mini-mine{width:11px;height:11px;border-radius:50%;background:#453a31;box-shadow:inset 2px 2px 0 rgba(255,255,255,.22);display:grid;place-items:center;color:#f8f5ec;font:5px/1 sans-serif}
+.classics-mini-cards{display:grid;grid-template:1fr/1fr;width:24px;height:19px}
+.classics-mini-card{grid-area:1/1;width:13px;height:18px;border:.45px solid #bbae98;border-radius:1.4px;background:#fffdf8;display:grid;place-items:center;font:8px/1 Georgia,serif;box-shadow:0 .5px 1px rgba(69,58,49,.2)}
+.classics-mini-card:first-child{justify-self:start;margin-top:1px;color:#8e3a4a}.classics-mini-card:last-child{justify-self:end;color:#453a31}
+.classics-sub{font:400 2.15px/1 sans-serif;color:#716455;letter-spacing:0}
+.classics-kill-deck{grid-area:1/1;width:100%;height:100%;display:none;grid-template:1fr/1fr;place-items:center;pointer-events:none}
+.classics-kill-card{grid-area:1/1;width:12px;height:17px;border:.4px solid #bbae98;border-radius:1.2px;background:#fffdf8;display:grid;place-items:center;font:7px/1 Georgia,serif;box-shadow:0 .7px 1.5px rgba(69,58,49,.3)}
+.classics-chooser[data-kill-stage] .classics-choice{visibility:hidden}
+.classics-chooser[data-kill-stage] .classics-kill-deck{display:grid}
 /* Pac-Man is pure HTML/CSS rather than canvas: replaced elements inside the scaled
    monitor foreignObject disappear in WebKit. Grid stacking keeps every maze tile,
    pellet and actor in the same compositor-safe flow. */
@@ -4319,6 +4343,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pac-wrap.pac-killed .pac-message{font-size:2.5px;color:#ffd83d}
 #office-monitor.death-pacman #monitor-pacman{pointer-events:none}
 #office-monitor.death-mines #monitor-mines{pointer-events:none}
+#office-monitor.death-classics #monitor-mines,#office-monitor.death-solitaire #monitor-mines{pointer-events:none}
 .mines-wrap{width:124px; height:42px; box-sizing:border-box; display:grid; grid-template-columns:96px 1fr; grid-template-rows:42px; background:#cfc9bb; font-family:sans-serif; color:#453a31; overflow:hidden} /* grid (was flex+position:relative): board/side/msg stack without a RenderLayer under the monitor's scaled foreignObject (WebKit bug 23113) */
 .mines-board{flex:none; grid-column:1; grid-row:1; display:grid; grid-template-columns:repeat(16,6px); grid-auto-rows:6px; width:96px; height:42px}
 .mines-cell{box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-size:3.8px; font-weight:700; line-height:1; background:#c8c2b4; box-shadow:inset 0.7px 0.7px 0 rgba(255,255,255,0.72), inset -0.7px -0.7px 0 rgba(69,58,49,0.38); cursor:pointer}
@@ -4341,9 +4366,37 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .mines-side{flex:1; grid-column:2; grid-row:1; display:flex; flex-direction:column; align-items:center; gap:1.6px; padding-top:13px; box-sizing:border-box; box-shadow:inset 0.7px 0 0 rgba(255,255,255,0.6)} /* top padding clears the ✕ pill */
 .mines-face{width:9px; height:8px; display:flex; align-items:center; justify-content:center; font-size:5px; line-height:1; border-radius:1px; background:#c8c2b4; box-shadow:inset 0.7px 0.7px 0 rgba(255,255,255,0.72), inset -0.7px -0.7px 0 rgba(69,58,49,0.38); cursor:pointer}
 .mines-face:active{box-shadow:inset 0.7px 0.7px 0 rgba(69,58,49,0.38), inset -0.7px -0.7px 0 rgba(255,255,255,0.72)}
+.classics-back{appearance:none;border:0;border-radius:1px;background:#a9a294;color:#453a31;width:19px;height:4.5px;padding:0;font:700 2.3px/1 sans-serif;box-shadow:inset .4px .4px 0 rgba(255,255,255,.55);cursor:pointer}
+.classics-back:hover,.classics-back:focus-visible{background:#8e3a4a;color:#fffdf8;outline:none}
 .mines-lcd{width:19px; box-sizing:border-box; text-align:center; padding:0.8px 0 0.6px; background:#241d18; color:#e0604e; font-family:ui-monospace,Menlo,monospace; font-size:3.2px; line-height:1; letter-spacing:0.3px; border-radius:0.6px; box-shadow:inset 0.5px 0.5px 0 rgba(0,0,0,0.6)}
 .mines-msg{grid-column:1/3; grid-row:1; place-self:center; max-width:88px; display:none; box-sizing:border-box; background:rgba(255,253,248,0.95); border:0.4px solid #8a8272; border-radius:1.5px; padding:1.8px 3px; font-size:3.2px; line-height:1.4; text-align:center}
 .mines-wrap.done .mines-msg{display:block}
+/* Compact Klondike: grid stacking supplies card overlap without positioned layers, while
+   the pointer drag ghost lives outside the scaled monitor and therefore paints in WebKit. */
+.sol-wrap{width:124px;height:42px;box-sizing:border-box;display:grid;grid-template:12px minmax(0,1fr)/1fr;gap:.5px;padding:1px;background:radial-gradient(circle at 50% -35%,#537c65,#254d3e 66%,#183b31);color:#fffdf8;font-family:sans-serif;overflow:hidden;user-select:none;touch-action:none}
+.sol-top{grid-area:1/1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1.2px;min-width:0}
+.sol-slot{width:11px;height:15px;box-sizing:border-box;border:.45px solid rgba(248,245,236,.42);border-radius:1.2px;display:grid;grid-template:1fr/1fr;place-self:start center;place-items:start center;color:rgba(248,245,236,.6);font:6px/1 Georgia,serif;cursor:pointer}
+.sol-slot::before{grid-area:1/1;align-self:center;content:attr(data-empty);font-size:5px}
+.sol-stock{grid-column:1}.sol-waste{grid-column:2}.sol-actions{grid-column:3;display:grid;grid-template:repeat(3,3px)/1fr;gap:.45px;align-content:center;padding:0 .6px;box-sizing:border-box}
+.sol-foundation[data-suit="h"]{grid-column:4}.sol-foundation[data-suit="d"]{grid-column:5}.sol-foundation[data-suit="c"]{grid-column:6}.sol-foundation[data-suit="s"]{grid-column:7}
+.sol-action{appearance:none;border:.25px solid rgba(248,245,236,.5);border-radius:1.5px;background:rgba(255,253,248,.16);color:#fffdf8;display:flex;align-items:center;justify-content:center;padding:0;font:600 1.5px/1 "Source Serif 4",Georgia,serif;letter-spacing:.02px;cursor:pointer;white-space:nowrap}
+.sol-action-label{display:block;margin-top:.25px}
+.sol-action:hover,.sol-action:focus-visible{background:#8e3a4a;border-color:#d9a6a6;outline:none}.sol-action:disabled{color:#9eb1a5;border-color:rgba(248,245,236,.2);background:rgba(255,253,248,.06);cursor:default}
+.sol-tableau{grid-area:2/1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1.2px;min-height:0}
+.sol-pile{display:grid;grid-template:1fr/1fr;align-content:start;justify-items:center;min-width:0;min-height:27px;border-top:.35px solid rgba(248,245,236,.28);border-radius:1px;cursor:pointer}
+.sol-card{grid-area:1/1;width:13px;height:18.2px;box-sizing:border-box;border:.4px solid #b9ad99;border-radius:1.25px;background:#fffdf8;color:#453a31;display:grid;grid-template:"rank suit" 3.5px "face face" 1fr/1fr 1fr;padding:.55px;box-shadow:0 .65px 1.2px rgba(15,35,29,.4);font-family:Georgia,serif;cursor:grab}
+.sol-card.red{color:#8e3a4a}.sol-card.selected{border-color:#f0c94f;box-shadow:0 0 0 .65px #f0c94f,0 .7px 1px rgba(15,35,29,.45)}.sol-card:focus-visible{outline:.6px solid #f0c94f;outline-offset:.25px}
+.sol-card.back{background:repeating-linear-gradient(45deg,#4a6b94 0 1px,#f8f5ec 1px 1.6px,#8e3a4a 1.6px 2.6px);border-color:#fffdf8;box-shadow:inset 0 0 0 .65px #4a6b94,0 .65px 1.2px rgba(15,35,29,.45);cursor:pointer}
+.sol-rank{grid-area:rank;font:bold 3px/1 Georgia,serif}.sol-suit{grid-area:suit;justify-self:end;font:3.1px/1 Georgia,serif}.sol-face{grid-area:face;align-self:center;justify-self:center;width:10px;height:12px;display:grid;place-items:center}
+.sol-face svg{width:10px;height:12px;display:block}.sol-pip{font:8px/1 Georgia,serif}
+.sol-slot .sol-card{margin-top:-.35px;width:11px;height:15px}.sol-slot .sol-rank{font-size:2.7px}.sol-slot .sol-suit{font-size:2.8px}.sol-slot .sol-face{width:8px;height:9.8px}.sol-slot .sol-face svg{width:8px;height:9.8px}
+.sol-status{grid-area:1/1/3/2;align-self:end;justify-self:center;max-width:58px;box-sizing:border-box;background:rgba(255,253,248,.94);border:.45px solid #8e3a4a;border-radius:1.5px;color:#453a31;padding:1.4px 3px;margin-bottom:2px;text-align:center;font:700 2.4px/1.25 sans-serif;display:none}
+.sol-wrap.won .sol-status,.sol-wrap.help .sol-status{display:block}.sol-status button{appearance:none;border:0;border-radius:1px;background:#8e3a4a;color:#fffdf8;margin-top:1px;padding:.7px 2px;font:700 2px/1 sans-serif;cursor:pointer}
+.sol-pickup{grid-area:1/1/3/2;display:grid;grid-template:1fr/1fr;place-items:center;pointer-events:none}
+.sol-pickup-card{grid-area:1/1;width:7px;height:10px;border:.3px solid #b9ad99;border-radius:.7px;background:#fffdf8;display:grid;place-items:center;color:#453a31;font:4px/1 Georgia,serif;box-shadow:0 .4px .8px rgba(15,35,29,.3)}
+.sol-pickup-card.red{color:#8e3a4a}
+.sol-drag-ghost{position:fixed;left:0;top:0;display:grid;grid-template:1fr/1fr;pointer-events:none;z-index:2147483646;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35))}
+.sol-drag-ghost .sol-card{grid-area:1/1;width:34px;height:47px;margin-top:var(--drag-y);font-size:8px}
 /* video app: markéta's films, letterboxed in a foreignObject over the screen
    (tap = play/pause); .absent on the wrap = the selected file isn't on the server, so
    a bilingual note takes the screen instead */
@@ -21958,19 +22011,25 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- MINESWEEPER app: a classic board in a foreignObject over the screen (grid + side
-     panel built by JS, copy from the T dict), with the same mini close pill in
-     minesweeper silver -->
-<g id="monitor-mines">
-<foreignObject x="254" y="154" width="124" height="42">
+<!-- CLASSICS: a chooser shared by the retained Mines board and Klondike Solitaire.
+     Separate foreignObjects keep the phone's existing Mines-node handoff intact. -->
+<g id="monitor-mines" data-view="mines">
+<foreignObject class="classics-chooser-fo" x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-classics-wrap" class="classics-view classics-chooser"></div>
+</foreignObject>
+<foreignObject class="classics-mines-fo" x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-mines-wrap" class="mines-wrap"></div>
+</foreignObject>
+<foreignObject class="classics-solitaire-fo" x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" id="monitor-solitaire-wrap" class="classics-view sol-wrap"></div>
 </foreignObject>
 <g id="monitor-mines-close" transform="translate(76.0,29.3) scale(0.8)">
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
-<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#c8c2b4" stroke="#8a8272" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.35"/>
+<rect class="classics-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#c8c2b4" stroke="#8a8272" stroke-width="0.5"/>
+<rect class="classics-close-shine" x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.35"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7c7466" opacity="0"/>
-<path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#453a31" stroke-width="0.6" stroke-linecap="round"/>
+<path class="classics-close-x" d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#453a31" stroke-width="0.6" stroke-linecap="round"/>
+<path class="classics-back-arrow" d="M375.4 157.9 L373.5 159.25 L375.4 160.6" fill="none" stroke="#453a31" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 </g>
 <!-- PAC-MAN: unlocked by catching Behdad's drifting ketamine ghost. The board is
@@ -23474,6 +23533,11 @@ section{margin:1.9rem 0}
 <symbol id="dicon-tattoo" viewBox="0 0 12 12"><path d="M6 10.7 C1.3 7.3 1.85 3.15 4.35 2.8 C5.28 2.67 5.8 3.25 6 3.85 C6.2 3.25 6.72 2.67 7.65 2.8 C10.15 3.15 10.7 7.3 6 10.7 Z" fill="#8e3a4a"/><path d="M1.2 5.5 L3.0 5.95 L2.6 6.8 L3.0 7.6 L1.2 8.05 L1.95 6.78 Z" fill="#8e3a4a"/><path d="M10.8 5.5 L9.0 5.95 L9.4 6.8 L9.0 7.6 L10.8 8.05 L10.05 6.78 Z" fill="#8e3a4a"/><path d="M2.7 5.95 L9.3 5.95 L9.3 7.65 L2.7 7.65 Z" fill="#f8f5ec"/><path d="M3.4 6.8 L8.6 6.8" stroke="#d9a6a6" stroke-width="0.35"/></symbol>
 <symbol id="dicon-album" viewBox="0 0 12 12"><rect x="1.6" y="1.6" width="8.8" height="8.8" rx="0.9" fill="#f8f5ec"/><rect x="2.5" y="2.5" width="7" height="7" rx="0.4" fill="#7f9ec0"/><path d="M2.5 8.2 L4.8 5.6 L6.4 7.3 L7.8 6 L9.5 8 L9.5 9.1 A0.4 0.4 0 0 1 9.1 9.5 L2.9 9.5 A0.4 0.4 0 0 1 2.5 9.1 Z" fill="#5d7d4e"/><circle cx="7.6" cy="4.3" r="0.9" fill="#f2e3b8"/></symbol><symbol id="dicon-mail" viewBox="0 0 12 12"><rect x="1.4" y="2.6" width="9.2" height="6.8" rx="1" fill="url(#dicon-cream-depth)" stroke="#d8d0c1" stroke-width="0.12"/><path d="M1.9 3.4 L6 6.6 L10.1 3.4" fill="none" stroke="#4a6b94" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="dicon-mines" viewBox="0 0 12 12"><path d="M6 1.2 L6 10.8 M1.2 6 L10.8 6 M2.6 2.6 L9.4 9.4 M9.4 2.6 L2.6 9.4" stroke="#453a31" stroke-width="0.9" stroke-linecap="round"/><circle cx="6" cy="6" r="3.1" fill="#453a31"/><circle cx="4.9" cy="4.9" r="0.85" fill="#f8f5ec" opacity="0.85"/></symbol>
+<symbol id="dicon-classics" viewBox="0 0 12 12">
+<g transform="rotate(-13 4.2 5.8)"><rect x="1.1" y="1.2" width="5.8" height="8.4" rx="0.8" fill="#fffdf8" stroke="#c9beaa" stroke-width="0.45"/><path d="M3.95 3.1 C3.15 2.15 1.95 3 2.35 3.85 C2.7 4.55 3.95 5.3 3.95 5.3 C3.95 5.3 5.2 4.55 5.55 3.85 C5.95 3 4.75 2.15 3.95 3.1 Z" fill="#8e3a4a"/></g>
+<g transform="rotate(12 7.6 5.8)"><rect x="5.1" y="1.2" width="5.8" height="8.4" rx="0.8" fill="#f8f5ec" stroke="#c9beaa" stroke-width="0.45"/><path d="M8 2.7 C6.85 4 6.4 4.7 6.75 5.35 C7.1 6 7.7 5.65 8 5.3 C8.3 5.65 8.9 6 9.25 5.35 C9.6 4.7 9.15 4 8 2.7 Z M7.55 5.35 L8.45 5.35 L8.85 6.25 L7.15 6.25 Z" fill="#453a31"/></g>
+<path d="M6.1 4.7 L6.1 11 M2.9 7.85 L9.3 7.85 M3.85 5.6 L8.35 10.1 M8.35 5.6 L3.85 10.1" stroke="#453a31" stroke-width="0.68" stroke-linecap="round"/><circle cx="6.1" cy="7.85" r="2.25" fill="#453a31"/><circle cx="5.25" cy="7" r="0.58" fill="#f8f5ec" opacity="0.88"/>
+</symbol>
 <symbol id="dicon-globe" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.4" fill="none" stroke="#4285f4" stroke-width="0.9"/><ellipse cx="6" cy="6" rx="2" ry="4.4" fill="none" stroke="#4285f4" stroke-width="0.7"/><path d="M1.8 6 L10.2 6 M2.4 3.8 L9.6 3.8 M2.4 8.2 L9.6 8.2" stroke="#4285f4" stroke-width="0.7" fill="none"/></symbol>
 <symbol id="dicon-chrome" viewBox="0 0 12 12"><path d="M6 6 L1.67 3.5 A5 5 0 0 1 10.33 3.5 Z" fill="#db4437"/><path d="M6 6 L10.33 3.5 A5 5 0 0 1 6 11 Z" fill="#ffcd40"/><path d="M6 6 L6 11 A5 5 0 0 1 1.67 3.5 Z" fill="#0f9d58"/><circle cx="6" cy="6" r="2.55" fill="#f8f5ec"/><circle cx="6" cy="6" r="1.95" fill="#4285f4"/></symbol>
 <symbol id="dicon-firefox" viewBox="0 0 12 12"><path d="M5.1 1.3 C6.4 1.1 7.2 1.7 7.5 2.6 C8.2 1.9 9.4 1.9 10.1 2.7 C9.3 2.7 8.7 3.2 8.6 3.9 C10.2 4.4 11.1 6 10.8 7.7 C10.4 9.9 8.4 11.3 6 11.3 C3.1 11.3 1.1 9.1 1.3 6.3 C1.45 4.4 2.6 2.9 4.3 2.35 C3.9 3.1 4.0 3.9 4.7 4.3 C4.2 3.0 4.3 1.6 5.1 1.3 Z" fill="#ffcb00"/><path d="M 4.24 1.57 C 5.47 1.38 6.22 1.95 6.5 2.79 C 7.16 2.14 8.29 2.14 8.94 2.89 C 8.19 2.89 7.63 3.36 7.53 4.02 C 9.04 4.49 9.88 5.99 9.6 7.59 C 9.23 9.66 7.35 10.97 5.09 10.97 C 2.36 10.97 0.48 8.9 0.67 6.27 C 0.81 4.49 1.89 3.08 3.49 2.56 C 3.12 3.26 3.21 4.02 3.87 4.39 C 3.4 3.17 3.49 1.85 4.24 1.57 Z" fill="#ff7139"/><circle cx="5.6" cy="7.3" r="2.6" fill="#29278c"/><circle cx="5.85" cy="7" r="1.9" fill="#0a84ff"/></symbol>
@@ -28294,6 +28358,8 @@ var T = {
       df_video_rose_quip: "The rose falls. The song stays.", // guitar performance sheds its rose into petals
       df_video_butterfly_quip: "The colour ran. The butterfly stayed.", // painted shower-curtain colours drip away
       df_mines_quip: "You found them.", // caption under the Mines board's forced reveal and detonation chain
+      df_solitaire_quip: "Patience ran out.", // caption under Solitaire's 52 Pickup process kill
+      df_classics_quip: "Pick a card. Any card.", // caption as the chooser folds into one shuffled deck
       df_pacman_quip: "Game over. Insert another ghost.", // caption under Pac-Man's ghost takeover
       df_call_quip: "It’s not you. It’s the connection.", // caption after the Call signal drops
       df_call_lost: "CONNECTION LOST", // status inside the Call kill overlay
@@ -28718,6 +28784,22 @@ var T = {
     console_laser: "bzzzt — red dot on the loose, shadowing your cursor. laser(false) calls it off. good luck, cat.",
     app_mail: "mail",
     app_mines: "mines",
+    app_classics: "classics",
+    classics_choose: "Choose a classic",
+    classics_mines: "Mines",
+    classics_mines_sub: "don’t set off the ring",
+    classics_solitaire: "Solitaire",
+    classics_solitaire_sub: "a little patience",
+    classics_back: "‹ games",
+    solitaire_new: "New",
+    solitaire_redeal: "Redeal",
+    solitaire_help: "Help",
+    solitaire_help_copy: "Build down in alternating colours. Send A→K by suit home. Tap or drag; double-tap a card to send it home.",
+    solitaire_win: "You won. Patience rewarded.",
+    solitaire_play_again: "Deal again",
+    solitaire_moves: "moves",
+    solitaire_ranks: ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"],
+    solitaire_suits: ["hearts", "diamonds", "clubs", "spades"],
     app_pacman: "hackman",
     pacman_win: "MAZE CLEARED",
     pacman_kill: "GHOSTS WIN",
@@ -29459,6 +29541,8 @@ var T = {
       df_video_rose_quip: "Růže opadá. Píseň zůstává.", // kytarové vystoupení se rozpadne na okvětní lístky
       df_video_butterfly_quip: "Barvy stekly. Motýl zůstal.", // barvy malovaného motýla stečou ze závěsu
       df_mines_quip: "Našel jsi je.", // caption under the Mines board's forced reveal and detonation chain
+      df_solitaire_quip: "Došla trpělivost.", // popisek pod ukončením pasiánsu ve stylu 52 Pickup
+      df_classics_quip: "Vyber si kartu. Jakoukoli.", // popisek při složení nabídky do zamíchaného balíčku
       df_pacman_quip: "Konec hry. Vlož dalšího ducha.", // caption under Pac-Man's ghost takeover
       df_call_quip: "Není to tebou. Zlobí spojení.", // caption after the Call signal drops
       df_call_lost: "SPOJENÍ PŘERUŠENO", // status inside the Call kill overlay
@@ -29880,6 +29964,22 @@ var T = {
     console_laser: "bzzzt — červená tečka je venku a sleduje kurzor. laser(false) ji odvolá. hodně štěstí, kočko.",
     app_mail: "pošta",
     app_mines: "miny",
+    app_classics: "classics",
+    classics_choose: "Vyberte klasiku",
+    classics_mines: "Miny",
+    classics_mines_sub: "nespusťte prsten",
+    classics_solitaire: "Pasiáns",
+    classics_solitaire_sub: "trocha trpělivosti",
+    classics_back: "‹ hry",
+    solitaire_new: "Nová",
+    solitaire_redeal: "Znovu rozdat",
+    solitaire_help: "Nápověda",
+    solitaire_help_copy: "Skládejte sestupně a střídejte barvy. Esa až krále stejné barvy posílejte domů. Klepněte nebo táhněte; dvojím klepnutím pošlete kartu domů.",
+    solitaire_win: "Vyhráli jste. Trpělivost se vyplatila.",
+    solitaire_play_again: "Rozdat znovu",
+    solitaire_moves: "tahy",
+    solitaire_ranks: ["eso", "2", "3", "4", "5", "6", "7", "8", "9", "10", "spodek", "dáma", "král"],
+    solitaire_suits: ["srdce", "kára", "kříže", "piky"],
     app_pacman: "hackman",
     pacman_win: "BLUDIŠTĚ HOTOVO",
     pacman_kill: "DUCHOVÉ VYHRÁLI",
@@ -30443,6 +30543,7 @@ function setLang(l) {
   if (window.refreshWeddingText) window.refreshWeddingText();
   if (window.refreshMailText) window.refreshMailText();
   if (window.refreshMinesText) window.refreshMinesText();
+  if (window.refreshClassicsText) window.refreshClassicsText();
   if (window.refreshPacmanText) window.refreshPacmanText();
   if (window.refreshFamilyText) window.refreshFamilyText();
   if (window.refreshCalendarText) window.refreshCalendarText();
@@ -47790,9 +47891,11 @@ setOfficeProgress("pc", false);
     { id: "mail", icon: "mail", labelKey: "app_mail", glyph: "✉️", tile: "#7b5aa6", glyphSize: "5.2", open: function () { openMailApp(); } },
     { id: "tattoo", icon: "tattoo", labelKey: "app_tattoo", glyph: "🖊️", tile: "#c68e95", glyphSize: "5.2", activities: ["make tattoo designs"], open: function () { openTattooApp(); } },
     { id: "calendar", labelKey: "app_calendar", glyph: "📅", tile: "#c68e95", glyphSize: "5.2", searchOnly: true, open: function () { openCalendar(); } },
-    // games row: Life, Mines, the DOS-native snakes game, and Shoot stay together
+    // games row: Life, Classics, the DOS-native snakes game, and Shoot stay together
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", game: { id: "life", name: "Game of Life" }, open: function () { openLifeApp(); } },
-    { id: "mines", icon: "mines", labelKey: "app_mines", glyph: "💣", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", game: { id: "mines", name: "Mines" }, open: function () { openMinesApp(); } },
+    { id: "classics", icon: "classics", labelKey: "app_classics", glyph: "♠", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", aliases: ["classic"], activities: ["Mines", "Solitaire"], open: function () { openClassicsApp("chooser"); } },
+    { id: "mines", labelKey: "classics_mines", aliases: ["mine", "miny"], searchOnly: true, catalogOnly: true, game: { id: "mines", name: "Mines", how_to_open: "Open Classics or search for mines on the monitor." }, open: function () { openClassicsApp("mines"); } },
+    { id: "solitaire", labelKey: "classics_solitaire", aliases: ["cards", "card", "patience", "pasiáns", "pasians"], searchOnly: true, catalogOnly: true, game: { id: "solitaire", name: "Solitaire", how_to_open: "Open Classics or search for solitaire or cards on the monitor." }, open: function () { openClassicsApp("solitaire"); } },
     { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true, game: { id: "hack-man", name: "Hack-Man", highScoreState: "__pacmanState", how_to_open: "Search for hackman on the monitor; the ketamine ghost can reveal it too." },
       open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
     { id: "system", labelKey: "mon_sys_system", glyph: "⚙", tile: "#f4ecdf", color: "#4a6b94", glyphSize: "5.2", searchOnly: true,
@@ -47871,7 +47974,7 @@ setOfficeProgress("pc", false);
   var MONITOR_APP_CLASSES = {
     chrome: "show-browser", music: "show-nowplaying", photobooth: "photobooth",
     video: "show-video", call: "show-family", chat: "show-chat", mail: "show-mail",
-    calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", mines: "show-mines", pacman: "show-pacman",
+    calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", classics: "show-mines", pacman: "show-pacman",
     life: "show-life", shoot: "show-doom", code: "show-code", console: "show-console",
     python: "show-python", linux: "show-linux", snakes: "show-snakes", weather: "show-weather",
     system: "show-system", about: "show-about", help: "show-help", credits: "show-credits"
@@ -47881,7 +47984,7 @@ setOfficeProgress("pc", false);
     photobooth: "__killMonitorPhotobooth", video: "__killMonitorVideo",
     call: "__killMonitorFamily", chat: "__killMonitorChat", mail: "__killMonitorMail",
     calendar: "__killMonitorCalendar", clock: "__killMonitorClock", tattoo: "__killMonitorTattoo",
-    mines: "__killMonitorMines", pacman: "__killMonitorPacman", life: "__killMonitorLife", shoot: "__killMonitorDoom",
+    classics: "__killMonitorClassics", pacman: "__killMonitorPacman", life: "__killMonitorLife", shoot: "__killMonitorDoom",
     code: "__killMonitorCode", console: "__killMonitorConsole",
     python: "__killMonitorPython", linux: "__killMonitorLinux", snakes: "__killMonitorSnakes",
     weather: "__killMonitorWeather", system: "__killMonitorSystem",
@@ -47889,7 +47992,12 @@ setOfficeProgress("pc", false);
   };
   var monitorRunningApps = Object.create(null);
   var monitorKillingApps = Object.create(null);
-  function monitorRegistryId(id) { return id === "family" ? "call" : id === "doom" ? "shoot" : id; }
+  function monitorRegistryId(id) {
+    if (id === "family") return "call";
+    if (id === "doom") return "shoot";
+    if (id === "mines" || id === "solitaire" || id === "cards") return "classics";
+    return id;
+  }
   function paintMonitorRunning(id) {
     var cell = dockCells[id];
     if (cell) cell.classList.toggle("is-running", !!monitorRunningApps[id]);
@@ -49887,7 +49995,7 @@ setOfficeProgress("pc", false);
         ["show-chat", "chat"], ["show-weather", "weather"], ["show-calendar", "calendar"], ["show-clock", "clock"], ["show-mail", "mail"],
         ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
         ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-snakes", "snakes"], ["show-code", "code"],
-        ["show-mines", "mines"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "shoot"], ["show-video", "video"],
+        ["show-mines", "classics"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "shoot"], ["show-video", "video"],
         ["show-browser", "browser"], ["show-system", "system"], ["show-about", "about"], ["show-help", "help"], ["show-credits", "credits"]
       ];
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
@@ -50567,6 +50675,8 @@ setOfficeProgress("pc", false);
     fishu: "fishu([count]) — puff Fishu and call them once; fishu(2) says \"fish fishu\", fishu(5) says four \"fish\" then \"fishu\". count is capped at 20. sound(\"fishu\") works too; use speech() for arbitrary text",
     laptop: "laptop(true) — wake the office laptop; laptop(false) closes it; laptop() reports whether it's open. laptop(\"prague\")/laptop(\"lubeck\") place a video call to her family",
     computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
+    mines: "mines() — open Mines directly inside Classics on the office monitor",
+    solitaire: "solitaire() — open Klondike Solitaire directly inside Classics on the office monitor",
     reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
     openurl: "openurl(\"url\") — open any URL in a new browser tab (a bare host gets https://)",
     mailto: "mailto() — compose an email to us; mailto(\"a@x.com\") or mailto([\"a@x\",\"b@y\"]) sets the recipient(s); mailto(\"a@x.com\", {cc:\"c@z\", bcc:[…], subject:\"hi\", body:\"…\"}) adds the rest. Device-aware: desktop→Gmail web, mobile→native mail. Empty recipient → sends to us",
@@ -51001,7 +51111,7 @@ setOfficeProgress("pc", false);
     "goto", "rooms", "daylight", "night", "day", "season", "meteors", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "sharecard", "projector", "storm", "rain", "snow", "overcast", "wildfires", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "gong", "servefood", "kidsAsleep",
-    "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
+    "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "mines", "solitaire", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "faal", "rumi", "confetti", "fireworks", "lanterns", "cat", "dog", "whistler", "octi", "piratebox", "chest", "lamaz", "elmaz", "tamper", "brew", "sip", "knockbox", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
@@ -52535,6 +52645,82 @@ setOfficeProgress("pc", false);
   // the timer interval is text-only repaint off a start timestamp, cleared on
   // close/game-over/hidden tab (same hidden-tab rule as the desk clock). Opening the
   // app always deals a fresh board.
+  var classicsGroup = document.getElementById("monitor-mines");
+  var classicsWrap = document.getElementById("monitor-classics-wrap");
+  var solitaireWrap = document.getElementById("monitor-solitaire-wrap");
+  var classicsView = "mines"; // direct show-mines test hooks historically mean the Mines board
+  function classicsT(key) {
+    var dict = T[document.documentElement.lang] || T.en;
+    return dict[key] != null ? dict[key] : T.en[key];
+  }
+  function setClassicsView(view) {
+    if (view !== "chooser" && view !== "mines" && view !== "solitaire") view = "chooser";
+    if (classicsView === "mines" && view !== "mines") minesStopTimer();
+    classicsView = view;
+    if (classicsGroup) classicsGroup.setAttribute("data-view", view);
+    if (view === "mines") {
+      if (!minesSeeded || !minesGrid.length) { minesSeeded = true; minesNewGame(); }
+      else if (minesPlaced && !minesOver) { minesStartTs = Date.now() - minesElapsed * 1000; minesStartTimer(); minesTick(); }
+    } else if (view === "solitaire" && typeof solitaireEnsureDeal === "function") solitaireEnsureDeal();
+    if (window.refreshClassicsText) window.refreshClassicsText();
+  }
+  window.__classicsView = function () { return classicsView; };
+  if (classicsWrap) {
+    var chooserTitle = document.createElement("div");
+    chooserTitle.className = "classics-sub";
+    chooserTitle.setAttribute("data-classics-copy", "classics_choose");
+    chooserTitle.style.display = "none";
+    classicsWrap.appendChild(chooserTitle);
+    function makeClassicsChoice(view, nameKey, subKey) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "classics-choice classics-choice-" + view;
+      button.setAttribute("data-classics-view", view);
+      var icon = document.createElement("span");
+      icon.className = "classics-choice-icon";
+      if (view === "mines") {
+        var mine = document.createElement("span");
+        mine.className = "classics-mini-mine";
+        mine.textContent = "✦";
+        icon.appendChild(mine);
+      } else {
+        var cards = document.createElement("span");
+        cards.className = "classics-mini-cards";
+        var heart = document.createElement("span"), spade = document.createElement("span");
+        heart.className = spade.className = "classics-mini-card";
+        heart.textContent = "♥"; spade.textContent = "♠";
+        cards.appendChild(heart); cards.appendChild(spade); icon.appendChild(cards);
+      }
+      var copy = document.createElement("span");
+      var name = document.createElement("span");
+      name.setAttribute("data-classics-copy", nameKey);
+      var sub = document.createElement("span");
+      sub.className = "classics-sub";
+      sub.setAttribute("data-classics-copy", subKey);
+      copy.appendChild(name); copy.appendChild(document.createElement("br")); copy.appendChild(sub);
+      button.appendChild(icon); button.appendChild(copy);
+      button.addEventListener("click", function (e) {
+        e.stopPropagation();
+        setClassicsView(view);
+        playLaptopClickSound("office-monitor");
+      });
+      classicsWrap.appendChild(button);
+    }
+    makeClassicsChoice("mines", "classics_mines", "classics_mines_sub");
+    makeClassicsChoice("solitaire", "classics_solitaire", "classics_solitaire_sub");
+    var chooserKillDeck = document.createElement("div");
+    chooserKillDeck.className = "classics-kill-deck";
+    for (var ck = 0; ck < 9; ck++) {
+      var chooserCard = document.createElement("span");
+      chooserCard.className = "classics-kill-card";
+      chooserCard.textContent = ck % 2 ? "♠" : "♥";
+      if (!(ck % 2)) chooserCard.style.color = "#8e3a4a";
+      chooserKillDeck.appendChild(chooserCard);
+    }
+    classicsWrap.appendChild(chooserKillDeck);
+    classicsWrap.addEventListener("click", function (e) { e.stopPropagation(); });
+    classicsWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
   var minesWrap = document.getElementById("monitor-mines-wrap");
   var minesCloseBtn = document.getElementById("monitor-mines-close");
   var MINES_COLS = 16, MINES_ROWS = 7, MINES_COUNT = 17;
@@ -52592,6 +52778,23 @@ setOfficeProgress("pc", false);
         " · " + mailT(minesMsgKey);
     }
   }; // language toggle repaints controls and a visible win/lose banner
+  window.refreshClassicsText = function () {
+    if (classicsGroup) {
+      var copies = classicsGroup.querySelectorAll("[data-classics-copy]");
+      for (var ci = 0; ci < copies.length; ci++) copies[ci].textContent = classicsT(copies[ci].getAttribute("data-classics-copy"));
+      var choices = classicsWrap.querySelectorAll("[data-classics-view]");
+      for (var cj = 0; cj < choices.length; cj++) {
+        var targetView = choices[cj].getAttribute("data-classics-view");
+        choices[cj].setAttribute("aria-label", classicsT(targetView === "mines" ? "classics_mines" : "classics_solitaire"));
+      }
+    }
+    if (minesCloseBtn) {
+      var closeKey = classicsView === "chooser" ? "install_dismiss" : "classics_back";
+      minesCloseBtn.setAttribute("aria-label", classicsT(closeKey));
+      minesCloseBtn.setAttribute("title", classicsT(closeKey));
+    }
+    if (typeof solitaireRefreshText === "function") solitaireRefreshText();
+  };
   function minesNewGame() {
     if (!minesBoardEl) return;
     minesStopTimer();
@@ -52743,17 +52946,393 @@ setOfficeProgress("pc", false);
       minesBoardEl.addEventListener(ev, function () { clearTimeout(minesLpTimer); }, { passive: true });
     });
   }
-  function openMinesApp() {
-    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-mines")) return;
+  // ── KLONDIKE SOLITAIRE ─────────────────────────────────────────────────────
+  // Draw-one, unlimited redeals. DOM grids keep the table compositor-safe beneath
+  // the monitor scale; the temporary drag ghost is mounted outside the SVG.
+  var SOL_SUITS = ["h", "d", "c", "s"];
+  var SOL_GLYPHS = { h: "♥", d: "♦", c: "♣", s: "♠" };
+  var solStock = [], solWaste = [], solTableau = [[], [], [], [], [], [], []];
+  var solFoundations = { h: [], d: [], c: [], s: [] };
+  var solitaireSeeded = false, solitaireMoves = 0, solitaireWon = false;
+  var solitaireSelected = null, solitaireDrag = null, solitaireSuppressClick = false;
+  function solRed(card) { return card && (card.suit === "h" || card.suit === "d"); }
+  function solRankShort(rank) { return rank === 1 ? "A" : rank === 11 ? "J" : rank === 12 ? "Q" : rank === 13 ? "K" : String(rank); }
+  function solCardName(card) {
+    var ranks = classicsT("solitaire_ranks"), suits = classicsT("solitaire_suits");
+    var rank = Array.isArray(ranks) ? ranks[card.rank - 1] : solRankShort(card.rank);
+    var suit = Array.isArray(suits) ? suits[SOL_SUITS.indexOf(card.suit)] : SOL_GLYPHS[card.suit];
+    return rank + " · " + suit;
+  }
+  function solitaireDeck() {
+    var deck = [];
+    SOL_SUITS.forEach(function (suit) {
+      for (var rank = 1; rank <= 13; rank++) deck.push({ id: suit + rank, suit: suit, rank: rank, faceUp: false });
+    });
+    for (var i = deck.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1)), swap = deck[i]; deck[i] = deck[j]; deck[j] = swap;
+    }
+    return deck;
+  }
+  function solitaireNewGame() {
+    var deck = solitaireDeck();
+    solStock = []; solWaste = []; solTableau = [[], [], [], [], [], [], []];
+    solFoundations = { h: [], d: [], c: [], s: [] };
+    for (var col = 0; col < 7; col++) {
+      for (var row = 0; row <= col; row++) {
+        var card = deck.pop();
+        card.faceUp = row === col;
+        solTableau[col].push(card);
+      }
+    }
+    solStock = deck;
+    solitaireMoves = 0; solitaireWon = false; solitaireSelected = null; solitaireSeeded = true;
+    if (solitaireWrap) solitaireWrap.classList.remove("won", "help");
+    solitaireRender();
+  }
+  function solitaireEnsureDeal() { if (!solitaireSeeded) solitaireNewGame(); else solitaireRender(); }
+  function solitaireSourceCards(source) {
+    if (!source) return [];
+    if (source.kind === "waste") return source.index === solWaste.length - 1 ? solWaste.slice(source.index) : [];
+    if (source.kind === "foundation") {
+      var foundation = solFoundations[source.suit] || [];
+      return source.index === foundation.length - 1 ? foundation.slice(source.index) : [];
+    }
+    if (source.kind === "tableau") {
+      var pile = solTableau[source.pile] || [];
+      if (source.index < 0 || source.index >= pile.length || !pile[source.index].faceUp) return [];
+      var run = pile.slice(source.index);
+      for (var i = 1; i < run.length; i++) {
+        if (!run[i].faceUp || run[i - 1].rank !== run[i].rank + 1 || solRed(run[i - 1]) === solRed(run[i])) return [];
+      }
+      return run;
+    }
+    return [];
+  }
+  function solitaireCanTableau(cards, targetPile) {
+    if (!cards || !cards.length) return false;
+    var target = targetPile && targetPile.length ? targetPile[targetPile.length - 1] : null;
+    return target ? target.faceUp && target.rank === cards[0].rank + 1 && solRed(target) !== solRed(cards[0]) : cards[0].rank === 13;
+  }
+  function solitaireCanFoundation(cards, suit) {
+    if (!cards || cards.length !== 1 || cards[0].suit !== suit) return false;
+    return cards[0].rank === (solFoundations[suit] || []).length + 1;
+  }
+  function solitaireRemoveSource(source) {
+    if (source.kind === "waste") return solWaste.splice(source.index);
+    if (source.kind === "foundation") return solFoundations[source.suit].splice(source.index);
+    return solTableau[source.pile].splice(source.index);
+  }
+  function solitaireExpose(pileIndex) {
+    if (pileIndex == null) return;
+    var pile = solTableau[pileIndex];
+    if (pile.length && !pile[pile.length - 1].faceUp) pile[pile.length - 1].faceUp = true;
+  }
+  function solitaireMove(source, target) {
+    var cards = solitaireSourceCards(source), valid = false;
+    if (target.kind === "tableau") valid = solitaireCanTableau(cards, solTableau[target.pile]);
+    else if (target.kind === "foundation") valid = solitaireCanFoundation(cards, target.suit);
+    if (!valid) return false;
+    var moved = solitaireRemoveSource(source);
+    if (target.kind === "tableau") Array.prototype.push.apply(solTableau[target.pile], moved);
+    else solFoundations[target.suit].push(moved[0]);
+    if (source.kind === "tableau") solitaireExpose(source.pile);
+    solitaireMoves++; solitaireSelected = null;
+    solitaireCheckWin();
+    solitaireRender();
+    playLaptopClickSound("office-monitor");
+    return true;
+  }
+  function solitaireDraw() {
+    solitaireSelected = null;
+    if (solStock.length) {
+      var card = solStock.pop(); card.faceUp = true; solWaste.push(card);
+    } else if (solWaste.length) {
+      while (solWaste.length) { var returned = solWaste.pop(); returned.faceUp = false; solStock.push(returned); }
+    } else return false;
+    solitaireMoves++; solitaireRender(); playLaptopClickSound("office-monitor"); return true;
+  }
+  function solitaireRedeal() {
+    if (!solWaste.length) return false;
+    solitaireSelected = null;
+    while (solWaste.length) { var card = solWaste.pop(); card.faceUp = false; solStock.push(card); }
+    solitaireMoves++; solitaireRender(); playLaptopClickSound("office-monitor"); return true;
+  }
+  function solitaireCheckWin() {
+    var total = SOL_SUITS.reduce(function (sum, suit) { return sum + solFoundations[suit].length; }, 0);
+    if (total !== 52) return false;
+    solitaireWon = true;
+    if (solitaireWrap) solitaireWrap.classList.add("won");
+    playMollyArpCycle();
+    return true;
+  }
+  function solitaireSourceFromCard(el) {
+    if (!el) return null;
+    var kind = el.getAttribute("data-sol-source");
+    if (kind === "tableau") return { kind: kind, pile: +el.getAttribute("data-sol-pile"), index: +el.getAttribute("data-sol-index") };
+    if (kind === "foundation") return { kind: kind, suit: el.getAttribute("data-sol-suit"), index: +el.getAttribute("data-sol-index") };
+    if (kind === "waste") return { kind: kind, index: +el.getAttribute("data-sol-index") };
+    return null;
+  }
+  function solitaireSameSource(a, b) {
+    return !!a && !!b && a.kind === b.kind && a.pile === b.pile && a.suit === b.suit && a.index === b.index;
+  }
+  function solitaireCourtMarkup(card) {
+    var red = solRed(card), accent = red ? "#8e3a4a" : "#453a31", art = "";
+    if (card.rank === 13) {
+      art = tattooPortrait({
+        skin: "#e6b489", hair: "#3a2b22", hairStyle: "short", top: red ? "#c68e95" : "#7d6e5d",
+        glasses: true, beard: "#3a2b22", cap: "flat", cap2: "#d9a6a6", capShade: "#c68e95"
+      });
+    } else if (card.rank === 12) {
+      art = tattooPortrait({
+        skin: "#f2cfae", hair: "#4d84c4", hairStyle: "short", top: red ? "#8e3a4a" : "#7f9ec0",
+        glasses: true, cap: "baker", cap2: "#7f9ec0", capShade: "#4a6b94"
+      });
+    } else {
+      art = '<path d="M1.5 24 C1.5 17 5.5 15 10 15 C14.5 15 18.5 17 18.5 24 Z" fill="' + (red ? "#d9a6a6" : "#f1eadb") + '"/>' +
+        '<circle cx="10" cy="8.7" r="5.5" fill="#d09155"/>' +
+        '<path d="M4.7 9 C4.5 14.5 6.7 19 10 21.8 C13.3 19 15.5 14.5 15.3 9 C13 12 7 12 4.7 9 Z" fill="#6b675e"/>' +
+        '<path d="M4 7.1 C4.1 3.1 15.9 3.1 16 7.1 L15 8.4 H4.2 Z" fill="#7a3a2a"/><path d="M4.2 7.8 L1.7 8.5 L4.5 8.7 L16.3 8.2 Z" fill="#6a3122"/>' +
+        '<rect x="3.8" y="7.2" width="5.2" height="3.6" rx="1.8" fill="#f3ecda" stroke="#d8cfb6" stroke-width=".45"/><rect x="11" y="7.2" width="5.2" height="3.6" rx="1.8" fill="#f3ecda" stroke="#d8cfb6" stroke-width=".45"/><path d="M9 8.7 H11" stroke="#f3ecda" stroke-width=".8"/>';
+    }
+    return '<svg viewBox="0 0 20 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x=".4" y=".4" width="19.2" height="23.2" rx="2" fill="' + accent + '" opacity=".09"/>' + art + '</svg>';
+  }
+  function solitaireCardEl(card, source, compact) {
+    var el = document.createElement("div");
+    el.className = "sol-card" + (card.faceUp ? (solRed(card) ? " red" : "") : " back");
+    el.setAttribute("data-sol-card", card.id);
+    el.setAttribute("data-sol-source", source.kind);
+    if (source.pile != null) el.setAttribute("data-sol-pile", source.pile);
+    if (source.suit) el.setAttribute("data-sol-suit", source.suit);
+    el.setAttribute("data-sol-index", source.index);
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("aria-label", card.faceUp ? solCardName(card) : "Face-down card");
+    if (!card.faceUp) return el;
+    if (card.rank >= 11) el.setAttribute("data-court-person", card.rank === 13 ? "behdad" : card.rank === 12 ? "marketa" : "ali");
+    var rank = document.createElement("span"), suit = document.createElement("span"), face = document.createElement("span");
+    rank.className = "sol-rank"; suit.className = "sol-suit"; face.className = "sol-face";
+    rank.textContent = solRankShort(card.rank); suit.textContent = SOL_GLYPHS[card.suit];
+    if (card.rank >= 11) face.innerHTML = solitaireCourtMarkup(card);
+    else { face.classList.add("sol-pip"); face.textContent = SOL_GLYPHS[card.suit]; }
+    el.appendChild(rank); el.appendChild(suit); el.appendChild(face);
+    if (solitaireSelected && solitaireSameSource(solitaireSelected, source)) el.classList.add("selected");
+    return el;
+  }
+  function solitaireRefreshText() {
+    if (!solitaireWrap || !solitaireSeeded || solitaireWrap.hasAttribute("data-kill-stage")) return;
+    solitaireRender();
+  }
+  function solitaireRender() {
+    if (!solitaireWrap || !solitaireSeeded) return;
+    var showHelp = solitaireWrap.classList.contains("help");
+    solitaireWrap.innerHTML = "";
+    solitaireWrap.classList.toggle("won", solitaireWon);
+    solitaireWrap.classList.toggle("help", showHelp);
+    var top = document.createElement("div"); top.className = "sol-top";
+    function makeSlot(cls, target, empty) {
+      var slot = document.createElement("div");
+      slot.className = "sol-slot " + cls;
+      slot.setAttribute("data-sol-target", target.kind);
+      if (target.suit) slot.setAttribute("data-sol-suit", target.suit);
+      if (target.pile != null) slot.setAttribute("data-sol-pile", target.pile);
+      slot.setAttribute("data-empty", empty || "");
+      return slot;
+    }
+    var stockSlot = makeSlot("sol-stock", { kind: "stock" }, "");
+    stockSlot.setAttribute("aria-label", "Stock · " + solStock.length);
+    if (solStock.length) stockSlot.appendChild(solitaireCardEl(solStock[solStock.length - 1], { kind: "stock", index: solStock.length - 1 }, true));
+    else stockSlot.setAttribute("data-empty", "↻");
+    top.appendChild(stockSlot);
+    var wasteSlot = makeSlot("sol-waste", { kind: "waste" }, "");
+    if (solWaste.length) wasteSlot.appendChild(solitaireCardEl(solWaste[solWaste.length - 1], { kind: "waste", index: solWaste.length - 1 }, true));
+    top.appendChild(wasteSlot);
+    var actions = document.createElement("div"); actions.className = "sol-actions";
+    [["new", "solitaire_new"], ["redeal", "solitaire_redeal"], ["help", "solitaire_help"]].forEach(function (spec) {
+      var button = document.createElement("button"); button.type = "button"; button.className = "sol-action";
+      button.setAttribute("data-sol-action", spec[0]); button.setAttribute("aria-label", classicsT(spec[1]));
+      if (spec[0] === "redeal") button.disabled = !solWaste.length;
+      var label = document.createElement("span"); label.className = "sol-action-label";
+      label.setAttribute("data-classics-copy", spec[1]); label.textContent = classicsT(spec[1]);
+      button.appendChild(label); actions.appendChild(button);
+    });
+    top.appendChild(actions);
+    SOL_SUITS.forEach(function (suit) {
+      var foundation = makeSlot("sol-foundation", { kind: "foundation", suit: suit }, SOL_GLYPHS[suit]);
+      foundation.setAttribute("data-suit", suit);
+      var pile = solFoundations[suit];
+      if (pile.length) foundation.appendChild(solitaireCardEl(pile[pile.length - 1], { kind: "foundation", suit: suit, index: pile.length - 1 }, true));
+      top.appendChild(foundation);
+    });
+    solitaireWrap.appendChild(top);
+    var tableau = document.createElement("div"); tableau.className = "sol-tableau";
+    solTableau.forEach(function (pile, pileIndex) {
+      var pileEl = document.createElement("div"); pileEl.className = "sol-pile";
+      pileEl.setAttribute("data-sol-target", "tableau"); pileEl.setAttribute("data-sol-pile", pileIndex);
+      if (!pile.length) {
+        var king = document.createElement("span"); king.className = "sol-empty"; king.textContent = "K"; pileEl.appendChild(king);
+      } else {
+        var gap = pile.length > 1 ? Math.min(3.25, 8.4 / (pile.length - 1)) : 0;
+        pile.forEach(function (card, index) {
+          var cardEl = solitaireCardEl(card, { kind: "tableau", pile: pileIndex, index: index }, false);
+          cardEl.style.marginTop = (index * gap).toFixed(2) + "px";
+          pileEl.appendChild(cardEl);
+        });
+      }
+      tableau.appendChild(pileEl);
+    });
+    solitaireWrap.appendChild(tableau);
+    var status = document.createElement("div"); status.className = "sol-status";
+    if (showHelp) status.textContent = classicsT("solitaire_help_copy");
+    else status.textContent = classicsT("solitaire_win");
+    var statusButton = document.createElement("button"); statusButton.type = "button";
+    statusButton.setAttribute("data-sol-action", showHelp ? "dismiss-help" : "new");
+    statusButton.textContent = showHelp ? classicsT("classics_back") : classicsT("solitaire_play_again");
+    status.appendChild(document.createElement("br")); status.appendChild(statusButton); solitaireWrap.appendChild(status);
+    solitaireWrap.setAttribute("aria-label", classicsT("classics_solitaire") + " · " + solitaireMoves + " " + classicsT("solitaire_moves"));
+  }
+  function solitaireAutoFoundation(source) {
+    var cards = solitaireSourceCards(source);
+    return cards.length === 1 && solitaireMove(source, { kind: "foundation", suit: cards[0].suit });
+  }
+  function solitaireTargetFromEl(el) {
+    var target = el && el.closest ? el.closest("[data-sol-target]") : null;
+    if (!target) return null;
+    var kind = target.getAttribute("data-sol-target");
+    if (kind === "tableau") return { kind: kind, pile: +target.getAttribute("data-sol-pile") };
+    if (kind === "foundation") return { kind: kind, suit: target.getAttribute("data-sol-suit") || target.getAttribute("data-suit") };
+    return { kind: kind };
+  }
+  if (solitaireWrap) {
+    solitaireWrap.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (solitaireSuppressClick) { solitaireSuppressClick = false; return; }
+      var action = e.target.closest && e.target.closest("[data-sol-action]");
+      if (action) {
+        var act = action.getAttribute("data-sol-action");
+        if (act === "new") solitaireNewGame();
+        else if (act === "redeal") solitaireRedeal();
+        else if (act === "help") { solitaireWrap.classList.add("help"); solitaireRender(); }
+        else if (act === "dismiss-help") { solitaireWrap.classList.remove("help"); solitaireRender(); }
+        playLaptopClickSound("office-monitor");
+        return;
+      }
+      var target = solitaireTargetFromEl(e.target), cardEl = e.target.closest && e.target.closest(".sol-card");
+      if (target && target.kind === "stock") { solitaireDraw(); return; }
+      if (cardEl && cardEl.classList.contains("back")) {
+        var downSource = solitaireSourceFromCard(cardEl);
+        if (downSource && downSource.kind === "tableau" && downSource.index === solTableau[downSource.pile].length - 1) {
+          solTableau[downSource.pile][downSource.index].faceUp = true; solitaireMoves++; solitaireRender(); playLaptopClickSound("office-monitor");
+        }
+        return;
+      }
+      if (solitaireSelected && target && (target.kind === "tableau" || target.kind === "foundation")) {
+        if (solitaireMove(solitaireSelected, target)) return;
+      }
+      if (cardEl) {
+        var source = solitaireSourceFromCard(cardEl);
+        if (source && solitaireSourceCards(source).length) {
+          solitaireSelected = solitaireSameSource(solitaireSelected, source) ? null : source;
+          solitaireRender();
+        }
+      } else { solitaireSelected = null; solitaireRender(); }
+    });
+    solitaireWrap.addEventListener("dblclick", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      var cardEl = e.target.closest && e.target.closest(".sol-card:not(.back)");
+      if (cardEl) solitaireAutoFoundation(solitaireSourceFromCard(cardEl));
+    });
+    solitaireWrap.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      var target = e.target.closest && e.target.closest("button,.sol-card,.sol-slot,.sol-pile");
+      if (!target) return;
+      e.preventDefault(); target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    solitaireWrap.addEventListener("pointerdown", function (e) {
+      if (e.button != null && e.button !== 0) return;
+      var cardEl = e.target.closest && e.target.closest(".sol-card:not(.back)");
+      if (!cardEl) return;
+      var source = solitaireSourceFromCard(cardEl), cards = solitaireSourceCards(source);
+      if (!cards.length) return;
+      solitaireDrag = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, source: source, cards: cards, ghost: null, moved: false };
+      try { solitaireWrap.setPointerCapture(e.pointerId); } catch (_error) {}
+    });
+    solitaireWrap.addEventListener("pointermove", function (e) {
+      if (!solitaireDrag || solitaireDrag.pointerId !== e.pointerId) return;
+      solitaireDrag.x = e.clientX; solitaireDrag.y = e.clientY;
+      if (!solitaireDrag.moved && Math.hypot(e.clientX - solitaireDrag.startX, e.clientY - solitaireDrag.startY) < 3) return;
+      e.preventDefault();
+      if (!solitaireDrag.ghost) {
+        var ghost = document.createElement("div"); ghost.className = "sol-drag-ghost";
+        solitaireDrag.cards.forEach(function (card, index) {
+          var cardEl = solitaireCardEl(card, { kind: "drag", index: index }, false);
+          cardEl.style.setProperty("--drag-y", (index * 9) + "px");
+          ghost.appendChild(cardEl);
+        });
+        (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(ghost);
+        solitaireDrag.ghost = ghost;
+      }
+      solitaireDrag.moved = true;
+      solitaireDrag.ghost.style.left = (e.clientX + 7) + "px";
+      solitaireDrag.ghost.style.top = (e.clientY + 7) + "px";
+    });
+    function finishSolitaireDrag(e, cancelled) {
+      if (!solitaireDrag || (e.pointerId != null && solitaireDrag.pointerId !== e.pointerId)) return;
+      var drag = solitaireDrag; solitaireDrag = null;
+      if (drag.ghost && drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
+      try { solitaireWrap.releasePointerCapture(drag.pointerId); } catch (_error) {}
+      if (!drag.moved || cancelled) return;
+      solitaireSuppressClick = true;
+      var under = document.elementFromPoint(e.clientX, e.clientY), target = solitaireTargetFromEl(under);
+      if (!target || (target.kind !== "tableau" && target.kind !== "foundation") || !solitaireMove(drag.source, target)) solitaireRender();
+    }
+    solitaireWrap.addEventListener("pointerup", function (e) { finishSolitaireDrag(e, false); });
+    solitaireWrap.addEventListener("pointercancel", function (e) { finishSolitaireDrag(e, true); });
+  }
+  window.__solitaireState = function () {
+    return {
+      seeded: solitaireSeeded, moves: solitaireMoves, won: solitaireWon,
+      stock: solStock.map(function (card) { return card.id; }),
+      waste: solWaste.map(function (card) { return card.id; }),
+      tableau: solTableau.map(function (pile) { return pile.map(function (card) { return { id: card.id, faceUp: card.faceUp }; }); }),
+      foundations: SOL_SUITS.reduce(function (out, suit) { out[suit] = solFoundations[suit].map(function (card) { return card.id; }); return out; }, {})
+    };
+  };
+  window.__solitaireRules = {
+    tableau: function (cards, pile) { return solitaireCanTableau(cards, pile || []); },
+    foundation: function (cards, suit, pile) {
+      var previous = solFoundations[suit]; solFoundations[suit] = pile || [];
+      var result = solitaireCanFoundation(cards, suit);
+      solFoundations[suit] = previous;
+      return result;
+    }
+  };
+  window.__solitaireMove = solitaireMove;
+  window.__solitaireNewGame = solitaireNewGame;
+  window.__solitaireLoadForTest = function (state) {
+    function card(input) {
+      return { suit: input.suit, rank: +input.rank, faceUp: input.faceUp !== false, id: input.id || input.suit + input.rank };
+    }
+    state = state || {};
+    solStock = (state.stock || []).map(card); solWaste = (state.waste || []).map(card);
+    solTableau = [0, 1, 2, 3, 4, 5, 6].map(function (index) { return (state.tableau && state.tableau[index] || []).map(card); });
+    solFoundations = { h: [], d: [], c: [], s: [] };
+    SOL_SUITS.forEach(function (suit) { solFoundations[suit] = (state.foundations && state.foundations[suit] || []).map(card); });
+    solitaireMoves = 0; solitaireWon = false; solitaireSelected = null; solitaireSeeded = true;
+    solitaireRender();
+  };
+  function openClassicsApp(view) {
+    if (!monitor.classList.contains("show-caps")) return;
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null; // startSaver's own guard reschedules anyway — but don't even arm one over a game
-    monitor.classList.add("show-mines");
-    if (!minesSeeded || !minesGrid.length) { minesSeeded = true; minesNewGame(); } // first open (or post-Kill/reset): a fresh board
-    else if (minesPlaced && !minesOver) { minesStartTs = Date.now() - minesElapsed * 1000; minesStartTimer(); minesTick(); } // reopen a live game: resume the retained board + rebase its clock
+    if (!monitor.classList.contains("show-mines")) monitor.classList.add("show-mines");
+    setClassicsView(view || "chooser");
     playLaptopClickSound("office-monitor");
   }
-  function closeMinesApp() {
+  function openMinesApp() { openClassicsApp("mines"); }
+  function closeMinesApp(stepBack) {
     if (!monitor.classList.contains("show-mines")) return;
+    if (stepBack && classicsView !== "chooser") { setClassicsView("chooser"); return; }
     monitor.classList.remove("show-mines");
     minesStopTimer();
     scheduleSaver();
@@ -52767,8 +53346,7 @@ setOfficeProgress("pc", false);
     var finish = function () {
       minesClearKillVisual();
       if (minesWrap) { minesWrap.removeAttribute("data-kill-stage"); minesWrap.removeAttribute("data-kill-timer"); }
-      if (window.resetMonitorAppState) window.resetMonitorAppState("mines");
-      else { minesSeeded = false; minesNewGame(); closeMinesApp(); }
+      resetClassicsAfterKill("mines");
     };
     if (!monitor.classList.contains("show-mines") || !window.__runMonitorDeathFlash) { finish(); return; }
     if (!minesGrid.length) minesNewGame();
@@ -52859,6 +53437,90 @@ setOfficeProgress("pc", false);
     });
   }
   window.__killMonitorMines = minesDeathFlash;
+  function resetClassicsAfterKill(view) {
+    minesStopTimer();
+    if (view === "mines" || view === "chooser") {
+      minesSeeded = false;
+      if (minesBoardEl && !__minesInPhone) minesNewGame();
+    }
+    if (view === "solitaire" || view === "chooser") {
+      solitaireSeeded = false; solitaireSelected = null; solitaireWon = false; solitaireMoves = 0;
+      solStock = []; solWaste = []; solTableau = [[], [], [], [], [], [], []];
+      solFoundations = { h: [], d: [], c: [], s: [] };
+      if (solitaireWrap) { solitaireWrap.innerHTML = ""; solitaireWrap.classList.remove("won", "help"); solitaireWrap.removeAttribute("data-kill-stage"); }
+    }
+    classicsView = "chooser";
+    if (classicsGroup) classicsGroup.setAttribute("data-view", "chooser");
+    closeMinesApp(false);
+  }
+  function classicsChooserDeathFlash() {
+    function clearChooserKill() {
+      if (!classicsWrap) return;
+      classicsWrap.removeAttribute("data-kill-stage");
+      var cards = classicsWrap.querySelectorAll(".classics-kill-card");
+      for (var i = 0; i < cards.length; i++) { cards[i].style.marginLeft = ""; cards[i].style.marginTop = ""; }
+    }
+    if (!monitor.classList.contains("show-mines") || !window.__runMonitorDeathFlash) { resetClassicsAfterKill("chooser"); return; }
+    window.__runMonitorDeathFlash({
+      screenClass: "death-classics",
+      beats: [{ key: "df_classics_quip", at: 260 }],
+      dur: 1900,
+      freeze: function () { if (classicsWrap) classicsWrap.setAttribute("data-kill-stage", "shuffle"); },
+      tick: function (t) {
+        if (!classicsWrap) return;
+        var cards = classicsWrap.querySelectorAll(".classics-kill-card"), settle = Math.min(1, t / .72);
+        for (var i = 0; i < cards.length; i++) {
+          var sx = ((i % 3) - 1) * 35 + (i % 2 ? 7 : -7);
+          var sy = (Math.floor(i / 3) - 1) * 12;
+          cards[i].style.marginLeft = (sx * (1 - settle) + (i - 4) * .22).toFixed(2) + "px";
+          cards[i].style.marginTop = (sy * (1 - settle) + Math.abs(i - 4) * .08).toFixed(2) + "px";
+        }
+        classicsWrap.setAttribute("data-kill-stage", t < .72 ? "shuffle" : "stack");
+      },
+      close: function () { clearChooserKill(); resetClassicsAfterKill("chooser"); }
+    });
+  }
+  function solitaireDeathFlash() {
+    if (!monitor.classList.contains("show-mines") || !window.__runMonitorDeathFlash) { resetClassicsAfterKill("solitaire"); return; }
+    solitaireEnsureDeal();
+    var pickup = document.createElement("div"); pickup.className = "sol-pickup";
+    SOL_SUITS.forEach(function (suit) {
+      for (var rank = 1; rank <= 13; rank++) {
+        var card = document.createElement("span");
+        card.className = "sol-pickup-card" + ((suit === "h" || suit === "d") ? " red" : "");
+        card.textContent = solRankShort(rank) + SOL_GLYPHS[suit];
+        card.setAttribute("data-pickup-index", pickup.children.length);
+        pickup.appendChild(card);
+      }
+    });
+    solitaireWrap.appendChild(pickup);
+    window.__runMonitorDeathFlash({
+      screenClass: "death-solitaire",
+      beats: [{ key: "df_solitaire_quip", at: 220 }],
+      dur: 2400,
+      freeze: function () { solitaireSelected = null; solitaireWrap.setAttribute("data-kill-stage", "pickup"); },
+      tick: function (t) {
+        var cards = pickup.querySelectorAll(".sol-pickup-card"), scatter = Math.min(1, t / .78);
+        for (var i = 0; i < cards.length; i++) {
+          var angle = (i * 2.399963 + (i % 5) * .13), radius = 8 + (i % 13) * 2.15;
+          cards[i].style.marginLeft = (Math.cos(angle) * radius * scatter).toFixed(2) + "px";
+          cards[i].style.marginTop = (Math.sin(angle) * Math.min(18, radius) * scatter).toFixed(2) + "px";
+        }
+        solitaireWrap.setAttribute("data-kill-stage", t < .78 ? "pickup" : "scattered");
+      },
+      close: function () {
+        if (pickup.parentNode) pickup.parentNode.removeChild(pickup);
+        solitaireWrap.removeAttribute("data-kill-stage");
+        resetClassicsAfterKill("solitaire");
+      }
+    });
+  }
+  window.__killMonitorSolitaire = solitaireDeathFlash;
+  window.__killMonitorClassics = function () {
+    if (classicsView === "solitaire") solitaireDeathFlash();
+    else if (classicsView === "mines") minesDeathFlash();
+    else classicsChooserDeathFlash();
+  };
   // Pac-Man is the ketamine ghost's hidden monitor game. One bounded timeout owns the
   // simulation; closing the app, hiding/blurring the page, or powering down the monitor
   // clears it immediately, so a background tab can never accumulate queued game steps.
@@ -53544,7 +54206,17 @@ setOfficeProgress("pc", false);
     minesNewGame();
   };
   if (minesCloseBtn) {
-    minesCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeMinesApp(); playLaptopClickSound("office-monitor"); });
+    minesCloseBtn.setAttribute("role", "button");
+    minesCloseBtn.setAttribute("tabindex", "0");
+    minesCloseBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (classicsView === "chooser") closeMinesApp(false);
+      else setClassicsView("chooser");
+      playLaptopClickSound("office-monitor");
+    });
+    minesCloseBtn.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); minesCloseBtn.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
+    });
     minesCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── VIDEO APP ────────────────────────────────────────────────────────────────────
@@ -53982,7 +54654,8 @@ setOfficeProgress("pc", false);
     if (monitor.classList.contains("show-python") && window.__closeMonitorPython) { window.__closeMonitorPython(!!stepBack); return true; }
     if (monitor.classList.contains("show-life") && stepBack && window.__closeMonitorLifeHelp && window.__closeMonitorLifeHelp()) return true;
     if (monitor.classList.contains("show-doom")) { closeDoom(!!stepBack); return true; }
-    var apps = [["show-video", closeVideoApp], ["show-mines", closeMinesApp], ["show-pacman", closePacmanApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-browser", closeBrowser]];
+    if (monitor.classList.contains("show-mines")) { closeMinesApp(!!stepBack); return true; }
+    var apps = [["show-video", closeVideoApp], ["show-pacman", closePacmanApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
     if (monitor.classList.contains("show-clock") && window.__closeMonitorClock) { window.__closeMonitorClock(); return true; }
@@ -54072,13 +54745,13 @@ setOfficeProgress("pc", false);
     };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorMines", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-system": "__killMonitorSystem", "show-about": "__killMonitorAbout", "show-help": "__killMonitorHelp", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorClassics", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-system": "__killMonitorSystem", "show-about": "__killMonitorAbout", "show-help": "__killMonitorHelp", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
     // python/linux/console owned by console-ctx).
     var CLASS_TO_ID = {
-      "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "mines", "show-pacman": "pacman",
+      "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "classics", "show-pacman": "pacman",
       "show-tattoo": "tattoo", "show-life": "life", "show-code": "code", "show-calendar": "calendar", "show-clock": "clock",
       "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music",
       "show-system": "system", "show-about": "about", "show-help": "help", "show-credits": "credits"
@@ -56196,7 +56869,7 @@ setOfficeProgress("pc", false);
       ["show-chat", "chat"], ["show-weather", "weather"], ["show-calendar", "calendar"], ["show-clock", "clock"], ["show-mail", "mail"],
       ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
       ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-snakes", "snakes"], ["show-code", "code"],
-      ["show-mines", "mines"], ["show-life", "life"], ["show-video", "video"], ["show-browser", "browser"]
+      ["show-mines", "classics"], ["show-life", "life"], ["show-video", "video"], ["show-browser", "browser"]
     ];
     for (var i = 0; i < classes.length; i++) if (monitor && monitor.classList.contains(classes[i][0])) return classes[i][1];
     return monitor && monitor.classList.contains("show-caps") ? "desktop" : null;
@@ -56277,7 +56950,7 @@ setOfficeProgress("pc", false);
     if (namedContacts.length) apps.contacts = namedContacts;
     else if (/(who is|who's|whose|guest|people|person|friend|family|relationship|fun fact|kdo je|host|rodin|vztah|zajimavost|مهمان|کیست|خانواده|رابطه)/.test(q)) apps.contacts = contacts;
     if (/(apps?|applications?|programs?|on the phone|on the computer|aplikac|programy|برنامه)/.test(q) && window.__chatAppCatalog) apps.catalog = window.__chatAppCatalog();
-    if (/(games?|minigame|arcade|high ?score|personal best|where.*play|flair|invaders?|alien resources|block party|tetris|hack.?man|pac.?man|mines|game of life|snakes|shoot|doom|duke|quake|octi.?s escape|hra|skore|rekord|بازی|امتیاز)/.test(q)) apps.games = chatGamesKnowledge();
+    if (/(games?|minigame|arcade|high ?score|personal best|where.*play|flair|invaders?|alien resources|block party|tetris|hack.?man|pac.?man|mines|solitaire|cards|patience|pasians|game of life|snakes|shoot|doom|duke|quake|octi.?s escape|hra|skore|rekord|بازی|امتیاز)/.test(q)) apps.games = chatGamesKnowledge();
     return apps;
   }
   function chatNeedsApiManifest(message) {
@@ -59715,6 +60388,10 @@ async def localfont(name):
       if (q === TOOLBAR_APPS[ti].id || (toolLabel && q === toolLabel.toLowerCase())) return TOOLBAR_APPS[ti];
     }
     for (var i = 0; i < DESKTOP_APPS.length; i++) if (DESKTOP_APPS[i].id.toLowerCase() === q) return DESKTOP_APPS[i];
+    for (var ai = 0; ai < DESKTOP_APPS.length; ai++) {
+      var aliases = DESKTOP_APPS[ai].aliases || [];
+      for (var aj = 0; aj < aliases.length; aj++) if (String(aliases[aj]).toLowerCase() === q) return DESKTOP_APPS[ai];
+    }
     for (var j = 0; j < DESKTOP_APPS.length; j++) {
       var lbl = (T[document.documentElement.lang] && T[document.documentElement.lang][DESKTOP_APPS[j].labelKey]) || (T.en && T.en[DESKTOP_APPS[j].labelKey]) || "";
       if (lbl && lbl.toLowerCase() === q) return DESKTOP_APPS[j];
@@ -60692,9 +61369,16 @@ async def localfont(name):
         lifeGen = 0; lifePlaying = false; lifeStationary = false; lifeSpeedIdx = 1; lifeSeeded = false;
         if (lifeBuilt) { lifeSetSpeed(1); lifePaintGen(); lifePaintPlayBtn(); lifeRender(); }
         break;
-      case "mines":
+      case "mines": // compatibility alias for older tests and console integrations
+      case "classics":
         closeMinesApp();
-        if (minesSeeded) { minesSeeded = false; if (minesBoardEl && !__minesInPhone) minesNewGame(); } // only re-deal if it had actually been dealt (keeps reset==load)
+        if (minesSeeded) { minesSeeded = false; if (minesBoardEl && !__minesInPhone) minesNewGame(); }
+        solitaireSeeded = false; solitaireSelected = null; solitaireWon = false; solitaireMoves = 0;
+        solStock = []; solWaste = []; solTableau = [[], [], [], [], [], [], []];
+        solFoundations = { h: [], d: [], c: [], s: [] };
+        if (solitaireWrap) { solitaireWrap.innerHTML = ""; solitaireWrap.classList.remove("won", "help"); solitaireWrap.removeAttribute("data-kill-stage"); }
+        classicsView = "chooser";
+        if (classicsGroup) classicsGroup.setAttribute("data-view", "chooser");
         break;
       case "pacman":
         closePacmanApp();
@@ -60764,7 +61448,7 @@ async def localfont(name):
     clearMonitorLock();
     pbFxIndex = 0; pbBaseFrame = null; // a kill drops the retained look + captured photo (closePhotobooth keeps them)
     closePhotobooth(); // never leave the camera running
-    ["life", "mines", "pacman", "mail", "tattoo", "code", "video", "music", "weather", "chat", "calendar", "clock", "family", "credits"].forEach(resetMonitorAppState);
+    ["life", "classics", "pacman", "mail", "tattoo", "code", "video", "music", "weather", "chat", "calendar", "clock", "family", "credits"].forEach(resetMonitorAppState);
     // the plain console's scrollback + welcome state lives in its own IIFE (no runtime to tear
     // down), so clear that session — a reopened console then greets fresh
     if (window.__resetMonitorTermSession) window.__resetMonitorTermSession();
@@ -96244,7 +96928,7 @@ function spawnDustMote(container) {
   ]; }
 
   function apOfficeArcade() { return [
-    apAppBeat("computer", "mines", 2200, "monitor-dock-mines"),
+    apAppBeat("computer", "mines", 2200, "monitor-dock-classics"),
     apBeat({ fn: function () { apMonitorInteract("mines"); }, wait: 1600, room: "office", label: "mines-poke" }),
     apBeat({ fn: function () { apMonitorInteract("mines"); }, wait: 1600, room: "office", label: "mines-poke" }),
     apAppBeat("computer", "life", 2100, "monitor-dock-life"),
@@ -101715,6 +102399,8 @@ function spawnDustMote(container) {
     return prev;
   };
   window.monitor = window.computer; // alias — the office monitor is the computer
+  window.mines = function () { return window.__openMonitorApp ? window.__openMonitorApp("mines") : false; };
+  window.solitaire = function () { return window.__openMonitorApp ? window.__openMonitorApp("solitaire") : false; };
   window.reboot = function () { // power-cycle the loft OS — a proper `sudo reboot` from inside its own console
     var pc = document.getElementById("office-pc-desk-trio");
     if (!pc) return "no computer here.";

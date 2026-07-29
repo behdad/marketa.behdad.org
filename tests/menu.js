@@ -6,7 +6,7 @@
 // Two menus by design (kept split to avoid a double menu on the console apps):
 //   • .console-ctx — python/linux/console fold Kill (and, for the runtimes, Restart) into
 //     their existing copy/paste menu.
-//   • .mon-ctx — every other real app (mail, chat, weather, mines, music, video, …) plus shoot
+//   • .mon-ctx — every other real app (mail, chat, weather, classics, music, video, …) plus shoot
 //     (a game iframe, no copy/paste) gets this standalone menu. Desktop Kill is available only
 //     after launch and reuses the app's in-app themed hook; Restart appears only for DOOM.
 // Kill on a self-hosted runtime (doom/python/linux) is DISABLED until the runtime is
@@ -262,7 +262,7 @@ var HARNESS = [
   // A fresh desktop has no killable tasks and no dots; adding the overlay must not resize cells.
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-caps'); await sleep(0);",
   "    var desktopDock=document.getElementById('monitor-desktop-dock'); mon().classList.remove('tap-blink'); desktopDock.dispatchEvent(new MouseEvent('click',{bubbles:true})); S('desk_blank_click_no_flicker',!mon().classList.contains('tap-blink'));",
-  "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','tattoo','life','mines','shoot','snakes','code','console','python','linux']; var freshOpenOnly=true;",
+  "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','tattoo','life','classics','shoot','snakes','code','console','python','linux']; var freshOpenOnly=true;",
   "    for(var di=0;di<allTiles.length;di++){ctxAt(deskTile(allTiles[di])); if(!monOpen()||monKill()) freshOpenOnly=false; escMenu();}",
   "    S('desk_fresh_all_open_only',freshOpenOnly); S('desk_fresh_no_dots',allTiles.every(function(id){return !dot(id);}));",
   "    var mailTile=deskTile('mail'), mailBox0=mailTile.getBoundingClientRect();",
@@ -277,17 +277,17 @@ var HARNESS = [
   "    if(window.__deathFlashCleanup) window.__deathFlashCleanup(); await sleep(20);",
   // A foreground switch registers both apps and backgrounds the first without clearing it.
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-mail'); await sleep(0); showApp('show-mines'); await sleep(0); showApp('show-caps'); await sleep(0);",
-  "    S('desk_switch_kept_both_running',reg('mail')&&reg('mines')&&dot('mail')&&dot('mines'));",
+  "    S('desk_switch_kept_both_running',reg('mail')&&reg('classics')&&dot('mail')&&dot('classics'));",
   // Every monitor class, including toolbar-only Weather and the three runtime consoles, maps in.
-  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['clock','show-clock'],['tattoo','show-tattoo'],['mines','show-mines'],['life','show-life'],['shoot','show-doom'],['snakes','show-snakes'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather'],['help','show-help']];",
+  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['clock','show-clock'],['tattoo','show-tattoo'],['classics','show-mines'],['life','show-life'],['shoot','show-doom'],['snakes','show-snakes'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather'],['help','show-help']];",
   "    for(var ri=0;ri<regApps.length;ri++){showApp(regApps[ri][1]); await sleep(0);} showApp('show-caps'); await sleep(0);",
   "    S('desk_every_app_registered',regApps.every(function(a){return reg(a[0]);})); S('desk_every_tiled_app_dotted',regApps.filter(function(a){return a[0]!=='weather'&&a[0]!=='clock'&&a[0]!=='calendar'&&a[0]!=='help';}).every(function(a){return dot(a[0]);}));",
   // Every registered plain app, including Browser and Console, exposes its established Kill.
-  "    var plainIds=['chrome','music','photobooth','video','call','chat','mail','tattoo','mines','life','code','console']; var plainKill=true;",
+  "    var plainIds=['chrome','music','photobooth','video','call','chat','mail','tattoo','classics','life','code','console']; var plainKill=true;",
   "    for(var pi=0;pi<plainIds.length;pi++){ctxAt(deskTile(plainIds[pi])); if(!monKill()) plainKill=false; escMenu();} S('desk_registered_plain_apps_have_kill',plainKill);",
   // Verify every desktop action dispatches to that app's exact themed hook (Mail's real gag
   // above covers the visual integration; spies keep this full mapping check fast).
-  "    var hookApps=[['chrome','__killMonitorBrowser'],['music','__killMonitorMusic'],['photobooth','__killMonitorPhotobooth'],['video','__killMonitorVideo'],['call','__killMonitorFamily'],['chat','__killMonitorChat'],['mail','__killMonitorMail'],['tattoo','__killMonitorTattoo'],['mines','__killMonitorMines'],['life','__killMonitorLife'],['code','__killMonitorCode'],['console','__killMonitorConsole']]; var exactHooks=true;",
+  "    var hookApps=[['chrome','__killMonitorBrowser'],['music','__killMonitorMusic'],['photobooth','__killMonitorPhotobooth'],['video','__killMonitorVideo'],['call','__killMonitorFamily'],['chat','__killMonitorChat'],['mail','__killMonitorMail'],['tattoo','__killMonitorTattoo'],['classics','__killMonitorClassics'],['life','__killMonitorLife'],['code','__killMonitorCode'],['console','__killMonitorConsole']]; var exactHooks=true;",
   "    for(var hi=0;hi<hookApps.length;hi++){var hp=hookApps[hi], oldHook=window[hp[1]], called=''; (function(id,name){window[name]=function(){called=id;};})(hp[0],hp[1]); ctxAt(deskTile(hp[0])); if(monKill()) monKill().click(); else exactHooks=false; if(called!==hp[0]||reg(hp[0])||dot(hp[0])) exactHooks=false; showApp('show-caps'); await sleep(0); window[hp[1]]=oldHook;} S('desk_exact_plain_kill_hooks',exactHooks);",
   // Host tile with runtime STOPPED remains Open-only even though its task is registered.
   "    window.__doomRunning=function(){return false;}; showApp('show-caps'); S('desk_doom_stopped_prevented', ctxAt(deskTile('shoot'))); S('desk_doom_stopped_items', monItems()); S('desk_doom_stopped_has_kill', !!monKill()); escMenu(); await sleep(20);",
@@ -327,7 +327,7 @@ console.log("monitor right-click Kill/Restart menus + restart + fs button:");
 console.log(" desktop (no app open):");
 check("right-click on the bare monitor desktop eats the native menu, shows no custom menu", s.desktop_ctx_prevented === true && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
 check("outside click dismisses the Loft OS menu without activating the covered app", s.system_menu_opened === true && s.system_menu_outside_dismissed === true && s.system_menu_outside_blocked_app === true, { opened: s.system_menu_opened, dismissed: s.system_menu_outside_dismissed, blocked: s.system_menu_outside_blocked_app });
-console.log(" non-runtime apps (mail/chat/weather/mines/music) — Kill only, enabled, no Restart:");
+console.log(" non-runtime apps (mail/chat/weather/classics/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);
 check("System Information offers Copy before Kill and copies only the system fields", Array.isArray(s.system_context_items) && s.system_context_items.length === 2 && /copy/i.test(s.system_context_items[0] || "") && /kill/i.test(s.system_context_items[1] || "") && s.system_copy_report === true && s.system_copy_omits_recommendation === true, { items: s.system_context_items, report: s.system_copy_report, omittedRecommendation: s.system_copy_omits_recommendation });
 check("Help Kill drops its question mark through both caption beats and closes", s.help_kill_started === true && s.help_kill_first_caption === true && s.help_kill_second_caption === true && s.help_kill_closed === true, { started: s.help_kill_started, first: s.help_kill_first_caption, second: s.help_kill_second_caption, closed: s.help_kill_closed });

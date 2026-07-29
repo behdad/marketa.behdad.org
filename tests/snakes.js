@@ -53,9 +53,9 @@ if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(!s.grid.calendar && s.grid.tattooAt === 7 &&
-  JSON.stringify(s.grid.games) === JSON.stringify(["life", "mines", "snakes", "shoot"]) &&
+  JSON.stringify(s.grid.games) === JSON.stringify(["life", "classics", "snakes", "shoot"]) &&
   JSON.stringify(s.grid.bottom) === JSON.stringify(["code", "console", "python", "linux"]),
-  "desktop order removes Calendar, moves Tattoo, puts Life before Mines, and places snakes before shoot", s.grid);
+  "desktop order removes Calendar, moves Tattoo, puts Life before Classics, and places snakes before shoot", s.grid);
 check(s.calendar.control && s.calendar.opened, "the explicit desktop date/countdown control opens Calendar", s.calendar);
 check(s.aliases.snakes.match === "snakes" && s.aliases.nibbles.match === "snakes" && s.aliases.dos.match === "snakes",
   "search resolves snakes, nibbles, and dos to the same app", s.aliases);

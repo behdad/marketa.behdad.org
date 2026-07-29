@@ -746,6 +746,23 @@ the tiled apps: ordinary close removes only the foreground class, while
 `__killMonitorSystem` clears the registry and runs the diagnostic-receipt
 send-off. The status value itself owns the browser-specific GitHub issue link.
 
+Classics is one tiled app with three internal views on the existing `show-mines`
+task class: chooser, Mines, and Solitaire. `openClassicsApp` and
+`setClassicsView` own that view state; the search-only `mines` and `solitaire`
+catalog aliases and their public console commands bypass the chooser without
+creating separate running tasks. Back/Escape steps a game to the chooser, while
+Dismiss closes the chooser. Kill dispatches by current view: the chooser
+collapses into a deck, Mines keeps its chain reaction, and Solitaire deals the
+52 Pickup scatter. `resetMonitorAppState("classics")` returns the combined app
+to a fresh chooser.
+
+Solitaire owns plain card records in `solStock`, `solWaste`, `solTableau`, and
+`solFoundations`; `solitaireMove` is the shared legality/mutation path for click,
+double-click, drag, and focused tests. Its DOM drag ghost lives outside the
+scaled SVG `foreignObject`, and the individual app surfaces remain de-layered
+and gated by `visibility` plus `pointer-events` for WebKit. The focused
+regression is `node tests/classics.js`.
+
 The maze uses a DOM/CSS grid because canvas does not composite reliably in the scaled WebKit
 `foreignObject`. Its actors depend on grid source order and must not gain RenderLayer-producing
 styles such as positioning, transforms, opacity, filters, or z-index. One bounded scheduler owns

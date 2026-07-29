@@ -226,6 +226,12 @@ Press backtick to open the drop-down console and type `help` or `shortcuts()` to
 get oriented. The Code app can run JavaScript and Python files; named files are
 saved in this browser.
 
+The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
+Solitaire. Solitaire accepts clicks or card drags, allows unlimited stock
+recycles, and puts Behdad, Markéta, and Ali on the kings, queens, and jacks.
+The `mines()` and `solitaire()` console commands open either game directly.
+Use the top-right **Back** control to return to the chooser.
+
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.
 

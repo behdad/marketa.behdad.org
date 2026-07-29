@@ -55,6 +55,14 @@ var harness = String.raw`<script>
     setTimeout(function () {
       (async function () {
         window.party(true);
+        var handoffGuest = document.querySelector("#garden-guests .g-irene");
+        handoffGuest.classList.add("off-at-games");
+        var awayTransitions = getComputedStyle(handoffGuest).transitionProperty;
+        handoffGuest.classList.remove("off-at-games");
+        var returnTransitions = getComputedStyle(handoffGuest).transitionProperty;
+        check("room-assignment handoffs ease both away and back onto the floor",
+          /opacity/.test(awayTransitions) && /opacity/.test(returnTransitions),
+          JSON.stringify({ away: awayTransitions, returning: returnTransitions }));
         await sleep(3000);
         var first = arrivedCount();
         await sleep(7000);

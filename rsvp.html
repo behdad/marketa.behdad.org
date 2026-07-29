@@ -47934,6 +47934,9 @@ setOfficeProgress("pc", false);
   // current song's metadata so the lock-screen artwork swaps in from the fallback icon
   window.__refreshMediaArtwork = function () { mediaSessionSongId = null; updateNowPlaying(); };
   var headphoneNudged = false; // one headphones nudge per time the PC player is opened during a party
+  // Space is a transport shortcut, not monitor navigation. Its play/pause event may land
+  // asynchronously, so keep this short deadline rather than a one-call boolean.
+  var preserveMonitorMusicViewUntil = 0;
   function updateNowPlaying() {
     var playing = null, pausedMid = null;
     for (var i = 0; i < songAudios.length; i++) {
@@ -47972,6 +47975,7 @@ setOfficeProgress("pc", false);
       !monitor.classList.contains("show-fedora") && !monitor.classList.contains("show-chrome");
     var pauseBtn = document.getElementById("monitor-pause-btn");
     if (current && booted) {
+      var preserveMonitorView = Date.now() < preserveMonitorMusicViewUntil;
       if (monitor.classList.contains("show-saver")) { stopSaver(); monitor.classList.add("show-caps"); monitorUrl = CAPS_URL; }
       var title = document.getElementById("monitor-np-title");
       if (title) {
@@ -47979,11 +47983,11 @@ setOfficeProgress("pc", false);
         if (title.textContent !== newTitle) restartMarquee(); // new song -> marquee starts over
         title.textContent = newTitle;
       }
-      monitor.classList.add("show-nowplaying");
+      if (!preserveMonitorView) monitor.classList.add("show-nowplaying");
       // The loft party's best on cans: nudge once toward the desk headphones while the PC player's
       // up in the office during a party and they're not already on. Delayed a beat so a booting/
       // panning monitor has settled; re-checks the gates at fire time (attended, still applicable).
-      if (window.__gardenPartyOn && window.currentStageName === "office" && !headphoneNudged &&
+      if (!preserveMonitorView && window.__gardenPartyOn && window.currentStageName === "office" && !headphoneNudged &&
           !(window.__headphoneModeOn && window.__headphoneModeOn()) && !document.hidden && document.hasFocus()) {
         headphoneNudged = true;
         setTimeout(function () {
@@ -47995,10 +47999,10 @@ setOfficeProgress("pc", false);
       }
       if (playing) {
         if (pauseBtn) pauseBtn.classList.remove("paused"); // playing → show the pause icon
-        scheduleSaver(15000); // idle on the equalizer a while (longer than the default 8s), then the screensaver takes over
+        if (!preserveMonitorView) scheduleSaver(15000); // idle on the equalizer a while (longer than the default 8s), then the screensaver takes over
       } else {
         if (pauseBtn) pauseBtn.classList.add("paused"); // paused → show the play icon (click to resume)
-        clearTimeout(saverTimer); saverTimer = null; // keep the paused player up (don't idle to the saver)
+        if (!preserveMonitorView) { clearTimeout(saverTimer); saverTimer = null; } // keep an explicitly opened paused player up
       }
     } else {
       var was = monitor.classList.contains("show-nowplaying");
@@ -60387,6 +60391,7 @@ async def localfont(name):
       window.__toggleMonitorVideo();
       return;
     }
+    preserveMonitorMusicViewUntil = Date.now() + 2000;
     toggleMusicPlayback();
   }, true);
   // Escape: unconditional stop, not a toggle like space above -- a "get me out of

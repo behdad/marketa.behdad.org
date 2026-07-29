@@ -50121,10 +50121,10 @@ setOfficeProgress("pc", false);
     time: "time() — the loft's current time as {hours, minutes}; time(\"HH:MM\") or time(hours,minutes) SETS it (the ?time= override, driving day/night)",
     timestamp: "timestamp() — the fully-resolved current loft moment: {year, month, day, hours, minutes, iso}",
     projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"coffee\"), or a number 1–6. coffee/fire lead in warm/cold half-year order, followed by \"nightsky\" · \"workout\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
-    storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (steps out to the balcony; works DAY or night — it does NOT force dusk). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. Set the sky yourself with day()/night(). storm(false) clears the lightning; storm() reports whether it's storming. Weather levers are independent — see rain(), snow(), overcast(), day()/night()",
+    storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (works DAY or night and does not change rooms or force dusk). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. Set the sky yourself with day()/night(). storm(false) clears the lightning; storm() reports whether it's storming. Weather levers are independent — see rain(), snow(), overcast(), day()/night()",
     rain: "rain(true) — falling rain over the balcony (drops in the sky + streaks down every window + a rain hiss), day or night; rain(false) clears it; rain() reports whether it's raining. Independent of storm() — rain alone is a plain shower, rain(true)+storm(true) is a thunderstorm",
     snow: "snow(true) — falling snow over the balcony and through the loft windows, day or night; snow(false) clears it; snow() reports whether it's snowing",
-    overcast: "overcast(true) — a grey overcast cloud wash over the whole loft (steps to the balcony + brings the day back, since the wash reads against daylight); overcast(false) clears it; overcast() reports whether it's overcast. Independent of rain()/storm()",
+    overcast: "overcast(true) — a grey overcast cloud wash over the whole loft (brings the day back, since the wash reads against daylight, but does not change rooms); overcast(false) clears it; overcast() reports whether it's overcast. Independent of rain()/storm()",
     wildfires: "wildfires(true) — severe wildfire smoke over the loft; wildfires(0–1) pins its intensity; wildfires(false) clears it; wildfires() reports the current intensity. A game reset returns smoke to Edmonton's real air and the season",
     dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or its menu number, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"bandari\" · \"polka\" · \"horah\" · \"bulgar\" · \"dupak\" · \"furiant\" · \"cumbia\"",
     jukebox: "jukebox(\"salsa\") — request a garden-party style with the DJ scratch; accepts the same names and numbers as dance(), or random(). jukebox() lists them with the current style starred. run party(true) first",
@@ -100308,7 +100308,6 @@ function spawnDustMote(container) {
     if (arguments.length === 0 || !window.__setBalconyStormLayer) return prev; // no arg → is the lightning storm on?
     var on = !!arg; // storm(true) → dry lightning storm on; storm(false) → off; returns the previous state
     if (!on) { window.__setBalconyStormLayer(false, "ui"); narrate(false, "", "🌤 the lightning passes — the storm quiets."); return prev; }
-    if (window.goToStage) window.goToStage("balcony"); // storms roll over the balcony (day or night — day/night is rain()/day()'s business, not storm's)
     window.__setBalconyStormLayer(true, "ui");
     narrate(true, "⛈ a dry thunderstorm cracks over the balcony — lightning + thunder, no rain (works day or night; add rain(true) for the downpour, day()/night() to set the sky).", "");
     return prev;
@@ -100319,7 +100318,6 @@ function spawnDustMote(container) {
     var on = !!arg; // rain(true) → precip on; rain(false) → off; returns the previous state
     if (!on) { window.__setBalconyRain(false, "ui"); narrate(false, "", "🌤 the rain lets up."); return prev; }
     if (window.__setBalconySnow) window.__setBalconySnow(false, "ui");
-    if (window.goToStage) window.goToStage("balcony"); // the rain sweeps the balcony sky (+ shows through every window)
     window.__setBalconyRain(true, "ui"); // falls day or night; pair with storm(true) for a classic thunderstorm
     narrate(true, "🌧 rain sweeps in over the balcony.", "");
     return prev;
@@ -100338,7 +100336,6 @@ function spawnDustMote(container) {
     var prev = window.__weatherLayerActive ? window.__weatherLayerActive("overcast") : !!window.__wxOvercast;
     if (arguments.length === 0 || !window.__setBalconyOvercast) return prev; // no arg → is it overcast?
     var on = !!arg; // overcast(true) → grey cloud wash on; overcast(false) → off; returns the previous state
-    if (on && window.goToStage) window.goToStage("balcony");
     if (on && window.__setDayNight) window.__setDayNight(false); // the grey wash reads against daylight
     window.__setBalconyOvercast(on, "ui");
     narrate(on, "☁ a grey overcast settles over the loft.", "☀ the overcast clears.");

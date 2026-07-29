@@ -62,11 +62,12 @@ check(/py\["loft-type\.py"\]\s*=\s*CODE_PY_FRAUNCES_SVG/.test(html) &&
   "the saved HarfBuzz + FontTools example renders LoftType from Fraunces outlines");
 check(/js\["loft-type\.js"\]\s*=\s*CODE_JS_FRAUNCES_SVG/.test(html) &&
       /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV3"/.test(html) &&
+      /hasOwnProperty\.call\(js, "loft-type\.js"\)[\s\S]*?if \(!localStorage\.getItem\(CODE_FRAUNCES_SVG_KEY\)\)/.test(html) &&
       /const \{ hb, font \} = await harfbuzz\(\)/.test(html) &&
       /buffer\.addText\(\\"LoftType\\"\)/.test(html) &&
       /font\.glyphToPath\(glyph\.g\)/.test(html) &&
       /display_svg\(svg\)/.test(html),
-  "the existing LoftType seed also adds an editable harfbuzzjs SVG example without a new migration key");
+  "the editable harfbuzzjs SVG example reaches existing profiles without a new migration key");
 check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),

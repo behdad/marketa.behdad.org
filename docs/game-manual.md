@@ -139,6 +139,9 @@ find an app. Use the normal close control to leave an app; right-click its tile
 or open surface to manage or kill its current session. The laptop beside it
 handles video calls.
 
+Quake III opens with three arenas; choose one, or let the short timer rotate to
+the next arena automatically.
+
 Messages become active after the party first unlocks. Selecting a notification
 opens the exact message; it does not automatically run the attached activity.
 Use the separate action arrow when you want that to happen. Right-click or

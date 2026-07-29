@@ -5,8 +5,8 @@ The shipped engine files are the official Emscripten artifact from ioquake3 comm
 artifact `8626992626`. The upstream build follows ioquake3's documented Emscripten
 CMake workflow; the exact shipped identities are in `README.md`.
 
-`baseoa/pak0.pk3` is copied unmodified from OpenArena 0.8.8. To reconstruct the reduced
-arena pack:
+`baseoa/pak0.pk3` is copied unmodified from OpenArena 0.8.8. To reconstruct the
+reduced arena packs:
 
 1. Download the official `openarena-0.8.8.zip` and verify the checksum in `README.md`.
 2. Expand its `baseoa/pak*.pk3` files into one overlay in numeric order.
@@ -18,7 +18,13 @@ arena pack:
 4. Zip those paths without renaming them and compare the member list with
    `baseoa/loft-shine.manifest` (530 files).
 
-The shipped pack's SHA-256 in `README.md` is its identity. A fresh ZIP may differ
+Repeat the same closure walk for `aggressor` and `am_lavaarena`, combine their
+BSP/AAS/levelshots, referenced shader definitions and images, map ambience, and
+`scripts/loft_arenas.arena`, then compare the member list with
+`baseoa/loft-arenas.manifest` (90 files). Every member comes from the same
+checksum-verified OpenArena archive except the compact arena index.
+
+Each shipped pack's SHA-256 in `README.md` is its identity. A fresh ZIP may differ
 byte-for-byte because ZIP metadata and compression versions are not reproducible.
 
 For a visual acceptance run, use a real headful Chrome/WebGL session, wait for

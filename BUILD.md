@@ -33,7 +33,7 @@ what is **verified** (from the on-disk build tree / pins / shas) vs. **reconstru
   `shape()` command, plus a re-subset Fraunces shaping TTF.
 - [`doom/BUILD.md`](doom/BUILD.md) — the DOOM runtime.
 - [`duke/BUILD.md`](duke/BUILD.md) — the emduke32 runtime and exact official shareware archive.
-- [`q3/BUILD.md`](q3/BUILD.md) — the ioquake3 runtime and reduced OpenArena arena pack.
+- [`q3/BUILD.md`](q3/BUILD.md) — the ioquake3 runtime and reduced OpenArena arena packs.
 
 Each of these `BUILD.md` files is blocked from public access by `.htaccess`'s basename
 `<Files "BUILD.md">` rule (build recipes are internal). The `COPYING` license files that

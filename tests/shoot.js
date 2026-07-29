@@ -120,6 +120,19 @@ check(/"sensitivity", "0\.8"/.test(players[2]) && /"cl_mouseAccel", "0"/.test(pl
 check(/"r_hdr", "0"/.test(players[2]) && /"r_postProcess", "0"/.test(players[2]) &&
     /"r_toneMap", "0"/.test(players[2]) && /"r_autoExposure", "0"/.test(players[2]),
   "Quake III keeps unsupported GLES postprocessing paths disabled");
+check(/const arenas = \["oa_shine", "aggressor", "am_lavaarena"\]/.test(players[2]) &&
+    /data-arena="oa_shine"/.test(players[2]) &&
+    /data-arena="aggressor"/.test(players[2]) &&
+    /data-arena="am_lavaarena"/.test(players[2]),
+  "Quake III offers all three arenas in its visible picker");
+check(/loft-arenas\.pk3/.test(players[2]) && /\+map", arena/.test(players[2]) &&
+    /loft:q3-arena/.test(players[2]),
+  "Quake III loads the extra arena pack and rotates the automatic choice");
+var arenaManifest = fs.readFileSync(path.join(root, "q3/baseoa/loft-arenas.manifest"), "utf8");
+check(/^maps\/aggressor\.(?:aas|bsp)$/m.test(arenaManifest) &&
+    /^maps\/am_lavaarena\.(?:aas|bsp)$/m.test(arenaManifest) &&
+    /^scripts\/loft_arenas\.arena$/m.test(arenaManifest),
+  "the additional arena manifest carries both playable maps and its arena index");
 
 if (failures) {
   console.error("\n" + failures + " shoot check(s) failed.");

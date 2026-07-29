@@ -35,12 +35,18 @@ is also present as `COPYING` inside `baseoa/pak0.pk3`.
   needed for a local match. Its exact 530-member list is in
   `baseoa/loft-shine.manifest`.
   SHA-256: `376e1ae3389fef99c7deea461cae745e5ba93215c82241e23fe7aa11a82e53a1`
+- `baseoa/loft-arenas.pk3` adds the `aggressor` and `am_lavaarena`
+  BSP/AAS/levelshots and their exact runtime asset closures from that same
+  archive. Its 90-member list is in `baseoa/loft-arenas.manifest`.
+  SHA-256: `649c64bbc3f6a6fae51c915177be032271c1b03924584fc3f443183ef4fc5cfb`
 
-`player.html` loads only these two packs, disables networking, opens `oa_shine`,
-and adds one local bot. It explicitly selects OpenGL2's GLES path and disables
-HDR/postprocessing/advanced material paths that upstream documents as unsupported
-or unsuitable on GLES; leaving them enabled produces invalid white world surfaces
-in this WebGL build. Initial mouse sensitivity is `0.8` with acceleration off.
+`player.html` loads only these three packs, disables networking, and adds one
+local bot. Its small launcher offers Shine, Aggressor, and Lava Arena; without a
+selection it advances to the next arena after a short delay. It explicitly
+selects OpenGL2's GLES path and disables HDR/postprocessing/advanced material
+paths that upstream documents as unsupported or unsuitable on GLES; leaving them
+enabled produces invalid white world surfaces in this WebGL build. Initial mouse
+sensitivity is `0.8` with acceleration off.
 
 The parent monitor sends pause/resume messages; the iframe gates both the main loop
 and SDL audio on foreground visibility. Removing the iframe is the hard-stop

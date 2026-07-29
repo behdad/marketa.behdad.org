@@ -2408,6 +2408,19 @@ html.frame-rate-low #loft-game-strip.uv-mode #stage-garden[data-partydance="tech
    by JS (restartable on a rapid re-tap via the remove→reflow→re-add idiom). */
 #garden-guests.guests-in .guest{pointer-events:auto; cursor:pointer}
 #garden-guests .guest-react{transform-box:fill-box; transform-origin:center bottom}
+/* Tapping either host brings the pair together for one affectionate shoulder bump. */
+.g-behdad .guest-react.host-bump{animation:guest-host-bump-left .85s cubic-bezier(.34,1.35,.64,1)}
+.g-marketa .guest-react.host-bump{animation:guest-host-bump-right .85s cubic-bezier(.34,1.35,.64,1)}
+@keyframes guest-host-bump-left{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  34%{transform:translate(7px,-3px) rotate(5deg)}
+  62%{transform:translate(4px,0) rotate(2deg)}
+}
+@keyframes guest-host-bump-right{
+  0%,100%{transform:translate(0,0) rotate(0)}
+  34%{transform:translate(-7px,-3px) rotate(-5deg)}
+  62%{transform:translate(-4px,0) rotate(-2deg)}
+}
 /* shorter-stature wrapper: a static 0.85 scale about the figure's feet (same compose-safe
    approach as #cuddly-robin-scale). Rides the CSS `scale` PROPERTY (not the transform
    attribute / property) so it composes with the orbit/sway/solo/flare `transform`
@@ -2481,7 +2494,9 @@ html.frame-rate-low #loft-game-strip.uv-mode #stage-garden[data-partydance="tech
   .g-robin .guest-react.robin-flare,
   .g-navid .guest-react.navid-flare,
   .g-elisabeth .guest-react.elisabeth-flare,
-  .g-felix .guest-react.felix-flare{animation:guest-react-blip .4s ease-in-out}
+  .g-felix .guest-react.felix-flare,
+  .g-behdad .guest-react.host-bump,
+  .g-marketa .guest-react.host-bump{animation:guest-react-blip .4s ease-in-out}
   .g-ali .guest-beard.beard-toss{animation:none}
   #garden-guests.guests-in .g-jay .guest-halo.halo-pulse{animation:none}
 }
@@ -85639,6 +85654,49 @@ function spawnDustMote(container) {
         extra.classList.remove("halo-pulse");
       });
     });
+    (function wireHostBump() {
+      var behdad = group.querySelector(".g-behdad");
+      var marketa = group.querySelector(".g-marketa");
+      var strip = document.getElementById("loft-game-strip");
+      if (!behdad || !marketa || !strip) return;
+      var behdadReact = behdad.querySelector(".guest-react");
+      var marketaReact = marketa.querySelector(".guest-react");
+      var heartTimer = null;
+      function canBump() {
+        return guestsOnFloor() && !strip.classList.contains("dance-frozen") &&
+          !window.__photoFreeze && !window.__firstDanceOn;
+      }
+      function restart(node) {
+        node.classList.remove("host-bump");
+        node.getBoundingClientRect();
+        node.classList.add("host-bump");
+      }
+      function bump() {
+        if (!canBump()) return;
+        restart(behdadReact);
+        restart(marketaReact);
+        if (heartTimer) clearTimeout(heartTimer);
+        heartTimer = setTimeout(function () {
+          heartTimer = null;
+          if (!canBump()) return;
+          spawnHearts(strip, 1008, 198);
+          playHeartsSound("garden-hosts");
+        }, 280);
+      }
+      [behdad, marketa].forEach(function (host) {
+        host.setAttribute("tabindex", "0");
+        host.addEventListener("pointerdown", bump);
+        host.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+            e.preventDefault();
+            bump();
+          }
+        });
+      });
+      [behdadReact, marketaReact].forEach(function (react) {
+        react.addEventListener("animationend", function () { react.classList.remove("host-bump"); });
+      });
+    })();
     // Named guests should feel alive without needing taps. This visual-only driver picks one
     // currently painted floor guest every few seconds and reuses their authored signature flare.
     // While the browser is unfocused it keeps a short retry armed, so looking back produces action

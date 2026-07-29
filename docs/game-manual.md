@@ -179,6 +179,7 @@ phone and monitor. Each action game displays its own controls and temporarily
 owns the relevant keyboard input.
 
 Double-click any office butterfly to start a short Butterfly Chase.
+Keep pestering a butterfly and its artwork may need a moment to recover.
 
 Calendar and Clock can move the loft to another date or time. Special days may
 change decorations, weather, guests, messages, or the party setup. Weather,

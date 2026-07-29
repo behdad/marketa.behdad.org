@@ -4102,6 +4102,12 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 #monitor-console-close:hover .seg-hover,#monitor-console-back:hover .seg-hover{opacity:.55}
 #monitor-console-back{opacity:0;pointer-events:none}
 #office-monitor.show-console #monitor-console-back.is-visible{opacity:1;pointer-events:auto}
+#monitor-console-svg{display:none}
+#monitor-console.svg-view #monitor-console-svg{display:inline}
+#monitor-console.svg-view #monitor-console-wrap{visibility:hidden}
+#monitor-console-svg,#monitor-console-svg *{cursor:default}
+#monitor-console-view-toggle{cursor:pointer}
+#monitor-console-view-toggle:hover .console-view-hover{opacity:.35}
 .console-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#100d0a; padding:1.8px 2px 2.6px; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; color:#cfe3cf}
 /* the scrollback is a scroll container, so it clips at its own padding box — and at 2px
    type under the desk zoom, painted ink can land up to ~1px outside its layout box
@@ -21970,6 +21976,20 @@ section{margin:1.9rem 0}
 <div class="console-row"><span class="console-ps">&#10095;</span><input id="monitor-console-in" class="console-in" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false"/></div>
 </div>
 </foreignObject>
+<!-- JavaScript SVG output stays native: WebKit cannot composite a canvas or other
+     replaced element inside the monitor's scaled foreignObject. -->
+<g id="monitor-console-svg">
+<rect x="254" y="154" width="124" height="42" fill="#fffdf8"/>
+<svg x="254" y="154" width="124" height="42" viewBox="-310 -105 620 210" preserveAspectRatio="xMidYMid meet" overflow="hidden">
+<g id="monitor-console-svg-display"></g>
+</svg>
+</g>
+<g id="monitor-console-view-toggle" transform="translate(356.5,154.8)">
+<title>Show SVG graphics</title>
+<rect width="9" height="4.2" rx="0.8" fill="#2e2823" stroke="#15120e" stroke-width="0.35"/>
+<rect class="console-view-hover" width="9" height="4.2" rx="0.8" fill="#8fd070" opacity="0"/>
+<text id="monitor-console-view-label" x="4.5" y="2.9" text-anchor="middle" font-family="ui-monospace,monospace" font-size="1.9" fill="#8fd070">gfx</text>
+</g>
 <g id="monitor-console-close" transform="translate(76.0,29.3) scale(0.8)">
 <title id="monitor-console-close-title">Close</title>
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
@@ -49906,12 +49926,68 @@ setOfficeProgress("pc", false);
   var consoleBackBtn = document.getElementById("monitor-console-back");
   var consoleCloseTitle = document.getElementById("monitor-console-close-title");
   var consoleCloseMark = document.getElementById("monitor-console-close-mark");
+  var consoleSvgSurface = document.getElementById("monitor-console-svg");
+  var consoleSvgDisplay = document.getElementById("monitor-console-svg-display");
+  var consoleViewToggle = document.getElementById("monitor-console-view-toggle");
+  var consoleViewLabel = document.getElementById("monitor-console-view-label");
   var consoleReturnToCode = false;
   var CLOSE_MARK_PATH = "M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3";
   function paintConsoleClose() {
     if (consoleCloseTitle) consoleCloseTitle.textContent = consoleT("share_close");
     if (consoleCloseMark) consoleCloseMark.setAttribute("d", CLOSE_MARK_PATH);
     if (consoleBackBtn) consoleBackBtn.classList.toggle("is-visible", consoleReturnToCode);
+  }
+  function consoleSvgView(on) {
+    var root = document.getElementById("monitor-console");
+    if (!root) return;
+    root.classList.toggle("svg-view", !!on);
+    if (consoleViewLabel) consoleViewLabel.textContent = on ? "❯" : "gfx";
+    if (consoleViewToggle) {
+      var title = consoleViewToggle.querySelector("title");
+      if (title) title.textContent = on ? "Show JavaScript Console" : "Show SVG graphics";
+    }
+  }
+  // SVG crosses the user-code boundary in both Console and Python, so keep one sanitizer.
+  // It accepts only an inline document and fits that document to the native monitor surface.
+  function sanitizeMonitorSvg(source) {
+    var doc;
+    try { doc = new DOMParser().parseFromString(String(source || ""), "image/svg+xml"); } catch (e) { return null; }
+    var root = doc && doc.documentElement;
+    if (!root || root.localName !== "svg" || root.querySelector("parsererror")) return null;
+    root.querySelectorAll("script,foreignObject,iframe,object,embed,audio,video,style").forEach(function (node) { node.remove(); });
+    [root].concat(Array.prototype.slice.call(root.querySelectorAll("*"))).forEach(function (node) {
+      Array.prototype.slice.call(node.attributes || []).forEach(function (attr) {
+        var name = attr.name.toLowerCase(), value = attr.value.trim();
+        if (name === "style" || name.indexOf("on") === 0 ||
+            ((name === "href" || name === "xlink:href") && value.charAt(0) !== "#") ||
+            (/url\s*\(/i.test(value) && !/url\s*\(\s*#/.test(value))) node.removeAttribute(attr.name);
+      });
+    });
+    root.setAttribute("x", "-310"); root.setAttribute("y", "-105");
+    root.setAttribute("width", "620"); root.setAttribute("height", "210");
+    root.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    return document.importNode(root, true);
+  }
+  function consoleDisplaySvg(source) {
+    if (!consoleSvgDisplay) return false;
+    var root = sanitizeMonitorSvg(source);
+    if (!root) return false;
+    consoleSvgDisplay.textContent = "";
+    consoleSvgDisplay.appendChild(root);
+    consoleSvgView(true);
+    return true;
+  }
+  window.display_svg = function (source) {
+    if (!consoleDisplaySvg(source)) throw new Error("display_svg() needs a valid SVG document");
+    return true;
+  };
+  if (consoleViewToggle) {
+    consoleViewToggle.addEventListener("click", function (e) { e.stopPropagation(); consoleSvgView(!document.getElementById("monitor-console").classList.contains("svg-view")); });
+    consoleViewToggle.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  if (consoleSvgSurface) {
+    consoleSvgSurface.addEventListener("click", function (e) { e.stopPropagation(); });
+    consoleSvgSurface.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // Console scrollback line boxes are TINY (2.8px), so a native wheel notch (~100px) would fling
   // ~35 lines at once — the printed history streaks past. Scale each tick down to a calm few lines.
@@ -50723,6 +50799,8 @@ setOfficeProgress("pc", false);
     consoleWelcomed = false;
     hbBannerShown = false;
     if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
+    if (consoleSvgDisplay) consoleSvgDisplay.textContent = "";
+    consoleSvgView(false);
     updateConsoleTile();
   };
   // Kill (or an internal restart command) REALLY refreshes the plain console (a stateless JS
@@ -50738,6 +50816,8 @@ setOfficeProgress("pc", false);
     consoleWelcomed = false; // next open reprints the welcome — a fresh shell
     hbBannerShown = false;
     if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
+    if (consoleSvgDisplay) consoleSvgDisplay.textContent = "";
+    consoleSvgView(false);
     updateConsoleTile();
     monitor.classList.remove("show-console"); // back to the desktop
     scheduleSaver();
@@ -50931,6 +51011,7 @@ setOfficeProgress("pc", false);
     beat: "beat() — ms until the next musical beat, phase-locked to whatever's playing. try `await sleep(beat())` to move in time",
     eclipse: "eclipse() — a solar (day) or lunar (night) eclipse over the balcony",
     hb: "hb — the harfbuzzjs shaper (uharfbuzz-style); `help hb` prints a full shaping sequence",
+    display_svg: "display_svg(svg) — fit a complete inline SVG document into the JavaScript Console's graphics view",
     loft: "loft — the couple's object: .countdown .nowPlaying .weather .menu .love .you .couple .weddings .site",
     ls: "ls — list the rooms",
     pwd: "pwd — print the working directory",
@@ -51313,7 +51394,7 @@ setOfficeProgress("pc", false);
     "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "mines", "solitaire", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "faal", "rumi", "confetti", "fireworks", "lanterns", "cat", "dog", "whistler", "octi", "piratebox", "chest", "lamaz", "elmaz", "tamper", "brew", "sip", "knockbox", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
-    "guitar", "ukulele", "beat", "eclipse", "hb", "loft", "ls", "pwd", "whoami", "sudo",
+    "guitar", "ukulele", "beat", "eclipse", "hb", "display_svg", "loft", "ls", "pwd", "whoami", "sudo",
     "date", "timestamp", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "mailto", "beans", "couples", "officefolks"
   ];
   // Barewords / unix gags that are NOT functions — completing them must not append "(".
@@ -52118,6 +52199,30 @@ setOfficeProgress("pc", false);
     "display_svg(svg)",
     ""
   ].join("\n");
+  var CODE_JS_FRAUNCES_SVG = [
+    "const { hb, font } = await harfbuzz();",
+    "const buffer = hb.createBuffer();",
+    "buffer.addText(\"LoftType\");",
+    "buffer.guessSegmentProperties();",
+    "hb.shape(font, buffer);",
+    "",
+    "const extents = font.hExtents();",
+    "let x = 0;",
+    "const paths = buffer.json().map(glyph => {",
+    "  const path = font.glyphToPath(glyph.g);",
+    "  const transform = `translate(${x + glyph.dx} ${glyph.dy})`;",
+    "  x += glyph.ax;",
+    "  return `<path d=\"${path}\" transform=\"${transform}\"/>`;",
+    "});",
+    "",
+    "const height = extents.ascender - extents.descender;",
+    "const svg = `<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ${x} ${height}\">",
+    "<g transform=\"translate(0 ${extents.ascender}) scale(1 -1)\" fill=\"#8e3a4a\">",
+    "${paths.join(\"\")}",
+    "</g></svg>`;",
+    "display_svg(svg);",
+    ""
+  ].join("\n");
   var CODE_EXAMPLES_KEY = "deskCodeExamplesV1";
   var CODE_SPACE_FILLER_KEY = "deskCodeSpaceFillerV1";
   var CODE_FRAUNCES_SVG_KEY = "deskCodeLoftTypeV3";
@@ -52135,6 +52240,9 @@ setOfficeProgress("pc", false);
         localStorage.setItem(CODE_SPACE_FILLER_KEY, "1");
       }
       if (!localStorage.getItem(CODE_FRAUNCES_SVG_KEY)) {
+        if (!Object.prototype.hasOwnProperty.call(js, "loft-type.js")) {
+          js["loft-type.js"] = CODE_JS_FRAUNCES_SVG; codeExamplesAdded.js = true;
+        }
         if (!Object.prototype.hasOwnProperty.call(py, "loft-type.py")) {
           py["loft-type.py"] = CODE_PY_FRAUNCES_SVG; codeExamplesAdded.python = true;
         } else if (/^from loft[a-z]* import display_svg$/m.test(py["loft-type.py"])) {
@@ -58486,26 +58594,12 @@ setOfficeProgress("pc", false);
   }
   function pyDisplaySvg(source) {
     if (!pySvgDisplay) return false;
-    var doc;
-    try { doc = new DOMParser().parseFromString(String(source || ""), "image/svg+xml"); } catch (e) { return false; }
-    var root = doc && doc.documentElement;
-    if (!root || root.localName !== "svg" || root.querySelector("parsererror")) return false;
-    root.querySelectorAll("script,foreignObject,iframe,object,embed,audio,video,style").forEach(function (node) { node.remove(); });
-    [root].concat(Array.prototype.slice.call(root.querySelectorAll("*"))).forEach(function (node) {
-      Array.prototype.slice.call(node.attributes || []).forEach(function (attr) {
-        var name = attr.name.toLowerCase(), value = attr.value.trim();
-        if (name === "style" || name.indexOf("on") === 0 ||
-            ((name === "href" || name === "xlink:href") && value.charAt(0) !== "#") ||
-            (/url\s*\(/i.test(value) && !/url\s*\(\s*#/.test(value))) node.removeAttribute(attr.name);
-      });
-    });
-    root.setAttribute("x", "-310"); root.setAttribute("y", "-105");
-    root.setAttribute("width", "620"); root.setAttribute("height", "210");
-    root.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    var root = sanitizeMonitorSvg(source);
+    if (!root) return false;
     pyTurtleClear(null);
     if (pyTurtleCursors) pyTurtleCursors.textContent = "";
     pySvgDisplay.textContent = "";
-    pySvgDisplay.appendChild(document.importNode(root, true));
+    pySvgDisplay.appendChild(root);
     pyTurtleView(true);
     return true;
   }

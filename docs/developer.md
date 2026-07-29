@@ -166,6 +166,14 @@ Restart path drops queued jobs, the interpreter, and the Turtle surface. Python
 execution is still on the browser main thread: the DOM command cap limits
 rendered output, but it is not a worker-level interrupt for arbitrary CPU loops.
 
+JavaScript Code opens the existing Console and runs in the page's async-IIFE
+environment. `display_svg(source)` sends complete SVG documents to the Console's
+native graphics view; its `gfx` control switches between the drawing and
+scrollback without clearing either. The bundled `loft-type.js` example shapes
+`LoftType` with harfbuzzjs and converts each glyph through
+`font.glyphToPath()`. It shares the existing LoftType starter-seed key rather
+than adding a separate migration.
+
 The standard-library archive omits desktop `turtle`/Tkinter, so
 `installPythonTurtle` writes a small compatibility module into Pyodide's virtual
 filesystem before user code runs. That module sends sanitized commands through
@@ -180,8 +188,9 @@ teaching operations, not Tk windows or event bindings. Update
 surface changes.
 
 `loft.display_svg()` uses that same native graphics surface for complete SVG
-documents, and `loft.clear_canvas()` clears it. Keep the DOM parser sanitizer at
-the page boundary; Python code should not insert raw markup into the monitor.
+documents, and `loft.clear_canvas()` clears it. Python and JavaScript share the
+DOM parser sanitizer at the page boundary; user code must not insert raw markup
+into either monitor surface.
 
 ## Game state model
 

@@ -228,7 +228,9 @@ The loft includes a drop-down JavaScript console and the monitor's **Console**
 and **Code** apps. They are optional play spaces, not part of the main game.
 Press backtick to open the drop-down console and type `help` or `shortcuts()` to
 get oriented. The Code app can run JavaScript and Python files; named files are
-saved in this browser.
+saved in this browser. JavaScript and Python examples can open native SVG
+graphics views; use the small **gfx** control to switch between a drawing and
+its Console output.
 
 The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
 Solitaire. Solitaire accepts clicks or card drags; the full lifted stack follows

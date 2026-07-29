@@ -60,6 +60,13 @@ check(/py\["loft-type\.py"\]\s*=\s*CODE_PY_FRAUNCES_SVG/.test(html) &&
       /await googlefonts\(\\"Fraunces\\"\)/.test(html) &&
       /buffer\.add_str\(\\"LoftType\\"\)/.test(html),
   "the saved HarfBuzz + FontTools example renders LoftType from Fraunces outlines");
+check(/js\["loft-type\.js"\]\s*=\s*CODE_JS_FRAUNCES_SVG/.test(html) &&
+      /CODE_FRAUNCES_SVG_KEY\s*=\s*"deskCodeLoftTypeV3"/.test(html) &&
+      /const \{ hb, font \} = await harfbuzz\(\)/.test(html) &&
+      /buffer\.addText\(\\"LoftType\\"\)/.test(html) &&
+      /font\.glyphToPath\(glyph\.g\)/.test(html) &&
+      /display_svg\(svg\)/.test(html),
+  "the existing LoftType seed also adds an editable harfbuzzjs SVG example without a new migration key");
 check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),
@@ -84,6 +91,10 @@ check(!!turtleMatch, "a self-hosted browser Turtle compatibility module is embed
 check(/<g id="monitor-py-turtle">[\s\S]*?<svg[\s\S]*?id="monitor-py-turtle-lines"/.test(html) &&
       /PY_TURTLE_NODE_LIMIT\s*=\s*6000/.test(html),
   "Turtle renders into a bounded native SVG surface");
+check(/<g id="monitor-console-svg">[\s\S]*?<svg[\s\S]*?id="monitor-console-svg-display"/.test(html) &&
+      /window\.display_svg\s*=\s*function/.test(html) &&
+      /function sanitizeMonitorSvg/.test(html),
+  "the JavaScript Console has a native, sanitized SVG output surface");
 check(/class", "py-turtle-cursor"/.test(html) &&
       /py-turtle-cursor-shell/.test(html),
   "Turtle drawings end with a turtle-shaped SVG cursor");
@@ -141,6 +152,10 @@ var harness = [
   '  document.getElementById("monitor-code-lang-js").click(); name.value="broken.js"; code.value="throw new Error(\\\"code boom\\\")";',
   '  document.getElementById("monitor-code-run").click(); await new Promise(function(r){setTimeout(r,80)});',
   '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastCodeError;',
+  '  var jsShown=window.display_svg(\'<svg viewBox="0 0 20 10" onload="bad()"><script>bad()<\\/script><path id="js-svg-probe" d="M0 0H20V10H0Z" onclick="bad()"/></svg>\');',
+  '  var jsSvgHost=document.getElementById("monitor-console-svg-display"),jsSvgRoot=jsSvgHost.querySelector("svg"),jsSvgPath=jsSvgHost.querySelector("#js-svg-probe");',
+  '  out.jsSvgDisplay=jsShown&&document.getElementById("monitor-console").classList.contains("svg-view")&&jsSvgRoot&&jsSvgRoot.getAttribute("viewBox")==="0 0 20 10"&&jsSvgRoot.getAttribute("width")==="620"&&!jsSvgRoot.hasAttribute("onload")&&!jsSvgHost.querySelector("script")&&jsSvgPath&&!jsSvgPath.hasAttribute("onclick");',
+  '  document.getElementById("monitor-console-view-toggle").dispatchEvent(new MouseEvent("click",{bubbles:true})); out.jsSvgToggle=!document.getElementById("monitor-console").classList.contains("svg-view")&&!!jsSvgHost.firstElementChild;',
   '  document.getElementById("monitor-console-close").dispatchEvent(new MouseEvent("click",{bubbles:true})); await new Promise(function(r){setTimeout(r,20)});',
   '  out.consoleDismissed=!mon.classList.contains("show-console")&&!mon.classList.contains("show-code");',
   '  window.__openMonitorCode();document.getElementById("monitor-code-run").click();await new Promise(function(r){setTimeout(r,80)});',
@@ -175,6 +190,8 @@ if (state && !state.error) {
     "selector styling and completion catalogs track Python without changing the Loft JS hook", state);
   check(state.jsConsole && /code boom/.test(state.jsError) && /code boom/.test(state.lastError),
     "a JavaScript Code exception opens the JS Console with the actual error", state);
+  check(state.jsSvgDisplay && state.jsSvgToggle,
+    "JavaScript SVG output is fitted and sanitized, and its view toggle preserves the drawing", state);
   check(state.consoleDismissed && state.codeReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
     "Dismiss leaves Code closed while the separate Back returns to it without overwriting failure status", state);
   check(state.codeAiApi && state.codeAiApi.mode === "code_assist" && state.codeAiApi.language === "js" &&

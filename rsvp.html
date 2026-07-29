@@ -3928,6 +3928,18 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 #office-monitor.monitor-sleeping .monitor-sleep-layer{opacity:1; visibility:visible}
 .monitor-sleep-bg{fill:#08090b}
 .monitor-sleep-led{fill:#8e3a4a; opacity:.48}
+.monitor-sleep-dream{opacity:0}
+#office-monitor.sleep-nod-off .monitor-sleep-bg{fill:#15192a}
+#office-monitor.sleep-nod-off .monitor-sleep-dream{opacity:1}
+#office-monitor.sleep-nod-off .monitor-sleep-body{transform-box:fill-box;transform-origin:center bottom;animation:monitor-sleep-breathe 1.7s ease-in-out infinite}
+#office-monitor.sleep-nod-off .monitor-sleep-z{transform-box:fill-box;transform-origin:center;animation:monitor-sleep-z 1.45s ease-out infinite}
+#office-monitor.sleep-nod-off .monitor-sleep-z.z2{animation-delay:.45s}
+#office-monitor.sleep-nod-off .monitor-sleep-z.z3{animation-delay:.9s}
+@keyframes monitor-sleep-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025,.975)}}
+@keyframes monitor-sleep-z{0%{opacity:0;transform:translate(0,2px) scale(.7)}30%{opacity:1}100%{opacity:0;transform:translate(4px,-7px) scale(1.15)}}
+@media (prefers-reduced-motion:reduce){
+  #office-monitor.sleep-nod-off .monitor-sleep-body,#office-monitor.sleep-nod-off .monitor-sleep-z{animation:none}
+}
 .dock-tile{width:11px; height:11px; transform-origin:50% 50%; transition:transform .15s ease; border-radius:3px; box-shadow:inset 0 0 0 0.4px rgba(0,0,0,0.18); display:grid} /* single-cell grid: glyph + overlays stack on one grid-area with NO position/transform layer, so they paint in place under the monitor's scaled foreignObject (WebKit bug 23113) */
 .dock-tile > *{grid-area:1/1; min-width:0}
 .dock-running-dot{display:block; width:1.7px; height:1.7px; margin:0 .35px .35px 0; place-self:end end; overflow:visible; opacity:0; pointer-events:none; transition:opacity .15s ease}
@@ -28614,6 +28626,7 @@ var T = {
     mon_sys_title: "Loft OS",
     mon_sys_lock: "Lock",
     mon_sys_sleep: "Sleep",
+    mon_sleep_gag: "Time for me to take a nap.. Zzz...",
     mon_sys_reboot: "Reboot",
     mon_sys_shutdown: "Shut down",
     mon_reboot_gag: "Have you tried closing all windows?",
@@ -29764,6 +29777,7 @@ var T = {
     mon_sys_title: "Loft OS",
     mon_sys_lock: "Zamknout",
     mon_sys_sleep: "Uspat",
+    mon_sleep_gag: "Je čas si zdřímnout.. Zzz...",
     mon_sys_reboot: "Restartovat",
     mon_sys_shutdown: "Vypnout",
     mon_reboot_gag: "Zkusili jste zavřít všechna okna?",
@@ -44794,7 +44808,7 @@ setOfficeProgress("pc", false);
   var monitorLockSelected = null, monitorLockFinishTimer = null, monitorLockIdleTimer = null;
   var monitorLockCapsState = null, monitorLockCapsPresses = 0;
   var MONITOR_LOCK_IDLE_MS = 10000;
-  var monitorSleeping = false, monitorSleepWakeUntil = 0;
+  var monitorSleeping = false, monitorSleepWakeUntil = 0, monitorSleepIntroTimer = null;
   var monitorLockCaps = {}, monitorLockPortraits = {};
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function stopSaver() {
@@ -44812,25 +44826,36 @@ setOfficeProgress("pc", false);
     if (monitorSleeping || !monitor.classList.contains("screen-on")) return monitorSleeping;
     stopSaver();
     monitorSleeping = true;
-    monitor.classList.add("monitor-sleeping");
+    monitor.classList.add("monitor-sleeping", "sleep-nod-off");
+    if (window.__flashCaptionKey)
+      window.__flashCaptionKey("mon_sleep_gag", 5000, "monitor-power");
+    clearTimeout(monitorSleepIntroTimer);
+    monitorSleepIntroTimer = setTimeout(function () {
+      monitorSleepIntroTimer = null;
+      monitor.classList.remove("sleep-nod-off");
+      if (monitorSleeping && window.__monitorZoomOut) window.__monitorZoomOut();
+    }, 2400);
     if (window.__syncMonitorEqLoop) window.__syncMonitorEqLoop();
-    if (window.__monitorZoomOut) window.__monitorZoomOut();
     return true;
   }
   function wakeMonitorSleep() {
     if (!monitorSleeping) return false;
+    clearTimeout(monitorSleepIntroTimer);
+    monitorSleepIntroTimer = null;
     monitorSleeping = false;
     monitorSleepWakeUntil = Date.now() + 450;
-    monitor.classList.remove("monitor-sleeping");
+    monitor.classList.remove("monitor-sleeping", "sleep-nod-off");
     if (monitor.classList.contains("show-caps")) scheduleSaver();
     else if (monitor.classList.contains("show-nowplaying")) scheduleSaver(15000);
     if (window.__syncMonitorEqLoop) window.__syncMonitorEqLoop();
     return true;
   }
   function clearMonitorSleep() {
+    clearTimeout(monitorSleepIntroTimer);
+    monitorSleepIntroTimer = null;
     monitorSleeping = false;
     monitorSleepWakeUntil = 0;
-    monitor.classList.remove("monitor-sleeping");
+    monitor.classList.remove("monitor-sleeping", "sleep-nod-off");
   }
   function clearMonitorLockIdle() {
     clearTimeout(monitorLockIdleTimer);
@@ -48206,6 +48231,30 @@ setOfficeProgress("pc", false);
       "aria-hidden": "true" }, dock.parentNode);
     mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
       "class": "monitor-sleep-bg" }, monitorSleepLayer);
+    var sleepDream = mkEl("g", { "class": "monitor-sleep-dream" }, monitorSleepLayer);
+    mkEl("ellipse", { cx: 316, cy: 190.5, rx: 39, ry: 2.8, fill: "#080a12", opacity: .7 }, sleepDream);
+    mkEl("rect", { x: 276, y: 172, width: 25, height: 13, rx: 5.5, fill: "#efe6cf",
+      stroke: "#cfc4af", "stroke-width": .7 }, sleepDream);
+    var sleepBody = mkEl("g", { "class": "monitor-sleep-body" }, sleepDream);
+    mkEl("path", { d: "M300 181 Q313 169 341 177 Q351 181 354 190 H298 Q297 185 300 181 Z",
+      fill: "#d9a6a6", stroke: "#8e3a4a", "stroke-width": .8 }, sleepBody);
+    mkEl("path", { d: "M299 181 Q317 177 343 181", fill: "none", stroke: "#efc6c9",
+      "stroke-width": .7, "stroke-linecap": "round", opacity: .8 }, sleepBody);
+    mkEl("circle", { cx: 301, cy: 176.5, r: 8.2, fill: "#d6a17d" }, sleepBody);
+    mkEl("path", { d: "M293.5 177 Q301 190 308.5 177 Q307 184 301 186 Q295 184 293.5 177 Z",
+      fill: "#33251f" }, sleepBody);
+    mkEl("path", { d: "M292.5 174 Q300 165 309.5 173 L307.5 169 Q300 165 294 169 Z",
+      fill: "#c68e95", stroke: "#8e3a4a", "stroke-width": .55 }, sleepBody);
+    mkEl("path", { d: "M292 173.8 Q301 175 310 172.8", fill: "none", stroke: "#8e3a4a",
+      "stroke-width": 1.2, "stroke-linecap": "round" }, sleepBody);
+    mkEl("path", { d: "M295.5 176.5 Q297.5 174.8 299.5 176.5 M302.5 176.5 Q304.5 174.8 306.5 176.5",
+      fill: "none", stroke: "#453a31", "stroke-width": .7, "stroke-linecap": "round" }, sleepBody);
+    mkEl("path", { d: "M299.5 176.5 H302.5", fill: "none", stroke: "#453a31", "stroke-width": .55 }, sleepBody);
+    [["Z", 339, 173, "z1"], ["Z", 346, 166, "z2"], ["Z", 353, 159.5, "z3"]].forEach(function (z) {
+      var t = mkEl("text", { x: z[1], y: z[2], "class": "monitor-sleep-z " + z[3],
+        fill: "#d9a6a6", "font-family": "Fraunces,serif", "font-size": 6, "font-weight": 700 }, sleepDream);
+      t.textContent = z[0];
+    });
     mkEl("circle", { cx: 376, cy: 194, r: .45, "class": "monitor-sleep-led" }, monitorSleepLayer);
   }
   window.addEventListener("keydown", function (e) {

@@ -5386,12 +5386,21 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .psb-batt-pop{position:absolute; top:calc(100% + 7px); right:0; z-index:20; display:none; align-items:center; gap:4px; padding:7px 10px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:10px; box-shadow:0 8px 22px rgba(0,0,0,.24); white-space:nowrap; font-family:"Source Serif 4",serif; font-size:12px}
 .psb-batt-pop .pbp-pct{font-weight:600}
 .psb-batt-wrap.show .psb-batt-pop{display:inline-flex}
-.phone-stage{flex:1; min-height:0; position:relative; display:flex; flex-direction:column}
-.phone-home, .phone-app, .phone-recents, .phone-incall{display:none; flex:1; min-height:0}
-.phone-shell.pm-home .phone-home{display:flex}
-.phone-shell.pm-app .phone-app{display:flex}
-.phone-shell.pm-recents .phone-recents{display:flex}
-.phone-shell.pm-incall .phone-incall{display:flex}
+.phone-stage{flex:1; min-height:0; position:relative; display:grid; overflow:hidden}
+/* Keep each phone surface in the same grid cell so app opens, Back/Home, Recents and
+   call handoffs share one short motion instead of snapping between display:none states. */
+.phone-home, .phone-app, .phone-recents, .phone-incall{
+  grid-area:1/1; display:flex; min-width:0; min-height:0; opacity:0; visibility:hidden;
+  pointer-events:none; translate:0 5px;
+  transition:opacity .18s ease, translate .18s ease, visibility 0s linear .18s;
+}
+.phone-shell.pm-home .phone-home,
+.phone-shell.pm-app .phone-app,
+.phone-shell.pm-recents .phone-recents,
+.phone-shell.pm-incall .phone-incall{
+  opacity:1; visibility:visible; pointer-events:auto; translate:0 0;
+  transition-delay:0s;
+}
 .phone-shell.pm-incall .phone-statusbar{background:#12100c; color:#eee; border-color:#000}
 .phone-nav{
   flex:none; display:flex; align-items:center; justify-content:space-around;
@@ -5871,6 +5880,11 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-album{display:flex; flex-direction:column; gap:16px; padding:8px 4px 6px; min-height:100%; box-sizing:border-box}
 .pm-album-empty{margin:auto; color:var(--muted); font-size:12.5px; text-align:center; line-height:1.5; max-width:80%}
 .pm-album-empty b{display:block; font-family:"Fraunces",serif; font-size:16px; color:var(--ink); margin-bottom:5px}
+/* Empty launcher-adjacent surfaces keep one calm block of breathing room. Individual
+   typography stays app-specific; only the footprint/spacing is shell chrome. */
+.phone-recents-empty,.pm-msg-empty,.pm-msg-nomatch,.pm-album-empty{
+  box-sizing:border-box; width:100%; min-height:96px; padding:24px 16px;
+}
 /* album search: a small round search field above the roll, live-filters the polaroids by the
    people named in each shot. Light theme, phone fonts; a ✕ clears it. */
 .pm-album-search{position:relative; align-self:stretch; display:flex; align-items:center; gap:6px; margin:0 6px}
@@ -6145,6 +6159,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 @media (prefers-reduced-motion: reduce){
   .phone-backdrop{transition:none}
   .phone-backdrop::before, .phone-backdrop .phone-shell{transition:none}
+  .phone-home, .phone-app, .phone-recents, .phone-incall{transition:none;translate:0 0}
   .phone-boot .pb-inf{animation:none}
   .phone-boot .pb-lock.shake{animation:none}
 }

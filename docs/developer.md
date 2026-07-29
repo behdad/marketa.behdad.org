@@ -833,7 +833,9 @@ verify both hysteresis directions without relying on headless timing.
 
 The phone is a lazily built HTML modal with launcher, app, and in-call screens. Search for
 `openApp`, `navBack`, `phoneAppReturn`, and `setPhoneAppReturn`. Its first ordinary open can show the
-math lock; explicit/cinematic deep links may skip it. `setPhoneAppReturn` is the only owner of the
+math lock; explicit/cinematic deep links may skip it. The four shell surfaces share one grid cell
+and a short opacity/translate handoff; reduced-motion mode keeps the same state changes without
+motion. `setPhoneAppReturn` is the only owner of the
 app-level return transition: launcher, close phone, or return to Messages.
 
 Back behavior depends on entry context:

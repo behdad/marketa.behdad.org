@@ -743,6 +743,10 @@ function checkAudioFadeCloseRace(file, script) {
         issues.push(name + ": no such function found — renamed? update FADE_STOP_FNS so the room-gated stops stay covered");
       }
     });
+    var birdStop = fns.find(function (fn) { return fn.name === "stopBirdsong"; });
+    if (!birdStop || !/\bctx\.close\s*\(/.test(birdStop.body)) {
+      issues.push("stopBirdsong: the discrete-chirp audioBed must be closed when its timer stops, or every garden visit leaks an active bed");
+    }
     // floor so parser rot can't silently drop the constants tier to zero coverage.
     // One-shot effects share a single never-closed AudioContext (getSfxCtx), so only
     // the persistent beds' teardowns still pair a close timer with a fade ramp.
@@ -764,7 +768,7 @@ function checkAudioFadeCloseRace(file, script) {
     pass(file + ": every audio ctx-close timer waits out its gain-fade ramp (" +
       strictChecked + " room-gated stop(s) strict, " + constChecked + " const-checked)");
   } else {
-    fail(file + ": audio fade/close race — an AudioContext can be closed before its fade ramp ends (abrupt cut mid-fade)",
+    fail(file + ": audio lifecycle regression — a bed can leak or an AudioContext can close before its fade finishes",
       issues.join("\n"));
   }
 }

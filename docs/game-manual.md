@@ -138,9 +138,9 @@ click its screen to interact. Search from the desktop menu bar if you cannot
 find an app. Use the normal close control to leave an app; right-click its tile
 or open surface to manage or kill its current session. The laptop beside it
 handles video calls. Drag the headphones around the room to move the music with
-them. The monitor's Video app has a selector for **Downtown dance** and
-**Mon amie la rose**; switching films preserves each playhead until the app is
-killed or the loft is reset.
+them. The monitor's Video app has a selector for **Downtown dance**,
+**Mon amie la rose**, and **Rainbow Butterfly**; switching films preserves each
+playhead until the app is killed or the loft is reset.
 
 Quake III opens with three arenas; choose one, or let the short timer rotate to
 the next arena automatically.

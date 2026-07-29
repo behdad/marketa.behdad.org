@@ -38362,6 +38362,7 @@ function quickReversalGesture(action) {
       if (e) e.stopPropagation();
       poufState = (poufState + 1) % 4;
       paintPoufs();
+      if (window.__checkpointChanged) window.__checkpointChanged();
       if (poufState) {
         playSwishSound("office-nesting-poufs");
         if (poufState === 3) eggBubble(nestingPoufs, tipText("office_pouf_sock_found"), "scene-top");
@@ -38372,9 +38373,17 @@ function quickReversalGesture(action) {
     nestingPoufs.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cyclePoufs(e); }
     });
-    window.__registerTransientResetHook("office-nesting-poufs", function () {
-      poufState = 0;
-      paintPoufs();
+    window.__deferCheckpointAdapter("office-poufs", {
+      capture: function () { return { state: poufState }; },
+      restore: function (row, phase) {
+        if (phase !== "afterStage") return;
+        poufState = row && Number.isInteger(row.state) && row.state >= 0 && row.state <= 3 ? row.state : 0;
+        paintPoufs();
+      },
+      reset: function () {
+        poufState = 0;
+        paintPoufs();
+      }
     });
     paintPoufs();
   }

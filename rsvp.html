@@ -49632,6 +49632,7 @@ setOfficeProgress("pc", false);
         bbq: bbqOn,
         uv: !!(strip && strip.classList.contains("uv-mode")),
         rain: !!window.__wxRain,
+        snow: !!window.__wxSnow,
         storm: !!window.__wxStorm,
         overcast: !!window.__wxOvercast,
         eclipse: balcony && balcony.classList.contains("solar-eclipse") ? "solar" : balcony && balcony.classList.contains("lunar-eclipse") ? "lunar" : null,
@@ -49828,12 +49829,13 @@ setOfficeProgress("pc", false);
     } });
     register({ id: "party.dj.set", kind: "action", risk: "ambient", args: { dj: { type: "string", enum: ["sina", "danesh"], required: true } }, available: function () { return !!window.__gardenPartyOn; }, run: function (args) { var before = window.__djB ? "danesh" : "sina"; if (window.dj) window.dj(args.dj); var after = window.__djB ? "danesh" : "sina"; return { changed: before !== after, dj: after }; } });
     register({ id: "projector.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"], required: true } }, run: function (args) { var beforeRoom = window.currentStageName, before = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; if (window.goToStage) window.goToStage("cuddly"); if (window.__cuddlyProjector) window.__cuddlyProjector.set(args.mode); var after = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : null; return { changed: before !== after || beforeRoom !== window.currentStageName, mode: after }; } });
-    register({ id: "weather.scene.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["clear", "rain", "thunderstorm", "overcast"], required: true } }, run: function (args) {
-      var rain = args.mode === "rain" || args.mode === "thunderstorm", storm = args.mode === "thunderstorm", overcast = args.mode === "overcast";
+    register({ id: "weather.scene.set", kind: "action", risk: "ambient", args: { mode: { type: "string", enum: ["clear", "rain", "snow", "thunderstorm", "overcast"], required: true } }, run: function (args) {
+      var rain = args.mode === "rain" || args.mode === "thunderstorm", snow = args.mode === "snow", storm = args.mode === "thunderstorm", overcast = args.mode === "overcast";
       if (typeof window.rain === "function") window.rain(rain);
+      if (typeof window.snow === "function") window.snow(snow);
       if (typeof window.storm === "function") window.storm(storm);
       if (typeof window.overcast === "function") window.overcast(overcast);
-      return { mode: args.mode, rain: !!window.__wxRain, storm: !!window.__wxStorm, overcast: !!window.__wxOvercast };
+      return { mode: args.mode, rain: !!window.__wxRain, snow: !!window.__wxSnow, storm: !!window.__wxStorm, overcast: !!window.__wxOvercast };
     } });
     register({ id: "sky.effect.set", kind: "action", risk: "ambient", args: { effect: { type: "string", enum: ["none", "aurora", "twilight"], required: true } }, run: function (args) {
       if (typeof window.aurora === "function") window.aurora(args.effect === "aurora");
@@ -50119,8 +50121,9 @@ setOfficeProgress("pc", false);
     time: "time() — the loft's current time as {hours, minutes}; time(\"HH:MM\") or time(hours,minutes) SETS it (the ?time= override, driving day/night)",
     timestamp: "timestamp() — the fully-resolved current loft moment: {year, month, day, hours, minutes, iso}",
     projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"coffee\"), or a number 1–6. coffee/fire lead in warm/cold half-year order, followed by \"nightsky\" · \"workout\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
-    storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (steps out to the balcony; works DAY or night — it does NOT force dusk). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. Set the sky yourself with day()/night(). storm(false) clears the lightning; storm() reports whether it's storming. Weather levers are independent — see rain(), overcast(), day()/night()",
+    storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (steps out to the balcony; works DAY or night — it does NOT force dusk). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. Set the sky yourself with day()/night(). storm(false) clears the lightning; storm() reports whether it's storming. Weather levers are independent — see rain(), snow(), overcast(), day()/night()",
     rain: "rain(true) — falling rain over the balcony (drops in the sky + streaks down every window + a rain hiss), day or night; rain(false) clears it; rain() reports whether it's raining. Independent of storm() — rain alone is a plain shower, rain(true)+storm(true) is a thunderstorm",
+    snow: "snow(true) — falling snow over the balcony and through the loft windows, day or night; snow(false) clears it; snow() reports whether it's snowing",
     overcast: "overcast(true) — a grey overcast cloud wash over the whole loft (steps to the balcony + brings the day back, since the wash reads against daylight); overcast(false) clears it; overcast() reports whether it's overcast. Independent of rain()/storm()",
     wildfires: "wildfires(true) — severe wildfire smoke over the loft; wildfires(0–1) pins its intensity; wildfires(false) clears it; wildfires() reports the current intensity. A game reset returns smoke to Edmonton's real air and the season",
     dance: "dance(\"name\") — cue a garden-party dance by name in quotes, e.g. dance(\"salsa\"), or its menu number, or dance(random()); dance() returns the current dance {n, name}; dance(\"next\") skips ahead (run party(true) first). dances: \"techno\" · \"waltz\" · \"disco\" · \"swing\" · \"salsa\" · \"bhangra\" · \"bandari\" · \"polka\" · \"horah\" · \"bulgar\" · \"dupak\" · \"furiant\" · \"cumbia\"",
@@ -50353,7 +50356,7 @@ setOfficeProgress("pc", false);
     // help — bare shows the overview; `help <command>` prints one-line details. The whole
     // console app is plain English constants (not routed through T) — the command names are
     // code anyway, so there's no CS to keep in sync and no EN/CS parity burden.
-    var CONSOLE_HELP_OVERVIEW = "commands: /chat your question · /message your message · help · capabilities()/loftstatus() · clear · shortcuts()/keyboard() · quit · reset() · autoplay() · laser() · party() · chase() · guests() · tetris() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/overcast()/wildfires() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · gong() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · faal() · rumi() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
+    var CONSOLE_HELP_OVERVIEW = "commands: /chat your question · /message your message · help · capabilities()/loftstatus() · clear · shortcuts()/keyboard() · quit · reset() · autoplay() · laser() · party() · chase() · guests() · tetris() · arrive() · roster() · dance() · jukebox() · dj() · firstdance() · slowdance() · toasts() · groupphoto() · sparklers() · cocktail()/drink() · mixer() · couples() · officefolks() · trip() · room()/goto() · daylight()/day()/night() · season() · meteors() · storm()/rain()/snow()/overcast()/wildfires() · rainbow() · projector() · audio() · piano() · music()/guitar()/ukulele() · sound() · fishu() · speech() · beat() · temp() · weather() · sharecard() · clock() · countdown() · lang() · caption() · volume() · volumebutton() · candle() · butterfly() · water() · aurora()/aurora(kp) · aurora() · twilight() · timelapse() · fullscreen() · smoker()/smokerlid() · cooked() · beans() · gong() · servefood() · snowman()/leafpile()/blossomplay()/sprinkler() · phone()/phone(\"app\") · album() · snap() · madla() · laptop()/laptop(\"call\") · computer()/computer(\"app\")/monitor() · reboot() · killall · service · go()/no() · summon()/reveal()/click() · cursorTo()/ghostClick()/cursorHide() · play()/pause() · random() · sleep() · echo() · confetti() · faal() · rumi() · cat() · octi() · piratebox()/chest() · scripts() · run(\"name\") · repeat(\"name\")/stop() · edit(\"name\") · hb (help hb) · googlefonts() · localfonts() · openurl() · mailto() · credits · loft · unix gags (ls·pwd·cat·man love) · any JavaScript. try `help <command>` for details.";
     var helpM = c.match(/^help(?:\(\))?(?:\s+(.+))?$/);
     if (helpM) {
       var topic = helpM[1];
@@ -50605,7 +50608,7 @@ setOfficeProgress("pc", false);
   var CONSOLE_CMDS = [
     "help", "capabilities", "loftstatus", "clear", "shortcuts", "keyboard", "laser", "party", "chase", "guests", "tetris", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "meteors", "birthday", "play", "pause", "temp", "weather",
-    "clock", "time", "sharecard", "projector", "storm", "rain", "overcast", "wildfires", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
+    "clock", "time", "sharecard", "projector", "storm", "rain", "snow", "overcast", "wildfires", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "gong", "servefood", "kidsAsleep",
     "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
@@ -55638,6 +55641,7 @@ setOfficeProgress("pc", false);
       uv: !!(strip && strip.classList.contains("uv-mode")),
       eclipse: balcony && balcony.classList.contains("solar-eclipse") ? "solar" : balcony && balcony.classList.contains("lunar-eclipse") ? "lunar" : null,
       rain: !!window.__wxRain,
+      snow: !!window.__wxSnow,
       storm: !!window.__wxStorm,
       overcast: !!window.__wxOvercast,
       moon: typeof window.__moonPhase === "function" ? window.__moonPhase() : null,
@@ -69879,8 +69883,7 @@ async def localfont(name):
   window.__edmSun = null; // {sr,ss}: Edmonton sunrise/sunset in local minutes-of-day for the effective date
   window.__realWxMode = null; // Edmonton's mapped current look: "clear"|"overcast"|"rain"|"storm"|"snow", null until a fetch lands
   window.__realStormWet = true; // rolled once each time the real sky turns thunderstorm: mostly WET (rain+lightning), sometimes DRY (lightning only). Meaningless unless mode==="storm".
-  // The scene weather is three INDEPENDENT, composable layers, each separately forceable from the
-  // console (rain() / storm() / overcast()) and each also driven by the real-weather combo below:
+  // The scene weather is independently forceable from the console and also driven by real weather:
   //   RAIN     — falling precip particles + pane streaks + rain hiss
   //   STORM    — lightning flashes + thunder (DRY-CAPABLE: runs with or without rain)
   //   OVERCAST — the flat grey daylight of a cloud deck (.climate-overcast)
@@ -69892,9 +69895,10 @@ async def localfont(name):
   // rain/lightning storm is running" for the wind/glyph/windchime consumers that just want "is it
   // stormy out" (never the rain-particle or lightning gate — those read the precise layer flags).
   window.__wxRain = false;
+  window.__wxSnow = false;
   window.__wxStorm = false;
   window.__wxOvercast = false;
-  window.__wxSuppressed = { rain: false, storm: false, overcast: false };
+  window.__wxSuppressed = { rain: false, snow: false, storm: false, overcast: false };
   window.__realWxRainy = function () {
     // WMO: 51-67 drizzle/rain (incl. freezing), 80-82 showers, 95+ thunderstorm
     var w = window.__realWx;
@@ -69923,11 +69927,12 @@ async def localfont(name):
   }
   window.__realWxActive = function () { return realWxOverridden() ? null : window.__realWxMode; };
   window.__weatherLayerActive = function (layer) {
-    var forced = layer === "rain" ? window.__wxRain : layer === "storm" ? window.__wxStorm : window.__wxOvercast;
+    var forced = layer === "rain" ? window.__wxRain : layer === "snow" ? window.__wxSnow : layer === "storm" ? window.__wxStorm : window.__wxOvercast;
     if (forced) return true;
     if (window.__wxSuppressed && window.__wxSuppressed[layer]) return false;
     var mode = window.__realWxActive();
     if (layer === "rain") return mode === "rain" || (mode === "storm" && window.__realStormWet !== false);
+    if (layer === "snow") return mode === "snow";
     if (layer === "storm") return mode === "storm";
     return mode === "overcast";
   };
@@ -69936,9 +69941,10 @@ async def localfont(name):
   // the class-driven overcast/storm sky look stays either way — only the particles go.
   window.__realWxPrecip = function () {
     if (reduceMotionMq && reduceMotionMq.matches) return null;
+    if (window.__weatherLayerActive("snow")) return "snow";
     var m = window.__realWxActive();
     if ((m === "rain" || m === "storm") && window.__weatherLayerActive("rain")) return "rain";
-    return m === "snow" ? "snow" : null;
+    return null;
   };
   // the one WMO code -> glyph map, shared by the monitor's menu bar (which layers its
   // own storm precedence + day/night split on top) and the laptop's Prague readout
@@ -70371,8 +70377,8 @@ async def localfont(name):
   // storm cycle / console layer setters the instant a flag changes, so the two writers agree
   // instead of fighting (they read the same flags).
   function applyRealWx() {
-    var mode = window.__realWxActive ? window.__realWxActive() : null;
     var rain = window.__weatherLayerActive ? window.__weatherLayerActive("rain") : !!window.__wxRain;
+    var snow = window.__weatherLayerActive ? window.__weatherLayerActive("snow") : !!window.__wxSnow;
     var storm = window.__weatherLayerActive ? window.__weatherLayerActive("storm") : !!window.__wxStorm;
     var overcast = window.__weatherLayerActive ? window.__weatherLayerActive("overcast") : !!window.__wxOvercast;
     var storming = rain || storm;              // .storming = a cloudy precip/lightning sky (rain OR dry storm)
@@ -70381,7 +70387,7 @@ async def localfont(name):
     // precip/lightning on top. So the grey wash + the killed sun glare are shared, and a daytime
     // downpour can't come with a bright yellow sun over it. (The album's sky readout tests
     // .raining/.storming BEFORE .climate-overcast, so a rainy day still records as rain.)
-    var clouded = overcast || storming || mode === "snow";
+    var clouded = overcast || storming || snow;
     window.__balconyStorm = !!(window.__wxRain || window.__wxStorm); // compat alias: a GAME storm is running
     ["stage-garden", "stage-balcony", "stage-kitchen", "stage-office"].forEach(function (id) {
       var st = document.getElementById(id);
@@ -70400,8 +70406,7 @@ async def localfont(name):
   // "is the sky cloudy?" — no shooting stars when it is (overcast/rain/storm/snow hide the stars),
   // whether that's a game-forced layer or the real Edmonton sky.
   window.__skyCloudy = function () {
-    var m = window.__realWxActive ? window.__realWxActive() : null;
-    return (window.__weatherLayerActive && (window.__weatherLayerActive("rain") || window.__weatherLayerActive("storm") || window.__weatherLayerActive("overcast"))) || m === "snow";
+    return !!(window.__weatherLayerActive && (window.__weatherLayerActive("rain") || window.__weatherLayerActive("snow") || window.__weatherLayerActive("storm") || window.__weatherLayerActive("overcast")));
   };
   // "is the LIGHTNING layer live?" — the continuous thunder scheduler fires while it is (a forced
   // dry/real storm, or the game storm cycle); triggerBalconyThunder self-gates dusk + focus.
@@ -84500,6 +84505,7 @@ function spawnDustMote(container) {
   }
   window.__rollPrecip = rollPrecip; // toggleDusk tosses as night falls
   function fallsAsSnow() {
+    if (window.__weatherLayerActive && window.__weatherLayerActive("snow")) return true;
     // real weather is a measurement, not a coin: while it's DRIVING (no override held) it dictates
     // the drop TYPE outright — a season/date preview steps it aside, so its own coin lands instead
     var rw = window.__realWxActive ? window.__realWxActive() : null;
@@ -84519,7 +84525,7 @@ function spawnDustMote(container) {
   window.__summerSeason = summerSeason;
   // Snow comes down on its own, no storm needed — but only when today IS a snow day; rain
   // always waits for a storm (a storm on a snow day is just a snowstorm).
-  function snowsOnItsOwn() { return (window.__realWxPrecip && window.__realWxPrecip() === "snow") || (fallsAsSnow() && snowySeason()); }
+  function snowsOnItsOwn() { return !!window.__wxSnow || (window.__realWxPrecip && window.__realWxPrecip() === "snow") || (fallsAsSnow() && snowySeason()); }
   // One trace per snow spell, deferred until the visitor is actually looking through the
   // garden window. A hidden or unfocused onset stays armed rather than playing off-screen.
   (function firstSnowSignature() {
@@ -89107,7 +89113,7 @@ function spawnDustMote(container) {
   // 2-3 thunders, passes, then the whole thing repeats a minute or two later.
   (function balconyStorm() {
     var timers = [];
-    var checkpointWeather = { rain: null, storm: null, overcast: null };
+    var checkpointWeather = { rain: null, snow: null, storm: null, overcast: null };
     var SVGNS = "http://www.w3.org/2000/svg";
     var RAIN_DROPS = 14;
     function isDuskBalcony() {
@@ -89187,7 +89193,7 @@ function spawnDustMote(container) {
       if (window.__applyBalconyWeather) window.__applyBalconyWeather();
       else if (window.__updateGardenAurora) window.__updateGardenAurora();
     }
-    function weatherLayers() { return { rain: !!window.__wxRain, storm: !!window.__wxStorm, overcast: !!window.__wxOvercast }; }
+    function weatherLayers() { return { rain: !!window.__wxRain, snow: !!window.__wxSnow, storm: !!window.__wxStorm, overcast: !!window.__wxOvercast }; }
     function rememberWeather(key, on, source) {
       if (source === "ui") {
         checkpointWeather[key] = !!on;
@@ -89197,7 +89203,7 @@ function spawnDustMote(container) {
     }
     function reportWeatherLayers(before, source) {
       var after = weatherLayers();
-      if (before.rain === after.rain && before.storm === after.storm && before.overcast === after.overcast) return;
+      if (before.rain === after.rain && before.snow === after.snow && before.storm === after.storm && before.overcast === after.overcast) return;
       if (window.__loftStateChanged) window.__loftStateChanged("environment.weather", after, source || "internal");
     }
     // set the three layers independently. RAIN drives the falling drops (seeded here); the LIGHTNING
@@ -89212,6 +89218,15 @@ function spawnDustMote(container) {
       if (on && rainActive()) topUpDrops(); // a restored indoor room keeps the weather state without painting balcony drops there
       reportWeatherLayers(before, source);
       return !!window.__wxRain;
+    };
+    window.__setBalconySnow = function (on, source) {
+      var before = weatherLayers();
+      window.__wxSnow = !!on;
+      rememberWeather("snow", on, source);
+      apply();
+      if (on && rainActive()) topUpDrops();
+      reportWeatherLayers(before, source);
+      return !!window.__wxSnow;
     };
     window.__setBalconyStormLayer = function (on, source) {
       var before = weatherLayers();
@@ -89278,22 +89293,23 @@ function spawnDustMote(container) {
     };
     window.__weatherCheckpointState = function () {
       var row = {};
-      ["rain", "storm", "overcast"].forEach(function (key) {
+      ["rain", "snow", "storm", "overcast"].forEach(function (key) {
         if (typeof checkpointWeather[key] === "boolean") row[key] = checkpointWeather[key];
       });
       return Object.keys(row).length ? row : null;
     };
     window.__restoreWeatherCheckpointState = function (row) {
       row = row && typeof row === "object" ? row : null;
-      var valid = row && ["rain", "storm", "overcast"].every(function (key) {
+      var valid = row && ["rain", "snow", "storm", "overcast"].every(function (key) {
         return !Object.prototype.hasOwnProperty.call(row, key) || typeof row[key] === "boolean";
       });
-      checkpointWeather = { rain: null, storm: null, overcast: null };
-      window.__wxSuppressed = { rain: false, storm: false, overcast: false };
+      checkpointWeather = { rain: null, snow: null, storm: null, overcast: null };
+      window.__wxSuppressed = { rain: false, snow: false, storm: false, overcast: false };
       window.__setBalconyRain(valid && row.rain === true, "restore");
+      window.__setBalconySnow(valid && row.snow === true, "restore");
       window.__setBalconyStormLayer(valid && row.storm === true, "restore");
       window.__setBalconyOvercast(valid && row.overcast === true, "restore");
-      if (valid) ["rain", "storm", "overcast"].forEach(function (key) {
+      if (valid) ["rain", "snow", "storm", "overcast"].forEach(function (key) {
         if (Object.prototype.hasOwnProperty.call(row, key)) {
           checkpointWeather[key] = row[key];
           window.__wxSuppressed[key] = row[key] === false;
@@ -100302,9 +100318,20 @@ function spawnDustMote(container) {
     if (arguments.length === 0 || !window.__setBalconyRain) return prev; // no arg → is it raining?
     var on = !!arg; // rain(true) → precip on; rain(false) → off; returns the previous state
     if (!on) { window.__setBalconyRain(false, "ui"); narrate(false, "", "🌤 the rain lets up."); return prev; }
+    if (window.__setBalconySnow) window.__setBalconySnow(false, "ui");
     if (window.goToStage) window.goToStage("balcony"); // the rain sweeps the balcony sky (+ shows through every window)
     window.__setBalconyRain(true, "ui"); // falls day or night; pair with storm(true) for a classic thunderstorm
     narrate(true, "🌧 rain sweeps in over the balcony.", "");
+    return prev;
+  };
+  window.snow = function (arg) {
+    var prev = window.__weatherLayerActive ? window.__weatherLayerActive("snow") : !!window.__wxSnow;
+    if (arguments.length === 0 || !window.__setBalconySnow) return prev;
+    var on = !!arg;
+    if (!on) { window.__setBalconySnow(false, "ui"); narrate(false, "", "🌤 the snow lets up."); return prev; }
+    if (window.__setBalconyRain) window.__setBalconyRain(false, "ui");
+    window.__setBalconySnow(true, "ui");
+    narrate(true, "❄ snow drifts over the loft.", "");
     return prev;
   };
   window.overcast = function (arg) {

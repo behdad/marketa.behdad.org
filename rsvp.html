@@ -9547,6 +9547,23 @@ html.frame-rate-low.constellation-step #stage-garden.dusk .const-lines{opacity:.
 /* winter: precipitation falls as snow, which doesn't run down the glass — suppress the
    rain streaks so the storming window just reads cold (base opacity 0 keeps them hidden) */
 #loft-game-strip.season-holiday #stage-garden.raining #garden-pane-streaks .pane-streak{animation:none}
+/* The first snow seen through the garden window leaves one brief signature in the frost.
+   JS re-arms it only after the snow stops, so a whole snowfall gets one quiet moment. */
+#garden-first-snow-signature{opacity:0}
+#garden-first-snow-signature.tracing{animation:first-snow-frost-fade 5.2s ease-in-out both}
+#garden-first-snow-signature.tracing text{animation:first-snow-frost-trace 5.2s ease-out both}
+@keyframes first-snow-frost-fade{
+  0%,100%{opacity:0}
+  16%,72%{opacity:.72}
+}
+@keyframes first-snow-frost-trace{
+  0%{stroke-dashoffset:180}
+  42%,100%{stroke-dashoffset:0}
+}
+@media (prefers-reduced-motion: reduce){
+  #garden-first-snow-signature.tracing{animation:none;opacity:.62}
+  #garden-first-snow-signature.tracing text{animation:none;stroke-dashoffset:0}
+}
 /* SOLAR eclipse (daytime): a dark moon transits the sun right->left (N hemisphere),
    the sky blacks out at totality with a bright corona ring, then it passes. The
    .solar-eclipse class is added by JS; the hearts burst at totality (the 2017 event). */
@@ -13079,6 +13096,13 @@ section{margin:1.9rem 0}
 <path d="M528 292 L528 260 Q522 264 520 271 L515 274 Q518 279 512 281 L508 285 Q511 288 504 289 L499 291 Q501 292 490 292 Z" opacity="0.28"/>
 <path d="M528 292 L528 274 Q523 277 522 283 L518 287 Q520 290 512 292 Z" opacity="0.24"/>
 <path d="M526 272 L515 283 M522 268 L513 277" stroke="#ffffff" stroke-width="0.7" opacity="0.38" fill="none"/>
+</g>
+<g id="garden-first-snow-signature" aria-hidden="true" pointer-events="none">
+<text x="316" y="171" text-anchor="middle" font-family="Fraunces,serif" font-size="30"
+      font-weight="650" letter-spacing="1.5" fill="#f8fbfd" fill-opacity=".16"
+      stroke="#ffffff" stroke-opacity=".9" stroke-width="1.15" stroke-linecap="round"
+      stroke-linejoin="round" stroke-dasharray="180" stroke-dashoffset="180"
+      paint-order="stroke fill">m∞b</text>
 </g>
 <rect id="garden-window-flash" class="window-storm-flash" x="104" y="20" width="424" height="272"/>
 </g>
@@ -84473,6 +84497,38 @@ function spawnDustMote(container) {
   // Snow comes down on its own, no storm needed — but only when today IS a snow day; rain
   // always waits for a storm (a storm on a snow day is just a snowstorm).
   function snowsOnItsOwn() { return (window.__realWxPrecip && window.__realWxPrecip() === "snow") || (fallsAsSnow() && snowySeason()); }
+  // One trace per snow spell, deferred until the visitor is actually looking through the
+  // garden window. A hidden or unfocused onset stays armed rather than playing off-screen.
+  (function firstSnowSignature() {
+    var armed = true, cleanupTimer = 0;
+    var gardenIndex = STAGES.indexOf("garden");
+    function clearSignature() {
+      var mark = document.getElementById("garden-first-snow-signature");
+      if (mark) mark.classList.remove("tracing");
+      clearTimeout(cleanupTimer);
+      cleanupTimer = 0;
+    }
+    function trace() {
+      var mark = document.getElementById("garden-first-snow-signature");
+      if (!mark) return;
+      clearSignature();
+      void mark.getBBox();
+      mark.classList.add("tracing");
+      cleanupTimer = setTimeout(clearSignature, 5400);
+      armed = false;
+    }
+    (function tick() {
+      var snowing = snowsOnItsOwn();
+      if (!snowing) {
+        armed = true;
+        clearSignature();
+      } else if (armed && stageIndex === gardenIndex &&
+                 document.visibilityState !== "hidden" && document.hasFocus()) {
+        trace();
+      }
+      setTimeout(tick, 1000);
+    })();
+  })();
   // A single drifting snowflake: a soft circle (position via cx/cy, so a CSS transform
   // animation is safe — no transform attribute to clobber). onDone is the caller's 1:1
   // replenish, gated on its own rainActive()-style check, run on the fall's onfinish.

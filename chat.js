@@ -1087,7 +1087,7 @@ async function callOpenAI(request, env, payload) {
         text: { verbosity: "low" },
         instructions,
         input: [...payload.history, { role: "user", content: payload.message }],
-        max_output_tokens: payload.context.apps.games ? 480 : 220,
+        max_output_tokens: codeMode ? 4000 : payload.context.apps.games ? 480 : 220,
         store: false,
         safety_identifier: await safetyIdentifier(request),
       }),
@@ -1120,8 +1120,19 @@ async function callOpenAI(request, env, payload) {
 }
 
 function normalizeCodeReply(reply, codeRequest) {
-  let parsed;
-  try { parsed = JSON.parse(String(reply).replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")); } catch (_error) { parsed = { text: cleanText(reply, 1200), suggestion: "", replace: false }; }
+  let parsed = reply;
+  for (let depth = 0; depth < 4 && typeof parsed === "string"; depth++) {
+    const source = parsed.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    try { parsed = JSON.parse(source); }
+    catch (_error) {
+      parsed = { text: cleanText(reply, 1200), suggestion: "", replace: false };
+      break;
+    }
+    if (parsed && typeof parsed === "object" &&
+        (typeof parsed.suggestion === "string" || Array.isArray(parsed.edits))) break;
+    if (parsed && typeof parsed === "object" && typeof parsed.text === "string") parsed = parsed.text;
+  }
+  if (!parsed || typeof parsed !== "object") parsed = { text: cleanText(reply, 1200), suggestion: "", replace: false };
   const source = cleanText(codeRequest && codeRequest.source, MAX_CODE_SOURCE_CHARS);
   const rawEdits = parsed && Array.isArray(parsed.edits) ? parsed.edits : [];
   let edits = [];

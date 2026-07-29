@@ -713,6 +713,9 @@ const pythonCodeResponse = await worker.fetch(makeRequest("/chat", {
 const pythonCodeReply = JSON.parse((await pythonCodeResponse.json()).reply);
 check(pythonCodeResponse.status === 200 && pythonCodeReply.text === "Draws a square.",
   "Python Code assistance keeps the existing normalized reply envelope", pythonCodeReply);
+check(captured.body.max_output_tokens === 4000,
+  "Code assistance receives enough output room for complete replacement scripts",
+  captured.body.max_output_tokens);
 check(/CPython 3\.14/.test(captured.body.instructions) &&
       /LANGUAGE LOCK/.test(captured.body.instructions) &&
       /browser-compatible turtle/.test(captured.body.instructions) &&

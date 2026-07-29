@@ -40,6 +40,17 @@ check(coerced.edits.length === 0, "string offsets are not coerced into edits", c
 const legacy = parse({ text: "replace this", suggestion: "party(true);", replace: true }, { source: code });
 check(legacy.suggestion === "party(true);" && legacy.replace === true && Array.isArray(legacy.edits) && legacy.edits.length === 0, "legacy suggestion/replace replies remain compatible", legacy);
 
+const nested = JSON.parse(normalizeCodeReply(JSON.stringify({
+  text: JSON.stringify({
+    text: "Replace the current script.",
+    suggestion: "import turtle\nturtle.circle(60)",
+    replace: true,
+    edits: [],
+  }),
+}), { language: "python", source: "print('old')" }));
+check(nested.suggestion === "import turtle\nturtle.circle(60)" && nested.replace === true,
+  "nested JSON envelopes preserve a complete code suggestion", nested);
+
 const huge = parse({ text: "too much", edits: Array.from({ length: 17 }, (_, i) => ({ start: 0, end: 0, text: String(i) })) }, { source: code });
 check(huge.edits.length === 0, "edit count is capped", huge.edits.length);
 

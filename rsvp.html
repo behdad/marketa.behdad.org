@@ -51212,21 +51212,73 @@ setOfficeProgress("pc", false);
   // Code assistance is deliberately separate from Chat's conversation queue. It sends only
   // bounded code/context to the same verified Worker and renders a review panel; Apply is always
   // an explicit user click and never runs the returned text.
-  var codeAiBusy = false, codeAiSuggestion = "", codeAiReplace = false, codeAiEdits = null, codeAiStart = 0, codeAiEnd = 0, codeAiSourceCode = "";
+  var codeAiBusy = false, codeAiSuggestion = "", codeAiReplace = false, codeAiEdits = null, codeAiStart = 0, codeAiEnd = 0, codeAiSourceCode = "", codeAiOperation = "", codeAiRequestToken = 0;
   function codeAiSetStatus(text, ready) {
     if (!codeAiStatus) return;
     codeAiStatus.textContent = text;
     codeAiStatus.classList.toggle("ready", !!ready);
   }
   function codeAiClosePanel() { if (codeAiPanel) { codeAiPanel.classList.remove("open"); codeAiPanel.textContent = ""; } codeAiSuggestion = ""; codeAiEdits = null; }
+  function codeAiDismissReview() {
+    codeAiRequestToken++; codeAiBusy = false; codeAiClosePanel(); codeAiSetStatus("ready", false);
+    if (codeAskInput) codeAskInput.value = "";
+    [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = false; });
+  }
+  function codeAiLooseString(source, key) {
+    var at = source.indexOf('"' + key + '"');
+    if (at < 0) return null;
+    at = source.indexOf(":", at + key.length + 2);
+    if (at < 0) return null;
+    at = source.indexOf('"', at + 1);
+    if (at < 0) return null;
+    var boundary = /"\s*,\s*"(?:text|suggestion|replace|edits)"\s*:/.exec(source.slice(at));
+    if (boundary) {
+      var literal = source.slice(at, at + boundary.index + 1);
+      try { return JSON.parse(literal); } catch (_) {
+        var raw = literal.slice(1, -1);
+        return raw.replace(/\\(["\\/bfnrt])/g, function (_, escaped) {
+          return escaped === "n" ? "\n" : escaped === "r" ? "\r" : escaped === "t" ? "\t" :
+            escaped === "b" ? "\b" : escaped === "f" ? "\f" : escaped;
+        });
+      }
+    }
+    for (var i = at + 1; i < source.length; i++) {
+      if (source.charAt(i) === "\\") { i++; continue; }
+      if (source.charAt(i) === '"') {
+        try { return JSON.parse(source.slice(at, i + 1)); } catch (_) { break; }
+      }
+    }
+    return null;
+  }
   function codeAiRender(data) {
     if (!codeAiPanel) return;
+    for (var unwrap = 0; unwrap < 4 && data && typeof data.text === "string" &&
+         !String(data.suggestion || "").trim() && !(Array.isArray(data.edits) && data.edits.some(function (edit) { return edit && typeof edit.text === "string"; })); unwrap++) {
+      try {
+        var nestedText = data.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+        var nested;
+        try { nested = JSON.parse(nestedText); }
+        catch (_) {
+          var firstBrace = nestedText.indexOf("{"), lastBrace = nestedText.lastIndexOf("}");
+          if (firstBrace < 0 || lastBrace <= firstBrace) throw _;
+          nested = JSON.parse(nestedText.slice(firstBrace, lastBrace + 1));
+        }
+        if (typeof nested === "string") data = { text: nested };
+        else if (nested && typeof nested === "object") data = nested;
+        else break;
+      } catch (_) {
+        var looseText = codeAiLooseString(data.text, "text");
+        var looseSuggestion = codeAiLooseString(data.text, "suggestion");
+        if (looseText === null && looseSuggestion === null) { console.warn("[Code AI] could not parse suggestion envelope", data); break; }
+        data = { text: looseText || "", suggestion: looseSuggestion || "", replace: /"replace"\s*:\s*true/.test(data.text), edits: [] };
+      }
+    }
     codeAiPanel.textContent = "";
     var close = document.createElement("button"); close.className = "code-ai-close"; close.type = "button"; close.title = "Dismiss review"; close.textContent = "×";
     close.addEventListener("click", function (e) { e.stopPropagation(); codeAiClosePanel(); codeAiSetStatus("ready", true); });
     codeAiPanel.appendChild(close);
     var note = document.createElement("div"); note.textContent = data.text || "No review returned."; codeAiPanel.appendChild(note);
-    codeAiSuggestion = String(data.suggestion || ""); codeAiReplace = data.replace === true;
+    codeAiSuggestion = String(data.suggestion || ""); codeAiReplace = data.replace === true || codeAiOperation === "ask";
     codeAiEdits = Array.isArray(data.edits) ? data.edits.filter(function (x) { return x && Number.isFinite(+x.start) && Number.isFinite(+x.end) && typeof x.text === "string"; }).map(function (x) { return { start: Math.max(0, +x.start), end: Math.max(0, +x.end), text: x.text }; }) : null;
     if (codeAiEdits && codeAiEdits.length) {
       var editTitle = document.createElement("div"); editTitle.textContent = codeAiEdits.length + " proposed edit" + (codeAiEdits.length === 1 ? "" : "s") + ":"; codeAiPanel.appendChild(editTitle);
@@ -51237,12 +51289,12 @@ setOfficeProgress("pc", false);
       codeAiPanel.appendChild(applyEdits);
     }
     if (codeAiSuggestion) {
-      var pre = document.createElement("pre"); pre.textContent = codeAiSuggestion; pre.style.margin = "1px 0"; codeAiPanel.appendChild(pre);
       var apply = document.createElement("button"); apply.className = "code-ai-btn"; apply.type = "button"; apply.textContent = codeAiReplace ? (codeAiStart === codeAiEnd ? "replace script" : "replace selection") : "insert at cursor";
       apply.addEventListener("click", function (e) { e.stopPropagation(); if (!codeAiSuggestion || !codeCode) return; if (codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var a = codeAiStart, b = codeAiEnd; if (codeAiReplace && a === b) { a = 0; b = codeCode.value.length; } codeCode.value = codeAiReplace ? codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(b) : codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(a); codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied", true); try { codeCode.focus(); codeCode.setSelectionRange(a + codeAiSuggestion.length, a + codeAiSuggestion.length); } catch (_) {} });
       codeAiPanel.appendChild(apply);
       var copy = document.createElement("button"); copy.className = "code-ai-btn"; copy.type = "button"; copy.textContent = "copy";
       copy.addEventListener("click", function (e) { e.stopPropagation(); try { navigator.clipboard.writeText(codeAiSuggestion); codeAiSetStatus("copied", true); } catch (_) {} }); codeAiPanel.appendChild(copy);
+      var pre = document.createElement("pre"); pre.textContent = codeAiSuggestion; pre.style.margin = "1px 0"; codeAiPanel.appendChild(pre);
     }
     codeAiPanel.classList.add("open"); codeAiSetStatus("review suggestion", true);
   }
@@ -51251,7 +51303,7 @@ setOfficeProgress("pc", false);
     var challenge = window.__monitorChatTurnstile;
     var transport = window.fetch, endpoint = window.__monitorChatEndpoint || "https://marketa.behdad.org/chat";
     if (typeof challenge !== "function" || typeof transport !== "function") { codeAiSetStatus("ai unavailable", false); return; }
-    codeAiBusy = true; [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); codeAiClosePanel(); codeAiSetStatus("thinking…", false);
+    codeAiBusy = true; codeAiOperation = operation; var requestToken = ++codeAiRequestToken; [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (b) { if (b) b.disabled = true; }); codeAiClosePanel(); codeAiSetStatus("thinking…", false);
     var a = codeCode.selectionStart || 0, b = codeCode.selectionEnd || a;
     codeAiStart = a; codeAiEnd = b; codeAiSourceCode = codeCode.value;
     var context = typeof window.__chatContext === "function" ? window.__chatContext("Code " + operation) : { scripting_api: null };
@@ -51259,8 +51311,9 @@ setOfficeProgress("pc", false);
     Promise.resolve(challenge()).then(function (token) {
       return transport(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ message: userRequest || "Review this script using the requested operation.", mode: "code_assist", turnstile_token: token, context: context, code: { language: codeLanguage, operation: operation, request: userRequest || "", source: codeCode.value, selected: codeCode.value.slice(a, b), selection_start: a, selection_end: b, cursor: a, error: codeGetRunError(codeLanguage) } }) });
     }).then(function (response) { if (!response.ok) throw new Error("AI " + response.status); return response.json(); }).then(function (body) {
+      if (requestToken !== codeAiRequestToken) return;
       var raw = body && (body.reply || body.text || ""), data; try { data = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (_) { data = { text: String(raw), suggestion: "" }; } codeAiRender(data || {});
-    }).catch(function (error) { codeAiSetStatus(error && error.message === "AI 403" ? "verify again" : "ai unavailable", false); }).finally(function () { codeAiBusy = false; [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
+    }).catch(function (error) { if (requestToken === codeAiRequestToken) codeAiSetStatus(error && error.message === "AI 403" ? "verify again" : "ai unavailable", false); }).finally(function () { if (requestToken !== codeAiRequestToken) return; codeAiBusy = false; [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.disabled = false; }); });
   }
   // download the current buffer with the active language's conventional extension.
   function codeDownload() {
@@ -51434,6 +51487,7 @@ setOfficeProgress("pc", false);
     return true;
   };
   function closeCode() {
+    codeAiDismissReview();
     if (!monitor.classList.contains("show-code")) return;
     if (typeof codeAcHide === "function") codeAcHide(); // drop any open autocomplete popup with the app
     codeFlushAutoSave(); // commit any pending debounced save before the app tears down (Esc is faster than the debounce)

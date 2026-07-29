@@ -70,8 +70,8 @@ check(s.drag.ghost && s.drag.ghostCards === 2 && s.drag.hidden === 2 &&
   "pointer dragging lifts the full visible stack and lands a legal tableau move", s.drag);
 check(s.foundation.moved && s.foundation.home.length === 1 && s.foundation.waste.length === 0,
   "an Ace moves from waste to its foundation", s.foundation);
-check(JSON.stringify(s.courts.sort()) === JSON.stringify(["ali","behdad","marketa"]),
-  "Jacks, Queens and Kings render Ali, Markéta and Behdad portraits", s.courts);
+check(JSON.stringify(s.courts.sort()) === JSON.stringify(["behdad","jay","marketa"]),
+  "Jacks, Queens and Kings render Jay, Markéta and Behdad portraits", s.courts);
 check(s.killChooser.chooser && !s.killChooser.mine && s.killMines.mine && !s.killMines.sol &&
   s.killSol.sol && !s.killSol.mine && s.killSol.cards === 52,
   "chooser, Mines and Solitaire dispatch their distinct Kill gags", { chooser: s.killChooser, mines: s.killMines, solitaire: s.killSol });

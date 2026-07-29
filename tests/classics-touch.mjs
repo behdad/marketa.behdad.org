@@ -136,8 +136,14 @@ function check(ok, message, detail) {
     }
     const preview = await evaluate(`(function(){
       var ghost=document.querySelector(".sol-drag-ghost"),r=ghost&&ghost.getBoundingClientRect();
-      return{present:!!ghost,rect:r&&[r.x,r.y,r.width,r.height]};
+      var source=document.querySelector(".sol-drag-source"),sr=source&&source.getBoundingClientRect();
+      return{present:!!ghost,rect:r&&[r.x,r.y,r.width,r.height],sourceRect:sr&&[sr.x,sr.y,sr.width,sr.height],
+        hidden:!!source&&getComputedStyle(source).visibility==="hidden",cards:ghost&&ghost.querySelectorAll(".sol-card").length};
     })()`);
+    if (process.env.CLASSICS_TOUCH_SHOT) {
+      const shot = await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      fs.writeFileSync(process.env.CLASSICS_TOUCH_SHOT, Buffer.from(shot.data, "base64"));
+    }
     await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await sleep(80);
     return preview;
@@ -181,8 +187,10 @@ function check(ok, message, detail) {
   const dragTarget = await centre('[data-sol-target="tableau"][data-sol-pile="0"]');
   const dragPreview = await drag(dragSource, dragTarget);
   const piles = await evaluate("window.__solitaireState().tableau.map(function(pile){return pile.length;})");
-  check(dragPreview.present && dragPreview.rect[2] > 20 && dragPreview.rect[3] > 30,
-    "a Solitaire card visibly follows a live Android touch drag", dragPreview);
+  check(dragPreview.present && dragPreview.hidden && dragPreview.cards === 1 &&
+    Math.abs(dragPreview.rect[2] - dragPreview.sourceRect[2]) < 2 &&
+    Math.abs(dragPreview.rect[3] - dragPreview.sourceRect[3]) < 2,
+    "the actual-size Solitaire card lifts from its pile during a live Android touch drag", dragPreview);
   check(piles[0] === 2 && piles[1] === 0, "a real Android touch drag moves a legal Solitaire card", piles);
 
   ws.close();

@@ -758,8 +758,9 @@ to a fresh chooser.
 
 Solitaire owns plain card records in `solStock`, `solWaste`, `solTableau`, and
 `solFoundations`; `solitaireMove` is the shared legality/mutation path for click,
-double-click, drag, and focused tests. Its DOM drag ghost lives outside the
-scaled SVG `foreignObject`; a non-passive touch-move fallback both keeps Android
+double-click, drag, and focused tests. Its actual-size DOM drag stack lives outside
+the scaled SVG `foreignObject` while the in-pile source cards hide in place; a
+non-passive touch-move fallback both keeps Android
 from claiming the gesture and paints the live ghost when transformed pointer
 movement is delayed. Drag completion listens at `window` scope so failed pointer
 capture cannot lose the release. Mines suppresses Android's synthetic

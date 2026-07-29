@@ -16,10 +16,10 @@ var HARNESS = [
   'async function run(){',
   ' var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");window.goToStage("office");if(tower)tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();await sleep(40);',
   ' var ids=[].slice.call(document.querySelectorAll("#monitor-desktop-dock .dock-app")).map(function(el){return el.id.replace("monitor-dock-","");});',
-  ' S("grid",{ids:ids,calendar:!!document.getElementById("monitor-dock-calendar"),tattooAt:ids.indexOf("tattoo"),games:ids.slice(8,12),bottom:ids.slice(12,16)});',
+  ' S("grid",{ids:ids,calendar:!!document.getElementById("monitor-dock-calendar"),tattooAt:ids.indexOf("tattoo"),games:ids.slice(8,12),bottom:ids.slice(12,16)});var snakeTile=document.querySelector(".dock-app-snake .dock-tile"),snakeDos=document.querySelector("#dicon-snake text");S("theme",{tile:snakeTile&&getComputedStyle(snakeTile).backgroundColor,dos:snakeDos&&snakeDos.getAttribute("fill")});',
   ' var dateControl=document.getElementById("monitor-desk-calendar");if(dateControl)dateControl.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(20);S("calendar",{control:!!dateControl,opened:mon.classList.contains("show-calendar"),phoneTile:!!document.querySelector(".phone-app-tile[data-app=\\"calendar\\"], [data-phone-app=\\"calendar\\"]")});if(window.__closeTopMonitorApp)window.__closeTopMonitorApp();mon.classList.add("show-caps");',
   ' function search(q){q.split("").forEach(key);var state=window.__monitorDockSearch();key("Escape");return state;}S("aliases",{snake:search("snake"),nibbles:search("nibbles"),dos:search("dos")});',
-  ' window.__openMonitorApp("snake");await sleep(30);var first=document.querySelector("#monitor-snake-wrap iframe");S("open",{open:mon.classList.contains("show-snake"),frame:!!first,src:first&&first.getAttribute("src"),state:window.__snakeState()});var gutters=document.querySelectorAll("#monitor-snake .monitor-runtime-side-hit");gutters[0].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:250,clientY:250}));S("gutters",{count:gutters.length,menu:!!document.querySelector(".mon-ctx")});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
+  ' window.__openMonitorApp("snake");await sleep(30);var first=document.querySelector("#monitor-snake-wrap iframe");S("open",{open:mon.classList.contains("show-snake"),frame:!!first,src:first&&first.getAttribute("src"),state:window.__snakeState()});var fsCalls=0;first.requestFullscreen=function(){fsCalls++;};var snakeFs=document.getElementById("monitor-snake-fs");snakeFs.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));S("fullscreen",{button:!!snakeFs,calls:fsCalls,bg:snakeFs&&snakeFs.querySelector("rect:not(.mini-hit)").getAttribute("fill"),mark:snakeFs&&snakeFs.querySelector("path").getAttribute("stroke"),closeBg:document.querySelector("#monitor-snake-close rect:not(.mini-hit)").getAttribute("fill"),closeMark:document.querySelector("#monitor-snake-close path").getAttribute("stroke")});var gutters=document.querySelectorAll("#monitor-snake .monitor-runtime-side-hit");gutters[0].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:250,clientY:250}));S("gutters",{count:gutters.length,menu:!!document.querySelector(".mon-ctx")});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
   ' var oldReady=window.__snakeRunning;window.__snakeRunning=function(){return true;};mon.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:500,clientY:500}));var menu=document.querySelector(".mon-ctx"),labels=menu?[].slice.call(menu.querySelectorAll("button")).map(function(b){return b.textContent.trim();}):[];S("menu",{labels:labels,kill:!!(menu&&menu.querySelector(".ctx-kill:not(:disabled)")),restart:!!(menu&&menu.querySelector(".ctx-restart:not(:disabled)"))});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));window.__snakeRunning=oldReady;',
   ' window.__closeMonitorSnake();await sleep(10);S("close",{open:mon.classList.contains("show-snake"),retained:document.querySelector("#monitor-snake-wrap iframe")===first});',
   ' mon.classList.add("show-caps");window.__restartMonitorSnake();await sleep(20);var second=document.querySelector("#monitor-snake-wrap iframe");S("restart",{open:mon.classList.contains("show-snake"),fresh:!!second&&second!==first});',
@@ -38,6 +38,7 @@ console.log("rsvp.html snake DOS app:");
 var expectedExeHash = "ca601f2eb07727b5100017d524df6f0698751b89ee2ea1eb8a1df08c955bedc2";
 var sourceExe = fs.readFileSync("dos/source/nibbles.exe");
 var bundle = fs.readFileSync("dos/snake.jsdos");
+var playerHtml = fs.readFileSync("dos/player.html", "utf8");
 var bundledExe = childProcess.execFileSync("unzip", ["-p", "dos/snake.jsdos", "NIBBLES.EXE"]);
 var bundleEntries = childProcess.execFileSync("unzip", ["-Z1", "dos/snake.jsdos"], { encoding: "utf8" }).trim().split(/\r?\n/);
 check(sourceExe.length === 59476 && crypto.createHash("sha256").update(sourceExe).digest("hex") === expectedExeHash,
@@ -48,6 +49,11 @@ check(crypto.createHash("sha256").update(bundle).digest("hex") === "15f35bb40c08
   "the complete DOS bundle matches its documented pinned hash");
 check(JSON.stringify(bundleEntries) === JSON.stringify([".jsdos/dosbox.conf", "NIBBLES.EXE", "README.TXT"]),
   "the DOS bundle contains only its configuration, historical executable, and provenance note", bundleEntries);
+check(/type EXIT to return to the loft/.test(playerHtml) &&
+  /napište EXIT pro návrat do bytu/.test(playerHtml) &&
+  /exitInput\.trim\(\)\.toLowerCase\(\) === "exit"/.test(playerHtml) &&
+  /tell\("snake-close"\)/.test(playerHtml),
+  "the post-game DOS prompt explains EXIT in both languages and EXIT returns to the loft");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4500, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
@@ -59,12 +65,22 @@ check(!s.grid.calendar && s.grid.tattooAt === 7 &&
 check(s.calendar.control && s.calendar.opened, "the explicit desktop date/countdown control opens Calendar", s.calendar);
 check(s.aliases.snake.match === "snake" && s.aliases.nibbles.match === "snake" && s.aliases.dos.match === "snake",
   "search resolves snake, nibbles, and dos to the same app", s.aliases);
+check(s.theme.tile === "rgb(23, 45, 150)" && s.theme.dos === "#ffd83d",
+  "the Nibbles launcher is yellow on DOS blue", s.theme);
 check(s.open.open && s.open.frame && /^dos\/player\.html\?lang=/.test(s.open.src || ""),
   "opening snake lazily creates its self-hosted DOS iframe", s.open);
+check(s.fullscreen.button && s.fullscreen.calls === 1 &&
+  s.fullscreen.bg === "#b6000b" && s.fullscreen.closeBg === "#b6000b" &&
+  s.fullscreen.mark === "#f8f5ec" && s.fullscreen.closeMark === "#f8f5ec",
+  "the red-and-white Fullscreen and Dismiss controls are distinct and fullscreen the DOS iframe", s.fullscreen);
+check(/function focusSnakeFrame\(\)/.test(fs.readFileSync("rsvp.html", "utf8")) &&
+  /Promise\.resolve\(entered\)\.then\(function \(\) \{[\s\S]*?focusSnakeFrame\(\)/.test(fs.readFileSync("rsvp.html", "utf8")) &&
+  /addEventListener\("fullscreenchange", snakeFullscreenFocus\)/.test(fs.readFileSync("rsvp.html", "utf8")),
+  "fullscreen completion and fullscreenchange both return keyboard focus to DOSBox");
 check(s.gutters.count === 2 && s.gutters.menu,
   "both 4:3 side gutters belong to the monitor context-menu surface", s.gutters);
-check(s.menu.kill && s.menu.restart && s.menu.labels.length === 2,
-  "the open DOS surface exposes enabled Kill and Restart actions", s.menu);
+check(s.menu.kill && !s.menu.restart && JSON.stringify(s.menu.labels) === JSON.stringify(["Kill app"]),
+  "the open DOS surface exposes only the enabled Kill app action", s.menu);
 check(!s.close.open && s.close.retained, "normal close pauses and retains the DOS machine", s.close);
 check(s.restart.open && s.restart.fresh, "Restart replaces it with a fresh DOS machine", s.restart);
 check(s.killGag.active, "Kill starts the self-devouring snake farewell", s.killGag);

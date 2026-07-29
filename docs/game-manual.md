@@ -248,7 +248,10 @@ Double-tap a band to zero that band. On touch devices, press and hold a band to
 open the same **Reset EQ** and **Kill app** menu provided by right-click.
 
 The monitor's **snake** app runs the four-player DOS edition of Nibbles. It is
-also discoverable by searching for `nibbles` or `dos`.
+also discoverable by searching for `nibbles` or `dos`. Its **Fullscreen** button
+expands the DOS game itself; its red-and-white controls echo the game screen.
+Esc leaves Nibbles at its historical DOS
+prompt; type `EXIT` there to return to the loft.
 
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.

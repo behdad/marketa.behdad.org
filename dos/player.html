@@ -11,8 +11,6 @@ body{font-family:ui-monospace,Menlo,Consolas,monospace;touch-action:none}
 #dos{position:relative}
 #status{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;box-sizing:border-box;background:#000;color:#8fd070;text-align:center;font-size:clamp(10px,4vw,16px);line-height:1.35}
 #status[hidden]{display:none}
-#exit-hint{position:absolute;z-index:18;left:50%;bottom:.7rem;transform:translateX(-50%);max-width:calc(100% - 1.4rem);box-sizing:border-box;padding:.35rem .65rem;border:1px solid #ffd83d;background:#172d96;color:#ffd83d;text-align:center;font-size:clamp(9px,2.7vw,13px);line-height:1.25;pointer-events:none}
-#exit-hint[hidden]{display:none}
 .emulator-root,.emulator-container,.emulator-canvas{width:100%!important;height:100%!important}
 canvas{image-rendering:pixelated}
 </style>
@@ -21,26 +19,52 @@ canvas{image-rendering:pixelated}
 <body>
 <div id="dos"></div>
 <div id="status">loading DOS…</div>
-<div id="exit-hint" hidden></div>
 <script>
 (function () {
   "use strict";
   var status = document.getElementById("status");
-  var exitHint = document.getElementById("exit-hint");
   var lang = new URLSearchParams(location.search).get("lang") === "cs" ? "cs" : "en";
   var text = {
-    en: { loading: "loading DOS…", failed: "DOS could not start. Restart the app to retry.", exit: "DOS prompt · type EXIT to return to the loft" },
-    cs: { loading: "načítám DOS…", failed: "DOS se nepodařilo spustit. Zkuste aplikaci restartovat.", exit: "Příkazový řádek DOS · napište EXIT pro návrat do bytu" }
+    en: { loading: "loading DOS…", failed: "DOS could not start. Restart the app to retry." },
+    cs: { loading: "načítám DOS…", failed: "DOS se nepodařilo spustit. Zkuste aplikaci restartovat." }
   };
   status.textContent = text[lang].loading;
-  exitHint.textContent = text[lang].exit;
   function tell(type, extra) {
     try { parent.postMessage(Object.assign({ type: type }, extra || {}), location.origin); } catch (_error) {}
   }
+  var exitInput = "", atPrompt = false;
+  function handleExitKeys(event) {
+    if (event.key === "Escape" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      tell("snake-close");
+      return;
+    }
+    if (event.key === "Escape") {
+      exitInput = ""; atPrompt = true;
+      return;
+    }
+    if (!atPrompt) return;
+    if (event.key === "Backspace") exitInput = exitInput.slice(0, -1);
+    else if (event.key === "Enter") {
+      var command = exitInput.trim().toLowerCase();
+      if (command === "exit") {
+        event.preventDefault();
+        event.stopPropagation();
+        tell("snake-close");
+      } else if (command === "nibbles" || command === "nibbles.exe") atPrompt = false;
+      exitInput = "";
+    } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      exitInput += event.key;
+      if (exitInput.length > 16) exitInput = exitInput.slice(-16);
+    }
+  }
+  // Register before Dos() installs its keyboard plumbing; window capture sees Esc
+  // before the emulator can consume it on the way to the canvas/worker.
+  window.addEventListener("keydown", handleExitKeys, true);
   var player;
   try {
     player = Dos(document.getElementById("dos"), {
-      url: "snake.jsdos?v=15f35bb4",
+      url: "snake.jsdos?v=7a0a1895",
       pathPrefix: "runtime/emulators/",
       backend: "dosbox",
       backendLocked: true,
@@ -84,32 +108,6 @@ canvas{image-rendering:pixelated}
       y: Math.max(0, Math.min(1, event.clientY / Math.max(1, innerHeight)))
     });
   });
-  var exitInput = "";
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      tell("snake-close");
-      return;
-    }
-    if (event.key === "Escape") {
-      exitInput = "";
-      setTimeout(function () { exitHint.hidden = false; }, 180);
-      return;
-    }
-    if (exitHint.hidden) return;
-    if (event.key === "Backspace") exitInput = exitInput.slice(0, -1);
-    else if (event.key === "Enter") {
-      if (exitInput.trim().toLowerCase() === "exit") {
-        event.preventDefault();
-        event.stopPropagation();
-        tell("snake-close");
-      }
-      exitInput = "";
-    } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      exitInput += event.key;
-      if (exitInput.length > 16) exitInput = exitInput.slice(-16);
-    }
-  }, true);
 }());
 </script>
 </body>

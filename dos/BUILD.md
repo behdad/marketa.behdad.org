@@ -22,7 +22,7 @@ described as open source.
 `snake.jsdos` is a ZIP-format js-dos bundle assembled from the pinned
 `source/nibbles.exe` plus the locally authored DOSBox configuration and
 `README.TXT` in `bundle-config/`. Its SHA-256 is
-`15f35bb40c086fda6b76ae87d7b14839c0f029f061e643a5a6a4e68494598408`.
+`7a0a1895d2f9c865b5f502f94426dad1040c1a2b9d92c95ff42af097b6736735`.
 
 ## Repacking
 

@@ -45,15 +45,16 @@ check(sourceExe.length === 59476 && crypto.createHash("sha256").update(sourceExe
   "the pinned owner-supplied four-player Nibbles executable has the exact expected size and hash");
 check(bundledExe.equals(sourceExe) && crypto.createHash("sha256").update(bundledExe).digest("hex") === expectedExeHash,
   "the DOS bundle embeds that executable byte-for-byte");
-check(crypto.createHash("sha256").update(bundle).digest("hex") === "15f35bb40c086fda6b76ae87d7b14839c0f029f061e643a5a6a4e68494598408",
+check(crypto.createHash("sha256").update(bundle).digest("hex") === "7a0a1895d2f9c865b5f502f94426dad1040c1a2b9d92c95ff42af097b6736735",
   "the complete DOS bundle matches its documented pinned hash");
 check(JSON.stringify(bundleEntries) === JSON.stringify([".jsdos/dosbox.conf", "NIBBLES.EXE", "README.TXT"]),
   "the DOS bundle contains only its configuration, historical executable, and provenance note", bundleEntries);
-check(/type EXIT to return to the loft/.test(playerHtml) &&
-  /napište EXIT pro návrat do bytu/.test(playerHtml) &&
-  /exitInput\.trim\(\)\.toLowerCase\(\) === "exit"/.test(playerHtml) &&
-  /tell\("snake-close"\)/.test(playerHtml),
-  "the post-game DOS prompt explains EXIT in both languages and EXIT returns to the loft");
+check(/atPrompt = true/.test(playerHtml) &&
+  /command === "exit"/.test(playerHtml) &&
+  /command === "nibbles" \|\| command === "nibbles\.exe"/.test(playerHtml) &&
+  /tell\("snake-close"\)/.test(playerHtml) &&
+  playerHtml.indexOf('window.addEventListener("keydown", handleExitKeys, true)') < playerHtml.indexOf("player = Dos("),
+  "the DOS prompt can replay Nibbles or return to the loft without confusing later game input");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4500, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
@@ -84,6 +85,8 @@ check(s.menu.kill && !s.menu.restart && JSON.stringify(s.menu.labels) === JSON.s
 check(!s.close.open && s.close.retained, "normal close pauses and retains the DOS machine", s.close);
 check(s.restart.open && s.restart.fresh, "Restart replaces it with a fresh DOS machine", s.restart);
 check(s.killGag.active, "Kill starts the self-devouring snake farewell", s.killGag);
+check(/id="monitor-snake-farewell"[\s\S]*?fill="#172d96"[\s\S]*?id="monitor-snake-kill-body"[\s\S]*?stroke="#ffd84a"/.test(fs.readFileSync("rsvp.html", "utf8")),
+  "the Kill farewell uses the launcher's yellow snake on DOS blue");
 check(!s.kill.open && !s.kill.frame && s.kill.state.state === "cold", "Kill tears the DOS machine down", s.kill);
 
 console.log("");

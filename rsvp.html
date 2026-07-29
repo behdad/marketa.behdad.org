@@ -369,9 +369,60 @@ footer{margin-top:2.6rem}
    position-tracking (the same principle as the pocket phone's ✕, which is a child of the
    shell it closes). Shown only while THAT device holds the view (its group carries
    .dev-zoomed); a corner tap also zooms out on its own, this just makes the exit obvious. */
-.bezel-close{opacity:0; pointer-events:none; transition:opacity .2s ease; cursor:pointer}
-.dev-zoomed .bezel-close{opacity:1; pointer-events:auto}
-.bezel-close:hover circle{fill:var(--wine)}
+.bezel-close,.bezel-fs{opacity:0; pointer-events:none; transition:opacity .2s ease; cursor:pointer}
+.dev-zoomed .bezel-close,.dev-zoomed .bezel-fs{opacity:1; pointer-events:auto}
+.bezel-close:hover circle,.bezel-fs:hover circle{fill:var(--wine)}
+/* Monitor-content fullscreen keeps only the authored 124×42 display surface. The
+   existing screen clip provides the rounded mask; the desk zoom supplies the uniform
+   contain-scale, so the display letterboxes instead of stretching. */
+#office-monitor.monitor-content-fullscreen > *{visibility:hidden}
+#office-monitor.monitor-content-fullscreen > #office-monitor-clip,
+#office-monitor.monitor-content-fullscreen > #office-monitor-bg,
+#office-monitor.monitor-content-fullscreen > #office-monitor-screen-content{visibility:visible}
+#stage-office.monitor-content-fullscreen > *{visibility:hidden}
+#stage-office.monitor-content-fullscreen > #office-monitor{visibility:visible}
+#hunt-fullscreen-area.monitor-content-fullscreen-host{
+  position:fixed;
+  inset:0;
+  transform:none;
+  z-index:50;
+  width:100vw !important;
+  height:100vh !important;
+  max-width:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden !important;
+  background:#000 !important;
+  border-color:#000 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+#hunt-fullscreen-area.monitor-content-fullscreen-host:fullscreen::backdrop,
+#hunt-fullscreen-area.monitor-content-fullscreen-host:-webkit-full-screen::backdrop{background:#000}
+#hunt-fullscreen-area.monitor-content-fullscreen-host > :not(.hunt-frame){display:none}
+#hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-frame{
+  width:100vw !important;
+  height:50vw !important;
+  max-width:none !important;
+  margin:0 !important;
+  flex:0 0 auto;
+  gap:0;
+  background:#000;
+}
+#hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-left,
+#hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-right{display:none}
+#hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-viewport{
+  width:100%;
+  height:100%;
+  border-radius:0;
+  box-shadow:none;
+  background:#000;
+}
+#hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-viewport > :not(#loft-game-strip){display:none}
 #loft-game-strip{
   display:block; width:500%; height:auto; user-select:none; -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
@@ -4106,7 +4157,8 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 #monitor-console.svg-view #monitor-console-svg{display:inline}
 #monitor-console.svg-view #monitor-console-wrap{visibility:hidden}
 #monitor-console-svg,#monitor-console-svg *{cursor:default}
-#monitor-console-view-toggle{cursor:pointer}
+#monitor-console-view-toggle{cursor:pointer;opacity:0;pointer-events:none}
+#monitor-console-view-toggle.has-graphics{opacity:1;pointer-events:auto}
 #monitor-console-view-toggle:hover .console-view-hover{opacity:.35}
 .console-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#100d0a; padding:1.8px 2px 2.6px; font-family:ui-monospace,Menlo,monospace; font-size:2px; line-height:1.4; color:#cfe3cf}
 /* the scrollback is a scroll container, so it clips at its own padding box — and at 2px
@@ -4531,20 +4583,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .vid-ctrl-fill{width:0%; height:100%; background:#c68e95; border-radius:0.8px}
 .vid-ctrl-vol .vid-ctrl-fill{background:#f8f5ec}
 .vid-ctrl-time{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:3px; line-height:1; min-width:7.5px; text-align:right}
-.vid-ctrl-mute, .vid-ctrl-fs{cursor:pointer; display:flex; align-items:center}
-.vid-ctrl-mute svg, .vid-ctrl-fs svg{width:3.4px; height:3.4px; display:block}
-/* fullscreened, the wrap's px sizes are honest screen pixels — scale the strip up */
-.vid-wrap:fullscreen{width:100%; height:100%}
-.vid-wrap:fullscreen .vid-picker{height:38px; gap:4px; padding:5px}
-.vid-wrap:fullscreen:not(.paused) .vid-picker{height:0; padding-top:0; padding-bottom:0}
-.vid-wrap:fullscreen .vid-pick{border-radius:6px; padding:7px 14px; font-size:17px}
-.vid-wrap:fullscreen .vid-ctrl{height:44px; gap:12px; padding:0 14px}
-.vid-wrap:fullscreen .vid-ctrl-pp{font-size:26px; width:30px}
-.vid-wrap:fullscreen .vid-ctrl-time{font-size:15px; min-width:56px}
-.vid-wrap:fullscreen .vid-ctrl-mute svg, .vid-wrap:fullscreen .vid-ctrl-fs svg{width:24px; height:24px}
-.vid-wrap:fullscreen .vid-ctrl-vol{width:100px}
-.vid-wrap:fullscreen .vid-ctrl-track{height:6px; border-radius:3px}
-.vid-wrap:fullscreen .vid-play{font-size:90px}
+.vid-ctrl-mute{cursor:pointer; display:flex; align-items:center}
+.vid-ctrl-mute svg{width:3.4px; height:3.4px; display:block}
 /* ── video control strip (end) ── */
 /* calendar app: the wedding date cards + .ics download over the screen */
 #monitor-calendar{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
@@ -4812,7 +4852,8 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #monitor-python.turtle-view #monitor-py-turtle{display:inline}
 #monitor-py-turtle, #monitor-py-turtle *{cursor:default}
 #monitor-python.turtle-view #monitor-py-wrap{visibility:hidden}
-#monitor-py-view-toggle{cursor:pointer}
+#monitor-py-view-toggle{cursor:pointer;opacity:0;pointer-events:none}
+#monitor-py-view-toggle.has-graphics{opacity:1;pointer-events:auto}
 #monitor-py-view-toggle:hover .py-view-hover{opacity:.35}
 .py-wrap{background:#0e1520; color:#d9e4f0}
 .py-wrap .console-ps{color:#ffd43b}
@@ -4834,8 +4875,8 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
    Kill or an internal restart destroys the iframe so the machine and listeners are released. */
 #monitor-snake{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
 #office-monitor.show-snake #monitor-snake{opacity:1; pointer-events:auto}
-#monitor-snake-close,#monitor-snake-fs{cursor:pointer}
-#monitor-snake-close:hover .seg-hover,#monitor-snake-fs:hover .seg-hover{opacity:.55}
+#monitor-snake-close{cursor:pointer}
+#monitor-snake-close:hover .seg-hover{opacity:.55}
 .monitor-runtime-side-hit{pointer-events:none}
 #office-monitor.show-snake #monitor-snake .monitor-runtime-side-hit,
 #office-monitor.show-doom #monitor-doom:is([data-shoot-view="doom"],[data-shoot-view="duke"],[data-shoot-view="q3"]) .monitor-runtime-side-hit{pointer-events:all}
@@ -4851,12 +4892,6 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #monitor-doom-back{opacity:0;pointer-events:none;cursor:pointer}
 #office-monitor.show-doom #monitor-doom:not([data-shoot-view="chooser"]) #monitor-doom-back{opacity:1;pointer-events:auto}
 #monitor-doom-back:hover .seg-hover{opacity:.55;fill:#4b2d20}
-.monitor-shoot-fs{opacity:0;pointer-events:none;cursor:pointer}
-#office-monitor.show-doom #monitor-doom[data-shoot-view="doom"] .monitor-shoot-fs[data-shoot-fs="doom"],
-#office-monitor.show-doom #monitor-doom[data-shoot-view="duke"] .monitor-shoot-fs[data-shoot-fs="duke"],
-#office-monitor.show-doom #monitor-doom[data-shoot-view="q3"] .monitor-shoot-fs[data-shoot-fs="q3"]{opacity:1;pointer-events:all}
-.monitor-shoot-fs .shoot-fs-bg{fill:#805438;stroke:#5e3827}
-.monitor-shoot-fs:hover .seg-hover{opacity:.55;fill:#4b2d20}
 .doom-wrap{width:100%; height:100%; overflow:hidden; background:#000; display:grid; grid-template-rows:100%; place-items:center} /* grid avoids layered position:absolute descendants under the scaled foreignObject (WebKit bug 23113). Replaced canvases/iframes still cannot composite there on WebKit. */
 #monitor-shoot-picker{grid-area:1/1; align-self:stretch; justify-self:stretch; display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:5px 6px; box-sizing:border-box; background:radial-gradient(circle at 50% 35%,#30251b,#100d0a 72%)}
 .shoot-choice{min-width:0; border:.5px solid rgba(232,192,96,.55); border-radius:2px; background:rgba(68,43,29,.72); color:#f5e3a5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:1px; font:2.3px/1.05 "Source Serif 4",Georgia,serif; cursor:pointer}
@@ -4872,6 +4907,43 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #monitor-doom-wrap[data-shoot-view="doom"] #monitor-shoot-host,
 #monitor-doom-wrap[data-shoot-view="duke"] #monitor-shoot-host,
 #monitor-doom-wrap[data-shoot-view="q3"] #monitor-shoot-host{display:block}
+#shoot-focus-overlay{
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  margin:0;
+  padding:0;
+  border:0;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:#000;
+}
+#shoot-focus-overlay[hidden]{display:none}
+#shoot-focus-overlay:fullscreen::backdrop,
+#shoot-focus-overlay:-webkit-full-screen::backdrop{background:#000}
+#monitor-focus-dialog{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  max-width:none;
+  max-height:none;
+  margin:0;
+  padding:0;
+  border:0;
+  overflow:hidden;
+  background:#000;
+}
+#monitor-focus-dialog::backdrop{background:#000}
+#shoot-focus-stage{
+  width:min(100vw, 133.333333vh);
+  height:min(75vw, 100vh);
+  background:#000;
+}
+#shoot-focus-overlay #monitor-shoot-host,
+#shoot-focus-overlay #monitor-shoot-host iframe{display:block;width:100%;height:100%}
 .doom-msg{grid-area:1/1; align-self:center; justify-self:stretch; margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
 .doom-msg.err{color:#e0736a}
 .doom-msg:empty{display:none}
@@ -21801,7 +21873,7 @@ section{margin:1.9rem 0}
 <circle class="seg-hover" cx="380.3" cy="175" r="2.6" fill="#0c0c0d" opacity="0"/>
 <path d="M379.1 173.3 L381.4 175 L379.1 176.7" fill="none" stroke="#f8f5ec" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
-<g clip-path="url(#office-monitor-clip)">
+<g id="office-monitor-screen-content" clip-path="url(#office-monitor-clip)">
 <g id="monitor-logo-fedora" class="boot-logo">
 <!-- the loft's own OS boots: a cream ∞ on the wine field (the bg rule paints the screen wine) -->
 <text x="316" y="180.5" text-anchor="middle" font-family="Georgia, 'Source Serif 4', serif" font-size="20" fill="#f8f5ec">∞</text>
@@ -21984,15 +22056,17 @@ section{margin:1.9rem 0}
 <g id="monitor-console-svg-display"></g>
 </svg>
 </g>
-<g id="monitor-console-view-toggle" transform="translate(358.5,154.8)">
+<g id="monitor-console-view-toggle" transform="translate(71,29.3) scale(0.8)">
 <title>Show SVG graphics</title>
-<rect width="9" height="4.2" rx="0.8" fill="#2e2823" stroke="#15120e" stroke-width="0.35"/>
-<rect class="console-view-hover" width="9" height="4.2" rx="0.8" fill="#8fd070" opacity="0"/>
-<text id="monitor-console-view-label" x="4.5" y="2.9" text-anchor="middle" font-family="ui-monospace,monospace" font-size="1.9" fill="#8fd070">gfx</text>
+<rect class="mini-hit" x="371.375" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#2e2823" stroke="#15120e" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
+<rect class="console-view-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#0c0a08" opacity="0"/>
+<path id="monitor-console-view-mark" d="M373.2 158.05 H375.8 V160.45 H373.2 Z M373.45 160.1 L374.15 159.35 L374.7 159.8 L375.15 159.4 L375.55 160.1" fill="none" stroke="#8fd070" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 <g id="monitor-console-close" transform="translate(76.0,29.3) scale(0.8)">
 <title id="monitor-console-close-title">Close</title>
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#2e2823" stroke="#15120e" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#0c0a08" opacity="0"/>
@@ -22000,7 +22074,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-console-back" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="code_back" data-aria-i="code_back">
 <title data-i="code_back">Back to Code</title>
-<rect class="mini-hit" x="369" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#2e2823" stroke="#15120e" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#0c0a08" opacity="0"/>
@@ -22053,7 +22127,7 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-mail-wrap" class="mail-wrap"></div>
 </foreignObject>
 <g id="monitor-mail-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7b5aa6" stroke="#604681" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4a3664" opacity="0"/>
@@ -22061,7 +22135,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-mail-back" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="mail_back" data-aria-i="mail_back">
 <title data-i="mail_back">Inbox</title>
-<rect class="mini-hit" x="369" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7b5aa6" stroke="#604681" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4a3664" opacity="0"/>
@@ -22081,7 +22155,7 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-solitaire-wrap" class="classics-view sol-wrap"></div>
 </foreignObject>
 <g id="monitor-mines-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect class="classics-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#c8c2b4" stroke="#8a8272" stroke-width="0.5"/>
 <rect class="classics-close-shine" x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.35"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7c7466" opacity="0"/>
@@ -22089,7 +22163,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-mines-back" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="classics_back" data-aria-i="classics_back">
 <title data-i="classics_back">Back to games</title>
-<rect class="mini-hit" x="369" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
 <rect class="classics-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#c8c2b4" stroke="#8a8272" stroke-width="0.5"/>
 <rect class="classics-close-shine" x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.35"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#7c7466" opacity="0"/>
@@ -22134,7 +22208,6 @@ section{margin:1.9rem 0}
 <span class="vid-ctrl-time">0:00</span>
 <span class="vid-ctrl-mute"><svg viewBox="0 0 12 12"><path d="M2 4.6 L4.2 4.6 L6.8 2.4 L6.8 9.6 L4.2 7.4 L2 7.4 Z" fill="#f8f5ec"/><g class="vc-waves"><path d="M8.2 4.4 a2.4 2.4 0 0 1 0 3.2 M9.4 3.2 a4.2 4.2 0 0 1 0 5.6" fill="none" stroke="#f8f5ec" stroke-width="0.9" stroke-linecap="round"/></g><g class="vc-mutex" style="display:none"><path d="M8 4.6 L10.8 7.4 M10.8 4.6 L8 7.4" stroke="#f8f5ec" stroke-width="0.9" stroke-linecap="round"/></g></svg></span>
 <div class="vid-ctrl-vol"><div class="vid-ctrl-track"><div class="vid-ctrl-fill"></div></div></div>
-<span class="vid-ctrl-fs"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke="#f8f5ec" stroke-width="1" stroke-linecap="round"/></svg></span>
 </div>
 <!-- video control strip (end) -->
 </div>
@@ -22158,7 +22231,7 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-tattoo-wrap" class="tattoo-wrap"></div>
 </foreignObject>
 <g id="monitor-tattoo-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#c68e95" stroke="#a76e77" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.28"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#9a5b64" opacity="0"/>
@@ -22166,7 +22239,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-tattoo-back" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="tt_back" data-aria-i="tt_back">
 <title data-i="tt_back">Gallery</title>
-<rect class="mini-hit" x="369" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#c68e95" stroke="#a76e77" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.28"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#9a5b64" opacity="0"/>
@@ -22182,22 +22255,22 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-life-wrap" class="life-wrap"></div>
 </foreignObject>
 <g id="monitor-life-help-button" transform="translate(76.0,29.3) scale(0.8)" role="button" tabindex="0">
-<rect class="mini-hit" x="365" y="155" width="6.5" height="9" fill="#000" opacity="0"/>
-<circle cx="368.5" cy="159.25" r="2.5" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.5"/>
-<circle cx="368.5" cy="158.7" r="1.8" fill="#ffffff" opacity="0.24"/>
-<circle class="seg-hover" cx="368.5" cy="159.25" r="2.5" fill="#6f2c39" opacity="0"/>
-<text x="368.5" y="160.45" text-anchor="middle" font-family="sans-serif" font-size="3.6" font-weight="700" fill="#f8f5ec" pointer-events="none">?</text>
+<rect class="mini-hit" x="362.75" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
+<circle cx="368.25" cy="159.25" r="2.5" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.5"/>
+<circle cx="368.25" cy="158.7" r="1.8" fill="#ffffff" opacity="0.24"/>
+<circle class="seg-hover" cx="368.25" cy="159.25" r="2.5" fill="#6f2c39" opacity="0"/>
+<text x="368.25" y="160.45" text-anchor="middle" font-family="sans-serif" font-size="3.6" font-weight="700" fill="#f8f5ec" pointer-events="none">?</text>
 </g>
 <g id="monitor-life-back" transform="translate(76.0,29.3) scale(0.8)" role="button" data-title-i="life_help_back" data-aria-i="life_help_back">
 <title data-i="life_help_back">Back</title>
-<rect class="mini-hit" x="365" y="155" width="6.5" height="9" fill="#000" opacity="0"/>
-<rect x="366" y="156.5" width="5" height="5.5" rx="2.5" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.5"/>
-<rect x="366.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.24"/>
-<rect class="seg-hover" x="366" y="156.5" width="5" height="5.5" rx="2.5" fill="#6f2c39" opacity="0"/>
-<path d="M369.4 157.9 L367.5 159.25 L369.4 160.6" fill="none" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>
+<rect class="mini-hit" x="362.75" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
+<rect x="365.75" y="156.5" width="5" height="5.5" rx="2.5" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.5"/>
+<rect x="366.35" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.24"/>
+<rect class="seg-hover" x="365.75" y="156.5" width="5" height="5.5" rx="2.5" fill="#6f2c39" opacity="0"/>
+<path d="M369.15 157.9 L367.25 159.25 L369.15 160.6" fill="none" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 <g id="monitor-life-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="371.5" y="155" width="6.5" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#8e3a4a" stroke="#6f2c39" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.24"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#6f2c39" opacity="0"/>
@@ -23065,15 +23138,17 @@ section{margin:1.9rem 0}
 <g id="monitor-py-turtle-cursors" transform="scale(1,-1)"></g>
 </svg>
 </g>
-<g id="monitor-py-view-toggle" transform="translate(358.5,154.8)">
+<g id="monitor-py-view-toggle" transform="translate(71,29.3) scale(0.8)">
 <title>Show Turtle graphics</title>
-<rect width="9" height="4.2" rx="0.8" fill="#172331" stroke="#306998" stroke-width="0.35"/>
-<rect class="py-view-hover" width="9" height="4.2" rx="0.8" fill="#ffd43b" opacity="0"/>
-<text id="monitor-py-view-label" x="4.5" y="2.9" text-anchor="middle" font-family="ui-monospace,monospace" font-size="1.9" fill="#ffd43b">gfx</text>
+<rect class="mini-hit" x="371.375" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#306998" stroke="#255277" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
+<rect class="py-view-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#1d3f5b" opacity="0"/>
+<path id="monitor-py-view-mark" d="M373.2 158.05 H375.8 V160.45 H373.2 Z M373.45 160.1 L374.15 159.35 L374.7 159.8 L375.15 159.4 L375.55 160.1" fill="none" stroke="#ffd43b" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 <g id="monitor-py-close" transform="translate(76.0,29.3) scale(0.8)">
 <title id="monitor-py-close-title">Close</title>
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#306998" stroke="#255277" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#1d3f5b" opacity="0"/>
@@ -23081,7 +23156,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="monitor-py-back" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="code_back" data-aria-i="code_back">
 <title data-i="code_back">Back to Code</title>
-<rect class="mini-hit" x="369" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#306998" stroke="#255277" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#1d3f5b" opacity="0"/>
@@ -23117,17 +23192,9 @@ section{margin:1.9rem 0}
 </foreignObject>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="snake-left" x="254" y="154" width="34" height="42" fill="transparent"/>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="snake-right" x="344" y="154" width="34" height="42" fill="transparent"/>
-<g id="monitor-snake-fs" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="doom_fs" data-aria-i="doom_fs">
-<title data-i="doom_fs">Fullscreen</title>
-<rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
-<rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#b6000b" stroke="#780008" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#780008" opacity="0"/>
-<path d="M373.15 158.55 V157.75 H373.95 M375.05 157.75 H375.85 V158.55 M375.85 159.75 V160.55 H375.05 M373.95 160.55 H373.15 V159.75" fill="none" stroke="#f8f5ec" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
 <g id="monitor-snake-close" transform="translate(76.0,29.3) scale(0.8)" role="button" data-title-i="share_close" data-aria-i="share_close">
 <title data-i="share_close">Close</title>
-<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#b6000b" stroke="#780008" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#780008" opacity="0"/>
@@ -23156,38 +23223,17 @@ section{margin:1.9rem 0}
 </foreignObject>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="shoot-left" x="254" y="154" width="34" height="42" fill="transparent"/>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="shoot-right" x="344" y="154" width="34" height="42" fill="transparent"/>
-<g id="monitor-doom-back" transform="translate(63.9,29.3) scale(0.8)" role="button" data-title-i="shoot_picker" data-aria-i="shoot_picker">
+<g id="monitor-doom-back" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="shoot_picker" data-aria-i="shoot_picker">
 <title data-i="shoot_picker">Back to games</title>
-<rect class="mini-hit" x="369" y="155" width="8.125" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
 <rect class="shoot-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4b2d20" opacity="0"/>
 <path d="M375.4 157.9 L373.5 159.25 L375.4 160.6" fill="none" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
-<g id="monitor-doom-fs" class="monitor-shoot-fs" data-shoot-fs="doom" transform="translate(69.95,29.3) scale(0.8)" role="button" data-title-i="doom_fs" data-aria-i="doom_fs">
-<rect class="mini-hit" x="370" y="155" width="6.5625" height="9" fill="#000" opacity="0"/>
-<rect class="shoot-fs-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4b2d20" opacity="0"/>
-<path d="M373.15 158.55 V157.75 H373.95 M375.05 157.75 H375.85 V158.55 M375.85 159.75 V160.55 H375.05 M373.95 160.55 H373.15 V159.75" fill="none" stroke="#f8f5ec" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
-<g id="monitor-duke-fs" class="monitor-shoot-fs" data-shoot-fs="duke" transform="translate(69.95,29.3) scale(0.8)" role="button" data-title-i="doom_fs" data-aria-i="doom_fs">
-<rect class="mini-hit" x="370" y="155" width="6.5625" height="9" fill="#000" opacity="0"/>
-<rect class="shoot-fs-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4b2d20" opacity="0"/>
-<path d="M373.15 158.55 V157.75 H373.95 M375.05 157.75 H375.85 V158.55 M375.85 159.75 V160.55 H375.05 M373.95 160.55 H373.15 V159.75" fill="none" stroke="#f8f5ec" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
-<g id="monitor-q3-fs" class="monitor-shoot-fs" data-shoot-fs="q3" transform="translate(69.95,29.3) scale(0.8)" role="button" data-title-i="doom_fs" data-aria-i="doom_fs">
-<rect class="mini-hit" x="370" y="155" width="6.5625" height="9" fill="#000" opacity="0"/>
-<rect class="shoot-fs-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
-<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
-<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4b2d20" opacity="0"/>
-<path d="M373.15 158.55 V157.75 H373.95 M375.05 157.75 H375.85 V158.55 M375.85 159.75 V160.55 H375.05 M373.95 160.55 H373.15 V159.75" fill="none" stroke="#f8f5ec" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
 <g id="monitor-doom-close" transform="translate(76.0,29.3) scale(0.8)" role="button" data-title-i="shoot_close" data-aria-i="shoot_close">
 <title id="monitor-doom-close-title" data-i="shoot_close">Close shoot</title>
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect class="shoot-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4c1515" opacity="0"/>
@@ -23818,9 +23864,14 @@ section{margin:1.9rem 0}
 <!-- bezel dismiss ✕: top-right corner of the monitor frame, over the screen's top-right
      edge. Shown only while the monitor is zoomed (its group carries .dev-zoomed); rides
      the group's transform so it never needs JS position-tracking, even in fullscreen. -->
+<g id="monitor-bezel-fullscreen" class="bezel-fs" transform="translate(375.4,152) scale(0.7) translate(-378,-155)" role="button" tabindex="0">
+<title>Fullscreen monitor</title>
+<circle cx="378" cy="155" r="2.6" fill="#453a31" stroke="#c8c2b4" stroke-width="0.5"/>
+<path d="M376.7 154.35 V153.7 H377.35 M378.65 153.7 H379.3 V154.35 M379.3 155.65 V156.3 H378.65 M377.35 156.3 H376.7 V155.65" fill="none" stroke="#c8c2b4" stroke-width="0.55" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
 <g id="monitor-bezel-close" class="bezel-close" transform="translate(380,152) scale(0.7) translate(-378,-155)">
-<circle cx="378" cy="155" r="2.6" fill="#453a31" stroke="#fffdf8" stroke-width="0.5"/>
-<path d="M376.7 153.7 L379.3 156.3 M379.3 153.7 L376.7 156.3" fill="none" stroke="#fffdf8" stroke-width="0.7" stroke-linecap="round"/>
+<circle cx="378" cy="155" r="2.6" fill="#453a31" stroke="#c8c2b4" stroke-width="0.5"/>
+<path d="M376.7 153.7 L379.3 156.3 M379.3 153.7 L376.7 156.3" fill="none" stroke="#c8c2b4" stroke-width="0.7" stroke-linecap="round"/>
 </g>
 </g>
 <defs>
@@ -27923,7 +27974,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   </div>
   </div>
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
+  <div id="shoot-focus-overlay" hidden>
+    <div id="shoot-focus-stage"></div>
   </div>
+  </div>
+  <dialog id="monitor-focus-dialog"></dialog>
   <div class="watch-controls">
     <button type="button" id="watch-loft-btn" class="watch-loft-btn" data-i="watch_loft">▷ Trailer</button>
     <button type="button" id="watch-autoplay-btn" class="watch-loft-btn" data-i="watch_autoplay">⟳ Autoplay</button>
@@ -31034,6 +31089,7 @@ window.addEventListener("hashchange", function () {
     } else {
       btn.textContent = "⛶";
     }
+    if (window.__syncMonitorFullscreenButton) window.__syncMonitorFullscreenButton();
     sizeFullscreenFrame();
     // The phone modal is a fixed overlay parented to whatever host was current when it
     // opened; entering/leaving fullscreen changes that host (real fullscreen is top-layer,
@@ -31161,16 +31217,6 @@ window.addEventListener("hashchange", function () {
     if ((e.key !== "f" && e.key !== "F") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-    // Priority routing: a fullscreen-capable monitor app that's the live foreground claims
-    // 'f' for ITS OWN fullscreen instead of the whole-loft toggle.
-    // (DOOM intentionally left on the whole-loft toggle below — owner's call; it fills the
-    // zoomed monitor and that's good enough.)
-    // VIDEO app up front: drive the film's own fullscreen (toggle) on #monitor-video-wrap.
-    if (window.__videoAppShowing && window.__videoAppShowing()) {
-      e.preventDefault();
-      if (window.__videoFsToggle) window.__videoFsToggle();
-      return;
-    }
     e.preventDefault();
     toggleFs();
   });
@@ -49937,19 +49983,29 @@ setOfficeProgress("pc", false);
   var consoleSvgSurface = document.getElementById("monitor-console-svg");
   var consoleSvgDisplay = document.getElementById("monitor-console-svg-display");
   var consoleViewToggle = document.getElementById("monitor-console-view-toggle");
-  var consoleViewLabel = document.getElementById("monitor-console-view-label");
+  var consoleViewMark = document.getElementById("monitor-console-view-mark");
   var consoleReturnToCode = false;
   var CLOSE_MARK_PATH = "M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3";
+  function syncConsoleGraphicsToggle() {
+    var available = !!(consoleSvgDisplay && consoleSvgDisplay.firstElementChild);
+    if (consoleViewToggle) consoleViewToggle.classList.toggle("has-graphics", available);
+    if (consoleBackBtn) consoleBackBtn.setAttribute("transform", "translate(" + (consoleReturnToCode && available ? "66" : "71") + ",29.3) scale(0.8)");
+    if (!available) consoleSvgView(false);
+    return available;
+  }
   function paintConsoleClose() {
     if (consoleCloseTitle) consoleCloseTitle.textContent = consoleT("share_close");
     if (consoleCloseMark) consoleCloseMark.setAttribute("d", CLOSE_MARK_PATH);
     if (consoleBackBtn) consoleBackBtn.classList.toggle("is-visible", consoleReturnToCode);
+    syncConsoleGraphicsToggle();
   }
   function consoleSvgView(on) {
     var root = document.getElementById("monitor-console");
     if (!root) return;
     root.classList.toggle("svg-view", !!on);
-    if (consoleViewLabel) consoleViewLabel.textContent = on ? "❯" : "gfx";
+    if (consoleViewMark) consoleViewMark.setAttribute("d", on
+      ? "M373.8 158.15 L375.25 159.25 L373.8 160.35"
+      : "M373.2 158.05 H375.8 V160.45 H373.2 Z M373.45 160.1 L374.15 159.35 L374.7 159.8 L375.15 159.4 L375.55 160.1");
     if (consoleViewToggle) {
       var title = consoleViewToggle.querySelector("title");
       if (title) title.textContent = on ? "Show JavaScript Console" : "Show SVG graphics";
@@ -49982,6 +50038,7 @@ setOfficeProgress("pc", false);
     if (!root) return false;
     consoleSvgDisplay.textContent = "";
     consoleSvgDisplay.appendChild(root);
+    syncConsoleGraphicsToggle();
     consoleSvgView(true);
     return true;
   }
@@ -50808,7 +50865,7 @@ setOfficeProgress("pc", false);
     hbBannerShown = false;
     if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
     if (consoleSvgDisplay) consoleSvgDisplay.textContent = "";
-    consoleSvgView(false);
+    syncConsoleGraphicsToggle();
     updateConsoleTile();
   };
   // Kill (or an internal restart command) REALLY refreshes the plain console (a stateless JS
@@ -50825,7 +50882,7 @@ setOfficeProgress("pc", false);
     hbBannerShown = false;
     if (consoleIn) { consoleIn.value = ""; try { consoleIn.blur(); } catch (e) {} }
     if (consoleSvgDisplay) consoleSvgDisplay.textContent = "";
-    consoleSvgView(false);
+    syncConsoleGraphicsToggle();
     updateConsoleTile();
     monitor.classList.remove("show-console"); // back to the desktop
     scheduleSaver();
@@ -51781,27 +51838,28 @@ setOfficeProgress("pc", false);
   // rename (autosave off the filename field) can drop the stale old-name entry instead of
   // leaving a duplicate. null = the buffer isn't saved under any name yet (fresh/new).
   var codeLastSavedName = null, codeLastSavedLanguage = codeLanguage;
-  function codeSetLanguage(language, preserveBuffer) {
+  function codeSetLanguage(language) {
     var next = language === "python" ? "python" : "js";
     if (next === codeLanguage) { codePaintLanguage(); return; }
-    if (!preserveBuffer) codeFlushAutoSave();
+    codeFlushAutoSave();
     var oldName = codeName ? codeName.value.trim() : "", code = codeCode ? codeCode.value : "";
-    var nextName = oldName;
-    if (/\.js$/i.test(nextName) && next === "python") nextName = nextName.replace(/\.js$/i, ".py");
-    else if (/\.py$/i.test(nextName) && next === "js") nextName = nextName.replace(/\.py$/i, ".js");
-    if (!preserveBuffer && codeLastSavedName) {
-      var oldStore = readScripts(codeLastSavedLanguage);
-      if (Object.prototype.hasOwnProperty.call(oldStore, codeLastSavedName)) { delete oldStore[codeLastSavedName]; writeScripts(oldStore, codeLastSavedLanguage); }
+    var counterpart = oldName;
+    if (/\.js$/i.test(counterpart) && next === "python") counterpart = counterpart.replace(/\.js$/i, ".py");
+    else if (/\.py$/i.test(counterpart) && next === "js") counterpart = counterpart.replace(/\.py$/i, ".js");
+    var nextStore = readScripts(next);
+    // The language pills navigate between sibling files; they must never convert,
+    // rename, or delete the file currently being edited. If no sibling exists, retain
+    // the text as a new unnamed buffer in the requested language.
+    if (counterpart && Object.prototype.hasOwnProperty.call(nextStore, counterpart)) {
+      codeLoad(counterpart, next);
+      return;
     }
     codeLanguage = next; codeRememberLanguage();
-    if (codeName) codeName.value = nextName;
-    if (!preserveBuffer && nextName) {
-      var nextStore = readScripts(next); nextStore[nextName] = code; writeScripts(nextStore, next);
-      codeLastSavedName = nextName; codeLastSavedLanguage = next;
-    } else if (preserveBuffer) {
-      codeLastSavedName = null; codeLastSavedLanguage = next;
-    }
-    codeRefreshPicker(codeLastSavedName);
+    if (codeName) codeName.value = "";
+    if (codeCode) codeCode.value = code;
+    codeLastSavedName = null; codeLastSavedLanguage = next;
+    if (code) writeCodeUnsaved(code, next);
+    codeRefreshPicker(null);
     codeScheduleDraft();
   }
   function codeLoad(name, language) {
@@ -52428,8 +52486,8 @@ setOfficeProgress("pc", false);
     if (inferred && inferred !== codeLanguage) { codeLanguage = inferred; codeRememberLanguage(); }
     codeScheduleAutoSave(); codeScheduleDraft();
   }); // rename persists too (Save is gone), with .js/.py selecting its runtime
-  if (codeLangJsBtn) codeLangJsBtn.addEventListener("click", function (e) { e.stopPropagation(); codeSetLanguage("js", false); });
-  if (codeLangPyBtn) codeLangPyBtn.addEventListener("click", function (e) { e.stopPropagation(); codeSetLanguage("python", false); });
+  if (codeLangJsBtn) codeLangJsBtn.addEventListener("click", function (e) { e.stopPropagation(); codeSetLanguage("js"); });
+  if (codeLangPyBtn) codeLangPyBtn.addEventListener("click", function (e) { e.stopPropagation(); codeSetLanguage("python"); });
   // ── Code autocomplete ────────────────────────────────────────────────────────────
   // A caret-anchored popup that completes loft console command NAMES as you type in the code
   // buffer, each row showing the command + its (dimmed, truncated) help line. Reads the SAME
@@ -54954,24 +55012,6 @@ setOfficeProgress("pc", false);
   window.__selectMonitorVideoTrack = selectVideoTrack;
   window.__monitorVideoTrack = function () { return currentVideoTrack().id; };
   window.__syncLoftVideoState = syncVideoPlayback;
-  // The global 'f' handler routes to the film's OWN fullscreen while its app is the live
-  // foreground (mirrors the space-key gate: show-video + in the office).
-  window.__videoAppShowing = function () {
-    return monitor.classList.contains("show-video") && window.currentStageName === "office" && vidWrap && !vidWrap.classList.contains("absent");
-  };
-  // Toggle real fullscreen on the film wrap: request it, or exit if the wrap already owns it.
-  // Requested fresh at call time (not a captured ref), so it transitions the fullscreen
-  // element even when the loft area was already fullscreen. Shared by 'f' and the ⛶ button.
-  window.__videoFsToggle = function () {
-    if (!vidWrap) return;
-    try {
-      if ((document.fullscreenElement || document.webkitFullscreenElement) === vidWrap) {
-        if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      } else if (vidWrap.requestFullscreen) vidWrap.requestFullscreen();
-      else if (vidWrap.webkitRequestFullscreen) vidWrap.webkitRequestFullscreen();
-    } catch (err) {}
-  };
   // ── CLOCK APP ─────────────────────────────────────────────────────────────────────
   // Toolbar-only monitor utility. Its content is built by the same renderer as the
   // pocket Clock, so city times, countdowns and synthetic-time controls cannot drift.
@@ -56704,25 +56744,6 @@ setOfficeProgress("pc", false);
     }
     vidEl.addEventListener("volumechange", paintVol); // covers programmatic changes (e.g. toggleVideoApp's reapply)
     muteBtn.addEventListener("click", function () { vidEl.muted = !vidEl.muted; paintVol(); wake(); });
-    var fsBtn = ctrl.querySelector(".vid-ctrl-fs");
-    if (fsBtn) fsBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (window.__videoFsToggle) window.__videoFsToggle(); // same toggle the 'f' key uses
-      wake();
-    });
-    // Flip the fs corner-mark between expand (outward) and compress (inward) so the button
-    // reads as "exit fullscreen" once the film is fullscreen — same inward-corners glyph the
-    // game's own fullscreen toggle uses, instead of leaving an ✕/expand meaning ambiguous.
-    var fsExpandD = "M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6";
-    var fsCompressD = "M4.4 2 L4.4 4.4 L2 4.4 M7.6 2 L7.6 4.4 L10 4.4 M7.6 10 L7.6 7.6 L10 7.6 M4.4 10 L4.4 7.6 L2 7.6";
-    function paintFsIcon() {
-      if (!fsBtn) return;
-      var p = fsBtn.querySelector("path");
-      if (p) p.setAttribute("d", (document.fullscreenElement || document.webkitFullscreenElement) === vidWrap ? fsCompressD : fsExpandD);
-    }
-    document.addEventListener("fullscreenchange", paintFsIcon);
-    document.addEventListener("webkitfullscreenchange", paintFsIcon);
-    paintFsIcon();
     // Shared slider plumbing: fraction from the track's live screen rect (scale-proof —
     // both values are screen coordinates). Mouse/pen drags live at window scope because
     // pointer capture can fail inside the transformed foreignObject. Touch owns a native
@@ -58531,6 +58552,8 @@ setOfficeProgress("pc", false);
     if (pyCloseTitle) pyCloseTitle.textContent = pyT("share_close");
     if (pyCloseMark) pyCloseMark.setAttribute("d", CLOSE_MARK_PATH);
     if (pyBackBtn) pyBackBtn.classList.toggle("is-visible", pyReturnToCode);
+    var hasGraphics = syncPythonGraphicsToggle();
+    if (pyBackBtn) pyBackBtn.setAttribute("transform", "translate(" + (pyReturnToCode && hasGraphics ? "61" : "71") + ",29.3) scale(0.8)");
   }
   var pyHist = [], pyHistIdx = 0, pyWelcomed = false;
   var pyRuntime = null, pyReprFn = null;
@@ -58546,14 +58569,25 @@ setOfficeProgress("pc", false);
   var pyTurtleCursors = document.getElementById("monitor-py-turtle-cursors");
   var pyTurtleSurface = document.getElementById("monitor-py-turtle");
   var pyTurtleToggle = document.getElementById("monitor-py-view-toggle");
-  var pyTurtleToggleLabel = document.getElementById("monitor-py-view-label");
-  var PY_TURTLE_NODE_LIMIT = 6000, pyTurtleNodes = 0;
+  var pyTurtleToggleMark = document.getElementById("monitor-py-view-mark");
+  var PY_TURTLE_NODE_LIMIT = 6000, pyTurtleNodes = 0, pyTurtleBackgroundUsed = false;
   var SVGNS = "http://www.w3.org/2000/svg";
+  function syncPythonGraphicsToggle() {
+    var available = !!(pyTurtleNodes || pyTurtleBackgroundUsed ||
+      (pySvgDisplay && pySvgDisplay.firstElementChild) ||
+      (pyTurtleCursors && pyTurtleCursors.firstElementChild));
+    if (pyTurtleToggle) pyTurtleToggle.classList.toggle("has-graphics", available);
+    if (pyBackBtn) pyBackBtn.setAttribute("transform", "translate(" + (pyReturnToCode && available ? "66" : "71") + ",29.3) scale(0.8)");
+    if (!available) pyTurtleView(false);
+    return available;
+  }
   function pyTurtleView(on) {
     var root = document.getElementById("monitor-python");
     if (!root) return;
     root.classList.toggle("turtle-view", !!on);
-    if (pyTurtleToggleLabel) pyTurtleToggleLabel.textContent = on ? ">>>" : "gfx";
+    if (pyTurtleToggleMark) pyTurtleToggleMark.setAttribute("d", on
+      ? "M373.8 158.15 L375.25 159.25 L373.8 160.35"
+      : "M373.2 158.05 H375.8 V160.45 H373.2 Z M373.45 160.1 L374.15 159.35 L374.7 159.8 L375.15 159.4 L375.55 160.1");
     if (pyTurtleToggle) {
       var title = pyTurtleToggle.querySelector("title");
       if (title) title.textContent = on ? "Show Python Console" : "Show Turtle graphics";
@@ -58589,6 +58623,7 @@ setOfficeProgress("pc", false);
     Object.keys(attrs || {}).forEach(function (key) { el.setAttribute(key, attrs[key]); });
     if (turtleId != null) el.setAttribute("data-turtle", String(turtleId));
     parent.appendChild(el); pyTurtleNodes++;
+    syncPythonGraphicsToggle();
     return el;
   }
   function pyTurtleClearLayer(layer, turtleId) {
@@ -58599,6 +58634,7 @@ setOfficeProgress("pc", false);
   }
   function pyTurtleClear(turtleId) {
     pyTurtleClearLayer(pyTurtleFills, turtleId); pyTurtleClearLayer(pyTurtleLines, turtleId); pyTurtleClearLayer(pyTurtleMarks, turtleId);
+    syncPythonGraphicsToggle();
   }
   function pyDisplaySvg(source) {
     if (!pySvgDisplay) return false;
@@ -58608,6 +58644,7 @@ setOfficeProgress("pc", false);
     if (pyTurtleCursors) pyTurtleCursors.textContent = "";
     pySvgDisplay.textContent = "";
     pySvgDisplay.appendChild(root);
+    syncPythonGraphicsToggle();
     pyTurtleView(true);
     return true;
   }
@@ -58615,7 +58652,7 @@ setOfficeProgress("pc", false);
     if (!pyTurtleCursors) return;
     var old = pyTurtleCursors.querySelector('[data-turtle="' + String(id).replace(/[^\d-]/g, "") + '"]');
     if (old) old.remove();
-    if (!visible) return;
+    if (!visible) { syncPythonGraphicsToggle(); return; }
     var c = pyTurtleColor(color, "#306998");
     var turtle = document.createElementNS(SVGNS, "g");
     turtle.setAttribute("data-turtle", String(id));
@@ -58633,6 +58670,7 @@ setOfficeProgress("pc", false);
       '<circle cx="8" cy="-1" r=".45" fill="#172331"/>' +
       '<circle cx="8" cy="1" r=".45" fill="#172331"/>';
     pyTurtleCursors.appendChild(turtle);
+    syncPythonGraphicsToggle();
   }
   window.__loftTurtleCommand = function (op) {
     var a = Array.prototype.slice.call(arguments, 1), id = a[0];
@@ -58654,11 +58692,11 @@ setOfficeProgress("pc", false);
     } else if (op === "clear") {
       pyTurtleClear(id);
     } else if (op === "screen_clear") {
-      pyTurtleClear(null); if (pyTurtleCursors) pyTurtleCursors.textContent = ""; if (pySvgDisplay) pySvgDisplay.textContent = ""; pyTurtleNodes = 0;
+      pyTurtleClear(null); if (pyTurtleCursors) pyTurtleCursors.textContent = ""; if (pySvgDisplay) pySvgDisplay.textContent = ""; pyTurtleNodes = 0; pyTurtleBackgroundUsed = false; if (pyTurtleBg) pyTurtleBg.setAttribute("fill", "#fffdf8"); syncPythonGraphicsToggle();
     } else if (op === "svg") {
       return pyDisplaySvg(id);
     } else if (op === "bg") {
-      if (pyTurtleBg) pyTurtleBg.setAttribute("fill", pyTurtleColor(id, "#fffdf8")); pyTurtleView(true);
+      if (pyTurtleBg) pyTurtleBg.setAttribute("fill", pyTurtleColor(id, "#fffdf8")); pyTurtleBackgroundUsed = true; syncPythonGraphicsToggle(); pyTurtleView(true);
     }
     return true;
   };
@@ -59514,7 +59552,6 @@ async def localfont(name):
   // ── snake / DOS app ────────────────────────────────────────────────────────────
   var snakeWrap = document.getElementById("monitor-snake-wrap");
   var snakeCloseBtn = document.getElementById("monitor-snake-close");
-  var snakeFsBtn = document.getElementById("monitor-snake-fs");
   var snakeFrame = null, snakeState = "cold";
   function snakeControl(action) {
     if (!snakeFrame || !snakeFrame.contentWindow) return;
@@ -59537,8 +59574,7 @@ async def localfont(name):
     var frame = document.createElement("iframe");
     frame.title = "snake — historical four-player Nibbles in DOSBox";
     frame.src = "dos/player.html?lang=" + (document.documentElement.lang === "cs" ? "cs" : "en");
-    frame.allow = "autoplay; fullscreen";
-    frame.setAttribute("allowfullscreen", "");
+    frame.allow = "autoplay";
     frame.addEventListener("load", function () {
       if (snakeFrame !== frame) return;
       snakeControl(monitor.classList.contains("show-snake") && !document.hidden ? "resume" : "pause");
@@ -59601,23 +59637,6 @@ async def localfont(name):
   window.__snakeRunning = function () { return snakeState === "ready"; };
   window.__killMonitorSnake = snakeDeathFlash;
   window.__restartMonitorSnake = function () { destroySnake(); openSnake(); };
-  window.__snakeFsToggle = function () {
-    var frame = snakeFrame;
-    if (!frame) return;
-    try {
-      if ((document.fullscreenElement || document.webkitFullscreenElement) === frame) {
-        if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      } else {
-        var entered = frame.requestFullscreen ? frame.requestFullscreen() :
-          frame.webkitRequestFullscreen ? frame.webkitRequestFullscreen() : null;
-        Promise.resolve(entered).then(function () {
-          focusSnakeFrame();
-          setTimeout(focusSnakeFrame, 80);
-        }).catch(function () {});
-      }
-    } catch (e) {}
-  };
   window.__focusMonitorSnake = focusSnakeFrame;
   window.__snakeState = function () {
     return { open: monitor.classList.contains("show-snake"), state: snakeState,
@@ -59633,21 +59652,9 @@ async def localfont(name):
     if (!snakeFrame) return;
     snakeControl(!document.hidden && monitor.classList.contains("show-snake") ? "resume" : "pause");
   });
-  function snakeFullscreenFocus() {
-    if ((document.fullscreenElement || document.webkitFullscreenElement) !== snakeFrame) return;
-    focusSnakeFrame();
-    setTimeout(focusSnakeFrame, 80);
-    setTimeout(focusSnakeFrame, 240);
-  }
-  document.addEventListener("fullscreenchange", snakeFullscreenFocus);
-  document.addEventListener("webkitfullscreenchange", snakeFullscreenFocus);
   if (snakeCloseBtn) {
     snakeCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeSnake(); playLaptopClickSound("office-monitor"); });
     snakeCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
-  }
-  if (snakeFsBtn) {
-    snakeFsBtn.addEventListener("click", function (e) { e.stopPropagation(); e.preventDefault(); window.__snakeFsToggle(); });
-    snakeFsBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── shoot app ─────────────────────────────────────────────────────────────────
   // Each genuine WebAssembly game owns its Emscripten globals, input listeners, main loop,
@@ -59659,6 +59666,8 @@ async def localfont(name):
   var doomCloseBtn = document.getElementById("monitor-doom-close");
   var doomBackBtn = document.getElementById("monitor-doom-back");
   var shootHost = document.getElementById("monitor-shoot-host");
+  var shootFocusOverlay = document.getElementById("shoot-focus-overlay");
+  var shootFocusStage = document.getElementById("shoot-focus-stage");
   var shootCoach = document.getElementById("monitor-shoot-coach");
   var shootCloseTitle = document.getElementById("monitor-doom-close-title");
   var shootView = "chooser";
@@ -59667,6 +59676,7 @@ async def localfont(name):
   var shootFrameState = "cold";
   var shootEverOpened = false;
   var shootFrozen = false;
+  var shootFocusActive = false;
   function doomT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function doomSetMsg(txt, isErr) { if (!doomMsg) return; doomMsg.textContent = txt || ""; doomMsg.className = "doom-msg" + (isErr ? " err" : ""); }
   function showShootCoach() {
@@ -59685,7 +59695,51 @@ async def localfont(name):
     } catch (e) {}
   }
   window.__syncMonitorDoom = shootSync;
+  function finishShootFullscreen() {
+    shootFocusActive = false;
+    if (doomWrap && shootHost) doomWrap.insertBefore(shootHost, doomMsg);
+    if (shootFocusOverlay) shootFocusOverlay.hidden = true;
+    shootSync();
+    if (shootFrame && shootFrame.contentWindow) {
+      try { shootFrame.contentWindow.focus(); } catch (e) {}
+    }
+  }
+  function setShootFocus(on) {
+    on = !!on && shootView !== "chooser" && !!shootFrame;
+    if (on === shootFocusActive) return;
+    if (on && document.getElementById("hunt-fullscreen-area").classList.contains("monitor-content-fullscreen-host") &&
+        window.__toggleMonitorContentFullscreen) window.__toggleMonitorContentFullscreen();
+    if (on) {
+      shootFocusActive = true;
+      if (shootFocusStage && shootHost) shootFocusStage.appendChild(shootHost);
+      if (shootFocusOverlay) {
+        shootFocusOverlay.hidden = false;
+        var request = shootFocusOverlay.requestFullscreen || shootFocusOverlay.webkitRequestFullscreen;
+        if (!request) { finishShootFullscreen(); return; }
+        try {
+          var promise = request.call(shootFocusOverlay);
+          if (promise && promise.catch) promise.catch(finishShootFullscreen);
+        } catch (e) {
+          finishShootFullscreen();
+        }
+      }
+    } else {
+      var activeFs = document.fullscreenElement || document.webkitFullscreenElement;
+      if (activeFs === shootFocusOverlay) {
+        var exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) {
+          try { exit.call(document); } catch (e) { finishShootFullscreen(); }
+          return;
+        }
+      }
+      finishShootFullscreen();
+    }
+    shootSync();
+  }
+  window.__shootCanFullscreen = function () { return shootView !== "chooser" && !!shootFrame; };
+  window.__enterShootBrowserFullscreen = function () { setShootFocus(true); };
   function destroyShootFrame() {
+    if (shootFocusActive) setShootFocus(false);
     if (shootCoach) shootCoach.classList.remove("on");
     if (!shootFrame) { shootFrameGame = ""; shootFrameState = "cold"; return; }
     try { shootFrame.contentWindow.postMessage({ kind: "shoot-control", active: false }, location.origin); } catch (e) {}
@@ -59699,8 +59753,7 @@ async def localfont(name):
     var frame = document.createElement("iframe");
     frame.title = game === "doom" ? "Doom — FreeDM" : game === "duke" ? "Duke Nukem 3D shareware" : "Quake III — OpenArena";
     frame.src = game === "doom" ? "doom/player.html" : game === "duke" ? "duke/player.html" : "q3/player.html";
-    frame.allow = "autoplay; fullscreen";
-    frame.setAttribute("allowfullscreen", "");
+    frame.allow = "autoplay";
     frame.addEventListener("load", function () {
       shootSync();
       if (shootFrame !== frame || shootView === "chooser" || !monitor.classList.contains("show-doom")) return;
@@ -59729,8 +59782,16 @@ async def localfont(name):
       shootCloseTitle.textContent = doomT(closeKey);
     }
     doomSetMsg("", false);
-    if (shootView === "chooser") destroyShootFrame();
-    else { loadShootFrame(shootView); showShootCoach(); }
+    if (shootView === "chooser") {
+      if (shootFocusActive) setShootFocus(false);
+      destroyShootFrame();
+    }
+    else {
+      loadShootFrame(shootView);
+      showShootCoach();
+      if (window.__monitorContentFullscreen && window.__monitorContentFullscreen() &&
+          window.__enterShootBrowserFullscreen) window.__enterShootBrowserFullscreen();
+    }
     shootSync();
   }
   function openShoot(game) {
@@ -59751,11 +59812,9 @@ async def localfont(name):
   function closeDoom(stepBack) {
     if (!monitor.classList.contains("show-doom")) return;
     if (stepBack && shootView !== "chooser") { setShootView("chooser"); return; }
-    monitor.classList.remove("show-doom");
-    shootSync();
-    scheduleSaver();
+    destroyDoom();
   }
-  window.__closeMonitorDoom = closeDoom; // other monitor apps / resets pause the engine before taking the screen
+  window.__closeMonitorDoom = closeDoom; // Dismiss tears down unreliable suspended WASM runtimes without playing the Kill gag
   window.__doomRunning = function () { return shootEverOpened; }; // the Shoot task exists even while its chooser is foreground
   window.__shootState = function () {
     return {
@@ -59801,31 +59860,15 @@ async def localfont(name):
   }
   window.__killMonitorDoom = function () { doomDeathFlash(false); };    // Kill → flash → destroy (back to desktop)
   window.__restartMonitorDoom = function () { doomDeathFlash(true); };  // Restart → flash → destroy → fresh cold boot
-  // The per-game ⛶ controls share one iframe-level fullscreen path (the 'f' key remains
-  // the whole-loft toggle). Target resolution happens at click time because Back,
-  // chooser selection and Restart replace the iframe.
-  window.__shootFsToggle = function (game) {
-    var c = shootFrame;
-    if (!c || shootView === "chooser" || (game && game !== shootFrameGame)) return;
-    try {
-      if ((document.fullscreenElement || document.webkitFullscreenElement) === c) {
-        if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      } else if (c.requestFullscreen) c.requestFullscreen();
-      else if (c.webkitRequestFullscreen) c.webkitRequestFullscreen();
-    } catch (e) {}
-  };
-  window.__doomFsToggle = function () { window.__shootFsToggle(shootFrameGame); }; // established external/test hook
-  var shootFsButtons = document.querySelectorAll("[data-shoot-fs]");
-  for (var sfi = 0; sfi < shootFsButtons.length; sfi++) shootFsButtons[sfi].addEventListener("click", function (e) {
-    e.stopPropagation(); e.preventDefault(); // don't let the canvas / keyguard swallow it
-    window.__shootFsToggle(this.getAttribute("data-shoot-fs"));
-  });
   // hidden tab: pause the engine (and re-evaluate on return) — a WebGL run loop behind a
   // background tab would burn frames for nothing
   document.addEventListener("visibilitychange", shootSync);
-  document.addEventListener("fullscreenchange", shootSync);
-  document.addEventListener("webkitfullscreenchange", shootSync);
+  function shootFullscreenChanged() {
+    if (shootFocusActive && (document.fullscreenElement || document.webkitFullscreenElement) !== shootFocusOverlay) finishShootFullscreen();
+    shootSync();
+  }
+  document.addEventListener("fullscreenchange", shootFullscreenChanged);
+  document.addEventListener("webkitfullscreenchange", shootFullscreenChanged);
   window.addEventListener("focus", shootSync);
   window.addEventListener("blur", shootSync);
   window.addEventListener("message", function (event) {
@@ -59833,11 +59876,18 @@ async def localfont(name):
         !event.data || event.data.game !== shootFrameGame) return;
     if (event.data.kind === "shoot-pointer-lock") { showShootCoach(); return; }
     if (event.data.kind === "shoot-contextmenu" && doomWrap) {
-      var r = doomWrap.getBoundingClientRect();
-      doomWrap.dispatchEvent(new MouseEvent("contextmenu", {
+      var contextTarget = shootFocusActive && shootFocusOverlay ? shootFocusOverlay : doomWrap;
+      var r = contextTarget.getBoundingClientRect();
+      var contextX = r.left + Math.max(0, Math.min(1, Number(event.data.x) || 0)) * r.width;
+      var contextY = r.top + Math.max(0, Math.min(1, Number(event.data.y) || 0)) * r.height;
+      if (shootFocusActive && window.__openMonitorContextAt) {
+        window.__openMonitorContextAt(contextTarget, contextX, contextY);
+        return;
+      }
+      contextTarget.dispatchEvent(new MouseEvent("contextmenu", {
         bubbles: true, cancelable: true,
-        clientX: r.left + Math.max(0, Math.min(1, Number(event.data.x) || 0)) * r.width,
-        clientY: r.top + Math.max(0, Math.min(1, Number(event.data.y) || 0)) * r.height
+        clientX: contextX,
+        clientY: contextY
       }));
       return;
     }
@@ -62260,9 +62310,15 @@ async def localfont(name):
   var strip = document.getElementById("loft-game-strip");
   var vp = document.querySelector(".hunt-viewport");
   var monitor = document.getElementById("office-monitor");
+  var officeStage = document.getElementById("stage-office");
   var laptop = document.getElementById("office-laptop");
+  var fullscreenArea = document.getElementById("hunt-fullscreen-area");
+  var monitorFocusDialog = document.getElementById("monitor-focus-dialog");
+  var fullscreenHome = fullscreenArea && fullscreenArea.parentNode;
+  var fullscreenNext = fullscreenArea && fullscreenArea.nextSibling;
   if (!strip || !vp || !monitor) return;
   var zoomEl = null; // the device the view is zoomed onto (null = zoomed out)
+  var monitorContentFullscreen = false;
   var monitorIntentUntil = 0; // a dark-screen tap declares attention before boot makes zoom eligible
   var lastZoomPose = "", refitRaf = 0, refitRetryTimer = null, zoomOutTimer = null;
   // box = the invisible screen-sized rect the zoom frames (the device groups' own
@@ -62284,7 +62340,10 @@ async def localfont(name):
     if (!r.width || !sr.width || !v.width) return;
     var ux = ((r.left + r.right) / 2 - sr.left) / sr.width * 3400;
     var uy = ((r.top + r.bottom) / 2 - sr.top) / sr.height * 340;
-    var s = Math.min(680 / (r.width / sr.width * 3400 + t.padX * 2), 340 / (r.height / sr.height * 340 + t.padY * 2), t.maxS);
+    var contentFullscreen = zoomEl === monitor && monitorContentFullscreen;
+    var padX = contentFullscreen ? 0.8 : t.padX, padY = contentFullscreen ? 0 : t.padY;
+    var maxScale = contentFullscreen ? Infinity : t.maxS;
+    var s = Math.min(680 / (r.width / sr.width * 3400 + padX * 2), 340 / (r.height / sr.height * 340 + padY * 2), maxScale);
     var tx = ux / 3400 * (v.width * 5), ty = uy / 340 * v.height; // strip lays out at 500% viewport width
     var origin = tx + "px " + ty + "px";
     var transform = "translate(" + (v.width / 2 - tx) + "px, " + (v.height / 2 - ty) + "px) scale(" + s + ")";
@@ -62321,6 +62380,11 @@ async def localfont(name):
     if (zoomEl === monitor) monitorIntentUntil = 0;
     zoomEl.classList.remove("dev-zoomed");
     zoomEl = null;
+    monitorContentFullscreen = false;
+    monitor.classList.remove("monitor-content-fullscreen");
+    if (officeStage) officeStage.classList.remove("monitor-content-fullscreen");
+    if (fullscreenArea) fullscreenArea.classList.remove("monitor-content-fullscreen-host");
+    placeMonitorFocusHost(false);
     lastZoomPose = "";
     vp.classList.remove("device-zoomed");
     strip.style.transition = "none";
@@ -62347,6 +62411,11 @@ async def localfont(name):
     if (monitor) monitor.classList.remove("dev-zoomed");
     if (laptop) laptop.classList.remove("dev-zoomed");
     zoomEl = null; lastZoomPose = "";
+    monitorContentFullscreen = false;
+    monitor.classList.remove("monitor-content-fullscreen");
+    if (officeStage) officeStage.classList.remove("monitor-content-fullscreen");
+    if (fullscreenArea) fullscreenArea.classList.remove("monitor-content-fullscreen-host");
+    placeMonitorFocusHost(false);
     monitorIntentUntil = 0;
     vp.classList.remove("device-zoomed");
     var prevTransition = strip.style.transition;
@@ -62394,6 +62463,9 @@ async def localfont(name):
   window.__monitorZoomOut = zoomOut;
   window.__toggleMonitorZoom = function () { if (zoomEl === monitor) zoomOut(); else zoomIn(monitor); }; // 'Enter' in the office toggles the monitor zoom
   window.__monitorZoomed = function () { return zoomEl === monitor; }; // is the monitor currently zoomed in? (the office Enter-walk's open/dismiss beats read this)
+  window.__monitorContentFullscreen = function () {
+    return monitorContentFullscreen && zoomEl === monitor;
+  };
   window.__monitorAttention = function () { return zoomEl === monitor || Date.now() < monitorIntentUntil; };
   window.__laptopZoomIn = function () { if (laptop) zoomIn(laptop); }; // the office Enter-walk's call beat pulls the view up to the laptop (the lid may have auto-opened un-zoomed)
   window.__laptopZoomed = function () { return zoomEl === laptop; };
@@ -62403,6 +62475,103 @@ async def localfont(name):
   [document.getElementById("monitor-bezel-close"), document.getElementById("laptop-bezel-close")].forEach(function (x) {
     if (x) x.addEventListener("pointerdown", function (e) { e.stopPropagation(); zoomOut(); });
   });
+  var monitorFsButton = document.getElementById("monitor-bezel-fullscreen");
+  function placeMonitorFocusHost(on) {
+    if (!fullscreenArea || !fullscreenHome) return;
+    if (on) {
+      var browserFullscreen = fullscreenArea.classList.contains("is-fullscreen") ||
+        document.fullscreenElement === fullscreenArea ||
+        document.webkitFullscreenElement === fullscreenArea;
+      if (browserFullscreen) return;
+      if (monitorFocusDialog && fullscreenArea.parentNode !== monitorFocusDialog) monitorFocusDialog.appendChild(fullscreenArea);
+      if (monitorFocusDialog && !monitorFocusDialog.open) {
+        try { monitorFocusDialog.showModal(); } catch (_error) { monitorFocusDialog.setAttribute("open", ""); }
+      }
+    } else if (fullscreenArea.parentNode !== fullscreenHome) {
+      if (monitorFocusDialog && monitorFocusDialog.open) monitorFocusDialog.close();
+      if (fullscreenNext && fullscreenNext.parentNode === fullscreenHome) fullscreenHome.insertBefore(fullscreenArea, fullscreenNext);
+      else fullscreenHome.appendChild(fullscreenArea);
+    }
+  }
+  function syncMonitorFullscreenButton() {
+    if (!monitorFsButton) return;
+    var contentFullscreen = monitorContentFullscreen && zoomEl === monitor;
+    placeMonitorFocusHost(contentFullscreen);
+    monitor.classList.toggle("monitor-content-fullscreen", contentFullscreen);
+    if (officeStage) officeStage.classList.toggle("monitor-content-fullscreen", contentFullscreen);
+    if (fullscreenArea) fullscreenArea.classList.toggle("monitor-content-fullscreen-host", contentFullscreen);
+    var language = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    var label = T[language][contentFullscreen ? "fullscreen_exit" : "fullscreen_enter"];
+    monitorFsButton.setAttribute("aria-label", label);
+    monitorFsButton.setAttribute("title", label);
+    var title = monitorFsButton.querySelector("title");
+    if (title) title.textContent = label;
+    var mark = monitorFsButton.querySelector("path");
+    if (mark) mark.setAttribute("d", contentFullscreen
+      ? "M377.35 153.7 V154.35 H376.7 M379.3 154.35 H378.65 V153.7 M378.65 156.3 V155.65 H379.3 M376.7 155.65 H377.35 V156.3"
+      : "M376.7 154.35 V153.7 H377.35 M378.65 153.7 H379.3 V154.35 M379.3 155.65 V156.3 H378.65 M377.35 156.3 H376.7 V155.65");
+  }
+  window.__syncMonitorFullscreenButton = syncMonitorFullscreenButton;
+  window.__toggleMonitorContentFullscreen = function () {
+    if (zoomEl !== monitor) return;
+    if (!monitorContentFullscreen && monitor.classList.contains("show-doom") &&
+        window.__shootCanFullscreen && window.__shootCanFullscreen() &&
+        window.__enterShootBrowserFullscreen) {
+      window.__enterShootBrowserFullscreen();
+      return;
+    }
+    monitorContentFullscreen = !monitorContentFullscreen;
+    syncMonitorFullscreenButton();
+    refitZoom();
+    scheduleRefitZoom(true);
+  };
+  if (fullscreenArea) fullscreenArea.addEventListener("pointerdown", function (e) {
+    if (!monitorContentFullscreen) return;
+    var screen = document.getElementById("monitor-zoom-box");
+    if (!screen) return;
+    var r = screen.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    window.__toggleMonitorContentFullscreen();
+  }, true);
+  syncMonitorFullscreenButton();
+  if (monitorFsButton) {
+    var monitorFsRestoreTarget = null;
+    function restoreMonitorFullscreenFocus() {
+      var target = monitorFsRestoreTarget;
+      if (target && target.isConnected && typeof target.focus === "function") {
+        try { target.focus({ preventScroll: true }); } catch (_error) { try { target.focus(); } catch (_error2) {} }
+        if (target.tagName === "IFRAME" && target.contentWindow) {
+          try { target.contentWindow.focus(); } catch (_error3) {}
+        }
+      }
+      if (monitor.classList.contains("show-snake") && window.__focusMonitorSnake) window.__focusMonitorSnake();
+    }
+    monitorFsButton.addEventListener("pointerdown", function () {
+      monitorFsRestoreTarget = document.activeElement;
+    });
+    monitorFsButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.__toggleMonitorContentFullscreen) window.__toggleMonitorContentFullscreen();
+      restoreMonitorFullscreenFocus();
+      setTimeout(restoreMonitorFullscreenFocus, 80);
+      setTimeout(restoreMonitorFullscreenFocus, 240);
+    });
+    monitorFsButton.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.__toggleMonitorContentFullscreen) window.__toggleMonitorContentFullscreen();
+    });
+  }
+  window.addEventListener("keydown", function (e) {
+    if ((e.key !== "Escape" && e.key !== "Esc") || !monitorContentFullscreen) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    window.__toggleMonitorContentFullscreen();
+  }, true);
   // a tap landing outside the zoomed device hands the room back — unless it lands on
   // the OTHER device (glide over) or on viewport chrome (capture phase, so a target's
   // own stopPropagation can't strand the zoom)
@@ -62469,7 +62638,6 @@ async def localfont(name):
   // (photobooth polaroid, shortcuts card) keep their own Esc priority
   window.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
-    if (document.fullscreenElement && document.fullscreenElement.id === "monitor-video-wrap") return; // the browser is exiting the film's own fullscreen — that's all this press does
     if (document.querySelector(".pb-dialog-backdrop")) return; // dialogs own Esc while up
     if (document.querySelector(".mon-ctx") || document.querySelector(".console-ctx.show")) return; // an open right-click menu owns Esc (its own handler closes it)
     // This capture listener runs before the native finder input's own key handler.

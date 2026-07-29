@@ -15,7 +15,7 @@ var HARNESS = [
   ' document.title="Wedding host title";window.__openMonitorApp("doom");await sleep(30);',
   ' var first=document.querySelector("#monitor-shoot-host iframe");',
   ' S("launch",{title:document.title,running:window.__doomRunning(),open:mon.classList.contains("show-doom"),frame:!!first});',
-  ' window.__closeMonitorDoom();await sleep(30);S("close",{title:document.title,open:mon.classList.contains("show-doom"),retained:document.querySelector("#monitor-shoot-host iframe")===first});',
+  ' window.__closeMonitorDoom();await sleep(30);S("close",{title:document.title,open:mon.classList.contains("show-doom"),removed:!document.querySelector("#monitor-shoot-host iframe"),running:window.__doomRunning()});',
   ' window.__openMonitorApp("doom");window.__killMonitorDoom();await sleep(2250);S("kill",{title:document.title,running:window.__doomRunning(),open:mon.classList.contains("show-doom"),frame:!!document.querySelector("#monitor-shoot-host iframe")});',
   ' window.__openMonitorApp("doom");await sleep(30);var before=document.querySelector("#monitor-shoot-host iframe");window.__restartMonitorDoom();await sleep(2250);var after=document.querySelector("#monitor-shoot-host iframe");S("restart",{title:document.title,running:window.__doomRunning(),open:mon.classList.contains("show-doom"),fresh:!!after&&after!==before});',
   '}',
@@ -35,8 +35,8 @@ var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.launch.title === "Wedding host title" && s.launch.running && s.launch.open && s.launch.frame,
   "launch creates an isolated frame without replacing the host title", s.launch);
-check(s.close.title === "Wedding host title" && !s.close.open && s.close.retained,
-  "ordinary close pauses and retains the isolated frame", s.close);
+check(s.close.title === "Wedding host title" && !s.close.open && s.close.removed && !s.close.running,
+  "ordinary close silently tears down the isolated frame", s.close);
 check(s.kill.title === "Wedding host title" && !s.kill.running && !s.kill.open && !s.kill.frame,
   "Kill leaves the host title intact through teardown", s.kill);
 check(s.restart.title === "Wedding host title" && s.restart.running && s.restart.open && s.restart.fresh,

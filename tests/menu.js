@@ -215,11 +215,10 @@ var HARNESS = [
   // Kill now runs a ~2.1s FATALITY death-flash, THEN destroys the app: the menu hides + the
   // on-screen flash (death-doom) starts immediately; show-doom is torn down only after the flash.
   "    if(monKill()) monKill().click(); await sleep(40); S('doom_kill_hid_menu', !monMenu()); S('doom_kill_flash_started', mon().classList.contains('death-doom')); S('doom_kill_still_open_during_flash', mon().classList.contains('show-doom')); await sleep(2300); S('doom_kill_closed_app', !mon().classList.contains('show-doom')); S('doom_kill_flash_ended', !mon().classList.contains('death-doom'));",
-  // fs button
+  // shared in-page monitor focus mode (Shoot has no iframe-level fullscreen control)
   "    showApp('show-doom'); document.querySelector('[data-shoot-game=\"doom\"]').click(); await sleep(20);",
-  "    window.__fsCalls=[]; HTMLIFrameElement.prototype.requestFullscreen=function(){window.__fsCalls.push(this.getAttribute('src')||'iframe');return Promise.resolve();};",
-  "    var fsBtn=document.getElementById('monitor-doom-fs'); S('doom_fs_btn_present', !!fsBtn);",
-  "    fsBtn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); await sleep(40); S('doom_fs_called_on_iframe', (window.__fsCalls||[]).indexOf('doom/player.html')>=0); S('doom_fs_calls', window.__fsCalls);",
+  "    if(window.__monitorZoomIn)window.__monitorZoomIn(); var fsBtn=document.getElementById('monitor-bezel-fullscreen'),shootOverlay=document.getElementById('shoot-focus-overlay'),shootFsRequested=false; shootOverlay.requestFullscreen=function(){shootFsRequested=true;return Promise.resolve();}; S('monitor_fs_btn_present', !!fsBtn);",
+  "    fsBtn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); await sleep(40); S('monitor_fs_entered', shootFsRequested&&mon().classList.contains('show-doom')&&!document.getElementById('monitor-doom-fs')); document.dispatchEvent(new Event('fullscreenchange')); await sleep(40);",
   "    mon().classList.remove('show-caps');",
   // doom restart teardown — Restart now runs the FATALITY flash, THEN destroys (and would cold-boot,
   // but a real re-boot needs show-caps + the WASM runtime, out of scope here; no show-caps → openDoom
@@ -324,7 +323,7 @@ function check(name, cond, detail) {
   else { fails++; console.log("  ✗ " + name + (detail !== undefined ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 var s = rep.steps;
-console.log("monitor right-click Kill/Start over menus + runtime helpers + fs button:");
+console.log("monitor right-click Kill/Start over menus + runtime helpers + shared fullscreen:");
 console.log(" desktop (no app open):");
 check("right-click on the bare monitor desktop eats the native menu, shows no custom menu", s.desktop_ctx_prevented === true && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
 check("outside click dismisses the Loft OS menu without activating the covered app", s.system_menu_opened === true && s.system_menu_outside_dismissed === true && s.system_menu_outside_blocked_app === true, { opened: s.system_menu_opened, dismissed: s.system_menu_outside_dismissed, blocked: s.system_menu_outside_blocked_app });
@@ -396,8 +395,8 @@ check("doom Start over is separated and last", s.doom_reset_last === true);
 check("doom Kill is DISABLED while the engine isn't running", s.doom_kill_disabled_when_cold === true);
 check("doom Kill becomes ENABLED once the engine is running", s.doom_kill_enabled_when_running === true);
 check("enabled doom Kill runs the FATALITY flash then destroys the app", s.doom_kill_hid_menu === true && s.doom_kill_flash_started === true && s.doom_kill_still_open_during_flash === true && s.doom_kill_closed_app === true && s.doom_kill_flash_ended === true);
-check("doom fs button present", s.doom_fs_btn_present === true);
-check("doom fs button calls requestFullscreen on the active iframe", s.doom_fs_called_on_iframe === true, s.doom_fs_calls);
+check("shared monitor fullscreen button present", s.monitor_fs_btn_present === true);
+check("shared monitor fullscreen carries Shoot without an iframe-level control", s.monitor_fs_entered === true);
 console.log(" runtime teardown helpers (no throws, real state reset):");
 check("doom restart runs the flash then tears down the disposable iframe", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_removed_iframe === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
 check("linux restart holds the BSOD longer, then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_bsod_lingers === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);

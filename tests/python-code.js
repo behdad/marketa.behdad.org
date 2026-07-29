@@ -81,9 +81,17 @@ check(/CODE_UNSAVED_KEY\s*=\s*"deskCodeUnsaved"/.test(html) &&
       /code-item\.unsaved/.test(html),
   "an unnamed buffer remains available as an italic unsaved sidebar item");
 check(/pyPrint\(">>> import turtle  # browser graphics"/.test(html) &&
-      /id="monitor-py-view-toggle" transform="translate\(358\.5,154\.8\)"/.test(html) &&
-      /id="monitor-console-view-toggle" transform="translate\(358\.5,154\.8\)"/.test(html),
-  "both graphics toggles sit evenly beside their distinct Back and Dismiss controls");
+      /id="monitor-py-view-toggle" transform="translate\(71,29\.3\) scale\(0\.8\)"/.test(html) &&
+      /id="monitor-console-view-toggle" transform="translate\(71,29\.3\) scale\(0\.8\)"/.test(html) &&
+      /id="monitor-py-view-mark"/.test(html) &&
+      /id="monitor-console-view-mark"/.test(html) &&
+      /#monitor-console-view-toggle\{[^}]*opacity:0;pointer-events:none/.test(html) &&
+      /#monitor-console-view-toggle\.has-graphics\{opacity:1;pointer-events:auto\}/.test(html) &&
+      /#monitor-py-view-toggle\{[^}]*opacity:0;pointer-events:none/.test(html) &&
+      /#monitor-py-view-toggle\.has-graphics\{opacity:1;pointer-events:auto\}/.test(html) &&
+      /consoleReturnToCode && available \? "66" : "71"/.test(html) &&
+      /pyReturnToCode && available \? "66" : "71"/.test(html),
+  "graphics toggles appear only for output and sit between Back and Dismiss");
 check(/pyReturnToCode[\s\S]*?paintPythonClose[\s\S]*?openPython\(true\)/.test(html) &&
       /consoleReturnToCode[\s\S]*?paintConsoleClose[\s\S]*?openConsole\(true\)/.test(html),
   "Code-launched Python and JavaScript consoles expose a Back path");
@@ -147,16 +155,18 @@ var harness = [
   '  await new Promise(function(r){setTimeout(r,360)});',
   '  out.pythonSaved=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}")["irene.py"];',
   '  out.jsUntouched=!Object.prototype.hasOwnProperty.call(JSON.parse(localStorage.getItem("deskScripts")||"{}"),"irene.py");',
+  '  var jsFiles=JSON.parse(localStorage.getItem("deskScripts")||"{}");jsFiles["irene.js"]="window.irene = 1;";localStorage.setItem("deskScripts",JSON.stringify(jsFiles));',
   '  var routed=null; window.__runPythonCode=function(n,c){routed={name:n,code:c};return true}; document.getElementById("monitor-code-run").click();',
   '  out.routed=routed; out.pythonActive=py.classList.contains("active");',
   '  out.pythonCompletion=window.__codeCommands().some(function(c){return c.name==="Turtle"});',
   '  out.loftRosterStable=window.__loftCommands().some(function(c){return c.name==="party"}) && !window.__loftCommands().some(function(c){return c.name==="Turtle"});',
-  '  document.getElementById("monitor-code-lang-js").click(); name.value="broken.js"; code.value="throw new Error(\\\"code boom\\\")";',
+  '  document.getElementById("monitor-code-lang-js").click();out.pairedSwitch=name.value==="irene.js"&&code.value==="window.irene = 1;"&&JSON.parse(localStorage.getItem("deskPythonScripts")||"{}")["irene.py"]===\'print("turtle time")\';name.value="broken.js"; code.value="throw new Error(\\\"code boom\\\")";',
   '  document.getElementById("monitor-code-run").click(); await new Promise(function(r){setTimeout(r,80)});',
   '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastCodeError;',
+  '  out.jsGfxInitiallyHidden=!document.getElementById("monitor-console-view-toggle").classList.contains("has-graphics");',
   '  var jsShown=window.display_svg(\'<svg viewBox="0 0 20 10" onload="bad()"><script>bad()<\\/script><path id="js-svg-probe" d="M0 0H20V10H0Z" onclick="bad()"/></svg>\');',
   '  var jsSvgHost=document.getElementById("monitor-console-svg-display"),jsSvgRoot=jsSvgHost.querySelector("svg"),jsSvgPath=jsSvgHost.querySelector("#js-svg-probe");',
-  '  out.jsSvgDisplay=jsShown&&document.getElementById("monitor-console").classList.contains("svg-view")&&jsSvgRoot&&jsSvgRoot.getAttribute("viewBox")==="0 0 20 10"&&jsSvgRoot.getAttribute("width")==="620"&&!jsSvgRoot.hasAttribute("onload")&&!jsSvgHost.querySelector("script")&&jsSvgPath&&!jsSvgPath.hasAttribute("onclick");',
+  '  out.jsSvgDisplay=jsShown&&document.getElementById("monitor-console-view-toggle").classList.contains("has-graphics")&&document.getElementById("monitor-console").classList.contains("svg-view")&&jsSvgRoot&&jsSvgRoot.getAttribute("viewBox")==="0 0 20 10"&&jsSvgRoot.getAttribute("width")==="620"&&!jsSvgRoot.hasAttribute("onload")&&!jsSvgHost.querySelector("script")&&jsSvgPath&&!jsSvgPath.hasAttribute("onclick");',
   '  document.getElementById("monitor-console-view-toggle").dispatchEvent(new MouseEvent("click",{bubbles:true})); out.jsSvgToggle=!document.getElementById("monitor-console").classList.contains("svg-view")&&!!jsSvgHost.firstElementChild;',
   '  document.getElementById("monitor-console-close").dispatchEvent(new MouseEvent("click",{bubbles:true})); await new Promise(function(r){setTimeout(r,20)});',
   '  out.consoleDismissed=!mon.classList.contains("show-console")&&!mon.classList.contains("show-code");',
@@ -167,13 +177,14 @@ var harness = [
   '  document.getElementById("monitor-code-explain").click();await new Promise(function(r){setTimeout(r,100)});',
   '  var api=aiBody&&aiBody.context&&aiBody.context.scripting_api;out.codeAiApi={mode:aiBody&&aiBody.mode,language:aiBody&&aiBody.code&&aiBody.code.language,party:api&&api.globals&&api.globals.party,music:api&&api.globals&&api.globals.music,runtime:api&&api.runtime,globals:api&&Object.keys(api.globals).length,commands:window.__loftCommands().length};',
   '  mon.classList.remove("show-code","show-console"); mon.classList.add("here","show-caps","show-python");',
+  '  out.pyGfxInitiallyHidden=!document.getElementById("monitor-py-view-toggle").classList.contains("has-graphics");',
   '  document.getElementById("monitor-python").classList.add("turtle-view"); var gfx=document.getElementById("monitor-py-turtle"),gfxClicks=0;',
   '  mon.addEventListener("click",function(){gfxClicks++}); gfx.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true})); gfx.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));',
   '  out.gfxOwned=gfxClicks===0 && mon.classList.contains("here") && mon.classList.contains("show-python");',
   '  var shown=window.__loftTurtleCommand("svg",\'<svg viewBox="0 0 20 10" onload="bad()"><script>bad()<\\/script><path id="py-svg-probe" d="M0 0H20V10H0Z" onclick="bad()"/></svg>\');',
   '  var svgHost=document.getElementById("monitor-py-svg-display"),svgRoot=svgHost.querySelector("svg"),svgPath=svgHost.querySelector("#py-svg-probe");',
-  '  out.svgDisplay=shown&&svgRoot&&svgRoot.getAttribute("viewBox")==="0 0 20 10"&&svgRoot.getAttribute("width")==="620"&&!svgRoot.hasAttribute("onload")&&!svgHost.querySelector("script")&&svgPath&&!svgPath.hasAttribute("onclick");',
-  '  window.__loftTurtleCommand("screen_clear"); out.svgClears=!svgHost.firstElementChild;',
+  '  out.svgDisplay=shown&&document.getElementById("monitor-py-view-toggle").classList.contains("has-graphics")&&svgRoot&&svgRoot.getAttribute("viewBox")==="0 0 20 10"&&svgRoot.getAttribute("width")==="620"&&!svgRoot.hasAttribute("onload")&&!svgHost.querySelector("script")&&svgPath&&!svgPath.hasAttribute("onclick");',
+  '  window.__loftTurtleCommand("screen_clear"); out.svgClears=!svgHost.firstElementChild&&!document.getElementById("monitor-py-view-toggle").classList.contains("has-graphics");',
   '  document.body.innerHTML="<pre id=\\"__report\\"></pre>"; document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(e){document.body.innerHTML="<pre id=\\"__report\\"></pre>";document.getElementById("__report").textContent=JSON.stringify({error:String(e&&e.stack||e)})});',
   '<\/script>',
@@ -184,6 +195,8 @@ check(state && !state.error, "headless Code interaction completed", state && sta
 if (state && !state.error) {
   check(state.pythonSaved === 'print("turtle time")' && state.jsUntouched,
     "a named Python buffer autosaves without contaminating legacy JavaScript files", state);
+  check(state.pairedSwitch,
+    "language pills open an existing sibling without renaming or deleting the focused file", state);
   check(state.draftLanguage === "python",
     "the recoverable Code draft retains its language", state.draftLanguage);
   check(state.routed && state.routed.name === "irene.py" && state.routed.code === 'print("turtle time")',
@@ -192,7 +205,7 @@ if (state && !state.error) {
     "selector styling and completion catalogs track Python without changing the Loft JS hook", state);
   check(state.jsConsole && /code boom/.test(state.jsError) && /code boom/.test(state.lastError),
     "a JavaScript Code exception opens the JS Console with the actual error", state);
-  check(state.jsSvgDisplay && state.jsSvgToggle,
+  check(state.jsGfxInitiallyHidden && state.jsSvgDisplay && state.jsSvgToggle,
     "JavaScript SVG output is fitted and sanitized, and its view toggle preserves the drawing", state);
   check(state.consoleDismissed && state.codeReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
     "Dismiss leaves Code closed while the separate Back returns to it without overwriting failure status", state);
@@ -202,7 +215,7 @@ if (state && !state.error) {
     "the JavaScript coder receives the shared live console roster, usage help, and async calling context", state.codeAiApi);
   check(state.gfxOwned,
     "clicking or double-clicking Turtle graphics stays inside Python instead of reaching the monitor repaint/swap handlers", state);
-  check(state.svgDisplay && state.svgClears,
+  check(state.pyGfxInitiallyHidden && state.svgDisplay && state.svgClears,
     "loft SVG output is fitted, sanitized, and cleared on the native graphics surface", state);
 }
 

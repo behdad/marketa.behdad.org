@@ -156,7 +156,9 @@ runner. Python uses `localStorage["deskPythonScripts"]` and hands the complete
 buffer to the existing Python app through `__runPythonCode`. The recoverable
 `deskCodeDraft` object includes its language. Explicit `.js` and `.py`
 filenames select a runtime; an extensionless name retains the manually selected
-one. Keep these stores outside checkpoint/reset state.
+one. The JS/PY pills open an existing same-basename sibling in the other store;
+without one, they retain the text as an unnamed buffer and leave the named
+source file untouched. Keep these stores outside checkpoint/reset state.
 
 Python Code jobs queue while self-hosted Pyodide loads, then execute serially
 through `runPythonAsync` in the Python console's persistent namespace. stdout,
@@ -168,8 +170,9 @@ rendered output, but it is not a worker-level interrupt for arbitrary CPU loops.
 
 JavaScript Code opens the existing Console and runs in the page's async-IIFE
 environment. `display_svg(source)` sends complete SVG documents to the Console's
-native graphics view; its `gfx` control switches between the drawing and
-scrollback without clearing either. The bundled `loft-type.js` example shapes
+native graphics view; its conditional `gfx` control appears only while a
+drawing exists and switches between the drawing and scrollback without clearing
+either. The bundled `loft-type.js` example shapes
 `LoftType` with harfbuzzjs and converts each glyph through
 `font.glyphToPath()`. It shares the existing LoftType starter-seed key rather
 than adding a separate migration.
@@ -729,6 +732,24 @@ Opening an app boots/pans the monitor if necessary, closes incompatible surfaces
 own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
 view gets the first chance to step back, then the app closes to the desktop. A normal close can
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
+The zoomed monitor bezel owns the only monitor fullscreen control. It drives the
+in-page `monitorContentFullscreen` state without calling the browser Fullscreen
+API. The desk zoom contains `#monitor-zoom-box` without a scale cap and with
+only a 0.8-unit horizontal safe margin
+while `.monitor-content-fullscreen` hides every direct monitor child except the
+background and clipped `#office-monitor-screen-content`; the host simultaneously
+hides room chrome and becomes a fixed, viewport-filling black layer. The authored 124×42 display
+therefore letterboxes without stretching; Escape or a surround tap returns to
+the office, while **F** independently owns browser fullscreen. Code, consoles,
+media, and embedded games share this lifecycle. Do not add iframe- or app-level
+fullscreen buttons casually. Shoot is the sole intentional exception because
+all three engines author a 4:3 viewport: the shared bezel control routes a live
+Shoot game to `#shoot-focus-overlay`, which temporarily reparents the retained
+`#monitor-shoot-host` and requests true browser fullscreen without recreating
+its iframe. It deliberately exposes no exit control; native Escape owns exit.
+Shoot does not retain an iframe across Dismiss: `closeDoom(false)` calls the
+immediate, gag-free `destroyDoom()`, while Back returns to the chooser and the
+context-menu Kill path alone runs `doomDeathFlash`.
 The visible dock order lives in the monitor checkpoint row; drag swaps fixed slots, Continue
 restores the order, and the adapter reset restores `DESKTOP_APPS` order.
 Julia and Pipes share one off-DOM Canvas 2D surface. Its baseline remains 4×

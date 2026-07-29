@@ -229,8 +229,17 @@ and **Code** apps. They are optional play spaces, not part of the main game.
 Press backtick to open the drop-down console and type `help` or `shortcuts()` to
 get oriented. The Code app can run JavaScript and Python files; named files are
 saved in this browser. JavaScript and Python examples can open native SVG
-graphics views; use the small **gfx** control to switch between a drawing and
-its Console output.
+graphics views. Once a drawing exists, the small **gfx** control appears so you
+can switch between it and the Console output. When the office monitor is
+zoomed, its bezel has a fullscreen control that expands only the 124×42 display
+surface across the current browser viewport, preserving its aspect ratio
+against a black surround and carrying whichever app is open. Tap the surround or press
+Escape to return. This does not invoke browser fullscreen; **F** remains that
+separate toggle. The bezel control is shared by every monitor app, including
+embedded games and Video. Shoot is the deliberate exception: once a shooter is
+running, the same monitor-bezel control opens the 4:3 game in true browser
+fullscreen so the monitor's extra-wide shape does not waste most of the browser
+height. Shoot adds no second fullscreen or exit button; press Escape to leave.
 
 The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
 Solitaire. Solitaire accepts clicks or card drags; the full lifted stack follows
@@ -240,8 +249,10 @@ In Mines, tap a square to reveal it or press and hold to place or remove a flag.
 The `mines()` and `solitaire()` console commands open either game directly.
 In layered monitor apps, **Back** returns within the app while **Dismiss** closes
 it and preserves the current view. This applies to the game chooser in Classics
-and Shoot, messages and drafts in Mail, designs in Tattoo, Life's Help screen,
-and Console or Python sessions launched from Code.
+messages and drafts in Mail, designs in Tattoo, Life's Help screen, and Console
+or Python sessions launched from Code. Shoot is the exception: **Dismiss**
+silently tears down its WASM game so reopening starts cleanly at the chooser;
+the context-menu **Kill app** keeps its separate FATALITY gag.
 
 In the monitor music player, drag an equalizer band vertically to adjust it.
 Double-tap a band to zero that band. On touch devices, press and hold a band to

@@ -97,6 +97,66 @@ function checkStaticDomIds(file, html) {
   else pass(file + ": static DOM ids are unique (" + seen.size + ")");
 }
 
+// Multi-control monitor corners use one geometry contract: painted pills have a
+// one-unit gap and their enlarged transparent hit regions meet at (but never cross)
+// the midpoint. This keeps Back/Fullscreen/Dismiss visually consistent without one
+// control stealing the edge of its neighbour's touch target.
+function checkMonitorControlSpacing(file, html) {
+  if (file !== "rsvp.html") return;
+  function attr(tag, name) {
+    var match = new RegExp("\\b" + name + '="([-\\d.]+)"').exec(tag);
+    return match ? Number(match[1]) : null;
+  }
+  function geometry(id) {
+    var start = html.indexOf('<g id="' + id + '"');
+    if (start < 0) return null;
+    var openEnd = html.indexOf(">", start), end = html.indexOf("</g>", openEnd);
+    var open = html.slice(start, openEnd + 1), body = html.slice(openEnd + 1, end);
+    var transform = /translate\(([-\d.]+),[-\d.]+\) scale\(([-\d.]+)\)/.exec(open);
+    var tags = body.match(/<rect\b[^>]*>/g) || [];
+    var hitTag = tags.find(function (tag) { return /class="mini-hit"/.test(tag); });
+    var paintTag = tags.find(function (tag) { return !/class="mini-hit"/.test(tag) && /\brx="2\.5"/.test(tag); });
+    if (!transform || !hitTag || !paintTag) return null;
+    var tx = Number(transform[1]), scale = Number(transform[2]);
+    function span(tag) {
+      var x = attr(tag, "x"), width = attr(tag, "width");
+      return x == null || width == null ? null : { left: tx + x * scale, right: tx + (x + width) * scale };
+    }
+    return { paint: span(paintTag), hit: span(hitTag) };
+  }
+  var clusters = [
+    ["monitor-console-back", "monitor-console-close"],
+    ["monitor-mail-back", "monitor-mail-close"],
+    ["monitor-mines-back", "monitor-mines-close"],
+    ["monitor-tattoo-back", "monitor-tattoo-close"],
+    ["monitor-life-back", "monitor-life-close"],
+    ["monitor-py-back", "monitor-py-close"],
+    ["monitor-doom-back", "monitor-doom-close"]
+  ];
+  var errors = [], epsilon = 0.0001;
+  clusters.forEach(function (ids) {
+    var controls = ids.map(geometry);
+    if (controls.some(function (control) { return !control || !control.paint || !control.hit; })) {
+      errors.push(ids.join(" → ") + ": missing geometry");
+      return;
+    }
+    controls.forEach(function (control, index) {
+      if (control.hit.left > control.paint.left + epsilon || control.hit.right < control.paint.right - epsilon) {
+        errors.push(ids[index] + ": hit region does not contain painted control");
+      }
+      if (!index) return;
+      var previous = controls[index - 1];
+      var gap = control.paint.left - previous.paint.right;
+      if (Math.abs(gap - 1) > epsilon) errors.push(ids[index - 1] + " → " + ids[index] + ": visual gap " + gap);
+      if (Math.abs(control.hit.left - previous.hit.right) > epsilon) {
+        errors.push(ids[index - 1] + " → " + ids[index] + ": hit regions do not meet cleanly");
+      }
+    });
+  });
+  if (errors.length) fail(file + ": monitor corner controls share one spacing/hit-region contract", errors.join("\n"));
+  else pass(file + ": monitor corner controls share one spacing/hit-region contract (" + clusters.length + " states)");
+}
+
 // Extracts the top-level keys of a `en: { ... }` / `cs: { ... }` object literal
 // by brace-depth scanning from the line where it starts. Good enough for this
 // file's hand-written dictionaries; not a general JS parser.
@@ -1210,6 +1270,7 @@ FILES.forEach(function (file) {
   checkConsoleOutClipSlack(file, style);
   checkSvgTagBalance(file, html);
   checkStaticDomIds(file, html);
+  checkMonitorControlSpacing(file, html);
   console.log("");
 });
 

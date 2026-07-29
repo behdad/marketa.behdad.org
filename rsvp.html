@@ -44363,13 +44363,16 @@ setOfficeProgress("pc", false);
     }
   }
   window.stopPcFan = stopPcFan;
-  // the fan hum is only audible in the office and while the tab's visible: leaving
-  // the room (or hiding the tab) stops it, and returning with the PC still on resumes it
+  // The fan hum is only audible while looking at the office itself. Device zooms mute it
+  // along with leaving the room or tab, then it resumes when the desk comes back into view.
   var fanInOffice = false;
   window.__updatePcFan = function (inOffice, fadeSecs) {
     if (typeof inOffice === "boolean") fanInOffice = inOffice;
     // hasFocus: continuous-bed rule, see __updateKettleHum
-    var wantFan = pcTower.classList.contains("on") && fanInOffice && !document.hidden && document.hasFocus();
+    var deviceZoomed = (window.__monitorZoomed && window.__monitorZoomed()) ||
+      (window.__laptopZoomed && window.__laptopZoomed());
+    var wantFan = pcTower.classList.contains("on") && fanInOffice && !deviceZoomed &&
+      !document.hidden && document.hasFocus();
     if (wantFan && !pcFanCtx) startPcFan();
     else if (!wantFan && pcFanCtx) stopPcFan(fadeSecs);
   };
@@ -59297,6 +59300,7 @@ async def localfont(name):
     vp.classList.add("device-zoomed");
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
+    if (window.__updatePcFan) window.__updatePcFan();
     if (el === monitor && window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   function zoomOut() {
@@ -59314,6 +59318,7 @@ async def localfont(name):
     strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     strip.getBoundingClientRect();
     strip.style.transition = "";
+    if (window.__updatePcFan) window.__updatePcFan();
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   // A room slide and a device-zoom glide both own the same strip transform. Collapse any
@@ -59340,6 +59345,7 @@ async def localfont(name):
     strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     strip.getBoundingClientRect();
     strip.style.transition = prevTransition;
+    if (window.__updatePcFan) window.__updatePcFan();
     return true;
   }
   // re-fit the zoom whenever the box it frames may have moved or resized under us — a

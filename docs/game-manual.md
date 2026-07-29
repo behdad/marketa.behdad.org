@@ -130,7 +130,7 @@ Home, Back, and Recents work like their familiar phone equivalents.
 
 The phone holds Messages, Mail, Calendar, Album, camera and music tools, small
 utilities, and games. Right-click or press and hold an app icon to open, stop,
-or uninstall it. **Kill** resets and closes only that app; **Start over** restarts
+or uninstall it. **Kill app** resets and closes only that app; **Start over** restarts
 the whole loft and restores removed apps.
 
 The office monitor contains the larger apps, classic games, Chat, Code, Python,
@@ -243,7 +243,7 @@ and Console or Python sessions launched from Code.
 
 In the monitor music player, drag an equalizer band vertically to adjust it.
 Double-tap a band to zero that band. On touch devices, press and hold a band to
-open the same **Reset EQ** and **Kill** menu provided by right-click.
+open the same **Reset EQ** and **Kill app** menu provided by right-click.
 
 The monitor's **snake** app runs the four-player DOS edition of Nibbles. It is
 also discoverable by searching for `nibbles` or `dos`.

@@ -32,6 +32,8 @@ var HARNESS = [
   ' report.steps.rows=rows;report.steps.catalog=ids;',
   ' report.steps.data={message:window.__phoneMessageReceived("cue_mail"),selfie:!!selfie&&window.__albumList().some(function(row){return row.id===selfie.id;})};',
   ' window.__restoreCheckpointSystems({"phone-shell":{unlocked:false,open:true,app:"notes"}},"afterStage");await sleep(30);var locked=document.querySelector(".phone-shell");report.steps.locked={open:shellState().open,booting:!!(locked&&locked.classList.contains("booting")),app:shellState().app};',
+  ' var ok=locked&&locked.querySelector(".pb-key.pb-ok");if(ok){ok.click();ok.click();ok.click();}await sleep(450);',
+  ' var afterUnlock=JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems["phone-shell"];report.steps.unlocked={home:shellState().home,booting:!!(locked&&locked.classList.contains("booting")),saved:afterUnlock};',
   '}',
   '})();</script>'
 ].join("\n");
@@ -69,6 +71,9 @@ check(steps.data && steps.data.message && steps.data.selfie,
   "shell restoration preserves separately owned Messages and Album data", steps.data);
 check(steps.locked && steps.locked.open && steps.locked.booting && !steps.locked.app,
   "a saved locked shell remains locked instead of reviving an app", steps.locked);
+check(steps.unlocked && steps.unlocked.home && !steps.unlocked.booting &&
+  steps.unlocked.saved && steps.unlocked.saved.unlocked === true,
+  "unlocking the phone immediately persists its unlocked checkpoint state", steps.unlocked);
 
 console.log("");
 if (failures) {

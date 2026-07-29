@@ -10349,6 +10349,16 @@ section{margin:1.9rem 0}
 #balcony-hangout.food-cheer .bh-arm-gesture{animation:bbq-food-wave 1.35s ease-in-out}
 @keyframes bbq-food-cheer{0%,100%{transform:translateY(0) rotate(0)}28%{transform:translateY(-8px) rotate(-2deg)}55%{transform:translateY(-3px) rotate(2deg)}}
 @keyframes bbq-food-wave{0%,100%{transform:rotate(0)}30%{transform:rotate(-24deg)}58%{transform:rotate(12deg)}}
+/* When the northern lights first appear, whoever is actually on the deck settles into one
+   quiet upward look, then resumes their own idle motion. This class never changes attendance. */
+#balcony-hangout.aurora-look-up .bh-fig.bh-present .bh-idle{animation:bh-aurora-look-up 3.8s cubic-bezier(.22,.7,.25,1)}
+#balcony-hangout.aurora-look-up .bh-fig.bh-present .bh-arm-gesture,
+#balcony-hangout.aurora-look-up .bh-fig.bh-present .bh-toke-arm{animation-play-state:paused}
+@keyframes bh-aurora-look-up{
+  0%,100%{transform:translateY(0) rotate(0)}
+  18%{transform:translateY(-1px) rotate(-1.6deg)}
+  34%,72%{transform:translateY(-1.8px) rotate(-1deg)}
+}
 /* optional drink in a guest's hand: hidden until the controller reveals the person's preferred
    beer, wine, or Diet Coke (or a random drink when they have no preference). Sits inside
    the .bh-idle wrapper so it sways with the figure; static under reduced motion like everything. */
@@ -10375,6 +10385,7 @@ section{margin:1.9rem 0}
 @media (prefers-reduced-motion: reduce){
   #balcony-hangout .bh-idle, #balcony-hangout .bh-arm-gesture, #balcony-hangout .bh-toke-arm, #balcony-hangout .bh-ember,
   #balcony-hangout.food-cheer .bh-idle, #balcony-hangout.food-cheer .bh-arm-gesture{animation:none}
+  #balcony-hangout.aurora-look-up .bh-fig.bh-present .bh-idle{animation:none;transform:translateY(-1px) rotate(-1deg)}
   #balcony-hangout .bh-served-plate{animation:none;opacity:1}
   #balcony-hangout,#balcony-hangout .bh-fig,#balcony-grillmaster,#garden-jacket-inner,#balcony-hallway-jacket-inner{transition:none}
 }
@@ -36100,6 +36111,17 @@ setMusicPausedState(false);
     }
     return false;
   }
+  var balconyWasVisible = false;
+  function updateBalconyLookUp() {
+    var balcony = null;
+    for (var k = 0; k < targets.length; k++) {
+      if (targets[k].room === "balcony") { balcony = targets[k]; break; }
+    }
+    var showing = !!(balcony && window.currentStageName === "balcony" &&
+      targetShown(balcony) && auroraDials(auroraTargetKp()).bright > 0.05);
+    if (showing && !balconyWasVisible && window.__auroraPartyLookUp) window.__auroraPartyLookUp();
+    balconyWasVisible = showing;
+  }
   var kpShown = null; // the index the paint is AT — eased toward auroraTargetKp() so aurora(9) grows in rather than popping
   function frame(now) {
     applyCloudClass();
@@ -36122,6 +36144,7 @@ setMusicPausedState(false);
   stillFrame();
   window.__updateGardenAurora = function () {
     applyCloudClass();
+    updateBalconyLookUp();
     if (reduceMotion) { stillFrame(); return; } // one still frame, no loop — repainted so a Kp/date change still lands
     if (shouldRun()) start();
     else if (raf) { cancelAnimationFrame(raf); raf = 0; }
@@ -89915,6 +89938,29 @@ function spawnDustMote(container) {
       });
       return out;
     };
+    var auroraLookTimer = null;
+    function clearAuroraLookUp() {
+      if (auroraLookTimer) { clearTimeout(auroraLookTimer); auroraLookTimer = null; }
+      hangout.classList.remove("aurora-look-up");
+    }
+    function authoredMomentActive() {
+      var strip = document.getElementById("loft-game-strip");
+      return !!(hangout.classList.contains("food-cheer") ||
+        (strip && strip.classList.contains("dance-frozen")) ||
+        window.__photoFreeze || window.__firstDanceOn || window.__slowDanceOn ||
+        window.__toastsOn || window.__groupPhotoOn || window.__sparklersOn ||
+        window.__cakeOn || window.__bdCakeOn || window.__bouquetOn || window.__chairLiftOn);
+    }
+    // Called on the aurora's hidden→visible edge. Public only as a deterministic test seam.
+    window.__auroraPartyLookUp = function () {
+      if (!window.__gardenPartyOn || window.currentStageName !== "balcony" ||
+          !hangout.classList.contains("on") || authoredMomentActive() ||
+          !hangout.querySelector(".bh-fig.bh-present")) return false;
+      clearAuroraLookUp();
+      hangout.classList.add("aurora-look-up");
+      auroraLookTimer = setTimeout(clearAuroraLookUp, reduceMotion() ? 1400 : 3900);
+      return true;
+    };
     // Once per visit, an actual smoker may notice the silhouettes watching from the building
     // opposite. The facade controller calls this only while its watcher cameo is visible.
     var audienceCommented = false;
@@ -89962,6 +90008,7 @@ function spawnDustMote(container) {
     }
     var shownOnce = false, preserveNextLayout = false, shownSmokingPolicy = null;
     function show() {
+      var wasOn = hangout.classList.contains("on");
       if (!shownOnce) {
         if (bbqCrowdOn) layoutBBQ();
         else { rollCouple(); layout(preserveNextLayout); }
@@ -89974,10 +90021,14 @@ function spawnDustMote(container) {
       shownSmokingPolicy = smokingPolicy();
       resolveDj();
       hangout.classList.add("on");
+      if (!wasOn && window.__auroraShowing && window.__auroraShowing() && window.__auroraPartyLookUp) {
+        window.__auroraPartyLookUp();
+      }
       if (perch) { perch.classList.add("up", "hunt-hit"); perch.style.opacity = "1"; perch.style.pointerEvents = "auto"; perch.setAttribute("tabindex", "0"); perch.setAttribute("role", "button"); perch.removeAttribute("aria-hidden"); }
       if (tableAshtray) tableAshtray.style.display = "none"; // the deck ashtray has moved onto the covered grill
     }
     function hide() {
+      clearAuroraLookUp();
       hangout.classList.remove("on");
       clearGuestFoodPlates();
       var audienceBubble = document.querySelector(".egg-bubble.balcony-audience-callout");

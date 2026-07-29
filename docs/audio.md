@@ -148,8 +148,10 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 - **The office laptop's automatic update** keeps animating while the desktop monitor is
   being engaged or is zoomed, but its update click and reboot chime are suppressed at
   callback time. Attention begins on the initiating monitor tap, including the brief
-  dark-screen boot interval before zoom becomes eligible. The monitor fan remains audible,
-  and player-triggered app, call, music, and toy sounds are unaffected.
+  dark-screen boot interval before zoom becomes eligible. Room tone (fire, aquarium
+  hush/rain, birds/crickets, kettle, radio, PC fan, AC, and city hum) yields while the pocket phone or either
+  office screen owns the foreground, then re-evaluate on dismissal. Player-triggered app,
+  call, projector-score, song/media, and toy sounds are unaffected.
 - **Background-safe beds** (channel-only `want()`) intentionally ignore focus/visibility and
   keep playing — the refcount keeps the context alive under them.
 

@@ -613,6 +613,9 @@ deliberately allowed to continue while hidden or unfocused. Scene volume control
 while the console volume command controls the master bus. Media captured by
 `createMediaElementSource` must use an in-graph gain because WebKit can bypass the element's own
 volume.
+`__roomAmbienceCovered()` is the foreground-device gate: the pocket phone and zoomed laptop/monitor
+stop room-tone beds through `__refreshRoomAmbience()`, while songs, projector scores, calls, app
+media, and one-shots retain their own intended lifecycles.
 
 Stops should ramp a gain with the subsystem's `fadeSecs`, wait for the fade, then disconnect/close
 the handle. Abruptly closing mid-ramp can pop. The recording pipeline has an owner kill switch and a

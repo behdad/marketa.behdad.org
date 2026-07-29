@@ -27483,6 +27483,23 @@ window.__runTransientResetHooks = function () {
 // getSfxCtx(); the song pipeline uses the raw shared context. Exactly ONE AudioContext is
 // constructed at runtime — only here in getAudioCtx (see check.js).
 var __sharedAC = null, __sharedACFailed = false, __activeAudioBeds = 0;
+// A foreground device owns the visitor's attention. Room-tone beds yield while the pocket
+// phone or a desk screen fills the view; songs, projector scores, calls and app media keep
+// their own lifecycles and are deliberately not included.
+var __phoneCoversRoomAmbience = false;
+window.__roomAmbienceCovered = function () {
+  return __phoneCoversRoomAmbience ||
+    !!(window.__monitorZoomed && window.__monitorZoomed()) ||
+    !!(window.__laptopZoomed && window.__laptopZoomed());
+};
+window.__refreshRoomAmbience = function () {
+  ["__updateFireSound", "__updateAquaSound", "__updateTotoroSound",
+   "__updateGardenBirdsong", "__updateKettleHum", "__updateRadioSound",
+   "__updatePcFan", "__updateACHum", "__updateCityHum"].forEach(function (name) {
+    try { if (typeof window[name] === "function") window[name](); } catch (_error) {}
+  });
+};
+window.__activeAudioBedCount = function () { return __activeAudioBeds; };
 function getAudioCtx() {
   if (__sharedAC || __sharedACFailed) return __sharedAC;
   try {
@@ -31895,7 +31912,8 @@ setMusicPausedState(false);
     // stream open, and an unattended-but-"visible" window (covered on X11 — no
     // occlusion detection) would otherwise hold it forever, where it underruns
     // into crackle on Linux; same rule as the one-shot spawners (crickets/crane)
-    return !window.__projectorRestorePaused && fireInCuddly && screen.classList.contains("chan-fire") &&
+    return !window.__projectorRestorePaused && !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
+      fireInCuddly && screen.classList.contains("chan-fire") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popCrackle() {
@@ -32025,7 +32043,8 @@ setMusicPausedState(false);
   // focus gate and fade-and-close teardown as the fire bed above.
   var aquaCtx = null, bloopTimer = null, aquaInCuddly = false;
   function aquaWant() {
-    return !window.__projectorRestorePaused && aquaInCuddly && screen.classList.contains("chan-aqua") &&
+    return !window.__projectorRestorePaused && !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
+      aquaInCuddly && screen.classList.contains("chan-aqua") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popBloop() {
@@ -32260,7 +32279,8 @@ setMusicPausedState(false);
   // sparse gentle drips. Same gate/teardown shape as the aquarium bed.
   var totoroCtx = null, dripTimer = null, totoroInCuddly = false;
   function totoroWant() {
-    return !window.__projectorRestorePaused && totoroInCuddly && screen.classList.contains("chan-totoro") &&
+    return !window.__projectorRestorePaused && !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
+      totoroInCuddly && screen.classList.contains("chan-totoro") &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popDrip() {
@@ -35347,6 +35367,7 @@ setMusicPausedState(false);
     // hasFocus too: even between chirps the idling context holds a live OS audio
     // stream open, which underruns into crackle in an unattended window on Linux
     return inGarden && !gardenStage.classList.contains("dusk") &&
+      !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
       document.visibilityState !== "hidden" && document.hasFocus();
   }
   function popChirp() {
@@ -39933,7 +39954,9 @@ function quickReversalGesture(action) {
       // hasFocus too (all the continuous beds share this rule): a bed left on in an
       // unattended-but-"visible" window (covered on X11) holds a live OS audio
       // stream open indefinitely, where it underruns into crackle on Linux
-      var want = kettleSteaming && !kettleRestorePaused && kettleInKitchen && !document.hidden && document.hasFocus();
+      var want = kettleSteaming && !kettleRestorePaused && kettleInKitchen &&
+        !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
+        !document.hidden && document.hasFocus();
       if (want && !kettleCtx) startKettleHum();
       else if (!want && kettleCtx) stopKettleHum(fadeSecs);
     };
@@ -40428,7 +40451,9 @@ function quickReversalGesture(action) {
     window.__updateRadioSound = function (inKitchen, fadeSecs) {
       if (typeof inKitchen === "boolean") radioInKitchen = inKitchen;
       // hasFocus: continuous-bed rule, see __updateKettleHum
-      var want = radioOn && !radioRestorePaused && radioInKitchen && !document.hidden && document.hasFocus();
+      var want = radioOn && !radioRestorePaused && radioInKitchen &&
+        !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
+        !document.hidden && document.hasFocus();
       if (want && !radioCtx) startRadioStatic();
       else if (!want && radioCtx) stopRadioStatic(fadeSecs);
     };
@@ -44856,6 +44881,7 @@ setOfficeProgress("pc", false);
     var deviceZoomed = (window.__monitorZoomed && window.__monitorZoomed()) ||
       (window.__laptopZoomed && window.__laptopZoomed());
     var wantFan = pcTower.classList.contains("on") && fanInOffice && !deviceZoomed &&
+      !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
       !document.hidden && document.hasFocus();
     if (wantFan && !pcFanCtx) startPcFan();
     else if (!wantFan && pcFanCtx) stopPcFan(fadeSecs);
@@ -59911,7 +59937,7 @@ async def localfont(name):
     vp.classList.add("device-zoomed");
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
-    if (window.__updatePcFan) window.__updatePcFan();
+    if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (el === monitor && window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   function zoomOut() {
@@ -59929,7 +59955,7 @@ async def localfont(name):
     strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     strip.getBoundingClientRect();
     strip.style.transition = "";
-    if (window.__updatePcFan) window.__updatePcFan();
+    if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   // A room slide and a device-zoom glide both own the same strip transform. Collapse any
@@ -59956,7 +59982,7 @@ async def localfont(name):
     strip.style.transform = "translateX(-" + ((window.currentStageIndex || 0) * 20) + "%)";
     strip.getBoundingClientRect();
     strip.style.transition = prevTransition;
-    if (window.__updatePcFan) window.__updatePcFan();
+    if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     return true;
   }
   // re-fit the zoom whenever the box it frames may have moved or resized under us — a
@@ -66000,6 +66026,8 @@ async def localfont(name):
     function open(cineHome) {
       build();
       closing = false;
+      __phoneCoversRoomAmbience = true;
+      if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
       if (shell) shell.style.translate = ""; // a fresh open re-centres the phone (drops any prior drag offset)
       var fsHost = phoneFullscreenHost();
       if (modal.parentNode !== fsHost) fsHost.appendChild(modal);
@@ -66038,6 +66066,8 @@ async def localfont(name):
       recentsReturnApp = null;
       leaveCurrentApp();           // restore the re-placed Mines board to the monitor
       stopStatusClock();
+      __phoneCoversRoomAmbience = false;
+      if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
       window.__weatherDuck = 1; // phone closed: weather ambience back to full
       if (window.__applyWindDuck) window.__applyWindDuck();
       if (window.__updateRainDuck) window.__updateRainDuck();
@@ -69382,7 +69412,9 @@ async def localfont(name):
         if (acInAudibleRoom) acRoom = roomName; // remember which unit to pan toward
       }
       // hasFocus: continuous-bed rule, see __updateKettleHum
-      var wantHum = acOn && !acRestorePaused && acInAudibleRoom && !document.hidden && document.hasFocus();
+      var wantHum = acOn && !acRestorePaused && acInAudibleRoom &&
+        !(window.__roomAmbienceCovered && window.__roomAmbienceCovered()) &&
+        !document.hidden && document.hasFocus();
       if (wantHum && !acCtx) startACHum();
       else if (!wantHum && acCtx) stopACHum(fadeSecs);
     };
@@ -70382,7 +70414,8 @@ async def localfont(name):
   function cityHumWant() {
     // hasFocus: continuous-bed rule, see __updateKettleHum (the ~1s poll below
     // picks the change up without any blur/focus listener)
-    if (document.hidden || !document.hasFocus()) return null;
+    if (document.hidden || !document.hasFocus() ||
+        (window.__roomAmbienceCovered && window.__roomAmbienceCovered())) return null;
     if (window.currentStageIndex === 4) return "balcony";
     if (window.currentStageIndex === 2 && cuddlyDoorOpen()) return "cuddly";
     return null;
@@ -70441,10 +70474,14 @@ async def localfont(name):
     }, 500);
     citySource = null; cityGain = null; cityCtx = null; cityLfo = null; cityLfoDepth = null; cityWhere = null;
   }
-  function tick() {
+  function evaluateCityHum() {
     var want = cityHumWant();
     if (want && want !== cityWhere) startCityHum(want);
     else if (!want && cityCtx) stopCityHum();
+  }
+  window.__updateCityHum = evaluateCityHum;
+  function tick() {
+    evaluateCityHum();
     setTimeout(tick, 1000);
   }
   tick();
@@ -88925,7 +88962,8 @@ function spawnDustMote(container) {
     function gate() {
       var sb = document.getElementById("stage-balcony");
       return sb && sb.classList.contains("dusk") && document.visibilityState !== "hidden" &&
-        document.hasFocus() && !window.__balconyStorm;
+        document.hasFocus() && !window.__balconyStorm &&
+        !(window.__roomAmbienceCovered && window.__roomAmbienceCovered());
     }
     function tick() {
       if (!quiet && gate()) playCricketChirp();

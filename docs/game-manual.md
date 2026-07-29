@@ -165,6 +165,9 @@ The lower media controls belong to whichever foreground experience is active:
 loft songs, party music, projector audio, piano, or video. The guitar,
 ukulele, DJ, Music apps, and Cuddly-puddly projector provide the main ways to
 choose what plays.
+Tap the projector screen to cycle its programs. Coffee cat and the fireplace
+lead the cycle: coffee is first from April through September, while fire is
+first from October through March.
 
 On the balcony, open and light the smoker to begin the BBQ during a party. Its
 lid, firebox, food, and serving state are all interactive. Extinguishing it or

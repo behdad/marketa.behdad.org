@@ -505,6 +505,11 @@ interruption/reset still clears it through `clearPriorTripEffects`.
 play/pause UI and party dance-freeze projection. Individual song/projector/dance-bed controllers
 still own their AudioNode suspension and call the state transition after changing it.
 
+The Cuddly projector keeps its durable channel in the `projector` checkpoint row. Its cycle starts
+coffee→fire in April–September and fire→coffee in October–March, then follows the stable remaining
+program order. Coffee is a native SVG channel with a shared-context synth bed; restored explicit
+channel state outranks the seasonal fresh/reset default.
+
 ### Shared projections
 
 Cross-subsystem scalar projections have one named writer. `setBBQDayPartyState`,
@@ -1164,6 +1169,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
   monitor/phone shell, context-menu, launch, and teardown behavior;
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
+- `tests/projector-coffee.js`, `tests/media-transitions.js`, and `tests/piano-message.js` for
+  projector ordering, retained channel state, shared beds, transport, and play-along transitions;
 - `tests/party-lifecycle.js` for attended party timing and finales;
 - `tests/balcony-tetris.js`, `tests/pacman.js`, `tests/doom-title.js`,
   `tests/monitor-savers.js`, and

@@ -123,7 +123,7 @@ suspend + idle timer. Keep it **running** while:
 **Suspend only when truly idle** (unattended, no song, no bed) so we never hold a silent OS
 stream open. `__activeAudioBeds` is a refcount: `audioBed()` increments, the handle's
 `close()` decrements. This is what keeps the clock from freezing under the **background-safe
-beds** (aquarium melody, night-sky Satie, workout, totoro melody, and every garden-party
+beds** (coffee-cat lounge loop, aquarium melody, night-sky Satie, workout, totoro melody, and every garden-party
 dance) — they intentionally keep playing while unfocused, so the context must stay running
 under them → no clock jump → no burst.
 
@@ -154,6 +154,11 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
   call, projector-score, song/media, and toy sounds are unaffected.
 - **Background-safe beds** (channel-only `want()`) intentionally ignore focus/visibility and
   keep playing — the refcount keeps the context alive under them.
+
+The coffee-cat channel is one of these Cuddly-only projector beds. Its original 72 BPM loop uses
+self-terminating chord, bass, brush, kick, and melody voices scheduled ahead on the shared clock;
+channel exit cancels the sole scheduler, fades the bed master, then closes only its `audioBed`
+handle.
 
 ## Kill switch / overrides (unchanged)
 
@@ -191,5 +196,6 @@ disabled. It does not create or join the loft’s shared audio graph.
   cap, so it can't reproduce the silence; the fix is correct-by-construction + this proof).
 - **Regression:** `node tests/check.js` (new-Ctx == 1, fade/close race), `tests/state.js`
   (drone start/fade-stop storm, pause/groove), `tests/play.js` (full playthrough + click
-  storm), and `tests/piano-message.js` (message transition, layered keys, polyphony,
+  storm), `tests/projector-coffee.js` (seasonal order, translated now-playing, bed lifecycle),
+  and `tests/piano-message.js` (message transition, layered keys, polyphony,
   backing-pause independence, and party continuity). All must pass.

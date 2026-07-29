@@ -50,7 +50,7 @@ const ACTION_SPECS = Object.freeze({
   "trip.start": Object.freeze({ variant: new Set(["nitrous", "shrooms", "acid", "froggies", "dmt", "molly", "ketamine", "iboga"]) }),
   "party.dance.request": Object.freeze({ style: new Set(["slow", "fast", "techno", "waltz", "tango", "disco", "swing", "salsa", "bhangra", "persian", "bandari", "polka", "horah", "bulgar", "dupak", "furiant", "cumbia"]) }),
   "party.dj.set": Object.freeze({ dj: new Set(["sina", "danesh"]) }),
-  "projector.set": Object.freeze({ mode: new Set(["off", "stars", "workout", "totoro", "aqua"]) }),
+  "projector.set": Object.freeze({ mode: new Set(["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"]) }),
   "weather.scene.set": Object.freeze({ mode: new Set(["clear", "rain", "thunderstorm", "overcast"]) }),
   "sky.effect.set": Object.freeze({ effect: new Set(["none", "aurora", "twilight"]) }),
   "party.moment.start": Object.freeze({ moment: new Set(["first-dance", "slow-dance", "toasts", "group-photo", "sparklers", "cake", "bouquet-toss", "chair-lift"]) }),
@@ -387,7 +387,7 @@ function cleanMedia(value) {
     },
     video: { open: Boolean(source.video && source.video.open), playing: Boolean(source.video && source.video.playing) },
     party_dance: cleanText(source.party_dance, 32) || null,
-    projector: new Set(["off", "fire", "stars", "workout", "totoro", "aqua"]).has(source.projector) ? source.projector : null,
+    projector: new Set(["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"]).has(source.projector) ? source.projector : null,
   };
 }
 

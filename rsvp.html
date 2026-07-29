@@ -47953,7 +47953,7 @@ setOfficeProgress("pc", false);
   // Space is a transport shortcut, not monitor navigation. Its play/pause event may land
   // asynchronously, so keep this short deadline rather than a one-call boolean.
   var preserveMonitorMusicViewUntil = 0;
-  function updateNowPlaying() {
+  function updateNowPlaying(forceMonitorView) {
     var playing = null, pausedMid = null;
     for (var i = 0; i < songAudios.length; i++) {
       var a = songAudios[i];
@@ -47991,7 +47991,9 @@ setOfficeProgress("pc", false);
       !monitor.classList.contains("show-fedora") && !monitor.classList.contains("show-chrome");
     var pauseBtn = document.getElementById("monitor-pause-btn");
     if (current && booted) {
-      var preserveMonitorView = Date.now() < preserveMonitorMusicViewUntil;
+      var preserveMonitorView = !forceMonitorView && (Date.now() < preserveMonitorMusicViewUntil ||
+        (!!(window.__monitorAttention && window.__monitorAttention()) &&
+          !monitor.classList.contains("show-nowplaying")));
       if (monitor.classList.contains("show-saver")) { stopSaver(); monitor.classList.add("show-caps"); monitorUrl = CAPS_URL; }
       var title = document.getElementById("monitor-np-title");
       if (title) {
@@ -48136,7 +48138,7 @@ setOfficeProgress("pc", false);
     // opens idle with the play triangle, and pressing it starts a song.
     if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-nowplaying")) return;
     var current = songAudios.some(function (a) { return a && !a.ended && (!a.paused || a.currentTime > 0); });
-    if (current) { updateNowPlaying(); return; }
+    if (current) { updateNowPlaying(true); return; }
     stopSaver();
     monitor.classList.add("show-nowplaying");
     var pauseBtn = document.getElementById("monitor-pause-btn");

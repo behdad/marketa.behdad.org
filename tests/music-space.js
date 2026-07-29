@@ -12,6 +12,8 @@ var harness = [
   'space();await sleep(180);out.desktop={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
   'space();await sleep(80);out.paused={caps:mon.classList.contains("show-caps"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
   'mon.classList.remove("show-caps");mon.classList.add("show-weather");space();await sleep(180);out.app={weather:mon.classList.contains("show-weather"),music:mon.classList.contains("show-nowplaying"),playing:window.__anyMusicPlaying()};',
+  'window.__monitorZoomIn();var before=window.__phoneMusicId();window.__monitorSkip(1);await sleep(760);out.track={focused:window.__monitorAttention(),weather:mon.classList.contains("show-weather"),music:mon.classList.contains("show-nowplaying"),before:before,after:window.__phoneMusicId(),playing:window.__anyMusicPlaying()};',
+  'mon.classList.remove("show-weather");mon.classList.add("show-caps");document.getElementById("monitor-dock-music").click();await sleep(40);out.launch={focused:window.__monitorAttention(),music:mon.classList.contains("show-nowplaying")};',
   'document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(error){document.getElementById("__report").textContent=JSON.stringify({error:String(error&&error.stack||error)});});<\/script>'
 ].join("\n");
@@ -40,6 +42,11 @@ if (result && !result.error) {
     "Space pauses music without leaving the desktop", result.paused);
   check(result.app.playing && result.app.weather && !result.app.music,
     "Space resumes music without leaving the active monitor app", result.app);
+  check(result.track.focused && result.track.playing && result.track.weather &&
+    !result.track.music && result.track.before !== result.track.after,
+    "a track change does not summon Music over a focused monitor app", result.track);
+  check(result.launch.focused && result.launch.music,
+    "clicking Music still opens it while the monitor is focused", result.launch);
 }
 
 if (failures) {

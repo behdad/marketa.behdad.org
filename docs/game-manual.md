@@ -178,6 +178,8 @@ Octi's Escape, the balcony's Block Party, the garden magic box, and games on the
 phone and monitor. Each action game displays its own controls and temporarily
 owns the relevant keyboard input.
 
+Double-click any office butterfly to start a short Butterfly Chase.
+
 Calendar and Clock can move the loft to another date or time. Special days may
 change decorations, weather, guests, messages, or the party setup. Weather,
 daylight, moon phase, and sky effects can also change the rooms. These are toys,

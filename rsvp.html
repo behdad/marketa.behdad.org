@@ -95284,6 +95284,15 @@ function spawnDustMote(container) {
     recoveryBrand = recoveryTitle = recoveryContinueBtn = recoveryRestartBtn = null;
     if (recoveryArea) recoveryArea.classList.remove("recovery-active");
     strip.classList.remove("recovery-preview");
+    if (recoveryPreviewLook) {
+      strip.classList.toggle("second-round", recoveryPreviewLook.secondRound);
+      strip.classList.toggle("party-on", recoveryPreviewLook.party);
+      recoveryPreviewLook.dusk.forEach(function (wasDusk, i) {
+        var stage = document.getElementById(STAGES[i] === "balcony" ? "stage-balcony" : "stage-" + STAGES[i]);
+        if (stage) stage.classList.toggle("dusk", wasDusk);
+      });
+      recoveryPreviewLook = null;
+    }
     restoreIntroWatchControls();
     if (hadRecoveryGate) {
       caption.classList.remove("recovery-caption");
@@ -95293,13 +95302,29 @@ function spawnDustMote(container) {
     if (watchControls) { watchControls.hidden = false; watchControls.removeAttribute("aria-hidden"); }
     if (startWaitingAutoplay) setTimeout(function () { if (!apOn) startAutoplay(); }, 0);
   }
+  var recoveryPreviewLook = null;
   function previewRecoveryRoom(saved) {
     var idx = saved && saved.progress ? STAGES.indexOf(saved.progress.room) : -1;
     if (idx < 0) return;
+    var progress = saved.progress;
+    recoveryPreviewLook = {
+      secondRound: strip.classList.contains("second-round"),
+      party: strip.classList.contains("party-on"),
+      dusk: STAGES.map(function (name) {
+        var stage = document.getElementById(name === "balcony" ? "stage-balcony" : "stage-" + name);
+        return !!(stage && stage.classList.contains("dusk"));
+      })
+    };
     strip.classList.add("recovery-preview");
+    strip.classList.toggle("second-round", !!progress.phase2);
+    strip.classList.toggle("party-on", !!progress.party);
+    STAGES.forEach(function (name) {
+      var stage = document.getElementById(name === "balcony" ? "stage-balcony" : "stage-" + name);
+      if (stage) stage.classList.toggle("dusk", progress.daylight === false);
+    });
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
-    strip.classList.toggle("viewing-office", saved.progress.room === "office");
-    strip.classList.toggle("viewing-balcony", saved.progress.room === "balcony");
+    strip.classList.toggle("viewing-office", progress.room === "office");
+    strip.classList.toggle("viewing-balcony", progress.room === "balcony");
     markFarRooms(idx);
   }
   function holdRecoveryActivationUntilRelease(e) {

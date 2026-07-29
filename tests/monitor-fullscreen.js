@@ -57,6 +57,8 @@ if (state && !state.error) {
     state.taskbarGeometry);
   check(state.volumeBefore !== state.volumeAfter,
     "the taskbar volume button advances the shared music-volume step", state);
+  check(state.volumeBefore === 0.15 && state.volumeAfter === 0.4,
+    "the shared volume steps use the revised quiet and medium levels", state);
   check(state.entered && state.browserUntouched && state.codeRetained,
     "the taskbar expands the monitor without invoking browser fullscreen", state);
   check(state.fillsViewport,

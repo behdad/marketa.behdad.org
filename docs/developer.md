@@ -768,7 +768,9 @@ capture cannot lose the release. Mines suppresses Android's synthetic
 The manual EQ similarly synthesizes its normal monitor context menu after a
 stationary Android hold, cancels that hold once a band adjustment exceeds the
 movement slop, fires before the platform's native long-press cancellation, and
-suppresses only the platform's late duplicate context event.
+suppresses the firing touch release so compatibility mouse events cannot
+immediately dismiss the menu. It calls the shared menu builder directly rather
+than relying on Android to dispatch `contextmenu`.
 The individual app surfaces remain de-layered and gated by `visibility` plus
 `pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
 and `node tests/classics-touch.mjs`.

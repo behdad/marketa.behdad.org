@@ -55003,6 +55003,12 @@ setOfficeProgress("pc", false);
       if (app.restart) items.push(makeItem("ctx-restart", RESTART_ICO, tr("mon_ctx_restart"), app.restart, false));
       openMenu(items, x, y);
     }
+    window.__openMonitorContextAt = function (target, x, y) {
+      var app = activeMonitorApp();
+      if (!app) return false;
+      buildMenu(app, x, y, target);
+      return true;
+    };
     function killDesktopApp(appObj, host) {
       var id = appObj.id;
       var hookName = (host && host.kill) || MONITOR_APP_KILLS[id];
@@ -60096,16 +60102,54 @@ async def localfont(name):
   // ±9dB; double-tap a slider to zero its band.
   var manualEqG = document.getElementById("monitor-manual-eq");
   var meqRepaints = []; // one per band, for the reset button
-  var meqSyntheticContextAt = 0;
+  var meqTouchContextAt = 0;
   if (manualEqG) {
+    function openMeqTouchContext(target, x, y) {
+      if (Date.now() - meqTouchContextAt < 200) return true; // pointer + touch describe one hold
+      if (!window.__openMonitorContextAt || !window.__openMonitorContextAt(target, x, y)) return false;
+      meqTouchContextAt = Date.now();
+      return true;
+    }
     // Android does not synthesize a dependable contextmenu from a long-press on transformed
     // SVG. Suppress only the late native duplicate after our own hold has opened the real menu.
     manualEqG.addEventListener("contextmenu", function (ev) {
-      if (ev.isTrusted && Date.now() - meqSyntheticContextAt < 900) {
+      if (ev.isTrusted && Date.now() - meqTouchContextAt < 900) {
         ev.preventDefault();
         ev.stopImmediatePropagation();
       }
     }, true);
+    // Touch events are the fallback when Android cancels or retargets the SVG PointerEvent.
+    // Prevent the firing touchend so its compatibility mousedown cannot instantly close the menu.
+    var meqTouchHold = null, meqTouchX = 0, meqTouchY = 0, meqTouchTarget = null, meqTouchOpened = false;
+    manualEqG.addEventListener("touchstart", function (ev) {
+      if (!USE_LIVE_ANALYSER || ev.touches.length !== 1) return;
+      var target = ev.target && ev.target.closest && ev.target.closest(".meq-band");
+      if (!target) return;
+      var touch = ev.touches[0];
+      clearTimeout(meqTouchHold);
+      meqTouchX = touch.clientX; meqTouchY = touch.clientY; meqTouchTarget = ev.target; meqTouchOpened = false;
+      meqTouchHold = setTimeout(function () {
+        meqTouchHold = null;
+        meqTouchOpened = openMeqTouchContext(meqTouchTarget, meqTouchX, meqTouchY);
+      }, 300);
+    }, { passive: true });
+    manualEqG.addEventListener("touchmove", function (ev) {
+      if (!meqTouchHold || !ev.touches.length) return;
+      var touch = ev.touches[0];
+      if (Math.hypot(touch.clientX - meqTouchX, touch.clientY - meqTouchY) > 10) {
+        clearTimeout(meqTouchHold); meqTouchHold = null;
+      }
+    }, { passive: true });
+    function finishMeqTouch(ev) {
+      if (meqTouchHold) { clearTimeout(meqTouchHold); meqTouchHold = null; }
+      if (meqTouchOpened) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        meqTouchOpened = false;
+      }
+    }
+    manualEqG.addEventListener("touchend", finishMeqTouch, { passive: false });
+    manualEqG.addEventListener("touchcancel", finishMeqTouch, { passive: false });
     var MEQ_COLORS = ["#d9a6a6", "#e0935a", "#e8b93a", "#7fb35c", "#6f94bd", "#9c6bb8"];
     var MEQ_TOP = 169.5, MEQ_H = 12, MEQ_MID = MEQ_TOP + MEQ_H / 2;
     MANUAL_EQ_FREQS.forEach(function (fq, i) {
@@ -60140,10 +60184,7 @@ async def localfont(name):
             holdTimer = null;
             holdOpened = true;
             setManualEqBand(i, startDb); paintThumb();
-            meqSyntheticContextAt = Date.now();
-            hit.dispatchEvent(new MouseEvent("contextmenu", {
-              bubbles: true, cancelable: true, button: 2, clientX: startX, clientY: startY
-            }));
+            openMeqTouchContext(hit, startX, startY);
           }, 300); // beat Android's ~500ms native long-press pointer cancellation
         }
         try { hit.setPointerCapture(ev.pointerId); } catch (e) {}

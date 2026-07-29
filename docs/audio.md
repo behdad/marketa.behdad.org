@@ -63,7 +63,9 @@ their volume controls never double-scale:
    shared context** (not a handle — it needs real `suspend/resume` and, crucially,
    `createMediaElementSource`, which irreversibly captures an `<audio>` element). Graph:
    `MediaElementSource → bassShelf → 6-band manual EQ → muffle → width → masterGain →
-   compressor → panner → analyser → ac.destination`.
+   compressor → route → panner → analyser → ac.destination`. The normal route uses the
+   room stereo panner; headphone mode crossfades to an HRTF panner whose restrained
+   position follows the draggable office headphones.
 
 **Volume model (by design):** the in-scene volume **button** controls only music/beds
 (`__songVolume`), so you can turn music down to hear SFX. The console **`volume()`** master

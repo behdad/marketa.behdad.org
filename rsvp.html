@@ -3681,9 +3681,17 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
   #garden-tensegrity.wobbling #garden-tensegrity-top,
   #garden-tensegrity.wobbling .tenseg-cords{animation:none}
 }
-#office-desk, #office-chair, #garden-bottles, #garden-watering-can, #garden-plant-mister, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife{touch-action:none}
-#office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio, #office-headphones{transition:translate .6s ease}
-#office-headphones{transform-origin:210px 219px}
+#office-desk, #office-chair, #office-headphones, #garden-bottles, #garden-watering-can, #garden-plant-mister, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife{touch-action:none}
+#office-desk-top, #office-typewriter, #office-laptop, #office-pc-desk-trio, #office-headphones-hook, #office-headphones{transition:translate .6s ease}
+#office-headphones{
+  --headphones-x:0px;
+  --headphones-y:0px;
+  --headphones-desk-lift:0px;
+  translate:var(--headphones-x) calc(var(--headphones-y) - var(--headphones-desk-lift));
+  transform-origin:210px 219px;
+  cursor:grab;
+}
+#office-headphones.dragging{cursor:grabbing}
 #office-headphones.wobbling{animation:headphones-wobble .6s ease-in-out}
 @keyframes headphones-wobble{
   0%{transform:rotate(0deg)}
@@ -23955,12 +23963,14 @@ section{margin:1.9rem 0}
 </g>
 <!-- over-ear headphones (HD-6xx style) hung by their band from a small hook under
      the desk front edge, dangling below the laptop into the under-desk space -->
-<g id="office-headphones" class="hunt-hit">
-<rect x="186" y="215" width="48" height="90" fill="transparent"/>
-<!-- Sennheiser HD800S: large ROUND open-back cups with the concentric-ring grille + silver
-     rim, thin minimalist headband, angular yokes. Rides the desk (in risingIds). -->
+<g id="office-headphones-hook">
 <rect x="205.5" y="217" width="9" height="3.4" rx="1" fill="#2a2a2a"/>
 <path d="M210 220.4 q0 2.5 -2.3 3.2" fill="none" stroke="#2a2a2a" stroke-width="1.7" stroke-linecap="round"/>
+</g>
+<g id="office-headphones" class="hunt-hit">
+<rect x="186" y="223" width="48" height="82" fill="transparent"/>
+<!-- Sennheiser HD800S: large ROUND open-back cups with the concentric-ring grille + silver
+     rim, thin minimalist headband, angular yokes. Rides the desk (in risingIds). -->
 <path d="M197.5 255 q-4 7.5 -0.4 14 q1.9 4.2 -1.2 7" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
 <path d="M201 244 A9 22.5 0 0 1 219 244" fill="none" stroke="#1f1f1f" stroke-width="3" stroke-linecap="round"/>
 <path d="M201 244 A9 21.3 0 0 1 219 244" fill="none" stroke="#454545" stroke-width="1" stroke-linecap="round"/>
@@ -38887,12 +38897,40 @@ function quickReversalGesture(action) {
   });
   wireTableToy("office-broken-glass", "tinged", function () { playGlassClinkSound(0.7, "office-broken-glass"); });
   wireTableToy("office-spin-top", "spinning", function () { playAshtraySpinSound("office-spin-top"); });
-  // the hanging headphones: a tap swings them on their hook, and either folds
+  // the hanging headphones: a tap swings them and either folds
   // whatever song is playing into "headphone mode" (bass-boosted, muffled, panned
   // here) or — if nothing's playing — drops a quick bass riff panned here instead.
   var headphones = document.getElementById("office-headphones");
   if (headphones) {
-    function wobbleHeadphones() {
+    var headphonesDragging = false, headphonesDragMoved = false;
+    var headphonesDragStart = null, headphonesStartOffset = null;
+    var headphonesOffset = { x: 0, y: 0 };
+    var headphonesBox = headphones.getBBox();
+    var HEADPHONES_PAD = 8;
+    function headphonesPoint(e) {
+      var stage = document.getElementById("stage-office");
+      var pt = stage.ownerSVGElement.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      return pt.matrixTransform(stage.getScreenCTM().inverse());
+    }
+    function settleHeadphones(x, y, live) {
+      x = Number(x); y = Number(y);
+      if (!isFinite(x)) x = 0;
+      if (!isFinite(y)) y = 0;
+      headphonesOffset.x = Math.max(HEADPHONES_PAD - headphonesBox.x,
+        Math.min(680 - HEADPHONES_PAD - headphonesBox.x - headphonesBox.width, x));
+      headphonesOffset.y = Math.max(HEADPHONES_PAD - headphonesBox.y,
+        Math.min(340 - HEADPHONES_PAD - headphonesBox.y - headphonesBox.height, y));
+      headphones.style.setProperty("--headphones-x", headphonesOffset.x + "px");
+      headphones.style.setProperty("--headphones-y", headphonesOffset.y + "px");
+      if (live && window.__updateHeadphoneSpatial) window.__updateHeadphoneSpatial();
+    }
+    function wobbleHeadphones(e) {
+      if (headphonesDragMoved) {
+        headphonesDragMoved = false;
+        if (e) { e.preventDefault(); e.stopImmediatePropagation(); }
+        return;
+      }
       headphones.classList.remove("wobbling");
       requestAnimationFrame(function () {
         requestAnimationFrame(function () { headphones.classList.add("wobbling"); });
@@ -38906,7 +38944,56 @@ function quickReversalGesture(action) {
       else if (window.__setHeadphoneMode) window.__setHeadphoneMode(true); // nothing playing → cans on, which resumes the music (see __setHeadphoneMode)
       else playHeadphoneBassRiff();
     }
+    headphones.addEventListener("pointerdown", function (e) {
+      if (e.button && e.button !== 0) return;
+      headphonesDragging = true;
+      headphonesDragMoved = false;
+      headphonesDragStart = headphonesPoint(e);
+      headphonesStartOffset = { x: headphonesOffset.x, y: headphonesOffset.y };
+      headphones.style.transition = "none";
+      headphones.classList.add("dragging");
+      try { headphones.setPointerCapture(e.pointerId); } catch (_error) {}
+    });
+    headphones.addEventListener("pointermove", function (e) {
+      if (!headphonesDragging) return;
+      var pt = headphonesPoint(e);
+      var dx = pt.x - headphonesDragStart.x, dy = pt.y - headphonesDragStart.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) headphonesDragMoved = true;
+      settleHeadphones(headphonesStartOffset.x + dx, headphonesStartOffset.y + dy, true);
+    });
+    function finishHeadphonesDrag(e) {
+      if (!headphonesDragging) return;
+      headphonesDragging = false;
+      headphones.classList.remove("dragging");
+      try { headphones.releasePointerCapture(e.pointerId); } catch (_error) {}
+      headphones.style.transition = "";
+      if (headphonesDragMoved && window.__checkpointChanged) window.__checkpointChanged();
+    }
+    headphones.addEventListener("pointerup", finishHeadphonesDrag);
+    headphones.addEventListener("pointercancel", finishHeadphonesDrag);
     headphones.addEventListener("click", wobbleHeadphones);
+    if (window.__registerArrangementOwner) window.__registerArrangementOwner("headphones", {
+      capture: function () {
+        return Math.abs(headphonesOffset.x) > 0.01 || Math.abs(headphonesOffset.y) > 0.01
+          ? { x: headphonesOffset.x, y: headphonesOffset.y } : null;
+      },
+      settle: function (row) {
+        headphonesDragging = false;
+        headphonesDragMoved = false;
+        headphones.classList.remove("dragging");
+        headphones.style.transition = "none";
+        settleHeadphones(row && row.x, row && row.y, false);
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            headphones.style.transition = "";
+            if (window.__updateHeadphoneSpatial) window.__updateHeadphoneSpatial();
+          });
+        });
+      }
+    });
+    window.__headphoneArrangementState = function () {
+      return { x: headphonesOffset.x, y: headphonesOffset.y, dragging: headphonesDragging };
+    };
   }
   // the little stained-glass desk butterfly flaps its right wing.
   // animationend can't clear this one (the first bit ending would cancel the
@@ -46438,6 +46525,7 @@ setOfficeProgress("pc", false);
   // screensaver fractal's brightness on the beat while a song plays underneath it.
   var eqRAF = null, eqFrame = null, eqAudioCtx = null, eqCtxFailed = false, eqAudioEl = null;
   var eqBassShelf = null, eqMuffleFilter = null, eqMasterGain = null, eqCompressor = null, eqPanner = null, eqAnalyser = null;
+  var eqNormalRoute = null, eqHeadphoneRoute = null, eqHeadphonePanner = null;
   // Song level authority: once a song is captured into the pipeline its .volume is inert on
   // WebKit (createMediaElementSource bypasses it) — route the level to the in-graph gain then;
   // before capture (or with the pipeline off) plain .volume still governs native playback. So
@@ -46538,6 +46626,18 @@ setOfficeProgress("pc", false);
       }
       eqPanner = eqAudioCtx.createStereoPanner ? eqAudioCtx.createStereoPanner() : null;
       if (eqPanner) eqPanner.pan.value = 0;
+      eqHeadphonePanner = eqAudioCtx.createPanner ? eqAudioCtx.createPanner() : null;
+      if (eqHeadphonePanner) {
+        eqHeadphonePanner.panningModel = "HRTF";
+        eqHeadphonePanner.distanceModel = "inverse";
+        eqHeadphonePanner.refDistance = 1;
+        eqHeadphonePanner.maxDistance = 8;
+        eqHeadphonePanner.rolloffFactor = 0.35;
+      }
+      eqNormalRoute = eqAudioCtx.createGain();
+      eqHeadphoneRoute = eqAudioCtx.createGain();
+      eqNormalRoute.gain.value = 1;
+      eqHeadphoneRoute.gain.value = 0;
       eqAnalyser = eqAudioCtx.createAnalyser();
       eqAnalyser.fftSize = 1024; // 512 bins (~47Hz each) — the visual bars sit AFTER the manual
                                  // EQ, and its 60/150/400Hz bands need this resolution to move
@@ -46582,8 +46682,13 @@ setOfficeProgress("pc", false);
       eqWidthMerger.connect(eqMasterGain);
       var postGain = eqMasterGain;
       if (eqCompressor) { eqMasterGain.connect(eqCompressor); postGain = eqCompressor; }
-      if (eqPanner) { postGain.connect(eqPanner); eqPanner.connect(eqAnalyser); }
-      else { postGain.connect(eqAnalyser); } // very old Safari: no StereoPanner, still analysed+audible
+      postGain.connect(eqNormalRoute);
+      postGain.connect(eqHeadphoneRoute);
+      if (eqPanner) { eqNormalRoute.connect(eqPanner); eqPanner.connect(eqAnalyser); }
+      else { eqNormalRoute.connect(eqAnalyser); } // very old Safari: no StereoPanner, still analysed+audible
+      if (eqHeadphonePanner) eqHeadphoneRoute.connect(eqHeadphonePanner).connect(eqAnalyser);
+      else if (eqPanner) eqHeadphoneRoute.connect(eqPanner);
+      else eqHeadphoneRoute.connect(eqAnalyser);
       eqAnalyser.connect(eqAudioCtx.destination); // keep the song audible
     } catch (e) {
       eqAudioCtx = null;
@@ -46708,6 +46813,57 @@ setOfficeProgress("pc", false);
   document.addEventListener("visibilitychange", syncHeadphoneBeatLoop);
   window.addEventListener("focus", syncHeadphoneBeatLoop);
   window.addEventListener("blur", syncHeadphoneBeatLoop);
+  var headphoneSpatial = { x: 0, y: 0, z: -1, pan: 0 };
+  function headphoneSpatialPosition() {
+    var el = document.getElementById("office-headphones");
+    var vp = document.querySelector(".hunt-viewport");
+    if (!el || !vp) return { x: 0, y: 0, z: -1, pan: 0 };
+    var r = el.getBoundingClientRect(), v = vp.getBoundingClientRect();
+    if (!r.width || !v.width || !v.height) return { x: 0, y: 0, z: -1, pan: 0 };
+    var fx = Math.max(0, Math.min(1, (r.left + r.width / 2 - v.left) / v.width));
+    var fy = Math.max(0, Math.min(1, (r.top + r.height / 2 - v.top) / v.height));
+    return {
+      x: (fx * 2 - 1) * 1.65,
+      // Vertical dragging adds a little elevation and distance without making
+      // the source sound as though it left the room.
+      y: (0.5 - fy) * 0.7,
+      z: -(1.1 + (1 - fy) * 0.7),
+      pan: panForElId("office-headphones")
+    };
+  }
+  function setHeadphonePannerPosition(pos, immediate) {
+    headphoneSpatial = pos;
+    if (!eqAudioCtx || !eqHeadphonePanner) return;
+    var t = eqAudioCtx.currentTime, tau = immediate ? 0.012 : 0.04;
+    try {
+      if (eqHeadphonePanner.positionX) {
+        eqHeadphonePanner.positionX.setTargetAtTime(pos.x, t, tau);
+        eqHeadphonePanner.positionY.setTargetAtTime(pos.y, t, tau);
+        eqHeadphonePanner.positionZ.setTargetAtTime(pos.z, t, tau);
+      } else {
+        eqHeadphonePanner.setPosition(pos.x, pos.y, pos.z);
+      }
+    } catch (_error) {}
+  }
+  window.__updateHeadphoneSpatial = function () {
+    var pos = headphoneSpatialPosition();
+    setHeadphonePannerPosition(pos, true);
+    if (headphoneModeOn && !eqHeadphonePanner && eqAudioCtx && eqPanner) {
+      try { eqPanner.pan.setTargetAtTime(pos.pan, eqAudioCtx.currentTime, 0.012); } catch (_error) {}
+    }
+    return pos;
+  };
+  window.__headphoneSpatialState = function () {
+    return {
+      active: headphoneModeOn,
+      hrtf: !!eqHeadphonePanner,
+      x: headphoneSpatial.x, y: headphoneSpatial.y, z: headphoneSpatial.z,
+      pan: headphoneSpatial.pan
+    };
+  };
+  window.addEventListener("resize", function () {
+    if (headphoneModeOn) window.__updateHeadphoneSpatial();
+  });
   // "Headphone mode": bass boost + muffle + pan to the on-screen headphones, ramped
   // smoothly via setTargetAtTime (never a hard switch, so there's no click). A safe
   // no-op if the audio graph never confirmed running — headphone mode then just
@@ -46733,7 +46889,12 @@ setOfficeProgress("pc", false);
     try {
       eqBassShelf.gain.setTargetAtTime(on ? HP_BASS_DB : FLAT_BASS_DB, now, FX_RAMP_S);
       eqMuffleFilter.frequency.setTargetAtTime(on ? HP_LOWPASS_HZ : FLAT_LOWPASS_HZ, now, FX_RAMP_S);
-      if (eqPanner) eqPanner.pan.setTargetAtTime(on ? panForElId("office-headphones") : 0, now, FX_RAMP_S);
+      if (eqNormalRoute) eqNormalRoute.gain.setTargetAtTime(on ? 0 : 1, now, FX_RAMP_S);
+      if (eqHeadphoneRoute) eqHeadphoneRoute.gain.setTargetAtTime(on ? 1 : 0, now, FX_RAMP_S);
+      if (on) {
+        window.__updateHeadphoneSpatial();
+        if (!eqHeadphonePanner && eqPanner) eqPanner.pan.setTargetAtTime(headphoneSpatial.pan, now, FX_RAMP_S);
+      }
       // Headphones mean full presence regardless of in-game room -- snap width back to 1
       // the same way pan snaps to the headphones' fixed spot, just above. (Turning OFF
       // hands width back to room-relative tracking via __updateSongRoomWidth below, same
@@ -72529,7 +72690,7 @@ async def localfont(name):
   var desk = document.getElementById("office-desk");
   if (!desk) return;
   var controls = document.getElementById("office-desk-controls");
-  var risingIds = ["office-desk-top", "office-typewriter", "office-laptop", "office-pc-desk-trio", "office-monitor", "office-headphones"];
+  var risingIds = ["office-desk-top", "office-typewriter", "office-laptop", "office-pc-desk-trio", "office-monitor", "office-headphones-hook", "office-headphones"];
   var MAX_LIFT = 40;
   var standing = false;
   var lift = 0;
@@ -72545,8 +72706,11 @@ async def localfont(name):
     lift = Math.max(0, Math.min(MAX_LIFT, px));
     risingIds.forEach(function (id) {
       var el = document.getElementById(id);
-      if (el) el.style.translate = "0px " + (-lift) + "px";
+      if (!el) return;
+      if (id === "office-headphones") el.style.setProperty("--headphones-desk-lift", lift + "px");
+      else el.style.translate = "0px " + (-lift) + "px";
     });
+    if (window.__updateHeadphoneSpatial) window.__updateHeadphoneSpatial();
     document.querySelectorAll(".desk-leg-pole").forEach(function (el) {
       el.style.transform = "scaleY(" + (1 + lift / 80) + ")";
     });
@@ -72565,6 +72729,7 @@ async def localfont(name):
     function frame(t) {
       if (start === null) start = t;
       window.__deskCatFollow();
+      if (window.__updateHeadphoneSpatial) window.__updateHeadphoneSpatial();
       if (t - start < ms) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -102207,7 +102372,7 @@ function spawnDustMote(container) {
   // dragging an object would pan the page on touch screens. touchmove events
   // retarget to the touchstart element, so one non-passive listener covers
   // every draggable; touches starting elsewhere still scroll normally.
-  var DRAG_SEL = "#office-desk, #office-chair, #garden-bottles, #garden-watering-can, #garden-plant-mister, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #cuddly-polyamory-pair, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons, #kitchen-bar-cooler";
+  var DRAG_SEL = "#office-desk, #office-chair, #office-headphones, #garden-bottles, #garden-watering-can, #garden-plant-mister, #cuddly-blanket, #cuddly-yellowblanket, #cuddly-lapblanket, .cuddly-knife, #cuddly-polyamory-pair, #monitor-manual-eq, #kitchen-bartender, #kitchen-bar-stools, #kitchen-bar-patrons, #kitchen-bar-cooler";
   strip.addEventListener("touchmove", function (e) {
     if (e.target.closest && e.target.closest(DRAG_SEL)) e.preventDefault();
   }, { passive: false });

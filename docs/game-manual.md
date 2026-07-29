@@ -137,7 +137,8 @@ a substantial first-load download. Click the monitor once to zoom in, then
 click its screen to interact. Search from the desktop menu bar if you cannot
 find an app. Use the normal close control to leave an app; right-click its tile
 or open surface to manage or kill its current session. The laptop beside it
-handles video calls.
+handles video calls. Drag the headphones around the room to move the music with
+them.
 
 Quake III opens with three arenas; choose one, or let the short timer rotate to
 the next arena automatically.

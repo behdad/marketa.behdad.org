@@ -377,6 +377,7 @@ footer{margin-top:2.6rem}
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
   transition:transform .7s ease;
 }
+#loft-game-strip.recovery-preview{transition:none}
 /* March 30 swaps the hosts' established pink/blue identities without touching skin,
    hair texture, or the rest of the loft's palette. */
 #loft-game-strip.bipolar-day .host-palette-behdad [fill="#e9bfc4"]{fill:#bcd1e7}
@@ -95256,6 +95257,7 @@ function spawnDustMote(container) {
     recoverySaved = null;
     recoveryBrand = recoveryTitle = recoveryContinueBtn = recoveryRestartBtn = null;
     if (recoveryArea) recoveryArea.classList.remove("recovery-active");
+    strip.classList.remove("recovery-preview");
     restoreIntroWatchControls();
     if (hadRecoveryGate) {
       caption.classList.remove("recovery-caption");
@@ -95264,6 +95266,15 @@ function spawnDustMote(container) {
     var watchControls = document.querySelector(".watch-controls");
     if (watchControls) { watchControls.hidden = false; watchControls.removeAttribute("aria-hidden"); }
     if (startWaitingAutoplay) setTimeout(function () { if (!apOn) startAutoplay(); }, 0);
+  }
+  function previewRecoveryRoom(saved) {
+    var idx = saved && saved.progress ? STAGES.indexOf(saved.progress.room) : -1;
+    if (idx < 0) return;
+    strip.classList.add("recovery-preview");
+    strip.style.transform = "translateX(-" + (idx * 20) + "%)";
+    strip.classList.toggle("viewing-office", saved.progress.room === "office");
+    strip.classList.toggle("viewing-balcony", saved.progress.room === "balcony");
+    markFarRooms(idx);
   }
   function holdRecoveryActivationUntilRelease(e) {
     var key = e.key, code = e.code;
@@ -95345,6 +95356,7 @@ function spawnDustMote(container) {
     var recoveryArea = document.getElementById("hunt-fullscreen-area");
     if (recoveryArea) recoveryArea.classList.add("recovery-active");
     dockIntroWatchControls(recoveryArea);
+    previewRecoveryRoom(saved);
     var gate = document.createElement("div"); recoveryGate = gate;
     gate.id = "loft-recovery-gate"; gate.setAttribute("role", "dialog"); gate.setAttribute("aria-modal", "true"); gate.setAttribute("aria-labelledby", "loft-recovery-title"); gate.setAttribute("aria-describedby", "hunt-caption");
     var brand = document.createElement("p"); recoveryBrand = brand; brand.className = "loft-entry-brand"; brand.setAttribute("data-i", "hunt_title"); brand.textContent = huntTitleText();

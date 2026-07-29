@@ -16,11 +16,13 @@ var harness = String.raw`<script>
       names.indexOf("Nima") !== -1, names.join(", "));
     check("Goli appears in the language-neutral tester roster",
       names.indexOf("Goli") !== -1, names.join(", "));
-    check("Chinnell and Rafi appear in the language-neutral tester roster",
-      names.indexOf("Chinnell") !== -1 && names.indexOf("Rafi") !== -1, names.join(", "));
+    check("Chinnell, Rafi, Farhang, and Spencer appear in the language-neutral tester roster",
+      names.indexOf("Chinnell") !== -1 && names.indexOf("Rafi") !== -1 &&
+      names.indexOf("Farhang") !== -1 && names.indexOf("Spencer") !== -1, names.join(", "));
 
-    var current = window.__loftCreditsLayout(names.length, 2);
-    var crowded = window.__loftCreditsLayout(50, 2);
+    var otherPeopleCount = window.LOFT_CREDITS.people.length - names.length;
+    var current = window.__loftCreditsLayout(names.length, otherPeopleCount);
+    var crowded = window.__loftCreditsLayout(50, otherPeopleCount);
     check("software credits move below every tester",
       crowded.softwareHeadingY - current.softwareHeadingY ===
         (Math.ceil(50 / 2) - Math.ceil(names.length / 2)) * 4.5,

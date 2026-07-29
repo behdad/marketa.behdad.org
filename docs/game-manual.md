@@ -231,15 +231,15 @@ get oriented. The Code app can run JavaScript and Python files; named files are
 saved in this browser. JavaScript and Python examples can open native SVG
 graphics views. Once a drawing exists, the small **gfx** control appears so you
 can switch between it and the Console output. When the office monitor is
-zoomed, its bezel has a fullscreen control that expands only the 124×42 display
-surface across the current browser viewport, preserving its aspect ratio
-against a black surround and carrying whichever app is open. Tap the surround or press
-Escape to return. This does not invoke browser fullscreen; **F** remains that
-separate toggle. The bezel control is shared by every monitor app, including
-embedded games and Video. Shoot is the deliberate exception: once a shooter is
-running, the same monitor-bezel control opens the 4:3 game in true browser
-fullscreen so the monitor's extra-wide shape does not waste most of the browser
-height. Shoot adds no second fullscreen or exit button; press Escape to leave.
+zoomed, the compact taskbar control immediately right of **EN/CZ** expands only
+the 124×42 display surface across the current browser viewport, preserving its
+aspect ratio against a black surround. Dismiss an open app to return to this
+taskbar control; tap the surround or press Escape to return directly. This does
+not invoke browser fullscreen; **F** remains that separate toggle. Shoot is the
+deliberate exception: choosing a shooter while the monitor is expanded opens
+the 4:3 game in true browser fullscreen so the monitor's extra-wide shape does
+not waste most of the browser height. Shoot adds no second fullscreen or exit
+button; press Escape to leave.
 
 The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
 Solitaire. Solitaire accepts clicks or card drags; the full lifted stack follows

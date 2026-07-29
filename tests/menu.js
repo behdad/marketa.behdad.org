@@ -216,9 +216,8 @@ var HARNESS = [
   // on-screen flash (death-doom) starts immediately; show-doom is torn down only after the flash.
   "    if(monKill()) monKill().click(); await sleep(40); S('doom_kill_hid_menu', !monMenu()); S('doom_kill_flash_started', mon().classList.contains('death-doom')); S('doom_kill_still_open_during_flash', mon().classList.contains('show-doom')); await sleep(2300); S('doom_kill_closed_app', !mon().classList.contains('show-doom')); S('doom_kill_flash_ended', !mon().classList.contains('death-doom'));",
   // shared in-page monitor focus mode (Shoot has no iframe-level fullscreen control)
-  "    showApp('show-doom'); document.querySelector('[data-shoot-game=\"doom\"]').click(); await sleep(20);",
-  "    if(window.__monitorZoomIn)window.__monitorZoomIn(); var fsBtn=document.getElementById('monitor-bezel-fullscreen'),shootOverlay=document.getElementById('shoot-focus-overlay'),shootFsRequested=false; shootOverlay.requestFullscreen=function(){shootFsRequested=true;return Promise.resolve();}; S('monitor_fs_btn_present', !!fsBtn);",
-  "    fsBtn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); await sleep(40); S('monitor_fs_entered', shootFsRequested&&mon().classList.contains('show-doom')&&!document.getElementById('monitor-doom-fs')); document.dispatchEvent(new Event('fullscreenchange')); await sleep(40);",
+  "    if(window.__monitorZoomIn)window.__monitorZoomIn(); var fsBtn=document.getElementById('monitor-desk-fullscreen'),shootOverlay=document.getElementById('shoot-focus-overlay'),shootFsRequested=false; fsBtn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); shootOverlay.requestFullscreen=function(){shootFsRequested=true;return Promise.resolve();}; S('monitor_fs_btn_present', !!fsBtn);",
+  "    showApp('show-doom'); document.querySelector('[data-shoot-game=\"doom\"]').click(); await sleep(40); S('monitor_fs_entered', shootFsRequested&&mon().classList.contains('show-doom')&&!document.getElementById('monitor-doom-fs')); document.dispatchEvent(new Event('fullscreenchange')); await sleep(40);",
   "    mon().classList.remove('show-caps');",
   // doom restart teardown — Restart now runs the FATALITY flash, THEN destroys (and would cold-boot,
   // but a real re-boot needs show-caps + the WASM runtime, out of scope here; no show-caps → openDoom

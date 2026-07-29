@@ -369,9 +369,9 @@ footer{margin-top:2.6rem}
    position-tracking (the same principle as the pocket phone's ✕, which is a child of the
    shell it closes). Shown only while THAT device holds the view (its group carries
    .dev-zoomed); a corner tap also zooms out on its own, this just makes the exit obvious. */
-.bezel-close,.bezel-fs{opacity:0; pointer-events:none; transition:opacity .2s ease; cursor:pointer}
-.dev-zoomed .bezel-close,.dev-zoomed .bezel-fs{opacity:1; pointer-events:auto}
-.bezel-close:hover circle,.bezel-fs:hover circle{fill:var(--wine)}
+.bezel-close{opacity:0; pointer-events:none; transition:opacity .2s ease; cursor:pointer}
+.dev-zoomed .bezel-close{opacity:1; pointer-events:auto}
+.bezel-close:hover circle{fill:var(--wine)}
 /* Monitor-content fullscreen keeps only the authored 124×42 display surface. The
    existing screen clip provides the rounded mask; the desk zoom supplies the uniform
    contain-scale, so the display letterboxes instead of stretching. */
@@ -3864,10 +3864,15 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .desk-search-button{cursor:pointer}
 .desk-search-button .desk-search-icon{fill:none;stroke:#f8f5ec;stroke-width:.55;stroke-linecap:round;stroke-linejoin:round}
 .desk-search-button:hover .desk-search-icon,.desk-search-button:focus .desk-search-icon{stroke:#d9a6a6}
+.desk-fullscreen-button{cursor:pointer}
+.desk-fullscreen-button .desk-fullscreen-icon{fill:none;stroke:#f8f5ec;stroke-width:.45;stroke-linecap:round;stroke-linejoin:round}
+.desk-fullscreen-button:hover .desk-fullscreen-icon,.desk-fullscreen-button:focus .desk-fullscreen-icon{stroke:#d9a6a6}
 .desk-bar-hit{fill:#fffdf8;fill-opacity:.035;stroke:#f8f5ec;stroke-opacity:.28;stroke-width:.25}
 .desk-brand:hover .desk-bar-hit,.desk-brand:focus .desk-bar-hit,
-.desk-search-button:hover .desk-bar-hit,.desk-search-button:focus .desk-bar-hit{fill-opacity:.1;stroke-opacity:.68}
-.desk-brand:active .desk-bar-hit,.desk-search-button:active .desk-bar-hit{fill-opacity:.19;stroke-opacity:.95}
+.desk-search-button:hover .desk-bar-hit,.desk-search-button:focus .desk-bar-hit,
+.desk-fullscreen-button:hover .desk-bar-hit,.desk-fullscreen-button:focus .desk-bar-hit{fill-opacity:.1;stroke-opacity:.68}
+.desk-brand:active .desk-bar-hit,.desk-search-button:active .desk-bar-hit,
+.desk-fullscreen-button:active .desk-bar-hit{fill-opacity:.19;stroke-opacity:.95}
 /* A real input sits over the menu-bar icon before search opens, so Android receives the
    initiating touch on an editable control instead of relying on a later scripted focus.
    Keep the armed control barely painted: Android declines to raise its IME for a fully
@@ -23863,12 +23868,8 @@ section{margin:1.9rem 0}
 </g>
 <!-- bezel dismiss ✕: top-right corner of the monitor frame, over the screen's top-right
      edge. Shown only while the monitor is zoomed (its group carries .dev-zoomed); rides
-     the group's transform so it never needs JS position-tracking, even in fullscreen. -->
-<g id="monitor-bezel-fullscreen" class="bezel-fs" transform="translate(375.4,152) scale(0.7) translate(-378,-155)" role="button" tabindex="0">
-<title>Fullscreen monitor</title>
-<circle cx="378" cy="155" r="2.6" fill="#453a31" stroke="#c8c2b4" stroke-width="0.5"/>
-<path d="M376.7 154.35 V153.7 H377.35 M378.65 153.7 H379.3 V154.35 M379.3 155.65 V156.3 H378.65 M377.35 156.3 H376.7 V155.65" fill="none" stroke="#c8c2b4" stroke-width="0.55" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
+     the group's transform so it never needs JS position-tracking. Monitor fullscreen
+     belongs to the desktop taskbar instead. -->
 <g id="monitor-bezel-close" class="bezel-close" transform="translate(380,152) scale(0.7) translate(-378,-155)">
 <circle cx="378" cy="155" r="2.6" fill="#453a31" stroke="#c8c2b4" stroke-width="0.5"/>
 <path d="M376.7 153.7 L379.3 156.3 M379.3 153.7 L376.7 156.3" fill="none" stroke="#c8c2b4" stroke-width="0.7" stroke-linecap="round"/>
@@ -48764,10 +48765,9 @@ setOfficeProgress("pc", false);
     var searchButton = mkEl("g", { id: "monitor-desk-search-button", "class": "desk-search-button",
       role: "button", tabindex: "0", "data-aria-i": "desk_search_apps_aria",
       "aria-label": (T[document.documentElement.lang] || T.en).desk_search_apps_aria || T.en.desk_search_apps_aria }, dock);
-    mkEl("path", { d: "M291.18 156.45 A1.18 1.18 0 1 1 288.82 156.45 A1.18 1.18 0 1 1 291.18 156.45 M289.15 157.3 L287.65 158.8",
-      transform: "translate(275.442 157.1) scale(.585225) translate(-290 -157.4)",
+    mkEl("path", { d: "M273.15 156.55 A.8 .8 0 1 1 271.55 156.55 A.8 .8 0 1 1 273.15 156.55 M271.78 157.12 L270.8 158.1",
       "class": "desk-search-icon" }, searchButton);
-    mkEl("rect", { x: 270.1, y: 154.5, width: 10, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, searchButton);
+    mkEl("rect", { x: 270.1, y: 154.5, width: 4.5, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, searchButton);
     function activateDockSearch(e) {
       if (e) {
         // Pointer clicks must retain their native activation so Android will raise the
@@ -48787,15 +48787,15 @@ setOfficeProgress("pc", false);
       if (e.key === "Enter" || e.key === " ") activateDockSearch(e);
     });
     var clockG = mkEl("g", { id: "monitor-desk-clock", "class": "desk-brand", role: "button", tabindex: "0", "data-aria-i": "app_clock", "aria-label": (T[document.documentElement.lang] || T.en).app_clock || T.en.app_clock }, dock);
-    var deskClock = mkEl("text", { x: 359.4, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text" }, clockG);
-    mkEl("rect", { x: 351.9, y: 154.5, width: 15, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, clockG);
+    var deskClock = mkEl("text", { x: 356.9, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text" }, clockG);
+    mkEl("rect", { x: 351.9, y: 154.5, width: 10, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, clockG);
     clockG.addEventListener("click", function (e) { e.stopPropagation(); openClockApp(); });
     clockG.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     clockG.addEventListener("keydown", function (e) {
       if (e.key !== "Enter" && e.key !== " ") return;
       e.preventDefault(); e.stopPropagation(); openClockApp();
     });
-    var languageG = mkEl("g", { id: "monitor-desk-language", "class": "desk-brand",
+    var languageG = mkEl("g", { id: "monitor-desk-language", "class": "desk-brand", transform: "translate(-5.1 0)",
       role: "button", tabindex: "0", "data-aria-i": "mon_lang_switch",
       "aria-label": (T[document.documentElement.lang] || T.en).mon_lang_switch || T.en.mon_lang_switch }, dock);
     var canadaFlag = mkEl("g", { "class": "desk-lang-flag",
@@ -48813,6 +48813,14 @@ setOfficeProgress("pc", false);
     var deskLanguage = mkEl("text", { x: 374.004, y: 157.75, "text-anchor": "middle",
       "class": "desk-bar-text desk-lang-code" }, languageG);
     mkEl("rect", { x: 367.5, y: 154.5, width: 10, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, languageG);
+    var fullscreenG = mkEl("g", { id: "monitor-desk-fullscreen", "class": "desk-fullscreen-button",
+      role: "button", tabindex: "0" }, dock);
+    mkEl("title", {}, fullscreenG).textContent = "Fullscreen monitor";
+    mkEl("rect", { x: 373, y: 154.5, width: 4.5, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, fullscreenG);
+    mkEl("path", {
+      d: "M374.05 156.15 V155.55 H374.65 M375.85 155.55 H376.45 V156.15 M376.45 157.35 V157.95 H375.85 M374.65 157.95 H374.05 V157.35",
+      "class": "desk-fullscreen-icon"
+    }, fullscreenG);
     window.__refreshMonitorLanguageButton = function () {
       var czech = document.documentElement.lang === "cs";
       deskLanguage.textContent = czech ? "CZ" : "EN";
@@ -48833,7 +48841,7 @@ setOfficeProgress("pc", false);
     // clicking this readout is now the forecast's one deliberately tucked-away monitor route.
     var weatherG = mkEl("g", { id: "monitor-desk-weather", "class": "desk-brand" }, dock);
     var deskWeather = mkEl("text", { x: 298.2, y: 157.9, "text-anchor": "middle", "class": "desk-bar-text desk-bar-wide" }, weatherG);
-    mkEl("rect", { x: 280.7, y: 154.5, width: 35, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, weatherG);
+    mkEl("rect", { x: 275.2, y: 154.5, width: 40.5, height: 4.5, rx: 0.75, "class": "desk-bar-hit" }, weatherG);
     weatherG.addEventListener("click", function (e) { e.stopPropagation(); openWeather(); });
     weatherG.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     var countG = mkEl("g", { id: "monitor-desk-calendar", "class": "desk-brand", role: "button", tabindex: "0", "data-aria-i": "app_calendar", "aria-label": (T[document.documentElement.lang] || T.en).app_calendar || T.en.app_calendar }, dock);
@@ -59800,6 +59808,7 @@ async def localfont(name):
     clearTimeout(saverTimer); saverTimer = null; // no screensaver over someone playing
     var targetView = game || (shootEverOpened ? shootView : "chooser");
     monitor.classList.add("show-doom");
+    if (window.__markMonitorAppRunning) window.__markMonitorAppRunning("shoot");
     shootEverOpened = true;
     shootFrozen = false;
     setShootView(targetView);
@@ -59812,6 +59821,7 @@ async def localfont(name):
   function closeDoom(stepBack) {
     if (!monitor.classList.contains("show-doom")) return;
     if (stepBack && shootView !== "chooser") { setShootView("chooser"); return; }
+    if (window.__markMonitorAppKilled) window.__markMonitorAppKilled("shoot");
     destroyDoom();
   }
   window.__closeMonitorDoom = closeDoom; // Dismiss tears down unreliable suspended WASM runtimes without playing the Kill gag
@@ -61059,7 +61069,7 @@ async def localfont(name):
     else app = monitorAppByName(name);
     if (!app) return DESKTOP_APPS.filter(function (a) { return !a.locked || !a.locked(); }).concat(TOOLBAR_APPS).map(function (a) { return a.id; }); // a bad name → every searchable app id
     if (app.locked && app.locked()) return "🔒 " + app.id + " is still hidden.";
-    if (window.goToStage) window.goToStage("office"); // the monitor lives in the office — bring it on screen
+    if (window.goToStage && window.currentStageName !== "office") window.goToStage("office"); // the monitor lives in the office — bring it on screen without tearing down an existing monitor-focus view
     // PC off → power on (spark + fan + boot Fedora → caps); the boot-complete hook opens the queued app.
     if (!pcTower.classList.contains("on")) { pendingBootApp = app.id; pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "🖥 booting the PC → " + app.id + "…"; }
     // PC on but the typewriter's showing → bring the monitor back; updateScreen reboots to caps, hook opens it.
@@ -62475,7 +62485,7 @@ async def localfont(name):
   [document.getElementById("monitor-bezel-close"), document.getElementById("laptop-bezel-close")].forEach(function (x) {
     if (x) x.addEventListener("pointerdown", function (e) { e.stopPropagation(); zoomOut(); });
   });
-  var monitorFsButton = document.getElementById("monitor-bezel-fullscreen");
+  var monitorFsButton = document.getElementById("monitor-desk-fullscreen");
   function placeMonitorFocusHost(on) {
     if (!fullscreenArea || !fullscreenHome) return;
     if (on) {
@@ -62508,8 +62518,8 @@ async def localfont(name):
     if (title) title.textContent = label;
     var mark = monitorFsButton.querySelector("path");
     if (mark) mark.setAttribute("d", contentFullscreen
-      ? "M377.35 153.7 V154.35 H376.7 M379.3 154.35 H378.65 V153.7 M378.65 156.3 V155.65 H379.3 M376.7 155.65 H377.35 V156.3"
-      : "M376.7 154.35 V153.7 H377.35 M378.65 153.7 H379.3 V154.35 M379.3 155.65 V156.3 H378.65 M377.35 156.3 H376.7 V155.65");
+      ? "M374.65 155.55 V156.15 H374.05 M375.85 155.55 V156.15 H376.45 M375.85 157.95 V157.35 H376.45 M374.65 157.95 V157.35 H374.05"
+      : "M374.05 156.15 V155.55 H374.65 M375.85 155.55 H376.45 V156.15 M376.45 157.35 V157.95 H375.85 M374.65 157.95 H374.05 V157.35");
   }
   window.__syncMonitorFullscreenButton = syncMonitorFullscreenButton;
   window.__toggleMonitorContentFullscreen = function () {

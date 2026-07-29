@@ -732,9 +732,12 @@ Opening an app boots/pans the monitor if necessary, closes incompatible surfaces
 own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
 view gets the first chance to step back, then the app closes to the desktop. A normal close can
 retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
-The zoomed monitor bezel owns the only monitor fullscreen control. It drives the
-in-page `monitorContentFullscreen` state without calling the browser Fullscreen
-API. The desk zoom contains `#monitor-zoom-box` without a scale cap and with
+The desktop taskbar cell immediately right of its language picker owns the only
+monitor fullscreen control. It drives the in-page `monitorContentFullscreen`
+state without calling the browser Fullscreen API. Apps cover the taskbar, so
+their existing Dismiss control returns to the shared enter/exit cell rather than
+each app growing another fullscreen button. The desk zoom contains
+`#monitor-zoom-box` without a scale cap and with
 only a 0.8-unit horizontal safe margin
 while `.monitor-content-fullscreen` hides every direct monitor child except the
 background and clipped `#office-monitor-screen-content`; the host simultaneously
@@ -743,8 +746,8 @@ therefore letterboxes without stretching; Escape or a surround tap returns to
 the office, while **F** independently owns browser fullscreen. Code, consoles,
 media, and embedded games share this lifecycle. Do not add iframe- or app-level
 fullscreen buttons casually. Shoot is the sole intentional exception because
-all three engines author a 4:3 viewport: the shared bezel control routes a live
-Shoot game to `#shoot-focus-overlay`, which temporarily reparents the retained
+all three engines author a 4:3 viewport: choosing a game while monitor focus is
+active routes Shoot to `#shoot-focus-overlay`, which temporarily reparents the
 `#monitor-shoot-host` and requests true browser fullscreen without recreating
 its iframe. It deliberately exposes no exit control; native Escape owns exit.
 Shoot does not retain an iframe across Dismiss: `closeDoom(false)` calls the

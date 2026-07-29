@@ -9,7 +9,7 @@ var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
   'var report={errors:window.__errs||[],steps:{}};',
-  'function snap(name){var s=window.__shootState();report.steps[name]={view:s.view,open:s.open,src:s.iframe&&s.iframe.src};}',
+  'function snap(name){var s=window.__shootState();report.steps[name]={view:s.view,open:s.open,src:s.iframe&&s.iframe.src,running:window.__monitorAppRunning&&window.__monitorAppRunning("shoot")};}',
   'addEventListener("load",function(){setTimeout(function(){',
   'window.goToStage("office");',
   'var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");',
@@ -18,7 +18,7 @@ var HARNESS = [
   'report.steps.icons=Array.from(document.querySelectorAll("[data-shoot-game] .shoot-logo")).map(function(svg){return svg.tagName.toLowerCase()+":"+svg.querySelectorAll("path,ellipse,circle").length;});',
   'report.steps.tile={id:!!document.getElementById("monitor-dock-shoot"),en:document.querySelector("#monitor-dock-shoot .dock-label").textContent,bg:getComputedStyle(document.querySelector("#monitor-dock-shoot .dock-tile")).backgroundColor};',
   'window.setLang("cs");report.steps.tile.cs=document.querySelector("#monitor-dock-shoot .dock-label").textContent;window.setLang("en");',
-  'window.__openMonitorApp("shoot");snap("shoot");var focus=document.getElementById("monitor-bezel-fullscreen"),overlay=document.getElementById("shoot-focus-overlay"),launchRequested=false;window.__monitorZoomIn();focus.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));overlay.requestFullscreen=function(){launchRequested=true;return Promise.resolve();};document.querySelector("[data-shoot-game=\\"doom\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));report.steps.focusLaunch={requested:launchRequested,monitorFocus:window.__monitorContentFullscreen(),hostParent:document.getElementById("monitor-shoot-host").parentNode.id};document.dispatchEvent(new Event("fullscreenchange"));',
+  'var focus=document.getElementById("monitor-desk-fullscreen"),overlay=document.getElementById("shoot-focus-overlay"),launchRequested=false;window.__monitorZoomIn();focus.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__openMonitorApp("shoot");snap("shoot");overlay.requestFullscreen=function(){launchRequested=true;return Promise.resolve();};document.querySelector("[data-shoot-game=\\"doom\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));report.steps.focusLaunch={requested:launchRequested,monitorFocus:window.__monitorContentFullscreen(),hostParent:document.getElementById("monitor-shoot-host").parentNode.id};document.dispatchEvent(new Event("fullscreenchange"));',
   'var doomIcon=document.querySelector(".shoot-choice-doom path"),closeBg=document.querySelector("#monitor-doom-close .shoot-close-bg");',
   'report.steps.colors={chooserClose:getComputedStyle(closeBg).fill};',
   'window.__openMonitorApp("doom");snap("doom");',
@@ -30,7 +30,7 @@ var HARNESS = [
   'report.steps.coach={on:coach.classList.contains("on"),en:coach.querySelector("text").textContent,pointer:coach.getAttribute("pointer-events"),y:+coachRect.getAttribute("y"),screenBottom:+screen.getAttribute("y")+ +screen.getAttribute("height")};',
   'window.setLang("cs");report.steps.coach.cs=coach.querySelector("text").textContent;window.setLang("en");',
   'window.__openMonitorApp("quake");snap("quake");',
-  'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back"),focus=document.getElementById("monitor-bezel-fullscreen"),overlay=document.getElementById("shoot-focus-overlay");',
+  'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back"),focus=document.getElementById("monitor-desk-fullscreen"),overlay=document.getElementById("shoot-focus-overlay");',
   'window.__monitorZoomIn();report.steps.gameControls={closeAria:close.getAttribute("aria-label"),closeMark:close.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents,ownFocus:!!document.getElementById("monitor-doom-fullscreen")};var requested=false;overlay.requestFullscreen=function(){requested=true;return Promise.resolve();};focus.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));var focusRect=document.getElementById("shoot-focus-stage").getBoundingClientRect();report.steps.focus={shown:!overlay.hidden,requested:requested,ratio:focusRect.width/focusRect.height,hostParent:document.getElementById("monitor-shoot-host").parentNode.id,noExitButton:!document.getElementById("shoot-focus-exit")};document.dispatchEvent(new Event("fullscreenchange"));report.steps.focus.exited=document.getElementById("monitor-shoot-host").parentNode.id==="monitor-doom-wrap";close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents};',
   'window.__openMonitorApp("shoot");snap("reopened");document.querySelector("[data-shoot-game=\\"q3\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));snap("q3reopened");back.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
   'report.steps.chooserControls={closeAria:close.getAttribute("aria-label"),backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
@@ -73,7 +73,7 @@ if (result) {
   check(!s.gameControls.ownFocus && s.focus.shown && s.focus.requested &&
       Math.abs(s.focus.ratio - 4 / 3) < 0.01 &&
       s.focus.hostParent === "shoot-focus-stage" && s.focus.noExitButton && s.focus.exited,
-    "the shared bezel gives Shoot true 4:3 browser fullscreen with native-Escape exit only", {
+    "monitor focus gives Shoot true 4:3 browser fullscreen with native-Escape exit only", {
       controls: s.gameControls, focus: s.focus
     });
   check(s.focusLaunch.requested && !s.focusLaunch.monitorFocus &&
@@ -90,11 +90,11 @@ if (result) {
     "quake is a Quake III alias", s.quake);
   check(/Close shoot/.test(s.gameControls.closeAria) && s.gameControls.backPointer !== "none" &&
       s.gameControls.closeMark !== s.gameControls.backMark &&
-      !s.dismissed.open && s.dismissed.view === "chooser" && !s.dismissed.src &&
+      !s.dismissed.open && s.dismissed.view === "chooser" && !s.dismissed.src && !s.dismissed.running &&
       s.hiddenControls.back === "none" &&
-      s.reopened.open && s.reopened.view === "chooser" && !s.reopened.src &&
+      s.reopened.open && s.reopened.view === "chooser" && !s.reopened.src && s.reopened.running &&
       s.q3reopened.open && s.q3reopened.view === "q3" && s.q3reopened.src === "q3/player.html",
-    "Dismiss silently destroys the shooter and reopening starts cleanly at the chooser", {
+    "Dismiss silently destroys the shooter, clears its task LED, and reopening starts cleanly", {
       controls: s.gameControls, dismissed: s.dismissed, reopened: s.reopened, q3reopened: s.q3reopened
     });
   check(s.back.view === "chooser" && s.back.open && !s.back.src &&

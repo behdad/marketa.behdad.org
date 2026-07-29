@@ -808,7 +808,7 @@ range uses half-hour units. Reset visibility is derived from an explicit
 `?time=` override, not the synthetic day-lapse clock.
 
 The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat,
-Browser, System, and About their own staged gag before teardown. They all use
+Video, Browser, System, and About their own staged gag before teardown. They all use
 `__runMonitorDeathFlash` so
 cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.
 Call first clears every owned connect/goodbye timer and ambient source, then drops its signal bars
@@ -817,6 +817,9 @@ live media element while its SVG notes leave the staff, then pauses and rewinds 
 clears the current selection, and flattens the manual EQ. Chat freezes pending transport and
 verification work, types its interrupted thought, collapses rendered rows into context tokens,
 displays `[context cleared]`, then resets its history and closes.
+Video captures its selected track before freeze/reset and gates one of three native-SVG overlays;
+paused and ended films therefore keep their own send-off, while teardown clears the captured
+variant and resets the playlist as before.
 
 The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
 low delivery with `html.frame-rate-low`. It samples only while the document is
@@ -1183,6 +1186,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
   presentation entries and their recovery/lifecycle contracts;
 - `tests/projector-coffee.js`, `tests/media-transitions.js`, and `tests/piano-message.js` for
   projector ordering, retained channel state, shared beds, transport, and play-along transitions;
+- `tests/video-playlist.js` and `tests/video-kill-variants.js` for film selection, retained
+  playheads, track-specific Kill visuals, and teardown reset;
 - `tests/party-lifecycle.js` for attended party timing and finales;
 - `tests/balcony-tetris.js`, `tests/pacman.js`, `tests/doom-title.js`,
   `tests/monitor-savers.js`, and

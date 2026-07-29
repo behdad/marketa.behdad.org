@@ -4826,6 +4826,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
    active visitor tab hasn't navigated yet */
 .browser-newtab{grid-area:1/1; display:none; align-items:center; justify-content:center; gap:2px; background:#fffdf8}
 .browser-wrap.newtab .browser-newtab{display:flex}
+.browser-wrap.deeper .browser-newtab{display:none}
 /* .browser-frame-holder is positioned for iframe scaling, so it wins hit-testing over
    the later-painted grid item in some browsers even while the visible new-tab form sits
    above it. Remove that dormant layer from hit-testing until the visitor navigates. */
@@ -22963,7 +22964,7 @@ section{margin:1.9rem 0}
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-browser-wrap" class="browser-wrap">
 <div id="monitor-browser-tabs" class="browser-tabs"></div>
 <div class="browser-page">
-<div class="browser-loading" data-i="browser_loading">loading&#8230;</div>
+<div id="monitor-browser-loading" class="browser-loading" data-i="browser_loading">loading&#8230;</div>
 <div class="browser-frame-holder"></div>
 <div id="monitor-browser-newtab" class="browser-newtab">
 <div class="url-wrap">
@@ -28413,6 +28414,7 @@ var T = {
     tab_behdad: "behdad",
     tab_harfbuzz: "harfbuzz",
     browser_loading: "loading…",
+    browser_deeper: "We must go deeper…",
     tab_new: "new tab",
     browser_url_ph: "type a URL…",
     browser_omni_ph: "Search or enter address",
@@ -29556,6 +29558,7 @@ var T = {
     tab_behdad: "behdad",
     tab_harfbuzz: "harfbuzz",
     browser_loading: "načítání…",
+    browser_deeper: "Musíme jít hlouběji…",
     tab_new: "nová karta",
     browser_url_ph: "zadejte adresu…",
     browser_omni_ph: "Hledat nebo zadat adresu",
@@ -55209,6 +55212,7 @@ setOfficeProgress("pc", false);
   })();
   var browserPage = browserWrap ? browserWrap.querySelector(".browser-page") : null;
   var browserFrameHolder = browserWrap ? browserWrap.querySelector(".browser-frame-holder") : null;
+  var browserLoading = document.getElementById("monitor-browser-loading");
   function ensureBrowserFrame() {
     if (browserFrame || !browserFrameHolder) return browserFrame;
     browserFrame = document.createElement("iframe");
@@ -55264,8 +55268,10 @@ setOfficeProgress("pc", false);
     for (var id in browserTabEls) browserTabEls[id].classList.toggle("active", id === tab.id);
     if (browserExternalEl) browserExternalEl.classList.toggle("open-dead", !tab.url);
     if (browserWrap) {
-      browserWrap.classList.toggle("newtab", !!tab.dyn && !tab.url); // unnavigated visitor tab = address form
+      browserWrap.classList.toggle("newtab", !!tab.dyn && !tab.url && !tab.pendingUrl); // unnavigated visitor tab = address form
+      browserWrap.classList.toggle("deeper", !!tab.pendingUrl);
     }
+    if (browserLoading) browserLoading.textContent = browserT(tab.pendingUrl ? "browser_deeper" : "browser_loading");
     // fixed tabs share the one original frame; each navigated visitor tab keeps its
     // own, so switching tabs shows/hides frames instead of reloading them
     if (browserFrame) browserFrame.style.display = tab.dyn ? "none" : "";
@@ -55353,6 +55359,7 @@ setOfficeProgress("pc", false);
     if (!silent) playLaptopClickSound("office-monitor");
   }
   function closeDynBrowserTab(t) {
+    if (t.deepTimer) clearTimeout(t.deepTimer);
     var idx = browserDynTabs.indexOf(t);
     if (idx < 0) return;
     var wasActive = browserActiveTab === t.id;
@@ -55486,6 +55493,21 @@ setOfficeProgress("pc", false);
       tabMenuItem("ctx-close", TAB_CLOSE_ICO, tabMenuTr("tab_ctx_close"), function () { closeBrowserTab(tab); })
     ], e.clientX, e.clientY);
   });
+  function finishBrowserNavigation(tab, u, raw, isSearch) {
+    tab.pendingUrl = null;
+    tab.deepTimer = null;
+    tab.url = u.href;
+    tab.lbl.removeAttribute("data-i"); // hostnames (and queries) don't translate
+    tab.lbl.textContent = isSearch ? "🔍 " + raw : u.hostname.replace(/^www\./, "");
+    tab.fav.style.display = "";
+    tab.fav.src = u.origin + "/favicon.ico"; // onerror re-hides it for sites without one
+    ensureDynBrowserFrame(tab);
+    setBrowserTab(tab.id); // repaints form/frame visibility now that the tab has a page
+  }
+  function isLoftDayUrl(u) {
+    if (u.hostname.toLowerCase() !== "marketa.behdad.org") return false;
+    return /^\/(?:loft-day|rsvp)(?:\.html)?\/?$/i.test(u.pathname);
+  }
   function browserNavigate() {
     var tab = findBrowserTab(browserActiveTab);
     if (!tab || !tab.dyn || tab.url || !browserUrlIn) return;
@@ -55502,14 +55524,17 @@ setOfficeProgress("pc", false);
       browserUrlIn.classList.remove("shake"); void browserUrlIn.offsetWidth; browserUrlIn.classList.add("shake");
       return;
     }
-    tab.url = u.href;
-    tab.lbl.removeAttribute("data-i"); // hostnames (and queries) don't translate
-    tab.lbl.textContent = isSearch ? "🔍 " + raw : u.hostname.replace(/^www\./, "");
-    tab.fav.style.display = "";
-    tab.fav.src = u.origin + "/favicon.ico"; // onerror re-hides it for sites without one
-    ensureDynBrowserFrame(tab);
     browserUrlIn.value = "";
-    setBrowserTab(tab.id); // repaints form/frame visibility now that the tab has a page
+    if (isLoftDayUrl(u)) {
+      tab.pendingUrl = u.href;
+      setBrowserTab(tab.id);
+      tab.deepTimer = setTimeout(function () {
+        if (!findBrowserTab(tab.id) || tab.url || tab.pendingUrl !== u.href) return;
+        finishBrowserNavigation(tab, u, raw, isSearch);
+      }, 1000);
+      return;
+    }
+    finishBrowserNavigation(tab, u, raw, isSearch);
   }
   if (browserUrlIn) {
     browserUrlIn.addEventListener("keydown", function (e) {
@@ -55615,6 +55640,7 @@ setOfficeProgress("pc", false);
     // visitor tabs are the running machine's session state: power-off drops them whole
     while (browserDynTabs.length) {
       var t = browserDynTabs.pop();
+      if (t.deepTimer) clearTimeout(t.deepTimer);
       delete browserTabEls[t.id];
       if (t.el && t.el.parentNode) t.el.parentNode.removeChild(t.el);
       if (t.frame && t.frame.parentNode) t.frame.parentNode.removeChild(t.frame);

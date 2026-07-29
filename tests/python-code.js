@@ -58,8 +58,8 @@ check(/py\["loft-type\.py"\]\s*=\s*CODE_PY_FRAUNCES_SVG/.test(html) &&
       /hb\.shape\(hb_font, buffer\)/.test(html) &&
       /hb_font\.get_font_extents\(\\"ltr\\"\)/.test(html) &&
       /await googlefonts\(\\"Fraunces\\"\)/.test(html) &&
-      /buffer\.add_str\(\\"Loft Day\\"\)/.test(html),
-  "the saved HarfBuzz + FontTools example renders Loft Day from Fraunces outlines");
+      /buffer\.add_str\(\\"LoftType\\"\)/.test(html),
+  "the saved HarfBuzz + FontTools example renders LoftType from Fraunces outlines");
 check(/\["js", "python"\]\.forEach\(function \(language\)/.test(html) &&
       /codeLoad\(file\.name, file\.language\)/.test(html) &&
       /file\.language === codeLanguage/.test(html),

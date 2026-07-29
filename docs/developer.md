@@ -770,9 +770,9 @@ stationary Android hold, cancels that hold once a band adjustment exceeds the
 movement slop, fires before the platform's native long-press cancellation, and
 suppresses the firing touch release so compatibility mouse events cannot
 immediately dismiss the menu. It calls the shared menu builder directly rather
-than relying on Android to dispatch `contextmenu`. The painted
-`#monitor-eq-menu-btn` is the deterministic fallback and opens the same menu
-through a normal click/tap.
+than relying on Android to dispatch `contextmenu`. The large `#monitor-eq-hit`
+visualization is the deterministic coarse-pointer fallback: touch opens that
+same menu, while mouse click retains its play/pause shortcut.
 The individual app surfaces remain de-layered and gated by `visibility` plus
 `pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
 and `node tests/classics-touch.mjs`.

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// Focused test for the monitor running-app registry, right-click Kill/Restart menus,
-// restart teardown and the DOOM fullscreen button. Uses the same one-shot headless-Chrome runner as play.js
+// Focused test for the monitor running-app registry, contextual Kill/whole-loft Start over menus,
+// runtime teardown helpers and the DOOM fullscreen button. Uses the same one-shot headless-Chrome runner as play.js
 // (--dump-dom, no long-lived process, so it runs in-sandbox).
 //
 // Two menus by design (kept split to avoid a double menu on the console apps):
-//   • .console-ctx — python/linux/console fold Kill (and, for the runtimes, Restart) into
-//     their existing copy/paste menu.
+//   • .console-ctx — python/linux/console fold Kill into their existing copy/paste menu.
 //   • .mon-ctx — every other real app (mail, chat, weather, classics, music, video, …) plus shoot
 //     (a game iframe, no copy/paste) gets this standalone menu. Desktop Kill is available only
-//     after launch and reuses the app's in-app themed hook; Restart appears only for DOOM.
+//     after launch and reuses the app's in-app themed hook.
+// Every custom menu ends with a separated whole-loft Start over; app-level Restart is intentionally absent.
 // Kill on a self-hosted runtime (doom/python/linux) is DISABLED until the runtime is
 // actually running — the running predicates (__doomRunning/__pyRunning/__lxRunning) are
 // window-exposed so this harness can flip them (it can't boot the real WASM runtimes,
@@ -24,15 +24,18 @@ var HARNESS = [
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
   "  var report = { errors: [], steps: {} };",
   "  function S(k,v){ report.steps[k]=v; }",
-  "  function ctxAt(el){ var r=el.getBoundingClientRect(); var e=new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+Math.min(20,r.width/2),clientY:r.top+Math.min(20,r.height/2)}); var prevented=!el.dispatchEvent(e); return prevented; }",
+  "  function ctxAt(el){ var r=el.getBoundingClientRect(); var e=new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+Math.min(20,r.width/2),clientY:r.top+Math.min(20,r.height/2)}); var prevented=!el.dispatchEvent(e); if(window.__augmentContextMenus)window.__augmentContextMenus(); return prevented; }",
   "  function ccMenu(){ return document.querySelector('.console-ctx.show'); }",           // python/linux/console menu
   "  function ccVisible(sel){ var m=ccMenu(); if(!m) return false; var b=m.querySelector(sel); return !!b && b.style.display!=='none'; }",
   "  function ccText(sel){ var m=ccMenu(); var b=m&&m.querySelector(sel); return b?b.textContent:''; }",
   "  function ccKillDisabled(){ var m=ccMenu(); var b=m&&m.querySelector('.cc-kill'); return !!(b&&b.disabled); }",
+  "  function ccReset(){ var m=ccMenu(); return m&&m.querySelector('.cc-loft-reset'); }",
   "  function monMenu(){ return document.querySelector('.mon-ctx:not(.scene-ctx)'); }",     // doom + every non-console app menu
-  "  function monItems(){ var m=monMenu(); return m?[].map.call(m.querySelectorAll('button span'),function(s){return s.textContent;}):[]; }",
+  "  function monItems(){ var m=monMenu(); return m?[].map.call(m.querySelectorAll('button:not(.ctx-loft-reset) span:last-child'),function(s){return s.textContent;}):[]; }",
   "  function monKill(){ var m=monMenu(); return m?m.querySelector('button.ctx-kill'):null; }",
   "  function monRestart(){ var m=monMenu(); return m?m.querySelector('button.ctx-restart'):null; }",
+  "  function monReset(){ var m=monMenu(); return m?m.querySelector('button.ctx-loft-reset'):null; }",
+  "  function resetIsLast(menu,button){ return !!(menu&&button&&menu.lastElementChild===button&&button.classList.contains(menu.classList.contains('console-ctx')?'cc-sep':'ctx-sep')); }",
   "  function monKillDisabled(){ var b=monKill(); return !!(b&&b.disabled); }",
   "  function mon(){ return document.getElementById('office-monitor'); }",
   "  function reg(id){ return !!(window.__monitorAppRunning&&window.__monitorAppRunning(id)); }",
@@ -58,7 +61,7 @@ var HARNESS = [
   // ---- NON-RUNTIME APPS (mon-ctx): Kill only, enabled, no Restart ----
   "    var nonRt=['show-mail','show-chat','show-weather','show-mines','show-nowplaying','show-help'];",
   "    var nonRtOk=true, nonRtDetail={};",
-  "    for (var i=0;i<nonRt.length;i++){ var c=nonRt[i]; showApp(c); var prevented=ctxAt(mon()); var items=monItems(); var kill=monKill(); var ok = prevented===true && !!monMenu() && items.length===1 && /kill/i.test(items[0]||'') && !monRestart() && !!kill && kill.disabled===false; nonRtDetail[c]={prevented:prevented,items:items,hasRestart:!!monRestart(),killDisabled:kill?kill.disabled:'no-kill'}; if(!ok) nonRtOk=false; }",
+  "    for (var i=0;i<nonRt.length;i++){ var c=nonRt[i]; showApp(c); var prevented=ctxAt(mon()); var items=monItems(); var kill=monKill(); var ok = prevented===true && !!monMenu() && items.length===1 && /kill/i.test(items[0]||'') && !monRestart() && !!kill && kill.disabled===false && resetIsLast(monMenu(),monReset()); nonRtDetail[c]={prevented:prevented,items:items,hasRestart:!!monRestart(),killDisabled:kill?kill.disabled:'no-kill',resetLast:resetIsLast(monMenu(),monReset())}; if(!ok) nonRtOk=false; }",
   "    S('nonruntime_kill_only_enabled', nonRtOk); S('nonruntime_detail', nonRtDetail);",
   // A stationary Android hold on an EQ band must open the same Reset EQ + Kill menu as right-click.
   "    showApp('show-nowplaying'); var eqHits=document.querySelectorAll('#monitor-manual-eq .meq-band rect[fill=transparent]'),eqHit=eqHits[0],eqHold=eqHits[1],eqr=eqHit&&eqHit.getBoundingClientRect(),eqhr=eqHold&&eqHold.getBoundingClientRect();",
@@ -154,21 +157,12 @@ var HARNESS = [
   "    var pyOut = document.getElementById('monitor-py-out');",
   "    S('py_contextmenu_prevented', ctxAt(pyOut));",
   "    S('py_menu_present', !!ccMenu());",
-  "    S('py_restart_visible', ccVisible('.cc-restart'));",
+  "    S('py_no_restart', !ccVisible('.cc-restart'));",
   "    S('py_kill_visible', ccVisible('.cc-kill'));",
   "    S('py_kill_disabled_when_cold', ccKillDisabled());",   // runtime not loaded → Kill inactive
-  "    S('py_restart_label', ccText('.cc-restart'));",
   "    S('py_kill_label', ccText('.cc-kill'));",
+  "    S('py_reset_last', resetIsLast(ccMenu(),ccReset()) && ccText('.cc-loft-reset')==='Start over');",
   "    S('menu_html', ccMenu()?ccMenu().outerHTML.replace(/\\s+/g,' ').slice(0,500):'');",
-  // Restart is the load/failure affordance — it works even while the runtime is cold. It now runs the
-  // Monty Python Black Knight flash first, THEN tears down (deferred past the ~2.6s flash). openPython
-  // no-ops here (no show-caps), so the reopened welcome doesn't reprint — pyOut just clears.
-  "    pyOut.innerHTML='<div>stale line</div><div>garbage</div>';",
-  "    ccMenu().querySelector('.cc-restart').click(); await sleep(40);",
-  "    S('py_menu_hidden_after_restart', !ccMenu());",
-  "    S('py_restart_flash_started', mon().classList.contains('death-python'));",
-  "    await sleep(2700);",   // wait out the ~2.6s flash → destroyPython clears the output + drops show-python
-  "    S('py_out_reset', !/stale line|garbage/.test(pyOut.textContent) && !mon().classList.contains('death-python'));",
   // mark the runtime running → Kill enabled → runs the Black Knight flash, THEN destroys the app
   "    window.__pyRunning=function(){return true;};",
   "    showApp('show-python'); ctxAt(pyOut); S('py_menu_reopened', !!ccMenu());",
@@ -186,13 +180,12 @@ var HARNESS = [
   "    await sleep(80);",
   "    S('esc_hid_menu', !ccMenu());",
   "    S('esc_kept_app', mon().classList.contains('show-python'));",
-  // plain JS console: Kill AND Restart both present + enabled now — Kill = refresh (clear scrollback,
-  // re-arm welcome, back to desktop), Restart = refresh + reopen. No runtime to gate → Kill always live.
-  // The copy/paste labels are now Titlecase (Copy/Paste), matching Kill/Restart.
+  // Plain JS console: Kill is enabled (no runtime gate); Reset remains the final global action.
   "    showApp('show-console');",
   "    var conOut=document.getElementById('monitor-console-out');",
-  "    if(conOut){ ctxAt(conOut); S('console_restart_visible', ccVisible('.cc-restart')); S('console_kill_visible', ccVisible('.cc-kill')); S('console_kill_enabled', !ccKillDisabled()); S('console_restart_label', ccText('.cc-restart')); S('console_kill_label', ccText('.cc-kill')); S('console_menu_html', ccMenu()?ccMenu().outerHTML.replace(/\\s+/g,' '):''); }",
-  "    else { S('console_restart_visible','no-console-out'); S('console_kill_visible','no-console-out'); S('console_kill_enabled','no-console-out'); S('console_restart_label','no-console-out'); S('console_kill_label','no-console-out'); S('console_menu_html',''); }",
+  "    if(conOut){ ctxAt(conOut); S('console_no_restart', !ccVisible('.cc-restart')); S('console_kill_visible', ccVisible('.cc-kill')); S('console_kill_enabled', !ccKillDisabled()); S('console_kill_label', ccText('.cc-kill')); S('console_reset_last',resetIsLast(ccMenu(),ccReset())); S('console_menu_html', ccMenu()?ccMenu().outerHTML.replace(/\\s+/g,' '):''); }",
+  "    else { S('console_no_restart','no-console-out'); S('console_kill_visible','no-console-out'); S('console_kill_enabled','no-console-out'); S('console_kill_label','no-console-out'); S('console_reset_last','no-console-out'); S('console_menu_html',''); }",
+  "    if(conOut){var savedResetRequest=window.__requestLoftReset,consoleResetRequests=0;window.__requestLoftReset=function(){consoleResetRequests++;return false;};if(ccReset())ccReset().click();S('console_start_over_hid',!ccMenu()&&consoleResetRequests===1);ctxAt(conOut);S('console_menu_reusable',!!ccMenu());window.__requestLoftReset=savedResetRequest;}",
   // console Kill now runs the JS-crash flatline flash, THEN refreshes: the menu hides + death-console
   // starts immediately; show-console stays up during the flash, then destroyConsole clears the
   // scrollback + drops show-console once it ends.
@@ -205,14 +198,15 @@ var HARNESS = [
   // ---- LINUX (console-ctx) ----
   "    showApp('show-linux');",
   "    var lxOutEl=document.getElementById('monitor-linux-out');",
-  "    ctxAt(lxOutEl); S('linux_menu_present', !!ccMenu()); S('linux_restart_visible', ccVisible('.cc-restart')); S('linux_kill_visible', ccVisible('.cc-kill'));",
+  "    ctxAt(lxOutEl); S('linux_menu_present', !!ccMenu()); S('linux_no_restart', !ccVisible('.cc-restart')); S('linux_kill_visible', ccVisible('.cc-kill')); S('linux_reset_last',resetIsLast(ccMenu(),ccReset()));",
   "    S('linux_kill_disabled_when_cold', ccKillDisabled());",
-  "    if(ccMenu()) document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await sleep(40); S('linux_restart_hid_menu', !ccMenu());",
+  "    if(ccMenu()) document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); await sleep(40); S('linux_menu_hidden', !ccMenu());",
   // ---- DOOM (mon-ctx) ----
   "    showApp('show-doom');",
   "    var doomWrap=document.getElementById('monitor-doom-wrap');",
   "    S('doom_ctx_prevented', ctxAt(mon()));",
   "    S('doom_menu_present', !!monMenu()); S('doom_items', monItems());",
+  "    S('doom_no_restart', !monRestart()); S('doom_reset_last',resetIsLast(monMenu(),monReset()));",
   "    S('doom_kill_disabled_when_cold', monKillDisabled());",   // engine not up → Kill inactive
   // mark the engine running → Kill enabled → closes
   "    window.__doomRunning=function(){return true;};",
@@ -303,6 +297,10 @@ var HARNESS = [
   "    window.__pyRunning=function(){return true;}; showApp('show-caps'); ctxAt(deskTile('python')); S('desk_python_running_has_kill', !!monKill()); escMenu(); await sleep(20);",
   // right-clicking a NON-icon desktop surface (the menu-bar brand) → no custom menu, native kept
   "    showApp('show-caps'); var brand=document.querySelector('#monitor-desktop-dock .desk-brand'); S('desk_nontile_prevented', brand?ctxAt(brand):'no-brand'); S('desk_nontile_no_menu', !monMenu());",
+  // The global Reset is always last, dismisses its menu, and routes through the shared
+  // confirmation + extinguisher path. Stub the destructive endpoint for this focused check.
+  "    showApp('show-mail'); ctxAt(mon()); var oldRequest=window.__requestLoftReset, resetRequests=0; window.__requestLoftReset=function(){resetRequests++;return true;}; var resetButton=monReset(); if(resetButton)resetButton.click(); S('global_reset_click',resetRequests===1&&!monMenu()); window.__requestLoftReset=oldRequest;",
+  "    var oldConfirm=window.__confirmRestart,oldActivate=window.__activateExtinguisher,oldStageIndex=window.currentStageIndex,resetActivations=[]; window.currentStageIndex=0; window.__activateExtinguisher=function(opts){resetActivations.push(opts||{});}; window.__confirmRestart=function(){return false;}; var rejected=window.__requestLoftReset(); await sleep(10); S('global_reset_reject',rejected===false&&resetActivations.length===0); window.__confirmRestart=function(){return true;}; var accepted=window.__requestLoftReset(); await sleep(10); S('global_reset_accept',accepted===true&&resetActivations.length===1&&resetActivations[0].resetDateTime===true); window.__confirmRestart=oldConfirm;window.__activateExtinguisher=oldActivate;window.currentStageIndex=oldStageIndex;",
   // Console Restart now runs the JS-crash flatline flash, THEN refreshes (clears the scrollback +
   // drops show-console) and would reopen a fresh welcome (no show-caps here → openConsole no-ops);
   // verify flash-then-teardown, mirroring linux/python.
@@ -326,7 +324,7 @@ function check(name, cond, detail) {
   else { fails++; console.log("  ✗ " + name + (detail !== undefined ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 var s = rep.steps;
-console.log("monitor right-click Kill/Restart menus + restart + fs button:");
+console.log("monitor right-click Kill/Start over menus + runtime helpers + fs button:");
 console.log(" desktop (no app open):");
 check("right-click on the bare monitor desktop eats the native menu, shows no custom menu", s.desktop_ctx_prevented === true && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
 check("outside click dismisses the Loft OS menu without activating the covered app", s.system_menu_opened === true && s.system_menu_outside_dismissed === true && s.system_menu_outside_blocked_app === true, { opened: s.system_menu_opened, dismissed: s.system_menu_outside_dismissed, blocked: s.system_menu_outside_blocked_app });
@@ -371,33 +369,36 @@ check("Mines Kill reveals the board, chains every mine, blinks the last, freezes
 check("Photobooth Kill develops empty-chair frames, closes the last curtain, resets and closes", s.photobooth_kill_flash_started === true && s.photobooth_kill_still_open === true && s.photobooth_kill_cancelled_picker === true && s.photobooth_kill_strip_developing === true && s.photobooth_kill_caption === "Nobody blinked." && s.photobooth_kill_curtain_closing === true && s.photobooth_kill_curtain_closed === true && s.photobooth_kill_closed_app === true && s.photobooth_kill_flash_ended === true && s.photobooth_kill_reset_visual === true, { flash: s.photobooth_kill_flash_started, open: s.photobooth_kill_still_open, picker: s.photobooth_kill_cancelled_picker, strip: s.photobooth_kill_strip_developing, caption: s.photobooth_kill_caption, closing: s.photobooth_kill_curtain_closing, closedCurtain: s.photobooth_kill_curtain_closed, closed: s.photobooth_kill_closed_app, ended: s.photobooth_kill_flash_ended, reset: s.photobooth_kill_reset_visual });
 check("Weather Kill cycles sun/rain/snow/lightning, strikes the app, resets and closes", s.weather_kill_flash_started === true && s.weather_kill_still_open === true && s.weather_kill_cycled_all === true && s.weather_kill_caption === "Under the weather." && s.weather_kill_struck === true && s.weather_kill_closed_app === true && s.weather_kill_flash_ended === true && s.weather_kill_reset_visual === true, { flash: s.weather_kill_flash_started, open: s.weather_kill_still_open, cycled: s.weather_kill_cycled_all, caption: s.weather_kill_caption, struck: s.weather_kill_struck, closed: s.weather_kill_closed_app, ended: s.weather_kill_flash_ended, reset: s.weather_kill_reset_visual });
 check("console menu appears over python", s.py_menu_present === true);
-check("Restart item visible for python", s.py_restart_visible === true);
+check("python has no redundant app Restart", s.py_no_restart === true);
 check("Kill item visible for python", s.py_kill_visible === true);
 check("Kill is DISABLED while the python runtime isn't running", s.py_kill_disabled_when_cold === true);
-check("Restart labelled 'Restart'", /restart/i.test(s.py_restart_label), s.py_restart_label);
 check("Kill labelled 'Kill'", /kill/i.test(s.py_kill_label), s.py_kill_label);
-check("Restart works while cold — hides the menu, runs the Black Knight flash, then tears down python output", s.py_menu_hidden_after_restart === true && s.py_restart_flash_started === true && s.py_out_reset === true);
+check("python Start over is labelled, separated, and last", s.py_reset_last === true);
 check("Kill becomes ENABLED once the runtime is running", s.py_kill_enabled_when_running === true);
 check("enabled Kill runs the Black Knight flash then destroys the python app", s.py_kill_hid_menu === true && s.py_kill_flash_started === true && s.py_kill_still_open_during_flash === true && s.py_kill_closed_app === true && s.py_kill_flash_ended === true);
 check("Esc hides the menu", s.esc_hid_menu === true);
 check("Esc leaves the app open (does not close it)", s.esc_kept_app === true);
-check("plain JS console NOW gets a Restart (Kill=refresh, Restart=refresh+reopen)", s.console_restart_visible === true || s.console_restart_visible === "no-console-out");
+check("plain JS console has no redundant app Restart", s.console_no_restart === true || s.console_no_restart === "no-console-out");
 check("plain JS console gets an enabled Kill (no runtime to gate)", (s.console_kill_visible === true && s.console_kill_enabled === true) || s.console_kill_visible === "no-console-out");
-check("console Restart/Kill labelled 'Restart'/'Kill'", (/restart/i.test(s.console_restart_label) && /kill/i.test(s.console_kill_label)) || s.console_restart_label === "no-console-out", { restart: s.console_restart_label, kill: s.console_kill_label });
-check("console menu copy/paste are Titlecase (Copy/Paste), matching Kill/Restart", /Copy/.test(s.console_menu_html) && /Paste/.test(s.console_menu_html) || s.console_menu_html === "", s.console_menu_html ? s.console_menu_html.slice(0, 260) : "(none)");
+check("console Kill is labelled 'Kill'", /kill/i.test(s.console_kill_label) || s.console_kill_label === "no-console-out", s.console_kill_label);
+check("console Start over is separated and last", s.console_reset_last === true || s.console_reset_last === "no-console-out");
+check("console Start over dismisses without breaking the reusable menu", s.console_start_over_hid === true && s.console_menu_reusable === true);
+check("console menu copy/paste are Titlecase (Copy/Paste)", /Copy/.test(s.console_menu_html) && /Paste/.test(s.console_menu_html) || s.console_menu_html === "", s.console_menu_html ? s.console_menu_html.slice(0, 260) : "(none)");
 check("console Kill runs the flatline flash then refreshes (clears scrollback + drops show-console)", (s.console_kill_hid_menu === true && s.console_kill_flash_started === true && s.console_kill_still_open_during_flash === true && s.console_kill_cleared_out === true && s.console_kill_closed_app === true && s.console_kill_flash_ended === true) || s.console_kill_hid_menu === "no-console-out", { hid: s.console_kill_hid_menu, flash: s.console_kill_flash_started, during: s.console_kill_still_open_during_flash, cleared: s.console_kill_cleared_out, closed: s.console_kill_closed_app, ended: s.console_kill_flash_ended });
-check("console menu appears over linux with Restart+Kill", s.linux_menu_present === true && s.linux_restart_visible === true && s.linux_kill_visible === true);
+check("console menu appears over linux with Kill, no Restart", s.linux_menu_present === true && s.linux_no_restart === true && s.linux_kill_visible === true);
 check("linux Kill is DISABLED while the VM isn't running", s.linux_kill_disabled_when_cold === true);
-check("linux menu dismisses cleanly before shooter checks", s.linux_restart_hid_menu === true);
+check("linux Start over is separated and last", s.linux_reset_last === true);
+check("linux menu dismisses cleanly before shooter checks", s.linux_menu_hidden === true);
 console.log(" doom (standalone menu):");
 check("contextmenu suppresses native menu over doom", s.doom_ctx_prevented === true);
-check("doom menu appears with Kill + Restart (Kill first)", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 2 && /kill/i.test(s.doom_items[0]) && /restart/i.test(s.doom_items[1]), s.doom_items);
+check("doom menu has Kill and no redundant Restart", s.doom_menu_present === true && Array.isArray(s.doom_items) && s.doom_items.length === 1 && /kill/i.test(s.doom_items[0]) && s.doom_no_restart === true, s.doom_items);
+check("doom Start over is separated and last", s.doom_reset_last === true);
 check("doom Kill is DISABLED while the engine isn't running", s.doom_kill_disabled_when_cold === true);
 check("doom Kill becomes ENABLED once the engine is running", s.doom_kill_enabled_when_running === true);
 check("enabled doom Kill runs the FATALITY flash then destroys the app", s.doom_kill_hid_menu === true && s.doom_kill_flash_started === true && s.doom_kill_still_open_during_flash === true && s.doom_kill_closed_app === true && s.doom_kill_flash_ended === true);
 check("doom fs button present", s.doom_fs_btn_present === true);
 check("doom fs button calls requestFullscreen on the active iframe", s.doom_fs_called_on_iframe === true, s.doom_fs_calls);
-console.log(" restart teardown (no throws, real state reset):");
+console.log(" runtime teardown helpers (no throws, real state reset):");
 check("doom restart runs the flash then tears down the disposable iframe", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_removed_iframe === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
 check("linux restart holds the BSOD longer, then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_bsod_lingers === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);
 check("python restart runs the Black Knight flash then destroys + clears the console", s.python_restart_threw === null && s.python_restart_flash_started === true && s.python_restart_cleared_out === true && s.python_restart_torn_down === true, s.python_restart_threw);
@@ -425,6 +426,9 @@ check("registered runtime with engine RUNNING exposes Open + Kill", Array.isArra
 check("desktop runtime Kill foregrounds its gag, calls its hook, clears the registry/dot, and hides the menu", s.desk_doom_kill_called === true && s.desk_doom_kill_foregrounded_gag === true && s.desk_doom_kill_cleared === true && s.desk_doom_kill_hid_menu === true);
 check("registered, live Linux and Python runtimes offer Kill", s.desk_linux_running_has_kill === true && s.desk_python_running_has_kill === true);
 check("desktop right-click a non-icon surface shows no custom menu", s.desk_nontile_prevented === true && s.desk_nontile_no_menu === true, { prevented: s.desk_nontile_prevented });
+check("global Start over dismisses its menu and dispatches the shared action", s.global_reset_click === true);
+check("global Start over cancellation preserves state", s.global_reset_reject === true);
+check("global Start over confirmation runs the extinguisher with date/time reset", s.global_reset_accept === true);
 
 console.log("\n" + (fails ? ("FAILED " + fails + " check(s)") : "All menu checks passed."));
 console.log("captured console menu HTML: " + (s.menu_html || "(none)"));

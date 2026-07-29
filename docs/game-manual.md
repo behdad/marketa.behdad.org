@@ -39,6 +39,8 @@ reduced-motion preferences.
 - Double-click or double-tap a locked room dot to skip the current puzzle and
   unlock through that room.
 - Right-click for context actions. On touch, press and hold without moving.
+- Every context menu ends with **Start over**, separated from the local actions.
+  It asks for confirmation, then restarts the whole loft with the extinguisher.
 - Some objects can be dragged. They will visibly respond when a drag begins.
 - The top-left arrow goes back or closes the current layer. The top-right
   controls provide Fullscreen and Restart.
@@ -128,7 +130,8 @@ Home, Back, and Recents work like their familiar phone equivalents.
 
 The phone holds Messages, Mail, Calendar, Album, camera and music tools, small
 utilities, and games. Right-click or press and hold an app icon to open, stop,
-or uninstall it. Restarting the whole loft restores removed apps.
+or uninstall it. **Kill** resets and closes only that app; **Start over** restarts
+the whole loft and restores removed apps.
 
 The office monitor contains the larger apps, classic games, Chat, Code, Python,
 and a small Linux environment. These technical toys are optional and some have
@@ -271,5 +274,6 @@ connection. The main room trail still works.
 **The game feels slow.** The game automatically switches to a lighter mode when
 it detects a slow system. If issue persists, reduce browser window size.
 
-**I want a clean start.** Use Restart and confirm, or press `R`. This clears
-game progress and session UI state. Ending the party alone is not a reset.
+**I want a clean start.** Choose **Start over** at the end of any context menu,
+use the top-right Restart control, or press `R`, then confirm. This clears game
+progress and session UI state. Ending the party alone is not a reset.

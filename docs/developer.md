@@ -229,15 +229,15 @@ Restart, and the dots; the left utility links remain visible. Closing recovery r
 controls to their document owner. Recovery
 Autoplay applies the checkpoint before starting its director, while recovery Trailer holds and
 restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
-directly because the recovery gate is already an explicit destructive choice; only the in-game
-Restart button/key uses `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
+directly because the recovery gate is already an explicit destructive choice; the in-game
+Restart button, `R` key, and contextual Start over action use `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
 `resetHunt()`: the fresh-load CLICK ME state remains unstarted and regains the shared entry chrome,
 while `.loft-entered` immediately enlarges its scene. The extinguisher snapshots whether game-only
 page mode was already entered before its delayed wipe, then passes the same option to `resetHunt()`;
-`R` and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
+`R`, contextual Start over, and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
 re-arms CLICK ME without dropping the enlarged view. These contextual reset paths preserve active
-`?date=` and `?time=` parameters; only the explicit right-side chrome Restart passes
-`resetDateTime:true` and returns to the real clock. Cinematic/fresh-load resets omit the option and
+`?date=` and `?time=` parameters; the explicit right-side chrome Restart and contextual Start over pass
+`resetDateTime:true` and return to the real clock. Cinematic/fresh-load resets omit the option and
 retain their own page-mode behavior.
 
 Checkpoint payloads may carry a `systems` map populated by subsystem-owned adapters. Each adapter
@@ -773,6 +773,11 @@ bridge suppresses only the compatibility mouse sequence after an existing
 context-menu handler claims the synthesized event. All `.mon-ctx` builders mount
 through `contextMenuHost()`; appending to `document.body` makes an otherwise-open
 menu invisible while the game subtree owns browser fullscreen.
+One `MutationObserver` augments every `.mon-ctx` and `.console-ctx` after its
+owner builds it, appending the separated whole-loft **Start over** action as the
+final item and reclamping the taller menu. App menus expose Kill, not a redundant
+Restart; Start over confirms and routes through `__requestLoftReset()` and the
+existing extinguisher wipe.
 The individual app surfaces remain de-layered and gated by `visibility` plus
 `pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
 and `node tests/classics-touch.mjs`.
@@ -821,10 +826,11 @@ remain a known blank-compositing limitation on WebKit.
 
 The `show-snake` app lazily creates one same-origin `dos/player.html` iframe.
 The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
-or stop it. Normal close pauses and retains the frame. Kill/Restart calls
-`player.stop()` and removes the iframe, which releases the WASM machine and all
-child listeners. Child readiness gates runtime Kill, and a normalized
-`snake-context` bridge reuses the monitor’s ordinary Restart/Kill menu. The
+or stop it. Normal close pauses and retains the frame. Kill (and the internal
+restart helper used by console commands) calls `player.stop()` and removes the
+iframe, which releases the WASM machine and all child listeners. Child readiness
+gates runtime Kill, and a normalized `snake-context` bridge reuses the monitor’s
+ordinary Kill menu. The
 bundle autoexec runs the owner-supplied historical Nibbles build once; that
 build was modified by `bigbug` for four-player support. It deliberately leaves
 DOSBox’s internal shell at `C:\>` after the game exits. Repacking, hashes, and

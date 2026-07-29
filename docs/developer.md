@@ -765,14 +765,12 @@ from claiming the gesture and paints the live ghost when transformed pointer
 movement is delayed. Drag completion listens at `window` scope so failed pointer
 capture cannot lose the release. Mines suppresses Android's synthetic
 `contextmenu` after its own hold-to-flag timer so one hold cannot toggle twice.
-The manual EQ similarly synthesizes its normal monitor context menu after a
-stationary Android hold, cancels that hold once a band adjustment exceeds the
-movement slop, fires before the platform's native long-press cancellation, and
-suppresses the firing touch release so compatibility mouse events cannot
-immediately dismiss the menu. It calls the shared menu builder directly rather
-than relying on Android to dispatch `contextmenu`. The large `#monitor-eq-hit`
-visualization is the deterministic coarse-pointer fallback: touch opens that
-same menu, while mouse click retains its play/pause shortcut.
+The page-wide touch context bridge turns a stationary one-finger hold into the
+same `contextmenu` event used by mouse input. Movement cancels the hold before
+any default is prevented, preserving scroll and drag; Mines cells and Messages
+rows stay excluded because their own holds flag and open message actions. The
+bridge suppresses only the compatibility mouse sequence after an existing
+context-menu handler claims the synthesized event.
 The individual app surfaces remain de-layered and gated by `visibility` plus
 `pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
 and `node tests/classics-touch.mjs`.

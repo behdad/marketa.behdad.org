@@ -38,8 +38,7 @@ reduced-motion preferences.
   navigation.
 - Double-click or double-tap a locked room dot to skip the current puzzle and
   unlock through that room.
-- Right-click for context actions. On touch, use a two-finger tap; in Messages,
-  press and hold a message for its actions.
+- Right-click for context actions. On touch, press and hold without moving.
 - Some objects can be dragged. They will visibly respond when a drag begins.
 - The top-left arrow goes back or closes the current layer. The top-right
   controls provide Fullscreen and Restart.
@@ -128,7 +127,7 @@ opening has a small math lock; three failed attempts open it automatically.
 Home, Back, and Recents work like their familiar phone equivalents.
 
 The phone holds Messages, Mail, Calendar, Album, camera and music tools, small
-utilities, and games. Right-click or two-finger tap an app icon to open, stop,
+utilities, and games. Right-click or press and hold an app icon to open, stop,
 or uninstall it. Restarting the whole loft restores removed apps.
 
 The office monitor contains the larger apps, classic games, Chat, Code, Python,
@@ -236,9 +235,7 @@ Use the top-right **Back** control to return to the chooser.
 
 In the monitor music player, drag an equalizer band vertically to adjust it.
 Double-tap a band to zero that band. On touch devices, press and hold a band to
-open the same **Reset EQ** and **Kill** menu provided by right-click. If the
-device does not deliver SVG long-presses, tap the large animated equalizer
-visualization instead; the separate transport button still controls play/pause.
+open the same **Reset EQ** and **Kill** menu provided by right-click.
 
 The monitor's **snake** app runs the four-player DOS edition of Nibbles. It is
 also discoverable by searching for `nibbles` or `dos`.

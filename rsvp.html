@@ -60101,54 +60101,7 @@ async def localfont(name):
   // ±9dB; double-tap a slider to zero its band.
   var manualEqG = document.getElementById("monitor-manual-eq");
   var meqRepaints = []; // one per band, for the reset button
-  var meqTouchContextAt = 0;
   if (manualEqG) {
-    function openMeqTouchContext(target, x, y) {
-      if (Date.now() - meqTouchContextAt < 200) return true; // pointer + touch describe one hold
-      if (!window.__openMonitorContextAt || !window.__openMonitorContextAt(target, x, y)) return false;
-      meqTouchContextAt = Date.now();
-      return true;
-    }
-    // Android does not synthesize a dependable contextmenu from a long-press on transformed
-    // SVG. Suppress only the late native duplicate after our own hold has opened the real menu.
-    manualEqG.addEventListener("contextmenu", function (ev) {
-      if (ev.isTrusted && Date.now() - meqTouchContextAt < 900) {
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-      }
-    }, true);
-    // Touch events are the fallback when Android cancels or retargets the SVG PointerEvent.
-    // Prevent the firing touchend so its compatibility mousedown cannot instantly close the menu.
-    var meqTouchHold = null, meqTouchX = 0, meqTouchY = 0, meqTouchTarget = null, meqTouchOpened = false;
-    manualEqG.addEventListener("touchstart", function (ev) {
-      if (!USE_LIVE_ANALYSER || ev.touches.length !== 1) return;
-      var target = ev.target && ev.target.closest && ev.target.closest(".meq-band");
-      if (!target) return;
-      var touch = ev.touches[0];
-      clearTimeout(meqTouchHold);
-      meqTouchX = touch.clientX; meqTouchY = touch.clientY; meqTouchTarget = ev.target; meqTouchOpened = false;
-      meqTouchHold = setTimeout(function () {
-        meqTouchHold = null;
-        meqTouchOpened = openMeqTouchContext(meqTouchTarget, meqTouchX, meqTouchY);
-      }, 300);
-    }, { passive: true });
-    manualEqG.addEventListener("touchmove", function (ev) {
-      if (!meqTouchHold || !ev.touches.length) return;
-      var touch = ev.touches[0];
-      if (Math.hypot(touch.clientX - meqTouchX, touch.clientY - meqTouchY) > 10) {
-        clearTimeout(meqTouchHold); meqTouchHold = null;
-      }
-    }, { passive: true });
-    function finishMeqTouch(ev) {
-      if (meqTouchHold) { clearTimeout(meqTouchHold); meqTouchHold = null; }
-      if (meqTouchOpened) {
-        ev.preventDefault();
-        ev.stopPropagation();
-        meqTouchOpened = false;
-      }
-    }
-    manualEqG.addEventListener("touchend", finishMeqTouch, { passive: false });
-    manualEqG.addEventListener("touchcancel", finishMeqTouch, { passive: false });
     var MEQ_COLORS = ["#d9a6a6", "#e0935a", "#e8b93a", "#7fb35c", "#6f94bd", "#9c6bb8"];
     var MEQ_TOP = 169.5, MEQ_H = 12, MEQ_MID = MEQ_TOP + MEQ_H / 2;
     MANUAL_EQ_FREQS.forEach(function (fq, i) {
@@ -60176,28 +60129,13 @@ async def localfont(name):
           eggBubble(manualEqG, (T[lang] && T[lang].eq_off_note) || T.en.eq_off_note);
           return;
         }
-        var startX = ev.clientX, startY = ev.clientY, startDb = manualEqDb[i];
-        var holdOpened = false, holdTimer = null;
-        if (ev.pointerType === "touch") {
-          holdTimer = setTimeout(function () {
-            holdTimer = null;
-            holdOpened = true;
-            setManualEqBand(i, startDb); paintThumb();
-            openMeqTouchContext(hit, startX, startY);
-          }, 300); // beat Android's ~500ms native long-press pointer cancellation
-        }
         try { hit.setPointerCapture(ev.pointerId); } catch (e) {}
         scheduleSaver(15000); // adjusting the EQ is player activity — hold the screensaver off
         setManualEqBand(i, dbFromPointer(ev)); paintThumb();
         function onMove(mv) {
-          if (holdOpened) return;
-          if (holdTimer && Math.hypot(mv.clientX - startX, mv.clientY - startY) > 10) {
-            clearTimeout(holdTimer); holdTimer = null;
-          }
           scheduleSaver(15000); setManualEqBand(i, dbFromPointer(mv)); paintThumb();
         }
         function onUp() {
-          if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
           hit.removeEventListener("pointermove", onMove);
           hit.removeEventListener("pointerup", onUp);
           hit.removeEventListener("pointercancel", onUp);
@@ -60365,21 +60303,12 @@ async def localfont(name):
     });
     npMarqueeHit.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
-  // The equalizer column doubles as a big play/pause toggle for mouse users. Touch gets a
-  // deterministic context-menu target here; the visible transport already owns play/pause.
+  // The equalizer column doubles as a big play/pause toggle.
   var eqHit = document.getElementById("monitor-eq-hit");
   if (eqHit) {
-    var eqHitTouched = false;
-    eqHit.addEventListener("pointerdown", function (e) { eqHitTouched = e.pointerType === "touch"; });
     eqHit.addEventListener("click", function (e) {
       e.stopPropagation();
       scheduleSaver(15000);
-      var coarse = eqHitTouched || !!(window.matchMedia && window.matchMedia("(hover:none), (pointer:coarse)").matches);
-      eqHitTouched = false;
-      if (coarse && window.__openMonitorContextAt) {
-        window.__openMonitorContextAt(eqHit, e.clientX, e.clientY);
-        return;
-      }
       monitorTogglePause();
     });
     eqHit.addEventListener("dblclick", function (e) { e.stopPropagation(); });
@@ -103937,38 +103866,61 @@ function spawnDustMote(container) {
   scheduleHalos();
 })();
 (function () {
-  // Touch devices have no right-click, so every .mon-ctx / .console-ctx context menu (monitor
-  // desktop-dock, console, phone app-icons, browser tabs, minesweeper, laptop)
-  // is unreachable. A TWO-FINGER TAP — two fingers down, released quickly without much drift —
-  // synthesizes a `contextmenu` at the touch midpoint on the element there, so every existing
-  // right-click menu opens exactly as the mouse does. Pinch-zoom, single-finger taps and object
-  // drags are untouched: we never preventDefault on touchstart/move and only act on a clean
-  // stationary two-finger tap. preventDefault on the firing touchend suppresses the ghost mouse
-  // events so the just-opened menu isn't immediately dismissed by a compat mousedown-away.
-  var startT = 0, midX = 0, midY = 0, tracking = false;
-  function mid(a, b) { return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 }; }
-  document.addEventListener("touchstart", function (e) {
-    if (e.touches.length === 2) {
-      var m = mid(e.touches[0], e.touches[1]);
-      tracking = true; startT = Date.now(); midX = m.x; midY = m.y;
-    } else {
-      tracking = false; // 1 or 3+ fingers → not the gesture (and a re-touch cancels an in-flight one)
+  // A stationary one-finger hold is the touch equivalent of right-click everywhere.
+  // Dispatching the existing contextmenu path keeps each surface's menu ownership in one
+  // place. Movement cancels before any default is prevented, so scroll, pan, and drag retain
+  // their normal gesture. Mines and Messages already own distinct one-finger hold actions.
+  var hold = null, suppressUntil = 0, suppressX = 0, suppressY = 0;
+  function clearHold() {
+    if (!hold) return;
+    clearTimeout(hold.timer);
+    hold = null;
+  }
+  function excluded(target) {
+    return target && target.closest &&
+      target.closest(".mines-cell, .pm-msg-row");
+  }
+  function suppressCompatMouse(e) {
+    if (Date.now() > suppressUntil ||
+        Math.abs(e.clientX - suppressX) > 24 || Math.abs(e.clientY - suppressY) > 24) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.type === "click") suppressUntil = 0;
+  }
+  document.addEventListener("mousedown", suppressCompatMouse, true);
+  document.addEventListener("click", suppressCompatMouse, true);
+  document.addEventListener("pointerdown", function (e) {
+    if (e.pointerType !== "touch" || !e.isPrimary || e.button !== 0 || excluded(e.target)) {
+      clearHold();
+      return;
     }
-  }, { passive: true });
-  document.addEventListener("touchmove", function (e) {
-    if (!tracking || e.touches.length < 2) return;
-    var m = mid(e.touches[0], e.touches[1]);
-    if (Math.abs(m.x - midX) > 12 || Math.abs(m.y - midY) > 12) tracking = false; // drifted → pinch/pan, not a tap
-  }, { passive: true });
-  document.addEventListener("touchend", function (e) {
-    if (!tracking || e.touches.length !== 0) return; // wait for the last finger to lift
-    tracking = false;
-    if (Date.now() - startT > 500) return;           // too slow to read as a tap
-    var el = document.elementFromPoint(midX, midY);
-    if (!el) return;
-    e.preventDefault();                               // no ghost mousedown/click to dismiss the menu
-    el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: midX, clientY: midY, view: window }));
-  }, { passive: false });
+    clearHold();
+    var target = e.target, pointerId = e.pointerId, x = e.clientX, y = e.clientY;
+    hold = {
+      pointerId: pointerId, x: x, y: y,
+      timer: setTimeout(function () {
+        if (!hold || hold.pointerId !== pointerId) return;
+        hold = null;
+        var event = new MouseEvent("contextmenu", {
+          bubbles: true, cancelable: true, clientX: x, clientY: y, view: window
+        });
+        target.dispatchEvent(event);
+        if (!event.defaultPrevented) return;
+        suppressX = x; suppressY = y; suppressUntil = Date.now() + 900;
+      }, 360)
+    };
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!hold || e.pointerId !== hold.pointerId) return;
+    if (Math.abs(e.clientX - hold.x) > 10 || Math.abs(e.clientY - hold.y) > 10) clearHold();
+  }, true);
+  document.addEventListener("pointerup", function (e) {
+    if (hold && e.pointerId === hold.pointerId) clearHold();
+  }, true);
+  document.addEventListener("pointercancel", function (e) {
+    if (hold && e.pointerId === hold.pointerId) clearHold();
+  }, true);
+  window.addEventListener("scroll", clearHold, true);
 })();
 (function () {
   // Fishu paints in FRONT of the fireplace projector (move it after the screen), and

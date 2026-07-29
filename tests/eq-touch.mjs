@@ -84,7 +84,7 @@ function check(ok, message, detail) {
     if (await evaluate("typeof window.__resetManualEq==='function'")) break;
     await sleep(250);
   }
-  const fresh = await evaluate("/openMeqTouchContext/.test(document.documentElement.innerHTML)");
+  const fresh = await evaluate("/stationary one-finger hold/.test(document.documentElement.innerHTML)");
   if (!fresh) throw new Error("Freshness gate failed");
 
   await evaluate(`(function(){
@@ -97,13 +97,13 @@ function check(ok, message, detail) {
   })()`);
   await sleep(100);
   const band = await evaluate(`(function(){
-    var el=document.querySelector("#monitor-manual-eq .meq-band rect[fill=transparent]");
-    var r=el.getBoundingClientRect();
-    return{x:r.left+r.width/2,top:r.top+1,mid:r.top+r.height/2,w:r.width,h:r.height};
+    var els=document.querySelectorAll("#monitor-manual-eq .meq-band rect[fill=transparent]");
+    var r=els[0].getBoundingClientRect(),r2=els[1].getBoundingClientRect();
+    return{x:r.left+r.width/2,x2:r2.left+r2.width/2,top:r.top+1,mid:r.top+r.height/2,w:r.width,h:r.height};
   })()`);
-  const touchStart = y => send("Input.dispatchTouchEvent", {
+  const touchStart = (y, x = band.x) => send("Input.dispatchTouchEvent", {
     type: "touchStart",
-    touchPoints: [{ x: band.x, y, radiusX: 4, radiusY: 4, force: 1 }]
+    touchPoints: [{ x, y, radiusX: 4, radiusY: 4, force: 1 }]
   });
   const touchEnd = () => send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 
@@ -113,8 +113,8 @@ function check(ok, message, detail) {
   const adjusted = await evaluate("JSON.parse(localStorage.getItem('songEqBands')||'[]')[0]");
   check(adjusted > 0, "a real touch still adjusts an EQ band", adjusted);
 
-  await touchStart(band.mid);
-  await sleep(360);
+  await touchStart(band.mid, band.x2);
+  await sleep(440);
   await touchEnd();
   await sleep(80);
   const menu = await evaluate(`(function(){
@@ -131,22 +131,23 @@ function check(ok, message, detail) {
   check(reset.length === 6 && reset.every(value => value === 0),
     "Reset EQ from the touch-opened menu flattens every band", reset);
 
-  const visualizer = await evaluate(`(function(){
-    var r=document.getElementById("monitor-eq-hit").getBoundingClientRect();
+  const player = await evaluate(`(function(){
+    var el=document.getElementById("monitor-logo-nowplaying"),r=el.getBoundingClientRect();
     return{x:r.left+r.width/2,y:r.top+r.height/2};
   })()`);
   await send("Input.dispatchTouchEvent", {
     type: "touchStart",
-    touchPoints: [{ x: visualizer.x, y: visualizer.y, radiusX: 4, radiusY: 4, force: 1 }]
+    touchPoints: [{ x: player.x, y: player.y, radiusX: 4, radiusY: 4, force: 1 }]
   });
+  await sleep(440);
   await touchEnd();
   await sleep(80);
-  const tapMenu = await evaluate(`(function(){
+  const surfaceMenu = await evaluate(`(function(){
     var m=document.querySelector(".mon-ctx");
-    return{open:!!m,reset:!!(m&&m.querySelector(".ctx-reset-eq")),kill:!!(m&&m.querySelector(".ctx-kill"))};
+    return{open:!!m,kill:!!(m&&m.querySelector(".ctx-kill"))};
   })()`);
-  check(tapMenu.open && tapMenu.reset && tapMenu.kill,
-    "tapping the EQ visualization reliably opens Reset EQ and Kill on touch", tapMenu);
+  check(surfaceMenu.open && surfaceMenu.kill,
+    "a held touch on the app surface opens its shared Kill menu", surfaceMenu);
 
   ws.close();
   cleanup();

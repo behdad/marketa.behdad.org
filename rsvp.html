@@ -52932,17 +52932,27 @@ setOfficeProgress("pc", false);
     minesBoardEl.addEventListener("contextmenu", function (e) {
       e.preventDefault(); // board-only: everywhere else the browser menu stays
       e.stopPropagation();
+      // Android may synthesize contextmenu after our hold timer has already flagged the cell.
+      // That is the same gesture, not a second toggle.
+      if (minesLpDone) return;
       var idx = minesCellFromEvent(e);
       if (idx >= 0) minesFlagToggle(idx);
     });
+    var MINES_HOLD_SLOP = 10, minesLpX = 0, minesLpY = 0;
     minesBoardEl.addEventListener("touchstart", function (e) {
       var idx = minesCellFromEvent(e);
-      if (idx < 0) return;
+      if (idx < 0 || !e.touches || e.touches.length !== 1) return;
       minesLpDone = false;
+      minesLpX = e.touches[0].clientX; minesLpY = e.touches[0].clientY;
       clearTimeout(minesLpTimer);
       minesLpTimer = setTimeout(function () { minesLpDone = true; minesFlagToggle(idx); }, 300);
     }, { passive: true });
-    ["touchend", "touchmove", "touchcancel"].forEach(function (ev) {
+    minesBoardEl.addEventListener("touchmove", function (e) {
+      var touch = e.touches && e.touches[0];
+      if (!touch || Math.abs(touch.clientX - minesLpX) > MINES_HOLD_SLOP ||
+          Math.abs(touch.clientY - minesLpY) > MINES_HOLD_SLOP) clearTimeout(minesLpTimer);
+    }, { passive: true });
+    ["touchend", "touchcancel"].forEach(function (ev) {
       minesBoardEl.addEventListener(ev, function () { clearTimeout(minesLpTimer); }, { passive: true });
     });
   }
@@ -53204,6 +53214,23 @@ setOfficeProgress("pc", false);
     return { kind: kind };
   }
   if (solitaireWrap) {
+    // Keep Android from handing a card drag to page panning. Pointer capture is attempted below,
+    // but transformed foreignObject descendants have not delivered it consistently on devices.
+    solitaireWrap.addEventListener("touchmove", function (e) {
+      if (!solitaireDrag) return;
+      e.preventDefault();
+      e.stopPropagation();
+      // Some Android builds complete the pointer drop but do not deliver intermediate
+      // pointermove paint reliably through the scaled foreignObject. Touch movement is the
+      // live-preview fallback; the shared mover keeps the ghost identical to mouse/pen drag.
+      var touch = e.touches && e.touches[0];
+      if (touch) moveSolitaireDrag({
+        pointerId: solitaireDrag.pointerId,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: function () {}
+      });
+    }, { passive: false });
     solitaireWrap.addEventListener("click", function (e) {
       e.stopPropagation();
       if (solitaireSuppressClick) { solitaireSuppressClick = false; return; }
@@ -53257,7 +53284,7 @@ setOfficeProgress("pc", false);
       solitaireDrag = { pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, source: source, cards: cards, ghost: null, moved: false };
       try { solitaireWrap.setPointerCapture(e.pointerId); } catch (_error) {}
     });
-    solitaireWrap.addEventListener("pointermove", function (e) {
+    function moveSolitaireDrag(e) {
       if (!solitaireDrag || solitaireDrag.pointerId !== e.pointerId) return;
       solitaireDrag.x = e.clientX; solitaireDrag.y = e.clientY;
       if (!solitaireDrag.moved && Math.hypot(e.clientX - solitaireDrag.startX, e.clientY - solitaireDrag.startY) < 3) return;
@@ -53275,7 +53302,8 @@ setOfficeProgress("pc", false);
       solitaireDrag.moved = true;
       solitaireDrag.ghost.style.left = (e.clientX + 7) + "px";
       solitaireDrag.ghost.style.top = (e.clientY + 7) + "px";
-    });
+    }
+    window.addEventListener("pointermove", moveSolitaireDrag);
     function finishSolitaireDrag(e, cancelled) {
       if (!solitaireDrag || (e.pointerId != null && solitaireDrag.pointerId !== e.pointerId)) return;
       var drag = solitaireDrag; solitaireDrag = null;
@@ -53286,8 +53314,8 @@ setOfficeProgress("pc", false);
       var under = document.elementFromPoint(e.clientX, e.clientY), target = solitaireTargetFromEl(under);
       if (!target || (target.kind !== "tableau" && target.kind !== "foundation") || !solitaireMove(drag.source, target)) solitaireRender();
     }
-    solitaireWrap.addEventListener("pointerup", function (e) { finishSolitaireDrag(e, false); });
-    solitaireWrap.addEventListener("pointercancel", function (e) { finishSolitaireDrag(e, true); });
+    window.addEventListener("pointerup", function (e) { finishSolitaireDrag(e, false); });
+    window.addEventListener("pointercancel", function (e) { finishSolitaireDrag(e, true); });
   }
   window.__solitaireState = function () {
     return {

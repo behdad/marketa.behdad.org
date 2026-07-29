@@ -229,6 +229,7 @@ saved in this browser.
 The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
 Solitaire. Solitaire accepts clicks or card drags, allows unlimited stock
 recycles, and puts Behdad, Markéta, and Ali on the kings, queens, and jacks.
+In Mines, tap a square to reveal it or press and hold to place or remove a flag.
 The `mines()` and `solitaire()` console commands open either game directly.
 Use the top-right **Back** control to return to the chooser.
 

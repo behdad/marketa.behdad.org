@@ -759,9 +759,14 @@ to a fresh chooser.
 Solitaire owns plain card records in `solStock`, `solWaste`, `solTableau`, and
 `solFoundations`; `solitaireMove` is the shared legality/mutation path for click,
 double-click, drag, and focused tests. Its DOM drag ghost lives outside the
-scaled SVG `foreignObject`, and the individual app surfaces remain de-layered
-and gated by `visibility` plus `pointer-events` for WebKit. The focused
-regression is `node tests/classics.js`.
+scaled SVG `foreignObject`; a non-passive touch-move fallback both keeps Android
+from claiming the gesture and paints the live ghost when transformed pointer
+movement is delayed. Drag completion listens at `window` scope so failed pointer
+capture cannot lose the release. Mines suppresses Android's synthetic
+`contextmenu` after its own hold-to-flag timer so one hold cannot toggle twice.
+The individual app surfaces remain de-layered and gated by `visibility` plus
+`pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
+and `node tests/classics-touch.mjs`.
 
 The maze uses a DOM/CSS grid because canvas does not composite reliably in the scaled WebKit
 `foreignObject`. Its actors depend on grid source order and must not gain RenderLayer-producing

@@ -5581,8 +5581,10 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .phone-statusbar svg{display:block}
 .psb-date{max-width:68px;padding:2px 5px;border:0;border-radius:7px;background:transparent;color:var(--soft);font:600 10.5px/1 "Source Serif 4",serif;white-space:nowrap;cursor:pointer}
 .psb-date:hover,.psb-date:focus-visible{background:var(--rule);color:var(--wine);outline:none}
-.psb-sig-wrap{display:inline-flex; align-items:center}
+.psb-sig-wrap{position:relative;display:inline-flex;align-items:center;cursor:pointer}
 .psb-sig-bar.off{opacity:.2} /* bars beyond the current reception level (timezone distance from Edmonton) */
+.psb-sig-pop{position:absolute;top:calc(100% + 7px);right:0;z-index:20;display:none;padding:7px 10px;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.24);white-space:nowrap;font-family:"Source Serif 4",serif;font-size:11.5px}
+.psb-sig-wrap.show .psb-sig-pop{display:block}
 .psb-brand{font-family:"Fraunces",serif; font-size:12px; color:var(--ink); cursor:pointer}
 .psb-brand b{color:var(--wine); font-weight:400; margin:0 1px}
 .phone-shell.pm-incall .psb-brand{color:#eee}
@@ -28449,6 +28451,13 @@ var T = {
     escape_aria: "Get me out",
     skip_piece_aria: "Next",
     volume_aria: "Music volume",
+    phone_signal_4: "Close enough to Edmonton.",
+    phone_signal_3: "A little far from Edmonton.",
+    phone_signal_2: "You’re far from Edmonton.",
+    phone_signal_1: "You’re too far from Edmonton.",
+    phone_signal_title: "distance",
+    phone_wifi_title: "wi‑fi",
+    phone_battery_title: "battery",
     rooms_aria: "Rooms",
     room_kitchen: "Kitchen",
     room_garden: "Garden",
@@ -29634,6 +29643,13 @@ var T = {
     escape_aria: "Dostaň mě odsud",
     skip_piece_aria: "Další",
     volume_aria: "Hlasitost hudby",
+    phone_signal_4: "Dost blízko Edmontonu.",
+    phone_signal_3: "Trochu daleko od Edmontonu.",
+    phone_signal_2: "Jste daleko od Edmontonu.",
+    phone_signal_1: "Jste příliš daleko od Edmontonu.",
+    phone_signal_title: "vzdálenost",
+    phone_wifi_title: "wi‑fi",
+    phone_battery_title: "baterie",
     rooms_aria: "Místnosti",
     room_kitchen: "Kuchyň",
     room_garden: "Zahrada",
@@ -63446,23 +63462,36 @@ async def localfont(name):
       catch (e) { clearExternalLaunch(); return null; }
     }
 
+    // Reception is a privacy-preserving geographic joke: UTC offset supplies the broad
+    // gradient, while the permission-free IANA timezone name prevents Mexico/Brazil from
+    // looking local merely because their clocks happen to resemble Edmonton's.
+    function phoneSignalLevel(zone, offsetDistance) {
+      var lvl = offsetDistance <= 2 ? 4 : offsetDistance <= 5 ? 3 : offsetDistance <= 8 ? 2 : 1;
+      if (!zone || zone === "America/Edmonton") return lvl;
+      if (/^America\/(?:Vancouver|Creston|Dawson|Dawson_Creek|Fort_Nelson|Inuvik|Regina|Swift_Current|Whitehorse|Yellowknife|Cambridge_Bay)$/.test(zone)) return Math.min(lvl, 3);
+      if (/^America\/(?:Adak|Anchorage|Boise|Chicago|Denver|Detroit|Glace_Bay|Goose_Bay|Halifax|Indiana\/.+|Iqaluit|Juneau|Kentucky\/.+|Los_Angeles|Menominee|Metlakatla|Moncton|New_York|Nome|North_Dakota\/.+|Phoenix|Rankin_Inlet|Resolute|Sitka|St_Johns|Thunder_Bay|Toronto|Winnipeg|Yakutat)$/.test(zone)) return Math.min(lvl, 2);
+      return 1;
+    }
+    window.__phoneSignalLevel = phoneSignalLevel;
+
     // ── static chrome ──────────────────────────────────────────────────────────
     var STATUSBAR =
       '<div class="phone-statusbar">' +
         '<span class="psb-left">' +
-          '<button type="button" class="psb-date"></button>' +
-          '<span class="psb-time">--:--</span>' +
+          '<button type="button" class="psb-date" data-title-i="app_calendar" title="calendar"></button>' +
+          '<span class="psb-time" data-title-i="app_clock" title="clock">--:--</span>' +
         '</span>' +
         '<span class="psb-right">' +
           '<span class="psb-brand" role="link" tabindex="0" title="marketa.behdad.org">m<b>∞</b>b</span>' + // the loft's own OS doubles as the carrier name and taps out to the wedding site
-          '<span class="psb-sig-wrap" title="m ∞ b">' + // the carrier: m ∞ b (fewer bars the farther your timezone is from Edmonton)
+          '<span class="psb-sig-wrap" role="button" tabindex="0" aria-expanded="false" data-title-i="phone_signal_title" title="distance">' + // the carrier: m ∞ b (fewer bars the farther your timezone is from Edmonton)
             '<svg class="psb-sig" width="15" height="11" viewBox="0 0 15 11" aria-hidden="true"><rect class="psb-sig-bar" x="0" y="7" width="3" height="4" fill="currentColor"/><rect class="psb-sig-bar" x="4" y="5" width="3" height="6" fill="currentColor"/><rect class="psb-sig-bar" x="8" y="3" width="3" height="8" fill="currentColor"/><rect class="psb-sig-bar" x="12" y="0" width="3" height="11" fill="currentColor"/></svg>' +
+            '<span class="psb-sig-pop"></span>' +
           '</span>' +
-          '<span class="psb-wifi-wrap" role="button" tabindex="0" title="Wi‑Fi">' +
+          '<span class="psb-wifi-wrap" role="button" tabindex="0" data-title-i="phone_wifi_title" title="wi‑fi">' +
             '<svg class="psb-wifi" width="15" height="11" viewBox="0 0 16 12" aria-hidden="true"><path d="M2.4 4.3 A8 8 0 0 1 13.6 4.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4.6 6.7 A5 5 0 0 1 11.4 6.7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="9.4" r="1.15" fill="currentColor"/></svg>' +
             '<span class="psb-wifi-pop"><span class="pwp-row">📶 Never Forget</span><span class="pwp-row">🔑 Never Forgive</span></span>' +
           '</span>' +
-          '<span class="psb-batt-wrap" role="button" tabindex="0" title="Battery">' +
+          '<span class="psb-batt-wrap" role="button" tabindex="0" data-title-i="phone_battery_title" title="battery">' +
             '<svg class="psb-batt" width="23" height="11" viewBox="0 0 24 12" aria-hidden="true"><rect x="1" y="1.5" width="20" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/><rect class="psb-batt-fill" x="3" y="3.5" width="16" height="5" rx="1" fill="currentColor"/><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor"/><path class="psb-batt-bolt" d="M12.6 2.2 L8.6 6.6 H11 L10.3 9.8 L14.4 5.2 H11.9 Z" fill="var(--cream)" style="display:none"/></svg>' +
             '<span class="psb-batt-pop"><span class="pbp-ico">🔋</span> <b class="pbp-pct">100%</b></span>' +
           '</span>' +
@@ -63511,7 +63540,7 @@ async def localfont(name):
           '<button type="button" class="phone-close" aria-label="close">✕</button>' +
           '<div class="phone-screen">' +
             STATUSBAR +
-            '<button type="button" class="psb-cam" aria-label="camera"></button>' + // the front camera hole opens the photobooth
+            '<button type="button" class="psb-cam" aria-label="photobooth" data-aria-i="app_photobooth" data-title-i="app_photobooth" title="photobooth"></button>' + // the front camera hole opens the photobooth
             '<div class="phone-stage">' +
               '<div class="phone-home"></div>' +
               '<div class="phone-app"><div class="phone-app-head"><span class="pah-title"></span></div><div class="phone-app-body"></div></div>' +
@@ -63531,8 +63560,18 @@ async def localfont(name):
           var usr = -now.getTimezoneOffset() / 60; // user's UTC offset (hours)
           var edm = (new Date(now.toLocaleString("en-US", { timeZone: "America/Edmonton" })) - new Date(now.toLocaleString("en-US", { timeZone: "UTC" }))) / 3600000; // Edmonton's current offset (DST-aware)
           var d = Math.abs(usr - edm); if (d > 12) d = 24 - d; // circular timezone distance, 0..12h
-          lvl = d <= 2 ? 4 : d <= 5 ? 3 : d <= 8 ? 2 : 1;
+          var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+          lvl = phoneSignalLevel(zone, d);
         } catch (e) {}
+        var wrap = modal.querySelector(".psb-sig-wrap");
+        var key = "phone_signal_" + lvl;
+        if (wrap) {
+          wrap.setAttribute("data-level", String(lvl));
+          wrap.setAttribute("data-aria-i", key);
+          wrap.setAttribute("aria-label", tr(key));
+          var pop = wrap.querySelector(".psb-sig-pop");
+          if (pop) { pop.setAttribute("data-i", key); pop.textContent = tr(key); }
+        }
         var bars = modal.querySelectorAll(".psb-sig-bar");
         for (var i = 0; i < bars.length; i++) bars[i].classList.toggle("off", i >= lvl); // dim bars above the level (bars fill weak→strong, left→right)
       })();
@@ -63569,7 +63608,7 @@ async def localfont(name):
       })();
       // backdrop tap (outside the shell) closes
       modal.addEventListener("click", function (e) { if (e.target === modal) close(); });
-      shell.addEventListener("click", function (e) { e.stopPropagation(); ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (c) { var w = modal.querySelector("." + c); if (w) w.classList.remove("show"); }); });
+      shell.addEventListener("click", function (e) { e.stopPropagation(); ["psb-sig-wrap", "psb-wifi-wrap", "psb-batt-wrap"].forEach(function (c) { var w = modal.querySelector("." + c); if (w) { w.classList.remove("show"); w.setAttribute("aria-expanded", "false"); } }); });
       modal.querySelector(".phone-close").addEventListener("click", function (e) { e.stopPropagation(); close(); });
       modal.querySelector(".pnav-back").addEventListener("click", navBack);
       modal.querySelector(".pnav-home").addEventListener("click", navHome);
@@ -63607,14 +63646,18 @@ async def localfont(name):
         cam.addEventListener("click", function (e) { e.stopPropagation(); if (shell.classList.contains("booting") || shell.classList.contains("pm-incall")) return; openApp("photobooth", "app_photobooth", renderPhotobooth); });
       })();
       (function () {
-        ["psb-wifi-wrap", "psb-batt-wrap"].forEach(function (cls) {
+        ["psb-sig-wrap", "psb-wifi-wrap", "psb-batt-wrap"].forEach(function (cls) {
           var wrap = modal.querySelector("." + cls);
           if (!wrap) return;
           function toggle(e) {
             e.stopPropagation();
-            var other = modal.querySelector(cls === "psb-wifi-wrap" ? ".psb-batt-wrap" : ".psb-wifi-wrap");
-            if (other) other.classList.remove("show"); // only one status-bar popover open at a time
+            ["psb-sig-wrap", "psb-wifi-wrap", "psb-batt-wrap"].forEach(function (otherCls) {
+              if (otherCls === cls) return;
+              var other = modal.querySelector("." + otherCls);
+              if (other) { other.classList.remove("show"); other.setAttribute("aria-expanded", "false"); }
+            }); // only one status-bar popover open at a time
             wrap.classList.toggle("show");
+            wrap.setAttribute("aria-expanded", String(wrap.classList.contains("show")));
             if (cls === "psb-batt-wrap") paintBattery(); // refresh the % on open
           }
           wrap.addEventListener("click", toggle);

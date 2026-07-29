@@ -132,6 +132,9 @@ The phone holds Messages, Mail, Calendar, Album, camera and music tools, small
 utilities, and games. Right-click or press and hold an app icon to open, stop,
 or uninstall it. **Kill app** resets and closes only that app; **Start over** restarts
 the whole loft and restores removed apps.
+The status-bar reception bars make a rough, permission-free estimate of how far
+your timezone region sits from Edmonton;
+tap them to read the carrier’s verdict.
 
 The office monitor contains the larger apps, classic games, Chat, Code, Python,
 and a small Linux environment. These technical toys are optional and some have

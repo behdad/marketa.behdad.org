@@ -28705,6 +28705,7 @@ var T = {
     msg_albumfull_body: "been snapping all night 📸 your album's filling up — take a look",
     msg_bbq_body: "let's start the BBQ 🔥🍔",
     msg_hamid_food_body: "grill's open — first batch is ready, come get it while it's hot 🔥🍔🌽",
+    msg_heat_body: "Could somebody bring something cold? 🧊",
     msg_bbq_cheer_madla_body: "running — save me the crispy tofu 🔥",
     msg_bbq_cheer_pouria_body: "too late, I'm already holding a plate 🍽️",
     msg_jay_from: "Jay",
@@ -29860,6 +29861,7 @@ var T = {
     msg_albumfull_body: "cvakám celý večer 📸 album se ti plní — mrkni na něj",
     msg_bbq_body: "jdeme roztopit gril 🔥🍔",
     msg_hamid_food_body: "gril je otevřený — první várka je hotová, pojďte si pro ni, dokud je teplá 🔥🍔🌽",
+    msg_heat_body: "Mohl by někdo přinést něco studeného? 🧊",
     msg_bbq_cheer_madla_body: "běžím — schovej mi opečené tofu 🔥",
     msg_bbq_cheer_pouria_body: "pozdě, už držím talíř 🍽️",
     msg_jay_from: "Jay",
@@ -64644,6 +64646,7 @@ async def localfont(name):
       album_full:    { fromKey: "msg_aspen_from",    bodyKey: "msg_albumfull_body", apiAction: { id: "app.open", args: { app: "album" } } },     // Aspen, once the album hits ≥5 shots → taps: the phone album (not in a drip pool — count-triggered)
       bbq:           { fromKey: "msg_behdad_from",  bodyKey: "msg_bbq_body",       act: "bbq" },           // behdad → taps: balcony + open the smoker lid + light it
       hamid_food:    { fromKey: "msg_hamid_from",   bodyKey: "msg_hamid_food_body", arrivalReactions: ["🔥", "🎉", "❤️"], next: "bbq_cheer_madla", nextDelay: 2200 }, // first cooked batch → Hamid calls everyone; the crew reacts and two guests answer in-thread
+      heat:          { fromKeys: ADULT_SENDERS,      bodyKey: "msg_heat_body", apiAction: { id: "app.open", args: { app: "cocktails" } } }, // sustained indoor heat → a grown-up asks the group for something cold
       bbq_cheer_madla:   { fromKey: "msg_madla_from",   bodyKey: "msg_bbq_cheer_madla_body",   replyTo: "hamid_food", next: "bbq_cheer_pouria", nextDelay: 2600 },
       bbq_cheer_pouria:  { fromKey: "msg_pouria_from",  bodyKey: "msg_bbq_cheer_pouria_body",  replyTo: "hamid_food" },
       jay_bbq_satisfied: { fromKey: "msg_jay_from",     bodyKey: "msg_jay_bbq_satisfied_body" },             // Jay's second tofu plate satisfies him → the officiant makes it official
@@ -67272,6 +67275,24 @@ async def localfont(name):
       scheduleDeferredAutonomousMessages(1000);
       return true;
     };
+    var heatSince = 0;
+    function heatMessageTick(now) {
+      var state = window.__indoorTempState && window.__indoorTempState();
+      var hot = !!(state && typeof state.temperature_c === "number" && state.temperature_c >= 29);
+      if (!hot) {
+        if (!state || state.temperature_c <= 27) heatSince = 0;
+        return false;
+      }
+      if (!heatSince) heatSince = now;
+      if (now - heatSince < 15000 || window.__phoneMessageReceived("heat")) return false;
+      if (document.hidden || !document.hasFocus() || !window.__secondRound || !playerStarted() ||
+          window.__cinematic || (window.__autoplayOn && window.__autoplayOn()) || !autonomousMsgOk()) return false;
+      return !!window.__deliverAutonomousPhoneMessage("heat");
+    }
+    window.__heatMessageTick = function (now) {
+      return heatMessageTick(typeof now === "number" ? now : Date.now());
+    };
+    setInterval(function () { heatMessageTick(Date.now()); }, 2500);
     window.__flushDeferredPhoneMessages = drainDeferredAutonomousMessages;
     window.__deferredPhoneMessages = function () { return deferredAutonomousMessages.slice(); };
     window.__formalMomentMessagesReady = function () { return formalMomentMessageReady("firstdance"); };

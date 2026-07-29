@@ -106,6 +106,7 @@ function check(ok, message, detail) {
     touchPoints: [{ x: band.x, y, radiusX: 4, radiusY: 4, force: 1 }]
   });
   const touchEnd = () => send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  const touchCancel = () => send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
 
   await touchStart(band.top);
   await touchEnd();
@@ -114,14 +115,14 @@ function check(ok, message, detail) {
   check(adjusted > 0, "a real touch still adjusts an EQ band", adjusted);
 
   await touchStart(band.mid);
-  await sleep(620);
+  await sleep(360);
+  await touchCancel();
   const menu = await evaluate(`(function(){
     var m=document.querySelector(".mon-ctx"),reset=m&&m.querySelector(".ctx-reset-eq"),kill=m&&m.querySelector(".ctx-kill");
     return{open:!!m,reset:!!reset,resetEnabled:!!reset&&!reset.disabled,kill:!!kill};
   })()`);
   check(menu.open && menu.reset && menu.resetEnabled && menu.kill,
-    "a real stationary Android hold opens Reset EQ and Kill", menu);
-  await touchEnd();
+    "the EQ menu opens before Android cancels the held pointer", menu);
 
   const reset = await evaluate(`(function(){
     var b=document.querySelector(".mon-ctx .ctx-reset-eq");if(b)b.click();

@@ -32,9 +32,10 @@ var HARNESS = [
   'report.steps.coach={on:coach.classList.contains("on"),en:coach.querySelector("text").textContent,pointer:coach.getAttribute("pointer-events"),y:+coachRect.getAttribute("y"),screenBottom:+screen.getAttribute("y")+ +screen.getAttribute("height")};',
   'window.setLang("cs");report.steps.coach.cs=coach.querySelector("text").textContent;window.setLang("en");',
   'window.__openMonitorApp("quake");snap("quake");',
-  'var close=document.getElementById("monitor-doom-close"),mark=document.getElementById("monitor-doom-close-mark");',
-  'report.steps.dismissGame={aria:close.getAttribute("aria-label"),mark:mark.getAttribute("d")};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
-  'report.steps.dismissChooser={aria:close.getAttribute("aria-label"),mark:mark.getAttribute("d")};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
+  'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back");',
+  'report.steps.gameControls={closeAria:close.getAttribute("aria-label"),closeMark:close.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents,fs:Array.from(document.querySelectorAll("[data-shoot-fs]")).map(function(x){return getComputedStyle(x).pointerEvents;})};',
+  'window.__openMonitorApp("shoot");snap("resumed");back.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
+  'report.steps.chooserControls={closeAria:close.getAttribute("aria-label"),backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
   'report.errors=window.__errs||[];document.getElementById("__report").textContent=JSON.stringify(report);',
   '},350);});',
   '})();</script>'
@@ -97,12 +98,20 @@ if (result) {
     "coach is click-through and below the game viewport", s.coach);
   check(s.quake.view === "q3" && s.quake.src === "q3/player.html",
     "quake is a Quake III alias", s.quake);
-  check(/Back to shooters/.test(s.dismissGame.aria) && s.back.view === "chooser" && s.back.open,
-    "active-game dismiss returns a game to the chooser", { dismiss: s.dismissGame, back: s.back });
-  check(/Close shoot/.test(s.dismissChooser.aria) && !s.closed.open,
-    "the same dismiss closes shoot from the chooser", { dismiss: s.dismissChooser, closed: s.closed });
-  check(s.dismissGame.mark !== s.dismissChooser.mark,
-    "dismiss mark changes between back and close", [s.dismissGame.mark, s.dismissChooser.mark]);
+  check(/Close shoot/.test(s.gameControls.closeAria) && s.gameControls.backPointer !== "none" &&
+      s.gameControls.closeMark !== s.gameControls.backMark &&
+      !s.dismissed.open && s.dismissed.view === "q3" && s.dismissed.src === "q3/player.html" &&
+      s.hiddenControls.back === "none" && s.hiddenControls.fs.every(function(value) { return value === "none"; }) &&
+      s.resumed.open && s.resumed.view === "q3" && s.resumed.src === "q3/player.html",
+    "Dismiss pauses and preserves the active shooter for reopening", {
+      controls: s.gameControls, dismissed: s.dismissed, resumed: s.resumed
+    });
+  check(s.back.view === "chooser" && s.back.open && !s.back.src &&
+      s.chooserControls.backPointer === "none" && /Close shoot/.test(s.chooserControls.closeAria),
+    "the separate Back returns to the chooser while Dismiss remains available", {
+      back: s.back, controls: s.chooserControls
+    });
+  check(!s.closed.open, "Dismiss closes shoot from the chooser", s.closed);
 }
 
 var root = path.resolve(__dirname, "..");

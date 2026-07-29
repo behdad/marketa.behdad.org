@@ -166,8 +166,10 @@ function check(ok, message, detail) {
   const flagCount = await evaluate("document.querySelectorAll('#monitor-mines-wrap .mines-cell.flag').length");
   check(flagCount === 1, "one real Android long-press leaves exactly one Mines flag set", flagCount);
 
-  await evaluate("window.__openMonitorApp('classics')");
-  await sleep(50);
+  const classicsBack = await centre("#monitor-mines-back");
+  await tap(classicsBack);
+  const chooserView = await evaluate("window.__classicsView()");
+  check(chooserView === "chooser", "the separate Back touch target returns Mines to the chooser", chooserView);
   const solitaireChoice = await centre(".classics-choice-solitaire");
   await tap(solitaireChoice);
   const solitaireView = await evaluate("window.__classicsView()");

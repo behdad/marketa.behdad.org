@@ -4344,19 +4344,29 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .mines-lcd{width:19px; box-sizing:border-box; text-align:center; padding:0.8px 0 0.6px; background:#241d18; color:#e0604e; font-family:ui-monospace,Menlo,monospace; font-size:3.2px; line-height:1; letter-spacing:0.3px; border-radius:0.6px; box-shadow:inset 0.5px 0.5px 0 rgba(0,0,0,0.6)}
 .mines-msg{grid-column:1/3; grid-row:1; place-self:center; max-width:88px; display:none; box-sizing:border-box; background:rgba(255,253,248,0.95); border:0.4px solid #8a8272; border-radius:1.5px; padding:1.8px 3px; font-size:3.2px; line-height:1.4; text-align:center}
 .mines-wrap.done .mines-msg{display:block}
-/* video app: markéta's identity-dance film, letterboxed in a foreignObject over the
-   screen (tap = play/pause); .absent on the wrap = the file isn't on the server, so a
-   bilingual note takes the screen instead */
+/* video app: markéta's films, letterboxed in a foreignObject over the screen
+   (tap = play/pause); .absent on the wrap = the selected file isn't on the server, so
+   a bilingual note takes the screen instead */
 #monitor-video{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
 #office-monitor.show-video #monitor-video{opacity:1; pointer-events:auto}
 #monitor-video-close{cursor:pointer}
 #monitor-video-close:hover .seg-hover{opacity:.55}
-.vid-wrap{width:124px; height:42px; background:#000; cursor:pointer; display:grid; overflow:hidden} /* single-cell grid (was position:relative): the note/play/controls stack via grid-area with no RenderLayer, so they paint under the monitor's scaled foreignObject (WebKit bug 23113). The <video> raster itself is a composited replaced element WebKit still can't paint under the g-scale. */
+.vid-wrap{width:124px; height:42px; background:#000; display:flex; flex-direction:column; overflow:hidden}
+.vid-stage{flex:1; min-height:0; display:grid; overflow:hidden; cursor:pointer} /* single-cell grid (was position:relative): the note/play/controls stack via grid-area with no RenderLayer, so they paint under the monitor's scaled foreignObject (WebKit bug 23113). The <video> raster itself is a composited replaced element WebKit still can't paint under the g-scale. */
 .vid-el{grid-area:1/1; width:100%; height:100%; min-height:0; min-width:0; object-fit:cover; object-position:center; display:block} /* min-height:0 lets the grid cell clamp to 42px so object-fit works; cover fills the width, centred crop (no bottom-cut) */
 .vid-note{grid-area:1/1; display:none; align-items:center; justify-content:center; text-align:center; padding:0 12px; box-sizing:border-box; color:#cfc4b4; font-family:sans-serif; font-size:4.6px; line-height:1.5}
 .vid-play{grid-area:1/1; display:flex; align-items:center; justify-content:center; pointer-events:none; color:rgba(248,245,236,0.92); font-family:sans-serif; font-size:13px; text-shadow:0 0 3px rgba(0,0,0,0.8); opacity:0; transition:opacity .2s ease}
 .vid-wrap.paused .vid-play{opacity:1}
 .vid-wrap.absent .vid-note{display:flex}
+.vid-picker{flex:none; align-self:stretch; height:7px; display:flex; align-items:center; justify-content:center; gap:.5px; padding:.7px; box-sizing:border-box; overflow:hidden; background:rgba(10,8,6,.7); font-family:sans-serif; cursor:default; transition:height .28s ease,padding .28s ease,background-color .22s ease}
+.vid-pick{appearance:none; -webkit-appearance:none; border:0; border-radius:1px; margin:0; padding:.7px 1.8px; background:transparent; color:#f8f5ec; font:600 2.8px/1.15 sans-serif; letter-spacing:.02px; white-space:nowrap; cursor:pointer; transition:color .18s ease,background-color .18s ease}
+.vid-pick[aria-pressed="true"]{background:#c68e95; color:#fffdf8}
+.vid-pick:hover{background:#7f9ec0}
+/* Playing collapses the selector's own row and fades its paint colours to transparent,
+   giving the film the full 124×42 screen without using descendant opacity (which creates
+   a misplaced RenderLayer in WebKit's scaled foreignObject). Pause/end restores it. */
+.vid-wrap:not(.paused) .vid-picker{height:0; padding-top:0; padding-bottom:0; background:rgba(10,8,6,0); pointer-events:none}
+.vid-wrap:not(.paused) .vid-pick{color:rgba(248,245,236,0); background:rgba(198,142,149,0)}
 /* tattoo studio app: a design gallery + a paint canvas over the screen, HTML in the
    foreignObject. Three JS-built views (gallery / design preview / paint) share the wrap;
    the send affordance is the shared pb-dialog. His-suit pink chrome throughout. */
@@ -4452,6 +4462,9 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .vid-ctrl-mute svg, .vid-ctrl-fs svg{width:3.4px; height:3.4px; display:block}
 /* fullscreened, the wrap's px sizes are honest screen pixels — scale the strip up */
 .vid-wrap:fullscreen{width:100%; height:100%}
+.vid-wrap:fullscreen .vid-picker{height:38px; gap:4px; padding:5px}
+.vid-wrap:fullscreen:not(.paused) .vid-picker{height:0; padding-top:0; padding-bottom:0}
+.vid-wrap:fullscreen .vid-pick{border-radius:6px; padding:7px 14px; font-size:17px}
 .vid-wrap:fullscreen .vid-ctrl{height:44px; gap:12px; padding:0 14px}
 .vid-wrap:fullscreen .vid-ctrl-pp{font-size:26px; width:30px}
 .vid-wrap:fullscreen .vid-ctrl-time{font-size:15px; min-width:56px}
@@ -21970,13 +21983,18 @@ section{margin:1.9rem 0}
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#ffd83d" stroke-width="0.6" stroke-linecap="round"/>
 </g>
 </g>
-<!-- VIDEO app: markéta's identity-dance film, letterboxed in a foreignObject over the
-     screen, with the same mini close pill as the player. The <video> gets its src on
+<!-- VIDEO app: markéta's films, letterboxed in a foreignObject over the screen, with
+     the same mini close pill as the player. The <video> gets the selected film's src on
      first open (openVideoApp); .absent on the wrap swaps in the bilingual
      not-loaded-yet note. -->
 <g id="monitor-video">
 <foreignObject x="254" y="154" width="124" height="42">
 <div xmlns="http://www.w3.org/1999/xhtml" id="monitor-video-wrap" class="vid-wrap paused">
+<div class="vid-picker" role="group" data-aria-i="video_choose" aria-label="Choose a film">
+<button type="button" class="vid-pick" data-video-track="downtown" data-i="video_downtown" aria-pressed="true">Downtown dance</button>
+<button type="button" class="vid-pick" data-video-track="rose" data-i="video_rose" aria-pressed="false">Mon amie la rose</button>
+</div>
+<div class="vid-stage">
 <video id="monitor-video-el" class="vid-el" preload="metadata" playsinline="playsinline"></video>
 <div class="vid-note" data-i="video_absent">the film isn&#8217;t loaded yet &#8212; come back soon</div>
 <div class="vid-play">&#9654;</div>
@@ -21991,6 +22009,7 @@ section{margin:1.9rem 0}
 <span class="vid-ctrl-fs"><svg viewBox="0 0 12 12"><path d="M2 4.4 L2 2 L4.4 2 M7.6 2 L10 2 L10 4.4 M10 7.6 L10 10 L7.6 10 M4.4 10 L2 10 L2 7.6" fill="none" stroke="#f8f5ec" stroke-width="1" stroke-linecap="round"/></svg></span>
 </div>
 <!-- video control strip (end) -->
+</div>
 </div>
 </foreignObject>
 <g id="monitor-video-close" transform="translate(76.0,29.3) scale(0.8)">
@@ -28527,6 +28546,9 @@ var T = {
     app_code: "code",
     app_video: "video",
     video_absent: "the film isn’t loaded yet — come back soon",
+    video_choose: "Choose a film",
+    video_downtown: "Downtown dance",
+    video_rose: "Mon amie la rose",
     app_calendar: "calendar",
     occasion_activate: "activate this day",
     desk_search_apps: "search apps…",
@@ -29683,6 +29705,9 @@ var T = {
     app_code: "code",
     app_video: "video",
     video_absent: "film ještě není nahraný — vraťte se brzy",
+    video_choose: "Vybrat film",
+    video_downtown: "Downtown dance",
+    video_rose: "Mon amie la rose",
     app_calendar: "kalendář",
     occasion_activate: "spustit tento den",
     desk_search_apps: "hledat aplikace…",
@@ -53444,17 +53469,62 @@ setOfficeProgress("pc", false);
     minesCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── VIDEO APP ────────────────────────────────────────────────────────────────────
-  // Markéta's downtown-dance film. The <video> only gets its src on the
-  // app's first open, so visitors who never open it fetch nothing; if the file isn't on
-  // the server (or fails to decode), the error handler swaps in the bilingual note —
-  // no uncaught errors either way. Opens paused on the first frame; tapping the picture
-  // toggles play/pause. The film and the songs never sound together: starting one
-  // pauses the other.
+  // Markéta's films share one <video>, which only gets the selected src on the app's
+  // first open so visitors who never open it fetch nothing. A switch remembers each
+  // film's playhead; Kill resets both. If a file is missing or fails to decode, the
+  // bilingual note replaces it while the picker remains available. Opens paused on the
+  // first frame; tapping the picture toggles play/pause. Films and songs never sound
+  // together: starting one pauses the other.
   var vidEl = document.getElementById("monitor-video-el");
   var vidWrap = document.getElementById("monitor-video-wrap");
+  var vidStage = vidWrap && vidWrap.querySelector(".vid-stage");
   var vidCloseBtn = document.getElementById("monitor-video-close");
+  var VIDEO_TRACKS = [
+    { id: "downtown", src: "art/downtown-dance.mp4", title: "Downtown dance" },
+    { id: "rose", src: "art/monamielarose.mp4", title: "Mon amie la rose" }
+  ];
+  var vidTrackIndex = 0;
+  var vidTrackTimes = [0, 0];
   var vidSrcSet = false;
   var lastVideoPlaying = !!(vidEl && !vidEl.paused && !vidEl.ended);
+  function currentVideoTrack() { return VIDEO_TRACKS[vidTrackIndex]; }
+  function paintVideoPicker() {
+    if (!vidWrap) return;
+    var picks = vidWrap.querySelectorAll(".vid-pick");
+    for (var i = 0; i < picks.length; i++) picks[i].setAttribute("aria-pressed", String(picks[i].getAttribute("data-video-track") === currentVideoTrack().id));
+  }
+  function rememberVideoTime() {
+    if (!vidEl || !isFinite(vidEl.currentTime) || vidEl.currentTime < 0) return;
+    vidTrackTimes[vidTrackIndex] = vidEl.currentTime;
+  }
+  function loadCurrentVideo(keepPlaying) {
+    if (!vidEl) return;
+    vidWrap.classList.remove("absent");
+    vidEl.src = currentVideoTrack().src;
+    if (keepPlaying) toggleVideoApp();
+  }
+  function selectVideoTrack(id) {
+    var next = -1;
+    for (var i = 0; i < VIDEO_TRACKS.length; i++) if (VIDEO_TRACKS[i].id === id) { next = i; break; }
+    if (next < 0 || next === vidTrackIndex) return false;
+    var keepPlaying = videoPlaying();
+    rememberVideoTime();
+    if (keepPlaying) pauseVideoApp("ui");
+    vidTrackIndex = next;
+    paintVideoPicker();
+    if (vidSrcSet) loadCurrentVideo(keepPlaying);
+    return true;
+  }
+  function resetVideoAppState() {
+    pauseVideoApp();
+    vidTrackTimes = [0, 0];
+    vidTrackIndex = 0;
+    paintVideoPicker();
+    if (vidSrcSet && vidEl) {
+      vidWrap.classList.remove("absent");
+      vidEl.src = currentVideoTrack().src;
+    }
+  }
   function videoPlaying() { return !!(vidEl && !vidEl.paused && !vidEl.ended); }
   function syncVideoPlayback(reason, source) {
     var playing = videoPlaying();
@@ -53476,7 +53546,7 @@ setOfficeProgress("pc", false);
     monitor.classList.add("show-video");
     if (!vidSrcSet && vidEl) {
       vidSrcSet = true;
-      vidEl.src = "art/downtown-dance.mp4"; // preload="metadata" fetches just enough for the first frame
+      loadCurrentVideo(false); // preload="metadata" fetches just enough for the first frame
     }
     playLaptopClickSound("office-monitor");
   }
@@ -53573,6 +53643,8 @@ setOfficeProgress("pc", false);
   window.__pauseMonitorVideo = pauseVideoApp; // room-leave hook: pause playback without closing the app view
   window.__toggleMonitorVideo = toggleVideoApp; // the space key drives the film while its app is up
   window.__videoPlaying = videoPlaying;
+  window.__selectMonitorVideoTrack = selectVideoTrack;
+  window.__monitorVideoTrack = function () { return currentVideoTrack().id; };
   window.__syncLoftVideoState = syncVideoPlayback;
   // The global 'f' handler routes to the film's OWN fullscreen while its app is the live
   // foreground (mirrors the space-key gate: show-video + in the office).
@@ -54094,20 +54166,29 @@ setOfficeProgress("pc", false);
     vidEl.addEventListener("error", function () { vidWrap.classList.add("absent"); }); // 404/undecodable → the note takes the screen
     vidEl.addEventListener("loadedmetadata", function () {
       vidWrap.classList.remove("absent");
-      try { if (vidEl.currentTime === 0) vidEl.currentTime = 0.001; } catch (e) {} // nudge a seek so the first frame actually paints
+      try { vidEl.currentTime = vidTrackTimes[vidTrackIndex] || 0.001; } catch (e) {} // restore this film's playhead; nudge zero so its first frame paints
     });
+    vidEl.addEventListener("timeupdate", rememberVideoTime);
     vidEl.addEventListener("play", function () {
       vidWrap.classList.remove("paused");
       syncVideoPlayback("play", "ui");
-      try { if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: "downtown dance", artist: "markéta" }); } catch (e) {}
+      try { if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: currentVideoTrack().title, artist: "markéta" }); } catch (e) {}
     });
     vidEl.addEventListener("pause", function () { vidWrap.classList.add("paused"); syncVideoPlayback("pause", "ui"); });
     vidEl.addEventListener("ended", function () { vidWrap.classList.add("paused"); syncVideoPlayback("ended", "internal"); });
     // a song starting (spacebar, headphones, garden instruments…) takes the screen for the
     // player — close the film so it never keeps playing (or lingering) underneath
     songAudios.forEach(function (a) { if (a) a.addEventListener("play", closeVideoApp); });
-    vidWrap.addEventListener("click", function (e) { e.stopPropagation(); toggleVideoApp(); });
-    vidWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    vidStage.addEventListener("click", function (e) { e.stopPropagation(); toggleVideoApp(); });
+    vidStage.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    var vidPicks = vidWrap.querySelectorAll(".vid-pick");
+    for (var vp = 0; vp < vidPicks.length; vp++) {
+      ["pointerdown", "click", "dblclick", "touchstart"].forEach(function (type) {
+        vidPicks[vp].addEventListener(type, function (e) { e.stopPropagation(); });
+      });
+      vidPicks[vp].addEventListener("click", function () { selectVideoTrack(this.getAttribute("data-video-track")); });
+    }
+    paintVideoPicker();
   }
   if (vidCloseBtn) {
     vidCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeVideoApp(); playLaptopClickSound("office-monitor"); });
@@ -60390,7 +60471,7 @@ async def localfont(name):
         break;
       case "video":
         closeVideoApp();
-        if (vidEl) { try { vidEl.pause(); vidEl.currentTime = 0; } catch (e) {} } // rewind to the first frame
+        resetVideoAppState(); // select Downtown dance and rewind both films
         break;
       case "music":
         if (window.__resetMonitorMusic) window.__resetMonitorMusic();

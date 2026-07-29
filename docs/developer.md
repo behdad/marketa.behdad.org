@@ -842,6 +842,8 @@ The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, M
 Video, Browser, System, and About their own staged gag before teardown. They all use
 `__runMonitorDeathFlash` so
 cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.
+Video progress and volume drags are owned at `window` scope for the active
+pointer; transformed-`foreignObject` pointer capture is not assumed to succeed.
 Call first clears every owned connect/goodbye timer and ambient source, then drops its signal bars
 and waveform before the silent hang-up. Music cancels track fades/snippets, scratches and slows the
 live media element while its SVG notes leave the staff, then pauses and rewinds every catalog track,

@@ -13,9 +13,13 @@ var HARNESS = [
   ' var monitor=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio"),video=document.getElementById("monitor-video-el"),wrap=document.getElementById("monitor-video-wrap"),downtown=wrap.querySelector("[data-video-track=downtown]"),rose=wrap.querySelector("[data-video-track=rose]"),butterfly=wrap.querySelector("[data-video-track=butterfly]");',
   ' tower.classList.add("on");monitor.classList.add("here","screen-on","show-caps");window.__openMonitorApp("video");',
   ' var fakePaused=true,fakeEnded=false,fakeTime=0,playCalls=0,pauseCalls=0;',
-  ' Object.defineProperty(video,"paused",{configurable:true,get:function(){return fakePaused;}});Object.defineProperty(video,"ended",{configurable:true,get:function(){return fakeEnded;}});Object.defineProperty(video,"currentTime",{configurable:true,get:function(){return fakeTime;},set:function(v){fakeTime=Number(v)||0;}});',
+  ' Object.defineProperty(video,"paused",{configurable:true,get:function(){return fakePaused;}});Object.defineProperty(video,"ended",{configurable:true,get:function(){return fakeEnded;}});Object.defineProperty(video,"duration",{configurable:true,get:function(){return 100;}});Object.defineProperty(video,"currentTime",{configurable:true,get:function(){return fakeTime;},set:function(v){fakeTime=Number(v)||0;}});',
   ' video.play=function(){playCalls++;fakePaused=false;video.dispatchEvent(new Event("play"));return Promise.resolve();};video.pause=function(){pauseCalls++;fakePaused=true;video.dispatchEvent(new Event("pause"));};',
   ' report.steps.initial={track:window.__monitorVideoTrack(),src:video.src,downtown:downtown.textContent,rose:rose.textContent,butterfly:butterfly.textContent,downtownPressed:downtown.getAttribute("aria-pressed"),rosePressed:rose.getAttribute("aria-pressed"),butterflyPressed:butterfly.getAttribute("aria-pressed")};',
+  ' var seek=wrap.querySelector(".vid-ctrl-bar"),volume=wrap.querySelector(".vid-ctrl-vol"),sr=seek.getBoundingClientRect(),vr=volume.getBoundingClientRect();seek.setPointerCapture=function(){throw new Error("capture unavailable");};volume.setPointerCapture=function(){throw new Error("capture unavailable");};',
+  ' seek.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:801,pointerType:"touch",isPrimary:true,button:0,buttons:1,clientX:sr.left+1,clientY:sr.top+sr.height/2}));window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:801,pointerType:"touch",isPrimary:true,button:0,buttons:1,clientX:sr.right-1,clientY:sr.top+sr.height/2}));window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:801,pointerType:"touch",isPrimary:true,button:0,clientX:sr.right-1,clientY:sr.top+sr.height/2}));',
+  ' volume.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:802,pointerType:"touch",isPrimary:true,button:0,buttons:1,clientX:vr.left+1,clientY:vr.top+vr.height/2}));window.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:802,pointerType:"touch",isPrimary:true,button:0,buttons:1,clientX:vr.right-1,clientY:vr.top+vr.height/2}));window.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:802,pointerType:"touch",isPrimary:true,button:0,clientX:vr.right-1,clientY:vr.top+vr.height/2}));',
+  ' report.steps.sliders={time:fakeTime,volume:window.__vidCtrlVolume(),seekWidth:sr.width,volumeWidth:vr.width};',
   ' fakeTime=12.5;video.dispatchEvent(new Event("timeupdate"));video.play();rose.click();video.dispatchEvent(new Event("loadedmetadata"));',
   ' report.steps.rose={track:window.__monitorVideoTrack(),src:video.src,time:fakeTime,playing:window.__videoPlaying(),playCalls:playCalls,pauseCalls:pauseCalls,downtownPressed:downtown.getAttribute("aria-pressed"),rosePressed:rose.getAttribute("aria-pressed"),butterflyPressed:butterfly.getAttribute("aria-pressed")};',
   ' fakeTime=7.25;video.dispatchEvent(new Event("timeupdate"));butterfly.click();video.dispatchEvent(new Event("loadedmetadata"));',
@@ -49,6 +53,9 @@ check(s.initial && s.initial.track === "downtown" && /art\/downtown-dance\.mp4$/
   s.initial.butterfly === "Rainbow Butterfly" && s.initial.downtownPressed === "true" &&
   s.initial.rosePressed === "false" && s.initial.butterflyPressed === "false",
   "opens on Downtown dance with all three exact titles and matching selected state", s.initial);
+check(s.sliders && s.sliders.seekWidth > 0 && s.sliders.volumeWidth > 0 &&
+  s.sliders.time > 80 && s.sliders.volume > 0.8,
+  "touch drags update seek and volume even when pointer capture is unavailable", s.sliders);
 check(s.rose && s.rose.track === "rose" && /art\/monamielarose\.mp4$/.test(s.rose.src) &&
   s.rose.time > 0 && s.rose.time < 0.01 && s.rose.playing && s.rose.playCalls === 2 &&
   s.rose.pauseCalls === 1 && s.rose.downtownPressed === "false" && s.rose.rosePressed === "true" &&

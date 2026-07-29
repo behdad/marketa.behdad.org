@@ -139,7 +139,8 @@ or open surface to manage or kill its current session. The laptop beside it
 handles video calls. Drag the headphones around the room to move the music with
 them. The monitor's Video app has a selector for **Downtown dance**,
 **Mon amie la rose**, and **Rainbow Butterfly**; switching films preserves each
-playhead until the app is killed or the loft is reset. Killing Video remembers
+playhead until the app is killed or the loft is reset. Its progress and volume
+bars can be dragged with either mouse or touch. Killing Video remembers
 the last selected film long enough to give each one its own final scene.
 
 Quake III opens with three arenas; choose one, or let the short timer rotate to

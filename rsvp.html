@@ -56353,21 +56353,39 @@ setOfficeProgress("pc", false);
     document.addEventListener("fullscreenchange", paintFsIcon);
     document.addEventListener("webkitfullscreenchange", paintFsIcon);
     paintFsIcon();
-    // shared slider plumbing: pointer capture on the track, fraction from the pointer's
-    // x within the track's screen rect (scale-proof — both are screen coords)
+    // Shared slider plumbing: fraction from the track's live screen rect (scale-proof —
+    // both values are screen coordinates). Track the active pointer at window scope:
+    // pointer capture can fail inside the monitor's transformed foreignObject on Android.
     function fracFrom(el, e) {
       var r = el.getBoundingClientRect();
       if (!(r.width > 0)) return 0;
       return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     }
     function wireSlider(el, apply) {
+      var activePointer = null;
+      function move(e) {
+        if (activePointer == null || e.pointerId !== activePointer) return;
+        e.preventDefault();
+        apply(fracFrom(el, e)); wake();
+      }
+      function end(e) {
+        if (activePointer == null || e.pointerId !== activePointer) return;
+        if (e.type === "pointerup") move(e);
+        activePointer = null;
+        window.removeEventListener("pointermove", move, true);
+        window.removeEventListener("pointerup", end, true);
+        window.removeEventListener("pointercancel", end, true);
+      }
       el.addEventListener("pointerdown", function (e) {
+        if (e.button != null && e.button !== 0) return;
         e.stopPropagation(); e.preventDefault();
+        if (activePointer != null) end({ pointerId: activePointer, type: "pointercancel" });
+        activePointer = e.pointerId;
         try { el.setPointerCapture(e.pointerId); } catch (err) {}
         apply(fracFrom(el, e)); wake();
-      });
-      el.addEventListener("pointermove", function (e) {
-        if (el.hasPointerCapture && el.hasPointerCapture(e.pointerId)) { apply(fracFrom(el, e)); wake(); }
+        window.addEventListener("pointermove", move, true);
+        window.addEventListener("pointerup", end, true);
+        window.addEventListener("pointercancel", end, true);
       });
     }
     wireSlider(bar, function (frac) {

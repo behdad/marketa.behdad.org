@@ -77,6 +77,9 @@ never counted against the context cap. The formant/vocal-tract synths (giggle, e
 Trip cues use that same SFX handle too. DMT has its own six-second glassy drone-and-bells
 soundscape; its teardown fades and stops only those oscillator nodes when the trip ends,
 is reset, or is interrupted, leaving the shared context and every other consumer alone.
+The monitor power menu also stays on this bus: reboot's three window-close clicks align
+with its closing cards, shutdown uses one descending tone, and sleep uses a short filtered
+noise exhale. Reboot's delayed clicks re-check focus and visibility at playback time.
 
 ## Per-consumer lifecycle maps to NODES, not the context
 

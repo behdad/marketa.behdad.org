@@ -47492,6 +47492,7 @@ setOfficeProgress("pc", false);
     if (action === "help") return openMonitorHelp();
     if (action === "credits") return openMonitorCredits();
     if (action === "sleep") {
+      playMonitorSleepSound("office-monitor");
       return sleepMonitor();
     }
     if (action === "lock") {
@@ -47501,6 +47502,7 @@ setOfficeProgress("pc", false);
     }
     if (action === "shutdown") {
       beginMonitorPowerVisual("shutdown");
+      playMonitorShutdownSound("office-monitor");
       if (window.__flashCaptionKey)
         window.__flashCaptionKey("mon_shutdown_gag", 5000, "monitor-power");
       monitorPowerTimers.push(setTimeout(function () {
@@ -47513,6 +47515,13 @@ setOfficeProgress("pc", false);
     if (action === "reboot") {
       if (!pcTower) return false;
       beginMonitorPowerVisual("reboot");
+      playMonitorWindowCloseSound("office-monitor");
+      monitorPowerTimers.push(setTimeout(function () {
+        playMonitorWindowCloseSound("office-monitor");
+      }, 140));
+      monitorPowerTimers.push(setTimeout(function () {
+        playMonitorWindowCloseSound("office-monitor");
+      }, 280));
       if (window.__flashCaptionKey)
         window.__flashCaptionKey("mon_reboot_gag", 5000, "monitor-power");
       monitorPowerTimers.push(setTimeout(function () {
@@ -78014,6 +78023,72 @@ function playLaptopClickSound(panId) {
     gain.connect(out);
     osc.start(t);
     osc.stop(t + 0.05);
+  } catch (e) {}
+}
+// Loft OS power cues share the persistent SFX bus. The reboot calls the first helper
+// once per animated window; every call re-checks attention so delayed clicks cannot
+// sound after the visitor has moved away.
+function playMonitorWindowCloseSound(panId) {
+  if (document.hidden || !document.hasFocus()) return;
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId || "office-monitor");
+    var osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(720, t);
+    osc.frequency.exponentialRampToValueAtTime(340, t + 0.045);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.025, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    osc.connect(gain); gain.connect(out);
+    osc.start(t); osc.stop(t + 0.065);
+  } catch (e) {}
+}
+function playMonitorShutdownSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId || "office-monitor");
+    var osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(392, t);
+    osc.frequency.exponentialRampToValueAtTime(110, t + 1.15);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.045, t + 0.03);
+    gain.gain.setValueAtTime(0.035, t + 0.65);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.18);
+    osc.connect(gain); gain.connect(out);
+    osc.start(t); osc.stop(t + 1.2);
+  } catch (e) {}
+}
+function playMonitorSleepSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime, dur = 0.58;
+    var n = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    var buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    var breath = ctx.createBufferSource();
+    breath.buffer = buf;
+    var filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(760, t);
+    filter.frequency.exponentialRampToValueAtTime(310, t + dur);
+    filter.Q.value = 0.65;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.018, t + 0.08);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    breath.connect(filter); filter.connect(gain);
+    gain.connect(pannedOut(ctx, panId || "office-monitor"));
+    breath.start(t); breath.stop(t + dur + 0.02);
   } catch (e) {}
 }
 // A short synthesized ring for the "call Prague" gag: two brief dual-tone warbles,

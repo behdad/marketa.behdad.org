@@ -95903,6 +95903,23 @@ function spawnDustMote(container) {
       return { x: p.x, y: p.y };
     } catch (e) { return { x: 278, y: 273 }; }         // static fallback matching the default chair
   }
+  function officePoufPerch() {
+    try {
+      var poufs = document.getElementById("office-nesting-poufs");
+      var svg = document.getElementById("loft-game-strip");
+      var stage = document.getElementById("stage-office");
+      if (!poufs || getComputedStyle(poufs).display === "none" || !svg || !stage || !svg.createSVGPoint || !stage.getScreenCTM) return null;
+      var active = poufs.classList.contains("state-medium") ? document.getElementById("office-pouf-medium") :
+        poufs.classList.contains("state-small") || poufs.classList.contains("state-reveal") ? document.getElementById("office-pouf-small") :
+        document.getElementById("office-pouf-large");
+      if (!active) return null;
+      var r = active.getBoundingClientRect();
+      var pt = svg.createSVGPoint();
+      pt.x = r.left + r.width * 0.5; pt.y = r.top + r.height * 0.22;
+      var p = pt.matrixTransform(stage.getScreenCTM().inverse());
+      return { x: p.x, y: p.y };
+    } catch (e) { return null; }
+  }
   // The windchime hangs at a fixed spot (art/#balcony-windchime, its own #balcony-windchime-
   // swing sway rotates it a couple degrees but never repositions it via a transform=), so —
   // unlike the desk/chair above — a plain static {x,y} is enough; no live-geometry resolve
@@ -95938,7 +95955,7 @@ function spawnDustMote(container) {
     cuddly:  [{ x: 96, y: 250 }, { x: 96, y: 250 }, { x: 96, y: 250 }, pulleyPouncePerch],
     // the chair is weighted 3:1 over the desk — it gravitates toward the chair to nap far
     // more often than it perches anywhere else (owner request); resolved live, both move.
-    office:  [officeDeskPerch, officeChairPerch, officeChairPerch, officeChairPerch],
+    office:  [officeDeskPerch, officePoufPerch, officeChairPerch, officeChairPerch, officeChairPerch],
     // the windchime is a rare discovered moment (a quiet bonus find, not one of the tracked
     // 12), not the cat's usual habit — weighted 1-in-4 against the railing's 3, so it swats
     // the chime occasionally rather than every other balcony visit.

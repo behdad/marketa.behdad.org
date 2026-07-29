@@ -82,8 +82,8 @@ check(r.rotted && r.rotted.water.rotted && r.rotted.water.growth === 4 && r.rott
 check(r.rotted && r.rotted.frogWater.rotted && r.rotted.frogWater.growth === 2 && !r.rotted.trip.active,
   "bottle water rots the frog at its current size and disables its trip", r.rotted);
 check(r.rotted && r.rotted.visible, "the frog and mushroom remain rendered after watering", r.rotted);
-check(r.recovered && !r.recovered.water.rotted && r.recovered.water.growth === 0 &&
-  !r.recovered.frogWater.rotted && r.recovered.frogWater.growth === 0 && !r.recovered.classed,
-  "rotted garden props recover at their default size after the recovery timer", r.recovered);
+check(r.recovered && !r.recovered.water.rotted && r.recovered.water.growth === 4 &&
+  !r.recovered.frogWater.rotted && r.recovered.frogWater.growth === 2 && !r.recovered.classed,
+  "rotted garden props recover after the timer without losing their grown size", r.recovered);
 if (failed) process.exit(1);
 console.log("garden trip props: all checks passed");

@@ -82818,6 +82818,8 @@ function spawnDustMote(container) {
     "garden-frog": { x: 1126, y: 315, tripProp: true }
   };
   var plantWaterCounts = {};
+  var plantOverwateredAt = {};
+  var plantRecoveryTimers = {};
   var tripPropWaterState = {
     "garden-mushroom": { growth: 0, rotted: false, rottedAt: 0 },
     "garden-frog": { growth: 0, rotted: false, rottedAt: 0 }
@@ -82841,11 +82843,25 @@ function spawnDustMote(container) {
     if (!state) return;
     clearTimeout(tripPropRotTimers[id]);
     tripPropRotTimers[id] = null;
-    state.growth = 0;
     state.rotted = false;
     state.rottedAt = 0;
     renderTripPropWater(id);
     if (window.__checkpointChanged) window.__checkpointChanged();
+  }
+  function recoverPlant(id) {
+    clearTimeout(plantRecoveryTimers[id]);
+    plantRecoveryTimers[id] = null;
+    plantWaterCounts[id] = 0;
+    plantOverwateredAt[id] = 0;
+    var el = document.getElementById(id);
+    if (el) el.classList.remove("overwatered");
+    if (window.__checkpointChanged) window.__checkpointChanged();
+  }
+  function schedulePlantRecovery(id) {
+    clearTimeout(plantRecoveryTimers[id]);
+    if (!plantOverwateredAt[id]) return;
+    var remaining = Math.max(0, 30000 - (Date.now() - plantOverwateredAt[id]));
+    plantRecoveryTimers[id] = setTimeout(function () { recoverPlant(id); }, remaining);
   }
   function scheduleTripPropRecovery(id) {
     var state = tripPropWaterState[id];
@@ -82896,9 +82912,11 @@ function spawnDustMote(container) {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { el.classList.add("watered"); });
     });
-    plantWaterCounts[id] = (plantWaterCounts[id] || 0) + 1;
-    if (plantWaterCounts[id] === 3) {
+    plantWaterCounts[id] = Math.min(3, (plantWaterCounts[id] || 0) + 1);
+    if (plantWaterCounts[id] >= 3) {
       el.classList.add("overwatered");
+      plantOverwateredAt[id] = Date.now();
+      schedulePlantRecovery(id);
       eggBubble(el, tipText("plant_overwatered"), "scene-top");
     }
     if (window.__checkpointChanged) window.__checkpointChanged();
@@ -82908,25 +82926,35 @@ function spawnDustMote(container) {
   window.waterSpecificPlant = waterSpecificPlant;
   function plantWaterState() {
     var counts = {};
+    var overwateredAt = {};
     Object.keys(plantSpots).forEach(function (id) { counts[id] = Math.min(3, plantWaterCounts[id] || 0); });
-    return { counts: counts };
+    Object.keys(plantSpots).forEach(function (id) { overwateredAt[id] = plantOverwateredAt[id] || 0; });
+    return { counts: counts, overwateredAt: overwateredAt };
   }
   function restorePlantWater(row) {
     var counts = row && row.counts && typeof row.counts === "object" ? row.counts : null;
+    var overwateredAt = row && row.overwateredAt && typeof row.overwateredAt === "object" ? row.overwateredAt : null;
     var valid = !!counts && Object.keys(counts).every(function (id) {
       return Object.prototype.hasOwnProperty.call(plantSpots, id) &&
         Number.isInteger(counts[id]) && counts[id] >= 0 && counts[id] <= 3;
     });
     Object.keys(plantSpots).forEach(function (id) {
       var count = valid && Object.prototype.hasOwnProperty.call(counts, id) ? counts[id] : 0;
+      var rottedAt = count >= 3 && overwateredAt && Number.isFinite(overwateredAt[id]) ? overwateredAt[id] : 0;
+      if (count >= 3 && (!rottedAt || Date.now() - rottedAt >= 30000)) count = 0;
       plantWaterCounts[id] = count;
+      plantOverwateredAt[id] = count >= 3 ? rottedAt : 0;
+      clearTimeout(plantRecoveryTimers[id]);
+      plantRecoveryTimers[id] = null;
       var el = document.getElementById(id);
       if (el) {
         el.classList.remove("watered");
         el.classList.toggle("overwatered", count >= 3);
       }
+      if (count >= 3) schedulePlantRecovery(id);
     });
   }
+  window.__recoverGardenPlant = recoverPlant;
   window.__plantWaterState = plantWaterState;
   window.__deferCheckpointAdapter("plant-water", {
     capture: plantWaterState,
@@ -82954,7 +82982,6 @@ function spawnDustMote(container) {
         tripPropWaterState[id].rotted = !!(saved && saved.rotted);
         tripPropWaterState[id].rottedAt = saved && Number.isFinite(saved.rottedAt) ? saved.rottedAt : 0;
         if (tripPropWaterState[id].rotted && Date.now() - tripPropWaterState[id].rottedAt >= 30000) {
-          tripPropWaterState[id].growth = 0;
           tripPropWaterState[id].rotted = false;
           tripPropWaterState[id].rottedAt = 0;
         }

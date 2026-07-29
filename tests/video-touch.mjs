@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-// Trusted Android-style touch regression for the monitor Video seek and volume bars.
+// Trusted Android-style touch regression for the monitor Video chooser and sliders.
 import http from "http";
 import fs from "fs";
 import os from "os";
@@ -85,7 +85,7 @@ function check(ok, message, detail) {
     if (await evaluate("typeof window.__openMonitorApp==='function'")) break;
     await sleep(250);
   }
-  const fresh = await evaluate("/var activeTouch = null/.test(document.documentElement.innerHTML)");
+  const fresh = await evaluate("/var mobileRoute = null/.test(document.documentElement.innerHTML)");
   if (!fresh) throw new Error("Freshness gate failed");
 
   await evaluate(`(function(){
@@ -107,15 +107,27 @@ function check(ok, message, detail) {
   const state = await evaluate(`(function(){
     var seek=document.querySelector(".vid-ctrl-bar").getBoundingClientRect();
     var vol=document.querySelector(".vid-ctrl-vol").getBoundingClientRect();
+    var rose=document.querySelector("[data-video-track=rose]").getBoundingClientRect();
+    document.querySelector(".vid-ctrl-bar").style.pointerEvents="none";
+    document.querySelector(".vid-ctrl-vol").style.pointerEvents="none";
+    document.querySelectorAll(".vid-pick").forEach(function(el){el.style.pointerEvents="none";});
     return{
       fullscreen:document.fullscreenElement&&document.fullscreenElement.id,
       seek:{left:seek.left,right:seek.right,y:seek.top+seek.height/2,width:seek.width},
-      vol:{left:vol.left,right:vol.right,y:vol.top+vol.height/2,width:vol.width}
+      vol:{left:vol.left,right:vol.right,y:vol.top+vol.height/2,width:vol.width},
+      rose:{x:rose.left+rose.width/2,y:rose.top+rose.height/2,width:rose.width}
     };
   })()`);
   check(state.fullscreen === "hunt-fullscreen-area", "touch probe runs in browser fullscreen", state);
   check(state.seek.width > 0 && state.vol.width > 0, "both slider tracks are visible", state);
 
+  async function tap(point) {
+    await send("Input.dispatchTouchEvent", {
+      type: "touchStart", touchPoints: [{ x: point.x, y: point.y, radiusX: 4, radiusY: 4, force: 1 }]
+    });
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await sleep(50);
+  }
   async function drag(track) {
     const x1 = track.left + track.width * 0.1;
     const x2 = track.left + track.width * 0.9;
@@ -128,6 +140,9 @@ function check(ok, message, detail) {
     await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await sleep(50);
   }
+  await tap(state.rose);
+  const picked = await evaluate("window.__monitorVideoTrack()");
+  check(picked === "rose", "trusted touch selects a visible chooser button despite foreignObject mis-targeting", picked);
   await drag(state.seek);
   await drag(state.vol);
   const result = await evaluate(`(function(){
@@ -135,7 +150,7 @@ function check(ok, message, detail) {
   })()`);
   check(result.time > 75, "trusted touch drag seeks the film", result);
   check(result.volume > 0.75, "trusted touch drag changes film volume", result);
-  check(exceptions.length === 0, "touch drags raise no page exceptions", exceptions);
+  check(exceptions.length === 0, "chooser and slider touches raise no page exceptions", exceptions);
 
   ws.close();
   cleanup();

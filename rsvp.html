@@ -56420,17 +56420,77 @@ setOfficeProgress("pc", false);
       el.addEventListener("touchend", endTouch, { passive: false });
       el.addEventListener("touchcancel", endTouch, { passive: false });
     }
-    wireSlider(bar, function (frac) {
+    function applySeek(frac) {
       var d = vidEl.duration;
       if (!isFinite(d) || d <= 0) return; // no metadata yet — nowhere to seek
       try { vidEl.currentTime = frac * d; } catch (err) {}
       paintProgress();
-    });
-    wireSlider(vol, function (frac) {
+    }
+    function applyVolume(frac) {
       userVol = frac;
       try { vidEl.volume = frac; vidEl.muted = false; } catch (err) {}
       paintVol(); // volumechange arrives async — repaint now so the drag tracks the finger
-    });
+    }
+    wireSlider(bar, applySeek);
+    wireSlider(vol, applyVolume);
+    // Android can paint a foreignObject child in one place but hit-test the touch against
+    // the film below it. Route touch pointers from their live screen coordinates at document
+    // capture, before the mis-targeted film click or global hold gesture can claim them.
+    // This owns only visible chooser buttons and the two slider tracks; ordinary film taps
+    // still reach vidStage and keep the tap-to-pause/play behavior.
+    var mobileRoute = null;
+    function within(el, x, y, ySlop) {
+      var r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 &&
+        x >= r.left && x <= r.right && y >= r.top - ySlop && y <= r.bottom + ySlop;
+    }
+    function finishMobileRoute(e, canceled) {
+      if (!mobileRoute || e.pointerId !== mobileRoute.pointerId) return;
+      var route = mobileRoute;
+      mobileRoute = null;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (canceled) return;
+      if (route.kind === "slider") {
+        route.apply(fracFrom(route.el, { clientX: route.lastX }));
+        wake();
+      } else if (!route.moved && within(route.el, route.lastX, route.lastY, 3)) {
+        selectVideoTrack(route.el.getAttribute("data-video-track"));
+      }
+    }
+    document.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "touch" || !e.isPrimary || e.button !== 0 ||
+          !monitor.classList.contains("show-video") || window.currentStageName !== "office") return;
+      var route = null;
+      if (within(bar, e.clientX, e.clientY, 8)) route = { kind: "slider", el: bar, apply: applySeek };
+      else if (within(vol, e.clientX, e.clientY, 8)) route = { kind: "slider", el: vol, apply: applyVolume };
+      else if (vidWrap.classList.contains("paused")) {
+        var picks = vidWrap.querySelectorAll(".vid-pick");
+        for (var i = 0; i < picks.length; i++) {
+          if (within(picks[i], e.clientX, e.clientY, 3)) {
+            route = { kind: "picker", el: picks[i], moved: false, x: e.clientX, y: e.clientY };
+            break;
+          }
+        }
+      }
+      if (!route) return;
+      route.pointerId = e.pointerId;
+      route.lastX = e.clientX; route.lastY = e.clientY;
+      mobileRoute = route;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (route.kind === "slider") { route.apply(fracFrom(route.el, e)); wake(); }
+    }, true);
+    document.addEventListener("pointermove", function (e) {
+      if (!mobileRoute || e.pointerId !== mobileRoute.pointerId) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      mobileRoute.lastX = e.clientX; mobileRoute.lastY = e.clientY;
+      if (mobileRoute.kind === "slider") {
+        mobileRoute.apply(fracFrom(mobileRoute.el, e)); wake();
+      } else if (Math.abs(e.clientX - mobileRoute.x) > 10 || Math.abs(e.clientY - mobileRoute.y) > 10) {
+        mobileRoute.moved = true;
+      }
+    }, true);
+    document.addEventListener("pointerup", function (e) { finishMobileRoute(e, false); }, true);
+    document.addEventListener("pointercancel", function (e) { finishMobileRoute(e, true); }, true);
     paintProgress(); paintPP(); paintVol();
   })();
   // ── video control strip (end) ─────────────────────────────────────────────────────

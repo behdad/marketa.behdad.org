@@ -844,7 +844,9 @@ Video, Browser, System, and About their own staged gag before teardown. They all
 cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.
 Video progress and volume drags use window-scoped pointer tracking for mouse/pen
 and direct native touch tracking for Android; transformed-`foreignObject` pointer
-capture and synthesized touch-pointer moves are not assumed to succeed.
+capture is not assumed to succeed. A document-capture coordinate router additionally
+owns Android touch pointers over the chooser and sliders because a transformed
+`foreignObject` can paint those controls correctly while hit-testing the film beneath.
 Call first clears every owned connect/goodbye timer and ambient source, then drops its signal bars
 and waveform before the silent hang-up. Music cancels track fades/snippets, scratches and slows the
 live media element while its SVG notes leave the staff, then pauses and rewinds every catalog track,

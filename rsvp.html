@@ -56354,8 +56354,9 @@ setOfficeProgress("pc", false);
     document.addEventListener("webkitfullscreenchange", paintFsIcon);
     paintFsIcon();
     // Shared slider plumbing: fraction from the track's live screen rect (scale-proof —
-    // both values are screen coordinates). Track the active pointer at window scope:
-    // pointer capture can fail inside the monitor's transformed foreignObject on Android.
+    // both values are screen coordinates). Mouse/pen drags live at window scope because
+    // pointer capture can fail inside the transformed foreignObject. Touch owns a native
+    // path: Android does not reliably synthesize pointer moves for this surface.
     function fracFrom(el, e) {
       var r = el.getBoundingClientRect();
       if (!(r.width > 0)) return 0;
@@ -56363,6 +56364,7 @@ setOfficeProgress("pc", false);
     }
     function wireSlider(el, apply) {
       var activePointer = null;
+      var activeTouch = null;
       function move(e) {
         if (activePointer == null || e.pointerId !== activePointer) return;
         e.preventDefault();
@@ -56377,6 +56379,7 @@ setOfficeProgress("pc", false);
         window.removeEventListener("pointercancel", end, true);
       }
       el.addEventListener("pointerdown", function (e) {
+        if (e.pointerType === "touch") return;
         if (e.button != null && e.button !== 0) return;
         e.stopPropagation(); e.preventDefault();
         if (activePointer != null) end({ pointerId: activePointer, type: "pointercancel" });
@@ -56387,6 +56390,35 @@ setOfficeProgress("pc", false);
         window.addEventListener("pointerup", end, true);
         window.addEventListener("pointercancel", end, true);
       });
+      function findTouch(list, id) {
+        for (var i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i];
+        return null;
+      }
+      el.addEventListener("touchstart", function (e) {
+        if (activeTouch != null || e.changedTouches.length !== 1) return;
+        var touch = e.changedTouches[0];
+        activeTouch = touch.identifier;
+        e.stopPropagation(); e.preventDefault();
+        apply(fracFrom(el, touch)); wake();
+      }, { passive: false });
+      el.addEventListener("touchmove", function (e) {
+        if (activeTouch == null) return;
+        var touch = findTouch(e.touches, activeTouch);
+        if (!touch) return;
+        e.stopPropagation(); e.preventDefault();
+        apply(fracFrom(el, touch)); wake();
+      }, { passive: false });
+      function endTouch(e) {
+        if (activeTouch == null) return;
+        var touch = findTouch(e.changedTouches, activeTouch);
+        if (!touch) return;
+        e.stopPropagation(); e.preventDefault();
+        if (e.type === "touchend") apply(fracFrom(el, touch));
+        activeTouch = null;
+        wake();
+      }
+      el.addEventListener("touchend", endTouch, { passive: false });
+      el.addEventListener("touchcancel", endTouch, { passive: false });
     }
     wireSlider(bar, function (frac) {
       var d = vidEl.duration;

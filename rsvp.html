@@ -60096,7 +60096,16 @@ async def localfont(name):
   // ±9dB; double-tap a slider to zero its band.
   var manualEqG = document.getElementById("monitor-manual-eq");
   var meqRepaints = []; // one per band, for the reset button
+  var meqSyntheticContextAt = 0;
   if (manualEqG) {
+    // Android does not synthesize a dependable contextmenu from a long-press on transformed
+    // SVG. Suppress only the late native duplicate after our own hold has opened the real menu.
+    manualEqG.addEventListener("contextmenu", function (ev) {
+      if (ev.isTrusted && Date.now() - meqSyntheticContextAt < 900) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+      }
+    }, true);
     var MEQ_COLORS = ["#d9a6a6", "#e0935a", "#e8b93a", "#7fb35c", "#6f94bd", "#9c6bb8"];
     var MEQ_TOP = 169.5, MEQ_H = 12, MEQ_MID = MEQ_TOP + MEQ_H / 2;
     MANUAL_EQ_FREQS.forEach(function (fq, i) {
@@ -60124,11 +60133,31 @@ async def localfont(name):
           eggBubble(manualEqG, (T[lang] && T[lang].eq_off_note) || T.en.eq_off_note);
           return;
         }
+        var startX = ev.clientX, startY = ev.clientY, startDb = manualEqDb[i];
+        var holdOpened = false, holdTimer = null;
+        if (ev.pointerType === "touch") {
+          holdTimer = setTimeout(function () {
+            holdTimer = null;
+            holdOpened = true;
+            setManualEqBand(i, startDb); paintThumb();
+            meqSyntheticContextAt = Date.now();
+            hit.dispatchEvent(new MouseEvent("contextmenu", {
+              bubbles: true, cancelable: true, button: 2, clientX: startX, clientY: startY
+            }));
+          }, 520);
+        }
         try { hit.setPointerCapture(ev.pointerId); } catch (e) {}
         scheduleSaver(15000); // adjusting the EQ is player activity — hold the screensaver off
         setManualEqBand(i, dbFromPointer(ev)); paintThumb();
-        function onMove(mv) { scheduleSaver(15000); setManualEqBand(i, dbFromPointer(mv)); paintThumb(); }
+        function onMove(mv) {
+          if (holdOpened) return;
+          if (holdTimer && Math.hypot(mv.clientX - startX, mv.clientY - startY) > 10) {
+            clearTimeout(holdTimer); holdTimer = null;
+          }
+          scheduleSaver(15000); setManualEqBand(i, dbFromPointer(mv)); paintThumb();
+        }
         function onUp() {
+          if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
           hit.removeEventListener("pointermove", onMove);
           hit.removeEventListener("pointerup", onUp);
           hit.removeEventListener("pointercancel", onUp);

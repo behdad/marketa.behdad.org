@@ -765,6 +765,9 @@ from claiming the gesture and paints the live ghost when transformed pointer
 movement is delayed. Drag completion listens at `window` scope so failed pointer
 capture cannot lose the release. Mines suppresses Android's synthetic
 `contextmenu` after its own hold-to-flag timer so one hold cannot toggle twice.
+The manual EQ similarly synthesizes its normal monitor context menu after a
+stationary Android hold, cancels that hold once a band adjustment exceeds the
+movement slop, and suppresses only the platform's late duplicate context event.
 The individual app surfaces remain de-layered and gated by `visibility` plus
 `pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
 and `node tests/classics-touch.mjs`.

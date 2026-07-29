@@ -234,6 +234,10 @@ In Mines, tap a square to reveal it or press and hold to place or remove a flag.
 The `mines()` and `solitaire()` console commands open either game directly.
 Use the top-right **Back** control to return to the chooser.
 
+In the monitor music player, drag an equalizer band vertically to adjust it.
+Double-tap a band to zero that band. On touch devices, press and hold a band to
+open the same **Reset EQ** and **Kill** menu provided by right-click.
+
 The monitor's **snake** app runs the four-player DOS edition of Nibbles. It is
 also discoverable by searching for `nibbles` or `dos`.
 

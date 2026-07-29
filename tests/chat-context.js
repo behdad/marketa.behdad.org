@@ -81,14 +81,14 @@ check(sources.games && sources.games.some(function (g) { return g.id === "flair-
   sources.games.some(function (g) { return g.id === "hack-man" && /Search for hackman/.test(g.how_to_open) && g.high_score === 1930; }) &&
   sources.games.some(function (g) { return g.id === "mines" && /office computer/.test(g.location) && /phone/.test(g.location); }) &&
   sources.games.some(function (g) { return g.id === "shoot" && g.name === "Shoot" && /Duke Nukem 3D, Doom, or Quake III Arena/.test(g.how_to_open); }) &&
-  sources.games.some(function (g) { return g.id === "snakes" && !Object.prototype.hasOwnProperty.call(g, "high_score"); }),
+  sources.games.some(function (g) { return g.id === "snake" && !Object.prototype.hasOwnProperty.call(g, "high_score"); }),
   "game questions retrieve canonical locations and only real persisted personal bests", sources.games);
 check(sources.games.every(function (game) { return workerSet("PUBLIC_GAME_IDS").indexOf(game.id) >= 0; }),
   "the Worker safety allowlist covers every game derived from the live registries", sources.games);
 check(sources.liveScore && sources.liveScore.high_score === 88,
   "game scores are read from the live controller snapshot at request time", sources.liveScore);
 check(sources.registryGames && sources.registryGames.some(function (g) { return g.id === "life" && g.name === "Registry Game" && /Search for life/.test(g.how_to_open); }) &&
-  !sources.registryGames.some(function (g) { return g.id === "mines" || g.id === "quiz" || g.id === "snakes" || g.id === "shoot"; }),
+  !sources.registryGames.some(function (g) { return g.id === "mines" || g.id === "quiz" || g.id === "snake" || g.id === "shoot"; }),
   "app games are derived from the current app registry rather than a fixed assistant-only list", sources.registryGames);
 check(sources.media && sources.media.music.catalog.some(function (track) { return /Čí že sú to koně/.test(track.title); }) &&
   sources.media.music.available_in.some(function (where) { return /phone/.test(where); }) &&

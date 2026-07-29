@@ -171,7 +171,7 @@ handle.
 
 ## Adding a new sound
 
-The monitor’s `snakes` DOS bundle is deliberately silent:
+The monitor’s `snake` DOS bundle is deliberately silent:
 `dos/player.html` starts js-dos with volume zero and DOSBox sound devices
 disabled. It does not create or join the loft’s shared audio graph.
 

@@ -232,6 +232,9 @@ recycles, and puts Behdad, Markéta, and Ali on the kings, queens, and jacks.
 The `mines()` and `solitaire()` console commands open either game directly.
 Use the top-right **Back** control to return to the chooser.
 
+The monitor's **snake** app runs the four-player DOS edition of Nibbles. It is
+also discoverable by searching for `nibbles` or `dos`.
+
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.
 

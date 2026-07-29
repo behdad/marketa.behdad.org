@@ -1,6 +1,6 @@
-# snakes DOS runtime
+# snake DOS runtime
 
-The monitor’s `snakes` app is a pinned, self-hosted DOSBox runtime. It boots
+The monitor’s `snake` app is a pinned, self-hosted DOSBox runtime. It boots
 directly into an owner-supplied historical MS-DOS Nibbles executable modified by
 Behdad’s friend `bigbug` to support up to four players. `Esc` leaves the game at
 DOSBox’s real `C:\>` shell.
@@ -19,7 +19,7 @@ components. The Nibbles executable is preserved byte-for-byte as supplied by
 the owner; no QBasic/Microsoft source is included, and that executable is not
 described as open source.
 
-`snakes.jsdos` is a ZIP-format js-dos bundle assembled from the pinned
+`snake.jsdos` is a ZIP-format js-dos bundle assembled from the pinned
 `source/nibbles.exe` plus the locally authored DOSBox configuration and
 `README.TXT` in `bundle-config/`. Its SHA-256 is
 `15f35bb40c086fda6b76ae87d7b14839c0f029f061e643a5a6a4e68494598408`.
@@ -29,7 +29,7 @@ described as open source.
 Copy `source/nibbles.exe` to the bundle root as `NIBBLES.EXE`, add
 `bundle-config/dosbox.conf` as `.jsdos/dosbox.conf`, and add
 `bundle-config/README.TXT` as `README.TXT`. Zip those entries with Deflate
-compression and name the result `snakes.jsdos`.
+compression and name the result `snake.jsdos`.
 
 This compiled QBasic-era DOS executable runs without a DPMI host, so CWSDPMI is
 not bundled.

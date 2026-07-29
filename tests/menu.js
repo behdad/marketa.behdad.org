@@ -37,7 +37,7 @@ var HARNESS = [
   "  function mon(){ return document.getElementById('office-monitor'); }",
   "  function reg(id){ return !!(window.__monitorAppRunning&&window.__monitorAppRunning(id)); }",
   "  function dot(id){ var c=document.getElementById('monitor-dock-'+id); return !!(c&&c.classList.contains('is-running')); }",
-  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-clock','show-video','show-tattoo','show-life','show-code','show-browser','show-family','photobooth','show-python','show-linux','show-snakes','show-console','show-doom','show-help'];",
+  "  var APP_CLASSES=['show-caps','show-nowplaying','show-mail','show-mines','show-weather','show-chat','show-calendar','show-clock','show-video','show-tattoo','show-life','show-code','show-browser','show-family','photobooth','show-python','show-linux','show-snake','show-console','show-doom','show-help'];",
   "  function showApp(cls){ var m=mon(); APP_CLASSES.forEach(function(c){m.classList.remove(c);}); m.classList.add('screen-on'); if(cls) m.classList.add(cls); window.currentStageName='office'; }",
   "  async function run(){",
   "    if (window.goToStage) window.goToStage('office');",
@@ -262,7 +262,7 @@ var HARNESS = [
   // A fresh desktop has no killable tasks and no dots; adding the overlay must not resize cells.
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-caps'); await sleep(0);",
   "    var desktopDock=document.getElementById('monitor-desktop-dock'); mon().classList.remove('tap-blink'); desktopDock.dispatchEvent(new MouseEvent('click',{bubbles:true})); S('desk_blank_click_no_flicker',!mon().classList.contains('tap-blink'));",
-  "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','tattoo','life','classics','shoot','snakes','code','console','python','linux']; var freshOpenOnly=true;",
+  "    var allTiles=['chrome','music','photobooth','video','call','chat','mail','tattoo','life','classics','shoot','snake','code','console','python','linux']; var freshOpenOnly=true;",
   "    for(var di=0;di<allTiles.length;di++){ctxAt(deskTile(allTiles[di])); if(!monOpen()||monKill()) freshOpenOnly=false; escMenu();}",
   "    S('desk_fresh_all_open_only',freshOpenOnly); S('desk_fresh_no_dots',allTiles.every(function(id){return !dot(id);}));",
   "    var mailTile=deskTile('mail'), mailBox0=mailTile.getBoundingClientRect();",
@@ -279,7 +279,7 @@ var HARNESS = [
   "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); showApp('show-mail'); await sleep(0); showApp('show-mines'); await sleep(0); showApp('show-caps'); await sleep(0);",
   "    S('desk_switch_kept_both_running',reg('mail')&&reg('classics')&&dot('mail')&&dot('classics'));",
   // Every monitor class, including toolbar-only Weather and the three runtime consoles, maps in.
-  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['clock','show-clock'],['tattoo','show-tattoo'],['classics','show-mines'],['life','show-life'],['shoot','show-doom'],['snakes','show-snakes'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather'],['help','show-help']];",
+  "    if(window.__clearMonitorRunningApps) window.__clearMonitorRunningApps(); var regApps=[['chrome','show-browser'],['music','show-nowplaying'],['photobooth','photobooth'],['video','show-video'],['call','show-family'],['chat','show-chat'],['mail','show-mail'],['calendar','show-calendar'],['clock','show-clock'],['tattoo','show-tattoo'],['classics','show-mines'],['life','show-life'],['shoot','show-doom'],['snake','show-snake'],['code','show-code'],['console','show-console'],['python','show-python'],['linux','show-linux'],['weather','show-weather'],['help','show-help']];",
   "    for(var ri=0;ri<regApps.length;ri++){showApp(regApps[ri][1]); await sleep(0);} showApp('show-caps'); await sleep(0);",
   "    S('desk_every_app_registered',regApps.every(function(a){return reg(a[0]);})); S('desk_every_tiled_app_dotted',regApps.filter(function(a){return a[0]!=='weather'&&a[0]!=='clock'&&a[0]!=='calendar'&&a[0]!=='help';}).every(function(a){return dot(a[0]);}));",
   // Every registered plain app, including Browser and Console, exposes its established Kill.

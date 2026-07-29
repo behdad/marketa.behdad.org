@@ -805,12 +805,12 @@ this Emscripten/WebGL build. Like every
 canvas/video/iframe inside the scaled monitor `foreignObject`, these game rasters
 remain a known blank-compositing limitation on WebKit.
 
-The `show-snakes` app lazily creates one same-origin `dos/player.html` iframe.
-The child owns js-dos and DOSBox; parent `snakes-control` messages pause, resume,
+The `show-snake` app lazily creates one same-origin `dos/player.html` iframe.
+The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
 or stop it. Normal close pauses and retains the frame. Kill/Restart calls
 `player.stop()` and removes the iframe, which releases the WASM machine and all
 child listeners. Child readiness gates runtime Kill, and a normalized
-`snakes-context` bridge reuses the monitor’s ordinary Restart/Kill menu. The
+`snake-context` bridge reuses the monitor’s ordinary Restart/Kill menu. The
 bundle autoexec runs the owner-supplied historical Nibbles build once; that
 build was modified by `bigbug` for four-player support. It deliberately leaves
 DOSBox’s internal shell at `C:\>` after the game exits. Repacking, hashes, and

@@ -1,4 +1,4 @@
-SNAKES
+SNAKE
 ======
 
 Historical MS-DOS Nibbles build supplied by the site owner.

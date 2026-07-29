@@ -23,10 +23,10 @@ const MAX_CODE_EDIT_TOTAL_CHARS = 12_000;
 const TURNSTILE_TIMEOUT_MS = 10_000;
 const UPSTREAM_TIMEOUT_MS = 35_000;
 const CHAT_KNOWLEDGE_JSON = JSON.stringify(CHAT_KNOWLEDGE);
-const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "mines", "pacman", "life", "snakes", "shoot", "doom", "duke", "quake3", "quake", "code", "console", "python", "linux", "weather", "clock", "system", "about", "help", "credits"]);
+const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "classics", "mines", "solitaire", "pacman", "life", "snake", "shoot", "doom", "duke", "quake3", "quake", "code", "console", "python", "linux", "weather", "clock", "system", "about", "help", "credits"]);
 const PUBLIC_PHONE_APPS = new Set(["call", "messages", "mail", "calendar", "album", "photobooth", "music", "hn", "weather", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"]);
 const PUBLIC_MAIL_IDS = new Set(["lore", "rsvp", "spam"]);
-const PUBLIC_GAME_IDS = new Set(["flair-catch", "alien-resources", "block-party", "hack-man", "mines", "quiz", "life", "snakes", "shoot", "octi-escape"]);
+const PUBLIC_GAME_IDS = new Set(["flair-catch", "alien-resources", "block-party", "hack-man", "mines", "solitaire", "quiz", "life", "snake", "shoot", "octi-escape"]);
 
 const ACTION_SPECS = Object.freeze({
   "room.go": Object.freeze({ room: new Set(["kitchen", "garden", "cuddly", "office", "balcony"]) }),

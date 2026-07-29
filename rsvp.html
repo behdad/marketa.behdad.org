@@ -95859,7 +95859,6 @@ function spawnDustMote(container) {
     window.addEventListener("blur", recoveryBlurHandler);
   }
   function applyCheckpoint(saved) {
-    hideRecoveryGate();
     restoreCheckpointPuzzle(saved.puzzle);
     // A checkpoint predating the adapter registry (including the deliberately compact portable
     // handoff) has no systems property at all. Its legacy puzzle fields remain authoritative
@@ -95884,6 +95883,12 @@ function spawnDustMote(container) {
     goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
     if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "afterStage");
     endAttract();
+    // The recovery surface is also the paint cover for restoration. Keep it mounted while
+    // puzzle, environment, occasion, party and room owners settle, then discard the preview
+    // snapshot: restoring that pre-gate snapshot now would overwrite the checkpoint we just
+    // applied. This makes Continue one atomic reveal instead of exposing fresh-page decor.
+    recoveryPreviewLook = null;
+    hideRecoveryGate();
     saveCheckpoint();
   }
   function startRecoveryTrailer() {

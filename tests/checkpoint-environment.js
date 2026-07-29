@@ -9,14 +9,17 @@ var HARNESS = [
   'var saved={version:1,savedAt:Date.now()-1000,progress:{room:"kitchen",maxUnlocked:4,phase2:true,party:false,daylight:true,bbq:false},puzzle:{},systems:{environment:{weather:{rain:true,storm:true,overcast:false},aurora:{mode:"on",kp:7},smoke:true,outdoorC:-25,units:{indoor:"F",outdoor:"F"}}}};',
   'if(!sessionStorage.getItem("checkpoint-environment-seeded")){sessionStorage.setItem("checkpoint-environment-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
-  'var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn");if(button)button.click();',
+  'var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn"),covered=[];',
+  '["__restoreCheckpointSystems","__setPartyMode","__setDayNight","goToStage"].forEach(function(name){var original=window[name];if(typeof original!=="function")return;window[name]=function(){covered.push({name:name,gate:!!document.getElementById("loft-recovery-gate")});return original.apply(this,arguments);};});',
+  'if(button)button.click();',
+  'var restoreCovered=covered.slice();',
   'var restored={room:window.currentStageName,weather:window.__weatherCheckpointState(),aurora:window.__auroraCheckpointState(),season:window.__seasonPreviewName(),temp:window.__outdoorTempOverride(),units:window.__tempDisplayUnits(),particles:{rain:document.querySelectorAll(".balc-drop").length,meteors:document.querySelectorAll(".sky-meteor").length}};',
   'window.__saveLoftCheckpoint();var recaptured=JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.environment;',
   'window.__restoreCheckpointSystems({environment:{weather:{rain:"yes"},aurora:{mode:"on",kp:12},smoke:"yes",outdoorC:200,units:{indoor:"K",outdoor:"F"}}},"beforeStage");',
   'window.__restoreCheckpointSystems({environment:{weather:{rain:"yes"},aurora:{mode:"on",kp:12},smoke:"yes",outdoorC:200,units:{indoor:"K",outdoor:"F"}}},"afterStage");',
   'var malformed={weather:window.__weatherCheckpointState(),aurora:window.__auroraCheckpointState(),season:window.__seasonPreviewName(),temp:window.__outdoorTempOverride(),units:window.__tempDisplayUnits()};',
   'window.__wxOvercast=true;window.__applyBalconyWeather();var derived=window.__captureCheckpointSystems().environment||null;',
-  'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,restored:restored,recaptured:recaptured,malformed:malformed,derived:derived});',
+  'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,covered:restoreCovered,gateAfter:!!document.getElementById("loft-recovery-gate"),restored:restored,recaptured:recaptured,malformed:malformed,derived:derived});',
   '}catch(e){document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs.concat([String(e&&e.stack||e)])});}},450);});',
   '})();</script>'
 ].join("\n");
@@ -38,6 +41,8 @@ if (!result) {
 }
 
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
+check(result.covered && result.covered.length >= 5 && result.covered.every(function (step) { return step.gate; }) && !result.gateAfter,
+  "Continue keeps the recovery paint cover through both restore phases, environment, occasion/daylight, and room settlement", result.covered);
 check(result.restored && result.restored.room === "kitchen" &&
   result.restored.weather && result.restored.weather.rain && result.restored.weather.storm &&
   result.restored.weather.overcast === false && result.restored.particles.rain === 0,

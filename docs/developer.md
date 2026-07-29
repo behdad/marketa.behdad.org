@@ -250,6 +250,10 @@ gates allow it. Live observations and derived rolls remain fresh; calls, cameras
 timers, spawned effects, runtimes, and live minigame loops stay stopped. Geometry owners capture only
 validated settled state and restore it in `afterStage`, never transient drag motion or reactions.
 Finite quantities are bounded, and in-flight actions normalize to a safe settled state before capture.
+The recovery gate remains mounted as a paint cover through both restore phases, environment and
+occasion settlement, and the final room change. `applyCheckpoint` then discards the preview snapshot
+before removing the gate, so Continue reveals one settled frame instead of briefly exposing
+fresh-page decor or restoring the preview over the checkpoint.
 When a larger scene owner can establish presentation during recovery, its manual-state adapter also
 settles in `afterStage`, after that owner, so the visitor's saved choice has final authority.
 Conditionally rendered keepsakes carry their effective date and restore only after that same date

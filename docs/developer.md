@@ -1059,6 +1059,15 @@ retains at most 40 local rows once idle, and the Worker accepts at most 24 histo
 mode sends no private history and instead sends sanitized cast, reply target, at most 12 recent
 messages, people, and reactions.
 
+Game, activity, music, film, and scripting answers are registry-backed. App games and their
+activities come from the monitor/phone app definitions; the four scene-only hidden games retain a
+small physical-opening guide, while high scores are read from their live controller snapshots.
+Song and film titles come from the player playlists. `__chatApiManifest()` derives JavaScript
+commands from `CONSOLE_CMDS` + `CONSOLE_HELP` and typed calls from `loft.api`; Charlie receives it
+only for scripting questions, while every JavaScript Code-assistant request receives the same
+manifest with its async-function calling context. Keep the Worker sanitizers and prompt rules in
+sync when adding a new public context field.
+
 The client lazy-loads Turnstile, obtains a token for the chat action, and prewarms/caches a recent
 token. Requests use `AbortController` and a roughly 20-second browser timeout. The app renders
 configuration, verification, rate-limit, timeout, and upstream failures as user-facing errors.

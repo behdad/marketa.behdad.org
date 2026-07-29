@@ -143,6 +143,9 @@ var harness = [
   '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastCodeError;',
   '  document.getElementById("monitor-console-close").dispatchEvent(new MouseEvent("click",{bubbles:true})); await new Promise(function(r){setTimeout(r,20)});',
   '  out.codeReturned=mon.classList.contains("show-code"); out.failedStatus=document.getElementById("monitor-code-ai-status").textContent;',
+  '  var aiBody=null;window.__monitorChatTurnstile=function(){return Promise.resolve("code-test-token");};window.fetch=function(_url,opts){aiBody=JSON.parse(opts.body);return Promise.resolve(new Response(JSON.stringify({reply:JSON.stringify({text:"reviewed",suggestion:"",replace:false,edits:[]})}),{status:200,headers:{"Content-Type":"application/json"}}));};',
+  '  document.getElementById("monitor-code-explain").click();await new Promise(function(r){setTimeout(r,100)});',
+  '  var api=aiBody&&aiBody.context&&aiBody.context.scripting_api;out.codeAiApi={mode:aiBody&&aiBody.mode,language:aiBody&&aiBody.code&&aiBody.code.language,party:api&&api.globals&&api.globals.party,music:api&&api.globals&&api.globals.music,runtime:api&&api.runtime,globals:api&&Object.keys(api.globals).length,commands:window.__loftCommands().length};',
   '  mon.classList.remove("show-code","show-console"); mon.classList.add("here","show-caps","show-python");',
   '  document.getElementById("monitor-python").classList.add("turtle-view"); var gfx=document.getElementById("monitor-py-turtle"),gfxClicks=0;',
   '  mon.addEventListener("click",function(){gfxClicks++}); gfx.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true})); gfx.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));',
@@ -171,6 +174,10 @@ if (state && !state.error) {
     "a JavaScript Code exception opens the JS Console with the actual error", state);
   check(state.codeReturned && /failed/i.test(state.failedStatus) && !/finished/i.test(state.failedStatus),
     "Back returns to the Code and failure is not overwritten by a success status", state);
+  check(state.codeAiApi && state.codeAiApi.mode === "code_assist" && state.codeAiApi.language === "js" &&
+      /party\(true\)/.test(state.codeAiApi.party) && /marketa-czech/.test(state.codeAiApi.music) &&
+      /top-level await/.test(state.codeAiApi.runtime) && state.codeAiApi.globals === state.codeAiApi.commands,
+    "the JavaScript coder receives the shared live console roster, usage help, and async calling context", state.codeAiApi);
   check(state.gfxOwned,
     "clicking or double-clicking Turtle graphics stays inside Python instead of reaching the monitor repaint/swap handlers", state);
   check(state.svgDisplay && state.svgClears,

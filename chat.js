@@ -23,7 +23,7 @@ const MAX_CODE_EDIT_TOTAL_CHARS = 12_000;
 const TURNSTILE_TIMEOUT_MS = 10_000;
 const UPSTREAM_TIMEOUT_MS = 35_000;
 const CHAT_KNOWLEDGE_JSON = JSON.stringify(CHAT_KNOWLEDGE);
-const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "mines", "life", "doom", "code", "console", "python", "linux", "weather"]);
+const PUBLIC_MONITOR_APPS = new Set(["chrome", "music", "photobooth", "video", "call", "chat", "mail", "calendar", "tattoo", "mines", "pacman", "life", "snakes", "shoot", "doom", "duke", "quake3", "quake", "code", "console", "python", "linux", "weather", "clock", "system", "about", "help", "credits"]);
 const PUBLIC_PHONE_APPS = new Set(["call", "messages", "mail", "calendar", "album", "photobooth", "music", "hn", "weather", "clock", "calculator", "currency", "notes", "cards", "flashlight", "browser", "cocktails", "dressup", "mines", "quiz"]);
 const PUBLIC_MAIL_IDS = new Set(["lore", "rsvp", "spam"]);
 const PUBLIC_GAME_IDS = new Set(["flair-catch", "alien-resources", "block-party", "hack-man", "mines", "quiz", "life", "snakes", "shoot", "octi-escape"]);
@@ -92,6 +92,12 @@ Current game state.current_hint is the instruction visible to the player now. Cu
 
 When current game state.apps.games is present, it is the authoritative game directory: use its exact public names, locations, how_to_open instructions, and live persisted high_score values. A broad question about what games exist MUST cover every supplied entry, not only games with currently available actions. Never substitute an internal/controller name such as "Invaders" for "Alien Resources", and never invent a Games menu or another location. Do not invent a high score for entries without that field.
 
+Current game state.apps.catalog is the live phone and office-computer app registry. Each app's
+activities array says what can actually be done inside it; use those exact entries to locate an
+activity instead of guessing from an app name. Current game state.media.music and .video contain
+the live recording and film catalogs plus their available_in app locations. Use the supplied
+titles exactly, including accents, and do not invent missing tracks, films, or apps.
+
 When current game state.scripting_api is present, it is the authoritative public reference for
 the Loft's typed loft.api capabilities and legacy console/global JavaScript commands. Use its
 descriptions, argument schemas, enums, and availability to answer API/signature questions and to
@@ -145,6 +151,11 @@ While a party is active, party_elapsed_seconds may gently affect adult guests' c
 Current game state.current_hint is the instruction visible to the visitor now. Current game state.instructions is the complete localized catalog of possible instruction captions; use it only as reference, and do not present a non-current caption as current.
 
 When current game state.apps.games is present, it is the authoritative game directory. For a broad question about available games, Charlie must cover every supplied entry using its exact public name, location, how_to_open instructions, and live persisted high_score values—not only games with currently available actions. Never rename "Alien Resources" to "Invaders" or invent a Games menu. Nobody should guess a score for entries without that field.
+
+Current game state.apps.catalog is the live phone and office-computer app registry. Each app's
+activities array says what can actually be done inside it. Current game state.media.music and
+.video contain the live recording and film catalogs plus their available_in app locations. Use
+their exact supplied titles and do not invent missing tracks, films, or apps.
 
 When current game state.scripting_api is present, use it as the authoritative public reference for
 Loft API signatures and console/global helpers. It is supplied only for scripting questions. Use it
@@ -384,8 +395,14 @@ function cleanMedia(value) {
       previous: cleanMusicItem(rawMusic.previous),
       next: cleanMusicItem(rawMusic.next),
       catalog: Array.isArray(rawMusic.catalog) ? rawMusic.catalog.slice(0, 6).map(cleanMusicItem).filter(Boolean) : [],
+      available_in: cleanStringArray(rawMusic.available_in).slice(0, 4),
     },
-    video: { open: Boolean(source.video && source.video.open), playing: Boolean(source.video && source.video.playing) },
+    video: {
+      open: Boolean(source.video && source.video.open),
+      playing: Boolean(source.video && source.video.playing),
+      catalog: Array.isArray(source.video && source.video.catalog) ? source.video.catalog.slice(0, 6).map(cleanMusicItem).filter(Boolean) : [],
+      available_in: cleanStringArray(source.video && source.video.available_in).slice(0, 4),
+    },
     party_dance: cleanText(source.party_dance, 32) || null,
     projector: new Set(["off", "fire", "coffee", "stars", "workout", "totoro", "aqua"]).has(source.projector) ? source.projector : null,
   };
@@ -479,8 +496,9 @@ function cleanAppCatalog(value) {
       const app = item && typeof item === "object" ? item : {};
       const id = cleanText(app.id, 40), label = cleanText(app.label, 80);
       if (!allowed.has(id) || !label) return [];
-      if (phone) return [{ id, label, installed: Boolean(app.installed) }];
-      return [{ id, label, access: app.access === "toolbar" ? "toolbar" : "desktop" }];
+      const activities = Array.isArray(app.activities) ? app.activities.slice(0, 12).map((activity) => cleanText(activity, 140)).filter(Boolean) : [];
+      if (phone) return [{ id, label, installed: Boolean(app.installed), activities }];
+      return [{ id, label, access: app.access === "toolbar" ? "toolbar" : app.access === "search" ? "search" : "desktop", activities }];
     }) : [];
   }
   return {

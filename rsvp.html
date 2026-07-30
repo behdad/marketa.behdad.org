@@ -498,6 +498,19 @@ footer{margin-top:2.6rem}
 #entrance-room-close:hover,#entrance-room-close:focus-visible{
   background:#8e3a4a; outline:2px solid #fffdf8;
 }
+.hunt-viewport.entrance-room-open #entrance-room-art.grooving .entrance-window-pane{
+  animation:entrance-glass-beat .7s ease-in-out infinite;
+  transform-box:fill-box;
+  transform-origin:center;
+}
+.hunt-viewport.entrance-room-open #entrance-room-art.grooving .entrance-window-pane:nth-of-type(even){
+  animation-delay:-.35s;
+}
+@keyframes entrance-glass-beat{
+  0%,100%{transform:translateX(0);opacity:1}
+  46%{transform:translateX(-.35px);opacity:.9}
+  54%{transform:translateX(.35px);opacity:.97}
+}
 .hunt-viewport.entrance-room-open #entrance-room{
   visibility:visible; pointer-events:auto; transform:translateY(0); transition-delay:0s;
 }
@@ -506,6 +519,7 @@ footer{margin-top:2.6rem}
   #cinema-room,#cinema-room *,#entrance-room,#entrance-room *{transition:none;scroll-behavior:auto}
   .hunt-viewport:is(.cinema-room-open,.entrance-room-open) #loft-game-strip{transition:none}
   .entrance-prop.reacting .entrance-hit{animation-duration:.01ms !important}
+  .hunt-viewport.entrance-room-open #entrance-room-art.grooving .entrance-window-pane{animation:none}
 }
 #bathroom-room[hidden]{display:none}
 #bathroom-room{
@@ -28991,25 +29005,25 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         </g>
         <!-- Four paired black-framed window bays; a few warm interiors keep the night inhabited. -->
         <g stroke="#11161b" stroke-width="6">
-          <g>
+          <g class="entrance-window-pane">
             <rect x="47" y="104" width="102" height="53" fill="url(#entrance-glass)"/>
             <rect x="47" y="166" width="102" height="25" fill="#1b252d"/>
             <path d="M98 104V191M47 130H149M47 178H149" stroke-width="3"/>
             <path d="M53 111L81 106M111 188L143 168" stroke="#75899a" stroke-width="2" opacity=".48"/>
           </g>
-          <g>
+          <g class="entrance-window-pane">
             <rect x="199" y="104" width="66" height="53" fill="#202b34"/>
             <rect x="199" y="166" width="66" height="25" fill="#d7a36d"/>
             <path d="M232 104V191M199 130H265M199 178H265" stroke-width="3"/>
             <path d="M205 111L225 105" stroke="#738899" stroke-width="2" opacity=".5"/>
           </g>
-          <g>
+          <g class="entrance-window-pane">
             <rect x="415" y="104" width="66" height="53" fill="#1b252d"/>
             <rect x="415" y="166" width="66" height="25" fill="#c98d5e"/>
             <path d="M448 104V191M415 130H481M415 178H481" stroke-width="3"/>
             <path d="M420 153L442 107" stroke="#72899a" stroke-width="2" opacity=".42"/>
           </g>
-          <g>
+          <g class="entrance-window-pane">
             <rect x="531" y="104" width="102" height="53" fill="url(#entrance-glass)"/>
             <rect x="531" y="166" width="102" height="25" fill="#19242c"/>
             <path d="M582 104V191M531 130H633M531 178H633" stroke-width="3"/>
@@ -29021,7 +29035,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <rect x="418" y="169" width="27" height="19"/><rect x="450" y="169" width="28" height="19"/>
         </g>
         <!-- Tall centre window, name stone, and deep wood-and-glass doorway. -->
-        <g>
+        <g class="entrance-window-pane">
           <path d="M287 68H393L401 80H279Z" fill="#d4c8af" stroke="#a99c85" stroke-width="1.2"/>
           <rect x="293" y="82" width="94" height="64" fill="url(#entrance-glass)" stroke="#11161b" stroke-width="7"/>
           <path d="M340 82V146M293 113H387" stroke="#11161b" stroke-width="4"/>
@@ -29464,6 +29478,7 @@ window.__bathroomRoomOpen = false;
   function closeBathroom() {
     if (!window.__bathroomRoomOpen) return false;
     window.__bathroomRoomOpen = false;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     resetBathroomProps();
     closing = true;
     viewport.classList.remove("bathroom-room-open");
@@ -29484,6 +29499,7 @@ window.__bathroomRoomOpen = false;
     closeTimer = null;
     closing = false;
     window.__bathroomRoomOpen = true;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     room.hidden = false;
     requestAnimationFrame(function () {
@@ -29658,6 +29674,7 @@ window.__cinemaVideoLoaded = false;
     if (!window.__cinemaRoomOpen) return false;
     clearPlayer();
     window.__cinemaRoomOpen = false;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     syncCuddlyOccupants(false);
     cinemaClosing = true;
     viewport.classList.remove("cinema-room-open");
@@ -29679,6 +29696,7 @@ window.__cinemaVideoLoaded = false;
     cinemaCloseTimer = null;
     cinemaClosing = false;
     window.__cinemaRoomOpen = true;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     syncCuddlyOccupants(true);
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     syncCinemaDayNight();
@@ -29835,6 +29853,8 @@ window.__entranceRoomOpen = false;
   function closeEntrance() {
     if (!window.__entranceRoomOpen) return false;
     window.__entranceRoomOpen = false;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
+    if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     clearEntranceInteractions();
     closing = true;
     viewport.classList.remove("entrance-room-open");
@@ -29853,6 +29873,8 @@ window.__entranceRoomOpen = false;
     closing = false;
     clearEntranceInteractions();
     window.__entranceRoomOpen = true;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
+    if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     room.hidden = false;
     requestAnimationFrame(function () {
@@ -30071,6 +30093,7 @@ window.__bedroomRoomOpen = false;
   function closeBedroom() {
     if (!window.__bedroomRoomOpen) return false;
     window.__bedroomRoomOpen = false;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     closing = true;
     resetProps();
     viewport.classList.remove("bedroom-room-open");
@@ -30094,6 +30117,7 @@ window.__bedroomRoomOpen = false;
     syncNight();
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     window.__bedroomRoomOpen = true;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     room.hidden = false;
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
@@ -30248,6 +30272,55 @@ if (window.__closeBedroomRoom) window.__registerTransientResetHook("bedroom-room
 // getSfxCtx(); the song pipeline uses the raw shared context. Exactly ONE AudioContext is
 // constructed at runtime — only here in getAudioCtx (see check.js).
 var __sharedAC = null, __sharedACFailed = false, __activeAudioBeds = 0;
+var __lowerFloorFilter = null, __lowerFloorGain = null;
+var LOWER_FLOOR_ACOUSTICS = {
+  upstairs: { room: "upstairs", gain: 1, cutoff: 20000 },
+  lower: { room: "lower", gain: 0.48, cutoff: 2400 },
+  bathroom: { room: "bathroom", gain: 0.30, cutoff: 1450 },
+  entrance: { room: "entrance", gain: 0.25, cutoff: 1200 }
+};
+function lowerFloorAcousticProfile() {
+  if (window.__entranceRoomOpen) return LOWER_FLOOR_ACOUSTICS.entrance;
+  if (window.__bathroomRoomOpen) return LOWER_FLOOR_ACOUSTICS.bathroom;
+  var prince = window.__princeState && window.__princeState();
+  if (window.__cinemaRoomOpen || window.__bedroomRoomOpen ||
+      (prince && prince.basement)) return LOWER_FLOOR_ACOUSTICS.lower;
+  return LOWER_FLOOR_ACOUSTICS.upstairs;
+}
+// Continuous loft-owned sound shares this final room-boundary stage. Local prop SFX
+// keep their separate bus, and Vimeo remains browser-owned foreground media.
+function lowerFloorAudioOutput(ac) {
+  if (__lowerFloorGain) return __lowerFloorFilter;
+  __lowerFloorFilter = ac.createBiquadFilter();
+  __lowerFloorFilter.type = "lowpass";
+  __lowerFloorFilter.Q.value = 0.55;
+  __lowerFloorGain = ac.createGain();
+  var profile = lowerFloorAcousticProfile();
+  __lowerFloorFilter.frequency.value = profile.cutoff;
+  __lowerFloorGain.gain.value = profile.gain;
+  __lowerFloorFilter.connect(__lowerFloorGain);
+  __lowerFloorGain.connect(ac.destination);
+  return __lowerFloorFilter;
+}
+window.__updateLowerFloorAcoustics = function () {
+  var profile = lowerFloorAcousticProfile();
+  if (__sharedAC && __lowerFloorFilter && __lowerFloorGain) {
+    var now = __sharedAC.currentTime;
+    try {
+      __lowerFloorFilter.frequency.cancelScheduledValues(now);
+      __lowerFloorFilter.frequency.setTargetAtTime(profile.cutoff, now, 0.32);
+      __lowerFloorGain.gain.cancelScheduledValues(now);
+      __lowerFloorGain.gain.setTargetAtTime(profile.gain, now, 0.32);
+    } catch (_error) {}
+  }
+  if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics();
+  return { room: profile.room, gain: profile.gain, cutoff: profile.cutoff };
+};
+window.__lowerFloorAcousticsState = function () {
+  var profile = lowerFloorAcousticProfile();
+  return { room: profile.room, gain: profile.gain, cutoff: profile.cutoff,
+    connected: !!(__lowerFloorFilter && __lowerFloorGain) };
+};
 // A foreground device owns the visitor's attention. Room-tone beds yield while the pocket
 // phone or a desk screen fills the view; songs, projector scores, calls and app media keep
 // their own lifecycles and are deliberately not included.
@@ -30362,7 +30435,7 @@ function audioBed() {
   resumeSharedAudio();
   var out = ac.createGain();
   out.gain.value = 1;
-  out.connect(ac.destination);
+  out.connect(lowerFloorAudioOutput(ac));
   __activeAudioBeds++;
   var closed = false;
   function ramp(to) {
@@ -49582,6 +49655,9 @@ setOfficeProgress("pc", false);
     v = Math.max(0, v);
     a._songLogicalLevel = v;
     var output = songOutputLevel(a, v);
+    // Captured songs reach the shared lower-floor bus. Native fallback audio cannot be
+    // filtered, so apply the same floor attenuation at its element-level output.
+    if (!a._eqGain) output *= lowerFloorAcousticProfile().gain;
     if (a._eqGain) {
       try { if (eqAudioCtx) a._eqGain.gain.setTargetAtTime(output, eqAudioCtx.currentTime, 0.012); else a._eqGain.gain.value = output; } catch (e) {}
     } else {
@@ -49727,7 +49803,7 @@ setOfficeProgress("pc", false);
       if (eqHeadphonePanner) eqHeadphoneRoute.connect(eqHeadphonePanner).connect(eqAnalyser);
       else if (eqPanner) eqHeadphoneRoute.connect(eqPanner);
       else eqHeadphoneRoute.connect(eqAnalyser);
-      eqAnalyser.connect(eqAudioCtx.destination); // keep the song audible
+      eqAnalyser.connect(lowerFloorAudioOutput(eqAudioCtx)); // audible through the current floor boundary
     } catch (e) {
       eqAudioCtx = null;
       eqCtxFailed = true;
@@ -62776,6 +62852,7 @@ async def localfont(name):
   function presentPrinceBasement() {
     if (!princeBasement || !huntViewport) return;
     princePresented = true;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     princeBasement.hidden = false;
     requestAnimationFrame(function () {
@@ -62793,6 +62870,7 @@ async def localfont(name):
     releasePrinceContextMenu();
     princeClosing = false;
     princePresented = false;
+    if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     princeOwnsFullscreen = false;
     if (princeRaisedMonitorFullscreen) {
       princeRaisedMonitorFullscreen = false;
@@ -96608,6 +96686,14 @@ function spawnDustMote(container) {
       if (pcLit) setGroove(led, durations.toe);
       else led.classList.remove("grooving");
     });
+    // The old entrance is outside the loft envelope: its glass gives the faintest
+    // beat-rattle only while that lower room is actually visible.
+    var entranceGlass = document.getElementById("entrance-room-art");
+    if (entranceGlass) {
+      if (window.__entranceRoomOpen && anyPlaying) setGroove(entranceGlass, durations.head);
+      else if (window.__entranceRoomOpen && partyMusicOn) partyGroove(entranceGlass);
+      else entranceGlass.classList.remove("grooving");
+    }
   }
   window.updateCuddlyGrooving = updateCuddlyGrooving;
   // The resident couple's presence in the nook by time of day (owner rule):

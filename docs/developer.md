@@ -586,7 +586,9 @@ selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
 in-flight class so no one-shot survives a room leave or reset.
 Like the other full-viewport overlays, it refreshes the shared room-ambience
 gate on both entry and return so the preserved Balcony cannot keep sounding
-under the street scene.
+under the street scene. `updateCuddlyGrooving()` also gates a restrained,
+phase-locked pulse across `.entrance-window-pane` only while Entrance is
+visible; the reduced-motion rule disables it.
 
 The Office Bedroom follows the same viewport-sibling contract as `#cinema-room`
 but is entirely native SVG. Entry pans the preserved Office strip to
@@ -629,6 +631,13 @@ lock gate only while any lower room owns the viewport and restores focus to the
 selected dot; keyboard horizontal pans restore focus to `.hunt-viewport`.
 Prince focus timers re-check `princeShouldRun()` so a parked iframe cannot steal
 focus back after any of these transitions.
+
+Every lower-room open/close hook also retargets the shared continuous-audio
+boundary via `__updateLowerFloorAcoustics()`. Dungeon, Cinema, and Bedroom use
+one moderate attenuation/low-pass profile; the enclosed Bathroom uses a much
+stronger treatment, and Entrance is quieter and darker still. The paired lateral pan closes and opens in one task, so
+AudioParam automation is cancelled and retargeted directly from one lower
+profile to the next rather than swelling upstairs between rooms.
 
 ### Shared projections
 
@@ -731,6 +740,11 @@ Consumers receive graph handles rather than lifecycle ownership of the context:
 consumer output. A consumer may fade its output, disconnect nodes, and close its handle; it must not
 suspend or close the shared context. `resumeSharedAudio()` resumes after a user gesture, and
 `__updateSharedAudioIdle()` suspends shared processing when no attended bed/song requires it.
+Continuous beds and captured songs meet again at `lowerFloorAudioOutput()`, a
+single low-pass/gain boundary before the shared destination. Native song
+fallback cannot be filtered, so `setSongLevel()` applies only the matching
+attenuation while downstairs. SFX bypass this boundary so an object clicked in
+a lower room still sounds local; Vimeo remains browser-owned foreground media.
 
 Room and party gates decide whether ambient beds should exist. Autonomous SFX must obey the
 visibility-and-focus rule; user-initiated SFX can rely on the gesture/focus path. Songs are

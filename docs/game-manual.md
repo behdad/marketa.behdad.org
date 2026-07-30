@@ -62,7 +62,10 @@ Enter, or select an app directly.
 plain `↓` descends from any main room into its lower room and plain `↑`
 returns upstairs. While downstairs, `←`/`→` pans laterally between adjacent
 lower rooms; any room dot stays on the lower floor and pans straight to the
-room beneath its selected main room.
+room beneath its selected main room. Music and other continuous loft sound
+become quieter and softly muffled downstairs; the enclosed Bathroom is
+especially muffled, and the street Entrance sounds quieter still. Returning
+upstairs restores the original mix.
 
 ## The guided room trail
 
@@ -230,7 +233,9 @@ night facade keeps the historic brick, stone, window, and timber-door character
 without reproducing an address. Every distinct street detail responds: tap or
 focus and press Enter/Space on any of the five window bays, the name stone,
 doors, entry lamps, tree canopy, or sidewalk for a small light, movement, and
-sound reaction. `↑`, Escape, Backspace, or × returns to the
+sound reaction. While music is playing, the visible entrance glass gives a
+subtle beat-rattle; reduced-motion visitors get a still facade. `↑`, Escape,
+Backspace, or × returns to the
 Balcony. `←` pans to the Bedroom; `→` stays at the lower floor's right edge,
 and a room dot pans directly to the lower room beneath its selection.
 

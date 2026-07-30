@@ -48,7 +48,8 @@ Everything mixes at the single `ac.destination`, but through three independent p
 their volume controls never double-scale:
 
 1. **Beds / dances** → `audioBed()`. Each bed's graph ends at the handle's `.destination`,
-   which is a per-bed unity **`_out` gain** → `ac.destination`. Music/projector/dance beds
+   which is a per-bed unity **`_out` gain** → the shared lower-floor boundary →
+   `ac.destination`. Music/projector/dance beds
    apply the volume-button level at their own in-graph `_masterGain` (`__songVolume()`);
    ambient environmental beds (fire, aqua hush, wind…) sit at fixed low levels and are NOT
    scaled by the button. The `bandari` source keeps its fast coastal 6/8 graph.
@@ -63,7 +64,8 @@ their volume controls never double-scale:
    shared context** (not a handle — it needs real `suspend/resume` and, crucially,
    `createMediaElementSource`, which irreversibly captures an `<audio>` element). Graph:
    `MediaElementSource → bassShelf → 6-band manual EQ → muffle → width → masterGain →
-   compressor → route → panner → analyser → ac.destination`. The normal route uses the
+   compressor → route → panner → analyser → the shared lower-floor boundary →
+   `ac.destination`. The normal route uses the
    room stereo panner; headphone mode crossfades to an HRTF panner whose restrained
    position follows the draggable office headphones.
 
@@ -72,6 +74,24 @@ their volume controls never double-scale:
 (`__audioMaster`) is the god-knob over everything (SFX master + folded into `__songVolume`).
 Overall level is otherwise the device's job. The headphone-mode filter (bass shelf +
 lowpass) lives only in the song pipeline — music-only, deliberately not applied to SFX/beds.
+
+## Lower-floor acoustics
+
+`lowerFloorAudioOutput()` is one lazily-created low-pass plus gain stage shared
+by continuous synth beds and captured loft songs. It creates no context. The
+main floor targets unity/20 kHz; Prince dungeon, Cinema, and Bedroom target
+`0.48`/2.4 kHz; the enclosed Bathroom targets `0.30`/1.45 kHz; and the exterior
+Entrance targets `0.25`/1.2 kHz. Changes
+use `setTargetAtTime` with a 320 ms time constant, so Down, Up, close, and
+lateral lower-room pans cannot click or leave stale attenuation behind.
+
+Local one-shot SFX deliberately bypass the boundary: a bathroom faucet or
+entrance window was touched in the room the visitor occupies and should remain
+present. Cross-origin Vimeo also bypasses it as deliberate Cinema foreground
+media. A song still on native `<audio>` fallback cannot receive Web Audio
+filtering, so `setSongLevel()` applies the profile's gain only; after capture,
+the logical level stays unchanged and the shared boundary owns both filtering
+and gain. Returning upstairs restores the exact logical level.
 
 Speech ("fishu" TTS) uses the browser **`speechSynthesis`** API — separate from Web Audio,
 never counted against the context cap. The formant/vocal-tract synths (giggle, espresso
@@ -223,5 +243,7 @@ disabled. It does not create or join the loft’s shared audio graph.
   (drone start/fade-stop storm, pause/groove), `tests/play.js` (full playthrough + click
   storm), `tests/projector-coffee.js` (seasonal order, translated now-playing, bed lifecycle),
   `tests/cinema-room.js` (foreground coverage, Vimeo teardown, party duck, navigation),
+  `tests/lower-audio.js` (all five lower profiles, native fallback attenuation,
+  lateral retargeting, exact upstairs restore, and Entrance glass groove),
   and `tests/piano-message.js` (message transition, layered keys, polyphony,
   backing-pause independence, and party continuity). All must pass.

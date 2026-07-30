@@ -563,7 +563,12 @@ the player iframe. The shared side Play/Pause and Next buttons are intercepted
 in capture phase while Cinema owns the viewport and speak to Vimeo through its
 postMessage API. A player iframe is removed on Choose another, projector-off,
 sprinkler short, close, reset, or `goToStage`, which is the cross-origin
-playback teardown.
+playback teardown. The calibrated HTML screen shell has no CSS border inset, so
+the 100% player reaches its four outer edges without changing Vimeo's iframe
+aspect behavior. The native SVG rim tracks that aperture with only a compact
+physical bezel instead of a broad black matte; its side reveal matches the
+top/bottom band made by Vimeo's preserved 16:9 player aspect, so the visible
+frame reads evenly on all four sides.
 
 `#cinema-projector-ray` is a clipped, blurred CSS projection cone behind the
 screen shell. Its `--cinema-poster` uses the selected local poster only—live

@@ -30,8 +30,8 @@ var HARNESS = [
   ' click(cinemaWindow);await sleep(40);var clickedNight=document.getElementById("cinema-room").classList.contains("cinema-night");click(cinemaWindow);await sleep(40);report.steps.cinemaWindowToggle={clickedNight:clickedNight,clickedDay:!document.getElementById("cinema-room").classList.contains("cinema-night")};',
   ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label"),window:cinemaWindow.getAttribute("aria-label"),neon:neon.getAttribute("aria-label")};setLang("en");',
   ' var film=document.querySelector(".cinema-film[data-vimeo-id=\\"1096537359\\"]");click(film);await sleep(80);var frame=document.getElementById("cinema-player");',
-  ' var shell=document.getElementById("cinema-screen-shell"),wrap=document.getElementById("cinema-player-wrap"),chooser=document.getElementById("cinema-chooser"),backButton=document.getElementById("cinema-chooser-back"),sr=shell.getBoundingClientRect(),wr=wrap.getBoundingClientRect(),fr=frame&&frame.getBoundingClientRect(),br=backButton.getBoundingClientRect(),rr=document.getElementById("cinema-room").getBoundingClientRect();',
-  ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,audioDuck:window.__cinemaAudioDuckState(),ray:parseFloat(getComputedStyle(document.getElementById("cinema-projector-ray")).opacity),chooser:chooser.hidden,chooserDisplay:getComputedStyle(chooser).display,geometry:fr&&{frame:[fr.left,fr.top,fr.width,fr.height],wrap:[wr.left,wr.top,wr.width,wr.height],shell:[sr.left+shell.clientLeft,sr.top+shell.clientTop,shell.clientWidth,shell.clientHeight],shellOuter:[sr.left,sr.top,sr.right,sr.bottom],back:[br.left,br.top,br.right,br.bottom],room:[rr.left,rr.top,rr.right,rr.bottom]}};',
+  ' var shell=document.getElementById("cinema-screen-shell"),bezel=document.getElementById("cinema-screen-bezel"),wrap=document.getElementById("cinema-player-wrap"),chooser=document.getElementById("cinema-chooser"),backButton=document.getElementById("cinema-chooser-back"),sr=shell.getBoundingClientRect(),zr=bezel.getBoundingClientRect(),wr=wrap.getBoundingClientRect(),fr=frame&&frame.getBoundingClientRect(),br=backButton.getBoundingClientRect(),rr=document.getElementById("cinema-room").getBoundingClientRect();',
+  ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,audioDuck:window.__cinemaAudioDuckState(),ray:parseFloat(getComputedStyle(document.getElementById("cinema-projector-ray")).opacity),chooser:chooser.hidden,chooserDisplay:getComputedStyle(chooser).display,geometry:fr&&{frame:[fr.left,fr.top,fr.width,fr.height],wrap:[wr.left,wr.top,wr.width,wr.height],shell:[sr.left+shell.clientLeft,sr.top+shell.clientTop,shell.clientWidth,shell.clientHeight],shellOuter:[sr.left,sr.top,sr.right,sr.bottom],bezel:[zr.left,zr.top,zr.right,zr.bottom],back:[br.left,br.top,br.right,br.bottom],room:[rr.left,rr.top,rr.right,rr.bottom]}};',
   ' click(document.getElementById("hunt-playpause-btn"));await sleep(30);var sidePause={state:window.__cinemaRoomState(),duck:window.__cinemaAudioDuckState()};click(document.getElementById("hunt-playpause-btn"));await sleep(30);var sidePlay={state:window.__cinemaRoomState(),duck:window.__cinemaAudioDuckState()};click(document.getElementById("hunt-skip-btn"));await sleep(40);report.steps.sideTransport={pause:sidePause,play:sidePlay,next:window.__cinemaRoomState()};',
   ' click(document.getElementById("cinema-sprinkler"));await sleep(80);var waterOverlay=document.getElementById("cinema-water-overlay"),screenShell=document.getElementById("cinema-screen-shell");report.steps.sprinklerShort={state:window.__cinemaRoomState(),frame:!!document.getElementById("cinema-player"),duck:window.__cinemaAudioDuckState(),spraying:document.getElementById("cinema-room").classList.contains("spraying"),overlay:{z:getComputedStyle(waterOverlay).zIndex,after:!!(screenShell.compareDocumentPosition(waterOverlay)&Node.DOCUMENT_POSITION_FOLLOWING),parent:waterOverlay.parentElement.id}};await sleep(3650);report.steps.sprinklerReboot={state:window.__cinemaRoomState(),chooser:document.getElementById("cinema-chooser").hidden,off:document.getElementById("cinema-screen-off").hidden};click(film);await sleep(40);',
   ' click(document.getElementById("cinema-chooser-back"));await sleep(40);report.steps.back={state:window.__cinemaRoomState(),frame:!!document.getElementById("cinema-player"),chooser:document.getElementById("cinema-chooser").hidden};',
@@ -138,9 +138,25 @@ check(s.play && s.play.state.playing && s.play.state.video === "1096537359" &&
   "choosing a film creates the privacy-conscious Vimeo player, projection ray, and whole-loft duck", s.play);
 check(s.play && s.play.chooserDisplay === "none" && s.play.geometry &&
    s.play.geometry.frame.every(function (value, index) { return Math.abs(value - s.play.geometry.wrap[index]) < 0.6; }) &&
-   Math.abs(s.play.geometry.frame[2] - s.play.geometry.shell[2]) < 0.6 &&
-   Math.abs(s.play.geometry.frame[3] - s.play.geometry.shell[3]) < 0.6,
-   "the Vimeo iframe fills the screen content box exactly", s.play && s.play.geometry);
+   Math.abs(s.play.geometry.frame[0] - s.play.geometry.shellOuter[0]) < 0.6 &&
+   Math.abs(s.play.geometry.frame[1] - s.play.geometry.shellOuter[1]) < 0.6 &&
+   Math.abs(s.play.geometry.frame[0] + s.play.geometry.frame[2] - s.play.geometry.shellOuter[2]) < 0.6 &&
+   Math.abs(s.play.geometry.frame[1] + s.play.geometry.frame[3] - s.play.geometry.shellOuter[3]) < 0.6,
+   "the Vimeo iframe reaches all four calibrated screen edges without a CSS matte", s.play && s.play.geometry);
+check(s.play && s.play.geometry &&
+   s.play.geometry.bezel[0] <= s.play.geometry.shellOuter[0] &&
+   s.play.geometry.bezel[1] <= s.play.geometry.shellOuter[1] &&
+   s.play.geometry.bezel[2] >= s.play.geometry.shellOuter[2] &&
+   s.play.geometry.bezel[3] >= s.play.geometry.shellOuter[3] &&
+   s.play.geometry.shellOuter[1] - s.play.geometry.bezel[1] < 3 &&
+   s.play.geometry.bezel[3] - s.play.geometry.shellOuter[3] < 3 &&
+   Math.abs((s.play.geometry.shellOuter[0] - s.play.geometry.bezel[0]) -
+     ((s.play.geometry.shellOuter[3] - s.play.geometry.shellOuter[1]) -
+      (s.play.geometry.shellOuter[2] - s.play.geometry.shellOuter[0]) * 9 / 16) / 2) < 1 &&
+   Math.abs((s.play.geometry.bezel[2] - s.play.geometry.shellOuter[2]) -
+     ((s.play.geometry.shellOuter[3] - s.play.geometry.shellOuter[1]) -
+      (s.play.geometry.shellOuter[2] - s.play.geometry.shellOuter[0]) * 9 / 16) / 2) < 1,
+   "the side bezel matches Vimeo's 16:9 top/bottom band for a uniform visible frame", s.play && s.play.geometry);
 check(s.play && s.play.geometry &&
    Math.abs(s.play.geometry.back[0] - s.play.geometry.shellOuter[0]) < 1 &&
    (s.play.geometry.back[1] + s.play.geometry.back[3]) / 2 - s.play.geometry.shellOuter[3] > 1 &&

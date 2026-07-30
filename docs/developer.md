@@ -649,9 +649,10 @@ Prince focus timers re-check `princeShouldRun()` so a parked iframe cannot steal
 focus back after any of these transitions.
 
 Every lower-room open/close hook also retargets the shared continuous-audio
-boundary via `__updateLowerFloorAcoustics()`. Dungeon, Cinema, and Bedroom use
-one moderate attenuation/low-pass profile; the enclosed Bathroom uses a much
-stronger treatment, and Entrance is quieter and darker still. The paired lateral pan closes and opens in one task, so
+boundary via `__updateLowerFloorAcoustics()`. Dungeon and Cinema share the
+moderate attenuation/low-pass profile; Bedroom keeps that filter with a
+slightly lower gain. The enclosed Bathroom uses a much stronger treatment, and
+Entrance is quieter and darker still. The paired lateral pan closes and opens in one task, so
 AudioParam automation is cancelled and retargeted directly from one lower
 profile to the next rather than swelling upstairs between rooms.
 

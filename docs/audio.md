@@ -79,8 +79,9 @@ lowpass) lives only in the song pipeline — music-only, deliberately not applie
 
 `lowerFloorAudioOutput()` is one lazily-created low-pass plus gain stage shared
 by continuous synth beds and captured loft songs. It creates no context. The
-main floor targets unity/20 kHz; Prince dungeon, Cinema, and Bedroom target
-`0.48`/2.4 kHz; the enclosed Bathroom targets `0.30`/1.45 kHz; and the exterior
+main floor targets unity/20 kHz; Prince dungeon and Cinema target
+`0.48`/2.4 kHz; Bedroom keeps the same 2.4 kHz filter at a quieter `0.40`;
+the enclosed Bathroom targets `0.30`/1.45 kHz; and the exterior
 Entrance targets `0.25`/1.2 kHz. Changes
 use `setTargetAtTime` with a 320 ms time constant, so Down, Up, close, and
 lateral lower-room pans cannot click or leave stale attenuation behind.

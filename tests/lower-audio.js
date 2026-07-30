@@ -42,12 +42,15 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.upstairs && s.upstairs.acoustics.room === "upstairs" &&
   s.upstairs.acoustics.gain === 1 && s.upstairs.acoustics.cutoff === 20000,
   "the main floor keeps the continuous loft bus at unity and full bandwidth", s.upstairs);
-["dungeon", "cinema", "bedroom"].forEach(function (room) {
+["dungeon", "cinema"].forEach(function (room) {
   check(s[room] && s[room].acoustics ? s[room].acoustics.room === "lower" &&
     s[room].acoustics.gain === 0.48 && s[room].acoustics.cutoff === 2400 :
     s[room] && s[room].room === "lower" && s[room].gain === 0.48 && s[room].cutoff === 2400,
     room + " uses the shared quieter, muffled lower-floor profile", s[room]);
 });
+check(s.bedroom && s.bedroom.room === "bedroom" &&
+  s.bedroom.gain === 0.40 && s.bedroom.cutoff === 2400,
+  "Bedroom retains the moderate filter with a modestly quieter gain", s.bedroom);
 check(s.bathroom && s.bathroom.acoustics.room === "bathroom" &&
   s.bathroom.acoustics.gain === 0.30 && s.bathroom.acoustics.cutoff === 1450 &&
   Math.abs(s.bathroom.volume - .12) < .01,
@@ -58,7 +61,8 @@ check(s.entrance && s.entrance.acoustics.room === "entrance" &&
   "the outside Entrance is quieter and more muffled than the other lower rooms", s.entrance);
 check(s.entrance && s.entrance.grooving,
   "visible Entrance glass picks up the existing music groove", s.entrance);
-check(s.lateral && s.lateral.acoustics.room === "lower" && !s.lateral.entranceGrooving,
+check(s.lateral && s.lateral.acoustics.room === "bedroom" &&
+  s.lateral.acoustics.gain === 0.40 && !s.lateral.entranceGrooving,
   "a lateral lower-room pan retargets acoustics without leaving the Entrance groove behind", s.lateral);
 check(s.restored && s.restored.acoustics.room === "upstairs" &&
   s.restored.acoustics.gain === 1 && Math.abs(s.restored.logical - .4) < .01 &&

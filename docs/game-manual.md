@@ -351,11 +351,14 @@ either console, or run `prince()` from browser JavaScript. Its own Fullscreen
 control expands both the monitor and browser around the 16:10 game. Dismiss
 parks the live game so reopening resumes it; **Kill app** and **Start over**
 discard the run. In the garden, double-click or double-tap the distant skyline
-or a bare patch of the brick background to descend into the same persistent
-game in the stone basement. Interactive objects never trigger the background
-shortcut. Escape or Backspace returns to the garden without ending the run.
-Left/Right pans to the adjacent lower room, and a room dot pans to the lower
-room beneath the room it names.
+or a bare patch of the brick background to descend into the stone basement.
+The dungeon opens quietly: activate its inset play wall with click, tap, Enter,
+or Space to create or resume the persistent Prince game and hand it the
+keyboard. Until then, its torches, barred window, chain, ledge, and loose stone
+remain small interactive toys and no game iframe exists. Interactive upstairs
+objects never trigger the background shortcut. Escape or Backspace returns to
+the garden without ending an initiated run. Left/Right pans to the adjacent
+lower room, and a room dot pans to the lower room beneath the room it names.
 
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.

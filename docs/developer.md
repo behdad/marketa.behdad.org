@@ -921,11 +921,15 @@ reset it, and the separate `localStorage["pacmanHigh"]` personal best survives
 those resets.
 
 PrinceJS is another `searchOnly` app and owns one lazy, same-origin iframe for
-both presentations. `openPrinceApp` reparents that iframe into the monitor;
-`openPrinceBasement` reparents it into the garden's `#prince-basement` overlay
-and pans the room strip down. Ordinary Dismiss, Escape, or Backspace calls
-`parkPrinceApp`, pauses the child through `prince-control`, and retains its
-browsing context. Kill, Start over, and shutdown call `destroyPrinceApp`.
+both presentations. `openPrinceApp` reparents that iframe into the monitor.
+`openPrinceBasement` only opens the garden's `#prince-basement` lower room: its
+code-native `#prince-dungeon-set` owns the dormant stone play wall and reactive
+set dressing, with no iframe or keyboard capture. Activating
+`#prince-play-wall` calls `activatePrinceBasementGame`, lazily creates or
+reparents the shared iframe, swaps the set for the game, and only then enables
+Prince input. Ordinary Dismiss, Escape, or Backspace calls `parkPrinceApp`,
+pauses an initiated child through `prince-control`, and retains its browsing
+context. Kill, Start over, and shutdown call `destroyPrinceApp`.
 Fullscreen reparents the same live iframe through `#prince-focus-overlay`,
 raises monitor-content fullscreen when required, and requests browser
 fullscreen without reloading the level. Parent key routing must yield while

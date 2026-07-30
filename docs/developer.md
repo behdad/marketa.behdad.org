@@ -653,6 +653,9 @@ The global room-key owner reserves plain `ArrowDown` for all five implemented
 upstairs rooms and delegates to their public open hooks; each active lower-room
 capture guard owns `ArrowUp` on the way back. `__navigateLowerRoom` maps
 Left/Right, side controls, and room dots across the parallel lower-floor row.
+The Garden dungeon-door, Office `Zzz…`, and Balcony key/fob SVG markers call
+the same public open hooks; they use `tabindex="-1"` because Tab remains a
+global game shortcut.
 It lets `goToStage` settle the destination's main-room state while paired WAAPI
 transforms move the source and destination overlays laterally. This runs before
 ordinary room shortcuts without changing `D` day/night or Shift+arrow calendar

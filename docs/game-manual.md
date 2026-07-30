@@ -209,7 +209,8 @@ double-tapping a bare patch of that room's background is a second entrance. The
 room pans down into the cinema and temporarily puts **Who's here** away. Pick one
 of the three films on the screen; **Choose another** stops it and returns to the
 chooser. The × button, Escape, Backspace, or ordinary room navigation pans back
-up. The cinema window follows the loft's day/night state. Film audio takes the
+up. The cinema window follows the loft's day/night state; select it to swap day
+and night throughout the loft. Film audio takes the
 foreground while it plays. Incoming messages still collect while either lower
 room is open, but their preview, unread badge, and first-use coach wait until
 you return upstairs.

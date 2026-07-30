@@ -420,6 +420,7 @@ footer{margin-top:2.6rem}
 #cinema-room-close:hover,#cinema-room-close:focus-visible,
 #cinema-chooser-back:hover,#cinema-chooser-back:focus-visible{background:#8e3a4a; outline:2px solid #fffdf8}
 #cinema-window-sky,.cinema-window-view{transition:fill .7s ease}
+#cinema-window{cursor:pointer}
 #cinema-window-sky{fill:#b8d4e8}
 .cinema-window-nightlight{opacity:0;transition:opacity .7s ease}
 #cinema-room.cinema-night #cinema-window-sky{fill:#202a34}
@@ -28532,7 +28533,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         </g>
         <path d="M79 179H98" stroke="#17191b" stroke-width="5" stroke-linecap="round"/>
         <!-- Right-hand black-framed window follows the loft's shared day/night state. -->
-        <g>
+        <g id="cinema-window" class="hunt-hit" tabindex="0" role="button" data-aria-i="cinema_window_toggle" data-title-i="cinema_window_toggle" aria-label="Toggle day and night" title="Toggle day and night">
           <rect x="588" y="55" width="68" height="135" fill="#171a1c" stroke="#08090a" stroke-width="6"/>
           <rect id="cinema-window-sky" x="595" y="62" width="54" height="121"/>
           <path class="cinema-window-view" d="M598 176L614 147L628 165L641 142L648 176Z" fill="#63778a"/>
@@ -28733,12 +28734,13 @@ window.__cinemaVideoLoaded = false;
   var chooser = document.getElementById("cinema-chooser");
   var playerWrap = document.getElementById("cinema-player-wrap");
   var chooserBack = document.getElementById("cinema-chooser-back");
+  var cinemaWindow = document.getElementById("cinema-window");
   var cuddlyScene = document.getElementById("stage-cuddly");
   var cinemaSongSuspended = false;
   var cinemaSongRestoreTimer = null;
   var cinemaCloseTimer = null;
   var cinemaClosing = false;
-  if (!room || !viewport || !ticket || !closeButton || !chooser || !playerWrap || !chooserBack) return;
+  if (!room || !viewport || !ticket || !closeButton || !chooser || !playerWrap || !chooserBack || !cinemaWindow) return;
 
   function syncCinemaDayNight() {
     room.classList.toggle("cinema-night", !!(cuddlyScene && cuddlyScene.classList.contains("dusk")));
@@ -28856,6 +28858,17 @@ window.__cinemaVideoLoaded = false;
   });
   closeButton.addEventListener("click", closeCinema);
   chooserBack.addEventListener("click", function () { clearPlayer(); chooser.querySelector(".cinema-film").focus(); });
+  function toggleCinemaWindow(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (window.__toggleDayNight) window.__toggleDayNight();
+  }
+  cinemaWindow.addEventListener("click", toggleCinemaWindow);
+  cinemaWindow.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") toggleCinemaWindow(event);
+  });
   var cuddlyBackgrounds = [document.getElementById("cuddly-wall"), document.getElementById("cuddly-ceiling")].filter(Boolean);
   var cuddlyBackgroundIds = { "cuddly-wall": true, "cuddly-ceiling": true };
   var cuddlyBackgroundTapAt = 0;
@@ -28898,6 +28911,13 @@ document.addEventListener("keydown", function (event) {
   if (!window.__cinemaRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
+  if ((event.key === "Enter" || event.key === " ") &&
+      event.target && event.target.closest && event.target.closest("#cinema-window")) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.target.closest("#cinema-window").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return;
+  }
   event.stopImmediatePropagation();
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
@@ -30183,6 +30203,7 @@ var T = {
     cinema_leave: "Back to Cuddly-puddly",
     cinema_title: "What are we watching?",
     cinema_choose: "Choose another",
+    cinema_window_toggle: "Toggle day and night",
     cinema_film_1: "Identity",
     cinema_film_2: "MANIA",
     cinema_film_3: "Water",
@@ -31384,6 +31405,7 @@ var T = {
     cinema_leave: "Zpět do Cuddly-puddly",
     cinema_title: "Na co se podíváme?",
     cinema_choose: "Vybrat jiný film",
+    cinema_window_toggle: "Přepnout den a noc",
     cinema_film_1: "Identity",
     cinema_film_2: "MANIA",
     cinema_film_3: "Water",

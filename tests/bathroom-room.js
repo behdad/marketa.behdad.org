@@ -25,6 +25,13 @@ var HARNESS = [
   ' report.steps.down={state:window.__bathroomRoomState(),room:window.currentStageName,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("bathroom-room-open"),geometry:{room:[roomBox.left,roomBox.top,roomBox.width,roomBox.height],viewport:[viewBox.left,viewBox.top,viewBox.width,viewBox.height],kitchenBottom:kitchenBox.bottom,controls:{bathroom:[parseFloat(bathroomCloseStyle.width),parseFloat(bathroomCloseStyle.height),parseFloat(bathroomCloseStyle.right),parseFloat(bathroomCloseStyle.top)],cinema:[parseFloat(cinemaCloseStyle.width),parseFloat(cinemaCloseStyle.height),parseFloat(cinemaCloseStyle.right),parseFloat(cinemaCloseStyle.top)],prince:[parseFloat(princeCloseStyle.width),parseFloat(princeCloseStyle.height),parseFloat(princeCloseStyle.right),parseFloat(princeCloseStyle.top)]}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility],images:room.querySelectorAll("img").length};',
   ' var props=Array.from(room.querySelectorAll("[data-bath-action]"));setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bathroom-room-close").getAttribute("aria-label"),props:props.map(function(el){return el.getAttribute("aria-label");})};setLang("en");',
   ' props.forEach(function(el,index){click(el);keyOn(el,index%2?" ":"Enter");});report.steps.props={count:props.length,roles:props.map(function(el){return [el.id,el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("title")];}),state:window.__bathroomInteractionState()};',
+  ' var scale=document.getElementById("bathroom-scale-action");click(scale);var scaleSpike=document.getElementById("bathroom-scale-reading").textContent;await sleep(380);var scaleOn=window.__bathroomInteractionState();click(scale);var scaleOff=window.__bathroomInteractionState();click(scale);await sleep(380);',
+  ' var stool=document.getElementById("bathroom-stool"),stoolPosition=document.getElementById("bathroom-stool-position"),art=document.getElementById("bathroom-room-art");',
+  ' var stoolHitsBefore=window.__bathroomInteractionState().hits.stool;stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,buttons:1,clientX:300}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,clientX:300}));await sleep(10);var stationaryState=window.__bathroomInteractionState();',
+  ' stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:71,pointerType:"mouse",button:0,buttons:1,clientX:300}));art.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:71,pointerType:"mouse",buttons:1,clientX:900}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:71,pointerType:"mouse",button:0,clientX:900}));await sleep(10);',
+  ' var rightState=window.__bathroomInteractionState(),rightTransform=stoolPosition.getAttribute("transform");',
+  ' stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:72,pointerType:"mouse",button:0,buttons:1,clientX:900}));art.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:72,pointerType:"mouse",buttons:1,clientX:-500}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:72,pointerType:"mouse",button:0,clientX:-500}));await sleep(10);',
+  ' var towelStyle=getComputedStyle(document.getElementById("bathroom-waffle-towel")),toiletTarget=document.getElementById("bathroom-toilet-action");report.steps.functional={scaleToggle:{spike:scaleSpike,on:scaleOn,off:scaleOff},stationary:{before:stoolHitsBefore,state:stationaryState},right:{state:rightState,transform:rightTransform},left:{state:window.__bathroomInteractionState(),transform:stoolPosition.getAttribute("transform")},water:document.getElementById("bathroom-sink-water").getAttribute("d"),towelOrigin:towelStyle.transformOrigin,towelBox:towelStyle.transformBox,stoolOrigin:getComputedStyle(stool).transformOrigin,scaleText:document.getElementById("bathroom-scale-reading").textContent,scaleTransform:document.getElementById("bathroom-scale-needle").style.transform,toiletTarget:[toiletTarget.getAttribute("x"),toiletTarget.getAttribute("y"),toiletTarget.getAttribute("width"),toiletTarget.getAttribute("height")]};',
   ' key("ArrowUp");await sleep(760);report.steps.up={state:window.__bathroomRoomState(),props:window.__bathroomInteractionState(),viewport:viewport.classList.contains("bathroom-room-open"),covered:window.__roomAmbienceCovered(),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility]};',
   ' dblclick(document.getElementById("kitchen-pan-1"));await sleep(30);report.steps.interactive=window.__bathroomRoomState();',
   ' dblclick(document.getElementById("kitchen-wall"));await sleep(80);report.steps.mouse=window.__bathroomRoomState();key("Escape");await sleep(760);',
@@ -74,17 +81,47 @@ check(s.down && s.down.images === 0,
   "the bathroom is entirely code-native and embeds no photo", s.down);
 check(s.cs && s.cs.room === "Koupelna / toalety" && s.cs.close === "Zpět do Kuchyně / baru",
   "room and return labels switch to Czech", s.cs);
-var propNames = ["sink", "mirror", "tub", "curtain", "towel", "stool", "scale", "cabinet", "toilet"];
+var propNames = ["sink", "mirror", "tub", "towel", "stool", "scale", "cabinet", "toilet"];
 check(s.props && s.props.count === propNames.length &&
   s.props.roles.every(function (row) { return row[1] === "button" && row[2] === "0" && !!row[3]; }),
   "every distinct bathroom prop is a labelled keyboard-focusable control", s.props);
 check(s.props && propNames.every(function (name) { return s.props.state.hits[name] === 2; }),
   "every bathroom prop responds once to click and once to Enter or Space", s.props && s.props.state);
+check(s.functional && s.functional.water === "M119 139V171",
+  "the faucet stream falls from the midpoint between both faucet uprights", s.functional);
+check(s.functional && s.functional.towelOrigin === "44px 0px" &&
+  s.functional.towelBox === "fill-box" &&
+  s.functional.stoolOrigin === "380px 332px",
+  "the towel turns from its rail and the stool wobbles from its feet", s.functional);
+check(s.functional && s.functional.stationary.state.hits.stool ===
+  s.functional.stationary.before + 1 &&
+  s.functional.stationary.state.active.indexOf("stool-wobble") !== -1,
+  "a stationary pointer tap still wobbles the draggable stool", s.functional);
+check(s.functional && s.functional.right.state.stoolX === 55 &&
+  s.functional.left.state.stoolX === -95 &&
+  /translate\(55(?:\.0+)? 0\)/.test(s.functional.right.transform) &&
+  /translate\(-95(?:\.0+)? 0\)/.test(s.functional.left.transform),
+  "the stool drags horizontally and clamps at both room-safe limits", s.functional);
+check(s.functional && s.functional.scaleText === "69.0" &&
+  s.functional.left.state.scaleValue === 69 &&
+  /rotate\(-?\d/.test(s.functional.scaleTransform),
+  "the scale settles on and displays a plausible numeric reading", s.functional);
+check(s.functional && s.functional.scaleToggle.spike === "72.4" &&
+  s.functional.scaleToggle.on.scaleValue !== null &&
+  s.functional.scaleToggle.on.scaleReading === "69.0" &&
+  s.functional.scaleToggle.on.active.indexOf("scale-on") !== -1 &&
+  s.functional.scaleToggle.off.scaleValue === null &&
+  s.functional.scaleToggle.off.scaleReading === "--" &&
+  s.functional.scaleToggle.off.active.indexOf("scale-on") === -1,
+  "successive activations switch the scale on and off", s.functional);
+check(s.functional && s.functional.toiletTarget.join(",") === "544,137,110,203",
+  "the toilet target spans its full visible footprint to the room floor", s.functional);
 check(s.cs && s.cs.props.length === propNames.length &&
   s.cs.props.every(function (label) { return label && !/Run|Polish|Fill|Draw|Fluff|Test|Step|Open|Flush/.test(label); }),
   "all prop labels switch to Czech", s.cs);
 check(s.up && !s.up.state.open && s.up.state.hidden && !s.up.viewport && !s.up.covered &&
   s.up.props.active.length === 0 &&
+  s.up.props.stoolX === 0 && s.up.props.scaleValue === null && s.up.props.scaleReading === "--" &&
   s.up.roster.every(function (value) { return value === "visible"; }) &&
   s.up.messages.every(function (value) { return value === "visible"; }),
   "plain Up returns upstairs, settles bathroom props, and restores suppressed UI", s.up);
@@ -114,8 +151,8 @@ check(s.dot && !s.dot.source.open && s.dot.source.hidden && s.dot.room === "balc
   "a room dot stays downstairs and pans to Entrance while keeping dot focus", s.dot);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
-["bathroom-sink", "bathroom-mirror-action", "bathroom-tub", "bathroom-shower-curtain",
- "bathroom-waffle-towel", "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
+["bathroom-sink", "bathroom-mirror-action", "bathroom-tub", "bathroom-waffle-towel",
+ "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
  "bathroom-toilet-action"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "illustration includes " + id);
 });

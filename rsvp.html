@@ -587,8 +587,6 @@ footer{margin-top:2.6rem}
 #bathroom-sink-water,#bathroom-mirror-gleam,#bathroom-toilet-swirl{opacity:0;pointer-events:none}
 #bathroom-tub-water{opacity:.12;transition:opacity .35s ease}
 #bathroom-room.tub-filled #bathroom-tub-water{opacity:.72}
-#bathroom-room.curtain-open #bathroom-shower-curtain{transform:translateX(53px) scaleX(.24)}
-#bathroom-shower-curtain{transform-origin:452px 125px;transition:transform .42s cubic-bezier(.4,0,.2,1)}
 #bathroom-room.cabinet-open #bathroom-cabinet-face{transform:translateY(-7px)}
 #bathroom-cabinet-face{transition:transform .32s ease}
 #bathroom-room.sink-running #bathroom-sink-water{opacity:1;animation:bathroom-water-run .78s ease-in-out}
@@ -596,6 +594,19 @@ footer{margin-top:2.6rem}
 #bathroom-room.towel-fluff #bathroom-waffle-towel{animation:bathroom-towel-fluff .62s ease-in-out}
 #bathroom-room.stool-wobble #bathroom-stool{animation:bathroom-stool-wobble .5s ease-in-out}
 #bathroom-room.scale-weigh #bathroom-scale-needle{animation:bathroom-scale-weigh .82s ease-in-out}
+#bathroom-room.scale-bounce #bathroom-scale{animation:bathroom-scale-bounce .46s ease-in-out}
+#bathroom-waffle-towel{transform-box:fill-box;transform-origin:50% 0}
+#bathroom-stool-position{will-change:transform;cursor:grab}
+#bathroom-stool-position.dragging{cursor:grabbing}
+#bathroom-stool{transform-origin:380px 332px}
+#bathroom-scale-needle{transform-origin:500px 321px;transition:transform .24s ease-out}
+#bathroom-scale-display{fill:#344b4b;stroke:#1e2b2a;stroke-width:1;transition:fill .18s ease,stroke .18s ease}
+#bathroom-scale-reading{
+  fill:#8da39a;font:700 7.5px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  text-anchor:middle;pointer-events:none;
+}
+#bathroom-room.scale-on #bathroom-scale-display{fill:#d8f4df;stroke:#4d8b72}
+#bathroom-room.scale-on #bathroom-scale-reading{fill:#214b3e}
 #bathroom-room.toilet-flush #bathroom-toilet-swirl{animation:bathroom-toilet-flush .9s ease-in-out}
 @keyframes bathroom-water-run{
   0%,100%{opacity:0;stroke-dashoffset:18}20%,75%{opacity:.9}100%{stroke-dashoffset:-18}
@@ -604,13 +615,21 @@ footer{margin-top:2.6rem}
   0%{opacity:0;translate:-28px 0}35%{opacity:.6}100%{opacity:0;translate:55px 0}
 }
 @keyframes bathroom-towel-fluff{
-  0%,100%{transform:rotate(0)}35%{transform:rotate(-2deg) translateY(-4px)}65%{transform:rotate(1deg) translateY(-1px)}
+  0%,100%{transform:rotate(0)}35%{transform:rotate(-2.4deg)}65%{transform:rotate(1.4deg)}
 }
 @keyframes bathroom-stool-wobble{
   0%,100%{transform:rotate(0)}30%{transform:rotate(-2.4deg)}65%{transform:rotate(1.8deg)}
 }
 @keyframes bathroom-scale-weigh{
-  0%,100%{transform:rotate(0)}25%{transform:rotate(38deg)}50%{transform:rotate(22deg)}70%{transform:rotate(31deg)}
+  0%{transform:rotate(0)}
+  28%{transform:rotate(var(--bathroom-scale-overshoot,38deg))}
+  58%{transform:rotate(var(--bathroom-scale-settle,22deg))}
+  100%{transform:rotate(var(--bathroom-scale-angle,31deg))}
+}
+@keyframes bathroom-scale-bounce{
+  0%,100%{transform:translateY(0)}
+  35%{transform:translateY(4px) rotate(-.8deg)}
+  68%{transform:translateY(-1.5px) rotate(.5deg)}
 }
 @keyframes bathroom-toilet-flush{
   0%{opacity:0;stroke-dashoffset:28;rotate:0deg}
@@ -631,7 +650,7 @@ footer{margin-top:2.6rem}
 .hunt-viewport.bathroom-room-open #loft-game-strip{transform:translate(0,-100%) !important}
 @media (prefers-reduced-motion:reduce){
   #bathroom-room,#bathroom-room *{transition:none}
-  #bathroom-room :is(#bathroom-sink-water,#bathroom-mirror-gleam,#bathroom-waffle-towel,#bathroom-stool,#bathroom-scale-needle,#bathroom-toilet-swirl){animation:none}
+  #bathroom-room :is(#bathroom-sink-water,#bathroom-mirror-gleam,#bathroom-waffle-towel,#bathroom-stool,#bathroom-scale,#bathroom-scale-needle,#bathroom-toilet-swirl){animation:none}
   .hunt-viewport.bathroom-room-open #loft-game-strip{transition:none}
 }
 #bedroom-room[hidden]{display:none}
@@ -29020,11 +29039,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <path d="M0 1H8M0 5H8M1 0V8M5 0V8" fill="none" stroke="#807b77" stroke-width=".7" opacity=".72"/>
             <path d="M2 2H4V4H2ZM6 6H8V8H6Z" fill="#c8c3bd" opacity=".38"/>
           </pattern>
-          <pattern id="bathroom-curtain-print" width="22" height="22" patternUnits="userSpaceOnUse">
-            <rect width="22" height="22" fill="#eee9dd" fill-opacity=".9"/>
-            <path d="M3 11L11 3L19 11L11 19Z" fill="none" stroke="#a8a092" stroke-width="1"/>
-            <circle cx="11" cy="11" r="2.2" fill="#b9b0a2"/>
-          </pattern>
         </defs>
         <!-- Quiet taupe walls and the dark, irregular slate floor from the lower loft bath. -->
         <rect width="680" height="244" fill="url(#bathroom-wall-wash)"/>
@@ -29070,12 +29084,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <path d="M57 142V129M64 142V126M70 142V132" stroke="#c7d3cc" stroke-width="3" stroke-linecap="round"/>
           <rect x="158" y="146" width="18" height="18" rx="3" fill="#b6d0c1" stroke="#728f82"/>
           <path d="M167 146V137" stroke="#514840" stroke-width="2"/><path d="M163 137H171" stroke="#514840" stroke-width="2"/>
-          <path id="bathroom-sink-water" d="M126 139V171" fill="none" stroke="#a8d7e5" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 3"/>
+          <path id="bathroom-sink-water" d="M119 139V171" fill="none" stroke="#a8d7e5" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 3"/>
           <path id="bathroom-mirror-gleam" d="M48 119L93 38H116L71 119ZM129 119L174 38H194L149 119Z" fill="#fffdf8" opacity="0"/>
           <rect id="bathroom-mirror-action" data-bath-action="mirror" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_mirror" data-title-i="bathroom_mirror" aria-label="Polish the mirror" title="Polish the mirror" x="32" y="24" width="175" height="113" rx="2" fill="transparent" pointer-events="all"/>
         </g>
 
-        <!-- Clawfoot tub, shower rail, patterned curtain, and the familiar hanging waffle towel. -->
+        <!-- Clawfoot tub, shower rail, and the familiar hanging waffle towel. -->
         <g id="bathroom-tub" data-bath-action="tub" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_tub" data-title-i="bathroom_tub" aria-label="Fill or drain the tub" title="Fill or drain the tub">
           <path d="M236 177V67Q236 46 258 46H438Q468 46 468 76V193" fill="none" stroke="#404442" stroke-width="5"/>
           <path d="M251 48H449" stroke="#777b78" stroke-width="2" opacity=".7"/>
@@ -29083,8 +29097,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <circle cx="276" cy="48" r="4"/><circle cx="302" cy="48" r="4"/><circle cx="328" cy="48" r="4"/>
             <circle cx="354" cy="48" r="4"/><circle cx="380" cy="48" r="4"/><circle cx="406" cy="48" r="4"/><circle cx="432" cy="48" r="4"/>
           </g>
-          <path id="bathroom-shower-curtain" data-bath-action="curtain" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_curtain" data-title-i="bathroom_curtain" aria-label="Draw the shower curtain" title="Draw the shower curtain" d="M385 49H452V201Q436 193 422 201Q403 190 385 200Z" fill="url(#bathroom-curtain-print)" stroke="#9e978b" stroke-width="1.5"/>
-          <path d="M399 53V196M414 53V194M430 53V196M445 53V197" stroke="#d6d0c4" stroke-width="1.5" opacity=".75"/>
           <path id="bathroom-waffle-towel" data-bath-action="towel" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_towel" data-title-i="bathroom_towel" aria-label="Fluff the towel" title="Fluff the towel" d="M270 48H358V158Q343 166 326 157Q310 166 294 157Q282 162 270 156Z" fill="url(#bathroom-waffle)" stroke="#77716c" stroke-width="1.5"/>
           <path d="M277 154Q314 160 351 154" fill="none" stroke="#6f6a65" stroke-width="2"/>
           <path d="M211 186Q218 171 242 169H468Q493 171 500 186L487 249Q483 270 457 274H255Q229 270 225 249Z" fill="url(#bathroom-porcelain)" stroke="#b8b8b2" stroke-width="2.5"/>
@@ -29092,24 +29104,27 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <path id="bathroom-tub-water" d="M225 184Q240 177 260 177H452Q474 177 487 184Q473 198 451 200H261Q240 198 225 184Z" fill="#89bcc5"/>
           <path d="M240 188Q265 197 290 194M430 194Q460 198 478 186" fill="none" stroke="#f9f8f3" stroke-width="3" opacity=".72"/>
           <path d="M253 273Q246 282 249 293H263Q272 285 273 273M454 273Q456 283 466 292H480Q479 280 470 270" fill="#333638" stroke="#151819" stroke-width="3"/>
-          <path d="M467 187V97" stroke="#bfc3c0" stroke-width="6"/><path d="M467 99Q467 88 478 88H488" fill="none" stroke="#daddda" stroke-width="6" stroke-linecap="round"/>
-          <ellipse cx="492" cy="89" rx="9" ry="5" fill="#cfd2cf" stroke="#757a78" stroke-width="2"/>
+          <path d="M467 187V104" stroke="#bfc3c0" stroke-width="6"/><path d="M467 106Q467 94 455 91L446 89" fill="none" stroke="#daddda" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="440" cy="91" rx="9" ry="5" transform="rotate(18 440 91)" fill="#cfd2cf" stroke="#757a78" stroke-width="2"/>
           <path d="M469 185Q482 174 489 185V199M469 185Q456 174 450 185V198" fill="none" stroke="#b8bcb9" stroke-width="4"/>
           <circle cx="469" cy="185" r="4" fill="#7e8481"/>
         </g>
 
         <!-- Simple wooden stool and mint glass scale in the shared foreground. -->
         <g>
-          <g id="bathroom-stool" data-bath-action="stool" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_stool" data-title-i="bathroom_stool" aria-label="Test the stool" title="Test the stool">
-          <ellipse cx="380" cy="265" rx="38" ry="14" fill="url(#bathroom-wood)" stroke="#744c31" stroke-width="2"/>
-          <ellipse cx="380" cy="261" rx="34" ry="10" fill="#d8ad78"/>
-          <circle cx="380" cy="261" r="4" fill="#795234"/>
-          <path d="M352 269L345 332M408 269L417 332M353 302H410" fill="none" stroke="#865936" stroke-width="8" stroke-linecap="round"/>
-          <path d="M357 273L351 328M402 273L410 328" stroke="#c58d56" stroke-width="3" stroke-linecap="round"/>
+          <g id="bathroom-stool-position">
+            <g id="bathroom-stool" data-bath-action="stool" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_stool" data-title-i="bathroom_stool" aria-label="Test the stool" title="Test the stool">
+              <ellipse cx="380" cy="265" rx="38" ry="14" fill="url(#bathroom-wood)" stroke="#744c31" stroke-width="2"/>
+              <ellipse cx="380" cy="261" rx="34" ry="10" fill="#d8ad78"/>
+              <circle cx="380" cy="261" r="4" fill="#795234"/>
+              <path d="M352 269L345 332M408 269L417 332M353 302H410" fill="none" stroke="#865936" stroke-width="8" stroke-linecap="round"/>
+              <path d="M357 273L351 328M402 273L410 328" stroke="#c58d56" stroke-width="3" stroke-linecap="round"/>
+            </g>
           </g>
-          <g id="bathroom-scale" data-bath-action="scale" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_scale" data-title-i="bathroom_scale" aria-label="Step on the scale" title="Step on the scale">
+          <g id="bathroom-scale">
           <path d="M461 298L535 294L548 332L449 336Z" fill="#a8d7cc" fill-opacity=".82" stroke="#609389" stroke-width="3"/>
-          <rect x="483" y="301" width="22" height="9" rx="2" fill="#344b4b"/>
+          <rect id="bathroom-scale-display" x="478" y="298" width="34" height="14" rx="2"/>
+          <text id="bathroom-scale-reading" x="495" y="308.2">--</text>
           <circle cx="500" cy="321" r="7" fill="#778f89" stroke="#4d6964" stroke-width="2"/>
           <path id="bathroom-scale-needle" d="M500 321V315" stroke="#fffdf8" stroke-width="1.8" stroke-linecap="round" style="transform-origin:500px 321px"/>
           <path d="M458 302L530 298" stroke="#e5faf5" stroke-width="3" opacity=".52"/>
@@ -29137,12 +29152,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <path d="M562 222H623L618 290Q617 307 593 310Q569 307 567 290Z" fill="url(#bathroom-porcelain)" stroke="#b8b8b2" stroke-width="2"/>
           <path d="M633 227V270" stroke="#5f5751" stroke-width="3"/><rect x="627" y="239" width="13" height="16" rx="3" fill="#eee9df"/>
           <path d="M549 310H632" stroke="#252a29" stroke-width="5" opacity=".55"/>
-          <rect id="bathroom-toilet-action" data-bath-action="toilet" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_toilet" data-title-i="bathroom_toilet" aria-label="Flush the toilet" title="Flush the toilet" x="544" y="151" width="94" height="163" rx="8" fill="transparent" pointer-events="all"/>
         </g>
 
         <!-- Warm pools keep the code-native room in the loft's soft illustrated register. -->
-        <ellipse cx="135" cy="18" rx="185" ry="100" fill="#f4d6a3" opacity=".09"/>
-        <ellipse cx="556" cy="273" rx="160" ry="90" fill="#7f9ec0" opacity=".08"/>
+        <ellipse cx="135" cy="18" rx="185" ry="100" fill="#f4d6a3" opacity=".09" pointer-events="none"/>
+        <ellipse cx="556" cy="273" rx="160" ry="90" fill="#7f9ec0" opacity=".08" pointer-events="none"/>
+        <!-- Prop hit surfaces stay above the illustration's ambient washes. -->
+        <rect id="bathroom-scale-action" data-bath-action="scale" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_scale" data-title-i="bathroom_scale" aria-label="Step on the scale" title="Step on the scale" x="438" y="282" width="118" height="58" rx="8" fill="transparent" pointer-events="all"/>
+        <!-- Keep the toilet surface last so no fixture or ambient wash can intercept it. -->
+        <rect id="bathroom-toilet-action" data-bath-action="toilet" class="hunt-hit" role="button" tabindex="0" data-aria-i="bathroom_toilet" data-title-i="bathroom_toilet" aria-label="Flush the toilet" title="Flush the toilet" x="544" y="137" width="110" height="203" rx="8" fill="transparent" pointer-events="all"/>
       </svg>
       <button type="button" id="bathroom-room-close" data-aria-i="bathroom_leave" data-title-i="bathroom_leave" aria-label="Back to Kitchen / bar" title="Back to Kitchen / bar">×</button>
     </div>
@@ -29740,9 +29758,20 @@ window.__bathroomRoomOpen = false;
   var closing = false;
   var backgroundTapAt = 0;
   var bathroomHits = {};
-  var settledClasses = ["sink-running", "mirror-shimmer", "tub-filled", "curtain-open",
-    "towel-fluff", "stool-wobble", "scale-weigh", "cabinet-open", "toilet-flush"];
-  if (!room || !viewport || !background || !closeButton || !art) return;
+  var stoolPosition = document.getElementById("bathroom-stool-position");
+  var stool = document.getElementById("bathroom-stool");
+  var scaleNeedle = document.getElementById("bathroom-scale-needle");
+  var scaleReading = document.getElementById("bathroom-scale-reading");
+  var stoolX = 0;
+  var stoolDrag = null;
+  var suppressStoolClick = false;
+  var scaleValue = null;
+  var scaleReadingTimer = null;
+  var settledClasses = ["sink-running", "mirror-shimmer", "tub-filled", "towel-fluff",
+    "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
+    "toilet-flush"];
+  if (!room || !viewport || !background || !closeButton || !art || !stoolPosition ||
+      !stool || !scaleNeedle || !scaleReading) return;
 
   function focusUpstairs() {
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
@@ -29751,6 +29780,19 @@ window.__bathroomRoomOpen = false;
   }
   function resetBathroomProps() {
     settledClasses.forEach(function (name) { room.classList.remove(name); });
+    stoolX = 0;
+    stoolDrag = null;
+    suppressStoolClick = false;
+    stoolPosition.classList.remove("dragging");
+    stoolPosition.removeAttribute("transform");
+    clearTimeout(scaleReadingTimer);
+    scaleReadingTimer = null;
+    scaleValue = null;
+    scaleReading.textContent = "--";
+    scaleNeedle.style.removeProperty("--bathroom-scale-angle");
+    scaleNeedle.style.removeProperty("--bathroom-scale-overshoot");
+    scaleNeedle.style.removeProperty("--bathroom-scale-settle");
+    scaleNeedle.style.removeProperty("transform");
   }
   function pulseClass(name, duration) {
     room.classList.remove(name);
@@ -29776,9 +29818,6 @@ window.__bathroomRoomOpen = false;
     } else if (action === "tub") {
       room.classList.toggle("tub-filled");
       bathroomSound("water");
-    } else if (action === "curtain") {
-      room.classList.toggle("curtain-open");
-      bathroomSound("swish");
     } else if (action === "towel") {
       pulseClass("towel-fluff", 700);
       bathroomSound("swish");
@@ -29786,7 +29825,36 @@ window.__bathroomRoomOpen = false;
       pulseClass("stool-wobble", 580);
       bathroomSound("creak");
     } else if (action === "scale") {
-      pulseClass("scale-weigh", 900);
+      pulseClass("scale-bounce", 520);
+      if (scaleValue === null) {
+        room.classList.add("scale-on");
+        scaleValue = 69;
+        var scaleAngle = -34 + (scaleValue - 55) / 30 * 68;
+        scaleNeedle.style.setProperty("--bathroom-scale-angle", scaleAngle.toFixed(2) + "deg");
+        scaleNeedle.style.setProperty("--bathroom-scale-overshoot",
+          Math.min(43, scaleAngle + 11).toFixed(2) + "deg");
+        scaleNeedle.style.setProperty("--bathroom-scale-settle",
+          Math.max(-38, scaleAngle - 6).toFixed(2) + "deg");
+        scaleNeedle.style.transform = "rotate(" + scaleAngle.toFixed(2) + "deg)";
+        scaleReading.textContent = "72.4";
+        clearTimeout(scaleReadingTimer);
+        scaleReadingTimer = setTimeout(function () {
+          scaleReadingTimer = null;
+          if (scaleValue !== null) scaleReading.textContent = scaleValue.toFixed(1);
+        }, 320);
+        pulseClass("scale-weigh", 900);
+      } else {
+        clearTimeout(scaleReadingTimer);
+        scaleReadingTimer = null;
+        room.classList.remove("scale-on");
+        room.classList.remove("scale-weigh");
+        scaleValue = null;
+        scaleReading.textContent = "--";
+        scaleNeedle.style.removeProperty("--bathroom-scale-angle");
+        scaleNeedle.style.removeProperty("--bathroom-scale-overshoot");
+        scaleNeedle.style.removeProperty("--bathroom-scale-settle");
+        scaleNeedle.style.removeProperty("transform");
+      }
       bathroomSound("click");
     } else if (action === "cabinet") {
       room.classList.toggle("cabinet-open");
@@ -29806,9 +29874,55 @@ window.__bathroomRoomOpen = false;
     var target = bathroomTarget(event);
     if (!target || !art.contains(target)) return;
     if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+    if (event.type === "click" && target === stool && suppressStoolClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     activateBathroomProp(target.getAttribute("data-bath-action"));
+  }
+  function svgUnitsPerClientPixel() {
+    var box = art.getBoundingClientRect();
+    return box.width ? 680 / box.width : 1;
+  }
+  function beginStoolDrag(event) {
+    if (!window.__bathroomRoomOpen || event.button > 0 ||
+        !(event.target && event.target.closest && event.target.closest("#bathroom-stool"))) return;
+    stoolDrag = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startX: stoolX,
+      moved: false
+    };
+    stoolPosition.classList.add("dragging");
+    try { art.setPointerCapture(event.pointerId); } catch (_error) {}
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  function moveStool(event) {
+    if (!stoolDrag || event.pointerId !== stoolDrag.pointerId) return;
+    var nextX = stoolDrag.startX +
+      (event.clientX - stoolDrag.startClientX) * svgUnitsPerClientPixel();
+    stoolX = Math.max(-95, Math.min(55, nextX));
+    stoolDrag.moved = stoolDrag.moved ||
+      Math.abs(event.clientX - stoolDrag.startClientX) > 3;
+    stoolPosition.setAttribute("transform", "translate(" + stoolX.toFixed(2) + " 0)");
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  function endStoolDrag(event) {
+    if (!stoolDrag || event.pointerId !== stoolDrag.pointerId) return;
+    var moved = stoolDrag.moved;
+    suppressStoolClick = true;
+    stoolDrag = null;
+    stoolPosition.classList.remove("dragging");
+    try { art.releasePointerCapture(event.pointerId); } catch (_error) {}
+    if (!moved) activateBathroomProp("stool");
+    setTimeout(function () { suppressStoolClick = false; }, 0);
+    event.preventDefault();
+    event.stopPropagation();
   }
   function closeBathroom() {
     if (!window.__bathroomRoomOpen) return false;
@@ -29868,6 +29982,13 @@ window.__bathroomRoomOpen = false;
       backgroundTapAt = now;
     }
   });
+  art.addEventListener("pointerdown", beginStoolDrag);
+  art.addEventListener("pointermove", moveStool);
+  art.addEventListener("pointerup", endStoolDrag);
+  art.addEventListener("pointercancel", endStoolDrag);
+  art.addEventListener("touchmove", function (event) {
+    if (stoolDrag) event.preventDefault();
+  }, { passive: false });
   art.addEventListener("click", activateFromEvent);
   art.addEventListener("keydown", activateFromEvent);
   art.addEventListener("animationend", function (event) {
@@ -29876,6 +29997,7 @@ window.__bathroomRoomOpen = false;
     else if (event.animationName === "bathroom-towel-fluff") room.classList.remove("towel-fluff");
     else if (event.animationName === "bathroom-stool-wobble") room.classList.remove("stool-wobble");
     else if (event.animationName === "bathroom-scale-weigh") room.classList.remove("scale-weigh");
+    else if (event.animationName === "bathroom-scale-bounce") room.classList.remove("scale-bounce");
     else if (event.animationName === "bathroom-toilet-flush") room.classList.remove("toilet-flush");
   });
   closeButton.addEventListener("click", closeBathroom);
@@ -29887,7 +30009,10 @@ window.__bathroomRoomOpen = false;
   window.__bathroomInteractionState = function () {
     return {
       active: settledClasses.filter(function (name) { return room.classList.contains(name); }),
-      hits: Object.assign({}, bathroomHits)
+      hits: Object.assign({}, bathroomHits),
+      stoolX: stoolX,
+      scaleValue: scaleValue,
+      scaleReading: scaleReading.textContent
     };
   };
   window.__resetBathroomProps = resetBathroomProps;
@@ -29906,25 +30031,26 @@ function handleLowerRoomNumberShortcut(event) {
   return true;
 }
 
-// A lower bathroom owns ordinary room keys while it is visible. Plain Up and the
-// usual Escape / Backspace aliases return to Kitchen / Bar.
+// A lower bathroom owns its navigation and activation keys while it is visible.
+// Other loft shortcuts keep flowing to the shared document handler downstairs.
 document.addEventListener("keydown", function (event) {
   if (!window.__bathroomRoomOpen) return;
-  if ((event.key === "Enter" || event.key === " ") && event.target && event.target.closest &&
-      event.target.closest("[data-bath-action]")) {
+  if (event.ctrlKey || event.metaKey || event.altKey ||
+      (window.__dropTermOpen && window.__dropTermOpen())) return;
+  if (handleLowerRoomNumberShortcut(event)) return;
+  if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
     event.preventDefault();
     event.stopImmediatePropagation();
-    event.target.closest("[data-bath-action]").dispatchEvent(
+    var bathroomAction = event.target && event.target.closest &&
+      event.target.closest("[data-bath-action]");
+    if (bathroomAction) bathroomAction.dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true })
     );
     return;
   }
-  if (event.ctrlKey || event.metaKey || event.altKey ||
-      (window.__dropTermOpen && window.__dropTermOpen())) return;
-  if (handleLowerRoomNumberShortcut(event)) return;
-  event.stopImmediatePropagation();
   if (event.key === "ArrowRight") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__navigateLowerRoom) {
       window.__navigateLowerRoom("garden");
       return;
@@ -29938,6 +30064,7 @@ document.addEventListener("keydown", function (event) {
     }
   } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__closeBathroomRoom) window.__closeBathroomRoom();
   }
 }, true);
@@ -32315,7 +32442,6 @@ var T = {
     bathroom_sink: "Run the faucet",
     bathroom_mirror: "Polish the mirror",
     bathroom_tub: "Fill or drain the tub",
-    bathroom_curtain: "Draw the shower curtain",
     bathroom_towel: "Fluff the towel",
     bathroom_stool: "Test the stool",
     bathroom_scale: "Step on the scale",
@@ -33577,7 +33703,6 @@ var T = {
     bathroom_sink: "Pustit kohoutek",
     bathroom_mirror: "Vyleštit zrcadlo",
     bathroom_tub: "Napustit nebo vypustit vanu",
-    bathroom_curtain: "Zatáhnout sprchový závěs",
     bathroom_towel: "Načechrat ručník",
     bathroom_stool: "Vyzkoušet stoličku",
     bathroom_scale: "Stoupnout si na váhu",

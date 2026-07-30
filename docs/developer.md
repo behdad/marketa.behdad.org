@@ -783,6 +783,23 @@ but it has no desktop tile and the ghost is not an access gate. The live board i
 normal close parks and retains it, Kill/New reset it, and the separate
 `localStorage["pacmanHigh"]` personal best survives those resets.
 
+PrinceJS is another `searchOnly` app and owns one lazy, same-origin iframe for
+both presentations. `openPrinceApp` reparents that iframe into the monitor;
+`openPrinceBasement` reparents it into the garden's `#prince-basement` overlay
+and pans the room strip down. Ordinary Dismiss, Escape, or Backspace calls
+`parkPrinceApp`, pauses the child through `prince-control`, and retains its
+browsing context. Kill, Start over, and shutdown call `destroyPrinceApp`.
+Fullscreen reparents the same live iframe through `#prince-focus-overlay`,
+raises monitor-content fullscreen when required, and requests browser
+fullscreen without reloading the level. Parent key routing must yield while
+Prince is active but always preserve Ctrl/Cmd/Alt browser chords and the
+drop-down console. Parking explicitly restores parent focus because Phaser
+otherwise keeps browser shortcuts inside its hidden iframe. The garden overlay
+hides the roster and repeats `art/prince-stone.svg`, whose colors are sampled
+from the pinned dungeon atlas; narrow stone jambs distinguish the playable
+16:10 opening without framing it as a separate screen. The vendored,
+zero-CDN runtime and its Unlicense notice live in `princejs/`.
+
 Calendar is also `searchOnly` on the monitor desktop. Its centered date/countdown
 menu-bar control remains the primary pointer entry point; the phone launcher is a
 separate catalog and is unchanged.

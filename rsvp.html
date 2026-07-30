@@ -234,6 +234,11 @@ footer{margin-top:2.6rem}
   transition:opacity .25s ease, transform .25s ease;
 }
 .roster-panel.show{opacity:1; transform:translateY(0); pointer-events:auto}
+.hunt-viewport.prince-basement-open :is(.roster-toggle,.roster-panel,.roster-backdrop){
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
 .roster-panel.show.spot-hide{opacity:0; pointer-events:none} /* temporarily hidden during a guest flash on small screens (see spotlightGuests) */
 .roster-panel h3{
   font-family:"Fraunces",serif; font-weight:700; font-size:1rem; letter-spacing:0;
@@ -3819,6 +3824,7 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
 #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
 #office-monitor.show-caps #monitor-desktop-dock{opacity:1; visibility:visible; pointer-events:auto}
 #office-monitor.show-nowplaying #monitor-desktop-dock, #office-monitor.show-saver #monitor-desktop-dock, #office-monitor.show-console #monitor-desktop-dock, #office-monitor.show-mail #monitor-desktop-dock, #office-monitor.show-mines #monitor-desktop-dock, #office-monitor.show-pacman #monitor-desktop-dock, #office-monitor.show-video #monitor-desktop-dock, #office-monitor.show-family #monitor-desktop-dock, #office-monitor.show-calendar #monitor-desktop-dock, #office-monitor.show-clock #monitor-desktop-dock, #office-monitor.show-python #monitor-desktop-dock, #office-monitor.show-linux #monitor-desktop-dock, #office-monitor.show-snake #monitor-desktop-dock, #office-monitor.show-weather #monitor-desktop-dock, #office-monitor.show-chat #monitor-desktop-dock, #office-monitor.show-code #monitor-desktop-dock, #office-monitor.show-tattoo #monitor-desktop-dock, #office-monitor.show-life #monitor-desktop-dock, #office-monitor.show-doom #monitor-desktop-dock{opacity:0; visibility:hidden; pointer-events:none}
+#office-monitor.show-prince #monitor-desktop-dock{opacity:0;visibility:hidden;pointer-events:none}
 /* the dock is an HTML app grid in a foreignObject below the menu bar: 8 columns, and a
    thin right-side scrollbar once the apps outgrow the screen (overflow-y:auto shows it
    only then). overscroll-behavior + the grid's own wheel/touchmove stopPropagation keep
@@ -4388,6 +4394,22 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #office-monitor.show-pacman #monitor-pacman{opacity:1;visibility:visible;pointer-events:auto}
 #monitor-pacman-close{cursor:pointer}
 #monitor-pacman-close:hover .seg-hover{opacity:.55}
+/* PrinceJS is a hidden monitor app. Like Shoot, its iframe lives inside the authored
+   display first and is physically moved to a true-fullscreen host only on request.
+   WebKit may leave the contained replaced element blank under the scaled foreignObject;
+   true fullscreen remains the reliable path there. */
+#monitor-prince{opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--loft-os-surface-time) ease}
+#office-monitor.show-prince #monitor-prince{opacity:1;visibility:visible;pointer-events:auto}
+#monitor-prince-close,#monitor-prince-fullscreen{cursor:pointer}
+#monitor-prince-close:hover .seg-hover,#monitor-prince-fullscreen:hover .seg-hover{opacity:.55}
+.prince-monitor-wrap{width:124px;height:42px;box-sizing:border-box;display:grid;grid-template:1fr/1fr;place-items:stretch;background:#000;color:#d7b34c}
+#monitor-prince-host{grid-area:1/1;min-width:0;min-height:0;overflow:hidden;background:#000}
+#monitor-prince-host iframe{display:block;width:100%;height:100%;border:0;background:#000}
+#monitor-prince.prince-context-open iframe,
+#prince-basement.prince-context-open iframe{pointer-events:none}
+#monitor-prince-host iframe:fullscreen,
+#monitor-prince-host iframe:-webkit-full-screen{width:100vw!important;height:100vh!important;background:#000}
+#prince-monitor-kill{grid-area:1/1}
 .pac-wrap{width:100%;height:100%;box-sizing:border-box;display:grid;grid-template:"info board actions" 1fr/29.5px 61px 29.5px;gap:1px;padding:1px;background:#050711;color:#f8f5ec;font:2.3px/1 ui-monospace,monospace;user-select:none;touch-action:none}
 .pac-board{grid-area:board;display:grid;grid-template:repeat(15,minmax(0,1fr))/repeat(19,minmax(0,1fr));min-width:0;min-height:0;background:#02030a;border:.45px solid #253fc8;border-radius:1px;overflow:hidden}
 .pac-cell{grid-row:var(--r);grid-column:var(--c);min-width:0;min-height:0}
@@ -4958,6 +4980,133 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 }
 #shoot-focus-overlay #monitor-shoot-host,
 #shoot-focus-overlay #monitor-shoot-host iframe{display:block;width:100%;height:100%}
+#prince-focus-overlay{
+  position:fixed;
+  inset:0;
+  z-index:90;
+  width:100vw;
+  height:100vh;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:#000;
+}
+#prince-focus-overlay[hidden]{display:none}
+#prince-focus-overlay:fullscreen::backdrop,
+#prince-focus-overlay:-webkit-full-screen::backdrop{background:#000}
+#prince-focus-stage{
+  width:min(100vw,160vh);
+  height:min(62.5vw,100vh);
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:#000;
+}
+#prince-focus-stage #monitor-prince-host,
+#prince-focus-stage #monitor-prince-host iframe{display:block;width:100%;height:100%;border:0;background:#000}
+#prince-basement{
+  position:absolute;
+  inset:0;
+  z-index:12;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translateY(100%);
+  transition:transform .72s cubic-bezier(.4,0,.2,1),visibility 0s linear .72s;
+  background:#788494 url("art/prince-stone.svg") 0 0/auto 20% repeat;
+  image-rendering:pixelated;
+}
+.hunt-viewport.prince-basement-open #prince-basement{
+  visibility:visible;
+  pointer-events:auto;
+  transform:translateY(0);
+  transition-delay:0s;
+}
+.hunt-viewport.prince-basement-open #loft-game-strip{transform:translate(-20%,-100%) !important}
+#prince-basement-stage{
+  position:relative;
+  width:auto;
+  height:100%;
+  aspect-ratio:1.6;
+  box-sizing:border-box;
+  overflow:hidden;
+  border:0;
+  box-shadow:none;
+  background:#000;
+}
+#prince-basement-stage::before,
+#prince-basement-stage::after{
+  content:"";
+  position:absolute;
+  z-index:2;
+  top:0;
+  bottom:0;
+  width:7px;
+  pointer-events:none;
+  background:linear-gradient(90deg,#1c304c 0 29%,#5c7080 29% 43%,#445c70 43% 71%,#1c304c 71%);
+}
+#prince-basement-stage::before{left:0}
+#prince-basement-stage::after{right:0;transform:scaleX(-1)}
+#prince-basement-host,#prince-basement-host iframe{display:block;width:100%;height:100%;border:0;background:#000}
+#prince-basement-close{
+  position:absolute;
+  top:7px;
+  right:8px;
+  width:28px;
+  height:28px;
+  padding:0;
+  border:1.5px solid #d7b34c;
+  border-radius:50%;
+  background:#17130f;
+  color:#f8f5ec;
+  font:21px/24px sans-serif;
+  cursor:pointer;
+}
+.prince-kill-card{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:grid;
+  place-content:center;
+  gap:8px;
+  text-align:center;
+  visibility:hidden;
+  opacity:0;
+  pointer-events:none;
+  color:#f0cd6c;
+  background:radial-gradient(circle,#5b1f20 0,#190b0a 62%,#000 100%);
+}
+#prince-focus-overlay.prince-killing #prince-kill-card,
+#monitor-prince.prince-killing #prince-monitor-kill{visibility:visible;animation:prince-kill-gag 1.55s ease both}
+#prince-kill-card strong{font:700 clamp(34px,7vw,88px)/.9 Fraunces,Georgia,serif;letter-spacing:.08em}
+#prince-kill-card span{font:600 clamp(15px,2vw,26px)/1.2 "Source Serif 4",Georgia,serif;color:#f8f5ec}
+#prince-monitor-kill{position:static;inset:auto;grid-area:1/1;place-content:center;font:700 4px/1 Fraunces,Georgia,serif;letter-spacing:.25px}
+#prince-kill-sword{font-size:clamp(42px,9vw,112px);animation:prince-kill-sword 1.05s cubic-bezier(.2,.8,.2,1) both}
+@keyframes prince-kill-gag{0%{opacity:0}12%,78%{opacity:1}100%{opacity:0}}
+@keyframes prince-kill-sword{0%{transform:translate(-65vw,-50vh) rotate(-42deg)}45%,100%{transform:translate(0,0) rotate(0)}}
+#prince-focus-close{
+  position:absolute;
+  z-index:1;
+  top:max(10px,env(safe-area-inset-top));
+  right:max(10px,env(safe-area-inset-right));
+  width:42px;
+  height:42px;
+  padding:0;
+  border:2px solid #d7b34c;
+  border-radius:50%;
+  background:rgba(0,0,0,.72);
+  color:#f8f5ec;
+  font:32px/36px sans-serif;
+  cursor:pointer;
+}
+#prince-focus-close:hover,#prince-focus-close:focus-visible{background:#5b1f20;outline:none}
+@media (prefers-reduced-motion:reduce){
+  #prince-basement{transition:none}
+  .hunt-viewport.prince-basement-open #loft-game-strip{transition:none}
+  #prince-kill-sword{animation:none}
+}
 .doom-msg{grid-area:1/1; align-self:center; justify-self:stretch; margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
 .doom-msg.err{color:#e0736a}
 .doom-msg:empty{display:none}
@@ -22381,7 +22530,7 @@ section{margin:1.9rem 0}
 </div>
 </foreignObject>
 <g id="monitor-code-close" transform="translate(76.0,29.3) scale(0.8)">
-<rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
+<rect class="mini-hit" x="371.375" y="155" width="6.625" height="9" fill="#000" opacity="0"/>
 <rect x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#17271e" stroke="#121e17" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#0e1712" opacity="0"/>
@@ -22450,6 +22599,35 @@ section{margin:1.9rem 0}
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.24"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#081047" opacity="0"/>
 <path d="M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" stroke="#ffd83d" stroke-width="0.6" stroke-linecap="round"/>
+</g>
+</g>
+<!-- PRINCEJS: hidden monitor app, launched by the garden skyline or console. The live
+     canvas runs in #prince-focus-overlay outside this scaled foreignObject; this native
+     fallback simply makes monitor ownership explicit while the overlay is transitioning. -->
+<g id="monitor-prince">
+<foreignObject x="254" y="154" width="124" height="42">
+<div xmlns="http://www.w3.org/1999/xhtml" class="prince-monitor-wrap">
+<div id="monitor-prince-host"></div>
+<div id="prince-monitor-kill" class="prince-kill-card" aria-hidden="true">
+<b data-i="prince_kill_title">JAFFAR WINS</b>
+</div>
+</div>
+</foreignObject>
+<g id="monitor-prince-fullscreen" transform="translate(72,29.3) scale(0.8)" role="button" tabindex="0" data-title-i="fullscreen_enter" data-aria-i="fullscreen_enter">
+<title data-i="fullscreen_enter">Enter fullscreen</title>
+<rect class="mini-hit" x="369" y="155" width="8.225" height="9" fill="#000" opacity="0"/>
+<rect x="372.4" y="156.9" width="4.2" height="4.6" rx="2.5" fill="#17130f" stroke="#d7b34c" stroke-width="0.34"/>
+<rect x="372.95" y="157.35" width="3.1" height="1.55" rx="0.8" fill="#ffffff" opacity="0.13"/>
+<rect class="seg-hover" x="372.4" y="156.9" width="4.2" height="4.6" rx="2.1" fill="#5b1f20" opacity="0"/>
+<path d="M373.45 158.7 V157.85 H374.3 M374.7 157.85 H375.55 V158.7 M375.55 159.7 V160.55 H374.7 M374.3 160.55 H373.45 V159.7" fill="none" stroke="#f8f5ec" stroke-width="0.38" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g id="monitor-prince-close" transform="translate(76.36,29.3) scale(0.8)" role="button" data-title-i="share_close" data-aria-i="share_close">
+<title data-i="share_close">Close</title>
+<rect class="mini-hit" x="371.775" y="155" width="6.225" height="9" fill="#000" opacity="0"/>
+<rect x="372.4" y="156.9" width="4.2" height="4.6" rx="2.5" fill="#17130f" stroke="#d7b34c" stroke-width="0.34"/>
+<rect x="372.95" y="157.35" width="3.1" height="1.55" rx="0.8" fill="#ffffff" opacity="0.13"/>
+<rect class="seg-hover" x="372.4" y="156.9" width="4.2" height="4.6" rx="2.1" fill="#5b1f20" opacity="0"/>
+<path d="M373.6 158.4 L375.4 160.2 M375.4 158.4 L373.6 160.2" stroke="#f8f5ec" stroke-width="0.46" stroke-linecap="round"/>
 </g>
 </g>
 <!-- VIDEO app: markéta's films, letterboxed in a foreignObject over the screen, with
@@ -28198,6 +28376,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
 <text class="mol-cap" data-i="mol_caption" x="75" y="83" text-anchor="middle">we’ve got chemistry</text>
 </g>
     </svg>
+    <div id="prince-basement" hidden>
+      <div id="prince-basement-stage"><div id="prince-basement-host"></div></div>
+      <button type="button" id="prince-basement-close" aria-label="Close" title="Close" data-aria-i="share_close" data-title-i="share_close">×</button>
+    </div>
     <div id="pride-day-wash" aria-hidden="true"></div>
     <div id="hunt-wipe" aria-hidden="true"></div>
     <!-- autoplay (attract-mode) badge: a quiet "auto" pill shown while the self-driving
@@ -28240,6 +28422,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
   <div id="shoot-focus-overlay" hidden>
     <div id="shoot-focus-stage"></div>
+  </div>
+  <div id="prince-focus-overlay" hidden>
+    <div id="prince-focus-stage"></div>
+    <div id="prince-kill-card" class="prince-kill-card" aria-hidden="true">
+      <div id="prince-kill-sword">⚔</div>
+      <strong data-i="prince_kill_title">JAFFAR WINS</strong>
+      <span data-i="prince_kill_line">the hourglass runs out.</span>
+    </div>
+    <button type="button" id="prince-focus-close" aria-label="Close" title="Close" data-aria-i="share_close" data-title-i="share_close">×</button>
   </div>
   </div>
   <dialog id="monitor-focus-dialog"></dialog>
@@ -28321,6 +28512,28 @@ function contextMenuHost() {
   return document.fullscreenElement || document.webkitFullscreenElement ||
     document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
 }
+
+// Full-screen iframe games own the keyboard while active. Install this capture guard
+// before the loft's room/music shortcuts so a missed iframe focus cannot turn arrows,
+// Space, letters, or number keys into two actions at once. Escape remains the one exit.
+window.__princeInputActive = false;
+document.addEventListener("keydown", function (event) {
+  if (!window.__princeInputActive) return;
+  // Prince owns ordinary game keys, not browser/system chords or the page-level
+  // drop-down console. Ctrl/Cmd+R, find/devtools shortcuts, Alt navigation, and
+  // terminal typing must remain with their higher-level owner.
+  if (event.ctrlKey || event.metaKey || event.altKey ||
+      (window.__dropTermOpen && window.__dropTermOpen())) return;
+  event.stopImmediatePropagation();
+  if (event.key === "Escape") {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      event.preventDefault();
+      if (window.__closeMonitorPrince) window.__closeMonitorPrince();
+    }
+    return;
+  }
+  event.preventDefault();
+}, true);
 
 // Closure-local timers and one-shot classes can join the full reset without exposing a
 // subsystem reset API. Hooks stay additive and ordered; one broken cleanup must not keep
@@ -29226,6 +29439,9 @@ var T = {
     app_mail: "mail",
     app_mines: "mines",
     app_classics: "classics",
+    app_prince: "prince",
+    prince_kill_title: "JAFFAR WINS",
+    prince_kill_line: "the hourglass runs out.",
     classics_choose: "Choose a classic",
     classics_mines: "Mines",
     classics_mines_sub: "don’t set off the ring",
@@ -30415,6 +30631,9 @@ var T = {
     app_mail: "pošta",
     app_mines: "miny",
     app_classics: "classics",
+    app_prince: "princ",
+    prince_kill_title: "JAFFAR VÍTĚZÍ",
+    prince_kill_line: "písek v přesýpacích hodinách došel.",
     classics_choose: "Vyberte klasiku",
     classics_mines: "Miny",
     classics_mines_sub: "nespusťte prsten",
@@ -30904,6 +31123,7 @@ var LOFT_CREDITS = Object.freeze({
     "Pyodide · CPython",
     "v86 · Linux · BusyBox",
     "js-dos · DOSBox",
+    "PrinceJS (Unlicense)",
     "HarfBuzz · FontTools",
     "Chocolate Doom (GPL-2.0) · FreeDM (BSD-3-Clause)",
     "emduke32 (GPL-2.0) · Duke shareware (3D Realms)",
@@ -37381,7 +37601,7 @@ setMusicPausedState(false);
     var loftSong = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying());
     var duck = (!!window.__projMusicActive && window.currentStageName === "cuddly") ||
                (!!window.__headphonesOn && window.currentStageName === "office") ||
-               officeScreen || loftSong;
+               officeScreen || loftSong || !!window.__princeInputActive;
     window.__partyDuck = duck ? 0.06 : 1; // foreground media leads; retain only a faint distant party thump
     var fade = typeof fadeTime === "number" ? fadeTime : 0.4;
     ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyTangoMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyBandariMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume", "__applyBulgarMusicVolume", "__applyDupakMusicVolume", "__applyFuriantMusicVolume", "__applyCumbiaMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](fade); });
@@ -46511,7 +46731,7 @@ setOfficeProgress("pc", false);
     if (monitorSleeping) return;
     var creditsLayer = document.getElementById("monitor-credits-layer");
     if (creditsLayer && creditsLayer.classList.contains("open")) { scheduleSaver(30000); return; }
-    if (monitor.classList.contains("show-console") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-pacman") || monitor.classList.contains("show-video") || monitor.classList.contains("show-family") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-snake") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-chat") || monitor.classList.contains("show-code") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, chatting, reading mail, a live game, the film, playing doom, editing a script, the tattoo studio, a life sim, or a live call
+    if (monitor.classList.contains("show-console") || monitor.classList.contains("show-mail") || monitor.classList.contains("show-mines") || monitor.classList.contains("show-pacman") || monitor.classList.contains("show-prince") || monitor.classList.contains("show-video") || monitor.classList.contains("show-family") || monitor.classList.contains("show-python") || monitor.classList.contains("show-linux") || monitor.classList.contains("show-snake") || monitor.classList.contains("show-doom") || monitor.classList.contains("show-weather") || monitor.classList.contains("show-chat") || monitor.classList.contains("show-code") || monitor.classList.contains("show-tattoo") || monitor.classList.contains("show-life")) { scheduleSaver(30000); return; } // never over someone typing, chatting, reading mail, a live game, the film, playing doom, editing a script, the tattoo studio, a life sim, or a live call
     if (monitor.classList.contains("show-calendar") || monitor.classList.contains("show-clock")) { scheduleSaver(30000); return; } // nor over the open calendar / clock
     if (monitor.classList.contains("show-browser")) { scheduleSaver(30000); return; } // nor over someone browsing
     // a visited site (harfbuzz/behdad) idles back to the caps "home" before the saver
@@ -47361,6 +47581,7 @@ setOfficeProgress("pc", false);
     closeMailApp();
     closeMinesApp(); // stops the game timer too — nothing ticks behind a dark screen
     closePacmanApp(); // parks its maze loop without discarding the retained board
+    parkPrinceApp(); // pauses PrinceJS behind the dark screen; a real shutdown below destroys it
     closeVideoApp(); // pauses the film too — it never plays behind a dark/rebooting screen
     closeTattooApp(); // drops the studio (and any open send dialog) before the screen goes dark
     closeLifeApp(); // stops the Game-of-Life loop too — nothing ticks behind a dark screen
@@ -47373,7 +47594,7 @@ setOfficeProgress("pc", false);
     bootTimers.forEach(clearTimeout);
     bootTimers = [];
     stopSaver();
-    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snake", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-help", "show-credits");
+    monitor.classList.remove("screen-on", "show-fedora", "show-chrome", "show-caps", "show-harfbuzz", "show-behdad", "show-nowplaying", "show-console", "show-mail", "show-mines", "show-pacman", "show-prince", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snake", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-help", "show-credits");
     if (window.__monitorZoomOut) window.__monitorZoomOut(); // a dark screen never holds the zoom
   }
   // The monitor only lights up when the PC is on; it then boots Fedora →
@@ -48278,7 +48499,7 @@ setOfficeProgress("pc", false);
     eqFrame = frame;
     syncEqVisualLoop();
   }
-  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snake", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-help", "show-credits"];
+  var EQ_OCCLUDING_CLASSES = ["photobooth", "show-console", "show-mail", "show-mines", "show-pacman", "show-prince", "show-video", "show-family", "show-calendar", "show-clock", "show-weather", "show-chat", "show-python", "show-linux", "show-snake", "show-doom", "show-code", "show-tattoo", "show-life", "show-browser", "show-system", "show-about", "show-help", "show-credits"];
   function eqVisualWant() {
     if (monitorSleeping || !eqFrame || !eqAudioEl || window.currentStageName !== "office" || document.hidden || !document.hasFocus() ||
         !monitor.classList.contains("here") || !monitor.classList.contains("screen-on")) return false;
@@ -48621,6 +48842,9 @@ setOfficeProgress("pc", false);
     { id: "solitaire", labelKey: "classics_solitaire", aliases: ["cards", "card", "patience", "pasiáns", "pasians"], searchOnly: true, catalogOnly: true, game: { id: "solitaire", name: "Solitaire", how_to_open: "Open Classics or search for solitaire or cards on the monitor." }, open: function () { openClassicsApp("solitaire"); } },
     { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true, game: { id: "hack-man", name: "Hack-Man", highScoreState: "__pacmanState", how_to_open: "Search for hackman on the monitor; the ketamine ghost can reveal it too." },
       open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
+    { id: "prince", labelKey: "app_prince", aliases: ["princejs"], glyph: "♛", tile: "#17130f", color: "#d7b34c", glyphSize: "5.2", searchOnly: true,
+      game: { id: "prince", name: "Prince of Persia", how_to_open: "Double-click the garden skyline, search for prince on the monitor, or type prince in Console." },
+      open: function () { openPrinceApp(); } },
     { id: "system", labelKey: "mon_sys_system", glyph: "⚙", tile: "#f4ecdf", color: "#4a6b94", glyphSize: "5.2", searchOnly: true,
       open: function () { openMonitorSystemInfo(); } },
     { id: "about", labelKey: "mon_sys_website", glyph: "i", tile: "#f4ecdf", color: "#8e3a4a", glyphSize: "5.2", searchOnly: true,
@@ -48697,7 +48921,7 @@ setOfficeProgress("pc", false);
   var MONITOR_APP_CLASSES = {
     chrome: "show-browser", music: "show-nowplaying", photobooth: "photobooth",
     video: "show-video", call: "show-family", chat: "show-chat", mail: "show-mail",
-    calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", classics: "show-mines", pacman: "show-pacman",
+    calendar: "show-calendar", clock: "show-clock", tattoo: "show-tattoo", classics: "show-mines", pacman: "show-pacman", prince: "show-prince",
     life: "show-life", shoot: "show-doom", code: "show-code", console: "show-console",
     python: "show-python", linux: "show-linux", snake: "show-snake", weather: "show-weather",
     system: "show-system", about: "show-about", help: "show-help", credits: "show-credits"
@@ -48707,7 +48931,7 @@ setOfficeProgress("pc", false);
     photobooth: "__killMonitorPhotobooth", video: "__killMonitorVideo",
     call: "__killMonitorFamily", chat: "__killMonitorChat", mail: "__killMonitorMail",
     calendar: "__killMonitorCalendar", clock: "__killMonitorClock", tattoo: "__killMonitorTattoo",
-    classics: "__killMonitorClassics", pacman: "__killMonitorPacman", life: "__killMonitorLife", shoot: "__killMonitorDoom",
+    classics: "__killMonitorClassics", pacman: "__killMonitorPacman", prince: "__killMonitorPrince", life: "__killMonitorLife", shoot: "__killMonitorDoom",
     code: "__killMonitorCode", console: "__killMonitorConsole",
     python: "__killMonitorPython", linux: "__killMonitorLinux", snake: "__killMonitorSnake",
     weather: "__killMonitorWeather", system: "__killMonitorSystem",
@@ -50806,7 +51030,7 @@ setOfficeProgress("pc", false);
         ["show-chat", "chat"], ["show-weather", "weather"], ["show-calendar", "calendar"], ["show-clock", "clock"], ["show-mail", "mail"],
         ["show-family", "call"], ["show-nowplaying", "music"], ["show-tattoo", "tattoo"], ["photobooth", "photobooth"],
         ["show-console", "console"], ["show-python", "python"], ["show-linux", "linux"], ["show-snake", "snake"], ["show-code", "code"],
-        ["show-mines", "classics"], ["show-pacman", "pacman"], ["show-life", "life"], ["show-doom", "shoot"], ["show-video", "video"],
+        ["show-mines", "classics"], ["show-pacman", "pacman"], ["show-prince", "prince"], ["show-life", "life"], ["show-doom", "shoot"], ["show-video", "video"],
         ["show-browser", "browser"], ["show-system", "system"], ["show-about", "about"], ["show-help", "help"], ["show-credits", "credits"]
       ];
       for (var i = 0; monitor && i < classes.length; i++) if (monitor.classList.contains(classes[i][0])) return classes[i][1];
@@ -51492,6 +51716,7 @@ setOfficeProgress("pc", false);
     computer: "computer(true) — power the office PC up; computer(false) shuts it down; computer() reports whether it's on. computer(\"doom\")/computer(\"weather\") boot (if needed) and open that monitor app; a bad name lists them",
     mines: "mines() — open Mines directly inside Classics on the office monitor",
     solitaire: "solitaire() — open Klondike Solitaire directly inside Classics on the office monitor",
+    prince: "prince — open Prince of Persia inside the office monitor; prince() does the same from browser JavaScript. Double-click or double-tap the garden skyline for the basement entrance instead",
     reboot: "reboot() — power-cycle the loft OS (a `sudo reboot` from its own console)",
     openurl: "openurl(\"url\") — open any URL in a new browser tab (a bare host gets https://)",
     mailto: "mailto() — compose an email to us; mailto(\"a@x.com\") or mailto([\"a@x\",\"b@y\"]) sets the recipient(s); mailto(\"a@x.com\", {cc:\"c@z\", bcc:[…], subject:\"hi\", body:\"…\"}) adds the rest. Device-aware: desktop→Gmail web, mobile→native mail. Empty recipient → sends to us",
@@ -51617,6 +51842,10 @@ setOfficeProgress("pc", false);
     // re-points independently; see its .then below, which captures ctx.out.)
     var __capturedOut = activeConsoleOut;
     try {
+    if (/^prince(?:\(\))?$/i.test(c)) {
+      if (window.prince) window.prince();
+      return;
+    }
     // `/chat ...` is deliberately explicit: everything else remains real JavaScript. It
     // shares Charlie's app history/queue, but leaves the reply in whichever console asked.
     var chatM = c.match(/^\/chat(?:\s+([\s\S]*))?$/i);
@@ -51927,14 +52156,14 @@ setOfficeProgress("pc", false);
     "goto", "rooms", "daylight", "night", "day", "season", "meteors", "birthday", "play", "pause", "temp", "weather",
     "clock", "time", "sharecard", "projector", "storm", "rain", "snow", "overcast", "wildfires", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "gong", "servefood", "kidsAsleep",
-    "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "mines", "solitaire", "reboot", "killall", "service", "monitor", "go", "no",
+    "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "mines", "solitaire", "prince", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
     "faal", "rumi", "confetti", "fireworks", "lanterns", "cat", "dog", "whistler", "octi", "piratebox", "chest", "lamaz", "elmaz", "tamper", "brew", "sip", "knockbox", "irene", "visitors", "mouses", "piano", "classic", "kitten", "ukelele", "audio", "music",
     "guitar", "ukulele", "beat", "eclipse", "hb", "display_svg", "loft", "ls", "pwd", "whoami", "sudo",
     "date", "timestamp", "man", "love", "kitty", "exit", "speech", "fishu", "volume", "volumebutton", "openurl", "mailto", "beans", "couples", "officefolks"
   ];
   // Barewords / unix gags that are NOT functions — completing them must not append "(".
-  var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, killall: 1, service: 1 };
+  var CONSOLE_CMDS_BARE = { help: 1, clear: 1, quit: 1, exit: 1, loft: 1, hb: 1, ls: 1, pwd: 1, whoami: 1, sudo: 1, date: 1, man: 1, love: 1, prince: 1, killall: 1, service: 1 };
   function consoleCommonPrefix(list) {
     if (!list.length) return "";
     var p = list[0];
@@ -55588,6 +55817,7 @@ setOfficeProgress("pc", false);
     if (monitor.classList.contains("show-life") && stepBack && window.__closeMonitorLifeHelp && window.__closeMonitorLifeHelp()) return true;
     if (monitor.classList.contains("show-doom")) { closeDoom(!!stepBack); return true; }
     if (monitor.classList.contains("show-mines")) { closeMinesApp(!!stepBack); return true; }
+    if (monitor.classList.contains("show-prince")) { parkPrinceApp(); return true; }
     var apps = [["show-video", closeVideoApp], ["show-pacman", closePacmanApp], ["show-life", closeLifeApp], ["show-chat", closeChat], ["show-code", closeCode], ["show-browser", closeBrowser]];
     for (var i = 0; i < apps.length; i++) if (monitor.classList.contains(apps[i][0])) { apps[i][1](); return true; }
     if (monitor.classList.contains("show-calendar") && window.__closeMonitorCalendar) { window.__closeMonitorCalendar(); return true; }
@@ -55666,7 +55896,7 @@ setOfficeProgress("pc", false);
   (function () {
     // Real closable apps this menu serves — the exact set __closeTopMonitorApp knows how to
     // close, minus the three console apps (console-ctx owns those). Keep in sync with it.
-    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-tattoo", "show-life", "show-code", "show-doom", "show-snake", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-system", "show-about", "show-help", "show-credits"];
+    var REAL_APPS = ["show-family", "photobooth", "show-video", "show-mail", "show-mines", "show-pacman", "show-prince", "show-tattoo", "show-life", "show-code", "show-doom", "show-snake", "show-browser", "show-calendar", "show-clock", "show-weather", "show-chat", "show-nowplaying", "show-system", "show-about", "show-help", "show-credits"];
     var CONSOLE_APPS = ["show-python", "show-linux", "show-console"];
     // Runtime predicates grey Kill out until there is a live engine to stop.
     var RUNTIME_EXTRAS = {
@@ -55675,13 +55905,13 @@ setOfficeProgress("pc", false);
     };
     // per-app Kill overrides for plain (non-runtime) apps whose Kill should run a staged gag
     // instead of the silent generic close.
-    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorClassics", "show-pacman": "__killMonitorPacman", "show-weather": "__killMonitorWeather", "show-system": "__killMonitorSystem", "show-about": "__killMonitorAbout", "show-help": "__killMonitorHelp", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
+    var APP_KILLS = { "show-browser": "__killMonitorBrowser", "show-code": "__killMonitorCode", "show-life": "__killMonitorLife", "show-calendar": "__killMonitorCalendar", "show-clock": "__killMonitorClock", "show-mail": "__killMonitorMail", "show-tattoo": "__killMonitorTattoo", "show-video": "__killMonitorVideo", "show-family": "__killMonitorFamily", "show-nowplaying": "__killMonitorMusic", "show-chat": "__killMonitorChat", "show-mines": "__killMonitorClassics", "show-pacman": "__killMonitorPacman", "show-prince": "__killMonitorPrince", "show-weather": "__killMonitorWeather", "show-system": "__killMonitorSystem", "show-about": "__killMonitorAbout", "show-help": "__killMonitorHelp", "show-credits": "__killMonitorCredits", "photobooth": "__killMonitorPhotobooth" };
     // plain (non-host) apps: their show-class → desktop-app id, so an in-app Kill resets state
     // (drop the retained board/drawing/read-state/…) AND closes — same "Kill clears, close keeps"
     // meaning as the desktop-dock Kill. Excludes the hosts (doom/browser via the maps above;
     // python/linux/console owned by console-ctx).
     var CLASS_TO_ID = {
-      "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "classics", "show-pacman": "pacman",
+      "show-family": "family", "show-video": "video", "show-mail": "mail", "show-mines": "classics", "show-pacman": "pacman", "show-prince": "prince",
       "show-tattoo": "tattoo", "show-life": "life", "show-code": "code", "show-calendar": "calendar", "show-clock": "clock",
       "show-weather": "weather", "show-chat": "chat", "show-nowplaying": "music",
       "show-system": "system", "show-about": "about", "show-help": "help", "show-credits": "credits"
@@ -60394,6 +60624,380 @@ async def localfont(name):
     });
     doomBackBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
+  // ── hidden PrinceJS app ────────────────────────────────────────────────────────
+  // Hidden monitor app with one stable iframe browsing context. The contained game starts
+  // inside the authored display; its own button fullscreens that SAME iframe, so entering
+  // and leaving fullscreen never reloads the game. The skyline uses a separate basement
+  // presentation, still without adding a desktop tile.
+  var princeRoot = document.getElementById("monitor-prince");
+  var princeCloseBtn = document.getElementById("monitor-prince-close");
+  var princeFullscreenBtn = document.getElementById("monitor-prince-fullscreen");
+  var princeOverlay = document.getElementById("prince-focus-overlay");
+  var princeHost = document.getElementById("monitor-prince-host");
+  var princeOverlayClose = document.getElementById("prince-focus-close");
+  var princeBasement = document.getElementById("prince-basement");
+  var princeBasementHost = document.getElementById("prince-basement-host");
+  var princeBasementClose = document.getElementById("prince-basement-close");
+  var huntViewport = document.querySelector(".hunt-viewport");
+  var princeFrame = null;
+  var princeFrameState = "cold";
+  var princeMode = null;
+  var princePresented = false;
+  var princeOwnsFullscreen = false;
+  var princeRaisedMonitorFullscreen = false;
+  var princeAfterFullscreen = null;
+  var princeClosing = false;
+  var princeKillTimer = null;
+  var princeContextObserver = null;
+  var princeContextTimer = null;
+  function releasePrinceContextMenu() {
+    if (princeContextObserver) princeContextObserver.disconnect();
+    princeContextObserver = null;
+    clearTimeout(princeContextTimer);
+    princeContextTimer = null;
+    if (princeRoot) princeRoot.classList.remove("prince-context-open");
+    if (princeBasement) princeBasement.classList.remove("prince-context-open");
+    if (princeFrame && window.__princeInputActive) focusPrince();
+  }
+  function ownPrinceContextMenu(target, x, y) {
+    releasePrinceContextMenu();
+    if (target) target.classList.add("prince-context-open");
+    if (!window.__openMonitorContextAt || !window.__openMonitorContextAt(target, x, y)) {
+      releasePrinceContextMenu();
+      return;
+    }
+    var menu = document.querySelector(".mon-ctx:not(.scene-ctx)");
+    if (!menu || !window.MutationObserver) {
+      princeContextTimer = setTimeout(releasePrinceContextMenu, 15000);
+      return;
+    }
+    princeContextObserver = new MutationObserver(function () {
+      if (!menu.isConnected) releasePrinceContextMenu();
+    });
+    princeContextObserver.observe(document.documentElement, { childList: true, subtree: true });
+    princeContextTimer = setTimeout(releasePrinceContextMenu, 15000);
+  }
+  function princeShouldRun() {
+    return !!princeFrame && princePresented && !princeClosing && window.__princeInputActive &&
+      (princeMode === "basement" || monitor.classList.contains("show-prince")) &&
+      document.visibilityState !== "hidden" &&
+      document.hasFocus();
+  }
+  function princeSync() {
+    if (!princeFrame || !princeFrame.contentWindow) return;
+    try { princeFrame.contentWindow.postMessage({ kind: "prince-control", active: princeShouldRun() }, location.origin); }
+    catch (_error) {}
+  }
+  function focusPrince() {
+    if (!princeFrame || !princeFrame.contentWindow) return;
+    try {
+      princeFrame.contentWindow.focus();
+      var canvas = princeFrame.contentDocument && princeFrame.contentDocument.querySelector("canvas");
+      if (canvas) {
+        canvas.setAttribute("tabindex", "0");
+        canvas.focus({ preventScroll: true });
+      }
+    } catch (_error) {}
+  }
+  function buildPrinceFrame(host) {
+    if (princeFrame) {
+      if (host && princeFrame.parentNode !== host) host.appendChild(princeFrame);
+      return;
+    }
+    if (!host) return;
+    var frame = document.createElement("iframe");
+    frame.title = "Prince of Persia — PrinceJS";
+    frame.src = "princejs/index.html";
+    frame.allow = "autoplay; fullscreen";
+    frame.addEventListener("load", function () {
+      princeFrameState = "loading";
+      princeSync();
+      setTimeout(focusPrince, 80);
+    });
+    host.appendChild(frame);
+    princeFrame = frame;
+    princeFrameState = "loading";
+  }
+  function presentPrinceMonitor() {
+    princePresented = true;
+    window.__princeInputActive = true;
+    princeSync();
+    focusPrince();
+    setTimeout(focusPrince, 80);
+    setTimeout(focusPrince, 240);
+  }
+  function finishPrinceFullscreen() {
+    princeOwnsFullscreen = false;
+    // Chromium can retain a stale raster for SVG-symbol text after an iframe leaves
+    // fullscreen; rebinding the Snake icon's <use> is the same repaint hover provokes.
+    document.querySelectorAll('use[href="#dicon-snake"]').forEach(function (use) {
+      use.removeAttribute("href");
+      requestAnimationFrame(function () { use.setAttribute("href", "#dicon-snake"); });
+    });
+    princeSync();
+    setTimeout(focusPrince, 80);
+  }
+  function setPrinceFullscreen(on) {
+    on = !!on && princeMode === "monitor" && !!princeFrame;
+    if (!on) {
+      if (princeRaisedMonitorFullscreen) {
+        princeRaisedMonitorFullscreen = false;
+        if (window.__monitorContentFullscreen && window.__monitorContentFullscreen() &&
+            window.__toggleMonitorContentFullscreen) window.__toggleMonitorContentFullscreen();
+      }
+      var current = document.fullscreenElement || document.webkitFullscreenElement;
+      if (current === princeFrame) {
+        var exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) {
+          try { exit.call(document); return; } catch (_error) {}
+        }
+      }
+      finishPrinceFullscreen();
+      return;
+    }
+    var activeFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    if (activeFullscreen && activeFullscreen !== princeFrame) {
+      if (window.__monitorContentFullscreen && !window.__monitorContentFullscreen() &&
+          window.__toggleMonitorContentFullscreen) {
+        window.__toggleMonitorContentFullscreen();
+        princeRaisedMonitorFullscreen = true;
+      }
+      princeSync();
+      setTimeout(focusPrince, 80);
+      return;
+    }
+    if (!princeFrame) return;
+    var request = princeFrame.requestFullscreen || princeFrame.webkitRequestFullscreen;
+    if (!request) { finishPrinceFullscreen(); return; }
+    try {
+      var promise = request.call(princeFrame);
+      if (promise && promise.catch) promise.catch(finishPrinceFullscreen);
+    } catch (_error) { finishPrinceFullscreen(); }
+  }
+  function presentPrinceBasement() {
+    if (!princeBasement || !huntViewport) return;
+    princePresented = true;
+    princeBasement.hidden = false;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { huntViewport.classList.add("prince-basement-open"); });
+    });
+    window.__princeInputActive = true;
+    princeSync();
+    setTimeout(focusPrince, 80);
+    setTimeout(focusPrince, 800);
+  }
+  function finishPrincePark() {
+    if (!princeFrame && !princePresented && !princeClosing) return;
+    var parkedFromMonitor = princeMode === "monitor";
+    releasePrinceContextMenu();
+    princeClosing = false;
+    princePresented = false;
+    princeOwnsFullscreen = false;
+    if (princeRaisedMonitorFullscreen) {
+      princeRaisedMonitorFullscreen = false;
+      if (window.__monitorContentFullscreen && window.__monitorContentFullscreen() &&
+          window.__toggleMonitorContentFullscreen) window.__toggleMonitorContentFullscreen();
+    }
+    princeAfterFullscreen = null;
+    window.__princeInputActive = false;
+    if (princeOverlay) {
+      princeOverlay.classList.remove("prince-killing");
+      princeOverlay.hidden = true;
+    }
+    if (princeRoot) princeRoot.classList.remove("prince-killing");
+    if (huntViewport) huntViewport.classList.remove("prince-basement-open");
+    if (princeBasement) princeBasement.hidden = true;
+    if (princeFrame) {
+      try { princeFrame.contentWindow.postMessage({ kind: "prince-control", active: false }, location.origin); } catch (_error) {}
+    }
+    monitor.classList.remove("show-prince");
+    if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    scheduleSaver();
+    // A retained iframe keeps its browsing-context focus even while hidden. Explicitly
+    // hand focus back to a real desktop control so the next printable key can wake the
+    // monitor finder without requiring an otherwise-pointless monitor click.
+    if (parkedFromMonitor) requestAnimationFrame(function () {
+      var desktopFocus = document.getElementById("monitor-desk-search-button");
+      try { window.focus(); } catch (_error) {}
+      if (desktopFocus) {
+        try { desktopFocus.focus({ preventScroll: true }); }
+        catch (_error2) { try { desktopFocus.focus(); } catch (_error3) {} }
+      }
+    });
+  }
+  function parkPrinceApp() {
+    if (!princeFrame || !princePresented) return;
+    if (princeClosing) return;
+    princeClosing = true;
+    window.__princeInputActive = false;
+    // Phaser installs its own key suppression inside the retained iframe. Move focus
+    // back into the parent document immediately, before the slide-out finishes, or a
+    // parked dungeon can still eat browser chords such as Ctrl/Cmd+R.
+    try { window.focus(); } catch (_error) {}
+    if (huntViewport) {
+      if (!huntViewport.hasAttribute("tabindex")) huntViewport.setAttribute("tabindex", "-1");
+      try { huntViewport.focus({ preventScroll: true }); }
+      catch (_error2) { try { huntViewport.focus(); } catch (_error3) {} }
+    }
+    princeSync();
+    if (princeMode === "basement" && huntViewport) {
+      huntViewport.classList.remove("prince-basement-open");
+      setTimeout(finishPrincePark, 720);
+      return;
+    }
+    var current = document.fullscreenElement || document.webkitFullscreenElement;
+    if (princeOwnsFullscreen && current === princeFrame) {
+      princeAfterFullscreen = "park";
+      setPrinceFullscreen(false);
+      return;
+    }
+    finishPrincePark();
+  }
+  function destroyPrinceApp() {
+    if (!princeFrame) {
+      finishPrincePark();
+      princeMode = null;
+      princeFrameState = "cold";
+      if (window.__markMonitorAppKilled) window.__markMonitorAppKilled("prince");
+      return;
+    }
+    var current = document.fullscreenElement || document.webkitFullscreenElement;
+    if (princeOwnsFullscreen && current === princeFrame) {
+      princeAfterFullscreen = "destroy";
+      setPrinceFullscreen(false);
+      return;
+    }
+    finishPrincePark();
+    try { princeFrame.remove(); } catch (_error) {
+      if (princeFrame.parentNode) princeFrame.parentNode.removeChild(princeFrame);
+    }
+    princeFrame = null;
+    princeFrameState = "cold";
+    princeMode = null;
+    clearTimeout(princeKillTimer);
+    princeKillTimer = null;
+    if (window.__markMonitorAppKilled) window.__markMonitorAppKilled("prince");
+  }
+  function killPrinceApp() {
+    if (!princeFrame || princeClosing) return destroyPrinceApp();
+    if (princeMode !== "monitor" || !princePresented) return destroyPrinceApp();
+    window.__princeInputActive = false;
+    princeSync();
+    princeRoot.classList.add("prince-killing");
+    clearTimeout(princeKillTimer);
+    princeKillTimer = setTimeout(destroyPrinceApp, 1550);
+  }
+  function openPrinceApp() {
+    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-prince")) return;
+    stopSaver();
+    clearTimeout(saverTimer); saverTimer = null;
+    monitor.classList.add("show-prince");
+    if (window.__markMonitorAppRunning) window.__markMonitorAppRunning("prince");
+    princeClosing = false;
+    princeMode = "monitor";
+    buildPrinceFrame(princeHost);
+    presentPrinceMonitor();
+    if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    playLaptopClickSound("office-monitor");
+  }
+  function openPrinceBasement() {
+    if (princePresented || princeClosing) return false;
+    if (window.currentStageName !== "garden" && window.goToStage) window.goToStage("garden");
+    if (window.__stopAutoplay) window.__stopAutoplay();
+    stopSaver();
+    princeMode = "basement";
+    princeClosing = false;
+    if (window.__markMonitorAppRunning) window.__markMonitorAppRunning("prince");
+    buildPrinceFrame(princeBasementHost);
+    presentPrinceBasement();
+    if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    return true;
+  }
+  window.__openMonitorPrince = openPrinceApp;
+  window.__openGardenPrince = openPrinceBasement;
+  window.__princeCanFullscreen = function () { return princeMode === "monitor" && !!princeFrame; };
+  window.__enterPrinceBrowserFullscreen = function () { setPrinceFullscreen(true); };
+  window.__closeMonitorPrince = parkPrinceApp;
+  window.__killMonitorPrince = killPrinceApp;
+  window.__destroyMonitorPrince = destroyPrinceApp;
+  window.__princeRunning = function () { return !!princeFrame; };
+  window.__princeState = function () {
+    return { open: princePresented, mode: princeMode, parked: !!princeFrame && !princePresented,
+      overlay: !!(princeOverlay && !princeOverlay.hidden), basement: princePresented && princeMode === "basement",
+      iframe: princeFrame ? princeFrame.getAttribute("src") : null, state: princeFrameState,
+      browserFullscreen: princeOwnsFullscreen };
+  };
+  function princeFullscreenChanged() {
+    var current = document.fullscreenElement || document.webkitFullscreenElement;
+    if (current === princeFrame) {
+      princeOwnsFullscreen = true;
+      focusPrince();
+      return;
+    }
+    if (princeOwnsFullscreen) {
+      finishPrinceFullscreen();
+      var action = princeAfterFullscreen;
+      princeAfterFullscreen = null;
+      if (action === "destroy") destroyPrinceApp();
+      else if (action === "park") finishPrincePark();
+    }
+  }
+  document.addEventListener("fullscreenchange", princeFullscreenChanged);
+  document.addEventListener("webkitfullscreenchange", princeFullscreenChanged);
+  document.addEventListener("visibilitychange", princeSync);
+  window.addEventListener("focus", princeSync);
+  window.addEventListener("blur", princeSync);
+  window.addEventListener("message", function (event) {
+    if (!princeFrame || event.source !== princeFrame.contentWindow || event.origin !== location.origin || !event.data) return;
+    if (event.data.kind === "prince-exit") {
+      parkPrinceApp();
+      return;
+    }
+    if (event.data.kind === "prince-contextmenu") {
+      var target = princeMode === "basement" ? princeBasement : princeRoot;
+      if (target) {
+        var rect = target.getBoundingClientRect();
+        ownPrinceContextMenu(target,
+          rect.left + Math.max(0, Math.min(1, Number(event.data.x) || 0)) * rect.width,
+          rect.top + Math.max(0, Math.min(1, Number(event.data.y) || 0)) * rect.height);
+      }
+      return;
+    }
+    if (event.data.kind === "prince-status") {
+      princeFrameState = event.data.state || princeFrameState;
+      if (princeMode === "basement" && princeFrameState === "lost") {
+        parkPrinceApp();
+        return;
+      }
+      princeSync();
+      focusPrince();
+    }
+  });
+  if (princeBasementClose) princeBasementClose.addEventListener("click", function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    parkPrinceApp();
+  });
+  if (princeFullscreenBtn) {
+    function enterPrinceFullscreen(event) {
+      if (event) { event.preventDefault(); event.stopPropagation(); }
+      setPrinceFullscreen(true);
+    }
+    princeFullscreenBtn.addEventListener("click", enterPrinceFullscreen);
+    princeFullscreenBtn.addEventListener("dblclick", function (event) { event.preventDefault(); event.stopPropagation(); });
+    princeFullscreenBtn.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") enterPrinceFullscreen(event);
+    });
+  }
+  [princeCloseBtn, princeOverlayClose].forEach(function (button) {
+    if (!button) return;
+    button.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      parkPrinceApp();
+    });
+    button.addEventListener("dblclick", function (event) { event.preventDefault(); event.stopPropagation(); });
+  });
   // The now-playing screen's pause/play toggle: pauses the current song, or resumes it
   // if paused. play()/pause() fire the listeners above, which repaint the button + bars.
   var pauseBtn = document.getElementById("monitor-pause-btn");
@@ -62599,6 +63203,7 @@ async def localfont(name):
     if (pyLoadState) destroyPython();
     if (lxLoadState) destroyLinux();
     if (snakeFrame) destroySnake();
+    if (princeFrame) destroyPrinceApp();
     clearMonitorRunningApps();
     stopSaver();
   }
@@ -75372,6 +75977,45 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); gleamPane(); }
     });
   });
+  // The three Prague-skyline towers conceal Prince's basement entrance. Desktop gets
+  // a double-click; touch gets an equivalent double-tap. Coordinate hit-testing keeps
+  // the discovery on the actual buildings without laying a transparent target over the
+  // sky pane's existing gleam/aircraft interaction.
+  var gardenWindow = document.getElementById("garden-window");
+  var gardenSkylineTapAt = 0;
+  function gardenSkylineHit(event) {
+    if (!gardenWindow || !gardenWindow.getScreenCTM) return false;
+    var svg = gardenWindow.ownerSVGElement;
+    var point = svg && svg.createSVGPoint ? svg.createSVGPoint() : null;
+    var matrix = gardenWindow.getScreenCTM();
+    if (!point || !matrix) return false;
+    point.x = event.clientX;
+    point.y = event.clientY;
+    var local = point.matrixTransform(matrix.inverse());
+    return (local.x >= 104 && local.x <= 244 && local.y >= 120 && local.y <= 292) ||
+      (local.x >= 250 && local.x <= 386 && local.y >= 70 && local.y <= 292) ||
+      (local.x >= 392 && local.x <= 528 && local.y >= 130 && local.y <= 292);
+  }
+  function enterPrinceBasement(event) {
+    if (!gardenSkylineHit(event)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    if (window.__openGardenPrince) window.__openGardenPrince();
+    return true;
+  }
+  if (gardenWindow) {
+    gardenWindow.addEventListener("dblclick", enterPrinceBasement);
+    gardenWindow.addEventListener("pointerup", function (event) {
+      if (event.pointerType !== "touch" || !gardenSkylineHit(event)) return;
+      var now = Date.now();
+      if (now - gardenSkylineTapAt < 420) {
+        gardenSkylineTapAt = 0;
+        enterPrinceBasement(event);
+      } else {
+        gardenSkylineTapAt = now;
+      }
+    });
+  }
   var lamp = document.getElementById("garden-lamp");
   var genie = document.getElementById("garden-genie");
   var lampRubCount = 0;
@@ -103801,6 +104445,7 @@ function spawnDustMote(container) {
   window.monitor = window.computer; // alias — the office monitor is the computer
   window.mines = function () { return window.__openMonitorApp ? window.__openMonitorApp("mines") : false; };
   window.solitaire = function () { return window.__openMonitorApp ? window.__openMonitorApp("solitaire") : false; };
+  window.prince = function () { return window.__openMonitorApp ? window.__openMonitorApp("prince") : false; };
   window.reboot = function () { // power-cycle the loft OS — a proper `sudo reboot` from inside its own console
     var pc = document.getElementById("office-pc-desk-trio");
     if (!pc) return "no computer here.";

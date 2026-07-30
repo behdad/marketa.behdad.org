@@ -279,6 +279,14 @@ expands the DOS game itself; its red-and-white controls echo the game screen.
 Esc leaves Nibbles at its historical DOS
 prompt; type `EXIT` there to return to the loft.
 
+Prince of Persia is a hidden monitor app: search for `prince`, type `prince` in
+either console, or run `prince()` from browser JavaScript. Its own Fullscreen
+control expands both the monitor and browser around the 16:10 game. Dismiss
+parks the live game so reopening resumes it; **Kill app** and **Start over**
+discard the run. In the garden, double-click or double-tap the distant skyline
+to descend into the same persistent game in the stone basement. Escape or
+Backspace returns to the garden without ending the run.
+
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.
 

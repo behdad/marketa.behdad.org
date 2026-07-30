@@ -75,6 +75,14 @@ var HARNESS = String.raw`<script>
 
     // Pause only the backing score: the live keys stay available and polyphonic.
     window.__setGardenParty(false, false);
+    var roomLocalStart = window.__starsPlaying();
+    window.goToStage("garden");
+    var roomLocalAway = !window.__starsPlaying();
+    window.goToStage("cuddly");
+    var roomLocalReturn = window.__starsPlaying();
+    check("the night-sky score stops outside Cuddly and resumes on return",
+      roomLocalStart && roomLocalAway && roomLocalReturn,
+      JSON.stringify({ start: roomLocalStart, away: roomLocalAway, returned: roomLocalReturn }));
     window.__pauseStars(true);
     var before = window.__projectorPianoState();
     var keyC = piano.querySelector('[data-note="60"]');

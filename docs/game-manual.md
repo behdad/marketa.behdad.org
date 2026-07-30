@@ -184,7 +184,8 @@ Space toggles the current music without opening or leaving a monitor app.
 Tap the projector screen to cycle its programs. Coffee cat and the fireplace
 lead the cycle: coffee is first from April through September, while fire is
 first from October through March. While the coffee channel is selected, its
-three café scenes rotate every 20 seconds.
+three café scenes rotate every 20 seconds. Projector music, including the
+night-sky piano, is contained to the Cuddly-puddly room.
 
 On the balcony, open and light the smoker to begin the BBQ during a party. Its
 lid, firebox, food, and serving state are all interactive. Extinguishing it or

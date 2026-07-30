@@ -125,9 +125,9 @@ suspend + idle timer. Keep it **running** while:
 **Suspend only when truly idle** (unattended, no song, no bed) so we never hold a silent OS
 stream open. `__activeAudioBeds` is a refcount: `audioBed()` increments, the handle's
 `close()` decrements. This is what keeps the clock from freezing under the **background-safe
-beds** (coffee-cat lounge loop, aquarium melody, night-sky Satie, workout, totoro melody, and every garden-party
-dance) — they intentionally keep playing while unfocused, so the context must stay running
-under them → no clock jump → no burst.
+beds** (the Cuddly-local projector scores and every garden-party dance) — while their room
+gate remains open they intentionally keep playing while unfocused, so the context must stay
+running under them → no clock jump → no burst.
 
 Wiring: `visibilitychange` + window `blur`/`focus` + a 2 s interval backstop
 (`updateFocusGatedAudio`) all call the manager (via `__updateEqCtxIdle`, which now just

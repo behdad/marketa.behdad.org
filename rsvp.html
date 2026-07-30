@@ -33314,11 +33314,10 @@ setMusicPausedState(false);
   for (var _si = STARS_SCORES.length - 1; _si > 0; _si--) { var _sj = (Math.random() * (_si + 1)) | 0, _st = STARS_SCORES[_si]; STARS_SCORES[_si] = STARS_SCORES[_sj]; STARS_SCORES[_sj] = _st; } // Fisher-Yates: random per-load order, fixed for the session
   var starsPiece = 0, curScore = STARS_SCORES[0], lastFlashT = 0, lastNoteT = 0; // rotation index into the shuffled pool
   function starsWant() {
-    // the night-sky piano: whole-loft when there's NO party (a calm Satie bed across the loft),
-    // but cuddly-ONLY once the garden party is on — so it leads in the nook while the party ducks
-    // into the background, instead of two whole-loft musics. Background-safe within wherever it's
-    // allowed (the look-ahead scheduler queues on the audio clock, so a throttled tab won't stutter).
-    return !window.__projectorRestorePaused && screen.classList.contains("chan-stars") && (!window.__gardenPartyOn || window.currentStageName === "cuddly");
+    // Like every projector score, the night-sky piano belongs to the Cuddly room.
+    // Background-safe while that room remains selected: the look-ahead scheduler queues on
+    // the audio clock, so a throttled tab won't stutter.
+    return !window.__projectorRestorePaused && screen.classList.contains("chan-stars") && starsInCuddly;
   }
   // Soft triangle voice with a struck-note envelope — a quick strike, a fast initial decay to a
   // lower body, then a slow tail, so it articulates like a felt piano rather than a held tone.
@@ -33477,7 +33476,7 @@ setMusicPausedState(false);
       if (!starsCtx) return;
       try { var p = starsCtx.resume && starsCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       // triangle voices → a gentle lowpass (rounds the tone toward a soft piano) → one master
-      // gain (the single volume handle + fade). Centered: it's a whole-loft track.
+      // gain (the single volume handle + fade). Centered within the Cuddly room.
       var lp = starsCtx.createBiquadFilter();
       lp.type = "lowpass"; lp.frequency.value = 2400; // warm, felt-piano roundness
       var master = starsCtx.createGain();
@@ -85347,7 +85346,7 @@ function spawnDustMote(container) {
     if (window.__syncCoffeeScenes) window.__syncCoffeeScenes(); // only advance the café scenes while this channel is being watched
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
     if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
-    if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // Gnossienne: whole-loft off-party, cuddly-only during a party (see starsWant)
+    if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // the night-sky piano is Cuddly-only, like every projector score
     if (window.__setPartyDuck) window.__setPartyDuck(); // room-scoped party duck: fade the party down on entering the nook (channel playing), back up on leaving
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
     if (window.__updateProjectorPans) window.__updateProjectorPans(); // every projector-music bed pans to the new room from the shared table
@@ -85360,7 +85359,7 @@ function spawnDustMote(container) {
     if (window.__updateGardenBirdsong) window.__updateGardenBirdsong(name === "garden"); // birdsong only in the garden, and only by day
     if (window.__updateGardenDiscoPeek) window.__updateGardenDiscoPeek(); // after-dark disco-ball peek re-arms on entering the garden at night, retracts on leaving (reads window.currentStageName)
     if (window.__updateGardenAurora) window.__updateGardenAurora(); // northern lights: the rAF loop runs only while the garden's on-screen at dusk (reads window.currentStageName)
-    if (window.__updatePartyMusic) window.__updatePartyMusic(ROOM_FADE); // techno party bed plays whole-loft while the party's on (room-agnostic, like the night-sky bed)
+    if (window.__updatePartyMusic) window.__updatePartyMusic(ROOM_FADE); // techno party bed plays whole-loft while the party's on (room-agnostic)
     if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse(name === "balcony"); // string lights pulse with the beat only on the balcony
     if (window.__updateBalconyWindows) window.__updateBalconyWindows(name === "balcony"); // across-street apartment lights change only while their facade is being watched
     if (window.__maybeBalconyKidsPlay) window.__maybeBalconyKidsPlay(name); // open door + day: seasonal play, strongly favoured when freezing
@@ -90983,7 +90982,7 @@ function spawnDustMote(container) {
     if (on) { if (window.__startGuestFlares) window.__startGuestFlares(); } else if (window.__stopGuestFlares) window.__stopGuestFlares(); // frequent silent named-guest reactions while the garden is watched
     if (!on && window.__setSmores) window.__setSmores(false); // the party's out → put the s'mores bonfire out too (unless a fire-festival season keeps its own)
     if (!on && window.__stopBalconySky) window.__stopBalconySky(); // ...and any fireworks finale / wish-lanterns in flight
-    if (window.__updateStarsSound) window.__updateStarsSound(); // stars/piano is cuddly-only during a party, whole-loft otherwise — re-gate on party start/stop
+    if (window.__updateStarsSound) window.__updateStarsSound(); // resync the Cuddly piano bed alongside the projector/party handoff
     if (window.__refreshGardenCaption) window.__refreshGardenCaption(); // garden line goes party-mode / reverts
     if (on && window.__retireHint) window.__retireHint("hint_ksecret"); // loose-brick hint: retire once the party (and its bar) reveals the kitchen's other side
     var gs = document.getElementById("stage-garden");
@@ -97024,8 +97023,8 @@ function spawnDustMote(container) {
     // a no-op before the encore has switched it on; keeps the party switch in sync too)
     setEncoreUv(false);
     if (window.__setGardenParty) window.__setGardenParty(false); // the encore's garden party never lingers past the show
-    // the cuddly chapter's night-sky piano rides a whole-loft projector music channel; a
-    // mid-show skip must silence its bed (→ off) or the piano would play on stranded past the
+    // the cuddly chapter can leave the night-sky piano selected; a mid-show skip must still
+    // silence its bed (→ off) or the piano would resume on a later Cuddly visit past the
     // take-over. Only a music channel is switched off (fire/off are already silent), so a
     // resting projector is left as it is.
     if (window.__cuddlyProjector && window.__cuddlyProjector.channel) {

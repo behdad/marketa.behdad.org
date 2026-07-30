@@ -676,8 +676,12 @@ Left/Right, side controls, and room dots across the parallel lower-floor row.
 The Kitchen `WC`, Garden dungeon-door, Cuddly cinema-ticket, Office `Zzz…`,
 and Balcony key/fob SVG markers call the same public open hooks after a
 double-click or a pair of touch `pointerup` events within 420 ms. Single
-activation stays upstairs. They use `tabindex="-1"` because Tab remains a
-global game shortcut.
+activation stays in the main room and flashes the shared localized
+`lower_portal_insist` caption. Each marker owns a `.mon-ctx.scene-ctx`
+right-click menu whose **Unlock** action calls the same open hook; the shared
+context-menu augmenter appends separated **Start over** last. Escape, away
+click, scroll, blur, and resize dismiss the menu. They use `tabindex="-1"`
+because Tab remains a global game shortcut.
 It lets `goToStage` settle the destination's main-room state while paired WAAPI
 transforms move the source and destination overlays laterally. This runs before
 ordinary room shortcuts without changing `D` day/night or Shift+arrow calendar

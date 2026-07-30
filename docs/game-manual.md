@@ -59,19 +59,20 @@ every monitor app, including apps normally available only through search.
 Type to filter the directory, use the arrow keys to choose a result, then press
 Enter, or select an app directly.
 `D` toggles day and night. `Shift`+`↑`/`↓` moves the clock by 30 minutes;
-plain `↓` descends from any main room into its lower room and plain `↑`
-returns upstairs. While downstairs, `←`/`→` pans laterally between adjacent
-lower rooms; any room dot stays on the lower floor and pans straight to the
-room beneath its selected main room. Number keys `1`–`5` do the same without
-returning upstairs. Double-click or double-tap the Kitchen's `WC` sign, the
+plain `↓` opens the hidden room paired with any main room and plain `↑`
+returns to the main room. While visiting the hidden rooms, `←`/`→` pans
+laterally between adjacent rooms; any room dot pans straight to the hidden
+room paired with its selected main room. Number keys `1`–`5` do the same
+without returning to the main rooms. Double-click or double-tap the Kitchen's `WC` sign, the
 Garden's tiny dungeon door, the Cuddly-puddly film ticket, the Office's rising
-`Zzz…`, or the Balcony's key and fob for a discreet way down to the matching
-room. The other loft shortcuts remain available downstairs; Escape/Backspace,
+`Zzz…`, or the Balcony's key and fob for a discreet portal to the matching
+room. A single click makes the portal insist; right-click it and choose
+**Unlock** for a direct entrance. The other loft shortcuts remain available there; Escape/Backspace,
 arrows, and Enter/Space retain their local room meanings. Music and other
 continuous loft sound
-become quieter and softly muffled downstairs; the enclosed Bathroom is
+become quieter and softly muffled in these hidden rooms; the enclosed Bathroom is
 especially muffled, and the street Entrance sounds quieter still. Returning
-upstairs restores the original mix. Illustrated lower-room props react to
+to a main room restores the original mix. Illustrated hidden-room props react to
 clicks or taps but stay out of the `Tab` order, leaving `Tab` to its shortcut.
 
 After the first party unlocks free exploration, `Enter` starts the main activity
@@ -227,26 +228,26 @@ projector, or press Enter/Space, to toggle it on or off and reveal/hide the
 three-film chooser. Those keys never operate film playback; the side
 Play/Pause and Next controls follow the cinema while it is open. **Choose
 another** stops a film and returns to the chooser. The × button, Escape,
-Backspace, or ordinary room navigation pans back up.
+Backspace, or ordinary room navigation returns to the paired main room.
 
 The cinema window follows the loft's day/night state; select it to swap day and
 night throughout the loft. Film audio takes the foreground while it plays, with
 the selected poster casting a faint projection spill into the room. The ceiling
 sprinkler is unfortunately aimed at the projector: testing it during a film
 shorts the projector briefly, stops the film, and eventually reboots to the
-chooser. The Cuddly-puddly visitors upstairs pause while the cinema owns the
+chooser. The main-room Cuddly-puddly visitors pause while the cinema owns the
 room. The rainbow-butterfly neon hangs above the bicycle and relights when
 selected; each beam, camera and loose cushion responds on its own, while the
 bicycle, table, weights and sofa answer individually too.
 
 From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
-bare patch of brick to visit **Bathroom / Toilets** below. The room pans down
-to the fixtures below. Click or tap them to play; the stool also drags
+bare patch of brick to visit **Bathroom / Toilets**. The scene pans to its
+fixtures. Click or tap them to play; the stool also drags
 sideways. Use ×, Up, Escape, or Backspace to return. Left/Right and the room
-dots move between lower rooms.
+dots move between adjacent hidden rooms.
 
 From the Balcony, press `↓` or double-click/double-tap a truly bare patch of its
-background to descend to **The Lofts** street entrance. The native SVG
+background to open **The Lofts** street entrance. The native SVG
 night facade keeps the historic brick, stone, window, and timber-door character
 without reproducing an address. By day the façade and street brighten while
 the windows, hallway, and hanging entry lamps start dark; at night those lights
@@ -259,11 +260,11 @@ same intensity as the Balcony and clears with the other daylight smoke at night.
 While music is playing, the visible entrance glass gives a
 subtle beat-rattle; reduced-motion visitors get a still facade. `↑`, Escape,
 Backspace, or × returns to the
-Balcony. `←` pans to the Bedroom; `→` stays at the lower floor's right edge,
-and a room dot pans directly to the lower room beneath its selection.
+Balcony. `←` pans to the Bedroom; `→` stays at the hidden-room track's right edge,
+and a room dot pans directly to the hidden room paired with its selection.
 
-The Office has a Bedroom below it. Press `↓`, or double-click or double-tap a
-bare patch of the Office wall or floor, to pan downstairs without disturbing
+The Office pairs with a hidden Bedroom. Press `↓`, or double-click or double-tap a
+bare patch of the Office wall or floor, to open it without disturbing
 the Office. Press `↑`, ×, Escape, or Backspace to return. The room follows the
 loft's day/night state. Its stained glass, two brass mushroom lamps, compact wall rack,
 wardrobe, bed, and both bedside drawers are quiet repeatable toys; they also
@@ -274,8 +275,8 @@ O, use ordinary clicks or taps for later turns. Double-click/tap any pane after
 a win or draw to start over; the caption above the room announces who won or
 that the board ended in a draw. Leaving the Bedroom clears the board.
 
-Incoming messages still collect while any lower room is open, but their
-preview, unread badge, and first-use coach wait until you return upstairs.
+Incoming messages still collect while any hidden room is open, but their
+preview, unread badge, and first-use coach wait until you return to a main room.
 
 On the balcony, open and light the smoker to begin the BBQ during a party. Its
 lid, firebox, food, and serving state are all interactive. Extinguishing it or
@@ -384,15 +385,15 @@ either console, or run `prince()` from browser JavaScript. Its own Fullscreen
 control expands both the monitor and browser around the 16:10 game. Dismiss
 parks the live game so reopening resumes it; **Kill app** and **Start over**
 discard the run. In the garden, double-click or double-tap the distant skyline
-or a bare patch of the brick background to descend into the stone basement.
+or a bare patch of the brick background to open the stone dungeon.
 The dungeon opens quietly: click or tap its inset play wall, or press bare
 Enter or Space anywhere in the dormant dungeon, to create or resume the
 persistent Prince game and hand it the keyboard. Until then, its torches,
 barred window, chain, ledge, and loose stone
-remain small interactive toys and no game iframe exists. Interactive upstairs
+remain small interactive toys and no game iframe exists. Interactive main-room
 objects never trigger the background shortcut. Escape or Backspace returns to
 the garden without ending an initiated run. Left/Right pans to the adjacent
-lower room, and a room dot pans to the lower room beneath the room it names.
+hidden room, and a room dot pans to the hidden room paired with the room it names.
 
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.

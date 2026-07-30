@@ -12244,7 +12244,7 @@ section{margin:1.9rem 0}
 <rect x="64" y="148" width="28" height="13" fill="#dc9a78" class="hunt-hit wall-brick"/>
 <g id="kitchen-bathroom-marker" class="hunt-hit lower-room-marker" role="button" tabindex="-1"
    data-aria-i="lower_bathroom_marker" data-title-i="lower_bathroom_marker"
-   aria-label="Down to the bathroom" title="Down to the bathroom">
+   aria-label="Bathroom portal" title="Bathroom portal">
 <rect x="3" y="76" width="27" height="33" fill="transparent"/>
 <rect x="6" y="79" width="21" height="18" rx="2" fill="#f2ead8" stroke="#735447" stroke-width="1.2"/>
 <text x="16.5" y="91.5" text-anchor="middle" font-family="Fraunces,serif" font-size="9" font-weight="700" fill="#6b493d">WC</text>
@@ -14198,7 +14198,7 @@ section{margin:1.9rem 0}
 <!-- A pocket-size echo of the dungeon below, tucked behind the coat rack. -->
 <g id="garden-dungeon-marker" class="hunt-hit lower-room-marker" role="button" tabindex="-1"
    data-aria-i="lower_dungeon_marker" data-title-i="lower_dungeon_marker"
-   aria-label="Down to the dungeon" title="Down to the dungeon">
+   aria-label="Dungeon portal" title="Dungeon portal">
 <rect x="27" y="244" width="36" height="51" fill="transparent"/>
 <path d="M30 293 V264 Q30 250 44 247 Q58 250 58 264 V293 Z" fill="#718397" stroke="#243442" stroke-width="1.5"/>
 <path d="M35 293 V265 Q35 255 44 252 Q53 255 53 265 V293 Z" fill="#9a6534" stroke="#5e3d25" stroke-width="1.2"/>
@@ -21880,7 +21880,7 @@ section{margin:1.9rem 0}
 <line x1="470" y1="18" x2="470" y2="300" stroke="#c9bfa8" stroke-width="3"/>
 <g id="office-bedroom-marker" class="hunt-hit lower-room-marker" role="button" tabindex="-1"
    data-aria-i="lower_bedroom_marker" data-title-i="lower_bedroom_marker"
-   aria-label="Down to the bedroom" title="Down to the bedroom"
+   aria-label="Bedroom portal" title="Bedroom portal"
    font-family="Fraunces,serif" font-style="italic" fill="#8e7569">
 <rect x="638" y="138" width="40" height="58" fill="transparent"/>
 <text x="646" y="190" font-size="14">Z</text>
@@ -25991,7 +25991,7 @@ section{margin:1.9rem 0}
 </g>
 <g id="balcony-entrance-marker" class="hunt-hit lower-room-marker" role="button" tabindex="-1"
    data-aria-i="lower_entrance_marker" data-title-i="lower_entrance_marker"
-   aria-label="Down to the entrance" title="Down to the entrance">
+   aria-label="Entrance portal" title="Entrance portal">
 <rect x="142" y="111" width="32" height="32" fill="transparent"/>
 <g transform="translate(146 117) scale(0.7) translate(-146 -127)">
 <circle cx="155" cy="136" r="4.4" fill="none" stroke="#b8b1a4" stroke-width="2"/>
@@ -31768,10 +31768,12 @@ var T = {
     room_cuddly: "Cuddly-puddly",
     room_office: "Office",
     room_balcony: "Balcony",
-    lower_bathroom_marker: "Down to the bathroom",
-    lower_dungeon_marker: "Down to the dungeon",
-    lower_bedroom_marker: "Down to the bedroom",
-    lower_entrance_marker: "Down to the entrance",
+    lower_bathroom_marker: "Bathroom portal",
+    lower_dungeon_marker: "Dungeon portal",
+    lower_bedroom_marker: "Bedroom portal",
+    lower_entrance_marker: "Entrance portal",
+    lower_portal_insist: "I insist.",
+    lower_portal_unlock: "Unlock",
     game_score: "SCORE",
     game_best: "BEST",
     game_ready: "READY!",
@@ -33039,10 +33041,12 @@ var T = {
     room_cuddly: "Cuddly-puddly",
     room_office: "Pracovna",
     room_balcony: "Balkon",
-    lower_bathroom_marker: "Dolů do koupelny",
-    lower_dungeon_marker: "Dolů do kobky",
-    lower_bedroom_marker: "Dolů do ložnice",
-    lower_entrance_marker: "Dolů ke vchodu",
+    lower_bathroom_marker: "Portál do koupelny",
+    lower_dungeon_marker: "Portál do kobky",
+    lower_bedroom_marker: "Portál do ložnice",
+    lower_entrance_marker: "Portál ke vchodu",
+    lower_portal_insist: "Trvám na tom.",
+    lower_portal_unlock: "Odemknout",
     game_score: "SKÓRE",
     game_best: "REKORD",
     game_ready: "PŘIPRAVEN!",
@@ -89102,6 +89106,78 @@ function spawnDustMote(container) {
       direction: lowerRoomSlideState.direction
     } : { active: false, from: null, to: null, direction: 0 };
   };
+  var lowerPortalMenu = null;
+  function lowerPortalText(key) {
+    var lang = document.documentElement.lang;
+    return (T[lang] && T[lang][key]) || T.en[key] || key;
+  }
+  function closeLowerPortalMenu() {
+    if (!lowerPortalMenu) return;
+    lowerPortalMenu.remove();
+    lowerPortalMenu = null;
+    document.removeEventListener("keydown", lowerPortalMenuKey, true);
+    document.removeEventListener("mousedown", lowerPortalMenuAway, true);
+    document.removeEventListener("scroll", closeLowerPortalMenu, true);
+    window.removeEventListener("blur", closeLowerPortalMenu);
+    window.removeEventListener("resize", closeLowerPortalMenu);
+  }
+  function lowerPortalMenuAway(event) {
+    if (lowerPortalMenu && !lowerPortalMenu.contains(event.target)) closeLowerPortalMenu();
+  }
+  function lowerPortalMenuKey(event) {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    closeLowerPortalMenu();
+  }
+  function openLowerPortalMenu(event, enterLowerRoom) {
+    closeLowerPortalMenu();
+    if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
+    lowerPortalMenu = document.createElement("div");
+    lowerPortalMenu.className = "mon-ctx scene-ctx lower-portal-ctx";
+    lowerPortalMenu.setAttribute("role", "menu");
+    var unlock = document.createElement("button");
+    unlock.type = "button";
+    unlock.className = "ctx-unlock";
+    unlock.setAttribute("role", "menuitem");
+    unlock.innerHTML = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5 V3.8 A3 3 0 0 1 8.6 2.3"/><rect x="2" y="5" width="8" height="6" rx="1.2"/><path d="M6 7.2 V8.8"/></svg><span>' +
+      lowerPortalText("lower_portal_unlock") + "</span>";
+    unlock.addEventListener("click", function (clickEvent) {
+      clickEvent.preventDefault();
+      clickEvent.stopPropagation();
+      closeLowerPortalMenu();
+      enterLowerRoom();
+    });
+    lowerPortalMenu.appendChild(unlock);
+    var host = document.fullscreenElement || document.webkitFullscreenElement ||
+      document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    host.appendChild(lowerPortalMenu);
+    if (window.__augmentContextMenus) window.__augmentContextMenus();
+    lowerPortalMenu.style.visibility = "hidden";
+    var viewport = document.querySelector(".hunt-viewport");
+    var bounds = viewport && viewport.getBoundingClientRect();
+    var rect = lowerPortalMenu.getBoundingClientRect();
+    if (bounds) {
+      lowerPortalMenu.style.left = Math.max(bounds.left + 4, Math.min(event.clientX, bounds.right - rect.width - 4)) + "px";
+      lowerPortalMenu.style.top = Math.max(bounds.top + 4, Math.min(event.clientY, bounds.bottom - rect.height - 4)) + "px";
+    } else {
+      lowerPortalMenu.style.left = Math.max(4, Math.min(event.clientX, window.innerWidth - rect.width - 4)) + "px";
+      lowerPortalMenu.style.top = Math.max(4, Math.min(event.clientY, window.innerHeight - rect.height - 4)) + "px";
+    }
+    lowerPortalMenu.style.visibility = "";
+    document.addEventListener("keydown", lowerPortalMenuKey, true);
+    document.addEventListener("mousedown", lowerPortalMenuAway, true);
+    document.addEventListener("scroll", closeLowerPortalMenu, true);
+    window.addEventListener("blur", closeLowerPortalMenu);
+    window.addEventListener("resize", closeLowerPortalMenu);
+  }
+  window.__lowerPortalContextMenu = function () {
+    if (!lowerPortalMenu || !lowerPortalMenu.isConnected) return [];
+    return [].map.call(lowerPortalMenu.querySelectorAll("button span:last-child"), function (span) {
+      return span.textContent;
+    });
+  };
+  window.__closeLowerPortalContextMenu = closeLowerPortalMenu;
   [
     ["kitchen-bathroom-marker", function () {
       return window.__openBathroomRoom && window.__openBathroomRoom();
@@ -89121,24 +89197,60 @@ function spawnDustMote(container) {
   ].forEach(function (entry) {
     var marker = document.getElementById(entry[0]);
     if (!marker) return;
+    var mouseClickTimer = null;
+    var touchTapTimer = null;
+    var lastTouch = 0;
+    var ignoreClicksUntil = 0;
+    function showPortalInsistence() {
+      if (window.__flashCaptionKey) {
+        window.__flashCaptionKey("lower_portal_insist", 2600, "lower-portal");
+      }
+    }
     function enterLowerRoom(event) {
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
+      clearTimeout(mouseClickTimer);
+      clearTimeout(touchTapTimer);
+      mouseClickTimer = null;
+      touchTapTimer = null;
+      lastTouch = 0;
+      if (window.__clearFlashCaption) window.__clearFlashCaption("lower-portal");
       return entry[1]();
     }
-    var lastTouch = 0;
+    marker.addEventListener("click", function (event) {
+      if (event.detail > 1 || Date.now() < ignoreClicksUntil) return;
+      clearTimeout(mouseClickTimer);
+      mouseClickTimer = setTimeout(function () {
+        mouseClickTimer = null;
+        showPortalInsistence();
+      }, 420);
+    });
     marker.addEventListener("dblclick", enterLowerRoom);
     marker.addEventListener("pointerup", function (event) {
       if (event.pointerType !== "touch") return;
       var now = Date.now();
+      ignoreClicksUntil = now + 650;
       if (now - lastTouch <= 420) {
-        lastTouch = 0;
+        clearTimeout(touchTapTimer);
         enterLowerRoom(event);
       } else {
         lastTouch = now;
+        clearTimeout(touchTapTimer);
+        touchTapTimer = setTimeout(function () {
+          touchTapTimer = null;
+          lastTouch = 0;
+          showPortalInsistence();
+        }, 430);
       }
+    });
+    marker.addEventListener("contextmenu", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearTimeout(mouseClickTimer);
+      mouseClickTimer = null;
+      openLowerPortalMenu(event, enterLowerRoom);
     });
   });
   if (dotsWrap) {

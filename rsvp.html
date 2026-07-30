@@ -414,6 +414,12 @@ footer{margin-top:2.6rem}
 #cinema-chooser-back{left:clamp(4px,.6vw,8px); bottom:clamp(4px,.6vw,8px); padding:clamp(3px,.4vw,5px) clamp(5px,.7vw,9px); border-radius:999px}
 #cinema-room-close:hover,#cinema-room-close:focus-visible,
 #cinema-chooser-back:hover,#cinema-chooser-back:focus-visible{background:#8e3a4a; outline:2px solid #fffdf8}
+#cinema-window-sky,.cinema-window-view{transition:fill .7s ease}
+#cinema-window-sky{fill:#b8d4e8}
+.cinema-window-nightlight{opacity:0;transition:opacity .7s ease}
+#cinema-room.cinema-night #cinema-window-sky{fill:#202a34}
+#cinema-room.cinema-night .cinema-window-view{fill:#13191e}
+#cinema-room.cinema-night .cinema-window-nightlight{opacity:.72}
 .hunt-viewport.cinema-room-open #cinema-room{
   visibility:visible; pointer-events:auto; transform:translateY(0); transition-delay:0s;
 }
@@ -28480,10 +28486,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     <div id="cinema-room" role="dialog" aria-modal="true" aria-labelledby="cinema-room-title" hidden>
       <svg id="cinema-room-art" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <defs>
-          <pattern id="cinema-brick" width="54" height="24" patternUnits="userSpaceOnUse">
-            <rect width="54" height="24" fill="#8d4e39"/>
-            <path d="M0 1H54M0 12H54M0 23H54M27 0V12M0 12V24M54 12V24" fill="none" stroke="#633629" stroke-width="1.3"/>
-            <path d="M3 4H22M31 16H49" fill="none" stroke="#b66d4e" stroke-width=".8" opacity=".42"/>
+          <!-- Same 60×32 running bond and warm Cuddly mortar language as #pbrick. -->
+          <pattern id="cinema-brick" width="60" height="32" patternUnits="userSpaceOnUse">
+            <rect width="60" height="32" fill="#c07a55"/>
+            <path d="M0 1H60M0 16H60M0 31H60" fill="none" stroke="#a4654a" stroke-width="1.5"/>
+            <path d="M30 0V16M0 16V32M60 16V32" fill="none" stroke="#a4654a" stroke-width="1.5"/>
           </pattern>
           <linearGradient id="cinema-floor" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#9a623f"/><stop offset="1" stop-color="#5d3827"/>
@@ -28519,13 +28526,16 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <circle cx="104" cy="221" r="5"/>
         </g>
         <path d="M79 179H98" stroke="#17191b" stroke-width="5" stroke-linecap="round"/>
-        <!-- Right-hand black-framed window and the night reflections beyond it. -->
+        <!-- Right-hand black-framed window follows the loft's shared day/night state. -->
         <g>
           <rect x="588" y="55" width="68" height="135" fill="#171a1c" stroke="#08090a" stroke-width="6"/>
-          <rect x="595" y="62" width="54" height="121" fill="#202a34"/>
+          <rect id="cinema-window-sky" x="595" y="62" width="54" height="121"/>
+          <path class="cinema-window-view" d="M598 176L614 147L628 165L641 142L648 176Z" fill="#63778a"/>
           <path d="M622 62V183M595 122H649" stroke="#08090a" stroke-width="4"/>
-          <rect x="600" y="70" width="6" height="10" fill="#d9a86b" opacity=".52"/><rect x="635" y="136" width="7" height="14" fill="#7f9ec0" opacity=".62"/>
-          <path d="M598 176L614 147L628 165L641 142L648 176Z" fill="#13191e"/>
+          <g class="cinema-window-nightlight">
+            <rect x="600" y="70" width="6" height="10" fill="#d9a86b"/>
+            <rect x="635" y="136" width="7" height="14" fill="#7f9ec0"/>
+          </g>
         </g>
         <!-- Camera bodies, tripods, and a lens case beside the window. -->
         <g stroke="#1c1d1f" stroke-linecap="round">
@@ -28718,11 +28728,20 @@ window.__cinemaVideoLoaded = false;
   var chooser = document.getElementById("cinema-chooser");
   var playerWrap = document.getElementById("cinema-player-wrap");
   var chooserBack = document.getElementById("cinema-chooser-back");
+  var cuddlyScene = document.getElementById("stage-cuddly");
   var cinemaSongSuspended = false;
   var cinemaSongRestoreTimer = null;
   var cinemaCloseTimer = null;
   var cinemaClosing = false;
   if (!room || !viewport || !ticket || !closeButton || !chooser || !playerWrap || !chooserBack) return;
+
+  function syncCinemaDayNight() {
+    room.classList.toggle("cinema-night", !!(cuddlyScene && cuddlyScene.classList.contains("dusk")));
+  }
+  if (cuddlyScene && window.MutationObserver) {
+    new MutationObserver(syncCinemaDayNight).observe(cuddlyScene, { attributes: true, attributeFilter: ["class"] });
+  }
+  syncCinemaDayNight();
 
   function refreshProjectorAudio(fade) {
     ["__updateFireSound", "__updateAquaSound", "__updateAquaMelody", "__updateCoffeeMusic",
@@ -28783,6 +28802,7 @@ window.__cinemaVideoLoaded = false;
     cinemaCloseTimer = null;
     cinemaClosing = false;
     window.__cinemaRoomOpen = true;
+    syncCinemaDayNight();
     room.hidden = false;
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {

@@ -548,6 +548,10 @@ created on selection and removed on Choose another, close, reset, or
 surface. Exact background whitelists (`#cuddly-wall`/`#cuddly-ceiling` and
 `#garden-wall`) own the desktop double-click and touch double-tap shortcuts;
 interactive descendants are explicitly rejected.
+The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond
+and palette. A narrow `MutationObserver` on `#stage-cuddly` mirrors its `dusk`
+class to `.cinema-night`, keeping the lower-room window synchronized with every
+manual, automatic, restored, and simulated day/night path.
 
 Possible future lower-room pairs are Kitchen/Bar→Toilets, Office→Bedroom, and
 Balcony→Entrance. They are navigation backlog only; no rooms or handlers exist.

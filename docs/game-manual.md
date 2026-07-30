@@ -208,7 +208,8 @@ double-tapping a bare patch of that room's background is a second entrance. The
 room pans down into the cinema and temporarily puts **Who's here** away. Pick one
 of the three films on the screen; **Choose another** stops it and returns to the
 chooser. The × button, Escape, Backspace, or ordinary room navigation pans back
-up. Film audio takes the foreground while it plays.
+up. The cinema window follows the loft's day/night state. Film audio takes the
+foreground while it plays.
 
 On the balcony, open and light the smoker to begin the BBQ during a party. Its
 lid, firebox, food, and serving state are all interactive. Extinguishing it or

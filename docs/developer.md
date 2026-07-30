@@ -668,6 +668,11 @@ selected dot; keyboard horizontal pans restore focus to `.hunt-viewport`.
 Prince focus timers re-check `princeShouldRun()` so a parked iframe cannot steal
 focus back after any of these transitions.
 
+Lower-room illustrated props deliberately stay outside sequential focus:
+SVG props omit `tabindex`, and native dungeon prop buttons use `tabindex="-1"`.
+Their delegated pointer/direct-key handlers remain intact; `Tab` belongs to the
+global shortcut instead of walking the scenery.
+
 Every lower-room open/close hook also retargets the shared continuous-audio
 boundary via `__updateLowerFloorAcoustics()`. Dungeon and Cinema share the
 moderate attenuation/low-pass profile; Bedroom keeps that filter with a

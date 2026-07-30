@@ -66,7 +66,8 @@ room beneath its selected main room. Number keys `1`–`5` do the same without
 returning upstairs. Music and other continuous loft sound
 become quieter and softly muffled downstairs; the enclosed Bathroom is
 especially muffled, and the street Entrance sounds quieter still. Returning
-upstairs restores the original mix.
+upstairs restores the original mix. Illustrated lower-room props react to
+clicks or taps but stay out of the `Tab` order, leaving `Tab` to its shortcut.
 
 ## The guided room trail
 

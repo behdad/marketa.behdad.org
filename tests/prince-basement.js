@@ -13,7 +13,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();',
   ' var room=document.getElementById("prince-basement"),strip=document.getElementById("loft-game-strip"),host=document.getElementById("prince-basement-host"),wall=document.getElementById("prince-play-wall");room.style.transition="none";strip.style.transition="none";',
-  ' window.goToStage("garden");key("ArrowDown");await sleep(80);var props=Array.from(document.querySelectorAll("#prince-dungeon-set .prince-dungeon-prop"));report.steps.dormant={state:window.__princeState(),input:window.__princeInputActive,frames:host.querySelectorAll("iframe").length,props:props.map(function(prop){return [prop.id,prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
+  ' window.goToStage("garden");key("ArrowDown");await sleep(80);var props=Array.from(document.querySelectorAll("#prince-dungeon-set .prince-dungeon-prop"));report.steps.dormant={state:window.__princeState(),input:window.__princeInputActive,frames:host.querySelectorAll("iframe").length,props:props.map(function(prop){return [prop.id,prop.getAttribute("aria-label"),prop.getAttribute("title"),prop.getAttribute("tabindex")];})};',
   ' click(document.getElementById("prince-dungeon-window"));elkey(document.getElementById("prince-dungeon-torch-left"),"Enter");elkey(document.getElementById("prince-dungeon-chain")," ");click(document.getElementById("prince-dungeon-ledge"));click(document.getElementById("prince-dungeon-stone"));await sleep(30);report.steps.props={window:document.getElementById("prince-dungeon-window").className,left:document.getElementById("prince-dungeon-torch-left").className,chain:document.getElementById("prince-dungeon-chain").className,ledge:document.getElementById("prince-dungeon-ledge").className,stone:document.getElementById("prince-dungeon-stone").className};',
   ' setLang("cs");report.steps.cs=props.map(function(prop){return [prop.getAttribute("aria-label"),prop.getAttribute("title")];});setLang("en");',
   ' wall.focus();elkey(wall," ");await sleep(90);var frame=host.querySelector("iframe");var ctrl=key("r",{ctrlKey:true});report.steps.started={state:window.__princeState(),input:window.__princeInputActive,frame:!!frame,src:frame&&frame.getAttribute("src"),ctrlPrevented:ctrl.defaultPrevented};',
@@ -40,8 +40,8 @@ check(s.dormant && s.dormant.state.basement && !s.dormant.state.initiated &&
   !s.dormant.state.playing && !s.dormant.input && s.dormant.frames === 0,
   "descending opens the authored dungeon without constructing or focusing Prince", s.dormant);
 check(s.dormant && s.dormant.props.length === 7 &&
-  s.dormant.props.every(function (row) { return row[1] && row[1] === row[2]; }),
-  "all seven distinct dungeon controls have English pointer and keyboard labels", s.dormant && s.dormant.props);
+  s.dormant.props.every(function (row) { return row[1] && row[1] === row[2] && row[3] === "-1"; }),
+  "all seven labelled dungeon controls stay outside the Tab order", s.dormant && s.dormant.props);
 check(s.cs && s.cs.length === 7 && s.cs.every(function (row) { return row[0] && row[0] === row[1]; }),
   "all dungeon labels switch to Czech", s.cs);
 check(s.props && /rattled/.test(s.props.window) && /dim/.test(s.props.left) &&

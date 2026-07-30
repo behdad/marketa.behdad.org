@@ -83,8 +83,8 @@ check(s.cs && s.cs.room === "Koupelna / toalety" && s.cs.close === "Zpět do Kuc
   "room and return labels switch to Czech", s.cs);
 var propNames = ["sink", "mirror", "tub", "towel", "stool", "scale", "cabinet", "toilet"];
 check(s.props && s.props.count === propNames.length &&
-  s.props.roles.every(function (row) { return row[1] === "button" && row[2] === "0" && !!row[3]; }),
-  "every distinct bathroom prop is a labelled keyboard-focusable control", s.props);
+  s.props.roles.every(function (row) { return row[1] === "button" && row[2] === null && !!row[3]; }),
+  "every distinct bathroom prop is labelled but stays outside the Tab order", s.props);
 check(s.props && propNames.every(function (name) { return s.props.state.hits[name] === 2; }),
   "every bathroom prop responds once to click and once to Enter or Space", s.props && s.props.state);
 check(s.functional && s.functional.water === "M119 139V171",

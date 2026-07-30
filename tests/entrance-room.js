@@ -77,8 +77,8 @@ check(s.open && s.open.label === "The Lofts entrance" &&
   "dialog and return labels switch between English and Czech", {en:s.open&&s.open.label,cs:s.cs});
 check(s.props && s.props.ids.length === 10 &&
   s.props.ids.every(function(id){return s.props.state.reactions[id] === 1;}) &&
-  s.props.roles.every(function(row){return row[0] === "button" && row[1] === "0" && row[2] && row[3];}),
-  "every distinct facade and street prop answers pointer, Enter, or Space with an accessible control",
+  s.props.roles.every(function(row){return row[0] === "button" && row[1] === null && row[2] && row[3];}),
+  "every distinct facade prop reacts with accessible copy while staying outside the Tab order",
   s.props);
 check(s.cs && s.cs.props && s.cs.props.length === 10 &&
   s.cs.props.every(function(row){return row[0] && row[1] && row[0] === row[1];}),
@@ -115,8 +115,8 @@ check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
   /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
 check((entrance.match(/class="entrance-prop"/g) || []).length === 10 &&
-  (entrance.match(/role="button" tabindex="0"/g) || []).length >= 10,
-  "the five windows, sign, doors, lamps, canopy, and sidewalk form the complete interaction inventory");
+  (entrance.match(/role="button" tabindex="0"/g) || []).length === 0,
+  "the complete Entrance interaction inventory stays outside the Tab order");
 check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#bedroom-room-close,#entrance-room-close\{/.test(source),
   "Entrance shares the unified lower-room corner-control geometry");
 check(!/<image\b|(?:src|href)="[^"]+\.(?:png|jpe?g|webp)"/i.test(entrance) &&

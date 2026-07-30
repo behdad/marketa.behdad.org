@@ -32705,6 +32705,54 @@ setMusicPausedState(false);
     });
   })();
 
+  // Projector scores use look-ahead schedulers whose notes self-terminate. A long room-exit
+  // fade must therefore keep the scheduler alive until the gain ramp finishes; cancelling it
+  // immediately leaves only the ~1.5s queue and makes a five-second fade sound abruptly short.
+  function holdProjectorGain(param, now) {
+    if (!param) return;
+    if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(now);
+    else {
+      var value = param.value;
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(value, now);
+    }
+  }
+  function beginProjectorRoomFade(ctx, master, fadeSecs, finish) {
+    if (!ctx || !master || fadeSecs < 1) return false;
+    if (ctx._roomFading) return true;
+    if (ctx._roomFadeTimer) clearTimeout(ctx._roomFadeTimer);
+    ctx._roomFading = true;
+    try {
+      var now = ctx.currentTime;
+      holdProjectorGain(master.gain, now);
+      master.gain.linearRampToValueAtTime(0.0001, now + fadeSecs);
+    } catch (e) {}
+    ctx._roomFadeTimer = setTimeout(function () {
+      ctx._roomFadeTimer = null;
+      ctx._roomFading = false;
+      finish();
+    }, fadeSecs * 1000 + 100);
+    return true;
+  }
+  function reviveProjectorRoomFade(ctx, master, volume) {
+    if (!ctx || !ctx._roomFading) return false;
+    if (ctx._roomFadeTimer) clearTimeout(ctx._roomFadeTimer);
+    ctx._roomFadeTimer = null;
+    ctx._roomFading = false;
+    try {
+      var now = ctx.currentTime;
+      holdProjectorGain(master && master.gain, now);
+      master.gain.linearRampToValueAtTime(volume, now + 0.35);
+    } catch (e) {}
+    return true;
+  }
+  function cancelProjectorRoomFade(ctx) {
+    if (!ctx) return;
+    if (ctx._roomFadeTimer) clearTimeout(ctx._roomFadeTimer);
+    ctx._roomFadeTimer = null;
+    ctx._roomFading = false;
+  }
+
   // Ambient fire sound: a soft low roar (looping lowpassed noise, gently breathing via a
   // slow LFO) plus sparse bright bandpassed crackle pops — like sitting by a fireplace.
   // Modeled on startPcFan (looping filtered-noise bed with a fade in/out, gated to its
@@ -33055,11 +33103,22 @@ setMusicPausedState(false);
   }
   function stopAquaMel(fadeSecs) {
     var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
-    if (aquaMelTimer) { clearTimeout(aquaMelTimer); aquaMelTimer = null; }
     if (aquaMelCtx) {
       var ctx = aquaMelCtx, master = aquaMelCtx._masterGain, nodes = aquaMelCtx._nodes || [];
+      if (ctx._roomFading && typeof fadeSecs !== "number") return;
+      if (beginProjectorRoomFade(ctx, master, f, function () {
+        if (aquaMelTimer) { clearTimeout(aquaMelTimer); aquaMelTimer = null; }
+        if (aquaMelCtx === ctx) aquaMelCtx = null;
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      })) {
+        if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+        return;
+      }
+      cancelProjectorRoomFade(ctx);
+      if (aquaMelTimer) { clearTimeout(aquaMelTimer); aquaMelTimer = null; }
       aquaMelCtx = null; // null first so a racing scheduleAquaMel callback bails
-      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      try { if (master) { var t = ctx.currentTime; holdProjectorGain(master.gain, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
       setTimeout(function () {
         nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
         try { ctx.close(); } catch (e) {}
@@ -33073,10 +33132,11 @@ setMusicPausedState(false);
     try { if (paused) aquaMelCtx.suspend(); else aquaMelCtx.resume(); } catch (e) {}
     return true;
   };
-  window.__aquaMelodyPlaying = function () { return !!aquaMelCtx && !aquaMelSuspended; }; // live: bed up & not suspended
+  window.__aquaMelodyPlaying = function () { return !!aquaMelCtx && !aquaMelCtx._roomFading && !aquaMelSuspended; }; // live in its room: bed up & not suspended
   window.__updateAquaMelody = function (inCuddly, fadeSecs) {
     var want = aquaMelWant();
     if (want && !aquaMelCtx) startAquaMel();
+    else if (want && aquaMelCtx) reviveProjectorRoomFade(aquaMelCtx, aquaMelCtx._masterGain, aquaMelVol());
     else if (!want && aquaMelCtx) stopAquaMel(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateAquaMelody(); });
@@ -33245,11 +33305,22 @@ setMusicPausedState(false);
   }
   function stopTotoroMel(fadeSecs) {
     var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
-    if (totoroMelTimer) { clearTimeout(totoroMelTimer); totoroMelTimer = null; }
     if (totoroMelodyCtx) {
       var ctx = totoroMelodyCtx, master = totoroMelodyCtx._masterGain, nodes = totoroMelodyCtx._nodes || [];
+      if (ctx._roomFading && typeof fadeSecs !== "number") return;
+      if (beginProjectorRoomFade(ctx, master, f, function () {
+        if (totoroMelTimer) { clearTimeout(totoroMelTimer); totoroMelTimer = null; }
+        if (totoroMelodyCtx === ctx) totoroMelodyCtx = null;
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      })) {
+        if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+        return;
+      }
+      cancelProjectorRoomFade(ctx);
+      if (totoroMelTimer) { clearTimeout(totoroMelTimer); totoroMelTimer = null; }
       totoroMelodyCtx = null; // null first so a racing scheduleTotoroMel callback bails
-      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      try { if (master) { var t = ctx.currentTime; holdProjectorGain(master.gain, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
       setTimeout(function () {
         nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
         try { ctx.close(); } catch (e) {}
@@ -33263,11 +33334,12 @@ setMusicPausedState(false);
     try { if (paused) totoroMelodyCtx.suspend(); else totoroMelodyCtx.resume(); } catch (e) {}
     return true;
   };
-  window.__totoroMelodyPlaying = function () { return !!totoroMelodyCtx && !totoroMelSuspended; }; // live: bed up & not suspended
+  window.__totoroMelodyPlaying = function () { return !!totoroMelodyCtx && !totoroMelodyCtx._roomFading && !totoroMelSuspended; }; // live in its room: bed up & not suspended
   window.__updateTotoroMelody = function (inCuddly, fadeSecs) {
     if (typeof inCuddly === "boolean") totoroMelInCuddly = inCuddly;
     var want = totoroMelWant();
     if (want && !totoroMelodyCtx) startTotoroMel();
+    else if (want && totoroMelodyCtx) reviveProjectorRoomFade(totoroMelodyCtx, totoroMelodyCtx._masterGain, totoroMelVol());
     else if (!want && totoroMelodyCtx) stopTotoroMel(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateTotoroMelody(); });
@@ -33499,11 +33571,22 @@ setMusicPausedState(false);
   }
   function stopStars(fadeSecs) {
     var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
-    if (starsTimer) { clearTimeout(starsTimer); starsTimer = null; }
     if (starsCtx) {
       var ctx = starsCtx, master = starsCtx._masterGain, nodes = starsCtx._nodes || [];
+      if (ctx._roomFading && typeof fadeSecs !== "number") return;
+      if (beginProjectorRoomFade(ctx, master, f, function () {
+        if (starsTimer) { clearTimeout(starsTimer); starsTimer = null; }
+        if (starsCtx === ctx) starsCtx = null;
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      })) {
+        if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+        return;
+      }
+      cancelProjectorRoomFade(ctx);
+      if (starsTimer) { clearTimeout(starsTimer); starsTimer = null; }
       starsCtx = null; // null first so a racing scheduleSatie callback bails
-      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      try { if (master) { var t = ctx.currentTime; holdProjectorGain(master.gain, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
       setTimeout(function () {
         nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
         try { ctx.close(); } catch (e) {}
@@ -33517,7 +33600,7 @@ setMusicPausedState(false);
     try { if (paused) starsCtx.suspend(); else starsCtx.resume(); } catch (e) {}
     return true;
   };
-  window.__starsPlaying = function () { return !!starsCtx && !starsSuspended; }; // live: bed up & not suspended
+  window.__starsPlaying = function () { return !!starsCtx && !starsCtx._roomFading && !starsSuspended; }; // live in its room: bed up & not suspended
   window.__starsPieceName = function () { // current night-sky piece's display name (for the now-playing tooltip)
     if (curScore === STARS_MELODY_2) return "Chopin — Nocturne Op. 9 No. 2";
     if (curScore === STARS_MELODY_3) return "Beethoven — Für Elise";
@@ -33570,6 +33653,7 @@ setMusicPausedState(false);
     else if (!onSky && starsWasActive) { starsWasActive = false; }
     var want = starsWant();
     if (want && !starsCtx) startStars();
+    else if (want && starsCtx) reviveProjectorRoomFade(starsCtx, starsCtx._masterGain, starsVol());
     else if (!want && starsCtx) stopStars(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateStarsSound(); });
@@ -33756,11 +33840,22 @@ setMusicPausedState(false);
   }
   function stopWorkout(fadeSecs) {
     var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
-    if (beatTimer) { clearTimeout(beatTimer); beatTimer = null; }
     if (workoutCtx) {
       var ctx = workoutCtx, master = workoutCtx._masterGain, nodes = workoutCtx._nodes || [];
+      if (ctx._roomFading && typeof fadeSecs !== "number") return;
+      if (beginProjectorRoomFade(ctx, master, f, function () {
+        if (beatTimer) { clearTimeout(beatTimer); beatTimer = null; }
+        if (workoutCtx === ctx) workoutCtx = null;
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      })) {
+        if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+        return;
+      }
+      cancelProjectorRoomFade(ctx);
+      if (beatTimer) { clearTimeout(beatTimer); beatTimer = null; }
       workoutCtx = null; // null first so a racing scheduleBeat callback bails
-      try { if (master) { var t = ctx.currentTime; master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
+      try { if (master) { var t = ctx.currentTime; holdProjectorGain(master.gain, t); master.gain.linearRampToValueAtTime(0.0001, t + f); } } catch (e) {}
       setTimeout(function () {
         nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
         try { ctx.close(); } catch (e) {}
@@ -33774,7 +33869,7 @@ setMusicPausedState(false);
     try { if (paused) workoutCtx.suspend(); else workoutCtx.resume(); } catch (e) {}
     return true;
   };
-  window.__workoutPlaying = function () { return !!workoutCtx && !workoutSuspended; }; // live: bed up & not suspended
+  window.__workoutPlaying = function () { return !!workoutCtx && !workoutCtx._roomFading && !workoutSuspended; }; // live in its room: bed up & not suspended
   window.__applyWorkoutVolume = function () { // the volume button cycle updates the live master
     if (workoutCtx && workoutCtx._masterGain) { try { workoutCtx._masterGain.gain.setTargetAtTime(workoutVol(), workoutCtx.currentTime, 0.05); } catch (e) {} }
   };
@@ -33782,6 +33877,7 @@ setMusicPausedState(false);
     if (typeof inCuddly === "boolean") workoutInCuddly = inCuddly;
     var want = workoutWant();
     if (want && !workoutCtx) startWorkout();
+    else if (want && workoutCtx) reviveProjectorRoomFade(workoutCtx, workoutCtx._masterGain, workoutVol());
     else if (!want && workoutCtx) stopWorkout(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateWorkoutSound(); });
@@ -33911,15 +34007,25 @@ setMusicPausedState(false);
   }
   function stopCoffee(fadeSecs) {
     var f = (typeof fadeSecs === "number") ? fadeSecs : 0.3;
-    if (coffeeTimer) { clearTimeout(coffeeTimer); coffeeTimer = null; }
     if (coffeeCtx) {
       var ctx = coffeeCtx, master = coffeeCtx._masterGain, nodes = coffeeCtx._nodes || [];
+      if (ctx._roomFading && typeof fadeSecs !== "number") return;
+      if (beginProjectorRoomFade(ctx, master, f, function () {
+        if (coffeeTimer) { clearTimeout(coffeeTimer); coffeeTimer = null; }
+        if (coffeeCtx === ctx) coffeeCtx = null;
+        nodes.forEach(function (n) { try { n.stop(); } catch (e) {} });
+        try { ctx.close(); } catch (e) {}
+      })) {
+        if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+        return;
+      }
+      cancelProjectorRoomFade(ctx);
+      if (coffeeTimer) { clearTimeout(coffeeTimer); coffeeTimer = null; }
       coffeeCtx = null;
       try {
         if (master) {
           var t = ctx.currentTime;
-          master.gain.cancelScheduledValues(t);
-          master.gain.setValueAtTime(master.gain.value, t);
+          holdProjectorGain(master.gain, t);
           master.gain.linearRampToValueAtTime(0.0001, t + f);
         }
       } catch (e) {}
@@ -33936,7 +34042,7 @@ setMusicPausedState(false);
     try { if (paused) coffeeCtx.suspend(); else coffeeCtx.resume(); } catch (e) {}
     return true;
   };
-  window.__coffeeMusicPlaying = function () { return !!coffeeCtx && !coffeeSuspended; };
+  window.__coffeeMusicPlaying = function () { return !!coffeeCtx && !coffeeCtx._roomFading && !coffeeSuspended; };
   window.__applyCoffeeMusicVolume = function () {
     if (coffeeCtx && coffeeCtx._masterGain) {
       try { coffeeCtx._masterGain.gain.setTargetAtTime(coffeeVol(), coffeeCtx.currentTime, 0.05); } catch (e) {}
@@ -33945,6 +34051,7 @@ setMusicPausedState(false);
   window.__updateCoffeeMusic = function (inCuddly, fadeSecs) {
     var want = coffeeWant();
     if (want && !coffeeCtx) startCoffee();
+    else if (want && coffeeCtx) reviveProjectorRoomFade(coffeeCtx, coffeeCtx._masterGain, coffeeVol());
     else if (!want && coffeeCtx) stopCoffee(fadeSecs);
   };
   document.addEventListener("visibilitychange", function () { window.__updateCoffeeMusic(); });
@@ -33961,6 +34068,16 @@ setMusicPausedState(false);
         if (c._roomGain) c._roomGain.gain.setTargetAtTime(projectorRoomGain(), c.currentTime, 0.4); // balcony muffle, door-reactive
       } catch (e) {}
     });
+  };
+  window.__projectorRoomFadeState = function () {
+    function state(ctx, timer) { return { fading: !!(ctx && ctx._roomFading), scheduled: !!timer }; }
+    return {
+      coffee: state(coffeeCtx, coffeeTimer),
+      stars: state(starsCtx, starsTimer),
+      workout: state(workoutCtx, beatTimer),
+      aqua: state(aquaMelCtx, aquaMelTimer),
+      totoro: state(totoroMelodyCtx, totoroMelTimer)
+    };
   };
 
   function advanceChannel() {
@@ -37311,13 +37428,13 @@ setMusicPausedState(false);
     else if (!nowMusic && wasMusic) { if (window.__restoreSongAfterProjector) window.__restoreSongAfterProjector(); }
     if (window.__updateFireSound) window.__updateFireSound(); // crackle audio follows the fire channel
     if (window.__updateAquaSound) window.__updateAquaSound(); // underwater bed follows the aquarium channel
-    if (window.__updateAquaMelody) window.__updateAquaMelody(); // underwater melody follows the aquarium channel
-    if (window.__updateCoffeeMusic) window.__updateCoffeeMusic(); // warm lounge loop follows coffee-cat
-    if (window.__updateWorkoutSound) window.__updateWorkoutSound(); // aerobics bed follows the workout channel
+    if (window.__updateAquaMelody) window.__updateAquaMelody(undefined, 0.3); // direct channel switches stay quick; room navigation owns the long fade
+    if (window.__updateCoffeeMusic) window.__updateCoffeeMusic(undefined, 0.3);
+    if (window.__updateWorkoutSound) window.__updateWorkoutSound(undefined, 0.3);
     if (window.__updateTotoroSound) window.__updateTotoroSound(); // rainfall follows the totoro channel
-    if (window.__updateStarsSound) window.__updateStarsSound(); // Gnossienne follows the night-sky channel
+    if (window.__updateStarsSound) window.__updateStarsSound(undefined, 0.3);
     if (window.__actPing) window.__actPing("stars"); // second act: the night-sky channel IS the piano wind-down beat (W1)
-    if (window.__updateTotoroMelody) window.__updateTotoroMelody(); // woodland melody follows the totoro channel
+    if (window.__updateTotoroMelody) window.__updateTotoroMelody(undefined, 0.3);
     if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // three cameos outside a party, or all eight party kids, follow Totoro
     if (reduceMotion) renderStill(); else start();
     if (prev !== current && window.__loftStateChanged) window.__loftStateChanged("media.projector", { mode: current }, "internal");
@@ -85313,7 +85430,7 @@ function spawnDustMote(container) {
     }, 760);
     // leaving a room fades its ambient drone out over several seconds rather than the
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
-    var ROOM_FADE = 3;
+    var ROOM_FADE = 5;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
     if (name !== "office") { // leaving the office also leaves the console's monitor focus: blur its input so keys go to the game, not the off-screen console (see the console keydown guard)
       var ai = document.activeElement;

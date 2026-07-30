@@ -124,6 +124,19 @@ var HARNESS = String.raw`<script>
     check("the keybed returns S to the season shortcut after its channel changes",
       window.__projectorPianoState().voices === 0 &&
       window.__seasonPreviewName() !== seasonBefore);
+
+    // A long room fade must keep each score's look-ahead scheduler alive. Otherwise the
+    // queued notes run out in ~1–2s even though the gain claims to be fading for five.
+    ["coffee", "stars", "workout", "aqua", "totoro"].forEach(function (channel) {
+      window.__cuddlyProjector.set(channel);
+      window.goToStage("garden");
+      var away = window.__projectorRoomFadeState()[channel];
+      window.goToStage("cuddly");
+      var returned = window.__projectorRoomFadeState()[channel];
+      check(channel + " score feeds the full room fade and revives on return",
+        away.fading && away.scheduled && !returned.fading && returned.scheduled,
+        JSON.stringify({ away: away, returned: returned }));
+    });
     report();
   }, 260);
 })();

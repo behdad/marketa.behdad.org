@@ -162,6 +162,11 @@ self-terminating chord, bass, brush, kick, and melody voices scheduled ahead on 
 channel exit cancels the sole scheduler, fades the bed master, then closes only its `audioBed`
 handle.
 
+Room navigation gives every room-local bed, including all Cuddly projector channels, a shared
+five-second fade so it recedes gently behind the visitor. Projector score schedulers remain alive
+through that ramp, rather than exhausting their short look-ahead queue. Direct channel and device changes keep
+their shorter local fades.
+
 ## Kill switch / overrides (unchanged)
 
 - `AUDIO_PIPELINE_ENABLED` (in `ensureAudioGraph`'s block) — owner's kill switch: `false`

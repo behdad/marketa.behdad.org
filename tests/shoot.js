@@ -25,7 +25,7 @@ var HARNESS = [
   'window.__openMonitorApp("doom");snap("doom");',
   'report.steps.colors.doomIcon=getComputedStyle(doomIcon).fill;report.steps.colors.doomClose=getComputedStyle(closeBg).fill;',
   'window.__openMonitorApp("duke");snap("duke");report.steps.colors.dukeClose=getComputedStyle(closeBg).fill;',
-  'window.__openMonitorApp("quake3");snap("quake3");report.steps.colors.q3Close=getComputedStyle(closeBg).fill;',
+  'window.__openMonitorApp("quake3");snap("quake3");report.steps.colors.q3Close=getComputedStyle(closeBg).fill;window.__openMonitorApp("doom");',
   'var gutters=document.querySelectorAll("#monitor-doom .monitor-runtime-side-hit");gutters[1].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:850,clientY:450}));report.steps.gutters={count:gutters.length,menu:!!document.querySelector(".mon-ctx")};document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
   'var coach=document.getElementById("monitor-shoot-coach"),coachRect=coach.querySelector("rect"),screen=document.getElementById("office-monitor-bg");',
   'report.steps.coach={on:coach.classList.contains("on"),en:coach.querySelector("text").textContent,pointer:coach.getAttribute("pointer-events"),y:+coachRect.getAttribute("y"),screenBottom:+screen.getAttribute("y")+ +screen.getAttribute("height")};',
@@ -126,6 +126,7 @@ if (result) {
 }
 
 var root = path.resolve(__dirname, "..");
+var rsvpSource = fs.readFileSync(path.join(root, "rsvp.html"), "utf8");
 var players = ["doom", "duke", "q3"].map(function(name) {
   return fs.readFileSync(path.join(root, name, "player.html"), "utf8");
 });
@@ -147,7 +148,17 @@ check(/const arenas = \["oa_shine", "aggressor", "am_lavaarena"\]/.test(players[
   "Quake III offers all three arenas in its visible picker");
 check(/loft-arenas\.pk3/.test(players[2]) && /\+map", arena/.test(players[2]) &&
     /loft:q3-arena/.test(players[2]),
-  "Quake III loads the extra arena pack and rotates the automatic choice");
+  "Quake III loads the extra arena pack and remembers the explicit choice");
+check(!/setTimeout\(\(\) => pick/.test(players[2]) &&
+    /canvas\.addEventListener\("pointerdown"/.test(players[2]) &&
+    !/document\.addEventListener\("pointerdown", \(\) =>/.test(players[2]),
+  "Quake III waits for a choice and only the game canvas takes pointer focus");
+check(/width:min\(84vw,470px\)/.test(players[2]) &&
+    /touch-action:manipulation/.test(players[2]),
+  "Quake III arena cards keep touch-sized explicit pointer targets");
+check(/#monitor-doom:is\(\[data-shoot-view="doom"\],\[data-shoot-view="duke"\]\) \.monitor-runtime-side-hit\{pointer-events:all\}/.test(rsvpSource) &&
+    !/#monitor-doom:is\([^}]*data-shoot-view="q3"[^}]*\) \.monitor-runtime-side-hit\{pointer-events:all\}/.test(rsvpSource),
+  "Quake III leaves its full visible picker free of monitor gutter hit surfaces");
 var arenaManifest = fs.readFileSync(path.join(root, "q3/baseoa/loft-arenas.manifest"), "utf8");
 check(/^maps\/aggressor\.(?:aas|bsp)$/m.test(arenaManifest) &&
     /^maps\/am_lavaarena\.(?:aas|bsp)$/m.test(arenaManifest) &&

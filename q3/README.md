@@ -41,8 +41,8 @@ is also present as `COPYING` inside `baseoa/pak0.pk3`.
   SHA-256: `649c64bbc3f6a6fae51c915177be032271c1b03924584fc3f443183ef4fc5cfb`
 
 `player.html` loads only these three packs, disables networking, and adds one
-local bot. Its small launcher offers Shine, Aggressor, and Lava Arena; without a
-selection it advances to the next arena after a short delay. It explicitly
+local bot. Its small launcher offers Shine, Aggressor, and Lava Arena and waits
+for an explicit click or `1`–`3` selection. It explicitly
 selects OpenGL2's GLES path and disables HDR/postprocessing/advanced material
 paths that upstream documents as unsupported or unsuitable on GLES; leaving them
 enabled produces invalid white world surfaces in this WebGL build. Initial mouse

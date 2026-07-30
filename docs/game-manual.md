@@ -209,12 +209,21 @@ Night Sky, it stays there and advances the piano pieces instead.
 The small film ticket resting on a Cuddly-puddly wall brick opens the loft
 cinema without changing the selected projector program. Double-clicking or
 double-tapping a bare patch of that room's background is a second entrance. The
-room pans down into the cinema and temporarily puts **Who's here** away. Pick one
-of the three films on the screen; **Choose another** stops it and returns to the
-chooser. The × button, Escape, Backspace, or ordinary room navigation pans back
-up. The cinema window follows the loft's day/night state; select it to swap day
-and night throughout the loft. Film audio takes the foreground while it plays,
-and the Cuddly-puddly visitors upstairs pause while the cinema owns the room.
+room pans down into the cinema and temporarily puts **Who's here** away. Its
+short-throw projector starts off: select the physical projector, or press bare
+Space, to light the screen and reveal the three-film chooser. The side
+Play/Pause and Next controls follow the cinema while it is open. **Choose
+another** stops a film and returns to the chooser. The × button, Escape,
+Backspace, or ordinary room navigation pans back up.
+
+The cinema window follows the loft's day/night state; select it to swap day and
+night throughout the loft. Film audio takes the foreground while it plays, with
+the selected poster casting a faint projection spill into the room. The ceiling
+sprinkler is unfortunately aimed at the projector: testing it during a film
+shorts the projector briefly, stops the film, and eventually reboots to the
+chooser. The Cuddly-puddly visitors upstairs pause while the cinema owns the
+room. The room's beams, bicycle, cameras, cushions, table, weights and sofa all
+answer a click or keyboard activation too.
 
 From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
 bare patch of brick to visit **Bathroom / Toilets** below. The room pans down

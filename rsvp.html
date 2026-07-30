@@ -383,6 +383,52 @@ footer{margin-top:2.6rem}
   background:#211813;
 }
 #cinema-room-art{display:block; width:100%; height:100%}
+#cinema-room .cinema-prop{cursor:pointer;outline:none}
+#cinema-room .cinema-prop .cinema-hit{fill:transparent;stroke:transparent;stroke-width:2;vector-effect:non-scaling-stroke}
+#cinema-room .cinema-prop:focus-visible .cinema-hit{stroke:#fffdf8;stroke-dasharray:4 3}
+#cinema-room .cinema-prop.reacting{transform-box:fill-box;transform-origin:center}
+#cinema-room .cinema-prop.reacting[data-cinema-action="bike"]{animation:cinema-bike .58s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="camera"]{animation:cinema-camera .34s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="weights"]{animation:cinema-weight .48s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="cushion"]{animation:cinema-cushion .42s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="table"]{animation:cinema-table .32s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="sofa"]{animation:cinema-sofa .48s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="pipe"]{animation:cinema-pipe .42s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="beam"]{animation:cinema-beam .5s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="window"]{animation:cinema-window .48s ease}
+@keyframes cinema-bike{35%{transform:rotate(-2deg)}70%{transform:rotate(1.5deg)}}
+@keyframes cinema-camera{45%{transform:scale(1.06)}}
+@keyframes cinema-weight{45%{transform:translateY(-5px)}}
+@keyframes cinema-cushion{45%{transform:scale(1.07,.91)}}
+@keyframes cinema-table{45%{transform:translateY(-2px)}}
+@keyframes cinema-sofa{45%{transform:translateY(2px)}}
+@keyframes cinema-pipe{35%{transform:translateX(-1px)}70%{transform:translateX(1px)}}
+@keyframes cinema-beam{45%{filter:brightness(1.18)}}
+@keyframes cinema-window{45%{filter:brightness(1.24)}}
+#cinema-projector-ray{
+  position:absolute;z-index:.5;left:22%;top:9%;width:56%;height:72%;pointer-events:none;
+  opacity:0;clip-path:polygon(4% 0,96% 0,56% 100%,44% 100%);
+  background:
+    linear-gradient(rgba(255,247,214,.2),rgba(255,247,214,.08)),
+    var(--cinema-poster,linear-gradient(125deg,#7f9ec0,#d9a6a6));
+  background-size:cover;background-position:center;
+  filter:blur(5px) saturate(.8);mix-blend-mode:screen;
+  transform:perspective(240px) rotateX(4deg);transform-origin:50% 100%;
+  transition:opacity .45s ease,transform .24s ease;
+}
+#cinema-room.projector-on:not(.projector-shorted) #cinema-projector-ray{opacity:.16}
+#cinema-room.projector-shorted #cinema-projector-ray{opacity:0;transform:perspective(240px) rotateX(4deg) scaleX(.04)}
+#cinema-screen-off{
+  position:absolute;inset:0;display:grid;place-items:center;background:#0b0c0d;color:#625d56;
+  font:600 clamp(8px,1.25vw,15px)/1 Fraunces,Georgia,serif;letter-spacing:.08em;
+}
+#cinema-screen-off[hidden]{display:none}
+#cinema-room.projector-shorted #cinema-screen-shell{animation:cinema-screen-short .16s steps(2,end) 5}
+#cinema-room.projector-shorted #cinema-projector{filter:drop-shadow(0 0 5px #9bc8ff)}
+#cinema-water-spray{opacity:0;pointer-events:none}
+#cinema-room.spraying #cinema-water-spray{animation:cinema-spray 1.05s ease-out}
+@keyframes cinema-screen-short{50%{filter:brightness(2.2) saturate(0)}}
+@keyframes cinema-spray{0%{opacity:0}12%{opacity:.9}80%{opacity:.72}100%{opacity:0}}
 #cinema-screen-shell{
   position:absolute; left:25.9%; top:12.3%; width:49.8%; height:58.8%;
   box-sizing:border-box; overflow:hidden; border:clamp(3px,.7vw,8px) solid #17191c;
@@ -520,6 +566,8 @@ footer{margin-top:2.6rem}
   .hunt-viewport:is(.cinema-room-open,.entrance-room-open) #loft-game-strip{transition:none}
   .entrance-prop.reacting .entrance-hit{animation-duration:.01ms !important}
   .hunt-viewport.entrance-room-open #entrance-room-art.grooving .entrance-window-pane{animation:none}
+  #cinema-room .cinema-prop.reacting,#cinema-room.spraying #cinema-water-spray,
+  #cinema-room.projector-shorted #cinema-screen-shell{animation:none}
 }
 #bathroom-room[hidden]{display:none}
 #bathroom-room{
@@ -29043,7 +29091,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <button type="button" id="bathroom-room-close" data-aria-i="bathroom_leave" data-title-i="bathroom_leave" aria-label="Back to Kitchen / bar" title="Back to Kitchen / bar">×</button>
     </div>
     <div id="cinema-room" role="dialog" aria-modal="true" aria-labelledby="cinema-room-title" hidden>
-      <svg id="cinema-room-art" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <svg id="cinema-room-art" viewBox="0 0 680 340" preserveAspectRatio="xMidYMid slice" role="group" data-aria-i="cinema_scene" aria-label="Interactive cinema">
         <defs>
           <!-- Same 60×32 running bond and warm Cuddly mortar language as #pbrick. -->
           <pattern id="cinema-brick" width="60" height="32" patternUnits="userSpaceOnUse">
@@ -29070,30 +29118,42 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <!-- Low ceiling, exposed timber, and the real room's centre sprinkler pipe. -->
         <rect width="680" height="34" fill="#d2cbc0"/>
         <path d="M0 16H680" stroke="#bbb2a6" stroke-width="1"/>
-        <path d="M16 0L145 38M515 38L667 0" stroke="#6b3d2d" stroke-width="18" stroke-linecap="square"/>
-        <path d="M18 1L144 36M517 36L666 1" stroke="#9a6245" stroke-width="4" opacity=".62"/>
-        <path d="M340 0V37" stroke="#52585a" stroke-width="6"/><path d="M336 26H344M336 30H344" stroke="#2b2d2e" stroke-width="1.2"/>
+        <g id="cinema-beams" class="cinema-prop" data-cinema-action="beam" tabindex="0" role="button" data-aria-i="cinema_beams" data-title-i="cinema_beams" aria-label="Knock on the ceiling beams" title="Knock on the ceiling beams">
+          <path d="M16 0L145 38M535 38L664 0" stroke="#6b3d2d" stroke-width="18" stroke-linecap="square"/>
+          <path d="M18 1L144 36M536 36L662 1" stroke="#9a6245" stroke-width="4" opacity=".62"/>
+          <path d="M8 0L151 43M529 43L672 0" class="cinema-hit" stroke-width="26"/>
+        </g>
+        <g id="cinema-sprinkler" class="cinema-prop" data-cinema-action="sprinkler" tabindex="0" role="button" data-aria-i="cinema_sprinkler" data-title-i="cinema_sprinkler" aria-label="Test the sprinkler" title="Test the sprinkler">
+          <path d="M340 0V37" stroke="#52585a" stroke-width="6"/><path d="M336 26H344M336 30H344" stroke="#2b2d2e" stroke-width="1.2"/>
+          <path d="M328 37H352M332 41H348" stroke="#656d70" stroke-width="4" stroke-linecap="round"/>
+          <rect x="326" y="0" width="28" height="48" class="cinema-hit"/>
+        </g>
+        <g id="cinema-water-spray" fill="none" stroke="#bfeaff" stroke-width="2" stroke-linecap="round">
+          <path d="M334 44Q322 118 321 251M340 44Q340 133 340 252M346 44Q358 118 359 251" stroke-dasharray="6 7"/>
+          <path d="M330 48Q306 112 312 214M350 48Q374 112 368 214" stroke-dasharray="3 8" opacity=".72"/>
+        </g>
         <!-- Coloured ambient spill only; the office already owns the rainbow-neon fixture. -->
         <ellipse cx="66" cy="100" rx="150" ry="128" fill="url(#cinema-blue-wash)"/>
         <ellipse cx="628" cy="164" rx="125" ry="112" fill="url(#cinema-rose-wash)"/>
         <!-- Screen wall shadow; the live HTML chooser/player sits exactly over this aperture. -->
         <rect x="168" y="34" width="356" height="216" rx="4" fill="#111315" opacity=".62"/>
         <!-- Bikes parked against the left brick. -->
-        <g fill="none" stroke="#202326" stroke-width="3">
+        <g id="cinema-bike" class="cinema-prop" data-cinema-action="bike" tabindex="0" role="button" data-aria-i="cinema_bike" data-title-i="cinema_bike" aria-label="Ring the bicycle" title="Ring the bicycle" fill="none" stroke="#202326" stroke-width="3">
           <circle cx="58" cy="221" r="34"/><circle cx="128" cy="221" r="34"/>
           <path d="M58 221L84 177L104 221H58L91 194H128L108 171M84 177H70M108 171L119 165"/>
           <circle cx="104" cy="221" r="5"/>
+          <rect x="20" y="158" width="147" height="100" class="cinema-hit"/>
         </g>
         <path d="M79 179H98" stroke="#17191b" stroke-width="5" stroke-linecap="round"/>
         <!-- Right-hand black-framed window follows the loft's shared day/night state. -->
-        <g id="cinema-window" class="hunt-hit" tabindex="0" role="button" data-aria-i="cinema_window_toggle" data-title-i="cinema_window_toggle" aria-label="Toggle day and night" title="Toggle day and night">
+        <g id="cinema-window" class="hunt-hit cinema-prop" data-cinema-action="window" tabindex="0" role="button" data-aria-i="cinema_window_toggle" data-title-i="cinema_window_toggle" aria-label="Toggle day and night" title="Toggle day and night">
           <rect x="588" y="55" width="68" height="135" fill="#171a1c" stroke="#08090a" stroke-width="6"/>
           <rect id="cinema-window-sky" x="595" y="62" width="54" height="121"/>
           <path class="cinema-window-view" d="M598 176L614 147L628 165L641 142L648 176Z" fill="#63778a"/>
           <path d="M622 62V183M595 122H649" stroke="#08090a" stroke-width="4"/>
         </g>
         <!-- Camera bodies, tripods, and a lens case beside the window. -->
-        <g stroke="#1c1d1f" stroke-linecap="round">
+        <g id="cinema-cameras" class="cinema-prop" data-cinema-action="camera" tabindex="0" role="button" data-aria-i="cinema_cameras" data-title-i="cinema_cameras" aria-label="Try the cameras" title="Try the cameras" stroke="#1c1d1f" stroke-linecap="round">
           <path d="M562 188L541 250M562 188L580 250M562 188V250" stroke-width="3"/>
           <rect x="548" y="174" width="29" height="18" rx="3" fill="#25272a" stroke-width="2"/>
           <circle cx="562" cy="183" r="6" fill="#111315" stroke="#555b62" stroke-width="2"/>
@@ -29101,25 +29161,45 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <rect x="612" y="193" width="22" height="15" rx="3" fill="#202225" stroke-width="2"/>
           <circle cx="622" cy="201" r="5" fill="#0e1012" stroke="#555b62" stroke-width="1.6"/>
           <rect x="648" y="218" width="24" height="31" rx="5" fill="#25272a" stroke-width="2"/>
+          <rect x="532" y="168" width="145" height="87" class="cinema-hit"/>
         </g>
         <!-- Floor cushions and the low projector table. -->
-        <path d="M82 273Q115 250 153 270Q147 297 92 297Q76 288 82 273Z" fill="#8e3a4a" stroke="#5f2733" stroke-width="2"/>
-        <path d="M145 292Q188 265 225 291Q215 320 153 319Q139 309 145 292Z" fill="#7f9ec0" stroke="#4a6b94" stroke-width="2"/>
-        <path d="M255 273H421L409 306H266Z" fill="#70452f" stroke="#39271e" stroke-width="3"/>
-        <path d="M272 306L265 330M403 306L412 330" stroke="#39271e" stroke-width="5"/>
-        <rect x="309" y="255" width="62" height="23" rx="5" fill="#e5e2da" stroke="#77766f" stroke-width="2"/>
-        <circle cx="340" cy="266" r="8" fill="#b4c5d6" stroke="#606b76" stroke-width="2"/>
-        <path d="M318 279V286M362 279V286" stroke="#393a3c" stroke-width="3"/>
+        <g id="cinema-cushion-wine" class="cinema-prop" data-cinema-action="cushion" tabindex="0" role="button" data-aria-i="cinema_cushion" data-title-i="cinema_cushion" aria-label="Squish the cushion" title="Squish the cushion">
+          <path d="M82 273Q115 250 153 270Q147 297 92 297Q76 288 82 273Z" fill="#8e3a4a" stroke="#5f2733" stroke-width="2"/>
+          <rect x="74" y="250" width="84" height="50" class="cinema-hit"/>
+        </g>
+        <g id="cinema-cushion-blue" class="cinema-prop" data-cinema-action="cushion" tabindex="0" role="button" data-aria-i="cinema_cushion" data-title-i="cinema_cushion" aria-label="Squish the cushion" title="Squish the cushion">
+          <path d="M145 292Q188 265 225 291Q215 320 153 319Q139 309 145 292Z" fill="#7f9ec0" stroke="#4a6b94" stroke-width="2"/>
+          <rect x="137" y="264" width="94" height="59" class="cinema-hit"/>
+        </g>
+        <g id="cinema-table" class="cinema-prop" data-cinema-action="table" tabindex="0" role="button" data-aria-i="cinema_table" data-title-i="cinema_table" aria-label="Tap the projector table" title="Tap the projector table">
+          <path d="M255 273H421L409 306H266Z" fill="#70452f" stroke="#39271e" stroke-width="3"/>
+          <path d="M272 306L265 330M403 306L412 330" stroke="#39271e" stroke-width="5"/>
+          <rect x="251" y="269" width="174" height="65" class="cinema-hit"/>
+        </g>
+        <g id="cinema-projector" class="cinema-prop" data-cinema-action="projector" tabindex="0" role="button" data-aria-i="cinema_projector" data-title-i="cinema_projector" aria-label="Turn on the projector" title="Turn on the projector">
+          <rect x="309" y="255" width="62" height="23" rx="5" fill="#e5e2da" stroke="#77766f" stroke-width="2"/>
+          <circle cx="340" cy="266" r="8" fill="#b4c5d6" stroke="#606b76" stroke-width="2"/>
+          <path d="M318 279V286M362 279V286" stroke="#393a3c" stroke-width="3"/>
+          <rect x="301" y="247" width="78" height="44" class="cinema-hit"/>
+        </g>
+        <g id="cinema-weights" class="cinema-prop" data-cinema-action="weights" tabindex="0" role="button" data-aria-i="cinema_weights" data-title-i="cinema_weights" aria-label="Lift the weights" title="Lift the weights">
+          <path d="M438 268H485M445 260V276M451 257V279M472 257V279M478 260V276" stroke="#27282a" stroke-width="5" stroke-linecap="round"/>
+          <rect x="433" y="250" width="57" height="35" class="cinema-hit"/>
+        </g>
         <!-- Tan leather sofa in the foreground, with stitched panels and loose cushions. -->
-        <g>
+        <g id="cinema-sofa-seat" class="cinema-prop" data-cinema-action="sofa" tabindex="0" role="button" data-aria-i="cinema_sofa" data-title-i="cinema_sofa" aria-label="Drop onto the sofa" title="Drop onto the sofa">
           <rect x="198" y="287" width="360" height="52" rx="14" fill="url(#cinema-sofa)" stroke="#6f4328" stroke-width="3"/>
           <path d="M211 292Q243 263 289 285L279 315Q238 322 211 306ZM545 292Q511 263 469 285L479 315Q516 322 545 306Z" fill="#b77a42" stroke="#754526" stroke-width="2"/>
           <path d="M290 290V337M378 290V337M466 290V337M202 318H554" fill="none" stroke="#754526" stroke-width="1.5" opacity=".72"/>
           <path d="M220 338V340M536 338V340" stroke="#2d2926" stroke-width="8"/>
+          <rect x="194" y="275" width="368" height="65" class="cinema-hit"/>
         </g>
       </svg>
       <button type="button" id="cinema-room-close" data-aria-i="cinema_leave" data-title-i="cinema_leave" aria-label="Back to Cuddly-puddly" title="Back to Cuddly-puddly">×</button>
+      <div id="cinema-projector-ray" aria-hidden="true"></div>
       <div id="cinema-screen-shell">
+        <div id="cinema-screen-off" data-i="cinema_screen_off">projector off</div>
         <div id="cinema-chooser">
           <h3 id="cinema-room-title" data-i="cinema_title">What are we watching?</h3>
           <div class="cinema-films">
@@ -29801,12 +29881,23 @@ window.__cinemaVideoLoaded = false;
   var playerWrap = document.getElementById("cinema-player-wrap");
   var chooserBack = document.getElementById("cinema-chooser-back");
   var cinemaWindow = document.getElementById("cinema-window");
+  var screenOff = document.getElementById("cinema-screen-off");
+  var projector = document.getElementById("cinema-projector");
+  var sprinkler = document.getElementById("cinema-sprinkler");
+  var playPauseButton = document.getElementById("hunt-playpause-btn");
+  var skipButton = document.getElementById("hunt-skip-btn");
   var cuddlyScene = document.getElementById("stage-cuddly");
-  var cinemaSongSuspended = false;
-  var cinemaSongRestoreTimer = null;
   var cinemaCloseTimer = null;
+  var cinemaShortTimer = null;
   var cinemaClosing = false;
-  if (!room || !viewport || !ticket || !closeButton || !chooser || !playerWrap || !chooserBack || !cinemaWindow) return;
+  var projectorOn = false;
+  var projectorShorted = false;
+  var filmPlaying = false;
+  var currentFilm = null;
+  var reactions = {};
+  var props = Array.prototype.slice.call(room.querySelectorAll(".cinema-prop"));
+  if (!room || !viewport || !ticket || !closeButton || !chooser || !playerWrap || !chooserBack ||
+      !cinemaWindow || !screenOff || !projector || !sprinkler) return;
 
   function syncCinemaDayNight() {
     room.classList.toggle("cinema-night", !!(cuddlyScene && cuddlyScene.classList.contains("dusk")));
@@ -29825,32 +29916,120 @@ window.__cinemaVideoLoaded = false;
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, fade);
     if (window.__syncProjectorPiano) window.__syncProjectorPiano();
   }
-  function releaseCinemaSong() {
-    if (!cinemaSongSuspended) return;
-    function restore() {
-      cinemaSongRestoreTimer = null;
-      if (window.__cinemaRoomOpen) { cinemaSongRestoreTimer = setTimeout(restore, 760); return; }
-      cinemaSongSuspended = false;
-      if (window.__restoreSongAfterProjector) window.__restoreSongAfterProjector();
-    }
-    // The shared projector handoff fades for 700ms before pausing. If the cinema is
-    // dismissed during that ramp, restoring immediately would be followed by its stale
-    // pause callback. Wait out that callback only while the song still reports playing.
-    if (window.__phoneMusicPlaying && window.__phoneMusicPlaying()) {
-      clearTimeout(cinemaSongRestoreTimer);
-      cinemaSongRestoreTimer = setTimeout(restore, 760);
-    } else {
-      clearTimeout(cinemaSongRestoreTimer);
-      restore();
-    }
+  function setFilmPlaying(active, fade) {
+    filmPlaying = !!active;
+    window.__cinemaVideoLoaded = filmPlaying;
+    if (window.__setCinemaAudioDuck) window.__setCinemaAudioDuck(filmPlaying, fade);
+    if (window.__setPartyDuck) window.__setPartyDuck(undefined, fade);
+    if (playPauseButton && window.__cinemaRoomOpen) playPauseButton.classList.toggle("paused", !filmPlaying);
   }
-  function clearPlayer() {
+  function tellVimeo(method) {
+    var frame = document.getElementById("cinema-player");
+    if (!frame || !frame.contentWindow) return false;
+    try { frame.contentWindow.postMessage(JSON.stringify({ method: method }), "https://player.vimeo.com"); }
+    catch (_error) { return false; }
+    return true;
+  }
+  function clearPlayer(showChooser) {
     playerWrap.replaceChildren();
     playerWrap.hidden = true;
-    chooser.hidden = false;
+    chooser.hidden = !(showChooser && projectorOn && !projectorShorted);
     chooserBack.hidden = true;
-    window.__cinemaVideoLoaded = false;
-    if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    currentFilm = null;
+    room.style.removeProperty("--cinema-poster");
+    setFilmPlaying(false, .45);
+  }
+  function cinemaText(key, fallback) {
+    return typeof T === "object" && T && typeof tipText === "function" ? tipText(key) : fallback;
+  }
+  function syncProjectorAria() {
+    var key = projectorOn ? "cinema_projector_off" : "cinema_projector";
+    projector.setAttribute("data-aria-i", key);
+    projector.setAttribute("data-title-i", key);
+    var label = cinemaText(key, projectorOn ? "Turn off the projector" : "Turn on the projector");
+    projector.setAttribute("aria-label", label);
+    projector.setAttribute("title", label);
+  }
+  function powerOff() {
+    clearTimeout(cinemaShortTimer);
+    cinemaShortTimer = null;
+    projectorShorted = false;
+    projectorOn = false;
+    room.classList.remove("projector-on", "projector-shorted");
+    clearPlayer(false);
+    screenOff.hidden = false;
+    screenOff.setAttribute("data-i", "cinema_screen_off");
+    screenOff.textContent = cinemaText("cinema_screen_off", "projector off");
+    syncProjectorAria();
+    if (playPauseButton && window.__cinemaRoomOpen) playPauseButton.classList.add("shown", "paused");
+    if (skipButton && window.__cinemaRoomOpen) skipButton.classList.add("shown");
+  }
+  function powerOn(focusChooser) {
+    if (projectorShorted) return false;
+    projectorOn = true;
+    room.classList.add("projector-on");
+    screenOff.hidden = true;
+    chooser.hidden = false;
+    syncProjectorAria();
+    if (playPauseButton) playPauseButton.classList.add("shown", "paused");
+    if (skipButton) skipButton.classList.add("shown");
+    if (focusChooser !== false) {
+      var first = chooser.querySelector(".cinema-film");
+      if (first) try { first.focus({ preventScroll: true }); } catch (_error) { try { first.focus(); } catch (_error2) {} }
+    }
+    return true;
+  }
+  function toggleProjector() {
+    if (projectorShorted) return false;
+    if (projectorOn) powerOff();
+    else powerOn(true);
+    if (typeof playDryClickSound === "function") playDryClickSound("cinema-projector");
+    return true;
+  }
+  function toggleFilmPlayback() {
+    if (!projectorOn) return powerOn(true);
+    if (!currentFilm) {
+      var first = chooser.querySelector(".cinema-film");
+      if (first) playFilm(first);
+      return !!first;
+    }
+    tellVimeo(filmPlaying ? "pause" : "play");
+    setFilmPlaying(!filmPlaying, .4);
+    return true;
+  }
+  function nextFilm() {
+    if (!projectorOn) powerOn(false);
+    var films = Array.prototype.slice.call(chooser.querySelectorAll(".cinema-film"));
+    if (!films.length) return false;
+    var at = currentFilm ? films.indexOf(currentFilm) : -1;
+    playFilm(films[(at + 1) % films.length]);
+    return true;
+  }
+  function spraySprinkler() {
+    if (!window.__cinemaRoomOpen) return false;
+    room.classList.remove("spraying");
+    void room.offsetWidth;
+    room.classList.add("spraying");
+    setTimeout(function () { room.classList.remove("spraying"); }, 1100);
+    if (typeof playWaterLeakSound === "function") playWaterLeakSound("cinema-sprinkler");
+    if (!projectorOn || projectorShorted) return true;
+    projectorShorted = true;
+    projectorOn = false;
+    clearPlayer(false);
+    room.classList.remove("projector-on");
+    room.classList.add("projector-shorted");
+    screenOff.hidden = false;
+    screenOff.setAttribute("data-i", "cinema_screen_short");
+    screenOff.textContent = cinemaText("cinema_screen_short", "drying out…");
+    if (typeof playDryClickSound === "function") playDryClickSound("cinema-projector");
+    clearTimeout(cinemaShortTimer);
+    cinemaShortTimer = setTimeout(function () {
+      cinemaShortTimer = null;
+      projectorShorted = false;
+      room.classList.remove("projector-shorted");
+      powerOn(false);
+    }, 3600);
+    return true;
   }
   function syncCuddlyOccupants(downstairs) {
     if (downstairs) {
@@ -29865,7 +30044,7 @@ window.__cinemaVideoLoaded = false;
   }
   function closeCinema() {
     if (!window.__cinemaRoomOpen) return false;
-    clearPlayer();
+    powerOff();
     window.__cinemaRoomOpen = false;
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     syncCuddlyOccupants(false);
@@ -29878,8 +30057,8 @@ window.__cinemaVideoLoaded = false;
       room.hidden = true;
       if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(false);
     }, 720);
-    releaseCinemaSong();
     refreshProjectorAudio(0.7);
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
     try { ticket.focus({ preventScroll: true }); } catch (_error) { try { ticket.focus(); } catch (_error2) {} }
     return true;
   }
@@ -29894,31 +30073,32 @@ window.__cinemaVideoLoaded = false;
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     syncCinemaDayNight();
     room.hidden = false;
+    powerOff();
+    if (playPauseButton) playPauseButton.classList.add("shown", "paused");
+    if (skipButton) skipButton.classList.add("shown");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         if (window.__cinemaRoomOpen) viewport.classList.add("cinema-room-open");
       });
     });
     refreshProjectorAudio(0.7);
-    try { closeButton.focus({ preventScroll: true }); } catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
+    if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
+    try { viewport.focus({ preventScroll: true }); } catch (_error) { try { viewport.focus(); } catch (_error2) {} }
     return true;
   }
   function playFilm(button) {
+    if (!projectorOn || projectorShorted) return false;
     var id = button && button.getAttribute("data-vimeo-id");
-    if (!/^\d+$/.test(id || "")) return;
+    if (!/^\d+$/.test(id || "")) return false;
     var hash = button.getAttribute("data-vimeo-hash") || "";
-    var projectorMode = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : "";
-    var projectorOwnsSong = ["coffee", "stars", "workout", "totoro", "aqua"].indexOf(projectorMode) !== -1;
-    if (!projectorOwnsSong && !cinemaSongSuspended && window.__phoneMusicPlaying && window.__phoneMusicPlaying()) {
-      cinemaSongSuspended = true;
-      if (window.__suspendSongForProjector) window.__suspendSongForProjector();
-    }
+    currentFilm = button;
+    room.style.setProperty("--cinema-poster", 'url("' + (button.getAttribute("data-poster") || "") + '")');
     var frame = document.createElement("iframe");
     frame.id = "cinema-player";
     frame.title = button.getAttribute("aria-label") || "Vimeo film";
     frame.src = "https://player.vimeo.com/video/" + id + "?" +
       (hash ? "h=" + encodeURIComponent(hash) + "&" : "") +
-      "autoplay=1&title=0&byline=0&portrait=0&dnt=1";
+      "autoplay=1&title=0&byline=0&portrait=0&dnt=1&api=1&player_id=cinema-player";
     frame.allow = "autoplay; fullscreen; picture-in-picture";
     frame.allowFullscreen = true;
     frame.referrerPolicy = "strict-origin-when-cross-origin";
@@ -29926,8 +30106,8 @@ window.__cinemaVideoLoaded = false;
     chooser.hidden = true;
     playerWrap.hidden = false;
     chooserBack.hidden = false;
-    window.__cinemaVideoLoaded = true;
-    if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    setFilmPlaying(true, .65);
+    return true;
   }
   Array.prototype.forEach.call(room.querySelectorAll(".cinema-film"), function (button) {
     button.addEventListener("click", function () { playFilm(button); });
@@ -29938,7 +30118,7 @@ window.__cinemaVideoLoaded = false;
     event.preventDefault(); event.stopPropagation(); openCinema();
   });
   closeButton.addEventListener("click", closeCinema);
-  chooserBack.addEventListener("click", function () { clearPlayer(); chooser.querySelector(".cinema-film").focus(); });
+  chooserBack.addEventListener("click", function () { clearPlayer(true); chooser.querySelector(".cinema-film").focus(); });
   function toggleCinemaWindow(event) {
     if (event) {
       event.preventDefault();
@@ -29946,9 +30126,53 @@ window.__cinemaVideoLoaded = false;
     }
     if (window.__toggleDayNight) window.__toggleDayNight();
   }
-  cinemaWindow.addEventListener("click", toggleCinemaWindow);
-  cinemaWindow.addEventListener("keydown", function (event) {
-    if (event.key === "Enter" || event.key === " ") toggleCinemaWindow(event);
+  props.forEach(function (prop) {
+    prop.addEventListener("animationend", function () { prop.classList.remove("reacting"); });
+    function react(event) {
+      if (!window.__cinemaRoomOpen) return;
+      if (event) { event.preventDefault(); event.stopPropagation(); }
+      var action = prop.getAttribute("data-cinema-action") || "";
+      reactions[prop.id] = (reactions[prop.id] || 0) + 1;
+      prop.classList.remove("reacting");
+      void prop.getBBox();
+      prop.classList.add("reacting");
+      if (action === "projector") return toggleProjector();
+      if (action === "sprinkler") return spraySprinkler();
+      if (action === "window") return toggleCinemaWindow(event);
+      if (action === "camera" && typeof playCameraShutterSound === "function") playCameraShutterSound(prop.id);
+      else if (action === "cushion" || action === "sofa") {
+        if (typeof playPlushSquishSound === "function") playPlushSquishSound(prop.id);
+      } else if (action === "bike" || action === "weights") {
+        if (typeof playMetalClinkSound === "function") playMetalClinkSound(action === "bike" ? 1.4 : .72, prop.id);
+      } else if (typeof playKnockboxThumpSound === "function") playKnockboxThumpSound(prop.id);
+      return true;
+    }
+    prop.addEventListener("click", react);
+    prop.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") react(event);
+    });
+  });
+  if (playPauseButton) playPauseButton.addEventListener("click", function (event) {
+    if (!window.__cinemaRoomOpen) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    toggleFilmPlayback();
+  }, true);
+  if (skipButton) skipButton.addEventListener("click", function (event) {
+    if (!window.__cinemaRoomOpen) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    nextFilm();
+  }, true);
+  window.addEventListener("message", function (event) {
+    if (event.origin !== "https://player.vimeo.com" || !currentFilm) return;
+    var data = event.data;
+    if (typeof data === "string") {
+      try { data = JSON.parse(data); } catch (_error) { return; }
+    }
+    if (!data || !data.event) return;
+    if (data.event === "play") setFilmPlaying(true, .4);
+    else if (data.event === "pause" || data.event === "ended") setFilmPlaying(false, .45);
   });
   var cuddlyBackgrounds = [document.getElementById("cuddly-wall"), document.getElementById("cuddly-ceiling")].filter(Boolean);
   var cuddlyBackgroundIds = { "cuddly-wall": true, "cuddly-ceiling": true };
@@ -29980,9 +30204,16 @@ window.__cinemaVideoLoaded = false;
   window.__closeCinemaRoom = closeCinema;
   window.__cinemaRoomState = function () {
     var frame = document.getElementById("cinema-player");
-    return { open: !!window.__cinemaRoomOpen, closing: cinemaClosing, playing: !!window.__cinemaVideoLoaded,
-      video: frame ? (frame.src.match(/video\/(\d+)/) || [])[1] || null : null };
+    return { open: !!window.__cinemaRoomOpen, closing: cinemaClosing, powered: projectorOn,
+      shorted: projectorShorted, playing: filmPlaying,
+      video: frame ? (frame.src.match(/video\/(\d+)/) || [])[1] || null : null,
+      reactions: Object.assign({}, reactions) };
   };
+  window.__cinemaProjectorToggle = toggleProjector;
+  window.__cinemaProjectorPlayPause = toggleFilmPlayback;
+  window.__cinemaProjectorNext = nextFilm;
+  window.__cinemaSprinkler = spraySprinkler;
+  powerOff();
   if (window.__registerTransientResetHook) window.__registerTransientResetHook("cinema-room", closeCinema);
 })();
 
@@ -30140,11 +30371,18 @@ document.addEventListener("keydown", function (event) {
   if (!window.__cinemaRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
-  if ((event.key === "Enter" || event.key === " ") &&
-      event.target && event.target.closest && event.target.closest("#cinema-window")) {
+  var ownedControl = event.target && event.target.closest &&
+    event.target.closest("#cinema-room button,#cinema-room .cinema-prop");
+  if ((event.key === "Enter" || event.key === " ") && ownedControl) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    event.target.closest("#cinema-window").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    ownedControl.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    return;
+  }
+  if ((event.key === " " || event.key === "Spacebar") && window.__cinemaProjectorToggle) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    window.__cinemaProjectorToggle();
     return;
   }
   event.stopImmediatePropagation();
@@ -30489,6 +30727,7 @@ if (window.__closeBedroomRoom) window.__registerTransientResetHook("bedroom-room
 // constructed at runtime — only here in getAudioCtx (see check.js).
 var __sharedAC = null, __sharedACFailed = false, __activeAudioBeds = 0;
 var __lowerFloorFilter = null, __lowerFloorGain = null;
+var __loftAudioMaster = null, __cinemaAudioDucked = false;
 var LOWER_FLOOR_ACOUSTICS = {
   upstairs: { room: "upstairs", gain: 1, cutoff: 20000 },
   lower: { room: "lower", gain: 0.48, cutoff: 2400 },
@@ -30515,7 +30754,7 @@ function lowerFloorAudioOutput(ac) {
   __lowerFloorFilter.frequency.value = profile.cutoff;
   __lowerFloorGain.gain.value = profile.gain;
   __lowerFloorFilter.connect(__lowerFloorGain);
-  __lowerFloorGain.connect(ac.destination);
+  __lowerFloorGain.connect(loftAudioDestination(ac));
   return __lowerFloorFilter;
 }
 window.__updateLowerFloorAcoustics = function () {
@@ -30564,6 +30803,36 @@ function getAudioCtx() {
   } catch (e) { __sharedACFailed = true; return null; }
   return __sharedAC;
 }
+// Every loft-owned Web Audio route meets here, immediately before the hardware
+// destination. Vimeo remains outside this graph in its cross-origin iframe. The cinema
+// can therefore yield the entire loft mix to a film without changing any source's own
+// level/state, and restoring the gain recovers the exact mix that was playing.
+function loftAudioDestination(ac) {
+  if (!ac) return null;
+  if (!__loftAudioMaster) {
+    __loftAudioMaster = ac.createGain();
+    __loftAudioMaster.gain.value = __cinemaAudioDucked ? 0.035 : 1;
+    __loftAudioMaster.connect(ac.destination);
+  }
+  return __loftAudioMaster;
+}
+window.__setCinemaAudioDuck = function (active, fadeSeconds) {
+  __cinemaAudioDucked = !!active;
+  var ac = __sharedAC;
+  if (!ac) return;
+  var master = loftAudioDestination(ac);
+  if (!master) return;
+  try {
+    var now = ac.currentTime;
+    var fade = Math.max(0, typeof fadeSeconds === "number" ? fadeSeconds : 0.55);
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.linearRampToValueAtTime(__cinemaAudioDucked ? 0.035 : 1, now + fade);
+  } catch (_error) {}
+};
+window.__cinemaAudioDuckState = function () {
+  return { active: __cinemaAudioDucked, gain: __loftAudioMaster ? __loftAudioMaster.gain.value : (__cinemaAudioDucked ? 0.035 : 1) };
+};
 // Nudge the one context running. A freshly-built context starts "suspended"; callers are
 // always in a gesture/attended path when they want sound, so resuming here is safe (the
 // idle manager below re-suspends once nothing wants sound). Reject swallowed (autoplay
@@ -31768,6 +32037,19 @@ var T = {
     cinema_leave: "Back to Cuddly-puddly",
     cinema_title: "What are we watching?",
     cinema_choose: "Choose another",
+    cinema_scene: "Interactive cinema",
+    cinema_screen_off: "projector off",
+    cinema_screen_short: "drying out…",
+    cinema_projector: "Turn on the projector",
+    cinema_projector_off: "Turn off the projector",
+    cinema_sprinkler: "Test the sprinkler",
+    cinema_beams: "Knock on the ceiling beams",
+    cinema_bike: "Ring the bicycle",
+    cinema_cameras: "Try the cameras",
+    cinema_cushion: "Squish the cushion",
+    cinema_table: "Tap the projector table",
+    cinema_weights: "Lift the weights",
+    cinema_sofa: "Drop onto the sofa",
     cinema_window_toggle: "Toggle day and night",
     entrance_title: "The Lofts entrance",
     entrance_leave: "Back to the balcony",
@@ -33012,6 +33294,19 @@ var T = {
     cinema_leave: "Zpět do Cuddly-puddly",
     cinema_title: "Na co se podíváme?",
     cinema_choose: "Vybrat jiný film",
+    cinema_scene: "Interaktivní kino",
+    cinema_screen_off: "projektor je vypnutý",
+    cinema_screen_short: "vysychá…",
+    cinema_projector: "Zapnout projektor",
+    cinema_projector_off: "Vypnout projektor",
+    cinema_sprinkler: "Vyzkoušet sprinkler",
+    cinema_beams: "Zaklepat na stropní trámy",
+    cinema_bike: "Cinknout na kolo",
+    cinema_cameras: "Vyzkoušet kamery",
+    cinema_cushion: "Zmáčknout polštář",
+    cinema_table: "Klepnout na stolek s projektorem",
+    cinema_weights: "Zvednout činky",
+    cinema_sofa: "Plácnout sebou na pohovku",
     cinema_window_toggle: "Přepnout den a noc",
     entrance_title: "Vstup do The Lofts",
     entrance_leave: "Zpět na balkon",
@@ -83697,7 +83992,7 @@ function getSfxCtx() {
     try {
       mg = ac.createGain();
       mg.gain.value = (typeof window.__audioMaster === "number" ? window.__audioMaster : 1);
-      mg.connect(ac.destination);
+      mg.connect(loftAudioDestination(ac));
     } catch (e) { sfxCtxFailed = true; return null; }
     sfxCtx = audioBusProxy(ac, mg, { resume: function () { return Promise.resolve(); }, suspend: function () { return Promise.resolve(); }, close: function () { return Promise.resolve(); } });
     sfxCtx._volMaster = mg;

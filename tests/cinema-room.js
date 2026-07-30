@@ -18,16 +18,21 @@ var HARNESS = [
   ' window.goToStage("cuddly");if(window.__setDayNight)window.__setDayNight(false);window.__cuddlyProjector.set("coffee");document.getElementById("cinema-room").style.transition="none";document.getElementById("loft-game-strip").style.transition="none";await sleep(520);',
   ' var roster=document.querySelector(".roster-panel"),rosterToggle=document.querySelector(".roster-toggle"),rosterBackdrop=document.querySelector(".roster-backdrop");roster.classList.add("show");rosterBackdrop.classList.add("show");window.__ireneShow("irene-sit");var cameoBefore=document.getElementById("cuddly-irene").classList.contains("showing");',
   ' var channel=window.__cuddlyProjector.channel(),before=window.__activeAudioBedCount(),ticket=document.getElementById("cuddly-cinema-ticket"),ticketBox=ticket.getBoundingClientRect(),screenBox=document.getElementById("cuddly-screen-bg").getBoundingClientRect();click(ticket);await sleep(850);',
+  ' report.steps.projectorOff={state:window.__cinemaRoomState(),frame:!!document.getElementById("cinema-player"),chooser:document.getElementById("cinema-chooser").hidden,off:!document.getElementById("cinema-screen-off").hidden};',
+  ' var projector=document.getElementById("cinema-projector");click(projector);await sleep(40);var clickOn=window.__cinemaRoomState();key(" ");await sleep(40);var spaceOff=window.__cinemaRoomState();projector.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));await sleep(40);report.steps.projectorControls={clickOn:clickOn,spaceOff:spaceOff,keyOn:window.__cinemaRoomState()};',
   ' var posters=Array.prototype.map.call(document.querySelectorAll(".cinema-film"),function(el){var r=el.getBoundingClientRect(),img=el.querySelector("img"),ir=img.getBoundingClientRect();return {box:[r.left,r.top,r.width,r.height],image:[ir.left,ir.top,ir.width,ir.height],fit:getComputedStyle(img).objectFit,label:el.getAttribute("aria-label"),src:img.getAttribute("src"),poster:el.dataset.poster};});',
   ' var cinemaBox=document.getElementById("cinema-room").getBoundingClientRect(),viewportBox=document.querySelector(".hunt-viewport").getBoundingClientRect(),cuddlyBox=document.getElementById("stage-cuddly").getBoundingClientRect(),cinemaCloseStyle=getComputedStyle(document.getElementById("cinema-room-close")),princeCloseStyle=getComputedStyle(document.getElementById("prince-basement-close"));',
   ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before,posters:posters,ticket:[ticketBox.left,ticketBox.top,ticketBox.right,ticketBox.bottom],screen:[screenBox.left,screenBox.top,screenBox.right,screenBox.bottom],geometry:{cinema:[cinemaBox.left,cinemaBox.top,cinemaBox.width,cinemaBox.height],viewport:[viewportBox.left,viewportBox.top,viewportBox.width,viewportBox.height],cuddlyBottom:cuddlyBox.bottom,controls:{cinema:[parseFloat(cinemaCloseStyle.width),parseFloat(cinemaCloseStyle.height),parseFloat(cinemaCloseStyle.right),parseFloat(cinemaCloseStyle.top)],prince:[parseFloat(princeCloseStyle.width),parseFloat(princeCloseStyle.height),parseFloat(princeCloseStyle.right),parseFloat(princeCloseStyle.top)]}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility]};',
   ' report.steps.occupants={before:cameoBefore,irene:document.getElementById("cuddly-irene").classList.contains("showing"),robin:document.getElementById("cuddly-robin").classList.contains("showing"),navid:document.getElementById("cuddly-navid").classList.contains("showing"),visitors:window.__cuddlyVisitorsNow().length,kids:document.getElementById("cuddly-kidgames").classList.contains("playing"),forcedVisit:window.__cuddlyVisit("bahareh",true)};',
+  ' var propIds=Array.prototype.map.call(document.querySelectorAll("#cinema-room .cinema-prop"),function(el){return el.id;});propIds.filter(function(id){return id!=="cinema-projector"&&id!=="cinema-sprinkler"&&id!=="cinema-window";}).forEach(function(id){click(document.getElementById(id));});report.steps.props={ids:propIds,reactions:window.__cinemaRoomState().reactions};',
   ' var cinemaSky=document.getElementById("cinema-window-sky"),cinemaWindow=document.getElementById("cinema-window");cinemaSky.style.transition="none";report.steps.cinemaDay={night:document.getElementById("cinema-room").classList.contains("cinema-night"),fill:getComputedStyle(cinemaSky).fill};window.__setDayNight(true);await sleep(40);report.steps.cinemaNight={night:document.getElementById("cinema-room").classList.contains("cinema-night"),fill:getComputedStyle(cinemaSky).fill};window.__setDayNight(false);await sleep(40);',
   ' click(cinemaWindow);await sleep(40);var clickedNight=document.getElementById("cinema-room").classList.contains("cinema-night");cinemaWindow.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));await sleep(40);report.steps.cinemaWindowToggle={clickedNight:clickedNight,keyedDay:!document.getElementById("cinema-room").classList.contains("cinema-night")};',
   ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label"),window:cinemaWindow.getAttribute("aria-label")};setLang("en");',
   ' var film=document.querySelector(".cinema-film[data-vimeo-id=\\"1096537359\\"]");click(film);await sleep(80);var frame=document.getElementById("cinema-player");',
   ' var shell=document.getElementById("cinema-screen-shell"),wrap=document.getElementById("cinema-player-wrap"),chooser=document.getElementById("cinema-chooser"),backButton=document.getElementById("cinema-chooser-back"),sr=shell.getBoundingClientRect(),wr=wrap.getBoundingClientRect(),fr=frame&&frame.getBoundingClientRect(),br=backButton.getBoundingClientRect(),rr=document.getElementById("cinema-room").getBoundingClientRect();',
-  ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,chooser:chooser.hidden,chooserDisplay:getComputedStyle(chooser).display,geometry:fr&&{frame:[fr.left,fr.top,fr.width,fr.height],wrap:[wr.left,wr.top,wr.width,wr.height],shell:[sr.left+shell.clientLeft,sr.top+shell.clientTop,shell.clientWidth,shell.clientHeight],shellOuter:[sr.left,sr.top,sr.right,sr.bottom],back:[br.left,br.top,br.right,br.bottom],room:[rr.left,rr.top,rr.right,rr.bottom]}};',
+  ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,audioDuck:window.__cinemaAudioDuckState(),ray:parseFloat(getComputedStyle(document.getElementById("cinema-projector-ray")).opacity),chooser:chooser.hidden,chooserDisplay:getComputedStyle(chooser).display,geometry:fr&&{frame:[fr.left,fr.top,fr.width,fr.height],wrap:[wr.left,wr.top,wr.width,wr.height],shell:[sr.left+shell.clientLeft,sr.top+shell.clientTop,shell.clientWidth,shell.clientHeight],shellOuter:[sr.left,sr.top,sr.right,sr.bottom],back:[br.left,br.top,br.right,br.bottom],room:[rr.left,rr.top,rr.right,rr.bottom]}};',
+  ' click(document.getElementById("hunt-playpause-btn"));await sleep(30);var sidePause={state:window.__cinemaRoomState(),duck:window.__cinemaAudioDuckState()};click(document.getElementById("hunt-playpause-btn"));await sleep(30);var sidePlay={state:window.__cinemaRoomState(),duck:window.__cinemaAudioDuckState()};click(document.getElementById("hunt-skip-btn"));await sleep(40);report.steps.sideTransport={pause:sidePause,play:sidePlay,next:window.__cinemaRoomState()};',
+  ' click(document.getElementById("cinema-sprinkler"));await sleep(80);report.steps.sprinklerShort={state:window.__cinemaRoomState(),frame:!!document.getElementById("cinema-player"),duck:window.__cinemaAudioDuckState(),spraying:document.getElementById("cinema-room").classList.contains("spraying")};await sleep(3650);report.steps.sprinklerReboot={state:window.__cinemaRoomState(),chooser:document.getElementById("cinema-chooser").hidden,off:document.getElementById("cinema-screen-off").hidden};click(film);await sleep(40);',
   ' click(document.getElementById("cinema-chooser-back"));await sleep(40);report.steps.back={state:window.__cinemaRoomState(),frame:!!document.getElementById("cinema-player"),chooser:document.getElementById("cinema-chooser").hidden};',
   ' click(film);await sleep(40);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__cinemaRoomState(),room:window.currentStageName,frame:!!document.getElementById("cinema-player"),channel:window.__cuddlyProjector.channel()};',
   ' window.goToStage("cuddly");window.__cuddlyProjector.set("fire");window.__playSongAt(0);await sleep(100);window.__openCinemaRoom();click(film);await sleep(40);click(document.getElementById("cinema-room-close"));await sleep(900);report.steps.fastClose={open:window.__cinemaRoomState().open,song:window.__phoneMusicPlaying(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility]};',
@@ -62,7 +67,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html cinema room:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 30000, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 40000, {
   patchRaf: true,
   chromeFlags: "--autoplay-policy=no-user-gesture-required"
 });
@@ -72,6 +77,12 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.open && s.open.state.open && !s.open.state.playing && s.open.room === "cuddly" &&
   s.open.channel === s.channelWas && s.open.covered && !s.open.hidden && s.open.viewport,
   "the projector ticket opens a covered subroom without changing room or channel state", s.open);
+check(s.projectorOff && s.projectorOff.state.open && !s.projectorOff.state.powered &&
+  !s.projectorOff.state.playing && !s.projectorOff.frame && s.projectorOff.chooser && s.projectorOff.off,
+  "Cinema arrives with its physical projector off and no Vimeo surface", s.projectorOff);
+check(s.projectorControls && s.projectorControls.clickOn.powered &&
+  !s.projectorControls.spaceOff.powered && s.projectorControls.keyOn.powered,
+  "click, bare Space, and keyboard activation share the physical projector power control", s.projectorControls);
 check(s.open && s.open.before >= 1 && s.open.beds === 0,
   "entering the cinema releases the active Cuddly projector score", s.open);
 check(s.open && s.open.geometry &&
@@ -92,6 +103,10 @@ check(s.cinemaDay && !s.cinemaDay.night && /184, 212, 232/.test(s.cinemaDay.fill
   "the cinema window follows the loft from daylight blue to night", {day:s.cinemaDay,night:s.cinemaNight});
 check(s.cinemaWindowToggle && s.cinemaWindowToggle.clickedNight && s.cinemaWindowToggle.keyedDay,
   "click and keyboard activation on the cinema window toggle day and night", s.cinemaWindowToggle);
+check(s.props && s.props.ids.length === 11 &&
+  ["cinema-beams","cinema-bike","cinema-cameras","cinema-cushion-wine","cinema-cushion-blue",
+   "cinema-table","cinema-weights","cinema-sofa-seat"].every(function(id){return s.props.reactions[id] === 1;}),
+  "every distinct authored cinema prop participates in the shared reaction surface", s.props);
 check(s.open && s.open.ticket[0] > s.open.screen[2] + 20,
   "the quiet cinema ticket sits on the brickwork beside, not on, the projector", s.open);
 check(s.open && s.open.posters.length === 3 &&
@@ -106,8 +121,9 @@ check(s.cs && s.cs.title === "Na co se podíváme?" && s.cs.close === "Zpět do 
   "chooser and exit copy switch to Czech", s.cs);
 check(s.play && s.play.state.playing && s.play.state.video === "1096537359" &&
   /player\.vimeo\.com\/video\/1096537359/.test(s.play.src || "") && /dnt=1/.test(s.play.src || "") &&
-  /autoplay/.test(s.play.allow || "") && /fullscreen/.test(s.play.allow || "") && s.play.duck === 0.06 && s.play.chooser,
-  "choosing a film creates the privacy-conscious Vimeo player and ducks the party", s.play);
+  /autoplay/.test(s.play.allow || "") && /fullscreen/.test(s.play.allow || "") && s.play.duck === 0.06 &&
+  s.play.audioDuck.active && s.play.ray > 0 && s.play.chooser,
+  "choosing a film creates the privacy-conscious Vimeo player, projection ray, and whole-loft duck", s.play);
 check(s.play && s.play.chooserDisplay === "none" && s.play.geometry &&
    s.play.geometry.frame.every(function (value, index) { return Math.abs(value - s.play.geometry.wrap[index]) < 0.6; }) &&
    Math.abs(s.play.geometry.frame[2] - s.play.geometry.shell[2]) < 0.6 &&
@@ -118,13 +134,22 @@ check(s.play && s.play.geometry &&
    (s.play.geometry.back[1] + s.play.geometry.back[3]) / 2 - s.play.geometry.shellOuter[3] > 1 &&
    (s.play.geometry.back[1] + s.play.geometry.back[3]) / 2 - s.play.geometry.shellOuter[3] < 4,
    "Choose another is attached to the projector screen's bottom-left bezel", s.play && s.play.geometry);
+check(s.sideTransport && !s.sideTransport.pause.state.playing && !s.sideTransport.pause.duck.active &&
+  s.sideTransport.play.state.playing && s.sideTransport.play.duck.active &&
+  s.sideTransport.next.playing && s.sideTransport.next.video === "902708480",
+  "the shared side Play/Pause and Next controls hand off to the active cinema projector", s.sideTransport);
+check(s.sprinklerShort && s.sprinklerShort.state.shorted && !s.sprinklerShort.state.playing &&
+  !s.sprinklerShort.frame && !s.sprinklerShort.duck.active && s.sprinklerShort.spraying &&
+  s.sprinklerReboot && s.sprinklerReboot.state.powered && !s.sprinklerReboot.state.shorted &&
+  !s.sprinklerReboot.state.playing && !s.sprinklerReboot.chooser && s.sprinklerReboot.off,
+  "the sprinkler tears down an active film, restores the loft mix, and reboots to the chooser", {short:s.sprinklerShort,reboot:s.sprinklerReboot});
 check(s.back && s.back.state.open && !s.back.state.playing && !s.back.frame && !s.back.chooser,
   "returning to the chooser removes the cross-origin player", s.back);
 check(s.navigate && !s.navigate.state.open && !s.navigate.state.playing && s.navigate.room === "office" &&
   !s.navigate.frame && s.navigate.channel === s.channelWas,
   "ordinary room navigation tears down the cinema and preserves projector state", s.navigate);
 check(s.fastClose && !s.fastClose.open && s.fastClose.song,
-  "closing during the song fade still restores the borrowed loft song", s.fastClose);
+  "closing after film teardown preserves the loft song's own playback state", s.fastClose);
 check(s.fastClose && s.fastClose.hidden && !s.fastClose.viewport &&
   s.fastClose.roster.every(function(value){return value==="visible";}),
   "the upward return finishes hidden and restores the open Who's here surface", s.fastClose);

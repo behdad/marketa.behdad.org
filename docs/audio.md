@@ -182,13 +182,22 @@ self-terminating chord, bass, brush, kick, and melody voices scheduled ahead on 
 channel exit cancels the sole scheduler, fades the bed master, then closes only its `audioBed`
 handle.
 
-The cinema creates no new Web Audio graph. Opening it joins the foreground
-coverage gate, fades the active Cuddly projector score, and leaves the durable
-projector channel unchanged. Selecting a Vimeo film creates a cross-origin iframe,
-ducks the party through `__partyDuck`, and borrows the existing projector song
-suspend/restore handoff only when a loft song was genuinely playing. Returning to
-the chooser or leaving removes the iframe, the only reliable cross-origin stop;
-leaving also restores the borrowed song and re-evaluates projector/room beds.
+The cinema creates no new AudioContext. All loft-owned Web Audio outputs—the
+bed proxies, shared SFX bus, and captured song analyser—meet at the single
+`__loftAudioMaster` immediately before the shared context destination. While a
+Vimeo film reports active playback, `__setCinemaAudioDuck(true)` fades that
+master to 0.035; pause, end, Choose another, projector-off, sprinkler short, or
+leaving fades it back to exactly 1. Source gains and playback states remain
+untouched, so the precise pre-film mix returns. Vimeo lives outside that graph
+in its cross-origin iframe and is therefore never self-ducked. The existing
+party duck is still re-evaluated so its own source mix remains coherent.
+
+Opening Cinema joins the foreground coverage gate, fades the active Cuddly
+projector score, and leaves the durable projector channel unchanged. The
+physical cinema projector initially creates no iframe. Selecting a film creates
+one; Vimeo play/pause/ended messages keep the whole-loft duck honest, while the
+side transport sends play/pause commands back through postMessage. Removing the
+iframe remains the reliable stop/teardown path.
 
 Room navigation gives ordinary room-local ambience a five-second fade. Cuddly projector channels
 use a shorter three-second room-exit fade so they recede behind the visitor without lingering.

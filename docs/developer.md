@@ -542,11 +542,27 @@ and the Bathroom / Toilets and Entrance lower rooms all suppress the roster and
 transient message/call surfaces while they own the viewport.
 
 Chooser cards carry `data-vimeo-id`, an empty `data-vimeo-hash` hook, and a
-filled `data-poster` path for their tracked original artwork. A player iframe is
-created on selection and removed on Choose another, close, reset, or
-`goToStage`, which is the cross-origin playback teardown.
-`__cinemaRoomState()` exposes the compact open/closing/playing/video test
-surface. Exact background whitelists (`#cuddly-wall`/`#cuddly-ceiling`,
+filled `data-poster` path for their tracked original artwork. Entry deliberately
+leaves the physical projector off and creates no iframe. Projector click,
+Enter/Space, or bare room Space reveals the chooser; a selection then creates
+the player iframe. The shared side Play/Pause and Next buttons are intercepted
+in capture phase while Cinema owns the viewport and speak to Vimeo through its
+postMessage API. A player iframe is removed on Choose another, projector-off,
+sprinkler short, close, reset, or `goToStage`, which is the cross-origin
+playback teardown.
+
+`#cinema-projector-ray` is a clipped, blurred CSS projection cone behind the
+screen shell. Its `--cinema-poster` uses the selected local poster only—live
+cross-origin Vimeo frames are never sampled. `#cinema-sprinkler` runs a bounded
+spray; an on-projector short tears down playback and clears the audio duck
+immediately, then a single timer reboots to the chooser. Close/reset clears that
+timer. The roof beams mirror around x=340, the same axis as sprinkler and
+projector. Every distinct prop is a translated `.cinema-prop`, with shared
+click/Enter/Space reaction wiring and no extra AudioContext.
+
+`__cinemaRoomState()` exposes the compact
+open/closing/powered/shorted/playing/video/reactions test surface. Exact
+background whitelists (`#cuddly-wall`/`#cuddly-ceiling`,
 `#garden-wall`, and `#balcony-background`) own the desktop double-click and
 touch double-tap shortcuts; interactive descendants are explicitly rejected.
 The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond

@@ -528,7 +528,9 @@ coffee→fire in April–September and fire→coffee in October–March, then fo
 program order. Coffee is a four-frame native SVG channel with a shared-context synth bed. One
 room-, channel-, and visibility-gated timer rotates those frames every 15 seconds and is cleared
 before every reschedule. Every projector score, including the night-sky piano, is room-gated to
-Cuddly; restored explicit channel state outranks the seasonal fresh/reset default.
+Cuddly; restored explicit channel state outranks the seasonal fresh/reset default. Screen taps use
+the full cycle, including `off`; media-next uses `__cuddlyProjector.next()`, skips `off` at the wrap,
+and hands subsequent next actions to the current piano piece once it reaches `stars`.
 
 ### Shared projections
 

@@ -37572,6 +37572,15 @@ setMusicPausedState(false);
   }
   window.__cuddlyProjector = {
     cycle: function () { resumeRestoredProjector(); var i = order.indexOf(current); setChannel(order[(i + 1) % order.length], true); },
+    next: function () {
+      resumeRestoredProjector();
+      var i = order.indexOf(current), name;
+      do {
+        i = (i + 1) % order.length;
+        name = order[i];
+      } while (name === "off");
+      setChannel(name, true);
+    },
     set: function (n) { resumeRestoredProjector(); setChannel(n, true); },
     reset: resetSeasonalChannel,
     channel: function () { return current; },
@@ -60724,11 +60733,12 @@ async def localfont(name):
     if (bedGatedOn || songActive) btn.classList.add("shown"); // reveal once there's music to control; never un-shows (matches the volume button)
     btn.classList.toggle("paused", !anyAudioPlaying()); // ▶ when everything's silent, ⏸ when anything plays
     // The "next" control follows the foreground source. Piano changes piece; the other
-    // projector music channels advance channel; party and loft music advance track.
+    // projector programs advance toward piano (skipping off at the wrap); party and loft
+    // music advance track.
     var skipBtn = document.getElementById("hunt-skip-btn");
-    var projectorMusic = !!(ws && (ws.classList.contains("chan-coffee") || ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") ||
+    var projectorProgram = !!(ws && (ws.classList.contains("chan-fire") || ws.classList.contains("chan-coffee") || ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") ||
       ws.classList.contains("chan-aqua") || ws.classList.contains("chan-totoro")));
-    if (skipBtn) skipBtn.classList.toggle("shown", !!(projectorMusic || window.__gardenPartyOn || songActive));
+    if (skipBtn) skipBtn.classList.toggle("shown", !!(projectorProgram || window.__gardenPartyOn || songActive));
   };
   (function wirePlayPauseBtn() {
     var btn = document.getElementById("hunt-playpause-btn");
@@ -60738,17 +60748,19 @@ async def localfont(name):
       toggleMusicPlayback();
     });
   })();
-  // One "next" for the foreground source. The night sky owns multiple piano pieces;
-  // workout/aquarium/Totoro each own one soundtrack, so next advances their channel.
+  // One "next" for the foreground source. The night sky owns multiple piano pieces and
+  // therefore parks there; every other live projector program advances toward it. The
+  // screen's own cycle still includes off, but a media-next wraps past off to the first
+  // seasonal program.
   window.__skipCurrentMusic = function () {
     var projectorChannel = window.__cuddlyProjector && window.__cuddlyProjector.channel && window.__cuddlyProjector.channel();
-    if ((projectorChannel === "coffee" || projectorChannel === "workout" || projectorChannel === "aqua" || projectorChannel === "totoro") &&
-        window.__cuddlyProjector.cycle) {
-      window.__cuddlyProjector.cycle();
-      return true;
-    }
     if (projectorChannel === "stars" && window.__starsPlaying && window.__starsPlaying() && window.__skipStarsPiece) {
       window.__skipStarsPiece();
+      return true;
+    }
+    if ((projectorChannel === "fire" || projectorChannel === "coffee" || projectorChannel === "workout" ||
+         projectorChannel === "aqua" || projectorChannel === "totoro") && window.__cuddlyProjector.next) {
+      window.__cuddlyProjector.next();
       return true;
     }
     if (window.__gardenPartyOn && window.__nextPartyDance) { window.__nextPartyDance(); return true; }

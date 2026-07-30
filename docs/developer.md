@@ -565,6 +565,13 @@ The global room-key owner reserves plain `ArrowDown` for the two implemented
 upstairs rooms and delegates to their public open hooks; each active lower-room
 capture guard owns `ArrowUp` on the way back. This runs before ordinary room
 shortcuts without changing `D` day/night or Shift+arrow calendar stepping.
+Those guards also map Left/Right to the parent room's adjacent main-floor rooms.
+`goToStage` parks an active basement as well as closing cinema, so side controls,
+programmatic navigation, and dots share teardown. A dot bypasses its ordinary
+lock gate only while a lower room owns the viewport, then restores focus to the
+selected dot; keyboard horizontal exits restore focus to `.hunt-viewport`.
+Prince focus timers re-check `princeShouldRun()` so a parked iframe cannot steal
+focus back after any of these exits.
 
 ### Shared projections
 

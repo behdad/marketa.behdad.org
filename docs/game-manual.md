@@ -61,7 +61,8 @@ Enter, or select an app directly.
 `D` toggles day and night. `Shift`+`↑`/`↓` moves the clock by 30 minutes;
 plain `↓` descends from the Garden or Cuddly-puddly into its lower room and
 plain `↑` returns upstairs. Those plain vertical arrows do nothing in the other
-rooms.
+rooms. While downstairs, `←`/`→` exits to the adjacent main-floor room; any
+room dot exits and jumps straight to that room.
 
 ## The guided room trail
 
@@ -317,6 +318,8 @@ discard the run. In the garden, double-click or double-tap the distant skyline
 or a bare patch of the brick background to descend into the same persistent
 game in the stone basement. Interactive objects never trigger the background
 shortcut. Escape or Backspace returns to the garden without ending the run.
+Left/Right leaves for the adjacent main-floor room, and a room dot leaves for
+the room it names.
 
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.

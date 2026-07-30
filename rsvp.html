@@ -28899,7 +28899,16 @@ document.addEventListener("keydown", function (event) {
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   event.stopImmediatePropagation();
-  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    event.preventDefault();
+    if (window.__closeCinemaRoom) window.__closeCinemaRoom();
+    if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "garden" : "office");
+    var cinemaViewport = document.querySelector(".hunt-viewport");
+    if (cinemaViewport) {
+      if (!cinemaViewport.hasAttribute("tabindex")) cinemaViewport.setAttribute("tabindex", "-1");
+      try { cinemaViewport.focus({ preventScroll: true }); } catch (_error) { try { cinemaViewport.focus(); } catch (_error2) {} }
+    }
+  } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
     event.preventDefault();
     if (window.__closeCinemaRoom) window.__closeCinemaRoom();
   }
@@ -28917,7 +28926,15 @@ document.addEventListener("keydown", function (event) {
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   event.stopImmediatePropagation();
-  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
+  var princeBasementActive = !!(window.__princeState && window.__princeState().basement);
+  if (princeBasementActive && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+    event.preventDefault();
+    if (window.__closeMonitorPrince) window.__closeMonitorPrince();
+    if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "kitchen" : "cuddly");
+    return;
+  }
+  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" ||
+      (princeBasementActive && event.key === "ArrowUp")) {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       event.preventDefault();
       if (window.__closeMonitorPrince) window.__closeMonitorPrince();
@@ -61319,7 +61336,7 @@ async def localfont(name):
     catch (_error) {}
   }
   function focusPrince() {
-    if (!princeFrame || !princeFrame.contentWindow) return;
+    if (!princeFrame || !princeFrame.contentWindow || !princeShouldRun()) return;
     try {
       princeFrame.contentWindow.focus();
       var canvas = princeFrame.contentDocument && princeFrame.contentDocument.querySelector("canvas");
@@ -86333,6 +86350,11 @@ function spawnDustMote(container) {
     var l = document.documentElement.lang;
     return (T[l] && T[l]["room_" + name]) || T.en["room_" + name] || name;
   }
+  function lowerRoomOwnsViewport() {
+    if (window.__cinemaRoomOpen) return true;
+    var princeState = window.__princeState && window.__princeState();
+    return !!(princeState && princeState.basement);
+  }
   if (dotsWrap) {
     STAGES.forEach(function (name, i) {
       var d = document.createElement("button");
@@ -86340,7 +86362,11 @@ function spawnDustMote(container) {
       d.className = "hunt-dot";
       d.setAttribute("role", "tab");
       d.addEventListener("click", function () {
-        if (i <= maxUnlocked) navigateWithRoster(STAGES[i]);
+        var fromLowerRoom = lowerRoomOwnsViewport();
+        if (fromLowerRoom || i <= maxUnlocked) navigateWithRoster(STAGES[i]);
+        if (fromLowerRoom) requestAnimationFrame(function () {
+          try { d.focus({ preventScroll: true }); } catch (_error) { try { d.focus(); } catch (_error2) {} }
+        });
       });
       // cheat: double-click a locked dot to unlock up to that room and jump there
       d.addEventListener("dblclick", function () {
@@ -86829,6 +86855,8 @@ function spawnDustMote(container) {
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name, opts) {
     if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
+    var lowerPrince = window.__princeState && window.__princeState();
+    if (lowerPrince && lowerPrince.basement && window.__closeMonitorPrince) window.__closeMonitorPrince();
     var rosterOpen = rosterHoldsOccupants();
     var rosterNavigation = !!(opts && opts.rosterNavigation);
     if (rosterOpen && name !== window.currentStageName && !rosterNavigation) return false;

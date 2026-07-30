@@ -575,21 +575,29 @@ Like the other full-viewport overlays, it refreshes the shared room-ambience
 gate on both entry and return so the preserved Balcony cannot keep sounding
 under the street scene.
 
-All four lower rooms claim the shared `"lower-room"` notification hold. This
+The Office Bedroom follows the same viewport-sibling contract as `#cinema-room`
+but is entirely native SVG. Entry pans the preserved Office strip to
+`translate(-60%,-100%)`; `__openBedroomRoom()`, `__closeBedroomRoom()`, and
+`__bedroomRoomState()` expose its compact lifecycle surface. Only the exact
+background ids `#office-wall-bg`, `#office-plaster-bg`, and `#office-floor-bg`
+own desktop double-click and touch double-tap entry, so monitor, laptop, room
+toys, and other interactive descendants cannot accidentally descend. A narrow
+observer mirrors `#stage-office.dusk` into `.bedroom-night`.
+
+All five lower rooms claim the shared `"lower-room"` notification hold. This
 reuses the action-game queue: incoming messages enter the thread immediately,
 while their preview, unread badge, coach, and call ring stay suppressed. Release
 happens only after the 720 ms return pan completes, then the existing 450 ms
 queue drain surfaces the newest preview and full unread count upstairs.
 
-Office→Bedroom remains a navigation backlog pair; no room or handler exists.
-The global room-key owner reserves plain `ArrowDown` for the four implemented
+The global room-key owner reserves plain `ArrowDown` for all five implemented
 upstairs rooms and delegates to their public open hooks; each active lower-room
 capture guard owns `ArrowUp` on the way back. Those guards also map Left/Right
 to the parent room's adjacent main-floor rooms, or back to the parent at the
 strip edge. This runs before ordinary room shortcuts without changing `D`
 day/night or Shift+arrow calendar stepping upstairs.
 
-`goToStage` closes Bathroom, Cinema, or Entrance and parks an active basement,
+`goToStage` closes Bathroom, Cinema, Bedroom, or Entrance and parks an active basement,
 so side controls, programmatic navigation, and dots share teardown. A dot
 bypasses its ordinary lock gate only while any lower room owns the viewport,
 then restores focus to the selected dot; keyboard horizontal exits restore
@@ -1402,10 +1410,11 @@ Run focused tests for the changed ownership boundary. The main routes are:
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
 - `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`,
-  `tests/cinema-room.js`, `tests/bathroom-room.js`, and `tests/entrance-room.js` for projector
+  `tests/cinema-room.js`, `tests/bathroom-room.js`, `tests/bedroom-room.js`, and
+  `tests/entrance-room.js` for projector
   ordering, retained channel state, shared beds, transport, play-along transitions, Vimeo
   teardown, lower-room pan/UI restoration, and guarded mouse/touch navigation for Kitchen,
-  Cuddly, Garden, and Balcony;
+  Cuddly, Garden, Office, and Balcony;
 - `tests/video-playlist.js` and `tests/video-kill-variants.js` for film selection, retained
   playheads, track-specific Kill visuals, and teardown reset;
 - `tests/party-lifecycle.js` for attended party timing and finales;

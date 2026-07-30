@@ -59,11 +59,10 @@ every monitor app, including apps normally available only through search.
 Type to filter the directory, use the arrow keys to choose a result, then press
 Enter, or select an app directly.
 `D` toggles day and night. `Shift`+`↑`/`↓` moves the clock by 30 minutes;
-plain `↓` descends from the Garden, Cuddly-puddly, or Balcony into its lower
-room and plain `↑` returns upstairs. Those plain vertical arrows do nothing in
-the Kitchen or Office. While downstairs, `←`/`→` exits to an adjacent
-main-floor room or the parent room at the strip's edge; any room dot exits and
-jumps straight to that room.
+plain `↓` descends from any main room into its lower room and plain `↑`
+returns upstairs. While downstairs, `←`/`→` exits to an adjacent main-floor
+room or the parent room at the strip's edge; any room dot exits and jumps
+straight to that room.
 
 ## The guided room trail
 
@@ -226,6 +225,11 @@ night facade keeps the historic brick, stone, window, and timber-door character
 without reproducing an address. `↑`, Escape, Backspace, or × returns to the
 Balcony. `←` exits to the adjacent Office; `→` returns at the right edge to the
 Balcony, and a room dot exits directly to the room it selects.
+
+The Office has a Bedroom below it. Press `↓`, or double-click or double-tap a
+bare patch of the Office wall or floor, to pan downstairs without disturbing
+the Office. Press `↑`, ×, Escape, or Backspace to return. The room follows the
+loft's day/night state.
 
 Incoming messages still collect while any lower room is open, but their
 preview, unread badge, and first-use coach wait until you return upstairs.

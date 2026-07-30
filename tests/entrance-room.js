@@ -96,7 +96,7 @@ var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="
 check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
   /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
-check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#entrance-room-close\{/.test(source),
+check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#bedroom-room-close,#entrance-room-close\{/.test(source),
   "Entrance shares the unified lower-room corner-control geometry");
 check(!/<image\b|(?:src|href)="[^"]+\.(?:png|jpe?g|webp)"/i.test(entrance) &&
   !/<text\b[^>]*>\s*[^<]*(?:\d{2,}|\b(?:street|st\.|avenue|ave\.)\b)/i.test(entrance),

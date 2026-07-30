@@ -127,6 +127,13 @@ var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check((source.match(/class="bedroom-prop[^"]*" role="button"/g) || []).length === 8 &&
   !/class="bedroom-prop[^"]*" role="button" tabindex="0"/.test(source),
   "all eight distinct Bedroom prop groups stay outside the Tab order");
+check(!/id="bedroom-(?:left|right)-lamp"[^>]*tabindex=/.test(source),
+  "the two bedside lamps do not add tab stops");
+check((source.match(/class="bedroom-lamp-pedestal"/g) || []).length === 2 &&
+  (source.match(/class="bedroom-lamp-shade"/g) || []).length === 2 &&
+  /id="bedroom-left-lamp"[\s\S]*?cx="119" cy="197"/.test(source) &&
+  /id="bedroom-right-lamp"[\s\S]*?cx="549" cy="197"/.test(source),
+  "matching brass mushroom lamps sit over both bedside tables");
 check(!/<image[^>]+bedroom/i.test(source),
   "Bedroom remains code-native rather than embedding a raster room image");
 check(/id="bedroom-brick" width="60" height="32"[\s\S]*?M0 1H60M0 16H60M0 31H60/.test(source),

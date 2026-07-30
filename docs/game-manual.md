@@ -251,7 +251,7 @@ and a room dot pans directly to the lower room beneath its selection.
 The Office has a Bedroom below it. Press `↓`, or double-click or double-tap a
 bare patch of the Office wall or floor, to pan downstairs without disturbing
 the Office. Press `↑`, ×, Escape, or Backspace to return. The room follows the
-loft's day/night state. Its stained glass, two lamps, compact wall rack,
+loft's day/night state. Its stained glass, two brass mushroom lamps, compact wall rack,
 wardrobe, bed, and both bedside drawers are quiet repeatable toys; they also
 work from the keyboard when focused. Their temporary arrangement resets when
 you leave the room. Double-click or double-tap one of the stained-glass panes

@@ -626,7 +626,7 @@ own desktop double-click and touch double-tap entry, so monitor, laptop, room
 toys, and other interactive descendants cannot accidentally descend. A narrow
 observer mirrors `#stage-office.dusk` into `.bedroom-night`.
 Every distinct foreground prop is an SVG `role="button"` with localized
-`aria-label`/tooltip copy: stained glass, each wall lamp, wall rack, wardrobe,
+`aria-label`/tooltip copy: stained glass, each brass mushroom bedside lamp, wall rack, wardrobe,
 bed, and each bedside drawer. The Bedroom's capture-phase key owner translates
 Enter/Space on those focused groups into their click path before claiming the
 remaining downstairs shortcuts. The interaction controller reuses shared SFX

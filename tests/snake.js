@@ -11,6 +11,7 @@ var HARNESS = [
   '<script>(function(){',
   'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'function key(k){document.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true}));}',
+  'function routedKey(k){var active=document.activeElement;if(active&&active.tagName==="IFRAME")return;var target=active||document;target.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true}));}',
   'var report={errors:[],steps:{}};function S(k,v){report.steps[k]=v;}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},300);});',
   'async function run(){',
@@ -21,8 +22,9 @@ var HARNESS = [
   ' function search(q){q.split("").forEach(key);var state=window.__monitorDockSearch();key("Escape");return state;}function searchOpen(q){q.split("").forEach(key);key("Enter");}S("aliases",{snake:search("snake"),nibbles:search("nibbles"),dos:search("dos")});',
   ' window.__openMonitorApp("snake");await sleep(30);var first=document.querySelector("#monitor-snake-wrap iframe");S("open",{open:mon.classList.contains("show-snake"),frame:!!first,src:first&&first.getAttribute("src"),state:window.__snakeState(),innerFs:!!document.getElementById("monitor-snake-fs"),allow:first&&first.getAttribute("allow")});var gutters=document.querySelectorAll("#monitor-snake .monitor-runtime-side-hit");gutters[0].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:250,clientY:250}));S("gutters",{count:gutters.length,menu:!!document.querySelector(".mon-ctx")});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
   ' var oldReady=window.__snakeRunning;window.__snakeRunning=function(){return true;};mon.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:500,clientY:500}));var menu=document.querySelector(".mon-ctx"),labels=menu?[].slice.call(menu.querySelectorAll("button")).map(function(b){return b.textContent.trim();}):[];S("menu",{labels:labels,kill:!!(menu&&menu.querySelector(".ctx-kill:not(:disabled)")),restart:!!(menu&&menu.querySelector(".ctx-restart:not(:disabled)"))});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));window.__snakeRunning=oldReady;',
-  ' window.__closeMonitorSnake();await sleep(10);S("close",{open:mon.classList.contains("show-snake"),retained:document.querySelector("#monitor-snake-wrap iframe")===first});window.__openMonitorApp("nibbles");await sleep(10);S("reopenGame",{same:document.querySelector("#monitor-snake-wrap iframe")===first,mode:window.__snakeState().mode});window.__closeMonitorSnake();',
+  ' window.__closeMonitorSnake();await sleep(10);S("close",{open:mon.classList.contains("show-snake"),retained:document.querySelector("#monitor-snake-wrap iframe")===first,inert:first.inert});window.__openMonitorApp("nibbles");await sleep(10);S("reopenGame",{same:document.querySelector("#monitor-snake-wrap iframe")===first,mode:window.__snakeState().mode,inert:first.inert});window.__closeMonitorSnake();',
   ' searchOpen("dos");await sleep(20);var shell=document.querySelector("#monitor-snake-wrap iframe");S("dos",{fresh:!!shell&&shell!==first,src:shell&&shell.getAttribute("src"),mode:window.__snakeState().mode});window.__closeMonitorSnake();window.__openMonitorApp("dos");await sleep(10);S("reopenDos",{same:document.querySelector("#monitor-snake-wrap iframe")===shell,mode:window.__snakeState().mode});',
+  ' shell.focus();shell.contentWindow.focus();window.dispatchEvent(new MessageEvent("message",{origin:location.origin,source:shell.contentWindow,data:{type:"snake-close"}}));"mail".split("").forEach(routedKey);var afterExitSearch=window.__monitorDockSearch();S("dosExitFocus",{open:mon.classList.contains("show-snake"),retained:document.querySelector("#monitor-snake-wrap iframe")===shell,inert:shell.inert,focus:document.activeElement&&(document.activeElement.id||document.activeElement.tagName),search:afterExitSearch});routedKey("Escape");',
   ' window.__openMonitorApp("snake");await sleep(20);var game=document.querySelector("#monitor-snake-wrap iframe");window.dispatchEvent(new MessageEvent("message",{origin:location.origin,source:game.contentWindow,data:{type:"snake-exit"}}));await sleep(20);S("gameExit",{open:mon.classList.contains("show-snake"),frame:!!document.querySelector("#monitor-snake-wrap iframe"),state:window.__snakeState(),running:window.__monitorAppRunning("snake")});',
   ' mon.classList.add("show-caps");window.__openMonitorApp("nibbles");await sleep(20);var beforeRestart=document.querySelector("#monitor-snake-wrap iframe");window.__restartMonitorSnake();await sleep(20);var second=document.querySelector("#monitor-snake-wrap iframe");S("restart",{open:mon.classList.contains("show-snake"),fresh:!!second&&second!==beforeRestart,mode:window.__snakeState().mode});',
   ' window.__killMonitorSnake();await sleep(20);S("killGag",{active:mon.classList.contains("death-snake")});await sleep(2200);S("kill",{open:mon.classList.contains("show-snake"),frame:!!document.querySelector("#monitor-snake-wrap iframe"),state:window.__snakeState()});',
@@ -83,11 +85,15 @@ check(s.gutters.count === 2 && s.gutters.menu,
   "both 4:3 side gutters belong to the monitor context-menu surface", s.gutters);
 check(s.menu.kill && !s.menu.restart && JSON.stringify(s.menu.labels) === JSON.stringify(["Kill app"]),
   "the open DOS surface exposes only the enabled Kill app action", s.menu);
-check(!s.close.open && s.close.retained, "normal close pauses and retains the DOS machine", s.close);
-check(s.reopenGame.same && s.reopenGame.mode === "nibbles", "reopening Nibbles resumes its retained game machine", s.reopenGame);
+check(!s.close.open && s.close.retained && s.close.inert, "normal close pauses and inerts the retained DOS machine", s.close);
+check(s.reopenGame.same && s.reopenGame.mode === "nibbles" && !s.reopenGame.inert, "reopening Nibbles resumes and reactivates its retained game machine", s.reopenGame);
 check(s.dos.fresh && /[?&]mode=dos(?:&|$)/.test(s.dos.src || "") && s.dos.mode === "dos",
   "searching for dos replaces a retained game with a bare-shell machine", s.dos);
 check(s.reopenDos.same && s.reopenDos.mode === "dos", "the dos command reopens and retains that DOS shell", s.reopenDos);
+check(!s.dosExitFocus.open && s.dosExitFocus.retained && s.dosExitFocus.inert &&
+  s.dosExitFocus.focus === "monitor-desktop-dock" &&
+  s.dosExitFocus.search.query === "mail" && s.dosExitFocus.search.match === "mail",
+  "DOS EXIT returns focus to the monitor and the next keys search without a click", s.dosExitFocus);
 check(!s.gameExit.open && !s.gameExit.frame && s.gameExit.state.state === "cold" && !s.gameExit.running,
   "exiting a Nibbles launch tears it down and returns to the monitor", s.gameExit);
 check(s.restart.open && s.restart.fresh && s.restart.mode === "nibbles",

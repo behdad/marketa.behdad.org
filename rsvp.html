@@ -22494,7 +22494,7 @@ section{margin:1.9rem 0}
 </g>
 <!-- desktop dock: app launchers on the caps home screen, built by JS from DESKTOP_APPS;
      last child = topmost, so it sits above every screen state (CSS gates it to show-caps) -->
-<g id="monitor-desktop-dock"></g>
+<g id="monitor-desktop-dock" tabindex="-1"></g>
 <!-- now-playing player controls, right side: volume beside the compact close control,
      with the segmented prev/play-pause/next transport below. The close x returns the
      home screen while the music keeps going.
@@ -60853,6 +60853,7 @@ async def localfont(name):
   function focusSnakeFrame() {
     if (!snakeFrame || !monitor.classList.contains("show-snake")) return;
     try {
+      snakeFrame.inert = false;
       snakeFrame.contentWindow.focus();
       var canvas = snakeFrame.contentDocument && snakeFrame.contentDocument.querySelector("canvas");
       if (canvas) {
@@ -60869,6 +60870,7 @@ async def localfont(name):
     frame.title = mode === "dos" ? "DOSBox" : "snake — historical four-player Nibbles in DOSBox";
     frame.src = "dos/player.html?lang=" + (document.documentElement.lang === "cs" ? "cs" : "en") + "&mode=" + mode;
     frame.allow = "autoplay";
+    frame.tabIndex = -1;
     frame.addEventListener("load", function () {
       if (snakeFrame !== frame) return;
       snakeControl(monitor.classList.contains("show-snake") && !document.hidden ? "resume" : "pause");
@@ -60886,13 +60888,33 @@ async def localfont(name):
     clearTimeout(saverTimer); saverTimer = null;
     monitor.classList.add("show-snake");
     ensureSnakeFrame(mode);
+    if (snakeFrame) snakeFrame.inert = false;
     snakeControl("resume");
     playLaptopClickSound("office-monitor");
+  }
+  function releaseSnakeFocus() {
+    if (snakeFrame) {
+      try {
+        var childActive = snakeFrame.contentDocument && snakeFrame.contentDocument.activeElement;
+        if (childActive && childActive.blur) childActive.blur();
+      } catch (e) {}
+      try { snakeFrame.contentWindow.blur(); } catch (e2) {}
+      try { snakeFrame.blur(); } catch (e3) {}
+    }
+    try { window.focus(); } catch (e4) {}
+    // The bare desktop owns monitor typing. Give its non-interactive root focus
+    // so the next physical key is handled by this document without a click,
+    // while Enter and Space retain their ordinary monitor shortcuts.
+    if (dock && monitor.classList.contains("screen-on") && monitor.classList.contains("show-caps")) {
+      try { dock.focus({ preventScroll: true }); } catch (e5) { try { dock.focus(); } catch (e6) {} }
+    }
   }
   function closeSnake() {
     if (!monitor.classList.contains("show-snake")) return;
     monitor.classList.remove("show-snake");
     snakeControl("pause");
+    if (snakeFrame) snakeFrame.inert = true;
+    releaseSnakeFocus();
     scheduleSaver();
   }
   function destroySnake() {

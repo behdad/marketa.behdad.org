@@ -946,7 +946,10 @@ remain a known blank-compositing limitation on WebKit.
 The `show-snake` app lazily creates one same-origin `dos/player.html` iframe,
 with a `mode=dos|nibbles` query selected by the launcher.
 The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
-or stop it. Normal close pauses and retains the frame. Kill (and the internal
+or stop it. Normal close pauses and retains the frame, but marks the hidden
+iframe inert, blurs its child focus, and focuses the non-interactive desktop
+root so the desktop receives the very next key without a click. Reopen clears `inert`
+before focusing the DOS canvas. Kill (and the internal
 restart helper used by console commands) calls `player.stop()` and removes the
 iframe, which releases the WASM machine and all child listeners. Child readiness
 gates runtime Kill, and a normalized `snake-context` bridge reuses the monitor’s

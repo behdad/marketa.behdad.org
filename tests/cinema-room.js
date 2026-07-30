@@ -107,8 +107,8 @@ check(s.cinemaDay && !s.cinemaDay.night && /184, 212, 232/.test(s.cinemaDay.fill
   "the cinema window follows the loft from daylight blue to night", {day:s.cinemaDay,night:s.cinemaNight});
 check(s.cinemaWindowToggle && s.cinemaWindowToggle.clickedNight && s.cinemaWindowToggle.clickedDay,
   "successive window clicks toggle cinema day and night", s.cinemaWindowToggle);
-check(s.props && s.props.ids.length === 15 &&
-  ["cinema-beam-left","cinema-beam-right","cinema-bike","cinema-camera-left","cinema-camera-right",
+check(s.props && s.props.ids.length === 16 &&
+  ["cinema-beam-left","cinema-beam-right","cinema-bike","cinema-bike-marketa","cinema-camera-left","cinema-camera-right",
    "cinema-cushion-wine","cinema-cushion-blue","cinema-table","cinema-weights","cinema-sofa-seat",
    "cinema-sofa-cushion-left","cinema-sofa-cushion-right"].every(function(id){return s.props.reactions[id] === 1;}) &&
   s.props.tabs.every(function(tab){ return tab === null; }) && s.props.tabStops === 1 &&

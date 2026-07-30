@@ -110,8 +110,9 @@ check(s.resetStart && s.resetStart.board[7] === "X" && s.resetStart.aiPending &&
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check((source.match(/class="bedroom-ttt-pane"/g) || []).length === 9 &&
+  /id="bedroom-stained-glass" class="bedroom-prop" transform="translate\(0 -18\)"/.test(source) &&
   /<rect x="10" y="62" width="145" height="145"/.test(source),
-  "the widened, lowered stained-glass frame keeps one square three-by-three board");
+  "the complete square board moves up exactly 18 units without changing local geometry");
 check(!/M29 63L66 102L29 153L66 197|M135 63L105 102L135 153L105 197/.test(source),
   "the former decorative diagonal mullions stay removed");
 check(/winner === "X"\) return "bedroom_glass_win"/.test(source) &&

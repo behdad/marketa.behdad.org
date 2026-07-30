@@ -124,8 +124,8 @@ var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "Bedroom art keeps #" + id + " as a native SVG group");
 });
-check((source.match(/class="bedroom-prop[^"]*" role="button"/g) || []).length === 8 &&
-  !/class="bedroom-prop[^"]*" role="button" tabindex="0"/.test(source),
+check((source.match(/class="bedroom-prop[^"]*"[^>]* role="button"/g) || []).length === 8 &&
+  !/class="bedroom-prop[^"]*"[^>]* role="button"[^>]* tabindex="0"/.test(source),
   "all eight distinct Bedroom prop groups stay outside the Tab order");
 check(!/id="bedroom-(?:left|right)-lamp"[^>]*tabindex=/.test(source),
   "the two bedside lamps do not add tab stops");

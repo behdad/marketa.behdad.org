@@ -192,6 +192,9 @@ Extinguishing it or ending the party ends BBQ mode.
 
 ### Hidden rooms
 
+Each hidden room announces itself in the clue line when entered; temporary
+gameplay messages finish before that room caption appears.
+
 - **Bathroom / Toilets** pairs with the Kitchen. Its fixtures are playful, and
   the stool can be dragged.
 - **Dungeon** pairs with the Garden. Select the play wall, or press Enter or

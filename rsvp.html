@@ -30148,6 +30148,7 @@ window.__bathroomRoomOpen = false;
   function closeBathroom() {
     if (!window.__bathroomRoomOpen) return false;
     window.__bathroomRoomOpen = false;
+    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_bathroom");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     resetBathroomProps();
     closing = true;
@@ -30178,6 +30179,7 @@ window.__bathroomRoomOpen = false;
       });
     });
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_bathroom");
     try { closeButton.focus({ preventScroll: true }); }
     catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
     return true;
@@ -30467,6 +30469,7 @@ window.__cinemaVideoLoaded = false;
     if (!window.__cinemaRoomOpen) return false;
     powerOff();
     window.__cinemaRoomOpen = false;
+    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_cinema");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     syncCuddlyOccupants(false);
     cinemaClosing = true;
@@ -30503,6 +30506,7 @@ window.__cinemaVideoLoaded = false;
       });
     });
     refreshProjectorAudio(0.7);
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_cinema");
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
     try { viewport.focus({ preventScroll: true }); } catch (_error) { try { viewport.focus(); } catch (_error2) {} }
     return true;
@@ -30741,6 +30745,7 @@ window.__entranceRoomOpen = false;
   function closeEntrance() {
     if (!window.__entranceRoomOpen) return false;
     window.__entranceRoomOpen = false;
+    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_entrance");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     clearEntranceInteractions();
@@ -30777,6 +30782,7 @@ window.__entranceRoomOpen = false;
       });
     });
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
     try { closeButton.focus({ preventScroll: true }); }
     catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
     return true;
@@ -31248,6 +31254,7 @@ window.__bedroomRoomOpen = false;
   function closeBedroom() {
     if (!window.__bedroomRoomOpen) return false;
     window.__bedroomRoomOpen = false;
+    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_bedroom");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     closing = true;
     resetProps();
@@ -31279,6 +31286,7 @@ window.__bedroomRoomOpen = false;
         if (window.__bedroomRoomOpen) viewport.classList.add("bedroom-room-open");
       });
     });
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_bedroom");
     try { closeButton.focus({ preventScroll: true }); }
     catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
     return true;
@@ -32001,6 +32009,11 @@ var T = {
       df_help_quip1: "You’ve been freed. You’re on your own.", // caption beats under Help's falling question mark
       df_help_quip2: "Do you have a clue what happens now?",
       kitchen: "Turn on La Maz → run El Maz → brew.",
+      lower_bathroom: "Bathroom · fixtures welcome.",
+      lower_dungeon: "Dungeon · the old game is awake.",
+      lower_cinema: "Cinema · choose a film, then wake the projector.",
+      lower_bedroom: "Bedroom · everything here is playable.",
+      lower_entrance: "Entrance · the street starts here.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it. ☕",
@@ -33280,6 +33293,11 @@ var T = {
       df_help_quip1: "Jsi na svobodě. Teď se musíš spolehnout na sebe.", // caption beats under Help's falling question mark
       df_help_quip2: "Máš ponětí, co se stane teď?",
       kitchen: "Zapni La Maz → spusť El Maz → uvař.",
+      lower_bathroom: "Koupelna · vybavení vítá hru.",
+      lower_dungeon: "Žalář · stará hra se probudila.",
+      lower_cinema: "Kino · vyber film a pak probuď projektor.",
+      lower_bedroom: "Ložnice · se vším si tu můžeš hrát.",
+      lower_entrance: "Vchod · tady začíná ulice.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni. ☕",
@@ -64259,6 +64277,9 @@ async def localfont(name):
   function parkPrinceApp() {
     if (!princePresented) return;
     if (princeClosing) return;
+    if (princeMode === "basement" && window.__restoreLowerRoomCaption) {
+      window.__restoreLowerRoomCaption("lower_dungeon");
+    }
     princeClosing = true;
     window.__princeInputActive = false;
     // Phaser installs its own key suppression inside the retained iframe. Move focus
@@ -64340,6 +64361,7 @@ async def localfont(name):
     princeClosing = false;
     presentPrinceBasement();
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_dungeon");
     return true;
   }
   window.__openMonitorPrince = openPrinceApp;
@@ -89487,6 +89509,42 @@ function spawnDustMote(container) {
   window.__clearFlashCaption = function (owner) { return clearFlashedCaption(owner, true); };
   window.__flashCaptionState = function () {
     return flashedCaption ? { key: flashedCaption.key, owner: flashedCaption.owner } : null;
+  };
+  var lowerRoomReturnCaption = null;
+  window.__setLowerRoomCaption = function (key) {
+    if (!key) return false;
+    lowerRoomReturnCaption = {
+      roomKey: key,
+      key: flashedCaption ? flashedCaption.prevKey : captionKey,
+      html: flashedCaption ? flashedCaption.prevHtml : caption.innerHTML
+    };
+    // Entry captions become the room's stable line. If gameplay currently owns the
+    // visible line, leave it untouched and only change what its temporary flash restores.
+    if (flashedCaption) {
+      flashedCaption.prevKey = key;
+      flashedCaption.prevHtml = huntText(key);
+      return true;
+    }
+    setCaption(key);
+    return captionKey === key;
+  };
+  window.__restoreLowerRoomCaption = function (key) {
+    var saved = lowerRoomReturnCaption;
+    if (!saved || saved.roomKey !== key) return false;
+    lowerRoomReturnCaption = null;
+    if (flashedCaption && flashedCaption.prevKey === key) {
+      flashedCaption.prevKey = saved.key;
+      flashedCaption.prevHtml = saved.html;
+      return true;
+    }
+    if (captionKey !== key) return true;
+    if (saved.key === "rsvp_exit") showRsvpNudge();
+    else if (saved.key != null) setCaption(saved.key, true);
+    else {
+      caption.innerHTML = saved.html;
+      captionKey = null;
+    }
+    return true;
   };
   // The RSVP CTA is the second act's last beat, once the wandering is done. The key rides
   // captionKey so a language flip re-renders it.

@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+"use strict";
+
+var lib = require("./lib");
+
+var HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var report={errors:[],en:{},cs:{}};function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
+  'function cap(){return {key:window.__captionKey(),text:document.getElementById("hunt-caption").textContent,flash:window.__flashCaptionState()};}',
+  'var rooms=[',
+  ' ["bathroom","kitchen",window.__openBathroomRoom,window.__closeBathroomRoom],',
+  ' ["dungeon","garden",window.__openGardenPrince,window.__closeMonitorPrince],',
+  ' ["cinema","cuddly",window.__openCinemaRoom,window.__closeCinemaRoom],',
+  ' ["bedroom","office",window.__openBedroomRoom,window.__closeBedroomRoom],',
+  ' ["entrance","balcony",window.__openEntranceRoom,window.__closeEntranceRoom]',
+  '];',
+  'async function visit(lang,out){setLang(lang);for(var i=0;i<rooms.length;i++){var room=rooms[i];window.goToStage(room[1]);await sleep(30);room[2]();await sleep(30);out[room[0]]=cap();room[3]();await sleep(760);}}',
+  'window.addEventListener("load",function(){setTimeout(async function(){try{',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();',
+  ' ["loft-game-strip","bathroom-room","cinema-room","bedroom-room","entrance-room","prince-basement"].forEach(function(id){var el=document.getElementById(id);if(el)el.style.transition="none";});',
+  ' await visit("en",report.en);await visit("cs",report.cs);',
+  ' setLang("en");window.goToStage("kitchen");await sleep(20);var upstairs=cap();window.__flashCaptionKey("trip_caption_molly",550,"caption-test");var before=cap();window.__openBathroomRoom();var during=cap();await sleep(620);var restored=cap();var repeat=window.__openBathroomRoom();window.__flashCaptionKey("trip_caption_molly",550,"caption-close-test");window.__closeBathroomRoom();var closing=cap();await sleep(620);var upstairsRestored=cap();report.transient={upstairs:upstairs,before:before,during:during,restored:restored,repeat:repeat,closing:closing,upstairsRestored:upstairsRestored};',
+  '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
+  'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},250);});',
+  '})();</script>'
+].join("\n");
+
+var failures = 0;
+function check(ok, message, detail) {
+  if (ok) console.log("  ✓ " + message);
+  else {
+    failures++;
+    console.log("  ✗ " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : ""));
+  }
+}
+
+console.log("rsvp.html lower-room captions:");
+var result = lib.runPageSync("rsvp.html", HARNESS, 15000, { patchRaf: true });
+if (!result) {
+  console.log("  ✗ harness produced no report");
+  process.exit(1);
+}
+check(result.errors.length === 0, "no uncaught page errors", result.errors);
+
+var expected = {
+  en: {
+    bathroom: "Bathroom · fixtures welcome.",
+    dungeon: "Dungeon · the old game is awake.",
+    cinema: "Cinema · choose a film, then wake the projector.",
+    bedroom: "Bedroom · everything here is playable.",
+    entrance: "Entrance · the street starts here."
+  },
+  cs: {
+    bathroom: "Koupelna · vybavení vítá hru.",
+    dungeon: "Žalář · stará hra se probudila.",
+    cinema: "Kino · vyber film a pak probuď projektor.",
+    bedroom: "Ložnice · se vším si tu můžeš hrát.",
+    entrance: "Vchod · tady začíná ulice."
+  }
+};
+["en", "cs"].forEach(function (lang) {
+  Object.keys(expected[lang]).forEach(function (room) {
+    var caption = result[lang] && result[lang][room];
+    check(caption && caption.key === "lower_" + room &&
+      caption.text === expected[lang][room] && !caption.flash,
+    room + " has one stable " + lang.toUpperCase() + " entry caption", caption);
+  });
+});
+var transient = result.transient;
+check(transient && transient.before.key === "trip_caption_molly" &&
+  transient.during.key === "trip_caption_molly" &&
+  transient.during.text === transient.before.text &&
+  transient.during.flash && transient.during.flash.owner === "caption-test",
+  "entering a lower room does not replace a live gameplay caption", transient);
+check(transient && transient.restored.key === "lower_bathroom" &&
+  transient.restored.text === expected.en.bathroom && !transient.restored.flash,
+  "the gameplay caption restores to the active lower room", transient);
+check(transient && transient.repeat === false,
+  "reopening an already-active room does not announce it again", transient);
+check(transient && transient.closing.key === "trip_caption_molly" &&
+  transient.closing.flash && transient.closing.flash.owner === "caption-close-test" &&
+  transient.upstairsRestored.key === transient.upstairs.key &&
+  transient.upstairsRestored.text === transient.upstairs.text,
+  "leaving does not interrupt gameplay copy and restores the upstairs caption afterward", transient);
+
+console.log("");
+if (failures) {
+  console.log(failures + " lower-room-caption assertion" + (failures === 1 ? "" : "s") + " failed.");
+  process.exit(1);
+}
+console.log("Lower-room-caption assertions passed.");

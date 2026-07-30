@@ -553,6 +553,8 @@ The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond
 and palette. A narrow `MutationObserver` on `#stage-cuddly` mirrors its `dusk`
 class to `.cinema-night`, keeping the lower-room window synchronized with every
 manual, automatic, restored, and simulated day/night path.
+Cinema entry also clears the upstairs Cuddly child and visitor cameos and gates
+their schedulers, Totoro audience, fairy, and game groups until the return pan.
 
 `#bathroom-room` is the code-native SVG room below Kitchen / Bar. Its taupe
 walls, varied slate floor, clawfoot tub and textiles, sink/mirror, stool, scale,

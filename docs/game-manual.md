@@ -210,7 +210,8 @@ room pans down into the cinema and temporarily puts **Who's here** away. Pick on
 of the three films on the screen; **Choose another** stops it and returns to the
 chooser. The × button, Escape, Backspace, or ordinary room navigation pans back
 up. The cinema window follows the loft's day/night state; select it to swap day
-and night throughout the loft. Film audio takes the foreground while it plays.
+and night throughout the loft. Film audio takes the foreground while it plays,
+and the Cuddly-puddly visitors upstairs pause while the cinema owns the room.
 
 From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
 bare patch of brick to visit **Bathroom / Toilets** below. The room pans down

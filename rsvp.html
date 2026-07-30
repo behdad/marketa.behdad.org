@@ -29363,10 +29363,22 @@ window.__cinemaVideoLoaded = false;
     window.__cinemaVideoLoaded = false;
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
   }
+  function syncCuddlyOccupants(downstairs) {
+    if (downstairs) {
+      if (window.__resetIrene) window.__resetIrene();
+      if (window.__resetRobin) window.__resetRobin();
+      if (window.__resetNavid) window.__resetNavid();
+      if (window.__resetCuddlyVisitors) window.__resetCuddlyVisitors();
+    }
+    if (window.__updateCuddlyRumiFairy) window.__updateCuddlyRumiFairy({ noDepart: true });
+    if (window.__updateTotoroWatch) window.__updateTotoroWatch();
+    if (window.__updateKidGames) window.__updateKidGames();
+  }
   function closeCinema() {
     if (!window.__cinemaRoomOpen) return false;
     clearPlayer();
     window.__cinemaRoomOpen = false;
+    syncCuddlyOccupants(false);
     cinemaClosing = true;
     viewport.classList.remove("cinema-room-open");
     clearTimeout(cinemaCloseTimer);
@@ -29387,6 +29399,7 @@ window.__cinemaVideoLoaded = false;
     cinemaCloseTimer = null;
     cinemaClosing = false;
     window.__cinemaRoomOpen = true;
+    syncCuddlyOccupants(true);
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     syncCinemaDayNight();
     room.hidden = false;
@@ -39421,7 +39434,7 @@ setMusicPausedState(false);
   var ireneHome = irene.parentNode, ireneNext = irene.nextSibling; // canonical z-order (in front of the couple)
   var BEHAVIORS = ["irene-roam", "irene-bounce", "irene-sit", "irene-hug", "irene-hugb", "irene-swing"]; // catplay appended only when the cat's here; hugb = the "daaeee" hug of uncle Behdad; swing = hangs from the pulley rope (always available)
   var showTimer = null, hideTimer = null, catPlayTimer = null, octiReactTimer = null, fadeTimer = null, firstDone = false, lastBeh = null, firstWasRoam = false;
-  function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
+  function onScreen() { return window.currentStageName === "cuddly" && !window.__cinemaRoomOpen && !document.hidden; }
   function daytime() {
     var stage = document.getElementById("stage-cuddly");
     return !!(stage && !stage.classList.contains("dusk"));
@@ -39876,7 +39889,7 @@ setMusicPausedState(false);
   var robinHome = robin.parentNode, robinNext = robin.nextSibling; // canonical z-order
   var BEHAVIORS = ["robin-roam", "robin-bounce", "robin-sit", "robin-hugb", "robin-swing"]; // cat poses appended only when the loose cat is in the nook
   var hideTimer = null, fadeTimer = null, catPlayTimer = null, lastBeh = null;
-  function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
+  function onScreen() { return window.currentStageName === "cuddly" && !window.__cinemaRoomOpen && !document.hidden; }
   function focused() { return !document.hidden && document.hasFocus(); } // crickets rule for unattended sound
   function catLoose() { var w = document.getElementById("witchy-chest-cat-walk"); return !!(w && w.classList.contains("out")); }
   function catInNook() { var pos = document.getElementById("witchy-chest-cat-pos"); var stage = document.getElementById("stage-cuddly"); return !!(catLoose() && pos && stage && stage.contains(pos)); }
@@ -40070,7 +40083,7 @@ setMusicPausedState(false);
   var navidHome = navid.parentNode, navidNext = navid.nextSibling; // canonical z-order
   var BEHAVIORS = ["navid-roam", "navid-bounce", "navid-sit", "navid-hugb", "navid-swing"]; // cat poses appended only when the loose cat is in the nook
   var hideTimer = null, fadeTimer = null, catPlayTimer = null, lastBeh = null;
-  function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
+  function onScreen() { return window.currentStageName === "cuddly" && !window.__cinemaRoomOpen && !document.hidden; }
   function focused() { return !document.hidden && document.hasFocus(); } // crickets rule for unattended sound
   function catLoose() { var w = document.getElementById("witchy-chest-cat-walk"); return !!(w && w.classList.contains("out")); }
   function catInNook() { var pos = document.getElementById("witchy-chest-cat-pos"); var stage = document.getElementById("stage-cuddly"); return !!(catLoose() && pos && stage && stage.contains(pos)); }
@@ -40335,7 +40348,7 @@ setMusicPausedState(false);
   function mealOn() { var s = stripEl(); return !!(s && s.classList.contains("meal-on")); } // owner rule: no visitors while food is served
   function isDay() { var c = document.getElementById("stage-cuddly"); return !(c && c.classList.contains("dusk")); } // owner rule: visitors only come during the day (dusk = night, applied to every stage by the sun toggle)
   function openBBQDay() { return !!(window.__bbqDateNow && window.__bbqDateNow()); } // open-cookout days already invite everyone; nobody needs to ask whether we're home
-  function onScreen() { return window.currentStageName === "cuddly" && !document.hidden; }
+  function onScreen() { return window.currentStageName === "cuddly" && !window.__cinemaRoomOpen && !document.hidden; }
   function reducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   // every person-group node, and the one currently-visiting duo (null when none)
   var groups = {};
@@ -40486,6 +40499,7 @@ setMusicPausedState(false);
   function visit(id, forced, timed) {
     var duo = CUDDLY_DUOS[id];
     if (!duo) return false;
+    if (window.__cinemaRoomOpen) return false;
     if (!forced) {                      // a forced visit (e.g. a kid's birthday reveal) overrides both gates
       if (mealOn()) return false;       // owner rule: no visitors while food is served
       if (!isDay()) return false;       // owner rule: visitors only drop by during the day
@@ -40629,6 +40643,7 @@ setMusicPausedState(false);
     var strip = document.getElementById("loft-game-strip");
     return !!(ws && ws.classList.contains("chan-totoro")) &&
       window.currentStageName === "cuddly" &&
+      !window.__cinemaRoomOpen &&
       !(strip && strip.classList.contains("meal-on")); // not on days the food table is out
   }
   window.__updateTotoroWatch = function () {
@@ -40671,6 +40686,7 @@ setMusicPausedState(false);
 (function () {
   function want() {
     if (window.currentStageName !== "cuddly") return false; // only decorate the nook while it's on screen
+    if (window.__cinemaRoomOpen) return false;               // the cinema owns the lower viewport
     if (!window.__gardenPartyOn) return false;               // owner: only during the party
     var couple = document.getElementById("cuddly-couple");
     if (!couple || !couple.classList.contains("at-party")) return false; // hosts must be OFF at the garden (nook empty of adults)
@@ -78004,7 +78020,7 @@ async def localfont(name):
     fairyDance.classList.toggle("away", departed && !fairyDance.classList.contains("departing"));
     var couple = document.getElementById("cuddly-couple");
     var cuddlyStage = document.getElementById("stage-cuddly");
-    var present = departed && !!window.__secondRound && !window.__gardenPartyOn &&
+    var present = departed && !!window.__secondRound && !window.__gardenPartyOn && !window.__cinemaRoomOpen &&
       !!(cuddlyStage && cuddlyStage.classList.contains("dusk")) &&
       !(couple && couple.classList.contains("at-party"));
     cuddlyFairy.classList.toggle("present", present);

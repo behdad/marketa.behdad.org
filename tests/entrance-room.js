@@ -13,6 +13,7 @@ var HARNESS = [
   'function dblclick(el){el.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));}',
   'function touchup(el){el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
   'function key(name){document.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
+  'function elkey(el,name){el.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'function surface(cls){var el=document.createElement("div");el.className=cls;el.style.display="block";el.style.opacity="1";document.querySelector(".hunt-viewport").appendChild(el);return el;}',
   'function state(){return window.__entranceRoomState();}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
@@ -23,14 +24,15 @@ var HARNESS = [
   ' var bg=document.getElementById("balcony-background"),bb=bg.getBoundingClientRect(),bare=null;for(var gy=1;gy<10&&!bare;gy++)for(var gx=1;gx<20;gx++){var px=bb.left+bb.width*gx/20,py=bb.top+bb.height*gy/10;if(document.elementFromPoint(px,py)===bg){bare={x:px,y:py};break;}}if(bare)bg.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true,clientX:bare.x,clientY:bare.y}));await sleep(50);roster.classList.add("show");backdrop.classList.add("show");var rr=room.getBoundingClientRect(),vr=viewport.getBoundingClientRect(),sr=strip.getBoundingClientRect();',
   ' var closeStyles=["bathroom-room-close","cinema-room-close","prince-basement-close","entrance-room-close"].map(function(id){var style=getComputedStyle(document.getElementById(id));return [parseFloat(style.width),parseFloat(style.height),parseFloat(style.right),parseFloat(style.top)];});',
   ' report.steps.open={state:state(),room:window.currentStageName,bare:bare,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),geometry:{entrance:[rr.left,rr.top,rr.width,rr.height],viewport:[vr.left,vr.top,vr.width,vr.height],strip:[sr.left,sr.top,sr.width,sr.height],transform:getComputedStyle(strip).transform,controls:closeStyles},roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],label:room.getAttribute("aria-label")};',
-  ' setLang("cs");report.steps.cs={label:room.getAttribute("aria-label"),close:document.getElementById("entrance-room-close").getAttribute("aria-label")};setLang("en");',
+  ' var props=Array.from(document.querySelectorAll("#entrance-room .entrance-prop"));props.forEach(function(prop,index){if(index===1)elkey(prop,"Enter");else if(index===2)elkey(prop," ");else click(prop);});await sleep(30);report.steps.props={ids:props.map(function(prop){return prop.id;}),state:state(),roles:props.map(function(prop){return [prop.getAttribute("role"),prop.getAttribute("tabindex"),prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
+  ' setLang("cs");report.steps.cs={label:room.getAttribute("aria-label"),close:document.getElementById("entrance-room-close").getAttribute("aria-label"),props:props.map(function(prop){return [prop.getAttribute("aria-label"),prop.getAttribute("title")];})};setLang("en");',
   ' key("ArrowUp");await sleep(30);report.steps.up=state();key("ArrowDown");await sleep(50);key("Escape");await sleep(30);report.steps.escape=state();key("ArrowDown");await sleep(50);key("Backspace");await sleep(30);report.steps.backspace=state();',
   ' window.goToStage("balcony");touchup(document.getElementById("balcony-background"));await sleep(20);touchup(document.getElementById("balcony-background"));await sleep(50);report.steps.touch=state();',
   ' key("ArrowLeft");await sleep(780);report.steps.left={source:state(),target:window.__bedroomRoomState(),room:window.currentStageName};window.goToStage("balcony");key("ArrowDown");await sleep(50);key("ArrowRight");await sleep(40);report.steps.right={source:state(),room:window.currentStageName};',
   ' var targetDot=document.querySelectorAll(".hunt-dot")[1];targetDot.focus();click(targetDot);await sleep(780);report.steps.dot={source:state(),target:window.__princeState(),room:window.currentStageName,focused:document.activeElement===targetDot};',
   ' window.goToStage("balcony");key("ArrowDown");await sleep(50);click(document.getElementById("hunt-prev"));await sleep(780);report.steps.prev={source:state(),target:window.__bedroomRoomState(),room:window.currentStageName};',
   ' window.goToStage("balcony");key("ArrowDown");await sleep(50);click(document.getElementById("hunt-next"));await sleep(40);report.steps.next={source:state(),room:window.currentStageName};',
-  ' window.__secondRound=true;key("ArrowDown");await sleep(50);window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge:not(.entrance-probe)"),coach=document.querySelector(".msg-badge-coach:not(.entrance-probe)"),thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.held={state:state(),hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};',
+  ' window.__secondRound=true;key("ArrowDown");await sleep(50);document.getElementById("entrance-doors").classList.add("reacting");window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge:not(.entrance-probe)"),coach=document.querySelector(".msg-badge-coach:not(.entrance-probe)"),thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.held={state:state(),hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};',
   ' click(document.getElementById("entrance-room-close"));await sleep(1250);thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.closed={state:state(),covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show")};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},240);});',
@@ -69,6 +71,14 @@ check(s.open && s.open.geometry && s.open.geometry.controls &&
 check(s.open && s.open.label === "The Lofts entrance" &&
   s.cs && s.cs.label === "Vstup do The Lofts" && s.cs.close === "Zpět na balkon",
   "dialog and return labels switch between English and Czech", {en:s.open&&s.open.label,cs:s.cs});
+check(s.props && s.props.ids.length === 10 &&
+  s.props.ids.every(function(id){return s.props.state.reactions[id] === 1;}) &&
+  s.props.roles.every(function(row){return row[0] === "button" && row[1] === "0" && row[2] && row[3];}),
+  "every distinct facade and street prop answers pointer, Enter, or Space with an accessible control",
+  s.props);
+check(s.cs && s.cs.props && s.cs.props.length === 10 &&
+  s.cs.props.every(function(row){return row[0] && row[1] && row[0] === row[1];}),
+  "all Entrance prop labels and tooltips switch to Czech", s.cs && s.cs.props);
 check(s.up && !s.up.open && s.escape && !s.escape.open && s.backspace && !s.backspace.open,
   "plain Up, Escape, and Backspace return upstairs", {up:s.up,escape:s.escape,backspace:s.backspace});
 check(s.touch && s.touch.open, "a bare-background touch double-tap enters Entrance", s.touch);
@@ -90,12 +100,17 @@ check(s.closed && s.closed.roster.every(function(value){return value==="visible"
 check(s.closed && !s.closed.covered && s.closed.messages.every(function(value){return value==="visible";}),
   "the completed return restores upstairs ambience and transient surfaces",
   s.closed && {covered:s.closed.covered,messages:s.closed.messages});
+check(s.closed && s.closed.state && !s.closed.state.reacting.length,
+  "leaving Entrance clears every in-flight prop reaction", s.closed && s.closed.state);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="prince-basement"/) || [""])[0];
 check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
   /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
+check((entrance.match(/class="entrance-prop"/g) || []).length === 10 &&
+  (entrance.match(/role="button" tabindex="0"/g) || []).length >= 10,
+  "the five windows, sign, doors, lamps, canopy, and sidewalk form the complete interaction inventory");
 check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#bedroom-room-close,#entrance-room-close\{/.test(source),
   "Entrance shares the unified lower-room corner-control geometry");
 check(!/<image\b|(?:src|href)="[^"]+\.(?:png|jpe?g|webp)"/i.test(entrance) &&

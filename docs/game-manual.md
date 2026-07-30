@@ -227,7 +227,10 @@ puzzle steps; leaving the bathroom puts each one back in order.
 From the Balcony, press `↓` or double-click/double-tap a truly bare patch of its
 background to descend to **The Lofts** street entrance. The native SVG
 night facade keeps the historic brick, stone, window, and timber-door character
-without reproducing an address. `↑`, Escape, Backspace, or × returns to the
+without reproducing an address. Every distinct street detail responds: tap or
+focus and press Enter/Space on any of the five window bays, the name stone,
+doors, entry lamps, tree canopy, or sidewalk for a small light, movement, and
+sound reaction. `↑`, Escape, Backspace, or × returns to the
 Balcony. `←` pans to the Bedroom; `→` stays at the lower floor's right edge,
 and a room dot pans directly to the lower room beneath its selection.
 

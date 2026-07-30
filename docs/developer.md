@@ -579,6 +579,11 @@ strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
 `hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
 capture guard owns Up/Escape/Backspace; horizontal navigation remains on the
 lower floor, with Entrance forming its right edge.
+Ten `.entrance-prop` SVG overlays give the five window bays, name stone, doors,
+paired entry lamps, tree canopy, and sidewalk pointer/touch plus Enter/Space
+responses without changing the facade paint order. `data-entrance-action`
+selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
+in-flight class so no one-shot survives a room leave or reset.
 Like the other full-viewport overlays, it refreshes the shared room-ambience
 gate on both entry and return so the preserved Balcony cannot keep sounding
 under the street scene.

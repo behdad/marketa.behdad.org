@@ -590,8 +590,18 @@ AudioContext. The separate
 `#cinema-neon-butterfly` wall fixture keeps its relight interaction but is not a
 `.cinema-prop` or a member of the three-item Office Butterfly Chase roster.
 
+The camera props are separate Blackmagic Pocket and Canon 5D Mark IV groups.
+Either one powers the cinema projector and temporarily reparents the existing
+`#monitor-photobooth`, confirm, and error content groups into
+`#cinema-photobooth-surface`; the Office monitor body and chrome never move.
+A narrow monitor-class observer mirrors the Photobooth state onto Cinema for
+the existing live, picker, and error views. App close, Choose another,
+projector-off, room close, navigation, and reset stop the stream and restore
+the groups immediately before `#monitor-shoot-coach`. Generated picker controls
+are removed from the Cinema tab order while projected.
+
 `__cinemaRoomState()` exposes the compact
-open/closing/powered/shorted/playing/video/reactions test surface. Dedicated
+open/closing/powered/shorted/playing/photobooth/video/reactions test surface. Dedicated
 main-room portal props own desktop double-click and touch double-tap entry.
 The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond
 and palette. A narrow `MutationObserver` on `#stage-cuddly` mirrors its `dusk`

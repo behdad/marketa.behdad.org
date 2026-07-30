@@ -255,7 +255,10 @@ the Office. Press `↑`, ×, Escape, or Backspace to return. The room follows th
 loft's day/night state. Its stained glass, two lamps, compact wall rack,
 wardrobe, bed, and both bedside drawers are quiet repeatable toys; they also
 work from the keyboard when focused. Their temporary arrangement resets when
-you leave the room.
+you leave the room. Double-click or double-tap one of the stained-glass panes
+to place the first X in that pane and start tic-tac-toe; after the window plays
+O, use ordinary clicks or taps for later turns. Double-click/tap any pane after
+a win or draw to start over. Leaving the Bedroom clears the board.
 
 Incoming messages still collect while any lower room is open, but their
 preview, unread badge, and first-use coach wait until you return upstairs.

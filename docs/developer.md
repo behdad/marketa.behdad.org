@@ -628,6 +628,15 @@ and clears persistent and one-shot classes on room close, so a return always
 starts from the authored composition. `__bedroomRoomState().props` is the
 focused regression surface for that cleanup.
 
+The stained-glass inset is also a nine-cell tic-tac-toe board. Pane double-click
+or same-pane touch double-tap starts/restarts with the visitor as X; subsequent
+visitor turns use ordinary pane clicks/taps. A deterministic minimax player
+answers as O after a 340 ms delay. Board, phase, result, winning line, and
+pending-timer state are closure-owned and exposed read-only through
+`__bedroomTicTacToeState()` for focused regression checks. `resetProps()` clears
+the board and cancels the AI timer, so both room close and the registered loft
+transient reset prevent a late move from landing off-screen.
+
 All five lower rooms claim the shared `"lower-room"` notification hold. This
 reuses the action-game queue: incoming messages enter the thread immediately,
 while their preview, unread badge, coach, and call ring stay suppressed. Release
@@ -1476,8 +1485,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
 - `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`,
-  `tests/cinema-room.js`, `tests/bathroom-room.js`, `tests/bedroom-room.js`, and
-  `tests/entrance-room.js` for projector
+  `tests/cinema-room.js`, `tests/bathroom-room.js`, `tests/bedroom-room.js`,
+  `tests/bedroom-tictactoe.js`, and `tests/entrance-room.js` for projector
   ordering, retained channel state, shared beds, transport, play-along transitions, Vimeo
   teardown, lower-room pan/UI restoration, and guarded mouse/touch navigation for Kitchen,
   Cuddly, Garden, Office, and Balcony;

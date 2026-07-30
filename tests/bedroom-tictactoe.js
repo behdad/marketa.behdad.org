@@ -23,7 +23,7 @@ var HARNESS = [
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip"),leakedDblclicks=0;room.addEventListener("dblclick",function(){leakedDblclicks++;});room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(400);report.steps.enterReply=window.__bedroomTicTacToeState();window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' dbl(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={leaked:leakedDblclicks,other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(400);report.steps.reply=window.__bedroomTicTacToeState();',
-  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();report.steps.winCaption=cap();',
+  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();report.steps.paneFlash=document.getElementById("bedroom-stained-glass").classList.contains("glinting");await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();report.steps.winCaption=cap();',
   ' dbl(8);report.steps.restart=window.__bedroomTicTacToeState();report.steps.restartCaption=cap();await sleep(400);var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(400);}report.steps.draw=window.__bedroomTicTacToeState();report.steps.drawCaption=cap();',
   ' setLang("cs");report.steps.cs={glass:document.getElementById("bedroom-stained-glass").getAttribute("aria-label"),caption:cap()};setLang("en");',
   ' touch(5);await sleep(35);touch(5);report.steps.touch=window.__bedroomTicTacToeState();window.__closeBedroomRoom();report.steps.close=window.__bedroomTicTacToeState();await sleep(450);report.steps.closeSettled=window.__bedroomTicTacToeState();',
@@ -78,6 +78,8 @@ check(s.turn && count(s.turn.board, "X") === 2 && count(s.turn.board, "O") === 1
   count(s.secondReply.board, "X") === 2 && count(s.secondReply.board, "O") === 2 &&
   s.secondReply.phase === "player",
   "ordinary pane clicks alternate visitor and computer turns", { turn: s.turn, reply: s.secondReply });
+check(s.paneFlash === false,
+  "tic-tac-toe pane clicks do not trigger the stained-glass flash overlay");
 check(s.win && s.win.phase === "done" && s.win.winner === "O" &&
   s.win.line.length === 3 && !s.win.aiPending,
   "a completed winning line settles the game and its timer", s.win);

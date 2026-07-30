@@ -25,6 +25,7 @@ var HARNESS = [
   ' report.steps.down={state:window.__bathroomRoomState(),room:window.currentStageName,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("bathroom-room-open"),geometry:{room:[roomBox.left,roomBox.top,roomBox.width,roomBox.height],viewport:[viewBox.left,viewBox.top,viewBox.width,viewBox.height],kitchenBottom:kitchenBox.bottom,controls:{bathroom:[parseFloat(bathroomCloseStyle.width),parseFloat(bathroomCloseStyle.height),parseFloat(bathroomCloseStyle.right),parseFloat(bathroomCloseStyle.top)],cinema:[parseFloat(cinemaCloseStyle.width),parseFloat(cinemaCloseStyle.height),parseFloat(cinemaCloseStyle.right),parseFloat(cinemaCloseStyle.top)],prince:[parseFloat(princeCloseStyle.width),parseFloat(princeCloseStyle.height),parseFloat(princeCloseStyle.right),parseFloat(princeCloseStyle.top)]}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility],images:room.querySelectorAll("img").length};',
   ' var props=Array.from(room.querySelectorAll("[data-bath-action]"));setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bathroom-room-close").getAttribute("aria-label"),props:props.map(function(el){return el.getAttribute("aria-label");})};setLang("en");',
   ' props.forEach(function(el,index){click(el);keyOn(el,index%2?" ":"Enter");});report.steps.props={count:props.length,roles:props.map(function(el){return [el.id,el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("title")];}),state:window.__bathroomInteractionState()};',
+  ' var tub=document.getElementById("bathroom-tub"),bubbles=Array.from(room.querySelectorAll("[data-bath-bubble]"));click(tub);var bubbleStart=window.__bathroomInteractionState();bubbles.forEach(click);var bubbleDone=window.__bathroomInteractionState();click(tub);var bubbleReset=window.__bathroomInteractionState();report.steps.bubbles={count:bubbles.length,roles:bubbles.map(function(el){return [el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("aria-label")];}),start:bubbleStart.bubbles,done:bubbleDone.bubbles,reset:bubbleReset.bubbles};',
   ' var scale=document.getElementById("bathroom-scale-action");click(scale);var scaleSpike=document.getElementById("bathroom-scale-reading").textContent;await sleep(380);var scaleOn=window.__bathroomInteractionState();click(scale);var scaleOff=window.__bathroomInteractionState();click(scale);await sleep(380);',
   ' var stool=document.getElementById("bathroom-stool"),stoolPosition=document.getElementById("bathroom-stool-position"),art=document.getElementById("bathroom-room-art");',
   ' var stoolHitsBefore=window.__bathroomInteractionState().hits.stool;stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,buttons:1,clientX:300}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,clientX:300}));await sleep(10);var stationaryState=window.__bathroomInteractionState();',
@@ -87,6 +88,17 @@ check(s.props && s.props.count === propNames.length &&
   "every distinct bathroom prop is labelled but stays outside the Tab order", s.props);
 check(s.props && propNames.every(function (name) { return s.props.state.hits[name] === 2; }),
   "every bathroom prop responds once to click and once to Enter or Space", s.props && s.props.state);
+check(s.bubbles && s.bubbles.count === 8 &&
+  s.bubbles.roles.every(function (row) {
+    return row[0] === "button" && row[1] === null && row[2] === "Pop bubble";
+  }),
+  "the finite bubble hunt exposes eight labelled targets outside the Tab order", s.bubbles);
+check(s.bubbles && s.bubbles.start.active && s.bubbles.start.popped === 0 &&
+  s.bubbles.start.total === 8 && !s.bubbles.start.complete &&
+  s.bubbles.done.popped === 8 && s.bubbles.done.complete &&
+  !s.bubbles.reset.active && s.bubbles.reset.popped === 0 &&
+  !s.bubbles.reset.complete,
+  "filling starts the hunt, eight pops complete it, and draining resets it", s.bubbles);
 check(s.functional && s.functional.water === "M119 139V171",
   "the faucet stream falls from the midpoint between both faucet uprights", s.functional);
 check(s.functional && s.functional.towelOrigin === "44px 0px" &&

@@ -183,6 +183,9 @@ loft songs, party music, projector audio, piano, or video. The guitar,
 ukulele, DJ, Music apps, and Cuddly-puddly projector provide the main ways to
 choose what plays.
 Space toggles the current music without opening or leaving a monitor app.
+Zooming into either office screen lowers the distant party music until the
+screen is dismissed. A loft song started from the guitar also lowers the party
+music wherever you hear it, while the song itself keeps its normal level.
 Tap the projector screen to cycle its programs. Coffee cat and the fireplace
 lead the cycle: coffee is first from April through September, while fire is
 first from October through March. While the coffee channel is selected, its

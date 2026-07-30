@@ -162,10 +162,20 @@ self-terminating chord, bass, brush, kick, and melody voices scheduled ahead on 
 channel exit cancels the sole scheduler, fades the bed master, then closes only its `audioBed`
 handle.
 
-Room navigation gives every room-local bed, including all Cuddly projector channels, a shared
-five-second fade so it recedes gently behind the visitor. Projector score schedulers remain alive
-through that ramp, rather than exhausting their short look-ahead queue. Direct channel and device changes keep
-their shorter local fades.
+Room navigation gives ordinary room-local ambience a five-second fade. Cuddly projector channels
+use a shorter three-second room-exit fade so they recede behind the visitor without lingering.
+Projector score schedulers remain alive through that ramp, rather than exhausting their short
+look-ahead queue. Direct channel and device changes keep their shorter local fades.
+
+The garden-party dance bed also ducks while either office monitor or laptop is zoomed, then swells
+back over a slower roughly 2.5-second screen-focus ramp when the zoom is dismissed. Room navigation
+still clears it on the ordinary room-transition timing. This uses the existing
+`__partyDuck` dance-only projection; loft songs—including the guitar-started song—do not read that
+scalar and keep their current level. A playing loft song is itself another global party-duck gate:
+its media-element `play`/`pause`/`ended` events re-evaluate the projection, so the party glides
+under the song everywhere and returns when the song stops. Every dance bed retargets that shared
+projection by cancelling-and-holding its current AudioParam automation first; overlapping monitor
+focus and song fades therefore cannot leave an old duck ramp stranded after both gates clear.
 
 ## Kill switch / overrides (unchanged)
 

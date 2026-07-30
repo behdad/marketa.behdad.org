@@ -360,6 +360,7 @@ var GATES_HARNESS = [
   "    __updateGardenBirdsong: ['garden']", // discrete chirps: room boolean only, no fade arg
   "  };",
   "  var FADED = ['__updatePcFan', '__updateACHum', '__updateRadioSound', '__updateKettleHum', '__updateFireSound', '__updateAquaSound', '__updateAquaMelody', '__updateCoffeeMusic', '__updateWorkoutSound', '__updateTotoroSound', '__updateTotoroMelody', '__updateStarsSound'];",
+  "  var PROJECTOR_FADED = ['__updateFireSound', '__updateAquaSound', '__updateAquaMelody', '__updateCoffeeMusic', '__updateWorkoutSound', '__updateTotoroSound', '__updateTotoroMelody', '__updateStarsSound'];",
   "  var ROOM_NAME_GATES = ['__updateACHum'];", // AC gets the room NAME (to pick its per-room pan), the rest a boolean
   "  var GATES = Object.keys(OWNERS);",
   "  async function run() {",
@@ -397,7 +398,8 @@ var GATES_HARNESS = [
   "        if (!(roomCalls.length > 0 && roomCalls.every(function (a) { return a[0] === wanted; }))) {",
   "          (boolBad[g] = boolBad[g] || []).push(room + ' wanted ' + wanted + ', got ' + (roomCalls.length ? JSON.stringify(roomCalls) : 'no room-arg call'));",
   "        }",
-  "        if (FADED.indexOf(g) !== -1 && !(roomCalls.length > 0 && roomCalls.every(function (a) { return a[1] === 5; }))) {",
+  "        var expectedFade = PROJECTOR_FADED.indexOf(g) !== -1 ? 3 : 5;",
+  "        if (FADED.indexOf(g) !== -1 && !(roomCalls.length > 0 && roomCalls.every(function (a) { return a[1] === expectedFade; }))) {",
   "          (fadeBad[g] = fadeBad[g] || []).push(room + ': ' + JSON.stringify(roomCalls));",
   "        }",
   "      });",
@@ -407,7 +409,8 @@ var GATES_HARNESS = [
   "      if (!originals[g]) return;",
   "      ok('gates: goToStage hands ' + g + ' its correct room arg in every room', !boolBad[g], (boolBad[g] || []).join(' | '));",
   "      if (FADED.indexOf(g) !== -1) {",
-  "        ok('gates: goToStage passes ' + g + ' the five-second fade on every room change', !fadeBad[g], (fadeBad[g] || []).join(' | '));",
+  "        var fadeLabel = PROJECTOR_FADED.indexOf(g) !== -1 ? 'three-second projector fade' : 'five-second ambience fade';",
+  "        ok('gates: goToStage passes ' + g + ' the ' + fadeLabel + ' on every room change', !fadeBad[g], (fadeBad[g] || []).join(' | '));",
   "      }",
   "      window[g] = originals[g];", // hand the real gates back before the storm
   "    });",

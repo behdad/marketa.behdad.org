@@ -126,7 +126,7 @@ var HARNESS = String.raw`<script>
       window.__seasonPreviewName() !== seasonBefore);
 
     // A long room fade must keep each score's look-ahead scheduler alive. Otherwise the
-    // queued notes run out in ~1–2s even though the gain claims to be fading for five.
+    // queued notes run out in ~1–2s even though the gain claims to be fading for three.
     ["coffee", "stars", "workout", "aqua", "totoro"].forEach(function (channel) {
       window.__cuddlyProjector.set(channel);
       window.goToStage("garden");

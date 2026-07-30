@@ -32823,7 +32823,7 @@ setMusicPausedState(false);
 
   // Projector scores use look-ahead schedulers whose notes self-terminate. A long room-exit
   // fade must therefore keep the scheduler alive until the gain ramp finishes; cancelling it
-  // immediately leaves only the ~1.5s queue and makes a five-second fade sound abruptly short.
+  // immediately leaves only the ~1.5s queue and makes a multi-second fade sound abruptly short.
   function holdProjectorGain(param, now) {
     if (!param) return;
     if (param.cancelAndHoldAtTime) param.cancelAndHoldAtTime(now);
@@ -32833,6 +32833,12 @@ setMusicPausedState(false);
       param.setValueAtTime(value, now);
     }
   }
+  window.__retargetPartyGain = function (ctx, param, value, timeConstant) {
+    if (!ctx || !param) return;
+    var now = ctx.currentTime;
+    holdProjectorGain(param, now);
+    param.setTargetAtTime(value, now, timeConstant || 0.05);
+  };
   function beginProjectorRoomFade(ctx, master, fadeSecs, finish) {
     if (!ctx || !master || fadeSecs < 1) return false;
     if (ctx._roomFading) return true;
@@ -34473,7 +34479,7 @@ setMusicPausedState(false);
   window.__partyPlaying = function () { return !!partyCtx && !partySuspended; }; // live: bed up & not suspended
   window.__partyMusicWant = partyMusicWant; // setGardenParty checks this before pausing a loft song
   window.__applyPartyMusicVolume = function (tc) { // the volume button cycle updates the live master
-    if (partyCtx && partyCtx._masterGain) { try { partyCtx._masterGain.gain.setTargetAtTime(partyVol(), partyCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (partyCtx && partyCtx._masterGain) { try { window.__retargetPartyGain(partyCtx, partyCtx._masterGain.gain, partyVol(), tc); } catch (e) {} }
   };
   window.__updatePartyMusic = function (fadeSecs) {
     // gate reads the party flag + current-room globals directly, so callers pass no room bool
@@ -34629,7 +34635,7 @@ setMusicPausedState(false);
   window.__waltzPlaying = function () { return !!waltzCtx && !waltzSuspended; };
   window.__waltzMusicWant = waltzMusicWant;
   window.__applyWaltzMusicVolume = function (tc) {
-    if (waltzCtx && waltzCtx._masterGain) { try { waltzCtx._masterGain.gain.setTargetAtTime(waltzVol(), waltzCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (waltzCtx && waltzCtx._masterGain) { try { window.__retargetPartyGain(waltzCtx, waltzCtx._masterGain.gain, waltzVol(), tc); } catch (e) {} }
   };
   window.__updateWaltzMusic = function (fadeSecs) {
     var want = waltzMusicWant();
@@ -34854,7 +34860,7 @@ setMusicPausedState(false);
   window.__tangoPlaying = function () { return !!tangoCtx && !tangoSuspended; };
   window.__tangoMusicWant = tangoMusicWant;
   window.__applyTangoMusicVolume = function (tc) {
-    if (tangoCtx && tangoCtx._masterGain) { try { tangoCtx._masterGain.gain.setTargetAtTime(tangoVol(), tangoCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (tangoCtx && tangoCtx._masterGain) { try { window.__retargetPartyGain(tangoCtx, tangoCtx._masterGain.gain, tangoVol(), tc); } catch (e) {} }
   };
   window.__updateTangoMusic = function (fadeSecs) {
     var want = tangoMusicWant();
@@ -35033,7 +35039,7 @@ setMusicPausedState(false);
   window.__discoPlaying = function () { return !!discoCtx && !discoSuspended; };
   window.__discoMusicWant = discoMusicWant;
   window.__applyDiscoMusicVolume = function (tc) {
-    if (discoCtx && discoCtx._masterGain) { try { discoCtx._masterGain.gain.setTargetAtTime(discoVol(), discoCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (discoCtx && discoCtx._masterGain) { try { window.__retargetPartyGain(discoCtx, discoCtx._masterGain.gain, discoVol(), tc); } catch (e) {} }
   };
   window.__updateDiscoMusic = function (fadeSecs) {
     var want = discoMusicWant();
@@ -35196,7 +35202,7 @@ setMusicPausedState(false);
   window.__swingPlaying = function () { return !!swingCtx && !swingSuspended; };
   window.__swingMusicWant = swingMusicWant;
   window.__applySwingMusicVolume = function (tc) {
-    if (swingCtx && swingCtx._masterGain) { try { swingCtx._masterGain.gain.setTargetAtTime(swingVol(), swingCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (swingCtx && swingCtx._masterGain) { try { window.__retargetPartyGain(swingCtx, swingCtx._masterGain.gain, swingVol(), tc); } catch (e) {} }
   };
   window.__updateSwingMusic = function (fadeSecs) {
     var want = swingMusicWant();
@@ -35383,7 +35389,7 @@ setMusicPausedState(false);
   window.__salsaPlaying = function () { return !!salsaCtx && !salsaSuspended; };
   window.__salsaMusicWant = salsaMusicWant;
   window.__applySalsaMusicVolume = function (tc) {
-    if (salsaCtx && salsaCtx._masterGain) { try { salsaCtx._masterGain.gain.setTargetAtTime(salsaVol(), salsaCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (salsaCtx && salsaCtx._masterGain) { try { window.__retargetPartyGain(salsaCtx, salsaCtx._masterGain.gain, salsaVol(), tc); } catch (e) {} }
   };
   window.__updateSalsaMusic = function (fadeSecs) {
     var want = salsaMusicWant();
@@ -35555,7 +35561,7 @@ setMusicPausedState(false);
   window.__bhangraPlaying = function () { return !!bhangraCtx && !bhangraSuspended; };
   window.__bhangraMusicWant = bhangraMusicWant;
   window.__applyBhangraMusicVolume = function (tc) {
-    if (bhangraCtx && bhangraCtx._masterGain) { try { bhangraCtx._masterGain.gain.setTargetAtTime(bhangraVol(), bhangraCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (bhangraCtx && bhangraCtx._masterGain) { try { window.__retargetPartyGain(bhangraCtx, bhangraCtx._masterGain.gain, bhangraVol(), tc); } catch (e) {} }
   };
   window.__updateBhangraMusic = function (fadeSecs) {
     var want = bhangraMusicWant();
@@ -35726,7 +35732,7 @@ setMusicPausedState(false);
   };
   window.__bandariPlaying = function () { return !!baCtx && !baSuspended; };
   window.__applyBandariMusicVolume = function (tc) {
-    if (baCtx && baCtx._masterGain) { try { baCtx._masterGain.gain.setTargetAtTime(baVol(), baCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (baCtx && baCtx._masterGain) { try { window.__retargetPartyGain(baCtx, baCtx._masterGain.gain, baVol(), tc); } catch (e) {} }
   };
   window.__updateBandariMusic = function (fadeSecs) {
     var want = baWant();
@@ -35854,7 +35860,7 @@ setMusicPausedState(false);
   };
   window.__polkaPlaying = function () { return !!kCtx && !kSuspended; };
   window.__applyPolkaMusicVolume = function (tc) {
-    if (kCtx && kCtx._masterGain) { try { kCtx._masterGain.gain.setTargetAtTime(kVol(), kCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (kCtx && kCtx._masterGain) { try { window.__retargetPartyGain(kCtx, kCtx._masterGain.gain, kVol(), tc); } catch (e) {} }
   };
   window.__updatePolkaMusic = function (fadeSecs) {
     var want = kWant();
@@ -35987,7 +35993,7 @@ setMusicPausedState(false);
   };
   window.__horahPlaying = function () { return !!hCtx && !hSuspended; };
   window.__applyHorahMusicVolume = function (tc) {
-    if (hCtx && hCtx._masterGain) { try { hCtx._masterGain.gain.setTargetAtTime(hVol(), hCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (hCtx && hCtx._masterGain) { try { window.__retargetPartyGain(hCtx, hCtx._masterGain.gain, hVol(), tc); } catch (e) {} }
   };
   window.__updateHorahMusic = function (fadeSecs) {
     var want = hWant();
@@ -36125,7 +36131,7 @@ setMusicPausedState(false);
   };
   window.__bulgarPlaying = function () { return !!bgCtx && !bgSuspended; };
   window.__applyBulgarMusicVolume = function (tc) {
-    if (bgCtx && bgCtx._masterGain) { try { bgCtx._masterGain.gain.setTargetAtTime(bgVol(), bgCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (bgCtx && bgCtx._masterGain) { try { window.__retargetPartyGain(bgCtx, bgCtx._masterGain.gain, bgVol(), tc); } catch (e) {} }
   };
   window.__updateBulgarMusic = function (fadeSecs) {
     var want = bgWant();
@@ -36257,7 +36263,7 @@ setMusicPausedState(false);
   };
   window.__dupakPlaying = function () { return !!duCtx && !duSuspended; };
   window.__applyDupakMusicVolume = function (tc) {
-    if (duCtx && duCtx._masterGain) { try { duCtx._masterGain.gain.setTargetAtTime(duVol(), duCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (duCtx && duCtx._masterGain) { try { window.__retargetPartyGain(duCtx, duCtx._masterGain.gain, duVol(), tc); } catch (e) {} }
   };
   window.__updateDupakMusic = function (fadeSecs) {
     var want = duWant();
@@ -36403,7 +36409,7 @@ setMusicPausedState(false);
   };
   window.__furiantPlaying = function () { return !!fuCtx && !fuSuspended; };
   window.__applyFuriantMusicVolume = function (tc) {
-    if (fuCtx && fuCtx._masterGain) { try { fuCtx._masterGain.gain.setTargetAtTime(fuVol(), fuCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (fuCtx && fuCtx._masterGain) { try { window.__retargetPartyGain(fuCtx, fuCtx._masterGain.gain, fuVol(), tc); } catch (e) {} }
   };
   window.__updateFuriantMusic = function (fadeSecs) {
     var want = fuWant();
@@ -36545,7 +36551,7 @@ setMusicPausedState(false);
   };
   window.__cumbiaPlaying = function () { return !!cuCtx && !cuSuspended; };
   window.__applyCumbiaMusicVolume = function (tc) {
-    if (cuCtx && cuCtx._masterGain) { try { cuCtx._masterGain.gain.setTargetAtTime(cuVol(), cuCtx.currentTime, tc || 0.05); } catch (e) {} }
+    if (cuCtx && cuCtx._masterGain) { try { window.__retargetPartyGain(cuCtx, cuCtx._masterGain.gain, cuVol(), tc); } catch (e) {} }
   };
   window.__updateCumbiaMusic = function (fadeSecs) {
     var want = cuWant();
@@ -37359,20 +37365,26 @@ setMusicPausedState(false);
   function projectorPreferred() { return projectorOrderForDate()[0]; }
   var order = projectorOrderForDate();
   var MUSIC_CHANNELS = { coffee: 1, stars: 1, workout: 1, totoro: 1, aqua: 1 }; // projector-music channels: they suspend the game song while up
-  // Duck the garden-party dances WAY down — but ONLY in the cuddly nook, where a projector music
-  // channel is actually audible. Elsewhere the party stays full. Moving in/out of the nook
-  // re-evaluates and FADES the transition (~1s). Call with a bool to record whether a channel is
-  // on (setChannel/setGardenParty); call with no arg to just re-evaluate the room (goToStage).
+  // Duck the garden-party dances WAY down while a foreground experience owns attention:
+  // a projector-music channel in the cuddly nook, headphones in the office, or either
+  // office screen zoom. Loft songs are deliberately outside this projection. Room/zoom
+  // changes re-evaluate and FADE the transition (~1s). Call with a bool to record whether
+  // a projector channel is on; call with no arg to re-evaluate the current foreground.
   // window.__partyDuck feeds each dance Vol() (default 1 via `|| 1`); only the active dance has a ctx.
-  window.__setPartyDuck = function (musicActive) {
+  window.__setPartyDuck = function (musicActive, fadeTime) {
     if (musicActive !== undefined) window.__projMusicActive = !!musicActive;
-    // Duck in the cuddly nook while a projector music channel plays, OR in the office while the
-    // headphones are on (you're listening to the PC through cans — the party recedes). Both are
-    // room-scoped: step out and the party swells back (the ~1s fade below).
+    // All three attentional gates are room-scoped: step away/dismiss and the party swells
+    // back. This scalar feeds dance beds only; the guitar/loft-song pipeline stays unchanged.
+    var officeScreen = window.currentStageName === "office" &&
+      (!!(window.__monitorZoomed && window.__monitorZoomed()) ||
+       !!(window.__laptopZoomed && window.__laptopZoomed()));
+    var loftSong = !!(window.__phoneMusicPlaying && window.__phoneMusicPlaying());
     var duck = (!!window.__projMusicActive && window.currentStageName === "cuddly") ||
-               (!!window.__headphonesOn && window.currentStageName === "office");
+               (!!window.__headphonesOn && window.currentStageName === "office") ||
+               officeScreen || loftSong;
     window.__partyDuck = duck ? 0.06 : 1; // foreground media leads; retain only a faint distant party thump
-    ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyTangoMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyBandariMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume", "__applyBulgarMusicVolume", "__applyDupakMusicVolume", "__applyFuriantMusicVolume", "__applyCumbiaMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](0.4); }); // 0.4s time-constant → ~1s fade up/down
+    var fade = typeof fadeTime === "number" ? fadeTime : 0.4;
+    ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyTangoMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyBandariMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume", "__applyBulgarMusicVolume", "__applyDupakMusicVolume", "__applyFuriantMusicVolume", "__applyCumbiaMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](fade); });
   };
   var chanObj = { fire: fire, coffee: svgChan, workout: svgChan, aqua: svgChan, totoro: svgChan, stars: svgChan, off: off };
   var current = projectorPreferred();
@@ -48450,6 +48462,7 @@ setOfficeProgress("pc", false);
       a.addEventListener(ev, function () {
         if (window.__phoneMusicChanged) window.__phoneMusicChanged();
         if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+        if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1); // loft songs stay foreground; party glides underneath them
       });
     });
   });
@@ -62845,6 +62858,7 @@ async def localfont(name):
     el.classList.add("dev-zoomed"); // reveals THIS device's bezel ✕ (a child of its group)
     apply();
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
+    if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1); // screen focus settles musically: ~2.5s rather than the projector's ~1s
     if (el === monitor && window.__hideMsgBadgeCoach) window.__hideMsgBadgeCoach();
     if (el === monitor && window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
@@ -62869,6 +62883,7 @@ async def localfont(name):
     strip.getBoundingClientRect();
     strip.style.transition = "";
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
+    if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
   }
   // A room slide and a device-zoom glide both own the same strip transform. Collapse any
@@ -62901,6 +62916,7 @@ async def localfont(name):
     strip.getBoundingClientRect();
     strip.style.transition = prevTransition;
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
+    if (window.__setPartyDuck) window.__setPartyDuck();
     return true;
   }
   // re-fit the zoom whenever the box it frames may have moved or resized under us — a
@@ -85595,6 +85611,7 @@ function spawnDustMote(container) {
     // leaving a room fades its ambient drone out over several seconds rather than the
     // snappy device-toggle fade, so the sound slowly recedes as you move to the next room.
     var ROOM_FADE = 5;
+    var PROJECTOR_ROOM_FADE = 3;
     if (window.__updatePcFan) window.__updatePcFan(name === "office", ROOM_FADE); // hum only in the office
     if (name !== "office") { // leaving the office also leaves the console's monitor focus: blur its input so keys go to the game, not the off-screen console (see the console keydown guard)
       var ai = document.activeElement;
@@ -85620,16 +85637,16 @@ function spawnDustMote(container) {
     if (window.__updateOfficeHangout) window.__updateOfficeHangout(); // an occasional cast couple hangs out in the office (party on) only while the office is the room you're in — arm on entry, tear down on leave
     if (window.__updateRoomPhotogs) window.__updateRoomPhotogs(); // occupants settle first; Aspen only follows into a room containing subjects
     if (window.__updateRoosterEgg) window.__updateRoosterEgg(); // the rooster only lays its golden egg while the garden is the room you're in
-    if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", ROOM_FADE); // fire crackle only in the cuddly nook
-    if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", ROOM_FADE); // aquarium bed only in the cuddly nook
-    if (window.__updateAquaMelody) window.__updateAquaMelody(name === "cuddly", ROOM_FADE); // aquarium melody is cuddly-only now (aquaMelWant room-gates it) — a plain repetitive loop, no reason to hear it loft-wide
-    if (window.__updateCoffeeMusic) window.__updateCoffeeMusic(name === "cuddly", ROOM_FADE); // coffee-cat's warm loop is cuddly-only
+    if (window.__updateFireSound) window.__updateFireSound(name === "cuddly", PROJECTOR_ROOM_FADE); // fire crackle only in the cuddly nook
+    if (window.__updateAquaSound) window.__updateAquaSound(name === "cuddly", PROJECTOR_ROOM_FADE); // aquarium bed only in the cuddly nook
+    if (window.__updateAquaMelody) window.__updateAquaMelody(name === "cuddly", PROJECTOR_ROOM_FADE); // aquarium melody is cuddly-only now (aquaMelWant room-gates it) — a plain repetitive loop, no reason to hear it loft-wide
+    if (window.__updateCoffeeMusic) window.__updateCoffeeMusic(name === "cuddly", PROJECTOR_ROOM_FADE); // coffee-cat's warm loop is cuddly-only
     if (window.__syncCoffeeScenes) window.__syncCoffeeScenes(); // only advance the café scenes while this channel is being watched
-    if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", ROOM_FADE); // workout bed only in the cuddly nook
-    if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", ROOM_FADE); // rainfall only in the cuddly nook
-    if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", ROOM_FADE); // the night-sky piano is Cuddly-only, like every projector score
+    if (window.__updateWorkoutSound) window.__updateWorkoutSound(name === "cuddly", PROJECTOR_ROOM_FADE); // workout bed only in the cuddly nook
+    if (window.__updateTotoroSound) window.__updateTotoroSound(name === "cuddly", PROJECTOR_ROOM_FADE); // rainfall only in the cuddly nook
+    if (window.__updateStarsSound) window.__updateStarsSound(name === "cuddly", PROJECTOR_ROOM_FADE); // the night-sky piano is Cuddly-only, like every projector score
     if (window.__setPartyDuck) window.__setPartyDuck(); // room-scoped party duck: fade the party down on entering the nook (channel playing), back up on leaving
-    if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", ROOM_FADE); // woodland melody follows the totoro channel
+    if (window.__updateTotoroMelody) window.__updateTotoroMelody(name === "cuddly", PROJECTOR_ROOM_FADE); // woodland melody follows the totoro channel
     if (window.__updateProjectorPans) window.__updateProjectorPans(); // every projector-music bed pans to the new room from the shared table
     if (window.__syncProjectorPiano) window.__syncProjectorPiano(); // only the visible cuddly night-sky projection accepts play-along input
     if (window.__updatePartyRoom) window.__updatePartyRoom(); // party is garden-sourced: pan + faintness per room

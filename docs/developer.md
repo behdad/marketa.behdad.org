@@ -538,17 +538,17 @@ inside SVG `foreignObject`, so the room remains a viewport sibling of the strip:
 entry slides it up from `translateY(100%)` while the preserved Cuddly strip pans
 to `translate(-40%,-100%)`. Close reverses both transforms, then applies
 `hidden` after the 720 ms transition. The cinema and Prince basement classes
-and the Bathroom / Toilets lower room all suppress the roster and transient
-message/call surfaces while they own the viewport.
+and the Bathroom / Toilets and Entrance lower rooms all suppress the roster and
+transient message/call surfaces while they own the viewport.
 
 Chooser cards carry `data-vimeo-id`, an empty `data-vimeo-hash` hook, and a
 filled `data-poster` path for their tracked original artwork. A player iframe is
 created on selection and removed on Choose another, close, reset, or
 `goToStage`, which is the cross-origin playback teardown.
 `__cinemaRoomState()` exposes the compact open/closing/playing/video test
-surface. Exact background whitelists (`#cuddly-wall`/`#cuddly-ceiling` and
-`#garden-wall`) own the desktop double-click and touch double-tap shortcuts;
-interactive descendants are explicitly rejected.
+surface. Exact background whitelists (`#cuddly-wall`/`#cuddly-ceiling`,
+`#garden-wall`, and `#balcony-background`) own the desktop double-click and
+touch double-tap shortcuts; interactive descendants are explicitly rejected.
 The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond
 and palette. A narrow `MutationObserver` on `#stage-cuddly` mirrors its `dusk`
 class to `.cinema-night`, keeping the lower-room window synchronized with every
@@ -563,26 +563,38 @@ the cinema, with the Kitchen strip parked at `translate(0,-100%)`. Only an exact
 objects cannot bubble into the entrance. `__bathroomRoomState()` exposes
 open/closing/hidden state for focused tests.
 
-All three lower rooms claim the shared `"lower-room"` notification hold. This
-reuses the action-game queue: incoming messages enter the thread immediately,
-while their preview, unread badge, and coach stay suppressed. Release happens
-only after the 720 ms return pan completes, then the existing 450 ms queue drain
-surfaces the newest preview and full unread count upstairs.
+`#entrance-room` is the code-native Balcony lower room. Its inline 680×340 SVG
+models the nighttime Cobogo Lofts facade without image or address assets.
+Entry is whitelisted to `#balcony-background`, so objects already owning
+double-click gestures remain untouched. The overlay pans up while the Balcony
+strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
+`hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
+capture guard owns Up/Escape/Backspace, exits Left to Office and Right to
+Balcony, while `goToStage` closes it for side-arrow and room-dot selection.
+Like the other full-viewport overlays, it refreshes the shared room-ambience
+gate on both entry and return so the preserved Balcony cannot keep sounding
+under the street scene.
 
-Possible future lower-room pairs are Office→Bedroom and Balcony→Entrance. They
-are navigation backlog only; no rooms or handlers exist. The global room-key
-owner reserves plain `ArrowDown` for the three implemented upstairs rooms and
-delegates to their public open hooks; each active lower-room capture guard owns
-`ArrowUp` on the way back. This runs before ordinary room shortcuts without
-changing `D` day/night or Shift+arrow calendar stepping. Those guards also map
-horizontal movement to an available adjacent main-floor room (`ArrowRight`
-leaves the bathroom for Garden; Kitchen has no room to its left).
-`goToStage` closes Bathroom/Cinema and parks an active basement, so side
-controls, programmatic navigation, and dots share teardown. A dot bypasses its
-ordinary lock gate only while a lower room owns the viewport, then restores
-focus to the selected dot; keyboard horizontal exits restore focus to
-`.hunt-viewport`. Prince focus timers re-check `princeShouldRun()` so a parked
-iframe cannot steal focus back after any of these exits.
+All four lower rooms claim the shared `"lower-room"` notification hold. This
+reuses the action-game queue: incoming messages enter the thread immediately,
+while their preview, unread badge, coach, and call ring stay suppressed. Release
+happens only after the 720 ms return pan completes, then the existing 450 ms
+queue drain surfaces the newest preview and full unread count upstairs.
+
+Office→Bedroom remains a navigation backlog pair; no room or handler exists.
+The global room-key owner reserves plain `ArrowDown` for the four implemented
+upstairs rooms and delegates to their public open hooks; each active lower-room
+capture guard owns `ArrowUp` on the way back. Those guards also map Left/Right
+to the parent room's adjacent main-floor rooms, or back to the parent at the
+strip edge. This runs before ordinary room shortcuts without changing `D`
+day/night or Shift+arrow calendar stepping upstairs.
+
+`goToStage` closes Bathroom, Cinema, or Entrance and parks an active basement,
+so side controls, programmatic navigation, and dots share teardown. A dot
+bypasses its ordinary lock gate only while any lower room owns the viewport,
+then restores focus to the selected dot; keyboard horizontal exits restore
+focus to `.hunt-viewport`. Prince focus timers re-check `princeShouldRun()` so
+a parked iframe cannot steal focus back after any of these exits.
 
 ### Shared projections
 
@@ -1390,9 +1402,10 @@ Run focused tests for the changed ownership boundary. The main routes are:
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
 - `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`,
-  `tests/cinema-room.js`, and `tests/bathroom-room.js` for projector ordering, retained channel
-  state, shared beds, transport, play-along transitions, Vimeo teardown, lower-room pan/UI
-  restoration, and guarded mouse/touch navigation for Kitchen, Cuddly, and Garden;
+  `tests/cinema-room.js`, `tests/bathroom-room.js`, and `tests/entrance-room.js` for projector
+  ordering, retained channel state, shared beds, transport, play-along transitions, Vimeo
+  teardown, lower-room pan/UI restoration, and guarded mouse/touch navigation for Kitchen,
+  Cuddly, Garden, and Balcony;
 - `tests/video-playlist.js` and `tests/video-kill-variants.js` for film selection, retained
   playheads, track-specific Kill visuals, and teardown reset;
 - `tests/party-lifecycle.js` for attended party timing and finales;

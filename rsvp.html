@@ -28872,7 +28872,7 @@ document.addEventListener("keydown", function (event) {
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   event.stopImmediatePropagation();
-  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
+  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
     event.preventDefault();
     if (window.__closeCinemaRoom) window.__closeCinemaRoom();
   }
@@ -28890,7 +28890,7 @@ document.addEventListener("keydown", function (event) {
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   event.stopImmediatePropagation();
-  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
+  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       event.preventDefault();
       if (window.__closeMonitorPrince) window.__closeMonitorPrince();
@@ -30121,11 +30121,12 @@ var T = {
     kbd_arrows: "previous / next room",
     kbd_shift_arrows: "previous / next key day",
     kbd_shift_updown: "clock +30 / −30 min",
+    kbd_vertical: "descend / return (where available)",
     kbd_console: "open / close the console",
     kbd_digits: "jump to a room",
     kbd_devices: "monitor / laptop / cellphone",
     kbd_enter: "advance the room puzzle",
-    kbd_d: "day ↔ night (or ↑ / ↓)",
+    kbd_d: "day ↔ night",
     kbd_r: "reset the loft",
     kbd_kitten: "toggle the kitten",
     kbd_s: "season change",
@@ -31321,11 +31322,12 @@ var T = {
     kbd_arrows: "předchozí / další místnost",
     kbd_shift_arrows: "předchozí / další významný den",
     kbd_shift_updown: "hodiny +30 / −30 min",
+    kbd_vertical: "sestoupit / vrátit se (kde je to možné)",
     kbd_console: "otevřít / zavřít konzoli",
     kbd_digits: "skok do místnosti",
     kbd_devices: "monitor / notebook / telefon",
     kbd_enter: "pokračovat v hádance místnosti",
-    kbd_d: "den ↔ noc (nebo ↑ / ↓)",
+    kbd_d: "den ↔ noc",
     kbd_r: "resetovat loft",
     kbd_kitten: "přepnout kotě",
     kbd_s: "změna sezóny",
@@ -32255,6 +32257,7 @@ window.addEventListener("hashchange", function () {
       ["<kbd>←</kbd> / <kbd>→</kbd>", "kbd_arrows"],
       ["<kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd>", "kbd_shift_arrows"],
       ["<kbd>Shift</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd>", "kbd_shift_updown"],
+      ["<kbd>↑</kbd> / <kbd>↓</kbd>", "kbd_vertical"],
       ["<kbd>`</kbd>", "kbd_console"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
       ["<kbd>m</kbd><kbd>l</kbd><kbd>c</kbd>", "kbd_devices"],
@@ -87206,7 +87209,8 @@ function spawnDustMote(container) {
   }, true);
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
-  // console. d/↑/↓ flip day↔night, 1-5 jump to a room, m/l/c summon the monitor/laptop/
+  // console. d flips day↔night; ↓ descends from Garden/Cuddly and ↑ returns, while elsewhere
+  // vertical arrows are inert. 1-5 jump to a room, m/l/c summon the monitor/laptop/
   // cellphone, / opens Messages, k toggles the kitten, r resets, n next track, t a trip. Backspace
   // mirrors Escape ("go back") — see the alias below. Ignored while typing / with a modifier.
   // (Tab is repurposed here — the game strip has no tab targets — but form fields still get it
@@ -87232,7 +87236,7 @@ function spawnDustMote(container) {
       if (window.__stopHintBlink) window.__stopHintBlink();
       return;
     }
-    if (e.shiftKey) { // Shift+arrows time-travel the loft: ←/→ = significant prev/next day, ↑/↓ = clock +/−30 min (plain arrows stay room-nav / day-night)
+    if (e.shiftKey) { // Shift+arrows time-travel the loft: ←/→ = significant prev/next day, ↑/↓ = clock +/−30 min
       if (e.key === "ArrowLeft") { e.preventDefault(); if (window.__calStepSignificant) window.__calStepSignificant(-1); return; }
       if (e.key === "ArrowRight") { e.preventDefault(); if (window.__calStepSignificant) window.__calStepSignificant(1); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); if (window.__calStepTime) window.__calStepTime(1); return; }
@@ -87267,10 +87271,10 @@ function spawnDustMote(container) {
       if (window.__toggleDayNight) window.__toggleDayNight(); // 'd' just toggles
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
-      var sbDN = document.getElementById("stage-balcony");
-      var isNightDN = sbDN && sbDN.classList.contains("dusk");
-      // Up brings day, Down brings night — each only toggles when a change is actually needed
-      if (e.key === "ArrowUp" ? isNightDN : !isNightDN) { if (window.__toggleDayNight) window.__toggleDayNight(); }
+      // Lower-room exits are captured by their active overlays before this handler.
+      // Upstairs, only Down has meaning and only where a lower room actually exists.
+      if (e.key === "ArrowDown" && window.currentStageName === "garden" && window.__openGardenPrince) window.__openGardenPrince();
+      else if (e.key === "ArrowDown" && window.currentStageName === "cuddly" && window.__openCinemaRoom) window.__openCinemaRoom();
     } else if (e.key >= "1" && e.key <= "5") {
       e.preventDefault();
       navigateWithRoster(STAGES[parseInt(e.key, 10) - 1]); // jump straight to room 1-5, unlocking it if needed

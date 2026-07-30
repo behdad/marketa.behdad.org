@@ -58,6 +58,10 @@ On the zoomed office monitor, open Search and leave its query empty to browse
 every monitor app, including apps normally available only through search.
 Type to filter the directory, use the arrow keys to choose a result, then press
 Enter, or select an app directly.
+`D` toggles day and night. `Shift`+`↑`/`↓` moves the clock by 30 minutes;
+plain `↓` descends from the Garden or Cuddly-puddly into its lower room and
+plain `↑` returns upstairs. Those plain vertical arrows do nothing in the other
+rooms.
 
 ## The guided room trail
 

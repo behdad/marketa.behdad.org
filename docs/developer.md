@@ -551,6 +551,10 @@ interactive descendants are explicitly rejected.
 
 Possible future lower-room pairs are Kitchen/Bar→Toilets, Office→Bedroom, and
 Balcony→Entrance. They are navigation backlog only; no rooms or handlers exist.
+The global room-key owner reserves plain `ArrowDown` for the two implemented
+upstairs rooms and delegates to their public open hooks; each active lower-room
+capture guard owns `ArrowUp` on the way back. This runs before ordinary room
+shortcuts without changing `D` day/night or Shift+arrow calendar stepping.
 
 ### Shared projections
 

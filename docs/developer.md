@@ -978,7 +978,8 @@ code-native `#prince-dungeon-set` owns the dormant stone play wall and reactive
 set dressing, with no iframe or keyboard capture. Activating
 `#prince-play-wall` calls `activatePrinceBasementGame`, lazily creates or
 reparents the shared iframe, swaps the set for the game, and only then enables
-Prince input. Ordinary Dismiss, Escape, or Backspace calls `parkPrinceApp`,
+Prince input. The dormant dungeon capture guard routes bare Enter/Space to the
+same activation hook. Ordinary Dismiss, Escape, or Backspace calls `parkPrinceApp`,
 pauses an initiated child through `prince-control`, and retains its browsing
 context. Kill, Start over, and shutdown call `destroyPrinceApp`.
 Fullscreen reparents the same live iframe through `#prince-focus-overlay`,

@@ -16,9 +16,9 @@ var HARNESS = [
   ' window.goToStage("garden");key("ArrowDown");await sleep(80);var props=Array.from(document.querySelectorAll("#prince-dungeon-set .prince-dungeon-prop"));report.steps.dormant={state:window.__princeState(),input:window.__princeInputActive,frames:host.querySelectorAll("iframe").length,props:props.map(function(prop){return [prop.id,prop.getAttribute("aria-label"),prop.getAttribute("title"),prop.getAttribute("tabindex")];})};',
   ' click(document.getElementById("prince-dungeon-window"));elkey(document.getElementById("prince-dungeon-torch-left"),"Enter");elkey(document.getElementById("prince-dungeon-chain")," ");click(document.getElementById("prince-dungeon-ledge"));click(document.getElementById("prince-dungeon-stone"));await sleep(30);report.steps.props={window:document.getElementById("prince-dungeon-window").className,left:document.getElementById("prince-dungeon-torch-left").className,chain:document.getElementById("prince-dungeon-chain").className,ledge:document.getElementById("prince-dungeon-ledge").className,stone:document.getElementById("prince-dungeon-stone").className};',
   ' setLang("cs");report.steps.cs=props.map(function(prop){return [prop.getAttribute("aria-label"),prop.getAttribute("title")];});setLang("en");',
-  ' wall.focus();elkey(wall," ");await sleep(90);var frame=host.querySelector("iframe");var ctrl=key("r",{ctrlKey:true});report.steps.started={state:window.__princeState(),input:window.__princeInputActive,frame:!!frame,src:frame&&frame.getAttribute("src"),ctrlPrevented:ctrl.defaultPrevented};',
+  ' key(" ");await sleep(90);var frame=host.querySelector("iframe");var ctrl=key("r",{ctrlKey:true});report.steps.started={state:window.__princeState(),input:window.__princeInputActive,frame:!!frame,src:frame&&frame.getAttribute("src"),ctrlPrevented:ctrl.defaultPrevented};',
   ' key("Escape");await sleep(780);report.steps.parked={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};',
-  ' key("ArrowDown");await sleep(80);report.steps.returned={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};click(wall);await sleep(80);report.steps.resumed={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};',
+  ' key("ArrowDown");await sleep(80);report.steps.returned={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};key("Enter");await sleep(80);report.steps.resumed={state:window.__princeState(),input:window.__princeInputActive,frame:host.querySelector("iframe")===frame};',
   ' window.__destroyMonitorPrince();await sleep(30);report.steps.destroyed=window.__princeState();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},240);});',
@@ -49,13 +49,13 @@ check(s.props && /rattled/.test(s.props.window) && /dim/.test(s.props.left) &&
   "window, torch, chain, ledge, and loose stone visibly react", s.props);
 check(s.started && s.started.frame && s.started.src === "princejs/index.html" &&
   s.started.state.initiated && s.started.state.playing && s.started.input && !s.started.ctrlPrevented,
-  "Space on the play wall lazily creates Prince and preserves browser shortcuts", s.started);
+  "bare Space in the dormant dungeon lazily creates Prince and preserves browser shortcuts", s.started);
 check(s.parked && !s.parked.state.open && s.parked.state.parked && s.parked.state.initiated &&
   !s.parked.input && s.parked.frame,
   "Escape parks the initiated browsing context without leaving keyboard capture behind", s.parked);
 check(s.returned && s.returned.state.basement && !s.returned.state.playing && !s.returned.input &&
   s.returned.frame && s.resumed && s.resumed.state.playing && s.resumed.input && s.resumed.frame,
-  "re-entering shows the play wall and clicking it resumes the same iframe", {returned:s.returned,resumed:s.resumed});
+  "re-entering shows the play wall and bare Enter resumes the same iframe", {returned:s.returned,resumed:s.resumed});
 check(s.destroyed && !s.destroyed.initiated && !s.destroyed.open && !s.destroyed.iframe,
   "destroy semantics discard the persistent run", s.destroyed);
 

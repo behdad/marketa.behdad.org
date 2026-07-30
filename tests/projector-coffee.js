@@ -46,10 +46,10 @@ check(w.fresh && w.fresh.phrase === "Hurry? Never—" && /Fraunces/i.test(w.fres
   w.fresh.kettleAnimation === "coffee-kettle-pour" && w.fresh.dots === 6,
   "the native channel retains its exact Fraunces phrase, slow animation and indicator", w.fresh);
 check(w.fresh && w.fresh.sceneGroups === 3 && w.fresh.scenes && w.fresh.scenes.count === 3 &&
-  w.fresh.scenes.interval === 20000 && w.fresh.scenes.index >= 0 && w.fresh.scenes.index < 3 &&
+  w.fresh.scenes.interval === 15000 && w.fresh.scenes.index >= 0 && w.fresh.scenes.index < 3 &&
   w.fresh.readerTitle === "The Gentle Art of Being Home." && /Fraunces/i.test(w.fresh.readerFont) &&
   w.fresh.readerSteam === "cat-reader-steam-rise",
-  "three native café scenes rotate every 20 seconds, including the Fraunces-titled home reader", w.fresh);
+  "three native café scenes rotate every 15 seconds, including the Fraunces-titled home reader", w.fresh);
 check(w.playing && w.playing.channel === "coffee" && w.playing.playing && w.playing.beds >= 1 &&
   w.playing.label === "Slow coffee" && w.playing.captured.channel === "coffee",
   "coffee music joins the shared bed, now-playing UI and checkpoint row", w.playing);

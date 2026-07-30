@@ -13,6 +13,7 @@ var HARNESS = [
   'function dbl(cell){pane(cell).dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));}',
   'function click(cell){pane(cell).dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   'function touch(cell){pane(cell).dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
+  'function cap(){return {text:document.getElementById("hunt-caption").textContent,key:window.__captionKey&&window.__captionKey(),flash:window.__flashCaptionState&&window.__flashCaptionState()};}',
   'var lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]],order=[4,0,2,6,8,1,3,5,7];',
   'function result(board){for(var i=0;i<lines.length;i++){var l=lines[i];if(board[l[0]]&&board[l[0]]===board[l[1]]&&board[l[0]]===board[l[2]])return board[l[0]];}return board.every(Boolean)?"draw":null;}',
   'function score(board,turn,depth){var r=result(board);if(r)return r==="O"?10-depth:r==="X"?depth-10:0;var best=turn==="O"?-Infinity:Infinity;order.forEach(function(cell){if(board[cell])return;board[cell]=turn;var n=score(board,turn==="O"?"X":"O",depth+1);board[cell]=null;best=turn==="O"?Math.max(best,n):Math.min(best,n);});return best;}',
@@ -20,9 +21,9 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip"),leakedDblclicks=0;room.addEventListener("dblclick",function(){leakedDblclicks++;});room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' dbl(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={leaked:leakedDblclicks,other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(400);report.steps.reply=window.__bedroomTicTacToeState();',
-  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();',
-  ' dbl(8);report.steps.restart=window.__bedroomTicTacToeState();await sleep(400);var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(400);}report.steps.draw=window.__bedroomTicTacToeState();',
-  ' setLang("cs");report.steps.cs=document.getElementById("bedroom-stained-glass").getAttribute("aria-label");setLang("en");',
+  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();report.steps.winCaption=cap();',
+  ' dbl(8);report.steps.restart=window.__bedroomTicTacToeState();report.steps.restartCaption=cap();await sleep(400);var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(400);}report.steps.draw=window.__bedroomTicTacToeState();report.steps.drawCaption=cap();',
+  ' setLang("cs");report.steps.cs={glass:document.getElementById("bedroom-stained-glass").getAttribute("aria-label"),caption:cap()};setLang("en");',
   ' touch(5);await sleep(35);touch(5);report.steps.touch=window.__bedroomTicTacToeState();window.__closeBedroomRoom();report.steps.close=window.__bedroomTicTacToeState();await sleep(450);report.steps.closeSettled=window.__bedroomTicTacToeState();',
   ' await sleep(300);window.goToStage("office");window.__openBedroomRoom();await sleep(80);dbl(7);report.steps.resetStart=window.__bedroomTicTacToeState();window.__runTransientResetHooks();report.steps.loftReset={room:window.__bedroomRoomState(),game:window.__bedroomTicTacToeState()};await sleep(450);report.steps.loftResetSettled=window.__bedroomTicTacToeState();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
@@ -70,14 +71,28 @@ check(s.turn && count(s.turn.board, "X") === 2 && count(s.turn.board, "O") === 1
 check(s.win && s.win.phase === "done" && s.win.winner === "O" &&
   s.win.line.length === 3 && !s.win.aiPending,
   "a completed winning line settles the game and its timer", s.win);
+check(s.win && s.win.resultCaptionKey === "bedroom_glass_loss" &&
+  s.winCaption && s.winCaption.key === "bedroom_glass_loss" &&
+  /window won/i.test(s.winCaption.text) && s.winCaption.flash &&
+  s.winCaption.flash.owner === "bedroom-ttt",
+  "a computer win is announced visibly as the visitor's loss", s.winCaption);
 check(s.restart && s.restart.board[8] === "X" && count(s.restart.board, "X") === 1 &&
   count(s.restart.board, "O") === 0 && s.restart.phase === "computer",
   "double-click after completion clears the board and honors the new start pane", s.restart);
+check(s.restartCaption && !s.restartCaption.flash &&
+  s.restartCaption.key !== "bedroom_glass_loss" &&
+  !/window won/i.test(s.restartCaption.text),
+  "restart clears the completed game's visible result", s.restartCaption);
 check(s.draw && s.draw.phase === "done" && s.draw.winner === "draw" &&
   count(s.draw.board, "X") === 5 && count(s.draw.board, "O") === 4,
   "optimal visitor play reaches and detects a draw", s.draw);
-check(s.cs && /Remíza/.test(s.cs),
-  "live game-result guidance switches to Czech", s.cs);
+check(s.draw && s.draw.resultCaptionKey === "bedroom_glass_draw" &&
+  s.drawCaption && s.drawCaption.key === "bedroom_glass_draw" &&
+  /^Draw\b/.test(s.drawCaption.text),
+  "a draw is announced distinctly in the visible room caption", s.drawCaption);
+check(s.cs && /Remíza/.test(s.cs.glass) && s.cs.caption &&
+  /Remíza/.test(s.cs.caption.text) && s.cs.caption.key === "bedroom_glass_draw",
+  "the live board and visible result caption switch to Czech", s.cs);
 check(s.touch && s.touch.board[5] === "X" && count(s.touch.board, "X") === 1 &&
   count(s.touch.board, "O") === 0 && s.touch.phase === "computer" && s.touch.aiPending,
   "touch double-tap restarts in the tapped pane", s.touch);
@@ -99,6 +114,10 @@ check((source.match(/class="bedroom-ttt-pane"/g) || []).length === 9 &&
   "the widened, lowered stained-glass frame keeps one square three-by-three board");
 check(!/M29 63L66 102L29 153L66 197|M135 63L105 102L135 153L105 197/.test(source),
   "the former decorative diagonal mullions stay removed");
+check(/winner === "X"\) return "bedroom_glass_win"/.test(source) &&
+  /winner === "O"\) return "bedroom_glass_loss"/.test(source) &&
+  /winner === "draw"\) return "bedroom_glass_draw"/.test(source),
+  "player win, computer win, and draw map to three distinct localized captions");
 
 console.log("");
 if (failures) {

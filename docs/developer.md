@@ -641,7 +641,10 @@ answers as O after a 340 ms delay. Board, phase, result, winning line, and
 pending-timer state are closure-owned and exposed read-only through
 `__bedroomTicTacToeState()` for focused regression checks. `resetProps()` clears
 the board and cancels the AI timer, so both room close and the registered loft
-transient reset prevent a late move from landing off-screen.
+transient reset prevent a late move from landing off-screen. A completed game
+uses the shared `__flashCaptionKey` surface with owner `"bedroom-ttt"` for its
+localized win/loss/draw result; restart and teardown clear that owner so its
+caption cannot outlive the board.
 
 All five lower rooms claim the shared `"lower-room"` notification hold. This
 reuses the action-game queue: incoming messages enter the thread immediately,

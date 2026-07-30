@@ -30753,13 +30753,16 @@ window.__bedroomRoomOpen = false;
     }
     return board.every(Boolean) ? { winner: "draw", line: [] } : null;
   }
+  function tttResultTextKey(winner) {
+    if (winner === "X") return "bedroom_glass_win";
+    if (winner === "O") return "bedroom_glass_loss";
+    if (winner === "draw") return "bedroom_glass_draw";
+    return null;
+  }
   function tttTextKey() {
     if (tttPhase === "player") return "bedroom_glass_turn";
     if (tttPhase === "computer") return "bedroom_glass_wait";
-    if (tttWinner === "X") return "bedroom_glass_win";
-    if (tttWinner === "O") return "bedroom_glass_loss";
-    if (tttWinner === "draw") return "bedroom_glass_draw";
-    return "bedroom_glass";
+    return tttResultTextKey(tttWinner) || "bedroom_glass";
   }
   function refreshTttText() {
     if (!glass) return;
@@ -30804,6 +30807,7 @@ window.__bedroomRoomOpen = false;
     refreshTttText();
   }
   function resetTtt() {
+    if (window.__clearFlashCaption) window.__clearFlashCaption("bedroom-ttt");
     clearTimeout(tttAiTimer);
     tttAiTimer = null;
     tttBoard = [null, null, null, null, null, null, null, null, null];
@@ -30819,6 +30823,10 @@ window.__bedroomRoomOpen = false;
     tttWinner = result.winner;
     tttLine = result.line;
     renderTtt();
+    var key = tttResultTextKey(result.winner);
+    if (key && window.__flashCaptionKey) {
+      window.__flashCaptionKey(key, 6000, "bedroom-ttt");
+    }
   }
   function tttScore(board, turn, depth) {
     var result = tttResult(board);
@@ -31064,7 +31072,8 @@ window.__bedroomRoomOpen = false;
   window.__bedroomTicTacToeState = function () {
     return {
       board: tttBoard.slice(), phase: tttPhase, winner: tttWinner,
-      line: tttLine.slice(), aiPending: !!tttAiTimer
+      line: tttLine.slice(), aiPending: !!tttAiTimer,
+      resultCaptionKey: tttResultTextKey(tttWinner)
     };
   };
   window.__refreshBedroomGlassText = refreshTttText;

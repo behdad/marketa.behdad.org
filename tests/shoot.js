@@ -18,7 +18,7 @@ var HARNESS = [
   'report.steps.icons=Array.from(document.querySelectorAll("[data-shoot-game] .shoot-logo")).map(function(svg){return svg.tagName.toLowerCase()+":"+svg.querySelectorAll("path,ellipse,circle").length;});',
   'report.steps.tile={id:!!document.getElementById("monitor-dock-shoot"),en:document.querySelector("#monitor-dock-shoot .dock-label").textContent,bg:getComputedStyle(document.querySelector("#monitor-dock-shoot .dock-tile")).backgroundColor};',
   'window.setLang("cs");report.steps.tile.cs=document.querySelector("#monitor-dock-shoot .dock-label").textContent;window.setLang("en");',
-  'var focus=document.getElementById("monitor-desk-fullscreen"),overlay=document.getElementById("shoot-focus-overlay"),launchRequested=false;window.__monitorZoomIn();focus.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__openMonitorApp("shoot");snap("shoot");overlay.requestFullscreen=function(){launchRequested=true;return Promise.resolve();};document.querySelector("[data-shoot-game=\\"doom\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));report.steps.focusLaunch={requested:launchRequested,monitorFocus:window.__monitorContentFullscreen(),hostParent:document.getElementById("monitor-shoot-host").parentNode.id};document.dispatchEvent(new Event("fullscreenchange"));',
+  'var focus=document.getElementById("monitor-desk-fullscreen"),shootFullscreen=document.getElementById("monitor-doom-fullscreen"),overlay=document.getElementById("shoot-focus-overlay"),launchRequested=false;window.__monitorZoomIn();focus.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));window.__openMonitorApp("shoot");snap("shoot");overlay.requestFullscreen=function(){launchRequested=true;return Promise.resolve();};document.querySelector("[data-shoot-game=\\"doom\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));var expandedFrame=document.querySelector("#monitor-shoot-host iframe");report.steps.expandedLaunch={requested:launchRequested,monitorFocus:window.__monitorContentFullscreen(),hostParent:document.getElementById("monitor-shoot-host").parentNode.id};shootFullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));report.steps.focusFromExpanded={requested:launchRequested,monitorFocus:window.__monitorContentFullscreen(),hostParent:document.getElementById("monitor-shoot-host").parentNode.id,sameFrame:expandedFrame===document.querySelector("#monitor-shoot-host iframe"),controlOutside:!overlay.contains(shootFullscreen)};document.dispatchEvent(new Event("fullscreenchange"));report.steps.focusFromExpanded.sameAfter=expandedFrame===document.querySelector("#monitor-shoot-host iframe");',
   'var doomIcon=document.querySelector(".shoot-choice-doom path"),closeBg=document.querySelector("#monitor-doom-close .shoot-close-bg");',
   'report.steps.colors={chooserClose:getComputedStyle(closeBg).fill};',
   'window.__openMonitorApp("doom");snap("doom");',
@@ -30,8 +30,8 @@ var HARNESS = [
   'report.steps.coach={on:coach.classList.contains("on"),en:coach.querySelector("text").textContent,pointer:coach.getAttribute("pointer-events"),y:+coachRect.getAttribute("y"),screenBottom:+screen.getAttribute("y")+ +screen.getAttribute("height")};',
   'window.setLang("cs");report.steps.coach.cs=coach.querySelector("text").textContent;window.setLang("en");',
   'window.__openMonitorApp("quake");snap("quake");',
-  'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back"),focus=document.getElementById("monitor-desk-fullscreen"),overlay=document.getElementById("shoot-focus-overlay");',
-  'window.__monitorZoomIn();report.steps.gameControls={closeAria:close.getAttribute("aria-label"),closeMark:close.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents,ownFocus:!!document.getElementById("monitor-doom-fullscreen")};var requested=false;overlay.requestFullscreen=function(){requested=true;return Promise.resolve();};focus.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));var focusRect=document.getElementById("shoot-focus-stage").getBoundingClientRect();report.steps.focus={shown:!overlay.hidden,requested:requested,ratio:focusRect.width/focusRect.height,hostParent:document.getElementById("monitor-shoot-host").parentNode.id,noExitButton:!document.getElementById("shoot-focus-exit")};document.dispatchEvent(new Event("fullscreenchange"));report.steps.focus.exited=document.getElementById("monitor-shoot-host").parentNode.id==="monitor-doom-wrap";close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents};',
+  'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back"),fullscreen=document.getElementById("monitor-doom-fullscreen"),overlay=document.getElementById("shoot-focus-overlay");',
+  'var backRect=back.querySelector(".shoot-close-bg").getBoundingClientRect(),fullscreenRect=fullscreen.querySelector(".shoot-close-bg").getBoundingClientRect(),closeRect=close.querySelector(".shoot-close-bg").getBoundingClientRect(),backHit=back.querySelector(".mini-hit").getBoundingClientRect(),fullscreenHit=fullscreen.querySelector(".mini-hit").getBoundingClientRect(),closeHit=close.querySelector(".mini-hit").getBoundingClientRect();report.steps.gameControls={closeAria:close.getAttribute("aria-label"),fullscreenAria:fullscreen.getAttribute("aria-label"),closeMark:close.querySelector("path").getAttribute("d"),fullscreenMark:fullscreen.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents,fullscreenPointer:getComputedStyle(fullscreen).pointerEvents,order:backRect.left<fullscreenRect.left&&fullscreenRect.left<closeRect.left,disjoint:backHit.right<=fullscreenHit.left+.1&&fullscreenHit.right<=closeHit.left+.1};window.setLang("cs");report.steps.gameControls.fullscreenCs=fullscreen.getAttribute("aria-label");window.setLang("en");var requested=false,beforeFrame=document.querySelector("#monitor-shoot-host iframe");overlay.requestFullscreen=function(){requested=true;return Promise.resolve();};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));var focusRect=document.getElementById("shoot-focus-stage").getBoundingClientRect();report.steps.focus={shown:!overlay.hidden,requested:requested,ratio:focusRect.width/focusRect.height,hostParent:document.getElementById("monitor-shoot-host").parentNode.id,sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),noExitButton:!document.getElementById("shoot-focus-exit"),controlOutside:!overlay.contains(fullscreen)};document.dispatchEvent(new Event("fullscreenchange"));report.steps.focus.exited=document.getElementById("monitor-shoot-host").parentNode.id==="monitor-doom-wrap";report.steps.focus.sameAfter=beforeFrame===document.querySelector("#monitor-shoot-host iframe");close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents,fullscreen:getComputedStyle(fullscreen).pointerEvents};',
   'window.__openMonitorApp("shoot");snap("reopened");document.querySelector("[data-shoot-game=\\"q3\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));snap("q3reopened");back.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
   'report.steps.chooserControls={closeAria:close.getAttribute("aria-label"),backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
   'report.errors=window.__errs||[];document.getElementById("__report").textContent=JSON.stringify(report);',
@@ -70,16 +70,28 @@ if (result) {
     "duke routes directly to its self-hosted player", s.duke);
   check(s.quake3.view === "q3" && s.quake3.src === "q3/player.html",
     "quake3 routes directly to Quake III", s.quake3);
-  check(!s.gameControls.ownFocus && s.focus.shown && s.focus.requested &&
+  check(s.gameControls.fullscreenPointer !== "none" && /Fullscreen/.test(s.gameControls.fullscreenAria) &&
+      s.gameControls.fullscreenCs === "Celá obrazovka" &&
+      s.gameControls.order && s.gameControls.disjoint &&
+      s.gameControls.backMark !== s.gameControls.fullscreenMark &&
+      s.gameControls.fullscreenMark !== s.gameControls.closeMark,
+    "active Shoot controls are ordered Back, Fullscreen, Dismiss with separate hit targets",
+    s.gameControls);
+  check(s.focus.shown && s.focus.requested &&
       Math.abs(s.focus.ratio - 4 / 3) < 0.01 &&
-      s.focus.hostParent === "shoot-focus-stage" && s.focus.noExitButton && s.focus.exited,
-    "monitor focus gives Shoot true 4:3 browser fullscreen with native-Escape exit only", {
+      s.focus.hostParent === "shoot-focus-stage" && s.focus.sameFrame &&
+      s.focus.noExitButton && s.focus.controlOutside && s.focus.exited && s.focus.sameAfter,
+    "Shoot Fullscreen reparents the live 4:3 iframe and leaves native Escape as the only exit", {
       controls: s.gameControls, focus: s.focus
     });
-  check(s.focusLaunch.requested && !s.focusLaunch.monitorFocus &&
-      s.focusLaunch.hostParent === "shoot-focus-stage",
-    "choosing a shooter from monitor focus transitions directly to Shoot browser fullscreen",
-    s.focusLaunch);
+  check(!s.expandedLaunch.requested && s.expandedLaunch.monitorFocus &&
+      s.expandedLaunch.hostParent === "monitor-doom-wrap" &&
+      s.focusFromExpanded.requested && !s.focusFromExpanded.monitorFocus &&
+      s.focusFromExpanded.hostParent === "shoot-focus-stage" &&
+      s.focusFromExpanded.sameFrame && s.focusFromExpanded.sameAfter &&
+      s.focusFromExpanded.controlOutside,
+    "the app control enters true fullscreen from expanded monitor focus without auto-launch or reload",
+    { launch: s.expandedLaunch, fullscreen: s.focusFromExpanded });
   check(s.gutters.count === 2 && s.gutters.menu,
     "both 4:3 side gutters belong to the monitor context-menu surface", s.gutters);
   check(s.coach.on && s.coach.en === "Esc releases mouse" && s.coach.cs === "Esc uvolní myš",
@@ -91,7 +103,7 @@ if (result) {
   check(/Close shoot/.test(s.gameControls.closeAria) && s.gameControls.backPointer !== "none" &&
       s.gameControls.closeMark !== s.gameControls.backMark &&
       !s.dismissed.open && s.dismissed.view === "chooser" && !s.dismissed.src && !s.dismissed.running &&
-      s.hiddenControls.back === "none" &&
+      s.hiddenControls.back === "none" && s.hiddenControls.fullscreen === "none" &&
       s.reopened.open && s.reopened.view === "chooser" && !s.reopened.src && s.reopened.running &&
       s.q3reopened.open && s.q3reopened.view === "q3" && s.q3reopened.src === "q3/player.html",
     "Dismiss silently destroys the shooter, clears its task LED, and reopening starts cleanly", {

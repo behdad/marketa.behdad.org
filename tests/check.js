@@ -131,7 +131,7 @@ function checkMonitorControlSpacing(file, html) {
     ["monitor-tattoo-back", "monitor-tattoo-close"],
     ["monitor-life-back", "monitor-life-close"],
     ["monitor-py-back", "monitor-py-close"],
-    ["monitor-doom-back", "monitor-doom-close"],
+    ["monitor-doom-back", "monitor-doom-fullscreen", "monitor-doom-close"],
     ["monitor-prince-fullscreen", "monitor-prince-close"]
   ];
   var errors = [], epsilon = 0.0001;

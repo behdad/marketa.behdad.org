@@ -215,9 +215,9 @@ var HARNESS = [
   // Kill now runs a ~2.1s FATALITY death-flash, THEN destroys the app: the menu hides + the
   // on-screen flash (death-doom) starts immediately; show-doom is torn down only after the flash.
   "    if(monKill()) monKill().click(); await sleep(40); S('doom_kill_hid_menu', !monMenu()); S('doom_kill_flash_started', mon().classList.contains('death-doom')); S('doom_kill_still_open_during_flash', mon().classList.contains('show-doom')); await sleep(2300); S('doom_kill_closed_app', !mon().classList.contains('show-doom')); S('doom_kill_flash_ended', !mon().classList.contains('death-doom'));",
-  // shared in-page monitor focus mode (Shoot has no iframe-level fullscreen control)
+  // Shoot's own Fullscreen control leaves the shared in-page monitor mode and preserves its iframe.
   "    if(window.__monitorZoomIn)window.__monitorZoomIn(); var fsBtn=document.getElementById('monitor-desk-fullscreen'),shootOverlay=document.getElementById('shoot-focus-overlay'),shootFsRequested=false; fsBtn.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); shootOverlay.requestFullscreen=function(){shootFsRequested=true;return Promise.resolve();}; S('monitor_fs_btn_present', !!fsBtn);",
-  "    showApp('show-doom'); document.querySelector('[data-shoot-game=\"doom\"]').click(); await sleep(40); S('monitor_fs_entered', shootFsRequested&&mon().classList.contains('show-doom')&&!document.getElementById('monitor-doom-fs')); document.dispatchEvent(new Event('fullscreenchange')); await sleep(40);",
+  "    showApp('show-doom'); document.querySelector('[data-shoot-game=\"doom\"]').click(); await sleep(40); var shootFrame=document.querySelector('#monitor-shoot-host iframe'),shootFs=document.getElementById('monitor-doom-fullscreen'); S('shoot_did_not_auto_fs',!shootFsRequested&&window.__monitorContentFullscreen()); shootFs.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); S('monitor_fs_entered', shootFsRequested&&mon().classList.contains('show-doom')&&!window.__monitorContentFullscreen()&&shootFrame===document.querySelector('#monitor-shoot-host iframe')&&!shootOverlay.contains(shootFs)); document.dispatchEvent(new Event('fullscreenchange')); await sleep(40); S('shoot_fs_returned_same_iframe',shootFrame===document.querySelector('#monitor-shoot-host iframe'));",
   "    mon().classList.remove('show-caps');",
   // doom restart teardown — Restart now runs the FATALITY flash, THEN destroys (and would cold-boot,
   // but a real re-boot needs show-caps + the WASM runtime, out of scope here; no show-caps → openDoom
@@ -395,7 +395,8 @@ check("doom Kill is DISABLED while the engine isn't running", s.doom_kill_disabl
 check("doom Kill becomes ENABLED once the engine is running", s.doom_kill_enabled_when_running === true);
 check("enabled doom Kill runs the FATALITY flash then destroys the app", s.doom_kill_hid_menu === true && s.doom_kill_flash_started === true && s.doom_kill_still_open_during_flash === true && s.doom_kill_closed_app === true && s.doom_kill_flash_ended === true);
 check("shared monitor fullscreen button present", s.monitor_fs_btn_present === true);
-check("shared monitor fullscreen carries Shoot without an iframe-level control", s.monitor_fs_entered === true);
+check("choosing a shooter does not auto-enter browser fullscreen", s.shoot_did_not_auto_fs === true);
+check("Shoot Fullscreen leaves monitor focus and reparents the live iframe", s.monitor_fs_entered === true && s.shoot_fs_returned_same_iframe === true);
 console.log(" runtime teardown helpers (no throws, real state reset):");
 check("doom restart runs the flash then tears down the disposable iframe", s.doom_restart_threw === null && s.doom_restart_flash_started === true && s.doom_restart_removed_iframe === true && s.doom_restart_torn_down === true, s.doom_restart_threw);
 check("linux restart holds the BSOD longer, then destroys + clears the console", s.linux_restart_threw === null && s.linux_restart_flash_started === true && s.linux_restart_bsod_lingers === true && s.linux_restart_cleared_out === true, s.linux_restart_threw);

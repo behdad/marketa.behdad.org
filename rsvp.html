@@ -4930,12 +4930,14 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
    lives in a disposable same-origin iframe so Back/Kill tears its engine and listeners down. */
 #monitor-doom{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
 #office-monitor.show-doom #monitor-doom{opacity:1; pointer-events:auto}
-#monitor-doom-close{cursor:pointer}
+#monitor-doom-close,#monitor-doom-fullscreen{cursor:pointer}
 #monitor-doom-close .shoot-close-bg{fill:#805438;stroke:#5e3827}
-#monitor-doom-close:hover .seg-hover{opacity:.55;fill:#4b2d20}
+#monitor-doom-close:hover .seg-hover,#monitor-doom-fullscreen:hover .seg-hover{opacity:.55;fill:#4b2d20}
 #monitor-doom-back{opacity:0;pointer-events:none;cursor:pointer}
 #office-monitor.show-doom #monitor-doom:not([data-shoot-view="chooser"]) #monitor-doom-back{opacity:1;pointer-events:auto}
 #monitor-doom-back:hover .seg-hover{opacity:.55;fill:#4b2d20}
+#monitor-doom-fullscreen{opacity:0;pointer-events:none}
+#office-monitor.show-doom #monitor-doom:not([data-shoot-view="chooser"]) #monitor-doom-fullscreen{opacity:1;pointer-events:auto}
 .doom-wrap{width:100%; height:100%; overflow:hidden; background:#000; display:grid; grid-template-rows:100%; place-items:center} /* grid avoids layered position:absolute descendants under the scaled foreignObject (WebKit bug 23113). Replaced canvases/iframes still cannot composite there on WebKit. */
 #monitor-shoot-picker{grid-area:1/1; align-self:stretch; justify-self:stretch; display:grid; grid-template-columns:repeat(3,1fr); gap:2px; padding:5px 6px; box-sizing:border-box; background:radial-gradient(circle at 50% 35%,#30251b,#100d0a 72%)}
 .shoot-choice{min-width:0; border:.5px solid rgba(232,192,96,.55); border-radius:2px; background:rgba(68,43,29,.72); color:#f5e3a5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:1px; font:2.3px/1.05 "Source Serif 4",Georgia,serif; cursor:pointer}
@@ -23677,13 +23679,21 @@ section{margin:1.9rem 0}
 </foreignObject>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="shoot-left" x="254" y="154" width="34" height="42" fill="transparent"/>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="shoot-right" x="344" y="154" width="34" height="42" fill="transparent"/>
-<g id="monitor-doom-back" transform="translate(71,29.3) scale(0.8)" role="button" data-title-i="shoot_picker" data-aria-i="shoot_picker">
+<g id="monitor-doom-back" transform="translate(66,29.3) scale(0.8)" role="button" data-title-i="shoot_picker" data-aria-i="shoot_picker">
 <title data-i="shoot_picker">Back to games</title>
 <rect class="mini-hit" x="369" y="155" width="8.625" height="9" fill="#000" opacity="0"/>
 <rect class="shoot-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
 <rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
 <rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4b2d20" opacity="0"/>
 <path d="M375.4 157.9 L373.5 159.25 L375.4 160.6" fill="none" stroke="#f8f5ec" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<g id="monitor-doom-fullscreen" transform="translate(71,29.3) scale(0.8)" role="button" tabindex="0" data-title-i="doom_fs" data-aria-i="doom_fs">
+<title data-i="doom_fs">Fullscreen</title>
+<rect class="mini-hit" x="371.375" y="155" width="6.25" height="9" fill="#000" opacity="0"/>
+<rect class="shoot-close-bg" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#805438" stroke="#5e3827" stroke-width="0.5"/>
+<rect x="372.6" y="157.05" width="3.8" height="2.1" rx="1.05" fill="#ffffff" opacity="0.16"/>
+<rect class="seg-hover" x="372" y="156.5" width="5" height="5.5" rx="2.5" fill="#4b2d20" opacity="0"/>
+<path d="M373.15 158.55 V157.75 H373.95 M375.05 157.75 H375.85 V158.55 M375.85 159.75 V160.55 H375.05 M373.95 160.55 H373.15 V159.75" fill="none" stroke="#f8f5ec" stroke-width="0.48" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 <g id="monitor-doom-close" transform="translate(76.0,29.3) scale(0.8)" role="button" data-title-i="shoot_close" data-aria-i="shoot_close">
 <title id="monitor-doom-close-title" data-i="shoot_close">Close shoot</title>
@@ -60476,6 +60486,7 @@ async def localfont(name):
   var doomWrap = document.getElementById("monitor-doom-wrap");
   var doomCloseBtn = document.getElementById("monitor-doom-close");
   var doomBackBtn = document.getElementById("monitor-doom-back");
+  var doomFullscreenBtn = document.getElementById("monitor-doom-fullscreen");
   var shootHost = document.getElementById("monitor-shoot-host");
   var shootFocusOverlay = document.getElementById("shoot-focus-overlay");
   var shootFocusStage = document.getElementById("shoot-focus-stage");
@@ -60600,8 +60611,6 @@ async def localfont(name):
     else {
       loadShootFrame(shootView);
       showShootCoach();
-      if (window.__monitorContentFullscreen && window.__monitorContentFullscreen() &&
-          window.__enterShootBrowserFullscreen) window.__enterShootBrowserFullscreen();
     }
     shootSync();
   }
@@ -60733,6 +60742,18 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doomBackBtn.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
     });
     doomBackBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+  }
+  if (doomFullscreenBtn) {
+    function enterShootFullscreen(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setShootFocus(true);
+    }
+    doomFullscreenBtn.addEventListener("click", enterShootFullscreen);
+    doomFullscreenBtn.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") enterShootFullscreen(e);
+    });
+    doomFullscreenBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── hidden PrinceJS app ────────────────────────────────────────────────────────
   // Hidden monitor app with one stable iframe browsing context. The contained game starts
@@ -63721,12 +63742,6 @@ async def localfont(name):
   window.__syncMonitorFullscreenButton = syncMonitorFullscreenButton;
   window.__toggleMonitorContentFullscreen = function () {
     if (zoomEl !== monitor) return;
-    if (!monitorContentFullscreen && monitor.classList.contains("show-doom") &&
-        window.__shootCanFullscreen && window.__shootCanFullscreen() &&
-        window.__enterShootBrowserFullscreen) {
-      window.__enterShootBrowserFullscreen();
-      return;
-    }
     monitorContentFullscreen = !monitorContentFullscreen;
     syncMonitorFullscreenButton();
     refitZoom();

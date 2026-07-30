@@ -253,11 +253,10 @@ zoomed, the compact taskbar control at the far right expands only
 the 124×42 display surface across the current browser viewport, preserving its
 aspect ratio against a black surround. Dismiss an open app to return to this
 taskbar control; tap the surround or press Escape to return directly. This does
-not invoke browser fullscreen; **F** remains that separate toggle. Shoot is the
-deliberate exception: choosing a shooter while the monitor is expanded opens
-the 4:3 game in true browser fullscreen so the monitor's extra-wide shape does
-not waste most of the browser height. Shoot adds no second fullscreen or exit
-button; press Escape to leave.
+not invoke browser fullscreen; **F** remains that separate toggle. Shoot has its
+own **Fullscreen** control between **Back** and **Dismiss**. It moves the running
+4:3 game into true browser fullscreen without restarting it, whether the monitor
+is ordinarily zoomed or expanded. Press Escape to leave fullscreen.
 
 The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
 Solitaire. Solitaire accepts clicks or card drags; the full lifted stack follows

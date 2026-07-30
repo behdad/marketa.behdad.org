@@ -202,8 +202,8 @@ gameplay messages finish before that room caption appears.
 - **Dungeon** pairs with the Garden. Select the play wall, or press Enter or
   Space, to start or resume Prince of Persia; Escape or Backspace leaves without
   ending the run.
-- **Cinema** pairs with Cuddly-puddly. Select its projector, or press Enter or
-  Space, to turn it on and reveal the film chooser. Those keys control the
+- **Cinema** pairs with Cuddly-puddly. Select its dark screen or projector, or
+  press Enter or Space, to turn it on and reveal the film chooser. Those keys control the
   projector, not film playback; use the side Play/Pause and Next controls.
   **Choose another** returns to the chooser. The window toggles day and night.
   The woven poufs beside the asymmetrical leather daybed nest into one another.

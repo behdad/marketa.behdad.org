@@ -31868,6 +31868,11 @@ var T = {
     room_cuddly: "Cuddly-puddly",
     room_office: "Office",
     room_balcony: "Balcony",
+    room_bathroom: "Bathroom",
+    room_dungeon: "Dungeon",
+    room_cinema: "Cinema",
+    room_bedroom: "Bedroom",
+    room_entrance: "Entrance",
     lower_bathroom_marker: "Bathroom portal",
     lower_dungeon_marker: "Dungeon portal",
     lower_bedroom_marker: "Bedroom portal",
@@ -33142,6 +33147,11 @@ var T = {
     room_cuddly: "Cuddly-puddly",
     room_office: "Pracovna",
     room_balcony: "Balkon",
+    room_bathroom: "Koupelna",
+    room_dungeon: "Kobka",
+    room_cinema: "Kino",
+    room_bedroom: "Ložnice",
+    room_entrance: "Vstup",
     lower_bathroom_marker: "Portál do koupelny",
     lower_dungeon_marker: "Portál do kobky",
     lower_bedroom_marker: "Portál do ložnice",
@@ -89041,22 +89051,27 @@ function spawnDustMote(container) {
   function lowerRoomForStage(name) {
     var table = {
       kitchen: {
+        id: "bathroom",
         element: document.getElementById("bathroom-room"),
         open: function () { return window.__openBathroomRoom && window.__openBathroomRoom(); }
       },
       garden: {
+        id: "dungeon",
         element: document.getElementById("prince-basement"),
         open: function () { return window.__openGardenPrince && window.__openGardenPrince(); }
       },
       cuddly: {
+        id: "cinema",
         element: document.getElementById("cinema-room"),
         open: function () { return window.__openCinemaRoom && window.__openCinemaRoom(); }
       },
       office: {
+        id: "bedroom",
         element: document.getElementById("bedroom-room"),
         open: function () { return window.__openBedroomRoom && window.__openBedroomRoom(); }
       },
       balcony: {
+        id: "entrance",
         element: document.getElementById("entrance-room"),
         open: function () { return window.__openEntranceRoom && window.__openEntranceRoom(); }
       }
@@ -89071,6 +89086,11 @@ function spawnDustMote(container) {
     if (window.__bedroomRoomOpen) return lowerRoomForStage("office");
     if (window.__entranceRoomOpen) return lowerRoomForStage("balcony");
     return null;
+  }
+  function savedLowerRoom(progress) {
+    if (!progress || typeof progress.lowerRoom !== "string") return null;
+    var room = lowerRoomForStage(progress.room);
+    return room && room.id === progress.lowerRoom ? room : null;
   }
   function focusLowerNavigation(target) {
     var focusTarget = target || document.querySelector(".hunt-viewport");
@@ -103490,6 +103510,7 @@ function spawnDustMote(container) {
       version: LOFT_CHECKPOINT_VERSION, savedAt: Date.now(),
       progress: {
         room: window.currentStageName || "kitchen", maxUnlocked: maxUnlocked,
+        lowerRoom: (activeLowerRoom() || {}).id,
         phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
         daylight: !(balcony && balcony.classList.contains("dusk")),
         bbq: !!(window.bbq && window.bbq())
@@ -103563,7 +103584,8 @@ function spawnDustMote(container) {
     return huntText(key).replace("{n}", n);
   }
   function recoveryCaptionText(saved) {
-    return huntText("recovery_meta").replace("{room}", roomDotLabel(saved.progress.room)).replace("{age}", recoveryAge(saved.savedAt));
+    var lowerRoom = savedLowerRoom(saved.progress);
+    return huntText("recovery_meta").replace("{room}", roomDotLabel(lowerRoom ? lowerRoom.id : saved.progress.room)).replace("{age}", recoveryAge(saved.savedAt));
   }
   function showRecoveryCaption(saved) {
     caption.classList.add("recovery-caption");
@@ -103674,6 +103696,7 @@ function spawnDustMote(container) {
     // inside it intentionally settle those subsystems to their fresh defaults.
     var hasSystems = Object.prototype.hasOwnProperty.call(saved, "systems");
     var p = saved.progress || {}, savedMax = Math.max(0, Math.min(STAGES.length - 1, parseInt(p.maxUnlocked, 10) || 0));
+    var lowerRoom = savedLowerRoom(p);
     setMaxUnlocked(0, true); unlockThrough(savedMax);
     setSecondRound(!!p.phase2, { releaseHeld: false });
     balconyIntroSeen = savedMax >= STAGES.length - 1;
@@ -103690,6 +103713,10 @@ function spawnDustMote(container) {
     if (window.__setDayNight) window.__setDayNight(!p.daylight);
     goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
     if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "afterStage");
+    // Lower rooms retain their own entry semantics: transient illustrated props reset,
+    // Cinema stays powered off, and the dungeon returns to its play wall without creating
+    // or resuming the Prince iframe.
+    if (lowerRoom) lowerRoom.open();
     endAttract();
     // The recovery surface is also the paint cover for restoration. Keep it mounted while
     // puzzle, environment, occasion, party and room owners settle, then discard the preview

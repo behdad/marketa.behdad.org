@@ -17,7 +17,8 @@ above the scene, select what looks useful, and explore at your own pace.
 5. Reach the balcony and start the party to unlock every room, Messages, guests,
    and free play.
 
-If a saved session exists, **Continue** restores it. **Start over** discards it
+If a saved session exists, **Continue** restores it, including any hidden room
+left open, without restarting its film or game. **Start over** discards it
 immediately; Restart inside the game asks for confirmation.
 
 Prefer watching? **Trailer** is a fixed one-minute preview. **Autoplay** is an

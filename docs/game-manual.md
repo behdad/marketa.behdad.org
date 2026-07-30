@@ -209,7 +209,8 @@ Extinguishing it or ending the party ends BBQ mode.
   board with the window moving first. Leaving clears the board.
 - **The Lofts** entrance pairs with the Balcony. Select the windows and street
   details for small reactions. Toggling all five windows away from their
-  day/night defaults earns a caption.
+  day/night defaults earns a caption. Enter flickers them briefly as an
+  invitation to play.
 
 ### Optional activities
 

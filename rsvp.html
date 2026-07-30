@@ -508,6 +508,9 @@ footer{margin-top:2.6rem}
 #entrance-room.entrance-day #entrance-day-wash{opacity:.24}
 .entrance-window-light{opacity:0;transition:opacity .45s ease}
 .entrance-window-pane.light-on .entrance-window-light{opacity:.78}
+#entrance-room-art.window-cue .entrance-window-light{
+  animation:entrance-window-cue .82s steps(1,end);
+}
 .entrance-night-light{opacity:1;transition:opacity .7s ease}
 #entrance-room.entrance-day .entrance-night-light{opacity:0}
 .entrance-smoke-tint{opacity:calc(var(--smoke,0) * .42);transition:opacity .9s ease}
@@ -539,6 +542,10 @@ footer{margin-top:2.6rem}
 }
 @keyframes entrance-window-answer{
   0%,100%{fill:transparent}32%{fill:rgba(255,232,174,.34)}55%{fill:rgba(127,158,192,.12)}
+}
+@keyframes entrance-window-cue{
+  0%,48%,96%{opacity:.88}
+  24%,72%{opacity:.06}
 }
 @keyframes entrance-door-answer{
   0%,100%{fill:transparent}30%{fill:rgba(255,243,196,.34)}48%{fill:rgba(69,58,49,.2)}
@@ -30640,6 +30647,7 @@ window.__entranceRoomOpen = false;
   var entranceNight = null;
   var windowLights = {};
   var windowPayoffShown = false;
+  var windowCueTimer = null;
   if (!room || !viewport || !closeButton || !balconyStage) return;
 
   function paintEntranceWindows() {
@@ -30675,6 +30683,22 @@ window.__entranceRoomOpen = false;
     } else if (!fullyFlipped) {
       windowPayoffShown = false;
     }
+    return true;
+  }
+  function cueEntranceWindows() {
+    if (!window.__entranceRoomOpen) return false;
+    var art = document.getElementById("entrance-room-art");
+    if (!art) return false;
+    clearTimeout(windowCueTimer);
+    art.classList.remove("window-cue");
+    void art.getBoundingClientRect().width;
+    art.classList.add("window-cue");
+    if (typeof playDryClickSound === "function") playDryClickSound("entrance-windows");
+    windowCueTimer = setTimeout(function () {
+      windowCueTimer = null;
+      art.classList.remove("window-cue");
+      paintEntranceWindows();
+    }, 850);
     return true;
   }
   syncEntranceDayNight();
@@ -30728,6 +30752,10 @@ window.__entranceRoomOpen = false;
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     clearEntranceInteractions();
+    clearTimeout(windowCueTimer);
+    windowCueTimer = null;
+    var art = document.getElementById("entrance-room-art");
+    if (art) art.classList.remove("window-cue");
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     closing = true;
     viewport.classList.remove("entrance-room-open");
@@ -30789,11 +30817,13 @@ window.__entranceRoomOpen = false;
       night: entranceNight,
       windows: windowIds.map(function (id) { return { id: id, on: !!windowLights[id] }; }),
       windowsFlipped: windowIds.every(function (id) { return windowLights[id] === !entranceNight; }),
+      windowCue: document.getElementById("entrance-room-art").classList.contains("window-cue"),
       reactions: Object.assign({}, reactions),
       reacting: props.filter(function (prop) { return prop.classList.contains("reacting"); })
         .map(function (prop) { return prop.id; })
     };
   };
+  window.__cueEntranceWindows = cueEntranceWindows;
   if (window.__registerTransientResetHook) window.__registerTransientResetHook("entrance-room", closeEntrance);
 })();
 
@@ -30847,6 +30877,9 @@ document.addEventListener("keydown", function (event) {
     if (entranceProp) entranceProp.dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true })
     );
+    else if (event.key === "Enter" && window.__cueEntranceWindows) {
+      window.__cueEntranceWindows();
+    }
     return;
   }
   if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {

@@ -325,7 +325,10 @@ The loft includes a drop-down JavaScript console and the monitor's **Console**
 and **Code** apps. They are optional play spaces, not part of the main game.
 Press backtick to open the drop-down console and type `help` or `shortcuts()` to
 get oriented. The Code app can run JavaScript and Python files; named files are
-saved in this browser. JavaScript and Python examples can open native SVG
+saved in this browser. Its JS/PY control changes only how the current buffer
+runs—it never renames the file or opens a same-named file automatically.
+Renaming to a filename that already exists is refused rather than overwriting it.
+JavaScript and Python examples can open native SVG
 graphics views. Once a drawing exists, the small **gfx** control appears so you
 can switch between it and the Console output. On the zoomed monitor desktop,
 typing opens the app finder: matching search names appear alphabetically,

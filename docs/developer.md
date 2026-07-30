@@ -156,9 +156,12 @@ runner. Python uses `localStorage["deskPythonScripts"]` and hands the complete
 buffer to the existing Python app through `__runPythonCode`. The recoverable
 `deskCodeDraft` object includes its language. Explicit `.js` and `.py`
 filenames select a runtime; an extensionless name retains the manually selected
-one. The JS/PY pills open an existing same-basename sibling in the other store;
-without one, they retain the text as an unnamed buffer and leave the named
-source file untouched. Keep these stores outside checkpoint/reset state.
+one when first saved or opened. The JS/PY pills change only the execution
+language of the current buffer. They never modify its name, navigate to a
+same-basename sibling, migrate it between stores, or overwrite that sibling.
+Filename collisions across either store are rejected for renames, copies, and
+imports; the original buffer remains selected and its edits remain autosaved.
+Keep these stores outside checkpoint/reset state.
 
 Python Code jobs queue while self-hosted Pyodide loads, then execute serially
 through `runPythonAsync` in the Python console's persistent namespace. stdout,

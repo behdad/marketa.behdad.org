@@ -55425,6 +55425,18 @@ setOfficeProgress("pc", false);
     var lang = language === "python" ? "python" : "js";
     try { localStorage.setItem(CODE_STORE_KEYS[lang], JSON.stringify(o)); } catch (e) {}
   }
+  function codeNameExistsElsewhere(name, currentName, currentLanguage) {
+    return ["js", "python"].some(function (language) {
+      if (name === currentName && language === currentLanguage) return false;
+      return Object.prototype.hasOwnProperty.call(readScripts(language), name);
+    });
+  }
+  function codeRejectExistingName() {
+    if (codeName) codeName.value = codeLastSavedName || "";
+    codeAiSetStatus("that filename already exists", false);
+    codeRefreshPicker(codeLastSavedName);
+    codeScheduleDraft();
+  }
   function codePaintLanguage() {
     if (codeLangJsBtn) codeLangJsBtn.classList.toggle("active", codeLanguage === "js");
     if (codeLangPyBtn) codeLangPyBtn.classList.toggle("active", codeLanguage === "python");
@@ -55456,7 +55468,8 @@ setOfficeProgress("pc", false);
     return names.length ? "saved scripts: " + names.join(", ") : "no saved scripts yet.";
   }
   // Rebuild one language-neutral file list. A .js/.py extension selects its runtime when opened;
-  // extensionless files retain the store they came from.
+  // extensionless files retain the store they came from. Runtime selection is independent of
+  // file identity, so a saved file remains highlighted while it is run in the other language.
   function codeRefreshPicker(sel) {
     if (!codeList) return;
     var files = [];
@@ -55482,7 +55495,7 @@ setOfficeProgress("pc", false);
       var it = document.createElement("div");
       var active = file.unsaved
         ? !codeName.value.trim() && file.language === codeLanguage
-        : file.name === sel && file.language === codeLanguage;
+        : file.name === sel && file.language === codeLastSavedLanguage;
       it.className = "code-item" + (file.unsaved ? " unsaved" : "") + (active ? " active" : "");
       it.textContent = file.name;
       it.title = file.name + " · " + (file.language === "python" ? "Python" : "JavaScript");
@@ -55502,24 +55515,10 @@ setOfficeProgress("pc", false);
     var next = language === "python" ? "python" : "js";
     if (next === codeLanguage) { codePaintLanguage(); return; }
     codeFlushAutoSave();
-    var oldName = codeName ? codeName.value.trim() : "", code = codeCode ? codeCode.value : "";
-    var counterpart = oldName;
-    if (/\.js$/i.test(counterpart) && next === "python") counterpart = counterpart.replace(/\.js$/i, ".py");
-    else if (/\.py$/i.test(counterpart) && next === "js") counterpart = counterpart.replace(/\.py$/i, ".js");
-    var nextStore = readScripts(next);
-    // The language pills navigate between sibling files; they must never convert,
-    // rename, or delete the file currently being edited. If no sibling exists, retain
-    // the text as a new unnamed buffer in the requested language.
-    if (counterpart && Object.prototype.hasOwnProperty.call(nextStore, counterpart)) {
-      codeLoad(counterpart, next);
-      return;
-    }
+    // These pills select only the execution language. They never navigate to a sibling,
+    // clear or rewrite the filename, or migrate the file between storage maps.
     codeLanguage = next; codeRememberLanguage();
-    if (codeName) codeName.value = "";
-    if (codeCode) codeCode.value = code;
-    codeLastSavedName = null; codeLastSavedLanguage = next;
-    if (code) writeCodeUnsaved(code, next);
-    codeRefreshPicker(null);
+    codeRefreshPicker(codeLastSavedName);
     codeScheduleDraft();
   }
   function codeLoad(name, language) {
@@ -55559,16 +55558,21 @@ setOfficeProgress("pc", false);
     var name = codeName.value.trim();
     if (!name) { try { codeName.focus(); } catch (e) {} return; } // no nameless files
     var inferred = codeExplicitLanguage(name);
-    if (inferred && inferred !== codeLanguage) { codeLanguage = inferred; codeRememberLanguage(); }
-    var scr = readScripts(codeLanguage);
+    var saveLanguage = codeLastSavedName ? codeLastSavedLanguage : (inferred || codeLanguage);
+    if (codeNameExistsElsewhere(name, codeLastSavedName, codeLastSavedLanguage)) {
+      codeRejectExistingName();
+      return false;
+    }
+    var scr = readScripts(saveLanguage);
     scr[name] = codeCode.value; // same-name save overwrites — it's the same file
-    writeScripts(scr, codeLanguage);
+    writeScripts(scr, saveLanguage);
     codeName.value = name; // reflect the trimmed name back
     codeLastSavedName = name;
-    codeLastSavedLanguage = codeLanguage;
+    codeLastSavedLanguage = saveLanguage;
     clearCodeUnsaved();
     clearCodeDraft();
     codeRefreshPicker(name);
+    return true;
   }
   // Write the buffer to its language store, dropping a stale prior-name entry on rename so a
   // rename never leaves a duplicate under the old key. `prev` is the name it was last
@@ -55602,9 +55606,16 @@ setOfficeProgress("pc", false);
     if (!codeName || !codeCode) return;
     clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null;
     var name = codeName.value.trim(), inferred = codeExplicitLanguage(name);
-    if (inferred && inferred !== codeLanguage) { codeLanguage = inferred; codeRememberLanguage(); }
+    if (!codeLastSavedName && inferred && inferred !== codeLanguage) { codeLanguage = inferred; codeRememberLanguage(); }
     if (!name) { stashCodeUnsaved(); codeRefreshPicker(null); return; } // retain, but never persist, a nameless buffer
-    var code = codeCode.value, prev = codeLastSavedName, lang = codeLanguage, prevLang = codeLastSavedLanguage;
+    var code = codeCode.value, prev = codeLastSavedName;
+    var lang = codeLastSavedName ? codeLastSavedLanguage : codeLanguage, prevLang = codeLastSavedLanguage;
+    if (codeNameExistsElsewhere(name, prev, prevLang)) {
+      if (prev) codeWriteBuffer(prev, code, prev, prevLang, prevLang);
+      else writeCodeUnsaved(code, codeLanguage);
+      codeRejectExistingName();
+      return;
+    }
     codePendingCommit = function () {
       codeAutoTimer = null; codePendingCommit = null;
       codeWriteBuffer(name, code, prev, lang, prevLang);

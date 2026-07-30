@@ -160,7 +160,14 @@ var harness = [
   '  out.routed=routed; out.pythonActive=py.classList.contains("active");',
   '  out.pythonCompletion=window.__codeCommands().some(function(c){return c.name==="Turtle"});',
   '  out.loftRosterStable=window.__loftCommands().some(function(c){return c.name==="party"}) && !window.__loftCommands().some(function(c){return c.name==="Turtle"});',
-  '  document.getElementById("monitor-code-lang-js").click();out.pairedSwitch=name.value==="irene.js"&&code.value==="window.irene = 1;"&&JSON.parse(localStorage.getItem("deskPythonScripts")||"{}")["irene.py"]===\'print("turtle time")\';name.value="broken.js"; code.value="throw new Error(\\\"code boom\\\")";',
+  '  document.getElementById("monitor-code-lang-js").click();',
+  '  out.languageSwitchPreserves=name.value==="irene.py"&&code.value===\'print("turtle time")\'&&document.getElementById("monitor-code-lang-js").classList.contains("active")&&JSON.parse(localStorage.getItem("deskPythonScripts")||"{}")["irene.py"]===\'print("turtle time")\'&&JSON.parse(localStorage.getItem("deskScripts")||"{}")["irene.js"]==="window.irene = 1;";',
+  '  code.value=\'print("still irene")\';code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});',
+  '  out.languageSwitchStorage=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}")["irene.py"]===\'print("still irene")\'&&JSON.parse(localStorage.getItem("deskScripts")||"{}")["irene.js"]==="window.irene = 1;";',
+  '  Array.from(document.querySelectorAll("#monitor-code-list .code-item")).filter(function(x){return x.title.indexOf("irene.js ·")===0})[0].click();',
+  '  var jsBefore=JSON.parse(localStorage.getItem("deskScripts")||"{}");jsBefore["taken.js"]="do not overwrite";localStorage.setItem("deskScripts",JSON.stringify(jsBefore));name.value="taken.js";code.value="window.irene = 2;";name.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});',
+  '  var jsAfter=JSON.parse(localStorage.getItem("deskScripts")||"{}");out.renameCollision=name.value==="irene.js"&&jsAfter["taken.js"]==="do not overwrite"&&jsAfter["irene.js"]==="window.irene = 2;";',
+  '  name.value="broken.js"; code.value="throw new Error(\\\"code boom\\\")";',
   '  document.getElementById("monitor-code-run").click(); await new Promise(function(r){setTimeout(r,80)});',
   '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastCodeError;',
   '  out.jsGfxInitiallyHidden=!document.getElementById("monitor-console-view-toggle").classList.contains("has-graphics");',
@@ -195,8 +202,10 @@ check(state && !state.error, "headless Code interaction completed", state && sta
 if (state && !state.error) {
   check(state.pythonSaved === 'print("turtle time")' && state.jsUntouched,
     "a named Python buffer autosaves without contaminating legacy JavaScript files", state);
-  check(state.pairedSwitch,
-    "language pills open an existing sibling without renaming or deleting the focused file", state);
+  check(state.languageSwitchPreserves && state.languageSwitchStorage,
+    "language pills change only the runtime without renaming, navigating, migrating, or overwriting files", state);
+  check(state.renameCollision,
+    "renaming to an existing filename is refused without losing edits or overwriting either file", state);
   check(state.draftLanguage === "python",
     "the recoverable Code draft retains its language", state.draftLanguage);
   check(state.routed && state.routed.name === "irene.py" && state.routed.code === 'print("turtle time")',

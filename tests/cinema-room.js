@@ -38,6 +38,8 @@ var HARNESS = [
   ' window.goToStage("kitchen");var toggles=0,steps=[],oldToggle=window.__toggleDayNight,oldStep=window.__calStepTime;window.__toggleDayNight=function(){toggles++;};window.__calStepTime=function(n){steps.push(n);};key("ArrowDown");key("ArrowUp");key("d");key("ArrowUp",{shiftKey:true});key("ArrowDown",{shiftKey:true});window.__toggleDayNight=oldToggle;window.__calStepTime=oldStep;report.steps.verticalElsewhere={toggles:toggles,steps:steps,cinema:window.__cinemaRoomState(),prince:window.__princeState()};',
   ' window.goToStage("cuddly");key("ArrowDown");await sleep(850);report.steps.cuddlyDown=window.__cinemaRoomState();key("ArrowUp");await sleep(760);report.steps.cuddlyUp=window.__cinemaRoomState();',
   ' window.goToStage("garden");key("ArrowDown");await sleep(850);report.steps.gardenDown=window.__princeState();key("ArrowUp");await sleep(780);report.steps.gardenUp=window.__princeState();',
+  ' window.__secondRound=true;window.goToStage("cuddly");key("ArrowDown");await sleep(850);window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge"),coach=document.querySelector(".msg-badge-coach"),thumb=document.querySelector(".msg-thumb");report.steps.cinemaMessageHold={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1600);thumb=document.querySelector(".msg-thumb");report.steps.cinemaMessageRelease={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};if(window.__hideMessageThumb)window.__hideMessageThumb(true);',
+  ' window.goToStage("garden");key("ArrowDown");await sleep(850);window.__deliverPhoneMessage("cue_calendar");await sleep(80);report.steps.princeMessageHold={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1600);thumb=document.querySelector(".msg-thumb");report.steps.princeMessageRelease={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};',
   ' report.steps.channelWas=channel;',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
@@ -51,7 +53,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html cinema room:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 14000, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 22000, {
   patchRaf: true,
   chromeFlags: "--autoplay-policy=no-user-gesture-required"
 });
@@ -118,6 +120,18 @@ check(s.verticalElsewhere && s.verticalElsewhere.toggles === 1 &&
 check(s.cuddlyDown && s.cuddlyDown.open && s.cuddlyUp && !s.cuddlyUp.open &&
   s.gardenDown && s.gardenDown.basement && s.gardenUp && !s.gardenUp.open && s.gardenUp.parked,
   "plain Down enters each available lower room and plain Up returns upstairs", {cuddlyDown:s.cuddlyDown,cuddlyUp:s.cuddlyUp,gardenDown:s.gardenDown,gardenUp:s.gardenUp});
+check(s.cinemaMessageHold && s.cinemaMessageHold.held.messages.indexOf("cue_mail") !== -1 &&
+  !s.cinemaMessageHold.badge && !s.cinemaMessageHold.coach && !s.cinemaMessageHold.thumb &&
+  s.cinemaMessageHold.thread.indexOf("cue_mail") !== -1 &&
+  s.cinemaMessageRelease && !s.cinemaMessageRelease.held.messages.length &&
+  s.cinemaMessageRelease.badge && s.cinemaMessageRelease.thumb,
+  "cinema queues an arriving message invisibly and surfaces it after the upward return", {held:s.cinemaMessageHold,released:s.cinemaMessageRelease});
+check(s.princeMessageHold && s.princeMessageHold.held.messages.indexOf("cue_calendar") !== -1 &&
+  !s.princeMessageHold.badge && !s.princeMessageHold.coach && !s.princeMessageHold.thumb &&
+  s.princeMessageHold.thread.indexOf("cue_calendar") !== -1 &&
+  s.princeMessageRelease && !s.princeMessageRelease.held.messages.length &&
+  s.princeMessageRelease.badge && s.princeMessageRelease.thumb,
+  "Prince basement queues an arriving message invisibly and surfaces it upstairs", {held:s.princeMessageHold,released:s.princeMessageRelease});
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["1096537359", "902708480", "927763091"].forEach(function (id) {

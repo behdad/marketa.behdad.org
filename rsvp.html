@@ -239,6 +239,11 @@ footer{margin-top:2.6rem}
   visibility:hidden;
   pointer-events:none;
 }
+.hunt-viewport:is(.prince-basement-open,.cinema-room-open) :is(.msg-badge,.msg-badge-coach,.msg-thumb){
+  opacity:0 !important;
+  visibility:hidden;
+  pointer-events:none !important;
+}
 .roster-panel.show.spot-hide{opacity:0; pointer-events:none} /* temporarily hidden during a guest flash on small screens (see spotlightGuests) */
 .roster-panel h3{
   font-family:"Fraunces",serif; font-weight:700; font-size:1rem; letter-spacing:0;
@@ -28790,6 +28795,7 @@ window.__cinemaVideoLoaded = false;
       cinemaCloseTimer = null;
       cinemaClosing = false;
       room.hidden = true;
+      if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(false);
     }, 720);
     releaseCinemaSong();
     refreshProjectorAudio(0.7);
@@ -28802,6 +28808,7 @@ window.__cinemaVideoLoaded = false;
     cinemaCloseTimer = null;
     cinemaClosing = false;
     window.__cinemaRoomOpen = true;
+    if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     syncCinemaDayNight();
     room.hidden = false;
     requestAnimationFrame(function () {
@@ -61400,6 +61407,7 @@ async def localfont(name):
   function presentPrinceBasement() {
     if (!princeBasement || !huntViewport) return;
     princePresented = true;
+    if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     princeBasement.hidden = false;
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { huntViewport.classList.add("prince-basement-open"); });
@@ -61412,6 +61420,7 @@ async def localfont(name):
   function finishPrincePark() {
     if (!princeFrame && !princePresented && !princeClosing) return;
     var parkedFromMonitor = princeMode === "monitor";
+    var parkedFromBasement = princeMode === "basement";
     releasePrinceContextMenu();
     princeClosing = false;
     princePresented = false;
@@ -61435,6 +61444,7 @@ async def localfont(name):
     }
     monitor.classList.remove("show-prince");
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
+    if (parkedFromBasement && window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(false);
     scheduleSaver();
     // A retained iframe keeps its browsing-context focus even while hidden. Explicitly
     // hand focus back to a real desktop control so the next printable key can wake the
@@ -70750,6 +70760,9 @@ async def localfont(name):
       if (heldMessageReleaseT) clearTimeout(heldMessageReleaseT);
       heldMessageReleaseT = setTimeout(releaseHeldMessageThumbs, 450);
     }
+    window.__setLowerRoomNotificationHold = function (active) {
+      syncActionGameNotificationHold("lower-room", !!active);
+    };
     function showMessageThumb(id) {
       if (document.hidden || !document.hasFocus()) return; // unattended → the text waits in the app; no ghost thumbnail/buzz
       if (isOpen()) return; // phone's already up → no notification toast over it (the text lands in the thread; the app live-refreshes)

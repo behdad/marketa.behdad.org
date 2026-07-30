@@ -131,9 +131,10 @@ check(!/id="bedroom-(?:left|right)-lamp"[^>]*tabindex=/.test(source),
   "the two bedside lamps do not add tab stops");
 check((source.match(/class="bedroom-lamp-pedestal"/g) || []).length === 2 &&
   (source.match(/class="bedroom-lamp-shade"/g) || []).length === 2 &&
-  /id="bedroom-left-lamp"[\s\S]*?cx="119" cy="197"/.test(source) &&
-  /id="bedroom-right-lamp"[\s\S]*?cx="549" cy="197"/.test(source),
-  "matching brass mushroom lamps sit over both bedside tables");
+  (source.match(/class="bedroom-lamp-fixture" transform="translate\([^"]+\) scale\(\.8\)"/g) || []).length === 2 &&
+  (source.match(/class="bedroom-lamp-hit"/g) || []).length === 2 &&
+  source.indexOf('id="bedroom-side-tables"') < source.indexOf('id="bedroom-lamps"'),
+  "matching brass mushroom lamps scale to eighty percent over the painted bedside tables");
 check(!/<image[^>]+bedroom/i.test(source),
   "Bedroom remains code-native rather than embedding a raster room image");
 check(/id="bedroom-brick" width="60" height="32"[\s\S]*?M0 1H60M0 16H60M0 31H60/.test(source),

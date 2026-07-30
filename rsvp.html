@@ -30166,6 +30166,7 @@ window.__bathroomRoomOpen = false;
   }
   function openBathroom() {
     if (window.currentStageName !== "kitchen" || window.__bathroomRoomOpen) return false;
+    if (window.__markLowerRoomDiscovered) window.__markLowerRoomDiscovered();
     clearTimeout(closeTimer);
     closeTimer = null;
     closing = false;
@@ -30488,6 +30489,7 @@ window.__cinemaVideoLoaded = false;
   }
   function openCinema() {
     if (window.currentStageName !== "cuddly" || window.__cinemaRoomOpen) return false;
+    if (window.__markLowerRoomDiscovered) window.__markLowerRoomDiscovered();
     clearTimeout(cinemaCloseTimer);
     cinemaCloseTimer = null;
     cinemaClosing = false;
@@ -30766,6 +30768,7 @@ window.__entranceRoomOpen = false;
   }
   function openEntrance() {
     if (window.currentStageName !== "balcony" || window.__entranceRoomOpen) return false;
+    if (window.__markLowerRoomDiscovered) window.__markLowerRoomDiscovered();
     clearTimeout(closeTimer);
     closeTimer = null;
     closing = false;
@@ -31273,6 +31276,7 @@ window.__bedroomRoomOpen = false;
     if (window.currentStageName !== "office" || window.__bedroomRoomOpen ||
         (window.__monitorZoomed && window.__monitorZoomed()) ||
         (window.__laptopZoomed && window.__laptopZoomed())) return false;
+    if (window.__markLowerRoomDiscovered) window.__markLowerRoomDiscovered();
     clearTimeout(closeTimer);
     closeTimer = null;
     closing = false;
@@ -31912,6 +31916,7 @@ var T = {
     lower_entrance_marker: "Entrance portal",
     lower_portal_insist: "I insist.",
     lower_portal_unlock: "Unlock",
+    lower_rooms_clue: "The loft may have kept a few rooms out of sight.",
     game_score: "SCORE",
     game_best: "BEST",
     game_ready: "READY!",
@@ -33196,6 +33201,7 @@ var T = {
     lower_entrance_marker: "Portál ke vchodu",
     lower_portal_insist: "Trvám na tom.",
     lower_portal_unlock: "Odemknout",
+    lower_rooms_clue: "Loft možná pár pokojů schoval před očima.",
     game_score: "SKÓRE",
     game_best: "REKORD",
     game_ready: "PŘIPRAVEN!",
@@ -64354,6 +64360,7 @@ async def localfont(name):
   }
   function openPrinceBasement() {
     if (princePresented || princeClosing) return false;
+    if (window.__markLowerRoomDiscovered) window.__markLowerRoomDiscovered();
     if (window.currentStageName !== "garden" && window.goToStage) window.goToStage("garden");
     if (window.__stopAutoplay) window.__stopAutoplay();
     stopSaver();
@@ -89213,6 +89220,48 @@ function spawnDustMote(container) {
       direction: lowerRoomSlideState.direction
     } : { active: false, from: null, to: null, direction: 0 };
   };
+  // One late, quiet phase-two nudge for visitors who have never found a lower-room
+  // portal. Discovery is browser knowledge, not playthrough progress, so it deliberately
+  // survives checkpoints and Start over. The cue itself may recur only after a reload and
+  // another full attended wait; it never repeats within one page session.
+  var LOWER_ROOM_DISCOVERY_KEY = "lowerRoomDiscovered:v1";
+  var LOWER_ROOM_CLUE_DELAY = 180000;
+  var lowerRoomDiscovered = false, lowerRoomClueShown = false, lowerRoomClueMs = 0;
+  try { lowerRoomDiscovered = localStorage.getItem(LOWER_ROOM_DISCOVERY_KEY) === "1"; } catch (_error) {}
+  function markLowerRoomDiscovered() {
+    if (lowerRoomDiscovered) return false;
+    lowerRoomDiscovered = true;
+    try { localStorage.setItem(LOWER_ROOM_DISCOVERY_KEY, "1"); } catch (_error) {}
+    if (window.__clearFlashCaption) window.__clearFlashCaption("lower-room-discovery");
+    return true;
+  }
+  function lowerRoomClueTick(delta, forceAttended) {
+    if (lowerRoomDiscovered) return false;
+    if (lowerRoomOwnsViewport()) { markLowerRoomDiscovered(); return false; }
+    if (!window.__secondRound) { lowerRoomClueMs = 0; return false; }
+    if (!forceAttended && (document.hidden || !document.hasFocus() || window.__cinematic)) return false;
+    if (window.__cinematic) return false;
+    lowerRoomClueMs += Math.max(0, +delta || 0);
+    if (lowerRoomClueShown || lowerRoomClueMs < LOWER_ROOM_CLUE_DELAY) return false;
+    if ((window.__flashCaptionState && window.__flashCaptionState()) ||
+        caption.classList.contains("brick-hint-live") ||
+        (window.__captionKey && window.__captionKey() === "rsvp_exit") ||
+        (window.__actBeatHint && window.__actBeatHint(window.currentStageName))) return false;
+    if (!window.__flashCaptionKey ||
+        !window.__flashCaptionKey("lower_rooms_clue", 5200, "lower-room-discovery")) return false;
+    lowerRoomClueShown = true;
+    return true;
+  }
+  window.__markLowerRoomDiscovered = markLowerRoomDiscovered;
+  window.__lowerRoomDiscoveryClueState = function () {
+    return { discovered: lowerRoomDiscovered, shown: lowerRoomClueShown, elapsed: lowerRoomClueMs };
+  };
+  window.__lowerRoomDiscoveryClueTick = lowerRoomClueTick;
+  window.__resetLowerRoomDiscoveryClue = function () {
+    lowerRoomClueMs = 0;
+    if (window.__clearFlashCaption) window.__clearFlashCaption("lower-room-discovery");
+  };
+  setInterval(function () { lowerRoomClueTick(1000, false); }, 1000);
   var lowerPortalMenu = null;
   function lowerPortalText(key) {
     var lang = document.documentElement.lang;
@@ -89328,6 +89377,7 @@ function spawnDustMote(container) {
     }
     marker.addEventListener("click", function (event) {
       if (event.detail > 1 || Date.now() < ignoreClicksUntil) return;
+      markLowerRoomDiscovered();
       clearTimeout(mouseClickTimer);
       mouseClickTimer = setTimeout(function () {
         mouseClickTimer = null;
@@ -89337,6 +89387,7 @@ function spawnDustMote(container) {
     marker.addEventListener("dblclick", enterLowerRoom);
     marker.addEventListener("pointerup", function (event) {
       if (event.pointerType !== "touch") return;
+      markLowerRoomDiscovered();
       var now = Date.now();
       ignoreClicksUntil = now + 650;
       if (now - lastTouch <= 420) {
@@ -89355,6 +89406,7 @@ function spawnDustMote(container) {
     marker.addEventListener("contextmenu", function (event) {
       event.preventDefault();
       event.stopPropagation();
+      markLowerRoomDiscovered();
       clearTimeout(mouseClickTimer);
       mouseClickTimer = null;
       openLowerPortalMenu(event, enterLowerRoom);
@@ -99024,6 +99076,7 @@ function spawnDustMote(container) {
     if (rainbow) rainbow.classList.remove("burst");
     balconyIntroSeen = false; // a fresh playthrough replays the one-time arrival flourish
     if (window.__resetActTwo) window.__resetActTwo();         // second act back to un-armed: beats forgotten, ticker stopped, the switch's pulse+arrow cleared (nothing stranded)
+    if (window.__resetLowerRoomDiscoveryClue) window.__resetLowerRoomDiscoveryClue(); // restart its attended wait, but preserve the browser's permanent portal discovery
     if (window.__resetExplore) window.__resetExplore();       // exploreSeen (this IIFE) → base "Enjoy wandering" leads again if a room is re-solved
     if (window.__resetExplorePtr) window.__resetExplorePtr();  // explorePtr (brick IIFE) → rotation restarts
     if (window.__resetRetiredHints) window.__resetRetiredHints(); // a full reset is a fresh run: every loose-brick hint may surface again

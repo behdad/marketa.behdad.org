@@ -694,6 +694,10 @@ right-click menu whose **Unlock** action calls the same open hook; the shared
 context-menu augmenter appends separated **Start over** last. Escape, away
 click, scroll, blur, and resize dismiss the menu. They use `tabindex="-1"`
 because Tab remains a global game shortcut.
+After three attended phase-two minutes, the navigation owner may flash the
+localized `lower_rooms_clue` once per page session. Any marker interaction or
+successful lower-room open latches `lowerRoomDiscovered:v1` in localStorage;
+that browser-level discovery deliberately survives checkpoints and Start over.
 It lets `goToStage` settle the destination's main-room state while paired WAAPI
 transforms move the source and destination overlays laterally. This runs before
 ordinary room shortcuts without changing `D` day/night or Shift+arrow calendar

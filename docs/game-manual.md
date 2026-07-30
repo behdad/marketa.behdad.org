@@ -67,6 +67,8 @@ Balcony's key and fob. Double-click or double-tap a portal to enter; a single
 selection gives a clue, and its context menu offers **Unlock**. Hidden-room
 illustrations respond to selection but stay out of the `Tab` order. Loft audio
 becomes quieter there and returns to normal in the main rooms.
+If phase-two wandering continues for a few attended minutes without any portal
+discovery, the caption offers one quiet hint; it stops once any portal is found.
 
 On the zoomed office monitor, open Search with an empty query to browse every
 app. Type to filter, use the arrow keys to choose, and press Enter, or select an

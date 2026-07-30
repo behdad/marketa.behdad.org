@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+"use strict";
+
+// The phase-two portal clue is intentionally late and one-shot. Portal knowledge
+// lives outside checkpoint/reset state and any successful lower-room entry records it.
+var fs = require("fs");
+var lib = require("./lib");
+
+var harness = String.raw`<script>
+(function () {
+  var out = { checks: [], errors: [] };
+  function check(name, pass, detail) {
+    out.checks.push({ name: name, pass: !!pass, detail: detail || "" });
+  }
+  function report() {
+    out.errors = out.errors.concat((window.__errs || []).slice());
+    var pre = document.createElement("pre");
+    pre.id = "__report";
+    pre.textContent = JSON.stringify(out);
+    document.body.appendChild(pre);
+  }
+  function run() {
+    localStorage.removeItem("lowerRoomDiscovered:v1");
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__lowerRoomDiscoveryClueTick(179999, true);
+    check("the clue stays quiet until three attended phase-two minutes",
+      window.__captionKey() !== "lower_rooms_clue" &&
+      window.__lowerRoomDiscoveryClueState().shown === false,
+      JSON.stringify(window.__lowerRoomDiscoveryClueState()));
+
+    window.__lowerRoomDiscoveryClueTick(1, true);
+    check("the late clue appears once in English",
+      window.__captionKey() === "lower_rooms_clue" &&
+      document.getElementById("hunt-caption").textContent ===
+        "The loft may have kept a few rooms out of sight.",
+      document.getElementById("hunt-caption").textContent);
+    setLang("cs");
+    check("the live clue follows the language switch",
+      document.getElementById("hunt-caption").textContent ===
+        "Loft možná pár pokojů schoval před očima.",
+      document.getElementById("hunt-caption").textContent);
+
+    setLang("en");
+    window.__clearFlashCaption("lower-room-discovery");
+    window.setCaption("kitchen", true);
+    window.__lowerRoomDiscoveryClueTick(600000, true);
+    check("the clue does not repeat in the same page session",
+      window.__captionKey() === "kitchen" &&
+      window.__lowerRoomDiscoveryClueState().shown === true,
+      JSON.stringify(window.__lowerRoomDiscoveryClueState()));
+
+    document.getElementById("kitchen-bathroom-marker").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+    check("interacting with a portal permanently records discovery",
+      window.__lowerRoomDiscoveryClueState().discovered === true &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === "1",
+      JSON.stringify(window.__lowerRoomDiscoveryClueState()));
+
+    window.__resetLowerRoomDiscoveryClue();
+    window.__lowerRoomDiscoveryClueTick(600000, true);
+    check("Start-over runtime reset cannot revive the clue after discovery",
+      window.__lowerRoomDiscoveryClueState().shown === true &&
+      window.__captionKey() !== "lower_rooms_clue" &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === "1",
+      JSON.stringify(window.__lowerRoomDiscoveryClueState()));
+  }
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      try { run(); } catch (error) { out.errors.push(String(error && error.stack || error)); }
+      report();
+    }, 300);
+  });
+})();
+</script>`;
+
+var result = lib.runPageSync("rsvp.html", harness, 7000, { patchRaf: true, seedRandom: true });
+if (!result) { console.error("lower-room discovery clue: no report"); process.exit(1); }
+var failed = false;
+result.checks.forEach(function (item) {
+  console.log("  " + (item.pass ? "✓" : "✗") + " " + item.name +
+    (item.pass || !item.detail ? "" : " — " + item.detail));
+  if (!item.pass) failed = true;
+});
+if (result.errors.length) {
+  failed = true;
+  console.error("runtime errors:\n  " + result.errors.join("\n  "));
+}
+
+var source = fs.readFileSync("rsvp.html", "utf8");
+[
+  "openBathroom", "openCinema", "openEntrance", "openBedroom", "openPrinceBasement"
+].forEach(function (name) {
+  var match = source.match(new RegExp("function " + name + "\\(\\) \\{([\\s\\S]*?)\\n  \\}"));
+  var pass = !!(match && /__markLowerRoomDiscovered/.test(match[1]));
+  console.log("  " + (pass ? "✓" : "✗") + " " + name + " records successful lower-room entry");
+  if (!pass) failed = true;
+});
+
+if (failed) process.exit(1);
+console.log("lower-room discovery clue: all checks passed");

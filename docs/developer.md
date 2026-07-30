@@ -532,14 +532,25 @@ Cuddly; restored explicit channel state outranks the seasonal fresh/reset defaul
 the full cycle, including `off`; media-next uses `__cuddlyProjector.next()`, skips `off` at the wrap,
 and hands subsequent next actions to the current piano piece once it reaches `stars`.
 
-The film ticket beside `#cuddly-wallscreen` opens `#cinema-room`, a hidden HTML
-overlay whose room art is native inline SVG. The overlay deliberately sits outside
-the strip: WebKit cannot composite a Vimeo iframe inside SVG `foreignObject`.
-Chooser cards carry `data-vimeo-id`, empty `data-vimeo-hash`, and empty `data-poster`
-hooks; unlisted hashes or supplied posters can be added by filling those attributes. A player iframe is created on
-selection and removed on Choose another, close, reset, or `goToStage`, which is the
-cross-origin playback teardown. `__cinemaRoomState()` exposes the compact
-open/playing/video test surface.
+The film ticket on a far-right Cuddly brick opens `#cinema-room`, an HTML lower
+room whose art is native inline SVG. WebKit cannot composite a Vimeo iframe
+inside SVG `foreignObject`, so the room remains a viewport sibling of the strip:
+entry slides it up from `translateY(100%)` while the preserved Cuddly strip pans
+to `translate(-40%,-100%)`. Close reverses both transforms, then applies
+`hidden` after the 720 ms transition. The cinema and Prince basement classes
+both suppress the roster while they own the viewport.
+
+Chooser cards carry `data-vimeo-id`, an empty `data-vimeo-hash` hook, and a
+filled `data-poster` path for their tracked original artwork. A player iframe is
+created on selection and removed on Choose another, close, reset, or
+`goToStage`, which is the cross-origin playback teardown.
+`__cinemaRoomState()` exposes the compact open/closing/playing/video test
+surface. Exact background whitelists (`#cuddly-wall`/`#cuddly-ceiling` and
+`#garden-wall`) own the desktop double-click and touch double-tap shortcuts;
+interactive descendants are explicitly rejected.
+
+Possible future lower-room pairs are Kitchen/Bar→Toilets, Office→Bedroom, and
+Balcony→Entrance. They are navigation backlog only; no rooms or handlers exist.
 
 ### Shared projections
 
@@ -1345,7 +1356,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
   presentation entries and their recovery/lifecycle contracts;
 - `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`, and
   `tests/cinema-room.js` for projector ordering, retained channel state, shared beds, transport,
-  play-along transitions, Vimeo teardown, and cinema navigation;
+  play-along transitions, Vimeo teardown, cinema pan/roster restoration, and guarded
+  mouse/touch lower-room navigation for Cuddly and Garden;
 - `tests/video-playlist.js` and `tests/video-kill-variants.js` for film selection, retained
   playheads, track-specific Kill visuals, and teardown reset;
 - `tests/party-lifecycle.js` for attended party timing and finales;

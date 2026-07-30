@@ -10,19 +10,30 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:[],steps:{}};function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'function click(el){el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
+  'function dblclick(el){el.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));}',
+  'function touchup(el){el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
+  'function key(name){document.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
-  ' window.goToStage("cuddly");window.__cuddlyProjector.set("coffee");await sleep(520);',
+  ' window.goToStage("cuddly");window.__cuddlyProjector.set("coffee");document.getElementById("cinema-room").style.transition="none";document.getElementById("loft-game-strip").style.transition="none";await sleep(520);',
+  ' var roster=document.querySelector(".roster-panel"),rosterToggle=document.querySelector(".roster-toggle"),rosterBackdrop=document.querySelector(".roster-backdrop");roster.classList.add("show");rosterBackdrop.classList.add("show");',
   ' var channel=window.__cuddlyProjector.channel(),before=window.__activeAudioBedCount(),ticket=document.getElementById("cuddly-cinema-ticket"),ticketBox=ticket.getBoundingClientRect(),screenBox=document.getElementById("cuddly-screen-bg").getBoundingClientRect();click(ticket);await sleep(850);',
   ' var posters=Array.prototype.map.call(document.querySelectorAll(".cinema-film"),function(el){var r=el.getBoundingClientRect(),img=el.querySelector("img"),ir=img.getBoundingClientRect();return {box:[r.left,r.top,r.width,r.height],image:[ir.left,ir.top,ir.width,ir.height],fit:getComputedStyle(img).objectFit,label:el.getAttribute("aria-label"),src:img.getAttribute("src"),poster:el.dataset.poster};});',
-  ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before,posters:posters,ticket:[ticketBox.left,ticketBox.top,ticketBox.right,ticketBox.bottom],screen:[screenBox.left,screenBox.top,screenBox.right,screenBox.bottom]};',
+  ' var cinemaBox=document.getElementById("cinema-room").getBoundingClientRect(),viewportBox=document.querySelector(".hunt-viewport").getBoundingClientRect(),cuddlyBox=document.getElementById("stage-cuddly").getBoundingClientRect();',
+  ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before,posters:posters,ticket:[ticketBox.left,ticketBox.top,ticketBox.right,ticketBox.bottom],screen:[screenBox.left,screenBox.top,screenBox.right,screenBox.bottom],geometry:{cinema:[cinemaBox.left,cinemaBox.top,cinemaBox.width,cinemaBox.height],viewport:[viewportBox.left,viewportBox.top,viewportBox.width,viewportBox.height],cuddlyBottom:cuddlyBox.bottom},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility]};',
   ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label")};setLang("en");',
   ' var film=document.querySelector(".cinema-film[data-vimeo-id=\\"1096537359\\"]");click(film);await sleep(80);var frame=document.getElementById("cinema-player");',
   ' var shell=document.getElementById("cinema-screen-shell"),frameRect=frame&&frame.getBoundingClientRect(),shellRect=shell.getBoundingClientRect();',
   ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,chooser:document.getElementById("cinema-chooser").hidden,chooserDisplay:getComputedStyle(document.getElementById("cinema-chooser")).display,frameRect:frameRect&&{x:frameRect.x,y:frameRect.y,width:frameRect.width,height:frameRect.height},shellRect:{x:shellRect.x,y:shellRect.y,width:shellRect.width,height:shellRect.height}};',
   ' click(document.getElementById("cinema-chooser-back"));await sleep(40);report.steps.back={state:window.__cinemaRoomState(),frame:!!document.getElementById("cinema-player"),chooser:document.getElementById("cinema-chooser").hidden};',
   ' click(film);await sleep(40);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__cinemaRoomState(),room:window.currentStageName,frame:!!document.getElementById("cinema-player"),channel:window.__cuddlyProjector.channel()};',
-  ' window.goToStage("cuddly");window.__cuddlyProjector.set("fire");window.__playSongAt(0);await sleep(100);window.__openCinemaRoom();click(film);await sleep(40);click(document.getElementById("cinema-room-close"));await sleep(900);report.steps.fastClose={open:window.__cinemaRoomState().open,song:window.__phoneMusicPlaying()};',
+  ' window.goToStage("cuddly");window.__cuddlyProjector.set("fire");window.__playSongAt(0);await sleep(100);window.__openCinemaRoom();click(film);await sleep(40);click(document.getElementById("cinema-room-close"));await sleep(900);report.steps.fastClose={open:window.__cinemaRoomState().open,song:window.__phoneMusicPlaying(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility]};',
+  ' dblclick(document.getElementById("cuddly-wallscreen"));await sleep(40);report.steps.cuddlyInteractive=window.__cinemaRoomState();',
+  ' dblclick(document.getElementById("cuddly-wall"));await sleep(850);report.steps.cuddlyMouse=window.__cinemaRoomState();key("Escape");await sleep(760);',
+  ' touchup(document.getElementById("cuddly-wall"));await sleep(30);touchup(document.getElementById("cuddly-wall"));await sleep(850);report.steps.cuddlyTouch=window.__cinemaRoomState();key("Backspace");await sleep(760);',
+  ' window.goToStage("garden");await sleep(80);dblclick(document.getElementById("garden-window-pane-0"));await sleep(40);report.steps.gardenInteractive=window.__princeState();',
+  ' dblclick(document.getElementById("garden-wall"));await sleep(850);report.steps.gardenMouse=window.__princeState();key("Escape");await sleep(780);',
+  ' touchup(document.getElementById("garden-wall"));await sleep(30);touchup(document.getElementById("garden-wall"));await sleep(850);report.steps.gardenTouch=window.__princeState();key("Backspace");await sleep(780);report.steps.gardenReturn=window.__princeState();',
   ' report.steps.channelWas=channel;',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
@@ -36,7 +47,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html cinema room:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 3200, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 14000, {
   patchRaf: true,
   chromeFlags: "--autoplay-policy=no-user-gesture-required"
 });
@@ -48,6 +59,12 @@ check(s.open && s.open.state.open && !s.open.state.playing && s.open.room === "c
   "the projector ticket opens a covered subroom without changing room or channel state", s.open);
 check(s.open && s.open.before >= 1 && s.open.beds === 0,
   "entering the cinema releases the active Cuddly projector score", s.open);
+check(s.open && s.open.geometry &&
+  s.open.geometry.cinema.every(function(value,index){return Math.abs(value-s.open.geometry.viewport[index])<0.7;}) &&
+  s.open.geometry.cuddlyBottom <= s.open.geometry.viewport[1] + s.open.geometry.viewport[3] * 0.05,
+  "cinema entry completes the downward pan while preserving the Cuddly stage above", s.open && s.open.geometry);
+check(s.open && s.open.roster.every(function(value){return value==="hidden";}),
+  "Who's here controls and panel are hidden while cinema owns the viewport", s.open && s.open.roster);
 check(s.open && s.open.ticket[0] > s.open.screen[2] + 20,
   "the quiet cinema ticket sits on the brickwork beside, not on, the projector", s.open);
 check(s.open && s.open.posters.length === 3 &&
@@ -76,6 +93,15 @@ check(s.navigate && !s.navigate.state.open && !s.navigate.state.playing && s.nav
   "ordinary room navigation tears down the cinema and preserves projector state", s.navigate);
 check(s.fastClose && !s.fastClose.open && s.fastClose.song,
   "closing during the song fade still restores the borrowed loft song", s.fastClose);
+check(s.fastClose && s.fastClose.hidden && !s.fastClose.viewport &&
+  s.fastClose.roster.every(function(value){return value==="visible";}),
+  "the upward return finishes hidden and restores the open Who's here surface", s.fastClose);
+check(s.cuddlyInteractive && !s.cuddlyInteractive.open && s.cuddlyMouse && s.cuddlyMouse.open &&
+  s.cuddlyTouch && s.cuddlyTouch.open,
+  "only bare Cuddly background double-clicks and double-taps enter cinema", {interactive:s.cuddlyInteractive,mouse:s.cuddlyMouse,touch:s.cuddlyTouch});
+check(s.gardenInteractive && !s.gardenInteractive.basement && s.gardenMouse && s.gardenMouse.basement &&
+  s.gardenTouch && s.gardenTouch.basement && s.gardenReturn && !s.gardenReturn.open && s.gardenReturn.parked,
+  "only bare Garden background double-clicks/double-taps descend, and Escape/Backspace return", {interactive:s.gardenInteractive,mouse:s.gardenMouse,touch:s.gardenTouch,returned:s.gardenReturn});
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["1096537359", "902708480", "927763091"].forEach(function (id) {

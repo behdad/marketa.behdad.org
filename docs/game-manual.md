@@ -198,11 +198,13 @@ night-sky piano, is contained to the Cuddly-puddly room. The media **Next**
 button advances projector programs without stopping at Off; once it reaches
 Night Sky, it stays there and advances the piano pieces instead.
 
-The small film ticket tucked against the Cuddly-puddly projector opens the loft
-cinema without changing the selected projector program. Pick one of the three
-films on the screen; **Choose another** stops it and returns to the chooser.
-The × button, Escape, or ordinary room navigation leaves the cinema. Film audio
-takes the foreground while it plays.
+The small film ticket resting on a Cuddly-puddly wall brick opens the loft
+cinema without changing the selected projector program. Double-clicking or
+double-tapping a bare patch of that room's background is a second entrance. The
+room pans down into the cinema and temporarily puts **Who's here** away. Pick one
+of the three films on the screen; **Choose another** stops it and returns to the
+chooser. The × button, Escape, Backspace, or ordinary room navigation pans back
+up. Film audio takes the foreground while it plays.
 
 On the balcony, open and light the smoker to begin the BBQ during a party. Its
 lid, firebox, food, and serving state are all interactive. Extinguishing it or
@@ -305,8 +307,9 @@ either console, or run `prince()` from browser JavaScript. Its own Fullscreen
 control expands both the monitor and browser around the 16:10 game. Dismiss
 parks the live game so reopening resumes it; **Kill app** and **Start over**
 discard the run. In the garden, double-click or double-tap the distant skyline
-to descend into the same persistent game in the stone basement. Escape or
-Backspace returns to the garden without ending the run.
+or a bare patch of the brick background to descend into the same persistent
+game in the stone basement. Interactive objects never trigger the background
+shortcut. Escape or Backspace returns to the garden without ending the run.
 
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.

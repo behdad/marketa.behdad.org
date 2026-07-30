@@ -234,7 +234,7 @@ footer{margin-top:2.6rem}
   transition:opacity .25s ease, transform .25s ease;
 }
 .roster-panel.show{opacity:1; transform:translateY(0); pointer-events:auto}
-.hunt-viewport.prince-basement-open :is(.roster-toggle,.roster-panel,.roster-backdrop){
+.hunt-viewport:is(.prince-basement-open,.cinema-room-open) :is(.roster-toggle,.roster-panel,.roster-backdrop){
   opacity:0;
   visibility:hidden;
   pointer-events:none;
@@ -368,6 +368,8 @@ footer{margin-top:2.6rem}
 #cinema-room[hidden]{display:none}
 #cinema-room{
   position:absolute; inset:0; z-index:12; overflow:hidden; color:#fffdf8;
+  visibility:hidden; pointer-events:none; transform:translateY(100%);
+  transition:transform .72s cubic-bezier(.4,0,.2,1),visibility 0s linear .72s;
   background:#211813;
 }
 #cinema-room-art{display:block; width:100%; height:100%}
@@ -412,9 +414,15 @@ footer{margin-top:2.6rem}
 #cinema-chooser-back{left:clamp(4px,.6vw,8px); bottom:clamp(4px,.6vw,8px); padding:clamp(3px,.4vw,5px) clamp(5px,.7vw,9px); border-radius:999px}
 #cinema-room-close:hover,#cinema-room-close:focus-visible,
 #cinema-chooser-back:hover,#cinema-chooser-back:focus-visible{background:#8e3a4a; outline:2px solid #fffdf8}
-.hunt-viewport.cinema-room-open #loft-game-strip{visibility:hidden}
+.hunt-viewport.cinema-room-open #cinema-room{
+  visibility:visible; pointer-events:auto; transform:translateY(0); transition-delay:0s;
+}
+.hunt-viewport.cinema-room-open #loft-game-strip{transform:translate(-40%,-100%) !important}
 #cuddly-cinema-ticket{cursor:pointer}
-@media (prefers-reduced-motion:reduce){#cinema-room *{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){
+  #cinema-room,#cinema-room *{transition:none;scroll-behavior:auto}
+  .hunt-viewport.cinema-room-open #loft-game-strip{transition:none}
+}
 #hunt-wipe{
   position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none;
   transition:opacity .6s ease; z-index:5;
@@ -28712,6 +28720,8 @@ window.__cinemaVideoLoaded = false;
   var chooserBack = document.getElementById("cinema-chooser-back");
   var cinemaSongSuspended = false;
   var cinemaSongRestoreTimer = null;
+  var cinemaCloseTimer = null;
+  var cinemaClosing = false;
   if (!room || !viewport || !ticket || !closeButton || !chooser || !playerWrap || !chooserBack) return;
 
   function refreshProjectorAudio(fade) {
@@ -28754,8 +28764,14 @@ window.__cinemaVideoLoaded = false;
     if (!window.__cinemaRoomOpen) return false;
     clearPlayer();
     window.__cinemaRoomOpen = false;
-    room.hidden = true;
+    cinemaClosing = true;
     viewport.classList.remove("cinema-room-open");
+    clearTimeout(cinemaCloseTimer);
+    cinemaCloseTimer = setTimeout(function () {
+      cinemaCloseTimer = null;
+      cinemaClosing = false;
+      room.hidden = true;
+    }, 720);
     releaseCinemaSong();
     refreshProjectorAudio(0.7);
     try { ticket.focus({ preventScroll: true }); } catch (_error) { try { ticket.focus(); } catch (_error2) {} }
@@ -28763,9 +28779,16 @@ window.__cinemaVideoLoaded = false;
   }
   function openCinema() {
     if (window.currentStageName !== "cuddly" || window.__cinemaRoomOpen) return false;
+    clearTimeout(cinemaCloseTimer);
+    cinemaCloseTimer = null;
+    cinemaClosing = false;
     window.__cinemaRoomOpen = true;
     room.hidden = false;
-    viewport.classList.add("cinema-room-open");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (window.__cinemaRoomOpen) viewport.classList.add("cinema-room-open");
+      });
+    });
     refreshProjectorAudio(0.7);
     try { closeButton.focus({ preventScroll: true }); } catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
     return true;
@@ -28782,7 +28805,7 @@ window.__cinemaVideoLoaded = false;
     }
     var frame = document.createElement("iframe");
     frame.id = "cinema-player";
-    frame.title = button.textContent.trim();
+    frame.title = button.getAttribute("aria-label") || "Vimeo film";
     frame.src = "https://player.vimeo.com/video/" + id + "?" +
       (hash ? "h=" + encodeURIComponent(hash) + "&" : "") +
       "autoplay=1&title=0&byline=0&portrait=0&dnt=1";
@@ -28797,8 +28820,6 @@ window.__cinemaVideoLoaded = false;
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
   }
   Array.prototype.forEach.call(room.querySelectorAll(".cinema-film"), function (button) {
-    var poster = button.getAttribute("data-poster");
-    if (poster) button.querySelector(".cinema-film-poster").style.backgroundImage = 'url("' + poster.replace(/"/g, "%22") + '")';
     button.addEventListener("click", function () { playFilm(button); });
   });
   ticket.addEventListener("click", function (event) { event.stopPropagation(); openCinema(); });
@@ -28808,24 +28829,50 @@ window.__cinemaVideoLoaded = false;
   });
   closeButton.addEventListener("click", closeCinema);
   chooserBack.addEventListener("click", function () { clearPlayer(); chooser.querySelector(".cinema-film").focus(); });
+  var cuddlyBackgrounds = [document.getElementById("cuddly-wall"), document.getElementById("cuddly-ceiling")].filter(Boolean);
+  var cuddlyBackgroundIds = { "cuddly-wall": true, "cuddly-ceiling": true };
+  var cuddlyBackgroundTapAt = 0;
+  function isCuddlyBackground(event) {
+    var target = event && event.target;
+    return !!(target && cuddlyBackgroundIds[target.id] && !(target.closest && target.closest(".hunt-hit")));
+  }
+  function openCinemaFromBackground(event) {
+    if (!isCuddlyBackground(event)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    return openCinema();
+  }
+  cuddlyBackgrounds.forEach(function (background) {
+    background.addEventListener("dblclick", openCinemaFromBackground);
+    background.addEventListener("pointerup", function (event) {
+      if (event.pointerType !== "touch" || !isCuddlyBackground(event)) return;
+      var now = Date.now();
+      if (now - cuddlyBackgroundTapAt < 420) {
+        cuddlyBackgroundTapAt = 0;
+        openCinemaFromBackground(event);
+      } else {
+        cuddlyBackgroundTapAt = now;
+      }
+    });
+  });
   window.__openCinemaRoom = openCinema;
   window.__closeCinemaRoom = closeCinema;
   window.__cinemaRoomState = function () {
     var frame = document.getElementById("cinema-player");
-    return { open: !!window.__cinemaRoomOpen, playing: !!window.__cinemaVideoLoaded,
+    return { open: !!window.__cinemaRoomOpen, closing: cinemaClosing, playing: !!window.__cinemaVideoLoaded,
       video: frame ? (frame.src.match(/video\/(\d+)/) || [])[1] || null : null };
   };
   if (window.__registerTransientResetHook) window.__registerTransientResetHook("cinema-room", closeCinema);
 })();
 
 // While the cinema owns the viewport, its controls keep ordinary key defaults but the
-// underlying loft must not also interpret them. Escape returns to Cuddly.
+// underlying loft must not also interpret them. Escape and Backspace return to Cuddly.
 document.addEventListener("keydown", function (event) {
   if (!window.__cinemaRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   event.stopImmediatePropagation();
-  if (event.key === "Escape" || event.key === "Esc") {
+  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
     event.preventDefault();
     if (window.__closeCinemaRoom) window.__closeCinemaRoom();
   }
@@ -28833,7 +28880,7 @@ document.addEventListener("keydown", function (event) {
 
 // Full-screen iframe games own the keyboard while active. Install this capture guard
 // before the loft's room/music shortcuts so a missed iframe focus cannot turn arrows,
-// Space, letters, or number keys into two actions at once. Escape remains the one exit.
+// Space, letters, or number keys into two actions at once. Escape/Backspace remain exits.
 window.__princeInputActive = false;
 document.addEventListener("keydown", function (event) {
   if (!window.__princeInputActive) return;
@@ -28843,7 +28890,7 @@ document.addEventListener("keydown", function (event) {
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   event.stopImmediatePropagation();
-  if (event.key === "Escape") {
+  if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       event.preventDefault();
       if (window.__closeMonitorPrince) window.__closeMonitorPrince();
@@ -76538,6 +76585,36 @@ async def localfont(name):
         enterPrinceBasement(event);
       } else {
         gardenSkylineTapAt = now;
+      }
+    });
+  }
+  // The skyline remains the hidden illustrated entrance; a truly bare patch of the
+  // room backdrop is a second, spatially consistent route. Explicit whitelist + the
+  // interactive-ancestor guard keep furniture, people, panes, and controls from ever
+  // turning an ordinary double activation into a descent.
+  var gardenBackground = document.getElementById("garden-wall");
+  var gardenBackgroundTapAt = 0;
+  function isGardenBackground(event) {
+    var target = event && event.target;
+    return !!(target && target.id === "garden-wall" && !(target.closest && target.closest(".hunt-hit")));
+  }
+  function enterPrinceFromBackground(event) {
+    if (!isGardenBackground(event)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    if (window.__openGardenPrince) window.__openGardenPrince();
+    return true;
+  }
+  if (gardenBackground) {
+    gardenBackground.addEventListener("dblclick", enterPrinceFromBackground);
+    gardenBackground.addEventListener("pointerup", function (event) {
+      if (event.pointerType !== "touch" || !isGardenBackground(event)) return;
+      var now = Date.now();
+      if (now - gardenBackgroundTapAt < 420) {
+        gardenBackgroundTapAt = 0;
+        enterPrinceFromBackground(event);
+      } else {
+        gardenBackgroundTapAt = now;
       }
     });
   }

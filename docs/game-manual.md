@@ -216,6 +216,11 @@ Octi's Escape, the balcony's Block Party, the garden magic box, and games on the
 phone and monitor. Each action game displays its own controls and temporarily
 owns the relevant keyboard input.
 
+During the ketamine trip, catching the roaming ghost opens **Hack-Man** over the
+room where you found it. Arrow keys or `WASD` steer, Space pauses, and Dismiss,
+Escape, or Backspace closes the game and returns to that same room. Searching
+for `hackman` on the office monitor still opens the contained monitor version.
+
 In Block Party, click or tap the playfield to rotate a piece. Drag horizontally
 to move it, or drag down to drop it; the arrow keys and Space also work. Every
 ten cleared lines advances the level and speeds up the falling pieces.

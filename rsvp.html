@@ -4454,6 +4454,23 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #office-monitor.show-pacman #monitor-pacman{opacity:1;visibility:visible;pointer-events:auto}
 #monitor-pacman-close{cursor:pointer}
 #monitor-pacman-close:hover .seg-hover{opacity:.55}
+/* Catching the ketamine ghost presents that same retained DOM maze over the room where
+   it was caught. The 124×42 board stays at its authored size and JS scales only this
+   host, preserving the monitor layout while avoiding WebKit foreignObject layers. */
+#pacman-room-overlay{
+  position:absolute;inset:0;z-index:64;display:grid;place-items:center;overflow:hidden;
+  background:rgba(5,7,17,.58);touch-action:none
+}
+#pacman-room-overlay[hidden]{display:none}
+#pacman-room-host{
+  width:124px;height:42px;transform-origin:center;border:1px solid rgba(255,216,61,.72);
+  border-radius:1.5px;box-shadow:0 0 0 2px rgba(5,7,17,.78),0 8px 28px rgba(0,0,0,.55)
+}
+#pacman-room-close{
+  position:absolute;top:7px;right:8px;width:28px;height:28px;padding:0;border:1.5px solid #ffd83d;
+  border-radius:50%;background:#172d96;color:#f8f5ec;font:21px/24px sans-serif;cursor:pointer
+}
+#pacman-room-close:hover,#pacman-room-close:focus-visible{background:#8e3a4a;outline:none}
 /* PrinceJS is a hidden monitor app. Like Shoot, its iframe lives inside the authored
    display first and is physically moved to a true-fullscreen host only on request.
    WebKit may leave the contained replaced element blank under the scaled foreignObject;
@@ -28549,6 +28566,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <div id="prince-basement-stage"><div id="prince-basement-host"></div></div>
       <button type="button" id="prince-basement-close" aria-label="Close" title="Close" data-aria-i="share_close" data-title-i="share_close">×</button>
     </div>
+    <div id="pacman-room-overlay" role="dialog" aria-modal="true" aria-label="Hack-Man in the current room" data-aria-i="pacman_room_dialog" tabindex="-1" hidden>
+      <div id="pacman-room-host"></div>
+      <button type="button" id="pacman-room-close" aria-label="Close Hack-Man and return to the room" title="Close Hack-Man and return to the room" data-aria-i="pacman_room_close" data-title-i="pacman_room_close">×</button>
+    </div>
     <div id="pride-day-wash" aria-hidden="true"></div>
     <div id="hunt-wipe" aria-hidden="true"></div>
     <!-- autoplay (attract-mode) badge: a quiet "auto" pill shown while the self-driving
@@ -29759,6 +29780,8 @@ var T = {
     solitaire_ranks: ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"],
     solitaire_suits: ["hearts", "diamonds", "clubs", "spades"],
     app_pacman: "hackman",
+    pacman_room_dialog: "Hack-Man in the current room",
+    pacman_room_close: "Close Hack-Man and return to the room",
     pacman_win: "MAZE CLEARED",
     pacman_kill: "GHOSTS WIN",
     mines_lose: "You set off the ring!<br>(It was always going to happen.)",
@@ -30958,6 +30981,8 @@ var T = {
     solitaire_ranks: ["eso", "2", "3", "4", "5", "6", "7", "8", "9", "10", "spodek", "dáma", "král"],
     solitaire_suits: ["srdce", "kára", "kříže", "piky"],
     app_pacman: "hackman",
+    pacman_room_dialog: "Hack-Man v aktuální místnosti",
+    pacman_room_close: "Zavřít Hack-Man a vrátit se do místnosti",
     pacman_win: "BLUDIŠTĚ HOTOVO",
     pacman_kill: "DUCHOVÉ VYHRÁLI",
     mines_lose: "Spustili jste prsten!<br>(Stejně k tomu jednou dojít muselo.)",
@@ -55120,9 +55145,10 @@ setOfficeProgress("pc", false);
     else if (classicsView === "mines") minesDeathFlash();
     else classicsChooserDeathFlash();
   };
-  // Pac-Man is the ketamine ghost's hidden monitor game. One bounded timeout owns the
-  // simulation; closing the app, hiding/blurring the page, or powering down the monitor
-  // clears it immediately, so a background tab can never accumulate queued game steps.
+  // Pac-Man is the ketamine ghost's hidden game. Monitor/search launches stay contained
+  // in the office display; catching the ghost reparents the same retained board into a
+  // room overlay without moving the player. One bounded timeout owns the simulation;
+  // closing either presentation or hiding/blurring the page clears it immediately.
   var PAC_MAZE = [
     "###################",
     "#o.......#.......o#",
@@ -55143,6 +55169,11 @@ setOfficeProgress("pc", false);
   var PAC_DIRS = { left: [0, -1], right: [0, 1], up: [-1, 0], down: [1, 0] };
   var PAC_REVERSE = { left: "right", right: "left", up: "down", down: "up" };
   var pacWrap = document.getElementById("monitor-pacman-wrap");
+  var pacMonitorHost = pacWrap && pacWrap.parentNode;
+  var pacRoomOverlay = document.getElementById("pacman-room-overlay");
+  var pacRoomHost = document.getElementById("pacman-room-host");
+  var pacRoomClose = document.getElementById("pacman-room-close");
+  var pacRoomOrigin = null, pacRoomLastFocus = null;
   var pacBoard = null, pacScoreEl = null, pacHighEl = null, pacMessageEl = null, pacNewEl = null;
   var pacPlayerEl = null, pacGhostEls = [], pacPelletEls = [];
   // Compact adaptation of the arcade's level-one timing. Pac-Man runs at 80% in
@@ -55162,6 +55193,14 @@ setOfficeProgress("pc", false);
   var pacState = null, pacClock = null;
   var pacRunStartingHigh = 0, pacRunActive = false;
   var PAC_HIGH_KEY = "pacmanHigh"; // personal best survives New, Kill, shutdown, and full loft reset
+  function pacRoomPresented() { return !!(pacRoomOverlay && !pacRoomOverlay.hidden); }
+  function pacPresented() { return pacRoomPresented() || monitor.classList.contains("show-pacman"); }
+  function sizePacmanRoom() {
+    if (!pacRoomPresented() || !pacRoomHost) return;
+    var rect = pacRoomOverlay.getBoundingClientRect();
+    var scale = Math.max(1, Math.min((rect.width - 44) / 124, (rect.height - 30) / 42));
+    pacRoomHost.style.transform = "scale(" + scale.toFixed(4) + ")";
+  }
   function pacHigh() { try { return parseInt(localStorage.getItem(PAC_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
   function pacSetHigh(n) { try { localStorage.setItem(PAC_HIGH_KEY, String(n)); } catch (e) {} }
   function pacBankHigh() { if (pacState && pacState.score > pacHigh()) pacSetHigh(pacState.score); }
@@ -55267,7 +55306,7 @@ setOfficeProgress("pc", false);
         el.__pacMotion = null;
       }
     });
-    if (active && !pacDying && monitor.classList.contains("show-pacman") && !document.hidden && document.hasFocus()) pacFrame = requestAnimationFrame(pacVisualFrame);
+    if (active && !pacDying && pacPresented() && !document.hidden && document.hasFocus()) pacFrame = requestAnimationFrame(pacVisualFrame);
   }
   function pacPlaceActor(el, actor, from) {
     if (!el || !actor) return;
@@ -55545,7 +55584,7 @@ setOfficeProgress("pc", false);
   }
   function pacStep() {
     pacTimer = null;
-    if (!pacState || pacState.status !== "running" || pacState.paused || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    if (!pacState || pacState.status !== "running" || pacState.paused || pacDying || !pacPresented() || document.hidden || !document.hasFocus()) return;
     var now = performance.now();
     if (!pacClock) pacClock = { last: now, player: 0, ghosts: [0, 0, 0] };
     var dt = Math.max(0, Math.min(50, now - pacClock.last)); pacClock.last = now;
@@ -55605,7 +55644,7 @@ setOfficeProgress("pc", false);
     if (snap !== false) pacStopVisuals(true);
   }
   function pacStartLoop() {
-    if (pacTimer || !pacState || pacState.status !== "running" || pacState.paused || pacDying || !monitor.classList.contains("show-pacman") || document.hidden || !document.hasFocus()) return;
+    if (pacTimer || !pacState || pacState.status !== "running" || pacState.paused || pacDying || !pacPresented() || document.hidden || !document.hasFocus()) return;
     pacClock = { last: performance.now(), player: 0, ghosts: [0, 0, 0] };
     pacTimer = setTimeout(pacStep, PAC_LOOP_MS);
   }
@@ -55622,7 +55661,7 @@ setOfficeProgress("pc", false);
     pacPaintText(); pacStartLoop(); return true;
   }
   function pacTogglePause() {
-    if (!pacState || pacState.status !== "running" || pacDying || !monitor.classList.contains("show-pacman")) return false;
+    if (!pacState || pacState.status !== "running" || pacDying || !pacPresented()) return false;
     pacState.paused = !pacState.paused;
     if (pacState.paused) pacStopLoop(false); else pacStartLoop();
     pacPaintText(); pacSaveSoon(true);
@@ -55638,7 +55677,43 @@ setOfficeProgress("pc", false);
     var cell = dockCells && dockCells.pacman;
     if (cell) cell.classList.toggle("dock-app-locked", !pacUnlocked);
   }
+  function openPacmanRoomApp() {
+    if (!pacUnlocked || !pacRoomOverlay || !pacRoomHost || pacRoomPresented()) return false;
+    pacBuild();
+    pacRoomOrigin = window.currentStageName || null;
+    pacRoomLastFocus = document.activeElement;
+    pacRoomHost.appendChild(pacWrap);
+    pacRoomOverlay.hidden = false;
+    sizePacmanRoom();
+    requestAnimationFrame(sizePacmanRoom);
+    try { pacRoomOverlay.focus({ preventScroll: true }); } catch (_error) { try { pacRoomOverlay.focus(); } catch (_error2) {} }
+    if (pacState.status === "running") { pacTrackRun(); pacStartLoop(); }
+    if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: true, room: pacRoomOrigin }, "ui");
+    return true;
+  }
+  function closePacmanRoomApp(restoreOrigin, save, quiet) {
+    if (!pacRoomPresented()) return false;
+    var origin = pacRoomOrigin, focus = pacRoomLastFocus;
+    if (quiet) pacRunActive = false;
+    else pacOfferBest();
+    pacStopLoop();
+    pacRoomOverlay.hidden = true;
+    if (pacMonitorHost && pacWrap.parentNode !== pacMonitorHost) pacMonitorHost.appendChild(pacWrap);
+    pacRoomHost.style.transform = "";
+    pacRoomOrigin = null;
+    pacRoomLastFocus = null;
+    if (save !== false) pacSaveSoon(true);
+    if (restoreOrigin !== false && origin && window.currentStageName !== origin && window.goToStage) window.goToStage(origin);
+    requestAnimationFrame(function () {
+      if (focus && focus.isConnected && typeof focus.focus === "function") {
+        try { focus.focus({ preventScroll: true }); } catch (_error) { try { focus.focus(); } catch (_error2) {} }
+      }
+    });
+    if (!quiet && window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: false, score: pacState ? pacState.score : 0, room: origin }, "ui");
+    return true;
+  }
   function openPacmanApp() {
+    if (pacRoomPresented()) closePacmanRoomApp(false, false, true);
     if (!pacUnlocked || !monitor.classList.contains("show-caps") || monitor.classList.contains("show-pacman")) return;
     stopSaver(); clearTimeout(saverTimer); saverTimer = null; pacBuild(); monitor.classList.add("show-pacman");
     if (pacState.status === "running") { pacTrackRun(); pacStartLoop(); }
@@ -55646,12 +55721,18 @@ setOfficeProgress("pc", false);
     if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: true }, "ui");
   }
   function closePacmanApp() {
+    if (pacRoomPresented()) return closePacmanRoomApp(true);
     if (!monitor.classList.contains("show-pacman")) { pacStopLoop(); return; }
     pacOfferBest();
     monitor.classList.remove("show-pacman"); pacStopLoop(); pacSaveSoon(true); scheduleSaver();
     if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: false, score: pacState ? pacState.score : 0 }, "ui");
   }
   window.__closeMonitorPacman = closePacmanApp;
+  window.__openRoomPacman = openPacmanRoomApp;
+  window.__pacmanPresentation = function () {
+    return { mode: pacRoomPresented() ? "room" : monitor.classList.contains("show-pacman") ? "monitor" : null,
+      room: pacRoomPresented() ? pacRoomOrigin : monitor.classList.contains("show-pacman") ? "office" : null };
+  };
   window.__pacmanUnlocked = function () { return pacUnlocked; };
   window.__pacmanState = function () {
     return pacState ? {
@@ -55715,7 +55796,10 @@ setOfficeProgress("pc", false);
     });
     pacState = fresh; if (pacBuilt) pacRender(); return true;
   };
-  window.__resetPacmanUnlock = function () { pacStopLoop(); pacDying = false; pacUnlocked = false; pacState = pacFreshState(); pacSyncUnlock(); if (pacBuilt) pacRender(); };
+  window.__resetPacmanUnlock = function () {
+    closePacmanRoomApp(false, false, true);
+    pacStopLoop(); pacDying = false; pacUnlocked = false; pacState = pacFreshState(); pacSyncUnlock(); if (pacBuilt) pacRender();
+  };
   function pacmanDeathFlash() {
     pacDying = true;
     var finish = function () {
@@ -55730,8 +55814,18 @@ setOfficeProgress("pc", false);
   window.__killMonitorPacman = pacmanDeathFlash;
   var pacClose = document.getElementById("monitor-pacman-close");
   if (pacClose) { pacClose.addEventListener("click", function (e) { e.stopPropagation(); closePacmanApp(); playLaptopClickSound("office-monitor"); }); pacClose.addEventListener("dblclick", function (e) { e.stopPropagation(); }); }
+  if (pacRoomClose) pacRoomClose.addEventListener("click", function (e) {
+    e.preventDefault(); e.stopPropagation(); closePacmanRoomApp(true);
+  });
+  window.addEventListener("resize", sizePacmanRoom);
+  document.addEventListener("fullscreenchange", sizePacmanRoom);
+  document.addEventListener("webkitfullscreenchange", sizePacmanRoom);
+  window.addEventListener("keydown", function (e) {
+    if (!pacRoomPresented() || (e.key !== "Escape" && e.key !== "Esc")) return;
+    e.preventDefault(); e.stopImmediatePropagation(); closePacmanRoomApp(true);
+  }, true);
   document.addEventListener("keydown", function (e) {
-    if (!monitor.classList.contains("show-pacman") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!pacPresented() || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === " " || e.key === "Spacebar") {
       if (pacState && pacState.status === "running") {
         e.preventDefault(); e.stopImmediatePropagation(); pacTogglePause();
@@ -55748,7 +55842,8 @@ setOfficeProgress("pc", false);
     if (!ketGhost.classList.contains("roaming")) return;
     e.preventDefault(); e.stopPropagation(); ketGhost.classList.remove("roaming");
     if (window.__stopTrip) window.__stopTrip();
-    window.__unlockPacman(true);
+    window.__unlockPacman(false);
+    openPacmanRoomApp();
   });
   if (ketGhost) ketGhost.addEventListener("animationend", function (e) {
     if (e.animationName === "trip-ghost-roam") ketGhost.classList.remove("roaming");

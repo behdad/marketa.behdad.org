@@ -804,10 +804,18 @@ rise to 3×. Every adaptive tier is capped per axis at half the visible
 consumer's measured CSS size × `devicePixelRatio`; a non-healthy sample or lost
 focus immediately restores the baseline.
 
-Pac-Man is a `searchOnly` monitor app: search, Chat, test hooks, or the ketamine ghost can open it,
-but it has no desktop tile and the ghost is not an access gate. The live board is checkpoint state;
-normal close parks and retains it, Kill/New reset it, and the separate
-`localStorage["pacmanHigh"]` personal best survives those resets.
+Pac-Man is a `searchOnly` monitor app: search, Chat, and test hooks open it in the
+office display, but it has no desktop tile and the ghost is not an access gate.
+Catching the ketamine ghost instead calls `openPacmanRoomApp`, snapshots the
+current room/focus owner, and reparents the same `#monitor-pacman-wrap` into the
+HTML `#pacman-room-overlay`. The presentation remains inside `.hunt-viewport`,
+so whole-loft fullscreen keeps it with the originating scene; its resize hook
+scales the authored 124×42 board without changing monitor layout. Dismiss,
+Escape, or Backspace reparents the board to its monitor `foreignObject`, parks
+the loop, restores focus and the originating room if anything moved it. The
+live board is checkpoint state; normal close parks and retains it, Kill/New
+reset it, and the separate `localStorage["pacmanHigh"]` personal best survives
+those resets.
 
 PrinceJS is another `searchOnly` app and owns one lazy, same-origin iframe for
 both presentations. `openPrinceApp` reparents that iframe into the monitor;
@@ -876,13 +884,15 @@ The maze uses a DOM/CSS grid because canvas does not composite reliably in the s
 `foreignObject`. Its actors depend on grid source order and must not gain RenderLayer-producing
 styles such as positioning, transforms, opacity, filters, or z-index. One bounded scheduler owns
 the tile simulation; rAF only interpolates display. Input may update the buffered direction but
-must never clear/re-arm that scheduler, or held input starves the simulation. The loop gates on app
-ownership, focus, visibility, and Kill state.
+must never clear/re-arm that scheduler, or held input starves the simulation. The loop gates on
+either presentation owner, focus, visibility, and Kill state.
 
 Pac-Man's capture-phase handler must remain ahead of the page-wide transport handler so active-game
-Space pauses Pac-Man rather than music. Pointer buttons and drag gestures feed the same direction
-owner. `tests/pacman.js` owns simulation cadence, input, pause/resume, checkpoint, Kill, and
-reduced-motion coverage.
+Space pauses Pac-Man rather than music. The room presentation's window-capture Escape owner must
+also remain ahead of office zoom/global room Escape handlers; Backspace reaches it through the
+shared synthetic-Escape path without exiting browser fullscreen. Pointer buttons and drag gestures
+feed the same direction owner. `tests/pacman.js` owns both launch presentations, origin restoration,
+simulation cadence, input, pause/resume, checkpoint, Kill, and reduced-motion coverage.
 
 Life compares each computed generation with its source board. An empty board or a non-empty
 fixed point pauses through the normal `lifePause` owner; period-two and longer oscillators keep

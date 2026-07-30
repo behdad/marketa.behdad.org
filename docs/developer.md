@@ -524,8 +524,9 @@ still own their AudioNode suspension and call the state transition after changin
 
 The Cuddly projector keeps its durable channel in the `projector` checkpoint row. Its cycle starts
 coffee→fire in April–September and fire→coffee in October–March, then follows the stable remaining
-program order. Coffee is a native SVG channel with a shared-context synth bed; restored explicit
-channel state outranks the seasonal fresh/reset default.
+program order. Coffee is a three-frame native SVG channel with a shared-context synth bed. One
+room-, channel-, and visibility-gated timer rotates those frames every 20 seconds and is cleared
+before every reschedule; restored explicit channel state outranks the seasonal fresh/reset default.
 
 ### Shared projections
 

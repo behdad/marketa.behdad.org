@@ -8,8 +8,8 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:[],steps:{}};function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' var screen=document.getElementById("cuddly-wallscreen"),art=document.getElementById("cuddly-coffee"),phrase=art&&art.querySelector("text"),kettle=art&&art.querySelector(".coffee-kettle");',
-  ' report.steps.fresh={channel:window.__cuddlyProjector.channel(),preferred:window.__cuddlyProjector.preferred(),order:window.__cuddlyProjector.order(),shown:screen.classList.contains("chan-coffee"),phrase:phrase&&phrase.textContent,font:phrase&&getComputedStyle(phrase).fontFamily,kettleAnimation:kettle&&getComputedStyle(kettle).animationName,dots:document.querySelectorAll("#cuddly-chan-badge .chan-dot").length};',
+  ' var screen=document.getElementById("cuddly-wallscreen"),art=document.getElementById("cuddly-coffee"),phrase=art&&art.querySelector("text"),kettle=art&&art.querySelector(".coffee-kettle"),reader=document.getElementById("cuddly-home-reader"),title=reader&&reader.querySelector(".cat-reader-title"),readerSteam=reader&&reader.querySelector(".cat-reader-steam");',
+  ' report.steps.fresh={channel:window.__cuddlyProjector.channel(),preferred:window.__cuddlyProjector.preferred(),order:window.__cuddlyProjector.order(),shown:screen.classList.contains("chan-coffee"),phrase:phrase&&phrase.textContent,font:phrase&&getComputedStyle(phrase).fontFamily,kettleAnimation:kettle&&getComputedStyle(kettle).animationName,dots:document.querySelectorAll("#cuddly-chan-badge .chan-dot").length,scenes:window.__coffeeSceneState&&window.__coffeeSceneState(),sceneGroups:document.querySelectorAll("#cuddly-coffee,#cuddly-cat-times,#cuddly-home-reader").length,readerTitle:title&&title.textContent.replace(/\\s+/g," ").trim(),readerFont:title&&getComputedStyle(title).fontFamily,readerSteam:readerSteam&&getComputedStyle(readerSteam).animationName};',
   ' window.goToStage("cuddly");window.__cuddlyProjector.set("coffee");await sleep(520);',
   ' report.steps.playing={channel:window.__cuddlyProjector.channel(),playing:window.__coffeeMusicPlaying(),beds:window.__activeAudioBedCount(),label:window.__nowPlayingLabel(),captured:window.__captureCheckpointSystems().projector};',
   ' window.__toggleMusicPlayback();report.steps.paused={flag:!!window.__musicPaused,playing:window.__coffeeMusicPlaying()};window.__toggleMusicPlayback();report.steps.resumed={flag:!!window.__musicPaused,playing:window.__coffeeMusicPlaying()};',
@@ -42,9 +42,14 @@ var w = warm && warm.steps || {};
 check(w.fresh && w.fresh.channel === "coffee" && w.fresh.preferred === "coffee" &&
   w.fresh.order.slice(0, 2).join(",") === "coffee,fire" && w.fresh.shown,
   "April–September opens coffee first, immediately before fire", w.fresh);
-check(w.fresh && w.fresh.phrase === "Hurry? Never." && /Fraunces/i.test(w.fresh.font) &&
+check(w.fresh && w.fresh.phrase === "Hurry? Never—" && /Fraunces/i.test(w.fresh.font) &&
   w.fresh.kettleAnimation === "coffee-kettle-pour" && w.fresh.dots === 6,
   "the native channel retains its exact Fraunces phrase, slow animation and indicator", w.fresh);
+check(w.fresh && w.fresh.sceneGroups === 3 && w.fresh.scenes && w.fresh.scenes.count === 3 &&
+  w.fresh.scenes.interval === 20000 && w.fresh.scenes.index >= 0 && w.fresh.scenes.index < 3 &&
+  w.fresh.readerTitle === "The Gentle Art of Being Home." && /Fraunces/i.test(w.fresh.readerFont) &&
+  w.fresh.readerSteam === "cat-reader-steam-rise",
+  "three native café scenes rotate every 20 seconds, including the Fraunces-titled home reader", w.fresh);
 check(w.playing && w.playing.channel === "coffee" && w.playing.playing && w.playing.beds >= 1 &&
   w.playing.label === "Slow coffee" && w.playing.captured.channel === "coffee",
   "coffee music joins the shared bed, now-playing UI and checkpoint row", w.playing);

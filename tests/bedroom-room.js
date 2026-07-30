@@ -27,8 +27,8 @@ var HARNESS = [
   ' window.__secondRound=true;window.__deliverPhoneMessage("cue_mail");await sleep(80);badge=document.querySelector(".msg-badge");coach=document.querySelector(".msg-badge-coach");thumb=document.querySelector(".msg-thumb");report.steps.hold={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread(),badge:badge&&badge.classList.contains("show"),coach:coach&&coach.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};',
   ' key("ArrowUp");await sleep(1300);badge=document.querySelector(".msg-badge");thumb=document.querySelector(".msg-thumb");report.steps.return={state:window.__bedroomRoomState(),hidden:room.hidden,klass:viewport.classList.contains("bedroom-room-open"),focus:document.activeElement===viewport,held:window.__messageNotificationsHeld(),badge:badge&&badge.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};if(window.__hideMessageThumb)window.__hideMessageThumb(true);',
   ' window.goToStage("office");dblclick(document.getElementById("office-stainedglass"));await sleep(40);report.steps.interactive=window.__bedroomRoomState();',
-  ' dblclick(document.getElementById("office-wall-bg"));await sleep(100);report.steps.mouse=window.__bedroomRoomState();key("Escape");await sleep(760);',
-  ' touchup(document.getElementById("office-floor-bg"));await sleep(30);touchup(document.getElementById("office-floor-bg"));await sleep(100);report.steps.touch=window.__bedroomRoomState();key("Backspace");await sleep(760);',
+  ' dblclick(document.getElementById("office-wall-bg"));await sleep(100);report.steps.mouse=window.__bedroomRoomState();',
+  ' touchup(document.getElementById("office-floor-bg"));await sleep(30);touchup(document.getElementById("office-floor-bg"));await sleep(100);report.steps.touch=window.__bedroomRoomState();',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(780);report.steps.left={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__cinemaRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(780);report.steps.right={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__entranceRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);var dot=document.querySelectorAll(".hunt-dot")[0];dot.focus();click(dot);await sleep(780);report.steps.dot={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__bathroomRoomState(),hidden:room.hidden,focus:document.activeElement===dot};',
@@ -112,8 +112,8 @@ check(s.return && !s.return.state.open && !s.return.state.closing && s.return.hi
     return !/\b(?:glinting|off|swinging|tidied|made|open)\b/.test(prop.state);
   }),
   "Up completes the reverse pan, hides Bedroom, and restores viewport focus", s.return);
-check(s.interactive && !s.interactive.open && s.mouse && s.mouse.open && s.touch && s.touch.open,
-  "only exact bare Office backgrounds accept mouse or touch double entry",
+check(s.interactive && !s.interactive.open && s.mouse && !s.mouse.open && s.touch && !s.touch.open,
+  "Office props and bare backgrounds no longer open Bedroom",
   { interactive: s.interactive, mouse: s.mouse, touch: s.touch });
 check(s.left && s.left.room === "cuddly" && !s.left.source.open && s.left.hidden &&
   s.left.target.open && s.left.focus &&

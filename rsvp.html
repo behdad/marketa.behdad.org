@@ -29863,12 +29863,10 @@ window.__bathroomRoomOpen = false;
 (function () {
   var room = document.getElementById("bathroom-room");
   var viewport = document.querySelector(".hunt-viewport");
-  var background = document.getElementById("kitchen-wall");
   var closeButton = document.getElementById("bathroom-room-close");
   var art = document.getElementById("bathroom-room-art");
   var closeTimer = null;
   var closing = false;
-  var backgroundTapAt = 0;
   var bathroomHits = {};
   var stoolPosition = document.getElementById("bathroom-stool-position");
   var stool = document.getElementById("bathroom-stool");
@@ -29882,7 +29880,7 @@ window.__bathroomRoomOpen = false;
   var settledClasses = ["sink-running", "mirror-shimmer", "tub-filled", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
     "toilet-flush"];
-  if (!room || !viewport || !background || !closeButton || !art || !stoolPosition ||
+  if (!room || !viewport || !closeButton || !art || !stoolPosition ||
       !stool || !scaleNeedle || !scaleReading) return;
 
   function focusUpstairs() {
@@ -30073,27 +30071,6 @@ window.__bathroomRoomOpen = false;
     catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
     return true;
   }
-  function isBareKitchenBackground(event) {
-    var target = event && event.target;
-    return !!(target && target.id === "kitchen-wall" && !(target.closest && target.closest(".hunt-hit")));
-  }
-  function openFromBackground(event) {
-    if (!isBareKitchenBackground(event)) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    return openBathroom();
-  }
-  background.addEventListener("dblclick", openFromBackground);
-  background.addEventListener("pointerup", function (event) {
-    if (event.pointerType !== "touch" || !isBareKitchenBackground(event)) return;
-    var now = Date.now();
-    if (now - backgroundTapAt < 420) {
-      backgroundTapAt = 0;
-      openFromBackground(event);
-    } else {
-      backgroundTapAt = now;
-    }
-  });
   art.addEventListener("pointerdown", beginStoolDrag);
   art.addEventListener("pointermove", moveStool);
   art.addEventListener("pointerup", endStoolDrag);
@@ -30502,32 +30479,6 @@ window.__cinemaVideoLoaded = false;
     if (data.event === "play") setFilmPlaying(true, .4);
     else if (data.event === "pause" || data.event === "ended") setFilmPlaying(false, .45);
   });
-  var cuddlyBackgrounds = [document.getElementById("cuddly-wall"), document.getElementById("cuddly-ceiling")].filter(Boolean);
-  var cuddlyBackgroundIds = { "cuddly-wall": true, "cuddly-ceiling": true };
-  var cuddlyBackgroundTapAt = 0;
-  function isCuddlyBackground(event) {
-    var target = event && event.target;
-    return !!(target && cuddlyBackgroundIds[target.id] && !(target.closest && target.closest(".hunt-hit")));
-  }
-  function openCinemaFromBackground(event) {
-    if (!isCuddlyBackground(event)) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    return openCinema();
-  }
-  cuddlyBackgrounds.forEach(function (background) {
-    background.addEventListener("dblclick", openCinemaFromBackground);
-    background.addEventListener("pointerup", function (event) {
-      if (event.pointerType !== "touch" || !isCuddlyBackground(event)) return;
-      var now = Date.now();
-      if (now - cuddlyBackgroundTapAt < 420) {
-        cuddlyBackgroundTapAt = 0;
-        openCinemaFromBackground(event);
-      } else {
-        cuddlyBackgroundTapAt = now;
-      }
-    });
-  });
   window.__openCinemaRoom = openCinema;
   window.__closeCinemaRoom = closeCinema;
   window.__cinemaRoomState = function () {
@@ -30553,13 +30504,11 @@ window.__entranceRoomOpen = false;
   var room = document.getElementById("entrance-room");
   var viewport = document.querySelector(".hunt-viewport");
   var closeButton = document.getElementById("entrance-room-close");
-  var background = document.getElementById("balcony-background");
   var balconyStage = document.getElementById("stage-balcony");
   var prevButton = document.getElementById("hunt-prev");
   var nextButton = document.getElementById("hunt-next");
   var closeTimer = null;
   var closing = false;
-  var backgroundTapAt = 0;
   var props = room ? Array.prototype.slice.call(room.querySelectorAll(".entrance-prop")) : [];
   var reactions = {};
   var windowIds = [
@@ -30579,7 +30528,7 @@ window.__entranceRoomOpen = false;
   var entranceNight = null;
   var windowLights = {};
   var windowPayoffShown = false;
-  if (!room || !viewport || !closeButton || !background || !balconyStage) return;
+  if (!room || !viewport || !closeButton || !balconyStage) return;
 
   function paintEntranceWindows() {
     windowIds.forEach(function (id) {
@@ -30700,30 +30649,6 @@ window.__entranceRoomOpen = false;
     catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
     return true;
   }
-  function isBareBalconyBackground(event) {
-    var target = event && event.target;
-    return !!(target && balconyStage.contains(target) &&
-      !(target.closest && target.closest(
-        ".hunt-hit,#balcony-wall,[role=button],button,input,textarea,select,a"
-      )));
-  }
-  function openEntranceFromBackground(event) {
-    if (!isBareBalconyBackground(event)) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    return openEntrance();
-  }
-  balconyStage.addEventListener("dblclick", openEntranceFromBackground);
-  balconyStage.addEventListener("pointerup", function (event) {
-    if (event.pointerType !== "touch" || !isBareBalconyBackground(event)) return;
-    var now = Date.now();
-    if (now - backgroundTapAt < 420) {
-      backgroundTapAt = 0;
-      openEntranceFromBackground(event);
-    } else {
-      backgroundTapAt = now;
-    }
-  });
   closeButton.addEventListener("click", closeEntrance);
   function exitHorizontal(name, event) {
     if (!window.__entranceRoomOpen) return;
@@ -31222,39 +31147,6 @@ window.__bedroomRoomOpen = false;
     return true;
   }
 
-  var officeBackgroundIds = {
-    "office-wall-bg": true,
-    "office-plaster-bg": true,
-    "office-floor-bg": true
-  };
-  var officeBackgrounds = Object.keys(officeBackgroundIds).map(function (id) {
-    return document.getElementById(id);
-  }).filter(Boolean);
-  var backgroundTapAt = 0;
-  function isOfficeBackground(event) {
-    var target = event && event.target;
-    return !!(target && officeBackgroundIds[target.id] &&
-      !(target.closest && target.closest(".hunt-hit,[role=button],button,input,textarea,select,a")));
-  }
-  function openFromBackground(event) {
-    if (!isOfficeBackground(event)) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    return openBedroom();
-  }
-  officeBackgrounds.forEach(function (background) {
-    background.addEventListener("dblclick", openFromBackground);
-    background.addEventListener("pointerup", function (event) {
-      if (event.pointerType !== "touch" || !isOfficeBackground(event)) return;
-      var now = Date.now();
-      if (now - backgroundTapAt < 420) {
-        backgroundTapAt = 0;
-        openFromBackground(event);
-      } else {
-        backgroundTapAt = now;
-      }
-    });
-  });
   closeButton.addEventListener("click", closeBedroom);
   window.__openBedroomRoom = openBedroom;
   window.__closeBedroomRoom = closeBedroom;
@@ -79369,75 +79261,6 @@ async def localfont(name):
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); gleamPane(); }
     });
   });
-  // The three Prague-skyline towers conceal Prince's basement entrance. Desktop gets
-  // a double-click; touch gets an equivalent double-tap. Coordinate hit-testing keeps
-  // the discovery on the actual buildings without laying a transparent target over the
-  // sky pane's existing gleam/aircraft interaction.
-  var gardenWindow = document.getElementById("garden-window");
-  var gardenSkylineTapAt = 0;
-  function gardenSkylineHit(event) {
-    if (!gardenWindow || !gardenWindow.getScreenCTM) return false;
-    var svg = gardenWindow.ownerSVGElement;
-    var point = svg && svg.createSVGPoint ? svg.createSVGPoint() : null;
-    var matrix = gardenWindow.getScreenCTM();
-    if (!point || !matrix) return false;
-    point.x = event.clientX;
-    point.y = event.clientY;
-    var local = point.matrixTransform(matrix.inverse());
-    return (local.x >= 104 && local.x <= 244 && local.y >= 120 && local.y <= 292) ||
-      (local.x >= 250 && local.x <= 386 && local.y >= 70 && local.y <= 292) ||
-      (local.x >= 392 && local.x <= 528 && local.y >= 130 && local.y <= 292);
-  }
-  function enterPrinceBasement(event) {
-    if (!gardenSkylineHit(event)) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    if (window.__openGardenPrince) window.__openGardenPrince();
-    return true;
-  }
-  if (gardenWindow) {
-    gardenWindow.addEventListener("dblclick", enterPrinceBasement);
-    gardenWindow.addEventListener("pointerup", function (event) {
-      if (event.pointerType !== "touch" || !gardenSkylineHit(event)) return;
-      var now = Date.now();
-      if (now - gardenSkylineTapAt < 420) {
-        gardenSkylineTapAt = 0;
-        enterPrinceBasement(event);
-      } else {
-        gardenSkylineTapAt = now;
-      }
-    });
-  }
-  // The skyline remains the hidden illustrated entrance; a truly bare patch of the
-  // room backdrop is a second, spatially consistent route. Explicit whitelist + the
-  // interactive-ancestor guard keep furniture, people, panes, and controls from ever
-  // turning an ordinary double activation into a descent.
-  var gardenBackground = document.getElementById("garden-wall");
-  var gardenBackgroundTapAt = 0;
-  function isGardenBackground(event) {
-    var target = event && event.target;
-    return !!(target && target.id === "garden-wall" && !(target.closest && target.closest(".hunt-hit")));
-  }
-  function enterPrinceFromBackground(event) {
-    if (!isGardenBackground(event)) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    if (window.__openGardenPrince) window.__openGardenPrince();
-    return true;
-  }
-  if (gardenBackground) {
-    gardenBackground.addEventListener("dblclick", enterPrinceFromBackground);
-    gardenBackground.addEventListener("pointerup", function (event) {
-      if (event.pointerType !== "touch" || !isGardenBackground(event)) return;
-      var now = Date.now();
-      if (now - gardenBackgroundTapAt < 420) {
-        gardenBackgroundTapAt = 0;
-        enterPrinceFromBackground(event);
-      } else {
-        gardenBackgroundTapAt = now;
-      }
-    });
-  }
   var lamp = document.getElementById("garden-lamp");
   var genie = document.getElementById("garden-genie");
   var lampRubCount = 0;

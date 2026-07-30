@@ -221,8 +221,7 @@ Night Sky, it stays there and advances the piano pieces instead.
 
 Double-clicking or double-tapping the small film ticket resting on a
 Cuddly-puddly wall brick opens the loft cinema without changing the selected
-projector program. Doing the same on a bare patch of that room's background is
-a second entrance. The room pans down into the cinema and temporarily puts
+projector program. The room pans down into the cinema and temporarily puts
 **Who's here** away. Its short-throw projector starts off: select the physical
 projector, or press Enter/Space, to toggle it on or off and reveal/hide the
 three-film chooser. Those keys never operate film playback; the side
@@ -240,14 +239,14 @@ room. The rainbow-butterfly neon hangs above the bicycle and relights when
 selected; each beam, camera and loose cushion responds on its own, while the
 bicycle, table, weights and sofa answer individually too.
 
-From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
-bare patch of brick to visit **Bathroom / Toilets**. The scene pans to its
+From **Kitchen / Bar**, press Down or double-click / double-tap the small `WC`
+sign to visit **Bathroom / Toilets**. The scene pans to its
 fixtures. Click or tap them to play; the stool also drags
 sideways. Use ×, Up, Escape, or Backspace to return. Left/Right and the room
 dots move between adjacent hidden rooms.
 
-From the Balcony, press `↓` or double-click/double-tap a truly bare patch of its
-background to open **The Lofts** street entrance. The native SVG
+From the Balcony, press `↓` or double-click/double-tap the key and fob beside
+the door to open **The Lofts** street entrance. The native SVG
 night facade keeps the historic brick, stone, window, and timber-door character
 without reproducing an address. By day the façade and street brighten while
 the windows, hallway, and hanging entry lamps start dark; at night those lights
@@ -263,8 +262,8 @@ Backspace, or × returns to the
 Balcony. `←` pans to the Bedroom; `→` stays at the hidden-room track's right edge,
 and a room dot pans directly to the hidden room paired with its selection.
 
-The Office pairs with a hidden Bedroom. Press `↓`, or double-click or double-tap a
-bare patch of the Office wall or floor, to open it without disturbing
+The Office pairs with a hidden Bedroom. Press `↓`, or double-click or double-tap
+the rising `Zzz…` beside the stained-glass window, to open it without disturbing
 the Office. Press `↑`, ×, Escape, or Backspace to return. The room follows the
 loft's day/night state. Its stained glass, two brass mushroom lamps, compact wall rack,
 wardrobe, bed, and both bedside drawers are quiet repeatable toys; they also
@@ -388,14 +387,13 @@ Prince of Persia is a hidden monitor app: search for `prince`, type `prince` in
 either console, or run `prince()` from browser JavaScript. Its own Fullscreen
 control expands both the monitor and browser around the 16:10 game. Dismiss
 parks the live game so reopening resumes it; **Kill app** and **Start over**
-discard the run. In the garden, double-click or double-tap the distant skyline
-or a bare patch of the brick background to open the stone dungeon.
+discard the run. In the garden, double-click or double-tap the tiny dungeon
+door to open the stone dungeon.
 The dungeon opens quietly: click or tap its inset play wall, or press bare
 Enter or Space anywhere in the dormant dungeon, to create or resume the
 persistent Prince game and hand it the keyboard. Until then, its torches,
 barred window, chain, ledge, and loose stone
-remain small interactive toys and no game iframe exists. Interactive main-room
-objects never trigger the background shortcut. Escape or Backspace returns to
+remain small interactive toys and no game iframe exists. Escape or Backspace returns to
 the garden without ending an initiated run. Left/Right pans to the adjacent
 hidden room, and a room dot pans to the hidden room paired with the room it names.
 

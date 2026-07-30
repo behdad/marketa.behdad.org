@@ -579,10 +579,8 @@ common sound graph without an extra AudioContext. The separate
 `.cinema-prop` or a member of the three-item Office Butterfly Chase roster.
 
 `__cinemaRoomState()` exposes the compact
-open/closing/powered/shorted/playing/video/reactions test surface. Exact
-background whitelists (`#cuddly-wall`/`#cuddly-ceiling`,
-`#garden-wall`, and `#balcony-background`) own the desktop double-click and
-touch double-tap shortcuts; interactive descendants are explicitly rejected.
+open/closing/powered/shorted/playing/video/reactions test surface. Dedicated
+main-room portal props own desktop double-click and touch double-tap entry.
 The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond
 and palette. A narrow `MutationObserver` on `#stage-cuddly` mirrors its `dusk`
 class to `.cinema-night`, keeping the lower-room window synchronized with every
@@ -594,9 +592,8 @@ their schedulers, Totoro audience, fairy, and game groups until the return pan.
 walls, varied slate floor, clawfoot tub and textiles, sink/mirror, stool, scale,
 and separate pale-wood toilet nook are authored entirely in `rsvp.html`; the
 rendering uses no raster assets. It uses the same 720 ms overlay lifecycle as
-the cinema, with the Kitchen strip parked at `translate(0,-100%)`. Only an exact
-`#kitchen-wall` background double-click or double-tap may open it; kitchen
-objects cannot bubble into the entrance. `__bathroomRoomState()` exposes
+the cinema, with the Kitchen strip parked at `translate(0,-100%)`. The Kitchen
+`WC` portal or shared Down navigation opens it. `__bathroomRoomState()` exposes
 open/closing/hidden state for focused tests.
 The eight `[data-bath-action]` SVG controls share one delegated click/keydown
 handler, translated labels/tooltips, and the existing shared SFX helpers. Tub
@@ -611,8 +608,7 @@ stool offset, and scale state to `tests/bathroom-room.js`.
 
 `#entrance-room` is the code-native Balcony lower room. Its inline 680×340 SVG
 models the nighttime **The Lofts** facade without image or address assets.
-Entry is whitelisted to `#balcony-background`, so objects already owning
-double-click gestures remain untouched. The overlay pans up while the Balcony
+The Balcony key-and-fob portal or shared Down navigation opens it. The overlay pans up while the Balcony
 strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
 `hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
 capture guard owns Up/Escape/Backspace; horizontal navigation remains on the
@@ -636,10 +632,8 @@ visible; the reduced-motion rule disables it.
 The Office Bedroom follows the same viewport-sibling contract as `#cinema-room`
 but is entirely native SVG. Entry pans the preserved Office strip to
 `translate(-60%,-100%)`; `__openBedroomRoom()`, `__closeBedroomRoom()`, and
-`__bedroomRoomState()` expose its compact lifecycle surface. Only the exact
-background ids `#office-wall-bg`, `#office-plaster-bg`, and `#office-floor-bg`
-own desktop double-click and touch double-tap entry, so monitor, laptop, room
-toys, and other interactive descendants cannot accidentally descend. A narrow
+`__bedroomRoomState()` expose its compact lifecycle surface. The Office
+`Zzz…` portal or shared Down navigation opens it. A narrow
 observer mirrors `#stage-office.dusk` into `.bedroom-night`.
 Every distinct foreground prop is an SVG `role="button"` with localized
 `aria-label`/tooltip copy: stained glass, each brass mushroom bedside lamp, wall rack, wardrobe,

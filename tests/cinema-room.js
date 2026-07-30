@@ -38,11 +38,11 @@ var HARNESS = [
   ' click(film);await sleep(40);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__cinemaRoomState(),room:window.currentStageName,frame:!!document.getElementById("cinema-player"),channel:window.__cuddlyProjector.channel()};',
   ' window.goToStage("cuddly");window.__cuddlyProjector.set("fire");window.__playSongAt(0);await sleep(100);window.__openCinemaRoom();click(film);await sleep(40);click(document.getElementById("cinema-room-close"));await sleep(900);report.steps.fastClose={open:window.__cinemaRoomState().open,song:window.__phoneMusicPlaying(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility]};',
   ' dblclick(document.getElementById("cuddly-wallscreen"));await sleep(40);report.steps.cuddlyInteractive=window.__cinemaRoomState();',
-  ' dblclick(document.getElementById("cuddly-wall"));await sleep(850);report.steps.cuddlyMouse=window.__cinemaRoomState();key("Escape");await sleep(760);',
-  ' touchup(document.getElementById("cuddly-wall"));await sleep(30);touchup(document.getElementById("cuddly-wall"));await sleep(850);report.steps.cuddlyTouch=window.__cinemaRoomState();key("Backspace");await sleep(760);',
+  ' dblclick(document.getElementById("cuddly-wall"));await sleep(80);report.steps.cuddlyMouse=window.__cinemaRoomState();',
+  ' touchup(document.getElementById("cuddly-wall"));await sleep(30);touchup(document.getElementById("cuddly-wall"));await sleep(80);report.steps.cuddlyTouch=window.__cinemaRoomState();',
   ' window.goToStage("garden");await sleep(80);dblclick(document.getElementById("garden-window-pane-0"));await sleep(40);report.steps.gardenInteractive=window.__princeState();',
-  ' dblclick(document.getElementById("garden-wall"));await sleep(850);report.steps.gardenMouse=window.__princeState();key("Escape");await sleep(780);',
-  ' touchup(document.getElementById("garden-wall"));await sleep(30);touchup(document.getElementById("garden-wall"));await sleep(850);report.steps.gardenTouch=window.__princeState();key("Backspace");await sleep(780);report.steps.gardenReturn=window.__princeState();',
+  ' dblclick(document.getElementById("garden-wall"));await sleep(80);report.steps.gardenMouse=window.__princeState();',
+  ' touchup(document.getElementById("garden-wall"));await sleep(30);touchup(document.getElementById("garden-wall"));await sleep(80);report.steps.gardenTouch=window.__princeState();report.steps.gardenReturn=window.__princeState();',
   ' window.goToStage("office");var toggles=0,steps=[],oldToggle=window.__toggleDayNight,oldStep=window.__calStepTime;window.__toggleDayNight=function(){toggles++;};window.__calStepTime=function(n){steps.push(n);};key("ArrowDown");key("ArrowUp");key("d");key("ArrowUp",{shiftKey:true});key("ArrowDown",{shiftKey:true});window.__toggleDayNight=oldToggle;window.__calStepTime=oldStep;report.steps.verticalElsewhere={toggles:toggles,steps:steps,cinema:window.__cinemaRoomState(),prince:window.__princeState(),bathroom:window.__bathroomRoomState()};',
   ' window.goToStage("kitchen");key("ArrowDown");await sleep(850);report.steps.kitchenDown=window.__bathroomRoomState();key("ArrowUp");await sleep(760);report.steps.kitchenUp=window.__bathroomRoomState();',
   ' window.goToStage("cuddly");key("ArrowDown");await sleep(850);report.steps.cuddlyDown=window.__cinemaRoomState();key("ArrowUp");await sleep(760);report.steps.cuddlyUp=window.__cinemaRoomState();',
@@ -165,12 +165,12 @@ check(s.fastClose && !s.fastClose.open && s.fastClose.song,
 check(s.fastClose && s.fastClose.hidden && !s.fastClose.viewport &&
   s.fastClose.roster.every(function(value){return value==="visible";}),
   "the upward return finishes hidden and restores the open Who's here surface", s.fastClose);
-check(s.cuddlyInteractive && !s.cuddlyInteractive.open && s.cuddlyMouse && s.cuddlyMouse.open &&
-  s.cuddlyTouch && s.cuddlyTouch.open,
-  "only bare Cuddly background double-clicks and double-taps enter cinema", {interactive:s.cuddlyInteractive,mouse:s.cuddlyMouse,touch:s.cuddlyTouch});
-check(s.gardenInteractive && !s.gardenInteractive.basement && s.gardenMouse && s.gardenMouse.basement &&
-  s.gardenTouch && s.gardenTouch.basement && s.gardenReturn && !s.gardenReturn.open && s.gardenReturn.parked,
-  "only bare Garden background double-clicks/double-taps descend, and Escape/Backspace return", {interactive:s.gardenInteractive,mouse:s.gardenMouse,touch:s.gardenTouch,returned:s.gardenReturn});
+check(s.cuddlyInteractive && !s.cuddlyInteractive.open && s.cuddlyMouse && !s.cuddlyMouse.open &&
+  s.cuddlyTouch && !s.cuddlyTouch.open,
+  "Cuddly props and bare background no longer open cinema", {interactive:s.cuddlyInteractive,mouse:s.cuddlyMouse,touch:s.cuddlyTouch});
+check(s.gardenInteractive && !s.gardenInteractive.basement && s.gardenMouse && !s.gardenMouse.basement &&
+  s.gardenTouch && !s.gardenTouch.basement && s.gardenReturn && !s.gardenReturn.open,
+  "Garden props and bare background no longer open the dungeon", {interactive:s.gardenInteractive,mouse:s.gardenMouse,touch:s.gardenTouch,returned:s.gardenReturn});
 check(s.verticalElsewhere && s.verticalElsewhere.toggles === 1 &&
   s.verticalElsewhere.steps.join(",") === "1,-1" &&
   !s.verticalElsewhere.cinema.open && !s.verticalElsewhere.prince.open && !s.verticalElsewhere.bathroom.open,

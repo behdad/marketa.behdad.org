@@ -34,8 +34,8 @@ var HARNESS = [
   ' var towelStyle=getComputedStyle(document.getElementById("bathroom-waffle-towel")),toiletTarget=document.getElementById("bathroom-toilet-action");report.steps.functional={scaleToggle:{spike:scaleSpike,on:scaleOn,off:scaleOff},stationary:{before:stoolHitsBefore,state:stationaryState},right:{state:rightState,transform:rightTransform},left:{state:window.__bathroomInteractionState(),transform:stoolPosition.getAttribute("transform")},water:document.getElementById("bathroom-sink-water").getAttribute("d"),towelOrigin:towelStyle.transformOrigin,towelBox:towelStyle.transformBox,stoolOrigin:getComputedStyle(stool).transformOrigin,scaleText:document.getElementById("bathroom-scale-reading").textContent,scaleTransform:document.getElementById("bathroom-scale-needle").style.transform,toiletTarget:[toiletTarget.getAttribute("x"),toiletTarget.getAttribute("y"),toiletTarget.getAttribute("width"),toiletTarget.getAttribute("height")]};',
   ' key("ArrowUp");await sleep(760);report.steps.up={state:window.__bathroomRoomState(),props:window.__bathroomInteractionState(),viewport:viewport.classList.contains("bathroom-room-open"),covered:window.__roomAmbienceCovered(),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility]};',
   ' dblclick(document.getElementById("kitchen-pan-1"));await sleep(30);report.steps.interactive=window.__bathroomRoomState();',
-  ' dblclick(document.getElementById("kitchen-wall"));await sleep(80);report.steps.mouse=window.__bathroomRoomState();key("Escape");await sleep(760);',
-  ' touchup(document.getElementById("kitchen-wall"));await sleep(20);touchup(document.getElementById("kitchen-wall"));await sleep(80);report.steps.touch=window.__bathroomRoomState();key("Backspace");await sleep(760);',
+  ' dblclick(document.getElementById("kitchen-wall"));await sleep(80);report.steps.mouse=window.__bathroomRoomState();',
+  ' touchup(document.getElementById("kitchen-wall"));await sleep(20);touchup(document.getElementById("kitchen-wall"));await sleep(80);report.steps.touch=window.__bathroomRoomState();',
   ' window.__openBathroomRoom();await sleep(60);click(document.getElementById("bathroom-room-close"));await sleep(760);report.steps.dismiss=window.__bathroomRoomState();',
   ' window.__openBathroomRoom();await sleep(60);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__bathroomRoomState(),room:window.currentStageName};window.goToStage("kitchen");',
   ' var times=[],oldStep=window.__calStepTime;window.__calStepTime=function(n){times.push(n);};key("ArrowDown",{shiftKey:true});window.__calStepTime=oldStep;report.steps.shift={times:times,state:window.__bathroomRoomState()};',
@@ -125,8 +125,8 @@ check(s.up && !s.up.state.open && s.up.state.hidden && !s.up.viewport && !s.up.c
   s.up.roster.every(function (value) { return value === "visible"; }) &&
   s.up.messages.every(function (value) { return value === "visible"; }),
   "plain Up returns upstairs, settles bathroom props, and restores suppressed UI", s.up);
-check(s.interactive && !s.interactive.open && s.mouse && s.mouse.open && s.touch && s.touch.open,
-  "only the true bare kitchen background accepts mouse or touch double activation",
+check(s.interactive && !s.interactive.open && s.mouse && !s.mouse.open && s.touch && !s.touch.open,
+  "kitchen props and bare background no longer open Bathroom",
   { interactive: s.interactive, mouse: s.mouse, touch: s.touch });
 check(s.dismiss && !s.dismiss.open && s.dismiss.hidden,
   "the visible dismiss control closes and settles the room", s.dismiss);

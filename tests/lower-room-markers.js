@@ -86,6 +86,8 @@ check(/id="kitchen-bathroom-marker"[\s\S]*?>WC<\/text>[\s\S]*?<g id="kitchen-pan
   "the Kitchen marker is a small WC sign above the far-left pans");
 check(/id="garden-dungeon-marker"[\s\S]*?<g id="garden-jacket"[\s\S]*?<rect x="3" y="136" width="31" height="62"/.test(source),
   "the tiny dungeon door remains behind a jacket-only Garden hit target");
+check(!/gardenSkylineHit|enterPrinceBasement/.test(source),
+  "the Garden skyline no longer doubles as a dungeon entrance");
 check(/id="office-bedroom-marker"[\s\S]*?<text x="646"[^>]*>Z<\/text>[\s\S]*?<text x="664"[^>]*>z…<\/text>/.test(source),
   "the Office marker rises on the white wall right of the stained-glass window");
 check(/id="balcony-entrance-marker"[\s\S]*?translate\(146 117\) scale\(0\.7\)[\s\S]*?<circle[^>]+fill="#d9a6a6"/.test(source),

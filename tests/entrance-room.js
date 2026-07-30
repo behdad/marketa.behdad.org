@@ -20,15 +20,15 @@ var HARNESS = [
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();',
   ' var room=document.getElementById("entrance-room"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip"),roster=document.querySelector(".roster-panel"),toggle=document.querySelector(".roster-toggle"),backdrop=document.querySelector(".roster-backdrop");room.style.transition="none";strip.style.transition="none";var probeBadge=surface("msg-badge show entrance-probe"),probeCoach=surface("msg-badge-coach show entrance-probe"),probeThumb=surface("msg-thumb show entrance-probe"),probeCall=surface("call-ring show entrance-probe");',
   ' if(window.__setDayNight)window.__setDayNight(false);if(window.__setWildfireSmoke)window.__setWildfireSmoke(1);window.goToStage("balcony");await sleep(40);',
-  ' dblclick(document.getElementById("balcony-wall"));await sleep(30);report.steps.interactive=state();dblclick(document.getElementById("stage-balcony"));await sleep(50);report.steps.stageBackground=state();key("Escape");await sleep(760);',
-  ' var bg=document.getElementById("balcony-background"),bb=bg.getBoundingClientRect(),bare=null;for(var gy=1;gy<10&&!bare;gy++)for(var gx=1;gx<20;gx++){var px=bb.left+bb.width*gx/20,py=bb.top+bb.height*gy/10;if(document.elementFromPoint(px,py)===bg){bare={x:px,y:py};break;}}if(bare)bg.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true,clientX:bare.x,clientY:bare.y}));await sleep(50);roster.classList.add("show");backdrop.classList.add("show");var rr=room.getBoundingClientRect(),vr=viewport.getBoundingClientRect(),sr=strip.getBoundingClientRect(),smoke=document.querySelector("#entrance-room .entrance-smoke-tint");smoke.style.transition="none";',
+  ' dblclick(document.getElementById("balcony-wall"));await sleep(30);report.steps.interactive=state();dblclick(document.getElementById("stage-balcony"));await sleep(50);report.steps.stageBackground=state();',
+  ' var bg=document.getElementById("balcony-background"),bb=bg.getBoundingClientRect(),bare=null;for(var gy=1;gy<10&&!bare;gy++)for(var gx=1;gx<20;gx++){var px=bb.left+bb.width*gx/20,py=bb.top+bb.height*gy/10;if(document.elementFromPoint(px,py)===bg){bare={x:px,y:py};break;}}if(bare)bg.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true,clientX:bare.x,clientY:bare.y}));await sleep(50);report.steps.background=state();key("ArrowDown");await sleep(50);roster.classList.add("show");backdrop.classList.add("show");var rr=room.getBoundingClientRect(),vr=viewport.getBoundingClientRect(),sr=strip.getBoundingClientRect(),smoke=document.querySelector("#entrance-room .entrance-smoke-tint");smoke.style.transition="none";',
   ' var closeStyles=["bathroom-room-close","cinema-room-close","prince-basement-close","entrance-room-close"].map(function(id){var style=getComputedStyle(document.getElementById(id));return [parseFloat(style.width),parseFloat(style.height),parseFloat(style.right),parseFloat(style.top)];});',
   ' report.steps.open={state:state(),room:window.currentStageName,bare:bare,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),smoke:[room.style.getPropertyValue("--smoke"),parseFloat(getComputedStyle(smoke).opacity)],geometry:{entrance:[rr.left,rr.top,rr.width,rr.height],viewport:[vr.left,vr.top,vr.width,vr.height],strip:[sr.left,sr.top,sr.width,sr.height],transform:getComputedStyle(strip).transform,controls:closeStyles},roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],label:room.getAttribute("aria-label")};',
   ' var props=Array.from(document.querySelectorAll("#entrance-room .entrance-prop"));props.forEach(function(prop,index){if(index===1)elkey(prop,"Enter");else if(index===2)elkey(prop," ");else click(prop);});await sleep(30);report.steps.props={ids:props.map(function(prop){return prop.id;}),state:state(),caption:window.__captionKey(),roles:props.map(function(prop){return [prop.getAttribute("role"),prop.getAttribute("tabindex"),prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
   ' document.getElementById("stage-balcony").classList.add("dusk");await sleep(20);report.steps.night={state:state(),smoke:parseFloat(getComputedStyle(smoke).opacity)};document.getElementById("stage-balcony").classList.remove("dusk");await sleep(20);',
   ' setLang("cs");report.steps.cs={label:room.getAttribute("aria-label"),close:document.getElementById("entrance-room-close").getAttribute("aria-label"),props:props.map(function(prop){return [prop.getAttribute("aria-label"),prop.getAttribute("title")];})};setLang("en");',
   ' key("ArrowUp");await sleep(30);report.steps.up=state();key("ArrowDown");await sleep(50);key("Escape");await sleep(30);report.steps.escape=state();key("ArrowDown");await sleep(50);key("Backspace");await sleep(30);report.steps.backspace=state();',
-  ' window.goToStage("balcony");touchup(document.getElementById("balcony-background"));await sleep(20);touchup(document.getElementById("balcony-background"));await sleep(50);report.steps.touch=state();',
+  ' window.goToStage("balcony");touchup(document.getElementById("balcony-background"));await sleep(20);touchup(document.getElementById("balcony-background"));await sleep(50);report.steps.touch=state();key("ArrowDown");await sleep(50);',
   ' key("ArrowLeft");await sleep(780);report.steps.left={source:state(),target:window.__bedroomRoomState(),room:window.currentStageName};window.goToStage("balcony");key("ArrowDown");await sleep(50);key("ArrowRight");await sleep(40);report.steps.right={source:state(),room:window.currentStageName};',
   ' var targetDot=document.querySelectorAll(".hunt-dot")[1];targetDot.focus();click(targetDot);await sleep(780);report.steps.dot={source:state(),target:window.__princeState(),room:window.currentStageName,focused:document.activeElement===targetDot};',
   ' window.goToStage("balcony");key("ArrowDown");await sleep(50);click(document.getElementById("hunt-prev"));await sleep(780);report.steps.prev={source:state(),target:window.__bedroomRoomState(),room:window.currentStageName};',
@@ -53,11 +53,12 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(s.interactive && !s.interactive.open && s.stageBackground && s.stageBackground.open &&
+check(s.interactive && !s.interactive.open && s.stageBackground && !s.stageBackground.open &&
+  s.background && !s.background.open &&
   s.open && s.open.bare && s.open.state.open &&
   s.open.room === "balcony" && s.open.viewport && !s.open.state.hidden,
-  "any unclaimed Balcony surface opens Entrance without stealing interactive props",
-  {interactive:s.interactive,stageBackground:s.stageBackground,open:s.open});
+  "Balcony props and bare backgrounds stay upstairs while Down opens Entrance",
+  {interactive:s.interactive,stageBackground:s.stageBackground,background:s.background,open:s.open});
 check(s.open && s.open.geometry &&
   s.open.geometry.entrance.every(function(value,index){return Math.abs(value-s.open.geometry.viewport[index])<0.7;}) &&
   s.open.geometry.strip[1] + s.open.geometry.strip[3] <= s.open.geometry.viewport[1] + 1,
@@ -98,7 +99,7 @@ check(s.cs && s.cs.props && s.cs.props.length === 10 &&
   "all Entrance prop labels and tooltips switch to Czech", s.cs && s.cs.props);
 check(s.up && !s.up.open && s.escape && !s.escape.open && s.backspace && !s.backspace.open,
   "plain Up, Escape, and Backspace return upstairs", {up:s.up,escape:s.escape,backspace:s.backspace});
-check(s.touch && s.touch.open, "a bare-background touch double-tap enters Entrance", s.touch);
+check(s.touch && !s.touch.open, "a bare-background touch double-tap stays upstairs", s.touch);
 check(s.number && !s.number.source.open && s.number.target.open && s.number.room === "kitchen",
   "a number shortcut pans to the corresponding room while remaining downstairs", s.number);
 check(s.left && !s.left.source.open && s.left.target.open && s.left.room === "office" &&

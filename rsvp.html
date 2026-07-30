@@ -47978,7 +47978,11 @@ setOfficeProgress("pc", false);
       // needs show-caps, which the branch above has just added)
       if (!resumedMonitorLock && pendingBootConsole) { pendingBootConsole = false; openConsole(); }
       // a computer("app")/monitor("app") device-command queued a dock app to open once caps lands
-      if (!resumedMonitorLock && pendingBootApp) { var _pbApp = monitorAppByName(pendingBootApp); pendingBootApp = null; if (_pbApp) _pbApp.open(); }
+      if (!resumedMonitorLock && pendingBootApp) {
+        var _pbName = pendingBootApp, _pbApp = monitorAppByName(_pbName);
+        pendingBootApp = null;
+        if (_pbApp) _pbApp.open(_pbName);
+      }
       if (resumedMonitorLock) {
         pendingBootConsole = false;
         pendingBootApp = null;
@@ -49182,7 +49186,7 @@ setOfficeProgress("pc", false);
       open: function () { openMonitorHelp(); } },
     { id: "credits", labelKey: "mon_sys_credits", glyph: "✦", tile: "#17131d", color: "#d9a6a6", glyphSize: "5.2", searchOnly: true,
       open: function () { openMonitorCredits(); } },
-    { id: "snake", icon: "snake", labelKey: "app_snake", aliases: ["nibbles", "dos"], glyph: "🐍", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", game: { id: "snake", name: "Snake" }, open: function () { openSnake(); } },
+    { id: "snake", icon: "snake", labelKey: "app_snake", aliases: ["nibbles", "dos"], glyph: "🐍", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", game: { id: "snake", name: "Snake" }, open: function (name) { openSnake(normalizeDockSearch(name) === "dos" ? "dos" : "nibbles"); } },
     { id: "shoot", icon: "shoot", labelKey: "app_shoot", glyph: "🎮", tile: "#805438", color: "#e8c060", glyphSize: "5.2", game: { id: "shoot", name: "Shoot", how_to_open: "Open Shoot from the monitor desktop, then choose Duke Nukem 3D, Doom, or Quake III Arena.", activities: ["Duke Nukem 3D", "Doom", "Quake III Arena"] }, open: function () { openShoot(); } },
     { id: "doom", labelKey: "shoot_doom", glyph: "D", tile: "#805438", color: "#e8c060", glyphSize: "4.2", searchOnly: true, open: function () { openDoom(); } },
     { id: "duke", labelKey: "shoot_duke", glyph: "⌐■-■", tile: "#9b7424", color: "#f5d44b", glyphSize: "3.2", searchOnly: true, open: function () { openShoot("duke"); } },
@@ -50870,11 +50874,11 @@ setOfficeProgress("pc", false);
     }
     return { score: best, completion: completion, matchedName: matchedName };
   }
-  function openDockSearchMatch(app) {
-    if (!app) return;
+  function openDockSearchMatch(entry) {
+    if (!entry || !entry.app) return;
     clearDockSearch();
     appOpenTs = Date.now();
-    app.open();
+    entry.app.open(entry.match.matchedName);
   }
   function renderDockSearchResults() {
     if (!dockSearchResults) return;
@@ -50903,11 +50907,11 @@ setOfficeProgress("pc", false);
       label.textContent = resultNames[i];
       result.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
       result.addEventListener("click", function (e) {
-        e.preventDefault(); e.stopPropagation(); openDockSearchMatch(entry.app);
+        e.preventDefault(); e.stopPropagation(); openDockSearchMatch(entry);
       });
       result.addEventListener("keydown", function (e) {
         if (e.key !== "Enter" && e.key !== " ") return;
-        e.preventDefault(); e.stopPropagation(); openDockSearchMatch(entry.app);
+        e.preventDefault(); e.stopPropagation(); openDockSearchMatch(entry);
       });
     });
   }
@@ -51063,10 +51067,11 @@ setOfficeProgress("pc", false);
     if (e.key === "Enter" || e.key === "Tab") {
       if (!active) return;
       e.preventDefault(); e.stopImmediatePropagation();
-      var app = dockSearchBest;
-      if (!app) return;
+      var entry = dockSearchMatches[dockSearchIndex];
+      if (!entry) return;
       clearDockSearch();
-      if (app) { appOpenTs = Date.now(); app.open(); }
+      appOpenTs = Date.now();
+      entry.app.open(entry.match.matchedName);
       return;
     }
     var isLetterOrDigit = e.key && e.key.length === 1 && (/\d/.test(e.key) || e.key.toLocaleLowerCase() !== e.key.toLocaleUpperCase());
@@ -60689,7 +60694,7 @@ async def localfont(name):
   // ── snake / DOS app ────────────────────────────────────────────────────────────
   var snakeWrap = document.getElementById("monitor-snake-wrap");
   var snakeCloseBtn = document.getElementById("monitor-snake-close");
-  var snakeFrame = null, snakeState = "cold";
+  var snakeFrame = null, snakeState = "cold", snakeMode = null;
   function snakeControl(action) {
     if (!snakeFrame || !snakeFrame.contentWindow) return;
     try { snakeFrame.contentWindow.postMessage({ type: "snake-control", action: action }, location.origin); } catch (e) {}
@@ -60705,12 +60710,13 @@ async def localfont(name):
       }
     } catch (e) {}
   }
-  function ensureSnakeFrame() {
+  function ensureSnakeFrame(mode) {
     if (snakeFrame || !snakeWrap) return;
     snakeState = "loading";
+    snakeMode = mode;
     var frame = document.createElement("iframe");
-    frame.title = "snake — historical four-player Nibbles in DOSBox";
-    frame.src = "dos/player.html?lang=" + (document.documentElement.lang === "cs" ? "cs" : "en");
+    frame.title = mode === "dos" ? "DOSBox" : "snake — historical four-player Nibbles in DOSBox";
+    frame.src = "dos/player.html?lang=" + (document.documentElement.lang === "cs" ? "cs" : "en") + "&mode=" + mode;
     frame.allow = "autoplay";
     frame.addEventListener("load", function () {
       if (snakeFrame !== frame) return;
@@ -60720,12 +60726,15 @@ async def localfont(name):
     snakeWrap.appendChild(frame);
     snakeFrame = frame;
   }
-  function openSnake() {
-    if (!monitor.classList.contains("show-caps") || monitor.classList.contains("show-snake")) return;
+  function openSnake(mode) {
+    mode = mode === "dos" ? "dos" : "nibbles";
+    if (!monitor.classList.contains("show-caps")) return;
+    if (monitor.classList.contains("show-snake") && snakeMode === mode) return;
+    if (snakeFrame && snakeMode !== mode) destroySnake();
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null;
     monitor.classList.add("show-snake");
-    ensureSnakeFrame();
+    ensureSnakeFrame(mode);
     snakeControl("resume");
     playLaptopClickSound("office-monitor");
   }
@@ -60740,7 +60749,7 @@ async def localfont(name):
     if (snakeFrame) {
       try { snakeFrame.remove(); } catch (e) { if (snakeFrame.parentNode) snakeFrame.parentNode.removeChild(snakeFrame); }
     }
-    snakeFrame = null; snakeState = "cold";
+    snakeFrame = null; snakeState = "cold"; snakeMode = null;
     monitor.classList.remove("show-snake");
     scheduleSaver();
   }
@@ -60773,10 +60782,10 @@ async def localfont(name):
   window.__closeMonitorSnake = closeSnake;
   window.__snakeRunning = function () { return snakeState === "ready"; };
   window.__killMonitorSnake = snakeDeathFlash;
-  window.__restartMonitorSnake = function () { destroySnake(); openSnake(); };
+  window.__restartMonitorSnake = function () { var mode = snakeMode || "nibbles"; destroySnake(); openSnake(mode); };
   window.__focusMonitorSnake = focusSnakeFrame;
   window.__snakeState = function () {
-    return { open: monitor.classList.contains("show-snake"), state: snakeState,
+    return { open: monitor.classList.contains("show-snake"), state: snakeState, mode: snakeMode,
       iframe: snakeFrame ? snakeFrame.getAttribute("src") : null };
   };
   window.addEventListener("message", function (event) {
@@ -60784,6 +60793,10 @@ async def localfont(name):
     if (event.data.type === "snake-ready") snakeState = "ready";
     else if (event.data.type === "snake-failed") snakeState = "failed";
     else if (event.data.type === "snake-close") closeSnake();
+    else if (event.data.type === "snake-exit") {
+      if (window.__markMonitorAppKilled) window.__markMonitorAppKilled("snake");
+      destroySnake();
+    }
   });
   document.addEventListener("visibilitychange", function () {
     if (!snakeFrame) return;
@@ -62591,17 +62604,17 @@ async def localfont(name):
     if (app.locked && app.locked()) return "🔒 " + app.id + " is still hidden.";
     if (window.goToStage && window.currentStageName !== "office") window.goToStage("office"); // the monitor lives in the office — bring it on screen without tearing down an existing monitor-focus view
     // PC off → power on (spark + fan + boot Fedora → caps); the boot-complete hook opens the queued app.
-    if (!pcTower.classList.contains("on")) { pendingBootApp = app.id; pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "🖥 booting the PC → " + app.id + "…"; }
+    if (!pcTower.classList.contains("on")) { pendingBootApp = q || app.id; pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true })); return "🖥 booting the PC → " + app.id + "…"; }
     // PC on but the typewriter's showing → bring the monitor back; updateScreen reboots to caps, hook opens it.
-    if (!monitor.classList.contains("here")) { pendingBootApp = app.id; swap(true); return "🖥 waking the monitor → " + app.id + "…"; }
-    if (monitor.classList.contains("show-fedora")) { pendingBootApp = app.id; return "🖥 mid-boot → " + app.id + " next…"; } // the boot hook opens it when caps lands
+    if (!monitor.classList.contains("here")) { pendingBootApp = q || app.id; swap(true); return "🖥 waking the monitor → " + app.id + "…"; }
+    if (monitor.classList.contains("show-fedora")) { pendingBootApp = q || app.id; return "🖥 mid-boot → " + app.id + " next…"; } // the boot hook opens it when caps lands
     // PC on, monitor here, booted: close whatever owns the screen, back to caps, open the app in place.
     if (window.__closeTopMonitorApp) window.__closeTopMonitorApp();
     stopSaver();
     monitor.classList.remove("show-harfbuzz", "show-behdad", "show-nowplaying");
     if (!monitor.classList.contains("show-caps")) { monitor.classList.add("show-caps"); monitorUrl = CAPS_URL; }
     if (window.__monitorZoomIn) window.__monitorZoomIn();
-    app.open();
+    app.open(q);
     return "🖥 " + app.id + " — up on the monitor.";
   };
   function swap(toMonitor) {

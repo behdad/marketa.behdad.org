@@ -286,11 +286,11 @@ In the monitor music player, drag an equalizer band vertically to adjust it.
 Double-tap a band to zero that band. On touch devices, press and hold a band to
 open the same **Reset EQ** and **Kill app** menu provided by right-click.
 
-The monitor's **snake** app runs the four-player DOS edition of Nibbles. It is
-also discoverable by searching for `nibbles` or `dos`. Its **Fullscreen** button
-expands the DOS game itself; its red-and-white controls echo the game screen.
-Esc leaves Nibbles at its historical DOS
-prompt; type `EXIT` there to return to the loft.
+The monitor's **snake** app runs the four-player DOS edition of Nibbles. Search
+for `snake` or `nibbles` to launch the game; Esc exits it and returns to the
+monitor. Search for `dos` when you want a bare `C:\>` prompt instead. Type
+`NIBBLES` there to run the game without leaving the DOS session, or `EXIT` to
+return to the monitor.
 
 Prince of Persia is a hidden monitor app: search for `prince`, type `prince` in
 either console, or run `prince()` from browser JavaScript. Its own Fullscreen

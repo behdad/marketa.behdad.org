@@ -778,7 +778,9 @@ The visible dock order lives in the monitor checkpoint row; drag swaps fixed slo
 restores the order, and the adapter reset restores `DESKTOP_APPS` order.
 The transient desktop finder ranks exact hits first and then alphabetizes every
 prefix match by its displayed lowercase search name. Canonical ids and localized
-labels participate; only Snake retains explicit `nibbles`/`dos` aliases.
+labels participate; only Snake retains explicit `nibbles`/`dos` aliases. The
+matched spelling is forwarded to an app's open callback so `dos` can select the
+bare-shell mode while `snake` and `nibbles` select the game.
 All matching tiled apps receive `.search-match`, while the native-SVG dropdown
 also exposes search-only and toolbar results without a WebKit RenderLayer.
 With an empty query, that same result surface becomes the complete alphabetized
@@ -912,16 +914,20 @@ this Emscripten/WebGL build. Like every
 canvas/video/iframe inside the scaled monitor `foreignObject`, these game rasters
 remain a known blank-compositing limitation on WebKit.
 
-The `show-snake` app lazily creates one same-origin `dos/player.html` iframe.
+The `show-snake` app lazily creates one same-origin `dos/player.html` iframe,
+with a `mode=dos|nibbles` query selected by the launcher.
 The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
 or stop it. Normal close pauses and retains the frame. Kill (and the internal
 restart helper used by console commands) calls `player.stop()` and removes the
 iframe, which releases the WASM machine and all child listeners. Child readiness
 gates runtime Kill, and a normalized `snake-context` bridge reuses the monitor’s
 ordinary Kill menu. The
-bundle autoexec runs the owner-supplied historical Nibbles build once; that
-build was modified by `bigbug` for four-player support. It deliberately leaves
-DOSBox’s internal shell at `C:\>` after the game exits. Repacking, hashes, and
+pinned bundle carries the owner-supplied historical Nibbles build modified by
+`bigbug` for four-player support. `player.html` overlays only
+`.jsdos/dosbox.conf` at runtime: DOS mode mounts the bundle at a bare `C:\>`
+prompt, while Nibbles mode runs the game once and exits DOSBox afterward. The
+child's captured Esc reaches DOSBox, then sends `snake-exit`; the parent tears
+down the completed game and returns to the monitor. Repacking, hashes, and
 provenance live in `dos/BUILD.md`.
 
 Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The

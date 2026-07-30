@@ -15,6 +15,7 @@ body{font-family:ui-monospace,Menlo,Consolas,monospace;touch-action:none}
 canvas{image-rendering:pixelated}
 </style>
 <script src="runtime/js-dos.js"></script>
+<script id="emulators-js" src="runtime/emulators/emulators.js"></script>
 </head>
 <body>
 <div id="dos"></div>
@@ -23,7 +24,9 @@ canvas{image-rendering:pixelated}
 (function () {
   "use strict";
   var status = document.getElementById("status");
-  var lang = new URLSearchParams(location.search).get("lang") === "cs" ? "cs" : "en";
+  var params = new URLSearchParams(location.search);
+  var lang = params.get("lang") === "cs" ? "cs" : "en";
+  var mode = params.get("mode") === "dos" ? "dos" : "nibbles";
   var text = {
     en: { loading: "loading DOS…", failed: "DOS could not start. Restart the app to retry." },
     cs: { loading: "načítám DOS…", failed: "DOS se nepodařilo spustit. Zkuste aplikaci restartovat." }
@@ -32,7 +35,7 @@ canvas{image-rendering:pixelated}
   function tell(type, extra) {
     try { parent.postMessage(Object.assign({ type: type }, extra || {}), location.origin); } catch (_error) {}
   }
-  var exitInput = "", atPrompt = false;
+  var exitInput = "", atPrompt = mode === "dos";
   function handleExitKeys(event) {
     if (event.key === "Escape" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
@@ -40,6 +43,12 @@ canvas{image-rendering:pixelated}
       return;
     }
     if (event.key === "Escape") {
+      if (mode === "nibbles") {
+        // Let DOSBox receive Esc and return from Nibbles before the parent tears
+        // down this finished machine and brings the monitor desktop back.
+        window.setTimeout(function () { tell("snake-exit"); }, 100);
+        return;
+      }
       exitInput = ""; atPrompt = true;
       return;
     }
@@ -61,10 +70,67 @@ canvas{image-rendering:pixelated}
   // Register before Dos() installs its keyboard plumbing; window capture sees Esc
   // before the emulator can consume it on the way to the canvas/worker.
   window.addEventListener("keydown", handleExitKeys, true);
-  var player;
-  try {
+  var runtimeDosboxConf = [
+    "[sdl]",
+    "autolock=true",
+    "",
+    "[dosbox]",
+    "machine=svga_s3",
+    "memsize=16",
+    "",
+    "[cpu]",
+    "core=auto",
+    "cycles=auto",
+    "",
+    "[mixer]",
+    "nosound=true",
+    "",
+    "[midi]",
+    "mpu401=none",
+    "mididevice=none",
+    "",
+    "[sblaster]",
+    "sbtype=none",
+    "",
+    "[gus]",
+    "gus=false",
+    "",
+    "[speaker]",
+    "pcspeaker=false",
+    "tandy=off",
+    "disney=false",
+    "",
+    "[autoexec]",
+    "@echo off",
+    "mount c .",
+    "c:"
+  ].concat(mode === "nibbles" ? ["NIBBLES.EXE", "exit"] : []).join("\n");
+  var player = null;
+  emulators.pathPrefix = "runtime/emulators/";
+  emulators.pathSuffix = "";
+  function fail() {
+    status.hidden = false;
+    status.textContent = text[lang].failed;
+    tell("snake-failed");
+  }
+  fetch("snake.jsdos?v=7a0a1895", { cache: "no-store" }).then(function (response) {
+    if (!response.ok) throw new Error("bundle unavailable");
+    return response.arrayBuffer();
+  }).then(function (bundle) {
+    // Patch a transient in-memory copy: archives are extracted after loose
+    // initFs entries in this pinned emulator, so changing the archive config
+    // itself is what reliably selects the requested autoexec.
+    return emulators.bundleUpdateConfig(new Uint8Array(bundle), {
+      dosboxConf: runtimeDosboxConf,
+      jsdosConf: { version: "8" }
+    });
+  }).then(function (bundle) {
     player = Dos(document.getElementById("dos"), {
-      url: "snake.jsdos?v=7a0a1895",
+      dosboxConf: runtimeDosboxConf,
+      jsdosConf: { version: "8" },
+      // The deployed archive and owner executable remain byte-for-byte pinned;
+      // only this disposable in-memory bundle has its config replaced.
+      initFs: bundle,
       pathPrefix: "runtime/emulators/",
       backend: "dosbox",
       backendLocked: true,
@@ -86,15 +152,8 @@ canvas{image-rendering:pixelated}
         }
       }
     });
-  } catch (_error) {
-    status.textContent = text[lang].failed;
-    tell("snake-failed");
-  }
-  window.addEventListener("error", function () {
-    status.hidden = false;
-    status.textContent = text[lang].failed;
-    tell("snake-failed");
-  });
+  }).catch(fail);
+  window.addEventListener("error", fail);
   window.addEventListener("message", function (event) {
     if (event.origin !== location.origin || !event.data || event.data.type !== "snake-control" || !player) return;
     if (event.data.action === "pause") player.setPaused(true);

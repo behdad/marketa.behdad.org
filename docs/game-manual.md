@@ -214,8 +214,9 @@ The small film ticket resting on a Cuddly-puddly wall brick opens the loft
 cinema without changing the selected projector program. Double-clicking or
 double-tapping a bare patch of that room's background is a second entrance. The
 room pans down into the cinema and temporarily puts **Who's here** away. Its
-short-throw projector starts off: select the physical projector, or press bare
-Space, to light the screen and reveal the three-film chooser. The side
+short-throw projector starts off: select the physical projector, or press
+Enter/Space, to toggle it on or off and reveal/hide the three-film chooser.
+Those keys never operate film playback; the side
 Play/Pause and Next controls follow the cinema while it is open. **Choose
 another** stops a film and returns to the chooser. The × button, Escape,
 Backspace, or ordinary room navigation pans back up.

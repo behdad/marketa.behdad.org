@@ -30628,30 +30628,22 @@ window.__entranceRoomOpen = false;
   if (window.__registerTransientResetHook) window.__registerTransientResetHook("entrance-room", closeEntrance);
 })();
 
-// While the cinema owns the viewport, its controls keep ordinary key defaults but the
-// underlying loft must not also interpret them. Escape and Backspace return to Cuddly.
+// While the cinema owns the viewport, it claims only room navigation and activation.
+// Space always toggles the physical projector; Play remains an explicit button action.
 document.addEventListener("keydown", function (event) {
   if (!window.__cinemaRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   if (handleLowerRoomNumberShortcut(event)) return;
-  var ownedControl = event.target && event.target.closest &&
-    event.target.closest("#cinema-room button,#cinema-room .cinema-prop");
-  if ((event.key === "Enter" || event.key === " ") && ownedControl) {
+  if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
     event.preventDefault();
     event.stopImmediatePropagation();
-    ownedControl.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    if (window.__cinemaProjectorToggle) window.__cinemaProjectorToggle();
     return;
   }
-  if ((event.key === " " || event.key === "Spacebar") && window.__cinemaProjectorToggle) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    window.__cinemaProjectorToggle();
-    return;
-  }
-  event.stopImmediatePropagation();
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__navigateLowerRoom) {
       window.__navigateLowerRoom(event.key === "ArrowLeft" ? "garden" : "office");
       return;
@@ -30665,6 +30657,7 @@ document.addEventListener("keydown", function (event) {
     }
   } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__closeCinemaRoom) window.__closeCinemaRoom();
   }
 }, true);

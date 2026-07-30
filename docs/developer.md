@@ -651,6 +651,11 @@ and clears persistent and one-shot classes on room close, so a return always
 starts from the authored composition. `__bedroomRoomState().props` is the
 focused regression surface for that cleanup.
 
+The ceiling sprinkler is one more native SVG Bedroom prop. Its click path
+briefly reveals the spray layer and adds `.wet` to the bed; independent timers
+stop the spray and fade the wet sheen after the linen dries. Room close clears
+both timers and classes.
+
 The stained-glass inset is also a nine-cell tic-tac-toe board. Pane double-click
 or same-pane touch double-tap starts/restarts with the visitor as X; subsequent
 visitor turns use ordinary pane clicks/taps. A deterministic minimax player

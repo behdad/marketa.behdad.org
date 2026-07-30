@@ -726,6 +726,10 @@ footer{margin-top:2.6rem}
 #bedroom-bed.made .bedroom-pillow-left{transform:translate(4px,3px)}
 #bedroom-bed.made .bedroom-pillow-right{transform:translate(-4px,3px)}
 #bedroom-bed.made .bedroom-duvet-crease{opacity:.14}
+#bedroom-room .bedroom-sprinkler-water{opacity:0;transition:opacity .14s ease}
+#bedroom-room.spraying .bedroom-sprinkler-water{opacity:.82}
+#bedroom-room .bedroom-bed-wet{opacity:0;transition:opacity 1.5s ease}
+#bedroom-bed.wet .bedroom-bed-wet{opacity:.34;transition-duration:.18s}
 #bedroom-left-table.open .bedroom-drawer{transform:translateX(5px)}
 #bedroom-right-table.open .bedroom-drawer{transform:translateX(-5px)}
 #bedroom-room-close{
@@ -29591,7 +29595,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <rect y="300" width="680" height="40" fill="url(#bedroom-floor)"/>
         <path d="M0 317H680M85 300L79 340M189 300L184 340M303 300L301 340M420 300L423 340M535 300L543 340M630 300L644 340" fill="none" stroke="#75472e" stroke-width="1.3" opacity=".62"/>
         <path d="M0 24H680" stroke="#2f3030" stroke-width="5"/>
-        <path d="M340 0V31" stroke="#4b4c4c" stroke-width="5"/><circle cx="340" cy="32" r="5" fill="#747576" stroke="#292a2a" stroke-width="1.2"/>
+        <g id="bedroom-sprinkler" class="bedroom-prop" role="button"
+          data-aria-i="bedroom_sprinkler" data-title-i="bedroom_sprinkler"
+          aria-label="Test the bedroom sprinkler" title="Test the bedroom sprinkler">
+          <path d="M340 0V31" stroke="#4b4c4c" stroke-width="5"/>
+          <circle cx="340" cy="32" r="5" fill="#747576" stroke="#292a2a" stroke-width="1.2"/>
+          <circle cx="340" cy="31" r="18" fill="#fff" fill-opacity="0" pointer-events="all"/>
+        </g>
 
         <!-- Stained-glass panel beside the bed. -->
         <g id="bedroom-stained-glass" class="bedroom-prop" transform="translate(0 -18)" role="button" aria-label="Catch the stained-glass light; double-click or double-tap a pane to play tic-tac-toe" title="Catch the stained-glass light; double-click or double-tap a pane to play tic-tac-toe" data-aria-i="bedroom_glass" data-title-i="bedroom_glass">
@@ -29646,6 +29656,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <path class="bedroom-pillow bedroom-pillow-left" d="M153 211Q206 183 274 210L266 244Q206 252 151 231Z" fill="#e5c893" stroke="#b2864f" stroke-width="2"/>
           <path class="bedroom-pillow bedroom-pillow-right" d="M409 210Q472 181 529 212L525 236Q469 251 412 242Z" fill="#e5c893" stroke="#b2864f" stroke-width="2"/>
           <path d="M123 233Q206 212 283 226Q348 207 420 225Q501 213 558 240L548 326H129Z" fill="url(#bedroom-duvet)" stroke="#8c5632" stroke-width="3"/>
+          <path class="bedroom-bed-wet" d="M171 247Q241 226 305 244Q356 229 415 244Q466 231 516 250L506 304Q417 286 337 300Q252 283 165 300Z" fill="#7f9ec0" pointer-events="none"/>
           <path class="bedroom-duvet-crease" d="M130 252Q210 240 279 253M287 232Q323 270 311 324M417 231Q394 272 410 325M480 239Q517 274 508 323M154 294Q241 280 332 298Q418 282 535 303" fill="none" stroke="#f0c779" stroke-width="3" opacity=".43"/>
           <path d="M129 326H548" stroke="#5d3b2a" stroke-width="7"/>
         </g>
@@ -29684,6 +29695,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <path class="bedroom-lamp-light" d="M533 198Q549 204 565 198" fill="none" stroke="#ffe7a2" stroke-width="2.2" stroke-linecap="round" opacity=".78"/>
               <path d="M535 190Q542 184 551 184" fill="none" stroke="#fff0b5" stroke-width="1.8" stroke-linecap="round" opacity=".55"/>
             </g>
+          </g>
+        </g>
+        <g class="bedroom-sprinkler-water" pointer-events="none" fill="none" stroke="#b9dff0" stroke-linecap="round">
+          <path d="M340 37Q310 112 250 228M340 37Q329 126 314 239M340 37Q357 126 374 239M340 37Q387 116 443 230" stroke-width="2.2"/>
+          <g fill="#d7edf6" stroke="none">
+            <ellipse cx="274" cy="183" rx="3" ry="6"/><ellipse cx="323" cy="198" rx="2.7" ry="5.5"/>
+            <ellipse cx="370" cy="177" rx="2.8" ry="5.8"/><ellipse cx="420" cy="202" rx="3" ry="6"/>
           </g>
         </g>
         <rect class="bedroom-night-wash" width="680" height="340" fill="#172033" pointer-events="none"/>
@@ -30826,6 +30844,10 @@ window.__bedroomRoomOpen = false;
   var closing = false;
   var propTimers = [];
   var glass = document.getElementById("bedroom-stained-glass");
+  var bed = document.getElementById("bedroom-bed");
+  var sprinkler = document.getElementById("bedroom-sprinkler");
+  var sprinklerTimer = null;
+  var dryTimer = null;
   var tttMarks = document.getElementById("bedroom-ttt-marks");
   var tttBoard = [null, null, null, null, null, null, null, null, null];
   var tttPhase = "idle";
@@ -30840,7 +30862,7 @@ window.__bedroomRoomOpen = false;
     [0, 4, 8], [2, 4, 6]
   ];
   var TTT_ORDER = [4, 0, 2, 6, 8, 1, 3, 5, 7];
-  if (!room || !viewport || !closeButton || !officeStage) return;
+  if (!room || !viewport || !closeButton || !officeStage || !bed || !sprinkler) return;
 
   function focusViewport() {
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
@@ -30857,6 +30879,10 @@ window.__bedroomRoomOpen = false;
   function clearPropTimers() {
     propTimers.forEach(clearTimeout);
     propTimers.length = 0;
+    clearTimeout(sprinklerTimer);
+    clearTimeout(dryTimer);
+    sprinklerTimer = null;
+    dryTimer = null;
   }
   function tttResult(board) {
     for (var i = 0; i < TTT_LINES.length; i++) {
@@ -31044,10 +31070,29 @@ window.__bedroomRoomOpen = false;
   function resetProps() {
     clearPropTimers();
     resetTtt();
+    room.classList.remove("spraying");
     room.querySelectorAll(".bedroom-prop").forEach(function (prop) {
       prop.classList.remove("glinting", "off", "swinging", "tidied", "made", "open",
-        "game-over", "game-draw");
+        "wet", "game-over", "game-draw");
     });
+  }
+  function sprayBedroom() {
+    clearTimeout(sprinklerTimer);
+    clearTimeout(dryTimer);
+    room.classList.remove("spraying");
+    void room.offsetWidth;
+    room.classList.add("spraying");
+    bed.classList.add("wet");
+    sprinklerTimer = setTimeout(function () {
+      sprinklerTimer = null;
+      room.classList.remove("spraying");
+    }, 1100);
+    dryTimer = setTimeout(function () {
+      dryTimer = null;
+      bed.classList.remove("wet");
+    }, 5200);
+    if (typeof playWaterSound === "function") playWaterSound("bedroom-sprinkler");
+    return true;
   }
   function replayClass(prop, className, duration) {
     prop.classList.remove(className);
@@ -31080,6 +31125,9 @@ window.__bedroomRoomOpen = false;
       case "bedroom-bed":
         prop.classList.toggle("made");
         if (typeof playPlushSquishSound === "function") playPlushSquishSound();
+        break;
+      case "bedroom-sprinkler":
+        sprayBedroom();
         break;
       case "bedroom-left-table":
       case "bedroom-right-table":
@@ -31213,6 +31261,8 @@ window.__bedroomRoomOpen = false;
   window.__bedroomRoomState = function () {
     return { open: !!window.__bedroomRoomOpen, closing: closing,
       night: room.classList.contains("bedroom-night"),
+      spraying: room.classList.contains("spraying"),
+      bedWet: bed.classList.contains("wet"),
       props: Array.prototype.map.call(room.querySelectorAll(".bedroom-prop"), function (prop) {
         return { id: prop.id, state: prop.getAttribute("class") || "" };
       }) };
@@ -32721,6 +32771,7 @@ var T = {
     bedroom_glass_win: "You won — double-click any pane to play again",
     bedroom_glass_loss: "The window won — double-click any pane to play again",
     bedroom_glass_draw: "Draw — double-click any pane to play again",
+    bedroom_sprinkler: "Test the bedroom sprinkler",
     bedroom_lamp_left: "Toggle the left bedside lamp",
     bedroom_lamp_right: "Toggle the right bedside lamp",
     bedroom_gear: "Nudge the wall rack",
@@ -33990,6 +34041,7 @@ var T = {
     bedroom_glass_win: "Vyhráli jste — dvojklikem na políčko spustíte novou hru",
     bedroom_glass_loss: "Vitráž vyhrála — dvojklikem na políčko spustíte novou hru",
     bedroom_glass_draw: "Remíza — dvojklikem na políčko spustíte novou hru",
+    bedroom_sprinkler: "Vyzkoušet sprinkler v ložnici",
     bedroom_lamp_left: "Přepnout levou lampičku",
     bedroom_lamp_right: "Přepnout pravou lampičku",
     bedroom_gear: "Rozhýbat nástěnný věšák",

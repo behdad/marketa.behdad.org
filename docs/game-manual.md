@@ -269,7 +269,8 @@ the Office. Press `↑`, ×, Escape, or Backspace to return. The room follows th
 loft's day/night state. Its stained glass, two brass mushroom lamps, compact wall rack,
 wardrobe, bed, and both bedside drawers are quiet repeatable toys; they also
 work from the keyboard when focused. Their temporary arrangement resets when
-you leave the room. Double-click or double-tap one of the stained-glass panes
+you leave the room. The ceiling sprinkler briefly drenches the bed; the blue
+sheen fades once the linen dries. Double-click or double-tap one of the stained-glass panes
 to place the first X in that pane and start tic-tac-toe; after the window plays
 O, use ordinary clicks or taps for later turns. Double-click/tap any pane after
 a win or draw to start over; the caption above the room announces who won or

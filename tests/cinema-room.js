@@ -25,9 +25,10 @@ var HARNESS = [
   ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before,posters:posters,ticket:[ticketBox.left,ticketBox.top,ticketBox.right,ticketBox.bottom],screen:[screenBox.left,screenBox.top,screenBox.right,screenBox.bottom],geometry:{cinema:[cinemaBox.left,cinemaBox.top,cinemaBox.width,cinemaBox.height],viewport:[viewportBox.left,viewportBox.top,viewportBox.width,viewportBox.height],cuddlyBottom:cuddlyBox.bottom,controls:{cinema:[parseFloat(cinemaCloseStyle.width),parseFloat(cinemaCloseStyle.height),parseFloat(cinemaCloseStyle.right),parseFloat(cinemaCloseStyle.top)],prince:[parseFloat(princeCloseStyle.width),parseFloat(princeCloseStyle.height),parseFloat(princeCloseStyle.right),parseFloat(princeCloseStyle.top)]}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility]};',
   ' report.steps.occupants={before:cameoBefore,irene:document.getElementById("cuddly-irene").classList.contains("showing"),robin:document.getElementById("cuddly-robin").classList.contains("showing"),navid:document.getElementById("cuddly-navid").classList.contains("showing"),visitors:window.__cuddlyVisitorsNow().length,kids:document.getElementById("cuddly-kidgames").classList.contains("playing"),forcedVisit:window.__cuddlyVisit("bahareh",true)};',
   ' var propIds=Array.prototype.map.call(document.querySelectorAll("#cinema-room .cinema-prop"),function(el){return el.id;});propIds.filter(function(id){return id!=="cinema-projector"&&id!=="cinema-sprinkler"&&id!=="cinema-window";}).forEach(function(id){click(document.getElementById(id));});report.steps.props={ids:propIds,reactions:window.__cinemaRoomState().reactions};',
+  ' var neon=document.getElementById("cinema-neon-butterfly"),bike=document.getElementById("cinema-bike"),nr=neon.getBoundingClientRect(),bir=bike.getBoundingClientRect();click(neon);await sleep(80);report.steps.neon={count:document.querySelectorAll("#cinema-neon-butterfly").length,inCinema:!!neon.closest("#cinema-room"),inOffice:!!neon.closest("#stage-office"),relighting:neon.classList.contains("relighting"),box:[nr.left,nr.top,nr.right,nr.bottom],bike:[bir.left,bir.top,bir.right,bir.bottom]};',
   ' var cinemaSky=document.getElementById("cinema-window-sky"),cinemaWindow=document.getElementById("cinema-window");cinemaSky.style.transition="none";report.steps.cinemaDay={night:document.getElementById("cinema-room").classList.contains("cinema-night"),fill:getComputedStyle(cinemaSky).fill};window.__setDayNight(true);await sleep(40);report.steps.cinemaNight={night:document.getElementById("cinema-room").classList.contains("cinema-night"),fill:getComputedStyle(cinemaSky).fill};window.__setDayNight(false);await sleep(40);',
   ' click(cinemaWindow);await sleep(40);var clickedNight=document.getElementById("cinema-room").classList.contains("cinema-night");cinemaWindow.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));await sleep(40);report.steps.cinemaWindowToggle={clickedNight:clickedNight,keyedDay:!document.getElementById("cinema-room").classList.contains("cinema-night")};',
-  ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label"),window:cinemaWindow.getAttribute("aria-label")};setLang("en");',
+  ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label"),window:cinemaWindow.getAttribute("aria-label"),neon:neon.getAttribute("aria-label")};setLang("en");',
   ' var film=document.querySelector(".cinema-film[data-vimeo-id=\\"1096537359\\"]");click(film);await sleep(80);var frame=document.getElementById("cinema-player");',
   ' var shell=document.getElementById("cinema-screen-shell"),wrap=document.getElementById("cinema-player-wrap"),chooser=document.getElementById("cinema-chooser"),backButton=document.getElementById("cinema-chooser-back"),sr=shell.getBoundingClientRect(),wr=wrap.getBoundingClientRect(),fr=frame&&frame.getBoundingClientRect(),br=backButton.getBoundingClientRect(),rr=document.getElementById("cinema-room").getBoundingClientRect();',
   ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,audioDuck:window.__cinemaAudioDuckState(),ray:parseFloat(getComputedStyle(document.getElementById("cinema-projector-ray")).opacity),chooser:chooser.hidden,chooserDisplay:getComputedStyle(chooser).display,geometry:fr&&{frame:[fr.left,fr.top,fr.width,fr.height],wrap:[wr.left,wr.top,wr.width,wr.height],shell:[sr.left+shell.clientLeft,sr.top+shell.clientTop,shell.clientWidth,shell.clientHeight],shellOuter:[sr.left,sr.top,sr.right,sr.bottom],back:[br.left,br.top,br.right,br.bottom],room:[rr.left,rr.top,rr.right,rr.bottom]}};',
@@ -107,6 +108,10 @@ check(s.props && s.props.ids.length === 11 &&
   ["cinema-beams","cinema-bike","cinema-cameras","cinema-cushion-wine","cinema-cushion-blue",
    "cinema-table","cinema-weights","cinema-sofa-seat"].every(function(id){return s.props.reactions[id] === 1;}),
   "every distinct authored cinema prop participates in the shared reaction surface", s.props);
+check(s.neon && s.neon.count === 1 && s.neon.inCinema && !s.neon.inOffice && s.neon.relighting &&
+  s.neon.box[3] < s.neon.bike[1] &&
+  Math.min(s.neon.box[2], s.neon.bike[2]) > Math.max(s.neon.box[0], s.neon.bike[0]),
+  "the single rainbow-butterfly neon hangs above the Cinema bicycle and keeps its relight interaction", s.neon);
 check(s.open && s.open.ticket[0] > s.open.screen[2] + 20,
   "the quiet cinema ticket sits on the brickwork beside, not on, the projector", s.open);
 check(s.open && s.open.posters.length === 3 &&
@@ -117,7 +122,7 @@ check(s.open && s.open.posters.map(function(p){return p.label;}).join("|")==="Id
   s.open.posters.every(function(p){return p.src===p.poster && /^art\/cinema-(identity|mania|water)\.png$/.test(p.src);}),
   "the original posters carry exact accessible film titles and poster hooks", s.open && s.open.posters);
 check(s.cs && s.cs.title === "Na co se podíváme?" && s.cs.close === "Zpět do Cuddly-puddly" &&
-  s.cs.window === "Přepnout den a noc",
+  s.cs.window === "Přepnout den a noc" && s.cs.neon === "Neon 🌈🦋",
   "chooser and exit copy switch to Czech", s.cs);
 check(s.play && s.play.state.playing && s.play.state.video === "1096537359" &&
   /player\.vimeo\.com\/video\/1096537359/.test(s.play.src || "") && /dnt=1/.test(s.play.src || "") &&
@@ -207,6 +212,10 @@ check((source.match(/data-vimeo-hash=""/g) || []).length === 3,
   "all three chooser cards expose the unlisted-video hash hook");
 check(/id="cinema-brick" width="60" height="32"[\s\S]*?M0 1H60M0 16H60M0 31H60[\s\S]*?M30 0V16M0 16V32M60 16V32/.test(source),
   "cinema brickwork uses the established 60×32 loft running bond");
+var chaseRosterMatch = source.match(/var butterflies = (\[[^\n]+\])\s*\n\s*\.map/);
+var chaseRoster = chaseRosterMatch ? JSON.parse(chaseRosterMatch[1]) : [];
+check(chaseRoster.join("|") === "office-stainedglass|office-mondrian|office-abstract-butterfly",
+  "Butterfly Chase has exactly the three remaining Office artworks", chaseRoster);
 
 console.log("");
 if (failures) { console.log(failures + " cinema-room assertion" + (failures === 1 ? "" : "s") + " failed."); process.exit(1); }

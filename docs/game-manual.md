@@ -223,7 +223,8 @@ the selected poster casting a faint projection spill into the room. The ceiling
 sprinkler is unfortunately aimed at the projector: testing it during a film
 shorts the projector briefly, stops the film, and eventually reboots to the
 chooser. The Cuddly-puddly visitors upstairs pause while the cinema owns the
-room. The room's beams, bicycle, cameras, cushions, table, weights and sofa all
+room. The rainbow-butterfly neon hangs above the bicycle and relights when
+selected; the room's beams, bicycle, cameras, cushions, table, weights and sofa
 answer a click or keyboard activation too.
 
 From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
@@ -279,7 +280,8 @@ In Block Party, click or tap the playfield to rotate a piece. Drag horizontally
 to move it, or drag down to drop it; the arrow keys and Space also work. Every
 ten cleared lines advances the level and speeds up the falling pieces.
 
-Double-click any office butterfly to start a short Butterfly Chase.
+Double-click any of the three office butterfly artworks to start a short
+Butterfly Chase.
 Keep pestering a butterfly and its artwork may need a moment to recover.
 
 Calendar and Clock can move the loft to another date or time. Special days may

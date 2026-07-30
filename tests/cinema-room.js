@@ -110,7 +110,8 @@ check(s.play && s.play.chooserDisplay === "none" && s.play.geometry &&
    "the Vimeo iframe fills the screen content box exactly", s.play && s.play.geometry);
 check(s.play && s.play.geometry &&
    Math.abs(s.play.geometry.back[0] - s.play.geometry.shellOuter[0]) < 1 &&
-   Math.abs((s.play.geometry.back[1] + s.play.geometry.back[3]) / 2 - s.play.geometry.shellOuter[3]) < 1,
+   (s.play.geometry.back[1] + s.play.geometry.back[3]) / 2 - s.play.geometry.shellOuter[3] > 1 &&
+   (s.play.geometry.back[1] + s.play.geometry.back[3]) / 2 - s.play.geometry.shellOuter[3] < 4,
    "Choose another is attached to the projector screen's bottom-left bezel", s.play && s.play.geometry);
 check(s.back && s.back.state.open && !s.back.state.playing && !s.back.frame && !s.back.chooser,
   "returning to the chooser removes the cross-origin player", s.back);

@@ -27,9 +27,9 @@ var HARNESS = [
   ' window.goToStage("office");dblclick(document.getElementById("office-stainedglass"));await sleep(40);report.steps.interactive=window.__bedroomRoomState();',
   ' dblclick(document.getElementById("office-wall-bg"));await sleep(100);report.steps.mouse=window.__bedroomRoomState();key("Escape");await sleep(760);',
   ' touchup(document.getElementById("office-floor-bg"));await sleep(30);touchup(document.getElementById("office-floor-bg"));await sleep(100);report.steps.touch=window.__bedroomRoomState();key("Backspace");await sleep(760);',
-  ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(760);report.steps.left={room:window.currentStageName,state:window.__bedroomRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
-  ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(760);report.steps.right={room:window.currentStageName,state:window.__bedroomRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
-  ' window.goToStage("office");key("ArrowDown");await sleep(100);var dot=document.querySelectorAll(".hunt-dot")[0];dot.focus();click(dot);await sleep(760);report.steps.dot={room:window.currentStageName,state:window.__bedroomRoomState(),hidden:room.hidden,focus:document.activeElement===dot};',
+  ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(780);report.steps.left={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__cinemaRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
+  ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(780);report.steps.right={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__entranceRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
+  ' window.goToStage("office");key("ArrowDown");await sleep(100);var dot=document.querySelectorAll(".hunt-dot")[0];dot.focus();click(dot);await sleep(780);report.steps.dot={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__bathroomRoomState(),hidden:room.hidden,focus:document.activeElement===dot};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -87,12 +87,15 @@ check(s.return && !s.return.state.open && !s.return.state.closing && s.return.hi
 check(s.interactive && !s.interactive.open && s.mouse && s.mouse.open && s.touch && s.touch.open,
   "only exact bare Office backgrounds accept mouse or touch double entry",
   { interactive: s.interactive, mouse: s.mouse, touch: s.touch });
-check(s.left && s.left.room === "cuddly" && !s.left.state.open && s.left.hidden && s.left.focus &&
-  s.right && s.right.room === "balcony" && !s.right.state.open && s.right.hidden && s.right.focus,
-  "Bedroom Left/Right exit to adjacent main-floor rooms with viewport focus",
+check(s.left && s.left.room === "cuddly" && !s.left.source.open && s.left.hidden &&
+  s.left.target.open && s.left.focus &&
+  s.right && s.right.room === "balcony" && !s.right.source.open && s.right.hidden &&
+  s.right.target.open && s.right.focus,
+  "Bedroom Left/Right pan to adjacent lower rooms with viewport focus",
   { left: s.left, right: s.right });
-check(s.dot && s.dot.room === "kitchen" && !s.dot.state.open && s.dot.hidden && s.dot.focus,
-  "a room dot exits Bedroom directly and retains dot focus", s.dot);
+check(s.dot && s.dot.room === "kitchen" && !s.dot.source.open && s.dot.hidden &&
+  s.dot.target.open && s.dot.focus,
+  "a room dot pans from Bedroom to Bathroom and retains dot focus", s.dot);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {

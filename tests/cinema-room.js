@@ -43,12 +43,12 @@ var HARNESS = [
   ' window.goToStage("garden");key("ArrowDown");await sleep(850);report.steps.gardenDown=window.__princeState();key("ArrowUp");await sleep(780);report.steps.gardenUp=window.__princeState();',
   ' window.__secondRound=true;window.goToStage("cuddly");key("ArrowDown");await sleep(850);window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge"),coach=document.querySelector(".msg-badge-coach"),thumb=document.querySelector(".msg-thumb");report.steps.cinemaMessageHold={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1600);thumb=document.querySelector(".msg-thumb");report.steps.cinemaMessageRelease={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};if(window.__hideMessageThumb)window.__hideMessageThumb(true);',
   ' window.goToStage("garden");key("ArrowDown");await sleep(850);window.__deliverPhoneMessage("cue_calendar");await sleep(80);report.steps.princeMessageHold={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1600);thumb=document.querySelector(".msg-thumb");report.steps.princeMessageRelease={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};',
-  ' window.goToStage("cuddly");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(780);report.steps.cinemaLeft={room:window.currentStageName,state:window.__cinemaRoomState(),hidden:document.getElementById("cinema-room").hidden,focus:document.activeElement.classList.contains("hunt-viewport")};',
-  ' window.goToStage("cuddly");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(780);report.steps.cinemaRight={room:window.currentStageName,state:window.__cinemaRoomState(),hidden:document.getElementById("cinema-room").hidden,focus:document.activeElement.classList.contains("hunt-viewport")};',
-  ' window.goToStage("cuddly");key("ArrowDown");await sleep(100);var cinemaDot=document.querySelectorAll(".hunt-dot")[0];cinemaDot.focus();click(cinemaDot);await sleep(780);report.steps.cinemaDot={room:window.currentStageName,state:window.__cinemaRoomState(),hidden:document.getElementById("cinema-room").hidden,focus:document.activeElement===cinemaDot};',
-  ' window.goToStage("garden");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(780);report.steps.princeLeft={room:window.currentStageName,state:window.__princeState(),focus:document.activeElement.classList.contains("hunt-viewport")};',
-  ' window.goToStage("garden");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(780);report.steps.princeRight={room:window.currentStageName,state:window.__princeState(),focus:document.activeElement.classList.contains("hunt-viewport")};',
-  ' window.goToStage("garden");key("ArrowDown");await sleep(100);var princeDot=document.querySelectorAll(".hunt-dot")[4];princeDot.focus();click(princeDot);await sleep(780);report.steps.princeDot={room:window.currentStageName,state:window.__princeState(),focus:document.activeElement===princeDot};',
+  ' window.goToStage("cuddly");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(780);report.steps.cinemaLeft={room:window.currentStageName,source:window.__cinemaRoomState(),target:window.__princeState(),nav:window.__lowerRoomNavigationState(),focus:document.activeElement.classList.contains("hunt-viewport")};',
+  ' key("ArrowRight");await sleep(780);key("ArrowRight");await sleep(780);report.steps.cinemaRight={room:window.currentStageName,source:window.__cinemaRoomState(),target:window.__bedroomRoomState(),nav:window.__lowerRoomNavigationState(),focus:document.activeElement.classList.contains("hunt-viewport")};',
+  ' key("ArrowLeft");await sleep(780);key("ArrowLeft");await sleep(780);var cinemaDot=document.querySelectorAll(".hunt-dot")[0];cinemaDot.focus();click(cinemaDot);await sleep(780);report.steps.cinemaDot={room:window.currentStageName,source:window.__cinemaRoomState(),target:window.__bathroomRoomState(),nav:window.__lowerRoomNavigationState(),focus:document.activeElement===cinemaDot};',
+  ' key("ArrowRight");await sleep(780);key("ArrowLeft");await sleep(780);report.steps.princeLeft={room:window.currentStageName,source:window.__princeState(),target:window.__bathroomRoomState(),focus:document.activeElement.classList.contains("hunt-viewport")};',
+  ' key("ArrowRight");await sleep(780);key("ArrowRight");await sleep(780);report.steps.princeRight={room:window.currentStageName,source:window.__princeState(),target:window.__cinemaRoomState(),focus:document.activeElement.classList.contains("hunt-viewport")};',
+  ' var princeDot=document.querySelectorAll(".hunt-dot")[4];princeDot.focus();click(princeDot);await sleep(780);report.steps.princeDot={room:window.currentStageName,source:window.__princeState(),target:window.__entranceRoomState(),focus:document.activeElement===princeDot};',
   ' report.steps.channelWas=channel;',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
@@ -154,16 +154,22 @@ check(s.princeMessageHold && s.princeMessageHold.held.messages.indexOf("cue_cale
   s.princeMessageRelease && !s.princeMessageRelease.held.messages.length &&
   s.princeMessageRelease.badge && s.princeMessageRelease.thumb,
   "Prince basement queues an arriving message invisibly and surfaces it upstairs", {held:s.princeMessageHold,released:s.princeMessageRelease});
-check(s.cinemaLeft && s.cinemaLeft.room === "garden" && !s.cinemaLeft.state.open && s.cinemaLeft.hidden && s.cinemaLeft.focus &&
-  s.cinemaRight && s.cinemaRight.room === "office" && !s.cinemaRight.state.open && s.cinemaRight.hidden && s.cinemaRight.focus,
-  "cinema Left/Right exit to adjacent main-floor rooms with viewport focus", {left:s.cinemaLeft,right:s.cinemaRight});
-check(s.cinemaDot && s.cinemaDot.room === "kitchen" && !s.cinemaDot.state.open && s.cinemaDot.hidden && s.cinemaDot.focus,
-  "a room dot exits cinema directly to its selected main-floor room and retains dot focus", s.cinemaDot);
-check(s.princeLeft && s.princeLeft.room === "kitchen" && !s.princeLeft.state.open && s.princeLeft.state.parked && s.princeLeft.focus &&
-  s.princeRight && s.princeRight.room === "cuddly" && !s.princeRight.state.open && s.princeRight.state.parked && s.princeRight.focus,
-  "Prince Left/Right exit to adjacent main-floor rooms with viewport focus", {left:s.princeLeft,right:s.princeRight});
-check(s.princeDot && s.princeDot.room === "balcony" && !s.princeDot.state.open && s.princeDot.state.parked && s.princeDot.focus,
-  "a room dot exits Prince directly to its selected main-floor room and retains dot focus", s.princeDot);
+check(s.cinemaLeft && s.cinemaLeft.room === "garden" && !s.cinemaLeft.source.open &&
+  s.cinemaLeft.target.basement && !s.cinemaLeft.nav.active && s.cinemaLeft.focus &&
+  s.cinemaRight && s.cinemaRight.room === "office" && !s.cinemaRight.source.open &&
+  s.cinemaRight.target.open && !s.cinemaRight.nav.active && s.cinemaRight.focus,
+  "cinema Left/Right pan laterally to the adjacent lower rooms", {left:s.cinemaLeft,right:s.cinemaRight});
+check(s.cinemaDot && s.cinemaDot.room === "kitchen" && !s.cinemaDot.source.open &&
+  s.cinemaDot.target.open && !s.cinemaDot.nav.active && s.cinemaDot.focus,
+  "a room dot stays downstairs and pans to its selected room", s.cinemaDot);
+check(s.princeLeft && s.princeLeft.room === "kitchen" && !s.princeLeft.source.open &&
+  s.princeLeft.source.parked && s.princeLeft.target && s.princeLeft.target.open && s.princeLeft.focus &&
+  s.princeRight && s.princeRight.room === "cuddly" && !s.princeRight.source.open &&
+  s.princeRight.source.parked && s.princeRight.target.open && s.princeRight.focus,
+  "the dungeon pans laterally to Bathroom or Cinema without returning upstairs", {left:s.princeLeft,right:s.princeRight});
+check(s.princeDot && s.princeDot.room === "balcony" && !s.princeDot.source.open &&
+  s.princeDot.source.parked && s.princeDot.target.open && s.princeDot.focus,
+  "a room dot pans from the dungeon to its selected lower room", s.princeDot);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["1096537359", "902708480", "927763091"].forEach(function (id) {

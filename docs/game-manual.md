@@ -60,9 +60,9 @@ Type to filter the directory, use the arrow keys to choose a result, then press
 Enter, or select an app directly.
 `D` toggles day and night. `Shift`+`↑`/`↓` moves the clock by 30 minutes;
 plain `↓` descends from any main room into its lower room and plain `↑`
-returns upstairs. While downstairs, `←`/`→` exits to an adjacent main-floor
-room or the parent room at the strip's edge; any room dot exits and jumps
-straight to that room.
+returns upstairs. While downstairs, `←`/`→` pans laterally between adjacent
+lower rooms; any room dot stays on the lower floor and pans straight to the
+room beneath its selected main room.
 
 ## The guided room trail
 
@@ -217,15 +217,15 @@ From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
 bare patch of brick to visit **Bathroom / Toilets** below. The room pans down
 past the sink and mirror, clawfoot tub, stool and scale to the separate toilet
 nook. Kitchen objects do not count as background. Use the × button, Up, Escape,
-Backspace, or ordinary room navigation to return; **Who's here** and message
-pop-ups stay out of the way while you are downstairs.
+Backspace to return; horizontal navigation and room dots remain downstairs.
+**Who's here** and message pop-ups stay out of the way while you are there.
 
 From the Balcony, press `↓` or double-click/double-tap a truly bare patch of its
 background to descend to **The Lofts** street entrance. The native SVG
 night facade keeps the historic brick, stone, window, and timber-door character
 without reproducing an address. `↑`, Escape, Backspace, or × returns to the
-Balcony. `←` exits to the adjacent Office; `→` returns at the right edge to the
-Balcony, and a room dot exits directly to the room it selects.
+Balcony. `←` pans to the Bedroom; `→` stays at the lower floor's right edge,
+and a room dot pans directly to the lower room beneath its selection.
 
 The Office has a Bedroom below it. Press `↓`, or double-click or double-tap a
 bare patch of the Office wall or floor, to pan downstairs without disturbing
@@ -339,8 +339,8 @@ discard the run. In the garden, double-click or double-tap the distant skyline
 or a bare patch of the brick background to descend into the same persistent
 game in the stone basement. Interactive objects never trigger the background
 shortcut. Escape or Backspace returns to the garden without ending the run.
-Left/Right leaves for the adjacent main-floor room, and a room dot leaves for
-the room it names.
+Left/Right pans to the adjacent lower room, and a room dot pans to the lower
+room beneath the room it names.
 
 These surfaces execute real code in the page. Do not paste or import code from
 someone you do not trust.

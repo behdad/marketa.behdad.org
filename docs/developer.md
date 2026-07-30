@@ -571,8 +571,8 @@ Entry is whitelisted to `#balcony-background`, so objects already owning
 double-click gestures remain untouched. The overlay pans up while the Balcony
 strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
 `hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
-capture guard owns Up/Escape/Backspace, exits Left to Office and Right to
-Balcony, while `goToStage` closes it for side-arrow and room-dot selection.
+capture guard owns Up/Escape/Backspace; horizontal navigation remains on the
+lower floor, with Entrance forming its right edge.
 Like the other full-viewport overlays, it refreshes the shared room-ambience
 gate on both entry and return so the preserved Balcony cannot keep sounding
 under the street scene.
@@ -594,17 +594,22 @@ queue drain surfaces the newest preview and full unread count upstairs.
 
 The global room-key owner reserves plain `ArrowDown` for all five implemented
 upstairs rooms and delegates to their public open hooks; each active lower-room
-capture guard owns `ArrowUp` on the way back. Those guards also map Left/Right
-to the parent room's adjacent main-floor rooms, or back to the parent at the
-strip edge. This runs before ordinary room shortcuts without changing `D`
-day/night or Shift+arrow calendar stepping upstairs.
+capture guard owns `ArrowUp` on the way back. `__navigateLowerRoom` maps
+Left/Right, side controls, and room dots across the parallel lower-floor row.
+It lets `goToStage` settle the destination's main-room state while paired WAAPI
+transforms move the source and destination overlays laterally. This runs before
+ordinary room shortcuts without changing `D` day/night or Shift+arrow calendar
+stepping upstairs.
 
-`goToStage` closes Bathroom, Cinema, Bedroom, or Entrance and parks an active basement,
-so side controls, programmatic navigation, and dots share teardown. A dot
-bypasses its ordinary lock gate only while any lower room owns the viewport,
-then restores focus to the selected dot; keyboard horizontal exits restore
-focus to `.hunt-viewport`. Prince focus timers re-check `princeShouldRun()` so
-a parked iframe cannot steal focus back after any of these exits.
+`goToStage` still closes Bathroom, Cinema, Bedroom, or Entrance and parks an
+active basement for ordinary programmatic main-floor navigation.
+`__navigateLowerRoom` deliberately performs that teardown inside the paired
+lower-floor pan, then opens the destination overlay and reasserts the shared
+notification hold after the source's delayed close. A dot bypasses its ordinary
+lock gate only while any lower room owns the viewport and restores focus to the
+selected dot; keyboard horizontal pans restore focus to `.hunt-viewport`.
+Prince focus timers re-check `princeShouldRun()` so a parked iframe cannot steal
+focus back after any of these transitions.
 
 ### Shared projections
 

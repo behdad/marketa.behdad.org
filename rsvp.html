@@ -29285,6 +29285,10 @@ document.addEventListener("keydown", function (event) {
   event.stopImmediatePropagation();
   if (event.key === "ArrowRight") {
     event.preventDefault();
+    if (window.__navigateLowerRoom) {
+      window.__navigateLowerRoom("garden");
+      return;
+    }
     if (window.__closeBathroomRoom) window.__closeBathroomRoom();
     if (window.goToStage) window.goToStage("garden");
     var bathroomViewport = document.querySelector(".hunt-viewport");
@@ -29574,6 +29578,10 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    if (window.__navigateLowerRoom) {
+      window.__navigateLowerRoom(name);
+      return;
+    }
     closeEntrance();
     if (window.goToStage) window.goToStage(name);
   }
@@ -29607,6 +29615,10 @@ document.addEventListener("keydown", function (event) {
   event.stopImmediatePropagation();
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
+    if (window.__navigateLowerRoom) {
+      window.__navigateLowerRoom(event.key === "ArrowLeft" ? "garden" : "office");
+      return;
+    }
     if (window.__closeCinemaRoom) window.__closeCinemaRoom();
     if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "garden" : "office");
     var cinemaViewport = document.querySelector(".hunt-viewport");
@@ -29635,6 +29647,10 @@ document.addEventListener("keydown", function (event) {
   }
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
+    if (window.__navigateLowerRoom) {
+      window.__navigateLowerRoom(event.key === "ArrowLeft" ? "office" : "balcony");
+      return;
+    }
     if (window.__closeEntranceRoom) window.__closeEntranceRoom();
     if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "office" : "balcony");
     return;
@@ -29755,6 +29771,10 @@ document.addEventListener("keydown", function (event) {
   event.stopImmediatePropagation();
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
+    if (window.__navigateLowerRoom) {
+      window.__navigateLowerRoom(event.key === "ArrowLeft" ? "cuddly" : "balcony");
+      return;
+    }
     if (window.__closeBedroomRoom) window.__closeBedroomRoom();
     if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "cuddly" : "balcony");
   } else if (event.key === "Escape" || event.key === "Esc" ||
@@ -29779,6 +29799,10 @@ document.addEventListener("keydown", function (event) {
   var princeBasementActive = !!(window.__princeState && window.__princeState().basement);
   if (princeBasementActive && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
     event.preventDefault();
+    if (window.__navigateLowerRoom) {
+      window.__navigateLowerRoom(event.key === "ArrowLeft" ? "kitchen" : "cuddly");
+      return;
+    }
     if (window.__closeMonitorPrince) window.__closeMonitorPrince();
     if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "kitchen" : "cuddly");
     return;
@@ -87227,6 +87251,109 @@ function spawnDustMote(container) {
     var princeState = window.__princeState && window.__princeState();
     return !!(princeState && princeState.basement);
   }
+  var lowerRoomSlideTimer = null;
+  var lowerRoomSlideState = null;
+  function lowerRoomForStage(name) {
+    var table = {
+      kitchen: {
+        element: document.getElementById("bathroom-room"),
+        open: function () { return window.__openBathroomRoom && window.__openBathroomRoom(); }
+      },
+      garden: {
+        element: document.getElementById("prince-basement"),
+        open: function () { return window.__openGardenPrince && window.__openGardenPrince(); }
+      },
+      cuddly: {
+        element: document.getElementById("cinema-room"),
+        open: function () { return window.__openCinemaRoom && window.__openCinemaRoom(); }
+      },
+      office: {
+        element: document.getElementById("bedroom-room"),
+        open: function () { return window.__openBedroomRoom && window.__openBedroomRoom(); }
+      },
+      balcony: {
+        element: document.getElementById("entrance-room"),
+        open: function () { return window.__openEntranceRoom && window.__openEntranceRoom(); }
+      }
+    };
+    return table[name] || null;
+  }
+  function activeLowerRoom() {
+    if (window.__bathroomRoomOpen) return lowerRoomForStage("kitchen");
+    var princeState = window.__princeState && window.__princeState();
+    if (princeState && princeState.basement) return lowerRoomForStage("garden");
+    if (window.__cinemaRoomOpen) return lowerRoomForStage("cuddly");
+    if (window.__bedroomRoomOpen) return lowerRoomForStage("office");
+    if (window.__entranceRoomOpen) return lowerRoomForStage("balcony");
+    return null;
+  }
+  function focusLowerNavigation(target) {
+    var focusTarget = target || document.querySelector(".hunt-viewport");
+    if (!focusTarget) return;
+    if (!focusTarget.hasAttribute("tabindex") && focusTarget.classList &&
+        focusTarget.classList.contains("hunt-viewport")) focusTarget.setAttribute("tabindex", "-1");
+    try { focusTarget.focus({ preventScroll: true }); }
+    catch (_error) { try { focusTarget.focus(); } catch (_error2) {} }
+  }
+  // Every main room now has a lower room. Horizontal navigation therefore stays on
+  // that floor: the current overlay slides out while the destination overlay enters,
+  // and only Up/Escape/the close control returns to the main floor.
+  function navigateLowerRoom(name, focusTarget) {
+    if (lowerRoomSlideTimer) return false;
+    var source = activeLowerRoom();
+    var target = lowerRoomForStage(name);
+    var fromIndex = STAGES.indexOf(window.currentStageName);
+    var toIndex = STAGES.indexOf(name);
+    if (!source || !target || !source.element || !target.element ||
+        fromIndex < 0 || toIndex < 0) return false;
+    if (fromIndex === toIndex) {
+      focusLowerNavigation(focusTarget);
+      return true;
+    }
+    var direction = toIndex > fromIndex ? 1 : -1;
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var duration = reduced ? 1 : 720;
+    var timing = { duration: duration, easing: "cubic-bezier(.4,0,.2,1)", fill: "both" };
+    var sourceAnimation = source.element.animate([
+      { transform: "translateX(0)" },
+      { transform: "translateX(" + (-direction * 100) + "%)" }
+    ], timing);
+    if (!goToStage(name, { rosterNavigation: true })) {
+      sourceAnimation.cancel();
+      return false;
+    }
+    if (!target.open()) {
+      sourceAnimation.cancel();
+      return false;
+    }
+    var targetAnimation = target.element.animate([
+      { transform: "translateX(" + (direction * 100) + "%)" },
+      { transform: "translateX(0)" }
+    ], timing);
+    lowerRoomSlideState = { active: true, from: STAGES[fromIndex], to: name, direction: direction };
+    lowerRoomSlideTimer = setTimeout(function () {
+      lowerRoomSlideTimer = null;
+      lowerRoomSlideState = null;
+      try { sourceAnimation.cancel(); } catch (_error) {}
+      try { targetAnimation.cancel(); } catch (_error2) {}
+      // The source's delayed close releases the shared hold in this same frame;
+      // reassert it for the destination that still owns the viewport.
+      if (lowerRoomOwnsViewport() && window.__setLowerRoomNotificationHold) {
+        window.__setLowerRoomNotificationHold(true);
+      }
+      focusLowerNavigation(focusTarget);
+    }, duration + 20);
+    return true;
+  }
+  window.__navigateLowerRoom = navigateLowerRoom;
+  window.__lowerRoomNavigationState = function () {
+    return lowerRoomSlideState ? {
+      active: true,
+      from: lowerRoomSlideState.from,
+      to: lowerRoomSlideState.to,
+      direction: lowerRoomSlideState.direction
+    } : { active: false, from: null, to: null, direction: 0 };
+  };
   if (dotsWrap) {
     STAGES.forEach(function (name, i) {
       var d = document.createElement("button");
@@ -87235,10 +87362,8 @@ function spawnDustMote(container) {
       d.setAttribute("role", "tab");
       d.addEventListener("click", function () {
         var fromLowerRoom = lowerRoomOwnsViewport();
-        if (fromLowerRoom || i <= maxUnlocked) navigateWithRoster(STAGES[i]);
-        if (fromLowerRoom) requestAnimationFrame(function () {
-          try { d.focus({ preventScroll: true }); } catch (_error) { try { d.focus(); } catch (_error2) {} }
-        });
+        if (fromLowerRoom) navigateLowerRoom(STAGES[i], d);
+        else if (i <= maxUnlocked) navigateWithRoster(STAGES[i]);
       });
       // cheat: double-click a locked dot to unlock up to that room and jump there
       d.addEventListener("dblclick", function () {
@@ -87920,9 +88045,17 @@ function spawnDustMote(container) {
   };
   window.__maxUnlocked = function () { return maxUnlocked; }; // furthest room reached — autoplay reads it to know which rooms are solved
   if (prevBtn) prevBtn.addEventListener("click", function () {
+    if (lowerRoomOwnsViewport()) {
+      if (stageIndex > 0) navigateLowerRoom(STAGES[stageIndex - 1]);
+      return;
+    }
     if (stageIndex > 0) navigateWithRoster(STAGES[stageIndex - 1]);
   });
   if (nextBtn) nextBtn.addEventListener("click", function (e) {
+    if (lowerRoomOwnsViewport()) {
+      if (stageIndex < STAGES.length - 1) navigateLowerRoom(STAGES[stageIndex + 1]);
+      return;
+    }
     if (stageIndex < maxUnlocked) {
       navigateWithRoster(STAGES[stageIndex + 1]);
     } else if (e.detail >= 2 && stageIndex < STAGES.length - 1) {

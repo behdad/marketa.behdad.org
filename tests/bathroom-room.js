@@ -31,8 +31,8 @@ var HARNESS = [
   ' window.__openBathroomRoom();await sleep(60);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__bathroomRoomState(),room:window.currentStageName};window.goToStage("kitchen");',
   ' var times=[],oldStep=window.__calStepTime;window.__calStepTime=function(n){times.push(n);};key("ArrowDown",{shiftKey:true});window.__calStepTime=oldStep;report.steps.shift={times:times,state:window.__bathroomRoomState()};',
   ' window.__secondRound=true;window.__openBathroomRoom();await sleep(80);window.__deliverPhoneMessage("cue_mail");await sleep(80);report.steps.messageHold={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1300);report.steps.messageRelease={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread()};',
-  ' window.__openBathroomRoom();await sleep(80);key("ArrowRight");await sleep(760);report.steps.right={state:window.__bathroomRoomState(),room:window.currentStageName,focus:document.activeElement.classList.contains("hunt-viewport")};',
-  ' window.goToStage("kitchen");window.__openBathroomRoom();await sleep(80);var dot=document.querySelectorAll(".hunt-dot")[4];dot.focus();click(dot);await sleep(760);report.steps.dot={state:window.__bathroomRoomState(),room:window.currentStageName,focus:document.activeElement===dot};',
+  ' window.__openBathroomRoom();await sleep(80);key("ArrowRight");await sleep(80);report.steps.slide={nav:window.__lowerRoomNavigationState(),sourceAnimations:room.getAnimations().length,targetAnimations:document.getElementById("prince-basement").getAnimations().length};await sleep(700);report.steps.right={source:window.__bathroomRoomState(),target:window.__princeState(),room:window.currentStageName,focus:document.activeElement.classList.contains("hunt-viewport")};',
+  ' window.goToStage("kitchen");window.__openBathroomRoom();await sleep(80);var dot=document.querySelectorAll(".hunt-dot")[4];dot.focus();click(dot);await sleep(780);report.steps.dot={source:window.__bathroomRoomState(),target:window.__entranceRoomState(),room:window.currentStageName,focus:document.activeElement===dot};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -90,10 +90,16 @@ check(s.messageHold && s.messageHold.held.messages.indexOf("cue_mail") !== -1 &&
   s.messageRelease && !s.messageRelease.held.messages.length,
   "an arriving message enters its thread but waits to surface until the upward return",
   { held: s.messageHold, released: s.messageRelease });
-check(s.right && !s.right.state.open && s.right.state.hidden && s.right.room === "garden" && s.right.focus,
-  "Right exits to the adjacent main-floor room and restores viewport focus", s.right);
-check(s.dot && !s.dot.state.open && s.dot.state.hidden && s.dot.room === "balcony" && s.dot.focus,
-  "a room dot exits directly to its selected main-floor room and keeps dot focus", s.dot);
+check(s.slide && s.slide.nav.active && s.slide.nav.from === "kitchen" &&
+  s.slide.nav.to === "garden" && s.slide.nav.direction === 1 &&
+  s.slide.sourceAnimations > 0 && s.slide.targetAnimations > 0,
+  "a paired horizontal animation owns both lower rooms during the pan", s.slide);
+check(s.right && !s.right.source.open && s.right.source.hidden && s.right.room === "garden" &&
+  s.right.target.basement && s.right.focus,
+  "Right pans from Bathroom to the adjacent dungeon and restores viewport focus", s.right);
+check(s.dot && !s.dot.source.open && s.dot.source.hidden && s.dot.room === "balcony" &&
+  s.dot.target.open && s.dot.focus,
+  "a room dot stays downstairs and pans to Entrance while keeping dot focus", s.dot);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["bathroom-sink", "bathroom-tub", "bathroom-shower-curtain", "bathroom-waffle-towel",

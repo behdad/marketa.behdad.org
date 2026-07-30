@@ -1,88 +1,77 @@
 # The Loft Game Manual
 
-Loft Day is a point-and-click visit to five connected rooms. There is a short
-guided trail, followed by an open-ended party full of apps, music, guests,
-minigames, and small things to discover.
+Loft Day is a point-and-click visit to five connected rooms. A short guided
+trail opens into a party full of apps, music, guests, minigames, and small
+discoveries.
 
-You do not need a keyboard or any adventure-game experience. Follow the
-instruction above the scene, click or tap what looks useful, and explore at your
-own pace.
+No keyboard or adventure-game experience is required. Follow the instruction
+above the scene, select what looks useful, and explore at your own pace.
 
 ## Quick start
 
 1. Select **CLICK ME** to enter. On a narrow phone, rotate to landscape or use
    **Try landscape** first.
-2. Follow the instruction above the scene. It always shows the next useful step.
-3. Move between rooms with the side arrows or the five dots below the scene.
-4. Complete each room's main activity to unlock the next room.
-5. Reach the balcony and start the party. This unlocks all rooms, Messages,
-   guests, and the rest of free play.
-6. Keep exploring for as long as you like. Ending the party does not end or
-   reset the game.
+2. Follow the instruction above the scene.
+3. Move with the side arrows or the five room dots below the scene.
+4. Complete each room's activity to unlock the next room.
+5. Reach the balcony and start the party to unlock every room, Messages, guests,
+   and free play.
 
-If a saved session exists, choose **Continue** or **Start over** at entry.
-Continue restores your progress. Start over discards it immediately; the
-in-game Restart control still asks for confirmation.
+If a saved session exists, **Continue** restores it. **Start over** discards it
+immediately; Restart inside the game asks for confirmation.
 
-Prefer watching? **Trailer** is a fixed one-minute preview. **Autoplay** turns
-the loft into an ongoing show that can handle rooms, stories, apps, and
-interruptions. Select **Take over** whenever you want control. Both modes honor
+Prefer watching? **Trailer** is a fixed one-minute preview. **Autoplay** is an
+ongoing tour; select **Take over** whenever you want control. Both respect
 reduced-motion preferences.
 
 ## Controls
 
 ### Mouse and touch
 
-- Click or tap room objects to interact.
-- Use the side arrows or room dots to move; the scene itself does not use swipe
-  navigation.
+- Select room objects to interact.
+- Use the side arrows or room dots to move. The scene has no swipe navigation.
 - Double-click or double-tap a locked room dot to skip the current puzzle and
   unlock through that room.
-- Right-click for context actions. On touch, press and hold without moving.
-- Every context menu ends with **Start over**, separated from the local actions.
-  It asks for confirmation, then restarts the whole loft with the extinguisher.
-- Some objects can be dragged. They will visibly respond when a drag begins.
+- Right-click for context actions; on touch, press and hold without moving.
+- During the guided trail, the scene menu offers **Hint** and **Solve**. Solve
+  performs one step.
+- Some objects can be dragged and respond visibly when the drag starts.
 - The top-left arrow goes back or closes the current layer. The top-right
   controls provide Fullscreen and Restart.
-
-At room level during the guided trail, the scene context menu also offers
-**Hint** and **Solve**. Solve performs one guided step rather than completing the
-whole room at once.
+- Every context menu ends with **Start over**, which confirms before resetting
+  the whole loft.
 
 ### Keyboard
 
-Press `?` in the game for the complete, current shortcut list. Shortcuts pause
-while you type in a field, and action games temporarily take over the keys they
-need.
-On the zoomed office monitor, open Search and leave its query empty to browse
-every monitor app, including apps normally available only through search.
-Type to filter the directory, use the arrow keys to choose a result, then press
-Enter, or select an app directly.
-`D` toggles day and night. `Shift`+`↑`/`↓` moves the clock by 30 minutes;
-plain `↓` opens the hidden room paired with any main room and plain `↑`
-returns to the main room. While visiting the hidden rooms, `←`/`→` pans
-laterally between adjacent rooms; any room dot pans straight to the hidden
-room paired with its selected main room. Number keys `1`–`5` do the same
-without returning to the main rooms. Double-click or double-tap the Kitchen's `WC` sign, the
-Garden's tiny dungeon door, the Cuddly-puddly film ticket, the Office's rising
-`Zzz…`, or the Balcony's key and fob for a discreet portal to the matching
-room. A single click makes the portal insist; right-click it and choose
-**Unlock** for a direct entrance. The other loft shortcuts remain available there; Escape/Backspace,
-arrows, and Enter/Space retain their local room meanings. Music and other
-continuous loft sound
-become quieter and softly muffled in these hidden rooms; the enclosed Bathroom is
-especially muffled, and the street Entrance sounds quieter still. Returning
-to a main room restores the original mix. Illustrated hidden-room props react to
-clicks or taps but stay out of the `Tab` order, leaving `Tab` to its shortcut.
+Press `?` in the game for the complete shortcut list. Shortcuts pause while you
+type, and action games temporarily take the keys they need.
 
-After the first party unlocks free exploration, `Enter` starts the main activity
-in the room on screen: Flair Catch in the Kitchen/Bar, in-room Hack-Man in the
-Garden, Octi's Escape in Cuddly-puddly, Alien Resources in the Office, and Block
-Party on the Balcony. Escape and Backspace remain dismiss/back actions.
+- `D` toggles day and night.
+- `Shift`+`↑`/`↓` moves the clock by 30 minutes.
+- `C` opens the phone, `P` toggles the party after it is unlocked, and `W` opens
+  **Who's here**.
+- `Enter` follows the guided instruction. In free play it starts the current
+  room's main activity: Flair Catch, Hack-Man, Octi's Escape, Alien Resources,
+  or Block Party.
+- Escape and Backspace dismiss the current layer.
+
+The five main rooms each have a paired hidden room. Press `↓` to enter it and
+`↑` to return. In a hidden room, `←`/`→` pans to an adjacent hidden room; room
+dots or number keys `1`–`5` go directly to the hidden room paired with that main
+room. Escape, Backspace, or × returns to the paired main room.
+
+You can also find a discreet portal in each main room: the Kitchen's `WC` sign,
+Garden's dungeon door, Cuddly-puddly's film ticket, Office's `Zzz…`, and
+Balcony's key and fob. Double-click or double-tap a portal to enter; a single
+selection gives a clue, and its context menu offers **Unlock**. Hidden-room
+illustrations respond to selection but stay out of the `Tab` order. Loft audio
+becomes quieter there and returns to normal in the main rooms.
+
+On the zoomed office monitor, open Search with an empty query to browse every
+app. Type to filter, use the arrow keys to choose, and press Enter, or select an
+app directly.
 
 ## The guided room trail
-
-The first visit introduces one activity at a time:
 
 - **Kitchen/bar:** make an espresso with La Maz and El Maz.
 - **Garden/party:** care for the plants and set the mood.
@@ -90,11 +79,9 @@ The first visit introduces one activity at a time:
 - **Office:** use the laptop and monitor, then darken the room.
 - **Balcony:** finish the trail and begin the party.
 
-Only the rooms reached so far are available. Once the first party starts, all
-five rooms remain unlocked and the instruction trail gives way to free
-exploration. Messages that were waiting also begin to arrive.
-
-If you want exact answers, open the spoilers below.
+Only reached rooms are available until the first party starts. Then all five
+rooms remain unlocked, Messages begin arriving, and free exploration replaces
+the instruction trail.
 
 <details>
 <summary><strong>Kitchen/bar solution</strong></summary>
@@ -140,8 +127,7 @@ If you want exact answers, open the spoilers below.
 <details>
 <summary><strong>Balcony solution</strong></summary>
 
-Reaching the balcony completes the main traversal. Use its party switch or press
-`Enter` to start the party.
+Reach the balcony, then use its party switch or press `Enter`.
 
 </details>
 
@@ -149,283 +135,184 @@ Reaching the balcony completes the main traversal. Use its party switch or press
 
 ### Phone, computer, and Messages
 
-Open the pocket phone from the balcony table or with `C`. Its first ordinary
+Open the pocket phone from the balcony table or with `C`. The first ordinary
 opening has a small math lock; three failed attempts open it automatically.
 Home, Back, and Recents work like their familiar phone equivalents.
 
-The phone holds Messages, Mail, Calendar, Album, camera and music tools, small
+The phone contains Messages, Mail, Calendar, Album, camera and music tools,
 utilities, and games. Right-click or press and hold an app icon to open, stop,
-or uninstall it. **Kill app** resets and closes only that app; **Start over** restarts
-the whole loft and restores removed apps.
-The status-bar reception bars make a rough, permission-free estimate of how far
-your timezone region sits from Edmonton;
-tap them to read the carrier’s verdict.
-During family calls, tap any caller portrait—including the small local
-self-view—to see who is on screen.
+or uninstall it. **Kill app** resets only that app; **Start over** restores
+removed apps with the rest of the loft. Select the reception bars for a playful
+estimate of your timezone region's distance from Edmonton. During family calls,
+select any portrait, including the self-view, to identify the caller.
 
-The office monitor contains the larger apps, classic games, Chat, Code, Python,
-and a small Linux environment. These technical toys are optional and some have
-a substantial first-load download. Click the monitor once to zoom in, then
-click its screen to interact. Search from the desktop menu bar if you cannot
-find an app. The menu bar also keeps music volume and the monitor-focus control
-within reach. Use the normal close control to leave an app; right-click its tile
-or open surface to manage or kill its current session. The laptop beside it
-handles video calls. Drag the headphones around the room to move the music with
-them. The monitor's Video app has a selector for **Downtown dance**,
-**Mon amie la rose**, and **Rainbow Butterfly**; switching films preserves each
-playhead until the app is killed or the loft is reset. The selector floats over
-the paused film without shifting it. Its progress and volume bars can be dragged
-with either mouse or touch. Killing Video remembers
-the last selected film long enough to give each one its own final scene.
+The office monitor has larger apps, classic games, Chat, Code, Python, and
+Linux. Some optional technical toys require a substantial first download.
+Select the monitor to zoom, then select its screen. Use Search if an app is hard
+to find. Close an app normally to preserve it; use its context menu to manage or
+kill the session. The nearby laptop handles video calls, and the headphones can
+be dragged to move their music.
 
-Quake III opens with three arenas; choose one, or let the short timer rotate to
-the next arena automatically.
+The monitor's Video app offers **Downtown dance**, **Mon amie la rose**, and
+**Rainbow Butterfly**; its progress and volume bars can be dragged. Quake III
+offers three arenas to choose from and rotates automatically if you do not
+choose.
 
-Messages become active after the party first unlocks. Selecting a notification
-opens the exact message; it does not automatically run the attached activity.
-Use the separate action arrow when you want that to happen. Right-click or
-long-press a message to reply, copy, change read state, or react.
+Messages activate after the first party. Selecting a notification opens its
+message but does not run an attached activity; use the action arrow when ready.
+Right-click or long-press a message to reply, copy, change read state, or react.
+Incoming messages still collect in hidden rooms, but previews wait until you
+return to a main room.
 
-The monitor's **Chat** app contains Charlie, a wedding assistant who can answer
-questions about the loft and offer hints. Free-form Messages can also receive a
-reply from an appropriate member of the wedding crew. Network or verification
-failures remain retryable.
+The monitor's **Chat** app contains Charlie, a wedding assistant who answers
+questions and offers hints. Free-form Messages may receive a reply from the
+wedding crew. Network or verification failures can be retried.
 
 ### Party, music, and guests
 
-The garden wall switch is the main party control once the guided trail is
-complete; `P` is its keyboard shortcut. Starting the first party unlocks free
-play permanently. Turning the party off changes the scene and sends guests home,
-but preserves progress, rooms, apps, photos, and games.
+After the trail, use the garden wall switch or `P` to toggle the party. Turning
+it off sends guests home but preserves progress, rooms, apps, photos, and games.
 
 Select **Who's here** or press `W` to see the current room's guests. Select a
-named person for a short relationship card. Guests arrive and move between rooms
-while the party runs, and Messages may offer explicit actions for dances,
-toasts, photos, cake, or the send-off.
+name for a relationship card. During the party, guests move between rooms and
+Messages may offer actions for dances, toasts, photos, cake, or the send-off.
 
-The lower media controls belong to whichever foreground experience is active:
-loft songs, party music, projector audio, piano, or video. The guitar,
-ukulele, DJ, Music apps, and Cuddly-puddly projector provide the main ways to
-choose what plays.
-Space toggles the current music without opening or leaving a monitor app.
-Zooming into either office screen lowers the distant party music until the
-screen is dismissed. A loft song started from the guitar also lowers the party
-music wherever you hear it, while the song itself keeps its normal level.
-Tap the projector screen to cycle its programs. Coffee cat and the fireplace
-lead the cycle: coffee is first from April through September, while fire is
-first from October through March. While the coffee channel is selected, its
-four café scenes rotate every 15 seconds. Projector music, including the
-night-sky piano, is contained to the Cuddly-puddly room. The media **Next**
-button advances projector programs without stopping at Off; once it reaches
-Night Sky, it stays there and advances the piano pieces instead.
+The lower media controls follow the foreground experience: loft or party music,
+projector, piano, or video. Space toggles current music without changing monitor
+apps. The guitar, ukulele, DJ, Music apps, and Cuddly-puddly projector choose
+what plays. Zooming into an office screen lowers distant party music.
 
-Double-clicking or double-tapping the small film ticket resting on a
-Cuddly-puddly wall brick opens the loft cinema without changing the selected
-projector program. The room pans down into the cinema and temporarily puts
-**Who's here** away. Its short-throw projector starts off: select the physical
-projector, or press Enter/Space, to toggle it on or off and reveal/hide the
-three-film chooser. Those keys never operate film playback; the side
-Play/Pause and Next controls follow the cinema while it is open. **Choose
-another** stops a film and returns to the chooser. The × button, Escape,
-Backspace, or ordinary room navigation returns to the paired main room.
+Select the projector screen to cycle programs. **Next** advances through them;
+at Night Sky it advances the piano pieces. Projector sound stays in
+Cuddly-puddly.
 
-The cinema window follows the loft's day/night state; select it to swap day and
-night throughout the loft. Film audio takes the foreground while it plays, with
-the selected poster casting a faint projection spill into the room. The ceiling
-sprinkler is unfortunately aimed at the projector: testing it during a film
-shorts the projector briefly, stops the film, and eventually reboots to the
-chooser. The main-room Cuddly-puddly visitors pause while the cinema owns the
-room. The rainbow-butterfly neon hangs above the bicycle and relights when
-selected; each beam, camera and loose cushion responds on its own, while the
-bicycle, table, weights and sofa answer individually too.
+On the balcony, open and light the smoker during a party to begin the BBQ.
+Extinguishing it or ending the party ends BBQ mode.
 
-From **Kitchen / Bar**, press Down or double-click / double-tap the small `WC`
-sign to visit **Bathroom / Toilets**. The scene pans to its
-fixtures. Click or tap them to play; the stool also drags
-sideways. Use ×, Up, Escape, or Backspace to return. Left/Right and the room
-dots move between adjacent hidden rooms.
+### Hidden rooms
 
-From the Balcony, press `↓` or double-click/double-tap the key and fob beside
-the door to open **The Lofts** street entrance. The native SVG
-night facade keeps the historic brick, stone, window, and timber-door character
-without reproducing an address. By day the façade and street brighten while
-the windows, hallway, and hanging entry lamps start dark; at night those lights
-start on. Each of the five window bays toggles independently. Flip every one
-away from its day/night default for a caption payoff. Every other distinct
-street detail responds: tap or focus and press Enter/Space on the name stone,
-doors, entry lamps, tree canopy, or sidewalk for a small light, movement, and
-sound reaction. Edmonton wildfire haze reaches the daylight street view at the
-same intensity as the Balcony and clears with the other daylight smoke at night.
-While music is playing, the visible entrance glass gives a
-subtle beat-rattle; reduced-motion visitors get a still facade. `↑`, Escape,
-Backspace, or × returns to the
-Balcony. `←` pans to the Bedroom; `→` stays at the hidden-room track's right edge,
-and a room dot pans directly to the hidden room paired with its selection.
-
-The Office pairs with a hidden Bedroom. Press `↓`, or double-click or double-tap
-the rising `Zzz…` beside the stained-glass window, to open it without disturbing
-the Office. Press `↑`, ×, Escape, or Backspace to return. The room follows the
-loft's day/night state. Its stained glass, two brass mushroom lamps, compact wall rack,
-wardrobe, bed, and both bedside drawers are quiet repeatable toys; they also
-work from the keyboard when focused. Their temporary arrangement resets when
-you leave the room. The ceiling sprinkler briefly drenches the bed; the blue
-sheen fades once the linen dries. Double-click or double-tap one of the stained-glass panes
-to place the first X in that pane and start tic-tac-toe; after the window plays
-O, use ordinary clicks or taps for later turns. Double-click/tap any pane after
-a win or draw to start over; the caption above the room announces who won or
-that the board ended in a draw, and a caps-pink or light-blue line crosses the
-winning three panes. Press Enter in the room to start a fresh board
-with the window taking the opening move; Enter is inert once play is active.
-Leaving the Bedroom clears the board.
-
-Incoming messages still collect while any hidden room is open, but their
-preview, unread badge, and first-use coach wait until you return to a main room.
-
-On the balcony, open and light the smoker to begin the BBQ during a party. Its
-lid, firebox, food, and serving state are all interactive. Extinguishing it or
-ending the party ends BBQ mode.
+- **Bathroom / Toilets** pairs with the Kitchen. Its fixtures are playful, and
+  the stool can be dragged.
+- **Dungeon** pairs with the Garden. Select the play wall, or press Enter or
+  Space, to start or resume Prince of Persia; Escape or Backspace leaves without
+  ending the run.
+- **Cinema** pairs with Cuddly-puddly. Select its projector, or press Enter or
+  Space, to turn it on and reveal the film chooser. Those keys control the
+  projector, not film playback; use the side Play/Pause and Next controls.
+  **Choose another** returns to the chooser. The window toggles day and night.
+  Try the ceiling sprinkler during a film if you accept the consequences.
+- **Bedroom** pairs with the Office. Its furnishings are repeatable toys whose
+  arrangement resets when you leave. Double-click or double-tap a stained-glass
+  pane to start tic-tac-toe, then make later moves with ordinary selections.
+  After a win or draw, double-select any pane to restart. Enter starts a fresh
+  board with the window moving first. Leaving clears the board.
+- **The Lofts** entrance pairs with the Balcony. Select the windows and street
+  details for small reactions. Toggling all five windows away from their
+  day/night defaults earns a caption.
 
 ### Optional activities
 
-The rooms contain many repeat interactions and quiet surprises. The larger
-optional activities include bar Flair Catch, office Alien Resources,
-Octi's Escape, the balcony's Block Party, the garden magic box, and games on the
-phone and monitor. Each action game displays its own controls and temporarily
-owns the relevant keyboard input.
+Larger activities include Kitchen Flair Catch, Garden Hack-Man and the magic
+box, Cuddly-puddly Octi's Escape, Office Alien Resources and Butterfly Chase,
+Balcony Block Party, and games on the phone and monitor. Each action game shows
+its controls.
 
-During the ketamine trip, catching the roaming ghost opens **Hack-Man** over the
-room where you found it. Arrow keys or `WASD` steer, Space pauses, and Dismiss,
-Escape, or Backspace closes the game and returns to that same room. Searching
-for `hackman` on the office monitor still opens the contained monitor version.
+During the ketamine trip, catching the roaming ghost opens **Hack-Man** in that
+room. Arrow keys or `WASD` steer, Space pauses, and Dismiss, Escape, or
+Backspace closes it. Searching for `hackman` on the monitor opens its contained
+version.
 
-In Block Party, click or tap the playfield to rotate a piece. Drag horizontally
-to move it, or drag down to drop it; the arrow keys and Space also work. Every
-ten cleared lines advances the level and speeds up the falling pieces.
+In Block Party, select the playfield to rotate a piece. Drag horizontally to
+move it or down to drop it; arrow keys and Space also work. Every ten cleared
+lines advances the level.
 
-Double-click any of the three office butterfly artworks to start a short
-Butterfly Chase.
-Keep pestering a butterfly and its artwork may need a moment to recover.
+Double-click any office butterfly artwork to start Butterfly Chase.
 
-Calendar and Clock can move the loft to another date or time. Special days may
-change decorations, weather, guests, messages, or the party setup. Weather,
-daylight, moon phase, and sky effects can also change the rooms. These are toys,
-not requirements for completing the trail. The floating date and time controls
-show their own ↺ Reset buttons while an override is active: date returns to
-today without changing the selected time, and time returns to the current real
-clock without changing the selected date.
+Calendar and Clock can move the loft to another date or time. Special dates,
+weather, daylight, moon phase, and sky effects may change the rooms. While an
+override is active, the floating date and time controls show separate ↺ Reset
+buttons: resetting one does not change the other.
 
-There are plenty of smaller discoveries too. This manual deliberately does not
-catalog them: poke around, revisit objects in a different room state, and try
-context actions when something seems suggestive.
+This manual deliberately leaves smaller discoveries uncatalogued. Revisit
+objects in different room states and try context actions when something seems
+suggestive.
 
 ## Accessibility and browser notes
 
-- English and Czech are available, and the selection persists when storage is
-  allowed.
-- The game honors the system reduced-motion preference. Some animation is
-  simplified and Flair Catch is disabled.
+- English and Czech are available; the choice persists when storage is allowed.
+- The game respects reduced motion. Some animation is simplified and Flair
+  Catch is disabled.
 - The instruction line and `Enter` provide an alternate path through the main
-  trail, but not every illustrated object is in the Tab order.
-- Camera, torch, sharing, fullscreen, installation, and some embedded computer
-  toys depend on browser support and permission. Denying them does not block the
-  room trail.
-- Current desktop Chrome offers the broadest feature coverage. Other modern
-  browsers remain playable, though some monitor media or embedded games may be
+  trail, but not every illustrated object is in the `Tab` order.
+- Camera, torch, sharing, fullscreen, installation, and some computer toys
+  depend on browser support and permission. Denying them does not block the
+  trail.
+- Desktop Chrome offers the broadest feature coverage. Other modern browsers
+  remain playable, though some monitor media or embedded games may be
   unavailable.
 
 ## Advanced toys
 
-The loft includes a drop-down JavaScript console and the monitor's **Console**
-and **Code** apps. They are optional play spaces, not part of the main game.
-Press backtick to open the drop-down console and type `help` or `shortcuts()` to
-get oriented. The Code app can run JavaScript and Python files; named files are
-saved in this browser. Its JS/PY control changes only how the current buffer
-runs—it never renames the file or opens a same-named file automatically.
-An exact filename collision turns the name red while it is being edited; typing
-can continue to a unique name. Enter and Escape leave the conflict untouched;
-leaving the field reverts to the old name.
-JavaScript and Python examples can open native SVG
-graphics views. Once a drawing exists, the small **gfx** control appears so you
-can switch between it and the Console output. On the zoomed monitor desktop,
-typing opens the app finder: matching search names appear alphabetically,
-matching tiles highlight together, and any listed result can be opened directly.
-When the office monitor is
-zoomed, the compact taskbar control at the far right expands only
-the 124×42 display surface across the current browser viewport, preserving its
-aspect ratio against a black surround. Dismiss an open app to return to this
-taskbar control; tap the surround or press Escape to return directly. This does
-not invoke browser fullscreen; **F** remains that separate toggle. Shoot has its
-own **Fullscreen** control between **Back** and **Dismiss**. It moves the running
-4:3 game into true browser fullscreen without restarting it, whether the monitor
-is ordinarily zoomed or expanded. Press Escape to leave fullscreen and return
-to the same monitor view.
+The loft's drop-down JavaScript console and the monitor's **Console**, **Code**,
+Python, and Linux apps are optional play spaces. Press backtick to open the
+drop-down console, then type `help` or `shortcuts()`. Do not paste or import code
+from anyone you do not trust.
 
-The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
-Solitaire. Solitaire accepts clicks or card drags; the full lifted stack follows
-your finger at its real size. It allows unlimited stock recycles and puts Behdad,
-Markéta, and Jay on the kings, queens, and jacks.
-In Mines, tap a square to reveal it or press and hold to place or remove a flag.
-The `mines()` and `solitaire()` console commands open either game directly.
-In layered monitor apps, **Back** returns within the app while **Dismiss** closes
-it and preserves the current view. This applies to the game chooser in Classics
-messages and drafts in Mail, designs in Tattoo, Life's Help screen, and Console
-or Python sessions launched from Code. Shoot is the exception: **Dismiss**
-silently tears down its WASM game so reopening starts cleanly at the chooser;
-the context-menu **Kill app** keeps its separate FATALITY gag.
+Code runs JavaScript and Python. Named files are saved in this browser, and an
+exact filename collision is shown in red. JavaScript and Python examples can
+open SVG graphics views; use **gfx** to switch between a drawing and console
+output.
 
-In the monitor music player, drag an equalizer band vertically to adjust it.
-Double-tap a band to zero that band. On touch devices, press and hold a band to
-open the same **Reset EQ** and **Kill app** menu provided by right-click.
+The far-right monitor taskbar control expands the monitor within the browser;
+select the surround or press Escape to return. This is separate from browser
+fullscreen (`F`). Shoot also has a **Fullscreen** control that preserves the
+running game when entering or leaving fullscreen.
 
-The monitor's **snake** app runs the four-player DOS edition of Nibbles. Search
-for `snake` or `nibbles` to launch the game; Esc exits it and returns to the
-monitor. Search for `dos` when you want a bare `C:\>` prompt instead. Type
-`NIBBLES` there to run the game without leaving the DOS session, or `EXIT` to
-return to the monitor.
+**Classics** contains Mines and draw-one Klondike Solitaire. Mines uses select
+to reveal and press-and-hold to flag. Solitaire accepts selections or drags and
+allows unlimited stock recycles. `mines()` and `solitaire()` open them directly.
+In layered apps, **Back** steps within the app and **Dismiss** closes it while
+preserving its view. Shoot restarts after Dismiss.
 
-Prince of Persia is a hidden monitor app: search for `prince`, type `prince` in
-either console, or run `prince()` from browser JavaScript. Its own Fullscreen
-control expands both the monitor and browser around the 16:10 game. Dismiss
-parks the live game so reopening resumes it; **Kill app** and **Start over**
-discard the run. In the garden, double-click or double-tap the tiny dungeon
-door to open the stone dungeon.
-The dungeon opens quietly: click or tap its inset play wall, or press bare
-Enter or Space anywhere in the dormant dungeon, to create or resume the
-persistent Prince game and hand it the keyboard. Until then, its torches,
-barred window, chain, ledge, and loose stone
-remain small interactive toys and no game iframe exists. Escape or Backspace returns to
-the garden without ending an initiated run. Left/Right pans to the adjacent
-hidden room, and a room dot pans to the hidden room paired with the room it names.
+In the monitor music player, drag equalizer bands vertically, double-tap a band
+to zero it, or open its context menu to reset the EQ or kill the app.
 
-These surfaces execute real code in the page. Do not paste or import code from
-someone you do not trust.
+Search for `snake` or `nibbles` to open DOS Nibbles; Esc returns to the monitor.
+Search for `dos` for a `C:\>` prompt, where `NIBBLES` starts it and `EXIT`
+returns.
+
+Prince of Persia is hidden: search for `prince`, type `prince` in either
+console, or run `prince()` from browser JavaScript. Dismiss preserves the run;
+**Kill app** or **Start over** discards it. It is also available in the Garden's
+hidden dungeon.
 
 ## Troubleshooting
 
 **A room will not unlock.** Follow the instruction above the scene. To skip,
-double-click or double-tap the locked destination dot, open the scene context
-menu and choose **Solve**, or press the destination room number.
+double-click or double-tap the locked destination dot, choose **Solve** from the
+scene menu, or press the destination room number.
 
-**The phone is locked.** Solve the displayed math question. After three failed
-attempts it opens automatically; its context menu also has an accessible unlock.
+**The phone is locked.** Solve the math question. After three failed attempts it
+opens automatically; its context menu also offers an accessible unlock.
 
-**Messages have not arrived.** They wait until the party has unlocked free play.
-Reach the balcony and follow its finale, or start the party yourself.
+**Messages have not arrived.** Reach the balcony and start the first party to
+unlock free play.
 
-**A notification did not start an activity.** That is intentional. Open the
-message, then select its action arrow.
+**A notification did not start an activity.** Open the message, then select its
+action arrow.
 
-**Audio is silent.** Browsers require a click or tap before sound can begin.
-Interact with the game, try the media control or instrument again, and check
-device mute and site permissions. Another foreground app may own the controls.
+**Audio is silent.** Interact with the game first; browsers require a click or
+tap before sound can begin. Try the media control or instrument again, check
+device mute and site permissions, and remember that another foreground app may
+own the controls.
 
 **Camera, torch, sharing, or fullscreen is unavailable.** The browser may not
-support it, the page may lack permission, or the feature may require a secure
-connection. The main room trail still works.
+support it, permission may be missing, or the feature may require a secure
+connection. The main trail still works.
 
-**The game feels slow.** The game automatically switches to a lighter mode when
-it detects a slow system. If issue persists, reduce browser window size.
+**The game feels slow.** The game may switch to a lighter mode automatically.
+If it remains slow, reduce the browser window size.
 
-**I want a clean start.** Choose **Start over** at the end of any context menu,
-use the top-right Restart control, or press `R`, then confirm. This clears game
-progress and session UI state. Ending the party alone is not a reset.
+**I want a clean start.** Choose **Start over** in any context menu, use the
+top-right Restart control, or press `R`, then confirm. Ending the party is not a
+reset.

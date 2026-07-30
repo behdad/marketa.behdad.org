@@ -63,11 +63,12 @@ plain `↓` descends from any main room into its lower room and plain `↑`
 returns upstairs. While downstairs, `←`/`→` pans laterally between adjacent
 lower rooms; any room dot stays on the lower floor and pans straight to the
 room beneath its selected main room. Number keys `1`–`5` do the same without
-returning upstairs. The Garden's tiny dungeon door, the Office's rising
-`Zzz…`, and the Balcony's key and fob are discreet clickable ways down to
-their matching rooms. The other loft shortcuts remain available downstairs;
-Escape/Backspace, arrows, and Enter/Space retain their local room meanings.
-Music and other continuous loft sound
+returning upstairs. Double-click or double-tap the Kitchen's `WC` sign, the
+Garden's tiny dungeon door, the Cuddly-puddly film ticket, the Office's rising
+`Zzz…`, or the Balcony's key and fob for a discreet way down to the matching
+room. The other loft shortcuts remain available downstairs; Escape/Backspace,
+arrows, and Enter/Space retain their local room meanings. Music and other
+continuous loft sound
 become quieter and softly muffled downstairs; the enclosed Bathroom is
 especially muffled, and the street Entrance sounds quieter still. Returning
 upstairs restores the original mix. Illustrated lower-room props react to
@@ -212,13 +213,13 @@ night-sky piano, is contained to the Cuddly-puddly room. The media **Next**
 button advances projector programs without stopping at Off; once it reaches
 Night Sky, it stays there and advances the piano pieces instead.
 
-The small film ticket resting on a Cuddly-puddly wall brick opens the loft
-cinema without changing the selected projector program. Double-clicking or
-double-tapping a bare patch of that room's background is a second entrance. The
-room pans down into the cinema and temporarily puts **Who's here** away. Its
-short-throw projector starts off: select the physical projector, or press
-Enter/Space, to toggle it on or off and reveal/hide the three-film chooser.
-Those keys never operate film playback; the side
+Double-clicking or double-tapping the small film ticket resting on a
+Cuddly-puddly wall brick opens the loft cinema without changing the selected
+projector program. Doing the same on a bare patch of that room's background is
+a second entrance. The room pans down into the cinema and temporarily puts
+**Who's here** away. Its short-throw projector starts off: select the physical
+projector, or press Enter/Space, to toggle it on or off and reveal/hide the
+three-film chooser. Those keys never operate film playback; the side
 Play/Pause and Next controls follow the cinema while it is open. **Choose
 another** stops a film and returns to the chooser. The × button, Escape,
 Backspace, or ordinary room navigation pans back up.

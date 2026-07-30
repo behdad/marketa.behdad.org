@@ -30283,6 +30283,7 @@ window.__entranceRoomOpen = false;
   var viewport = document.querySelector(".hunt-viewport");
   var closeButton = document.getElementById("entrance-room-close");
   var background = document.getElementById("balcony-background");
+  var balconyStage = document.getElementById("stage-balcony");
   var prevButton = document.getElementById("hunt-prev");
   var nextButton = document.getElementById("hunt-next");
   var closeTimer = null;
@@ -30290,7 +30291,7 @@ window.__entranceRoomOpen = false;
   var backgroundTapAt = 0;
   var props = room ? Array.prototype.slice.call(room.querySelectorAll(".entrance-prop")) : [];
   var reactions = {};
-  if (!room || !viewport || !closeButton || !background) return;
+  if (!room || !viewport || !closeButton || !background || !balconyStage) return;
 
   function clearEntranceInteractions() {
     props.forEach(function (prop) { prop.classList.remove("reacting"); });
@@ -30370,7 +30371,10 @@ window.__entranceRoomOpen = false;
   }
   function isBareBalconyBackground(event) {
     var target = event && event.target;
-    return !!(target && target === background && !(target.closest && target.closest(".hunt-hit")));
+    return !!(target && balconyStage.contains(target) &&
+      !(target.closest && target.closest(
+        ".hunt-hit,#balcony-wall,[role=button],button,input,textarea,select,a"
+      )));
   }
   function openEntranceFromBackground(event) {
     if (!isBareBalconyBackground(event)) return false;
@@ -30378,8 +30382,8 @@ window.__entranceRoomOpen = false;
     event.stopPropagation();
     return openEntrance();
   }
-  background.addEventListener("dblclick", openEntranceFromBackground);
-  background.addEventListener("pointerup", function (event) {
+  balconyStage.addEventListener("dblclick", openEntranceFromBackground);
+  balconyStage.addEventListener("pointerup", function (event) {
     if (event.pointerType !== "touch" || !isBareBalconyBackground(event)) return;
     var now = Date.now();
     if (now - backgroundTapAt < 420) {

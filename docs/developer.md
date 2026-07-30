@@ -628,8 +628,9 @@ observer mirrors `#stage-office.dusk` into `.bedroom-night`.
 Every distinct foreground prop is an SVG `role="button"` with localized
 `aria-label`/tooltip copy: stained glass, each brass mushroom bedside lamp, wall rack, wardrobe,
 bed, and each bedside drawer. The Bedroom's capture-phase key owner translates
-Enter/Space on those focused groups into their click path before claiming the
-remaining downstairs shortcuts. The interaction controller reuses shared SFX
+Enter/Space on those focused groups into their click path. Every lower-room
+capture owner stops only local navigation and activation keys, leaving the
+shared loft shortcuts available downstairs. The interaction controller reuses shared SFX
 and clears persistent and one-shot classes on room close, so a return always
 starts from the authored composition. `__bedroomRoomState().props` is the
 focused regression surface for that cleanup.

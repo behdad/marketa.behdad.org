@@ -30662,30 +30662,33 @@ document.addEventListener("keydown", function (event) {
   }
 }, true);
 
-// The Entrance owns ordinary room keys while it is below the balcony. Up and
+// The Entrance owns its navigation and activation keys while it is below the balcony. Up and
 // back-shaped keys return directly; Left exits to the adjacent Office, while
-// Right exits at the strip's right edge back onto the Balcony.
+// Right exits at the strip's right edge back onto the Balcony. Global shortcuts pass through.
 document.addEventListener("keydown", function (event) {
   if (!window.__entranceRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   if (handleLowerRoomNumberShortcut(event)) return;
-  if ((event.key === "Enter" || event.key === " ") &&
-      event.target && event.target.closest && event.target.closest(".entrance-prop")) {
+  if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
     event.preventDefault();
     event.stopImmediatePropagation();
-    event.target.closest(".entrance-prop")
-      .dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var entranceProp = event.target && event.target.closest &&
+      event.target.closest(".entrance-prop");
+    if (entranceProp) entranceProp.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true })
+    );
     return;
   }
-  event.stopImmediatePropagation();
   if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" || event.key === "ArrowUp") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__closeEntranceRoom) window.__closeEntranceRoom();
     return;
   }
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__navigateLowerRoom) {
       window.__navigateLowerRoom(event.key === "ArrowLeft" ? "office" : "balcony");
       return;
@@ -30694,7 +30697,6 @@ document.addEventListener("keydown", function (event) {
     if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "office" : "balcony");
     return;
   }
-  event.preventDefault();
 }, true);
 
 // The Bedroom is a native-SVG lower room beneath the Office. It uses the same
@@ -31078,24 +31080,26 @@ window.__bedroomRoomOpen = false;
   window.__refreshBedroomGlassText = refreshTttText;
 })();
 
-// While downstairs, room shortcuts cannot operate the hidden Office. Escape,
-// Backspace and plain Up return upstairs; Left/Right leave through adjacent
-// main-floor rooms, matching the other lower-room navigation.
+// While downstairs, Bedroom owns navigation and activation; all other shared
+// loft shortcuts continue through to the document-level shortcut handler.
 document.addEventListener("keydown", function (event) {
   if (!window.__bedroomRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   if (handleLowerRoomNumberShortcut(event)) return;
-  event.stopImmediatePropagation();
   var bedroomProp = event.target && event.target.closest &&
     event.target.closest("#bedroom-room .bedroom-prop");
-  if (bedroomProp && (event.key === "Enter" || event.key === " ")) {
+  if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
     event.preventDefault();
-    bedroomProp.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    event.stopImmediatePropagation();
+    if (bedroomProp) bedroomProp.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true })
+    );
     return;
   }
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__navigateLowerRoom) {
       window.__navigateLowerRoom(event.key === "ArrowLeft" ? "cuddly" : "balcony");
       return;
@@ -31105,6 +31109,7 @@ document.addEventListener("keydown", function (event) {
   } else if (event.key === "Escape" || event.key === "Esc" ||
       event.key === "Backspace" || event.key === "ArrowUp") {
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (window.__closeBedroomRoom) window.__closeBedroomRoom();
   }
 }, true);
@@ -31123,17 +31128,20 @@ document.addEventListener("keydown", function (event) {
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   if (princeBasementActive && handleLowerRoomNumberShortcut(event)) return;
-  event.stopImmediatePropagation();
   if (princeBasementActive && !window.__princeInputActive) {
     var dungeonProp = event.target && event.target.closest &&
       event.target.closest("#prince-dungeon-set .prince-dungeon-prop");
-    if (dungeonProp && (event.key === "Enter" || event.key === " ")) {
+    if (dungeonProp && (event.key === "Enter" || event.key === " " || event.key === "Spacebar")) {
       event.preventDefault();
-      dungeonProp.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      event.stopImmediatePropagation();
+      dungeonProp.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true })
+      );
       return;
     }
     if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
       event.preventDefault();
+      event.stopImmediatePropagation();
       if (window.__navigateLowerRoom) {
         window.__navigateLowerRoom(event.key === "ArrowLeft" ? "kitchen" : "cuddly");
         return;
@@ -31142,10 +31150,12 @@ document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace" ||
         event.key === "ArrowUp") {
       event.preventDefault();
+      event.stopImmediatePropagation();
       if (window.__closeMonitorPrince) window.__closeMonitorPrince();
     }
     return;
   }
+  event.stopImmediatePropagation();
   if (princeBasementActive && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
     event.preventDefault();
     if (window.__navigateLowerRoom) {

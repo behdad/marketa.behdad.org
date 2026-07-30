@@ -764,11 +764,13 @@ the office, while **F** independently owns browser fullscreen. Code, consoles,
 media, and embedded games share this lifecycle. Do not add iframe- or app-level
 fullscreen buttons casually. Shoot is the sole intentional exception because
 all three engines author a 4:3 viewport: its app-level Fullscreen control sits
-between Back and Dismiss and routes Shoot to `#shoot-focus-overlay`, which
-temporarily reparents `#monitor-shoot-host` and requests true browser fullscreen
-without recreating its iframe. Entering from monitor-content fullscreen first
-releases that in-page mode; the true-fullscreen overlay deliberately exposes no
-exit control because native Escape owns exit.
+between Back and Dismiss and requests true browser fullscreen directly on
+`#monitor-shoot-host`. The host must remain in its original DOM position:
+reparenting an iframe or its host can recreate the browsing context and restart
+the active engine. Monitor-content fullscreen remains in place behind Shoot
+fullscreen for the same reason, so native Escape returns to the prior monitor
+focus without moving an iframe ancestor. The fullscreen host deliberately
+exposes no exit control because native Escape owns exit.
 Shoot does not retain an iframe across Dismiss: `closeDoom(false)` calls the
 immediate, gag-free `destroyDoom()`, while Back returns to the chooser and the
 context-menu Kill path alone runs `doomDeathFlash`.

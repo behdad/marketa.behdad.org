@@ -5013,7 +5013,8 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #monitor-doom-wrap[data-shoot-view="doom"] #monitor-shoot-host,
 #monitor-doom-wrap[data-shoot-view="duke"] #monitor-shoot-host,
 #monitor-doom-wrap[data-shoot-view="q3"] #monitor-shoot-host{display:block}
-#shoot-focus-overlay{
+#monitor-doom-wrap #monitor-shoot-host:fullscreen,
+#monitor-doom-wrap #monitor-shoot-host:-webkit-full-screen{
   width:100%;
   height:100%;
   max-width:none;
@@ -5026,9 +5027,8 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   overflow:hidden;
   background:#000;
 }
-#shoot-focus-overlay[hidden]{display:none}
-#shoot-focus-overlay:fullscreen::backdrop,
-#shoot-focus-overlay:-webkit-full-screen::backdrop{background:#000}
+#monitor-shoot-host:fullscreen::backdrop,
+#monitor-shoot-host:-webkit-full-screen::backdrop{background:#000}
 #monitor-focus-dialog{
   position:fixed;
   inset:0;
@@ -5043,13 +5043,12 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   background:#000;
 }
 #monitor-focus-dialog::backdrop{background:#000}
-#shoot-focus-stage{
+#monitor-shoot-host:fullscreen iframe,
+#monitor-shoot-host:-webkit-full-screen iframe{
   width:min(100vw, 133.333333vh);
   height:min(75vw, 100vh);
   background:#000;
 }
-#shoot-focus-overlay #monitor-shoot-host,
-#shoot-focus-overlay #monitor-shoot-host iframe{display:block;width:100%;height:100%}
 #prince-focus-overlay{
   position:fixed;
   inset:0;
@@ -28598,9 +28597,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   </div>
   </div>
   <div class="hunt-dots" id="hunt-dots" role="tablist" aria-label="Rooms"></div>
-  <div id="shoot-focus-overlay" hidden>
-    <div id="shoot-focus-stage"></div>
-  </div>
   <div id="prince-focus-overlay" hidden>
     <div id="prince-focus-stage"></div>
     <div id="prince-kill-card" class="prince-kill-card" aria-hidden="true">
@@ -60802,8 +60798,6 @@ async def localfont(name):
   var doomBackBtn = document.getElementById("monitor-doom-back");
   var doomFullscreenBtn = document.getElementById("monitor-doom-fullscreen");
   var shootHost = document.getElementById("monitor-shoot-host");
-  var shootFocusOverlay = document.getElementById("shoot-focus-overlay");
-  var shootFocusStage = document.getElementById("shoot-focus-stage");
   var shootCoach = document.getElementById("monitor-shoot-coach");
   var shootCloseTitle = document.getElementById("monitor-doom-close-title");
   var shootView = "chooser";
@@ -60833,8 +60827,6 @@ async def localfont(name):
   window.__syncMonitorDoom = shootSync;
   function finishShootFullscreen() {
     shootFocusActive = false;
-    if (doomWrap && shootHost) doomWrap.insertBefore(shootHost, doomMsg);
-    if (shootFocusOverlay) shootFocusOverlay.hidden = true;
     shootSync();
     if (shootFrame && shootFrame.contentWindow) {
       try { shootFrame.contentWindow.focus(); } catch (e) {}
@@ -60843,25 +60835,19 @@ async def localfont(name):
   function setShootFocus(on) {
     on = !!on && shootView !== "chooser" && !!shootFrame;
     if (on === shootFocusActive) return;
-    if (on && document.getElementById("hunt-fullscreen-area").classList.contains("monitor-content-fullscreen-host") &&
-        window.__toggleMonitorContentFullscreen) window.__toggleMonitorContentFullscreen();
     if (on) {
       shootFocusActive = true;
-      if (shootFocusStage && shootHost) shootFocusStage.appendChild(shootHost);
-      if (shootFocusOverlay) {
-        shootFocusOverlay.hidden = false;
-        var request = shootFocusOverlay.requestFullscreen || shootFocusOverlay.webkitRequestFullscreen;
-        if (!request) { finishShootFullscreen(); return; }
-        try {
-          var promise = request.call(shootFocusOverlay);
-          if (promise && promise.catch) promise.catch(finishShootFullscreen);
-        } catch (e) {
-          finishShootFullscreen();
-        }
+      var request = shootHost && (shootHost.requestFullscreen || shootHost.webkitRequestFullscreen);
+      if (!request) { finishShootFullscreen(); return; }
+      try {
+        var promise = request.call(shootHost);
+        if (promise && promise.catch) promise.catch(finishShootFullscreen);
+      } catch (e) {
+        finishShootFullscreen();
       }
     } else {
       var activeFs = document.fullscreenElement || document.webkitFullscreenElement;
-      if (activeFs === shootFocusOverlay) {
+      if (activeFs === shootHost) {
         var exit = document.exitFullscreen || document.webkitExitFullscreen;
         if (exit) {
           try { exit.call(document); } catch (e) { finishShootFullscreen(); }
@@ -61000,7 +60986,7 @@ async def localfont(name):
   // background tab would burn frames for nothing
   document.addEventListener("visibilitychange", shootSync);
   function shootFullscreenChanged() {
-    if (shootFocusActive && (document.fullscreenElement || document.webkitFullscreenElement) !== shootFocusOverlay) finishShootFullscreen();
+    if (shootFocusActive && (document.fullscreenElement || document.webkitFullscreenElement) !== shootHost) finishShootFullscreen();
     shootSync();
   }
   document.addEventListener("fullscreenchange", shootFullscreenChanged);
@@ -61012,7 +60998,7 @@ async def localfont(name):
         !event.data || event.data.game !== shootFrameGame) return;
     if (event.data.kind === "shoot-pointer-lock") { showShootCoach(); return; }
     if (event.data.kind === "shoot-contextmenu" && doomWrap) {
-      var contextTarget = shootFocusActive && shootFocusOverlay ? shootFocusOverlay : doomWrap;
+      var contextTarget = shootFocusActive && shootHost ? shootHost : doomWrap;
       var r = contextTarget.getBoundingClientRect();
       var contextX = r.left + Math.max(0, Math.min(1, Number(event.data.x) || 0)) * r.width;
       var contextY = r.top + Math.max(0, Math.min(1, Number(event.data.y) || 0)) * r.height;

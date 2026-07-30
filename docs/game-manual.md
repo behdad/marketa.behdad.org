@@ -262,7 +262,8 @@ taskbar control; tap the surround or press Escape to return directly. This does
 not invoke browser fullscreen; **F** remains that separate toggle. Shoot has its
 own **Fullscreen** control between **Back** and **Dismiss**. It moves the running
 4:3 game into true browser fullscreen without restarting it, whether the monitor
-is ordinarily zoomed or expanded. Press Escape to leave fullscreen.
+is ordinarily zoomed or expanded. Press Escape to leave fullscreen and return
+to the same monitor view.
 
 The monitor's **classics** app opens a chooser for Mines and draw-one Klondike
 Solitaire. Solitaire accepts clicks or card drags; the full lifted stack follows

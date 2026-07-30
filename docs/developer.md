@@ -1277,7 +1277,10 @@ or reconstructed readings until reset.
 
 Wildfire haze combines Edmonton PM2.5 with the Jul 16–Aug 31 seasonal ramp in `smokeLevelFor`.
 The stronger raw input wins, then a `0.5` presentation gain keeps the orange-sun/haze beat from
-dominating the rooms; console overrides pass through that same visual gain.
+dominating the rooms; console overrides pass through that same visual gain. `applySeasonDate()`
+also writes the computed value to `#entrance-room`, which is a viewport sibling and therefore
+cannot inherit `--smoke` from the loft strip. Its full-street wash uses the Balcony's `.42`
+ceiling and the same daylight-only gate.
 
 ## Messages
 

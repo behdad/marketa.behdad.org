@@ -249,7 +249,9 @@ start on. Each of the five window bays toggles independently. Flip every one
 away from its day/night default for a caption payoff. Every other distinct
 street detail responds: tap or focus and press Enter/Space on the name stone,
 doors, entry lamps, tree canopy, or sidewalk for a small light, movement, and
-sound reaction. While music is playing, the visible entrance glass gives a
+sound reaction. Edmonton wildfire haze reaches the daylight street view at the
+same intensity as the Balcony and clears with the other daylight smoke at night.
+While music is playing, the visible entrance glass gives a
 subtle beat-rattle; reduced-motion visitors get a still facade. `↑`, Escape,
 Backspace, or × returns to the
 Balcony. `←` pans to the Bedroom; `→` stays at the lower floor's right edge,

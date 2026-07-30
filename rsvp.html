@@ -499,6 +499,8 @@ footer{margin-top:2.6rem}
 .entrance-window-pane.light-on .entrance-window-light{opacity:.78}
 .entrance-night-light{opacity:1;transition:opacity .7s ease}
 #entrance-room.entrance-day .entrance-night-light{opacity:0}
+.entrance-smoke-tint{opacity:calc(var(--smoke,0) * .42);transition:opacity .9s ease}
+#entrance-room:not(.entrance-day) .entrance-smoke-tint{opacity:0}
 .entrance-prop{cursor:pointer;outline:none}
 .entrance-prop .entrance-hit{
   fill:transparent;stroke:transparent;stroke-width:2;vector-effect:non-scaling-stroke;
@@ -29470,6 +29472,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <!-- Quiet street-edge shadows anchor the little facade rather than reproducing a photo. -->
         <path d="M0 331Q114 319 222 333T462 331T680 326V340H0Z" fill="#181b20" opacity=".62"/>
         <rect id="entrance-day-wash" width="680" height="340" fill="#fff0cb" pointer-events="none"/>
+        <rect class="entrance-smoke-tint" width="680" height="340" fill="#b0a89c" pointer-events="none" aria-hidden="true"/>
         <!-- One transparent, keyboard-focusable response surface per distinct street prop.
              Keeping them in a final overlay preserves the illustration's paint order. -->
         <g id="entrance-window-left" class="entrance-prop" role="button"
@@ -99544,10 +99547,11 @@ function spawnDustMote(container) {
     applyMeals(s);     // same deal: the low table comes out for the dinners, inside or outside a season
     if (window.__applyWeddingDay) window.__applyWeddingDay(); // the wedding is a season too — refresh before the sky reads it
     var strip = document.getElementById("loft-game-strip");
+    var smokeLevel = smokeLevelFor(s);
     if (strip) {
       strip.classList.toggle("bipolar-day", s.m === 2 && s.d === 30);
       strip.classList.toggle("gifts-out", inGiftsWindow(s)); // another overlay, same as the hats
-      strip.style.setProperty("--smoke", smokeLevelFor(s));
+      strip.style.setProperty("--smoke", smokeLevel);
       // Two more axes read off the same date, riding ALONGSIDE the decor class rather than
       // through decorForDate — which answers "what's out", not "what's it like out" (winter)
       // or "what day is it" (New Year's). Toggled, so they need no place in __setSeason's
@@ -99595,6 +99599,10 @@ function spawnDustMote(container) {
       strip.classList.toggle("mehregan", mehregan);
       if (!mehregan && window.__resetMehregan) window.__resetMehregan();
     }
+    // Entrance is a viewport sibling rather than a strip descendant, so explicitly share the
+    // same computed Edmonton haze instead of duplicating climate state or fetching it again.
+    var entranceRoom = document.getElementById("entrance-room");
+    if (entranceRoom) entranceRoom.style.setProperty("--smoke", smokeLevel);
     if (window.__reconcileBalconyKidsPlay) window.__reconcileBalconyKidsPlay();
     if (window.__balconyHangoutAttendanceChanged) window.__balconyHangoutAttendanceChanged();
     if (window.__stampNightDepth) window.__stampNightDepth(); // the new date may never get properly dark

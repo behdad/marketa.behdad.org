@@ -3918,6 +3918,20 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .dock-grid.searching .dock-app{opacity:.28}
 .dock-grid.searching .dock-app.search-match{opacity:1}
 .dock-app.search-match .dock-tile{box-shadow:inset 0 0 0 .7px #8e3a4a,0 0 0 .7px rgba(255,253,248,.95)}
+.monitor-app-directory{visibility:hidden;pointer-events:none}
+.monitor-app-directory.open{visibility:visible;pointer-events:auto}
+.monitor-app-directory-bg{fill:#f8f5ec;stroke:#8e3a4a;stroke-width:.45}
+.monitor-app-directory-head{fill:#8e3a4a}
+.monitor-app-directory-title{fill:#fffdf8;font:600 3.2px/1 Fraunces,serif}
+.monitor-app-directory-item{cursor:pointer;outline:none}
+.monitor-app-directory-item rect{fill:#fffdf8;stroke:#d8cdbb;stroke-width:.3}
+.monitor-app-directory-item text{fill:#453a31;font:600 1.85px/1 "Source Serif 4",serif;pointer-events:none}
+.monitor-app-directory-item.search-only rect{fill:#f4ecdf;stroke:#c68e95}
+.monitor-app-directory-item:hover rect,.monitor-app-directory-item:focus rect{fill:#ead8d8;stroke:#8e3a4a;stroke-width:.5}
+.monitor-app-directory-close{cursor:pointer;outline:none}
+.monitor-app-directory-close circle{fill:#fffdf8;stroke:#d9a6a6;stroke-width:.3}
+.monitor-app-directory-close text{fill:#8e3a4a;font:700 3px/1 sans-serif;text-anchor:middle;pointer-events:none}
+.monitor-app-directory-close:hover circle,.monitor-app-directory-close:focus circle{fill:#ead8d8;stroke:#fffdf8;stroke-width:.5}
 .dock-app.dragging{opacity:.28}
 .dock-app.drop-target .dock-tile{box-shadow:inset 0 0 0 .7px #8e3a4a,0 0 0 .7px rgba(255,253,248,.95)}
 .dock-drag-ghost{position:fixed; left:0; top:0; z-index:70; pointer-events:none; margin:0; transition:none; transform:translate(-50%,-50%) scale(var(--dock-drag-scale,1.12)); transform-origin:center; opacity:.96}
@@ -29640,6 +29654,8 @@ var T = {
     occasion_activate: "activate this day",
     desk_search_apps: "search apps…",
     desk_search_apps_aria: "Search apps",
+    desk_app_directory: "All apps",
+    desk_app_directory_aria: "Monitor app directory",
     datenav_prev: "Jump to the previous day of significance",
     datenav_next: "Jump to the next day of significance",
     datenav_prev_day: "Previous day",
@@ -30840,6 +30856,8 @@ var T = {
     occasion_activate: "spustit tento den",
     desk_search_apps: "hledat aplikace…",
     desk_search_apps_aria: "Hledat aplikace",
+    desk_app_directory: "Všechny aplikace",
+    desk_app_directory_aria: "Seznam aplikací monitoru",
     datenav_prev: "Přejít na předchozí významný den",
     datenav_next: "Přejít na další významný den",
     datenav_prev_day: "Předchozí den",
@@ -32257,6 +32275,10 @@ window.addEventListener("hashchange", function () {
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     e.preventDefault();
+    if (window.__monitorAppDirectoryShortcut && window.__monitorAppDirectoryShortcut()) {
+      window.__toggleMonitorAppDirectory();
+      return;
+    }
     if (kbdOverlay) closeKbdHelp(); else openKbdHelp();
   });
   window.__openKbdHelp = openKbdHelp; // so scene objects (e.g. the bar's "…THERE?" imprint) can raise the shortcuts card
@@ -49186,7 +49208,7 @@ setOfficeProgress("pc", false);
     { id: "doom", labelKey: "shoot_doom", glyph: "D", tile: "#805438", color: "#e8c060", glyphSize: "4.2", searchOnly: true, open: function () { openDoom(); } },
     { id: "duke", labelKey: "shoot_duke", glyph: "⌐■-■", tile: "#9b7424", color: "#f5d44b", glyphSize: "3.2", searchOnly: true, open: function () { openShoot("duke"); } },
     { id: "quake3", labelKey: "shoot_q3", glyph: "Q³", tile: "#292624", color: "#e4d3aa", glyphSize: "4.2", searchOnly: true, open: function () { openShoot("q3"); } },
-    { id: "quake", labelKey: "shoot_q3", glyph: "Q³", tile: "#292624", color: "#e4d3aa", glyphSize: "4.2", searchOnly: true, open: function () { openShoot("q3"); } },
+    { id: "quake", labelKey: "shoot_q3", glyph: "Q³", tile: "#292624", color: "#e4d3aa", glyphSize: "4.2", searchOnly: true, directoryAlias: true, open: function () { openShoot("q3"); } },
     { id: "code", icon: "code", labelKey: "app_code", glyph: "</>", tile: "#17271e", color: "#8fd070", mono: true, glyphSize: "3.5", open: function () { openCode(); } },
     { id: "console", icon: "console", labelKey: "app_console", glyph: "❯_", tile: "#2e2823", color: "#8fd070", mono: true, glyphSize: "4", open: function () { openConsole(); } },
     { id: "python", icon: "python", labelKey: "app_python", glyph: ">>>", tile: "#306998", color: "#ffd43b", mono: true, glyphSize: "3.5", open: function () { openPython(); } },
@@ -49340,6 +49362,9 @@ setOfficeProgress("pc", false);
   var monitorHelpLayer = null;
   var monitorCreditsLayer = null;
   var monitorCreditsKillTimer = null;
+  var monitorAppDirectory = null;
+  var monitorAppDirectoryItems = [];
+  var monitorAppDirectoryOpen = false;
   function closeMonitorSystemMenu() {
     if (!monitorSystemMenu) return;
     monitorSystemMenu.classList.remove("open");
@@ -50474,6 +50499,117 @@ setOfficeProgress("pc", false);
     });
     monitorCreditsLayer.addEventListener("dblclick", function (e) { e.stopPropagation(); });
 
+    // '?' on the bare desktop opens the complete finder catalog as native SVG. Keeping
+    // this outside the foreignObject grid avoids WebKit's scaled-layer paint bug, while
+    // sourcing it from the same arrays means search-only and toolbar apps cannot drift.
+    monitorAppDirectory = mkEl("g", { id: "monitor-app-directory",
+      "class": "monitor-app-directory", role: "dialog", "aria-modal": "true",
+      "aria-labelledby": "monitor-app-directory-title", "data-aria-i": "desk_app_directory_aria",
+      "aria-label": (T[document.documentElement.lang] || T.en).desk_app_directory_aria }, dock);
+    mkEl("rect", { x: 254, y: 154, width: 124, height: 42, rx: 1.5,
+      "class": "monitor-app-directory-bg" }, monitorAppDirectory);
+    mkEl("path", { d: "M255.5 154 H376.5 Q378 154 378 155.5 V160 H254 V155.5 Q254 154 255.5 154 Z",
+      "class": "monitor-app-directory-head" }, monitorAppDirectory);
+    var directoryTitle = mkEl("text", { id: "monitor-app-directory-title", x: 257.5, y: 158.2,
+      "class": "monitor-app-directory-title", "data-i": "desk_app_directory" }, monitorAppDirectory);
+    directoryTitle.textContent = (T[document.documentElement.lang] || T.en).desk_app_directory;
+    var directoryClose = mkEl("g", { "class": "monitor-app-directory-close", role: "button",
+      tabindex: "0", "data-aria-i": "install_dismiss",
+      "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, monitorAppDirectory);
+    mkEl("circle", { cx: 374.7, cy: 157, r: 1.7 }, directoryClose);
+    var directoryX = mkEl("text", { x: 374.7, y: 158 }, directoryClose);
+    directoryX.textContent = "×";
+    DESKTOP_APPS.concat(TOOLBAR_APPS).filter(function (app) { return !app.directoryAlias; }).forEach(function (app, index) {
+      var col = index % 5, row = Math.floor(index / 5);
+      var x = 256 + col * 24.25, y = 161 + row * 4.75;
+      var item = mkEl("g", { "class": "monitor-app-directory-item" + (app.searchOnly ? " search-only" : ""),
+        role: "button", tabindex: "0", "data-app-id": app.id,
+        "data-aria-i": app.labelKey,
+        "aria-label": (T[document.documentElement.lang] || T.en)[app.labelKey] || T.en[app.labelKey] || app.id }, monitorAppDirectory);
+      mkEl("rect", { x: x, y: y, width: 22.2, height: 3.8, rx: .7 }, item);
+      var label = mkEl("text", { x: x + 1.15, y: y + 2.55, "data-i": app.labelKey }, item);
+      label.textContent = (T[document.documentElement.lang] || T.en)[app.labelKey] || T.en[app.labelKey] || app.id;
+      function launchDirectoryApp(e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        closeMonitorAppDirectory(false);
+        appOpenTs = Date.now();
+        app.open();
+      }
+      item.addEventListener("click", launchDirectoryApp);
+      item.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+      monitorAppDirectoryItems.push(item);
+    });
+    function monitorAppDirectoryReady() {
+      return !monitorAppDirectoryOpen && !dockSearchOpen && !dockSearchQuery &&
+        !(monitorSystemMenu && monitorSystemMenu.classList.contains("open")) && dockSearchReady();
+    }
+    function closeMonitorAppDirectory(rearmSaver) {
+      if (!monitorAppDirectoryOpen) return false;
+      monitorAppDirectoryOpen = false;
+      monitorAppDirectory.classList.remove("open");
+      if (rearmSaver !== false) scheduleSaver();
+      return true;
+    }
+    function openMonitorAppDirectory() {
+      if (!monitorAppDirectoryReady()) return false;
+      clearDockSearch();
+      closeMonitorSystemMenu();
+      stopSaver();
+      monitorAppDirectoryOpen = true;
+      monitorAppDirectory.classList.add("open");
+      if (monitorAppDirectoryItems[0]) try { monitorAppDirectoryItems[0].focus(); } catch (e) {}
+      return true;
+    }
+    function dismissMonitorAppDirectory(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      closeMonitorAppDirectory();
+    }
+    directoryClose.addEventListener("click", dismissMonitorAppDirectory);
+    directoryClose.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") dismissMonitorAppDirectory(e);
+    });
+    monitorAppDirectory.addEventListener("click", function (e) { e.stopPropagation(); });
+    monitorAppDirectory.addEventListener("dblclick", function (e) { e.stopPropagation(); });
+    window.__monitorAppDirectoryShortcut = function () {
+      return monitorAppDirectoryOpen || monitorAppDirectoryReady();
+    };
+    window.__toggleMonitorAppDirectory = function () {
+      return monitorAppDirectoryOpen ? !closeMonitorAppDirectory() : openMonitorAppDirectory();
+    };
+    window.__monitorAppDirectory = function () {
+      return {
+        open: monitorAppDirectoryOpen,
+        ids: monitorAppDirectoryItems.map(function (item) { return item.getAttribute("data-app-id"); })
+      };
+    };
+    window.addEventListener("keydown", function (e) {
+      if (!monitorAppDirectoryOpen || e.ctrlKey || e.metaKey || e.altKey) return;
+      var key = e.key, active = document.activeElement;
+      var at = monitorAppDirectoryItems.indexOf(active);
+      if (key === "?" || key === "Escape" || key === "Esc" || key === "Backspace") {
+        e.preventDefault(); e.stopImmediatePropagation(); closeMonitorAppDirectory(); return;
+      }
+      if (key === "Enter" || key === " ") {
+        if (at < 0) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        monitorAppDirectoryItems[at].dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+        return;
+      }
+      if (key === "Tab" || /^Arrow(Left|Right|Up|Down)$/.test(key)) {
+        if (!monitorAppDirectoryItems.length) return;
+        e.preventDefault(); e.stopImmediatePropagation();
+        var delta = key === "ArrowUp" ? -5 : key === "ArrowDown" ? 5 :
+          (key === "ArrowLeft" || (key === "Tab" && e.shiftKey)) ? -1 : 1;
+        if (at < 0) at = delta < 0 ? 0 : -1;
+        monitorAppDirectoryItems[(at + delta + monitorAppDirectoryItems.length) % monitorAppDirectoryItems.length].focus();
+        return;
+      }
+      // The directory is modal: unmodified room/device shortcuts wait until it closes.
+      e.stopImmediatePropagation();
+    }, true);
+    new MutationObserver(function () {
+      if (monitorAppDirectoryOpen && !dockSearchReady()) closeMonitorAppDirectory(false);
+    }).observe(monitor, { attributes: true, attributeFilter: ["class"] });
   }
   // CAPS LOCK: a tiny, pointer-and-keyboard cap-matching lock screen. It sits above the
   // Julia saver as native SVG (not a foreignObject, which WebKit loses under this scaled

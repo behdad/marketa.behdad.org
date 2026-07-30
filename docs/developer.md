@@ -781,6 +781,12 @@ prefix match by its displayed lowercase search name. Canonical ids and localized
 labels participate; only Snake retains explicit `nibbles`/`dos` aliases.
 All matching tiled apps receive `.search-match`, while the native-SVG dropdown
 also exposes search-only and toolbar results without a WebKit RenderLayer.
+On the zoomed bare desktop, the global `?` route yields to
+`#monitor-app-directory`, a native-SVG keyboard/pointer dialog built from
+`DESKTOP_APPS.concat(TOOLBAR_APPS)`. This keeps search-only and toolbar-only
+entries discoverable without duplicating the app catalog or introducing another
+scaled `foreignObject`; a catalog entry marked `directoryAlias` remains searchable
+but does not duplicate its canonical app in this visual list.
 Julia and Pipes share one off-DOM Canvas 2D surface. Its baseline remains 4×
 authored size; after three healthy frame windows either saver may rise in
 quarter-step tiers as high as 6×. Flower Box owns one lazy

@@ -54,6 +54,9 @@ whole room at once.
 Press `?` in the game for the complete, current shortcut list. Shortcuts pause
 while you type in a field, and action games temporarily take over the keys they
 need.
+On the zoomed office monitor’s bare desktop, `?` instead opens a clickable,
+keyboard-navigable directory of every monitor app, including apps normally
+available only through search.
 
 ## The guided room trail
 

@@ -29876,6 +29876,18 @@ window.__bathroomRoomOpen = false;
   if (window.__registerTransientResetHook) window.__registerTransientResetHook("bathroom-room", closeBathroom);
 })();
 
+// Number shortcuts retain the user's floor: upstairs they jump among the five main
+// rooms, while any active lower room pans to the corresponding room below it.
+function handleLowerRoomNumberShortcut(event) {
+  if (!event || event.key < "1" || event.key > "5") return false;
+  var names = ["kitchen", "garden", "cuddly", "office", "balcony"];
+  if (!window.__navigateLowerRoom) return false;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  window.__navigateLowerRoom(names[parseInt(event.key, 10) - 1]);
+  return true;
+}
+
 // A lower bathroom owns ordinary room keys while it is visible. Plain Up and the
 // usual Escape / Backspace aliases return to Kitchen / Bar.
 document.addEventListener("keydown", function (event) {
@@ -29891,6 +29903,7 @@ document.addEventListener("keydown", function (event) {
   }
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
+  if (handleLowerRoomNumberShortcut(event)) return;
   event.stopImmediatePropagation();
   if (event.key === "ArrowRight") {
     event.preventDefault();
@@ -30415,6 +30428,7 @@ document.addEventListener("keydown", function (event) {
   if (!window.__cinemaRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
+  if (handleLowerRoomNumberShortcut(event)) return;
   var ownedControl = event.target && event.target.closest &&
     event.target.closest("#cinema-room button,#cinema-room .cinema-prop");
   if ((event.key === "Enter" || event.key === " ") && ownedControl) {
@@ -30456,6 +30470,7 @@ document.addEventListener("keydown", function (event) {
   if (!window.__entranceRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
+  if (handleLowerRoomNumberShortcut(event)) return;
   if ((event.key === "Enter" || event.key === " ") &&
       event.target && event.target.closest && event.target.closest(".entrance-prop")) {
     event.preventDefault();
@@ -30659,6 +30674,7 @@ document.addEventListener("keydown", function (event) {
   if (!window.__bedroomRoomOpen) return;
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
+  if (handleLowerRoomNumberShortcut(event)) return;
   event.stopImmediatePropagation();
   var bedroomProp = event.target && event.target.closest &&
     event.target.closest("#bedroom-room .bedroom-prop");
@@ -30695,6 +30711,7 @@ document.addEventListener("keydown", function (event) {
   // terminal typing must remain with their higher-level owner.
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
+  if (princeBasementActive && handleLowerRoomNumberShortcut(event)) return;
   event.stopImmediatePropagation();
   if (princeBasementActive && !window.__princeInputActive) {
     var dungeonProp = event.target && event.target.closest &&

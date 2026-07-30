@@ -62,7 +62,8 @@ Enter, or select an app directly.
 plain `↓` descends from any main room into its lower room and plain `↑`
 returns upstairs. While downstairs, `←`/`→` pans laterally between adjacent
 lower rooms; any room dot stays on the lower floor and pans straight to the
-room beneath its selected main room. Music and other continuous loft sound
+room beneath its selected main room. Number keys `1`–`5` do the same without
+returning upstairs. Music and other continuous loft sound
 become quieter and softly muffled downstairs; the enclosed Bathroom is
 especially muffled, and the street Entrance sounds quieter still. Returning
 upstairs restores the original mix.

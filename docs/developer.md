@@ -381,6 +381,11 @@ Turning the party off does not return to phase one; only a full reset clears tha
 progression. Explicit room navigation remains available in phase two through dots, arrows, room
 number keys, and `goToStage`.
 
+`handleLowerRoomNumberShortcut()` intercepts `1`–`5` inside each lower-room
+capture handler before that handler suppresses the shared upstairs shortcut.
+It delegates to `__navigateLowerRoom`, so a numeric jump retains the current
+floor and uses the same paired horizontal pan as arrows and room dots.
+
 The first balcony arrival owns the one-time finale/Act Two transition. Subsequent solved-room visits
 use exploration captions and rotating hints. `goToStage` is also the central room-change re-gate: it
 collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,

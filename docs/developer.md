@@ -564,6 +564,12 @@ the cinema, with the Kitchen strip parked at `translate(0,-100%)`. Only an exact
 `#kitchen-wall` background double-click or double-tap may open it; kitchen
 objects cannot bubble into the entrance. `__bathroomRoomState()` exposes
 open/closing/hidden state for focused tests.
+The nine `[data-bath-action]` SVG controls share one delegated click/keydown
+handler, translated labels/tooltips, and the existing shared SFX helpers. Tub,
+curtain, and cabinet are local toggles; the other reactions are bounded
+one-shots with fallback class cleanup. `closeBathroom()` always calls the same
+state reset used by transient teardown, while `__bathroomInteractionState()`
+exposes active classes and activation counts to `tests/bathroom-room.js`.
 
 `#entrance-room` is the code-native Balcony lower room. Its inline 680×340 SVG
 models the nighttime **The Lofts** facade without image or address assets.

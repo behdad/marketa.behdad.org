@@ -13,6 +13,7 @@ var HARNESS = [
   'function dblclick(el){el.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));}',
   'function touchup(el){el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
   'function key(name,options){var init={key:name,bubbles:true,cancelable:true};Object.assign(init,options||{});document.dispatchEvent(new KeyboardEvent("keydown",init));}',
+  'function keyOn(el,name){el.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'function surface(cls){var el=document.createElement("div");el.className=cls;el.style.display="block";el.style.opacity="1";document.querySelector(".hunt-viewport").appendChild(el);return el;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
@@ -22,8 +23,9 @@ var HARNESS = [
   ' key("ArrowDown");await sleep(80);',
   ' var roomBox=room.getBoundingClientRect(),viewBox=viewport.getBoundingClientRect(),kitchenBox=document.getElementById("stage-kitchen").getBoundingClientRect(),bathroomCloseStyle=getComputedStyle(document.getElementById("bathroom-room-close")),cinemaCloseStyle=getComputedStyle(document.getElementById("cinema-room-close")),princeCloseStyle=getComputedStyle(document.getElementById("prince-basement-close"));',
   ' report.steps.down={state:window.__bathroomRoomState(),room:window.currentStageName,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("bathroom-room-open"),geometry:{room:[roomBox.left,roomBox.top,roomBox.width,roomBox.height],viewport:[viewBox.left,viewBox.top,viewBox.width,viewBox.height],kitchenBottom:kitchenBox.bottom,controls:{bathroom:[parseFloat(bathroomCloseStyle.width),parseFloat(bathroomCloseStyle.height),parseFloat(bathroomCloseStyle.right),parseFloat(bathroomCloseStyle.top)],cinema:[parseFloat(cinemaCloseStyle.width),parseFloat(cinemaCloseStyle.height),parseFloat(cinemaCloseStyle.right),parseFloat(cinemaCloseStyle.top)],prince:[parseFloat(princeCloseStyle.width),parseFloat(princeCloseStyle.height),parseFloat(princeCloseStyle.right),parseFloat(princeCloseStyle.top)]}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility],images:room.querySelectorAll("img").length};',
-  ' setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bathroom-room-close").getAttribute("aria-label")};setLang("en");',
-  ' key("ArrowUp");await sleep(760);report.steps.up={state:window.__bathroomRoomState(),viewport:viewport.classList.contains("bathroom-room-open"),covered:window.__roomAmbienceCovered(),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility]};',
+  ' var props=Array.from(room.querySelectorAll("[data-bath-action]"));setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bathroom-room-close").getAttribute("aria-label"),props:props.map(function(el){return el.getAttribute("aria-label");})};setLang("en");',
+  ' props.forEach(function(el,index){click(el);keyOn(el,index%2?" ":"Enter");});report.steps.props={count:props.length,roles:props.map(function(el){return [el.id,el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("title")];}),state:window.__bathroomInteractionState()};',
+  ' key("ArrowUp");await sleep(760);report.steps.up={state:window.__bathroomRoomState(),props:window.__bathroomInteractionState(),viewport:viewport.classList.contains("bathroom-room-open"),covered:window.__roomAmbienceCovered(),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility]};',
   ' dblclick(document.getElementById("kitchen-pan-1"));await sleep(30);report.steps.interactive=window.__bathroomRoomState();',
   ' dblclick(document.getElementById("kitchen-wall"));await sleep(80);report.steps.mouse=window.__bathroomRoomState();key("Escape");await sleep(760);',
   ' touchup(document.getElementById("kitchen-wall"));await sleep(20);touchup(document.getElementById("kitchen-wall"));await sleep(80);report.steps.touch=window.__bathroomRoomState();key("Backspace");await sleep(760);',
@@ -72,10 +74,20 @@ check(s.down && s.down.images === 0,
   "the bathroom is entirely code-native and embeds no photo", s.down);
 check(s.cs && s.cs.room === "Koupelna / toalety" && s.cs.close === "Zpět do Kuchyně / baru",
   "room and return labels switch to Czech", s.cs);
+var propNames = ["sink", "mirror", "tub", "curtain", "towel", "stool", "scale", "cabinet", "toilet"];
+check(s.props && s.props.count === propNames.length &&
+  s.props.roles.every(function (row) { return row[1] === "button" && row[2] === "0" && !!row[3]; }),
+  "every distinct bathroom prop is a labelled keyboard-focusable control", s.props);
+check(s.props && propNames.every(function (name) { return s.props.state.hits[name] === 2; }),
+  "every bathroom prop responds once to click and once to Enter or Space", s.props && s.props.state);
+check(s.cs && s.cs.props.length === propNames.length &&
+  s.cs.props.every(function (label) { return label && !/Run|Polish|Fill|Draw|Fluff|Test|Step|Open|Flush/.test(label); }),
+  "all prop labels switch to Czech", s.cs);
 check(s.up && !s.up.state.open && s.up.state.hidden && !s.up.viewport && !s.up.covered &&
+  s.up.props.active.length === 0 &&
   s.up.roster.every(function (value) { return value === "visible"; }) &&
   s.up.messages.every(function (value) { return value === "visible"; }),
-  "plain Up returns upstairs and restores suppressed UI", s.up);
+  "plain Up returns upstairs, settles bathroom props, and restores suppressed UI", s.up);
 check(s.interactive && !s.interactive.open && s.mouse && s.mouse.open && s.touch && s.touch.open,
   "only the true bare kitchen background accepts mouse or touch double activation",
   { interactive: s.interactive, mouse: s.mouse, touch: s.touch });
@@ -102,8 +114,9 @@ check(s.dot && !s.dot.source.open && s.dot.source.hidden && s.dot.room === "balc
   "a room dot stays downstairs and pans to Entrance while keeping dot focus", s.dot);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
-["bathroom-sink", "bathroom-tub", "bathroom-shower-curtain", "bathroom-waffle-towel",
- "bathroom-stool", "bathroom-scale", "bathroom-toilet-nook"].forEach(function (id) {
+["bathroom-sink", "bathroom-mirror-action", "bathroom-tub", "bathroom-shower-curtain",
+ "bathroom-waffle-towel", "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
+ "bathroom-toilet-action"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "illustration includes " + id);
 });
 check(!/codex-clipboard|ZAJ6YO|zTrLmq/.test(source),

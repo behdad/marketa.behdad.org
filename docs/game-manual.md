@@ -219,6 +219,10 @@ past the sink and mirror, clawfoot tub, stool and scale to the separate toilet
 nook. Kitchen objects do not count as background. Use the × button, Up, Escape,
 Backspace to return; horizontal navigation and room dots remain downstairs.
 **Who's here** and message pop-ups stay out of the way while you are there.
+Every distinct fixture answers a click, tap, Enter, or Space: run the faucet,
+polish the mirror, fill the tub, draw the curtain, fluff the towel, test the
+stool, weigh in, open the cabinet, or flush. These are quiet room toys, not
+puzzle steps; leaving the bathroom puts each one back in order.
 
 From the Balcony, press `↓` or double-click/double-tap a truly bare patch of its
 background to descend to **The Lofts** street entrance. The native SVG

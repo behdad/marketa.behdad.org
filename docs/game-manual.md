@@ -236,8 +236,8 @@ sprinkler is unfortunately aimed at the projector: testing it during a film
 shorts the projector briefly, stops the film, and eventually reboots to the
 chooser. The Cuddly-puddly visitors upstairs pause while the cinema owns the
 room. The rainbow-butterfly neon hangs above the bicycle and relights when
-selected; the room's beams, bicycle, cameras, cushions, table, weights and sofa
-answer a click or keyboard activation too.
+selected; each beam, camera and loose cushion responds on its own, while the
+bicycle, table, weights and sofa answer individually too.
 
 From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
 bare patch of brick to visit **Bathroom / Toilets** below. The room pans down

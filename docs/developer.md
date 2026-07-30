@@ -571,8 +571,10 @@ cross-origin Vimeo frames are never sampled. `#cinema-sprinkler` runs a bounded
 spray; an on-projector short tears down playback and clears the audio duck
 immediately, then a single timer reboots to the chooser. Close/reset clears that
 timer. The roof beams mirror around x=340, the same axis as sprinkler and
-projector. Every distinct prop is a translated `.cinema-prop`, with shared
-click/Enter/Space reaction wiring and no extra AudioContext. The separate
+projector. Every distinct prop is its own `.cinema-prop`: the two beams, two
+cameras, floor cushions and loose sofa cushions do not share hit targets or
+reaction classes. Shared click wiring adds the one-shot response and reuses the
+common sound graph without an extra AudioContext. The separate
 `#cinema-neon-butterfly` wall fixture keeps its relight interaction but is not a
 `.cinema-prop` or a member of the three-item Office Butterfly Chase roster.
 

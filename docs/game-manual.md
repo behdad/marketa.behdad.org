@@ -74,6 +74,11 @@ especially muffled, and the street Entrance sounds quieter still. Returning
 upstairs restores the original mix. Illustrated lower-room props react to
 clicks or taps but stay out of the `Tab` order, leaving `Tab` to its shortcut.
 
+After the first party unlocks free exploration, `Enter` starts the main activity
+in the room on screen: Flair Catch in the Kitchen/Bar, in-room Hack-Man in the
+Garden, Octi's Escape in Cuddly-puddly, Alien Resources in the Office, and Block
+Party on the Balcony. Escape and Backspace remain dismiss/back actions.
+
 ## The guided room trail
 
 The first visit introduces one activity at a time:

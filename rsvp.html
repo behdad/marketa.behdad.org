@@ -90197,8 +90197,23 @@ function spawnDustMote(container) {
   // handlers get first refusal and prevent/stop Escape before it arrives here. Backspace dispatches
   // the existing fullscreen-safe synthetic Escape below, so it shares this exact path.
   function activateCurrentRoom() {
-    if (window.__secondRound) return false;
     var er = window.currentStageName, did = true;
+    if (window.__secondRound) {
+      if (er === "kitchen") {
+        if (window.__setDayNight) window.__setDayNight(true);
+        if (window.__startFlairCatch) window.__startFlairCatch();
+      } else if (er === "garden") {
+        if (window.__unlockPacman) window.__unlockPacman(false);
+        if (window.__openRoomPacman) window.__openRoomPacman();
+      } else if (er === "cuddly") {
+        if (window.__startOctiEscape) window.__startOctiEscape();
+      } else if (er === "office") {
+        if (window.__startArcade) window.__startArcade();
+      } else if (er === "balcony") {
+        if (window.__startBalconyTetris) window.__startBalconyTetris();
+      } else did = false;
+      return did;
+    }
     if (er === "kitchen") { if (stageIndex < maxUnlocked) { if (window.__toggleDayNight) window.__toggleDayNight(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // solved → toggle day/night (kitchen ⇄ bar); unsolved → walk the espresso solve (a no-op mid warm-up/brew, so Enter never flips to night then). NB: __kitchenDoNext returns null transiently, not just when solved, so gate the toggle on the room being solved, not on its return.
     else if (er === "garden") { if (!(window.__gardenDoNext && window.__gardenDoNext())) { if (window.party) window.party(!window.party()); } } // advance the solve (water→music→candles); once solved, toggle the party
     else if (er === "cuddly") { if (!(window.__cuddlyDoNext && window.__cuddlyDoNext())) { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); } } // advance the solve (octopus → blanket); once solved, cycle the projector channel
@@ -90232,10 +90247,9 @@ function spawnDustMote(container) {
       return;
     }
     if (window.__tripPickerOpen && window.__tripPickerOpen()) return;
-    // The shared room-action keys are phase-one solve aids only. Once the party has been observed
-    // every room is unlocked, so Enter stops auto-operating toys and an otherwise-unconsumed
-    // Escape remains a pure dismiss/back gesture.
-    if (window.__secondRound) return;
+    // In free exploration Enter launches each room's main activity; Escape/Backspace remain pure
+    // dismiss/back gestures and never start a game underneath the layer they just closed.
+    if (window.__secondRound && e.key !== "Enter") return;
     var did = activateCurrentRoom();
     if (did) { e.preventDefault(); e.stopPropagation(); if (ae && ae.blur && ae !== document.body) ae.blur(); } // suppress the focused scene object's activation + drop its focus
   }, true); // capture — ahead of scene objects' onActivate

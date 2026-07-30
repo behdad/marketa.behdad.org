@@ -96,11 +96,12 @@ saved language/full `navigator.languages` list, advances an ARIA progressbar, co
 `DOMContentLoaded` with a minimum readable dwell, and removes the overlay. Browser mode removes the
 node synchronously and sets test hooks without painting it.
 
-The capture-phase room keyboard controller owns one phase-one `activateCurrentRoom()` transition
-used by `Enter` and by an otherwise-unconsumed top-level `Escape`. The existing Backspace alias
+The capture-phase room keyboard controller owns `activateCurrentRoom()`. During phase one it is
+used by `Enter` and by an otherwise-unconsumed top-level `Escape`; the existing Backspace alias
 dispatches a synthetic Escape, so it reaches the same transition even while browser fullscreen
-consumes the physical Escape key. Once `__secondRound` is set, all three stop operating rooms:
-Escape/Backspace remain dismiss/back gestures and Enter becomes inert. Window-level phone/monitor
+consumes the physical Escape key. Once `__secondRound` is set, Escape/Backspace remain dismiss/back
+gestures while Enter launches the current room's principal free-exploration activity (Flair Catch,
+room-presented Pacman, Octi's Escape, Alien Resources, or Block Party). Window-level phone/monitor
 closers and component menu/dialog handlers retain first refusal; typing fields never fall through
 to a room action. CLICK ME is checked before
 `activateCurrentRoom()`: Enter/Escape, including the synthetic Backspace alias, dismisses the

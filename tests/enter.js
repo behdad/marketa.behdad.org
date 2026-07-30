@@ -40,6 +40,9 @@ var HARNESS = [
   "    window.goToStage('garden');await sleep(300);enter();await sleep(200);var pac=window.__pacmanPresentation&&window.__pacmanPresentation();report.phaseTwoActions.pacmanStart=!!(pac&&pac.mode==='room'&&pac.room==='garden');key('Escape');await sleep(120);pac=window.__pacmanPresentation&&window.__pacmanPresentation();report.phaseTwoActions.pacmanClosed=!!(pac&&!pac.mode);",
   "    window.goToStage('cuddly');await sleep(300);enter();await sleep(120);report.phaseTwoActions.octiStart=!!(window.__octiEscapeState&&window.__octiEscapeState().active);key('Escape');await sleep(120);report.phaseTwoActions.octiClosed=!!(window.__octiEscapeState&&!window.__octiEscapeState().active);",
   "    window.goToStage('office');await sleep(300);enter();await sleep(120);report.phaseTwoActions.invadersStart=!!(window.__arcadeState&&window.__arcadeState().active);key('Escape');await sleep(120);report.phaseTwoActions.invadersClosed=!!(window.__arcadeState&&!window.__arcadeState().active);",
+  "    if(window.__monitorZoomIn)window.__monitorZoomIn();await sleep(180);enter();await sleep(120);report.phaseTwoActions.monitorZoomSafe=!!(window.__monitorZoomed&&window.__monitorZoomed())&&!!(window.__arcadeState&&!window.__arcadeState().active);if(window.__monitorZoomOut)window.__monitorZoomOut();await sleep(450);",
+  "    if(window.__laptopZoomIn)window.__laptopZoomIn();await sleep(180);enter();await sleep(120);report.phaseTwoActions.laptopZoomSafe=!!(window.__laptopZoomed&&window.__laptopZoomed())&&!!(window.__arcadeState&&!window.__arcadeState().active);if(window.__monitorZoomOut)window.__monitorZoomOut();await sleep(450);",
+  "    if(window.phone)window.phone(true);await sleep(180);enter();await sleep(120);report.phaseTwoActions.phoneOpenSafe=!!(window.phone&&window.phone())&&!!(window.__arcadeState&&!window.__arcadeState().active);if(window.phone)window.phone(false);await sleep(180);",
   "    window.goToStage('balcony');await sleep(300);enter();await sleep(120);report.phaseTwoActions.tetrisStart=!!(window.__balconyTetrisState&&window.__balconyTetrisState().active);key('Escape');await sleep(120);report.phaseTwoActions.tetrisClosed=!!(window.__balconyTetrisState&&!window.__balconyTetrisState().active);",
   "  }",
   "  window.addEventListener('load',function(){setTimeout(function(){run().catch(function(e){window.__errs.push('harness:'+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);});},400);});",
@@ -65,8 +68,9 @@ if (!r) {
   var p2 = r.phaseTwoActions || {};
   if (r.phaseTwo && p2.flairStart && p2.flairClosed && p2.pacmanStart && p2.pacmanClosed &&
       p2.octiStart && p2.octiClosed && p2.invadersStart && p2.invadersClosed &&
+      p2.monitorZoomSafe && p2.laptopZoomSafe && p2.phoneOpenSafe &&
       p2.tetrisStart && p2.tetrisClosed)
-    pass("phase-two Enter launches each room's main activity while Escape/Backspace stay dismissive");
+    pass("phase-two Enter launches each room's main activity without stealing Enter from a zoomed office screen");
   else fail("phase-two room activities follow the Enter mapping", JSON.stringify(p2));
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));

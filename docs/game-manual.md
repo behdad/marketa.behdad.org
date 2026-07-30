@@ -53,7 +53,7 @@ type, and action games temporarily take the keys they need.
   **Who's here**.
 - `Enter` follows the guided instruction. In free play it starts the current
   room's main activity: Flair Catch, Hack-Man, Octi's Escape, Alien Resources,
-  or Block Party.
+  or Block Party. An open phone or zoomed office screen keeps Enter for itself.
 - Escape and Backspace dismiss the current layer.
 
 The five main rooms each have a paired hidden room. Press `↓` to enter it and

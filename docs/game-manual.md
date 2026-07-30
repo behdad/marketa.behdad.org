@@ -206,6 +206,7 @@ gameplay messages finish before that room caption appears.
   Space, to turn it on and reveal the film chooser. Those keys control the
   projector, not film playback; use the side Play/Pause and Next controls.
   **Choose another** returns to the chooser. The window toggles day and night.
+  The woven poufs beside the asymmetrical leather daybed nest into one another.
   Try the ceiling sprinkler during a film if you accept the consequences.
 - **Bedroom** pairs with the Office. Its furnishings are repeatable toys whose
   arrangement resets when you leave. Double-click or double-tap a stained-glass

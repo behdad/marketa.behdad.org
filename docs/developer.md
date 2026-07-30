@@ -581,9 +581,12 @@ spray; an on-projector short tears down playback and clears the audio duck
 immediately, then a single timer reboots to the chooser. Close/reset clears that
 timer. The roof beams mirror around x=340, the same axis as sprinkler and
 projector. Every distinct prop is its own `.cinema-prop`: the two beams, two
-cameras, floor cushions and loose sofa cushions do not share hit targets or
-reaction classes. Shared click wiring adds the one-shot response and reuses the
-common sound graph without an extra AudioContext. The separate
+cameras, daybed cushions, resin-and-wood coffee table and dumbbell do not share
+hit targets or reaction classes. The stateful nesting-pouf group is moved from
+the Office SVG into the Cinema SVG before its existing interaction is wired;
+its checkpoint key remains stable for saved games. Shared click wiring adds the
+one-shot response and reuses the common sound graph without an extra
+AudioContext. The separate
 `#cinema-neon-butterfly` wall fixture keeps its relight interaction but is not a
 `.cinema-prop` or a member of the three-item Office Butterfly Chase roster.
 

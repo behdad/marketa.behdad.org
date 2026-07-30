@@ -26,6 +26,7 @@ var HARNESS = [
   ' var props=Array.from(room.querySelectorAll("[data-bath-action]"));setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bathroom-room-close").getAttribute("aria-label"),props:props.map(function(el){return el.getAttribute("aria-label");})};setLang("en");',
   ' props.forEach(function(el,index){click(el);keyOn(el,index%2?" ":"Enter");});report.steps.props={count:props.length,roles:props.map(function(el){return [el.id,el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("title")];}),state:window.__bathroomInteractionState()};',
   ' var tub=document.getElementById("bathroom-tub"),bubbles=Array.from(room.querySelectorAll("[data-bath-bubble]"));click(tub);var bubbleStart=window.__bathroomInteractionState();bubbles.forEach(click);var bubbleDone=window.__bathroomInteractionState();click(tub);var bubbleReset=window.__bathroomInteractionState();report.steps.bubbles={count:bubbles.length,roles:bubbles.map(function(el){return [el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("aria-label")];}),start:bubbleStart.bubbles,done:bubbleDone.bubbles,reset:bubbleReset.bubbles};',
+  ' key("Enter");var enterOnce={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};key("Enter");var enterTwice={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};click(tub);report.steps.enterTub={once:enterOnce,twice:enterTwice};',
   ' var scale=document.getElementById("bathroom-scale-action");click(scale);var scaleSpike=document.getElementById("bathroom-scale-reading").textContent;await sleep(380);var scaleOn=window.__bathroomInteractionState();click(scale);var scaleOff=window.__bathroomInteractionState();click(scale);await sleep(380);',
   ' var stool=document.getElementById("bathroom-stool"),stoolPosition=document.getElementById("bathroom-stool-position"),art=document.getElementById("bathroom-room-art");',
   ' var stoolHitsBefore=window.__bathroomInteractionState().hits.stool;stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,buttons:1,clientX:300}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,clientX:300}));await sleep(10);var stationaryState=window.__bathroomInteractionState();',
@@ -99,6 +100,10 @@ check(s.bubbles && s.bubbles.start.active && s.bubbles.start.popped === 0 &&
   !s.bubbles.reset.active && s.bubbles.reset.popped === 0 &&
   !s.bubbles.reset.complete,
   "filling starts the hunt, eight pops complete it, and draining resets it", s.bubbles);
+check(s.enterTub && s.enterTub.once.filled && s.enterTub.once.state.bubbles.active &&
+  s.enterTub.twice.filled && s.enterTub.twice.state.bubbles.active &&
+  s.enterTub.once.state.hits.tub === s.enterTub.twice.state.hits.tub,
+  "bare Enter fills the tub once without draining it on a second press", s.enterTub);
 check(s.functional && s.functional.water === "M119 139V171",
   "the faucet stream falls from the midpoint between both faucet uprights", s.functional);
 check(s.functional && s.functional.towelOrigin === "44px 0px" &&

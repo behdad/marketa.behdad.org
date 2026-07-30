@@ -13,9 +13,9 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
   ' window.goToStage("cuddly");window.__cuddlyProjector.set("coffee");await sleep(520);',
-  ' var channel=window.__cuddlyProjector.channel(),before=window.__activeAudioBedCount(),ticket=document.getElementById("cuddly-cinema-ticket");click(ticket);await sleep(850);',
+  ' var channel=window.__cuddlyProjector.channel(),before=window.__activeAudioBedCount(),ticket=document.getElementById("cuddly-cinema-ticket"),ticketBox=ticket.getBoundingClientRect(),screenBox=document.getElementById("cuddly-screen-bg").getBoundingClientRect();click(ticket);await sleep(850);',
   ' var posters=Array.prototype.map.call(document.querySelectorAll(".cinema-film"),function(el){var r=el.getBoundingClientRect(),img=el.querySelector("img"),ir=img.getBoundingClientRect();return {box:[r.left,r.top,r.width,r.height],image:[ir.left,ir.top,ir.width,ir.height],fit:getComputedStyle(img).objectFit,label:el.getAttribute("aria-label"),src:img.getAttribute("src"),poster:el.dataset.poster};});',
-  ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before,posters:posters};',
+  ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before,posters:posters,ticket:[ticketBox.left,ticketBox.top,ticketBox.right,ticketBox.bottom],screen:[screenBox.left,screenBox.top,screenBox.right,screenBox.bottom]};',
   ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label")};setLang("en");',
   ' var film=document.querySelector(".cinema-film[data-vimeo-id=\\"1096537359\\"]");click(film);await sleep(80);var frame=document.getElementById("cinema-player");',
   ' var shell=document.getElementById("cinema-screen-shell"),frameRect=frame&&frame.getBoundingClientRect(),shellRect=shell.getBoundingClientRect();',
@@ -48,6 +48,8 @@ check(s.open && s.open.state.open && !s.open.state.playing && s.open.room === "c
   "the projector ticket opens a covered subroom without changing room or channel state", s.open);
 check(s.open && s.open.before >= 1 && s.open.beds === 0,
   "entering the cinema releases the active Cuddly projector score", s.open);
+check(s.open && s.open.ticket[0] > s.open.screen[2] + 20,
+  "the quiet cinema ticket sits on the brickwork beside, not on, the projector", s.open);
 check(s.open && s.open.posters.length === 3 &&
   s.open.posters.every(function (poster) { var box=poster.box,img=poster.image,first=s.open.posters[0].box;return Math.abs(box[1]-first[1])<0.6 && Math.abs(box[2]-first[2])<0.6 && Math.abs(box[3]-first[3])<0.6 && poster.fit==="cover" && Math.abs(img[0]-box[0]-1)<0.6 && Math.abs(img[1]-box[1]-1)<0.6 && Math.abs(img[2]-box[2]+2)<0.6 && Math.abs(img[3]-box[3]+2)<0.6; }) &&
   Math.abs((s.open.posters[1].box[0]-s.open.posters[0].box[0])-(s.open.posters[2].box[0]-s.open.posters[1].box[0]))<0.6,

@@ -47,14 +47,14 @@ var expected = {
   en: {
     bathroom: "Bathroom · fixtures welcome.",
     dungeon: "Dungeon · the old game is awake.",
-    cinema: "Cinema · choose a film, then wake the projector.",
+    cinema: "Cinema · wake the projector, then choose a film.",
     bedroom: "Bedroom · everything here is playable.",
     entrance: "Entrance · the street starts here."
   },
   cs: {
     bathroom: "Koupelna · vybavení vítá hru.",
     dungeon: "Žalář · stará hra se probudila.",
-    cinema: "Kino · vyber film a pak probuď projektor.",
+    cinema: "Kino · probuď projektor a pak vyber film.",
     bedroom: "Ložnice · se vším si tu můžeš hrát.",
     entrance: "Vchod · tady začíná ulice."
   }

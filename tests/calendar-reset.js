@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Calendar's shared phone/monitor Reset mirrors Clock: it appears only for an
-// explicit date override, clears only that override, and localizes on both hosts.
+// Calendar's app-level Today control is permanent on both hosts. Date override
+// reset belongs to the room HUD, clears only date, and localizes independently.
 "use strict";
 
 var lib = require("./lib");
@@ -11,28 +11,35 @@ var HARNESS = [
   "(function(){",
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
   "  function ymd(d){return [d.getFullYear(),d.getMonth()+1,d.getDate()].join('-');}",
-  "  function state(host){var b=host&&host.querySelector('.calx-today');return {exists:!!b,hidden:b&&b.hidden,disabled:b&&b.disabled,title:b&&b.title,aria:b&&b.getAttribute('aria-label')};}",
+  "  function shown(el){return !!el&&!el.hidden&&getComputedStyle(el).display!=='none';}",
+  "  function button(el){return {exists:!!el,shown:shown(el),disabled:el&&el.disabled,title:el&&el.title,aria:el&&el.getAttribute('aria-label')};}",
   "  var report={errors:[],steps:{}}; function S(k,v){report.steps[k]=v;}",
   "  async function run(){",
   "    var live=ymd(new Date());",
-  "    history.replaceState(null,'',location.pathname+'?date=2031-02-03&time=05:31&keep=1#play');",
+  "    history.replaceState(null,'',location.pathname+'?date=2030-04-06&keep=app#play');",
   "    if(window.__calReapplyDateTime)window.__calReapplyDateTime();",
-  "    if(window.goToStage)window.goToStage('cuddly');",
-  "    window.__openPhoneAppHere('calendar'); await sleep(40);",
-  "    var phone=document.querySelector('.calx-phone'), pReset=phone&&phone.querySelector('.calx-today');",
-  "    S('phoneShown',{button:state(phone),date:new URL(location.href).searchParams.get('date'),time:new URL(location.href).searchParams.get('time'),room:window.currentStageName});",
-  "    if(pReset)pReset.click(); await sleep(40);",
-  "    phone=document.querySelector('.calx-phone'); var pu=new URL(location.href);",
-  "    S('phoneReset',{button:state(phone),now:ymd(window.__now()),live:live,date:pu.searchParams.get('date'),time:pu.searchParams.get('time'),keep:pu.searchParams.get('keep'),hash:pu.hash,room:window.currentStageName,open:!!phone});",
-  "    history.replaceState(null,'',location.pathname+'?date=2032-09-18&time=05:31&keep=1#play');",
-  "    if(window.__calReapplyDateTime)window.__calReapplyDateTime();",
-  "    if(window.setLang)window.setLang('cs');",
+  "    window.setLang('en');window.__openPhoneAppHere('calendar');await sleep(40);",
+  "    var phone=document.querySelector('.calx-phone'),pToday=phone&&phone.querySelector('.calx-today');",
+  "    S('phoneTodayBefore',button(pToday));if(pToday)pToday.click();await sleep(40);",
+  "    phone=document.querySelector('.calx-phone');var appUrl=new URL(location.href);",
+  "    S('phoneTodayAfter',{button:button(phone&&phone.querySelector('.calx-today')),now:ymd(window.__now()),live:live,date:appUrl.searchParams.get('date'),keep:appUrl.searchParams.get('keep'),open:!!phone});",
+  "    window.setLang('cs');",
   "    var mon=document.getElementById('office-monitor'),pc=document.getElementById('office-pc-desk-trio');pc.classList.add('on');mon.classList.add('here','screen-on','show-caps');window.__openMonitorApp('calendar');await sleep(40);",
-  "    var host=document.getElementById('monitor-cal-body'),mReset=host&&host.querySelector('.calx-today');",
-  "    S('monitorShown',{button:state(host),open:mon.classList.contains('show-calendar')});",
-  "    if(mReset)mReset.click(); await sleep(40);",
-  "    host=document.getElementById('monitor-cal-body'); var mu=new URL(location.href);",
-  "    S('monitorReset',{button:state(host),now:ymd(window.__now()),live:live,date:mu.searchParams.get('date'),time:mu.searchParams.get('time'),keep:mu.searchParams.get('keep'),hash:mu.hash,open:mon.classList.contains('show-calendar')});",
+  "    var host=document.getElementById('monitor-cal-body'),mToday=host&&host.querySelector('.calx-today');",
+  "    S('monitorToday',{button:button(mToday),open:mon.classList.contains('show-calendar')});",
+  "    if(window.phone)window.phone(false);await sleep(280);if(window.goToStage)window.goToStage('cuddly');",
+  "    window.setLang('en');history.replaceState(null,'',location.pathname+'?date=2031-02-03&keep=1#play');",
+  "    if(window.__calReapplyDateTime)window.__calReapplyDateTime();await sleep(30);",
+  "    var dateNav=document.querySelector('.loft-datenav'),reset=document.getElementById('loft-datereset');",
+  "    S('dateOnlyShown',{reset:button(reset),nav:shown(dateNav),date:new URL(location.href).searchParams.get('date')});",
+  "    if(reset)reset.click();await sleep(40);var du=new URL(location.href);",
+  "    S('dateOnlyReset',{now:ymd(window.__now()),live:live,date:du.searchParams.get('date'),keep:du.searchParams.get('keep'),hash:du.hash,room:window.currentStageName,nav:shown(dateNav),reset:shown(reset)});",
+  "    window.setLang('cs');history.replaceState(null,'',location.pathname+'?date=2032-09-18&time=05:31&keep=1#play');",
+  "    if(window.__calReapplyDateTime)window.__calReapplyDateTime();await sleep(30);",
+  "    reset=document.getElementById('loft-datereset');dateNav=document.querySelector('.loft-datenav');",
+  "    S('combinedShown',{reset:button(reset),dateNav:shown(dateNav),timeNav:shown(document.getElementById('loft-timenav'))});",
+  "    if(reset)reset.click();await sleep(40);var cu=new URL(location.href);",
+  "    S('combinedReset',{now:ymd(window.__now()),live:live,date:cu.searchParams.get('date'),time:cu.searchParams.get('time'),keep:cu.searchParams.get('keep'),hash:cu.hash,room:window.currentStageName,dateNav:shown(dateNav),timeNav:shown(document.getElementById('loft-timenav')),reset:shown(reset)});",
   "    report.errors=window.__errs||[];document.getElementById('__report').textContent=JSON.stringify(report);",
   "  }",
   "  window.addEventListener('load',function(){setTimeout(function(){run().catch(function(e){report.errors.push(String(e&&e.stack||e));document.getElementById('__report').textContent=JSON.stringify(report);});},300);});",
@@ -40,20 +47,21 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var r=lib.runPageSync("rsvp.html",HARNESS,2600,{patchRaf:true});
+var r=lib.runPageSync("rsvp.html",HARNESS,3200,{patchRaf:true});
 if(!r){console.log("  ✗ harness produced no report");process.exit(1);}
 var s=r.steps||{},failures=0;
 function check(ok,msg,detail){if(ok)console.log("  ✓ "+msg);else{failures++;console.log("  ✗ "+msg+(detail?"   ["+JSON.stringify(detail)+"]":""));}}
 
-console.log("rsvp.html Calendar reset:");
-check(s.phoneShown&&s.phoneShown.button.exists&&!s.phoneShown.button.hidden&&!s.phoneShown.button.disabled&&s.phoneShown.button.title==="Reset date to today"&&s.phoneShown.button.aria==="Reset date to today","phone exposes an English Reset for an explicit date override",s.phoneShown);
-check(s.phoneReset&&s.phoneReset.now===s.phoneReset.live&&s.phoneReset.date===null&&s.phoneReset.time==="05:31"&&s.phoneReset.keep==="1"&&s.phoneReset.hash==="#play"&&s.phoneReset.room==="cuddly"&&s.phoneReset.open,"phone Reset returns to the real date while preserving time, URL, room, and the open app",s.phoneReset);
-check(s.phoneReset&&s.phoneReset.button.hidden&&s.phoneReset.button.disabled,"phone Reset hides and disables after clearing the override",s.phoneReset);
-check(s.monitorShown&&s.monitorShown.button.exists&&!s.monitorShown.button.hidden&&!s.monitorShown.button.disabled&&s.monitorShown.button.title==="Vrátit datum na dnešek"&&s.monitorShown.button.aria==="Vrátit datum na dnešek"&&s.monitorShown.open,"monitor exposes the same localized Reset",s.monitorShown);
-check(s.monitorReset&&s.monitorReset.now===s.monitorReset.live&&s.monitorReset.date===null&&s.monitorReset.time==="05:31"&&s.monitorReset.keep==="1"&&s.monitorReset.hash==="#play"&&s.monitorReset.open,"monitor Reset clears only the date and leaves the Calendar open",s.monitorReset);
-check(s.monitorReset&&s.monitorReset.button.hidden&&s.monitorReset.button.disabled,"monitor Reset hides and disables after clearing the override",s.monitorReset);
+console.log("rsvp.html Calendar reset ownership:");
+check(s.phoneTodayBefore&&s.phoneTodayBefore.exists&&s.phoneTodayBefore.shown&&!s.phoneTodayBefore.disabled&&s.phoneTodayBefore.title==="today"&&s.phoneTodayBefore.aria==="today","phone Calendar exposes its original English Today control while a date is selected",s.phoneTodayBefore);
+check(s.phoneTodayAfter&&s.phoneTodayAfter.button.exists&&s.phoneTodayAfter.button.shown&&!s.phoneTodayAfter.button.disabled&&s.phoneTodayAfter.now===s.phoneTodayAfter.live&&s.phoneTodayAfter.date===null&&s.phoneTodayAfter.keep==="app"&&s.phoneTodayAfter.open,"phone Today returns to the real day but remains permanently available",s.phoneTodayAfter);
+check(s.monitorToday&&s.monitorToday.button.exists&&s.monitorToday.button.shown&&!s.monitorToday.button.disabled&&s.monitorToday.button.title==="dnes"&&s.monitorToday.button.aria==="dnes"&&s.monitorToday.open,"monitor Calendar permanently retains its Czech Today control",s.monitorToday);
+check(s.dateOnlyShown&&s.dateOnlyShown.reset.exists&&s.dateOnlyShown.reset.shown&&!s.dateOnlyShown.reset.disabled&&s.dateOnlyShown.reset.title==="Reset date to today"&&s.dateOnlyShown.reset.aria==="Reset date to today"&&s.dateOnlyShown.nav,"an explicit date reveals the English room-HUD Reset",s.dateOnlyShown);
+check(s.dateOnlyReset&&s.dateOnlyReset.now===s.dateOnlyReset.live&&s.dateOnlyReset.date===null&&s.dateOnlyReset.keep==="1"&&s.dateOnlyReset.hash==="#play"&&s.dateOnlyReset.room==="cuddly"&&!s.dateOnlyReset.nav&&!s.dateOnlyReset.reset,"date-only Reset returns to real today and hides the unneeded HUD without disturbing room or URL state",s.dateOnlyReset);
+check(s.combinedShown&&s.combinedShown.reset.exists&&s.combinedShown.reset.shown&&!s.combinedShown.reset.disabled&&s.combinedShown.reset.title==="Vrátit datum na dnešek"&&s.combinedShown.reset.aria==="Vrátit datum na dnešek"&&s.combinedShown.dateNav&&s.combinedShown.timeNav,"the same room-HUD Reset localizes to Czech",s.combinedShown);
+check(s.combinedReset&&s.combinedReset.now===s.combinedReset.live&&s.combinedReset.date===null&&s.combinedReset.time==="05:31"&&s.combinedReset.keep==="1"&&s.combinedReset.hash==="#play"&&s.combinedReset.room==="cuddly"&&s.combinedReset.dateNav&&s.combinedReset.timeNav&&!s.combinedReset.reset,"date reset preserves time and leaves the HUDs visible for that remaining override",s.combinedReset);
 check(Array.isArray(r.errors)&&r.errors.length===0,"no uncaught page errors",r.errors);
 
 console.log("");
 if(failures){console.log(failures+" check(s) failed.");process.exit(1);}
-console.log("All Calendar reset checks passed.");
+console.log("All Calendar reset ownership checks passed.");

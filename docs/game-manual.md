@@ -226,9 +226,10 @@ Keep pestering a butterfly and its artwork may need a moment to recover.
 Calendar and Clock can move the loft to another date or time. Special days may
 change decorations, weather, guests, messages, or the party setup. Weather,
 daylight, moon phase, and sky effects can also change the rooms. These are toys,
-not requirements for completing the trail. After choosing another date or time,
-that app shows a ↻ Reset control. Calendar returns only the date to today; Clock
-returns only the time to the current real clock.
+not requirements for completing the trail. The floating date and time controls
+show their own ↺ Reset buttons while an override is active: date returns to
+today without changing the selected time, and time returns to the current real
+clock without changing the selected date.
 
 There are plenty of smaller discoveries too. This manual deliberately does not
 catalog them: poke around, revisit objects in a different room state, and try

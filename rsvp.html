@@ -3868,6 +3868,14 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .desk-search-text{fill:#453a31;font-family:sans-serif;font-size:3px;letter-spacing:0}
 .desk-search-completion{fill:#9a9288}
 .desk-search-text.no-match{fill:#8e3a4a}
+.desk-search-results-bg{fill:#fffdf8;stroke:#8e3a4a;stroke-width:.4}
+.desk-search-result{cursor:pointer}
+.desk-search-result-bg{fill:#f8f5ec;stroke:#e8dfcc;stroke-width:.22}
+.desk-search-result:hover .desk-search-result-bg,
+.desk-search-result:focus .desk-search-result-bg{fill:#ead7d5;stroke:#c68e95}
+.desk-search-result.selected .desk-search-result-bg{fill:#8e3a4a;stroke:#8e3a4a}
+.desk-search-result-text{fill:#453a31;font-family:sans-serif;letter-spacing:0;pointer-events:none}
+.desk-search-result.selected .desk-search-result-text{fill:#fffdf8}
 .desk-search-button{cursor:pointer}
 .desk-search-button .desk-search-icon{fill:none;stroke:#f8f5ec;stroke-width:.3;stroke-linecap:round;stroke-linejoin:round}
 .desk-search-button:hover .desk-search-icon,.desk-search-button:focus .desk-search-icon{stroke:#d9a6a6}
@@ -48837,12 +48845,12 @@ setOfficeProgress("pc", false);
     { id: "calendar", labelKey: "app_calendar", glyph: "📅", tile: "#c68e95", glyphSize: "5.2", searchOnly: true, open: function () { openCalendar(); } },
     // games row: Life, Classics, the DOS-native snake game, and Shoot stay together
     { id: "life", icon: "life", labelKey: "app_life", glyph: "⧉", tile: "#fdfbf6", color: "#8e3a4a", glyphSize: "5.2", game: { id: "life", name: "Game of Life" }, open: function () { openLifeApp(); } },
-    { id: "classics", icon: "classics", labelKey: "app_classics", glyph: "♠", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", aliases: ["classic"], activities: ["Mines", "Solitaire"], open: function () { openClassicsApp(); } },
-    { id: "mines", labelKey: "classics_mines", aliases: ["mine", "miny"], searchOnly: true, catalogOnly: true, game: { id: "mines", name: "Mines", how_to_open: "Open Classics or search for mines on the monitor." }, open: function () { openClassicsApp("mines"); } },
-    { id: "solitaire", labelKey: "classics_solitaire", aliases: ["cards", "card", "patience", "pasiáns", "pasians"], searchOnly: true, catalogOnly: true, game: { id: "solitaire", name: "Solitaire", how_to_open: "Open Classics or search for solitaire or cards on the monitor." }, open: function () { openClassicsApp("solitaire"); } },
+    { id: "classics", icon: "classics", labelKey: "app_classics", glyph: "♠", tile: "#c8c2b4", color: "#453a31", glyphSize: "5.2", activities: ["Mines", "Solitaire"], open: function () { openClassicsApp(); } },
+    { id: "mines", labelKey: "classics_mines", searchOnly: true, catalogOnly: true, game: { id: "mines", name: "Mines", how_to_open: "Open Classics or search for mines on the monitor." }, open: function () { openClassicsApp("mines"); } },
+    { id: "solitaire", labelKey: "classics_solitaire", searchOnly: true, catalogOnly: true, game: { id: "solitaire", name: "Solitaire", how_to_open: "Open Classics or search for solitaire on the monitor." }, open: function () { openClassicsApp("solitaire"); } },
     { id: "pacman", labelKey: "app_pacman", glyph: "ᗧ", tile: "#172d96", color: "#ffd83d", glyphSize: "5.2", searchOnly: true, game: { id: "hack-man", name: "Hack-Man", highScoreState: "__pacmanState", how_to_open: "Search for hackman on the monitor; the ketamine ghost can reveal it too." },
       open: function () { if (window.__unlockPacman) window.__unlockPacman(false); openPacmanApp(); } },
-    { id: "prince", labelKey: "app_prince", aliases: ["princejs"], glyph: "♛", tile: "#17130f", color: "#d7b34c", glyphSize: "5.2", searchOnly: true,
+    { id: "prince", labelKey: "app_prince", glyph: "♛", tile: "#17130f", color: "#d7b34c", glyphSize: "5.2", searchOnly: true,
       game: { id: "prince", name: "Prince of Persia", how_to_open: "Double-click the garden skyline, search for prince on the monitor, or type prince in Console." },
       open: function () { openPrinceApp(); } },
     { id: "system", labelKey: "mon_sys_system", glyph: "⚙", tile: "#f4ecdf", color: "#4a6b94", glyphSize: "5.2", searchOnly: true,
@@ -48987,8 +48995,9 @@ setOfficeProgress("pc", false);
     new MutationObserver(syncMonitorRunningApps).observe(monitor, { attributes: true, attributeFilter: ["class"] });
     syncMonitorRunningApps();
   }
-  var dockGrid = null, dockSearch = null, dockSearchText = null, dockSearchInput = null;
+  var dockGrid = null, dockSearch = null, dockSearchText = null, dockSearchInput = null, dockSearchResults = null;
   var dockSearchQuery = "", dockSearchBest = null, dockSearchCompletion = "", dockSearchOpen = false;
+  var dockSearchMatches = [], dockSearchIndex = -1;
   var tileCamVideo = null, tileCamGroup = null;
   var dockDrag = null, dockSuppressClick = false;
   // stamped whenever a dock icon swaps the screen layer; the monitor's dblclick swap and
@@ -49732,6 +49741,8 @@ setOfficeProgress("pc", false);
       "aria-label": (T[document.documentElement.lang] || T.en).install_dismiss }, dockSearch);
     mkEl("circle", { cx: 374.1, cy: 156.75, r: 1.45 }, dockSearchClose);
     mkEl("path", { d: "M373.45 156.1 L374.75 157.4 M374.75 156.1 L373.45 157.4" }, dockSearchClose);
+    dockSearchResults = mkEl("g", { id: "monitor-dock-search-results", role: "listbox",
+      "aria-label": (T[document.documentElement.lang] || T.en).desk_search_apps_aria || T.en.desk_search_apps_aria }, dockSearch);
     dockSearchInput = document.createElement("input");
     dockSearchInput.type = "search";
     dockSearchInput.className = "dock-search-keyboard";
@@ -49773,6 +49784,7 @@ setOfficeProgress("pc", false);
     dockSearchInput.addEventListener("input", function () {
       dockSearchQuery = dockSearchInput.value.slice(0, 28);
       dockSearchOpen = true;
+      dockSearchIndex = -1;
       paintDockSearch();
     });
     dockSearchInput.addEventListener("pointerdown", function (e) {
@@ -49792,9 +49804,15 @@ setOfficeProgress("pc", false);
       if (e.key === "Backspace" && !dockSearchInput.value) {
         e.preventDefault(); e.stopPropagation(); clearDockSearch(); return;
       }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault(); e.stopPropagation();
+        stepDockSearch(e.key === "ArrowDown" ? 1 : -1);
+        return;
+      }
       if (e.key !== "Enter" && e.key !== "Tab") return;
       e.preventDefault(); e.stopPropagation();
       var app = dockSearchBest;
+      if (!app) return;
       clearDockSearch();
       if (app) { appOpenTs = Date.now(); app.open(); }
     });
@@ -50505,23 +50523,78 @@ setOfficeProgress("pc", false);
     return (T[lang] && T[lang][app.labelKey]) || T.en[app.labelKey] || app.id;
   }
   function dockAppMatch(app, query) {
-    var names = [app.id, dockAppLabel(app), (T.en && T.en[app.labelKey]) || ""].concat(app.aliases || []);
-    var best = Infinity, completion = "";
+    var names = [app.id, dockAppLabel(app), (T.en && T.en[app.labelKey]) || ""];
+    var aliases = app.aliases || [];
+    var best = Infinity, completion = "", matchedName = "";
     for (var i = 0; i < names.length; i++) {
       var rawName = String(names[i] || ""), name = normalizeDockSearch(rawName), score = Infinity;
       if (!name) continue;
       if (name === query) score = i;
       else if (name.indexOf(query) === 0) score = 10 + name.length - query.length + i;
-      else {
-        var at = name.indexOf(query);
-        if (at >= 0) score = 100 + at * 4 + name.length - query.length + i;
-      }
       if (score < best) {
         best = score;
         completion = name.indexOf(query) === 0 ? rawName.slice(query.length) : "";
+        matchedName = rawName;
       }
     }
-    return { score: best, completion: completion };
+    for (var ai = 0; ai < aliases.length; ai++) {
+      var rawAlias = String(aliases[ai] || ""), alias = normalizeDockSearch(rawAlias);
+      if (!alias || alias.indexOf(query) !== 0) continue;
+      var aliasScore = alias === query ? 4 + ai : 20 + alias.length - query.length + ai;
+      if (aliasScore < best) {
+        best = aliasScore;
+        completion = alias === query ? "" : rawAlias.slice(query.length);
+        matchedName = rawAlias;
+      }
+    }
+    return { score: best, completion: completion, matchedName: matchedName };
+  }
+  function openDockSearchMatch(app) {
+    if (!app) return;
+    clearDockSearch();
+    appOpenTs = Date.now();
+    app.open();
+  }
+  function renderDockSearchResults() {
+    if (!dockSearchResults) return;
+    dockSearchResults.textContent = "";
+    if (dockSearchMatches.length <= 1 || !normalizeDockSearch(dockSearchQuery)) return;
+    var x = 254.7, y = 159.25, width = 122.6;
+    var resultNames = dockSearchMatches.map(function (entry) {
+      return String(entry.match.matchedName || entry.app.id || "").toLocaleLowerCase();
+    });
+    var columns = Math.max(1, Math.ceil(dockSearchMatches.length / 5));
+    var rows = Math.ceil(dockSearchMatches.length / columns);
+    var rowHeight = 4.2, height = rows * rowHeight + .6;
+    var columnWidth = width / columns;
+    mkEl("rect", { x: x, y: y, width: width, height: height, rx: 1.15,
+      "class": "desk-search-results-bg" }, dockSearchResults);
+    dockSearchMatches.forEach(function (entry, i) {
+      var col = Math.floor(i / rows), row = i % rows;
+      var result = mkEl("g", { "class": "desk-search-result" + (i === dockSearchIndex ? " selected" : ""),
+        transform: "translate(" + (x + col * columnWidth) + " " + (y + row * rowHeight) + ")",
+        role: "option", tabindex: "0", "aria-selected": String(i === dockSearchIndex),
+        "data-app-id": entry.app.id }, dockSearchResults);
+      mkEl("rect", { x: .3, y: .2, width: columnWidth - .6, height: rowHeight - .4, rx: .55,
+        "class": "desk-search-result-bg" }, result);
+      var label = mkEl("text", { x: 1.25, y: rowHeight * .68,
+        "class": "desk-search-result-text", "font-size": Math.min(2.35, rowHeight * .58) }, result);
+      label.textContent = resultNames[i];
+      result.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+      result.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation(); openDockSearchMatch(entry.app);
+      });
+      result.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault(); e.stopPropagation(); openDockSearchMatch(entry.app);
+      });
+    });
+  }
+  function stepDockSearch(delta) {
+    if (!dockSearchMatches.length) return;
+    if (dockSearchIndex < 0) dockSearchIndex = delta > 0 ? 0 : dockSearchMatches.length - 1;
+    else dockSearchIndex = (dockSearchIndex + delta + dockSearchMatches.length) % dockSearchMatches.length;
+    paintDockSearch();
   }
   function paintDockSearch() {
     if (!dockGrid || !dockSearch || !dockSearchText) return;
@@ -50531,16 +50604,34 @@ setOfficeProgress("pc", false);
       dockSearchInput.setAttribute("aria-label", dict.desk_search_apps_aria || T.en.desk_search_apps_aria);
     }
     dockSearch.classList.toggle("native-input", !!(dockSearchInput && dockSearchInput.classList.contains("active")));
-    var query = normalizeDockSearch(dockSearchQuery), bestScore = Infinity;
+    var query = normalizeDockSearch(dockSearchQuery);
     dockSearchBest = null; dockSearchCompletion = "";
+    dockSearchMatches = [];
     var searchableApps = DESKTOP_APPS.filter(function (app) { return !app.locked || !app.locked(); }).concat(TOOLBAR_APPS);
     for (var i = 0; i < searchableApps.length; i++) {
       var app = searchableApps[i], match = dockAppMatch(app, query);
       var cell = dockCells[app.id];
       if (cell) cell.classList.remove("search-match");
-      if (query && match.score < bestScore) { bestScore = match.score; dockSearchBest = app; dockSearchCompletion = match.completion; }
+      if (query && Number.isFinite(match.score)) {
+        dockSearchMatches.push({ app: app, match: match, order: i });
+        if (cell) cell.classList.add("search-match");
+      }
+    }
+    dockSearchMatches.sort(function (a, b) {
+      var aExact = a.match.score < 10 ? 0 : 1;
+      var bExact = b.match.score < 10 ? 0 : 1;
+      return aExact - bExact ||
+        normalizeDockSearch(a.match.matchedName || a.app.id).localeCompare(normalizeDockSearch(b.match.matchedName || b.app.id)) ||
+        String(a.app.id).localeCompare(String(b.app.id));
+    });
+    if (dockSearchMatches.length === 1) dockSearchIndex = 0;
+    else if (dockSearchIndex >= dockSearchMatches.length) dockSearchIndex = -1;
+    if (dockSearchMatches[dockSearchIndex]) {
+      dockSearchBest = dockSearchMatches[dockSearchIndex].app;
+      dockSearchCompletion = dockSearchMatches[dockSearchIndex].match.completion;
     }
     if (!query) {
+      dockSearchIndex = -1;
       dockGrid.classList.remove("searching");
       dockSearch.classList.toggle("active", dockSearchOpen);
       dockSearchText.classList.remove("no-match");
@@ -50552,9 +50643,9 @@ setOfficeProgress("pc", false);
         prompt.textContent = ((T[document.documentElement.lang] || T.en).desk_search_apps || T.en.desk_search_apps);
         dockSearchText.appendChild(prompt);
       }
+      renderDockSearchResults();
       return;
     }
-    if (dockSearchBest && dockCells[dockSearchBest.id]) dockCells[dockSearchBest.id].classList.add("search-match");
     dockGrid.classList.add("searching");
     dockSearch.classList.add("active");
     dockSearchText.classList.toggle("no-match", !dockSearchBest);
@@ -50562,16 +50653,18 @@ setOfficeProgress("pc", false);
     var typed = document.createElementNS(SVGNS, "tspan");
     typed.textContent = dockSearchQuery;
     dockSearchText.appendChild(typed);
-    if (dockSearchBest && dockSearchCompletion) {
+    if (dockSearchMatches.length === 1 && dockSearchBest && dockSearchCompletion) {
       var completion = document.createElementNS(SVGNS, "tspan");
       completion.setAttribute("class", "desk-search-completion");
       completion.textContent = dockSearchCompletion;
       dockSearchText.appendChild(completion);
     }
+    renderDockSearchResults();
   }
   function clearDockSearch() {
     var wasOpen = dockSearchOpen || !!dockSearchQuery;
     dockSearchOpen = false; dockSearchQuery = ""; dockSearchBest = null; dockSearchCompletion = "";
+    dockSearchMatches = []; dockSearchIndex = -1;
     if (dockSearchInput) {
       dockSearchInput.value = "";
       if (document.activeElement === dockSearchInput) dockSearchInput.blur();
@@ -50581,6 +50674,7 @@ setOfficeProgress("pc", false);
     if (dockSearch) dockSearch.classList.remove("active");
     if (dockSearch) dockSearch.classList.remove("native-input");
     if (dockSearchText) { dockSearchText.textContent = ""; dockSearchText.classList.remove("no-match"); }
+    if (dockSearchResults) dockSearchResults.textContent = "";
     for (var id in dockCells) dockCells[id].classList.remove("search-match");
     if (window.__syncMonitorDockSearchInput) window.__syncMonitorDockSearchInput();
     if (wasOpen && monitor.classList.contains("screen-on") && monitor.classList.contains("show-caps") && !monitor.classList.contains("show-saver")) scheduleSaver();
@@ -50632,12 +50726,19 @@ setOfficeProgress("pc", false);
       if (!active) return;
       e.preventDefault(); e.stopImmediatePropagation();
       if (!dockSearchQuery) { clearDockSearch(); return; }
-      dockSearchQuery = dockSearchQuery.slice(0, -1); paintDockSearch(); return;
+      dockSearchQuery = dockSearchQuery.slice(0, -1); dockSearchIndex = -1; paintDockSearch(); return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!active) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      stepDockSearch(e.key === "ArrowDown" ? 1 : -1);
+      return;
     }
     if (e.key === "Enter" || e.key === "Tab") {
       if (!active) return;
       e.preventDefault(); e.stopImmediatePropagation();
       var app = dockSearchBest;
+      if (!app) return;
       clearDockSearch();
       if (app) { appOpenTs = Date.now(); app.open(); }
       return;
@@ -50653,7 +50754,7 @@ setOfficeProgress("pc", false);
     e.preventDefault(); e.stopImmediatePropagation();
     stopSaver(); // a half-typed app name owns the screen; clearing/opening it re-arms idle.
     dockSearchOpen = true;
-    if (dockSearchQuery.length < 28) dockSearchQuery += e.key;
+    if (dockSearchQuery.length < 28) { dockSearchQuery += e.key; dockSearchIndex = -1; }
     paintDockSearch();
   }, true);
   // Search is a transient desktop mode, not persistent desktop state. Any pointer gesture hands
@@ -50663,7 +50764,16 @@ setOfficeProgress("pc", false);
     if (e.target === dockSearchInput || (dockSearch && dockSearch.contains(e.target)) || (searchButton && searchButton.contains(e.target))) return;
     clearDockSearch();
   }, true);
-  window.__monitorDockSearch = function () { return { open: dockSearchOpen, query: dockSearchQuery, match: dockSearchBest && dockSearchBest.id, completion: dockSearchCompletion }; };
+  window.__monitorDockSearch = function () {
+    return {
+      open: dockSearchOpen,
+      query: dockSearchQuery,
+      match: dockSearchBest && dockSearchBest.id,
+      matches: dockSearchMatches.map(function (entry) { return entry.app.id; }),
+      selected: dockSearchIndex,
+      completion: dockSearchCompletion
+    };
+  };
   // ── CONSOLE APP ─────────────────────────────────────────────────────────────────
   // A real (tiny) JavaScript REPL: input line + scrollback, evaluated with indirect
   // eval in global scope — exactly the blast radius of the visitor's own devtools

@@ -762,6 +762,11 @@ immediate, gag-free `destroyDoom()`, while Back returns to the chooser and the
 context-menu Kill path alone runs `doomDeathFlash`.
 The visible dock order lives in the monitor checkpoint row; drag swaps fixed slots, Continue
 restores the order, and the adapter reset restores `DESKTOP_APPS` order.
+The transient desktop finder ranks exact hits first and then alphabetizes every
+prefix match by its displayed lowercase search name. Canonical ids and localized
+labels participate; only Snake retains explicit `nibbles`/`dos` aliases.
+All matching tiled apps receive `.search-match`, while the native-SVG dropdown
+also exposes search-only and toolbar results without a WebKit RenderLayer.
 Julia and Pipes share one off-DOM Canvas 2D surface. Its baseline remains 4×
 authored size; after three healthy frame windows either saver may rise in
 quarter-step tiers as high as 6×. Flower Box owns one lazy

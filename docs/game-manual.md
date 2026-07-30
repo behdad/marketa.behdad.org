@@ -245,7 +245,10 @@ Press backtick to open the drop-down console and type `help` or `shortcuts()` to
 get oriented. The Code app can run JavaScript and Python files; named files are
 saved in this browser. JavaScript and Python examples can open native SVG
 graphics views. Once a drawing exists, the small **gfx** control appears so you
-can switch between it and the Console output. When the office monitor is
+can switch between it and the Console output. On the zoomed monitor desktop,
+typing opens the app finder: matching search names appear alphabetically,
+matching tiles highlight together, and any listed result can be opened directly.
+When the office monitor is
 zoomed, the compact taskbar control at the far right expands only
 the 124×42 display surface across the current browser viewport, preserving its
 aspect ratio against a black surround. Dismiss an open app to return to this

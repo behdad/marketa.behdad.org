@@ -273,7 +273,8 @@ you leave the room. Double-click or double-tap one of the stained-glass panes
 to place the first X in that pane and start tic-tac-toe; after the window plays
 O, use ordinary clicks or taps for later turns. Double-click/tap any pane after
 a win or draw to start over; the caption above the room announces who won or
-that the board ended in a draw. Press Enter in the room to start a fresh board
+that the board ended in a draw, and a caps-pink or light-blue line crosses the
+winning three panes. Press Enter in the room to start a fresh board
 with the window taking the opening move; Enter is inert once play is active.
 Leaving the Bedroom clears the board.
 

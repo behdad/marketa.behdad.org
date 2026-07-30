@@ -693,6 +693,12 @@ footer{margin-top:2.6rem}
 }
 #bedroom-stained-glass .bedroom-ttt-x{stroke:#8e3a4a}
 #bedroom-stained-glass .bedroom-ttt-o{stroke:#4a6b94}
+#bedroom-stained-glass .bedroom-ttt-win-line{
+  fill:none;stroke-linecap:round;pointer-events:none;
+}
+#bedroom-stained-glass .bedroom-ttt-win-shadow{stroke:#fffdf8;stroke-width:8;opacity:.72}
+#bedroom-stained-glass .bedroom-ttt-win-x{stroke:#d9a6a6;stroke-width:5}
+#bedroom-stained-glass .bedroom-ttt-win-o{stroke:#7f9ec0;stroke-width:5}
 #bedroom-stained-glass.game-over .bedroom-ttt-mark:not(.winning){opacity:.46}
 #bedroom-stained-glass.game-over .bedroom-ttt-mark.winning{stroke-width:4}
 #bedroom-stained-glass.game-draw .bedroom-ttt-mark{opacity:.72}
@@ -30885,7 +30891,8 @@ window.__bedroomRoomOpen = false;
     if (!glass || !tttMarks) return;
     while (tttMarks.firstChild) tttMarks.removeChild(tttMarks.firstChild);
     var ns = "http://www.w3.org/2000/svg";
-    room.querySelectorAll(".bedroom-ttt-pane").forEach(function (pane, cell) {
+    var panes = room.querySelectorAll(".bedroom-ttt-pane");
+    panes.forEach(function (pane, cell) {
       var mark = tttBoard[cell];
       if (!mark) return;
       var fill = pane.querySelector(".bedroom-ttt-pane-fill");
@@ -30911,6 +30918,26 @@ window.__bedroomRoomOpen = false;
       node.setAttribute("data-cell", cell);
       tttMarks.appendChild(node);
     });
+    if (tttLine.length === 3 && (tttWinner === "X" || tttWinner === "O")) {
+      function paneCenter(cell) {
+        var fill = panes[cell].querySelector(".bedroom-ttt-pane-fill");
+        return {
+          x: parseFloat(fill.getAttribute("x")) + parseFloat(fill.getAttribute("width")) / 2,
+          y: parseFloat(fill.getAttribute("y")) + parseFloat(fill.getAttribute("height")) / 2
+        };
+      }
+      var from = paneCenter(tttLine[0]);
+      var to = paneCenter(tttLine[2]);
+      ["bedroom-ttt-win-shadow", "bedroom-ttt-win-" + tttWinner.toLowerCase()].forEach(function (className) {
+        var line = document.createElementNS(ns, "line");
+        line.setAttribute("x1", from.x);
+        line.setAttribute("y1", from.y);
+        line.setAttribute("x2", to.x);
+        line.setAttribute("y2", to.y);
+        line.setAttribute("class", "bedroom-ttt-win-line " + className);
+        tttMarks.appendChild(line);
+      });
+    }
     glass.classList.toggle("game-over", tttPhase === "done");
     glass.classList.toggle("game-draw", tttWinner === "draw");
     refreshTttText();

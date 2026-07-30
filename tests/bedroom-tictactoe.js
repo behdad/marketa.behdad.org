@@ -23,7 +23,7 @@ var HARNESS = [
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip"),leakedDblclicks=0;room.addEventListener("dblclick",function(){leakedDblclicks++;});room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(400);report.steps.enterReply=window.__bedroomTicTacToeState();window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' dbl(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={leaked:leakedDblclicks,other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(400);report.steps.reply=window.__bedroomTicTacToeState();',
-  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();report.steps.paneFlash=document.getElementById("bedroom-stained-glass").classList.contains("glinting");await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();report.steps.winCaption=cap();',
+  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();report.steps.paneFlash=document.getElementById("bedroom-stained-glass").classList.contains("glinting");await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();var winLine=document.querySelector(".bedroom-ttt-win-o");report.steps.winLine=winLine&&{x1:winLine.getAttribute("x1"),y1:winLine.getAttribute("y1"),x2:winLine.getAttribute("x2"),y2:winLine.getAttribute("y2"),shadow:!!document.querySelector(".bedroom-ttt-win-shadow")};report.steps.winCaption=cap();',
   ' dbl(8);report.steps.restart=window.__bedroomTicTacToeState();report.steps.restartCaption=cap();await sleep(400);var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(400);}report.steps.draw=window.__bedroomTicTacToeState();report.steps.drawCaption=cap();',
   ' setLang("cs");report.steps.cs={glass:document.getElementById("bedroom-stained-glass").getAttribute("aria-label"),caption:cap()};setLang("en");',
   ' touch(5);await sleep(35);touch(5);report.steps.touch=window.__bedroomTicTacToeState();window.__closeBedroomRoom();report.steps.close=window.__bedroomTicTacToeState();await sleep(450);report.steps.closeSettled=window.__bedroomTicTacToeState();',
@@ -83,6 +83,10 @@ check(s.paneFlash === false,
 check(s.win && s.win.phase === "done" && s.win.winner === "O" &&
   s.win.line.length === 3 && !s.win.aiPending,
   "a completed winning line settles the game and its timer", s.win);
+check(s.winLine && s.winLine.shadow &&
+  (s.winLine.x1 !== s.winLine.x2 || s.winLine.y1 !== s.winLine.y2),
+  "the computer's winning cells receive a visible light-blue line with a contrast underlay",
+  s.winLine);
 check(s.win && s.win.resultCaptionKey === "bedroom_glass_loss" &&
   s.winCaption && s.winCaption.key === "bedroom_glass_loss" &&
   /window won/i.test(s.winCaption.text) && s.winCaption.flash &&
@@ -131,6 +135,9 @@ check(/winner === "X"\) return "bedroom_glass_win"/.test(source) &&
   /winner === "O"\) return "bedroom_glass_loss"/.test(source) &&
   /winner === "draw"\) return "bedroom_glass_draw"/.test(source),
   "player win, computer win, and draw map to three distinct localized captions");
+check(/bedroom-ttt-win-x\{stroke:#d9a6a6/.test(source) &&
+  /bedroom-ttt-win-o\{stroke:#7f9ec0/.test(source),
+  "winning strokes use the caps pink for X and light blue for O");
 
 console.log("");
 if (failures) {

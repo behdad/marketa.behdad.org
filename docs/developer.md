@@ -663,7 +663,8 @@ turn is active. `resetProps()` clears
 the board and cancels the AI timer, so both room close and the registered loft
 transient reset prevent a late move from landing off-screen. A completed game
 uses the shared `__flashCaptionKey` surface with owner `"bedroom-ttt"` for its
-localized win/loss/draw result; restart and teardown clear that owner so its
+localized win/loss/draw result. `renderTtt()` overlays the winning endpoints
+with a cream-backed caps-pink X line or light-blue O line; restart and teardown clear that owner so its
 caption cannot outlive the board.
 
 All five lower rooms claim the shared `"lower-room"` notification hold. This

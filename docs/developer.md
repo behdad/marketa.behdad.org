@@ -1053,8 +1053,11 @@ The shared calendar renderer serves monitor and phone views. Canonical wedding e
 also generate calendar downloads and external calendar links. Birthday/occasion definitions and
 Persian dates are runtime code; avoid duplicating dates in another UI data source. Wedding event
 cards update only the renderer's displayed month; grid days and search results own date activation
-and special-day scene dispatch. `__activatePolyamoryDay` explicitly ends party mode before the
-Cuddly-puddly pan so the four-person couch scene is not hidden by party occupancy.
+and special-day scene dispatch. Both surfaces show the shared Calendar ↻ only while an explicit
+date override is active. It calls `calResetToday()`, clears only `date` from the URL, re-seeds the
+displayed month from the real date, and leaves a time override and unrelated loft state intact.
+`__activatePolyamoryDay` explicitly ends party mode before the Cuddly-puddly pan so the four-person
+couch scene is not hidden by party occupancy.
 
 Birthday adornments are nested inside each rendered figure so they inherit its authored transforms.
 Birthday cake eligibility is derived from matching `.g-<who>` figures on the dance floor; station-

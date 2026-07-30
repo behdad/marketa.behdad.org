@@ -4725,6 +4725,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .calx-gcal:hover{filter:brightness(1.08)}
 .calx-nav,.calx-today,.calx-ics,.calx-search-btn{font:inherit; cursor:pointer; border:1px solid #e0d3bd; background:#fffdf8; color:#8e3a4a; line-height:1; white-space:nowrap; display:flex; align-items:center; justify-content:center}
 .calx-nav:hover,.calx-today:hover,.calx-ics:hover,.calx-search-btn:hover{background:#f1e6dc}
+.calx-today[hidden]{display:none}
 .calx-search-btn.is-on{background:#8e3a4a; border-color:#8e3a4a; color:#fffdf8} /* lit while search mode is active — mirrors the left ↻, sits right of the » forward buttons */
 .calx-grid{display:grid; grid-template-columns:repeat(7,1fr)}
 .calx-wd{text-align:center; font-weight:700; color:#716455; text-transform:capitalize; overflow:hidden}
@@ -29679,12 +29680,12 @@ var T = {
     cal_download: "Download .ics",
     cal_dl_e: "Download the Edmonton dates (.ics)",
     cal_dl_p: "Download the Prague dates (.ics)",
-    cal_today: "today",
     cal_gcal: "GCal",
     cal_search: "search",
     cal_search_placeholder: "search events…",
     cal_search_none: "no events match that search.",
     cal_search_meteor: "meteor shower", // folded into every shower's search text so "meteor" finds them (their labels are the shower names — perseids, geminids…)
+    cal_reset: "Reset date to today",
     cal_ics_e1: "markéta ∞ behdad — Edmonton wedding",
     cal_ics_e2: "markéta ∞ behdad — Edmonton loft BBQ",
     cal_ics_p1: "markéta ∞ behdad — Prague garden party",
@@ -30879,12 +30880,12 @@ var T = {
     cal_download: "Stáhnout .ics",
     cal_dl_e: "Stáhnout termíny v Edmontonu (.ics)",
     cal_dl_p: "Stáhnout termíny v Praze (.ics)",
-    cal_today: "dnes",
     cal_gcal: "GCal",
     cal_search: "hledat",
     cal_search_placeholder: "hledat události…",
     cal_search_none: "žádné události neodpovídají hledání.",
     cal_search_meteor: "meteorický roj", // "meteor" najde všechny roje (jejich názvy jsou perseidy, geminidy…)
+    cal_reset: "Vrátit datum na dnešek",
     cal_ics_e1: "markéta ∞ behdad — svatba v Edmontonu",
     cal_ics_e2: "markéta ∞ behdad — grilovačka v loftu · Edmonton",
     cal_ics_p1: "markéta ∞ behdad — zahradní slavnost v Praze",
@@ -97536,8 +97537,9 @@ function spawnDustMote(container) {
       });
       return b;
     }
-    var todayB = document.createElement("button"); todayB.type = "button"; todayB.className = "calx-today"; todayB.textContent = "↻"; // reset-to-now glyph (mirrors the scene's ↻ restart), compact so the month title clears the nav row on mobile
-    todayB.setAttribute("aria-label", calStr("cal_today")); todayB.title = calStr("cal_today");
+    var todayB = document.createElement("button"); todayB.type = "button"; todayB.className = "calx-today"; todayB.textContent = "↻"; // date-only Reset, matching Clock's override-only ↻ without taking another row from the month grid
+    todayB.setAttribute("aria-label", calStr("cal_reset")); todayB.title = calStr("cal_reset");
+    todayB.hidden = !calOverrideDate(); todayB.disabled = todayB.hidden;
     todayB.addEventListener("click", function (e) { e.stopPropagation(); calResetToday(); calView = { y: real.getFullYear(), m: real.getMonth() }; window.__calendarRender(container, surface); });
     head.appendChild(todayB); // kept LEFT so it clears the monitor app's own close ✕ (top-right)
     // search toggle: 🔍 at the RIGHT end, mirroring ↻ on the left. Flips search mode; pressing it

@@ -30927,6 +30927,17 @@ window.__bedroomRoomOpen = false;
     tttTouchAt = 0;
     renderTtt();
   }
+  function startTtt(computerFirst) {
+    if (!window.__bedroomRoomOpen ||
+        (tttPhase !== "idle" && tttPhase !== "done")) return false;
+    resetTtt();
+    if (computerFirst) queueTttComputer();
+    else {
+      tttPhase = "player";
+      renderTtt();
+    }
+    return true;
+  }
   function finishTtt(result) {
     tttPhase = "done";
     tttWinner = result.winner;
@@ -30994,8 +31005,7 @@ window.__bedroomRoomOpen = false;
   function playTttCell(cell, start) {
     if (!window.__bedroomRoomOpen || cell < 0 || cell > 8) return false;
     if (start && (tttPhase === "idle" || tttPhase === "done")) {
-      resetTtt();
-      tttPhase = "player";
+      startTtt(false);
     }
     if (tttPhase !== "player" || tttBoard[cell]) return false;
     tttBoard[cell] = "X";
@@ -31178,6 +31188,7 @@ window.__bedroomRoomOpen = false;
   window.__activateBedroomProp = function (id) {
     return activateProp(document.getElementById(id));
   };
+  window.__startBedroomTicTacToe = function () { return startTtt(true); };
   window.__bedroomTicTacToeState = function () {
     return {
       board: tttBoard.slice(), phase: tttPhase, winner: tttWinner,
@@ -31203,6 +31214,9 @@ document.addEventListener("keydown", function (event) {
     if (bedroomProp) bedroomProp.dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true })
     );
+    else if (event.key === "Enter" && window.__startBedroomTicTacToe) {
+      window.__startBedroomTicTacToe();
+    }
     return;
   }
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {

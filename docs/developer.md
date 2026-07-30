@@ -656,7 +656,10 @@ or same-pane touch double-tap starts/restarts with the visitor as X; subsequent
 visitor turns use ordinary pane clicks/taps. A deterministic minimax player
 answers as O after a 340 ms delay. Board, phase, result, winning line, and
 pending-timer state are closure-owned and exposed read-only through
-`__bedroomTicTacToeState()` for focused regression checks. `resetProps()` clears
+`__bedroomTicTacToeState()` for focused regression checks. Bare Bedroom Enter
+calls `__startBedroomTicTacToe()` to queue O's opening move before handing the
+empty-pane choice to the visitor; further Enter presses are inert while that
+turn is active. `resetProps()` clears
 the board and cancels the AI timer, so both room close and the registered loft
 transient reset prevent a late move from landing off-screen. A completed game
 uses the shared `__flashCaptionKey` surface with owner `"bedroom-ttt"` for its

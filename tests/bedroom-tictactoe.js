@@ -13,6 +13,7 @@ var HARNESS = [
   'function dbl(cell){pane(cell).dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));}',
   'function click(cell){pane(cell).dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   'function touch(cell){pane(cell).dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
+  'function key(value){document.dispatchEvent(new KeyboardEvent("keydown",{key:value,bubbles:true,cancelable:true}));}',
   'function cap(){return {text:document.getElementById("hunt-caption").textContent,key:window.__captionKey&&window.__captionKey(),flash:window.__flashCaptionState&&window.__flashCaptionState()};}',
   'var lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]],order=[4,0,2,6,8,1,3,5,7];',
   'function result(board){for(var i=0;i<lines.length;i++){var l=lines[i];if(board[l[0]]&&board[l[0]]===board[l[1]]&&board[l[0]]===board[l[2]])return board[l[0]];}return board.every(Boolean)?"draw":null;}',
@@ -20,6 +21,7 @@ var HARNESS = [
   'function bestX(board){var cell=-1,best=Infinity;order.forEach(function(n){if(board[n])return;board[n]="X";var value=score(board,"O",0);board[n]=null;if(value<best){best=value;cell=n;}});return cell;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip"),leakedDblclicks=0;room.addEventListener("dblclick",function(){leakedDblclicks++;});room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
+  ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(400);report.steps.enterReply=window.__bedroomTicTacToeState();window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' dbl(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={leaked:leakedDblclicks,other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(400);report.steps.reply=window.__bedroomTicTacToeState();',
   ' click(1);report.steps.turn=window.__bedroomTicTacToeState();await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();report.steps.winCaption=cap();',
   ' dbl(8);report.steps.restart=window.__bedroomTicTacToeState();report.steps.restartCaption=cap();await sleep(400);var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(400);}report.steps.draw=window.__bedroomTicTacToeState();report.steps.drawCaption=cap();',
@@ -51,6 +53,14 @@ if (!result) {
 }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
+check(s.enterStart && s.enterStart.phase === "computer" && s.enterStart.aiPending &&
+  count(s.enterStart.board, "X") === 0 && count(s.enterStart.board, "O") === 0 &&
+  s.enterAgain && s.enterAgain.phase === "computer" && s.enterAgain.aiPending &&
+  count(s.enterAgain.board, "X") === 0 && count(s.enterAgain.board, "O") === 0 &&
+  s.enterReply && s.enterReply.phase === "player" &&
+  count(s.enterReply.board, "X") === 0 && count(s.enterReply.board, "O") === 1,
+  "Bedroom Enter starts once with the computer's opening move",
+  { start: s.enterStart, again: s.enterAgain, reply: s.enterReply });
 check(s.chosen && s.chosen.board[0] === "X" && count(s.chosen.board, "X") === 1 &&
   count(s.chosen.board, "O") === 0 && s.chosen.phase === "computer" && s.chosen.aiPending,
   "double-click starts with X in the visitor's chosen pane", s.chosen);

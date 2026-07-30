@@ -199,7 +199,7 @@ button advances projector programs without stopping at Off; once it reaches
 Night Sky, it stays there and advances the piano pieces instead.
 
 The small film ticket tucked against the Cuddly-puddly projector opens the loft
-cinema without changing the selected projector program. Pick one of the four
+cinema without changing the selected projector program. Pick one of the three
 films on the screen; **Choose another** stops it and returns to the chooser.
 The × button, Escape, or ordinary room navigation leaves the cinema. Film audio
 takes the foreground while it plays.

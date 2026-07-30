@@ -14,7 +14,8 @@ var HARNESS = [
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
   ' window.goToStage("cuddly");window.__cuddlyProjector.set("coffee");await sleep(520);',
   ' var channel=window.__cuddlyProjector.channel(),before=window.__activeAudioBedCount(),ticket=document.getElementById("cuddly-cinema-ticket");click(ticket);await sleep(850);',
-  ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before};',
+  ' var posters=Array.prototype.map.call(document.querySelectorAll(".cinema-film"),function(el){var r=el.getBoundingClientRect(),img=el.querySelector("img"),ir=img.getBoundingClientRect();return {box:[r.left,r.top,r.width,r.height],image:[ir.left,ir.top,ir.width,ir.height],fit:getComputedStyle(img).objectFit,label:el.getAttribute("aria-label"),src:img.getAttribute("src"),poster:el.dataset.poster};});',
+  ' report.steps.open={state:window.__cinemaRoomState(),room:window.currentStageName,channel:window.__cuddlyProjector.channel(),covered:window.__roomAmbienceCovered(),beds:window.__activeAudioBedCount(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),before:before,posters:posters};',
   ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label")};setLang("en");',
   ' var film=document.querySelector(".cinema-film[data-vimeo-id=\\"1096537359\\"]");click(film);await sleep(80);var frame=document.getElementById("cinema-player");',
   ' var shell=document.getElementById("cinema-screen-shell"),frameRect=frame&&frame.getBoundingClientRect(),shellRect=shell.getBoundingClientRect();',
@@ -47,6 +48,13 @@ check(s.open && s.open.state.open && !s.open.state.playing && s.open.room === "c
   "the projector ticket opens a covered subroom without changing room or channel state", s.open);
 check(s.open && s.open.before >= 1 && s.open.beds === 0,
   "entering the cinema releases the active Cuddly projector score", s.open);
+check(s.open && s.open.posters.length === 3 &&
+  s.open.posters.every(function (poster) { var box=poster.box,img=poster.image,first=s.open.posters[0].box;return Math.abs(box[1]-first[1])<0.6 && Math.abs(box[2]-first[2])<0.6 && Math.abs(box[3]-first[3])<0.6 && poster.fit==="cover" && Math.abs(img[0]-box[0]-1)<0.6 && Math.abs(img[1]-box[1]-1)<0.6 && Math.abs(img[2]-box[2]+2)<0.6 && Math.abs(img[3]-box[3]+2)<0.6; }) &&
+  Math.abs((s.open.posters[1].box[0]-s.open.posters[0].box[0])-(s.open.posters[2].box[0]-s.open.posters[1].box[0]))<0.6,
+  "three equal poster cards form one balanced row", s.open && s.open.posters);
+check(s.open && s.open.posters.map(function(p){return p.label;}).join("|")==="Identity|MANIA|Water" &&
+  s.open.posters.every(function(p){return p.src===p.poster && /^art\/cinema-(identity|mania|water)\.png$/.test(p.src);}),
+  "the original posters carry exact accessible film titles and poster hooks", s.open && s.open.posters);
 check(s.cs && s.cs.title === "Na co se podíváme?" && s.cs.close === "Zpět do Cuddly-puddly",
   "chooser and exit copy switch to Czech", s.cs);
 check(s.play && s.play.state.playing && s.play.state.video === "1096537359" &&
@@ -68,13 +76,14 @@ check(s.fastClose && !s.fastClose.open && s.fastClose.song,
   "closing during the song fade still restores the borrowed loft song", s.fastClose);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
-["1096537359", "902708480", "927763091", "930085724"].forEach(function (id) {
+["1096537359", "902708480", "927763091"].forEach(function (id) {
   check(new RegExp('data-vimeo-id="' + id + '"').test(source), "chooser includes Vimeo " + id);
 });
-check((source.match(/data-poster=""/g) || []).length === 4,
-  "all four chooser cards expose the poster-ready data hook");
-check((source.match(/data-vimeo-hash=""/g) || []).length === 4,
-  "all four chooser cards expose the unlisted-video hash hook");
+check(!/930085724/.test(source), "the retired fourth film is absent");
+check((source.match(/data-poster="art\/cinema-(?:identity|mania|water)\.png"/g) || []).length === 3,
+  "all three chooser cards expose their original artwork through the poster hook");
+check((source.match(/data-vimeo-hash=""/g) || []).length === 3,
+  "all three chooser cards expose the unlisted-video hash hook");
 
 console.log("");
 if (failures) { console.log(failures + " cinema-room assertion" + (failures === 1 ? "" : "s") + " failed."); process.exit(1); }

@@ -210,10 +210,16 @@ room pans down into the cinema and temporarily puts **Who's here** away. Pick on
 of the three films on the screen; **Choose another** stops it and returns to the
 chooser. The × button, Escape, Backspace, or ordinary room navigation pans back
 up. The cinema window follows the loft's day/night state; select it to swap day
-and night throughout the loft. Film audio takes the
-foreground while it plays. Incoming messages still collect while either lower
-room is open, but their preview, unread badge, and first-use coach wait until
-you return upstairs.
+and night throughout the loft. Film audio takes the foreground while it plays.
+Incoming messages still collect while any lower room is open, but their
+preview, unread badge, and first-use coach wait until you return upstairs.
+
+From **Kitchen / Bar**, press Down or double-click / double-tap a genuinely
+bare patch of brick to visit **Bathroom / Toilets** below. The room pans down
+past the sink and mirror, clawfoot tub, stool and scale to the separate toilet
+nook. Kitchen objects do not count as background. Use the × button, Up, Escape,
+Backspace, or ordinary room navigation to return; **Who's here** and message
+pop-ups stay out of the way while you are downstairs.
 
 On the balcony, open and light the smoker to begin the BBQ during a party. Its
 lid, firebox, food, and serving state are all interactive. Extinguishing it or

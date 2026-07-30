@@ -36,7 +36,8 @@ var HARNESS = [
   ' window.goToStage("garden");await sleep(80);dblclick(document.getElementById("garden-window-pane-0"));await sleep(40);report.steps.gardenInteractive=window.__princeState();',
   ' dblclick(document.getElementById("garden-wall"));await sleep(850);report.steps.gardenMouse=window.__princeState();key("Escape");await sleep(780);',
   ' touchup(document.getElementById("garden-wall"));await sleep(30);touchup(document.getElementById("garden-wall"));await sleep(850);report.steps.gardenTouch=window.__princeState();key("Backspace");await sleep(780);report.steps.gardenReturn=window.__princeState();',
-  ' window.goToStage("kitchen");var toggles=0,steps=[],oldToggle=window.__toggleDayNight,oldStep=window.__calStepTime;window.__toggleDayNight=function(){toggles++;};window.__calStepTime=function(n){steps.push(n);};key("ArrowDown");key("ArrowUp");key("d");key("ArrowUp",{shiftKey:true});key("ArrowDown",{shiftKey:true});window.__toggleDayNight=oldToggle;window.__calStepTime=oldStep;report.steps.verticalElsewhere={toggles:toggles,steps:steps,cinema:window.__cinemaRoomState(),prince:window.__princeState()};',
+  ' window.goToStage("office");var toggles=0,steps=[],oldToggle=window.__toggleDayNight,oldStep=window.__calStepTime;window.__toggleDayNight=function(){toggles++;};window.__calStepTime=function(n){steps.push(n);};key("ArrowDown");key("ArrowUp");key("d");key("ArrowUp",{shiftKey:true});key("ArrowDown",{shiftKey:true});window.__toggleDayNight=oldToggle;window.__calStepTime=oldStep;report.steps.verticalElsewhere={toggles:toggles,steps:steps,cinema:window.__cinemaRoomState(),prince:window.__princeState(),bathroom:window.__bathroomRoomState()};',
+  ' window.goToStage("kitchen");key("ArrowDown");await sleep(850);report.steps.kitchenDown=window.__bathroomRoomState();key("ArrowUp");await sleep(760);report.steps.kitchenUp=window.__bathroomRoomState();',
   ' window.goToStage("cuddly");key("ArrowDown");await sleep(850);report.steps.cuddlyDown=window.__cinemaRoomState();key("ArrowUp");await sleep(760);report.steps.cuddlyUp=window.__cinemaRoomState();',
   ' window.goToStage("garden");key("ArrowDown");await sleep(850);report.steps.gardenDown=window.__princeState();key("ArrowUp");await sleep(780);report.steps.gardenUp=window.__princeState();',
   ' window.__secondRound=true;window.goToStage("cuddly");key("ArrowDown");await sleep(850);window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge"),coach=document.querySelector(".msg-badge-coach"),thumb=document.querySelector(".msg-thumb");report.steps.cinemaMessageHold={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1600);thumb=document.querySelector(".msg-thumb");report.steps.cinemaMessageRelease={held:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};if(window.__hideMessageThumb)window.__hideMessageThumb(true);',
@@ -131,11 +132,12 @@ check(s.gardenInteractive && !s.gardenInteractive.basement && s.gardenMouse && s
   "only bare Garden background double-clicks/double-taps descend, and Escape/Backspace return", {interactive:s.gardenInteractive,mouse:s.gardenMouse,touch:s.gardenTouch,returned:s.gardenReturn});
 check(s.verticalElsewhere && s.verticalElsewhere.toggles === 1 &&
   s.verticalElsewhere.steps.join(",") === "1,-1" &&
-  !s.verticalElsewhere.cinema.open && !s.verticalElsewhere.prince.open,
+  !s.verticalElsewhere.cinema.open && !s.verticalElsewhere.prince.open && !s.verticalElsewhere.bathroom.open,
   "plain vertical arrows are inert elsewhere, D remains day/night, and Shift+vertical keeps time stepping", s.verticalElsewhere);
-check(s.cuddlyDown && s.cuddlyDown.open && s.cuddlyUp && !s.cuddlyUp.open &&
+check(s.kitchenDown && s.kitchenDown.open && s.kitchenUp && !s.kitchenUp.open &&
+  s.cuddlyDown && s.cuddlyDown.open && s.cuddlyUp && !s.cuddlyUp.open &&
   s.gardenDown && s.gardenDown.basement && s.gardenUp && !s.gardenUp.open && s.gardenUp.parked,
-  "plain Down enters each available lower room and plain Up returns upstairs", {cuddlyDown:s.cuddlyDown,cuddlyUp:s.cuddlyUp,gardenDown:s.gardenDown,gardenUp:s.gardenUp});
+  "plain Down enters each available lower room and plain Up returns upstairs", {kitchenDown:s.kitchenDown,kitchenUp:s.kitchenUp,cuddlyDown:s.cuddlyDown,cuddlyUp:s.cuddlyUp,gardenDown:s.gardenDown,gardenUp:s.gardenUp});
 check(s.cinemaMessageHold && s.cinemaMessageHold.held.messages.indexOf("cue_mail") !== -1 &&
   !s.cinemaMessageHold.badge && !s.cinemaMessageHold.coach && !s.cinemaMessageHold.thumb &&
   s.cinemaMessageHold.thread.indexOf("cue_mail") !== -1 &&

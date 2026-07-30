@@ -9173,8 +9173,8 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
 @keyframes cat-crawl{0%,100%{transform:translateX(0)} 50%{transform:translateX(12px)}}
 @keyframes cat-inch{0%,100%{transform:scale(1,1)} 45%{transform:scale(0.82,1.16)}}
 @media (prefers-reduced-motion: reduce){#stage-garden.dusk #garden-caterpillar .cat-crawl, #stage-garden.dusk #garden-caterpillar .cat-body{animation:none}}
-/* Edmonton's wildfire-smoke season (Jul 16 – Aug 31): --smoke is a 0..1 intensity set on
-   the strip from the season date. Grey haze rides over each room's sky/window, a muted
+/* Edmonton's wildfire-smoke season (Jul 16 – Aug 31): --smoke is the raw seasonal/live
+   intensity at half presentation gain. Grey haze rides over each room's sky/window, a muted
    orange disc rides over each sun; both are daylight-only, so .dusk cuts them and the
    night cascade underneath is untouched. Per-element ceilings via --smoke-max. */
 .smoke-tint{opacity:calc(var(--smoke,0) * var(--smoke-max,.55)); transition:opacity .9s ease}
@@ -9225,10 +9225,9 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
    so each room's id-qualified .dusk rule still out-specifies it and wins at night. Elements
    whose own opacity is ANIMATED (the garden/cuddly breathe, the balcony halo pulse) can't
    take this — an animation replaces the property — so there the class rides a wrapper.
-   Glare dies at DOUBLE the smoke's rate (gone by --smoke .5, opacity clamps the overshoot):
-   even moderate haze kills direct sun completely — you can look straight at the disc — and
-   a linear fade left the rays half-lit right through smoke season, since --smoke is a random
-   .5–1 roll that never actually reaches 1. Keep the two rules below on the same curve. */
+   Glare dies at DOUBLE the displayed smoke's rate (gone at the half-strength ceiling):
+   even the toned-down heaviest haze can flatten the direct sun completely, while ordinary
+   seasonal days retain some rays. Keep the two rules below on the same curve. */
 #loft-game-strip{--glare-fade:calc(1 - var(--smoke,0) * 2)}
 /* A cloud deck scatters direct light as completely as heavy haze does, so overcast lands on
    the same variable rather than a parallel one: one curve, one set of consumers, and the two
@@ -95022,17 +95021,21 @@ function spawnDustMote(container) {
   }
   var smokeOverride = null;
   // Edmonton's REAL air (window.__realSmoke, set by the air-quality fetch) blends in as a
-  // max: a pretend-date has no live AQI, so the 'smoky' preview always shows full smoke,
+  // max: a pretend-date has no live AQI, so the 'smoky' preview always shows peak smoke,
   // and reality can only ever push the haze higher — neither silences the other.
   function smokeLevelFor(s) {
-    if (typeof smokeOverride === "number") return smokeOverride;
-    var ramp = smokeRampFor(s), seasonal = 0;
-    if (ramp) { // out of season there's nothing to roll for, but real smoke still counts
-      if (s.m + "/" + s.d !== smokeRollKey) rollSmoke();
-      seasonal = ramp * smokeRoll;
+    var raw;
+    if (typeof smokeOverride === "number") raw = smokeOverride;
+    else {
+      var ramp = smokeRampFor(s), seasonal = 0;
+      if (ramp) { // out of season there's nothing to roll for, but real smoke still counts
+        if (s.m + "/" + s.d !== smokeRollKey) rollSmoke();
+        seasonal = ramp * smokeRoll;
+      }
+      var live = window.__weatherApprox && window.__weatherApprox.active ? 0 : (window.__realSmoke || 0);
+      raw = Math.max(live, seasonal); // a pretend day never inherits today's actual Edmonton smoke
     }
-    var live = window.__weatherApprox && window.__weatherApprox.active ? 0 : (window.__realSmoke || 0);
-    return Math.max(live, seasonal); // a pretend day never inherits today's actual Edmonton smoke
+    return raw * 0.5; // retain the climate beat without letting it dominate the rooms
   }
   window.__smokeLevel = function () { return smokeLevelFor(seasonDate()); };
   window.__wildfireOverride = function () { return smokeOverride; };

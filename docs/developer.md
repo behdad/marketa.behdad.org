@@ -1036,6 +1036,10 @@ failed network data falls back to the simulated scene model; UI and Charlie cont
 `null`. Console temperature overrides intentionally separate the simulated outdoor model from live
 or reconstructed readings until reset.
 
+Wildfire haze combines Edmonton PM2.5 with the Jul 16–Aug 31 seasonal ramp in `smokeLevelFor`.
+The stronger raw input wins, then a `0.5` presentation gain keeps the orange-sun/haze beat from
+dominating the rooms; console overrides pass through that same visual gain.
+
 ## Messages
 
 Messages is a chronological, session-local wedding group chat. Search for `var MESSAGES`,

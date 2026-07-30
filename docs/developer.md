@@ -422,7 +422,8 @@ toggles exactly one window and two nearby clicks within one second start the gam
 two 18px direction changes within 1.1 seconds, leaving one-way drags and jitter inert.
 
 The minigame owns a 10×16 board, seven-bag pieces, rotation/wall kicks,
-line/level scoring, and `localStorage["balconyTetrisHigh"]`. That personal best
+line/level scoring (ten lines per level, with the classic NES 60 Hz `GRAVITY_FRAMES` curve), and
+`localStorage["balconyTetrisHigh"]`. That personal best
 is intentionally outside checkpoint/reset state, matching Invaders, Flair-Catch,
 and Pac-Man. Starting snapshots the forty apartment states, pauses running
 balcony animations, adds `.tetris-on`, installs the topmost click shield, and

@@ -70496,6 +70496,10 @@ async def localfont(name):
     var SVGNS_TETRIS = "http://www.w3.org/2000/svg";
     var WINDOW_COLS = 5, WINDOW_ROWS = 8, BOARD_COLS = 10, BOARD_ROWS = 16;
     var BUILDING_X = 598, BUILDING_Y = 2, WINDOW_SIZE = 16;
+    var LINES_PER_LEVEL = 10;
+    // Classic NES gravity, in 60 Hz frames per row. This is deliberately a named
+    // implementation rather than an invented linear "Tetris-ish" acceleration.
+    var GRAVITY_FRAMES = [48,43,38,33,28,23,18,13,8,6,5,5,5,4,4,4,3,3,3,2,2,2,2,2,2,2,2,2,2,1];
     var windows = [], cells = new Array(BOARD_COLS * BOARD_ROWS);
     var buildingHour = new Date(window.__now ? window.__now() : Date.now()).getHours();
     var officeLitChance = buildingHour >= 8 && buildingHour < 18 ? .62 :
@@ -70872,7 +70876,7 @@ async def localfont(name):
         var awards = [0, 100, 300, 500, 800];
         score += awards[cleared] * (level + 1);
         lines += cleared;
-        level = Math.floor(lines / 8);
+        level = Math.floor(lines / LINES_PER_LEVEL);
       }
     }
     function lockPiece() {
@@ -70895,7 +70899,9 @@ async def localfont(name):
       score += dropped * 2;
       lockPiece();
     }
-    function gravityMs() { return Math.max(100, 720 - level * 60); }
+    function gravityMs() {
+      return Math.round(GRAVITY_FRAMES[Math.min(level, GRAVITY_FRAMES.length - 1)] * 1000 / 60);
+    }
 
     var freezeRescanRaf = null;
     function pauseNewSceneAnimations() {
@@ -71190,6 +71196,7 @@ async def localfont(name):
     window.__balconyTetrisState = function () {
       return {
         active: active, result: resultVisible, score: score, high: highScore(), lines: lines, level: level,
+        gravityMs: gravityMs(),
         piece: piece ? { type: piece.type, rotation: piece.rotation, x: piece.x, y: piece.y } : null,
         next: active ? queuedType() : null,
         board: board.map(function (row) { return row.slice(); }),
@@ -71220,7 +71227,7 @@ async def localfont(name):
       if (command === "set" && value) {
         board = value.board ? value.board.map(function (row) { return row.slice(); }) : emptyBoard();
         if (value.score != null) score = Number(value.score) || 0;
-        if (value.lines != null) { lines = Number(value.lines) || 0; level = Math.floor(lines / 8); }
+        if (value.lines != null) { lines = Number(value.lines) || 0; level = Math.floor(lines / LINES_PER_LEVEL); }
         if (value.piece) piece = {
           type: value.piece.type, rotation: value.piece.rotation || 0,
           x: value.piece.x || 0, y: value.piece.y || 0

@@ -5833,6 +5833,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
    It is a real modal surface: the scene stays recognizable underneath, but cannot receive a
    stray tap before Continue or Start over has established which state owns the page. */
 #loft-recovery-gate{position:absolute; inset:0; z-index:9; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.55rem; padding:1rem; box-sizing:border-box; color:var(--ink); background:rgba(248,245,236,.78); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px); text-align:center}
+.hunt-viewport.recovery-lower-preview #loft-recovery-gate{z-index:13}
 #loft-recovery-gate .loft-entry-brand{margin-bottom:.05rem}
 @media (max-width:480px){
   #loft-recovery-gate{gap:.2rem; padding:.35rem}
@@ -89313,26 +89314,31 @@ function spawnDustMote(container) {
     var table = {
       kitchen: {
         id: "bathroom",
+        openClass: "bathroom-room-open",
         element: document.getElementById("bathroom-room"),
         open: function () { return window.__openBathroomRoom && window.__openBathroomRoom(); }
       },
       garden: {
         id: "dungeon",
+        openClass: "prince-basement-open",
         element: document.getElementById("prince-basement"),
         open: function () { return window.__openGardenPrince && window.__openGardenPrince(); }
       },
       cuddly: {
         id: "cinema",
+        openClass: "cinema-room-open",
         element: document.getElementById("cinema-room"),
         open: function () { return window.__openCinemaRoom && window.__openCinemaRoom(); }
       },
       office: {
         id: "bedroom",
+        openClass: "bedroom-room-open",
         element: document.getElementById("bedroom-room"),
         open: function () { return window.__openBedroomRoom && window.__openBedroomRoom(); }
       },
       balcony: {
         id: "entrance",
+        openClass: "entrance-room-open",
         element: document.getElementById("entrance-room"),
         open: function () { return window.__openEntranceRoom && window.__openEntranceRoom(); }
       }
@@ -103952,6 +103958,55 @@ function spawnDustMote(container) {
     introWatchParent = null;
     introWatchNext = null;
   }
+  var recoveryLowerPreview = null;
+  function clearRecoveryLowerPreview() {
+    var preview = recoveryLowerPreview;
+    if (!preview) return;
+    recoveryLowerPreview = null;
+    var viewport = document.querySelector(".hunt-viewport");
+    var live = activeLowerRoom();
+    var becameLive = !!(live && live.id === preview.id);
+    if (viewport) {
+      viewport.classList.remove("recovery-lower-preview");
+      if (!becameLive) viewport.classList.toggle(preview.openClass, preview.hadOpenClass);
+    }
+    if (!becameLive && preview.element) {
+      preview.element.hidden = preview.wasHidden;
+      preview.look.forEach(function (item) {
+        preview.element.classList.toggle(item.name, item.had);
+      });
+    }
+    if (preview.element) {
+      if (preview.ariaHidden == null) preview.element.removeAttribute("aria-hidden");
+      else preview.element.setAttribute("aria-hidden", preview.ariaHidden);
+    }
+  }
+  function previewRecoveryLowerRoom(saved) {
+    var progress = saved && saved.progress;
+    var lowerRoom = savedLowerRoom(progress);
+    var viewport = document.querySelector(".hunt-viewport");
+    if (!lowerRoom || !lowerRoom.element || !viewport) return;
+    var look = [];
+    function setLook(name, on) {
+      look.push({ name: name, had: lowerRoom.element.classList.contains(name) });
+      lowerRoom.element.classList.toggle(name, !!on);
+    }
+    if (lowerRoom.id === "cinema") setLook("cinema-night", progress.daylight === false);
+    else if (lowerRoom.id === "bedroom") setLook("bedroom-night", progress.daylight === false);
+    else if (lowerRoom.id === "entrance") setLook("entrance-day", progress.daylight !== false);
+    recoveryLowerPreview = {
+      id: lowerRoom.id,
+      element: lowerRoom.element,
+      openClass: lowerRoom.openClass,
+      hadOpenClass: viewport.classList.contains(lowerRoom.openClass),
+      wasHidden: lowerRoom.element.hidden,
+      ariaHidden: lowerRoom.element.getAttribute("aria-hidden"),
+      look: look
+    };
+    lowerRoom.element.hidden = false;
+    lowerRoom.element.setAttribute("aria-hidden", "true");
+    viewport.classList.add("recovery-lower-preview", lowerRoom.openClass);
+  }
   function hideRecoveryGate() {
     var startWaitingAutoplay = apWaitRecovery;
     var hadRecoveryGate = !!recoveryGate;
@@ -103959,6 +104014,7 @@ function spawnDustMote(container) {
     apWaitRecovery = false;
     if (recoveryKeyHandler) document.removeEventListener("keydown", recoveryKeyHandler, true);
     recoveryKeyHandler = null;
+    clearRecoveryLowerPreview();
     if (recoveryGate && recoveryGate.parentNode) recoveryGate.parentNode.removeChild(recoveryGate);
     recoveryGate = null;
     recoverySaved = null;
@@ -104007,6 +104063,7 @@ function spawnDustMote(container) {
     strip.classList.toggle("viewing-office", progress.room === "office");
     strip.classList.toggle("viewing-balcony", progress.room === "balcony");
     markFarRooms(idx);
+    previewRecoveryLowerRoom(saved);
   }
   function holdRecoveryActivationUntilRelease(e) {
     var key = e.key, code = e.code;

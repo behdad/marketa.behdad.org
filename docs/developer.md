@@ -271,9 +271,12 @@ gates allow it. Live observations and derived rolls remain fresh; calls, cameras
 timers, spawned effects, runtimes, and live minigame loops stay stopped. Geometry owners capture only
 validated settled state and restore it in `afterStage`, never transient drag motion or reactions.
 `progress.lowerRoom` records only the active lower-room identity and is accepted only when it matches
-`progress.room`. Recovery settles the upstairs room and systems first, then enters through the lower
-room's normal open hook. This preserves each room's own reset/parking rules while leaving Cinema
-powered off and the Dungeon at its play wall rather than starting media or an iframe runtime.
+`progress.room`. The unopened recovery gate previews that lower room with temporary DOM visibility
+and presentation classes only; it does not call an open hook, discover the room, change captions,
+start audio/media, or mutate checkpoint state. Gate teardown restores those temporary values, while
+Continue settles the upstairs room and systems first and then enters through the lower room's normal
+open hook. This preserves each room's own reset/parking rules while leaving Cinema powered off and
+the Dungeon at its play wall rather than starting media or an iframe runtime.
 Finite quantities are bounded, and in-flight actions normalize to a safe settled state before capture.
 The recovery gate remains mounted as a paint cover through both restore phases, environment and
 occasion settlement, and the final room change. `applyCheckpoint` then discards the preview snapshot

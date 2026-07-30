@@ -24,8 +24,8 @@ var HARNESS = [
   ' var cinemaSky=document.getElementById("cinema-window-sky");cinemaSky.style.transition="none";report.steps.cinemaDay={night:document.getElementById("cinema-room").classList.contains("cinema-night"),fill:getComputedStyle(cinemaSky).fill};window.__setDayNight(true);await sleep(40);report.steps.cinemaNight={night:document.getElementById("cinema-room").classList.contains("cinema-night"),fill:getComputedStyle(cinemaSky).fill};window.__setDayNight(false);await sleep(40);',
   ' setLang("cs");report.steps.cs={title:document.getElementById("cinema-room-title").textContent,close:document.getElementById("cinema-room-close").getAttribute("aria-label")};setLang("en");',
   ' var film=document.querySelector(".cinema-film[data-vimeo-id=\\"1096537359\\"]");click(film);await sleep(80);var frame=document.getElementById("cinema-player");',
-  ' var shell=document.getElementById("cinema-screen-shell"),frameRect=frame&&frame.getBoundingClientRect(),shellRect=shell.getBoundingClientRect();',
-  ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,chooser:document.getElementById("cinema-chooser").hidden,chooserDisplay:getComputedStyle(document.getElementById("cinema-chooser")).display,frameRect:frameRect&&{x:frameRect.x,y:frameRect.y,width:frameRect.width,height:frameRect.height},shellRect:{x:shellRect.x,y:shellRect.y,width:shellRect.width,height:shellRect.height}};',
+  ' var shell=document.getElementById("cinema-screen-shell"),wrap=document.getElementById("cinema-player-wrap"),chooser=document.getElementById("cinema-chooser"),backButton=document.getElementById("cinema-chooser-back"),sr=shell.getBoundingClientRect(),wr=wrap.getBoundingClientRect(),fr=frame&&frame.getBoundingClientRect(),br=backButton.getBoundingClientRect(),rr=document.getElementById("cinema-room").getBoundingClientRect();',
+  ' report.steps.play={state:window.__cinemaRoomState(),src:frame&&frame.src,allow:frame&&frame.getAttribute("allow"),duck:window.__partyDuck,chooser:chooser.hidden,chooserDisplay:getComputedStyle(chooser).display,geometry:fr&&{frame:[fr.left,fr.top,fr.width,fr.height],wrap:[wr.left,wr.top,wr.width,wr.height],shell:[sr.left+shell.clientLeft,sr.top+shell.clientTop,shell.clientWidth,shell.clientHeight],back:[br.left,br.top,br.right,br.bottom],room:[rr.left,rr.top,rr.right,rr.bottom]}};',
   ' click(document.getElementById("cinema-chooser-back"));await sleep(40);report.steps.back={state:window.__cinemaRoomState(),frame:!!document.getElementById("cinema-player"),chooser:document.getElementById("cinema-chooser").hidden};',
   ' click(film);await sleep(40);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__cinemaRoomState(),room:window.currentStageName,frame:!!document.getElementById("cinema-player"),channel:window.__cuddlyProjector.channel()};',
   ' window.goToStage("cuddly");window.__cuddlyProjector.set("fire");window.__playSongAt(0);await sleep(100);window.__openCinemaRoom();click(film);await sleep(40);click(document.getElementById("cinema-room-close"));await sleep(900);report.steps.fastClose={open:window.__cinemaRoomState().open,song:window.__phoneMusicPlaying(),hidden:document.getElementById("cinema-room").hidden,viewport:document.querySelector(".hunt-viewport").classList.contains("cinema-room-open"),roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility]};',
@@ -87,12 +87,14 @@ check(s.play && s.play.state.playing && s.play.state.video === "1096537359" &&
   /player\.vimeo\.com\/video\/1096537359/.test(s.play.src || "") && /dnt=1/.test(s.play.src || "") &&
   /autoplay/.test(s.play.allow || "") && /fullscreen/.test(s.play.allow || "") && s.play.duck === 0.06 && s.play.chooser,
   "choosing a film creates the privacy-conscious Vimeo player and ducks the party", s.play);
-check(s.play && s.play.chooserDisplay === "none" && s.play.frameRect && s.play.shellRect &&
-  s.play.frameRect.x >= s.play.shellRect.x && s.play.frameRect.x - s.play.shellRect.x < 10 &&
-  s.play.frameRect.y >= s.play.shellRect.y && s.play.frameRect.y - s.play.shellRect.y < 10 &&
-  s.play.frameRect.width / s.play.shellRect.width > 0.95 &&
-  s.play.frameRect.height / s.play.shellRect.height > 0.94,
-  "the hidden chooser releases its layout so the Vimeo picture fills the screen aperture", s.play);
+check(s.play && s.play.chooserDisplay === "none" && s.play.geometry &&
+   s.play.geometry.frame.every(function (value, index) { return Math.abs(value - s.play.geometry.wrap[index]) < 0.6; }) &&
+   Math.abs(s.play.geometry.frame[2] - s.play.geometry.shell[2]) < 0.6 &&
+   Math.abs(s.play.geometry.frame[3] - s.play.geometry.shell[3]) < 0.6,
+   "the Vimeo iframe fills the screen content box exactly", s.play && s.play.geometry);
+check(s.play && s.play.geometry && s.play.geometry.back[2] < s.play.geometry.shell[0] &&
+   s.play.geometry.room[3] - s.play.geometry.back[3] < 30,
+   "Choose another sits outside the screen at the cinema's low-left edge", s.play && s.play.geometry);
 check(s.back && s.back.state.open && !s.back.state.playing && !s.back.frame && !s.back.chooser,
   "returning to the chooser removes the cross-origin player", s.back);
 check(s.navigate && !s.navigate.state.open && !s.navigate.state.playing && s.navigate.room === "office" &&

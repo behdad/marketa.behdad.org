@@ -243,8 +243,11 @@ dots move between lower rooms.
 From the Balcony, press `↓` or double-click/double-tap a truly bare patch of its
 background to descend to **The Lofts** street entrance. The native SVG
 night facade keeps the historic brick, stone, window, and timber-door character
-without reproducing an address. Every distinct street detail responds: tap or
-focus and press Enter/Space on any of the five window bays, the name stone,
+without reproducing an address. By day the façade and street brighten while
+the windows, hallway, and hanging entry lamps start dark; at night those lights
+start on. Each of the five window bays toggles independently. Flip every one
+away from its day/night default for a caption payoff. Every other distinct
+street detail responds: tap or focus and press Enter/Space on the name stone,
 doors, entry lamps, tree canopy, or sidewalk for a small light, movement, and
 sound reaction. While music is playing, the visible entrance glass gives a
 subtle beat-rattle; reduced-motion visitors get a still facade. `↑`, Escape,

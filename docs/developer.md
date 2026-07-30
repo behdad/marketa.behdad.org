@@ -619,6 +619,11 @@ paired entry lamps, tree canopy, and sidewalk pointer/touch plus Enter/Space
 responses without changing the facade paint order. `data-entrance-action`
 selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
 in-flight class so no one-shot survives a room leave or reset.
+The Balcony stage's `.dusk` class is observed as Entrance's day/night owner.
+`syncEntranceDayNight()` brightens the daytime facade, suppresses the door and
+entry-lamp glow, and resets all five independent window lights off; night resets
+them on. Reaching the complete inverse state flashes the localized caption once.
+`__entranceRoomState().windows` exposes the ordered light state for focused tests.
 Like the other full-viewport overlays, it refreshes the shared room-ambience
 gate on both entry and return so the preserved Balcony cannot keep sounding
 under the street scene. `updateCuddlyGrooving()` also gates a restrained,

@@ -939,6 +939,9 @@ math lock; explicit/cinematic deep links may skip it. The four shell surfaces sh
 and a short opacity/translate handoff; reduced-motion mode keeps the same state changes without
 motion. `setPhoneAppReturn` is the only owner of the
 app-level return transition: launcher, close phone, or return to Messages.
+Call portraits and local self-views reuse the office call-card helpers
+(`__callFigLabel` and `__callHostLabel`) so their translated roles, relationships,
+and fun facts stay aligned across the laptop, monitor, and pocket phone.
 
 Back behavior depends on entry context:
 

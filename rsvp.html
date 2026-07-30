@@ -195,6 +195,7 @@ footer{margin-top:2.6rem}
   background:var(--paper); color:var(--ink); border:1px solid var(--rule);
   box-shadow:0 6px 22px rgba(69,58,49,.28); z-index:23; font-size:1rem;
 }
+.egg-bubble.who-pop.phone-tooltip{z-index:70} /* clicked call bios must clear the pocket phone's z65 overlay */
 .egg-bubble.who-pop em{font-style:normal; font-weight:700; color:var(--ink)}
 /* fun-fact: a second line under a person's name/role/relationship (funFact()) — its own line so the
    popup stays readable; works in the dark bubble, the white who-pop card, the call cards, and the roster. */
@@ -41905,6 +41906,13 @@ function quickReversalGesture(action) {
     var m = CALL_FIGS[lid]; return m ? "<em>" + m[0] + "</em> · " + tipText(m[1]) + relLine(m[0]) + funFact(m[0]) : null;
   }
   window.__callFigLabel = figHtml; // the pocket-phone call clones (data-lid) reuse these exact labels
+  function hostHtml(who) {
+    if (who === "both") return "<em>markéta &amp; behdad</em> · " + tipText("role_hosts");
+    var name = who === "marketa" ? "markéta" : "behdad";
+    var role = who === "marketa" ? "role_bride" : "role_groom";
+    return "<em>" + name + "</em> · " + tipText(role) + relLine(who) + funFact(who);
+  }
+  window.__callHostLabel = hostHtml; // phone self-view clones share the exact host cards below
   var CALL_SURFACE_SEL = "#monitor-tehran-scene,#monitor-california-scene,#laptop-call-remote,#madla-call-scene"; // every video-call family card uses one fixed lower-left screen position; tiny/moving callers are unreliable anchors and arrows obscure the call.
   function callSurface(el) { return (el && el.closest) ? el.closest(CALL_SURFACE_SEL) : null; }
   Object.keys(CALL_FIGS).concat(Object.keys(GARDEN_COUPLE)).forEach(function (lid) {
@@ -41918,6 +41926,18 @@ function quickReversalGesture(action) {
       else showDirectPersonCard(el, figHtml(lid)); // defensive fallback for a future non-call reuse
     }); // no stopPropagation: the global dismisser's contains-check keeps the new card up
   });
+  function wireHostSelf(id, who, surfaceId, placement) {
+    var el = document.getElementById(id), surface = document.getElementById(surfaceId);
+    if (!el || !surface) return;
+    el.style.cursor = "pointer";
+    function open(e) {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      if (window.__whoPop) window.__whoPop(el, hostHtml(who), surface, placement);
+    }
+    el.addEventListener("click", open);
+  }
+  wireHostSelf("monitor-family-self", "behdad", "monitor-family-video");
+  wireHostSelf("laptop-call-self", "marketa", "laptop-call-remote", "call-left");
   // A live call owns the screen. Let its figures and close control handle their target events,
   // then stop blank call areas (including the local self-view) before they reach the surrounding
   // laptop/monitor chrome. Otherwise the device's generic click/repaint and double-click handlers
@@ -64770,10 +64790,20 @@ async def localfont(name):
       })(figs[i]);
       // the tiny self-view thumbnail — the couple on a call they placed, Markéta alone on one that rang in
       var self = shell && shell.querySelector(".phone-incall .pic-self");
-      var selfRoot = self && self.querySelector("[data-lid]");
-      if (selfRoot) {
-        var selfHtml = callIncoming ? "<em>markéta</em>" : "<em>markéta &amp; behdad</em>";
-        selfRoot.addEventListener("click", function () { if (window.__whoPop) window.__whoPop(selfRoot, selfHtml); });
+      if (self) {
+        var who = callIncoming ? "marketa" : "both";
+        self.style.cursor = "pointer";
+        self.setAttribute("role", "button");
+        self.setAttribute("tabindex", "0");
+        function openSelf(e) {
+          if (e) { e.preventDefault(); e.stopPropagation(); }
+          var surface = shell.querySelector(".phone-incall .pic-video");
+          if (window.__whoPop && window.__callHostLabel) window.__whoPop(self, window.__callHostLabel(who), surface);
+        }
+        self.addEventListener("click", openSelf);
+        self.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") openSelf(e);
+        });
       }
     }
     function phoneLifeStart(fam) {
@@ -101952,6 +101982,13 @@ function spawnDustMote(container) {
       // not mistaken for an outside click and allowed to dismiss the card in the same event.
       b._anchor = anchor;
       b.classList.add("who-pop"); // ...but paint it white like the roster (see .egg-bubble.who-pop)
+      // The pocket phone is a z65 fixed overlay. A body-level card at the normal who-pop z23
+      // receives the tap but paints behind that overlay, which made every caller bio invisible
+      // on the real phone UI. Reuse the phone tooltip tier (z70) for clicked call cards too.
+      if ((anchor.closest && anchor.closest(".phone-backdrop")) ||
+          (posEl && posEl.closest && posEl.closest(".phone-backdrop"))) {
+        b.classList.add("phone-tooltip");
+      }
       // Text/font layout can settle a frame after insertion. Re-measure once so an above-arrow
       // card keeps its intended gap instead of growing downward over the arrow after positioning.
       requestAnimationFrame(function () {

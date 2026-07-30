@@ -135,6 +135,8 @@ the whole loft and restores removed apps.
 The status-bar reception bars make a rough, permission-free estimate of how far
 your timezone region sits from Edmonton;
 tap them to read the carrier’s verdict.
+During family calls, tap any caller portrait—including the small local
+self-view—to see who is on screen.
 
 The office monitor contains the larger apps, classic games, Chat, Code, Python,
 and a small Linux environment. These technical toys are optional and some have

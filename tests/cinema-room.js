@@ -113,7 +113,7 @@ check(s.open && s.open.posters.length === 3 &&
   s.open.posters.every(function (poster) { var box=poster.box,img=poster.image,first=s.open.posters[0].box;return Math.abs(box[1]-first[1])<0.6 && Math.abs(box[2]-first[2])<0.6 && Math.abs(box[3]-first[3])<0.6 && poster.fit==="cover" && Math.abs(img[0]-box[0]-1)<0.6 && Math.abs(img[1]-box[1]-1)<0.6 && Math.abs(img[2]-box[2]+2)<0.6 && Math.abs(img[3]-box[3]+2)<0.6; }) &&
   Math.abs((s.open.posters[1].box[0]-s.open.posters[0].box[0])-(s.open.posters[2].box[0]-s.open.posters[1].box[0]))<0.6,
   "three equal poster cards form one balanced row", s.open && s.open.posters);
-check(s.open && s.open.posters.map(function(p){return p.label;}).join("|")==="Identity|MANIA|Water" &&
+check(s.open && s.open.posters.map(function(p){return p.label;}).join("|")==="Identity|Water|MANIA" &&
   s.open.posters.every(function(p){return p.src===p.poster && /^art\/cinema-(identity|mania|water)\.png$/.test(p.src);}),
   "the original posters carry exact accessible film titles and poster hooks", s.open && s.open.posters);
 check(s.cs && s.cs.title === "Na co se podíváme?" && s.cs.close === "Zpět do Cuddly-puddly" &&
@@ -136,7 +136,7 @@ check(s.play && s.play.geometry &&
    "Choose another is attached to the projector screen's bottom-left bezel", s.play && s.play.geometry);
 check(s.sideTransport && !s.sideTransport.pause.state.playing && !s.sideTransport.pause.duck.active &&
   s.sideTransport.play.state.playing && s.sideTransport.play.duck.active &&
-  s.sideTransport.next.playing && s.sideTransport.next.video === "902708480",
+  s.sideTransport.next.playing && s.sideTransport.next.video === "927763091",
   "the shared side Play/Pause and Next controls hand off to the active cinema projector", s.sideTransport);
 check(s.sprinklerShort && s.sprinklerShort.state.shorted && !s.sprinklerShort.state.playing &&
   !s.sprinklerShort.frame && !s.sprinklerShort.duck.active && s.sprinklerShort.spraying &&

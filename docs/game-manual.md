@@ -327,7 +327,9 @@ Press backtick to open the drop-down console and type `help` or `shortcuts()` to
 get oriented. The Code app can run JavaScript and Python files; named files are
 saved in this browser. Its JS/PY control changes only how the current buffer
 runs—it never renames the file or opens a same-named file automatically.
-Renaming to a filename that already exists is refused rather than overwriting it.
+An exact filename collision turns the name red while it is being edited; typing
+can continue to a unique name. Enter and Escape leave the conflict untouched;
+leaving the field reverts to the old name.
 JavaScript and Python examples can open native SVG
 graphics views. Once a drawing exists, the small **gfx** control appears so you
 can switch between it and the Console output. On the zoomed monitor desktop,

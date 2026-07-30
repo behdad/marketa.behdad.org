@@ -165,8 +165,10 @@ var harness = [
   '  code.value=\'print("still irene")\';code.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});',
   '  out.languageSwitchStorage=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}")["irene.py"]===\'print("still irene")\'&&JSON.parse(localStorage.getItem("deskScripts")||"{}")["irene.js"]==="window.irene = 1;";',
   '  Array.from(document.querySelectorAll("#monitor-code-list .code-item")).filter(function(x){return x.title.indexOf("irene.js ·")===0})[0].click();',
-  '  var jsBefore=JSON.parse(localStorage.getItem("deskScripts")||"{}");jsBefore["taken.js"]="do not overwrite";localStorage.setItem("deskScripts",JSON.stringify(jsBefore));name.value="taken.js";code.value="window.irene = 2;";name.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});',
-  '  var jsAfter=JSON.parse(localStorage.getItem("deskScripts")||"{}");out.renameCollision=name.value==="irene.js"&&jsAfter["taken.js"]==="do not overwrite"&&jsAfter["irene.js"]==="window.irene = 2;";',
+  '  var pyBefore=JSON.parse(localStorage.getItem("deskPythonScripts")||"{}");pyBefore["test.py"]="existing python";localStorage.setItem("deskPythonScripts",JSON.stringify(pyBefore));',
+  '  name.value="test.py";name.dispatchEvent(new Event("input",{bubbles:true}));out.conflictWhileTyping=name.classList.contains("conflict");name.value="test.py.bak";name.dispatchEvent(new Event("input",{bubbles:true}));await new Promise(function(r){setTimeout(r,360)});',
+  '  var jsBefore=JSON.parse(localStorage.getItem("deskScripts")||"{}");out.longerNameAllowed=!name.classList.contains("conflict")&&jsBefore["test.py.bak"]==="window.irene = 1;"&&JSON.parse(localStorage.getItem("deskPythonScripts")||"{}")["test.py"]==="existing python";jsBefore["taken.js"]="do not overwrite";localStorage.setItem("deskScripts",JSON.stringify(jsBefore));name.value="taken.js";code.value="window.irene = 2;";name.dispatchEvent(new Event("input",{bubbles:true}));name.focus();await new Promise(function(r){setTimeout(r,360)});name.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));name.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));out.conflictKeysInert=name.value==="taken.js"&&name.classList.contains("conflict")&&mon.classList.contains("show-code");name.dispatchEvent(new Event("blur"));',
+  '  var jsAfter=JSON.parse(localStorage.getItem("deskScripts")||"{}");out.renameCollisionDetail={name:name.value,conflict:name.classList.contains("conflict"),taken:jsAfter["taken.js"],source:jsAfter["test.py.bak"]};out.renameCollision=out.conflictKeysInert&&name.value==="test.py.bak"&&!name.classList.contains("conflict")&&jsAfter["taken.js"]==="do not overwrite"&&jsAfter["test.py.bak"]==="window.irene = 2;";',
   '  name.value="broken.js"; code.value="throw new Error(\\\"code boom\\\")";',
   '  document.getElementById("monitor-code-run").click(); await new Promise(function(r){setTimeout(r,80)});',
   '  out.jsConsole=mon.classList.contains("show-console"); out.jsError=document.getElementById("monitor-console-out").textContent; out.lastError=window.__lastCodeError;',
@@ -197,15 +199,15 @@ var harness = [
   '<\/script>',
 ].join("\n");
 
-var state = lib.runPageSync("rsvp.html", harness, 1800, { patchRaf: true });
+var state = lib.runPageSync("rsvp.html", harness, 2400, { patchRaf: true });
 check(state && !state.error, "headless Code interaction completed", state && state.error);
 if (state && !state.error) {
   check(state.pythonSaved === 'print("turtle time")' && state.jsUntouched,
     "a named Python buffer autosaves without contaminating legacy JavaScript files", state);
   check(state.languageSwitchPreserves && state.languageSwitchStorage,
     "language pills change only the runtime without renaming, navigating, migrating, or overwriting files", state);
-  check(state.renameCollision,
-    "renaming to an existing filename is refused without losing edits or overwriting either file", state);
+  check(state.conflictWhileTyping && state.longerNameAllowed && state.conflictKeysInert && state.renameCollision,
+    "an exact collision warns while typing, ignores Enter/Escape, allows a longer unique name, and reverts only on blur", JSON.stringify(state));
   check(state.draftLanguage === "python",
     "the recoverable Code draft retains its language", state.draftLanguage);
   check(state.routed && state.routed.name === "irene.py" && state.routed.code === 'print("turtle time")',

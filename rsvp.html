@@ -4484,6 +4484,7 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 .code-lang-btn:hover{color:#c6f0ad}
 .code-name{flex:1; min-width:0; background:#161c20; border:0.3px solid #2b3a3a; border-radius:0.8px; outline:none; color:#cfe3cf; font:inherit; font-size:2px; height:3.6px; line-height:3.6px; padding:0 0.8px}
 .code-name::placeholder{color:#5f7a5f}
+.code-name.conflict{color:#f0a0a0;border-color:#b95656;background:#251718}
 .code-btn{flex:none; width:4px; height:4px; display:flex; align-items:center; justify-content:center; background:#1d2622; border:0.3px solid #2b3a3a; border-radius:0.8px; color:#8fd070; font:inherit; font-size:3px; line-height:1; padding:0; cursor:pointer} /* same keycap metrics as .code-side-btn so the whole toolbar reads as one even set */
 .code-btn:hover{background:#26332b}
 .code-btn-run{color:#a7e08a; font-size:2.5px} /* the solid ▶ triangle reads heavier than the outline arrows, so nudge it a hair smaller to optically match */
@@ -55433,9 +55434,22 @@ setOfficeProgress("pc", false);
   }
   function codeRejectExistingName() {
     if (codeName) codeName.value = codeLastSavedName || "";
+    if (codeName) codeName.classList.remove("conflict");
     codeAiSetStatus("that filename already exists", false);
     codeRefreshPicker(codeLastSavedName);
     codeScheduleDraft();
+  }
+  function codeMarkNameConflict() {
+    if (!codeName) return false;
+    var name = codeName.value.trim();
+    var conflict = !!name && codeNameExistsElsewhere(name, codeLastSavedName, codeLastSavedLanguage);
+    codeName.classList.toggle("conflict", conflict);
+    return conflict;
+  }
+  function codeFinishNameEdit() {
+    if (!codeMarkNameConflict()) return true;
+    codeRejectExistingName();
+    return false;
   }
   function codePaintLanguage() {
     if (codeLangJsBtn) codeLangJsBtn.classList.toggle("active", codeLanguage === "js");
@@ -55613,9 +55627,10 @@ setOfficeProgress("pc", false);
     if (codeNameExistsElsewhere(name, prev, prevLang)) {
       if (prev) codeWriteBuffer(prev, code, prev, prevLang, prevLang);
       else writeCodeUnsaved(code, codeLanguage);
-      codeRejectExistingName();
+      codeMarkNameConflict();
       return;
     }
+    codeName.classList.remove("conflict");
     codePendingCommit = function () {
       codeAutoTimer = null; codePendingCommit = null;
       codeWriteBuffer(name, code, prev, lang, prevLang);
@@ -56154,9 +56169,34 @@ setOfficeProgress("pc", false);
   if (codeCode) codeCode.addEventListener("input", function () { codeScheduleAutoSave(); codeScheduleDraft(); });
   if (codeName) codeName.addEventListener("input", function () {
     var inferred = codeExplicitLanguage(codeName.value);
-    if (inferred && inferred !== codeLanguage) { codeLanguage = inferred; codeRememberLanguage(); }
+    if (!codeLastSavedName && inferred && inferred !== codeLanguage) { codeLanguage = inferred; codeRememberLanguage(); }
+    codeMarkNameConflict();
     codeScheduleAutoSave(); codeScheduleDraft();
   }); // rename persists too (Save is gone), with .js/.py selecting its runtime
+  if (codeName) {
+    codeName.addEventListener("blur", codeFinishNameEdit);
+    codeName.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") return;
+      if (codeMarkNameConflict()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      event.preventDefault();
+      codeFinishNameEdit();
+      try { codeCode.focus({ preventScroll: true }); } catch (_error) { try { codeCode.focus(); } catch (_error2) {} }
+    });
+    // The app-level Escape closer is registered later on window capture, before a target-level
+    // handler could intervene. Register this guard first: conflict editing owns Enter/Escape and
+    // deliberately does nothing until the visitor either keeps typing or leaves the field.
+    window.addEventListener("keydown", function (event) {
+      if (document.activeElement !== codeName ||
+          (event.key !== "Enter" && event.key !== "Escape" && event.key !== "Esc") ||
+          !codeMarkNameConflict()) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  }
   if (codeLangJsBtn) codeLangJsBtn.addEventListener("click", function (e) { e.stopPropagation(); codeSetLanguage("js"); });
   if (codeLangPyBtn) codeLangPyBtn.addEventListener("click", function (e) { e.stopPropagation(); codeSetLanguage("python"); });
   // ── Code autocomplete ────────────────────────────────────────────────────────────

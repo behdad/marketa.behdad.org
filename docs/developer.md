@@ -159,8 +159,13 @@ filenames select a runtime; an extensionless name retains the manually selected
 one when first saved or opened. The JS/PY pills change only the execution
 language of the current buffer. They never modify its name, navigate to a
 same-basename sibling, migrate it between stores, or overwrite that sibling.
-Filename collisions across either store are rejected for renames, copies, and
-imports; the original buffer remains selected and its edits remain autosaved.
+Filename collisions across either store are non-blocking while the filename
+field is active (red `.conflict` state, no rename autosave), then revert on blur
+if unresolved. Enter and Escape are capture-guarded no-ops during a conflict, so
+Escape cannot reach the app closer. This permits typing through an intermediate collision
+such as `test.py` on the way to `test.py.bak`. Copies and imports reject their
+collision immediately. The original buffer remains selected and its edits remain
+autosaved.
 Keep these stores outside checkpoint/reset state.
 
 Python Code jobs queue while self-hosted Pyodide loads, then execute serially

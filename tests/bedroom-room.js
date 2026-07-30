@@ -13,6 +13,7 @@ var HARNESS = [
   'function touchup(el){el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
   'function click(el){el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   'function key(name){document.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
+  'function propkey(el,name){el.focus();el.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'function box(el){var r=el.getBoundingClientRect();return [r.left,r.top,r.width,r.height];}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
@@ -21,7 +22,8 @@ var HARNESS = [
   ' var badge=document.querySelector(".msg-badge"),coach=document.querySelector(".msg-badge-coach"),thumb=document.querySelector(".msg-thumb"),ring=document.querySelector(".call-ring");[badge,coach,thumb,ring].forEach(function(el){if(el)el.classList.add("show");});',
   ' var rb=box(room),vb=box(viewport),ob=box(office),bedroomCloseStyle=getComputedStyle(document.getElementById("bedroom-room-close")),cinemaCloseStyle=getComputedStyle(document.getElementById("cinema-room-close")),princeCloseStyle=getComputedStyle(document.getElementById("prince-basement-close"));function controlStyle(style){return [parseFloat(style.width),parseFloat(style.height),parseFloat(style.right),parseFloat(style.top)];}report.steps.open={state:window.__bedroomRoomState(),room:window.currentStageName,hidden:room.hidden,klass:viewport.classList.contains("bedroom-room-open"),geometry:{bedroom:rb,viewport:vb,officeBottom:ob[1]+ob[3],controls:{bedroom:controlStyle(bedroomCloseStyle),cinema:controlStyle(cinemaCloseStyle),prince:controlStyle(princeCloseStyle)}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],notices:[badge,coach,thumb,ring].map(function(el){return el&&getComputedStyle(el).visibility;})};',
   ' var wash=room.querySelector(".bedroom-night-wash"),halo=room.querySelector(".bedroom-lamp-halo");wash.style.transition="none";halo.style.transition="none";report.steps.day={state:window.__bedroomRoomState(),wash:getComputedStyle(wash).opacity,halo:getComputedStyle(halo).opacity};window.__setDayNight(true);await sleep(50);report.steps.night={state:window.__bedroomRoomState(),wash:getComputedStyle(wash).opacity,halo:getComputedStyle(halo).opacity};window.__setDayNight(false);await sleep(50);',
-  ' setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bedroom-room-close").getAttribute("aria-label"),title:document.getElementById("bedroom-room-close").getAttribute("title")};setLang("en");',
+  ' setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bedroom-room-close").getAttribute("aria-label"),title:document.getElementById("bedroom-room-close").getAttribute("title"),scene:document.getElementById("bedroom-room-art").getAttribute("aria-label"),props:Array.from(room.querySelectorAll(".bedroom-prop")).map(function(el){return [el.id,el.getAttribute("aria-label"),el.getAttribute("title")];})};setLang("en");',
+  ' var glass=document.getElementById("bedroom-stained-glass"),leftLamp=document.getElementById("bedroom-left-lamp"),rightLamp=document.getElementById("bedroom-right-lamp"),gear=document.getElementById("bedroom-wall-gear"),wardrobe=document.getElementById("bedroom-wardrobe"),bed=document.getElementById("bedroom-bed"),leftTable=document.getElementById("bedroom-left-table"),rightTable=document.getElementById("bedroom-right-table");click(glass);click(leftLamp);click(rightLamp);propkey(gear,"Enter");propkey(wardrobe," ");click(bed);click(leftTable);propkey(rightTable,"Enter");report.steps.props={state:window.__bedroomRoomState(),focus:document.activeElement&&document.activeElement.id};',
   ' window.__secondRound=true;window.__deliverPhoneMessage("cue_mail");await sleep(80);badge=document.querySelector(".msg-badge");coach=document.querySelector(".msg-badge-coach");thumb=document.querySelector(".msg-thumb");report.steps.hold={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread(),badge:badge&&badge.classList.contains("show"),coach:coach&&coach.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};',
   ' key("ArrowUp");await sleep(1300);badge=document.querySelector(".msg-badge");thumb=document.querySelector(".msg-thumb");report.steps.return={state:window.__bedroomRoomState(),hidden:room.hidden,klass:viewport.classList.contains("bedroom-room-open"),focus:document.activeElement===viewport,held:window.__messageNotificationsHeld(),badge:badge&&badge.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};if(window.__hideMessageThumb)window.__hideMessageThumb(true);',
   ' window.goToStage("office");dblclick(document.getElementById("office-stainedglass"));await sleep(40);report.steps.interactive=window.__bedroomRoomState();',
@@ -75,14 +77,35 @@ check(s.day && !s.day.state.night && s.day.wash === "0" && Number(s.day.halo) < 
   s.night && s.night.state.night && Number(s.night.wash) > 0.2 && Number(s.night.halo) > 0.7,
   "Bedroom mirrors Office daylight and night lamp treatment", { day: s.day, night: s.night });
 check(s.cs && s.cs.room === "Ložnice" && s.cs.close === "Zpět do pracovny" &&
-  s.cs.title === "Zpět do pracovny",
+  s.cs.title === "Zpět do pracovny" && s.cs.scene === "Interaktivní ložnice" &&
+  s.cs.props && s.cs.props.length === 8 &&
+  s.cs.props.every(function (entry) { return entry[1] && entry[1] === entry[2]; }),
   "Bedroom dialog and exit control switch to Czech", s.cs);
+var propState = s.props && s.props.state && s.props.state.props || [];
+function propHas(id, cls) {
+  var found = propState.find(function (prop) { return prop.id === id; });
+  return !!(found && found.state.split(/\s+/).indexOf(cls) !== -1);
+}
+check(propState.length === 8 &&
+  propHas("bedroom-stained-glass", "glinting") &&
+  propHas("bedroom-left-lamp", "off") &&
+  propHas("bedroom-right-lamp", "off") &&
+  propHas("bedroom-wall-gear", "swinging") &&
+  propHas("bedroom-wardrobe", "tidied") &&
+  propHas("bedroom-bed", "made") &&
+  propHas("bedroom-left-table", "open") &&
+  propHas("bedroom-right-table", "open") &&
+  s.props.focus === "bedroom-right-table",
+  "every distinct Bedroom prop responds to pointer or keyboard activation", s.props);
 check(s.hold && s.hold.held.messages.indexOf("cue_mail") !== -1 &&
   s.hold.thread.indexOf("cue_mail") !== -1 && !s.hold.badge && !s.hold.coach && !s.hold.thumb &&
   s.return && !s.return.held.messages.length && s.return.badge && s.return.thumb,
   "incoming messages collect downstairs and surface after the return pan", { hold: s.hold, returned: s.return });
 check(s.return && !s.return.state.open && !s.return.state.closing && s.return.hidden &&
-  !s.return.klass && s.return.focus,
+  !s.return.klass && s.return.focus &&
+  s.return.state.props.every(function (prop) {
+    return !/\b(?:glinting|off|swinging|tidied|made|open)\b/.test(prop.state);
+  }),
   "Up completes the reverse pan, hides Bedroom, and restores viewport focus", s.return);
 check(s.interactive && !s.interactive.open && s.mouse && s.mouse.open && s.touch && s.touch.open,
   "only exact bare Office backgrounds accept mouse or touch double entry",
@@ -101,6 +124,8 @@ var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "Bedroom art keeps #" + id + " as a native SVG group");
 });
+check((source.match(/class="bedroom-prop[^"]*" role="button" tabindex="0"/g) || []).length === 8,
+  "all eight distinct Bedroom prop groups are keyboard-reachable SVG buttons");
 check(!/<image[^>]+bedroom/i.test(source),
   "Bedroom remains code-native rather than embedding a raster room image");
 check(/id="bedroom-brick" width="60" height="32"[\s\S]*?M0 1H60M0 16H60M0 31H60/.test(source),

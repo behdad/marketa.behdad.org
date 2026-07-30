@@ -591,6 +591,14 @@ background ids `#office-wall-bg`, `#office-plaster-bg`, and `#office-floor-bg`
 own desktop double-click and touch double-tap entry, so monitor, laptop, room
 toys, and other interactive descendants cannot accidentally descend. A narrow
 observer mirrors `#stage-office.dusk` into `.bedroom-night`.
+Every distinct foreground prop is an SVG `role="button"` with localized
+`aria-label`/tooltip copy: stained glass, each wall lamp, wall rack, wardrobe,
+bed, and each bedside drawer. The Bedroom's capture-phase key owner translates
+Enter/Space on those focused groups into their click path before claiming the
+remaining downstairs shortcuts. The interaction controller reuses shared SFX
+and clears persistent and one-shot classes on room close, so a return always
+starts from the authored composition. `__bedroomRoomState().props` is the
+focused regression surface for that cleanup.
 
 All five lower rooms claim the shared `"lower-room"` notification hold. This
 reuses the action-game queue: incoming messages enter the thread immediately,

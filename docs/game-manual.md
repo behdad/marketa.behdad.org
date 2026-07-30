@@ -194,6 +194,12 @@ night-sky piano, is contained to the Cuddly-puddly room. The media **Next**
 button advances projector programs without stopping at Off; once it reaches
 Night Sky, it stays there and advances the piano pieces instead.
 
+The small film ticket tucked against the Cuddly-puddly projector opens the loft
+cinema without changing the selected projector program. Pick one of the four
+films on the screen; **Choose another** stops it and returns to the chooser.
+The × button, Escape, or ordinary room navigation leaves the cinema. Film audio
+takes the foreground while it plays.
+
 On the balcony, open and light the smoker to begin the BBQ during a party. Its
 lid, firebox, food, and serving state are all interactive. Extinguishing it or
 ending the party ends BBQ mode.

@@ -162,6 +162,14 @@ self-terminating chord, bass, brush, kick, and melody voices scheduled ahead on 
 channel exit cancels the sole scheduler, fades the bed master, then closes only its `audioBed`
 handle.
 
+The cinema creates no new Web Audio graph. Opening it joins the foreground
+coverage gate, fades the active Cuddly projector score, and leaves the durable
+projector channel unchanged. Selecting a Vimeo film creates a cross-origin iframe,
+ducks the party through `__partyDuck`, and borrows the existing projector song
+suspend/restore handoff only when a loft song was genuinely playing. Returning to
+the chooser or leaving removes the iframe, the only reliable cross-origin stop;
+leaving also restores the borrowed song and re-evaluates projector/room beds.
+
 Room navigation gives ordinary room-local ambience a five-second fade. Cuddly projector channels
 use a shorter three-second room-exit fade so they recede behind the visitor without lingering.
 Projector score schedulers remain alive through that ramp, rather than exhausting their short
@@ -214,5 +222,6 @@ disabled. It does not create or join the loft’s shared audio graph.
 - **Regression:** `node tests/check.js` (new-Ctx == 1, fade/close race), `tests/state.js`
   (drone start/fade-stop storm, pause/groove), `tests/play.js` (full playthrough + click
   storm), `tests/projector-coffee.js` (seasonal order, translated now-playing, bed lifecycle),
+  `tests/cinema-room.js` (foreground coverage, Vimeo teardown, party duck, navigation),
   and `tests/piano-message.js` (message transition, layered keys, polyphony,
   backing-pause independence, and party continuity). All must pass.

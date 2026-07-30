@@ -532,6 +532,15 @@ Cuddly; restored explicit channel state outranks the seasonal fresh/reset defaul
 the full cycle, including `off`; media-next uses `__cuddlyProjector.next()`, skips `off` at the wrap,
 and hands subsequent next actions to the current piano piece once it reaches `stars`.
 
+The film ticket beside `#cuddly-wallscreen` opens `#cinema-room`, a hidden HTML
+overlay whose room art is native inline SVG. The overlay deliberately sits outside
+the strip: WebKit cannot composite a Vimeo iframe inside SVG `foreignObject`.
+Chooser cards carry `data-vimeo-id`, empty `data-vimeo-hash`, and empty `data-poster`
+hooks; unlisted hashes or supplied posters can be added by filling those attributes. A player iframe is created on
+selection and removed on Choose another, close, reset, or `goToStage`, which is the
+cross-origin playback teardown. `__cinemaRoomState()` exposes the compact
+open/playing/video test surface.
+
 ### Shared projections
 
 Cross-subsystem scalar projections have one named writer. `setBBQDayPartyState`,
@@ -640,9 +649,10 @@ deliberately allowed to continue while hidden or unfocused. Scene volume control
 while the console volume command controls the master bus. Media captured by
 `createMediaElementSource` must use an in-graph gain because WebKit can bypass the element's own
 volume.
-`__roomAmbienceCovered()` is the foreground-device gate: the pocket phone and zoomed laptop/monitor
-stop room-tone beds through `__refreshRoomAmbience()`, while songs, projector scores, calls, app
-media, and one-shots retain their own intended lifecycles.
+`__roomAmbienceCovered()` is the foreground-device gate: the pocket phone, zoomed laptop/monitor,
+and open cinema stop room-tone beds through `__refreshRoomAmbience()`. The cinema additionally
+fades Cuddly projector scores while its overlay is open; Vimeo playback ducks the party and
+temporarily owns any already-playing loft song.
 
 Stops should ramp a gain with the subsystem's `fadeSecs`, wait for the fade, then disconnect/close
 the handle. Abruptly closing mid-ramp can pop. The recording pipeline has an owner kill switch and a
@@ -1306,8 +1316,9 @@ Run focused tests for the changed ownership boundary. The main routes are:
   monitor/phone shell, context-menu, launch, and teardown behavior;
 - `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
   presentation entries and their recovery/lifecycle contracts;
-- `tests/projector-coffee.js`, `tests/media-transitions.js`, and `tests/piano-message.js` for
-  projector ordering, retained channel state, shared beds, transport, and play-along transitions;
+- `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`, and
+  `tests/cinema-room.js` for projector ordering, retained channel state, shared beds, transport,
+  play-along transitions, Vimeo teardown, and cinema navigation;
 - `tests/video-playlist.js` and `tests/video-kill-variants.js` for film selection, retained
   playheads, track-specific Kill visuals, and teardown reset;
 - `tests/party-lifecycle.js` for attended party timing and finales;

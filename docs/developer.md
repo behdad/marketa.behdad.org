@@ -564,7 +564,7 @@ objects cannot bubble into the entrance. `__bathroomRoomState()` exposes
 open/closing/hidden state for focused tests.
 
 `#entrance-room` is the code-native Balcony lower room. Its inline 680×340 SVG
-models the nighttime Cobogo Lofts facade without image or address assets.
+models the nighttime **The Lofts** facade without image or address assets.
 Entry is whitelisted to `#balcony-background`, so objects already owning
 double-click gestures remain untouched. The overlay pans up while the Balcony
 strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying

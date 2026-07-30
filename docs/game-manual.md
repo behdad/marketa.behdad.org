@@ -221,7 +221,7 @@ Backspace, or ordinary room navigation to return; **Who's here** and message
 pop-ups stay out of the way while you are downstairs.
 
 From the Balcony, press `↓` or double-click/double-tap a truly bare patch of its
-background to descend to the old Cobogo Lofts street entrance. The native SVG
+background to descend to **The Lofts** street entrance. The native SVG
 night facade keeps the historic brick, stone, window, and timber-door character
 without reproducing an address. `↑`, Escape, Backspace, or × returns to the
 Balcony. `←` exits to the adjacent Office; `→` returns at the right edge to the

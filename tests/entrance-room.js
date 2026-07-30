@@ -66,8 +66,8 @@ check(s.open && s.open.geometry && s.open.geometry.controls &&
   }),
   "Bathroom, Cinema, Prince, and Entrance share one close-control geometry",
   s.open && s.open.geometry && s.open.geometry.controls);
-check(s.open && s.open.label === "Cobogo Lofts entrance" &&
-  s.cs && s.cs.label === "Vstup do Cobogo Lofts" && s.cs.close === "Zpět na balkon",
+check(s.open && s.open.label === "The Lofts entrance" &&
+  s.cs && s.cs.label === "Vstup do The Lofts" && s.cs.close === "Zpět na balkon",
   "dialog and return labels switch between English and Czech", {en:s.open&&s.open.label,cs:s.cs});
 check(s.up && !s.up.open && s.escape && !s.escape.open && s.backspace && !s.backspace.open,
   "plain Up, Escape, and Backspace return upstairs", {up:s.up,escape:s.escape,backspace:s.backspace});
@@ -93,7 +93,7 @@ check(s.closed && !s.closed.covered && s.closed.messages.every(function(value){r
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="prince-basement"/) || [""])[0];
-check(/COBOGO LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
+check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
   /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
 check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#entrance-room-close\{/.test(source),

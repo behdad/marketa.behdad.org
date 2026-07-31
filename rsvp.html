@@ -29344,6 +29344,9 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <!-- Keep the toilet surface last so no fixture or ambient wash can intercept it. -->
         <rect id="bathroom-toilet-action" data-bath-action="toilet" class="hunt-hit" role="button" data-aria-i="bathroom_toilet" data-title-i="bathroom_toilet" aria-label="Flush the toilet" title="Flush the toilet" x="544" y="137" width="110" height="203" rx="8" fill="transparent" pointer-events="all"/>
         <rect id="bathroom-book-action" data-bath-action="book" class="hunt-hit" role="button" data-aria-i="bathroom_book" data-title-i="bathroom_book" aria-label="Flip through Markéta's toilet book" title="Flip through Markéta's toilet book" x="632" y="115" width="48" height="48" rx="7" fill="transparent" pointer-events="all"/>
+        <!-- The one shared loose cat is reparented here for its tub-rim cameo. The
+             active bubble hunt paints next so every floating target stays tappable. -->
+        <g id="bathroom-cat-overlay"></g>
         <!-- Filling the tub releases a finite, touch-friendly bubble hunt. -->
         <g id="bathroom-bubble-hunt" role="group" data-aria-i="bathroom_bubble_hunt" aria-label="Bubble hunt">
           <g id="bathroom-bubble-1" class="bathroom-bubble" data-bath-bubble="1" role="button" data-aria-i="bathroom_bubble_pop" aria-label="Pop bubble">
@@ -105890,8 +105893,8 @@ function spawnDustMote(container) {
     if (changed && window.__checkpointChanged) window.__checkpointChanged();
   };
   // Lower rooms share the same one cat. Cinema alternates between the woven pouf, the
-  // two parked bicycles and a floor-to-daybed hop; the bedroom hops onto the bed.
-  // The entrance and bathroom deliberately stay cat-free.
+  // two parked bicycles and a floor-to-daybed hop; the bedroom hops onto the bed; the
+  // bathroom springs from the bath-side floor onto the tub rim. The entrance stays cat-free.
   window.__homeCatLower = function (room) {
     if (!walk.classList.contains("out") || catGoneForever) return false;
     clearTimeout(lowerCatTimer);
@@ -105903,13 +105906,18 @@ function spawnDustMote(container) {
     walk.style.animationDelay = "";
     walk.style.animationPlayState = "";
     pos.style.pointerEvents = "auto";
-    if (room === "bathroom" || room === "entrance") {
+    if (room === "entrance") {
       pos.style.visibility = "hidden";
       return true;
     }
     pos.style.visibility = "";
     var parent = null, feet = null;
-    if (room === "dungeon") {
+    if (room === "bathroom") {
+      parent = document.getElementById("bathroom-cat-overlay");
+      // Start beside the bath, then make a small two-beat spring onto its near rim.
+      // Both the start and landing stay wholly left of the separate toilet nook.
+      feet = { x: 210, y: 293, hop: { x: 85, y: -108 }, playful: true };
+    } else if (room === "dungeon") {
       parent = document.getElementById("prince-cat-overlay");
       feet = { x: 116, y: 353 };
     } else if (room === "cinema") {
@@ -105936,20 +105944,30 @@ function spawnDustMote(container) {
     } else if (feet.hop && walk.animate) {
       lowerCatTimer = setTimeout(function () {
         lowerCatTimer = null;
-        var stillOpen = room === "bedroom" ? window.__bedroomRoomOpen : window.__cinemaRoomOpen;
+        var stillOpen = room === "bathroom" ? window.__bathroomRoomOpen :
+          (room === "bedroom" ? window.__bedroomRoomOpen : window.__cinemaRoomOpen);
         if (catRoom !== room || !stillOpen || !walk.classList.contains("out")) return;
         walk.style.animationPlayState = "paused";
         jumping = true;
         var apexX = feet.hop.x * .52;
         var apexY = feet.hop.y - 42;
-        jumpAnim = walk.animate([
+        var keyframes = feet.playful ? [
+          { offset: 0, transform: "translate(0,0)", easing: "cubic-bezier(.35,0,.65,.4)" },
+          { offset: .38, transform: "translate(" + apexX + "px," + apexY + "px)", easing: "cubic-bezier(.25,.7,.35,1)" },
+          { offset: .68, transform: "translate(" + feet.hop.x + "px," + feet.hop.y + "px)", easing: "cubic-bezier(.25,.7,.35,1)" },
+          { offset: .82, transform: "translate(" + (feet.hop.x + 11) + "px," + (feet.hop.y - 12) + "px)", easing: "cubic-bezier(.35,0,.65,.4)" },
+          { offset: 1, transform: "translate(" + feet.hop.x + "px," + feet.hop.y + "px)" }
+        ] : [
           { offset: 0, transform: "translate(0,0)", easing: "cubic-bezier(.35,0,.65,.4)" },
           { offset: .55, transform: "translate(" + apexX + "px," + apexY + "px)", easing: "cubic-bezier(.25,.7,.35,1)" },
           { offset: 1, transform: "translate(" + feet.hop.x + "px," + feet.hop.y + "px)" }
-        ], { duration: 1050, fill: "forwards" });
+        ];
+        jumpAnim = walk.animate(keyframes, { duration: feet.playful ? 1250 : 1050, fill: "forwards" });
         jumpAnim.onfinish = function () {
-          setNapping(true);
-          flickTail();
+          if (!feet.playful) {
+            setNapping(true);
+            flickTail();
+          }
         };
       }, 850);
     }

@@ -7,14 +7,14 @@ var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
   'var report={errors:[],cinema:[]};function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
-  'function snap(){var pos=document.getElementById("witchy-chest-cat-pos"),walk=document.getElementById("witchy-chest-cat-walk"),breathe=document.getElementById("witchy-chest-cat-breathe"),hit=document.getElementById("witchy-chest-cat-hit");hit.scrollIntoView({block:"center",inline:"center"});var r=hit.getBoundingClientRect(),top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {count:document.querySelectorAll("#witchy-chest-cat-pos").length,parent:pos.parentNode&&pos.parentNode.id,transform:pos.getAttribute("transform"),visible:pos.style.visibility!=="hidden",napping:breathe.classList.contains("napping"),walkTransform:getComputedStyle(walk).transform,hitWidth:r.width,hitHeight:r.height,hitTop:!!(top&&hit.parentNode.contains(top)),hitTopId:top&&(top.id||top.tagName)};}',
+  'function snap(){var pos=document.getElementById("witchy-chest-cat-pos"),walk=document.getElementById("witchy-chest-cat-walk"),breathe=document.getElementById("witchy-chest-cat-breathe"),hit=document.getElementById("witchy-chest-cat-hit");hit.scrollIntoView({block:"center",inline:"center"});var r=hit.getBoundingClientRect(),top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {count:document.querySelectorAll("#witchy-chest-cat-pos").length,parent:pos.parentNode&&pos.parentNode.id,transform:pos.getAttribute("transform"),visible:pos.style.visibility!=="hidden",napping:breathe.classList.contains("napping"),walkTransform:getComputedStyle(walk).transform,animations:walk.getAnimations().map(function(a){return a.effect&&a.effect.getComputedTiming().duration;}),hit:[r.left,r.top,r.right,r.bottom],hitWidth:r.width,hitHeight:r.height,hitTop:!!(top&&hit.parentNode.contains(top)),hitTopId:top&&(top.id||top.tagName)};}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
   ' document.getElementById("hunt-fullscreen-area").scrollIntoView({block:"center"});await sleep(80);',
   ' window.__releaseCat(true);window.goToStage("cuddly");',
   ' for(var i=0;i<4;i++){window.__openCinemaRoom();await sleep(i===3?1200:60);if(i===3)document.getElementById("witchy-chest-cat-walk").getAnimations().forEach(function(a){try{a.finish();}catch(_e){}});await sleep(40);report.cinema.push(snap());window.__closeCinemaRoom();await sleep(60);}',
   ' window.goToStage("office");window.__openBedroomRoom();await sleep(1200);document.getElementById("witchy-chest-cat-walk").getAnimations().forEach(function(a){try{a.finish();}catch(_e){}});await sleep(40);report.bedroom=snap();window.__closeBedroomRoom();await sleep(60);',
-  ' window.goToStage("kitchen");window.__openBathroomRoom();await sleep(60);report.bathroom=snap();window.__closeBathroomRoom();await sleep(60);',
+  ' window.goToStage("kitchen");window.__openBathroomRoom();await sleep(60);report.bathroomStart=snap();window.__closeBathroomRoom();await sleep(60);report.bathroomCancelled=snap();await sleep(900);report.bathroomAfterTimer=snap();window.__openBathroomRoom();await sleep(900);report.bathroomHop=snap();document.getElementById("witchy-chest-cat-walk").getAnimations().forEach(function(a){try{a.finish();}catch(_e){}});await sleep(40);report.bathroomSettled=snap();var water=document.getElementById("bathroom-tub-water").getBoundingClientRect(),toilet=document.getElementById("bathroom-toilet-action").getBoundingClientRect();report.bathroomBounds={water:[water.left,water.top,water.right,water.bottom],toilet:[toilet.left,toilet.top,toilet.right,toilet.bottom]};document.getElementById("bathroom-tub").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));var bubble=document.getElementById("bathroom-bubble-2"),bubbleHit=bubble.querySelector(".bathroom-bubble-hit"),bubbleBox=bubbleHit.getBoundingClientRect(),bubbleTop=document.elementFromPoint(bubbleBox.left+bubbleBox.width/2,bubbleBox.top+bubbleBox.height/2);report.bathroomBubbleTop=!!(bubbleTop&&bubble.contains(bubbleTop));window.__closeBathroomRoom();await sleep(60);report.bathroomReturned=snap();',
   ' window.goToStage("balcony");window.__openEntranceRoom();await sleep(60);report.entrance=snap();window.__closeEntranceRoom();await sleep(60);',
   ' window.goToStage("garden");window.__openGardenPrince();await sleep(60);report.dungeon=snap();window.__closeMonitorPrince();await sleep(900);report.returned=snap();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
@@ -56,9 +56,40 @@ check(r.cinema && r.cinema.every(function (s) {
 check(r.bedroom && r.bedroom.count === 1 && r.bedroom.parent === "bedroom-room-art" &&
   r.bedroom.visible && r.bedroom.walkTransform !== "none",
   "the bedroom cat hops from the floor onto the bed", r.bedroom);
-check(r.bathroom && r.bathroom.count === 1 && !r.bathroom.visible &&
-  r.entrance && r.entrance.count === 1 && !r.entrance.visible,
-  "the same cat stays hidden in the bathroom and entrance", { bathroom: r.bathroom, entrance: r.entrance });
+check(r.bathroomStart && r.bathroomStart.count === 1 &&
+  r.bathroomStart.parent === "bathroom-cat-overlay" && r.bathroomStart.visible &&
+  r.bathroomStart.transform === "translate(-426,1)" && r.bathroomStart.hitTop,
+  "the same loose cat starts beside the bathroom tub with its touch target on top", r.bathroomStart);
+check(r.bathroomHop && r.bathroomHop.animations.indexOf(1250) !== -1 &&
+  r.bathroomSettled && r.bathroomSettled.walkTransform.indexOf("85, -108") !== -1 &&
+  !r.bathroomSettled.napping,
+  "the bathroom cameo makes a playful two-beat hop onto the tub rim", {
+    hop: r.bathroomHop, settled: r.bathroomSettled
+  });
+check(r.bathroomBounds && r.bathroomSettled &&
+  r.bathroomSettled.hit[0] >= r.bathroomBounds.water[0] &&
+  r.bathroomSettled.hit[2] <= r.bathroomBounds.water[2] &&
+  r.bathroomSettled.hit[3] >= r.bathroomBounds.water[1] &&
+  r.bathroomSettled.hit[2] < r.bathroomBounds.toilet[0],
+  "the landed cat stays over the bath water and clear of the toilet nook", {
+    cat: r.bathroomSettled.hit, bounds: r.bathroomBounds
+  });
+check(r.bathroomBubbleTop,
+  "the active bubble hunt stays tappable in front of the cat cameo");
+check(r.bathroomCancelled && r.bathroomCancelled.parent === "stage-kitchen" &&
+  r.bathroomCancelled.visible && r.bathroomCancelled.animations.indexOf(1250) === -1 &&
+  r.bathroomAfterTimer && r.bathroomAfterTimer.parent === "stage-kitchen" &&
+  r.bathroomAfterTimer.animations.indexOf(1250) === -1,
+  "leaving before the cameo clears its delayed hop before the cat resumes upstairs", {
+    cancelled: r.bathroomCancelled, afterTimer: r.bathroomAfterTimer
+  });
+check(r.bathroomReturned && r.bathroomReturned.parent === "stage-kitchen" &&
+  r.bathroomReturned.visible && r.bathroomReturned.animations.indexOf(1250) === -1,
+  "leaving after the cameo cancels its held animation cleanly", {
+    returned: r.bathroomReturned
+  });
+check(r.entrance && r.entrance.count === 1 && !r.entrance.visible,
+  "the entrance remains cat-free", r.entrance);
 check(r.dungeon && r.dungeon.count === 1 && r.dungeon.parent === "prince-cat-overlay" && r.dungeon.visible &&
   r.returned && r.returned.count === 1 && r.returned.parent === "garden-chest" && r.returned.visible,
   "the dungeon cameo returns cleanly to the upstairs garden", { dungeon: r.dungeon, returned: r.returned });

@@ -78,6 +78,8 @@ check(/__lowerFloorFilter\.connect\(__lowerFloorReverb\)/.test(source) &&
   "the dungeon reverb is a wet branch on the existing shared boundary");
 check((source.match(/new Ctx\(\)/g) || []).length === 1,
   "lower-floor modeling creates no additional AudioContext");
+check(/function want\(\) \{[\s\S]*?if \(window\.__entranceRoomOpen\) return null;[\s\S]*?currentStageIndex === 4/.test(source),
+  "the Balcony's autonomous wind chime stays silent in Entrance");
 
 console.log("");
 if (failures) {

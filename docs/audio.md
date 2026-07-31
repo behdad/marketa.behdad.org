@@ -93,7 +93,9 @@ present. The dungeon's autonomous ceiling-drip plink follows the standard
 hidden-or-unfocused gate before touching the shared SFX context. Opening the
 Bathroom synchronously cancels Pouria's in-flight ambient
 or player cocktail make, so its queued pours and shaker rattles cannot bypass
-the boundary from the bar above. Cross-origin Vimeo also bypasses it as deliberate Cinema foreground
+the boundary from the bar above. The Balcony's autonomous wind chime is fully
+gated while Entrance is open rather than leaking through its shared stage
+index. Cross-origin Vimeo also bypasses it as deliberate Cinema foreground
 media. A song still on native `<audio>` fallback cannot receive Web Audio
 filtering, so `setSongLevel()` applies the profile's gain only; after capture,
 the logical level stays unchanged and the shared boundary owns both filtering

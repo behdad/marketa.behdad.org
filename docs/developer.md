@@ -1092,7 +1092,8 @@ activation gives the existing shallow gate reaction; a drag past the lower
 threshold temporarily raises the gate farther and reveals the single static
 `#prince-dungeon-secret`. Release holds that glimpse for one bounded timer, then
 restores the chain, gate, secret, and lower-room caption. Dungeon teardown clears
-the same timer and state, and delegated non-passive `touchmove` continues to stop
+the same timer and state; a repeated drag replaces that timer so stale cleanup
+cannot drop the gate during the new gesture. Delegated non-passive `touchmove` continues to stop
 page panning during the drag.
 
 Calendar is also `searchOnly` on the monitor desktop. Its centered date/countdown

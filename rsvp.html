@@ -65356,6 +65356,7 @@ async def localfont(name):
   var princeContextObserver = null;
   var princeContextTimer = null;
   var princeDungeonTimers = [];
+  var princeGateSecretTimer = null;
   var princeDripAnimation = null;
   var princeChainPointer = null, princeChainStartX = 0, princeChainStartY = 0;
   var princeChainX = 0, princeChainY = 0, princeChainMoved = false, princeChainSuppressClick = false;
@@ -65371,6 +65372,8 @@ async def localfont(name):
   }
   function resetPrinceDungeonProps() {
     clearPrinceDungeonTimers();
+    clearTimeout(princeGateSecretTimer);
+    princeGateSecretTimer = null;
     if (princeDripAnimation) {
       princeDripAnimation.onfinish = null;
       princeDripAnimation.cancel();
@@ -65497,14 +65500,16 @@ async def localfont(name):
     if (princeDungeonSet) princeDungeonSet.classList.remove("chain-dragging");
     var heldSecret = princeDungeonSet && princeDungeonSet.classList.contains("gate-secret-peek");
     if (heldSecret) {
-      princeDungeonTimers.push(setTimeout(function () {
+      clearTimeout(princeGateSecretTimer);
+      princeGateSecretTimer = setTimeout(function () {
+        princeGateSecretTimer = null;
         if (!princeDungeonSet) return;
         princeDungeonSet.classList.remove("gate-secret-peek");
         setPrinceChainPosition(0, 0);
         if (princePresented && princeMode === "basement" && window.__restoreLowerRoomCaption) {
           window.__restoreLowerRoomCaption("lower_dungeon");
         }
-      }, 520));
+      }, 520);
     } else {
       setPrinceChainPosition(0, 0);
     }
@@ -65938,6 +65943,8 @@ async def localfont(name):
       princeChainStartX = event.clientX;
       princeChainStartY = event.clientY;
       princeChainMoved = false;
+      clearTimeout(princeGateSecretTimer);
+      princeGateSecretTimer = null;
       princeDungeonChain.classList.remove("swung");
       princeDungeonChain.classList.add("dragging");
       if (princeDungeonSet) princeDungeonSet.classList.add("chain-dragging");

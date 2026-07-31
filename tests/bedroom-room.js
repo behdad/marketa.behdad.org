@@ -32,6 +32,7 @@ var HARNESS = [
   ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowLeft");await sleep(780);report.steps.left={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__cinemaRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);key("ArrowRight");await sleep(780);report.steps.right={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__entranceRoomState(),hidden:room.hidden,focus:document.activeElement===viewport};',
   ' window.goToStage("office");key("ArrowDown");await sleep(100);var dot=document.querySelectorAll(".hunt-dot")[0];dot.focus();click(dot);await sleep(780);report.steps.dot={room:window.currentStageName,source:window.__bedroomRoomState(),target:window.__bathroomRoomState(),hidden:room.hidden,focus:document.activeElement===dot};',
+  ' window.goToStage("office");key("ArrowDown");await sleep(100);wardrobe=document.getElementById("bedroom-wardrobe");pinkSuit=document.getElementById("bedroom-suit-pink");click(wardrobe);click(pinkSuit);report.steps.suitClose={before:pinkSuit.getAttribute("class")};window.__closeBedroomRoom();report.steps.suitClose.after=pinkSuit.getAttribute("class");await sleep(780);',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -145,6 +146,9 @@ check(s.left && s.left.room === "cuddly" && !s.left.source.open && s.left.hidden
 check(s.dot && s.dot.room === "kitchen" && !s.dot.source.open && s.dot.hidden &&
   s.dot.target.open && s.dot.focus,
   "a room dot pans from Bedroom to Bathroom and retains dot focus", s.dot);
+check(s.suitClose && /\bswinging\b/.test(s.suitClose.before) &&
+  !/\bswinging\b/.test(s.suitClose.after),
+  "closing Bedroom clears a suit swing whose cleanup timer was canceled", s.suitClose);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 ["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-wall-gear-left", "bedroom-wall-gear-middle", "bedroom-wall-gear-right", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {

@@ -689,7 +689,8 @@ survive room changes and are captured by the `bedroom-lamps` checkpoint
 adapter; only a deliberate game reset returns both lamps to their authored-on
 state. `__bedroomRoomState().props` is the focused regression surface.
 Opening the wardrobe reveals both suits; selecting either suit replays only that
-hanger's swing without adding a Tab stop or toggling the wardrobe.
+hanger's swing without adding a Tab stop or toggling the wardrobe. Bedroom
+teardown clears an in-flight suit swing along with its canceled cleanup timer.
 `#bedroom-party-coats` lives inside the bed's native SVG group and projects the
 strip's `.party-on` state through CSS only. It is non-interactive, paints below
 the sprinkler spray and the dynamically appended cat, and hides again on party end.

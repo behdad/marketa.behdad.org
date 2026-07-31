@@ -680,9 +680,17 @@ bed, and each bedside drawer. The Bedroom's capture-phase key owner translates
 Enter/Space on those focused groups into their click path. Every lower-room
 capture owner stops only local navigation and activation keys, leaving the
 shared loft shortcuts available downstairs. The interaction controller reuses shared SFX
-and clears persistent and one-shot classes on room close, so a return always
-starts from the authored composition. `__bedroomRoomState().props` is the
-focused regression surface for that cleanup.
+and clears transient prop classes on room close. The two lamp `.off` classes
+survive room changes and are captured by the `bedroom-lamps` checkpoint
+adapter; only a deliberate game reset returns both lamps to their authored-on
+state. `__bedroomRoomState().props` is the focused regression surface.
+
+Lamp activation also calls `syncSleep()`. Only when both mushroom lamps carry
+`.off` does the room gain `.bedroom-sleeping`, which deepens the existing night
+wash, gives the linen one restrained breathing loop, and releases three
+staggered SVG-path `Z` marks. The state follows those saved lamp switches across
+room changes and Continue; reset removes it. Reduced motion leaves one static
+mark instead.
 
 The ceiling sprinkler is one more native SVG Bedroom prop. Its click path
 briefly reveals the spray layer and adds `.wet` to the bed; independent timers

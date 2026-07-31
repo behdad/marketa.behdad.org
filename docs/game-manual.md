@@ -220,7 +220,8 @@ gameplay messages finish before that room caption appears.
   arrangement resets when you leave. Double-click or double-tap a stained-glass
   pane to start tic-tac-toe, then make later moves with ordinary selections.
   After a win or draw, double-select any pane to restart. Enter starts a fresh
-  board with the window moving first. Leaving clears the board.
+  board with the window moving first. Turning off both mushroom lamps lets the
+  room settle to sleep. Leaving clears the board and restores the furnishings.
 - **The Lofts** entrance pairs with the Balcony. Select the windows and street
   details for small reactions. Toggling all five windows away from their
   day/night defaults earns a caption. Enter flickers them briefly as an

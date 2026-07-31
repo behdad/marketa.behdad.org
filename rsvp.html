@@ -92322,9 +92322,9 @@ function spawnDustMote(container) {
     } : { active: false, from: null, to: null, direction: 0 };
   };
   // One late, quiet phase-two nudge for visitors who have never found a lower-room
-  // portal. Discovery is browser knowledge, not playthrough progress, so it deliberately
-  // survives checkpoints and Start over. The cue itself may recur only after a reload and
-  // another full attended wait; it never repeats within one page session.
+  // portal. Discovery survives ordinary navigation, checkpoints, and reloads. Start over
+  // deliberately clears it along with the rest of the run. The cue itself may recur only
+  // after a reload or reset and another full attended wait; it never repeats otherwise.
   var LOWER_ROOM_DISCOVERY_KEY = "lowerRoomDiscovered:v1";
   var LOWER_ROOM_CLUE_DELAY = 180000;
   var lowerRoomDiscovered = false, lowerRoomClueShown = false, lowerRoomClueMs = 0;
@@ -92335,6 +92335,15 @@ function spawnDustMote(container) {
     try { localStorage.setItem(LOWER_ROOM_DISCOVERY_KEY, "1"); } catch (_error) {}
     if (window.__clearFlashCaption) window.__clearFlashCaption("lower-room-discovery");
     return true;
+  }
+  function resetLowerRoomDiscovery() {
+    lowerRoomDiscovered = false;
+    lowerRoomClueShown = false;
+    lowerRoomClueMs = 0;
+    lastLockedDownAt = 0;
+    lastLockedDownStage = "";
+    try { localStorage.removeItem(LOWER_ROOM_DISCOVERY_KEY); } catch (_error) {}
+    if (window.__clearFlashCaption) window.__clearFlashCaption("lower-room-discovery");
   }
   function lowerRoomClueTick(delta, forceAttended) {
     if (lowerRoomDiscovered) return false;
@@ -92354,6 +92363,7 @@ function spawnDustMote(container) {
     return true;
   }
   window.__markLowerRoomDiscovered = markLowerRoomDiscovered;
+  window.__resetLowerRoomDiscovery = resetLowerRoomDiscovery;
   window.__lowerRoomDiscoveryClueState = function () {
     return { discovered: lowerRoomDiscovered, shown: lowerRoomClueShown, elapsed: lowerRoomClueMs };
   };
@@ -93495,8 +93505,9 @@ function spawnDustMote(container) {
   }, true);
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
-  // console. d flips day↔night; ↓ descends from Kitchen/Garden/Cuddly/Balcony and ↑ returns, while elsewhere
-  // vertical arrows are inert. 1-5 jump to a room, m/l/c summon the monitor/laptop/
+  // console. d flips day↔night; ↓ descends from Kitchen/Garden/Cuddly/Balcony/Office (a
+  // rapid double-press until the lower floor has been discovered) and ↑ returns, while
+  // elsewhere vertical arrows are inert. 1-5 jump to a room, m/l/c summon the monitor/laptop/
   // cellphone, / opens Messages, k toggles the kitten, r resets, n next track, t a trip. Backspace
   // mirrors Escape ("go back") — see the alias below. Ignored while typing / with a modifier.
   // (Tab is repurposed here — the game strip has no tab targets — but form fields still get it
@@ -93509,6 +93520,39 @@ function spawnDustMote(container) {
     return (a.getAttribute && a.getAttribute("role") === "button");
   }
   var lastLockedRightAt = 0;
+  var lastLockedDownAt = 0, lastLockedDownStage = "";
+  function lowerRoomOpenerForStage(name) {
+    if (name === "kitchen") return window.__openBathroomRoom;
+    if (name === "garden") return window.__openGardenPrince;
+    if (name === "cuddly") return window.__openCinemaRoom;
+    if (name === "balcony") return window.__openEntranceRoom;
+    if (name === "office") return window.__openBedroomRoom;
+    return null;
+  }
+  function descendFromStage(event) {
+    var stage = window.currentStageName;
+    var open = lowerRoomOpenerForStage(stage);
+    if (!open) {
+      lastLockedDownAt = 0;
+      lastLockedDownStage = "";
+      return false;
+    }
+    if (lowerRoomDiscovered) {
+      lastLockedDownAt = 0;
+      lastLockedDownStage = "";
+      return !!open();
+    }
+    if (event.repeat) return false;
+    var now = Date.now();
+    if (lastLockedDownStage === stage && now - lastLockedDownAt <= 420) {
+      lastLockedDownAt = 0;
+      lastLockedDownStage = "";
+      return !!open();
+    }
+    lastLockedDownAt = now;
+    lastLockedDownStage = stage;
+    return false;
+  }
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
@@ -93527,6 +93571,10 @@ function spawnDustMote(container) {
       if (e.key === "ArrowRight") { e.preventDefault(); if (window.__calStepSignificant) window.__calStepSignificant(1); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); if (window.__calStepTime) window.__calStepTime(1); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); if (window.__calStepTime) window.__calStepTime(-1); return; }
+    }
+    if (e.key !== "ArrowDown") {
+      lastLockedDownAt = 0;
+      lastLockedDownStage = "";
     }
     if (e.key === "ArrowRight") {
       e.preventDefault();
@@ -93559,11 +93607,7 @@ function spawnDustMote(container) {
       e.preventDefault();
       // Lower-room exits are captured by their active overlays before this handler.
       // Upstairs, only Down has meaning and only where a lower room actually exists.
-      if (e.key === "ArrowDown" && window.currentStageName === "kitchen" && window.__openBathroomRoom) window.__openBathroomRoom();
-      else if (e.key === "ArrowDown" && window.currentStageName === "garden" && window.__openGardenPrince) window.__openGardenPrince();
-      else if (e.key === "ArrowDown" && window.currentStageName === "cuddly" && window.__openCinemaRoom) window.__openCinemaRoom();
-      else if (e.key === "ArrowDown" && window.currentStageName === "balcony" && window.__openEntranceRoom) window.__openEntranceRoom();
-      else if (e.key === "ArrowDown" && window.currentStageName === "office" && window.__openBedroomRoom) window.__openBedroomRoom();
+      if (e.key === "ArrowDown") descendFromStage(e);
     } else if (e.key >= "1" && e.key <= "5") {
       e.preventDefault();
       navigateWithRoster(STAGES[parseInt(e.key, 10) - 1]); // jump straight to room 1-5, unlocking it if needed
@@ -102037,6 +102081,7 @@ function spawnDustMote(container) {
     try { localStorage.removeItem("loftExtinguisherWarned"); } catch (error) {}
     if (window.__resetShareAutoShow) window.__resetShareAutoShow();
     window.__runTransientResetHooks();
+    if (window.__resetLowerRoomDiscovery) window.__resetLowerRoomDiscovery();
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     if (window.__resetCheckpointSystems) window.__resetCheckpointSystems();
     if (window.__resetPacmanUnlock) window.__resetPacmanUnlock(); // a fresh loft hides the ketamine ghost's game again

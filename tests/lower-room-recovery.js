@@ -80,10 +80,10 @@ function restartHarness() {
     '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
     '<script>(function(){',
     "var saved=" + JSON.stringify(saved) + ";",
-    'if(!sessionStorage.getItem("lower-recovery-restart-seeded")){sessionStorage.setItem("lower-recovery-restart-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
+    'if(!sessionStorage.getItem("lower-recovery-restart-seeded")){sessionStorage.setItem("lower-recovery-restart-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));localStorage.setItem("lowerRoomDiscovered:v1","1");location.reload();return;}',
     'window.addEventListener("load",function(){setTimeout(function(){',
     'var gate=document.getElementById("loft-recovery-gate");gate.querySelector(".loft-recovery-btn:not(.primary)").click();',
-    'setTimeout(function(){var viewport=document.querySelector(".hunt-viewport"),room=document.getElementById("bathroom-room");document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,gate:!!document.getElementById("loft-recovery-gate"),preview:viewport.classList.contains("recovery-lower-preview"),openClass:viewport.classList.contains("bathroom-room-open"),hidden:room.hidden,ariaHidden:room.getAttribute("aria-hidden"),live:!!window.__bathroomRoomOpen,save:!!localStorage.getItem("loftCheckpoint:v1"),clickMe:!!document.getElementById("click-me-overlay")});},120);',
+    'setTimeout(function(){var viewport=document.querySelector(".hunt-viewport"),room=document.getElementById("bathroom-room");document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,gate:!!document.getElementById("loft-recovery-gate"),preview:viewport.classList.contains("recovery-lower-preview"),openClass:viewport.classList.contains("bathroom-room-open"),hidden:room.hidden,ariaHidden:room.getAttribute("aria-hidden"),live:!!window.__bathroomRoomOpen,save:!!localStorage.getItem("loftCheckpoint:v1"),discovered:localStorage.getItem("lowerRoomDiscovered:v1"),clickMe:!!document.getElementById("click-me-overlay")});},120);',
     '},80);});',
     '})();</script>'
   ].join("\n");
@@ -158,8 +158,8 @@ var restarted = lib.runPageSync("rsvp.html", restartHarness(), 1200, {
 check(restarted && restarted.errors.length === 0, "lower-room Start over has no uncaught errors", restarted && restarted.errors);
 check(restarted && !restarted.gate && !restarted.preview && !restarted.openClass &&
     restarted.hidden && restarted.ariaHidden === null && !restarted.live &&
-    !restarted.save && restarted.clickMe,
-  "Start over fully removes the lower-room preview and returns to fresh entry", restarted);
+    !restarted.save && restarted.discovered === null && restarted.clickMe,
+  "Start over removes the lower-room preview and discovery unlock, then returns to fresh entry", restarted);
 
 console.log("");
 if (failures) {

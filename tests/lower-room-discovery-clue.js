@@ -19,7 +19,13 @@ var harness = String.raw`<script>
     pre.textContent = JSON.stringify(out);
     document.body.appendChild(pre);
   }
-  function run() {
+  function key(name, options) {
+    var init = { key: name, bubbles: true, cancelable: true };
+    Object.assign(init, options || {});
+    document.dispatchEvent(new KeyboardEvent("keydown", init));
+  }
+  function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+  async function run() {
     localStorage.removeItem("lowerRoomDiscovered:v1");
     window.__setSecondRound(true, { releaseHeld: false });
     window.__lowerRoomDiscoveryClueTick(179999, true);
@@ -49,24 +55,56 @@ var harness = String.raw`<script>
       window.__lowerRoomDiscoveryClueState().shown === true,
       JSON.stringify(window.__lowerRoomDiscoveryClueState()));
 
-    document.getElementById("kitchen-bathroom-marker").dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
-    check("interacting with a portal permanently records discovery",
+    window.goToStage("kitchen");
+    key("ArrowDown");
+    key("ArrowDown", { repeat: true });
+    check("one Down press and held-key repeats do not discover the lower floor",
+      !window.__bathroomRoomState().open &&
+      window.__lowerRoomDiscoveryClueState().discovered === false &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === null,
+      JSON.stringify(window.__bathroomRoomState()));
+
+    await sleep(450);
+    key("ArrowDown");
+    check("a late second Down press only starts a fresh double-press window",
+      !window.__bathroomRoomState().open &&
+      window.__lowerRoomDiscoveryClueState().discovered === false,
+      JSON.stringify(window.__bathroomRoomState()));
+
+    key("ArrowDown");
+    check("a rapid double-Down enters and permanently unlocks the lower floor",
       window.__lowerRoomDiscoveryClueState().discovered === true &&
+      window.__bathroomRoomState().open === true &&
       localStorage.getItem("lowerRoomDiscovered:v1") === "1",
       JSON.stringify(window.__lowerRoomDiscoveryClueState()));
 
-    window.__resetLowerRoomDiscoveryClue();
-    window.__lowerRoomDiscoveryClueTick(600000, true);
-    check("Start-over runtime reset cannot revive the clue after discovery",
-      window.__lowerRoomDiscoveryClueState().shown === true &&
-      window.__captionKey() !== "lower_rooms_clue" &&
+    key("ArrowUp");
+    await sleep(760);
+    window.goToStage("garden");
+    key("ArrowDown");
+    check("one Down press enters every lower room after discovery",
+      window.__princeState().basement === true &&
       localStorage.getItem("lowerRoomDiscovered:v1") === "1",
+      JSON.stringify(window.__princeState()));
+
+    window.__activateExtinguisher({ resetDateTime: false });
+    await sleep(760);
+    check("Start over clears the persisted lower-floor unlock",
+      window.__lowerRoomDiscoveryClueState().discovered === false &&
+      window.__lowerRoomDiscoveryClueState().shown === false &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === null,
       JSON.stringify(window.__lowerRoomDiscoveryClueState()));
+
+    window.goToStage("kitchen");
+    key("ArrowDown");
+    check("Start over re-arms the double-Down discovery gate",
+      !window.__bathroomRoomState().open &&
+      window.__lowerRoomDiscoveryClueState().discovered === false,
+      JSON.stringify(window.__bathroomRoomState()));
   }
   window.addEventListener("load", function () {
-    setTimeout(function () {
-      try { run(); } catch (error) { out.errors.push(String(error && error.stack || error)); }
+    setTimeout(async function () {
+      try { await run(); } catch (error) { out.errors.push(String(error && error.stack || error)); }
       report();
     }, 300);
   });

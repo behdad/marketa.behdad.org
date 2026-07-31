@@ -122,10 +122,10 @@ check(s.functional && s.functional.stationary.state.hits.stool ===
   s.functional.stationary.before + 1 &&
   s.functional.stationary.state.active.indexOf("stool-wobble") !== -1,
   "a stationary pointer tap still wobbles the draggable stool", s.functional);
-check(s.functional && s.functional.right.state.stoolX === 55 &&
-  s.functional.left.state.stoolX === -95 &&
-  /translate\(55(?:\.0+)? 0\)/.test(s.functional.right.transform) &&
-  /translate\(-95(?:\.0+)? 0\)/.test(s.functional.left.transform),
+check(s.functional && s.functional.right.state.stoolX === 80 &&
+  s.functional.left.state.stoolX === -130 &&
+  /translate\(80(?:\.0+)? 0\)/.test(s.functional.right.transform) &&
+  /translate\(-130(?:\.0+)? 0\)/.test(s.functional.left.transform),
   "the stool drags horizontally and clamps at both room-safe limits", s.functional);
 check(s.functional && s.functional.scaleText === "69.0" &&
   s.functional.left.state.scaleValue === 69 &&

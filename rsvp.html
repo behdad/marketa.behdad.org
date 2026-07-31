@@ -828,6 +828,9 @@ footer{margin-top:2.6rem}
   background:#6f4334;
 }
 #bedroom-room-art{display:block;width:100%;height:100%}
+#bedroom-party-window-reflection{mix-blend-mode:multiply;transition:opacity .7s ease}
+#bedroom-party-window-reflection .of-couple{opacity:.28;filter:grayscale(1) brightness(.72)}
+.hunt-viewport:has(#stage-garden.garden-party) #bedroom-party-window-reflection{opacity:.72}
 #bedroom-room .bedroom-night-wash{opacity:0;transition:opacity .7s ease}
 #bedroom-room .bedroom-lamp-halo{opacity:.34;transition:opacity .7s ease}
 #bedroom-room.bedroom-night .bedroom-night-wash{opacity:.28}
@@ -29832,6 +29835,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
              active bubble hunt paints next so every floating target stays tappable. -->
         <g id="bathroom-cat-overlay"></g>
         <!-- Filling the tub releases a finite, touch-friendly bubble hunt. -->
+        <g id="bathroom-stool-shot-layer" pointer-events="none" aria-hidden="true"></g>
         <g id="bathroom-bubble-hunt" role="group" data-aria-i="bathroom_bubble_hunt" aria-label="Bubble hunt">
           <g id="bathroom-bubble-1" class="bathroom-bubble" data-bath-bubble="1" role="button" data-aria-i="bathroom_bubble_pop" aria-label="Pop bubble">
             <circle class="bathroom-bubble-hit" cx="254" cy="164"/>
@@ -30584,6 +30588,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <stop offset="0" stop-color="#e0e3e3"/><stop offset=".42" stop-color="#92999b"/>
             <stop offset=".74" stop-color="#5d6365"/><stop offset="1" stop-color="#292c2d"/>
           </radialGradient>
+          <filter id="bedroom-party-window-soft" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.4"/>
+          </filter>
+          <clipPath id="bedroom-party-window-clip" clipPathUnits="userSpaceOnUse">
+            <rect x="20" y="72" width="125" height="125"/>
+          </clipPath>
           <linearGradient id="bedroom-party-uv" gradientUnits="userSpaceOnUse" x1="145" y1="125" x2="470" y2="286">
             <stop offset="0" stop-color="#a785ff" stop-opacity=".95"/>
             <stop offset=".48" stop-color="#be55cf" stop-opacity=".62"/>
@@ -30629,6 +30639,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <g class="bedroom-ttt-pane" data-cell="7"><rect class="bedroom-ttt-pane-fill" x="61.667" y="155.333" width="41.666" height="41.667" fill="#d3aa79"/></g>
             <g class="bedroom-ttt-pane" data-cell="8"><rect class="bedroom-ttt-pane-fill" x="103.333" y="155.333" width="41.667" height="41.667" fill="#d0b36b"/></g>
           </g>
+          <g id="bedroom-party-window-reflection" opacity="0" pointer-events="none" filter="url(#bedroom-party-window-soft)" clip-path="url(#bedroom-party-window-clip)" aria-hidden="true"></g>
           <rect x="20" y="72" width="125" height="125" fill="none" stroke="#3f4444" stroke-width="2"/>
           <path d="M61.667 72V197M103.333 72V197M20 113.667H145M20 155.333H145" fill="none" stroke="#3f4444" stroke-width="3"/>
           <g id="bedroom-ttt-marks" aria-hidden="true" pointer-events="none"></g>
@@ -30963,6 +30974,8 @@ window.__bathroomRoomOpen = false;
   var mirrorDraw = null;
   var mirrorDoodleCount = 0;
   var suppressMirrorClick = false;
+  var stoolShotLayer = document.getElementById("bathroom-stool-shot-layer");
+  var stoolShotTimer = null;
   var bubbles = Array.from(art.querySelectorAll("[data-bath-bubble]"));
   var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
@@ -31003,6 +31016,9 @@ window.__bathroomRoomOpen = false;
     suppressStoolClick = false;
     stoolPosition.classList.remove("dragging");
     stoolPosition.removeAttribute("transform");
+    clearTimeout(stoolShotTimer);
+    stoolShotTimer = null;
+    if (stoolShotLayer) stoolShotLayer.replaceChildren();
     clearTimeout(scaleReadingTimer);
     scaleReadingTimer = null;
     scaleValue = null;
@@ -31090,6 +31106,40 @@ window.__bathroomRoomOpen = false;
     }
     return true;
   }
+  function fireStoolShot() {
+    if (!window.__bathroomRoomOpen || !room.classList.contains("bubble-hunt") ||
+        !stoolShotLayer) return false;
+    var stoolXCenter = 380 + stoolX;
+    var target = bubbles.filter(function (bubble) {
+      return !bubble.classList.contains("popped");
+    }).map(function (bubble) {
+      var hit = bubble.querySelector(".bathroom-bubble-hit");
+      return { bubble: bubble, x: Number(hit.getAttribute("cx")), y: Number(hit.getAttribute("cy")) };
+    }).filter(function (candidate) {
+      return Math.abs(candidate.x - stoolXCenter) <= 23;
+    }).sort(function (a, b) { return b.y - a.y; })[0];
+    var shot = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    shot.setAttribute("d", "M" + stoolXCenter.toFixed(1) + " 254V" + (target ? target.y : 46));
+    shot.setAttribute("fill", "none");
+    shot.setAttribute("stroke", "#f6d98a");
+    shot.setAttribute("stroke-width", "3");
+    shot.setAttribute("stroke-linecap", "round");
+    shot.setAttribute("opacity", ".9");
+    shot.style.transformBox = "fill-box";
+    stoolShotLayer.appendChild(shot);
+    if (shot.animate) {
+      var animation = shot.animate([
+        { opacity: 0, transform: "scaleY(.2)", transformOrigin: stoolXCenter + "px 254px" },
+        { opacity: 1, transform: "scaleY(1)", transformOrigin: stoolXCenter + "px 254px" },
+        { opacity: 0, transform: "scaleY(1)", transformOrigin: stoolXCenter + "px 254px" }
+      ], { duration: 300, easing: "ease-out" });
+      animation.onfinish = function () { if (shot.parentNode) shot.remove(); };
+    } else {
+      stoolShotTimer = setTimeout(function () { if (shot.parentNode) shot.remove(); }, 300);
+    }
+    if (target) popBubble(target.bubble);
+    return true;
+  }
   function activateBathroomProp(action) {
     if (!window.__bathroomRoomOpen) return false;
     bathroomHits[action] = (bathroomHits[action] || 0) + 1;
@@ -31116,6 +31166,10 @@ window.__bathroomRoomOpen = false;
       pulseClass("towel-fluff", 700);
       bathroomSound("swish");
     } else if (action === "stool") {
+      if (room.classList.contains("bubble-hunt")) {
+        fireStoolShot();
+        return true;
+      }
       pulseClass("stool-wobble", 580);
       bathroomSound("creak");
     } else if (action === "scale") {
@@ -31282,7 +31336,7 @@ window.__bathroomRoomOpen = false;
     if (!stoolDrag || event.pointerId !== stoolDrag.pointerId) return;
     var nextX = stoolDrag.startX +
       (event.clientX - stoolDrag.startClientX) * svgUnitsPerClientPixel();
-    stoolX = Math.max(-95, Math.min(55, nextX));
+    stoolX = Math.max(-130, Math.min(80, nextX));
     stoolDrag.moved = stoolDrag.moved ||
       Math.abs(event.clientX - stoolDrag.startClientX) > 3;
     stoolPosition.setAttribute("transform", "translate(" + stoolX.toFixed(2) + " 0)");
@@ -31501,6 +31555,32 @@ window.__cinemaVideoLoaded = false;
   });
   var photoboothHomeAnchor = document.getElementById("monitor-shoot-coach");
   var reactions = {};
+  var cinemaCushionStep = 0;
+  var cinemaCushionIds = [
+    "cinema-cushion-wine", "cinema-cushion-blue",
+    "cinema-sofa-cushion-left", "cinema-sofa-cushion-right"
+  ];
+  function resetCinemaCushions() {
+    cinemaCushionStep = 0;
+    cinemaCushionIds.forEach(function (id) {
+      var cushion = document.getElementById(id);
+      if (cushion) cushion.style.removeProperty("translate");
+    });
+  }
+  function moveCinemaCushions() {
+    var positions = [
+      [[-5, 1], [5, 0], [-4, 0], [4, 1]],
+      [[8, -1], [-7, 1], [10, 1], [-9, 0]],
+      [[14, 1], [-13, 0], [16, 0], [-15, 1]],
+      [[3, 0], [-4, -1], [-7, 1], [8, 0]],
+      [[-9, 1], [11, 0], [-14, 0], [13, 1]]
+    ];
+    var set = positions[cinemaCushionStep++ % positions.length];
+    cinemaCushionIds.forEach(function (id, index) {
+      var cushion = document.getElementById(id);
+      if (cushion) cushion.style.translate = set[index][0] + "px " + set[index][1] + "px";
+    });
+  }
   // The throws are authored near the rest of the foreground props, then raised above the
   // leather shell so they visibly rest against the back instead of reading as floor clutter.
   var cinemaArt = document.getElementById("cinema-room-art");
@@ -31907,6 +31987,7 @@ window.__cinemaVideoLoaded = false;
     clearTimeout(cinemaCloseTimer);
     cinemaCloseTimer = null;
     cinemaClosing = false;
+    resetCinemaCushions();
     window.__cinemaRoomOpen = true;
     if (window.__homeCatLower) window.__homeCatLower("cinema");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
@@ -32010,6 +32091,7 @@ window.__cinemaVideoLoaded = false;
         if (typeof playCameraShutterSound === "function") playCameraShutterSound(prop.id);
         return startCinemaPhotobooth();
       } else if (action === "cushion" || action === "sofa-cushion" || action === "sofa") {
+        moveCinemaCushions();
         if (typeof playPlushSquishSound === "function") playPlushSquishSound(prop.id);
       } else if (action === "bike" || action === "weights") {
         if (typeof playMetalClinkSound === "function") playMetalClinkSound(action === "bike" ? 1.4 : .72, prop.id);
@@ -32436,6 +32518,7 @@ window.__bedroomRoomOpen = false;
   var viewport = document.querySelector(".hunt-viewport");
   var closeButton = document.getElementById("bedroom-room-close");
   var officeStage = document.getElementById("stage-office");
+  var partyWindowReflection = document.getElementById("bedroom-party-window-reflection");
   var closeTimer = null;
   var closing = false;
   var propTimers = [];
@@ -32480,8 +32563,26 @@ window.__bedroomRoomOpen = false;
     room.classList.toggle("bedroom-sleeping",
       leftLamp.classList.contains("off") && rightLamp.classList.contains("off"));
   }
+  function syncPartyWindowReflection() {
+    if (!partyWindowReflection) return;
+    partyWindowReflection.replaceChildren();
+    var garden = document.getElementById("stage-garden");
+    var officeHangout = document.getElementById("office-hangout");
+    var couple = officeHangout && officeHangout.querySelector(".of-couple.present");
+    if (!garden || !garden.classList.contains("garden-party") || !couple) return;
+    var reflection = couple.cloneNode(true);
+    reflection.setAttribute("transform", "translate(82 278) scale(-1.95 1.95)");
+    partyWindowReflection.appendChild(reflection);
+  }
   syncNight();
   new MutationObserver(syncNight).observe(officeStage, { attributes: true, attributeFilter: ["class"] });
+  syncPartyWindowReflection();
+  var gardenStage = document.getElementById("stage-garden");
+  if (gardenStage) new MutationObserver(syncPartyWindowReflection).observe(gardenStage, { attributes: true, attributeFilter: ["class"] });
+  var officeHangout = document.getElementById("office-hangout");
+  if (officeHangout) new MutationObserver(syncPartyWindowReflection).observe(officeHangout, {
+    attributes: true, subtree: true, attributeFilter: ["class"]
+  });
 
   function clearPropTimers() {
     propTimers.forEach(clearTimeout);
@@ -107633,6 +107734,25 @@ function spawnDustMote(container) {
     var overlay = document.getElementById("prince-cat-overlay");
     if (catRoom !== "dungeon" || !overlay || pos.parentNode !== overlay ||
         !walk.classList.contains("out")) return false;
+    if (reducedMotion() || !walk.animate || jumping) {
+      twitchEar();
+      flickTail();
+      return true;
+    }
+    cancelJump();
+    var b = baseFeet();
+    var targetX = 42;
+    var targetDx = targetX - b.x;
+    jumping = true;
+    walk.style.animationPlayState = "paused";
+    jumpAnim = walk.animate([
+      { offset: 0, transform: "translate(0,0)", easing: "cubic-bezier(.35,0,.65,.4)" },
+      { offset: .32, transform: "translate(" + (targetDx * .48).toFixed(1) + "px,-48px)", easing: "cubic-bezier(.2,.7,.35,1)" },
+      { offset: .55, transform: "translate(" + targetDx.toFixed(1) + "px,-4px)", easing: "cubic-bezier(.25,.7,.4,1)" },
+      { offset: .72, transform: "translate(" + targetDx.toFixed(1) + "px,-4px)" },
+      { offset: 1, transform: "translate(0,0)", easing: "cubic-bezier(.35,0,.65,.4)" }
+    ], { duration: 920, fill: "none" });
+    jumpAnim.onfinish = finishJump;
     twitchEar();
     flickTail();
     if (catArt) {
@@ -107643,6 +107763,54 @@ function spawnDustMote(container) {
     }
     return true;
   };
+  function runLowerCatAway() {
+    var lowerRooms = { bathroom: 1, cinema: 1, bedroom: 1, dungeon: 1 };
+    var open = catRoom === "bathroom" ? window.__bathroomRoomOpen :
+      catRoom === "cinema" ? window.__cinemaRoomOpen :
+      catRoom === "bedroom" ? window.__bedroomRoomOpen :
+      catRoom === "dungeon" ? !!document.querySelector(".hunt-viewport.prince-basement-open") : false;
+    if (!lowerRooms[catRoom] || !open || !walk.classList.contains("out") ||
+        getComputedStyle(pos).visibility === "hidden") return false;
+    clearTimeout(lowerCatTimer);
+    lowerCatTimer = null;
+    cancelJump();
+    lowerCatPerched = null;
+    pos.style.pointerEvents = "none";
+    walk.style.transform = "";
+    var escapedRoom = catRoom;
+    function bringCatBack() {
+      if (catRoom !== escapedRoom) return;
+      var stillOpen = escapedRoom === "bathroom" ? window.__bathroomRoomOpen :
+        escapedRoom === "cinema" ? window.__cinemaRoomOpen :
+        escapedRoom === "bedroom" ? window.__bedroomRoomOpen :
+        !!document.querySelector(".hunt-viewport.prince-basement-open");
+      if (stillOpen && window.__homeCatLower) window.__homeCatLower(escapedRoom);
+    }
+    if (reducedMotion() || !walk.animate) {
+      pos.style.visibility = "hidden";
+      pos.style.pointerEvents = "none";
+      setTimeout(bringCatBack, 1500);
+      return true;
+    }
+    jumping = true;
+    walk.style.animationPlayState = "paused";
+    var flee = walk.animate([
+      { transform: "translate(0,0)", opacity: 1 },
+      { transform: "translate(-105px,5px)", opacity: 1, offset: .46 },
+      { transform: "translate(-205px,10px)", opacity: 0 }
+    ], { duration: 720, easing: "cubic-bezier(.2,.7,.35,1)", fill: "forwards" });
+    jumpAnim = flee;
+    flee.onfinish = function () {
+      if (jumpAnim !== flee) return;
+      jumpAnim = null;
+      jumping = false;
+      pos.style.visibility = "hidden";
+      pos.style.pointerEvents = "none";
+      walk.style.animationPlayState = "";
+      setTimeout(bringCatBack, 1500);
+    };
+    return true;
+  }
   // The chest doors are physical: with BOTH shut the cat can neither come out nor get
   // back in. Emergence already lives inside witchy-door-1's own open handler (so it
   // only ever fires through an opening door); this is the return side of the same
@@ -107699,6 +107867,7 @@ function spawnDustMote(container) {
   // a no-op when it's not out, off-screen, mid-hop, or under reduced motion).
   var catArt = document.getElementById("witchy-chest-cat");
   if (catArt) catArt.addEventListener("click", function () {
+    if (runLowerCatAway()) return;
     if (jumping) {
       // already up on a perch → clicking cuts the sit short and hops it back down
       // (skip to the descent keyframe at offset 0.86); ignore during an entrance glide.

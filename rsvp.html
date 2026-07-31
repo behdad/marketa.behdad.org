@@ -6093,6 +6093,20 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   background:#788494;
   transform:rotate(-5deg);
 }
+#prince-dungeon-stone::after{
+  content:"";
+  position:absolute;
+  left:-22%;
+  bottom:-16%;
+  width:110%;
+  height:42%;
+  border-radius:50%;
+  background:radial-gradient(ellipse,rgba(199,207,207,.72),rgba(199,207,207,0) 72%);
+  opacity:0;
+  transform:scale(.25);
+  pointer-events:none;
+}
+#prince-dungeon-stone.scraped::after{animation:prince-stone-dust .42s ease-out}
 #prince-dungeon-stone.shifted{transform:translateX(16%) rotate(8deg)}
 @keyframes prince-portal-wake{50%{transform:translate(-50%,-50%) scale(1.04);filter:brightness(1.7)}}
 @keyframes prince-window-rattle{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
@@ -6100,6 +6114,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 @keyframes prince-torch-melody-flare{0%{transform:scale(.9);filter:drop-shadow(0 0 8px #ff9d00)}35%{transform:scale(1.32);filter:drop-shadow(0 0 20px #ffd36b)}100%{transform:scale(1);filter:drop-shadow(0 0 8px #ff9d00)}}
 @keyframes prince-chain-swing{25%{transform:translate(var(--prince-chain-x,0px),var(--prince-chain-y,0px)) rotate(8deg)}65%{transform:translate(var(--prince-chain-x,0px),var(--prince-chain-y,0px)) rotate(-6deg)}}
 @keyframes prince-ledge-thud{50%{transform:translateY(3px)}}
+@keyframes prince-stone-dust{20%{opacity:.78;transform:scale(.7) translate(-8%,-8%)}100%{opacity:0;transform:scale(1.35) translate(-18%,-30%)}}
 @keyframes prince-rat-scurry{
   0%{opacity:0;transform:translateX(0) scaleX(1)}
   9%{opacity:1}
@@ -66157,7 +66172,8 @@ async def localfont(name):
       if (typeof playKnockboxThumpSound === "function") playKnockboxThumpSound(prop.id);
     } else if (action === "stone") {
       prop.classList.toggle("shifted");
-      if (typeof playKnockboxThumpSound === "function") playKnockboxThumpSound(prop.id);
+      replayPrinceDungeonClass(prop, "scraped", 450);
+      if (typeof playStoneScrapeSound === "function") playStoneScrapeSound(prop.id);
     } else {
       return false;
     }
@@ -90482,6 +90498,30 @@ function playKnockboxThumpSound(panId) {
       osc.start(t);
       osc.stop(t + 0.15);
     });
+  } catch (e) {}
+}
+function playStoneScrapeSound(panId) {
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, panId == null ? "prince-dungeon-stone" : panId);
+    var bufferSize = Math.floor(ctx.sampleRate * .2);
+    var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, .55);
+    var noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    var filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(900, t);
+    filter.frequency.exponentialRampToValueAtTime(180, t + .18);
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.exponentialRampToValueAtTime(.16, t + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + .2);
+    noise.connect(filter); filter.connect(gain); gain.connect(out);
+    noise.start(t); noise.stop(t + .21);
   } catch (e) {}
 }
 // A cocktail-shaker rattle: ice cubes clattering inside a metal tin — a short flurry of bright,

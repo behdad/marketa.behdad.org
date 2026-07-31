@@ -72,15 +72,15 @@ AddType text/javascript .mjs
 AddType application/manifest+json .webmanifest
 
 # ── launch hardening: compression + caching ────────────────────────────────
-# rsvp.html is ~1.6 MB uncompressed; gzip takes it to a few hundred KB. Every
-# visitor benefits, and it slashes origin egress under a traffic spike.
+# Text and self-hosted runtime assets benefit from transparent compression,
+# reducing origin egress without changing the files visitors receive.
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
     application/javascript text/javascript application/json image/svg+xml \
     application/wasm application/manifest+json
   # Large self-hosted binaries served as octet-stream (so the type filter above misses them):
-  # the DOOM WAD compresses ~61% (21→8 MB) and the Linux ISO ~56% (7.6→3.3 MB). Both are fetched
-  # WHOLE (Emscripten createPreloadedFile / v86's non-async cdrom), so the browser's transparent
+  # These large binaries are fetched WHOLE (Emscripten createPreloadedFile / v86's non-async
+  # cdrom), so the browser's transparent
   # gunzip hands the runtime the full bytes — safe. (.wasm is already covered above; .zip/.whl are
   # already-compressed, so they're left alone.)
   <FilesMatch "\.(wad|iso)$">

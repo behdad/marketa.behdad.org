@@ -707,6 +707,12 @@ The global room-key owner reserves plain `ArrowDown` for all five implemented
 upstairs rooms and delegates to their public open hooks; each active lower-room
 capture guard owns `ArrowUp` on the way back. `__navigateLowerRoom` maps
 Left/Right, side controls, and room dots across the parallel lower-floor row.
+The five lower-room roots live in `#lower-room-track`: its single horizontal
+transform keeps adjacent panels continuous and queues one navigation request
+during an active pan. Vertical entry/return instead shares the registered
+`--floor-pan` progress value between the upstairs strip and the active lower
+panel, so both floors move on exactly one timeline rather than exposing the
+viewport background between independent transitions.
 The Kitchen `WC`, Garden dungeon-door, Cuddly cinema-ticket, Office `Zzz…`,
 and Balcony key/fob SVG markers call the same public open hooks after a
 double-click or a pair of touch `pointerup` events within 420 ms. Single

@@ -372,8 +372,18 @@ footer{margin-top:2.6rem}
 }
 .hunt-frame{display:flex; align-items:center; gap:.3rem; max-width:1140px; margin:1.5rem auto; position:relative}
 .hunt-viewport{
+  --floor-pan:0%;
   position:relative; flex:1 1 auto; min-width:0; overflow:hidden; border-radius:14px;
   box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec; container-type:inline-size;
+  transition:--floor-pan .72s cubic-bezier(.4,0,.2,1);
+}
+@property --floor-pan{
+  syntax:"<percentage>";
+  inherits:true;
+  initial-value:0%;
+}
+.hunt-viewport:is(.bathroom-room-open,.prince-basement-open,.cinema-room-open,.bedroom-room-open,.entrance-room-open){
+  --floor-pan:100%;
 }
 #cinema-room[hidden]{display:none}
 #cinema-room{
@@ -511,7 +521,7 @@ footer{margin-top:2.6rem}
 .hunt-viewport.cinema-room-open #cinema-room{
   visibility:visible; pointer-events:auto; transform:translateY(0); transition-delay:0s;
 }
-.hunt-viewport.cinema-room-open #loft-game-strip{transform:translate(-40%,-100%) !important}
+.hunt-viewport.cinema-room-open #loft-game-strip{transform:translateX(-40%) !important}
 #cuddly-cinema-ticket{cursor:pointer}
 #entrance-room[hidden]{display:none}
 #entrance-room{
@@ -607,7 +617,7 @@ footer{margin-top:2.6rem}
 .hunt-viewport.entrance-room-open #entrance-room{
   visibility:visible; pointer-events:auto; transform:translateY(0); transition-delay:0s;
 }
-.hunt-viewport.entrance-room-open #loft-game-strip{transform:translate(-80%,-100%) !important}
+.hunt-viewport.entrance-room-open #loft-game-strip{transform:translateX(-80%) !important}
 @media (prefers-reduced-motion:reduce){
   #cinema-room,#cinema-room *,#entrance-room,#entrance-room *{transition:none;scroll-behavior:auto}
   .hunt-viewport:is(.cinema-room-open,.entrance-room-open) #loft-game-strip{transition:none}
@@ -721,7 +731,7 @@ footer{margin-top:2.6rem}
 .hunt-viewport.bathroom-room-open #bathroom-room{
   visibility:visible; pointer-events:auto; transform:translateY(0); transition-delay:0s;
 }
-.hunt-viewport.bathroom-room-open #loft-game-strip{transform:translate(0,-100%) !important}
+.hunt-viewport.bathroom-room-open #loft-game-strip{transform:translateX(0) !important}
 @media (prefers-reduced-motion:reduce){
   #bathroom-room,#bathroom-room *{transition:none}
   #bathroom-room :is(#bathroom-sink-water,#bathroom-mirror-gleam,#bathroom-waffle-towel,#bathroom-stool,#bathroom-scale,#bathroom-scale-needle,#bathroom-toilet-swirl){animation:none}
@@ -804,7 +814,7 @@ footer{margin-top:2.6rem}
 .hunt-viewport.bedroom-room-open #bedroom-room{
   visibility:visible;pointer-events:auto;transform:translateY(0);transition-delay:0s;
 }
-.hunt-viewport.bedroom-room-open #loft-game-strip{transform:translate(-60%,-100%) !important}
+.hunt-viewport.bedroom-room-open #loft-game-strip{transform:translateX(-60%) !important}
 @media (prefers-reduced-motion:reduce){
   #bedroom-room,#bedroom-room *{transition:none}
   .hunt-viewport.bedroom-room-open #loft-game-strip{transition:none}
@@ -876,9 +886,45 @@ footer{margin-top:2.6rem}
 #loft-game-strip{
   display:block; width:500%; height:auto; user-select:none; -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none;
-  transition:transform .7s ease;
+  translate:0 calc(-1 * var(--floor-pan));
+  transition:transform .72s cubic-bezier(.4,0,.2,1);
 }
 #loft-game-strip.recovery-preview{transition:none}
+#lower-room-track{
+  position:absolute; inset:0; z-index:12; width:500%; height:100%;
+  display:flex; pointer-events:none; transform:translateX(0);
+}
+#lower-room-track > :is(#bathroom-room,#prince-basement,#cinema-room,#bedroom-room,#entrance-room){
+  position:relative; inset:auto; flex:0 0 20%; width:20%; height:100%; z-index:auto;
+  transform:none;
+  translate:0 calc(100% - var(--floor-pan));
+  transition:visibility 0s linear .72s;
+}
+.hunt-viewport:is(.bathroom-room-open,.prince-basement-open,.cinema-room-open,.bedroom-room-open,.entrance-room-open)
+  #lower-room-track > :is(#bathroom-room,#prince-basement,#cinema-room,#bedroom-room,#entrance-room){
+  transition-delay:0s;
+}
+#lower-room-track > [hidden]{display:block}
+#lower-room-track > #bathroom-room{order:0}
+#lower-room-track > #prince-basement{order:1}
+#lower-room-track > #cinema-room{order:2}
+#lower-room-track > #bedroom-room{order:3}
+#lower-room-track > #entrance-room{order:4}
+.hunt-viewport.bathroom-room-open #lower-room-track{transform:translateX(0)}
+.hunt-viewport.prince-basement-open #lower-room-track{transform:translateX(-20%)}
+.hunt-viewport.cinema-room-open #lower-room-track{transform:translateX(-40%)}
+.hunt-viewport.bedroom-room-open #lower-room-track{transform:translateX(-60%)}
+.hunt-viewport.entrance-room-open #lower-room-track{transform:translateX(-80%)}
+#lower-room-track[data-room="kitchen"]{transform:translateX(0)}
+#lower-room-track[data-room="garden"]{transform:translateX(-20%)}
+#lower-room-track[data-room="cuddly"]{transform:translateX(-40%)}
+#lower-room-track[data-room="office"]{transform:translateX(-60%)}
+#lower-room-track[data-room="balcony"]{transform:translateX(-80%)}
+.hunt-viewport.lower-room-sliding #lower-room-track >
+  :is(#bathroom-room,#prince-basement,#cinema-room,#bedroom-room,#entrance-room){
+  visibility:visible; translate:0; transition:none; pointer-events:none;
+}
+@media (prefers-reduced-motion:reduce){#lower-room-track{transition:none !important}}
 /* March 30 swaps the hosts' established pink/blue identities without touching skin,
    hair texture, or the rest of the loft's palette. */
 #loft-game-strip.bipolar-day .host-palette-behdad [fill="#e9bfc4"]{fill:#bcd1e7}
@@ -5486,7 +5532,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   transform:translateY(0);
   transition-delay:0s;
 }
-.hunt-viewport.prince-basement-open #loft-game-strip{transform:translate(-20%,-100%) !important}
+.hunt-viewport.prince-basement-open #loft-game-strip{transform:translateX(-20%) !important}
 #prince-basement-stage{
   position:relative;
   width:auto;
@@ -89553,6 +89599,40 @@ function spawnDustMote(container) {
   }
   var lowerRoomSlideTimer = null;
   var lowerRoomSlideState = null;
+  var lowerRoomSlideQueue = null;
+  var lowerRoomTrack = document.getElementById("lower-room-track");
+  if (!lowerRoomTrack) {
+    lowerRoomTrack = document.createElement("div");
+    lowerRoomTrack.id = "lower-room-track";
+    var lowerRoomAnchor = document.getElementById("bathroom-room");
+    if (lowerRoomAnchor && lowerRoomAnchor.parentNode) {
+      lowerRoomAnchor.parentNode.insertBefore(lowerRoomTrack, lowerRoomAnchor);
+      ["bathroom-room", "prince-basement", "cinema-room", "bedroom-room", "entrance-room"]
+        .forEach(function (id) {
+          var room = document.getElementById(id);
+          if (room) lowerRoomTrack.appendChild(room);
+        });
+    }
+  }
+  if (lowerRoomTrack) {
+    lowerRoomTrack.dataset.room = STAGES.indexOf(window.currentStageName) >= 0
+      ? window.currentStageName : "kitchen";
+    new MutationObserver(function () {
+      if (document.querySelector(".hunt-viewport.lower-room-sliding")) return;
+      var active = [
+        ["bathroom-room-open", "kitchen"],
+        ["prince-basement-open", "garden"],
+        ["cinema-room-open", "cuddly"],
+        ["bedroom-room-open", "office"],
+        ["entrance-room-open", "balcony"]
+      ].find(function (entry) {
+        return strip.closest(".hunt-viewport").classList.contains(entry[0]);
+      });
+      // Keep the last active room when its class is removed: that is the panel
+      // which must remain under the viewport throughout the upward return.
+      if (active) lowerRoomTrack.dataset.room = active[1];
+    }).observe(strip.closest(".hunt-viewport"), { attributes: true, attributeFilter: ["class"] });
+  }
   function lowerRoomForStage(name) {
     var table = {
       kitchen: {
@@ -89611,10 +89691,13 @@ function spawnDustMote(container) {
     catch (_error) { try { focusTarget.focus(); } catch (_error2) {} }
   }
   // Every main room now has a lower room. Horizontal navigation therefore stays on
-  // that floor: the current overlay slides out while the destination overlay enters,
-  // and only Up/Escape/the close control returns to the main floor.
+  // that floor. All five existing room roots live in one continuous track, so a single
+  // transform moves the source and destination together without a paint gap.
   function navigateLowerRoom(name, focusTarget) {
-    if (lowerRoomSlideTimer) return false;
+    if (lowerRoomSlideTimer) {
+      lowerRoomSlideQueue = { name: name, focusTarget: focusTarget };
+      return true;
+    }
     var source = activeLowerRoom();
     var target = lowerRoomForStage(name);
     var fromIndex = STAGES.indexOf(window.currentStageName);
@@ -89628,35 +89711,53 @@ function spawnDustMote(container) {
     var direction = toIndex > fromIndex ? 1 : -1;
     var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var duration = reduced ? 1 : 720;
-    var timing = { duration: duration, easing: "cubic-bezier(.4,0,.2,1)", fill: "both" };
-    var sourceAnimation = source.element.animate([
-      { transform: "translateX(0)" },
-      { transform: "translateX(" + (-direction * 100) + "%)" }
-    ], timing);
+    var viewport = strip.closest(".hunt-viewport");
+    if (!viewport || !lowerRoomTrack) return false;
+    var sourceOffset = -fromIndex * 20;
+    var targetOffset = -toIndex * 20;
+    lowerRoomTrack.style.transition = "none";
+    lowerRoomTrack.style.transform = "translateX(" + sourceOffset + "%)";
+    viewport.classList.add("lower-room-sliding");
+    lowerRoomTrack.getBoundingClientRect();
     if (!goToStage(name, { rosterNavigation: true })) {
-      sourceAnimation.cancel();
+      viewport.classList.remove("lower-room-sliding");
+      lowerRoomTrack.style.transition = "";
+      lowerRoomTrack.style.transform = "";
       return false;
     }
     if (!target.open()) {
-      sourceAnimation.cancel();
+      viewport.classList.remove("lower-room-sliding");
+      lowerRoomTrack.style.transition = "";
+      lowerRoomTrack.style.transform = "";
       return false;
     }
-    var targetAnimation = target.element.animate([
-      { transform: "translateX(" + (direction * 100) + "%)" },
-      { transform: "translateX(0)" }
-    ], timing);
+    // open() normally adds this after two paints for a vertical entrance. During a
+    // lateral handoff both panels are already held at y=0, so make ownership atomic.
+    viewport.classList.add(target.openClass);
+    lowerRoomTrack.dataset.room = name;
+    lowerRoomTrack.getBoundingClientRect();
+    lowerRoomTrack.style.transition = reduced
+      ? "none"
+      : "transform .72s cubic-bezier(.4,0,.2,1)";
+    lowerRoomTrack.style.transform = "translateX(" + targetOffset + "%)";
     lowerRoomSlideState = { active: true, from: STAGES[fromIndex], to: name, direction: direction };
     lowerRoomSlideTimer = setTimeout(function () {
       lowerRoomSlideTimer = null;
       lowerRoomSlideState = null;
-      try { sourceAnimation.cancel(); } catch (_error) {}
-      try { targetAnimation.cancel(); } catch (_error2) {}
+      viewport.classList.remove("lower-room-sliding");
+      lowerRoomTrack.style.transition = "";
+      lowerRoomTrack.style.transform = "";
       // The source's delayed close releases the shared hold in this same frame;
       // reassert it for the destination that still owns the viewport.
       if (lowerRoomOwnsViewport() && window.__setLowerRoomNotificationHold) {
         window.__setLowerRoomNotificationHold(true);
       }
       focusLowerNavigation(focusTarget);
+      var queued = lowerRoomSlideQueue;
+      lowerRoomSlideQueue = null;
+      if (queued && queued.name !== window.currentStageName) {
+        navigateLowerRoom(queued.name, queued.focusTarget);
+      }
     }, duration + 20);
     return true;
   }

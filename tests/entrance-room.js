@@ -192,9 +192,9 @@ check((entrance.match(/class="entrance-car-control" role="button" tabindex="-1"/
   /id="entrance-porsche-door-panel"/.test(entrance) && /id="entrance-porsche-frunk-panel"/.test(entrance) &&
   /id="entrance-porsche-trunk-panel"/.test(entrance) && /id="entrance-porsche-mirror"/.test(entrance),
   "the inline Boxster keeps seven partitioned controls and separate roof, door, and compartment art");
-check(/id="entrance-porsche" transform="translate\(0 -9\)"/.test(entrance) &&
-  (entrance.match(/class="entrance-car-control"[^>]*transform="translate\(0 -9\)"/g) || []).length === 7,
-  "the complete Porsche visual and all seven controls share the approved nine-unit lift");
+check(/id="entrance-porsche" transform="translate\(328 -9\)"/.test(entrance) &&
+  (entrance.match(/class="entrance-car-control"[^>]*transform="translate\(328 -9\)"/g) || []).length === 7,
+  "the complete Porsche visual and all seven controls share the right-side placement and approved nine-unit lift");
 check(!/\.entrance-car-control:(?:hover|focus-visible)/.test(source) &&
   !/id="entrance-(?:doors|walk)"|entrance_(?:door|sidewalk):/.test(source),
   "car hit regions stay visually transparent and removed building hits leave no stale interaction");

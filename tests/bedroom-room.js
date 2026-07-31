@@ -142,6 +142,8 @@ check((source.match(/class="bedroom-prop[^"]*"[^>]* role="button"/g) || []).leng
   "all nine distinct Bedroom prop groups stay outside the Tab order");
 check(!/id="bedroom-(?:left|right)-lamp"[^>]*tabindex=/.test(source),
   "the two bedside lamps do not add tab stops");
+check(!/#bedroom-room\s+\.bedroom-prop:hover\s*\{[^}]*opacity/.test(source),
+  "Bedroom props stay fully opaque on hover");
 check((source.match(/class="bedroom-lamp-pedestal"/g) || []).length === 2 &&
   (source.match(/class="bedroom-lamp-shade"/g) || []).length === 2 &&
   (source.match(/class="bedroom-lamp-fixture" transform="translate\([^"]+\) scale\(\.8\)"/g) || []).length === 2 &&

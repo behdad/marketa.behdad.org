@@ -205,7 +205,8 @@ check(/@media \(any-pointer:coarse\)\{\.bathroom-bubble-hit\{r:40px\}\}/.test(so
   "coarse pointers receive expanded bubble hit circles");
 ["bathroom-sink", "bathroom-mirror-action", "bathroom-tub", "bathroom-waffle-towel",
  "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
- "bathroom-toilet-action", "bathroom-toilet-book", "bathroom-book-action"].forEach(function (id) {
+ "bathroom-toilet-action", "bathroom-toilet-book", "bathroom-book-action",
+ "bathroom-grooming-kit", "bathroom-toothbrush-holder"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "illustration includes " + id);
 });
 ["bathroom-mirror-fog", "bathroom-mirror-wipe", "bathroom-mirror-signature",

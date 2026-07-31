@@ -582,7 +582,7 @@ before the small remote, and the VAVA ring/confirm regions are stacked 32×32
 SVG units around the visible face. VAVA presses animate the complete remote
 shell rather than an invisible hit overlay. The shared side Play/Pause and Next buttons are intercepted
 in capture phase while Cinema owns the viewport and speak to Vimeo through its
-postMessage API. A player iframe is removed on Choose another, projector-off,
+postMessage API. A player iframe is removed on remote return, projector-off,
 sprinkler short, reset, or an explicit teardown; ordinary Cinema close/navigation
 pauses and retains the selected iframe, and the open hook restores that paused
 surface. The calibrated HTML screen shell has no CSS border inset, so
@@ -613,7 +613,7 @@ Either one powers the cinema projector and temporarily reparents the existing
 `#monitor-photobooth`, confirm, and error content groups into
 `#cinema-photobooth-surface`; the Office monitor body and chrome never move.
 A narrow monitor-class observer mirrors the Photobooth state onto Cinema for
-the existing live, picker, and error views. App close, Choose another,
+the existing live, picker, and error views. App close, remote return,
 projector-off, room close, navigation, and reset stop the stream and restore
 the groups immediately before `#monitor-shoot-coach`. Generated picker controls
 are removed from the Cinema tab order while projected.

@@ -6,11 +6,11 @@
 var lib = require("./lib");
 
 var CASES = [
-  { id: "bathroom", room: "kitchen", label: "Bathroom" },
-  { id: "dungeon", room: "garden", label: "Dungeon" },
-  { id: "cinema", room: "cuddly", label: "Cinema" },
-  { id: "bedroom", room: "office", label: "Bedroom" },
-  { id: "entrance", room: "balcony", label: "Entrance" }
+  { id: "bathroom", room: "kitchen", label: "bathroom" },
+  { id: "dungeon", room: "garden", label: "dungeon" },
+  { id: "cinema", room: "cuddly", label: "cinema" },
+  { id: "bedroom", room: "office", label: "bedroom" },
+  { id: "entrance", room: "balcony", label: "entrance" }
 ];
 
 function harness(testCase) {
@@ -53,7 +53,7 @@ function harness(testCase) {
     'if(!sessionStorage.getItem("lower-recovery-seeded")){sessionStorage.setItem("lower-recovery-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
     'window.addEventListener("load",function(){setTimeout(function(){',
     'var gate=document.getElementById("loft-recovery-gate"),summary=document.getElementById("hunt-caption").textContent,viewport=document.querySelector(".hunt-viewport"),element=document.getElementById(elementId),princeBefore=window.__princeState&&window.__princeState(),cinemaBefore=window.__cinemaRoomState&&window.__cinemaRoomState();',
-    'var preview={shown:!element.hidden&&viewport.classList.contains("recovery-lower-preview")&&viewport.classList.contains(openClass),ariaHidden:element.getAttribute("aria-hidden"),gateAbove:+getComputedStyle(gate).zIndex>+getComputedStyle(element).zIndex,live:{bathroom:!!window.__bathroomRoomOpen,dungeon:!!(princeBefore&&princeBefore.basement),cinema:!!window.__cinemaRoomOpen,bedroom:!!window.__bedroomRoomOpen,entrance:!!window.__entranceRoomOpen},checkpoint:localStorage.getItem("loftCheckpoint:v1")===JSON.stringify(saved),discovered:localStorage.getItem("lowerRoomDiscovered:v1"),frames:{dungeon:document.querySelectorAll("#prince-basement iframe").length,cinema:document.querySelectorAll("#cinema-player").length},cinemaPowered:!!(cinemaBefore&&cinemaBefore.powered)};',
+    'var gateZ=getComputedStyle(gate).zIndex,elementZ=getComputedStyle(element).zIndex;var preview={shown:!element.hidden&&viewport.classList.contains("recovery-lower-preview")&&viewport.classList.contains(openClass),ariaHidden:element.getAttribute("aria-hidden"),floorPan:getComputedStyle(viewport).getPropertyValue("--floor-pan").trim(),transition:getComputedStyle(viewport).transition,gateAbove:gateZ!=="auto"&&(elementZ==="auto"||+gateZ>+elementZ),live:{bathroom:!!window.__bathroomRoomOpen,dungeon:!!(princeBefore&&princeBefore.basement),cinema:!!window.__cinemaRoomOpen,bedroom:!!window.__bedroomRoomOpen,entrance:!!window.__entranceRoomOpen},checkpoint:localStorage.getItem("loftCheckpoint:v1")===JSON.stringify(saved),discovered:localStorage.getItem("lowerRoomDiscovered:v1"),frames:{dungeon:document.querySelectorAll("#prince-basement iframe").length,cinema:document.querySelectorAll("#cinema-player").length},cinemaPowered:!!(cinemaBefore&&cinemaBefore.powered)};',
     'if(gate)gate.querySelector(".loft-recovery-btn.primary").click();',
     'setTimeout(function(){var prince=window.__princeState&&window.__princeState(),cinema=window.__cinemaRoomState&&window.__cinemaRoomState(),bedroom=window.__bedroomRoomState&&window.__bedroomRoomState(),ttt=window.__bedroomTicTacToeState&&window.__bedroomTicTacToeState(),persisted=JSON.parse(localStorage.getItem("loftCheckpoint:v1"));',
     'document.getElementById("__report").textContent=JSON.stringify({errors:window.__errs,preview:preview,summary:summary,room:window.currentStageName,persisted:persisted&&persisted.progress&&persisted.progress.lowerRoom,open:{bathroom:!!window.__bathroomRoomOpen,dungeon:!!(prince&&prince.basement),cinema:!!window.__cinemaRoomOpen,bedroom:!!window.__bedroomRoomOpen,entrance:!!window.__entranceRoomOpen},dungeon:{initiated:!!(prince&&prince.initiated),playing:!!(prince&&prince.playing),input:!!window.__princeInputActive,frames:document.querySelectorAll("#prince-basement iframe").length},cinema:cinema&&{powered:cinema.powered,playing:cinema.playing,video:cinema.video,frames:document.querySelectorAll("#cinema-player").length},bedroom:bedroom&&{spraying:bedroom.spraying,bedWet:bedroom.bedWet,ttt:ttt&&ttt.phase}});',
@@ -106,8 +106,9 @@ CASES.forEach(function (testCase) {
   });
   check(result && result.errors.length === 0, testCase.id + " recovery has no uncaught errors", result && result.errors);
   check(result && result.preview && result.preview.shown && result.preview.ariaHidden === "true" &&
+      result.preview.floorPan === "100%" && result.preview.transition === "none" &&
       result.preview.gateAbove,
-    testCase.id + " is visible only as an inert scene behind the recovery gate", result && result.preview);
+    testCase.id + " opens directly on the saved lower room behind the recovery gate", result && result.preview);
   check(result && result.preview && Object.keys(result.preview.live).every(function (id) {
       return !result.preview.live[id];
     }) && result.preview.checkpoint && result.preview.discovered === null,

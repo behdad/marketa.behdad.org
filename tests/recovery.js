@@ -69,11 +69,11 @@ check(s.gate.preview && s.gate.previewTransform === "translateX(-60%)" && s.gate
   "the recovery gate previews the saved room without entering it", s.gate);
 check(s.gate.previewPhase2 && s.gate.previewParty && s.gate.previewNight && parseFloat(s.gate.previewBar) > 0.9,
   "the recovery preview uses the saved phase, party, and day/night look", s.gate);
-check(!!s.gate.summary && /^Saved Office · /.test(s.gate.summary) && !s.gate.duplicateMeta && s.gate.describedBy === "hunt-caption", "the caption alone carries the concise accessible recovery summary", s.gate);
+check(!!s.gate.summary && /^Saved office · /.test(s.gate.summary) && !s.gate.duplicateMeta && s.gate.describedBy === "hunt-caption", "the caption alone carries the concise accessible recovery summary", s.gate);
 check(s.gate.recoveryActive && s.gate.restartVisibility === "hidden" && s.gate.escapeVisibility === "hidden" && s.gate.prevVisibility === "hidden" && s.gate.mediaVisibility === "hidden" && s.gate.dotsDisplay === "none" && s.gate.fullscreenVisibility === "visible", "recovery hides inactive game controls but keeps fullscreen available", s.gate);
 check(s.gate.utilityVisibility === "visible" && s.gate.brandDisplay === "block" && s.gate.brandAboveTitle && s.gate.langsDisplay === "flex", "recovery keeps utilities/language in chrome and Loft Day above Welcome back", s.gate);
 check(s.translatedRecovery && s.translatedRecovery.brand === "Den v podkroví" && s.translatedRecovery.title === "Vítej zpátky" &&
-  /Pokračovat/.test(s.translatedRecovery.continueText) && /Začít znovu/.test(s.translatedRecovery.restartText) && /^Uloženo Pracovna · /.test(s.translatedRecovery.summary),
+  /Pokračovat/.test(s.translatedRecovery.continueText) && /Začít znovu/.test(s.translatedRecovery.restartText) && /^Uloženo pracovna · /.test(s.translatedRecovery.summary),
   "changing language repaints the visible recovery choice and saved-room summary", s.translatedRecovery);
 check(s.gate.watchParent === "hunt-fullscreen-area" && s.gate.watchDisplay === "flex", "Trailer and Autoplay occupy the room-dot row during recovery", s.gate);
 check(!s.gate.watchHidden && s.gate.watchAria === null && s.gate.watchDisplay === "flex", "Trailer and Autoplay remain available beside the recovery choice", s.gate);

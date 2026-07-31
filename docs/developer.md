@@ -690,6 +690,9 @@ adapter; only a deliberate game reset returns both lamps to their authored-on
 state. `__bedroomRoomState().props` is the focused regression surface.
 Opening the wardrobe reveals both suits; selecting either suit replays only that
 hanger's swing without adding a Tab stop or toggling the wardrobe.
+`#bedroom-party-coats` lives inside the bed's native SVG group and projects the
+strip's `.party-on` state through CSS only. It is non-interactive, paints below
+the sprinkler spray and the dynamically appended cat, and hides again on party end.
 
 Lamp activation also calls `syncSleep()`. Only when both mushroom lamps carry
 `.off` does the room gain `.bedroom-sleeping`, which deepens the existing night

@@ -222,7 +222,8 @@ gameplay messages finish before that room caption appears.
   After a win or draw, double-select any pane to restart. Enter starts a fresh
   board with the window moving first. Turning off both mushroom lamps lets the
   room settle to sleep. Open the wardrobe to reveal the wedding suits; each
-  hanger swings on its own. Leaving clears the board and restores the furnishings.
+  hanger swings on its own. During the party, guests leave their coats on the
+  bed. Leaving clears the board and restores the furnishings.
 - **The Lofts** entrance pairs with the Balcony. Select the windows and street
   details for small reactions. Toggling all five windows away from their
   day/night defaults earns a caption. Enter flickers them briefly as an

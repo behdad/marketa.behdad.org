@@ -65763,6 +65763,40 @@ async def localfont(name):
       osc.stop(now + 0.17);
     } catch (_error) {}
   }
+  function playDungeonIntroMelody() {
+    if (document.hidden || !document.hasFocus()) return;
+    try {
+      var ctx = getSfxCtx();
+      if (!ctx) return;
+      var t = ctx.currentTime;
+      var master = ctx.createGain();
+      master.gain.value = 0.11;
+      master.connect(pannedOut(ctx, "prince-dungeon-window"));
+      var notes = [
+        { f: 293.66, d: .24 }, { f: 311.13, d: .07 }, { f: 369.99, d: .27 },
+        { f: 392, d: .10 }, { f: 440, d: .26 }, { f: 466.16, d: .08 },
+        { f: 554.37, d: .32 }, { f: 440, d: .12 }, { f: 392, d: .22 },
+        { f: 369.99, d: .08 }, { f: 311.13, d: .18 }, { f: 293.66, d: .58 }
+      ];
+      var at = t;
+      notes.forEach(function (note, index) {
+        var frequency = note.f;
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(frequency * 1.035, at);
+        osc.frequency.exponentialRampToValueAtTime(frequency, at + Math.min(.045, note.d * .3));
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(index === notes.length - 1 ? 0.38 : 0.27, at + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + note.d);
+        osc.connect(gain);
+        gain.connect(master);
+        osc.start(at);
+        osc.stop(at + note.d + 0.025);
+        at += note.d + .025;
+      });
+    } catch (_error) {}
+  }
   // One fixed drop owns its successor: backgrounded WAAPI pauses before onfinish, so
   // there is never a timer queue or a growing pile of hidden particles to catch up.
   function runPrinceDungeonDrip() {
@@ -65997,6 +66031,7 @@ async def localfont(name):
     princeBasement.hidden = false;
     princeBasement.classList.remove("playing");
     resetPrinceDungeonProps();
+    playDungeonIntroMelody();
     runPrinceDungeonDrip();
     runPrinceDungeonRat();
     requestAnimationFrame(function () {

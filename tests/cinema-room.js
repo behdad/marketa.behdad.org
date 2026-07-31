@@ -226,13 +226,15 @@ check(s.sprinklerRemoteLock && s.sprinklerRemoteLock.shorted && !s.sprinklerRemo
 check(s.back && s.back.state.open && !s.back.state.playing && !s.back.frame && !s.back.chooser,
   "returning to the chooser removes the cross-origin player", s.back);
 check(s.navigate && !s.navigate.state.open && !s.navigate.state.playing && s.navigate.room === "office" &&
-  !s.navigate.frame && s.navigate.channel === s.channelWas,
-  "ordinary room navigation tears down the cinema and preserves projector state", s.navigate);
+  s.navigate.frame && s.navigate.state.powered && s.navigate.state.video === "1096537359" &&
+  s.navigate.channel === s.channelWas,
+  "ordinary room navigation pauses and preserves the cinema player", s.navigate);
 check(s.fastClose && !s.fastClose.open && s.fastClose.song,
   "closing after film teardown preserves the loft song's own playback state", s.fastClose);
-check(s.remoteResume && !s.remoteResume.state.powered && !s.remoteResume.state.video &&
-  s.remoteResume.state.chooserIndex === 0 && s.remoteResume.current === 0,
-  "leaving and reopening resets both remotes to the projector-off baseline", s.remoteResume);
+check(s.remoteResume && s.remoteResume.state.powered && !s.remoteResume.state.playing &&
+  s.remoteResume.state.video === "1096537359" && s.remoteResume.state.chooserIndex === 0 &&
+  s.remoteResume.current === 1,
+  "reopening Cinema restores the visible paused player", s.remoteResume);
 check(s.fastClose && s.fastClose.hidden && !s.fastClose.viewport &&
   s.fastClose.roster.every(function(value){return value==="visible";}),
   "the upward return finishes hidden and restores the open Who's here surface", s.fastClose);

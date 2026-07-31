@@ -217,7 +217,9 @@ gameplay messages finish before that room caption appears.
   **Choose another** returns to the chooser. Its Blackmagic cinema camera and
   Canon DSLR each project the real Photobooth app directly onto the cinema
   screen; Back returns to the film chooser without bringing the office monitor
-  into the room. The window toggles day and night.
+  into the room. Leaving Cinema pauses a selected film and keeps its player
+  visible for the next visit; turning the projector off still clears it. The
+  window toggles day and night.
   The woven poufs beside the asymmetrical leather daybed nest into one another.
   Try the ceiling sprinkler during a film if you accept the consequences.
 - **Bedroom** pairs with the Office. Its furnishings are repeatable toys whose

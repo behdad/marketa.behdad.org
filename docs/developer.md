@@ -583,8 +583,9 @@ SVG units around the visible face. VAVA presses animate the complete remote
 shell rather than an invisible hit overlay. The shared side Play/Pause and Next buttons are intercepted
 in capture phase while Cinema owns the viewport and speak to Vimeo through its
 postMessage API. A player iframe is removed on Choose another, projector-off,
-sprinkler short, close, reset, or `goToStage`, which is the cross-origin
-playback teardown. The calibrated HTML screen shell has no CSS border inset, so
+sprinkler short, reset, or an explicit teardown; ordinary Cinema close/navigation
+pauses and retains the selected iframe, and the open hook restores that paused
+surface. The calibrated HTML screen shell has no CSS border inset, so
 the 100% player reaches its four outer edges without changing Vimeo's iframe
 aspect behavior. The native SVG rim tracks that aperture with only a compact
 physical bezel instead of a broad black matte; its side reveal matches the

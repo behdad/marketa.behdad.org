@@ -294,8 +294,9 @@ Conditionally rendered keepsakes carry their effective date and restore only aft
 has rendered the matching scene again; a mismatch settles the scene's fresh default.
 Device checkpoints store physical shell state rather than painted app activity; restored shells land
 on a normal desktop or launcher so their next action always follows the ordinary fresh path.
-Completing the phone's first-open lock immediately schedules a checkpoint, so Continue never asks
-for that unlock again.
+Completing the phone's lock immediately schedules a checkpoint for the current visit. A page-load
+Continue deliberately discards only that authentication bit, so an open restored phone asks for
+the PIN again while its separately owned messages, photos, layout, and compact app data survive.
 Separately owned compact app data uses fixed, bounded row allowlists; no additional foreground
 drafts, focus, scroll, live media, runtime frames, or other transient state ride with the device shell.
 

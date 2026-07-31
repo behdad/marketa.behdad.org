@@ -104787,6 +104787,15 @@ function spawnDustMote(container) {
     // until the save below captures a modern systems map. A present map is modern: missing rows
     // inside it intentionally settle those subsystems to their fresh defaults.
     var hasSystems = Object.prototype.hasOwnProperty.call(saved, "systems");
+    var restoreSystems = saved.systems;
+    // A continued visit always starts behind the phone's lock screen. Preserve the
+    // saved shell-open bit and all separately owned phone/app data, but do not carry
+    // authentication across a page-load recovery.
+    if (hasSystems && restoreSystems && typeof restoreSystems === "object" &&
+        restoreSystems["phone-shell"] && typeof restoreSystems["phone-shell"] === "object") {
+      restoreSystems = Object.assign({}, restoreSystems);
+      restoreSystems["phone-shell"] = Object.assign({}, restoreSystems["phone-shell"], { unlocked: false });
+    }
     var p = saved.progress || {}, savedMax = Math.max(0, Math.min(STAGES.length - 1, parseInt(p.maxUnlocked, 10) || 0));
     var lowerRoom = savedLowerRoom(p);
     setMaxUnlocked(0, true); unlockThrough(savedMax);
@@ -104795,7 +104804,7 @@ function spawnDustMote(container) {
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
     if (window.__checkpointAlbumRestore && saved.album) window.__checkpointAlbumRestore(saved.album);
     if (window.__pacmanRestore) window.__pacmanRestore(saved.pacman);
-    if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "beforeStage");
+    if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(restoreSystems, "beforeStage");
     // Restore through the complete party-mode owner, not only its scene half. The balcony
     // switch and persistent UV intent are also toggle state: if they remain at their fresh-page
     // defaults, the first `p` after Continue only reconciles the switch and cannot stop the party.
@@ -104804,7 +104813,7 @@ function spawnDustMote(container) {
     if (window.bbq) window.bbq(!!p.bbq);
     if (window.__setDayNight) window.__setDayNight(!p.daylight);
     goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
-    if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(saved.systems, "afterStage");
+    if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(restoreSystems, "afterStage");
     // Lower rooms retain their own entry semantics: transient illustrated props reset,
     // Cinema stays powered off, and the dungeon returns to its play wall without creating
     // or resuming the Prince iframe.

@@ -307,7 +307,7 @@ hidden dungeon.
 double-click or double-tap the locked destination dot, choose **Solve** from the
 scene menu, or press the destination room number.
 
-**The phone is locked.** Solve the math question. After three failed attempts it
+**The phone is locked.** Solve the math question; a resumed visit asks again. After three failed attempts it
 opens automatically; its context menu also offers an accessible unlock.
 
 **Messages have not arrived.** Reach the balcony and start the first party to

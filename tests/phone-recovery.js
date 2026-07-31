@@ -11,7 +11,7 @@ var HARNESS = [
   'if(!sessionStorage.getItem("phone-recovery-seeded")){sessionStorage.setItem("phone-recovery-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function key(name){document.dispatchEvent(new KeyboardEvent("keydown",{key:name,code:name===" "?"Space":"",bubbles:true,cancelable:true}));}',
-  'function shellState(){var shell=document.querySelector(".phone-shell");return {open:!!document.querySelector(".phone-backdrop.show"),home:!!(shell&&shell.classList.contains("pm-home")),app:!!(shell&&shell.classList.contains("pm-app")),tiles:shell?shell.querySelectorAll(".phone-app-tile").length:0};}',
+  'function shellState(){var shell=document.querySelector(".phone-shell");return {open:!!document.querySelector(".phone-backdrop.show"),locked:!!(shell&&shell.classList.contains("booting")),home:!!(shell&&shell.classList.contains("pm-home")),app:!!(shell&&shell.classList.contains("pm-app")),tiles:shell?shell.querySelectorAll(".phone-app-tile").length:0};}',
   'var report={errors:[],steps:{}};',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(error){window.__errs.push("harness: "+String(error&&error.stack||error));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},350);});',
   'async function run(){',
@@ -57,10 +57,12 @@ var steps = result.steps || {};
 var rows = steps.rows || [];
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(steps.continued && !steps.continued.gate && steps.continued.shell.open &&
-  steps.continued.shell.home && !steps.continued.shell.app && steps.continued.shell.tiles === 20,
-  "Continue restores an old foreground-app row to the complete launcher", steps.continued);
+  steps.continued.shell.locked && !steps.continued.shell.app,
+  "Continue restores an open phone behind its lock screen", steps.continued);
 check(steps.continued && steps.continued.row && Object.keys(steps.continued.row).sort().join(",") === "open,unlocked",
   "the post-Continue checkpoint drops the legacy app identity", steps.continued && steps.continued.row);
+check(steps.continued && steps.continued.row && steps.continued.row.unlocked === false,
+  "the post-Continue checkpoint records the renewed phone lock", steps.continued && steps.continued.row);
 check(steps.catalog && steps.catalog.length === 20 && rows.length === 23 &&
   rows.every(function (row) {
     return row.restored.open && row.restored.home && !row.restored.app &&

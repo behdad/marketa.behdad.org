@@ -31531,6 +31531,7 @@ window.__cinemaVideoLoaded = false;
     room.classList.remove("projector-warming");
     projectorWarmup.hidden = true;
     projectorWarmup.textContent = "";
+    if (window.__setCinemaProjectorHumLevel) window.__setCinemaProjectorHumLevel(0.018, .2);
     if (revealChooser !== false && projectorOn && !projectorShorted) chooser.hidden = false;
   }
   function startProjectorWarmup() {
@@ -31542,6 +31543,7 @@ window.__cinemaVideoLoaded = false;
     letters.forEach(function (letter, index) {
       cinemaWarmupLetterTimers.push(setTimeout(function () {
         projectorWarmup.textContent += letter;
+        if (window.__setCinemaProjectorHumLevel) window.__setCinemaProjectorHumLevel(0.003 + index * 0.005, .14);
       }, index * 260));
     });
     cinemaWarmupTimer = setTimeout(finishProjectorWarmup, 1180);
@@ -37413,8 +37415,7 @@ document.addEventListener("click", function (e) {
       humCtx = audioBed();
       if (!humCtx) return;
       var out = humCtx.createGain();
-      out.gain.setValueAtTime(0.0001, humCtx.currentTime);
-      out.gain.exponentialRampToValueAtTime(0.006, humCtx.currentTime + 0.35);
+      out.gain.setValueAtTime(0.003, humCtx.currentTime);
       out.connect(pannedOut(humCtx, "cinema-projector"));
       var fundamental = humCtx.createOscillator();
       fundamental.type = "sine";
@@ -37454,6 +37455,15 @@ document.addEventListener("click", function (e) {
       !cinemaRoom.classList.contains("projector-shorted") && !document.hidden && document.hasFocus();
     if (wantsHum && !humCtx) startCinemaProjectorHum();
     else if (!wantsHum && humCtx) stopCinemaProjectorHum(fadeSecs);
+  };
+  window.__setCinemaProjectorHumLevel = function (level, fadeSecs) {
+    if (!humCtx || !humCtx._outGain) return;
+    try {
+      var now = humCtx.currentTime, fade = typeof fadeSecs === "number" ? fadeSecs : .15;
+      humCtx._outGain.gain.cancelScheduledValues(now);
+      humCtx._outGain.gain.setValueAtTime(humCtx._outGain.gain.value, now);
+      humCtx._outGain.gain.linearRampToValueAtTime(level, now + fade);
+    } catch (e) {}
   };
   window.__cinemaProjectorHumState = function () { return !!humCtx; };
   document.addEventListener("visibilitychange", function () { window.__updateCinemaProjectorHum(); });

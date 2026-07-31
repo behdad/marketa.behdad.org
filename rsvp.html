@@ -55,7 +55,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,700;1,9..144,400&family=Source+Serif+4:opsz,wght@8..60,400..700&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@400;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,700;1,9..144,400&family=Source+Serif+4:opsz,wght@8..60,400..700&display=block" rel="stylesheet">
 <!-- Source Serif 4 has no IPA vowels/marks, so the pronunciation line uses Noto Serif, subsetted (text=) to just the .ipa line's glyphs. Update text= if that line's characters change. -->
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif&text=abdehkmrsty%CB%88%C9%9B%CB%90%C9%92%2F%C2%B7%20%C2%A0&display=block" rel="stylesheet">
 <!-- Climate Crisis: a variable font whose custom YEAR axis (1979→2050) erodes the letters like melting ice.
@@ -441,6 +441,7 @@ footer{margin-top:2.6rem}
 }
 #cinema-room.projector-on:not(.projector-shorted) #cinema-projector-ray{opacity:.16}
 #cinema-room.projector-shorted #cinema-projector-ray{opacity:0;transform:perspective(240px) rotateX(4deg) scaleX(.04)}
+#cinema-room.projector-cooling #cinema-projector-lens-glow{animation:cinema-projector-cooldown .9s ease-out}
 #cinema-screen-off{
   position:absolute;inset:0;display:grid;place-items:center;background:#0b0c0d;color:#625d56;
   font:600 clamp(8px,1.25vw,15px)/1 Fraunces,Georgia,serif;letter-spacing:.08em;
@@ -448,6 +449,8 @@ footer{margin-top:2.6rem}
 }
 #cinema-screen-off[hidden]{display:none}
 #cinema-room.projector-flickering #cinema-screen-off{animation:cinema-poweroff-flicker .42s steps(1,end)}
+#cinema-projector-warmup{position:absolute;inset:0;z-index:2;display:grid;place-items:center;background:#92cce8;color:#fff;font:400 clamp(42px,15vw,150px)/.82 Anton,Impact,sans-serif;letter-spacing:.035em}
+#cinema-projector-warmup[hidden]{display:none}
 #cinema-room.projector-shorted #cinema-screen-shell{animation:cinema-screen-short .16s steps(2,end) 5}
 #cinema-room.projector-shorted #cinema-projector{filter:drop-shadow(0 0 5px #9bc8ff)}
 #cinema-water-overlay{
@@ -458,6 +461,7 @@ footer{margin-top:2.6rem}
 #cinema-room.spraying #cinema-water-spray{animation:cinema-spray 1.05s ease-out}
 @keyframes cinema-screen-short{50%{filter:brightness(2.2) saturate(0)}}
 @keyframes cinema-poweroff-flicker{0%,100%{filter:brightness(1)}18%{filter:brightness(2.8)}35%{filter:brightness(.35)}54%{filter:brightness(1.9)}72%{filter:brightness(.55)}}
+@keyframes cinema-projector-cooldown{0%{fill:#fff3b0;opacity:1}100%{fill:#334754;opacity:.55}}
 @keyframes cinema-spray{0%{opacity:0}12%{opacity:.9}80%{opacity:.72}100%{opacity:0}}
 #cinema-screen-shell{
   position:absolute; left:25.9%; top:12.3%; width:49.8%; height:58.8%;
@@ -30047,7 +30051,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <path d="M300 265H381V272Q381 276 376 276H305Q300 276 300 271Z" fill="#aaa8a3" stroke="none"/>
             <path d="M301 267H380M301 269H380M302 271H379M304 273H377" fill="none" stroke="#7e7d79" stroke-width=".45" opacity=".72"/>
             <rect id="cinema-projector-lens-slot" x="329" y="250.5" width="23" height="5.2" rx="2.6" fill="#17191b" stroke="#5e6265" stroke-width=".7"/>
-            <ellipse cx="340.5" cy="253" rx="5.6" ry="1.7" fill="#334754"/>
+            <ellipse id="cinema-projector-lens-glow" cx="340.5" cy="253" rx="5.6" ry="1.7" fill="#334754"/>
             <circle cx="374" cy="253" r="1" fill="#f3f1eb" stroke="#8e8c86" stroke-width=".5"/>
             <text x="340.5" y="275" fill="#dedbd5" stroke="none" font-size="2.5" font-family="sans-serif" text-anchor="middle" letter-spacing=".7">VAVA</text>
             <path d="M307 277V281M374 277V281" stroke="#555654" stroke-width="2.4"/>
@@ -30123,6 +30127,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <div id="cinema-projector-ray" aria-hidden="true"></div>
       <div id="cinema-screen-shell">
         <div id="cinema-screen-off" data-i="cinema_screen_off">projector off</div>
+        <div id="cinema-projector-warmup" hidden aria-hidden="true"></div>
         <div id="cinema-chooser">
           <h3 id="cinema-room-title" data-i="cinema_title">What are we watching?</h3>
           <div class="cinema-films">
@@ -31345,6 +31350,7 @@ window.__cinemaVideoLoaded = false;
   var cinemaWindow = document.getElementById("cinema-window");
   var cinemaNeon = document.getElementById("cinema-neon-butterfly");
   var screenOff = document.getElementById("cinema-screen-off");
+  var projectorWarmup = document.getElementById("cinema-projector-warmup");
   var photoboothSurface = document.getElementById("cinema-photobooth-surface");
   var officeMonitor = document.getElementById("office-monitor");
   var officeWebcam = document.getElementById("office-webcam");
@@ -31357,6 +31363,9 @@ window.__cinemaVideoLoaded = false;
   var cinemaCloseTimer = null;
   var cinemaShortTimer = null;
   var cinemaFlickerTimer = null;
+  var cinemaCooldownTimer = null;
+  var cinemaWarmupTimer = null;
+  var cinemaWarmupLetterTimers = [];
   var cinemaClosing = false;
   var projectorOn = false;
   var projectorShorted = false;
@@ -31444,6 +31453,7 @@ window.__cinemaVideoLoaded = false;
     }
     clearPlayer(false);
     powerOn(false);
+    finishProjectorWarmup();
     chooser.hidden = true;
     screenOff.hidden = true;
     cinemaPhotobooth = true;
@@ -31512,6 +31522,28 @@ window.__cinemaVideoLoaded = false;
     room.style.removeProperty("--cinema-poster");
     setFilmPlaying(false, .45);
   }
+  function finishProjectorWarmup() {
+    clearTimeout(cinemaWarmupTimer);
+    cinemaWarmupTimer = null;
+    cinemaWarmupLetterTimers.forEach(clearTimeout);
+    cinemaWarmupLetterTimers = [];
+    room.classList.remove("projector-warming");
+    projectorWarmup.hidden = true;
+    projectorWarmup.textContent = "";
+    if (projectorOn && !projectorShorted) chooser.hidden = false;
+  }
+  function startProjectorWarmup() {
+    finishProjectorWarmup();
+    room.classList.add("projector-warming");
+    projectorWarmup.hidden = false;
+    var letters = ["V", "A", "V", "A"];
+    letters.forEach(function (letter, index) {
+      cinemaWarmupLetterTimers.push(setTimeout(function () {
+        projectorWarmup.textContent += letter;
+      }, index * 260));
+    });
+    cinemaWarmupTimer = setTimeout(finishProjectorWarmup, 1180);
+  }
   function cinemaText(key, fallback) {
     return typeof T === "object" && T && typeof tipText === "function" ? tipText(key) : fallback;
   }
@@ -31551,8 +31583,20 @@ window.__cinemaVideoLoaded = false;
     cinemaShortTimer = null;
     projectorShorted = false;
     projectorOn = false;
+    clearTimeout(cinemaCooldownTimer);
+    cinemaCooldownTimer = null;
+    finishProjectorWarmup();
     vavaRemote.classList.remove("remote-reacting");
     room.classList.remove("projector-on", "projector-shorted");
+    if (window.__cinemaRoomOpen) {
+      room.classList.remove("projector-cooling");
+      void room.offsetWidth;
+      room.classList.add("projector-cooling");
+      cinemaCooldownTimer = setTimeout(function () {
+        cinemaCooldownTimer = null;
+        room.classList.remove("projector-cooling");
+      }, 950);
+    }
     clearPlayer(false);
     chooserFilms().forEach(function (film) { film.classList.remove("remote-current"); });
     chooserIndex = 0;
@@ -31561,17 +31605,23 @@ window.__cinemaVideoLoaded = false;
     screenOff.setAttribute("data-i", "cinema_screen_off");
     screenOff.textContent = cinemaText("cinema_screen_off", "projector off");
     syncProjectorAria();
+    if (window.__updateCinemaProjectorHum) window.__updateCinemaProjectorHum(.7);
     if (playPauseButton && window.__cinemaRoomOpen) playPauseButton.classList.add("shown", "paused");
     if (skipButton && window.__cinemaRoomOpen) skipButton.classList.add("shown");
   }
   function powerOn(focusChooser) {
     if (projectorShorted) return false;
     projectorOn = true;
+    clearTimeout(cinemaCooldownTimer);
+    cinemaCooldownTimer = null;
+    room.classList.remove("projector-cooling");
     room.classList.add("projector-on");
     screenOff.hidden = true;
-    chooser.hidden = false;
+    chooser.hidden = true;
+    startProjectorWarmup();
     markChooserFilm(chooserIndex, false);
     syncProjectorAria();
+    if (window.__updateCinemaProjectorHum) window.__updateCinemaProjectorHum(.7);
     if (playPauseButton) playPauseButton.classList.add("shown", "paused");
     if (skipButton) skipButton.classList.add("shown");
     if (focusChooser !== false) {
@@ -31750,6 +31800,7 @@ window.__cinemaVideoLoaded = false;
   }
   function playFilm(button) {
     if (!projectorOn || projectorShorted) return false;
+    finishProjectorWarmup();
     stopCinemaPhotobooth(false, true);
     var id = button && button.getAttribute("data-vimeo-id");
     if (!/^\d+$/.test(id || "")) return false;
@@ -32911,7 +32962,7 @@ window.__roomAmbienceCovered = function () {
 window.__refreshRoomAmbience = function () {
   ["__updateFireSound", "__updateAquaSound", "__updateTotoroSound",
    "__updateGardenBirdsong", "__updateKettleHum", "__updateRadioSound",
-   "__updatePcFan", "__updateACHum", "__updateCityHum"].forEach(function (name) {
+   "__updatePcFan", "__updateCinemaProjectorHum", "__updateACHum", "__updateCityHum"].forEach(function (name) {
     try { if (typeof window[name] === "function") window[name](); } catch (_error) {}
   });
 };
@@ -37349,6 +37400,63 @@ document.addEventListener("click", function (e) {
       eggBubble(divInf, flightBubbleHtml());
     });
   }
+})();
+(function () {
+  var cinemaRoom = document.getElementById("cinema-room");
+  if (!cinemaRoom) return;
+  var humCtx = null;
+  function startCinemaProjectorHum() {
+    try {
+      stopCinemaProjectorHum();
+      humCtx = audioBed();
+      if (!humCtx) return;
+      var out = humCtx.createGain();
+      out.gain.setValueAtTime(0.0001, humCtx.currentTime);
+      out.gain.exponentialRampToValueAtTime(0.006, humCtx.currentTime + 0.35);
+      out.connect(pannedOut(humCtx, "cinema-projector"));
+      var fundamental = humCtx.createOscillator();
+      fundamental.type = "sine";
+      fundamental.frequency.value = 86;
+      fundamental.connect(out);
+      var overtone = humCtx.createOscillator();
+      overtone.type = "sine";
+      overtone.frequency.value = 172;
+      var overtoneGain = humCtx.createGain();
+      overtoneGain.gain.value = 0.28;
+      overtone.connect(overtoneGain);
+      overtoneGain.connect(out);
+      fundamental.start(0);
+      overtone.start(0);
+      humCtx._outGain = out;
+      humCtx._sources = [fundamental, overtone];
+    } catch (e) {}
+  }
+  function stopCinemaProjectorHum(fadeSecs) {
+    if (!humCtx) return;
+    var f = typeof fadeSecs === "number" ? fadeSecs : 0.25;
+    var ctxToClose = humCtx, sources = humCtx._sources, out = humCtx._outGain;
+    humCtx = null;
+    try {
+      var t = ctxToClose.currentTime;
+      out.gain.cancelScheduledValues(t);
+      out.gain.setValueAtTime(out.gain.value, t);
+      out.gain.linearRampToValueAtTime(0.0001, t + f);
+    } catch (e) {}
+    setTimeout(function () {
+      (sources || []).forEach(function (source) { try { source.stop(); } catch (e) {} });
+      try { ctxToClose.close(); } catch (e) {}
+    }, f * 1000 + 100);
+  }
+  window.__updateCinemaProjectorHum = function (fadeSecs) {
+    var wantsHum = window.__cinemaRoomOpen && cinemaRoom.classList.contains("projector-on") &&
+      !cinemaRoom.classList.contains("projector-shorted") && !document.hidden && document.hasFocus();
+    if (wantsHum && !humCtx) startCinemaProjectorHum();
+    else if (!wantsHum && humCtx) stopCinemaProjectorHum(fadeSecs);
+  };
+  window.__cinemaProjectorHumState = function () { return !!humCtx; };
+  document.addEventListener("visibilitychange", function () { window.__updateCinemaProjectorHum(); });
+  window.addEventListener("blur", function () { window.__updateCinemaProjectorHum(); });
+  window.addEventListener("focus", function () { window.__updateCinemaProjectorHum(); });
 })();
 (function () {
   function shake(el) {

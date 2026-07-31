@@ -163,8 +163,8 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 
 ## Focus/visibility gating (the "crickets/crane rule") — preserved
 
-- **Continuous ambient beds** (fire, aqua hush, totoro rain, bird, kettle, radio, PC fan, AC
-  hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
+- **Continuous ambient beds** (fire, aqua hush, totoro rain, bird, kettle, radio, PC fan, projector hum,
+  AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
   **self-teardown on blur/hide** (`updateFocusGatedAudio` re-checks each). When they stop,
   the refcount drops and the manager can suspend.
 - **`getSfxCtx()`** returns null while `document.visibilityState === "hidden"` — the
@@ -200,7 +200,7 @@ untouched, so the precise pre-film mix returns. Vimeo lives outside that graph
 in its cross-origin iframe and is therefore never self-ducked. The existing
 party duck is still re-evaluated so its own source mix remains coherent.
 
-Opening Cinema joins the foreground coverage gate, fades the active Cuddly
+Opening Cinema joins the foreground coverage gate, starts the room-local projector hum while the projector is on, and fades the active Cuddly
 projector score, and leaves the durable projector channel unchanged. The
 physical cinema projector initially creates no iframe. Selecting a film creates
 one; Vimeo play/pause/ended messages keep the whole-loft duck honest, while the

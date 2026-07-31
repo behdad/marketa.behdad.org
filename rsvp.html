@@ -655,6 +655,8 @@ footer{margin-top:2.6rem}
 #bathroom-room.scale-on #bathroom-scale-display{fill:#d8f4df;stroke:#4d8b72}
 #bathroom-room.scale-on #bathroom-scale-reading{fill:#214b3e}
 #bathroom-room.toilet-flush #bathroom-toilet-swirl{animation:bathroom-toilet-flush .9s ease-in-out}
+#bathroom-room.book-flip #bathroom-toilet-book{animation:bathroom-book-flip .64s ease-in-out}
+#bathroom-toilet-book{transform-origin:655px 147px}
 #bathroom-bubble-hunt{opacity:0;pointer-events:none;transition:opacity .18s ease}
 #bathroom-room.bubble-hunt #bathroom-bubble-hunt{opacity:1;pointer-events:all}
 .bathroom-bubble{
@@ -702,6 +704,11 @@ footer{margin-top:2.6rem}
   0%{opacity:0;stroke-dashoffset:28;rotate:0deg}
   22%{opacity:.75}
   100%{opacity:0;stroke-dashoffset:-28;rotate:240deg}
+}
+@keyframes bathroom-book-flip{
+  0%,100%{transform:rotate(0)}
+  34%{transform:rotate(-7deg) translateY(-2px)}
+  68%{transform:rotate(3deg) translateY(-1px)}
 }
 #bathroom-room-close{
   position:absolute; z-index:2; top:clamp(5px,1vw,12px); right:clamp(5px,1vw,12px);
@@ -29236,6 +29243,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           </g>
           <rect id="bathroom-cabinet-action" data-bath-action="cabinet" class="hunt-hit" role="button" data-aria-i="bathroom_cabinet" data-title-i="bathroom_cabinet" aria-label="Open the bathroom cabinet" title="Open the bathroom cabinet" x="542" y="22" width="128" height="86" rx="4" fill="transparent" pointer-events="all"/>
           <rect x="640" y="123" width="36" height="135" fill="url(#bathroom-wood)" stroke="#754c31" stroke-width="3"/>
+          <g id="bathroom-toilet-book">
+            <path d="M644 128L662 125L666 145L648 148Z" fill="#8e3a4a" stroke="#5f2632" stroke-width="1.5"/>
+            <path d="M648 129L650 146M662 127L665 144" stroke="#d9a6a6" stroke-width="1"/>
+            <path d="M649 131L659 129L660 137L650 139Z" fill="#fffdf8" opacity=".9"/>
+            <text x="654.7" y="136" fill="#8e3a4a" text-anchor="middle" style="font:700 6px 'Fraunces',Georgia,serif">M</text>
+            <path d="M648 148L666 145" stroke="#f8f5ec" stroke-width="2"/>
+          </g>
           <path d="M643 157H673M643 199H673M643 238H673" stroke="#754c31" stroke-width="3"/>
           <rect x="648" y="164" width="17" height="12" rx="2" fill="#eee8dc"/><rect x="648" y="181" width="17" height="12" rx="2" fill="#eee8dc"/>
           <rect x="649" y="207" width="18" height="22" rx="3" fill="#b6a38e"/><circle cx="658" cy="218" r="3" fill="#897664"/>
@@ -29255,6 +29269,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <rect id="bathroom-scale-action" data-bath-action="scale" class="hunt-hit" role="button" data-aria-i="bathroom_scale" data-title-i="bathroom_scale" aria-label="Step on the scale" title="Step on the scale" x="438" y="282" width="118" height="58" rx="8" fill="transparent" pointer-events="all"/>
         <!-- Keep the toilet surface last so no fixture or ambient wash can intercept it. -->
         <rect id="bathroom-toilet-action" data-bath-action="toilet" class="hunt-hit" role="button" data-aria-i="bathroom_toilet" data-title-i="bathroom_toilet" aria-label="Flush the toilet" title="Flush the toilet" x="544" y="137" width="110" height="203" rx="8" fill="transparent" pointer-events="all"/>
+        <rect id="bathroom-book-action" data-bath-action="book" class="hunt-hit" role="button" data-aria-i="bathroom_book" data-title-i="bathroom_book" aria-label="Flip through Markéta's toilet book" title="Flip through Markéta's toilet book" x="632" y="115" width="48" height="48" rx="7" fill="transparent" pointer-events="all"/>
         <!-- Filling the tub releases a finite, touch-friendly bubble hunt. -->
         <g id="bathroom-bubble-hunt" role="group" data-aria-i="bathroom_bubble_hunt" aria-label="Bubble hunt">
           <g id="bathroom-bubble-1" class="bathroom-bubble" data-bath-bubble="1" role="button" data-aria-i="bathroom_bubble_pop" aria-label="Pop bubble">
@@ -30204,7 +30219,7 @@ window.__bathroomRoomOpen = false;
   var bubbles = Array.from(art.querySelectorAll("[data-bath-bubble]"));
   var settledClasses = ["sink-running", "mirror-shimmer", "tub-filled", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
-    "toilet-flush", "bubble-hunt", "bubble-complete"];
+    "toilet-flush", "book-flip", "bubble-hunt", "bubble-complete"];
   if (!room || !viewport || !closeButton || !art || !stoolPosition ||
       !stool || !scaleNeedle || !scaleReading) return;
 
@@ -30348,6 +30363,9 @@ window.__bathroomRoomOpen = false;
     } else if (action === "toilet") {
       pulseClass("toilet-flush", 980);
       bathroomSound("water");
+    } else if (action === "book") {
+      pulseClass("book-flip", 720);
+      bathroomSound("swish");
     } else {
       return false;
     }
@@ -30476,6 +30494,7 @@ window.__bathroomRoomOpen = false;
     else if (event.animationName === "bathroom-scale-weigh") room.classList.remove("scale-weigh");
     else if (event.animationName === "bathroom-scale-bounce") room.classList.remove("scale-bounce");
     else if (event.animationName === "bathroom-toilet-flush") room.classList.remove("toilet-flush");
+    else if (event.animationName === "bathroom-book-flip") room.classList.remove("book-flip");
   });
   closeButton.addEventListener("click", closeBathroom);
   window.__openBathroomRoom = openBathroom;
@@ -33172,6 +33191,7 @@ var T = {
     bathroom_scale: "Step on the scale",
     bathroom_cabinet: "Open the bathroom cabinet",
     bathroom_toilet: "Flush the toilet",
+    bathroom_book: "Flip through Markéta's toilet book",
     cinema_enter: "Enter the cinema",
     cinema_leave: "Back to Cuddly-puddly",
     cinema_title: "What are we watching?",
@@ -34460,6 +34480,7 @@ var T = {
     bathroom_scale: "Stoupnout si na váhu",
     bathroom_cabinet: "Otevřít koupelnovou skříňku",
     bathroom_toilet: "Spláchnout toaletu",
+    bathroom_book: "Listovat Markétinou knihou na záchod",
     cinema_enter: "Vstoupit do kina",
     cinema_leave: "Zpět do Cuddly-puddly",
     cinema_title: "Na co se podíváme?",

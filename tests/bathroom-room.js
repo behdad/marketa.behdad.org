@@ -83,7 +83,7 @@ check(s.down && s.down.images === 0,
   "the bathroom is entirely code-native and embeds no photo", s.down);
 check(s.cs && s.cs.room === "Koupelna / toalety" && s.cs.close === "Zpět do Kuchyně / baru",
   "room and return labels switch to Czech", s.cs);
-var propNames = ["sink", "mirror", "tub", "towel", "stool", "scale", "cabinet", "toilet"];
+var propNames = ["sink", "mirror", "tub", "towel", "stool", "scale", "cabinet", "toilet", "book"];
 check(s.props && s.props.count === propNames.length &&
   s.props.roles.every(function (row) { return row[1] === "button" && row[2] === null && !!row[3]; }),
   "every distinct bathroom prop is labelled but stays outside the Tab order", s.props);
@@ -173,7 +173,7 @@ check(/@media \(any-pointer:coarse\)\{\.bathroom-bubble-hit\{r:40px\}\}/.test(so
   "coarse pointers receive expanded bubble hit circles");
 ["bathroom-sink", "bathroom-mirror-action", "bathroom-tub", "bathroom-waffle-towel",
  "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
- "bathroom-toilet-action"].forEach(function (id) {
+ "bathroom-toilet-action", "bathroom-toilet-book", "bathroom-book-action"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "illustration includes " + id);
 });
 check(!/codex-clipboard|ZAJ6YO|zTrLmq/.test(source),

@@ -31763,7 +31763,7 @@ window.__cinemaVideoLoaded = false;
     if (currentFilm) {
       tellVimeo("pause");
       setFilmPlaying(false, .45);
-    } else powerOff();
+    } else if (!projectorOn) powerOff();
     window.__cinemaRoomOpen = false;
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
     if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_cinema");
@@ -31796,12 +31796,12 @@ window.__cinemaVideoLoaded = false;
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     syncCinemaDayNight();
     room.hidden = false;
-    if (currentFilm) {
+    if (currentFilm || projectorOn) {
       projectorOn = true;
       room.classList.add("projector-on");
       screenOff.hidden = true;
-      chooser.hidden = true;
-      playerWrap.hidden = false;
+      chooser.hidden = !!currentFilm;
+      playerWrap.hidden = !currentFilm;
       syncProjectorAria();
     } else powerOff();
     if (playPauseButton) playPauseButton.classList.add("shown", "paused");
@@ -31935,6 +31935,20 @@ window.__cinemaVideoLoaded = false;
       chooserIndex: chooserIndex,
       reactions: Object.assign({}, reactions) };
   };
+  var cinemaProjectorCheckpoint = {
+    capture: function () { return { powered: !!projectorOn }; },
+    restore: function (row, phase) {
+      if (phase !== "beforeStage") return;
+      projectorOn = !!(row && row.powered === true);
+      room.classList.toggle("projector-on", projectorOn);
+      room.classList.remove("projector-warming", "projector-cooling", "projector-warmup-pulse");
+      screenOff.hidden = projectorOn;
+      chooser.hidden = !projectorOn;
+      syncProjectorAria();
+    }
+  };
+  if (window.__deferCheckpointAdapter) window.__deferCheckpointAdapter("cinema-projector", cinemaProjectorCheckpoint);
+  else (window.__pendingCheckpointAdapters || (window.__pendingCheckpointAdapters = [])).push(["cinema-projector", cinemaProjectorCheckpoint]);
   window.__cinemaProjectorToggle = toggleProjector;
   window.__cinemaProjectorPlayPause = toggleFilmPlayback;
   window.__cinemaProjectorNext = nextFilm;
@@ -106147,8 +106161,8 @@ function spawnDustMote(container) {
     goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
     if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(restoreSystems, "afterStage");
     // Lower rooms retain their own entry semantics: transient illustrated props reset,
-    // Cinema stays powered off, and the dungeon returns to its play wall without creating
-    // or resuming the Prince iframe.
+    // Cinema restores its saved projector power without creating or resuming a Vimeo iframe,
+    // and the dungeon returns to its play wall without creating or resuming the Prince iframe.
     if (lowerRoom) lowerRoom.open();
     endAttract();
     // The recovery surface is also the paint cover for restoration. Keep it mounted while

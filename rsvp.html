@@ -644,6 +644,18 @@ footer{margin-top:2.6rem}
   fill:rgba(255,253,248,.08);stroke:#fffdf8;stroke-width:2;
 }
 #bathroom-sink-water,#bathroom-mirror-gleam,#bathroom-toilet-swirl{opacity:0;pointer-events:none}
+#bathroom-mirror-fog,#bathroom-mirror-wipe{opacity:0;pointer-events:none}
+#bathroom-mirror-fog{transition:opacity .55s ease}
+#bathroom-mirror-wipe{transition:opacity .22s ease}
+#bathroom-room.tub-filled #bathroom-mirror-fog{opacity:.82}
+#bathroom-room.tub-filled.mirror-revealed #bathroom-mirror-wipe{opacity:1}
+#bathroom-room.tub-filled.mirror-revealed #bathroom-mirror-signature{
+  animation:bathroom-mirror-signature .9s ease-out both;
+}
+#bathroom-room-status{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
 #bathroom-tub-water{opacity:.12;transition:opacity .35s ease}
 #bathroom-room.tub-filled #bathroom-tub-water{opacity:.72}
 #bathroom-room.cabinet-open #bathroom-cabinet-face{transform:translateY(-7px)}
@@ -695,6 +707,10 @@ footer{margin-top:2.6rem}
 @keyframes bathroom-mirror-shimmer{
   0%{opacity:0;translate:-28px 0}35%{opacity:.6}100%{opacity:0;translate:55px 0}
 }
+@keyframes bathroom-mirror-signature{
+  from{stroke-dashoffset:180}
+  to{stroke-dashoffset:0}
+}
 @keyframes bathroom-towel-fluff{
   0%,100%{transform:rotate(0)}35%{transform:rotate(-2.4deg)}65%{transform:rotate(1.4deg)}
 }
@@ -737,6 +753,7 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion:reduce){
   #bathroom-room,#bathroom-room *{transition:none}
   #bathroom-room :is(#bathroom-sink-water,#bathroom-mirror-gleam,#bathroom-waffle-towel,#bathroom-stool,#bathroom-scale,#bathroom-scale-needle,#bathroom-toilet-swirl){animation:none}
+  #bathroom-room.tub-filled.mirror-revealed #bathroom-mirror-signature{animation:none;stroke-dashoffset:0}
   #bathroom-room .bathroom-bubble{animation:none}
   .hunt-viewport.bathroom-room-open #loft-game-strip{transition:none}
 }
@@ -29262,6 +29279,21 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <rect x="158" y="146" width="18" height="18" rx="3" fill="#b6d0c1" stroke="#728f82"/>
           <path d="M167 146V137" stroke="#514840" stroke-width="2"/><path d="M163 137H171" stroke="#514840" stroke-width="2"/>
           <path id="bathroom-sink-water" d="M119 139V171" fill="none" stroke="#a8d7e5" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 3"/>
+          <g id="bathroom-mirror-fog" fill="#edf2ef">
+            <rect x="40" y="32" width="77" height="97" opacity=".9"/>
+            <rect x="121" y="32" width="78" height="97" opacity=".9"/>
+            <path d="M47 52Q76 43 108 51M128 104Q159 114 191 101M50 121Q77 109 108 116M130 48Q159 39 191 50"
+                  fill="none" stroke="#fffdf8" stroke-width="4" stroke-linecap="round" opacity=".24"/>
+          </g>
+          <g id="bathroom-mirror-wipe">
+            <path d="M53 83Q79 60 108 72M130 74Q158 57 188 79M54 101Q82 82 109 91M130 95Q158 78 188 98"
+                  fill="none" stroke="url(#bathroom-mirror-glass)" stroke-width="17" stroke-linecap="round" opacity=".92"/>
+            <text id="bathroom-mirror-signature" x="119" y="93" text-anchor="middle"
+                  font-family="Fraunces,serif" font-size="29" font-weight="650" letter-spacing="1.5"
+                  fill="#f8fbfd" fill-opacity=".12" stroke="#fffdf8" stroke-opacity=".86"
+                  stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"
+                  stroke-dasharray="180" stroke-dashoffset="180" paint-order="stroke fill">m∞b</text>
+          </g>
           <path id="bathroom-mirror-gleam" d="M48 119L93 38H116L71 119ZM129 119L174 38H194L149 119Z" fill="#fffdf8" opacity="0"/>
           <rect id="bathroom-mirror-action" data-bath-action="mirror" class="hunt-hit" role="button" data-aria-i="bathroom_mirror" data-title-i="bathroom_mirror" aria-label="Polish the mirror" title="Polish the mirror" x="32" y="24" width="175" height="113" rx="2" fill="transparent" pointer-events="all"/>
         </g>
@@ -29385,6 +29417,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           </g>
         </g>
       </svg>
+      <div id="bathroom-room-status" role="status" aria-live="polite"></div>
       <button type="button" id="bathroom-room-close" data-aria-i="bathroom_leave" data-title-i="bathroom_leave" aria-label="Back to Kitchen / bar" title="Back to Kitchen / bar">×</button>
     </div>
     <div id="cinema-room" role="dialog" aria-modal="true" aria-labelledby="cinema-room-title" hidden>
@@ -30294,6 +30327,7 @@ window.__bathroomRoomOpen = false;
   var stool = document.getElementById("bathroom-stool");
   var scaleNeedle = document.getElementById("bathroom-scale-needle");
   var scaleReading = document.getElementById("bathroom-scale-reading");
+  var bathroomStatus = document.getElementById("bathroom-room-status");
   var stoolX = 0;
   var stoolDrag = null;
   var suppressStoolClick = false;
@@ -30304,11 +30338,11 @@ window.__bathroomRoomOpen = false;
   var bubbleComplete = false;
   var bubbleTimer = null;
   var bubbles = Array.from(art.querySelectorAll("[data-bath-bubble]"));
-  var settledClasses = ["sink-running", "mirror-shimmer", "tub-filled", "towel-fluff",
+  var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
     "toilet-flush", "book-flip", "bubble-hunt", "bubble-complete"];
   if (!room || !viewport || !closeButton || !art || !stoolPosition ||
-      !stool || !scaleNeedle || !scaleReading) return;
+      !stool || !scaleNeedle || !scaleReading || !bathroomStatus) return;
 
   function focusUpstairs() {
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
@@ -30328,6 +30362,8 @@ window.__bathroomRoomOpen = false;
     scaleReadingTimer = null;
     scaleValue = null;
     scaleReading.textContent = "--";
+    bathroomStatus.textContent = "";
+    bathroomStatus.removeAttribute("data-i");
     scaleNeedle.style.removeProperty("--bathroom-scale-angle");
     scaleNeedle.style.removeProperty("--bathroom-scale-overshoot");
     scaleNeedle.style.removeProperty("--bathroom-scale-settle");
@@ -30356,6 +30392,16 @@ window.__bathroomRoomOpen = false;
   }
   function setBathroomCaption(key) {
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(key);
+  }
+  function setBathroomFeedback(statusKey, captionKey) {
+    var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    bathroomStatus.setAttribute("data-i", statusKey);
+    bathroomStatus.textContent = T[lang][statusKey] || T.en[statusKey] || "";
+    setBathroomCaption(captionKey);
+  }
+  function clearBathroomFeedback() {
+    bathroomStatus.textContent = "";
+    bathroomStatus.removeAttribute("data-i");
   }
   function startBubbleHunt() {
     clearTimeout(bubbleTimer);
@@ -30406,9 +30452,15 @@ window.__bathroomRoomOpen = false;
       bathroomSound("water");
     } else if (action === "mirror") {
       pulseClass("mirror-shimmer", 780);
+      if (room.classList.contains("tub-filled")) {
+        room.classList.add("mirror-revealed");
+        setBathroomFeedback("bathroom_status_mirror_reveal", "bathroom_mirror_reveal");
+      }
       bathroomSound("swish");
     } else if (action === "tub") {
       room.classList.toggle("tub-filled");
+      room.classList.remove("mirror-revealed");
+      clearBathroomFeedback();
       if (room.classList.contains("tub-filled")) startBubbleHunt();
       else stopBubbleHunt(true);
       bathroomSound("water");
@@ -30421,6 +30473,7 @@ window.__bathroomRoomOpen = false;
     } else if (action === "scale") {
       pulseClass("scale-bounce", 520);
       if (scaleValue === null) {
+        var wet = room.classList.contains("tub-filled");
         room.classList.add("scale-on");
         scaleValue = 69;
         var scaleAngle = -34 + (scaleValue - 55) / 30 * 68;
@@ -30430,11 +30483,16 @@ window.__bathroomRoomOpen = false;
         scaleNeedle.style.setProperty("--bathroom-scale-settle",
           Math.max(-38, scaleAngle - 6).toFixed(2) + "deg");
         scaleNeedle.style.transform = "rotate(" + scaleAngle.toFixed(2) + "deg)";
-        scaleReading.textContent = "72.4";
+        scaleReading.textContent = wet ? "70.0" : "72.4";
+        setBathroomFeedback(wet ? "bathroom_status_scale_wet" : "bathroom_status_scale_weighing",
+          wet ? "bathroom_scale_wet" : "bathroom_scale_weighing");
         clearTimeout(scaleReadingTimer);
         scaleReadingTimer = setTimeout(function () {
           scaleReadingTimer = null;
-          if (scaleValue !== null) scaleReading.textContent = scaleValue.toFixed(1);
+          if (scaleValue !== null) {
+            scaleReading.textContent = scaleValue.toFixed(1);
+            setBathroomFeedback("bathroom_status_scale_settled", "bathroom_scale_settled");
+          }
         }, 320);
         pulseClass("scale-weigh", 900);
       } else {
@@ -30444,6 +30502,7 @@ window.__bathroomRoomOpen = false;
         room.classList.remove("scale-weigh");
         scaleValue = null;
         scaleReading.textContent = "--";
+        clearBathroomFeedback();
         scaleNeedle.style.removeProperty("--bathroom-scale-angle");
         scaleNeedle.style.removeProperty("--bathroom-scale-overshoot");
         scaleNeedle.style.removeProperty("--bathroom-scale-settle");
@@ -30604,6 +30663,11 @@ window.__bathroomRoomOpen = false;
       stoolX: stoolX,
       scaleValue: scaleValue,
       scaleReading: scaleReading.textContent,
+      feedback: bathroomStatus.textContent,
+      mirror: {
+        fogged: room.classList.contains("tub-filled"),
+        revealed: room.classList.contains("mirror-revealed")
+      },
       bubbles: {
         active: room.classList.contains("bubble-hunt"),
         popped: Object.keys(bubblePopped).length,
@@ -32520,6 +32584,10 @@ var T = {
       lower_bathroom: "Bathroom · fixtures welcome.",
       bathroom_bubbles_start: "Bathroom · pop every bubble.",
       bathroom_bubbles_done: "Not one escaped.",
+      bathroom_mirror_reveal: "Bathroom · m∞b, drawn through the steam.",
+      bathroom_scale_weighing: "Bathroom · weighing…",
+      bathroom_scale_wet: "Bathroom · 70.0 kg, still dripping.",
+      bathroom_scale_settled: "Bathroom · settled at 69.0 kg.",
       lower_dungeon: "Dungeon · the old game is awake.",
       lower_cinema: "Cinema · wake the projector, then choose a film.",
       lower_bedroom: "Bedroom · everything here is playable.",
@@ -33295,6 +33363,10 @@ var T = {
     bathroom_towel: "Fluff the towel",
     bathroom_stool: "Test the stool",
     bathroom_scale: "Step on the scale",
+    bathroom_status_mirror_reveal: "m∞b, drawn through the steam.",
+    bathroom_status_scale_weighing: "Weighing…",
+    bathroom_status_scale_wet: "70.0 kg — still dripping.",
+    bathroom_status_scale_settled: "69.0 kg — settled.",
     bathroom_cabinet: "Open the bathroom cabinet",
     bathroom_toilet: "Flush the toilet",
     bathroom_book: "Flip through Markéta's toilet book",
@@ -33824,6 +33896,10 @@ var T = {
       lower_bathroom: "Koupelna · vybavení vítá hru.",
       bathroom_bubbles_start: "Koupelna · praskni všechny bubliny.",
       bathroom_bubbles_done: "Ani jedna neunikla.",
+      bathroom_mirror_reveal: "Koupelna · m∞b, napsané do páry.",
+      bathroom_scale_weighing: "Koupelna · vážení…",
+      bathroom_scale_wet: "Koupelna · 70,0 kg, ještě z tebe kape.",
+      bathroom_scale_settled: "Koupelna · ustáleno na 69,0 kg.",
       lower_dungeon: "Žalář · stará hra se probudila.",
       lower_cinema: "Kino · probuď projektor a pak vyber film.",
       lower_bedroom: "Ložnice · se vším si tu můžeš hrát.",
@@ -34595,6 +34671,10 @@ var T = {
     bathroom_towel: "Načechrat ručník",
     bathroom_stool: "Vyzkoušet stoličku",
     bathroom_scale: "Stoupnout si na váhu",
+    bathroom_status_mirror_reveal: "m∞b, napsané do páry.",
+    bathroom_status_scale_weighing: "Vážení…",
+    bathroom_status_scale_wet: "70,0 kg — ještě z tebe kape.",
+    bathroom_status_scale_settled: "69,0 kg — ustáleno.",
     bathroom_cabinet: "Otevřít koupelnovou skříňku",
     bathroom_toilet: "Spláchnout toaletu",
     bathroom_book: "Listovat Markétinou knihou na záchod",

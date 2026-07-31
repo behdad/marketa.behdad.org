@@ -28,6 +28,7 @@ var HARNESS = [
   ' var tub=document.getElementById("bathroom-tub"),bubbles=Array.from(room.querySelectorAll("[data-bath-bubble]"));click(tub);var bubbleStart=window.__bathroomInteractionState();bubbles.forEach(click);var bubbleDone=window.__bathroomInteractionState();click(tub);var bubbleReset=window.__bathroomInteractionState();report.steps.bubbles={count:bubbles.length,roles:bubbles.map(function(el){var hit=el.querySelector(".bathroom-bubble-hit");return [el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("aria-label"),!!hit,hit&&getComputedStyle(hit).r];}),start:bubbleStart.bubbles,done:bubbleDone.bubbles,reset:bubbleReset.bubbles};',
   ' key("Enter");var enterOnce={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};key("Enter");var enterTwice={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};click(tub);report.steps.enterTub={once:enterOnce,twice:enterTwice};',
   ' var scale=document.getElementById("bathroom-scale-action");click(scale);var scaleSpike=document.getElementById("bathroom-scale-reading").textContent;await sleep(380);var scaleOn=window.__bathroomInteractionState();click(scale);var scaleOff=window.__bathroomInteractionState();click(scale);await sleep(380);',
+  ' click(scale);click(tub);var mirrorFog=window.__bathroomInteractionState();click(document.getElementById("bathroom-mirror-action"));var mirrorReveal=window.__bathroomInteractionState();click(scale);var wetSpike={reading:document.getElementById("bathroom-scale-reading").textContent,state:window.__bathroomInteractionState()};setLang("cs");var wetCs=document.getElementById("bathroom-room-status").textContent;setLang("en");await sleep(380);var wetSettled=window.__bathroomInteractionState();click(scale);click(tub);var mirrorDrained=window.__bathroomInteractionState();click(tub);var mirrorRefilled=window.__bathroomInteractionState();click(tub);click(scale);await sleep(380);report.steps.steam={fog:mirrorFog,reveal:mirrorReveal,drained:mirrorDrained,refilled:mirrorRefilled,signature:document.getElementById("bathroom-mirror-signature").textContent,wetSpike:wetSpike,wetCs:wetCs,wetSettled:wetSettled,statusRole:document.getElementById("bathroom-room-status").getAttribute("role"),statusLive:document.getElementById("bathroom-room-status").getAttribute("aria-live")};',
   ' var towel=document.getElementById("bathroom-waffle-towel");click(towel);await sleep(260);click(towel);await sleep(470);var towelRestarted=room.classList.contains("towel-fluff");await sleep(250);report.steps.towelRepeat={restarted:towelRestarted,settled:!room.classList.contains("towel-fluff"),hits:window.__bathroomInteractionState().hits.towel};',
   ' var stool=document.getElementById("bathroom-stool"),stoolPosition=document.getElementById("bathroom-stool-position"),art=document.getElementById("bathroom-room-art");',
   ' var stoolHitsBefore=window.__bathroomInteractionState().hits.stool;stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,buttons:1,clientX:300}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,clientX:300}));await sleep(10);var stationaryState=window.__bathroomInteractionState();',
@@ -138,6 +139,22 @@ check(s.functional && s.functional.scaleToggle.spike === "72.4" &&
   s.functional.scaleToggle.off.scaleReading === "--" &&
   s.functional.scaleToggle.off.active.indexOf("scale-on") === -1,
   "successive activations switch the scale on and off", s.functional);
+check(s.steam && s.steam.fog.mirror.fogged && !s.steam.fog.mirror.revealed &&
+  s.steam.reveal.mirror.fogged && s.steam.reveal.mirror.revealed &&
+  !s.steam.drained.mirror.fogged && !s.steam.drained.mirror.revealed &&
+  s.steam.refilled.mirror.fogged && !s.steam.refilled.mirror.revealed &&
+  s.steam.signature === "m∞b",
+  "a full tub fogs the mirror, wiping reveals the signature, and draining or refilling resets it",
+  s.steam);
+check(s.steam && s.steam.wetSpike.reading === "70.0" &&
+  s.steam.wetSpike.state.scaleValue === 69 &&
+  s.steam.wetSpike.state.feedback === "70.0 kg — still dripping." &&
+  s.steam.wetCs === "70,0 kg — ještě z tebe kape." &&
+  s.steam.wetSettled.scaleReading === "69.0" &&
+  s.steam.wetSettled.feedback === "69.0 kg — settled." &&
+  s.steam.statusRole === "status" && s.steam.statusLive === "polite",
+  "a wet weigh-in announces 70 kg in both languages before settling at 69 kg",
+  s.steam);
 check(s.functional && s.functional.toiletTarget.join(",") === "544,137,110,203",
   "the toilet target spans its full visible footprint to the room floor", s.functional);
 check(s.cs && s.cs.props.length === propNames.length &&
@@ -184,6 +201,9 @@ check(/@media \(any-pointer:coarse\)\{\.bathroom-bubble-hit\{r:40px\}\}/.test(so
  "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
  "bathroom-toilet-action", "bathroom-toilet-book", "bathroom-book-action"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "illustration includes " + id);
+});
+["bathroom-mirror-fog", "bathroom-mirror-wipe", "bathroom-mirror-signature"].forEach(function (id) {
+  check(new RegExp('id="' + id + '"').test(source), "mirror effect includes " + id);
 });
 check(!/codex-clipboard|ZAJ6YO|zTrLmq/.test(source),
   "private reference filenames are absent from authored source");

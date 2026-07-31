@@ -627,16 +627,18 @@ rendering uses no raster assets. It uses the same 720 ms overlay lifecycle as
 the cinema, with the Kitchen strip parked at `translate(0,-100%)`. The Kitchen
 `WC` portal or shared Down navigation opens it. `__bathroomRoomState()` exposes
 open/closing/hidden state for focused tests.
-The eight `[data-bath-action]` SVG controls share one delegated click/keydown
-handler, translated labels/tooltips, and the existing shared SFX helpers. Tub
-and cabinet are local toggles; the other reactions are bounded
+The nine `[data-bath-action]` SVG controls share one delegated click/keydown
+handler, translated labels/tooltips, and the existing shared SFX helpers. The
+tub owns the mirror-fog/reset state; wiping a fogged mirror reveals the traced
+`m∞b` mark. Tub and cabinet are local toggles; the other reactions are bounded
 one-shots with fallback class cleanup. The stool's outer position wrapper owns
 its clamped pointer drag while the inner group owns its foot-pivoted wobble, so
 the two transforms never replace each other. The scale stores a plausible
-numeric reading and maps it to the needle's settled angle. `closeBathroom()`
+numeric reading and maps it to the needle's settled angle, with a wet 70 kg
+spike before its usual 69 kg result. `closeBathroom()`
 always calls the same state reset used by transient teardown, while
 `__bathroomInteractionState()` exposes active classes, activation counts,
-stool offset, and scale state to `tests/bathroom-room.js`.
+stool offset, mirror state, and scale feedback to `tests/bathroom-room.js`.
 
 `#entrance-room` is the code-native Balcony lower room. Its inline 680×340 SVG
 models the nighttime **The Lofts** facade without image or address assets.

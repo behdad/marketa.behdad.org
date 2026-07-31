@@ -657,6 +657,11 @@ The Balcony stage's `.dusk` class is observed as Entrance's day/night owner.
 entry-lamp glow, and resets all five independent window lights off; night resets
 them on. Reaching the complete inverse state flashes the localized caption once.
 `__entranceRoomState().windows` exposes the ordered light state for focused tests.
+`applyRealWx()` also derives Entrance's cloud, rain, and snow classes from the
+same forced-or-real Edmonton weather layers used upstairs; its snow gate also
+reads the Balcony's `__snowsOnItsOwn()` seasonal roll. The rain streaks and snow
+cover are a fixed authored SVG inventory rather than spawned particles, so weather
+changes and unfocused tabs cannot grow the DOM.
 Like the other full-viewport overlays, it refreshes the shared room-ambience
 gate on both entry and return so the preserved Balcony cannot keep sounding
 under the street scene. `updateCuddlyGrooving()` also gates a restrained,

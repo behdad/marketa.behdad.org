@@ -451,7 +451,6 @@ footer{margin-top:2.6rem}
 }
 #cinema-screen-off[hidden]{display:none}
 #cinema-room.projector-flickering #cinema-screen-off{animation:cinema-poweroff-flicker .42s steps(1,end)}
-#cinema-screen-shell.cat-screen-flicker{animation:cinema-cat-screen-flicker .5s steps(1,end)}
 #cinema-projector-warmup{position:absolute;inset:0;z-index:2;display:grid;place-items:center;background:#4a6b94;color:#fff;font:400 clamp(42px,15vw,150px)/.82 Anton,Impact,sans-serif;letter-spacing:.035em}
 #cinema-projector-warmup[hidden]{display:none}
 #cinema-room.projector-shorted #cinema-screen-shell{animation:cinema-screen-short .16s steps(2,end) 5}
@@ -464,7 +463,6 @@ footer{margin-top:2.6rem}
 #cinema-room.spraying #cinema-water-spray{animation:cinema-spray 1.05s ease-out}
 @keyframes cinema-screen-short{50%{filter:brightness(2.2) saturate(0)}}
 @keyframes cinema-poweroff-flicker{0%,100%{filter:brightness(1)}18%{filter:brightness(2.8)}35%{filter:brightness(.35)}54%{filter:brightness(1.9)}72%{filter:brightness(.55)}}
-@keyframes cinema-cat-screen-flicker{0%,100%{filter:brightness(1)}18%{filter:brightness(1.9)}36%{filter:brightness(.55)}54%{filter:brightness(1.5)}72%{filter:brightness(.8)}}
 @keyframes cinema-projector-cooldown{0%{fill:#fff3b0;opacity:1}100%{fill:#334754;opacity:.55}}
 @keyframes cinema-projector-warmup-pulse{0%,100%{opacity:.16}38%{opacity:.34}70%{opacity:.22}}
 @keyframes cinema-spray{0%{opacity:0}12%{opacity:.9}80%{opacity:.72}100%{opacity:0}}
@@ -31709,7 +31707,7 @@ window.__cinemaVideoLoaded = false;
     filmPlaying = !!active;
     window.__cinemaVideoLoaded = filmPlaying;
     if (filmPlaying && window.__catCinemaScreenBlock) window.__catCinemaScreenBlock();
-    if (!filmPlaying && window.__dismissCatCinemaScreen) window.__dismissCatCinemaScreen();
+    if (!filmPlaying && window.__cancelCatCinemaScreenBlock) window.__cancelCatCinemaScreenBlock();
     if (window.__setCinemaAudioDuck) window.__setCinemaAudioDuck(filmPlaying, fade);
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, fade);
     if (playPauseButton && window.__cinemaRoomOpen) playPauseButton.classList.toggle("paused", !filmPlaying);
@@ -107078,7 +107076,6 @@ function spawnDustMote(container) {
   var lowerCatPerched = null;
   var cinemaCatVisit = 0;
   var cinemaScreenAnim = null;
-  var cinemaScreenFlickerTimer = null;
   var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow/__chairCatFollow to rebuild around
   // We don't actually have a cat — after enough balcony railing perches, the next one
   // keeps going: a last beat on the rail, then a leap up and out into the night, gone
@@ -107184,10 +107181,6 @@ function spawnDustMote(container) {
     if (!jumping) return;
     if (jumpAnim) { jumpAnim.onfinish = null; jumpAnim.cancel(); jumpAnim = null; }
     cinemaScreenAnim = null;
-    clearTimeout(cinemaScreenFlickerTimer);
-    cinemaScreenFlickerTimer = null;
-    var cinemaScreenShell = document.getElementById("cinema-screen-shell");
-    if (cinemaScreenShell) cinemaScreenShell.classList.remove("cat-screen-flicker");
     jumping = false;
     walk.style.animationPlayState = "";
     if (isNapJump) setNapping(false);
@@ -107200,7 +107193,7 @@ function spawnDustMote(container) {
     clearTimeout(jumpTimer);
     var current = currentWalkOffset();
     var base = baseFeet();
-    var target = { x: 340 - base.x, y: 264 - base.y };
+    var target = { x: 402 - base.x, y: 218 - base.y };
     var apex = { x: (current.x + target.x) * .5, y: Math.min(current.y, target.y) - 42 };
     var wasNapping = !!(breathe && breathe.classList.contains("napping"));
     setNapping(false);
@@ -107216,16 +107209,6 @@ function spawnDustMote(container) {
     ], { duration: 2200, fill: "none" });
     cinemaScreenAnim = animation;
     jumpAnim = animation;
-    cinemaScreenFlickerTimer = setTimeout(function () {
-      cinemaScreenFlickerTimer = null;
-      if (cinemaScreenAnim !== animation) return;
-      var shell = document.getElementById("cinema-screen-shell");
-      if (!shell) return;
-      shell.classList.remove("cat-screen-flicker");
-      void shell.offsetWidth;
-      shell.classList.add("cat-screen-flicker");
-      setTimeout(function () { shell.classList.remove("cat-screen-flicker"); }, 520);
-    }, 2200 * .48);
     animation.onfinish = function () {
       if (cinemaScreenAnim !== animation) return;
       cinemaScreenAnim = null; jumpAnim = null; jumping = false;
@@ -107917,12 +107900,7 @@ function spawnDustMote(container) {
         escapedRoom === "cinema" ? window.__cinemaRoomOpen :
         escapedRoom === "bedroom" ? window.__bedroomRoomOpen :
         !!document.querySelector(".hunt-viewport.prince-basement-open");
-      if (stillOpen && window.__homeCatLower) {
-        if (escapedRoom === "cinema") cinemaCatVisit = Math.max(0, cinemaCatVisit - 1);
-        window.__homeCatLower(escapedRoom);
-        pos.style.visibility = "";
-        pos.style.pointerEvents = "auto";
-      }
+      if (stillOpen && window.__homeCatLower) window.__homeCatLower(escapedRoom);
     }
     if (reducedMotion() || !walk.animate) {
       pos.style.visibility = "hidden";
@@ -107949,11 +107927,6 @@ function spawnDustMote(container) {
     };
     return true;
   }
-  window.__dismissCatCinemaScreen = function () {
-    if (catRoom !== "cinema" || !window.__cinemaRoomOpen || !walk.classList.contains("out")) return false;
-    if (cinemaScreenAnim) cancelJump();
-    return runLowerCatAway();
-  };
   window.__dismissCinemaCatFromPouf = function () {
     if (catRoom !== "cinema" || !window.__cinemaRoomOpen ||
         !breathe || !breathe.classList.contains("napping")) return false;

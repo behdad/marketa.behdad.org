@@ -49,11 +49,11 @@ check(s.cs && s.cs.caption === "Na zeď je příliš tma." && s.cs.left === "Zno
 check(s.relit && s.relit.state.torchesOut === 1 && !s.relit.state.dark &&
   s.relit.caption === "lower_dungeon" && s.relit.rightLabel === "Relight the torch",
   "relighting one torch restores the wall and keeps the other control truthful", s.relit);
-check(s.drag && s.drag.chainX === 14 && s.drag.chainY === 78 && parseFloat(s.drag.gateLift) <= 12 &&
-  parseFloat(s.drag.gateLift) > 11,
-  "the weighted chain clamps both axes and lifts the gate only about an inch", s.drag);
-check(s.drop && s.drop.chainX === 0 && s.drop.chainY === 0 && parseFloat(s.drop.gateLift) === 0,
-  "releasing the chain drops both weight and gate", s.drop);
+check(s.drag && s.drag.chainX === 14 && s.drag.chainY === 78 && parseFloat(s.drag.gateLift) >= 60,
+  "the weighted chain clamps both axes and raises the gate for its secret glimpse", s.drag);
+check(s.drop && s.drop.chainX === 14 && s.drop.chainY === 78 && parseFloat(s.drop.gateLift) >= 60 &&
+  s.later && s.later.chainX === 0 && s.later.chainY === 0 && parseFloat(s.later.gateLift) === 0,
+  "releasing the chain drops the weight, then the gate settles after the glimpse", {drop:s.drop,later:s.later});
 check(s.later && s.later.dripNodes === 1 && s.later.dripRunning,
   "the single ceiling drop replenishes without accumulating nodes", s.later);
 

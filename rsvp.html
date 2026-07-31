@@ -715,6 +715,10 @@ footer{margin-top:2.6rem}
   fill:none;stroke:#fffdf8;stroke-opacity:.76;stroke-width:2.2;
   stroke-linecap:round;stroke-linejoin:round;
 }
+#bathroom-mirror-doodle path.looped{stroke:#f6d98a;animation:bathroom-mirror-loop .8s ease-out}
+#bathroom-room.mirror-looped #bathroom-mirror-gleam{opacity:.82;animation:bathroom-mirror-gleam .8s ease-out}
+@keyframes bathroom-mirror-loop{0%{stroke-opacity:.35}35%{stroke-opacity:1}100%{stroke-opacity:.76}}
+@keyframes bathroom-mirror-gleam{0%{opacity:0}28%{opacity:.82}100%{opacity:0}}
 #bathroom-room-status{
   position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
   clip:rect(0 0 0 0);white-space:nowrap;border:0;
@@ -30974,6 +30978,7 @@ window.__bathroomRoomOpen = false;
   var bubbleTimer = null;
   var mirrorDraw = null;
   var mirrorDoodleCount = 0;
+  var mirrorLoopTimer = null;
   var suppressMirrorClick = false;
   var stoolShotLayer = document.getElementById("bathroom-stool-shot-layer");
   var stoolShotTimer = null;
@@ -30998,6 +31003,9 @@ window.__bathroomRoomOpen = false;
     }
     mirrorDraw = null;
     mirrorDoodleCount = 0;
+    clearTimeout(mirrorLoopTimer);
+    mirrorLoopTimer = null;
+    room.classList.remove("mirror-looped");
     suppressMirrorClick = false;
     mirrorDoodle.replaceChildren();
     setMirrorActionLabel("bathroom_mirror");
@@ -31274,7 +31282,7 @@ window.__bathroomRoomOpen = false;
     if (!window.__bathroomRoomOpen || event.button > 0 ||
         !room.classList.contains("tub-filled") || !room.classList.contains("mirror-revealed") ||
         !(event.target && event.target.closest && event.target.closest("#bathroom-mirror-action"))) return;
-    mirrorDraw = { pointerId: event.pointerId, path: null, points: [], moved: false };
+    mirrorDraw = { pointerId: event.pointerId, path: null, points: [], moved: false, looped: false };
     try { art.setPointerCapture(event.pointerId); } catch (_error) {}
     event.preventDefault();
     event.stopPropagation();
@@ -31301,6 +31309,25 @@ window.__bathroomRoomOpen = false;
     mirrorDraw.path.setAttribute("d", points.map(function (p, index) {
       return (index ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1);
     }).join(""));
+    if (!mirrorDraw.looped && points.length >= 12) {
+      var first = points[0];
+      if (Math.hypot(point.x - first.x, point.y - first.y) <= 11) {
+        mirrorDraw.looped = true;
+        mirrorDraw.path.classList.add("looped");
+        mirrorDraw.path.setAttribute("d", mirrorDraw.path.getAttribute("d") + "Z");
+        room.classList.remove("mirror-looped");
+        void room.offsetWidth;
+        room.classList.add("mirror-looped");
+        clearTimeout(mirrorLoopTimer);
+        var loopPath = mirrorDraw.path;
+        mirrorLoopTimer = setTimeout(function () {
+          mirrorLoopTimer = null;
+          room.classList.remove("mirror-looped");
+          if (loopPath) loopPath.classList.remove("looped");
+        }, 900);
+        bathroomSound("swish");
+      }
+    }
     event.preventDefault();
     event.stopPropagation();
   }

@@ -234,6 +234,8 @@ gameplay messages finish before that room caption appears.
   details for small reactions. Toggling all five windows away from their
   day/night defaults earns a caption. Enter flickers them briefly as an
   invitation to play. The intercom beside the doors buzzes somebody upstairs.
+  The grey Boxster's roof, driver door, front and rear compartments, and engine
+  are independent controls; its headlight and tail light can be switched at night.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze.
 

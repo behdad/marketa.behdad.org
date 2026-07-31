@@ -30462,6 +30462,8 @@ window.__bathroomRoomOpen = false;
     closeTimer = null;
     closing = false;
     window.__bathroomRoomOpen = true;
+    if (window.__bartenderRoomAway) window.__bartenderRoomAway();
+    if (window.__resetMixer) window.__resetMixer();
     if (window.__homeCatLower) window.__homeCatLower("bathroom");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
@@ -48619,7 +48621,10 @@ function quickReversalGesture(action) {
   // in either; barPresent means the bar's up AND you're standing at it (kitchen, visible tab).
   function kitchenNight() { var k = document.getElementById("stage-kitchen"); return !!(k && k.classList.contains("dusk")); }
   function barUpNow() { return !!window.__gardenPartyOn || (!!window.__secondRound && kitchenNight()); }
-  function barPresent() { return barUpNow() && window.currentStageName === "kitchen" && document.visibilityState !== "hidden"; }
+  function barPresent() {
+    return barUpNow() && window.currentStageName === "kitchen" &&
+      !window.__bathroomRoomOpen && document.visibilityState !== "hidden";
+  }
 
   // ---- the make sequence -----------------------------------------------------------------
   var making = false, selfServing = false, makeTimers = [], cooldownUntil = 0;
@@ -48631,6 +48636,7 @@ function quickReversalGesture(action) {
   function endBartenderMake() { stopBartenderStir(); if (window.__bartenderMixing) window.__bartenderMixing(false); } // back to idle: sway resumes, clear any stir
   function finishMake() { clearMakeTimers(); endBartenderMake(); makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); hideCocktailToast(); making = false; selfServing = false; cooldownUntil = Date.now() + 1500 + Math.random() * 1700; }
   function abort() { clearMakeTimers(); endBartenderMake(); if (makeGroup) { makeGroup.style.opacity = "0"; makeGroup.classList.remove("mk-live"); } hideCocktailToast(); making = false; selfServing = false; }
+  window.__bartenderRoomAway = function () { abort(); endBored(); };
 
   function startMake(row, opts) {
     if (making || !row) return false;
@@ -85019,8 +85025,13 @@ function playWindchimeSound(stormy, throughDoor, panId) {
     });
   } catch (e) {}
 }
+function bartenderSfxAllowed(panId) {
+  return panId !== "kitchen-bartender" || !window.__bathroomRoomOpen;
+}
+window.__bartenderSfxAllowed = bartenderSfxAllowed;
 function playPourSound(panId) {
   try {
+    if (!bartenderSfxAllowed(panId)) return;
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t = ctx.currentTime;
@@ -88636,6 +88647,7 @@ function playKnockboxThumpSound(panId) {
 // Spatialized to the bartender, one-shot via getSfxCtx (null while hidden → silent, no pile-up).
 function playShakerRattleSound(panId) {
   try {
+    if (!bartenderSfxAllowed(panId || "kitchen-bartender")) return;
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t0 = ctx.currentTime;
@@ -89076,6 +89088,7 @@ function playJsCrashSound(panId) {
 }
 function playGlassClinkSound(pitchMult, panId) {
   try {
+    if (!bartenderSfxAllowed(panId)) return;
     var ctx = getSfxCtx();
     if (!ctx) return;
     var t = ctx.currentTime;

@@ -41,6 +41,7 @@ var HARNESS = [
   ' window.__openBathroomRoom();await sleep(60);click(document.getElementById("bathroom-room-close"));await sleep(760);report.steps.dismiss=window.__bathroomRoomState();',
   ' window.__openBathroomRoom();await sleep(60);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__bathroomRoomState(),room:window.currentStageName};window.goToStage("kitchen");',
   ' var times=[],oldStep=window.__calStepTime;window.__calStepTime=function(n){times.push(n);};key("ArrowDown",{shiftKey:true});window.__calStepTime=oldStep;report.steps.shift={times:times,state:window.__bathroomRoomState()};',
+  ' window.__secondRound=true;document.getElementById("stage-kitchen").classList.add("dusk");var mixStarted=window.__makeCocktailHere();var mixBefore=window.__ambientMaking();window.__openBathroomRoom();await sleep(30);report.steps.barLeak={started:mixStarted,before:mixBefore,after:window.__ambientMaking(),userMixing:window.__userMixing(),sfxAllowed:window.__bartenderSfxAllowed("kitchen-bartender")};key("ArrowUp");await sleep(760);',
   ' window.__secondRound=true;window.__openBathroomRoom();await sleep(80);window.__deliverPhoneMessage("cue_mail");await sleep(80);report.steps.messageHold={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1300);report.steps.messageRelease={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread()};',
   ' window.__openBathroomRoom();await sleep(80);key("ArrowRight");await sleep(80);report.steps.slide={nav:window.__lowerRoomNavigationState(),sourceAnimations:room.getAnimations().length,targetAnimations:document.getElementById("prince-basement").getAnimations().length};await sleep(700);report.steps.right={source:window.__bathroomRoomState(),target:window.__princeState(),room:window.currentStageName,focus:document.activeElement.classList.contains("hunt-viewport")};',
   ' window.goToStage("kitchen");window.__openBathroomRoom();await sleep(80);var dot=document.querySelectorAll(".hunt-dot")[4];dot.focus();click(dot);await sleep(780);report.steps.dot={source:window.__bathroomRoomState(),target:window.__entranceRoomState(),room:window.currentStageName,focus:document.activeElement===dot};',
@@ -152,6 +153,9 @@ check(s.navigate && !s.navigate.state.open && s.navigate.room === "office",
   "ordinary room navigation closes the bathroom", s.navigate);
 check(s.shift && s.shift.times.join(",") === "-1" && !s.shift.state.open,
   "Shift+Down keeps its calendar-step meaning instead of entering", s.shift);
+check(s.barLeak && s.barLeak.started && s.barLeak.before && !s.barLeak.after &&
+  !s.barLeak.userMixing && !s.barLeak.sfxAllowed,
+  "entering the bathroom cancels Pouria's timed cocktail sounds and player mixing", s.barLeak);
 check(s.messageHold && s.messageHold.held.messages.indexOf("cue_mail") !== -1 &&
   s.messageHold.thread.indexOf("cue_mail") !== -1 &&
   s.messageRelease && !s.messageRelease.held.messages.length,

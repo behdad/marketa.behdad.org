@@ -88,7 +88,9 @@ lateral lower-room pans cannot click or leave stale attenuation behind.
 
 Local one-shot SFX deliberately bypass the boundary: a bathroom faucet or
 entrance window was touched in the room the visitor occupies and should remain
-present. Cross-origin Vimeo also bypasses it as deliberate Cinema foreground
+present. Opening the Bathroom synchronously cancels Pouria's in-flight ambient
+or player cocktail make, so its queued pours and shaker rattles cannot bypass
+the boundary from the bar above. Cross-origin Vimeo also bypasses it as deliberate Cinema foreground
 media. A song still on native `<audio>` fallback cannot receive Web Audio
 filtering, so `setSongLevel()` applies the profile's gain only; after capture,
 the logical level stays unchanged and the shared boundary owns both filtering

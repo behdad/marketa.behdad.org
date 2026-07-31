@@ -225,7 +225,8 @@ gameplay messages finish before that room caption appears.
 - **The Lofts** entrance pairs with the Balcony. Select the windows and street
   details for small reactions. Toggling all five windows away from their
   day/night defaults earns a caption. Enter flickers them briefly as an
-  invitation to play. The facade and sidewalk share the loft's current
+  invitation to play. The intercom beside the doors buzzes somebody upstairs.
+  The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze.
 
 ### Optional activities

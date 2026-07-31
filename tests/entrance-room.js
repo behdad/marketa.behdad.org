@@ -25,7 +25,8 @@ var HARNESS = [
   ' var closeStyles=["bathroom-room-close","cinema-room-close","prince-basement-close","entrance-room-close"].map(function(id){var style=getComputedStyle(document.getElementById(id));return [parseFloat(style.width),parseFloat(style.height),parseFloat(style.right),parseFloat(style.top)];});var homeUv=document.getElementById("entrance-home-uv");homeUv.style.transition="none";report.steps.uv={off:parseFloat(getComputedStyle(homeUv).opacity),window:homeUv.parentNode.id};window.__setUvMode(true);report.steps.uv.on=parseFloat(getComputedStyle(homeUv).opacity);window.__setUvMode(false);report.steps.uv.after=parseFloat(getComputedStyle(homeUv).opacity);',
   ' report.steps.open={state:state(),room:window.currentStageName,bare:bare,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),smoke:[room.style.getPropertyValue("--smoke"),parseFloat(getComputedStyle(smoke).opacity)],geometry:{entrance:[rr.left,rr.top,rr.width,rr.height],viewport:[vr.left,vr.top,vr.width,vr.height],strip:[sr.left,sr.top,sr.width,sr.height],transform:getComputedStyle(strip).transform,controls:closeStyles},roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],label:room.getAttribute("aria-label")};',
   ' var windowsBefore=state().windows.map(function(row){return row.on;});key("Enter");await sleep(30);var cueDuring=state();await sleep(850);report.steps.enterCue={during:cueDuring,after:state(),before:windowsBefore};',
-  ' var props=Array.from(document.querySelectorAll("#entrance-room .entrance-prop"));props.forEach(function(prop,index){if(index===1)elkey(prop,"Enter");else if(index===2)elkey(prop," ");else click(prop);});await sleep(30);report.steps.props={ids:props.map(function(prop){return prop.id;}),state:state(),caption:window.__captionKey(),roles:props.map(function(prop){return [prop.getAttribute("role"),prop.getAttribute("tabindex"),prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
+  ' var props=Array.from(document.querySelectorAll("#entrance-room .entrance-prop")),intercom=document.getElementById("entrance-intercom");click(intercom);await sleep(30);var intercomReply={state:state(),caption:window.__captionKey()};props.filter(function(prop){return prop!==intercom;}).forEach(function(prop,index){if(index===1)elkey(prop,"Enter");else if(index===2)elkey(prop," ");else click(prop);});await sleep(30);report.steps.props={ids:props.map(function(prop){return prop.id;}),state:state(),caption:window.__captionKey(),intercomReply:intercomReply,roles:props.map(function(prop){return [prop.getAttribute("role"),prop.getAttribute("tabindex"),prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return false;},configurable:true});var repliesBefore=state().intercomResponses;click(intercom);await sleep(30);report.steps.intercomGate={before:repliesBefore,after:state().intercomResponses};Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
   ' document.getElementById("stage-balcony").classList.add("dusk");await sleep(20);report.steps.night={state:state(),smoke:parseFloat(getComputedStyle(smoke).opacity)};document.getElementById("stage-balcony").classList.remove("dusk");await sleep(20);',
   ' setLang("cs");report.steps.cs={label:room.getAttribute("aria-label"),close:document.getElementById("entrance-room-close").getAttribute("aria-label"),props:props.map(function(prop){return [prop.getAttribute("aria-label"),prop.getAttribute("title")];})};setLang("en");',
   ' key("ArrowUp");await sleep(30);report.steps.up=state();key("ArrowDown");await sleep(50);key("Escape");await sleep(30);report.steps.escape=state();key("ArrowDown");await sleep(50);key("Backspace");await sleep(30);report.steps.backspace=state();',
@@ -78,11 +79,16 @@ check(s.open && s.open.geometry && s.open.geometry.controls &&
 check(s.open && s.open.label === "The Lofts entrance" &&
   s.cs && s.cs.label === "Vstup do The Lofts" && s.cs.close === "Zpět na balkon",
   "dialog and return labels switch between English and Czech", {en:s.open&&s.open.label,cs:s.cs});
-check(s.props && s.props.ids.length === 10 &&
+check(s.props && s.props.ids.length === 11 &&
   s.props.ids.every(function(id){return s.props.state.reactions[id] === 1;}) &&
   s.props.roles.every(function(row){return row[0] === "button" && row[1] === null && row[2] && row[3];}),
   "every distinct facade prop reacts with accessible copy while staying outside the Tab order",
   s.props);
+check(s.props && s.props.intercomReply && s.props.intercomReply.state.intercomResponses === 1 &&
+  s.props.intercomReply.caption === "entrance_intercom_reply" &&
+  s.intercomGate && s.intercomGate.before === 1 && s.intercomGate.after === 1,
+  "the intercom answers an attended buzz but stays silent after focus leaves the room",
+  {reply:s.props&&s.props.intercomReply,gate:s.intercomGate});
 check(s.open && !s.open.state.night && s.open.state.windows.every(function(row){return !row.on;}) &&
   s.props && s.props.state.windows.every(function(row){return row.on;}) &&
   s.props.state.windowsFlipped && s.props.caption === "entrance_windows_all_on",
@@ -102,7 +108,7 @@ check(s.uv && s.uv.window === "entrance-window-view-mid-left" &&
 check(s.night && s.night.state.night && s.night.state.windows.every(function(row){return row.on;}) &&
   !s.night.state.windowsFlipped,
   "nightfall resets every facade window to its lit default", s.night);
-check(s.cs && s.cs.props && s.cs.props.length === 10 &&
+check(s.cs && s.cs.props && s.cs.props.length === 11 &&
   s.cs.props.every(function(row){return row[0] && row[1] && row[0] === row[1];}),
   "all Entrance prop labels and tooltips switch to Czech", s.cs && s.cs.props);
 check(s.up && !s.up.open && s.escape && !s.escape.open && s.backspace && !s.backspace.open,
@@ -136,7 +142,7 @@ var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="
 check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
   /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
-check((entrance.match(/class="entrance-prop"/g) || []).length === 10 &&
+check((entrance.match(/class="entrance-prop"/g) || []).length === 11 &&
   (entrance.match(/role="button" tabindex="0"/g) || []).length === 0,
   "the complete Entrance interaction inventory stays outside the Tab order");
 check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#bedroom-room-close,#entrance-room-close\{/.test(source),

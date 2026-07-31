@@ -647,11 +647,14 @@ strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
 `hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
 capture guard owns Up/Escape/Backspace; horizontal navigation remains on the
 lower floor, with Entrance forming its right edge.
-Ten `.entrance-prop` SVG overlays give the five window bays, name stone, doors,
-paired entry lamps, tree canopy, and sidewalk pointer/touch plus Enter/Space
+Eleven `.entrance-prop` SVG overlays give the five window bays, name stone, doors,
+intercom, paired entry lamps, tree canopy, and sidewalk pointer/touch plus Enter/Space
 responses without changing the facade paint order. `data-entrance-action`
 selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
 in-flight class so no one-shot survives a room leave or reset.
+The intercom's attended click plays a short low-passed formant reply and flashes
+localized “Come up!” copy. Its sound path checks the open room, visibility, and
+focus at the gesture and has no autonomous timer.
 The Balcony stage's `.dusk` class is observed as Entrance's day/night owner.
 `syncEntranceDayNight()` brightens the daytime facade, suppresses the door and
 entry-lamp glow, and resets all five independent window lights off; night resets

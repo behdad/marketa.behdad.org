@@ -1248,6 +1248,13 @@ photobooth output, and similar state. Kill, uninstall, or full reset must clear 
 retained state. Adding an app therefore requires an open path, a teardown path, Back semantics,
 context-menu behavior, and reset coverage.
 
+The Hacker News app keeps its top-story list, selected item, and loaded comments in session state.
+Search for `renderHN`, `hnRenderDetail`, and `hnLoadComments`. Self-post HTML is rebuilt through a
+small element/link allowlist. External stories stay on an in-app landing view until the explicit
+open action. Comment loading takes at most eight roots and 24 item requests in batches of six,
+then path-sorts up to 20 visible comments back into thread order. Back clears only the selection;
+Stop, uninstall, and full reset clear the whole HN cache.
+
 Launcher badges are a projection of their owning stores, not a parallel notification ledger.
 `phoneAppNotificationCount` derives Messages from `unreadCount()`, Mail from `mailRead`, and Album
 from non-`shoot` record ids newer than the session-local `albumSeenMaxId`; zero counts stay hidden.

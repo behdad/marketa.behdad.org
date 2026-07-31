@@ -149,6 +149,8 @@ or uninstall it. **Kill app** resets only that app; **Start over** restores
 removed apps with the rest of the loft. Select the reception bars for a playful
 estimate of your timezone region's distance from Edmonton. During family calls,
 select any portrait, including the self-view, to identify the caller.
+Hacker News opens stories inside its reader; Back returns to the top stories.
+External stories use **Open original** when you want to leave the reader.
 
 The office monitor has larger apps, classic games, Chat, Code, Python, and
 Linux. Some optional technical toys require a substantial first download.

@@ -5887,6 +5887,43 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   transform:translateY(calc(0px - var(--prince-gate-lift)));
   transition:transform .18s cubic-bezier(.3,.8,.45,1);
 }
+#prince-dungeon-secret{
+  position:absolute;
+  z-index:0;
+  right:4.7%;
+  top:54%;
+  width:9%;
+  aspect-ratio:1;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(7px) scale(.72);
+  transition:opacity .16s ease,transform .22s ease;
+}
+#prince-dungeon-secret::before{
+  content:"";
+  position:absolute;
+  inset:15% 8% 6%;
+  border-radius:48% 52% 42% 45%;
+  background:
+    radial-gradient(circle at 35% 38%,#d8f1dc 0 5%,transparent 6%),
+    radial-gradient(circle at 68% 38%,#d8f1dc 0 5%,transparent 6%),
+    radial-gradient(ellipse at 50% 80%,#121b20 0 46%,transparent 48%);
+  box-shadow:0 0 12px rgba(183,232,192,.42);
+}
+#prince-dungeon-secret::after{
+  content:"";
+  position:absolute;
+  left:20%;
+  top:0;
+  width:60%;
+  height:28%;
+  background:#967a45;
+  clip-path:polygon(0 100%,7% 18%,34% 62%,50% 0,67% 62%,94% 18%,100% 100%);
+}
+#prince-dungeon-set.gate-secret-peek #prince-dungeon-secret{
+  opacity:.86;
+  transform:translateY(0) scale(1);
+}
 #prince-dungeon-set.chain-dragging #prince-dungeon-gate{transition:none}
 #prince-dungeon-chain{
   right:7%;
@@ -30540,6 +30577,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <div id="prince-basement-stage">
         <div id="prince-dungeon-set">
           <svg id="prince-cat-overlay" viewBox="0 0 680 425" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+          <div id="prince-dungeon-secret" aria-hidden="true"></div>
           <div id="prince-dungeon-gate" aria-hidden="true"></div>
           <div id="prince-dungeon-drip" aria-hidden="true"><span id="prince-dungeon-drop"></span><span id="prince-dungeon-puddle"></span></div>
           <div id="prince-dungeon-rat" aria-hidden="true"></div>
@@ -33099,6 +33137,7 @@ var T = {
       bathroom_scale_settled: "Bathroom · settled at 69.0 kg.",
       lower_dungeon: "Dungeon · the old game is awake.",
       prince_dark: "Too dark to read the wall.",
+      prince_gate_secret: "Dungeon · something crowned blinked behind the gate.",
       lower_cinema: "Cinema · wake the projector, then choose a film.",
       lower_bedroom: "Bedroom · everything here is playable.",
       lower_entrance: "Entrance · the street starts here.",
@@ -34419,6 +34458,7 @@ var T = {
       bathroom_scale_settled: "Koupelna · ustáleno na 69,0 kg.",
       lower_dungeon: "Žalář · stará hra se probudila.",
       prince_dark: "Na zeď je příliš tma.",
+      prince_gate_secret: "Žalář · za mříží zamrkalo něco s korunkou.",
       lower_cinema: "Kino · probuď projektor a pak vyber film.",
       lower_bedroom: "Ložnice · se vším si tu můžeš hrát.",
       lower_entrance: "Vchod · tady začíná ulice.",
@@ -65234,7 +65274,7 @@ async def localfont(name):
     princeDungeonSet.querySelectorAll(".prince-dungeon-prop").forEach(function (prop) {
       prop.classList.remove("awakening", "rattled", "swung", "thudded", "shifted", "snuffed", "dragging");
     });
-    princeDungeonSet.classList.remove("torchless", "chain-dragging");
+    princeDungeonSet.classList.remove("torchless", "chain-dragging", "gate-secret-peek");
     princeDungeonSet.style.setProperty("--prince-gate-lift", "0px");
     if (princeDungeonRat) princeDungeonRat.classList.remove("scurrying");
     princeChainPointer = null;
@@ -65329,8 +65369,12 @@ async def localfont(name):
       princeDungeonChain.style.setProperty("--prince-chain-y", princeChainY + "px");
     }
     if (princeDungeonSet) {
-      var lift = Math.min(12, princeChainY * 0.154);
+      var lift = princeChainY >= 58 ? 66 : Math.min(12, princeChainY * 0.154);
       princeDungeonSet.style.setProperty("--prince-gate-lift", lift.toFixed(2) + "px");
+      if (princeChainY >= 58 && !princeDungeonSet.classList.contains("gate-secret-peek")) {
+        princeDungeonSet.classList.add("gate-secret-peek");
+        if (window.setCaption) window.setCaption("prince_gate_secret", true);
+      }
     }
   }
   function releasePrinceChain(event) {
@@ -65345,7 +65389,19 @@ async def localfont(name):
     }
     if (princeDungeonChain) princeDungeonChain.classList.remove("dragging");
     if (princeDungeonSet) princeDungeonSet.classList.remove("chain-dragging");
-    setPrinceChainPosition(0, 0);
+    var heldSecret = princeDungeonSet && princeDungeonSet.classList.contains("gate-secret-peek");
+    if (heldSecret) {
+      princeDungeonTimers.push(setTimeout(function () {
+        if (!princeDungeonSet) return;
+        princeDungeonSet.classList.remove("gate-secret-peek");
+        setPrinceChainPosition(0, 0);
+        if (princePresented && princeMode === "basement" && window.__restoreLowerRoomCaption) {
+          window.__restoreLowerRoomCaption("lower_dungeon");
+        }
+      }, 520));
+    } else {
+      setPrinceChainPosition(0, 0);
+    }
     if (princeChainMoved && typeof playMetalClinkSound === "function") {
       playMetalClinkSound(.9, "prince-dungeon-chain");
     }

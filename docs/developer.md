@@ -1083,6 +1083,14 @@ from the pinned dungeon atlas; narrow stone jambs distinguish the playable
 16:10 opening without framing it as a separate screen. The vendored,
 zero-CDN runtime and its Unlicense notice live in `princejs/`.
 
+The weighted chain remains a pointer-captured, non-Tab-stop prop. Its ordinary
+activation gives the existing shallow gate reaction; a drag past the lower
+threshold temporarily raises the gate farther and reveals the single static
+`#prince-dungeon-secret`. Release holds that glimpse for one bounded timer, then
+restores the chain, gate, secret, and lower-room caption. Dungeon teardown clears
+the same timer and state, and delegated non-passive `touchmove` continues to stop
+page panning during the drag.
+
 Calendar is also `searchOnly` on the monitor desktop. Its centered date/countdown
 menu-bar control remains the primary pointer entry point; the phone launcher is a
 separate catalog and is unchanged.

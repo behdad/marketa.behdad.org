@@ -201,7 +201,8 @@ Each hidden room announces itself in the clue line when entered; temporary
 gameplay messages finish before that room caption appears.
 
 - **Bathroom / Toilets** pairs with the Kitchen. Fill the tub—or press Enter—to
-  begin a bubble hunt; the steam fogs the mirror for a finger-drawn note, and a
+  begin a bubble hunt; the steam fogs the mirror for a finger-drawn note. Wipe
+  it once to reveal `m∞b`, then draw a small doodle in the steam left around it. A
   post-bath weigh-in briefly carries a little water weight. Its other fixtures
   are playful, and the stool can be dragged.
 - **Dungeon** pairs with the Garden. Select the play wall, or press Enter or

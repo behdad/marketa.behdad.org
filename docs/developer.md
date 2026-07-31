@@ -630,7 +630,11 @@ open/closing/hidden state for focused tests.
 The nine `[data-bath-action]` SVG controls share one delegated click/keydown
 handler, translated labels/tooltips, and the existing shared SFX helpers. The
 tub owns the mirror-fog/reset state; wiping a fogged mirror reveals the traced
-`m∞b` mark. Tub and cabinet are local toggles; the other reactions are bounded
+`m∞b` mark, then a pointer-captured SVG stroke layer accepts up to three
+48-point doodles outside the signature's reserved box. The mirror label changes
+with the active drawing affordance in both languages. Draining, refilling,
+leaving the room, and transient reset all empty that fixed layer; it never
+spawns timers or unbounded particles. Tub and cabinet are local toggles; the other reactions are bounded
 one-shots with fallback class cleanup. The stool's outer position wrapper owns
 its clamped pointer drag while the inner group owns its foot-pivoted wobble, so
 the two transforms never replace each other. The scale stores a plausible

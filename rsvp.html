@@ -691,6 +691,11 @@ footer{margin-top:2.6rem}
 #bathroom-room.tub-filled.mirror-revealed #bathroom-mirror-signature{
   animation:bathroom-mirror-signature .9s ease-out both;
 }
+#bathroom-mirror-doodle{pointer-events:none}
+#bathroom-mirror-doodle path{
+  fill:none;stroke:#fffdf8;stroke-opacity:.76;stroke-width:2.2;
+  stroke-linecap:round;stroke-linejoin:round;
+}
 #bathroom-room-status{
   position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
   clip:rect(0 0 0 0);white-space:nowrap;border:0;
@@ -29595,6 +29600,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"
                   stroke-dasharray="180" stroke-dashoffset="180" paint-order="stroke fill">m∞b</text>
           </g>
+          <g id="bathroom-mirror-doodle" aria-hidden="true"></g>
           <path id="bathroom-mirror-gleam" d="M48 119L93 38H116L71 119ZM129 119L174 38H194L149 119Z" fill="#fffdf8" opacity="0"/>
           <rect id="bathroom-mirror-action" data-bath-action="mirror" class="hunt-hit" role="button" data-aria-i="bathroom_mirror" data-title-i="bathroom_mirror" aria-label="Polish the mirror" title="Polish the mirror" x="32" y="24" width="175" height="113" rx="2" fill="transparent" pointer-events="all"/>
         </g>
@@ -30752,6 +30758,8 @@ window.__bathroomRoomOpen = false;
   var scaleNeedle = document.getElementById("bathroom-scale-needle");
   var scaleReading = document.getElementById("bathroom-scale-reading");
   var bathroomStatus = document.getElementById("bathroom-room-status");
+  var mirrorAction = document.getElementById("bathroom-mirror-action");
+  var mirrorDoodle = document.getElementById("bathroom-mirror-doodle");
   var stoolX = 0;
   var stoolDrag = null;
   var suppressStoolClick = false;
@@ -30761,12 +30769,31 @@ window.__bathroomRoomOpen = false;
   var bubblePopped = {};
   var bubbleComplete = false;
   var bubbleTimer = null;
+  var mirrorDraw = null;
+  var mirrorDoodleCount = 0;
+  var suppressMirrorClick = false;
   var bubbles = Array.from(art.querySelectorAll("[data-bath-bubble]"));
   var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
     "toilet-flush", "book-flip", "bubble-hunt", "bubble-complete"];
   if (!room || !viewport || !closeButton || !art || !stoolPosition ||
-      !stool || !scaleNeedle || !scaleReading || !bathroomStatus) return;
+      !stool || !scaleNeedle || !scaleReading || !bathroomStatus ||
+      !mirrorAction || !mirrorDoodle) return;
+
+  function setMirrorActionLabel(key) {
+    var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    mirrorAction.setAttribute("data-aria-i", key);
+    mirrorAction.setAttribute("data-title-i", key);
+    mirrorAction.setAttribute("aria-label", T[lang][key]);
+    mirrorAction.setAttribute("title", T[lang][key]);
+  }
+  function clearMirrorDoodle() {
+    mirrorDraw = null;
+    mirrorDoodleCount = 0;
+    suppressMirrorClick = false;
+    mirrorDoodle.replaceChildren();
+    setMirrorActionLabel("bathroom_mirror");
+  }
 
   function focusUpstairs() {
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
@@ -30797,6 +30824,7 @@ window.__bathroomRoomOpen = false;
     bubblePopped = {};
     bubbleComplete = false;
     bubbles.forEach(function (bubble) { bubble.classList.remove("popped"); });
+    clearMirrorDoodle();
   }
   function pulseClass(name, duration) {
     clearTimeout(pulseTimers[name]);
@@ -30878,12 +30906,14 @@ window.__bathroomRoomOpen = false;
       pulseClass("mirror-shimmer", 780);
       if (room.classList.contains("tub-filled")) {
         room.classList.add("mirror-revealed");
+        setMirrorActionLabel("bathroom_mirror_draw");
         setBathroomFeedback("bathroom_status_mirror_reveal", "bathroom_mirror_reveal");
       }
       bathroomSound("swish");
     } else if (action === "tub") {
       room.classList.toggle("tub-filled");
       room.classList.remove("mirror-revealed");
+      clearMirrorDoodle();
       clearBathroomFeedback();
       if (room.classList.contains("tub-filled")) startBubbleHunt();
       else stopBubbleHunt(true);
@@ -30966,6 +30996,11 @@ window.__bathroomRoomOpen = false;
       event.stopPropagation();
       return;
     }
+    if (event.type === "click" && target === mirrorAction && suppressMirrorClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     activateBathroomProp(target.getAttribute("data-bath-action"));
@@ -30973,6 +31008,67 @@ window.__bathroomRoomOpen = false;
   function svgUnitsPerClientPixel() {
     var box = art.getBoundingClientRect();
     return box.width ? 680 / box.width : 1;
+  }
+  function mirrorPoint(event) {
+    var point = art.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    var matrix = art.getScreenCTM();
+    if (!matrix) return null;
+    point = point.matrixTransform(matrix.inverse());
+    var inPanel = point.y >= 35 && point.y <= 126 &&
+      ((point.x >= 43 && point.x <= 114) || (point.x >= 124 && point.x <= 196));
+    var overSignature = point.x >= 83 && point.x <= 155 && point.y >= 68 && point.y <= 105;
+    return inPanel && !overSignature ? point : null;
+  }
+  function beginMirrorDraw(event) {
+    if (!window.__bathroomRoomOpen || event.button > 0 ||
+        !room.classList.contains("tub-filled") || !room.classList.contains("mirror-revealed") ||
+        !(event.target && event.target.closest && event.target.closest("#bathroom-mirror-action"))) return;
+    mirrorDraw = { pointerId: event.pointerId, path: null, points: [], moved: false };
+    try { art.setPointerCapture(event.pointerId); } catch (_error) {}
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  function moveMirrorDraw(event) {
+    if (!mirrorDraw || event.pointerId !== mirrorDraw.pointerId) return;
+    var point = mirrorPoint(event);
+    if (!point) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    var points = mirrorDraw.points;
+    var previous = points[points.length - 1];
+    if (previous && Math.hypot(point.x - previous.x, point.y - previous.y) < 1.5) return;
+    if (!mirrorDraw.path) {
+      while (mirrorDoodle.children.length >= 3) mirrorDoodle.firstElementChild.remove();
+      mirrorDraw.path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      mirrorDoodle.appendChild(mirrorDraw.path);
+    }
+    points.push({ x: point.x, y: point.y });
+    if (points.length > 48) points.shift();
+    mirrorDraw.moved = points.length > 1;
+    mirrorDraw.path.setAttribute("d", points.map(function (p, index) {
+      return (index ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1);
+    }).join(""));
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  function endMirrorDraw(event) {
+    if (!mirrorDraw || event.pointerId !== mirrorDraw.pointerId) return;
+    var moved = mirrorDraw.moved;
+    if (!moved && mirrorDraw.path) mirrorDraw.path.remove();
+    if (moved) {
+      mirrorDoodleCount = mirrorDoodle.children.length;
+      setBathroomCaption("bathroom_mirror_doodle");
+    }
+    mirrorDraw = null;
+    suppressMirrorClick = moved;
+    try { art.releasePointerCapture(event.pointerId); } catch (_error) {}
+    setTimeout(function () { suppressMirrorClick = false; }, 0);
+    event.preventDefault();
+    event.stopPropagation();
   }
   function beginStoolDrag(event) {
     if (!window.__bathroomRoomOpen || event.button > 0 ||
@@ -31056,11 +31152,15 @@ window.__bathroomRoomOpen = false;
     return true;
   }
   art.addEventListener("pointerdown", beginStoolDrag);
+  art.addEventListener("pointerdown", beginMirrorDraw);
   art.addEventListener("pointermove", moveStool);
+  art.addEventListener("pointermove", moveMirrorDraw);
   art.addEventListener("pointerup", endStoolDrag);
+  art.addEventListener("pointerup", endMirrorDraw);
   art.addEventListener("pointercancel", endStoolDrag);
+  art.addEventListener("pointercancel", endMirrorDraw);
   art.addEventListener("touchmove", function (event) {
-    if (stoolDrag) event.preventDefault();
+    if (stoolDrag || mirrorDraw) event.preventDefault();
   }, { passive: false });
   art.addEventListener("click", activateFromEvent);
   art.addEventListener("keydown", activateFromEvent);
@@ -31090,7 +31190,9 @@ window.__bathroomRoomOpen = false;
       feedback: bathroomStatus.textContent,
       mirror: {
         fogged: room.classList.contains("tub-filled"),
-        revealed: room.classList.contains("mirror-revealed")
+        revealed: room.classList.contains("mirror-revealed"),
+        doodles: mirrorDoodleCount,
+        drawing: !!mirrorDraw
       },
       bubbles: {
         active: room.classList.contains("bubble-hunt"),
@@ -33132,6 +33234,7 @@ var T = {
       bathroom_bubbles_start: "Bathroom · pop every bubble.",
       bathroom_bubbles_done: "Not one escaped.",
       bathroom_mirror_reveal: "Bathroom · m∞b, drawn through the steam.",
+      bathroom_mirror_doodle: "Bathroom · your turn in the remaining steam.",
       bathroom_scale_weighing: "Bathroom · weighing…",
       bathroom_scale_wet: "Bathroom · 70.0 kg, still dripping.",
       bathroom_scale_settled: "Bathroom · settled at 69.0 kg.",
@@ -33909,6 +34012,7 @@ var T = {
     bathroom_bubble_pop: "Pop bubble",
     bathroom_sink: "Run the faucet",
     bathroom_mirror: "Polish the mirror",
+    bathroom_mirror_draw: "Draw in the remaining mirror steam",
     bathroom_tub: "Fill or drain the tub",
     bathroom_towel: "Fluff the towel",
     bathroom_stool: "Test the stool",
@@ -34453,6 +34557,7 @@ var T = {
       bathroom_bubbles_start: "Koupelna · praskni všechny bubliny.",
       bathroom_bubbles_done: "Ani jedna neunikla.",
       bathroom_mirror_reveal: "Koupelna · m∞b, napsané do páry.",
+      bathroom_mirror_doodle: "Koupelna · teď můžeš kreslit do zbylé páry.",
       bathroom_scale_weighing: "Koupelna · vážení…",
       bathroom_scale_wet: "Koupelna · 70,0 kg, ještě z tebe kape.",
       bathroom_scale_settled: "Koupelna · ustáleno na 69,0 kg.",
@@ -35226,6 +35331,7 @@ var T = {
     bathroom_bubble_pop: "Prasknout bublinu",
     bathroom_sink: "Pustit kohoutek",
     bathroom_mirror: "Vyleštit zrcadlo",
+    bathroom_mirror_draw: "Kreslit do zbylé páry na zrcadle",
     bathroom_tub: "Napustit nebo vypustit vanu",
     bathroom_towel: "Načechrat ručník",
     bathroom_stool: "Vyzkoušet stoličku",

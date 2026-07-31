@@ -678,7 +678,8 @@ but is entirely native SVG. Entry pans the preserved Office strip to
 `Zzz…` portal or shared Down navigation opens it. A narrow
 observer mirrors `#stage-office.dusk` into `.bedroom-night`.
 Every distinct foreground prop is an SVG `role="button"` with localized
-`aria-label`/tooltip copy: stained glass, each brass mushroom bedside lamp, wall rack, wardrobe,
+`aria-label`/tooltip copy: stained glass, each brass mushroom bedside lamp, wall rack, wardrobe
+and its separately clickable pink and blue wedding suits,
 bed, and each bedside drawer. The Bedroom's capture-phase key owner translates
 Enter/Space on those focused groups into their click path. Every lower-room
 capture owner stops only local navigation and activation keys, leaving the
@@ -687,6 +688,8 @@ and clears transient prop classes on room close. The two lamp `.off` classes
 survive room changes and are captured by the `bedroom-lamps` checkpoint
 adapter; only a deliberate game reset returns both lamps to their authored-on
 state. `__bedroomRoomState().props` is the focused regression surface.
+Opening the wardrobe reveals both suits; selecting either suit replays only that
+hanger's swing without adding a Tab stop or toggling the wardrobe.
 
 Lamp activation also calls `syncSleep()`. Only when both mushroom lamps carry
 `.off` does the room gain `.bedroom-sleeping`, which deepens the existing night

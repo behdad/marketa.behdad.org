@@ -17,7 +17,7 @@ var HARNESS = [
   'function surface(cls){var el=document.createElement("div");el.className=cls;el.style.display="block";el.style.opacity="1";document.querySelector(".hunt-viewport").appendChild(el);return el;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
-  ' var room=document.getElementById("bathroom-room"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip");room.style.transition="none";strip.style.transition="none";',
+  ' var room=document.getElementById("bathroom-room"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip"),lowerTrack=document.getElementById("lower-room-track");room.style.transition="none";strip.style.transition="none";viewport.style.transition="none";',
   ' var roster=document.querySelector(".roster-panel"),rosterToggle=document.querySelector(".roster-toggle"),rosterBackdrop=document.querySelector(".roster-backdrop");roster.classList.add("show");rosterBackdrop.classList.add("show");rosterToggle.classList.add("avail");',
   ' var badge=surface("msg-badge show"),coach=surface("msg-badge-coach show"),thumb=surface("msg-thumb show"),call=surface("call-ring show");',
   ' key("ArrowDown");await sleep(80);',
@@ -28,6 +28,7 @@ var HARNESS = [
   ' var tub=document.getElementById("bathroom-tub"),bubbles=Array.from(room.querySelectorAll("[data-bath-bubble]"));click(tub);var bubbleStart=window.__bathroomInteractionState();bubbles.forEach(click);var bubbleDone=window.__bathroomInteractionState();click(tub);var bubbleReset=window.__bathroomInteractionState();report.steps.bubbles={count:bubbles.length,roles:bubbles.map(function(el){var hit=el.querySelector(".bathroom-bubble-hit");return [el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("aria-label"),!!hit,hit&&getComputedStyle(hit).r];}),start:bubbleStart.bubbles,done:bubbleDone.bubbles,reset:bubbleReset.bubbles};',
   ' key("Enter");var enterOnce={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};key("Enter");var enterTwice={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};click(tub);report.steps.enterTub={once:enterOnce,twice:enterTwice};',
   ' var scale=document.getElementById("bathroom-scale-action");click(scale);var scaleSpike=document.getElementById("bathroom-scale-reading").textContent;await sleep(380);var scaleOn=window.__bathroomInteractionState();click(scale);var scaleOff=window.__bathroomInteractionState();click(scale);await sleep(380);',
+  ' var towel=document.getElementById("bathroom-waffle-towel");click(towel);await sleep(260);click(towel);await sleep(470);var towelRestarted=room.classList.contains("towel-fluff");await sleep(250);report.steps.towelRepeat={restarted:towelRestarted,settled:!room.classList.contains("towel-fluff"),hits:window.__bathroomInteractionState().hits.towel};',
   ' var stool=document.getElementById("bathroom-stool"),stoolPosition=document.getElementById("bathroom-stool-position"),art=document.getElementById("bathroom-room-art");',
   ' var stoolHitsBefore=window.__bathroomInteractionState().hits.stool;stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,buttons:1,clientX:300}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:70,pointerType:"touch",button:0,clientX:300}));await sleep(10);var stationaryState=window.__bathroomInteractionState();',
   ' stool.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:71,pointerType:"mouse",button:0,buttons:1,clientX:300}));art.dispatchEvent(new PointerEvent("pointermove",{bubbles:true,cancelable:true,pointerId:71,pointerType:"mouse",buttons:1,clientX:900}));art.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:71,pointerType:"mouse",button:0,clientX:900}));await sleep(10);',
@@ -43,7 +44,7 @@ var HARNESS = [
   ' var times=[],oldStep=window.__calStepTime;window.__calStepTime=function(n){times.push(n);};key("ArrowDown",{shiftKey:true});window.__calStepTime=oldStep;report.steps.shift={times:times,state:window.__bathroomRoomState()};',
   ' window.__secondRound=true;document.getElementById("stage-kitchen").classList.add("dusk");var mixStarted=window.__makeCocktailHere();var mixBefore=window.__ambientMaking();window.__openBathroomRoom();await sleep(30);report.steps.barLeak={started:mixStarted,before:mixBefore,after:window.__ambientMaking(),userMixing:window.__userMixing(),sfxAllowed:window.__bartenderSfxAllowed("kitchen-bartender")};key("ArrowUp");await sleep(760);',
   ' window.__secondRound=true;window.__openBathroomRoom();await sleep(80);window.__deliverPhoneMessage("cue_mail");await sleep(80);report.steps.messageHold={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread()};key("ArrowUp");await sleep(1300);report.steps.messageRelease={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread()};',
-  ' window.__openBathroomRoom();await sleep(80);key("ArrowRight");await sleep(80);report.steps.slide={nav:window.__lowerRoomNavigationState(),sourceAnimations:room.getAnimations().length,targetAnimations:document.getElementById("prince-basement").getAnimations().length};await sleep(700);report.steps.right={source:window.__bathroomRoomState(),target:window.__princeState(),room:window.currentStageName,focus:document.activeElement.classList.contains("hunt-viewport")};',
+  ' window.__openBathroomRoom();await sleep(80);key("ArrowRight");await sleep(80);report.steps.slide={nav:window.__lowerRoomNavigationState(),trackAnimations:lowerTrack.getAnimations().length};await sleep(700);report.steps.right={source:window.__bathroomRoomState(),target:window.__princeState(),room:window.currentStageName,focus:document.activeElement.classList.contains("hunt-viewport")};',
   ' window.goToStage("kitchen");window.__openBathroomRoom();await sleep(80);var dot=document.querySelectorAll(".hunt-dot")[4];dot.focus();click(dot);await sleep(780);report.steps.dot={source:window.__bathroomRoomState(),target:window.__entranceRoomState(),room:window.currentStageName,focus:document.activeElement===dot};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
@@ -112,6 +113,10 @@ check(s.functional && s.functional.towelOrigin === "44px 0px" &&
   s.functional.towelBox === "fill-box" &&
   s.functional.stoolOrigin === "380px 332px",
   "the towel turns from its rail and the stool wobbles from its feet", s.functional);
+check(s.towelRepeat && s.towelRepeat.restarted && s.towelRepeat.settled &&
+  s.towelRepeat.hits === 4,
+  "repeated towel clicks restart a full reaction without stale cleanup cutting it short",
+  s.towelRepeat);
 check(s.functional && s.functional.stationary.state.hits.stool ===
   s.functional.stationary.before + 1 &&
   s.functional.stationary.state.active.indexOf("stool-wobble") !== -1,
@@ -163,8 +168,8 @@ check(s.messageHold && s.messageHold.held.messages.indexOf("cue_mail") !== -1 &&
   { held: s.messageHold, released: s.messageRelease });
 check(s.slide && s.slide.nav.active && s.slide.nav.from === "kitchen" &&
   s.slide.nav.to === "garden" && s.slide.nav.direction === 1 &&
-  s.slide.sourceAnimations > 0 && s.slide.targetAnimations > 0,
-  "a paired horizontal animation owns both lower rooms during the pan", s.slide);
+  s.slide.trackAnimations > 0,
+  "the shared lower-room track owns the horizontal pan", s.slide);
 check(s.right && !s.right.source.open && s.right.source.hidden && s.right.room === "garden" &&
   s.right.target.basement && s.right.focus,
   "Right pans from Bathroom to the adjacent dungeon and restores viewport focus", s.right);

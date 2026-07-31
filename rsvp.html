@@ -30259,6 +30259,7 @@ window.__bathroomRoomOpen = false;
   var suppressStoolClick = false;
   var scaleValue = null;
   var scaleReadingTimer = null;
+  var pulseTimers = {};
   var bubblePopped = {};
   var bubbleComplete = false;
   var bubbleTimer = null;
@@ -30276,6 +30277,8 @@ window.__bathroomRoomOpen = false;
   }
   function resetBathroomProps() {
     settledClasses.forEach(function (name) { room.classList.remove(name); });
+    Object.keys(pulseTimers).forEach(function (name) { clearTimeout(pulseTimers[name]); });
+    pulseTimers = {};
     stoolX = 0;
     stoolDrag = null;
     suppressStoolClick = false;
@@ -30296,10 +30299,14 @@ window.__bathroomRoomOpen = false;
     bubbles.forEach(function (bubble) { bubble.classList.remove("popped"); });
   }
   function pulseClass(name, duration) {
+    clearTimeout(pulseTimers[name]);
     room.classList.remove(name);
     void room.getBoundingClientRect();
     room.classList.add(name);
-    setTimeout(function () { room.classList.remove(name); }, duration);
+    pulseTimers[name] = setTimeout(function () {
+      delete pulseTimers[name];
+      room.classList.remove(name);
+    }, duration);
   }
   function bathroomSound(name) {
     if (name === "water" && typeof playWaterSound === "function") playWaterSound("bathroom-room");

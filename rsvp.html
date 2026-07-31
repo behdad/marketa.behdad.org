@@ -725,6 +725,11 @@ footer{margin-top:2.6rem}
 }
 #bathroom-tub-water{opacity:.12;transition:opacity .35s ease}
 #bathroom-room.tub-filled #bathroom-tub-water{opacity:.72}
+#bathroom-tub-shower{opacity:0;pointer-events:none}
+#bathroom-room.tub-filling #bathroom-tub-shower{opacity:1}
+#bathroom-room.tub-filling #bathroom-tub-shower path{animation:bathroom-shower-fall .42s linear infinite}
+#bathroom-room.tub-filling #bathroom-tub-water{opacity:.22}
+@keyframes bathroom-shower-fall{0%{stroke-dashoffset:0;opacity:.25}35%{opacity:1}100%{stroke-dashoffset:-16;opacity:.45}}
 #bathroom-room.cabinet-open #bathroom-cabinet-face{transform:translateY(-7px)}
 #bathroom-cabinet-face{transition:transform .32s ease}
 #bathroom-room.sink-running #bathroom-sink-water{opacity:1;animation:bathroom-water-run .78s ease-in-out}
@@ -29781,6 +29786,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <path d="M253 273Q246 282 249 293H263Q272 285 273 273M454 273Q456 283 466 292H480Q479 280 470 270" fill="#333638" stroke="#151819" stroke-width="3"/>
           <path d="M467 187V104" stroke="#bfc3c0" stroke-width="6"/><path d="M467 106Q467 94 455 91L446 89" fill="none" stroke="#daddda" stroke-width="6" stroke-linecap="round"/>
           <ellipse cx="440" cy="91" rx="9" ry="5" transform="rotate(18 440 91)" fill="#cfd2cf" stroke="#757a78" stroke-width="2"/>
+          <g id="bathroom-tub-shower" aria-hidden="true">
+            <path d="M427 99V174M438 99V180M449 99V174" fill="none" stroke="#b9e4e8" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="4 7"/>
+            <path d="M431 101V171M442 101V177M453 101V171" fill="none" stroke="#f2fbf8" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 9" opacity=".75"/>
+          </g>
           <path d="M469 185Q482 174 489 185V199M469 185Q456 174 450 185V198" fill="none" stroke="#b8bcb9" stroke-width="4"/>
           <circle cx="469" cy="185" r="4" fill="#7e8481"/>
         </g>
@@ -30986,6 +30995,7 @@ window.__bathroomRoomOpen = false;
   var bubblePopped = {};
   var bubbleComplete = false;
   var bubbleTimer = null;
+  var tubFillTimer = null;
   var mirrorDraw = null;
   var mirrorDoodleCount = 0;
   var mirrorLoopTimer = null;
@@ -30993,7 +31003,7 @@ window.__bathroomRoomOpen = false;
   var stoolShotLayer = document.getElementById("bathroom-stool-shot-layer");
   var stoolShotTimer = null;
   var bubbles = Array.from(art.querySelectorAll("[data-bath-bubble]"));
-  var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "towel-fluff",
+  var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "tub-filling", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
     "toilet-flush", "book-flip", "bubble-hunt", "bubble-complete"];
   if (!room || !viewport || !closeButton || !art || !stoolPosition ||
@@ -31050,6 +31060,8 @@ window.__bathroomRoomOpen = false;
     scaleNeedle.style.removeProperty("transform");
     clearTimeout(bubbleTimer);
     bubbleTimer = null;
+    clearTimeout(tubFillTimer);
+    tubFillTimer = null;
     bubblePopped = {};
     bubbleComplete = false;
     bubbles.forEach(function (bubble) { bubble.classList.remove("popped"); });
@@ -31102,6 +31114,18 @@ window.__bathroomRoomOpen = false;
     bubbleComplete = false;
     bubbles.forEach(function (bubble) { bubble.classList.remove("popped"); });
     if (restoreCaption) setBathroomCaption("lower_bathroom");
+  }
+  function beginTubFill() {
+    clearTimeout(tubFillTimer);
+    room.classList.add("tub-filling");
+    bathroomSound("water");
+    tubFillTimer = setTimeout(function () {
+      tubFillTimer = null;
+      if (!window.__bathroomRoomOpen || !room.classList.contains("tub-filling")) return;
+      room.classList.remove("tub-filling");
+      room.classList.add("tub-filled");
+      startBubbleHunt();
+    }, 1100);
   }
   function popBubble(bubble, event) {
     if (!window.__bathroomRoomOpen || !room.classList.contains("bubble-hunt") ||
@@ -31174,13 +31198,19 @@ window.__bathroomRoomOpen = false;
       }
       bathroomSound("swish");
     } else if (action === "tub") {
-      room.classList.toggle("tub-filled");
-      room.classList.remove("mirror-revealed");
-      clearMirrorDoodle();
-      clearBathroomFeedback();
-      if (room.classList.contains("tub-filled")) startBubbleHunt();
-      else stopBubbleHunt(true);
-      bathroomSound("water");
+      if (room.classList.contains("tub-filling")) return true;
+      if (room.classList.contains("tub-filled")) {
+        room.classList.remove("tub-filled", "mirror-revealed");
+        clearMirrorDoodle();
+        clearBathroomFeedback();
+        stopBubbleHunt(true);
+        bathroomSound("water");
+      } else {
+        room.classList.remove("mirror-revealed");
+        clearMirrorDoodle();
+        clearBathroomFeedback();
+        beginTubFill();
+      }
     } else if (action === "towel") {
       pulseClass("towel-fluff", 700);
       bathroomSound("swish");
@@ -31485,7 +31515,8 @@ window.__bathroomRoomOpen = false;
         popped: Object.keys(bubblePopped).length,
         total: bubbles.length,
         complete: bubbleComplete
-      }
+      },
+      tubFilling: room.classList.contains("tub-filling")
     };
   };
   window.__resetBathroomProps = resetBathroomProps;

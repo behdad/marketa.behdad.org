@@ -31706,6 +31706,8 @@ window.__cinemaVideoLoaded = false;
   function setFilmPlaying(active, fade) {
     filmPlaying = !!active;
     window.__cinemaVideoLoaded = filmPlaying;
+    if (filmPlaying && window.__catCinemaScreenBlock) window.__catCinemaScreenBlock();
+    if (!filmPlaying && window.__cancelCatCinemaScreenBlock) window.__cancelCatCinemaScreenBlock();
     if (window.__setCinemaAudioDuck) window.__setCinemaAudioDuck(filmPlaying, fade);
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, fade);
     if (playPauseButton && window.__cinemaRoomOpen) playPauseButton.classList.toggle("paused", !filmPlaying);
@@ -107073,6 +107075,7 @@ function spawnDustMote(container) {
   var lowerCatTimer = null;
   var lowerCatPerched = null;
   var cinemaCatVisit = 0;
+  var cinemaScreenAnim = null;
   var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow/__chairCatFollow to rebuild around
   // We don't actually have a cat — after enough balcony railing perches, the next one
   // keeps going: a last beat on the rail, then a leap up and out into the night, gone
@@ -107177,12 +107180,49 @@ function spawnDustMote(container) {
     }
     if (!jumping) return;
     if (jumpAnim) { jumpAnim.onfinish = null; jumpAnim.cancel(); jumpAnim = null; }
+    cinemaScreenAnim = null;
     jumping = false;
     walk.style.animationPlayState = "";
     if (isNapJump) setNapping(false);
     isNapJump = false;
     scheduleJump();
   }
+  window.__catCinemaScreenBlock = function () {
+    if (!window.__cinemaRoomOpen || catRoom !== "cinema" || !walk.classList.contains("out") ||
+        jumping || reducedMotion() || document.visibilityState === "hidden" || !walk.animate) return false;
+    clearTimeout(jumpTimer);
+    var current = currentWalkOffset();
+    var base = baseFeet();
+    var target = { x: 402 - base.x, y: 218 - base.y };
+    var apex = { x: (current.x + target.x) * .5, y: Math.min(current.y, target.y) - 42 };
+    var wasNapping = !!(breathe && breathe.classList.contains("napping"));
+    setNapping(false);
+    jumping = true; isPerchJump = false; isNapJump = false;
+    walk.style.animationPlayState = "paused";
+    var animation = walk.animate([
+      { offset: 0, transform: "translate(" + current.x + "px," + current.y + "px)", easing: "cubic-bezier(.35,0,.65,.4)" },
+      { offset: .28, transform: "translate(" + apex.x + "px," + apex.y + "px)", easing: "cubic-bezier(.2,.7,.35,1)" },
+      { offset: .48, transform: "translate(" + target.x + "px," + target.y + "px)", easing: "cubic-bezier(.25,.7,.4,1)" },
+      { offset: .72, transform: "translate(" + target.x + "px," + target.y + "px)" },
+      { offset: .88, transform: "translate(" + apex.x + "px," + (apex.y + 5) + "px)", easing: "cubic-bezier(.25,.7,.35,1)" },
+      { offset: 1, transform: "translate(" + current.x + "px," + current.y + "px)", easing: "cubic-bezier(.35,0,.65,.4)" }
+    ], { duration: 2200, fill: "none" });
+    cinemaScreenAnim = animation;
+    jumpAnim = animation;
+    animation.onfinish = function () {
+      if (cinemaScreenAnim !== animation) return;
+      cinemaScreenAnim = null; jumpAnim = null; jumping = false;
+      walk.style.animationPlayState = "";
+      if (wasNapping && catRoom === "cinema") setNapping(true);
+      scheduleJump();
+    };
+    return true;
+  };
+  window.__cancelCatCinemaScreenBlock = function () {
+    if (!cinemaScreenAnim) return false;
+    cancelJump();
+    return true;
+  };
   function startJump() {
     if (catGoneForever) return; // it's gone; nothing left to schedule
     if (!walk.animate) { scheduleJump(); return; } // no WAAPI: just keep roaming

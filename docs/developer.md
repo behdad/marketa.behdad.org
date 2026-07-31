@@ -577,7 +577,10 @@ the player iframe. `#cinema-remote-google` is a separate power control.
 `#cinema-remote-vava-ring` advances the chooser's `.remote-current` card, while
 `#cinema-remote-vava-ok` selects it or returns from playback to the chooser.
 Both remotes remain native SVG on their shared suede pad and outside the Tab
-order. The shared side Play/Pause and Next buttons are intercepted
+order. Their authored hit regions stay disjoint: the projector target ends
+before the small remote, and the VAVA ring/confirm regions are stacked 32×32
+SVG units around the visible face. VAVA presses animate the complete remote
+shell rather than an invisible hit overlay. The shared side Play/Pause and Next buttons are intercepted
 in capture phase while Cinema owns the viewport and speak to Vimeo through its
 postMessage API. A player iframe is removed on Choose another, projector-off,
 sprinkler short, close, reset, or `goToStage`, which is the cross-origin

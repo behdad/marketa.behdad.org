@@ -404,7 +404,8 @@ footer{margin-top:2.6rem}
 #cinema-room .cinema-prop.reacting[data-cinema-action="cushion"]{animation:cinema-cushion .42s ease}
 #cinema-room .cinema-prop.reacting[data-cinema-action="sofa-cushion"]{animation:cinema-sofa-cushion .42s ease}
 #cinema-room .cinema-prop.reacting[data-cinema-action="table"]{animation:cinema-table .32s ease}
-#cinema-room .cinema-prop.reacting[data-cinema-action^="remote-"]{animation:cinema-remote .28s ease}
+#cinema-room .cinema-prop.reacting[data-cinema-action="remote-power"],
+#cinema-room #cinema-remote-vava.remote-reacting{animation:cinema-remote .28s ease}
 #cinema-room .cinema-prop.reacting[data-cinema-action="sofa"]{animation:cinema-sofa .48s ease}
 #cinema-room .cinema-prop.reacting[data-cinema-action="pipe"]{animation:cinema-pipe .42s ease}
 #cinema-room .cinema-prop.reacting[data-cinema-action="beam"]{animation:cinema-beam .5s ease}
@@ -29998,7 +29999,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <rect x="388.5" y="265" width="4.2" height="3" rx="1.2" fill="#e3e1dd"/>
           <rect x="394.3" y="265" width="4.2" height="3" rx="1.2" fill="#e3e1dd"/>
           <path d="M390.5 272a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M396 270.7v2.6" fill="none" stroke="#656662" stroke-width=".55"/>
-          <rect x="380" y="233" width="27" height="51" rx="6" class="cinema-hit"/>
+          <rect x="370" y="230" width="32" height="54" rx="6" class="cinema-hit"/>
         </g>
         <g id="cinema-remote-vava">
           <rect x="405" y="238" width="18" height="42" rx="6" fill="#efefed" stroke="#aaa8a4" stroke-width=".9"/>
@@ -30014,11 +30015,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <text x="414" y="278" fill="#a4a29e" stroke="none" font-size="2.1" font-family="sans-serif" text-anchor="middle">VAVA</text>
           <g id="cinema-remote-vava-ring" class="cinema-prop" data-cinema-action="remote-next"
             role="button" data-aria-i="cinema_remote_next" data-title-i="cinema_remote_next">
-            <circle cx="414" cy="253.5" r="8.2" class="cinema-hit"/>
+            <rect x="402" y="221" width="32" height="32" rx="6" class="cinema-hit"/>
           </g>
           <g id="cinema-remote-vava-ok" class="cinema-prop" data-cinema-action="remote-select"
             role="button" data-aria-i="cinema_remote_select" data-title-i="cinema_remote_select">
-            <circle cx="414" cy="253.5" r="3.2" class="cinema-hit"/>
+            <rect x="402" y="253" width="32" height="32" rx="6" class="cinema-hit"/>
           </g>
         </g>
         <g id="cinema-projector" class="cinema-prop" data-cinema-action="projector" role="button" data-aria-i="cinema_projector" data-title-i="cinema_projector" aria-label="Turn on the projector" title="Turn on the projector">
@@ -30034,7 +30035,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <text x="340.5" y="275" fill="#dedbd5" stroke="none" font-size="2.5" font-family="sans-serif" text-anchor="middle" letter-spacing=".7">VAVA</text>
             <path d="M307 277V281M374 277V281" stroke="#555654" stroke-width="2.4"/>
           </g>
-          <rect x="292" y="244" width="97" height="42" class="cinema-hit"/>
+          <rect x="292" y="244" width="78" height="42" class="cinema-hit"/>
         </g>
         <g id="cinema-weights" class="cinema-prop" data-cinema-action="weights" role="button" data-aria-i="cinema_weights" data-title-i="cinema_weights" aria-label="Lift the weights" title="Lift the weights">
           <path id="cinema-weights-silhouette" d="M93 268H140M100 260V276M106 257V279M127 257V279M133 260V276" fill="none" stroke="#27282a" stroke-width="5" stroke-linecap="round"/>
@@ -31337,6 +31338,7 @@ window.__cinemaVideoLoaded = false;
   var officeMonitor = document.getElementById("office-monitor");
   var officeWebcam = document.getElementById("office-webcam");
   var projector = document.getElementById("cinema-projector");
+  var vavaRemote = document.getElementById("cinema-remote-vava");
   var sprinkler = document.getElementById("cinema-sprinkler");
   var playPauseButton = document.getElementById("hunt-playpause-btn");
   var skipButton = document.getElementById("hunt-skip-btn");
@@ -31368,7 +31370,16 @@ window.__cinemaVideoLoaded = false;
   if (!room || !viewport || !ticket || !closeButton || !chooser || !playerWrap || !chooserBack ||
       !cinemaWindow || !cinemaNeon || !screenOff || !photoboothSurface || !officeMonitor ||
       !officeWebcam || photoboothGroups.some(function (group) { return !group; }) ||
-      !projector || !sprinkler) return;
+      !projector || !vavaRemote || !sprinkler) return;
+
+  vavaRemote.addEventListener("animationend", function (event) {
+    if (event.animationName === "cinema-remote") vavaRemote.classList.remove("remote-reacting");
+  });
+  function reactVavaRemote() {
+    vavaRemote.classList.remove("remote-reacting");
+    void vavaRemote.getBBox();
+    vavaRemote.classList.add("remote-reacting");
+  }
 
   var photoboothClasses = ["photobooth", "pb-confirm", "pb-error", "picking", "pick-hint", "death-photobooth"];
   function syncCinemaPhotoboothState() {
@@ -31523,6 +31534,7 @@ window.__cinemaVideoLoaded = false;
     cinemaShortTimer = null;
     projectorShorted = false;
     projectorOn = false;
+    vavaRemote.classList.remove("remote-reacting");
     room.classList.remove("projector-on", "projector-shorted");
     clearPlayer(false);
     chooserFilms().forEach(function (film) { film.classList.remove("remote-current"); });
@@ -31754,10 +31766,12 @@ window.__cinemaVideoLoaded = false;
       if (action === "projector") return toggleProjector();
       if (action === "remote-power") return toggleProjector();
       if (action === "remote-next") {
+        reactVavaRemote();
         if (typeof playDryClickSound === "function") playDryClickSound(prop.id);
         return remoteNextFilm();
       }
       if (action === "remote-select") {
+        reactVavaRemote();
         if (typeof playDryClickSound === "function") playDryClickSound(prop.id);
         return remoteSelectFilm();
       }

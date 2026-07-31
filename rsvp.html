@@ -32048,6 +32048,7 @@ window.__bedroomRoomOpen = false;
       dryTimer = null;
       bed.classList.remove("wet");
     }, 5200);
+    if (window.__bedroomCatSprinklerReaction) window.__bedroomCatSprinklerReaction();
     if (typeof playWaterSound === "function") playWaterSound("bedroom-sprinkler");
     return true;
   }
@@ -105952,6 +105953,7 @@ function spawnDustMote(container) {
   var catRoom = "garden";                 // where the cat physically is (chest home = garden)
   var jumpAnim = null, jumping = false, jumpTimer = null, isPerchJump = false, isNapJump = false;
   var lowerCatTimer = null;
+  var lowerCatPerched = null;
   var cinemaCatVisit = 0;
   var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow/__chairCatFollow to rebuild around
   // We don't actually have a cat — after enough balcony railing perches, the next one
@@ -106050,6 +106052,7 @@ function spawnDustMote(container) {
     scheduleJump();
   }
   function cancelJump() {                   // abort a hop or wake-up stretch in flight; safe no-op otherwise
+    lowerCatPerched = null;
     if (breathe && breathe.classList.contains("stretching")) {
       breathe.classList.remove("stretching"); // e.g. a room change mid-stretch: drop it and free the roam
       walk.style.animationPlayState = "";
@@ -106557,6 +106560,7 @@ function spawnDustMote(container) {
     walk.classList.remove("roaming", "roaming-sm");
     walk.style.animationDelay = "";
     walk.style.animationPlayState = "";
+    lowerCatPerched = null;
     pos.style.pointerEvents = "auto";
     if (room === "entrance") {
       pos.style.visibility = "hidden";
@@ -106593,6 +106597,7 @@ function spawnDustMote(container) {
       pos.setAttribute("transform", "translate(" +
         (feet.x + feet.hop.x - 636) + "," + (feet.y + feet.hop.y - 292) + ")");
       setNapping(true);
+      lowerCatPerched = room;
     } else if (feet.hop && walk.animate) {
       lowerCatTimer = setTimeout(function () {
         lowerCatTimer = null;
@@ -106615,7 +106620,9 @@ function spawnDustMote(container) {
           { offset: 1, transform: "translate(" + feet.hop.x + "px," + feet.hop.y + "px)" }
         ];
         jumpAnim = walk.animate(keyframes, { duration: feet.playful ? 1250 : 1050, fill: "forwards" });
+        jumpAnim.__lowerCatPerch = room;
         jumpAnim.onfinish = function () {
+          lowerCatPerched = room;
           if (!feet.playful) {
             setNapping(true);
             flickTail();
@@ -106624,6 +106631,61 @@ function spawnDustMote(container) {
       }, 850);
     }
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    return true;
+  };
+  // A tested sprinkler does not bother a cat on the bedroom floor or elsewhere. Once
+  // she has actually settled on the bed, though, she startles awake and jumps back to
+  // the floor. Reduced motion keeps the same state change but skips the jump animation.
+  window.__bedroomCatSprinklerReaction = function () {
+    var bedroomArt = document.getElementById("bedroom-room-art");
+    var settledBedAnimation = jumpAnim && jumpAnim.__lowerCatPerch === "bedroom" &&
+      jumpAnim.effect && Number(jumpAnim.currentTime) >=
+        Number(jumpAnim.effect.getComputedTiming().duration);
+    if (catRoom !== "bedroom" ||
+        (lowerCatPerched !== "bedroom" && !settledBedAnimation) ||
+        pos.parentNode !== bedroomArt || !walk.classList.contains("out")) return false;
+    lowerCatPerched = null;
+    clearTimeout(lowerCatTimer);
+    lowerCatTimer = null;
+    setNapping(false);
+    // Full motion keeps the floor position on the outer wrapper and reaches the bed
+    // with the walk animation; reduced motion places the outer wrapper directly on
+    // the bed. Normalize both paths back to the bedroom floor before reacting.
+    pos.setAttribute("transform", "translate(-558,33)");
+    if (jumpAnim) {
+      jumpAnim.onfinish = null;
+      jumpAnim.cancel();
+      jumpAnim = null;
+    }
+    jumping = false;
+    var motionReduced = reducedMotion();
+    if (!motionReduced) {
+      twitchEar();
+      flickTail();
+    }
+    if (!motionReduced && catArt) {
+      catArt.classList.remove("wobbling");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { catArt.classList.add("wobbling"); });
+      });
+      catArt.addEventListener("animationend", function done(event) {
+        if (event.animationName !== "cat-wobble") return;
+        catArt.classList.remove("wobbling");
+        catArt.removeEventListener("animationend", done);
+      });
+    }
+    if (motionReduced || !walk.animate) {
+      walk.style.animationPlayState = "";
+      return true;
+    }
+    jumping = true;
+    walk.style.animationPlayState = "paused";
+    jumpAnim = walk.animate([
+      { offset: 0, transform: "translate(305px,-85px)", easing: "cubic-bezier(.3,0,.65,.4)" },
+      { offset: .18, transform: "translate(298px,-102px)", easing: "cubic-bezier(.2,.7,.35,1)" },
+      { offset: .58, transform: "translate(155px,-48px)", easing: "cubic-bezier(.35,.1,.7,.7)" },
+      { offset: 1, transform: "translate(0,0)" }
+    ], { duration: 720, fill: "forwards" });
     return true;
   };
   window.__dungeonCatRatReaction = function () {

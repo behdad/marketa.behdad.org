@@ -38,7 +38,7 @@ var HARNESS = [
   ' window.goToStage("balcony");key("ArrowDown");await sleep(50);click(document.getElementById("hunt-next"));await sleep(40);report.steps.next={source:state(),room:window.currentStageName};',
   ' window.goToStage("balcony");key("ArrowDown");await sleep(50);key("1");await sleep(780);report.steps.number={source:state(),target:window.__bathroomRoomState(),room:window.currentStageName};',
   ' window.goToStage("balcony");',
-  ' window.__secondRound=true;key("ArrowDown");await sleep(50);document.getElementById("entrance-doors").classList.add("reacting");window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge:not(.entrance-probe)"),coach=document.querySelector(".msg-badge-coach:not(.entrance-probe)"),thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.held={state:state(),hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};',
+  ' window.__secondRound=true;key("ArrowDown");await sleep(50);document.getElementById("entrance-name-stone").classList.add("reacting");window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge:not(.entrance-probe)"),coach=document.querySelector(".msg-badge-coach:not(.entrance-probe)"),thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.held={state:state(),hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};',
   ' click(document.getElementById("entrance-room-close"));await sleep(1250);thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.closed={state:state(),covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show")};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},240);});',
@@ -80,7 +80,7 @@ check(s.open && s.open.geometry && s.open.geometry.controls &&
 check(s.open && s.open.label === "The Lofts entrance" &&
   s.cs && s.cs.label === "Vstup do The Lofts" && s.cs.close === "Zpět na balkon",
   "dialog and return labels switch between English and Czech", {en:s.open&&s.open.label,cs:s.cs});
-check(s.props && s.props.ids.length === 11 &&
+check(s.props && s.props.ids.length === 9 &&
   s.props.ids.every(function(id){return s.props.state.reactions[id] === 1;}) &&
   s.props.roles.every(function(row){return row[0] === "button" && row[1] === null && row[2] && row[3];}),
   "every distinct facade prop reacts with accessible copy while staying outside the Tab order",
@@ -144,7 +144,7 @@ check(s.carClosed && !s.carClosed.state.roofOpen && !s.carClosed.state.doorOpen 
   s.carClosed.state.headlightOn && s.carClosed.state.taillightOn && s.carClosed.bubbles === 0,
   "each car control stops propagation and closing panels leaves the independently toggled night lamps alone",
   s.carClosed);
-check(s.cs && s.cs.props && s.cs.props.length === 11 &&
+check(s.cs && s.cs.props && s.cs.props.length === 9 &&
   s.cs.props.every(function(row){return row[0] && row[1] && row[0] === row[1];}) &&
   s.cs.car && s.cs.car.length === 7 &&
   s.cs.car.every(function(row){return row[0] && row[1] && row[0] === row[1];}),
@@ -184,7 +184,7 @@ var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="
 check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
   /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
-check((entrance.match(/class="entrance-prop"/g) || []).length === 11 &&
+check((entrance.match(/class="entrance-prop"/g) || []).length === 9 &&
   (entrance.match(/role="button" tabindex="0"/g) || []).length === 0,
   "the complete Entrance interaction inventory stays outside the Tab order");
 check((entrance.match(/class="entrance-car-control" role="button" tabindex="-1"/g) || []).length === 7 &&
@@ -195,8 +195,9 @@ check((entrance.match(/class="entrance-car-control" role="button" tabindex="-1"/
 check(/id="entrance-porsche" transform="translate\(0 -9\)"/.test(entrance) &&
   (entrance.match(/class="entrance-car-control"[^>]*transform="translate\(0 -9\)"/g) || []).length === 7,
   "the complete Porsche visual and all seven controls share the approved nine-unit lift");
-check(!/\.entrance-car-control:(?:hover|focus-visible)/.test(source),
-  "car hit regions stay visually transparent without hover or focus chrome");
+check(!/\.entrance-car-control:(?:hover|focus-visible)/.test(source) &&
+  !/id="entrance-(?:doors|walk)"|entrance_(?:door|sidewalk):/.test(source),
+  "car hit regions stay visually transparent and removed building hits leave no stale interaction");
 check(/function playPorscheEngineSound\(starting\)[\s\S]*?getSfxCtx\(\)[\s\S]*?createOscillator\(\)/.test(source) &&
   /function answerPorscheControl\(control, event\)[\s\S]*?event\.stopPropagation\(\)/.test(source),
   "the engine voice stays on the shared SFX path and car hits stop at their own handlers");

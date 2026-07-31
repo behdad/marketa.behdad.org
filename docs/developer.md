@@ -1497,9 +1497,11 @@ transition, so assistants cannot truthfully report a pause without invoking the 
 `chat-knowledge.json` should contain verified, stable facts and explicit unknowns. Live state belongs
 in client context. Its `loft.rooms` entries are Charlie's stable room/object guide: they distinguish
 recognizable objects, phase-specific additions, main guided interactions, and special controls
-without forwarding the SVG DOM. Exact birthdays and other private facts are deliberately excluded
-from model context. Do not add secrets, credentials, operational access details, or unverified
-logistics to the knowledge file.
+without forwarding the SVG DOM. Lower-room entries carry `room_type: "lower"` and `paired_with`;
+`loft.game_geometry` makes explicit that this parallel row is game navigation rather than a literal
+second floor in the real one-floor Loft. Exact birthdays and other private facts are deliberately
+excluded from model context. Do not add secrets, credentials, operational access details, or
+unverified logistics to the knowledge file.
 
 ## Console and public scripting
 

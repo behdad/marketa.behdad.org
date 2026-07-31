@@ -231,7 +231,17 @@ check(/knowledge\.loft\.rooms is Charlie's room guide/.test(captured.body.instru
   /"Fishu the flying pufferfish"/.test(captured.body.instructions) &&
   /"stained-glass butterfly"/.test(captured.body.instructions) &&
   /"covered grill\/smoker"/.test(captured.body.instructions),
-  "Charlie receives a concrete object and interaction guide for all five rooms");
+  "Charlie receives a concrete object and interaction guide for all five main rooms");
+const lowerRooms = knowledge.loft.rooms.filter((room) => room.room_type === "lower");
+check(lowerRooms.map((room) => `${room.paired_with}:${room.id}`).join("|") ===
+    "kitchen:bathroom|garden:dungeon|cuddly:cinema|office:bedroom|balcony:entrance" &&
+  knowledge.loft.game_geometry.reality_note.includes("real Loft is one floor") &&
+  /room_type "lower" are game-only hidden-room pairings/.test(captured.body.instructions) &&
+  /"Blackmagic Pocket camera"/.test(captured.body.instructions) &&
+  /"Prince of Persia play wall"/.test(captured.body.instructions) &&
+  /"stained-glass window"/.test(captured.body.instructions),
+  "Charlie receives the five lower-room pairings without mistaking game navigation for real geometry",
+  { lowerRooms, geometry: knowledge.loft.game_geometry });
 check(/^[a-f0-9]{64}$/.test(captured.body.safety_identifier), "OpenAI receives a stable privacy-preserving safety identifier");
 check(!source.includes("test-key"), "the Worker source contains no API key");
 

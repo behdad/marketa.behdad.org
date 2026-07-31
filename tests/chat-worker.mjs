@@ -236,7 +236,11 @@ const lowerRooms = knowledge.loft.rooms.filter((room) => room.room_type === "low
 check(lowerRooms.map((room) => `${room.paired_with}:${room.id}`).join("|") ===
     "kitchen:bathroom|garden:dungeon|cuddly:cinema|office:bedroom|balcony:entrance" &&
   knowledge.loft.game_geometry.reality_note.includes("real Loft is one floor") &&
-  /room_type "lower" are game-only hidden-room pairings/.test(captured.body.instructions) &&
+  /room_type "lower" are real, explorable rooms in the game/.test(captured.body.instructions) &&
+  /Never deny that a listed lower room exists in the game/.test(captured.body.instructions) &&
+  /five main rooms.+plus the five hidden lower rooms/.test(captured.body.instructions) &&
+  /Keys 1–5 switch between paired rooms only while the player is already in a lower room/.test(captured.body.instructions) &&
+  /"entry":"From the garden\/party room, press Down or double-click the small dungeon door\."/.test(captured.body.instructions) &&
   /"Blackmagic Pocket camera"/.test(captured.body.instructions) &&
   /"Prince of Persia play wall"/.test(captured.body.instructions) &&
   /"stained-glass window"/.test(captured.body.instructions),

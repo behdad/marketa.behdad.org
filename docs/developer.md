@@ -277,6 +277,12 @@ start audio/media, or mutate checkpoint state. Gate teardown restores those temp
 Continue settles the upstairs room and systems first and then enters through the lower room's normal
 open hook. This preserves each room's own reset/parking rules while leaving Cinema powered off and
 the Dungeon at its play wall rather than starting media or an iframe runtime.
+
+Charlie receives these five pairings as explorable game rooms. His Worker prompt keeps the real
+one-floor Loft caveat subordinate to that room guide: a lower-room location question must describe
+the paired main room and its authored entrance rather than denying the game room. The knowledge
+also distinguishes entry (`Down` or the authored marker) from `1`–`5`, which only switches rooms
+after the lower row is already active.
 Finite quantities are bounded, and in-flight actions normalize to a safe settled state before capture.
 The recovery gate remains mounted as a paint cover through both restore phases, environment and
 occasion settlement, and the final room change. `applyCheckpoint` then discards the preview snapshot

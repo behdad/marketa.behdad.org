@@ -573,7 +573,11 @@ Chooser cards carry `data-vimeo-id`, an empty `data-vimeo-hash` hook, and a
 filled `data-poster` path for their tracked original artwork. Entry deliberately
 leaves the physical projector off and creates no iframe. Projector click,
 Enter/Space, or bare room Space reveals the chooser; a selection then creates
-the player iframe. The shared side Play/Pause and Next buttons are intercepted
+the player iframe. `#cinema-remote-google` is a separate power control.
+`#cinema-remote-vava-ring` advances the chooser's `.remote-current` card, while
+`#cinema-remote-vava-ok` selects it or returns from playback to the chooser.
+Both remotes remain native SVG on their shared suede pad and outside the Tab
+order. The shared side Play/Pause and Next buttons are intercepted
 in capture phase while Cinema owns the viewport and speak to Vimeo through its
 postMessage API. A player iframe is removed on Choose another, projector-off,
 sprinkler short, close, reset, or `goToStage`, which is the cross-origin

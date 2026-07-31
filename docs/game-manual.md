@@ -211,6 +211,9 @@ gameplay messages finish before that room caption appears.
 - **Cinema** pairs with Cuddly-puddly. Select its dark screen or projector, or
   press Enter or Space, to turn it on and reveal the film chooser. Those keys control the
   projector, not film playback; use the side Play/Pause and Next controls.
+  On the coffee table, the small white remote also toggles projector power; the
+  VAVA remote's ring moves through the film cards and its centre button selects
+  the highlighted film (or returns to the chooser during playback).
   **Choose another** returns to the chooser. Its Blackmagic cinema camera and
   Canon DSLR each project the real Photobooth app directly onto the cinema
   screen; Back returns to the film chooser without bringing the office monitor

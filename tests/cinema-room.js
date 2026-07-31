@@ -101,7 +101,7 @@ check(s.remotes && !s.remotes.off.powered && s.remotes.on.powered &&
   s.remotes.hits.ok[2] >= 32 && s.remotes.hits.ok[3] >= 32 &&
   s.remotes.hits.projector[0] + s.remotes.hits.projector[2] <= s.remotes.hits.power[0] &&
   s.remotes.tactile.every(Boolean) &&
-  s.remotes.padBefore && s.remotes.vava,
+  s.remotes.padBefore && !s.remotes.vava,
   "the Google-style remote controls power while the padded VAVA ring selects and returns from a film",
   s.remotes);
 check(s.open && s.open.before >= 1 && s.open.hum === true,

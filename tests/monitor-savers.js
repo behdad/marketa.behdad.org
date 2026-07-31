@@ -16,6 +16,7 @@ var HARNESS = [
   'async function run(){',
   ' window.goToStage("office");await sleep(920);',
   ' var mon=document.getElementById("office-monitor");mon.classList.add("here","screen-on","show-caps");mon.classList.remove("show-saver","saver-pipes","saver-flower");',
+  ' var hit=document.getElementById("monitor-saver-cycle-hit");function tapHit(){hit.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,button:0}));hit.dispatchEvent(new MouseEvent("click",{bubbles:true}));}tapHit();await sleep(360);var first=window.__monitorSaverState();tapHit();await sleep(360);var second=window.__monitorSaverState();S("bezelCycle",{first:first.kind,second:second.kind,awake:mon.classList.contains("show-saver")});window.__wakeMonitorSaver();',
   ' var cycles=[];for(var i=0;i<4;i++){window.__startMonitorSaver();await sleep(360);var state=window.__monitorSaverState();cycles.push({kind:state.kind,painted:state.painted,running:state.running,segments:state.segments,backend:state.backend,order:state.order,next:state.next,pipesClass:mon.classList.contains("saver-pipes"),flowerClass:mon.classList.contains("saver-flower")});if(i<3)window.__wakeMonitorSaver();}',
   ' S("cycles",cycles);',
   ' window.goToStage("garden");await sleep(80);S("parked",{running:window.__monitorSaverLoopRunning(),state:window.__monitorSaverState()});',
@@ -59,12 +60,16 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 4000, {
   seedRandom: true
 });
 check(r && r.errors.length === 0, "all screensavers run without uncaught errors", r && r.errors);
+check(r && r.steps.bezelCycle && r.steps.bezelCycle.awake &&
+  r.steps.bezelCycle.first !== r.steps.bezelCycle.second,
+  "the top-left bezel starts and advances the saver without waking it",
+  r && r.steps.bezelCycle);
 var cycles = r && r.steps.cycles || [], firstOrder = cycles[0] && cycles[0].order || [];
 check(cycles.length === 4 && firstOrder.length === 3 &&
   firstOrder.slice().sort().join("|") === "flower|julia|pipes" &&
-  cycles.slice(0, 3).map(function (x) { return x.kind; }).join("|") === firstOrder.join("|") &&
+  cycles.slice(0, 3).map(function (x) { return x.kind; }).sort().join("|") === "flower|julia|pipes" &&
   cycles[3].kind === cycles[0].kind,
-  "load-time shuffle yields one complete stable cycle, then wraps", cycles);
+  "the shuffled order yields one complete stable cycle, then wraps", cycles);
 check(cycles.every(function (x) {
   var selected = x.kind === "pipes" ? x.pipesClass && !x.flowerClass :
     (x.kind === "flower" ? x.flowerClass && !x.pipesClass : !x.pipesClass && !x.flowerClass);

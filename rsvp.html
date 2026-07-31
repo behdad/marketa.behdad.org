@@ -23324,6 +23324,9 @@ section{margin:1.9rem 0}
 <rect x="294" y="204.5" width="44" height="3.5" rx="1.5" fill="#6b6b6b" stroke="#4a4a4a" stroke-width="1"/>
 <rect id="office-monitor-bezel" x="250" y="150" width="132" height="50" rx="3" fill="#1f1f1f" stroke="#0f0f0f" stroke-width="1.5"/>
 <rect id="office-monitor-bg" x="254" y="154" width="124" height="42" rx="1.5" fill="#14161a"/>
+<!-- The unmarked top-left corner is a physical saver button: its L-shaped target stays
+     entirely on the bezel, clear of the glass, and intentionally adds no Tab stop. -->
+<path id="monitor-saver-cycle-hit" class="monitor-saver-cycle-control" d="M250 150 H264 V154 H254 V164 H250 Z" fill="transparent" cursor="pointer"/>
 <!-- room-light glare on the dark glass while the monitor is OFF (two soft diagonal streaks); hidden once the screen lights up -->
 <g id="office-monitor-glare" pointer-events="none" aria-hidden="true">
 <polygon points="256,154 285,154 261,196 256,196" fill="#aecbe8" opacity="0.05"/>
@@ -50883,6 +50886,19 @@ setOfficeProgress("pc", false);
     monitor.classList.toggle("saver-flower", monitorSaverKind === "flower");
     startMonitorSaver();
   }
+  function cycleMonitorSaver() {
+    if (monitorSleeping || monitorLocked || !monitor.classList.contains("screen-on")) return false;
+    if (!monitor.classList.contains("show-saver")) {
+      startSaver();
+      return monitor.classList.contains("show-saver");
+    }
+    stopMonitorSaver(true);
+    monitorSaverKind = monitorSaverOrder[monitorSaverAt++ % monitorSaverOrder.length];
+    monitor.classList.toggle("saver-pipes", monitorSaverKind === "pipes");
+    monitor.classList.toggle("saver-flower", monitorSaverKind === "flower");
+    startMonitorSaver();
+    return true;
+  }
   function saveMonitorLock() {
     try {
       if (!monitorLocked) localStorage.removeItem(MONITOR_LOCK_KEY);
@@ -66888,6 +66904,18 @@ async def localfont(name):
     e.preventDefault();
     e.stopImmediatePropagation();
   }, true);
+  var monitorSaverCycleHit = document.getElementById("monitor-saver-cycle-hit");
+  if (monitorSaverCycleHit) {
+    monitorSaverCycleHit.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    monitorSaverCycleHit.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (cycleMonitorSaver()) playLaptopClickSound("office-monitor");
+    });
+  }
   monitor.addEventListener("click", function () {
     clearTimeout(monClickTimer);
     if (Date.now() < monitorSleepWakeUntil) return;
@@ -68347,7 +68375,7 @@ async def localfont(name):
     e.stopPropagation(); e.stopImmediatePropagation(); e.preventDefault();
   }
   function monitorChromePointer(e) {
-    if (!e || !e.target || (e.target.closest && e.target.closest(".bezel-nav,.bezel-close,[role='button'],button,input,textarea,select"))) return false;
+    if (!e || !e.target || (e.target.closest && e.target.closest(".bezel-nav,.bezel-close,.monitor-saver-cycle-control,[role='button'],button,input,textarea,select"))) return false;
     var screen = document.getElementById("monitor-zoom-box");
     if (!screen) return false;
     var r = screen.getBoundingClientRect();

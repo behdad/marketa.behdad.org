@@ -23,7 +23,7 @@ var HARNESS = [
   ' var rb=box(room),vb=box(viewport),ob=box(office),bedroomCloseStyle=getComputedStyle(document.getElementById("bedroom-room-close")),cinemaCloseStyle=getComputedStyle(document.getElementById("cinema-room-close")),princeCloseStyle=getComputedStyle(document.getElementById("prince-basement-close"));function controlStyle(style){return [parseFloat(style.width),parseFloat(style.height),parseFloat(style.right),parseFloat(style.top)];}report.steps.open={state:window.__bedroomRoomState(),room:window.currentStageName,hidden:room.hidden,klass:viewport.classList.contains("bedroom-room-open"),geometry:{bedroom:rb,viewport:vb,officeBottom:ob[1]+ob[3],controls:{bedroom:controlStyle(bedroomCloseStyle),cinema:controlStyle(cinemaCloseStyle),prince:controlStyle(princeCloseStyle)}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],notices:[badge,coach,thumb,ring].map(function(el){return el&&getComputedStyle(el).visibility;})};',
   ' var wash=room.querySelector(".bedroom-night-wash"),halo=room.querySelector(".bedroom-lamp-halo");wash.style.transition="none";halo.style.transition="none";report.steps.day={state:window.__bedroomRoomState(),wash:getComputedStyle(wash).opacity,halo:getComputedStyle(halo).opacity};window.__setDayNight(true);await sleep(50);report.steps.night={state:window.__bedroomRoomState(),wash:getComputedStyle(wash).opacity,halo:getComputedStyle(halo).opacity};window.__setDayNight(false);await sleep(50);',
   ' setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bedroom-room-close").getAttribute("aria-label"),title:document.getElementById("bedroom-room-close").getAttribute("title"),scene:document.getElementById("bedroom-room-art").getAttribute("aria-label"),props:Array.from(room.querySelectorAll(".bedroom-prop")).map(function(el){return [el.id,el.getAttribute("aria-label"),el.getAttribute("title")];})};setLang("en");',
-  ' var glass=document.getElementById("bedroom-stained-glass"),sprinkler=document.getElementById("bedroom-sprinkler"),leftLamp=document.getElementById("bedroom-left-lamp"),rightLamp=document.getElementById("bedroom-right-lamp"),gear=document.getElementById("bedroom-wall-gear"),wardrobe=document.getElementById("bedroom-wardrobe"),bed=document.getElementById("bedroom-bed"),leftTable=document.getElementById("bedroom-left-table"),rightTable=document.getElementById("bedroom-right-table");click(glass);click(leftLamp);click(rightLamp);propkey(gear,"Enter");propkey(wardrobe," ");click(bed);click(leftTable);propkey(rightTable,"Enter");report.steps.props={state:window.__bedroomRoomState(),focus:document.activeElement&&document.activeElement.id};report.steps.sleep={wash:getComputedStyle(room.querySelector(".bedroom-night-wash")).opacity,linen:getComputedStyle(room.querySelector(".bedroom-linen")).animationName,zzz:getComputedStyle(room.querySelector(".bedroom-sleep-z")).animationName,saved:(window.__captureCheckpointSystems()["bedroom-lamps"]||null)};click(sprinkler);report.steps.spray=window.__bedroomRoomState();await sleep(1250);report.steps.soaked=window.__bedroomRoomState();await sleep(4100);report.steps.dry=window.__bedroomRoomState();',
+  ' var glass=document.getElementById("bedroom-stained-glass"),sprinkler=document.getElementById("bedroom-sprinkler"),leftLamp=document.getElementById("bedroom-left-lamp"),rightLamp=document.getElementById("bedroom-right-lamp"),gearLeft=document.getElementById("bedroom-wall-gear-left"),gearMiddle=document.getElementById("bedroom-wall-gear-middle"),gearRight=document.getElementById("bedroom-wall-gear-right"),wardrobe=document.getElementById("bedroom-wardrobe"),bed=document.getElementById("bedroom-bed"),leftTable=document.getElementById("bedroom-left-table"),rightTable=document.getElementById("bedroom-right-table");click(glass);click(leftLamp);click(rightLamp);click(gearLeft);click(gearMiddle);propkey(gearRight,"Enter");propkey(wardrobe," ");click(bed);click(leftTable);propkey(rightTable,"Enter");report.steps.props={state:window.__bedroomRoomState(),focus:document.activeElement&&document.activeElement.id};report.steps.sleep={wash:getComputedStyle(room.querySelector(".bedroom-night-wash")).opacity,linen:getComputedStyle(room.querySelector(".bedroom-linen")).animationName,zzz:getComputedStyle(room.querySelector(".bedroom-sleep-z")).animationName,saved:(window.__captureCheckpointSystems()["bedroom-lamps"]||null)};click(sprinkler);report.steps.spray=window.__bedroomRoomState();await sleep(1250);report.steps.soaked=window.__bedroomRoomState();await sleep(4100);report.steps.dry=window.__bedroomRoomState();',
   ' window.__secondRound=true;window.__deliverPhoneMessage("cue_mail");await sleep(80);badge=document.querySelector(".msg-badge");coach=document.querySelector(".msg-badge-coach");thumb=document.querySelector(".msg-thumb");report.steps.hold={held:window.__messageNotificationsHeld(),thread:window.__phoneMessageThread(),badge:badge&&badge.classList.contains("show"),coach:coach&&coach.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};',
   ' key("ArrowUp");await sleep(1300);badge=document.querySelector(".msg-badge");thumb=document.querySelector(".msg-thumb");report.steps.return={state:window.__bedroomRoomState(),hidden:room.hidden,klass:viewport.classList.contains("bedroom-room-open"),focus:document.activeElement===viewport,held:window.__messageNotificationsHeld(),badge:badge&&badge.classList.contains("show"),thumb:thumb&&thumb.classList.contains("show")};if(window.__hideMessageThumb)window.__hideMessageThumb(true);',
   ' window.goToStage("office");dblclick(document.getElementById("office-stainedglass"));await sleep(40);report.steps.interactive=window.__bedroomRoomState();',
@@ -78,7 +78,7 @@ check(s.day && !s.day.state.night && s.day.wash === "0" && Number(s.day.halo) < 
   "Bedroom mirrors Office daylight and night lamp treatment", { day: s.day, night: s.night });
 check(s.cs && s.cs.room === "Ložnice" && s.cs.close === "Zpět do pracovny" &&
   s.cs.title === "Zpět do pracovny" && s.cs.scene === "Interaktivní ložnice" &&
-  s.cs.props && s.cs.props.length === 9 &&
+  s.cs.props && s.cs.props.length === 11 &&
   s.cs.props.every(function (entry) { return entry[1] && entry[1] === entry[2]; }),
   "Bedroom dialog and exit control switch to Czech", s.cs);
 var propState = s.props && s.props.state && s.props.state.props || [];
@@ -91,11 +91,13 @@ check(s.spray && s.spray.spraying && s.spray.bedWet &&
   s.dry && !s.dry.spraying && !s.dry.bedWet,
   "the sprinkler visibly sprays the bed, leaves it wet, then lets it dry",
   { spray: s.spray, soaked: s.soaked, dry: s.dry });
-check(propState.length === 9 &&
+check(propState.length === 11 &&
   propHas("bedroom-stained-glass", "glinting") &&
   propHas("bedroom-left-lamp", "off") &&
   propHas("bedroom-right-lamp", "off") &&
-  propHas("bedroom-wall-gear", "swinging") &&
+  propHas("bedroom-wall-gear-left", "wiggling") &&
+  propHas("bedroom-wall-gear-middle", "wiggling") &&
+  propHas("bedroom-wall-gear-right", "wiggling") &&
   propHas("bedroom-wardrobe", "tidied") &&
   propHas("bedroom-bed", "made") &&
   propHas("bedroom-left-table", "open") &&
@@ -117,7 +119,7 @@ check(s.return && !s.return.state.open && !s.return.state.closing && s.return.hi
   !s.return.klass && s.return.focus && s.return.state.sleeping &&
   s.return.state.props.every(function (prop) {
     var persistentLamp = /bedroom-(?:left|right)-lamp/.test(prop.id) && /\boff\b/.test(prop.state);
-    return persistentLamp || !/\b(?:glinting|off|swinging|tidied|made|open)\b/.test(prop.state);
+    return persistentLamp || !/\b(?:glinting|off|wiggling|tidied|made|open)\b/.test(prop.state);
   }),
   "Up clears transient props but preserves both lamp switches and their sleep state", s.return);
 check(s.interactive && !s.interactive.open && s.mouse && !s.mouse.open && s.touch && !s.touch.open,
@@ -134,12 +136,12 @@ check(s.dot && s.dot.room === "kitchen" && !s.dot.source.open && s.dot.hidden &&
   "a room dot pans from Bedroom to Bathroom and retains dot focus", s.dot);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
-["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {
+["bedroom-room", "bedroom-bed", "bedroom-wall-gear", "bedroom-wall-gear-left", "bedroom-wall-gear-middle", "bedroom-wall-gear-right", "bedroom-stained-glass", "bedroom-wardrobe"].forEach(function (id) {
   check(new RegExp('id="' + id + '"').test(source), "Bedroom art keeps #" + id + " as a native SVG group");
 });
-check((source.match(/class="bedroom-prop[^"]*"[^>]* role="button"/g) || []).length === 9 &&
+check((source.match(/class="bedroom-prop[^"]*"[^>]* role="button"/g) || []).length === 11 &&
   !/class="bedroom-prop[^"]*"[^>]* role="button"[^>]* tabindex="0"/.test(source),
-  "all nine distinct Bedroom prop groups stay outside the Tab order");
+  "all eleven distinct Bedroom prop groups stay outside the Tab order");
 check(!/id="bedroom-(?:left|right)-lamp"[^>]*tabindex=/.test(source),
   "the two bedside lamps do not add tab stops");
 check(!/#bedroom-room\s+\.bedroom-prop:hover\s*\{[^}]*opacity/.test(source),

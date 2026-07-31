@@ -730,6 +730,20 @@ footer{margin-top:2.6rem}
 #bathroom-room.tub-filling #bathroom-tub-shower path{animation:bathroom-shower-fall .42s linear infinite}
 #bathroom-room.tub-filling #bathroom-tub-water{opacity:.22}
 @keyframes bathroom-shower-fall{0%{stroke-dashoffset:0;opacity:.25}35%{opacity:1}100%{stroke-dashoffset:-16;opacity:.45}}
+#bathroom-tub-drain{opacity:0;pointer-events:none}
+#bathroom-room.tub-draining #bathroom-tub-drain{opacity:1}
+#bathroom-room.tub-draining #bathroom-tub-drain path{animation:bathroom-drain-swirl .72s ease-in-out forwards}
+#bathroom-room.tub-draining .bathroom-bubble{animation:bathroom-bubble-drain .72s ease-in forwards}
+#bathroom-room.tub-draining #bathroom-bubble-1{--drain-x:101px;--drain-y:26px}
+#bathroom-room.tub-draining #bathroom-bubble-2{--drain-x:65px;--drain-y:44px}
+#bathroom-room.tub-draining #bathroom-bubble-3{--drain-x:27px;--drain-y:22px}
+#bathroom-room.tub-draining #bathroom-bubble-4{--drain-x:-9px;--drain-y:50px}
+#bathroom-room.tub-draining #bathroom-bubble-5{--drain-x:-47px;--drain-y:26px}
+#bathroom-room.tub-draining #bathroom-bubble-6{--drain-x:-89px;--drain-y:45px}
+#bathroom-room.tub-draining #bathroom-bubble-7{--drain-x:42px;--drain-y:78px}
+#bathroom-room.tub-draining #bathroom-bubble-8{--drain-x:-59px;--drain-y:88px}
+@keyframes bathroom-drain-swirl{0%{stroke-dashoffset:96;opacity:.2}35%{opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes bathroom-bubble-drain{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--drain-x),var(--drain-y)) scale(.18)}}
 #bathroom-room.cabinet-open #bathroom-cabinet-face{transform:translateY(-7px)}
 #bathroom-cabinet-face{transition:transform .32s ease}
 #bathroom-room.sink-running #bathroom-sink-water{opacity:1;animation:bathroom-water-run .78s ease-in-out}
@@ -755,6 +769,7 @@ footer{margin-top:2.6rem}
 #bathroom-toilet-book{transform-origin:655px 147px}
 #bathroom-bubble-hunt{opacity:0;pointer-events:none;transition:opacity .18s ease}
 #bathroom-room.bubble-hunt #bathroom-bubble-hunt{opacity:1;pointer-events:all}
+#bathroom-room:not(.bubble-hunt) .bathroom-bubble{opacity:0;pointer-events:none}
 .bathroom-bubble{
   cursor:pointer;transform-box:fill-box;transform-origin:center;
   animation:bathroom-bubble-float 1.7s ease-in-out infinite alternate;
@@ -29783,6 +29798,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <path d="M221 184Q229 174 247 174H462Q482 175 490 184Q475 202 453 204H259Q236 202 221 184Z" fill="#d4dcda" stroke="#aeb5b2" stroke-width="2"/>
           <path id="bathroom-tub-water" d="M225 184Q240 177 260 177H452Q474 177 487 184Q473 198 451 200H261Q240 198 225 184Z" fill="#89bcc5"/>
           <path d="M240 188Q265 197 290 194M430 194Q460 198 478 186" fill="none" stroke="#f9f8f3" stroke-width="3" opacity=".72"/>
+          <g id="bathroom-tub-drain" aria-hidden="true">
+            <path d="M329 188C337 178 355 176 368 183C381 190 375 201 360 204C345 207 333 201 337 192C341 184 354 182 363 188C371 193 365 198 356 198C347 198 343 194 348 190C352 187 358 189 359 192" fill="none" stroke="#e9fbf7" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="96"/>
+            <circle cx="356" cy="192" r="2.5" fill="#d9f4ef"/>
+          </g>
           <path d="M253 273Q246 282 249 293H263Q272 285 273 273M454 273Q456 283 466 292H480Q479 280 470 270" fill="#333638" stroke="#151819" stroke-width="3"/>
           <path d="M467 187V104" stroke="#bfc3c0" stroke-width="6"/><path d="M467 106Q467 94 455 91L446 89" fill="none" stroke="#daddda" stroke-width="6" stroke-linecap="round"/>
           <ellipse cx="440" cy="91" rx="9" ry="5" transform="rotate(18 440 91)" fill="#cfd2cf" stroke="#757a78" stroke-width="2"/>
@@ -30996,6 +31015,7 @@ window.__bathroomRoomOpen = false;
   var bubbleComplete = false;
   var bubbleTimer = null;
   var tubFillTimer = null;
+  var tubDrainTimer = null;
   var mirrorDraw = null;
   var mirrorDoodleCount = 0;
   var mirrorLoopTimer = null;
@@ -31003,7 +31023,7 @@ window.__bathroomRoomOpen = false;
   var stoolShotLayer = document.getElementById("bathroom-stool-shot-layer");
   var stoolShotTimer = null;
   var bubbles = Array.from(art.querySelectorAll("[data-bath-bubble]"));
-  var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "tub-filling", "towel-fluff",
+  var settledClasses = ["sink-running", "mirror-shimmer", "mirror-revealed", "tub-filled", "tub-filling", "tub-draining", "towel-fluff",
     "stool-wobble", "scale-on", "scale-weigh", "scale-bounce", "cabinet-open",
     "toilet-flush", "book-flip", "bubble-hunt", "bubble-complete"];
   if (!room || !viewport || !closeButton || !art || !stoolPosition ||
@@ -31062,6 +31082,8 @@ window.__bathroomRoomOpen = false;
     bubbleTimer = null;
     clearTimeout(tubFillTimer);
     tubFillTimer = null;
+    clearTimeout(tubDrainTimer);
+    tubDrainTimer = null;
     bubblePopped = {};
     bubbleComplete = false;
     bubbles.forEach(function (bubble) { bubble.classList.remove("popped"); });
@@ -31126,6 +31148,17 @@ window.__bathroomRoomOpen = false;
       room.classList.add("tub-filled");
       startBubbleHunt();
     }, 1100);
+  }
+  function beginTubDrain() {
+    clearTimeout(tubDrainTimer);
+    room.classList.add("tub-draining");
+    bathroomSound("water");
+    tubDrainTimer = setTimeout(function () {
+      tubDrainTimer = null;
+      if (!window.__bathroomRoomOpen || !room.classList.contains("tub-draining")) return;
+      stopBubbleHunt(true);
+      room.classList.remove("tub-draining", "tub-filled");
+    }, 720);
   }
   function popBubble(bubble, event) {
     if (!window.__bathroomRoomOpen || !room.classList.contains("bubble-hunt") ||
@@ -31198,13 +31231,12 @@ window.__bathroomRoomOpen = false;
       }
       bathroomSound("swish");
     } else if (action === "tub") {
-      if (room.classList.contains("tub-filling")) return true;
+      if (room.classList.contains("tub-filling") || room.classList.contains("tub-draining")) return true;
       if (room.classList.contains("tub-filled")) {
-        room.classList.remove("tub-filled", "mirror-revealed");
+        room.classList.remove("mirror-revealed");
         clearMirrorDoodle();
         clearBathroomFeedback();
-        stopBubbleHunt(true);
-        bathroomSound("water");
+        beginTubDrain();
       } else {
         room.classList.remove("mirror-revealed");
         clearMirrorDoodle();
@@ -31516,7 +31548,8 @@ window.__bathroomRoomOpen = false;
         total: bubbles.length,
         complete: bubbleComplete
       },
-      tubFilling: room.classList.contains("tub-filling")
+      tubFilling: room.classList.contains("tub-filling"),
+      tubDraining: room.classList.contains("tub-draining")
     };
   };
   window.__resetBathroomProps = resetBathroomProps;

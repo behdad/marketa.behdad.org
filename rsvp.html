@@ -48339,6 +48339,19 @@ function quickReversalGesture(action) {
       barShatter.appendChild(puddle);
       return puddle;
     }
+    function wobbleBarStoolsOnBreak() {
+      var group = document.getElementById("kitchen-bar-stools");
+      if (!group) return;
+      var stools = Array.prototype.filter.call(group.querySelectorAll("g.bar-stool"), function (stool) {
+        return stool.parentNode === group;
+      });
+      stools.forEach(function (stool) { stool.classList.remove("tipsy"); });
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          stools.forEach(function (stool) { stool.classList.add("tipsy"); });
+        });
+      });
+    }
     function shatterBottle(w) {
       var u = w.querySelector("use");
       if (!u) return;
@@ -48352,6 +48365,7 @@ function quickReversalGesture(action) {
       function land() {
         if (landed) return; landed = true;
         w.classList.add("broken");          // hide the shelf bottle — it's shattered now
+        wobbleBarStoolsOnBreak();
         spawnBottleShards(bx, BOTTLE_LAND_Y, color);
         if (window.__checkpointChanged) window.__checkpointChanged();
         playGlassClinkSound(0.42 + Math.random() * 0.1, pan); // a low glass smash cluster

@@ -901,6 +901,7 @@ footer{margin-top:2.6rem}
 #bedroom-room .bedroom-pillow,
 #bedroom-room .bedroom-duvet-crease,
 #bedroom-room .bedroom-drawer{transition:transform .3s ease,opacity .3s ease}
+#bedroom-room .bedroom-pillow{transform-box:fill-box;transform-origin:center}
 #bedroom-room .bedroom-suit{
   opacity:0;
   pointer-events:none;
@@ -32440,6 +32441,9 @@ window.__bedroomRoomOpen = false;
   var propTimers = [];
   var glass = document.getElementById("bedroom-stained-glass");
   var bed = document.getElementById("bedroom-bed");
+  var bedroomPillowLeft = room.querySelector(".bedroom-pillow-left");
+  var bedroomPillowRight = room.querySelector(".bedroom-pillow-right");
+  var bedroomPillowStep = 0;
   var suits = room.querySelectorAll(".bedroom-suit");
   var leftLamp = document.getElementById("bedroom-left-lamp");
   var rightLamp = document.getElementById("bedroom-right-lamp");
@@ -32680,7 +32684,22 @@ window.__bedroomRoomOpen = false;
         "wet", "game-over", "game-draw");
       if (!preserveLights) prop.classList.remove("off");
     });
+    bedroomPillowStep = 0;
+    [bedroomPillowLeft, bedroomPillowRight].forEach(function (pillow) { if (pillow) pillow.style.removeProperty("transform"); });
     syncSleep();
+  }
+  function moveBedroomPillows() {
+    if (!bedroomPillowLeft || !bedroomPillowRight) return;
+    var positions = [
+      [[-4, 3], [4, 3]],
+      [[10, 1], [-10, 2]],
+      [[16, 3], [-16, 1]],
+      [[3, 0], [-5, 3]],
+      [[-9, 2], [12, 1]]
+    ];
+    var pair = positions[bedroomPillowStep++ % positions.length];
+    bedroomPillowLeft.style.transform = "translate(" + pair[0][0] + "px," + pair[0][1] + "px)";
+    bedroomPillowRight.style.transform = "translate(" + pair[1][0] + "px," + pair[1][1] + "px)";
   }
   function sprayBedroom() {
     clearTimeout(sprinklerTimer);
@@ -32735,6 +32754,7 @@ window.__bedroomRoomOpen = false;
         break;
       case "bedroom-bed":
         prop.classList.toggle("made");
+        moveBedroomPillows();
         if (typeof playPlushSquishSound === "function") playPlushSquishSound();
         break;
       case "bedroom-sprinkler":

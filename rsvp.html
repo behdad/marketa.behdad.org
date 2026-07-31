@@ -5911,6 +5911,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   transform:translateY(calc(0px - var(--prince-gate-lift)));
   transition:transform .18s cubic-bezier(.3,.8,.45,1);
 }
+#prince-dungeon-set.melody-lift #prince-dungeon-gate{transform:translateY(calc(-5px - var(--prince-gate-lift)))}
 #prince-dungeon-secret{
   position:absolute;
   z-index:0;
@@ -65704,6 +65705,7 @@ async def localfont(name):
   var princeContextTimer = null;
   var princeDungeonTimers = [];
   var princeGateSecretTimer = null;
+  var princeGateMelodyTimer = null;
   var princeDripAnimation = null;
   var princeChainPointer = null, princeChainStartX = 0, princeChainStartY = 0;
   var princeChainX = 0, princeChainY = 0, princeChainMoved = false, princeChainSuppressClick = false;
@@ -65721,6 +65723,8 @@ async def localfont(name):
     clearPrinceDungeonTimers();
     clearTimeout(princeGateSecretTimer);
     princeGateSecretTimer = null;
+    clearTimeout(princeGateMelodyTimer);
+    princeGateMelodyTimer = null;
     if (princeDripAnimation) {
       princeDripAnimation.onfinish = null;
       princeDripAnimation.cancel();
@@ -65730,7 +65734,7 @@ async def localfont(name):
     princeDungeonSet.querySelectorAll(".prince-dungeon-prop").forEach(function (prop) {
       prop.classList.remove("awakening", "rattled", "swung", "thudded", "shifted", "snuffed", "dragging");
     });
-    princeDungeonSet.classList.remove("torchless", "chain-dragging", "gate-secret-peek");
+    princeDungeonSet.classList.remove("torchless", "chain-dragging", "gate-secret-peek", "melody-lift");
     princeDungeonSet.style.setProperty("--prince-gate-lift", "0px");
     if (princeDungeonRat) princeDungeonRat.classList.remove("scurrying");
     princeChainPointer = null;
@@ -65778,8 +65782,9 @@ async def localfont(name):
         { f: 554.37, d: .32 }, { f: 440, d: .12 }, { f: 392, d: .22 },
         { f: 369.99, d: .08 }, { f: 311.13, d: .18 }, { f: 293.66, d: .58 }
       ];
-      var at = t;
+      var at = t, finalNoteAt = t;
       notes.forEach(function (note, index) {
+        if (index === notes.length - 1) finalNoteAt = at;
         var frequency = note.f;
         var osc = ctx.createOscillator();
         var gain = ctx.createGain();
@@ -65795,6 +65800,14 @@ async def localfont(name):
         osc.stop(at + note.d + 0.025);
         at += note.d + .025;
       });
+      princeGateMelodyTimer = setTimeout(function () {
+        princeGateMelodyTimer = null;
+        if (document.hidden || !document.hasFocus() || !princePresented || princeMode !== "basement" || !princeDungeonSet) return;
+        princeDungeonSet.classList.add("melody-lift");
+        princeDungeonTimers.push(setTimeout(function () {
+          if (princeDungeonSet) princeDungeonSet.classList.remove("melody-lift");
+        }, 520));
+      }, Math.max(0, (finalNoteAt - t) * 1000));
     } catch (_error) {}
   }
   // One fixed drop owns its successor: backgrounded WAAPI pauses before onfinish, so

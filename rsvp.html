@@ -493,13 +493,14 @@ footer{margin-top:2.6rem}
 .cinema-film.remote-current{outline:2px solid #7f9ec0;outline-offset:-2px}
 .cinema-film-strip{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .18s ease}
 .cinema-film:hover .cinema-film-strip,.cinema-film:focus-visible .cinema-film-strip,.cinema-film.remote-current .cinema-film-strip{opacity:1}
-#cinema-chooser.film-hovering .cinema-film.remote-current .cinema-film-strip{opacity:0}
+#cinema-chooser.film-hovering .cinema-film .cinema-film-strip{opacity:0}
 #cinema-chooser.film-hovering .cinema-film.film-hover .cinema-film-strip{opacity:1}
 .cinema-film-strip i{position:absolute;display:block;background-color:#211815}
 .cinema-film-strip i:nth-child(1),.cinema-film-strip i:nth-child(2){left:0;right:0;height:7px;background-image:radial-gradient(ellipse 1.8px 1.35px at center,#f8f5ec 0 62%,#211815 68%);background-size:9px 7px}
 .cinema-film-strip i:nth-child(1){top:0}.cinema-film-strip i:nth-child(2){bottom:0}
 .cinema-film-strip i:nth-child(3),.cinema-film-strip i:nth-child(4){top:0;bottom:0;width:7px;background-image:radial-gradient(ellipse 1.35px 1.8px at center,#f8f5ec 0 62%,#211815 68%);background-size:7px 9px}
 .cinema-film-strip i:nth-child(3){left:0}.cinema-film-strip i:nth-child(4){right:0}
+#cinema-chooser.film-hovering .cinema-film.film-focus .cinema-film-strip{opacity:1}
 .cinema-film-poster{position:relative;z-index:1;display:block; width:100%; height:100%; object-fit:cover}
 #cinema-player-wrap,#cinema-player{width:100%; height:100%; border:0; background:#000}
 #cinema-player-wrap[hidden]{display:none}
@@ -31517,11 +31518,19 @@ window.__cinemaVideoLoaded = false;
   function chooserFilms() {
     return Array.prototype.slice.call(chooser.querySelectorAll(".cinema-film"));
   }
+  function syncFilmStripFrame() {
+    var films = chooserFilms();
+    films.forEach(function (film, at) {
+      var strip = film.querySelector(".cinema-film-strip");
+      if (strip) strip.style.opacity = at === chooserIndex ? "1" : "0";
+    });
+  }
   function markChooserFilm(index, focus) {
     var films = chooserFilms();
     if (!films.length) return null;
     chooserIndex = (index + films.length) % films.length;
     films.forEach(function (film, at) { film.classList.toggle("remote-current", at === chooserIndex); });
+    syncFilmStripFrame();
     if (focus) {
       try { films[chooserIndex].focus({ preventScroll: true }); }
       catch (_error) { try { films[chooserIndex].focus(); } catch (_error2) {} }
@@ -31547,6 +31556,7 @@ window.__cinemaVideoLoaded = false;
     clearPlayer(false);
     chooserFilms().forEach(function (film) { film.classList.remove("remote-current"); });
     chooserIndex = 0;
+    syncFilmStripFrame();
     screenOff.hidden = false;
     screenOff.setAttribute("data-i", "cinema_screen_off");
     screenOff.textContent = cinemaText("cinema_screen_off", "projector off");
@@ -31765,10 +31775,10 @@ window.__cinemaVideoLoaded = false;
   }
   Array.prototype.forEach.call(room.querySelectorAll(".cinema-film"), function (button) {
     button.addEventListener("click", function () { playFilm(button); });
-    button.addEventListener("mouseenter", function () { markChooserFilm(chooserFilms().indexOf(button), false); chooser.classList.add("film-hovering"); button.classList.add("film-hover"); });
+    button.addEventListener("mouseenter", function () { chooser.querySelectorAll(".film-focus").forEach(function (film) { film.classList.remove("film-focus"); }); markChooserFilm(chooserFilms().indexOf(button), false); chooser.classList.add("film-hovering"); button.classList.add("film-hover"); });
     button.addEventListener("mouseleave", function () { chooser.classList.remove("film-hovering"); button.classList.remove("film-hover"); });
-    button.addEventListener("focus", function () { markChooserFilm(chooserFilms().indexOf(button), false); chooser.classList.add("film-hovering"); button.classList.add("film-hover"); });
-    button.addEventListener("blur", function () { chooser.classList.remove("film-hovering"); button.classList.remove("film-hover"); });
+    button.addEventListener("focus", function () { markChooserFilm(chooserFilms().indexOf(button), false); chooser.classList.add("film-hovering"); button.classList.add("film-focus"); });
+    button.addEventListener("blur", function () { chooser.classList.remove("film-hovering"); button.classList.remove("film-focus"); });
   });
   screenOff.addEventListener("click", function (event) {
     if (!window.__cinemaRoomOpen || projectorOn || projectorShorted) return;

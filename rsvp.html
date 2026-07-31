@@ -447,6 +447,7 @@ footer{margin-top:2.6rem}
   cursor:pointer;
 }
 #cinema-screen-off[hidden]{display:none}
+#cinema-room.projector-flickering #cinema-screen-off{animation:cinema-poweroff-flicker .42s steps(1,end)}
 #cinema-room.projector-shorted #cinema-screen-shell{animation:cinema-screen-short .16s steps(2,end) 5}
 #cinema-room.projector-shorted #cinema-projector{filter:drop-shadow(0 0 5px #9bc8ff)}
 #cinema-water-overlay{
@@ -456,6 +457,7 @@ footer{margin-top:2.6rem}
 #cinema-water-spray{opacity:0;pointer-events:none}
 #cinema-room.spraying #cinema-water-spray{animation:cinema-spray 1.05s ease-out}
 @keyframes cinema-screen-short{50%{filter:brightness(2.2) saturate(0)}}
+@keyframes cinema-poweroff-flicker{0%,100%{filter:brightness(1)}18%{filter:brightness(2.8)}35%{filter:brightness(.35)}54%{filter:brightness(1.9)}72%{filter:brightness(.55)}}
 @keyframes cinema-spray{0%{opacity:0}12%{opacity:.9}80%{opacity:.72}100%{opacity:0}}
 #cinema-screen-shell{
   position:absolute; left:25.9%; top:12.3%; width:49.8%; height:58.8%;
@@ -31344,6 +31346,7 @@ window.__cinemaVideoLoaded = false;
   var cuddlyScene = document.getElementById("stage-cuddly");
   var cinemaCloseTimer = null;
   var cinemaShortTimer = null;
+  var cinemaFlickerTimer = null;
   var cinemaClosing = false;
   var projectorOn = false;
   var projectorShorted = false;
@@ -31560,8 +31563,22 @@ window.__cinemaVideoLoaded = false;
   }
   function toggleProjector() {
     if (projectorShorted) return false;
-    if (projectorOn) powerOff();
-    else powerOn(true);
+    if (projectorOn) {
+      powerOff();
+      clearTimeout(cinemaFlickerTimer);
+      room.classList.remove("projector-flickering");
+      void room.offsetWidth;
+      room.classList.add("projector-flickering");
+      cinemaFlickerTimer = setTimeout(function () {
+        cinemaFlickerTimer = null;
+        room.classList.remove("projector-flickering");
+      }, 500);
+    } else {
+      clearTimeout(cinemaFlickerTimer);
+      cinemaFlickerTimer = null;
+      room.classList.remove("projector-flickering");
+      powerOn(true);
+    }
     if (typeof playDryClickSound === "function") playDryClickSound("cinema-projector");
     return true;
   }

@@ -666,6 +666,12 @@ intercom, paired entry lamps, tree canopy, and sidewalk pointer/touch plus Enter
 responses without changing the facade paint order. `data-entrance-action`
 selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
 in-flight class so no one-shot survives a room leave or reset.
+Seven separate `.entrance-car-control` overlays partition the foreground Boxster's
+roof, driver door, front and rear compartments, mid-body engine control, headlight,
+and tail light. They remain outside the Tab order, stop bubbling at their own click
+handlers, and publish pressed state through `__entranceRoomState().car`. The start
+roar and stop wind-down are short shared-SFX voices rather than a new audio context
+or an unattended loop; leaving Entrance returns the car to its closed, engine-off state.
 The intercom's attended click plays a short low-passed formant reply and flashes
 localized “Come up!” copy. Its sound path checks the open room, visibility, and
 focus at the gesture and has no autonomous timer.

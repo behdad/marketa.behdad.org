@@ -107071,6 +107071,7 @@ function spawnDustMote(container) {
   var catRoom = "garden";                 // where the cat physically is (chest home = garden)
   var jumpAnim = null, jumping = false, jumpTimer = null, isPerchJump = false, isNapJump = false;
   var lowerCatTimer = null;
+  var lowerCatReturnTimer = null;
   var lowerCatPerched = null;
   var cinemaCatVisit = 0;
   var jumpCur = null, jumpApexX = 0, jumpApexY = 0; // the in-flight arc's fixed points, kept for __deskCatFollow/__chairCatFollow to rebuild around
@@ -107626,6 +107627,8 @@ function spawnDustMote(container) {
     if (!walk.classList.contains("out")) return; // still in the bag
     clearTimeout(lowerCatTimer);
     lowerCatTimer = null;
+    clearTimeout(lowerCatReturnTimer);
+    lowerCatReturnTimer = null;
     pos.style.visibility = "";
     pos.style.pointerEvents = "";
     setNapping(false);
@@ -107672,6 +107675,8 @@ function spawnDustMote(container) {
     if (!walk.classList.contains("out") || catGoneForever) return false;
     clearTimeout(lowerCatTimer);
     lowerCatTimer = null;
+    clearTimeout(lowerCatReturnTimer);
+    lowerCatReturnTimer = null;
     cancelJump();
     setNapping(false);
     catRoom = room;
@@ -107765,6 +107770,8 @@ function spawnDustMote(container) {
     lowerCatPerched = null;
     clearTimeout(lowerCatTimer);
     lowerCatTimer = null;
+    clearTimeout(lowerCatReturnTimer);
+    lowerCatReturnTimer = null;
     setNapping(false);
     // Full motion keeps the floor position on the outer wrapper and reaches the bed
     // with the walk animation; reduced motion places the outer wrapper directly on
@@ -107849,12 +107856,18 @@ function spawnDustMote(container) {
         getComputedStyle(pos).visibility === "hidden") return false;
     clearTimeout(lowerCatTimer);
     lowerCatTimer = null;
+    clearTimeout(lowerCatReturnTimer);
+    lowerCatReturnTimer = null;
     cancelJump();
     lowerCatPerched = null;
     pos.style.pointerEvents = "none";
     walk.style.transform = "";
     var escapedRoom = catRoom;
     function bringCatBack() {
+      if (lowerCatReturnTimer) {
+        clearTimeout(lowerCatReturnTimer);
+        lowerCatReturnTimer = null;
+      }
       if (catRoom !== escapedRoom) {
         pos.style.visibility = "";
         pos.style.pointerEvents = "auto";
@@ -107874,7 +107887,7 @@ function spawnDustMote(container) {
     if (reducedMotion() || !walk.animate) {
       pos.style.visibility = "hidden";
       pos.style.pointerEvents = "none";
-      setTimeout(bringCatBack, 1500);
+      lowerCatReturnTimer = setTimeout(bringCatBack, 1500);
       return true;
     }
     jumping = true;
@@ -107885,6 +107898,7 @@ function spawnDustMote(container) {
       { transform: "translate(-205px,10px)", opacity: 0 }
     ], { duration: 720, easing: "cubic-bezier(.2,.7,.35,1)", fill: "forwards" });
     jumpAnim = flee;
+    lowerCatReturnTimer = setTimeout(bringCatBack, 2350);
     flee.onfinish = function () {
       if (jumpAnim !== flee) return;
       jumpAnim = null;
@@ -107892,7 +107906,6 @@ function spawnDustMote(container) {
       pos.style.visibility = "hidden";
       pos.style.pointerEvents = "none";
       walk.style.animationPlayState = "";
-      setTimeout(bringCatBack, 1500);
     };
     return true;
   }

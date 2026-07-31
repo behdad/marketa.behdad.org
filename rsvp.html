@@ -5564,6 +5564,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   background:#000;
 }
 #prince-dungeon-set{
+  --prince-gate-lift:0px;
   position:absolute;
   inset:0;
   z-index:1;
@@ -5572,7 +5573,24 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   background:
     linear-gradient(90deg,rgba(12,20,30,.86),rgba(0,0,0,.42) 28% 72%,rgba(12,20,30,.86)),
     #111a24 url("art/prince-stone.svg") 0 0/auto 25% repeat;
-  transition:opacity .28s ease,visibility 0s linear 0s;
+  transition:opacity .28s ease,visibility 0s linear 0s,filter .24s ease;
+}
+#prince-dungeon-set::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+  opacity:0;
+  background:rgba(0,5,10,.82);
+  transition:opacity .24s ease;
+}
+#prince-dungeon-set.torchless{filter:brightness(.5)}
+#prince-dungeon-set.torchless::after{opacity:.72}
+#prince-dungeon-set.torchless #prince-play-wall{
+  color:transparent;
+  filter:brightness(.18);
+  pointer-events:none;
 }
 #prince-cat-overlay{
   position:absolute;
@@ -5704,26 +5722,113 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   filter:drop-shadow(0 0 8px #ff9d00);
   animation:prince-torch-flicker .8s ease-in-out infinite alternate;
 }
-.prince-dungeon-torch.dim::after{opacity:.22;filter:none;animation:none}
+.prince-dungeon-torch.snuffed::after{opacity:0;filter:none;animation:none}
+#prince-dungeon-gate{
+  position:absolute;
+  z-index:1;
+  right:2.2%;
+  top:27%;
+  width:14%;
+  height:47%;
+  border:4px solid #1c304c;
+  box-shadow:inset 0 0 0 3px #788494;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 16%,#596977 16% 27%),
+    linear-gradient(#03070a,#101923);
+  transform:translateY(calc(0px - var(--prince-gate-lift)));
+  transition:transform .18s cubic-bezier(.3,.8,.45,1);
+}
+#prince-dungeon-set.chain-dragging #prince-dungeon-gate{transition:none}
 #prince-dungeon-chain{
   right:7%;
   top:8%;
   width:9%;
   height:39%;
+  z-index:3;
+  transform:translate(var(--prince-chain-x,0px),var(--prince-chain-y,0px));
   transform-origin:50% 0;
   background:repeating-linear-gradient(0deg,transparent 0 8%,#788494 8% 13%,transparent 13% 18%);
+  cursor:grab;
 }
 #prince-dungeon-chain::after{
   content:"";
   position:absolute;
   left:19%;
   bottom:-10%;
-  width:58%;
-  aspect-ratio:1;
+  width:70%;
+  height:25%;
   border:4px solid #788494;
-  border-radius:50%;
+  border-radius:12%;
+  background:#273442;
+  box-shadow:inset 0 3px rgba(255,255,255,.12),0 5px 6px rgba(0,0,0,.6);
 }
+#prince-dungeon-chain.dragging{cursor:grabbing}
 #prince-dungeon-chain.swung{animation:prince-chain-swing .65s ease-in-out}
+#prince-dungeon-drip{
+  position:absolute;
+  z-index:3;
+  left:30%;
+  top:0;
+  width:2.2%;
+  height:79%;
+  pointer-events:none;
+}
+#prince-dungeon-drop{
+  position:absolute;
+  left:28%;
+  top:0;
+  width:44%;
+  aspect-ratio:.62;
+  border-radius:60% 40% 62% 38%;
+  background:#9cd6e3;
+  box-shadow:0 0 6px rgba(156,214,227,.55);
+  opacity:0;
+}
+#prince-dungeon-puddle{
+  position:absolute;
+  left:-110%;
+  bottom:0;
+  width:320%;
+  height:3.5%;
+  border-radius:50%;
+  background:rgba(98,160,180,.48);
+  box-shadow:0 0 7px rgba(98,160,180,.28);
+}
+#prince-dungeon-rat{
+  position:absolute;
+  z-index:3;
+  left:-5%;
+  bottom:11%;
+  width:5%;
+  aspect-ratio:1.7;
+  opacity:0;
+  pointer-events:none;
+  border-radius:62% 45% 42% 52%;
+  background:#554a43;
+}
+#prince-dungeon-rat::before{
+  content:"";
+  position:absolute;
+  right:-42%;
+  top:42%;
+  width:58%;
+  height:8%;
+  border-radius:50%;
+  background:#9b7c70;
+  transform:rotate(12deg);
+  transform-origin:left center;
+}
+#prince-dungeon-rat::after{
+  content:"";
+  position:absolute;
+  right:5%;
+  top:-21%;
+  width:25%;
+  aspect-ratio:1;
+  border-radius:50%;
+  background:#80685d;
+}
+#prince-dungeon-rat.scurrying{animation:prince-rat-scurry 1.15s ease-in both}
 #prince-dungeon-ledge{
   left:3%;
   right:3%;
@@ -5748,8 +5853,14 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 @keyframes prince-portal-wake{50%{transform:translate(-50%,-50%) scale(1.04);filter:brightness(1.7)}}
 @keyframes prince-window-rattle{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 @keyframes prince-torch-flicker{to{transform:scale(.88,1.08) rotate(3deg);filter:drop-shadow(0 0 13px #ff9d00)}}
-@keyframes prince-chain-swing{25%{transform:rotate(8deg)}65%{transform:rotate(-6deg)}}
+@keyframes prince-chain-swing{25%{transform:translate(var(--prince-chain-x,0px),var(--prince-chain-y,0px)) rotate(8deg)}65%{transform:translate(var(--prince-chain-x,0px),var(--prince-chain-y,0px)) rotate(-6deg)}}
 @keyframes prince-ledge-thud{50%{transform:translateY(3px)}}
+@keyframes prince-rat-scurry{
+  0%{opacity:0;transform:translateX(0) scaleX(1)}
+  9%{opacity:1}
+  75%{opacity:1}
+  100%{opacity:0;transform:translateX(130px) scaleX(1)}
+}
 #prince-basement-stage::before,
 #prince-basement-stage::after{
   content:"";
@@ -5838,7 +5949,8 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   #prince-dungeon-set{transition:none}
   .prince-dungeon-torch::after{animation:none}
   #prince-play-wall.awakening::before,#prince-dungeon-window.rattled,
-  #prince-dungeon-chain.swung,#prince-dungeon-ledge.thudded{animation:none}
+  #prince-dungeon-chain.swung,#prince-dungeon-ledge.thudded,
+  #prince-dungeon-rat.scurrying{animation:none}
 }
 .doom-msg{grid-area:1/1; align-self:center; justify-self:stretch; margin:0; padding:0 2px; text-align:center; font:2px/1.3 ui-monospace,monospace; color:#e8c060; pointer-events:none}
 .doom-msg.err{color:#e0736a}
@@ -30166,11 +30278,14 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <div id="prince-basement-stage">
         <div id="prince-dungeon-set">
           <svg id="prince-cat-overlay" viewBox="0 0 680 425" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+          <div id="prince-dungeon-gate" aria-hidden="true"></div>
+          <div id="prince-dungeon-drip" aria-hidden="true"><span id="prince-dungeon-drop"></span><span id="prince-dungeon-puddle"></span></div>
+          <div id="prince-dungeon-rat" aria-hidden="true"></div>
           <button type="button" id="prince-play-wall" class="prince-dungeon-prop" data-action="play" data-aria-i="prince_wall_play" data-title-i="prince_wall_play" aria-label="Play Prince of Persia" title="Play Prince of Persia" tabindex="-1"><span class="prince-play-label" data-i="prince_wall_label">wake the prince</span></button>
           <button type="button" id="prince-dungeon-window" class="prince-dungeon-prop" data-action="window" data-aria-i="prince_window" data-title-i="prince_window" aria-label="Rattle the barred window" title="Rattle the barred window" tabindex="-1"></button>
-          <button type="button" id="prince-dungeon-torch-left" class="prince-dungeon-prop prince-dungeon-torch" data-action="torch" data-aria-i="prince_torch" data-title-i="prince_torch" aria-label="Dim the torch" title="Dim the torch" tabindex="-1"></button>
-          <button type="button" id="prince-dungeon-torch-right" class="prince-dungeon-prop prince-dungeon-torch" data-action="torch" data-aria-i="prince_torch" data-title-i="prince_torch" aria-label="Dim the torch" title="Dim the torch" tabindex="-1"></button>
-          <button type="button" id="prince-dungeon-chain" class="prince-dungeon-prop" data-action="chain" data-aria-i="prince_chain" data-title-i="prince_chain" aria-label="Swing the dungeon chain" title="Swing the dungeon chain" tabindex="-1"></button>
+          <button type="button" id="prince-dungeon-torch-left" class="prince-dungeon-prop prince-dungeon-torch" data-action="torch" data-aria-i="prince_torch" data-title-i="prince_torch" aria-label="Snuff the torch" title="Snuff the torch" tabindex="-1"></button>
+          <button type="button" id="prince-dungeon-torch-right" class="prince-dungeon-prop prince-dungeon-torch" data-action="torch" data-aria-i="prince_torch" data-title-i="prince_torch" aria-label="Snuff the torch" title="Snuff the torch" tabindex="-1"></button>
+          <button type="button" id="prince-dungeon-chain" class="prince-dungeon-prop" data-action="chain" data-aria-i="prince_chain" data-title-i="prince_chain" aria-label="Pull the weighted dungeon chain" title="Pull the weighted dungeon chain" tabindex="-1"></button>
           <button type="button" id="prince-dungeon-ledge" class="prince-dungeon-prop" data-action="ledge" data-aria-i="prince_ledge" data-title-i="prince_ledge" aria-label="Knock on the stone ledge" title="Knock on the stone ledge" tabindex="-1"></button>
           <button type="button" id="prince-dungeon-stone" class="prince-dungeon-prop" data-action="stone" data-aria-i="prince_stone" data-title-i="prince_stone" aria-label="Nudge the loose stone" title="Nudge the loose stone" tabindex="-1"></button>
         </div>
@@ -32021,22 +32136,24 @@ if (window.__closeBedroomRoom) window.__registerTransientResetHook("bedroom-room
 // getSfxCtx(); the song pipeline uses the raw shared context. Exactly ONE AudioContext is
 // constructed at runtime — only here in getAudioCtx (see check.js).
 var __sharedAC = null, __sharedACFailed = false, __activeAudioBeds = 0;
-var __lowerFloorFilter = null, __lowerFloorGain = null;
+var __lowerFloorFilter = null, __lowerFloorGain = null, __lowerFloorDry = null;
+var __lowerFloorReverb = null, __lowerFloorReverbWet = null;
 var __loftAudioMaster = null, __cinemaAudioDucked = false;
 var LOWER_FLOOR_ACOUSTICS = {
-  upstairs: { room: "upstairs", gain: 1, cutoff: 20000 },
-  lower: { room: "lower", gain: 0.48, cutoff: 2400 },
-  bedroom: { room: "bedroom", gain: 0.40, cutoff: 2400 },
-  bathroom: { room: "bathroom", gain: 0.30, cutoff: 1450 },
-  entrance: { room: "entrance", gain: 0.25, cutoff: 1200 }
+  upstairs: { room: "upstairs", gain: 1, cutoff: 20000, reverb: 0 },
+  dungeon: { room: "dungeon", gain: 0.48, cutoff: 2400, reverb: 1.9 },
+  cinema: { room: "cinema", gain: 0.48, cutoff: 2400, reverb: 0 },
+  bedroom: { room: "bedroom", gain: 0.40, cutoff: 2400, reverb: 0 },
+  bathroom: { room: "bathroom", gain: 0.30, cutoff: 1450, reverb: 0 },
+  entrance: { room: "entrance", gain: 0.25, cutoff: 1200, reverb: 0 }
 };
 function lowerFloorAcousticProfile() {
   if (window.__entranceRoomOpen) return LOWER_FLOOR_ACOUSTICS.entrance;
   if (window.__bathroomRoomOpen) return LOWER_FLOOR_ACOUSTICS.bathroom;
   if (window.__bedroomRoomOpen) return LOWER_FLOOR_ACOUSTICS.bedroom;
   var prince = window.__princeState && window.__princeState();
-  if (window.__cinemaRoomOpen ||
-      (prince && prince.basement)) return LOWER_FLOOR_ACOUSTICS.lower;
+  if (prince && prince.basement) return LOWER_FLOOR_ACOUSTICS.dungeon;
+  if (window.__cinemaRoomOpen) return LOWER_FLOOR_ACOUSTICS.cinema;
   return LOWER_FLOOR_ACOUSTICS.upstairs;
 }
 // Continuous loft-owned sound shares this final room-boundary stage. Local prop SFX
@@ -32046,11 +32163,29 @@ function lowerFloorAudioOutput(ac) {
   __lowerFloorFilter = ac.createBiquadFilter();
   __lowerFloorFilter.type = "lowpass";
   __lowerFloorFilter.Q.value = 0.55;
+  __lowerFloorDry = ac.createGain();
+  __lowerFloorReverb = ac.createConvolver();
+  __lowerFloorReverbWet = ac.createGain();
   __lowerFloorGain = ac.createGain();
   var profile = lowerFloorAcousticProfile();
+  var impulse = ac.createBuffer(2, Math.ceil(ac.sampleRate * 1.9), ac.sampleRate);
+  for (var channel = 0; channel < impulse.numberOfChannels; channel++) {
+    var data = impulse.getChannelData(channel);
+    for (var i = 0; i < data.length; i++) {
+      var decay = Math.pow(1 - i / data.length, 2.8);
+      data[i] = (Math.random() * 2 - 1) * decay;
+    }
+  }
+  __lowerFloorReverb.buffer = impulse;
   __lowerFloorFilter.frequency.value = profile.cutoff;
+  __lowerFloorDry.gain.value = 1;
+  __lowerFloorReverbWet.gain.value = profile.reverb ? 0.22 : 0;
   __lowerFloorGain.gain.value = profile.gain;
-  __lowerFloorFilter.connect(__lowerFloorGain);
+  __lowerFloorFilter.connect(__lowerFloorDry);
+  __lowerFloorDry.connect(__lowerFloorGain);
+  __lowerFloorFilter.connect(__lowerFloorReverb);
+  __lowerFloorReverb.connect(__lowerFloorReverbWet);
+  __lowerFloorReverbWet.connect(__lowerFloorGain);
   __lowerFloorGain.connect(loftAudioDestination(ac));
   return __lowerFloorFilter;
 }
@@ -32063,14 +32198,16 @@ window.__updateLowerFloorAcoustics = function () {
       __lowerFloorFilter.frequency.setTargetAtTime(profile.cutoff, now, 0.32);
       __lowerFloorGain.gain.cancelScheduledValues(now);
       __lowerFloorGain.gain.setTargetAtTime(profile.gain, now, 0.32);
+      __lowerFloorReverbWet.gain.cancelScheduledValues(now);
+      __lowerFloorReverbWet.gain.setTargetAtTime(profile.reverb ? 0.22 : 0, now, 0.32);
     } catch (_error) {}
   }
   if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics();
-  return { room: profile.room, gain: profile.gain, cutoff: profile.cutoff };
+  return { room: profile.room, gain: profile.gain, cutoff: profile.cutoff, reverb: profile.reverb };
 };
 window.__lowerFloorAcousticsState = function () {
   var profile = lowerFloorAcousticProfile();
-  return { room: profile.room, gain: profile.gain, cutoff: profile.cutoff,
+  return { room: profile.room, gain: profile.gain, cutoff: profile.cutoff, reverb: profile.reverb,
     connected: !!(__lowerFloorFilter && __lowerFloorGain) };
 };
 // A foreground device owns the visitor's attention. Room-tone beds yield while the pocket
@@ -32589,6 +32726,7 @@ var T = {
       bathroom_scale_wet: "Bathroom · 70.0 kg, still dripping.",
       bathroom_scale_settled: "Bathroom · settled at 69.0 kg.",
       lower_dungeon: "Dungeon · the old game is awake.",
+      prince_dark: "Too dark to read the wall.",
       lower_cinema: "Cinema · wake the projector, then choose a film.",
       lower_bedroom: "Bedroom · everything here is playable.",
       lower_entrance: "Entrance · the street starts here.",
@@ -33010,8 +33148,9 @@ var T = {
     prince_wall_play: "Play Prince of Persia",
     prince_wall_label: "wake the prince",
     prince_window: "Rattle the barred window",
-    prince_torch: "Dim the torch",
-    prince_chain: "Swing the dungeon chain",
+    prince_torch: "Snuff the torch",
+    prince_torch_light: "Relight the torch",
+    prince_chain: "Pull the weighted dungeon chain",
     prince_ledge: "Knock on the stone ledge",
     prince_stone: "Nudge the loose stone",
     classics_choose: "Choose a classic",
@@ -33901,6 +34040,7 @@ var T = {
       bathroom_scale_wet: "Koupelna · 70,0 kg, ještě z tebe kape.",
       bathroom_scale_settled: "Koupelna · ustáleno na 69,0 kg.",
       lower_dungeon: "Žalář · stará hra se probudila.",
+      prince_dark: "Na zeď je příliš tma.",
       lower_cinema: "Kino · probuď projektor a pak vyber film.",
       lower_bedroom: "Ložnice · se vším si tu můžeš hrát.",
       lower_entrance: "Vchod · tady začíná ulice.",
@@ -34319,8 +34459,9 @@ var T = {
     prince_wall_play: "Hrát Prince of Persia",
     prince_wall_label: "probudit prince",
     prince_window: "Zatřást zamřížovaným oknem",
-    prince_torch: "Ztlumit pochodeň",
-    prince_chain: "Rozhoupat řetěz",
+    prince_torch: "Zhasnout pochodeň",
+    prince_torch_light: "Znovu zapálit pochodeň",
+    prince_chain: "Zatáhnout za řetěz se závažím",
     prince_ledge: "Zaklepat na kamennou římsu",
     prince_stone: "Posunout uvolněný kámen",
     classics_choose: "Vyberte klasiku",
@@ -64655,6 +64796,9 @@ async def localfont(name):
   var princeBasementClose = document.getElementById("prince-basement-close");
   var princeDungeonSet = document.getElementById("prince-dungeon-set");
   var princePlayWall = document.getElementById("prince-play-wall");
+  var princeDungeonDrop = document.getElementById("prince-dungeon-drop");
+  var princeDungeonRat = document.getElementById("prince-dungeon-rat");
+  var princeDungeonChain = document.getElementById("prince-dungeon-chain");
   var huntViewport = document.querySelector(".hunt-viewport");
   var princeFrame = null;
   var princeFrameState = "cold";
@@ -64668,6 +64812,9 @@ async def localfont(name):
   var princeContextObserver = null;
   var princeContextTimer = null;
   var princeDungeonTimers = [];
+  var princeDripAnimation = null;
+  var princeChainPointer = null, princeChainStartX = 0, princeChainStartY = 0;
+  var princeChainX = 0, princeChainY = 0, princeChainMoved = false, princeChainSuppressClick = false;
   function clearPrinceDungeonTimers() {
     princeDungeonTimers.forEach(clearTimeout);
     princeDungeonTimers.length = 0;
@@ -64680,10 +64827,126 @@ async def localfont(name):
   }
   function resetPrinceDungeonProps() {
     clearPrinceDungeonTimers();
+    if (princeDripAnimation) {
+      princeDripAnimation.onfinish = null;
+      princeDripAnimation.cancel();
+      princeDripAnimation = null;
+    }
     if (!princeDungeonSet) return;
     princeDungeonSet.querySelectorAll(".prince-dungeon-prop").forEach(function (prop) {
-      prop.classList.remove("awakening", "rattled", "swung", "thudded", "shifted", "dim");
+      prop.classList.remove("awakening", "rattled", "swung", "thudded", "shifted", "snuffed", "dragging");
     });
+    princeDungeonSet.classList.remove("torchless", "chain-dragging");
+    princeDungeonSet.style.setProperty("--prince-gate-lift", "0px");
+    if (princeDungeonRat) princeDungeonRat.classList.remove("scurrying");
+    princeChainPointer = null;
+    princeChainX = princeChainY = 0;
+    princeChainMoved = princeChainSuppressClick = false;
+    if (princeDungeonChain) {
+      princeDungeonChain.style.setProperty("--prince-chain-x", "0px");
+      princeDungeonChain.style.setProperty("--prince-chain-y", "0px");
+    }
+    updatePrinceTorchlight();
+  }
+  function playDungeonPlink() {
+    if (document.hidden || !document.hasFocus()) return;
+    try {
+      var ctx = getSfxCtx();
+      if (!ctx) return;
+      var now = ctx.currentTime;
+      var out = pannedOut(ctx, "prince-dungeon-drip");
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(1180, now);
+      osc.frequency.exponentialRampToValueAtTime(720, now + 0.13);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.026, now + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+      osc.connect(gain);
+      gain.connect(out);
+      osc.start(now);
+      osc.stop(now + 0.17);
+    } catch (_error) {}
+  }
+  // One fixed drop owns its successor: backgrounded WAAPI pauses before onfinish, so
+  // there is never a timer queue or a growing pile of hidden particles to catch up.
+  function runPrinceDungeonDrip() {
+    if (!princeDungeonDrop || !princePresented || princeMode !== "basement" ||
+        !princeBasement || princeBasement.hidden || princeBasement.classList.contains("playing")) return;
+    if (princeDripAnimation) princeDripAnimation.cancel();
+    princeDungeonDrop.style.transformBox = "fill-box";
+    princeDungeonDrop.style.transformOrigin = "center top";
+    princeDripAnimation = princeDungeonDrop.animate([
+      { offset: 0, opacity: 0, transform: "translateY(0) scale(.7)" },
+      { offset: .42, opacity: 0, transform: "translateY(0) scale(.7)" },
+      { offset: .48, opacity: 1, transform: "translateY(0) scale(1)" },
+      { offset: .94, opacity: 1, transform: "translateY(318px) scale(.82)" },
+      { offset: 1, opacity: 0, transform: "translateY(322px) scale(1.8,.35)" }
+    ], { duration: 2350, easing: "cubic-bezier(.45,0,.85,.65)" });
+    princeDripAnimation.onfinish = function () {
+      playDungeonPlink();
+      princeDripAnimation.cancel();
+      princeDripAnimation = null;
+      runPrinceDungeonDrip();
+    };
+  }
+  function runPrinceDungeonRat() {
+    if (!princeDungeonRat) return;
+    princeDungeonRat.classList.remove("scurrying");
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (!princePresented || princeMode !== "basement" || !princeDungeonRat) return;
+        princeDungeonRat.classList.add("scurrying");
+        if (window.__dungeonCatRatReaction) window.__dungeonCatRatReaction();
+      });
+    });
+  }
+  function updatePrinceTorchlight() {
+    if (!princeDungeonSet) return;
+    var torches = Array.prototype.slice.call(princeDungeonSet.querySelectorAll(".prince-dungeon-torch"));
+    var dark = torches.length === 2 && torches.every(function (torch) { return torch.classList.contains("snuffed"); });
+    princeDungeonSet.classList.toggle("torchless", dark);
+    torches.forEach(function (torch) {
+      var key = torch.classList.contains("snuffed") ? "prince_torch_light" : "prince_torch";
+      torch.setAttribute("data-aria-i", key);
+      torch.setAttribute("data-title-i", key);
+      var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+      torch.setAttribute("aria-label", T[lang][key]);
+      torch.setAttribute("title", T[lang][key]);
+    });
+    if (princePresented && princeMode === "basement" && window.setCaption) {
+      window.setCaption(dark ? "prince_dark" : "lower_dungeon", true);
+    }
+  }
+  function setPrinceChainPosition(x, y) {
+    princeChainX = Math.max(-14, Math.min(14, x));
+    princeChainY = Math.max(0, Math.min(78, y));
+    if (princeDungeonChain) {
+      princeDungeonChain.style.setProperty("--prince-chain-x", princeChainX + "px");
+      princeDungeonChain.style.setProperty("--prince-chain-y", princeChainY + "px");
+    }
+    if (princeDungeonSet) {
+      var lift = Math.min(12, princeChainY * 0.154);
+      princeDungeonSet.style.setProperty("--prince-gate-lift", lift.toFixed(2) + "px");
+    }
+  }
+  function releasePrinceChain(event) {
+    if (princeChainPointer == null || (event && event.pointerId !== princeChainPointer)) return;
+    if (princeDungeonChain && princeDungeonChain.releasePointerCapture) {
+      try { princeDungeonChain.releasePointerCapture(princeChainPointer); } catch (_error) {}
+    }
+    princeChainPointer = null;
+    princeChainSuppressClick = princeChainMoved;
+    if (princeChainSuppressClick) {
+      princeDungeonTimers.push(setTimeout(function () { princeChainSuppressClick = false; }, 80));
+    }
+    if (princeDungeonChain) princeDungeonChain.classList.remove("dragging");
+    if (princeDungeonSet) princeDungeonSet.classList.remove("chain-dragging");
+    setPrinceChainPosition(0, 0);
+    if (princeChainMoved && typeof playMetalClinkSound === "function") {
+      playMetalClinkSound(.9, "prince-dungeon-chain");
+    }
   }
   function releasePrinceContextMenu() {
     if (princeContextObserver) princeContextObserver.disconnect();
@@ -64818,6 +65081,8 @@ async def localfont(name):
     princeBasement.hidden = false;
     princeBasement.classList.remove("playing");
     resetPrinceDungeonProps();
+    runPrinceDungeonDrip();
+    runPrinceDungeonRat();
     requestAnimationFrame(function () {
       requestAnimationFrame(function () { huntViewport.classList.add("prince-basement-open"); });
     });
@@ -64831,6 +65096,11 @@ async def localfont(name):
       return true;
     }
     if (princePlayWall) replayPrinceDungeonClass(princePlayWall, "awakening", 280);
+    if (princeDripAnimation) {
+      princeDripAnimation.onfinish = null;
+      princeDripAnimation.cancel();
+      princeDripAnimation = null;
+    }
     buildPrinceFrame(princeBasementHost);
     princeBasement.classList.add("playing");
     window.__princeInputActive = true;
@@ -64846,12 +65116,17 @@ async def localfont(name):
     var action = prop.getAttribute("data-action");
     if (action === "play") return activatePrinceBasementGame();
     if (action === "torch") {
-      prop.classList.toggle("dim");
+      prop.classList.toggle("snuffed");
+      updatePrinceTorchlight();
       if (typeof playDryClickSound === "function") playDryClickSound(prop.id);
     } else if (action === "window") {
       replayPrinceDungeonClass(prop, "rattled", 300);
       if (typeof playMetalClinkSound === "function") playMetalClinkSound(.72, prop.id);
     } else if (action === "chain") {
+      if (princeChainSuppressClick) {
+        princeChainSuppressClick = false;
+        return true;
+      }
       replayPrinceDungeonClass(prop, "swung", 650);
       if (typeof playMetalClinkSound === "function") playMetalClinkSound(.9, prop.id);
     } else if (action === "ledge") {
@@ -65020,6 +65295,13 @@ async def localfont(name):
       iframe: princeFrame ? princeFrame.getAttribute("src") : null, state: princeFrameState,
       browserFullscreen: princeOwnsFullscreen };
   };
+  window.__princeDungeonState = function () {
+    var torches = princeDungeonSet ? princeDungeonSet.querySelectorAll(".prince-dungeon-torch.snuffed").length : 0;
+    return { torchesOut: torches, dark: !!(princeDungeonSet && princeDungeonSet.classList.contains("torchless")),
+      dripNodes: princeDungeonSet ? princeDungeonSet.querySelectorAll("#prince-dungeon-drop").length : 0,
+      dripRunning: !!princeDripAnimation, chainX: princeChainX, chainY: princeChainY,
+      gateLift: princeDungeonSet ? princeDungeonSet.style.getPropertyValue("--prince-gate-lift") : "" };
+  };
   function princeFullscreenChanged() {
     var current = document.fullscreenElement || document.webkitFullscreenElement;
     if (current === princeFrame) {
@@ -65072,12 +65354,45 @@ async def localfont(name):
     parkPrinceApp();
   });
   if (princeDungeonSet) {
+    princeDungeonSet.addEventListener("touchmove", function (event) {
+      if (event.target.closest && event.target.closest("#prince-dungeon-chain")) event.preventDefault();
+    }, { passive: false });
     princeDungeonSet.querySelectorAll(".prince-dungeon-prop").forEach(function (prop) {
       prop.addEventListener("click", function (event) {
         event.preventDefault();
         event.stopPropagation();
         activatePrinceDungeonProp(prop);
       });
+    });
+  }
+  if (princeDungeonChain) {
+    princeDungeonChain.addEventListener("pointerdown", function (event) {
+      if (!princePresented || princeMode !== "basement" || window.__princeInputActive) return;
+      event.preventDefault();
+      event.stopPropagation();
+      princeChainPointer = event.pointerId;
+      princeChainStartX = event.clientX;
+      princeChainStartY = event.clientY;
+      princeChainMoved = false;
+      princeDungeonChain.classList.remove("swung");
+      princeDungeonChain.classList.add("dragging");
+      if (princeDungeonSet) princeDungeonSet.classList.add("chain-dragging");
+      try { princeDungeonChain.setPointerCapture(event.pointerId); } catch (_error) {}
+    });
+    princeDungeonChain.addEventListener("pointermove", function (event) {
+      if (event.pointerId !== princeChainPointer) return;
+      event.preventDefault();
+      var x = event.clientX - princeChainStartX;
+      var y = event.clientY - princeChainStartY;
+      if (Math.abs(x) > 3 || Math.abs(y) > 3) princeChainMoved = true;
+      setPrinceChainPosition(x, y);
+    });
+    princeDungeonChain.addEventListener("pointerup", releasePrinceChain);
+    princeDungeonChain.addEventListener("pointercancel", releasePrinceChain);
+  }
+  if (princeDungeonRat) {
+    princeDungeonRat.addEventListener("animationend", function (event) {
+      if (event.animationName === "prince-rat-scurry") princeDungeonRat.classList.remove("scurrying");
     });
   }
   if (princeFullscreenBtn) {
@@ -106061,6 +106376,20 @@ function spawnDustMote(container) {
       }, 850);
     }
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
+    return true;
+  };
+  window.__dungeonCatRatReaction = function () {
+    var overlay = document.getElementById("prince-cat-overlay");
+    if (catRoom !== "dungeon" || !overlay || pos.parentNode !== overlay ||
+        !walk.classList.contains("out")) return false;
+    twitchEar();
+    flickTail();
+    if (catArt) {
+      catArt.classList.remove("wobbling");
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { catArt.classList.add("wobbling"); });
+      });
+    }
     return true;
   };
   // The chest doors are physical: with BOTH shut the cat can neither come out nor get

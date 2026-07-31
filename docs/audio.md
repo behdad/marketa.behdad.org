@@ -80,7 +80,8 @@ lowpass) lives only in the song pipeline — music-only, deliberately not applie
 `lowerFloorAudioOutput()` is one lazily-created low-pass plus gain stage shared
 by continuous synth beds and captured loft songs. It creates no context. The
 main floor targets unity/20 kHz; Prince dungeon and Cinema target
-`0.48`/2.4 kHz; Bedroom keeps the same 2.4 kHz filter at a quieter `0.40`;
+`0.48`/2.4 kHz, with a 1.9-second stone-tail reverb mixed in only for the
+dungeon; Bedroom keeps the same 2.4 kHz filter at a quieter `0.40`;
 the enclosed Bathroom targets `0.30`/1.45 kHz; and the exterior
 Entrance targets `0.25`/1.2 kHz. Changes
 use `setTargetAtTime` with a 320 ms time constant, so Down, Up, close, and
@@ -88,7 +89,9 @@ lateral lower-room pans cannot click or leave stale attenuation behind.
 
 Local one-shot SFX deliberately bypass the boundary: a bathroom faucet or
 entrance window was touched in the room the visitor occupies and should remain
-present. Opening the Bathroom synchronously cancels Pouria's in-flight ambient
+present. The dungeon's autonomous ceiling-drip plink follows the standard
+hidden-or-unfocused gate before touching the shared SFX context. Opening the
+Bathroom synchronously cancels Pouria's in-flight ambient
 or player cocktail make, so its queued pours and shaker rattles cannot bypass
 the boundary from the bar above. Cross-origin Vimeo also bypasses it as deliberate Cinema foreground
 media. A song still on native `<audio>` fallback cannot receive Web Audio

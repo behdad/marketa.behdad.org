@@ -44,7 +44,7 @@ check(s.dormant && s.dormant.props.length === 7 &&
   "all seven labelled dungeon controls stay outside the Tab order", s.dormant && s.dormant.props);
 check(s.cs && s.cs.length === 7 && s.cs.every(function (row) { return row[0] && row[0] === row[1]; }),
   "all dungeon labels switch to Czech", s.cs);
-check(s.props && /rattled/.test(s.props.window) && /dim/.test(s.props.left) &&
+check(s.props && /rattled/.test(s.props.window) && /snuffed/.test(s.props.left) &&
   /swung/.test(s.props.chain) && /thudded/.test(s.props.ledge) && /shifted/.test(s.props.stone),
   "window, torch, chain, ledge, and loose stone visibly react", s.props);
 check(s.started && s.started.frame && s.started.src === "princejs/index.html" &&

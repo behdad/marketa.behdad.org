@@ -42,12 +42,12 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.upstairs && s.upstairs.acoustics.room === "upstairs" &&
   s.upstairs.acoustics.gain === 1 && s.upstairs.acoustics.cutoff === 20000,
   "the main floor keeps the continuous loft bus at unity and full bandwidth", s.upstairs);
-["dungeon", "cinema"].forEach(function (room) {
-  check(s[room] && s[room].acoustics ? s[room].acoustics.room === "lower" &&
-    s[room].acoustics.gain === 0.48 && s[room].acoustics.cutoff === 2400 :
-    s[room] && s[room].room === "lower" && s[room].gain === 0.48 && s[room].cutoff === 2400,
-    room + " uses the shared quieter, muffled lower-floor profile", s[room]);
-});
+check(s.dungeon && s.dungeon.room === "dungeon" && s.dungeon.gain === 0.48 &&
+  s.dungeon.cutoff === 2400 && s.dungeon.reverb === 1.9,
+  "Dungeon adds its long stone-tail reverb to the quieter, muffled profile", s.dungeon);
+check(s.cinema && s.cinema.room === "cinema" && s.cinema.gain === 0.48 &&
+  s.cinema.cutoff === 2400 && s.cinema.reverb === 0,
+  "Cinema keeps the dry quieter, muffled lower-floor profile", s.cinema);
 check(s.bedroom && s.bedroom.room === "bedroom" &&
   s.bedroom.gain === 0.40 && s.bedroom.cutoff === 2400,
   "Bedroom retains the moderate filter with a modestly quieter gain", s.bedroom);
@@ -73,6 +73,9 @@ var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check(/out\.connect\(lowerFloorAudioOutput\(ac\)\)/.test(source) &&
   /eqAnalyser\.connect\(lowerFloorAudioOutput\(eqAudioCtx\)\)/.test(source),
   "continuous synth beds and captured songs share one lower-floor boundary stage");
+check(/__lowerFloorFilter\.connect\(__lowerFloorReverb\)/.test(source) &&
+  /__lowerFloorReverb\.connect\(__lowerFloorReverbWet\)/.test(source),
+  "the dungeon reverb is a wet branch on the existing shared boundary");
 check((source.match(/new Ctx\(\)/g) || []).length === 1,
   "lower-floor modeling creates no additional AudioContext");
 

@@ -25,7 +25,7 @@ var HARNESS = [
   ' report.steps.down={state:window.__bathroomRoomState(),room:window.currentStageName,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("bathroom-room-open"),geometry:{room:[roomBox.left,roomBox.top,roomBox.width,roomBox.height],viewport:[viewBox.left,viewBox.top,viewBox.width,viewBox.height],kitchenBottom:kitchenBox.bottom,controls:{bathroom:[parseFloat(bathroomCloseStyle.width),parseFloat(bathroomCloseStyle.height),parseFloat(bathroomCloseStyle.right),parseFloat(bathroomCloseStyle.top)],cinema:[parseFloat(cinemaCloseStyle.width),parseFloat(cinemaCloseStyle.height),parseFloat(cinemaCloseStyle.right),parseFloat(cinemaCloseStyle.top)],prince:[parseFloat(princeCloseStyle.width),parseFloat(princeCloseStyle.height),parseFloat(princeCloseStyle.right),parseFloat(princeCloseStyle.top)]}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility],images:room.querySelectorAll("img").length};',
   ' var props=Array.from(room.querySelectorAll("[data-bath-action]"));setLang("cs");report.steps.cs={room:room.getAttribute("aria-label"),close:document.getElementById("bathroom-room-close").getAttribute("aria-label"),props:props.map(function(el){return el.getAttribute("aria-label");})};setLang("en");',
   ' props.forEach(function(el,index){click(el);keyOn(el,index%2?" ":"Enter");});report.steps.props={count:props.length,roles:props.map(function(el){return [el.id,el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("title")];}),state:window.__bathroomInteractionState()};',
-  ' var tub=document.getElementById("bathroom-tub"),bubbles=Array.from(room.querySelectorAll("[data-bath-bubble]"));click(tub);var bubbleStart=window.__bathroomInteractionState();bubbles.forEach(click);var bubbleDone=window.__bathroomInteractionState();click(tub);var bubbleReset=window.__bathroomInteractionState();report.steps.bubbles={count:bubbles.length,roles:bubbles.map(function(el){return [el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("aria-label")];}),start:bubbleStart.bubbles,done:bubbleDone.bubbles,reset:bubbleReset.bubbles};',
+  ' var tub=document.getElementById("bathroom-tub"),bubbles=Array.from(room.querySelectorAll("[data-bath-bubble]"));click(tub);var bubbleStart=window.__bathroomInteractionState();bubbles.forEach(click);var bubbleDone=window.__bathroomInteractionState();click(tub);var bubbleReset=window.__bathroomInteractionState();report.steps.bubbles={count:bubbles.length,roles:bubbles.map(function(el){var hit=el.querySelector(".bathroom-bubble-hit");return [el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("aria-label"),!!hit,hit&&getComputedStyle(hit).r];}),start:bubbleStart.bubbles,done:bubbleDone.bubbles,reset:bubbleReset.bubbles};',
   ' key("Enter");var enterOnce={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};key("Enter");var enterTwice={filled:room.classList.contains("tub-filled"),state:window.__bathroomInteractionState()};click(tub);report.steps.enterTub={once:enterOnce,twice:enterTwice};',
   ' var scale=document.getElementById("bathroom-scale-action");click(scale);var scaleSpike=document.getElementById("bathroom-scale-reading").textContent;await sleep(380);var scaleOn=window.__bathroomInteractionState();click(scale);var scaleOff=window.__bathroomInteractionState();click(scale);await sleep(380);',
   ' var stool=document.getElementById("bathroom-stool"),stoolPosition=document.getElementById("bathroom-stool-position"),art=document.getElementById("bathroom-room-art");',
@@ -56,7 +56,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html bathroom room:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true });
+var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true, forceHybridPointer: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
@@ -91,7 +91,8 @@ check(s.props && propNames.every(function (name) { return s.props.state.hits[nam
   "every bathroom prop responds once to click and once to Enter or Space", s.props && s.props.state);
 check(s.bubbles && s.bubbles.count === 8 &&
   s.bubbles.roles.every(function (row) {
-    return row[0] === "button" && row[1] === null && row[2] === "Pop bubble";
+    return row[0] === "button" && row[1] === null && row[2] === "Pop bubble" &&
+      row[3] && row[4] === "16px";
   }),
   "the finite bubble hunt exposes eight labelled targets outside the Tab order", s.bubbles);
 check(s.bubbles && s.bubbles.start.active && s.bubbles.start.popped === 0 &&
@@ -168,6 +169,8 @@ check(s.dot && !s.dot.source.open && s.dot.source.hidden && s.dot.room === "balc
   "a room dot stays downstairs and pans to Entrance while keeping dot focus", s.dot);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
+check(/@media \(any-pointer:coarse\)\{\.bathroom-bubble-hit\{r:40px\}\}/.test(source),
+  "coarse pointers receive expanded bubble hit circles");
 ["bathroom-sink", "bathroom-mirror-action", "bathroom-tub", "bathroom-waffle-towel",
  "bathroom-stool", "bathroom-scale", "bathroom-cabinet-action",
  "bathroom-toilet-action"].forEach(function (id) {

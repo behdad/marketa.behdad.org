@@ -243,7 +243,8 @@ gameplay messages finish before that room caption appears.
   shift. Forward gears top out progressively at roughly 60, 100, 150, 200, 250,
   and 300 km/h. The pedals and H-pattern shifter also work directly. A clutchless
   keyboard shift grinds and falls back to neutral, while a hard fast stop leaves
-  a brief pair of tire marks. The dashboard's compact driving score stays with
+  a brief pair of tire marks. At high speed, braking while steering can send the car
+  into a directional 180-degree spin. The dashboard's compact driving score stays with
   the car and subtly picks up as the street does. At 24°C or warmer outside, a
   running dashboard visibly and audibly blows cool air through both vents.
   Hold the dashboard horn to get a small warm answer from the building door.

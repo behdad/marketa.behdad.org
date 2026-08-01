@@ -32758,6 +32758,7 @@ window.__bathroomRoomOpen = false;
     closeTimer = null;
     closing = false;
     window.__bathroomRoomOpen = true;
+    if (window.__hideCallRing) window.__hideCallRing();
     if (window.__bartenderRoomAway) window.__bartenderRoomAway();
     if (window.__resetMixer) window.__resetMixer();
     if (window.__homeCatLower) window.__homeCatLower("bathroom");
@@ -33369,6 +33370,7 @@ window.__cinemaVideoLoaded = false;
     cinemaClosing = false;
     resetCinemaCushions();
     window.__cinemaRoomOpen = true;
+    if (window.__hideCallRing) window.__hideCallRing();
     if (window.__homeCatLower) window.__homeCatLower("cinema");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     syncCuddlyOccupants(true);
@@ -35585,6 +35587,7 @@ window.__entranceRoomOpen = false;
     else if (driveState.position > 300) driveState.position = 275;
     paintPorscheDrivePosition();
     window.__entranceRoomOpen = true;
+    if (window.__hideCallRing) window.__hideCallRing();
     paintPorscheDriveHud();
     updatePorscheDriveLifecycle();
     if (window.__homeCatLower) window.__homeCatLower("entrance");
@@ -36415,6 +36418,7 @@ window.__bedroomRoomOpen = false;
     syncSleep();
     if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(true);
     window.__bedroomRoomOpen = true;
+    if (window.__hideCallRing) window.__hideCallRing();
     if (window.__homeCatLower) window.__homeCatLower("bedroom");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     room.hidden = false;
@@ -70185,6 +70189,7 @@ async def localfont(name):
     if (window.__stopAutoplay) window.__stopAutoplay();
     stopSaver();
     princeMode = "basement";
+    if (window.__hideCallRing) window.__hideCallRing();
     princeClosing = false;
     presentPrinceBasement();
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, 1);
@@ -80500,6 +80505,12 @@ async def localfont(name):
     var madlaRingCount = 0;
     var callRingForced = false; // explicit script/outlet calls may bypass the autonomous phase/party gate
     var callRingEl = null, callRingHideT = null, callRingT = [];
+    function downstairsRejectsIncomingCalls() {
+      if (window.__cinemaRoomOpen || window.__bathroomRoomOpen ||
+          window.__bedroomRoomOpen || window.__entranceRoomOpen) return true;
+      var princeState = window.__princeState && window.__princeState();
+      return !!(princeState && princeState.basement);
+    }
     function clearCallRingTimers() { callRingT.forEach(clearTimeout); callRingT = []; }
     function hideCallRing() {
       clearCallRingTimers();
@@ -80511,6 +80522,7 @@ async def localfont(name):
     // Answers whoever the card is currently showing — read at click time, so the one listener
     // bound to the card serves every caller.
     function answerRing() {
+      if (downstairsRejectsIncomingCalls()) { hideCallRing(); return false; }
       var who = callRingWho;
       var forced = callRingForced;
       hideCallRing();
@@ -80535,7 +80547,7 @@ async def localfont(name):
     function showCallRing(who, forced) {
       callRingWho = RING_CALLERS[who] ? who : "madla";
       callRingForced = !!forced;
-      if (document.hidden || !document.hasFocus()) return; // unattended → they'd call back; no ghost ring
+      if (document.hidden || !document.hasFocus() || downstairsRejectsIncomingCalls()) return; // unattended/downstairs → they'd call back; no ghost ring
       if (callRingUp() || callee || anyExternalCall() || isOpen()) return; // don't ring over a live call or an open phone
       var host = document.querySelector(".hunt-viewport") || document.body;
       if (!callRingEl) {
@@ -80566,6 +80578,7 @@ async def localfont(name):
       for (var s = 1; s <= 12; s++) (function (n) {
         callRingT.push(setTimeout(function () {
           if (!callRingUp() || callee) return;
+          if (downstairsRejectsIncomingCalls()) { hideCallRing(); return; }
           if (!document.hidden && document.hasFocus()) playPhoneRingSound("balcony-phone");
         }, n * 1150));
       })(s);
@@ -80576,7 +80589,7 @@ async def localfont(name):
     // trigger an incoming ring (used by both schedules + the madla()/saturday() console hooks).
     // Refuses while a call's already live or the phone's open (they'd just get a busy tone).
     function ringCall(who, forced) {
-      if (callee || anyExternalCall() || isOpen() || callRingUp()) return false;
+      if (downstairsRejectsIncomingCalls() || callee || anyExternalCall() || isOpen() || callRingUp()) return false;
       if (who === "madla" && madlaRingCount >= 2) return false;
       showCallRing(who, forced);
       if (who === "madla" && callRingUp()) madlaRingCount++;

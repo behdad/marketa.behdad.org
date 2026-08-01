@@ -244,10 +244,12 @@ check(s.closed && !s.closed.covered && s.closed.messages.every(function(value){r
   s.closed && {covered:s.closed.covered,messages:s.closed.messages});
 check(s.closed && s.closed.state && !s.closed.state.reacting.length,
   "leaving Entrance clears every in-flight prop reaction", s.closed && s.closed.state);
-check(s.closed && s.closed.state && !s.closed.state.car.roofOpen && !s.closed.state.car.doorOpen &&
-  !s.closed.state.car.frunkOpen && !s.closed.state.car.trunkOpen && !s.closed.state.car.engineOn &&
-  !s.closed.state.car.headlightOn && !s.closed.state.car.taillightOn,
-  "leaving Entrance returns the Boxster to its safe initial state", s.closed && s.closed.state.car);
+check(s.closed && s.closed.state && s.held && s.held.state &&
+  ["roofOpen","doorOpen","frunkOpen","trunkOpen","engineOn","headlightOn","taillightOn"].every(function(key){
+    return s.closed.state.car[key] === s.held.state.car[key];
+  }) && !s.closed.state.car.idleActive && !s.closed.state.car.vibrating,
+  "leaving Entrance preserves settled Boxster switches while parking idle and tremor",
+  {before:s.held&&s.held.state&&s.held.state.car,after:s.closed&&s.closed.state&&s.closed.state.car});
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="prince-basement"/) || [""])[0];
@@ -282,7 +284,7 @@ check(/id="entrance-porsche-full-seats">[\s\S]*?id="entrance-porsche-passenger-s
   "one permanent full-height seat stack layers passenger, tunnel, then driver behind the physical door");
 check(/id="entrance-porsche-front-running-lamp"/.test(entrance) &&
   /id="entrance-porsche-rear-running-lamp"/.test(entrance) &&
-  /var porscheIdleNodes = null/.test(source) && !/porscheIdleCtx|porscheIdleNodes\._/.test(source),
+  /var porscheIdleNodes = null/.test(source) && !/porscheIdleCtx|porscheIdleNodes\._|idle\.bed\.close/.test(source),
   "running lamps use separate dimensional housings and idle owns nodes rather than the shared context");
 check(/id="entrance-intercom"[^>]*>[\s\S]{0,180}?class="entrance-hit" x="400\.2" y="240\.7" width="8\.6" height="7\.6"/.test(entrance) &&
   /reacting\[data-entrance-action="intercom"\] \.entrance-intercom-lens/.test(source) &&

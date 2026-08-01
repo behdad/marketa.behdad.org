@@ -294,6 +294,10 @@ Conditionally rendered keepsakes carry their effective date and restore only aft
 has rendered the matching scene again; a mismatch settles the scene's fresh default.
 Device checkpoints store physical shell state rather than painted app activity; restored shells land
 on a normal desktop or launcher so their next action always follows the ordinary fresh path.
+The Entrance `entrance` row restores in `afterStage`, after daylight has established the facade's
+fresh defaults but before the saved lower room opens. It retains the five-window bitset, two
+independent wall lamps, and seven settled Porsche switches; indicator flashes, reactions, audio
+nodes, and tremor remain runtime-only and derive again from the restored engine and room/focus gates.
 Completing the phone's lock immediately schedules a checkpoint for the current visit. A page-load
 Continue deliberately discards only that authentication bit, so an open restored phone asks for
 the PIN again while its separately owned messages, photos, layout, and compact app data survive.

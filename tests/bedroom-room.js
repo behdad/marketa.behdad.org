@@ -16,7 +16,7 @@ var HARNESS = [
   'function propkey(el,name){el.focus();el.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'function box(el){var r=el.getBoundingClientRect();return [r.left,r.top,r.width,r.height];}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__markLowerRoomDiscovered();',
   ' var room=document.getElementById("bedroom-room"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip"),office=document.getElementById("stage-office");room.style.transition="none";viewport.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__setDayNight(false);await sleep(100);',
   ' key("ArrowDown");await sleep(780);var roster=document.querySelector(".roster-panel"),rosterToggle=document.querySelector(".roster-toggle"),rosterBackdrop=document.querySelector(".roster-backdrop");roster.classList.add("show");rosterBackdrop.classList.add("show");',
   ' var badge=document.querySelector(".msg-badge"),coach=document.querySelector(".msg-badge-coach"),thumb=document.querySelector(".msg-thumb"),ring=document.querySelector(".call-ring");[badge,coach,thumb,ring].forEach(function(el){if(el)el.classList.add("show");});',

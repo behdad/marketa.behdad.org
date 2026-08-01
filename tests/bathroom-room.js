@@ -16,7 +16,7 @@ var HARNESS = [
   'function keyOn(el,name){el.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'function surface(cls){var el=document.createElement("div");el.className=cls;el.style.display="block";el.style.opacity="1";document.querySelector(".hunt-viewport").appendChild(el);return el;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__markLowerRoomDiscovered();',
   ' var room=document.getElementById("bathroom-room"),art=document.getElementById("bathroom-room-art"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip"),lowerTrack=document.getElementById("lower-room-track");room.style.transition="none";strip.style.transition="none";viewport.style.transition="none";',
   ' var roster=document.querySelector(".roster-panel"),rosterToggle=document.querySelector(".roster-toggle"),rosterBackdrop=document.querySelector(".roster-backdrop");roster.classList.add("show");rosterBackdrop.classList.add("show");rosterToggle.classList.add("avail");',
   ' var badge=surface("msg-badge show"),coach=surface("msg-badge-coach show"),thumb=surface("msg-thumb show"),call=surface("call-ring show");',

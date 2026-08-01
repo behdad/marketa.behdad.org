@@ -645,6 +645,8 @@ footer{margin-top:2.6rem}
 .entrance-car-control .entrance-car-hit{
   fill:transparent;stroke:transparent;stroke-width:1.7;vector-effect:non-scaling-stroke;
 }
+.entrance-porsche-drag-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:grab}
+#entrance-porsche.is-dragging .entrance-porsche-drag-hit{cursor:grabbing}
 #entrance-porsche-roof-closed{
   transform-box:view-box;transform-origin:270px 256px;
   transition:transform .42s cubic-bezier(.45,0,.2,1),opacity .24s ease;
@@ -31713,7 +31715,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <rect class="entrance-drive-hit" x="125" y="117" width="39" height="54" rx="5"/>
             </g>
           </g>
-          <g id="entrance-drive-steering" pointer-events="none" transform="translate(277 93.5) scale(1.1 1.15) translate(-277 -107)">
+          <g id="entrance-drive-steering" pointer-events="none" transform="translate(277 95.9) scale(1.1 1.1845) translate(-277 -107)">
             <ellipse cx="277" cy="107" rx="78" ry="69" fill="none" stroke="#5c3d2d" stroke-width="16" opacity=".72"/>
             <ellipse cx="277" cy="107" rx="76" ry="67" fill="none" stroke="url(#entrance-drive-leather-hi)" stroke-width="12"/>
             <path d="M214 78A76 67 0 0 1 326 59" fill="none" stroke="#f2d4b1" stroke-width="2.4" stroke-linecap="round" opacity=".48"/>
@@ -33508,6 +33510,7 @@ window.__entranceRoomOpen = false;
   var closing = false;
   var props = room ? Array.prototype.slice.call(room.querySelectorAll(".entrance-prop")) : [];
   var porsche = document.getElementById("entrance-porsche");
+  var porscheDragHit = porsche ? porsche.querySelector(".entrance-porsche-drag-hit") : null;
   var carControls = room ? Array.prototype.slice.call(room.querySelectorAll(".entrance-car-control")) : [];
   var driveHud = document.getElementById("entrance-drive-hud");
   var driveControls = driveHud ? Array.prototype.slice.call(driveHud.querySelectorAll(".entrance-drive-control")) : [];
@@ -33757,7 +33760,7 @@ window.__entranceRoomOpen = false;
     if (!porscheState.engineOn) return "entrance_drive_ignition_hint";
     if (!driveState.gear) return "entrance_drive_neutral_hint";
     if (driveState.gear > 0 && driveState.gear < 6 && driveState.rpm >= 4500) return "entrance_drive_shift_up";
-    if (driveState.gear > 1 && driveState.rpm < 2000 && Math.abs(driveState.speed) > 4) return "entrance_drive_shift_down";
+    if (driveState.gear > 2 && driveState.rpm < 2000 && Math.abs(driveState.speed) > 4) return "entrance_drive_shift_down";
     return "entrance_drive_manual";
   }
   function syncPorscheDriveInstruction(force) {
@@ -33811,7 +33814,7 @@ window.__entranceRoomOpen = false;
       porscheFrontWheelSteer.setAttribute("transform", "rotate(" + roadWheelTurn.toFixed(2) + ") scale(" + roadWheelNarrowing.toFixed(3) + " 1)");
     }
     if (driveSteering) {
-      driveSteering.setAttribute("transform", "translate(277 93.5) scale(1.1 1.15) translate(-277 -107) rotate(" +
+      driveSteering.setAttribute("transform", "translate(277 95.9) scale(1.1 1.1845) translate(-277 -107) rotate(" +
         driveState.steeringAngle.toFixed(2) + " 277 107)");
     }
   }
@@ -33867,10 +33870,11 @@ window.__entranceRoomOpen = false;
     if (!porscheDrag.active) return;
     porscheDrag.active = false;
     porscheDrag.pointerId = null;
+    if (porsche) porsche.classList.remove("is-dragging");
     if (window.__checkpointChanged) window.__checkpointChanged();
   }
   function startPorscheDrag(event) {
-    if (!porsche || driveState.hudOpen || event.button !== undefined && event.button !== 0) return;
+    if (!porsche || event.button !== undefined && event.button !== 0) return;
     var wheel = event.target && event.target.closest ? event.target.closest(".entrance-porsche-wheel") : null;
     if (wheel) return;
     var svg = porsche.ownerSVGElement;
@@ -33883,6 +33887,7 @@ window.__entranceRoomOpen = false;
     porscheDrag.startPosition = driveState.position;
     porscheDrag.startLane = driveState.laneOffset;
     event.preventDefault();
+    if (porsche) porsche.classList.add("is-dragging");
     if (porsche.setPointerCapture && event.pointerId !== undefined) {
       try { porsche.setPointerCapture(event.pointerId); } catch (_error) {}
     }
@@ -35346,7 +35351,7 @@ window.__entranceRoomOpen = false;
     });
   });
   if (porsche) {
-    porsche.addEventListener("pointerdown", startPorscheDrag);
+    porsche.addEventListener("pointerdown", startPorscheDrag, true);
     porsche.addEventListener("pointermove", movePorscheDrag);
     porsche.addEventListener("pointerup", finishPorscheDrag);
     porsche.addEventListener("pointercancel", finishPorscheDrag);
@@ -37146,8 +37151,8 @@ var T = {
       lower_entrance: "Fancy-Stupid! · let’s go for a ride.",
       entrance_drive_manual: "Let’s drive manual.",
       entrance_drive_neutral_hint: "Let’s drive manual · put it in gear.",
-      entrance_drive_shift_up: "Shift up · it wants another gear.",
-      entrance_drive_shift_down: "Shift down · give the engine some leverage.",
+      entrance_drive_shift_up: "Shift ↑ · it wants another gear.",
+      entrance_drive_shift_down: "Shift ↓ · give the engine some leverage.",
       entrance_drive_ignition_hint: "Start the ignition. The key is on the left.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
       kitchen_grind: "Now grind coffee.",
@@ -37610,7 +37615,7 @@ var T = {
     life_gen: "GEN",
     life_help: "How to play",
     life_help_title: "Conway’s Game of Life",
-    life_help_copy: "A cell is born with 3 neighbours and survives with 2 or 3. Draw cells, then play, step, change speed, or try a pattern. Space pauses.",
+    life_help_copy: "A zero-player game: once you draw a starting pattern, the rules run it for you. A cell is born with 3 neighbours and survives with 2 or 3. Draw cells, then play, step, change speed, or try a pattern. Space pauses. <a href=\"https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life\" target=\"_blank\" rel=\"noopener\">Wikipedia</a>.",
     life_help_back: "Back",
     tehran_place: "Tehran",
     california_place: "California",
@@ -38505,8 +38510,8 @@ var T = {
       lower_entrance: "Fancy-Stupid! · pojeďme se projet.",
       entrance_drive_manual: "Jeďme s manuálem.",
       entrance_drive_neutral_hint: "Jeďme s manuálem · zařaď rychlost.",
-      entrance_drive_shift_up: "Přeřaď výš · chce další rychlost.",
-      entrance_drive_shift_down: "Přeřaď níž · dej motoru víc síly.",
+      entrance_drive_shift_up: "Shift ↑ · chce další rychlost.",
+      entrance_drive_shift_down: "Shift ↓ · dej motoru víc síly.",
       entrance_drive_ignition_hint: "Nastartuj. Klíček je vlevo.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
       kitchen_grind: "Teď umel kávu.",
@@ -38966,7 +38971,7 @@ var T = {
     life_gen: "GEN",
     life_help: "Jak hrát",
     life_help_title: "Conwayova Hra života",
-    life_help_copy: "Buňka se narodí se 3 sousedy a přežije se 2 nebo 3. Nakreslete buňky, pak spusťte hru, krokujte, změňte rychlost nebo zkuste vzor. Mezerník pozastaví hru.",
+    life_help_copy: "Hra pro nulového hráče: po nakreslení počátečního vzoru pravidla běží sama. Buňka se narodí se 3 sousedy a přežije se 2 nebo 3. Nakreslete buňky, pak spusťte hru, krokujte, změňte rychlost nebo zkuste vzor. Mezerník pozastaví hru. <a href=\"https://cs.wikipedia.org/wiki/Conwayova_hra_%C5%BEivota\" target=\"_blank\" rel=\"noopener\">Wikipedie</a>.",
     life_help_back: "Zpět",
     tehran_place: "Teherán",
     california_place: "Kalifornie",

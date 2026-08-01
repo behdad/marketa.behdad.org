@@ -34312,13 +34312,18 @@ window.__foregroundAmbienceCovered = function () {
 window.__roomAmbienceCovered = function () {
   return window.__foregroundAmbienceCovered() || !!window.__cinemaRoomOpen || !!window.__bathroomRoomOpen ||
     !!window.__bedroomRoomOpen || !!window.__entranceRoomOpen ||
-    false;
+    !!(window.__princeState && window.__princeState().basement);
+};
+window.__roomAutonomyAllowed = function (room) {
+  return window.currentStageName === room && !document.hidden &&
+    document.visibilityState !== "hidden" && document.hasFocus() &&
+    !window.__roomAmbienceCovered();
 };
 window.__refreshRoomAmbience = function () {
   ["__updateFireSound", "__updateAquaSound", "__updateTotoroSound",
      "__updateGardenBirdsong", "__updateKettleHum", "__updateRadioSound",
      "__updatePcFan", "__updateCinemaProjectorHum", "__updateACHum", "__updateCityHum",
-     "__updatePorscheIdle"].forEach(function (name) {
+     "__updateWind", "__updateRainSound", "__updatePorscheIdle"].forEach(function (name) {
     try { if (typeof window[name] === "function") window[name](); } catch (_error) {}
   });
 };
@@ -81217,12 +81222,8 @@ async def localfont(name):
     return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
   }
   function cityHumWant() {
-    // hasFocus: continuous-bed rule, see __updateKettleHum (the ~1s poll below
-    // picks the change up without any blur/focus listener)
-    if (document.hidden || !document.hasFocus() ||
-        (window.__roomAmbienceCovered && window.__roomAmbienceCovered())) return null;
-    if (window.currentStageIndex === 4) return "balcony";
-    if (window.currentStageIndex === 2 && cuddlyDoorOpen()) return "cuddly";
+    if (window.__roomAutonomyAllowed("balcony")) return "balcony";
+    if (window.__roomAutonomyAllowed("cuddly") && cuddlyDoorOpen()) return "cuddly";
     return null;
   }
   function startCityHum(where) {
@@ -81343,10 +81344,8 @@ async def localfont(name):
     return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
   }
   function windWant() {
-    // hasFocus: continuous-bed rule, see __updateKettleHum (picked up by the poll)
-    if (document.hidden || !document.hasFocus()) return null;
-    if (window.currentStageIndex === 4) return "balcony";
-    if (window.currentStageIndex === 2 && cuddlyDoorOpenForWind()) return "cuddly";
+    if (window.__roomAutonomyAllowed("balcony")) return "balcony";
+    if (window.__roomAutonomyAllowed("cuddly") && cuddlyDoorOpenForWind()) return "cuddly";
     return null;
   }
   function windTarget(stormy) {
@@ -81507,13 +81506,8 @@ async def localfont(name):
     return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
   }
   function want() {
-    // hidden OR unfocused = unattended: each ring is a one-shot context of its own,
-    // and an unattended-but-"visible" window (covered on X11 — no occlusion
-    // detection) would otherwise ring them forever; same rule as the crickets/crane
-    if (document.hidden || !document.hasFocus()) return null;
-    if (window.__entranceRoomOpen) return null;
-    if (window.currentStageIndex === 4) return "balcony";
-    if (window.currentStageIndex === 2 && cuddlyDoorOpenForChime()) return "cuddly";
+    if (window.__roomAutonomyAllowed("balcony")) return "balcony";
+    if (window.__roomAutonomyAllowed("cuddly") && cuddlyDoorOpenForChime()) return "cuddly";
     return null;
   }
   function tick() {
@@ -82034,7 +82028,7 @@ async def localfont(name):
     return null;
   }
   function hisFire() { return !!fireFest(); }
-  function onScreen() { return window.currentStageName === "balcony" && !document.hidden; }
+  function onScreen() { return window.__roomAutonomyAllowed("balcony"); }
   // Jostling the brazier fans its embers. The wisps go into the wobble wrapper's PARENT, not the
   // wrapper: they're placed by view-box coords, and the wrapper is rotating at exactly this moment
   // — a child would ride the rock instead of rising straight. Stagger rides WAAPI `delay`, never a
@@ -82176,7 +82170,7 @@ async def localfont(name):
   function landKid(el, animName) {
     el.addEventListener("animationend", function (e) {
       if (e.animationName !== animName) return;
-      if (!(document.hidden || !document.hasFocus())) playGiggleSound(el.id);
+      if (window.__roomAutonomyAllowed("balcony")) playGiggleSound(el.id);
       function finishLanding() {
         if (rosterHoldsOccupants()) { clearTimer = setTimeout(finishLanding, 1000); return; }
         el.classList.remove("showing"); // fade the kid out from the landing pose...
@@ -82408,7 +82402,7 @@ async def localfont(name):
     return null;
   }
   function hisFire() { return !!fireFest(); }
-  function onScreen() { return window.currentStageName === "balcony" && !document.hidden; }
+  function onScreen() { return window.__roomAutonomyAllowed("balcony"); }
   var showTimer = null, clearTimer = null;
   function leap(userInitiated) {
     if (!hisFire() || !onScreen() || couple.classList.contains("showing")) return;
@@ -82426,7 +82420,7 @@ async def localfont(name):
   // breath for the pair, not one each: they land as one composition.
   couple.addEventListener("animationend", function (e) {
     if (e.animationName !== "balcony-couple-leap") return;
-    if (!(document.hidden || !document.hasFocus())) playSatisfiedExhaleSound("balcony-couple");
+    if (window.__roomAutonomyAllowed("balcony")) playSatisfiedExhaleSound("balcony-couple");
     function finishLanding() {
       if (rosterHoldsOccupants()) { clearTimer = setTimeout(finishLanding, 1000); return; }
       couple.classList.remove("showing"); // fade them out from the landing pose...
@@ -85297,7 +85291,7 @@ function spawnCrystalSparkle() {
   function reducedMotion() {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
-  function attended() { return !document.hidden && document.hasFocus(); }
+  function attended() { return !!fwRoom && window.__roomAutonomyAllowed(fwRoom); }
   function mk(host, tag, attrs) {
     var e = document.createElementNS(SVGNS, tag);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
@@ -85492,7 +85486,7 @@ function spawnCrystalSparkle() {
   var FW_COLORS = ["#f5b8c8", "#f7d97a", "#a8c4d4", "#d9a6a6", "#7f9ec0", "#f0c86a", "#e88fa6", "#b6e3c4", "#c9a6e8"];
   function reducedMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function onBalcony() { return window.currentStageName === "balcony"; }
-  function attended() { return !document.hidden && document.hasFocus(); } // crickets rule for the autonomous spawner + its sound
+  function attended() { return window.__roomAutonomyAllowed("balcony"); }
   function mk(host, cls, tag, attrs) {
     var e = document.createElementNS(SVGNS, tag);
     for (var k in attrs) e.setAttribute(k, attrs[k]);
@@ -85749,7 +85743,7 @@ function spawnCrystalSparkle() {
   // tab never fires (nothing accumulates; the shows self-tear-down on room-leave/reset).
   (function autoSky() {
     var t = null;
-    function want() { return !!window.__gardenPartyOn && window.currentStageName === "balcony" && !document.hidden && document.hasFocus(); }
+    function want() { return !!window.__gardenPartyOn && window.__roomAutonomyAllowed("balcony"); }
     function tick() {
       t = setTimeout(function () {
         t = null;
@@ -93352,7 +93346,7 @@ function spawnDustMote(container) {
     // warm bell melody heralds the rainbow, just before it bursts at 4200 — gate at
     // FIRE time, not arrival: these timers outlive a quick room-change/blur, and an
     // unattended window shouldn't get a surprise melody (crickets/crane rule)
-    finaleTimers.push(setTimeout(function () { if (document.hasFocus()) playFinishMelody(); }, 3800));
+    finaleTimers.push(setTimeout(function () { if (window.__roomAutonomyAllowed("balcony")) playFinishMelody(); }, 3800));
     if (rainbow) {
       finaleTimers.push(setTimeout(function () {
         rainbow.classList.remove("burst");
@@ -99878,8 +99872,7 @@ function spawnDustMote(container) {
     function tick() {
       var sb = document.getElementById("stage-balcony"), door = document.getElementById("balcony-door");
       if (sb && door && sb.classList.contains("storming") && door.classList.contains("open") &&
-          stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" &&
-          document.hasFocus()) { // unfocused = unattended one-shot, same rule as the crickets/crane
+          window.__roomAutonomyAllowed("balcony")) {
         playCreakSound("balcony-door");
       }
       setTimeout(tick, 7000 + Math.random() * 6000);
@@ -99902,7 +99895,7 @@ function spawnDustMote(container) {
     function onCentre(e) { // fires at true totality: the "in" half's end == moon dead-centre
       if (e.animationName !== "solar-transit-in") return; // ignore the "out" half / bubbled siblings
       moon.removeEventListener("animationend", onCentre);
-      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" && document.hasFocus()) spawnEclipseTotality(); // totality chime is a one-shot: skip it when unfocused too, not just hidden
+      if (window.__roomAutonomyAllowed("balcony")) spawnEclipseTotality();
     }
     if (moon) moon.addEventListener("animationend", onCentre);
     eclipseTimers.push(setTimeout(function () { // safety net: clear the class + listener even if the burst was skipped
@@ -99923,7 +99916,7 @@ function spawnDustMote(container) {
     function onCentre(e) { // the umbra's "in" half ends at dead-centre totality — same clock trick as the solar burst
       if (e.animationName !== "solar-transit-in") return; // ignore the "out" half / bubbled siblings
       umbra.removeEventListener("animationend", onCentre);
-      if (stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden" && document.hasFocus()) spawnLunarSparkles(); // totality chime one-shot: unfocused-safe too (defense-in-depth; this path is user-triggered)
+      if (window.__roomAutonomyAllowed("balcony")) spawnLunarSparkles();
     }
     if (umbra) umbra.addEventListener("animationend", onCentre);
     eclipseTimers.push(setTimeout(function () {
@@ -99946,14 +99939,19 @@ function spawnDustMote(container) {
     if (sb) sb.classList.remove("solar-eclipse", "lunar-eclipse");
   };
   (function scheduleSolarEclipse() {
-    var seen = false;
+    var firstOpportunity = true;
+    function eligible() {
+      var sb = document.getElementById("stage-balcony");
+      return !!(sb && !sb.classList.contains("dusk") &&
+        window.__roomAutonomyAllowed("balcony"));
+    }
     function arm() {
-      var delay = seen ? (45000 + Math.random() * 60000) : (12000 + Math.random() * 9000); // first one soon, then rare
+      var delay = firstOpportunity ?
+        (90000 + Math.random() * 90000) :
+        (300000 + Math.random() * 240000);
       setTimeout(function () {
-        var sb = document.getElementById("stage-balcony");
-        if (sb && !sb.classList.contains("dusk") && stageIndex === STAGES.indexOf("balcony") && document.visibilityState !== "hidden") {
-          runSolarEclipse(); seen = true;
-        }
+        firstOpportunity = false;
+        if (eligible()) runSolarEclipse();
         arm();
       }, delay);
     }
@@ -100342,10 +100340,9 @@ function spawnDustMote(container) {
       return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
     }
     function rainSoundWant() {
-      // hasFocus: continuous-bed rule, see __updateKettleHum (picked up by the poll)
-      if (!window.__wxRain || document.hidden || !document.hasFocus()) return null;
-      if (window.currentStageIndex === 4 && stageDusk("stage-balcony")) return "balcony";
-      if (window.currentStageIndex === 2 && stageDusk("stage-cuddly") && cuddlyDoorOpen()) return "cuddly";
+      if (!window.__wxRain) return null;
+      if (window.__roomAutonomyAllowed("balcony") && stageDusk("stage-balcony")) return "balcony";
+      if (window.__roomAutonomyAllowed("cuddly") && stageDusk("stage-cuddly") && cuddlyDoorOpen()) return "cuddly";
       return null;
     }
     function startRain(where) {
@@ -100484,12 +100481,12 @@ function spawnDustMote(container) {
   // the cuddly nook — the couple coughs (only felt while you're in that room).
   (function scheduleSmokeIntrusion() {
     var delay = 5000 + Math.random() * 4000;
+    function allowed() { return window.__roomAutonomyAllowed("cuddly"); }
     setTimeout(function () {
       var door = document.getElementById("balcony-door");
       var smk = document.getElementById("balcony-smoker");
       if (door && smk && door.classList.contains("open") && smk.classList.contains("smoking") &&
-          stageIndex === STAGES.indexOf("cuddly") && document.visibilityState !== "hidden" &&
-          document.hasFocus()) { // unfocused = unattended one-shots (coughs/sneeze), same rule as the crickets/crane
+          allowed()) {
         spawnSmokeDrift(strip, 1985, 150, 4, -1); // seeps in from the right (balcony side)
         // one coughs, then the other a beat later (random who goes first)
         function coughHead(id, pitch) {
@@ -100505,11 +100502,12 @@ function spawnDustMote(container) {
           ? [["cuddly-behdad-head", 0.9], ["cuddly-marketa-head", 1.18]]
           : [["cuddly-marketa-head", 1.18], ["cuddly-behdad-head", 0.9]];
         coughHead(pair[0][0], pair[0][1]);
-        setTimeout(function () { coughHead(pair[1][0], pair[1][1]); }, 480 + Math.random() * 260);
+        setTimeout(function () { if (allowed()) coughHead(pair[1][0], pair[1][1]); }, 480 + Math.random() * 260);
         // Octi sneezes and/or Fishu coughs up a bubble a beat later
         var extra = 1000;
         if (Math.random() < 0.65) {
           setTimeout(function () {
+            if (!allowed()) return;
             var o = document.getElementById("cuddly-octopus");
             if (o && !o.classList.contains("wobble")) {
               o.classList.remove("sneezing");
@@ -100523,6 +100521,7 @@ function spawnDustMote(container) {
         }
         if (Math.random() < 0.65) {
           setTimeout(function () {
+            if (!allowed()) return;
             // spawn inside Fishu's drifting group so the bubble tracks the mouth
             var pufferDrift = document.querySelector("#cuddly-puffer-wrap .puffer-drift");
             if (pufferDrift) spawnBubble(pufferDrift, 13.5, 1.7);
@@ -108324,7 +108323,7 @@ function spawnDustMote(container) {
       var ringAt = duration * (0.10 + (0.86 - 0.10) * 0.25); // ~29% into the total duration
       setTimeout(function () {
         if (!jumping || jumpAnim !== thisJump) return;
-        if (window.__ringWindchime) window.__ringWindchime(null, !document.hasFocus());
+        if (window.__ringWindchime) window.__ringWindchime(null, !window.__roomAutonomyAllowed(catRoom));
         if (catArt) {
           catArt.classList.remove("wobbling");
           requestAnimationFrame(function () {
@@ -108344,7 +108343,7 @@ function spawnDustMote(container) {
       setTimeout(function () {
         if (!jumping || jumpAnim !== thisStare) return;
         flickTail();
-        if (document.hasFocus()) playCatChatterSound();
+        if (window.__roomAutonomyAllowed(catRoom)) playCatChatterSound();
       }, duration * (0.10 + (0.86 - 0.10) * 0.25));
       setTimeout(function () {
         if (!jumping || jumpAnim !== thisStare) return;

@@ -8,7 +8,8 @@
 //   • .mon-ctx — every other real app (mail, chat, weather, classics, music, video, …) plus shoot
 //     (a game iframe, no copy/paste) gets this standalone menu. Desktop Kill is available only
 //     after launch and reuses the app's in-app themed hook.
-// Every custom menu ends with a separated whole-loft Start over; app-level Restart is intentionally absent.
+// Every non-empty custom menu ends with a separated whole-loft Start over; app-level Restart is
+// intentionally absent, and empty shells stay suppressed.
 // Kill on a self-hosted runtime (doom/python/linux) is DISABLED until the runtime is
 // actually running — the running predicates (__doomRunning/__pyRunning/__lxRunning) are
 // window-exposed so this harness can flip them (it can't boot the real WASM runtimes,
@@ -50,6 +51,7 @@ var HARNESS = [
   "    S('desktop_ctx_prevented', ctxAt(mon()));",     // should be false — native menu kept
   "    S('desktop_no_mon_menu', !monMenu());",
   "    S('desktop_no_cc_menu', !ccMenu());",
+  "    var emptyMenu=document.createElement('div');emptyMenu.className='mon-ctx';emptyMenu.setAttribute('role','menu');document.body.appendChild(emptyMenu);if(window.__augmentContextMenus)window.__augmentContextMenus();S('empty_menu_suppressed',!emptyMenu.querySelector('button')&&getComputedStyle(emptyMenu).display==='none');emptyMenu.remove();",
   // The Loft OS dropdown is mouse-modal: the first outside click dismisses it without
   // activating the desktop app underneath.
   "    var sysBrand=document.getElementById('monitor-system-brand'), coveredMail=document.getElementById('monitor-dock-mail');",
@@ -325,6 +327,7 @@ var s = rep.steps;
 console.log("monitor right-click Kill/Start over menus + runtime helpers + shared fullscreen:");
 console.log(" desktop (no app open):");
 check("right-click on the bare monitor desktop eats the native menu, shows no custom menu", s.desktop_ctx_prevented === true && s.desktop_no_mon_menu === true && s.desktop_no_cc_menu === true, { prevented: s.desktop_ctx_prevented, mon: !s.desktop_no_mon_menu, cc: !s.desktop_no_cc_menu });
+check("empty menu shells stay hidden and receive no Start over action", s.empty_menu_suppressed === true, s.empty_menu_suppressed);
 check("outside click dismisses the Loft OS menu without activating the covered app", s.system_menu_opened === true && s.system_menu_outside_dismissed === true && s.system_menu_outside_blocked_app === true, { opened: s.system_menu_opened, dismissed: s.system_menu_outside_dismissed, blocked: s.system_menu_outside_blocked_app });
 console.log(" non-runtime apps (mail/chat/weather/classics/music) — Kill only, enabled, no Restart:");
 check("every sampled non-runtime app shows exactly an enabled Kill, no Restart", s.nonruntime_kill_only_enabled === true, s.nonruntime_detail);

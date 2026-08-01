@@ -13,20 +13,26 @@ var HARNESS = [
   "function ctxView(el){var r=document.querySelector('.hunt-viewport').getBoundingClientRect();return ctx(el,r.left+r.width/2,r.top+r.height/2);}",
   "function items(){return window.__sceneContextMenu?window.__sceneContextMenu():[];}",
   "function button(cls){return document.querySelector('.scene-ctx '+cls);}",
+  "function closeMenus(){if(window.__closeSceneContextMenu)window.__closeSceneContextMenu();document.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true}));}",
+  "async function hold(el,id){closeMenus();var r=el.getBoundingClientRect(),x=r.left+Math.max(1,r.width/2),y=r.top+Math.max(1,r.height/2);el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:true,button:0,buttons:1,clientX:x,clientY:y}));await sleep(420);el.dispatchEvent(new PointerEvent('pointercancel',{bubbles:true,cancelable:true,pointerId:id,pointerType:'touch',isPrimary:true,button:0,clientX:x,clientY:y}));return {scene:items(),app:!!document.querySelector('.mon-ctx:not(.scene-ctx),.console-ctx.show')};}",
   "async function run(){",
   "if(window.__endAttract)window.__endAttract();",
   "var pan=document.getElementById('kitchen-pans');",
   "S('kitchen_prevented',ctx(pan));S('kitchen_items',items());",
-  "button('.ctx-hint').click();await sleep(20);S('hint_blinks',document.getElementById('hunt-caption').classList.contains('hint-blink'));",
-  "var kitchenStage=document.getElementById('stage-kitchen');S('bare_prevented',ctx(kitchenStage));S('bare_items',items());button('.ctx-hint').click();",
+  "var kitchenStage=document.getElementById('stage-kitchen');S('bare_prevented',ctx(kitchenStage));S('bare_items',items());closeMenus();",
   "S('outside_native',document.body.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:2,clientY:2})));S('outside_items',items());",
   "ctx(pan);button('.ctx-solve').click();S('solve_advanced',document.getElementById('kitchen-lamarzocco').classList.contains('powered-on'));",
   "window.goToStage('garden');await sleep(800);var guitar=document.getElementById('garden-guitar');",
-  "S('garden_prevented',ctx(guitar));S('garden_items',items());button('.ctx-hint').click();S('garden_room',window.currentStageName);",
+  "S('garden_prevented',ctx(guitar));S('garden_items',items());closeMenus();S('garden_room',window.currentStageName);",
   "window.__secondRound=true;window.goToStage('office');await sleep(800);if(window.computer)window.computer(true);if(window.__monitorZoomIn)window.__monitorZoomIn();await sleep(20);",
   "var vp=document.querySelector('.hunt-viewport').getBoundingClientRect(),officeStage=document.getElementById('stage-office');S('layer_prevented',ctx(officeStage,vp.left+vp.width/2,vp.top+vp.height/2));S('layer_items',items());button('.ctx-escape').click();await sleep(30);S('escape_zoomed',window.__monitorZoomed&&window.__monitorZoomed());S('escape_room',window.currentStageName);",
-  "window.goToStage('kitchen');await sleep(800);S('phase2_kitchen_prevented',ctxView(pan));S('phase2_kitchen_items',items());button('.ctx-hint').click();",
+  "window.goToStage('kitchen');await sleep(800);S('phase2_kitchen_prevented',ctxView(pan));S('phase2_kitchen_items',items());",
   "window.__secondRound=false;window.__setMaxUnlocked(0);document.documentElement.lang='cs';S('czech_prevented',ctxView(pan));S('czech_items',items());",
+  "document.documentElement.lang='en';closeMenus();S('touch_positive',await hold(kitchenStage,801));",
+  "closeMenus();window.__flairTest(1,16);S('flair_live',window.__flairState().active);S('flair_hold',await hold(kitchenStage,802));window.__flairStop();",
+  "window.goToStage('office');await sleep(60);var officeStage=document.getElementById('stage-office');window.__arcadeTest(1,16);S('invaders_live',window.__arcadeState().active);S('invaders_hold',await hold(officeStage,803));window.__arcadeStop();",
+  "window.goToStage('balcony');await sleep(60);window.__startBalconyTetris();var tetrisUi=document.getElementById('balcony-tetris-ui');S('tetris_live',window.__balconyTetrisState().active);S('tetris_hold',await hold(tetrisUi,804));window.__stopBalconyTetris();",
+  "window.goToStage('office');await sleep(60);var monitor=document.getElementById('office-monitor');monitor.classList.add('screen-on','show-caps');window.__unlockPacman(true);await sleep(80);var pacman=document.getElementById('monitor-pacman-wrap');S('pacman_live',monitor.classList.contains('show-pacman'));S('pacman_hold',await hold(pacman,805));if(window.__closeMonitorPacman)window.__closeMonitorPacman();",
   "report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);",
   "}",
   "window.addEventListener('load',function(){setTimeout(function(){run().catch(function(e){window.__errs.push(String(e&&e.stack||e));report.errors=window.__errs;document.getElementById('__report').textContent=JSON.stringify(report);});},400);});",
@@ -42,14 +48,18 @@ function check(name, ok, detail) {
   else { fails++; console.log("  ✗ " + name + " [" + JSON.stringify(detail) + "]"); }
 }
 console.log("scene context menu:");
-check("phase-one kitchen offers Hint and Solve", s.kitchen_prevented && JSON.stringify(s.kitchen_items) === JSON.stringify(["Hint", "Solve"]), s.kitchen_items);
-check("Hint re-emphasizes the room clue", s.hint_blinks === true, s.hint_blinks);
-check("bare scenery gets the same game menu", s.bare_prevented && JSON.stringify(s.bare_items) === JSON.stringify(["Hint", "Solve"]), { prevented: s.bare_prevented, items: s.bare_items });
+check("phase-one kitchen offers Solve without a generic Hint", s.kitchen_prevented && JSON.stringify(s.kitchen_items) === JSON.stringify(["Solve"]), s.kitchen_items);
+check("bare scenery gets the same one-action menu", s.bare_prevented && JSON.stringify(s.bare_items) === JSON.stringify(["Solve"]), { prevented: s.bare_prevented, items: s.bare_items });
 check("outside the loft retains the native menu", s.outside_native === true && !s.outside_items.length, { native: s.outside_native, items: s.outside_items });
 check("Solve advances one guided step", s.solve_advanced === true, s.solve_advanced);
-check("frontier menus never pan to the previous room", s.garden_prevented && JSON.stringify(s.garden_items) === JSON.stringify(["Hint", "Solve"]) && s.garden_room === "garden", { items: s.garden_items, room: s.garden_room });
+check("frontier menus never pan to the previous room", s.garden_prevented && JSON.stringify(s.garden_items) === JSON.stringify(["Solve"]) && s.garden_room === "garden", { items: s.garden_items, room: s.garden_room });
 check("a real layer exposes Escape and delegates to canonical behavior", s.layer_prevented && JSON.stringify(s.layer_items) === JSON.stringify(["Escape"]) && s.escape_zoomed === false && s.escape_room === "office", { items: s.layer_items, zoomed: s.escape_zoomed, room: s.escape_room });
-check("without a layer, phase two omits Escape but keeps a useful fallback", s.phase2_kitchen_prevented && JSON.stringify(s.phase2_kitchen_items) === JSON.stringify(["Hint"]), { prevented: s.phase2_kitchen_prevented, items: s.phase2_kitchen_items });
-check("Czech menu copy stays in parity", s.czech_prevented && JSON.stringify(s.czech_items) === JSON.stringify(["Nápověda", "Vyřešit"]), s.czech_items);
+check("a solved scene suppresses its empty custom menu", !s.phase2_kitchen_prevented && !s.phase2_kitchen_items.length, { prevented: s.phase2_kitchen_prevented, items: s.phase2_kitchen_items });
+check("Czech menu copy stays in parity", s.czech_prevented && JSON.stringify(s.czech_items) === JSON.stringify(["Vyřešit"]), s.czech_items);
+check("ordinary touch holds still reach contextual scene actions", s.touch_positive && JSON.stringify(s.touch_positive.scene) === JSON.stringify(["Solve","Start over"]) && !s.touch_positive.app, s.touch_positive);
+check("Flair Catch touch holds stay in the action game", s.flair_live && s.flair_hold && !s.flair_hold.scene.length && !s.flair_hold.app, s.flair_hold);
+check("Alien Resources touch holds stay in the action game", s.invaders_live && s.invaders_hold && !s.invaders_hold.scene.length && !s.invaders_hold.app, s.invaders_hold);
+check("Block Party touch holds stay in the action game", s.tetris_live && s.tetris_hold && !s.tetris_hold.scene.length && !s.tetris_hold.app, s.tetris_hold);
+check("Hack-Man touch holds stay in the action game", s.pacman_live && s.pacman_hold && !s.pacman_hold.scene.length && !s.pacman_hold.app, s.pacman_hold);
 check("no uncaught page errors", !rep.errors.length, rep.errors);
 process.exit(fails ? 1 : 0);

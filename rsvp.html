@@ -6636,6 +6636,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
    It offers local actions plus the shared whole-loft Start over, fixed at the cursor
    and dismissed on click-away / Esc / scroll. Paper card in the site's palette. */
 .mon-ctx{position:fixed; z-index:60; min-width:112px; background:var(--paper); color:var(--ink); border:1px solid var(--rule); border-radius:7px; box-shadow:0 6px 22px rgba(69,58,49,.28); padding:4px; font-family:"Source Serif 4",Georgia,serif; font-size:13px; -webkit-user-select:none; user-select:none}
+.mon-ctx:not(:has(button)),.console-ctx:not(:has(button)){display:none}
 .mon-ctx button{display:flex; align-items:center; gap:7px; width:100%; box-sizing:border-box; padding:6px 10px; border:none; border-radius:4px; background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer}
 .mon-ctx button:hover:not(:disabled), .mon-ctx button:focus-visible:not(:disabled){background:var(--cream)}
 .mon-ctx button.ctx-kill{color:var(--wine)}
@@ -38134,7 +38135,6 @@ var T = {
     doom_fail: "DOOM couldn't load — you may be offline, or the download stalled. Close and reopen to try again.",
     doom_fs: "Fullscreen",
     df_bsod_main: "Your PC ran into a problem and needs to restart.", // on-screen BSOD line (Linux kill)
-    mon_ctx_restart: "Restart",
     mon_ctx_reset_eq: "Reset EQ",
     mon_ctx_kill: "Kill app",
     mon_ctx_open: "Open",
@@ -38143,7 +38143,6 @@ var T = {
     mon_ctx_paste: "Paste",
     mon_ctx_select_all: "Select all",
     scene_ctx_escape: "Escape",
-    scene_ctx_hint: "Hint",
     scene_ctx_solve: "Solve",
     scene_ctx_start_over: "Start over",
     mon_sys_website: "About",
@@ -39493,7 +39492,6 @@ var T = {
     doom_fail: "DOOM se nenačetl — možná jste offline nebo se stahování zaseklo. Zavřete ho a otevřete znovu.",
     doom_fs: "Celá obrazovka",
     df_bsod_main: "V počítači došlo k problému a je potřeba restartovat.", // on-screen BSOD line (Linux kill)
-    mon_ctx_restart: "Restartovat",
     mon_ctx_reset_eq: "Obnovit ekvalizér",
     mon_ctx_kill: "Ukončit aplikaci",
     mon_ctx_open: "Otevřít",
@@ -39502,7 +39500,6 @@ var T = {
     mon_ctx_paste: "Vložit",
     mon_ctx_select_all: "Vybrat vše",
     scene_ctx_escape: "Escape",
-    scene_ctx_hint: "Nápověda",
     scene_ctx_solve: "Vyřešit",
     scene_ctx_start_over: "Začít znovu",
     mon_sys_website: "O nás",
@@ -96537,14 +96534,6 @@ function spawnDustMote(container) {
         if (window.__dispatchEscape) window.__dispatchEscape(target && target.isConnected ? target : null);
       }, 0);
     }
-    function showHint() {
-      restoreStageHint(STAGES[stageIndex]);
-      caption.classList.remove("hint-blink");
-      requestAnimationFrame(function () {
-        caption.classList.add("hint-blink");
-        setTimeout(function () { caption.classList.remove("hint-blink"); }, 1800);
-      });
-    }
     function solveNext() {
       var room = STAGES[stageIndex];
       var fn = window["__" + room + "DoNext"];
@@ -96555,12 +96544,10 @@ function spawnDustMote(container) {
       var items = [];
       var canEscape = escapeHasLayer();
       if (canEscape) items.push(item("ctx-escape", "←", "scene_ctx_escape", semanticEscape));
-      else {
-        items.push(item("ctx-hint", "?", "scene_ctx_hint", showHint));
-      }
       if (!canEscape && phaseOneFrontier()) {
         items.push(item("ctx-solve", "✓", "scene_ctx_solve", solveNext));
       }
+      if (!items.length) return false;
       menu = document.createElement("div");
       menuEscapeTarget = document.activeElement;
       menu.className = "mon-ctx scene-ctx";
@@ -96638,6 +96625,7 @@ function spawnDustMote(container) {
     }
     function augment(menu) {
       if (!menu || menu.querySelector(".ctx-loft-reset, .cc-loft-reset")) return;
+      if (!menu.querySelector("button")) return;
       var button = document.createElement("button");
       button.type = "button";
       button.setAttribute("role", "menuitem");
@@ -116433,7 +116421,8 @@ function spawnDustMote(container) {
   scheduleHalos();
 })();
 (function () {
-  // A stationary one-finger hold is the touch equivalent of right-click everywhere.
+  // A stationary one-finger hold is the touch equivalent of right-click on contextual
+  // surfaces. Live arcade action games keep holds as uninterrupted gameplay input.
   // Dispatching the existing contextmenu path keeps each surface's menu ownership in one
   // place. Movement cancels before any default is prevented, so scroll, pan, and drag retain
   // their normal gesture. Mines and Messages already own distinct one-finger hold actions.
@@ -116445,7 +116434,7 @@ function spawnDustMote(container) {
   }
   function excluded(target) {
     return target && target.closest &&
-      target.closest(".mines-cell, .pm-msg-row");
+      target.closest(".mines-cell, .pm-msg-row, #stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on, #stage-balcony.tetris-result, #monitor-pacman-wrap");
   }
   function suppressCompatMouse(e) {
     if (Date.now() > suppressUntil ||

@@ -35,13 +35,15 @@ reduced-motion preferences.
 - Double-click or double-tap a locked room dot to skip the current puzzle and
   unlock through that room.
 - Right-click for context actions; on touch, press and hold without moving.
-- During the guided trail, the scene menu offers **Hint** and **Solve**. Solve
-  performs one step.
+  Flair Catch, Alien Resources, Block Party, and Hack-Man reserve holds for
+  play and do not open a popup menu.
+- At the current locked frontier, the scene menu offers **Solve**, which
+  performs one step. Scenes with no contextual action do not open an empty menu.
 - Some objects can be dragged and respond visibly when the drag starts.
 - The top-left arrow goes back or closes the current layer. The top-right
   controls provide Fullscreen and Restart.
-- Every context menu ends with **Start over**, which confirms before resetting
-  the whole loft.
+- Every non-empty custom context menu ends with **Start over**, which confirms
+  before resetting the whole loft. App menus use **Kill app**, not Restart.
 
 ### Keyboard
 
@@ -364,6 +366,6 @@ connection. The main trail still works.
 **The game feels slow.** The game may switch to a lighter mode automatically.
 If it remains slow, reduce the browser window size.
 
-**I want a clean start.** Choose **Start over** in any context menu, use the
-top-right Restart control, or press `R`, then confirm. Ending the party is not a
-reset.
+**I want a clean start.** Choose **Start over** from a context menu with actions,
+use the top-right Restart control, or press `R`, then confirm. Ending the party
+is not a reset.

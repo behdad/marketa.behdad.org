@@ -31044,6 +31044,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <title>Fancy-Stupid</title>
           <g id="entrance-porsche-vibration">
           <g id="entrance-porsche-scale" class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
+          <path class="entrance-porsche-drag-hit" d="M8 263Q55 255 137 258L164 250H252Q284 252 346 269Q362 277 368 291L366 309Q356 324 329 324H60Q20 324 8 309Z" fill="transparent" stroke="transparent" pointer-events="fill"/>
           <path class="entrance-porsche-reverse-beam" d="M345 270L430 246V316L345 291Z" fill="#fff0cb"/>
           <ellipse cx="188" cy="331" rx="181" ry="9" fill="#090b0d" opacity=".68"/>
           <path class="entrance-porsche-headlight-beam" d="M35 272L-72 235V326L38 294Z"
@@ -33828,9 +33829,26 @@ window.__entranceRoomOpen = false;
     tone.onended = function () { try { gain.disconnect(); } catch (_error) {} };
     return true;
   }
-  function sparklePorscheWheel(wheel) {
+  function sparklePorscheWheel(wheel, event) {
     var sparkle = document.querySelector("#entrance-porsche-wheel-sparkles .entrance-porsche-wheel-sparkle:nth-child(" + (wheel === "front" ? "1" : "2") + ")");
     if (!sparkle) return;
+    var x = wheel === "front" ? 95 : 296;
+    var y = 316;
+    var svg = porsche && porsche.ownerSVGElement;
+    if (event && svg && porsche.getScreenCTM && svg.createSVGPoint) {
+      try {
+        var point = svg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        var matrix = porsche.getScreenCTM();
+        if (matrix && matrix.inverse) {
+          var local = point.matrixTransform(matrix.inverse());
+          x = local.x;
+          y = local.y;
+        }
+      } catch (_error) {}
+    }
+    sparkle.setAttribute("transform", "translate(" + x.toFixed(2) + " " + y.toFixed(2) + ")");
     sparkle.classList.remove("sparkling");
     void sparkle.getBBox();
     sparkle.classList.add("sparkling");
@@ -35321,7 +35339,7 @@ window.__entranceRoomOpen = false;
       wheel.addEventListener("click", function (event) {
         event.preventDefault();
         event.stopPropagation();
-        sparklePorscheWheel(index === 0 ? "front" : "rear");
+        sparklePorscheWheel(index === 0 ? "front" : "rear", event);
       });
     });
   }

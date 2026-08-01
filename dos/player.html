@@ -9,14 +9,14 @@
 html,body,#dos{width:100%;height:100%;margin:0;overflow:hidden;background:#000;-webkit-tap-highlight-color:transparent}
 body{font-family:ui-monospace,Menlo,Consolas,monospace;touch-action:none}
 #dos{position:relative}
-#status{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;box-sizing:border-box;background:radial-gradient(circle at 50% 42%,#101b47 0,#05091e 48%,#000 100%);color:#fff3a6;text-align:center;font-size:clamp(10px,4vw,16px);line-height:1.35;opacity:1;transition:opacity 70ms ease;pointer-events:none}
+#status{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:clamp(2px,3vmin,.5rem);box-sizing:border-box;background:radial-gradient(circle at 50% 42%,#101b47 0,#05091e 48%,#000 100%);color:#fff3a6;text-align:center;line-height:1.15;opacity:1;transition:opacity 70ms ease;pointer-events:none}
 #status[hidden]{display:none}
-.status-card{display:grid;justify-items:center;gap:.55rem;width:min(17rem,78vw);padding:1rem 1.2rem;border:1px solid rgba(133,157,255,.36);border-radius:.7rem;background:rgba(4,8,27,.72);box-shadow:0 1rem 3rem rgba(0,0,0,.5)}
-.status-title{font-size:clamp(1rem,6vw,1.55rem);letter-spacing:.18em;color:#fff8b8;text-shadow:.12em .12em 0 #253b9c}
-.status-track{position:relative;display:block;width:100%;height:.42rem;overflow:hidden;border:1px solid rgba(255,243,166,.5);border-radius:999px;background:#060a20}
+.status-card{display:grid;justify-items:center;gap:clamp(2px,2vh,.55rem);box-sizing:border-box;width:min(17rem,92vw);padding:clamp(3px,4vh,1rem) clamp(4px,4vw,1.2rem);border:1px solid rgba(133,157,255,.36);border-radius:clamp(3px,2vmin,.7rem);background:rgba(4,8,27,.72);box-shadow:0 clamp(2px,3vh,1rem) clamp(8px,10vh,3rem) rgba(0,0,0,.5)}
+.status-title{font-size:clamp(7px,min(7vw,18vh),1.55rem);line-height:1.05;letter-spacing:.18em;color:#fff8b8;text-shadow:.12em .12em 0 #253b9c}
+.status-track{position:relative;display:block;box-sizing:border-box;width:100%;height:clamp(2px,1.5vh,.42rem);overflow:hidden;border:1px solid rgba(255,243,166,.5);border-radius:999px;background:#060a20}
 .status-track::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9%,rgba(255,255,255,.05) 9% 10%)}
 .status-track i{position:absolute;top:0;bottom:0;left:-35%;width:35%;border-radius:inherit;background:linear-gradient(90deg,#415cce,#8fa6ff 55%,#fff3a6);box-shadow:0 0 .7rem rgba(143,166,255,.8);animation:snake-load .65s linear infinite}
-.status-text{font-size:.72em;letter-spacing:.04em;color:#cbd4ff}
+.status-text{max-width:100%;font-size:clamp(4px,min(3vw,8vh),.72rem);line-height:1.15;letter-spacing:.04em;color:#cbd4ff}
 #status.is-finishing{opacity:0}
 @keyframes snake-load{to{left:100%}}
 @media (prefers-reduced-motion:reduce){#status{transition:none}.status-track i{animation:none;left:32%;width:36%}}
@@ -133,6 +133,8 @@ canvas{image-rendering:pixelated}
   var nibblesCi = null, nibblesStartupTimer = null, nibblesStartupHeld = 0;
   var nibblesStartupIndex = 0, nibblesStartupArmed = false, nibblesStartupReady = false;
   var nibblesStartupComplete = false, runtimeReadyTold = false;
+  var nibblesFrameSignature = "", nibblesStartBaseline = "", nibblesStartWaitAt = 0;
+  var nibblesStartScreenChanged = false, nibblesStartScreenChangedAt = 0, nibblesSpaceSending = false;
   // Direct CommandInterface key codes: Enter is 257 (not DOM keyCode 13).
   // The leading/extra Enter safely handles either order of the sound and intro prompts.
   // The final Space is part of setup: revealing the canvas lands in a running level.
@@ -149,7 +151,25 @@ canvas{image-rendering:pixelated}
   for (var playerIndex = 0; playerIndex < players; playerIndex++) {
     nibblesStartupKeys.push(82, 257); // right-hand keyboard layout for every selected player
   }
-  nibblesStartupKeys.push(32);
+  function frameSignature(rgb, rgba) {
+    var pixels = rgba && rgba.length ? rgba : rgb;
+    if (!pixels || !pixels.length) return "";
+    var hash = 2166136261, stride = Math.max(4, Math.floor(pixels.length / 521));
+    for (var offset = 0; offset < pixels.length; offset += stride) {
+      hash ^= pixels[offset];
+      hash = Math.imul(hash, 16777619);
+    }
+    return pixels.length + ":" + (hash >>> 0);
+  }
+  function observeNibblesFrame(rgb, rgba) {
+    var next = frameSignature(rgb, rgba);
+    if (!next) return;
+    nibblesFrameSignature = next;
+    if (nibblesStartWaitAt && (!nibblesStartBaseline || next !== nibblesStartBaseline)) {
+      if (!nibblesStartScreenChanged) nibblesStartScreenChangedAt = performance.now();
+      nibblesStartScreenChanged = true;
+    }
+  }
   function clearNibblesStartupTimer() {
     if (nibblesStartupTimer !== null) window.clearTimeout(nibblesStartupTimer);
     nibblesStartupTimer = null;
@@ -157,8 +177,52 @@ canvas{image-rendering:pixelated}
   function scheduleNibblesStartup(delay) {
     clearNibblesStartupTimer();
     if (!nibblesStartupReady) return;
-    if (nibblesStartupIndex >= nibblesStartupKeys.length) { finishNibblesStartup(); return; }
+    if (nibblesStartupIndex >= nibblesStartupKeys.length) { waitForNibblesStartScreen(); return; }
     nibblesStartupTimer = window.setTimeout(stepNibblesStartup, delay);
+  }
+  function sendNibblesStartSpace() {
+    if (nibblesSpaceSending || nibblesStartupComplete || !nibblesCi) return;
+    try {
+      nibblesCi.sendKeyEvent(32, true);
+      nibblesStartupHeld = 32;
+      nibblesSpaceSending = true;
+    } catch (_error) {
+      nibblesStartupTimer = window.setTimeout(waitForNibblesStartScreen, 60);
+      return;
+    }
+    nibblesStartupTimer = window.setTimeout(function () {
+      nibblesStartupTimer = null;
+      try { nibblesCi.sendKeyEvent(32, false); } catch (_error) {}
+      nibblesStartupHeld = 0;
+      nibblesSpaceSending = false;
+      finishNibblesStartup();
+    }, 8);
+  }
+  function waitForNibblesStartScreen() {
+    clearNibblesStartupTimer();
+    if (nibblesStartupComplete || nibblesSpaceSending || !nibblesCi) return;
+    if (runtimePaused || document.hidden) {
+      nibblesStartWaitAt = 0;
+      nibblesStartScreenChanged = false;
+      nibblesStartScreenChangedAt = 0;
+      nibblesStartupTimer = window.setTimeout(waitForNibblesStartScreen, 80);
+      return;
+    }
+    if (!nibblesStartWaitAt) {
+      nibblesStartBaseline = nibblesFrameSignature;
+      nibblesStartScreenChanged = false;
+      nibblesStartScreenChangedAt = 0;
+      nibblesStartWaitAt = performance.now();
+    }
+    var elapsed = performance.now() - nibblesStartWaitAt;
+    // A changed DOS frame acknowledges the final start screen. The short fallback covers
+    // render backends that do not expose frame data, while still keeping the longest setup fast.
+    if ((nibblesStartScreenChanged && elapsed >= 90 && performance.now() - nibblesStartScreenChangedAt >= 32) ||
+        elapsed >= 180) {
+      sendNibblesStartSpace();
+      return;
+    }
+    nibblesStartupTimer = window.setTimeout(waitForNibblesStartScreen, 16);
   }
   function finishNibblesStartup() {
     if (nibblesStartupComplete) return;
@@ -172,9 +236,15 @@ canvas{image-rendering:pixelated}
   function stepNibblesStartup() {
     nibblesStartupTimer = null;
     if (!nibblesCi || mode !== "nibbles") return;
-    if (nibblesStartupIndex >= nibblesStartupKeys.length) { finishNibblesStartup(); return; }
+    if (nibblesStartupIndex >= nibblesStartupKeys.length) { waitForNibblesStartScreen(); return; }
     if (runtimePaused || document.hidden) { scheduleNibblesStartup(80); return; }
     var keyCode = nibblesStartupKeys[nibblesStartupIndex];
+    if (nibblesStartupIndex === nibblesStartupKeys.length - 1 && !nibblesStartWaitAt) {
+      nibblesStartBaseline = nibblesFrameSignature;
+      nibblesStartScreenChanged = false;
+      nibblesStartScreenChangedAt = 0;
+      nibblesStartWaitAt = performance.now();
+    }
     try {
       nibblesCi.sendKeyEvent(keyCode, true);
       nibblesStartupHeld = keyCode;
@@ -222,12 +292,27 @@ canvas{image-rendering:pixelated}
     if (mode !== "nibbles" || nibblesStartupArmed) return;
     nibblesStartupArmed = true;
     nibblesCi = ci;
+    try {
+      var ciEvents = ci.events && ci.events();
+      if (ciEvents && typeof ciEvents.onFrame === "function") ciEvents.onFrame(observeNibblesFrame);
+    } catch (_error) {}
     waitForNibblesProgram();
   }
   function pauseNibblesStartup() {
     clearNibblesStartupTimer();
+    if (nibblesStartWaitAt && !nibblesSpaceSending) {
+      nibblesStartWaitAt = 0;
+      nibblesStartScreenChanged = false;
+      nibblesStartScreenChangedAt = 0;
+    }
     if (nibblesStartupHeld && nibblesCi) {
       try { nibblesCi.sendKeyEvent(nibblesStartupHeld, false); } catch (_error) {}
+      if (nibblesSpaceSending) {
+        nibblesStartupHeld = 0;
+        nibblesSpaceSending = false;
+        finishNibblesStartup();
+        return;
+      }
       nibblesStartupHeld = 0;
       nibblesStartupIndex++;
     }

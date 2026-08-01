@@ -1267,12 +1267,14 @@ overlays, editable console fields, and other foreground monitor apps block that 
 Fresh Nibbles launches open a parent-page player-count and speed dialog; those values reach the
 child as query parameters. After the command interface reports `NIBBLES.EXE` running,
 `dos/player.html` sends a generated sequence of paired key-down/key-up answers, including the
-final Space that starts play, within a sub-second splash-masked window. Completion does not move
-focus. Coarse pointers reveal the parent-page player-one D-pad once setup finishes. It reuses
-Pac-Man's cross-pad appearance, pointer capture, displacement thresholds, diagonal filtering,
-and opposite-gesture hysteresis; Nibbles adds paired arrow events, release cleanup, and a retained
-heading guard against immediate reversals. Its hold guards suppress selection and context menus.
-Additional players remain keyboard-only.
+final Space that starts play, within a splash-masked window. Space waits for a changed DOS frame
+after the last answer, with a short bounded fallback for render backends without frame data; the
+splash scales against both iframe axes so it fits the monitor's short embedded viewport.
+Completion does not move focus. Coarse pointers reveal the parent-page player-one D-pad once
+setup finishes. It reuses Pac-Man's cross-pad appearance, pointer capture, displacement thresholds,
+diagonal filtering, and opposite-gesture hysteresis; Nibbles adds paired arrow events, release
+cleanup, and a retained heading guard against immediate reversals. Its hold guards suppress
+selection and context menus. Additional players remain keyboard-only.
 The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
 or stop it. Normal close pauses and retains the frame, but marks the hidden
 iframe inert, blurs its child focus, and focuses the non-interactive desktop

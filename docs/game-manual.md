@@ -244,7 +244,10 @@ gameplay messages finish before that room caption appears.
   **↓** for brake, or **Shift** for the clutch; choose **N**, **R**, or **1–6** to
   shift, and steer with **←**/**→**. On touch, drag horizontally from the
   steering-wheel center for proportional steering; letting go springs the wheel
-  back. Forward gears top out progressively at roughly 60, 100, 150, 200, 250,
+  back. Throw the shifter toward the six H-pattern positions to select a gear
+  without the clutch; a left-then-up throw selects reverse, and a malformed throw
+  lands in neutral. Long-press the shifter for an enlarged direct selector.
+  Forward gears top out progressively at roughly 60, 100, 150, 200, 250,
   and 300 km/h. The pedals and H-pattern shifter also work directly. A clutchless
   keyboard shift grinds and falls back to neutral, while a hard fast stop leaves
   a brief pair of tire marks. At high speed, braking while steering can send the car

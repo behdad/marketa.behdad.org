@@ -951,6 +951,11 @@ footer{margin-top:2.6rem}
 #entrance-drive-hud.drive-shift-key-held :is(#entrance-drive-brake,#entrance-drive-throttle) .entrance-drive-key{opacity:0}
 #entrance-drive-shift-hints{opacity:0;transition:opacity .12s ease;pointer-events:none}
 #entrance-drive-hud.drive-shift-key-held #entrance-drive-shift-hints{opacity:1}
+#entrance-drive-touch-selector{opacity:0;transition:opacity .12s ease;pointer-events:none}
+#entrance-drive-hud.drive-touch-selector-open #entrance-drive-touch-selector{opacity:1}
+#entrance-drive-touch-selector .entrance-drive-touch-choice circle{fill:#d7d4c8;stroke:#616665;stroke-width:1.5}
+#entrance-drive-touch-selector .entrance-drive-touch-choice text{fill:#252a2d;stroke:none}
+#entrance-drive-touch-selector .entrance-drive-touch-choice.selected circle{fill:#d9a6a6;stroke:#733d35;stroke-width:2.2}
 #entrance-drive-hud.drive-stalled #entrance-drive-tach-readout{fill:#e6a08b}
 #entrance-drive-stall-led{opacity:0;filter:drop-shadow(0 0 2px rgba(244,153,45,.9))}
 #entrance-drive-hud.drive-stalled #entrance-drive-stall-led{opacity:1}
@@ -31920,6 +31925,18 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <g class="entrance-drive-control" role="button" data-drive-gear="5" data-aria-i="entrance_drive_gear_5"><circle class="entrance-drive-hit" cx="488" cy="92" r="5"/></g>
             <g class="entrance-drive-control" role="button" data-drive-gear="6" data-aria-i="entrance_drive_gear_6"><circle class="entrance-drive-hit" cx="488" cy="112" r="5"/></g>
             <g class="entrance-drive-control" role="button" data-drive-gear="0" data-aria-i="entrance_drive_neutral"><circle class="entrance-drive-hit" cx="476" cy="103" r="5"/></g>
+            <g id="entrance-drive-touch-selector" aria-hidden="true">
+              <rect x="399" y="45" width="149" height="118" rx="15" fill="#20282b" stroke="#d6b58f" stroke-width="2" opacity=".94"/>
+              <path d="M416 69V104H444M444 69V139M444 104H516M480 69V139M516 69V139" fill="none" stroke="#aeb5b3" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <g class="entrance-drive-touch-choice" data-touch-gear="-1" transform="translate(416 69)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">R</text></g>
+              <g class="entrance-drive-touch-choice" data-touch-gear="1" transform="translate(444 69)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">1</text></g>
+              <g class="entrance-drive-touch-choice" data-touch-gear="2" transform="translate(444 139)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">2</text></g>
+              <g class="entrance-drive-touch-choice" data-touch-gear="3" transform="translate(480 69)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">3</text></g>
+              <g class="entrance-drive-touch-choice" data-touch-gear="0" transform="translate(480 104)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">N</text></g>
+              <g class="entrance-drive-touch-choice" data-touch-gear="4" transform="translate(480 139)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">4</text></g>
+              <g class="entrance-drive-touch-choice" data-touch-gear="5" transform="translate(516 69)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">5</text></g>
+              <g class="entrance-drive-touch-choice" data-touch-gear="6" transform="translate(516 139)"><circle r="13"/><text y="3.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700">6</text></g>
+            </g>
           </g>
           <g id="entrance-drive-shift-hints" aria-hidden="true" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" font-weight="700" fill="#f2f4ed" stroke="#252a2d" stroke-width="1.4" paint-order="stroke">
             <text x="476" y="78">↑</text>
@@ -33651,6 +33668,8 @@ window.__entranceRoomOpen = false;
   var driveShifterLever = document.getElementById("entrance-drive-shifter-lever");
   var driveShifterShaft = document.getElementById("entrance-drive-shifter-shaft");
   var driveShifterHints = document.getElementById("entrance-drive-shift-hints");
+  var driveTouchSelector = document.getElementById("entrance-drive-touch-selector");
+  var driveTouchGearChoices = driveTouchSelector ? Array.prototype.slice.call(driveTouchSelector.querySelectorAll("[data-touch-gear]")) : [];
   var driveGlovebox = document.getElementById("entrance-drive-glovebox");
   var porscheFrontWheelSpin = document.getElementById("entrance-porsche-front-wheel-spin");
   var porscheFrontWheelSteer = document.getElementById("entrance-porsche-front-wheel-steer");
@@ -33729,7 +33748,16 @@ window.__entranceRoomOpen = false;
   var driveShifterRepeatTimer = null;
   var driveShifterPointerId = null;
   var driveShifterPointerTarget = null;
+  var driveShifterPointerType = "";
   var driveShifterHeld = false;
+  var driveShifterTouchStartX = 0;
+  var driveShifterTouchStartY = 0;
+  var driveShifterTouchLastX = 0;
+  var driveShifterTouchLastY = 0;
+  var driveShifterTouchMoved = false;
+  var driveShifterTouchReverseArmed = false;
+  var driveShifterTouchSelectorOpen = false;
+  var driveShifterTouchPreviewGear = null;
   var driveShifterPressSerial = 0;
   var driveShifterSuppressClickUntil = 0;
   var driveShiftKeyHeld = false;
@@ -34082,7 +34110,8 @@ window.__entranceRoomOpen = false;
     }
     if (driveTachReadout) driveTachReadout.textContent = driveState.stalled ? "STALL" : driveGearLabel();
     if (driveLapOdometer) driveLapOdometer.textContent = porscheDriveLapLabel();
-    if (!driveShifterAttemptTimer) paintPorscheShifter(driveState.gear);
+    if (driveShifterTouchPreviewGear !== null) paintPorscheShifter(driveShifterTouchPreviewGear);
+    else if (!driveShifterAttemptTimer) paintPorscheShifter(driveState.gear);
     if (driveGearIndicator) {
       var gearPositions = { "-1": [464, 93], "1": [472, 93], "2": [472, 113],
         "3": [480, 93], "4": [480, 113], "5": [488, 93], "6": [488, 113] };
@@ -34859,30 +34888,112 @@ window.__entranceRoomOpen = false;
   function porscheShifterAvailable() {
     return !!(driveState.hudOpen && (porscheState.engineOn || driveState.stalled));
   }
-  function activatePorscheShifterTap(target) {
+  function activatePorscheShifterTap(target, clutchBypass) {
     if (!porscheShifterAvailable()) return false;
     var gate = target && target.closest ? target.closest(".entrance-drive-control[data-drive-gear]") : null;
-    if (gate && driveShifter.contains(gate)) return selectPorscheDriveGear(gate.getAttribute("data-drive-gear"));
+    if (gate && driveShifter.contains(gate)) return selectPorscheDriveGear(gate.getAttribute("data-drive-gear"), clutchBypass);
     return stepPorscheDriveGear(1);
+  }
+  function paintPorscheTouchGearChoice(gear) {
+    driveTouchGearChoices.forEach(function (choice) {
+      choice.classList.toggle("selected", Number(choice.getAttribute("data-touch-gear")) === gear);
+    });
+  }
+  function setPorscheTouchSelectorOpen(open) {
+    driveShifterTouchSelectorOpen = !!open;
+    if (driveHud) driveHud.classList.toggle("drive-touch-selector-open", driveShifterTouchSelectorOpen);
+    paintPorscheTouchGearChoice(driveShifterTouchSelectorOpen ? 0 : NaN);
+  }
+  function porscheShifterLocalPoint(clientX, clientY) {
+    if (!driveShifter || !driveShifter.ownerSVGElement || !driveShifter.getScreenCTM) return null;
+    var matrix = driveShifter.getScreenCTM();
+    if (!matrix) return null;
+    var point = driveShifter.ownerSVGElement.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    try { return point.matrixTransform(matrix.inverse()); } catch (_error) { return null; }
+  }
+  function porscheTouchDirectGear(clientX, clientY) {
+    var point = porscheShifterLocalPoint(clientX, clientY);
+    if (!point) return 0;
+    var positions = { "-1": [416, 69], "0": [480, 104], "1": [444, 69], "2": [444, 139],
+      "3": [480, 69], "4": [480, 139], "5": [516, 69], "6": [516, 139] };
+    var nearest = 0;
+    var nearestDistance = Infinity;
+    Object.keys(positions).forEach(function (gear) {
+      var dx = point.x - positions[gear][0];
+      var dy = point.y - positions[gear][1];
+      var distance = dx * dx + dy * dy;
+      if (distance < nearestDistance) {
+        nearest = Number(gear);
+        nearestDistance = distance;
+      }
+    });
+    return nearestDistance <= 24 * 24 ? nearest : 0;
+  }
+  function porscheTouchGestureGear(clientX, clientY) {
+    if (driveShifterTouchSelectorOpen) return porscheTouchDirectGear(clientX, clientY);
+    var dx = clientX - driveShifterTouchStartX;
+    var dy = clientY - driveShifterTouchStartY;
+    var ax = Math.abs(dx);
+    var ay = Math.abs(dy);
+    if (driveShifterTouchReverseArmed && dy < -14) return -1;
+    if (ay < 16 || ay < ax * .42) return 0;
+    var lane = dx < -14 ? 0 : dx > 14 ? 2 : 1;
+    return dy < 0 ? [1, 3, 5][lane] : [2, 4, 6][lane];
+  }
+  function movePorscheShifterPress(event) {
+    if (driveShifterPointerType !== "touch" || event.pointerId !== driveShifterPointerId) return;
+    event.preventDefault();
+    driveShifterTouchLastX = event.clientX;
+    driveShifterTouchLastY = event.clientY;
+    var dx = event.clientX - driveShifterTouchStartX;
+    var dy = event.clientY - driveShifterTouchStartY;
+    if (dx < -18 && Math.abs(dy) < 13) driveShifterTouchReverseArmed = true;
+    if (!driveShifterTouchMoved && Math.hypot(dx, dy) >= 12) {
+      driveShifterTouchMoved = true;
+      if (!driveShifterTouchSelectorOpen) {
+        clearTimeout(driveShifterHoldTimer);
+        driveShifterHoldTimer = null;
+      }
+    }
+    if (!driveShifterTouchMoved && !driveShifterTouchSelectorOpen) return;
+    driveShifterTouchPreviewGear = porscheTouchGestureGear(event.clientX, event.clientY);
+    paintPorscheTouchGearChoice(driveShifterTouchPreviewGear);
+    paintPorscheShifter(driveShifterTouchPreviewGear);
   }
   function clearPorscheShifterPress(event, activateTap) {
     if (driveShifterPointerId === null || (event && event.pointerId !== driveShifterPointerId)) return false;
     var pointerId = driveShifterPointerId;
     var target = driveShifterPointerTarget;
+    var pointerType = driveShifterPointerType;
     var wasHeld = driveShifterHeld;
+    var touchMoved = driveShifterTouchMoved;
+    var touchSelectorOpen = driveShifterTouchSelectorOpen;
+    var touchGear = pointerType === "touch" && activateTap && (touchMoved || touchSelectorOpen) ?
+      porscheTouchGestureGear(event ? event.clientX : driveShifterTouchLastX, event ? event.clientY : driveShifterTouchLastY) : null;
     clearTimeout(driveShifterHoldTimer);
     clearInterval(driveShifterRepeatTimer);
     driveShifterHoldTimer = null;
     driveShifterRepeatTimer = null;
     driveShifterPointerId = null;
     driveShifterPointerTarget = null;
+    driveShifterPointerType = "";
     driveShifterHeld = false;
+    driveShifterTouchMoved = false;
+    driveShifterTouchReverseArmed = false;
+    driveShifterTouchPreviewGear = null;
+    setPorscheTouchSelectorOpen(false);
     driveShifterPressSerial++;
     if (driveShifter && driveShifter.releasePointerCapture) {
       try { driveShifter.releasePointerCapture(pointerId); } catch (_error) {}
     }
     if (wasHeld || activateTap) driveShifterSuppressClickUntil = performance.now() + 700;
-    if (!wasHeld && activateTap) activatePorscheShifterTap(target);
+    if (pointerType === "touch" && activateTap) {
+      if (touchMoved || touchSelectorOpen) selectPorscheDriveGear(touchGear, true);
+      else activatePorscheShifterTap(target, true);
+    } else if (!wasHeld && activateTap) activatePorscheShifterTap(target);
+    else paintPorscheShifter(driveState.gear);
     return true;
   }
   function cancelPorscheShifterPress() {
@@ -34898,7 +35009,13 @@ window.__entranceRoomOpen = false;
     event.preventDefault();
     driveShifterPointerId = event.pointerId;
     driveShifterPointerTarget = event.target;
+    driveShifterPointerType = event.pointerType || "mouse";
     driveShifterHeld = false;
+    driveShifterTouchStartX = driveShifterTouchLastX = event.clientX;
+    driveShifterTouchStartY = driveShifterTouchLastY = event.clientY;
+    driveShifterTouchMoved = false;
+    driveShifterTouchReverseArmed = false;
+    driveShifterTouchPreviewGear = null;
     var pressSerial = ++driveShifterPressSerial;
     if (driveShifter.setPointerCapture) {
       try { driveShifter.setPointerCapture(event.pointerId); } catch (_error) {}
@@ -34907,6 +35024,12 @@ window.__entranceRoomOpen = false;
       driveShifterHoldTimer = null;
       if (pressSerial !== driveShifterPressSerial || driveShifterPointerId === null || !porscheShifterAvailable()) return;
       driveShifterHeld = true;
+      if (driveShifterPointerType === "touch") {
+        driveShifterTouchPreviewGear = 0;
+        setPorscheTouchSelectorOpen(true);
+        paintPorscheShifter(0);
+        return;
+      }
       stepPorscheDriveGear(-1);
       driveShifterRepeatTimer = setInterval(function () {
         if (pressSerial !== driveShifterPressSerial || driveShifterPointerId === null ||
@@ -35662,6 +35785,7 @@ window.__entranceRoomOpen = false;
   });
   if (driveShifter) {
     driveShifter.addEventListener("pointerdown", beginPorscheShifterPress, true);
+    driveShifter.addEventListener("pointermove", movePorscheShifterPress, true);
     driveShifter.addEventListener("pointerup", function (event) {
       if (!clearPorscheShifterPress(event, true)) return;
       event.preventDefault();

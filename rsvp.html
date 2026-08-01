@@ -33895,23 +33895,63 @@ window.__entranceRoomOpen = false;
     osc.start(t); thud.start(t); osc.stop(t + .47); thud.stop(t + .47);
     osc.onended = function () { try { osc.disconnect(); thud.disconnect(); out.disconnect(); } catch (_error) {} };
   }
-  function playPorscheSkidSound() {
+  function porscheBrakeAudioMix(speed) {
+    var severity = Math.max(0, Math.min(1, (Math.abs(speed) - 65) / 175));
+    return {
+      absGain: .015 + severity * .006,
+      screechGain: .15 + severity * .07,
+      duration: .4 + severity * .12,
+      screechFrequency: 2050 + severity * 700
+    };
+  }
+  function playPorscheSkidSound(speed) {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
     if (!ctx) return;
     var t = ctx.currentTime;
-    var source = ctx.createBufferSource();
-    var filter = ctx.createBiquadFilter();
-    var gain = ctx.createGain();
-    var buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .34), ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length * .48);
-    source.buffer = buffer;
-    filter.type = "bandpass"; filter.frequency.value = 1850; filter.Q.value = 2.4;
-    gain.gain.setValueAtTime(.0001, t); gain.gain.exponentialRampToValueAtTime(.12, t + .015); gain.gain.exponentialRampToValueAtTime(.0001, t + .34);
-    source.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-    source.start(t); source.stop(t + .35);
-    source.onended = function () { try { source.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_error) {} };
+    var mix = porscheBrakeAudioMix(speed);
+    var samples = Math.ceil(ctx.sampleRate * mix.duration);
+    var screechBuffer = ctx.createBuffer(1, samples, ctx.sampleRate);
+    var absBuffer = ctx.createBuffer(1, samples, ctx.sampleRate);
+    var screechData = screechBuffer.getChannelData(0);
+    var absData = absBuffer.getChannelData(0);
+    for (var i = 0; i < samples; i++) {
+      var fade = 1 - i / samples * .42;
+      screechData[i] = (Math.random() * 2 - 1) * fade;
+      var absPulse = Math.sin(i / ctx.sampleRate * Math.PI * 34) > .05 ? 1 : .14;
+      absData[i] = (Math.random() * 2 - 1) * absPulse * fade;
+    }
+    var screech = ctx.createBufferSource();
+    var abs = ctx.createBufferSource();
+    var screechFilter = ctx.createBiquadFilter();
+    var absFilter = ctx.createBiquadFilter();
+    var screechGain = ctx.createGain();
+    var absGain = ctx.createGain();
+    screech.buffer = screechBuffer;
+    abs.buffer = absBuffer;
+    screechFilter.type = "bandpass";
+    screechFilter.frequency.setValueAtTime(mix.screechFrequency, t);
+    screechFilter.frequency.exponentialRampToValueAtTime(mix.screechFrequency * .86, t + mix.duration);
+    screechFilter.Q.value = 5.2;
+    absFilter.type = "lowpass";
+    absFilter.frequency.value = 390;
+    absFilter.Q.value = .7;
+    screechGain.gain.setValueAtTime(.0001, t);
+    screechGain.gain.exponentialRampToValueAtTime(mix.screechGain, t + .012);
+    screechGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
+    absGain.gain.setValueAtTime(.0001, t);
+    absGain.gain.exponentialRampToValueAtTime(mix.absGain, t + .008);
+    absGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
+    screech.connect(screechFilter); screechFilter.connect(screechGain); screechGain.connect(ctx.destination);
+    abs.connect(absFilter); absFilter.connect(absGain); absGain.connect(ctx.destination);
+    screech.start(t); abs.start(t);
+    screech.stop(t + mix.duration + .01); abs.stop(t + mix.duration + .01);
+    screech.onended = function () {
+      try {
+        screech.disconnect(); abs.disconnect(); screechFilter.disconnect(); absFilter.disconnect();
+        screechGain.disconnect(); absGain.disconnect();
+      } catch (_error) {}
+    };
   }
   function playPorscheGearGrindSound(gear) {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
@@ -34068,20 +34108,19 @@ window.__entranceRoomOpen = false;
       if (throttle && driveState.gear && !clutch) driveState.throttleHeldMs += dt;
       else driveState.throttleHeldMs = Math.max(0, driveState.throttleHeldMs - dt * 3);
       var freeRpm = 750 + throttle * 7250;
-      // A held digital throttle behaves like a human foot, not an instant brick on the
-      // accelerator: ordinary pulls live below ~5.5k, with the remaining rev range only
-      // becoming available after fifteen continuous seconds in gear.
-      var sustained = Math.max(0, Math.min(1, (driveState.throttleHeldMs - 15000) / 10000));
-      var coupledLimit = 5500 + sustained * 2500;
-      var coupledRpm = 750 + Math.abs(driveState.speed) * ratio * 30 + throttle * 300;
+      // The digital pedal opens progressively over a short pull, preserving a readable
+      // launch while making the upper rev range available quickly in every gear.
+      var sustained = Math.max(0, Math.min(1, driveState.throttleHeldMs / 3500));
+      var coupledLimit = 6800 + sustained * 1200;
+      var coupledRpm = 750 + Math.abs(driveState.speed) * ratio * 27 + throttle * 300;
       var targetRpm = clutch || !driveState.gear ? freeRpm : Math.min(coupledLimit, coupledRpm);
       driveState.rpm += (targetRpm - driveState.rpm) * Math.min(1, seconds * (clutch || !driveState.gear ? 4.6 : 7.5));
       if (driveState.gear && !clutch) {
         var direction = driveState.gear < 0 ? -1 : 1;
         var gearNumber = Math.max(1, Math.abs(driveState.gear));
-        var speedCeiling = Math.max(8, (coupledLimit - 1050) / (ratio * 30));
+        var speedCeiling = Math.max(8, (coupledLimit - 1050) / (ratio * 27));
         var ceilingApproach = Math.max(0, 1 - Math.abs(driveState.speed) / speedCeiling);
-        var driveForce = throttle * (35 / (1 + (gearNumber - 1) * .34)) * ceilingApproach;
+        var driveForce = throttle * (82 / (1 + (gearNumber - 1) * .22)) * Math.pow(ceilingApproach, .55);
         driveState.speed += direction * driveForce * seconds;
         if (!throttle) driveState.speed -= Math.sign(driveState.speed || direction) * Math.min(Math.abs(driveState.speed), (2.2 + ratio * .8) * seconds);
       }
@@ -34092,14 +34131,14 @@ window.__entranceRoomOpen = false;
       driveState.throttleHeldMs = 0;
       driveState.rpm += (0 - driveState.rpm) * Math.min(1, seconds * 8);
     }
-    var braking = brake * 44;
+    var braking = brake * 78;
     if (braking && Math.abs(driveState.speed) > .01) {
       var before = Math.abs(driveState.speed);
       driveState.speed -= Math.sign(driveState.speed) * Math.min(before, braking * seconds);
-      if (before > 26 && brake && Date.now() - lastSkidAt > 300) {
+      if (before >= 65 && brake && Date.now() - lastSkidAt > 300) {
         lastSkidAt = Date.now();
         leavePorscheTireMarks();
-        playPorscheSkidSound();
+        playPorscheSkidSound(before);
       }
     }
     if (!throttle && !braking) {
@@ -34109,7 +34148,7 @@ window.__entranceRoomOpen = false;
     if (!throttle && !clutch && driveState.gear > 2 && Math.abs(driveState.speed) < 2.2) {
       driveState.gear = 0;
     }
-    driveState.speed = Math.max(-48, Math.min(235, driveState.speed));
+    driveState.speed = Math.max(-55, Math.min(300, driveState.speed));
     // The street is a theatrical loop rather than a kilometre-scale map. Keep the
     // speedometer honest, then progressively compress distance so upper gears read
     // as genuinely fast instead of merely crossing the same short facade more often.
@@ -34849,6 +34888,7 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveStep = porscheDriveStep;
   window.__entranceDriveShift = selectPorscheDriveGear;
   window.__entranceDriveControl = setPorscheDriveHold;
+  window.__entranceDriveBrakeAudio = porscheBrakeAudioMix;
   window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
   var entranceCheckpoint = {
     capture: function () {
@@ -34897,7 +34937,7 @@ window.__entranceRoomOpen = false;
         driveState.hudOpen = typeof row.drive.hud === "boolean" ? row.drive.hud : !!porscheState.engineOn;
         driveState.stalled = !!row.drive.stalled;
         if (Number.isFinite(Number(row.drive.gear))) driveState.gear = Math.max(-1, Math.min(6, Number(row.drive.gear)));
-        if (Number.isFinite(Number(row.drive.speed))) driveState.speed = Math.max(-48, Math.min(235, Number(row.drive.speed)));
+        if (Number.isFinite(Number(row.drive.speed))) driveState.speed = Math.max(-55, Math.min(300, Number(row.drive.speed)));
         if (Number.isFinite(Number(row.drive.rpm))) driveState.rpm = Math.max(0, Math.min(8000, Number(row.drive.rpm)));
         if (Number.isFinite(Number(row.drive.temperature))) driveState.temperature = Math.max(0, Math.min(1, Number(row.drive.temperature)));
         if (Number.isFinite(Number(row.drive.laneOffset))) driveState.laneOffset = Math.max(-9, Math.min(9, Number(row.drive.laneOffset)));

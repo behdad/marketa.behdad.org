@@ -180,6 +180,14 @@ leaving, dismissing the HUD, stopping/stalling the engine, hiding, or unfocusing
 closes only that bed. Speed gently raises its tempo and opens its low-pass filter, while RPM
 adds a smaller brightness lift. Its master follows `__songVolume()` so the music button and
 session master scale it independently of the Porsche engine/drivetrain bed.
+
+At an effective outside temperature of 24°C or warmer, the running Porsche HUD
+also starts a restrained filtered-noise fan and low motor tone through the same
+shared `audioBed()` route. It reads `__outdoorTempC()` (live weather, pretend-date
+weather, or the explicit thermometer override), fades only its own nodes, and is
+gated by Entrance + HUD + engine + foreground focus. Cooling below the threshold,
+leaving or covering the room, hiding/unfocusing the page, or stopping the engine
+removes the vent wash without touching the shared context.
 - **`getSfxCtx()`** returns null while `document.visibilityState === "hidden"` — the
   hidden-tab choke point that silences all one-shots (and autonomous timer-driven ambients)
   without per-call-site guards. Autonomous one-shots additionally guard on

@@ -808,6 +808,19 @@ footer{margin-top:2.6rem}
 #entrance-drive-key-running{opacity:0}
 #entrance-drive-hud.drive-engine-on #entrance-drive-key-running{opacity:1}
 #entrance-drive-hud.drive-engine-on #entrance-drive-key-off{opacity:0}
+#entrance-drive-ac-air{opacity:0;transition:opacity .3s ease}
+#entrance-drive-hud.drive-ac-blasting #entrance-drive-ac-air{opacity:1}
+#entrance-drive-ac-air path{
+  fill:none;stroke:#d9f4f5;stroke-linecap:round;stroke-width:1.35;
+  stroke-dasharray:5 7;filter:drop-shadow(0 0 2px rgba(196,239,242,.72));
+  animation:entrance-drive-ac-flow .72s linear infinite;
+}
+#entrance-drive-ac-air path:nth-child(even){animation-duration:.94s;animation-delay:-.38s;opacity:.68}
+@keyframes entrance-drive-ac-flow{
+  from{stroke-dashoffset:0;opacity:.28}
+  45%{opacity:.82}
+  to{stroke-dashoffset:-24;opacity:.24}
+}
 .entrance-drive-pedal{transform-box:view-box;transform-origin:center bottom;transition:transform .08s ease}
 .entrance-drive-control.pressed .entrance-drive-pedal{transform:translateY(3px) scaleY(.94)}
 #entrance-drive-gear-indicator{transition:cx .13s cubic-bezier(.2,.8,.25,1),cy .13s cubic-bezier(.2,.8,.25,1),opacity .1s ease}
@@ -892,6 +905,7 @@ footer{margin-top:2.6rem}
   #entrance-porsche-roof-closed,#entrance-porsche-roof-stack,#entrance-porsche-door-panel,
   #entrance-porsche-door-well,#entrance-porsche-frunk-panel,#entrance-porsche-trunk-panel{transition:none}
   #entrance-drive-hud,.entrance-drive-pedal{transition:none}
+  #entrance-drive-ac-air path{animation:none}
   .entrance-tire-mark{animation-duration:.01ms}
   .hunt-viewport.entrance-room-open #entrance-room-art.grooving .entrance-window-pane{animation:none}
   #entrance-room.entrance-raining .entrance-rain-streak,
@@ -31588,6 +31602,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <ellipse cx="640" cy="93" rx="20" ry="21" fill="#172027" stroke="#c3c7c5" stroke-width="2"/>
             <g stroke="#778188" stroke-width="1.7"><path d="M627 79V108M634 74V112M641 73V113M648 74V112M654 79V108"/></g>
           </g>
+          <g id="entrance-drive-ac-air" pointer-events="none" aria-hidden="true">
+            <path d="M34 92Q74 77 119 90Q148 99 177 89"/>
+            <path d="M35 99Q75 91 113 103Q145 113 174 105"/>
+            <path d="M646 91Q608 78 570 91Q542 101 513 91"/>
+            <path d="M646 99Q607 91 571 104Q540 115 511 106"/>
+          </g>
           </g>
           <g id="entrance-drive-shifter" transform="translate(-47 0)">
             <path d="M441 145Q470 123 510 139L522 176H430Z" fill="#8d6348" stroke="#4d382c" stroke-width="1.5"/>
@@ -33368,6 +33388,7 @@ window.__entranceRoomOpen = false;
   var intercomResponses = 0;
   var porscheIdleNodes = null;
   var porscheDriveAudioNodes = null;
+  var porscheDriveAcNodes = null;
   var porscheDriveMusicNodes = null;
   var porscheDriveMusicTimer = null;
   var porscheDriveMusicStep = 0;
@@ -33498,6 +33519,23 @@ window.__entranceRoomOpen = false;
   function entranceDriveMusicWanted() {
     return !!(entranceDriveAudible() && driveState.hudOpen);
   }
+  function porscheDriveAcHot() {
+    if (typeof window.__outdoorTempC !== "function") return false;
+    var outside = Number(window.__outdoorTempC());
+    return isFinite(outside) && outside >= 24;
+  }
+  function entranceDriveAcVisible() {
+    return !!(window.__entranceRoomOpen && driveState.hudOpen &&
+      porscheState.engineOn && porscheDriveAcHot());
+  }
+  function entranceDriveAcWanted() {
+    return !!(entranceDriveAcVisible() && document.visibilityState !== "hidden" &&
+      document.hasFocus() &&
+      !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
+  }
+  function paintPorscheDriveAc() {
+    if (driveHud) driveHud.classList.toggle("drive-ac-blasting", entranceDriveAcVisible());
+  }
   function driveGearLabel() {
     return driveState.gear < 0 ? "R" : driveState.gear || "N";
   }
@@ -33563,6 +33601,7 @@ window.__entranceRoomOpen = false;
       driveHud.classList.toggle("drive-redline", driveState.rpm >= 7500);
       driveHud.setAttribute("aria-hidden", ignitionVisible ? "false" : "true");
     }
+    paintPorscheDriveAc();
     var rpm = Math.max(0, Math.min(8000, driveState.rpm));
     if (porsche) {
       var revVibration = Math.max(0, Math.min(1, (rpm - 750) / 7250));
@@ -33613,6 +33652,74 @@ window.__entranceRoomOpen = false;
     porscheDriveAudioNodes = null;
     driveAudio.sources.forEach(function (source) { try { source.stop(); } catch (_error) {} });
     driveAudio.nodes.forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+  }
+  function stopPorscheDriveAc(fadeSecs) {
+    if (!porscheDriveAcNodes) return;
+    var ac = porscheDriveAcNodes;
+    porscheDriveAcNodes = null;
+    var fade = typeof fadeSecs === "number" ? Math.max(0, fadeSecs) : .24;
+    try {
+      var now = ac.bed.currentTime;
+      ac.master.gain.cancelScheduledValues(now);
+      ac.master.gain.setValueAtTime(ac.master.gain.value, now);
+      ac.master.gain.linearRampToValueAtTime(.0001, now + fade);
+    } catch (_error) {}
+    setTimeout(function () {
+      ac.sources.forEach(function (source) { try { source.stop(); } catch (_error) {} });
+      ac.nodes.forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+      try { ac.bed.close(); } catch (_error) {}
+    }, fade * 1000 + 60);
+  }
+  function startPorscheDriveAc() {
+    if (porscheDriveAcNodes || !entranceDriveAcWanted()) return;
+    var bed = null;
+    try {
+      bed = audioBed();
+      if (!bed) return;
+      var fan = bed.createBufferSource();
+      var fanFilter = bed.createBiquadFilter();
+      var fanGain = bed.createGain();
+      var motor = bed.createOscillator();
+      var motorFilter = bed.createBiquadFilter();
+      var motorGain = bed.createGain();
+      var master = bed.createGain();
+      var buffer = bed.createBuffer(1, Math.ceil(bed.sampleRate * 1.5), bed.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      fan.buffer = buffer;
+      fan.loop = true;
+      fanFilter.type = "bandpass";
+      fanFilter.frequency.value = 940;
+      fanFilter.Q.value = .42;
+      fanGain.gain.value = .19;
+      motor.type = "triangle";
+      motor.frequency.value = 74;
+      motorFilter.type = "lowpass";
+      motorFilter.frequency.value = 210;
+      motorGain.gain.value = .045;
+      var now = bed.currentTime;
+      master.gain.setValueAtTime(.0001, now);
+      master.gain.linearRampToValueAtTime(.032, now + .34);
+      fan.connect(fanFilter); fanFilter.connect(fanGain); fanGain.connect(master);
+      motor.connect(motorFilter); motorFilter.connect(motorGain); motorGain.connect(master);
+      master.connect(pannedOut(bed, "entrance-porsche"));
+      porscheDriveAcNodes = {
+        bed: bed,
+        master: master,
+        sources: [fan, motor],
+        nodes: [fanFilter, fanGain, motorFilter, motorGain, master]
+      };
+      fan.start();
+      motor.start();
+    } catch (_error) {
+      if (porscheDriveAcNodes) stopPorscheDriveAc(0);
+      else if (bed) { try { bed.close(); } catch (_closeError) {} }
+    }
+  }
+  function updatePorscheDriveAc() {
+    paintPorscheDriveAc();
+    if (entranceDriveAcWanted()) startPorscheDriveAc();
+    else stopPorscheDriveAc();
   }
   function porscheDriveMusicVolume() {
     return 2 * (window.__songVolume ? window.__songVolume() : .5);
@@ -33870,6 +33977,7 @@ window.__entranceRoomOpen = false;
     if (entranceDriveAudible()) startPorscheDriveAudio();
     else stopPorscheDriveAudio();
     updatePorscheDriveMusic();
+    updatePorscheDriveAc();
     if (porsche) porsche.classList.toggle("engine-idling",
       entranceDriveAudible() && Math.abs(driveState.speed) < .75);
   }
@@ -34808,6 +34916,9 @@ window.__entranceRoomOpen = false;
         wraps: driveState.wraps,
         holds: Object.assign({}, driveState.holds),
         audioActive: !!porscheDriveAudioNodes,
+        outsideTemperature: typeof window.__outdoorTempC === "function" ? window.__outdoorTempC() : null,
+        acBlasting: !!(driveHud && driveHud.classList.contains("drive-ac-blasting")),
+        acAudioActive: !!porscheDriveAcNodes,
         musicActive: !!porscheDriveMusicNodes,
         frameActive: !!driveFrame,
         tireMarks: tireMarks ? tireMarks.childNodes.length : 0
@@ -34824,6 +34935,7 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveStep = porscheDriveStep;
   window.__entranceDriveShift = selectPorscheDriveGear;
   window.__entranceDriveControl = setPorscheDriveHold;
+  window.__refreshPorscheDriveClimate = updatePorscheDriveAc;
   window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
   var entranceCheckpoint = {
     capture: function () {
@@ -82648,6 +82760,7 @@ async def localfont(name):
     }
     window.__loftTempSet(); // snap, rather than let the 1°-per-1.2s drift crawl there
     paintTempPop();
+    if (window.__refreshPorscheDriveClimate) window.__refreshPorscheDriveClimate();
     if (window.__updateSunDogs) window.__updateSunDogs(); // set -25 on a clear winter noon and the pair is there before you look up
     if (window.__checkpointChanged) window.__checkpointChanged();
     return tempOverride;
@@ -82764,6 +82877,7 @@ async def localfont(name):
     if (shownOut < to) paintOutdoor(++shownOut);
     else if (shownOut > to) paintOutdoor(--shownOut);
     paintTempPop(); // the open popup tracks the tube (real weather drifting, a room's dusk)
+    if (window.__refreshPorscheDriveClimate) window.__refreshPorscheDriveClimate();
     return window.__indoorTempState();
   }
   window.__loftTempTick = temperatureTick; // deterministic thermal-mass test hook

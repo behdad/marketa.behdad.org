@@ -33674,6 +33674,15 @@ window.__entranceRoomOpen = false;
   var porscheDriveMusicStep = 0;
   var porscheDriveMusicNext = 0;
   var porscheHornNodes = null;
+  var porscheTouchHornPulseTimer = null;
+  var porscheTouchSteering = {
+    pointerId: null,
+    startX: 0,
+    input: 0,
+    mode: "idle",
+    hornTimer: null,
+    returning: false
+  };
   var porscheDoorCloseTimer = null;
   var porscheBodyClickTimer = null;
   var porscheDrag = { active: false, moved: false, suppressClick: false, pointerId: null, startX: 0, startY: 0, startPosition: 0, startLane: 0 };
@@ -34679,6 +34688,88 @@ window.__entranceRoomOpen = false;
       };
     } catch (_error) {}
   }
+  function porscheTouchSteeringTravel() {
+    var rect = driveHud && driveHud.getBoundingClientRect ? driveHud.getBoundingClientRect() : null;
+    return Math.max(44, Math.min(100, rect && rect.width ? rect.width * 90 / 680 : 60));
+  }
+  function clearPorscheTouchHornTimers() {
+    clearTimeout(porscheTouchSteering.hornTimer);
+    clearTimeout(porscheTouchHornPulseTimer);
+    porscheTouchSteering.hornTimer = null;
+    porscheTouchHornPulseTimer = null;
+  }
+  function beginPorscheTouchSteering(event, control) {
+    if (porscheTouchSteering.pointerId !== null || event.isPrimary === false) return false;
+    clearPorscheTouchHornTimers();
+    stopPorscheHornSound();
+    porscheTouchSteering.pointerId = event.pointerId;
+    porscheTouchSteering.startX = event.clientX;
+    porscheTouchSteering.input = 0;
+    porscheTouchSteering.mode = "pending";
+    // Give horizontal travel first claim on the shared horn center so a steering
+    // gesture cannot leak a horn transient before its intent is known.
+    porscheTouchSteering.hornTimer = setTimeout(function () {
+      porscheTouchSteering.hornTimer = null;
+      if (porscheTouchSteering.mode === "pending") {
+        porscheTouchSteering.mode = "horn";
+        startPorscheHornSound();
+      }
+    }, 160);
+    try { control.setPointerCapture(event.pointerId); } catch (_error) {}
+    return true;
+  }
+  function movePorscheTouchSteering(event) {
+    if (event.pointerId !== porscheTouchSteering.pointerId) return false;
+    var dx = event.clientX - porscheTouchSteering.startX;
+    if (porscheTouchSteering.mode !== "steering" && Math.abs(dx) >= 10) {
+      clearPorscheTouchHornTimers();
+      stopPorscheHornSound();
+      porscheTouchSteering.mode = "steering";
+      porscheTouchSteering.returning = false;
+      signalPorscheSteering(dx < 0 ? "left" : "right");
+    }
+    if (porscheTouchSteering.mode === "steering") {
+      porscheTouchSteering.input = Math.max(-1, Math.min(1, dx / porscheTouchSteeringTravel()));
+      driveState.steeringAngle = porscheTouchSteering.input * 18;
+      paintPorscheDrivePosition();
+      ensurePorscheDriveFrame();
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  }
+  function finishPorscheTouchSteering(event, activateTap) {
+    if (porscheTouchSteering.pointerId === null ||
+        event && event.pointerId !== porscheTouchSteering.pointerId) return false;
+    var mode = porscheTouchSteering.mode;
+    clearPorscheTouchHornTimers();
+    porscheTouchSteering.pointerId = null;
+    porscheTouchSteering.input = 0;
+    porscheTouchSteering.mode = "idle";
+    if (mode === "steering") {
+      porscheTouchSteering.returning = true;
+      stopPorscheHornSound();
+      ensurePorscheDriveFrame();
+    } else if (mode === "horn") {
+      stopPorscheHornSound();
+    } else if (mode === "pending" && activateTap && startPorscheHornSound()) {
+      porscheTouchHornPulseTimer = setTimeout(function () {
+        porscheTouchHornPulseTimer = null;
+        stopPorscheHornSound();
+      }, 110);
+    } else {
+      stopPorscheHornSound();
+    }
+    return true;
+  }
+  function cancelPorscheTouchSteering() {
+    if (porscheTouchSteering.pointerId === null) {
+      clearPorscheTouchHornTimers();
+      stopPorscheHornSound();
+      return false;
+    }
+    return finishPorscheTouchSteering(null, false);
+  }
   function leavePorscheTireMarks() {
     if (!tireMarks) return;
     var ns = "http://www.w3.org/2000/svg";
@@ -34827,9 +34918,14 @@ window.__entranceRoomOpen = false;
     var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
     var clutch = porscheState.engineOn && driveState.holds.clutch;
     var brake = driveState.holds.brake ? 1 : 0;
-    var steerInput = (driveState.holds.steerRight ? 1 : 0) - (driveState.holds.steerLeft ? 1 : 0);
+    var keyboardSteerInput = (driveState.holds.steerRight ? 1 : 0) - (driveState.holds.steerLeft ? 1 : 0);
+    var steerInput = porscheTouchSteering.mode === "steering" ? porscheTouchSteering.input : keyboardSteerInput;
     var steeringTarget = steerInput * 18;
     driveState.steeringAngle += (steeringTarget - driveState.steeringAngle) * Math.min(1, seconds * (steerInput ? 7 : 4.5));
+    if (porscheTouchSteering.returning && Math.abs(steeringTarget - driveState.steeringAngle) < .05) {
+      driveState.steeringAngle = steeringTarget;
+      porscheTouchSteering.returning = false;
+    }
     var ratios = { "-1": 3.31, "1": 3.82, "2": 2.2, "3": 1.52, "4": 1.22, "5": 1.02, "6": .84 };
     var ratio = ratios[String(driveState.gear)] || 0;
     if (porscheState.engineOn) {
@@ -34919,7 +35015,8 @@ window.__entranceRoomOpen = false;
     if (!driveLastTime) driveLastTime = now;
     porscheDriveStep(now - driveLastTime);
     driveLastTime = now;
-    if (porscheState.engineOn || Math.abs(driveState.speed) > .02 || Object.keys(driveState.holds).some(function (key) { return driveState.holds[key]; })) {
+    if (porscheState.engineOn || Math.abs(driveState.speed) > .02 || porscheTouchSteering.mode === "steering" ||
+        porscheTouchSteering.returning || Object.keys(driveState.holds).some(function (key) { return driveState.holds[key]; })) {
       var delay = document.hidden || !document.hasFocus() ? 100 : 16;
       driveTimer = setTimeout(function () { porscheDriveTick(performance.now()); }, delay);
     }
@@ -34932,6 +35029,8 @@ window.__entranceRoomOpen = false;
   }
   function resetPorscheDriveRuntime() {
     cancelPorscheShifterPress();
+    cancelPorscheTouchSteering();
+    porscheTouchSteering.returning = false;
     setPorscheDriveShiftKeyHeld(false);
     if (driveFrame) cancelAnimationFrame(driveFrame);
     if (driveTimer) clearTimeout(driveTimer);
@@ -35491,6 +35590,10 @@ window.__entranceRoomOpen = false;
     var holdReleased = true;
     function release(event) {
       if (action === "horn") {
+        if (event && (event.pointerType === "touch" || event.pointerId === porscheTouchSteering.pointerId)) {
+          finishPorscheTouchSteering(event, event.type === "pointerup");
+          return;
+        }
         stopPorscheHornSound();
         return;
       }
@@ -35504,8 +35607,11 @@ window.__entranceRoomOpen = false;
       event.preventDefault();
       event.stopPropagation();
       if (action === "horn") {
-        startPorscheHornSound();
-        try { control.setPointerCapture(event.pointerId); } catch (_error) {}
+        if (event.pointerType === "touch") beginPorscheTouchSteering(event, control);
+        else {
+          startPorscheHornSound();
+          try { control.setPointerCapture(event.pointerId); } catch (_error) {}
+        }
       }
       if (hold && driveState.hudOpen) {
         holdReleased = false;
@@ -35520,6 +35626,7 @@ window.__entranceRoomOpen = false;
     control.addEventListener("pointerup", release);
     control.addEventListener("pointercancel", release);
     control.addEventListener("lostpointercapture", release);
+    if (action === "horn") control.addEventListener("pointermove", movePorscheTouchSteering);
     control.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -35555,7 +35662,7 @@ window.__entranceRoomOpen = false;
     }, true);
   }
   if (driveHud) driveHud.addEventListener("touchmove", function (event) {
-    if (driveShifterPointerId !== null) event.preventDefault();
+    if (driveShifterPointerId !== null || porscheTouchSteering.pointerId !== null) event.preventDefault();
   }, { passive: false });
   if (driveGlovebox) {
     driveGlovebox.addEventListener("pointerdown", function (event) {
@@ -35576,6 +35683,7 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen ||
         (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
       cancelPorscheShifterPress();
+      cancelPorscheTouchSteering();
       setPorscheDriveShiftKeyHeld(false);
       stopPorscheHornSound();
       Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
@@ -38120,7 +38228,7 @@ var T = {
     entrance_car_indicator: "Flash the Porsche front indicator",
     entrance_drive_hud: "Porsche driving controls",
     entrance_drive_lap: "Lap",
-    entrance_drive_horn: "Sound the horn",
+    entrance_drive_horn: "Horn; drag to steer on touch",
     entrance_drive_ignition: "Ignition key",
     entrance_drive_glovebox: "Open or close the glovebox",
     entrance_drive_clutch: "Clutch pedal — hold Shift",
@@ -39487,7 +39595,7 @@ var T = {
     entrance_car_indicator: "Třikrát bliknout předním blinkrem Porsche",
     entrance_drive_hud: "Ovládání jízdy Porsche",
     entrance_drive_lap: "Kolo",
-    entrance_drive_horn: "Zatroubit",
+    entrance_drive_horn: "Klakson; tažením na dotyku řídit",
     entrance_drive_ignition: "Klíček zapalování",
     entrance_drive_glovebox: "Otevřít nebo zavřít přihrádku",
     entrance_drive_clutch: "Spojkový pedál — držet Shift",

@@ -687,7 +687,10 @@ tail light, and indicator. They remain outside the Tab order, stop bubbling at t
 own click handlers, and publish pressed state through `__entranceRoomState().car`.
 The dashboard horn keeps its held `horn-pressed` state independent from a transient
 `horn-answering` class on `#entrance-door-art`, which gives the facade door a restrained
-warm glass response and is cleared on every horn release or Entrance teardown.
+warm glass response and is cleared on every horn release or Entrance teardown. Touches
+starting on the horn center stay pending across a small movement threshold: a stationary
+press becomes the horn, while horizontal travel becomes signed analog steering and cancels
+the horn. The HUD's non-passive `touchmove` guard prevents page panning for that gesture.
 The driving HUD is a clipped top-half code-native SVG overlay that leaves
 the animated Porsche in the lower street band: pointer holds drive its
 physical pedals, shifter hotspots select R/N/1–6, and the Entrance

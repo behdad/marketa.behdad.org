@@ -242,7 +242,9 @@ gameplay messages finish before that room caption appears.
   are independent controls. Double-click it—or press Enter—to reveal its tan
   dashboard; Enter then turns the ignition. Hold **↑** or **Space** for throttle,
   **↓** for brake, or **Shift** for the clutch; choose **N**, **R**, or **1–6** to
-  shift. Forward gears top out progressively at roughly 60, 100, 150, 200, 250,
+  shift, and steer with **←**/**→**. On touch, drag horizontally from the
+  steering-wheel center for proportional steering; letting go springs the wheel
+  back. Forward gears top out progressively at roughly 60, 100, 150, 200, 250,
   and 300 km/h. The pedals and H-pattern shifter also work directly. A clutchless
   keyboard shift grinds and falls back to neutral, while a hard fast stop leaves
   a brief pair of tire marks. At high speed, braking while steering can send the car
@@ -253,7 +255,8 @@ gameplay messages finish before that room caption appears.
   running dashboard visibly and audibly blows cool air through both vents.
   The small LAP readout in the left instrument counts completed street loops
   for the current engine run; starting the engine begins a fresh count.
-  Hold the dashboard horn to get a small warm answer from the building door.
+  Press or hold the dashboard horn without dragging to get a small warm answer from
+  the building door.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze. If an attended daytime
   shower gives way to clear sky, a quiet rainbow may linger over the balcony.

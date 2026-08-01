@@ -685,7 +685,9 @@ Down brake, Shift clutch, and N/R/1–6.
 `__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
 focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
 state preserves the Porsche's position and durable panel/light configuration; a full
-reset clears both.
+reset clears both. The separate `drive.lapCount` resets only on engine start,
+counts street-wrap crossings for that engine run, and is stored in the Entrance
+checkpoint row; `drive.wraps` remains the existing street-wrap/caption state.
 The couple is presentation-only: `#entrance-porsche-occupants` fades in from the
 existing `.drive-hud-visible` class, while the HUD itself carries Behdad behind the
 passenger dashboard and Markéta's hands inside the steering-wheel transform. No
@@ -1661,7 +1663,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
   presentation entries and their recovery/lifecycle contracts;
 - `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`,
   `tests/cinema-room.js`, `tests/bathroom-room.js`, `tests/bedroom-room.js`,
-  `tests/bedroom-tictactoe.js`, and `tests/entrance-room.js` for projector
+  `tests/bedroom-tictactoe.js`, `tests/entrance-room.js`, and
+  `tests/entrance-lap-odometer.js` for projector
   ordering, retained channel state, shared beds, transport, play-along transitions, Vimeo
   teardown, lower-room pan/UI restoration, and guarded mouse/touch navigation for Kitchen,
   Cuddly, Garden, Office, and Balcony;

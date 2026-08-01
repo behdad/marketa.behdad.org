@@ -31564,6 +31564,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <g transform="translate(214 79)">
               <circle r="31" fill="url(#entrance-drive-gauge)" stroke="url(#entrance-drive-metal)" stroke-width="3"/>
               <g fill="#dbe7eb" font-size="6" font-weight="700"><text x="-18" y="15">0</text><text x="-24" y="0">50</text><text x="-14" y="-17">100</text><text x="7" y="-22">150</text><text x="22" y="-8">200</text><text x="21" y="12">250</text></g>
+              <text id="entrance-drive-lap-odometer" data-i="entrance_drive_lap" x="0" y="25" fill="#e3f0f4" font-size="4.4" font-weight="700" letter-spacing=".2">LAP 0</text>
               <g id="entrance-drive-speed-needle"><path d="M0 0L-18 16" stroke="#e3443c" stroke-width="2" stroke-linecap="round"/><circle r="3.1" fill="#20262a"/></g>
             </g>
             <g transform="translate(338 79)">
@@ -33437,6 +33438,7 @@ window.__entranceRoomOpen = false;
   var driveFuelNeedle = document.getElementById("entrance-drive-fuel-needle");
   var driveTachReadout = document.getElementById("entrance-drive-tach-readout");
   var driveClockReadout = document.getElementById("entrance-drive-clock-readout");
+  var driveLapOdometer = document.getElementById("entrance-drive-lap-odometer");
   var driveSteering = document.getElementById("entrance-drive-steering");
   var entranceDoorArt = document.getElementById("entrance-door-art");
   var driveShifter = document.getElementById("entrance-drive-shifter");
@@ -33525,6 +33527,7 @@ window.__entranceRoomOpen = false;
     wheelAngle: 0,
     steeringAngle: 0,
     wraps: 0,
+    lapCount: 0,
     facing: 1,
     yaw: 0,
     spinDirection: 0,
@@ -33658,6 +33661,12 @@ window.__entranceRoomOpen = false;
   function driveGearLabel() {
     return driveState.gear < 0 ? "R" : driveState.gear || "N";
   }
+  function porscheDriveLapLabel() {
+    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
+    var dict = typeof T === "object" && T[lang] ? T[lang] : null;
+    var label = dict && dict.entrance_drive_lap ? dict.entrance_drive_lap : (lang === "cs" ? "Kolo" : "Lap");
+    return label.toUpperCase() + " " + driveState.lapCount;
+  }
   function porscheDriveInstructionKey() {
     if (!driveState.hudOpen) return "lower_entrance";
     if (driveState.stalled) return "entrance_drive_stalled";
@@ -33756,6 +33765,7 @@ window.__entranceRoomOpen = false;
       driveClockReadout.textContent = gameHour + ":" + String(gameNow.getMinutes()).padStart(2, "0");
     }
     if (driveTachReadout) driveTachReadout.textContent = driveState.stalled ? "STALL" : driveGearLabel();
+    if (driveLapOdometer) driveLapOdometer.textContent = porscheDriveLapLabel();
     if (!driveShifterAttemptTimer) paintPorscheShifter(driveState.gear);
     if (driveGearIndicator) {
       var gearPositions = { "-1": [464, 93], "1": [472, 93], "2": [472, 113],
@@ -34511,8 +34521,8 @@ window.__entranceRoomOpen = false;
     // Wheel spin is local to the car. After a 180° spin the scene travel reverses,
     // but the mirrored car must keep rolling in its new forward direction.
     driveState.wheelAngle = (driveState.wheelAngle + travel * driveState.facing / 24.65 * 180 / Math.PI) % 360;
-    while (driveState.position < -648) { driveState.position += PORSCHE_WRAP_SPAN; driveState.wraps++; }
-    while (driveState.position > 349) { driveState.position -= PORSCHE_WRAP_SPAN; driveState.wraps++; }
+    while (driveState.position < -648) { driveState.position += PORSCHE_WRAP_SPAN; driveState.wraps++; driveState.lapCount++; }
+    while (driveState.position > 349) { driveState.position -= PORSCHE_WRAP_SPAN; driveState.wraps++; driveState.lapCount++; }
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
     paintPorscheDriveAudio();
@@ -34554,6 +34564,7 @@ window.__entranceRoomOpen = false;
     driveState.wheelAngle = 0;
     driveState.steeringAngle = 0;
     driveState.wraps = 0;
+    driveState.lapCount = 0;
     driveState.facing = 1;
     driveState.yaw = 0;
     driveState.spinDirection = 0;
@@ -34879,6 +34890,7 @@ window.__entranceRoomOpen = false;
         driveState.rpm = 750;
         driveState.gear = 0;
         driveState.temperature = 0;
+        driveState.lapCount = 0;
         if (entranceNight) {
           porscheState.headlightOn = true;
           porscheState.taillightOn = true;
@@ -35280,6 +35292,7 @@ window.__entranceRoomOpen = false;
         steeringAngle: driveState.steeringAngle,
         wheelAngle: driveState.wheelAngle,
         wraps: driveState.wraps,
+        lapCount: driveState.lapCount,
         facing: driveState.facing,
         yaw: driveState.yaw,
         spinDirection: driveState.spinDirection,
@@ -35330,6 +35343,7 @@ window.__entranceRoomOpen = false;
           steeringAngle: driveState.steeringAngle,
           wheelAngle: driveState.wheelAngle,
           wraps: driveState.wraps,
+          lapCount: driveState.lapCount,
           facing: driveState.facing,
           yaw: driveState.yaw,
           spinDirection: driveState.spinDirection,
@@ -35377,6 +35391,7 @@ window.__entranceRoomOpen = false;
         if (Number.isFinite(Number(row.drive.steeringAngle))) driveState.steeringAngle = Math.max(-18, Math.min(18, Number(row.drive.steeringAngle)));
         if (Number.isFinite(Number(row.drive.wheelAngle))) driveState.wheelAngle = Number(row.drive.wheelAngle) % 360;
         if (Number.isFinite(Number(row.drive.wraps))) driveState.wraps = Math.max(0, Math.floor(Number(row.drive.wraps)));
+        if (Number.isFinite(Number(row.drive.lapCount))) driveState.lapCount = Math.max(0, Math.floor(Number(row.drive.lapCount)));
       }
       windowPayoffShown = false;
       paintEntranceWindows();
@@ -37664,6 +37679,7 @@ var T = {
     entrance_car_taillight: "Toggle the Porsche tail light",
     entrance_car_indicator: "Flash the Porsche front indicator",
     entrance_drive_hud: "Porsche driving controls",
+    entrance_drive_lap: "Lap",
     entrance_drive_horn: "Sound the horn",
     entrance_drive_ignition: "Ignition key",
     entrance_drive_glovebox: "Open or close the glovebox",
@@ -39018,6 +39034,7 @@ var T = {
     entrance_car_taillight: "Rozsvítit nebo zhasnout zadní světlo Porsche",
     entrance_car_indicator: "Třikrát bliknout předním blinkrem Porsche",
     entrance_drive_hud: "Ovládání jízdy Porsche",
+    entrance_drive_lap: "Kolo",
     entrance_drive_horn: "Zatroubit",
     entrance_drive_ignition: "Klíček zapalování",
     entrance_drive_glovebox: "Otevřít nebo zavřít přihrádku",

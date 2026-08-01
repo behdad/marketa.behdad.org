@@ -249,6 +249,8 @@ gameplay messages finish before that room caption appears.
   Behdad rides along while the optional cockpit is open; dismissing it returns
   the street view to the parked, empty car. At 24°C or warmer outside, a
   running dashboard visibly and audibly blows cool air through both vents.
+  The small LAP readout in the left instrument counts completed street loops
+  for the current engine run; starting the engine begins a fresh count.
   Hold the dashboard horn to get a small warm answer from the building door.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze.

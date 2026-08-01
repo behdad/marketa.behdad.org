@@ -8,6 +8,8 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;-webkit-tap-highlight-color:transparent}
 body{display:grid;place-items:center}
 #canvas{grid-area:1/1;display:block;width:min(100vw,133.333vh)!important;height:auto!important;max-width:100vw!important;max-height:100vh!important;aspect-ratio:4/3!important;background:#000;outline:0}
+#touch-look{display:none;grid-area:1/1;z-index:3;width:min(100vw,133.333vh);max-width:100vw;max-height:100vh;aspect-ratio:4/3;touch-action:none;-webkit-touch-callout:none}
+#touch-look[hidden]{display:none}
 #status{grid-area:1/1;z-index:1;margin:0;padding:0 4px;color:#e8c060;text-align:center;font:11px/1.3 ui-monospace,monospace;pointer-events:none}
 #status.err{color:#e0736a}
 #status:empty{display:none}
@@ -35,11 +37,12 @@ body{display:grid;place-items:center}
 #touch-pad.dragging::before{background:#ffd83d;border-color:#f5d7a1;box-shadow:0 0 clamp(1.5px,.35vmin,2.5px) rgba(255,216,61,.85)}
 #touch-pad button{box-sizing:border-box;min-width:0;padding:0;border:0;border-radius:clamp(1px,1vmin,6px);background:#182252;color:#f8f5ec;font:700 clamp(3px,3vmin,20px)/1 ui-monospace,monospace;touch-action:none;-webkit-tap-highlight-color:transparent}
 #touch-pad [data-touch-key="w"]{grid-area:1/2}#touch-pad [data-touch-key="a"]{grid-area:2/1}#touch-pad [data-touch-key="d"]{grid-area:2/3}#touch-pad [data-touch-key="s"]{grid-area:3/2}
-@media (any-pointer:coarse),(hover:none){#touch-pad{display:grid}}
+@media (any-pointer:coarse),(hover:none){#touch-pad{display:grid}#touch-look{display:block}}
 </style>
 </head>
 <body>
 <canvas id="canvas" tabindex="0"></canvas>
+<div id="touch-look" hidden aria-label="Drag to look; tap to fire"></div>
 <nav id="touch-pad" aria-label="Touch movement controls" hidden>
   <button type="button" class="touch-pad-button" data-dir="up" data-touch-key="w" aria-label="Move forward" aria-pressed="false">↑</button>
   <button type="button" class="touch-pad-button" data-dir="left" data-touch-key="a" aria-label="Move left" aria-pressed="false">←</button>
@@ -57,6 +60,7 @@ body{display:grid;place-items:center}
 </section>
 <script type="module">
 const canvas = document.getElementById("canvas");
+const touchLook = document.getElementById("touch-look");
 const status = document.getElementById("status");
 const picker = document.getElementById("arena-picker");
 const arenas = ["oa_shine", "aggressor", "am_lavaarena"];
@@ -201,19 +205,23 @@ canvas.addEventListener("pointerdown", () => {
   sync();
 });
 let touchAim = null;
-canvas.addEventListener("pointerdown", event => {
-  if (event.pointerType !== "touch") return;
+touchLook.addEventListener("pointerdown", event => {
+  if (event.pointerType !== "touch" || touchAim) return;
   event.preventDefault(); event.stopImmediatePropagation();
   touchAim = { id:event.pointerId, x:event.clientX, y:event.clientY, sx:event.clientX, sy:event.clientY, moved:false };
-  try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+  try { touchLook.setPointerCapture(event.pointerId); } catch (_) {}
 }, true);
-canvas.addEventListener("pointermove", event => {
+touchLook.addEventListener("pointermove", event => {
   if (!touchAim || event.pointerId !== touchAim.id) return;
   event.preventDefault(); event.stopImmediatePropagation();
   const dx = event.clientX - touchAim.x, dy = event.clientY - touchAim.y;
-  if (Math.hypot(event.clientX - touchAim.sx, event.clientY - touchAim.sy) > 5) touchAim.moved = true;
+  if (Math.hypot(event.clientX - touchAim.sx, event.clientY - touchAim.sy) > 8) touchAim.moved = true;
   touchAim.x = event.clientX; touchAim.y = event.clientY;
-  canvas.dispatchEvent(new MouseEvent("mousemove", { bubbles:true, movementX:dx * 3.2, movementY:dy * 3.2 }));
+  if (!dx && !dy) return;
+  const move = new MouseEvent("mousemove", { bubbles:true, buttons:0 });
+  Object.defineProperty(move, "movementX", { value:dx * 7.5 });
+  Object.defineProperty(move, "movementY", { value:dy * 7.5 });
+  canvas.dispatchEvent(move);
 }, true);
 function finishTouchAim(event) {
   if (!touchAim || event.pointerId !== touchAim.id) return;
@@ -224,8 +232,12 @@ function finishTouchAim(event) {
   }
   touchAim = null;
 }
-canvas.addEventListener("pointerup", finishTouchAim, true);
-canvas.addEventListener("pointercancel", finishTouchAim, true);
+touchLook.addEventListener("pointerup", finishTouchAim, true);
+touchLook.addEventListener("pointercancel", event => {
+  if (!touchAim || event.pointerId !== touchAim.id) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  touchAim = null;
+}, true);
 document.addEventListener("contextmenu", event => {
   event.preventDefault();
   try { parent.postMessage({ kind: "shoot-contextmenu", game: "q3", x: event.clientX / innerWidth, y: event.clientY / innerHeight }, location.origin); } catch (_) {}
@@ -296,6 +308,7 @@ try {
   });
   setStatus("");
   touchPad.hidden = false;
+  touchLook.hidden = false;
   tell("ready");
   sync();
   try { canvas.focus({ preventScroll: true }); } catch (_) {}

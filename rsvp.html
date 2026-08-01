@@ -861,6 +861,8 @@ footer{margin-top:2.6rem}
 }
 .entrance-drive-key.word{font-size:4px;letter-spacing:-.15px}
 #entrance-drive-hud.drive-shift-key-held :is(#entrance-drive-brake,#entrance-drive-throttle) .entrance-drive-key{opacity:0}
+#entrance-drive-shift-hints{opacity:0;transition:opacity .12s ease;pointer-events:none}
+#entrance-drive-hud.drive-shift-key-held #entrance-drive-shift-hints{opacity:1}
 #entrance-drive-hud.drive-stalled #entrance-drive-tach-readout{fill:#e6a08b}
 #entrance-drive-stall-led{opacity:0;filter:drop-shadow(0 0 2px rgba(244,153,45,.9))}
 #entrance-drive-hud.drive-stalled #entrance-drive-stall-led{opacity:1}
@@ -31740,6 +31742,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <g class="entrance-drive-control" role="button" data-drive-gear="6" data-aria-i="entrance_drive_gear_6"><circle class="entrance-drive-hit" cx="488" cy="112" r="5"/></g>
             <g class="entrance-drive-control" role="button" data-drive-gear="0" data-aria-i="entrance_drive_neutral"><circle class="entrance-drive-hit" cx="476" cy="103" r="5"/></g>
           </g>
+          <g id="entrance-drive-shift-hints" aria-hidden="true" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" font-weight="700" fill="#f2f4ed" stroke="#252a2d" stroke-width="1.4" paint-order="stroke">
+            <text x="476" y="77">↑</text>
+            <text x="476" y="137">↓</text>
+          </g>
           </g>
         </svg>
         <span id="entrance-drive-status" class="entrance-drive-status" aria-live="polite"></span>
@@ -33459,6 +33465,7 @@ window.__entranceRoomOpen = false;
   var driveShifter = document.getElementById("entrance-drive-shifter");
   var driveShifterLever = document.getElementById("entrance-drive-shifter-lever");
   var driveShifterShaft = document.getElementById("entrance-drive-shifter-shaft");
+  var driveShifterHints = document.getElementById("entrance-drive-shift-hints");
   var driveGlovebox = document.getElementById("entrance-drive-glovebox");
   var porscheFrontWheelSpin = document.getElementById("entrance-porsche-front-wheel-spin");
   var porscheFrontWheelSteer = document.getElementById("entrance-porsche-front-wheel-steer");
@@ -34345,6 +34352,7 @@ window.__entranceRoomOpen = false;
   function selectPorscheDriveGear(gear, clutchBypass) {
     gear = Number(gear);
     if (gear < -1 || gear > 6 || gear !== Math.round(gear)) return false;
+    if (gear !== 0 && !porscheState.engineOn) return false;
     if (gear !== 0 && porscheState.engineOn && !driveState.holds.clutch && !clutchBypass) {
       driveState.gear = 0;
       previewPorscheShifterAttempt(gear);

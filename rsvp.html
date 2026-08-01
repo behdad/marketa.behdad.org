@@ -33581,6 +33581,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_ROAD_TRAVEL_SCALE = 2.5;
   var PORSCHE_GEAR_SPEED_CEILINGS = { "1": 60, "2": 100, "3": 150, "4": 200, "5": 250, "6": 300 };
   var driveFrame = null;
+  var driveTimer = null;
   var driveLastTime = 0;
   var lastSkidAt = 0;
   var lastSkidSoundAt = 0;
@@ -34790,7 +34791,8 @@ window.__entranceRoomOpen = false;
   }
   function porscheDriveTick(now) {
     driveFrame = null;
-    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus() ||
+    driveTimer = null;
+    if (!window.__entranceRoomOpen ||
         (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
       driveLastTime = 0;
       return;
@@ -34799,20 +34801,23 @@ window.__entranceRoomOpen = false;
     porscheDriveStep(now - driveLastTime);
     driveLastTime = now;
     if (porscheState.engineOn || Math.abs(driveState.speed) > .02 || Object.keys(driveState.holds).some(function (key) { return driveState.holds[key]; })) {
-      driveFrame = requestAnimationFrame(porscheDriveTick);
+      var delay = document.hidden || !document.hasFocus() ? 100 : 16;
+      driveTimer = setTimeout(function () { porscheDriveTick(performance.now()); }, delay);
     }
   }
   function ensurePorscheDriveFrame() {
-    if (driveFrame || !window.__entranceRoomOpen || document.hidden || !document.hasFocus() ||
+    if (driveFrame || driveTimer || !window.__entranceRoomOpen ||
         (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) return;
     driveLastTime = 0;
-    driveFrame = requestAnimationFrame(porscheDriveTick);
+    driveTimer = setTimeout(function () { porscheDriveTick(performance.now()); }, 0);
   }
   function resetPorscheDriveRuntime() {
     cancelPorscheShifterPress();
     setPorscheDriveShiftKeyHeld(false);
     if (driveFrame) cancelAnimationFrame(driveFrame);
+    if (driveTimer) clearTimeout(driveTimer);
     driveFrame = null;
+    driveTimer = null;
     driveLastTime = 0;
     driveState.hudOpen = false;
     driveState.gloveboxOpen = false;
@@ -35442,14 +35447,16 @@ window.__entranceRoomOpen = false;
   function updatePorscheDriveLifecycle() {
     updatePorscheIdle();
     updatePorscheDriveAudio();
-    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus() ||
+    if (!window.__entranceRoomOpen ||
         (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
       cancelPorscheShifterPress();
       setPorscheDriveShiftKeyHeld(false);
       stopPorscheHornSound();
       Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
       if (driveFrame) cancelAnimationFrame(driveFrame);
+      if (driveTimer) clearTimeout(driveTimer);
       driveFrame = null;
+      driveTimer = null;
       driveLastTime = 0;
     } else if (porscheState.engineOn) ensurePorscheDriveFrame();
   }

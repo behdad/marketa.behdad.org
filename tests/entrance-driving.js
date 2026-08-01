@@ -89,20 +89,25 @@ check(s.shiftArrows && s.shiftArrows.up.drive.gear === 1 && s.shiftArrows.held.d
   s.shiftArrows.down.drive.gear === 0,
   "fresh Shift+Up/Down steps one gear without key-repeat cycling", s.shiftArrows);
 check(s.lowBrake && s.lowBrake.before.drive.speed > 10 && s.lowBrake.before.drive.speed < 65 &&
-  s.lowBrake.after.drive.tireMarks === 0 && s.lowBrake.after.drive.speed < s.lowBrake.before.drive.speed,
+  s.lowBrake.after.drive.tireMarks === 0 &&
+  s.lowBrake.after.drive.brakeScreeches === s.lowBrake.before.drive.brakeScreeches &&
+  s.lowBrake.after.drive.speed < s.lowBrake.before.drive.speed,
   "ordinary low-speed braking stays below the tire-screech threshold", s.lowBrake);
-check(s.brakeAudio && s.brakeAudio.hard.screechGain >= s.brakeAudio.hard.absGain * 8 &&
-  s.brakeAudio.hard.screechGain > s.brakeAudio.low.screechGain &&
+check(s.brakeAudio && !s.brakeAudio.low.active && s.brakeAudio.low.screechGain === 0 &&
+  s.brakeAudio.low.screechToneGain === 0 && s.brakeAudio.low.absGain === 0 &&
+  s.brakeAudio.hard.active && s.brakeAudio.hard.screechGain >= s.brakeAudio.hard.absGain * 25 &&
+  s.brakeAudio.hard.screechToneGain > s.brakeAudio.hard.absGain &&
   s.brakeAudio.hard.screechFrequency > s.brakeAudio.low.screechFrequency,
-  "hard braking foregrounds a speed-responsive tire screech over quiet ABS chatter", s.brakeAudio);
+  "brake audio stays silent below threshold and foregrounds tire screech over quiet ABS at speed", s.brakeAudio);
 check(s.forward && s.forward.first.drive.gear === 1 && s.forward.first.drive.speed > 45 &&
   !s.forward.first.car.vibrating &&
   s.forward.second.drive.gear === 2 && s.forward.second.drive.speed > 85 &&
   s.forward.third.drive.gear === 3 && s.forward.third.drive.speed > 125 &&
   s.forward.third.drive.position < s.forward.first.drive.position,
   "clutched 1–2–3 shifts deliver substantially quicker acceleration", s.forward);
-check(s.brake && s.brake.drive.tireMarks >= 2 && s.brake.drive.speed < s.forward.third.drive.speed,
-  "a hard brake sheds speed and leaves paired fading tire marks", s.brake);
+check(s.brake && s.brake.drive.tireMarks >= 2 && s.brake.drive.speed < s.forward.third.drive.speed &&
+  s.brake.drive.brakeScreeches > s.lowBrake.after.drive.brakeScreeches,
+  "a hard brake schedules a screech, sheds speed, and leaves paired fading tire marks", s.brake);
 check(s.brake && s.brake.drive.spins === 0 && s.brake.drive.facing === 1,
   "ordinary hard braking remains yaw-stable below the spin threshold", s.brake);
 check(s.redlineGrace && s.redlineGrace.car.engineOn && !s.redlineGrace.drive.stalled &&

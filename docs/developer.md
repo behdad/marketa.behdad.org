@@ -688,6 +688,8 @@ state preserves the Porsche's position and durable panel/light configuration; a 
 reset clears both. The separate `drive.lapCount` resets only on engine start,
 counts street-wrap crossings for that engine run, and is stored in the Entrance
 checkpoint row; `drive.wraps` remains the existing street-wrap/caption state.
+The runtime-only `brakeScreeches` count proves that a high-speed brake actually
+scheduled its one-shot audio without becoming drivetrain state.
 The couple is presentation-only: `#entrance-porsche-occupants` fades in from the
 existing `.drive-hud-visible` class, while the HUD itself carries Behdad behind the
 passenger dashboard and Markéta's hands inside the steering-wheel transform. No

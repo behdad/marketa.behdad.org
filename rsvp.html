@@ -33504,6 +33504,8 @@ window.__entranceRoomOpen = false;
   var driveFrame = null;
   var driveLastTime = 0;
   var lastSkidAt = 0;
+  var lastSkidSoundAt = 0;
+  var porscheBrakeScreeches = 0;
   var porscheSpinTimer = null;
   var driveShifterAttemptTimer = null;
   var driveShifterHoldTimer = null;
@@ -34143,11 +34145,14 @@ window.__entranceRoomOpen = false;
     osc.onended = function () { try { osc.disconnect(); thud.disconnect(); out.disconnect(); } catch (_error) {} };
   }
   function porscheBrakeAudioMix(speed) {
-    var severity = Math.max(0, Math.min(1, (Math.abs(speed) - 65) / 175));
+    var active = Math.abs(speed) >= 65;
+    var severity = active ? Math.max(0, Math.min(1, (Math.abs(speed) - 65) / 175)) : 0;
     return {
-      absGain: .015 + severity * .006,
-      screechGain: .15 + severity * .07,
-      duration: .4 + severity * .12,
+      active: active,
+      absGain: active ? .006 + severity * .003 : 0,
+      screechGain: active ? .22 + severity * .09 : 0,
+      screechToneGain: active ? .025 + severity * .015 : 0,
+      duration: active ? .42 + severity * .1 : 0,
       screechFrequency: 2050 + severity * 700
     };
   }
@@ -34180,11 +34185,11 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function playPorscheSkidSound(speed) {
-    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
-    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
-    if (!ctx) return;
-    var t = ctx.currentTime;
     var mix = porscheBrakeAudioMix(speed);
+    if (!mix.active || !window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return false;
+    var t = ctx.currentTime;
     var samples = Math.ceil(ctx.sampleRate * mix.duration);
     var screechBuffer = ctx.createBuffer(1, samples, ctx.sampleRate);
     var absBuffer = ctx.createBuffer(1, samples, ctx.sampleRate);
@@ -34202,31 +34207,50 @@ window.__entranceRoomOpen = false;
     var absFilter = ctx.createBiquadFilter();
     var screechGain = ctx.createGain();
     var absGain = ctx.createGain();
+    var screechTone = ctx.createOscillator();
+    var screechWarble = ctx.createOscillator();
+    var screechWarbleGain = ctx.createGain();
+    var screechToneGain = ctx.createGain();
     screech.buffer = screechBuffer;
     abs.buffer = absBuffer;
     screechFilter.type = "bandpass";
     screechFilter.frequency.setValueAtTime(mix.screechFrequency, t);
     screechFilter.frequency.exponentialRampToValueAtTime(mix.screechFrequency * .86, t + mix.duration);
-    screechFilter.Q.value = 5.2;
+    screechFilter.Q.value = 1.65;
     absFilter.type = "lowpass";
     absFilter.frequency.value = 390;
     absFilter.Q.value = .7;
+    screechTone.type = "triangle";
+    screechTone.frequency.setValueAtTime(mix.screechFrequency, t);
+    screechTone.frequency.exponentialRampToValueAtTime(mix.screechFrequency * .86, t + mix.duration);
+    screechWarble.type = "sine";
+    screechWarble.frequency.value = 15;
+    screechWarbleGain.gain.value = 62;
     screechGain.gain.setValueAtTime(.0001, t);
     screechGain.gain.exponentialRampToValueAtTime(mix.screechGain, t + .012);
     screechGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
     absGain.gain.setValueAtTime(.0001, t);
     absGain.gain.exponentialRampToValueAtTime(mix.absGain, t + .008);
     absGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
+    screechToneGain.gain.setValueAtTime(.0001, t);
+    screechToneGain.gain.exponentialRampToValueAtTime(mix.screechToneGain, t + .016);
+    screechToneGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
     screech.connect(screechFilter); screechFilter.connect(screechGain); screechGain.connect(ctx.destination);
     abs.connect(absFilter); absFilter.connect(absGain); absGain.connect(ctx.destination);
-    screech.start(t); abs.start(t);
+    screechWarble.connect(screechWarbleGain); screechWarbleGain.connect(screechTone.frequency);
+    screechTone.connect(screechToneGain); screechToneGain.connect(ctx.destination);
+    screech.start(t); abs.start(t); screechTone.start(t); screechWarble.start(t);
     screech.stop(t + mix.duration + .01); abs.stop(t + mix.duration + .01);
+    screechTone.stop(t + mix.duration + .01); screechWarble.stop(t + mix.duration + .01);
+    porscheBrakeScreeches++;
     screech.onended = function () {
       try {
         screech.disconnect(); abs.disconnect(); screechFilter.disconnect(); absFilter.disconnect();
-        screechGain.disconnect(); absGain.disconnect();
+        screechGain.disconnect(); absGain.disconnect(); screechTone.disconnect(); screechWarble.disconnect();
+        screechWarbleGain.disconnect(); screechToneGain.disconnect();
       } catch (_error) {}
     };
+    return true;
   }
   function playPorscheGearGrindSound(gear) {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
@@ -34489,10 +34513,15 @@ window.__entranceRoomOpen = false;
     if (braking && Math.abs(driveState.speed) > .01) {
       var before = Math.abs(driveState.speed);
       driveState.speed -= Math.sign(driveState.speed) * Math.min(before, braking * seconds);
-      if (before >= 65 && brake && Date.now() - lastSkidAt > 300) {
-        lastSkidAt = Date.now();
-        leavePorscheTireMarks();
-        playPorscheSkidSound(before);
+      if (before >= 65 && brake) {
+        var skidNow = Date.now();
+        if (skidNow - lastSkidAt > 300) {
+          lastSkidAt = skidNow;
+          leavePorscheTireMarks();
+        }
+        // Audio retries independently if the shared context was not yet available;
+        // tire-mark cadence remains unchanged and drivetrain state is untouched.
+        if (skidNow - lastSkidSoundAt > 300 && playPorscheSkidSound(before)) lastSkidSoundAt = skidNow;
       }
       spinPorscheOnBrake(before, steerInput);
     }
@@ -35304,6 +35333,7 @@ window.__entranceRoomOpen = false;
         acBlasting: !!(driveHud && driveHud.classList.contains("drive-ac-blasting")),
         acAudioActive: !!porscheDriveAcNodes,
         musicActive: !!porscheDriveMusicNodes,
+        brakeScreeches: porscheBrakeScreeches,
         frameActive: !!driveFrame,
         tireMarks: tireMarks ? tireMarks.childNodes.length : 0
       },

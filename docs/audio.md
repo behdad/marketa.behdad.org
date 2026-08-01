@@ -188,6 +188,13 @@ weather, or the explicit thermometer override), fades only its own nodes, and is
 gated by Entrance + HUD + engine + foreground focus. Cooling below the threshold,
 leaving or covering the room, hiding/unfocusing the page, or stopping the engine
 removes the vent wash without touching the shared context.
+
+High-speed braking uses a broad filtered-noise screech reinforced by a lightly
+warbled tire tone; its audio retry is independent from the unchanged tire-mark
+cadence, so a temporarily unavailable shared context cannot swallow the stop.
+The low-passed ABS layer stays subordinate, and braking below 65 km/h schedules
+neither layer.
+
 - **`getSfxCtx()`** returns null while `document.visibilityState === "hidden"` — the
   hidden-tab choke point that silences all one-shots (and autonomous timer-driven ambients)
   without per-call-site guards. Autonomous one-shots additionally guard on

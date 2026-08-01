@@ -5883,6 +5883,16 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #office-monitor.show-doom #monitor-doom:is([data-shoot-view="doom"],[data-shoot-view="duke"]) .monitor-runtime-side-hit{pointer-events:all}
 .snake-wrap{width:100%;height:100%;overflow:hidden;background:#000}
 .snake-wrap iframe{display:block;width:100%;height:100%;border:0;background:#000}
+#monitor-snake-dpad{display:none;pointer-events:none}
+#monitor-snake-dpad .snake-dpad-button{cursor:pointer;user-select:none}
+#monitor-snake-dpad .snake-dpad-face{fill:#172d96;stroke:#ffd84a;stroke-width:.65}
+#monitor-snake-dpad .snake-dpad-button:hover .snake-dpad-face,
+#monitor-snake-dpad .snake-dpad-button:active .snake-dpad-face,
+#monitor-snake-dpad .snake-dpad-button:focus .snake-dpad-face{fill:#2847b8}
+#monitor-snake-dpad .snake-dpad-glyph{fill:none;stroke:#fff0a0;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+@media (pointer:coarse), (any-pointer:coarse), (max-width:759px){
+  #office-monitor.show-snake #monitor-snake-dpad{display:inline;pointer-events:all}
+}
 /* Shoot launcher: one monitor app owns three real, self-hosted browser shooters. Each game
    lives in a disposable same-origin iframe so Back/Kill tears its engine and listeners down. */
 #monitor-doom{opacity:0; pointer-events:none; transition:opacity var(--loft-os-surface-time) ease}
@@ -25231,6 +25241,24 @@ section{margin:1.9rem 0}
 </foreignObject>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="snake-left" x="254" y="154" width="34" height="42" fill="transparent"/>
 <rect class="monitor-runtime-side-hit" data-runtime-gutter="snake-right" x="344" y="154" width="34" height="42" fill="transparent"/>
+<g id="monitor-snake-dpad" data-aria-i="snake_dpad_title" aria-label="Nibbles touch controls">
+<g class="snake-dpad-button" data-snake-key="ArrowUp" data-snake-key-code="38" role="button" tabindex="-1" data-aria-i="snake_dpad_up" data-title-i="snake_dpad_up">
+<rect class="snake-dpad-face" x="356" y="163" width="10" height="9" rx="2"/>
+<path class="snake-dpad-glyph" d="M361 170V165.5M358.7 167.8 361 165.5 363.3 167.8"/>
+</g>
+<g class="snake-dpad-button" data-snake-key="ArrowLeft" data-snake-key-code="37" role="button" tabindex="-1" data-aria-i="snake_dpad_left" data-title-i="snake_dpad_left">
+<rect class="snake-dpad-face" x="345" y="173" width="10" height="9" rx="2"/>
+<path class="snake-dpad-glyph" d="M347.5 177.5H353M349.8 175.2 347.5 177.5 349.8 179.8"/>
+</g>
+<g class="snake-dpad-button" data-snake-key="ArrowRight" data-snake-key-code="39" role="button" tabindex="-1" data-aria-i="snake_dpad_right" data-title-i="snake_dpad_right">
+<rect class="snake-dpad-face" x="367" y="173" width="10" height="9" rx="2"/>
+<path class="snake-dpad-glyph" d="M369 177.5H374.5M372.2 175.2 374.5 177.5 372.2 179.8"/>
+</g>
+<g class="snake-dpad-button" data-snake-key="ArrowDown" data-snake-key-code="40" role="button" tabindex="-1" data-aria-i="snake_dpad_down" data-title-i="snake_dpad_down">
+<rect class="snake-dpad-face" x="356" y="183" width="10" height="9" rx="2"/>
+<path class="snake-dpad-glyph" d="M361 185V189.5M358.7 187.2 361 189.5 363.3 187.2"/>
+</g>
+</g>
 <g id="monitor-snake-close" transform="translate(76.0,29.3) scale(0.8)" role="button" data-title-i="share_close" data-aria-i="share_close">
 <title data-i="share_close">Close</title>
 <rect class="mini-hit" x="369" y="155" width="9" height="9" fill="#000" opacity="0"/>
@@ -37077,6 +37105,11 @@ var T = {
     game_move_down: "Move down",
     game_move_left: "Move left",
     game_move_right: "Move right",
+    snake_dpad_title: "Nibbles touch controls",
+    snake_dpad_up: "Move Nibbles up",
+    snake_dpad_down: "Move Nibbles down",
+    snake_dpad_left: "Move Nibbles left",
+    snake_dpad_right: "Move Nibbles right",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "LINES",
     tetris_next: "NEXT",
@@ -38436,6 +38469,11 @@ var T = {
     game_move_down: "Dolů",
     game_move_left: "Doleva",
     game_move_right: "Doprava",
+    snake_dpad_title: "Dotykové ovládání Nibbles",
+    snake_dpad_up: "Pohyb Nibbles nahoru",
+    snake_dpad_down: "Pohyb Nibbles dolů",
+    snake_dpad_left: "Pohyb Nibbles doleva",
+    snake_dpad_right: "Pohyb Nibbles doprava",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "ŘADY",
     tetris_next: "DALŠÍ",
@@ -69024,15 +69062,19 @@ async def localfont(name):
       }
     } catch (e) {}
   }
-  function snakeKeyboardBlocked() {
+  function snakeInputAvailable() {
     if (!snakeFrame || snakeMode !== "nibbles" || !monitor.classList.contains("show-snake") ||
-        document.hidden || window.currentStageName !== "office") return true;
-    if (document.querySelector(".mon-ctx, .console-ctx.show, .pb-dialog-backdrop, #sharecard-modal, .phone-backdrop.show, #click-me-overlay, #loft-recovery-gate")) return true;
+        document.hidden || window.currentStageName !== "office") return false;
+    if (document.querySelector(".mon-ctx, .console-ctx.show, .pb-dialog-backdrop, #sharecard-modal, .phone-backdrop.show, #click-me-overlay, #loft-recovery-gate")) return false;
     if (typeof MONITOR_APP_CLASSES === "object") {
       for (var id in MONITOR_APP_CLASSES) {
-        if (id !== "snake" && monitor.classList.contains(MONITOR_APP_CLASSES[id])) return true;
+        if (id !== "snake" && monitor.classList.contains(MONITOR_APP_CLASSES[id])) return false;
       }
     }
+    return true;
+  }
+  function snakeKeyboardBlocked() {
+    if (!snakeInputAvailable()) return true;
     var active = document.activeElement;
     if (active && active !== document.body && active !== document.documentElement && active !== snakeFrame) {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable) return true;
@@ -69040,22 +69082,61 @@ async def localfont(name):
     }
     return false;
   }
+  function postSnakeKey(event) {
+    if (!snakeInputAvailable()) return false;
+    focusSnakeFrame();
+    snakeRelayedKeys++;
+    snakeLastRelayedKey = { eventType: event.eventType, key: event.key, code: event.code, keyCode: event.keyCode };
+    try {
+      snakeFrame.contentWindow.postMessage({
+        type: "snake-key", eventType: event.eventType, key: event.key, code: event.code,
+        keyCode: event.keyCode, location: event.location || 0, repeat: !!event.repeat,
+        ctrlKey: !!event.ctrlKey, metaKey: !!event.metaKey, altKey: !!event.altKey, shiftKey: !!event.shiftKey
+      }, location.origin);
+    } catch (e) {}
+    return true;
+  }
   function relaySnakeKey(event) {
     if (event.defaultPrevented || snakeKeyboardBlocked() || document.activeElement === snakeFrame) return;
     if ((event.ctrlKey || event.metaKey || event.altKey) &&
         !((event.ctrlKey || event.metaKey) && (event.key === "Escape" || event.key === "Esc"))) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    focusSnakeFrame();
-    snakeRelayedKeys++;
-    snakeLastRelayedKey = { eventType: event.type, key: event.key, code: event.code, keyCode: event.keyCode };
-    try {
-      snakeFrame.contentWindow.postMessage({
-        type: "snake-key", eventType: event.type, key: event.key, code: event.code,
-        keyCode: event.keyCode, location: event.location, repeat: event.repeat,
-        ctrlKey: event.ctrlKey, metaKey: event.metaKey, altKey: event.altKey, shiftKey: event.shiftKey
-      }, location.origin);
-    } catch (e) {}
+    postSnakeKey({
+      eventType: event.type, key: event.key, code: event.code, keyCode: event.keyCode,
+      location: event.location, repeat: event.repeat, ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey, altKey: event.altKey, shiftKey: event.shiftKey
+    });
+  }
+  var snakeDpad = document.getElementById("monitor-snake-dpad");
+  var snakeDpadHeld = Object.create(null);
+  if (snakeDpad) {
+    Array.prototype.forEach.call(snakeDpad.querySelectorAll(".snake-dpad-button"), function (button) {
+      button.addEventListener("pointerdown", function (event) {
+        if ((event.pointerType === "mouse" && event.button !== 0) || snakeDpadHeld[event.pointerId]) return;
+        event.preventDefault();
+        event.stopPropagation();
+        var key = button.getAttribute("data-snake-key");
+        var keyCode = Number(button.getAttribute("data-snake-key-code")) || 0;
+        if (!postSnakeKey({ eventType: "keydown", key: key, code: key, keyCode: keyCode })) return;
+        snakeDpadHeld[event.pointerId] = { button: button, key: key, keyCode: keyCode };
+        button.setAttribute("aria-pressed", "true");
+        try { button.setPointerCapture(event.pointerId); } catch (e) {}
+      });
+      function release(event) {
+        var held = snakeDpadHeld[event.pointerId];
+        if (!held) return;
+        delete snakeDpadHeld[event.pointerId];
+        event.preventDefault();
+        event.stopPropagation();
+        held.button.setAttribute("aria-pressed", "false");
+        postSnakeKey({ eventType: "keyup", key: held.key, code: held.key, keyCode: held.keyCode });
+      }
+      button.addEventListener("pointerup", release);
+      button.addEventListener("pointercancel", release);
+      button.addEventListener("lostpointercapture", release);
+      button.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); });
+    });
   }
   function ensureSnakeFrame(mode) {
     if (snakeFrame || !snakeWrap) return;

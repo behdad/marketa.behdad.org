@@ -567,6 +567,10 @@ footer{margin-top:2.6rem}
 #entrance-room.entrance-day .entrance-night-light{opacity:0}
 .entrance-door-day-glass{opacity:0;transition:opacity .7s ease}
 #entrance-room.entrance-day .entrance-door-day-glass{opacity:1}
+#entrance-door-art .entrance-door-answer-glow{opacity:0;transition:opacity .14s ease}
+#entrance-door-art.horn-answering .entrance-door-answer-glow{
+  animation:entrance-door-answer .5s ease-in-out infinite;
+}
 .entrance-entry-lamp-light{opacity:0;transition:opacity .32s ease}
 #entrance-room.entrance-lamp-left-on .entrance-lamp-left,
 #entrance-room.entrance-lamp-right-on .entrance-lamp-right{opacity:1}
@@ -855,6 +859,9 @@ footer{margin-top:2.6rem}
 @keyframes entrance-window-answer{
   0%,100%{fill:transparent}32%{fill:rgba(255,232,174,.34)}55%{fill:rgba(127,158,192,.12)}
 }
+@keyframes entrance-door-answer{
+  0%,100%{opacity:.03}35%{opacity:.16}58%{opacity:.06}
+}
 @keyframes entrance-intercom-answer{
   0%,100%{fill:#c8a052;stroke:transparent}
   22%,48%{fill:#fff0a8;stroke:#fff8d8}
@@ -918,6 +925,7 @@ footer{margin-top:2.6rem}
   .hunt-viewport.entrance-room-open #entrance-room-art.grooving .entrance-window-pane{animation:none}
   #entrance-room.entrance-raining .entrance-rain-streak,
   #entrance-room.entrance-snowing .entrance-snowflake-row{animation:none}
+  #entrance-door-art.horn-answering .entrance-door-answer-glow{animation:none;opacity:.1}
   .entrance-drive-windshield-rain-row,.entrance-drive-windshield-snow-row{animation:none !important}
   #cinema-room .cinema-prop.reacting,#cinema-room.spraying #cinema-water-spray,
   #cinema-room.projector-shorted #cinema-screen-shell{animation:none}
@@ -30766,6 +30774,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <text x="340" y="187" text-anchor="middle" fill="#453a31"
             style="font:700 17px Fraunces,Georgia,serif;letter-spacing:2.4px">THE LOFTS</text>
           <path d="M276 198H404L410 209H270Z" fill="#d4c8af" stroke="#a99c85" stroke-width="1.2"/>
+          <g id="entrance-door-art" aria-hidden="true">
           <rect x="287" y="209" width="106" height="65" fill="#5d3427" stroke="#3b2620" stroke-width="4"/>
           <g class="entrance-door-day-glass" pointer-events="none" aria-hidden="true">
             <rect x="296" y="218" width="39" height="49" fill="url(#entrance-door-day-glass)" stroke="#252c2e" stroke-width="3"/>
@@ -30777,10 +30786,14 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <path d="M297.5 219.5V265.5M333.5 219.5V265.5M346.5 219.5V265.5M382.5 219.5V265.5"
               stroke="#111a1e" stroke-width=".7" opacity=".45"/>
           </g>
+          <g class="entrance-door-answer-glow" pointer-events="none">
+            <path d="M298.5 220H332.5V265H298.5ZM347.5 220H381.5V265H347.5Z" fill="#f8ddb0"/>
+          </g>
           <rect class="entrance-night-light" x="296" y="218" width="39" height="49" fill="url(#entrance-door-glow)" stroke="#2b2521" stroke-width="3"/>
           <rect class="entrance-night-light" x="345" y="218" width="39" height="49" fill="url(#entrance-door-glow)" stroke="#2b2521" stroke-width="3"/>
           <path d="M315.5 218V267M364.5 218V267M296 242H335M345 242H384" stroke="#67412f" stroke-width="2"/>
           <circle cx="330" cy="248" r="2" fill="#e8dfcc"/><circle cx="350" cy="248" r="2" fill="#e8dfcc"/>
+          </g>
         </g>
         <!-- Small street intercom beside the doors: speaker grille, call key, and status lamp. -->
         <g id="entrance-intercom-art" aria-hidden="true">
@@ -33376,6 +33389,7 @@ window.__entranceRoomOpen = false;
   var driveTachReadout = document.getElementById("entrance-drive-tach-readout");
   var driveClockReadout = document.getElementById("entrance-drive-clock-readout");
   var driveSteering = document.getElementById("entrance-drive-steering");
+  var entranceDoorArt = document.getElementById("entrance-door-art");
   var driveShifter = document.getElementById("entrance-drive-shifter");
   var driveShifterLever = document.getElementById("entrance-drive-shifter-lever");
   var driveShifterShaft = document.getElementById("entrance-drive-shifter-shaft");
@@ -33546,6 +33560,10 @@ window.__entranceRoomOpen = false;
 
   function clearEntranceInteractions() {
     props.forEach(function (prop) { prop.classList.remove("reacting"); });
+    setPorscheHornDoorAnswering(false);
+  }
+  function setPorscheHornDoorAnswering(answering) {
+    if (entranceDoorArt) entranceDoorArt.classList.toggle("horn-answering", !!answering);
   }
   function entranceDriveAudible() {
     return !!(porscheState.engineOn && window.__entranceRoomOpen &&
@@ -34134,7 +34152,10 @@ window.__entranceRoomOpen = false;
   }
   function startPorscheHornSound() {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
-    if (porscheHornNodes) return true;
+    if (porscheHornNodes) {
+      setPorscheHornDoorAnswering(true);
+      return true;
+    }
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
     if (!ctx) return false;
     var t = ctx.currentTime;
@@ -34154,10 +34175,12 @@ window.__entranceRoomOpen = false;
       return osc;
     });
     porscheHornNodes = { ctx: ctx, out: out, filter: filter, oscillators: oscillators };
+    setPorscheHornDoorAnswering(true);
     if (driveSteering) driveSteering.classList.add("horn-pressed");
     return true;
   }
   function stopPorscheHornSound() {
+    setPorscheHornDoorAnswering(false);
     if (driveSteering) driveSteering.classList.remove("horn-pressed");
     if (!porscheHornNodes) return;
     var horn = porscheHornNodes;

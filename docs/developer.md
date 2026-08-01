@@ -674,6 +674,9 @@ Eight separate `.entrance-car-control` overlays partition the foreground Boxster
 roof, driver door, front and rear compartments, mid-body engine control, headlight,
 tail light, and indicator. They remain outside the Tab order, stop bubbling at their
 own click handlers, and publish pressed state through `__entranceRoomState().car`.
+The dashboard horn keeps its held `horn-pressed` state independent from a transient
+`horn-answering` class on `#entrance-door-art`, which gives the facade door a restrained
+warm glass response and is cleared on every horn release or Entrance teardown.
 The driving HUD is a clipped top-half code-native SVG overlay that leaves
 the animated Porsche in the lower street band: pointer holds drive its
 physical pedals, shifter hotspots select R/N/1–6, and the Entrance

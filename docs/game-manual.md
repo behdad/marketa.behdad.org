@@ -246,6 +246,7 @@ gameplay messages finish before that room caption appears.
   a brief pair of tire marks. The dashboard's compact driving score stays with
   the car and subtly picks up as the street does. At 24°C or warmer outside, a
   running dashboard visibly and audibly blows cool air through both vents.
+  Hold the dashboard horn to get a small warm answer from the building door.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze.
 

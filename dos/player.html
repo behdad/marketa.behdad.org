@@ -106,6 +106,92 @@ canvas{image-rendering:pixelated}
     "c:"
   ].concat(mode === "nibbles" ? ["NIBBLES.EXE", "exit"] : []).join("\n");
   var player = null;
+  var runtimePaused = false;
+  var nibblesCi = null, nibblesStartupTimer = null, nibblesStartupHeld = 0;
+  var nibblesStartupIndex = 0, nibblesStartupArmed = false, nibblesStartupReady = false;
+  // Direct CommandInterface key codes: Enter is 257 (not DOM keyCode 13).
+  // The leading/extra Enter safely handles either order of the sound and intro prompts.
+  // Single-character values also work whether a prompt reads INPUT or one key at a time.
+  var nibblesStartupKeys = [
+    257, 78, 257, 257, // intro / sound off
+    49, 257,           // one player
+    53, 257,           // skill 5
+    78, 257,           // no speed increase
+    67, 257,           // colour
+    53, 257,           // five lives
+    89, 257,           // novice controls
+    78, 257,           // no length-conservation mode
+    82, 257,           // right hand: arrow keys
+    32                 // start level
+  ];
+  function clearNibblesStartupTimer() {
+    if (nibblesStartupTimer !== null) window.clearTimeout(nibblesStartupTimer);
+    nibblesStartupTimer = null;
+  }
+  function scheduleNibblesStartup(delay) {
+    clearNibblesStartupTimer();
+    if (!nibblesStartupReady || nibblesStartupIndex >= nibblesStartupKeys.length) return;
+    nibblesStartupTimer = window.setTimeout(stepNibblesStartup, delay);
+  }
+  function stepNibblesStartup() {
+    nibblesStartupTimer = null;
+    if (!nibblesCi || mode !== "nibbles" || nibblesStartupIndex >= nibblesStartupKeys.length) return;
+    if (runtimePaused || document.hidden) { scheduleNibblesStartup(120); return; }
+    var keyCode = nibblesStartupKeys[nibblesStartupIndex];
+    try {
+      nibblesCi.sendKeyEvent(keyCode, true);
+      nibblesStartupHeld = keyCode;
+    } catch (_error) {
+      scheduleNibblesStartup(120);
+      return;
+    }
+    nibblesStartupTimer = window.setTimeout(function () {
+      nibblesStartupTimer = null;
+      try { nibblesCi.sendKeyEvent(keyCode, false); } catch (_error) {}
+      nibblesStartupHeld = 0;
+      nibblesStartupIndex++;
+      scheduleNibblesStartup(keyCode === 257 ? 260 : 180);
+    }, 48);
+  }
+  function waitForNibblesProgram() {
+    clearNibblesStartupTimer();
+    if (!nibblesCi || runtimePaused || nibblesStartupReady ||
+        nibblesStartupIndex >= nibblesStartupKeys.length) return;
+    if (typeof nibblesCi.getRunningProgram !== "function") {
+      nibblesStartupReady = true;
+      scheduleNibblesStartup(700);
+      return;
+    }
+    var ci = nibblesCi;
+    Promise.resolve(ci.getRunningProgram()).then(function (program) {
+      if (nibblesCi !== ci || runtimePaused) return;
+      var running = String(program || "").replace(/^.*[\\/]/, "").trim();
+      if (/^NIBBLES(?:\.EXE)?$/i.test(running)) {
+        nibblesStartupReady = true;
+        scheduleNibblesStartup(700);
+      } else {
+        nibblesStartupTimer = window.setTimeout(waitForNibblesProgram, 120);
+      }
+    }).catch(function () {
+      if (nibblesCi !== ci || runtimePaused) return;
+      nibblesStartupReady = true;
+      scheduleNibblesStartup(700);
+    });
+  }
+  function armNibblesStartup(ci) {
+    if (mode !== "nibbles" || nibblesStartupArmed) return;
+    nibblesStartupArmed = true;
+    nibblesCi = ci;
+    waitForNibblesProgram();
+  }
+  function pauseNibblesStartup() {
+    clearNibblesStartupTimer();
+    if (nibblesStartupHeld && nibblesCi) {
+      try { nibblesCi.sendKeyEvent(nibblesStartupHeld, false); } catch (_error) {}
+      nibblesStartupHeld = 0;
+      nibblesStartupIndex++;
+    }
+  }
   emulators.pathPrefix = "runtime/emulators/";
   emulators.pathSuffix = "";
   function fail() {
@@ -145,13 +231,15 @@ canvas{image-rendering:pixelated}
       volume: 0,
       theme: "black",
       lang: "en",
-      onEvent: function (event) {
+      onEvent: function (event, arg) {
+        if (event === "ci-ready") armNibblesStartup(arg);
         if (event === "ci-ready" || event === "bnd-play") {
           status.hidden = true;
           tell("snake-ready");
         }
       }
     });
+    if (runtimePaused) player.setPaused(true);
   }).catch(fail);
   window.addEventListener("error", fail);
   window.addEventListener("message", function (event) {
@@ -168,10 +256,21 @@ canvas{image-rendering:pixelated}
       window.dispatchEvent(forwarded);
       return;
     }
-    if (event.data.type !== "snake-control" || !player) return;
-    if (event.data.action === "pause") player.setPaused(true);
-    else if (event.data.action === "resume") player.setPaused(false);
-    else if (event.data.action === "stop") Promise.resolve(player.stop()).catch(function () {});
+    if (event.data.type !== "snake-control") return;
+    if (event.data.action === "pause") {
+      runtimePaused = true;
+      pauseNibblesStartup();
+      if (player) player.setPaused(true);
+    } else if (event.data.action === "resume") {
+      runtimePaused = false;
+      if (player) player.setPaused(false);
+      if (nibblesStartupReady) scheduleNibblesStartup(120);
+      else waitForNibblesProgram();
+    } else if (event.data.action === "stop") {
+      pauseNibblesStartup();
+      nibblesCi = null;
+      if (player) Promise.resolve(player.stop()).catch(function () {});
+    }
   });
   document.addEventListener("contextmenu", function (event) {
     event.preventDefault();

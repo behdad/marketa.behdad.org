@@ -333,7 +333,8 @@ preserving its view. Shoot restarts after Dismiss.
 In the monitor music player, drag equalizer bands vertically, double-tap a band
 to zero it, or open its context menu to reset the EQ or kill the app.
 
-Search for `snake` or `nibbles` to open DOS Nibbles; Esc returns to the monitor.
+Search for `snake` or `nibbles` to open DOS Nibbles. It starts a one-player game
+automatically; use the arrow keys or the right-side touch D-pad. Esc returns to the monitor.
 Search for `dos` for a `C:\>` prompt, where `NIBBLES` starts it and `EXIT`
 returns.
 

@@ -5940,13 +5940,13 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 .snake-wrap{width:100%;height:100%;overflow:hidden;background:#000}
 .snake-wrap iframe{display:block;width:100%;height:100%;border:0;background:#000}
 #monitor-snake-dpad{display:none;pointer-events:none}
-#monitor-snake-dpad .snake-dpad-button{cursor:pointer;user-select:none}
+#monitor-snake-dpad .snake-dpad-button{cursor:pointer;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 #monitor-snake-dpad .snake-dpad-face{fill:#172d96;stroke:#ffd84a;stroke-width:.65}
 #monitor-snake-dpad .snake-dpad-button:hover .snake-dpad-face,
 #monitor-snake-dpad .snake-dpad-button:active .snake-dpad-face,
 #monitor-snake-dpad .snake-dpad-button:focus .snake-dpad-face{fill:#2847b8}
 #monitor-snake-dpad .snake-dpad-glyph{fill:none;stroke:#fff0a0;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
-@media (pointer:coarse), (any-pointer:coarse), (max-width:759px){
+@media (pointer:coarse){
   #office-monitor.show-snake #monitor-snake-dpad{display:inline;pointer-events:all}
 }
 /* Shoot launcher: one monitor app owns three real, self-hosted browser shooters. Each game
@@ -69460,6 +69460,10 @@ async def localfont(name):
   var snakeDpad = document.getElementById("monitor-snake-dpad");
   var snakeDpadHeld = Object.create(null);
   if (snakeDpad) {
+    snakeDpad.addEventListener("touchmove", function (event) { event.preventDefault(); }, { passive: false });
+    ["contextmenu", "selectstart"].forEach(function (type) {
+      snakeDpad.addEventListener(type, function (event) { event.preventDefault(); event.stopPropagation(); });
+    });
     Array.prototype.forEach.call(snakeDpad.querySelectorAll(".snake-dpad-button"), function (button) {
       button.addEventListener("pointerdown", function (event) {
         if ((event.pointerType === "mouse" && event.button !== 0) || snakeDpadHeld[event.pointerId]) return;
@@ -116846,7 +116850,7 @@ function spawnDustMote(container) {
   }
   function excluded(target) {
     return target && target.closest &&
-      target.closest(".mines-cell, .pm-msg-row, #stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on, #stage-balcony.tetris-result, #monitor-pacman-wrap");
+      target.closest(".mines-cell, .pm-msg-row, #stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on, #stage-balcony.tetris-result, #monitor-pacman-wrap, .snake-dpad-button");
   }
   function suppressCompatMouse(e) {
     if (Date.now() > suppressUntil ||

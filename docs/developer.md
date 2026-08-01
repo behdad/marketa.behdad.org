@@ -1262,6 +1262,10 @@ Nibbles keyboard ownership spans the same-origin iframe boundary. Opening or res
 game focuses its canvas; if a visible game loses focus to non-modal parent chrome, the first
 unmodified game key is relayed once and refocuses the iframe. Parent menus, dialogs, phone
 overlays, editable console fields, and other foreground monitor apps block that handoff.
+After the child command interface reports `NIBBLES.EXE` running, `dos/player.html` sends one
+platform-independent, paired key-down/key-up setup sequence for a one-player arrow-key game.
+Coarse pointers reveal the parent SVG's right-side D-pad; each press refocuses the iframe and
+relays the matching arrow pair while its hold guards suppress selection and context menus.
 The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
 or stop it. Normal close pauses and retains the frame, but marks the hidden
 iframe inert, blurs its child focus, and focuses the non-interactive desktop

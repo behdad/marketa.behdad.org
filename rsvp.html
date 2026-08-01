@@ -5947,7 +5947,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
 #monitor-snake-dpad .snake-dpad-button:focus .snake-dpad-face{fill:#2847b8}
 #monitor-snake-dpad .snake-dpad-glyph{fill:none;stroke:#fff0a0;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
 @media (pointer:coarse){
-  #office-monitor.show-snake #monitor-snake-dpad{display:inline;pointer-events:all}
+  #office-monitor.show-snake.snake-nibbles.snake-runtime-ready #monitor-snake-dpad{display:inline;pointer-events:all}
 }
 /* Shoot launcher: one monitor app owns three real, self-hosted browser shooters. Each game
    lives in a disposable same-origin iframe so Back/Kill tears its engine and listeners down. */
@@ -7211,6 +7211,19 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 }
 .pb-dlg-btn:hover{background:#fff; transform:translateY(-1px)}
 .pb-dlg-btn svg{vertical-align:-2px; margin-right:1px}
+.snake-launch-backdrop{z-index:80}
+.snake-launch-dialog{width:min(390px,94vw);text-align:left;padding:1.1rem 1.2rem 1.2rem}
+.snake-launch-title{margin:0 1.5rem .9rem 0;font:700 1.25rem/1.1 "Fraunces",Georgia,serif;color:var(--paper)}
+.snake-launch-fields{display:grid;gap:.85rem}
+.snake-launch-field{display:grid;gap:.32rem;font-size:.82rem}
+.snake-launch-field select{width:100%;min-height:42px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);padding:.35rem .55rem;font:inherit}
+.snake-launch-speed-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:.5rem;font-size:.68rem;opacity:.9}
+.snake-launch-speed-row input{width:100%;min-height:34px;accent-color:var(--pink-deep);touch-action:pan-x}
+.snake-launch-speed-row output{min-width:2.4em;text-align:center;font-variant-numeric:tabular-nums;font-weight:700;color:var(--paper)}
+.snake-launch-actions{display:flex;justify-content:flex-end;gap:.45rem;margin-top:1rem}
+.snake-launch-actions .pb-dlg-btn{min-height:40px;padding:.45rem .8rem}
+.snake-launch-actions .snake-launch-go{background:var(--pink);font-weight:700}
+.snake-launch-actions .snake-launch-go:hover{background:#e5baba}
 .pb-dlg-hint{margin:.5rem 0 .45rem; font-size:.7rem; opacity:.82; animation:pb-hint-flash .75s ease 3}
 @keyframes pb-hint-flash{0%,100%{opacity:.82} 30%{opacity:.12} 60%{opacity:1}}
 /* optional wedding-frame chooser: a small chip row under the polaroid (Plain stays the
@@ -37445,6 +37458,13 @@ var T = {
     snake_dpad_down: "Move Nibbles down",
     snake_dpad_left: "Move Nibbles left",
     snake_dpad_right: "Move Nibbles right",
+    snake_setup_title: "Nibbles setup",
+    snake_setup_players: "Number of players",
+    snake_setup_speed: "Game speed",
+    snake_setup_slow: "slow",
+    snake_setup_fast: "fast",
+    snake_setup_start: "Start game",
+    snake_setup_cancel: "Cancel",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "LINES",
     tetris_next: "NEXT",
@@ -38815,6 +38835,13 @@ var T = {
     snake_dpad_down: "Pohyb Nibbles dolů",
     snake_dpad_left: "Pohyb Nibbles doleva",
     snake_dpad_right: "Pohyb Nibbles doprava",
+    snake_setup_title: "Nastavení Nibbles",
+    snake_setup_players: "Počet hráčů",
+    snake_setup_speed: "Rychlost hry",
+    snake_setup_slow: "pomalu",
+    snake_setup_fast: "rychle",
+    snake_setup_start: "Spustit hru",
+    snake_setup_cancel: "Zrušit",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "ŘADY",
     tetris_next: "DALŠÍ",
@@ -69398,6 +69425,79 @@ async def localfont(name):
   var snakeCloseBtn = document.getElementById("monitor-snake-close");
   var snakeFrame = null, snakeState = "cold", snakeMode = null;
   var snakeRelayedKeys = 0, snakeLastRelayedKey = null;
+  var snakeLaunchDialog = null, snakeLaunchReturnFocus = null;
+  var snakeLaunchPlayers = 1, snakeLaunchSpeed = 5;
+  function snakeT(key) {
+    var l = document.documentElement.lang;
+    return (T[l] && T[l][key]) || T.en[key] || "";
+  }
+  function dismissSnakeLaunchDialog(restoreFocus, immediate) {
+    if (!snakeLaunchDialog) return;
+    var dialog = snakeLaunchDialog, returnFocus = snakeLaunchReturnFocus;
+    snakeLaunchDialog = null; snakeLaunchReturnFocus = null;
+    dialog.classList.remove("show");
+    if (immediate) dialog.remove();
+    else setTimeout(function () { if (dialog.parentNode) dialog.remove(); }, 250);
+    if (restoreFocus) setTimeout(function () {
+      var target = returnFocus && returnFocus.isConnected ? returnFocus : dock;
+      if (target && target.focus) try { target.focus({ preventScroll: true }); } catch (e) { try { target.focus(); } catch (e2) {} }
+    }, 0);
+  }
+  function showSnakeLaunchDialog() {
+    if (snakeLaunchDialog) {
+      var existing = snakeLaunchDialog.querySelector("#snake-launch-players");
+      if (existing) existing.focus();
+      return;
+    }
+    snakeLaunchReturnFocus = document.activeElement;
+    var bd = document.createElement("div");
+    bd.className = "pb-dialog-backdrop snake-launch-backdrop";
+    bd.innerHTML =
+      '<form class="pb-dialog snake-launch-dialog" role="dialog" aria-modal="true" aria-labelledby="snake-launch-title" dir="auto">' +
+        '<button type="button" class="pb-dlg-x" data-snake-launch-cancel data-aria-i="share_close" aria-label="' + snakeT("share_close") + '">✕</button>' +
+        '<h2 id="snake-launch-title" class="snake-launch-title" data-i="snake_setup_title">' + snakeT("snake_setup_title") + '</h2>' +
+        '<div class="snake-launch-fields">' +
+          '<label class="snake-launch-field" for="snake-launch-players"><span data-i="snake_setup_players">' + snakeT("snake_setup_players") + '</span>' +
+            '<select id="snake-launch-players"><option>1</option><option>2</option><option>3</option><option>4</option></select>' +
+          '</label>' +
+          '<label class="snake-launch-field" for="snake-launch-speed"><span data-i="snake_setup_speed">' + snakeT("snake_setup_speed") + '</span>' +
+            '<span class="snake-launch-speed-row"><span data-i="snake_setup_slow">' + snakeT("snake_setup_slow") + '</span>' +
+              '<input id="snake-launch-speed" type="range" min="1" max="100" step="1" value="' + snakeLaunchSpeed + '">' +
+              '<span data-i="snake_setup_fast">' + snakeT("snake_setup_fast") + '</span><output for="snake-launch-speed">' + snakeLaunchSpeed + '</output></span>' +
+          '</label>' +
+        '</div>' +
+        '<div class="snake-launch-actions"><button type="button" class="pb-dlg-btn" data-snake-launch-cancel data-i="snake_setup_cancel">' + snakeT("snake_setup_cancel") + '</button>' +
+          '<button type="submit" class="pb-dlg-btn snake-launch-go" data-i="snake_setup_start">' + snakeT("snake_setup_start") + '</button></div>' +
+      '</form>';
+    var players = bd.querySelector("#snake-launch-players");
+    var speed = bd.querySelector("#snake-launch-speed");
+    var output = bd.querySelector("output");
+    players.value = String(snakeLaunchPlayers);
+    speed.addEventListener("input", function () { output.value = speed.value; output.textContent = speed.value; });
+    bd.addEventListener("click", function (event) {
+      event.stopPropagation();
+      if (event.target === bd || (event.target.closest && event.target.closest("[data-snake-launch-cancel]"))) dismissSnakeLaunchDialog(true, false);
+    });
+    bd.querySelector("form").addEventListener("submit", function (event) {
+      event.preventDefault();
+      snakeLaunchPlayers = Math.max(1, Math.min(4, Number(players.value) || 1));
+      snakeLaunchSpeed = Math.max(1, Math.min(100, Number(speed.value) || 5));
+      dismissSnakeLaunchDialog(false, true);
+      openSnake("nibbles", { players: snakeLaunchPlayers, speed: snakeLaunchSpeed });
+    });
+    var fsHost = document.fullscreenElement || document.webkitFullscreenElement ||
+                 document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
+    fsHost.appendChild(bd);
+    snakeLaunchDialog = bd;
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      if (snakeLaunchDialog === bd) { bd.classList.add("show"); try { players.focus({ preventScroll: true }); } catch (e) { players.focus(); } }
+    }); });
+  }
+  window.addEventListener("keydown", function (event) {
+    if (!snakeLaunchDialog || (event.key !== "Escape" && event.key !== "Esc")) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    dismissSnakeLaunchDialog(true, false);
+  }, true);
   function snakeControl(action) {
     if (!snakeFrame || !snakeFrame.contentWindow) return;
     try { snakeFrame.contentWindow.postMessage({ type: "snake-control", action: action }, location.origin); } catch (e) {}
@@ -69415,7 +69515,7 @@ async def localfont(name):
     } catch (e) {}
   }
   function snakeInputAvailable() {
-    if (!snakeFrame || snakeMode !== "nibbles" || !monitor.classList.contains("show-snake") ||
+    if (!snakeFrame || snakeState !== "ready" || snakeMode !== "nibbles" || !monitor.classList.contains("show-snake") ||
         document.hidden || window.currentStageName !== "office") return false;
     if (document.querySelector(".mon-ctx, .console-ctx.show, .pb-dialog-backdrop, #sharecard-modal, .phone-backdrop.show, #click-me-overlay, #loft-recovery-gate")) return false;
     if (typeof MONITOR_APP_CLASSES === "object") {
@@ -69494,13 +69594,20 @@ async def localfont(name):
       button.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); });
     });
   }
-  function ensureSnakeFrame(mode) {
+  function ensureSnakeFrame(mode, setup) {
     if (snakeFrame || !snakeWrap) return;
     snakeState = "loading";
     snakeMode = mode;
+    monitor.classList.remove("snake-runtime-ready");
+    monitor.classList.toggle("snake-nibbles", mode === "nibbles");
     var frame = document.createElement("iframe");
     frame.title = mode === "dos" ? "DOSBox" : "snake — historical four-player Nibbles in DOSBox";
-    frame.src = "dos/player.html?lang=" + (document.documentElement.lang === "cs" ? "cs" : "en") + "&mode=" + mode;
+    var src = "dos/player.html?lang=" + (document.documentElement.lang === "cs" ? "cs" : "en") + "&mode=" + mode;
+    if (mode === "nibbles") {
+      setup = setup || { players: snakeLaunchPlayers, speed: snakeLaunchSpeed };
+      src += "&players=" + encodeURIComponent(setup.players) + "&speed=" + encodeURIComponent(setup.speed);
+    }
+    frame.src = src;
     frame.allow = "autoplay";
     frame.tabIndex = -1;
     frame.addEventListener("load", function () {
@@ -69511,15 +69618,22 @@ async def localfont(name):
     snakeWrap.appendChild(frame);
     snakeFrame = frame;
   }
-  function openSnake(mode) {
+  function openSnake(mode, setup) {
     mode = mode === "dos" ? "dos" : "nibbles";
     if (!monitor.classList.contains("show-caps")) return;
     if (monitor.classList.contains("show-snake") && snakeMode === mode) return;
+    if (mode === "nibbles" && (!snakeFrame || snakeMode !== "nibbles") && !setup) {
+      showSnakeLaunchDialog();
+      return;
+    }
     if (snakeFrame && snakeMode !== mode) destroySnake();
+    dismissSnakeLaunchDialog(false, true);
     stopSaver();
     clearTimeout(saverTimer); saverTimer = null;
     monitor.classList.add("show-snake");
-    ensureSnakeFrame(mode);
+    monitor.classList.toggle("snake-nibbles", mode === "nibbles");
+    monitor.classList.toggle("snake-runtime-ready", snakeState === "ready");
+    ensureSnakeFrame(mode, setup);
     if (snakeFrame) snakeFrame.inert = false;
     snakeControl("resume");
     focusSnakeFrame(); // retained machines resume from the desktop with their keyboard ownership restored
@@ -69551,12 +69665,13 @@ async def localfont(name):
     scheduleSaver();
   }
   function destroySnake() {
+    dismissSnakeLaunchDialog(false, true);
     snakeControl("stop");
     if (snakeFrame) {
       try { snakeFrame.remove(); } catch (e) { if (snakeFrame.parentNode) snakeFrame.parentNode.removeChild(snakeFrame); }
     }
     snakeFrame = null; snakeState = "cold"; snakeMode = null;
-    monitor.classList.remove("show-snake");
+    monitor.classList.remove("show-snake", "snake-nibbles", "snake-runtime-ready");
     scheduleSaver();
   }
   function snakeDeathFlash() {
@@ -69592,13 +69707,19 @@ async def localfont(name):
   window.__focusMonitorSnake = focusSnakeFrame;
   window.__snakeState = function () {
     return { open: monitor.classList.contains("show-snake"), state: snakeState, mode: snakeMode,
+      setupOpen: !!snakeLaunchDialog, players: snakeLaunchPlayers, speed: snakeLaunchSpeed,
       iframe: snakeFrame ? snakeFrame.getAttribute("src") : null,
       relayedKeys: snakeRelayedKeys, lastRelayedKey: snakeLastRelayedKey };
   };
   window.addEventListener("message", function (event) {
     if (!snakeFrame || event.origin !== location.origin || event.source !== snakeFrame.contentWindow || !event.data) return;
-    if (event.data.type === "snake-ready") snakeState = "ready";
-    else if (event.data.type === "snake-failed") snakeState = "failed";
+    if (event.data.type === "snake-ready") {
+      snakeState = "ready";
+      if (snakeMode === "nibbles") monitor.classList.add("snake-runtime-ready");
+    } else if (event.data.type === "snake-failed") {
+      snakeState = "failed";
+      monitor.classList.remove("snake-runtime-ready");
+    }
     else if (event.data.type === "snake-close") closeSnake();
     else if (event.data.type === "snake-exit") {
       if (window.__markMonitorAppKilled) window.__markMonitorAppKilled("snake");

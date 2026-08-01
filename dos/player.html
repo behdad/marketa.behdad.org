@@ -9,8 +9,17 @@
 html,body,#dos{width:100%;height:100%;margin:0;overflow:hidden;background:#000;-webkit-tap-highlight-color:transparent}
 body{font-family:ui-monospace,Menlo,Consolas,monospace;touch-action:none}
 #dos{position:relative}
-#status{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;box-sizing:border-box;background:#000;color:#8fd070;text-align:center;font-size:clamp(10px,4vw,16px);line-height:1.35}
+#status{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;box-sizing:border-box;background:radial-gradient(circle at 50% 42%,#101b47 0,#05091e 48%,#000 100%);color:#fff3a6;text-align:center;font-size:clamp(10px,4vw,16px);line-height:1.35;opacity:1;transition:opacity 70ms ease;pointer-events:none}
 #status[hidden]{display:none}
+.status-card{display:grid;justify-items:center;gap:.55rem;width:min(17rem,78vw);padding:1rem 1.2rem;border:1px solid rgba(133,157,255,.36);border-radius:.7rem;background:rgba(4,8,27,.72);box-shadow:0 1rem 3rem rgba(0,0,0,.5)}
+.status-title{font-size:clamp(1rem,6vw,1.55rem);letter-spacing:.18em;color:#fff8b8;text-shadow:.12em .12em 0 #253b9c}
+.status-track{position:relative;display:block;width:100%;height:.42rem;overflow:hidden;border:1px solid rgba(255,243,166,.5);border-radius:999px;background:#060a20}
+.status-track::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9%,rgba(255,255,255,.05) 9% 10%)}
+.status-track i{position:absolute;top:0;bottom:0;left:-35%;width:35%;border-radius:inherit;background:linear-gradient(90deg,#415cce,#8fa6ff 55%,#fff3a6);box-shadow:0 0 .7rem rgba(143,166,255,.8);animation:snake-load .65s linear infinite}
+.status-text{font-size:.72em;letter-spacing:.04em;color:#cbd4ff}
+#status.is-finishing{opacity:0}
+@keyframes snake-load{to{left:100%}}
+@media (prefers-reduced-motion:reduce){#status{transition:none}.status-track i{animation:none;left:32%;width:36%}}
 .emulator-root,.emulator-container,.emulator-canvas{width:100%!important;height:100%!important}
 canvas{image-rendering:pixelated}
 </style>
@@ -19,19 +28,30 @@ canvas{image-rendering:pixelated}
 </head>
 <body>
 <div id="dos"></div>
-<div id="status">loading DOS…</div>
+<div id="status" role="status" aria-live="polite">
+  <div class="status-card">
+    <strong id="status-title" class="status-title">NIBBLES</strong>
+    <span class="status-track" aria-hidden="true"><i></i></span>
+    <span id="status-text" class="status-text">loading DOS…</span>
+  </div>
+</div>
 <script>
 (function () {
   "use strict";
   var status = document.getElementById("status");
+  var statusTitle = document.getElementById("status-title");
+  var statusText = document.getElementById("status-text");
   var params = new URLSearchParams(location.search);
   var lang = params.get("lang") === "cs" ? "cs" : "en";
   var mode = params.get("mode") === "dos" ? "dos" : "nibbles";
+  var players = Math.max(1, Math.min(4, parseInt(params.get("players"), 10) || 1));
+  var gameSpeed = Math.max(1, Math.min(100, parseInt(params.get("speed"), 10) || 5));
   var text = {
-    en: { loading: "loading DOS…", failed: "DOS could not start. Restart the app to retry." },
-    cs: { loading: "načítám DOS…", failed: "DOS se nepodařilo spustit. Zkuste aplikaci restartovat." }
+    en: { loading: "loading DOS…", setup: "setting up your game…", failed: "DOS could not start. Restart the app to retry." },
+    cs: { loading: "načítám DOS…", setup: "nastavuji hru…", failed: "DOS se nepodařilo spustit. Zkuste aplikaci restartovat." }
   };
-  status.textContent = text[lang].loading;
+  statusTitle.textContent = mode === "dos" ? "DOS" : "NIBBLES";
+  statusText.textContent = text[lang].loading;
   function tell(type, extra) {
     try { parent.postMessage(Object.assign({ type: type }, extra || {}), location.origin); } catch (_error) {}
   }
@@ -109,40 +129,54 @@ canvas{image-rendering:pixelated}
   var runtimePaused = false;
   var nibblesCi = null, nibblesStartupTimer = null, nibblesStartupHeld = 0;
   var nibblesStartupIndex = 0, nibblesStartupArmed = false, nibblesStartupReady = false;
+  var nibblesStartupComplete = false, runtimeReadyTold = false;
   // Direct CommandInterface key codes: Enter is 257 (not DOM keyCode 13).
   // The leading/extra Enter safely handles either order of the sound and intro prompts.
-  // Single-character values also work whether a prompt reads INPUT or one key at a time.
-  var nibblesStartupKeys = [
-    257, 78, 257, 257, // intro / sound off
-    49, 257,           // one player
-    53, 257,           // skill 5
-    78, 257,           // no speed increase
-    67, 257,           // colour
-    53, 257,           // five lives
-    89, 257,           // novice controls
-    78, 257,           // no length-conservation mode
-    82, 257,           // right hand: arrow keys
-    32                 // start level
-  ];
+  // The final Space is part of setup: revealing the canvas lands in a running level.
+  var nibblesStartupKeys = [257, 78, 257, 257]; // intro / sound off
+  function appendNibblesAnswer(value) {
+    String(value).split("").forEach(function (character) { nibblesStartupKeys.push(character.charCodeAt(0)); });
+    nibblesStartupKeys.push(257);
+  }
+  appendNibblesAnswer(players);
+  appendNibblesAnswer(gameSpeed);
+  [78, 257, 67, 257, 53, 257, 89, 257, 78, 257].forEach(function (keyCode) {
+    nibblesStartupKeys.push(keyCode); // fixed defaults: no acceleration, colour, five lives, novice, normal length
+  });
+  for (var playerIndex = 0; playerIndex < players; playerIndex++) {
+    nibblesStartupKeys.push(82, 257); // right-hand keyboard layout for every selected player
+  }
+  nibblesStartupKeys.push(32);
   function clearNibblesStartupTimer() {
     if (nibblesStartupTimer !== null) window.clearTimeout(nibblesStartupTimer);
     nibblesStartupTimer = null;
   }
   function scheduleNibblesStartup(delay) {
     clearNibblesStartupTimer();
-    if (!nibblesStartupReady || nibblesStartupIndex >= nibblesStartupKeys.length) return;
+    if (!nibblesStartupReady) return;
+    if (nibblesStartupIndex >= nibblesStartupKeys.length) { finishNibblesStartup(); return; }
     nibblesStartupTimer = window.setTimeout(stepNibblesStartup, delay);
+  }
+  function finishNibblesStartup() {
+    if (nibblesStartupComplete) return;
+    nibblesStartupComplete = true;
+    status.classList.add("is-finishing");
+    window.setTimeout(function () {
+      status.hidden = true;
+      if (!runtimeReadyTold) { runtimeReadyTold = true; tell("snake-ready"); }
+    }, 70);
   }
   function stepNibblesStartup() {
     nibblesStartupTimer = null;
-    if (!nibblesCi || mode !== "nibbles" || nibblesStartupIndex >= nibblesStartupKeys.length) return;
-    if (runtimePaused || document.hidden) { scheduleNibblesStartup(120); return; }
+    if (!nibblesCi || mode !== "nibbles") return;
+    if (nibblesStartupIndex >= nibblesStartupKeys.length) { finishNibblesStartup(); return; }
+    if (runtimePaused || document.hidden) { scheduleNibblesStartup(80); return; }
     var keyCode = nibblesStartupKeys[nibblesStartupIndex];
     try {
       nibblesCi.sendKeyEvent(keyCode, true);
       nibblesStartupHeld = keyCode;
     } catch (_error) {
-      scheduleNibblesStartup(120);
+      scheduleNibblesStartup(80);
       return;
     }
     nibblesStartupTimer = window.setTimeout(function () {
@@ -150,8 +184,8 @@ canvas{image-rendering:pixelated}
       try { nibblesCi.sendKeyEvent(keyCode, false); } catch (_error) {}
       nibblesStartupHeld = 0;
       nibblesStartupIndex++;
-      scheduleNibblesStartup(keyCode === 257 ? 260 : 180);
-    }, 48);
+      scheduleNibblesStartup(keyCode === 257 ? 18 : 12);
+    }, 8);
   }
   function waitForNibblesProgram() {
     clearNibblesStartupTimer();
@@ -159,7 +193,8 @@ canvas{image-rendering:pixelated}
         nibblesStartupIndex >= nibblesStartupKeys.length) return;
     if (typeof nibblesCi.getRunningProgram !== "function") {
       nibblesStartupReady = true;
-      scheduleNibblesStartup(700);
+      statusText.textContent = text[lang].setup;
+      scheduleNibblesStartup(60);
       return;
     }
     var ci = nibblesCi;
@@ -168,14 +203,16 @@ canvas{image-rendering:pixelated}
       var running = String(program || "").replace(/^.*[\\/]/, "").trim();
       if (/^NIBBLES(?:\.EXE)?$/i.test(running)) {
         nibblesStartupReady = true;
-        scheduleNibblesStartup(700);
+        statusText.textContent = text[lang].setup;
+        scheduleNibblesStartup(60);
       } else {
-        nibblesStartupTimer = window.setTimeout(waitForNibblesProgram, 120);
+        nibblesStartupTimer = window.setTimeout(waitForNibblesProgram, 60);
       }
     }).catch(function () {
       if (nibblesCi !== ci || runtimePaused) return;
       nibblesStartupReady = true;
-      scheduleNibblesStartup(700);
+      statusText.textContent = text[lang].setup;
+      scheduleNibblesStartup(60);
     });
   }
   function armNibblesStartup(ci) {
@@ -196,7 +233,8 @@ canvas{image-rendering:pixelated}
   emulators.pathSuffix = "";
   function fail() {
     status.hidden = false;
-    status.textContent = text[lang].failed;
+    status.classList.remove("is-finishing");
+    statusText.textContent = text[lang].failed;
     tell("snake-failed");
   }
   fetch("snake.jsdos?v=7a0a1895", { cache: "no-store" }).then(function (response) {
@@ -233,9 +271,9 @@ canvas{image-rendering:pixelated}
       lang: "en",
       onEvent: function (event, arg) {
         if (event === "ci-ready") armNibblesStartup(arg);
-        if (event === "ci-ready" || event === "bnd-play") {
+        if (mode === "dos" && (event === "ci-ready" || event === "bnd-play")) {
           status.hidden = true;
-          tell("snake-ready");
+          if (!runtimeReadyTold) { runtimeReadyTold = true; tell("snake-ready"); }
         }
       }
     });
@@ -264,7 +302,7 @@ canvas{image-rendering:pixelated}
     } else if (event.data.action === "resume") {
       runtimePaused = false;
       if (player) player.setPaused(false);
-      if (nibblesStartupReady) scheduleNibblesStartup(120);
+      if (nibblesStartupReady) scheduleNibblesStartup(60);
       else waitForNibblesProgram();
     } else if (event.data.action === "stop") {
       pauseNibblesStartup();

@@ -665,17 +665,24 @@ strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
 `hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
 capture guard owns Up/Escape/Backspace; horizontal navigation remains on the
 lower floor, with Entrance forming its right edge.
-Eleven `.entrance-prop` SVG overlays give the five window bays, name stone, doors,
-intercom, paired entry lamps, tree canopy, and sidewalk pointer/touch plus Enter/Space
+Ten `.entrance-prop` SVG overlays give the five window bays, name stone,
+intercom, paired entry lamps, and tree canopy pointer/touch plus Enter/Space
 responses without changing the facade paint order. `data-entrance-action`
 selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
 in-flight class so no one-shot survives a room leave or reset.
-Seven separate `.entrance-car-control` overlays partition the foreground Boxster's
+Eight separate `.entrance-car-control` overlays partition the foreground Boxster's
 roof, driver door, front and rear compartments, mid-body engine control, headlight,
-and tail light. They remain outside the Tab order, stop bubbling at their own click
-handlers, and publish pressed state through `__entranceRoomState().car`. The start
-roar and stop wind-down are short shared-SFX voices rather than a new audio context
-or an unattended loop; leaving Entrance returns the car to its closed, engine-off state.
+tail light, and indicator. They remain outside the Tab order, stop bubbling at their
+own click handlers, and publish pressed state through `__entranceRoomState().car`.
+The driving HUD is a clipped top-half code-native SVG overlay that leaves
+the animated Porsche in the lower street band: pointer holds drive its
+physical pedals, shifter hotspots select R/N/1–6, and the Entrance
+capture handler claims the driving keys while it is open, including Up/Space throttle,
+Down brake, Shift clutch, and N/R/1–6.
+`__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
+focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
+state preserves the Porsche's position and durable panel/light configuration; a full
+reset clears both.
 The intercom's attended click plays a short low-passed formant reply and flashes
 localized “Come up!” copy. Its sound path checks the open room, visibility, and
 focus at the gesture and has no autonomous timer.
@@ -1208,6 +1215,11 @@ remain a known blank-compositing limitation on WebKit.
 
 The `show-snake` app lazily creates one same-origin `dos/player.html` iframe,
 with a `mode=dos|nibbles` query selected by the launcher.
+
+Nibbles keyboard ownership spans the same-origin iframe boundary. Opening or resuming a retained
+game focuses its canvas; if a visible game loses focus to non-modal parent chrome, the first
+unmodified game key is relayed once and refocuses the iframe. Parent menus, dialogs, phone
+overlays, editable console fields, and other foreground monitor apps block that handoff.
 The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
 or stop it. Normal close pauses and retains the frame, but marks the hidden
 iframe inert, blurs its child focus, and focuses the non-interactive desktop

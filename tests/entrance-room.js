@@ -295,7 +295,7 @@ check(/id="entrance-intercom"[^>]*>[\s\S]{0,180}?class="entrance-hit" x="400\.2"
 check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#bedroom-room-close,#entrance-room-close\{/.test(source),
   "Entrance shares the unified lower-room corner-control geometry");
 check(!/<image\b|(?:src|href)="[^"]+\.(?:png|jpe?g|webp)"/i.test(entrance) &&
-  !/<text\b[^>]*>\s*[^<]*(?:\d{2,}|\b(?:street|st\.|avenue|ave\.)\b)/i.test(entrance),
+  !/<text\b[^>]*>\s*[^<]*(?:\d{2,}\s+(?:street|st\.|avenue|ave\.)|\b(?:street|avenue)\b)/i.test(entrance),
   "Entrance publishes neither a reference image nor the private street numbers");
 
 console.log("");

@@ -155,7 +155,20 @@ canvas{image-rendering:pixelated}
   }).catch(fail);
   window.addEventListener("error", fail);
   window.addEventListener("message", function (event) {
-    if (event.origin !== location.origin || !event.data || event.data.type !== "snake-control" || !player) return;
+    if (event.origin !== location.origin || !event.data) return;
+    if (event.data.type === "snake-key" && mode === "nibbles") {
+      var forwarded = new KeyboardEvent(event.data.eventType === "keyup" ? "keyup" : "keydown", {
+        key: event.data.key || "", code: event.data.code || "", location: event.data.location || 0,
+        repeat: !!event.data.repeat, ctrlKey: !!event.data.ctrlKey, metaKey: !!event.data.metaKey,
+        altKey: !!event.data.altKey, shiftKey: !!event.data.shiftKey, bubbles: true, cancelable: true
+      });
+      // js-dos 8.4 maps the legacy keyCode, so preserve it on the relayed event as well as key/code.
+      try { Object.defineProperty(forwarded, "keyCode", { get: function () { return event.data.keyCode || 0; } }); } catch (_error) {}
+      try { Object.defineProperty(forwarded, "which", { get: function () { return event.data.keyCode || 0; } }); } catch (_error2) {}
+      window.dispatchEvent(forwarded);
+      return;
+    }
+    if (event.data.type !== "snake-control" || !player) return;
     if (event.data.action === "pause") player.setPaused(true);
     else if (event.data.action === "resume") player.setPaused(false);
     else if (event.data.action === "stop") Promise.resolve(player.stop()).catch(function () {});

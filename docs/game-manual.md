@@ -236,9 +236,14 @@ gameplay messages finish before that room caption appears.
   details for small reactions. Toggling all five windows away from their
   day/night defaults earns a caption. The intercom beside the doors buzzes
   somebody upstairs.
-  The grey Boxster's roof, driver door, front and rear compartments, and engine
-  are independent controls; bare Enter starts or stops its engine, and its
-  headlight and tail light can be switched at any time.
+  The grey Boxster's roof, driver door, front and rear compartments, and lights
+  are independent controls. Double-click it—or press Enter—to reveal its tan
+  dashboard; Enter then turns the ignition. Hold **↑** or **Space** for throttle,
+  **↓** for brake, or **Shift** for the clutch; choose **N**, **R**, or **1–6** to
+  shift. The pedals and H-pattern shifter also work directly. A clutchless
+  keyboard shift grinds and falls back to neutral, while a hard fast stop leaves
+  a brief pair of tire marks. The dashboard's compact driving score stays with
+  the car and subtly picks up as the street does.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze.
 

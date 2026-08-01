@@ -544,6 +544,9 @@ footer{margin-top:2.6rem}
 }
 .hunt-viewport.cinema-room-open #loft-game-strip{transform:translateX(-40%) !important}
 #cuddly-cinema-ticket{cursor:pointer}
+.lower-room-marker.portal-insisting{transform-box:fill-box;transform-origin:center;animation:lower-portal-insist .55s ease-in-out}
+@keyframes lower-portal-insist{0%,100%{rotate:0deg;translate:0 0}22%{rotate:-4deg;translate:-1px 0}48%{rotate:3deg;translate:1px 0}72%{rotate:-2deg;translate:-.5px 0}}
+@media (prefers-reduced-motion:reduce){.lower-room-marker.portal-insisting{animation:none}}
 #entrance-room[hidden]{display:none}
 #entrance-room{
   position:absolute; inset:0; z-index:12; overflow:hidden; color:#fffdf8;
@@ -680,6 +683,9 @@ footer{margin-top:2.6rem}
 }
 #entrance-porsche.door-closing #entrance-porsche-door-closed{opacity:1;transition:none}
 #entrance-porsche.door-closing #entrance-porsche-door-well{opacity:0;transition:none}
+#entrance-porsche.door-closing #entrance-porsche-side-glass{
+  visibility:visible;opacity:.92;transition:none;
+}
 #entrance-porsche-frunk-well,#entrance-porsche-trunk-well{opacity:0;transition:opacity .16s ease}
 #entrance-porsche.frunk-open #entrance-porsche-frunk-well,
 #entrance-porsche.trunk-open #entrance-porsche-trunk-well{opacity:1}
@@ -707,24 +713,124 @@ footer{margin-top:2.6rem}
 .entrance-porsche-headlight-on,.entrance-porsche-taillight-on,
 .entrance-porsche-headlight-beam,.entrance-porsche-taillight-glow,
 .entrance-porsche-running-light{opacity:0;transition:opacity .22s ease}
+.entrance-porsche-reverse-beam{opacity:0;transition:opacity .16s ease}
 .entrance-porsche-indicator-lit{opacity:0;transition:opacity .035s linear}
 #entrance-porsche.headlight-on :is(.entrance-porsche-headlight-on,.entrance-porsche-headlight-beam),
 #entrance-porsche.taillight-on :is(.entrance-porsche-taillight-on,.entrance-porsche-taillight-glow){opacity:1}
+#entrance-porsche.braking :is(.entrance-porsche-taillight-on,.entrance-porsche-taillight-glow){opacity:1}
+#entrance-porsche.braking .entrance-porsche-taillight-on{fill:url(#entrance-porsche-brake-flare);stroke:#ffd1d3;stroke-width:.7px}
+#entrance-porsche.braking .entrance-porsche-taillight-glow{fill:url(#entrance-porsche-brake-halo);opacity:.96}
+#entrance-room.entrance-day #entrance-porsche.headlight-on .entrance-porsche-headlight-beam{opacity:.46}
 #entrance-porsche.engine-on .entrance-porsche-running-light{opacity:.92}
+#entrance-porsche.reversing .entrance-porsche-reverse-beam{opacity:.34}
 #entrance-porsche.indicator-on .entrance-porsche-indicator-lit{opacity:1}
 #entrance-porsche-vibration{transform-box:view-box;transform-origin:188px 331px}
 #entrance-porsche.engine-idling #entrance-porsche-vibration{
-  animation:entrance-porsche-idle-tremor .16s linear infinite;
+  animation:entrance-porsche-idle-tremor var(--porsche-vibe-period,.16s) linear infinite;
 }
 @keyframes entrance-porsche-idle-tremor{
   0%,100%{transform:translate(0,0)}
-  25%{transform:translate(.1px,-.08px)}
-  50%{transform:translate(-.08px,.05px)}
-  75%{transform:translate(.06px,.08px)}
+  25%{transform:translate(var(--porsche-vibe-x,.1px),calc(var(--porsche-vibe-y,.08px) * -1))}
+  50%{transform:translate(calc(var(--porsche-vibe-x,.1px) * -.8),calc(var(--porsche-vibe-y,.08px) * .625))}
+  75%{transform:translate(calc(var(--porsche-vibe-x,.1px) * .6),var(--porsche-vibe-y,.08px))}
 }
 @media (prefers-reduced-motion:reduce){
   #entrance-porsche.engine-idling #entrance-porsche-vibration{animation:none}
 }
+#entrance-drive-hud{
+  position:absolute;z-index:1;left:0;right:0;top:0;bottom:auto;height:61%;
+  max-height:none;aspect-ratio:auto;
+  overflow:hidden;
+  pointer-events:none;touch-action:none;opacity:0;transform:translateY(-8px);
+  transform-origin:center top;
+  border:0;border-bottom:5px solid rgba(239,208,170,.62);border-radius:0 0 22px 22px;
+  background:#17232c;
+  box-shadow:0 9px 16px -3px rgba(8,10,12,.52),0 20px 30px -13px rgba(8,10,12,.56),inset 0 -2px 2px rgba(255,253,248,.14);
+  transition:transform .38s cubic-bezier(.22,.8,.24,1),opacity .22s ease;
+}
+#entrance-drive-hud svg{display:block;width:100%;height:100%;overflow:hidden}
+#entrance-room.entrance-day #entrance-drive-hud{background:#b7ced7}
+#entrance-drive-cockpit{opacity:1}
+.entrance-drive-windshield-scenery{pointer-events:none}
+.entrance-drive-windshield-day,.entrance-drive-windshield-night{transition:opacity .9s ease}
+.entrance-drive-windshield-day{opacity:0}
+.entrance-drive-windshield-night{opacity:1}
+#entrance-room.entrance-day .entrance-drive-windshield-day{opacity:1}
+#entrance-room.entrance-day .entrance-drive-windshield-night{opacity:0}
+.entrance-drive-windshield-clouds{opacity:0;transition:opacity .9s ease}
+#entrance-room.entrance-clouded .entrance-drive-windshield-clouds{opacity:.76}
+#entrance-room.entrance-clouded .entrance-drive-windshield-distant{opacity:.38}
+#entrance-room:not(.entrance-day).entrance-clouded :is(.entrance-drive-windshield-stars,.entrance-drive-windshield-moon){opacity:0}
+.entrance-drive-windshield-stars,.entrance-drive-windshield-moon{transition:opacity .8s ease}
+.entrance-drive-windshield-stars circle{animation:entrance-drive-star-twinkle 2.7s ease-in-out infinite alternate}
+.entrance-drive-windshield-stars circle:nth-child(3n+1){animation-duration:3.8s;animation-delay:-1.2s}
+.entrance-drive-windshield-stars circle:nth-child(3n+2){animation-duration:2.1s;animation-delay:-.7s}
+@keyframes entrance-drive-star-twinkle{from{opacity:.38}to{opacity:1}}
+.entrance-drive-windshield-winter-snow{opacity:.2;transition:opacity .8s ease}
+#entrance-room.entrance-winter-cover .entrance-drive-windshield-winter-snow{opacity:1}
+.entrance-drive-windshield-summer-leaves,.entrance-drive-windshield-autumn-leaves,
+.entrance-drive-windshield-spring-leaves,.entrance-drive-windshield-winter-branches{transition:opacity .8s ease}
+.entrance-drive-windshield-autumn-leaves,.entrance-drive-windshield-spring-leaves,
+.entrance-drive-windshield-winter-branches{opacity:0}
+.hunt-viewport:has(#loft-game-strip.season-autumn) .entrance-drive-windshield-summer-leaves{opacity:0}
+.hunt-viewport:has(#loft-game-strip.season-autumn) .entrance-drive-windshield-autumn-leaves{opacity:1}
+#entrance-room.entrance-spring-growth .entrance-drive-windshield-summer-leaves{opacity:0}
+#entrance-room.entrance-spring-growth .entrance-drive-windshield-spring-leaves{opacity:1}
+#entrance-room.entrance-winter-cover :is(.entrance-drive-windshield-summer-leaves,.entrance-drive-windshield-autumn-leaves,.entrance-drive-windshield-spring-leaves){opacity:0}
+#entrance-room.entrance-winter-cover .entrance-drive-windshield-winter-branches{opacity:1}
+.entrance-drive-windshield-rain,.entrance-drive-windshield-snow{opacity:0;transition:opacity .5s ease}
+#entrance-room.entrance-raining:not(.entrance-snowing) .entrance-drive-windshield-rain{opacity:.78}
+#entrance-room.entrance-snowing .entrance-drive-windshield-snow{opacity:.92}
+#entrance-room.entrance-raining:not(.entrance-snowing) .entrance-drive-windshield-rain-row{
+  animation:entrance-drive-rain-slide .78s linear infinite;
+}
+#entrance-room.entrance-raining:not(.entrance-snowing) .entrance-drive-windshield-rain-row:nth-child(2){animation-duration:.96s;animation-delay:-.44s}
+#entrance-room.entrance-snowing .entrance-drive-windshield-snow-row{animation:entrance-drive-snow-drift 4.6s linear infinite}
+#entrance-room.entrance-snowing .entrance-drive-windshield-snow-row:nth-child(2){animation-duration:5.8s;animation-delay:-2.7s}
+@keyframes entrance-drive-rain-slide{from{transform:translate(7px,-35px)}to{transform:translate(-11px,48px)}}
+@keyframes entrance-drive-snow-drift{
+  0%{transform:translate(-4px,-22px)}
+  48%{transform:translate(7px,15px)}
+  100%{transform:translate(-1px,48px)}
+}
+#entrance-room.drive-hud-visible #entrance-drive-hud{
+  pointer-events:auto;opacity:1;transform:translateY(0);
+}
+.entrance-drive-control{pointer-events:none;cursor:pointer;outline:none}
+#entrance-room.drive-hud-visible .entrance-drive-control{pointer-events:auto}
+.entrance-drive-prop{pointer-events:none;cursor:pointer;outline:none}
+#entrance-room.drive-hud-visible .entrance-drive-prop{pointer-events:auto}
+.entrance-drive-control .entrance-drive-hit{fill:transparent;stroke:transparent}
+.entrance-drive-prop .entrance-drive-hit{fill:transparent;stroke:transparent}
+.entrance-drive-control.pressed .entrance-drive-pedal-face{filter:brightness(.78)}
+#entrance-drive-horn-face{transform-box:fill-box;transform-origin:center;transition:transform .07s ease,filter .07s ease}
+#entrance-drive-steering.horn-pressed #entrance-drive-horn-face{transform:scale(.965);filter:brightness(.86)}
+#entrance-drive-key-running{opacity:0}
+#entrance-drive-hud.drive-engine-on #entrance-drive-key-running{opacity:1}
+#entrance-drive-hud.drive-engine-on #entrance-drive-key-off{opacity:0}
+.entrance-drive-pedal{transform-box:view-box;transform-origin:center bottom;transition:transform .08s ease}
+.entrance-drive-control.pressed .entrance-drive-pedal{transform:translateY(3px) scaleY(.94)}
+#entrance-drive-gear-indicator{transition:cx .13s cubic-bezier(.2,.8,.25,1),cy .13s cubic-bezier(.2,.8,.25,1),opacity .1s ease}
+#entrance-drive-glovebox-open{opacity:0;transform:translateY(-3px);transition:opacity .16s ease,transform .24s ease}
+#entrance-drive-glovebox-door-closed{opacity:1;transition:opacity .1s ease}
+#entrance-drive-hud.glovebox-open #entrance-drive-glovebox-open{opacity:1;transform:translateY(0)}
+#entrance-drive-hud.glovebox-open #entrance-drive-glovebox-door-closed{opacity:0}
+.entrance-drive-key{
+  fill:#202326;font:700 7px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  stroke:#c7cdcd;stroke-width:1.35px;paint-order:stroke fill;
+  text-anchor:middle;pointer-events:none;
+}
+.entrance-drive-key.word{font-size:4px;letter-spacing:-.15px}
+#entrance-drive-hud.drive-stalled #entrance-drive-tach-readout{fill:#e6a08b}
+#entrance-drive-stall-led{opacity:0;filter:drop-shadow(0 0 2px rgba(244,153,45,.9))}
+#entrance-drive-hud.drive-stalled #entrance-drive-stall-led{opacity:1}
+#entrance-drive-hud.drive-redline #entrance-drive-tach-ring{stroke:#a83d46}
+.entrance-drive-status{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+.entrance-tire-mark{animation:entrance-tire-mark-fade 3.2s ease-out forwards}
+@keyframes entrance-tire-mark-fade{0%{opacity:.88}65%{opacity:.58}100%{opacity:0}}
 @keyframes entrance-window-answer{
   0%,100%{fill:transparent}32%{fill:rgba(255,232,174,.34)}55%{fill:rgba(127,158,192,.12)}
 }
@@ -785,9 +891,12 @@ footer{margin-top:2.6rem}
   .entrance-prop.reacting .entrance-hit{animation-duration:.01ms !important}
   #entrance-porsche-roof-closed,#entrance-porsche-roof-stack,#entrance-porsche-door-panel,
   #entrance-porsche-door-well,#entrance-porsche-frunk-panel,#entrance-porsche-trunk-panel{transition:none}
+  #entrance-drive-hud,.entrance-drive-pedal{transition:none}
+  .entrance-tire-mark{animation-duration:.01ms}
   .hunt-viewport.entrance-room-open #entrance-room-art.grooving .entrance-window-pane{animation:none}
   #entrance-room.entrance-raining .entrance-rain-streak,
   #entrance-room.entrance-snowing .entrance-snowflake-row{animation:none}
+  .entrance-drive-windshield-rain-row,.entrance-drive-windshield-snow-row{animation:none !important}
   #cinema-room .cinema-prop.reacting,#cinema-room.spraying #cinema-water-spray,
   #cinema-room.projector-shorted #cinema-screen-shell{animation:none}
 }
@@ -30555,6 +30664,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <radialGradient id="entrance-porsche-tail-glow">
             <stop offset="0" stop-color="#d94d50" stop-opacity=".72"/><stop offset="1" stop-color="#d94d50" stop-opacity="0"/>
           </radialGradient>
+          <radialGradient id="entrance-porsche-brake-flare" cx="38%" cy="34%" r="76%">
+            <stop offset="0" stop-color="#fff1eb"/><stop offset=".2" stop-color="#ff8b80"/>
+            <stop offset=".58" stop-color="#f02a40"/><stop offset="1" stop-color="#971426"/>
+          </radialGradient>
+          <radialGradient id="entrance-porsche-brake-halo">
+            <stop offset="0" stop-color="#ff5865" stop-opacity=".94"/>
+            <stop offset=".42" stop-color="#ef1d38" stop-opacity=".62"/>
+            <stop offset="1" stop-color="#b20f29" stop-opacity="0"/>
+          </radialGradient>
           <filter id="entrance-soft-glow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="5"/>
           </filter>
@@ -30817,31 +30935,46 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <ellipse cx="429" cy="333" rx="1.9" ry="3.1" transform="rotate(22 429 333)"/>
           </g>
         </g>
+        <g class="entrance-wet-walk" pointer-events="none" aria-hidden="true">
+          <rect y="286" width="680" height="54" fill="#334b59" opacity=".5"/>
+          <g fill="#9fc3d2" opacity=".34">
+            <ellipse cx="95" cy="315" rx="62" ry="5"/><ellipse cx="516" cy="326" rx="82" ry="5.5"/>
+            <ellipse cx="336" cy="300" rx="36" ry="3.5"/>
+          </g>
+          <g fill="none" stroke="#c6dce5" stroke-width="1.3" opacity=".55">
+            <path d="M67 294q8 5 16 0M445 308q10 6 20 0M571 294q7 4 14 0"/>
+          </g>
+        </g>
+        <g id="entrance-porsche-tire-marks" aria-hidden="true" pointer-events="none" fill="none"
+          stroke="#07090b" stroke-width="10" stroke-linecap="butt" stroke-dasharray="3.4 1.7"/>
         <!-- Owner-photo-inspired 987 Boxster silhouette, pointed left and kept below the facade. -->
         <g id="entrance-porsche" transform="translate(328 -9)" aria-hidden="true">
+          <title>Fancy-Stupid</title>
           <g id="entrance-porsche-vibration">
           <g id="entrance-porsche-scale" class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
+          <path class="entrance-porsche-reverse-beam" d="M345 270L430 246V316L345 291Z" fill="#fff0cb"/>
           <ellipse cx="188" cy="331" rx="181" ry="9" fill="#090b0d" opacity=".68"/>
-          <path class="entrance-porsche-headlight-beam" d="M29 275L0 262V307L35 291Z"
+          <path class="entrance-porsche-headlight-beam" d="M35 272L-72 235V326L38 294Z"
             fill="url(#entrance-porsche-headlight-glow)"/>
           <ellipse class="entrance-porsche-taillight-glow" cx="357" cy="281" rx="29" ry="20"
             fill="url(#entrance-porsche-tail-glow)"/>
 
           <g class="entrance-porsche-wheel">
-            <use href="#entrance-porsche-wheel-design" transform="translate(95 316)"/>
-            <use href="#entrance-porsche-wheel-design" transform="translate(296 316)"/>
+            <g transform="translate(95 316)"><g id="entrance-porsche-front-wheel-steer"><g id="entrance-porsche-front-wheel-spin"><use href="#entrance-porsche-wheel-design"/></g></g></g>
+            <g transform="translate(296 316)"><g id="entrance-porsche-rear-wheel-spin"><use href="#entrance-porsche-wheel-design"/></g></g>
           </g>
 
           <path id="entrance-porsche-body"
-            d="M8 294Q10 281 28 273Q79 262 143 258L161 253Q172 249 185 250H246Q264 251 279 260Q323 258 346 269Q362 277 368 291L366 309Q361 321 339 324H329C326 301 316 286 296 286C276 286 264 301 260 325H130C126 301 115 286 95 286C75 286 64 301 60 325H35Q18 323 10 313Z"
+            d="M8 294Q10 281 28 273Q79 262 137 258L155 253Q166 249 179 250H252Q270 251 285 260Q323 258 346 269Q362 277 368 291L366 309Q361 321 339 324H329C326 301 316 286 296 286C276 286 264 301 260 325H130C126 301 115 286 95 286C75 286 64 301 60 325H35Q18 323 10 313Z"
             fill="url(#entrance-porsche-paint)" stroke="#252b2f" stroke-width="1.8"/>
           <path d="M9 299Q43 306 61 315Q70 285 95 284Q122 285 131 315H259Q268 284 296 284Q324 285 329 316Q354 315 366 305L366 316Q357 326 337 327H329Q325 299 296 294Q270 297 263 328H127Q121 297 95 294Q69 297 62 328H34Q14 325 9 312Z"
             fill="url(#entrance-porsche-lower-paint)" opacity=".9"/>
-          <path d="M10 291Q54 272 142 262Q157 260 174 255M280 262Q322 260 347 271"
+          <path d="M10 291Q54 272 136 262Q151 260 168 255M286 262Q322 260 347 271"
             fill="none" stroke="#d8dcdd" stroke-width="1.1" stroke-linecap="round" opacity=".55"/>
           <path d="M133 321H259" stroke="#242a2e" stroke-width="3.5" opacity=".78"/>
           <path d="M134 318H257" stroke="#a9afb0" stroke-width=".8" opacity=".45"/>
 
+          <g id="entrance-porsche-cockpit-scale" transform="translate(-21.85 0) scale(1.1 1)">
           <path id="entrance-porsche-cabin-shell" d="M159 254L183 229Q189 224 200 223H235Q249 224 260 237L278 260Z"
             fill="#201f1e" stroke="#2b3033" stroke-width="1.2"/>
           <g id="entrance-porsche-door-well">
@@ -30914,13 +31047,14 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <path d="M252 252Q264 246 279 249L287 258L250 260Z" fill="#111416" stroke="#050607" stroke-width="1.4"/>
             <path d="M256 252L280 255M260 249L276 252M264 247L273 249" stroke="#55595a" stroke-width="1"/>
           </g>
+          </g>
 
-          <path id="entrance-porsche-frunk-well" d="M24 272Q92 261 165 255L158 267Q91 271 28 282Z" fill="#151a1d"/>
+          <path id="entrance-porsche-frunk-well" d="M24 272Q92 261 155 255L148 267Q91 271 28 282Z" fill="#151a1d"/>
           <g id="entrance-porsche-frunk-panel">
-            <path d="M24 271Q91 261 165 255L158 264Q92 269 27 280Z"
+            <path d="M24 271Q91 261 155 255L148 264Q92 269 27 280Z"
               fill="url(#entrance-porsche-door-paint)" stroke="#343b3f" stroke-width="1.2"/>
-            <path d="M30 273Q95 265 158 258" fill="none" stroke="#d4d8d8" stroke-width=".8" opacity=".58"/>
-            <path d="M31 278Q94 270 157 264" fill="none" stroke="#22282c" stroke-width="1" opacity=".74"/>
+            <path d="M30 273Q95 265 148 258" fill="none" stroke="#d4d8d8" stroke-width=".8" opacity=".58"/>
+            <path d="M31 278Q94 270 147 264" fill="none" stroke="#22282c" stroke-width="1" opacity=".74"/>
           </g>
           <path id="entrance-porsche-trunk-well" d="M277 259Q322 256 351 272L357 282L282 271Z" fill="#151a1d"/>
           <g id="entrance-porsche-trunk-panel">
@@ -30930,7 +31064,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <path d="M284 268Q325 267 356 279" fill="none" stroke="#22282c" stroke-width="1" opacity=".72"/>
           </g>
 
-          <g id="entrance-porsche-door-panel">
+          <g id="entrance-porsche-door-panel" transform="translate(-21.85 0) scale(1.1 1)">
             <g id="entrance-porsche-door-closed">
               <path d="M163 254Q208 251 258 258L255 289Q251 306 238 316Q208 321 171 317L162 295Z"
                 fill="url(#entrance-porsche-door-paint)" stroke="#30373b" stroke-width="1.4"/>
@@ -30955,7 +31089,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             </g>
           </g>
 
-          <g class="entrance-porsche-side-intake">
+          <g class="entrance-porsche-side-intake" transform="translate(3 -5)">
             <path d="M260 274Q266 270.5 274 272L271 295Q266 297 259 291Z" fill="#161b1e" stroke="#9fa5a7" stroke-width="1"/>
             <g clip-path="url(#entrance-porsche-intake-clip)">
               <path d="M262 278L271.5 276M261.5 282.5L271 281M261 287L270 286M261 291L269.5 290"
@@ -31039,16 +31173,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <g id="entrance-weather" pointer-events="none" aria-hidden="true">
           <rect class="entrance-cloud-wash" width="680" height="340" fill="#526373"/>
           <rect class="entrance-wet-facade" y="18" width="680" height="268" fill="#243d4a"/>
-          <g class="entrance-wet-walk">
-            <rect y="286" width="680" height="54" fill="#334b59" opacity=".5"/>
-            <g fill="#9fc3d2" opacity=".34">
-              <ellipse cx="95" cy="315" rx="62" ry="5"/><ellipse cx="516" cy="326" rx="82" ry="5.5"/>
-              <ellipse cx="336" cy="300" rx="36" ry="3.5"/>
-            </g>
-            <g fill="none" stroke="#c6dce5" stroke-width="1.3" opacity=".55">
-              <path d="M67 294q8 5 16 0M445 308q10 6 20 0M571 294q7 4 14 0"/>
-            </g>
-          </g>
           <g class="entrance-rain-weather" fill="none" stroke="#c2dbe8" stroke-width="1.7" stroke-linecap="round">
             <path class="entrance-rain-streak" d="M28 20l-8 27M73 61l-7 24M119 13l-9 31M163 75l-7 25"/>
             <path class="entrance-rain-streak" d="M207 32l-8 28M251 4l-7 26M296 55l-8 29M341 19l-9 31"/>
@@ -31140,7 +31264,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <path class="entrance-hit" d="M535 0H680V135Q627 126 594 101Q563 78 535 0Z"/>
         </g>
         <g id="entrance-porsche-engine" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="engine" data-aria-i="entrance_car_engine" data-title-i="entrance_car_engine" aria-pressed="false">
+          data-car-action="engine" data-aria-i="entrance_car_engine" data-title-i="entrance_car_name" aria-pressed="false">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
             <path class="entrance-car-hit entrance-car-engine-rocker" d="M130 299H260V330H128Z"/>
             <path class="entrance-car-hit entrance-car-engine-body"
@@ -31148,48 +31273,348 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           </g>
         </g>
         <g id="entrance-porsche-roof" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="roof" data-aria-i="entrance_car_roof" data-title-i="entrance_car_roof" aria-pressed="false">
+          data-car-action="roof" data-aria-i="entrance_car_roof" data-title-i="entrance_car_name" aria-pressed="false">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
-            <path class="entrance-car-hit" d="M173 260L179 230Q187 215 203 214H236Q253 216 264 231L281 260Z"/>
+            <path class="entrance-car-hit" d="M168 260L174 230Q182 215 199 214H238Q256 216 269 231L287 260Z"/>
           </g>
         </g>
         <g id="entrance-porsche-frunk" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="frunk" data-aria-i="entrance_car_frunk" data-title-i="entrance_car_frunk" aria-pressed="false">
+          data-car-action="frunk" data-aria-i="entrance_car_frunk" data-title-i="entrance_car_name" aria-pressed="false">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
             <path class="entrance-car-hit" d="M18 263L166 250L166 278L19 293Z"/>
           </g>
         </g>
         <g id="entrance-porsche-trunk" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="trunk" data-aria-i="entrance_car_trunk" data-title-i="entrance_car_trunk" aria-pressed="false">
+          data-car-action="trunk" data-aria-i="entrance_car_trunk" data-title-i="entrance_car_name" aria-pressed="false">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
             <path class="entrance-car-hit" d="M276 253L340 256Q362 264 370 281L363 289L278 273Z"/>
           </g>
         </g>
         <g id="entrance-porsche-door" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="door" data-aria-i="entrance_car_door" data-title-i="entrance_car_door" aria-pressed="false">
+          data-car-action="door" data-aria-i="entrance_car_door" data-title-i="entrance_car_name" aria-pressed="false">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
-            <path class="entrance-car-hit" d="M160 251L260 252L260 290Q256 297 249 300H170L160 293Z"/>
+            <path class="entrance-car-hit" d="M154 251L266 252L266 290Q262 297 255 300H164L154 293Z"/>
           </g>
         </g>
         <g id="entrance-porsche-headlight" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="headlight" data-aria-i="entrance_car_headlight" data-title-i="entrance_car_headlight" aria-pressed="false">
+          data-car-action="headlight" data-aria-i="entrance_car_headlight" data-title-i="entrance_car_name" aria-pressed="false">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
             <path class="entrance-car-hit" d="M7 270Q29 263 55 267L57 283Q37 301 8 302Z"/>
           </g>
         </g>
         <g id="entrance-porsche-taillight" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="taillight" data-aria-i="entrance_car_taillight" data-title-i="entrance_car_taillight" aria-pressed="false">
+          data-car-action="taillight" data-aria-i="entrance_car_taillight" data-title-i="entrance_car_name" aria-pressed="false">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
             <path class="entrance-car-hit" d="M338 265Q360 268 371 282L369 302L343 293L335 278Z"/>
           </g>
         </g>
         <g id="entrance-porsche-indicator" class="entrance-car-control" role="button" transform="translate(328 -9)"
-          data-car-action="indicator" data-aria-i="entrance_car_indicator" data-title-i="entrance_car_indicator">
+          data-car-action="indicator" data-aria-i="entrance_car_indicator" data-title-i="entrance_car_name">
+          <title data-i="entrance_car_name">Fancy-Stupid</title>
           <g class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
             <path class="entrance-car-hit" d="M21.5 286.5Q31.5 284.5 42 287L43 294Q32 296 21 294Z"/>
           </g>
         </g>
       </svg>
+      <div id="entrance-drive-hud" role="group" data-aria-i="entrance_drive_hud" aria-hidden="true">
+        <svg viewBox="0 -31 680 207" preserveAspectRatio="xMidYMax meet">
+          <defs>
+            <linearGradient id="entrance-drive-leather" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#d5ad83"/><stop offset=".48" stop-color="#b6845f"/><stop offset="1" stop-color="#704d38"/>
+            </linearGradient>
+            <linearGradient id="entrance-drive-leather-hi" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#edcda8"/><stop offset=".5" stop-color="#bc8b66"/><stop offset="1" stop-color="#815b42"/>
+            </linearGradient>
+            <linearGradient id="entrance-drive-metal" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f1f0e8"/><stop offset=".32" stop-color="#9ca3a5"/><stop offset=".7" stop-color="#535b60"/><stop offset="1" stop-color="#d6d8d5"/>
+            </linearGradient>
+            <radialGradient id="entrance-drive-gauge" cx="42%" cy="36%" r="72%">
+              <stop offset="0" stop-color="#26313a"/><stop offset=".54" stop-color="#10161c"/><stop offset="1" stop-color="#05080a"/>
+            </radialGradient>
+            <linearGradient id="entrance-drive-sky-day" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#92b7ca"/><stop offset=".55" stop-color="#bad0d5"/><stop offset="1" stop-color="#e2d1b9"/>
+            </linearGradient>
+            <linearGradient id="entrance-drive-sky-night" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#101b2a"/><stop offset=".58" stop-color="#1c3040"/><stop offset="1" stop-color="#394756"/>
+            </linearGradient>
+            <linearGradient id="entrance-drive-mountain-day" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#8f7b70"/><stop offset=".46" stop-color="#65696a"/><stop offset="1" stop-color="#3f5052"/>
+            </linearGradient>
+            <linearGradient id="entrance-drive-windshield-glaze" x1="0" y1="0" x2="1" y2=".4">
+              <stop offset="0" stop-color="#e9f4f4" stop-opacity=".18"/><stop offset=".38" stop-color="#fffdf8" stop-opacity="0"/><stop offset=".78" stop-color="#b4d1df" stop-opacity=".12"/><stop offset="1" stop-color="#fffdf8" stop-opacity=".04"/>
+            </linearGradient>
+            <linearGradient id="entrance-drive-cloud-deck" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#737d85"/><stop offset=".55" stop-color="#8c969a"/><stop offset="1" stop-color="#adb1ae"/>
+            </linearGradient>
+            <radialGradient id="entrance-drive-moon-glow">
+              <stop offset="0" stop-color="#f3eed7" stop-opacity=".5"/><stop offset="1" stop-color="#d8e2e8" stop-opacity="0"/>
+            </radialGradient>
+            <clipPath id="entrance-drive-windshield-clip">
+              <path d="M0 -31H680V91Q560 69 455 64Q347 60 247 73Q111 87 0 76Z"/>
+            </clipPath>
+            <clipPath id="entrance-drive-hud-moon-clip"><circle cx="572" cy="27" r="8"/></clipPath>
+            <path id="entrance-drive-three-sisters-ridge" d="M0 65L28 60L50 56L71 38L87 30L103 31L119 42L137 51L155 48L172 35L183 28L197 29L212 42L230 47L248 42L267 24L279 17L289 28L299 38L315 48L341 56L365 63L365 78H0Z"/>
+            <path id="entrance-drive-three-sisters-light" d="M54 55L71 38L87 30L92 35L79 42L70 54ZM156 48L172 35L183 28L188 34L177 40L169 50ZM231 47L267 24L279 17L283 27L273 30L259 42Z"/>
+            <path id="entrance-drive-three-sisters-snow" d="M64 46L71 38L87 30L101 32L109 39L97 37L91 41L85 36L79 43L73 42ZM166 41L172 35L183 28L196 30L204 37L194 34L188 38L181 33L175 40ZM250 40L267 24L279 17L290 29L297 37L286 31L281 36L275 27L266 35L259 34Z"/>
+            <path id="entrance-drive-three-sisters-winter" d="M49 57L71 38L87 30L103 31L119 42L133 50L119 48L109 43L99 39L92 44L85 36L77 47L67 52ZM151 51L172 35L183 28L197 29L212 42L226 47L213 47L202 41L194 36L188 42L181 33L174 44L164 48ZM228 48L267 24L279 17L289 28L299 38L315 48L333 55L313 51L298 45L287 35L281 40L275 27L265 39L250 45Z"/>
+            <g id="entrance-drive-conifer">
+              <path d="M0 0V22" stroke="#3d4038" stroke-width="1.5"/><path d="M0 1L-7 11H-3L-10 19H10L3 11H7Z"/>
+            </g>
+            <filter id="entrance-drive-shadow" x="-30%" y="-40%" width="160%" height="190%">
+              <feGaussianBlur stdDeviation="3.6"/>
+            </filter>
+          </defs>
+          <g class="entrance-drive-windshield-scenery" clip-path="url(#entrance-drive-windshield-clip)" aria-hidden="true">
+            <g class="entrance-drive-windshield-day">
+              <rect y="-31" width="680" height="129" fill="url(#entrance-drive-sky-day)"/>
+              <path d="M0 25Q65 8 132 24T271 19T410 24T548 18T680 27V-31H0Z" fill="#f1e5d3" opacity=".28"/>
+              <g class="entrance-drive-windshield-distant">
+                <path d="M0 62L38 49L74 54L112 39L144 55L191 47L231 61L285 51L336 65V81H0Z" fill="#788f91" opacity=".48"/>
+                <g transform="translate(4 -8) scale(.72 .65)">
+                  <use href="#entrance-drive-three-sisters-ridge" fill="url(#entrance-drive-mountain-day)"/>
+                  <use href="#entrance-drive-three-sisters-light" fill="#c4aa91" opacity=".72"/>
+                  <use href="#entrance-drive-three-sisters-snow" fill="#e7e8df" opacity=".86"/>
+                  <use class="entrance-drive-windshield-winter-snow" href="#entrance-drive-three-sisters-winter" fill="#f4f5ef"/>
+                </g>
+                <path d="M0 68Q55 51 111 62Q166 48 220 62Q281 49 366 66V88H0Z" fill="#314842"/>
+                <path d="M0 75Q72 62 139 72Q207 57 272 72Q318 61 385 75V90H0Z" fill="#233b37"/>
+              </g>
+              <g fill="#304942" opacity=".98">
+                <use href="#entrance-drive-conifer" transform="translate(8 58) scale(.85)"/><use href="#entrance-drive-conifer" transform="translate(24 55) scale(1.05)"/>
+                <use href="#entrance-drive-conifer" transform="translate(43 61) scale(.78)"/><use href="#entrance-drive-conifer" transform="translate(61 55) scale(1.08)"/>
+                <use href="#entrance-drive-conifer" transform="translate(84 59) scale(.9)"/><use href="#entrance-drive-conifer" transform="translate(107 56) scale(1.03)"/>
+                <use href="#entrance-drive-conifer" transform="translate(132 61) scale(.74)"/><use href="#entrance-drive-conifer" transform="translate(151 57) scale(.96)"/>
+                <use href="#entrance-drive-conifer" transform="translate(178 61) scale(.78)"/><use href="#entrance-drive-conifer" transform="translate(201 57) scale(.98)"/>
+                <use href="#entrance-drive-conifer" transform="translate(229 59) scale(.86)"/><use href="#entrance-drive-conifer" transform="translate(255 57) scale(.98)"/>
+                <use href="#entrance-drive-conifer" transform="translate(285 61) scale(.76)"/><use href="#entrance-drive-conifer" transform="translate(311 58) scale(.9)"/>
+              </g>
+              <path class="entrance-drive-windshield-winter-snow" d="M0 76Q54 68 110 75Q170 66 230 76Q286 68 354 77V85H0Z" fill="#eef1ee" opacity=".78"/>
+              <g transform="translate(545 15)">
+                <g class="entrance-drive-windshield-winter-branches" fill="none" stroke="#56544a" stroke-width="2" stroke-linecap="round">
+                  <path d="M15 64Q20 35 17 9M18 34L2 20M18 29L34 14M16 47L-4 39M17 42L39 31"/><path d="M43 67Q48 39 47 18M47 43L32 30M47 36L63 24"/>
+                </g>
+                <g class="entrance-drive-windshield-summer-leaves" fill="#557253">
+                  <ellipse cx="17" cy="20" rx="20" ry="13"/><ellipse cx="2" cy="35" rx="17" ry="12"/><ellipse cx="34" cy="34" rx="19" ry="14"/><ellipse cx="48" cy="28" rx="16" ry="12"/>
+                </g>
+                <g class="entrance-drive-windshield-spring-leaves" fill="#7da864">
+                  <ellipse cx="17" cy="22" rx="17" ry="11"/><ellipse cx="3" cy="36" rx="14" ry="10"/><ellipse cx="33" cy="35" rx="16" ry="11"/><ellipse cx="49" cy="29" rx="13" ry="9"/>
+                </g>
+                <g class="entrance-drive-windshield-autumn-leaves">
+                  <ellipse cx="17" cy="20" rx="20" ry="13" fill="#b56e38"/><ellipse cx="2" cy="35" rx="17" ry="12" fill="#c78a3e"/><ellipse cx="34" cy="34" rx="19" ry="14" fill="#9d5637"/><ellipse cx="48" cy="28" rx="16" ry="12" fill="#d0a04b"/>
+                </g>
+              </g>
+            </g>
+            <g class="entrance-drive-windshield-night">
+              <rect y="-31" width="680" height="129" fill="url(#entrance-drive-sky-night)"/>
+              <g class="entrance-drive-windshield-stars" fill="#f7f2df">
+                <circle cx="29" cy="18" r=".8"/><circle cx="73" cy="10" r=".55" opacity=".7"/><circle cx="116" cy="24" r=".7"/><circle cx="151" cy="12" r=".5"/>
+                <circle cx="205" cy="19" r=".65"/><circle cx="247" cy="8" r=".85"/><circle cx="301" cy="22" r=".5"/><circle cx="346" cy="13" r=".7"/>
+                <circle cx="395" cy="26" r=".55"/><circle cx="438" cy="9" r=".8"/><circle cx="486" cy="21" r=".55"/><circle cx="527" cy="12" r=".65"/>
+                <circle cx="610" cy="17" r=".75"/><circle cx="654" cy="8" r=".5"/><path d="M460 17H466M463 14V20" stroke="#f7f2df" stroke-width=".55"/>
+              </g>
+              <g class="entrance-drive-windshield-moon">
+                <circle cx="572" cy="27" r="17" fill="url(#entrance-drive-moon-glow)"/>
+                <circle cx="572" cy="27" r="8" fill="#eee9d6"/>
+                <circle cx="569.5" cy="24.5" r=".7" fill="#c9c3ad"/><circle cx="574" cy="30" r=".9" fill="#c9c3ad"/>
+                <g clip-path="url(#entrance-drive-hud-moon-clip)"><use href="#balcony-moon-shadow" transform="translate(258.15 -3.77) scale(.6154)"/></g>
+              </g>
+              <g class="entrance-drive-windshield-distant">
+                <g transform="translate(4 -8) scale(.72 .65)">
+                  <use href="#entrance-drive-three-sisters-ridge" fill="#152529"/>
+                  <use href="#entrance-drive-three-sisters-light" fill="#35434a" opacity=".5"/>
+                  <use class="entrance-drive-windshield-winter-snow" href="#entrance-drive-three-sisters-winter" fill="#81919a" opacity=".62"/>
+                </g>
+                <path d="M0 71Q64 55 126 68Q205 52 278 70Q347 57 422 75V92H0Z" fill="#122522"/>
+              </g>
+              <g fill="#0d1d1c">
+                <use href="#entrance-drive-conifer" transform="translate(20 59) scale(.95)"/><use href="#entrance-drive-conifer" transform="translate(52 55) scale(1.1)"/>
+                <use href="#entrance-drive-conifer" transform="translate(88 60) scale(.82)"/><use href="#entrance-drive-conifer" transform="translate(126 57) scale(.98)"/>
+                <use href="#entrance-drive-conifer" transform="translate(167 60) scale(.84)"/><use href="#entrance-drive-conifer" transform="translate(205 56) scale(1.02)"/>
+                <use href="#entrance-drive-conifer" transform="translate(249 60) scale(.83)"/><use href="#entrance-drive-conifer" transform="translate(292 57) scale(.97)"/>
+              </g>
+            </g>
+            <g class="entrance-drive-windshield-clouds">
+              <rect y="-31" width="680" height="129" fill="url(#entrance-drive-cloud-deck)"/>
+              <path d="M0 29Q68 13 137 26T280 23T425 31T558 20T680 27" fill="none" stroke="#c5c8c4" stroke-width="13" opacity=".22"/>
+              <path d="M0 64Q103 47 208 57T414 55T680 61V98H0Z" fill="#68757b" opacity=".25"/>
+            </g>
+            <g class="entrance-drive-windshield-rain" stroke="#d8edf2" stroke-width="1.05" stroke-linecap="round" opacity=".72">
+              <g class="entrance-drive-windshield-rain-row">
+                <path d="M24 4L19 21M74 19L69 38M127 1L123 16M184 22L179 41M239 7L234 28M298 18L293 39M359 2L355 19M414 24L408 47M477 8L472 27M539 21L534 42M601 4L597 20M657 17L652 38"/>
+              </g>
+              <g class="entrance-drive-windshield-rain-row">
+                <path d="M49-18L44 1M103-8L99 9M157-20L152 0M216-4L211 16M273-17L268 1M332-6L327 14M390-19L386-3M448-7L443 12M507-18L503-1M565-5L560 15M625-19L621-2M675-6L670 14"/>
+              </g>
+            </g>
+            <g class="entrance-drive-windshield-snow" fill="#f5f7f4">
+              <g class="entrance-drive-windshield-snow-row">
+                <circle cx="23" cy="8" r="1.4"/><circle cx="69" cy="28" r=".9"/><circle cx="112" cy="13" r="1.1"/><circle cx="162" cy="36" r="1.6"/><circle cx="214" cy="7" r="1"/><circle cx="266" cy="27" r="1.3"/><circle cx="319" cy="16" r=".8"/><circle cx="374" cy="34" r="1.5"/><circle cx="429" cy="8" r="1"/><circle cx="481" cy="29" r="1.2"/><circle cx="537" cy="14" r="1.5"/><circle cx="591" cy="36" r=".9"/><circle cx="646" cy="18" r="1.2"/>
+              </g>
+              <g class="entrance-drive-windshield-snow-row" opacity=".72">
+                <circle cx="43" cy="-14" r="1"/><circle cx="91" cy="-3" r="1.5"/><circle cx="142" cy="-17" r=".8"/><circle cx="192" cy="-1" r="1.2"/><circle cx="245" cy="-12" r="1.4"/><circle cx="300" cy="-2" r=".9"/><circle cx="353" cy="-16" r="1.1"/><circle cx="407" cy="-4" r="1.5"/><circle cx="462" cy="-13" r=".8"/><circle cx="516" cy="-1" r="1.2"/><circle cx="570" cy="-17" r="1.4"/><circle cx="625" cy="-5" r=".9"/><circle cx="674" cy="-15" r="1.2"/>
+              </g>
+            </g>
+            <rect y="-31" width="680" height="129" fill="url(#entrance-drive-windshield-glaze)"/>
+            <path d="M36-31H110L72 78H26ZM560-31H616L660 74H626Z" fill="#eef6f5" opacity=".055"/>
+          </g>
+          <rect width="680" height="176" fill="#211b18" fill-opacity=".06" pointer-events="none"/>
+          <g id="entrance-drive-cockpit">
+          <g id="entrance-drive-dashboard" transform="translate(0 -12)">
+          <path d="M0 52Q74 32 152 47Q242 10 360 31Q472 13 680 51V176H0Z" fill="#17191b" opacity=".72" filter="url(#entrance-drive-shadow)"/>
+          <path d="M0 61Q77 41 157 55Q241 22 361 40Q485 22 680 58V176H0Z"
+            fill="url(#entrance-drive-leather)" stroke="#50382b" stroke-width="2"/>
+          <path d="M0 64Q86 48 158 61Q248 34 357 49Q478 31 680 62" fill="none" stroke="#efd0aa" stroke-width="2.1" opacity=".45"/>
+          <path d="M0 142H680V176H0Z" fill="#211c19" opacity=".82"/>
+          <path d="M13 75Q42 61 71 72V121Q42 114 12 125Z" fill="#72513d" stroke="#4a3429" stroke-width="1.5"/>
+          <ellipse cx="42" cy="94" rx="20" ry="21" fill="#172027" stroke="#c3c7c5" stroke-width="2"/>
+          <g stroke="#778188" stroke-width="1.7"><path d="M29 80V109M36 75V113M43 74V114M50 75V113M56 80V109"/></g>
+          <path d="M169 126Q174 43 215 33Q275 13 335 34Q378 42 387 126Z" fill="#342a24" stroke="#644936" stroke-width="2"/>
+          <g id="entrance-drive-gauges" font-family="Arial,sans-serif" text-anchor="middle" transform="translate(276 79) scale(.85) translate(-276 -79)">
+            <g transform="translate(214 79)">
+              <circle r="31" fill="url(#entrance-drive-gauge)" stroke="url(#entrance-drive-metal)" stroke-width="3"/>
+              <g fill="#dbe7eb" font-size="6" font-weight="700"><text x="-18" y="15">0</text><text x="-24" y="0">50</text><text x="-14" y="-17">100</text><text x="7" y="-22">150</text><text x="22" y="-8">200</text><text x="21" y="12">250</text></g>
+              <g id="entrance-drive-speed-needle"><path d="M0 0L-18 16" stroke="#e3443c" stroke-width="2" stroke-linecap="round"/><circle r="3.1" fill="#20262a"/></g>
+            </g>
+            <g transform="translate(338 79)">
+              <circle r="31" fill="url(#entrance-drive-gauge)" stroke="url(#entrance-drive-metal)" stroke-width="3"/>
+              <g fill="#c9e4ec" font-size="4.8" font-weight="700">
+                <text x="-15" y="-17">100</text><text x="-4" y="-24">175</text><text x="7" y="-18">250</text>
+                <text x="20" y="-9">4/4</text><text x="24" y="3">2/4</text><text x="20" y="15">0</text>
+              </g>
+              <g id="entrance-drive-temp-needle" transform="rotate(-55 -4 -8)"><path d="M-4-8L-4-21" stroke="#df3c36" stroke-width="1.8" stroke-linecap="round"/><circle cx="-4" cy="-8" r="2.4" fill="#20262a"/></g>
+              <g id="entrance-drive-fuel-needle" transform="rotate(-27.5 12 3)"><path d="M12 3H24" stroke="#df3c36" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="3" r="2.4" fill="#20262a"/></g>
+              <path d="M-15 14Q0 10 15 14V25Q0 29-15 25Z" fill="#608da3" opacity=".72"/>
+              <text id="entrance-drive-clock-readout" x="0" y="22" fill="#e3f0f4" font-size="6.2">4:57</text>
+            </g>
+            <g transform="translate(276 68)">
+              <circle id="entrance-drive-tach-ring" r="43" fill="url(#entrance-drive-gauge)" stroke="url(#entrance-drive-metal)" stroke-width="3.8"/>
+              <g fill="#dbe7eb" font-size="8.5" font-weight="700">
+                <text x="-30" y="23">0</text><text x="-38" y="5">1</text><text x="-32" y="-15">2</text><text x="-18" y="-30">3</text><text x="0" y="-35">4</text><text x="20" y="-30">5</text><text x="33" y="-13">6</text><text x="38" y="7">7</text><text x="30" y="25">8</text>
+              </g>
+              <path d="M25 18A38 38 0 0 0 34 4" fill="none" stroke="#b6343d" stroke-width="2.2" stroke-linecap="round"/>
+              <circle id="entrance-drive-stall-led" cx="0" cy="-23" r="2.7" fill="#f49a2d" stroke="#ffc46d" stroke-width=".75"/>
+              <g id="entrance-drive-tach-needle"><path d="M0 0L0 -34" stroke="#df3c36" stroke-width="2.7" stroke-linecap="round"/><circle r="4.2" fill="#24282b"/></g>
+              <text id="entrance-drive-tach-readout" y="20" fill="#c9e4ec" font-size="8">N</text>
+              <text y="30" fill="#8799a2" font-size="4.8">1/MIN × 1000</text>
+            </g>
+          </g>
+          <g id="entrance-drive-ignition" class="entrance-drive-control" role="button" transform="translate(-27 0)"
+            data-drive-action="ignition" data-aria-i="entrance_drive_ignition">
+            <circle cx="168.5" cy="113.5" r="7.2" fill="#34383a" stroke="url(#entrance-drive-metal)" stroke-width="2"/>
+            <g id="entrance-drive-ignition-fob" transform="translate(10 0)">
+              <path d="M157 112Q151 111 145 115L137 130Q136 135 141 138L153 142Q159 143 162 137L166 121Q167 115 157 112Z"
+                fill="#111416" stroke="#555b5e" stroke-width="1.5"/>
+              <g id="entrance-drive-key-off" fill="#252a2d" stroke="#6b7275" stroke-width=".65">
+                <path d="M145 118Q151 120.5 157 119L156 123Q151 124 146 122Z"/>
+                <path d="M144 125Q151 128 158 126L157 130Q151 131.5 145 129Z"/>
+                <path d="M143 133Q151 137 159 134L157 139Q151 141 144 138Z"/>
+              </g>
+              <g id="entrance-drive-key-running">
+                <path d="M143 119Q151 114 160 119L158 136Q151 143 142 136Z" fill="#171a1c" stroke="#727779" stroke-width=".85"/>
+                <path d="M145.5 120.5Q151 118 156.5 120.5L155.4 131.5Q153.5 135 151 137Q148.5 135 146.6 131.5Z"
+                  fill="#c79d3d" stroke="#d9c98e" stroke-width=".55"/>
+                <path d="M146 122H156" stroke="#252628" stroke-width="1.25"/>
+                <path d="M147 123V127M149 123V127M153 123V127M155 123V127" stroke="#8d3140" stroke-width=".8"/>
+                <path d="M151 122V136" stroke="#252628" stroke-width=".55"/>
+                <path d="M147 128H155M147.5 130.2H154.5" stroke="#8d3140" stroke-width=".7"/>
+                <path d="M151 127.2Q153 128 152.7 130.7L151 133.7L149.3 130.7Q149 128 151 127.2Z" fill="#242628"/>
+                <path d="M150 129.2L152 131M152 129.2L150 131" stroke="#c79d3d" stroke-width=".38"/>
+              </g>
+            </g>
+            <rect class="entrance-drive-hit" x="140" y="106" width="38" height="45" rx="7"/>
+          </g>
+          <g id="entrance-drive-footwell" transform="translate(183 17)">
+            <path d="M-24 127Q78 110 176 128L183 176H-28Z" fill="#27231f"/>
+            <g id="entrance-drive-clutch" class="entrance-drive-control" role="button" data-drive-hold="clutch" data-aria-i="entrance_drive_clutch" data-title-i="entrance_drive_clutch" transform="translate(-49 -1)">
+              <title data-i="entrance_drive_clutch">Clutch pedal — hold Shift</title>
+              <g class="entrance-drive-pedal"><path d="M43 128L47 150" stroke="#3f4447" stroke-width="5"/><rect class="entrance-drive-pedal-face" x="31" y="144" width="27" height="17" rx="4" fill="url(#entrance-drive-metal)" stroke="#262b2e" stroke-width="1.5"/><path d="M36 149H53M36 154H53" stroke="#343a3e" stroke-width="2"/><text class="entrance-drive-key word" x="44.5" y="158">SHIFT</text></g>
+              <rect class="entrance-drive-hit" x="24" y="121" width="41" height="48" rx="5"/>
+            </g>
+            <g id="entrance-drive-brake" class="entrance-drive-control" role="button" data-drive-hold="brake" data-aria-i="entrance_drive_brake" data-title-i="entrance_drive_brake" transform="translate(-65 0)">
+              <title data-i="entrance_drive_brake">Brake pedal — hold ↓</title>
+              <g class="entrance-drive-pedal"><path d="M93 127L94 149" stroke="#3f4447" stroke-width="5"/><rect class="entrance-drive-pedal-face" x="80" y="143" width="29" height="18" rx="4" fill="url(#entrance-drive-metal)" stroke="#262b2e" stroke-width="1.5"/><path d="M85 148H104M85 154H104" stroke="#343a3e" stroke-width="2"/><text class="entrance-drive-key" x="94.5" y="158">↓</text></g>
+              <rect class="entrance-drive-hit" x="73" y="120" width="43" height="49" rx="5"/>
+            </g>
+            <g id="entrance-drive-throttle" class="entrance-drive-control" role="button" data-drive-hold="throttle" data-aria-i="entrance_drive_throttle" data-title-i="entrance_drive_throttle" transform="translate(26 0)">
+              <title data-i="entrance_drive_throttle">Throttle pedal — hold ↑ or Space</title>
+              <g class="entrance-drive-pedal"><path class="entrance-drive-pedal-face" d="M133 128H156L151 166H132Z" fill="url(#entrance-drive-metal)" stroke="#262b2e" stroke-width="1.5"/><path d="M137 136H152M136 144H151M135 152H150M134 160H149" stroke="#343a3e" stroke-width="1.7"/><path d="M135 166H148" stroke="#343a3e" stroke-width="3" stroke-linecap="round"/><text class="entrance-drive-key" x="141.5" y="163">↑</text></g>
+              <rect class="entrance-drive-hit" x="125" y="117" width="39" height="54" rx="5"/>
+            </g>
+          </g>
+          <g id="entrance-drive-steering" pointer-events="none" transform="translate(277 93.5) scale(1.1 1.15) translate(-277 -107)">
+            <ellipse cx="277" cy="107" rx="78" ry="69" fill="none" stroke="#5c3d2d" stroke-width="16" opacity=".72"/>
+            <ellipse cx="277" cy="107" rx="76" ry="67" fill="none" stroke="url(#entrance-drive-leather-hi)" stroke-width="12"/>
+            <path d="M214 78A76 67 0 0 1 326 59" fill="none" stroke="#f2d4b1" stroke-width="2.4" stroke-linecap="round" opacity=".48"/>
+            <path d="M338 127A76 67 0 0 1 227 164" fill="none" stroke="#654634" stroke-width="3" stroke-linecap="round" opacity=".55"/>
+            <path d="M270 112L198 126L205 145L270 128ZM284 112L356 125L349 144L284 128ZM270 128L264 172H290L284 128Z" fill="url(#entrance-drive-metal)" stroke="#454b4e" stroke-width="1.3"/>
+            <g id="entrance-drive-horn-face">
+              <ellipse cx="277" cy="119" rx="31" ry="27" fill="#ba8864" stroke="url(#entrance-drive-metal)" stroke-width="4"/>
+              <ellipse cx="272" cy="112" rx="20" ry="13" fill="#e8bd96" opacity=".18"/>
+              <path d="M277 106L285 110L283 124L277 130L271 124L269 110Z" fill="#d1aa43" stroke="#302820" stroke-width="1"/>
+              <path d="M277 108V127M271.5 115H282.5" stroke="#8e3240" stroke-width="1.7"/><path d="M273 110L281 126M281 110L273 126" stroke="#202326" stroke-width=".8"/>
+            </g>
+          </g>
+          <g id="entrance-drive-horn" class="entrance-drive-control" role="button" data-drive-action="horn" data-aria-i="entrance_drive_horn" transform="translate(277 93.5) scale(1.1 1.15) translate(-277 -107)">
+            <ellipse class="entrance-drive-hit" cx="277" cy="119" rx="31" ry="27"/>
+          </g>
+          <path d="M405 73Q475 58 590 72V137H407Z" fill="#c69770" stroke="#795640" stroke-width="1.5"/>
+          <path d="M421 87H585" stroke="url(#entrance-drive-metal)" stroke-width="4"/>
+          <g id="entrance-drive-glovebox" class="entrance-drive-prop" role="button" data-aria-i="entrance_drive_glovebox" aria-expanded="false" transform="translate(482 0) scale(.75 1) translate(-482 0)">
+            <g id="entrance-drive-glovebox-open">
+              <path d="M482 92H607V126Q546 137 482 125Z" fill="#222629" stroke="#4e3a2e" stroke-width="2"/>
+              <path d="M492 106Q507 96 529 105L536 122Q512 125 491 119Z" fill="#d89ca7" stroke="#9e6874" stroke-width="1"/>
+              <path d="M500 103L516 99L527 112L510 118Z" fill="#f6f1e7" stroke="#d9d0bf" stroke-width=".8"/>
+              <rect x="544" y="99" width="22" height="19" rx="2" fill="#525b65" stroke="#aeb7bc" stroke-width="1"/>
+              <circle cx="555" cy="108.5" r="6.8" fill="#b8d2d7" stroke="#edf4ef" stroke-width="1"/><circle cx="555" cy="108.5" r="1.5" fill="#7c8c91"/>
+              <path d="M572 103L599 115" stroke="#c0a07b" stroke-width="3" stroke-linecap="round"/><path d="M574 102L600 114" stroke="#3c4852" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M483 127Q543 143 607 127L598 164Q544 174 492 159Z" fill="#b88967" stroke="#694b39" stroke-width="1.6"/>
+              <path d="M493 134Q544 145 597 134" fill="none" stroke="#e5bd94" stroke-width="1.2" opacity=".55"/>
+            </g>
+            <g id="entrance-drive-glovebox-door-closed">
+              <path d="M482 93H607V128Q545 134 482 127Z" fill="#bb8b66" stroke="#805d46" stroke-width="1.2"/>
+              <path d="M495 106Q544 100 594 106" fill="none" stroke="#e4bc91" stroke-width="1.2" opacity=".46"/>
+              <path d="M537 120H553" stroke="#655044" stroke-width="2" stroke-linecap="round"/>
+            </g>
+            <path class="entrance-drive-hit" d="M476 88H613V166H476Z"/>
+          </g>
+          <g id="entrance-drive-passenger-vent">
+            <path d="M611 72Q640 62 669 73V119Q640 114 610 121Z" fill="#72513d" stroke="#4a3429" stroke-width="1.5"/>
+            <ellipse cx="640" cy="93" rx="20" ry="21" fill="#172027" stroke="#c3c7c5" stroke-width="2"/>
+            <g stroke="#778188" stroke-width="1.7"><path d="M627 79V108M634 74V112M641 73V113M648 74V112M654 79V108"/></g>
+          </g>
+          </g>
+          <g id="entrance-drive-shifter" transform="translate(-47 0)">
+            <path d="M441 145Q470 123 510 139L522 176H430Z" fill="#8d6348" stroke="#4d382c" stroke-width="1.5"/>
+            <path d="M450 145Q475 130 503 143L509 169H441Z" fill="#c09169" stroke="#e1b890" stroke-width="1.2"/>
+            <g id="entrance-drive-shifter-lever">
+              <path d="M476 140V108" stroke="#a16f50" stroke-width="9" stroke-linecap="round"/>
+              <circle cx="476" cy="103" r="20" fill="url(#entrance-drive-metal)" stroke="#80634e" stroke-width="2"/>
+              <g font-family="Arial,sans-serif" font-size="5.2" text-anchor="middle" fill="#23282b" font-weight="700">
+                <text x="464" y="95">R</text><text x="472" y="95">1</text><text x="480" y="95">3</text><text x="488" y="95">5</text>
+                <text x="472" y="115">2</text><text x="480" y="115">4</text><text x="488" y="115">6</text>
+                <path d="M464 97V103H472M472 97V109M472 103H488M480 97V109M488 97V109" fill="none" stroke="#4e5355" stroke-width=".85"/>
+              </g>
+              <circle id="entrance-drive-gear-indicator" cx="476" cy="103" r="4" fill="none" stroke="#733d35" stroke-width="1.15" opacity="0" pointer-events="none"/>
+            </g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="-1" data-aria-i="entrance_drive_reverse"><circle class="entrance-drive-hit" cx="464" cy="92" r="6"/></g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="1" data-aria-i="entrance_drive_gear_1"><circle class="entrance-drive-hit" cx="472" cy="92" r="5"/></g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="2" data-aria-i="entrance_drive_gear_2"><circle class="entrance-drive-hit" cx="472" cy="112" r="5"/></g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="3" data-aria-i="entrance_drive_gear_3"><circle class="entrance-drive-hit" cx="480" cy="92" r="5"/></g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="4" data-aria-i="entrance_drive_gear_4"><circle class="entrance-drive-hit" cx="480" cy="112" r="5"/></g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="5" data-aria-i="entrance_drive_gear_5"><circle class="entrance-drive-hit" cx="488" cy="92" r="5"/></g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="6" data-aria-i="entrance_drive_gear_6"><circle class="entrance-drive-hit" cx="488" cy="112" r="5"/></g>
+            <g class="entrance-drive-control" role="button" data-drive-gear="0" data-aria-i="entrance_drive_neutral"><circle class="entrance-drive-hit" cx="476" cy="103" r="5"/></g>
+          </g>
+          </g>
+        </svg>
+        <span id="entrance-drive-status" class="entrance-drive-status" aria-live="polite"></span>
+      </div>
       <button type="button" id="entrance-room-close" data-aria-i="entrance_leave" data-title-i="entrance_leave" aria-label="Back to the balcony" title="Back to the balcony">×</button>
     </div>
     <div id="bedroom-room" role="dialog" aria-modal="true" aria-label="Bedroom" data-aria-i="bedroom_title" hidden>
@@ -32106,8 +32531,9 @@ window.__bathroomRoomOpen = false;
     });
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_bathroom");
-    try { closeButton.focus({ preventScroll: true }); }
-    catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
+    if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
+    try { viewport.focus({ preventScroll: true }); }
+    catch (_error) { try { viewport.focus(); } catch (_error2) {} }
     return true;
   }
   art.addEventListener("pointerdown", beginStoolDrag);
@@ -32890,6 +33316,23 @@ window.__entranceRoomOpen = false;
   var props = room ? Array.prototype.slice.call(room.querySelectorAll(".entrance-prop")) : [];
   var porsche = document.getElementById("entrance-porsche");
   var carControls = room ? Array.prototype.slice.call(room.querySelectorAll(".entrance-car-control")) : [];
+  var driveHud = document.getElementById("entrance-drive-hud");
+  var driveControls = driveHud ? Array.prototype.slice.call(driveHud.querySelectorAll(".entrance-drive-control")) : [];
+  var driveStatus = document.getElementById("entrance-drive-status");
+  var driveTachNeedle = document.getElementById("entrance-drive-tach-needle");
+  var driveSpeedNeedle = document.getElementById("entrance-drive-speed-needle");
+  var driveTempNeedle = document.getElementById("entrance-drive-temp-needle");
+  var driveFuelNeedle = document.getElementById("entrance-drive-fuel-needle");
+  var driveTachReadout = document.getElementById("entrance-drive-tach-readout");
+  var driveClockReadout = document.getElementById("entrance-drive-clock-readout");
+  var driveSteering = document.getElementById("entrance-drive-steering");
+  var driveShifter = document.getElementById("entrance-drive-shifter");
+  var driveShifterLever = document.getElementById("entrance-drive-shifter-lever");
+  var porscheFrontWheelSpin = document.getElementById("entrance-porsche-front-wheel-spin");
+  var porscheFrontWheelSteer = document.getElementById("entrance-porsche-front-wheel-steer");
+  var porscheRearWheelSpin = document.getElementById("entrance-porsche-rear-wheel-spin");
+  var driveGearIndicator = document.getElementById("entrance-drive-gear-indicator");
+  var tireMarks = document.getElementById("entrance-porsche-tire-marks");
   var reactions = {};
   var carActivations = {};
   var porscheState = {
@@ -32918,13 +33361,57 @@ window.__entranceRoomOpen = false;
   var entranceNight = null;
   var windowLights = {};
   var entranceLamps = { left: false, right: false };
+  var entranceFreshResetTimer = null;
   var windowPayoffShown = false;
   var indicatorTimers = [];
   var indicatorFlashes = 0;
   var intercomResponses = 0;
   var porscheIdleNodes = null;
+  var porscheDriveAudioNodes = null;
+  var porscheDriveMusicNodes = null;
+  var porscheDriveMusicTimer = null;
+  var porscheDriveMusicStep = 0;
+  var porscheDriveMusicNext = 0;
+  var porscheHornNodes = null;
   var porscheDoorCloseTimer = null;
+  var porscheBodyClickTimer = null;
+  var PORSCHE_BASE_X = 328;
+  var PORSCHE_BASE_Y = -9;
+  var PORSCHE_WRAP_SPAN = 986;
+  var PORSCHE_ROAD_TRAVEL_SCALE = 2.5;
+  var driveFrame = null;
+  var driveLastTime = 0;
+  var lastSkidAt = 0;
+  var driveShifterAttemptTimer = null;
+  var lastDriveInstruction = "";
+  var driveBatteryLevel = .75;
+  var driveState = {
+    hudOpen: false,
+    gear: 0,
+    speed: 0,
+    rpm: 0,
+    position: 0,
+    laneOffset: 0,
+    wheelAngle: 0,
+    steeringAngle: 0,
+    wraps: 0,
+    stalled: false,
+    redlineMs: 0,
+    throttleHeldMs: 0,
+    temperature: 0,
+    holds: { throttle: false, brake: false, clutch: false, steerLeft: false, steerRight: false }
+  };
   if (!room || !viewport || !closeButton || !balconyStage) return;
+  if (navigator.getBattery) {
+    navigator.getBattery().then(function (battery) {
+      function syncDriveBattery() {
+        driveBatteryLevel = Math.max(0, Math.min(1, battery.level));
+        paintPorscheDriveHud();
+      }
+      syncDriveBattery();
+      battery.addEventListener("levelchange", syncDriveBattery);
+    }).catch(function () {});
+  }
 
   function paintEntranceWindows() {
     windowIds.forEach(function (id) {
@@ -32940,25 +33427,33 @@ window.__entranceRoomOpen = false;
       if (control) control.setAttribute("aria-pressed", entranceLamps[side] ? "true" : "false");
     });
   }
-  function resetEntranceWindows(night) {
+  function resetEntranceWindows(night, resetState) {
     entranceNight = !!night;
     room.classList.toggle("entrance-day", !entranceNight);
-    windowIds.forEach(function (id) { windowLights[id] = entranceNight; });
-    if (!entranceNight) {
-      porscheState.headlightOn = false;
-      porscheState.taillightOn = false;
+    if (resetState) {
+      windowIds.forEach(function (id) { windowLights[id] = entranceNight; });
+      entranceLamps.left = entranceNight;
+      entranceLamps.right = entranceNight;
+      windowPayoffShown = false;
     }
-    windowPayoffShown = false;
     paintEntranceWindows();
-    entranceLamps.left = entranceNight;
-    entranceLamps.right = entranceNight;
     paintEntranceLamps();
     syncPorscheState();
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
   }
   function syncEntranceDayNight() {
     var night = balconyStage.classList.contains("dusk");
-    if (night !== entranceNight) resetEntranceWindows(night);
+    if (night !== entranceNight) resetEntranceWindows(night, entranceNight === null);
+  }
+  function resetFreshEntranceLighting() {
+    clearTimeout(entranceFreshResetTimer);
+    resetEntranceWindows(balconyStage.classList.contains("dusk"), true);
+    // resetHunt reapplies its URL/date immediately after checkpoint systems reset.
+    // Let that authoritative day/night class land before choosing fresh-game lights.
+    entranceFreshResetTimer = setTimeout(function () {
+      entranceFreshResetTimer = null;
+      resetEntranceWindows(balconyStage.classList.contains("dusk"), true);
+    }, 0);
   }
   function toggleEntranceWindow(id) {
     if (windowIds.indexOf(id) < 0) return false;
@@ -32995,6 +33490,718 @@ window.__entranceRoomOpen = false;
   function clearEntranceInteractions() {
     props.forEach(function (prop) { prop.classList.remove("reacting"); });
   }
+  function entranceDriveAudible() {
+    return !!(porscheState.engineOn && window.__entranceRoomOpen &&
+      document.visibilityState !== "hidden" && document.hasFocus() &&
+      !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
+  }
+  function entranceDriveMusicWanted() {
+    return !!(entranceDriveAudible() && driveState.hudOpen);
+  }
+  function driveGearLabel() {
+    return driveState.gear < 0 ? "R" : driveState.gear || "N";
+  }
+  function porscheDriveInstructionKey() {
+    if (!driveState.hudOpen) return "lower_entrance";
+    if (driveState.stalled) return "entrance_drive_stalled";
+    if (!porscheState.engineOn) return "entrance_drive_ignition_hint";
+    if (!driveState.gear) return "entrance_drive_neutral_hint";
+    if (driveState.gear > 0 && driveState.gear < 6 && driveState.rpm >= 4500) return "entrance_drive_shift_up";
+    if (driveState.gear > 1 && driveState.rpm < 2000 && Math.abs(driveState.speed) > 4) return "entrance_drive_shift_down";
+    return "entrance_drive_manual";
+  }
+  function syncPorscheDriveInstruction(force) {
+    if (!window.__entranceRoomOpen || !window.__setLowerRoomCaption) return;
+    var key = porscheDriveInstructionKey();
+    if (!force && key === lastDriveInstruction) return;
+    lastDriveInstruction = key;
+    window.__setLowerRoomCaption(key);
+  }
+  function porscheShifterOffset(gear) {
+    var offsets = { "-1": [-12, -7], "0": [4, 0], "1": [-4, -7], "2": [-4, 7],
+      "3": [4, -7], "4": [4, 7], "5": [12, -7], "6": [12, 7] };
+    return offsets[String(gear)] || offsets["0"];
+  }
+  function paintPorscheShifter(gear) {
+    if (!driveShifterLever) return;
+    var offset = porscheShifterOffset(gear);
+    driveShifterLever.setAttribute("transform", "translate(" + (offset[0] - 5) + " " + (offset[1] + 15) + ")");
+  }
+  function previewPorscheShifterAttempt(gear) {
+    clearTimeout(driveShifterAttemptTimer);
+    paintPorscheShifter(gear);
+    driveShifterAttemptTimer = setTimeout(function () {
+      driveShifterAttemptTimer = null;
+      paintPorscheShifter(driveState.gear);
+    }, 240);
+  }
+  function paintPorscheDrivePosition() {
+    var transform = "translate(" + (PORSCHE_BASE_X + driveState.position).toFixed(2).replace(/\.00$/, "") + " " +
+      (PORSCHE_BASE_Y + driveState.laneOffset).toFixed(2).replace(/\.00$/, "") + ")";
+    if (porsche) porsche.setAttribute("transform", transform);
+    carControls.forEach(function (control) { control.setAttribute("transform", transform); });
+    var wheelTransform = "rotate(" + driveState.wheelAngle.toFixed(2) + ")";
+    if (porscheFrontWheelSpin) porscheFrontWheelSpin.setAttribute("transform", wheelTransform);
+    if (porscheRearWheelSpin) porscheRearWheelSpin.setAttribute("transform", wheelTransform);
+    if (porscheFrontWheelSteer) {
+      var roadWheelTurn = driveState.steeringAngle * .22;
+      var roadWheelNarrowing = 1 - Math.abs(driveState.steeringAngle) * .004;
+      porscheFrontWheelSteer.setAttribute("transform", "rotate(" + roadWheelTurn.toFixed(2) + ") scale(" + roadWheelNarrowing.toFixed(3) + " 1)");
+    }
+    if (driveSteering) {
+      driveSteering.setAttribute("transform", "translate(277 93.5) scale(1.1 1.15) translate(-277 -107) rotate(" +
+        driveState.steeringAngle.toFixed(2) + " 277 107)");
+    }
+  }
+  function paintPorscheDriveHud() {
+    var ignitionVisible = !!(window.__entranceRoomOpen && driveState.hudOpen);
+    room.classList.toggle("drive-hud-visible", ignitionVisible);
+    if (porsche) porsche.classList.toggle("reversing", ignitionVisible && driveState.gear < 0);
+    if (driveHud) {
+      driveHud.classList.toggle("drive-engine-on", porscheState.engineOn);
+      driveHud.classList.toggle("drive-stalled", driveState.stalled);
+      driveHud.classList.toggle("drive-redline", driveState.rpm >= 7500);
+      driveHud.setAttribute("aria-hidden", ignitionVisible ? "false" : "true");
+    }
+    var rpm = Math.max(0, Math.min(8000, driveState.rpm));
+    if (porsche) {
+      var revVibration = Math.max(0, Math.min(1, (rpm - 750) / 7250));
+      porsche.style.setProperty("--porsche-vibe-x", (.1 + revVibration * .24).toFixed(3) + "px");
+      porsche.style.setProperty("--porsche-vibe-y", (.08 + revVibration * .19).toFixed(3) + "px");
+      porsche.style.setProperty("--porsche-vibe-period", (.16 - revVibration * .055).toFixed(3) + "s");
+    }
+    var speed = Math.abs(driveState.speed);
+    if (porsche) porsche.classList.toggle("engine-idling", entranceDriveAudible() && speed < .75);
+    if (driveTachNeedle) driveTachNeedle.setAttribute("transform", "rotate(" + (-132 + rpm / 8000 * 264).toFixed(1) + ")");
+    if (driveSpeedNeedle) driveSpeedNeedle.setAttribute("transform", "rotate(" + (Math.min(250, speed) / 250 * 242).toFixed(1) + ")");
+    if (driveTempNeedle) driveTempNeedle.setAttribute("transform", "rotate(" + (-55 + 55 * driveState.temperature).toFixed(1) + " -4 -8)");
+    if (driveFuelNeedle) driveFuelNeedle.setAttribute("transform", "rotate(" + (55 - 110 * driveBatteryLevel).toFixed(1) + " 12 3)");
+    if (driveClockReadout) {
+      var gameNow = window.__now ? window.__now() : new Date();
+      var gameHour = gameNow.getHours() % 12 || 12;
+      driveClockReadout.textContent = gameHour + ":" + String(gameNow.getMinutes()).padStart(2, "0");
+    }
+    if (driveTachReadout) driveTachReadout.textContent = driveState.stalled ? "STALL" : driveGearLabel();
+    if (!driveShifterAttemptTimer) paintPorscheShifter(driveState.gear);
+    if (driveGearIndicator) {
+      var gearPositions = { "-1": [464, 93], "1": [472, 93], "2": [472, 113],
+        "3": [480, 93], "4": [480, 113], "5": [488, 93], "6": [488, 113] };
+      var gearPosition = gearPositions[String(driveState.gear)];
+      driveGearIndicator.setAttribute("opacity", gearPosition ? "1" : "0");
+      if (gearPosition) {
+        driveGearIndicator.setAttribute("cx", gearPosition[0]);
+        driveGearIndicator.setAttribute("cy", gearPosition[1]);
+      }
+    }
+    syncPorscheDriveInstruction(false);
+    driveControls.forEach(function (control) {
+      var hold = control.getAttribute("data-drive-hold");
+      var gear = control.getAttribute("data-drive-gear");
+      var pressed = hold ? !!driveState.holds[hold] : gear !== null && Number(gear) === driveState.gear;
+      control.classList.toggle("pressed", pressed);
+      control.setAttribute("aria-pressed", pressed ? "true" : "false");
+    });
+    if (driveStatus) {
+      driveStatus.textContent = driveState.stalled ?
+        (document.documentElement.lang === "cs" ? "Motor zhasl" : "Engine stalled") :
+        driveGearLabel() + ", " + Math.round(speed) + " km/h";
+    }
+  }
+  function stopPorscheDriveAudio() {
+    if (!porscheDriveAudioNodes) return;
+    var driveAudio = porscheDriveAudioNodes;
+    porscheDriveAudioNodes = null;
+    driveAudio.sources.forEach(function (source) { try { source.stop(); } catch (_error) {} });
+    driveAudio.nodes.forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+  }
+  function porscheDriveMusicVolume() {
+    return 2 * (window.__songVolume ? window.__songVolume() : .5);
+  }
+  function porscheDriveMusicTempo() {
+    return 104 + Math.min(22, Math.abs(driveState.speed) * .11);
+  }
+  function porscheDriveMusicFrequency(base, semitones) {
+    return base * Math.pow(2, semitones / 12);
+  }
+  function trackPorscheDriveMusicSource(music, source, nodes) {
+    music.sources.push(source);
+    source.onended = function () {
+      var index = music.sources.indexOf(source);
+      if (index >= 0) music.sources.splice(index, 1);
+      (nodes || []).forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+      try { source.disconnect(); } catch (_error) {}
+    };
+  }
+  function schedulePorscheDriveKick(music, time) {
+    var osc = music.bed.createOscillator();
+    var gain = music.bed.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(92, time);
+    osc.frequency.exponentialRampToValueAtTime(43, time + .14);
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(.62, time + .008);
+    gain.gain.exponentialRampToValueAtTime(.0001, time + .22);
+    osc.connect(gain); gain.connect(music.bus);
+    trackPorscheDriveMusicSource(music, osc, [gain]);
+    osc.start(time); osc.stop(time + .24);
+  }
+  function schedulePorscheDriveDoob(music, time, semitones, accent) {
+    var osc = music.bed.createOscillator();
+    var filter = music.bed.createBiquadFilter();
+    var gain = music.bed.createGain();
+    var frequency = porscheDriveMusicFrequency(73.42, semitones);
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(frequency * 1.035, time);
+    osc.frequency.exponentialRampToValueAtTime(frequency, time + .075);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(accent ? 560 : 430, time);
+    filter.frequency.exponentialRampToValueAtTime(170, time + .28);
+    filter.Q.value = 2.2;
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(accent ? .34 : .25, time + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, time + .31);
+    osc.connect(filter); filter.connect(gain); gain.connect(music.bus);
+    trackPorscheDriveMusicSource(music, osc, [filter, gain]);
+    osc.start(time); osc.stop(time + .33);
+  }
+  function schedulePorscheDriveStab(music, time, root, minor) {
+    [0, minor ? 3 : 4, 7, 10].forEach(function (interval, index) {
+      var osc = music.bed.createOscillator();
+      var gain = music.bed.createGain();
+      osc.type = index < 2 ? "triangle" : "sine";
+      osc.frequency.value = porscheDriveMusicFrequency(146.83, root + interval);
+      osc.detune.value = index % 2 ? 3 : -3;
+      gain.gain.setValueAtTime(.0001, time);
+      gain.gain.exponentialRampToValueAtTime(index < 3 ? .055 : .025, time + .018);
+      gain.gain.exponentialRampToValueAtTime(.0001, time + .29);
+      osc.connect(gain); gain.connect(music.bus);
+      trackPorscheDriveMusicSource(music, osc, [gain]);
+      osc.start(time); osc.stop(time + .31);
+    });
+  }
+  function schedulePorscheDriveHat(music, time, open) {
+    var duration = open ? .16 : .055;
+    var buffer = music.bed.createBuffer(1, Math.ceil(music.bed.sampleRate * duration), music.bed.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, open ? 1.6 : 3.4);
+    var source = music.bed.createBufferSource();
+    var filter = music.bed.createBiquadFilter();
+    var gain = music.bed.createGain();
+    source.buffer = buffer;
+    filter.type = "highpass"; filter.frequency.value = open ? 5300 : 6900;
+    gain.gain.value = open ? .055 : .035;
+    source.connect(filter); filter.connect(gain); gain.connect(music.bus);
+    trackPorscheDriveMusicSource(music, source, [filter, gain]);
+    source.start(time); source.stop(time + duration);
+  }
+  function schedulePorscheDriveMusicStep(music, step, time) {
+    var inBar = step % 16;
+    var bar = Math.floor(step / 16) % 4;
+    var roots = [0, -4, 3, -2]; // Dm · B♭ · F · C
+    if (inBar % 4 === 0) schedulePorscheDriveKick(music, time);
+    if ([0, 3, 4, 7, 8, 11, 12, 15].indexOf(inBar) >= 0) {
+      schedulePorscheDriveDoob(music, time, roots[bar] + (inBar === 7 || inBar === 15 ? 7 : 0), inBar % 4 === 0);
+    }
+    if (inBar === 2 || inBar === 10) schedulePorscheDriveStab(music, time, roots[bar] + 12, bar === 0);
+    if (inBar % 2 === 1) schedulePorscheDriveHat(music, time, inBar === 7 || inBar === 15);
+  }
+  function schedulePorscheDriveMusic() {
+    porscheDriveMusicTimer = setTimeout(function () {
+      porscheDriveMusicTimer = null;
+      var music = porscheDriveMusicNodes;
+      if (!music) return;
+      if (!entranceDriveMusicWanted()) { stopPorscheDriveMusic(); return; }
+      try {
+        var now = music.bed.currentTime;
+        if (porscheDriveMusicNext < now - .12) porscheDriveMusicNext = now + .04;
+        var horizon = now + 1.2;
+        var guard = 0;
+        while (porscheDriveMusicNext < horizon && guard++ < 48) {
+          schedulePorscheDriveMusicStep(music, porscheDriveMusicStep, porscheDriveMusicNext);
+          porscheDriveMusicNext += 60 / porscheDriveMusicTempo() / 4;
+          porscheDriveMusicStep = (porscheDriveMusicStep + 1) % 64;
+        }
+      } catch (_error) {}
+      schedulePorscheDriveMusic();
+    }, 180);
+  }
+  function startPorscheDriveMusic() {
+    if (porscheDriveMusicNodes || !entranceDriveMusicWanted()) return;
+    var bed = null;
+    try {
+      bed = audioBed();
+      if (!bed) return;
+      var tone = bed.createBiquadFilter();
+      var compressor = bed.createDynamicsCompressor();
+      var master = bed.createGain();
+      var now = bed.currentTime;
+      tone.type = "lowpass"; tone.frequency.value = 1900; tone.Q.value = .65;
+      compressor.threshold.value = -19; compressor.knee.value = 16; compressor.ratio.value = 3;
+      compressor.attack.value = .008; compressor.release.value = .14;
+      master.gain.setValueAtTime(.0001, now);
+      master.gain.linearRampToValueAtTime(porscheDriveMusicVolume(), now + .42);
+      tone.connect(compressor); compressor.connect(master); master.connect(pannedOut(bed, "entrance-porsche"));
+      porscheDriveMusicNodes = {
+        bed: bed,
+        bus: tone,
+        tone: tone,
+        compressor: compressor,
+        master: master,
+        sources: []
+      };
+      porscheDriveMusicStep = 0;
+      porscheDriveMusicNext = now + .08;
+      var volumeButton = document.getElementById("hunt-volume-btn");
+      if (volumeButton) volumeButton.classList.add("shown");
+      schedulePorscheDriveMusic();
+    } catch (_error) {
+      if (porscheDriveMusicNodes) stopPorscheDriveMusic(0);
+      else if (bed) { try { bed.close(); } catch (_closeError) {} }
+    }
+  }
+  function stopPorscheDriveMusic(fadeSecs) {
+    if (porscheDriveMusicTimer) { clearTimeout(porscheDriveMusicTimer); porscheDriveMusicTimer = null; }
+    if (!porscheDriveMusicNodes) return;
+    var f = typeof fadeSecs === "number" ? Math.max(0, fadeSecs) : .22;
+    var music = porscheDriveMusicNodes;
+    porscheDriveMusicNodes = null;
+    try {
+      var now = music.bed.currentTime;
+      music.master.gain.cancelScheduledValues(now);
+      music.master.gain.setValueAtTime(music.master.gain.value, now);
+      music.master.gain.linearRampToValueAtTime(.0001, now + f);
+    } catch (_error) {}
+    setTimeout(function () {
+      music.sources.slice().forEach(function (source) { try { source.stop(); } catch (_error) {} });
+      [music.tone, music.compressor, music.master].forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+      try { music.bed.close(); } catch (_error) {}
+    }, f * 1000 + 80);
+  }
+  function paintPorscheDriveMusic() {
+    var music = porscheDriveMusicNodes;
+    if (!music) return;
+    try {
+      var now = music.bed.currentTime;
+      var motion = Math.min(1, Math.abs(driveState.speed) / 150);
+      var revs = Math.min(1, Math.max(0, driveState.rpm - 750) / 6500);
+      music.tone.frequency.setTargetAtTime(1750 + motion * 1450 + revs * 450, now, .18);
+      music.master.gain.setTargetAtTime(porscheDriveMusicVolume() * (.86 + motion * .14), now, .12);
+    } catch (_error) {}
+  }
+  function updatePorscheDriveMusic() {
+    if (entranceDriveMusicWanted()) startPorscheDriveMusic();
+    else stopPorscheDriveMusic();
+  }
+  function startPorscheDriveAudio() {
+    if (porscheDriveAudioNodes || !entranceDriveAudible()) return;
+    try {
+      var bed = audioBed();
+      if (!bed) return;
+      var out = bed.createGain();
+      var engineFilter = bed.createBiquadFilter();
+      var base = bed.createOscillator();
+      var harmonic = bed.createOscillator();
+      var harmonicGain = bed.createGain();
+      var pulse = bed.createOscillator();
+      var pulseGain = bed.createGain();
+      var road = bed.createBufferSource();
+      var roadFilter = bed.createBiquadFilter();
+      var roadGain = bed.createGain();
+      var buffer = bed.createBuffer(1, bed.sampleRate * 2, bed.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      out.gain.value = .05;
+      engineFilter.type = "lowpass";
+      engineFilter.frequency.value = 520;
+      engineFilter.Q.value = 1.6;
+      base.type = "sawtooth";
+      harmonic.type = "triangle";
+      harmonicGain.gain.value = .22;
+      pulse.type = "square";
+      pulseGain.gain.value = .045;
+      road.buffer = buffer;
+      road.loop = true;
+      roadFilter.type = "bandpass";
+      roadFilter.frequency.value = 260;
+      roadFilter.Q.value = .65;
+      roadGain.gain.value = .0001;
+      base.connect(out);
+      harmonic.connect(harmonicGain); harmonicGain.connect(out);
+      pulse.connect(pulseGain); pulseGain.connect(out);
+      road.connect(roadFilter); roadFilter.connect(roadGain); roadGain.connect(out);
+      out.connect(engineFilter); engineFilter.connect(pannedOut(bed, "entrance-porsche"));
+      porscheDriveAudioNodes = {
+        bed: bed,
+        sources: [base, harmonic, pulse, road],
+        nodes: [out, engineFilter, harmonicGain, pulseGain, roadFilter, roadGain],
+        out: out,
+        filter: engineFilter,
+        base: base,
+        harmonic: harmonic,
+        pulse: pulse,
+        roadFilter: roadFilter,
+        roadGain: roadGain
+      };
+      base.start(); harmonic.start(); pulse.start(); road.start();
+      paintPorscheDriveAudio();
+    } catch (_error) {
+      stopPorscheDriveAudio();
+    }
+  }
+  function paintPorscheDriveAudio() {
+    var audio = porscheDriveAudioNodes;
+    if (!audio) return;
+    var t = audio.bed.currentTime;
+    var rpm = Math.max(720, driveState.rpm || 820);
+    var fundamental = 34 + rpm / 61;
+    try {
+      audio.base.frequency.setTargetAtTime(fundamental, t, .035);
+      audio.harmonic.frequency.setTargetAtTime(fundamental * 2.05, t, .035);
+      audio.pulse.frequency.setTargetAtTime(fundamental * .5, t, .04);
+      audio.filter.frequency.setTargetAtTime(360 + rpm * .17, t, .06);
+      audio.out.gain.setTargetAtTime(.045 + Math.min(1, rpm / 7200) * .045 +
+        (driveState.holds.throttle ? .018 : 0), t, .05);
+      audio.roadFilter.frequency.setTargetAtTime(180 + Math.min(1300, Math.abs(driveState.speed) * 9), t, .08);
+      audio.roadGain.gain.setTargetAtTime(.0001 + Math.min(.075, Math.abs(driveState.speed) / 1900), t, .08);
+    } catch (_error) {}
+    paintPorscheDriveMusic();
+  }
+  function updatePorscheDriveAudio() {
+    if (entranceDriveAudible()) startPorscheDriveAudio();
+    else stopPorscheDriveAudio();
+    updatePorscheDriveMusic();
+    if (porsche) porsche.classList.toggle("engine-idling",
+      entranceDriveAudible() && Math.abs(driveState.speed) < .75);
+  }
+  function playPorscheStallSound() {
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = ctx.createGain();
+    var osc = ctx.createOscillator();
+    var thud = ctx.createOscillator();
+    osc.type = "sawtooth"; thud.type = "sine";
+    osc.frequency.setValueAtTime(86, t); osc.frequency.exponentialRampToValueAtTime(28, t + .42);
+    thud.frequency.setValueAtTime(54, t); thud.frequency.exponentialRampToValueAtTime(22, t + .3);
+    out.gain.setValueAtTime(.12, t); out.gain.exponentialRampToValueAtTime(.0001, t + .46);
+    osc.connect(out); thud.connect(out); out.connect(ctx.destination);
+    osc.start(t); thud.start(t); osc.stop(t + .47); thud.stop(t + .47);
+    osc.onended = function () { try { osc.disconnect(); thud.disconnect(); out.disconnect(); } catch (_error) {} };
+  }
+  function playPorscheSkidSound() {
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var source = ctx.createBufferSource();
+    var filter = ctx.createBiquadFilter();
+    var gain = ctx.createGain();
+    var buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .34), ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length * .48);
+    source.buffer = buffer;
+    filter.type = "bandpass"; filter.frequency.value = 1850; filter.Q.value = 2.4;
+    gain.gain.setValueAtTime(.0001, t); gain.gain.exponentialRampToValueAtTime(.12, t + .015); gain.gain.exponentialRampToValueAtTime(.0001, t + .34);
+    source.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    source.start(t); source.stop(t + .35);
+    source.onended = function () { try { source.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_error) {} };
+  }
+  function playPorscheGearGrindSound(gear) {
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var source = ctx.createBufferSource();
+    var filter = ctx.createBiquadFilter();
+    var gain = ctx.createGain();
+    var gearIndex = gear < 0 ? 7 : Math.max(1, Math.min(6, Math.abs(gear)));
+    var duration = .3 + (gearIndex % 3) * .045;
+    var buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < data.length; i++) {
+      var tooth = Math.sin(i * (.22 + gearIndex * .027)) > .18 ? 1 : -.7;
+      data[i] = (Math.random() * .7 + .3) * tooth * (1 - i / data.length * .34);
+    }
+    source.buffer = buffer;
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(1180 + gearIndex * 185, t);
+    filter.frequency.exponentialRampToValueAtTime(720 + gearIndex * 82, t + duration);
+    filter.Q.value = gear < 0 ? 4.1 : 2.7 + gearIndex * .14;
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.exponentialRampToValueAtTime(.11, t + .012);
+    gain.gain.setValueAtTime(.09, t + duration * .64);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + duration);
+    source.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    source.start(t); source.stop(t + duration + .01);
+    source.onended = function () { try { source.disconnect(); filter.disconnect(); gain.disconnect(); } catch (_error) {} };
+  }
+  function startPorscheHornSound() {
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
+    if (porscheHornNodes) return true;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return false;
+    var t = ctx.currentTime;
+    var out = ctx.createGain();
+    var filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 1250;
+    out.gain.setValueAtTime(.0001, t);
+    out.gain.exponentialRampToValueAtTime(.12, t + .025);
+    filter.connect(out); out.connect(ctx.destination);
+    var oscillators = [392, 466].map(function (frequency) {
+      var osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = frequency;
+      osc.connect(filter);
+      osc.start(t);
+      return osc;
+    });
+    porscheHornNodes = { ctx: ctx, out: out, filter: filter, oscillators: oscillators };
+    if (driveSteering) driveSteering.classList.add("horn-pressed");
+    return true;
+  }
+  function stopPorscheHornSound() {
+    if (driveSteering) driveSteering.classList.remove("horn-pressed");
+    if (!porscheHornNodes) return;
+    var horn = porscheHornNodes;
+    porscheHornNodes = null;
+    var t = horn.ctx.currentTime;
+    try {
+      horn.out.gain.cancelScheduledValues(t);
+      horn.out.gain.setValueAtTime(Math.max(.0001, horn.out.gain.value), t);
+      horn.out.gain.exponentialRampToValueAtTime(.0001, t + .075);
+      horn.oscillators.forEach(function (osc) { osc.stop(t + .085); });
+      horn.oscillators[0].onended = function () {
+        try {
+          horn.oscillators.forEach(function (osc) { osc.disconnect(); });
+          horn.filter.disconnect(); horn.out.disconnect();
+        } catch (_error) {}
+      };
+    } catch (_error) {}
+  }
+  function leavePorscheTireMarks() {
+    if (!tireMarks) return;
+    var ns = "http://www.w3.org/2000/svg";
+    var direction = driveState.speed >= 0 ? 1 : -1;
+    [95, 296].forEach(function (wheelX) {
+      var x = PORSCHE_BASE_X + driveState.position + 8 + .85 * (wheelX - 8);
+      var mark = document.createElementNS(ns, "path");
+      mark.setAttribute("class", "entrance-tire-mark");
+      if (wheelX === 95) mark.setAttribute("stroke-width", "8");
+      mark.setAttribute("d", "M" + (x - direction * 2).toFixed(1) + " 329Q" + (x + direction * 9).toFixed(1) + " 328.5 " + (x + direction * 21).toFixed(1) + " 329");
+      tireMarks.appendChild(mark);
+      mark.addEventListener("animationend", function () { if (mark.parentNode) mark.parentNode.removeChild(mark); }, { once: true });
+      setTimeout(function () { if (mark.parentNode) mark.parentNode.removeChild(mark); }, 3500);
+    });
+    while (tireMarks.childNodes.length > 20) tireMarks.removeChild(tireMarks.firstChild);
+  }
+  function stallPorsche() {
+    if (!porscheState.engineOn) return false;
+    porscheState.engineOn = false;
+    driveState.hudOpen = true;
+    driveState.stalled = true;
+    driveState.rpm = 0;
+    driveState.redlineMs = 0;
+    driveState.throttleHeldMs = 0;
+    Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
+    playPorscheStallSound();
+    syncPorscheState();
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_drive_stalled");
+    return true;
+  }
+  function selectPorscheDriveGear(gear, clutchBypass) {
+    gear = Number(gear);
+    if (gear < -1 || gear > 6 || gear !== Math.round(gear)) return false;
+    if (gear !== 0 && porscheState.engineOn && !driveState.holds.clutch && !clutchBypass) {
+      driveState.gear = 0;
+      previewPorscheShifterAttempt(gear);
+      playPorscheGearGrindSound(gear);
+      paintPorscheDriveHud();
+      return false;
+    }
+    if ((gear < 0 && driveState.speed > 6) || (gear > 0 && driveState.speed < -6)) {
+      stallPorsche();
+      return false;
+    }
+    driveState.gear = gear;
+    paintPorscheDriveHud();
+    if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) playDryClickSound("entrance-drive-shifter");
+    return true;
+  }
+  function stepPorscheDriveGear(direction) {
+    var gears = [-1, 0, 1, 2, 3, 4, 5, 6];
+    var index = gears.indexOf(driveState.gear);
+    var next = Math.max(0, Math.min(gears.length - 1, index + (direction > 0 ? 1 : -1)));
+    if (next === index) return false;
+    return selectPorscheDriveGear(gears[next], true);
+  }
+  function setPorscheDriveHold(name, held) {
+    if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
+    driveState.holds[name] = !!held;
+    if (name === "brake" && porsche) porsche.classList.toggle("braking", !!held);
+    driveControls.forEach(function (control) {
+      if (control.getAttribute("data-drive-hold") === name) control.classList.toggle("pressed", !!held);
+    });
+    if (held) ensurePorscheDriveFrame();
+    return true;
+  }
+  function porscheDriveStep(milliseconds) {
+    var dt = Math.max(0, Math.min(80, Number(milliseconds) || 0));
+    var seconds = dt / 1000;
+    var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
+    var clutch = porscheState.engineOn && driveState.holds.clutch;
+    var brake = driveState.holds.brake ? 1 : 0;
+    var steerInput = (driveState.holds.steerRight ? 1 : 0) - (driveState.holds.steerLeft ? 1 : 0);
+    var steeringTarget = steerInput * 18;
+    driveState.steeringAngle += (steeringTarget - driveState.steeringAngle) * Math.min(1, seconds * (steerInput ? 7 : 4.5));
+    var ratios = { "-1": 3.31, "1": 3.82, "2": 2.2, "3": 1.52, "4": 1.22, "5": 1.02, "6": .84 };
+    var ratio = ratios[String(driveState.gear)] || 0;
+    if (porscheState.engineOn) {
+      driveState.temperature = Math.min(1, driveState.temperature + seconds / 20);
+      if (throttle && driveState.gear && !clutch) driveState.throttleHeldMs += dt;
+      else driveState.throttleHeldMs = Math.max(0, driveState.throttleHeldMs - dt * 3);
+      var freeRpm = 750 + throttle * 7250;
+      // A held digital throttle behaves like a human foot, not an instant brick on the
+      // accelerator: ordinary pulls live below ~5.5k, with the remaining rev range only
+      // becoming available after fifteen continuous seconds in gear.
+      var sustained = Math.max(0, Math.min(1, (driveState.throttleHeldMs - 15000) / 10000));
+      var coupledLimit = 5500 + sustained * 2500;
+      var coupledRpm = 750 + Math.abs(driveState.speed) * ratio * 30 + throttle * 300;
+      var targetRpm = clutch || !driveState.gear ? freeRpm : Math.min(coupledLimit, coupledRpm);
+      driveState.rpm += (targetRpm - driveState.rpm) * Math.min(1, seconds * (clutch || !driveState.gear ? 4.6 : 7.5));
+      if (driveState.gear && !clutch) {
+        var direction = driveState.gear < 0 ? -1 : 1;
+        var gearNumber = Math.max(1, Math.abs(driveState.gear));
+        var speedCeiling = Math.max(8, (coupledLimit - 1050) / (ratio * 30));
+        var ceilingApproach = Math.max(0, 1 - Math.abs(driveState.speed) / speedCeiling);
+        var driveForce = throttle * (35 / (1 + (gearNumber - 1) * .34)) * ceilingApproach;
+        driveState.speed += direction * driveForce * seconds;
+        if (!throttle) driveState.speed -= Math.sign(driveState.speed || direction) * Math.min(Math.abs(driveState.speed), (2.2 + ratio * .8) * seconds);
+      }
+      if (driveState.rpm > 7900) driveState.redlineMs += dt;
+      else driveState.redlineMs = Math.max(0, driveState.redlineMs - dt * 1.6);
+      if (driveState.redlineMs > 10000) stallPorsche();
+    } else {
+      driveState.throttleHeldMs = 0;
+      driveState.rpm += (0 - driveState.rpm) * Math.min(1, seconds * 8);
+    }
+    var braking = brake * 44;
+    if (braking && Math.abs(driveState.speed) > .01) {
+      var before = Math.abs(driveState.speed);
+      driveState.speed -= Math.sign(driveState.speed) * Math.min(before, braking * seconds);
+      if (before > 26 && brake && Date.now() - lastSkidAt > 300) {
+        lastSkidAt = Date.now();
+        leavePorscheTireMarks();
+        playPorscheSkidSound();
+      }
+    }
+    if (!throttle && !braking) {
+      var rollingResistance = 2.8 + Math.abs(driveState.speed) * .026;
+      driveState.speed -= Math.sign(driveState.speed) * Math.min(Math.abs(driveState.speed), rollingResistance * seconds);
+    }
+    if (!throttle && !clutch && driveState.gear > 2 && Math.abs(driveState.speed) < 2.2) {
+      driveState.gear = 0;
+    }
+    driveState.speed = Math.max(-48, Math.min(235, driveState.speed));
+    // The street is a theatrical loop rather than a kilometre-scale map. Keep the
+    // speedometer honest, then progressively compress distance so upper gears read
+    // as genuinely fast instead of merely crossing the same short facade more often.
+    var roadTravelScale = PORSCHE_ROAD_TRAVEL_SCALE + Math.min(2.5, Math.abs(driveState.speed) / 75);
+    var travel = -driveState.speed * seconds * roadTravelScale;
+    driveState.position += travel;
+    if (steerInput && Math.abs(driveState.speed) > .5) {
+      driveState.laneOffset = Math.max(-9, Math.min(9,
+        driveState.laneOffset - steerInput * Math.min(1, Math.abs(driveState.speed) / 45) * seconds * 13));
+    }
+    driveState.wheelAngle = (driveState.wheelAngle + travel / 24.65 * 180 / Math.PI) % 360;
+    while (driveState.position < -648) { driveState.position += PORSCHE_WRAP_SPAN; driveState.wraps++; }
+    while (driveState.position > 349) { driveState.position -= PORSCHE_WRAP_SPAN; driveState.wraps++; }
+    paintPorscheDrivePosition();
+    paintPorscheDriveHud();
+    paintPorscheDriveAudio();
+    return driveState;
+  }
+  function porscheDriveTick(now) {
+    driveFrame = null;
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus() ||
+        (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
+      driveLastTime = 0;
+      return;
+    }
+    if (!driveLastTime) driveLastTime = now;
+    porscheDriveStep(now - driveLastTime);
+    driveLastTime = now;
+    if (porscheState.engineOn || Math.abs(driveState.speed) > .02 || Object.keys(driveState.holds).some(function (key) { return driveState.holds[key]; })) {
+      driveFrame = requestAnimationFrame(porscheDriveTick);
+    }
+  }
+  function ensurePorscheDriveFrame() {
+    if (driveFrame || !window.__entranceRoomOpen || document.hidden || !document.hasFocus() ||
+        (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) return;
+    driveLastTime = 0;
+    driveFrame = requestAnimationFrame(porscheDriveTick);
+  }
+  function resetPorscheDriveRuntime() {
+    if (driveFrame) cancelAnimationFrame(driveFrame);
+    driveFrame = null;
+    driveLastTime = 0;
+    driveState.hudOpen = false;
+    driveState.gear = 0;
+    driveState.speed = 0;
+    driveState.rpm = 0;
+    driveState.position = 0;
+    driveState.laneOffset = 0;
+    driveState.wheelAngle = 0;
+    driveState.steeringAngle = 0;
+    driveState.wraps = 0;
+    driveState.stalled = false;
+    driveState.redlineMs = 0;
+    driveState.throttleHeldMs = 0;
+    driveState.temperature = 0;
+    Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
+    stopPorscheDriveAudio();
+    stopPorscheDriveMusic(0);
+    if (porsche) porsche.classList.remove("engine-idling");
+    if (porsche) porsche.classList.remove("braking");
+    if (tireMarks) while (tireMarks.firstChild) tireMarks.removeChild(tireMarks.firstChild);
+    paintPorscheDrivePosition();
+    paintPorscheDriveHud();
+  }
+  function handlePorscheDriveKey(event, down) {
+    if (!event) return false;
+    var key = String(event.key || "").toLowerCase();
+    var code = String(event.code || "");
+    var shiftedGearStep = event.shiftKey && (code === "ArrowUp" || code === "ArrowDown");
+    if (shiftedGearStep) {
+      if (down && !event.repeat) stepPorscheDriveGear(code === "ArrowUp" ? 1 : -1);
+      return !!window.__entranceRoomOpen;
+    }
+    var hold = code === "Space" || code === "ArrowUp" || key === " " || key === "spacebar" || key === "arrowup" ? "throttle" :
+      code === "ArrowDown" || key === "arrowdown" ? "brake" :
+      code === "ShiftLeft" || code === "ShiftRight" || key === "shift" ? "clutch" :
+      code === "ArrowLeft" || key === "arrowleft" ? "steerLeft" :
+      code === "ArrowRight" || key === "arrowright" ? "steerRight" : null;
+    if (!down && hold) {
+      setPorscheDriveHold(hold, false);
+      return !!window.__entranceRoomOpen;
+    }
+    if (!window.__entranceRoomOpen || event.ctrlKey || event.metaKey || event.altKey) return false;
+    var target = event.target;
+    if (target && target !== document && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName || "")) return false;
+    if (hold) {
+      setPorscheDriveHold(hold, true);
+      return true;
+    }
+    if (!down || event.repeat) return false;
+    if (!porscheState.engineOn && !driveState.stalled) return false;
+    if (key === "n") return selectPorscheDriveGear(0), true;
+    if (key === "r") return selectPorscheDriveGear(-1), true;
+    var digitMatch = String(event.code || "").match(/^Digit([1-6])$/);
+    if (digitMatch) return selectPorscheDriveGear(Number(digitMatch[1])), true;
+    if (/^[1-6]$/.test(key)) return selectPorscheDriveGear(Number(key)), true;
+    return false;
+  }
   function syncPorscheState() {
     if (!porsche) return;
     porsche.classList.toggle("roof-open", porscheState.roofOpen);
@@ -33016,12 +34223,15 @@ window.__entranceRoomOpen = false;
       if (value === null) control.removeAttribute("aria-pressed");
       else control.setAttribute("aria-pressed", value ? "true" : "false");
     });
+    paintPorscheDriveHud();
     updatePorscheIdle();
+    updatePorscheDriveAudio();
+    if (porscheState.engineOn) ensurePorscheDriveFrame();
   }
   function porscheIdleWanted() {
     return !!(porscheState.engineOn && window.__entranceRoomOpen &&
       document.visibilityState !== "hidden" && document.hasFocus() &&
-      !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
+      !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) && !driveHud);
   }
   function startPorscheIdle() {
     if (porscheIdleNodes) return;
@@ -33070,7 +34280,8 @@ window.__entranceRoomOpen = false;
   }
   function updatePorscheIdle() {
     var wantsIdle = porscheIdleWanted();
-    if (porsche) porsche.classList.toggle("engine-idling", wantsIdle);
+    if (porsche) porsche.classList.toggle("engine-idling",
+      wantsIdle && Math.abs(driveState.speed) < .75);
     if (wantsIdle) startPorscheIdle();
     else stopPorscheIdle();
   }
@@ -33233,6 +34444,30 @@ window.__entranceRoomOpen = false;
     else if (action === "trunk") porscheState.trunkOpen = !porscheState.trunkOpen;
     else if (action === "engine") {
       porscheState.engineOn = !porscheState.engineOn;
+      if (porscheState.engineOn) {
+        driveState.stalled = false;
+        driveState.rpm = 750;
+        driveState.gear = 0;
+        driveState.temperature = 0;
+        if (entranceNight) {
+          porscheState.headlightOn = true;
+          porscheState.taillightOn = true;
+        }
+        if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_drive_manual");
+      } else {
+        driveState.stalled = false;
+        driveState.rpm = 0;
+        driveState.gear = 0;
+        driveState.speed = 0;
+        driveState.temperature = 0;
+        porscheState.headlightOn = false;
+        porscheState.taillightOn = false;
+        clearPorscheIndicator();
+        Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
+        if (window.__setLowerRoomCaption) {
+          window.__setLowerRoomCaption(driveState.hudOpen ? "entrance_drive_ignition_hint" : "lower_entrance");
+        }
+      }
       playPorscheEngineSound(porscheState.engineOn);
     }
     else if (action === "headlight") porscheState.headlightOn = !porscheState.headlightOn;
@@ -33246,50 +34481,63 @@ window.__entranceRoomOpen = false;
   function togglePorscheEngine() {
     return answerPorscheControl(document.getElementById("entrance-porsche-engine"));
   }
-  // A short, low-passed two-syllable formant voice reads as somebody answering
-  // through the old entry speaker. It is gesture-only and uses the crickets rule:
-  // an open but hidden or unfocused room must never speak on its own.
-  function playEntranceIntercomSound() {
+  function openPorscheDriveHud() {
+    driveState.hudOpen = true;
+    paintPorscheDriveHud();
+    updatePorscheDriveMusic();
+    syncPorscheDriveInstruction(true);
+    if (window.__checkpointChanged) window.__checkpointChanged();
+    return true;
+  }
+  function dismissPorscheDriveHud() {
+    var wasRunning = porscheState.engineOn;
+    porscheState.engineOn = false;
+    porscheState.headlightOn = false;
+    porscheState.taillightOn = false;
+    driveState.hudOpen = false;
+    driveState.stalled = false;
+    driveState.rpm = 0;
+    driveState.gear = 0;
+    driveState.temperature = 0;
+    clearPorscheIndicator();
+    Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
+    if (wasRunning) playPorscheEngineSound(false);
+    syncPorscheState();
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
+    return true;
+  }
+  function playEntranceIntercomRingSound() {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
     if (!ctx) return false;
     var t = ctx.currentTime;
-    var bus = ctx.createGain();
-    var speaker = ctx.createBiquadFilter();
-    speaker.type = "lowpass";
-    speaker.frequency.value = 1050;
-    speaker.Q.value = 1.1;
-    bus.gain.setValueAtTime(0.0001, t);
-    bus.gain.exponentialRampToValueAtTime(0.13, t + 0.025);
-    bus.gain.setValueAtTime(0.13, t + 0.52);
-    bus.gain.exponentialRampToValueAtTime(0.0001, t + 0.66);
-    bus.connect(speaker);
-    speaker.connect(ctx.destination);
-    [[0, 148, 640, 1120], [.3, 132, 520, 880]].forEach(function (syllable) {
-      var start = t + syllable[0];
-      var source = ctx.createOscillator();
-      var voice = ctx.createGain();
-      source.type = "sawtooth";
-      source.frequency.setValueAtTime(syllable[1], start);
-      source.frequency.exponentialRampToValueAtTime(syllable[1] * .9, start + .27);
-      voice.gain.setValueAtTime(0.0001, start);
-      voice.gain.exponentialRampToValueAtTime(.42, start + .025);
-      voice.gain.exponentialRampToValueAtTime(0.0001, start + .28);
-      source.connect(voice);
-      [syllable[2], syllable[3]].forEach(function (frequency, index) {
-        var formant = ctx.createBiquadFilter();
-        var level = ctx.createGain();
-        formant.type = "bandpass";
-        formant.frequency.value = frequency;
-        formant.Q.value = index ? 7 : 5;
-        level.gain.value = index ? .42 : 1;
-        voice.connect(formant);
-        formant.connect(level);
-        level.connect(bus);
-      });
-      source.start(start);
-      source.stop(start + .3);
+    [660, 880].forEach(function (frequency, index) {
+      var tone = ctx.createOscillator();
+      var gain = ctx.createGain();
+      tone.type = "sine";
+      tone.frequency.value = frequency;
+      gain.gain.setValueAtTime(.0001, t);
+      gain.gain.exponentialRampToValueAtTime(index ? .055 : .075, t + .018);
+      gain.gain.exponentialRampToValueAtTime(.0001, t + .28);
+      tone.connect(gain); gain.connect(ctx.destination);
+      tone.start(t); tone.stop(t + .29);
     });
+    var buzz = ctx.createOscillator();
+    var buzzGain = ctx.createGain();
+    buzz.type = "square";
+    buzz.frequency.value = 92;
+    buzzGain.gain.setValueAtTime(.0001, t + .31);
+    buzzGain.gain.exponentialRampToValueAtTime(.035, t + .34);
+    buzzGain.gain.exponentialRampToValueAtTime(.0001, t + .62);
+    buzz.connect(buzzGain); buzzGain.connect(ctx.destination);
+    buzz.start(t + .31); buzz.stop(t + .63);
+    return true;
+  }
+  // Reuse the phone's established "Alo?" voice so the intercom reply stays
+  // recognizable; the entrance wrapper only owns room/focus gating and panning.
+  function playEntranceIntercomSound() {
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
+    playPhoneVoiceSound("entrance-intercom");
     intercomResponses++;
     return true;
   }
@@ -33309,11 +34557,13 @@ window.__entranceRoomOpen = false;
       playDryClickSound(prop.id);
     }
     else if (action === "intercom") {
-      playDryClickSound(prop.id);
       if (!document.hidden && document.hasFocus()) {
-        if (typeof playPhoneVoiceSound === "function") playPhoneVoiceSound("entrance-intercom");
-        intercomResponses++;
-        if (window.__flashCaptionKey) window.__flashCaptionKey("entrance_intercom_reply", 2600, "entrance-intercom");
+        playEntranceIntercomRingSound();
+        setTimeout(function () {
+          if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
+          playEntranceIntercomSound();
+          if (window.__flashCaptionKey) window.__flashCaptionKey("entrance_intercom_reply", 2600, "entrance-intercom");
+        }, 720);
       }
     }
     else if (action === "sign") playMetalClinkSound(0.62, prop.id);
@@ -33344,13 +34594,104 @@ window.__entranceRoomOpen = false;
     control.addEventListener("pointerdown", keepPointerFromFocusing);
     control.addEventListener("mousedown", keepPointerFromFocusing);
     control.addEventListener("click", function (event) {
+      if (control.getAttribute("data-car-action") === "engine") {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       answerPorscheControl(control, event);
       if (document.activeElement === control && typeof control.blur === "function") control.blur();
     });
+    control.addEventListener("dblclick", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      clearTimeout(porscheBodyClickTimer);
+      porscheBodyClickTimer = null;
+      openPorscheDriveHud();
+    });
   });
-  document.addEventListener("visibilitychange", updatePorscheIdle);
-  window.addEventListener("blur", updatePorscheIdle);
-  window.addEventListener("focus", updatePorscheIdle);
+  driveControls.forEach(function (control) {
+    var hold = control.getAttribute("data-drive-hold");
+    var gear = control.getAttribute("data-drive-gear");
+    var action = control.getAttribute("data-drive-action");
+    var holdStartedAt = 0;
+    var holdWasLatched = false;
+    var holdReleased = true;
+    function release(event) {
+      if (action === "horn") {
+        stopPorscheHornSound();
+        return;
+      }
+      if (!hold || holdReleased) return;
+      holdReleased = true;
+      var shortTap = event && event.type === "pointerup" && performance.now() - holdStartedAt < 260;
+      var latchable = hold === "clutch";
+      setPorscheDriveHold(hold, latchable && shortTap ? !holdWasLatched : false);
+    }
+    control.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (action === "horn") {
+        startPorscheHornSound();
+        try { control.setPointerCapture(event.pointerId); } catch (_error) {}
+      }
+      if (hold && driveState.hudOpen) {
+        holdReleased = false;
+        holdStartedAt = performance.now();
+        holdWasLatched = !!driveState.holds[hold];
+        setPorscheDriveHold(hold, true);
+        try { control.setPointerCapture(event.pointerId); } catch (_error) {}
+      }
+      var active = document.activeElement;
+      if (active && room.contains(active) && typeof active.blur === "function") active.blur();
+    });
+    control.addEventListener("pointerup", release);
+    control.addEventListener("pointercancel", release);
+    control.addEventListener("lostpointercapture", release);
+    control.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (action === "ignition") togglePorscheEngine();
+      if (gear !== null && (porscheState.engineOn || driveState.stalled)) selectPorscheDriveGear(gear);
+    });
+  });
+  if (driveShifter) {
+    driveShifter.addEventListener("click", function (event) {
+      if (!driveState.hudOpen || (!porscheState.engineOn && !driveState.stalled)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stepPorscheDriveGear(1);
+    }, true);
+    driveShifter.addEventListener("contextmenu", function (event) {
+      if (!driveState.hudOpen || (!porscheState.engineOn && !driveState.stalled)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stepPorscheDriveGear(-1);
+    }, true);
+  }
+  room.addEventListener("click", function (event) {
+    if (!room.classList.contains("drive-hud-visible") || !driveHud) return;
+    var hudBox = driveHud.getBoundingClientRect();
+    if (event.clientY <= hudBox.bottom) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    dismissPorscheDriveHud();
+  }, true);
+  function updatePorscheDriveLifecycle() {
+    updatePorscheIdle();
+    updatePorscheDriveAudio();
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus() ||
+        (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
+      stopPorscheHornSound();
+      Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
+      if (driveFrame) cancelAnimationFrame(driveFrame);
+      driveFrame = null;
+      driveLastTime = 0;
+    } else if (porscheState.engineOn) ensurePorscheDriveFrame();
+  }
+  document.addEventListener("visibilitychange", updatePorscheDriveLifecycle);
+  window.addEventListener("blur", updatePorscheDriveLifecycle);
+  window.addEventListener("focus", updatePorscheDriveLifecycle);
   function finishEntranceClose() {
     closeTimer = null;
     closing = false;
@@ -33361,11 +34702,14 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen) return false;
     window.__entranceRoomOpen = false;
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
-    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_entrance");
+    if (window.__restoreLowerRoomCaption) {
+      window.__restoreLowerRoomCaption(porscheDriveInstructionKey());
+    }
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     clearEntranceInteractions();
     parkPorscheTransients();
+    updatePorscheDriveLifecycle();
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-intercom");
     closing = true;
@@ -33386,8 +34730,12 @@ window.__entranceRoomOpen = false;
     closing = false;
     clearEntranceInteractions();
     syncEntranceDayNight();
+    if (driveState.position < -600) driveState.position = -575;
+    else if (driveState.position > 300) driveState.position = 275;
+    paintPorscheDrivePosition();
     window.__entranceRoomOpen = true;
-    updatePorscheIdle();
+    paintPorscheDriveHud();
+    updatePorscheDriveLifecycle();
     if (window.__homeCatLower) window.__homeCatLower("entrance");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
@@ -33399,12 +34747,21 @@ window.__entranceRoomOpen = false;
       });
     });
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
-    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
-    try { closeButton.focus({ preventScroll: true }); }
-    catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
+    syncPorscheDriveInstruction(true);
+    if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
+    try { viewport.focus({ preventScroll: true }); }
+    catch (_error) { try { viewport.focus(); } catch (_error2) {} }
     return true;
   }
-  closeButton.addEventListener("click", closeEntrance);
+  closeButton.addEventListener("click", function (event) {
+    if (driveState.hudOpen) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      dismissPorscheDriveHud();
+      return;
+    }
+    closeEntrance();
+  });
   function exitHorizontal(name, event) {
     if (!window.__entranceRoomOpen) return;
     event.preventDefault();
@@ -33424,6 +34781,7 @@ window.__entranceRoomOpen = false;
   }, true);
   window.__openEntranceRoom = openEntrance;
   window.__closeEntranceRoom = closeEntrance;
+  window.__openEntrancePorscheDriveHud = openPorscheDriveHud;
   window.__entranceRoomState = function () {
     return {
       open: !!window.__entranceRoomOpen,
@@ -33435,14 +34793,38 @@ window.__entranceRoomOpen = false;
       windowsFlipped: windowIds.every(function (id) { return windowLights[id] === !entranceNight; }),
       intercomResponses: intercomResponses,
       car: Object.assign({ activations: Object.assign({}, carActivations), indicatorFlashes: indicatorFlashes,
-        idleActive: !!porscheIdleNodes, vibrating: porsche.classList.contains("engine-idling") }, porscheState),
+        idleActive: !!(porscheIdleNodes || porscheDriveAudioNodes), vibrating: porsche.classList.contains("engine-idling") }, porscheState),
+      drive: {
+        hud: room.classList.contains("drive-hud-visible"),
+        stalled: driveState.stalled,
+        gear: driveState.gear,
+        speed: driveState.speed,
+        rpm: driveState.rpm,
+        temperature: driveState.temperature,
+        position: driveState.position,
+        laneOffset: driveState.laneOffset,
+        steeringAngle: driveState.steeringAngle,
+        wheelAngle: driveState.wheelAngle,
+        wraps: driveState.wraps,
+        holds: Object.assign({}, driveState.holds),
+        audioActive: !!porscheDriveAudioNodes,
+        musicActive: !!porscheDriveMusicNodes,
+        frameActive: !!driveFrame,
+        tireMarks: tireMarks ? tireMarks.childNodes.length : 0
+      },
       reactions: Object.assign({}, reactions),
       reacting: props.filter(function (prop) { return prop.classList.contains("reacting"); })
         .map(function (prop) { return prop.id; })
     };
   };
   window.__toggleEntrancePorscheEngine = togglePorscheEngine;
-  window.__updatePorscheIdle = updatePorscheIdle;
+  window.__dismissEntrancePorscheDriveHud = dismissPorscheDriveHud;
+  window.__updatePorscheIdle = updatePorscheDriveLifecycle;
+  window.__entranceDriveKey = handlePorscheDriveKey;
+  window.__entranceDriveStep = porscheDriveStep;
+  window.__entranceDriveShift = selectPorscheDriveGear;
+  window.__entranceDriveControl = setPorscheDriveHold;
+  window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
   var entranceCheckpoint = {
     capture: function () {
       var car = {};
@@ -33450,13 +34832,27 @@ window.__entranceRoomOpen = false;
       return {
         windows: windowIds.map(function (id) { return windowLights[id] ? "1" : "0"; }).join(""),
         lamps: { left: !!entranceLamps.left, right: !!entranceLamps.right },
-        porsche: car
+        porsche: car,
+        drive: {
+          hud: driveState.hudOpen,
+          stalled: driveState.stalled,
+          gear: driveState.gear,
+          speed: driveState.speed,
+          rpm: driveState.rpm,
+          temperature: driveState.temperature,
+          position: driveState.position,
+          laneOffset: driveState.laneOffset,
+          steeringAngle: driveState.steeringAngle,
+          wheelAngle: driveState.wheelAngle,
+          wraps: driveState.wraps
+        }
       };
     },
     restore: function (row, phase) {
       if (phase !== "afterStage") return;
-      resetEntranceWindows(balconyStage.classList.contains("dusk"));
+      resetEntranceWindows(balconyStage.classList.contains("dusk"), true);
       resetPorscheState();
+      resetPorscheDriveRuntime();
       clearEntranceInteractions();
       if (row && typeof row.windows === "string" && /^[01]{5}$/.test(row.windows)) {
         windowIds.forEach(function (id, index) { windowLights[id] = row.windows.charAt(index) === "1"; });
@@ -33469,21 +34865,41 @@ window.__entranceRoomOpen = false;
       if (car) Object.keys(porscheState).forEach(function (key) {
         if (typeof car[key] === "boolean") porscheState[key] = car[key];
       });
+      if (row && row.drive && Number.isFinite(Number(row.drive.position))) {
+        driveState.position = Math.max(-648, Math.min(349, Number(row.drive.position)));
+      }
+      if (row && row.drive && typeof row.drive === "object") {
+        driveState.hudOpen = typeof row.drive.hud === "boolean" ? row.drive.hud : !!porscheState.engineOn;
+        driveState.stalled = !!row.drive.stalled;
+        if (Number.isFinite(Number(row.drive.gear))) driveState.gear = Math.max(-1, Math.min(6, Number(row.drive.gear)));
+        if (Number.isFinite(Number(row.drive.speed))) driveState.speed = Math.max(-48, Math.min(235, Number(row.drive.speed)));
+        if (Number.isFinite(Number(row.drive.rpm))) driveState.rpm = Math.max(0, Math.min(8000, Number(row.drive.rpm)));
+        if (Number.isFinite(Number(row.drive.temperature))) driveState.temperature = Math.max(0, Math.min(1, Number(row.drive.temperature)));
+        if (Number.isFinite(Number(row.drive.laneOffset))) driveState.laneOffset = Math.max(-9, Math.min(9, Number(row.drive.laneOffset)));
+        if (Number.isFinite(Number(row.drive.steeringAngle))) driveState.steeringAngle = Math.max(-18, Math.min(18, Number(row.drive.steeringAngle)));
+        if (Number.isFinite(Number(row.drive.wheelAngle))) driveState.wheelAngle = Number(row.drive.wheelAngle) % 360;
+        if (Number.isFinite(Number(row.drive.wraps))) driveState.wraps = Math.max(0, Math.floor(Number(row.drive.wraps)));
+      }
       windowPayoffShown = false;
       paintEntranceWindows();
       paintEntranceLamps();
+      paintPorscheDrivePosition();
       syncPorscheState();
       if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     },
     reset: function () {
-      resetEntranceWindows(balconyStage.classList.contains("dusk"));
+      resetFreshEntranceLighting();
       resetPorscheState();
+      resetPorscheDriveRuntime();
       clearEntranceInteractions();
     }
   };
   if (window.__deferCheckpointAdapter) window.__deferCheckpointAdapter("entrance", entranceCheckpoint);
   else (window.__pendingCheckpointAdapters || (window.__pendingCheckpointAdapters = [])).push(["entrance", entranceCheckpoint]);
-  if (window.__registerTransientResetHook) window.__registerTransientResetHook("entrance-room", closeEntrance);
+  if (window.__registerTransientResetHook) window.__registerTransientResetHook("entrance-room", function () {
+    closeEntrance();
+    resetPorscheDriveRuntime();
+  });
 })();
 
 // While the cinema owns the viewport, it claims only room navigation and activation.
@@ -33525,6 +34941,21 @@ document.addEventListener("keydown", function (event) {
 // Right exits at the strip's right edge back onto the Balcony. Global shortcuts pass through.
 document.addEventListener("keydown", function (event) {
   if (!window.__entranceRoomOpen) return;
+  var entranceRoom = document.getElementById("entrance-room");
+  var driveHudOpen = entranceRoom && entranceRoom.classList.contains("drive-hud-visible");
+  if (driveHudOpen && !event.ctrlKey && !event.metaKey) {
+    if (event.code === "Backquote" || event.key === "`") return;
+    if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
+      if (window.__dismissEntrancePorscheDriveHud) window.__dismissEntrancePorscheDriveHud();
+    } else if (event.key === "Enter") {
+      if (window.__toggleEntrancePorscheEngine) window.__toggleEntrancePorscheEngine();
+    } else if (window.__entranceDriveKey) {
+      window.__entranceDriveKey(event, true);
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
   if (handleLowerRoomNumberShortcut(event)) return;
@@ -33542,8 +34973,8 @@ document.addEventListener("keydown", function (event) {
     if (entranceProp) entranceProp.dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true })
     );
-    else if (event.key === "Enter" && window.__toggleEntrancePorscheEngine) {
-      window.__toggleEntrancePorscheEngine();
+    else if (event.key === "Enter" && window.__openEntrancePorscheDriveHud) {
+      window.__openEntrancePorscheDriveHud();
     }
     return;
   }
@@ -33563,6 +34994,16 @@ document.addEventListener("keydown", function (event) {
     if (window.__closeEntranceRoom) window.__closeEntranceRoom();
     if (window.goToStage) window.goToStage(event.key === "ArrowLeft" ? "office" : "balcony");
     return;
+  }
+}, true);
+document.addEventListener("keyup", function (event) {
+  if (!window.__entranceRoomOpen || !window.__entranceDriveKey) return;
+  var entranceRoom = document.getElementById("entrance-room");
+  if (entranceRoom && entranceRoom.classList.contains("drive-hud-visible") &&
+      !event.ctrlKey && !event.metaKey) {
+    window.__entranceDriveKey(event, false);
+    event.preventDefault();
+    event.stopImmediatePropagation();
   }
 }, true);
 
@@ -33683,6 +35124,12 @@ window.__bedroomRoomOpen = false;
     glass.setAttribute("aria-label", text);
     glass.setAttribute("title", text);
   }
+  function refreshTttCaption() {
+    if (!window.__bedroomRoomOpen || !window.__setLowerRoomCaption) return;
+    var key = tttPhase === "player" ? "bedroom_ttt_turn_caption" :
+      tttPhase === "computer" ? "bedroom_ttt_wait_caption" : "lower_bedroom";
+    window.__setLowerRoomCaption(key);
+  }
   function renderTtt() {
     if (!glass || !tttMarks) return;
     while (tttMarks.firstChild) tttMarks.removeChild(tttMarks.firstChild);
@@ -33737,6 +35184,7 @@ window.__bedroomRoomOpen = false;
     glass.classList.toggle("game-over", tttPhase === "done");
     glass.classList.toggle("game-draw", tttWinner === "draw");
     refreshTttText();
+    refreshTttCaption();
   }
   function resetTtt() {
     if (window.__clearFlashCaption) window.__clearFlashCaption("bedroom-ttt");
@@ -33823,7 +35271,7 @@ window.__bedroomRoomOpen = false;
           typeof playGlassClinkSound === "function") {
         playGlassClinkSound(.68, "bedroom-ttt-" + cell);
       }
-    }, 340);
+    }, 1000);
   }
   function playTttCell(cell, start) {
     if (!window.__bedroomRoomOpen || cell < 0 || cell > 8) return false;
@@ -34093,8 +35541,7 @@ window.__bedroomRoomOpen = false;
       });
     });
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_bedroom");
-    try { closeButton.focus({ preventScroll: true }); }
-    catch (_error) { try { closeButton.focus(); } catch (_error2) {} }
+    focusViewport();
     return true;
   }
 
@@ -34880,7 +36327,15 @@ var T = {
       prince_gate_secret: "Dungeon · something crowned blinked behind the gate.",
       lower_cinema: "Cinema · wake the projector, then choose a film.",
       lower_bedroom: "Bedroom · everything here is playable.",
-      lower_entrance: "Entrance · the street starts here.",
+      bedroom_ttt_turn_caption: "Your turn · the window is calling",
+      bedroom_ttt_wait_caption: "The window’s turn · it has a plan",
+      lower_entrance: "Fancy-Stupid! · let’s go for a ride.",
+      entrance_drive_manual: "Let’s drive manual.",
+      entrance_drive_neutral_hint: "Let’s drive manual · put it in gear.",
+      entrance_drive_shift_up: "Shift up · it wants another gear.",
+      entrance_drive_shift_down: "Shift down · give the engine some leverage.",
+      entrance_drive_ignition_hint: "Start the ignition. The key is on the left.",
+      entrance_drive_stalled: "You killed it. Restart the engine.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it. ☕",
@@ -35697,18 +37152,34 @@ var T = {
     entrance_windows_uv: "The building is trying to sleep. You're the reason it can't.",
     entrance_sign: "Tap The Lofts name stone",
     entrance_intercom: "Buzz the entrance intercom",
-    entrance_intercom_reply: "“Haló?”",
+    entrance_intercom_reply: "“Alo?”",
     entrance_lamp_left: "Toggle the left entrance lamp",
     entrance_lamp_right: "Toggle the right entrance lamp",
     entrance_tree: "Rustle the tree canopy",
     entrance_car_roof: "Open or close the Porsche roof",
     entrance_car_engine: "Start or stop the Porsche engine",
+    entrance_car_name: "Fancy-Stupid",
     entrance_car_door: "Open or close the Porsche driver door",
     entrance_car_frunk: "Open or close the Porsche front compartment",
     entrance_car_trunk: "Open or close the Porsche trunk",
     entrance_car_headlight: "Toggle the Porsche headlight",
     entrance_car_taillight: "Toggle the Porsche tail light",
     entrance_car_indicator: "Flash the Porsche front indicator",
+    entrance_drive_hud: "Porsche driving controls",
+    entrance_drive_horn: "Sound the horn",
+    entrance_drive_ignition: "Ignition key",
+    entrance_drive_glovebox: "Open or close the glovebox",
+    entrance_drive_clutch: "Clutch pedal — hold Shift",
+    entrance_drive_brake: "Brake pedal — hold ↓",
+    entrance_drive_throttle: "Throttle pedal — hold ↑ or Space",
+    entrance_drive_reverse: "Select reverse — R",
+    entrance_drive_neutral: "Select neutral — N",
+    entrance_drive_gear_1: "Select first gear — 1",
+    entrance_drive_gear_2: "Select second gear — 2",
+    entrance_drive_gear_3: "Select third gear — 3",
+    entrance_drive_gear_4: "Select fourth gear — 4",
+    entrance_drive_gear_5: "Select fifth gear — 5",
+    entrance_drive_gear_6: "Select sixth gear — 6",
     cinema_film_1: "Identity",
     cinema_film_2: "MANIA",
     cinema_film_3: "Water",
@@ -36214,7 +37685,15 @@ var T = {
       prince_gate_secret: "Žalář · za mříží zamrkalo něco s korunkou.",
       lower_cinema: "Kino · probuď projektor a pak vyber film.",
       lower_bedroom: "Ložnice · se vším si tu můžeš hrát.",
-      lower_entrance: "Vchod · tady začíná ulice.",
+      bedroom_ttt_turn_caption: "Jsi na tahu · okno volá",
+      bedroom_ttt_wait_caption: "Vitráž je na tahu · má svůj plán",
+      lower_entrance: "Fancy-Stupid! · pojeďme se projet.",
+      entrance_drive_manual: "Jeďme s manuálem.",
+      entrance_drive_neutral_hint: "Jeďme s manuálem · zařaď rychlost.",
+      entrance_drive_shift_up: "Přeřaď výš · chce další rychlost.",
+      entrance_drive_shift_down: "Přeřaď níž · dej motoru víc síly.",
+      entrance_drive_ignition_hint: "Nastartuj. Klíček je vlevo.",
+      entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni. ☕",
@@ -37027,18 +38506,34 @@ var T = {
     entrance_windows_uv: "Celý dům se snaží spát. Ty jsi důvod, proč nemůže.",
     entrance_sign: "Klepnout na nápis The Lofts",
     entrance_intercom: "Zazvonit na vstupní interkom",
-    entrance_intercom_reply: "„Haló?“",
+    entrance_intercom_reply: "„Alo?“",
     entrance_lamp_left: "Rozsvítit nebo zhasnout levou vstupní lampu",
     entrance_lamp_right: "Rozsvítit nebo zhasnout pravou vstupní lampu",
     entrance_tree: "Zašustit korunou stromu",
     entrance_car_roof: "Otevřít nebo zavřít střechu Porsche",
     entrance_car_engine: "Nastartovat nebo vypnout motor Porsche",
+    entrance_car_name: "Fancy-Stupid",
     entrance_car_door: "Otevřít nebo zavřít dveře řidiče Porsche",
     entrance_car_frunk: "Otevřít nebo zavřít přední zavazadlový prostor Porsche",
     entrance_car_trunk: "Otevřít nebo zavřít zadní kufr Porsche",
     entrance_car_headlight: "Rozsvítit nebo zhasnout přední světlo Porsche",
     entrance_car_taillight: "Rozsvítit nebo zhasnout zadní světlo Porsche",
     entrance_car_indicator: "Třikrát bliknout předním blinkrem Porsche",
+    entrance_drive_hud: "Ovládání jízdy Porsche",
+    entrance_drive_horn: "Zatroubit",
+    entrance_drive_ignition: "Klíček zapalování",
+    entrance_drive_glovebox: "Otevřít nebo zavřít přihrádku",
+    entrance_drive_clutch: "Spojkový pedál — držet Shift",
+    entrance_drive_brake: "Brzdový pedál — držet ↓",
+    entrance_drive_throttle: "Plynový pedál — držet ↑ nebo mezerník",
+    entrance_drive_reverse: "Zařadit zpátečku — R",
+    entrance_drive_neutral: "Zařadit neutrál — N",
+    entrance_drive_gear_1: "Zařadit jedničku — 1",
+    entrance_drive_gear_2: "Zařadit dvojku — 2",
+    entrance_drive_gear_3: "Zařadit trojku — 3",
+    entrance_drive_gear_4: "Zařadit čtyřku — 4",
+    entrance_drive_gear_5: "Zařadit pětku — 5",
+    entrance_drive_gear_6: "Zařadit šestku — 6",
     cinema_film_1: "Identity",
     cinema_film_2: "MANIA",
     cinema_film_3: "Water",
@@ -62409,6 +63904,12 @@ setOfficeProgress("pc", false);
       window.addEventListener("blur", closeMenu);
       window.addEventListener("resize", closeMenu);
     }
+    function focusSnakeMenu(app) {
+      if (!menuEl || !app || app.cls !== "show-snake") return;
+      var target = menuEl.querySelector("button:not(:disabled)") || menuEl;
+      if (target === menuEl) target.tabIndex = -1;
+      try { target.focus({ preventScroll: true }); } catch (e) { try { target.focus(); } catch (e2) {} }
+    }
     function codeEditTarget(node) {
       var el = node && (node.nodeType === 1 ? node : node.parentElement);
       if (!el || !el.closest || !el.closest("#monitor-code-wrap")) return null;
@@ -62514,6 +64015,7 @@ setOfficeProgress("pc", false);
       var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
       items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq || app.cls === "show-system" ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
       openMenu(items, x, y);
+      focusSnakeMenu(app); // the iframe cannot keep moving Nibbles while its parent-document menu is open
     }
     window.__openMonitorContextAt = function (target, x, y) {
       var app = activeMonitorApp();
@@ -66661,6 +68163,7 @@ async def localfont(name):
   var snakeWrap = document.getElementById("monitor-snake-wrap");
   var snakeCloseBtn = document.getElementById("monitor-snake-close");
   var snakeFrame = null, snakeState = "cold", snakeMode = null;
+  var snakeRelayedKeys = 0, snakeLastRelayedKey = null;
   function snakeControl(action) {
     if (!snakeFrame || !snakeFrame.contentWindow) return;
     try { snakeFrame.contentWindow.postMessage({ type: "snake-control", action: action }, location.origin); } catch (e) {}
@@ -66675,6 +68178,39 @@ async def localfont(name):
         if (!canvas.hasAttribute("tabindex")) canvas.setAttribute("tabindex", "-1");
         canvas.focus({ preventScroll: true });
       }
+    } catch (e) {}
+  }
+  function snakeKeyboardBlocked() {
+    if (!snakeFrame || snakeMode !== "nibbles" || !monitor.classList.contains("show-snake") ||
+        document.hidden || window.currentStageName !== "office") return true;
+    if (document.querySelector(".mon-ctx, .console-ctx.show, .pb-dialog-backdrop, #sharecard-modal, .phone-backdrop.show, #click-me-overlay, #loft-recovery-gate")) return true;
+    if (typeof MONITOR_APP_CLASSES === "object") {
+      for (var id in MONITOR_APP_CLASSES) {
+        if (id !== "snake" && monitor.classList.contains(MONITOR_APP_CLASSES[id])) return true;
+      }
+    }
+    var active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement && active !== snakeFrame) {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable) return true;
+      if (active.closest && active.closest("[role='dialog'], .mon-ctx, .console-ctx")) return true;
+    }
+    return false;
+  }
+  function relaySnakeKey(event) {
+    if (event.defaultPrevented || snakeKeyboardBlocked() || document.activeElement === snakeFrame) return;
+    if ((event.ctrlKey || event.metaKey || event.altKey) &&
+        !((event.ctrlKey || event.metaKey) && (event.key === "Escape" || event.key === "Esc"))) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    focusSnakeFrame();
+    snakeRelayedKeys++;
+    snakeLastRelayedKey = { eventType: event.type, key: event.key, code: event.code, keyCode: event.keyCode };
+    try {
+      snakeFrame.contentWindow.postMessage({
+        type: "snake-key", eventType: event.type, key: event.key, code: event.code,
+        keyCode: event.keyCode, location: event.location, repeat: event.repeat,
+        ctrlKey: event.ctrlKey, metaKey: event.metaKey, altKey: event.altKey, shiftKey: event.shiftKey
+      }, location.origin);
     } catch (e) {}
   }
   function ensureSnakeFrame(mode) {
@@ -66705,6 +68241,7 @@ async def localfont(name):
     ensureSnakeFrame(mode);
     if (snakeFrame) snakeFrame.inert = false;
     snakeControl("resume");
+    focusSnakeFrame(); // retained machines resume from the desktop with their keyboard ownership restored
     playLaptopClickSound("office-monitor");
   }
   function releaseSnakeFocus() {
@@ -66774,7 +68311,8 @@ async def localfont(name):
   window.__focusMonitorSnake = focusSnakeFrame;
   window.__snakeState = function () {
     return { open: monitor.classList.contains("show-snake"), state: snakeState, mode: snakeMode,
-      iframe: snakeFrame ? snakeFrame.getAttribute("src") : null };
+      iframe: snakeFrame ? snakeFrame.getAttribute("src") : null,
+      relayedKeys: snakeRelayedKeys, lastRelayedKey: snakeLastRelayedKey };
   };
   window.addEventListener("message", function (event) {
     if (!snakeFrame || event.origin !== location.origin || event.source !== snakeFrame.contentWindow || !event.data) return;
@@ -66789,6 +68327,12 @@ async def localfont(name):
   document.addEventListener("visibilitychange", function () {
     if (!snakeFrame) return;
     snakeControl(!document.hidden && monitor.classList.contains("show-snake") ? "resume" : "pause");
+    if (!document.hidden && !snakeKeyboardBlocked()) setTimeout(focusSnakeFrame, 0);
+  });
+  document.addEventListener("keydown", relaySnakeKey, true);
+  document.addEventListener("keyup", relaySnakeKey, true);
+  window.addEventListener("focus", function () {
+    if (!snakeKeyboardBlocked()) setTimeout(focusSnakeFrame, 0);
   });
   if (snakeCloseBtn) {
     snakeCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeSnake(); playLaptopClickSound("office-monitor"); });
@@ -68524,6 +70068,7 @@ async def localfont(name):
     if (window.__applyBandariMusicVolume) window.__applyBandariMusicVolume(); // the second Persian 6/8 bed follows it too
     if (window.__applyCumbiaMusicVolume) window.__applyCumbiaMusicVolume(); // the garden-party cumbia bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
+    if (window.__applyPorscheDriveMusicVolume) window.__applyPorscheDriveMusicVolume(); // Fancy-Stupid's driving loop follows it too
   };
   // Push the current volIdx step everywhere: live songs/beds, the on-screen icon, and
   // localStorage. Shared by the button's cycle and the console volumebutton() command.
@@ -93103,10 +94648,16 @@ function spawnDustMote(container) {
     var lastTouch = 0;
     var ignoreClicksUntil = 0;
     function showPortalInsistence() {
+      marker.classList.remove("portal-insisting");
+      void marker.getBBox();
+      marker.classList.add("portal-insisting");
       if (window.__flashCaptionKey) {
         window.__flashCaptionKey("lower_portal_insist", 2600, "lower-portal");
       }
     }
+    marker.addEventListener("animationend", function (event) {
+      if (event.animationName === "lower-portal-insist") marker.classList.remove("portal-insisting");
+    });
     function enterLowerRoom(event) {
       if (event) {
         event.preventDefault();
@@ -93310,11 +94861,14 @@ function spawnDustMote(container) {
   var lowerRoomReturnCaption = null;
   window.__setLowerRoomCaption = function (key) {
     if (!key) return false;
-    lowerRoomReturnCaption = {
-      roomKey: key,
-      key: flashedCaption ? flashedCaption.prevKey : captionKey,
-      html: flashedCaption ? flashedCaption.prevHtml : caption.innerHTML
-    };
+    if (lowerRoomReturnCaption) lowerRoomReturnCaption.roomKey = key;
+    else {
+      lowerRoomReturnCaption = {
+        roomKey: key,
+        key: flashedCaption ? flashedCaption.prevKey : captionKey,
+        html: flashedCaption ? flashedCaption.prevHtml : caption.innerHTML
+      };
+    }
     // Entry captions become the room's stable line. If gameplay currently owns the
     // visible line, leave it untouched and only change what its temporary flash restores.
     if (flashedCaption) {

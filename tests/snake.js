@@ -17,12 +17,13 @@ var HARNESS = [
   'async function run(){',
   ' var mon=document.getElementById("office-monitor"),tower=document.getElementById("office-pc-desk-trio");window.goToStage("office");if(tower)tower.classList.add("on");mon.classList.add("here","screen-on","show-caps");window.__monitorZoomIn();await sleep(40);',
   ' var ids=[].slice.call(document.querySelectorAll("#monitor-desktop-dock .dock-app")).map(function(el){return el.id.replace("monitor-dock-","");});',
-  ' S("grid",{ids:ids,calendar:!!document.getElementById("monitor-dock-calendar"),tattooAt:ids.indexOf("tattoo"),games:ids.slice(8,12),bottom:ids.slice(12,16)});var snakeTile=document.querySelector(".dock-app-snake .dock-tile"),snakeDos=document.querySelector("#dicon-snake text");S("theme",{tile:snakeTile&&getComputedStyle(snakeTile).backgroundColor,dos:snakeDos&&snakeDos.getAttribute("fill")});',
+  ' S("grid",{ids:ids,calendar:!!document.getElementById("monitor-dock-calendar"),tattooAt:ids.indexOf("tattoo"),games:ids.slice(8,12),bottom:ids.slice(12,16)});var snakeTile=document.querySelector(".dock-app-snake .dock-tile"),snakeDos=document.querySelector("#dicon-snake path");S("theme",{tile:snakeTile&&getComputedStyle(snakeTile).backgroundColor,dos:snakeDos&&snakeDos.getAttribute("stroke")});',
   ' var dateControl=document.getElementById("monitor-desk-calendar");if(dateControl)dateControl.dispatchEvent(new MouseEvent("click",{bubbles:true}));await sleep(20);S("calendar",{control:!!dateControl,opened:mon.classList.contains("show-calendar"),phoneTile:!!document.querySelector(".phone-app-tile[data-app=\\"calendar\\"], [data-phone-app=\\"calendar\\"]")});if(window.__closeTopMonitorApp)window.__closeTopMonitorApp();mon.classList.add("show-caps");',
   ' function search(q){q.split("").forEach(key);var state=window.__monitorDockSearch();key("Escape");return state;}function searchOpen(q){q.split("").forEach(key);key("Enter");}S("aliases",{snake:search("snake"),nibbles:search("nibbles"),dos:search("dos")});',
-  ' window.__openMonitorApp("snake");await sleep(30);var first=document.querySelector("#monitor-snake-wrap iframe");S("open",{open:mon.classList.contains("show-snake"),frame:!!first,src:first&&first.getAttribute("src"),state:window.__snakeState(),innerFs:!!document.getElementById("monitor-snake-fs"),allow:first&&first.getAttribute("allow")});var gutters=document.querySelectorAll("#monitor-snake .monitor-runtime-side-hit");gutters[0].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:250,clientY:250}));S("gutters",{count:gutters.length,menu:!!document.querySelector(".mon-ctx")});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
+  ' window.__openMonitorApp("snake");await sleep(30);var first=document.querySelector("#monitor-snake-wrap iframe");S("open",{open:mon.classList.contains("show-snake"),frame:!!first,src:first&&first.getAttribute("src"),state:window.__snakeState(),innerFs:!!document.getElementById("monitor-snake-fs"),allow:first&&first.getAttribute("allow")});var gutters=document.querySelectorAll("#monitor-snake .monitor-runtime-side-hit");gutters[0].dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:250,clientY:250}));var gutterMenu=document.querySelector(".mon-ctx");S("gutters",{count:gutters.length,menu:!!gutterMenu,ownsFocus:!!(gutterMenu&&gutterMenu.contains(document.activeElement))});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));',
+  ' var dock=document.getElementById("monitor-desktop-dock");dock.focus();var move=new KeyboardEvent("keydown",{key:"ArrowUp",code:"ArrowUp",bubbles:true,cancelable:true});try{Object.defineProperty(move,"keyCode",{get:function(){return 38;}});}catch(_error){}dock.dispatchEvent(move);await sleep(10);var ownershipState=window.__snakeState();S("ownership",{focus:document.activeElement===first,prevented:move.defaultPrevented,relayed:ownershipState.relayedKeys,last:ownershipState.lastRelayedKey});var modal=document.createElement("div");modal.className="pb-dialog-backdrop";document.body.appendChild(modal);dock.focus();var blocked=new KeyboardEvent("keydown",{key:"ArrowLeft",code:"ArrowLeft",bubbles:true,cancelable:true});dock.dispatchEvent(blocked);modal.remove();mon.classList.add("show-console");dock.focus();var otherApp=new KeyboardEvent("keydown",{key:"ArrowRight",code:"ArrowRight",bubbles:true,cancelable:true});dock.dispatchEvent(otherApp);mon.classList.remove("show-console");S("blockedOwners",{relayed:window.__snakeState().relayedKeys});',
   ' var oldReady=window.__snakeRunning;window.__snakeRunning=function(){return true;};mon.dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true,clientX:500,clientY:500}));var menu=document.querySelector(".mon-ctx"),labels=menu?[].slice.call(menu.querySelectorAll("button")).map(function(b){return b.textContent.trim();}):[];S("menu",{labels:labels,kill:!!(menu&&menu.querySelector(".ctx-kill:not(:disabled)")),restart:!!(menu&&menu.querySelector(".ctx-restart:not(:disabled)"))});document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));window.__snakeRunning=oldReady;',
-  ' window.__closeMonitorSnake();await sleep(10);S("close",{open:mon.classList.contains("show-snake"),retained:document.querySelector("#monitor-snake-wrap iframe")===first,inert:first.inert});window.__openMonitorApp("nibbles");await sleep(10);S("reopenGame",{same:document.querySelector("#monitor-snake-wrap iframe")===first,mode:window.__snakeState().mode,inert:first.inert});window.__closeMonitorSnake();',
+  ' window.__closeMonitorSnake();await sleep(10);S("close",{open:mon.classList.contains("show-snake"),retained:document.querySelector("#monitor-snake-wrap iframe")===first,inert:first.inert});window.__openMonitorApp("nibbles");await sleep(10);S("reopenGame",{same:document.querySelector("#monitor-snake-wrap iframe")===first,mode:window.__snakeState().mode,inert:first.inert,focus:document.activeElement===first});window.__closeMonitorSnake();',
   ' searchOpen("dos");await sleep(20);var shell=document.querySelector("#monitor-snake-wrap iframe");S("dos",{fresh:!!shell&&shell!==first,src:shell&&shell.getAttribute("src"),mode:window.__snakeState().mode});window.__closeMonitorSnake();window.__openMonitorApp("dos");await sleep(10);S("reopenDos",{same:document.querySelector("#monitor-snake-wrap iframe")===shell,mode:window.__snakeState().mode});',
   ' shell.focus();shell.contentWindow.focus();window.dispatchEvent(new MessageEvent("message",{origin:location.origin,source:shell.contentWindow,data:{type:"snake-close"}}));"mail".split("").forEach(routedKey);var afterExitSearch=window.__monitorDockSearch();S("dosExitFocus",{open:mon.classList.contains("show-snake"),retained:document.querySelector("#monitor-snake-wrap iframe")===shell,inert:shell.inert,focus:document.activeElement&&(document.activeElement.id||document.activeElement.tagName),search:afterExitSearch});routedKey("Escape");',
   ' window.__openMonitorApp("snake");await sleep(20);var game=document.querySelector("#monitor-snake-wrap iframe");window.dispatchEvent(new MessageEvent("message",{origin:location.origin,source:game.contentWindow,data:{type:"snake-exit"}}));await sleep(20);S("gameExit",{open:mon.classList.contains("show-snake"),frame:!!document.querySelector("#monitor-snake-wrap iframe"),state:window.__snakeState(),running:window.__monitorAppRunning("snake")});',
@@ -62,6 +63,9 @@ check(/mode = params\.get\("mode"\) === "dos" \? "dos" : "nibbles"/.test(playerH
   /command === "exit"/.test(playerHtml) &&
   /command === "nibbles" \|\| command === "nibbles\.exe"/.test(playerHtml) &&
   /tell\("snake-close"\)/.test(playerHtml) && /tell\("snake-exit"\)/.test(playerHtml) &&
+  /event\.data\.type === "snake-key" && mode === "nibbles"/.test(playerHtml) &&
+  /Object\.defineProperty\(forwarded, "keyCode"/.test(playerHtml) &&
+  /window\.dispatchEvent\(forwarded\)/.test(playerHtml) &&
   playerHtml.indexOf('window.addEventListener("keydown", handleExitKeys, true)') < playerHtml.indexOf("player = Dos("),
   "one pinned bundle boots either a bare DOS prompt or a one-shot Nibbles session");
 var r = lib.runPageSync("rsvp.html", HARNESS, 4500, { patchRaf: true });
@@ -75,18 +79,23 @@ check(!s.grid.calendar && s.grid.tattooAt === 7 &&
 check(s.calendar.control && s.calendar.opened, "the explicit desktop date/countdown control opens Calendar", s.calendar);
 check(s.aliases.snake.match === "snake" && s.aliases.nibbles.match === "snake" && s.aliases.dos.match === "snake",
   "search resolves snake, nibbles, and dos to the same app", s.aliases);
-check(s.theme.tile === "rgb(23, 45, 150)" && s.theme.dos === "#ffd83d",
+check(s.theme.tile === "rgb(23, 45, 150)" && s.theme.dos === "#ffd84a",
   "the Nibbles launcher is yellow on DOS blue", s.theme);
 check(s.open.open && s.open.frame && /[?&]mode=nibbles(?:&|$)/.test(s.open.src || "") && s.open.state.mode === "nibbles",
   "opening snake lazily creates its self-hosted DOS iframe", s.open);
 check(!s.open.innerFs && s.open.allow === "autoplay",
   "Nibbles relies on the shared monitor fullscreen instead of an iframe-level control", s.open);
-check(s.gutters.count === 2 && s.gutters.menu,
-  "both 4:3 side gutters belong to the monitor context-menu surface", s.gutters);
+check(s.gutters.count === 2 && s.gutters.menu && s.gutters.ownsFocus,
+  "both 4:3 side gutters open a keyboard-owning monitor context menu", s.gutters);
+check(s.ownership.focus && s.ownership.prevented && s.ownership.relayed === 1 &&
+  s.ownership.last.eventType === "keydown" && s.ownership.last.key === "ArrowUp" && s.ownership.last.keyCode === 38,
+  "a first Nibbles control lost to parent chrome is relayed once while the iframe reclaims focus", s.ownership);
+check(s.blockedOwners.relayed === 1,
+  "Nibbles does not reclaim keys from a modal overlay or another foreground monitor app", s.blockedOwners);
 check(s.menu.kill && !s.menu.restart && JSON.stringify(s.menu.labels) === JSON.stringify(["Kill app"]),
   "the open DOS surface exposes only the enabled Kill app action", s.menu);
 check(!s.close.open && s.close.retained && s.close.inert, "normal close pauses and inerts the retained DOS machine", s.close);
-check(s.reopenGame.same && s.reopenGame.mode === "nibbles" && !s.reopenGame.inert, "reopening Nibbles resumes and reactivates its retained game machine", s.reopenGame);
+check(s.reopenGame.same && s.reopenGame.mode === "nibbles" && !s.reopenGame.inert && s.reopenGame.focus, "reopening Nibbles resumes and refocuses its retained game machine", s.reopenGame);
 check(s.dos.fresh && /[?&]mode=dos(?:&|$)/.test(s.dos.src || "") && s.dos.mode === "dos",
   "searching for dos replaces a retained game with a bare-shell machine", s.dos);
 check(s.reopenDos.same && s.reopenDos.mode === "dos", "the dos command reopens and retains that DOS shell", s.reopenDos);

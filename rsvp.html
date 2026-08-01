@@ -33564,6 +33564,7 @@ window.__entranceRoomOpen = false;
       porsche.style.setProperty("--porsche-vibe-period", (.16 - revVibration * .055).toFixed(3) + "s");
     }
     var speed = Math.abs(driveState.speed);
+    if (porsche) porsche.classList.toggle("engine-idling", entranceDriveAudible() && speed < .75);
     if (driveTachNeedle) driveTachNeedle.setAttribute("transform", "rotate(" + (-132 + rpm / 8000 * 264).toFixed(1) + ")");
     if (driveSpeedNeedle) driveSpeedNeedle.setAttribute("transform", "rotate(" + (Math.min(250, speed) / 250 * 242).toFixed(1) + ")");
     if (driveTempNeedle) driveTempNeedle.setAttribute("transform", "rotate(" + (-55 + 55 * driveState.temperature).toFixed(1) + " -4 -8)");
@@ -33682,7 +33683,8 @@ window.__entranceRoomOpen = false;
   function updatePorscheDriveAudio() {
     if (entranceDriveAudible()) startPorscheDriveAudio();
     else stopPorscheDriveAudio();
-    if (porsche) porsche.classList.toggle("engine-idling", entranceDriveAudible());
+    if (porsche) porsche.classList.toggle("engine-idling",
+      entranceDriveAudible() && Math.abs(driveState.speed) < .75);
   }
   function playPorscheStallSound() {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
@@ -34089,7 +34091,8 @@ window.__entranceRoomOpen = false;
   }
   function updatePorscheIdle() {
     var wantsIdle = porscheIdleWanted();
-    if (porsche) porsche.classList.toggle("engine-idling", wantsIdle);
+    if (porsche) porsche.classList.toggle("engine-idling",
+      wantsIdle && Math.abs(driveState.speed) < .75);
     if (wantsIdle) startPorscheIdle();
     else stopPorscheIdle();
   }
@@ -34763,11 +34766,6 @@ document.addEventListener("keydown", function (event) {
   }
   if (event.ctrlKey || event.metaKey || event.altKey ||
       (window.__dropTermOpen && window.__dropTermOpen())) return;
-  if (window.__entranceDriveKey && window.__entranceDriveKey(event, true)) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    return;
-  }
   if (handleLowerRoomNumberShortcut(event)) return;
   if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
     var entranceProp = event.target && event.target.closest &&

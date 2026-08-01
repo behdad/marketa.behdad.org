@@ -21,6 +21,7 @@ var HARNESS = [
   'if(!state().car.engineOn)key("keydown","Enter");key("keydown","ArrowDown");step(30);key("keyup","ArrowDown");key("keydown","Shift");key("keydown","r");key("keyup","Shift");key("keydown","ArrowUp");step(12);key("keyup","ArrowUp");report.steps.reverse=state();',
   'key("keydown","ArrowDown");step(20);key("keyup","ArrowDown");for(var gear=1;gear<=6;gear++){key("keydown","Shift");key("keydown",String(gear));key("keyup","Shift");key("keydown","ArrowUp");step(gear<4?12:18);key("keyup","ArrowUp");}step(110);report.steps.wrap=state();',
   'var clutch=document.getElementById("entrance-drive-clutch");clutch.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:9,pointerType:"mouse"}));clutch.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:9,pointerType:"mouse"}));report.steps.latchOn=state();clutch.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:10,pointerType:"mouse"}));clutch.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:10,pointerType:"mouse"}));report.steps.latchOff=state();',
+  'window.__dismissEntrancePorscheDriveHud();await sleep(30);var nav=[];var oldNav=window.__navigateLowerRoom;window.__navigateLowerRoom=function(room){nav.push(room);};key("keydown","ArrowLeft");report.steps.closedHudNav={hud:state().drive.hud,rooms:nav.slice()};window.__navigateLowerRoom=oldNav;window.__openEntrancePorscheDriveHud();',
   'window.__closeEntranceRoom();await sleep(30);report.steps.closed=state();',
   '}catch(error){report.errors.push(String(error&&error.stack||error));}',
   'document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
@@ -41,7 +42,7 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 8500, {
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(s.started && s.started.state.car.engineOn && s.started.state.drive.hud && s.started.hidden === "false" &&
+check(s.started && s.started.state.car.engineOn && s.started.state.drive.hud && s.started.state.car.vibrating && s.started.hidden === "false" &&
   s.started.controls.length === 13 && s.started.controls.every(function (row) { return row[2] === null && row[3]; }),
   "starting the engine raises a labelled, pointer-only dashboard", s.started);
 var layout = s.started && s.started.layout;
@@ -62,6 +63,7 @@ check(s.shiftArrows && s.shiftArrows.up.drive.gear === 1 && s.shiftArrows.held.d
   s.shiftArrows.down.drive.gear === 0,
   "fresh Shift+Up/Down steps one gear without key-repeat cycling", s.shiftArrows);
 check(s.forward && s.forward.first.drive.gear === 1 && s.forward.first.drive.speed > 15 &&
+  !s.forward.first.car.vibrating &&
   s.forward.second.drive.gear === 2 && s.forward.second.drive.speed > s.forward.first.drive.speed &&
   s.forward.third.drive.gear === 3 && s.forward.third.drive.position < s.forward.first.drive.position,
   "clutched 1–2–3 shifts accelerate the car leftward", s.forward);
@@ -77,6 +79,8 @@ check(s.wrap && s.wrap.car.engineOn && s.wrap.drive.gear === 6 && s.wrap.drive.w
   "street travel wraps cleanly while preserving sixth-gear momentum", s.wrap);
 check(s.latchOn && s.latchOn.drive.holds.clutch && s.latchOff && !s.latchOff.drive.holds.clutch,
   "a quick pointer tap latches and releases the clutch for one-pointer shifting", {on:s.latchOn,off:s.latchOff});
+check(s.closedHudNav && !s.closedHudNav.hud && JSON.stringify(s.closedHudNav.rooms) === JSON.stringify(["office"]),
+  "closed HUD leaves the entrance arrow-key room navigation active", s.closedHudNav);
 check(s.closed && !s.closed.open && s.closed.drive.hud && !s.closed.drive.audioActive &&
   !s.closed.drive.frameActive && s.closed.drive.speed > 0 && s.closed.drive.position !== 0,
   "leaving parks audio/runtime while retaining the driving state", s.closed);

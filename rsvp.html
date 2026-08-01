@@ -37444,6 +37444,11 @@ var T = {
     snake_setup_fast: "fast",
     snake_setup_start: "Start game",
     snake_setup_cancel: "Cancel",
+    prince_dpad_title: "Prince of Persia touch controls",
+    prince_dpad_up: "Move Prince up",
+    prince_dpad_down: "Move Prince down",
+    prince_dpad_left: "Move Prince left",
+    prince_dpad_right: "Move Prince right",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "LINES",
     tetris_next: "NEXT",
@@ -38821,6 +38826,11 @@ var T = {
     snake_setup_fast: "rychle",
     snake_setup_start: "Spustit hru",
     snake_setup_cancel: "Zrušit",
+    prince_dpad_title: "Dotykové ovládání Prince of Persia",
+    prince_dpad_up: "Pohyb prince nahoru",
+    prince_dpad_down: "Pohyb prince dolů",
+    prince_dpad_left: "Pohyb prince doleva",
+    prince_dpad_right: "Pohyb prince doprava",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "ŘADY",
     tetris_next: "DALŠÍ",
@@ -40051,6 +40061,7 @@ function setLang(l) {
   if (window.refreshMinesText) window.refreshMinesText();
   if (window.refreshClassicsText) window.refreshClassicsText();
   if (window.refreshPacmanText) window.refreshPacmanText();
+  if (window.refreshPrinceText) window.refreshPrinceText();
   if (window.refreshFamilyText) window.refreshFamilyText();
   if (window.refreshCalendarText) window.refreshCalendarText();
   if (window.refreshMonitorClockText) window.refreshMonitorClockText();
@@ -70139,6 +70150,158 @@ async def localfont(name):
   var princeDripAnimation = null;
   var princeChainPointer = null, princeChainStartX = 0, princeChainStartY = 0;
   var princeChainX = 0, princeChainY = 0, princeChainMoved = false, princeChainSuppressClick = false;
+  var princeDpad = null, princeDpadDrag = null, princeDpadHeldDirection = null;
+  var PRINCE_DPAD_DIRECTIONS = {
+    up: { key: "ArrowUp", keyCode: 38, label: "prince_dpad_up", glyph: "↑" },
+    left: { key: "ArrowLeft", keyCode: 37, label: "prince_dpad_left", glyph: "←" },
+    right: { key: "ArrowRight", keyCode: 39, label: "prince_dpad_right", glyph: "→" },
+    down: { key: "ArrowDown", keyCode: 40, label: "prince_dpad_down", glyph: "↓" }
+  };
+  var PRINCE_DPAD_REVERSE = { left: "right", right: "left", up: "down", down: "up" };
+  function princeText(key) {
+    var lang = document.documentElement.lang;
+    return (T[lang] && T[lang][key]) || T.en[key] || "";
+  }
+  function paintPrinceDpadText() {
+    if (!princeDpad) return;
+    princeDpad.setAttribute("aria-label", princeText("prince_dpad_title"));
+    Object.keys(PRINCE_DPAD_DIRECTIONS).forEach(function (direction) {
+      var button = princeDpad.querySelector('[data-prince-direction="' + direction + '"]');
+      if (!button) return;
+      var label = princeText(PRINCE_DPAD_DIRECTIONS[direction].label);
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    });
+  }
+  window.refreshPrinceText = paintPrinceDpadText;
+  function emitPrinceDpadKey(type, direction, forcedRelease) {
+    var spec = PRINCE_DPAD_DIRECTIONS[direction];
+    if (!spec || !princeFrame || !princeFrame.contentWindow || (!forcedRelease && !princeShouldRun())) return false;
+    if (!forcedRelease) focusPrince();
+    try {
+      var child = princeFrame.contentWindow;
+      var keyEvent = new child.KeyboardEvent(type, {
+        key: spec.key, code: spec.key, keyCode: spec.keyCode, which: spec.keyCode,
+        bubbles: true, cancelable: true
+      });
+      ["keyCode", "which"].forEach(function (property) {
+        if (keyEvent[property] === spec.keyCode) return;
+        try { Object.defineProperty(keyEvent, property, { get: function () { return spec.keyCode; } }); }
+        catch (_error) {}
+      });
+      child.dispatchEvent(keyEvent);
+      return true;
+    } catch (_error) { return false; }
+  }
+  function paintPrinceDpadDirection(direction) {
+    if (!princeDpad) return;
+    princeDpad.querySelectorAll("[data-prince-direction]").forEach(function (button) {
+      button.setAttribute("aria-pressed", String(button.getAttribute("data-prince-direction") === direction));
+    });
+  }
+  function clearPrinceDpadMovement() {
+    var held = princeDpadHeldDirection;
+    princeDpadHeldDirection = null;
+    paintPrinceDpadDirection(null);
+    if (held) emitPrinceDpadKey("keyup", held, true);
+  }
+  function choosePrinceDpadDirection(direction) {
+    if (!PRINCE_DPAD_DIRECTIONS[direction] || !princeShouldRun()) return false;
+    if (princeDpadHeldDirection === direction) return true;
+    clearPrinceDpadMovement();
+    if (!emitPrinceDpadKey("keydown", direction, false)) return false;
+    princeDpadHeldDirection = direction;
+    paintPrinceDpadDirection(direction);
+    return true;
+  }
+  function endPrinceDpadDrag(event) {
+    if (!princeDpadDrag || (event && event.pointerId != null && event.pointerId !== princeDpadDrag.pointerId)) return;
+    if (event && event.preventDefault) { event.preventDefault(); event.stopPropagation(); }
+    var pointerId = princeDpadDrag.pointerId;
+    princeDpadDrag = null;
+    if (princeDpad) {
+      princeDpad.classList.remove("dragging");
+      try { princeDpad.releasePointerCapture(pointerId); } catch (_error) {}
+    }
+    clearPrinceDpadMovement();
+  }
+  function installPrinceTouchDpad() {
+    if (!princeFrame || !princeFrame.contentDocument) return;
+    var childDocument = princeFrame.contentDocument;
+    var existing = childDocument.getElementById("prince-touch-dpad");
+    if (existing) {
+      princeDpad = existing;
+      paintPrinceDpadText();
+      return;
+    }
+    var style = childDocument.createElement("style");
+    style.id = "prince-touch-dpad-style";
+    style.textContent =
+      "#prince-touch-dpad{position:fixed;z-index:20;right:max(4px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);display:none;grid-template:repeat(3,6px)/repeat(3,6px);justify-content:center;gap:.7px;border-radius:2px;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;cursor:grab;background:linear-gradient(90deg,transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%),linear-gradient(transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%)}" +
+      "#prince-touch-dpad::before{content:'';grid-area:2/2;width:3.2px;height:3.2px;place-self:center;border:.45px solid #6579dc;border-radius:50%;background:#253fc8;box-shadow:0 0 1px rgba(65,100,255,.75);pointer-events:none}" +
+      "#prince-touch-dpad.dragging{cursor:grabbing}#prince-touch-dpad.dragging::before{background:#ffd83d;border-color:#f5d7a1;box-shadow:0 0 1.5px rgba(255,216,61,.85)}" +
+      "#prince-touch-dpad button{appearance:none;-webkit-appearance:none;box-sizing:border-box;border:0;border-radius:1px;background:#182252;color:#f8f5ec;font:3px/1 ui-monospace,monospace;padding:0;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}" +
+      "#prince-touch-dpad button[data-prince-direction=up]{grid-area:1/2}#prince-touch-dpad button[data-prince-direction=left]{grid-area:2/1}#prince-touch-dpad button[data-prince-direction=right]{grid-area:2/3}#prince-touch-dpad button[data-prince-direction=down]{grid-area:3/2}" +
+      "#prince-touch-dpad button:active,#prince-touch-dpad button[aria-pressed=true]{background:#2847b8}" +
+      "@media (pointer:coarse){#prince-touch-dpad{display:grid;pointer-events:auto}}" +
+      "@media (pointer:coarse) and (min-height:200px){#prince-touch-dpad{right:max(16px,env(safe-area-inset-right));grid-template:repeat(3,clamp(20px,6vmin,36px))/repeat(3,clamp(20px,6vmin,36px));gap:clamp(2px,.6vmin,4px);border-radius:8px}#prince-touch-dpad::before{width:clamp(10px,3vmin,18px);height:clamp(10px,3vmin,18px);border-width:1.5px;box-shadow:0 0 5px rgba(65,100,255,.75)}#prince-touch-dpad.dragging::before{box-shadow:0 0 7px rgba(255,216,61,.85)}#prince-touch-dpad button{border-radius:5px;font-size:clamp(12px,3vmin,22px)}}";
+    childDocument.head.appendChild(style);
+    var pad = childDocument.createElement("div");
+    pad.id = "prince-touch-dpad";
+    pad.setAttribute("role", "group");
+    ["up", "left", "right", "down"].forEach(function (direction) {
+      var spec = PRINCE_DPAD_DIRECTIONS[direction];
+      var button = childDocument.createElement("button");
+      button.type = "button";
+      button.tabIndex = -1;
+      button.textContent = spec.glyph;
+      button.setAttribute("data-prince-direction", direction);
+      button.setAttribute("aria-pressed", "false");
+      pad.appendChild(button);
+    });
+    childDocument.body.appendChild(pad);
+    princeDpad = pad;
+    paintPrinceDpadText();
+    pad.addEventListener("touchmove", function (event) { event.preventDefault(); }, { passive: false });
+    ["contextmenu", "selectstart", "dragstart"].forEach(function (type) {
+      pad.addEventListener(type, function (event) { event.preventDefault(); event.stopPropagation(); });
+    });
+    pad.addEventListener("pointerdown", function (event) {
+      if (event.pointerType !== "touch" || event.isPrimary === false || princeDpadDrag) return;
+      event.preventDefault(); event.stopPropagation();
+      var button = event.target && event.target.closest ? event.target.closest("[data-prince-direction]") : null;
+      var rect = pad.getBoundingClientRect();
+      princeDpadDrag = {
+        pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+        lastDir: button ? button.getAttribute("data-prince-direction") : null,
+        threshold: Math.max(3, Math.min(7, Math.min(rect.width, rect.height) * .16))
+      };
+      pad.classList.add("dragging");
+      try { pad.setPointerCapture(event.pointerId); } catch (_error) {}
+      if (princeDpadDrag.lastDir) choosePrinceDpadDirection(princeDpadDrag.lastDir);
+    });
+    pad.addEventListener("pointermove", function (event) {
+      if (!princeDpadDrag || event.pointerId !== princeDpadDrag.pointerId) return;
+      event.preventDefault(); event.stopPropagation();
+      var dx = event.clientX - princeDpadDrag.x, dy = event.clientY - princeDpadDrag.y;
+      var ax = Math.abs(dx), ay = Math.abs(dy);
+      if (Math.max(ax, ay) < princeDpadDrag.threshold ||
+          (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
+      var direction = ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+      var needed = princeDpadDrag.lastDir && PRINCE_DPAD_REVERSE[princeDpadDrag.lastDir] === direction ?
+        princeDpadDrag.threshold * 1.55 : princeDpadDrag.threshold;
+      if (Math.max(ax, ay) < needed) return;
+      princeDpadDrag.x = event.clientX;
+      princeDpadDrag.y = event.clientY;
+      if (direction === princeDpadDrag.lastDir) return;
+      princeDpadDrag.lastDir = direction;
+      choosePrinceDpadDirection(direction);
+    });
+    pad.addEventListener("pointerup", endPrinceDpadDrag);
+    pad.addEventListener("pointercancel", endPrinceDpadDrag);
+    pad.addEventListener("lostpointercapture", endPrinceDpadDrag);
+    pad.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); });
+  }
   function clearPrinceDungeonTimers() {
     princeDungeonTimers.forEach(clearTimeout);
     princeDungeonTimers.length = 0;
@@ -70411,7 +70574,9 @@ async def localfont(name):
   }
   function princeSync() {
     if (!princeFrame || !princeFrame.contentWindow) return;
-    try { princeFrame.contentWindow.postMessage({ kind: "prince-control", active: princeShouldRun() }, location.origin); }
+    var active = princeShouldRun();
+    if (!active) endPrinceDpadDrag();
+    try { princeFrame.contentWindow.postMessage({ kind: "prince-control", active: active }, location.origin); }
     catch (_error) {}
   }
   function focusPrince() {
@@ -70437,6 +70602,7 @@ async def localfont(name):
     frame.allow = "autoplay; fullscreen";
     frame.addEventListener("load", function () {
       princeFrameState = "loading";
+      installPrinceTouchDpad();
       princeSync();
       setTimeout(focusPrince, 80);
     });
@@ -70586,6 +70752,7 @@ async def localfont(name):
     }
     princeAfterFullscreen = null;
     window.__princeInputActive = false;
+    endPrinceDpadDrag();
     if (princeOverlay) {
       princeOverlay.classList.remove("prince-killing");
       princeOverlay.hidden = true;
@@ -70667,6 +70834,9 @@ async def localfont(name):
       if (princeFrame.parentNode) princeFrame.parentNode.removeChild(princeFrame);
     }
     princeFrame = null;
+    princeDpad = null;
+    princeDpadDrag = null;
+    princeDpadHeldDirection = null;
     princeFrameState = "cold";
     princeMode = null;
     clearTimeout(princeKillTimer);

@@ -343,11 +343,13 @@ returns.
 
 Prince of Persia is hidden: search for `prince`, type `prince` in either
 console, or run `prince()` from browser JavaScript. Dismiss preserves the run;
-**Kill app** or **Start over** discards it. It is also available in the Garden's
-hidden dungeon. In the dungeon, each torch can be snuffed or relit; at least one
-must burn to read and wake the play wall. Tug the weighted chain for a small lift,
-or drag it all the way down for a brief glimpse behind the gate before the weight
-drops it again. Watch the room's drip, rat, and visiting cat.
+**Kill app** or **Start over** discards it. On touch devices, hold the right-side
+D-pad and drag to change the held direction; release it to release the arrow key.
+It is also available in the Garden's hidden dungeon. In the dungeon, each torch
+can be snuffed or relit; at least one must burn to read and wake the play wall.
+Tug the weighted chain for a small lift, or drag it all the way down for a brief
+glimpse behind the gate before the weight drops it again. Watch the room's drip,
+rat, and visiting cat.
 
 ## Troubleshooting
 

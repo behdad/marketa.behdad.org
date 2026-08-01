@@ -1146,6 +1146,12 @@ from the pinned dungeon atlas; narrow stone jambs distinguish the playable
 16:10 opening without framing it as a separate screen. The vendored,
 zero-CDN runtime and its Unlicense notice live in `princejs/`.
 
+On coarse primary pointers, `rsvp.html` injects a right-side cross-pad into the
+same-origin Prince iframe so it follows the retained game through monitor,
+basement, and fullscreen presentations. Its Pac-Man-style drag owner emits paired
+arrow events, changes the held direction as the finger moves, and releases on
+pointer cancellation, visibility/focus loss, parking, or teardown.
+
 The weighted chain remains a pointer-captured, non-Tab-stop prop. Its ordinary
 activation gives the existing shallow gate reaction; a drag past the lower
 threshold temporarily raises the gate farther and reveals the single static

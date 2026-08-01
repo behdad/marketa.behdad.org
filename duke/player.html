@@ -28,11 +28,13 @@ body{background:#000;color:#ccc;font-family:system-ui,-apple-system,sans-serif}
 #footer a{color:#888;text-decoration:none;border-bottom:1px dotted #3a3a3a}
 #footer a:hover{color:#ccc;border-bottom-color:#666}
 #footer .sep{color:#333;margin:0 6px}
-#touch-pad{display:none;position:fixed;z-index:4;left:max(clamp(2px,2vmin,10px),env(safe-area-inset-left));bottom:max(clamp(2px,2vmin,10px),env(safe-area-inset-bottom));grid-template-columns:repeat(3,clamp(15px,7vmin,64px));grid-template-areas:". w ." "a s d";gap:clamp(2px,1vmin,8px);padding:clamp(2px,.8vmin,6px);border:1px solid rgba(255,255,255,.24);border-radius:clamp(3px,2vmin,14px);background:rgba(12,12,12,.62);touch-action:none;pointer-events:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#touch-pad{--touch-cell:clamp(6px,6vmin,40px);display:none;position:fixed;z-index:4;left:max(clamp(2px,2vmin,10px),env(safe-area-inset-left));bottom:max(clamp(2px,2vmin,10px),env(safe-area-inset-bottom));grid-template:repeat(3,var(--touch-cell))/repeat(3,var(--touch-cell));justify-content:center;gap:clamp(.7px,.7vmin,5px);border-radius:clamp(2px,2vmin,12px);touch-action:none;cursor:grab;background:linear-gradient(90deg,transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%),linear-gradient(transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #touch-pad[hidden]{display:none}
-#touch-pad button{grid-area:var(--touch-grid);box-sizing:border-box;pointer-events:auto;min-width:0;padding:0;aspect-ratio:1;border:1px solid rgba(255,255,255,.34);border-radius:clamp(3px,1.5vmin,10px);background:rgba(55,55,55,.78);color:#fff;font:700 clamp(10px,4vmin,30px)/1 system-ui,sans-serif;touch-action:none;-webkit-tap-highlight-color:transparent}
-#touch-pad button:active,#touch-pad button[aria-pressed="true"]{background:rgba(180,110,42,.92);border-color:#f5d28a}
-#touch-pad [data-touch-key="w"]{--touch-grid:w}#touch-pad [data-touch-key="a"]{--touch-grid:a}#touch-pad [data-touch-key="s"]{--touch-grid:s}#touch-pad [data-touch-key="d"]{--touch-grid:d}
+#touch-pad::before{content:"";grid-area:2/2;width:53.333%;height:53.333%;place-self:center;border:clamp(.45px,.12vmin,1px) solid #6579dc;border-radius:50%;background:#253fc8;box-shadow:0 0 clamp(1px,.25vmin,1.5px) rgba(65,100,255,.75);pointer-events:none}
+#touch-pad.dragging{cursor:grabbing}
+#touch-pad.dragging::before{background:#ffd83d;border-color:#f5d7a1;box-shadow:0 0 clamp(1.5px,.35vmin,2.5px) rgba(255,216,61,.85)}
+#touch-pad button{box-sizing:border-box;min-width:0;padding:0;border:0;border-radius:clamp(1px,1vmin,6px);background:#182252;color:#f8f5ec;font:700 clamp(3px,3vmin,20px)/1 ui-monospace,monospace;touch-action:none;-webkit-tap-highlight-color:transparent}
+#touch-pad [data-touch-key="w"]{grid-area:1/2}#touch-pad [data-touch-key="a"]{grid-area:2/1}#touch-pad [data-touch-key="d"]{grid-area:2/3}#touch-pad [data-touch-key="s"]{grid-area:3/2}
 @media (any-pointer:coarse),(hover:none){#touch-pad{display:grid}}
 canvas:fullscreen,canvas:-webkit-full-screen{width:min(100vw,133.333vh)!important;height:auto!important;background:#000}
 </style>
@@ -41,10 +43,10 @@ canvas:fullscreen,canvas:-webkit-full-screen{width:min(100vw,133.333vh)!importan
 <div id="container">
   <canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
   <nav id="touch-pad" aria-label="Touch movement controls" hidden>
-    <button type="button" data-touch-key="w" aria-label="Move forward" aria-pressed="false">↑</button>
-    <button type="button" data-touch-key="a" aria-label="Move left" aria-pressed="false">←</button>
-    <button type="button" data-touch-key="s" aria-label="Move backward" aria-pressed="false">↓</button>
-    <button type="button" data-touch-key="d" aria-label="Move right" aria-pressed="false">→</button>
+    <button type="button" class="touch-pad-button" data-dir="up" data-touch-key="w" aria-label="Move forward" aria-pressed="false">↑</button>
+    <button type="button" class="touch-pad-button" data-dir="left" data-touch-key="a" aria-label="Move left" aria-pressed="false">←</button>
+    <button type="button" class="touch-pad-button" data-dir="right" data-touch-key="d" aria-label="Move right" aria-pressed="false">→</button>
+    <button type="button" class="touch-pad-button" data-dir="down" data-touch-key="s" aria-label="Move backward" aria-pressed="false">↓</button>
   </nav>
   <div id="controls">
     <button id="btn-fs">Fullscreen</button>
@@ -113,48 +115,74 @@ var runtimeReady = false;
 var runtimePaused = false;
 var scaledMouseDispatch = false;
 var touchPad = document.getElementById('touch-pad');
-var touchPointers = Object.create(null);
-var touchKeyCounts = Object.create(null);
+var touchDrag = null;
+var touchHeldKey = '';
+var touchDirectionKeys = { up:'w', left:'a', right:'d', down:'s' };
+var touchReverse = { up:'down', down:'up', left:'right', right:'left' };
 
 function emitTouchKey(type, key) {
   var upper = key.toUpperCase(), code = 'Key' + upper, keyCode = upper.charCodeAt(0);
   canvas.dispatchEvent(new KeyboardEvent(type, { key:key, code:code, keyCode:keyCode, which:keyCode, bubbles:true, cancelable:true }));
 }
-function setTouchKey(key, down) {
-  var count = touchKeyCounts[key] || 0;
-  if (down) {
-    touchKeyCounts[key] = count + 1;
-    if (!count) emitTouchKey('keydown', key);
-  } else if (count) {
-    touchKeyCounts[key] = count - 1;
-    if (count === 1) emitTouchKey('keyup', key);
+function setTouchDirection(direction) {
+  var key = touchDirectionKeys[direction] || '';
+  if (key !== touchHeldKey) {
+    if (touchHeldKey) emitTouchKey('keyup', touchHeldKey);
+    touchHeldKey = key;
+    if (touchHeldKey) emitTouchKey('keydown', touchHeldKey);
   }
-  var button = touchPad && touchPad.querySelector('[data-touch-key="' + key + '"]');
-  if (button) button.setAttribute('aria-pressed', (touchKeyCounts[key] || 0) > 0 ? 'true' : 'false');
+  var buttons = touchPad ? touchPad.querySelectorAll('[data-dir]') : [];
+  for (var i = 0; i < buttons.length; i++) buttons[i].setAttribute('aria-pressed', buttons[i].getAttribute('data-dir') === direction ? 'true' : 'false');
 }
-function releaseTouchPointer(pointerId) {
-  var key = touchPointers[pointerId];
-  if (!key) return;
-  delete touchPointers[pointerId];
-  setTouchKey(key, false);
+function releaseTouchKeys() {
+  var pointerId = touchDrag && touchDrag.pointerId;
+  touchDrag = null;
+  if (touchPad) touchPad.classList.remove('dragging');
+  setTouchDirection('');
+  if (pointerId != null && touchPad) { try { touchPad.releasePointerCapture(pointerId); } catch (_) {} }
 }
-function releaseTouchKeys() { Object.keys(touchPointers).forEach(releaseTouchPointer); }
 if (touchPad) {
+  function endTouchDrag(event) {
+    if (!touchDrag || (event && event.pointerId !== touchDrag.pointerId)) return;
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    releaseTouchKeys();
+  }
   touchPad.addEventListener('pointerdown', function(event) {
-    var button = event.target.closest && event.target.closest('[data-touch-key]');
-    if (!button) return;
-    event.preventDefault();
-    var pointerId = String(event.pointerId), key = button.getAttribute('data-touch-key');
-    if (touchPointers[pointerId]) return;
-    touchPointers[pointerId] = key;
-    try { button.setPointerCapture(event.pointerId); } catch (_) {}
-    setTouchKey(key, true);
+    if ((event.button !== undefined && event.button !== 0) || touchDrag) return;
+    event.preventDefault(); event.stopPropagation();
+    var button = event.target.closest && event.target.closest('[data-dir]');
+    var rect = touchPad.getBoundingClientRect();
+    touchDrag = {
+      pointerId:event.pointerId, x:event.clientX, y:event.clientY,
+      lastDir:button ? button.getAttribute('data-dir') : null,
+      threshold:Math.max(3, Math.min(7, Math.min(rect.width, rect.height) * .16))
+    };
+    touchPad.classList.add('dragging');
+    try { touchPad.setPointerCapture(event.pointerId); } catch (_) {}
+    if (touchDrag.lastDir) setTouchDirection(touchDrag.lastDir);
   });
-  ['pointerup','pointercancel','lostpointercapture'].forEach(function(type) {
-    touchPad.addEventListener(type, function(event) { releaseTouchPointer(String(event.pointerId)); });
+  // Match Hack-Man's live direction pad: re-anchor after turns and require extra travel to reverse.
+  touchPad.addEventListener('pointermove', function(event) {
+    if (!touchDrag || event.pointerId !== touchDrag.pointerId) return;
+    event.preventDefault(); event.stopPropagation();
+    var dx = event.clientX - touchDrag.x, dy = event.clientY - touchDrag.y;
+    var ax = Math.abs(dx), ay = Math.abs(dy);
+    if (Math.max(ax, ay) < touchDrag.threshold || (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
+    var direction = ax > ay ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    var needed = touchDrag.lastDir && touchReverse[touchDrag.lastDir] === direction ? touchDrag.threshold * 1.55 : touchDrag.threshold;
+    if (Math.max(ax, ay) < needed) return;
+    touchDrag.x = event.clientX; touchDrag.y = event.clientY;
+    if (direction === touchDrag.lastDir) return;
+    touchDrag.lastDir = direction;
+    setTouchDirection(direction);
   });
+  touchPad.addEventListener('pointerup', endTouchDrag);
+  touchPad.addEventListener('pointercancel', endTouchDrag);
+  touchPad.addEventListener('lostpointercapture', endTouchDrag);
   touchPad.addEventListener('click', function(event) { event.preventDefault(); });
-  touchPad.addEventListener('contextmenu', function(event) { event.preventDefault(); });
+  ['contextmenu','selectstart','dragstart'].forEach(function(type) {
+    touchPad.addEventListener(type, function(event) { event.preventDefault(); event.stopPropagation(); });
+  });
 }
 
 function shouldRun() {

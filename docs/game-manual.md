@@ -321,7 +321,7 @@ The far-right monitor taskbar control expands the monitor within the browser;
 select the surround or press Escape to return. This is separate from browser
 fullscreen (`F`). Shoot also has a **Fullscreen** control that preserves the
 running game when entering or leaving fullscreen.
-On a touch phone or tablet, hold the left-side **D-pad** to move; the game keeps
+On a touch phone or tablet, press or drag the left-side **D-pad** to move; the game keeps
 the same controls when fullscreened.
 
 **Classics** contains Mines and draw-one Klondike Solitaire. Mines uses select

@@ -15,11 +15,12 @@ var HARNESS = [
   'var room=document.getElementById("entrance-room"),hud=document.getElementById("entrance-drive-hud"),car=document.getElementById("entrance-porsche"),controls=Array.from(hud.querySelectorAll(".entrance-drive-control"));key("keydown","Enter");await sleep(30);key("keydown","Enter");await sleep(460);report.steps.started={state:state(),hidden:hud.getAttribute("aria-hidden"),controls:controls.map(function(el){return [el.getAttribute("data-drive-hold"),el.getAttribute("data-drive-gear"),el.getAttribute("tabindex"),el.getAttribute("aria-label")];}),layout:{room:box(room.getBoundingClientRect()),hud:box(hud.getBoundingClientRect()),car:box(car.getBoundingClientRect()),controlBoxes:controls.map(function(el){return box(el.getBoundingClientRect());})},navClaims:{up:window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowUp"}),true),down:window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowDown"}),true)}};key("keyup","ArrowUp");key("keyup","ArrowDown");Object.defineProperty(document,"hasFocus",{value:function(){return false;},configurable:true});window.dispatchEvent(new Event("blur"));await sleep(40);report.steps.unfocused=state();Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.dispatchEvent(new Event("focus"));await sleep(120);report.steps.refocused=state();',
   'key("keydown","1");await sleep(20);report.steps.badShift=state();',
   'window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowUp",code:"ArrowUp",shiftKey:true}),true);var comboUp=state();window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowUp",code:"ArrowUp",shiftKey:true,repeat:true}),true);var comboHeld=state();window.__entranceDriveKey(new KeyboardEvent("keyup",{key:"ArrowUp",code:"ArrowUp",shiftKey:true}),false);window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowDown",code:"ArrowDown",shiftKey:true}),true);report.steps.shiftArrows={up:comboUp,held:comboHeld,down:state()};',
+  'key("keydown","Shift");key("keydown","1");key("keyup","Shift");key("keydown","ArrowUp");step(3);key("keyup","ArrowUp");var lowBefore=state();key("keydown","ArrowDown");step(3);key("keyup","ArrowDown");report.steps.lowBrake={before:lowBefore,after:state()};report.steps.brakeAudio={low:window.__entranceDriveBrakeAudio(40),hard:window.__entranceDriveBrakeAudio(180)};',
   'key("keydown","Shift");key("keydown","1");key("keyup","Shift");key("keydown","ArrowUp");step(12);key("keyup","ArrowUp");var first=state();key("keydown","Shift");key("keydown","2");key("keyup","Shift");key("keydown","ArrowUp");step(15);key("keyup","ArrowUp");var second=state();key("keydown","Shift");key("keydown","3");key("keyup","Shift");key("keydown","ArrowUp");step(20);key("keyup","ArrowUp");report.steps.forward={first:first,second:second,third:state()};',
   'key("keydown","ArrowDown");step(1);key("keyup","ArrowDown");report.steps.brake=state();',
   'key("keydown","Shift");key("keydown","n");key("keyup","Shift");key("keydown","ArrowUp");step(120);report.steps.redlineGrace=state();step(30);key("keyup","ArrowUp");report.steps.redline=state();',
   'if(!state().car.engineOn)key("keydown","Enter");key("keydown","ArrowDown");step(30);key("keyup","ArrowDown");key("keydown","Shift");key("keydown","r");key("keyup","Shift");key("keydown","ArrowUp");step(12);key("keyup","ArrowUp");report.steps.reverse=state();',
-  'key("keydown","ArrowDown");step(20);key("keyup","ArrowDown");for(var gear=1;gear<=6;gear++){key("keydown","Shift");key("keydown",String(gear));key("keyup","Shift");key("keydown","ArrowUp");step(gear<4?12:18);key("keyup","ArrowUp");}step(110);report.steps.wrap=state();',
+  'key("keydown","ArrowDown");step(20);key("keyup","ArrowDown");for(var gear=1;gear<=6;gear++){key("keydown","Shift");key("keydown",String(gear));key("keyup","Shift");key("keydown","ArrowUp");step(gear<4?12:18);key("keyup","ArrowUp");}key("keydown","ArrowUp");step(100);key("keyup","ArrowUp");report.steps.wrap=state();',
   'var clutch=document.getElementById("entrance-drive-clutch");clutch.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:9,pointerType:"mouse"}));clutch.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:9,pointerType:"mouse"}));report.steps.latchOn=state();clutch.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:10,pointerType:"mouse"}));clutch.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:10,pointerType:"mouse"}));report.steps.latchOff=state();',
   'window.__dismissEntrancePorscheDriveHud();await sleep(30);var nav=[];var oldNav=window.__navigateLowerRoom;window.__navigateLowerRoom=function(room){nav.push(room);};key("keydown","ArrowLeft");report.steps.closedHudNav={hud:state().drive.hud,rooms:nav.slice()};window.__navigateLowerRoom=oldNav;window.__openEntrancePorscheDriveHud();',
   'window.__closeEntranceRoom();await sleep(30);report.steps.closed=state();',
@@ -65,11 +66,19 @@ check(s.badShift && !s.badShift.drive.stalled && s.badShift.car.engineOn && s.ba
 check(s.shiftArrows && s.shiftArrows.up.drive.gear === 1 && s.shiftArrows.held.drive.gear === 1 &&
   s.shiftArrows.down.drive.gear === 0,
   "fresh Shift+Up/Down steps one gear without key-repeat cycling", s.shiftArrows);
-check(s.forward && s.forward.first.drive.gear === 1 && s.forward.first.drive.speed > 15 &&
+check(s.lowBrake && s.lowBrake.before.drive.speed > 10 && s.lowBrake.before.drive.speed < 65 &&
+  s.lowBrake.after.drive.tireMarks === 0 && s.lowBrake.after.drive.speed < s.lowBrake.before.drive.speed,
+  "ordinary low-speed braking stays below the tire-screech threshold", s.lowBrake);
+check(s.brakeAudio && s.brakeAudio.hard.screechGain >= s.brakeAudio.hard.absGain * 8 &&
+  s.brakeAudio.hard.screechGain > s.brakeAudio.low.screechGain &&
+  s.brakeAudio.hard.screechFrequency > s.brakeAudio.low.screechFrequency,
+  "hard braking foregrounds a speed-responsive tire screech over quiet ABS chatter", s.brakeAudio);
+check(s.forward && s.forward.first.drive.gear === 1 && s.forward.first.drive.speed > 45 &&
   !s.forward.first.car.vibrating &&
-  s.forward.second.drive.gear === 2 && s.forward.second.drive.speed > s.forward.first.drive.speed &&
-  s.forward.third.drive.gear === 3 && s.forward.third.drive.position < s.forward.first.drive.position,
-  "clutched 1–2–3 shifts accelerate the car leftward", s.forward);
+  s.forward.second.drive.gear === 2 && s.forward.second.drive.speed > 85 &&
+  s.forward.third.drive.gear === 3 && s.forward.third.drive.speed > 125 &&
+  s.forward.third.drive.position < s.forward.first.drive.position,
+  "clutched 1–2–3 shifts deliver substantially quicker acceleration", s.forward);
 check(s.brake && s.brake.drive.tireMarks >= 2 && s.brake.drive.speed < s.forward.third.drive.speed,
   "a hard brake sheds speed and leaves paired fading tire marks", s.brake);
 check(s.redlineGrace && s.redlineGrace.car.engineOn && !s.redlineGrace.drive.stalled &&
@@ -78,8 +87,9 @@ check(s.redlineGrace && s.redlineGrace.car.engineOn && !s.redlineGrace.drive.sta
 check(s.reverse && s.reverse.car.engineOn && s.reverse.drive.gear === -1 && s.reverse.drive.speed < 0,
   "the real reverse gate drives in the opposite direction", s.reverse);
 check(s.wrap && s.wrap.car.engineOn && s.wrap.drive.gear === 6 && s.wrap.drive.wraps > 0 &&
+  s.wrap.drive.speed >= 285 && s.wrap.drive.speed <= 300 &&
   s.wrap.drive.position >= -648 && s.wrap.drive.position <= 349,
-  "street travel wraps cleanly while preserving sixth-gear momentum", s.wrap);
+  "street travel wraps cleanly at the new sixth-gear top speed", s.wrap);
 check(s.latchOn && s.latchOn.drive.holds.clutch && s.latchOff && !s.latchOff.drive.holds.clutch,
   "a quick pointer tap latches and releases the clutch for one-pointer shifting", {on:s.latchOn,off:s.latchOff});
 check(s.closedHudNav && !s.closedHudNav.hud && JSON.stringify(s.closedHudNav.rooms) === JSON.stringify(["office"]),

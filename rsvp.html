@@ -724,18 +724,30 @@ footer{margin-top:2.6rem}
 #entrance-porsche.engine-on .entrance-porsche-running-light{opacity:.92}
 #entrance-porsche.reversing .entrance-porsche-reverse-beam{opacity:.34}
 #entrance-porsche.indicator-on .entrance-porsche-indicator-lit{opacity:1}
-#entrance-porsche-vibration{transform-box:view-box;transform-origin:188px 331px}
+#entrance-porsche-vibration{
+  transform-box:view-box;transform-origin:188px 331px;
+  transform:rotateY(var(--porsche-facing-angle,0deg));
+}
+#entrance-porsche.facing-reversed #entrance-porsche-vibration{--porsche-facing-angle:180deg}
 #entrance-porsche.engine-idling #entrance-porsche-vibration{
   animation:entrance-porsche-idle-tremor var(--porsche-vibe-period,.16s) linear infinite;
 }
 @keyframes entrance-porsche-idle-tremor{
-  0%,100%{transform:translate(0,0)}
-  25%{transform:translate(var(--porsche-vibe-x,.1px),calc(var(--porsche-vibe-y,.08px) * -1))}
-  50%{transform:translate(calc(var(--porsche-vibe-x,.1px) * -.8),calc(var(--porsche-vibe-y,.08px) * .625))}
-  75%{transform:translate(calc(var(--porsche-vibe-x,.1px) * .6),var(--porsche-vibe-y,.08px))}
+  0%,100%{transform:rotateY(var(--porsche-facing-angle,0deg)) translate(0,0)}
+  25%{transform:rotateY(var(--porsche-facing-angle,0deg)) translate(var(--porsche-vibe-x,.1px),calc(var(--porsche-vibe-y,.08px) * -1))}
+  50%{transform:rotateY(var(--porsche-facing-angle,0deg)) translate(calc(var(--porsche-vibe-x,.1px) * -.8),calc(var(--porsche-vibe-y,.08px) * .625))}
+  75%{transform:rotateY(var(--porsche-facing-angle,0deg)) translate(calc(var(--porsche-vibe-x,.1px) * .6),var(--porsche-vibe-y,.08px))}
+}
+#entrance-porsche.spinning #entrance-porsche-vibration{
+  animation:entrance-porsche-hard-brake-spin .72s cubic-bezier(.2,.72,.3,1) both;
+}
+@keyframes entrance-porsche-hard-brake-spin{
+  from{transform:rotateY(var(--porsche-spin-from,0deg))}
+  to{transform:rotateY(var(--porsche-spin-to,180deg))}
 }
 @media (prefers-reduced-motion:reduce){
-  #entrance-porsche.engine-idling #entrance-porsche-vibration{animation:none}
+  #entrance-porsche.engine-idling #entrance-porsche-vibration,
+  #entrance-porsche.spinning #entrance-porsche-vibration{animation:none}
 }
 #entrance-drive-hud{
   position:absolute;z-index:1;left:0;right:0;top:0;bottom:auto;height:61%;
@@ -33437,6 +33449,7 @@ window.__entranceRoomOpen = false;
   var driveFrame = null;
   var driveLastTime = 0;
   var lastSkidAt = 0;
+  var porscheSpinTimer = null;
   var driveShifterAttemptTimer = null;
   var lastDriveInstruction = "";
   var driveBatteryLevel = .75;
@@ -33451,6 +33464,12 @@ window.__entranceRoomOpen = false;
     wheelAngle: 0,
     steeringAngle: 0,
     wraps: 0,
+    facing: 1,
+    yaw: 0,
+    spinDirection: 0,
+    spins: 0,
+    spinning: false,
+    brakeSpinChecked: false,
     stalled: false,
     redlineMs: 0,
     throttleHeldMs: 0,
@@ -33615,7 +33634,8 @@ window.__entranceRoomOpen = false;
     var transform = "translate(" + (PORSCHE_BASE_X + driveState.position).toFixed(2).replace(/\.00$/, "") + " " +
       (PORSCHE_BASE_Y + driveState.laneOffset).toFixed(2).replace(/\.00$/, "") + ")";
     if (porsche) porsche.setAttribute("transform", transform);
-    carControls.forEach(function (control) { control.setAttribute("transform", transform); });
+    var controlTransform = transform + (driveState.facing < 0 ? " translate(376 0) scale(-1 1)" : "");
+    carControls.forEach(function (control) { control.setAttribute("transform", controlTransform); });
     var wheelTransform = "rotate(" + driveState.wheelAngle.toFixed(2) + ")";
     if (porscheFrontWheelSpin) porscheFrontWheelSpin.setAttribute("transform", wheelTransform);
     if (porscheRearWheelSpin) porscheRearWheelSpin.setAttribute("transform", wheelTransform);
@@ -33632,6 +33652,7 @@ window.__entranceRoomOpen = false;
   function paintPorscheDriveHud() {
     var ignitionVisible = !!(window.__entranceRoomOpen && driveState.hudOpen);
     room.classList.toggle("drive-hud-visible", ignitionVisible);
+    if (porsche) porsche.classList.toggle("facing-reversed", driveState.facing < 0);
     if (porsche) porsche.classList.toggle("reversing", ignitionVisible && driveState.gear < 0);
     if (driveHud) {
       driveHud.classList.toggle("drive-engine-on", porscheState.engineOn);
@@ -34046,6 +34067,34 @@ window.__entranceRoomOpen = false;
       screechFrequency: 2050 + severity * 700
     };
   }
+  function finishPorscheBrakeSpin() {
+    clearTimeout(porscheSpinTimer);
+    porscheSpinTimer = null;
+    driveState.spinning = false;
+    if (porsche) porsche.classList.remove("spinning");
+    paintPorscheDrivePosition();
+    paintPorscheDriveHud();
+  }
+  function spinPorscheOnBrake(speed, steerInput) {
+    if (driveState.brakeSpinChecked || Math.abs(speed) < 185 || !steerInput) return false;
+    driveState.brakeSpinChecked = true;
+    driveState.spinDirection = steerInput;
+    var from = driveState.yaw;
+    var to = from + steerInput * 180;
+    driveState.yaw = to;
+    driveState.facing = Math.abs(to % 360) < .01 ? 1 : -1;
+    driveState.speed *= -1;
+    driveState.spins++;
+    driveState.spinning = true;
+    if (porsche) {
+      porsche.style.setProperty("--porsche-spin-from", from + "deg");
+      porsche.style.setProperty("--porsche-spin-to", to + "deg");
+      porsche.classList.add("spinning");
+    }
+    clearTimeout(porscheSpinTimer);
+    porscheSpinTimer = setTimeout(finishPorscheBrakeSpin, 740);
+    return true;
+  }
   function playPorscheSkidSound(speed) {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
@@ -34209,7 +34258,8 @@ window.__entranceRoomOpen = false;
       paintPorscheDriveHud();
       return false;
     }
-    if ((gear < 0 && driveState.speed > 6) || (gear > 0 && driveState.speed < -6)) {
+    var relativeSpeed = driveState.speed * driveState.facing;
+    if ((gear < 0 && relativeSpeed > 6) || (gear > 0 && relativeSpeed < -6)) {
       stallPorsche();
       return false;
     }
@@ -34228,6 +34278,7 @@ window.__entranceRoomOpen = false;
   function setPorscheDriveHold(name, held) {
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     driveState.holds[name] = !!held;
+    if (name === "brake" && !held) driveState.brakeSpinChecked = false;
     if (name === "brake" && porsche) porsche.classList.toggle("braking", !!held);
     driveControls.forEach(function (control) {
       if (control.getAttribute("data-drive-hold") === name) control.classList.toggle("pressed", !!held);
@@ -34267,7 +34318,7 @@ window.__entranceRoomOpen = false;
       var targetRpm = clutch || !driveState.gear ? freeRpm : Math.min(coupledLimit, coupledRpm);
       driveState.rpm += (targetRpm - driveState.rpm) * Math.min(1, seconds * (clutch || !driveState.gear ? 4.6 : 7.5));
       if (driveState.gear && !clutch) {
-        var direction = driveState.gear < 0 ? -1 : 1;
+        var direction = (driveState.gear < 0 ? -1 : 1) * driveState.facing;
         var gearNumber = Math.max(1, Math.abs(driveState.gear));
         var speedCeiling = Math.max(8, (coupledLimit - 1050) / (ratio * 27));
         var ceilingApproach = Math.max(0, 1 - Math.abs(driveState.speed) / speedCeiling);
@@ -34291,6 +34342,7 @@ window.__entranceRoomOpen = false;
         leavePorscheTireMarks();
         playPorscheSkidSound(before);
       }
+      spinPorscheOnBrake(before, steerInput);
     }
     if (!throttle && !braking) {
       var rollingResistance = 2.8 + Math.abs(driveState.speed) * .026;
@@ -34299,7 +34351,9 @@ window.__entranceRoomOpen = false;
     if (!throttle && !clutch && driveState.gear > 2 && Math.abs(driveState.speed) < 2.2) {
       driveState.gear = 0;
     }
-    driveState.speed = Math.max(-55, Math.min(300, driveState.speed));
+    var relativeVelocity = driveState.speed * driveState.facing;
+    relativeVelocity = Math.max(-55, Math.min(300, relativeVelocity));
+    driveState.speed = relativeVelocity * driveState.facing;
     // The street is a theatrical loop rather than a kilometre-scale map. Keep the
     // speedometer honest, then progressively compress distance so upper gears read
     // as genuinely fast instead of merely crossing the same short facade more often.
@@ -34352,15 +34406,24 @@ window.__entranceRoomOpen = false;
     driveState.wheelAngle = 0;
     driveState.steeringAngle = 0;
     driveState.wraps = 0;
+    driveState.facing = 1;
+    driveState.yaw = 0;
+    driveState.spinDirection = 0;
+    driveState.spins = 0;
+    driveState.spinning = false;
+    driveState.brakeSpinChecked = false;
     driveState.stalled = false;
     driveState.redlineMs = 0;
     driveState.throttleHeldMs = 0;
     driveState.temperature = 0;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
+    clearTimeout(porscheSpinTimer);
+    porscheSpinTimer = null;
     stopPorscheDriveAudio();
     stopPorscheDriveMusic(0);
     if (porsche) porsche.classList.remove("engine-idling");
     if (porsche) porsche.classList.remove("braking");
+    if (porsche) porsche.classList.remove("spinning", "facing-reversed");
     if (tireMarks) while (tireMarks.firstChild) tireMarks.removeChild(tireMarks.firstChild);
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
@@ -35034,6 +35097,11 @@ window.__entranceRoomOpen = false;
         steeringAngle: driveState.steeringAngle,
         wheelAngle: driveState.wheelAngle,
         wraps: driveState.wraps,
+        facing: driveState.facing,
+        yaw: driveState.yaw,
+        spinDirection: driveState.spinDirection,
+        spins: driveState.spins,
+        spinning: driveState.spinning,
         holds: Object.assign({}, driveState.holds),
         audioActive: !!porscheDriveAudioNodes,
         outsideTemperature: typeof window.__outdoorTempC === "function" ? window.__outdoorTempC() : null,
@@ -35078,7 +35146,11 @@ window.__entranceRoomOpen = false;
           laneOffset: driveState.laneOffset,
           steeringAngle: driveState.steeringAngle,
           wheelAngle: driveState.wheelAngle,
-          wraps: driveState.wraps
+          wraps: driveState.wraps,
+          facing: driveState.facing,
+          yaw: driveState.yaw,
+          spinDirection: driveState.spinDirection,
+          spins: driveState.spins
         }
       };
     },
@@ -35106,8 +35178,16 @@ window.__entranceRoomOpen = false;
         driveState.hudOpen = typeof row.drive.hud === "boolean" ? row.drive.hud : !!porscheState.engineOn;
         driveState.gloveboxOpen = row.drive.gloveboxOpen === true;
         driveState.stalled = !!row.drive.stalled;
+        driveState.facing = Number(row.drive.facing) < 0 ? -1 : 1;
+        if (Number.isFinite(Number(row.drive.yaw))) driveState.yaw = Number(row.drive.yaw);
+        else driveState.yaw = driveState.facing < 0 ? 180 : 0;
+        if (Number.isFinite(Number(row.drive.spinDirection))) driveState.spinDirection = Number(row.drive.spinDirection) < 0 ? -1 : Number(row.drive.spinDirection) > 0 ? 1 : 0;
+        if (Number.isFinite(Number(row.drive.spins))) driveState.spins = Math.max(0, Math.floor(Number(row.drive.spins)));
         if (Number.isFinite(Number(row.drive.gear))) driveState.gear = Math.max(-1, Math.min(6, Number(row.drive.gear)));
-        if (Number.isFinite(Number(row.drive.speed))) driveState.speed = Math.max(-55, Math.min(300, Number(row.drive.speed)));
+        if (Number.isFinite(Number(row.drive.speed))) {
+          var restoredRelativeSpeed = Number(row.drive.speed) * driveState.facing;
+          driveState.speed = Math.max(-55, Math.min(300, restoredRelativeSpeed)) * driveState.facing;
+        }
         if (Number.isFinite(Number(row.drive.rpm))) driveState.rpm = Math.max(0, Math.min(8000, Number(row.drive.rpm)));
         if (Number.isFinite(Number(row.drive.temperature))) driveState.temperature = Math.max(0, Math.min(1, Number(row.drive.temperature)));
         if (Number.isFinite(Number(row.drive.laneOffset))) driveState.laneOffset = Math.max(-9, Math.min(9, Number(row.drive.laneOffset)));

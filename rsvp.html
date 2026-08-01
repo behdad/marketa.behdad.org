@@ -726,13 +726,13 @@ footer{margin-top:2.6rem}
 #entrance-porsche.indicator-on .entrance-porsche-indicator-lit{opacity:1}
 #entrance-porsche-vibration{transform-box:view-box;transform-origin:188px 331px}
 #entrance-porsche.engine-idling #entrance-porsche-vibration{
-  animation:entrance-porsche-idle-tremor .16s linear infinite;
+  animation:entrance-porsche-idle-tremor var(--porsche-vibe-period,.16s) linear infinite;
 }
 @keyframes entrance-porsche-idle-tremor{
   0%,100%{transform:translate(0,0)}
-  25%{transform:translate(.1px,-.08px)}
-  50%{transform:translate(-.08px,.05px)}
-  75%{transform:translate(.06px,.08px)}
+  25%{transform:translate(var(--porsche-vibe-x,.1px),calc(var(--porsche-vibe-y,.08px) * -1))}
+  50%{transform:translate(calc(var(--porsche-vibe-x,.1px) * -.8),calc(var(--porsche-vibe-y,.08px) * .625))}
+  75%{transform:translate(calc(var(--porsche-vibe-x,.1px) * .6),var(--porsche-vibe-y,.08px))}
 }
 @media (prefers-reduced-motion:reduce){
   #entrance-porsche.engine-idling #entrance-porsche-vibration{animation:none}
@@ -33540,6 +33540,12 @@ window.__entranceRoomOpen = false;
       driveHud.setAttribute("aria-hidden", ignitionVisible ? "false" : "true");
     }
     var rpm = Math.max(0, Math.min(8000, driveState.rpm));
+    if (porsche) {
+      var revVibration = Math.max(0, Math.min(1, (rpm - 750) / 7250));
+      porsche.style.setProperty("--porsche-vibe-x", (.1 + revVibration * .24).toFixed(3) + "px");
+      porsche.style.setProperty("--porsche-vibe-y", (.08 + revVibration * .19).toFixed(3) + "px");
+      porsche.style.setProperty("--porsche-vibe-period", (.16 - revVibration * .055).toFixed(3) + "s");
+    }
     var speed = Math.abs(driveState.speed);
     if (driveTachNeedle) driveTachNeedle.setAttribute("transform", "rotate(" + (-132 + rpm / 8000 * 264).toFixed(1) + ")");
     if (driveSpeedNeedle) driveSpeedNeedle.setAttribute("transform", "rotate(" + (Math.min(250, speed) / 250 * 242).toFixed(1) + ")");

@@ -676,7 +676,7 @@ tail light, and indicator. They remain outside the Tab order, stop bubbling at t
 own click handlers, and publish pressed state through `__entranceRoomState().car`.
 The engine-on HUD is a clipped, translucent top-half code-native SVG overlay that leaves
 the animated Porsche in the lower street band: pointer holds drive its
-physical pedals and handbrake, shifter hotspots select R/N/1–6, and the Entrance
+physical pedals, shifter hotspots select R/N/1–6, and the Entrance
 capture handler claims only W/S/C/H/N/R/1–6 while leaving Up/Down routing intact.
 `__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
 focused drivetrain test surfaces. Leaving Entrance parks motion and its audio bed

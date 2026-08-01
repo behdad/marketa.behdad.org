@@ -240,9 +240,10 @@ gameplay messages finish before that room caption appears.
   are independent controls; bare Enter starts or stops its engine, and its
   headlight and tail light can be switched at any time.
   With the engine running, a framed tan dashboard fills the upper half while
-  the Porsche remains on the street below. Hold **W**
-  throttle, **S** brake, **C** clutch, or **H** handbrake; choose **N**, **R**,
-  or **1–6** to shift. The pedals, handbrake, and H-pattern shifter also work
+  the Porsche remains on the street below. Hold **Space**
+  throttle with **↑** or **Space**, brake with **↓**, or hold **Shift** for the clutch;
+  choose **N**, **R**, or **1–6** to
+  shift. The pedals and H-pattern shifter also work
   directly. A clutchless shift stalls the engine, while a hard fast stop leaves
   a brief pair of tire marks.
   The facade and sidewalk share the loft's current

@@ -674,14 +674,15 @@ Eight separate `.entrance-car-control` overlays partition the foreground Boxster
 roof, driver door, front and rear compartments, mid-body engine control, headlight,
 tail light, and indicator. They remain outside the Tab order, stop bubbling at their
 own click handlers, and publish pressed state through `__entranceRoomState().car`.
-The engine-on HUD is a clipped, translucent top-half code-native SVG overlay that leaves
+The driving HUD is a clipped top-half code-native SVG overlay that leaves
 the animated Porsche in the lower street band: pointer holds drive its
 physical pedals, shifter hotspots select R/N/1–6, and the Entrance
-capture handler claims only W/S/C/H/N/R/1–6 while leaving Up/Down routing intact.
+capture handler claims the driving keys while it is open, including Up/Space throttle,
+Down brake, Shift clutch, and N/R/1–6.
 `__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
-focused drivetrain test surfaces. Leaving Entrance parks motion and its audio bed
-at the authored position without erasing the parked Porsche's durable panel/light
-configuration; a full transient reset still clears both.
+focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
+state preserves the Porsche's position and durable panel/light configuration; a full
+reset clears both.
 The intercom's attended click plays a short low-passed formant reply and flashes
 localized “Come up!” copy. Its sound path checks the open room, visibility, and
 focus at the gesture and has no autonomous timer.

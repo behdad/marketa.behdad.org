@@ -544,6 +544,9 @@ footer{margin-top:2.6rem}
 }
 .hunt-viewport.cinema-room-open #loft-game-strip{transform:translateX(-40%) !important}
 #cuddly-cinema-ticket{cursor:pointer}
+.lower-room-marker.portal-insisting{transform-box:fill-box;transform-origin:center;animation:lower-portal-insist .55s ease-in-out}
+@keyframes lower-portal-insist{0%,100%{rotate:0deg;translate:0 0}22%{rotate:-4deg;translate:-1px 0}48%{rotate:3deg;translate:1px 0}72%{rotate:-2deg;translate:-.5px 0}}
+@media (prefers-reduced-motion:reduce){.lower-room-marker.portal-insisting{animation:none}}
 #entrance-room[hidden]{display:none}
 #entrance-room{
   position:absolute; inset:0; z-index:12; overflow:hidden; color:#fffdf8;
@@ -714,6 +717,9 @@ footer{margin-top:2.6rem}
 .entrance-porsche-indicator-lit{opacity:0;transition:opacity .035s linear}
 #entrance-porsche.headlight-on :is(.entrance-porsche-headlight-on,.entrance-porsche-headlight-beam),
 #entrance-porsche.taillight-on :is(.entrance-porsche-taillight-on,.entrance-porsche-taillight-glow){opacity:1}
+#entrance-porsche.braking :is(.entrance-porsche-taillight-on,.entrance-porsche-taillight-glow){opacity:1}
+#entrance-porsche.braking .entrance-porsche-taillight-on{fill:url(#entrance-porsche-brake-flare);stroke:#ffd1d3;stroke-width:.7px}
+#entrance-porsche.braking .entrance-porsche-taillight-glow{fill:url(#entrance-porsche-brake-halo);opacity:.96}
 #entrance-room.entrance-day #entrance-porsche.headlight-on .entrance-porsche-headlight-beam{opacity:.46}
 #entrance-porsche.engine-on .entrance-porsche-running-light{opacity:.92}
 #entrance-porsche.reversing .entrance-porsche-reverse-beam{opacity:.34}
@@ -30658,6 +30664,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <radialGradient id="entrance-porsche-tail-glow">
             <stop offset="0" stop-color="#d94d50" stop-opacity=".72"/><stop offset="1" stop-color="#d94d50" stop-opacity="0"/>
           </radialGradient>
+          <radialGradient id="entrance-porsche-brake-flare" cx="38%" cy="34%" r="76%">
+            <stop offset="0" stop-color="#fff1eb"/><stop offset=".2" stop-color="#ff8b80"/>
+            <stop offset=".58" stop-color="#f02a40"/><stop offset="1" stop-color="#971426"/>
+          </radialGradient>
+          <radialGradient id="entrance-porsche-brake-halo">
+            <stop offset="0" stop-color="#ff5865" stop-opacity=".94"/>
+            <stop offset=".42" stop-color="#ef1d38" stop-opacity=".62"/>
+            <stop offset="1" stop-color="#b20f29" stop-opacity="0"/>
+          </radialGradient>
           <filter id="entrance-soft-glow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="5"/>
           </filter>
@@ -33311,6 +33326,7 @@ window.__entranceRoomOpen = false;
   var driveTachReadout = document.getElementById("entrance-drive-tach-readout");
   var driveClockReadout = document.getElementById("entrance-drive-clock-readout");
   var driveSteering = document.getElementById("entrance-drive-steering");
+  var driveShifter = document.getElementById("entrance-drive-shifter");
   var driveShifterLever = document.getElementById("entrance-drive-shifter-lever");
   var porscheFrontWheelSpin = document.getElementById("entrance-porsche-front-wheel-spin");
   var porscheFrontWheelSteer = document.getElementById("entrance-porsche-front-wheel-steer");
@@ -33345,6 +33361,7 @@ window.__entranceRoomOpen = false;
   var entranceNight = null;
   var windowLights = {};
   var entranceLamps = { left: false, right: false };
+  var entranceFreshResetTimer = null;
   var windowPayoffShown = false;
   var indicatorTimers = [];
   var indicatorFlashes = 0;
@@ -33357,6 +33374,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_BASE_X = 328;
   var PORSCHE_BASE_Y = -9;
   var PORSCHE_WRAP_SPAN = 986;
+  var PORSCHE_ROAD_TRAVEL_SCALE = 2.5;
   var driveFrame = null;
   var driveLastTime = 0;
   var lastSkidAt = 0;
@@ -33374,6 +33392,7 @@ window.__entranceRoomOpen = false;
     wraps: 0,
     stalled: false,
     redlineMs: 0,
+    throttleHeldMs: 0,
     temperature: 0,
     holds: { throttle: false, brake: false, clutch: false, steerLeft: false, steerRight: false }
   };
@@ -33420,6 +33439,16 @@ window.__entranceRoomOpen = false;
   function syncEntranceDayNight() {
     var night = balconyStage.classList.contains("dusk");
     if (night !== entranceNight) resetEntranceWindows(night, entranceNight === null);
+  }
+  function resetFreshEntranceLighting() {
+    clearTimeout(entranceFreshResetTimer);
+    resetEntranceWindows(balconyStage.classList.contains("dusk"), true);
+    // resetHunt reapplies its URL/date immediately after checkpoint systems reset.
+    // Let that authoritative day/night class land before choosing fresh-game lights.
+    entranceFreshResetTimer = setTimeout(function () {
+      entranceFreshResetTimer = null;
+      resetEntranceWindows(balconyStage.classList.contains("dusk"), true);
+    }, 0);
   }
   function toggleEntranceWindow(id) {
     if (windowIds.indexOf(id) < 0) return false;
@@ -33760,16 +33789,17 @@ window.__entranceRoomOpen = false;
     driveState.stalled = true;
     driveState.rpm = 0;
     driveState.redlineMs = 0;
+    driveState.throttleHeldMs = 0;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     playPorscheStallSound();
     syncPorscheState();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_drive_stalled");
     return true;
   }
-  function selectPorscheDriveGear(gear) {
+  function selectPorscheDriveGear(gear, clutchBypass) {
     gear = Number(gear);
     if (gear < -1 || gear > 6 || gear !== Math.round(gear)) return false;
-    if (gear !== 0 && porscheState.engineOn && !driveState.holds.clutch) {
+    if (gear !== 0 && porscheState.engineOn && !driveState.holds.clutch && !clutchBypass) {
       driveState.gear = 0;
       previewPorscheShifterAttempt(gear);
       playPorscheGearGrindSound(gear);
@@ -33785,9 +33815,17 @@ window.__entranceRoomOpen = false;
     if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) playDryClickSound("entrance-drive-shifter");
     return true;
   }
+  function stepPorscheDriveGear(direction) {
+    var gears = [-1, 0, 1, 2, 3, 4, 5, 6];
+    var index = gears.indexOf(driveState.gear);
+    var next = Math.max(0, Math.min(gears.length - 1, index + (direction > 0 ? 1 : -1)));
+    if (next === index) return false;
+    return selectPorscheDriveGear(gears[next], true);
+  }
   function setPorscheDriveHold(name, held) {
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     driveState.holds[name] = !!held;
+    if (name === "brake" && porsche) porsche.classList.toggle("braking", !!held);
     driveControls.forEach(function (control) {
       if (control.getAttribute("data-drive-hold") === name) control.classList.toggle("pressed", !!held);
     });
@@ -33807,13 +33845,23 @@ window.__entranceRoomOpen = false;
     var ratio = ratios[String(driveState.gear)] || 0;
     if (porscheState.engineOn) {
       driveState.temperature = Math.min(1, driveState.temperature + seconds / 20);
+      if (throttle && driveState.gear && !clutch) driveState.throttleHeldMs += dt;
+      else driveState.throttleHeldMs = Math.max(0, driveState.throttleHeldMs - dt * 3);
       var freeRpm = 750 + throttle * 7250;
-      var coupledRpm = 750 + Math.abs(driveState.speed) * ratio * 38 + throttle * 480;
-      var targetRpm = clutch || !driveState.gear ? freeRpm : coupledRpm;
+      // A held digital throttle behaves like a human foot, not an instant brick on the
+      // accelerator: ordinary pulls live below ~5.5k, with the remaining rev range only
+      // becoming available after fifteen continuous seconds in gear.
+      var sustained = Math.max(0, Math.min(1, (driveState.throttleHeldMs - 15000) / 10000));
+      var coupledLimit = 5500 + sustained * 2500;
+      var coupledRpm = 750 + Math.abs(driveState.speed) * ratio * 30 + throttle * 300;
+      var targetRpm = clutch || !driveState.gear ? freeRpm : Math.min(coupledLimit, coupledRpm);
       driveState.rpm += (targetRpm - driveState.rpm) * Math.min(1, seconds * (clutch || !driveState.gear ? 4.6 : 7.5));
       if (driveState.gear && !clutch) {
         var direction = driveState.gear < 0 ? -1 : 1;
-        var driveForce = throttle * (30 / (1 + Math.max(0, Math.abs(driveState.gear) - 1) * .48));
+        var gearNumber = Math.max(1, Math.abs(driveState.gear));
+        var speedCeiling = Math.max(8, (coupledLimit - 1050) / (ratio * 30));
+        var ceilingApproach = Math.max(0, 1 - Math.abs(driveState.speed) / speedCeiling);
+        var driveForce = throttle * (35 / (1 + (gearNumber - 1) * .34)) * ceilingApproach;
         driveState.speed += direction * driveForce * seconds;
         if (!throttle) driveState.speed -= Math.sign(driveState.speed || direction) * Math.min(Math.abs(driveState.speed), (2.2 + ratio * .8) * seconds);
       }
@@ -33821,6 +33869,7 @@ window.__entranceRoomOpen = false;
       else driveState.redlineMs = Math.max(0, driveState.redlineMs - dt * 1.6);
       if (driveState.redlineMs > 1500) stallPorsche();
     } else {
+      driveState.throttleHeldMs = 0;
       driveState.rpm += (0 - driveState.rpm) * Math.min(1, seconds * 8);
     }
     var braking = brake * 44;
@@ -33841,7 +33890,11 @@ window.__entranceRoomOpen = false;
       driveState.gear = 0;
     }
     driveState.speed = Math.max(-48, Math.min(235, driveState.speed));
-    var travel = -driveState.speed * seconds * 1.08;
+    // The street is a theatrical loop rather than a kilometre-scale map. Keep the
+    // speedometer honest, then progressively compress distance so upper gears read
+    // as genuinely fast instead of merely crossing the same short facade more often.
+    var roadTravelScale = PORSCHE_ROAD_TRAVEL_SCALE + Math.min(2.5, Math.abs(driveState.speed) / 75);
+    var travel = -driveState.speed * seconds * roadTravelScale;
     driveState.position += travel;
     if (steerInput && Math.abs(driveState.speed) > .5) {
       driveState.laneOffset = Math.max(-9, Math.min(9,
@@ -33890,10 +33943,12 @@ window.__entranceRoomOpen = false;
     driveState.wraps = 0;
     driveState.stalled = false;
     driveState.redlineMs = 0;
+    driveState.throttleHeldMs = 0;
     driveState.temperature = 0;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     stopPorscheDriveAudio();
     if (porsche) porsche.classList.remove("engine-idling");
+    if (porsche) porsche.classList.remove("braking");
     if (tireMarks) while (tireMarks.firstChild) tireMarks.removeChild(tireMarks.firstChild);
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
@@ -34188,7 +34243,9 @@ window.__entranceRoomOpen = false;
         porscheState.taillightOn = false;
         clearPorscheIndicator();
         Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
-        if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
+        if (window.__setLowerRoomCaption) {
+          window.__setLowerRoomCaption(driveState.hudOpen ? "entrance_drive_ignition_hint" : "lower_entrance");
+        }
       }
       playPorscheEngineSound(porscheState.engineOn);
     }
@@ -34378,6 +34435,20 @@ window.__entranceRoomOpen = false;
       if (gear !== null && (porscheState.engineOn || driveState.stalled)) selectPorscheDriveGear(gear);
     });
   });
+  if (driveShifter) {
+    driveShifter.addEventListener("click", function (event) {
+      if (!driveState.hudOpen || (!porscheState.engineOn && !driveState.stalled)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stepPorscheDriveGear(1);
+    }, true);
+    driveShifter.addEventListener("contextmenu", function (event) {
+      if (!driveState.hudOpen || (!porscheState.engineOn && !driveState.stalled)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      stepPorscheDriveGear(-1);
+    }, true);
+  }
   room.addEventListener("click", function (event) {
     if (!room.classList.contains("drive-hud-visible") || !driveHud) return;
     var hudBox = driveHud.getBoundingClientRect();
@@ -34440,6 +34511,9 @@ window.__entranceRoomOpen = false;
     closing = false;
     clearEntranceInteractions();
     syncEntranceDayNight();
+    if (driveState.position < -600) driveState.position = -575;
+    else if (driveState.position > 300) driveState.position = 275;
+    paintPorscheDrivePosition();
     window.__entranceRoomOpen = true;
     paintPorscheDriveHud();
     updatePorscheDriveLifecycle();
@@ -34456,7 +34530,8 @@ window.__entranceRoomOpen = false;
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (window.__setLowerRoomCaption) {
       window.__setLowerRoomCaption(driveState.stalled ? "entrance_drive_stalled" :
-        (porscheState.engineOn ? "entrance_drive_manual" : "lower_entrance"));
+        (porscheState.engineOn ? "entrance_drive_manual" :
+          (driveState.hudOpen ? "entrance_drive_ignition_hint" : "lower_entrance")));
     }
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
     try { viewport.focus({ preventScroll: true }); }
@@ -34596,7 +34671,7 @@ window.__entranceRoomOpen = false;
       if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     },
     reset: function () {
-      resetEntranceWindows(balconyStage.classList.contains("dusk"), true);
+      resetFreshEntranceLighting();
       resetPorscheState();
       resetPorscheDriveRuntime();
       clearEntranceInteractions();
@@ -94305,10 +94380,16 @@ function spawnDustMote(container) {
     var lastTouch = 0;
     var ignoreClicksUntil = 0;
     function showPortalInsistence() {
+      marker.classList.remove("portal-insisting");
+      void marker.getBBox();
+      marker.classList.add("portal-insisting");
       if (window.__flashCaptionKey) {
         window.__flashCaptionKey("lower_portal_insist", 2600, "lower-portal");
       }
     }
+    marker.addEventListener("animationend", function (event) {
+      if (event.animationName === "lower-portal-insist") marker.classList.remove("portal-insisting");
+    });
     function enterLowerRoom(event) {
       if (event) {
         event.preventDefault();

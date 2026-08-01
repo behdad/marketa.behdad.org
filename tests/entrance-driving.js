@@ -13,6 +13,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();await sleep(30);',
   'var room=document.getElementById("entrance-room"),hud=document.getElementById("entrance-drive-hud"),car=document.getElementById("entrance-porsche"),controls=Array.from(hud.querySelectorAll(".entrance-drive-control"));key("keydown","Enter");await sleep(30);key("keydown","Enter");await sleep(460);report.steps.started={state:state(),hidden:hud.getAttribute("aria-hidden"),controls:controls.map(function(el){return [el.getAttribute("data-drive-hold"),el.getAttribute("data-drive-gear"),el.getAttribute("tabindex"),el.getAttribute("aria-label")];}),layout:{room:box(room.getBoundingClientRect()),hud:box(hud.getBoundingClientRect()),car:box(car.getBoundingClientRect()),controlBoxes:controls.map(function(el){return box(el.getBoundingClientRect());})},navClaims:{up:window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowUp"}),true),down:window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowDown"}),true)}};key("keyup","ArrowUp");key("keyup","ArrowDown");Object.defineProperty(document,"hasFocus",{value:function(){return false;},configurable:true});window.dispatchEvent(new Event("blur"));await sleep(40);report.steps.unfocused=state();Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.dispatchEvent(new Event("focus"));await sleep(120);report.steps.refocused=state();',
+  'var glovebox=document.getElementById("entrance-drive-glovebox"),gloveboxDoor=document.getElementById("entrance-drive-glovebox-door"),cavity=document.getElementById("entrance-drive-glovebox-cavity"),contents=document.getElementById("entrance-drive-glovebox-contents"),closedGlovebox=box(glovebox.getBoundingClientRect());glovebox.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(440);var openGlovebox=box(glovebox.getBoundingClientRect()),capturedGlovebox=window.__captureCheckpointSystems().entrance;report.steps.gloveboxOpen={state:state(),expanded:glovebox.getAttribute("aria-expanded"),hudClass:hud.classList.contains("glovebox-open"),doorTransform:getComputedStyle(gloveboxDoor).transform,cavityOpacity:getComputedStyle(cavity).opacity,contentsOpacity:getComputedStyle(contents).opacity,closedBox:closedGlovebox,openBox:openGlovebox,hudBox:box(hud.getBoundingClientRect()),authoredTransform:glovebox.getAttribute("transform"),authoredDoor:gloveboxDoor.querySelector("path").getAttribute("d"),captured:capturedGlovebox.drive};glovebox.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(30);report.steps.gloveboxClosed={state:state(),expanded:glovebox.getAttribute("aria-expanded")};window.__restoreCheckpointSystems({entrance:capturedGlovebox},"afterStage");await sleep(30);report.steps.gloveboxRestored={state:state(),expanded:glovebox.getAttribute("aria-expanded"),hudClass:hud.classList.contains("glovebox-open")};',
   'key("keydown","1");await sleep(20);report.steps.badShift=state();',
   'window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowUp",code:"ArrowUp",shiftKey:true}),true);var comboUp=state();window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowUp",code:"ArrowUp",shiftKey:true,repeat:true}),true);var comboHeld=state();window.__entranceDriveKey(new KeyboardEvent("keyup",{key:"ArrowUp",code:"ArrowUp",shiftKey:true}),false);window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowDown",code:"ArrowDown",shiftKey:true}),true);report.steps.shiftArrows={up:comboUp,held:comboHeld,down:state()};',
   'key("keydown","Shift");key("keydown","1");key("keyup","Shift");key("keydown","ArrowUp");step(12);key("keyup","ArrowUp");var first=state();key("keydown","Shift");key("keydown","2");key("keyup","Shift");key("keydown","ArrowUp");step(15);key("keyup","ArrowUp");var second=state();key("keydown","Shift");key("keydown","3");key("keyup","Shift");key("keydown","ArrowUp");step(20);key("keyup","ArrowUp");report.steps.forward={first:first,second:second,third:state()};',
@@ -58,6 +59,27 @@ check(layout && layout.controlBoxes.every(function (rect) {
 }), "every pointer control remains clipped inside the dashboard frame", layout && layout.controlBoxes);
 check(s.started && s.started.navClaims && s.started.navClaims.up && s.started.navClaims.down,
   "the open dashboard claims Up/Down for throttle and brake", s.started && s.started.navClaims);
+check(s.gloveboxOpen && s.gloveboxOpen.state.open && s.gloveboxOpen.state.drive.hud &&
+  s.gloveboxOpen.state.drive.gloveboxOpen && s.gloveboxOpen.expanded === "true" && s.gloveboxOpen.hudClass &&
+  s.gloveboxOpen.doorTransform !== "none" && Number(s.gloveboxOpen.cavityOpacity) > .99 &&
+  Number(s.gloveboxOpen.contentsOpacity) > .99,
+  "the glovebox opens on click without dismissing the driving HUD", s.gloveboxOpen);
+check(s.gloveboxOpen && s.gloveboxOpen.authoredTransform === "translate(482 0) scale(.75 1) translate(-482 0)" &&
+  s.gloveboxOpen.authoredDoor === "M482 93H607V128Q545 134 482 127Z" &&
+  Math.abs(s.gloveboxOpen.closedBox.left - s.gloveboxOpen.openBox.left) <= 1 &&
+  Math.abs(s.gloveboxOpen.closedBox.right - s.gloveboxOpen.openBox.right) <= 1 &&
+  s.gloveboxOpen.openBox.left >= s.gloveboxOpen.hudBox.left - 2 &&
+  s.gloveboxOpen.openBox.right <= s.gloveboxOpen.hudBox.right + 2 &&
+  s.gloveboxOpen.openBox.top >= s.gloveboxOpen.hudBox.top - 2 &&
+  s.gloveboxOpen.openBox.bottom <= s.gloveboxOpen.hudBox.bottom + 2,
+  "the approved narrow glovebox footprint stays fixed and contained inside the HUD", s.gloveboxOpen);
+check(s.gloveboxClosed && !s.gloveboxClosed.state.drive.gloveboxOpen && s.gloveboxClosed.state.drive.hud &&
+  s.gloveboxClosed.expanded === "false",
+  "a second click closes the glovebox while leaving the HUD active", s.gloveboxClosed);
+check(s.gloveboxOpen && s.gloveboxOpen.captured.gloveboxOpen === true && s.gloveboxRestored &&
+  s.gloveboxRestored.state.drive.gloveboxOpen && s.gloveboxRestored.state.drive.hud &&
+  s.gloveboxRestored.expanded === "true" && s.gloveboxRestored.hudClass,
+  "the entrance checkpoint captures and restores the open glovebox", {captured:s.gloveboxOpen&&s.gloveboxOpen.captured,restored:s.gloveboxRestored});
 check(s.unfocused && !s.unfocused.drive.musicActive && s.refocused && s.refocused.drive.musicActive,
   "the driving score tears down while unfocused and returns with the attended HUD", {unfocused:s.unfocused,refocused:s.refocused});
 check(s.badShift && !s.badShift.drive.stalled && s.badShift.car.engineOn && s.badShift.drive.hud && s.badShift.drive.gear === 0,

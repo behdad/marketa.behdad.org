@@ -31669,17 +31669,17 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             data-drive-action="ignition" data-aria-i="entrance_drive_ignition">
             <circle cx="168.5" cy="113.5" r="7.2" fill="#34383a" stroke="url(#entrance-drive-metal)" stroke-width="2"/>
             <g id="entrance-drive-ignition-fob" transform="translate(10 0)">
-              <path d="M157 112Q151 111 145 115L137 130Q136 135 141 138L153 142Q159 143 162 137L166 121Q167 115 157 112Z"
-                fill="#111416" stroke="#555b5e" stroke-width="1.5"/>
               <g id="entrance-drive-key-face">
                 <g id="entrance-drive-key-face-off">
-                  <path d="M141 117Q151 112 161 117L164 135Q163 143 153 146Q143 144 140 136Z" fill="#171a1c" stroke="#727779" stroke-width=".85"/>
+                  <path d="M139 115Q151 108 163 115L167 136Q165 148 152 151Q138 147 135 136Z" fill="#171a1c" stroke="#727779" stroke-width="1"/>
+                  <path d="M141 117Q151 111 161 116" fill="none" stroke="#8c9698" stroke-width="1.1" opacity=".55"/>
                   <path d="M145 121Q151 118 157 121L158 125Q151 123 144 125Z" fill="#272b2d" stroke="#858b8b" stroke-width=".55"/>
                   <path d="M144 127Q151 124 158 127L159 131Q151 129 143 131Z" fill="#272b2d" stroke="#858b8b" stroke-width=".55"/>
                   <path d="M144 133Q151 131 159 134L158 138Q151 136 145 138Z" fill="#272b2d" stroke="#858b8b" stroke-width=".55"/>
                 </g>
-                <g id="entrance-drive-key-face-on">
-                  <path d="M141 117Q151 112 161 117L164 135Q163 143 153 146Q143 144 140 136Z" fill="#171a1c" stroke="#727779" stroke-width=".85"/>
+                <g id="entrance-drive-key-face-on" transform="rotate(180 151 130)">
+                  <path d="M139 115Q151 108 163 115L167 136Q165 148 152 151Q138 147 135 136Z" fill="#171a1c" stroke="#727779" stroke-width="1"/>
+                  <path d="M141 117Q151 111 161 116" fill="none" stroke="#8c9698" stroke-width="1.1" opacity=".55"/>
                   <path class="entrance-drive-key-shield" d="M151 117Q158 118 160 121V132Q157 141 151 144Q145 141 142 132V121Q145 118 151 117Z"/>
                   <path class="entrance-drive-key-shield-band" d="M144 122Q151 119 158 122V125Q151 123 144 125Z"/>
                   <path class="entrance-drive-key-shield-stripe" d="M146 124V132M149 123V135M152 123V135M155 124V132"/>
@@ -34703,7 +34703,9 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function porscheDriveStep(milliseconds) {
-    var dt = Math.max(0, Math.min(80, Number(milliseconds) || 0));
+    // Background tabs throttle timers heavily. Keep the elapsed time instead of
+    // throwing it away, while limiting one catch-up step to a manageable second.
+    var dt = Math.max(0, Math.min(1000, Number(milliseconds) || 0));
     var seconds = dt / 1000;
     var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
     var clutch = porscheState.engineOn && driveState.holds.clutch;
@@ -35458,7 +35460,13 @@ window.__entranceRoomOpen = false;
       driveFrame = null;
       driveTimer = null;
       driveLastTime = 0;
-    } else if (porscheState.engineOn) ensurePorscheDriveFrame();
+    } else if (porscheState.engineOn) {
+      if (!document.hidden && document.hasFocus() && driveTimer) {
+        clearTimeout(driveTimer);
+        driveTimer = null;
+      }
+      ensurePorscheDriveFrame();
+    }
   }
   document.addEventListener("visibilitychange", updatePorscheDriveLifecycle);
   window.addEventListener("blur", updatePorscheDriveLifecycle);

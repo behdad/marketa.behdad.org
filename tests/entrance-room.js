@@ -24,6 +24,7 @@ var HARNESS = [
   ' var bg=document.getElementById("balcony-background"),bb=bg.getBoundingClientRect(),bare=null;for(var gy=1;gy<10&&!bare;gy++)for(var gx=1;gx<20;gx++){var px=bb.left+bb.width*gx/20,py=bb.top+bb.height*gy/10;if(document.elementFromPoint(px,py)===bg){bare={x:px,y:py};break;}}if(bare)bg.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true,clientX:bare.x,clientY:bare.y}));await sleep(50);report.steps.background=state();key("ArrowDown");await sleep(780);roster.classList.add("show");backdrop.classList.add("show");var rr=room.getBoundingClientRect(),vr=viewport.getBoundingClientRect(),sr=strip.getBoundingClientRect(),smoke=document.querySelector("#entrance-room .entrance-smoke-tint");smoke.style.transition="none";',
   ' var closeStyles=["bathroom-room-close","cinema-room-close","prince-basement-close","entrance-room-close"].map(function(id){var style=getComputedStyle(document.getElementById(id));return [parseFloat(style.width),parseFloat(style.height),parseFloat(style.right),parseFloat(style.top)];});var homeUv=document.getElementById("entrance-home-uv");homeUv.style.transition="none";report.steps.uv={off:parseFloat(getComputedStyle(homeUv).opacity),window:homeUv.parentNode.id};window.__setUvMode(true);report.steps.uv.on=parseFloat(getComputedStyle(homeUv).opacity);window.__setUvMode(false);report.steps.uv.after=parseFloat(getComputedStyle(homeUv).opacity);',
   ' report.steps.open={state:state(),room:window.currentStageName,bare:bare,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),smoke:[room.style.getPropertyValue("--smoke"),parseFloat(getComputedStyle(smoke).opacity)],geometry:{entrance:[rr.left,rr.top,rr.width,rr.height],viewport:[vr.left,vr.top,vr.width,vr.height],strip:[sr.left,sr.top,sr.width,sr.height],transform:getComputedStyle(strip).transform,controls:closeStyles},roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],label:room.getAttribute("aria-label")};',
+  ' var snowFlakes=document.querySelector("#entrance-room .entrance-snow-flakes");snowFlakes.style.transition="none";function seasonArt(){return ["entrance-tree-summer","entrance-tree-autumn","entrance-tree-spring","entrance-tree-winter-snow","entrance-autumn-foreground","entrance-tree-natural-branches","entrance-tree-branches","entrance-snowbank","entrance-architectural-snow"].map(function(id){return getComputedStyle(document.getElementById(id)).display;});}report.steps.seasons={};for(var seasonName of ["summer","autumn","winter","stedry","spring"]){window.__applySeasonSilent(seasonName);await sleep(25);report.steps.seasons[seasonName]={art:seasonArt(),classes:strip.getAttribute("class")||"",room:room.getAttribute("class")||""};}report.steps.cutoff={};window.date("2027-03-31");await sleep(25);report.steps.cutoff.mar31={art:seasonArt(),room:room.getAttribute("class")||""};window.date("2027-04-01");await sleep(25);report.steps.cutoff.apr1={art:seasonArt(),room:room.getAttribute("class")||""};window.__setBalconySnow(true,"ui");await sleep(25);report.steps.cutoff.apr1snow={art:seasonArt(),room:room.getAttribute("class")||"",flakes:parseFloat(getComputedStyle(snowFlakes).opacity)};window.__setBalconySnow(false,"ui");window.__calResetToday();await sleep(25);',
   ' var windowsBefore=state().windows.map(function(row){return row.on;});key("Enter");await sleep(30);var cueDuring=state();await sleep(850);report.steps.enterCue={during:cueDuring,after:state(),before:windowsBefore};',
   ' var props=Array.from(document.querySelectorAll("#entrance-room .entrance-prop")),intercom=document.getElementById("entrance-intercom");click(intercom);await sleep(30);var intercomReply={state:state(),caption:window.__captionKey()};props.filter(function(prop){return prop!==intercom;}).forEach(function(prop,index){if(index===1)elkey(prop,"Enter");else if(index===2)elkey(prop," ");else click(prop);});await sleep(30);report.steps.props={ids:props.map(function(prop){return prop.id;}),state:state(),caption:window.__captionKey(),intercomReply:intercomReply,roles:props.map(function(prop){return [prop.getAttribute("role"),prop.getAttribute("tabindex"),prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
   ' var car=document.getElementById("entrance-porsche"),carControls=Array.from(document.querySelectorAll("#entrance-room .entrance-car-control"));car.querySelectorAll("*").forEach(function(el){el.style.transition="none";});var glint=document.getElementById("entrance-porsche-glint"),running=document.querySelector(".entrance-porsche-running-light"),headOn=document.querySelector(".entrance-porsche-headlight-on"),tailOn=document.querySelector(".entrance-porsche-taillight-on");var carBubbles=0;function carBubble(){carBubbles++;}art.addEventListener("click",carBubble);report.steps.carInitial={state:state().car,glint:parseFloat(getComputedStyle(glint).opacity),roles:carControls.map(function(control){return [control.id,control.getAttribute("role"),control.getAttribute("tabindex"),control.getAttribute("aria-pressed"),control.getAttribute("aria-disabled"),control.getAttribute("aria-label"),control.getAttribute("title")];})};click(document.getElementById("entrance-porsche-headlight"));click(document.getElementById("entrance-porsche-taillight"));report.steps.carDayLamps=state().car;["roof","door","frunk","trunk","engine"].forEach(function(action){click(document.getElementById("entrance-porsche-"+action));});await sleep(30);report.steps.carOpen={state:state().car,classes:car.getAttribute("class")||"",running:parseFloat(getComputedStyle(running).opacity)};click(document.getElementById("entrance-porsche-engine"));await sleep(30);report.steps.carStopped={state:state().car,running:parseFloat(getComputedStyle(running).opacity)};',
@@ -124,6 +125,28 @@ check(s.open && parseFloat(s.open.smoke[0]) === 0.5 && s.open.smoke[1] > 0 &&
   s.night && s.night.smoke === 0,
   "Entrance shares the Balcony wildfire intensity by day and clears the wash at night",
   {day:s.open&&s.open.smoke,night:s.night});
+check(s.seasons &&
+  s.seasons.summer.art.join(",") === "inline,none,none,none,none,none,inline,none,none" &&
+  s.seasons.autumn.art.join(",") === "none,inline,none,none,inline,none,inline,none,none" &&
+  s.seasons.winter.art.join(",") === "none,none,none,inline,none,inline,none,inline,inline" &&
+  s.seasons.stedry.art.join(",") === "none,none,none,inline,none,inline,none,inline,inline" &&
+  s.seasons.spring.art.join(",") === "none,none,inline,none,none,inline,none,none,none" &&
+  /season-autumn/.test(s.seasons.autumn.classes) && /climate-winter/.test(s.seasons.winter.classes) &&
+  /season-holiday/.test(s.seasons.stedry.classes) && /season-spring/.test(s.seasons.spring.classes),
+  "Entrance selects mature summer, fallen-leaf autumn, bare snowy winter, and airy fresh spring art through the live season path",
+  s.seasons);
+check(s.cutoff && /entrance-winter-cover/.test(s.cutoff.mar31.room) &&
+  !/entrance-spring-growth/.test(s.cutoff.mar31.room) &&
+  s.cutoff.mar31.art.join(",") === "none,none,none,inline,none,inline,none,inline,inline" &&
+  /entrance-spring-growth/.test(s.cutoff.apr1.room) &&
+  !/entrance-winter-cover/.test(s.cutoff.apr1.room) &&
+  s.cutoff.apr1.art.join(",") === "none,none,inline,none,none,inline,none,none,none",
+  "Entrance accumulated snow stays through March 31 and clears for April 1 spring growth",
+  s.cutoff);
+check(s.cutoff && /entrance-snowing/.test(s.cutoff.apr1snow.room) && s.cutoff.apr1snow.flakes > .8 &&
+  s.cutoff.apr1snow.art.join(",") === "none,none,inline,none,none,inline,none,none,none",
+  "active April 1 snowfall keeps flakes but cannot restore the winter tree, bank, or architectural caps",
+  s.cutoff && s.cutoff.apr1snow);
 check(s.uv && s.uv.window === "entrance-window-view-mid-left" &&
   s.uv.off === 0 && s.uv.on > 0.7 && s.uv.after === 0,
   "the party UV glow appears only in the loft's second facade window from the left",
@@ -176,8 +199,18 @@ check(s.closed && s.closed.state && !s.closed.state.car.roofOpen && !s.closed.st
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="prince-basement"/) || [""])[0];
 check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
-  /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
-  "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
+  /id="entrance-sidewalk"/.test(entrance) && /id="entrance-tree-branches"/.test(entrance),
+  "the inline scene carries the facade's brick, stone, tree, and sidewalk identity");
+check(["summer", "autumn", "spring", "winter-snow"].every(function (name) {
+  return entrance.indexOf('id="entrance-tree-' + name + '"') !== -1;
+}) && /id="entrance-autumn-foreground"/.test(entrance),
+  "the inline tree keeps four explicit seasonal layers and an autumn foreground scatter");
+var springTree = (entrance.match(/<g id="entrance-tree-spring"[\s\S]*?<g id="entrance-tree-winter-snow"/) || [""])[0];
+check((springTree.match(/<ellipse /g) || []).length >= 30 && /id="entrance-tree-natural-branches"/.test(entrance),
+  "spring grows clustered small leaves around the shared natural branch hierarchy");
+check(entrance.indexOf('id="entrance-snowbank"') < entrance.indexOf('id="entrance-porsche"') &&
+  /id="entrance-snow-cap-name" d="M266 151[^\"]+L417 154H263Z"/.test(entrance),
+  "the low snowbank paints behind the Porsche and the name-stone cap stays anchored at canopy y151–154");
 check((entrance.match(/class="entrance-prop"/g) || []).length === 11 &&
   (entrance.match(/role="button" tabindex="0"/g) || []).length === 0,
   "the complete Entrance interaction inventory stays outside the Tab order");

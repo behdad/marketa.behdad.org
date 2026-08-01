@@ -164,6 +164,7 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 ## Focus/visibility gating (the "crickets/crane rule") — preserved
 
 - **Continuous ambient beds** (fire, aqua hush, totoro rain, bird, kettle, radio, PC fan, projector hum,
+  Porsche idle,
   AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
   **self-teardown on blur/hide** (`updateFocusGatedAudio` re-checks each). When they stop,
   the refcount drops and the manager can suspend.

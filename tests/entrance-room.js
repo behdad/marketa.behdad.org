@@ -13,21 +13,23 @@ var HARNESS = [
   'function dblclick(el){el.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));}',
   'function touchup(el){el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
   'function key(name){document.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
+  'function activeKey(name){(document.activeElement||document).dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'function elkey(el,name){el.dispatchEvent(new KeyboardEvent("keydown",{key:name,bubbles:true,cancelable:true}));}',
   'function surface(cls){var el=document.createElement("div");el.className=cls;el.style.display="block";el.style.opacity="1";document.querySelector(".hunt-viewport").appendChild(el);return el;}',
   'function state(){return window.__entranceRoomState();}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();',
-  ' var room=document.getElementById("entrance-room"),art=document.getElementById("entrance-room-art"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip"),roster=document.querySelector(".roster-panel"),toggle=document.querySelector(".roster-toggle"),backdrop=document.querySelector(".roster-backdrop");room.style.transition="none";strip.style.transition="none";var probeBadge=surface("msg-badge show entrance-probe"),probeCoach=surface("msg-badge-coach show entrance-probe"),probeThumb=surface("msg-thumb show entrance-probe"),probeCall=surface("call-ring show entrance-probe");',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__markLowerRoomDiscovered();',
+  ' var room=document.getElementById("entrance-room"),art=document.getElementById("entrance-room-art"),viewport=document.querySelector(".hunt-viewport"),strip=document.getElementById("loft-game-strip"),roster=document.querySelector(".roster-panel"),toggle=document.querySelector(".roster-toggle"),backdrop=document.querySelector(".roster-backdrop");room.style.transition="none";viewport.style.transition="none";strip.style.transition="none";var probeBadge=surface("msg-badge show entrance-probe"),probeCoach=surface("msg-badge-coach show entrance-probe"),probeThumb=surface("msg-thumb show entrance-probe"),probeCall=surface("call-ring show entrance-probe");',
   ' if(window.__setDayNight)window.__setDayNight(false);if(window.__setWildfireSmoke)window.__setWildfireSmoke(1);window.goToStage("balcony");await sleep(40);',
   ' dblclick(document.getElementById("balcony-wall"));await sleep(30);report.steps.interactive=state();dblclick(document.getElementById("stage-balcony"));await sleep(50);report.steps.stageBackground=state();',
-  ' var bg=document.getElementById("balcony-background"),bb=bg.getBoundingClientRect(),bare=null;for(var gy=1;gy<10&&!bare;gy++)for(var gx=1;gx<20;gx++){var px=bb.left+bb.width*gx/20,py=bb.top+bb.height*gy/10;if(document.elementFromPoint(px,py)===bg){bare={x:px,y:py};break;}}if(bare)bg.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true,clientX:bare.x,clientY:bare.y}));await sleep(50);report.steps.background=state();key("ArrowDown");await sleep(780);roster.classList.add("show");backdrop.classList.add("show");var rr=room.getBoundingClientRect(),vr=viewport.getBoundingClientRect(),sr=strip.getBoundingClientRect(),smoke=document.querySelector("#entrance-room .entrance-smoke-tint");smoke.style.transition="none";',
+  ' var bg=document.getElementById("balcony-background"),bb=bg.getBoundingClientRect(),bare=null;for(var gy=1;gy<10&&!bare;gy++)for(var gx=1;gx<20;gx++){var px=bb.left+bb.width*gx/20,py=bb.top+bb.height*gy/10;if(document.elementFromPoint(px,py)===bg){bare={x:px,y:py};break;}}if(bare)bg.dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true,clientX:bare.x,clientY:bare.y}));await sleep(50);report.steps.background=state();key("ArrowDown");await sleep(920);viewport.scrollIntoView({block:"center"});await sleep(30);roster.classList.add("show");backdrop.classList.add("show");var rr=room.getBoundingClientRect(),vr=viewport.getBoundingClientRect(),sr=strip.getBoundingClientRect(),smoke=document.querySelector("#entrance-room .entrance-smoke-tint");smoke.style.transition="none";',
   ' var closeStyles=["bathroom-room-close","cinema-room-close","prince-basement-close","entrance-room-close"].map(function(id){var style=getComputedStyle(document.getElementById(id));return [parseFloat(style.width),parseFloat(style.height),parseFloat(style.right),parseFloat(style.top)];});var homeUv=document.getElementById("entrance-home-uv");homeUv.style.transition="none";report.steps.uv={off:parseFloat(getComputedStyle(homeUv).opacity),window:homeUv.parentNode.id};window.__setUvMode(true);report.steps.uv.on=parseFloat(getComputedStyle(homeUv).opacity);window.__setUvMode(false);report.steps.uv.after=parseFloat(getComputedStyle(homeUv).opacity);',
   ' report.steps.open={state:state(),room:window.currentStageName,bare:bare,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),smoke:[room.style.getPropertyValue("--smoke"),parseFloat(getComputedStyle(smoke).opacity)],geometry:{entrance:[rr.left,rr.top,rr.width,rr.height],viewport:[vr.left,vr.top,vr.width,vr.height],strip:[sr.left,sr.top,sr.width,sr.height],transform:getComputedStyle(strip).transform,controls:closeStyles},roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],label:room.getAttribute("aria-label")};',
   ' var snowFlakes=document.querySelector("#entrance-room .entrance-snow-flakes");snowFlakes.style.transition="none";function seasonArt(){return ["entrance-tree-summer","entrance-tree-autumn","entrance-tree-spring","entrance-tree-winter-snow","entrance-autumn-foreground","entrance-tree-natural-branches","entrance-tree-branches","entrance-snowbank","entrance-architectural-snow"].map(function(id){return getComputedStyle(document.getElementById(id)).display;});}report.steps.seasons={};for(var seasonName of ["summer","autumn","winter","stedry","spring"]){window.__applySeasonSilent(seasonName);await sleep(25);report.steps.seasons[seasonName]={art:seasonArt(),classes:strip.getAttribute("class")||"",room:room.getAttribute("class")||""};}report.steps.cutoff={};window.date("2027-03-31");await sleep(25);report.steps.cutoff.mar31={art:seasonArt(),room:room.getAttribute("class")||""};window.date("2027-04-01");await sleep(25);report.steps.cutoff.apr1={art:seasonArt(),room:room.getAttribute("class")||""};window.__setBalconySnow(true,"ui");await sleep(25);report.steps.cutoff.apr1snow={art:seasonArt(),room:room.getAttribute("class")||"",flakes:parseFloat(getComputedStyle(snowFlakes).opacity)};window.__setBalconySnow(false,"ui");window.__calResetToday();await sleep(25);',
-  ' var windowsBefore=state().windows.map(function(row){return row.on;});key("Enter");await sleep(30);var cueDuring=state();await sleep(850);report.steps.enterCue={during:cueDuring,after:state(),before:windowsBefore};',
-  ' var props=Array.from(document.querySelectorAll("#entrance-room .entrance-prop")),intercom=document.getElementById("entrance-intercom");click(intercom);await sleep(30);var intercomReply={state:state(),caption:window.__captionKey()};props.filter(function(prop){return prop!==intercom;}).forEach(function(prop,index){if(index===1)elkey(prop,"Enter");else if(index===2)elkey(prop," ");else click(prop);});await sleep(30);report.steps.props={ids:props.map(function(prop){return prop.id;}),state:state(),caption:window.__captionKey(),intercomReply:intercomReply,roles:props.map(function(prop){return [prop.getAttribute("role"),prop.getAttribute("tabindex"),prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
-  ' var car=document.getElementById("entrance-porsche"),carControls=Array.from(document.querySelectorAll("#entrance-room .entrance-car-control"));car.querySelectorAll("*").forEach(function(el){el.style.transition="none";});var glint=document.getElementById("entrance-porsche-glint"),running=document.querySelector(".entrance-porsche-running-light"),headOn=document.querySelector(".entrance-porsche-headlight-on"),tailOn=document.querySelector(".entrance-porsche-taillight-on"),frunkHit=document.querySelector("#entrance-porsche-frunk .entrance-car-hit"),trunkHit=document.querySelector("#entrance-porsche-trunk .entrance-car-hit");var carBubbles=0;function carBubble(){carBubbles++;}art.addEventListener("click",carBubble);report.steps.carInitial={state:state().car,glint:parseFloat(getComputedStyle(glint).opacity),roles:carControls.map(function(control){return [control.id,control.getAttribute("role"),control.getAttribute("tabindex"),control.getAttribute("aria-pressed"),control.getAttribute("aria-disabled"),control.getAttribute("aria-label"),control.getAttribute("title")];})};click(document.getElementById("entrance-porsche-headlight"));click(document.getElementById("entrance-porsche-taillight"));await sleep(30);report.steps.carDayLamps={state:state().car,lamps:[parseFloat(getComputedStyle(headOn).opacity),parseFloat(getComputedStyle(tailOn).opacity)]};click(document.getElementById("entrance-porsche-headlight"));click(document.getElementById("entrance-porsche-taillight"));await sleep(30);report.steps.carDayLampsOff={state:state().car,lamps:[parseFloat(getComputedStyle(headOn).opacity),parseFloat(getComputedStyle(tailOn).opacity)]};["roof","door","frunk","trunk","engine"].forEach(function(action){click(document.getElementById("entrance-porsche-"+action));});await sleep(30);report.steps.carOpen={state:state().car,classes:car.getAttribute("class")||"",running:parseFloat(getComputedStyle(running).opacity),lidHits:[getComputedStyle(frunkHit).transform,getComputedStyle(trunkHit).transform]};click(document.getElementById("entrance-porsche-engine"));await sleep(30);report.steps.carStopped={state:state().car,running:parseFloat(getComputedStyle(running).opacity)};',
+  ' var windowsBefore=state().windows.map(function(row){return row.on;});key("Enter");await sleep(30);var enterOn=state();key("Enter");await sleep(30);report.steps.enterEngine={on:enterOn,off:state(),before:windowsBefore};',
+  ' var props=Array.from(document.querySelectorAll("#entrance-room .entrance-prop")),intercom=document.getElementById("entrance-intercom"),lampLeft=document.getElementById("entrance-entry-lamp-left"),lampRight=document.getElementById("entrance-entry-lamp-right");click(intercom);await sleep(30);var intercomReply={state:state(),caption:window.__captionKey()};click(lampLeft);var lampLeftOnly={state:state(),pressed:[lampLeft.getAttribute("aria-pressed"),lampRight.getAttribute("aria-pressed")]};click(lampRight);var lampBoth={state:state(),pressed:[lampLeft.getAttribute("aria-pressed"),lampRight.getAttribute("aria-pressed")]};props.filter(function(prop){return prop!==intercom&&prop!==lampLeft&&prop!==lampRight;}).forEach(function(prop,index){if(index===1)elkey(prop,"Enter");else if(index===2)elkey(prop," ");else click(prop);});await sleep(30);report.steps.props={ids:props.map(function(prop){return prop.id;}),state:state(),caption:window.__captionKey(),intercomReply:intercomReply,lamps:{leftOnly:lampLeftOnly,both:lampBoth},roles:props.map(function(prop){return [prop.getAttribute("role"),prop.getAttribute("tabindex"),prop.getAttribute("aria-label"),prop.getAttribute("title")];})};',
+  ' var car=document.getElementById("entrance-porsche"),carControls=Array.from(document.querySelectorAll("#entrance-room .entrance-car-control"));car.querySelectorAll("*").forEach(function(el){el.style.transition="none";});carControls.forEach(function(control){control.querySelectorAll("*").forEach(function(el){el.style.transition="none";});});var glint=document.getElementById("entrance-porsche-glint"),running=document.querySelector(".entrance-porsche-running-light"),headOn=document.querySelector(".entrance-porsche-headlight-on"),tailOn=document.querySelector(".entrance-porsche-taillight-on"),indicatorLit=document.querySelector(".entrance-porsche-indicator-lit"),frunkHit=document.querySelector("#entrance-porsche-frunk .entrance-car-hit"),trunkHit=document.querySelector("#entrance-porsche-trunk .entrance-car-hit"),engineHit=document.querySelector("#entrance-porsche-engine .entrance-car-hit");function hitPoint(hit){var r=hit.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height*.56,rect:[r.left,r.top,r.width,r.height]};}function hitTarget(hit){var p=hitPoint(hit);return document.elementFromPoint(p.x,p.y);}function hitOwner(hit){var el=hitTarget(hit);return el&&el.closest&&el.closest(".entrance-car-control")&&el.closest(".entrance-car-control").id;}var carBubbles=0;function carBubble(){carBubbles++;}art.addEventListener("click",carBubble);report.steps.carInitial={state:state().car,glint:parseFloat(getComputedStyle(glint).opacity),roles:carControls.map(function(control){return [control.id,control.getAttribute("role"),control.getAttribute("tabindex"),control.getAttribute("aria-pressed"),control.getAttribute("aria-disabled"),control.getAttribute("aria-label"),control.getAttribute("title")];})};var enginePoint=hitPoint(engineHit),engineTarget=hitTarget(engineHit);report.steps.carEngineProbe={point:enginePoint,viewport:[innerWidth,innerHeight],stack:document.elementsFromPoint(enginePoint.x,enginePoint.y).slice(0,8).map(function(el){return el.id||el.className&&el.className.baseVal||el.className||el.tagName;})};if(engineTarget)click(engineTarget);await sleep(30);report.steps.carEngineCoordinateOn={owner:engineTarget&&engineTarget.closest(".entrance-car-control")&&engineTarget.closest(".entrance-car-control").id,state:state().car,running:parseFloat(getComputedStyle(running).opacity)};engineTarget=hitTarget(engineHit);if(engineTarget)click(engineTarget);await sleep(30);report.steps.carEngineCoordinateOff={state:state().car,running:parseFloat(getComputedStyle(running).opacity)};click(document.getElementById("entrance-porsche-headlight"));click(document.getElementById("entrance-porsche-taillight"));await sleep(30);report.steps.carDayLamps={state:state().car,lamps:[parseFloat(getComputedStyle(headOn).opacity),parseFloat(getComputedStyle(tailOn).opacity)]};click(document.getElementById("entrance-porsche-headlight"));click(document.getElementById("entrance-porsche-taillight"));await sleep(30);report.steps.carDayLampsOff={state:state().car,lamps:[parseFloat(getComputedStyle(headOn).opacity),parseFloat(getComputedStyle(tailOn).opacity)]};click(document.getElementById("entrance-porsche-indicator"));await sleep(20);var indicatorFirst=parseFloat(getComputedStyle(indicatorLit).opacity);await sleep(600);report.steps.carIndicator={first:indicatorFirst,after:parseFloat(getComputedStyle(indicatorLit).opacity),classOn:car.classList.contains("indicator-on"),state:state().car};["roof","door","frunk","trunk","engine"].forEach(function(action){click(document.getElementById("entrance-porsche-"+action));});await sleep(30);report.steps.carOpen={state:state().car,classes:car.getAttribute("class")||"",running:parseFloat(getComputedStyle(running).opacity),lidHits:[getComputedStyle(frunkHit).transform,getComputedStyle(trunkHit).transform],lidOwners:[hitOwner(frunkHit),hitOwner(trunkHit)]};click(document.getElementById("entrance-porsche-engine"));await sleep(30);report.steps.carStopped={state:state().car,running:parseFloat(getComputedStyle(running).opacity)};',
+  ' var runningLights=Array.from(document.querySelectorAll(".entrance-porsche-running-light")),doorGlass=document.getElementById("entrance-porsche-door-glass"),engineBody=document.querySelector(".entrance-car-engine-body"),engineRocker=document.querySelector(".entrance-car-engine-rocker");report.steps.roofDownDoorGlass={visibility:getComputedStyle(doorGlass).visibility,opacity:parseFloat(getComputedStyle(doorGlass).opacity)};function pointClick(point){var target=document.elementFromPoint(point.x,point.y);if(!target)return null;target.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerType:"mouse",clientX:point.x,clientY:point.y}));target.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,cancelable:true,clientX:point.x,clientY:point.y}));target.dispatchEvent(new MouseEvent("mouseup",{bubbles:true,cancelable:true,clientX:point.x,clientY:point.y}));target.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,clientX:point.x,clientY:point.y}));return target;}function findEngineBodyPoint(){var r=engineBody.getBoundingClientRect(),rock=engineRocker.getBoundingClientRect();for(var gy=1;gy<8;gy++)for(var gx=1;gx<18;gx++){var point={x:r.left+r.width*gx/18,y:r.top+r.height*gy/8};if(point.y>=rock.top-1)continue;var target=document.elementFromPoint(point.x,point.y),owner=target&&target.closest&&target.closest(".entrance-car-control");if(owner&&owner.id==="entrance-porsche-engine")return point;}return null;}var bodyPoint=findEngineBodyPoint(),bodyBefore=state().car.activations.engine||0,bodyTarget=bodyPoint&&pointClick(bodyPoint);await sleep(30);var bodyOn=state().car;var bodyLightsOn=runningLights.map(function(light){return parseFloat(getComputedStyle(light).opacity);});if(bodyPoint)pointClick(bodyPoint);await sleep(30);report.steps.carBodyToggle={point:bodyPoint,owner:bodyTarget&&bodyTarget.closest(".entrance-car-control").id,before:bodyBefore,on:bodyOn,lightsOn:bodyLightsOn,off:state().car};var indicatorControl=document.getElementById("entrance-porsche-indicator"),indicatorPoint=hitPoint(indicatorControl.querySelector(".entrance-car-hit"));document.getElementById("entrance-room-close").focus();pointClick(indicatorPoint);await sleep(610);var indicatorAfterClick=state().car.activations.indicator,activeAfterClick=document.activeElement&&document.activeElement.id;activeKey("Enter");await sleep(30);var focusEngineOn=state().car;activeKey("Enter");await sleep(30);report.steps.carFocusEnter={active:activeAfterClick,indicatorAfterClick:indicatorAfterClick,on:focusEngineOn,off:state().car};function closeDoorFrame(){click(document.getElementById("entrance-porsche-door"));return {closing:car.classList.contains("door-closing"),openVisibility:getComputedStyle(document.getElementById("entrance-porsche-door-open")).visibility,openOpacity:parseFloat(getComputedStyle(document.getElementById("entrance-porsche-door-open")).opacity),closedOpacity:parseFloat(getComputedStyle(document.getElementById("entrance-porsche-door-closed")).opacity),wellOpacity:parseFloat(getComputedStyle(document.getElementById("entrance-porsche-door-well")).opacity)};}var closeRoofDown=closeDoorFrame();click(document.getElementById("entrance-porsche-door"));click(document.getElementById("entrance-porsche-roof"));var roofUpGlass={visibility:getComputedStyle(doorGlass).visibility,opacity:parseFloat(getComputedStyle(doorGlass).opacity)};var closeRoofUp=closeDoorFrame();click(document.getElementById("entrance-porsche-door"));click(document.getElementById("entrance-porsche-roof"));report.steps.carDoorHandoff={roofDown:closeRoofDown,roofUp:closeRoofUp,roofUpGlass:roofUpGlass,state:state().car};',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return false;},configurable:true});var repliesBefore=state().intercomResponses;click(intercom);await sleep(30);report.steps.intercomGate={before:repliesBefore,after:state().intercomResponses};Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});',
   ' document.getElementById("stage-balcony").classList.add("dusk");await sleep(20);var nightBefore=state();click(document.getElementById("entrance-porsche-headlight"));click(document.getElementById("entrance-porsche-taillight"));await sleep(30);report.steps.night={state:state(),before:nightBefore,smoke:parseFloat(getComputedStyle(smoke).opacity),lamps:[parseFloat(getComputedStyle(headOn).opacity),parseFloat(getComputedStyle(tailOn).opacity)]};["roof","door","frunk","trunk"].forEach(function(action){click(document.getElementById("entrance-porsche-"+action));});art.removeEventListener("click",carBubble);report.steps.carClosed={state:state().car,bubbles:carBubbles};document.getElementById("stage-balcony").classList.remove("dusk");await sleep(20);',
   ' setLang("cs");report.steps.cs={label:room.getAttribute("aria-label"),close:document.getElementById("entrance-room-close").getAttribute("aria-label"),props:props.map(function(prop){return [prop.getAttribute("aria-label"),prop.getAttribute("title")];}),car:carControls.map(function(control){return [control.getAttribute("aria-label"),control.getAttribute("title")];})};setLang("en");',
@@ -53,7 +55,10 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html Entrance lower room:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true });
+var result = lib.runPageSync("rsvp.html", HARNESS, 9000, {
+  patchRaf: true,
+  chromeFlags: "--window-size=1100,1100"
+});
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
@@ -81,7 +86,7 @@ check(s.open && s.open.geometry && s.open.geometry.controls &&
 check(s.open && s.open.label === "The Lofts entrance" &&
   s.cs && s.cs.label === "Vstup do The Lofts" && s.cs.close === "Zpět na balkon",
   "dialog and return labels switch between English and Czech", {en:s.open&&s.open.label,cs:s.cs});
-check(s.props && s.props.ids.length === 9 &&
+check(s.props && s.props.ids.length === 10 &&
   s.props.ids.every(function(id){return s.props.state.reactions[id] === 1;}) &&
   s.props.roles.every(function(row){return row[0] === "button" && row[1] === null && row[2] && row[3];}),
   "every distinct facade prop reacts with accessible copy while staying outside the Tab order",
@@ -89,11 +94,19 @@ check(s.props && s.props.ids.length === 9 &&
 check(s.carInitial && !s.carInitial.state.roofOpen && !s.carInitial.state.doorOpen &&
   !s.carInitial.state.frunkOpen && !s.carInitial.state.trunkOpen && !s.carInitial.state.engineOn &&
   !s.carInitial.state.headlightOn && !s.carInitial.state.taillightOn && s.carInitial.glint > .5 &&
-  s.carInitial.roles.length === 7 && s.carInitial.roles.every(function(row){
-    return row[1] === "button" && row[2] === "-1" && row[3] === "false" && row[4] === null && row[5] && row[6];
+  s.carInitial.roles.length === 8 && s.carInitial.roles.every(function(row){
+    return row[1] === "button" && row[2] === null &&
+      (row[0] === "entrance-porsche-indicator" ? row[3] === null : row[3] === "false") &&
+      row[4] === null && row[5] && row[6];
   }),
-  "the daytime Boxster starts roof-up, closed and off with a restrained glint and seven untabbable buttons",
+  "the daytime Boxster starts roof-up, closed and off with a restrained glint and eight pointer-only controls",
   s.carInitial);
+check(s.carEngineCoordinateOn && s.carEngineCoordinateOn.owner === "entrance-porsche-engine" &&
+  s.carEngineCoordinateOn.state.engineOn && s.carEngineCoordinateOn.running > .9 &&
+  s.carEngineCoordinateOff && !s.carEngineCoordinateOff.state.engineOn &&
+  s.carEngineCoordinateOff.running === 0 && s.carEngineCoordinateOff.state.activations.engine === 4,
+  "a rendered mid-rocker coordinate starts and stops the engine with its running lights",
+  {probe:s.carEngineProbe,on:s.carEngineCoordinateOn,off:s.carEngineCoordinateOff});
 check(s.carDayLamps && s.carDayLamps.state.headlightOn && s.carDayLamps.state.taillightOn &&
   s.carDayLamps.state.activations.headlight === 1 && s.carDayLamps.state.activations.taillight === 1 &&
   s.carDayLamps.lamps.every(function(value){return value === 1;}) &&
@@ -102,31 +115,65 @@ check(s.carDayLamps && s.carDayLamps.state.headlightOn && s.carDayLamps.state.ta
   s.carDayLampsOff.lamps.every(function(value){return value === 0;}),
   "daytime head and tail lamps independently toggle visibly on and off",
   {on:s.carDayLamps,off:s.carDayLampsOff});
+check(s.carIndicator && s.carIndicator.first === 1 && s.carIndicator.after === 0 &&
+  !s.carIndicator.classOn && s.carIndicator.state.indicatorFlashes === 3 &&
+  s.carIndicator.state.activations.indicator === 1,
+  "the momentary front indicator runs exactly three amber flashes and returns idle",
+  s.carIndicator);
 check(s.carOpen && s.carOpen.state.roofOpen && s.carOpen.state.doorOpen &&
   s.carOpen.state.frunkOpen && s.carOpen.state.trunkOpen && s.carOpen.state.engineOn &&
   /roof-open/.test(s.carOpen.classes) && /door-open/.test(s.carOpen.classes) &&
   /frunk-open/.test(s.carOpen.classes) && /trunk-open/.test(s.carOpen.classes) &&
   /engine-on/.test(s.carOpen.classes) && s.carOpen.running > .9 &&
-  s.carOpen.lidHits.every(function(value){return value && value !== "none";}),
+  s.carOpen.lidHits.every(function(value){return value && value !== "none";}) &&
+  s.carOpen.lidOwners[0] === "entrance-porsche-frunk" && s.carOpen.lidOwners[1] === "entrance-porsche-trunk",
   "roof, driver door, frunk, trunk, and engine toggle independently while raised lids keep aligned hit regions",
   s.carOpen);
 check(s.carStopped && !s.carStopped.state.engineOn && s.carStopped.running === 0 &&
-  s.carStopped.state.activations.engine === 2 && s.carStopped.state.roofOpen &&
+  s.carStopped.state.activations.engine === 6 && s.carStopped.state.roofOpen &&
   s.carStopped.state.doorOpen && s.carStopped.state.frunkOpen && s.carStopped.state.trunkOpen,
   "stopping the engine clears only its persistent state and running lights", s.carStopped);
+check(s.roofDownDoorGlass && s.roofDownDoorGlass.visibility === "hidden" && s.roofDownDoorGlass.opacity === 0,
+  "roof-down door-open keeps its side window fully lowered", s.roofDownDoorGlass);
+check(s.carBodyToggle && s.carBodyToggle.point && s.carBodyToggle.owner === "entrance-porsche-engine" &&
+  s.carBodyToggle.on.engineOn && s.carBodyToggle.on.idleActive && s.carBodyToggle.on.vibrating &&
+  s.carBodyToggle.lightsOn.length === 2 && s.carBodyToggle.lightsOn.every(function(value){return value > .9;}) &&
+  !s.carBodyToggle.off.engineOn && !s.carBodyToggle.off.idleActive && !s.carBodyToggle.off.vibrating &&
+  s.carBodyToggle.off.activations.engine === s.carBodyToggle.before + 2,
+  "a real coordinate on otherwise-unused body metal toggles engine, both running lamps, idle, and tremor",
+  s.carBodyToggle);
+check(s.carFocusEnter && !/^entrance-porsche-/.test(s.carFocusEnter.active || "") &&
+  s.carFocusEnter.on.engineOn && !s.carFocusEnter.off.engineOn &&
+  s.carFocusEnter.off.activations.indicator === s.carFocusEnter.indicatorAfterClick,
+  "a pointer-used Porsche control releases focus so bare Enter reaches the room engine action",
+  s.carFocusEnter);
+check(s.carDoorHandoff && [s.carDoorHandoff.roofDown,s.carDoorHandoff.roofUp].every(function(frame){
+    return frame.closing && frame.openVisibility === "hidden" && frame.openOpacity === 0 &&
+      frame.closedOpacity === 1 && frame.wellOpacity === 0;
+  }) && s.carDoorHandoff.roofUpGlass.visibility === "visible" && s.carDoorHandoff.roofUpGlass.opacity > .7 &&
+  s.carDoorHandoff.state.roofOpen && s.carDoorHandoff.state.doorOpen,
+  "door-close swaps open and closed layers atomically in both roof states while roof-up glass follows the door",
+  s.carDoorHandoff);
 check(s.props && s.props.intercomReply && s.props.intercomReply.state.intercomResponses === 1 &&
   s.props.intercomReply.caption === "entrance_intercom_reply" &&
   s.intercomGate && s.intercomGate.before === 1 && s.intercomGate.after === 1,
   "the intercom answers an attended buzz but stays silent after focus leaves the room",
   {reply:s.props&&s.props.intercomReply,gate:s.intercomGate});
+check(s.props && s.props.lamps && s.props.lamps.leftOnly.state.lamps.left &&
+  !s.props.lamps.leftOnly.state.lamps.right && s.props.lamps.leftOnly.pressed.join(",") === "true,false" &&
+  s.props.lamps.both.state.lamps.left && s.props.lamps.both.state.lamps.right &&
+  s.props.lamps.both.pressed.join(",") === "true,true",
+  "the two physical entrance lamps toggle independently with truthful pressed state",
+  s.props&&s.props.lamps);
 check(s.open && !s.open.state.night && s.open.state.windows.every(function(row){return !row.on;}) &&
   s.props && s.props.state.windows.every(function(row){return row.on;}) &&
   s.props.state.windowsFlipped && s.props.caption === "entrance_windows_all_on",
   "day starts with every window dark and rewards independently switching all five on",
   {open:s.open&&s.open.state,props:s.props});
-check(s.enterCue && s.enterCue.during.windowCue && !s.enterCue.after.windowCue &&
-  s.enterCue.before.every(function(on,index){return on===s.enterCue.after.windows[index].on;}),
-  "bare Enter flickers every facade window without changing the light puzzle", s.enterCue);
+check(s.enterEngine && s.enterEngine.on.car.engineOn && !s.enterEngine.off.car.engineOn &&
+  s.enterEngine.off.car.activations.engine === 2 &&
+  s.enterEngine.before.every(function(on,index){return on===s.enterEngine.off.windows[index].on;}),
+  "bare Enter starts and stops the Porsche without changing the window puzzle", s.enterEngine);
 check(s.open && parseFloat(s.open.smoke[0]) === 0.5 && s.open.smoke[1] > 0 &&
   s.night && s.night.smoke === 0,
   "Entrance shares the Balcony wildfire intensity by day and clears the wash at night",
@@ -167,9 +214,9 @@ check(s.carClosed && !s.carClosed.state.roofOpen && !s.carClosed.state.doorOpen 
   s.carClosed.state.headlightOn && s.carClosed.state.taillightOn && s.carClosed.bubbles === 0,
   "each car control stops propagation and closing panels leaves the independently toggled night lamps alone",
   s.carClosed);
-check(s.cs && s.cs.props && s.cs.props.length === 9 &&
+check(s.cs && s.cs.props && s.cs.props.length === 10 &&
   s.cs.props.every(function(row){return row[0] && row[1] && row[0] === row[1];}) &&
-  s.cs.car && s.cs.car.length === 7 &&
+  s.cs.car && s.cs.car.length === 8 &&
   s.cs.car.every(function(row){return row[0] && row[1] && row[0] === row[1];}),
   "all Entrance facade and car labels and tooltips switch to Czech", s.cs);
 check(s.up && !s.up.open && s.escape && !s.escape.open && s.backspace && !s.backspace.open,
@@ -205,25 +252,44 @@ check(s.closed && s.closed.state && !s.closed.state.car.roofOpen && !s.closed.st
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="prince-basement"/) || [""])[0];
 check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
-  /id="entrance-sidewalk"/.test(entrance) && /A dark tree canopy/.test(entrance),
+  /id="entrance-sidewalk"/.test(entrance) && /id="entrance-tree-summer"/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
-check((entrance.match(/class="entrance-prop"/g) || []).length === 9 &&
+check((entrance.match(/class="entrance-prop"/g) || []).length === 10 &&
   (entrance.match(/role="button" tabindex="0"/g) || []).length === 0,
   "the complete Entrance interaction inventory stays outside the Tab order");
-check((entrance.match(/class="entrance-car-control" role="button" tabindex="-1"/g) || []).length === 7 &&
+check((entrance.match(/class="entrance-car-control" role="button"/g) || []).length === 8 &&
+  !/class="entrance-car-control"[^>]*tabindex=/.test(entrance) &&
   /id="entrance-porsche"/.test(entrance) && /id="entrance-porsche-roof-closed"/.test(entrance) &&
   /id="entrance-porsche-door-panel"/.test(entrance) && /id="entrance-porsche-frunk-panel"/.test(entrance) &&
   /id="entrance-porsche-trunk-panel"/.test(entrance) && /id="entrance-porsche-mirror"/.test(entrance),
-  "the inline Boxster keeps seven partitioned controls and separate roof, door, and compartment art");
+  "the inline Boxster keeps eight partitioned controls and separate roof, door, compartment, and indicator art");
 check(/id="entrance-porsche" transform="translate\(328 -9\)"/.test(entrance) &&
-  (entrance.match(/class="entrance-car-control"[^>]*transform="translate\(328 -9\)"/g) || []).length === 7,
-  "the complete Porsche visual and all seven controls share the right-side placement and approved nine-unit lift");
+  (entrance.match(/class="entrance-car-control"[^>]*transform="translate\(328 -9\)"/g) || []).length === 8,
+  "the complete Porsche visual and all eight controls share the right-side placement and approved nine-unit lift");
+check((entrance.match(/class="entrance-porsche-scale" transform="translate\(8 345\) scale\(\.85\) translate\(-8 -345\)"/g) || []).length === 9,
+  "the complete Porsche visual and all eight controls share the grounded fifteen-percent scale");
+check(/#entrance-porsche-door-open\{[\s\S]*?transition:transform \.62s cubic-bezier\(\.25,\.1,\.25,1\),opacity \.28s linear/.test(source),
+  "the approved open-door shell uses a slower direct transition without overshoot");
 check(!/\.entrance-car-control:(?:hover|focus-visible)/.test(source) &&
   !/id="entrance-(?:doors|walk)"|entrance_(?:door|sidewalk):/.test(source),
   "car hit regions stay visually transparent and removed building hits leave no stale interaction");
 check(/function playPorscheEngineSound\(starting\)[\s\S]*?getSfxCtx\(\)[\s\S]*?createOscillator\(\)/.test(source) &&
   /function answerPorscheControl\(control, event\)[\s\S]*?event\.stopPropagation\(\)/.test(source),
   "the engine voice stays on the shared SFX path and car hits stop at their own handlers");
+check(/id="entrance-porsche-full-seats">[\s\S]*?id="entrance-porsche-passenger-seat-base"[\s\S]*?id="entrance-porsche-center-console"[\s\S]*?id="entrance-porsche-driver-seat-base"/.test(entrance) &&
+  !/entrance-porsche-(?:open-door-seats|closed-seatbacks)/.test(source) &&
+  entrance.indexOf('id="entrance-porsche-full-seats"') < entrance.indexOf('id="entrance-porsche-door-panel"'),
+  "one permanent full-height seat stack layers passenger, tunnel, then driver behind the physical door");
+check(/id="entrance-porsche-front-running-lamp"/.test(entrance) &&
+  /id="entrance-porsche-rear-running-lamp"/.test(entrance) &&
+  /var porscheIdleNodes = null/.test(source) && !/porscheIdleCtx|porscheIdleNodes\._/.test(source),
+  "running lamps use separate dimensional housings and idle owns nodes rather than the shared context");
+check(/id="entrance-intercom"[^>]*>[\s\S]{0,180}?class="entrance-hit" x="400\.2" y="240\.7" width="8\.6" height="7\.6"/.test(entrance) &&
+  /reacting\[data-entrance-action="intercom"\] \.entrance-intercom-lens/.test(source) &&
+  !/reacting\[data-entrance-action="intercom"\] \.entrance-hit/.test(source) &&
+  /playPhoneVoiceSound\("entrance-intercom"\)/.test(source),
+  "the intercom hit matches its physical button while only the lens pulses and Haló uses the phone voice",
+  null);
 check(/#bathroom-room-close,#cinema-room-close,#prince-basement-close,#bedroom-room-close,#entrance-room-close\{/.test(source),
   "Entrance shares the unified lower-room corner-control geometry");
 check(!/<image\b|(?:src|href)="[^"]+\.(?:png|jpe?g|webp)"/i.test(entrance) &&

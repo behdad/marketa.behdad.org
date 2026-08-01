@@ -234,10 +234,11 @@ gameplay messages finish before that room caption appears.
   bed. Leaving clears the board and restores the furnishings.
 - **The Lofts** entrance pairs with the Balcony. Select the windows and street
   details for small reactions. Toggling all five windows away from their
-  day/night defaults earns a caption. Enter flickers them briefly as an
-  invitation to play. The intercom beside the doors buzzes somebody upstairs.
+  day/night defaults earns a caption. The intercom beside the doors buzzes
+  somebody upstairs.
   The grey Boxster's roof, driver door, front and rear compartments, and engine
-  are independent controls; its headlight and tail light can be switched at night.
+  are independent controls; bare Enter starts or stops its engine, and its
+  headlight and tail light can be switched at any time.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze.
 

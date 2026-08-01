@@ -74,6 +74,52 @@
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth; -webkit-tap-highlight-color:transparent}
+/* Keep touch browsers from turning a hold on the game into Search/callout/selection UI.
+   :where keeps these defaults weak enough for purpose-built editor rules to override. */
+:where(
+  #hunt-fullscreen-area,
+  #monitor-focus-dialog,
+  .phone-backdrop,
+  .pb-dialog-backdrop,
+  .sharecard-modal,
+  .mon-ctx,
+  .console-ctx
+),
+:where(
+  #hunt-fullscreen-area,
+  #monitor-focus-dialog,
+  .phone-backdrop,
+  .pb-dialog-backdrop,
+  .sharecard-modal,
+  .mon-ctx,
+  .console-ctx
+) *{
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+:where(
+  #hunt-fullscreen-area,
+  #monitor-focus-dialog,
+  .phone-backdrop,
+  .pb-dialog-backdrop,
+  .sharecard-modal,
+  .mon-ctx,
+  .console-ctx
+) :is(
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable="false"]),
+  [contenteditable]:not([contenteditable="false"]) *,
+  .console-out,
+  .console-out *,
+  .chat-log,
+  .chat-log *
+){
+  -webkit-touch-callout:default;
+  -webkit-user-select:text;
+  user-select:text;
+}
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 body{
   margin:0; background:#f7f2e1; color:var(--ink); /* page bg: a warm yellow-cream, a touch yellower than --cream */
@@ -116578,6 +116624,25 @@ function spawnDustMote(container) {
     if (hold && e.pointerId === hold.pointerId) clearHold();
   }, true);
   window.addEventListener("scroll", clearHold, true);
+})();
+(function () {
+  // CSS handles WebKit callouts and most selection UI; these late document guards cover
+  // engines that still emit selectstart/contextmenu. Contextmenu deliberately runs in the
+  // bubble phase after the game's menu owners, so it only cancels the leftover native menu.
+  var GAME_SURFACE_SEL = "#hunt-fullscreen-area, #monitor-focus-dialog, .phone-backdrop, .pb-dialog-backdrop, .sharecard-modal, .mon-ctx, .console-ctx";
+  var TEXT_SURFACE_SEL = "input, textarea, [contenteditable]:not([contenteditable='false']), .console-out, .chat-log";
+  function guarded(target) {
+    return !!(target && target.closest && target.closest(GAME_SURFACE_SEL));
+  }
+  function textSurface(target) {
+    return !!(target && target.closest && target.closest(TEXT_SURFACE_SEL));
+  }
+  document.addEventListener("selectstart", function (e) {
+    if (guarded(e.target) && !textSurface(e.target)) e.preventDefault();
+  }, true);
+  document.addEventListener("contextmenu", function (e) {
+    if (guarded(e.target) && !textSurface(e.target)) e.preventDefault();
+  });
 })();
 (function () {
   // Fishu paints in FRONT of the fireplace projector (move it after the screen), and

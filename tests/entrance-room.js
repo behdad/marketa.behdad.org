@@ -270,8 +270,8 @@ check(/id="entrance-porsche" transform="translate\(328 -9\)"/.test(entrance) &&
   "the complete Porsche visual and all eight controls share the right-side placement and approved nine-unit lift");
 check((entrance.match(/class="entrance-porsche-scale" transform="translate\(8 345\) scale\(\.85\) translate\(-8 -345\)"/g) || []).length === 9,
   "the complete Porsche visual and all eight controls share the grounded fifteen-percent scale");
-check(/#entrance-porsche-door-open\{[\s\S]*?transition:transform \.62s cubic-bezier\(\.25,\.1,\.25,1\),opacity \.28s linear/.test(source),
-  "the approved open-door shell uses a slower direct transition without overshoot");
+check(/#entrance-porsche-door-open\{[\s\S]*?transition:transform \.72s cubic-bezier\(\.42,0,\.58,1\),opacity \.28s linear/.test(source),
+  "the approved open-door shell eases progressively to its final position without changing the opacity handoff");
 check(!/\.entrance-car-control:(?:hover|focus-visible)/.test(source) &&
   !/id="entrance-(?:doors|walk)"|entrance_(?:door|sidewalk):/.test(source),
   "car hit regions stay visually transparent and removed building hits leave no stale interaction");

@@ -33368,6 +33368,10 @@ window.__entranceRoomOpen = false;
   var intercomResponses = 0;
   var porscheIdleNodes = null;
   var porscheDriveAudioNodes = null;
+  var porscheDriveMusicNodes = null;
+  var porscheDriveMusicTimer = null;
+  var porscheDriveMusicStep = 0;
+  var porscheDriveMusicNext = 0;
   var porscheHornNodes = null;
   var porscheDoorCloseTimer = null;
   var porscheBodyClickTimer = null;
@@ -33491,6 +33495,9 @@ window.__entranceRoomOpen = false;
       document.visibilityState !== "hidden" && document.hasFocus() &&
       !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
   }
+  function entranceDriveMusicWanted() {
+    return !!(entranceDriveAudible() && driveState.hudOpen);
+  }
   function driveGearLabel() {
     return driveState.gear < 0 ? "R" : driveState.gear || "N";
   }
@@ -33607,6 +33614,182 @@ window.__entranceRoomOpen = false;
     driveAudio.sources.forEach(function (source) { try { source.stop(); } catch (_error) {} });
     driveAudio.nodes.forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
   }
+  function porscheDriveMusicVolume() {
+    return .34 * (window.__songVolume ? window.__songVolume() : .5);
+  }
+  function porscheDriveMusicTempo() {
+    return 104 + Math.min(22, Math.abs(driveState.speed) * .11);
+  }
+  function porscheDriveMusicFrequency(base, semitones) {
+    return base * Math.pow(2, semitones / 12);
+  }
+  function trackPorscheDriveMusicSource(music, source, nodes) {
+    music.sources.push(source);
+    source.onended = function () {
+      var index = music.sources.indexOf(source);
+      if (index >= 0) music.sources.splice(index, 1);
+      (nodes || []).forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+      try { source.disconnect(); } catch (_error) {}
+    };
+  }
+  function schedulePorscheDriveKick(music, time) {
+    var osc = music.bed.createOscillator();
+    var gain = music.bed.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(92, time);
+    osc.frequency.exponentialRampToValueAtTime(43, time + .14);
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(.62, time + .008);
+    gain.gain.exponentialRampToValueAtTime(.0001, time + .22);
+    osc.connect(gain); gain.connect(music.bus);
+    trackPorscheDriveMusicSource(music, osc, [gain]);
+    osc.start(time); osc.stop(time + .24);
+  }
+  function schedulePorscheDriveDoob(music, time, semitones, accent) {
+    var osc = music.bed.createOscillator();
+    var filter = music.bed.createBiquadFilter();
+    var gain = music.bed.createGain();
+    var frequency = porscheDriveMusicFrequency(73.42, semitones);
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(frequency * 1.035, time);
+    osc.frequency.exponentialRampToValueAtTime(frequency, time + .075);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(accent ? 560 : 430, time);
+    filter.frequency.exponentialRampToValueAtTime(170, time + .28);
+    filter.Q.value = 2.2;
+    gain.gain.setValueAtTime(.0001, time);
+    gain.gain.exponentialRampToValueAtTime(accent ? .34 : .25, time + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, time + .31);
+    osc.connect(filter); filter.connect(gain); gain.connect(music.bus);
+    trackPorscheDriveMusicSource(music, osc, [filter, gain]);
+    osc.start(time); osc.stop(time + .33);
+  }
+  function schedulePorscheDriveStab(music, time, root, minor) {
+    [0, minor ? 3 : 4, 7, 10].forEach(function (interval, index) {
+      var osc = music.bed.createOscillator();
+      var gain = music.bed.createGain();
+      osc.type = index < 2 ? "triangle" : "sine";
+      osc.frequency.value = porscheDriveMusicFrequency(146.83, root + interval);
+      osc.detune.value = index % 2 ? 3 : -3;
+      gain.gain.setValueAtTime(.0001, time);
+      gain.gain.exponentialRampToValueAtTime(index < 3 ? .055 : .025, time + .018);
+      gain.gain.exponentialRampToValueAtTime(.0001, time + .29);
+      osc.connect(gain); gain.connect(music.bus);
+      trackPorscheDriveMusicSource(music, osc, [gain]);
+      osc.start(time); osc.stop(time + .31);
+    });
+  }
+  function schedulePorscheDriveHat(music, time, open) {
+    var duration = open ? .16 : .055;
+    var buffer = music.bed.createBuffer(1, Math.ceil(music.bed.sampleRate * duration), music.bed.sampleRate);
+    var data = buffer.getChannelData(0);
+    for (var i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, open ? 1.6 : 3.4);
+    var source = music.bed.createBufferSource();
+    var filter = music.bed.createBiquadFilter();
+    var gain = music.bed.createGain();
+    source.buffer = buffer;
+    filter.type = "highpass"; filter.frequency.value = open ? 5300 : 6900;
+    gain.gain.value = open ? .055 : .035;
+    source.connect(filter); filter.connect(gain); gain.connect(music.bus);
+    trackPorscheDriveMusicSource(music, source, [filter, gain]);
+    source.start(time); source.stop(time + duration);
+  }
+  function schedulePorscheDriveMusicStep(music, step, time) {
+    var inBar = step % 16;
+    var bar = Math.floor(step / 16) % 4;
+    var roots = [0, -4, 3, -2]; // Dm · B♭ · F · C
+    if (inBar % 4 === 0) schedulePorscheDriveKick(music, time);
+    if ([0, 3, 4, 7, 8, 11, 12, 15].indexOf(inBar) >= 0) {
+      schedulePorscheDriveDoob(music, time, roots[bar] + (inBar === 7 || inBar === 15 ? 7 : 0), inBar % 4 === 0);
+    }
+    if (inBar === 2 || inBar === 10) schedulePorscheDriveStab(music, time, roots[bar] + 12, bar === 0);
+    if (inBar % 2 === 1) schedulePorscheDriveHat(music, time, inBar === 7 || inBar === 15);
+  }
+  function schedulePorscheDriveMusic() {
+    porscheDriveMusicTimer = setTimeout(function () {
+      porscheDriveMusicTimer = null;
+      var music = porscheDriveMusicNodes;
+      if (!music) return;
+      if (!entranceDriveMusicWanted()) { stopPorscheDriveMusic(); return; }
+      try {
+        var horizon = music.bed.currentTime + .18;
+        var guard = 0;
+        while (porscheDriveMusicNext < horizon && guard++ < 48) {
+          schedulePorscheDriveMusicStep(music, porscheDriveMusicStep, porscheDriveMusicNext);
+          porscheDriveMusicNext += 60 / porscheDriveMusicTempo() / 4;
+          porscheDriveMusicStep = (porscheDriveMusicStep + 1) % 64;
+        }
+      } catch (_error) {}
+      schedulePorscheDriveMusic();
+    }, 45);
+  }
+  function startPorscheDriveMusic() {
+    if (porscheDriveMusicNodes || !entranceDriveMusicWanted()) return;
+    var bed = null;
+    try {
+      bed = audioBed();
+      if (!bed) return;
+      var tone = bed.createBiquadFilter();
+      var compressor = bed.createDynamicsCompressor();
+      var master = bed.createGain();
+      var now = bed.currentTime;
+      tone.type = "lowpass"; tone.frequency.value = 1900; tone.Q.value = .65;
+      compressor.threshold.value = -19; compressor.knee.value = 16; compressor.ratio.value = 3;
+      compressor.attack.value = .008; compressor.release.value = .14;
+      master.gain.setValueAtTime(.0001, now);
+      master.gain.linearRampToValueAtTime(porscheDriveMusicVolume(), now + .42);
+      tone.connect(compressor); compressor.connect(master); master.connect(pannedOut(bed, "entrance-porsche"));
+      porscheDriveMusicNodes = {
+        bed: bed,
+        bus: tone,
+        tone: tone,
+        compressor: compressor,
+        master: master,
+        sources: []
+      };
+      porscheDriveMusicStep = 0;
+      porscheDriveMusicNext = now + .08;
+      var volumeButton = document.getElementById("hunt-volume-btn");
+      if (volumeButton) volumeButton.classList.add("shown");
+      schedulePorscheDriveMusic();
+    } catch (_error) {
+      if (porscheDriveMusicNodes) stopPorscheDriveMusic(0);
+      else if (bed) { try { bed.close(); } catch (_closeError) {} }
+    }
+  }
+  function stopPorscheDriveMusic(fadeSecs) {
+    if (porscheDriveMusicTimer) { clearTimeout(porscheDriveMusicTimer); porscheDriveMusicTimer = null; }
+    if (!porscheDriveMusicNodes) return;
+    var f = typeof fadeSecs === "number" ? Math.max(0, fadeSecs) : .22;
+    var music = porscheDriveMusicNodes;
+    porscheDriveMusicNodes = null;
+    try {
+      var now = music.bed.currentTime;
+      music.master.gain.cancelScheduledValues(now);
+      music.master.gain.setValueAtTime(music.master.gain.value, now);
+      music.master.gain.linearRampToValueAtTime(.0001, now + f);
+    } catch (_error) {}
+    setTimeout(function () {
+      music.sources.slice().forEach(function (source) { try { source.stop(); } catch (_error) {} });
+      [music.tone, music.compressor, music.master].forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+      try { music.bed.close(); } catch (_error) {}
+    }, f * 1000 + 80);
+  }
+  function paintPorscheDriveMusic() {
+    var music = porscheDriveMusicNodes;
+    if (!music) return;
+    try {
+      var now = music.bed.currentTime;
+      var motion = Math.min(1, Math.abs(driveState.speed) / 150);
+      var revs = Math.min(1, Math.max(0, driveState.rpm - 750) / 6500);
+      music.tone.frequency.setTargetAtTime(1750 + motion * 1450 + revs * 450, now, .18);
+      music.master.gain.setTargetAtTime(porscheDriveMusicVolume() * (.86 + motion * .14), now, .12);
+    } catch (_error) {}
+  }
+  function updatePorscheDriveMusic() {
+    if (entranceDriveMusicWanted()) startPorscheDriveMusic();
+    else stopPorscheDriveMusic();
+  }
   function startPorscheDriveAudio() {
     if (porscheDriveAudioNodes || !entranceDriveAudible()) return;
     try {
@@ -33679,10 +33862,12 @@ window.__entranceRoomOpen = false;
       audio.roadFilter.frequency.setTargetAtTime(180 + Math.min(1300, Math.abs(driveState.speed) * 9), t, .08);
       audio.roadGain.gain.setTargetAtTime(.0001 + Math.min(.075, Math.abs(driveState.speed) / 1900), t, .08);
     } catch (_error) {}
+    paintPorscheDriveMusic();
   }
   function updatePorscheDriveAudio() {
     if (entranceDriveAudible()) startPorscheDriveAudio();
     else stopPorscheDriveAudio();
+    updatePorscheDriveMusic();
     if (porsche) porsche.classList.toggle("engine-idling",
       entranceDriveAudible() && Math.abs(driveState.speed) < .75);
   }
@@ -33973,6 +34158,7 @@ window.__entranceRoomOpen = false;
     driveState.temperature = 0;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     stopPorscheDriveAudio();
+    stopPorscheDriveMusic(0);
     if (porsche) porsche.classList.remove("engine-idling");
     if (porsche) porsche.classList.remove("braking");
     if (tireMarks) while (tireMarks.firstChild) tireMarks.removeChild(tireMarks.firstChild);
@@ -34295,6 +34481,7 @@ window.__entranceRoomOpen = false;
   function openPorscheDriveHud() {
     driveState.hudOpen = true;
     paintPorscheDriveHud();
+    updatePorscheDriveMusic();
     syncPorscheDriveInstruction(true);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
@@ -34618,6 +34805,7 @@ window.__entranceRoomOpen = false;
         wraps: driveState.wraps,
         holds: Object.assign({}, driveState.holds),
         audioActive: !!porscheDriveAudioNodes,
+        musicActive: !!porscheDriveMusicNodes,
         frameActive: !!driveFrame,
         tireMarks: tireMarks ? tireMarks.childNodes.length : 0
       },
@@ -34633,6 +34821,7 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveStep = porscheDriveStep;
   window.__entranceDriveShift = selectPorscheDriveGear;
   window.__entranceDriveControl = setPorscheDriveHold;
+  window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
   var entranceCheckpoint = {
     capture: function () {
       var car = {};
@@ -69827,6 +70016,7 @@ async def localfont(name):
     if (window.__applyBandariMusicVolume) window.__applyBandariMusicVolume(); // the second Persian 6/8 bed follows it too
     if (window.__applyCumbiaMusicVolume) window.__applyCumbiaMusicVolume(); // the garden-party cumbia bed follows it too
     if (window.__applyWorkoutVolume) window.__applyWorkoutVolume(); // the workout bed follows it too
+    if (window.__applyPorscheDriveMusicVolume) window.__applyPorscheDriveMusicVolume(); // Fancy-Stupid's driving loop follows it too
   };
   // Push the current volIdx step everywhere: live songs/beds, the on-screen icon, and
   // localStorage. Shared by the button's cycle and the console volumebutton() command.

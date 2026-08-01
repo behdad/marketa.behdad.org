@@ -242,7 +242,8 @@ gameplay messages finish before that room caption appears.
   **↓** for brake, or **Shift** for the clutch; choose **N**, **R**, or **1–6** to
   shift. The pedals and H-pattern shifter also work directly. A clutchless
   keyboard shift grinds and falls back to neutral, while a hard fast stop leaves
-  a brief pair of tire marks.
+  a brief pair of tire marks. The dashboard's compact driving score stays with
+  the car and subtly picks up as the street does.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze.
 

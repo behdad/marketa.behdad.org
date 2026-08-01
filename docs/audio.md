@@ -168,10 +168,18 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 ## Focus/visibility gating (the "crickets/crane rule") — preserved
 
 - **Continuous ambient beds** (fire, aqua hush, totoro rain, bird, kettle, radio, PC fan, projector hum,
-  Porsche idle/drivetrain and road bed,
+  Porsche idle/drivetrain, road bed, and driving loop,
   AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
   **self-teardown on blur/hide** (`updateFocusGatedAudio` re-checks each). When they stop,
   the refcount drops and the manager can suspend.
+
+The Porsche HUD adds an original compact four-bar driving loop on its own `audioBed()`:
+four-on-the-floor kick, short “doob” bass replies, muted chord stabs, and sparse hats.
+It exists only while the Entrance, HUD, engine, and attended-window gates are all live;
+leaving, dismissing the HUD, stopping/stalling the engine, hiding, or unfocusing fades and
+closes only that bed. Speed gently raises its tempo and opens its low-pass filter, while RPM
+adds a smaller brightness lift. Its master follows `__songVolume()` so the music button and
+session master scale it independently of the Porsche engine/drivetrain bed.
 - **`getSfxCtx()`** returns null while `document.visibilityState === "hidden"` — the
   hidden-tab choke point that silences all one-shots (and autonomous timer-driven ambients)
   without per-call-site guards. Autonomous one-shots additionally guard on

@@ -34961,6 +34961,17 @@ window.__entranceRoomOpen = false;
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
     return true;
   }
+  function hidePorscheDriveHudOnly() {
+    cancelPorscheShifterPress();
+    setPorscheDriveShiftKeyHeld(false);
+    driveState.hudOpen = false;
+    driveState.stalled = false;
+    Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
+    paintPorscheDriveHud();
+    syncPorscheState();
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
+    return true;
+  }
   function playEntranceIntercomRingSound() {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
@@ -35265,6 +35276,7 @@ window.__entranceRoomOpen = false;
   window.__openEntranceRoom = openEntrance;
   window.__closeEntranceRoom = closeEntrance;
   window.__openEntrancePorscheDriveHud = openPorscheDriveHud;
+  window.__hideEntrancePorscheDriveHud = hidePorscheDriveHudOnly;
   window.__entranceRoomState = function () {
     return {
       open: !!window.__entranceRoomOpen,
@@ -59943,6 +59955,7 @@ setOfficeProgress("pc", false);
     time: "time() — the loft's current time as {hours, minutes}; time(\"HH:MM\") or time(hours,minutes) SETS it (the ?time= override, driving day/night)",
     timestamp: "timestamp() — the fully-resolved current loft moment: {year, month, day, hours, minutes, iso}",
     projector: "projector(\"channel\") — switch the cuddly-room projector by name in quotes, e.g. projector(\"coffee\"), or a number 1–6. coffee/fire lead in warm/cold half-year order, followed by \"nightsky\" · \"workout\" · \"aquarium\" · \"totoro\" · \"none\" (off). projector() returns the current channel {n, name}",
+    porsche: "porsche(true) — pan to the street and open Fancy-Stupid's driving HUD; porsche(false) dismisses only the HUD; porsche() reports the car state",
     storm: "storm(true) — a DRY thunderstorm over the balcony: lightning + thunder, NO rain (works DAY or night and does not change rooms or force dusk). Add rain(true) for the downpour — rain(true)+storm(true) is a classic thunderstorm. Set the sky yourself with day()/night(). storm(false) clears the lightning; storm() reports whether it's storming. Weather levers are independent — see rain(), snow(), overcast(), day()/night()",
     rain: "rain(true) — falling rain over the balcony (drops in the sky + streaks down every window + a rain hiss), day or night; rain(false) clears it; rain() reports whether it's raining. Independent of storm() — rain alone is a plain shower, rain(true)+storm(true) is a thunderstorm",
     snow: "snow(true) — falling snow over the balcony and through the loft windows, day or night; snow(false) clears it; snow() reports whether it's snowing",
@@ -60445,7 +60458,7 @@ setOfficeProgress("pc", false);
   var CONSOLE_CMDS = [
     "help", "capabilities", "loftstatus", "clear", "shortcuts", "keyboard", "laser", "party", "chase", "guests", "tetris", "arrive", "roster", "reset", "autoplay", "quit", "blacklight", "uv", "trip", "room",
     "goto", "rooms", "daylight", "night", "day", "season", "meteors", "birthday", "play", "pause", "temp", "weather",
-    "clock", "time", "sharecard", "projector", "storm", "rain", "snow", "overcast", "wildfires", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
+    "clock", "time", "sharecard", "projector", "porsche", "storm", "rain", "snow", "overcast", "wildfires", "dance", "jukebox", "dj", "firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift", "cocktail", "mixer", "lang", "caption", "candle",
     "butterfly", "water", "countdown", "fullscreen", "rainbow", "aurora", "twilight", "timelapse", "smoker", "bbq", "smokerlid", "smores", "snowman", "leafpile", "blossomplay", "sprinkler", "cooked", "gong", "servefood", "kidsAsleep",
     "phone", "album", "snap", "message", "madla", "saturday", "sound", "laptop", "computer", "mines", "solitaire", "prince", "reboot", "killall", "service", "monitor", "go", "no",
     "summon", "reveal", "click", "cursorTo", "ghostClick", "cursorHide", "random", "sleep", "echo", "say", "scripts", "run", "repeat", "stop", "edit",
@@ -113608,6 +113621,31 @@ function spawnDustMote(container) {
   };
   window.goto = window.room; // alias
   window.rooms = function () { return ROOM_NAMES.join(" · "); };
+
+  window.porsche = function (arg) {
+    if (arguments.length === 0) {
+      var state = window.__entranceRoomState ? window.__entranceRoomState() : null;
+      return state && state.car ? state.car : { room: "entrance", hud: false };
+    }
+    var on = !!arg;
+    if (!on) return window.__hideEntrancePorscheDriveHud ? window.__hideEntrancePorscheDriveHud() : false;
+    var openHud = function () {
+      if (window.__openEntranceRoom && !window.__entranceRoomOpen) window.__openEntranceRoom();
+      if (window.__openEntrancePorscheDriveHud) window.__openEntrancePorscheDriveHud();
+      return true;
+    };
+    if (window.__entranceRoomOpen) return openHud();
+    if (window.__navigateLowerRoom && window.currentStageName !== "balcony" && window.__lowerRoomNavigationState) {
+      var lower = window.__lowerRoomNavigationState();
+      if (lower && lower.active) {
+        window.__navigateLowerRoom("balcony");
+        setTimeout(openHud, 780);
+        return true;
+      }
+    }
+    if (window.currentStageName !== "balcony" && window.goToStage) window.goToStage("balcony");
+    return openHud();
+  };
 
   function isNight() { var b = document.getElementById("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
   // daylight() — no arg returns whether it's day (true) / night (false); daylight(true/false) sets

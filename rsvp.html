@@ -34946,7 +34946,7 @@ window.__entranceRoomOpen = false;
     return dy < 0 ? 1 : -1;
   }
   function movePorscheShifterPress(event) {
-    if (driveShifterPointerType !== "touch" || event.pointerId !== driveShifterPointerId) return;
+    if (event.pointerId !== driveShifterPointerId) return;
     event.preventDefault();
     driveShifterTouchLastX = event.clientX;
     driveShifterTouchLastY = event.clientY;
@@ -34977,7 +34977,7 @@ window.__entranceRoomOpen = false;
     var touchSelectorOpen = driveShifterTouchSelectorOpen;
     var touchX = event ? event.clientX : driveShifterTouchLastX;
     var touchY = event ? event.clientY : driveShifterTouchLastY;
-    var touchGear = pointerType === "touch" && activateTap && touchSelectorOpen ? porscheTouchDirectGear(touchX, touchY) : null;
+    var touchGear = activateTap && touchSelectorOpen ? porscheTouchDirectGear(touchX, touchY) : null;
     var touchDirection = pointerType === "touch" && activateTap && touchMoved && !touchSelectorOpen ? porscheTouchDragDirection(touchY) : 0;
     clearTimeout(driveShifterHoldTimer);
     clearInterval(driveShifterRepeatTimer);
@@ -34995,9 +34995,10 @@ window.__entranceRoomOpen = false;
       try { driveShifter.releasePointerCapture(pointerId); } catch (_error) {}
     }
     if (wasHeld || activateTap) driveShifterSuppressClickUntil = performance.now() + 700;
-    if (pointerType === "touch" && activateTap) {
-      if (touchSelectorOpen) selectPorscheDriveGear(touchGear, true);
-      else if (touchMoved && touchDirection) stepPorscheDriveGear(touchDirection);
+    if (activateTap && touchSelectorOpen) {
+      selectPorscheDriveGear(touchGear, true);
+    } else if (pointerType === "touch" && activateTap) {
+      if (touchMoved && touchDirection) stepPorscheDriveGear(touchDirection);
       else if (touchMoved) selectPorscheDriveGear(0, true);
       else activatePorscheShifterTap(target, true);
     } else if (!wasHeld && activateTap) activatePorscheShifterTap(target);
@@ -35031,20 +35032,9 @@ window.__entranceRoomOpen = false;
       driveShifterHoldTimer = null;
       if (pressSerial !== driveShifterPressSerial || driveShifterPointerId === null || !porscheShifterAvailable()) return;
       driveShifterHeld = true;
-      if (driveShifterPointerType === "touch") {
-        driveShifterTouchPreviewGear = 0;
-        setPorscheTouchSelectorOpen(true);
-        paintPorscheShifter(0);
-        return;
-      }
-      stepPorscheDriveGear(-1);
-      driveShifterRepeatTimer = setInterval(function () {
-        if (pressSerial !== driveShifterPressSerial || driveShifterPointerId === null ||
-            !porscheShifterAvailable() || !stepPorscheDriveGear(-1)) {
-          clearInterval(driveShifterRepeatTimer);
-          driveShifterRepeatTimer = null;
-        }
-      }, 240);
+      driveShifterTouchPreviewGear = 0;
+      setPorscheTouchSelectorOpen(true);
+      paintPorscheShifter(0);
     }, 440);
   }
   function setPorscheDriveHold(name, held) {

@@ -39,6 +39,12 @@ Gmail web composer on desktop and a `mailto:` handoff on Android/iOS, including 
 Safari; `__mailComposeMailto` is used by actions explicitly labelled as the native Email app.
 Keep new email actions on these helpers rather than opening Gmail URLs directly.
 
+Every owned interactive document suppresses WebKit's tap-highlight rectangle at its root, including
+the same-origin runtime iframe pages. Keep that separate from `user-select`, `touch-action`, pointer
+handling, and focus outlines so editable text, authored drags, and keyboard focus retain their
+existing behavior. `tests/mobile-highlights.js` audits the document roots and those interaction
+invariants.
+
 In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and lets
 the shell use the viewport width subject only to its 2:1 room-height fit. The game-only `main`
 has no page padding; the thin shell chrome is the only inset around the room. Fresh CLICK ME adds `.intro-active`; checkpoint entry

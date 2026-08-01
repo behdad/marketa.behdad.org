@@ -31750,6 +31750,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <path d="M36-31H110L72 78H26ZM560-31H616L660 74H626Z" fill="#eef6f5" opacity=".055"/>
           </g>
           <rect width="680" height="176" fill="#211b18" fill-opacity=".06" pointer-events="none"/>
+          <rect y="158" width="680" height="18" fill="#211c19" pointer-events="none"/>
           <g id="entrance-drive-cockpit">
           <g id="entrance-drive-dashboard" transform="translate(0 -12)">
           <path d="M0 52Q74 32 152 47Q242 10 360 31Q472 13 680 51V176H0Z" fill="#17191b" opacity=".72" filter="url(#entrance-drive-shadow)"/>
@@ -38469,7 +38470,6 @@ var T = {
     mon_ctx_select_all: "Select all",
     scene_ctx_escape: "Escape",
     scene_ctx_solve: "Solve",
-    scene_ctx_start_over: "Start over",
     mon_sys_website: "About",
     mon_sys_title: "Loft OS",
     mon_sys_lock: "Lock",
@@ -39835,7 +39835,6 @@ var T = {
     mon_ctx_select_all: "Vybrat vše",
     scene_ctx_escape: "Escape",
     scene_ctx_solve: "Vyřešit",
-    scene_ctx_start_over: "Začít znovu",
     mon_sys_website: "O nás",
     mon_sys_title: "Loft OS",
     mon_sys_lock: "Zamknout",
@@ -96999,73 +96998,6 @@ function spawnDustMote(container) {
       return menu ? [].map.call(menu.querySelectorAll("button span:last-child"), function (s) { return s.textContent; }) : [];
     };
     window.__closeSceneContextMenu = closeMenu;
-  })();
-  // Every custom context menu ends with the same whole-loft Start over. Menu owners remain
-  // responsible for their own actions and dismissal; this augmentation keeps the action
-  // last even as those menus are rebuilt dynamically.
-  (function () {
-    var RESET_ICO = '<svg class="ctx-ico" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"><path d="M9.7 3.4 A4 4 0 1 0 10.3 6.2"/><path d="M10 1.8 L10 3.6 L8.2 3.6"/></svg>';
-    function tr(key) {
-      var l = document.documentElement.lang;
-      return (T[l] && T[l][key]) || T.en[key] || key;
-    }
-    function dismiss(menu) {
-      var outside = document.body;
-      if (window.PointerEvent) outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-      outside.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-      // console-ctx is built once and reused; hide but retain it. The other menu
-      // owners build per opening and their outside handlers remove their node.
-      if (menu.classList.contains("console-ctx")) {
-        menu.classList.remove("show");
-        return;
-      }
-      if (menu.isConnected) menu.remove();
-    }
-    function requestReset(menu, e) {
-      e.preventDefault();
-      e.stopPropagation();
-      dismiss(menu);
-      if (window.__requestLoftReset) window.__requestLoftReset();
-    }
-    function reclamp(menu) {
-      var r = menu.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      var bounds = menu.classList.contains("scene-ctx") && document.querySelector(".hunt-viewport");
-      bounds = bounds ? bounds.getBoundingClientRect() : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
-      var left = Math.max(bounds.left + 4, Math.min(r.left, bounds.right - r.width - 4));
-      var top = Math.max(bounds.top + 4, Math.min(r.top, bounds.bottom - r.height - 4));
-      menu.style.left = left + "px";
-      menu.style.top = top + "px";
-    }
-    function augment(menu) {
-      if (!menu || menu.querySelector(".ctx-loft-reset, .cc-loft-reset")) return;
-      if (!menu.querySelector("button")) return;
-      var button = document.createElement("button");
-      button.type = "button";
-      button.setAttribute("role", "menuitem");
-      if (menu.classList.contains("console-ctx")) {
-        button.className = "cc-sep cc-loft-reset";
-        button.textContent = tr("scene_ctx_start_over");
-      } else {
-        button.className = "ctx-sep ctx-loft-reset";
-        button.innerHTML = RESET_ICO + "<span>" + tr("scene_ctx_start_over") + "</span>";
-      }
-      button.addEventListener("click", function (e) { requestReset(menu, e); });
-      menu.appendChild(button);
-      reclamp(menu);
-    }
-    function scan(root) {
-      if (root && root.matches && root.matches(".mon-ctx, .console-ctx")) augment(root);
-      var menus = root && root.querySelectorAll ? root.querySelectorAll(".mon-ctx, .console-ctx") : [];
-      for (var i = 0; i < menus.length; i++) augment(menus[i]);
-    }
-    window.__augmentContextMenus = function () { scan(document); };
-    scan(document);
-    new MutationObserver(function (records) {
-      for (var i = 0; i < records.length; i++) {
-        for (var j = 0; j < records[i].addedNodes.length; j++) scan(records[i].addedNodes[j]);
-      }
-    }).observe(document.documentElement, { childList: true, subtree: true });
   })();
   // Right-clicking an EMPTY area of any custom context menu shouldn't summon the native browser
   // menu on top of it. One capture-phase guard covers them all (every custom menu carries .mon-ctx

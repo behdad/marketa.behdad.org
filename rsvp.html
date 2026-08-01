@@ -5956,6 +5956,17 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   height:min(75vw, 100vh);
   background:#000;
 }
+/* Mobile Safari and a few Android tablet shells can expose the Fullscreen API but
+   decline an element request. Shoot then falls back to the existing monitor-content
+   fullscreen owner; keep the live game at its authored 4:3 shape inside that 2:1 frame. */
+#office-monitor.monitor-content-fullscreen #monitor-doom-wrap[data-shoot-view="doom"],
+#office-monitor.monitor-content-fullscreen #monitor-doom-wrap[data-shoot-view="duke"],
+#office-monitor.monitor-content-fullscreen #monitor-doom-wrap[data-shoot-view="q3"]{
+  width:auto;
+  height:100%;
+  aspect-ratio:4 / 3;
+  margin:auto;
+}
 #prince-focus-overlay{
   position:fixed;
   inset:0;
@@ -69283,6 +69294,9 @@ async def localfont(name):
   var shootEverOpened = false;
   var shootFrozen = false;
   var shootFocusActive = false;
+  var shootFallbackFullscreen = false;
+  var shootFallbackOwnsMonitorContent = false;
+  var shootFullscreenProbeTimer = null;
   function doomT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
   function doomSetMsg(txt, isErr) { if (!doomMsg) return; doomMsg.textContent = txt || ""; doomMsg.className = "doom-msg" + (isErr ? " err" : ""); }
   function showShootCoach() {
@@ -69301,7 +69315,30 @@ async def localfont(name):
     } catch (e) {}
   }
   window.__syncMonitorDoom = shootSync;
+  function enterShootFallbackFullscreen() {
+    clearTimeout(shootFullscreenProbeTimer);
+    shootFullscreenProbeTimer = null;
+    if (!window.__monitorZoomed || !window.__monitorZoomIn || !window.__monitorContentFullscreen || !window.__toggleMonitorContentFullscreen) return false;
+    if (!window.__monitorZoomed()) window.__monitorZoomIn();
+    if (!window.__monitorContentFullscreen()) {
+      window.__toggleMonitorContentFullscreen();
+      shootFallbackOwnsMonitorContent = true;
+    }
+    shootFallbackFullscreen = true;
+    shootSync();
+    return true;
+  }
+  function exitShootFallbackFullscreen() {
+    clearTimeout(shootFullscreenProbeTimer);
+    shootFullscreenProbeTimer = null;
+    if (shootFallbackOwnsMonitorContent && window.__monitorContentFullscreen && window.__monitorContentFullscreen() && window.__toggleMonitorContentFullscreen) {
+      window.__toggleMonitorContentFullscreen();
+    }
+    shootFallbackOwnsMonitorContent = false;
+    shootFallbackFullscreen = false;
+  }
   function finishShootFullscreen() {
+    exitShootFallbackFullscreen();
     shootFocusActive = false;
     shootSync();
     if (shootFrame && shootFrame.contentWindow) {
@@ -69314,16 +69351,32 @@ async def localfont(name):
     if (on) {
       shootFocusActive = true;
       var request = shootHost && (shootHost.requestFullscreen || shootHost.webkitRequestFullscreen);
-      if (!request) { finishShootFullscreen(); return; }
+      if (!request) { if (!enterShootFallbackFullscreen()) finishShootFullscreen(); return; }
       try {
         var promise = request.call(shootHost);
-        if (promise && promise.catch) promise.catch(finishShootFullscreen);
+        if (promise && promise.catch) promise.catch(function () {
+          if (!enterShootFallbackFullscreen()) finishShootFullscreen();
+        });
+        // Some iOS WebKit shells expose a vendor request method that returns no promise
+        // and can decline the element without throwing. Give a coarse-pointer tablet a
+        // short chance to publish fullscreenchange, then use the established monitor fill.
+        var coarseTablet = navigator.maxTouchPoints > 0 && window.matchMedia &&
+          (matchMedia("(any-pointer: coarse)").matches || matchMedia("(hover: none)").matches) && innerWidth >= 600;
+        if (coarseTablet) {
+          clearTimeout(shootFullscreenProbeTimer);
+          shootFullscreenProbeTimer = setTimeout(function () {
+            shootFullscreenProbeTimer = null;
+            if (shootFocusActive && !shootFallbackFullscreen &&
+                (document.fullscreenElement || document.webkitFullscreenElement) !== shootHost &&
+                !enterShootFallbackFullscreen()) finishShootFullscreen();
+          }, 900);
+        }
       } catch (e) {
-        finishShootFullscreen();
+        if (!enterShootFallbackFullscreen()) finishShootFullscreen();
       }
     } else {
       var activeFs = document.fullscreenElement || document.webkitFullscreenElement;
-      if (activeFs === shootHost) {
+      if (activeFs === shootHost && !shootFallbackFullscreen) {
         var exit = document.exitFullscreen || document.webkitExitFullscreen;
         if (exit) {
           try { exit.call(document); } catch (e) { finishShootFullscreen(); }
@@ -69462,7 +69515,8 @@ async def localfont(name):
   // background tab would burn frames for nothing
   document.addEventListener("visibilitychange", shootSync);
   function shootFullscreenChanged() {
-    if (shootFocusActive && (document.fullscreenElement || document.webkitFullscreenElement) !== shootHost) finishShootFullscreen();
+    if (shootFocusActive && !shootFallbackFullscreen &&
+        (document.fullscreenElement || document.webkitFullscreenElement) !== shootHost) finishShootFullscreen();
     shootSync();
   }
   document.addEventListener("fullscreenchange", shootFullscreenChanged);
@@ -69523,7 +69577,7 @@ async def localfont(name):
     function enterShootFullscreen(e) {
       e.preventDefault();
       e.stopPropagation();
-      setShootFocus(true);
+      setShootFocus(shootFallbackFullscreen ? false : true);
     }
     doomFullscreenBtn.addEventListener("click", enterShootFullscreen);
     doomFullscreenBtn.addEventListener("keydown", function (e) {

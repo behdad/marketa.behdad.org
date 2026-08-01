@@ -33,7 +33,7 @@ var HARNESS = [
   'window.__openMonitorApp("quake");snap("quake");await sleep(120);',
   'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back"),fullscreen=document.getElementById("monitor-doom-fullscreen"),shootHost=document.getElementById("monitor-shoot-host");',
   'var backRect=back.querySelector(".shoot-close-bg").getBoundingClientRect(),fullscreenRect=fullscreen.querySelector(".shoot-close-bg").getBoundingClientRect(),closeRect=close.querySelector(".shoot-close-bg").getBoundingClientRect(),backHit=back.querySelector(".mini-hit").getBoundingClientRect(),fullscreenHit=fullscreen.querySelector(".mini-hit").getBoundingClientRect(),closeHit=close.querySelector(".mini-hit").getBoundingClientRect();report.steps.gameControls={closeAria:close.getAttribute("aria-label"),fullscreenAria:fullscreen.getAttribute("aria-label"),closeMark:close.querySelector("path").getAttribute("d"),fullscreenMark:fullscreen.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents,fullscreenPointer:getComputedStyle(fullscreen).pointerEvents,order:backRect.left<fullscreenRect.left&&fullscreenRect.left<closeRect.left,disjoint:backHit.right<=fullscreenHit.left+.1&&fullscreenHit.right<=closeHit.left+.1};window.setLang("cs");report.steps.gameControls.fullscreenCs=fullscreen.getAttribute("aria-label");window.setLang("en");var requested=false,beforeFrame=document.querySelector("#monitor-shoot-host iframe"),beforeWindow=beforeFrame.contentWindow,beforeSrc=beforeFrame.getAttribute("src"),focusLoads=0;beforeFrame.addEventListener("load",function(){focusLoads++;});shootHost.requestFullscreen=function(){requested=this===shootHost;return Promise.resolve();};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(60);report.steps.focus={requested:requested,hostParent:shootHost.parentNode.id,sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,noExitButton:!document.getElementById("shoot-focus-exit"),controlOutside:!shootHost.contains(fullscreen)};document.dispatchEvent(new Event("fullscreenchange"));await sleep(60);report.steps.focus.after={sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,hostParent:shootHost.parentNode.id};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents,fullscreen:getComputedStyle(fullscreen).pointerEvents};',
-  'window.__openMonitorApp("shoot");snap("reopened");document.querySelector("[data-shoot-game=\\"q3\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));snap("q3reopened");back.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
+  'window.__openMonitorApp("shoot");snap("reopened");document.querySelector("[data-shoot-game=\\"q3\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));snap("q3reopened");var fallbackFrame=document.querySelector("#monitor-shoot-host iframe");shootHost.requestFullscreen=null;shootHost.webkitRequestFullscreen=null;fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);report.steps.fallback={content:window.__monitorContentFullscreen(),sameFrame:fallbackFrame===document.querySelector("#monitor-shoot-host iframe"),hostParent:shootHost.parentNode.id};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);report.steps.fallback.after={content:window.__monitorContentFullscreen(),sameFrame:fallbackFrame===document.querySelector("#monitor-shoot-host iframe"),hostParent:shootHost.parentNode.id};back.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
   'report.steps.chooserControls={closeAria:close.getAttribute("aria-label"),backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
   'report.errors=window.__errs||[];document.getElementById("__report").textContent=JSON.stringify(report);',
   '},350);});',
@@ -98,6 +98,11 @@ if (result) {
       s.focusFromExpanded.controlOutside,
     "expanded monitor focus also preserves the exact live browsing context through fullscreen",
     { launch: s.expandedLaunch, fullscreen: s.focusFromExpanded });
+  check(s.fallback && s.fallback.content && s.fallback.sameFrame && s.fallback.hostParent === "monitor-doom-wrap" &&
+      s.fallback.after && !s.fallback.after.content && s.fallback.after.sameFrame &&
+      s.fallback.after.hostParent === "monitor-doom-wrap",
+    "tablet fullscreen fallback uses monitor-content fullscreen without moving the live iframe",
+    { fallback: s.fallback });
   check(s.gutters.count === 2 && s.gutters.menu,
     "both 4:3 side gutters belong to the monitor context-menu surface", s.gutters);
   check(s.coach.on && s.coach.en === "Esc releases mouse" && s.coach.cs === "Esc uvolní myš",
@@ -130,6 +135,12 @@ var players = ["doom", "duke", "q3"].map(function(name) {
 });
 check(players.every(function(source) { return /aspect-ratio:4\/3!important/.test(source); }),
   "all three players share the centered 4:3 viewport contract");
+check(players.every(function(source) {
+  return /id="touch-pad"/.test(source) &&
+    (source.match(/data-touch-key="[wasd]"/g) || []).length >= 8 &&
+    /any-pointer:coarse/.test(source) && /left:max\(/.test(source) && /canvas\.dispatchEvent\(new KeyboardEvent/.test(source) && /setPointerCapture/.test(source) &&
+    /releaseTouchKeys/.test(source);
+}), "all three players expose a coarse-pointer left-side WASD touch pad with held-key cleanup");
 check(players.every(function(source) { return /shoot-pointer-lock/.test(source); }),
   "all three players report pointer-lock acquisition");
 check(/movementX \* 0\.25/.test(players[1]) && /movementY \* 0\.25/.test(players[1]),

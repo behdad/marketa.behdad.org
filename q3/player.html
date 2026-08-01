@@ -28,10 +28,22 @@ body{display:grid;place-items:center}
   linear-gradient(125deg,transparent 34%,#ffb22e 35% 39%,transparent 40% 67%,#ff7b20 68% 72%,transparent 73%),
   radial-gradient(circle at 55% 80%,#d83b14,#6c1f16 54%,#271719 55%)}
 .arena-choice:hover,.arena-choice:focus-visible{border-color:#f1c96c;outline:0;transform:translateY(-1px)}
+#touch-pad{display:none;position:fixed;z-index:4;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));grid-template-columns:repeat(3,clamp(42px,7vw,68px));grid-template-areas:". w ." "a s d";gap:clamp(4px,1vw,10px);padding:5px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(12,12,12,.62);touch-action:none;pointer-events:none;user-select:none;-webkit-user-select:none}
+#touch-pad[hidden]{display:none}
+#touch-pad button{grid-area:var(--touch-grid);pointer-events:auto;min-width:0;aspect-ratio:1;border:1px solid rgba(255,255,255,.34);border-radius:10px;background:rgba(55,55,55,.78);color:#fff;font:700 clamp(16px,3vw,25px)/1 system-ui,sans-serif;touch-action:none;-webkit-tap-highlight-color:transparent}
+#touch-pad button:active,#touch-pad button[aria-pressed="true"]{background:rgba(180,110,42,.92);border-color:#f5d28a}
+#touch-pad [data-touch-key="w"]{--touch-grid:w}#touch-pad [data-touch-key="a"]{--touch-grid:a}#touch-pad [data-touch-key="s"]{--touch-grid:s}#touch-pad [data-touch-key="d"]{--touch-grid:d}
+@media (any-pointer:coarse) and (min-width:600px),(hover:none) and (min-width:600px){#touch-pad{display:grid}}
 </style>
 </head>
 <body>
 <canvas id="canvas" tabindex="0"></canvas>
+<nav id="touch-pad" aria-label="Touch movement controls" hidden>
+  <button type="button" data-touch-key="w" aria-label="Move forward" aria-pressed="false">W</button>
+  <button type="button" data-touch-key="a" aria-label="Move left" aria-pressed="false">A</button>
+  <button type="button" data-touch-key="s" aria-label="Move backward" aria-pressed="false">S</button>
+  <button type="button" data-touch-key="d" aria-label="Move right" aria-pressed="false">D</button>
+</nav>
 <p id="status">Loading arena…</p>
 <section id="arena-picker" aria-label="Choose an arena">
   <strong>Choose arena</strong>
@@ -49,6 +61,50 @@ const arenas = ["oa_shine", "aggressor", "am_lavaarena"];
 let game = null;
 let parentActive = true;
 let paused = false;
+const touchPad = document.getElementById("touch-pad");
+const touchPointers = Object.create(null);
+const touchKeyCounts = Object.create(null);
+
+function emitTouchKey(type, key) {
+  const upper = key.toUpperCase(), code = "Key" + upper, keyCode = upper.charCodeAt(0);
+  canvas.dispatchEvent(new KeyboardEvent(type, { key, code, keyCode, which:keyCode, bubbles:true, cancelable:true }));
+}
+function setTouchKey(key, down) {
+  const count = touchKeyCounts[key] || 0;
+  if (down) {
+    touchKeyCounts[key] = count + 1;
+    if (!count) emitTouchKey("keydown", key);
+  } else if (count) {
+    touchKeyCounts[key] = count - 1;
+    if (count === 1) emitTouchKey("keyup", key);
+  }
+  const button = touchPad && touchPad.querySelector(`[data-touch-key="${key}"]`);
+  if (button) button.setAttribute("aria-pressed", (touchKeyCounts[key] || 0) > 0 ? "true" : "false");
+}
+function releaseTouchPointer(pointerId) {
+  const key = touchPointers[pointerId];
+  if (!key) return;
+  delete touchPointers[pointerId];
+  setTouchKey(key, false);
+}
+function releaseTouchKeys() { Object.keys(touchPointers).forEach(releaseTouchPointer); }
+if (touchPad) {
+  touchPad.addEventListener("pointerdown", event => {
+    const button = event.target.closest?.("[data-touch-key]");
+    if (!button) return;
+    event.preventDefault();
+    const pointerId = String(event.pointerId), key = button.getAttribute("data-touch-key");
+    if (touchPointers[pointerId]) return;
+    touchPointers[pointerId] = key;
+    try { button.setPointerCapture(event.pointerId); } catch (_) {}
+    setTouchKey(key, true);
+  });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(type => {
+    touchPad.addEventListener(type, event => releaseTouchPointer(String(event.pointerId)));
+  });
+  touchPad.addEventListener("click", event => event.preventDefault());
+  touchPad.addEventListener("contextmenu", event => event.preventDefault());
+}
 
 function chooseArena() {
   return new Promise(resolve => {
@@ -104,10 +160,12 @@ function sync() {
 addEventListener("message", event => {
   if (event.origin !== location.origin || !event.data || event.data.kind !== "shoot-control") return;
   parentActive = !!event.data.active;
+  if (!parentActive) releaseTouchKeys();
   sync();
 });
 addEventListener("focus", sync);
 addEventListener("blur", sync);
+addEventListener("blur", releaseTouchKeys);
 document.addEventListener("visibilitychange", sync);
 canvas.addEventListener("pointerdown", () => {
   try { window.focus(); } catch (_) {}
@@ -183,6 +241,7 @@ try {
     }]
   });
   setStatus("");
+  touchPad.hidden = false;
   tell("ready");
   sync();
   try { canvas.focus({ preventScroll: true }); } catch (_) {}

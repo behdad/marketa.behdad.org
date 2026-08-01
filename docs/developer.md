@@ -1219,6 +1219,12 @@ visibility, and focus. A normal app close retains and pauses the current frame;
 Back, chooser selection, Kill, and Restart remove it. The iframe boundary therefore
 hard-stops each engine's heap, canvas, listeners, and document title without patching
 third-party glue. Every player uses the same centered 4:3 contain contract.
+On coarse-pointer tablets, each player reveals a left-side held-key WASD pad only
+after its engine is ready; pointer capture and blur/visibility cleanup prevent a
+stuck movement key. Shoot first requests true fullscreen on the live host. If a
+mobile shell rejects or silently declines that request, the parent falls back to
+the existing monitor-content fullscreen owner, keeping the iframe in place and
+letterboxing the same 4:3 game surface.
 
 The child reports pointer-lock acquisition to the parent. The parent shows the
 localized `Esc releases mouse` coach for the entire active game session; it is

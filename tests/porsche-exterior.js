@@ -20,6 +20,8 @@ check(!/entrance-porsche-(?:open-door-seats|closed-seatbacks)/.test(source) &&
   "one permanent seat stack preserves that order across every roof and door state");
 check(/id="entrance-porsche-steering-wheel" transform="translate\(185 253\) scale\(1\.25\) translate\(-190 -248\)"/.test(entrance),
   "the cockpit steering wheel is twenty-five percent larger and shifted five units left and down");
+check(/#entrance-porsche-door-open\{[\s\S]*?transform:scaleX\(\.08\);transition:transform \.72s cubic-bezier\(\.42,0,\.58,1\),opacity \.28s linear[\s\S]*?#entrance-porsche\.door-open #entrance-porsche-door-open\{opacity:1;transform:scaleX\(1\)\}/.test(source),
+  "the driver door eases between the approved endpoints while retaining its opacity timing");
 
 if (failures) {
   console.log("\n" + failures + " Porsche exterior assertion" + (failures === 1 ? "" : "s") + " failed.");

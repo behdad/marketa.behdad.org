@@ -181,6 +181,16 @@ closes only that bed. Speed gently raises its tempo and opens its low-pass filte
 adds a smaller brightness lift. Its master follows `__songVolume()` so the music button and
 session master scale it independently of the Porsche engine/drivetrain bed.
 
+Fancy-Stupid's engine/drivetrain, driving loop, tire screech, and ABS chatter keep their
+authored source gains and then enter a car-only spatial output stage. Engine and tire noise
+track the moving car; the score stays centered on the HUD and ABS sits by the brake control.
+The stage adds mild edge-distance attenuation plus stereo placement. Closing the soft top
+smoothly applies a shared `0.74` enclosure gain and source-appropriate low-pass cutoff;
+opening it restores unity/18 kHz. The continuous engine and score retarget as the car or roof
+moves, while each half-second brake one-shot snapshots the current car/roof position. This
+stage still terminates at the owning bed or SFX destination, so it does not alter trigger,
+focus, teardown, volume-button, or shared-context rules.
+
 At an effective outside temperature of 24°C or warmer, the running Porsche HUD
 also starts a restrained filtered-noise fan and low motor tone through the same
 shared `audioBed()` route. It reads `__outdoorTempC()` (live weather, pretend-date

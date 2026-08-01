@@ -33793,6 +33793,59 @@ window.__entranceRoomOpen = false;
         driveGearLabel() + ", " + Math.round(speed) + " km/h";
     }
   }
+  // Keep the approved source mixes intact, then place only Fancy-Stupid's driving
+  // sounds in the scene. Car-borne sounds follow the moving body; cabin music and
+  // ABS stay with their HUD controls. The roof treatment belongs after each source's
+  // authored gain so open-top unity still means exactly the existing mix.
+  var PORSCHE_DRIVE_SPATIAL = {
+    engine: { anchor: "entrance-porsche", edgeRolloff: .24, closedCutoff: 1050 },
+    music: { anchor: "entrance-drive-hud", edgeRolloff: .08, closedCutoff: 2600 },
+    screech: { anchor: "entrance-porsche", edgeRolloff: .28, closedCutoff: 1750 },
+    abs: { anchor: "entrance-drive-brake", edgeRolloff: .12, closedCutoff: 300 }
+  };
+  function porscheDriveSpatialProfile(kind) {
+    var cfg = PORSCHE_DRIVE_SPATIAL[kind] || PORSCHE_DRIVE_SPATIAL.engine;
+    var pan = panForElId(cfg.anchor);
+    var distanceGain = 1 / (1 + Math.abs(pan) * cfg.edgeRolloff);
+    return {
+      kind: kind,
+      anchor: cfg.anchor,
+      pan: pan,
+      gain: distanceGain * (porscheState.roofOpen ? 1 : .74),
+      cutoff: porscheState.roofOpen ? 18000 : cfg.closedCutoff,
+      roofOpen: porscheState.roofOpen
+    };
+  }
+  function setPorscheDriveSpatialParam(param, value, time, immediate) {
+    param.cancelScheduledValues(time);
+    if (immediate) param.setValueAtTime(value, time);
+    else param.setTargetAtTime(value, time, .06);
+  }
+  function paintPorscheDriveSpatialOut(spatial, immediate) {
+    if (!spatial) return;
+    var profile = porscheDriveSpatialProfile(spatial.kind);
+    var t = spatial.ctx.currentTime;
+    try {
+      setPorscheDriveSpatialParam(spatial.filter.frequency, profile.cutoff, t, immediate);
+      setPorscheDriveSpatialParam(spatial.gain.gain, profile.gain, t, immediate);
+      if (spatial.panner) setPorscheDriveSpatialParam(spatial.panner.pan, profile.pan, t, immediate);
+      spatial.profile = profile;
+    } catch (_error) {}
+  }
+  function porscheDriveSpatialOut(ctx, kind) {
+    var filter = ctx.createBiquadFilter();
+    var gain = ctx.createGain();
+    var panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    filter.type = "lowpass";
+    filter.Q.value = .45;
+    filter.connect(gain);
+    gain.connect(panner || ctx.destination);
+    if (panner) panner.connect(ctx.destination);
+    var spatial = { ctx: ctx, kind: kind, input: filter, filter: filter, gain: gain,
+      panner: panner, profile: null, nodes: panner ? [filter, gain, panner] : [filter, gain] };
+    paintPorscheDriveSpatialOut(spatial, true);
+    return spatial;
+  }
   function stopPorscheDriveAudio() {
     if (!porscheDriveAudioNodes) return;
     var driveAudio = porscheDriveAudioNodes;
@@ -33994,13 +34047,15 @@ window.__entranceRoomOpen = false;
       compressor.attack.value = .008; compressor.release.value = .14;
       master.gain.setValueAtTime(.0001, now);
       master.gain.linearRampToValueAtTime(porscheDriveMusicVolume(), now + .42);
-      tone.connect(compressor); compressor.connect(master); master.connect(pannedOut(bed, "entrance-porsche"));
+      var spatial = porscheDriveSpatialOut(bed, "music");
+      tone.connect(compressor); compressor.connect(master); master.connect(spatial.input);
       porscheDriveMusicNodes = {
         bed: bed,
         bus: tone,
         tone: tone,
         compressor: compressor,
         master: master,
+        spatial: spatial,
         sources: []
       };
       porscheDriveMusicStep = 0;
@@ -34027,7 +34082,7 @@ window.__entranceRoomOpen = false;
     } catch (_error) {}
     setTimeout(function () {
       music.sources.slice().forEach(function (source) { try { source.stop(); } catch (_error) {} });
-      [music.tone, music.compressor, music.master].forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+      [music.tone, music.compressor, music.master].concat(music.spatial.nodes).forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
       try { music.bed.close(); } catch (_error) {}
     }, f * 1000 + 80);
   }
@@ -34040,6 +34095,7 @@ window.__entranceRoomOpen = false;
       var revs = Math.min(1, Math.max(0, driveState.rpm - 750) / 6500);
       music.tone.frequency.setTargetAtTime(1750 + motion * 1450 + revs * 450, now, .18);
       music.master.gain.setTargetAtTime(porscheDriveMusicVolume() * (.86 + motion * .14), now, .12);
+      paintPorscheDriveSpatialOut(music.spatial, false);
     } catch (_error) {}
   }
   function updatePorscheDriveMusic() {
@@ -34083,13 +34139,15 @@ window.__entranceRoomOpen = false;
       harmonic.connect(harmonicGain); harmonicGain.connect(out);
       pulse.connect(pulseGain); pulseGain.connect(out);
       road.connect(roadFilter); roadFilter.connect(roadGain); roadGain.connect(out);
-      out.connect(engineFilter); engineFilter.connect(pannedOut(bed, "entrance-porsche"));
+      var spatial = porscheDriveSpatialOut(bed, "engine");
+      out.connect(engineFilter); engineFilter.connect(spatial.input);
       porscheDriveAudioNodes = {
         bed: bed,
         sources: [base, harmonic, pulse, road],
-        nodes: [out, engineFilter, harmonicGain, pulseGain, roadFilter, roadGain],
+        nodes: [out, engineFilter, harmonicGain, pulseGain, roadFilter, roadGain].concat(spatial.nodes),
         out: out,
         filter: engineFilter,
+        spatial: spatial,
         base: base,
         harmonic: harmonic,
         pulse: pulse,
@@ -34117,6 +34175,7 @@ window.__entranceRoomOpen = false;
         (driveState.holds.throttle ? .018 : 0), t, .05);
       audio.roadFilter.frequency.setTargetAtTime(180 + Math.min(1300, Math.abs(driveState.speed) * 9), t, .08);
       audio.roadGain.gain.setTargetAtTime(.0001 + Math.min(.075, Math.abs(driveState.speed) / 1900), t, .08);
+      paintPorscheDriveSpatialOut(audio.spatial, false);
     } catch (_error) {}
     paintPorscheDriveMusic();
   }
@@ -34125,6 +34184,8 @@ window.__entranceRoomOpen = false;
     else stopPorscheDriveAudio();
     updatePorscheDriveMusic();
     updatePorscheDriveAc();
+    if (porscheDriveAudioNodes) paintPorscheDriveAudio();
+    else paintPorscheDriveMusic();
     if (porsche) porsche.classList.toggle("engine-idling",
       entranceDriveAudible() && Math.abs(driveState.speed) < .75);
   }
@@ -34211,6 +34272,8 @@ window.__entranceRoomOpen = false;
     var screechWarble = ctx.createOscillator();
     var screechWarbleGain = ctx.createGain();
     var screechToneGain = ctx.createGain();
+    var screechSpatial = porscheDriveSpatialOut(ctx, "screech");
+    var absSpatial = porscheDriveSpatialOut(ctx, "abs");
     screech.buffer = screechBuffer;
     abs.buffer = absBuffer;
     screechFilter.type = "bandpass";
@@ -34235,10 +34298,10 @@ window.__entranceRoomOpen = false;
     screechToneGain.gain.setValueAtTime(.0001, t);
     screechToneGain.gain.exponentialRampToValueAtTime(mix.screechToneGain, t + .016);
     screechToneGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
-    screech.connect(screechFilter); screechFilter.connect(screechGain); screechGain.connect(ctx.destination);
-    abs.connect(absFilter); absFilter.connect(absGain); absGain.connect(ctx.destination);
+    screech.connect(screechFilter); screechFilter.connect(screechGain); screechGain.connect(screechSpatial.input);
+    abs.connect(absFilter); absFilter.connect(absGain); absGain.connect(absSpatial.input);
     screechWarble.connect(screechWarbleGain); screechWarbleGain.connect(screechTone.frequency);
-    screechTone.connect(screechToneGain); screechToneGain.connect(ctx.destination);
+    screechTone.connect(screechToneGain); screechToneGain.connect(screechSpatial.input);
     screech.start(t); abs.start(t); screechTone.start(t); screechWarble.start(t);
     screech.stop(t + mix.duration + .01); abs.stop(t + mix.duration + .01);
     screechTone.stop(t + mix.duration + .01); screechWarble.stop(t + mix.duration + .01);
@@ -34246,8 +34309,11 @@ window.__entranceRoomOpen = false;
     screech.onended = function () {
       try {
         screech.disconnect(); abs.disconnect(); screechFilter.disconnect(); absFilter.disconnect();
-        screechGain.disconnect(); absGain.disconnect(); screechTone.disconnect(); screechWarble.disconnect();
-        screechWarbleGain.disconnect(); screechToneGain.disconnect();
+        screechGain.disconnect(); absGain.disconnect();
+        screechTone.disconnect(); screechWarble.disconnect(); screechWarbleGain.disconnect();
+        screechToneGain.disconnect();
+        screechSpatial.nodes.forEach(function (node) { node.disconnect(); });
+        absSpatial.nodes.forEach(function (node) { node.disconnect(); });
       } catch (_error) {}
     };
     return true;
@@ -35350,6 +35416,7 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveShift = selectPorscheDriveGear;
   window.__entranceDriveControl = setPorscheDriveHold;
   window.__entranceDriveBrakeAudio = porscheBrakeAudioMix;
+  window.__entranceDriveSpatialAudio = porscheDriveSpatialProfile;
   window.__refreshPorscheDriveClimate = updatePorscheDriveAc;
   window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
   var entranceCheckpoint = {

@@ -1238,10 +1238,11 @@ third-party glue. Every player uses the same centered 4:3 contain contract.
 On coarse-pointer phones and tablets, each player reveals a compact left-side D-pad only
 after its engine is ready. It reuses Hack-Man's held-pointer drag and reversal-hysteresis
 pattern while mapping directions to WASD; release, blur, and visibility cleanup prevent a
-stuck movement key. Shoot first requests true fullscreen on the live host. If a
+stuck movement key. Canvas touch input classifies taps as a single shot and amplified drags
+as aim motion. Shoot first requests true fullscreen on the live host. If a
 mobile shell rejects or silently declines that request, the parent falls back to
-the existing monitor-content fullscreen owner, keeping the iframe in place and
-letterboxing the same 4:3 game surface.
+the existing monitor-content fullscreen owner. The iframe fills that owner while each
+engine keeps its own centered 4:3 canvas, leaving side-rail room for touch controls.
 
 The child reports pointer-lock acquisition to the parent. The parent shows the
 localized `Esc releases mouse` coach for the entire active game session; it is

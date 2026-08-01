@@ -200,6 +200,32 @@ canvas.addEventListener("pointerdown", () => {
   try { canvas.focus({ preventScroll: true }); } catch (_) {}
   sync();
 });
+let touchAim = null;
+canvas.addEventListener("pointerdown", event => {
+  if (event.pointerType !== "touch") return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  touchAim = { id:event.pointerId, x:event.clientX, y:event.clientY, sx:event.clientX, sy:event.clientY, moved:false };
+  try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+}, true);
+canvas.addEventListener("pointermove", event => {
+  if (!touchAim || event.pointerId !== touchAim.id) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  const dx = event.clientX - touchAim.x, dy = event.clientY - touchAim.y;
+  if (Math.hypot(event.clientX - touchAim.sx, event.clientY - touchAim.sy) > 5) touchAim.moved = true;
+  touchAim.x = event.clientX; touchAim.y = event.clientY;
+  canvas.dispatchEvent(new MouseEvent("mousemove", { bubbles:true, movementX:dx * 3.2, movementY:dy * 3.2 }));
+}, true);
+function finishTouchAim(event) {
+  if (!touchAim || event.pointerId !== touchAim.id) return;
+  event.preventDefault(); event.stopImmediatePropagation();
+  if (!touchAim.moved) {
+    canvas.dispatchEvent(new MouseEvent("mousedown", { bubbles:true, button:0, buttons:1 }));
+    canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles:true, button:0 }));
+  }
+  touchAim = null;
+}
+canvas.addEventListener("pointerup", finishTouchAim, true);
+canvas.addEventListener("pointercancel", finishTouchAim, true);
 document.addEventListener("contextmenu", event => {
   event.preventDefault();
   try { parent.postMessage({ kind: "shoot-contextmenu", game: "q3", x: event.clientX / innerWidth, y: event.clientY / innerHeight }, location.origin); } catch (_) {}

@@ -41,6 +41,7 @@ canvas{image-rendering:pixelated}
   var status = document.getElementById("status");
   var statusTitle = document.getElementById("status-title");
   var statusText = document.getElementById("status-text");
+  var dosSurface = document.getElementById("dos");
   var params = new URLSearchParams(location.search);
   var lang = params.get("lang") === "cs" ? "cs" : "en";
   var mode = params.get("mode") === "dos" ? "dos" : "nibbles";
@@ -180,29 +181,51 @@ canvas{image-rendering:pixelated}
     if (nibblesStartupIndex >= nibblesStartupKeys.length) { waitForNibblesStartScreen(); return; }
     nibblesStartupTimer = window.setTimeout(stepNibblesStartup, delay);
   }
-  function sendNibblesStartSpace() {
-    if (nibblesSpaceSending || nibblesStartupComplete || !nibblesCi) return;
+  function pulseNibblesSpace(done) {
+    if (!nibblesCi) return false;
     try {
       nibblesCi.sendKeyEvent(32, true);
       window.dispatchEvent(new KeyboardEvent("keydown", {
         key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true, cancelable: true
       }));
-      nibblesStartupHeld = 32;
-      nibblesSpaceSending = true;
-    } catch (_error) {
-      nibblesStartupTimer = window.setTimeout(waitForNibblesStartScreen, 60);
-      return;
-    }
-    nibblesStartupTimer = window.setTimeout(function () {
-      nibblesStartupTimer = null;
+    } catch (_error) { return false; }
+    window.setTimeout(function () {
       try { nibblesCi.sendKeyEvent(32, false); } catch (_error) {}
       window.dispatchEvent(new KeyboardEvent("keyup", {
         key: " ", code: "Space", keyCode: 32, which: 32, bubbles: true, cancelable: true
       }));
-      nibblesStartupHeld = 0;
+      if (done) done();
+    }, 18);
+    return true;
+  }
+  function sendNibblesStartSpace() {
+    if (nibblesSpaceSending || nibblesStartupComplete || !nibblesCi) return;
+    nibblesStartupHeld = 32;
+    nibblesSpaceSending = true;
+    var remaining = 6;
+    function sendNext() {
+      if (!pulseNibblesSpace(function () {
+        remaining--;
+        if (remaining > 0) {
+          nibblesStartupTimer = window.setTimeout(sendNext, 170);
+          return;
+        }
+        nibblesStartupTimer = null;
+        nibblesStartupHeld = 0;
+        nibblesSpaceSending = false;
+        finishNibblesStartup();
+      })) {
+        nibblesSpaceSending = false;
+        nibblesStartupHeld = 0;
+        nibblesStartupTimer = window.setTimeout(waitForNibblesStartScreen, 60);
+      }
+    }
+    try { sendNext(); }
+    catch (_error) {
       nibblesSpaceSending = false;
-      finishNibblesStartup();
-    }, 8);
+      nibblesStartupHeld = 0;
+      nibblesStartupTimer = window.setTimeout(waitForNibblesStartScreen, 60);
+    }
   }
   function waitForNibblesStartScreen() {
     clearNibblesStartupTimer();
@@ -239,6 +262,11 @@ canvas{image-rendering:pixelated}
       if (!runtimeReadyTold) { runtimeReadyTold = true; tell("snake-ready"); }
     }, 70);
   }
+  dosSurface.addEventListener("pointerup", function (event) {
+    if (mode !== "nibbles" || !nibblesCi || event.pointerType === "mouse" && event.button !== 0) return;
+    event.preventDefault();
+    pulseNibblesSpace();
+  });
   function stepNibblesStartup() {
     nibblesStartupTimer = null;
     if (!nibblesCi || mode !== "nibbles") return;

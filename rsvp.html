@@ -7207,16 +7207,16 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pb-dlg-btn:hover{background:#fff; transform:translateY(-1px)}
 .pb-dlg-btn svg{vertical-align:-2px; margin-right:1px}
 .snake-launch-backdrop{z-index:80}
-.snake-launch-dialog{width:min(390px,94vw);text-align:left;padding:1.1rem 1.2rem 1.2rem}
-.snake-launch-title{margin:0 1.5rem .9rem 0;font:700 1.25rem/1.1 "Fraunces",Georgia,serif;color:var(--paper)}
-.snake-launch-fields{display:grid;gap:.85rem}
-.snake-launch-field{display:grid;gap:.32rem;font-size:.82rem}
-.snake-launch-field select{width:100%;min-height:42px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);padding:.35rem .55rem;font:inherit}
-.snake-launch-speed-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:.5rem;font-size:.68rem;opacity:.9}
-.snake-launch-speed-row input{width:100%;min-height:34px;accent-color:var(--pink-deep);touch-action:pan-x}
-.snake-launch-speed-row output{min-width:2.4em;text-align:center;font-variant-numeric:tabular-nums;font-weight:700;color:var(--paper)}
-.snake-launch-actions{display:flex;justify-content:flex-end;gap:.45rem;margin-top:1rem}
-.snake-launch-actions .pb-dlg-btn{min-height:40px;padding:.45rem .8rem}
+.snake-launch-dialog{width:min(560px,94vw);text-align:left;padding:1.55rem 1.7rem 1.65rem;border-width:2px;box-shadow:0 18px 60px rgba(22,13,31,.38)}
+.snake-launch-title{margin:0 1.5rem 1.25rem 0;font:700 clamp(1.65rem,5vw,2.35rem)/1.05 "Fraunces",Georgia,serif;color:var(--paper);letter-spacing:.025em}
+.snake-launch-fields{display:grid;gap:1.3rem}
+.snake-launch-field{display:grid;gap:.55rem;font-size:clamp(1rem,2.6vw,1.25rem);font-weight:650}
+.snake-launch-field select{width:100%;min-height:56px;border:2px solid var(--rule);border-radius:12px;background:var(--paper);color:var(--ink);padding:.55rem .8rem;font:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.snake-launch-speed-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:.8rem;font-size:clamp(.82rem,2vw,1rem);opacity:.95}
+.snake-launch-speed-row input{width:100%;min-height:48px;accent-color:var(--pink-deep);touch-action:pan-x}
+.snake-launch-speed-row output{min-width:2.8em;padding:.3rem .45rem;border-radius:8px;background:rgba(255,255,255,.14);text-align:center;font-variant-numeric:tabular-nums;font-weight:800;color:var(--paper)}
+.snake-launch-actions{display:flex;justify-content:flex-end;gap:.75rem;margin-top:1.5rem}
+.snake-launch-actions .pb-dlg-btn{min-height:52px;padding:.65rem 1.15rem;font-size:1rem;border-radius:10px}
 .snake-launch-actions .snake-launch-go{background:var(--pink);font-weight:700}
 .snake-launch-actions .snake-launch-go:hover{background:#e5baba}
 .pb-dlg-hint{margin:.5rem 0 .45rem; font-size:.7rem; opacity:.82; animation:pb-hint-flash .75s ease 3}
@@ -37449,6 +37449,7 @@ var T = {
     prince_dpad_down: "Move Prince down",
     prince_dpad_left: "Move Prince left",
     prince_dpad_right: "Move Prince right",
+    prince_dpad_shift: "Hold Shift",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "LINES",
     tetris_next: "NEXT",
@@ -38831,6 +38832,7 @@ var T = {
     prince_dpad_down: "Pohyb prince dolů",
     prince_dpad_left: "Pohyb prince doleva",
     prince_dpad_right: "Pohyb prince doprava",
+    prince_dpad_shift: "Podržet Shift",
     tetris_title: "BLOCK PARTY",
     tetris_lines: "ŘADY",
     tetris_next: "DALŠÍ",
@@ -70150,7 +70152,8 @@ async def localfont(name):
   var princeDripAnimation = null;
   var princeChainPointer = null, princeChainStartX = 0, princeChainStartY = 0;
   var princeChainX = 0, princeChainY = 0, princeChainMoved = false, princeChainSuppressClick = false;
-  var princeDpad = null, princeDpadDrag = null, princeDpadHeldDirection = null;
+  var princeDpad = null, princeShiftControl = null, princeDpadDrag = null;
+  var princeDpadHeldDirections = [], princeShiftHeld = false;
   var PRINCE_DPAD_DIRECTIONS = {
     up: { key: "ArrowUp", keyCode: 38, label: "prince_dpad_up", glyph: "↑" },
     left: { key: "ArrowLeft", keyCode: 37, label: "prince_dpad_left", glyph: "←" },
@@ -70172,6 +70175,11 @@ async def localfont(name):
       button.setAttribute("aria-label", label);
       button.setAttribute("title", label);
     });
+    if (princeShiftControl) {
+      var shiftLabel = princeText("prince_dpad_shift");
+      princeShiftControl.setAttribute("aria-label", shiftLabel);
+      princeShiftControl.setAttribute("title", shiftLabel);
+    }
   }
   window.refreshPrinceText = paintPrinceDpadText;
   function emitPrinceDpadKey(type, direction, forcedRelease) {
@@ -70193,26 +70201,46 @@ async def localfont(name):
       return true;
     } catch (_error) { return false; }
   }
-  function paintPrinceDpadDirection(direction) {
+  function paintPrinceDpadDirections(directions) {
     if (!princeDpad) return;
     princeDpad.querySelectorAll("[data-prince-direction]").forEach(function (button) {
-      button.setAttribute("aria-pressed", String(button.getAttribute("data-prince-direction") === direction));
+      var needed = button.getAttribute("data-prince-direction").split(" ");
+      button.setAttribute("aria-pressed", String(needed.every(function (direction) { return directions.indexOf(direction) >= 0; })));
     });
   }
   function clearPrinceDpadMovement() {
-    var held = princeDpadHeldDirection;
-    princeDpadHeldDirection = null;
-    paintPrinceDpadDirection(null);
-    if (held) emitPrinceDpadKey("keyup", held, true);
+    var held = princeDpadHeldDirections.slice();
+    princeDpadHeldDirections.length = 0;
+    paintPrinceDpadDirections([]);
+    held.forEach(function (direction) { emitPrinceDpadKey("keyup", direction, true); });
   }
-  function choosePrinceDpadDirection(direction) {
-    if (!PRINCE_DPAD_DIRECTIONS[direction] || !princeShouldRun()) return false;
-    if (princeDpadHeldDirection === direction) return true;
-    clearPrinceDpadMovement();
-    if (!emitPrinceDpadKey("keydown", direction, false)) return false;
-    princeDpadHeldDirection = direction;
-    paintPrinceDpadDirection(direction);
+  function choosePrinceDpadDirections(directions) {
+    directions = directions.filter(function (direction) { return !!PRINCE_DPAD_DIRECTIONS[direction]; });
+    if (!directions.length || !princeShouldRun()) return false;
+    princeDpadHeldDirections.filter(function (direction) { return directions.indexOf(direction) < 0; })
+      .forEach(function (direction) { emitPrinceDpadKey("keyup", direction, true); });
+    directions.filter(function (direction) { return princeDpadHeldDirections.indexOf(direction) < 0; })
+      .forEach(function (direction) { emitPrinceDpadKey("keydown", direction, false); });
+    princeDpadHeldDirections = directions.slice();
+    paintPrinceDpadDirections(directions);
     return true;
+  }
+  function emitPrinceShift(type, forcedRelease) {
+    if (!princeFrame || !princeFrame.contentWindow || (!forcedRelease && !princeShouldRun())) return false;
+    if (!forcedRelease) focusPrince();
+    try {
+      var child = princeFrame.contentWindow;
+      var event = new child.KeyboardEvent(type, { key: "Shift", code: "ShiftLeft", keyCode: 16, which: 16, shiftKey: type === "keydown", bubbles: true, cancelable: true });
+      ["keyCode", "which"].forEach(function (property) { try { Object.defineProperty(event, property, { get: function () { return 16; } }); } catch (_error) {} });
+      child.dispatchEvent(event);
+      return true;
+    } catch (_error) { return false; }
+  }
+  function setPrinceShift(held) {
+    if (princeShiftHeld === held) return;
+    princeShiftHeld = held;
+    if (princeShiftControl) princeShiftControl.setAttribute("aria-pressed", String(held));
+    emitPrinceShift(held ? "keydown" : "keyup", !held);
   }
   function endPrinceDpadDrag(event) {
     if (!princeDpadDrag || (event && event.pointerId != null && event.pointerId !== princeDpadDrag.pointerId)) return;
@@ -70241,26 +70269,35 @@ async def localfont(name):
       "#prince-touch-dpad::before{content:'';grid-area:2/2;width:3.2px;height:3.2px;place-self:center;border:.45px solid #6579dc;border-radius:50%;background:#253fc8;box-shadow:0 0 1px rgba(65,100,255,.75);pointer-events:none}" +
       "#prince-touch-dpad.dragging{cursor:grabbing}#prince-touch-dpad.dragging::before{background:#ffd83d;border-color:#f5d7a1;box-shadow:0 0 1.5px rgba(255,216,61,.85)}" +
       "#prince-touch-dpad button{appearance:none;-webkit-appearance:none;box-sizing:border-box;border:0;border-radius:1px;background:#182252;color:#f8f5ec;font:3px/1 ui-monospace,monospace;padding:0;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}" +
-      "#prince-touch-dpad button[data-prince-direction=up]{grid-area:1/2}#prince-touch-dpad button[data-prince-direction=left]{grid-area:2/1}#prince-touch-dpad button[data-prince-direction=right]{grid-area:2/3}#prince-touch-dpad button[data-prince-direction=down]{grid-area:3/2}" +
+      "#prince-touch-dpad button[data-prince-direction='up left']{grid-area:1/1}#prince-touch-dpad button[data-prince-direction=up]{grid-area:1/2}#prince-touch-dpad button[data-prince-direction='up right']{grid-area:1/3}#prince-touch-dpad button[data-prince-direction=left]{grid-area:2/1}#prince-touch-dpad button[data-prince-direction=right]{grid-area:2/3}#prince-touch-dpad button[data-prince-direction='down left']{grid-area:3/1}#prince-touch-dpad button[data-prince-direction=down]{grid-area:3/2}#prince-touch-dpad button[data-prince-direction='down right']{grid-area:3/3}" +
       "#prince-touch-dpad button:active,#prince-touch-dpad button[aria-pressed=true]{background:#2847b8}" +
-      "@media (pointer:coarse){#prince-touch-dpad{display:grid;pointer-events:auto}}" +
-      "@media (pointer:coarse) and (min-height:200px){#prince-touch-dpad{right:max(16px,env(safe-area-inset-right));grid-template:repeat(3,clamp(20px,6vmin,36px))/repeat(3,clamp(20px,6vmin,36px));gap:clamp(2px,.6vmin,4px);border-radius:8px}#prince-touch-dpad::before{width:clamp(10px,3vmin,18px);height:clamp(10px,3vmin,18px);border-width:1.5px;box-shadow:0 0 5px rgba(65,100,255,.75)}#prince-touch-dpad.dragging::before{box-shadow:0 0 7px rgba(255,216,61,.85)}#prince-touch-dpad button{border-radius:5px;font-size:clamp(12px,3vmin,22px)}}";
+      "#prince-touch-shift{position:fixed;z-index:20;display:none;left:0;top:50%;transform:translateY(-50%);width:max(28px,calc((100vw - 133.333vh)/2));height:clamp(72px,21.6vmin,130px);border:0;border-radius:0 10px 10px 0;background:linear-gradient(90deg,#151d45,#2847b8);color:#f8f5ec;font:700 clamp(10px,2.4vmin,17px)/1 ui-monospace,monospace;writing-mode:vertical-rl;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#prince-touch-shift[aria-pressed=true]{background:linear-gradient(90deg,#8c6a18,#ffd83d);color:#182252}" +
+      "@media (pointer:coarse){#prince-touch-dpad{display:grid;pointer-events:auto}#prince-touch-shift{display:block}}" +
+      "@media (pointer:coarse) and (min-height:200px){#prince-touch-dpad{right:max(8px,calc((100vw - 133.333vh)/4));grid-template:repeat(3,clamp(24px,7.2vmin,43px))/repeat(3,clamp(24px,7.2vmin,43px));gap:clamp(2px,.6vmin,4px);border-radius:8px}#prince-touch-dpad::before{width:clamp(10px,3vmin,18px);height:clamp(10px,3vmin,18px);border-width:1.5px;box-shadow:0 0 5px rgba(65,100,255,.75)}#prince-touch-dpad.dragging::before{box-shadow:0 0 7px rgba(255,216,61,.85)}#prince-touch-dpad button{border-radius:5px;font-size:clamp(12px,3vmin,22px)}}";
     childDocument.head.appendChild(style);
     var pad = childDocument.createElement("div");
     pad.id = "prince-touch-dpad";
     pad.setAttribute("role", "group");
-    ["up", "left", "right", "down"].forEach(function (direction) {
-      var spec = PRINCE_DPAD_DIRECTIONS[direction];
+    [["up", "left"], ["up"], ["up", "right"], ["left"], ["right"], ["down", "left"], ["down"], ["down", "right"]].forEach(function (directions) {
+      var spec = PRINCE_DPAD_DIRECTIONS[directions[0]];
       var button = childDocument.createElement("button");
       button.type = "button";
       button.tabIndex = -1;
-      button.textContent = spec.glyph;
-      button.setAttribute("data-prince-direction", direction);
+      button.textContent = directions.length === 1 ? spec.glyph : (directions.join(" ") === "up left" ? "↖" : directions.join(" ") === "up right" ? "↗" : directions.join(" ") === "down left" ? "↙" : "↘");
+      button.setAttribute("data-prince-direction", directions.join(" "));
       button.setAttribute("aria-pressed", "false");
       pad.appendChild(button);
     });
     childDocument.body.appendChild(pad);
+    var shift = childDocument.createElement("button");
+    shift.id = "prince-touch-shift";
+    shift.type = "button";
+    shift.tabIndex = -1;
+    shift.textContent = "SHIFT";
+    shift.setAttribute("aria-pressed", "false");
+    childDocument.body.appendChild(shift);
     princeDpad = pad;
+    princeShiftControl = shift;
     paintPrinceDpadText();
     pad.addEventListener("touchmove", function (event) { event.preventDefault(); }, { passive: false });
     ["contextmenu", "selectstart", "dragstart"].forEach(function (type) {
@@ -70278,7 +70315,7 @@ async def localfont(name):
       };
       pad.classList.add("dragging");
       try { pad.setPointerCapture(event.pointerId); } catch (_error) {}
-      if (princeDpadDrag.lastDir) choosePrinceDpadDirection(princeDpadDrag.lastDir);
+      if (princeDpadDrag.lastDir) choosePrinceDpadDirections(princeDpadDrag.lastDir.split(" "));
     });
     pad.addEventListener("pointermove", function (event) {
       if (!princeDpadDrag || event.pointerId !== princeDpadDrag.pointerId) return;
@@ -70287,7 +70324,10 @@ async def localfont(name):
       var ax = Math.abs(dx), ay = Math.abs(dy);
       if (Math.max(ax, ay) < princeDpadDrag.threshold ||
           (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
-      var direction = ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+      var directions = [];
+      if (ax >= princeDpadDrag.threshold) directions.push(dx > 0 ? "right" : "left");
+      if (ay >= princeDpadDrag.threshold) directions.unshift(dy > 0 ? "down" : "up");
+      var direction = directions.join(" ");
       var needed = princeDpadDrag.lastDir && PRINCE_DPAD_REVERSE[princeDpadDrag.lastDir] === direction ?
         princeDpadDrag.threshold * 1.55 : princeDpadDrag.threshold;
       if (Math.max(ax, ay) < needed) return;
@@ -70295,12 +70335,18 @@ async def localfont(name):
       princeDpadDrag.y = event.clientY;
       if (direction === princeDpadDrag.lastDir) return;
       princeDpadDrag.lastDir = direction;
-      choosePrinceDpadDirection(direction);
+      choosePrinceDpadDirections(directions);
     });
     pad.addEventListener("pointerup", endPrinceDpadDrag);
     pad.addEventListener("pointercancel", endPrinceDpadDrag);
     pad.addEventListener("lostpointercapture", endPrinceDpadDrag);
     pad.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); });
+    function releaseShift(event) { if (event) { event.preventDefault(); event.stopPropagation(); } setPrinceShift(false); }
+    shift.addEventListener("pointerdown", function (event) { event.preventDefault(); event.stopPropagation(); try { shift.setPointerCapture(event.pointerId); } catch (_error) {} setPrinceShift(true); });
+    shift.addEventListener("pointerup", releaseShift);
+    shift.addEventListener("pointercancel", releaseShift);
+    shift.addEventListener("lostpointercapture", releaseShift);
+    shift.addEventListener("contextmenu", function (event) { event.preventDefault(); event.stopPropagation(); });
   }
   function clearPrinceDungeonTimers() {
     princeDungeonTimers.forEach(clearTimeout);

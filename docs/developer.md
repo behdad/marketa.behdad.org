@@ -686,6 +686,10 @@ Down brake, Shift clutch, and N/R/1–6.
 focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
 state preserves the Porsche's position and durable panel/light configuration; a full
 reset clears both.
+The couple is presentation-only: `#entrance-porsche-occupants` fades in from the
+existing `.drive-hud-visible` class, while the HUD itself carries Behdad behind the
+passenger dashboard and Markéta's hands inside the steering-wheel transform. No
+occupant state is captured, restored, or consulted by the drivetrain.
 The intercom's attended click plays a short low-passed formant reply and flashes
 localized “Come up!” copy. Its sound path checks the open room, visibility, and
 focus at the gesture and has no autonomous timer.

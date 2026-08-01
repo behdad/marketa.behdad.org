@@ -33434,6 +33434,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_BASE_Y = -9;
   var PORSCHE_WRAP_SPAN = 986;
   var PORSCHE_ROAD_TRAVEL_SCALE = 2.5;
+  var PORSCHE_GEAR_SPEED_CEILINGS = { "1": 60, "2": 100, "3": 150, "4": 200, "5": 250, "6": 300 };
   var driveFrame = null;
   var driveLastTime = 0;
   var lastSkidAt = 0;
@@ -33594,6 +33595,13 @@ window.__entranceRoomOpen = false;
     var offsets = { "-1": [-12, -7], "0": [4, 0], "1": [-4, -7], "2": [-4, 7],
       "3": [4, -7], "4": [4, 7], "5": [12, -7], "6": [12, 7] };
     return offsets[String(gear)] || offsets["0"];
+  }
+  function porscheGearSpeedCeiling(gear) {
+    return PORSCHE_GEAR_SPEED_CEILINGS[String(Math.abs(Number(gear)))] || 55;
+  }
+  function clampPorscheDriveSpeedToGear() {
+    if (driveState.gear > 0) driveState.speed = Math.min(driveState.speed, porscheGearSpeedCeiling(driveState.gear));
+    else if (driveState.gear < 0) driveState.speed = Math.max(driveState.speed, -55);
   }
   function paintPorscheShifter(gear) {
     if (!driveShifterLever) return;
@@ -34214,6 +34222,7 @@ window.__entranceRoomOpen = false;
       return false;
     }
     driveState.gear = gear;
+    clampPorscheDriveSpeedToGear();
     paintPorscheDriveHud();
     if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) playDryClickSound("entrance-drive-shifter");
     return true;
@@ -34269,7 +34278,7 @@ window.__entranceRoomOpen = false;
       if (driveState.gear && !clutch) {
         var direction = driveState.gear < 0 ? -1 : 1;
         var gearNumber = Math.max(1, Math.abs(driveState.gear));
-        var speedCeiling = Math.max(8, (coupledLimit - 1050) / (ratio * 27));
+        var speedCeiling = porscheGearSpeedCeiling(driveState.gear);
         var ceilingApproach = Math.max(0, 1 - Math.abs(driveState.speed) / speedCeiling);
         var driveForce = throttle * (82 / (1 + (gearNumber - 1) * .22)) * Math.pow(ceilingApproach, .55);
         driveState.speed += direction * driveForce * seconds;
@@ -34299,6 +34308,7 @@ window.__entranceRoomOpen = false;
     if (!throttle && !clutch && driveState.gear > 2 && Math.abs(driveState.speed) < 2.2) {
       driveState.gear = 0;
     }
+    clampPorscheDriveSpeedToGear();
     driveState.speed = Math.max(-55, Math.min(300, driveState.speed));
     // The street is a theatrical loop rather than a kilometre-scale map. Keep the
     // speedometer honest, then progressively compress distance so upper gears read

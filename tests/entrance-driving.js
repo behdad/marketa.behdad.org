@@ -24,6 +24,7 @@ var HARNESS = [
   'key("keydown","ArrowDown");step(1);key("keyup","ArrowDown");report.steps.brake=state();',
   'key("keydown","Shift");key("keydown","n");key("keyup","Shift");key("keydown","ArrowUp");step(120);report.steps.redlineGrace=state();step(30);key("keyup","ArrowUp");report.steps.redline=state();',
   'if(!state().car.engineOn)key("keydown","Enter");key("keydown","ArrowDown");step(30);key("keyup","ArrowDown");key("keydown","Shift");key("keydown","r");key("keyup","Shift");key("keydown","ArrowUp");step(12);key("keyup","ArrowUp");report.steps.reverse=state();',
+  'var gearCaps=[60,100,150,200,250,300],gearCeilings=[];key("keydown","ArrowDown");step(20);key("keyup","ArrowDown");for(var gear=1;gear<=6;gear++){window.__entranceDriveShift(gear,true);window.__entranceDriveControl("throttle",true);for(var ticks=0;ticks<150;ticks++)window.__entranceDriveStep(80);window.__entranceDriveControl("throttle",false);gearCeilings.push({gear:gear,speed:state().drive.speed,cap:gearCaps[gear-1]});}window.__entranceDriveShift(1,true);report.steps.gearCeilings=gearCeilings;report.steps.downshiftToFirst=state().drive;',
   'key("keydown","ArrowDown");step(20);key("keyup","ArrowDown");for(var gear=1;gear<=6;gear++){key("keydown","Shift");key("keydown",String(gear));key("keyup","Shift");key("keydown","ArrowUp");step(gear<4?12:18);key("keyup","ArrowUp");}key("keydown","ArrowUp");step(100);key("keyup","ArrowUp");report.steps.wrap=state();',
   'var clutch=document.getElementById("entrance-drive-clutch");clutch.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:9,pointerType:"mouse"}));clutch.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:9,pointerType:"mouse"}));report.steps.latchOn=state();clutch.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:10,pointerType:"mouse"}));clutch.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:10,pointerType:"mouse"}));report.steps.latchOff=state();',
   'window.__dismissEntrancePorscheDriveHud();await sleep(30);var nav=[];var oldNav=window.__navigateLowerRoom;window.__navigateLowerRoom=function(room){nav.push(room);};key("keydown","ArrowLeft");report.steps.closedHudNav={hud:state().drive.hud,rooms:nav.slice()};window.__navigateLowerRoom=oldNav;window.__openEntrancePorscheDriveHud();',
@@ -106,6 +107,12 @@ check(s.redlineGrace && s.redlineGrace.car.engineOn && !s.redlineGrace.drive.sta
   "neutral redline allows ten seconds before stalling the engine", {grace:s.redlineGrace,stalled:s.redline});
 check(s.reverse && s.reverse.car.engineOn && s.reverse.drive.gear === -1 && s.reverse.drive.speed < 0,
   "the real reverse gate drives in the opposite direction", s.reverse);
+check(s.gearCeilings && s.gearCeilings.length === 6 &&
+  s.gearCeilings.every(function (row, index) { return row.speed <= row.cap + .001 && (index === 0 || row.cap > s.gearCeilings[index - 1].cap); }) &&
+  s.gearCeilings[0].speed < 150 && s.gearCeilings[0].speed > 48 &&
+  s.gearCeilings[5].speed > 285 && s.downshiftToFirst && s.downshiftToFirst.gear === 1 &&
+  s.downshiftToFirst.speed <= 60.001,
+  "each forward gear respects its ascending speed ceiling", s.gearCeilings);
 check(s.wrap && s.wrap.car.engineOn && s.wrap.drive.gear === 6 && s.wrap.drive.wraps > 0 &&
   s.wrap.drive.speed >= 285 && s.wrap.drive.speed <= 300 &&
   s.wrap.drive.position >= -648 && s.wrap.drive.position <= 349,

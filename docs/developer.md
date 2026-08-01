@@ -665,17 +665,23 @@ strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
 `hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
 capture guard owns Up/Escape/Backspace; horizontal navigation remains on the
 lower floor, with Entrance forming its right edge.
-Eleven `.entrance-prop` SVG overlays give the five window bays, name stone, doors,
-intercom, paired entry lamps, tree canopy, and sidewalk pointer/touch plus Enter/Space
+Ten `.entrance-prop` SVG overlays give the five window bays, name stone,
+intercom, paired entry lamps, and tree canopy pointer/touch plus Enter/Space
 responses without changing the facade paint order. `data-entrance-action`
 selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
 in-flight class so no one-shot survives a room leave or reset.
-Seven separate `.entrance-car-control` overlays partition the foreground Boxster's
+Eight separate `.entrance-car-control` overlays partition the foreground Boxster's
 roof, driver door, front and rear compartments, mid-body engine control, headlight,
-and tail light. They remain outside the Tab order, stop bubbling at their own click
-handlers, and publish pressed state through `__entranceRoomState().car`. The start
-roar and stop wind-down are short shared-SFX voices rather than a new audio context
-or an unattended loop; leaving Entrance returns the car to its closed, engine-off state.
+tail light, and indicator. They remain outside the Tab order, stop bubbling at their
+own click handlers, and publish pressed state through `__entranceRoomState().car`.
+The engine-on HUD is a clipped, translucent top-half code-native SVG overlay that leaves
+the animated Porsche in the lower street band: pointer holds drive its
+physical pedals and handbrake, shifter hotspots select R/N/1–6, and the Entrance
+capture handler claims only W/S/C/H/N/R/1–6 while leaving Up/Down routing intact.
+`__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
+focused drivetrain test surfaces. Leaving Entrance parks motion and its audio bed
+at the authored position without erasing the parked Porsche's durable panel/light
+configuration; a full transient reset still clears both.
 The intercom's attended click plays a short low-passed formant reply and flashes
 localized “Come up!” copy. Its sound path checks the open room, visibility, and
 focus at the gesture and has no autonomous timer.

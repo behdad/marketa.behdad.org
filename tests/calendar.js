@@ -27,8 +27,8 @@ var HARNESS = [
   ' var mh=document.getElementById("monitor-cal-body"),mrows=mh.querySelectorAll(".calx-card-row"),mrow=mrows[mrows.length-1];mrow.click();await sleep(30);',
   ' S("monitor",{title:title(mh),sameDate:ymd()===before,sameHref:location.href===href,selected:selected(mh)});',
   ' var canada=day(mh,1);canada.click();await sleep(160);mh=document.getElementById("monitor-cal-body");S("canada",{date:new URL(location.href).searchParams.get("date"),room:window.currentStageName,party:!!window.__gardenPartyOn,dusk:document.getElementById("stage-balcony").classList.contains("dusk"),smoking:document.getElementById("balcony-smoker").classList.contains("smoking")});',
-  ' window.__applySeason("newyear");await sleep(160);S("newyear",{room:window.currentStageName,party:!!window.__gardenPartyOn,dusk:document.getElementById("stage-balcony").classList.contains("dusk"),smoking:document.getElementById("balcony-smoker").classList.contains("smoking"),dateNav:getComputedStyle(document.querySelector(".loft-datenav")).display,timeNav:getComputedStyle(document.getElementById("loft-timenav")).display,dateText:document.getElementById("loft-datepill-txt").textContent});',
-  ' var d=day(mh,12);d.click();await sleep(40);S("grid",{date:new URL(location.href).searchParams.get("date"),selected:selected(mh)});',
+  ' window.__applySeason("newyear");await sleep(160);S("newyear",{room:window.currentStageName,party:!!window.__gardenPartyOn,dusk:document.getElementById("stage-balcony").classList.contains("dusk"),smoking:document.getElementById("balcony-smoker").classList.contains("smoking"),date:new URL(location.href).searchParams.get("date"),dateNav:getComputedStyle(document.querySelector(".loft-datenav")).display,timeNav:getComputedStyle(document.getElementById("loft-timenav")).display,reset:getComputedStyle(document.getElementById("loft-datereset")).display,dateText:document.getElementById("loft-datepill-txt").textContent});',
+  ' var d=day(mh,12);d.click();await sleep(40);var gd=window.__seasonDate();S("grid",{date:new URL(location.href).searchParams.get("date"),selected:selected(mh),preview:window.__seasonPreviewName(),effective:[gd.y,gd.m,gd.d]});',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},300);});',
   '})();</script>'
@@ -49,9 +49,9 @@ check(s.phoneTouchTip&&s.phoneTouchTip.shown&&/Ali/.test(s.phoneTouchTip.text||"
 check(s.monitor&&/July|červenec/i.test(s.monitor.title||"")&&s.monitor.sameDate&&s.monitor.sameHref&&!s.monitor.selected,"monitor event card reveals July without activating its date",s.monitor);
 check(s.canada&&s.canada.date==="2027-07-01"&&s.canada.room==="balcony"&&s.canada.party&&!s.canada.dusk&&s.canada.smoking,"Canada Day selection opens a daytime balcony BBQ party",s.canada);
 check(s.newyear&&s.newyear.room==="balcony"&&s.newyear.party&&s.newyear.dusk&&s.newyear.smoking,"New Year opens a nighttime balcony BBQ party",s.newyear);
-check(s.newyear&&s.newyear.dateNav!=="none"&&s.newyear.timeNav!=="none","season previews reveal the date and time controls",s.newyear);
+check(s.newyear&&s.newyear.date==="2027-12-31"&&s.newyear.dateNav!=="none"&&s.newyear.timeNav!=="none"&&s.newyear.reset!=="none","user-driven season previews write their date to the URL and reveal Reset",s.newyear);
 check(s.newyear&&/Dec 31/.test(s.newyear.dateText||""),"season controls show the selected pretend date",s.newyear);
-check(s.grid&&s.grid.date==="2027-07-12"&&s.grid.selected==="12","calendar grid day still activates its date",s.grid);
+check(s.grid&&s.grid.date==="2027-07-12"&&s.grid.selected==="12"&&s.grid.preview===null&&s.grid.effective.join("-")==="2027-6-12","calendar grid day replaces the season-preview URL and remains the effective date",s.grid);
 
 console.log("");
 if(failures){console.log(failures+" check(s) failed.");process.exit(1);}

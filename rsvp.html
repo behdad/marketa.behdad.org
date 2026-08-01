@@ -103127,20 +103127,24 @@ function spawnDustMote(container) {
   };
   var seasonPreview = null; // null = the real calendar
   var bdPreview = null; // {m,d}: the birthday axis ('b' key / birthday()) time-travels here, its own axis
+  function seasonPreviewDate(name, y) {
+    // Drifting stops must use the same computed day for both rendering and choosing the
+    // next/previous stop beside an effective date.
+    if (name === "nowruz" || name === "sizdah" || name === "chaharshanbe" || name === "sadeh" || name === "mehregan") {
+      var pd = persianOcc(y)[name];
+      return { m: pd.getMonth(), d: pd.getDate(), y: y };
+    }
+    if (name === "yalda") { var yd = yaldaOf(y); return { m: yd.getMonth(), d: yd.getDate(), y: y }; }
+    if (name === "solstice") { var js = juneSolsticeOf(y); return { m: js.getMonth(), d: js.getDate(), y: y }; }
+    var p = SEASON_PREVIEW_DATE[name];
+    return p ? { m: p[0], d: p[1], y: y } : null;
+  }
   function seasonDate() {
     var y = (window.__now ? window.__now() : new Date()).getFullYear(); // the year the previews resolve into (honours ?date=/#date=)
     if (bdPreview) return { m: bdPreview.m, d: bdPreview.d, y: y }; // a birthday stop wins: the day's real decor dresses around the hat
     if (seasonPreview) {
-      // the drifting occasions resolve to THIS year's computed day (the three Persian new-year
-      // stops off the March equinox, Yalda off the December solstice)
-      if (seasonPreview === "nowruz" || seasonPreview === "sizdah" || seasonPreview === "chaharshanbe" || seasonPreview === "sadeh" || seasonPreview === "mehregan") {
-        var pd = persianOcc(y)[seasonPreview];
-        return { m: pd.getMonth(), d: pd.getDate(), y: y };
-      }
-      if (seasonPreview === "yalda") { var yd = yaldaOf(y); return { m: yd.getMonth(), d: yd.getDate(), y: y }; }
-      if (seasonPreview === "solstice") { var js = juneSolsticeOf(y); return { m: js.getMonth(), d: js.getDate(), y: y }; } // drifts too, same reason
-      var p = SEASON_PREVIEW_DATE[seasonPreview];
-      if (p) return { m: p[0], d: p[1], y: y };
+      var previewDate = seasonPreviewDate(seasonPreview, y);
+      if (previewDate) return previewDate;
     }
     var n = window.__now ? window.__now() : new Date(); // __now honours the ?date=/#date= preview, so it drives the seasons too
     return { m: n.getMonth(), d: n.getDate(), y: n.getFullYear() };
@@ -103811,11 +103815,10 @@ function spawnDustMote(container) {
       reset: function () { settle(null); }
     });
   })();
-  // 's' cycles the previews forward, in calendar order STARTING FROM the May 1 wedding and going
-  // around the year: today → wedding → pride → canada → summer → smoky → autumn → spooky → štědrý
-  // večer → christmas → new year → winter → valentine's → chaharshanbe suri → nowruz → sizdah
-  // bedar → spring → witches' night → back to wedding. Shift+S walks the ring backwards. Birthdays
-  // are NOT in this ring — they're the 'b' key's own axis now.
+  // 's' cycles the previews in calendar order. From the real/URL-selected day, the first step
+  // lands on the next dated stop; Shift+S lands on the previous one. Once a preview is active,
+  // the fixed ring continues from that stop. Birthdays are NOT in this ring — they're the 'b'
+  // key's own axis, but stepping from one still begins beside that effective birthday.
   // Shift is the direction; any OTHER modifier held (or typing) still skips (same guard as 'f').
   var SEASON_CYCLE = [null, "wedding", "pride", "solstice", "svatojanska", "canada", "summer", "smoky", "autumn", "mehregan", "spooky", "martin", "stedry", "xmas", "yalda", "newyear", "winter", "sadeh", "valentines", "chaharshanbe", "nowruz", "sizdah", "spring", "carodejnice"];
   // Shared apply-path for the 's' key AND the console season(); shows the naming pill.
@@ -103840,38 +103843,67 @@ function spawnDustMote(container) {
     smoky: "balcony", winter: "balcony", sizdah: "balcony", spooky: "balcony",
     sadeh: "balcony" // the mid-winter fire is built out on the deck, in the snow
   };
-  function applySeasonPreview(name, silent) {
-    bdPreview = null; // picking a season leaves the birthday axis (they're mutually exclusive pretend-dates)
-    seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
-    applySeasonDate();
-    if (!silent && (seasonPreview === "canada" || seasonPreview === "solstice" || seasonPreview === "newyear")) {
-      var daytimeBBQ = seasonPreview !== "newyear";
+  function presentSeason(name, silent) {
+    if (!silent && (name === "canada" || name === "solstice" || name === "newyear")) {
+      var daytimeBBQ = name !== "newyear";
       if (window.__setBBQDayParty) window.__setBBQDayParty(daytimeBBQ);
       if (window.__setPartyMode) window.__setPartyMode(true);
       else if (window.__setGardenParty) window.__setGardenParty(true, true);
       if (window.__setDayNight) window.__setDayNight(!daytimeBBQ);
       if (window.__startBBQ) window.__startBBQ("occasion");
     }
-    if (!silent) seasonToast(seasonPreview ? "season_" + seasonPreview : "season_auto");
+    if (!silent) seasonToast(name ? "season_" + name : "season_auto");
     // Only a user-driven change to a named season pans: silent callers (autoplay's per-loop churn,
     // the cinema reel) drive their own view, the birthday axis never reaches here, and the
     // null/auto real-date reset stays put.
-    if (!silent && seasonPreview && SEASON_ROOM[seasonPreview] && window.goToStage) window.goToStage(SEASON_ROOM[seasonPreview]);
+    if (!silent && name && SEASON_ROOM[name] && window.goToStage) window.goToStage(SEASON_ROOM[name]);
     if (window.__refreshDatePill) window.__refreshDatePill();
     if (window.__refreshTimePill) window.__refreshTimePill();
+  }
+  function applySeasonPreview(name, silent) {
+    bdPreview = null; // picking a season leaves the birthday axis (they're mutually exclusive pretend-dates)
+    seasonPreview = SEASON_PREVIEW_DATE[name] ? name : null;
+    // A visitor-driven season step is real calendar travel: expose its resolved day in the URL
+    // so the date HUD owns a visible Reset. Silent cinematic/autoplay previews stay ephemeral.
+    if (!silent) {
+      if (seasonPreview) {
+        var previewDate = seasonDate();
+        calSetDateParam(previewDate.y + "-" + calZ(previewDate.m + 1) + "-" + calZ(previewDate.d));
+      } else calSetDateParam(null);
+    }
+    applySeasonDate();
+    presentSeason(seasonPreview, silent);
   }
   window.__applySeason = applySeasonPreview; // console season() drives the same path as 's'
   window.__applySeasonSilent = function (name) { applySeasonPreview(name, true); }; // autoplay: vary the season with no toast
   window.__seasonPreviewName = function () { return seasonPreview; };
+  function seasonStepTarget(dir) {
+    var n = SEASON_CYCLE.length, step = dir < 0 ? -1 : 1;
+    if (seasonPreview !== null) return SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + step + n) % n];
+    var base = seasonDate(), baseMs = Date.UTC(base.y, base.m, base.d), best = null, bestGap = Infinity;
+    for (var i = 0; i < n; i++) {
+      var name = SEASON_CYCLE[i];
+      if (!name) continue;
+      var date = seasonPreviewDate(name, base.y), dateMs = Date.UTC(date.y, date.m, date.d);
+      if (step > 0 && dateMs <= baseMs) {
+        date = seasonPreviewDate(name, base.y + 1); dateMs = Date.UTC(date.y, date.m, date.d);
+      } else if (step < 0 && dateMs >= baseMs) {
+        date = seasonPreviewDate(name, base.y - 1); dateMs = Date.UTC(date.y, date.m, date.d);
+      }
+      var gap = step > 0 ? dateMs - baseMs : baseMs - dateMs;
+      if (gap < bestGap) { bestGap = gap; best = name; }
+    }
+    return best;
+  }
+  function stepSeason(dir) { applySeasonPreview(seasonStepTarget(dir)); return seasonPreview; }
   document.addEventListener("keydown", function (e) {
     if ((e.key !== "s" && e.key !== "S") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     e.preventDefault();
-    var n = SEASON_CYCLE.length, dir = e.shiftKey ? -1 : 1; // + n before the modulo: JS's % goes negative
-    applySeasonPreview(SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + dir + n) % n]);
+    stepSeason(e.shiftKey ? -1 : 1);
   });
-  window.__seasonStep = function (dir) { var n = SEASON_CYCLE.length; applySeasonPreview(SEASON_CYCLE[(SEASON_CYCLE.indexOf(seasonPreview) + (dir || 1) + n) % n]); return seasonPreview; }; // console season() with no arg advances the ring (like the 's' key)
+  window.__seasonStep = stepSeason; // console season() with no arg advances the ring (like the 's' key)
   if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("environment", {
     capture: function () {
       var row = {}, weather = window.__weatherCheckpointState && window.__weatherCheckpointState();
@@ -104470,7 +104502,10 @@ function spawnDustMote(container) {
       return true;
     }
     var sk = calSeasonKey(mo, d, y);
-    if (!CAL_AMBIENT[sk] && window.season) { window.season(sk); return true; }
+    // jumpToDate already dressed the selected day. Present its named festivity without turning
+    // that date-driven decor into a season preview, which would replace the grid's URL date with
+    // the preview's anchor (for example July 12 in wedding week becoming May 1).
+    if (!CAL_AMBIENT[sk]) { presentSeason(sk, false); return true; }
     return false;
   }
   window.__summonCurrentFestivity = function () {

@@ -720,6 +720,13 @@ footer{margin-top:2.6rem}
 .entrance-porsche-running-light{opacity:0;transition:opacity .22s ease}
 .entrance-porsche-reverse-beam{opacity:0;transition:opacity .16s ease}
 .entrance-porsche-indicator-lit{opacity:0;transition:opacity .035s linear}
+.entrance-porsche-wheel-sparkle{opacity:0;pointer-events:none}
+.entrance-porsche-wheel-sparkle.sparkling{animation:entrance-porsche-wheel-sparkle .46s ease-out both}
+@keyframes entrance-porsche-wheel-sparkle{
+  0%,100%{opacity:0;stroke-width:1}
+  16%{opacity:1;stroke-width:2.2}
+  52%{opacity:.72;stroke-width:1.3}
+}
 #entrance-porsche.headlight-on :is(.entrance-porsche-headlight-on,.entrance-porsche-headlight-beam),
 #entrance-porsche.taillight-on :is(.entrance-porsche-taillight-on,.entrance-porsche-taillight-glow){opacity:1}
 #entrance-porsche.braking :is(.entrance-porsche-taillight-on,.entrance-porsche-taillight-glow){opacity:1}
@@ -31048,6 +31055,14 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <g transform="translate(95 316)"><g id="entrance-porsche-front-wheel-steer"><g id="entrance-porsche-front-wheel-spin"><use href="#entrance-porsche-wheel-design"/></g></g></g>
             <g transform="translate(296 316)"><g id="entrance-porsche-rear-wheel-spin"><use href="#entrance-porsche-wheel-design"/></g></g>
           </g>
+          <g id="entrance-porsche-wheel-sparkles" fill="none" stroke="#fff6cf" stroke-linecap="round" aria-hidden="true">
+            <g class="entrance-porsche-wheel-sparkle" transform="translate(95 316)">
+              <path d="M0 -19V19M-19 0H19M-10 -10L10 10M10 -10L-10 10"/>
+            </g>
+            <g class="entrance-porsche-wheel-sparkle" transform="translate(296 316)">
+              <path d="M0 -19V19M-19 0H19M-10 -10L10 10M10 -10L-10 10"/>
+            </g>
+          </g>
 
           <path id="entrance-porsche-body"
             d="M8 294Q10 281 28 273Q79 262 137 258L155 253Q166 249 179 250H252Q270 251 285 260Q323 258 346 269Q362 277 368 291L366 309Q361 321 339 324H329C326 301 316 286 296 286C276 286 264 301 260 325H130C126 301 115 286 95 286C75 286 64 301 60 325H35Q18 323 10 313Z"
@@ -33554,6 +33569,7 @@ window.__entranceRoomOpen = false;
   var porscheHornNodes = null;
   var porscheDoorCloseTimer = null;
   var porscheBodyClickTimer = null;
+  var porscheDrag = { active: false, pointerId: null, startX: 0, startY: 0, startPosition: 0, startLane: 0 };
   var PORSCHE_BASE_X = 328;
   var PORSCHE_BASE_Y = -9;
   var PORSCHE_WRAP_SPAN = 986;
@@ -33790,6 +33806,70 @@ window.__entranceRoomOpen = false;
       driveSteering.setAttribute("transform", "translate(277 93.5) scale(1.1 1.15) translate(-277 -107) rotate(" +
         driveState.steeringAngle.toFixed(2) + " 277 107)");
     }
+  }
+  function playPorschePropSound(action, opening) {
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return false;
+    var t = ctx.currentTime;
+    var settings = {
+      roof: [185, .24, .045], door: [132, .34, .06], frunk: [104, .28, .055], trunk: [118, .28, .055]
+    }[action] || [150, .24, .045];
+    var tone = ctx.createOscillator();
+    var gain = ctx.createGain();
+    tone.type = action === "door" ? "triangle" : "sine";
+    tone.frequency.setValueAtTime(settings[0] * (opening ? 1.08 : .82), t);
+    tone.frequency.exponentialRampToValueAtTime(settings[0] * (opening ? .72 : .58), t + settings[1]);
+    gain.gain.setValueAtTime(.0001, t);
+    gain.gain.exponentialRampToValueAtTime(settings[2], t + .018);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + settings[1]);
+    tone.connect(gain); gain.connect(ctx.destination);
+    tone.start(t); tone.stop(t + settings[1] + .02);
+    tone.onended = function () { try { gain.disconnect(); } catch (_error) {} };
+    return true;
+  }
+  function sparklePorscheWheel(wheel) {
+    var sparkle = document.querySelector("#entrance-porsche-wheel-sparkles .entrance-porsche-wheel-sparkle:nth-child(" + (wheel === "front" ? "1" : "2") + ")");
+    if (!sparkle) return;
+    sparkle.classList.remove("sparkling");
+    void sparkle.getBBox();
+    sparkle.classList.add("sparkling");
+  }
+  function clampPorscheDragPosition(value) { return Math.max(-260, Math.min(260, value)); }
+  function clampPorscheDragLane(value) { return Math.max(-22, Math.min(22, value)); }
+  function finishPorscheDrag() {
+    if (!porscheDrag.active) return;
+    porscheDrag.active = false;
+    porscheDrag.pointerId = null;
+    if (window.__checkpointChanged) window.__checkpointChanged();
+  }
+  function startPorscheDrag(event) {
+    if (!porsche || driveState.hudOpen || event.button !== undefined && event.button !== 0) return;
+    var wheel = event.target && event.target.closest ? event.target.closest(".entrance-porsche-wheel") : null;
+    if (wheel) return;
+    var svg = porsche.ownerSVGElement;
+    var rect = svg && svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+    if (!rect || !rect.width || !rect.height) return;
+    porscheDrag.active = true;
+    porscheDrag.pointerId = event.pointerId;
+    porscheDrag.startX = event.clientX;
+    porscheDrag.startY = event.clientY;
+    porscheDrag.startPosition = driveState.position;
+    porscheDrag.startLane = driveState.laneOffset;
+    event.preventDefault();
+    if (porsche.setPointerCapture && event.pointerId !== undefined) {
+      try { porsche.setPointerCapture(event.pointerId); } catch (_error) {}
+    }
+  }
+  function movePorscheDrag(event) {
+    if (!porscheDrag.active || event.pointerId !== porscheDrag.pointerId) return;
+    var svg = porsche && porsche.ownerSVGElement;
+    var rect = svg && svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
+    if (!rect || !rect.width || !rect.height) return;
+    driveState.position = clampPorscheDragPosition(porscheDrag.startPosition + (event.clientX - porscheDrag.startX) * 680 / rect.width);
+    driveState.laneOffset = clampPorscheDragLane(porscheDrag.startLane + (event.clientY - porscheDrag.startY) * 920 / rect.height);
+    paintPorscheDrivePosition();
+    event.preventDefault();
   }
   function paintPorscheDriveHud() {
     var ignitionVisible = !!(window.__entranceRoomOpen && driveState.hudOpen);
@@ -35022,7 +35102,10 @@ window.__entranceRoomOpen = false;
     }
     var action = control.getAttribute("data-car-action") || "";
     carActivations[action] = (carActivations[action] || 0) + 1;
-    if (action === "roof") porscheState.roofOpen = !porscheState.roofOpen;
+    if (action === "roof") {
+      porscheState.roofOpen = !porscheState.roofOpen;
+      playPorschePropSound(action, porscheState.roofOpen);
+    }
     else if (action === "door") {
       clearTimeout(porscheDoorCloseTimer);
       porscheDoorCloseTimer = null;
@@ -35037,9 +35120,16 @@ window.__entranceRoomOpen = false;
         if (porsche) porsche.classList.remove("door-closing");
         porscheState.doorOpen = true;
       }
+      playPorschePropSound(action, porscheState.doorOpen);
     }
-    else if (action === "frunk") porscheState.frunkOpen = !porscheState.frunkOpen;
-    else if (action === "trunk") porscheState.trunkOpen = !porscheState.trunkOpen;
+    else if (action === "frunk") {
+      porscheState.frunkOpen = !porscheState.frunkOpen;
+      playPorschePropSound(action, porscheState.frunkOpen);
+    }
+    else if (action === "trunk") {
+      porscheState.trunkOpen = !porscheState.trunkOpen;
+      playPorschePropSound(action, porscheState.trunkOpen);
+    }
     else if (action === "engine") {
       porscheState.engineOn = !porscheState.engineOn;
       if (porscheState.engineOn) {
@@ -35222,6 +35312,22 @@ window.__entranceRoomOpen = false;
       openPorscheDriveHud();
     });
   });
+  if (porsche) {
+    porsche.addEventListener("pointerdown", startPorscheDrag);
+    porsche.addEventListener("pointermove", movePorscheDrag);
+    porsche.addEventListener("pointerup", finishPorscheDrag);
+    porsche.addEventListener("pointercancel", finishPorscheDrag);
+    porsche.querySelectorAll(".entrance-porsche-wheel").forEach(function (wheel, index) {
+      wheel.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        sparklePorscheWheel(index === 0 ? "front" : "rear");
+      });
+    });
+  }
+  document.addEventListener("pointermove", movePorscheDrag, { passive: false });
+  document.addEventListener("pointerup", finishPorscheDrag);
+  document.addEventListener("pointercancel", finishPorscheDrag);
   driveControls.forEach(function (control) {
     var hold = control.getAttribute("data-drive-hold");
     var gear = control.getAttribute("data-drive-gear");

@@ -36,7 +36,7 @@ body{display:grid;place-items:center}
 #touch-pad.dragging{cursor:grabbing}
 #touch-pad.dragging::before{background:#ffd83d;border-color:#f5d7a1;box-shadow:0 0 clamp(1.5px,.35vmin,2.5px) rgba(255,216,61,.85)}
 #touch-pad button{box-sizing:border-box;min-width:0;padding:0;border:0;border-radius:clamp(1px,1vmin,6px);background:#182252;color:#f8f5ec;font:700 clamp(3px,3vmin,20px)/1 ui-monospace,monospace;touch-action:none;-webkit-tap-highlight-color:transparent}
-#touch-pad [data-touch-key="w"]{grid-area:1/2}#touch-pad [data-touch-key="a"]{grid-area:2/1}#touch-pad [data-touch-key="d"]{grid-area:2/3}#touch-pad [data-touch-key="s"]{grid-area:3/2}
+#touch-pad [data-dir="up left"]{grid-area:1/1}#touch-pad [data-dir=up]{grid-area:1/2}#touch-pad [data-dir="up right"]{grid-area:1/3}#touch-pad [data-dir=left]{grid-area:2/1}#touch-pad [data-dir=right]{grid-area:2/3}#touch-pad [data-dir="down left"]{grid-area:3/1}#touch-pad [data-dir=down]{grid-area:3/2}#touch-pad [data-dir="down right"]{grid-area:3/3}
 @media (any-pointer:coarse),(hover:none){#touch-pad{display:grid}#touch-look{display:block}}
 </style>
 </head>
@@ -44,10 +44,14 @@ body{display:grid;place-items:center}
 <canvas id="canvas" tabindex="0"></canvas>
 <div id="touch-look" hidden aria-label="Drag to look; tap to fire"></div>
 <nav id="touch-pad" aria-label="Touch movement controls" hidden>
+  <button type="button" class="touch-pad-button" data-dir="up left" aria-label="Move forward and left" aria-pressed="false">↖</button>
   <button type="button" class="touch-pad-button" data-dir="up" data-touch-key="w" aria-label="Move forward" aria-pressed="false">↑</button>
+  <button type="button" class="touch-pad-button" data-dir="up right" aria-label="Move forward and right" aria-pressed="false">↗</button>
   <button type="button" class="touch-pad-button" data-dir="left" data-touch-key="a" aria-label="Move left" aria-pressed="false">←</button>
   <button type="button" class="touch-pad-button" data-dir="right" data-touch-key="d" aria-label="Move right" aria-pressed="false">→</button>
+  <button type="button" class="touch-pad-button" data-dir="down left" aria-label="Move backward and left" aria-pressed="false">↙</button>
   <button type="button" class="touch-pad-button" data-dir="down" data-touch-key="s" aria-label="Move backward" aria-pressed="false">↓</button>
+  <button type="button" class="touch-pad-button" data-dir="down right" aria-label="Move backward and right" aria-pressed="false">↘</button>
 </nav>
 <p id="status">Loading arena…</p>
 <section id="arena-picker" aria-label="Choose an arena">
@@ -69,7 +73,7 @@ let parentActive = true;
 let paused = false;
 const touchPad = document.getElementById("touch-pad");
 let touchDrag = null;
-let touchHeldKey = "";
+let touchHeldKeys = [];
 const touchDirectionKeys = { up:"w", left:"a", right:"d", down:"s" };
 const touchReverse = { up:"down", down:"up", left:"right", right:"left" };
 
@@ -78,12 +82,10 @@ function emitTouchKey(type, key) {
   canvas.dispatchEvent(new KeyboardEvent(type, { key, code, keyCode, which:keyCode, bubbles:true, cancelable:true }));
 }
 function setTouchDirection(direction) {
-  const key = touchDirectionKeys[direction] || "";
-  if (key !== touchHeldKey) {
-    if (touchHeldKey) emitTouchKey("keyup", touchHeldKey);
-    touchHeldKey = key;
-    if (touchHeldKey) emitTouchKey("keydown", touchHeldKey);
-  }
+  const keys = direction ? direction.split(" ").map(part => touchDirectionKeys[part]).filter(Boolean) : [];
+  touchHeldKeys.filter(key => !keys.includes(key)).forEach(key => emitTouchKey("keyup", key));
+  keys.filter(key => !touchHeldKeys.includes(key)).forEach(key => emitTouchKey("keydown", key));
+  touchHeldKeys = keys;
   const buttons = touchPad ? touchPad.querySelectorAll("[data-dir]") : [];
   buttons.forEach(button => button.setAttribute("aria-pressed", button.getAttribute("data-dir") === direction ? "true" : "false"));
 }
@@ -120,8 +122,9 @@ if (touchPad) {
     event.preventDefault(); event.stopPropagation();
     const dx = event.clientX - touchDrag.x, dy = event.clientY - touchDrag.y;
     const ax = Math.abs(dx), ay = Math.abs(dy);
-    if (Math.max(ax, ay) < touchDrag.threshold || (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
-    const direction = ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+    if (Math.max(ax, ay) < touchDrag.threshold) return;
+    const diagonal = ax >= touchDrag.threshold && ay >= touchDrag.threshold && Math.max(ax, ay) < Math.min(ax, ay) * 1.8;
+    const direction = diagonal ? `${dy > 0 ? "down" : "up"} ${dx > 0 ? "right" : "left"}` : ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
     const needed = touchDrag.lastDir && touchReverse[touchDrag.lastDir] === direction ? touchDrag.threshold * 1.55 : touchDrag.threshold;
     if (Math.max(ax, ay) < needed) return;
     touchDrag.x = event.clientX; touchDrag.y = event.clientY;

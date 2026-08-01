@@ -679,13 +679,17 @@ The dashboard horn keeps its held `horn-pressed` state independent from a transi
 warm glass response and is cleared on every horn release or Entrance teardown.
 The driving HUD is a clipped top-half code-native SVG overlay that leaves
 the animated Porsche in the lower street band: pointer holds drive its
-physical pedals, shifter hotspots select R/N/1–6, and the Entrance
-capture handler claims the driving keys while it is open, including Up/Space throttle,
-Down brake, Shift clutch, and N/R/1–6.
+physical pedals, shifter hotspots select R/N/1–6, a short press elsewhere on
+the shifter steps up, and its cancellable held-pointer timer repeatedly steps
+down. A separate keyboard-only Shift-held flag temporarily hides the throttle
+and brake arrow labels, then clears on key release or HUD lifecycle teardown.
+The Entrance capture handler claims the driving keys while it is open, including
+Up/Space throttle, Down brake, Shift clutch, and N/R/1–6.
 `__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
-focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
-state preserves the Porsche's position and durable panel/light configuration; a full
-reset clears both.
+focused drivetrain test surfaces; `tests/porsche-gearshift-touch.js` covers the
+pointer timer, synthesized-click suppression, cancellation, and Shift-label state.
+Leaving Entrance parks its audio bed while retained state preserves the Porsche's
+position and durable panel/light configuration; a full reset clears both.
 The intercom's attended click plays a short low-passed formant reply and flashes
 localized “Come up!” copy. Its sound path checks the open room, visibility, and
 focus at the gesture and has no autonomous timer.

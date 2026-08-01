@@ -241,9 +241,12 @@ gameplay messages finish before that room caption appears.
   dashboard; Enter then turns the ignition. Hold **↑** or **Space** for throttle,
   **↓** for brake, or **Shift** for the clutch; choose **N**, **R**, or **1–6** to
   shift. Forward gears top out progressively at roughly 60, 100, 150, 200, 250,
-  and 300 km/h. The pedals and H-pattern shifter also work directly. A clutchless
-  keyboard shift grinds and falls back to neutral, while a hard fast stop leaves
-  a brief pair of tire marks. The dashboard's compact driving score stays with
+  and 300 km/h. The pedals and H-pattern shifter also work directly: tap a marked
+  gate to select it, tap the rest of the shifter to step up, or hold it to step
+  down repeatedly. A clutchless direct or keyboard shift grinds and falls back
+  to neutral. While **Shift** is held, the pedal arrows clear to show that **↑**
+  and **↓** are changing gears instead. A hard fast stop leaves a brief pair of
+  tire marks. The dashboard's compact driving score stays with
   the car and subtly picks up as the street does. At 24°C or warmer outside, a
   running dashboard visibly and audibly blows cool air through both vents.
   Hold the dashboard horn to get a small warm answer from the building door.

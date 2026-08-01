@@ -10,7 +10,7 @@ var HARNESS = [
   'function key(type,key){document.dispatchEvent(new KeyboardEvent(type,{key:key,bubbles:true,cancelable:true}));}',
   'function step(count){for(var i=0;i<count;i++)window.__entranceDriveStep(80);}',
   'function state(){return window.__entranceRoomState();}',
-  'function shifter(){return {knob:document.getElementById("entrance-drive-shifter-lever").getAttribute("transform"),shaft:document.getElementById("entrance-drive-shifter-shaft").getAttribute("d")};}',
+  'function shifter(){var shaft=document.getElementById("entrance-drive-shifter-shaft");return {knob:document.getElementById("entrance-drive-shifter-lever").getAttribute("transform"),shaft:shaft.getAttribute("d"),stroke:shaft.getAttribute("stroke"),width:shaft.getAttribute("stroke-width")};}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();await sleep(30);',
   'var room=document.getElementById("entrance-room"),hud=document.getElementById("entrance-drive-hud"),car=document.getElementById("entrance-porsche"),controls=Array.from(hud.querySelectorAll(".entrance-drive-control"));key("keydown","Enter");await sleep(30);key("keydown","Enter");await sleep(460);report.steps.started={state:state(),hidden:hud.getAttribute("aria-hidden"),controls:controls.map(function(el){return [el.getAttribute("data-drive-hold"),el.getAttribute("data-drive-gear"),el.getAttribute("tabindex"),el.getAttribute("aria-label")];}),layout:{room:box(room.getBoundingClientRect()),hud:box(hud.getBoundingClientRect()),car:box(car.getBoundingClientRect()),controlBoxes:controls.map(function(el){return box(el.getBoundingClientRect());})},navClaims:{up:window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowUp"}),true),down:window.__entranceDriveKey(new KeyboardEvent("keydown",{key:"ArrowDown"}),true)}};key("keyup","ArrowUp");key("keyup","ArrowDown");Object.defineProperty(document,"hasFocus",{value:function(){return false;},configurable:true});window.dispatchEvent(new Event("blur"));await sleep(40);report.steps.unfocused=state();Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.dispatchEvent(new Event("focus"));await sleep(120);report.steps.refocused=state();',
@@ -62,6 +62,7 @@ check(s.started && s.started.navClaims && s.started.navClaims.up && s.started.na
 check(s.unfocused && !s.unfocused.drive.musicActive && s.refocused && s.refocused.drive.musicActive,
   "the driving score tears down while unfocused and returns with the attended HUD", {unfocused:s.unfocused,refocused:s.refocused});
 check(s.shifterNeutral && s.shifterNeutral.knob === "translate(-1 15)" && s.shifterNeutral.shaft === "M475 155L475 123" &&
+  s.shifterNeutral.stroke === "url(#entrance-drive-shaft-metal)" && s.shifterNeutral.width === "9" &&
   s.shifterAttempt && s.shifterAttempt.knob === "translate(-9 8)" && s.shifterAttempt.shaft === "M475 155L467 116" &&
   s.shifterSelected && s.shifterSelected.knob === s.shifterAttempt.knob && s.shifterSelected.shaft === s.shifterAttempt.shaft &&
   s.shifterRestored && s.shifterRestored.knob === s.shifterNeutral.knob && s.shifterRestored.shaft === s.shifterNeutral.shaft,

@@ -63901,6 +63901,12 @@ setOfficeProgress("pc", false);
       window.addEventListener("blur", closeMenu);
       window.addEventListener("resize", closeMenu);
     }
+    function focusSnakeMenu(app) {
+      if (!menuEl || !app || app.cls !== "show-snake") return;
+      var target = menuEl.querySelector("button:not(:disabled)") || menuEl;
+      if (target === menuEl) target.tabIndex = -1;
+      try { target.focus({ preventScroll: true }); } catch (e) { try { target.focus(); } catch (e2) {} }
+    }
     function codeEditTarget(node) {
       var el = node && (node.nodeType === 1 ? node : node.parentElement);
       if (!el || !el.closest || !el.closest("#monitor-code-wrap")) return null;
@@ -64006,6 +64012,7 @@ setOfficeProgress("pc", false);
       var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
       items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq || app.cls === "show-system" ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
       openMenu(items, x, y);
+      focusSnakeMenu(app); // the iframe cannot keep moving Nibbles while its parent-document menu is open
     }
     window.__openMonitorContextAt = function (target, x, y) {
       var app = activeMonitorApp();
@@ -68153,6 +68160,7 @@ async def localfont(name):
   var snakeWrap = document.getElementById("monitor-snake-wrap");
   var snakeCloseBtn = document.getElementById("monitor-snake-close");
   var snakeFrame = null, snakeState = "cold", snakeMode = null;
+  var snakeRelayedKeys = 0, snakeLastRelayedKey = null;
   function snakeControl(action) {
     if (!snakeFrame || !snakeFrame.contentWindow) return;
     try { snakeFrame.contentWindow.postMessage({ type: "snake-control", action: action }, location.origin); } catch (e) {}
@@ -68167,6 +68175,39 @@ async def localfont(name):
         if (!canvas.hasAttribute("tabindex")) canvas.setAttribute("tabindex", "-1");
         canvas.focus({ preventScroll: true });
       }
+    } catch (e) {}
+  }
+  function snakeKeyboardBlocked() {
+    if (!snakeFrame || snakeMode !== "nibbles" || !monitor.classList.contains("show-snake") ||
+        document.hidden || window.currentStageName !== "office") return true;
+    if (document.querySelector(".mon-ctx, .console-ctx.show, .pb-dialog-backdrop, #sharecard-modal, .phone-backdrop.show, #click-me-overlay, #loft-recovery-gate")) return true;
+    if (typeof MONITOR_APP_CLASSES === "object") {
+      for (var id in MONITOR_APP_CLASSES) {
+        if (id !== "snake" && monitor.classList.contains(MONITOR_APP_CLASSES[id])) return true;
+      }
+    }
+    var active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement && active !== snakeFrame) {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable) return true;
+      if (active.closest && active.closest("[role='dialog'], .mon-ctx, .console-ctx")) return true;
+    }
+    return false;
+  }
+  function relaySnakeKey(event) {
+    if (event.defaultPrevented || snakeKeyboardBlocked() || document.activeElement === snakeFrame) return;
+    if ((event.ctrlKey || event.metaKey || event.altKey) &&
+        !((event.ctrlKey || event.metaKey) && (event.key === "Escape" || event.key === "Esc"))) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    focusSnakeFrame();
+    snakeRelayedKeys++;
+    snakeLastRelayedKey = { eventType: event.type, key: event.key, code: event.code, keyCode: event.keyCode };
+    try {
+      snakeFrame.contentWindow.postMessage({
+        type: "snake-key", eventType: event.type, key: event.key, code: event.code,
+        keyCode: event.keyCode, location: event.location, repeat: event.repeat,
+        ctrlKey: event.ctrlKey, metaKey: event.metaKey, altKey: event.altKey, shiftKey: event.shiftKey
+      }, location.origin);
     } catch (e) {}
   }
   function ensureSnakeFrame(mode) {
@@ -68197,6 +68238,7 @@ async def localfont(name):
     ensureSnakeFrame(mode);
     if (snakeFrame) snakeFrame.inert = false;
     snakeControl("resume");
+    focusSnakeFrame(); // retained machines resume from the desktop with their keyboard ownership restored
     playLaptopClickSound("office-monitor");
   }
   function releaseSnakeFocus() {
@@ -68266,7 +68308,8 @@ async def localfont(name):
   window.__focusMonitorSnake = focusSnakeFrame;
   window.__snakeState = function () {
     return { open: monitor.classList.contains("show-snake"), state: snakeState, mode: snakeMode,
-      iframe: snakeFrame ? snakeFrame.getAttribute("src") : null };
+      iframe: snakeFrame ? snakeFrame.getAttribute("src") : null,
+      relayedKeys: snakeRelayedKeys, lastRelayedKey: snakeLastRelayedKey };
   };
   window.addEventListener("message", function (event) {
     if (!snakeFrame || event.origin !== location.origin || event.source !== snakeFrame.contentWindow || !event.data) return;
@@ -68281,6 +68324,12 @@ async def localfont(name):
   document.addEventListener("visibilitychange", function () {
     if (!snakeFrame) return;
     snakeControl(!document.hidden && monitor.classList.contains("show-snake") ? "resume" : "pause");
+    if (!document.hidden && !snakeKeyboardBlocked()) setTimeout(focusSnakeFrame, 0);
+  });
+  document.addEventListener("keydown", relaySnakeKey, true);
+  document.addEventListener("keyup", relaySnakeKey, true);
+  window.addEventListener("focus", function () {
+    if (!snakeKeyboardBlocked()) setTimeout(focusSnakeFrame, 0);
   });
   if (snakeCloseBtn) {
     snakeCloseBtn.addEventListener("click", function (e) { e.stopPropagation(); closeSnake(); playLaptopClickSound("office-monitor"); });

@@ -1215,6 +1215,11 @@ remain a known blank-compositing limitation on WebKit.
 
 The `show-snake` app lazily creates one same-origin `dos/player.html` iframe,
 with a `mode=dos|nibbles` query selected by the launcher.
+
+Nibbles keyboard ownership spans the same-origin iframe boundary. Opening or resuming a retained
+game focuses its canvas; if a visible game loses focus to non-modal parent chrome, the first
+unmodified game key is relayed once and refocuses the iframe. Parent menus, dialogs, phone
+overlays, editable console fields, and other foreground monitor apps block that handoff.
 The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
 or stop it. Normal close pauses and retains the frame, but marks the hidden
 iframe inert, blurs its child focus, and focuses the non-interactive desktop

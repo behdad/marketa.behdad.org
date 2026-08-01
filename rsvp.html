@@ -32979,12 +32979,14 @@ window.__entranceRoomOpen = false;
     } else if (!fullyFlipped) {
       windowPayoffShown = false;
     }
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   function toggleEntranceLamp(side) {
     if (side !== "left" && side !== "right") return false;
     entranceLamps[side] = !entranceLamps[side];
     paintEntranceLamps();
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   syncEntranceDayNight();
@@ -33065,7 +33067,6 @@ window.__entranceRoomOpen = false;
     porscheIdleNodes = null;
     idle.sources.forEach(function (source) { try { source.stop(); } catch (_error) {} });
     idle.nodes.forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
-    try { idle.bed.close(); } catch (_error) {}
   }
   function updatePorscheIdle() {
     var wantsIdle = porscheIdleWanted();
@@ -33085,6 +33086,13 @@ window.__entranceRoomOpen = false;
     if (porsche) porsche.classList.remove("door-closing");
     Object.keys(porscheState).forEach(function (key) { porscheState[key] = false; });
     syncPorscheState();
+  }
+  function parkPorscheTransients() {
+    clearPorscheIndicator();
+    clearTimeout(porscheDoorCloseTimer);
+    porscheDoorCloseTimer = null;
+    if (porsche) porsche.classList.remove("door-closing");
+    updatePorscheIdle();
   }
   function playPorscheIndicatorTick(lit) {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
@@ -33232,6 +33240,7 @@ window.__entranceRoomOpen = false;
     else if (action === "indicator") flashPorscheIndicator();
     else return false;
     syncPorscheState();
+    if (action !== "indicator" && window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   function togglePorscheEngine() {
@@ -33356,7 +33365,7 @@ window.__entranceRoomOpen = false;
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
     clearEntranceInteractions();
-    resetPorscheState();
+    parkPorscheTransients();
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-intercom");
     closing = true;
@@ -33434,6 +33443,46 @@ window.__entranceRoomOpen = false;
   };
   window.__toggleEntrancePorscheEngine = togglePorscheEngine;
   window.__updatePorscheIdle = updatePorscheIdle;
+  var entranceCheckpoint = {
+    capture: function () {
+      var car = {};
+      Object.keys(porscheState).forEach(function (key) { car[key] = !!porscheState[key]; });
+      return {
+        windows: windowIds.map(function (id) { return windowLights[id] ? "1" : "0"; }).join(""),
+        lamps: { left: !!entranceLamps.left, right: !!entranceLamps.right },
+        porsche: car
+      };
+    },
+    restore: function (row, phase) {
+      if (phase !== "afterStage") return;
+      resetEntranceWindows(balconyStage.classList.contains("dusk"));
+      resetPorscheState();
+      clearEntranceInteractions();
+      if (row && typeof row.windows === "string" && /^[01]{5}$/.test(row.windows)) {
+        windowIds.forEach(function (id, index) { windowLights[id] = row.windows.charAt(index) === "1"; });
+      }
+      if (row && row.lamps && typeof row.lamps === "object") {
+        if (typeof row.lamps.left === "boolean") entranceLamps.left = row.lamps.left;
+        if (typeof row.lamps.right === "boolean") entranceLamps.right = row.lamps.right;
+      }
+      var car = row && row.porsche && typeof row.porsche === "object" ? row.porsche : null;
+      if (car) Object.keys(porscheState).forEach(function (key) {
+        if (typeof car[key] === "boolean") porscheState[key] = car[key];
+      });
+      windowPayoffShown = false;
+      paintEntranceWindows();
+      paintEntranceLamps();
+      syncPorscheState();
+      if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
+    },
+    reset: function () {
+      resetEntranceWindows(balconyStage.classList.contains("dusk"));
+      resetPorscheState();
+      clearEntranceInteractions();
+    }
+  };
+  if (window.__deferCheckpointAdapter) window.__deferCheckpointAdapter("entrance", entranceCheckpoint);
+  else (window.__pendingCheckpointAdapters || (window.__pendingCheckpointAdapters = [])).push(["entrance", entranceCheckpoint]);
   if (window.__registerTransientResetHook) window.__registerTransientResetHook("entrance-room", closeEntrance);
 })();
 

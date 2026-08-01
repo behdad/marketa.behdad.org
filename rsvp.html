@@ -33365,6 +33365,8 @@ window.__entranceRoomOpen = false;
   var windowPayoffShown = false;
   var indicatorTimers = [];
   var indicatorFlashes = 0;
+  var indicatorSounds = 0;
+  var lastSteeringSignalAt = { left: 0, right: 0 };
   var intercomResponses = 0;
   var porscheIdleNodes = null;
   var porscheDriveAudioNodes = null;
@@ -34190,6 +34192,8 @@ window.__entranceRoomOpen = false;
     var target = event.target;
     if (target && target !== document && /^(INPUT|SELECT|TEXTAREA)$/.test(target.tagName || "")) return false;
     if (hold) {
+      if (down && !event.repeat && hold === "steerLeft") signalPorscheSteering("left");
+      else if (down && !event.repeat && hold === "steerRight") signalPorscheSteering("right");
       setPorscheDriveHold(hold, true);
       return true;
     }
@@ -34339,6 +34343,22 @@ window.__entranceRoomOpen = false;
       if (porsche) porsche.classList.remove("indicator-on");
     }, 590));
     return true;
+  }
+  function soundPorscheIndicator() {
+    clearPorscheIndicator();
+    indicatorSounds++;
+    [true, false, true, false, true, false].forEach(function (lit, index) {
+      if (!index) playPorscheIndicatorTick(lit);
+      else indicatorTimers.push(setTimeout(function () { playPorscheIndicatorTick(lit); }, index * 95));
+    });
+    indicatorTimers.push(setTimeout(function () { indicatorTimers.length = 0; }, 590));
+    return true;
+  }
+  function signalPorscheSteering(direction) {
+    var now = Date.now();
+    if (now - lastSteeringSignalAt[direction] < 2000) return false;
+    lastSteeringSignalAt[direction] = now;
+    return direction === "left" ? flashPorscheIndicator() : soundPorscheIndicator();
   }
   function playPorscheEngineSound(starting) {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
@@ -34793,6 +34813,7 @@ window.__entranceRoomOpen = false;
       windowsFlipped: windowIds.every(function (id) { return windowLights[id] === !entranceNight; }),
       intercomResponses: intercomResponses,
       car: Object.assign({ activations: Object.assign({}, carActivations), indicatorFlashes: indicatorFlashes,
+        indicatorSounds: indicatorSounds,
         idleActive: !!(porscheIdleNodes || porscheDriveAudioNodes), vibrating: porsche.classList.contains("engine-idling") }, porscheState),
       drive: {
         hud: room.classList.contains("drive-hud-visible"),

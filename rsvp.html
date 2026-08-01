@@ -33756,7 +33756,6 @@ window.__entranceRoomOpen = false;
   var driveShifterTouchLastX = 0;
   var driveShifterTouchLastY = 0;
   var driveShifterTouchMoved = false;
-  var driveShifterTouchReverseArmed = false;
   var driveShifterTouchSelectorOpen = false;
   var driveShifterTouchPreviewGear = null;
   var driveShifterPressSerial = 0;
@@ -34879,12 +34878,16 @@ window.__entranceRoomOpen = false;
     if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) playDryClickSound("entrance-drive-shifter");
     return true;
   }
-  function stepPorscheDriveGear(direction) {
+  function porscheDriveGearStepTarget(direction) {
     var gears = [-1, 0, 1, 2, 3, 4, 5, 6];
     var index = gears.indexOf(driveState.gear);
     var next = Math.max(0, Math.min(gears.length - 1, index + (direction > 0 ? 1 : -1)));
-    if (next === index) return false;
-    return selectPorscheDriveGear(gears[next], true);
+    return gears[next];
+  }
+  function stepPorscheDriveGear(direction) {
+    var next = porscheDriveGearStepTarget(direction);
+    if (next === driveState.gear) return false;
+    return selectPorscheDriveGear(next, true);
   }
   function porscheShifterAvailable() {
     return !!(driveState.hudOpen && (porscheState.engineOn || driveState.stalled));
@@ -34932,16 +34935,10 @@ window.__entranceRoomOpen = false;
     });
     return nearestDistance <= 24 * 24 ? nearest : 0;
   }
-  function porscheTouchGestureGear(clientX, clientY) {
-    if (driveShifterTouchSelectorOpen) return porscheTouchDirectGear(clientX, clientY);
-    var dx = clientX - driveShifterTouchStartX;
+  function porscheTouchDragDirection(clientY) {
     var dy = clientY - driveShifterTouchStartY;
-    var ax = Math.abs(dx);
-    var ay = Math.abs(dy);
-    if (driveShifterTouchReverseArmed && dy < -14) return -1;
-    if (ay < 16 || ay < ax * .42) return 0;
-    var lane = dx < -14 ? 0 : dx > 14 ? 2 : 1;
-    return dy < 0 ? [1, 3, 5][lane] : [2, 4, 6][lane];
+    if (Math.abs(dy) < 12) return 0;
+    return dy < 0 ? 1 : -1;
   }
   function movePorscheShifterPress(event) {
     if (driveShifterPointerType !== "touch" || event.pointerId !== driveShifterPointerId) return;
@@ -34950,7 +34947,6 @@ window.__entranceRoomOpen = false;
     driveShifterTouchLastY = event.clientY;
     var dx = event.clientX - driveShifterTouchStartX;
     var dy = event.clientY - driveShifterTouchStartY;
-    if (dx < -18 && Math.abs(dy) < 13) driveShifterTouchReverseArmed = true;
     if (!driveShifterTouchMoved && Math.hypot(dx, dy) >= 12) {
       driveShifterTouchMoved = true;
       if (!driveShifterTouchSelectorOpen) {
@@ -34959,7 +34955,10 @@ window.__entranceRoomOpen = false;
       }
     }
     if (!driveShifterTouchMoved && !driveShifterTouchSelectorOpen) return;
-    driveShifterTouchPreviewGear = porscheTouchGestureGear(event.clientX, event.clientY);
+    var direction = porscheTouchDragDirection(event.clientY);
+    driveShifterTouchPreviewGear = driveShifterTouchSelectorOpen ?
+      porscheTouchDirectGear(event.clientX, event.clientY) :
+      direction ? porscheDriveGearStepTarget(direction) : 0;
     paintPorscheTouchGearChoice(driveShifterTouchPreviewGear);
     paintPorscheShifter(driveShifterTouchPreviewGear);
   }
@@ -34971,8 +34970,10 @@ window.__entranceRoomOpen = false;
     var wasHeld = driveShifterHeld;
     var touchMoved = driveShifterTouchMoved;
     var touchSelectorOpen = driveShifterTouchSelectorOpen;
-    var touchGear = pointerType === "touch" && activateTap && (touchMoved || touchSelectorOpen) ?
-      porscheTouchGestureGear(event ? event.clientX : driveShifterTouchLastX, event ? event.clientY : driveShifterTouchLastY) : null;
+    var touchX = event ? event.clientX : driveShifterTouchLastX;
+    var touchY = event ? event.clientY : driveShifterTouchLastY;
+    var touchGear = pointerType === "touch" && activateTap && touchSelectorOpen ? porscheTouchDirectGear(touchX, touchY) : null;
+    var touchDirection = pointerType === "touch" && activateTap && touchMoved && !touchSelectorOpen ? porscheTouchDragDirection(touchY) : 0;
     clearTimeout(driveShifterHoldTimer);
     clearInterval(driveShifterRepeatTimer);
     driveShifterHoldTimer = null;
@@ -34982,7 +34983,6 @@ window.__entranceRoomOpen = false;
     driveShifterPointerType = "";
     driveShifterHeld = false;
     driveShifterTouchMoved = false;
-    driveShifterTouchReverseArmed = false;
     driveShifterTouchPreviewGear = null;
     setPorscheTouchSelectorOpen(false);
     driveShifterPressSerial++;
@@ -34991,7 +34991,9 @@ window.__entranceRoomOpen = false;
     }
     if (wasHeld || activateTap) driveShifterSuppressClickUntil = performance.now() + 700;
     if (pointerType === "touch" && activateTap) {
-      if (touchMoved || touchSelectorOpen) selectPorscheDriveGear(touchGear, true);
+      if (touchSelectorOpen) selectPorscheDriveGear(touchGear, true);
+      else if (touchMoved && touchDirection) stepPorscheDriveGear(touchDirection);
+      else if (touchMoved) selectPorscheDriveGear(0, true);
       else activatePorscheShifterTap(target, true);
     } else if (!wasHeld && activateTap) activatePorscheShifterTap(target);
     else paintPorscheShifter(driveState.gear);
@@ -35015,7 +35017,6 @@ window.__entranceRoomOpen = false;
     driveShifterTouchStartX = driveShifterTouchLastX = event.clientX;
     driveShifterTouchStartY = driveShifterTouchLastY = event.clientY;
     driveShifterTouchMoved = false;
-    driveShifterTouchReverseArmed = false;
     driveShifterTouchPreviewGear = null;
     var pressSerial = ++driveShifterPressSerial;
     if (driveShifter.setPointerCapture) {

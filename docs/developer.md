@@ -697,8 +697,8 @@ physical pedals, shifter hotspots select R/N/1–6, and the Entrance
 capture handler claims the driving keys while it is open, including Up/Space throttle,
 Down brake, Shift clutch, and N/R/1–6.
 Touch shifter throws are classified separately from mouse tap/hold/context-menu stepping:
-six directional throws and a staged left-then-up reverse throw bypass the clutch, malformed
-throws select neutral, and a stationary long-press reveals the larger SVG direct selector.
+ordinary vertical drags step exactly one gear with clutch bypass, mostly horizontal drags
+select neutral, and a stationary long-press reveals the larger SVG direct selector.
 `__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
 focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
 state preserves the Porsche's position and durable panel/light configuration; a full

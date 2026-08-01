@@ -65352,8 +65352,8 @@ setOfficeProgress("pc", false);
       setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
     } catch (e) {}
   }
-  function tattooGmail() { try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + encodeURIComponent(tattooT("tt_email_subject")) + "&body=" + encodeURIComponent(tattooT("tt_email_body")), "_blank"); } catch (e) {} }
-  function tattooMailto() { if (window.__mailCompose) window.__mailCompose(tattooT("tt_email_subject"), tattooT("tt_email_body")); } // device-aware: desktop→Gmail, mobile→native mail
+  function tattooGmail() { if (window.__mailCompose) window.__mailCompose(tattooT("tt_email_subject"), tattooT("tt_email_body")); }
+  function tattooMailto() { if (window.__mailComposeMailto) window.__mailComposeMailto(tattooT("tt_email_subject"), tattooT("tt_email_body")); }
   function tattooClipboardSupported() { try { return !!(navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== "undefined"); } catch (e) { return false; } }
   // Copy the design PNG to the clipboard — accepts a blob OR a blob promise so the write
   // can be issued inside a fresh gesture (promise-valued ClipboardItem keeps the activation).
@@ -71949,10 +71949,9 @@ async def localfont(name):
     } catch (e) {}
   }
   function openGmailCompose() {
-    try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
-      encodeURIComponent(pbText("pb_email_subject")) + "&body=" + encodeURIComponent(pbText("pb_email_body")), "_blank", "noopener"); } catch (e) {}
+    if (window.__mailCompose) window.__mailCompose(pbText("pb_email_subject"), pbText("pb_email_body"));
   }
-  function openMailto() { if (window.__mailCompose) window.__mailCompose(pbText("pb_email_subject"), pbText("pb_email_body")); } // device-aware: desktop→Gmail, mobile→native mail
+  function openMailto() { if (window.__mailComposeMailto) window.__mailComposeMailto(pbText("pb_email_subject"), pbText("pb_email_body")); }
   // ── the polaroid dialog ── the booth's ONE popup: a centered fixed overlay showing the
   // composed polaroid big, with Download / Gmail / Email / Retake / Cancel. Retake goes
   // back to live + countdown; Cancel/✕/backdrop-tap go back to the live view (camera
@@ -77656,8 +77655,7 @@ async def localfont(name):
       function noteBody() { return tr("notes_email_intro") + "\n\n" + pad.value.trim(); }
       gmail.addEventListener("click", function () {
         if (!pad.value.trim()) return;
-        openExternal("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" +
-          encodeURIComponent(tr("notes_email_subject")) + "&body=" + encodeURIComponent(noteBody()));
+        if (window.__mailCompose) window.__mailCompose(tr("notes_email_subject"), noteBody());
       });
       mail.addEventListener("click", function () {
         if (!pad.value.trim()) return;
@@ -115496,39 +115494,48 @@ function spawnDustMote(container) {
     var l = document.documentElement.lang;
     var d = T[l] || T.en;
     return {
-      subject: encodeURIComponent(d.rsvp_email_subject),
-      body: encodeURIComponent(d.rsvp_email_body)
+      subject: d.rsvp_email_subject,
+      body: d.rsvp_email_body
     };
   }
   function openRsvpGmail() {
     var sb = rsvpSubjectBody();
-    try { window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + sb.subject + "&body=" + sb.body, "_blank"); } catch (e) {}
+    if (window.__mailCompose) window.__mailCompose(sb.subject, sb.body);
   }
   function openRsvpMailto() {
     var sb = rsvpSubjectBody();
-    try { window.location.href = "mailto:marketa@behdad.org?subject=" + sb.subject + "&body=" + sb.body; } catch (e) {}
+    if (window.__mailComposeMailto) window.__mailComposeMailto(sb.subject, sb.body);
   }
-  // Device-aware composer for every GENERIC "email us" click: desktop has no reliable mailto:
-  // handler set up here, and Gmail-web wants a login on phones — so desktop → Gmail web composer,
-  // mobile → the native mail app. Explicitly-labelled "Gmail" buttons keep their fixed flavour.
+  // Device-aware composer for every email action: Android/iOS (including iPadOS desktop-mode UA)
+  // uses the native mail handler; desktop retains the Gmail web composer. The mailto-only helper
+  // keeps explicitly-labelled Email app actions predictable on desktop too.
   function mailAddrs(v) { return v == null ? "" : (Array.isArray(v) ? v.join(",") : String(v)).trim(); }
-  window.__mailCompose = function (subject, body, opts) {
+  function mailIsMobileDevice() {
+    var ua = navigator.userAgent || "";
+    return /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+  }
+  function mailComposeTarget(subject, body, opts, mailtoOnly) {
     opts = opts || {};
     var to = mailAddrs(opts.to) || "marketa@behdad.org"; // default recipient is us
     var cc = mailAddrs(opts.cc), bcc = mailAddrs(opts.bcc);
     var su = encodeURIComponent(subject || ""), bd = encodeURIComponent(body || "");
-    var mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "") || (("ontouchstart" in window) && Math.min(screen.width || 9999, screen.height || 9999) < 820);
+    var mobile = mailtoOnly || mailIsMobileDevice();
+    var q = "subject=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "");
+    if (mobile) return { mode: "mailto", url: "mailto:" + encodeURIComponent(to).replace(/%2C/g, ",") + "?" + q };
+    return { mode: "gmail", url: "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(to) + "&su=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "") };
+  }
+  function mailLaunch(subject, body, opts, mailtoOnly) {
+    var target = mailComposeTarget(subject, body, opts, mailtoOnly);
     if (window.__armPhoneExternalLaunch) window.__armPhoneExternalLaunch();
     try {
-      if (mobile) {
-        var q = "subject=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "");
-        window.location.href = "mailto:" + encodeURIComponent(to).replace(/%2C/g, ",") + "?" + q;
-      } else {
-        var url = "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(to) + "&su=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "");
-        window.open(url, "_blank");
-      }
+      if (target.mode === "mailto") window.location.href = target.url;
+      else window.open(target.url, "_blank");
     } catch (e) {}
-  };
+    return target.mode;
+  }
+  window.__mailComposeTarget = function (subject, body, opts) { return mailComposeTarget(subject, body, opts, false); };
+  window.__mailCompose = function (subject, body, opts) { return mailLaunch(subject, body, opts, false); };
+  window.__mailComposeMailto = function (subject, body, opts) { return mailLaunch(subject, body, opts, true); };
   // mailto() console command — compose an email (device-aware: desktop→Gmail web, mobile→native
   // mail). mailto() → to us; mailto("a@x.com") or mailto(["a@x","b@y"]) → those recipients;
   // mailto("a@x.com", {cc:"c@z", bcc:[...], subject:"hi", body:"…"}) → with extras.

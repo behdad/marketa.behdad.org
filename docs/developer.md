@@ -34,6 +34,11 @@ it coordinates over introducing a second runtime bundle or a new dependency. The
 HTML, CSS, and vanilla JavaScript, with the room illustrations embedded as inline SVG. There is
 nothing to compile: committed page artifacts are served directly from the live Git checkout.
 
+Email compose routing is centralized inside each self-contained page: `__mailCompose` selects the
+Gmail web composer on desktop and a `mailto:` handoff on Android/iOS, including iPadOS desktop-mode
+Safari; `__mailComposeMailto` is used by actions explicitly labelled as the native Email app.
+Keep new email actions on these helpers rather than opening Gmail URLs directly.
+
 In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and lets
 the shell use the viewport width subject only to its 2:1 room-height fit. The game-only `main`
 has no page padding; the thin shell chrome is the only inset around the room. Fresh CLICK ME adds `.intro-active`; checkpoint entry
@@ -1657,6 +1662,9 @@ node tests/play.js
 ```
 
 Run focused tests for the changed ownership boundary. The main routes are:
+
+- `tests/email-links.js` for centralized desktop Gmail versus Android/iOS mailto routing on both
+  self-contained pages;
 
 - `tests/enter.js`, `tests/navigation.js`, `tests/delayed-pan.js`,
   `tests/rapid-navigation.js`, `tests/phase2-progression.js`, and

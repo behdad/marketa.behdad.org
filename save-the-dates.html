@@ -3460,6 +3460,37 @@ function openPartyForm() {
 }
 window.openPartyForm = openPartyForm;
 (function () {
+  // Android/iOS devices, including iPadOS desktop-mode Safari, should hand email to the
+  // native mail chooser. Desktop keeps the Gmail web composer for the explicitly-labelled
+  // Gmail action; the mailto-only helper backs the Email app action on every platform.
+  function mailAddrs(v) { return v == null ? "" : (Array.isArray(v) ? v.join(",") : String(v)).trim(); }
+  function mailIsMobileDevice() {
+    var ua = navigator.userAgent || "";
+    return /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+  }
+  function mailComposeTarget(subject, body, opts, mailtoOnly) {
+    opts = opts || {};
+    var to = mailAddrs(opts.to) || "marketa@behdad.org";
+    var cc = mailAddrs(opts.cc), bcc = mailAddrs(opts.bcc);
+    var su = encodeURIComponent(subject || ""), bd = encodeURIComponent(body || "");
+    var mobile = mailtoOnly || mailIsMobileDevice();
+    var q = "subject=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "");
+    if (mobile) return { mode: "mailto", url: "mailto:" + encodeURIComponent(to).replace(/%2C/g, ",") + "?" + q };
+    return { mode: "gmail", url: "https://mail.google.com/mail/?view=cm&fs=1&to=" + encodeURIComponent(to) + "&su=" + su + "&body=" + bd + (cc ? "&cc=" + encodeURIComponent(cc) : "") + (bcc ? "&bcc=" + encodeURIComponent(bcc) : "") };
+  }
+  function mailLaunch(subject, body, opts, mailtoOnly) {
+    var target = mailComposeTarget(subject, body, opts, mailtoOnly);
+    try {
+      if (target.mode === "mailto") window.location.href = target.url;
+      else window.open(target.url, "_blank");
+    } catch (e) {}
+    return target.mode;
+  }
+  window.__mailComposeTarget = function (subject, body, opts) { return mailComposeTarget(subject, body, opts, false); };
+  window.__mailCompose = function (subject, body, opts) { return mailLaunch(subject, body, opts, false); };
+  window.__mailComposeMailto = function (subject, body, opts) { return mailLaunch(subject, body, opts, true); };
+})();
+(function () {
   var overlay = document.getElementById("party-form-modal");
   if (!overlay) return;
   var closeBtn = overlay.querySelector(".party-close");
@@ -3481,18 +3512,18 @@ window.openPartyForm = openPartyForm;
   function poisonSubjectAndBody() {
     var poison = (document.getElementById("party-poison") || {}).value || "";
     return {
-      subject: encodeURIComponent("What's your poison? 👋"),
-      body: encodeURIComponent("Poison of choice: " + poison + "\n\n...")
+      subject: "What's your poison? 👋",
+      body: "Poison of choice: " + poison + "\n\n..."
     };
   }
   if (gmailBtn) gmailBtn.addEventListener("click", function () {
     var sb = poisonSubjectAndBody();
-    window.open("https://mail.google.com/mail/?view=cm&fs=1&to=marketa@behdad.org&su=" + sb.subject + "&body=" + sb.body, "_blank");
+    if (window.__mailCompose) window.__mailCompose(sb.subject, sb.body);
     close();
   });
   if (mailBtn) mailBtn.addEventListener("click", function () {
     var sb = poisonSubjectAndBody();
-    window.location.href = "mailto:marketa@behdad.org?subject=" + sb.subject + "&body=" + sb.body;
+    if (window.__mailComposeMailto) window.__mailComposeMailto(sb.subject, sb.body);
     close();
   });
   if (form) form.addEventListener("submit", function (e) { e.preventDefault(); });

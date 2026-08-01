@@ -642,6 +642,9 @@ footer{margin-top:2.6rem}
   animation:entrance-tree-answer .72s ease-out;
 }
 .entrance-car-control{cursor:pointer;outline:none}
+#entrance-porsche{cursor:grab}
+#entrance-porsche .entrance-porsche-wheel{cursor:pointer}
+#entrance-porsche.is-dragging{cursor:grabbing}
 .entrance-car-control .entrance-car-hit{
   fill:transparent;stroke:transparent;stroke-width:1.7;vector-effect:non-scaling-stroke;
 }
@@ -33579,7 +33582,7 @@ window.__entranceRoomOpen = false;
   var porscheHornNodes = null;
   var porscheDoorCloseTimer = null;
   var porscheBodyClickTimer = null;
-  var porscheDrag = { active: false, pointerId: null, startX: 0, startY: 0, startPosition: 0, startLane: 0 };
+  var porscheDrag = { active: false, moved: false, suppressClick: false, pointerId: null, startX: 0, startY: 0, startPosition: 0, startLane: 0 };
   var PORSCHE_BASE_X = 328;
   var PORSCHE_BASE_Y = -9;
   var PORSCHE_WRAP_SPAN = 986;
@@ -33868,35 +33871,48 @@ window.__entranceRoomOpen = false;
   function clampPorscheDragLane(value) { return Math.max(-22, Math.min(22, value)); }
   function finishPorscheDrag() {
     if (!porscheDrag.active) return;
+    var suppressTrailingClick = porscheDrag.moved;
     porscheDrag.active = false;
     porscheDrag.pointerId = null;
     if (porsche) porsche.classList.remove("is-dragging");
+    if (suppressTrailingClick) setTimeout(function () { porscheDrag.suppressClick = false; }, 0);
     if (window.__checkpointChanged) window.__checkpointChanged();
   }
   function startPorscheDrag(event) {
     if (!porsche || event.button !== undefined && event.button !== 0) return;
+    var target = event.target;
+    var onBody = target && target.closest && target.closest("#entrance-porsche");
+    var onControl = target && target.closest && target.closest(".entrance-car-control");
+    if (!onBody && !onControl) return;
     var wheel = event.target && event.target.closest ? event.target.closest(".entrance-porsche-wheel") : null;
     if (wheel) return;
     var svg = porsche.ownerSVGElement;
     var rect = svg && svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
     if (!rect || !rect.width || !rect.height) return;
     porscheDrag.active = true;
+    porscheDrag.moved = false;
     porscheDrag.pointerId = event.pointerId;
     porscheDrag.startX = event.clientX;
     porscheDrag.startY = event.clientY;
     porscheDrag.startPosition = driveState.position;
     porscheDrag.startLane = driveState.laneOffset;
-    event.preventDefault();
-    if (porsche) porsche.classList.add("is-dragging");
-    if (porsche.setPointerCapture && event.pointerId !== undefined) {
-      try { porsche.setPointerCapture(event.pointerId); } catch (_error) {}
-    }
   }
   function movePorscheDrag(event) {
     if (!porscheDrag.active || event.pointerId !== porscheDrag.pointerId) return;
     var svg = porsche && porsche.ownerSVGElement;
     var rect = svg && svg.getBoundingClientRect ? svg.getBoundingClientRect() : null;
     if (!rect || !rect.width || !rect.height) return;
+    if (Math.abs(event.clientX - porscheDrag.startX) + Math.abs(event.clientY - porscheDrag.startY) > 3) {
+      if (!porscheDrag.moved) {
+        if (porsche) porsche.classList.add("is-dragging");
+        if (porsche.setPointerCapture && event.pointerId !== undefined) {
+          try { porsche.setPointerCapture(event.pointerId); } catch (_error) {}
+        }
+      }
+      porscheDrag.moved = true;
+      porscheDrag.suppressClick = true;
+    }
+    if (!porscheDrag.moved) return;
     driveState.position = clampPorscheDragPosition(porscheDrag.startPosition + (event.clientX - porscheDrag.startX) * 680 / rect.width);
     driveState.laneOffset = clampPorscheDragLane(porscheDrag.startLane + (event.clientY - porscheDrag.startY) * 920 / rect.height);
     paintPorscheDrivePosition();
@@ -35351,7 +35367,6 @@ window.__entranceRoomOpen = false;
     });
   });
   if (porsche) {
-    porsche.addEventListener("pointerdown", startPorscheDrag, true);
     porsche.addEventListener("pointermove", movePorscheDrag);
     porsche.addEventListener("pointerup", finishPorscheDrag);
     porsche.addEventListener("pointercancel", finishPorscheDrag);
@@ -35363,7 +35378,14 @@ window.__entranceRoomOpen = false;
       });
     });
   }
-  document.addEventListener("pointermove", movePorscheDrag, { passive: false });
+  room.addEventListener("pointerdown", startPorscheDrag, true);
+  room.addEventListener("click", function (event) {
+    if (!porscheDrag.suppressClick) return;
+    porscheDrag.suppressClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+  document.addEventListener("pointermove", movePorscheDrag, { passive: false, capture: true });
   document.addEventListener("pointerup", finishPorscheDrag);
   document.addEventListener("pointercancel", finishPorscheDrag);
   driveControls.forEach(function (control) {

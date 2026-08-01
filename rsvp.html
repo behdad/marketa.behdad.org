@@ -33379,6 +33379,7 @@ window.__entranceRoomOpen = false;
   var driveLastTime = 0;
   var lastSkidAt = 0;
   var driveShifterAttemptTimer = null;
+  var lastDriveInstruction = "";
   var driveBatteryLevel = .75;
   var driveState = {
     hudOpen: false,
@@ -33493,6 +33494,22 @@ window.__entranceRoomOpen = false;
   function driveGearLabel() {
     return driveState.gear < 0 ? "R" : driveState.gear || "N";
   }
+  function porscheDriveInstructionKey() {
+    if (!driveState.hudOpen) return "lower_entrance";
+    if (driveState.stalled) return "entrance_drive_stalled";
+    if (!porscheState.engineOn) return "entrance_drive_ignition_hint";
+    if (!driveState.gear) return "entrance_drive_neutral_hint";
+    if (driveState.gear > 0 && driveState.gear < 6 && driveState.rpm >= 4500) return "entrance_drive_shift_up";
+    if (driveState.gear > 1 && driveState.rpm < 2000 && Math.abs(driveState.speed) > 4) return "entrance_drive_shift_down";
+    return "entrance_drive_manual";
+  }
+  function syncPorscheDriveInstruction(force) {
+    if (!window.__entranceRoomOpen || !window.__setLowerRoomCaption) return;
+    var key = porscheDriveInstructionKey();
+    if (!force && key === lastDriveInstruction) return;
+    lastDriveInstruction = key;
+    window.__setLowerRoomCaption(key);
+  }
   function porscheShifterOffset(gear) {
     var offsets = { "-1": [-12, -7], "0": [4, 0], "1": [-4, -7], "2": [-4, 7],
       "3": [4, -7], "4": [4, 7], "5": [12, -7], "6": [12, 7] };
@@ -33568,6 +33585,7 @@ window.__entranceRoomOpen = false;
         driveGearIndicator.setAttribute("cy", gearPosition[1]);
       }
     }
+    syncPorscheDriveInstruction(false);
     driveControls.forEach(function (control) {
       var hold = control.getAttribute("data-drive-hold");
       var gear = control.getAttribute("data-drive-gear");
@@ -34269,9 +34287,7 @@ window.__entranceRoomOpen = false;
   function openPorscheDriveHud() {
     driveState.hudOpen = true;
     paintPorscheDriveHud();
-    if (window.__setLowerRoomCaption) {
-      window.__setLowerRoomCaption(porscheState.engineOn ? "entrance_drive_manual" : "entrance_drive_ignition_hint");
-    }
+    syncPorscheDriveInstruction(true);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
@@ -34489,8 +34505,7 @@ window.__entranceRoomOpen = false;
     window.__entranceRoomOpen = false;
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
     if (window.__restoreLowerRoomCaption) {
-      window.__restoreLowerRoomCaption(driveState.stalled ? "entrance_drive_stalled" :
-        (porscheState.engineOn ? "entrance_drive_manual" : "lower_entrance"));
+      window.__restoreLowerRoomCaption(porscheDriveInstructionKey());
     }
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
@@ -34534,11 +34549,7 @@ window.__entranceRoomOpen = false;
       });
     });
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
-    if (window.__setLowerRoomCaption) {
-      window.__setLowerRoomCaption(driveState.stalled ? "entrance_drive_stalled" :
-        (porscheState.engineOn ? "entrance_drive_manual" :
-          (driveState.hudOpen ? "entrance_drive_ignition_hint" : "lower_entrance")));
-    }
+    syncPorscheDriveInstruction(true);
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
     try { viewport.focus({ preventScroll: true }); }
     catch (_error) { try { viewport.focus(); } catch (_error2) {} }
@@ -36125,6 +36136,9 @@ var T = {
       bedroom_ttt_wait_caption: "The window’s turn · it has a plan",
       lower_entrance: "Fancy-Stupid! · let’s go for a ride.",
       entrance_drive_manual: "Let’s drive manual.",
+      entrance_drive_neutral_hint: "Let’s drive manual · put it in gear.",
+      entrance_drive_shift_up: "Shift up · it wants another gear.",
+      entrance_drive_shift_down: "Shift down · give the engine some leverage.",
       entrance_drive_ignition_hint: "Start the ignition. The key is on the left.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
       kitchen_grind: "Now grind coffee.",
@@ -37480,6 +37494,9 @@ var T = {
       bedroom_ttt_wait_caption: "Vitráž je na tahu · má svůj plán",
       lower_entrance: "Fancy-Stupid! · pojeďme se projet.",
       entrance_drive_manual: "Jeďme s manuálem.",
+      entrance_drive_neutral_hint: "Jeďme s manuálem · zařaď rychlost.",
+      entrance_drive_shift_up: "Přeřaď výš · chce další rychlost.",
+      entrance_drive_shift_down: "Přeřaď níž · dej motoru víc síly.",
       entrance_drive_ignition_hint: "Nastartuj. Klíček je vlevo.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
       kitchen_grind: "Teď umel kávu.",

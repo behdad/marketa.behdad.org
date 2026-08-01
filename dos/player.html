@@ -46,7 +46,7 @@ canvas{image-rendering:pixelated}
   var lang = params.get("lang") === "cs" ? "cs" : "en";
   var mode = params.get("mode") === "dos" ? "dos" : "nibbles";
   var players = Math.max(1, Math.min(4, parseInt(params.get("players"), 10) || 1));
-  var gameSpeed = Math.max(1, Math.min(100, parseInt(params.get("speed"), 10) || 5));
+  var gameSpeed = Math.max(1, Math.min(100, parseInt(params.get("speed"), 10) || 50));
   var text = {
     en: { loading: "loading DOS…", setup: "setting up your game…", failed: "DOS could not start. Restart the app to retry." },
     cs: { loading: "načítám DOS…", setup: "nastavuji hru…", failed: "DOS se nepodařilo spustit. Zkuste aplikaci restartovat." }
@@ -262,11 +262,11 @@ canvas{image-rendering:pixelated}
       if (!runtimeReadyTold) { runtimeReadyTold = true; tell("snake-ready"); }
     }, 70);
   }
-  dosSurface.addEventListener("pointerup", function (event) {
+  document.addEventListener("pointerup", function (event) {
     if (mode !== "nibbles" || !nibblesCi || event.pointerType === "mouse" && event.button !== 0) return;
     event.preventDefault();
     pulseNibblesSpace();
-  });
+  }, true);
   function stepNibblesStartup() {
     nibblesStartupTimer = null;
     if (!nibblesCi || mode !== "nibbles") return;
@@ -405,6 +405,12 @@ canvas{image-rendering:pixelated}
   window.addEventListener("message", function (event) {
     if (event.origin !== location.origin || !event.data) return;
     if (event.data.type === "snake-key" && mode === "nibbles") {
+      if (nibblesCi && event.data.keyCode) {
+        try {
+          nibblesCi.sendKeyEvent(event.data.keyCode, event.data.eventType !== "keyup");
+          return;
+        } catch (_error) {}
+      }
       var forwarded = new KeyboardEvent(event.data.eventType === "keyup" ? "keyup" : "keydown", {
         key: event.data.key || "", code: event.data.code || "", location: event.data.location || 0,
         repeat: !!event.data.repeat, ctrlKey: !!event.data.ctrlKey, metaKey: !!event.data.metaKey,

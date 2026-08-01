@@ -860,6 +860,7 @@ footer{margin-top:2.6rem}
   text-anchor:middle;pointer-events:none;
 }
 .entrance-drive-key.word{font-size:4px;letter-spacing:-.15px}
+#entrance-drive-hud.drive-shift-key-held :is(#entrance-drive-brake,#entrance-drive-throttle) .entrance-drive-key{opacity:0}
 #entrance-drive-hud.drive-stalled #entrance-drive-tach-readout{fill:#e6a08b}
 #entrance-drive-stall-led{opacity:0;filter:drop-shadow(0 0 2px rgba(244,153,45,.9))}
 #entrance-drive-hud.drive-stalled #entrance-drive-stall-led{opacity:1}
@@ -33519,6 +33520,14 @@ window.__entranceRoomOpen = false;
   var lastSkidAt = 0;
   var porscheSpinTimer = null;
   var driveShifterAttemptTimer = null;
+  var driveShifterHoldTimer = null;
+  var driveShifterRepeatTimer = null;
+  var driveShifterPointerId = null;
+  var driveShifterPointerTarget = null;
+  var driveShifterHeld = false;
+  var driveShifterPressSerial = 0;
+  var driveShifterSuppressClickUntil = 0;
+  var driveShiftKeyHeld = false;
   var lastDriveInstruction = "";
   var driveBatteryLevel = .75;
   var driveState = {
@@ -33738,6 +33747,7 @@ window.__entranceRoomOpen = false;
       driveHud.classList.toggle("drive-stalled", driveState.stalled);
       driveHud.classList.toggle("drive-redline", driveState.rpm >= 7500);
       driveHud.classList.toggle("glovebox-open", driveState.gloveboxOpen);
+      driveHud.classList.toggle("drive-shift-key-held", driveShiftKeyHeld);
       driveHud.setAttribute("aria-hidden", ignitionVisible ? "false" : "true");
     }
     if (driveGlovebox) driveGlovebox.setAttribute("aria-expanded", driveState.gloveboxOpen ? "true" : "false");
@@ -34360,6 +34370,67 @@ window.__entranceRoomOpen = false;
     if (next === index) return false;
     return selectPorscheDriveGear(gears[next], true);
   }
+  function porscheShifterAvailable() {
+    return !!(driveState.hudOpen && (porscheState.engineOn || driveState.stalled));
+  }
+  function activatePorscheShifterTap(target) {
+    if (!porscheShifterAvailable()) return false;
+    var gate = target && target.closest ? target.closest(".entrance-drive-control[data-drive-gear]") : null;
+    if (gate && driveShifter.contains(gate)) return selectPorscheDriveGear(gate.getAttribute("data-drive-gear"));
+    return stepPorscheDriveGear(1);
+  }
+  function clearPorscheShifterPress(event, activateTap) {
+    if (driveShifterPointerId === null || (event && event.pointerId !== driveShifterPointerId)) return false;
+    var pointerId = driveShifterPointerId;
+    var target = driveShifterPointerTarget;
+    var wasHeld = driveShifterHeld;
+    clearTimeout(driveShifterHoldTimer);
+    clearInterval(driveShifterRepeatTimer);
+    driveShifterHoldTimer = null;
+    driveShifterRepeatTimer = null;
+    driveShifterPointerId = null;
+    driveShifterPointerTarget = null;
+    driveShifterHeld = false;
+    driveShifterPressSerial++;
+    if (driveShifter && driveShifter.releasePointerCapture) {
+      try { driveShifter.releasePointerCapture(pointerId); } catch (_error) {}
+    }
+    if (wasHeld || activateTap) driveShifterSuppressClickUntil = performance.now() + 700;
+    if (!wasHeld && activateTap) activatePorscheShifterTap(target);
+    return true;
+  }
+  function cancelPorscheShifterPress() {
+    return clearPorscheShifterPress(null, false);
+  }
+  function setPorscheDriveShiftKeyHeld(held) {
+    driveShiftKeyHeld = !!held;
+    if (driveHud) driveHud.classList.toggle("drive-shift-key-held", driveShiftKeyHeld);
+  }
+  function beginPorscheShifterPress(event) {
+    if (!porscheShifterAvailable() || driveShifterPointerId !== null ||
+        event.button !== 0 || event.isPrimary === false) return;
+    event.preventDefault();
+    driveShifterPointerId = event.pointerId;
+    driveShifterPointerTarget = event.target;
+    driveShifterHeld = false;
+    var pressSerial = ++driveShifterPressSerial;
+    if (driveShifter.setPointerCapture) {
+      try { driveShifter.setPointerCapture(event.pointerId); } catch (_error) {}
+    }
+    driveShifterHoldTimer = setTimeout(function () {
+      driveShifterHoldTimer = null;
+      if (pressSerial !== driveShifterPressSerial || driveShifterPointerId === null || !porscheShifterAvailable()) return;
+      driveShifterHeld = true;
+      stepPorscheDriveGear(-1);
+      driveShifterRepeatTimer = setInterval(function () {
+        if (pressSerial !== driveShifterPressSerial || driveShifterPointerId === null ||
+            !porscheShifterAvailable() || !stepPorscheDriveGear(-1)) {
+          clearInterval(driveShifterRepeatTimer);
+          driveShifterRepeatTimer = null;
+        }
+      }, 240);
+    }, 440);
+  }
   function setPorscheDriveHold(name, held) {
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     driveState.holds[name] = !!held;
@@ -34482,6 +34553,8 @@ window.__entranceRoomOpen = false;
     driveFrame = requestAnimationFrame(porscheDriveTick);
   }
   function resetPorscheDriveRuntime() {
+    cancelPorscheShifterPress();
+    setPorscheDriveShiftKeyHeld(false);
     if (driveFrame) cancelAnimationFrame(driveFrame);
     driveFrame = null;
     driveLastTime = 0;
@@ -34521,6 +34594,9 @@ window.__entranceRoomOpen = false;
     if (!event) return false;
     var key = String(event.key || "").toLowerCase();
     var code = String(event.code || "");
+    var shiftKeyEvent = code === "ShiftLeft" || code === "ShiftRight" || key === "shift";
+    if (shiftKeyEvent) setPorscheDriveShiftKeyHeld(down);
+    else if (!down && !event.shiftKey) setPorscheDriveShiftKeyHeld(false);
     var shiftedGearStep = event.shiftKey && (code === "ArrowUp" || code === "ArrowDown");
     if (shiftedGearStep) {
       if (down && !event.repeat) stepPorscheDriveGear(code === "ArrowUp" ? 1 : -1);
@@ -34858,6 +34934,8 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function dismissPorscheDriveHud() {
+    cancelPorscheShifterPress();
+    setPorscheDriveShiftKeyHeld(false);
     var wasRunning = porscheState.engineOn;
     porscheState.engineOn = false;
     porscheState.headlightOn = false;
@@ -35024,19 +35102,35 @@ window.__entranceRoomOpen = false;
     });
   });
   if (driveShifter) {
+    driveShifter.addEventListener("pointerdown", beginPorscheShifterPress, true);
+    driveShifter.addEventListener("pointerup", function (event) {
+      if (!clearPorscheShifterPress(event, true)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+    driveShifter.addEventListener("pointercancel", function () {
+      cancelPorscheShifterPress();
+    }, true);
+    driveShifter.addEventListener("lostpointercapture", function () {
+      cancelPorscheShifterPress();
+    });
     driveShifter.addEventListener("click", function (event) {
       if (!driveState.hudOpen || (!porscheState.engineOn && !driveState.stalled)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      stepPorscheDriveGear(1);
+      if (performance.now() > driveShifterSuppressClickUntil) activatePorscheShifterTap(event.target);
     }, true);
     driveShifter.addEventListener("contextmenu", function (event) {
       if (!driveState.hudOpen || (!porscheState.engineOn && !driveState.stalled)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (driveShifterPointerId !== null || performance.now() <= driveShifterSuppressClickUntil) return;
       stepPorscheDriveGear(-1);
     }, true);
   }
+  if (driveHud) driveHud.addEventListener("touchmove", function (event) {
+    if (driveShifterPointerId !== null) event.preventDefault();
+  }, { passive: false });
   if (driveGlovebox) {
     driveGlovebox.addEventListener("pointerdown", function (event) {
       event.preventDefault();
@@ -35060,6 +35154,8 @@ window.__entranceRoomOpen = false;
     updatePorscheDriveAudio();
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus() ||
         (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
+      cancelPorscheShifterPress();
+      setPorscheDriveShiftKeyHeld(false);
       stopPorscheHornSound();
       Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
       if (driveFrame) cancelAnimationFrame(driveFrame);

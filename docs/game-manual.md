@@ -253,7 +253,8 @@ gameplay messages finish before that room caption appears.
   for the current engine run; starting the engine begins a fresh count.
   Hold the dashboard horn to get a small warm answer from the building door.
   The facade and sidewalk share the loft's current
-  Edmonton rain, snow, overcast, and wildfire haze.
+  Edmonton rain, snow, overcast, and wildfire haze. If an attended daytime
+  shower gives way to clear sky, a quiet rainbow may linger over the balcony.
 
 ### Optional activities
 

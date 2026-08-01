@@ -707,6 +707,10 @@ same forced-or-real Edmonton weather layers used upstairs; its snow gate also
 reads the Balcony's `__snowsOnItsOwn()` seasonal roll. The rain streaks and snow
 cover are a fixed authored SVG inventory rather than spawned particles, so weather
 changes and unfocused tabs cannot grow the DOM.
+The same single writer remembers a rain-to-dry edge for 90 seconds. During that
+window, an attended daytime Balcony with no remaining cloud, storm, or snow can
+reuse the distant `#balcony-rainbow` artwork for one restrained eight-second fade;
+overcast waits, dusk suppresses it, and no weather change navigates to the Balcony.
 Like the other full-viewport overlays, it refreshes the shared room-ambience
 gate on both entry and return so the preserved Balcony cannot keep sounding
 under the street scene. `updateCuddlyGrooving()` also gates a restrained,

@@ -206,7 +206,7 @@ Each hidden room announces itself in the clue line when entered; temporary
 gameplay messages finish before that room caption appears.
 
 - **Bathroom / Toilets** pairs with the Kitchen. Click the tub body—or press
-  Enter—to fill it and start the 30-second Bubble-gun round. Click bubbles for
+  Enter—to fill it and immediately start the 30-second Bubble-gun round. Click bubbles for
   one point, or drag the stool to aim and release to fire for two; bubbles
   replenish during the round, and quick hits build a small combo bonus. The
   tub body is fill-only once full; click its top rim to drain it. Wipe the

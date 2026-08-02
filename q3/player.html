@@ -75,7 +75,7 @@ const touchPad = document.getElementById("touch-pad");
 let touchDrag = null;
 let touchHeldKeys = [];
 let touchRepeatTimer = 0;
-const engineInputHandlers = { keydown:[], keyup:[], mousemove:[] };
+const engineInputHandlers = { keydown:[], keyup:[], mousemove:[], mouseup:[] };
 const touchDirectionKeys = { up:"w", left:"a", right:"d", down:"s" };
 const touchReverse = { up:"down", down:"up", left:"right", right:"left" };
 
@@ -241,13 +241,25 @@ function releaseTouchLook() {
   touchLookKeys.forEach(key => emitTouchKey("keyup", key));
   touchLookKeys = [];
 }
-touchLook.addEventListener("pointerdown", event => {
-  if (event.pointerType !== "touch" || touchAim) return;
+function releaseTouchFire() {
+  const event = new MouseEvent("mouseup", { bubbles:true, button:0, buttons:0 });
+  const handlers = engineInputHandlers.mouseup;
+  if (handlers.length) handlers.forEach(entry => {
+    try {
+      if (typeof entry.listener === "function") entry.listener.call(entry.target, event);
+      else if (entry.listener && entry.listener.handleEvent) entry.listener.handleEvent(event);
+    } catch (error) { console.error(error); }
+  });
+  else canvas.dispatchEvent(event);
+}
+window.addEventListener("pointerdown", event => {
+  if (event.pointerType !== "touch" || event.target !== touchLook || touchAim) return;
   event.preventDefault(); event.stopImmediatePropagation();
+  releaseTouchFire();
   touchAim = { id:event.pointerId, x:event.clientX, y:event.clientY, sx:event.clientX, sy:event.clientY, moved:false };
   try { touchLook.setPointerCapture(event.pointerId); } catch (_) {}
 }, true);
-touchLook.addEventListener("pointermove", event => {
+window.addEventListener("pointermove", event => {
   if (!touchAim || event.pointerId !== touchAim.id) return;
   event.preventDefault(); event.stopImmediatePropagation();
   const dx = event.clientX - touchAim.x, dy = event.clientY - touchAim.y;
@@ -257,10 +269,10 @@ touchLook.addEventListener("pointermove", event => {
   const mouseMove = new MouseEvent("mousemove", {
     bubbles:true, cancelable:true, clientX:event.clientX, clientY:event.clientY
   });
-  try { Object.defineProperty(mouseMove, "movementX", { value:dx * 4 }); } catch (_) {}
-  try { Object.defineProperty(mouseMove, "movementY", { value:dy * 4 }); } catch (_) {}
+  try { Object.defineProperty(mouseMove, "movementX", { value:dx * 16 }); } catch (_) {}
+  try { Object.defineProperty(mouseMove, "movementY", { value:dy * 16 }); } catch (_) {}
   const handlers = engineInputHandlers.mousemove;
-  setStatus("Touch look · SDL mouse " + handlers.length);
+  releaseTouchFire();
   if (handlers.length) handlers.forEach(entry => {
     try {
       if (typeof entry.listener === "function") entry.listener.call(entry.target, mouseMove);
@@ -279,8 +291,8 @@ function finishTouchAim(event) {
   }
   touchAim = null;
 }
-touchLook.addEventListener("pointerup", finishTouchAim, true);
-touchLook.addEventListener("pointercancel", event => {
+window.addEventListener("pointerup", finishTouchAim, true);
+window.addEventListener("pointercancel", event => {
   if (!touchAim || event.pointerId !== touchAim.id) return;
   event.preventDefault(); event.stopImmediatePropagation();
   releaseTouchLook();
@@ -302,7 +314,7 @@ try {
   setStatus("Loading " + picker.querySelector('[data-arena="' + arena + '"]').textContent + "…");
   const nativeAddEventListener = EventTarget.prototype.addEventListener;
   EventTarget.prototype.addEventListener = function(type, listener, options) {
-    if ((type === "keydown" || type === "keyup" || type === "mousemove") && listener &&
+    if ((type === "keydown" || type === "keyup" || type === "mousemove" || type === "mouseup") && listener &&
         (this === document || this === window || this === canvas)) {
       engineInputHandlers[type].push({ target:this, listener });
     }

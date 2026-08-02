@@ -30,7 +30,7 @@ body{display:grid;place-items:center}
   linear-gradient(125deg,transparent 34%,#ffb22e 35% 39%,transparent 40% 67%,#ff7b20 68% 72%,transparent 73%),
   radial-gradient(circle at 55% 80%,#d83b14,#6c1f16 54%,#271719 55%)}
 .arena-choice:hover,.arena-choice:focus-visible{border-color:#f1c96c;outline:0;transform:translateY(-1px)}
-#touch-pad{--touch-cell:clamp(6px,6vmin,40px);display:none;position:fixed;z-index:4;left:max(clamp(2px,2vmin,10px),env(safe-area-inset-left));bottom:max(clamp(2px,2vmin,10px),env(safe-area-inset-bottom));grid-template:repeat(3,var(--touch-cell))/repeat(3,var(--touch-cell));justify-content:center;gap:clamp(.7px,.7vmin,5px);border-radius:clamp(2px,2vmin,12px);touch-action:none;cursor:grab;background:linear-gradient(90deg,transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%),linear-gradient(transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#touch-pad{--touch-cell:clamp(18px,10vmin,64px);display:none;position:fixed;z-index:4;left:max(clamp(3px,2vmin,14px),env(safe-area-inset-left));bottom:max(clamp(3px,2vmin,14px),env(safe-area-inset-bottom));grid-template:repeat(3,var(--touch-cell))/repeat(3,var(--touch-cell));justify-content:center;gap:clamp(1px,1vmin,7px);border-radius:clamp(4px,2vmin,14px);touch-action:none;cursor:grab;background:linear-gradient(90deg,transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%),linear-gradient(transparent 31%,rgba(65,100,255,.28) 31% 69%,transparent 69%);user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #touch-pad[hidden]{display:none}
 #touch-pad::before{content:"";grid-area:2/2;width:53.333%;height:53.333%;place-self:center;border:clamp(.45px,.12vmin,1px) solid #6579dc;border-radius:50%;background:#253fc8;box-shadow:0 0 clamp(1px,.25vmin,1.5px) rgba(65,100,255,.75);pointer-events:none}
 #touch-pad.dragging{cursor:grabbing}
@@ -248,10 +248,12 @@ touchLook.addEventListener("pointermove", event => {
   if (Math.hypot(event.clientX - touchAim.sx, event.clientY - touchAim.sy) > 8) touchAim.moved = true;
   touchAim.x = event.clientX; touchAim.y = event.clientY;
   if (!dx && !dy) return;
-  const directions = [];
-  if (Math.abs(dx) > 1) directions.push(dx < 0 ? "left" : "right");
-  if (Math.abs(dy) > 1) directions.push(dy < 0 ? "up" : "down");
-  setTouchLookKeys(directions);
+  const mouseMove = new MouseEvent("mousemove", {
+    bubbles:true, cancelable:true, clientX:event.clientX, clientY:event.clientY
+  });
+  try { Object.defineProperty(mouseMove, "movementX", { value:dx * 4 }); } catch (_) {}
+  try { Object.defineProperty(mouseMove, "movementY", { value:dy * 4 }); } catch (_) {}
+  canvas.dispatchEvent(mouseMove);
 }, true);
 function finishTouchAim(event) {
   if (!touchAim || event.pointerId !== touchAim.id) return;

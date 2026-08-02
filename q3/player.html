@@ -94,6 +94,7 @@ function releaseTouchKeys() {
   touchDrag = null;
   if (touchPad) touchPad.classList.remove("dragging");
   setTouchDirection("");
+  releaseTouchLook();
   if (pointerId != null && touchPad) { try { touchPad.releasePointerCapture(pointerId); } catch (_) {} }
 }
 if (touchPad) {
@@ -208,6 +209,18 @@ canvas.addEventListener("pointerdown", () => {
   sync();
 });
 let touchAim = null;
+let touchLookKeys = [];
+const touchLookKeyMap = { left:"j", right:"l", up:"i", down:"k" };
+function setTouchLookKeys(directions) {
+  const next = directions.map(direction => touchLookKeyMap[direction]);
+  touchLookKeys.filter(key => !next.includes(key)).forEach(key => emitTouchKey("keyup", key));
+  next.filter(key => !touchLookKeys.includes(key)).forEach(key => emitTouchKey("keydown", key));
+  touchLookKeys = next;
+}
+function releaseTouchLook() {
+  touchLookKeys.forEach(key => emitTouchKey("keyup", key));
+  touchLookKeys = [];
+}
 touchLook.addEventListener("pointerdown", event => {
   if (event.pointerType !== "touch" || touchAim) return;
   event.preventDefault(); event.stopImmediatePropagation();
@@ -221,14 +234,15 @@ touchLook.addEventListener("pointermove", event => {
   if (Math.hypot(event.clientX - touchAim.sx, event.clientY - touchAim.sy) > 8) touchAim.moved = true;
   touchAim.x = event.clientX; touchAim.y = event.clientY;
   if (!dx && !dy) return;
-  const move = new MouseEvent("mousemove", { bubbles:true, buttons:0 });
-  Object.defineProperty(move, "movementX", { value:dx * 7.5 });
-  Object.defineProperty(move, "movementY", { value:dy * 7.5 });
-  canvas.dispatchEvent(move);
+  const directions = [];
+  if (Math.abs(dx) > 1) directions.push(dx < 0 ? "left" : "right");
+  if (Math.abs(dy) > 1) directions.push(dy < 0 ? "up" : "down");
+  setTouchLookKeys(directions);
 }, true);
 function finishTouchAim(event) {
   if (!touchAim || event.pointerId !== touchAim.id) return;
   event.preventDefault(); event.stopImmediatePropagation();
+  releaseTouchLook();
   if (!touchAim.moved) {
     canvas.dispatchEvent(new MouseEvent("mousedown", { bubbles:true, button:0, buttons:1 }));
     canvas.dispatchEvent(new MouseEvent("mouseup", { bubbles:true, button:0 }));
@@ -239,6 +253,7 @@ touchLook.addEventListener("pointerup", finishTouchAim, true);
 touchLook.addEventListener("pointercancel", event => {
   if (!touchAim || event.pointerId !== touchAim.id) return;
   event.preventDefault(); event.stopImmediatePropagation();
+  releaseTouchLook();
   touchAim = null;
 }, true);
 document.addEventListener("contextmenu", event => {
@@ -284,6 +299,10 @@ try {
       "+set", "r_deluxeMapping", "0",
       "+set", "sensitivity", "0.8",
       "+set", "cl_mouseAccel", "0",
+      "+bind", "j", "+left",
+      "+bind", "l", "+right",
+      "+bind", "i", "+lookup",
+      "+bind", "k", "+lookdown",
       "+set", "s_volume", "0.32",
       "+set", "musicvolume", "0.18",
       "+set", "g_gametype", "0",

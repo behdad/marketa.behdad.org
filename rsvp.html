@@ -32087,7 +32087,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         </g>
 
         <!-- Stained-glass panel beside the bed. -->
-        <g id="bedroom-stained-glass" class="bedroom-prop" transform="translate(0 -18)" role="button" aria-label="Catch the stained-glass light; double-click or double-tap a pane to play tic-tac-toe" title="Catch the stained-glass light; double-click or double-tap a pane to play tic-tac-toe" data-aria-i="bedroom_glass" data-title-i="bedroom_glass">
+        <g id="bedroom-stained-glass" class="bedroom-prop" transform="translate(0 -18)" role="button" aria-label="Catch the stained-glass light; click any pane to play tic-tac-toe" title="Catch the stained-glass light; click any pane to play tic-tac-toe" data-aria-i="bedroom_glass" data-title-i="bedroom_glass">
           <rect x="10" y="62" width="145" height="145" rx="2" fill="#eee6d5" stroke="#5f493d" stroke-width="5"/>
           <g id="bedroom-ttt-board">
             <g class="bedroom-ttt-pane" data-cell="0"><rect class="bedroom-ttt-pane-fill" x="20" y="72" width="41.667" height="41.667" fill="#d2b0ae"/></g>
@@ -36321,8 +36321,6 @@ window.__bedroomRoomOpen = false;
   var tttWinner = null;
   var tttLine = [];
   var tttAiTimer = null;
-  var tttTouchCell = -1;
-  var tttTouchAt = 0;
   var TTT_LINES = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8],
     [0, 3, 6], [1, 4, 7], [2, 5, 8],
@@ -36406,7 +36404,8 @@ window.__bedroomRoomOpen = false;
   function refreshTttCaption() {
     if (!window.__bedroomRoomOpen || !window.__setLowerRoomCaption) return;
     var key = tttPhase === "player" ? "bedroom_ttt_turn_caption" :
-      tttPhase === "computer" ? "bedroom_ttt_wait_caption" : "lower_bedroom";
+      tttPhase === "computer" ? "bedroom_ttt_wait_caption" :
+      tttPhase === "idle" ? "bedroom_ttt_start_caption" : "lower_bedroom";
     window.__setLowerRoomCaption(key);
   }
   function renderTtt() {
@@ -36473,8 +36472,6 @@ window.__bedroomRoomOpen = false;
     tttPhase = "idle";
     tttWinner = null;
     tttLine = [];
-    tttTouchCell = -1;
-    tttTouchAt = 0;
     renderTtt();
   }
   function startTtt(computerFirst) {
@@ -36725,9 +36722,7 @@ window.__bedroomRoomOpen = false;
         var pane = event.target && event.target.closest &&
           event.target.closest(".bedroom-ttt-pane");
         if (pane) {
-          if (tttPhase === "player") {
-            playTttCell(Number(pane.getAttribute("data-cell")), false);
-          }
+          playTttCell(Number(pane.getAttribute("data-cell")), true);
           return;
         }
       }
@@ -36751,34 +36746,6 @@ window.__bedroomRoomOpen = false;
       if (typeof playSwishSound === "function") playSwishSound(suit.id);
     });
   });
-  if (glass) {
-    glass.addEventListener("dblclick", function (event) {
-      var pane = event.target && event.target.closest &&
-        event.target.closest(".bedroom-ttt-pane");
-      if (!pane) return;
-      event.preventDefault();
-      event.stopPropagation();
-      playTttCell(Number(pane.getAttribute("data-cell")), true);
-    });
-    glass.addEventListener("pointerup", function (event) {
-      if (event.pointerType !== "touch") return;
-      var pane = event.target && event.target.closest &&
-        event.target.closest(".bedroom-ttt-pane");
-      if (!pane) return;
-      var cell = Number(pane.getAttribute("data-cell"));
-      var now = Date.now();
-      if (cell === tttTouchCell && now - tttTouchAt < 420) {
-        event.preventDefault();
-        event.stopPropagation();
-        tttTouchCell = -1;
-        tttTouchAt = 0;
-        playTttCell(cell, true);
-      } else {
-        tttTouchCell = cell;
-        tttTouchAt = now;
-      }
-    });
-  }
 
   function closeBedroom() {
     if (!window.__bedroomRoomOpen) return false;
@@ -36820,7 +36787,7 @@ window.__bedroomRoomOpen = false;
         if (window.__bedroomRoomOpen) viewport.classList.add("bedroom-room-open");
       });
     });
-    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_bedroom");
+    refreshTttCaption();
     if (window.__markLowerRoomEntered) window.__markLowerRoomEntered();
     focusViewport();
     return true;
@@ -38497,12 +38464,13 @@ var T = {
     bedroom_title: "Bedroom",
     bedroom_leave: "Back to the office",
     bedroom_scene: "Interactive bedroom",
-    bedroom_glass: "Catch the stained-glass light; double-click or double-tap a pane to play tic-tac-toe",
+    bedroom_glass: "Catch the stained-glass light; click any pane to play tic-tac-toe",
+    bedroom_ttt_start_caption: "Click any pane to play tic-tac-toe",
     bedroom_glass_turn: "Your turn — choose an empty pane",
     bedroom_glass_wait: "The window is choosing a pane",
-    bedroom_glass_win: "You won — double-click any pane to play again",
-    bedroom_glass_loss: "The window won — double-click any pane to play again",
-    bedroom_glass_draw: "Draw — double-click any pane to play again",
+    bedroom_glass_win: "You won — click any pane to play again",
+    bedroom_glass_loss: "The window won — click any pane to play again",
+    bedroom_glass_draw: "Draw — click any pane to play again",
     bedroom_sprinkler: "Test the bedroom sprinkler",
     bedroom_lamp_left: "Toggle the left bedside lamp",
     bedroom_lamp_right: "Toggle the right bedside lamp",
@@ -39878,12 +39846,13 @@ var T = {
     bedroom_title: "Ložnice",
     bedroom_leave: "Zpět do pracovny",
     bedroom_scene: "Interaktivní ložnice",
-    bedroom_glass: "Zachytit světlo ve vitráži; dvojklikem nebo dvojitým klepnutím na políčko spustit piškvorky",
+    bedroom_glass: "Zachytit světlo ve vitráži; kliknutím na libovolné políčko spustit piškvorky",
+    bedroom_ttt_start_caption: "Kliknutím na libovolné políčko spustit piškvorky",
     bedroom_glass_turn: "Jsi na tahu — vyber prázdné políčko",
     bedroom_glass_wait: "Vitráž vybírá políčko",
-    bedroom_glass_win: "Vyhráli jste — dvojklikem na políčko spustíte novou hru",
-    bedroom_glass_loss: "Vitráž vyhrála — dvojklikem na políčko spustíte novou hru",
-    bedroom_glass_draw: "Remíza — dvojklikem na políčko spustíte novou hru",
+    bedroom_glass_win: "Vyhráli jste — kliknutím na políčko spustíte novou hru",
+    bedroom_glass_loss: "Vitráž vyhrála — kliknutím na políčko spustíte novou hru",
+    bedroom_glass_draw: "Remíza — kliknutím na políčko spustíte novou hru",
     bedroom_sprinkler: "Vyzkoušet sprinkler v ložnici",
     bedroom_lamp_left: "Přepnout levou lampičku",
     bedroom_lamp_right: "Přepnout pravou lampičku",

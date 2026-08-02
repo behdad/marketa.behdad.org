@@ -230,9 +230,9 @@ gameplay messages finish before that room caption appears.
   The woven poufs beside the asymmetrical leather daybed nest into one another.
   Try the ceiling sprinkler during a film if you accept the consequences.
 - **Bedroom** pairs with the Office. Its furnishings are repeatable toys whose
-  arrangement resets when you leave. Double-click or double-tap a stained-glass
-  pane to start tic-tac-toe, then make later moves with ordinary selections.
-  After a win or draw, double-select any pane to restart. Enter starts a fresh
+  arrangement resets when you leave. Click any stained-glass pane to start tic-tac-toe,
+  then make later moves with ordinary selections. After a win or draw, click any pane
+  to clear the board and start again. Enter starts a fresh
   board with the window moving first. Turning off both mushroom lamps lets the
   room settle to sleep. Open the wardrobe to reveal the wedding suits; each
   hanger swings on its own. During the party, guests leave their coats on the

@@ -7829,9 +7829,12 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-act.used{background:transparent; color:var(--soft); border:1px solid var(--rule); box-shadow:none}
 .pm-msg-act.used:hover,.pm-msg-act.used:focus-visible{background:rgba(142,58,74,.08); color:var(--wine)}
 .pm-msg-act svg{width:15px; height:15px}
+.pm-msg-action-coach{display:flex;align-items:center;gap:2px;margin-left:auto;color:var(--wine);font-size:11px;font-weight:700;line-height:1;white-space:nowrap;animation:pm-msg-coach-in .35s ease-out both}
+.pm-msg-action-coach::after{content:"→";font-size:24px;line-height:.7}
 @keyframes pm-msg-action-nudge{0%,100%{transform:translateX(0)}35%{transform:translateX(-4px)}70%{transform:translateX(0)}}
+@keyframes pm-msg-coach-in{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(0)}}
 .pm-msg-row.unread .pm-msg-act:not(.used){animation:pm-msg-action-nudge 1.25s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){.pm-msg-row.unread .pm-msg-act:not(.used){animation:none}}
+@media (prefers-reduced-motion: reduce){.pm-msg-action-coach,.pm-msg-row.unread .pm-msg-act:not(.used){animation:none}}
 .pm-msg-text{display:block}
 .pm-msg-quote{display:block; width:100%; margin:0 0 4px; padding:2px 5px; border:0; border-left:2px solid currentColor; border-radius:0; background:none; color:inherit; opacity:.72; font:inherit; font-size:10px; line-height:1.25; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer}
 .pm-msg-quote:hover,.pm-msg-quote:focus-visible{opacity:1; background:rgba(151,58,79,.08); outline:none}
@@ -38301,6 +38304,7 @@ var T = {
     msg_mark_unread: "Mark as unread.",
     msg_react: "React",
     msg_badge_coach: "New message. Tap to read.",
+    msg_action_coach: "Try the arrow",
     msg_charlie_from: "Charlie",
     msg_charlie_body_a: "Hi, Charlie here. I know this loft pretty well—ask me anything, or just come chat. 💬",
     msg_charlie_body_b: "Need a clue, directions, or a little company? Message me. —Charlie 💬",
@@ -39670,6 +39674,7 @@ var T = {
     msg_mark_unread: "Označit jako nepřečtené.",
     msg_react: "Reakce",
     msg_badge_coach: "Nová zpráva. Klepni a přečti si ji.",
+    msg_action_coach: "Zkus šipku",
     msg_charlie_from: "Charlie",
     msg_charlie_body_a: "Ahoj, tady Charlie. Tenhle loft znám docela dobře — zeptej se mě na cokoli nebo si přijď popovídat. 💬",
     msg_charlie_body_b: "Potřebuješ nápovědu, navigaci nebo trochu společnosti? Napiš mi. —Charlie 💬",
@@ -76432,6 +76437,12 @@ async def localfont(name):
           actBtn.setAttribute("aria-label", tr("mon_ctx_open")); actBtn.setAttribute("title", tr("mon_ctx_open"));
           actBtn.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
           actBtn.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(id); });
+          if (!msgActionCoachShown && !messagesRead[id] && !messageActionUsed[id]) {
+            msgActionCoachShown = true;
+            var actionCoach = document.createElement("span"); actionCoach.className = "pm-msg-action-coach"; actionCoach.textContent = tr("msg_action_coach");
+            line.appendChild(actionCoach);
+            setTimeout(function () { if (actionCoach.parentNode) actionCoach.remove(); }, 7000);
+          }
           line.appendChild(actBtn);
         }
         row.appendChild(head); row.appendChild(line);
@@ -78328,7 +78339,7 @@ async def localfont(name):
     var notesDraft = ""; // the typed note — session-scoped: survives a language rebuild AND a normal close/reopen; cleared only on a kill (uninstallApp / __resetPhoneApps)
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
-    var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
+    var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null, msgActionCoachShown = false; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
     var lastAutonomousAuthoredId = null, autonomousReplyLinks = {}; // light conversational continuity between otherwise independent scheduled texts
     var deferredAutonomousMessages = [], deferredAutonomousTimer = null;
     var pendingAuthoredRewrites = {}, messageRewriteGeneration = 0;
@@ -80241,7 +80252,7 @@ async def localfont(name):
       setTimeout(seatPhoneInFullscreenHost, 80);
       setTimeout(seatPhoneInFullscreenHost, 240);
     };
-    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
+    window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; msgActionCoachShown = false; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
       recentApps = [];

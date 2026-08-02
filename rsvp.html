@@ -580,6 +580,16 @@ footer{margin-top:2.6rem}
   height:clamp(26px,3.1vw,38px); border-radius:50%; font-size:clamp(16px,2vw,24px);
 }
 #cinema-room-close:hover,#cinema-room-close:focus-visible{background:#8e3a4a; outline:2px solid #fffdf8}
+#cinema-projector-dismiss{
+  position:absolute; z-index:4;
+  left:calc(56.2% - clamp(13px,1.55vw,19px));
+  top:calc(72.9% - clamp(13px,1.55vw,19px));
+  width:clamp(26px,3.1vw,38px); height:clamp(26px,3.1vw,38px);
+  padding:0; border:1px solid rgba(255,253,248,.62); border-radius:50%;
+  color:#fffdf8; background:rgba(36,28,23,.9); cursor:pointer;
+  font:clamp(16px,2vw,24px)/1 sans-serif;
+}
+#cinema-projector-dismiss:hover,#cinema-projector-dismiss:focus-visible{background:#8e3a4a; outline:2px solid #fffdf8}
 #cinema-window-sky,.cinema-window-view{transition:fill .7s ease}
 #cinema-window{cursor:pointer}
 #cinema-window-sky{fill:#b8d4e8}
@@ -30746,6 +30756,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <rect id="cinema-party-spill" width="680" height="340" fill="url(#cinema-party-uv)" style="mix-blend-mode:screen"/>
       </svg>
       <button type="button" id="cinema-room-close" data-aria-i="cinema_leave" data-title-i="cinema_leave" aria-label="Back to Cuddly-puddly" title="Back to Cuddly-puddly">×</button>
+      <button type="button" id="cinema-projector-dismiss" hidden data-aria-i="cinema_film_close" data-title-i="cinema_film_close" aria-label="Stop film and return to selection" title="Stop film and return to selection">×</button>
       <div id="cinema-projector-ray" aria-hidden="true"></div>
       <div id="cinema-screen-shell">
         <div id="cinema-screen-off" data-i="cinema_screen_off">projector off</div>
@@ -33046,6 +33057,7 @@ window.__cinemaVideoLoaded = false;
   var cinemaWindow = document.getElementById("cinema-window");
   var cinemaNeon = document.getElementById("cinema-neon-butterfly");
   var screenOff = document.getElementById("cinema-screen-off");
+  var projectorDismissButton = document.getElementById("cinema-projector-dismiss");
   var projectorWarmup = document.getElementById("cinema-projector-warmup");
   var photoboothSurface = document.getElementById("cinema-photobooth-surface");
   var officeMonitor = document.getElementById("office-monitor");
@@ -33226,6 +33238,7 @@ window.__cinemaVideoLoaded = false;
   function setFilmPlaying(active, fade) {
     filmPlaying = !!active;
     window.__cinemaVideoLoaded = filmPlaying;
+    if (projectorDismissButton) projectorDismissButton.hidden = !(window.__cinemaRoomOpen && currentFilm);
     if (window.__setCinemaAudioDuck) window.__setCinemaAudioDuck(filmPlaying, fade);
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, fade);
     if (playPauseButton && window.__cinemaRoomOpen) playPauseButton.classList.toggle("paused", !filmPlaying);
@@ -33566,6 +33579,17 @@ window.__cinemaVideoLoaded = false;
     setFilmPlaying(true, .65);
     return true;
   }
+  function dismissFilm(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (!currentFilm) return false;
+    clearPlayer(true);
+    markChooserFilm(chooserIndex, true);
+    if (typeof playDryClickSound === "function") playDryClickSound("cinema-projector-dismiss");
+    return true;
+  }
   Array.prototype.forEach.call(room.querySelectorAll(".cinema-film"), function (button) {
     button.addEventListener("click", function () { playFilm(button); });
     button.addEventListener("mouseenter", function () { chooser.querySelectorAll(".film-focus").forEach(function (film) { film.classList.remove("film-focus"); }); markChooserFilm(chooserFilms().indexOf(button), false); chooser.classList.add("film-hovering"); button.classList.add("film-hover"); });
@@ -33579,6 +33603,7 @@ window.__cinemaVideoLoaded = false;
     event.stopPropagation();
     toggleProjector();
   });
+  if (projectorDismissButton) projectorDismissButton.addEventListener("click", dismissFilm);
   closeButton.addEventListener("click", closeCinema);
   function toggleCinemaWindow(event) {
     if (event) {
@@ -38409,6 +38434,7 @@ var T = {
     cinema_short_gag: "The projector survived. The warranty did not.",
     cinema_projector: "Turn on the projector",
     cinema_projector_off: "Turn off the projector",
+    cinema_film_close: "Stop the film and return to selection",
     cinema_remote_power: "Use the small remote to toggle projector power",
     cinema_remote_next: "Move to the next film with the VAVA remote",
     cinema_remote_select: "Select the highlighted film with the VAVA remote",
@@ -39789,6 +39815,7 @@ var T = {
     cinema_short_gag: "Projektor přežil. Záruka ne.",
     cinema_projector: "Zapnout projektor",
     cinema_projector_off: "Vypnout projektor",
+    cinema_film_close: "Zastavit film a vrátit se k výběru",
     cinema_remote_power: "Malým ovladačem zapnout nebo vypnout projektor",
     cinema_remote_next: "Ovladačem VAVA přejít na další film",
     cinema_remote_select: "Ovladačem VAVA vybrat označený film",

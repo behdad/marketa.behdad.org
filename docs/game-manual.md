@@ -219,6 +219,8 @@ gameplay messages finish before that room caption appears.
   On the coffee table, the small white remote also toggles projector power; the
   VAVA remote's ring moves through the film cards and its centre button selects
   the highlighted film (or returns to the chooser during playback).
+  The × at the projector's top-right corner also stops the current film and returns to
+  the chooser.
   The cinema cameras each project the real Photobooth app directly onto the
   cinema
   screen; Back returns to the film chooser without bringing the office monitor

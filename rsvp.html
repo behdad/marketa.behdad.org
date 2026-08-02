@@ -37581,10 +37581,8 @@ var T = {
     lower_bedroom_marker: "Bedroom portal",
     lower_entrance_marker: "Entrance portal",
     lower_portal_insist: "I insist.",
-    lower_down_again: "Again ↓↓",
     lower_portal_unlock: "Unlock",
     lower_rooms_clue: "The loft may have kept a few rooms out of sight.",
-    lower_rooms_orientation: "←/→ travel below · ↑ returns · 1–5 jump",
     game_score: "SCORE",
     game_best: "BEST",
     game_ready: "READY!",
@@ -38955,10 +38953,8 @@ var T = {
     lower_bedroom_marker: "Portál do ložnice",
     lower_entrance_marker: "Portál ke vchodu",
     lower_portal_insist: "Trvám na tom.",
-    lower_down_again: "Ještě ↓↓",
     lower_portal_unlock: "Odemknout",
     lower_rooms_clue: "Loft možná pár pokojů schoval před očima.",
-    lower_rooms_orientation: "←/→ pohyb dole · ↑ návrat · 1–5 skok",
     game_score: "SKÓRE",
     game_best: "REKORD",
     game_ready: "PŘIPRAVEN!",
@@ -96378,8 +96374,6 @@ function spawnDustMote(container) {
     lowerRoomOrientationShown = false;
     lowerRoomClueShown = false;
     lowerRoomClueMs = 0;
-    lastLockedDownAt = 0;
-    lastLockedDownStage = "";
     try {
       localStorage.removeItem(LOWER_ROOM_DISCOVERY_KEY);
       localStorage.removeItem(LOWER_ROOM_ORIENTATION_KEY);
@@ -96408,7 +96402,6 @@ function spawnDustMote(container) {
     if (lowerRoomOrientationShown) return false;
     lowerRoomOrientationShown = true;
     try { localStorage.setItem(LOWER_ROOM_ORIENTATION_KEY, "1"); } catch (_error) {}
-    if (window.__flashCaptionKey) window.__flashCaptionKey("lower_rooms_orientation", 4600, "lower-room-orientation");
     return true;
   };
   window.__resetLowerRoomDiscovery = resetLowerRoomDiscovery;
@@ -97479,8 +97472,8 @@ function spawnDustMote(container) {
   }, true);
   // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
-  // console. d flips day↔night; ↓ descends from Kitchen/Garden/Cuddly/Balcony/Office (a
-  // rapid double-press until the lower floor has been discovered) and ↑ returns, while
+  // console. d flips day↔night; ↓ descends from Kitchen/Garden/Cuddly/Balcony/Office and ↑
+  // returns, while
   // elsewhere vertical arrows are inert. 1-5 jump to a room, m/l/c summon the monitor/laptop/
   // cellphone, / opens Messages, k toggles the kitten, r resets, n next track, t a trip. Backspace
   // mirrors Escape ("go back") — see the alias below. Ignored while typing / with a modifier.
@@ -97494,7 +97487,6 @@ function spawnDustMote(container) {
     return (a.getAttribute && a.getAttribute("role") === "button");
   }
   var lastLockedRightAt = 0;
-  var lastLockedDownAt = 0, lastLockedDownStage = "";
   function lowerRoomOpenerForStage(name) {
     if (name === "kitchen") return window.__openBathroomRoom;
     if (name === "garden") return window.__openGardenPrince;
@@ -97507,27 +97499,11 @@ function spawnDustMote(container) {
     var stage = window.currentStageName;
     var open = lowerRoomOpenerForStage(stage);
     if (!open) {
-      lastLockedDownAt = 0;
-      lastLockedDownStage = "";
       return false;
     }
-    if (lowerRoomDiscovered) {
-      lastLockedDownAt = 0;
-      lastLockedDownStage = "";
-      return !!open();
-    }
     if (event.repeat) return false;
-    var now = Date.now();
-    if (lastLockedDownStage === stage && now - lastLockedDownAt <= 420) {
-      lastLockedDownAt = 0;
-      lastLockedDownStage = "";
-      return !!open();
-    }
-    lastLockedDownAt = now;
-    lastLockedDownStage = stage;
-    pulseLowerRoomMarkerForStage(stage);
-    if (window.__flashCaptionKey) window.__flashCaptionKey("lower_down_again", 1800, "lower-room-down");
-    return false;
+    markLowerRoomDiscovered();
+    return !!open();
   }
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
@@ -97548,10 +97524,7 @@ function spawnDustMote(container) {
       if (e.key === "ArrowUp") { e.preventDefault(); if (window.__calStepTime) window.__calStepTime(1); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); if (window.__calStepTime) window.__calStepTime(-1); return; }
     }
-    if (e.key !== "ArrowDown") {
-      lastLockedDownAt = 0;
-      lastLockedDownStage = "";
-    }
+    // Down is a direct lower-room entry; no arming or repeat hint is needed.
     if (e.key === "ArrowRight") {
       e.preventDefault();
       if (stageIndex < maxUnlocked) { navigateWithRoster(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }

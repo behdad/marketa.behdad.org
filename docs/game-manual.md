@@ -59,8 +59,8 @@ type, and action games temporarily take the keys they need.
   or Block Party. An open phone or zoomed office screen keeps Enter for itself.
 - Escape and Backspace dismiss the current layer.
 
-The five main rooms each have a paired hidden room. Before the lower floor has
-been discovered, double-press `↓` to enter it; afterward one press is enough
+The five main rooms each have a paired hidden room. Press `↓` once to enter it;
+the same first-action rule applies to the room's portal. This remains available
 until **Start over**.
 Press `↑` to return. In a hidden room, `←`/`→` pans to an adjacent hidden room;
 room dots or number keys `1`–`5` go directly to the hidden room paired with that

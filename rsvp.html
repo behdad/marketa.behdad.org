@@ -7830,7 +7830,7 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-act.used:hover,.pm-msg-act.used:focus-visible{background:rgba(142,58,74,.08); color:var(--wine)}
 .pm-msg-act svg{width:15px; height:15px}
 .pm-msg-line{position:relative}
-.pm-msg-action-coach{position:absolute;right:-2px;bottom:calc(100% + 8px);z-index:3;width:max-content;max-width:calc(100% - 8px);padding:7px 10px;border-radius:7px;background:var(--ink);color:var(--paper);box-shadow:0 3px 10px rgba(0,0,0,.28);font:600 16px/1.25 "Source Serif 4",serif;overflow-wrap:anywhere;white-space:nowrap;animation:pm-msg-coach-in .35s ease-out both;pointer-events:none}
+.pm-msg-action-coach{position:absolute;right:-2px;bottom:calc(100% + 18px);z-index:3;width:max-content;max-width:calc(100% - 8px);padding:7px 10px;border-radius:7px;background:var(--ink);color:var(--paper);box-shadow:0 3px 10px rgba(0,0,0,.28);font:600 16px/1.25 "Source Serif 4",serif;overflow-wrap:anywhere;white-space:nowrap;animation:pm-msg-coach-in .35s ease-out both;pointer-events:none}
 .pm-msg-action-coach::after{content:"";position:absolute;right:8px;top:calc(100% - 2px);width:40px;height:48px;background:center / contain no-repeat var(--espresso-arrow-up);transform:rotate(180deg);filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
 @keyframes pm-msg-action-nudge{0%,100%{transform:translateX(0)}35%{transform:translateX(-4px)}70%{transform:translateX(0)}}
 @keyframes pm-msg-coach-in{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(0)}}
@@ -75023,6 +75023,7 @@ async def localfont(name):
         else if (oldFocus.classList.contains("pm-msg-input")) refocusClass = ".pm-msg-input";
       }
       var keepReturn = currentApp === id && phoneAppReturn && phoneAppReturn.launched === id;
+      if (currentApp === "messages" && id !== "messages") releaseActionCoachMessages();
       leaveCurrentApp();
       if (!keepReturn) setPhoneAppReturn(null);
       currentApp = id;
@@ -76444,7 +76445,6 @@ async def localfont(name):
             msgActionCoachActive = true;
             var actionCoach = document.createElement("span"); actionCoach.className = "pm-msg-action-coach"; actionCoach.textContent = tr("msg_action_coach");
             line.appendChild(actionCoach);
-            setTimeout(function () { if (actionCoach.parentNode) actionCoach.remove(); releaseActionCoachMessages(); }, 7000);
           }
           line.appendChild(actBtn);
         }
@@ -80129,12 +80129,14 @@ async def localfont(name):
           if (closeMessagesDirectly) setPhoneAppReturn("close", "messages");
           return;
         }
+        if (currentApp === "messages") releaseActionCoachMessages();
         showHome(); return;
       }
       close();
     }
     function navHome() {
       if (shell.classList.contains("pm-incall")) { hangup(); return; } // can't background a live call — hang up first
+      if (currentApp === "messages") releaseActionCoachMessages();
       showHome();
     }
     function navRecents() {
@@ -80228,6 +80230,7 @@ async def localfont(name):
     }
     function close(silent) {
       if (!modal) return;
+      releaseActionCoachMessages();
       closing = true;
       phFullscreenTransitionUntil = 0;
       cancelHiddenPhoneClose();
@@ -80752,9 +80755,7 @@ async def localfont(name):
       msgBadgeCoachEl.classList.remove("show"); void msgBadgeCoachEl.offsetWidth;
       msgBadgeCoachEl.classList.add("show");
       if (msgBadgeEl) msgBadgeEl.classList.add("coached");
-      msgBadgeCoachT = setTimeout(hideMsgBadgeCoach, 8000);
       cancelMsgBadgeCoachRepeat();
-      msgBadgeCoachRepeatT = setTimeout(repeatMsgBadgeCoach, 60000);
       return true;
     }
     function maybeShowMsgBadgeCoach() {

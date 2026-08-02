@@ -72297,7 +72297,15 @@ async def localfont(name):
     updateScreen();
   }
   typewriter.addEventListener("dblclick", function () { swap(true); });
-  var monClickTimer = null;
+  var monClickTimer = null, monitorSaverWakeUntil = 0;
+  function wakeMonitorSaver() {
+    if (!monitor.classList.contains("show-saver")) return false;
+    stopSaver();
+    monitor.classList.add("show-caps");
+    if (saverCameFrom === "nowplaying") updateNowPlaying();
+    scheduleSaver();
+    return true;
+  }
   monitor.addEventListener("pointermove", function () {
     if (monitorSleeping) return;
     if (monitorLocked) {
@@ -72306,10 +72314,7 @@ async def localfont(name):
       return;
     }
     if (!monitor.classList.contains("show-saver")) return;
-    stopSaver();
-    monitor.classList.add("show-caps");
-    if (saverCameFrom === "nowplaying") updateNowPlaying();
-    scheduleSaver();
+    wakeMonitorSaver();
   });
   // activity inhibits the countdown: while the screen is awake, any mouse travel or
   // keystroke pushes a PENDING saver timer back out (never arms one that isn't pending)
@@ -72328,6 +72333,14 @@ async def localfont(name):
     if (window.currentStageName === "office") nudgeSaver();
   });
   monitor.addEventListener("pointerdown", function (e) {
+    if (monitor.classList.contains("show-saver")) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      monitorSaverWakeUntil = Date.now() + 450;
+      wakeMonitorSaver();
+      playLaptopClickSound("office-monitor");
+      return;
+    }
     if (!monitorSleeping) return;
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -72335,7 +72348,7 @@ async def localfont(name):
     playLaptopClickSound("office-monitor");
   }, true);
   monitor.addEventListener("click", function (e) {
-    if (Date.now() >= monitorSleepWakeUntil) return;
+    if (Date.now() >= monitorSleepWakeUntil && Date.now() >= monitorSaverWakeUntil) return;
     e.preventDefault();
     e.stopImmediatePropagation();
   }, true);
@@ -72366,12 +72379,7 @@ async def localfont(name):
       hidePbConfirm(); hidePbError(); return; // a stray click (screen or bezel) dismisses the booth's panel, never runs the boot gag under it
     }
     if (monitor.classList.contains("show-saver")) {
-      stopSaver();
-      monitor.classList.add("show-caps");
-      // wake back to whatever the saver covered: the player only if it was up before
-      // (a desktop that idled into the saver stays a desktop)
-      if (saverCameFrom === "nowplaying") updateNowPlaying();
-      scheduleSaver();
+      wakeMonitorSaver();
       playLaptopClickSound("office-monitor");
       return;
     }

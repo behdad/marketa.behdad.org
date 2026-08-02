@@ -63840,6 +63840,63 @@ setOfficeProgress("pc", false);
     else if (classicsView === "mines") minesDeathFlash();
     else classicsChooserDeathFlash();
   };
+  // Shared directional-pad gesture plumbing. Games provide only their direction mapping
+  // and output adapter; Tetris deliberately keeps its separate swipe/rotate controls.
+  function installDirectionalPad(surface, options) {
+    if (!surface) return function () {};
+    var drag = null;
+    var buttonSelector = options.buttonSelector || "button";
+    function end(event) {
+      if (!drag || (event && event.pointerId != null && event.pointerId !== drag.pointerId)) return;
+      if (event && event.preventDefault) { event.preventDefault(); event.stopPropagation(); }
+      var pointerId = drag.pointerId;
+      drag = null;
+      surface.classList.remove("dragging");
+      try { surface.releasePointerCapture(pointerId); } catch (_error) {}
+      if (options.onEnd) options.onEnd(event);
+    }
+    surface.addEventListener("pointerdown", function (event) {
+      if (options.pointerType && event.pointerType !== options.pointerType) return;
+      if (options.primaryOnly && event.isPrimary === false) return;
+      if (event.button !== undefined && event.button !== 0) return;
+      if (drag) return;
+      event.preventDefault(); event.stopPropagation();
+      var button = event.target && event.target.closest ? event.target.closest(buttonSelector) : null;
+      var rect = surface.getBoundingClientRect();
+      drag = {
+        pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+        lastDir: button && options.readButton ? options.readButton(button) : null,
+        threshold: Math.max(3, Math.min(7, Math.min(rect.width, rect.height) * .16))
+      };
+      surface.classList.add("dragging");
+      try { surface.setPointerCapture(event.pointerId); } catch (_error) {}
+      if (options.onStart) options.onStart(button, drag);
+    });
+    surface.addEventListener("pointermove", function (event) {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      event.preventDefault(); event.stopPropagation();
+      var dx = event.clientX - drag.x, dy = event.clientY - drag.y;
+      var ax = Math.abs(dx), ay = Math.abs(dy), distance = Math.max(ax, ay);
+      if (distance < drag.threshold || (ax && ay && distance < Math.min(ax, ay) * 1.25)) return;
+      var direction;
+      if (options.diagonal) {
+        var directions = [];
+        if (ax >= drag.threshold) directions.push(dx > 0 ? "right" : "left");
+        if (ay >= drag.threshold) directions.unshift(dy > 0 ? "down" : "up");
+        direction = directions.join(" ");
+      } else direction = ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
+      var reverse = options.reverse && options.reverse[drag.lastDir] === direction;
+      var needed = reverse ? drag.threshold * 1.55 : drag.threshold;
+      if (distance < needed || direction === drag.lastDir) return;
+      drag.x = event.clientX; drag.y = event.clientY; drag.lastDir = direction;
+      if (options.onMove) options.onMove(direction, drag);
+    });
+    surface.addEventListener("pointerup", end);
+    surface.addEventListener("pointercancel", end);
+    surface.addEventListener("lostpointercapture", end);
+    return end;
+  }
+
   // Pac-Man is the ketamine ghost's hidden game. Monitor/search launches stay contained
   // in the office display; catching the ghost reparents the same retained board into a
   // room overlay without moving the player. One bounded timeout owns the simulation;
@@ -64107,44 +64164,15 @@ setOfficeProgress("pc", false);
       });
       controls.appendChild(btn);
     });
-    var pacDrag = null;
-    function endPacDrag(e) {
-      if (!pacDrag || (e && e.pointerId !== pacDrag.pointerId)) return;
-      if (e) { e.preventDefault(); e.stopPropagation(); }
-      var pointerId = pacDrag.pointerId;
-      pacDrag = null; controls.classList.remove("dragging");
-      try { controls.releasePointerCapture(pointerId); } catch (ignore) {}
-    }
-    controls.addEventListener("pointerdown", function (e) {
-      if (e.button !== undefined && e.button !== 0) return;
-      e.preventDefault(); e.stopPropagation();
-      var btn = e.target && e.target.closest ? e.target.closest(".pac-btn[data-dir]") : null;
-      var rect = controls.getBoundingClientRect();
-      pacDrag = {
-        pointerId: e.pointerId, x: e.clientX, y: e.clientY,
-        lastDir: btn ? btn.getAttribute("data-dir") : null,
-        threshold: Math.max(3, Math.min(7, Math.min(rect.width, rect.height) * .16))
-      };
-      controls.classList.add("dragging");
-      try { controls.setPointerCapture(e.pointerId); } catch (ignore) {}
-      if (btn) { btn.__pacPointerChosen = true; pacChoose(pacDrag.lastDir); }
+    installDirectionalPad(controls, {
+      buttonSelector: ".pac-btn[data-dir]",
+      readButton: function (button) { return button.getAttribute("data-dir"); },
+      reverse: PAC_REVERSE,
+      onStart: function (button, drag) {
+        if (button) { button.__pacPointerChosen = true; pacChoose(drag.lastDir); }
+      },
+      onMove: function (direction) { pacChoose(direction); }
     });
-    controls.addEventListener("pointermove", function (e) {
-      if (!pacDrag || e.pointerId !== pacDrag.pointerId) return;
-      e.preventDefault(); e.stopPropagation();
-      var dx = e.clientX - pacDrag.x, dy = e.clientY - pacDrag.y;
-      var ax = Math.abs(dx), ay = Math.abs(dy);
-      if (Math.max(ax, ay) < pacDrag.threshold || (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
-      var dir = ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
-      var needed = pacDrag.lastDir && PAC_REVERSE[pacDrag.lastDir] === dir ? pacDrag.threshold * 1.55 : pacDrag.threshold;
-      if (Math.max(ax, ay) < needed) return;
-      pacDrag.x = e.clientX; pacDrag.y = e.clientY;
-      if (dir === pacDrag.lastDir) return;
-      pacDrag.lastDir = dir; pacChoose(dir);
-    });
-    controls.addEventListener("pointerup", endPacDrag);
-    controls.addEventListener("pointercancel", endPacDrag);
-    controls.addEventListener("lostpointercapture", endPacDrag);
     pacNewEl = document.createElement("button"); pacNewEl.type = "button"; pacNewEl.className = "pac-new";
     pacNewEl.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); pacResetBoard(true); }); actions.appendChild(pacNewEl);
     pacWrap.addEventListener("click", function (e) { e.stopPropagation(); });
@@ -69635,7 +69663,7 @@ async def localfont(name):
     if (direction && SNAKE_DPAD_REVERSE[snakeDpadHeading] !== direction) snakeDpadHeading = direction;
   }
   var snakeDpad = document.getElementById("monitor-snake-controls");
-  var snakeDpadDrag = null;
+  var snakeDpadEnd = null;
   function paintSnakeDpadDirection(direction) {
     if (!snakeDpad) return;
     Array.prototype.forEach.call(snakeDpad.querySelectorAll(".snake-dpad-button"), function (button) {
@@ -69664,55 +69692,20 @@ async def localfont(name):
     paintSnakeDpadDirection(direction);
     return true;
   }
-  function endSnakeDpadDrag(event) {
-    if (!snakeDpadDrag || (event && event.pointerId != null && event.pointerId !== snakeDpadDrag.pointerId)) return;
-    if (event && event.preventDefault) { event.preventDefault(); event.stopPropagation(); }
-    var pointerId = snakeDpadDrag.pointerId;
-    snakeDpadDrag = null;
-    if (snakeDpad) {
-      snakeDpad.classList.remove("dragging");
-      try { snakeDpad.releasePointerCapture(pointerId); } catch (ignore) {}
-    }
-    clearSnakeDpadMovement();
-  }
+  function endSnakeDpadDrag(event) { if (snakeDpadEnd) snakeDpadEnd(event); }
   if (snakeDpad) {
     snakeDpad.addEventListener("touchmove", function (event) { event.preventDefault(); }, { passive: false });
     ["contextmenu", "selectstart"].forEach(function (type) {
       snakeDpad.addEventListener(type, function (event) { event.preventDefault(); event.stopPropagation(); });
     });
-    snakeDpad.addEventListener("pointerdown", function (event) {
-      if ((event.button != null && event.button !== 0) || snakeDpadDrag) return;
-      event.preventDefault(); event.stopPropagation();
-      var button = event.target && event.target.closest ? event.target.closest(".snake-dpad-button[data-dir]") : null;
-      var rect = snakeDpad.getBoundingClientRect();
-      snakeDpadDrag = {
-        pointerId: event.pointerId, x: event.clientX, y: event.clientY,
-        lastDir: button ? button.getAttribute("data-dir") : null,
-        threshold: Math.max(3, Math.min(7, Math.min(rect.width, rect.height) * .16))
-      };
-      snakeDpad.classList.add("dragging");
-      try { snakeDpad.setPointerCapture(event.pointerId); } catch (ignore) {}
-      if (snakeDpadDrag.lastDir) chooseSnakeDpadDirection(snakeDpadDrag.lastDir);
+    snakeDpadEnd = installDirectionalPad(snakeDpad, {
+      buttonSelector: ".snake-dpad-button[data-dir]",
+      readButton: function (button) { return button.getAttribute("data-dir"); },
+      reverse: SNAKE_DPAD_REVERSE,
+      onStart: function (button, drag) { if (drag.lastDir) chooseSnakeDpadDirection(drag.lastDir); },
+      onMove: function (direction) { chooseSnakeDpadDirection(direction); },
+      onEnd: clearSnakeDpadMovement
     });
-    snakeDpad.addEventListener("pointermove", function (event) {
-      if (!snakeDpadDrag || event.pointerId !== snakeDpadDrag.pointerId) return;
-      event.preventDefault(); event.stopPropagation();
-      var dx = event.clientX - snakeDpadDrag.x, dy = event.clientY - snakeDpadDrag.y;
-      var ax = Math.abs(dx), ay = Math.abs(dy);
-      if (Math.max(ax, ay) < snakeDpadDrag.threshold ||
-          (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
-      var direction = ax > ay ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up");
-      var needed = snakeDpadDrag.lastDir && SNAKE_DPAD_REVERSE[snakeDpadDrag.lastDir] === direction ?
-        snakeDpadDrag.threshold * 1.55 : snakeDpadDrag.threshold;
-      if (Math.max(ax, ay) < needed) return;
-      snakeDpadDrag.x = event.clientX; snakeDpadDrag.y = event.clientY;
-      if (direction === snakeDpadDrag.lastDir) return;
-      snakeDpadDrag.lastDir = direction;
-      chooseSnakeDpadDirection(direction);
-    });
-    snakeDpad.addEventListener("pointerup", endSnakeDpadDrag);
-    snakeDpad.addEventListener("pointercancel", endSnakeDpadDrag);
-    snakeDpad.addEventListener("lostpointercapture", endSnakeDpadDrag);
     snakeDpad.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); });
   }
   function ensureSnakeFrame(mode, setup) {
@@ -70228,7 +70221,7 @@ async def localfont(name):
   var princeDripAnimation = null;
   var princeChainPointer = null, princeChainStartX = 0, princeChainStartY = 0;
   var princeChainX = 0, princeChainY = 0, princeChainMoved = false, princeChainSuppressClick = false;
-  var princeDpad = null, princeShiftControl = null, princeDpadDrag = null;
+  var princeDpad = null, princeShiftControl = null, princeDpadEnd = null;
   var princeDpadHeldDirections = [], princeShiftHeld = false;
   var PRINCE_DPAD_DIRECTIONS = {
     up: { key: "ArrowUp", keyCode: 38, label: "prince_dpad_up", glyph: "↑" },
@@ -70318,17 +70311,7 @@ async def localfont(name):
     if (princeShiftControl) princeShiftControl.setAttribute("aria-pressed", String(held));
     emitPrinceShift(held ? "keydown" : "keyup", !held);
   }
-  function endPrinceDpadDrag(event) {
-    if (!princeDpadDrag || (event && event.pointerId != null && event.pointerId !== princeDpadDrag.pointerId)) return;
-    if (event && event.preventDefault) { event.preventDefault(); event.stopPropagation(); }
-    var pointerId = princeDpadDrag.pointerId;
-    princeDpadDrag = null;
-    if (princeDpad) {
-      princeDpad.classList.remove("dragging");
-      try { princeDpad.releasePointerCapture(pointerId); } catch (_error) {}
-    }
-    clearPrinceDpadMovement();
-  }
+  function endPrinceDpadDrag(event) { if (princeDpadEnd) princeDpadEnd(event); }
   function installPrinceTouchDpad() {
     if (!princeFrame || !princeFrame.contentDocument) return;
     var childDocument = princeFrame.contentDocument;
@@ -70373,43 +70356,19 @@ async def localfont(name):
     ["contextmenu", "selectstart", "dragstart"].forEach(function (type) {
       pad.addEventListener(type, function (event) { event.preventDefault(); event.stopPropagation(); });
     });
-    pad.addEventListener("pointerdown", function (event) {
-      if (event.pointerType !== "touch" || event.isPrimary === false || princeDpadDrag) return;
-      event.preventDefault(); event.stopPropagation();
-      var button = event.target && event.target.closest ? event.target.closest("[data-prince-direction]") : null;
-      var rect = pad.getBoundingClientRect();
-      princeDpadDrag = {
-        pointerId: event.pointerId, x: event.clientX, y: event.clientY,
-        lastDir: button ? button.getAttribute("data-prince-direction") : null,
-        threshold: Math.max(3, Math.min(7, Math.min(rect.width, rect.height) * .16))
-      };
-      pad.classList.add("dragging");
-      try { pad.setPointerCapture(event.pointerId); } catch (_error) {}
-      if (princeDpadDrag.lastDir) choosePrinceDpadDirections(princeDpadDrag.lastDir.split(" "));
+    princeDpadEnd = installDirectionalPad(pad, {
+      pointerType: "touch",
+      primaryOnly: true,
+      buttonSelector: "[data-prince-direction]",
+      readButton: function (button) { return button.getAttribute("data-prince-direction"); },
+      diagonal: true,
+      reverse: PRINCE_DPAD_REVERSE,
+      onStart: function (button, drag) {
+        if (drag.lastDir) choosePrinceDpadDirections(drag.lastDir.split(" "));
+      },
+      onMove: function (direction) { choosePrinceDpadDirections(direction.split(" ")); },
+      onEnd: clearPrinceDpadMovement
     });
-    pad.addEventListener("pointermove", function (event) {
-      if (!princeDpadDrag || event.pointerId !== princeDpadDrag.pointerId) return;
-      event.preventDefault(); event.stopPropagation();
-      var dx = event.clientX - princeDpadDrag.x, dy = event.clientY - princeDpadDrag.y;
-      var ax = Math.abs(dx), ay = Math.abs(dy);
-      if (Math.max(ax, ay) < princeDpadDrag.threshold ||
-          (ax && ay && Math.max(ax, ay) < Math.min(ax, ay) * 1.25)) return;
-      var directions = [];
-      if (ax >= princeDpadDrag.threshold) directions.push(dx > 0 ? "right" : "left");
-      if (ay >= princeDpadDrag.threshold) directions.unshift(dy > 0 ? "down" : "up");
-      var direction = directions.join(" ");
-      var needed = princeDpadDrag.lastDir && PRINCE_DPAD_REVERSE[princeDpadDrag.lastDir] === direction ?
-        princeDpadDrag.threshold * 1.55 : princeDpadDrag.threshold;
-      if (Math.max(ax, ay) < needed) return;
-      princeDpadDrag.x = event.clientX;
-      princeDpadDrag.y = event.clientY;
-      if (direction === princeDpadDrag.lastDir) return;
-      princeDpadDrag.lastDir = direction;
-      choosePrinceDpadDirections(directions);
-    });
-    pad.addEventListener("pointerup", endPrinceDpadDrag);
-    pad.addEventListener("pointercancel", endPrinceDpadDrag);
-    pad.addEventListener("lostpointercapture", endPrinceDpadDrag);
     pad.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); });
     function releaseShift(event) { if (event) { event.preventDefault(); event.stopPropagation(); } setPrinceShift(false); }
     shift.addEventListener("pointerdown", function (event) { event.preventDefault(); event.stopPropagation(); try { shift.setPointerCapture(event.pointerId); } catch (_error) {} setPrinceShift(true); });
@@ -70951,7 +70910,6 @@ async def localfont(name):
     }
     princeFrame = null;
     princeDpad = null;
-    princeDpadDrag = null;
     princeDpadHeldDirection = null;
     princeFrameState = "cold";
     princeMode = null;

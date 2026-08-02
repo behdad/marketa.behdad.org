@@ -1263,6 +1263,14 @@ this Emscripten/WebGL build. Like every
 canvas/video/iframe inside the scaled monitor `foreignObject`, these game rasters
 remain a known blank-compositing limitation on WebKit.
 
+The shared `installDirectionalPad` helper in `rsvp.html` owns the common
+pointer-captured press/drag/release lifecycle, displacement thresholds, diagonal
+filtering, reversal hysteresis, and cleanup for the Prince, Nibbles, and Pac-Man
+cross-pads. Each game supplies its own direction mapping and output adapter;
+Tetris's rotate/swipe/drop input remains separate. The three shooter iframes keep
+their own engine-local touch surfaces and only use the parent for directional
+message routing.
+
 The `show-snake` app lazily creates one same-origin `dos/player.html` iframe,
 with a `mode=dos|nibbles` query selected by the launcher.
 

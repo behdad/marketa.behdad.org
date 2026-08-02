@@ -205,9 +205,11 @@ Extinguishing it or ending the party ends BBQ mode.
 Each hidden room announces itself in the clue line when entered; temporary
 gameplay messages finish before that room caption appears.
 
-- **Bathroom / Toilets** pairs with the Kitchen. Fill the tub—or press Enter—to
-  begin a bubble hunt; the steam fogs the mirror for a finger-drawn note. Wipe
-  it once to reveal `m∞b`, then draw a small doodle in the steam left around it. A
+- **Bathroom / Toilets** pairs with the Kitchen. Click the tub body—or press
+  Enter—to fill it and begin a bubble hunt; the steam fogs the mirror for a
+  finger-drawn note. The tub body is fill-only once full; click its top rim to
+  drain it. Wipe the mirror once to reveal `m∞b`, then draw a small doodle in
+  the steam left around it. A
   post-bath weigh-in briefly carries a little water weight. Its other fixtures
   are playful, and the stool can be dragged.
 - **Dungeon** pairs with the Garden. Select the play wall, or press Enter or

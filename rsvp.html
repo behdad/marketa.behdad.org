@@ -32382,6 +32382,11 @@ function contextMenuHost() {
     document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
 }
 
+function monitorTouchMenusChooserOnly() {
+  return navigator.maxTouchPoints > 0 && window.matchMedia &&
+    window.matchMedia("(any-pointer: coarse), (hover: none)").matches;
+}
+
 // Bathroom / Toilets is a code-native lower room beneath Kitchen / Bar. It keeps the
 // upstairs stage in place and slides the illustrated room over the same viewport.
 window.__bathroomRoomOpen = false;
@@ -41543,7 +41548,7 @@ document.addEventListener("keydown", function (e) {
     pasteBtn.disabled = !(consoleInput() && navigator.clipboard && navigator.clipboard.readText);
     // Kill is disabled while a runtime isn't yet running; the plain console has no
     // running gate and is always live.
-    var ka = killApp();
+    var ka = monitorTouchMenusChooserOnly() ? null : killApp();
     killBtn.style.display = ka ? "block" : "none";
     if (ka) {
       killBtn.textContent = ccT("mon_ctx_kill");
@@ -65292,16 +65297,19 @@ setOfficeProgress("pc", false);
       if (app.cls === "show-system") {
         items.push(makeItem("ctx-copy", COPY_ICO, tr("mon_ctx_copy"), "__copyMonitorSystemInfo", false));
       }
-      var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
-      items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq || app.cls === "show-system" ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
+      if (!monitorTouchMenusChooserOnly()) {
+        var killDisabled = !!(app.running && !(window[app.running] && window[app.running]())); // runtime not up yet → nothing to kill
+        items.push(makeItem("ctx-kill" + ((edit && edit.target) || chatText || onEq || app.cls === "show-system" ? " ctx-sep" : ""), KILL_ICO, tr("mon_ctx_kill"), app.close, killDisabled));
+      }
+      if (!items.length) return false;
       openMenu(items, x, y);
       focusSnakeMenu(app); // the iframe cannot keep moving Nibbles while its parent-document menu is open
+      return true;
     }
     window.__openMonitorContextAt = function (target, x, y) {
       var app = activeMonitorApp();
       if (!app) return false;
-      buildMenu(app, x, y, target);
-      return true;
+      return buildMenu(app, x, y, target);
     };
     function killDesktopApp(appObj, host) {
       var id = appObj.id;

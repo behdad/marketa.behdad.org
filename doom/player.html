@@ -44,6 +44,7 @@ body{display:grid;place-items:center}
   var paused = true;
   var stallTimer = 0;
   var engineMousemoveHandlers = [];
+  var engineKeyboardHandlers = { keydown: [], keyup: [] };
   var touchPad = document.getElementById("touch-pad");
   var touchDrag = null;
   var touchHeldKeys = [];
@@ -52,7 +53,17 @@ body{display:grid;place-items:center}
 
   function emitTouchKey(type, key) {
     var upper = key.toUpperCase(), code = "Key" + upper, keyCode = upper.charCodeAt(0);
-    canvas.dispatchEvent(new KeyboardEvent(type, { key: key, code: code, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true }));
+    var event = new KeyboardEvent(type, { key: key, code: code, bubbles: true, cancelable: true });
+    try { Object.defineProperty(event, "keyCode", { value: keyCode }); } catch (_) {}
+    try { Object.defineProperty(event, "which", { value: keyCode }); } catch (_) {}
+    var handlers = engineKeyboardHandlers[type];
+    if (handlers && handlers.length) handlers.forEach(function (entry) {
+      try {
+        if (typeof entry.listener === "function") entry.listener.call(entry.target, event);
+        else if (entry.listener && entry.listener.handleEvent) entry.listener.handleEvent(event);
+      } catch (error) { console.error(error); }
+    });
+    else canvas.dispatchEvent(event);
   }
   function setTouchDirection(direction) {
     var keys = direction ? direction.split(" ").map(function (part) { return touchDirectionKeys[part]; }).filter(Boolean) : [];
@@ -249,6 +260,10 @@ body{display:grid;place-items:center}
   EventTarget.prototype.addEventListener = function (type, listener, options) {
     if (type === "mousemove" && listener && (this === document || this === window || this === canvas)) {
       engineMousemoveHandlers.push({ target:this, listener:listener });
+    }
+    if ((type === "keydown" || type === "keyup") && listener &&
+        (this === document || this === window || this === canvas)) {
+      engineKeyboardHandlers[type].push({ target:this, listener:listener });
     }
     return nativeAddEventListener.call(this, type, listener, options);
   };

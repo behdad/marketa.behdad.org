@@ -79,7 +79,10 @@ const touchReverse = { up:"down", down:"up", left:"right", right:"left" };
 
 function emitTouchKey(type, key) {
   const upper = key.toUpperCase(), code = "Key" + upper, keyCode = upper.charCodeAt(0);
-  canvas.dispatchEvent(new KeyboardEvent(type, { key, code, keyCode, which:keyCode, bubbles:true, cancelable:true }));
+  const event = new KeyboardEvent(type, { key, code, bubbles:true, cancelable:true });
+  try { Object.defineProperty(event, "keyCode", { value:keyCode }); } catch (_) {}
+  try { Object.defineProperty(event, "which", { value:keyCode }); } catch (_) {}
+  canvas.dispatchEvent(event);
 }
 function setTouchDirection(direction) {
   const keys = direction ? direction.split(" ").map(part => touchDirectionKeys[part]).filter(Boolean) : [];
@@ -258,7 +261,6 @@ touchLook.addEventListener("pointercancel", event => {
 }, true);
 document.addEventListener("contextmenu", event => {
   event.preventDefault();
-  try { parent.postMessage({ kind: "shoot-contextmenu", game: "q3", x: event.clientX / innerWidth, y: event.clientY / innerHeight }, location.origin); } catch (_) {}
 });
 document.addEventListener("pointerlockchange", () => {
   if (!document.pointerLockElement) return;

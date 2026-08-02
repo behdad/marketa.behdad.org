@@ -21,7 +21,7 @@ var HARNESS = [
   "    var toolbar=openClock(); await sleep(30); var wrap=document.getElementById('monitor-clock-wrap');",
   "    S('opened',!!toolbar&&m.classList.contains('show-clock'));",
   "    var leakedClicks=0; m.addEventListener('click',function(){leakedClicks++;}); wrap.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true})); S('click_contained',leakedClicks===0);",
-  "    S('shared_ui',!!wrap&&!!wrap.querySelector('.pm-clock.mon-clock')&&!!wrap.querySelector('.pmk-e-t')&&!!wrap.querySelector('.pmk-p-t')&&!!wrap.querySelector('.pmk-t-t')&&!!wrap.querySelector('.pmk-l-t')&&!!wrap.querySelector('.pmk-e-cd')&&!!wrap.querySelector('.pmk-p-cd')&&!!wrap.querySelector('.pmk-pt')&&!!wrap.querySelector('.pmk-slider')&&!!wrap.querySelector('.pmk-timelapse'));",
+  "    S('shared_ui',!!wrap&&!!wrap.querySelector('.pm-clock.mon-clock')&&!!wrap.querySelector('.pmk-e-t')&&!!wrap.querySelector('.pmk-p-t')&&!!wrap.querySelector('.pmk-t-t')&&!!wrap.querySelector('.pmk-l-t')&&!!wrap.querySelector('.pmk-e-cd')&&!!wrap.querySelector('.pmk-p-cd')&&!!wrap.querySelector('.pmk-pt')&&!!wrap.querySelector('.pmk-slider'));",
   "    var cards=wrap.querySelectorAll('.pmk-cd'), slider=wrap.querySelector('.pmk-slider'), reset=wrap.querySelector('.pmk-treset'), resetRow=wrap.querySelector('.pmk-trow2');",
   "    S('world_clocks',cards.length===4&&cards[0].getAttribute('data-time-zone')==='America/Edmonton'&&cards[1].getAttribute('data-time-zone')==='Europe/Prague'&&cards[2].getAttribute('data-time-zone')==='Asia/Tehran'&&cards[3].getAttribute('data-time-zone')==='Europe/Berlin'&&cards[2].textContent.indexOf('Tehran')>=0&&cards[3].textContent.indexOf('Lübeck')>=0&&!!wrap.querySelector('.pmk-t-t').textContent&&!!wrap.querySelector('.pmk-l-t').textContent);",
   "    S('monitor_precision',slider.step==='1'&&slider.max==='1439');",
@@ -32,8 +32,8 @@ var HARNESS = [
   "    S('reset_preserves_date',location.search.indexOf('date=2027-05-01')>=0&&location.search.indexOf('time=')<0&&resetRow.hidden===true&&reset.disabled===true);",
   "    var phoneHost=document.createElement('div'); document.body.appendChild(phoneHost); var phoneClean=window.__renderLoftClock(phoneHost,{isActive:function(){return true;}}); var phoneSlider=phoneHost.querySelector('.pmk-slider');",
   "    S('phone_layout',phoneHost.querySelectorAll('.pmk-cd').length===4&&phoneSlider.step==='1'&&phoneSlider.max==='47'&&phoneHost.querySelector('.pmk-trow2').hidden===true); if(phoneClean)phoneClean(); phoneHost.remove();",
-  "    history.replaceState(null,'',location.pathname); if(window.__refreshTimePill)window.__refreshTimePill(); var dateNav=document.querySelector('.loft-datenav'),timeNav=document.getElementById('loft-timenav'); S('hud_hidden_before_lapse',dateNav.style.display==='none'&&timeNav.style.display==='none');",
-  "    window.timelapse(true); await sleep(30); S('hud_shown_during_lapse',window.__lapseActive===true&&dateNav.style.display!== 'none'&&timeNav.style.display!== 'none'); window.timelapse(false); await sleep(30); S('hud_hidden_after_lapse',window.__lapseActive===false&&dateNav.style.display==='none'&&timeNav.style.display==='none');",
+  "    history.replaceState(null,'',location.pathname); if(window.__refreshTimePill)window.__refreshTimePill(); var dateNav=document.querySelector('.loft-datenav'),timeNav=document.getElementById('loft-timenav'); S('hud_hidden_without_override',dateNav.style.display==='none'&&timeNav.style.display==='none');",
+  "    S('timelapse_removed',typeof window.timelapse==='undefined'&&typeof window.daylapse==='undefined'&&typeof window.__stopDaylapse==='undefined'&&!wrap.querySelector('.pmk-timelapse')&&!document.getElementById('loft-timelapse-btn'));",
   "    if(window.goToStage)window.goToStage('office'); m.classList.add('screen-on','show-clock'); window.currentStageName='office';",
   "    if(window.setLang)window.setLang('cs'); await sleep(20); wrap=document.getElementById('monitor-clock-wrap'); var csCards=wrap.querySelectorAll('.pmk-cd'); S('cs_world_clocks',csCards.length===4&&csCards[1].textContent.indexOf('Praha')>=0&&csCards[2].textContent.indexOf('Teherán')>=0&&csCards[3].textContent.indexOf('Lübeck')>=0&&Array.prototype.every.call(wrap.querySelectorAll('.pmk-city'),function(el){return el.scrollWidth<=el.clientWidth+1;})); if(window.setLang)window.setLang('en'); await sleep(20);",
   "    S('registry',!!window.__monitorAppRunning&&window.__monitorAppRunning('clock')===true&&!document.getElementById('monitor-dock-clock'));",
@@ -65,9 +65,8 @@ check("monitor stepUp advances and writes exactly one minute",s.minute_step===tr
 check("an explicit time override reveals Reset",s.reset_shown_override===true);
 check("Reset clears only time, preserves date, then hides again",s.reset_preserves_date===true);
 check("phone shares the four-city layout while retaining half-hour range",s.phone_layout===true);
-check("date/time HUD is hidden before an unparameterized day lapse",s.hud_hidden_before_lapse===true);
-check("starting Timelapse reveals both date and time HUD controls",s.hud_shown_during_lapse===true);
-check("stopping Timelapse restores normal hidden HUD visibility",s.hud_hidden_after_lapse===true);
+check("date/time HUD is hidden without an override",s.hud_hidden_without_override===true);
+check("Timelapse controls and hooks are absent",s.timelapse_removed===true);
 check("Czech city labels localize and fit the monitor cards",s.cs_world_clocks===true);
 check("Clock is registered without a duplicate desktop tile",s.registry===true);
 check("Back closes Clock normally and retains its running session",s.back_consumed===true&&s.back_closed===true,{consumed:s.back_consumed,closed:s.back_closed});

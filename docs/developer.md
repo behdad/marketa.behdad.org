@@ -1304,7 +1304,7 @@ surface-specific activity and close callbacks own interval lifetime and sunrise/
 sunset navigation without duplicating the four-city time grid, countdown, or
 time-travel logic. Its monitor range uses minute units while the pocket-phone
 range uses half-hour units. Reset visibility is derived from an explicit
-`?time=` override, not the synthetic day-lapse clock.
+`?time=` override.
 
 The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat,
 Video, Browser, System, and About their own staged gag before teardown. They all use

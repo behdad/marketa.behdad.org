@@ -160,8 +160,9 @@ The office monitor has larger apps, classic games, Chat, Code, Python, and
 Linux. Some optional technical toys require a substantial first download.
 Select the monitor to zoom, then select its screen. Use Search if an app is hard
 to find. Close an app normally to preserve it; use its context menu to manage or
-kill the session. The nearby laptop handles video calls, and the headphones can
-be dragged to move their music.
+kill the session. **Tattoo** includes seven credited designs—including Markéta's
+pufferfish—and a canvas for drawing your own. The nearby laptop handles video
+calls, and the headphones can be dragged to move their music.
 
 The monitor's Video app offers **Downtown dance**, **Mon amie la rose**, and
 **Rainbow Butterfly**; its progress and volume bars can be dragged. Quake III

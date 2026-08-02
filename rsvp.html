@@ -5570,7 +5570,6 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .tattoo-preview img{grid-area:1/1; max-width:100%; max-height:100%; object-fit:contain; border-radius:1px; background:#fff; box-shadow:0 0.5px 2px rgba(0,0,0,0.25)}
 .tattoo-preview .tattoo-artist{grid-area:1/1; justify-self:end; align-self:end; margin:0 0.5px 0.5px 0; line-height:0}
 .tattoo-artist-svg{display:block; height:11px; width:auto; overflow:visible} /* no filter/transform/opacity — this SVG is a descendant of the monitor's scaled foreignObject, and a RenderLayer there vanishes in WebKit (bug 23113) */
-.tattoo-artist-svg.tattoo-artist-duo{height:12px}
 .tattoo-actions{flex:none; display:flex; justify-content:center; padding:1px 3px 2px}
 .tattoo-btn{display:inline-flex; align-items:center; justify-content:center; gap:0.8px; cursor:pointer; background:#c68e95; color:#fffdf8; border-radius:2.5px; padding:1.2px 4px; font-size:2.7px; line-height:1; box-shadow:inset 0 0.4px 0 rgba(255,255,255,0.3)}
 .tattoo-btn:hover{background:#b87b83}
@@ -37854,6 +37853,7 @@ var T = {
     tt_design_elephant: "Elephant",
     tt_design_giraffe: "Giraffe",
     tt_design_princesses: "Princesses",
+    tt_design_pufferfish: "Pufferfish",
     tt_share: "Send to us",
     tt_tip_color: "Colour",
     tt_tip_brush: "Brush size",
@@ -39234,6 +39234,7 @@ var T = {
     tt_design_elephant: "Slon",
     tt_design_giraffe: "Žirafa",
     tt_design_princesses: "Princezny",
+    tt_design_pufferfish: "Čtverzubec",
     tt_share: "Pošli nám to",
     tt_tip_color: "Barva",
     tt_tip_brush: "Velikost štětce",
@@ -65473,8 +65474,8 @@ setOfficeProgress("pc", false);
     vidCloseBtn.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   // ── TATTOO STUDIO APP ────────────────────────────────────────────────────────────
-  // A temporary-tattoo design studio over the screen: a gallery of the kids' drawings
-  // (art/tattoo/*.jpg) plus a "+1" paint canvas to draw your own. A picked design or a
+  // A temporary-tattoo design studio over the screen: a gallery of credited drawings
+  // (art/tattoo/) plus a "+1" paint canvas to draw your own. A picked design or a
   // finished drawing opens the same Download / Gmail / Email send dialog as the
   // photobooth — but those helpers live in the photobooth's own closure, so the small
   // blob→anchor download + compose-link functions are replicated locally here. The paint
@@ -65483,15 +65484,15 @@ setOfficeProgress("pc", false);
   var tattooWrap = document.getElementById("monitor-tattoo-wrap");
   var tattooCloseBtn = document.getElementById("monitor-tattoo-close");
   var tattooBackBtn = document.getElementById("monitor-tattoo-back");
-  var TATTOO_DESIGNS = ["butterfly", "dinosaur", "elephant", "giraffe", "princesses", "bored"];
-  // who drew each one (the real young artists; "bored" is the couple's own doodle)
-  var TATTOO_ARTISTS = { butterfly: "Irene", dinosaur: "Robin", elephant: "Irene", giraffe: "Hannah", princesses: "Elisabeth", bored: "m & b" };
+  var TATTOO_DESIGNS = ["pufferfish", "butterfly", "dinosaur", "elephant", "giraffe", "princesses", "bored"];
+  // who drew each one
+  var TATTOO_ARTISTS = { pufferfish: "Markéta", butterfly: "Irene", dinosaur: "Robin", elephant: "Irene", giraffe: "Hannah", princesses: "Elisabeth", bored: "Behdad" };
   // Relationships belong only in the expanded design credit; gallery captions stay compact.
   var TATTOO_ARTIST_ROLES = { Irene: "role_niece", Robin: "role_godson", Hannah: "role_niece", Elisabeth: "role_mniece" };
   window.__chatTattooKnowledge = function () {
     return TATTOO_DESIGNS.map(function (design) {
       var artist = TATTOO_ARTISTS[design], roleKey = TATTOO_ARTIST_ROLES[artist];
-      return { design: design, artist: artist === "m & b" ? "Markéta and Behdad" : artist, relationship: roleKey ? (T.en[roleKey] || null) : "the couple" };
+      return { design: design, artist: artist, relationship: roleKey ? (T.en[roleKey] || null) : "the couple" };
     });
   };
   var TATTOO_COLORS = ["#8e3a4a", "#4a6b94", "#d9a6a6", "#2b7a4b", "#e8a33d", "#453a31"]; // wine, blue, pink, green, amber, ink
@@ -65504,6 +65505,7 @@ setOfficeProgress("pc", false);
   var tattooDialog = null, tattooDialogUrl = null;
   var tattooMenuEl = null;
   function tattooT(key) { var l = document.documentElement.lang; return (T[l] && T[l][key]) || T.en[key] || ""; }
+  function tattooDesignSrc(id) { return "art/tattoo/" + id + (id === "pufferfish" ? ".png" : ".jpg"); }
   function tattooPaintClosePill() {
     var back = tattooView !== "gallery";
     paintMonitorDismissPill(tattooCloseBtn, tattooT("share_close"));
@@ -65641,11 +65643,13 @@ setOfficeProgress("pc", false);
   function tattooBindCopyTarget(el, blobFactory) {
     el.addEventListener("contextmenu", function (e) { tattooOpenCopyMenu(e, blobFactory); });
   }
-  // The real young artists behind each design, as tiny recognizable head-and-shoulders —
-  // colours/hair/hats lifted from their full figures elsewhere in the file so a mini Irene
-  // reads as Irene. Emitted as a native nested <svg> (paints everywhere, no RenderLayer to
+  // The artists behind each design, as tiny recognizable head-and-shoulders —
+  // colours/hair/hats lifted from their full figures elsewhere in the file so each mini
+  // reads as its artist. Emitted as a native nested <svg> (paints everywhere, no RenderLayer to
   // trip WebKit's foreignObject-under-scale bug) tucked into the design card's lower-right.
   var TATTOO_ARTIST_ART = {
+    Markéta:   { skin: "#f2cfae", hair: "#4a6b94", top: "#7f9ec0", cap: "baker", cap2: "#4a6b94", capShade: "#3c587c", glasses: true },
+    Behdad:    { skin: "#e6b489", hair: "#3a2b22", top: "#c68e95", cap: "flat", cap2: "#d9a6a6", capShade: "#c79598", beard: "#3a2b22", glasses: true },
     Irene:     { skin: "#dca878", hair: "#241d1a", hairStyle: "long",  top: "#dcd9d2" },
     Robin:     { skin: "#dca878", hair: "#33261c", hairStyle: "short", top: "#63456e" },
     Hannah:    { skin: "#f0d0aa", hair: "#3a281a", hairStyle: "long",  top: "#f8f4ea", topStroke: "#dcb98c" },
@@ -65693,11 +65697,6 @@ setOfficeProgress("pc", false);
     return s;
   }
   function tattooArtistMarkup(artist) {
-    if (artist === "m & b") {
-      var mk = tattooPortrait({ skin: "#f2cfae", top: "#7f9ec0", hair: "#4a6b94", cap: "baker", cap2: "#4a6b94", capShade: "#3c587c", glasses: true });
-      var bh = tattooPortrait({ skin: "#e6b489", top: "#c68e95", hair: "#3a2b22", cap: "flat", cap2: "#d9a6a6", capShade: "#c79598", beard: "#3a2b22", glasses: true });
-      return '<svg class="tattoo-artist-svg tattoo-artist-duo" viewBox="0 0 40 24" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0.5)">' + mk + '</g><g transform="translate(19.5)">' + bh + '</g></svg>';
-    }
     var c = TATTOO_ARTIST_ART[artist];
     if (!c) return null;
     return '<svg class="tattoo-artist-svg" viewBox="0 0 20 24" xmlns="http://www.w3.org/2000/svg">' + tattooPortrait(c) + '</svg>';
@@ -65712,7 +65711,6 @@ setOfficeProgress("pc", false);
     return holder;
   }
   function tattooDetailCredit(artist) {
-    if (artist === "m & b") return tattooT("tt_by") + " markéta ∞ behdad";
     var roleKey = TATTOO_ARTIST_ROLES[artist];
     return tattooT("tt_by") + " " + artist + (roleKey ? ", " + tattooT(roleKey) : "");
   }
@@ -65790,7 +65788,7 @@ setOfficeProgress("pc", false);
     TATTOO_DESIGNS.forEach(function (id) {
       var cell = tattooDiv("tattoo-cell", grid);
       var img = document.createElement("img");
-      img.className = "tattoo-thumb"; img.alt = ""; img.src = "art/tattoo/" + id + ".jpg";
+      img.className = "tattoo-thumb"; img.alt = ""; img.src = tattooDesignSrc(id);
       cell.appendChild(img);
       tattooBindCopyTarget(img, function () { return tattooImageBlob(img); });
       tattooDiv("tattoo-cap", cell, tattooT("tt_by") + " " + TATTOO_ARTISTS[id]);
@@ -65800,7 +65798,7 @@ setOfficeProgress("pc", false);
   function renderTattooDesign() {
     var prev = tattooDiv("tattoo-preview", tattooWrap);
     var img = document.createElement("img");
-    img.alt = tattooT("tt_design_" + tattooDesign); img.src = "art/tattoo/" + tattooDesign + ".jpg";
+    img.alt = tattooT("tt_design_" + tattooDesign); img.src = tattooDesignSrc(tattooDesign);
     prev.appendChild(img);
     tattooBindCopyTarget(img, function () { return tattooImageBlob(img); });
     var fig = tattooArtistFigure(TATTOO_ARTISTS[tattooDesign]);

@@ -206,12 +206,12 @@ Each hidden room announces itself in the clue line when entered; temporary
 gameplay messages finish before that room caption appears.
 
 - **Bathroom / Toilets** pairs with the Kitchen. Click the tub body—or press
-  Enter—to fill it and begin a bubble hunt; the steam fogs the mirror for a
-  finger-drawn note. The tub body is fill-only once full; click its top rim to
-  drain it. Wipe the mirror once to reveal `m∞b`, then draw a small doodle in
-  the steam left around it. A
-  post-bath weigh-in briefly carries a little water weight. Its other fixtures
-  are playful, and the stool can be dragged.
+  Enter—to fill it and start the 20-second Bubble-gun round. Click bubbles for
+  one point, or drag the stool to aim and release to fire for two; bubbles
+  replenish during the round, and quick hits build a small combo bonus. The
+  tub body is fill-only once full; click its top rim to drain it. Wipe the
+  mirror once to reveal `m∞b`, then draw a small doodle in the steam left
+  around it. The personal high score is kept locally.
 - **Dungeon** pairs with the Garden. Select the play wall, or press Enter or
   Space, to start or resume Prince of Persia; Escape or Backspace leaves without
   ending the run.

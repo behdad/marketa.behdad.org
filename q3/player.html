@@ -74,6 +74,7 @@ let paused = false;
 const touchPad = document.getElementById("touch-pad");
 let touchDrag = null;
 let touchHeldKeys = [];
+const engineKeyHandlers = { keydown:[], keyup:[] };
 const touchDirectionKeys = { up:"w", left:"a", right:"d", down:"s" };
 const touchReverse = { up:"down", down:"up", left:"right", right:"left" };
 
@@ -82,7 +83,17 @@ function emitTouchKey(type, key) {
   const event = new KeyboardEvent(type, { key, code, bubbles:true, cancelable:true });
   try { Object.defineProperty(event, "keyCode", { value:keyCode }); } catch (_) {}
   try { Object.defineProperty(event, "which", { value:keyCode }); } catch (_) {}
-  window.dispatchEvent(event);
+  const handlers = engineKeyHandlers[type];
+  if (handlers && handlers.length) {
+    handlers.forEach(entry => {
+      try {
+        if (typeof entry.listener === "function") entry.listener.call(entry.target, event);
+        else if (entry.listener && entry.listener.handleEvent) entry.listener.handleEvent(event);
+      } catch (error) { console.error(error); }
+    });
+  } else {
+    document.dispatchEvent(event);
+  }
 }
 function setTouchDirection(direction) {
   const keys = direction ? direction.split(" ").map(part => touchDirectionKeys[part]).filter(Boolean) : [];
@@ -273,6 +284,14 @@ document.addEventListener("keydown", event => {
 try {
   const arena = await chooseArena();
   setStatus("Loading " + picker.querySelector('[data-arena="' + arena + '"]').textContent + "…");
+  const nativeAddEventListener = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function(type, listener, options) {
+    if ((type === "keydown" || type === "keyup") && listener &&
+        (this === document || this === window || this === canvas)) {
+      engineKeyHandlers[type].push({ target:this, listener });
+    }
+    return nativeAddEventListener.call(this, type, listener, options);
+  };
   const ioquake3 = (await import("./ioquake3.js")).default;
   const files = [
     { src: "baseoa/pak0.pk3", dst: "/baseoa" },
@@ -330,6 +349,7 @@ try {
       }
     }]
   });
+  EventTarget.prototype.addEventListener = nativeAddEventListener;
   setStatus("");
   touchPad.hidden = false;
   touchLook.hidden = false;

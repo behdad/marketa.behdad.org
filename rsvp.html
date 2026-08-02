@@ -80328,7 +80328,8 @@ async def localfont(name):
       capture: function () {
         return {
           unlocked: !!booted,
-          open: !!(isOpen() && !closing)
+          open: !!(isOpen() && !closing),
+          app: isOpen() && !closing && currentApp === "messages" ? "messages" : null
         };
       },
       restore: function (state, phase) {
@@ -80341,7 +80342,10 @@ async def localfont(name):
         }
         if (callee) dropCall(true);
         open(booted);
-        // App screens are not checkpoint state; open() rebuilds the launcher or lock screen.
+        if (state.app === "messages") {
+          var messagesApp = phoneAppById("messages");
+          if (messagesApp && messagesApp.open) messagesApp.open();
+        }
       }
     });
     // ── new-message thumbnail (top-centre, ~7s, pulsating) + delivery ──────────────────────

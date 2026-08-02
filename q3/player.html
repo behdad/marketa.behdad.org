@@ -253,9 +253,8 @@ function releaseTouchFire() {
   else canvas.dispatchEvent(event);
 }
 window.addEventListener("pointerdown", event => {
-  if (event.pointerType !== "touch" || event.target !== touchLook || touchAim) return;
+  if (event.pointerType !== "touch" || (event.target !== touchLook && event.target !== canvas) || touchAim) return;
   event.preventDefault(); event.stopImmediatePropagation();
-  if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
   releaseTouchFire();
   touchAim = { id:event.pointerId, x:event.clientX, y:event.clientY, sx:event.clientX, sy:event.clientY, moved:false };
   try { touchLook.setPointerCapture(event.pointerId); } catch (_) {}
@@ -267,11 +266,8 @@ window.addEventListener("pointermove", event => {
   if (Math.hypot(event.clientX - touchAim.sx, event.clientY - touchAim.sy) > 8) touchAim.moved = true;
   touchAim.x = event.clientX; touchAim.y = event.clientY;
   if (!dx && !dy) return;
-  const bounds = canvas.getBoundingClientRect();
   const mouseMove = new MouseEvent("mousemove", {
-    bubbles:true, cancelable:true,
-    clientX:bounds.left + bounds.width / 2,
-    clientY:bounds.top + bounds.height / 2
+    bubbles:true, cancelable:true, clientX:event.clientX, clientY:event.clientY
   });
   try { Object.defineProperty(mouseMove, "movementX", { value:dx * 64 }); } catch (_) {}
   try { Object.defineProperty(mouseMove, "movementY", { value:dy * 64 }); } catch (_) {}

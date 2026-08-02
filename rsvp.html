@@ -36321,6 +36321,8 @@ window.__bedroomRoomOpen = false;
   var tttWinner = null;
   var tttLine = [];
   var tttAiTimer = null;
+  var tttComputerFirst = false;
+  var tttNextComputerFirst = false;
   var TTT_LINES = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8],
     [0, 3, 6], [1, 4, 7], [2, 5, 8],
@@ -36478,6 +36480,7 @@ window.__bedroomRoomOpen = false;
     if (!window.__bedroomRoomOpen ||
         (tttPhase !== "idle" && tttPhase !== "done")) return false;
     resetTtt();
+    tttComputerFirst = !!computerFirst;
     if (computerFirst) queueTttComputer();
     else {
       tttPhase = "player";
@@ -36551,8 +36554,15 @@ window.__bedroomRoomOpen = false;
   }
   function playTttCell(cell, start) {
     if (!window.__bedroomRoomOpen || cell < 0 || cell > 8) return false;
+    if (tttPhase === "done") {
+      tttNextComputerFirst = tttWinner === "O" ? true :
+        tttWinner === "X" ? false : !tttComputerFirst;
+      resetTtt();
+      return true;
+    }
     if (start && (tttPhase === "idle" || tttPhase === "done")) {
-      startTtt(false);
+      startTtt(tttNextComputerFirst);
+      if (tttNextComputerFirst) return true;
     }
     if (tttPhase !== "player" || tttBoard[cell]) return false;
     tttBoard[cell] = "X";
@@ -38468,9 +38478,9 @@ var T = {
     bedroom_ttt_start_caption: "Click any pane to play tic-tac-toe",
     bedroom_glass_turn: "Your turn — choose an empty pane",
     bedroom_glass_wait: "The window is choosing a pane",
-    bedroom_glass_win: "You won — click any pane to play again",
-    bedroom_glass_loss: "The window won — click any pane to play again",
-    bedroom_glass_draw: "Draw — click any pane to play again",
+    bedroom_glass_win: "You won — click any pane to clear the board",
+    bedroom_glass_loss: "The window won — click any pane to clear the board",
+    bedroom_glass_draw: "Draw — click any pane to clear the board",
     bedroom_sprinkler: "Test the bedroom sprinkler",
     bedroom_lamp_left: "Toggle the left bedside lamp",
     bedroom_lamp_right: "Toggle the right bedside lamp",
@@ -39850,9 +39860,9 @@ var T = {
     bedroom_ttt_start_caption: "Kliknutím na libovolné políčko spustit piškvorky",
     bedroom_glass_turn: "Jsi na tahu — vyber prázdné políčko",
     bedroom_glass_wait: "Vitráž vybírá políčko",
-    bedroom_glass_win: "Vyhráli jste — kliknutím na políčko spustíte novou hru",
-    bedroom_glass_loss: "Vitráž vyhrála — kliknutím na políčko spustíte novou hru",
-    bedroom_glass_draw: "Remíza — kliknutím na políčko spustíte novou hru",
+    bedroom_glass_win: "Vyhráli jste — kliknutím na políčko vyčistíte hrací plochu",
+    bedroom_glass_loss: "Vitráž vyhrála — kliknutím na políčko vyčistíte hrací plochu",
+    bedroom_glass_draw: "Remíza — kliknutím na políčko vyčistíte hrací plochu",
     bedroom_sprinkler: "Vyzkoušet sprinkler v ložnici",
     bedroom_lamp_left: "Přepnout levou lampičku",
     bedroom_lamp_right: "Přepnout pravou lampičku",

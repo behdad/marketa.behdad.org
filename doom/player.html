@@ -43,6 +43,7 @@ body{display:grid;place-items:center}
   var ready = false;
   var paused = true;
   var stallTimer = 0;
+  var engineMousemoveHandlers = [];
   var touchPad = document.getElementById("touch-pad");
   var touchDrag = null;
   var touchHeldKeys = [];
@@ -168,7 +169,18 @@ body{display:grid;place-items:center}
     var dx = event.clientX - touchAim.x, dy = event.clientY - touchAim.y;
     if (Math.hypot(event.clientX - touchAim.sx, event.clientY - touchAim.sy) > 5) touchAim.moved = true;
     touchAim.x = event.clientX; touchAim.y = event.clientY;
-    canvas.dispatchEvent(new MouseEvent("mousemove", { bubbles:true, movementX:dx * 3.2, movementY:dy * 3.2 }));
+    var mouseMove = new MouseEvent("mousemove", {
+      bubbles:true, cancelable:true, clientX:event.clientX, clientY:event.clientY
+    });
+    try { Object.defineProperty(mouseMove, "movementX", { value:dx * 12 }); } catch (_) {}
+    try { Object.defineProperty(mouseMove, "movementY", { value:dy * 12 }); } catch (_) {}
+    if (engineMousemoveHandlers.length) engineMousemoveHandlers.forEach(function (entry) {
+      try {
+        if (typeof entry.listener === "function") entry.listener.call(entry.target, mouseMove);
+        else if (entry.listener && entry.listener.handleEvent) entry.listener.handleEvent(mouseMove);
+      } catch (error) { console.error(error); }
+    });
+    else canvas.dispatchEvent(mouseMove);
   }, true);
   function finishTouchAim(event) {
     if (!touchAim || event.pointerId !== touchAim.id) return;
@@ -232,6 +244,13 @@ body{display:grid;place-items:center}
   };
 
   stallTimer = setTimeout(fail, 60000);
+  var nativeAddEventListener = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function (type, listener, options) {
+    if (type === "mousemove" && listener && (this === document || this === window || this === canvas)) {
+      engineMousemoveHandlers.push({ target:this, listener:listener });
+    }
+    return nativeAddEventListener.call(this, type, listener, options);
+  };
   var script = document.createElement("script");
   script.src = "./doom.js";
   script.onerror = fail;

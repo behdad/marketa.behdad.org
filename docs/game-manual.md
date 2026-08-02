@@ -68,8 +68,8 @@ main room. Escape, Backspace, or × returns to the paired main room.
 
 You can also find a discreet portal in each main room: the Kitchen's `WC` sign,
 Garden's dungeon door, Cuddly-puddly's film ticket, Office's `Zzz…`, and
-Balcony's key and fob. Double-click or double-tap a portal to enter; a single
-selection gives a clue, and its context menu offers **Unlock**. Hidden-room
+Balcony's key and fob. Click a portal to enter; its context menu offers
+**Unlock**. Hidden-room
 illustrations respond to selection but stay out of the `Tab` order. Loft audio
 becomes quieter there and returns to normal in the main rooms.
 If phase-two wandering continues for a few attended minutes without any portal
@@ -206,7 +206,7 @@ Each hidden room announces itself in the clue line when entered; temporary
 gameplay messages finish before that room caption appears.
 
 - **Bathroom / Toilets** pairs with the Kitchen. Click the tub body—or press
-  Enter—to fill it and start the 20-second Bubble-gun round. Click bubbles for
+  Enter—to fill it and start the 30-second Bubble-gun round. Click bubbles for
   one point, or drag the stool to aim and release to fire for two; bubbles
   replenish during the round, and quick hits build a small combo bonus. The
   tub body is fill-only once full; click its top rim to drain it. Wipe the
@@ -286,7 +286,7 @@ In Block Party, select the playfield to rotate a piece. Drag horizontally to
 move it or down to drop it; arrow keys and Space also work. Every ten cleared
 lines advances the level.
 
-Double-click any office butterfly artwork to start Butterfly Chase.
+Click any office butterfly artwork to start Butterfly Chase.
 
 Calendar and Clock can move the loft to another date or time. Special dates,
 weather, daylight, moon phase, and sky effects may change the rooms. While an

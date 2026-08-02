@@ -635,7 +635,7 @@ are removed from the Cinema tab order while projected.
 
 `__cinemaRoomState()` exposes the compact
 open/closing/powered/shorted/playing/photobooth/video/reactions test surface. Dedicated
-main-room portal props own desktop double-click and touch double-tap entry.
+main-room portal props own single-click entry on desktop and touch.
 The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond
 and palette. A narrow `MutationObserver` on `#stage-cuddly` mirrors its `dusk`
 class to `.cinema-night`, keeping the lower-room window synchronized with every

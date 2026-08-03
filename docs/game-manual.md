@@ -55,6 +55,7 @@ Press `?` in the game for the complete shortcut list. Shortcuts pause while you
 type, and action games temporarily take the keys they need.
 
 - `D` toggles day and night.
+- Holding `←` or `→` moves through the main floor one settled room at a time.
 - `Shift`+`↑`/`↓` moves the clock by 30 minutes.
 - `C` opens the phone, `P` toggles the party after it is unlocked, and `W` opens
   **Who's here**.

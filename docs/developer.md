@@ -360,7 +360,9 @@ The five rooms are `kitchen`, `garden`, `cuddly`, `office`, and `balcony`. Searc
 At rest, room parking keeps only the current SVG stage paintable. During a slide it reveals every
 traversed stage. Rapid navigation accumulates those revealed rooms across all in-flight retargets,
 because the strip may still be painting over an earlier leg; the final `transitionend` or timeout
-fallback parks everything except the latest destination.
+fallback parks everything except the latest destination. Direct/programmatic jumps may still
+retarget a live transition, but upstairs `←`/`→` key repeats are settle-gated for one room-slide
+duration so a held key advances with the same room-by-room cadence as the lower floor.
 
 The normal first phase is a linear solve:
 
@@ -1699,7 +1701,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
   self-contained pages;
 
 - `tests/enter.js`, `tests/navigation.js`, `tests/delayed-pan.js`,
-  `tests/rapid-navigation.js`, `tests/phase2-progression.js`, and
+  `tests/rapid-navigation.js`, `tests/upstairs-keyboard-navigation.js`,
+  `tests/phase2-progression.js`, and
   `tests/progression-transitions.js` for room progression and navigation ownership;
 - `tests/menu.js`, `tests/laptopmenu.js`, `tests/systemmenu.js`, `tests/monitor-search.js`,
   `tests/phone-direct-launch.js`, `tests/phone-lock.js`, `tests/phone-recents.js`, and

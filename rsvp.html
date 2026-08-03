@@ -96876,7 +96876,8 @@ function spawnDustMote(container) {
     if (!focusActiveAppSearch()) return;
     e.preventDefault(); e.stopPropagation();
   }, true);
-  // Keyboard room nav: →/Tab forward, ← back. At a locked frontier a second forward within
+  // Keyboard room nav: → forward, ← back. Horizontal key repeats wait for each room slide to
+  // settle before advancing again, matching the lower floor's room-by-room cadence. At a locked frontier a second forward within
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
   // console. d flips day↔night; ↓ descends from Kitchen/Garden/Cuddly/Balcony/Office and ↑
   // returns, while
@@ -96893,6 +96894,19 @@ function spawnDustMote(container) {
     return !!(a.matches && a.matches("button,a,input,select,textarea,[tabindex]"));
   }
   var lastLockedRightAt = 0;
+  var upperKeyboardSlideTimer = null;
+  function upperKeyboardSlideBusy() { return !!upperKeyboardSlideTimer; }
+  function startUpperKeyboardSettle(fromIndex) {
+    if (stageIndex === fromIndex) return;
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    clearTimeout(upperKeyboardSlideTimer);
+    upperKeyboardSlideTimer = setTimeout(function () {
+      upperKeyboardSlideTimer = null;
+    }, (reduced ? 1 : STRIP_SLIDE_MS) + 20);
+  }
+  window.__upperRoomKeyboardNavigationState = function () {
+    return { settling: upperKeyboardSlideBusy(), room: STAGES[stageIndex] };
+  };
   function lowerRoomOpenerForStage(name) {
     if (name === "kitchen") return window.__openBathroomRoom;
     if (name === "garden") return window.__openGardenPrince;
@@ -96933,15 +96947,21 @@ function spawnDustMote(container) {
     // Down is a direct lower-room entry; no arming or repeat hint is needed.
     if (e.key === "ArrowRight") {
       e.preventDefault();
+      if (upperKeyboardSlideBusy()) return;
+      var rightFrom = stageIndex;
       if (stageIndex < maxUnlocked) { navigateWithRoster(STAGES[stageIndex + 1]); lastLockedRightAt = 0; }
       else if (stageIndex < STAGES.length - 1) {
         var now = Date.now();
         if (now - lastLockedRightAt < 600) { navigateWithRoster(STAGES[stageIndex + 1]); lastLockedRightAt = 0; } // second press unlocks
         else lastLockedRightAt = now; // first press at the locked frontier — arm the unlock
       }
+      startUpperKeyboardSettle(rightFrom);
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
+      if (upperKeyboardSlideBusy()) return;
+      var leftFrom = stageIndex;
       if (stageIndex > 0) navigateWithRoster(STAGES[stageIndex - 1]);
+      startUpperKeyboardSettle(leftFrom);
     } else if (e.key === "Tab") {
       e.preventDefault();
       // Tab delivers a context-appropriate text only: party cues while the party is lit,

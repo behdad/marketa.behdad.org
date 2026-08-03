@@ -919,9 +919,9 @@ check(activation && activation.practice.some(function (row) { return row.practic
   activation.offer.before.practiceLaps === 3 && activation.offer.before.unlocked &&
   activation.offer.before.invitationReady && !activation.offer.before.accepted && !activation.offer.before.active &&
   !activation.offer.after.accepted && !activation.offer.after.active && activation.offer.visible &&
-  activation.offer.ariaHidden === "false" && /Fancy a roadtrip/.test(activation.offer.title) &&
+  activation.offer.ariaHidden === "false" && activation.offer.title === "Let’s road trip!" &&
   activation.offer.transform === "translate(426 0)" &&
-  activation.offer.czech.title === "Dáme si výlet?" && activation.offer.czech.accept === "Vyjet na dálnici" &&
+  activation.offer.czech.title === "Jedeme na výlet!" && activation.offer.czech.accept === "Vyjet na dálnici" &&
   activation.offer.czech.later === "Později" && activation.offer.czech.acceptAria === "Vyjet na dálnici" &&
   activation.offer.czech.laterAria === "Později" &&
   activation.offer.viewBox === "0 -31 680 207" && activation.roadtrip.accepted && activation.roadtrip.active,

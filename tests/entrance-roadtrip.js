@@ -358,6 +358,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       leftWarning: leftWarning,
       left: leftCurve
     };
+    report.steps.lamps = Array.prototype.map.call(document.querySelectorAll(
+      '#entrance-roadtrip-furniture [data-roadtrip-furniture="lamp"]'), function (node) {
+        return { side: node.getAttribute("data-roadtrip-side"), transform: node.getAttribute("transform") };
+      });
 
     window.__entranceRoadtripSetDistance(0);
     window.__entranceRoadtripSetLane(2.14);
@@ -828,6 +832,10 @@ check(curves && curves.rightWarning && curves.rightWarning.direction === "right"
   curves.right.mirror.road.farCenter > curves.straightMirror.road.farCenter + 1 &&
   curves.left.mirror.road.farCenter < curves.straightMirror.road.farCenter - 1,
   "rear-view bends accumulate toward opposite horizon sides while every near road and marking stays centred", curves);
+check(s.lamps && s.lamps.length >= 2 && s.lamps.every(function (lamp) {
+  var scale = String(lamp.transform || "").match(/scale\(([-.\d]+) ([-.\d]+)\)/);
+  return scale && (lamp.side === "right" ? Number(scale[1]) < 0 : Number(scale[1]) > 0) && Number(scale[2]) > 0;
+}), "roadside lamp heads mirror by side so both point inward toward the carriageway", s.lamps);
 var shoulder = s.shoulder;
 check(shoulder && shoulder.before.state.drive.roadtrip.playerLane > 2 &&
   shoulder.before.state.drive.roadtrip.shoulderZone === "gravel" &&

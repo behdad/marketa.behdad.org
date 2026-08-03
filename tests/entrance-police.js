@@ -140,6 +140,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripPoliceStep(0, 2);
       var courtFade = copy(trip());
       window.__entranceRoadtripPoliceStep(0, .6);
+      var courtResolved = copy(trip());
+      var courtResolvedCaption = document.getElementById("hunt-caption").textContent.trim();
+      for (var courtReturnTick = 0; courtReturnTick < 8 && !trip().invitationReady; courtReturnTick++) {
+        setMotion(120, 3);
+        step(1000);
+      }
       report.steps.courtStop = {
         stopped: courtStopped,
         stoppedCaption: courtStoppedCaption,
@@ -150,9 +156,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         czech: courtCzech,
         paused: courtPaused,
         fade: courtFade,
-        trip: copy(trip()),
+        trip: courtResolved,
+        returnOffer: copy(state()),
         hudOpen: state().drive.hud,
-        caption: document.getElementById("hunt-caption").textContent.trim()
+        caption: courtResolvedCaption
       };
 
       prepareEncounter();
@@ -350,7 +357,9 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.paused.police.arrestElapsed === s.courtStop.card.police.arrestElapsed &&
   !s.courtStop.paused.police.sirenActive && s.courtStop.paused.police.arrestAudioVoices === 0 &&
   s.courtStop.fade.active && s.courtStop.fade.police.arrestOpacity > 0 &&
-  s.courtStop.fade.police.arrestOpacity < 1 && !s.courtStop.trip.active && s.courtStop.hudOpen &&
+  s.courtStop.fade.police.arrestOpacity < 1 && !s.courtStop.trip.active && !s.courtStop.trip.accepted &&
+  s.courtStop.hudOpen && s.courtStop.returnOffer.drive.roadtrip.invitationReady &&
+  s.courtStop.returnOffer.drive.roadtrip.invitationVisible &&
   s.courtStop.trip.police.phase === "ended" && s.courtStop.trip.police.runEnded &&
   s.courtStop.trip.police.endReason === "court" && s.courtStop.trip.police.overLimit === 55 &&
   s.courtStop.trip.police.fine === null && s.courtStop.trip.police.courtRequired &&

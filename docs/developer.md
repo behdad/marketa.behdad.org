@@ -171,6 +171,9 @@ while the current curvature adds a small unsteered outside drift. Curve-warning 
 pooled and placed 54 road units before their matching bend. The player range extends beyond the four
 lane centres into rumble and gravel zones; `syncRoadtripShoulder()` owns their view vibration, grip
 reduction, speed bleed, classes, and exposed test state.
+The windshield road and its edge, double-yellow, and dashed lane markings are sampled perspective
+polygons: their filled widths converge with the asphalt at the horizon rather than using fixed SVG
+strokes. The rumble strip remains a separate dashed path beside the filled white edge band.
 `porscheTireAudioMix()` is the deterministic speed/steering/surface projection for the continuous
 road, tire, wind, corner-squeal, and shoulder textures. It shares the drivetrain bed but uses a
 separate tire spatial output so a closed roof can muffle high frequencies without the engine's

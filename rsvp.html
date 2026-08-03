@@ -33641,6 +33641,7 @@ window.__cinemaVideoLoaded = false;
   var projectorShorted = false;
   var filmPlaying = false;
   var currentFilm = null;
+  var vimeoSubscribedWindow = null;
   var chooserIndex = 0;
   var cinemaPhotobooth = false;
   var cinemaPhotoboothStateSeen = false;
@@ -33809,11 +33810,21 @@ window.__cinemaVideoLoaded = false;
     if (!frame || !frame.contentWindow) return false;
     var message = { method: method };
     if (value !== undefined) message.value = value;
-    try { frame.contentWindow.postMessage(JSON.stringify(message), "https://player.vimeo.com"); }
+    try { frame.contentWindow.postMessage(message, "https://player.vimeo.com"); }
     catch (_error) { return false; }
     return true;
   }
+  function subscribeVimeoEvents() {
+    var frame = document.getElementById("cinema-player");
+    if (!frame || !frame.contentWindow || frame.contentWindow === vimeoSubscribedWindow) return false;
+    vimeoSubscribedWindow = frame.contentWindow;
+    ["play", "pause", "ended", "timeupdate"].forEach(function (name) {
+      tellVimeo("addEventListener", name);
+    });
+    return true;
+  }
   function clearPlayer(showChooser) {
+    vimeoSubscribedWindow = null;
     playerWrap.replaceChildren();
     playerWrap.hidden = true;
     chooser.hidden = !(showChooser && projectorOn && !projectorShorted);
@@ -34124,6 +34135,7 @@ window.__cinemaVideoLoaded = false;
     frame.allow = "autoplay; fullscreen; picture-in-picture";
     frame.allowFullscreen = true;
     frame.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.addEventListener("load", function () { tellVimeo("ping"); }, { once: true });
     playerWrap.replaceChildren(frame);
     chooser.hidden = true;
     playerWrap.hidden = false;
@@ -34218,16 +34230,25 @@ window.__cinemaVideoLoaded = false;
     nextFilm();
   }, true);
   window.addEventListener("message", function (event) {
-    if (event.origin !== "https://player.vimeo.com" || !currentFilm) return;
+    var frame = document.getElementById("cinema-player");
+    if (event.origin !== "https://player.vimeo.com" || !currentFilm || !frame ||
+        event.source !== frame.contentWindow) return;
     var data = event.data;
     if (typeof data === "string") {
       try { data = JSON.parse(data); } catch (_error) { return; }
     }
-    if (!data || !data.event) return;
-    if (data.event === "ready") tellVimeo("addEventListener", "ended");
+    if (!data || (data.player_id && data.player_id !== "cinema-player")) return;
+    if (data.event === "ready" || data.method === "ping") subscribeVimeoEvents();
     else if (data.event === "play") setFilmPlaying(true, .4);
     else if (data.event === "pause") setFilmPlaying(false, .45);
     else if (data.event === "ended") {
+      clearPlayer(true);
+      markChooserFilm(chooserIndex, window.__cinemaRoomOpen);
+    } else if (data.event === "timeupdate" && data.data &&
+        (data.data.percent >= .999 ||
+         (data.data.duration > 0 && data.data.seconds >= data.data.duration - .15))) {
+      // A few Vimeo playback paths reach their final timeupdate without delivering
+      // ended. Treat the actual final frame as completion, just as the native player does.
       clearPlayer(true);
       markChooserFilm(chooserIndex, window.__cinemaRoomOpen);
     }

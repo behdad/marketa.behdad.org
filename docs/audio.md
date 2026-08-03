@@ -265,10 +265,12 @@ party duck is still re-evaluated so its own source mix remains coherent.
 Opening Cinema joins the foreground coverage gate, starts the room-local projector hum while the projector is on, and fades the active Cuddly
 projector score, and leaves the durable projector channel unchanged. The
 physical cinema projector initially creates no iframe. Selecting a film creates
-one; its ready message subscribes to Vimeo's ended event, and a completed film
-removes the iframe, restores the chooser, and releases the whole-loft duck. The
-side transport sends play/pause commands through postMessage. Removing the iframe
-remains the reliable stop/teardown path.
+one; a ready or ping reply subscribes to Vimeo's play, pause, ended, and timeupdate
+events. Messages are accepted only from the active iframe. An ended event—or the
+trusted final timeupdate when Vimeo omits ended—removes the iframe, restores the
+chooser, and releases the whole-loft duck. The side transport sends play/pause
+commands through postMessage. Removing the iframe remains the reliable
+stop/teardown path.
 
 Room navigation gives ordinary room-local ambience a five-second fade. Cuddly projector channels
 use a shorter three-second room-exit fade so they recede behind the visitor without lingering.

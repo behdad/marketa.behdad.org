@@ -247,8 +247,8 @@ gameplay messages finish before that room caption appears.
   details for small reactions. Toggling all five windows away from their
   day/night defaults earns a caption. The intercom beside the doors buzzes
   somebody upstairs.
-  The grey Boxster's roof, driver door, front and rear compartments, and lights
-  are independent controls. Click the road—or press Enter—to reveal its tan
+  The grey Boxster's roof, driver door, paired side windows, front and rear compartments,
+  and lights are independent controls. Click the road—or press Enter—to reveal its tan
   dashboard; Enter then turns the ignition. Hold **↑** or **Space** for throttle,
   **↓** for brake, or **Shift** for the clutch; choose **N**, **R**, or **1–6** to
   shift, and steer with **←**/**→**. On touch, drag horizontally from the

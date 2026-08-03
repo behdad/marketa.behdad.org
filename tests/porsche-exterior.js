@@ -18,6 +18,25 @@ check(/id="entrance-porsche-full-seats">[\s\S]*?id="entrance-porsche-passenger-s
 check(!/entrance-porsche-(?:open-door-seats|closed-seatbacks)/.test(source) &&
   entrance.indexOf('id="entrance-porsche-full-seats"') < entrance.indexOf('id="entrance-porsche-door-panel"'),
   "one permanent seat stack preserves that order across every roof and door state");
+check(entrance.indexOf('id="entrance-porsche-side-glass"') < entrance.indexOf('id="entrance-porsche-roof-closed"') &&
+  entrance.indexOf('id="entrance-porsche-passenger-glass"') < entrance.indexOf('id="entrance-porsche-occupants"') &&
+  entrance.indexOf('id="entrance-porsche-passenger-glass"') < entrance.indexOf('id="entrance-porsche-roof-closed"') &&
+  /#entrance-porsche\.windows-open #entrance-porsche-side-glass,[\s\S]*?#entrance-porsche\.windows-open #entrance-porsche-door-glass/.test(source) &&
+  /#entrance-porsche\.windows-open #entrance-porsche-passenger-glass/.test(source) &&
+  !/#entrance-porsche\.roof-open #entrance-porsche-(?:side|door|passenger)-glass/.test(source) &&
+  !/id="entrance-porsche-cabin-(?:shell|backdrop)"/.test(entrance),
+  "one paired-window state controls the near and far panes independently of the soft top");
+check(/id="entrance-porsche-side-glass" d="M176 255L190 228Q195 222 207 222H231Q241 223 247 232L263 256Z"/.test(entrance) &&
+  /#entrance-porsche-side-glass\{[\s\S]*?opacity:\.48/.test(source) &&
+  /#entrance-porsche-door-glass\{[\s\S]*?opacity:\.64/.test(source),
+  "the lighter side glass follows the windshield pillar and reaches the rear of the door");
+check(/id="entrance-porsche-window" class="entrance-car-control"[^>]*data-car-action="window"/.test(entrance) &&
+  /entrance-car-window-side-hit" d="M196 248L201 235Q208 230 218 230H231Q239 232 244 239L249 248Z"/.test(entrance) &&
+  /entrance-car-window-door-hit" d="M166 257L169 241Q176 243 180 259Z"/.test(entrance),
+  "the window uses centered closed/open hit regions that leave the roof edge available");
+check(/#entrance-porsche-side-glass,[\s\S]*?#entrance-porsche-passenger-glass\{[\s\S]*?transition:opacity \.16s ease,visibility 0s linear/.test(source) &&
+  /#entrance-porsche-door-glass\{[\s\S]*?transition:opacity \.16s ease,visibility 0s linear/.test(source),
+  "raising the independent window has no inherited roof-animation delay");
 check(/id="entrance-porsche-steering-wheel" transform="translate\(185 253\) scale\(1\.25\) translate\(-190 -248\)"/.test(entrance),
   "the cockpit steering wheel is twenty-five percent larger and shifted five units left and down");
 check(/id="entrance-porsche-occupants" aria-hidden="true" pointer-events="none">[\s\S]*?id="entrance-porsche-behdad-passenger"[\s\S]*?id="entrance-porsche-marketa-driver"/.test(entrance),

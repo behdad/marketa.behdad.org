@@ -7,6 +7,7 @@ var lib = require("./lib");
 var PORSCHE = {
   roofOpen: true,
   doorOpen: true,
+  windowOpen: true,
   frunkOpen: true,
   trunkOpen: true,
   engineOn: true,
@@ -14,7 +15,7 @@ var PORSCHE = {
   taillightOn: true
 };
 var ROW = { windows: "10101", lamps: { left: true, right: false }, porsche: PORSCHE };
-var DEFAULT_DRIVE = { hud: false, stalled: false, gear: 0, speed: 0, rpm: 0, temperature: 0, position: 0, laneOffset: 0, steeringAngle: 0, wheelAngle: 0, wraps: 0 };
+var DEFAULT_DRIVE = { hud: false, gloveboxOpen: false, stalled: false, gear: 0, speed: 0, rpm: 0, temperature: 0, position: 0, laneOffset: 0, steeringAngle: 0, wheelAngle: 0, wraps: 0, lapCount: 0, facing: 1, yaw: 0, spinDirection: 0, spins: 0 };
 var SAVED = {
   version: 1,
   savedAt: Date.now(),
@@ -42,7 +43,7 @@ var HARNESS = [
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function click(id){var el=document.getElementById(id);if(!el)throw new Error("missing "+id);el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   'function state(){return window.__entranceRoomState();}',
-  'function carBits(car){return [car.roofOpen,car.doorOpen,car.frunkOpen,car.trunkOpen,car.engineOn,car.headlightOn,car.taillightOn];}',
+  'function carBits(car){return [car.roofOpen,car.doorOpen,car.windowOpen,car.frunkOpen,car.trunkOpen,car.engineOn,car.headlightOn,car.taillightOn];}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return false;},configurable:true});',
   ' window.getSfxCtx=function(){report.sfx++;return null;};',
@@ -51,10 +52,10 @@ var HARNESS = [
   ' await sleep(520);var restored=state(),car=document.getElementById("entrance-porsche");',
   ' report.steps.restored={state:restored,classes:car.getAttribute("class")||"",carPressed:Array.from(document.querySelectorAll(".entrance-car-control")).map(function(el){return [el.id,el.getAttribute("aria-pressed")];}),lampPressed:[document.getElementById("entrance-entry-lamp-left").getAttribute("aria-pressed"),document.getElementById("entrance-entry-lamp-right").getAttribute("aria-pressed")],persisted:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.entrance,sfx:report.sfx};',
   ' window.__closeEntranceRoom();await sleep(760);report.steps.closed=state();window.__openEntranceRoom();await sleep(60);report.steps.reopened=state();',
-  ' window.__restoreCheckpointSystems({entrance:{windows:"111111",lamps:{left:1,right:true},porsche:{roofOpen:"yes",doorOpen:true,frunkOpen:1,trunkOpen:false,engineOn:null,headlightOn:true,taillightOn:0}}},"afterStage");report.steps.validated=state();',
+  ' window.__restoreCheckpointSystems({entrance:{windows:"111111",lamps:{left:1,right:true},porsche:{roofOpen:"yes",doorOpen:true,windowOpen:false,frunkOpen:1,trunkOpen:false,engineOn:null,headlightOn:true,taillightOn:0}}},"afterStage");report.steps.validated=state();',
   ' window.__resetCheckpointSystems();report.steps.reset=state();',
   ' var saves=0;window.__checkpointChanged=function(){saves++;};',
-  ' ["entrance-window-left","entrance-window-mid-left","entrance-window-upper","entrance-window-mid-right","entrance-window-right","entrance-entry-lamp-left","entrance-entry-lamp-right","entrance-porsche-roof","entrance-porsche-door","entrance-porsche-frunk","entrance-porsche-trunk","entrance-porsche-headlight","entrance-porsche-taillight"].forEach(click);window.__toggleEntrancePorscheEngine();',
+  ' ["entrance-window-left","entrance-window-mid-left","entrance-window-upper","entrance-window-mid-right","entrance-window-right","entrance-entry-lamp-left","entrance-entry-lamp-right","entrance-porsche-roof","entrance-porsche-door","entrance-porsche-window","entrance-porsche-frunk","entrance-porsche-trunk","entrance-porsche-headlight","entrance-porsche-taillight"].forEach(click);window.__toggleEntrancePorscheEngine();',
   ' click("entrance-porsche-indicator");var captured=window.__captureCheckpointSystems().entrance;report.steps.mutated={state:state(),row:captured,saves:saves,rowKeys:Object.keys(captured).sort(),carKeys:Object.keys(captured.porsche).sort()};',
   ' window.__resetCheckpointSystems();report.steps.resetAfterMutation=state();',
   ' var balcony=document.getElementById("stage-balcony");balcony.classList.remove("dusk");window.__resetCheckpointSystems();balcony.classList.add("dusk");await sleep(10);report.steps.nightReset=state();',
@@ -69,7 +70,7 @@ function check(ok, message, detail) {
   else { failures++; console.log("  ✗ " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
 function allCar(car, value) {
-  return car && ["roofOpen", "doorOpen", "frunkOpen", "trunkOpen", "engineOn", "headlightOn", "taillightOn"]
+  return car && ["roofOpen", "doorOpen", "windowOpen", "frunkOpen", "trunkOpen", "engineOn", "headlightOn", "taillightOn"]
     .every(function (key) { return car[key] === value; });
 }
 
@@ -91,12 +92,13 @@ check(restored && restored.open && restored.windows.map(function (row) { return 
   !restored.car.idleActive && !restored.car.vibrating && restored.car.indicatorFlashes === 0 &&
   Object.keys(restored.car.activations).length === 0 && !restored.reacting.length &&
   /roof-open/.test(s.restored.classes) && /door-open/.test(s.restored.classes) &&
+  /windows-open/.test(s.restored.classes) &&
   /frunk-open/.test(s.restored.classes) && /trunk-open/.test(s.restored.classes) &&
   /engine-on/.test(s.restored.classes) && /headlight-on/.test(s.restored.classes) &&
   /taillight-on/.test(s.restored.classes),
   "restored classes are truthful while idle/tremor remain lifecycle-derived", s.restored);
-check(s.restored && s.restored.carPressed.length === 8 && s.restored.carPressed.every(function (row) {
-    return row[0] === "entrance-porsche-indicator" ? row[1] === null : row[1] === "true";
+check(s.restored && s.restored.carPressed.length === 9 && s.restored.carPressed.every(function (row) {
+    return row[0] === "entrance-porsche-indicator" || row[0] === "entrance-porsche-window" ? row[1] === null : row[1] === "true";
   }) && s.restored.lampPressed.join(",") === "true,false",
   "Continue restores truthful Porsche and independent wall-lamp pressed states", s.restored);
 check(s.restored && JSON.stringify(s.restored.persisted) === JSON.stringify(Object.assign({}, ROW, { drive: DEFAULT_DRIVE })) && s.restored.sfx === 0,
@@ -106,17 +108,17 @@ check(s.closed && !s.closed.open && allCar(s.closed.car, true) && !s.closed.car.
   "leaving parks runtime idle while settled Porsche state survives room re-entry", { closed: s.closed, reopened: s.reopened });
 check(s.validated && /^00000$/.test(s.validated.windows.map(function (row) { return row.on ? "1" : "0"; }).join("")) &&
   !s.validated.lamps.left && s.validated.lamps.right && !s.validated.car.roofOpen &&
-  s.validated.car.doorOpen && !s.validated.car.frunkOpen && !s.validated.car.trunkOpen &&
+  s.validated.car.doorOpen && !s.validated.car.windowOpen && !s.validated.car.frunkOpen && !s.validated.car.trunkOpen &&
   !s.validated.car.engineOn && s.validated.car.headlightOn && !s.validated.car.taillightOn,
   "restore accepts only bounded window bits and literal booleans", s.validated);
 check(s.reset && /^00000$/.test(s.reset.windows.map(function (row) { return row.on ? "1" : "0"; }).join("")) &&
   !s.reset.lamps.left && !s.reset.lamps.right && allCar(s.reset.car, false) &&
   !s.reset.car.idleActive && !s.reset.car.vibrating,
   "checkpoint reset returns the daytime Entrance to authored defaults", s.reset);
-check(s.mutated && s.mutated.saves === 14 && s.mutated.row.windows === "11111" &&
+check(s.mutated && s.mutated.saves === 15 && s.mutated.row.windows === "11111" &&
   s.mutated.row.lamps.left && s.mutated.row.lamps.right && allCar(s.mutated.row.porsche, true) &&
   s.mutated.rowKeys.join(",") === "drive,lamps,porsche,windows" &&
-  s.mutated.carKeys.join(",") === "doorOpen,engineOn,frunkOpen,headlightOn,roofOpen,taillightOn,trunkOpen" &&
+  s.mutated.carKeys.join(",") === "doorOpen,engineOn,frunkOpen,headlightOn,roofOpen,taillightOn,trunkOpen,windowOpen" &&
   !("indicatorFlashes" in s.mutated.row.porsche) && !("idleActive" in s.mutated.row.porsche) &&
   !("vibrating" in s.mutated.row.porsche),
   "every durable manual switch checkpoints while indicator/runtime state stays transient", s.mutated);

@@ -696,9 +696,9 @@ intercom, paired entry lamps, and tree canopy pointer/touch plus Enter/Space
 responses without changing the facade paint order. `data-entrance-action`
 selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
 in-flight class so no one-shot survives a room leave or reset.
-Eight separate `.entrance-car-control` overlays partition the foreground Boxster's
-roof, driver door, front and rear compartments, mid-body engine control, headlight,
-tail light, and indicator. They remain outside the Tab order, stop bubbling at their
+Nine separate `.entrance-car-control` overlays partition the foreground Boxster's
+roof, driver door, paired side windows, front and rear compartments, mid-body engine control,
+headlight, tail light, and indicator. They remain outside the Tab order, stop bubbling at their
 own click handlers, and publish pressed state through `__entranceRoomState().car`.
 The dashboard horn keeps its held `horn-pressed` state independent from a transient
 `horn-answering` class on `#entrance-door-art`, which gives the facade door a restrained

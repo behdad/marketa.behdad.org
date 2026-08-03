@@ -62,9 +62,6 @@ var RSVP_HARNESS = [
   "  var report = { errors: [], solve: {}, stormClicked: 0, missing: [] };",
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function solve() {",
-  "    var phaseOneCaption = window.__captionKey();",
-  "    if (window.__brickHint) window.__brickHint('kitchen');",
-  "    report.phaseOneHint = { before: phaseOneCaption, after: window.__captionKey() };",
   "    click(expect('kitchen-portafilter'));",       // the portafilter advances whichever coffee step comes next
   "    await sleep(2800);",                         // the espresso machine must finish warming before the grinder accepts input
   "    click(expect('kitchen-portafilter'));",       // flies to the grinder (FLY_MS), then grinds (GRIND_MS)
@@ -214,8 +211,6 @@ if (!r) {
   else fail("solved-room revisit shows the exploration base line", "revisit: " + JSON.stringify(rv));
   if (rv.second === rv.first) pass("later solved-room revisits keep the stable exploration caption");
   else fail("later solved-room revisits keep the stable exploration caption", "revisit: " + JSON.stringify(rv));
-  if (r.phaseOneHint && r.phaseOneHint.after === r.phaseOneHint.before) pass("loose bricks cannot replace an unsolved Phase 1 instruction");
-  else fail("loose bricks cannot replace an unsolved Phase 1 instruction", JSON.stringify(r.phaseOneHint));
   if (r.stormClicked >= 60) pass("click-stormed " + r.stormClicked + " interactive elements");
   else fail("interactive element count sanity", "only " + r.stormClicked);
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");

@@ -431,8 +431,7 @@ It delegates to `__navigateLowerRoom`, so a numeric jump retains the current
 floor and uses the same paired horizontal pan as arrows and room dots.
 
 The first balcony arrival owns the one-time finale/Act Two transition. Subsequent solved-room visits
-use one stable exploration caption; loose-brick hints are available only after Phase 1. `goToStage`
-is also the central room-change re-gate: it
+use one stable exploration caption. `goToStage` is also the central room-change re-gate: it
 collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,
 particles, photographer state, and phone/monitor ownership.
 

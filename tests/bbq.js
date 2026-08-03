@@ -49,10 +49,6 @@ var harness = String.raw`<script>
     check("May 2 excludes wedding-moment texts", deliveredMoments.length === 0, deliveredMoments.join(","));
     check("balcony split waits for invitation", !(window.__bbqSplitState && window.__bbqSplitState().on));
     check("grill waits for invitation", !document.getElementById("balcony-smoker").classList.contains("smoking"));
-    var bbqHints = [];
-    if (window.__nextExploreHint) for (var hi = 0; hi < 20; hi++) bbqHints.push(window.__nextExploreHint("balcony", true));
-    check("May 2 suppresses the turn-day-to-night hint", bbqHints.indexOf("hint_sun") === -1, bbqHints.join(","));
-
     setTimeout(function () {
       window.__runMsgAction("bbq");
       setTimeout(function () {

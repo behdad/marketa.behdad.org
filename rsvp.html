@@ -33098,7 +33098,7 @@ window.__bathroomRoomOpen = false;
     }
     window.__bathroomRoomOpen = false;
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
-    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_bathroom");
+    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption();
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     resetBathroomProps();
     closing = true;
@@ -33710,7 +33710,7 @@ window.__cinemaVideoLoaded = false;
     } else if (!projectorOn) powerOff();
     window.__cinemaRoomOpen = false;
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
-    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_cinema");
+    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption();
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     syncCuddlyOccupants(false);
     cinemaClosing = true;
@@ -36225,7 +36225,7 @@ window.__entranceRoomOpen = false;
     window.__entranceRoomOpen = false;
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
     if (window.__restoreLowerRoomCaption) {
-      window.__restoreLowerRoomCaption(porscheDriveInstructionKey());
+      window.__restoreLowerRoomCaption();
     }
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     if (window.updateCuddlyGrooving) window.updateCuddlyGrooving();
@@ -36679,12 +36679,14 @@ window.__bedroomRoomOpen = false;
     glass.setAttribute("aria-label", text);
     glass.setAttribute("title", text);
   }
-  function refreshTttCaption() {
-    if (!window.__bedroomRoomOpen || !window.__setLowerRoomCaption) return;
-    var key = tttPhase === "player" ? "bedroom_ttt_turn_caption" :
+  function bedroomCaptionKey() {
+    return tttPhase === "player" ? "bedroom_ttt_turn_caption" :
       tttPhase === "computer" ? "bedroom_ttt_wait_caption" :
       tttPhase === "idle" ? "bedroom_ttt_start_caption" : "lower_bedroom";
-    window.__setLowerRoomCaption(key);
+  }
+  function refreshTttCaption() {
+    if (!window.__bedroomRoomOpen || !window.__setLowerRoomCaption) return;
+    window.__setLowerRoomCaption(bedroomCaptionKey());
   }
   function renderTtt() {
     if (!glass || !tttMarks) return;
@@ -37038,7 +37040,7 @@ window.__bedroomRoomOpen = false;
     if (!window.__bedroomRoomOpen) return false;
     window.__bedroomRoomOpen = false;
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
-    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption("lower_bedroom");
+    if (window.__restoreLowerRoomCaption) window.__restoreLowerRoomCaption();
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
     closing = true;
     resetProps(true);
@@ -71159,7 +71161,7 @@ async def localfont(name):
     if (!princePresented) return;
     if (princeClosing) return;
     if (princeMode === "basement" && window.__restoreLowerRoomCaption) {
-      window.__restoreLowerRoomCaption("lower_dungeon");
+      window.__restoreLowerRoomCaption();
     }
     princeClosing = true;
     window.__princeInputActive = false;
@@ -96993,14 +96995,15 @@ function spawnDustMote(container) {
   };
   window.__restoreLowerRoomCaption = function (key) {
     var saved = lowerRoomReturnCaption;
-    if (!saved || saved.roomKey !== key) return false;
+    if (!saved || (key && saved.roomKey !== key)) return false;
+    var roomKey = saved.roomKey;
     lowerRoomReturnCaption = null;
-    if (flashedCaption && flashedCaption.prevKey === key) {
+    if (flashedCaption && flashedCaption.prevKey === roomKey) {
       flashedCaption.prevKey = saved.key;
       flashedCaption.prevHtml = saved.html;
       return true;
     }
-    if (captionKey !== key) return true;
+    if (captionKey !== roomKey) return true;
     if (saved.key === "rsvp_exit") showRsvpNudge();
     else if (saved.key != null) setCaption(saved.key, true);
     else {

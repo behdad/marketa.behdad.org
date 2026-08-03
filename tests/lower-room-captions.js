@@ -20,6 +20,7 @@ var HARNESS = [
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();',
   ' ["loft-game-strip","bathroom-room","cinema-room","bedroom-room","entrance-room","prince-basement"].forEach(function(id){var el=document.getElementById(id);if(el)el.style.transition="none";});',
   ' await visit("en",report.en);await visit("cs",report.cs);',
+  ' setLang("en");window.goToStage("office");window.setCaption("office_call",true);window.__openBedroomRoom();await sleep(30);var bedroomAction=cap();window.__closeBedroomRoom();var officeReturn=cap();report.bedroomReturn={inside:bedroomAction,upstairs:officeReturn};',
   ' setLang("en");window.goToStage("kitchen");await sleep(20);var upstairs=cap();window.__flashCaptionKey("trip_caption_molly",550,"caption-test");var before=cap();window.__openBathroomRoom();var during=cap();await sleep(620);var restored=cap();var repeat=window.__openBathroomRoom();window.__flashCaptionKey("trip_caption_molly",550,"caption-close-test");window.__closeBathroomRoom();var closing=cap();await sleep(620);var upstairsRestored=cap();report.transient={upstairs:upstairs,before:before,during:during,restored:restored,repeat:repeat,closing:closing,upstairsRestored:upstairsRestored};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},250);});',
@@ -48,25 +49,30 @@ var expected = {
     bathroom: "Bathroom · fixtures welcome.",
     dungeon: "Dungeon · the old game is awake.",
     cinema: "Cinema · wake the projector, then choose a film.",
-    bedroom: "Bedroom · everything here is playable.",
-    entrance: "Entrance · the street starts here."
+    bedroom: "Click any pane to play tic-tac-toe",
+    entrance: "Fancy-Stupid! · click the road to take the wheel."
   },
   cs: {
     bathroom: "Koupelna · vybavení vítá hru.",
     dungeon: "Žalář · stará hra se probudila.",
     cinema: "Kino · probuď projektor a pak vyber film.",
-    bedroom: "Ložnice · se vším si tu můžeš hrát.",
-    entrance: "Vchod · tady začíná ulice."
+    bedroom: "Kliknutím na libovolné políčko spustit piškvorky",
+    entrance: "Fancy-Stupid! · klikni na silnici a usedni za volant."
   }
 };
 ["en", "cs"].forEach(function (lang) {
   Object.keys(expected[lang]).forEach(function (room) {
     var caption = result[lang] && result[lang][room];
-    check(caption && caption.key === "lower_" + room &&
+    var key = room === "bedroom" ? "bedroom_ttt_start_caption" : "lower_" + room;
+    check(caption && caption.key === key &&
       caption.text === expected[lang][room] && !caption.flash,
     room + " has one stable " + lang.toUpperCase() + " entry caption", caption);
   });
 });
+check(result.bedroomReturn && result.bedroomReturn.inside.key === "bedroom_ttt_start_caption" &&
+  result.bedroomReturn.upstairs.key === "office_call",
+  "leaving Bedroom restores the current Office instruction after its tic-tac-toe caption",
+  result.bedroomReturn);
 var transient = result.transient;
 check(transient && transient.before.key === "trip_caption_molly" &&
   transient.during.key === "trip_caption_molly" &&

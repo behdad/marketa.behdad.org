@@ -571,6 +571,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveControl("steerLeft", true);
     step(80);
     window.__entranceDriveControl("steerLeft", false);
+    pressKey("ArrowLeft");
+    document.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowLeft", bubbles: true, cancelable: true }));
     report.steps.steering = {
       before: steeringBefore,
       after: {
@@ -946,8 +948,10 @@ check(dismiss && !dismiss.active && dismiss.unlocked && dismiss.entityCount === 
   "dashboard dismissal ends and clears the run while retaining unlock and best", s.dismiss);
 var steering = s.steering;
 check(steering && steering.after.state.drive.roadtrip.playerLane < steering.before.state.drive.roadtrip.playerLane &&
-  steering.after.road !== steering.before.road && steering.after.entityX > steering.before.entityX,
-  "left steering moves the player left while the road and approaching entity shift visibly right",
+  steering.after.road !== steering.before.road && steering.after.entityX > steering.before.entityX &&
+  steering.after.state.car.indicatorFlashes === steering.before.state.car.indicatorFlashes &&
+  steering.after.state.car.indicatorSounds === steering.before.state.car.indicatorSounds,
+  "left steering moves the world right without triggering street indicator flourishes on the highway",
   steering);
 var exitLadder = s.exitLadder;
 check(exitLadder && exitLadder.closeControl.open && exitLadder.closeControl.drive.hud &&

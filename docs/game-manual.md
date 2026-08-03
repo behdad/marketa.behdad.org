@@ -209,7 +209,8 @@ the dashboard does not leave the street until the highway is accepted. After
 that, the highway remains unlocked. Every later dashboard session begins on the
 block and offers the card after one completed forward lap. Enter accepts a
 visible offer; Escape dismisses it for the rest of that dashboard session. The
-same steering, gears, accelerator, and brake apply. The Porsche
+same steering, gears, accelerator, and brake apply; highway steering omits the
+street-drive indicator flourish. The Porsche
 begins in the inner right-hand lane: rear-view traffic travels ahead in the two
 right lanes, while headlights approach in the two lanes beyond the double
 yellow. The traffic mix includes sedans, pickups, semis, and the RVs common on

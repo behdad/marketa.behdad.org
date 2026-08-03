@@ -242,6 +242,10 @@ with a 5.2 kHz closed-roof cutoff; the engine keeps its lower cabin cutoff. Thes
 nodes start and stop with the existing drivetrain bed and inherit the same
 Entrance + engine + focus/visibility lifecycle.
 
+The brief turn-indicator flourish remains a street-driving response only.
+Highway steering suppresses its lamp/tick sequence so repeated lane corrections
+do not compete with traffic, tire, pursuit, or collision cues.
+
 - **`getSfxCtx()`** returns null while `document.visibilityState === "hidden"` — the
   hidden-tab choke point that silences all one-shots (and autonomous timer-driven ambients)
   without per-call-site guards. Autonomous one-shots additionally guard on

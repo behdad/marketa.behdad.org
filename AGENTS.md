@@ -24,10 +24,12 @@ allowed exception, owner-confirmed.)
   multiple agents at the primary checkout or let agents share a writable worktree.
   Review and integrate each agent's finished commit explicitly into the primary branch;
   remove the temporary worktree only after integration.
-- **Integrate returned agent work early.** After a quick scope and syntax sanity check,
-  merge it into the primary branch and deploy it while full verification continues, so
-  the owner can test in parallel. Handle follow-up feedback directly or send it back to
-  the same agent in its isolated worktree.
+- **Commit completed work before starting another feature.** Finish and validate each
+  bounded change in its isolated branch, then commit it immediately. Never leave a
+  completed feature uncommitted while beginning another one. Give the owner the
+  isolated test URL and ask for confirmation after the commit; merge that commit into
+  the primary branch and deploy it only after the owner confirms. Handle follow-up
+  feedback directly or send it back to the same agent in its isolated worktree.
 - **Keep commentary, docs, and tests proportional.** Code comments should explain only
   non-obvious current invariants—not narrate obsolete behavior or routine mechanics.
   Keep `docs/game-manual.md` and `docs/developer.md` concise and relevant to their
@@ -35,9 +37,11 @@ allowed exception, owner-confirmed.)
   of every small copy or cosmetic adjustment.
 - **Add a `Co-Authored-By` trailer to every commit** with the agent name and model
   family: `Co-Authored-By: Codex (GPT-5) <noreply@openai.com>`.
-- **Commit and deploy after every discrete change**, not in one big batch at the end.
-  Push with `git puff` (an alias for `git push --force-with-lease`, already configured —
-  just run it, don't second-guess it), then `ssh behdad "cd w && git pull"` to deploy.
+- **Commit every discrete change immediately after validation; deploy it after owner
+  confirmation**, not in one big batch at the end. Do not start the next feature before
+  the completed one is committed. After confirmation, push with `git puff` (an alias for
+  `git push --force-with-lease`, already configured — just run it, don't second-guess it),
+  then `ssh behdad "cd w && git pull"` to deploy.
   `w` on that host is the live web root itself — the git working tree *is* the served
   directory, so anything committed and pulled is instantly live, including files you
   didn't mean to expose (see the `.htaccess` note below).
@@ -125,13 +129,16 @@ allowed exception, owner-confirmed.)
 - For larger tasks, suggest delegation or assign bounded, independent work to subagents when that
   will help. The primary agent still owns the task lists, validation, owner confirmation, and
   one-issue-per-commit boundary.
-- When a subagent's work returns, prioritize reviewing and integrating it so completed parallel
-  work does not sit stale. Preserve that issue's own validation, confirmation, and isolated commit.
+- When a subagent's work returns, prioritize reviewing, validating, and committing it so completed
+  work does not sit uncommitted. Preserve that issue's own isolated commit; integrate and deploy it
+  only after owner confirmation.
 - Handle one issue at a time and never combine unrelated issues in one commit.
-- Finish and validate the issue, report the result to the owner, and move it to **fixed, awaiting
-  confirmation**. Do not idle while waiting: begin the smallest issue still in todo.
-- Commit an issue only after the owner confirms it. Keep confirmed commits isolated even when
-  other completed-but-unconfirmed changes are present in the working tree.
+- Finish and validate the issue, commit it immediately, report the commit and test URL to the owner,
+  and move it to **fixed, awaiting confirmation**. A completed issue must never remain uncommitted
+  while another feature begins. Once it is committed, do not idle while waiting for confirmation:
+  begin the smallest issue still in todo.
+- After the owner confirms a committed issue, integrate that isolated commit into `main`, push, and
+  deploy it. Do not merge or deploy an unconfirmed feature.
 - Keep each report scoped to the issue just completed so acceptance and commit history remain
   unambiguous.
 

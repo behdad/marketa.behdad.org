@@ -33,6 +33,10 @@ check(/id="entrance-porsche-behdad-lower-body"[\s\S]*?id="entrance-porsche-marke
   "both occupants have seated lower bodies behind the later door-panel layer");
 check(!/id="entrance-drive-(?:behdad-passenger|marketa-hands)"/.test(entrance),
   "the first-person HUD keeps its windshield and steering wheel free of occupant artifacts");
+check(/id="entrance-porsche-trunk-panel">\s*<path d="M278 259Q323 257 350 270L358 279Q361 282 358 285Q325 271 281 269Z"/.test(entrance),
+  "the raised trunk lid ends in a short rounded nose instead of a sharp polygon point");
+check(/#entrance-porsche-trunk-well\{opacity:0;transition:opacity \.08s ease \.26s\}[\s\S]*?#entrance-porsche\.trunk-open #entrance-porsche-trunk-well\{opacity:1;transition:opacity \.16s ease\}/.test(source),
+  "the trunk well covers the silver body until the closing lid reaches its final position");
 check(/#entrance-porsche-door-closed\{transition:none\}/.test(source) &&
   /#entrance-porsche-door-open\{[\s\S]*?transform:scaleX\(\.08\);transition:none[\s\S]*?#entrance-porsche\.door-open #entrance-porsche-door-open\{opacity:1;transform:scaleX\(1\)\}/.test(source) &&
   /#entrance-porsche-door-well\{opacity:0;transition:none\}/.test(source),

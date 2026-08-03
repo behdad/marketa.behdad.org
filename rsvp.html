@@ -117424,26 +117424,29 @@ function spawnDustMote(container) {
     var stale = parent.querySelectorAll(".brick-note-dust");
     for (var old = 0; old < stale.length - 8; old++) stale[old].remove();
     for (var i = 0; i < 3; i++) {
+      var puff = document.createElementNS("http://www.w3.org/2000/svg", "g");
       var mote = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       var dx = (i - 1) * 5 + (Math.random() - 0.5) * 3;
       var dy = -7 - Math.random() * 7;
-      mote.setAttribute("class", "brick-note-dust");
-      mote.setAttribute("cx", (box.x + box.width * (0.3 + i * 0.2)).toFixed(1));
-      mote.setAttribute("cy", (box.y + 1).toFixed(1));
+      puff.setAttribute("class", "brick-note-dust");
+      puff.setAttribute("transform", "translate(" +
+        (box.x + box.width * (0.3 + i * 0.2)).toFixed(1) + " " + (box.y + 1).toFixed(1) + ")");
+      mote.setAttribute("cx", "0");
+      mote.setAttribute("cy", "0");
       mote.setAttribute("r", (0.9 + Math.random() * 1.1).toFixed(1));
       mote.setAttribute("fill", brick.getAttribute("fill") || "#9a6048");
-      parent.appendChild(mote);
+      puff.appendChild(mote);
+      parent.appendChild(puff);
       if (mote.animate) {
         var animation = mote.animate([
           { opacity: 0.55, transform: "translate(0,0) scale(.7)" },
           { opacity: 0, transform: "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) scale(1.35)" }
         ], { duration: 360, easing: "ease-out" });
-        animation.onfinish = function (event) {
-          var target = event && event.target && event.target.effect && event.target.effect.target;
-          if (target && target.parentNode) target.remove();
-        };
+        (function (group, activeAnimation) {
+          activeAnimation.onfinish = function () { if (group.parentNode) group.remove(); };
+        })(puff, animation);
       } else {
-        (function (node) { setTimeout(function () { if (node.parentNode) node.remove(); }, 380); })(mote);
+        (function (group) { setTimeout(function () { if (group.parentNode) group.remove(); }, 380); })(puff);
       }
     }
   }

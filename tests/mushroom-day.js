@@ -15,8 +15,8 @@ var HARNESS = [
   ' document.hasFocus=function(){return true;};window.__gameStarted=function(){return true;};',
   ' window.__jumpToDate(2027,8,20);window.goToStage("office");window.__openPhoneAppHere("calendar");await sleep(40);',
   ' var ph=document.querySelector(".calx-phone"),d20=day(ph,20);',
-  ' S("english",{label:d20&&d20.getAttribute("aria-label"),icon:d20&&d20.querySelector(".calx-mk")&&d20.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
-  ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d20=day(ph,20);S("czech",{label:d20&&d20.getAttribute("aria-label")});',
+  ' S("english",{icon:d20&&d20.querySelector(".calx-mk")&&d20.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
+  ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d20=day(ph,20);S("czech",{banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
   ' setLang("en");ph=document.querySelector(".calx-phone");d20=day(ph,20);d20.click();await sleep(60);',
   ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:window.__tripState&&window.__tripState(),card:document.getElementById("mol-card-shrooms").classList.contains("mol-show"),status:window.__mushroomDayStatus()});',
   ' window.__jumpToDate(2027,8,21);S("leave",{trip:window.__tripState&&window.__tripState(),status:window.__mushroomDayStatus(),tick:window.__mushroomDayTick()});',
@@ -40,11 +40,10 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 3400, { patchRaf: true, seedRandom
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(s.english && s.english.label === "20. International Mushroom Day" &&
-  s.english.banner === "International Mushroom Day" && /🍄/.test(s.english.icon || ""),
-  "September 20 uses its canonical English calendar and ribbon name", s.english);
-check(s.czech && /Mezinárodní den hub/.test(s.czech.label || ""),
-  "September 20 has a natural Czech calendar name", s.czech);
+check(s.english && s.english.banner === "International Mushroom Day" && /🍄/.test(s.english.icon || ""),
+  "September 20 uses its canonical English occasion banner", s.english);
+check(s.czech && /Mezinárodní den hub/.test(s.czech.banner || ""),
+  "September 20 has a natural visible Czech name", s.czech);
 check(s.activate && !s.activate.phone && s.activate.room === "office" &&
   s.activate.trip && s.activate.trip.active && s.activate.trip.variant === "shrooms" &&
   s.activate.card && s.activate.status.pending,

@@ -18,8 +18,8 @@ var HARNESS = [
   ' var nbr=blanket.getBoundingClientRect(),nbx=nbr.left+nbr.width/2,nby=nbr.top+nbr.height/2;blanket.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,cancelable:true,pointerId:30,pointerType:"mouse",button:0,buttons:1,clientX:nbx,clientY:nby}));S("normalBlanket",{afterKnives:!!(k2.compareDocumentPosition(blanket)&Node.DOCUMENT_POSITION_FOLLOWING),beforeVisitors:!!(blanket.compareDocumentPosition(visitors)&Node.DOCUMENT_POSITION_FOLLOWING)});blanket.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerId:30,pointerType:"mouse",button:0,buttons:0,clientX:nbx,clientY:nby}));',
   ' window.__jumpToDate(2027,10,23);window.__openPhoneAppHere("calendar");await sleep(50);',
   ' var ph=document.querySelector(".calx-phone"),d23=day(ph,23);',
-  ' S("english",{label:d23&&d23.getAttribute("aria-label"),icon:d23&&d23.querySelector(".calx-mk")&&d23.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
-  ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d23=day(ph,23);S("czech",{label:d23&&d23.getAttribute("aria-label")});',
+  ' S("english",{icon:d23&&d23.querySelector(".calx-mk")&&d23.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
+  ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d23=day(ph,23);S("czech",{banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
   ' setLang("en");ph=document.querySelector(".calx-phone");d23=day(ph,23);party(true);await sleep(30);',
   ' var spencer=document.querySelector("#garden-guests .g-spencer"),spencerHat=spencer&&spencer.querySelector(".bd-hat-spencer"),navid=document.querySelector("#garden-guests .g-navid");S("birthdayOverlap",{spencerArrived:!!(spencer&&spencer.classList.contains("arrived")),spencerVisibility:spencer&&getComputedStyle(spencer).visibility,hatVisibility:spencerHat&&getComputedStyle(spencerHat).visibility,navidOpacity:navid&&getComputedStyle(navid).opacity});',
   ' d23.click();await sleep(900);',
@@ -55,9 +55,9 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 6200, { patchRaf: true, seedRandom
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(s.english && s.english.label === "23. World Polyamory Day" && /👨/.test(s.english.icon || "") &&
+check(s.english && /👨/.test(s.english.icon || "") &&
   s.english.banner === "World Polyamory Day", "November 23 is named in the English calendar and banner", s.english);
-check(s.czech && s.czech.label === "23. Světový den polyamorie", "the occasion has a Czech calendar name", s.czech);
+check(s.czech && s.czech.banner === "Světový den polyamorie", "the occasion has a visible Czech name", s.czech);
 check(s.normal && s.normal.room === "cuddly" && s.normal.polyVisible === "hidden" &&
   s.normal.hostsVisible === "visible" && s.normal.authoredSlot && s.normal.establishedOrder && s.normal.blanketHome,
   "an ordinary Cuddly day keeps its original people, prop and blanket hierarchy", s.normal);

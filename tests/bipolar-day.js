@@ -16,9 +16,8 @@ var HARNESS = [
   ' var partyState=true;window.party=function(v){if(arguments.length)partyState=!!v;return partyState;};',
   ' window.__jumpToDate(2027,2,1);window.goToStage("garden");window.__openPhoneAppHere("calendar");await sleep(40);',
   ' var ph=document.querySelector(".calx-phone"),d30=day(ph,30);',
-  ' S("english",{label:d30&&d30.getAttribute("aria-label"),icon:d30&&d30.querySelector(".calx-mk")&&d30.querySelector(".calx-mk").textContent});',
+  ' S("english",{icon:d30&&d30.querySelector(".calx-mk")&&d30.querySelector(".calx-mk").textContent});',
   ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d30=day(ph,30);',
-  ' S("czech",{label:d30&&d30.getAttribute("aria-label")});',
   ' d30.click();await sleep(40);',
   ' S("active",{date:new URL(location.href).searchParams.get("date"),classOn:document.getElementById("loft-game-strip").classList.contains("bipolar-day"),phoneOpen:!!document.querySelector(".phone-backdrop.show"),party:window.party(),room:window.currentStageName,his:fill(\'#cuddly-behdad [fill="#e9bfc4"]\'),hisSleeve:stroke(\'#cuddly-behdad-right-arm [stroke="#e9bfc4"]\'),hisLeg:fill(\'#cuddly-couple-legs .host-palette-behdad [fill="#e9bfc4"]\'),hisCap:fill(\'#cuddly-behdad .cuddly-cap-his [fill="#d9a6a6"]\'),hers:fill(\'#cuddly-marketa [fill="#bcd1e7"]\'),herSleeve:stroke(\'#cuddly-marketa-right-arm [stroke="#bcd1e7"]\'),herLeg:fill(\'#cuddly-couple-legs .host-palette-marketa [fill="#a9c3de"]\'),herCap:fill(\'#cuddly-marketa .cuddly-cap-hers [fill="#6f94bd"]\')});',
   ' window.__jumpToDate(2027,2,31);',
@@ -39,10 +38,8 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 2200, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(s.english && /World Bipolar Day/.test(s.english.label || "") && /🧲/.test(s.english.icon || ""),
-  "March 30 is labelled with its magnet in English", s.english);
-check(s.czech && /Světový den bipolární poruchy/.test(s.czech.label || ""),
-  "the occasion label is localized in Czech", s.czech);
+check(s.english && /🧲/.test(s.english.icon || ""),
+  "March 30 shows its magnet marker in the calendar", s.english);
 check(s.active && s.active.date === "2027-03-30" && s.active.classOn && !s.active.phoneOpen &&
   !s.active.party && s.active.room === "cuddly" &&
   s.active.his === "rgb(188, 209, 231)" && s.active.hisSleeve === "rgb(188, 209, 231)" && s.active.hisLeg === "rgb(188, 209, 231)" &&

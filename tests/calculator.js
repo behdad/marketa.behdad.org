@@ -9,15 +9,16 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   'window.__openPhoneApp("calculator");var shell=document.querySelector(".phone-shell");',
   'function key(t){return Array.from(shell.querySelectorAll(".pc-key")).find(function(b){return b.textContent===t;});}',
-  'function snap(){var a=shell.querySelector(".pc-abacus"),rods=a.querySelectorAll(".pc-abacus-rod");return {label:a.getAttribute("aria-label"),rods:rods.length,overflow:!!a.querySelector(".pc-abacus-overflow"),gap:a.style.getPropertyValue("--abacus-gap"),rodWidth:a.style.getPropertyValue("--rod-width"),run:Number(a.dataset.animationRun||0)};}',
+  'function abacusValue(a){var overflow=a.querySelector(".pc-abacus-overflow");if(overflow)return overflow.textContent;var value="",rods=a.querySelectorAll(".pc-abacus-rod");rods.forEach(function(rod){value+=String((rod.querySelector(".heaven.engaged")?5:0)+rod.querySelectorAll(".earth.engaged").length);if(rod.classList.contains("decimal"))value+=".";});return (a.querySelector(".pc-abacus-sign")?"-":"")+(value||"0");}',
+  'function snap(){var a=shell.querySelector(".pc-abacus"),rods=a.querySelectorAll(".pc-abacus-rod");return {value:abacusValue(a),rods:rods.length,overflow:!!a.querySelector(".pc-abacus-overflow"),gap:a.style.getPropertyValue("--abacus-gap"),rodWidth:a.style.getPropertyValue("--rod-width"),run:Number(a.dataset.animationRun||0)};}',
   'var a=shell.querySelector(".pc-abacus");',
-  'var initialBead=a.querySelector(".pc-bead").getBoundingClientRect();S("initial",{alwaysVisible:getComputedStyle(a).display==="flex",atBottom:a===shell.querySelector(".phone-calc").lastElementChild,label:a.getAttribute("aria-label"),keyHeight:key("7").getBoundingClientRect().height,beadWidth:initialBead.width,beadHeight:initialBead.height});',
-  '["1","2","3","⌫"].forEach(function(t){key(t).click();});S("backspace",{display:shell.querySelector(".pc-display").textContent,label:key("⌫").getAttribute("aria-label"),percentGone:!key("%")});',
+  'var initialBead=a.querySelector(".pc-bead").getBoundingClientRect();S("initial",{alwaysVisible:getComputedStyle(a).display==="flex",atBottom:a===shell.querySelector(".phone-calc").lastElementChild,value:abacusValue(a),keyHeight:key("7").getBoundingClientRect().height,beadWidth:initialBead.width,beadHeight:initialBead.height});',
+  '["1","2","3","⌫"].forEach(function(t){key(t).click();});S("backspace",{display:shell.querySelector(".pc-display").textContent,key:key("⌫").textContent,percentGone:!key("%")});',
   'key("AC").click();["1","2","3","4","5","6","7","8","9","0"].forEach(function(t){key(t).click();});S("compressed",snap());',
   'key("AC").click();["7","+","8"].forEach(function(t){key(t).click();});',
-  'var seen=[];new MutationObserver(function(){seen.push(a.getAttribute("aria-label"));}).observe(a,{attributes:true,attributeFilter:["aria-label"]});',
+  'var seen=[];new MutationObserver(function(){seen.push(abacusValue(a));}).observe(a,{attributes:true,attributeFilter:["class"],childList:true,subtree:true});',
   'key("=").click();S("additionStart",snap());',
-  'setTimeout(function(){try{S("additionEnd",{snap:snap(),display:shell.querySelector(".pc-display").textContent,seen:seen.slice()});var run=snap().run;key("=").click();S("replay",{before:run,after:snap().run,label:snap().label});',
+  'setTimeout(function(){try{S("additionEnd",{snap:snap(),display:shell.querySelector(".pc-display").textContent,seen:seen.slice()});var run=snap().run;key("=").click();S("replay",{before:run,after:snap().run,value:snap().value});',
   'setTimeout(function(){try{key("AC").click();["1","2","×","1","2","="].forEach(function(t){key(t).click();});S("multiplyStart",snap());',
   'setTimeout(function(){try{S("multiplyEnd",{snap:snap(),display:shell.querySelector(".pc-display").textContent});',
   'key("AC").click();["9","9","9","9","9","9","9","9","9","9","9","9","×","9","9","9","9","9","9","9","9","9","9","9","9","="].forEach(function(t){key(t).click();});',
@@ -41,18 +42,18 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 7200, { patchRaf: true });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(s.initial.alwaysVisible && s.initial.atBottom && s.initial.label === "Abacus result: 0", "abacus is always visible at the bottom and starts at zero", s.initial);
+check(s.initial.alwaysVisible && s.initial.atBottom && s.initial.value === "0", "abacus is always visible at the bottom and starts at zero", s.initial);
 check(s.initial.beadWidth >= 10 && s.initial.beadHeight >= 5, "initial layout gives beads their full horizontal shape", s.initial);
 check(s.initial.keyHeight <= 42, "calculator keys are shortened to leave room for the abacus", s.initial.keyHeight);
-check(s.backspace.display === "12" && s.backspace.label === "Backspace" && s.backspace.percentGone, "backspace replaces percent and removes one entered digit", s.backspace);
+check(s.backspace.display === "12" && s.backspace.key === "⌫" && s.backspace.percentGone, "the visible backspace key replaces percent and removes one entered digit", s.backspace);
 check(s.compressed.rods === 10 && Number(s.compressed.gap.replace("px", "")) <= 2 && Number(s.compressed.rodWidth.replace("px", "")) < 22, "extra columns compress rod width and spacing instead of clipping", s.compressed);
-check(s.additionStart.label === "Abacus result: 7", "addition animation begins from the left operand", s.additionStart);
-check(s.additionEnd.display === "15" && s.additionEnd.snap.label === "Abacus result: 15", "addition finishes on the exact displayed result", s.additionEnd);
-check(s.additionEnd.seen.some(function(x){return x === "Abacus result: 10";}), "addition animates through the units carry into ten", s.additionEnd.seen);
-check(s.replay.after === s.replay.before + 1 && s.replay.label === "Abacus result: 7", "pressing = again replays the same operation from its original operand", s.replay);
-check(s.multiplyStart.label === "Abacus result: 0", "multiplication starts from a cleared accumulator", s.multiplyStart);
-check(s.multiplyEnd.display === "144" && s.multiplyEnd.snap.label === "Abacus result: 144", "multiplication accumulates partial products to the final result", s.multiplyEnd);
-check(s.overflow.overflow && s.overflow.rods === 0 && s.overflow.label === "Too many digits for the abacus", "an over-capacity result replaces the rods with an accessible infinity", s.overflow);
+check(Number(s.additionStart.value) === 7, "addition animation begins from the left operand", s.additionStart);
+check(s.additionEnd.display === "15" && s.additionEnd.snap.value === "15", "addition finishes on the exact displayed result", s.additionEnd);
+check(s.additionEnd.seen.some(function(x){return x === "10";}), "addition animates through the units carry into ten", s.additionEnd.seen);
+check(s.replay.after === s.replay.before + 1 && Number(s.replay.value) === 7, "pressing = again replays the same operation from its original operand", s.replay);
+check(Number(s.multiplyStart.value) === 0, "multiplication starts from a cleared accumulator", s.multiplyStart);
+check(s.multiplyEnd.display === "144" && s.multiplyEnd.snap.value === "144", "multiplication accumulates partial products to the final result", s.multiplyEnd);
+check(s.overflow.overflow && s.overflow.rods === 0 && s.overflow.value === "∞", "an over-capacity result visibly replaces the rods with infinity", s.overflow);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

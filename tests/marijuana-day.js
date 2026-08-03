@@ -15,8 +15,8 @@ var HARNESS = [
   ' document.hasFocus=function(){return true;};window.__gameStarted=function(){return true;};',
   ' window.__jumpToDate(2027,3,20);window.party(true);window.__openPhoneAppHere("calendar");await sleep(40);',
   ' var ph=document.querySelector(".calx-phone"),d20=day(ph,20);',
-  ' S("english",{label:d20&&d20.getAttribute("aria-label"),icon:d20&&d20.querySelector(".calx-mk")&&d20.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
-  ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d20=day(ph,20);S("czech",{label:d20&&d20.getAttribute("aria-label")});',
+  ' S("english",{icon:d20&&d20.querySelector(".calx-mk")&&d20.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
+  ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d20=day(ph,20);S("czech",{banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
   ' setLang("en");ph=document.querySelector(".calx-phone");d20=day(ph,20);d20.click();await sleep(60);',
   ' var behdad=document.getElementById("cuddly-behdad");S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,party:window.party(),smoking:behdad.classList.contains("smoking-joint"),status:window.__marijuanaDayStatus()});',
   ' window.__jumpToDate(2027,3,21);S("leave",{smoking:behdad.classList.contains("smoking-joint"),status:window.__marijuanaDayStatus(),tick:window.__marijuanaDayTick()});',
@@ -40,11 +40,10 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 3400, { patchRaf: true, seedRandom
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(s.english && s.english.label === "20. 420 (Marijuana)" &&
-  s.english.banner === "420 (Marijuana)" && /🌿/.test(s.english.icon || ""),
-  "April 20 uses its canonical English calendar and ribbon name", s.english);
-check(s.czech && s.czech.label === "20. 420 (marihuana)",
-  "April 20 has a concise Czech calendar name", s.czech);
+check(s.english && s.english.banner === "420 (Marijuana)" && /🌿/.test(s.english.icon || ""),
+  "April 20 uses its canonical English occasion banner", s.english);
+check(s.czech && s.czech.banner === "420 (marihuana)",
+  "April 20 has a concise visible Czech name", s.czech);
 check(s.activate && !s.activate.phone && s.activate.room === "cuddly" && !s.activate.party &&
   s.activate.smoking && s.activate.status.active && s.activate.status.pending,
   "activation closes Calendar, ends the party, pans Cuddly and starts Behdad smoking", s.activate);

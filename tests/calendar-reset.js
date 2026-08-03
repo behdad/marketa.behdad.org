@@ -12,7 +12,7 @@ var HARNESS = [
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
   "  function ymd(d){return [d.getFullYear(),d.getMonth()+1,d.getDate()].join('-');}",
   "  function shown(el){return !!el&&!el.hidden&&getComputedStyle(el).display!=='none';}",
-  "  function button(el){return {exists:!!el,shown:shown(el),disabled:el&&el.disabled,title:el&&el.title,aria:el&&el.getAttribute('aria-label')};}",
+  "  function button(el){return {exists:!!el,shown:shown(el),disabled:el&&el.disabled,text:el&&el.textContent.trim()};}",
   "  var report={errors:[],steps:{}}; function S(k,v){report.steps[k]=v;}",
   "  async function run(){",
   "    var live=ymd(new Date());",
@@ -53,12 +53,12 @@ var s=r.steps||{},failures=0;
 function check(ok,msg,detail){if(ok)console.log("  ✓ "+msg);else{failures++;console.log("  ✗ "+msg+(detail?"   ["+JSON.stringify(detail)+"]":""));}}
 
 console.log("rsvp.html Calendar reset ownership:");
-check(s.phoneTodayBefore&&s.phoneTodayBefore.exists&&s.phoneTodayBefore.shown&&!s.phoneTodayBefore.disabled&&s.phoneTodayBefore.title==="today"&&s.phoneTodayBefore.aria==="today","phone Calendar exposes its original English Today control while a date is selected",s.phoneTodayBefore);
+check(s.phoneTodayBefore&&s.phoneTodayBefore.exists&&s.phoneTodayBefore.shown&&!s.phoneTodayBefore.disabled&&s.phoneTodayBefore.text==="↻","phone Calendar exposes its visible Today control while a date is selected",s.phoneTodayBefore);
 check(s.phoneTodayAfter&&s.phoneTodayAfter.button.exists&&s.phoneTodayAfter.button.shown&&!s.phoneTodayAfter.button.disabled&&s.phoneTodayAfter.now===s.phoneTodayAfter.live&&s.phoneTodayAfter.date===null&&s.phoneTodayAfter.keep==="app"&&s.phoneTodayAfter.open,"phone Today returns to the real day but remains permanently available",s.phoneTodayAfter);
-check(s.monitorToday&&s.monitorToday.button.exists&&s.monitorToday.button.shown&&!s.monitorToday.button.disabled&&s.monitorToday.button.title==="dnes"&&s.monitorToday.button.aria==="dnes"&&s.monitorToday.open,"monitor Calendar permanently retains its Czech Today control",s.monitorToday);
-check(s.dateOnlyShown&&s.dateOnlyShown.reset.exists&&s.dateOnlyShown.reset.shown&&!s.dateOnlyShown.reset.disabled&&s.dateOnlyShown.reset.title==="Reset date to today"&&s.dateOnlyShown.reset.aria==="Reset date to today"&&s.dateOnlyShown.nav&&JSON.stringify(s.dateOnlyShown.order)===JSON.stringify(["loft-dateprev","loft-dateprevday","loft-datepill","loft-datereset","loft-datenextday","loft-datenext"]),"an explicit date reveals the English room-HUD Reset immediately left of Next",s.dateOnlyShown);
+check(s.monitorToday&&s.monitorToday.button.exists&&s.monitorToday.button.shown&&!s.monitorToday.button.disabled&&s.monitorToday.button.text==="↻"&&s.monitorToday.open,"monitor Calendar permanently retains its visible Today control",s.monitorToday);
+check(s.dateOnlyShown&&s.dateOnlyShown.reset.exists&&s.dateOnlyShown.reset.shown&&!s.dateOnlyShown.reset.disabled&&s.dateOnlyShown.reset.text==="↺"&&s.dateOnlyShown.nav&&JSON.stringify(s.dateOnlyShown.order)===JSON.stringify(["loft-dateprev","loft-dateprevday","loft-datepill","loft-datereset","loft-datenextday","loft-datenext"]),"an explicit date reveals the room-HUD Reset immediately left of Next",s.dateOnlyShown);
 check(s.dateOnlyReset&&s.dateOnlyReset.now===s.dateOnlyReset.live&&s.dateOnlyReset.date===null&&s.dateOnlyReset.keep==="1"&&s.dateOnlyReset.hash==="#play"&&s.dateOnlyReset.room==="cuddly"&&!s.dateOnlyReset.nav&&!s.dateOnlyReset.reset,"date-only Reset returns to real today and hides the unneeded HUD without disturbing room or URL state",s.dateOnlyReset);
-check(s.combinedShown&&s.combinedShown.reset.exists&&s.combinedShown.reset.shown&&!s.combinedShown.reset.disabled&&s.combinedShown.reset.title==="Vrátit datum na dnešek"&&s.combinedShown.reset.aria==="Vrátit datum na dnešek"&&s.combinedShown.dateNav&&s.combinedShown.timeNav,"the same room-HUD Reset localizes to Czech",s.combinedShown);
+check(s.combinedShown&&s.combinedShown.reset.exists&&s.combinedShown.reset.shown&&!s.combinedShown.reset.disabled&&s.combinedShown.reset.text==="↺"&&s.combinedShown.dateNav&&s.combinedShown.timeNav,"the room-HUD Reset remains visible when the Czech UI has date and time overrides",s.combinedShown);
 check(s.combinedReset&&s.combinedReset.now===s.combinedReset.live&&s.combinedReset.date===null&&s.combinedReset.time==="05:31"&&s.combinedReset.keep==="1"&&s.combinedReset.hash==="#play"&&s.combinedReset.room==="cuddly"&&s.combinedReset.dateNav&&s.combinedReset.timeNav&&!s.combinedReset.reset,"date reset preserves time and leaves the HUDs visible for that remaining override",s.combinedReset);
 check(Array.isArray(r.errors)&&r.errors.length===0,"no uncaught page errors",r.errors);
 

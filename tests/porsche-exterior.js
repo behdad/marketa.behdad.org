@@ -39,7 +39,7 @@ check(/#entrance-porsche-side-glass,[\s\S]*?#entrance-porsche-passenger-glass\{[
   "raising the independent window has no inherited roof-animation delay");
 check(/id="entrance-porsche-steering-wheel" transform="translate\(185 253\) scale\(1\.25\) translate\(-190 -248\)"/.test(entrance),
   "the cockpit steering wheel is twenty-five percent larger and shifted five units left and down");
-check(/id="entrance-porsche-occupants" aria-hidden="true" pointer-events="none">[\s\S]*?id="entrance-porsche-behdad-passenger"[\s\S]*?id="entrance-porsche-marketa-driver"/.test(entrance),
+check(/id="entrance-porsche-occupants" pointer-events="none">[\s\S]*?id="entrance-porsche-behdad-passenger"[\s\S]*?id="entrance-porsche-marketa-driver"/.test(entrance),
   "the exterior seats identify Behdad as passenger and Markéta as driver without adding a hit target");
 check(/d="M158 255L182 223Q190 221 196 220Q199 220 197 223L173 256Z"[^>]*stroke-linejoin="round"/.test(entrance),
   "the windshield frame keeps its roof junction while rounding its exposed upper tip");

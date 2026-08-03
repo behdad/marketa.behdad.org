@@ -16,7 +16,7 @@ var HARNESS = [
   " if(marketa)marketa.closest('.browser-tab').click();",
   " if(external)external.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));",
   " report.control=!!external;",
-  " report.label=external&&external.getAttribute('aria-label');",
+  " report.externalIcon=!!(external&&external.querySelector('path'));",
   " report.opened=opened;",
   " var fixedTabs=document.querySelectorAll('.browser-tab [data-i^=\"tab_\"]');",
   " report.fixedCloseButtons=[].every.call(fixedTabs,function(label){return !!label.closest('.browser-tab').querySelector('.tab-x');});",
@@ -51,7 +51,7 @@ if (!r) { console.error("  ✗ no report captured"); process.exit(1); }
 if (r.harnessError) console.error("  harness: " + r.harnessError);
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("browser harness completed", !r.harnessError);
-ok("external-tab control is labelled", r.control && r.label === "Open in a real tab");
+ok("external-tab control is visibly rendered", r.control && r.externalIcon);
 ok("external-tab control opens the active tab safely",
   r.opened && r.opened.url === "https://marketajakesova.ca/" &&
   r.opened.target === "_blank" && r.opened.features === "noopener");

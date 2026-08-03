@@ -17,9 +17,9 @@ var HARNESS = [
   ' window.__jumpToDate(2027,3,19);',
   ' window.__openPhoneAppHere("calendar");await sleep(40);',
   ' var ph=document.querySelector(".calx-phone"),d19=day(ph,19);',
-  ' S("english",{label:d19&&d19.getAttribute("aria-label"),icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent,status:window.__bicycleDayStatus()});',
+  ' S("english",{icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent,status:window.__bicycleDayStatus()});',
   ' setLang("cs");await sleep(30);ph=document.querySelector(".calx-phone");d19=day(ph,19);',
-  ' S("czech",{label:d19&&d19.getAttribute("aria-label"),icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent});',
+  ' S("czech",{icon:d19&&d19.querySelector(".calx-mk")&&d19.querySelector(".calx-mk").textContent,banner:document.getElementById("occasion-banner")&&document.getElementById("occasion-banner").textContent});',
   ' setLang("en");ph=document.querySelector(".calx-phone");d19=day(ph,19);d19.click();await sleep(60);var trip=window.__tripState&&window.__tripState();',
   ' S("activate",{phone:!!document.querySelector(".phone-backdrop.show"),room:window.currentStageName,trip:trip,card:document.getElementById("mol-card-acid").classList.contains("mol-show"),status:window.__bicycleDayStatus()});',
   ' window.__jumpToDate(2027,3,20);',
@@ -46,12 +46,12 @@ var r = lib.runPageSync("rsvp.html", HARNESS, 3200, { patchRaf: true, seedRandom
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = r.steps;
 check(r.errors.length === 0, "no uncaught page errors", r.errors);
-check(s.english && s.english.label === "19. Bicycle Day (LSD)" && /🚲/.test(s.english.icon || "") &&
+check(s.english && /🚲/.test(s.english.icon || "") &&
   s.english.banner === "Bicycle Day (LSD)" &&
   s.english.status.active && s.english.status.pending,
-  "April 19 is labelled and arms its cadence in the English calendar", s.english);
-check(s.czech && s.czech.label === "19. Den na kole (LSD)" && /🚲/.test(s.czech.icon || ""),
-  "the April 19 label is localized in the Czech calendar", s.czech);
+  "April 19 shows its English occasion banner and arms its cadence", s.english);
+check(s.czech && s.czech.banner === "Den na kole (LSD)" && /🚲/.test(s.czech.icon || ""),
+  "the visible April 19 occasion is localized in Czech", s.czech);
 check(s.activate && !s.activate.phone && s.activate.room === "garden" &&
   s.activate.trip && s.activate.trip.active && s.activate.trip.variant === "acid" &&
   s.activate.card && s.activate.status.pending,

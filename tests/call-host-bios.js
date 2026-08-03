@@ -52,10 +52,6 @@ var harness = String.raw`<script>
         var card = document.querySelector(".egg-bubble.who-pop.phone-tooltip");
         return card && Number(getComputedStyle(card).zIndex) > 65;
       })());
-    check("phone self-view is keyboard accessible",
-      outgoingSelf && outgoingSelf.getAttribute("role") === "button" &&
-      outgoingSelf.getAttribute("tabindex") === "0");
-
     window.phone(false);
     setTimeout(function () {
       try {

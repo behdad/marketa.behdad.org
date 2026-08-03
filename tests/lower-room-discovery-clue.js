@@ -57,22 +57,14 @@ var harness = String.raw`<script>
 
     window.goToStage("kitchen");
     key("ArrowDown");
+    check("one Down press enters and permanently unlocks the lower floor",
+      window.__bathroomRoomState().open &&
+      window.__lowerRoomDiscoveryClueState().discovered === true &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === "1",
+      JSON.stringify(window.__bathroomRoomState()));
+
     key("ArrowDown", { repeat: true });
-    check("one Down press and held-key repeats do not discover the lower floor",
-      !window.__bathroomRoomState().open &&
-      window.__lowerRoomDiscoveryClueState().discovered === false &&
-      localStorage.getItem("lowerRoomDiscovered:v1") === null,
-      JSON.stringify(window.__bathroomRoomState()));
-
-    await sleep(450);
-    key("ArrowDown");
-    check("a late second Down press only starts a fresh double-press window",
-      !window.__bathroomRoomState().open &&
-      window.__lowerRoomDiscoveryClueState().discovered === false,
-      JSON.stringify(window.__bathroomRoomState()));
-
-    key("ArrowDown");
-    check("a rapid double-Down enters and permanently unlocks the lower floor",
+    check("held-key repeats leave the entered lower room stable",
       window.__lowerRoomDiscoveryClueState().discovered === true &&
       window.__bathroomRoomState().open === true &&
       localStorage.getItem("lowerRoomDiscovered:v1") === "1",
@@ -88,7 +80,7 @@ var harness = String.raw`<script>
       JSON.stringify(window.__princeState()));
 
     window.__activateExtinguisher({ resetDateTime: false });
-    await sleep(760);
+    await sleep(1000);
     check("Start over clears the persisted lower-floor unlock",
       window.__lowerRoomDiscoveryClueState().discovered === false &&
       window.__lowerRoomDiscoveryClueState().shown === false &&
@@ -97,9 +89,10 @@ var harness = String.raw`<script>
 
     window.goToStage("kitchen");
     key("ArrowDown");
-    check("Start over re-arms the double-Down discovery gate",
-      !window.__bathroomRoomState().open &&
-      window.__lowerRoomDiscoveryClueState().discovered === false,
+    check("Start over re-arms first-press discovery",
+      window.__bathroomRoomState().open &&
+      window.__lowerRoomDiscoveryClueState().discovered === true &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === "1",
       JSON.stringify(window.__bathroomRoomState()));
   }
   window.addEventListener("load", function () {

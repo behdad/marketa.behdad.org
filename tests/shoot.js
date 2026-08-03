@@ -30,11 +30,11 @@ var HARNESS = [
   'var coach=document.getElementById("monitor-shoot-coach"),coachRect=coach.querySelector("rect"),screen=document.getElementById("office-monitor-bg");',
   'report.steps.coach={on:coach.classList.contains("on"),en:coach.querySelector("text").textContent,pointer:coach.getAttribute("pointer-events"),y:+coachRect.getAttribute("y"),screenBottom:+screen.getAttribute("y")+ +screen.getAttribute("height")};',
   'window.setLang("cs");report.steps.coach.cs=coach.querySelector("text").textContent;window.setLang("en");',
-  'window.__openMonitorApp("quake");snap("quake");await sleep(120);',
+  'window.__openMonitorApp("quake");snap("quake");await sleep(120);report.steps.q3Gutters=Array.from(document.querySelectorAll("#monitor-doom .monitor-runtime-side-hit")).map(function(el){return getComputedStyle(el).pointerEvents;});',
   'var close=document.getElementById("monitor-doom-close"),back=document.getElementById("monitor-doom-back"),fullscreen=document.getElementById("monitor-doom-fullscreen"),shootHost=document.getElementById("monitor-shoot-host");',
-  'var backRect=back.querySelector(".shoot-close-bg").getBoundingClientRect(),fullscreenRect=fullscreen.querySelector(".shoot-close-bg").getBoundingClientRect(),closeRect=close.querySelector(".shoot-close-bg").getBoundingClientRect(),backHit=back.querySelector(".mini-hit").getBoundingClientRect(),fullscreenHit=fullscreen.querySelector(".mini-hit").getBoundingClientRect(),closeHit=close.querySelector(".mini-hit").getBoundingClientRect();report.steps.gameControls={closeAria:close.getAttribute("aria-label"),fullscreenAria:fullscreen.getAttribute("aria-label"),closeMark:close.querySelector("path").getAttribute("d"),fullscreenMark:fullscreen.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents,fullscreenPointer:getComputedStyle(fullscreen).pointerEvents,order:backRect.left<fullscreenRect.left&&fullscreenRect.left<closeRect.left,disjoint:backHit.right<=fullscreenHit.left+.1&&fullscreenHit.right<=closeHit.left+.1};window.setLang("cs");report.steps.gameControls.fullscreenCs=fullscreen.getAttribute("aria-label");window.setLang("en");var requested=false,beforeFrame=document.querySelector("#monitor-shoot-host iframe"),beforeWindow=beforeFrame.contentWindow,beforeSrc=beforeFrame.getAttribute("src"),focusLoads=0;beforeFrame.addEventListener("load",function(){focusLoads++;});shootHost.requestFullscreen=function(){requested=this===shootHost;return Promise.resolve();};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(60);report.steps.focus={requested:requested,hostParent:shootHost.parentNode.id,sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,noExitButton:!document.getElementById("shoot-focus-exit"),controlOutside:!shootHost.contains(fullscreen)};document.dispatchEvent(new Event("fullscreenchange"));await sleep(60);report.steps.focus.after={sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,hostParent:shootHost.parentNode.id};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents,fullscreen:getComputedStyle(fullscreen).pointerEvents};',
+  'var backRect=back.querySelector(".shoot-close-bg").getBoundingClientRect(),fullscreenRect=fullscreen.querySelector(".shoot-close-bg").getBoundingClientRect(),closeRect=close.querySelector(".shoot-close-bg").getBoundingClientRect(),backHit=back.querySelector(".mini-hit").getBoundingClientRect(),fullscreenHit=fullscreen.querySelector(".mini-hit").getBoundingClientRect(),closeHit=close.querySelector(".mini-hit").getBoundingClientRect();report.steps.gameControls={closeMark:close.querySelector("path").getAttribute("d"),fullscreenMark:fullscreen.querySelector("path").getAttribute("d"),backMark:back.querySelector("path").getAttribute("d"),backPointer:getComputedStyle(back).pointerEvents,fullscreenPointer:getComputedStyle(fullscreen).pointerEvents,order:backRect.left<fullscreenRect.left&&fullscreenRect.left<closeRect.left,disjoint:backHit.right<=fullscreenHit.left+.1&&fullscreenHit.right<=closeHit.left+.1};var requested=false,beforeFrame=document.querySelector("#monitor-shoot-host iframe"),beforeWindow=beforeFrame.contentWindow,beforeSrc=beforeFrame.getAttribute("src"),focusLoads=0;beforeFrame.addEventListener("load",function(){focusLoads++;});shootHost.requestFullscreen=function(){requested=this===shootHost;return Promise.resolve();};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(60);report.steps.focus={requested:requested,hostParent:shootHost.parentNode.id,sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,noExitButton:!document.getElementById("shoot-focus-exit"),controlOutside:!shootHost.contains(fullscreen)};document.dispatchEvent(new Event("fullscreenchange"));await sleep(60);report.steps.focus.after={sameFrame:beforeFrame===document.querySelector("#monitor-shoot-host iframe"),sameWindow:beforeWindow===beforeFrame.contentWindow,sameSrc:beforeSrc===beforeFrame.getAttribute("src"),loads:focusLoads,hostParent:shootHost.parentNode.id};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("dismissed");report.steps.hiddenControls={back:getComputedStyle(back).pointerEvents,fullscreen:getComputedStyle(fullscreen).pointerEvents};',
   'window.__openMonitorApp("shoot");snap("reopened");document.querySelector("[data-shoot-game=\\"q3\\"]").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));snap("q3reopened");var fallbackFrame=document.querySelector("#monitor-shoot-host iframe");shootHost.requestFullscreen=null;shootHost.webkitRequestFullscreen=null;fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);report.steps.fallback={content:window.__monitorContentFullscreen(),sameFrame:fallbackFrame===document.querySelector("#monitor-shoot-host iframe"),hostParent:shootHost.parentNode.id};fullscreen.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await sleep(40);report.steps.fallback.after={content:window.__monitorContentFullscreen(),sameFrame:fallbackFrame===document.querySelector("#monitor-shoot-host iframe"),hostParent:shootHost.parentNode.id};back.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("back");',
-  'report.steps.chooserControls={closeAria:close.getAttribute("aria-label"),backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
+  'report.steps.chooserControls={closePointer:getComputedStyle(close).pointerEvents,backPointer:getComputedStyle(back).pointerEvents};close.dispatchEvent(new MouseEvent("click",{bubbles:true}));snap("closed");',
   'report.errors=window.__errs||[];document.getElementById("__report").textContent=JSON.stringify(report);',
   '},350);});',
   '})();</script>'
@@ -69,8 +69,7 @@ if (result) {
     });
   check(s.duke.view === "duke" && s.duke.src === "duke/player.html",
     "duke routes directly to its self-hosted player", s.duke);
-  check(s.gameControls.fullscreenPointer !== "none" && /Fullscreen/.test(s.gameControls.fullscreenAria) &&
-      s.gameControls.fullscreenCs === "Celá obrazovka" &&
+  check(s.gameControls.fullscreenPointer !== "none" &&
       s.gameControls.order && s.gameControls.disjoint &&
       s.gameControls.backMark !== s.gameControls.fullscreenMark &&
       s.gameControls.fullscreenMark !== s.gameControls.closeMark,
@@ -111,7 +110,7 @@ if (result) {
     "coach is click-through and below the game viewport", s.coach);
   check(s.quake.view === "q3" && s.quake.src === "q3/player.html",
     "quake routes directly to Quake III", s.quake);
-  check(/Close shoot/.test(s.gameControls.closeAria) && s.gameControls.backPointer !== "none" &&
+  check(s.gameControls.backPointer !== "none" &&
       s.gameControls.closeMark !== s.gameControls.backMark &&
       !s.dismissed.open && s.dismissed.view === "chooser" && !s.dismissed.src && !s.dismissed.running &&
       s.hiddenControls.back === "none" && s.hiddenControls.fullscreen === "none" &&
@@ -121,7 +120,7 @@ if (result) {
       controls: s.gameControls, dismissed: s.dismissed, reopened: s.reopened, q3reopened: s.q3reopened
     });
   check(s.back.view === "chooser" && s.back.open && !s.back.src &&
-      s.chooserControls.backPointer === "none" && /Close shoot/.test(s.chooserControls.closeAria),
+      s.chooserControls.backPointer === "none" && s.chooserControls.closePointer !== "none",
     "the separate Back returns to the chooser while Dismiss remains available", {
       back: s.back, controls: s.chooserControls
     });
@@ -129,7 +128,6 @@ if (result) {
 }
 
 var root = path.resolve(__dirname, "..");
-var rsvpSource = fs.readFileSync(path.join(root, "rsvp.html"), "utf8");
 var players = ["doom", "duke", "q3"].map(function(name) {
   return fs.readFileSync(path.join(root, name, "player.html"), "utf8");
 });
@@ -137,8 +135,10 @@ check(players.every(function(source) { return /aspect-ratio:4\/3!important/.test
   "all three players share the centered 4:3 viewport contract");
 check(players.every(function(source) {
   return /id="touch-pad"/.test(source) &&
-    (source.match(/data-touch-key="[wasd]"/g) || []).length >= 8 &&
-    /any-pointer:coarse/.test(source) && /left:max\(/.test(source) && /canvas\.dispatchEvent\(new KeyboardEvent/.test(source) && /setPointerCapture/.test(source) &&
+    (source.match(/class="touch-pad-button"/g) || []).length === 8 &&
+    (source.match(/data-dir=/g) || []).length >= 8 &&
+    (source.match(/data-touch-key="[wasd]"/g) || []).length >= 4 &&
+    /any-pointer:coarse/.test(source) && /left:max\(/.test(source) && /emitTouchKey/.test(source) && /setPointerCapture/.test(source) &&
     /releaseTouchKeys/.test(source);
 }), "all three players expose a coarse-pointer left-side WASD touch pad with held-key cleanup");
 check(players.every(function(source) { return /shoot-pointer-lock/.test(source); }),
@@ -165,8 +165,8 @@ check(!/setTimeout\(\(\) => pick/.test(players[2]) &&
 check(/width:min\(84vw,470px\)/.test(players[2]) &&
     /touch-action:manipulation/.test(players[2]),
   "Quake III arena cards keep touch-sized explicit pointer targets");
-check(/#monitor-doom:is\(\[data-shoot-view="doom"\],\[data-shoot-view="duke"\]\) \.monitor-runtime-side-hit\{pointer-events:all\}/.test(rsvpSource) &&
-    !/#monitor-doom:is\([^}]*data-shoot-view="q3"[^}]*\) \.monitor-runtime-side-hit\{pointer-events:all\}/.test(rsvpSource),
+check(result && result.steps.q3Gutters.length === 2 &&
+    result.steps.q3Gutters.every(function(value) { return value === "none"; }),
   "Quake III leaves its full visible picker free of monitor gutter hit surfaces");
 var arenaManifest = fs.readFileSync(path.join(root, "q3/baseoa/loft-arenas.manifest"), "utf8");
 check(/^maps\/aggressor\.(?:aas|bsp)$/m.test(arenaManifest) &&

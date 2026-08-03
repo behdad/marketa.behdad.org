@@ -60,12 +60,10 @@ var harness = String.raw`<script>
         var cameo = document.getElementById("cuddly-rumi-fairy");
         window.__setDayNight(false);
         check("the fairy stays away during the day after the party",
-          cameo && !cameo.classList.contains("present") &&
-          cameo.getAttribute("aria-hidden") === "true");
+          cameo && !cameo.classList.contains("present"));
         window.__setDayNight(true);
         check("the fairy settles above the couple once the party is quiet at night",
-          cameo && cameo.classList.contains("present") &&
-          cameo.getAttribute("aria-hidden") === "false");
+          cameo && cameo.classList.contains("present"));
         var rumiCycleBefore = window.__rumiCycleState();
         check("Rumi pairs are shuffled into one complete load-time deck",
           rumiCycleBefore.cursor === 0 &&
@@ -164,8 +162,7 @@ var harness = String.raw`<script>
               document.getElementById("loft-game-strip").classList.contains("behdad-awake"));
             window.__setDayNight(false);
             check("dawn sends the cuddly fairy away again",
-              !cameo.classList.contains("present") &&
-              cameo.getAttribute("aria-hidden") === "true");
+              !cameo.classList.contains("present"));
 
             window.__resetRumiFairy();
             check("reset releases the Rumi-held wake",

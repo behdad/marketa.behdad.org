@@ -228,6 +228,11 @@ Visible arrows and dots apply their own frontier rules. Keep progression asserti
 `tests/play.js`, `tests/enter.js`, `tests/phase2-progression.js`, and
 `tests/progression-transitions.js`.
 
+The phase-two `actTwo` sequencer keeps completion, fallback pacing, and caption ownership separate.
+`liveMs` advances fallbacks on attended whole-loft time, while `claimElapsed` advances only when the
+beat's main room is actually visible. The `act_b2` party-switch hinge has no caption timeout: its
+caption and switch pulse retire only when the visitor flips the switch and starts the party.
+
 ## Apps and minigames
 
 The office monitor and pocket phone are separate shells with registry-backed catalogs:

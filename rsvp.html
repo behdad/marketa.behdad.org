@@ -115951,19 +115951,27 @@ function spawnDustMote(container) {
   //     that could un-complete would walk the arc backwards the moment they flipped the
   //     lights back on.
   //  2. COMPLETION AND CAPTION-OWNERSHIP ARE SEPARATE. A beat owns its room's caption for a
-  //     bounded stretch of ATTENDED time (claimMs), then yields it back to the room's own
-  //     rotation while staying live, so it still completes if they get round to it later.
-  //     The final RSVP beat takes the line only after the whole arc has completed.
+  //     bounded stretch of time actually SEEN in that room (claimMs), then yields it back to
+  //     the room's own rotation while staying live, so it still completes if they get round
+  //     to it later. Fallbacks keep their separate whole-loft attended clock. The final RSVP
+  //     beat takes the line only after the whole arc has completed.
   //
   // Per-session, never localStorage: a ~10-minute experience, and a returning visitor who
   // knows the trick shouldn't have the surprise re-explained to them.
-  var armed = false, live = null, liveMs = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null;
+  var armed = false, live = null, liveMs = 0, claimElapsed = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null;
 
   function el(id) { return document.getElementById(id); }
   function isDusk() { var b = el("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
   function bbqDay() { return !!window.__bbqDayPartyOn || !!(window.__isOccasionDate && window.__isOccasionDate() === "bbq"); }
   function partyOn() { return !!window.__gardenPartyOn; }
   function starsOn() { var ws = el("cuddly-wallscreen"); return !!(ws && ws.classList.contains("chan-stars")); }
+  function roomAttended(room) {
+    if (window.currentStageName !== room) return false;
+    if (window.__cinemaRoomOpen || window.__bathroomRoomOpen ||
+        window.__bedroomRoomOpen || window.__entranceRoomOpen) return false;
+    var prince = window.__princeState && window.__princeState();
+    return !(prince && prince.basement);
+  }
   // rule 1, as a helper: read the world, and once it says yes remember it said yes
   function latch(name, live_) { if (live_()) latched[name] = true; return !!latched[name]; }
   function switchPulse(on) { var s = el("balcony-partyswitch"); if (s) s.classList.toggle("invite-pulse", !!on); }
@@ -115977,7 +115985,8 @@ function spawnDustMote(container) {
     { id: "act_b0", room: "balcony", claimMs: 60000, afterMs: 90000,
       done: function () { return latch("dusk", function () { return isDusk() || bbqDay(); }); },
       after: function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); } }, // idled through the nudge → the sun sets itself, once
-    { id: "act_b2", room: "balcony", claimMs: 90000,
+    // The hinge has no caption timeout: only the guest flipping the marked switch retires it.
+    { id: "act_b2", room: "balcony", claimMs: Infinity,
       done: function () { return latch("party", partyOn); },
       enter: function () { switchPulse(true); }, exit: function () { switchPulse(false); } },
     { id: "act_p1", room: "garden", claimMs: 90000, afterMs: 150000,
@@ -116017,7 +116026,7 @@ function spawnDustMote(container) {
     if (next === live) return;
     var prev = beat(live);
     if (prev && prev.exit) prev.exit();
-    live = next; liveMs = 0;
+    live = next; liveMs = 0; claimElapsed = 0;
     if (ACT_MSG[live]) { // the caption lands now; the phone text(s) follow ~5s later so they don't clash
       [].concat(ACT_MSG[live]).forEach(function (mid, i) {
         pendingMsgIds.push(mid);
@@ -116043,8 +116052,9 @@ function spawnDustMote(container) {
     // Window Tetris owns the balcony while it is active. Its play time should not advance
     // the second-act caption pacing.
     if (window.__balconyTetrisState && window.__balconyTetrisState().active) return;
-    liveMs += 1000;
     var b = beat(live);
+    liveMs += 1000; // fallbacks preserve their existing whole-loft attended progression
+    if (b && roomAttended(b.room)) claimElapsed += 1000;
     if (b && b.afterMs && b.after && liveMs >= b.afterMs) { b.after(); advance(); }
   }
 
@@ -116054,7 +116064,7 @@ function spawnDustMote(container) {
     if (!armed || !live || window.__cinematic) return null;
     var b = beat(live);
     if (b && b.silent) return null;
-    if (!b || b.room !== room || liveMs >= b.claimMs) return null;
+    if (!b || b.room !== room || claimElapsed >= b.claimMs) return null;
     return b.id;
   };
   // What the world tells the act. Every ping is fired from an existing site's tail and just
@@ -116104,7 +116114,7 @@ function spawnDustMote(container) {
   };
   window.__actPendingMessages = function () { return pendingMsgIds.slice(); }; // focused lifecycle test hook
   window.__resetActTwo = function () { // the extinguisher: forget the whole arc, strand nothing
-    armed = false; live = null; liveMs = 0; latched = {};
+    armed = false; live = null; liveMs = 0; claimElapsed = 0; latched = {};
     if (ticker) { clearInterval(ticker); ticker = null; }
     if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
     if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
@@ -116112,7 +116122,7 @@ function spawnDustMote(container) {
     switchPulse(false);
   };
   window.__actBeat = function () { return live; }; // test hook
-  window.__actTwoState = function () { return { armed: armed, beat: live, elapsed: liveMs }; }; // focused lifecycle test hook
+  window.__actTwoState = function () { return { armed: armed, beat: live, elapsed: liveMs, claimElapsed: claimElapsed }; }; // focused lifecycle test hook
   window.__actTwoTick = tick; // focused lifecycle test hook
 
   // Hazard A, the one the whole hinge turns on: told "kill the lights", people click the

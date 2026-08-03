@@ -205,6 +205,8 @@ unlock/practice, while the best score remains localStorage-owned. Checkpoints pe
 roadtrip counters but not active presentation, spawn timing, or live entities. Run
 `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`, `tests/entrance-recovery.js`, and
 `tests/entrance-roadtrip.js` for this boundary.
+Street `driveState.position` uses twice the roadtrip world-travel scale so the compact block loops
+briskly; speed, RPM, odometer distance, and `roadtripState.distance` remain unscaled physical values.
 Checkpoint restore marks the first-drive coach complete before the Entrance reopens; a fresh reset
 still owns the four-step lesson, and the dashboard help control remains its explicit replay path.
 

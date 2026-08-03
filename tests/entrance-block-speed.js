@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+"use strict";
+
+var lib = require("./lib");
+
+var HARNESS = [
+  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<script>(function(){',
+  'var report={errors:window.__errs||[]};',
+  'window.addEventListener("load",function(){setTimeout(function(){try{',
+  'window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();',
+  'window.__entranceDriveSetMotion(30,2);var before=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var street=window.__entranceRoomState().drive.position;',
+  'var started=window.__entranceRoadtripStart();window.__entranceDriveSetMotion(30,2);var highwayBefore=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var highway=window.__entranceRoomState().drive.position;',
+  'report.before=before;report.street=street;report.started=started;report.highwayBefore=highwayBefore;report.highway=highway;',
+  '}catch(error){report.errors.push(String(error&&error.stack||error));}',
+  'document.getElementById("__report").textContent=JSON.stringify(report);},140);});',
+  '})();</script>'
+].join("\n");
+
+var result = lib.runPageSync("rsvp.html", HARNESS, 2200, {
+  patchRaf: true,
+  seedRandom: true,
+  urlSuffix: "#play",
+  chromeFlags: "--window-size=1100,900"
+});
+var failed = 0;
+function check(ok, message, detail) {
+  if (ok) console.log("  ✓ " + message);
+  else { failed++; console.log("  ✗ " + message + "   [" + JSON.stringify(detail) + "]"); }
+}
+console.log("rsvp.html block driving travel rate:");
+check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
+var streetTravel = result && Math.abs(result.street - result.before);
+var highwayTravel = result && Math.abs(result.highway - result.highwayBefore);
+check(result && result.started && streetTravel > 0 && highwayTravel > 0 &&
+  Math.abs(streetTravel / highwayTravel - 2) < .03,
+  "the block moves at twice the highway world rate for the same road speed", {
+    streetTravel: streetTravel,
+    highwayTravel: highwayTravel
+  });
+if (failed) process.exit(1);
+console.log("block driving travel-rate assertions passed.");

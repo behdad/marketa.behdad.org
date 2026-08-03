@@ -189,6 +189,9 @@ The roof, door, paired side windows, compartments, and lights remain separate
 car controls. Outside highway mode, closing the dashboard keeps the settled
 street-drive state for the visit.
 
+The compact block is visually compressed, so its scenery passes at twice the
+highway world rate. The speedometer and accumulated distance remain physical.
+
 The six-speed manual follows the 2010 base Boxster's real gearing: RPM is tied to
 road speed in each selected gear, apart from forgiving clutch slip when launching
 in first. Acceleration builds progressively, the limiter is at 7,500 rpm, and a

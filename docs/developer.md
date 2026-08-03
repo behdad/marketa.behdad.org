@@ -143,6 +143,9 @@ current-run elapsed time, distance and scoring, the bounded entity pool, and lif
 the driving step instead of starting a second frame loop. `__entranceRoadtripStart()` and
 `__entranceRoadtripSpawn(type, lane)` are narrow deterministic test seams; player input still goes
 through the dashboard's existing steering, shift, throttle, brake, and dismiss owners.
+Keyboard steering starts at 28% authority, builds to full over 760 ms while held, and adds 22%
+for same-direction presses inside a 420 ms tap window; reversing resets to the gentle baseline.
+The direct touch-wheel input bypasses that transient keyboard ramp.
 
 The drivetrain uses the 2010 base Boxster's six manual ratios (`3.667`, `2.050`, `1.407`, `1.133`,
 `.972`, `.841`), `3.875` final drive, and `235/50 R17` rear-tire circumference. Coupled RPM is derived

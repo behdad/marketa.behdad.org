@@ -34569,6 +34569,16 @@ window.__entranceRoomOpen = false;
     hornTimer: null,
     returning: false
   };
+  var porscheKeyboardSteering = {
+    direction: 0,
+    authority: 0,
+    heldMs: 0,
+    lastPressDirection: 0,
+    lastPressAt: -Infinity
+  };
+  var PORSCHE_KEYBOARD_STEER_BASE = .28;
+  var PORSCHE_KEYBOARD_STEER_BUILD_MS = 760;
+  var PORSCHE_KEYBOARD_STEER_TAP_WINDOW_MS = 420;
   var porscheDoorCloseTimer = null;
   var porscheBodyClickTimer = null;
   var porscheDrag = { active: false, moved: false, suppressClick: false, pointerId: null, startX: 0, startY: 0, startPosition: 0, startLane: 0 };
@@ -38133,7 +38143,31 @@ window.__entranceRoomOpen = false;
   }
   function setPorscheDriveHold(name, held) {
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
-    driveState.holds[name] = !!held;
+    held = !!held;
+    var wasHeld = driveState.holds[name];
+    driveState.holds[name] = held;
+    if ((name === "steerLeft" || name === "steerRight") && wasHeld !== held) {
+      var direction = name === "steerLeft" ? -1 : 1;
+      if (held) {
+        var now = performance.now();
+        var oppositeHeld = direction < 0 ? driveState.holds.steerRight : driveState.holds.steerLeft;
+        var rapidRepeat = !oppositeHeld && porscheKeyboardSteering.lastPressDirection === direction &&
+          now - porscheKeyboardSteering.lastPressAt <= PORSCHE_KEYBOARD_STEER_TAP_WINDOW_MS;
+        porscheKeyboardSteering.direction = direction;
+        porscheKeyboardSteering.heldMs = 0;
+        porscheKeyboardSteering.authority = rapidRepeat ?
+          Math.min(1, Math.max(PORSCHE_KEYBOARD_STEER_BASE, porscheKeyboardSteering.authority) + .22) :
+          PORSCHE_KEYBOARD_STEER_BASE;
+        porscheKeyboardSteering.lastPressDirection = direction;
+        porscheKeyboardSteering.lastPressAt = now;
+      } else if (porscheKeyboardSteering.direction === direction) {
+        var fallbackDirection = direction < 0 && driveState.holds.steerRight ? 1 :
+          direction > 0 && driveState.holds.steerLeft ? -1 : 0;
+        porscheKeyboardSteering.direction = fallbackDirection;
+        porscheKeyboardSteering.heldMs = 0;
+        if (fallbackDirection) porscheKeyboardSteering.authority = PORSCHE_KEYBOARD_STEER_BASE;
+      }
+    }
     if (name === "brake" && !held) driveState.brakeSpinChecked = false;
     if (!held && (name === "throttle" || name === "brake")) driveCoachNeedsFreshPedal = false;
     if (held && (name === "throttle" || name === "brake") && !driveCoachNeedsFreshPedal) completePorscheDriveCoachAction("pedal");
@@ -38161,7 +38195,23 @@ window.__entranceRoomOpen = false;
     var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
     var clutch = porscheState.engineOn && driveState.holds.clutch;
     var brake = driveState.holds.brake ? 1 : 0;
-    var keyboardSteerInput = (driveState.holds.steerRight ? 1 : 0) - (driveState.holds.steerLeft ? 1 : 0);
+    var keyboardSteerDirection = (driveState.holds.steerRight ? 1 : 0) - (driveState.holds.steerLeft ? 1 : 0);
+    if (keyboardSteerDirection) {
+      if (porscheKeyboardSteering.direction !== keyboardSteerDirection) {
+        porscheKeyboardSteering.direction = keyboardSteerDirection;
+        porscheKeyboardSteering.authority = PORSCHE_KEYBOARD_STEER_BASE;
+        porscheKeyboardSteering.heldMs = 0;
+      }
+      porscheKeyboardSteering.heldMs += dt;
+      porscheKeyboardSteering.authority = Math.max(porscheKeyboardSteering.authority,
+        PORSCHE_KEYBOARD_STEER_BASE + (1 - PORSCHE_KEYBOARD_STEER_BASE) *
+        Math.min(1, porscheKeyboardSteering.heldMs / PORSCHE_KEYBOARD_STEER_BUILD_MS));
+    } else {
+      porscheKeyboardSteering.direction = 0;
+      porscheKeyboardSteering.heldMs = 0;
+      porscheKeyboardSteering.authority = Math.max(0, porscheKeyboardSteering.authority - seconds * 1.8);
+    }
+    var keyboardSteerInput = keyboardSteerDirection * porscheKeyboardSteering.authority;
     var steerInput = porscheTouchSteering.mode === "steering" ? porscheTouchSteering.input : keyboardSteerInput;
     var steeringTarget = steerInput * 18;
     driveState.steeringAngle += (steeringTarget - driveState.steeringAngle) * Math.min(1, seconds * (steerInput ? 7 : 4.5));
@@ -38213,7 +38263,7 @@ window.__entranceRoomOpen = false;
         // tire-mark cadence remains unchanged and drivetrain state is untouched.
         if (skidNow - lastSkidSoundAt > 300 && playPorscheSkidSound(before)) lastSkidSoundAt = skidNow;
       }
-      spinPorscheOnBrake(before, steerInput);
+      spinPorscheOnBrake(before, Math.sign(steerInput));
     }
     if (!throttle && !braking) {
       var rollingResistance = 2.8 + Math.abs(driveState.speed) * .026;
@@ -38319,6 +38369,11 @@ window.__entranceRoomOpen = false;
     driveState.laneOffset = 0;
     driveState.wheelAngle = 0;
     driveState.steeringAngle = 0;
+    porscheKeyboardSteering.direction = 0;
+    porscheKeyboardSteering.authority = 0;
+    porscheKeyboardSteering.heldMs = 0;
+    porscheKeyboardSteering.lastPressDirection = 0;
+    porscheKeyboardSteering.lastPressAt = -Infinity;
     driveState.wraps = 0;
     driveState.odometerKm = 0;
     driveState.facing = 1;
@@ -39131,6 +39186,11 @@ window.__entranceRoomOpen = false;
         position: driveState.position,
         laneOffset: driveState.laneOffset,
         steeringAngle: driveState.steeringAngle,
+        keyboardSteering: {
+          direction: porscheKeyboardSteering.direction,
+          authority: porscheKeyboardSteering.authority,
+          heldMs: porscheKeyboardSteering.heldMs
+        },
         wheelAngle: driveState.wheelAngle,
         wraps: driveState.wraps,
         odometerKm: driveState.odometerKm,

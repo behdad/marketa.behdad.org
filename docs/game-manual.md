@@ -174,7 +174,8 @@ lesson.
 On desktop:
 
 - select the ignition key to start or stop the engine;
-- use `←` / `→` to steer;
+- use `←` / `→` to steer; a tap stays gentle, while holding a direction or
+  tapping it repeatedly builds progressively stronger steering;
 - use `Shift`+`↑` / `Shift`+`↓` to shift one gear;
 - hold `↑` to accelerate and `↓` to brake.
 

@@ -347,9 +347,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.curves = {
       straight: straightGeometry,
       straightMirror: straightMirror,
-      roadLineFills: Array.prototype.map.call(document.querySelectorAll(
+      roadLines: Array.prototype.map.call(document.querySelectorAll(
         ".entrance-roadtrip-edge,.entrance-roadtrip-centerline"), function (node) {
-          return getComputedStyle(node).fill;
+          return { fill: getComputedStyle(node).fill, stroke: getComputedStyle(node).stroke,
+            d: node.getAttribute("d") };
         }),
       rightWarning: rightWarning,
       right: rightCurve,
@@ -504,7 +505,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var closeBefore = { roadtrip: copy(roadtrip()), node: entityVisual(retainedSpawn.node), viewBox: viewBox() };
     window.__closeEntranceRoom();
     var closed = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox(), dom: childCount(), visible: visibleChildCount() };
-    step(20);
+    var closedWrapStart = state().drive.wraps;
+    for (var closedTick = 0; closedTick < 40 && state().drive.wraps === closedWrapStart; closedTick++) step(1000);
+    var closedWrapEnd = state().drive.wraps;
     var parked = copy(roadtrip());
     window.__openEntranceRoom();
     await sleep(30);
@@ -526,6 +529,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveControl("throttle", false);
     var stillDismissed = copy(state());
     report.steps.close = { before: closeBefore, closed: closed, parked: parked, reopened: reopened,
+      closedWrapStart: closedWrapStart, closedWrapEnd: closedWrapEnd, reopenedWrap: reopenedLap,
       street: street, offeredAfterLap: offeredAfterLap, dismissedOffer: dismissedOffer, stillDismissed: stillDismissed };
 
     var bestBeforeDismiss = roadtrip().best;
@@ -662,7 +666,7 @@ check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74
   /clipPath id="entrance-roadtrip-mirror-clip">\s*<path/.test(source),
   "the mirror uses a rounded charcoal trapezoidal housing, dark gasket, and matching reflection clip");
 check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&
-  /function recordRoadtripPracticeLap\(\)[\s\S]{0,700}if \(roadtripState\.unlocked\)[\s\S]{0,400}roadtripState\.invitationReady = true;[\s\S]{0,400}roadtripState\.practiceLaps\+\+/.test(source) &&
+  /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;[\s\S]{0,700}if \(roadtripState\.unlocked\)[\s\S]{0,400}roadtripState\.invitationReady = true;[\s\S]{0,400}roadtripState\.practiceLaps\+\+/.test(source) &&
   /function resetRoadtripInvitationSession\(\)[\s\S]{0,300}roadtripState\.accepted = false;[\s\S]{0,200}roadtripState\.invitationReady = false;/.test(source),
   "the source owns a three-lap initial unlock and one-lap per-session invitation gate");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
@@ -758,6 +762,10 @@ function mirrorBendReturnsToBase(mirror, direction) {
     });
   });
 }
+check(curves && curves.roadLines.length === 3 && curves.roadLines.every(function (line, index) {
+    return line.stroke === "none" && /Z/.test(line.d) && line.fill ===
+      (index < 2 ? "rgb(233, 229, 215)" : "rgb(216, 167, 45)");
+  }), "white edge and double-yellow markings keep their approved filled perspective-band contract", curves);
 check(curves && curves.rightWarning && curves.rightWarning.direction === "right" &&
   curves.roadLineFills.length === 3 &&
   curves.roadLineFills.slice(0, 2).every(function (value) { return value === "rgb(233, 229, 215)"; }) &&
@@ -899,8 +907,10 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.entityCount
   !close.closed.roadtrip.active && close.closed.classes.indexOf("roadtrip-active") < 0 &&
   close.closed.viewBox === "0 -31 680 207" &&
   close.parked.distance === close.closed.roadtrip.distance && close.parked.entityCount === close.closed.roadtrip.entityCount &&
+  close.closedWrapEnd > close.closedWrapStart && !close.parked.invitationReady &&
   !close.reopened.roadtrip.active && !close.reopened.roadtrip.accepted && !close.reopened.roadtrip.invitationVisible &&
   !close.street.roadtrip.active && close.street.viewBox === "0 -31 680 207" &&
+  close.offeredAfterLap.drive.wraps > close.reopenedWrap &&
   close.offeredAfterLap.drive.roadtrip.invitationReady && close.offeredAfterLap.drive.roadtrip.invitationVisible &&
   close.dismissedOffer.open && close.dismissedOffer.drive.hud && close.dismissedOffer.car.engineOn &&
   !close.dismissedOffer.drive.roadtrip.invitationVisible && !close.stillDismissed.drive.roadtrip.invitationVisible,

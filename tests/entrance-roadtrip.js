@@ -183,6 +183,30 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       traces: traces
     };
   }
+  function probeTargetWidth(type, hitGap, clearGap) {
+    function attempt(gap) {
+      window.__entranceRoadtripStart();
+      ensureEngine();
+      window.__entranceDriveSetMotion(type === "deer" || type === "rabbit" ? 36 : 120,
+        type === "deer" || type === "rabbit" ? 2 : 3);
+      window.__entranceDriveControl("throttle", false);
+      var made = spawn(type, .5, 8);
+      var center = Number(made.node && made.node.getAttribute("data-roadtrip-lane"));
+      window.__entranceRoadtripSetLane(center + gap);
+      var before = copy(roadtrip());
+      step(320);
+      var after = copy(roadtrip());
+      return {
+        gap: gap,
+        center: center,
+        collisions: after.collisions - before.collisions,
+        passes: after.passes - before.passes,
+        wildlifeHits: after.wildlifeHits - before.wildlifeHits,
+        released: made.node && made.node.getAttribute("visibility") === "hidden"
+      };
+    }
+    return { hit: attempt(hitGap), clear: attempt(clearGap) };
+  }
   function finish() {
     report.errors = (window.__errs || []).concat(report.errors);
     document.getElementById("__report").textContent = JSON.stringify(report);
@@ -556,6 +580,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         y: translateY(hoppingRabbit.node),
         transform: hoppingRabbit.node && hoppingRabbit.node.getAttribute("transform")
       }
+    };
+    report.steps.targetWidths = {
+      rabbit: probeTargetWidth("rabbit", .15, .20),
+      deer: probeTargetWidth("deer", .25, .30),
+      car: probeTargetWidth("car", .29, .34),
+      pickup: probeTargetWidth("pickup", .35, .40),
+      rv: probeTargetWidth("rv", .43, .48),
+      truck: probeTargetWidth("truck", .45, .50)
     };
     window.__entranceRoadtripStart();
     window.__entranceDriveSetMotion(160, 3);
@@ -997,6 +1029,15 @@ check(wildlifeHop && wildlifeHop.before.visual.kind === "animal" &&
   wildlifeHop.after.y < wildlifeHop.before.y && /rotate\((?!0(?:\.0+)?\))/.test(wildlifeHop.after.transform || ""),
   "nearby wildlife visibly hops up and outward toward the verge before it clears the road",
   wildlifeHop);
+var targetWidths = s.targetWidths;
+check(targetWidths && ["rabbit", "deer", "car", "pickup", "rv", "truck"].every(function (type) {
+  var probe = targetWidths[type];
+  var animal = type === "rabbit" || type === "deer";
+  return probe && probe.hit.collisions === 1 && probe.hit.released &&
+    (animal ? probe.hit.wildlifeHits === 1 : true) && probe.clear.collisions === 0 &&
+    !probe.clear.released && (animal ? probe.clear.wildlifeHits === 0 : probe.clear.passes === 1);
+}), "roadtrip targets collide by visible width: rabbit, deer, sedan, pickup, RV, then semi, with close passes just outside each envelope",
+  targetWidths);
 var oncomingCrash = s.oncomingCrash;
 check(oncomingCrash && oncomingCrash.before.visual.direction === "oncoming" &&
   !oncomingCrash.after.state.car.engineOn && oncomingCrash.after.state.drive.stalled &&

@@ -36335,8 +36335,14 @@ window.__entranceRoomOpen = false;
     if (entity.direction === "oncoming") severity = Math.max(.82, severity);
     return Math.max(.08, Math.min(1, severity));
   }
+  function roadtripCollisionLaneGap(entity) {
+    return entity.type === "rabbit" ? .17 : entity.type === "deer" ? .27 :
+      entity.type === "car" ? .31 : entity.type === "pickup" ? .37 :
+      entity.type === "rv" ? .45 : entity.type === "truck" ? .47 : .48;
+  }
   function resolveRoadtripEntity(entity, remaining, seconds) {
     var laneGap = Math.abs(roadtripPlayerLane() - entity.lane);
+    var collisionLaneGap = roadtripCollisionLaneGap(entity);
     if (entity.type === "deer" || entity.type === "rabbit") {
       if (!entity.escaping && remaining <= 22) {
         entity.escaping = true;
@@ -36344,7 +36350,7 @@ window.__entranceRoomOpen = false;
         entity.escapeDirection = entity.lane <= 0 ? -1 : 1;
       }
       if (entity.escaping) entity.escapeElapsed += Math.max(0, Number(seconds) || 0);
-      if (remaining <= 8 && laneGap <= .48 && entity.escapeElapsed < .48) {
+      if (remaining <= 8 && laneGap <= collisionLaneGap && entity.escapeElapsed < .48) {
         var wildlifeSeverity = roadtripCollisionSeverity(entity);
         roadtripState.collisions++;
         roadtripState.wildlifeHits++;
@@ -36385,7 +36391,7 @@ window.__entranceRoomOpen = false;
       return;
     }
     if (remaining > 8) return;
-    if (laneGap <= .48) {
+    if (laneGap <= collisionLaneGap) {
       var trafficSeverity = roadtripCollisionSeverity(entity);
       roadtripState.collisions++;
       if (entity.direction === "oncoming") {

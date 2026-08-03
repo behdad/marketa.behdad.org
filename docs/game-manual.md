@@ -289,7 +289,8 @@ also scale with the other object's type and relative speed. Any hit severe enoug
 to crack or shatter the windshield knocks the transmission into neutral and
 releases the accelerator and clutch. Mule deer and snowshoe
 hares visibly leap and zig-zag toward the verge; slowing early gives them the time
-needed to clear safely.
+needed to clear safely. Collision room follows the target's visible width: rabbits
+leave the most space, then deer and sedans, pickups, and finally RVs and semis.
 
 The current grade is **Sunday drive** below 100 points, **Scenic run** from
 100–249, **Roadtrip regular** from 250–499, and **Highway legend** at 500 or more.

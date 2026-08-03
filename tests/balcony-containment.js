@@ -17,7 +17,7 @@ var HARNESS = [
   'window.__unlockAllRooms();window.__markLowerRoomDiscovered();window.__setDayNight(false);window.goToStage("balcony");await sleep(50);',
   'report.steps.upstairs={covered:window.__roomAmbienceCovered(),allowed:allowed("balcony")};',
   'var refresh={},originals={};["__updateCityHum","__updateWind","__updateRainSound"].forEach(function(name){originals[name]=window[name];window[name]=function(){refresh[name]=(refresh[name]||0)+1;return originals[name].apply(this,arguments);};});',
-  'window.__openEntranceRoom();await sleep(30);var before=window.__entranceRoomState().intercomResponses;click("entrance-intercom");await sleep(30);',
+  'window.__openEntranceRoom();await sleep(30);var before=window.__entranceRoomState().intercomResponses;click("entrance-intercom");await sleep(780);',
   'report.steps.entrance={covered:window.__roomAmbienceCovered(),allowed:allowed("balcony"),refresh:refresh,localBefore:before,localAfter:window.__entranceRoomState().intercomResponses};',
   'window.__closeEntranceRoom();window.__clearBalconyEclipse();var host=document.getElementById("balcony-heartfx");while(host.firstChild)host.firstChild.remove();',
   'window.__runSolarEclipse();var beganUpstairs=document.getElementById("stage-balcony").classList.contains("solar-eclipse");window.__openEntranceRoom();',

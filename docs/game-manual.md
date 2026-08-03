@@ -224,6 +224,17 @@ The centre mirror is live: its road and markings follow the bends behind you,
 cloud, smoke, rain, snow, and winter cover match the windshield, and traffic you
 have just passed remains visible until it falls out of mirror range.
 
+The posted highway limit is 90 km/h. An occasional parked police car is announced
+by one oncoming driver flashing its high beams three times. Police allow speeds
+through 110 km/h; above that, a patrol car and siren appear in the rear-view
+mirror. Move onto the right shoulder and stop to receive a fine scaled to the
+speed at which you passed the police. Ignoring the stop ends the highway run and
+adds a refusal surcharge. Passing at 150–199 km/h ends the highway run immediately,
+without ending or resetting the loft game. At 200 km/h or faster the Porsche can
+instead open a gap: keep that speed until the patrol car recedes from the mirror
+and its siren fades away. A brief touch of 200 is not enough, and slowing below it
+before the gap is complete lets the pursuit recover.
+
 Cleanly passing a car or truck scores `100 ×` the current multiplier. Collecting
 a ♥️ scores `100 ×`, a 💋 scores `250 ×`, and the rarer ∞ scores `500 ×` the
 multiplier. Any clean pass or pickup raises the multiplier by one, up to `8×`;

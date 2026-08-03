@@ -187,6 +187,22 @@ into a separate six-use mirror pool, swaps forward traffic to its front/headligh
 releases it after 38 road units. The mirror's clipped cloud, smoke, rain, snow, and winter layers read
 the same Entrance classes and `--smoke` value as the windshield. The main windshield hides passed
 entities below its lower edge, so a pooled vehicle is never painted in both views at once.
+The nested `drive.roadtrip.police` state owns the infrequent speed trap independently of the bounded
+traffic pool. `stepRoadtripPolice()` advances its warning → pursuit → cooldown state machine;
+`paintRoadtripPolice()` projects a dedicated oncoming warning car, parked patrol car, and rear-view
+pursuit use without competing for pooled traffic slots. The warning car exposes exactly three
+distance-safe high-beam flashes. Posted speed is 90 km/h, enforcement begins above 110, and the fine
+is `$250 + $25` per whole enforceable km/h (rounded to `$25`). A right-shoulder stop at 2.5 km/h or
+less settles the ticket. Twenty attended seconds or 500 metres below the 200 km/h escape threshold
+without stopping adds `$1000` and ends the highway run; detection from 150 through 199 km/h ends it
+immediately. At 200 km/h or faster, separation grows from the patrol car's 180 km/h pursuit pace.
+The mirror scale and siren gain follow that separation; reaching 55 metres clears the chase, while
+slowing below 200 before then closes the gap and resumes the refusal counters. Neither enforcement
+case resets the loft game.
+`__entranceRoadtripPolice(ahead)`, `__entranceRoadtripPoliceDetect(speed)`, and
+`__entranceRoadtripPoliceStep(speed, seconds)` are the deterministic focused-test seams; police
+presentation and siren state remain transient rather than checkpoint data. Run
+`tests/entrance-police.js` with the other Entrance tests.
 Wildlife switches to a timed hop-and-verge escape inside 22 road units: a slow approach gives the
 escape its required `0.48s`, while a fast same-lane arrival can reach the collision zone first.
 Roadtrip event feedback is routed through the shared lower-room caption flash; do not place transient
@@ -217,6 +233,7 @@ briskly; speed, RPM, odometer distance, and `roadtripState.distance` remain unsc
 `driveState.odometerKm` is the persistent physical-distance total: every drive step adds
 `abs(speed) × elapsed time`, independent of the street scene's theatrical travel scale. Engine lifecycle
 does not reset it; full game reset does, and Entrance checkpoint capture/restore preserves it.
+Run `tests/entrance-police.js` for the enforcement state machine.
 Checkpoint restore marks the first-drive coach complete before the Entrance reopens; a fresh reset
 still owns the four-step lesson, and the dashboard help control remains its explicit replay path.
 

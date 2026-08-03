@@ -89,9 +89,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var own = el && getComputedStyle(el);
     return { connected: !!(el && el.isConnected), hiddenBy: hidden, opacity: own ? parseFloat(own.opacity) : -1 };
   }
-  function childCount() { return document.getElementById("entrance-roadtrip-entities").children.length; }
+  function pooledChildren() {
+    return document.getElementById("entrance-roadtrip-entities").querySelectorAll(".entrance-roadtrip-entity");
+  }
+  function childCount() { return pooledChildren().length; }
   function visibleChildCount() {
-    return Array.prototype.filter.call(document.getElementById("entrance-roadtrip-entities").children, function (node) {
+    return Array.prototype.filter.call(pooledChildren(), function (node) {
       return node.getAttribute("visibility") !== "hidden";
     }).length;
   }
@@ -389,7 +392,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       source: entityVisual(mirrorTraffic.node),
       visible: mirrorVisible,
       cleared: !visibleMirrorEntity(),
-      mirrorChildren: document.getElementById("entrance-roadtrip-mirror-entities").children.length
+      mirrorChildren: document.getElementById("entrance-roadtrip-mirror-entities").querySelectorAll(".entrance-roadtrip-mirror-entity").length
     };
 
     window.__entranceDriveControl("throttle", false);

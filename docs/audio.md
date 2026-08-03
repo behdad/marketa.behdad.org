@@ -224,6 +224,15 @@ layer share one severity value derived from relative speed and object mass;
 head-on events extend the envelope, while rear-end and wildlife bumps remain
 shorter and quieter. They never create, suspend, or close an `AudioContext`.
 
+A speeding pursuit adds one restrained two-tone siren on the shared SFX handle,
+localized to the live rear-view mirror. Its oscillators exist only while the
+highway police state is `pursuit` and the Entrance is visible, focused, uncovered,
+and audible. Its master gain falls with the pursuit's modeled separation once the
+Porsche sustains 200+ km/h, then fades and disconnects after escape. Pulling over,
+ending or leaving the highway, closing the room, hiding the tab, or losing focus
+also fades and disconnects those nodes; focus may recreate them while a pursuit
+remains active. The siren never suspends or closes the shared context.
+
 The drivetrain bed also owns one looped noise source fanned into five continuous
 textures: low road body, tire band, high-speed wind, filtered corner scrub, and a
 quiet pitched corner squeal. `porscheTireAudioMix()` raises road/tire/wind with

@@ -913,6 +913,8 @@ footer{margin-top:2.6rem}
 #entrance-room.entrance-winter-cover #entrance-roadtrip-mirror-winter{opacity:.92}
 #entrance-roadtrip-mirror-smoke{opacity:calc(var(--smoke,0) * .4);transition:opacity .9s ease}
 #entrance-room:not(.entrance-day) #entrance-roadtrip-mirror-smoke{opacity:0}
+.entrance-roadtrip-high-beams{opacity:0}
+.entrance-roadtrip-high-beams.is-lit{opacity:.92}
 #entrance-room:not(.entrance-day) .entrance-roadtrip-mirror-sky{fill:#142a38}
 #entrance-room:not(.entrance-day) .entrance-roadtrip-mirror-verge{fill:#26352e}
 #entrance-room:not(.entrance-day) .entrance-roadtrip-mirror-road{fill:#20272c}
@@ -31925,6 +31927,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <path d="M-19-42H19V-22H-19Z" fill="#356849" stroke="#e8e5d7" stroke-width="2"/>
               <path d="M-10-32H10M4-37L10-32L4-27" fill="none" stroke="#f8f5ec" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
             </g>
+            <g id="entrance-roadtrip-speed-90">
+              <path d="M0 0V-50" stroke="#697276" stroke-width="3"/>
+              <rect x="-18" y="-58" width="36" height="29" rx="2" fill="#f7f7f1" stroke="#343b3e" stroke-width="1.8"/>
+              <text x="0" y="-49" text-anchor="middle" font-size="5.5" font-family="Arial,sans-serif" font-weight="700" fill="#272d30">MAXIMUM</text>
+              <text x="0" y="-35" text-anchor="middle" font-size="15" font-family="Arial,sans-serif" font-weight="700" fill="#272d30">90</text>
+            </g>
             <g id="entrance-roadtrip-curve-sign-right">
               <path d="M0 0V-42" stroke="#697276" stroke-width="3"/>
               <path d="M0-54L14-40L0-26L-14-40Z" fill="#e5b949" stroke="#332f29" stroke-width="1.8"/>
@@ -31960,6 +31968,22 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <path d="M-12-8H12" stroke="#d4d8d5" stroke-width="1.3" stroke-linecap="round"/>
               <circle cx="-13" cy="-7" r="2.5" fill="#fff1b5"/><circle cx="13" cy="-7" r="2.5" fill="#fff1b5"/>
               <path d="M-18-2H18" stroke="#1c2022" stroke-width="3" stroke-linecap="round"/>
+            </g>
+            <g id="entrance-roadtrip-police">
+              <path d="M-23-3L-20-21Q-12-31 0-32Q13-31 20-21L23-3Z" fill="#f3f1e9" stroke="#30383e" stroke-width="1.5"/>
+              <path d="M-14-21Q-8-27 0-27Q9-27 14-21L12-14H-12Z" fill="#263d4b" stroke="#a9bdc5" stroke-width=".9"/>
+              <path d="M-18-13H18" stroke="#274f7c" stroke-width="3"/><path d="M-7-31H7" stroke="#1e2529" stroke-width="2.8"/>
+              <rect x="-8" y="-34" width="8" height="3.5" rx="1" fill="#2d70b3"/><rect x="0" y="-34" width="8" height="3.5" rx="1" fill="#c83b43"/>
+              <rect x="-17" y="-8" width="7" height="3" rx="1" fill="#d54446"/><rect x="10" y="-8" width="7" height="3" rx="1" fill="#d54446"/>
+              <path d="M-21-2H21" stroke="#1c2022" stroke-width="3.5" stroke-linecap="round"/>
+            </g>
+            <g id="entrance-roadtrip-police-oncoming">
+              <path d="M-23-3L-20-21Q-12-31 0-32Q13-31 20-21L23-3Z" fill="#f3f1e9" stroke="#30383e" stroke-width="1.5"/>
+              <path d="M-14-21Q-8-27 0-27Q9-27 14-21L12-14H-12Z" fill="#263d4b" stroke="#a9bdc5" stroke-width=".9"/>
+              <path d="M-18-13H18" stroke="#274f7c" stroke-width="3"/><path d="M-7-31H7" stroke="#1e2529" stroke-width="2.8"/>
+              <rect x="-8" y="-34" width="8" height="3.5" rx="1" fill="#2d70b3"/><rect x="0" y="-34" width="8" height="3.5" rx="1" fill="#c83b43"/>
+              <circle cx="-15" cy="-7" r="2.8" fill="#fff1b5"/><circle cx="15" cy="-7" r="2.8" fill="#fff1b5"/>
+              <path d="M-21-2H21" stroke="#1c2022" stroke-width="3.5" stroke-linecap="round"/>
             </g>
             <g id="entrance-roadtrip-truck">
               <path d="M-25-3V-38H25V-3Z" fill="#d8d1c0" stroke="#454a4b" stroke-width="1.5"/>
@@ -34491,6 +34515,7 @@ window.__entranceRoomOpen = false;
   var intercomResponses = 0;
   var porscheIdleNodes = null;
   var porscheDriveAudioNodes = null;
+  var porschePoliceAudioNodes = null;
   var porscheDriveAcNodes = null;
   var porscheDriveMusicNodes = null;
   var porscheDriveMusicTimer = null;
@@ -34562,6 +34587,17 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_ROAD_EDGE_LANE = 2;
   var ROADTRIP_RUMBLE_LANE = 1.72;
   var ROADTRIP_MAX_LANE = 2.32;
+  var ROADTRIP_SPEED_LIMIT = 90;
+  var ROADTRIP_POLICE_TOLERANCE = 20;
+  var ROADTRIP_POLICE_ENFORCE_SPEED = ROADTRIP_SPEED_LIMIT + ROADTRIP_POLICE_TOLERANCE;
+  var ROADTRIP_POLICE_RUN_END_SPEED = 150;
+  var ROADTRIP_POLICE_ESCAPE_SPEED = 200;
+  var ROADTRIP_POLICE_PURSUIT_SPEED = 180;
+  var ROADTRIP_POLICE_ESCAPE_DISTANCE = 55;
+  var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
+  var ROADTRIP_POLICE_FIRST_DISTANCE = 620;
+  var ROADTRIP_POLICE_REFUSAL_SECONDS = 20;
+  var ROADTRIP_POLICE_REFUSAL_DISTANCE = 500;
   var roadtripPool = [];
   var roadtripMirrorPool = [];
   var roadtripLaneMarks = [];
@@ -34577,6 +34613,10 @@ window.__entranceRoomOpen = false;
   var roadtripMirrorCenterPath = null;
   var roadtripMirrorLanePath = null;
   var roadtripMirrorEdgesPath = null;
+  var roadtripPoliceRoadNode = null;
+  var roadtripPoliceWarningNode = null;
+  var roadtripPoliceWarningBeams = null;
+  var roadtripPoliceMirrorNode = null;
   var roadtripImpactTimer = null;
   var roadtripCrackSerial = 0;
   var roadtripState = {
@@ -34601,6 +34641,31 @@ window.__entranceRoomOpen = false;
     shoulderZone: "road",
     shoulderDistance: 0,
     nextSpawnDistance: 34,
+    police: {
+      phase: "idle",
+      nextDistance: ROADTRIP_POLICE_FIRST_DISTANCE,
+      stationAt: 0,
+      warningCarAt: 0,
+      warningElapsed: 0,
+      warningFlashCount: 0,
+      warningLight: false,
+      detectedSpeed: 0,
+      fine: 0,
+      tickets: 0,
+      fines: 0,
+      stops: 0,
+      pursuits: 0,
+      pursuitElapsed: 0,
+      pursuitDistance: 0,
+      refusalElapsed: 0,
+      refusalDistance: 0,
+      escapeGap: 0,
+      escapes: 0,
+      mirrorScale: 0,
+      cooldownElapsed: 0,
+      runEnded: false,
+      endReason: ""
+    },
     spawnSerial: 0,
     entities: []
   };
@@ -34846,7 +34911,7 @@ window.__entranceRoomOpen = false;
       for (var furnitureIndex = 0; furnitureIndex < ROADTRIP_FURNITURE_SIZE; furnitureIndex++) {
         var furnitureUse = authoredFurniture[furnitureIndex] || roadtripSvgUse(furniture, "entrance-roadtrip-furniture-engine");
         furnitureUse.classList.add("entrance-roadtrip-furniture-engine");
-        var furnitureType = furnitureIndex % 7 === 0 ? "sign" : furnitureIndex % 5 === 0 ? "lamp" : furnitureIndex % 3 === 0 ? "post" : "tree";
+        var furnitureType = furnitureIndex % 7 === 0 ? "speed-90" : furnitureIndex % 5 === 0 ? "lamp" : furnitureIndex % 3 === 0 ? "post" : "tree";
         roadtripUseTemplate(furnitureUse, furnitureType);
         roadtripFurniturePool.push({ node: furnitureUse, type: furnitureType, index: furnitureIndex });
       }
@@ -34863,6 +34928,26 @@ window.__entranceRoomOpen = false;
         roadtripPool.push({ node: roadtripSvgUse(entities, "entrance-roadtrip-entity"), active: false });
       }
     }
+    if (entities && !roadtripPoliceRoadNode) {
+      roadtripPoliceWarningBeams = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      roadtripPoliceWarningBeams.setAttribute("class", "entrance-roadtrip-high-beams");
+      roadtripPoliceWarningBeams.setAttribute("visibility", "hidden");
+      var leftBeam = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      leftBeam.setAttribute("d", "M-15-8L-49 23L-2 23Z");
+      leftBeam.setAttribute("fill", "#fff4bd");
+      leftBeam.setAttribute("fill-opacity", ".54");
+      var rightBeam = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      rightBeam.setAttribute("d", "M15-8L49 23L2 23Z");
+      rightBeam.setAttribute("fill", "#fff4bd");
+      rightBeam.setAttribute("fill-opacity", ".54");
+      roadtripPoliceWarningBeams.appendChild(leftBeam);
+      roadtripPoliceWarningBeams.appendChild(rightBeam);
+      entities.appendChild(roadtripPoliceWarningBeams);
+      roadtripPoliceWarningNode = roadtripSvgUse(entities, "entrance-roadtrip-police-warning");
+      roadtripPoliceRoadNode = roadtripSvgUse(entities, "entrance-roadtrip-police-roadside");
+      roadtripUseTemplate(roadtripPoliceWarningNode, "car-oncoming");
+      roadtripUseTemplate(roadtripPoliceRoadNode, "police");
+    }
     var mirrorEntities = roadtripElement("entrance-roadtrip-mirror-entities");
     if (!roadtripMirrorPool.length && mirrorEntities) {
       for (var mirrorIndex = 0; mirrorIndex < 6; mirrorIndex++) {
@@ -34873,10 +34958,28 @@ window.__entranceRoomOpen = false;
       roadtripMirrorLanePath = roadtripElement("entrance-roadtrip-mirror-lanes");
       roadtripMirrorEdgesPath = roadtripElement("entrance-roadtrip-mirror-edges");
     }
+    if (mirrorEntities && !roadtripPoliceMirrorNode) {
+      roadtripPoliceMirrorNode = roadtripSvgUse(mirrorEntities, "entrance-roadtrip-police-mirror");
+      roadtripUseTemplate(roadtripPoliceMirrorNode, "police-oncoming");
+    }
     paintRoadtripScore();
   }
   function roadtripFeedback(key) {
     if (window.__flashCaptionKey) window.__flashCaptionKey(key, 2200, "entrance-roadtrip");
+  }
+  function roadtripPoliceFeedback(key, values, holdMs) {
+    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
+    var dict = typeof T === "object" && T[lang] ? T[lang] : null;
+    var template = dict && ((dict.hunt && dict.hunt[key]) || dict[key]);
+    if (!template) template = key;
+    Object.keys(values || {}).forEach(function (name) {
+      template = template.split("{" + name + "}").join(String(values[name]));
+    });
+    // This literal amount/speed line owns the same caption as the stable drive
+    // instruction. Mark that stable key current so the end-of-step HUD repaint
+    // does not immediately overwrite the temporary line.
+    lastDriveInstruction = porscheDriveInstructionKey();
+    if (window.caption) window.caption(template, { blink: 700, hold: holdMs || 4200 });
   }
   function paintRoadtripInvite() {
     if (!roadtripInvite) return;
@@ -35190,6 +35293,277 @@ window.__entranceRoomOpen = false;
       return "L" + roadtripProjectLateral(point, innerFraction).toFixed(2) + " " + point.y.toFixed(2);
     }).join("");
     return outer + inner + "Z";
+  }
+  function hideRoadtripPoliceVisuals() {
+    [roadtripPoliceRoadNode, roadtripPoliceWarningNode, roadtripPoliceWarningBeams,
+      roadtripPoliceMirrorNode].forEach(function (node) {
+      if (node) node.setAttribute("visibility", "hidden");
+    });
+    if (roadtripPoliceWarningBeams) roadtripPoliceWarningBeams.classList.remove("is-lit");
+  }
+  function roadtripPoliceFineForSpeed(speed) {
+    var enforceableExcess = Math.max(1, Math.ceil(Math.abs(Number(speed) || 0) - ROADTRIP_POLICE_ENFORCE_SPEED));
+    return Math.ceil((250 + enforceableExcess * 25) / 25) * 25;
+  }
+  function roadtripPoliceEscapeRatio() {
+    return Math.max(0, Math.min(1,
+      roadtripState.police.escapeGap / ROADTRIP_POLICE_ESCAPE_DISTANCE));
+  }
+  function resetRoadtripPoliceRun() {
+    var police = roadtripState.police;
+    police.phase = "idle";
+    police.nextDistance = ROADTRIP_POLICE_FIRST_DISTANCE;
+    police.stationAt = 0;
+    police.warningCarAt = 0;
+    police.warningElapsed = 0;
+    police.warningFlashCount = 0;
+    police.warningLight = false;
+    police.detectedSpeed = 0;
+    police.fine = 0;
+    police.tickets = 0;
+    police.fines = 0;
+    police.stops = 0;
+    police.pursuits = 0;
+    police.pursuitElapsed = 0;
+    police.pursuitDistance = 0;
+    police.refusalElapsed = 0;
+    police.refusalDistance = 0;
+    police.escapeGap = 0;
+    police.escapes = 0;
+    police.mirrorScale = 0;
+    police.cooldownElapsed = 0;
+    police.runEnded = false;
+    police.endReason = "";
+    hideRoadtripPoliceVisuals();
+    stopRoadtripPoliceSiren(0);
+  }
+  function beginRoadtripPoliceEncounter(ahead) {
+    var police = roadtripState.police;
+    if (!roadtripState.active || police.phase !== "idle") return false;
+    police.phase = "warning";
+    police.stationAt = roadtripState.distance + Math.max(140, Number(ahead) || 150);
+    police.warningCarAt = roadtripState.distance + 135;
+    police.warningElapsed = 0;
+    police.warningFlashCount = 0;
+    police.warningLight = false;
+    police.detectedSpeed = 0;
+    police.fine = 0;
+    police.pursuitElapsed = 0;
+    police.pursuitDistance = 0;
+    police.refusalElapsed = 0;
+    police.refusalDistance = 0;
+    police.escapeGap = 0;
+    police.mirrorScale = 0;
+    roadtripFeedback("entrance_roadtrip_police_warning");
+    paintRoadtripPolice();
+    return true;
+  }
+  function applyRoadtripPoliceFine(fine) {
+    var police = roadtripState.police;
+    fine = Math.max(0, Math.round(Number(fine) || 0));
+    police.fine = fine;
+    police.tickets++;
+    police.fines += fine;
+    roadtripState.score = Math.max(0, roadtripState.score - fine);
+    roadtripState.multiplier = 1;
+    paintRoadtripScore();
+    if (window.__checkpointChanged) window.__checkpointChanged();
+    return fine;
+  }
+  function endRoadtripForPolice(reason, fine) {
+    var police = roadtripState.police;
+    applyRoadtripPoliceFine(fine);
+    police.phase = "ended";
+    police.runEnded = true;
+    police.endReason = reason;
+    driveState.speed = 0;
+    driveState.gear = 0;
+    driveState.throttleHeldMs = 0;
+    Object.keys(driveState.holds).forEach(function (key) { driveState.holds[key] = false; });
+    stopRoadtripPoliceSiren(.08);
+    hideRoadtripPoliceVisuals();
+    parkRoadtrip(false);
+    roadtripState.exitUntilStop = true;
+    roadtripPoliceFeedback(reason === "speed" ? "entrance_roadtrip_police_run_end" :
+      "entrance_roadtrip_police_refused", { fine: police.fine }, 5200);
+    paintPorscheDriveHud();
+    return true;
+  }
+  function settleRoadtripPoliceStop() {
+    var police = roadtripState.police;
+    if (police.phase !== "pursuit") return false;
+    police.stops++;
+    applyRoadtripPoliceFine(police.fine);
+    police.phase = "cooldown";
+    police.cooldownElapsed = 0;
+    driveState.gear = 0;
+    driveState.rpm = porscheState.engineOn ? 780 : 0;
+    stopRoadtripPoliceSiren(.18);
+    roadtripPoliceFeedback("entrance_roadtrip_police_ticket", { fine: police.fine }, 5000);
+    return true;
+  }
+  function settleRoadtripPoliceEscape() {
+    var police = roadtripState.police;
+    if (police.phase !== "pursuit" || police.escapeGap < ROADTRIP_POLICE_ESCAPE_DISTANCE) return false;
+    police.escapes++;
+    police.phase = "cooldown";
+    police.cooldownElapsed = 0;
+    police.fine = 0;
+    police.mirrorScale = 0;
+    stopRoadtripPoliceSiren(.9);
+    roadtripFeedback("entrance_roadtrip_police_escaped");
+    return true;
+  }
+  function detectRoadtripPoliceSpeed(sampledSpeed) {
+    var police = roadtripState.police;
+    var measuredSpeed = typeof sampledSpeed === "number" && Number.isFinite(sampledSpeed) ?
+      sampledSpeed : driveState.speed;
+    var detectedSpeed = Math.round(Math.abs(measuredSpeed));
+    police.detectedSpeed = detectedSpeed;
+    police.warningLight = false;
+    if (detectedSpeed <= ROADTRIP_POLICE_ENFORCE_SPEED) {
+      police.phase = "cooldown";
+      police.cooldownElapsed = 0;
+      roadtripFeedback("entrance_roadtrip_police_clear");
+      return false;
+    }
+    police.fine = roadtripPoliceFineForSpeed(detectedSpeed);
+    if (detectedSpeed >= ROADTRIP_POLICE_RUN_END_SPEED && detectedSpeed < ROADTRIP_POLICE_ESCAPE_SPEED) {
+      endRoadtripForPolice("speed", police.fine);
+      return true;
+    }
+    police.phase = "pursuit";
+    police.pursuits++;
+    police.pursuitElapsed = 0;
+    police.pursuitDistance = 0;
+    police.refusalElapsed = 0;
+    police.refusalDistance = 0;
+    police.escapeGap = 0;
+    roadtripPoliceFeedback("entrance_roadtrip_police_pursuit", { speed: detectedSpeed }, 4400);
+    updateRoadtripPoliceSiren();
+    return true;
+  }
+  function paintRoadtripPolice() {
+    ensureRoadtripScene();
+    var police = roadtripState.police;
+    var roadHost = roadtripElement("entrance-roadtrip-entities");
+    if (police.phase === "warning") {
+      var stationRemaining = police.stationAt - roadtripState.distance;
+      if (roadtripPoliceRoadNode && stationRemaining <= ROADTRIP_DRAW_DISTANCE + 8 && stationRemaining >= 6) {
+        var stationPoint = roadtripProject(stationRemaining);
+        var policeX = roadtripProjectLateral(stationPoint, 1.08);
+        var policeScale = (.11 + stationPoint.perspective * .9) * .96;
+        roadtripPoliceRoadNode.setAttribute("transform", "translate(" + policeX.toFixed(2) + " " + stationPoint.y.toFixed(2) + ") scale(" + policeScale.toFixed(3) + ")");
+        roadtripPoliceRoadNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+      } else if (roadtripPoliceRoadNode) roadtripPoliceRoadNode.setAttribute("visibility", "hidden");
+      var warningRemaining = police.warningCarAt - roadtripState.distance;
+      if (roadtripPoliceWarningNode && warningRemaining <= ROADTRIP_DRAW_DISTANCE + 8 && warningRemaining >= -3) {
+        var warningPoint = roadtripProject(warningRemaining);
+        var warningX = roadtripProjectLateral(warningPoint, -.25);
+        var warningScale = .11 + warningPoint.perspective * .9;
+        var warningTransform = "translate(" + warningX.toFixed(2) + " " + warningPoint.y.toFixed(2) + ") scale(" + warningScale.toFixed(3) + ")";
+        roadtripPoliceWarningNode.setAttribute("transform", warningTransform);
+        roadtripPoliceWarningNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+        if (roadtripPoliceWarningBeams) {
+          roadtripPoliceWarningBeams.setAttribute("transform", warningTransform);
+          roadtripPoliceWarningBeams.setAttribute("visibility", roadtripState.active && police.warningLight ? "visible" : "hidden");
+          roadtripPoliceWarningBeams.classList.toggle("is-lit", police.warningLight);
+        }
+      } else {
+        if (roadtripPoliceWarningNode) roadtripPoliceWarningNode.setAttribute("visibility", "hidden");
+        if (roadtripPoliceWarningBeams) roadtripPoliceWarningBeams.setAttribute("visibility", "hidden");
+      }
+    } else {
+      [roadtripPoliceRoadNode, roadtripPoliceWarningNode, roadtripPoliceWarningBeams].forEach(function (node) {
+        if (node) node.setAttribute("visibility", "hidden");
+      });
+    }
+    if (roadtripPoliceMirrorNode && police.phase === "pursuit" && roadtripState.active) {
+      var pursuitNearness = Math.max(0, Math.min(1, .28 + police.pursuitElapsed / 9));
+      var nearness = Math.max(.025,
+        pursuitNearness - police.escapeGap * ROADTRIP_POLICE_MIRROR_GAP_SCALE);
+      var mirrorX = 340 - roadtripPlayerLane() * (3 + nearness * 3);
+      var mirrorY = -98 + nearness * 18;
+      var mirrorScale = .07 + nearness * .18;
+      police.mirrorScale = mirrorScale;
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-police", "pursuit");
+      roadtripPoliceMirrorNode.setAttribute("transform", "translate(" + mirrorX.toFixed(2) + " " + mirrorY.toFixed(2) + ") scale(" + mirrorScale.toFixed(3) + ")");
+      roadtripPoliceMirrorNode.setAttribute("visibility", "visible");
+    } else if (roadtripPoliceMirrorNode) {
+      police.mirrorScale = 0;
+      roadtripPoliceMirrorNode.setAttribute("visibility", "hidden");
+      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-police");
+    }
+    if (roadHost) {
+      if (roadtripPoliceWarningBeams) roadHost.appendChild(roadtripPoliceWarningBeams);
+      if (roadtripPoliceWarningNode) roadHost.appendChild(roadtripPoliceWarningNode);
+      if (roadtripPoliceRoadNode) roadHost.appendChild(roadtripPoliceRoadNode);
+    }
+  }
+  function stepRoadtripPolice(distance, seconds) {
+    var police = roadtripState.police;
+    seconds = Math.max(0, Number(seconds) || 0);
+    distance = Math.max(0, Number(distance) || 0);
+    // Driving physics intentionally keep ticking under timer throttling, but a
+    // hidden or unfocused visitor must not miss the warning or time out a stop.
+    if (document.hidden || !document.hasFocus()) {
+      if (police.phase === "warning") {
+        police.stationAt += distance;
+        police.warningCarAt += distance;
+      }
+      paintRoadtripPolice();
+      updateRoadtripPoliceSiren();
+      return;
+    }
+    if (police.phase === "idle" && roadtripState.distance >= police.nextDistance) {
+      beginRoadtripPoliceEncounter(150);
+    }
+    if (police.phase === "warning") {
+      police.warningElapsed += seconds;
+      police.warningCarAt -= 24 * seconds;
+      var flashStarts = [.18, .68, 1.18];
+      while (police.warningFlashCount < flashStarts.length &&
+          police.warningElapsed >= flashStarts[police.warningFlashCount]) {
+        police.warningFlashCount++;
+      }
+      police.warningLight = flashStarts.some(function (start) {
+        return police.warningElapsed >= start && police.warningElapsed < start + .22;
+      });
+      if (police.stationAt - roadtripState.distance <= 7) detectRoadtripPoliceSpeed();
+    } else if (police.phase === "pursuit") {
+      police.pursuitElapsed += seconds;
+      police.pursuitDistance += distance;
+      if (roadtripState.playerLane >= ROADTRIP_RUMBLE_LANE && Math.abs(driveState.speed) <= 2.5) {
+        settleRoadtripPoliceStop();
+      } else {
+        var pursuitSpeed = Math.abs(Number(driveState.speed) || 0);
+        if (pursuitSpeed >= ROADTRIP_POLICE_ESCAPE_SPEED) {
+          police.escapeGap += Math.max(0, pursuitSpeed - ROADTRIP_POLICE_PURSUIT_SPEED) / 3.6 * seconds;
+        } else {
+          police.escapeGap = Math.max(0, police.escapeGap -
+            (ROADTRIP_POLICE_ESCAPE_SPEED - pursuitSpeed + 20) / 3.6 * seconds);
+          police.refusalElapsed += seconds;
+          police.refusalDistance += distance;
+        }
+        if (police.escapeGap >= ROADTRIP_POLICE_ESCAPE_DISTANCE) {
+          settleRoadtripPoliceEscape();
+        } else if (police.refusalElapsed >= ROADTRIP_POLICE_REFUSAL_SECONDS ||
+            police.refusalDistance >= ROADTRIP_POLICE_REFUSAL_DISTANCE) {
+          endRoadtripForPolice("refused", police.fine + 1000);
+        }
+      }
+    } else if (police.phase === "cooldown") {
+      police.cooldownElapsed += seconds;
+      if (police.cooldownElapsed >= 4) {
+        police.phase = "idle";
+        police.nextDistance = roadtripState.distance + 760 + police.tickets % 4 * 80;
+        police.cooldownElapsed = 0;
+        police.fine = 0;
+        police.detectedSpeed = 0;
+      }
+    }
+    paintRoadtripPolice();
+    updateRoadtripPoliceSiren();
   }
   function paintRoadtripCurveSigns() {
     if (!roadtripCurveSignPool.length) return;
@@ -35518,6 +35892,7 @@ window.__entranceRoomOpen = false;
       if (host) host.appendChild(entity.node);
     });
     paintRoadtripMirror();
+    paintRoadtripPolice();
   }
   function resetRoadtripRun() {
     clearRoadtripEntities();
@@ -35536,9 +35911,11 @@ window.__entranceRoomOpen = false;
     roadtripState.shoulderDistance = 0;
     roadtripState.nextSpawnDistance = 34;
     roadtripState.spawnSerial = 0;
+    resetRoadtripPoliceRun();
     room.classList.remove("roadtrip-on-shoulder", "roadtrip-on-gravel");
     if (driveHudSvg) driveHudSvg.classList.remove("roadtrip-shoulder-rumble");
     roadtripMirrorPool.forEach(function (node) { node.setAttribute("visibility", "hidden"); });
+    if (roadtripPoliceMirrorNode) roadtripPoliceMirrorNode.setAttribute("visibility", "hidden");
     paintRoadtripScore();
   }
   function parkRoadtrip(clearRun) {
@@ -35555,6 +35932,8 @@ window.__entranceRoomOpen = false;
     roadtripLaneMarks.forEach(function (mark) { mark.setAttribute("visibility", "hidden"); });
     room.classList.remove("roadtrip-on-shoulder", "roadtrip-on-gravel");
     if (driveHudSvg) driveHudSvg.classList.remove("roadtrip-shoulder-rumble");
+    hideRoadtripPoliceVisuals();
+    stopRoadtripPoliceSiren(.1);
     if (clearRun) {
       roadtripState.exitUntilStop = false;
       resetRoadtripRun();
@@ -35562,6 +35941,9 @@ window.__entranceRoomOpen = false;
   }
   function exitRoadtrip() {
     if (!roadtripState.active) return false;
+    if (roadtripState.police.phase === "pursuit") {
+      return endRoadtripForPolice("refused", roadtripState.police.fine + 1000);
+    }
     parkRoadtrip(false);
     // Stay in the street view while the moving car is brought to a stop. Once stopped,
     // the next new acceleration may take the unlocked Porsche back onto the highway.
@@ -35583,6 +35965,7 @@ window.__entranceRoomOpen = false;
     }
     if (!roadtripState.unlocked || !roadtripState.accepted) return false;
     if (roadtripState.active) return true;
+    if (roadtripState.police.runEnded) resetRoadtripRun();
     roadtripState.active = true;
     room.classList.add("roadtrip-active");
     ensureRoadtripScene();
@@ -35593,6 +35976,7 @@ window.__entranceRoomOpen = false;
     dismissPorscheDriveCoach();
     paintRoadtripRoad();
     paintRoadtripEntities();
+    paintRoadtripPolice();
     paintRoadtripScore();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_roadtrip_drive");
     return true;
@@ -35633,12 +36017,17 @@ window.__entranceRoomOpen = false;
       if (remaining > ROADTRIP_DRAW_DISTANCE + 24) releaseRoadtripEntity(entity);
       else resolveRoadtripEntity(entity, remaining, seconds);
     });
+    stepRoadtripPolice(distance, seconds);
+    if (!roadtripState.active) return;
     paintRoadtripRoad();
     paintRoadtripEntities();
     paintRoadtripScore();
   }
   function porscheDriveInstructionKey() {
     if (!driveState.hudOpen) return "lower_entrance";
+    if (roadtripState.active && roadtripState.police.phase === "pursuit" &&
+        roadtripState.police.escapeGap > 0) return "entrance_roadtrip_police_escape";
+    if (roadtripState.active && roadtripState.police.phase === "pursuit") return "entrance_roadtrip_police_pull_over";
     if (roadtripState.active) return "entrance_roadtrip_drive";
     if (driveState.stalled) return "entrance_drive_stalled";
     if (!porscheState.engineOn) return "entrance_drive_ignition_hint";
@@ -35915,7 +36304,8 @@ window.__entranceRoomOpen = false;
     tire: { anchor: "entrance-porsche", edgeRolloff: .25, closedCutoff: 5200 },
     screech: { anchor: "entrance-porsche", edgeRolloff: .28, closedCutoff: 4200 },
     abs: { anchor: "entrance-drive-brake", edgeRolloff: .12, closedCutoff: 300 },
-    crash: { anchor: "entrance-drive-hud", edgeRolloff: .06, closedCutoff: 6200 }
+    crash: { anchor: "entrance-drive-hud", edgeRolloff: .06, closedCutoff: 6200 },
+    police: { anchor: "entrance-roadtrip-mirror", edgeRolloff: .05, closedCutoff: 3400 }
   };
   function porscheDriveSpatialProfile(kind) {
     var cfg = PORSCHE_DRIVE_SPATIAL[kind] || PORSCHE_DRIVE_SPATIAL.engine;
@@ -35959,6 +36349,94 @@ window.__entranceRoomOpen = false;
       panner: panner, profile: null, nodes: panner ? [filter, gain, panner] : [filter, gain] };
     paintPorscheDriveSpatialOut(spatial, true);
     return spatial;
+  }
+  function roadtripPoliceSirenWanted() {
+    return !!(roadtripState.active && roadtripState.police.phase === "pursuit" && entranceDriveAudible());
+  }
+  function roadtripPoliceSirenLevel() {
+    if (roadtripState.police.phase !== "pursuit") return 0;
+    return Math.max(.04, 1 - roadtripPoliceEscapeRatio() * .94);
+  }
+  function startRoadtripPoliceSiren() {
+    if (porschePoliceAudioNodes || !roadtripPoliceSirenWanted()) return false;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return false;
+    try {
+      var t = ctx.currentTime;
+      var carrier = ctx.createOscillator();
+      var harmonic = ctx.createOscillator();
+      var carrierGain = ctx.createGain();
+      var harmonicGain = ctx.createGain();
+      var lfo = ctx.createOscillator();
+      var lfoDepth = ctx.createGain();
+      var harmonicDepth = ctx.createGain();
+      var master = ctx.createGain();
+      var spatial = porscheDriveSpatialOut(ctx, "police");
+      carrier.type = "triangle";
+      carrier.frequency.value = 760;
+      harmonic.type = "sine";
+      harmonic.frequency.value = 1140;
+      carrierGain.gain.value = .72;
+      harmonicGain.gain.value = .24;
+      lfo.type = "sine";
+      lfo.frequency.value = .72;
+      lfoDepth.gain.value = 175;
+      harmonicDepth.gain.value = 262;
+      var level = roadtripPoliceSirenLevel();
+      master.gain.setValueAtTime(.0001, t);
+      master.gain.linearRampToValueAtTime(.052 * level, t + .26);
+      lfo.connect(lfoDepth); lfoDepth.connect(carrier.frequency);
+      lfo.connect(harmonicDepth); harmonicDepth.connect(harmonic.frequency);
+      carrier.connect(carrierGain); carrierGain.connect(master);
+      harmonic.connect(harmonicGain); harmonicGain.connect(master);
+      master.connect(spatial.input);
+      porschePoliceAudioNodes = {
+        ctx: ctx,
+        master: master,
+        spatial: spatial,
+        level: level,
+        sources: [carrier, harmonic, lfo],
+        nodes: [carrierGain, harmonicGain, lfoDepth, harmonicDepth, master].concat(spatial.nodes)
+      };
+      carrier.start(); harmonic.start(); lfo.start();
+      return true;
+    } catch (_error) {
+      stopRoadtripPoliceSiren(0);
+      return false;
+    }
+  }
+  function stopRoadtripPoliceSiren(fadeSeconds) {
+    if (!porschePoliceAudioNodes) return false;
+    var siren = porschePoliceAudioNodes;
+    porschePoliceAudioNodes = null;
+    var fade = typeof fadeSeconds === "number" ? Math.max(0, fadeSeconds) : .18;
+    try {
+      var now = siren.ctx.currentTime;
+      siren.master.gain.cancelScheduledValues(now);
+      siren.master.gain.setValueAtTime(siren.master.gain.value, now);
+      siren.master.gain.linearRampToValueAtTime(.0001, now + fade);
+    } catch (_error) {}
+    setTimeout(function () {
+      siren.sources.forEach(function (source) { try { source.stop(); } catch (_error) {} });
+      siren.sources.concat(siren.nodes).forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+    }, fade * 1000 + 30);
+    return true;
+  }
+  function updateRoadtripPoliceSiren() {
+    if (roadtripPoliceSirenWanted()) {
+      startRoadtripPoliceSiren();
+      if (porschePoliceAudioNodes) {
+        paintPorscheDriveSpatialOut(porschePoliceAudioNodes.spatial, false);
+        var level = roadtripPoliceSirenLevel();
+        if (Math.abs(level - porschePoliceAudioNodes.level) >= .015) {
+          porschePoliceAudioNodes.level = level;
+          try {
+            porschePoliceAudioNodes.master.gain.setTargetAtTime(.052 * level,
+              porschePoliceAudioNodes.ctx.currentTime, .12);
+          } catch (_error) {}
+        }
+      }
+    } else stopRoadtripPoliceSiren();
   }
   function stopPorscheDriveAudio() {
     if (!porscheDriveAudioNodes) return;
@@ -36368,6 +36846,7 @@ window.__entranceRoomOpen = false;
     else stopPorscheDriveAudio();
     updatePorscheDriveMusic();
     updatePorscheDriveAc();
+    updateRoadtripPoliceSiren();
     if (porscheDriveAudioNodes) paintPorscheDriveAudio();
     else paintPorscheDriveMusic();
     if (porsche) porsche.classList.toggle("engine-idling",
@@ -37903,6 +38382,40 @@ window.__entranceRoomOpen = false;
           lastImpactSeverity: roadtripState.lastImpactSeverity,
           shoulderZone: roadtripState.shoulderZone,
           shoulderDistance: roadtripState.shoulderDistance,
+          speedLimit: ROADTRIP_SPEED_LIMIT,
+          enforcementSpeed: ROADTRIP_POLICE_ENFORCE_SPEED,
+          runEndSpeed: ROADTRIP_POLICE_RUN_END_SPEED,
+          policeEscapeSpeed: ROADTRIP_POLICE_ESCAPE_SPEED,
+          policeEscapeDistance: ROADTRIP_POLICE_ESCAPE_DISTANCE,
+          police: {
+            phase: roadtripState.police.phase,
+            nextDistance: roadtripState.police.nextDistance,
+            stationAt: roadtripState.police.stationAt,
+            warningCarAt: roadtripState.police.warningCarAt,
+            warningElapsed: roadtripState.police.warningElapsed,
+            warningFlashCount: roadtripState.police.warningFlashCount,
+            warningLight: roadtripState.police.warningLight,
+            detectedSpeed: roadtripState.police.detectedSpeed,
+            fine: roadtripState.police.fine,
+            tickets: roadtripState.police.tickets,
+            fines: roadtripState.police.fines,
+            stops: roadtripState.police.stops,
+            pursuits: roadtripState.police.pursuits,
+            pursuitElapsed: roadtripState.police.pursuitElapsed,
+            pursuitDistance: roadtripState.police.pursuitDistance,
+            refusalElapsed: roadtripState.police.refusalElapsed,
+            refusalDistance: roadtripState.police.refusalDistance,
+            escapeGap: roadtripState.police.escapeGap,
+            escapeRatio: roadtripPoliceEscapeRatio(),
+            escapes: roadtripState.police.escapes,
+            runEnded: roadtripState.police.runEnded,
+            endReason: roadtripState.police.endReason,
+            sirenActive: !!porschePoliceAudioNodes,
+            sirenLevel: roadtripPoliceSirenLevel(),
+            mirrorScale: roadtripState.police.mirrorScale,
+            roadsideVisible: !!(roadtripPoliceRoadNode && roadtripPoliceRoadNode.getAttribute("visibility") !== "hidden"),
+            mirrorVisible: !!(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("visibility") !== "hidden")
+          },
           curve: roadtripCurvatureAt(roadtripState.distance),
           passedTraffic: roadtripState.entities.filter(function (entity) { return !!entity.passed; }).length,
           mirrorCount: roadtripMirrorPool.filter(function (node) {
@@ -37974,6 +38487,26 @@ window.__entranceRoomOpen = false;
   window.__entranceRoadtripSpawn = function (type, lane) {
     if (!roadtripState.active) return false;
     return spawnRoadtripEntity(String(type || "").toLowerCase(), lane, 18);
+  };
+  window.__entranceRoadtripPolice = function (ahead) {
+    if (!roadtripState.active) return false;
+    if (roadtripState.police.phase !== "idle") return false;
+    return beginRoadtripPoliceEncounter(ahead);
+  };
+  window.__entranceRoadtripPoliceDetect = function (speed) {
+    if (!roadtripState.active || roadtripState.police.phase !== "warning") return false;
+    detectRoadtripPoliceSpeed(Math.max(0, Math.min(263, Number(speed) || 0)));
+    paintRoadtripPolice();
+    updateRoadtripPoliceSiren();
+    return roadtripState.police.phase;
+  };
+  window.__entranceRoadtripPoliceStep = function (speed, seconds) {
+    if (!roadtripState.active || roadtripState.police.phase !== "pursuit") return false;
+    speed = Math.max(0, Math.min(263, Number(speed) || 0));
+    seconds = Math.max(0, Math.min(30, Number(seconds) || 0));
+    driveState.speed = speed * driveState.facing;
+    stepRoadtripPolice(speed / 3.6 * seconds, seconds);
+    return roadtripState.police.phase;
   };
   window.__refreshPorscheDriveClimate = updatePorscheDriveAc;
   window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
@@ -39543,6 +40076,15 @@ var T = {
       entrance_roadtrip_kiss: "💋 collected · 250 × multiplier.",
       entrance_roadtrip_inf: "Rare ∞ collected · 500 × multiplier.",
       entrance_roadtrip_escape: "Wildlife clear · easy does it.",
+      entrance_roadtrip_police_warning: "Headlights ×3 · police ahead. Limit 90.",
+      entrance_roadtrip_police_clear: "Police passed · within the 110 km/h tolerance.",
+      entrance_roadtrip_police_pursuit: "Clocked at {speed} km/h · pull onto the right shoulder and stop.",
+      entrance_roadtrip_police_pull_over: "Police behind · pull onto the right shoulder and stop.",
+      entrance_roadtrip_police_escape: "Police receding · hold 200+ to lose them.",
+      entrance_roadtrip_police_escaped: "Police lost · sirens fading away.",
+      entrance_roadtrip_police_ticket: "Pulled over · ${fine} fine. Score docked.",
+      entrance_roadtrip_police_run_end: "150–199 km/h · highway run over. ${fine} fine.",
+      entrance_roadtrip_police_refused: "You didn’t pull over · highway run over. ${fine} fine.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it. ☕",
@@ -40708,6 +41250,15 @@ var T = {
       entrance_roadtrip_kiss: "💋 sebráno · 250 × násobitel.",
       entrance_roadtrip_inf: "Vzácné ∞ sebráno · 500 × násobitel.",
       entrance_roadtrip_escape: "Zvěř unikla · v klidu dál.",
+      entrance_roadtrip_police_warning: "Troje probliknutí · vpředu policie. Limit 90.",
+      entrance_roadtrip_police_clear: "Policie za tebou · do 110 km/h bez postihu.",
+      entrance_roadtrip_police_pursuit: "Naměřeno {speed} km/h · zajeď na pravou krajnici a zastav.",
+      entrance_roadtrip_police_pull_over: "Policie za tebou · zajeď na pravou krajnici a zastav.",
+      entrance_roadtrip_police_escape: "Policie se vzdaluje · drž 200+ a setřes ji.",
+      entrance_roadtrip_police_escaped: "Policie setřesena · siréna utichá.",
+      entrance_roadtrip_police_ticket: "Zastavení u krajnice · pokuta ${fine}. Skóre sníženo.",
+      entrance_roadtrip_police_run_end: "150–199 km/h · jízda po dálnici končí. Pokuta ${fine}.",
+      entrance_roadtrip_police_refused: "Nezastavil jsi · jízda po dálnici končí. Pokuta ${fine}.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni. ☕",

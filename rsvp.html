@@ -126,8 +126,7 @@ body{
   font-family:"Source Serif 4", Georgia, serif; font-size:17px; line-height:1.7;
 }
 #installed-load{display:none}
-:root:not(.revealed) #installed-load,
-:root.installed-app #installed-load{
+:root.loft-loading-play #installed-load{
   position:fixed; inset:0; z-index:10000; display:flex; flex-direction:column;
   align-items:center; justify-content:center; gap:1.15rem;
   padding:max(1.5rem,env(safe-area-inset-top)) max(1.5rem,env(safe-area-inset-right))
@@ -135,8 +134,7 @@ body{
   background:var(--cream); color:var(--ink); opacity:1;
   transition:opacity .28s ease;
 }
-:root:not(.revealed) #installed-load.done,
-:root.installed-app #installed-load.done{opacity:0; pointer-events:none}
+:root.loft-loading-play #installed-load.done{opacity:0; pointer-events:none}
 .installed-load-icon{
   display:block; width:84px; height:84px; object-fit:contain;
   filter:drop-shadow(0 5px 9px rgba(69,58,49,.18));
@@ -163,8 +161,7 @@ body{
   content:""; position:absolute; top:0; right:0; width:5px; height:100%; background:var(--blue-deep);
 }
 @media (prefers-reduced-motion:reduce){
-  :root:not(.revealed) #installed-load,
-  :root.installed-app #installed-load{transition:none}
+  :root.loft-loading-play #installed-load{transition:none}
   .installed-load-fill{transition:none}
 }
 main{max-width:1140px; margin:0 auto; padding:1.25rem 1.25rem 0}
@@ -13143,52 +13140,97 @@ section{margin:1.9rem 0}
     var loader = document.getElementById("installed-load");
     var installed = document.documentElement.classList.contains("installed-app");
     var gameEntry = installed || !document.documentElement.classList.contains("revealed");
-    // Legacy probe names are retained for focused entry tests; the loader now covers every
-    // game-only browser route as well as the installed app.
-    window.__installedLoaderUsed = gameEntry;
+    // Legacy probe names are retained for focused entry tests. Browser and installed entries
+    // now paint their own CLICK ME / recovery decision first; progress begins only after selection.
+    window.__installedLoaderUsed = false;
     window.__installedLoaderComplete = !gameEntry;
     if (!gameEntry) {
       loader.remove();
+      window.__startGameEntryLoader = function (action) {
+        if (typeof action === "function") action();
+        return false;
+      };
       return;
     }
 
-    var lang = "en";
-    try {
-      var saved = localStorage.getItem("lang");
-      var languages = navigator.languages || [navigator.language || ""];
-      if (saved === "cs" || (!saved && languages.some(function (item) { return /^cs(?:-|$)/i.test(item); }))) lang = "cs";
-    } catch (_error) {}
-    loader.querySelectorAll("[data-" + lang + "]").forEach(function (node) {
-      node.textContent = node.getAttribute("data-" + lang);
-    });
-    var track = loader.querySelector(".installed-load-track");
     var fill = loader.querySelector(".installed-load-fill");
     var percent = loader.querySelector(".installed-load-percent");
-    var started = performance.now();
-    var ready = false;
+    var backgroundStarted = performance.now();
+    var ready = document.readyState === "complete";
+    var running = false;
+    var pendingAction = null;
     var value = 8;
+    function applyLanguage() {
+      var lang = document.documentElement.lang === "cs" ? "cs" : "en";
+      if (document.documentElement.lang !== "cs") {
+        try {
+          var saved = localStorage.getItem("lang");
+          var languages = navigator.languages || [navigator.language || ""];
+          if (saved === "cs" || (!saved && languages.some(function (item) { return /^cs(?:-|$)/i.test(item); }))) lang = "cs";
+        } catch (_error) {}
+      }
+      loader.querySelectorAll("[data-" + lang + "]").forEach(function (node) {
+        node.textContent = node.getAttribute("data-" + lang);
+      });
+    }
     function draw(next) {
       value = Math.max(value, Math.min(100, Math.round(next)));
       fill.style.width = value + "%";
       percent.value = value + "%";
       percent.textContent = value + "%";
     }
+    function estimatedBackgroundValue(now) {
+      return 8 + 84 * (1 - Math.exp(-(now - backgroundStarted) / 1500));
+    }
     function finish() {
       fill.style.transition = "none";
       draw(100);
       window.__installedLoaderComplete = true;
       loader.classList.add("done");
-      setTimeout(function () { loader.remove(); }, 300);
+      setTimeout(function () {
+        document.documentElement.classList.remove("loft-loading-play");
+        loader.remove();
+        running = false;
+        var action = pendingAction;
+        pendingAction = null;
+        window.__startGameEntryLoader = function (nextAction) {
+          if (typeof nextAction === "function") nextAction();
+          return false;
+        };
+        if (typeof action === "function") action();
+      }, 300);
     }
     function tick(now) {
-      var elapsed = now - started;
-      if (ready) draw(value + Math.max(3, (100 - value) * .3));
-      else draw(8 + 84 * (1 - Math.exp(-elapsed / 1500)));
-      if (ready && value >= 99 && elapsed >= 650) finish();
+      if (ready) draw(value + Math.max(8, (100 - value) * .45));
+      else draw(estimatedBackgroundValue(now));
+      if (ready && value >= 99) finish();
       else requestAnimationFrame(tick);
     }
-    addEventListener("DOMContentLoaded", function () { ready = true; }, { once:true });
-    requestAnimationFrame(tick);
+    addEventListener("load", function () { ready = true; }, { once:true });
+    window.__startGameEntryLoader = function (action) {
+      if (running) return true;
+      if (ready) {
+        window.__installedLoaderComplete = true;
+        loader.remove();
+        window.__startGameEntryLoader = function (nextAction) {
+          if (typeof nextAction === "function") nextAction();
+          return false;
+        };
+        if (typeof action === "function") action();
+        return false;
+      }
+      running = true;
+      pendingAction = action;
+      value = Math.max(value, estimatedBackgroundValue(performance.now()));
+      applyLanguage();
+      draw(value);
+      window.__installedLoaderUsed = true;
+      window.__installedLoaderComplete = false;
+      loader.classList.remove("done");
+      document.documentElement.classList.add("loft-loading-play");
+      requestAnimationFrame(tick);
+      return true;
+    };
   })();
 </script>
 <main>
@@ -110874,6 +110916,11 @@ function spawnDustMote(container) {
     hideRecoveryGate();
     saveCheckpoint();
   }
+  function runGameEntryAction(action) {
+    if (window.__startGameEntryLoader && window.__startGameEntryLoader(action)) return true;
+    action();
+    return false;
+  }
   function startRecoveryTrailer() {
     if (!recoverySaved) return false;
     try { cinematicRecoveryRaw = JSON.stringify(recoverySaved); } catch (_error) { cinematicRecoveryRaw = null; }
@@ -110907,8 +110954,13 @@ function spawnDustMote(container) {
     var buttons = [continueBtn, restartBtn], selected = 0;
     function select(index) { selected = (index + buttons.length) % buttons.length; buttons.forEach(function (b, i) { b.classList.toggle("selected", i === selected); }); buttons[selected].focus(); }
     function choose(index) {
-      if (index === 0) { applyCheckpoint(saved); return; }
-      hideRecoveryGate(); clearCheckpoint(); resetHunt({ enterPageMode: true, resetDateTime: false });
+      if (index === 0) {
+        runGameEntryAction(function () { applyCheckpoint(saved); });
+        return;
+      }
+      runGameEntryAction(function () {
+        hideRecoveryGate(); clearCheckpoint(); resetHunt({ enterPageMode: true, resetDateTime: false });
+      });
     }
     continueBtn.addEventListener("click", function (e) { e.stopPropagation(); choose(0); });
     restartBtn.addEventListener("click", function (e) { e.stopPropagation(); choose(1); });
@@ -110946,8 +110998,10 @@ function spawnDustMote(container) {
   }
   function clickMeDismiss(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    removeClickMe();
-    stopHintBlink();
+    runGameEntryAction(function () {
+      removeClickMe();
+      stopHintBlink();
+    });
   } // the overlay consumes the first scene tap before handing control to the room
   // ...and so does any real KEY interaction (Enter, the room-nav arrows, d, a letter…) — the melting
   // invitation shouldn't linger while a keyboard player is already driving. Ignore lone modifiers/Tab

@@ -35,12 +35,14 @@ select the game-only shell but start no activity. `#trailer` starts the curated 
 trailer after normal entry or checkpoint recovery has settled. Search for `urlEntryMode`,
 `startCinematic`, and `stopCinematic`.
 
-Every game-only entry, including installed/standalone launch, uses the bilingual
-`#installed-load` progress cover while the single-file game parses. The legacy
-`__installedLoaderUsed` / `__installedLoaderComplete` probes describe that shared game-entry
-loader; the revealed invitation removes it synchronously and never paints it. The cover retires
-after `DOMContentLoaded`, by which point either CLICK ME or checkpoint recovery has established
-the interactive entry surface.
+Every game-only entry, including installed/standalone launch, paints its interactive entry surface
+first: either CLICK ME or checkpoint Continue/Start over. The single-file game continues loading in
+the background. Selecting one of those actions calls `__startGameEntryLoader`; if window-load
+readiness is already complete, the held action runs immediately. Otherwise it raises the bilingual
+`#installed-load` cover at the estimated background percentage and performs the action as soon as
+the remaining work completes. The legacy `__installedLoaderUsed` /
+`__installedLoaderComplete` probes now describe that post-selection handoff. The revealed invitation
+removes the loader synchronously and never paints it.
 
 The trailer is a fixed editorial timeline, not an autonomous player. It owns `window.__cinematic`,
 its timers, cuts, overlay, score, previews, and teardown. `stopCinematic` must remain the single

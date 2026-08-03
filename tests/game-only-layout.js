@@ -29,9 +29,9 @@ function run(width, height, standalone, fullPage) {
         check("installed mode is detected", document.documentElement.classList.contains("installed-app"));
       }
       var loader = document.getElementById("installed-load");
-      check("game-only entry shows loading progress",
-        window.__installedLoaderUsed === true && !!loader &&
-        parseInt(loader.querySelector(".installed-load-percent").textContent, 10) >= 8);
+      check("game-only entry keeps progress dormant behind its splash",
+        window.__installedLoaderUsed === false && window.__installedLoaderComplete === false &&
+        !!loader && getComputedStyle(loader).display === "none");
     } else {
       check("revealed invitation never mounts game loading progress",
         window.__installedLoaderUsed === false && !document.getElementById("installed-load"));
@@ -82,8 +82,10 @@ function run(width, height, standalone, fullPage) {
       }
       if (${(!fullPage || standalone) ? "true" : "false"}) {
         setTimeout(function () {
-          check("game loading progress completes and leaves no overlay",
-            window.__installedLoaderComplete === true && !document.getElementById("installed-load"));
+          var loader = document.getElementById("installed-load");
+          check("portrait keeps progress dormant until a splash action",
+            window.__installedLoaderUsed === false && window.__installedLoaderComplete === false &&
+            !!loader && getComputedStyle(loader).display === "none");
           exercisePortraitAction();
         }, 2700);
       } else {
@@ -190,8 +192,10 @@ function run(width, height, standalone, fullPage) {
             document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
             getComputedStyle(document.querySelector(".game-langs")).display === "flex");
           if (${(!fullPage || standalone) ? "true" : "false"}) {
-            check("game loading progress completes and leaves no overlay",
-              window.__installedLoaderComplete === true && !document.getElementById("installed-load"));
+            var loader = document.getElementById("installed-load");
+            check("scripted layout setup leaves entry progress dormant",
+              window.__installedLoaderUsed === false && window.__installedLoaderComplete === false &&
+              !!loader && getComputedStyle(loader).display === "none");
           }
           report();
         }, ${standalone ? "1800" : "900"});

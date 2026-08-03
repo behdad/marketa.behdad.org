@@ -15,7 +15,8 @@ var PORSCHE = {
   taillightOn: true
 };
 var ROW = { windows: "10101", lamps: { left: true, right: false }, porsche: PORSCHE };
-var DEFAULT_DRIVE = { hud: false, gloveboxOpen: false, stalled: false, gear: 0, speed: 0, rpm: 0, temperature: 0, position: 0, laneOffset: 0, steeringAngle: 0, wheelAngle: 0, wraps: 0, lapCount: 0, facing: 1, yaw: 0, spinDirection: 0, spins: 0 };
+var DEFAULT_ROADTRIP = { unlocked: false, accepted: false, practiceLaps: 0, distance: 0, score: 0, multiplier: 1, collisions: 0, passes: 0, tokens: 0, escapes: 0 };
+var DEFAULT_DRIVE = { hud: false, gloveboxOpen: false, stalled: false, gear: 0, speed: 0, rpm: 0, temperature: 0, position: 0, laneOffset: 0, steeringAngle: 0, wheelAngle: 0, wraps: 0, lapCount: 0, facing: 1, yaw: 0, spinDirection: 0, spins: 0, roadtrip: DEFAULT_ROADTRIP };
 var SAVED = {
   version: 1,
   savedAt: Date.now(),
@@ -52,8 +53,10 @@ var HARNESS = [
   ' await sleep(520);var restored=state(),car=document.getElementById("entrance-porsche");',
   ' report.steps.restored={state:restored,classes:car.getAttribute("class")||"",controls:Array.from(document.querySelectorAll(".entrance-car-control")).map(function(el){return el.id;}),lamps:[document.getElementById("entrance-entry-lamp-left").classList.contains("on"),document.getElementById("entrance-entry-lamp-right").classList.contains("on")],persisted:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.entrance,sfx:report.sfx};',
   ' window.__closeEntranceRoom();await sleep(760);report.steps.closed=state();window.__openEntranceRoom();await sleep(60);report.steps.reopened=state();',
+  ' window.__openEntrancePorscheDriveHud();report.steps.resumedCoach={show:document.getElementById("entrance-drive-coach").classList.contains("show"),hud:state().drive.hud};window.__dismissEntrancePorscheDriveHud();',
   ' window.__restoreCheckpointSystems({entrance:{windows:"111111",lamps:{left:1,right:true},porsche:{roofOpen:"yes",doorOpen:true,windowOpen:false,frunkOpen:1,trunkOpen:false,engineOn:null,headlightOn:true,taillightOn:0}}},"afterStage");report.steps.validated=state();',
   ' window.__resetCheckpointSystems();report.steps.reset=state();',
+  ' window.__openEntrancePorscheDriveHud();report.steps.freshCoach={show:document.getElementById("entrance-drive-coach").classList.contains("show"),hud:state().drive.hud};window.__dismissEntrancePorscheDriveHud();',
   ' var saves=0;window.__checkpointChanged=function(){saves++;};',
   ' ["entrance-window-left","entrance-window-mid-left","entrance-window-upper","entrance-window-mid-right","entrance-window-right","entrance-entry-lamp-left","entrance-entry-lamp-right","entrance-porsche-roof","entrance-porsche-door","entrance-porsche-window","entrance-porsche-frunk","entrance-porsche-trunk","entrance-porsche-headlight","entrance-porsche-taillight"].forEach(click);window.__toggleEntrancePorscheEngine();',
   ' click("entrance-porsche-indicator");var captured=window.__captureCheckpointSystems().entrance;report.steps.mutated={state:state(),row:captured,saves:saves,rowKeys:Object.keys(captured).sort(),carKeys:Object.keys(captured.porsche).sort()};',
@@ -100,6 +103,10 @@ check(restored && restored.open && restored.windows.map(function (row) { return 
 check(s.restored && s.restored.controls.length === 9 &&
   s.restored.controls.every(function (id) { return /^entrance-porsche-/.test(id); }),
   "Continue retains the complete Porsche control inventory", s.restored);
+check(s.resumedCoach && s.resumedCoach.hud && !s.resumedCoach.show,
+  "opening the dashboard after Continue does not replay the first-drive coach", s.resumedCoach);
+check(s.freshCoach && s.freshCoach.hud && s.freshCoach.show,
+  "a fresh reset still presents the first-drive coach", s.freshCoach);
 check(s.restored && JSON.stringify(s.restored.persisted) === JSON.stringify(Object.assign({}, ROW, { drive: DEFAULT_DRIVE })) && s.restored.sfx === 0,
   "the post-Continue save retains the compact row without replaying startup SFX", s.restored);
 check(s.closed && !s.closed.open && allCar(s.closed.car, true) && !s.closed.car.idleActive && !s.closed.car.vibrating &&

@@ -126,6 +126,75 @@ Start navigation work with `tests/navigation.js`, `tests/upstairs-keyboard-navig
 `tests/delayed-pan.js`, `tests/rapid-navigation.js`, `tests/lower-shortcuts.js`,
 `tests/lower-room-markers.js`, and `tests/lower-room-recovery.js`.
 
+### Entrance driving and highway
+
+Search for `entrancePorscheDrive`, `__entranceDriveStep`, and `entranceRoadtrip`. The Entrance
+controller owns the ordinary car state and the nested `drive.roadtrip` record: unlock/practice,
+current-run distance and scoring, the bounded entity pool, and lifecycle flags. The roadtrip reuses
+the driving step instead of starting a second frame loop. `__entranceRoadtripStart()` and
+`__entranceRoadtripSpawn(type, lane)` are narrow deterministic test seams; player input still goes
+through the dashboard's existing steering, shift, throttle, brake, and dismiss owners.
+
+The drivetrain uses the 2010 base Boxster's six manual ratios (`3.667`, `2.050`, `1.407`, `1.133`,
+`.972`, `.841`), `3.875` final drive, and `235/50 R17` rear-tire circumference. Coupled RPM is derived
+directly from road speed; first-gear launch slip is the only exception. The 7,500 rpm limiter,
+350 ms shift interruption, torque curve, drag, 263 km/h power-limited top speed, and progressive
+pedal ramp calibrate a correctly shifted 0–100 km/h run near the published 5.9 seconds. Keep
+`__entranceDriveRpmForSpeed()`, `__entranceDriveAcceleration()`, and `__entranceDriveSetMotion()` as
+deterministic focused-test seams when tuning this model.
+
+The first-person world is native SVG under `#entrance-drive-hud-svg`. `#entrance-room.roadtrip-active`
+expands its viewBox and HUD while leaving `#entrance-room-art` and `#entrance-porsche` rendered so
+spatial-audio geometry remains valid. The roadtrip weather layers follow the Entrance's existing
+day/cloud/rain/snow/winter classes. Keep runtime traffic, wildlife, and tokens capped by the owned
+pool; never let timer- or step-spawned entities accumulate without a bound.
+The road uses four equal lanes around a dynamic double-yellow centre. Positive-lane traffic advances
+in the two right-hand lanes; negative-lane traffic uses front/headlight art and a negative world
+velocity so it closes faster from the opposite lanes. The Porsche's roadtrip lane is separate from
+the side-view SVG lane offset and starts at `0.5`, the inner right-hand lane.
+Traffic types are `car`, `pickup`, `truck` (semi), and `rv`; each owns rear and oncoming-front
+templates, speed, scale, and mass treatment. Keep the natural spawn table varied, with RVs common
+enough to read as Alberta highway traffic. `deer` and the compatibility-named `rabbit` render as a
+mule deer and snowshoe hare.
+`roadtripCurvatureAt()` defines alternating eased bends. `roadtripCurveOffset()` integrates the
+upcoming curve into the sampled asphalt, shoulder, lane, furniture, sign, and entity projection,
+while the current curvature adds a small unsteered outside drift. Curve-warning uses are separately
+pooled and placed 54 road units before their matching bend. The player range extends beyond the four
+lane centres into rumble and gravel zones; `syncRoadtripShoulder()` owns their view vibration, grip
+reduction, speed bleed, classes, and exposed test state.
+`porscheTireAudioMix()` is the deterministic speed/steering/surface projection for the continuous
+road, tire, wind, corner-squeal, and shoulder textures. It shares the drivetrain bed but uses a
+separate tire spatial output so a closed roof can muffle high frequencies without the engine's
+lower cutoff erasing them.
+The top-centre ornament is a live SVG mirror. A clean traffic pass keeps the pooled entity alive
+briefly behind the player; `paintRoadtripMirror()` projects it into a separate six-use mirror pool,
+swaps forward traffic to its front/headlight template, and releases it after 38 road units. The main
+windshield hides passed entities below its lower edge, so a pooled vehicle is never painted in both
+views at once.
+Wildlife switches to a timed hop-and-verge escape inside 22 road units: a slow approach gives the
+escape its required `0.48s`, while a fast same-lane arrival can reach the collision zone first.
+Roadtrip event feedback is routed through the shared lower-room caption flash; do not place transient
+score or coaching copy over the windshield.
+Collectibles use pooled `heart`, `kiss`, and `inf` entities worth 100/250/500 before the multiplier;
+the original `token` test-seam input remains a compatibility alias for `inf`.
+`roadtripCollisionSeverity()` combines relative velocity with a per-object mass factor. It scales
+speed loss, shake displacement, SFX gain/duration, and crack opacity. Forward traffic and wildlife
+use the localized `.roadtrip-cracked` layer; same-lane oncoming traffic hard-stops/stalls the Porsche
+and uses the full `.roadtrip-shattered` layer. Restart repairs either windshield state.
+
+The third forward practice wrap unlocks the highway and reveals the owned SVG invitation; it does not
+start the roadtrip. Acceptance persists as `drive.roadtrip.accepted`, while Later is transient and the
+card returns on a later dashboard opening. Closing the Entrance parks an accepted run
+and live entities; the first positive driving step after reopen resumes it. Escape/the close control
+first exits an active highway to the street HUD and suppresses automatic re-entry until the car stops;
+the next Escape dismisses the dashboard and clears the run while retaining unlock and best. Full reset also clears
+unlock/practice, while the best score remains localStorage-owned. Checkpoints persist compact settled
+roadtrip counters but not active presentation, spawn timing, or live entities. Run
+`tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`, `tests/entrance-recovery.js`, and
+`tests/entrance-roadtrip.js` for this boundary.
+Checkpoint restore marks the first-drive coach complete before the Entrance reopens; a fresh reset
+still owns the four-step lesson, and the dashboard help control remains its explicit replay path.
+
 ### Phase and solved-state model
 
 The main progression values have separate jobs:
@@ -308,7 +377,7 @@ Add the focused runner for the ownership boundary you changed:
 | Main/lower navigation | `navigation.js`, `upstairs-keyboard-navigation.js`, `delayed-pan.js`, `rapid-navigation.js`, `lower-shortcuts.js`, `lower-room-*.js` |
 | Entry, recovery, reset, trailer | `game-only-layout.js`, `url-entry.js`, `recovery.js`, `checkpoint-*.js`, `reset-hooks.js`, `cine.js` |
 | Monitor/phone shells and menus | `menu.js`, `laptopmenu.js`, `systemmenu.js`, `monitor-*.js`, `phone-*.js` |
-| Room-specific interactions | the corresponding `kitchen`/`garden`/`cuddly`/`office`/`balcony` or lower-room focused file |
+| Room-specific interactions | the corresponding `kitchen`/`garden`/`cuddly`/`office`/`balcony` or lower-room focused file; Entrance driving also runs `entrance-driving.js` and `entrance-roadtrip.js` |
 | Apps and games | the named app/game test plus `minigame-vocabulary.js`; include touch tests for shared D-pads or drag controls |
 | Messages and Charlie | `message-*.js`, `chat.js`, `chat-context.js`, `chat-worker.mjs`, `assistant-behavior.mjs`, `safe-actions*.js` |
 | Audio/media lifecycle | `media-transitions.js`, `device-audio.js`, `lower-audio.js`, `piano-message.js`, `performance.js`, `leak.js` |
@@ -367,6 +436,7 @@ The Worker is a separate Cloudflare deployment. A frontend Git pull does not dep
 | Localization | `var T =`, `function setLang` |
 | Main/lower navigation | `var STAGES`, `goToStage`, `lowerRoomForStage`, `__navigateLowerRoom` |
 | Progression | `solvedRooms`, `__finishSolveAdvance`, `setSecondRound` |
+| Entrance highway | `entrancePorscheDrive`, `entranceRoadtrip`, `__entranceDriveStep` |
 | Checkpoints | `LOFT_CHECKPOINT_KEY`, `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter` |
 | Reset | `resetHunt`, `__registerTransientResetHook` |
 | Typed API | `initLoftApi`, `register({ id:`, `__loftStateChanged` |

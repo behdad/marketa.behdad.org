@@ -206,6 +206,21 @@ cadence, so a temporarily unavailable shared context cannot swallow the stop.
 The low-passed ABS layer stays subordinate, and braking below 65 km/h schedules
 neither layer.
 
+Roadtrip impacts are attended one-shots on `getSfxCtx()`, routed through the
+HUD-centered Porsche spatial stage. A low crash/noise body and high glass-shard
+layer share one severity value derived from relative speed and object mass;
+head-on events extend the envelope, while rear-end and wildlife bumps remain
+shorter and quieter. They never create, suspend, or close an `AudioContext`.
+
+The drivetrain bed also owns one looped noise source fanned into five continuous
+textures: low road body, tire band, high-speed wind, filtered corner scrub, and a
+quiet pitched corner squeal. `porscheTireAudioMix()` raises road/tire/wind with
+speed, corner layers with speed × steering angle, and adds progressively rougher
+rumble-strip/gravel gain. Tire paths use their own Porsche-anchored spatial output
+with a 5.2 kHz closed-roof cutoff; the engine keeps its lower cabin cutoff. These
+nodes start and stop with the existing drivetrain bed and inherit the same
+Entrance + engine + focus/visibility lifecycle.
+
 - **`getSfxCtx()`** returns null while `document.visibilityState === "hidden"` — the
   hidden-tab choke point that silences all one-shots (and autonomous timer-driven ambients)
   without per-call-site guards. Autonomous one-shots additionally guard on

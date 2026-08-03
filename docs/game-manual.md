@@ -180,7 +180,56 @@ On touch:
 - press the accelerator and brake pedals directly.
 
 The roof, door, paired side windows, compartments, and lights remain separate
-car controls. Closing the dashboard keeps the drive state for the visit.
+car controls. Outside highway mode, closing the dashboard keeps the settled
+street-drive state for the visit.
+
+The six-speed manual follows the 2010 base Boxster's real gearing: RPM is tied to
+road speed in each selected gear, apart from forgiving clutch slip when launching
+in first. Acceleration builds progressively, the limiter is at 7,500 rpm, and a
+well-timed shift near 7,000 rpm reaches 100 km/h in about six seconds. Sixth gear
+is for relaxed cruising rather than instant acceleration; top speed is 263 km/h.
+
+Complete three forward street laps to unlock the highway. On the third lap a
+top-left **Fancy a roadtrip?** card offers **Take the highway** or **Later**;
+the dashboard does not leave the street until the highway is accepted. After
+that, the highway remains unlocked. The same steering, gears, accelerator, and brake apply. The Porsche
+begins in the inner right-hand lane: rear-view traffic travels ahead in the two
+right lanes, while headlights approach in the two lanes beyond the double
+yellow. The traffic mix includes sedans, pickups, semis, and the RVs common on
+Alberta highways. Steering can cross the centre line, so watch the direction as well as
+the lane while the road and weather continue through the windshield. Yellow
+curve signs announce the next matching bend. The car drifts toward the outside
+of a bend unless you steer with it.
+
+You can cross either white edge line onto the shoulder. The rumble strip shakes
+the view; farther out, gravel reduces grip and steadily bleeds speed. It is useful
+as an emergency escape route, but slower than staying on the pavement.
+Road and tire noise build with speed; fast steering adds a tire squeal and air
+swoosh, while the rumble strip and gravel have rougher textures.
+The centre mirror is live: traffic you have just passed remains visible behind
+the Porsche until it falls out of mirror range.
+
+Cleanly passing a car or truck scores `100 ×` the current multiplier. Collecting
+a ♥️ scores `100 ×`, a 💋 scores `250 ×`, and the rarer ∞ scores `500 ×` the
+multiplier. Any clean pass or pickup raises the multiplier by one, up to `8×`;
+rear-ending forward traffic cuts the car's speed and resets
+it below the struck vehicle's speed, kicks the view, cracks the windshield, and
+resets it to `1×`. Meeting oncoming traffic in its lane produces a longer, louder
+impact, stops and stalls the Porsche, and shatters the windshield until the
+ignition is restarted. Shake, sound, slowdown, and glass damage scale with the
+other object's type and relative speed.
+Mule deer and snowshoe hares visibly leap and zig-zag toward the verge. A measured approach
+gives them time to clear unharmed without changing the score chain; reaching one
+too quickly can cause a proportionally lighter strike and windshield crack.
+Distance, score, best, and multiplier stay visible across the top of the drive.
+Pass, pickup, wildlife, and collision results briefly use the room caption line
+instead of covering the windshield.
+
+Press Escape or select the dashboard close control to leave the highway for the
+street view while keeping the dashboard and engine available so the car can be
+fully braked. Escape again closes the dashboard; once it is closed, Escape
+leaves the Entrance. Returning upstairs by another route instead parks the run;
+reopen the Entrance and drive forward to resume it.
 
 ## Help and coaches
 
@@ -191,7 +240,8 @@ Press `?` for keyboard help. Individual activities show compact instructions
 when their controls differ, and one-time coaches call attention to genuinely
 easy-to-miss controls such as Messages and the driving dashboard. Coaches are
 dismissed by using the control they indicate; the driving card can also be
-selected to put it away and reopened with its `?` button.
+selected to put it away and reopened with its `?` button. Continue does not
+replay the first-drive lesson in a recovered game.
 
 ## Saves, Continue, and Restart
 

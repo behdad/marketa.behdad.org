@@ -8,7 +8,7 @@ var lib = require("./lib");
 var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
-  'var saved={version:1,savedAt:Date.now()-1000,progress:{room:"kitchen",maxUnlocked:0,phase2:false,party:false,daylight:true,bbq:false},puzzle:{},phone:null,album:null,systems:{coffee:{step:"brewed",rounds:1}}};',
+  'var saved={version:1,savedAt:Date.now()-1000,progress:{room:"kitchen",maxUnlocked:1,solvedRooms:["kitchen"],phase2:false,party:false,daylight:true,bbq:false},puzzle:{},phone:null,album:null,systems:{coffee:{step:"brewed",rounds:1}}};',
   'if(!sessionStorage.getItem("coffee-recovery-seeded")){sessionStorage.setItem("coffee-recovery-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
   'var report={errors:[],sounds:0,advances:0,matrix:{}};',
   'window.addEventListener("load",function(){setTimeout(function(){try{',

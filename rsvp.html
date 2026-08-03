@@ -110452,12 +110452,20 @@ function spawnDustMote(container) {
       systems: window.__captureCheckpointSystems ? window.__captureCheckpointSystems() : undefined
     };
   }
+  function checkpointKitchenSolved(saved) {
+    var progress = saved && saved.progress;
+    if (!progress) return false;
+    if (Array.isArray(progress.solvedRooms)) return progress.solvedRooms.indexOf("kitchen") !== -1;
+    // v1 predates solvedRooms. Preserve a genuinely progressed legacy save while rejecting the
+    // tap-only maxUnlocked:0 records this gate is designed to retire.
+    return !!progress.phase2 || Math.max(0, parseInt(progress.maxUnlocked, 10) || 0) >= 1;
+  }
   function saveCheckpoint() {
-    if (!attractOver() || window.__cinematic) return false;
+    if (!attractOver() || window.__cinematic || !roomSolved("kitchen")) return false;
     try { localStorage.setItem(LOFT_CHECKPOINT_KEY, JSON.stringify(checkpointPayload())); return true; } catch (_error) { return false; }
   }
   function scheduleCheckpoint() {
-    if (!attractOver()) return;
+    if (!attractOver() || !roomSolved("kitchen")) return;
     clearTimeout(checkpointWriteTimer);
     checkpointWriteTimer = setTimeout(function () { checkpointWriteTimer = null; saveCheckpoint(); }, 350);
   }
@@ -110472,7 +110480,8 @@ function spawnDustMote(container) {
     try {
       var raw = localStorage.getItem(LOFT_CHECKPOINT_KEY), saved = raw ? JSON.parse(raw) : null;
       if (!saved || saved.version !== LOFT_CHECKPOINT_VERSION || !saved.progress ||
-          STAGES.indexOf(saved.progress.room) === -1 || Date.now() - (+saved.savedAt || 0) > LOFT_CHECKPOINT_MAX_AGE) {
+          STAGES.indexOf(saved.progress.room) === -1 || !checkpointKitchenSolved(saved) ||
+          Date.now() - (+saved.savedAt || 0) > LOFT_CHECKPOINT_MAX_AGE) {
         if (raw) clearCheckpoint();
         return null;
       }

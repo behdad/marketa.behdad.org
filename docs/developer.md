@@ -267,7 +267,10 @@ contains:
 - separately owned phone, album, and Hack-Man data;
 - a `systems` map captured by subsystem adapters.
 
-Checkpoint writes are debounced through `__checkpointChanged`. A subsystem adapter provides
+Checkpoint creation is gated on `roomSolved("kitchen")`: tap-only and mid-Kitchen visits have no
+recoverable record, and loading clears a current-format record without that solved marker. A
+progressed legacy v1 record without `solvedRooms` remains compatible when its unlock frontier is
+beyond the Kitchen. Writes are debounced through `__checkpointChanged`. A subsystem adapter provides
 `capture()`, `restore(row, phase)`, and optionally `reset()`. Restore has two passes:
 `beforeStage` for state that must precede room selection and `afterStage` for geometry or
 presentation that depends on the settled destination. Validate every row and restore only bounded,

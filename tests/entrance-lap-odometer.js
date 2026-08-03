@@ -9,7 +9,7 @@ var HARNESS = [
   'var report={errors:window.__errs||[],steps:{}};function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function state(){return window.__entranceRoomState();}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();await sleep(30);window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();await sleep(30);',
+  'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__setRoomSolved("kitchen",true);window.goToStage("balcony");window.__openEntranceRoom();await sleep(30);window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();await sleep(30);',
   'var odometer=document.getElementById("entrance-drive-lap-odometer"),started=state(),startedText=odometer&&odometer.textContent;window.__entranceDriveSetMotion(180,4);window.__entranceDriveControl("throttle",true);for(var i=0;i<60;i++)window.__entranceDriveStep(80);window.__entranceDriveControl("throttle",false);await sleep(30);',
   'var wrapped=state(),wrappedText=odometer&&odometer.textContent,wrappedShape={hasWraps:Object.prototype.hasOwnProperty.call(wrapped.drive,"wraps"),hasLapCount:Object.prototype.hasOwnProperty.call(wrapped.drive,"lapCount")};',
   'window.__toggleEntrancePorscheEngine();await sleep(20);var stopped=state();window.__toggleEntrancePorscheEngine();await sleep(30);var restarted=state(),restartedText=odometer&&odometer.textContent;',

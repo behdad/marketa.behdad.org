@@ -32161,6 +32161,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   <path d="M74 8V-17M74-8L64-15M74-3L85-13M194 8V-12M194-5L185-11M194-1L203-8M497 8V-15M497-6L486-13M497-2L508-11M618 8V-11M618-4L610-10M618-1L627-7"/>
                 </g>
               </g>
+              <g id="entrance-roadtrip-winter" fill="#f1f2ed">
+                <path id="entrance-roadtrip-winter-ground" d="M322-8L0 96V-8ZM358-8L680 96V-8Z" opacity=".82"/>
+                <path id="entrance-roadtrip-winter-edges" d="M322-8L0 96L6 96L323-8ZM357-8L674 96L680 96L358-8Z" fill="#f6f7f2" opacity=".62"/>
+              </g>
               <g id="entrance-roadtrip-road">
                 <path class="entrance-roadtrip-verge" d="M0-1Q120-8 315-5L326-8L32 96H0ZM365-5Q544-9 680-1V96H648L354-8Z"/>
                 <path class="entrance-roadtrip-asphalt" d="M326-8L354-8L648 96H32Z"/>
@@ -32190,10 +32194,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <g id="entrance-roadtrip-curve-signs"></g>
               <!-- The road engine owns runtime children and their transforms. -->
               <g id="entrance-roadtrip-entities"></g>
-              <g id="entrance-roadtrip-winter" fill="#f1f2ed">
-                <path d="M0 6Q88-3 180 6L314-3L302 4Q157 32 0 34ZM366-3L501 7Q593-3 680 7V35Q526 30 379 4Z" opacity=".82"/>
-                <path d="M0-7Q91-21 181-8Q262-26 316-8" fill="none" stroke="#f6f7f2" stroke-width="5" opacity=".62"/>
-              </g>
               <g id="entrance-roadtrip-clouds">
                 <rect y="-120" width="680" height="216" fill="#697984" opacity=".48"/>
                 <path d="M-30-76Q47-99 128-80T288-82T444-73T595-85T710-69" fill="none" stroke="#d6d9d5" stroke-width="25" opacity=".28"/>
@@ -34774,6 +34774,8 @@ window.__entranceRoomOpen = false;
   var roadtripHeadlightGroup = null;
   var roadtripHeadlightLeft = null;
   var roadtripHeadlightRight = null;
+  var roadtripWinterGroundPath = null;
+  var roadtripWinterEdgePath = null;
   var roadtripMirrorRoadPath = null;
   var roadtripMirrorCenterPath = null;
   var roadtripMirrorLanePath = null;
@@ -35136,6 +35138,10 @@ window.__entranceRoomOpen = false;
       roadtripHeadlightGroup = roadtripElement("entrance-roadtrip-headlights");
       roadtripHeadlightLeft = roadtripElement("entrance-roadtrip-headlight-left");
       roadtripHeadlightRight = roadtripElement("entrance-roadtrip-headlight-right");
+    }
+    if (!roadtripWinterGroundPath) {
+      roadtripWinterGroundPath = roadtripElement("entrance-roadtrip-winter-ground");
+      roadtripWinterEdgePath = roadtripElement("entrance-roadtrip-winter-edges");
     }
     var laneMarks = roadtripElement("entrance-roadtrip-lane-marks");
     if (!roadtripLaneMarks.length && laneMarks) {
@@ -35738,6 +35744,13 @@ window.__entranceRoomOpen = false;
     }).join("");
     return outer + inner + "Z";
   }
+  function roadtripOutsidePath(samples, roadFraction, boundaryX) {
+    var far = samples[0];
+    var near = samples[samples.length - 1];
+    return roadtripLinePath(samples, roadFraction) +
+      "L" + boundaryX + " " + near.y.toFixed(2) +
+      "L" + boundaryX + " " + far.y.toFixed(2) + "Z";
+  }
   function hideRoadtripPoliceVisuals() {
     [roadtripPoliceRoadNode, roadtripPoliceWarningNode, roadtripPoliceWarningBeams,
       roadtripPoliceMirrorNode].forEach(function (node) {
@@ -36284,6 +36297,11 @@ window.__entranceRoomOpen = false;
     if (roadtripEdgePaths[1]) roadtripEdgePaths[1].setAttribute("d", roadtripBandPath(samples, .994, 1));
     if (roadtripCenterPath) roadtripCenterPath.setAttribute("d",
       roadtripBandPath(samples, -.030, -.016) + roadtripBandPath(samples, .016, .030));
+    if (roadtripWinterGroundPath) roadtripWinterGroundPath.setAttribute("d",
+      roadtripOutsidePath(samples, -outerFraction, 0) + roadtripOutsidePath(samples, outerFraction, 680));
+    if (roadtripWinterEdgePath) roadtripWinterEdgePath.setAttribute("d",
+      roadtripBandPath(samples, -outerFraction - .018, -outerFraction) +
+      roadtripBandPath(samples, outerFraction, outerFraction + .018));
     var markSpacing = 16;
     var markCycle = markSpacing * 9;
     var scroll = roadtripState.distance % markCycle;

@@ -39,7 +39,9 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-clouds",
   "entrance-roadtrip-rain",
   "entrance-roadtrip-snow",
-  "entrance-roadtrip-winter"
+  "entrance-roadtrip-winter",
+  "entrance-roadtrip-winter-ground",
+  "entrance-roadtrip-winter-edges"
 ];
 
 var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
@@ -58,7 +60,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-roadtrip-mirror-entities", "entrance-roadtrip-mirror-clouds",
     "entrance-roadtrip-mirror-smoke", "entrance-roadtrip-mirror-rain",
     "entrance-roadtrip-mirror-snow", "entrance-roadtrip-mirror-winter", "entrance-roadtrip-clouds",
-    "entrance-roadtrip-rain", "entrance-roadtrip-snow", "entrance-roadtrip-winter"
+    "entrance-roadtrip-rain", "entrance-roadtrip-snow", "entrance-roadtrip-winter",
+    "entrance-roadtrip-winter-ground", "entrance-roadtrip-winter-edges"
   ];
   var report = { errors: [], steps: {} };
   var attended = true;
@@ -446,10 +449,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         edges: mirrorPathGeometry("entrance-roadtrip-mirror-edges", false)
       };
     }
+    function winterGeometry() {
+      return {
+        ground: document.getElementById("entrance-roadtrip-winter-ground").getAttribute("d"),
+        edges: document.getElementById("entrance-roadtrip-winter-edges").getAttribute("d")
+      };
+    }
     var straightGeometry = asphalt.getAttribute("d");
     var straightMirror = mirrorGeometry();
+    var straightWinter = winterGeometry();
     window.__entranceRoadtripSetDistance(158);
-    var rightCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry() };
+    var rightCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry(), winter: winterGeometry() };
     window.__entranceRoadtripSetDistance(260);
     var leftWarningNode = visibleCurveSign();
     var leftWarning = leftWarningNode && {
@@ -458,10 +468,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       href: leftWarningNode.getAttribute("href") || leftWarningNode.getAttribute("xlink:href")
     };
     window.__entranceRoadtripSetDistance(401);
-    var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry() };
+    var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry(), winter: winterGeometry() };
     report.steps.curves = {
       straight: straightGeometry,
       straightMirror: straightMirror,
+      straightWinter: straightWinter,
       roadLines: Array.prototype.map.call(document.querySelectorAll(
         ".entrance-roadtrip-edge,.entrance-roadtrip-centerline"), function (node) {
           return { fill: getComputedStyle(node).fill, stroke: getComputedStyle(node).stroke,
@@ -856,6 +867,8 @@ check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74
 check(/id="entrance-roadtrip-curve-sign-right"[\s\S]{0,260}M-7-28V-37Q-7-47 3-47H7M3-51L7-47L3-43[^>]+stroke="#17191b"[^>]+stroke-linecap="square"[^>]+stroke-linejoin="miter"/.test(source) &&
   /id="entrance-roadtrip-curve-sign-left"[\s\S]{0,260}M7-28V-37Q7-47-3-47H-7M-3-51L-7-47L-3-43/.test(source),
   "curve signs use contained, dark, sharp-cornered single-turn arrows");
+check(source.indexOf('id="entrance-roadtrip-winter"') < source.indexOf('id="entrance-roadtrip-road"'),
+  "accumulated snow paints beneath the road so shoulder markings remain visible at the horizon");
 check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&
   /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;\s*if \(roadtripState\.unlocked\) return;\s*roadtripState\.practiceLaps\+\+/.test(source) &&
   /function recordRoadtripInvitationTravel\(distance\)[\s\S]{0,800}roadtripState\.invitationDistance \+= [^;]+;[\s\S]{0,300}roadtripState\.invitationDistance < PORSCHE_WRAP_SPAN[\s\S]{0,300}roadtripState\.invitationReady = true;/.test(source) &&
@@ -1001,6 +1014,13 @@ check(curves && curves.roadLines.length === 3 && curves.roadLines.every(function
     return line.stroke === "none" && /Z/.test(line.d) && line.fill ===
       (index < 2 ? "rgb(233, 229, 215)" : "rgb(216, 167, 45)");
   }), "white edge and double-yellow markings keep their approved filled perspective-band contract", curves);
+check(curves && (curves.straightWinter.ground.match(/Z/g) || []).length === 2 &&
+  (curves.straightWinter.edges.match(/Z/g) || []).length === 2 &&
+  curves.right.winter.ground !== curves.straightWinter.ground &&
+  curves.right.winter.edges !== curves.straightWinter.edges &&
+  curves.left.winter.ground !== curves.right.winter.ground &&
+  curves.left.winter.edges !== curves.right.winter.edges,
+  "accumulated winter ground remains two separate projected verges through both road bends", curves);
 check(curves && curves.rightWarning && curves.rightWarning.direction === "right" &&
   /curve-sign-right/.test(curves.rightWarning.href || "") && curves.rightWarning.ahead > 0 &&
   curves.right.state.curve > 0 && curves.right.road !== curves.straight &&

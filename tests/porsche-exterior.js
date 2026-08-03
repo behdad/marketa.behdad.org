@@ -26,7 +26,7 @@ check(entrance.indexOf('id="entrance-porsche-side-glass"') < entrance.indexOf('i
   !/#entrance-porsche\.roof-open #entrance-porsche-(?:side|door|passenger)-glass/.test(source) &&
   !/id="entrance-porsche-cabin-(?:shell|backdrop)"/.test(entrance),
   "one paired-window state controls the near and far panes independently of the soft top");
-check(/id="entrance-porsche-side-glass" d="M176 255L190 228Q195 222 207 222H231Q241 223 247 232L263 256Z"/.test(entrance) &&
+check(/id="entrance-porsche-side-glass" d="M175 255L195 225Q198 222 207 222H231Q241 223 247 232L263 256Z"/.test(entrance) &&
   /#entrance-porsche-side-glass\{[\s\S]*?opacity:\.48/.test(source) &&
   /#entrance-porsche-door-glass\{[\s\S]*?opacity:\.64/.test(source),
   "the lighter side glass follows the windshield pillar and reaches the rear of the door");
@@ -41,6 +41,8 @@ check(/id="entrance-porsche-steering-wheel" transform="translate\(185 253\) scal
   "the cockpit steering wheel is twenty-five percent larger and shifted five units left and down");
 check(/id="entrance-porsche-occupants" aria-hidden="true" pointer-events="none">[\s\S]*?id="entrance-porsche-behdad-passenger"[\s\S]*?id="entrance-porsche-marketa-driver"/.test(entrance),
   "the exterior seats identify Behdad as passenger and Markéta as driver without adding a hit target");
+check(/d="M158 255L182 223Q190 221 196 220Q199 220 197 223L173 256Z"[^>]*stroke-linejoin="round"/.test(entrance),
+  "the windshield frame keeps its roof junction while rounding its exposed upper tip");
 check(/#entrance-porsche-occupants\{opacity:1;transition:opacity \.22s ease\}/.test(source) &&
   !/#entrance-room\.drive-hud-visible #entrance-porsche-occupants|#entrance-porsche\.door-open #entrance-porsche-occupants/.test(source),
   "the exterior occupants remain visible before, during, and after the driving HUD");

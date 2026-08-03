@@ -99,7 +99,7 @@ check(s.continued.devices && s.continued.devices.persisted &&
   !("running" in s.continued.devices.persisted.monitor) &&
   s.continued.devices.persisted["phone-shell"].open &&
   !s.continued.devices.persisted["phone-shell"].unlocked &&
-  !("app" in s.continued.devices.persisted["phone-shell"]),
+  s.continued.devices.persisted["phone-shell"].app === null,
   "the post-Continue checkpoint captures the restored subsystem rows again", s.continued.devices && s.continued.devices.persisted);
 check(s.continued.utilities && s.continued.utilities.projector === "stars" && !s.continued.utilities.projectorPaused &&
   !s.continued.utilities.projectorPlaying && s.continued.utilities.candle &&

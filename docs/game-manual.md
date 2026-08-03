@@ -251,8 +251,9 @@ replay the first-drive lesson in a recovered game.
 
 ## Saves, Continue, and Restart
 
-Once the Kitchen is solved, progress is checkpointed automatically in this browser. Visits that
-end before that first room is complete return to the fresh introduction. On a later visit,
+Progress is checkpointed automatically in this browser after solving the Kitchen or deliberately
+leaving it for another upstairs or downstairs room. Merely entering or partially playing the
+Kitchen does not create a save. On a later visit,
 **Continue** previews and restores the saved room and floor, reached and solved
 rooms, Phase 2 status, durable arrangements, Album and Messages data, and the
 safe shell state of devices.

@@ -35,6 +35,13 @@ select the game-only shell but start no activity. `#trailer` starts the curated 
 trailer after normal entry or checkpoint recovery has settled. Search for `urlEntryMode`,
 `startCinematic`, and `stopCinematic`.
 
+Every game-only entry, including installed/standalone launch, uses the bilingual
+`#installed-load` progress cover while the single-file game parses. The legacy
+`__installedLoaderUsed` / `__installedLoaderComplete` probes describe that shared game-entry
+loader; the revealed invitation removes it synchronously and never paints it. The cover retires
+after `DOMContentLoaded`, by which point either CLICK ME or checkpoint recovery has established
+the interactive entry surface.
+
 The trailer is a fixed editorial timeline, not an autonomous player. It owns `window.__cinematic`,
 its timers, cuts, overlay, score, previews, and teardown. `stopCinematic` must remain the single
 cleanup path for completion, Take over, and hidden-tab abort. The removed autoplay director and
@@ -51,7 +58,7 @@ Game chrome has four presentations worth checking independently:
 The fresh CLICK ME overlay and saved-session recovery gate share entry chrome but have different
 state effects. `.loft-entered` enlarges direct game mode without claiming browser fullscreen.
 `.is-fullscreen` and native Fullscreen API ownership remain explicit. Start with
-`tests/game-only-layout.js`, `tests/url-entry.js`, `tests/recovery.js`, and
+`tests/game-entry-loader.js`, `tests/game-only-layout.js`, `tests/url-entry.js`, `tests/recovery.js`, and
 `tests/monitor-fullscreen.js` when changing this area.
 
 ## State ownership
@@ -375,7 +382,7 @@ Add the focused runner for the ownership boundary you changed:
 | --- | --- |
 | Room solve and Enter ownership | `enter.js`, `phase2-progression.js`, `progression-transitions.js` |
 | Main/lower navigation | `navigation.js`, `upstairs-keyboard-navigation.js`, `delayed-pan.js`, `rapid-navigation.js`, `lower-shortcuts.js`, `lower-room-*.js` |
-| Entry, recovery, reset, trailer | `game-only-layout.js`, `url-entry.js`, `recovery.js`, `checkpoint-*.js`, `reset-hooks.js`, `cine.js` |
+| Entry, recovery, reset, trailer | `game-entry-loader.js`, `game-only-layout.js`, `url-entry.js`, `recovery.js`, `checkpoint-*.js`, `reset-hooks.js`, `cine.js` |
 | Monitor/phone shells and menus | `menu.js`, `laptopmenu.js`, `systemmenu.js`, `monitor-*.js`, `phone-*.js` |
 | Room-specific interactions | the corresponding `kitchen`/`garden`/`cuddly`/`office`/`balcony` or lower-room focused file; Entrance driving also runs `entrance-driving.js` and `entrance-roadtrip.js` |
 | Apps and games | the named app/game test plus `minigame-vocabulary.js`; include touch tests for shared D-pads or drag controls |

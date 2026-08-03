@@ -126,6 +126,7 @@ body{
   font-family:"Source Serif 4", Georgia, serif; font-size:17px; line-height:1.7;
 }
 #installed-load{display:none}
+:root:not(.revealed) #installed-load,
 :root.installed-app #installed-load{
   position:fixed; inset:0; z-index:10000; display:flex; flex-direction:column;
   align-items:center; justify-content:center; gap:1.15rem;
@@ -134,6 +135,7 @@ body{
   background:var(--cream); color:var(--ink); opacity:1;
   transition:opacity .28s ease;
 }
+:root:not(.revealed) #installed-load.done,
 :root.installed-app #installed-load.done{opacity:0; pointer-events:none}
 .installed-load-icon{
   display:block; width:84px; height:84px; object-fit:contain;
@@ -161,6 +163,7 @@ body{
   content:""; position:absolute; top:0; right:0; width:5px; height:100%; background:var(--blue-deep);
 }
 @media (prefers-reduced-motion:reduce){
+  :root:not(.revealed) #installed-load,
   :root.installed-app #installed-load{transition:none}
   .installed-load-fill{transition:none}
 }
@@ -13133,9 +13136,12 @@ section{margin:1.9rem 0}
   (function () {
     var loader = document.getElementById("installed-load");
     var installed = document.documentElement.classList.contains("installed-app");
-    window.__installedLoaderUsed = installed;
-    window.__installedLoaderComplete = !installed;
-    if (!installed) {
+    var gameEntry = installed || !document.documentElement.classList.contains("revealed");
+    // Legacy probe names are retained for focused entry tests; the loader now covers every
+    // game-only browser route as well as the installed app.
+    window.__installedLoaderUsed = gameEntry;
+    window.__installedLoaderComplete = !gameEntry;
+    if (!gameEntry) {
       loader.remove();
       return;
     }

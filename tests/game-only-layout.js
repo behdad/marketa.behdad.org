@@ -24,14 +24,16 @@ function run(width, height, standalone, fullPage) {
     var frame = document.querySelector(".hunt-frame").getBoundingClientRect();
     var viewport = document.querySelector(".hunt-viewport").getBoundingClientRect();
     var utilityIds = ["hunt-feedback-btn","hunt-bugs-btn","hunt-github-btn"];
-    if (${standalone ? "true" : "false"}) {
-      check("installed mode is detected", document.documentElement.classList.contains("installed-app"));
+    if (${(!fullPage || standalone) ? "true" : "false"}) {
+      if (${standalone ? "true" : "false"}) {
+        check("installed mode is detected", document.documentElement.classList.contains("installed-app"));
+      }
       var loader = document.getElementById("installed-load");
-      check("installed mode shows its own loading progress",
+      check("game-only entry shows loading progress",
         window.__installedLoaderUsed === true && !!loader &&
         parseInt(loader.querySelector(".installed-load-percent").textContent, 10) >= 8);
     } else {
-      check("browser mode never mounts the installed loading progress",
+      check("revealed invitation never mounts game loading progress",
         window.__installedLoaderUsed === false && !document.getElementById("installed-load"));
     }
     if (${fullPage ? "true" : "false"}) {
@@ -78,9 +80,9 @@ function run(width, height, standalone, fullPage) {
           report();
         }, 100);
       }
-      if (${standalone ? "true" : "false"}) {
+      if (${(!fullPage || standalone) ? "true" : "false"}) {
         setTimeout(function () {
-          check("installed loading progress completes and leaves no overlay",
+          check("game loading progress completes and leaves no overlay",
             window.__installedLoaderComplete === true && !document.getElementById("installed-load"));
           exercisePortraitAction();
         }, 2700);
@@ -187,8 +189,8 @@ function run(width, height, standalone, fullPage) {
             window.__gameOnlyEntered() && !window.__gameStarted() && !!document.getElementById("click-me-overlay") &&
             document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
             getComputedStyle(document.querySelector(".game-langs")).display === "flex");
-          if (${standalone ? "true" : "false"}) {
-            check("installed loading progress completes and leaves no overlay",
+          if (${(!fullPage || standalone) ? "true" : "false"}) {
+            check("game loading progress completes and leaves no overlay",
               window.__installedLoaderComplete === true && !document.getElementById("installed-load"));
           }
           report();

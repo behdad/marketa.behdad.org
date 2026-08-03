@@ -1665,8 +1665,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 }
 /* Trailer playback is an authored reel, not a second navigation mode. Keep the frame's
    fullscreen and audio controls available, but quiet the room controls so a stray tap cannot
-   pan away from the current shot. visibility preserves the frame geometry. Captions get one
-   restrained cut-in; reduced-motion keeps the same words with no movement. */
+   pan away from the current shot. visibility preserves the frame geometry. */
 #hunt-fullscreen-area.cinematic-running .hunt-nav,
 #hunt-fullscreen-area.cinematic-running #hunt-dots,
 #hunt-fullscreen-area.cinematic-running #hunt-restart-btn,
@@ -1680,7 +1679,40 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   from{opacity:.25; transform:translateY(4px)}
   to{opacity:1; transform:translateY(0)}
 }
-@media (prefers-reduced-motion: reduce){#hunt-caption.cine-caption-in{animation:none}}
+/* The reel gets its own restrained film language: letterbox rails, a continuous progress
+   hairline, chapter slugs, and one reusable title card. Room changes happen beneath the
+   ink veil; .cine-cutting temporarily removes the ordinary side-pan so the reveal reads as
+   an editorial cut rather than player navigation. Everything is generated and removed by
+   the cinematic owner, so normal play carries none of this presentation state. */
+#cine-overlay{position:absolute;inset:0;z-index:6;overflow:hidden;pointer-events:none;color:#fffdf8;font-family:"Source Serif 4",Georgia,serif}
+#cine-overlay .cine-grade{position:absolute;inset:0;box-shadow:inset 0 0 70px rgba(25,18,15,.3);background:linear-gradient(110deg,rgba(255,223,182,.04),transparent 44%,rgba(58,36,54,.08));}
+#cine-overlay .cine-rail{position:absolute;left:0;right:0;height:clamp(7px,2.2cqw,21px);background:#211a17;box-shadow:0 1px 0 rgba(255,253,248,.08);transition:transform .7s cubic-bezier(.2,.8,.2,1)}
+#cine-overlay .cine-rail-top{top:0;transform:translateY(-110%)}
+#cine-overlay .cine-rail-bottom{bottom:0;transform:translateY(110%)}
+#hunt-fullscreen-area.cinematic-running #cine-overlay .cine-rail{transform:translateY(0)}
+#cine-overlay .cine-progress{position:absolute;left:0;right:0;bottom:0;height:2px;z-index:3;background:rgba(255,253,248,.18)}
+#cine-overlay .cine-progress-fill{display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left;background:var(--pink);animation:cine-progress 59.6s linear forwards}
+@keyframes cine-progress{to{transform:scaleX(1)}}
+#cine-overlay .cine-veil{position:absolute;inset:0;z-index:1;background:#211a17;opacity:0;transition:opacity .32s ease}
+#cine-overlay.cine-cut .cine-veil{opacity:.94}
+#hunt-fullscreen-area.cinematic-running .hunt-viewport.cine-cutting #loft-game-strip{transition:none}
+#cine-overlay .cine-chapter{position:absolute;z-index:2;top:clamp(14px,5cqw,48px);left:clamp(16px,4.5cqw,46px);padding:.28em .68em .34em;border-left:3px solid var(--pink);background:rgba(33,26,23,.82);box-shadow:0 4px 16px rgba(0,0,0,.22);font:600 clamp(11px,2cqw,22px)/1.1 Fraunces,Georgia,serif;letter-spacing:.16em;text-transform:uppercase;opacity:0;transform:translateX(-12px);transition:opacity .3s ease,transform .45s cubic-bezier(.2,.8,.2,1)}
+#cine-overlay .cine-chapter.show{opacity:1;transform:translateX(0)}
+#cine-overlay .cine-card{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8% 12%;box-sizing:border-box;text-align:center;text-wrap:balance;opacity:0;transform:scale(1.025);transition:opacity .5s ease,transform 1.1s cubic-bezier(.2,.8,.2,1)}
+#cine-overlay.cine-title .cine-veil,#cine-overlay.cine-final .cine-veil{opacity:.79}
+#cine-overlay.cine-title .cine-card,#cine-overlay.cine-final .cine-card{opacity:1;transform:scale(1)}
+#cine-overlay .cine-kicker{margin:0 0 .65em;color:var(--pink);font:700 clamp(9px,1.55cqw,16px)/1.1 "Source Serif 4",Georgia,serif;letter-spacing:.22em;text-transform:uppercase}
+#cine-overlay .cine-card-title{margin:0;color:#fffdf8;font:700 clamp(31px,7.2cqw,76px)/.96 Fraunces,Georgia,serif;letter-spacing:.015em}
+#cine-overlay .cine-card-rule{width:min(180px,28%);height:1px;margin:clamp(10px,2.3cqw,23px) 0;background:var(--pink)}
+#cine-overlay .cine-card-detail{margin:0;color:#f8f5ec;font:500 clamp(12px,2.35cqw,25px)/1.35 Fraunces,Georgia,serif;letter-spacing:.035em}
+#cine-overlay.cine-final .cine-card-title{text-transform:lowercase}
+#cine-overlay.cine-final .cine-card-detail{line-height:1.48}
+#cine-overlay .cine-card-note{margin:.7em 0 0;color:#e8dfcc;font:500 clamp(11px,1.8cqw,19px)/1.3 "Source Serif 4",Georgia,serif}
+@media (prefers-reduced-motion: reduce){
+  #hunt-caption.cine-caption-in{animation:none}
+  #cine-overlay *,#cine-overlay .cine-rail{transition:none!important;animation:none!important}
+  #cine-overlay .cine-progress-fill{transform:scaleX(1)}
+}
 /* the cross-room song volume control, second in the side stack below the fullscreen
    button -- hidden (display:none, so it reserves no empty slot before then) until a song's
    actually played once, same as save-the-dates.html's loft volume button. Cycles the SAME
@@ -37974,15 +38006,27 @@ var T = {
       cine_flairgame: "Catch the garnishes — mind the wasp!",
       cine_dance: "…and the beat rolls on.",
       cine_encore_end: "And that's their day. Again tomorrow…",
-      // ── Trailer reel: texture and atmosphere, never puzzle/finale solutions ──
-      cine_open: "Before the doors open, the loft hums quietly.",
-      cine_details: "Every room keeps a small surprise.",
-      cine_garden_texture: "Plants, strings, and just enough mischief.",
-      cine_room_rhythm: "Then the room finds its rhythm.",
-      cine_arrivals: "Soon, it is full of familiar faces.",
-      cine_quiet_corner: "There are quieter corners, too.",
-      cine_desk_play: "Work can wait. The desk has other ideas.",
-      cine_evening: "By evening, the city slows down.",
+      // ── Trailer reel: a day-long invitation, never puzzle/finale solutions ──
+      cine_title_kicker: "A one-minute invitation",
+      cine_title: "The Loft",
+      cine_title_sub: "Edmonton · Prague · 2027",
+      cine_chapter_morning: "01 · Morning",
+      cine_chapter_garden: "02 · The doors open",
+      cine_chapter_quiet: "03 · Somewhere softer",
+      cine_chapter_office: "04 · After hours",
+      cine_chapter_balcony: "05 · Blue hour",
+      cine_final_kicker: "You’re invited",
+      cine_final_title: "markéta &amp; behdad",
+      cine_final_dates: "Edmonton · May 1, 2027<br>Prague · July 10, 2027",
+      cine_final_note: "Come to one. Come to both.",
+      cine_open: "Edmonton, morning. The loft wakes slowly.",
+      cine_details: "A flame, a gong — the little rituals begin.",
+      cine_garden_texture: "By afternoon, the garden has found a melody.",
+      cine_room_rhythm: "Then the doors open.",
+      cine_arrivals: "Friends turn a room into a party.",
+      cine_quiet_corner: "Every good party needs somewhere soft to land.",
+      cine_desk_play: "Work is over. The office has other plans.",
+      cine_evening: "At blue hour, the city exhales.",
       cine_invite: "Two cities. Two dates. Come for one, or both.",
       cine_signoff: "markéta &amp; behdad. See you there."
     },
@@ -39356,15 +39400,27 @@ var T = {
       cine_flairgame: "Chytej ozdoby — pozor na vosu!",
       cine_dance: "…a rytmus jede dál.",
       cine_encore_end: "A to je jejich den. Zítra zas…",
-      // ── Trailer: atmosféra a drobnosti, nikdy řešení hádanek ani finále ──
-      cine_open: "Než se otevřou dveře, loft si tiše pobrukuje.",
-      cine_details: "Každý pokoj skrývá malé překvapení.",
-      cine_garden_texture: "Kytky, struny a špetka neplechy.",
-      cine_room_rhythm: "A pak pokoj najde svůj rytmus.",
-      cine_arrivals: "Za chvíli je plný známých tváří.",
-      cine_quiet_corner: "Jsou tu i tišší kouty.",
-      cine_desk_play: "Práce počká. Stůl má jiné nápady.",
-      cine_evening: "K večeru město zpomalí.",
+      // ── Trailer: celodenní pozvánka, nikdy řešení hádanek ani finále ──
+      cine_title_kicker: "Minutová pozvánka",
+      cine_title: "Loft",
+      cine_title_sub: "Edmonton · Praha · 2027",
+      cine_chapter_morning: "01 · Ráno",
+      cine_chapter_garden: "02 · Dveře se otevírají",
+      cine_chapter_quiet: "03 · Někde v měkkém",
+      cine_chapter_office: "04 · Po práci",
+      cine_chapter_balcony: "05 · Modrá hodina",
+      cine_final_kicker: "Jste zváni",
+      cine_final_title: "markéta &amp; behdad",
+      cine_final_dates: "Edmonton · 1. května 2027<br>Praha · 10. července 2027",
+      cine_final_note: "Přijeďte na jedno. Přijeďte na obě.",
+      cine_open: "Edmonton, ráno. Loft se pomalu probouzí.",
+      cine_details: "Plamínek, gong — malé rituály začínají.",
+      cine_garden_texture: "Odpoledne už zahrada našla svou melodii.",
+      cine_room_rhythm: "Pak se otevřou dveře.",
+      cine_arrivals: "Přátelé promění pokoj ve večírek.",
+      cine_quiet_corner: "Každá správná párty potřebuje měkké místo k přistání.",
+      cine_desk_play: "Práce skončila. Pracovna má jiné plány.",
+      cine_evening: "V modré hodině město vydechne.",
       cine_invite: "Dvě města. Dvě data. Přijeďte na jedno, nebo na obě.",
       cine_signoff: "markéta &amp; behdad. Uvidíme se tam."
     },
@@ -40369,6 +40425,7 @@ function setLang(l) {
   }
   try { localStorage.setItem("lang", l); } catch (e) {}
   if (window.refreshHuntCaption) window.refreshHuntCaption();
+  if (window.__refreshCinematicOverlay) window.__refreshCinematicOverlay();
   if (window.refreshLaptopClock) window.refreshLaptopClock();
   if (window.refreshDeskClock) window.refreshDeskClock();
   if (window.refreshFullscreenLabel) window.refreshFullscreenLabel();
@@ -109139,6 +109196,7 @@ function spawnDustMote(container) {
     cinematicTimers.forEach(clearTimeout);
     cinematicTimers = [];
     cursorTeardown(); // the ghost cursor and any ripples vanish with the show
+    cineOverlayTeardown(); // title/chapter cards, rails, progress, and any in-flight cut
     var cineFrame = document.getElementById("hunt-fullscreen-area");
     if (cineFrame) cineFrame.classList.remove("cinematic-running");
     if (caption) caption.classList.remove("cine-caption", "cine-caption-in");
@@ -109252,6 +109310,103 @@ function spawnDustMote(container) {
     caption.classList.add("cine-caption-in");
   }
   function cine(key) { return function () { paintCineCaption(key); }; }
+  // ── film presentation ──
+  // One generated overlay owns every editorial layer, keeping the underlying room SVG
+  // untouched. Its scoped keys refresh alongside the ordinary setLang pass.
+  var cineOverlayEl = null;
+  function cineText(key) {
+    var lang = T[document.documentElement.lang] ? document.documentElement.lang : "en";
+    var dict = T[lang] || T.en, hunt = dict.hunt || T.en.hunt || {};
+    return hunt[key] || dict[key] || (T.en.hunt && T.en.hunt[key]) || T.en[key] || "";
+  }
+  function cineLabel(el, key) {
+    if (!el) return;
+    el.setAttribute("data-cine-i", key);
+    el.innerHTML = cineText(key);
+  }
+  function refreshCineOverlayText() {
+    if (!cineOverlayEl) return;
+    cineOverlayEl.querySelectorAll("[data-cine-i]").forEach(function (el) {
+      el.innerHTML = cineText(el.getAttribute("data-cine-i"));
+    });
+  }
+  window.__refreshCinematicOverlay = refreshCineOverlayText;
+  function ensureCineOverlay() {
+    if (cineOverlayEl) return cineOverlayEl;
+    var host = cursorHost();
+    if (!host) return null;
+    var overlay = document.createElement("div");
+    overlay.id = "cine-overlay";
+    overlay.innerHTML =
+      '<div class="cine-grade"></div>' +
+      '<div class="cine-rail cine-rail-top"></div>' +
+      '<div class="cine-rail cine-rail-bottom"></div>' +
+      '<div class="cine-progress"><span class="cine-progress-fill"></span></div>' +
+      '<div class="cine-veil"></div>' +
+      '<div class="cine-chapter"></div>' +
+      '<div class="cine-card">' +
+        '<p class="cine-kicker"></p>' +
+        '<p class="cine-card-title"></p>' +
+        '<span class="cine-card-rule"></span>' +
+        '<p class="cine-card-detail"></p>' +
+        '<p class="cine-card-note"></p>' +
+      '</div>';
+    host.appendChild(overlay);
+    cineOverlayEl = overlay;
+    return overlay;
+  }
+  function cineShowCard(mode, kickerKey, titleKey, detailKey, noteKey) {
+    var overlay = ensureCineOverlay();
+    if (!overlay) return;
+    var chapter = overlay.querySelector(".cine-chapter");
+    if (chapter) chapter.classList.remove("show");
+    cineLabel(overlay.querySelector(".cine-kicker"), kickerKey);
+    cineLabel(overlay.querySelector(".cine-card-title"), titleKey);
+    cineLabel(overlay.querySelector(".cine-card-detail"), detailKey);
+    var note = overlay.querySelector(".cine-card-note");
+    if (noteKey) { note.hidden = false; cineLabel(note, noteKey); }
+    else { note.hidden = true; note.removeAttribute("data-cine-i"); note.textContent = ""; }
+    overlay.classList.remove("cine-title", "cine-final", "cine-cut");
+    void overlay.offsetWidth;
+    overlay.classList.add(mode === "final" ? "cine-final" : "cine-title");
+  }
+  function cineHideCard() {
+    if (cineOverlayEl) cineOverlayEl.classList.remove("cine-title", "cine-final");
+  }
+  function cineChapter(key) {
+    var overlay = ensureCineOverlay();
+    if (!overlay) return;
+    var chapter = overlay.querySelector(".cine-chapter");
+    cineLabel(chapter, key);
+    chapter.classList.remove("show");
+    void chapter.offsetWidth;
+    chapter.classList.add("show");
+    cineBeat(2800, function () { if (chapter) chapter.classList.remove("show"); });
+  }
+  // Fade to ink, switch rooms at full cover, then reveal the new tableau with its chapter
+  // and narration. The ordinary 720ms room slide is suppressed only while the veil is up.
+  function cineCutTo(name, chapterKey, captionKey, settle) {
+    var overlay = ensureCineOverlay(), host = cursorHost();
+    cursorHide();
+    cineHideCard();
+    if (overlay) overlay.classList.add("cine-cut");
+    if (host) host.classList.add("cine-cutting");
+    cineBeat(320, function () {
+      goToStage(name);
+      if (settle) settle();
+      cineChapter(chapterKey);
+      paintCineCaption(captionKey);
+    });
+    cineBeat(820, function () {
+      if (overlay) overlay.classList.remove("cine-cut");
+      if (host) host.classList.remove("cine-cutting");
+    });
+  }
+  function cineOverlayTeardown() {
+    var host = cursorHost();
+    if (host) host.classList.remove("cine-cutting");
+    if (cineOverlayEl) { cineOverlayEl.remove(); cineOverlayEl = null; }
+  }
   function cinePhoneClose() { if (window.__closePhoneModal) window.__closePhoneModal(true); } // dormant encore backstop
   // The guitar enters well after the trusted Trailer click. Unlock its real recording here
   // with a silent play→pause so WebKit permits the delayed garden beat. Prime only the track
@@ -109278,11 +109433,12 @@ function spawnDustMote(container) {
       if (a && !a.paused) { try { a.pause(); a.currentTime = 0; } catch (e) {} }
     });
   }
-  // ── THE TRAILER — a curated ~61-second atmospheric reel ───────────────────
-  // Editorial rule: texture, not solutions. Each room gets one or two tactile details;
-  // the garden briefly fills with social energy, but the film never demonstrates how to
-  // unlock it or exposes roster, album, formal moments, apps, projector channels, weather
-  // reveals, or the balcony payoff. This is an invitation with rhythm, not a walkthrough.
+  // ── THE TRAILER — a curated 59.6-second day in the loft ────────────────────
+  // Editorial rule: a story, not a feature reel. Morning rituals wake the kitchen; a song
+  // opens the garden into the social peak; Cuddly and the office provide two short breaths;
+  // blue hour resolves into the actual invitation. Chapter cards, ink cuts, and the closing
+  // date card make that arc legible without exposing solutions, apps, formal moments,
+  // projector channels, weather reveals, or the balcony payoff.
   function cineParty(on) { // throw / drop the garden party the way the balcony switch does (UV + confetti)
     if (window.party && !!window.party() !== !!on) window.party(!!on);
   }
@@ -109301,64 +109457,66 @@ function spawnDustMote(container) {
     if (fn) fn();
   }
   function runFullCinematic() {
+    ensureCineOverlay();
+    cineShowCard("title", "cine_title_kicker", "cine_title", "cine_title_sub");
     paintCineCaption("cine_open"); // synchronous, so resetHunt's blocked caption never flashes stale
     runSteps([
-      // ── KITCHEN (~9s): morning light, a candle, then the room-rattling gong. No espresso. ──
-      [1100, function () { cursorGlideTo("kitchen-candle", 450); }],
-      [500, function () { cineCandle(true); }],
-      [1600, cine("cine_details")],
-      tapAt(2000, "kitchen-gong"),
-      [2600, function () { cineCandle(false); }],
-      [1400, visit("garden")], [0, cine("cine_garden_texture")],
+      // ── KITCHEN (8.5s): an opening card gives way to two small morning rituals. ──
+      [2400, function () { cineHideCard(); cineChapter("cine_chapter_morning"); }],
+      [900, function () { cursorGlideTo("kitchen-candle", 450); }],
+      [400, function () { cineCandle(true); }],
+      [1100, cine("cine_details")],
+      tapAt(1500, "kitchen-gong"),
+      [1100, function () { cineCandle(false); }],
+      [1100, function () { cineCutTo("garden", "cine_chapter_garden", "cine_garden_texture"); }],
 
-      // ── GARDEN (~18s): curios and the real song, then one brief party swell. ──
-      // Party state arrives as a cinematic cut, never via its switch; the viewer sees a room
-      // become lively without being shown a solution or a formal-moment payoff.
-      tapAt(1500, "garden-tensegrity"),
-      tapAt(2000, "garden-guitar"),
-      [2100, function () { cineParty(true); }], [0, cine("cine_room_rhythm")],
-      [2400, function () { if (window.__summonGuests) window.__summonGuests(); }], [0, cine("cine_arrivals")],
-      [1950, function () { cursorGlideTo("garden-dj-decks", 450); }],
+      // ── GARDEN (16.5s): one melody gathers momentum until the doors seem to open. ──
+      // Party arrives as an editorial cut, never via its switch: the social peak is visible,
+      // but its unlock, guest identities, requests, and formal-moment controls stay hidden.
+      tapAt(1400, "garden-tensegrity"),
+      tapAt(1900, "garden-guitar"),
+      [2200, function () { cineParty(true); }], [0, cine("cine_room_rhythm")],
+      [2200, function () { if (window.__summonGuests) window.__summonGuests(); }], [0, cine("cine_arrivals")],
+      [1700, function () { cursorGlideTo("garden-dj-decks", 450); }],
       [450, function () { cineGesture("garden-dj-decks", function () { if (window.__djScratchNow) window.__djScratchNow(true); }); }],
-      tapAt(2100, "garden-mask"),
-      [2700, null],
-
-      // ── CUDDLY (~10s): soft, ordinary play. No Octi solve, trunk, door, or projector. ──
-      [1500, function () {
-        cursorHide();
+      tapAt(1800, "garden-mask"),
+      [4850, function () {
         cineParty(false);
         cineHushSong();
-        goToStage("cuddly");
-      }], [0, cine("cine_quiet_corner")],
-      tapAt(1700, "cuddly-pillow-2"),
-      tapAt(2000, "cuddly-panedge-hit"),
-      tapAt(2100, "cuddly-bolster"),
-      [2800, null],
+        cineCutTo("cuddly", "cine_chapter_quiet", "cine_quiet_corner");
+      }],
 
-      // ── OFFICE (~10s): desk curios and the moving city, never a boot/app/call workflow. ──
-      [1500, function () {
-        cursorHide();
-        goToStage("office");
-      }], [0, cine("cine_desk_play")],
-      tapAt(1700, "office-wooden-head"),
-      tapAt(1900, "office-skull"),
-      tapAt(2200, "office-crane-hit"),
-      [2800, null],
+      // ── CUDDLY (9s): the film takes a soft breath without revealing its puzzle. ──
+      tapAt(1500, "cuddly-pillow-2"),
+      tapAt(1600, "cuddly-panedge-hit"),
+      tapAt(1700, "cuddly-bolster"),
+      [3200, function () { cineCutTo("office", "cine_chapter_office", "cine_desk_play"); }],
+      [1000, null],
 
-      // ── BALCONY (~14s): one dusk cut, a chime, the city, and the invitation. ──
+      // ── OFFICE (9s): three desk curios turn the workday into after-hours play. ──
+      tapAt(1500, "office-wooden-head"),
+      tapAt(1500, "office-skull"),
+      tapAt(1700, "office-crane-hit"),
+      [3300, function () {
+        cineCutTo("balcony", "cine_chapter_balcony", "cine_evening", function () {
+          var balcony = document.getElementById("stage-balcony");
+          if (window.__autoToggleDusk && balcony && !balcony.classList.contains("dusk")) window.__autoToggleDusk();
+        });
+      }],
+      [1000, null],
+
+      // ── BALCONY (16.6s): blue hour, a long exhale, then the invitation itself. ──
       // No forced aurora, held couple, fireworks, phone, or party switch: those remain discoveries.
-      [1700, function () {
-        cursorHide();
-        goToStage("balcony");
-        var balcony = document.getElementById("stage-balcony");
-        if (window.__autoToggleDusk && balcony && !balcony.classList.contains("dusk")) window.__autoToggleDusk();
-      }], [0, cine("cine_evening")],
-      tapAt(2200, "balcony-windchime"),
-      tapAt(2100, "balcony-dustpan"),
-      [2600, cine("cine_invite")],
+      tapAt(1900, "balcony-windchime"),
+      tapAt(1800, "balcony-dustpan"),
+      [2700, cine("cine_invite")],
       [0, function () { cursorGlideTo("balcony-cityview", 700); }],
-      [3000, function () { cursorHide(); paintCineCaption("cine_signoff"); }],
-      [3400, function () { stopCinematic(); }]
+      [2200, function () {
+        cursorHide();
+        cineShowCard("final", "cine_final_kicker", "cine_final_title", "cine_final_dates", "cine_final_note");
+      }],
+      [4000, function () { paintCineCaption("cine_signoff"); }],
+      [4000, function () { stopCinematic(); }]
     ]);
   }
 
@@ -109485,13 +109643,14 @@ function spawnDustMote(container) {
   }
 
   function runReducedCinematic() {
-    // Same editorial arc as the full cut, compressed into held tableaux. Room transitions,
-    // cursor glides, and caption cut-ins have no motion under the media query; the brief party
-    // remains because it changes composition, while every spoiler-bearing payoff stays absent.
+    // Same editorial arc as the full cut, compressed into held tableaux. All presentation
+    // movement is disabled by CSS; the cards and chapter labels remain as static orientation.
     var D = 2200;
+    ensureCineOverlay();
+    cineShowCard("title", "cine_title_kicker", "cine_title", "cine_title_sub");
     paintCineCaption("cine_open");
     cineBeat(D, function () {
-      goToStage("garden");
+      cineHideCard(); cineChapter("cine_chapter_garden"); goToStage("garden");
       cineClick("garden-tensegrity");
       cineClick("garden-guitar");
       cineParty(true);
@@ -109503,22 +109662,29 @@ function spawnDustMote(container) {
     });
     cineBeat(D * 3, function () {
       cineParty(false); cineHushSong(); goToStage("cuddly");
+      cineChapter("cine_chapter_quiet");
       cineClick("cuddly-pillow-2");
       paintCineCaption("cine_quiet_corner");
     });
     cineBeat(D * 4, function () {
       goToStage("office"); cineClick("office-wooden-head");
+      cineChapter("cine_chapter_office");
       paintCineCaption("cine_desk_play");
     });
     cineBeat(D * 5, function () {
       goToStage("balcony");
+      cineChapter("cine_chapter_balcony");
       var balcony = document.getElementById("stage-balcony");
       if (window.__autoToggleDusk && balcony && !balcony.classList.contains("dusk")) window.__autoToggleDusk();
       cineClick("balcony-windchime");
       paintCineCaption("cine_evening");
     });
     cineBeat(D * 6, function () { paintCineCaption("cine_invite"); });
-    cineBeat(D * 7, function () { cursorHide(); paintCineCaption("cine_signoff"); });
+    cineBeat(D * 7, function () {
+      cursorHide();
+      cineShowCard("final", "cine_final_kicker", "cine_final_title", "cine_final_dates", "cine_final_note");
+      paintCineCaption("cine_signoff");
+    });
     cineBeat(D * 8, function () { stopCinematic(); });
   }
 
@@ -109532,6 +109698,10 @@ function spawnDustMote(container) {
     if (cineFrame) cineFrame.classList.add("cinematic-running");
     resetHunt(); // deterministic daylight kitchen; the fixed cut owns everything shown from here
     if (window.__stopAutoDayNight) window.__stopAutoDayNight(); // freeze the background sky: the scripted show drives its own day/night beats
+    // Seasonal defaults can otherwise wake a music/video projector channel before the reel
+    // reaches Cuddly. Pin its ordinary fire tableau so the cut stays deterministic and never
+    // previews the selector's richer channels.
+    if (window.__cuddlyProjector) window.__cuddlyProjector.set("fire");
     primeCinematicAudio(); // unlock the song inside this gesture so the later garden beat can play it
 
     // The show is NOT stopped by stray input — only the explicit skip/take-over

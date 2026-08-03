@@ -318,22 +318,26 @@ drafts, focus, scroll, live media, runtime frames, or other transient state ride
 ### Trailer lifecycle
 
 Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a
-fixed 59–60 second editorial timeline, separate from Autoplay's director. Its content contract is
-**texture, not solutions**: five room identities, small one-shot toys, the real guitar recording,
-and one short garden-party swell; no solve chain, roster/spotlight, album capture, formal moment,
-season preview, projector channel, monitor/phone workflow, forced aurora, or held balcony couple.
+fixed 59.6-second editorial timeline, separate from Autoplay's director. It tells one day-long arc:
+morning rituals, a garden-party swell, two quieter interior beats, blue hour, then the invitation.
+Its content contract remains **story, not solutions**: no solve chain, roster/spotlight, album
+capture, formal moment, season preview, projector channel, monitor/phone workflow, forced aurora,
+or held balcony couple.
 `tests/cine.js` samples those negative invariants throughout playback, because a post-teardown
 snapshot alone cannot prove that a payoff was never shown.
 
 Starting Trailer sets `window.__cinematic`, resets to a deterministic daylight kitchen, primes only
 the deferred guitar recording inside the trusted click, and adds `.cinematic-running` to the frame.
 That presentation class visibility-hides room navigation and Restart without changing layout;
-fullscreen and audio controls remain usable. All authored pacing uses `cineBeat`/`runSteps`, while
-scene input is capture-swallowed so only synthetic reel taps reach the SVG. `stopCinematic` is the
-single cleanup path for natural completion, **Take over**, and hidden-tab abort: it clears timers,
+fullscreen and audio controls remain usable. `#cine-overlay` is generated inside the viewport and
+owns the letterbox rails, progress line, chapter slugs, ink-cut veil, and opening/closing cards.
+`cineCutTo` switches rooms only while that veil is opaque, temporarily suppressing the ordinary
+room-slide transition. All authored pacing uses `cineBeat`/`runSteps`, while scene input is
+capture-swallowed so only synthetic reel taps reach the SVG. `stopCinematic` is the single cleanup
+path for natural completion, **Take over**, and hidden-tab abort: it clears timers, overlay,
 cursor/ripples, party/UV, defensive legacy payoff state, the trailer-owned kitchen candle, caption
-classes, and listeners. The reduced-motion branch uses the same room/editorial arc as held tableaux
-and completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
+classes, and listeners. The reduced-motion branch presents the same arc as held tableaux and
+completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
 `window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
 
 ### Autoplay director

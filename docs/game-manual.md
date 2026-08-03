@@ -206,7 +206,10 @@ is for relaxed cruising rather than instant acceleration; top speed is 263 km/h.
 Complete three forward street laps to unlock the highway. On the third lap a
 top-left **Fancy a roadtrip?** card offers **Take the highway** or **Later**;
 the dashboard does not leave the street until the highway is accepted. After
-that, the highway remains unlocked. The same steering, gears, accelerator, and brake apply. The Porsche
+that, the highway remains unlocked. Every later dashboard session begins on the
+block and offers the card after one completed forward lap. Enter accepts a
+visible offer; Escape dismisses it for the rest of that dashboard session. The
+same steering, gears, accelerator, and brake apply. The Porsche
 begins in the inner right-hand lane: rear-view traffic travels ahead in the two
 right lanes, while headlights approach in the two lanes beyond the double
 yellow. The traffic mix includes sedans, pickups, semis, and the RVs common on
@@ -263,9 +266,10 @@ instead of covering the windshield.
 
 Press Escape or select the dashboard close control to leave the highway for the
 street view while keeping the dashboard and engine available so the car can be
-fully braked. Escape again closes the dashboard; once it is closed, Escape
-leaves the Entrance. Returning upstairs by another route instead parks the run;
-reopen the Entrance and drive forward to resume it.
+fully braked. Leaving never resumes the highway automatically: complete another
+block lap and accept the new offer to return. Escape again closes the dashboard;
+once it is closed, Escape leaves the Entrance. Returning upstairs by another
+route also parks the run.
 
 ## Help and coaches
 

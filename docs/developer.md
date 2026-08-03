@@ -231,13 +231,14 @@ hard-stops/stalls the Porsche and uses the independent full `.roadtrip-shattered
 either windshield state.
 
 The third forward practice wrap unlocks the highway and reveals the owned SVG invitation; it does not
-start the roadtrip. Acceptance persists as `drive.roadtrip.accepted`, while Later is transient and the
-card returns on a later dashboard opening. Closing the Entrance parks an accepted run
-and live entities; the first positive driving step after reopen resumes it. Escape/the close control
-first exits an active highway to the street HUD and suppresses automatic re-entry until the car stops;
-the next Escape dismisses the dashboard and clears the run while retaining unlock and best. Full reset also clears
+start the roadtrip. Acceptance and invitation eligibility are one-HUD-session state. Each later HUD
+session starts on the block with `invitationReady=false`; the next forward wrap makes the card eligible.
+Enter accepts a visible card, while Escape dismisses it for that session. Closing the Entrance or
+leaving an active highway parks the run and clears acceptance, so acceleration cannot resume it.
+The next Escape dismisses the dashboard and clears the run while retaining unlock and best. Full reset also clears
 unlock/practice, while the best score remains localStorage-owned. Checkpoints persist compact settled
-roadtrip counters but not active presentation, spawn timing, or live entities. Run
+roadtrip counters, unlock, and score, but capture/restore acceptance as false and never restore active
+presentation, spawn timing, or live entities. Run
 `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`, `tests/entrance-recovery.js`, and
 `tests/entrance-roadtrip.js` for this boundary. The source-only
 `tests/entrance-roadtrip-scoring.js` and `tests/entrance-windshield-cracks.js` check the scoring

@@ -16,7 +16,7 @@ var HARNESS = [
   "  window.addEventListener('load',function(){setTimeout(function(){try{",
   "    selectDay(2027,6,31); press(false); S('forward',state());",
   "    selectDay(2027,6,31); press(true); S('backward',state());",
-  "    window.__calResetToday();window.__applySeasonSilent('newyear');S('silent',state());",
+  "    window.__calResetToday();window.__applySeason('newyear',true);S('silent',state());",
   "  }catch(e){window.__errs.push('harness: '+String(e&&e.stack||e));}",
   "  report.errors=window.__errs||[];document.getElementById('__report').textContent=JSON.stringify(report);},300);});",
   "})();",

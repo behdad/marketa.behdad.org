@@ -72,9 +72,12 @@ their volume controls never double-scale:
 **Volume model (by design):** the in-scene volume **button** controls music/beds and the
 active cross-origin Cinema film (`__songVolume`), so you can turn program audio down to
 hear SFX. The console **`volume()`** master (`__audioMaster`) is the god-knob over
-everything (SFX master + folded into `__songVolume`, including Vimeo). Overall level is
-otherwise the device's job. The headphone-mode filter (bass shelf + lowpass) lives only
-in the song pipeline — music-only, deliberately not applied to SFX/beds or Vimeo.
+everything (SFX master + folded into `__songVolume`, including Vimeo). Vimeo alone gets
+a smooth perceptual lift after that shared level: mute remains exactly 0, site 0.15 maps
+to about 0.35, site 0.4 to about 0.55, and full remains 1. Other sources keep their
+existing linear levels. Overall level is otherwise the device's job. The headphone-mode
+filter (bass shelf + lowpass) lives only in the song pipeline — music-only, deliberately
+not applied to SFX/beds or Vimeo.
 
 ## Lower-floor acoustics
 

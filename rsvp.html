@@ -33877,9 +33877,17 @@ window.__cinemaVideoLoaded = false;
     }
     vimeoEndPollTimer = setTimeout(poll, 350);
   }
+  function cinemaVolumeForSiteLevel(level) {
+    var siteLevel = Math.max(0, Math.min(1, Number(level) || 0));
+    if (siteLevel === 0) return 0;
+    // Vimeo is perceptually quieter than the loft mix at low gain. This smooth,
+    // monotonic lift preserves hard mute and unity while seating .15≈.35 and .4≈.55.
+    return Math.min(1, siteLevel / (.2 + 1.67 * siteLevel - .87 * siteLevel * siteLevel));
+  }
+  window.__cinemaVolumeForSiteLevel = cinemaVolumeForSiteLevel;
   function currentCinemaVolume() {
     var level = window.__songVolume ? window.__songVolume() : .15;
-    return Math.max(0, Math.min(1, Number(level) || 0));
+    return cinemaVolumeForSiteLevel(level);
   }
   function applyCinemaVolume() {
     var frame = document.getElementById("cinema-player");

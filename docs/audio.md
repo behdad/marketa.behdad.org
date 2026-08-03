@@ -171,7 +171,8 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
   Porsche idle/drivetrain, road bed, and driving loop,
   AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
   **self-teardown on blur/hide** (`updateFocusGatedAudio` re-checks each). When they stop,
-  the refcount drops and the manager can suspend.
+  the refcount drops and the manager can suspend. The recovery Continue/Start over cover also
+  counts as a room-ambience cover, keeping its saved-room preview silent until a choice is made.
 
 The Porsche HUD adds an original compact four-bar driving loop on its own `audioBed()`:
 four-on-the-floor kick, short “doob” bass replies, muted chord stabs, and sparse hats.

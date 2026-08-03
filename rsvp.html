@@ -36519,6 +36519,9 @@ window.__bedroomRoomOpen = false;
   var tttAiTimer = null;
   var tttComputerFirst = false;
   var tttNextComputerFirst = false;
+  var tttSlipReady = false;
+  var tttSlipped = false;
+  var TTT_SLIP_RATE = .4;
   var TTT_LINES = [
     [0, 1, 2], [3, 4, 5], [6, 7, 8],
     [0, 3, 6], [1, 4, 7], [2, 5, 8],
@@ -36658,6 +36661,8 @@ window.__bedroomRoomOpen = false;
     tttPhase = "idle";
     tttWinner = null;
     tttLine = [];
+    tttSlipReady = false;
+    tttSlipped = false;
     renderTtt();
   }
   function startTtt(computerFirst) {
@@ -36665,6 +36670,7 @@ window.__bedroomRoomOpen = false;
         (tttPhase !== "idle" && tttPhase !== "done")) return false;
     resetTtt();
     tttComputerFirst = !!computerFirst;
+    tttSlipReady = Math.random() < TTT_SLIP_RATE;
     if (computerFirst) queueTttComputer();
     else {
       tttPhase = "player";
@@ -36702,16 +36708,28 @@ window.__bedroomRoomOpen = false;
   function chooseTttMove() {
     var bestCell = -1;
     var bestScore = -Infinity;
+    var moves = [];
     TTT_ORDER.forEach(function (cell) {
       if (tttBoard[cell]) return;
       tttBoard[cell] = "O";
       var score = tttScore(tttBoard, "X", 0);
       tttBoard[cell] = null;
+      moves.push({ cell: cell, score: score });
       if (score > bestScore) {
         bestScore = score;
         bestCell = cell;
       }
     });
+    if (tttSlipReady && bestScore >= 0 && bestScore < 10) {
+      var losing = moves.filter(function (move) { return move.score < 0; });
+      if (losing.length) {
+        var leastBad = Math.max.apply(null, losing.map(function (move) { return move.score; }));
+        var slips = losing.filter(function (move) { return move.score === leastBad; });
+        tttSlipReady = false;
+        tttSlipped = true;
+        return slips[Math.floor(Math.random() * slips.length)].cell;
+      }
+    }
     return bestCell;
   }
   function queueTttComputer() {
@@ -37009,6 +37027,7 @@ window.__bedroomRoomOpen = false;
     return {
       board: tttBoard.slice(), phase: tttPhase, winner: tttWinner,
       line: tttLine.slice(), aiPending: !!tttAiTimer,
+      slipped: tttSlipped,
       resultCaptionKey: tttResultTextKey(tttWinner)
     };
   };

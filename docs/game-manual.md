@@ -121,6 +121,8 @@ Downstairs adds a different activity to each room:
 - **Bedroom:** select any stained-glass pane to start tic-tac-toe. After a win
   or draw, the first click clears the board; the next starts the new game. If
   the window is due to begin, it makes that move as soon as the board clears.
+  The window occasionally makes one imperfect move, leaving an attentive player
+  a route to win.
 - **Entrance:** select the road to open the driving dashboard.
 
 The phone and Office monitor contain more games and toys, including Classics,

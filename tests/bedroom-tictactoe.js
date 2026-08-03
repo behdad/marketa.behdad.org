@@ -18,7 +18,7 @@ var HARNESS = [
   'function score(board,turn,depth){var r=result(board);if(r)return r==="O"?10-depth:r==="X"?depth-10:0;var best=turn==="O"?-Infinity:Infinity;order.forEach(function(cell){if(board[cell])return;board[cell]=turn;var n=score(board,turn==="O"?"X":"O",depth+1);board[cell]=null;best=turn==="O"?Math.max(best,n):Math.min(best,n);});return best;}',
   'function bestX(board){var cell=-1,best=Infinity;order.forEach(function(n){if(board[n])return;board[n]="X";var value=score(board,"O",0);board[n]=null;if(value<best){best=value;cell=n;}});return cell;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip");room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});Math.random=function(){return .99;};var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip");room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(620);report.steps.enterReply=window.__bedroomTicTacToeState();window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' click(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(620);report.steps.reply=window.__bedroomTicTacToeState();',
   ' click(1);report.steps.turn=window.__bedroomTicTacToeState();report.steps.paneFlash=document.getElementById("bedroom-stained-glass").classList.contains("glinting");await sleep(620);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(620);report.steps.win=window.__bedroomTicTacToeState();var winLine=document.querySelector(".bedroom-ttt-win-o");report.steps.winLine=winLine&&{x1:winLine.getAttribute("x1"),y1:winLine.getAttribute("y1"),x2:winLine.getAttribute("x2"),y2:winLine.getAttribute("y2"),shadow:!!document.querySelector(".bedroom-ttt-win-shadow")};report.steps.winCaption=cap();',
@@ -26,6 +26,7 @@ var HARNESS = [
   ' setLang("cs");report.steps.cs={caption:cap()};setLang("en");',
   ' click(5);report.steps.drawClear=window.__bedroomTicTacToeState();click(5);report.steps.drawRestart=window.__bedroomTicTacToeState();window.__closeBedroomRoom();report.steps.close=window.__bedroomTicTacToeState();await sleep(620);report.steps.closeSettled=window.__bedroomTicTacToeState();',
   ' await sleep(300);window.goToStage("office");window.__openBedroomRoom();await sleep(80);click(7);report.steps.resetStart=window.__bedroomTicTacToeState();window.__runTransientResetHooks();report.steps.loftReset={room:window.__bedroomRoomState(),game:window.__bedroomTicTacToeState()};await sleep(620);report.steps.loftResetSettled=window.__bedroomTicTacToeState();',
+  ' Math.random=function(){return 0;};window.goToStage("office");window.__openBedroomRoom();await sleep(80);click(0);await sleep(620);var slipReply=window.__bedroomTicTacToeState();click(8);await sleep(620);click(6);await sleep(620);var fork=window.__bedroomTicTacToeState();var winningCell=fork.board[3]?7:3;click(winningCell);report.steps.slipWin={reply:slipReply,fork:fork,done:window.__bedroomTicTacToeState()};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -126,6 +127,12 @@ check(s.resetStart && s.resetStart.board[7] === "X" && s.resetStart.aiPending &&
   count(s.loftResetSettled.board, "O") === 0,
   "the loft transient reset also settles the game with no late move",
   { start: s.resetStart, reset: s.loftReset, settled: s.loftResetSettled });
+check(s.slipWin && s.slipWin.reply.slipped && s.slipWin.reply.board[0] === "X" &&
+  s.slipWin.reply.board[2] === "O" && s.slipWin.fork.phase === "player" &&
+  s.slipWin.done.phase === "done" && s.slipWin.done.winner === "X" &&
+  s.slipWin.done.slipped,
+  "an eligible round makes one bounded mistake and leaves a playable route to win",
+  s.slipWin);
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check((source.match(/class="bedroom-ttt-pane"/g) || []).length === 9 &&

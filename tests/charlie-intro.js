@@ -15,6 +15,7 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},350);});',
   'async function run(){',
   ' window.__secondRound=true;',
+  ' window.__monitorMessageRewrite=null;',
   ' S("before",{delivered:window.__deliverCharlieIntroNow&&window.__deliverCharlieIntroNow(),received:window.__phoneMessageReceived&&window.__phoneMessageReceived("charlie")});',
   ' var ordinary=window.__deliverPhoneMessage&&window.__deliverPhoneMessage("cue_mail"); var intro=window.__deliverCharlieIntroNow&&window.__deliverCharlieIntroNow();',
   ' S("delivery",{ordinary:ordinary,intro:intro,received:window.__phoneMessageReceived&&window.__phoneMessageReceived("charlie")});',

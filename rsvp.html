@@ -95791,7 +95791,7 @@ function spawnDustMote(container) {
   var LOWER_ROOM_DISCOVERY_KEY = "lowerRoomDiscovered:v1";
   var LOWER_ROOM_ORIENTATION_KEY = "lowerRoomOrientationSeen:v1";
   var LOWER_ROOM_CLUE_DELAY = 180000;
-  var lowerRoomDiscovered = false, lowerRoomOrientationShown = false, lowerRoomClueShown = false, lowerRoomClueMs = 0;
+  var lowerRoomDiscovered = false, lowerRoomOrientationShown = false, lowerRoomClueShown = false, lowerRoomClueMs = 0, lowerRoomResetUntil = 0;
   try { lowerRoomDiscovered = localStorage.getItem(LOWER_ROOM_DISCOVERY_KEY) === "1"; } catch (_error) {}
   try { lowerRoomOrientationShown = localStorage.getItem(LOWER_ROOM_ORIENTATION_KEY) === "1"; } catch (_error) {}
   function markLowerRoomDiscovered() {
@@ -95802,6 +95802,7 @@ function spawnDustMote(container) {
     return true;
   }
   function resetLowerRoomDiscovery() {
+    lowerRoomResetUntil = Date.now() + 900; // transient close animations must not rediscover the room through the attended ticker
     lowerRoomDiscovered = false;
     lowerRoomOrientationShown = false;
     lowerRoomClueShown = false;
@@ -95814,6 +95815,7 @@ function spawnDustMote(container) {
   }
   function lowerRoomClueTick(delta, forceAttended) {
     if (lowerRoomDiscovered) return false;
+    if (Date.now() < lowerRoomResetUntil) return false;
     if (lowerRoomOwnsViewport()) { markLowerRoomDiscovered(); return false; }
     if (!window.__secondRound) { lowerRoomClueMs = 0; return false; }
     if (!forceAttended && (document.hidden || !document.hasFocus() || window.__cinematic)) return false;

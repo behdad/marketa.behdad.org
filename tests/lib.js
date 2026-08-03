@@ -58,7 +58,7 @@ function hook(opts) {
   ].join("\n");
 }
 
-function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix) {
+function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
   // --mute-audio: the playthrough click-storms every interactive element and state.js
   // starts beds/dances/songs, so the game's Web Audio actually SOUNDS. --headless=new
   // routes audio to the default output device (and state.js forces
@@ -66,6 +66,7 @@ function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix) {
   // dev's speakers with a glitchy pile-up of overlapping sounds. The tests only inspect
   // the DOM/report — they never assert on audible output — so muting is free.
   return (process.env.CHROME_BIN || "google-chrome") + " --headless=new --disable-gpu --mute-audio --window-size=1100,900 " +
+    "--user-data-dir=" + JSON.stringify(profile) + " --no-first-run " +
     (extraFlags ? extraFlags + " " : "") +
     "--virtual-time-budget=" + budgetMs + " --dump-dom " + JSON.stringify("file://" + scratch + (urlSuffix || ""));
 }
@@ -92,15 +93,17 @@ function parseReport(dom) {
 function runPageSync(file, harness, budgetMs, opts) {
   opts = opts || {};
   var scratch = makeScratch(file, harness, hook(opts));
+  var profile = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-chrome-"));
   var dom;
   try {
-    dom = child.execSync(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix), {
+    dom = child.execSync(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix, profile), {
       stdio: ["ignore", "pipe", "pipe"],
       maxBuffer: 64 * 1024 * 1024,
       timeout: budgetMs + 30000
     }).toString();
   } finally {
     fs.unlinkSync(scratch);
+    fs.rmSync(profile, { recursive: true, force: true });
   }
   return parseReport(dom);
 }
@@ -109,12 +112,14 @@ function runPageSync(file, harness, budgetMs, opts) {
 function runPage(file, harness, budgetMs, opts) {
   opts = opts || {};
   var scratch = makeScratch(file, harness, hook(opts));
+  var profile = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-chrome-"));
   return new Promise(function (resolve, reject) {
-    child.exec(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix), {
+    child.exec(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix, profile), {
       maxBuffer: 64 * 1024 * 1024,
       timeout: budgetMs + 30000
     }, function (err, stdout) {
       try { fs.unlinkSync(scratch); } catch (e) {}
+      try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {}
       if (err && !stdout) return reject(err);
       try { resolve(parseReport(stdout.toString())); } catch (e) { reject(e); }
     });

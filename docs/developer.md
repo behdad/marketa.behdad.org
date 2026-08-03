@@ -1,1841 +1,383 @@
 # Developer guide
 
-This guide describes the implementation that exists today, not a proposed rewrite. `rsvp.html`
-changes frequently, so search terms are given instead of line numbers. Internal names beginning
-with `__` are useful test and debugging seams, but are not a stable public API unless explicitly
-noted.
+This is an entry map for the implementation that exists today. `rsvp.html` moves often, so search
+for the named symbols instead of relying on line numbers. Names beginning with `__` are usually
+debug, test, or cross-controller seams; they are not a stable external API unless documented on
+`window.loft` or `loft.api`.
 
-## Repository shape
+## Repository boundaries
 
 - `save-the-dates.html` is the invitation/save-the-date page.
-- `rsvp.html` is the interactive loft game. Its HTML, CSS, inline SVG, localization dictionaries,
-  state, controllers, apps, and scripting console live in one large file.
-- `rsvp`/`loft-day` and their `.html` aliases point to `rsvp.html`;
-  `save-the-dates`/`egg-hunt` and their `.html` aliases point to `save-the-dates.html`. These are
-  public symlinks, not generated routes; keep every alias aligned if a current drop is renamed.
-- There is no application framework, package build, or bundling step. Both pages are intended to
-  remain directly loadable documents.
-- `art/` contains the normal media assets. `pyodide/`, `linux/`, `doom/`, `duke/`, `q3/`,
-  and `harfbuzzjs/` contain
-  pinned, self-hosted browser runtimes and their provenance. Treat those directories as versioned
-  deliverables, not generated build output; root `BUILD.md` indexes their rebuild records.
-- `manifest.v2.webmanifest` is the installable Loft Day shell metadata. Its start URL is the
-  extensionless `loft-day` alias and its standalone/landscape settings participate in entry-mode
-  behavior.
-- `chat.js` is the Cloudflare Worker behind `/chat`; `chat-knowledge.json` is the stable knowledge
-  supplied to that Worker, and `wrangler.jsonc` owns its route, model selection, secrets contract,
-  and edge rate-limit binding.
-- `tests/` contains zero-dependency Node/headless-Chrome tests. `tests/lib.js` is the shared runner.
-- Markdown, test files, Worker source/configuration, and local environment files are denied by
-  `.htaccess`; the static host otherwise serves files from the Git working tree.
-
-The single-file constraint is architectural. Prefer adding a small controller beside the subsystem
-it coordinates over introducing a second runtime bundle or a new dependency. The frontend is plain
-HTML, CSS, and vanilla JavaScript, with the room illustrations embedded as inline SVG. There is
-nothing to compile: committed page artifacts are served directly from the live Git checkout.
-
-Email compose routing is centralized inside each self-contained page: `__mailCompose` selects the
-Gmail web composer on desktop and a `mailto:` handoff on Android/iOS, including iPadOS desktop-mode
-Safari; `__mailComposeMailto` is used by actions explicitly labelled as the native Email app.
-Keep new email actions on these helpers rather than opening Gmail URLs directly.
-
-Every owned interactive document suppresses WebKit's tap-highlight rectangle at its root, including
-the same-origin runtime iframe pages. Keep that separate from `user-select`, `touch-action`, pointer
-handling, and focus outlines so editable text, authored drags, and keyboard focus retain their
-existing behavior. `tests/mobile-highlights.js` audits the document roots and those interaction
-invariants.
-
-In direct `#play`/`loft-day` mode, `:root:not(.revealed)` removes all outer game chrome and lets
-the shell use the viewport width subject only to its 2:1 room-height fit. The game-only `main`
-has no page padding; the thin shell chrome is the only inset around the room. Fresh CLICK ME adds `.intro-active`; checkpoint entry
-uses `.recovery-active`. Both show `.game-langs` in the chrome and a localized `.loft-entry-brand`
-inside the scene above CLICK ME or Welcome back, hide Back/Restart,
-room navigation, dots, and media transport, retain Fullscreen plus the left utility links, and dock
-the one `.watch-controls` node into the shell's bottom row. Fresh entry's `#click-me-overlay`
-uses the same translucent scene veil as recovery and consumes its dismissing click, so that click
-cannot activate an SVG object underneath. `.hunt-viewport` is an inline-size container; the shared
-entry title, CLICK ME prompt, and gap use `cqi` units so their scale follows the rendered scene
-rather than the browser viewport. The head script applies `.loft-entry-pending` before
-the game shell's first paint in both full RSVP and game-only modes; the checkpoint initializer constructs the chosen gate synchronously
-and `revealEntrySurface()` removes that concealment, preventing a kitchen/caption flash. Handing control to the player removes
-the entry class, reparents watch controls to their document owner, and restores normal controls.
-At `max-width:600px` in portrait, `#portrait-orientation-gate` is the game shell's only
-visible child in both full RSVP and direct game modes. Its action enters the existing fullscreen
-state owner and chains `screen.orientation.lock("landscape")` after a native fullscreen grant;
-manual rotation clears the media query when that API is absent or denied.
-`__holdFullscreenFill()` / `__releaseFullscreenFill()` bracket the blocking restart confirmation:
-if Chrome revokes native fullscreen for the dialog, the installed/class fill remains active while
-ordinary Escape and explicit fullscreen-button exits still clear it.
-The prose device/browser detector and recommendation line were removed: their actions are now
-direct Fullscreen, audio, and Known issues controls.
-
-### Game chrome test matrix
-
-Changes to the shell, entry screens, controls, fullscreen behavior, or surrounding page layout
-must be checked in these four distinct presentations:
-
-1. **Full RSVP page:** load `rsvp.html` without `#play`. The invitation remains the document owner
-   around its embedded game. Check desktop and phone widths so game-only rules do not remove or
-   overlap the invitation header, language controls, sections, or footer.
-2. **Direct browser game:** load the `#play` or `#trailer` entry, or the `loft-day`
-   route. On desktop and landscape mobile, check fresh CLICK ME, saved Continue/Start over, and
-   active play/presentation. These states share the edge-to-edge page fill but intentionally expose
-   different controls and bottom rows.
-3. **Installed/standalone app:** repeat direct-game checks with `(display-mode: standalone)` on
-   desktop and mobile. Include the installed loading progress, first-interaction fullscreen,
-   restart/reset fullscreen preservation, and return from browser-owned dialogs or tabs.
-4. **Narrow portrait gate:** at `max-width:600px` in portrait, check both full RSVP and direct game,
-   installed and uninstalled where practical. Only the localized Loft Day/orientation banner may
-   remain in the shell; verify English and Czech fit, the action attempts landscape, and manual
-   rotation reveals the appropriate entry or play state without stale chrome.
-
-`tests/game-only-layout.js` covers the structural variants, `tests/recovery.js` owns the saved-session
-transition, and `tests/url-entry.js` checks neutral and Trailer URL launch behavior with
-and without a checkpoint. Still inspect real desktop and approximately 390px mobile renders:
-headless geometry does not prove that the chrome is visually balanced.
-
-`setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, or Trailer hands
-over control; that uses a larger height fit without setting `.is-fullscreen`. Direct web play never
-auto-enters true fullscreen; only an installed PWA may use its first interaction for that
-transition. `enterFs()` timestamps that transition; the post-CLICK-ME caption-location guide reads
-it within the same interaction window and uses eight seconds only then, versus four seconds for an
-ordinary entry. The fullscreen button and `F` remain explicit. The synchronous mode bootstrap also
-adds `.installed-app` from the display-mode/navigator standalone signals.
-Immediately inside `<body>`, `#installed-load` uses that already-set class to paint a standalone-only
-loading screen before the large game DOM parses. Its small inline controller localizes from the
-saved language/full `navigator.languages` list, advances the visible progress bar, completes after
-`DOMContentLoaded` with a minimum readable dwell, and removes the overlay. Browser mode removes the
-node synchronously and sets test hooks without painting it.
-
-The capture-phase room keyboard controller owns `activateCurrentRoom()`. During phase one it is
-used by `Enter` and by an otherwise-unconsumed top-level `Escape`; the existing Backspace alias
-dispatches a synthetic Escape, so it reaches the same transition even while browser fullscreen
-consumes the physical Escape key. Once `__secondRound` is set, Escape/Backspace remain dismiss/back
-gestures while Enter launches the current room's principal free-exploration activity (Flair Catch,
-room-presented Pacman, Octi's Escape, Alien Resources, or Block Party). Window-level phone/monitor
-closers and component menu/dialog handlers retain first refusal; typing fields never fall through
-to a room action. CLICK ME is checked before
-`activateCurrentRoom()`: Enter/Escape, including the synthetic Backspace alias, dismisses the
-invitation and advances its caption handoff without touching the room underneath.
-`dispatchEscape()` is also the single entry point for the top-left back control on every
-layout. Restart is a distinct control below Fullscreen at top-right. Both are hidden
-with the other navigation controls during recovery and cinematics.
-
-## Self-hosted runtimes
-
-The loft has several features that run real software entirely from this repository, without a CDN.
-Each runtime has a `BUILD.md` recording its provenance and build process:
-
-- [`pyodide/`](../pyodide/BUILD.md) contains CPython compiled to WebAssembly and the bundled wheels.
-- [`linux/`](../linux/BUILD.md) contains the v86 runtime and a repacked Linux disk image.
-- [`doom/`](../doom/BUILD.md) contains the WebAssembly build of Doom.
-- [`duke/`](../duke/BUILD.md) contains emduke32 plus the unchanged official shareware archive.
-- [`q3/`](../q3/BUILD.md) contains ioquake3 plus the reduced OpenArena arena payload.
-- [`dos/`](../dos/BUILD.md) contains js-dos/DOSBox and the owner-supplied
-  historical four-player Nibbles executable. The runtime’s corresponding source
-  archives are pinned alongside it; no source or open-source claim is made for
-  the game executable.
-- [`harfbuzzjs/`](../harfbuzzjs/BUILD.md) contains HarfBuzz compiled for the browser.
-
-These directories are pinned, versioned deliverables rather than generated build output. Do not
-regenerate or upgrade them casually. Preserve their self-hosted, zero-CDN operation.
-
-### Google Fonts integration
-
-Google Fonts is the deliberate network exception to the self-hosted runtime policy. The page loads
-Fraunces and Source Serif 4 for the main interface, Caveat and Climate Crisis for special game
-surfaces, and a small Noto Serif IPA subset through normal Google Fonts stylesheets.
-The loft's font-programming tools also expose the Google Fonts Developer API at runtime:
-
-- The JavaScript and dropdown consoles provide `googlefonts(family, opts)`. It returns a
-  `Uint8Array` containing raw TTF bytes suitable for `hb.Face()` or `hbFont()`. `opts.weight` and
-  `opts.italic` select a variant, and `googlefonts.list(query)` lists or filters the catalog.
-- The Python app injects `async googlefonts(family, weight=None, italic=False)`. It returns Python
-  `bytes` suitable for `uharfbuzz.Face` or `fontTools.ttLib.TTFont`; its attached async
-  `googlefonts.list(query)` helper exposes the same catalog.
-
-Both helpers query `webfonts/v1` for a direct TTF URL rather than loading CSS or WOFF2. The browser
-API key is necessarily present in client code and must remain HTTP-referrer restricted in Google
-Cloud; it is an identifier for the public browser integration, not a server secret. These helpers
-require network access even though Pyodide, HarfBuzz, fontTools, Brotli, and the other runtimes are
-served locally.
-
-### Code languages and Turtle
-
-The Code is one UI with two execution paths. JavaScript preserves the original
-`localStorage["deskScripts"]` map and executes through the Loft's async-IIFE
-runner. Python uses `localStorage["deskPythonScripts"]` and hands the complete
-buffer to the existing Python app through `__runPythonCode`. The recoverable
-`deskCodeDraft` object includes its language. Explicit `.js` and `.py`
-filenames select a runtime; an extensionless name retains the manually selected
-one when first saved or opened. The JS/PY pills change only the execution
-language of the current buffer. They never modify its name, navigate to a
-same-basename sibling, migrate it between stores, or overwrite that sibling.
-Filename collisions across either store are non-blocking while the filename
-field is active (red `.conflict` state, no rename autosave), then revert on blur
-if unresolved. Enter and Escape are capture-guarded no-ops during a conflict, so
-Escape cannot reach the app closer. This permits typing through an intermediate collision
-such as `test.py` on the way to `test.py.bak`. Copies and imports reject their
-collision immediately. The original buffer remains selected and its edits remain
-autosaved.
-Keep these stores outside checkpoint/reset state.
-
-Python Code jobs queue while self-hosted Pyodide loads, then execute serially
-through `runPythonAsync` in the Python console's persistent namespace. stdout,
-stderr, results, and tracebacks therefore use the existing Python scrollback.
-Closing the app preserves the interpreter and drawing; the Python app's Kill or
-Restart path drops queued jobs, the interpreter, and the Turtle surface. Python
-execution is still on the browser main thread: the DOM command cap limits
-rendered output, but it is not a worker-level interrupt for arbitrary CPU loops.
-
-JavaScript Code opens the existing Console and runs in the page's async-IIFE
-environment. `display_svg(source)` sends complete SVG documents to the Console's
-native graphics view; its conditional `gfx` control appears only while a
-drawing exists and switches between the drawing and scrollback without clearing
-either. The bundled `loft-type.js` example shapes
-`LoftType` with harfbuzzjs and converts each glyph through
-`font.glyphToPath()`. It shares the existing LoftType starter-seed key rather
-than adding a separate migration.
-
-The standard-library archive omits desktop `turtle`/Tkinter, so
-`installPythonTurtle` writes a small compatibility module into Pyodide's virtual
-filesystem before user code runs. That module sends sanitized commands through
-`__loftTurtleCommand` to a native SVG surface. Do not replace the surface with a
-canvas inside the scaled monitor `foreignObject`; WebKit can paint it blank.
-Line, fill, mark, and cursor layers are separate, and retained drawing nodes are
-capped at 6,000. The SVG surface owns click and double-click propagation just as
-the console `foreignObject` does; otherwise monitor-level click/swap behavior
-flickers through the drawing. The compatibility API intentionally covers common
-teaching operations, not Tk windows or event bindings. Update
-`PYTHON_CODE_INSTRUCTIONS` in `chat.js` whenever the supported Python/Turtle
-surface changes.
-
-`loft.display_svg()` uses that same native graphics surface for complete SVG
-documents, and `loft.clear_canvas()` clears it. Python and JavaScript share the
-DOM parser sanitizer at the page boundary; user code must not insert raw markup
-into either monitor surface.
-
-## Game state model
-
-There is no central store. State is distributed across:
-
-- closure variables owned by inline-script IIFEs;
-- DOM classes, attributes, and inline CSS variables, often as the rendering source of truth;
-- a small set of cross-controller `window.__...` flags and functions;
-- the public `window.loft` object and the typed `window.loft.api` facade.
-
-Controllers communicate by calling feature-detected hooks such as
-`if (window.__updateSomething) ...` and by re-gating themselves when a room, party, date, focus, or
-visibility condition changes. This keeps declaration order loose, but it also means a new state axis
-usually needs to notify several existing controllers.
-
-Cross-controller state must have one named transition owner (`set*`, or a paired `begin*`/`stop*`).
-UI, typed API, console, restore, reset, and cinematic paths call that owner instead of
-assigning its `window.__...` mirror or rendering classes directly. Private animation counters and
-closure-local timers remain local. When a transition schedules delayed work, its stop/reset path
-must cancel the handles or invalidate callbacks with a generation token.
-Small transient controllers whose state is entirely closure-local may register cleanup with
-`__registerTransientResetHook(id, reset)`. Full resets run these hooks in registration order and
-isolate exceptions so one failed cleanup cannot strand later controllers. Existing subsystem reset
-owners remain explicit; the registry is an additive path, not a replacement for them.
-
-`loft.api` has a registry of typed queries and actions. It validates argument shapes and enum values,
-reports capability/availability information, and emits `loft:statechange` after a semantic state
-transition. `stateVersion` advances for typed actions and for direct mutations owned by rooms,
-daylight, party/BBQ, Messages, apps, calls, music/transport, projector, weather/forecasts, minigame
-lifecycle, and Album storage. Composite typed actions coalesce their synchronous owner mutations
-into one revision. Visual-only animation frames, minigame score ticks, and every incidental closure
-field are deliberately not revisions.
-
-Language is another shared state axis. User-facing copy lives in the `T.en` and `T.cs` dictionaries,
-with static fallback text where needed. Any English copy change must be mirrored in Czech. The game
-DOM intentionally carries no ARIA, explicit role, or native title metadata; translate visible copy,
-cards, captions, and explicitly authored visual coaches instead.
-
-The checkpoint recovery gate is a modal state boundary. Its capture-phase key handler consumes all
-keyboard events before gameplay handlers run, while handling arrow/Enter/Space itself and leaving
-browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
-or Start over removes the gate. While it is present, the normal room instruction is replaced by the
-localized saved-room/age summary in `#hunt-caption`; the modal references that caption with
-visible placement alone, and removing the gate restores the live room caption. Trailer remains available
-in the shell's bottom row while the gate hides room navigation, media transport, Back, Restart, and
-the dots; the left utility links remain visible. Closing recovery reparents the watch controls to
-their document owner. Recovery Trailer holds and
-restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
-directly because the recovery gate is already an explicit destructive choice; the in-game
-Restart button and `R` key use `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
-`resetHunt()`: the fresh-load CLICK ME state remains unstarted and regains the shared entry chrome,
-while `.loft-entered` immediately enlarges its scene. The extinguisher snapshots whether game-only
-page mode was already entered before its delayed wipe, then passes the same option to `resetHunt()`;
-`R` and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
-re-arms CLICK ME without dropping the enlarged view. These contextual reset paths preserve active
-`?date=` and `?time=` parameters; the explicit right-side chrome Restart passes
-`resetDateTime:true` and return to the real clock. Cinematic/fresh-load resets omit the option and
-retain their own page-mode behavior.
-
-Checkpoint payloads may carry a `systems` map populated by subsystem-owned adapters. Each adapter
-validates its compact row and restores around the room transition (`beforeStage`, then `afterStage`
-for geometry-dependent state). An absent map identifies a legacy/portable payload, so compatibility
-fields remain authoritative until the post-restore save migrates it; a missing row inside a present
-map means that subsystem's fresh default. Continue restores
-durable intent and settled identity. Stable room utilities may resume once their normal room/focus
-gates allow it. Live observations and derived rolls remain fresh; calls, cameras, dialogs, active
-timers, spawned effects, runtimes, and live minigame loops stay stopped. Geometry owners capture only
-validated settled state and restore it in `afterStage`, never transient drag motion or reactions.
-`progress.lowerRoom` records only the active lower-room identity and is accepted only when it matches
-`progress.room`. The unopened recovery gate previews that lower room with temporary DOM visibility
-and presentation classes only; it does not call an open hook, discover the room, change captions,
-start audio/media, or mutate checkpoint state. Gate teardown restores those temporary values, while
-Continue settles the upstairs room and systems first and then enters through the lower room's normal
-open hook. This preserves each room's own reset/parking rules while leaving Cinema powered off and
-the Dungeon at its play wall rather than starting media or an iframe runtime.
-
-Charlie receives these five pairings as explorable game rooms. His Worker prompt keeps the real
-one-floor Loft caveat subordinate to that room guide: a lower-room location question must describe
-the paired main room and its authored entrance rather than denying the game room. The knowledge
-also distinguishes entry (`Down` or the authored marker) from `1`–`5`, which only switches rooms
-after the lower row is already active.
-Finite quantities are bounded, and in-flight actions normalize to a safe settled state before capture.
-The recovery gate remains mounted as a paint cover through both restore phases, environment and
-occasion settlement, and the final room change. `applyCheckpoint` then discards the preview snapshot
-before removing the gate, so Continue reveals one settled frame instead of briefly exposing
-fresh-page decor or restoring the preview over the checkpoint.
-When a larger scene owner can establish presentation during recovery, its manual-state adapter also
-settles in `afterStage`, after that owner, so the visitor's saved choice has final authority.
-Conditionally rendered keepsakes carry their effective date and restore only after that same date
-has rendered the matching scene again; a mismatch settles the scene's fresh default.
-Device checkpoints store physical shell state rather than painted app activity; restored shells land
-on a normal desktop or launcher so their next action always follows the ordinary fresh path.
-The Entrance `entrance` row restores in `afterStage`, after daylight has established the facade's
-fresh defaults but before the saved lower room opens. It retains the five-window bitset, two
-independent wall lamps, and seven settled Porsche switches; indicator flashes, reactions, audio
-nodes, and tremor remain runtime-only and derive again from the restored engine and room/focus gates.
-Completing the phone's lock immediately schedules a checkpoint for the current visit. A page-load
-Continue deliberately discards only that authentication bit, so an open restored phone asks for
-the PIN again while its separately owned messages, photos, layout, and compact app data survive.
-Separately owned compact app data uses fixed, bounded row allowlists; no additional foreground
-drafts, focus, scroll, live media, runtime frames, or other transient state ride with the device shell.
-
-### Trailer lifecycle
-
-Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a
-fixed 60-second game montage, separate from ordinary play. Its deliberately non-map order mixes
-main and lower floors, previews selected minigames plus two phone and two monitor apps, and promises
-only the broad structure: Phase 1 unlocks the loft; Phase 2 is free play. Its content contract is
-**invitation, not walkthrough**: no demonstrated triggers or solve chain, complete app inventory,
-roster/spotlight, album capture, formal moment, season preview, forced aurora, held balcony couple,
-or party state. The party and its payoff must never appear.
-`tests/cine.js` samples those negative invariants throughout playback, because a post-teardown
-snapshot alone cannot prove that a payoff was never shown; it also asserts the authored cut order
-and selective lower-room/game/app coverage.
-
-Starting Trailer sets `window.__cinematic`, resets to deterministic Phase 1, primes only the
-Tumbalalaika score inside the trusted click, and adds `.cinematic-running` to the frame.
-That presentation class visibility-hides room navigation and Restart without changing layout;
-fullscreen and audio controls remain usable. `#cine-overlay` is generated inside the viewport and
-owns the letterbox rails, progress line, chapter slugs, ink-cut veil, and opening/closing cards.
-`cineCutTo` switches rooms only while that veil is opaque, temporarily suppressing the ordinary
-room-slide transition. Lower rooms and apps use direct preview hooks so the edit never teaches
-their in-scene triggers or exposes launchers. All authored pacing uses `cineBeat`/`runSteps`, while
-scene input is capture-swallowed so only synthetic reel taps reach the SVG. `stopCinematic` is the
-single cleanup path for natural completion, **Take over**, and hidden-tab abort: it clears timers,
-overlay, cursor/ripples, score audio, phone/monitor previews, minigame loops, lower rooms, caption
-classes, and listeners, restores the arcade recommendation ledger, then returns control to the
-locked Phase 1 kitchen. The reduced-motion branch presents the same promise as held tableaux and
-completes in about 24 seconds. `goToStage` suppresses `triggerBalconyFinale` while
-`window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
-
-### Direct entries
-
-`#play` only selects the game-only shell. `#trailer` starts the fixed cinematic through the same
-checkpoint-preserving path as the Watch button, including recovery. `window.__launchUrlEntryMode()`
-is the focused regression hook used by the URL-entry test.
-
-## Rooms, phases, and unlocking
-
-The five rooms are `kitchen`, `garden`, `cuddly`, `office`, and `balcony`. Search for `STAGES` and
-`goToStage`. They are adjacent groups in one SVG strip; navigation translates the 500%-wide strip by
-20% per room.
-
-At rest, room parking keeps only the current SVG stage paintable. During a slide it reveals every
-traversed stage. Rapid navigation accumulates those revealed rooms across all in-flight retargets,
-because the strip may still be painting over an earlier leg; the final `transitionend` or timeout
-fallback parks everything except the latest destination. Direct/programmatic jumps may still
-retarget a live transition, but upstairs `←`/`→` key repeats are settle-gated for one room-slide
-duration so a held key advances with the same room-by-room cadence as the lower floor.
-
-The normal first phase is a linear solve:
-
-1. Kitchen/bar espresso sequence.
-2. Garden interaction.
-3. Cuddly-puddly sequence.
-4. Office call/computer/lighting sequence.
-5. Balcony arrival and finale.
-
-`stageIndex` tracks the current room, `maxUnlocked` the furthest unlocked room, and `solvedRooms`
-records completed rooms independently. Normal solve paths use `__finishSolveAdvance(from, to)`,
-which marks `from` solved and unlocks `to`; a delayed completion navigates only if the player is
-still in the source room. This stale-timer guard matters for keyboard and click-storm behavior.
-Once `__secondRound` is true it returns without changing progression. Every `__*DoNext` solve
-walker and clue target has the same phase guard, and object-specific delayed completions route
-through this helper. Checkpoints persist the solved-room list rather than reconstructing it from
-the unlock frontier.
-
-`goToStage(name)` is intentionally permissive for scripting and test use: it calls `unlockThrough`,
-so directly going to a later room unlocks the intervening rooms. Normal UI arrows and dots remain
-gated; a double-click on a locked room dot is an intentional shortcut.
-
-`window.__gameStarted` means the opening/attract prompt has been dismissed. It does not mean phase
-two. `window.__secondRound` latches when the garden party first starts. That transition unlocks all
-rooms, reveals and synchronizes the party population/roster, releases phase-two-held occasion texts,
-clears the remaining phase-one device/door nudges, and retires the entire linear puzzle mechanism.
-Turning the party off does not return to phase one; only a full reset clears that session
-progression. Explicit room navigation remains available in phase two through dots, arrows, room
-number keys, and `goToStage`.
-
-`handleLowerRoomNumberShortcut()` intercepts `1`–`5` inside each lower-room
-capture handler before that handler suppresses the shared upstairs shortcut.
-It delegates to `__navigateLowerRoom`, so a numeric jump retains the current
-floor and uses the same paired horizontal pan as arrows and room dots.
-
-The first balcony arrival owns the one-time finale/Act Two transition. Subsequent solved-room visits
-use one stable exploration caption. `goToStage` is also the central room-change re-gate: it
-collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,
-particles, photographer state, and phone/monitor ownership.
-
-The twenty `.wall-brick` accents are a caption-free instrument. A late controller adds
-`.brick-instrument`, maps each brick's local horizontal position onto one shared pentatonic scale,
-and plays a shade-dependent one-shot through `getSfxCtx()` and `pannedOut()`. Dust is inserted into
-the brick's own SVG parent coordinate space and capped there before spawning. The bricks deliberately
-remain outside `.hunt-hit`; `tests/brick-instrument.js` covers count, pitch mapping, feedback, and
-caption non-ownership.
-
-### BBQ inventory and grillmaster
-
-The smoker owns food inventory: each of its three persistent grate nodes yields
-four servings, then keeps a `.depleted` visual state until the fire cycles off or
-the normal smoker reset runs. Inventory reset also invalidates each node's pending
-cook generation, preventing an old timeout from browning a newly replenished batch.
-The first cooked batch and exhausted inventory trigger Hamid's two one-shot
-Messages entries; the first also invokes the deck's bounded `.food-cheer` reaction
-and chains two authored replies quoting Hamid's row.
-Lighting the smoker latches the grillmaster projection for that complete fire
-cycle. Room/focus gates may temporarily hide the projection, but ambient drift
-cannot re-roll Hamid (and his nested serving plate) away while the smoker remains
-lit; extinguishing or resetting the smoker clears the latch.
-Every real serve calls `__balconyGuestTakePlate`: it attaches a short-lived,
-opacity-only plate to a present figure's own `.bh-idle` coordinate space, caps
-concurrent plates at three, and clears them on room exit.
-
-### Across-street windows and Block Party
-
-Search for `balconyBuildingTetris`, `#balcony-building-window-grid`, and
-`__balconyTetrisState`. The controller generates 5×8 clickable physical
-office windows, each containing a 2×2 set of square SVG cells. Normal mode applies
-one `.lit` state to all four cells in a window. Its single self-rescheduling
-ambient timer exists only while the balcony is visible and the document is
-focused. It interleaves ordinary single-window changes with a bounded falling
-tetromino attract cue; while the party is active it may instead reveal a
-temporary silhouetted pair without changing the underlying apartment state.
-Watcher probability and idle cadence derive from `__whoIsHere("balcony")`, so
-either the main party or BBQ naturally draws more attention as the deck fills.
-Room/focus/game transitions clear both effects synchronously. A manual click
-toggles exactly one window and two nearby clicks within one second start the game.
-`wireNearbyDoubleTap` provides the same screen-space tolerance for the garden chase.
-`quickReversalGesture` recognizes the chair and bartender launch shuffles only after
-two 18px direction changes within 1.1 seconds, leaving one-way drags and jitter inert.
-
-The minigame owns a 10×16 board, seven-bag pieces, rotation/wall kicks,
-line/level scoring (ten lines per level, with the classic NES 60 Hz `GRAVITY_FRAMES` curve), and
-`localStorage["balconyTetrisHigh"]`. That personal best
-is intentionally outside checkpoint/reset state, matching Invaders, Flair-Catch,
-and Pac-Man. Starting snapshots the forty apartment states, pauses running
-balcony animations, adds `.tetris-on`, installs the topmost click shield, and
-uses a capture-phase keyboard handler so arrows, Space, and Escape cannot reach
-global room/audio controls. Touch and primary-button mouse input share the same
-axis-locking gesture path: a tap/click rotates, horizontal movement tracks crossed
-columns live without replaying them on release, and a downward drag soft- or
-hard-drops. Escape, blur, hidden-tab transition, reset, and
-programmatic room leave cancel the sole rAF driver and restore the exact snapshot.
-Game over performs the same restore, then exposes a bounded `.tetris-result`
-state in which Enter or a tap/click can restart. `__balconyTetrisTest` is the narrow deterministic
-board/line-clear hook used by `tests/balcony-tetris.js`; it is not a public API.
-
-### Progression transitions
-
-`setSecondRound` owns the phase-two latch, full-room unlock, roster availability and release of held
-phase-two messages/cards. Checkpoint restore passes `releaseHeld:false` because it restores the saved
-phone state separately. `setMaxUnlocked` owns the room frontier and navigation projection.
-`setOfficeProgress` owns the Prague-call and PC-played milestones across play, Enter automation,
-checkpoint restore and reset. `setMonitorShorted` owns both the wet-monitor flag and `.shorted`
-rendering class; drying and reset call the same transition.
-The released garden fairy's Cuddly cameo is projected by `syncRumiFairy`: it requires phase two,
-night, a stopped party, and the couple's presence. Phase, party, room, and both manual and automatic
-day/night transitions re-run that projection. Its two Rumi bubbles use one bounded rAF follower to
-stay attached to the speakers' live head geometry; opening the reply cancels the prior follower, and
-detachment stops the loop. `rumiOrder` is Fisher–Yates shuffled once at load; `rumiPick` advances a
-wrapping cursor through that fixed deck instead of making per-exchange random draws. Each entry's
-parallel `RUMI_GHAZAL` value drives its visible source label. The Hafez-owned `faal()` is a
-side-effect-free random reading. The later `rumi()` global consumes the same deck and starts the
-scene exchange only when its nighttime fairy is present; outside that projection it returns a
-waiting status without advancing `rumiCursor`. Both helpers are mirrored in the console manifest
-and `chat.js` scripting guidance. The exchange
-holds the existing `behdad-awake` projection from Markéta's
-verse through the end of Behdad's reply, then releases it through the normal wake owner; reset and
-an interrupted reply clear the same hold.
-
-### Party lifetime
-
-`setGardenParty` is the party source of truth. A separate controller, searchable as
-`PARTY LIFECYCLE`, counts attended seconds only while the document is visible, focused, and outside a
-cinematic. Elapsed time never ends the party; it only paces later messages and explicit authored
-finales. An accepted last-dance/last-song action or cake completion can schedule a graceful ending,
-and `party.extend` cancels that pending finale. A later autonomous invitation may offer to restart a
-stopped party, but it does not restart by itself.
-
-The toast moment snapshots Ali and Farhang through the people manager before it
-starts. A split-room toast follows those assignments instead of animating an
-off-room garden figure.
-
-The `setGardenParty(false)` branch is also the authoritative visual teardown boundary. It clears the
-balcony switch, persistent UV intent and `.uv-mode` before stopping the disco stepper, camera flash,
-photo moments, guest movement, and other party-only drivers. Callers may use `setPartyMode(false)` for
-the graceful walk-out, but lower-level cinematic/reset/fallback paths must still leave no blacklight
-or timer-owned party effect behind.
-
-### Trip lifecycle
-
-`beginTrip` and `stopTrip` own the active flag and public mirror, current variant, strip classes,
-effect timers, creatures, molecule cards, bloom/slideshow loops and reset-time tolerance. Every
-interactive trip entry calls `beginTrip`; `startTripVariant` remains the lower-level visual primitive
-used by the trailer's deliberately non-gameplay bloom. `tripGeneration` invalidates stale end timers
-and double-rAF class additions when a trip is interrupted or reset.
-
-Trip and ambient chemistry captions use the shared temporary-caption owner above the scene.
-`__flashCaptionKey` snapshots the current clue, renders a translated key briefly, and restores the
-snapshot only if no room change or newer hint has reclaimed the line. Trip teardown and the
-molecule-card reset clear only their own caption owner.
-
-The magic box and keyboard shortcuts show molecule cards. Physical prop entries intentionally may
-not: the kitchen cream whipper starts uncarded laughing gas after its hiss. The garden frog and
-mushroom each use their first click only for their ordinary rasp/wobble and arm independently;
-their second and later eligible clicks start their respective uncarded variants. Three lamp rubs
-briefly expose the genie as a focusable control; activating it starts uncarded ketamine. Active
-laughing gas also reveals the whipper's calendar-style Behdad apparition; its jaw and whole-figure
-rise use separate wrappers so their transforms compose. The whipper owns its pending hiss-to-trip
-timer and dispensing class through a transient reset hook, so a reset during the squeeze cannot
-start laughing gas afterward.
-
-Acid also borrows the ladybug's compound-eye overlay and applies its displacement filter to the
-currently viewed room. `clearPriorTripEffects` releases that borrowed effect before replacement,
-while acid's natural completion releases it directly; explicit stop/reset reaches the same cleanup.
-
-The canonical direct-selection order is laughing gas, shrooms, acid, froggies, DMT, molly,
-ketamine, then iboga (`Shift+1` through `Shift+8`). Keep that order aligned across the keyboard
-handler, `trip()` scripting API, typed `trip.start` schema, Worker action schema, translated
-shortcut copy, and lifecycle tests when adding or reordering a variant.
-
-Ketamine schedules the roaming ghost four seconds into the trip. Its six-second
-catch window is bounded both by `animationend` and a tracked `tripEffectTimers`
-timeout, because reduced motion presents the ghost as a static target and emits
-no animation event. Catching it removes the hit target before unlocking Pac-Man;
-interruption/reset still clears it through `clearPriorTripEffects`.
-
-### Media transitions
-
-`setMusicPausedState` is the only writer of the shared transport-pause mirror and synchronizes its
-play/pause UI and party dance-freeze projection. Individual song/projector/dance-bed controllers
-still own their AudioNode suspension and call the state transition after changing it.
-
-The Cuddly projector keeps its durable channel in the `projector` checkpoint row. Its cycle starts
-coffee→fire in April–September and fire→coffee in October–March, then follows the stable remaining
-program order. Coffee is a four-frame native SVG channel with a shared-context synth bed. One
-room-, channel-, and visibility-gated timer rotates those frames every 15 seconds and is cleared
-before every reschedule. Every projector score, including the night-sky piano, is room-gated to
-Cuddly; restored explicit channel state outranks the seasonal fresh/reset default. Screen taps use
-the full cycle, including `off`; media-next uses `__cuddlyProjector.next()`, skips `off` at the wrap,
-and hands subsequent next actions to the current piano piece once it reaches `stars`.
-
-The film ticket on a far-right Cuddly brick opens `#cinema-room`, an HTML lower
-room whose art is native inline SVG. WebKit cannot composite a Vimeo iframe
-inside SVG `foreignObject`, so the room remains a viewport sibling of the strip:
-entry slides it up from `translateY(100%)` while the preserved Cuddly strip pans
-to `translate(-40%,-100%)`. Close reverses both transforms, then applies
-`hidden` after the 720 ms transition. The cinema and Prince basement classes
-and the Bathroom / Toilets and Entrance lower rooms all suppress the roster and
-transient message/call surfaces while they own the viewport.
-
-Chooser cards carry `data-vimeo-id`, an empty `data-vimeo-hash` hook, and a
-filled `data-poster` path for their tracked original artwork. Entry deliberately
-leaves the physical projector off and creates no iframe. Projector click,
-Enter/Space, or bare room Space reveals the chooser; a selection then creates
-the player iframe. `#cinema-remote-google` is a separate power control.
-`#cinema-remote-vava-ring` advances the chooser's `.remote-current` card, while
-`#cinema-remote-vava-ok` selects it or returns from playback to the chooser.
-Both remotes remain native SVG on their shared suede pad and outside the Tab
-order. Their authored hit regions stay disjoint: the projector target ends
-before the small remote, and the VAVA ring/confirm regions are stacked 32×32
-SVG units around the visible face. VAVA presses animate the complete remote
-shell rather than an invisible hit overlay. The shared side Play/Pause and Next buttons are intercepted
-in capture phase while Cinema owns the viewport and speak to Vimeo through its
-postMessage API. A player iframe is removed on remote return, projector-off,
-sprinkler short, reset, or an explicit teardown; ordinary Cinema close/navigation
-pauses and retains the selected iframe, and the open hook restores that paused
-surface. The calibrated HTML screen shell has no CSS border inset, so
-the 100% player reaches its four outer edges without changing Vimeo's iframe
-aspect behavior. The native SVG rim tracks that aperture with only a compact
-physical bezel instead of a broad black matte; its side reveal matches the
-top/bottom band made by Vimeo's preserved 16:9 player aspect, so the visible
-frame reads evenly on all four sides.
-
-`#cinema-projector-ray` is a clipped, blurred CSS projection cone behind the
-screen shell. Its `--cinema-poster` uses the selected local poster only—live
-cross-origin Vimeo frames are never sampled. `#cinema-sprinkler` runs a bounded
-spray; an on-projector short tears down playback and clears the audio duck
-immediately, then a single timer reboots to the chooser. Close/reset clears that
-timer. The roof beams mirror around x=340, the same axis as sprinkler and
-projector. Every distinct prop is its own `.cinema-prop`: the two beams, two
-cameras, daybed cushions, resin-and-wood coffee table and dumbbell do not share
-hit targets or reaction classes. The stateful nesting-pouf group is moved from
-the Office SVG into the Cinema SVG before its existing interaction is wired;
-its checkpoint key remains stable for saved games. Shared click wiring adds the
-one-shot response and reuses the common sound graph without an extra
-AudioContext. The separate
-`#cinema-neon-butterfly` wall fixture keeps its relight interaction but is not a
-`.cinema-prop` or a member of the three-item Office Butterfly Chase roster.
-The chase's capture handler arms only in Phase 2, allowing the stained-glass
-butterfly's Phase 1 click to reach the Office solve handler.
-
-The camera props are separate Blackmagic Pocket and Canon 5D Mark IV groups.
-Either one powers the cinema projector and temporarily reparents the existing
-`#monitor-photobooth`, confirm, and error content groups into
-`#cinema-photobooth-surface`; the Office monitor body and chrome never move.
-A narrow monitor-class observer mirrors the Photobooth state onto Cinema for
-the existing live, picker, and error views. App close, remote return,
-projector-off, room close, navigation, and reset stop the stream and restore
-the groups immediately before `#monitor-shoot-coach`. Generated picker controls
-are removed from the Cinema tab order while projected.
-
-`__cinemaRoomState()` exposes the compact
-open/closing/powered/shorted/playing/photobooth/video/reactions test surface. Dedicated
-main-room portal props own single-click entry on desktop and touch.
-The cinema's brick pattern intentionally repeats Cuddly's 60×32 running bond
-and palette. A narrow `MutationObserver` on `#stage-cuddly` mirrors its `dusk`
-class to `.cinema-night`, keeping the lower-room window synchronized with every
-manual, automatic, restored, and simulated day/night path.
-Cinema entry also clears the upstairs Cuddly child and visitor cameos and gates
-their schedulers, Totoro audience, fairy, and game groups until the return pan.
-
-`#bathroom-room` is the code-native SVG room below Kitchen / Bar. Its taupe
-walls, varied slate floor, clawfoot tub and textiles, sink/mirror, stool, scale,
-and separate pale-wood toilet nook are authored entirely in `rsvp.html`; the
-rendering uses no raster assets. It uses the same 720 ms overlay lifecycle as
-the cinema, with the Kitchen strip parked at `translate(0,-100%)`. The Kitchen
-`WC` portal or shared Down navigation opens it. `__bathroomRoomState()` exposes
-open/closing/hidden state for focused tests.
-The nine `[data-bath-action]` SVG controls share one delegated click/keydown
-handler and the existing shared SFX helpers. The
-tub owns the mirror-fog/reset state; wiping a fogged mirror reveals the traced
-`m∞b` mark, then a pointer-captured SVG stroke layer accepts up to three
-48-point doodles. A six-rectangle clip keeps even cross-panel segments inside
-the remaining glass and outside the signature's reserved box. Draining, refilling,
-leaving the room, and transient reset release any active pointer capture and
-empty that fixed layer; it never
-spawns timers or unbounded particles. Tub and cabinet are local toggles; the other reactions are bounded
-one-shots with fallback class cleanup. The stool's outer position wrapper owns
-its clamped pointer drag while the inner group owns its foot-pivoted wobble, so
-the two transforms never replace each other. The scale stores a plausible
-numeric reading and maps it to the needle's settled angle, with a wet 70 kg
-spike before its usual 69 kg result. `closeBathroom()`
-always calls the same state reset used by transient teardown, while
-`__bathroomInteractionState()` exposes active classes, activation counts,
-stool offset, mirror state, and scale feedback to `tests/bathroom-room.js`.
-
-`#entrance-room` is the code-native Balcony lower room. Its inline 680×340 SVG
-models the nighttime **The Lofts** facade without image or address assets.
-The Balcony key-and-fob portal or shared Down navigation opens it. The overlay pans up while the Balcony
-strip moves to `translate(-80%,-100%)`; close waits 720 ms before applying
-`hidden`. `__entranceRoomState()` is the focused lifecycle test surface. Its
-capture guard owns Up/Escape/Backspace; horizontal navigation remains on the
-lower floor, with Entrance forming its right edge.
-Ten `.entrance-prop` SVG overlays give the five window bays, name stone,
-intercom, paired entry lamps, and tree canopy pointer/touch plus Enter/Space
-responses without changing the facade paint order. `data-entrance-action`
-selects a restrained shared-SFX/visual response; `closeEntrance()` clears every
-in-flight class so no one-shot survives a room leave or reset.
-Nine separate `.entrance-car-control` overlays partition the foreground Boxster's
-roof, driver door, paired side windows, front and rear compartments, mid-body engine control,
-headlight, tail light, and indicator. They remain outside the Tab order, stop bubbling at their
-own click handlers, and publish pressed state through `__entranceRoomState().car`.
-The dashboard horn keeps its held `horn-pressed` state independent from a transient
-`horn-answering` class on `#entrance-door-art`, which gives the facade door a restrained
-warm glass response and is cleared on every horn release or Entrance teardown. Touches
-starting on the horn center stay pending across a small movement threshold: a stationary
-press becomes the horn, while horizontal travel becomes signed analog steering and cancels
-the horn. The HUD's non-passive `touchmove` guard prevents page panning for that gesture.
-The driving HUD is a clipped top-half code-native SVG overlay that leaves
-the animated Porsche in the lower street band: pointer holds drive its
-physical pedals, shifter hotspots select R/N/1–6, and the Entrance
-capture handler claims the driving keys while it is open, including Up/Space throttle,
-Down brake, Shift clutch, and N/R/1–6.
-Touch shifter throws are classified separately from mouse tap/hold/context-menu stepping:
-ordinary vertical drags step exactly one gear with clutch bypass, mostly horizontal drags
-select neutral, and a stationary long-press reveals the larger SVG direct selector.
-The HUD's four-step coach is action-driven rather than timed: ignition, steering, gear,
-then pedals. `#entrance-drive-help` reopens the current lesson; its card click remains a
-manual dismissal, while completing the relevant action advances the sequence. Keep the
-coach arrows independently positioned from the fixed centered card because the dashboard
-controls use different coordinate groups.
-`__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
-focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
-state preserves the Porsche's position and durable panel/light configuration; a full
-reset clears both. The separate `drive.lapCount` resets only on engine start,
-counts street-wrap crossings for that engine run, and is stored in the Entrance
-checkpoint row; `drive.wraps` remains the existing street-wrap/caption state.
-The runtime-only `brakeScreeches` count proves that a high-speed brake actually
-scheduled its one-shot audio without becoming drivetrain state.
-`recoverStoppedPorschePosition()` is the stopped-edge safety net: it leaves ordinary
-moving wraps alone, but places a stationary car at the visible edge that preserves its
-forward direction (including crossing to the opposite loop edge when necessary).
-The couple is presentation-only: `#entrance-porsche-occupants` fades in from the
-existing `.drive-hud-visible` class, while the HUD itself carries Behdad behind the
-passenger dashboard and Markéta's hands inside the steering-wheel transform. No
-occupant state is captured, restored, or consulted by the drivetrain.
-The intercom's attended click plays a short low-passed formant reply and flashes
-localized “Come up!” copy. Its sound path checks the open room, visibility, and
-focus at the gesture and has no autonomous timer.
-The Balcony stage's `.dusk` class is observed as Entrance's day/night owner.
-`syncEntranceDayNight()` brightens the daytime facade, suppresses the door and
-entry-lamp glow, and resets all five independent window lights off; night resets
-them on. Reaching the complete inverse state flashes the localized caption once.
-`__entranceRoomState().windows` exposes the ordered light state for focused tests.
-`applyRealWx()` also derives Entrance's cloud, rain, and snow classes from the
-same forced-or-real Edmonton weather layers used upstairs; its snow gate also
-reads the Balcony's `__snowsOnItsOwn()` seasonal roll. The rain streaks and snow
-cover are a fixed authored SVG inventory rather than spawned particles, so weather
-changes and unfocused tabs cannot grow the DOM.
-The same single writer remembers a rain-to-dry edge for 90 seconds. During that
-window, an attended daytime Balcony with no remaining cloud, storm, or snow can
-reuse the distant `#balcony-rainbow` artwork for one restrained eight-second fade;
-overcast waits, dusk suppresses it, and no weather change navigates to the Balcony.
-Like the other full-viewport overlays, it refreshes the shared room-ambience
-gate on both entry and return so the preserved Balcony cannot keep sounding
-under the street scene. `updateCuddlyGrooving()` also gates a restrained,
-phase-locked pulse across `.entrance-window-pane` only while Entrance is
-visible; the reduced-motion rule disables it.
-
-The Office Bedroom follows the same viewport-sibling contract as `#cinema-room`
-but is entirely native SVG. Entry pans the preserved Office strip to
-`translate(-60%,-100%)`; `__openBedroomRoom()`, `__closeBedroomRoom()`, and
-`__bedroomRoomState()` expose its compact lifecycle surface. The Office
-`Zzz…` portal or shared Down navigation opens it. A narrow
-observer mirrors `#stage-office.dusk` into `.bedroom-night`.
-Distinct foreground props use structural IDs/classes and click targets: stained glass, each brass
-mushroom bedside lamp, wall rack, wardrobe and its separately clickable pink and blue wedding suits,
-bed, and each bedside drawer. The Bedroom's capture-phase key owner translates
-Enter/Space on those focused groups into their click path. Every lower-room
-capture owner stops only local navigation and activation keys, leaving the
-shared loft shortcuts available downstairs. The interaction controller reuses shared SFX
-and clears transient prop classes on room close. The two lamp `.off` classes
-survive room changes and are captured by the `bedroom-lamps` checkpoint
-adapter; only a deliberate game reset returns both lamps to their authored-on
-state. `__bedroomRoomState().props` is the focused regression surface.
-Opening the wardrobe reveals both suits; selecting either suit replays only that
-hanger's swing without adding a Tab stop or toggling the wardrobe. Bedroom
-teardown clears an in-flight suit swing along with its canceled cleanup timer.
-`#bedroom-party-coats` lives inside the bed's native SVG group and projects the
-strip's `.party-on` state through CSS only. It is non-interactive, paints below
-the sprinkler spray and the dynamically appended cat, and hides again on party end.
-
-Lamp activation also calls `syncSleep()`. Only when both mushroom lamps carry
-`.off` does the room gain `.bedroom-sleeping`, which deepens the existing night
-wash, gives the linen one restrained breathing loop, and releases three
-staggered SVG-path `Z` marks. The state follows those saved lamp switches across
-room changes and Continue; reset removes it. Reduced motion leaves one static
-mark instead.
-
-The ceiling sprinkler is one more native SVG Bedroom prop. Its click path
-briefly reveals the spray layer and adds `.wet` to the bed; independent timers
-stop the spray and fade the wet sheen after the linen dries. Room close clears
-both timers and classes.
-
-The stained-glass inset is also a nine-cell tic-tac-toe board. Pane double-click
-or same-pane touch double-tap starts/restarts with the visitor as X; subsequent
-visitor turns use ordinary pane clicks/taps. A deterministic minimax player
-answers as O after a 340 ms delay. Board, phase, result, winning line, and
-pending-timer state are closure-owned and exposed read-only through
-`__bedroomTicTacToeState()` for focused regression checks. Bare Bedroom Enter
-calls `__startBedroomTicTacToe()` to queue O's opening move before handing the
-empty-pane choice to the visitor; further Enter presses are inert while that
-turn is active. `resetProps()` clears
-the board and cancels the AI timer, so both room close and the registered loft
-transient reset prevent a late move from landing off-screen. A completed game
-uses the shared `__flashCaptionKey` surface with owner `"bedroom-ttt"` for its
-localized win/loss/draw result. `renderTtt()` overlays the winning endpoints
-with a cream-backed caps-pink X line or light-blue O line; restart and teardown clear that owner so its
-caption cannot outlive the board.
-
-All five lower rooms claim the shared `"lower-room"` notification hold. This
-reuses the action-game queue: incoming messages enter the thread immediately,
-while their preview, unread badge, coach, and call ring stay suppressed. Release
-happens only after the 720 ms return pan completes, then the existing 450 ms
-queue drain surfaces the newest preview and full unread count upstairs.
-
-The global room-key owner reserves plain `ArrowDown` for all five implemented
-upstairs rooms and delegates to their public open hooks; each active lower-room
-capture guard owns `ArrowUp` on the way back. `__navigateLowerRoom` maps
-Left/Right, side controls, and room dots across the parallel lower-floor row.
-The five lower-room roots live in `#lower-room-track`: its single horizontal
-transform keeps adjacent panels continuous and queues one navigation request
-during an active pan. Vertical entry/return instead shares the registered
-`--floor-pan` progress value between the upstairs strip and the active lower
-panel, so both floors move on exactly one timeline rather than exposing the
-viewport background between independent transitions.
-The Kitchen `WC`, Garden dungeon-door, Cuddly cinema-ticket, Office `Zzz…`,
-and Balcony key/fob SVG markers call the same public open hooks after a
-double-click or a pair of touch `pointerup` events within 420 ms. Single
-activation stays in the main room and flashes the shared localized
-`lower_portal_insist` caption. Each marker owns a `.mon-ctx.scene-ctx`
-right-click menu whose **Unlock** action calls the same open hook; the shared
-menu contains only **Unlock**. Escape, away click, scroll, blur, and resize
-dismiss it. The markers use `tabindex="-1"`
-because Tab remains a global game shortcut.
-After three attended phase-two minutes, the navigation owner may flash the
-localized `lower_rooms_clue` once per page session. Any marker interaction or
-successful lower-room open latches `lowerRoomDiscovered:v1` in localStorage;
-that browser-level discovery deliberately survives checkpoints and Start over.
-It lets `goToStage` settle the destination's main-room state while paired WAAPI
-transforms move the source and destination overlays laterally. This runs before
-ordinary room shortcuts without changing `D` day/night or Shift+arrow calendar
-stepping upstairs.
-
-`goToStage` still closes Bathroom, Cinema, Bedroom, or Entrance and parks an
-active basement for ordinary programmatic main-floor navigation.
-`__navigateLowerRoom` deliberately performs that teardown inside the paired
-lower-floor pan, then opens the destination overlay and reasserts the shared
-notification hold after the source's delayed close. A dot bypasses its ordinary
-lock gate only while any lower room owns the viewport and restores focus to the
-selected dot; keyboard horizontal pans restore focus to `.hunt-viewport`.
-Prince focus timers re-check `princeShouldRun()` so a parked iframe cannot steal
-focus back after any of these transitions.
-
-Lower-room illustrated props deliberately stay outside sequential focus:
-SVG props omit `tabindex`, and native dungeon prop buttons use `tabindex="-1"`.
-Their delegated pointer/direct-key handlers remain intact; `Tab` belongs to the
-global shortcut instead of walking the scenery.
-
-Every lower-room open/close hook also retargets the shared continuous-audio
-boundary via `__updateLowerFloorAcoustics()`. Dungeon and Cinema share the
-moderate attenuation/low-pass profile; Bedroom keeps that filter with a
-slightly lower gain. The enclosed Bathroom uses a much stronger treatment, and
-Entrance is quieter and darker still. The paired lateral pan closes and opens in one task, so
-AudioParam automation is cancelled and retargeted directly from one lower
-profile to the next rather than swelling upstairs between rooms.
-
-### Shared projections
-
-Cross-subsystem scalar projections have one named writer. `setBBQDayPartyState`,
-`setBBQPartySessionState`, and the balcony controller's `setBBQSplit` own the cookout flags;
-`setPhoneCallFamily` owns the pocket-call family mirror; `setPartyMomentState` owns the keyed
-wedding-moment flags. `tests/check.js` counts literal assignment sites for these, progression,
-trip, and media projections so a reset or alternate entry path cannot quietly become a second
-writer.
-`setPartyDanceState` owns the active dance mirror, both SVG `data-dance` projections, formation,
-tempo retuning, flare cleanup and bed crossfade. Rotation, explicit selection, party start and party
-stop all use it.
-Each registered synth dance also needs one `DANCE_BPM` entry, one `DANCE_MOOD` entry, localized
-`np` labels, an `AudioTransport` source, volume reapplication, and the typed action/console
-allowlists. `checkDanceParity` enforces the registry/BPM/mood portion. The Czech `furiant` bed
-states its 2+2+2/3+3 hemiola in both audio and dancer motion; `bandari` is the rolling Persian
-6/8 source.
-
-## Rendering and performance lifecycle
-
-The scene is inline SVG, with CSS animations, Web Animations API effects, SMIL where required for
-WebKit, and JavaScript-created transient nodes. Treat all four mechanisms as lifecycle-managed
-resources.
-
-The Pride Day viewport wash uses one self-rescheduling timeout owned by
-`__setPrideDayWashEnabled`. It starts only after `loft:gamestart`, pauses and clears on
-blur/visibility loss, yields immediately to trip or molecule-card classes, and is destroyed on
-season exit/reset. The office flag's third tap calls the same immediate paint path and never owns
-a recurrence timer.
-
-### Room parking
-
-Search for `stage-far`, `stageAnimationParkingActive`, and `__stageParkingState`.
-
-- Every non-current room receives `.stage-far`, which uses `visibility:hidden` to stop paint and to
-  prevent WebKit foreign-object leakage.
-- During a multi-room slide, every traversed room stays visible until the strip transition finishes;
-  otherwise the pan crosses blank geometry.
-- Infinite CSS animations in parked room subtrees are paused through WAAPI and resumed at their
-  previous progress on entry. Finite one-shot animations are allowed to finish because their
-  `animationend` handlers often remove transient classes.
-- Animation starts in an already parked subtree are batched into a single document animation
-  snapshot. Hidden garden subtrees have a separate pause/resume tracker because the garden can be
-  the current room while individual guest/effect groups are not painted.
-- Room-specific canvas/DOM loops expose `__sync...Loop` gates and should hold their current frame
-  while their app or room is inactive.
-
-### Visibility, focus, and transient effects
-
-Autonomous work must normally pass both `!document.hidden` and `document.hasFocus()`. A visible but
-unfocused browser can throttle animation frames while timers continue. This is called the
-"crickets rule" in source comments.
-
-Timer-spawned particles cannot rely only on `animation.onfinish` for cleanup: animations pause in a
-backgrounded tab while timers may keep adding nodes. Use one of the established patterns:
-
-- self-replenish from `onfinish` for a constant population;
-- tag and cap the live nodes, dropping the oldest before spawning;
-- hard-clear stale nodes before a bounded burst;
-- stop and clear the subsystem on room leave, party off, visibility loss, and reset where relevant.
-
-Search for `capParticles`, `.fw-particle`, `.garden-firefly`, `.dust-mote`, and `fishu-bubble` for
-examples. Do not add an uncapped interval-driven SVG/WAAPI emitter.
-
-### SVG/CSS invariants
-
-- A CSS `transform` animation replaces an SVG element's `transform` attribute. Put static
-  positioning on a wrapper group or bake it into coordinates.
-- `getBBox()` returns local coordinates. Create an effect under the same transformed parent as its
-  target unless coordinates are explicitly converted.
-- One-shot animation rules on an ID-bearing element must beat any ID-specific infinite-state rule
-  in both specificity and source order.
-- SVG children do not reliably honor `touch-action`; delegated, non-passive `touchmove` prevention
-  on the strip is the established drag pattern.
-- Throwable drags request pointer capture and keep window-level move/up/cancel fallbacks for the
-  life of the gesture. Capture loss, window blur, or pagehide must restore the object's transition
-  and position without applying a drop-target hit.
-- The garden magic-box date lock keeps wheel selection and answer submission separate. Its engraved
-  date opens the shared in-place phone Calendar; only the full-width submit control compares the
-  selected wheels and starts the unlock sequence.
-- WebKit has additional `foreignObject`, replaced-element, text transform, filter, and opacity
-  constraints documented in `CLAUDE.md` and `DEBUGGING.md`. Check those before changing monitor or
-  phone composition.
-
-## Audio architecture
-
-[audio.md](audio.md) is the detailed authority. The core invariant is exactly one shared `AudioContext`,
-created by `getAudioCtx()`. Safari has a low concurrent-context limit, so no feature may create and
-own an independent context.
-
-Consumers receive graph handles rather than lifecycle ownership of the context:
-
-- ambient beds and room music use `audioBed` and per-bed output gains;
-- synthesized one-shot effects use the persistent SFX bus returned by `getSfxCtx()`;
-- recorded songs use a media-element processing graph with EQ, muffle/width controls, compression,
-  panning, and analysis before the shared destination;
-- speech synthesis is browser-owned and outside the Web Audio graph.
-
-`audioBusProxy` makes a per-consumer handle look context-like while redirecting its destination to a
-consumer output. A consumer may fade its output, disconnect nodes, and close its handle; it must not
-suspend or close the shared context. `resumeSharedAudio()` resumes after a user gesture, and
-`__updateSharedAudioIdle()` suspends shared processing when no attended bed/song requires it.
-Continuous beds and captured songs meet again at `lowerFloorAudioOutput()`, a
-single low-pass/gain boundary before the shared destination. Native song
-fallback cannot be filtered, so `setSongLevel()` applies only the matching
-attenuation while downstairs. SFX bypass this boundary so an object clicked in
-a lower room still sounds local; Vimeo remains browser-owned foreground media.
-
-Room and party gates decide whether ambient beds should exist. Autonomous SFX must obey the
-visibility-and-focus rule; user-initiated SFX can rely on the gesture/focus path. Songs are
-deliberately allowed to continue while hidden or unfocused. Scene volume controls affect music/beds,
-while the console volume command controls the master bus. Media captured by
-`createMediaElementSource` must use an in-graph gain because WebKit can bypass the element's own
-volume.
-`__roomAmbienceCovered()` is the foreground-device gate: the pocket phone, zoomed laptop/monitor,
-and open cinema stop room-tone beds through `__refreshRoomAmbience()`. The cinema additionally
-fades Cuddly projector scores while its overlay is open; Vimeo playback ducks the party and
-temporarily owns any already-playing loft song.
-
-Stops should ramp a gain with the subsystem's `fadeSecs`, wait for the fade, then disconnect/close
-the handle. Abruptly closing mid-ramp can pop. The recording pipeline has an owner kill switch and a
-`?pipeline=` diagnostic override; preserve both when modifying it.
-
-## People, attendance, and photography
-
-The canonical cast/party definitions drive visual population, chat context, and the roster. Search
-for `ROSTER`, `__peopleManager`, `__whoIsHere`, `__roomOccupants`, and `__rosterPresence`.
-
-- `__peopleManager` is the inventory boundary. Its `occupants(room, opts)` composes hosts, crew,
-  party guests, children, visitors, DJs, Aspen, and room-specific cameos according to what is
-  actually painted. `inventory()` returns all rooms plus a canonical key-to-room index,
-  `locate(key)` finds one person, and `audit()` reports cross-room duplicates.
-- `__whoIsHere(room, opts)` is the compatibility alias for `__peopleManager.occupants`; album,
-  roster, chat, and typed API consumers therefore share the same normalized records.
-- The Who's Here UI is phase-two-only. It polls cheaply and mutates only when occupancy changes.
-  Arrivals appear immediately; departures have a short hysteresis to avoid flicker during movement.
-  The accessor itself remains instantaneous; display order follows geometry without gratuitously
-  reordering existing rows.
-- Opening the roster holds autonomous arrivals/departures. In the garden it also adds
-  `.roster-freeze` to the stage, pausing the adult cast while the eight party children remain
-  animated; the existing row spotlight temporarily exempts `.spotlighted`. Check
-  `rosterHoldsOccupants` before adding another population timer.
-- The garden trickle and revolving door deliberately continue while the page is hidden or
-  unfocused. Attendance uses persistent classes only; hidden-tab arrival/departure paths settle
-  immediately instead of stranding CSS walks. The open roster and the May 2 BBQ split remain
-  explicit occupancy holds, and autonomous sound/particle systems retain their separate focus gates.
-- Party entry/exit controllers move guests to and from the floor. CSS variables help balance crowd
-  placement. Avoid rendering the same person in standing, dance, visitor, and kid-activity layers at
-  the same time.
-- `attendedGuestNames` records lifetime attendance for one party run, independently of the
-  floor-only `.arrived` class. Adult rotation must not clear an attending child's `.arrived`;
-  `assignPartyKids()` then gives every attending child exactly one persistent dance/Cuddly/sleep
-  home. The ordinary Irene/Robin/Navid Cuddly cameo scheduler is party-off and daylight-only;
-  `__updateCuddlyKidCameosForDay` is its day/night projection owner.
-- Persistent bar, office, balcony, and grillmaster figures use presence classes with opacity plus
-  delayed `visibility`, not `display`, so both arrival and departure can paint as fades.
-- The BBQ controller's `bbqHostsOnBalcony` is the single paired-location state for Behdad and
-  Markéta. Both balcony layout and the garden split consume it, keeping their two figures and
-  garden exclusions atomic.
-- One eight-child inventory drives standing dancers, Cuddly seats, chase sprites, and sleep.
-  `assignPartyKids()` owns persistent assignments; chase borrows from them temporarily, while
-  party Totoro explicitly overrides them with the shared Cuddly audience. Keep
-  `PARTY_FLOOR_KIDS`, `KID_WHO`, runner SVG nodes, `ROSTER.runSel`, and the people manager in parity
-  when adding a child.
-- S'mores and seasonal balcony play use `__balconyBorrowedKids` as another temporary projection
-  from the persistent assignment. `__balconyPlayKidsNow` publishes borrowed slots to the people
-  manager; `__reconcileBalconyKidsPlay()` is the single projection from door, phase, sleep, date,
-  temperature, and daylight state.
-- Aspen has garden stations and a photographer presence that can be cloned into other rooms/deck
-  contexts. `__roomHasPhotoSubjects(room)` excludes working crew and gates her visible clone,
-  camera/flash, shutter, and Album write together; an empty room must not show her or create a
-  keepsake. Population controllers, automatic rounds, and explicit `photo.take` all use that same
-  occupancy truth.
-- Named-guest ambient flares use one self-rescheduling visual-only driver. It runs only while the
-  active garden party is visible, focused, and outside a major moment; it never owns sound.
-
-When changing people data, verify all three representations: painted SVG figures, roster/chat
-metadata, and photo composition.
-
-## Phone and monitor applications
-
-### Office monitor
-
-The monitor is an SVG/`foreignObject` computer with a desktop, dock, rotating
-Julia/Pipes/Flower Box screensavers, and apps. App state
-is represented mainly by `show-*` classes on `#office-monitor`. Search for
-`__openMonitorApp`, `__closeTopMonitorApp`, `resetMonitorAppState`, and `REAL_APPS`.
-
-The native-SVG `m ∞ b` system menu delegates Reboot/Shut down to the physical PC
-tower, so there is no second machine-power owner. Sleep is the separate
-monitor-local `monitorSleeping` state: it stops monitor animation loops, unzooms, and covers the
-display with a native-SVG dark layer without touching the active `show-*` app classes
-or the physical PC. The first pointer press wakes and is consumed, preventing the same
-gesture from activating the app below it. `clearBoot()` clears suspension during a
-real shutdown or reboot.
-CAPS LOCK is a monitor-local state: `monitorLocked` blocks monitor app entry points,
-but never captures room or browser shortcuts. Lock initially leaves the Julia saver
-visible; monitor activity calls `wakeMonitorLock()` to reveal the cap-matching layer,
-and `monitorLockIdleTimer` returns it to the saver. The cap puzzle and an intentional
-Caps Lock on/off cycle are equivalent unlock paths. Its small
-`localStorage["loftMonitorCapsLock"]` record holds the randomized layout and partial
-matches across Continue/reload. Normal monitor unzoom preserves it; the shared
-`shutdownMonitorApps()` teardown and a full game reset clear it. The focused lifecycle
-probe is `node tests/systemmenu.js`.
-
-`LOFT_CREDITS` is the single structured source for the system-menu credits roll and the
-console's bare `credits` command. Human names and package names remain language-neutral;
-their roles and the surrounding labels come from `T`. Full third-party notices and
-corresponding-source pointers remain in each runtime's public `COPYING` file.
-
-Opening an app boots/pans the monitor if necessary, closes incompatible surfaces, and calls the app's
-own render/sync hook. Back/Escape is routed through `__closeTopMonitorApp(stepBack)`: a nested app
-view gets the first chance to step back, then the app closes to the desktop. A normal close can
-retain app session state; the context-menu Kill path calls `resetMonitorAppState` and must clear it.
-The desktop taskbar cell immediately right of its language picker owns the only
-shared monitor fullscreen control. It drives the in-page `monitorContentFullscreen`
-state without calling the browser Fullscreen API. Apps cover the taskbar, so
-their existing Dismiss control returns to the shared enter/exit cell rather than
-each app growing another fullscreen button. The desk zoom contains
-`#monitor-zoom-box` without a scale cap and with
-only a 0.8-unit horizontal safe margin
-while `.monitor-content-fullscreen` hides every direct monitor child except the
-background and clipped `#office-monitor-screen-content`; the host simultaneously
-hides room chrome and becomes a fixed, viewport-filling black layer. The authored 124×42 display
-therefore letterboxes without stretching; Escape or a surround tap returns to
-the office, while **F** independently owns browser fullscreen. Code, consoles,
-media, and embedded games share this lifecycle. Do not add iframe- or app-level
-fullscreen buttons casually. Shoot is the sole intentional exception because
-all three engines author a 4:3 viewport: its app-level Fullscreen control sits
-between Back and Dismiss and requests true browser fullscreen directly on
-`#monitor-shoot-host`. The host must remain in its original DOM position:
-reparenting an iframe or its host can recreate the browsing context and restart
-the active engine. Monitor-content fullscreen remains in place behind Shoot
-fullscreen for the same reason, so native Escape returns to the prior monitor
-focus without moving an iframe ancestor. The fullscreen host deliberately
-exposes no exit control because native Escape owns exit.
-Shoot does not retain an iframe across Dismiss: `closeDoom(false)` calls the
-immediate, gag-free `destroyDoom()`, while Back returns to the chooser and the
-context-menu Kill path alone runs `doomDeathFlash`.
-The visible dock order lives in the monitor checkpoint row; drag swaps fixed slots, Continue
-restores the order, and the adapter reset restores `DESKTOP_APPS` order.
-The transient desktop finder ranks exact hits first and then alphabetizes every
-prefix match by its displayed lowercase search name. Canonical ids and localized
-labels participate; only Snake retains explicit `nibbles`/`dos` aliases. The
-matched spelling is forwarded to an app's open callback so `dos` can select the
-bare-shell mode while `snake` and `nibbles` select the game.
-All matching tiled apps receive `.search-match`, while the native-SVG dropdown
-also exposes search-only and toolbar results without a WebKit RenderLayer.
-With an empty query, that same result surface becomes the complete alphabetized
-app directory from `DESKTOP_APPS.concat(TOOLBAR_APPS)`. A catalog entry marked
-`directoryAlias` remains searchable but does not duplicate its canonical app in
-the empty directory. The multi-match state begins neutral: arrows select, while
-Enter alone does nothing until a result is selected.
-Julia and Pipes share one off-DOM Canvas 2D surface. Its baseline remains 4×
-authored size; after three healthy frame windows either saver may rise in
-quarter-step tiers as high as 6×. Flower Box owns one lazy
-WebGL 1 canvas; its source-derived radial cube morph is updated on the CPU so the
-WebGL path and Canvas 2D fallback share geometry, smooth normals, and a slow
-24-second hue rotation across the six distinct face colours. Its framebuffer
-uses the same adaptive 4×→6× policy. All three
-blit into separate native SVG images, the WebKit-safe composition boundary. A
-single `saverRaf` owns whichever saver is selected. Each fresh page load shuffles
-the three-item order once, then idle cycles walk and wrap that stable order.
-Screensaver and expensive canvas/DOM loops are gated while an app owns the screen.
-The shared projector/Credits Doom-fire canvas similarly starts at 2× and may
-rise to 3×. Every adaptive tier is capped per axis at half the visible
-consumer's measured CSS size × `devicePixelRatio`; a non-healthy sample or lost
-focus immediately restores the baseline.
-
-Pac-Man is a `searchOnly` monitor app: search, Chat, and test hooks open it in the
-office display, but it has no desktop tile and the ghost is not an access gate.
-Catching the ketamine ghost instead calls `openPacmanRoomApp`, snapshots the
-current room/focus owner, and reparents the same `#monitor-pacman-wrap` into the
-HTML `#pacman-room-overlay`. The presentation remains inside `.hunt-viewport`,
-so whole-loft fullscreen keeps it with the originating scene; its resize hook
-scales the authored 124×42 board without changing monitor layout. Dismiss,
-Escape, or Backspace reparents the board to its monitor `foreignObject`, parks
-the loop, restores focus and the originating room if anything moved it. The
-live board is checkpoint state; normal close parks and retains it, Kill/New
-reset it, and the separate `localStorage["pacmanHigh"]` personal best survives
-those resets.
-
-PrinceJS is another `searchOnly` app and owns one lazy, same-origin iframe for
-both presentations. `openPrinceApp` reparents that iframe into the monitor.
-`openPrinceBasement` only opens the garden's `#prince-basement` lower room: its
-code-native `#prince-dungeon-set` owns the dormant stone play wall and reactive
-set dressing, with no iframe or keyboard capture. Activating
-`#prince-play-wall` calls `activatePrinceBasementGame`, lazily creates or
-reparents the shared iframe, swaps the set for the game, and only then enables
-Prince input. The dormant dungeon capture guard routes bare Enter/Space to the
-same activation hook. Ordinary Dismiss, Escape, or Backspace calls `parkPrinceApp`,
-pauses an initiated child through `prince-control`, and retains its browsing
-context. Kill, a whole-loft reset, and shutdown call `destroyPrinceApp`.
-Fullscreen reparents the same live iframe through `#prince-focus-overlay`,
-raises monitor-content fullscreen when required, and requests browser
-fullscreen without reloading the level. Parent key routing must yield while
-Prince is active but always preserve Ctrl/Cmd/Alt browser chords and the
-drop-down console. Parking explicitly restores parent focus because Phaser
-otherwise keeps browser shortcuts inside its hidden iframe. The garden overlay
-hides the roster and repeats `art/prince-stone.svg`, whose colors are sampled
-from the pinned dungeon atlas; narrow stone jambs distinguish the playable
-16:10 opening without framing it as a separate screen. The vendored,
-zero-CDN runtime and its Unlicense notice live in `princejs/`.
-
-On coarse primary pointers, `rsvp.html` injects a right-side cross-pad into the
-same-origin Prince iframe so it follows the retained game through monitor,
-basement, and fullscreen presentations. Its Pac-Man-style drag owner emits paired
-arrow events, changes the held direction as the finger moves, and releases on
-pointer cancellation, visibility/focus loss, parking, or teardown.
-
-The weighted chain remains a pointer-captured, non-Tab-stop prop. Its ordinary
-activation gives the existing shallow gate reaction; a drag past the lower
-threshold temporarily raises the gate farther and reveals the single static
-`#prince-dungeon-secret`. Release holds that glimpse for one bounded timer, then
-restores the chain, gate, secret, and lower-room caption. Dungeon teardown clears
-the same timer and state; a repeated drag replaces that timer so stale cleanup
-cannot drop the gate during the new gesture. Delegated non-passive `touchmove` continues to stop
-page panning during the drag.
-
-Calendar is also `searchOnly` on the monitor desktop. Its centered date/countdown
-menu-bar control remains the primary pointer entry point; the phone launcher is a
-separate catalog and is unchanged.
-
-System Information is also a `searchOnly` `DESKTOP_APPS` entry. Its `show-system`
-class participates in the same running-app registry and in-app context menu as
-the tiled apps: ordinary close removes only the foreground class, while
-`__killMonitorSystem` clears the registry and runs the diagnostic-receipt
-send-off. The status value itself owns the browser-specific GitHub issue link.
-
-Classics is one tiled app with three internal views on the existing `show-mines`
-task class: chooser, Mines, and Solitaire. `openClassicsApp` and
-`setClassicsView` own that view state; the search-only `mines` and `solitaire`
-catalog aliases and their public console commands bypass the chooser without
-creating separate running tasks. Back/Escape steps a game to the chooser, while
-Dismiss closes the chooser. Kill dispatches by current view: the chooser
-collapses into a deck, Mines keeps its chain reaction, and Solitaire deals the
-52 Pickup scatter. `resetMonitorAppState("classics")` returns the combined app
-to a fresh chooser.
-
-Solitaire owns plain card records in `solStock`, `solWaste`, `solTableau`, and
-`solFoundations`; `solitaireMove` is the shared legality/mutation path for click,
-double-click, drag, and focused tests. Its actual-size DOM drag stack lives outside
-the scaled SVG `foreignObject` while the in-pile source cards hide in place; a
-non-passive touch-move fallback both keeps Android
-from claiming the gesture and paints the live ghost when transformed pointer
-movement is delayed. Drag completion listens at `window` scope so failed pointer
-capture cannot lose the release. Mines suppresses Android's synthetic
-`contextmenu` after its own hold-to-flag timer so one hold cannot toggle twice.
-The page-wide touch context bridge turns a stationary one-finger hold into the
-same `contextmenu` event used by mouse input. Movement cancels the hold before
-any default is prevented, preserving scroll and drag. Mines cells and Messages
-rows stay excluded because their own holds flag and open message actions; the
-live Flair Catch, Alien Resources, Block Party, and Hack-Man surfaces are also
-excluded so a gameplay hold cannot raise a popup. The bridge suppresses only the
-compatibility mouse sequence after an existing context-menu handler claims the
-synthesized event. All `.mon-ctx` builders mount
-through `contextMenuHost()`; appending to `document.body` makes an otherwise-open
-menu invisible while the game subtree owns browser fullscreen.
-The scene fallback refuses to mount when it has neither Escape nor Solve. App
-menus expose only local actions such as Kill, never a redundant Restart or
-whole-loft Start over, and scene menus expose no generic Hint action.
-The individual app surfaces remain de-layered and gated by `visibility` plus
-`pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
-and `node tests/classics-touch.mjs`.
-
-The maze uses a DOM/CSS grid because canvas does not composite reliably in the scaled WebKit
-`foreignObject`. Its actors depend on grid source order and must not gain RenderLayer-producing
-styles such as positioning, transforms, opacity, filters, or z-index. One bounded scheduler owns
-the tile simulation; rAF only interpolates display. Input may update the buffered direction but
-must never clear/re-arm that scheduler, or held input starves the simulation. The loop gates on
-either presentation owner, focus, visibility, and Kill state.
-
-Pac-Man's capture-phase handler must remain ahead of the page-wide transport handler so active-game
-Space pauses Pac-Man rather than music. The room presentation's window-capture Escape owner must
-also remain ahead of office zoom/global room Escape handlers; Backspace reaches it through the
-shared synthetic-Escape path without exiting browser fullscreen. Pointer buttons and drag gestures
-feed the same direction owner. `tests/pacman.js` owns both launch presentations, origin restoration,
-simulation cadence, input, pause/resume, checkpoint, Kill, and reduced-motion coverage.
-
-Life compares each computed generation with its source board. An empty board or a non-empty
-fixed point pauses through the normal `lifePause` owner; period-two and longer oscillators keep
-running. Every direct board mutation clears the diagnostic `lifeStationary` flag.
-
-The tiled **shoot** app retains the existing `show-doom` ownership class and FATALITY
-Kill hook, but its foreground state is `data-shoot-view="chooser|doom|duke|q3"`.
-Keeping one show-class preserves desktop task registration, context menus, monitor
-occlusion, and the established gag.
-
-All three engines run in one disposable same-origin iframe created lazily inside
-`#monitor-shoot-host`. Each `player.html` receives `shoot-control` messages and
-gates its main loop and engine-owned audio contexts on foreground, room, document
-visibility, and focus. A normal app close retains and pauses the current frame;
-Back, chooser selection, Kill, and Restart remove it. The iframe boundary therefore
-hard-stops each engine's heap, canvas, listeners, and document title without patching
-third-party glue. Every player uses the same centered 4:3 contain contract.
-On coarse-pointer phones and tablets, each player reveals a compact left-side D-pad only
-after its engine is ready. It reuses Hack-Man's held-pointer drag and reversal-hysteresis
-pattern while mapping directions to WASD; release, blur, and visibility cleanup prevent a
-stuck movement key. Canvas touch input classifies taps as a single shot and amplified drags
-as aim motion. Shoot first requests true fullscreen on the live host. If a
-mobile shell rejects or silently declines that request, the parent falls back to
-the existing monitor-content fullscreen owner. The iframe fills that owner while each
-engine keeps its own centered 4:3 canvas, leaving side-rail room for touch controls.
-
-The child reports pointer-lock acquisition to the parent. The parent shows the
-localized `Esc releases mouse` coach for the entire active game session; it is
-native SVG on the lower bezel, outside the clipped game screen, and never
-intercepts input. Returning to the chooser removes it.
-
-Quake III loads the OpenArena `oa_shine` arena and a local bot from the pinned
-minimal pack. Its WebGL path explicitly selects the OpenGL2 GLES renderer while
-disabling HDR, postprocessing, tonemapping, auto-exposure, and advanced material
-mapping: those desktop-oriented paths do not render the OA lightmaps correctly in
-this Emscripten/WebGL build. Like every
-canvas/video/iframe inside the scaled monitor `foreignObject`, these game rasters
-remain a known blank-compositing limitation on WebKit.
-
-The shared `installDirectionalPad` helper in `rsvp.html` owns the common
-pointer-captured press/drag/release lifecycle, displacement thresholds, diagonal
-filtering, reversal hysteresis, and cleanup for the Prince, Nibbles, and Pac-Man
-cross-pads. Each game supplies its own direction mapping and output adapter;
-Tetris's rotate/swipe/drop input remains separate. The three shooter iframes keep
-their own engine-local touch surfaces and only use the parent for directional
-message routing.
-
-The `show-snake` app lazily creates one same-origin `dos/player.html` iframe,
-with a `mode=dos|nibbles` query selected by the launcher.
-
-Nibbles keyboard ownership spans the same-origin iframe boundary. Opening or resuming a retained
-game focuses its canvas; if a visible game loses focus to non-modal parent chrome, the first
-unmodified game key is relayed once and refocuses the iframe. Parent menus, dialogs, phone
-overlays, editable console fields, and other foreground monitor apps block that handoff.
-Fresh Nibbles launches open a parent-page player-count and speed dialog; those values reach the
-child as query parameters. After the command interface reports `NIBBLES.EXE` running,
-`dos/player.html` sends a generated sequence of paired key-down/key-up answers, including the
-final Space that starts play, within a splash-masked window. Space waits for a changed DOS frame
-after the last answer, with a short bounded fallback for render backends without frame data; the
-splash scales against both iframe axes so it fits the monitor's short embedded viewport.
-Completion does not move focus. Coarse pointers reveal the parent-page player-one D-pad once
-setup finishes. It reuses Pac-Man's cross-pad appearance, pointer capture, displacement thresholds,
-diagonal filtering, and opposite-gesture hysteresis; Nibbles adds paired arrow events, release
-cleanup, and a retained heading guard against immediate reversals. Its hold guards suppress
-selection and context menus. Additional players remain keyboard-only.
-The child owns js-dos and DOSBox; parent `snake-control` messages pause, resume,
-or stop it. Normal close pauses and retains the frame, but marks the hidden
-iframe inert, blurs its child focus, and focuses the non-interactive desktop
-root so the desktop receives the very next key without a click. Reopen clears `inert`
-before focusing the DOS canvas. Kill (and the internal
-restart helper used by console commands) calls `player.stop()` and removes the
-iframe, which releases the WASM machine and all child listeners. Child readiness
-gates runtime Kill, and a normalized `snake-context` bridge reuses the monitor’s
-ordinary Kill menu. The
-pinned bundle carries the owner-supplied historical Nibbles build modified by
-`bigbug` for four-player support. `player.html` overlays only
-`.jsdos/dosbox.conf` at runtime: DOS mode mounts the bundle at a bare `C:\>`
-prompt, while Nibbles mode runs the game once and exits DOSBox afterward. The
-child's captured Esc reaches DOSBox, then sends `snake-exit`; the parent tears
-down the completed game and returns to the monitor. Repacking, hashes, and
-provenance live in `dos/BUILD.md`.
-
-Weather and Clock are toolbar-only monitor apps rather than desktop tiles. The
-Clock's `renderClock`/`__renderLoftClock` renderer is shared with the pocket phone;
-surface-specific activity and close callbacks own interval lifetime and sunrise/
-sunset navigation without duplicating the four-city time grid, countdown, or
-time-travel logic. Its monitor range uses minute units while the pocket-phone
-range uses half-hour units. Reset visibility is derived from an explicit
-`?time=` override.
-
-The in-app Kill overrides give Doom, Console, Python, Linux, Code, Life, Call, Music, Chat,
-Video, Browser, System, and About their own staged gag before teardown. They all use
-`__runMonitorDeathFlash` so
-cancellation, caption ownership, reduced-motion behavior, and the final close share one lifecycle.
-Video progress and volume drags use window-scoped pointer tracking for mouse/pen
-and direct native touch tracking for Android; transformed-`foreignObject` pointer
-capture is not assumed to succeed. A document-capture coordinate router additionally
-owns Android touch pointers over the chooser and sliders because a transformed
-`foreignObject` can paint those controls correctly while hit-testing the film beneath.
-Call first clears every owned connect/goodbye timer and ambient source, then drops its signal bars
-and waveform before the silent hang-up. Music cancels track fades/snippets, scratches and slows the
-live media element while its SVG notes leave the staff, then pauses and rewinds every catalog track,
-clears the current selection, and flattens the manual EQ. Chat freezes pending transport and
-verification work, types its interrupted thought, collapses rendered rows into context tokens,
-displays `[context cleared]`, then resets its history and closes.
-Video captures its selected track before freeze/reset and gates one of three native-SVG overlays;
-paused and ended films therefore keep their own send-off, while teardown clears the captured
-variant and resets the playlist as before.
-
-The shared frame-health sampler exposes `__frameHealthState()` and marks sustained
-low delivery with `html.frame-rate-low`. It samples only while the document is
-visible and focused, requires two 1.2-second windows at or below 40 FPS to enter slow
-mode, and three windows at or above 50 FPS to recover. Those same three healthy
-windows expose the `high` quality tier when the party is not active; one sample
-below 50 FPS, blur, or hiding the page drops it immediately. The garden disco pools and
-night constellations use that state: healthy delivery runs their continuous CSS
-motion, while low-frame mode replaces it with roughly one-second discrete steps.
-The garden's full-scene UV wash similarly becomes a slow four-step lighting cue; it
-still breathes, but no longer requests a blended full-scene repaint on every frame.
-Asymmetric thresholds plus consecutive sampling windows keep the cost change
-itself from flapping the mode.
-
-Desk zoom is unconditionally transition-free. Testing on current Chrome and
-Chrome 138 showed that interpolating the whole scaled SVG could white-flash and
-temporarily reduce frame delivery even when the pre-transition scene held 60 FPS;
-reacting to the resulting dip cannot prevent that first bad transition. The zoom
-controller therefore commits both directions with `transition:none`, then restores
-the strip's transition for ordinary room pans. The garden mask's rapid-click
-counter calls idempotent `__openDropTerm()` on its third click, giving touch-only
-devices access to the console FPS meter without making a double-click alter party
-state. `tests/performance.js` drives the sampler through `__frameHealthFeed(fps)` to
-verify both hysteresis directions without relying on headless timing.
-
-### Pocket phone
-
-The phone is a lazily built HTML modal with launcher, app, and in-call screens. Search for
-`openApp`, `navBack`, `phoneAppReturn`, and `setPhoneAppReturn`. Its first ordinary open can show the
-math lock; explicit/cinematic deep links may skip it. The four shell surfaces share one grid cell
-and a short opacity/translate handoff; reduced-motion mode keeps the same state changes without
-motion. `setPhoneAppReturn` is the only owner of the
-app-level return transition: launcher, close phone, or return to Messages.
-Call portraits and local self-views reuse the office call-card helpers
-(`__callFigLabel` and `__callHostLabel`) so their translated roles, relationships,
-and fun facts stay aligned across the laptop, monitor, and pocket phone.
-
-Back behavior depends on entry context:
-
-- nested app detail views consume Back first;
-- an app launched from a Messages action returns to Messages;
-- a direct scene notification opens Messages as a deep link, so Back/Escape closes the phone rather
-  than exposing the launcher;
-- scene-level deep links use `__openPhoneAppHere(app, true)` for direct-close behavior: Aspen's
-  post-shutter Album, the magic-box Calendar clue, and the date/time HUD pills;
-- typed `app.open` actions are direct too, so they close the phone on Back/Escape; a Messages action
-  replaces that target with an explicit return to its thread. Interactive `phone("app")` console
-  commands retain ordinary app-to-launcher navigation;
-- an ordinary app returns to the phone home screen;
-- leaving the owning room closes the phone.
-
-Some app data is session-sticky across close/reopen: drafts, filters, current cards, saved
-photobooth output, and similar state. Kill, uninstall, or full reset must clear the app's documented
-retained state. Adding an app therefore requires an open path, a teardown path, Back semantics,
-context-menu behavior, and reset coverage.
-
-The Hacker News app keeps its top-story list, selected item, and loaded comments in session state.
-Search for `renderHN`, `hnRenderDetail`, and `hnLoadComments`. Self-post HTML is rebuilt through a
-small element/link allowlist. External stories stay on an in-app landing view until the explicit
-open action. Comment loading takes at most eight roots and 24 item requests in batches of six,
-then path-sorts up to 20 visible comments back into thread order. Back clears only the selection;
-Stop, uninstall, and full reset clear the whole HN cache.
-
-Launcher badges are a projection of their owning stores, not a parallel notification ledger.
-`phoneAppNotificationCount` derives Messages from `unreadCount()`, Mail from `mailRead`, and Album
-from non-`shoot` record ids newer than the session-local `albumSeenMaxId`; zero counts stay hidden.
-Store mutations call `updatePhoneHomeBadges` when the launcher may already be visible, while a fresh
-`renderHome` recomputes every installed tile. Opening Album advances its seen watermark without
-altering the Album records.
-
-Album recap is a derived presentation, not another photo store: after phase 2, while the party is
-off, it groups existing non-`shoot` records by semantic record kind. Seed photos remain in the full
-roll only. `albumRecapOpen` is session UI state and must not leak into checkpoint records or
-`album.list`; record ownership, caps, object-URL cleanup, and recovery remain with the ordinary
-Album store.
-
-The launcher owns touch gestures that begin on app icons because those icons use
-`touch-action:none` for rearrangement. A quick vertical drag updates the launcher scroll position;
-holding briefly before movement enters icon-reorder mode. Keep that distinction when changing the
-grid so short phone screens do not leave only the gaps as usable scroll targets.
-
-Madla's autonomous incoming call observes `__madlaAvailable()`: phase 2 must be latched and the
-party must be off. Explicit discovery/scripting paths (`madla()` and the cuddly outlet) use
-`__madlaRingForced()` and may bypass only that phase/party gate; busy calls and an open phone still
-prevent a second call. The forced flag follows the ring into `__answerMadla(true)`, so an explicitly
-requested call remains answerable if the party or phase has not changed.
-
-## Dates, calendar, weather, and time
-
-`window.__now()` is the canonical calendar-date source for date-driven presentation. `?date=` (and
-the legacy hash form) overrides the calendar date at local noon to avoid DST edges. It drives
-wedding/anniversary presentation, seasons, birthdays, Persian occasions, countdowns, moon/sun
-geometry, calendar tiles, and special-day messages. It does not freeze the wall clock.
-
-`?time=` selects an Edmonton wall-clock starting time that then advances at real speed. Search for
-`timeOverrideMins`, `__ovClock`, and `__setLoftTime`. Day/night and twilight use computed solar
-geometry for the selected date and Edmonton time. Automatic crossing changes start only after the
-kitchen is solved and yield to explicit season/date previews, trips, cinematics, and
-party-forced night. Focus/visibility catch-up handles a crossing missed while away.
-
-The shared calendar renderer serves monitor and phone views. Canonical wedding event definitions
-also generate calendar downloads and external calendar links. Birthday/occasion definitions and
-Persian dates are runtime code; avoid duplicating dates in another UI data source. Wedding event
-cards update only the renderer's displayed month; grid days and search results own date activation
-and special-day scene dispatch. Both surfaces retain their permanent Today control for returning
-the browsed month and loft date to the real day. The room-level `.loft-datenav` instead owns the
-override-only `#loft-datereset`: it calls `calResetToday()`, clears only `date` from the URL,
-re-seeds an open calendar from the real month, and leaves a time override and unrelated loft state
-intact. `__activatePolyamoryDay` explicitly ends party mode before the Cuddly-puddly pan so the
-four-person couch scene is not hidden by party occupancy.
-
-Birthday adornments are nested inside each rendered figure so they inherit its authored transforms.
-Birthday cake eligibility is derived from matching `.g-<who>` figures on the dance floor; station-
-and call-only people retain their authored venue without a parallel eligibility roster.
-Chase-runner adornments have an additional outer-runner gate: a parked or reduced-motion-suppressed
-runner must hide its child hat, while `.chasing` reveals the hat with the moving figure. Keep that
-selector scoped to the direct `#stage-garden` runner children; their `garden-kid-*-body` descendants
-never carry `.chasing`.
-
-Weather is fetched client-side for Edmonton and Prague, with current conditions and multi-day data.
-When `?date=` or `?time=` selects another Edmonton moment, the current Edmonton reading is replaced
-by Open-Meteo archive data. Past dates use their exact archive day; current or future dates use the
-median temperature and modal weather family from the five most recent matching calendar dates.
-The UI marks these reconstructed Edmonton readings with `≈`, and the approximation metadata is
-included in Charlie's context. Hour changes reuse cached hourly archive rows.
-
-The garden mini-split's indoor reading combines the weather-derived/furnace baseline, blind and AC,
-storm leakage, a lagged one-degree-per-three-person occupancy gain, and a small random walk. Trips
-are thermally neutral except Molly: `mollyGain` rises one degree per 1.2-second thermal tick to a
-five-degree ceiling, then sheds half a degree per tick after Molly ends. The exposed
-`__indoorTempState()` includes both occupancy and Molly contributions.
-Indoor and outdoor models remain Celsius internally; their independent C/F display preferences
-affect only the mini-split LCD, wall readout, and outdoor control.
-
-The implementation also retrieves aviation observations, Edmonton air quality, and geomagnetic
-forecast data for scene effects. Search for `api.open-meteo.com`, `archive-api.open-meteo.com`,
-`__realWx`, `__weatherApprox`, `__realOutdoorC`, `__realPragueC`, and `__realDaily`. Missing or
-failed network data falls back to the simulated scene model; UI and Charlie context must tolerate
-`null`. Console temperature overrides intentionally separate the simulated outdoor model from live
-or reconstructed readings until reset.
-
-Wildfire haze combines Edmonton PM2.5 with the Jul 16–Aug 31 seasonal ramp in `smokeLevelFor`.
-The stronger raw input wins, then a `0.5` presentation gain keeps the orange-sun/haze beat from
-dominating the rooms; console overrides pass through that same visual gain. `applySeasonDate()`
-also writes the computed value to `#entrance-room`, which is a viewport sibling and therefore
-cannot inherit `--smoke` from the loft strip. Its full-street wash uses the Balcony's `.42`
-ceiling and the same daylight-only gate.
-
-## Messages
-
-Messages is a chronological, session-local wedding group chat. Search for `var MESSAGES`,
-`messagesThread`, `CUE_POOL`, and `DAY_POOL`.
-
-### Authored and autonomous delivery
-
-`MESSAGES` is the authored catalog. Entries may have localized sender/body keys, randomized pools,
-images, reply targets, chained follow-ups, arrival side effects, and a typed app/scene action. Direct
-story beats call `__deliverPhoneMessage(id)` and bypass moment deferral once phase-two eligibility and
-deduplication checks pass.
-
-Autonomous sources include party cue drips, daytime drips, visitors, occasion/birthday events,
-Charlie discovery, party lifecycle prompts, and chained authored follow-ups. Their schedulers:
-
-- re-check phase, party/day/time, focus, visibility, cinematic, and attended-player gates
-  when a timer fires;
-- deduplicate authored IDs per session;
-- slow down when unread pressure grows and stop adding normal autonomous messages at the unread cap;
-- hold one-shot occasion messages requested during phase one, while recurring drips simply retry in
-  their valid phase-two context;
-- still add an unread row when appropriate, but buzz/show a scene notification only for an attended
-  player.
-
-Autonomous deliveries remember the preceding autonomous authored row. A small delivery-time roll
-either quotes that row or adds a quiet emoji reaction to it; authored `replyTo` chains always take
-priority. The runtime-only links clear on reset and are flattened into checkpoint rows when saved.
-
-Once an autonomous authored ID clears those gates, `deliverAutonomousRewritten` freezes any pooled
-sender/body choice. A 25% roll keeps the authored wording; otherwise it sends the resolved
-English original and that sender's bounded `groupChatCast()` bio through the shared Chat queue
-in `message_rewrite` mode. The Worker uses a dedicated no-actions prompt for visibly different,
-cheerful, playful, lightly mischievous phrasing while preserving the authored facts, intent,
-concrete details, certainty, and point of view. The bio may color voice but cannot contribute new
-message facts. Emoji are stylistic and may be added, removed, or swapped when meaning is unchanged.
-The Worker requires the exact `{en}` response shape. A valid
-English rewrite is stored on the authored message; Czech always remains the existing reviewed
-dictionary translation. A Turnstile, transport,
-timeout, upstream, parsing, or shape failure
-falls through to the original dictionary copy. Pending IDs count as received for scheduler
-deduplication, do not enter the thread until the request settles, and are generation-cancelled by
-phone/game reset. Checkpoint rows retain a completed English rewrite, while in-flight work remains
-session-only.
-
-`AUTHORED_REWRITE_BLOCKLIST` bypasses Chat unconditionally for wording that must remain verbatim.
-It currently contains Pouria's `pouria_farhang` line and both halves of Hamid's Persian verse
-(`hamid_verse`, `hamid_verse2`).
-
-The `Tab` context-message shortcut uses the same rewrite trip when the interface language is
-English, including cloned repeats after a catalog ID has already arrived. In Czech it deliberately
-uses direct authored delivery, so the reviewed Czech dictionary text is immediate and never sent
-to Chat.
-
-`__deliverAutonomousPhoneMessage` is the single deferral boundary for those sources, including
-birthday and date/BBQ occasion producers. While the Who's Here roster is open, it queues autonomous
-messages without adding thread rows; the scene preview, floating unread launcher, and balcony-phone
-badge are also suppressed. Closing the roster resumes eligible queued messages at the normal paced
-drain, while explicit `__deliverPhoneMessage` calls remain immediate but visually quiet behind the
-roster.
-
-Incoming authored rows may gain bounded crew reactions after delivery.
-`messageReactionPlan` hashes the message id rather than consuming gameplay randomness;
-an entry's `arrivalReactions` overrides that plan for intentional beats. Reaction arrival
-re-renders an open thread but does not alter unread state or raise a notification.
-
-Wedding-moment messages are routed through the same boundary and remain ineligible until 45 seconds
-of attended party time from `__partyLifecycleState()`. While first dance,
-slow dance, toasts, group photo, sparklers, cake, bouquet toss, or chair lift owns attention, incoming
-autonomous texts queue instead of interrupting. The queue re-checks the gates and drains one item at
-a time, approximately 4.2 seconds apart, after the moment ends. Explicit/story delivery remains
-outside this deferral queue, but still passes the shared phase and deduplication boundary.
-
-### Thread behavior
-
-- Read state, reactions, action state, arrival timestamps, filters, draft, and reply target are
-  session/checkpoint state.
-- Opening a notification scrolls to its exact row but does not run that message's action. Opening or
-  selecting the row marks it read; the separate action affordance performs the action.
-- The bulk read action clears unread pressure while preserving the chronological thread.
-- `messageActionState` records one-shot completion or expiry. `setGardenParty` retires actions whose
-  context has permanently passed, marks those rows read, and removes their action affordance without
-  deleting the historical text. `unreadCount()` and `__latestUnreadMessage()` re-run the same expiry
-  pass so stale rows cannot hold the autonomous unread-pressure cap.
-- Reactions are lightweight per-message state and are included in group-chat context.
-- Replies carry a stable target/quote and support jumping back to the quoted row.
-- Visitor input is inserted immediately as a local outgoing row. The generated crew reply is queued
-  through the shared Chat request pipeline in silent `group_chat` mode.
-- A failed group reply remains attached to the outgoing row with Retry. Retrying reuses the original
-  request/context without duplicating the visitor row or inserting a fake response.
-- The thread is capped at 40 rows. Trimming removes the oldest authored rows first. If the thread is
-  entirely generated conversation, it removes the oldest complete visitor/reply pair rather than
-  orphaning one side. Generated `MESSAGES` records are deleted with their rows.
-- Only the 12 most recent rows are assembled as group-chat context, even though more rows may remain
-  visible locally.
-- Invaders, Flair-Catch, Block Party, and Pac-Man publish `minigame.change` state. While any is
-  active, Messages still records incoming rows and unread state but suppresses previews and badges;
-  one current preview is released after the last game exits. This is presentation hold, not message
-  deferral. Keep new action games on the same state-event boundary.
-
-An action returned in group-chat mode is a suggestion attached to the incoming message. It runs only
-after the visitor taps it and the client re-validates it through `loft.api`.
-
-## Charlie and the chat Worker
-
-Private Chat, Messages replies, Code assistance, and authored-message rewriting share one serialized
-client queue and one `/chat` Worker endpoint. Their modes deliberately have different prompts,
-context envelopes, output schemas, and execution policy; do not merge them into one permissive
-conversation path. Search for `askChat`, `__chatContext`, `group_chat`, `code_assist`,
-`message_rewrite`, and `CHAT_PROXY_URL`.
-
-### Client context
-
-`__chatContext()` assembles bounded, live state: language, current room/hint, phase and unlocked
-rooms, party state and elapsed time, daylight/date/occasion, trip, weather and indoor temperature,
-people/occupants, media/devices/apps, relevant instructions, and currently available typed actions.
-Retrieval helpers add app-specific knowledge only when the message makes it relevant. Private Chat
-retains at most 40 local rows once idle, and the Worker accepts at most 24 history items. Group-chat
-mode sends no private history and instead sends sanitized cast, reply target, at most 12 recent
-messages, people, and reactions.
-
-Game, activity, music, film, and scripting answers are registry-backed. App games and their
-activities come from the monitor/phone app definitions; the four scene-only hidden games retain a
-small physical-opening guide, while high scores are read from their live controller snapshots.
-Song and film titles come from the player playlists. `__chatApiManifest()` derives JavaScript
-commands from `CONSOLE_CMDS` + `CONSOLE_HELP` and typed calls from `loft.api`; Charlie receives it
-only for scripting questions, while every JavaScript Code-assistant request receives the same
-manifest with its async-function calling context. Keep the Worker sanitizers and prompt rules in
-sync when adding a new public context field.
-
-The client lazy-loads Turnstile, obtains a token for the chat action, and prewarms/caches a recent
-token. Requests use `AbortController` and a roughly 20-second browser timeout. The app renders
-configuration, verification, rate-limit, timeout, and upstream failures as user-facing errors.
-Failed private Chat turns have a visible Retry control that reuses the original turn and does not
-append a duplicate user message. Silent modes surface failure to their caller instead: group replies
-retain Retry state, and authored rewrites fall back to the original English copy.
-
-### Worker boundary
-
-`chat.js` accepts only `POST /chat` (plus CORS preflight) from the production origin and explicit
-local-development origins. It requires JSON, caps body/message/history/group-context sizes, trims
-all strings, and reconstructs a known context shape rather than forwarding arbitrary client data.
-
-Before model access it:
-
-1. applies a configured edge rate limit keyed by client address (currently 12 requests per minute);
-2. verifies a Turnstile token server-side, including the expected hostname and action, with a
-   10-second verification timeout;
-3. supplies stable `chat-knowledge.json` plus the sanitized current context as data;
-4. calls the configured Responses model with storage disabled and a hashed safety identifier;
-5. parses and normalizes strict JSON output, then applies deterministic intent handling for a small
-   set of direct invocations.
-
-The model upstream timeout is 35 seconds. Invalid client requests return 4xx responses; missing
-server configuration or unavailable verification returns 503; rate limiting returns 429; model
-timeouts return 504; other upstream failures return 502. Responses use no-store and constrained
-CORS headers. The browser timeout is shorter than the Worker timeout, so a browser may abandon a
-request before the Worker finishes it.
-
-### Typed actions
-
-`ACTION_SPECS` in the Worker and the registry in `initLoftApi` are the two enforcement boundaries.
-Both allow only known action IDs and exact boolean/enum argument shapes. The model may return at most
-one action, only from `context.actions_available`; no raw JavaScript, selector, URL, or function name
-is accepted.
-
-The private Chat app automatically calls the validated action and reports the result. Messages never
-auto-executes a returned action: it stores a suggestion and waits for a tap. Keep this behavioral
-difference when sharing queue, renderer, or retry code.
-
-Monitor film playback is exposed as `media.video` in `media.status`; `video.pause` is advertised only
-while the film is actually playing. Its direct controls and typed action share one semantic state
-transition, so assistants cannot truthfully report a pause without invoking the registered action.
-
-`chat-knowledge.json` should contain verified, stable facts and explicit unknowns. Live state belongs
-in client context. Its `loft.rooms` entries are Charlie's stable room/object guide: they distinguish
-recognizable objects, phase-specific additions, main guided interactions, and special controls
-without forwarding the SVG DOM. Lower-room entries carry `room_type: "lower"` and `paired_with`;
-`loft.game_geometry` makes explicit that this parallel row is game navigation rather than a literal
-second floor in the real one-floor Loft. Exact birthdays and other private facts are deliberately
-excluded from model context. Do not add secrets, credentials, operational access details, or
-unverified logistics to the knowledge file.
-
-## Console and public scripting
-
-The drop-down console and office monitor console share an interpreter. Explicit `/chat` and
-`/message` routes use the assistant/group-chat flows; otherwise the console can evaluate JavaScript
-and exposes many intentional global commands. Search for `CONSOLE_HELP`, `CONSOLE_CMDS`, and the
-`window.<name> = function` block near the end of `rsvp.html`.
-
-Useful public controls include room navigation, party/daylight/season/weather/time, media and volume,
-projector, trips, dances and wedding moments, phone/monitor apps, calls, roster/guests, photography,
-and reset helpers. `CONSOLE_HELP` is the user-facing description and `CONSOLE_CMDS` is the
-completion roster; tests require them to stay in sync.
-
-For programmatic integrations, prefer:
-
-- `window.loft` read-only status getters for couple/site/countdown/media/weather facts;
-- `loft.api.capabilities()` to discover typed commands;
-- `loft.api.query(id, args)` for snapshots such as `game.snapshot`, `room.current`,
-  `room.occupants`, `people.locations`, `party.status`, `audio.status`, `calendar.events`,
-  `weather.cities`, `album.list`, and `trip.status`;
-- `loft.api.perform(id, args)` for validated actions;
-- `loft.api.subscribe(fn)` or the `loft:statechange` event for semantic state changes from typed
-  actions, direct UI/console use, and tracked autonomous transitions.
-
-The many `window.__...State`, `__...Now`, `__advance...`, and `__reset...` functions are targeted
-debug/test hooks. They are often the fastest way to inspect a controller, but callers outside this
-repository should not depend on them.
+- `rsvp.html` is Loft Day: one self-contained file containing its HTML, CSS, inline SVG, English
+  and Czech copy, state, controllers, apps, and console.
+- `loft-day`, `loft-day.html`, `rsvp`, and `rsvp.html` resolve to the game; the clean aliases are
+  tracked symlinks, not generated routes.
+- `chat.js` is the Cloudflare Worker behind `/chat`. `chat-knowledge.json` contains verified stable
+  facts; `wrangler.jsonc` owns the route, model configuration, secrets contract, and rate limiter.
+- `tests/` contains zero-dependency Node and headless-Chrome checks. `tests/lib.js` is the shared
+  scratch-page runner.
+- `art/` holds ordinary media. `pyodide/`, `linux/`, `dos/`, `doom/`, `duke/`, `q3/`, and
+  `harfbuzzjs/` are pinned, self-hosted runtime deliverables with provenance in their `BUILD.md` or
+  README files. Do not regenerate or upgrade them casually.
+
+There is no frontend build, framework, package bundle, or CDN runtime. Google Fonts is the one
+deliberate network exception. Keep new game code inside `rsvp.html` unless there is a strong reason
+to create a separately deployed boundary such as the chat Worker.
+
+Apache serves the Git working tree directly. `.htaccess` blocks Markdown, tests, Worker source and
+configuration, agent instructions, and local secret files; check its rules before adding another
+tracked internal file.
+
+## Entry and presentation modes
+
+The default `rsvp.html` load includes the surrounding invitation. `#play` and the `loft-day` aliases
+select the game-only shell but start no activity. `#trailer` starts the curated one-minute game
+trailer after normal entry or checkpoint recovery has settled. Search for `urlEntryMode`,
+`startCinematic`, and `stopCinematic`.
+
+The trailer is a fixed editorial timeline, not an autonomous player. It owns `window.__cinematic`,
+its timers, cuts, overlay, score, previews, and teardown. `stopCinematic` must remain the single
+cleanup path for completion, Take over, and hidden-tab abort. The removed autoplay director and
+scripted `?keys=` URL entry are not compatibility surfaces; do not restore their code, tests, or
+documentation.
+
+Game chrome has four presentations worth checking independently:
+
+1. full RSVP page;
+2. direct `#play`/`#trailer` browser entry;
+3. installed/standalone PWA entry;
+4. the narrow portrait orientation gate.
+
+The fresh CLICK ME overlay and saved-session recovery gate share entry chrome but have different
+state effects. `.loft-entered` enlarges direct game mode without claiming browser fullscreen.
+`.is-fullscreen` and native Fullscreen API ownership remain explicit. Start with
+`tests/game-only-layout.js`, `tests/url-entry.js`, `tests/recovery.js`, and
+`tests/monitor-fullscreen.js` when changing this area.
+
+## State ownership
+
+There is intentionally no central store. State lives in four places:
+
+- closure variables inside subsystem IIFEs;
+- DOM classes, attributes, and CSS custom properties used as rendering truth;
+- a limited set of cross-controller `window.__...` mirrors and hooks;
+- the public `window.loft` status object and typed `window.loft.api` facade.
+
+Every shared transition needs one owner: normally a `set*` function or a paired `start*`/`stop*`
+function. UI handlers, console commands, typed actions, checkpoint restore, reset, and trailer code
+must call that owner rather than editing its mirror classes or flags independently. Delayed work
+must be cancellable or generation-guarded.
+
+Controllers are declared in source order but communicate through feature-detected hooks. A new
+state axis commonly needs to re-gate room, focus, visibility, audio, people, messages, and device
+controllers. Keep the notifications explicit; do not replace them with a polling loop.
+
+`__registerTransientResetHook(id, reset)` is for small closure-local controllers. Durable systems
+keep explicit reset owners and may also register a checkpoint adapter. Full reset isolates hook
+failures so one subsystem cannot strand later cleanup.
+
+### Public typed state
+
+Search for `initLoftApi`, `register({ id:`, and `__loftStateChanged`. `loft.api` registers bounded
+queries and actions, validates arguments and availability, and emits `loft:statechange` after a
+semantic mutation. `stateVersion` advances for meaningful room, environment, app, call, media,
+message, album, and minigame transitions—not animation frames, score ticks, or incidental counters.
+Composite typed actions coalesce synchronous owner mutations into one revision.
+
+Use `loft.api.capabilities()`, `query()`, `perform()`, and `subscribe()` for integrations. The many
+`__...State` functions are narrower diagnostic seams and may change with their controller.
+
+`ACTION_SPECS` in `chat.js` is a second validation boundary for model-proposed actions. Keep it
+aligned with the client registry, but never pass raw selectors, URLs, JavaScript, or private
+function names through the Worker.
+
+## Rooms, floors, and progression
+
+### Ten-room navigation
+
+The five main rooms are the `STAGES` array:
+
+| Main strip stage | Paired lower panel | Lower identity |
+| --- | --- | --- |
+| `kitchen` | Bathroom | `bathroom` |
+| `garden` | Prince dungeon | `dungeon` |
+| `cuddly` | Cinema | `cinema` |
+| `office` | Bedroom | `bedroom` |
+| `balcony` | Entrance/garage | `entrance` |
+
+The main rooms are adjacent groups in `#loft-game-strip`; `goToStage(name)` translates the
+500%-wide strip by 20% per stage and is the central room-change re-gate. It collapses office zoom,
+closes ordinary lower-room ownership, parks distant room animation, and re-evaluates room-bound
+media, audio, people, particles, devices, and captions.
+
+The five lower roots live in `#lower-room-track`. `lowerRoomForStage()` is the pairing table and
+`__navigateLowerRoom(name)` is the horizontal-floor owner. It changes the paired main stage and
+opens the destination lower panel as one queued 720 ms transition, so arrows, dots, and `1`–`5`
+stay on the lower row without exposing the main strip between rooms. Vertical open/close remains
+owned by each lower controller. Checkpoint state stores a lower identity only when it matches the
+saved main room.
+
+Both floors settle one room at a time under held keyboard navigation. During a main-strip slide,
+every traversed stage stays paintable until `transitionend` or its timeout fallback; then
+`stage-far` parking leaves only the destination active. Preserve that lifecycle to avoid gaps,
+tearing, off-room animation, or captions that disagree with the visible room.
+
+Start navigation work with `tests/navigation.js`, `tests/upstairs-keyboard-navigation.js`,
+`tests/delayed-pan.js`, `tests/rapid-navigation.js`, `tests/lower-shortcuts.js`,
+`tests/lower-room-markers.js`, and `tests/lower-room-recovery.js`.
+
+### Phase and solved-state model
+
+The main progression values have separate jobs:
+
+- `stageIndex` / `currentStageName` identify the visible paired room;
+- `maxUnlocked` is the furthest main room available to normal navigation;
+- `solvedRooms` records each room's completion independently;
+- `window.__secondRound` is the latched phase-two state.
+
+Phase one is the linear kitchen → garden → cuddly → office → balcony solve. Each room's controller
+owns its clue sequence and `__*DoNext` walker. Completion calls
+`__finishSolveAdvance(from, to)`, which marks `from` solved, unlocks `to`, and navigates only if the
+player is still in the source room. The last condition prevents stale animation timers from pulling
+the player away. Unsolved rooms restore their current instruction; solved rooms restore their
+stable exploration caption. Do not infer solved state from the next room's unlock.
+
+`setSecondRound(true)` is the phase-two transition owner. The first party start latches it, unlocks
+and marks all rooms solved, releases phase-two-held content, and changes Enter into each room's
+principal free-play activity. Turning the party off does not return to phase one; only reset clears
+the latch. Phase-one solve walkers and captions must remain inert once it is set.
+
+`goToStage()` is intentionally permissive for scripting and tests and unlocks through its target.
+Visible arrows and dots apply their own frontier rules. Keep progression assertions in
+`tests/play.js`, `tests/enter.js`, `tests/phase2-progression.js`, and
+`tests/progression-transitions.js`.
+
+## Apps and minigames
+
+The office monitor and pocket phone are separate shells with registry-backed catalogs:
+
+- `DESKTOP_APPS` defines monitor desktop and search-only apps; `TOOLBAR_APPS` adds Weather and
+  Clock. `__chatMonitorApps()` projects this catalog for Charlie. The running-task registry survives
+  normal close or app switching; per-app Kill and shutdown paths own destructive reset.
+- `PHONE_APPS` defines phone labels, tiles, launchers, activities, and game metadata. The phone owns
+  installed slots, recents, Back/close return intent, shell lock, and bounded app state.
+  `__chatAppCatalog()` combines phone and monitor projections.
+
+Do not build a second hand-maintained app directory. Add metadata to the owning app record, then
+update any intentional Worker allowlist (`PUBLIC_MONITOR_APPS`, `PUBLIC_PHONE_APPS`) and focused
+contract tests.
+
+There is no single runtime manager for all games. Each scene or app controller owns its loop,
+input capture, score/high score, result screen, and teardown. App games advertise a `game` record on
+their app definition. The four scene games currently exposed to Charlie outside app definitions
+live in `CHAT_SCENE_GAMES`; `chatGamesKnowledge()` combines both sources. `PUBLIC_GAME_IDS` is the
+Worker-side sanitization allowlist, not a gameplay registry.
+
+Action games publish `minigame.change` through `__loftStateChanged`. Messages uses that event to
+hold previews and badges while Alien Resources, Flair Catch, Block Party, or Hack-Man owns input.
+When adding a comparable game, wire start and every stop path to the same event and tear down on
+Escape, room leave, blur/hidden state, reset, and game over as appropriate. High scores normally
+live in their own `localStorage` keys and are intentionally outside the gameplay checkpoint.
+
+## Checkpoints and recovery
+
+Search for `LOFT_CHECKPOINT_KEY`, `checkpointPayload`, `applyCheckpoint`, and
+`__registerCheckpointAdapter`. The versioned `loftCheckpoint:v1` record expires after 90 days and
+contains:
+
+- progression: main room, unlock frontier, solved rooms, paired lower room, phase, party,
+  daylight, and BBQ;
+- the compact phase-one puzzle record;
+- separately owned phone, album, and Hack-Man data;
+- a `systems` map captured by subsystem adapters.
+
+Checkpoint writes are debounced through `__checkpointChanged`. A subsystem adapter provides
+`capture()`, `restore(row, phase)`, and optionally `reset()`. Restore has two passes:
+`beforeStage` for state that must precede room selection and `afterStage` for geometry or
+presentation that depends on the settled destination. Validate every row and restore only bounded,
+settled intent—not live timers, calls, cameras, dialogs, drag motion, particles, iframe frames, or
+running minigame loops.
+
+A payload with no `systems` property is an older/portable record; the compact compatibility fields
+remain authoritative until the next save. In a modern payload, a missing adapter row means that
+subsystem's fresh default.
+
+The recovery gate is a modal state boundary and paint cover. It previews the saved main/lower room
+without calling lower-room open hooks or starting audio/media. Its capture-phase keyboard handler
+prevents gameplay shortcuts from mutating the unopened save. Continue restores puzzle and adapter
+state around one real room transition, opens the saved lower room through its normal owner, then
+removes the gate. Start over clears the checkpoint and returns to fresh CLICK ME state.
+
+Device recovery stores physical shell state rather than arbitrary live app execution. The monitor
+returns to its desktop with saved surface, power, zoom, and dock order. The phone restores whether
+it was open, deliberately requires authentication again on page-load Continue, and preserves
+Messages as the only foreground app eligible to resume; other apps return to the launcher. Calls,
+cameras, media execution, and heavyweight runtimes do not resume.
+
+`loftSessionExport()` / `loftSessionImport()` are deliberately smaller portable handoffs containing
+only progress and puzzle state. Personal messages, photos, scripts, and bulky app stores stay in the
+browser.
+
+## Audio and lifecycle
+
+All host-page sound uses one shared `AudioContext`; consumers own nodes and handles, never the
+context. Continuous beds, one-shot SFX, captured songs, lower-floor acoustics, focus/visibility
+gates, and Safari constraints are documented in [audio.md](audio.md). Read and update that document
+for any graph or lifecycle change instead of duplicating it here.
+
+At a high level, room changes re-gate every room-bound source, lower rooms share a filtered acoustic
+boundary, autonomous sounds require both visibility and focus, and ordinary songs intentionally
+may continue in the background. A user gesture is not a substitute for teardown: every timer,
+rAF loop, media source, and spawned effect still needs an explicit stop path and bounded retained
+collection.
+
+## Rendering and browser constraints
+
+The main strip is inline SVG with HTML `foreignObject` surfaces for the office monitor. WebKit
+cannot reliably composite layered or replaced content inside a scaled `foreignObject`; keep those
+surfaces de-layered and use native SVG `<image>` blits where the current implementation does. Read
+the cross-browser notes in `AGENTS.md` and the practical recipes in `DEBUGGING.md` before changing
+monitor composition, fullscreen geometry, touch drags, or season-gated paint.
+
+Off-room work must be parked, not merely made transparent. Ambient loops should run only while
+their owning room/state is visible and attended. Timer-spawned particles need self-replenishing or
+capped collections because background tabs pause animation completion while timers may continue.
+
+SVG transforms have two recurring hazards: a CSS transform animation replaces an authored
+`transform` attribute, and `getBBox()` returns local coordinates. Put static positioning on a
+wrapper when animating a child, and spawn effects into the target's own coordinate-space parent.
+
+## Localization and metadata-free UI
+
+Visible copy is bilingual. Keep `T.en`, `T.cs`, and any static fallback synchronized in the same
+commit. `setLang()` uses `innerHTML` for authored markup; never insert visitor or model text through
+that path. Write printable Unicode directly as UTF-8.
+
+The Loft Day game DOM intentionally has no ARIA attributes, explicit `role` metadata, or native
+`title` tooltips. Its player guidance is visible copy: captions, cards, labels, and explicitly
+authored coaches. Do not add invisible accessibility/tooltip message keys, and do not restore
+metadata to satisfy a stale test. Focused tests should use stable ids, classes, `data-*` state, and
+rendered behavior rather than translated metadata selectors. This stance is specific to the game;
+do not infer it for `save-the-dates.html`.
+
+## Chat boundary
+
+Private Chat, Wedding crew replies, authored-message rewriting, and Code assistance share one
+serialized browser queue and the `/chat` Worker, but have different prompts and output contracts.
+Search the client for `askChat`, `__chatContext`, `group_chat`, `message_rewrite`, and
+`code_assist`.
+
+The browser sends bounded live context assembled from the current state and the app/game
+registries. The Worker reconstructs known shapes, enforces origin, body and history limits, verifies
+Turnstile, applies the edge rate limit, disables model storage, normalizes strict output, and
+validates optional typed actions. Stable facts belong in `chat-knowledge.json`; live state belongs
+in client context. Never put credentials, private facts, or operational access details in either.
+
+Keep the client registry projections, `PUBLIC_*` Worker allowlists, `ACTION_SPECS`, and Code
+assistant instructions aligned when adding an app, public game, typed action, or scripting feature.
+Run the chat/Worker tests without requiring live model or Turnstile access.
 
 ## Local development and tests
 
-The static pages can be opened directly for basic inspection. A local HTTP server is preferable for
-media, browser APIs, and `/chat` integration because browsers restrict some `file://` subresources.
-The Worker is developed separately with Wrangler and platform-provided local bindings/secrets; do
-not place credentials in tracked files.
+Basic inspection works over `file://`, but use a local HTTP server for media, iframe runtimes,
+browser APIs, and `/chat` integration. Never add local credentials to tracked files.
 
-Mandatory tests for HTML changes are documented in `AGENTS.md` (`CLAUDE.md` is its compatibility
-symlink):
+For every change to either self-contained HTML page, run:
 
 ```sh
 node tests/check.js
 node tests/state.js
 ```
 
-For `rsvp.html` game logic or interactions also run:
+For `rsvp.html` game logic or interaction changes, also run:
 
 ```sh
 node tests/play.js
 ```
 
-Run focused tests for the changed ownership boundary. The main routes are:
+Add the focused runner for the ownership boundary you changed:
 
-- `tests/email-links.js` for centralized desktop Gmail versus Android/iOS mailto routing on both
-  self-contained pages;
+| Area | Focused tests |
+| --- | --- |
+| Room solve and Enter ownership | `enter.js`, `phase2-progression.js`, `progression-transitions.js` |
+| Main/lower navigation | `navigation.js`, `upstairs-keyboard-navigation.js`, `delayed-pan.js`, `rapid-navigation.js`, `lower-shortcuts.js`, `lower-room-*.js` |
+| Entry, recovery, reset, trailer | `game-only-layout.js`, `url-entry.js`, `recovery.js`, `checkpoint-*.js`, `reset-hooks.js`, `cine.js` |
+| Monitor/phone shells and menus | `menu.js`, `laptopmenu.js`, `systemmenu.js`, `monitor-*.js`, `phone-*.js` |
+| Room-specific interactions | the corresponding `kitchen`/`garden`/`cuddly`/`office`/`balcony` or lower-room focused file |
+| Apps and games | the named app/game test plus `minigame-vocabulary.js`; include touch tests for shared D-pads or drag controls |
+| Messages and Charlie | `message-*.js`, `chat.js`, `chat-context.js`, `chat-worker.mjs`, `assistant-behavior.mjs`, `safe-actions*.js` |
+| Audio/media lifecycle | `media-transitions.js`, `device-audio.js`, `lower-audio.js`, `piano-message.js`, `performance.js`, `leak.js` |
+| Album render signatures | `album-axis.mjs`, `album-render.mjs`, `album-ui.js` |
+| Date/weather/occasion gates | `weather.js` and the corresponding occasion/day test |
 
-- `tests/enter.js`, `tests/navigation.js`, `tests/delayed-pan.js`,
-  `tests/rapid-navigation.js`, `tests/upstairs-keyboard-navigation.js`,
-  `tests/phase2-progression.js`, and
-  `tests/progression-transitions.js` for room progression and navigation ownership;
-- `tests/menu.js`, `tests/laptopmenu.js`, `tests/systemmenu.js`, `tests/monitor-search.js`,
-  `tests/phone-direct-launch.js`, `tests/phone-lock.js`, `tests/phone-recents.js`, and
-  `tests/phone-badges.js` for
-  monitor/phone shell, context-menu, launch, and teardown behavior;
-- `tests/url-entry.js`, `tests/recovery.js`, and `tests/cine.js` for direct presentation entries
-  and their recovery/lifecycle contracts;
-- `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`,
-  `tests/cinema-room.js`, `tests/bathroom-room.js`, `tests/bedroom-room.js`,
-  `tests/bedroom-tictactoe.js`, `tests/entrance-room.js`, and
-  `tests/entrance-lap-odometer.js` for projector
-  ordering, retained channel state, shared beds, transport, play-along transitions, Vimeo
-  teardown, lower-room pan/UI restoration, and guarded mouse/touch navigation for Kitchen,
-  Cuddly, Garden, Office, and Balcony;
-- `tests/video-playlist.js` and `tests/video-kill-variants.js` for film selection, retained
-  playheads, track-specific Kill visuals, and teardown reset;
-- `tests/party-lifecycle.js` for attended party timing and finales;
-- `tests/balcony-tetris.js`, `tests/pacman.js`, `tests/doom-title.js`,
-  `tests/monitor-savers.js`, and
-  `tests/minigame-vocabulary.js` for action-game lifecycle, keyboard/title ownership,
-  notification holds, persistence, and shared terminology;
-- `tests/message-context.js`, `tests/message-launcher.js`, and
-  `tests/message-resilience.js`, `tests/message-rewrite.js`, `tests/message-longpress.js`, and
-  `tests/message-typed-actions.js` for Messages behavior;
-- `tests/chat.js`, `tests/chat-context.js`, `tests/chat-worker.mjs`,
-  `tests/assistant-behavior.mjs`, `tests/chat-code-protocol.mjs`, `tests/safe-actions.js`, and
-  `tests/safe-actions-worker.mjs` for assistant modes and action boundaries;
-- `tests/performance.js` and `tests/leak.js` for lifecycle regressions;
-- `tests/bar-layout.js` for the calm-night patrons, occupied stools, and hands-on mixer paint order;
-- `tests/album-axis.mjs`, `tests/album-render.mjs`, `tests/album-ui.js`, and
-  `tests/photographer-occupancy.js` for photography;
-- `tests/weather.js`, `tests/birthday.js`, `tests/bbq-days.js`, and `tests/polyamory-day.js` for
-  date/weather gates and special-day room dispatch.
+`tests/check.js` performs static/syntax contracts: inline script parsing, dictionary parity, SVG
+group balance, unique ids, console command/help parity, shared-audio construction, and other
+recurring structural checks. Add a static check only for a meaningful repeat bug class.
 
-`tests/lib.js` starts a fresh headless Chrome profile, loads a scratch page, injects narrow setup and
-assertion hooks, captures page errors/rejections, and provides deterministic motion/focus/random
-controls. New behavior tests should use `runPage`/`runPageSync`, assert visible/state behavior rather
-than source text, and expose the narrowest practical test hook. Add a static invariant to
-`tests/check.js` only when it protects a recurring structural bug class.
+`tests/state.js` runs independent stateful invariant pages. `tests/play.js` is the end-to-end phase
+one solve and interaction storm. `tests/enter.js` drives only the document-level Enter path.
+`tests/menu.js` and `tests/laptopmenu.js` own context-menu contracts. `tests/album-axis.mjs` uses a
+real CDP Chrome raster comparison because source inspection cannot prove two room photographs look
+different.
 
-Headless virtual time has known rAF, transition, WAAPI geometry, and display-paint artifacts. Use a
-cache-busted URL and freshness assertion. For visual work, inspect real Chrome screenshots at mobile
-and desktop widths in both languages; use the CDP recipes in `DEBUGGING.md` when virtual-time paint is
-suspect.
+### Runner isolation
 
-## Deployment model
+`tests/lib.js` copies the page to a unique scratch file, injects a narrow harness before
+`</body>`, starts a fresh Chrome profile, captures errors and unhandled rejections, blocks external
+navigation, and removes the scratch/profile afterward. `runPageSync()` serves one-shot tests;
+`runPage()` lets independent pages run concurrently. `WEDDING_TEST_ROOT` can point the same harness
+at another checkout.
 
-The frontend is served directly from a Git checkout behind Apache. HTML and the PWA manifest are
-configured to revalidate; large pinned runtimes and media have longer cache policies. Internal
-Markdown, tests, Worker source/configuration, and local secret files are explicitly blocked.
-Clean extensionless entry points are symlinks, and Apache does not infer the target HTML MIME type
-through them. The extensionless-file rule in `.htaccess` therefore forces `text/html`, compression,
-and revalidation for current and future clean routes; keep it when adding another drop alias.
+Each manual CDP run also needs a unique profile and port, a cache-busted URL, and an `assertFresh`
+probe that proves the loaded page contains the code under test. Headless virtual time distorts rAF,
+CSS transitions, WAAPI geometry, media clocks, and some season-gated paint. Test settled semantic
+state there; use real CDP Chrome and screenshots for visual timing and geometry. Always inspect
+English/Czech and desktop/mobile layouts for visible copy or layout work.
 
-The chat backend is a separately deployed Cloudflare Worker routed only to `/chat`, with its model
-credential, Turnstile server secret, and rate-limit binding supplied by the platform. The frontend
-contains only the public widget configuration needed to request a Turnstile token.
+## Commit and deploy workflow
 
-Because deployment updates the live checkout in place, a request arriving while a very large HTML
-file is being replaced can receive a truncated document. A report that the entire layout suddenly
-stacked or lost CSS should first be checked for a torn read and compared against the local artifact,
-not immediately attributed to the most recent small UI edit.
+1. Put every delegated task in its own branch and Git worktree. Never share a writable checkout.
+2. Keep one discrete issue per commit and preserve unrelated working-tree changes.
+3. Run the mandatory and focused tests for the files and ownership boundary touched.
+4. Commit with the required trailer:
 
-This guide intentionally omits host access, credential values, and exact deployment commands.
+   ```text
+   Co-Authored-By: Codex (GPT-5) <noreply@openai.com>
+   ```
 
-## Pitfalls and invariants
+5. Review and integrate the isolated commit into `main`, then remove the temporary worktree.
+6. Push with `git puff` and deploy with `ssh behdad "cd w && git pull"`.
 
-- Keep `rsvp.html` and `save-the-dates.html` self-contained; do not add a frontend build dependency
-  casually.
-- Keep `T.en`, `T.cs`, and any static fallback copy synchronized.
-- Maintain exactly one `AudioContext`; consumers own nodes/handles, never the shared context.
-- Re-gate an autonomous loop on room, state, visibility, and focus at fire time, not only when it is
-  scheduled.
-- Bound every timer-created node collection and explicitly tear it down.
-- Let finite one-shot animations finish; park only ambient infinite timelines.
-- Keep traversed rooms visible through a strip slide.
-- Do not use a CSS transform animation on the same SVG node that owns static transform positioning.
-- Keep people identity and occupancy consistent across SVG, roster/chat context, and album output.
-- Preserve normal-close versus Kill/reset semantics for apps.
-- Keep Worker and client typed action definitions aligned and deny arbitrary execution at both
-  boundaries.
-- Keep private Chat auto-actions distinct from Messages tap-to-run suggestions.
-- Do not advance `loft.api.stateVersion` for animation frames or incidental counters; wire new
-  durable query state through its central owner and emit one semantic revision.
-- Do not expose a new tracked internal file without checking `.htaccess` coverage.
+The live web root is the remote Git checkout. A pull rewrites the multi-megabyte `rsvp.html` in
+place, so a request during that write can receive a truncated page. If a post-deploy report shows
+the entire page unstyled or vertically stacked, compare local/live hashes and reload at the reported
+viewport before diagnosing the latest small change.
 
-## Debug entry points
+The Worker is a separate Cloudflare deployment. A frontend Git pull does not deploy `chat.js`.
 
-Start with the subsystem's state hook, then inspect its DOM classes and owning timers:
-
-- rooms: `currentStageName`, `__maxUnlocked()`, `__stageParkingState()`;
-- game: `loft.api.query("game.snapshot")`, `__secondRound`, `__gameStarted`;
-- party: `loft.api.query("party.status")`, `__partyLifecycleState()`;
-- audio: `loft.api.query("audio.status")`, `__updateSharedAudioIdle()`;
-- people: `__whoIsHere(room)`, `__rosterPresence()`, `loft.api.query("people.locations")`;
-- messages: `__phoneMessageThread()`, `__latestUnreadMessage()`,
-  `__deferredPhoneMessages()`, `__messageRewritePending()`,
-  `__messageNotificationsHeld()`;
-- date/time: `__now()`, `__ovClock()`, `__weddingOccasion()`;
-- weather: `loft.api.query("weather.cities")`, `__realWx`, `__realDaily`;
-- assistant context: `__chatContext()` and `loft.api.capabilities()`.
-
-Most reset functions are named `reset...` or `__reset...`. Prefer the subsystem reset or the public
-full reset over manually deleting classes; manual deletion usually misses timers, audio nodes,
-retained app state, or paired population layers.
-
-## Code map
-
-Use these search terms in `rsvp.html` rather than relying on line numbers:
+## Search map
 
 | Area | Search terms |
 | --- | --- |
 | Localization | `var T =`, `function setLang` |
-| Date and occasion source | `window.__now`, `__weddingOccasion`, `persianOcc` |
-| Shared audio | `function getAudioCtx`, `audioBusProxy`, `__updateSharedAudioIdle` |
-| Monitor desktop/apps | `REAL_APPS`, `__openMonitorApp`, `__closeTopMonitorApp`, `PAC_MAZE` |
-| Phone shell/apps | `function openApp`, `function navBack`, `phoneAppReturn`, `setPhoneAppReturn` |
-| Chat context/client | `window.__chatContext`, `askChat`, `CHAT_PROXY_URL`, `message_rewrite` |
-| Typed game API | `initLoftApi`, `register({ id:`, `actions_available` |
-| Messages catalog/schedulers | `var MESSAGES`, `CUE_POOL`, `scheduleDayDrip`, `deliverAutonomousRewritten` |
-| Message deferral/retention | `__deliverAutonomousPhoneMessage`, `MSG_CAP`, `trimMessageThread` |
-| Party lifetime | `PARTY LIFECYCLE`, `__partyLifecycleState` |
-| Room navigation | `var STAGES`, `function goToStage`, `__finishSolveAdvance` |
-| Room performance | `stage-far`, `stageAnimationParkingActive`, `capParticles` |
-| Party source of truth | `function setGardenParty`, `__setPartyMode` |
-| Population/roster | `ROSTER`, `__whoIsHere`, `__rosterPresence` |
-| Kids | `kids_asleep`, `kids_loose`, `__setKidsAsleep`, `chaseKidsAllowed` |
-| Photographer/album | `__updateGardenPhotographer`, `albumPhotoSvg`, `__photoMomentNow` |
-| Weather | `api.open-meteo.com`, `__realOutdoorC`, `refreshWeatherText` |
-| Public console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.volume` |
-| Code/Python Turtle | `CODE_STORE_KEYS`, `codeSetLanguage`, `__runPythonCode`, `PY_TURTLE_MODULE` |
-| Trailer/direct entry | `THE TRAILER`, `window.__launchUrlEntryMode`, `window.__cinematic` |
+| Main/lower navigation | `var STAGES`, `goToStage`, `lowerRoomForStage`, `__navigateLowerRoom` |
+| Progression | `solvedRooms`, `__finishSolveAdvance`, `setSecondRound` |
+| Checkpoints | `LOFT_CHECKPOINT_KEY`, `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter` |
+| Reset | `resetHunt`, `__registerTransientResetHook` |
+| Typed API | `initLoftApi`, `register({ id:`, `__loftStateChanged` |
+| Monitor apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `resetMonitorAppState` |
+| Phone apps | `PHONE_APPS`, `openApp`, `phoneAppReturn`, `__chatAppCatalog` |
+| Games catalog | `CHAT_SCENE_GAMES`, `chatGamesKnowledge`, `minigame.change` |
+| Messages | `var MESSAGES`, `__deliverAutonomousPhoneMessage`, `trimMessageThread` |
+| Chat client | `__chatContext`, `askChat`, `CHAT_PROXY_URL` |
+| Chat Worker | `ACTION_SPECS`, `cleanContext`, `verifyTurnstile`, `callOpenAI` |
+| Shared audio | `getAudioCtx`, `audioBusProxy`, `__updateSharedAudioIdle` |
+| People and roster | `ROSTER`, `__whoIsHere`, `__rosterPresence` |
+| Date/weather | `__now`, `__weddingOccasion`, `__realWx`, `refreshWeatherText` |
+| Album | `albumPhotoSvg`, `ALBUM_SKY_SIG`, `__albumList` |
+| Console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.loft` |
+| Trailer | `THE TRAILER`, `startCinematic`, `stopCinematic`, `urlEntryMode` |
 
-Worker-side searches in `chat.js`: `ACTION_SPECS`, `cleanContext`, `cleanGroupChat`,
-`verifyTurnstile`, `callOpenAI`, and `export default`. Stable assistant facts and policy live in
-`chat-knowledge.json`; runtime facts should not be moved there.
+Most debugging should begin with the subsystem's state hook and transition owner, then inspect its
+DOM projection and outstanding timers. Avoid repairing state by deleting classes manually; that
+usually leaves audio nodes, callbacks, retained app state, or paired room ownership behind.

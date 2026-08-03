@@ -33,8 +33,10 @@ check(/id="entrance-porsche-behdad-lower-body"[\s\S]*?id="entrance-porsche-marke
   "both occupants have seated lower bodies behind the later door-panel layer");
 check(!/id="entrance-drive-(?:behdad-passenger|marketa-hands)"/.test(entrance),
   "the first-person HUD keeps its windshield and steering wheel free of occupant artifacts");
-check(/#entrance-porsche-door-open\{[\s\S]*?transform:scaleX\(\.08\);transition:transform \.72s cubic-bezier\(\.42,0,\.58,1\),opacity \.28s linear[\s\S]*?#entrance-porsche\.door-open #entrance-porsche-door-open\{opacity:1;transform:scaleX\(1\)\}/.test(source),
-  "the driver door eases between the approved endpoints while retaining its opacity timing");
+check(/#entrance-porsche-door-closed\{transition:none\}/.test(source) &&
+  /#entrance-porsche-door-open\{[\s\S]*?transform:scaleX\(\.08\);transition:none[\s\S]*?#entrance-porsche\.door-open #entrance-porsche-door-open\{opacity:1;transform:scaleX\(1\)\}/.test(source) &&
+  /#entrance-porsche-door-well\{opacity:0;transition:none\}/.test(source),
+  "the driver door opening mirrors the closing layer handoff without a fake hinge stretch");
 
 if (failures) {
   console.log("\n" + failures + " Porsche exterior assertion" + (failures === 1 ? "" : "s") + " failed.");

@@ -97105,10 +97105,8 @@ function spawnDustMote(container) {
     var beat = window.__actBeatHint ? window.__actBeatHint(name) : null;
     if (beat === "rsvp_exit") { showRsvpNudge(); return; }
     if (beat) { setCaption(beat); return; }
-    if (!exploreSeen[name]) { exploreSeen[name] = true; setCaption("explore_" + name); return; } // first solved-entry this page load → base "Enjoy wandering" line
-    var k = window.__nextExploreHint ? window.__nextExploreHint(name, true) : null;              // each subsequent solved-entry → advance to the next surviving nudge
-    if (k) setCaption(k);
-    else setCaption("explore_" + name);
+    exploreSeen[name] = true;
+    setCaption("explore_" + name);
   }
   window.__resetExplore = function () { exploreSeen = {}; }; // resetHunt (this IIFE) calls it; explorePtr is reset via its own brick-IIFE hook
   function restoreStageHint(name) {
@@ -116890,8 +116888,6 @@ function spawnDustMote(container) {
   }
   var ROOM_HINTS = {
     kitchen: [
-      { id: "hint_ksecret",   en: "This room ain't just what you see.",              cs: "Tenhle pokoj není jen to, co vidíš.",
-        done: function () { return isRetired("hint_ksecret") || barUp(); } },                       // party/night bar reveals the kitchen's other side
       { id: "hint_coffee",    en: "The machine wants three things, in order.",        cs: "Ten stroj chce tři věci — a v tom pořadí.",
         done: function () { return isRetired("hint_coffee"); } },                                   // an espresso's been pulled
       { id: "hint_knock",     en: "Everything here has a voice — if you knock.",      cs: "Všechno tady má hlas — když zaťukáš.",
@@ -116910,8 +116906,6 @@ function spawnDustMote(container) {
     garden: [
       { id: "hint_water",   en: "Green things get thirsty too.",                cs: "I zelené věci dostanou žízeň.",
         done: function () { return isRetired("hint_water"); } },                                    // a plant watered
-      { id: "hint_camera",  en: "You're being watched — and photographed.",     cs: "Někdo tě pozoruje — a fotí.",
-        done: function () { return isRetired("hint_camera"); } },                                   // the photographer snapped you
       { id: "hint_critter", en: "Count the legs. There's a stranger about.",    cs: "Spočítej nožky. Někdo cizí se tu potuluje.",
         done: function () { return isRetired("hint_critter"); } },                                  // the cat or ladybug found
       { id: "hint_tarot",   en: "After dark, the cards have something to say.", cs: "Po setmění mají karty co říct.",
@@ -116990,7 +116984,7 @@ function spawnDustMote(container) {
     "garden-monstera": "hint_water", "garden-snakeplant": "hint_water", "garden-peacelily": "hint_water",
     "garden-dieffenbachia": "hint_water", "garden-smallpots": "hint_water", "garden-plant-mister": "hint_water",
     "garden-ladybug": "hint_critter", "garden-chest": "hint_critter",
-    "garden-tarot": "hint_tarot", "garden-photog-hit": "hint_camera",
+    "garden-tarot": "hint_tarot",
     "garden-drugsbox": "hint_trips",
     "cuddly-wallscreen": "hint_screen hint_fire",
     "cuddly-trunk": "hint_chest",
@@ -117066,7 +117060,7 @@ function spawnDustMote(container) {
   }
   window.__dismissBrickHint = dismissHint; // test/console hook
   function showRoomHint(room) {
-    if (!window.setCaption) return;
+    if (!window.setCaption || !window.__secondRound) return;
     var list = ROOM_HINTS[room] || [];
     var n = list.length, ptr = hintPtr[room] || 0, key = null;
     for (var i = 0; i < n; i++) {

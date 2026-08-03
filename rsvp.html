@@ -89300,6 +89300,7 @@ function spawnCloudRain(svg, cx, cy) {
       line.setAttribute("stroke", "#a8c4d4");
       line.setAttribute("stroke-width", "2");
       line.setAttribute("stroke-linecap", "round");
+      line.classList.add("balcony-finale-drop");
       line.style.transformBox = "fill-box";
       line.style.transformOrigin = "center";
       svg.appendChild(line);
@@ -90230,17 +90231,41 @@ function spawnCrystalSparkle() {
   }
   window.__playFireworkBoom = playFireworkBoom;
 })();
-function spawnBalconyRain(svg) {
-  if (!svg) return;
+var balconyFinaleRainTimers = [];
+function clearBalconyFinaleRain() {
+  balconyFinaleRainTimers.forEach(clearTimeout);
+  balconyFinaleRainTimers.length = 0;
+  var host = document.getElementById("balcony-precipfx");
+  if (!host) return;
+  Array.prototype.forEach.call(host.querySelectorAll(".balcony-finale-drop"), function (drop) {
+    if (drop.getAnimations) drop.getAnimations().forEach(function (animation) {
+      animation.onfinish = null;
+      animation.cancel();
+    });
+    drop.remove();
+  });
+}
+function balconyFinaleRainActive() {
+  return window.currentStageName === "balcony" && document.visibilityState !== "hidden";
+}
+function spawnBalconyRain() {
+  clearBalconyFinaleRain();
+  var host = document.getElementById("balcony-precipfx");
+  if (!host || !balconyFinaleRainActive()) return false;
   var xs = [460, 520, 580, 640];
   for (var burst = 0; burst < 3; burst++) {
     (function (burst) {
-      setTimeout(function () {
-        xs.forEach(function (x) { spawnCloudRain(svg, x, 60 + Math.random() * 30); });
-      }, burst * 350);
+      balconyFinaleRainTimers.push(setTimeout(function () {
+        if (!balconyFinaleRainActive()) return;
+        xs.forEach(function (x) { spawnCloudRain(host, x, 60 + Math.random() * 30); });
+      }, burst * 350));
     })(burst);
   }
+  return true;
 }
+document.addEventListener("visibilitychange", function () {
+  if (document.hidden) clearBalconyFinaleRain();
+});
 function spawnSparkFlare(svg, cx, cy) {
   if (!svg) return;
   var count = 6;
@@ -97909,7 +97934,7 @@ function spawnDustMote(container) {
         requestAnimationFrame(function () { butterfly.classList.add("flying"); });
       });
     }
-    finaleTimers.push(setTimeout(function () { spawnBalconyRain(strip); }, 500));
+    finaleTimers.push(setTimeout(function () { spawnBalconyRain(); }, 500));
     // warm bell melody heralds the rainbow, just before it bursts at 4200 — gate at
     // FIRE time, not arrival: these timers outlive a quick room-change/blur, and an
     // unattended window shouldn't get a surprise melody (crickets/crane rule)
@@ -104623,6 +104648,7 @@ function spawnDustMote(container) {
     // of their own, so a count would mean a querySelectorAll over the whole strip.
     var liveDrops = 0;
     window.__clearBalconyPrecip = function () {
+      clearBalconyFinaleRain();
       Array.prototype.forEach.call(strip.querySelectorAll(".balc-drop"), function (drop) {
         if (drop.getAnimations) drop.getAnimations().forEach(function (anim) {
           anim.onfinish = null;

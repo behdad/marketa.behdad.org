@@ -647,6 +647,25 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       visual: entityVisual(wildlifeImpactSpawn.node),
       after: copy(state()),
       classes: room.getAttribute("class"),
+      shakeX: parseFloat(getComputedStyle(document.getElementById("entrance-drive-hud-svg")).getPropertyValue("--roadtrip-shake-x")),
+      crackOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-crack")).opacity),
+      shatterOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-shatter")).opacity)
+    };
+    if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
+    window.__toggleEntrancePorscheEngine();
+    window.__entranceRoadtripStart();
+    window.__entranceDriveSetMotion(145, 3);
+    window.__entranceDriveControl("throttle", true);
+    var rabbitImpactBefore = copy(state());
+    var rabbitImpactSpawn = spawn("rabbit", .5);
+    for (var rabbitTick = 0; rabbitTick < 10 && roadtrip().wildlifeHits === rabbitImpactBefore.drive.roadtrip.wildlifeHits; rabbitTick++) step(80);
+    report.steps.rabbitImpact = {
+      before: rabbitImpactBefore,
+      visual: entityVisual(rabbitImpactSpawn.node),
+      after: copy(state()),
+      classes: room.getAttribute("class"),
+      hudClasses: document.getElementById("entrance-drive-hud-svg").getAttribute("class"),
+      shakeX: parseFloat(getComputedStyle(document.getElementById("entrance-drive-hud-svg")).getPropertyValue("--roadtrip-shake-x")),
       crackOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-crack")).opacity),
       shatterOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-shatter")).opacity)
     };
@@ -1133,6 +1152,23 @@ check(wildlifeImpact && wildlifeImpact.visual.kind === "animal" &&
   wildlifeImpact.crackOpacity > .25 && wildlifeImpact.shatterOpacity < .1,
   "a too-fast deer strike deducts a severity-scaled 20–60 points, neutralizes the gearbox, and produces slowdown, sound, shake, and a localized crack",
   wildlifeImpact);
+var rabbitImpact = s.rabbitImpact;
+check(rabbitImpact && /entrance-roadtrip-rabbit/.test(rabbitImpact.visual.href || "") &&
+  rabbitImpact.after.drive.roadtrip.wildlifeHits > rabbitImpact.before.drive.roadtrip.wildlifeHits &&
+  rabbitImpact.after.drive.roadtrip.collisions > rabbitImpact.before.drive.roadtrip.collisions &&
+  rabbitImpact.before.drive.roadtrip.score - rabbitImpact.after.drive.roadtrip.score >= 2 &&
+  rabbitImpact.before.drive.roadtrip.score - rabbitImpact.after.drive.roadtrip.score <= 8 &&
+  rabbitImpact.after.drive.roadtrip.multiplier === 1 &&
+  rabbitImpact.after.drive.roadtrip.impactSounds > rabbitImpact.before.drive.roadtrip.impactSounds &&
+  rabbitImpact.after.drive.speed < rabbitImpact.before.drive.speed &&
+  rabbitImpact.after.drive.speed > rabbitImpact.before.drive.speed * .8 &&
+  rabbitImpact.after.drive.gear === rabbitImpact.before.drive.gear && rabbitImpact.after.drive.holds.throttle &&
+  rabbitImpact.after.drive.roadtrip.lastImpactSeverity < wildlifeImpact.after.drive.roadtrip.lastImpactSeverity &&
+  rabbitImpact.shakeX < wildlifeImpact.shakeX && /roadtrip-impact-bump/.test(rabbitImpact.hudClasses || "") &&
+  rabbitImpact.classes.indexOf("roadtrip-cracked") < 0 && rabbitImpact.classes.indexOf("roadtrip-shattered") < 0 &&
+  rabbitImpact.crackOpacity < .1 && rabbitImpact.shatterOpacity < .1,
+  "a rabbit clip has a 2–8 point light bump and sound but preserves speed, gear, held throttle, and intact glass",
+  rabbitImpact);
 var pass = s.pass;
 check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pass.visual.direction === "forward" && pass.released &&
   pass.after.passes > pass.before.passes && pass.after.collisions === pass.before.collisions &&

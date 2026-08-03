@@ -221,8 +221,9 @@ neither layer.
 Roadtrip impacts are attended one-shots on `getSfxCtx()`, routed through the
 HUD-centered Porsche spatial stage. A low crash/noise body and high glass-shard
 layer share one severity value derived from relative speed and object mass;
-head-on events extend the envelope, while rear-end and wildlife bumps remain
-shorter and quieter. They never create, suspend, or close an `AudioContext`.
+head-on events extend the envelope, while rear-end and deer bumps remain shorter
+and quieter. Rabbit clips use a separate very short, low-gain thump/noise body
+without the glass layer. They never create, suspend, or close an `AudioContext`.
 
 Roadtrip pickups use the same attended shared-context path and HUD-centred
 spatial stage. Hearts play a soft rising pair, kisses a brighter swept pair, and

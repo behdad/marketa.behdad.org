@@ -282,7 +282,9 @@ Crossing into the oncoming side costs two points once per excursion, without
 resetting the combo. Returning fully to the proper side rearms the rule.
 
 Any collision resets the combo to `1×`. A rear-end impact deducts roughly
-`10–40` points and a wildlife strike roughly `20–60`, scaled by severity. Meeting
+`10–40` points and a deer strike roughly `20–60`, scaled by severity. A rabbit
+clip costs only `2–8`, gives a light bump, and never damages the windshield or
+knocks the transmission out of gear. Meeting
 oncoming traffic in its lane deducts `100`, produces a longer, louder impact,
 stops and stalls the Porsche, and shatters the windshield until the ignition is
 restarted. Rear-ending forward traffic instead cuts the car's speed below the

@@ -34996,6 +34996,7 @@ window.__entranceRoomOpen = false;
   function roadtripCollisionPenalty(kind, severity) {
     severity = Math.max(0, Math.min(1, Number(severity) || 0));
     if (kind === "head-on") return 100;
+    if (kind === "rabbit") return Math.round(2 + severity * 6);
     if (kind === "wildlife") return Math.round(20 + severity * 40);
     return Math.round(10 + severity * 30);
   }
@@ -35329,18 +35330,19 @@ window.__entranceRoomOpen = false;
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
     if (!ctx) return false;
     var heavy = kind === "heavy";
+    var light = kind === "light";
     severity = Math.max(.08, Math.min(1, Number(severity) || .5));
     var t = ctx.currentTime;
-    var duration = heavy ? .9 + severity * .38 : .3 + severity * .48;
+    var duration = heavy ? .9 + severity * .38 : light ? .16 + severity * .14 : .3 + severity * .48;
     try {
       var thump = ctx.createOscillator();
       var thumpGain = ctx.createGain();
       var crush = ctx.createBufferSource();
       var crushFilter = ctx.createBiquadFilter();
       var crushGain = ctx.createGain();
-      var glass = ctx.createBufferSource();
-      var glassFilter = ctx.createBiquadFilter();
-      var glassGain = ctx.createGain();
+      var glass = light ? null : ctx.createBufferSource();
+      var glassFilter = light ? null : ctx.createBiquadFilter();
+      var glassGain = light ? null : ctx.createGain();
       var spatial = porscheDriveSpatialOut(ctx, "crash");
       var crushBuffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
       var crushData = crushBuffer.getChannelData(0);
@@ -35349,38 +35351,44 @@ window.__entranceRoomOpen = false;
         crushData[i] = (Math.random() * 2 - 1) * crushFade;
       }
       var glassDuration = heavy ? .88 : .36;
-      var glassBuffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * glassDuration), ctx.sampleRate);
-      var glassData = glassBuffer.getChannelData(0);
-      for (var j = 0; j < glassData.length; j++) {
-        var glassFade = Math.pow(1 - j / glassData.length, 1.7);
-        var shard = Math.sin(j * .71) > .76 || Math.sin(j * .173) < -.91 ? 1 : .18;
-        glassData[j] = (Math.random() * 2 - 1) * glassFade * shard;
+      var glassBuffer = light ? null : ctx.createBuffer(1, Math.ceil(ctx.sampleRate * glassDuration), ctx.sampleRate);
+      if (glassBuffer) {
+        var glassData = glassBuffer.getChannelData(0);
+        for (var j = 0; j < glassData.length; j++) {
+          var glassFade = Math.pow(1 - j / glassData.length, 1.7);
+          var shard = Math.sin(j * .71) > .76 || Math.sin(j * .173) < -.91 ? 1 : .18;
+          glassData[j] = (Math.random() * 2 - 1) * glassFade * shard;
+        }
       }
       thump.type = "sine";
-      thump.frequency.setValueAtTime(heavy ? 74 : 58, t);
-      thump.frequency.exponentialRampToValueAtTime(heavy ? 19 : 27, t + duration * .7);
-      thumpGain.gain.setValueAtTime((heavy ? .32 : .13) + severity * (heavy ? .22 : .2), t);
+      thump.frequency.setValueAtTime(heavy ? 74 : light ? 92 : 58, t);
+      thump.frequency.exponentialRampToValueAtTime(heavy ? 19 : light ? 45 : 27, t + duration * .7);
+      thumpGain.gain.setValueAtTime((heavy ? .32 : light ? .035 : .13) + severity * (heavy ? .22 : light ? .055 : .2), t);
       thumpGain.gain.exponentialRampToValueAtTime(.0001, t + duration);
       crush.buffer = crushBuffer;
       crushFilter.type = "lowpass";
-      crushFilter.frequency.setValueAtTime(heavy ? 980 : 720, t);
+      crushFilter.frequency.setValueAtTime(heavy ? 980 : light ? 460 : 720, t);
       crushFilter.frequency.exponentialRampToValueAtTime(130, t + duration);
-      crushGain.gain.setValueAtTime((heavy ? .34 : .14) + severity * (heavy ? .24 : .22), t);
+      crushGain.gain.setValueAtTime((heavy ? .34 : light ? .028 : .14) + severity * (heavy ? .24 : light ? .045 : .22), t);
       crushGain.gain.exponentialRampToValueAtTime(.0001, t + duration);
-      glass.buffer = glassBuffer;
-      glassFilter.type = "highpass";
-      glassFilter.frequency.value = heavy ? 1900 : 2600;
-      glassGain.gain.setValueAtTime((heavy ? .2 : .09) + severity * (heavy ? .2 : .18), t);
-      glassGain.gain.exponentialRampToValueAtTime(.0001, t + glassDuration);
       thump.connect(thumpGain); thumpGain.connect(spatial.input);
       crush.connect(crushFilter); crushFilter.connect(crushGain); crushGain.connect(spatial.input);
-      glass.connect(glassFilter); glassFilter.connect(glassGain); glassGain.connect(spatial.input);
-      thump.start(t); crush.start(t); glass.start(t);
-      thump.stop(t + duration); crush.stop(t + duration); glass.stop(t + glassDuration);
+      if (glass) {
+        glass.buffer = glassBuffer;
+        glassFilter.type = "highpass";
+        glassFilter.frequency.value = heavy ? 1900 : 2600;
+        glassGain.gain.setValueAtTime((heavy ? .2 : .09) + severity * (heavy ? .2 : .18), t);
+        glassGain.gain.exponentialRampToValueAtTime(.0001, t + glassDuration);
+        glass.connect(glassFilter); glassFilter.connect(glassGain); glassGain.connect(spatial.input);
+      }
+      thump.start(t); crush.start(t);
+      thump.stop(t + duration); crush.stop(t + duration);
+      if (glass) { glass.start(t); glass.stop(t + glassDuration); }
       thump.onended = function () {
         try {
           thump.disconnect(); thumpGain.disconnect(); crush.disconnect(); crushFilter.disconnect();
-          crushGain.disconnect(); glass.disconnect(); glassFilter.disconnect(); glassGain.disconnect();
+          crushGain.disconnect();
+          if (glass) { glass.disconnect(); glassFilter.disconnect(); glassGain.disconnect(); }
           spatial.nodes.forEach(function (node) { node.disconnect(); });
         } catch (_error) {}
       };
@@ -35425,6 +35433,7 @@ window.__entranceRoomOpen = false;
   }
   function roadtripImpact(kind, damage, severity) {
     var heavy = kind === "heavy";
+    var light = kind === "light";
     severity = Math.max(.08, Math.min(1, Number(severity) || .5));
     roadtripState.lastImpactSeverity = severity;
     // A glass-damaging impact is the boundary between a scrape and a hit severe
@@ -35447,11 +35456,12 @@ window.__entranceRoomOpen = false;
       room.classList.add("roadtrip-cracked");
     }
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");
-    playRoadtripImpactSound(heavy ? "heavy" : "bump", severity);
+    playRoadtripImpactSound(heavy ? "heavy" : light ? "light" : "bump", severity);
     if (!driveHudSvg) return;
     clearTimeout(roadtripImpactTimer);
-    driveHudSvg.style.setProperty("--roadtrip-shake-x", (4 + severity * 9).toFixed(2) + "px");
-    driveHudSvg.style.setProperty("--roadtrip-shake-y", (2 + severity * 6).toFixed(2) + "px");
+    var shakeScale = light ? .38 : 1;
+    driveHudSvg.style.setProperty("--roadtrip-shake-x", ((4 + severity * 9) * shakeScale).toFixed(2) + "px");
+    driveHudSvg.style.setProperty("--roadtrip-shake-y", ((2 + severity * 6) * shakeScale).toFixed(2) + "px");
     driveHudSvg.classList.remove("roadtrip-impact-bump", "roadtrip-impact-heavy");
     void driveHudSvg.getBoundingClientRect();
     var className = heavy ? "roadtrip-impact-heavy" : "roadtrip-impact-bump";
@@ -35459,7 +35469,7 @@ window.__entranceRoomOpen = false;
     roadtripImpactTimer = setTimeout(function () {
       driveHudSvg.classList.remove(className);
       roadtripImpactTimer = null;
-    }, heavy ? 1160 : 620);
+    }, heavy ? 1160 : light ? 360 : 620);
   }
   function paintRoadtripScore() {
     var score = roadtripElement("entrance-roadtrip-score");
@@ -36352,13 +36362,17 @@ window.__entranceRoomOpen = false;
       if (entity.escaping) entity.escapeElapsed += Math.max(0, Number(seconds) || 0);
       if (remaining <= 8 && laneGap <= collisionLaneGap && entity.escapeElapsed < .48) {
         var wildlifeSeverity = roadtripCollisionSeverity(entity);
+        var rabbitHit = entity.type === "rabbit";
         roadtripState.collisions++;
         roadtripState.wildlifeHits++;
-        applyRoadtripPenalty(roadtripCollisionPenalty("wildlife", wildlifeSeverity));
-        driveState.speed *= Math.max(.22, 1 - wildlifeSeverity * .92);
+        applyRoadtripPenalty(roadtripCollisionPenalty(rabbitHit ? "rabbit" : "wildlife", wildlifeSeverity));
+        driveState.speed *= rabbitHit ? Math.max(.82, 1 - wildlifeSeverity * .28) :
+          Math.max(.22, 1 - wildlifeSeverity * .92);
         driveState.throttleHeldMs = 0;
-        roadtripImpact("bump", wildlifeSeverity >= .18 ? "crack" : "", wildlifeSeverity);
-        roadtripFeedback("entrance_roadtrip_wildlife_collision");
+        roadtripImpact(rabbitHit ? "light" : "bump",
+          !rabbitHit && wildlifeSeverity >= .18 ? "crack" : "", wildlifeSeverity);
+        roadtripFeedback(rabbitHit ? "entrance_roadtrip_rabbit_collision" :
+          "entrance_roadtrip_wildlife_collision");
         releaseRoadtripEntity(entity);
         if (window.__checkpointChanged) window.__checkpointChanged();
         return;
@@ -40906,6 +40920,7 @@ var T = {
       entrance_roadtrip_collision: "Rear-end impact · 10–40 point penalty, combo reset.",
       entrance_roadtrip_crash: "Head-on crash · −100 points, windshield shattered, engine stalled.",
       entrance_roadtrip_wildlife_collision: "Wildlife strike · 20–60 point penalty, combo reset.",
+      entrance_roadtrip_rabbit_collision: "Rabbit clipped · 2–8 point penalty, combo reset.",
       entrance_roadtrip_pass: "Clean close pass · +2 × combo.",
       entrance_roadtrip_heart: "♥️ collected · +5 × combo.",
       entrance_roadtrip_kiss: "💋 collected · +10 × combo.",
@@ -42094,6 +42109,7 @@ var T = {
       entrance_roadtrip_collision: "Náraz zezadu · ztráta 10–40 bodů, kombo od začátku.",
       entrance_roadtrip_crash: "Čelní srážka · −100 bodů, roztříštěné sklo a zhaslý motor.",
       entrance_roadtrip_wildlife_collision: "Střet se zvěří · ztráta 20–60 bodů, kombo od začátku.",
+      entrance_roadtrip_rabbit_collision: "Lehký střet se zajícem · ztráta 2–8 bodů, kombo od začátku.",
       entrance_roadtrip_pass: "Čisté těsné předjetí · +2 × kombo.",
       entrance_roadtrip_heart: "♥️ sebráno · +5 × kombo.",
       entrance_roadtrip_kiss: "💋 sebráno · +10 × kombo.",

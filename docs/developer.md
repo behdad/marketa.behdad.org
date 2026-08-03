@@ -435,6 +435,13 @@ use one stable exploration caption. `goToStage` is also the central room-change 
 collapses device zoom, tears down or pauses room-local effects, re-evaluates audio, people, weather,
 particles, photographer state, and phone/monitor ownership.
 
+The twenty `.wall-brick` accents are a caption-free instrument. A late controller adds
+`.brick-instrument`, maps each brick's local horizontal position onto one shared pentatonic scale,
+and plays a shade-dependent one-shot through `getSfxCtx()` and `pannedOut()`. Dust is inserted into
+the brick's own SVG parent coordinate space and capped there before spawning. The bricks deliberately
+remain outside `.hunt-hit`; `tests/brick-instrument.js` covers count, pitch mapping, feedback, and
+caption non-ownership.
+
 ### BBQ inventory and grillmaster
 
 The smoker owns food inventory: each of its three persistent grate nodes yields

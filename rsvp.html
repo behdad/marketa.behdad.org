@@ -4572,6 +4572,14 @@ html.frame-rate-low #garden-guests.guests-in .guest-arm-r{animation:none !import
   74%{transform:rotate(1.2deg)}
 }
 @media (prefers-reduced-motion: reduce){#kitchen-waterbottle.struck #kitchen-waterbottle-inner, #kitchen-drinkmate.struck #kitchen-drinkmate-wob, #kitchen-kettle.struck #kitchen-kettle-wob{animation:none}}
+.wall-brick.brick-instrument{cursor:pointer;transform-box:fill-box;transform-origin:center}
+.wall-brick.brick-instrument.brick-struck{animation:brick-note-tap .24s ease-out}
+.brick-note-dust{pointer-events:none}
+@keyframes brick-note-tap{
+  0%,100%{transform:translateY(0) scale(1)}
+  42%{transform:translateY(2px) scale(.96)}
+}
+@media (prefers-reduced-motion:reduce){.wall-brick.brick-instrument.brick-struck{animation:none}}
 #kitchen-shotcup-coffee{transform-box:fill-box; transform-origin:bottom center; transform:scaleY(0); transition:transform 1.4s ease}
 #kitchen-shotcup.filled #kitchen-shotcup-coffee{transform:scaleY(1)}
 #kitchen-shotcup{transform-box:fill-box; transform-origin:bottom center}
@@ -117354,6 +117362,116 @@ function spawnDustMote(container) {
     if (hold && e.pointerId === hold.pointerId) clearHold();
   }, true);
   window.addEventListener("scroll", clearHold, true);
+})();
+(function () {
+  // Loose bricks are a caption-free room instrument. Their horizontal position chooses
+  // a pentatonic note and their painted shade changes the short masonry timbre.
+  var bricks = Array.prototype.slice.call(document.querySelectorAll(".wall-brick"));
+  var scale = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
+  var strikes = 0, lastStrike = null;
+  if (!bricks.length) return;
+
+  function brickShade(brick) {
+    var hex = (brick.getAttribute("fill") || "#8f4d38").replace("#", "");
+    if (hex.length !== 6) return 0.45;
+    var r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+  }
+  function brickNote(brick) {
+    var x = parseFloat(brick.getAttribute("x")) || 0;
+    var width = parseFloat(brick.getAttribute("width")) || 0;
+    var slot = Math.max(0, Math.min(scale.length - 1, Math.floor((x + width / 2) / 680 * scale.length)));
+    return { slot: slot, semitone: scale[slot], frequency: 130.81 * Math.pow(2, scale[slot] / 12) };
+  }
+  function playBrickTone(brick, note) {
+    try {
+      var ctx = getSfxCtx();
+      if (!ctx) return;
+      var t = ctx.currentTime, shade = brickShade(brick);
+      var x = parseFloat(brick.getAttribute("x")) || 0;
+      var width = parseFloat(brick.getAttribute("width")) || 0;
+      var pan = Math.max(-0.9, Math.min(0.9, ((x + width / 2) / 680) * 1.8 - 0.9));
+      var out = pannedOut(ctx, pan);
+      var filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 650 + shade * 1150;
+      filter.Q.value = 1.2 + (1 - shade) * 2;
+      filter.connect(out);
+      var body = ctx.createOscillator(), overtone = ctx.createOscillator();
+      body.type = shade > 0.52 ? "triangle" : "sine";
+      overtone.type = "triangle";
+      body.frequency.setValueAtTime(note.frequency, t);
+      body.frequency.exponentialRampToValueAtTime(note.frequency * 0.94, t + 0.18);
+      overtone.frequency.value = note.frequency * (shade > 0.52 ? 2.01 : 1.5);
+      var bodyGain = ctx.createGain(), overtoneGain = ctx.createGain();
+      bodyGain.gain.setValueAtTime(0.0001, t);
+      bodyGain.gain.exponentialRampToValueAtTime(0.2, t + 0.005);
+      bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24 + shade * 0.1);
+      overtoneGain.gain.setValueAtTime(0.0001, t);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.035 + shade * 0.035, t + 0.003);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+      body.connect(bodyGain); overtone.connect(overtoneGain);
+      bodyGain.connect(filter); overtoneGain.connect(filter);
+      body.start(t); overtone.start(t);
+      body.stop(t + 0.36); overtone.stop(t + 0.14);
+    } catch (_error) {}
+  }
+  function puffBrickDust(brick) {
+    var parent = brick.parentNode;
+    if (!parent || !brick.getBBox) return;
+    var box;
+    try { box = brick.getBBox(); } catch (_error) { return; }
+    var stale = parent.querySelectorAll(".brick-note-dust");
+    for (var old = 0; old < stale.length - 8; old++) stale[old].remove();
+    for (var i = 0; i < 3; i++) {
+      var mote = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      var dx = (i - 1) * 5 + (Math.random() - 0.5) * 3;
+      var dy = -7 - Math.random() * 7;
+      mote.setAttribute("class", "brick-note-dust");
+      mote.setAttribute("cx", (box.x + box.width * (0.3 + i * 0.2)).toFixed(1));
+      mote.setAttribute("cy", (box.y + 1).toFixed(1));
+      mote.setAttribute("r", (0.9 + Math.random() * 1.1).toFixed(1));
+      mote.setAttribute("fill", brick.getAttribute("fill") || "#9a6048");
+      parent.appendChild(mote);
+      if (mote.animate) {
+        var animation = mote.animate([
+          { opacity: 0.55, transform: "translate(0,0) scale(.7)" },
+          { opacity: 0, transform: "translate(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px) scale(1.35)" }
+        ], { duration: 360, easing: "ease-out" });
+        animation.onfinish = function (event) {
+          var target = event && event.target && event.target.effect && event.target.effect.target;
+          if (target && target.parentNode) target.remove();
+        };
+      } else {
+        (function (node) { setTimeout(function () { if (node.parentNode) node.remove(); }, 380); })(mote);
+      }
+    }
+  }
+  function strikeBrick(brick) {
+    var note = brickNote(brick);
+    brick.classList.remove("brick-struck");
+    void brick.getBBox();
+    brick.classList.add("brick-struck");
+    playBrickTone(brick, note);
+    puffBrickDust(brick);
+    strikes++;
+    lastStrike = { room: (brick.closest('[id^="stage-"]') || {}).id || null,
+      slot: note.slot, semitone: note.semitone };
+  }
+  bricks.forEach(function (brick) {
+    brick.classList.add("brick-instrument");
+    brick.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      strikeBrick(brick);
+    });
+    brick.addEventListener("animationend", function (event) {
+      if (event.animationName === "brick-note-tap") brick.classList.remove("brick-struck");
+    });
+  });
+  window.__brickInstrumentState = function () {
+    return { bricks: bricks.length, strikes: strikes, last: lastStrike };
+  };
 })();
 (function () {
   // CSS handles WebKit callouts and most selection UI; these late document guards cover

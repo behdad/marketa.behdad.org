@@ -41,6 +41,8 @@ respect reduced-motion preferences.
 - At the current locked frontier, the scene menu offers **Solve**, which
   performs one step. Scenes with no contextual action do not open an empty menu.
 - Some objects can be dragged and respond visibly when the drag starts.
+- Colored loose wall bricks form a small percussion instrument: their position
+  changes the note, and they never replace the room caption.
 - The top-left arrow goes back or closes the current layer. The top-right
   controls provide Fullscreen and Restart.
 - Every non-empty custom context menu ends with **Start over**, which confirms

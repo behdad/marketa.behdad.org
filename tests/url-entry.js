@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-// The direct hash family shares one game-only shell, but only Trailer and Autoplay
-// take ownership after normal entry/recovery initialization has settled.
+// The direct hash family shares one game-only shell, but only Trailer takes
+// ownership after normal entry/recovery initialization has settled.
 var lib = require("./lib");
 
 var HARNESS = [
@@ -10,32 +10,19 @@ var HARNESS = [
   '<script>(function(){',
   'window.turnstile={render:function(){return "url-entry-widget";},remove:function(){},execute:function(){}};',
   'window.addEventListener("load",function(){setTimeout(function(){',
-  'var report={hash:location.hash,revealed:document.documentElement.classList.contains("revealed"),cinematic:!!window.__cinematic,autoplay:!!(window.__autoplayOn&&window.__autoplayOn()),started:!!(window.__gameStarted&&window.__gameStarted()),errors:(window.__errs||[]).slice()};',
+  'var report={hash:location.hash,revealed:document.documentElement.classList.contains("revealed"),cinematic:!!window.__cinematic,started:!!(window.__gameStarted&&window.__gameStarted()),errors:(window.__errs||[]).slice()};',
   'document.getElementById("__report").textContent=JSON.stringify(report);',
   '},1900);});',
   '})();</script>'
 ].join("\n");
 
-function run(hash) {
+function run(urlSuffix) {
   return lib.runPageSync("rsvp.html", HARNESS, 2600, {
     patchRaf: true,
     forceMotion: true,
-    urlSuffix: hash
+    urlSuffix: urlSuffix
   });
 }
-
-var RECOVERY_AUTOPLAY = [
-  '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
-  '<script>(function(){',
-  'var saved={version:1,savedAt:Date.now()-120000,progress:{room:"office",maxUnlocked:4,phase2:true,party:false,daylight:true,bbq:false},puzzle:{},phone:null,album:null};',
-  'if(!sessionStorage.getItem("url-entry-autoplay-seeded")){sessionStorage.setItem("url-entry-autoplay-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
-  'window.addEventListener("load",function(){setTimeout(function(){',
-  'var gate=document.getElementById("loft-recovery-gate");var waiting=!!gate&&!window.__autoplayOn();',
-  'gate.querySelector(".loft-recovery-btn.primary").click();',
-  'setTimeout(function(){document.getElementById("__report").textContent=JSON.stringify({waiting:waiting,gate:!!document.getElementById("loft-recovery-gate"),autoplay:window.__autoplayOn(),room:window.currentStageName,errors:(window.__errs||[]).slice()});},100);',
-  '},1750);});',
-  '})();</script>'
-].join("\n");
 
 var RECOVERY_TRAILER = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
@@ -77,8 +64,8 @@ function check(ok, msg, detail) {
 console.log("rsvp.html direct URL entries:");
 var play = run("#play");
 var trailer = run("#trailer");
-var autoplay = run("#autoplay");
-var recoveryAutoplay = runRecovery("#autoplay", RECOVERY_AUTOPLAY);
+var legacyHash = run("#autoplay");
+var legacyQueryPlay = run("?autoplay=1#play");
 var recoveryTrailer = runRecovery("#trailer", RECOVERY_TRAILER);
 var urlKeys = lib.runPageSync("rsvp.html", URL_KEYS, 2900, {
   patchRaf: true,
@@ -86,15 +73,14 @@ var urlKeys = lib.runPageSync("rsvp.html", URL_KEYS, 2900, {
   urlSuffix: "?keys=%5B%5D#play"
 });
 
-check(play && !play.revealed && !play.cinematic && !play.autoplay,
+check(play && !play.revealed && !play.cinematic,
   "#play is game-only and starts no presentation", play);
-check(trailer && !trailer.revealed && trailer.cinematic && !trailer.autoplay,
+check(trailer && !trailer.revealed && trailer.cinematic,
   "#trailer is game-only and starts the fixed reel", trailer);
-check(autoplay && !autoplay.revealed && !autoplay.cinematic && autoplay.autoplay && autoplay.started,
-  "#autoplay is game-only and starts the persistent director", autoplay);
-check(recoveryAutoplay && recoveryAutoplay.waiting && !recoveryAutoplay.gate &&
-    recoveryAutoplay.autoplay && recoveryAutoplay.room === "office",
-  "#autoplay waits behind recovery, then continues from the restored room", recoveryAutoplay);
+check(legacyHash && legacyHash.revealed && !legacyHash.cinematic && !legacyHash.started,
+  "#autoplay no longer claims the game-only shell or starts a presentation", legacyHash);
+check(legacyQueryPlay && !legacyQueryPlay.revealed && !legacyQueryPlay.cinematic,
+  "?autoplay no longer changes #play entry behavior", legacyQueryPlay);
 check(recoveryTrailer && !recoveryTrailer.gate && recoveryTrailer.cinematic && recoveryTrailer.checkpoint,
   "#trailer starts across recovery without discarding the saved checkpoint", recoveryTrailer);
 check(urlKeys && !urlKeys.gate && !urlKeys.intro && !urlKeys.introChrome &&
@@ -102,15 +88,14 @@ check(urlKeys && !urlKeys.gate && !urlKeys.intro && !urlKeys.introChrome &&
     urlKeys.started && urlKeys.state && urlKeys.state.done &&
     urlKeys.seen.join("|") === "down:[|up:[|down:]|up:]",
   "?keys starts directly in fresh play and dispatches paired keyboard gestures in order", urlKeys);
-[play, trailer, autoplay].forEach(function (report) {
+[play, trailer, legacyHash, legacyQueryPlay].forEach(function (report) {
   check(report && report.errors.length === 0,
     (report && report.hash || "missing entry") + " has no uncaught page errors",
     report && report.errors);
 });
-check(recoveryAutoplay && recoveryAutoplay.errors.length === 0 &&
-    recoveryTrailer && recoveryTrailer.errors.length === 0,
-  "recovery URL entries have no uncaught page errors",
-  { autoplay: recoveryAutoplay && recoveryAutoplay.errors, trailer: recoveryTrailer && recoveryTrailer.errors });
+check(recoveryTrailer && recoveryTrailer.errors.length === 0,
+  "recovery Trailer entry has no uncaught page errors",
+  recoveryTrailer && recoveryTrailer.errors);
 check(urlKeys && urlKeys.errors.length === 0, "?keys has no uncaught page errors", urlKeys && urlKeys.errors);
 
 console.log("");

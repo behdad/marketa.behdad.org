@@ -123,9 +123,9 @@ function run(width, height, standalone, fullPage) {
         area.width > 1620 && area.width >= Math.min(innerWidth, innerHeight * 2 - 80) - 1,
         JSON.stringify({ innerWidth: innerWidth, innerHeight: innerHeight, width: area.width }));
     }
-    check("the invitation state keeps Trailer and Autoplay in view", watch.bottom <= innerHeight + 1,
+    check("the invitation state keeps Trailer in view", watch.bottom <= innerHeight + 1,
       JSON.stringify({ innerHeight: innerHeight, watchBottom: watch.bottom, areaBottom: area.bottom }));
-    check("Trailer and Autoplay occupy the shell's bottom row",
+    check("Trailer occupies the shell's bottom row",
       document.querySelector(".watch-controls").parentNode.id === "hunt-fullscreen-area" &&
       watch.top >= frame.bottom - 1 && watch.bottom <= area.bottom + 1,
       JSON.stringify({ watch: watch, frame: frame, area: area }));

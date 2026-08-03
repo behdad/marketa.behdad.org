@@ -17,7 +17,7 @@ var HARNESS = [
   ' window.__secondRound=true;window.__gardenPartyOn=true;report.steps.autoParty=window.__madlaRing();',
   ' var explicitParty=window.madla();await wait(30);report.steps.explicitParty={promise:!!(explicitParty&&typeof explicitParty.then==="function"),ring:!!document.querySelector(".call-ring.show")};window.__hideCallRing();await wait(30);',
   ' window.__secondRound=false;window.__gardenPartyOn=true;var forced=window.__madlaRingForced();await wait(30);report.steps.forced={result:forced,ring:!!document.querySelector(".call-ring.show")};window.__hideCallRing();',
-  ' window.autoplay(false);document.dispatchEvent(new KeyboardEvent("keydown",{key:"a",code:"KeyA",bubbles:true,cancelable:true}));await wait(30);report.steps.aKeyAutoplay={active:window.__autoplayOn(),query:window.autoplay()};',
+  ' var beforeRoom=window.currentStageName;document.dispatchEvent(new KeyboardEvent("keydown",{key:"a",code:"KeyA",bubbles:true,cancelable:true}));await wait(30);report.steps.aKeyIdle={room:window.currentStageName,beforeRoom:beforeRoom,ring:!!document.querySelector(".call-ring.show"),phone:!!document.querySelector(".phone-backdrop.show")};',
   '}',
   '})();</script>'
 ].join("\n");
@@ -52,10 +52,9 @@ check(s.explicitParty && s.explicitParty.promise && s.explicitParty.ring,
   "madla() rings explicitly while the party is on", s.explicitParty);
 check(s.forced && !s.forced.result && !s.forced.ring,
   "a third Madla ring attempt is refused until reset", s.forced);
-check(s.aKeyAutoplay && s.aKeyAutoplay.active === false,
-  "the A key no longer starts autoplay", s.aKeyAutoplay.active);
-check(s.aKeyAutoplay && s.aKeyAutoplay.query === false,
-  "autoplay() reports state without changing it", s.aKeyAutoplay);
+check(s.aKeyIdle && s.aKeyIdle.room === s.aKeyIdle.beforeRoom &&
+  !s.aKeyIdle.ring && !s.aKeyIdle.phone,
+  "the A key no longer triggers any reserved console/game action", s.aKeyIdle);
 
 if (failures) process.exit(1);
 console.log("Madla console: all checks passed");

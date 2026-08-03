@@ -22,10 +22,8 @@ stopped. **Continue** restores it, including any hidden room left open, without
 restarting its film or game. **Start over** discards it immediately; Restart
 inside the game asks for confirmation.
 
-Prefer watching? **Trailer** is a fixed one-minute preview. **Autoplay** is an
-ongoing tour of linked mini-stories, paced from quieter arrivals through party
-peaks and back down again; select **Take over** whenever you want control. Both
-respect reduced-motion preferences.
+Prefer watching? **Trailer** is a fixed one-minute preview; select **Take over**
+whenever you want control. It respects reduced-motion preferences.
 
 ## Controls
 

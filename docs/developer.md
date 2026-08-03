@@ -77,7 +77,7 @@ must be checked in these four distinct presentations:
 1. **Full RSVP page:** load `rsvp.html` without `#play`. The invitation remains the document owner
    around its embedded game. Check desktop and phone widths so game-only rules do not remove or
    overlap the invitation header, language controls, sections, or footer.
-2. **Direct browser game:** load the `#play`, `#trailer`, or `#autoplay` entry, or the `loft-day`
+2. **Direct browser game:** load the `#play` or `#trailer` entry, or the `loft-day`
    route. On desktop and landscape mobile, check fresh CLICK ME, saved Continue/Start over, and
    active play/presentation. These states share the edge-to-edge page fill but intentionally expose
    different controls and bottom rows.
@@ -90,11 +90,11 @@ must be checked in these four distinct presentations:
    rotation reveals the appropriate entry or play state without stale chrome.
 
 `tests/game-only-layout.js` covers the structural variants, `tests/recovery.js` owns the saved-session
-transition, and `tests/url-entry.js` checks neutral, Trailer, and Autoplay URL launch behavior with
+transition, and `tests/url-entry.js` checks neutral and Trailer URL launch behavior with
 and without a checkpoint. Still inspect real desktop and approximately 390px mobile renders:
 headless geometry does not prove that the chrome is visually balanced.
 
-`setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, Trailer, or Autoplay hands
+`setGameOnlyEntered()` adds `.loft-entered` after CLICK ME, Continue, or Trailer hands
 over control; that uses a larger height fit without setting `.is-fullscreen`. Direct web play never
 auto-enters true fullscreen; only an installed PWA may use its first interaction for that
 transition. `enterFs()` timestamps that transition; the post-CLICK-ME caption-location guide reads
@@ -230,7 +230,7 @@ visibility condition changes. This keeps declaration order loose, but it also me
 usually needs to notify several existing controllers.
 
 Cross-controller state must have one named transition owner (`set*`, or a paired `begin*`/`stop*`).
-UI, typed API, console, restore, reset, cinematic and autoplay paths call that owner instead of
+UI, typed API, console, restore, reset, and cinematic paths call that owner instead of
 assigning its `window.__...` mirror or rendering classes directly. Private animation counters and
 closure-local timers remain local. When a transition schedules delayed work, its stop/reset path
 must cancel the handles or invalidate callbacks with a generation token.
@@ -255,11 +255,10 @@ keyboard events before gameplay handlers run, while handling arrow/Enter/Space i
 browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
 or Start over removes the gate. While it is present, the normal room instruction is replaced by the
 localized saved-room/age summary in `#hunt-caption`; the modal references that caption with
-`aria-describedby`, and removing the gate restores the live room caption. Trailer and Autoplay remain
-available in the shell's bottom row while the gate hides room navigation, media transport, Back,
-Restart, and the dots; the left utility links remain visible. Closing recovery reparents the watch
-controls to their document owner. Recovery
-Autoplay applies the checkpoint before starting its director, while recovery Trailer holds and
+`aria-describedby`, and removing the gate restores the live room caption. Trailer remains available
+in the shell's bottom row while the gate hides room navigation, media transport, Back, Restart, and
+the dots; the left utility links remain visible. Closing recovery reparents the watch controls to
+their document owner. Recovery Trailer holds and
 restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
 directly because the recovery gate is already an explicit destructive choice; the in-game
 Restart button, `R` key, and contextual Start over action use `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
@@ -318,7 +317,7 @@ drafts, focus, scroll, live media, runtime frames, or other transient state ride
 ### Trailer lifecycle
 
 Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a
-fixed 59.6-second editorial timeline, separate from Autoplay's director. It tells one day-long arc:
+fixed 59.6-second editorial timeline. It tells one day-long arc:
 morning rituals, a garden-party swell, two quieter interior beats, blue hour, then the invitation.
 Its content contract remains **story, not solutions**: no solve chain, roster/spotlight, album
 capture, formal moment, season preview, projector channel, monitor/phone workflow, forced aurora,
@@ -340,51 +339,17 @@ classes, and listeners. The reduced-motion branch presents the same arc as held 
 completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
 `window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
 
-### Autoplay director
+### Direct entries and scripted keys
 
-Autoplay is a persistent kiosk director, separate from the fixed Trailer timeline. Search for
-`AUTOPLAY (attract mode)`, `AP_SEQUENCE_LIBRARY`, and `AP_MOOD_TRANSITIONS`. Its execution layer is
-still one self-rescheduling `setTimeout`; `apBusy` and `apGen` prevent duplicate or stale drivers.
-The planning layer has three explicit parts:
-
-- `apState` owns the finite-state machine: `starting`, `overture`, `selecting`, `sequence`,
-  `interrupt`, `resuming`, `paused`, `takeover`, and `stopped`. `AP_MACHINE_EDGES` makes illegal
-  transitions countable rather than implicit.
-- `AP_SEQUENCE_LIBRARY` holds 30 short authored stories across all rooms plus cross-room relays.
-  The five showcase builders also serve as first-play solve walkers; solved-room alternatives cover
-  apps, party moments, music, calls, toys, weather, photography, food, and the BBQ.
-- `apPickSequence` is a constrained weighted choice over eight moods and a five-step
-  arrival→gather→peak→glow→exhale cadence. Its score also links story families (arrivals naturally
-  lead toward music or ceremony, then photographs) and favours the room where the previous relay
-  ended or a neighbouring room. Room/sequence age and frontier solving remain hard priorities:
-  exact stories are excluded for five selections, immediate primary-room repeats are avoided, and
-  the starvation boundary overrides editorial weighting. Randomness comes only from the director's
-  seeded xorshift32 stream; never use `Math.random()` for a new autoplay choice.
-
-Notifications suspend the current `{scene, beat, state}` on the one-deep stack, run an interrupt,
-then cross the explicit `resuming` state before restoring the exact next beat. If the notification
-action moved rooms, a normal navigation beat first rejoins the suspended story. Hidden and merely
-unfocused tabs enter `paused` without consuming a beat. Takeover and deliberate stop are distinct:
-takeover retains the idle-return timer, while `autoplay(false)` clears it. `apOwned` remains the
-cleanup inventory for autonomous effects that cannot be inherited safely; panels and the ghost
-cursor are unconditionally removed at boundaries/stop.
-`apWaitRecovery` keeps URL autoplay (`#autoplay`, plus the legacy `?autoplay` alias) behind the
-checkpoint gate, then starts from the restored or reset state only after that modal decision has
-completed. `#play` only selects the game shell; `#trailer` starts the fixed cinematic through its
-checkpoint-preserving entry path.
+`#play` only selects the game-only shell. `#trailer` starts the fixed cinematic through the same
+checkpoint-preserving path as the Watch button, including recovery. `window.__launchUrlEntryMode()`
+is the focused regression hook used by the URL-entry test.
 
 For deterministic manual repros, `?keys=p3cm` starts directly in a fresh game with neither the
 recovery prompt nor the `CLICK ME` introduction, then sends those ordinary unmodified key gestures
 in order after entry settles. Characters are spaced by 180 ms and pass through the real keyboard
 handlers; URL-encode punctuation when necessary. This clears only the gameplay checkpoint,
 preserving `?date=`, `?time=`, scripts, and other durable apps.
-
-Inspection and deterministic test hooks are `__autoplayMachine()`, `__autoplayModel()`,
-`__autoplayCatalog()`, `__autoplaySeed(seed)`, `__autoplayPlan(seed, count)`, and
-`__autoplayForceSequence(id)`. The plan preview saves and restores every live selector ledger, so it
-must remain side-effect free. `tests/autoplay.js` asserts seeded reproducibility and divergence,
-catalog breadth, score-factor visibility, anti-repetition, coverage bounds, FSM transitions,
-interrupt resume, pause behavior, cleanup, reduced motion, and the long-running kiosk contract.
 
 ## Rooms, phases, and unlocking
 
@@ -1452,7 +1417,7 @@ geometry, calendar tiles, and special-day messages. It does not freeze the wall 
 `?time=` selects an Edmonton wall-clock starting time that then advances at real speed. Search for
 `timeOverrideMins`, `__ovClock`, and `__setLoftTime`. Day/night and twilight use computed solar
 geometry for the selected date and Edmonton time. Automatic crossing changes start only after the
-kitchen is solved and yield to explicit season/date previews, trips, cinematics, autoplay, and
+kitchen is solved and yield to explicit season/date previews, trips, cinematics, and
 party-forced night. Focus/visibility catch-up handles a crossing missed while away.
 
 The shared calendar renderer serves monitor and phone views. Canonical wedding event definitions
@@ -1518,7 +1483,7 @@ deduplication checks pass.
 Autonomous sources include party cue drips, daytime drips, visitors, occasion/birthday events,
 Charlie discovery, party lifecycle prompts, and chained authored follow-ups. Their schedulers:
 
-- re-check phase, party/day/time, focus, visibility, cinematic, autoplay, and attended-player gates
+- re-check phase, party/day/time, focus, visibility, cinematic, and attended-player gates
   when a timer fires;
 - deduplicate authored IDs per session;
 - slow down when unread pressure grows and stop adding normal autonomous messages at the unread cap;
@@ -1694,7 +1659,7 @@ and exposes many intentional global commands. Search for `CONSOLE_HELP`, `CONSOL
 
 Useful public controls include room navigation, party/daylight/season/weather/time, media and volume,
 projector, trips, dances and wedding moments, phone/monitor apps, calls, roster/guests, photography,
-and reset/autoplay helpers. `CONSOLE_HELP` is the user-facing description and `CONSOLE_CMDS` is the
+and reset helpers. `CONSOLE_HELP` is the user-facing description and `CONSOLE_CMDS` is the
 completion roster; tests require them to stay in sync.
 
 For programmatic integrations, prefer:
@@ -1745,8 +1710,8 @@ Run focused tests for the changed ownership boundary. The main routes are:
   `tests/phone-direct-launch.js`, `tests/phone-lock.js`, `tests/phone-recents.js`, and
   `tests/phone-badges.js` for
   monitor/phone shell, context-menu, launch, and teardown behavior;
-- `tests/url-entry.js`, `tests/recovery.js`, `tests/cine.js`, and `tests/autoplay.js` for direct
-  presentation entries and their recovery/lifecycle contracts;
+- `tests/url-entry.js`, `tests/recovery.js`, and `tests/cine.js` for direct presentation entries
+  and their recovery/lifecycle contracts;
 - `tests/projector-coffee.js`, `tests/media-transitions.js`, `tests/piano-message.js`,
   `tests/cinema-room.js`, `tests/bathroom-room.js`, `tests/bedroom-room.js`,
   `tests/bedroom-tictactoe.js`, `tests/entrance-room.js`, and
@@ -1871,7 +1836,7 @@ Use these search terms in `rsvp.html` rather than relying on line numbers:
 | Weather | `api.open-meteo.com`, `__realOutdoorC`, `refreshWeatherText` |
 | Public console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.volume` |
 | Code/Python Turtle | `CODE_STORE_KEYS`, `codeSetLanguage`, `__runPythonCode`, `PY_TURTLE_MODULE` |
-| Autoplay/cinematic | `AP_SEQUENCE_LIBRARY`, `AP_MOOD_TRANSITIONS`, `__autoplayModel`, `apParam`, `window.__cinematic` |
+| Trailer/direct entry | `THE TRAILER`, `window.__launchUrlEntryMode`, `window.__cinematic` |
 
 Worker-side searches in `chat.js`: `ACTION_SPECS`, `cleanContext`, `cleanGroupChat`,
 `verifyTurnstile`, `callOpenAI`, and `export default`. Stable assistant facts and policy live in

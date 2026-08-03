@@ -1206,7 +1206,9 @@ function checkNoUnicodeEscapes() {
   var re = new RegExp(String.fromCharCode(92, 92) + "u(?:\\{[0-9A-Fa-f]+\\}|[0-9A-Fa-f]{4})", "g");
   var hits = [];
   names.forEach(function (name) {
-    var buf = fs.readFileSync(path.join(ROOT, name));
+    var file = path.join(ROOT, name);
+    if (!fs.existsSync(file)) return; // a tracked file may be intentionally deleted in the working tree
+    var buf = fs.readFileSync(file);
     if (buf.indexOf(0) !== -1) return; // pinned binary payload
     var text = buf.toString("utf8"), match;
     re.lastIndex = 0;

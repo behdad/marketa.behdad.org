@@ -668,7 +668,7 @@ var PROBE_HARNESS = [
   "    }",
   "    report.resetDiff = settleDiff;",
   "",
-  "    // The scene-level console tab starts hidden. Synthetic/autoplay input must not reveal it,",
+  "    // The scene-level console tab starts hidden. Synthetic input must not reveal it,",
   "    // while the user's backtick route reveals it before opening the drop-down console.",
   "    var consoleTab = el('loft-console-hint'), monitorConsoleIn = el('monitor-console-in');",
   "    ok('console discovery: pull-tab starts hidden', !!consoleTab && getComputedStyle(consoleTab).display === 'none');",

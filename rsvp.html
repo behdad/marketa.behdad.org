@@ -35017,7 +35017,7 @@ window.__entranceRoomOpen = false;
   function roadtripFeedback(key) {
     if (window.__flashCaptionKey) window.__flashCaptionKey(key, 2200, "entrance-roadtrip");
   }
-  function roadtripPoliceFeedback(key, values, holdMs) {
+  function roadtripPoliceFeedback(key, values, holdMs, persistent) {
     var lang = document.documentElement.lang === "cs" ? "cs" : "en";
     var dict = typeof T === "object" && T[lang] ? T[lang] : null;
     var template = dict && ((dict.hunt && dict.hunt[key]) || dict[key]);
@@ -35029,7 +35029,17 @@ window.__entranceRoomOpen = false;
     // instruction. Mark that stable key current so the end-of-step HUD repaint
     // does not immediately overwrite the temporary line.
     lastDriveInstruction = porscheDriveInstructionKey();
-    if (window.caption) window.caption(template, { blink: 700, hold: holdMs || 4200 });
+    if (window.caption) {
+      var options = { blink: 700 };
+      if (!persistent) options.hold = holdMs || 4200;
+      window.caption(template, options);
+    }
+  }
+  function roadtripPoliceOutcomeFeedback(key, values) {
+    // A pickup/pass flash may still be live when the pursuit resolves. Remove its
+    // restore timer before publishing the persistent terminal outcome.
+    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+    roadtripPoliceFeedback(key, values, 0, true);
   }
   function paintRoadtripInvite() {
     if (!roadtripInvite) return;
@@ -35486,8 +35496,8 @@ window.__entranceRoomOpen = false;
     hideRoadtripPoliceVisuals();
     parkRoadtrip(false);
     roadtripState.exitUntilStop = true;
-    roadtripPoliceFeedback(reason === "speed" ? "entrance_roadtrip_police_run_end" :
-      "entrance_roadtrip_police_refused", { fine: police.fine }, 5200);
+    roadtripPoliceOutcomeFeedback(reason === "speed" ? "entrance_roadtrip_police_run_end" :
+      "entrance_roadtrip_police_refused", { fine: police.fine });
     paintPorscheDriveHud();
     return true;
   }
@@ -35501,7 +35511,7 @@ window.__entranceRoomOpen = false;
     driveState.gear = 0;
     driveState.rpm = porscheState.engineOn ? 780 : 0;
     stopRoadtripPoliceSiren(.18);
-    roadtripPoliceFeedback("entrance_roadtrip_police_ticket", { fine: police.fine }, 5000);
+    roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_ticket", { fine: police.fine });
     return true;
   }
   function settleRoadtripPoliceEscape() {
@@ -35513,7 +35523,7 @@ window.__entranceRoomOpen = false;
     police.fine = 0;
     police.mirrorScale = 0;
     stopRoadtripPoliceSiren(.9);
-    roadtripFeedback("entrance_roadtrip_police_escaped");
+    roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_escaped");
     return true;
   }
   function detectRoadtripPoliceSpeed(sampledSpeed) {

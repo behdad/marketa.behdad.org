@@ -201,6 +201,8 @@ immediately. At 200 km/h or faster, separation grows from the patrol car's 180 k
 The mirror scale and siren gain follow that separation; reaching 55 metres clears the chase, while
 slowing below 200 before then closes the gap and resumes the refusal counters. Neither enforcement
 case resets the loft game.
+Ticket, escape, and run-ending outcomes clear any live `entrance-roadtrip` pickup/pass flash and
+publish a persistent caption, so an older flash or `caption()` restore timer cannot reclaim the line.
 `__entranceRoadtripPolice(ahead)`, `__entranceRoadtripPoliceDetect(speed)`, and
 `__entranceRoadtripPoliceStep(speed, seconds)` are the deterministic focused-test seams; police
 presentation and siren state remain transient rather than checkpoint data. Run

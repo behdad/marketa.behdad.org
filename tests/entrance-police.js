@@ -20,11 +20,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveControl("brake", false);
     return window.__entranceDriveSetMotion(speed, gear);
   }
-  function meetPolice(speed) {
+  function meetPolice(speed, pendingFeedback) {
     setMotion(speed, speed >= 200 ? 4 : 3);
     window.__entranceRoadtripPolice(150);
     var stationAt = trip().police.stationAt;
     window.__entranceRoadtripSetDistance(stationAt - 6);
+    if (pendingFeedback) window.__flashCaptionKey(pendingFeedback, 10000, "entrance-roadtrip");
     window.__entranceRoadtripPoliceDetect(speed);
     return copy(trip());
   }
@@ -85,9 +86,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       await sleep(80);
       report.steps.refocused = copy(trip().police);
       window.__entranceRoadtripSetLane(2);
+      window.__flashCaptionKey("entrance_roadtrip_heart", 10000, "entrance-roadtrip");
       setMotion(0, 0);
       step(1000);
-      report.steps.stopped = copy(trip());
+      report.steps.stopped = {
+        trip: copy(trip()),
+        caption: document.getElementById("hunt-caption").textContent.trim(),
+        flash: window.__flashCaptionState()
+      };
 
       prepareEncounter();
       var fastPursuit = meetPolice(205);
@@ -99,6 +105,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var brieflyFast = copy(trip());
       window.__entranceRoadtripPoliceStep(190, 2);
       var recovered = copy(trip());
+      window.__flashCaptionKey("entrance_roadtrip_kiss", 10000, "entrance-roadtrip");
       window.__entranceRoadtripPoliceStep(205, 8);
       report.steps.escaped = {
         detected: fastPursuit,
@@ -107,11 +114,21 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         firstFastStep: firstFastStep,
         brieflyFast: brieflyFast,
         recovered: recovered,
-        cleared: copy(trip())
+        cleared: copy(trip()),
+        caption: document.getElementById("hunt-caption").textContent.trim(),
+        flash: window.__flashCaptionState()
       };
 
       prepareEncounter();
-      report.steps.severe = meetPolice(150);
+      var severe = meetPolice(150, "entrance_roadtrip_heart");
+      report.steps.severe = {
+        trip: severe,
+        immediateCaption: document.getElementById("hunt-caption").textContent.trim(),
+        immediateFlash: window.__flashCaptionState()
+      };
+      await sleep(5400);
+      report.steps.severe.finalCaption = document.getElementById("hunt-caption").textContent.trim();
+      report.steps.severe.finalFlash = window.__flashCaptionState();
 
       prepareEncounter();
       meetPolice(130);
@@ -142,7 +159,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html highway police:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 7000, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 10000, {
   forceMotion: true,
   chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
@@ -175,10 +192,10 @@ check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sire
   "the pursuit siren tears down while unfocused and returns only when attended", {
     unfocused: s.unfocused, refocused: s.refocused
   });
-check(s.stopped && s.stopped.active && s.stopped.police.phase === "cooldown" &&
-  s.stopped.police.stops === 1 && s.stopped.police.tickets === 1 &&
-  s.stopped.police.fines === 750 && !s.stopped.police.sirenActive &&
-  !s.stopped.police.mirrorVisible,
+check(s.stopped && s.stopped.trip.active && s.stopped.trip.police.phase === "cooldown" &&
+  s.stopped.trip.police.stops === 1 && s.stopped.trip.police.tickets === 1 &&
+  s.stopped.trip.police.fines === 750 && !s.stopped.trip.police.sirenActive &&
+  !s.stopped.trip.police.mirrorVisible && /Pulled over/.test(s.stopped.caption) && !s.stopped.flash,
   "stopping on the right shoulder settles the speed-scaled fine and ends the siren", s.stopped);
 check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase === "pursuit" &&
   s.escaped.detected.police.detectedSpeed === 205 &&
@@ -192,12 +209,17 @@ check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase 
   s.escaped.recovered.police.refusalElapsed === 2 &&
   s.escaped.cleared.active && s.escaped.cleared.police.phase === "cooldown" &&
   s.escaped.cleared.police.escapes === 1 && !s.escaped.cleared.police.sirenActive &&
-  !s.escaped.cleared.police.mirrorVisible && s.escaped.cleared.police.tickets === 0,
+  !s.escaped.cleared.police.mirrorVisible && s.escaped.cleared.police.tickets === 0 &&
+  /Police lost/.test(s.escaped.caption) && !s.escaped.flash,
   "sustained 200+ opens a visible/audible gap, while an early speed drop lets pursuit recover",
   s.escaped);
-check(s.severe && !s.severe.active && s.severe.police.runEnded &&
-  s.severe.police.endReason === "speed" && s.severe.police.detectedSpeed >= 150 &&
-  s.severe.police.tickets === 1 && s.severe.police.fines >= 1250,
+check(s.severe && !s.severe.trip.active && s.severe.trip.police.runEnded &&
+  s.severe.trip.police.endReason === "speed" && s.severe.trip.police.detectedSpeed >= 150 &&
+  s.severe.trip.police.tickets === 1 && s.severe.trip.police.fines >= 1250 &&
+  /highway run over/.test(s.severe.immediateCaption) &&
+  s.severe.finalCaption === s.severe.immediateCaption &&
+  !s.severe.immediateFlash && !s.severe.finalFlash &&
+  !/collected|multiplier/.test(s.severe.finalCaption),
   "60 km/h over the limit ends only the highway run", s.severe);
 check(s.refused && !s.refused.active && s.refused.police.runEnded &&
   s.refused.police.endReason === "refused" && s.refused.police.fines === 1750,

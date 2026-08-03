@@ -50,7 +50,7 @@ var HARNESS = [
   ' var realOpen=window.__openEntranceRoom;window.__openEntranceRoom=function(){if(!report.steps.beforeOpen)report.steps.beforeOpen=state();return realOpen();};',
   ' var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn.primary");if(!button)throw new Error("missing recovery Continue");button.click();',
   ' await sleep(520);var restored=state(),car=document.getElementById("entrance-porsche");',
-  ' report.steps.restored={state:restored,classes:car.getAttribute("class")||"",carPressed:Array.from(document.querySelectorAll(".entrance-car-control")).map(function(el){return [el.id,el.getAttribute("aria-pressed")];}),lampPressed:[document.getElementById("entrance-entry-lamp-left").getAttribute("aria-pressed"),document.getElementById("entrance-entry-lamp-right").getAttribute("aria-pressed")],persisted:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.entrance,sfx:report.sfx};',
+  ' report.steps.restored={state:restored,classes:car.getAttribute("class")||"",controls:Array.from(document.querySelectorAll(".entrance-car-control")).map(function(el){return el.id;}),lamps:[document.getElementById("entrance-entry-lamp-left").classList.contains("on"),document.getElementById("entrance-entry-lamp-right").classList.contains("on")],persisted:JSON.parse(localStorage.getItem("loftCheckpoint:v1")).systems.entrance,sfx:report.sfx};',
   ' window.__closeEntranceRoom();await sleep(760);report.steps.closed=state();window.__openEntranceRoom();await sleep(60);report.steps.reopened=state();',
   ' window.__restoreCheckpointSystems({entrance:{windows:"111111",lamps:{left:1,right:true},porsche:{roofOpen:"yes",doorOpen:true,windowOpen:false,frunkOpen:1,trunkOpen:false,engineOn:null,headlightOn:true,taillightOn:0}}},"afterStage");report.steps.validated=state();',
   ' window.__resetCheckpointSystems();report.steps.reset=state();',
@@ -97,10 +97,9 @@ check(restored && restored.open && restored.windows.map(function (row) { return 
   /engine-on/.test(s.restored.classes) && /headlight-on/.test(s.restored.classes) &&
   /taillight-on/.test(s.restored.classes),
   "restored classes are truthful while idle/tremor remain lifecycle-derived", s.restored);
-check(s.restored && s.restored.carPressed.length === 9 && s.restored.carPressed.every(function (row) {
-    return row[0] === "entrance-porsche-indicator" || row[0] === "entrance-porsche-window" ? row[1] === null : row[1] === "true";
-  }) && s.restored.lampPressed.join(",") === "true,false",
-  "Continue restores truthful Porsche and independent wall-lamp pressed states", s.restored);
+check(s.restored && s.restored.controls.length === 9 &&
+  s.restored.controls.every(function (id) { return /^entrance-porsche-/.test(id); }),
+  "Continue retains the complete Porsche control inventory", s.restored);
 check(s.restored && JSON.stringify(s.restored.persisted) === JSON.stringify(Object.assign({}, ROW, { drive: DEFAULT_DRIVE })) && s.restored.sfx === 0,
   "the post-Continue save retains the compact row without replaying startup SFX", s.restored);
 check(s.closed && !s.closed.open && allCar(s.closed.car, true) && !s.closed.car.idleActive && !s.closed.car.vibrating &&

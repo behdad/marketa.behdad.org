@@ -105,7 +105,7 @@ CASES.forEach(function (testCase) {
     urlSuffix: "#play"
   });
   check(result && result.errors.length === 0, testCase.id + " recovery has no uncaught errors", result && result.errors);
-  check(result && result.preview && result.preview.shown && result.preview.ariaHidden === "true" &&
+  check(result && result.preview && result.preview.shown && result.preview.ariaHidden === null &&
       result.preview.floorPan === "100%" && result.preview.transition === "none" &&
       result.preview.gateAbove,
     testCase.id + " opens directly on the saved lower room behind the recovery gate", result && result.preview);

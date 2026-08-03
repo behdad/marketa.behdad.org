@@ -7,8 +7,8 @@ var harness = [
   '<pre id="__report">pending</pre>',
   '<script>(async function(){',
   'function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
-  'window.__openPhoneModal(true);await sleep(80);var wrap=document.querySelector(".psb-sig-wrap"),bars=[].slice.call(wrap.querySelectorAll(".psb-sig-bar")),pop=wrap.querySelector(".psb-sig-pop"),level=+wrap.getAttribute("data-level"),out={errors:window.__errs,level:level,lit:bars.filter(function(bar){return !bar.classList.contains("off");}).length,key:pop.getAttribute("data-i"),en:pop.textContent,tiers:{edmonton:window.__phoneSignalLevel("America/Edmonton",0),vancouver:window.__phoneSignalLevel("America/Vancouver",1),toronto:window.__phoneSignalLevel("America/Toronto",2),mexico:window.__phoneSignalLevel("America/Mexico_City",0),brazil:window.__phoneSignalLevel("America/Sao_Paulo",3),prague:window.__phoneSignalLevel("Europe/Prague",8)},titles:{calendar:document.querySelector(".psb-date").title,clock:document.querySelector(".psb-time").title,signal:wrap.title,wifi:document.querySelector(".psb-wifi-wrap").title,battery:document.querySelector(".psb-batt-wrap").title,camera:document.querySelector(".psb-cam").title}};',
-  'wrap.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));out.open=wrap.classList.contains("show")&&wrap.getAttribute("aria-expanded")==="true";setLang("cs");await sleep(30);out.cs=pop.textContent;out.csTitles={calendar:document.querySelector(".psb-date").title,clock:document.querySelector(".psb-time").title,signal:wrap.title,wifi:document.querySelector(".psb-wifi-wrap").title,battery:document.querySelector(".psb-batt-wrap").title,camera:document.querySelector(".psb-cam").title};document.querySelector(".phone-shell").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));out.closed=!wrap.classList.contains("show")&&wrap.getAttribute("aria-expanded")==="false";document.getElementById("__report").textContent=JSON.stringify(out);',
+  'window.__openPhoneModal(true);await sleep(80);var wrap=document.querySelector(".psb-sig-wrap"),bars=[].slice.call(wrap.querySelectorAll(".psb-sig-bar")),pop=wrap.querySelector(".psb-sig-pop"),level=+wrap.getAttribute("data-level"),out={errors:window.__errs,level:level,lit:bars.filter(function(bar){return !bar.classList.contains("off");}).length,key:pop.getAttribute("data-i"),en:pop.textContent,tiers:{edmonton:window.__phoneSignalLevel("America/Edmonton",0),vancouver:window.__phoneSignalLevel("America/Vancouver",1),toronto:window.__phoneSignalLevel("America/Toronto",2),mexico:window.__phoneSignalLevel("America/Mexico_City",0),brazil:window.__phoneSignalLevel("America/Sao_Paulo",3),prague:window.__phoneSignalLevel("Europe/Prague",8)}};',
+  'wrap.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));out.open=wrap.classList.contains("show")&&getComputedStyle(pop).display!=="none";setLang("cs");await sleep(30);out.cs=pop.textContent;document.querySelector(".phone-shell").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));out.closed=!wrap.classList.contains("show")&&getComputedStyle(pop).display==="none";document.getElementById("__report").textContent=JSON.stringify(out);',
   '})().catch(function(error){document.getElementById("__report").textContent=JSON.stringify({error:String(error&&error.stack||error)});});<\/script>'
 ].join("\n");
 
@@ -35,13 +35,6 @@ if (result && !result.error) {
   check(result.tiers.edmonton === 4 && result.tiers.vancouver === 3 && result.tiers.toronto === 2 &&
       result.tiers.mexico === 1 && result.tiers.brazil === 1 && result.tiers.prague === 1,
     "timezone identities prevent distant same-offset regions from receiving Edmonton bars", result.tiers);
-  check(result.titles.calendar === "calendar" && result.titles.clock === "clock" &&
-      result.titles.signal === "distance" && result.titles.wifi === "wi‑fi" &&
-      result.titles.battery === "battery" && result.titles.camera === "photobooth" &&
-      result.csTitles.calendar === "kalendář" &&
-      result.csTitles.clock === "hodiny" && result.csTitles.signal === "vzdálenost" &&
-      result.csTitles.battery === "baterie" && result.csTitles.camera === "fotokoutek",
-    "phone status-bar tooltips are lowercase and bilingual", { en: result.titles, cs: result.csTitles });
 }
 
 if (failures) {

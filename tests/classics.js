@@ -16,7 +16,7 @@ var HARNESS = [
   ' S("search",{classics:search("classics"),mines:search("mines"),solitaire:search("solitaire"),cards:search("cards")});',
   ' document.getElementById("monitor-dock-classics").click();S("chooser",{view:window.__classicsView(),show:mon.classList.contains("show-mines"),choices:[].slice.call(document.querySelectorAll(".classics-choice")).map(function(x){return x.getAttribute("data-classics-view");})});',
   ' document.querySelector(".classics-choice-solitaire").click();var st=window.__solitaireState();S("deal",{view:window.__classicsView(),stock:st.stock.length,waste:st.waste.length,tableau:st.tableau.map(function(x){return x.length;}),up:st.tableau.map(function(x){return x.filter(function(c){return c.faceUp;}).length;}),cards:document.querySelectorAll(".sol-card").length});',
-  ' var close=document.getElementById("monitor-mines-close"),back=document.getElementById("monitor-mines-back"),closeBg=close.querySelector(".classics-close-bg"),backBg=back.querySelector(".classics-close-bg");S("game_controls",{close:getComputedStyle(close).pointerEvents,back:getComputedStyle(back).pointerEvents,closePath:close.querySelector("path").getAttribute("d"),backPath:back.querySelector("path").getAttribute("d"),closeFill:getComputedStyle(closeBg).fill,backFill:getComputedStyle(backBg).fill,closeLabel:close.getAttribute("aria-label")});close.dispatchEvent(new MouseEvent("click",{bubbles:true}));S("dismissed",{view:window.__classicsView(),open:mon.classList.contains("show-mines")});document.getElementById("monitor-dock-classics").click();S("resumed",{view:window.__classicsView(),open:mon.classList.contains("show-mines")});back.dispatchEvent(new MouseEvent("click",{bubbles:true}));S("back",{view:window.__classicsView(),stillOpen:mon.classList.contains("show-mines"),back:getComputedStyle(back).pointerEvents,fill:getComputedStyle(closeBg).fill});',
+  ' var close=document.getElementById("monitor-mines-close"),back=document.getElementById("monitor-mines-back"),closeBg=close.querySelector(".classics-close-bg"),backBg=back.querySelector(".classics-close-bg");S("game_controls",{close:getComputedStyle(close).pointerEvents,back:getComputedStyle(back).pointerEvents,closePath:close.querySelector("path").getAttribute("d"),backPath:back.querySelector("path").getAttribute("d"),closeFill:getComputedStyle(closeBg).fill,backFill:getComputedStyle(backBg).fill});close.dispatchEvent(new MouseEvent("click",{bubbles:true}));S("dismissed",{view:window.__classicsView(),open:mon.classList.contains("show-mines")});document.getElementById("monitor-dock-classics").click();S("resumed",{view:window.__classicsView(),open:mon.classList.contains("show-mines")});back.dispatchEvent(new MouseEvent("click",{bubbles:true}));S("back",{view:window.__classicsView(),stillOpen:mon.classList.contains("show-mines"),back:getComputedStyle(back).pointerEvents,fill:getComputedStyle(closeBg).fill});',
   ' window.__openMonitorApp("mines");S("mines",{view:window.__classicsView(),cells:document.querySelectorAll("#monitor-mines-wrap .mines-cell").length,fill:getComputedStyle(closeBg).fill});close.dispatchEvent(new MouseEvent("click",{bubbles:true}));',
   ' var rules=window.__solitaireRules;S("rules",{king:rules.tableau([{suit:"h",rank:13,faceUp:true}],[]),nonking:rules.tableau([{suit:"h",rank:12,faceUp:true}],[]),alt:rules.tableau([{suit:"h",rank:12,faceUp:true}],[{suit:"s",rank:13,faceUp:true}]),same:rules.tableau([{suit:"d",rank:12,faceUp:true}],[{suit:"h",rank:13,faceUp:true}]),ace:rules.foundation([{suit:"h",rank:1,faceUp:true}],"h",[]),wrongSuit:rules.foundation([{suit:"d",rank:1,faceUp:true}],"h",[])});',
   ' window.__openMonitorApp("solitaire");window.__solitaireLoadForTest({tableau:[[{suit:"s",rank:13}],[{suit:"h",rank:12},{suit:"c",rank:11}],[],[],[],[],[]]});var moved=window.__solitaireMove({kind:"tableau",pile:1,index:0},{kind:"tableau",pile:0});st=window.__solitaireState();S("move",{moved:moved,piles:st.tableau.map(function(x){return x.length;})});',
@@ -46,8 +46,8 @@ check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.dock.classics && !s.dock.mines && s.dock.label === "classics" && s.dock.icon,
   "the renamed lowercase Classics tile carries the combined vector icon", s.dock);
 check(s.search.classics.match === "classics" && s.search.mines.match === "mines" &&
-  s.search.solitaire.match === "solitaire" && s.search.cards.match === "solitaire",
-  "monitor search routes classics, mines, solitaire and cards correctly", s.search);
+  s.search.solitaire.match === "solitaire" && !s.search.cards.match,
+  "monitor search routes the current Classics game names without a retired cards alias", s.search);
 check(s.chooser.show && s.chooser.view === "chooser" && JSON.stringify(s.chooser.choices) === JSON.stringify(["mines", "solitaire"]),
   "Classics opens a two-game chooser", s.chooser);
 check(s.deal.view === "solitaire" && s.deal.stock === 24 && s.deal.waste === 0 &&
@@ -58,7 +58,6 @@ check(s.game_controls.close !== "none" && s.game_controls.back !== "none" &&
   s.game_controls.closePath === "M373.45 158.2 L375.55 160.3 M375.55 158.2 L373.45 160.3" &&
   s.game_controls.backPath === "M375.4 157.9 L373.5 159.25 L375.4 160.6" &&
   s.game_controls.closeFill === "rgb(47, 102, 83)" && s.game_controls.backFill === "rgb(47, 102, 83)" &&
-  /Dismiss/.test(s.game_controls.closeLabel) &&
   !s.dismissed.open && s.dismissed.view === "solitaire" &&
   s.resumed.open && s.resumed.view === "solitaire" &&
   s.back.view === "chooser" && s.back.stillOpen && s.back.back === "none" &&

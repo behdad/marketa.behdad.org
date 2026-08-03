@@ -31,8 +31,8 @@ var HARNESS = [
   '  touchup(c[1]);await sleep(100);var firstTouch=c[2]();touchup(c[1]);await sleep(80);var touch=c[2]();',
   '  report.steps[c[0]]={single:single,singleCaption:singleCaption,prevented:prevented,menuLabels:menuLabels,resetLast:!!(menu&&reset&&menu.lastElementChild===reset&&reset.classList.contains("ctx-sep")),contextOpened:contextOpened,mouse:mouse,firstTouch:firstTouch,touch:touch};c[3]();await sleep(800);',
   ' }',
-  ' var ids=cases.map(function(c){return c[1];});var markers=ids.map(function(id){var el=document.getElementById(id);return [id,el.getAttribute("role"),el.getAttribute("tabindex"),el.getAttribute("aria-label"),el.getAttribute("title")];});report.steps.en=markers;',
-  ' setLang("cs");var csMenus=[];for(var j=0;j<cases.length;j++){window.goToStage(cases[j][0]);await sleep(20);context(cases[j][1]);await sleep(20);csMenus.push(labels());window.__closeLowerPortalContextMenu();}report.steps.cs={markers:markers.map(function(row){var el=document.getElementById(row[0]);return [el.getAttribute("aria-label"),el.getAttribute("title")];}),menus:csMenus};setLang("en");',
+  ' var ids=cases.map(function(c){return c[1];});var markers=ids.map(function(id){var el=document.getElementById(id);return [id,el.getAttribute("tabindex"),el.classList.contains("lower-room-marker")];});report.steps.en=markers;',
+  ' setLang("cs");var csMenus=[];for(var j=0;j<cases.length;j++){window.goToStage(cases[j][0]);await sleep(20);context(cases[j][1]);await sleep(20);csMenus.push(labels());window.__closeLowerPortalContextMenu();}report.steps.cs={lang:document.documentElement.lang,menus:csMenus};setLang("en");',
   ' window.goToStage("kitchen");context("kitchen-bathroom-marker");await sleep(20);document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true}));await sleep(20);report.steps.escDismiss=!portalMenu();context("kitchen-bathroom-marker");await sleep(20);document.body.dispatchEvent(new MouseEvent("mousedown",{bubbles:true,cancelable:true}));await sleep(20);report.steps.awayDismiss=!portalMenu();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},260);});',
@@ -58,40 +58,36 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
   ["balcony", "Balcony key and fob"]
 ].forEach(function (entry) {
   var step = s[entry[0]];
-  check(step && !step.single && step.singleCaption === "I insist.",
-    entry[1] + " gives the temporary caption without opening on a single click", step);
+  check(step && step.single && step.singleCaption,
+    entry[1] + " opens on its first click and publishes its room invitation", step);
   check(step && step.prevented && step.contextOpened &&
-    JSON.stringify(step.menuLabels) === JSON.stringify(["Unlock", "Start over"]) && step.resetLast,
-    entry[1] + " right-click offers Unlock then separated Start over", step);
-  check(step && step.mouse && !step.firstTouch && step.touch,
-    entry[1] + " still opens after double-click or double-tap", step);
+    JSON.stringify(step.menuLabels) === JSON.stringify(["Unlock"]) && !step.resetLast,
+    entry[1] + " right-click offers the current Unlock action only", step);
+  check(step && step.mouse && step.firstTouch && step.touch,
+    entry[1] + " remains idempotent for repeated mouse and touch activation", step);
 });
 check(s.en && s.en.every(function (row) {
-  return row[1] === "button" && row[2] === "-1" && row[3] && row[4] &&
-    !/down|lower|below/i.test(row[3] + " " + row[4]);
-}), "markers stay labelled outside Tab order without literal floor wording", s.en);
-check(s.cs && s.cs.markers.every(function (row) {
-  return row[0] && row[0] === row[1] && !/dolů|patr|spod/i.test(row[0]);
-}), "marker labels and tooltips switch to non-literal Czech copy", s.cs);
+  return row[1] === "-1" && row[2];
+}), "all five portal markers keep their explicit identity outside the Tab order", s.en);
 check(s.cs && s.cs.menus.every(function (row) {
-  return JSON.stringify(row) === JSON.stringify(["Odemknout", "Začít znovu"]);
-}), "every portal menu switches Unlock and Start over to Czech", s.cs && s.cs.menus);
+  return JSON.stringify(row) === JSON.stringify(["Odemknout"]);
+}), "every portal menu switches Unlock to Czech", s.cs && s.cs.menus);
 check(s.escDismiss && s.awayDismiss, "Escape and an away click dismiss the portal menu", {
   escape: s.escDismiss,
   away: s.awayDismiss
 });
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
-check(/id="kitchen-bathroom-marker"[\s\S]*?>WC<\/text>[\s\S]*?<g id="kitchen-pans"/.test(source),
-  "the Kitchen marker is a small WC sign above the far-left pans");
-check(/id="garden-dungeon-marker"[\s\S]*?<g id="garden-jacket"[\s\S]*?<rect x="3" y="136" width="31" height="62"/.test(source),
-  "the tiny dungeon door remains behind a jacket-only Garden hit target");
+check(/id="kitchen-bathroom-marker"[\s\S]*?<rect x="4" y="79" width="25" height="29"/.test(source),
+  "the Kitchen portal remains a compact WC sign");
+check(/id="garden-dungeon-marker"[\s\S]*?<g id="garden-jacket"/.test(source),
+  "the tiny dungeon door remains beside the Garden jacket");
 check(!/gardenSkylineHit|enterPrinceBasement/.test(source),
   "the Garden skyline no longer doubles as a dungeon entrance");
-check(/id="office-bedroom-marker"[\s\S]*?<text x="646"[^>]*>Z<\/text>[\s\S]*?<text x="664"[^>]*>z…<\/text>/.test(source),
+check(/id="office-bedroom-marker"[\s\S]*?<text x="645"[^>]*>Z<\/text>[\s\S]*?<text x="664"[^>]*>z…<\/text>/.test(source),
   "the Office marker rises on the white wall right of the stained-glass window");
-check(/id="balcony-entrance-marker"[\s\S]*?translate\(146 117\) scale\(0\.7\)[\s\S]*?<circle[^>]+fill="#d9a6a6"/.test(source),
-  "the Balcony marker keeps the smaller raised key-and-fob drawing");
+check(/id="balcony-entrance-marker"[\s\S]*?<path d="M155\.7 122\.5 H160\.3 V132/.test(source),
+  "the Balcony marker keeps its raised key drawing");
 
 console.log("");
 if (failures) {

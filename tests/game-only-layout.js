@@ -29,7 +29,7 @@ function run(width, height, standalone, fullPage) {
       var loader = document.getElementById("installed-load");
       check("installed mode shows its own loading progress",
         window.__installedLoaderUsed === true && !!loader &&
-        Number(loader.querySelector('[role="progressbar"]').getAttribute("aria-valuenow")) >= 8);
+        parseInt(loader.querySelector(".installed-load-percent").textContent, 10) >= 8);
     } else {
       check("browser mode never mounts the installed loading progress",
         window.__installedLoaderUsed === false && !document.getElementById("installed-load"));

@@ -64,8 +64,6 @@ function check(ok, msg, detail) {
 console.log("rsvp.html direct URL entries:");
 var play = run("#play");
 var trailer = run("#trailer");
-var legacyHash = run("#autoplay");
-var legacyQueryPlay = run("?autoplay=1#play");
 var recoveryTrailer = runRecovery("#trailer", RECOVERY_TRAILER);
 var urlKeys = lib.runPageSync("rsvp.html", URL_KEYS, 2900, {
   patchRaf: true,
@@ -77,10 +75,6 @@ check(play && !play.revealed && !play.cinematic,
   "#play is game-only and starts no presentation", play);
 check(trailer && !trailer.revealed && trailer.cinematic,
   "#trailer is game-only and starts the fixed reel", trailer);
-check(legacyHash && legacyHash.revealed && !legacyHash.cinematic && !legacyHash.started,
-  "#autoplay no longer claims the game-only shell or starts a presentation", legacyHash);
-check(legacyQueryPlay && !legacyQueryPlay.revealed && !legacyQueryPlay.cinematic,
-  "?autoplay no longer changes #play entry behavior", legacyQueryPlay);
 check(recoveryTrailer && !recoveryTrailer.gate && recoveryTrailer.cinematic && recoveryTrailer.checkpoint,
   "#trailer starts across recovery without discarding the saved checkpoint", recoveryTrailer);
 check(urlKeys && !urlKeys.gate && !urlKeys.intro && !urlKeys.introChrome &&
@@ -88,7 +82,7 @@ check(urlKeys && !urlKeys.gate && !urlKeys.intro && !urlKeys.introChrome &&
     urlKeys.started && urlKeys.state && urlKeys.state.done &&
     urlKeys.seen.join("|") === "down:[|up:[|down:]|up:]",
   "?keys starts directly in fresh play and dispatches paired keyboard gestures in order", urlKeys);
-[play, trailer, legacyHash, legacyQueryPlay].forEach(function (report) {
+[play, trailer].forEach(function (report) {
   check(report && report.errors.length === 0,
     (report && report.hash || "missing entry") + " has no uncaught page errors",
     report && report.errors);

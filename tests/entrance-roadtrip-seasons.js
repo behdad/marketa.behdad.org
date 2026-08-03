@@ -33,6 +33,8 @@ check(classify({ m: 10, d: 20 }) === "autumn" && classify({ m: 10, d: 21 }) === 
 });
 check(/data-roadtrip-season", roadtripSeason/.test(source),
   "the effective highway season is exposed for visual inspection");
+check(/not\(\.entrance-day\)\.entrance-roadtrip-season-spring #entrance-roadtrip-mirror-season-spring,[\s\S]{0,400}#entrance-roadtrip-mirror-season-winter\{opacity:\.46\}/.test(source),
+  "seasonal mirror scenery is dimmed independently at night");
 
 if (failures) process.exit(1);
 console.log("Entrance roadtrip season assertions passed.");

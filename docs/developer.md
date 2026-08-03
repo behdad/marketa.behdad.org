@@ -139,7 +139,7 @@ Start navigation work with `tests/navigation.js`, `tests/upstairs-keyboard-navig
 
 Search for `entrancePorscheDrive`, `__entranceDriveStep`, and `entranceRoadtrip`. The Entrance
 controller owns the ordinary car state and the nested `drive.roadtrip` record: unlock/practice,
-current-run distance and scoring, the bounded entity pool, and lifecycle flags. The roadtrip reuses
+current-run elapsed time, distance and scoring, the bounded entity pool, and lifecycle flags. The roadtrip reuses
 the driving step instead of starting a second frame loop. `__entranceRoadtripStart()` and
 `__entranceRoadtripSpawn(type, lane)` are narrow deterministic test seams; player input still goes
 through the dashboard's existing steering, shift, throttle, brake, and dismiss owners.
@@ -209,7 +209,18 @@ Wildlife switches to a timed hop-and-verge escape inside 22 road units: a slow a
 escape its required `0.48s`, while a fast same-lane arrival can reach the collision zone first.
 Roadtrip event feedback is routed through the shared lower-room caption flash; do not place transient
 score or coaching copy over the windshield.
-Collectibles use pooled `heart`, `kiss`, and `inf` entities worth 100/250/500 before the multiplier;
+`awardRoadtripBonus()` is the only combo-scored path: a close pass and safe wildlife clear are worth
+2/3, while the pooled `heart`, `kiss`, and `inf` collectibles are worth 5/10/25 before a combo capped
+at `3×`. `awardRoadtripDistance()` adds one point per 100 physical metres without the combo;
+elapsed time is display-only. `applyRoadtripPenalty()` centralizes unmultiplied deductions and resets
+the combo, including severity-scaled rear-end and wildlife penalties plus the fixed head-on penalty.
+Keep that generic deduction helper as the scoring boundary for any future fine system; it must not
+make scoring own police lifecycle or presentation.
+The original `v1` best and checkpoint scores migrate proportionally into scoring version 2, while
+new checkpoints retain elapsed time and the already-awarded distance-point watermark so recovery
+cannot award the same kilometre twice. Grade thresholds are 100/250/500 and their labels live in
+the EN/CS dictionaries.
+Collectibles use pooled `heart`, `kiss`, and `inf` entities;
 the original `token` test-seam input remains a compatibility alias for `inf`.
 `roadtripCollisionSeverity()` combines relative velocity with a per-object mass factor. It scales
 speed loss, shake displacement, SFX gain/duration, and crack opacity. Forward traffic and wildlife
@@ -228,14 +239,17 @@ the next Escape dismisses the dashboard and clears the run while retaining unloc
 unlock/practice, while the best score remains localStorage-owned. Checkpoints persist compact settled
 roadtrip counters but not active presentation, spawn timing, or live entities. Run
 `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`, `tests/entrance-recovery.js`, and
-`tests/entrance-roadtrip.js` for this boundary; `tests/entrance-windshield-cracks.js` checks the
-randomized glass geometry and crack/shatter separation without launching a browser.
+`tests/entrance-roadtrip.js` for this boundary. The source-only
+`tests/entrance-roadtrip-scoring.js` and `tests/entrance-windshield-cracks.js` check the scoring
+scale/formatting and randomized glass geometry/crack separation without launching a browser.
 Street `driveState.position` uses twice the roadtrip world-travel scale so the compact block loops
 briskly; speed, RPM, odometer distance, and `roadtripState.distance` remain unscaled physical values.
 `driveState.odometerKm` is the persistent physical-distance total: every drive step adds
 `abs(speed) × elapsed time`, independent of the street scene's theatrical travel scale. Engine lifecycle
 does not reset it; full game reset does, and Entrance checkpoint capture/restore preserves it.
 Run `tests/entrance-police.js` for the enforcement state machine.
+RPM and engine temperature remain runtime-only: restore accepts them from older rows, but new
+checkpoint captures omit them so idle ticks cannot churn an otherwise settled recovery snapshot.
 Checkpoint restore marks the first-drive coach complete before the Entrance reopens; a fresh reset
 still owns the four-step lesson, and the dashboard help control remains its explicit replay path.
 

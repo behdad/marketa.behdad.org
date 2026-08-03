@@ -897,9 +897,10 @@ footer{margin-top:2.6rem}
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;
   letter-spacing:.8px;
 }
-#entrance-roadtrip-score{font-size:17px}
+#entrance-roadtrip-score{font-size:10.5px;letter-spacing:.25px}
 #entrance-roadtrip-best{font-size:10px}
 #entrance-roadtrip-multiplier{font-size:13px;fill:#f2cf73}
+#entrance-roadtrip-grade{font-size:9px;letter-spacing:.25px;fill:#f0d8b8}
 #entrance-roadtrip-mirror{opacity:.96}
 .entrance-roadtrip-mirror-sky{fill:#9db7c2}
 .entrance-roadtrip-mirror-verge{fill:#7b7659}
@@ -32157,10 +32158,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <circle cx="342" cy="-3" r="3.2" fill="#eef7f6" fill-opacity=".35"/>
             </g>
             <g aria-hidden="true">
-              <rect x="18" y="-111" width="151" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
-              <text id="entrance-roadtrip-score" class="entrance-roadtrip-hud-text" x="31" y="-87">000000</text>
-              <rect x="511" y="-111" width="151" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
-              <text id="entrance-roadtrip-best" class="entrance-roadtrip-hud-text" x="646" y="-96" text-anchor="end">★ 000000</text>
+              <rect x="18" y="-111" width="250" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
+              <text id="entrance-roadtrip-score" class="entrance-roadtrip-hud-text" x="31" y="-87">0:00 · 0.0 km · 0 pts</text>
+              <rect x="412" y="-111" width="250" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
+              <text id="entrance-roadtrip-grade" class="entrance-roadtrip-hud-text" x="425" y="-83">Sunday drive</text>
+              <text id="entrance-roadtrip-best" class="entrance-roadtrip-hud-text" x="646" y="-96" text-anchor="end">★ 0</text>
               <text id="entrance-roadtrip-multiplier" class="entrance-roadtrip-hud-text" x="646" y="-81" text-anchor="end">×1</text>
               <g id="entrance-roadtrip-mirror" aria-hidden="true">
                 <path id="entrance-roadtrip-mirror-housing" d="M282-115H398Q407-115 408-105L411-87Q412-75 400-74H280Q268-75 269-87L272-105Q273-115 282-115Z" fill="#2d3438" stroke="#171c20" stroke-width="1.6"/>
@@ -34574,7 +34576,9 @@ window.__entranceRoomOpen = false;
   var driveShiftKeyHeld = false;
   var lastDriveInstruction = "";
   var driveBatteryLevel = .75;
-  var ROADTRIP_BEST_KEY = "entranceRoadtripBest:v1";
+  var ROADTRIP_BEST_KEY = "entranceRoadtripBest:v2";
+  var ROADTRIP_LEGACY_BEST_KEY = "entranceRoadtripBest:v1";
+  var ROADTRIP_SCORING_VERSION = 2;
   var ROADTRIP_POOL_SIZE = 16;
   var ROADTRIP_FURNITURE_SIZE = 14;
   var ROADTRIP_DRAW_DISTANCE = 112;
@@ -34630,6 +34634,8 @@ window.__entranceRoomOpen = false;
     invitationDismissed: false,
     practiceLaps: 0,
     distance: 0,
+    distancePoints: 0,
+    elapsedSeconds: 0,
     score: 0,
     best: 0,
     multiplier: 1,
@@ -34698,7 +34704,16 @@ window.__entranceRoomOpen = false;
   };
   if (!room || !viewport || !closeButton || !balconyStage) return;
   try {
-    var storedRoadtripBest = Number(localStorage.getItem(ROADTRIP_BEST_KEY));
+    var storedRoadtripBestRaw = localStorage.getItem(ROADTRIP_BEST_KEY);
+    var storedRoadtripBest = storedRoadtripBestRaw === null ? NaN : Number(storedRoadtripBestRaw);
+    if (!Number.isFinite(storedRoadtripBest)) {
+      var legacyRoadtripBestRaw = localStorage.getItem(ROADTRIP_LEGACY_BEST_KEY);
+      var legacyRoadtripBest = legacyRoadtripBestRaw === null ? NaN : Number(legacyRoadtripBestRaw);
+      if (Number.isFinite(legacyRoadtripBest) && legacyRoadtripBest >= 0) {
+        storedRoadtripBest = roadtripLegacyScore(legacyRoadtripBest);
+        localStorage.setItem(ROADTRIP_BEST_KEY, String(storedRoadtripBest));
+      }
+    }
     if (Number.isFinite(storedRoadtripBest) && storedRoadtripBest >= 0) {
       roadtripState.best = Math.floor(storedRoadtripBest);
     }
@@ -34865,6 +34880,37 @@ window.__entranceRoomOpen = false;
   }
   function roadtripElement(id) {
     return document.getElementById(id);
+  }
+  function roadtripLegacyScore(score) {
+    return Math.max(0, Math.round((Number(score) || 0) / 20));
+  }
+  function roadtripDistancePoints(distance) {
+    return Math.max(0, Math.floor((Number(distance) || 0) / 100));
+  }
+  function roadtripElapsedLabel(seconds) {
+    var total = Math.max(0, Math.floor(Number(seconds) || 0));
+    var hours = Math.floor(total / 3600);
+    var minutes = Math.floor(total % 3600 / 60);
+    var secs = total % 60;
+    if (hours) return hours + ":" + String(minutes).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+    return minutes + ":" + String(secs).padStart(2, "0");
+  }
+  function roadtripDistanceLabel(distance, lang) {
+    var label = (Math.max(0, Number(distance) || 0) / 1000).toFixed(1);
+    return lang === "cs" ? label.replace(".", ",") : label;
+  }
+  function roadtripGradeKey(score) {
+    score = Math.floor(Number(score) || 0);
+    if (score < 100) return "entrance_roadtrip_grade_sunday";
+    if (score < 250) return "entrance_roadtrip_grade_scenic";
+    if (score < 500) return "entrance_roadtrip_grade_regular";
+    return "entrance_roadtrip_grade_legend";
+  }
+  function roadtripCollisionPenalty(kind, severity) {
+    severity = Math.max(0, Math.min(1, Number(severity) || 0));
+    if (kind === "head-on") return 100;
+    if (kind === "wildlife") return Math.round(20 + severity * 40);
+    return Math.round(10 + severity * 30);
   }
   function roadtripSvgUse(parent, className) {
     var use = document.createElementNS("http://www.w3.org/2000/svg", "use");
@@ -35198,16 +35244,50 @@ window.__entranceRoomOpen = false;
     var score = roadtripElement("entrance-roadtrip-score");
     var best = roadtripElement("entrance-roadtrip-best");
     var multiplier = roadtripElement("entrance-roadtrip-multiplier");
-    if (score) score.textContent = String(Math.max(0, Math.floor(roadtripState.score))).padStart(6, "0");
-    if (best) best.textContent = "★ " + String(Math.max(0, Math.floor(roadtripState.best))).padStart(6, "0");
+    var grade = roadtripElement("entrance-roadtrip-grade");
+    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
+    var dict = typeof T === "object" && T[lang] ? T[lang] : null;
+    var pointsUnit = dict && dict.entrance_roadtrip_points_short ? dict.entrance_roadtrip_points_short : "pts";
+    var scoreValue = Math.floor(Number(roadtripState.score) || 0);
+    if (score) score.textContent = roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
+      roadtripDistanceLabel(roadtripState.distance, lang) + " km · " + scoreValue + " " + pointsUnit;
+    if (best) best.textContent = "★ " + Math.max(0, Math.floor(roadtripState.best));
     if (multiplier) multiplier.textContent = "×" + roadtripState.multiplier;
+    if (grade) {
+      var gradeKey = roadtripGradeKey(scoreValue);
+      grade.textContent = dict && dict[gradeKey] ? dict[gradeKey] : gradeKey;
+    }
   }
+  window.__refreshEntranceRoadtripHud = paintRoadtripScore;
   function persistRoadtripBest() {
     if (roadtripState.score <= roadtripState.best) return false;
     roadtripState.best = Math.floor(roadtripState.score);
     try { localStorage.setItem(ROADTRIP_BEST_KEY, String(roadtripState.best)); }
     catch (_error) {}
     return true;
+  }
+  function awardRoadtripBonus(points) {
+    points = Math.max(0, Math.floor(Number(points) || 0));
+    var awarded = points * roadtripState.multiplier;
+    roadtripState.score += awarded;
+    roadtripState.multiplier = Math.min(3, roadtripState.multiplier + 1);
+    persistRoadtripBest();
+    return awarded;
+  }
+  function applyRoadtripPenalty(points) {
+    points = Math.max(0, Math.floor(Number(points) || 0));
+    roadtripState.score -= points;
+    roadtripState.multiplier = 1;
+    return points;
+  }
+  function awardRoadtripDistance() {
+    var earned = roadtripDistancePoints(roadtripState.distance);
+    if (earned <= roadtripState.distancePoints) return 0;
+    var added = earned - roadtripState.distancePoints;
+    roadtripState.distancePoints = earned;
+    roadtripState.score += added;
+    persistRoadtripBest();
+    return added;
   }
   function roadtripProject(remaining) {
     var progress = Math.max(0, Math.min(1, 1 - remaining / ROADTRIP_DRAW_DISTANCE));
@@ -35727,7 +35807,7 @@ window.__entranceRoomOpen = false;
     entity.node.setAttribute("data-roadtrip-kind",
       traffic ? "traffic" :
       type === "deer" || type === "rabbit" ? "animal" : "collectible");
-    var collectibleValue = type === "heart" ? 100 : type === "kiss" ? 250 : type === "inf" ? 500 : 0;
+    var collectibleValue = type === "heart" ? 5 : type === "kiss" ? 10 : type === "inf" ? 25 : 0;
     entity.node.setAttribute("data-roadtrip-value", String(collectibleValue));
     entity.node.setAttribute("data-roadtrip-lane", String(entity.lane));
     entity.node.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
@@ -35771,7 +35851,7 @@ window.__entranceRoomOpen = false;
         var wildlifeSeverity = roadtripCollisionSeverity(entity);
         roadtripState.collisions++;
         roadtripState.wildlifeHits++;
-        roadtripState.multiplier = 1;
+        applyRoadtripPenalty(roadtripCollisionPenalty("wildlife", wildlifeSeverity));
         driveState.speed *= Math.max(.22, 1 - wildlifeSeverity * .92);
         driveState.throttleHeldMs = 0;
         roadtripImpact("bump", wildlifeSeverity >= .18 ? "crack" : "", wildlifeSeverity);
@@ -35783,18 +35863,18 @@ window.__entranceRoomOpen = false;
       if (entity.escaping && entity.escapeElapsed >= .48 && !entity.escapeCounted) {
         entity.escapeCounted = true;
         roadtripState.escapes++;
+        awardRoadtripBonus(3);
         roadtripFeedback("entrance_roadtrip_escape");
+        if (window.__checkpointChanged) window.__checkpointChanged();
       }
       if (remaining <= -6) releaseRoadtripEntity(entity);
       return;
     }
     if (entity.type === "heart" || entity.type === "kiss" || entity.type === "inf") {
       if (remaining <= 8 && laneGap <= .48) {
-        var value = entity.type === "heart" ? 100 : entity.type === "kiss" ? 250 : 500;
-        roadtripState.score += value * roadtripState.multiplier;
+        var value = entity.type === "heart" ? 5 : entity.type === "kiss" ? 10 : 25;
+        awardRoadtripBonus(value);
         roadtripState.tokens++;
-        roadtripState.multiplier = Math.min(8, roadtripState.multiplier + 1);
-        persistRoadtripBest();
         roadtripFeedback(entity.type === "heart" ? "entrance_roadtrip_heart" :
           entity.type === "kiss" ? "entrance_roadtrip_kiss" : "entrance_roadtrip_inf");
         releaseRoadtripEntity(entity);
@@ -35810,14 +35890,15 @@ window.__entranceRoomOpen = false;
     if (laneGap <= .48) {
       var trafficSeverity = roadtripCollisionSeverity(entity);
       roadtripState.collisions++;
-      roadtripState.multiplier = 1;
       if (entity.direction === "oncoming") {
+        applyRoadtripPenalty(roadtripCollisionPenalty("head-on", trafficSeverity));
         driveState.speed = 0;
         driveState.gear = 0;
         roadtripImpact("heavy", "shatter", trafficSeverity);
         stallPorsche();
         roadtripFeedback("entrance_roadtrip_crash");
       } else {
+        applyRoadtripPenalty(roadtripCollisionPenalty("rear-end", trafficSeverity));
         var trafficSpeed = Math.max(0, entity.velocity * 3.6);
         driveState.speed = Math.min(driveState.speed * .18, trafficSpeed * .42);
         driveState.throttleHeldMs = 0;
@@ -35825,11 +35906,11 @@ window.__entranceRoomOpen = false;
         roadtripFeedback("entrance_roadtrip_collision");
       }
     } else {
-      roadtripState.score += 100 * roadtripState.multiplier;
-      roadtripState.passes++;
-      roadtripState.multiplier = Math.min(8, roadtripState.multiplier + 1);
-      persistRoadtripBest();
-      roadtripFeedback("entrance_roadtrip_pass");
+      if (laneGap <= 1.05) {
+        awardRoadtripBonus(2);
+        roadtripState.passes++;
+        roadtripFeedback("entrance_roadtrip_pass");
+      }
       entity.passed = true;
     }
     if (!entity.passed) releaseRoadtripEntity(entity);
@@ -35907,6 +35988,8 @@ window.__entranceRoomOpen = false;
     clearRoadtripEntities();
     roadtripState.playerLane = .5;
     roadtripState.distance = 0;
+    roadtripState.distancePoints = 0;
+    roadtripState.elapsedSeconds = 0;
     roadtripState.score = 0;
     roadtripState.multiplier = 1;
     roadtripState.collisions = 0;
@@ -36010,7 +36093,9 @@ window.__entranceRoomOpen = false;
   }
   function stepRoadtrip(distance, seconds) {
     if (!roadtripState.active || distance <= 0 && seconds <= 0) return;
+    roadtripState.elapsedSeconds += Math.max(0, Number(seconds) || 0);
     roadtripState.distance += distance;
+    awardRoadtripDistance();
     roadtripState.playerLane = Math.max(-ROADTRIP_MAX_LANE, Math.min(ROADTRIP_MAX_LANE,
       roadtripState.playerLane - roadtripCurvatureAt(roadtripState.distance) * distance * .42));
     syncRoadtripShoulder(distance, seconds);
@@ -38379,9 +38464,12 @@ window.__entranceRoomOpen = false;
           invitationVisible: !!(roadtripInvite && roadtripInvite.classList.contains("show")),
           practiceLaps: roadtripState.practiceLaps,
           distance: roadtripState.distance,
+          distancePoints: roadtripState.distancePoints,
+          elapsedSeconds: roadtripState.elapsedSeconds,
           score: roadtripState.score,
           best: roadtripState.best,
           multiplier: roadtripState.multiplier,
+          grade: roadtripGradeKey(roadtripState.score),
           collisions: roadtripState.collisions,
           passes: roadtripState.passes,
           tokens: roadtripState.tokens,
@@ -38481,8 +38569,10 @@ window.__entranceRoomOpen = false;
   window.__entranceRoadtripSetDistance = function (distance) {
     if (!roadtripState.active && !startRoadtrip(true)) return false;
     roadtripState.distance = Math.max(0, Number(distance) || 0);
+    roadtripState.distancePoints = roadtripDistancePoints(roadtripState.distance);
     paintRoadtripRoad();
     paintRoadtripEntities();
+    paintRoadtripScore();
     return roadtripState.distance;
   };
   window.__entranceRoadtripSetLane = function (lane) {
@@ -38533,8 +38623,6 @@ window.__entranceRoomOpen = false;
           stalled: driveState.stalled,
           gear: driveState.gear,
           speed: driveState.speed,
-          rpm: driveState.rpm,
-          temperature: driveState.temperature,
           position: driveState.position,
           laneOffset: driveState.laneOffset,
           steeringAngle: driveState.steeringAngle,
@@ -38546,16 +38634,20 @@ window.__entranceRoomOpen = false;
           spinDirection: driveState.spinDirection,
           spins: driveState.spins,
           roadtrip: {
+            scoringVersion: ROADTRIP_SCORING_VERSION,
             unlocked: roadtripState.unlocked,
             accepted: roadtripState.accepted,
             practiceLaps: roadtripState.practiceLaps,
             distance: Math.round(roadtripState.distance * 100) / 100,
+            distancePoints: roadtripState.distancePoints,
+            elapsedSeconds: Math.round(roadtripState.elapsedSeconds * 100) / 100,
             score: roadtripState.score,
             multiplier: roadtripState.multiplier,
             collisions: roadtripState.collisions,
             passes: roadtripState.passes,
             tokens: roadtripState.tokens,
-            escapes: roadtripState.escapes
+            escapes: roadtripState.escapes,
+            wildlifeHits: roadtripState.wildlifeHits
           }
         }
       };
@@ -38609,13 +38701,23 @@ window.__entranceRoomOpen = false;
           }
           if (roadtripState.unlocked) roadtripState.practiceLaps = 3;
           roadtripState.accepted = roadtripState.unlocked && (roadtrip.accepted === true ||
-            Number(roadtrip.distance) > 0 || Number(roadtrip.score) > 0 || Number(roadtrip.collisions) > 0 ||
+            Number(roadtrip.distance) > 0 || Number.isFinite(Number(roadtrip.score)) && Number(roadtrip.score) !== 0 || Number(roadtrip.collisions) > 0 ||
             Number(roadtrip.passes) > 0 || Number(roadtrip.tokens) > 0 || Number(roadtrip.escapes) > 0);
           roadtripState.invitationDismissed = false;
           if (Number.isFinite(Number(roadtrip.distance))) roadtripState.distance = Math.max(0, Math.min(1000000000, Number(roadtrip.distance)));
-          if (Number.isFinite(Number(roadtrip.score))) roadtripState.score = Math.max(0, Math.min(1000000000, Math.floor(Number(roadtrip.score))));
-          if (Number.isFinite(Number(roadtrip.multiplier))) roadtripState.multiplier = Math.max(1, Math.min(8, Math.floor(Number(roadtrip.multiplier))));
-          ["collisions", "passes", "tokens", "escapes"].forEach(function (key) {
+          var restoredDistancePoints = roadtripDistancePoints(roadtripState.distance);
+          if (Number(roadtrip.scoringVersion) === ROADTRIP_SCORING_VERSION) {
+            if (Number.isFinite(Number(roadtrip.score))) roadtripState.score = Math.max(-1000000000, Math.min(1000000000, Math.floor(Number(roadtrip.score))));
+            if (Number.isFinite(Number(roadtrip.distancePoints))) {
+              restoredDistancePoints = Math.max(0, Math.min(roadtripDistancePoints(roadtripState.distance), Math.floor(Number(roadtrip.distancePoints))));
+            }
+          } else if (Number.isFinite(Number(roadtrip.score))) {
+            roadtripState.score = roadtripLegacyScore(roadtrip.score) + restoredDistancePoints;
+          }
+          roadtripState.distancePoints = restoredDistancePoints;
+          if (Number.isFinite(Number(roadtrip.elapsedSeconds))) roadtripState.elapsedSeconds = Math.max(0, Math.min(1000000000, Number(roadtrip.elapsedSeconds)));
+          if (Number.isFinite(Number(roadtrip.multiplier))) roadtripState.multiplier = Math.max(1, Math.min(3, Math.floor(Number(roadtrip.multiplier))));
+          ["collisions", "passes", "tokens", "escapes", "wildlifeHits"].forEach(function (key) {
             if (Number.isFinite(Number(roadtrip[key]))) roadtripState[key] = Math.max(0, Math.min(1000000000, Math.floor(Number(roadtrip[key]))));
           });
           roadtripState.nextSpawnDistance = roadtripState.distance + 34;
@@ -40077,14 +40179,19 @@ var T = {
       entrance_roadtrip_invite_title: "Fancy a roadtrip?",
       entrance_roadtrip_invite_accept: "Take the highway",
       entrance_roadtrip_invite_later: "Later",
-      entrance_roadtrip_collision: "Rear-end impact · speed lost, windshield cracked.",
-      entrance_roadtrip_crash: "Head-on crash · windshield shattered, engine stalled.",
-      entrance_roadtrip_wildlife_collision: "Wildlife strike · slow down, windshield cracked.",
-      entrance_roadtrip_pass: "Clean pass · multiplier up.",
-      entrance_roadtrip_heart: "♥️ collected · 100 × multiplier.",
-      entrance_roadtrip_kiss: "💋 collected · 250 × multiplier.",
-      entrance_roadtrip_inf: "Rare ∞ collected · 500 × multiplier.",
-      entrance_roadtrip_escape: "Wildlife clear · easy does it.",
+      entrance_roadtrip_collision: "Rear-end impact · 10–40 point penalty, combo reset.",
+      entrance_roadtrip_crash: "Head-on crash · −100 points, windshield shattered, engine stalled.",
+      entrance_roadtrip_wildlife_collision: "Wildlife strike · 20–60 point penalty, combo reset.",
+      entrance_roadtrip_pass: "Clean close pass · +2 × combo.",
+      entrance_roadtrip_heart: "♥️ collected · +5 × combo.",
+      entrance_roadtrip_kiss: "💋 collected · +10 × combo.",
+      entrance_roadtrip_inf: "Rare ∞ collected · +25 × combo.",
+      entrance_roadtrip_escape: "Wildlife clear · +3 × combo.",
+      entrance_roadtrip_points_short: "pts",
+      entrance_roadtrip_grade_sunday: "Sunday drive",
+      entrance_roadtrip_grade_scenic: "Scenic run",
+      entrance_roadtrip_grade_regular: "Roadtrip regular",
+      entrance_roadtrip_grade_legend: "Highway legend",
       entrance_roadtrip_police_warning: "Headlights ×3 · police ahead. Limit 90.",
       entrance_roadtrip_police_clear: "Police passed · within the 110 km/h tolerance.",
       entrance_roadtrip_police_pursuit: "Clocked at {speed} km/h · pull onto the right shoulder and stop.",
@@ -41251,14 +41358,19 @@ var T = {
       entrance_roadtrip_invite_title: "Dáme si výlet?",
       entrance_roadtrip_invite_accept: "Vyjet na dálnici",
       entrance_roadtrip_invite_later: "Později",
-      entrance_roadtrip_collision: "Náraz zezadu · zpomalení a prasklé čelní sklo.",
-      entrance_roadtrip_crash: "Čelní srážka · roztříštěné sklo a zhaslý motor.",
-      entrance_roadtrip_wildlife_collision: "Střet se zvěří · zpomal, čelní sklo prasklo.",
-      entrance_roadtrip_pass: "Čisté předjetí · násobitel roste.",
-      entrance_roadtrip_heart: "♥️ sebráno · 100 × násobitel.",
-      entrance_roadtrip_kiss: "💋 sebráno · 250 × násobitel.",
-      entrance_roadtrip_inf: "Vzácné ∞ sebráno · 500 × násobitel.",
-      entrance_roadtrip_escape: "Zvěř unikla · v klidu dál.",
+      entrance_roadtrip_collision: "Náraz zezadu · ztráta 10–40 bodů, kombo od začátku.",
+      entrance_roadtrip_crash: "Čelní srážka · −100 bodů, roztříštěné sklo a zhaslý motor.",
+      entrance_roadtrip_wildlife_collision: "Střet se zvěří · ztráta 20–60 bodů, kombo od začátku.",
+      entrance_roadtrip_pass: "Čisté těsné předjetí · +2 × kombo.",
+      entrance_roadtrip_heart: "♥️ sebráno · +5 × kombo.",
+      entrance_roadtrip_kiss: "💋 sebráno · +10 × kombo.",
+      entrance_roadtrip_inf: "Vzácné ∞ sebráno · +25 × kombo.",
+      entrance_roadtrip_escape: "Zvěř unikla · +3 × kombo.",
+      entrance_roadtrip_points_short: "b",
+      entrance_roadtrip_grade_sunday: "Nedělní projížďka",
+      entrance_roadtrip_grade_scenic: "Vyhlídková jízda",
+      entrance_roadtrip_grade_regular: "Výletový mazák",
+      entrance_roadtrip_grade_legend: "Legenda dálnice",
       entrance_roadtrip_police_warning: "Troje probliknutí · vpředu policie. Limit 90.",
       entrance_roadtrip_police_clear: "Policie za tebou · do 110 km/h bez postihu.",
       entrance_roadtrip_police_pursuit: "Naměřeno {speed} km/h · zajeď na pravou krajnici a zastav.",
@@ -42211,6 +42323,7 @@ function setLang(l) {
   if (window.refreshLifeText) window.refreshLifeText();
   if (window.refreshBalconyTetrisText) window.refreshBalconyTetrisText();
   if (window.refreshSceneMinigameText) window.refreshSceneMinigameText();
+  if (window.__refreshEntranceRoadtripHud) window.__refreshEntranceRoadtripHud();
   if (window.refreshRoster) window.refreshRoster();
   if (window.__refreshOccasionBanner) window.__refreshOccasionBanner();
   if (window.refreshRoomDots) window.refreshRoomDots();

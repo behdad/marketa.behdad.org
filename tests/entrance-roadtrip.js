@@ -17,6 +17,7 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-score",
   "entrance-roadtrip-best",
   "entrance-roadtrip-multiplier",
+  "entrance-roadtrip-grade",
   "entrance-roadtrip-invite",
   "entrance-roadtrip-invite-accept",
   "entrance-roadtrip-invite-later",
@@ -48,7 +49,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-drive-hud-svg", "entrance-roadtrip-world", "entrance-roadtrip-road",
     "entrance-roadtrip-lane-marks", "entrance-roadtrip-furniture", "entrance-roadtrip-entities",
     "entrance-roadtrip-curve-signs",
-    "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier",
+    "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier", "entrance-roadtrip-grade",
     "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later",
     "entrance-roadtrip-crack", "entrance-roadtrip-shatter", "entrance-roadtrip-mirror",
     "entrance-roadtrip-mirror-housing", "entrance-roadtrip-mirror-gasket",
@@ -706,7 +707,9 @@ function mirrorBendReturnsToBase(mirror, direction) {
   });
 }
 check(curves && curves.rightWarning && curves.rightWarning.direction === "right" &&
-  curves.roadLineFills.length === 3 && curves.roadLineFills.every(function (value) { return value === "none"; }) &&
+  curves.roadLineFills.length === 3 &&
+  curves.roadLineFills.slice(0, 2).every(function (value) { return value === "rgb(233, 229, 215)"; }) &&
+  curves.roadLineFills[2] === "rgb(216, 167, 45)" &&
   /curve-sign-right/.test(curves.rightWarning.href || "") && curves.rightWarning.ahead > 0 &&
   curves.right.state.curve > 0 && curves.right.road !== curves.straight &&
   curves.right.mirror.road.d !== curves.straightMirror.road.d &&
@@ -750,8 +753,10 @@ check(pool && pool.started && pool.first.state.poolSize > 0 &&
   pool.first.state.entityCount < 240 && pool.second.state.entityCount <= pool.first.state.poolSize,
   "spawn storms stabilize at the engine-exposed pool bound without leaking DOM entities", pool);
 check(s.progress && s.progress.started && s.progress.after.distance > s.progress.before.distance &&
-  s.progress.after.score === s.progress.before.score && s.progress.after.best >= s.progress.after.score,
-  "positive driving advances road distance without inventing passive score", s.progress);
+  s.progress.after.elapsedSeconds > s.progress.before.elapsedSeconds &&
+  s.progress.after.score - s.progress.before.score === s.progress.after.distancePoints - s.progress.before.distancePoints &&
+  s.progress.after.best >= s.progress.after.score,
+  "positive driving advances elapsed time and awards only crossed 100-metre distance points", s.progress);
 var trafficMotion = s.trafficMotion;
 check(trafficMotion && trafficMotion.before.forward.direction === "forward" &&
   trafficMotion.before.oncoming.direction === "oncoming" &&
@@ -775,6 +780,7 @@ check(oncomingCrash && oncomingCrash.before.visual.direction === "oncoming" &&
   !oncomingCrash.after.state.car.engineOn && oncomingCrash.after.state.drive.stalled &&
   oncomingCrash.after.state.drive.speed === 0 && oncomingCrash.after.state.drive.gear === 0 &&
   oncomingCrash.after.state.drive.roadtrip.collisions > oncomingCrash.before.state.drive.roadtrip.collisions &&
+  oncomingCrash.after.state.drive.roadtrip.score - oncomingCrash.before.state.drive.roadtrip.score === -100 &&
   oncomingCrash.after.state.drive.roadtrip.multiplier === 1 &&
   oncomingCrash.after.state.drive.roadtrip.impactSounds > oncomingCrash.before.state.drive.roadtrip.impactSounds &&
   oncomingCrash.after.state.drive.roadtrip.lastImpactSeverity >= .82 &&
@@ -786,7 +792,7 @@ check(oncomingCrash && oncomingCrash.before.visual.direction === "oncoming" &&
   oncomingCrash);
 
 var collectibles = [s.heart, s.kiss, s.infinity];
-var collectibleValues = [100, 250, 500];
+var collectibleValues = [5, 10, 25];
 var collectibleNames = ["heart", "kiss", "inf"];
 check(collectibles.every(function (item, index) {
   return item && item.visual.kind === "collectible" && item.visual.lane === "0.5" &&
@@ -796,38 +802,45 @@ check(collectibles.every(function (item, index) {
     item.after.tokens > item.before.tokens &&
     item.after.score - item.before.score === collectibleValues[index] * item.before.multiplier &&
     item.after.multiplier > item.before.multiplier;
-}), "heart, kiss, and rare infinity pickups visibly collect for 100, 250, and 500 times the multiplier",
+}), "heart, kiss, and rare infinity pickups visibly collect for 5, 10, and 25 times the combo",
   collectibles);
 var collision = s.collision;
 check(collision && collision.visual.kind === "traffic" && collision.visual.lane === "0.5" && collision.visual.direction === "forward" && collision.released &&
   collision.after.collisions > collision.before.collisions &&
+  collision.after.score < collision.before.score && collision.before.score - collision.after.score >= 10 &&
+  collision.before.score - collision.after.score <= 40 &&
   collision.after.impactSounds > collision.before.impactSounds && collision.after.lastImpactSeverity > 0 &&
   collision.afterDriveSpeed < collision.visual.speed && collision.minSpeed < collision.beforeSpeed * .45 &&
   collision.after.multiplier === 1 && collision.classes.indexOf("roadtrip-cracked") >= 0 &&
   collision.crackOpacity > .25 && collision.shatterOpacity < .1,
-  "rear-ending traffic kicks the Porsche below that vehicle's speed, sounds the hit, cracks the glass, and resets the multiplier", collision);
+  "rear-ending traffic deducts a severity-scaled 10–40 points, kicks the Porsche below traffic speed, cracks the glass, and resets the combo", collision);
 var animal = s.animal;
 check(animal && animal.visual.kind === "animal" && animal.visual.lane === "0.5" && animal.visual.display !== "none" &&
   animal.visual.visibility !== "hidden" && /entrance-roadtrip-deer/.test(animal.visual.href || "") && animal.released &&
   animal.after.escapes > animal.before.escapes && animal.after.collisions === animal.before.collisions &&
-  animal.after.multiplier === animal.before.multiplier,
-  "wildlife visibly escapes and leaves the pool without collision damage or score-chain loss", animal);
+  animal.after.score - animal.before.score === 3 * animal.before.multiplier &&
+  animal.after.multiplier === Math.min(3, animal.before.multiplier + 1),
+  "wildlife visibly escapes, awards its safe-clear bonus, and leaves the pool without collision damage", animal);
 var wildlifeImpact = s.wildlifeImpact;
 check(wildlifeImpact && wildlifeImpact.visual.kind === "animal" &&
   wildlifeImpact.after.drive.roadtrip.wildlifeHits > wildlifeImpact.before.drive.roadtrip.wildlifeHits &&
   wildlifeImpact.after.drive.roadtrip.collisions > wildlifeImpact.before.drive.roadtrip.collisions &&
+  wildlifeImpact.after.drive.roadtrip.score < wildlifeImpact.before.drive.roadtrip.score &&
+  wildlifeImpact.before.drive.roadtrip.score - wildlifeImpact.after.drive.roadtrip.score >= 20 &&
+  wildlifeImpact.before.drive.roadtrip.score - wildlifeImpact.after.drive.roadtrip.score <= 60 &&
+  wildlifeImpact.after.drive.roadtrip.multiplier === 1 &&
   wildlifeImpact.after.drive.roadtrip.impactSounds > wildlifeImpact.before.drive.roadtrip.impactSounds &&
   wildlifeImpact.after.drive.speed < wildlifeImpact.before.drive.speed &&
   wildlifeImpact.after.drive.roadtrip.lastImpactSeverity > 0 && wildlifeImpact.after.drive.roadtrip.lastImpactSeverity < .82 &&
   wildlifeImpact.classes.indexOf("roadtrip-cracked") >= 0 && wildlifeImpact.classes.indexOf("roadtrip-shattered") < 0 &&
   wildlifeImpact.crackOpacity > .25 && wildlifeImpact.shatterOpacity < .1,
-  "a too-fast deer strike produces proportional slowdown, sound, shake, and a localized crack rather than a shatter",
+  "a too-fast deer strike deducts a severity-scaled 20–60 points and produces slowdown, sound, shake, and a localized crack",
   wildlifeImpact);
 var pass = s.pass;
 check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pass.visual.direction === "forward" && pass.released &&
   pass.after.passes > pass.before.passes && pass.after.collisions === pass.before.collisions &&
-  pass.after.score > pass.before.score,
-  "other-lane traffic becomes a clean scored pass", pass);
+  pass.after.score - pass.before.score === 2 * pass.before.multiplier,
+  "adjacent-lane traffic becomes a clean close pass worth two points before the combo", pass);
 
 var close = s.close;
 check(close && close.before.roadtrip.active && close.before.roadtrip.entityCount > 0 &&
@@ -839,7 +852,8 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.entityCount
 var dismiss = s.dismiss && s.dismiss.roadtrip;
 check(dismiss && !dismiss.active && dismiss.unlocked && dismiss.entityCount === 0 &&
   s.dismiss.dom === dismiss.poolSize && s.dismiss.visible === 0 &&
-  dismiss.distance === 0 && dismiss.score === 0 && dismiss.multiplier === 1 &&
+  dismiss.distance === 0 && dismiss.distancePoints === 0 && dismiss.elapsedSeconds === 0 &&
+  dismiss.score === 0 && dismiss.multiplier === 1 &&
   dismiss.collisions === 0 && dismiss.passes === 0 && dismiss.tokens === 0 && dismiss.escapes === 0 &&
   dismiss.best >= s.dismiss.bestBefore && s.dismiss.classes.indexOf("roadtrip-active") < 0 &&
   s.dismiss.viewBox === "0 -31 680 207",
@@ -866,7 +880,8 @@ var reset = s.reset && s.reset.roadtrip;
 check(reset && !reset.active && !reset.unlocked && !reset.accepted && !reset.invitationVisible &&
   reset.practiceLaps === 0 && reset.entityCount === 0 &&
   s.reset.dom === reset.poolSize && s.reset.visible === 0 &&
-  reset.distance === 0 && reset.score === 0 && reset.multiplier === 1 && reset.best === s.reset.bestBefore &&
+  reset.distance === 0 && reset.distancePoints === 0 && reset.elapsedSeconds === 0 &&
+  reset.score === 0 && reset.multiplier === 1 && reset.best === s.reset.bestBefore &&
   s.reset.classes.indexOf("roadtrip-active") < 0 && s.reset.viewBox === "0 -31 680 207",
   "full reset tears down roadtrip progress while preserving the local best score", s.reset);
 

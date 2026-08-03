@@ -235,20 +235,29 @@ instead open a gap: keep that speed until the patrol car recedes from the mirror
 and its siren fades away. A brief touch of 200 is not enough, and slowing below it
 before the gap is complete lets the pursuit recover.
 
-Cleanly passing a car or truck scores `100 ×` the current multiplier. Collecting
-a ♥️ scores `100 ×`, a 💋 scores `250 ×`, and the rarer ∞ scores `500 ×` the
-multiplier. Any clean pass or pickup raises the multiplier by one, up to `8×`;
-rear-ending forward traffic cuts the car's speed and resets
-it below the struck vehicle's speed, kicks the view, cracks the windshield, and
-resets it to `1×`. Each localized crack varies its impact point, angle, branch lengths,
-and smaller fractures while remaining proportional to the strike. Meeting oncoming traffic in its lane produces a longer, louder
-impact, stops and stalls the Porsche, and shatters the windshield until the
-ignition is restarted. Shake, sound, slowdown, and glass damage scale with the
-other object's type and relative speed.
-Mule deer and snowshoe hares visibly leap and zig-zag toward the verge. A measured approach
-gives them time to clear unharmed without changing the score chain; reaching one
-too quickly can cause a proportionally lighter strike and windshield crack.
-Distance, score, best, and multiplier stay visible across the top of the drive.
+The top readout separates elapsed trip time, highway distance, and points: for
+example, `8:16 · 12.4 km · 184 pts`. Time is a measurement, not a speed bonus;
+there is no reward for rushing. Distance adds one unmultiplied point per 100 m
+(`+10` per kilometre). A clean close pass is worth `+2`, wildlife safely clearing
+after a measured approach is `+3`, ♥️ is `+5`, 💋 is `+10`, and the rarer ∞ is
+`+25`. Those bonuses use the current combo and raise it by one, up to `3×`.
+Distance never uses the combo.
+
+Any collision resets the combo to `1×`. A rear-end impact deducts roughly
+`10–40` points and a wildlife strike roughly `20–60`, scaled by severity. Meeting
+oncoming traffic in its lane deducts `100`, produces a longer, louder impact,
+stops and stalls the Porsche, and shatters the windshield until the ignition is
+restarted. Rear-ending forward traffic instead cuts the car's speed below the
+struck vehicle's speed, kicks the view, and cracks the windshield. Each localized
+crack varies its impact point, angle, branch lengths, and smaller fractures while
+remaining proportional to the strike. Shake, sound, slowdown, and glass damage
+also scale with the other object's type and relative speed. Mule deer and snowshoe
+hares visibly leap and zig-zag toward the verge; slowing early gives them the time
+needed to clear safely.
+
+The current grade is **Sunday drive** below 100 points, **Scenic run** from
+100–249, **Roadtrip regular** from 250–499, and **Highway legend** at 500 or more.
+The personal best and combo remain beside the three-part trip readout.
 Pass, pickup, wildlife, and collision results briefly use the room caption line
 instead of covering the windshield.
 

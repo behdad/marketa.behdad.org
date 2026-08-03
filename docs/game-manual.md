@@ -117,7 +117,7 @@ Downstairs adds a different activity to each room:
   leaves the presentation without discarding the run.
 - **Cinema:** wake the projector, choose a film, and use its visible playback
   controls. The × on the projector screen stops playback and returns to the
-  chooser.
+  chooser; finishing a film returns there automatically.
 - **Bedroom:** select any stained-glass pane to start tic-tac-toe. After a win
   or draw, the first click clears the board; the next starts the new game. If
   the window is due to begin, it makes that move as soon as the board clears.

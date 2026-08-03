@@ -33756,10 +33756,12 @@ window.__cinemaVideoLoaded = false;
     if (window.__setPartyDuck) window.__setPartyDuck(undefined, fade);
     if (playPauseButton && window.__cinemaRoomOpen) playPauseButton.classList.toggle("paused", !filmPlaying);
   }
-  function tellVimeo(method) {
+  function tellVimeo(method, value) {
     var frame = document.getElementById("cinema-player");
     if (!frame || !frame.contentWindow) return false;
-    try { frame.contentWindow.postMessage(JSON.stringify({ method: method }), "https://player.vimeo.com"); }
+    var message = { method: method };
+    if (value !== undefined) message.value = value;
+    try { frame.contentWindow.postMessage(JSON.stringify(message), "https://player.vimeo.com"); }
     catch (_error) { return false; }
     return true;
   }
@@ -34174,8 +34176,13 @@ window.__cinemaVideoLoaded = false;
       try { data = JSON.parse(data); } catch (_error) { return; }
     }
     if (!data || !data.event) return;
-    if (data.event === "play") setFilmPlaying(true, .4);
-    else if (data.event === "pause" || data.event === "ended") setFilmPlaying(false, .45);
+    if (data.event === "ready") tellVimeo("addEventListener", "ended");
+    else if (data.event === "play") setFilmPlaying(true, .4);
+    else if (data.event === "pause") setFilmPlaying(false, .45);
+    else if (data.event === "ended") {
+      clearPlayer(true);
+      markChooserFilm(chooserIndex, window.__cinemaRoomOpen);
+    }
   });
   window.__openCinemaRoom = openCinema;
   window.__closeCinemaRoom = closeCinema;

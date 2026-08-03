@@ -732,6 +732,9 @@ check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74
   /id="entrance-roadtrip-mirror-gasket"[^>]+stroke="#13191c"/.test(source) &&
   /clipPath id="entrance-roadtrip-mirror-clip">\s*<path/.test(source),
   "the mirror uses a rounded charcoal trapezoidal housing, dark gasket, and matching reflection clip");
+check(/id="entrance-roadtrip-curve-sign-right"[\s\S]{0,260}M-7-28V-37Q-7-47 3-47H7M3-51L7-47L3-43[^>]+stroke="#17191b"[^>]+stroke-linecap="square"[^>]+stroke-linejoin="miter"/.test(source) &&
+  /id="entrance-roadtrip-curve-sign-left"[\s\S]{0,260}M7-28V-37Q7-47-3-47H-7M-3-51L-7-47L-3-43/.test(source),
+  "curve signs use contained, dark, sharp-cornered single-turn arrows");
 check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&
   /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;\s*if \(roadtripState\.unlocked\) return;\s*roadtripState\.practiceLaps\+\+/.test(source) &&
   /function recordRoadtripInvitationTravel\(distance\)[\s\S]{0,800}roadtripState\.invitationDistance \+= [^;]+;[\s\S]{0,300}roadtripState\.invitationDistance < PORSCHE_WRAP_SPAN[\s\S]{0,300}roadtripState\.invitationReady = true;/.test(source) &&

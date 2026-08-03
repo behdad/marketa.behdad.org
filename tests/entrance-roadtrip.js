@@ -109,10 +109,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       return node.getAttribute("visibility") !== "hidden";
     }) || null;
   }
-  function spawn(type, lane) {
+  function spawn(type, lane, ahead) {
     var host = document.getElementById("entrance-roadtrip-entities");
     var prior = Array.prototype.slice.call(host.children);
-    var value = window.__entranceRoadtripSpawn(type, lane);
+    var value = window.__entranceRoadtripSpawn(type, lane, ahead);
     var node = value && value.nodeType ? value : Array.prototype.slice.call(host.children).filter(function (el) {
       return prior.indexOf(el) < 0;
     }).pop();
@@ -129,6 +129,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       speed: node && Number(node.getAttribute("data-roadtrip-speed")),
       value: node && Number(node.getAttribute("data-roadtrip-value")),
       escaping: node && node.getAttribute("data-roadtrip-escaping"),
+      passing: node && node.getAttribute("data-roadtrip-passing"),
       href: use && (use.getAttribute("href") || use.getAttribute("xlink:href")),
       display: node ? getComputedStyle(node).display : null,
       visibility: node && node.getAttribute("visibility")
@@ -437,6 +438,31 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         forwardScale: transformScale(forwardTraffic.node),
         oncomingScale: transformScale(oncomingTraffic.node)
       }
+    };
+    window.__entranceRoadtripStart();
+    window.__entranceDriveSetMotion(0, 0);
+    window.__entranceDriveControl("throttle", false);
+    var rightLaneRv = spawn("rv", .5, 80);
+    var oppositeRightLaneRv = spawn("rv", -.5, 80);
+    var freeSemi = spawn("truck", .5, 80);
+    var oppositeFreeSemi = spawn("truck", -.5, 80);
+    var heavyHomeLanes = {
+      rv: entityVisual(rightLaneRv.node),
+      oppositeRv: entityVisual(oppositeRightLaneRv.node),
+      freeSemi: entityVisual(freeSemi.node),
+      oppositeFreeSemi: entityVisual(oppositeFreeSemi.node)
+    };
+    var forwardPassTarget = spawn("rv", 1.5, 80);
+    var forwardPassingSemi = spawn("truck", .5, 60);
+    var oncomingPassTarget = spawn("rv", -1.5, 80);
+    var oncomingPassingSemi = spawn("truck", -.5, 110);
+    step(1000, 2);
+    report.steps.heavyLanePolicy = {
+      home: heavyHomeLanes,
+      forwardTarget: entityVisual(forwardPassTarget.node),
+      forwardPassing: entityVisual(forwardPassingSemi.node),
+      oncomingTarget: entityVisual(oncomingPassTarget.node),
+      oncomingPassing: entityVisual(oncomingPassingSemi.node)
     };
     window.__entranceRoadtripStart();
     var hoppingRabbit = spawn("rabbit", .5);
@@ -843,6 +869,17 @@ check(trafficMotion && trafficMotion.before.forward.direction === "forward" &&
   trafficMotion.after.oncomingScale > trafficMotion.after.forwardScale,
   "sedans, pickups, semis, and RVs use distinct art while opposite-lane traffic closes faster",
   trafficMotion);
+var heavyLanePolicy = s.heavyLanePolicy;
+check(heavyLanePolicy && heavyLanePolicy.home.rv.lane === "1.5" && heavyLanePolicy.home.oppositeRv.lane === "-1.5" &&
+  heavyLanePolicy.home.freeSemi.lane === "1.5" && heavyLanePolicy.home.oppositeFreeSemi.lane === "-1.5" &&
+  heavyLanePolicy.home.rv.speed >= 70 && heavyLanePolicy.home.rv.speed <= 82 &&
+  Math.abs(heavyLanePolicy.home.oppositeRv.speed) >= 70 && Math.abs(heavyLanePolicy.home.oppositeRv.speed) <= 82 &&
+  heavyLanePolicy.forwardPassing.passing === "true" && Number(heavyLanePolicy.forwardPassing.lane) < 1.5 &&
+  Math.abs(heavyLanePolicy.forwardPassing.speed) - Math.abs(heavyLanePolicy.forwardTarget.speed) >= 20 &&
+  heavyLanePolicy.oncomingPassing.passing === "true" && Number(heavyLanePolicy.oncomingPassing.lane) > -1.5 &&
+  Math.abs(heavyLanePolicy.oncomingPassing.speed) - Math.abs(heavyLanePolicy.oncomingTarget.speed) >= 20,
+  "RVs and cruising semis stay right in both directions while passing semis move left at a 20–30 km/h advantage",
+  heavyLanePolicy);
 var wildlifeHop = s.wildlifeHop;
 check(wildlifeHop && wildlifeHop.before.visual.kind === "animal" &&
   wildlifeHop.before.visual.escaping === "false" && wildlifeHop.after.visual.escaping === "true" &&

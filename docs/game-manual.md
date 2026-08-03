@@ -214,7 +214,10 @@ street-drive indicator flourish. The Porsche
 begins in the inner right-hand lane: rear-view traffic travels ahead in the two
 right lanes, while headlights approach in the two lanes beyond the double
 yellow. The traffic mix includes sedans, pickups, semis, and the RVs common on
-Alberta highways. Steering can cross the centre line, so watch the direction as well as
+Alberta highways. RVs stay in their direction's right lane, and semis strongly
+prefer it at roughly 70–88 km/h. A semi moves left only to pass slower traffic,
+accelerates to a 20–30 km/h advantage (never above 110), then returns right. The
+same rules are mirrored for oncoming traffic. Steering can cross the centre line, so watch the direction as well as
 the lane while the road and weather continue through the windshield. Yellow
 curve signs announce the next matching bend. The car drifts toward the outside
 of a bend unless you steer with it.

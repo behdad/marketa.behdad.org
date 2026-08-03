@@ -252,6 +252,10 @@ presentation, spawn timing, or live entities. Run
 scale/formatting and randomized glass geometry/crack separation without launching a browser.
 Street `driveState.position` uses twice the roadtrip world-travel scale so the compact block loops
 briskly; speed, RPM, odometer distance, and `roadtripState.distance` remain unscaled physical values.
+Roadtrip spawn normalization puts RVs in the outer/right lane for either travel direction and
+starts semis there as well. `syncRoadtripSemiLane()` detects slower same-direction traffic ahead,
+moves the semi into its direction-relative inner/left lane, raises it to a 26–30 km/h passing
+advantage capped at 110, and returns it to the outer lane and cruise speed after clearance.
 `driveState.odometerKm` is the persistent physical-distance total: every drive step adds
 `abs(speed) × elapsed time`, independent of the street scene's theatrical travel scale. Engine lifecycle
 does not reset it; full game reset does, and Entrance checkpoint capture/restore preserves it.

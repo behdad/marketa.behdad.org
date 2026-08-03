@@ -35887,10 +35887,14 @@ window.__entranceRoomOpen = false;
     entity.type = "";
     entity.direction = "";
     entity.velocity = 0;
+    entity.cruiseVelocity = 0;
     entity.passed = false;
+    entity.passing = false;
+    entity.passTargetSerial = 0;
     entity.escapeElapsed = 0;
     entity.node.setAttribute("visibility", "hidden");
     entity.node.removeAttribute("data-roadtrip-escaping");
+    entity.node.removeAttribute("data-roadtrip-passing");
     entity.node.removeAttribute("transform");
     var index = roadtripState.entities.indexOf(entity);
     if (index >= 0) roadtripState.entities.splice(index, 1);
@@ -35907,24 +35911,30 @@ window.__entranceRoomOpen = false;
     if (!entity) return false;
     entity.active = true;
     entity.type = type;
+    entity.serial = ++roadtripState.spawnSerial;
     entity.lane = roadtripLaneValue(lane);
+    var traffic = type === "car" || type === "pickup" || type === "truck" || type === "rv";
+    entity.direction = traffic ? (entity.lane < 0 ? "oncoming" : "forward") : "";
+    if (type === "rv" || type === "truck") entity.lane = entity.direction === "oncoming" ? -1.5 : 1.5;
     entity.at = roadtripState.distance + Math.max(10, Number(ahead) || ROADTRIP_DRAW_DISTANCE);
     entity.escaping = false;
     entity.escapeElapsed = 0;
     entity.escapeCounted = false;
     entity.passed = false;
+    entity.passing = false;
+    entity.passTargetSerial = 0;
     entity.escapeDirection = entity.lane <= 0 ? -1 : 1;
-    entity.serial = ++roadtripState.spawnSerial;
-    var traffic = type === "car" || type === "pickup" || type === "truck" || type === "rv";
-    entity.direction = traffic ? (entity.lane < 0 ? "oncoming" : "forward") : "";
-    var forwardSpeed = type === "rv" ? 12 : type === "truck" ? 13 : type === "pickup" ? 16 : 17;
-    entity.velocity = entity.direction === "oncoming" ? -21 - entity.serial % 3 * 2 :
-      entity.direction === "forward" ? forwardSpeed + entity.serial % 2 * 2 : 0;
+    var speedKmh = type === "rv" ? 70 + entity.serial % 3 * 6 :
+      type === "truck" ? 76 + entity.serial % 3 * 6 :
+        type === "pickup" ? 84 + entity.serial % 3 * 7 : 88 + entity.serial % 4 * 6;
+    entity.cruiseVelocity = (entity.direction === "oncoming" ? -1 : 1) * speedKmh / 3.6;
+    entity.velocity = traffic ? entity.cruiseVelocity : 0;
     roadtripUseTemplate(entity.node, entity.direction === "oncoming" ? type + "-oncoming" : type);
     entity.node.setAttribute("data-roadtrip-type", type);
     entity.node.setAttribute("data-roadtrip-direction", entity.direction);
     entity.node.setAttribute("data-roadtrip-speed", String(Math.round(entity.velocity * 3.6)));
     entity.node.setAttribute("data-roadtrip-escaping", "false");
+    entity.node.setAttribute("data-roadtrip-passing", "false");
     entity.node.setAttribute("data-roadtrip-kind",
       traffic ? "traffic" :
       type === "deer" || type === "rabbit" ? "animal" : "collectible");
@@ -35947,6 +35957,48 @@ window.__entranceRoomOpen = false;
     var type = types[serial % types.length];
     var lane = lanes[serial % lanes.length];
     return spawnRoadtripEntity(type, lane, ROADTRIP_DRAW_DISTANCE - (serial % 3) * 7);
+  }
+  function syncRoadtripSemiLane(entity, seconds) {
+    if (!entity || !entity.active || entity.type !== "truck") return;
+    var travelSign = entity.direction === "oncoming" ? -1 : 1;
+    var homeLane = travelSign < 0 ? -1.5 : 1.5;
+    var passingLane = travelSign < 0 ? -.5 : .5;
+    function separation(candidate) { return (candidate.at - entity.at) * travelSign; }
+    var target = entity.passTargetSerial && roadtripState.entities.find(function (candidate) {
+      return candidate.active && candidate.serial === entity.passTargetSerial;
+    });
+    if (entity.passing && (!target || separation(target) < -10)) {
+      entity.passing = false;
+      entity.passTargetSerial = 0;
+      target = null;
+    }
+    if (!entity.passing) {
+      target = roadtripState.entities.filter(function (candidate) {
+        if (!candidate.active || candidate === entity || candidate.direction !== entity.direction) return false;
+        if (["car", "pickup", "truck", "rv"].indexOf(candidate.type) < 0) return false;
+        var gap = separation(candidate);
+        var targetKmh = Math.abs(candidate.velocity) * 3.6;
+        return Math.abs(candidate.lane - homeLane) < .32 && gap > 0 && gap < 24 && targetKmh <= 90 &&
+          Math.abs(candidate.velocity) + .5 < 110 / 3.6;
+      }).sort(function (a, b) { return separation(a) - separation(b); })[0] || null;
+      if (target) {
+        entity.passing = true;
+        entity.passTargetSerial = target.serial;
+      }
+    }
+    var desiredKmh = Math.abs(entity.cruiseVelocity) * 3.6;
+    if (entity.passing && target) desiredKmh = Math.min(110, Math.abs(target.velocity) * 3.6 + 26 + entity.serial % 3 * 2);
+    var currentKmh = Math.abs(entity.velocity) * 3.6;
+    var speedStep = Math.max(0, Number(seconds) || 0) * (entity.passing ? 18 : 8);
+    currentKmh += Math.sign(desiredKmh - currentKmh) * Math.min(Math.abs(desiredKmh - currentKmh), speedStep);
+    entity.velocity = travelSign * currentKmh / 3.6;
+    var laneTarget = entity.passing ? passingLane : homeLane;
+    var laneDelta = laneTarget - entity.lane;
+    var laneStep = Math.min(Math.abs(laneDelta), Math.max(0, Number(seconds) || 0) * .72);
+    entity.lane += Math.sign(laneDelta) * laneStep;
+    entity.node.setAttribute("data-roadtrip-lane", entity.lane.toFixed(3).replace(/\.000$/, ""));
+    entity.node.setAttribute("data-roadtrip-speed", String(Math.round(entity.velocity * 3.6)));
+    entity.node.setAttribute("data-roadtrip-passing", entity.passing ? "true" : "false");
   }
   function roadtripCollisionSeverity(entity) {
     var playerMps = Math.abs(driveState.speed) / 3.6;
@@ -36244,8 +36296,10 @@ window.__entranceRoomOpen = false;
       roadtripState.nextSpawnDistance += 31 + roadtripState.spawnSerial % 5 * 4;
       spawned++;
     }
-    roadtripState.entities.slice().forEach(function (entity) {
-      entity.at += entity.velocity * seconds;
+    var liveEntities = roadtripState.entities.slice();
+    liveEntities.forEach(function (entity) { entity.at += entity.velocity * seconds; });
+    liveEntities.forEach(function (entity) { syncRoadtripSemiLane(entity, seconds); });
+    liveEntities.forEach(function (entity) {
       var remaining = entity.at - roadtripState.distance;
       if (remaining > ROADTRIP_DRAW_DISTANCE + 24) releaseRoadtripEntity(entity);
       else resolveRoadtripEntity(entity, remaining, seconds);
@@ -38739,9 +38793,9 @@ window.__entranceRoomOpen = false;
     paintRoadtripEntities();
     return roadtripState.playerLane;
   };
-  window.__entranceRoadtripSpawn = function (type, lane) {
+  window.__entranceRoadtripSpawn = function (type, lane, ahead) {
     if (!roadtripState.active) return false;
-    return spawnRoadtripEntity(String(type || "").toLowerCase(), lane, 18);
+    return spawnRoadtripEntity(String(type || "").toLowerCase(), lane, Number(ahead) || 18);
   };
   window.__entranceRoadtripPolice = function (ahead) {
     if (!roadtripState.active) return false;

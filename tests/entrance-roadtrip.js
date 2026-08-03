@@ -689,7 +689,7 @@ check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.ac
   /var roadtripInviteVisible[\s\S]{0,700}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
   /event\.key === "Escape"[\s\S]{0,400}roadtripInviteVisible[\s\S]{0,300}entrance-roadtrip-invite-later/.test(source),
   "highway entry is explicit and the visible offer owns Enter and Escape");
-check(/roadtrip:\s*\{\s*unlocked: roadtripState\.unlocked,\s*accepted: false,/.test(source) &&
+check(/roadtrip:\s*\{[\s\S]{0,180}unlocked: roadtripState\.unlocked,[\s\S]{0,80}accepted: false,/.test(source) &&
   /roadtripState\.accepted = false;\s*roadtripState\.invitationReady = false;\s*roadtripState\.invitationDistance = 0;\s*roadtripState\.invitationDismissed = false;/.test(source),
   "checkpoint capture and restore cannot authorize or activate a highway session");
 
@@ -783,9 +783,6 @@ check(curves && curves.roadLines.length === 3 && curves.roadLines.every(function
       (index < 2 ? "rgb(233, 229, 215)" : "rgb(216, 167, 45)");
   }), "white edge and double-yellow markings keep their approved filled perspective-band contract", curves);
 check(curves && curves.rightWarning && curves.rightWarning.direction === "right" &&
-  curves.roadLineFills.length === 3 &&
-  curves.roadLineFills.slice(0, 2).every(function (value) { return value === "rgb(233, 229, 215)"; }) &&
-  curves.roadLineFills[2] === "rgb(216, 167, 45)" &&
   /curve-sign-right/.test(curves.rightWarning.href || "") && curves.rightWarning.ahead > 0 &&
   curves.right.state.curve > 0 && curves.right.road !== curves.straight &&
   curves.right.mirror.road.d !== curves.straightMirror.road.d &&

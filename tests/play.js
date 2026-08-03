@@ -90,8 +90,11 @@ var RSVP_HARNESS = [
   "    await sleep(340);",                     // let the lid-open toggle (240ms) fire
   "    click(expect('laptop-calltile'));",     // Call Prague — the required finale first step
   "    await sleep(3600);",                     // the sequence gate sets on CONNECT (~3.4s after the ring starts)
+  "    if (window.__endLaptopCall) window.__endLaptopCall();",
+  "    await sleep(1600);",                     // let the goodbye finish and release the laptop modal
   "    click(expect('office-pc-desk-trio'));",  // power the PC — the finale also gates on playing with the computer
   "    await sleep(200);",
+  "    if (window.__monitorZoomOut) window.__monitorZoomOut();", // room props are intentionally blocked while the monitor owns focus
   "    click(expect('office-lamp'));",
   "    click(expect('office-pendant'));",
   "    click(expect('office-stainedglass'));",
@@ -198,7 +201,7 @@ function fail(msg, detail) {
 }
 
 console.log("rsvp.html interaction playthrough:");
-var r = runPage("rsvp.html", RSVP_HARNESS, 45000, true);
+var r = runPage("rsvp.html", RSVP_HARNESS, 50000, true);
 if (!r) {
   fail("harness reported (page error before load, or budget too small)");
 } else {

@@ -293,7 +293,7 @@ In Block Party, select the playfield to rotate a piece. Drag horizontally to
 move it or down to drop it; arrow keys and Space also work. Every ten cleared
 lines advances the level.
 
-Click any office butterfly artwork to start Butterfly Chase.
+In Phase 2 free play, click any office butterfly artwork to start Butterfly Chase.
 
 Calendar and Clock can move the loft to another date or time. Special dates,
 weather, daylight, moon phase, and sky effects may change the rooms. While an

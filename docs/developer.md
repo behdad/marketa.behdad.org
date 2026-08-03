@@ -635,6 +635,8 @@ one-shot response and reuses the common sound graph without an extra
 AudioContext. The separate
 `#cinema-neon-butterfly` wall fixture keeps its relight interaction but is not a
 `.cinema-prop` or a member of the three-item Office Butterfly Chase roster.
+The chase's capture handler arms only in Phase 2, allowing the stained-glass
+butterfly's Phase 1 click to reach the Office solve handler.
 
 The camera props are separate Blackmagic Pocket and Canon 5D Mark IV groups.
 Either one powers the cinema projector and temporarily reparents the existing

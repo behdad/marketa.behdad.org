@@ -177,12 +177,13 @@ separate tire spatial output so a closed roof can muffle high frequencies withou
 lower cutoff erasing them.
 The top-centre ornament is a live SVG mirror. `paintRoadtripMirror()` samples the same curvature
 model behind the Porsche, so its road edges, double-yellow centre, lane dividers, and reflected
-traffic share one rearward projection. A clean traffic pass keeps the pooled entity alive briefly
-behind the player, projects it into a separate six-use mirror pool, swaps forward traffic to its
-front/headlight template, and releases it after 38 road units. The mirror's clipped cloud, smoke,
-rain, snow, and winter layers read the same Entrance classes and `--smoke` value as the windshield.
-The main windshield hides passed entities below its lower edge, so a pooled vehicle is never painted
-in both views at once.
+traffic share one rearward projection. That projection pins the wide near edge at the mirror centre;
+historical curvature accumulates only toward the horizon, so a bend must never slide or skew the
+near base. A clean traffic pass keeps the pooled entity alive briefly behind the player, projects it
+into a separate six-use mirror pool, swaps forward traffic to its front/headlight template, and
+releases it after 38 road units. The mirror's clipped cloud, smoke, rain, snow, and winter layers read
+the same Entrance classes and `--smoke` value as the windshield. The main windshield hides passed
+entities below its lower edge, so a pooled vehicle is never painted in both views at once.
 Wildlife switches to a timed hop-and-verge escape inside 22 road units: a slow approach gives the
 escape its required `0.48s`, while a fast same-lane arrival can reach the collision zone first.
 Roadtrip event feedback is routed through the shared lower-room caption flash; do not place transient

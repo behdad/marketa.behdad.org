@@ -23,6 +23,8 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-crack",
   "entrance-roadtrip-shatter",
   "entrance-roadtrip-mirror",
+  "entrance-roadtrip-mirror-housing",
+  "entrance-roadtrip-mirror-gasket",
   "entrance-roadtrip-mirror-road",
   "entrance-roadtrip-mirror-center",
   "entrance-roadtrip-mirror-lanes",
@@ -49,6 +51,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier",
     "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later",
     "entrance-roadtrip-crack", "entrance-roadtrip-shatter", "entrance-roadtrip-mirror",
+    "entrance-roadtrip-mirror-housing", "entrance-roadtrip-mirror-gasket",
     "entrance-roadtrip-mirror-road", "entrance-roadtrip-mirror-center",
     "entrance-roadtrip-mirror-lanes", "entrance-roadtrip-mirror-edges",
     "entrance-roadtrip-mirror-entities", "entrance-roadtrip-mirror-clouds",
@@ -299,12 +302,31 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       ahead: Number(rightWarningNode.getAttribute("data-roadtrip-ahead")),
       href: rightWarningNode.getAttribute("href") || rightWarningNode.getAttribute("xlink:href")
     };
+    function mirrorPathGeometry(id, band) {
+      var d = document.getElementById(id).getAttribute("d");
+      var points = [], match, re = /[ML](-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g;
+      while ((match = re.exec(d))) points.push({ x: Number(match[1]), y: Number(match[2]) });
+      var half = points.length / 2;
+      var left = points.slice(0, half);
+      var right = points.slice(half);
+      if (band) right.reverse();
+      var centers = left.map(function (point, index) { return (point.x + right[index].x) / 2; });
+      return {
+        d: d,
+        points: points.length,
+        centers: centers,
+        farCenter: centers[0],
+        nearCenter: centers[centers.length - 1],
+        nearLeft: left[left.length - 1].x,
+        nearRight: right[right.length - 1].x
+      };
+    }
     function mirrorGeometry() {
       return {
-        road: document.getElementById("entrance-roadtrip-mirror-road").getAttribute("d"),
-        center: document.getElementById("entrance-roadtrip-mirror-center").getAttribute("d"),
-        lanes: document.getElementById("entrance-roadtrip-mirror-lanes").getAttribute("d"),
-        edges: document.getElementById("entrance-roadtrip-mirror-edges").getAttribute("d")
+        road: mirrorPathGeometry("entrance-roadtrip-mirror-road", true),
+        center: mirrorPathGeometry("entrance-roadtrip-mirror-center", false),
+        lanes: mirrorPathGeometry("entrance-roadtrip-mirror-lanes", false),
+        edges: mirrorPathGeometry("entrance-roadtrip-mirror-edges", false)
       };
     }
     var straightGeometry = asphalt.getAttribute("d");
@@ -596,6 +618,10 @@ check(/#entrance-roadtrip-mirror-smoke\{opacity:calc\(var\(--smoke,0\) \* \.4\)/
   /entrance-raining:not\(\.entrance-snowing\) #entrance-roadtrip-mirror-rain\{opacity:/.test(source) &&
   /entrance-snowing #entrance-roadtrip-mirror-snow\{opacity:/.test(source),
   "the mirror atmosphere reads the same smoke and Entrance weather state as the windshield");
+check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74H280Q268-75[^\"]+" fill="#2d3438"[^>]+stroke="#171c20"/.test(source) &&
+  /id="entrance-roadtrip-mirror-gasket"[^>]+stroke="#13191c"/.test(source) &&
+  /clipPath id="entrance-roadtrip-mirror-clip">\s*<path/.test(source),
+  "the mirror uses a rounded charcoal trapezoidal housing, dark gasket, and matching reflection clip");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 7500, {
   patchRaf: true,
@@ -657,20 +683,44 @@ check(activation && activation.beforeClasses.indexOf("entrance-clouded") >= 0 &&
   "the extended windshield preserves active Entrance weather classes and both old/new overlays", activation && activation.weather);
 
 var curves = s.curves;
+function mirrorNearCentered(mirror) {
+  return ["road", "center", "lanes", "edges"].every(function (name) {
+    var shape = mirror[name];
+    return shape && shape.points === 22 && Math.abs(shape.nearCenter - 340) < .01 &&
+      Math.abs((shape.nearLeft + shape.nearRight) / 2 - 340) < .01;
+  });
+}
+function mirrorFarAligned(mirror) {
+  var centers = ["road", "center", "lanes", "edges"].map(function (name) { return mirror[name].farCenter; });
+  return Math.max.apply(Math, centers) - Math.min.apply(Math, centers) < .01;
+}
+function mirrorBendReturnsToBase(mirror, direction) {
+  return ["road", "center", "lanes", "edges"].every(function (name) {
+    return mirror[name].centers.every(function (center, index, centers) {
+      if (!index) return direction > 0 ? center > 341 : center < 339;
+      return direction > 0 ? center <= centers[index - 1] + .01 : center >= centers[index - 1] - .01;
+    });
+  });
+}
 check(curves && curves.rightWarning && curves.rightWarning.direction === "right" &&
   curves.roadLineFills.length === 3 && curves.roadLineFills.every(function (value) { return value === "none"; }) &&
   /curve-sign-right/.test(curves.rightWarning.href || "") && curves.rightWarning.ahead > 0 &&
   curves.right.state.curve > 0 && curves.right.road !== curves.straight &&
-  curves.right.mirror.road !== curves.straightMirror.road &&
-  curves.right.mirror.center !== curves.straightMirror.center &&
-  curves.right.mirror.lanes !== curves.straightMirror.lanes &&
-  (curves.right.mirror.center.match(/L/g) || []).length >= 20 &&
+  curves.right.mirror.road.d !== curves.straightMirror.road.d &&
+  curves.right.mirror.center.d !== curves.straightMirror.center.d &&
+  curves.right.mirror.lanes.d !== curves.straightMirror.lanes.d &&
+  mirrorNearCentered(curves.straightMirror) && mirrorNearCentered(curves.right.mirror) &&
+  mirrorFarAligned(curves.right.mirror) && mirrorBendReturnsToBase(curves.right.mirror, 1) &&
   curves.leftWarning && curves.leftWarning.direction === "left" &&
   /curve-sign-left/.test(curves.leftWarning.href || "") && curves.leftWarning.ahead > 0 &&
   curves.left.state.curve < 0 && curves.left.road !== curves.right.road &&
-  curves.left.mirror.road !== curves.right.mirror.road &&
-  curves.left.mirror.edges !== curves.right.mirror.edges,
-  "alternating road bends reshape both windshield and sampled rear-view markings, with a matching warning sign before each turn", curves);
+  curves.left.mirror.road.d !== curves.right.mirror.road.d &&
+  curves.left.mirror.edges.d !== curves.right.mirror.edges.d &&
+  mirrorNearCentered(curves.left.mirror) && mirrorFarAligned(curves.left.mirror) &&
+  mirrorBendReturnsToBase(curves.left.mirror, -1) &&
+  curves.right.mirror.road.farCenter > curves.straightMirror.road.farCenter + 1 &&
+  curves.left.mirror.road.farCenter < curves.straightMirror.road.farCenter - 1,
+  "rear-view bends accumulate toward opposite horizon sides while every near road and marking stays centred", curves);
 var shoulder = s.shoulder;
 check(shoulder && shoulder.before.state.drive.roadtrip.playerLane > 2 &&
   shoulder.before.state.drive.roadtrip.shoulderZone === "gravel" &&

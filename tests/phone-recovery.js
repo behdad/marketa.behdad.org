@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phone checkpoints retain the physical shell, never a foreground app screen.
+// Phone checkpoints retain the physical shell and restore Messages when it was open.
 "use strict";
 
 var lib = require("./lib");
@@ -59,16 +59,17 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(steps.continued && !steps.continued.gate && steps.continued.shell.open &&
   steps.continued.shell.locked && !steps.continued.shell.app,
   "Continue restores an open phone behind its lock screen", steps.continued);
-check(steps.continued && steps.continued.row && Object.keys(steps.continued.row).sort().join(",") === "open,unlocked",
+check(steps.continued && steps.continued.row && Object.keys(steps.continued.row).sort().join(",") === "app,open,unlocked" && steps.continued.row.app === null,
   "the post-Continue checkpoint drops the legacy app identity", steps.continued && steps.continued.row);
 check(steps.continued && steps.continued.row && steps.continued.row.unlocked === false,
   "the post-Continue checkpoint records the renewed phone lock", steps.continued && steps.continued.row);
 check(steps.catalog && steps.catalog.length === 20 && rows.length === 23 &&
   rows.every(function (row) {
-    return row.restored.open && row.restored.home && !row.restored.app &&
+    var messages = row.id === "messages";
+    return row.restored.open && row.restored.home === !messages && row.restored.app === messages &&
       row.restored.tiles === 20 && row.functional &&
-      row.captureKeys.join(",") === "open,unlocked" && row.closed;
-  }), "every current, legacy, and malformed app identity lands on a functional launcher with valid Back/close", rows);
+      row.captureKeys.join(",") === "app,open,unlocked" && row.closed;
+  }), "Messages resumes while every other current, legacy, and malformed app identity lands on a functional launcher", rows);
 check(steps.data && steps.data.message && steps.data.selfie,
   "shell restoration preserves separately owned Messages and Album data", steps.data);
 check(steps.locked && steps.locked.open && steps.locked.booting && !steps.locked.app,

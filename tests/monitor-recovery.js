@@ -38,9 +38,10 @@ check(continued && continued.room === "office" && continued.tower && continued.h
   "Continue restores the powered, visible, zoomed monitor shell on its normal desktop", continued);
 check(continued && continued.running.length === 0 && continued.activity.length === 0,
   "Continue discards every legacy foreground and running-app identity", continued);
-check(continued && Object.keys(continued.row).sort().join(",") === "screenOn,surface,zoomed" &&
-  Object.keys(continued.persisted).sort().join(",") === "screenOn,surface,zoomed",
-  "new in-memory and persisted monitor rows contain shell state only", continued);
+check(continued && Object.keys(continued.row).sort().join(",") === "dockOrder,screenOn,surface,zoomed" &&
+  Object.keys(continued.persisted).sort().join(",") === "dockOrder,screenOn,surface,zoomed" &&
+  continued.row.dockOrder.join(",") === continued.persisted.dockOrder.join(","),
+  "new in-memory and persisted monitor rows retain only shell state and dock order", continued);
 check(video && /video/.test(video.opened || "") && video.open && video.desktop && video.src &&
   video.playCalls === 1 && video.playing && video.running.join(",") === "video",
   "Video launches fresh from the recovered desktop and its normal play control works", video);

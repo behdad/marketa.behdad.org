@@ -875,9 +875,10 @@ check(collectibles.every(function (item, index) {
     item.visual.visibility !== "hidden" &&
     new RegExp("entrance-roadtrip-" + collectibleNames[index]).test(item.visual.href || "") && item.released &&
     item.after.tokens > item.before.tokens &&
+    item.after.rewardSounds === item.before.rewardSounds + 1 &&
     item.after.score - item.before.score === collectibleValues[index] * item.before.multiplier &&
     item.after.multiplier > item.before.multiplier;
-}), "heart, kiss, and rare infinity pickups visibly collect for 5, 10, and 25 times the combo",
+}), "heart, kiss, and rare infinity pickups sound and visibly collect for 5, 10, and 25 times the combo",
   collectibles);
 var collision = s.collision;
 check(collision && collision.visual.kind === "traffic" && collision.visual.lane === "0.5" && collision.visual.direction === "forward" && collision.released &&

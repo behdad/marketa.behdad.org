@@ -34662,6 +34662,7 @@ window.__entranceRoomOpen = false;
     escapes: 0,
     wildlifeHits: 0,
     impactSounds: 0,
+    rewardSounds: 0,
     lastImpactSeverity: 0,
     shoulderZone: "road",
     shoulderDistance: 0,
@@ -35253,6 +35254,42 @@ window.__entranceRoomOpen = false;
           spatial.nodes.forEach(function (node) { node.disconnect(); });
         } catch (_error) {}
       };
+      return true;
+    } catch (_error) { return false; }
+  }
+  function playRoadtripRewardSound(type) {
+    roadtripState.rewardSounds++;
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return false;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return false;
+    var notes = type === "heart" ? [523.25, 659.25] :
+      type === "kiss" ? [880, 659.25] : [523.25, 659.25, 783.99, 1046.5];
+    var spacing = type === "inf" ? .065 : .085;
+    var voiceDuration = type === "inf" ? .42 : .28;
+    var volume = type === "inf" ? .065 : type === "kiss" ? .075 : .06;
+    var t = ctx.currentTime;
+    try {
+      var spatial = porscheDriveSpatialOut(ctx, "reward");
+      notes.forEach(function (frequency, index) {
+        var oscillator = ctx.createOscillator();
+        var gain = ctx.createGain();
+        var start = t + index * spacing;
+        var end = start + voiceDuration;
+        oscillator.type = type === "kiss" ? "triangle" : "sine";
+        oscillator.frequency.setValueAtTime(frequency, start);
+        if (type === "kiss") oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.08, end);
+        gain.gain.setValueAtTime(.0001, start);
+        gain.gain.linearRampToValueAtTime(volume, start + .018);
+        gain.gain.exponentialRampToValueAtTime(.0001, end);
+        oscillator.connect(gain); gain.connect(spatial.input);
+        oscillator.start(start); oscillator.stop(end);
+        oscillator.onended = function () {
+          try { oscillator.disconnect(); gain.disconnect(); } catch (_error) {}
+          if (index === notes.length - 1) {
+            try { spatial.nodes.forEach(function (node) { node.disconnect(); }); } catch (_error) {}
+          }
+        };
+      });
       return true;
     } catch (_error) { return false; }
   }
@@ -35959,6 +35996,7 @@ window.__entranceRoomOpen = false;
         var value = entity.type === "heart" ? 5 : entity.type === "kiss" ? 10 : 25;
         awardRoadtripBonus(value);
         roadtripState.tokens++;
+        playRoadtripRewardSound(entity.type);
         roadtripFeedback(entity.type === "heart" ? "entrance_roadtrip_heart" :
           entity.type === "kiss" ? "entrance_roadtrip_kiss" : "entrance_roadtrip_inf");
         releaseRoadtripEntity(entity);
@@ -36082,6 +36120,7 @@ window.__entranceRoomOpen = false;
     roadtripState.escapes = 0;
     roadtripState.wildlifeHits = 0;
     roadtripState.impactSounds = 0;
+    roadtripState.rewardSounds = 0;
     roadtripState.lastImpactSeverity = 0;
     roadtripState.shoulderZone = "road";
     roadtripState.shoulderDistance = 0;
@@ -36499,6 +36538,7 @@ window.__entranceRoomOpen = false;
     screech: { anchor: "entrance-porsche", edgeRolloff: .28, closedCutoff: 4200 },
     abs: { anchor: "entrance-drive-brake", edgeRolloff: .12, closedCutoff: 300 },
     crash: { anchor: "entrance-drive-hud", edgeRolloff: .06, closedCutoff: 6200 },
+    reward: { anchor: "entrance-drive-hud", edgeRolloff: .04, closedCutoff: 7200 },
     police: { anchor: "entrance-roadtrip-mirror", edgeRolloff: .05, closedCutoff: 3400 }
   };
   function porscheDriveSpatialProfile(kind) {
@@ -38583,6 +38623,7 @@ window.__entranceRoomOpen = false;
           escapes: roadtripState.escapes,
           wildlifeHits: roadtripState.wildlifeHits,
           impactSounds: roadtripState.impactSounds,
+          rewardSounds: roadtripState.rewardSounds,
           lastImpactSeverity: roadtripState.lastImpactSeverity,
           shoulderZone: roadtripState.shoulderZone,
           shoulderDistance: roadtripState.shoulderDistance,

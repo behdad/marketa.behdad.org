@@ -248,7 +248,8 @@ example, `8:16 · 12.4 km · 184 pts`. Time is a measurement, not a speed bonus;
 there is no reward for rushing. Distance adds one unmultiplied point per 100 m
 (`+10` per kilometre). A clean close pass is worth `+2`, wildlife safely clearing
 after a measured approach is `+3`, ♥️ is `+5`, 💋 is `+10`, and the rarer ∞ is
-`+25`. Those bonuses use the current combo and raise it by one, up to `3×`.
+`+25`. Each pickup has its own short sound. Those bonuses use the current combo
+and raise it by one, up to `3×`.
 Distance never uses the combo.
 
 Any collision resets the combo to `1×`. A rear-end impact deducts roughly

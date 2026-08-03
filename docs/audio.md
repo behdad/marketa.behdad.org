@@ -224,6 +224,11 @@ layer share one severity value derived from relative speed and object mass;
 head-on events extend the envelope, while rear-end and wildlife bumps remain
 shorter and quieter. They never create, suspend, or close an `AudioContext`.
 
+Roadtrip pickups use the same attended shared-context path and HUD-centred
+spatial stage. Hearts play a soft rising pair, kisses a brighter swept pair, and
+the rare infinity a four-note shimmer. Each voice disconnects after its short
+envelope; hidden or unfocused collection remains silent.
+
 A speeding pursuit adds one restrained two-tone siren on the shared SFX handle,
 localized to the live rear-view mirror. Its oscillators exist only while the
 highway police state is `pursuit` and the Entrance is visible, focused, uncovered,

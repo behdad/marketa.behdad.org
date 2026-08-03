@@ -226,6 +226,10 @@ the lane while the road and weather continue through the windshield. Yellow
 curve signs announce the next matching bend. The car drifts toward the outside
 of a bend unless you steer with it.
 
+Reverse also moves the highway: a missed pickup remains behind briefly, so you
+can back up, select a forward gear, and collect it on the next forward crossing.
+Reverse adds to the odometer but never earns highway distance points.
+
 Leaving the game window or switching tabs pauses the whole highway simulation:
 trip time, road motion, traffic, wildlife, police, spawns, distance, and scoring
 all freeze. Held driving controls are released, and returning resumes from the

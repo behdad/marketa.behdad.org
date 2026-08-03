@@ -36374,7 +36374,8 @@ window.__entranceRoomOpen = false;
       return;
     }
     if (entity.type === "heart" || entity.type === "kiss" || entity.type === "inf") {
-      if (remaining <= 8 && laneGap <= .48) {
+      var collectingForward = driveState.speed * driveState.facing > .5;
+      if (collectingForward && remaining <= 8 && laneGap <= .48) {
         var value = entity.type === "heart" ? 5 : entity.type === "kiss" ? 10 : 25;
         awardRoadtripBonus(value);
         roadtripState.tokens++;
@@ -36383,7 +36384,7 @@ window.__entranceRoomOpen = false;
           entity.type === "kiss" ? "entrance_roadtrip_kiss" : "entrance_roadtrip_inf");
         releaseRoadtripEntity(entity);
         if (window.__checkpointChanged) window.__checkpointChanged();
-      } else if (remaining <= -3) releaseRoadtripEntity(entity);
+      } else if (remaining <= -60) releaseRoadtripEntity(entity);
       return;
     }
     if (entity.passed) {
@@ -36625,13 +36626,16 @@ window.__entranceRoomOpen = false;
   }
   function stepRoadtrip(distance, seconds) {
     if (!roadtripState.active || distance <= 0 && seconds <= 0) return;
+    distance = Number(distance) || 0;
     roadtripState.elapsedSeconds += Math.max(0, Number(seconds) || 0);
-    roadtripState.distance += distance;
-    awardRoadtripDistance();
+    var previousDistance = roadtripState.distance;
+    roadtripState.distance = Math.max(0, roadtripState.distance + distance);
+    var routeTravel = roadtripState.distance - previousDistance;
+    if (routeTravel > 0) awardRoadtripDistance();
     roadtripState.playerLane = Math.max(-ROADTRIP_MAX_LANE, Math.min(ROADTRIP_MAX_LANE,
-      roadtripState.playerLane - roadtripCurvatureAt(roadtripState.distance) * distance * .42));
+      roadtripState.playerLane - roadtripCurvatureAt(roadtripState.distance) * routeTravel * .42));
     syncRoadtripCenterline();
-    syncRoadtripShoulder(distance, seconds);
+    syncRoadtripShoulder(Math.abs(routeTravel), seconds);
     var spawned = 0;
     while (roadtripState.distance >= roadtripState.nextSpawnDistance && spawned < 3) {
       roadtripNaturalSpawn();
@@ -36646,7 +36650,7 @@ window.__entranceRoomOpen = false;
       if (remaining > ROADTRIP_DRAW_DISTANCE + 24) releaseRoadtripEntity(entity);
       else resolveRoadtripEntity(entity, remaining, seconds);
     });
-    stepRoadtripPolice(distance, seconds);
+    stepRoadtripPolice(Math.max(0, routeTravel), seconds);
     if (!roadtripState.active) return;
     paintRoadtripRoad();
     paintRoadtripEntities();
@@ -38216,7 +38220,7 @@ window.__entranceRoomOpen = false;
     // The street is a theatrical loop rather than a kilometre-scale map. Keep the
     // speedometer honest, then progressively compress distance so upper gears read
     // as genuinely fast instead of merely crossing the same short facade more often.
-    var forwardRoadDistance = Math.max(0, relativeVelocity) * seconds / 3.6;
+    var roadtripRouteTravel = relativeVelocity * seconds / 3.6;
     var roadTravelScale = (PORSCHE_ROAD_TRAVEL_SCALE + Math.min(2.5, Math.abs(driveState.speed) / 75)) *
       (roadtripState.active ? 1 : 2);
     var travel = -driveState.speed * seconds * roadTravelScale;
@@ -38248,7 +38252,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.exitUntilStop && Math.abs(driveState.speed) <= .25) {
       roadtripState.exitUntilStop = false;
     }
-    stepRoadtrip(forwardRoadDistance, seconds);
+    stepRoadtrip(roadtripRouteTravel, seconds);
     recoverStoppedPorschePosition();
     paintPorscheDrivePosition();
     paintPorscheDriveHud();

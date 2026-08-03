@@ -363,6 +363,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       second: centerlineSecond
     };
     window.__entranceRoadtripStart();
+    window.__entranceRoadtripSetLane(1.5);
+    window.__entranceDriveSetMotion(36, 2);
+    var recoveredHeart = spawn("heart", .5, 5);
+    step(800);
+    var reverseMissed = { state: copy(state()), visible: recoveredHeart.node.getAttribute("visibility") };
+    window.__entranceRoadtripSetLane(.5);
+    window.__entranceDriveSetMotion(-20, -1);
+    step(1000);
+    var reverseBackedUp = { state: copy(state()), visible: recoveredHeart.node.getAttribute("visibility") };
+    window.__entranceDriveSetMotion(36, 2);
+    step(500);
+    var reverseCollected = { state: copy(state()), visible: recoveredHeart.node.getAttribute("visibility") };
+    report.steps.reverseRecovery = {
+      missed: reverseMissed,
+      backedUp: reverseBackedUp,
+      collected: reverseCollected
+    };
+    window.__entranceRoadtripStart();
     window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(90, 3);
     window.__entranceDriveControl("throttle", true);
@@ -901,6 +919,20 @@ check(centerline && centerline.before.score === 5 && centerline.before.multiplie
   centerline.second.score === 1 && centerline.second.multiplier === 2 &&
   centerline.second.centerlineCrossings === 2,
   "crossing the centre line costs two points once per excursion without resetting the combo", centerline);
+var reverseRecovery = s.reverseRecovery;
+check(reverseRecovery &&
+  reverseRecovery.missed.state.drive.roadtrip.score === 0 &&
+  reverseRecovery.missed.state.drive.roadtrip.tokens === 0 &&
+  reverseRecovery.missed.state.drive.roadtrip.entityCount === 1 &&
+  reverseRecovery.backedUp.state.drive.roadtrip.distance < reverseRecovery.missed.state.drive.roadtrip.distance &&
+  reverseRecovery.backedUp.state.drive.odometerKm > reverseRecovery.missed.state.drive.odometerKm &&
+  reverseRecovery.backedUp.state.drive.roadtrip.score === 0 &&
+  reverseRecovery.backedUp.state.drive.roadtrip.distancePoints === reverseRecovery.missed.state.drive.roadtrip.distancePoints &&
+  reverseRecovery.collected.state.drive.roadtrip.tokens === 1 &&
+  reverseRecovery.collected.state.drive.roadtrip.score === 5 &&
+  reverseRecovery.collected.visible === "hidden",
+  "reverse moves the highway backward and preserves a missed pickup for forward collection without farming distance points",
+  reverseRecovery);
 var focusPause = s.focusPause;
 check(focusPause &&
   focusPause.end.drive.roadtrip.elapsedSeconds === focusPause.start.drive.roadtrip.elapsedSeconds &&

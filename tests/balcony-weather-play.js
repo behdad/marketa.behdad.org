@@ -18,11 +18,11 @@ var HARNESS = [
   ' report.steps.corners={leafpile:document.getElementById("balcony-leafpile").getAttribute("transform"),blossom:document.getElementById("balcony-blossom").getAttribute("transform"),sprinkler:document.getElementById("balcony-sprinkler").getAttribute("transform")};',
   ' window.__setDayNight(true);report.steps.freezingTexts=window.__partyTextChoices();window.__setOutdoorTemp(5);report.steps.mildTexts=window.__partyTextChoices();',
   ' window.__setDayNight(false);window.__setOutdoorTemp(10);',
-  ' function playState(){return {snowman:!!window.__snowmanOn,leafpile:!!window.__leafpileOn,blossom:!!window.__blossomPlayOn,sprinkler:!!window.__sprinklerOn};}',
+  ' function playState(){var s=window.__seasonDate(),strip=document.getElementById("loft-game-strip");return {snowman:!!window.__snowmanOn,leafpile:!!window.__leafpileOn,blossom:!!window.__blossomPlayOn,sprinkler:!!window.__sprinklerOn,summer:!!window.__summerSeason(),autumnPlay:!!window.__autumnPlaySeason(),autumnDecor:strip.classList.contains("season-autumn"),calendar:window.__calSeasonKey(s.m,s.d,s.y)};}',
   ' window.__jumpToDate(2027,3,15);report.steps.april15=playState();',
   ' window.__jumpToDate(2027,5,2);report.steps.june2=playState();',
-  ' window.__jumpToDate(2027,8,14);report.steps.sep14=playState();',
-  ' window.__jumpToDate(2027,8,15);report.steps.sep15=playState();',
+  ' window.__jumpToDate(2027,8,21);report.steps.sep21=playState();',
+  ' window.__jumpToDate(2027,8,22);report.steps.sep22=playState();',
   ' window.__jumpToDate(2027,9,15);report.steps.oct15=playState();',
   ' window.__jumpToDate(2027,9,16);report.steps.oct16=playState();',
   ' function ch(y,m,d){window.__jumpToDate(y,m,d);return document.getElementById("loft-game-strip").classList.contains("season-chaharshanbe");}',
@@ -57,10 +57,12 @@ check(s.freezingTexts && s.freezingTexts.indexOf("smores") === -1, "freezing wea
 check(s.mildTexts && s.mildTexts.indexOf("smores") !== -1, "a mild night keeps the s'mores invitation eligible", s.mildTexts);
 check(s.april15 && s.april15.blossom, "April 15 deterministically starts blossom play", s.april15);
 check(s.june2 && s.june2.sprinkler, "June 2 deterministically starts water-balloon/sprinkler play", s.june2);
-check(s.sep14 && !s.sep14.snowman && !s.sep14.leafpile && !s.sep14.blossom && !s.sep14.sprinkler,
-  "September 14 has no automatic seasonal play", s.sep14);
-check(s.sep15 && s.sep15.leafpile && s.oct15 && s.oct15.leafpile,
-  "leaf-pile play runs deterministically from September 15 through October 15", { sep15: s.sep15, oct15: s.oct15 });
+check(s.sep21 && s.sep21.summer && s.sep21.sprinkler && !s.sep21.autumnPlay && !s.sep21.autumnDecor && s.sep21.calendar === "summer",
+  "September 21 remains summer across climate, calendar, decor, and balcony play", s.sep21);
+check(s.sep22 && !s.sep22.summer && !s.sep22.sprinkler && s.sep22.autumnPlay && s.sep22.autumnDecor && s.sep22.leafpile && s.sep22.calendar === "autumn",
+  "September 22 starts autumn across climate, calendar, decor, and balcony play", s.sep22);
+check(s.oct15 && s.oct15.leafpile,
+  "leaf-pile play continues through October 15", s.oct15);
 check(s.oct16 && !s.oct16.snowman && !s.oct16.leafpile && !s.oct16.blossom && !s.oct16.sprinkler,
   "leaf-pile play ends after October 15", s.oct16);
 check(s.chaharshanbe && !s.chaharshanbe.mar16 && s.chaharshanbe.mar17 && !s.chaharshanbe.mar18,

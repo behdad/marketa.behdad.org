@@ -243,6 +243,11 @@ Off-room work must be parked, not merely made transparent. Ambient loops should 
 their owning room/state is visible and attended. Timer-spawned particles need self-replenishing or
 capped collections because background tabs pause animation completion while timers may continue.
 
+The calendar treats summer as June through September 21 and starts autumn on September 22. Keep
+that boundary synchronized across `decorForDate`, both local `summerSeason` climate helpers, and
+`autumnPlaySeason`; they respectively own whole-loft dressing, warm ambience/sprinkler play, and
+the leaf-pile window.
+
 SVG transforms have two recurring hazards: a CSS transform animation replaces an authored
 `transform` attribute, and `getBBox()` returns local coordinates. Put static positioning on a
 wrapper when animating a child, and spawn effects into the target's own coordinate-space parent.

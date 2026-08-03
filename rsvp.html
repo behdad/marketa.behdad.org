@@ -11891,7 +11891,7 @@ section{margin:1.9rem 0}
 #loft-game-strip.season-valentines .sn-valentines{display:inline}
 #loft-game-strip.season-martin .sn-martin{display:inline}
 /* ── autumn ──────────────────────────────────────────────────────────────────
-   Sep 15–30 (before Halloween takes October). The garden room's greenery turns —
+   Sep 22–30 (after summer ends, before Halloween takes October). The garden room's greenery turns —
    the monstera + herb foliage recolour to warm reds/oranges/golds — and a small
    scatter of fallen leaves shows on the floor (.sn-autumn overlay). Warm leaves
    also drift down past the garden window: a self-replenishing WAAPI spawner (see
@@ -98338,10 +98338,13 @@ function spawnDustMote(container) {
   function snowySeason() { return snowChanceFor(seasonNow()) >= 0.5; }
   window.__snowySeason = snowySeason; // the toque rides the same curve the sky does
   // Summer is a CLIMATE axis like the snow odds / the smoke ramp, not decor: the warm
-  // months (Jun–Aug — the "never snow" stretch the mid-July preview lands in), read off the
+  // months (Jun–Sep 21 — the "never snow" stretch the mid-July preview lands in), read off the
   // same pretend-date. The fireflies ride this alongside whatever decor is out (Pride in
   // June, the smoke haze in August), so it needs no season- class of its own.
-  function summerSeason() { var m = seasonNow().m; return m >= 5 && m <= 7; }
+  function summerSeason() {
+    var s = seasonNow();
+    return (s.m >= 5 && s.m <= 7) || (s.m === 8 && s.d <= 21);
+  }
   window.__summerSeason = summerSeason;
   // Snow comes down on its own, no storm needed — but only when today IS a snow day; rain
   // always waits for a storm (a storm on a snow day is just a snowstorm).
@@ -105934,7 +105937,7 @@ function spawnDustMote(container) {
     // decor season of its own would strike the tree for a night. It rides as an overlay class
     // instead (applySeasonDate), the way Sizdah Bedar rides Nowruz's dressing.
     if (m === 11 || (m === 0 && d <= 6)) return "holiday"; // Dec 1 – Jan 6
-    if (m === 8 && d >= 15) return "autumn";               // Sep 15–30: leaves turning, before Halloween takes October
+    if (m === 8 && d >= 22) return "autumn";               // Sep 22–30: after summer ends, before Halloween takes October
     if (m === 9 || (m === 10 && d <= 3)) return "spooky";  // Oct 1 – Nov 3
     if (m === 1 && d <= 14) return "valentines";           // Feb 1 – 14
     var pk = persianDecorFor(m, d, y); // the Chaharshanbe→Nowruz→Sizdah run, computed for the year (drifts); checked before spring so a late Sizdah (up to ~Apr 2) still wins Apr 2
@@ -105946,19 +105949,20 @@ function spawnDustMote(container) {
   }
   // "Summer" the CLIMATE, the way __snowySeason is winter the climate — not a decor season (mid-
   // July returns null from decorForDate, and Pride/Canada dress June-into-July), but the warm
-  // stretch the sprinkler romp belongs to: June through August, minus any snowy roll. The brick-
+  // stretch the sprinkler romp belongs to: June through Sep 21, minus any snowy roll. The brick-
   // wall day-dblclick reads this to pick the sprinkler, and applySeasonDate uses it as the matching
   // teardown gate (melts the sprinkler when the date leaves summer), mirroring the snowman's.
   function summerSeason() {
     var s = seasonDate();
-    return (s.m === 5 || s.m === 6 || s.m === 7) && !(window.__snowySeason && window.__snowySeason());
+    return (s.m === 5 || s.m === 6 || s.m === 7 || (s.m === 8 && s.d <= 21)) &&
+      !(window.__snowySeason && window.__snowySeason());
   }
   window.__summerSeason = summerSeason;
-  // Outdoor leaf play lasts longer than the full-loft autumn dressing: Sep 15–Oct 15.
+  // Outdoor leaf play lasts longer than the full-loft autumn dressing: Sep 22–Oct 15.
   // October can therefore keep its spooky decor while the kids still have leaves to jump in.
   function autumnPlaySeason() {
     var s = seasonDate();
-    return (s.m === 8 && s.d >= 15) || (s.m === 9 && s.d <= 15);
+    return (s.m === 8 && s.d >= 22) || (s.m === 9 && s.d <= 15);
   }
   window.__autumnPlaySeason = autumnPlaySeason;
   // Birthdays are their OWN axis — not a season (the 'b' key walks them; see below) and not

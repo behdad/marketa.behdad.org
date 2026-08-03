@@ -266,6 +266,10 @@ gameplay messages finish before that room caption appears.
   for the current engine run; starting the engine begins a fresh count.
   Press or hold the dashboard horn without dragging to get a small warm answer from
   the building door.
+  The first dashboard visit teaches ignition, steering, shifting, and pedals in sequence;
+  each lesson advances when you perform that action, and `?` reopens the current lesson.
+  If the stopped car ends up beyond the visible edge, it is recovered in its forward
+  direction at the opposite side of the street loop.
   The facade and sidewalk share the loft's current
   Edmonton rain, snow, overcast, and wildfire haze. If an attended daytime
   shower gives way to clear sky, a quiet rainbow may linger over the balcony.

@@ -699,6 +699,11 @@ Down brake, Shift clutch, and N/R/1–6.
 Touch shifter throws are classified separately from mouse tap/hold/context-menu stepping:
 ordinary vertical drags step exactly one gear with clutch bypass, mostly horizontal drags
 select neutral, and a stationary long-press reveals the larger SVG direct selector.
+The HUD's four-step coach is action-driven rather than timed: ignition, steering, gear,
+then pedals. `#entrance-drive-help` reopens the current lesson; its card click remains a
+manual dismissal, while completing the relevant action advances the sequence. Keep the
+coach arrows independently positioned from the fixed centered card because the dashboard
+controls use different coordinate groups.
 `__entranceRoomState().drive` and deterministic `__entranceDriveStep()` are the
 focused drivetrain test surfaces. Leaving Entrance parks its audio bed while retained
 state preserves the Porsche's position and durable panel/light configuration; a full
@@ -707,6 +712,9 @@ counts street-wrap crossings for that engine run, and is stored in the Entrance
 checkpoint row; `drive.wraps` remains the existing street-wrap/caption state.
 The runtime-only `brakeScreeches` count proves that a high-speed brake actually
 scheduled its one-shot audio without becoming drivetrain state.
+`recoverStoppedPorschePosition()` is the stopped-edge safety net: it leaves ordinary
+moving wraps alone, but places a stationary car at the visible edge that preserves its
+forward direction (including crossing to the opposite loop edge when necessary).
 The couple is presentation-only: `#entrance-porsche-occupants` fades in from the
 existing `.drive-hud-visible` class, while the HUD itself carries Behdad behind the
 passenger dashboard and Markéta's hands inside the steering-wheel transform. No

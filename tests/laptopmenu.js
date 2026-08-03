@@ -3,7 +3,7 @@
 // that mirrors the desktop dock's look/dismiss wiring. The laptop's two contact tiles are
 // its "app icons": right-clicking one → Open launches that video call; the closed lid →
 // Open wakes the laptop; a live call → End call hangs up; the open editor offers Translate.
-// Every custom menu ends with the separated whole-loft Start over action.
+// Context menus stay local to their target and never expose the whole-loft Start over action.
 //
 // The call overlay (#laptop-call) is a SIBLING of #office-laptop, so the handler is a
 // document-level contextmenu listener gated on `.closest('#office-laptop, #laptop-call')`;
@@ -19,12 +19,11 @@ var HARNESS = [
   "(function () {",
   "  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}",
   "  var report = { errors: [], steps: {} };",
-  "  var resetMenusOk=true;",
   "  window.addEventListener('error', function(e){ report.errors.push(String(e.message)); });",
   "  function S(k,v){ report.steps[k]=v; }",
-  "  function ctxAt(el){ var r=el.getBoundingClientRect(); var e=new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+Math.min(8,r.width/2),clientY:r.top+Math.min(8,r.height/2)}); var prevented=!el.dispatchEvent(e); if(window.__augmentContextMenus)window.__augmentContextMenus(); var m=menu(),b=m&&m.querySelector('.ctx-loft-reset'); if(m)resetMenusOk=resetMenusOk&&!!b&&m.lastElementChild===b&&b.classList.contains('ctx-sep'); return prevented; }",  // returns true when default prevented (custom menu shown)
+  "  function ctxAt(el){ var r=el.getBoundingClientRect(); var e=new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+Math.min(8,r.width/2),clientY:r.top+Math.min(8,r.height/2)}); return !el.dispatchEvent(e); }",  // returns true when default prevented (custom menu shown)
   "  function menu(){ return document.querySelector('.mon-ctx'); }",
-  "  function items(){ var m=menu(); return m?[].map.call(m.querySelectorAll('button:not(.ctx-loft-reset) span:last-child'),function(s){return s.textContent;}):[]; }",
+  "  function items(){ var m=menu(); return m?[].map.call(m.querySelectorAll('button span:last-child'),function(s){return s.textContent;}):[]; }",
   "  function lap(){ return document.getElementById('office-laptop'); }",
   "  function el(id){ return document.getElementById(id); }",
   "  function calling(l){ return l.classList.contains('calling')||l.classList.contains('connecting')||l.classList.contains('connected'); }",
@@ -36,7 +35,7 @@ var HARNESS = [
   "    l.classList.remove('open','calling','connecting','connected','lueb');",
   "    S('closed_prevented', ctxAt(el('laptop-hit-pad')));",
   "    S('closed_items', items());",
-  "    S('closed_start_over', (menu()&&menu().querySelector('.ctx-loft-reset span:last-child')||{}).textContent);",
+  "    S('closed_no_start_over', !(menu()&&menu().querySelector('.ctx-loft-reset')));",
   "    var ob=menu()&&menu().querySelector('button.ctx-open'); if(ob) ob.click();",
   "    await sleep(60);",
   "    S('closed_dismissed', !menu());",
@@ -85,7 +84,6 @@ var HARNESS = [
   "    document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));",
   "    await sleep(40);",
   "    S('esc_dismissed', !menu());",
-  "    S('reset_menus_ok', resetMenusOk);",
   "    document.getElementById('__report').textContent = JSON.stringify(report);",
   "  }",
   "  run();",
@@ -103,7 +101,7 @@ var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("closed laptop: right-click shows a custom menu", s.closed_prevented === true);
 ok("closed laptop: single Open item", s.closed_items && s.closed_items.length === 1 && /open|otev/i.test(s.closed_items[0] || ""));
-ok("closed laptop: Start over is labelled, separated, and last", s.closed_start_over === "Start over" && s.reset_menus_ok === true);
+ok("closed laptop: context menu has no whole-loft Start over", s.closed_no_start_over === true);
 ok("closed laptop: Open wakes the laptop", s.closed_woke === true);
 ok("closed laptop: menu dismisses after Open", s.closed_dismissed === true);
 ok("bare desk: native menu kept (not prevented)", s.bare_prevented === false);

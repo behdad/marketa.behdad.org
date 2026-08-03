@@ -103,7 +103,7 @@ ordinary entry. The fullscreen button and `F` remain explicit. The synchronous m
 adds `.installed-app` from the display-mode/navigator standalone signals.
 Immediately inside `<body>`, `#installed-load` uses that already-set class to paint a standalone-only
 loading screen before the large game DOM parses. Its small inline controller localizes from the
-saved language/full `navigator.languages` list, advances an ARIA progressbar, completes after
+saved language/full `navigator.languages` list, advances the visible progress bar, completes after
 `DOMContentLoaded` with a minimum readable dwell, and removes the overlay. Browser mode removes the
 node synchronously and sets test hooks without painting it.
 
@@ -248,26 +248,28 @@ into one revision. Visual-only animation frames, minigame score ticks, and every
 field are deliberately not revisions.
 
 Language is another shared state axis. User-facing copy lives in the `T.en` and `T.cs` dictionaries,
-with static fallback text where needed. Any English copy change must be mirrored in Czech.
+with static fallback text where needed. Any English copy change must be mirrored in Czech. The game
+DOM intentionally carries no ARIA, explicit role, or native title metadata; translate visible copy,
+cards, captions, and explicitly authored visual coaches instead.
 
 The checkpoint recovery gate is a modal state boundary. Its capture-phase key handler consumes all
 keyboard events before gameplay handlers run, while handling arrow/Enter/Space itself and leaving
 browser-default `Tab` focus traversal available. Normal shortcuts become active only after Continue
 or Start over removes the gate. While it is present, the normal room instruction is replaced by the
 localized saved-room/age summary in `#hunt-caption`; the modal references that caption with
-`aria-describedby`, and removing the gate restores the live room caption. Trailer remains available
+visible placement alone, and removing the gate restores the live room caption. Trailer remains available
 in the shell's bottom row while the gate hides room navigation, media transport, Back, Restart, and
 the dots; the left utility links remain visible. Closing recovery reparents the watch controls to
 their document owner. Recovery Trailer holds and
 restores the unopened checkpoint around its deterministic reset. Start over clears the checkpoint
 directly because the recovery gate is already an explicit destructive choice; the in-game
-Restart button, `R` key, and contextual Start over action use `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
+Restart button and `R` key use `__confirmRestart()`. Recovery Start over passes `enterPageMode` to
 `resetHunt()`: the fresh-load CLICK ME state remains unstarted and regains the shared entry chrome,
 while `.loft-entered` immediately enlarges its scene. The extinguisher snapshots whether game-only
 page mode was already entered before its delayed wipe, then passes the same option to `resetHunt()`;
-`R`, contextual Start over, and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
+`R` and the public `reset()` console/API command use that extinguisher path. Thus an in-game reset
 re-arms CLICK ME without dropping the enlarged view. These contextual reset paths preserve active
-`?date=` and `?time=` parameters; the explicit right-side chrome Restart and contextual Start over pass
+`?date=` and `?time=` parameters; the explicit right-side chrome Restart passes
 `resetDateTime:true` and return to the real clock. Cinematic/fresh-load resets omit the option and
 retain their own page-mode behavior.
 
@@ -625,12 +627,11 @@ the cinema, with the Kitchen strip parked at `translate(0,-100%)`. The Kitchen
 `WC` portal or shared Down navigation opens it. `__bathroomRoomState()` exposes
 open/closing/hidden state for focused tests.
 The nine `[data-bath-action]` SVG controls share one delegated click/keydown
-handler, translated labels/tooltips, and the existing shared SFX helpers. The
+handler and the existing shared SFX helpers. The
 tub owns the mirror-fog/reset state; wiping a fogged mirror reveals the traced
 `m∞b` mark, then a pointer-captured SVG stroke layer accepts up to three
 48-point doodles. A six-rectangle clip keeps even cross-panel segments inside
-the remaining glass and outside the signature's reserved box. The mirror label changes
-with the active drawing affordance in both languages. Draining, refilling,
+the remaining glass and outside the signature's reserved box. Draining, refilling,
 leaving the room, and transient reset release any active pointer capture and
 empty that fixed layer; it never
 spawns timers or unbounded particles. Tub and cabinet are local toggles; the other reactions are bounded
@@ -722,9 +723,8 @@ but is entirely native SVG. Entry pans the preserved Office strip to
 `__bedroomRoomState()` expose its compact lifecycle surface. The Office
 `Zzz…` portal or shared Down navigation opens it. A narrow
 observer mirrors `#stage-office.dusk` into `.bedroom-night`.
-Every distinct foreground prop is an SVG `role="button"` with localized
-`aria-label`/tooltip copy: stained glass, each brass mushroom bedside lamp, wall rack, wardrobe
-and its separately clickable pink and blue wedding suits,
+Distinct foreground props use structural IDs/classes and click targets: stained glass, each brass
+mushroom bedside lamp, wall rack, wardrobe and its separately clickable pink and blue wedding suits,
 bed, and each bedside drawer. The Bedroom's capture-phase key owner translates
 Enter/Space on those focused groups into their click path. Every lower-room
 capture owner stops only local navigation and activation keys, leaving the
@@ -790,8 +790,8 @@ double-click or a pair of touch `pointerup` events within 420 ms. Single
 activation stays in the main room and flashes the shared localized
 `lower_portal_insist` caption. Each marker owns a `.mon-ctx.scene-ctx`
 right-click menu whose **Unlock** action calls the same open hook; the shared
-context-menu augmenter appends separated **Start over** last. Escape, away
-click, scroll, blur, and resize dismiss the menu. They use `tabindex="-1"`
+menu contains only **Unlock**. Escape, away click, scroll, blur, and resize
+dismiss it. The markers use `tabindex="-1"`
 because Tab remains a global game shortcut.
 After three attended phase-two minutes, the navigation owner may flash the
 localized `lower_rooms_clue` once per page session. Any marker interaction or
@@ -1116,7 +1116,7 @@ reparents the shared iframe, swaps the set for the game, and only then enables
 Prince input. The dormant dungeon capture guard routes bare Enter/Space to the
 same activation hook. Ordinary Dismiss, Escape, or Backspace calls `parkPrinceApp`,
 pauses an initiated child through `prince-control`, and retains its browsing
-context. Kill, Start over, and shutdown call `destroyPrinceApp`.
+context. Kill, a whole-loft reset, and shutdown call `destroyPrinceApp`.
 Fullscreen reparents the same live iframe through `#prince-focus-overlay`,
 raises monitor-content fullscreen when required, and requests browser
 fullscreen without reloading the level. Parent key routing must yield while
@@ -1182,13 +1182,9 @@ compatibility mouse sequence after an existing context-menu handler claims the
 synthesized event. All `.mon-ctx` builders mount
 through `contextMenuHost()`; appending to `document.body` makes an otherwise-open
 menu invisible while the game subtree owns browser fullscreen.
-One `MutationObserver` augments every non-empty `.mon-ctx` and `.console-ctx`
-after its owner builds it, appending the separated whole-loft **Start over**
-action as the final item and reclamping the taller menu. The scene fallback
-refuses to mount when it has neither Escape nor Solve. App menus expose Kill,
-never a redundant Restart, and scene menus expose no generic Hint action; Start
-over confirms and routes through `__requestLoftReset()` and the existing
-extinguisher wipe.
+The scene fallback refuses to mount when it has neither Escape nor Solve. App
+menus expose only local actions such as Kill, never a redundant Restart or
+whole-loft Start over, and scene menus expose no generic Hint action.
 The individual app surfaces remain de-layered and gated by `visibility` plus
 `pointer-events` for WebKit. Focused regressions are `node tests/classics.js`
 and `node tests/classics-touch.mjs`.

@@ -43,8 +43,8 @@ whenever you want control. It respects reduced-motion preferences.
   changes the note, and they never replace the room caption.
 - The top-left arrow goes back or closes the current layer. The top-right
   controls provide Fullscreen and Restart.
-- Every non-empty custom context menu ends with **Start over**, which confirms
-  before resetting the whole loft. App menus use **Kill app**, not Restart.
+- Custom context menus contain only actions local to their object or app. App
+  menus use **Kill app**, not Restart or whole-loft Start over.
 
 ### Keyboard
 
@@ -150,7 +150,7 @@ Home, Back, and Recents work like their familiar phone equivalents.
 
 The phone contains Messages, Mail, Calendar, Album, camera and music tools,
 utilities, and games. Right-click or press and hold an app icon to open, stop,
-or uninstall it. **Kill app** resets only that app; **Start over** restores
+or uninstall it. **Kill app** resets only that app; a whole-loft Restart restores
 removed apps with the rest of the loft. Select the reception bars for a playful
 estimate of your timezone region's distance from Edmonton. During family calls,
 select any portrait, including the self-view, to identify the caller.
@@ -354,7 +354,7 @@ returns.
 
 Prince of Persia is hidden: search for `prince`, type `prince` in either
 console, or run `prince()` from browser JavaScript. Dismiss preserves the run;
-**Kill app** or **Start over** discards it. On touch devices, hold the right-side
+**Kill app** discards it; a whole-loft Restart does too. On touch devices, hold the right-side
 D-pad and drag to change the held direction; release it to release the arrow key.
 It is also available in the Garden's hidden dungeon. In the dungeon, each torch
 can be snuffed or relit; at least one must burn to read and wake the play wall.
@@ -369,7 +369,7 @@ double-click or double-tap the locked destination dot, choose **Solve** from the
 scene menu, or press the destination room number.
 
 **The phone is locked.** Solve the math question; a resumed visit asks again. After three failed attempts it
-opens automatically; its context menu also offers an accessible unlock.
+opens automatically; its context menu also offers Unlock.
 
 **Messages have not arrived.** Reach the balcony and start the first party to
 unlock free play.
@@ -389,6 +389,6 @@ connection. The main trail still works.
 **The game feels slow.** The game may switch to a lighter mode automatically.
 If it remains slow, reduce the browser window size.
 
-**I want a clean start.** Choose **Start over** from a context menu with actions,
-use the top-right Restart control, or press `R`, then confirm. Ending the party
+**I want a clean start.** Use the top-right Restart control or press `R`, then
+confirm. Ending the party
 is not a reset.

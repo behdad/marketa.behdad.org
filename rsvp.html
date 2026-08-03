@@ -34227,6 +34227,19 @@ window.__entranceRoomOpen = false;
   }
   function clampPorscheDragPosition(value) { return Math.max(-260, Math.min(260, value)); }
   function clampPorscheDragLane(value) { return Math.max(-22, Math.min(22, value)); }
+  function recoverStoppedPorschePosition() {
+    if (Math.abs(driveState.speed) > .01) return false;
+    var recovered = false;
+    if (driveState.position < -600) {
+      driveState.position = driveState.facing < 0 ? -575 : 275;
+      recovered = true;
+    } else if (driveState.position > 300) {
+      driveState.position = driveState.facing > 0 ? 275 : -575;
+      recovered = true;
+    }
+    if (recovered) paintPorscheDrivePosition();
+    return recovered;
+  }
   function finishPorscheDrag() {
     if (!porscheDrag.active) return;
     var suppressTrailingClick = porscheDrag.moved;
@@ -35346,6 +35359,7 @@ window.__entranceRoomOpen = false;
     driveState.wheelAngle = (driveState.wheelAngle + travel * driveState.facing / 24.65 * 180 / Math.PI) % 360;
     while (driveState.position < -648) { driveState.position += PORSCHE_WRAP_SPAN; driveState.wraps++; driveState.lapCount++; }
     while (driveState.position > 349) { driveState.position -= PORSCHE_WRAP_SPAN; driveState.wraps++; driveState.lapCount++; }
+    recoverStoppedPorschePosition();
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
     paintPorscheDriveAudio();
@@ -35749,6 +35763,7 @@ window.__entranceRoomOpen = false;
         driveState.gear = 0;
         driveState.speed = 0;
         driveState.temperature = 0;
+        recoverStoppedPorschePosition();
         porscheState.headlightOn = false;
         porscheState.taillightOn = false;
         clearPorscheIndicator();
@@ -36094,8 +36109,7 @@ window.__entranceRoomOpen = false;
     closing = false;
     clearEntranceInteractions();
     syncEntranceDayNight();
-    if (driveState.position < -600) driveState.position = -575;
-    else if (driveState.position > 300) driveState.position = 275;
+    recoverStoppedPorschePosition();
     paintPorscheDrivePosition();
     window.__entranceRoomOpen = true;
     if (window.__hideCallRing) window.__hideCallRing();

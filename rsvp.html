@@ -91606,6 +91606,23 @@ document.addEventListener("keydown", function (e) {
   function resetWheels() {
     ["t", "u"].forEach(function (w) { wheels[w] = 0; park(w, 0, false); });
   }
+  function selectCalendarDate(y, mo, d) {
+    var p = panel();
+    if (!p || !p.classList.contains("showing") || !boxLocked) return false;
+    var picked = new Date(+y, +mo, +d, 12);
+    if (isNaN(picked.getTime()) || picked.getFullYear() !== +y || picked.getMonth() !== +mo || picked.getDate() !== +d) return false;
+    // The year and month are already engraved on this lock; Calendar supplies the two
+    // missing day digits. A mismatched date remains a useful, visibly wrong candidate
+    // until UNLOCK is pressed, just like spinning the drums by hand.
+    wheels.t = Math.floor(d / 10);
+    wheels.u = d % 10;
+    park("t", wheels.t, true);
+    park("u", wheels.u, true);
+    playBoxlockDetentSound();
+    if (window.__closePhoneModal) window.__closePhoneModal(true);
+    return true;
+  }
+  window.__boxlockSelectCalendarDate = selectCalendarDate;
   function syncLockVisual(animate) {
     var p = panel();
     var box = document.getElementById("garden-drugsbox");
@@ -108871,6 +108888,10 @@ function spawnDustMote(container) {
     return calSummonFestivity(s.m, s.d, s.y);
   };
   function calGoToDate(y, mo, d, container, surface) {
+    // Calendar opened from the magic-box hint acts as the lock's date picker. The
+    // box hook owns dismissal and returns to the still-live lock; every ordinary
+    // Calendar open continues through the loft time-travel path below.
+    if (window.__boxlockSelectCalendarDate && window.__boxlockSelectCalendarDate(y, mo, d)) return;
     jumpToDate(y, mo, d);
     calView = { y: y, m: mo };
     window.__calendarRender(container, surface);
@@ -108967,7 +108988,10 @@ function spawnDustMote(container) {
         else { try { window.open(url, "_blank"); } catch (err) {} }
       });
       row.appendChild(g);
-      function go() { calShowMonth(rw.y, rw.mo, container, surface); }
+      function go() {
+        if (window.__boxlockSelectCalendarDate && window.__boxlockSelectCalendarDate(rw.y, rw.mo, rw.d)) return;
+        calShowMonth(rw.y, rw.mo, container, surface);
+      }
       row.addEventListener("click", go);
       row.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
       card.appendChild(row);

@@ -463,7 +463,7 @@ The Worker is a separate Cloudflare deployment. A frontend Git pull does not dep
 | Chat Worker | `ACTION_SPECS`, `cleanContext`, `verifyTurnstile`, `callOpenAI` |
 | Shared audio | `getAudioCtx`, `audioBusProxy`, `__updateSharedAudioIdle` |
 | People and roster | `ROSTER`, `__whoIsHere`, `__rosterPresence` |
-| Date/weather | `__now`, `__weddingOccasion`, `__realWx`, `refreshWeatherText` |
+| Date/weather | `__now`, `__weddingOccasion`, `__boxlockSelectCalendarDate`, `__realWx`, `refreshWeatherText` |
 | Album | `albumPhotoSvg`, `ALBUM_SKY_SIG`, `__albumList` |
 | Console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.loft` |
 | Trailer | `THE TRAILER`, `startCinematic`, `stopCinematic`, `urlEntryMode` |

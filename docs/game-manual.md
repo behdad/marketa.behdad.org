@@ -131,6 +131,11 @@ Nibbles, Pac-Man, shooters, Code, Python, Linux, music, video, camera, calendar,
 and drawing tools. The manual deliberately leaves their smaller surprises
 uncatalogued.
 
+When the Garden magic box opens Calendar as its date clue, choosing any day—or
+one of the wedding event rows—puts that day on the lock and returns to it. The
+same Calendar choices keep their ordinary date-navigation behavior everywhere
+else.
+
 ## Phone and Messages
 
 Open the pocket phone with `C`, `/` for Messages, or its in-scene control. The

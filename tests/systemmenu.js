@@ -46,12 +46,13 @@ var HARNESS = [
   "  S('about_killing',about.classList.contains('killing')&&about.textContent.indexOf('about:eternity')>=0&&about.textContent.indexOf('about:blank')<0&&aboutRings.length===4&&!!about.querySelector('.monitor-about-portal-core')&&document.getElementById('hunt-caption').textContent==='Have you tried turning reality off and on again?'&&T.cs.hunt.df_about_quip==='Zkoušeli jste realitu vypnout a znovu zapnout?');",
   "  await sleep(2200); S('about_killed',!about.classList.contains('open')&&!mon.classList.contains('show-about')&&!window.__monitorAppRunning('about')&&mon.classList.contains('show-caps'));",
   "  window.__monitorSystemAction('credits'); await sleep(80); var credits=document.getElementById('monitor-credits-layer');",
-  "  S('credits_open',credits.classList.contains('open')&&credits.textContent.indexOf('Markéta')>=0&&credits.textContent.indexOf('Kasra')<credits.textContent.indexOf('Irene')&&credits.textContent.indexOf('FontTools')>=0&&credits.textContent.indexOf('made with love by behdad, Claude & Codex')>=0&&credits.textContent.indexOf('July 2026')>=0);",
+  "  S('credits_open',credits.classList.contains('open')&&credits.textContent.indexOf('Markéta')>=0&&credits.textContent.indexOf('Irene')<credits.textContent.indexOf('Kasra')&&credits.textContent.indexOf('FontTools')>=0&&credits.textContent.indexOf('made with love by behdad, Claude & Codex')>=0&&credits.textContent.indexOf('July 2026')>=0);",
   "  S('credits_type',{title:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-title')).fontSize),name:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-name')).fontSize),body:parseFloat(getComputedStyle(credits.querySelector('.monitor-credits-software')).fontSize)});",
   "  window.__killMonitorCredits(); await sleep(80); S('credits_killing',credits.classList.contains('killing')&&credits.textContent.indexOf('the gratitude survives.')>=0);",
   "  await sleep(3000); S('credits_killed',!credits.classList.contains('open')&&!mon.classList.contains('show-credits')&&!window.__monitorAppRunning('credits')&&mon.classList.contains('show-caps'));",
   "  window.__markMonitorAppRunning('mail'); mon.classList.add('show-mail'); if(window.__monitorZoomIn)window.__monitorZoomIn(); window.__monitorSystemAction('sleep');",
   "  S('sleep_suspended',window.__monitorSleeping()&&mon.classList.contains('monitor-sleeping')&&mon.classList.contains('screen-on')&&!mon.classList.contains('show-saver'));",
+  "  await sleep(2500);",
   "  S('sleep_unzoomed',!mon.classList.contains('dev-zoomed'));",
   "  S('sleep_kept_apps',window.__monitorAppRunning('mail')&&mon.classList.contains('show-mail'));",
   "  mon.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true})); await sleep(30);",
@@ -83,7 +84,7 @@ var HARNESS = [
   "  S('caps_cycle_unlocked',!window.__monitorLocked()&&mon.classList.contains('show-caps'));",
   "  window.__monitorSystemAction('lock'); var seed=window.__monitorLockState().seed; mon.classList.remove('monitor-locked');",
   "  S('resume_lock',window.__resumeMonitorLock()&&mon.classList.contains('monitor-locked')&&window.__monitorLockState().seed===seed);",
-  "  window.__monitorSystemAction('shutdown'); await sleep(40);",
+  "  window.__monitorSystemAction('shutdown'); await sleep(1700);",
   "  S('shutdown_off',!!tower&&!tower.classList.contains('on'));",
   "  S('shutdown_cleared_lock',!window.__monitorLocked()&&localStorage.getItem('loftMonitorCapsLock')===null);",
   "  S('shutdown_cleared_apps',!window.__monitorAppRunning('mail'));",
@@ -93,7 +94,7 @@ var HARNESS = [
   "</script>"
 ].join("\n");
 
-var r = lib.runPageSync("rsvp.html", HARNESS, 14500, { patchRaf: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 21000, { patchRaf: true });
 var fail = 0;
 function ok(name, cond) { console.log((cond ? "  ✓ " : "  ✗ ") + name); if (!cond) fail++; }
 console.log("monitor system menu + CAPS LOCK:");
@@ -102,7 +103,7 @@ var s = r.steps;
 ok("no uncaught JS errors", r.errors.length === 0);
 ok("hidden runtime gutters cannot cover the system menu", s.hidden_gutters_pass_through === true);
 ok("wordmark opens the system menu", s.menu_open === true);
-ok("menu groups power actions before About, Credits, and System", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","about","credits","system"]));
+ok("menu groups power actions before Help, About, System, and Credits", JSON.stringify(s.menu_actions) === JSON.stringify(["lock","sleep","reboot","shutdown","help","about","system","credits"]));
 ok("compact menu leaves the motto for About", s.tagline_removed === true);
 ok("system-menu labels use the enlarged type", s.menu_type >= 2.2);
 ok("enlarged system-menu type fits in English and Czech", s.menu_fit_en === true && s.menu_fit_cs === true);

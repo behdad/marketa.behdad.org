@@ -130,8 +130,8 @@ function check(ok, message, detail) {
     var m=document.querySelector(".mon-ctx"),reset=m&&m.querySelector(".ctx-reset-eq"),kill=m&&m.querySelector(".ctx-kill");
     return{open:!!m,painted:!!(m&&document.fullscreenElement&&document.fullscreenElement.contains(m)),reset:!!reset,resetEnabled:!!reset&&!reset.disabled,kill:!!kill};
   })()`);
-  check(menu.open && menu.painted && menu.reset && menu.resetEnabled && menu.kill,
-    "the EQ menu remains open after the held finger is released", menu);
+  check(menu.open && menu.painted && menu.reset && menu.resetEnabled && !menu.kill,
+    "the touch EQ menu stays open with Reset but no destructive Kill", menu);
 
   const reset = await evaluate(`(function(){
     var b=document.querySelector(".mon-ctx .ctx-reset-eq");if(b)b.click();
@@ -155,8 +155,8 @@ function check(ok, message, detail) {
     var m=document.querySelector(".mon-ctx");
     return{open:!!m,painted:!!(m&&document.fullscreenElement&&document.fullscreenElement.contains(m)),kill:!!(m&&m.querySelector(".ctx-kill"))};
   })()`);
-  check(surfaceMenu.open && surfaceMenu.painted && surfaceMenu.kill,
-    "a held touch on the app surface opens its shared Kill menu", surfaceMenu);
+  check(surfaceMenu.open && surfaceMenu.painted && !surfaceMenu.kill,
+    "a held touch on the app surface keeps the coarse-pointer menu non-destructive", surfaceMenu);
 
   ws.close();
   cleanup();

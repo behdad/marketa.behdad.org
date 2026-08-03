@@ -69597,6 +69597,7 @@ async def localfont(name):
     return {
       view: shootView,
       open: monitor.classList.contains("show-doom"),
+      focus: shootFocusActive,
       iframe: shootFrame ? { game: shootFrameGame, src: shootFrame.getAttribute("src"), state: shootFrameState } : null,
       message: doomMsg ? doomMsg.textContent : ""
     };
@@ -71838,6 +71839,7 @@ async def localfont(name):
   });
   monitor.addEventListener("pointerdown", function (e) {
     if (monitor.classList.contains("show-saver")) {
+      if (e.target && e.target.closest && e.target.closest("#monitor-saver-cycle-hit")) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       monitorSaverWakeUntil = Date.now() + 450;
@@ -73241,12 +73243,13 @@ async def localfont(name):
     refitZoom();
     scheduleRefitZoom(true);
   };
-  if (fullscreenArea) fullscreenArea.addEventListener("pointerdown", function (e) {
+  function exitMonitorFocusFromSurround(e) {
     if (!monitorContentFullscreen) return;
     var activeShootHost = document.getElementById("monitor-shoot-host");
+    var shootState = window.__shootState && window.__shootState();
     // Tablet shooters place their movement pad in the fullscreen side chrome. Keep the
     // whole focused shooter session inside fullscreen; only its own close control exits.
-    if (shootFocusActive || (activeShootHost && activeShootHost.contains(e.target))) return;
+    if ((shootState && shootState.focus) || (activeShootHost && activeShootHost.contains(e.target))) return;
     var screen = document.getElementById("monitor-zoom-box");
     if (!screen) return;
     var r = screen.getBoundingClientRect();
@@ -73254,7 +73257,9 @@ async def localfont(name):
     e.preventDefault();
     e.stopImmediatePropagation();
     window.__toggleMonitorContentFullscreen();
-  }, true);
+  }
+  if (fullscreenArea) fullscreenArea.addEventListener("pointerdown", exitMonitorFocusFromSurround, true);
+  if (monitorFocusDialog) monitorFocusDialog.addEventListener("pointerdown", exitMonitorFocusFromSurround, true);
   syncMonitorFullscreenButton();
   if (monitorFsButton) {
     var monitorFsRestoreTarget = null;
@@ -73296,6 +73301,7 @@ async def localfont(name):
   // the OTHER device (glide over) or on viewport chrome (capture phase, so a target's
   // own stopPropagation can't strand the zoom)
   vp.addEventListener("pointerdown", function (e) {
+    if (monitorContentFullscreen) return; // let the fullscreen host consume its black surround without dropping the underlying zoom
     if (!zoomEl || (e.target && zoomEl.contains(e.target))) return;
     if (e.target && e.target.closest && e.target.closest("#hunt-fullscreen-btn")) return; // viewport chrome, not the room
     var other = zoomEl === monitor ? laptop : monitor;

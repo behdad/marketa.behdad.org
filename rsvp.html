@@ -34632,6 +34632,7 @@ window.__entranceRoomOpen = false;
     unlocked: false,
     accepted: false,
     invitationReady: false,
+    invitationDistance: 0,
     invitationDismissed: false,
     practiceLaps: 0,
     distance: 0,
@@ -35043,6 +35044,7 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.unlocked || !roadtripState.invitationReady || roadtripState.accepted) return false;
     roadtripState.accepted = true;
     roadtripState.invitationReady = false;
+    roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = true;
     paintRoadtripInvite();
     var started = startRoadtrip(false);
@@ -35053,6 +35055,7 @@ window.__entranceRoomOpen = false;
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.unlocked || !roadtripState.invitationReady || roadtripState.accepted) return false;
     roadtripState.invitationReady = false;
+    roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = true;
     paintRoadtripInvite();
     return true;
@@ -35069,6 +35072,7 @@ window.__entranceRoomOpen = false;
   function resetRoadtripInvitationSession() {
     roadtripState.accepted = false;
     roadtripState.invitationReady = false;
+    roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = false;
     paintRoadtripInvite();
   }
@@ -36066,6 +36070,7 @@ window.__entranceRoomOpen = false;
       roadtripState.exitUntilStop = false;
       roadtripState.accepted = true;
       roadtripState.invitationReady = false;
+      roadtripState.invitationDistance = 0;
       roadtripState.invitationDismissed = true;
       if (!roadtripState.unlocked) {
         roadtripState.unlocked = true;
@@ -36096,6 +36101,7 @@ window.__entranceRoomOpen = false;
     roadtripState.unlocked = true;
     roadtripState.accepted = false;
     roadtripState.invitationReady = true;
+    roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = false;
     driveCoachComplete = true;
     dismissPorscheDriveCoach();
@@ -36106,16 +36112,20 @@ window.__entranceRoomOpen = false;
   }
   function recordRoadtripPracticeLap() {
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return;
-    if (roadtripState.unlocked) {
-      if (!roadtripState.active && !roadtripState.accepted && !roadtripState.invitationDismissed) {
-        roadtripState.invitationReady = true;
-        paintRoadtripInvite();
-      }
-      return;
-    }
+    if (roadtripState.unlocked) return;
     roadtripState.practiceLaps++;
     if (roadtripState.practiceLaps >= 3) unlockRoadtrip();
     else if (window.__checkpointChanged) window.__checkpointChanged();
+  }
+  function recordRoadtripInvitationTravel(distance) {
+    if (!window.__entranceRoomOpen || !driveState.hudOpen || roadtripState.active ||
+        !roadtripState.unlocked || roadtripState.accepted || roadtripState.invitationReady ||
+        roadtripState.invitationDismissed) return;
+    roadtripState.invitationDistance += Math.max(0, Number(distance) || 0);
+    if (roadtripState.invitationDistance < PORSCHE_WRAP_SPAN) return;
+    roadtripState.invitationDistance = PORSCHE_WRAP_SPAN;
+    roadtripState.invitationReady = true;
+    paintRoadtripInvite();
   }
   function stepRoadtrip(distance, seconds) {
     if (!roadtripState.active || distance <= 0 && seconds <= 0) return;
@@ -37585,6 +37595,7 @@ window.__entranceRoomOpen = false;
       (roadtripState.active ? 1 : 2);
     var travel = -driveState.speed * seconds * roadTravelScale;
     driveState.position += travel;
+    if (relativeVelocity > 0) recordRoadtripInvitationTravel(Math.abs(travel));
     if (steerInput && Math.abs(driveState.speed) > .5) {
       driveState.laneOffset = Math.max(-9, Math.min(9,
         driveState.laneOffset - steerInput * Math.min(1, Math.abs(driveState.speed) / 45) * seconds * 13));
@@ -37678,6 +37689,7 @@ window.__entranceRoomOpen = false;
     roadtripState.unlocked = false;
     roadtripState.accepted = false;
     roadtripState.invitationReady = false;
+    roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = false;
     roadtripState.practiceLaps = 0;
     driveCoachStep = 1;
@@ -38489,6 +38501,8 @@ window.__entranceRoomOpen = false;
           unlocked: roadtripState.unlocked,
           accepted: roadtripState.accepted,
           invitationReady: roadtripState.invitationReady,
+          invitationDistance: roadtripState.invitationDistance,
+          invitationDistanceRequired: PORSCHE_WRAP_SPAN,
           invitationVisible: !!(roadtripInvite && roadtripInvite.classList.contains("show")),
           practiceLaps: roadtripState.practiceLaps,
           distance: roadtripState.distance,
@@ -38730,6 +38744,7 @@ window.__entranceRoomOpen = false;
           if (roadtripState.unlocked) roadtripState.practiceLaps = 3;
           roadtripState.accepted = false;
           roadtripState.invitationReady = false;
+          roadtripState.invitationDistance = 0;
           roadtripState.invitationDismissed = false;
           if (Number.isFinite(Number(roadtrip.distance))) roadtripState.distance = Math.max(0, Math.min(1000000000, Number(roadtrip.distance)));
           var restoredDistancePoints = roadtripDistancePoints(roadtripState.distance);

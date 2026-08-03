@@ -507,17 +507,29 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var closed = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox(), dom: childCount(), visible: visibleChildCount() };
     var closedWrapStart = state().drive.wraps;
     for (var closedTick = 0; closedTick < 40 && state().drive.wraps === closedWrapStart; closedTick++) step(1000);
+    var ignoredClosedWrap = state().drive.wraps;
+    for (var nearBoundaryTick = 0; nearBoundaryTick < 3000 &&
+        state().drive.wraps === ignoredClosedWrap && state().drive.position > -647; nearBoundaryTick++) {
+      window.__entranceDriveSetMotion(60, 2);
+      step(1);
+    }
     var closedWrapEnd = state().drive.wraps;
+    var closedPosition = state().drive.position;
     var parked = copy(roadtrip());
     window.__openEntranceRoom();
     await sleep(30);
     var reopened = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox() };
+    var reopenedSettleWrap = state().drive.wraps;
     step(80);
     var street = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox() };
     var reopenedLap = state().drive.wraps;
     window.__entranceDriveSetMotion(120, 3);
     window.__entranceDriveControl("throttle", true);
-    for (var reopenTick = 0; reopenTick < 40 && state().drive.wraps === reopenedLap; reopenTick++) step(1000);
+    var lastBeforeOffer = copy(state());
+    for (var reopenTick = 0; reopenTick < 5000 && !roadtrip().invitationReady; reopenTick++) {
+      step(20);
+      if (!roadtrip().invitationReady) lastBeforeOffer = copy(state());
+    }
     window.__entranceDriveControl("throttle", false);
     var offeredAfterLap = copy(state());
     pressKey("Escape");
@@ -529,8 +541,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveControl("throttle", false);
     var stillDismissed = copy(state());
     report.steps.close = { before: closeBefore, closed: closed, parked: parked, reopened: reopened,
-      closedWrapStart: closedWrapStart, closedWrapEnd: closedWrapEnd, reopenedWrap: reopenedLap,
-      street: street, offeredAfterLap: offeredAfterLap, dismissedOffer: dismissedOffer, stillDismissed: stillDismissed };
+      closedWrapStart: closedWrapStart, ignoredClosedWrap: ignoredClosedWrap,
+      closedWrapEnd: closedWrapEnd, closedPosition: closedPosition,
+      reopenedSettleWrap: reopenedSettleWrap, reopenedWrap: reopenedLap,
+      street: street, lastBeforeOffer: lastBeforeOffer, offeredAfterLap: offeredAfterLap,
+      dismissedOffer: dismissedOffer, stillDismissed: stillDismissed };
 
     var bestBeforeDismiss = roadtrip().best;
     window.__dismissEntrancePorscheDriveHud();
@@ -666,15 +681,16 @@ check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74
   /clipPath id="entrance-roadtrip-mirror-clip">\s*<path/.test(source),
   "the mirror uses a rounded charcoal trapezoidal housing, dark gasket, and matching reflection clip");
 check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&
-  /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;[\s\S]{0,700}if \(roadtripState\.unlocked\)[\s\S]{0,400}roadtripState\.invitationReady = true;[\s\S]{0,400}roadtripState\.practiceLaps\+\+/.test(source) &&
+  /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;\s*if \(roadtripState\.unlocked\) return;\s*roadtripState\.practiceLaps\+\+/.test(source) &&
+  /function recordRoadtripInvitationTravel\(distance\)[\s\S]{0,800}roadtripState\.invitationDistance \+= [^;]+;[\s\S]{0,300}roadtripState\.invitationDistance < PORSCHE_WRAP_SPAN[\s\S]{0,300}roadtripState\.invitationReady = true;/.test(source) &&
   /function resetRoadtripInvitationSession\(\)[\s\S]{0,300}roadtripState\.accepted = false;[\s\S]{0,200}roadtripState\.invitationReady = false;/.test(source),
-  "the source owns a three-lap initial unlock and one-lap per-session invitation gate");
+  "the source owns a three-lap initial unlock and full-distance per-session invitation gate");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
   /var roadtripInviteVisible[\s\S]{0,700}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
   /event\.key === "Escape"[\s\S]{0,400}roadtripInviteVisible[\s\S]{0,300}entrance-roadtrip-invite-later/.test(source),
   "highway entry is explicit and the visible offer owns Enter and Escape");
 check(/roadtrip:\s*\{\s*unlocked: roadtripState\.unlocked,\s*accepted: false,/.test(source) &&
-  /roadtripState\.accepted = false;\s*roadtripState\.invitationReady = false;\s*roadtripState\.invitationDismissed = false;/.test(source),
+  /roadtripState\.accepted = false;\s*roadtripState\.invitationReady = false;\s*roadtripState\.invitationDistance = 0;\s*roadtripState\.invitationDismissed = false;/.test(source),
   "checkpoint capture and restore cannot authorize or activate a highway session");
 
 if (process.argv.indexOf("--source-only") >= 0) {
@@ -907,14 +923,21 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.entityCount
   !close.closed.roadtrip.active && close.closed.classes.indexOf("roadtrip-active") < 0 &&
   close.closed.viewBox === "0 -31 680 207" &&
   close.parked.distance === close.closed.roadtrip.distance && close.parked.entityCount === close.closed.roadtrip.entityCount &&
-  close.closedWrapEnd > close.closedWrapStart && !close.parked.invitationReady &&
+  close.ignoredClosedWrap > close.closedWrapStart && close.closedWrapEnd === close.ignoredClosedWrap &&
+  close.closedPosition <= -647 && close.closedPosition > -648 && !close.parked.invitationReady &&
   !close.reopened.roadtrip.active && !close.reopened.roadtrip.accepted && !close.reopened.roadtrip.invitationVisible &&
+  close.reopenedSettleWrap > close.closedWrapEnd && !close.reopened.roadtrip.invitationReady &&
+  close.reopened.roadtrip.invitationDistance < close.reopened.roadtrip.invitationDistanceRequired &&
   !close.street.roadtrip.active && close.street.viewBox === "0 -31 680 207" &&
-  close.offeredAfterLap.drive.wraps > close.reopenedWrap &&
+  !close.street.roadtrip.invitationReady &&
+  close.lastBeforeOffer.drive.roadtrip.invitationDistance <
+    close.lastBeforeOffer.drive.roadtrip.invitationDistanceRequired &&
+  close.offeredAfterLap.drive.roadtrip.invitationDistance ===
+    close.offeredAfterLap.drive.roadtrip.invitationDistanceRequired &&
   close.offeredAfterLap.drive.roadtrip.invitationReady && close.offeredAfterLap.drive.roadtrip.invitationVisible &&
   close.dismissedOffer.open && close.dismissedOffer.drive.hud && close.dismissedOffer.car.engineOn &&
   !close.dismissedOffer.drive.roadtrip.invitationVisible && !close.stillDismissed.drive.roadtrip.invitationVisible,
-  "a reopened HUD stays on the block, offers highway after one lap, and Escape dismisses it for that HUD session", close);
+  "a near-boundary rolling reopen needs one full live block lap before offering, and Escape dismisses it for that HUD session", close);
 var dismiss = s.dismiss && s.dismiss.roadtrip;
 check(dismiss && !dismiss.active && dismiss.unlocked && dismiss.entityCount === 0 &&
   s.dismiss.dom === dismiss.poolSize && s.dismiss.visible === 0 &&

@@ -232,7 +232,8 @@ either windshield state.
 
 The third forward practice wrap unlocks the highway and reveals the owned SVG invitation; it does not
 start the roadtrip. Acceptance and invitation eligibility are one-HUD-session state. Each later HUD
-session starts on the block with `invitationReady=false`; the next forward wrap makes the card eligible.
+session starts on the block with `invitationReady=false`; one full `PORSCHE_WRAP_SPAN` of live forward
+block travel makes the card eligible, independent of the car's position relative to a wrap boundary.
 Enter accepts a visible card, while Escape dismisses it for that session. Closing the Entrance or
 leaving an active highway parks the run and clears acceptance, so acceleration cannot resume it.
 The next Escape dismisses the dashboard and clears the run while retaining unlock and best. Full reset also clears

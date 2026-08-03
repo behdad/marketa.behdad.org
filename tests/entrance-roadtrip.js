@@ -271,6 +271,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       after: offerAfterDrive,
       visible: invitation.classList.contains("show"),
       ariaHidden: invitation.getAttribute("aria-hidden"),
+      transform: invitation.getAttribute("transform"),
       viewBox: viewBox(),
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim()
     };
@@ -906,11 +907,12 @@ check(activation && activation.practice.some(function (row) { return row.practic
   activation.offer.before.invitationReady && !activation.offer.before.accepted && !activation.offer.before.active &&
   !activation.offer.after.accepted && !activation.offer.after.active && activation.offer.visible &&
   activation.offer.ariaHidden === "false" && /Fancy a roadtrip/.test(activation.offer.title) &&
+  activation.offer.transform === "translate(426 0)" &&
   activation.offer.czech.title === "Dáme si výlet?" && activation.offer.czech.accept === "Vyjet na dálnici" &&
   activation.offer.czech.later === "Později" && activation.offer.czech.acceptAria === "Vyjet na dálnici" &&
   activation.offer.czech.laterAria === "Později" &&
   activation.offer.viewBox === "0 -31 680 207" && activation.roadtrip.accepted && activation.roadtrip.active,
-  "the third practice lap offers a roadtrip without auto-starting, and acceptance enters the highway",
+  "the third practice lap offers a right-side roadtrip card without auto-starting, and acceptance enters the highway",
   activation && { practice: activation.practice, offer: activation.offer, roadtrip: activation.roadtrip });
 check(activation && activation.roomClasses.indexOf("roadtrip-active") >= 0 &&
   activation.viewBox === "0 -120 680 340" &&

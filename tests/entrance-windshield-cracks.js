@@ -58,16 +58,23 @@ if (buildVariant) {
 }
 
 check(samples.length === 96 && samples.every(function (variant) {
-  return variant.origin.x >= 343 && variant.origin.x <= 395 &&
-    variant.origin.y >= -19 && variant.origin.y <= 2 &&
-    Math.abs(variant.rotation) <= 14.3;
-}), "impact origins and whole-crack rotations stay modestly centred", samples.slice(0, 2));
+  return variant.origin.x >= 320 && variant.origin.x <= 416 &&
+    variant.origin.y >= 27 && variant.origin.y <= 57 &&
+    Math.abs(variant.rotation) <= 6.5;
+}), "fracture roots stay in the lower windshield with only modest whole-crack rotation", samples.slice(0, 2));
 
 check(samples.every(function (variant) {
-  return variant.primaryCount === 6 && variant.secondaryCount >= 2 && variant.secondaryCount <= 4 &&
+  return variant.primaryCount === 3 && variant.secondaryCount >= 3 && variant.secondaryCount <= 5 &&
     (variant.primaryPath.match(/M/g) || []).length === variant.primaryCount &&
-    (variant.secondaryPath.match(/M/g) || []).length === variant.secondaryCount;
-}), "every localized crack has six varied main branches and two to four secondary fractures");
+    (variant.secondaryPath.match(/M/g) || []).length === variant.secondaryCount &&
+    variant.trunkSpan >= 55 && variant.branchRoots.length === 2;
+}), "every localized crack has one long split, two offset limbs, and three to five smaller forks");
+
+check(source.indexOf("entrance-roadtrip-crack-core") < 0 && samples.every(function (variant) {
+  return variant.branchRoots.every(function (root) {
+    return Math.hypot(root.x - variant.origin.x, root.y - variant.origin.y) > 15;
+  });
+}), "localized collision fractures have no circular stone-impact core or radial common root");
 
 var signatures = new Set(samples.map(function (variant) {
   return variant.origin.x.toFixed(2) + ":" + variant.origin.y.toFixed(2) + ":" +
@@ -91,7 +98,7 @@ check(light && severe && severe.maxRadius > light.maxRadius * 1.35,
 
 var bounded = samples.every(function (variant) {
   return variant.points.map(function (point) { return rotate(point, variant); }).every(function (point) {
-    return point.x >= 280 && point.x <= 460 && point.y >= -90 && point.y <= 72;
+    return point.x >= 245 && point.x <= 490 && point.y >= -105 && point.y <= 75;
   });
 });
 check(bounded && /id="entrance-roadtrip-crack"[^>]*clip-path="url\(#entrance-roadtrip-windshield-clip\)"/.test(source),

@@ -294,8 +294,9 @@ oncoming traffic in its lane deducts `100`, produces a longer, louder impact,
 stops and stalls the Porsche, and shatters the windshield until the ignition is
 restarted. Rear-ending forward traffic instead cuts the car's speed below the
 struck vehicle's speed, kicks the view, and cracks the windshield. Each localized
-crack varies its impact point, angle, branch lengths, and smaller fractures while
-remaining proportional to the strike. Shake, sound, slowdown, and glass damage
+crack is a long asymmetric laminated-glass split with offset limbs rather than a
+circular stone chip; its root, lean, lengths, and smaller forks vary on every hit
+while remaining proportional to the strike. Shake, sound, slowdown, and glass damage
 also scale with the other object's type and relative speed. Any hit severe enough
 to crack or shatter the windshield knocks the transmission into neutral and
 releases the accelerator and clutch. Mule deer and snowshoe

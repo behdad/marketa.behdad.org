@@ -32197,10 +32197,9 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             </g>
             <g id="entrance-roadtrip-crack" aria-hidden="true" clip-path="url(#entrance-roadtrip-windshield-clip)" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <g id="entrance-roadtrip-crack-geometry">
-                <path id="entrance-roadtrip-crack-shadow" d="M369-9L350-29L344-43M350-29L332-34M369-9L389-35L410-43M389-35L397-53M369-9L401-4L419-15M401-4L425 8M369-9L385 16L380 37M385 16L404 31M369-9L350 25L352 47M350 25L331 39M369-9L335-2L318-17M335-2L310 8" stroke="#233039" stroke-width="3" opacity=".34"/>
-                <path id="entrance-roadtrip-crack-primary" d="M369-9L350-29L344-43M369-9L389-35L410-43M369-9L401-4L419-15M369-9L385 16L380 37M369-9L350 25L352 47M369-9L335-2L318-17" stroke="#edf5f3" stroke-width="1.35"/>
-                <path id="entrance-roadtrip-crack-secondary" d="M350-29L332-34M389-35L397-53M401-4L425 8M385 16L404 31M350 25L331 39M335-2L310 8" stroke="#f6fbfa" stroke-width=".95" opacity=".9"/>
-                <circle id="entrance-roadtrip-crack-core" cx="369" cy="-9" r="4.5" stroke="#edf5f3" stroke-width="1.1"/>
+                <path id="entrance-roadtrip-crack-shadow" d="M374 48L365 18L372-17L356-68M365 18L337-3L315-7M372-17L400-39L421-43M337-3L324-26M400-39L410-63" stroke="#233039" stroke-width="3" opacity=".34"/>
+                <path id="entrance-roadtrip-crack-primary" d="M374 48L365 18L372-17L356-68M365 18L337-3L315-7M372-17L400-39L421-43" stroke="#edf5f3" stroke-width="1.35"/>
+                <path id="entrance-roadtrip-crack-secondary" d="M337-3L324-26M400-39L410-63" stroke="#f6fbfa" stroke-width=".95" opacity=".9"/>
               </g>
             </g>
             <g id="entrance-roadtrip-shatter" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -35329,35 +35328,52 @@ window.__entranceRoomOpen = false;
       function tidy(number) { return number.toFixed(1).replace(/\.0$/, ""); }
       return tidy(value.x) + "," + tidy(value.y);
     }
-    var originX = 369 + roll(-24, 24) + (sequence % 3 - 1) * 1.4;
-    var originY = -9 + roll(-9, 9) + (sequence % 2 ? .8 : -.8);
+    // Collision damage reads as a long laminated-glass split rising from the lower
+    // windshield, not six spokes around a stone-chip bullseye.
+    var originX = 368 + roll(-42, 42) + (sequence % 3 - 1) * 1.2;
+    var originY = 42 + roll(-13, 13) + (sequence % 2 ? .7 : -.7);
     var origin = { x: originX, y: originY };
-    var rotation = roll(-13, 13) + (sequence % 5 - 2) * .6;
-    var branchCount = 6;
-    var branchRadius = 24 + severity * 22;
-    var branches = [];
+    var rotation = roll(-5.5, 5.5) + (sequence % 5 - 2) * .35;
+    var lean = (sequence % 2 ? 1 : -1) * roll(.78, 1.18);
+    var trunkLength = 55 + severity * 52;
+    var lower = {
+      x: originX + lean * roll(5, 11),
+      y: originY - trunkLength * roll(.27, .34)
+    };
+    var upper = {
+      x: originX + lean * roll(11, 21),
+      y: originY - trunkLength * roll(.59, .7)
+    };
+    var tip = {
+      x: originX + lean * roll(18, 31),
+      y: originY - trunkLength
+    };
     var primary = [];
     var secondary = [];
-    var points = [origin];
-    for (var i = 0; i < branchCount; i++) {
-      var angle = -94 + i * (360 / branchCount) + roll(-11, 11) + (sequence + i) % 3 - 1;
-      var length = branchRadius * roll(.8, 1.15);
-      var kink = point(originX, originY, angle + roll(-9, 9), length * roll(.43, .61));
-      var end = point(originX, originY, angle + roll(-7, 7), length);
-      branches.push({ angle: angle, kink: kink, end: end });
+    var points = [origin, lower, upper, tip];
+    primary.push("M" + svgPoint(origin) + "L" + svgPoint(lower) + "L" + svgPoint(upper) + "L" + svgPoint(tip));
+    var branchRoots = [lower, upper];
+    var branches = branchRoots.map(function (root, index) {
+      var side = index ? lean : -lean;
+      var branchAngle = side > 0 ? roll(-54, -28) : roll(-152, -126);
+      var branchLength = (20 + severity * 25) * roll(.82, 1.14);
+      var kink = point(root.x, root.y, branchAngle + roll(-7, 7), branchLength * roll(.45, .62));
+      var end = point(root.x, root.y, branchAngle + roll(-5, 5), branchLength);
       points.push(kink, end);
-      primary.push("M" + svgPoint(origin) + "L" + svgPoint(kink) + "L" + svgPoint(end));
-    }
-    var secondaryCount = 2 + Math.floor(roll(0, 3));
+      primary.push("M" + svgPoint(root) + "L" + svgPoint(kink) + "L" + svgPoint(end));
+      return { root: root, kink: kink, end: end, angle: branchAngle };
+    });
+    var secondaryCount = 3 + Math.floor(roll(0, 3));
+    var forkRoots = [lower, upper, branches[0].kink, branches[1].kink, tip];
     for (var j = 0; j < secondaryCount; j++) {
-      var branch = branches[(Math.floor(roll(0, branchCount)) + j * 2 + sequence) % branchCount];
-      var forkDirection = roll(0, 1) < .5 ? -1 : 1;
-      var forkAngle = branch.angle + forkDirection * roll(31, 64);
-      var forkLength = (8 + severity * 8) * roll(.78, 1.2);
-      var forkMid = point(branch.kink.x, branch.kink.y, forkAngle + roll(-7, 7), forkLength * roll(.45, .65));
-      var forkEnd = point(branch.kink.x, branch.kink.y, forkAngle + roll(-5, 5), forkLength);
+      var root = forkRoots[(j + sequence) % forkRoots.length];
+      var forkSide = (j + sequence) % 2 ? 1 : -1;
+      var forkAngle = -90 + forkSide * roll(38, 72);
+      var forkLength = (8 + severity * 9) * roll(.78, 1.2);
+      var forkMid = point(root.x, root.y, forkAngle + roll(-7, 7), forkLength * roll(.45, .65));
+      var forkEnd = point(root.x, root.y, forkAngle + roll(-5, 5), forkLength);
       points.push(forkMid, forkEnd);
-      secondary.push("M" + svgPoint(branch.kink) + "L" + svgPoint(forkMid) + "L" + svgPoint(forkEnd));
+      secondary.push("M" + svgPoint(root) + "L" + svgPoint(forkMid) + "L" + svgPoint(forkEnd));
     }
     var maxRadius = points.reduce(function (greatest, value) {
       return Math.max(greatest, Math.hypot(value.x - originX, value.y - originY));
@@ -35367,8 +35383,10 @@ window.__entranceRoomOpen = false;
       rotation: rotation,
       primaryPath: primary.join(""),
       secondaryPath: secondary.join(""),
-      primaryCount: branchCount,
+      primaryCount: primary.length,
       secondaryCount: secondaryCount,
+      trunkSpan: origin.y - tip.y,
+      branchRoots: branchRoots,
       points: points,
       maxRadius: maxRadius
     };
@@ -35379,16 +35397,13 @@ window.__entranceRoomOpen = false;
     var shadow = roadtripElement("entrance-roadtrip-crack-shadow");
     var primary = roadtripElement("entrance-roadtrip-crack-primary");
     var secondary = roadtripElement("entrance-roadtrip-crack-secondary");
-    var core = roadtripElement("entrance-roadtrip-crack-core");
-    if (!crack || !geometry || !shadow || !primary || !secondary || !core) return false;
+    if (!crack || !geometry || !shadow || !primary || !secondary) return false;
     var sequence = roadtripCrackSerial++;
     var variant = entranceRoadtripCrackVariant(severity, Math.random, sequence);
     var path = variant.primaryPath + variant.secondaryPath;
     shadow.setAttribute("d", path);
     primary.setAttribute("d", variant.primaryPath);
     secondary.setAttribute("d", variant.secondaryPath);
-    core.setAttribute("cx", variant.origin.x.toFixed(1));
-    core.setAttribute("cy", variant.origin.y.toFixed(1));
     geometry.setAttribute("transform", "rotate(" + variant.rotation.toFixed(1) + " " +
       variant.origin.x.toFixed(1) + " " + variant.origin.y.toFixed(1) + ")");
     crack.setAttribute("data-roadtrip-crack-serial", String(sequence));

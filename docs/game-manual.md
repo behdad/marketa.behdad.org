@@ -274,6 +274,9 @@ after a measured approach is `+3`, ♥️ is `+5`, 💋 is `+10`, and the rarer 
 and raise it by one, up to `3×`.
 Distance never uses the combo.
 
+Crossing into the oncoming side costs two points once per excursion, without
+resetting the combo. Returning fully to the proper side rearms the rule.
+
 Any collision resets the combo to `1×`. A rear-end impact deducts roughly
 `10–40` points and a wildlife strike roughly `20–60`, scaled by severity. Meeting
 oncoming traffic in its lane deducts `100`, produces a longer, louder impact,

@@ -315,6 +315,31 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       downReady: shiftDownReady,
       cleared: state().drive.instruction
     };
+    window.__entranceRoadtripStart();
+    window.__entranceRoadtripSetLane(.5);
+    window.__entranceDriveSetMotion(90, 3);
+    spawn("heart", .5, 5);
+    window.__entranceRoadtripSetDistance(4);
+    step(50);
+    var centerlineBefore = copy(roadtrip());
+    window.__entranceRoadtripSetLane(-.2);
+    step(20);
+    var centerlineFirst = copy(roadtrip());
+    step(20);
+    var centerlineHeld = copy(roadtrip());
+    window.__entranceRoadtripSetLane(.5);
+    step(20);
+    window.__entranceRoadtripSetLane(-.2);
+    step(20);
+    var centerlineSecond = copy(roadtrip());
+    report.steps.centerline = {
+      before: centerlineBefore,
+      first: centerlineFirst,
+      held: centerlineHeld,
+      second: centerlineSecond
+    };
+    window.__entranceRoadtripStart();
+    window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(90, 3);
     window.__entranceDriveControl("throttle", true);
     await sleep(45);
@@ -836,6 +861,14 @@ check(s.shiftCoaching &&
   s.shiftCoaching.downReady === "entrance_drive_shift_down" &&
   s.shiftCoaching.cleared === "entrance_roadtrip_drive",
   "sustained highway RPM earns delayed shift coaching without caption flicker", s.shiftCoaching);
+var centerline = s.centerline;
+check(centerline && centerline.before.score === 5 && centerline.before.multiplier === 2 &&
+  centerline.first.score === 3 && centerline.first.multiplier === 2 &&
+  centerline.first.centerlineCrossings === 1 && centerline.first.centerlineExcursion &&
+  centerline.held.score === centerline.first.score && centerline.held.centerlineCrossings === 1 &&
+  centerline.second.score === 1 && centerline.second.multiplier === 2 &&
+  centerline.second.centerlineCrossings === 2,
+  "crossing the centre line costs two points once per excursion without resetting the combo", centerline);
 var focusPause = s.focusPause;
 check(focusPause &&
   focusPause.end.drive.roadtrip.elapsedSeconds === focusPause.start.drive.roadtrip.elapsedSeconds &&

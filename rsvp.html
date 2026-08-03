@@ -34715,6 +34715,8 @@ window.__entranceRoomOpen = false;
     impactSounds: 0,
     rewardSounds: 0,
     lastImpactSeverity: 0,
+    centerlineExcursion: false,
+    centerlineCrossings: 0,
     shoulderZone: "road",
     shoulderDistance: 0,
     nextSpawnDistance: 34,
@@ -36192,6 +36194,17 @@ window.__entranceRoomOpen = false;
     var drag = zone === "gravel" ? .15 : .035;
     driveState.speed *= Math.max(0, 1 - drag * seconds);
   }
+  function syncRoadtripCenterline() {
+    if (!roadtripState.centerlineExcursion && roadtripState.playerLane < -.05) {
+      roadtripState.centerlineExcursion = true;
+      roadtripState.centerlineCrossings++;
+      roadtripState.score -= 2;
+      roadtripFeedback("entrance_roadtrip_centerline");
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    } else if (roadtripState.centerlineExcursion && roadtripState.playerLane > .08) {
+      roadtripState.centerlineExcursion = false;
+    }
+  }
   function releaseRoadtripEntity(entity) {
     if (!entity || !entity.active) return;
     entity.active = false;
@@ -36485,6 +36498,8 @@ window.__entranceRoomOpen = false;
     roadtripState.impactSounds = 0;
     roadtripState.rewardSounds = 0;
     roadtripState.lastImpactSeverity = 0;
+    roadtripState.centerlineExcursion = false;
+    roadtripState.centerlineCrossings = 0;
     roadtripState.shoulderZone = "road";
     roadtripState.shoulderDistance = 0;
     roadtripState.nextSpawnDistance = 34;
@@ -36609,6 +36624,7 @@ window.__entranceRoomOpen = false;
     awardRoadtripDistance();
     roadtripState.playerLane = Math.max(-ROADTRIP_MAX_LANE, Math.min(ROADTRIP_MAX_LANE,
       roadtripState.playerLane - roadtripCurvatureAt(roadtripState.distance) * distance * .42));
+    syncRoadtripCenterline();
     syncRoadtripShoulder(distance, seconds);
     var spawned = 0;
     while (roadtripState.distance >= roadtripState.nextSpawnDistance && spawned < 3) {
@@ -39136,6 +39152,8 @@ window.__entranceRoomOpen = false;
           impactSounds: roadtripState.impactSounds,
           rewardSounds: roadtripState.rewardSounds,
           lastImpactSeverity: roadtripState.lastImpactSeverity,
+          centerlineExcursion: roadtripState.centerlineExcursion,
+          centerlineCrossings: roadtripState.centerlineCrossings,
           shoulderZone: roadtripState.shoulderZone,
           shoulderDistance: roadtripState.shoulderDistance,
           speedLimit: ROADTRIP_SPEED_LIMIT,
@@ -40883,6 +40901,7 @@ var T = {
       entrance_roadtrip_kiss: "💋 collected · +10 × combo.",
       entrance_roadtrip_inf: "Rare ∞ collected · +25 × combo.",
       entrance_roadtrip_escape: "Wildlife clear · +3 × combo.",
+      entrance_roadtrip_centerline: "Crossed the centre line · −2 points.",
       entrance_roadtrip_points_short: "pts",
       entrance_roadtrip_grade_sunday: "Sunday drive",
       entrance_roadtrip_grade_scenic: "Scenic run",
@@ -42070,6 +42089,7 @@ var T = {
       entrance_roadtrip_kiss: "💋 sebráno · +10 × kombo.",
       entrance_roadtrip_inf: "Vzácné ∞ sebráno · +25 × kombo.",
       entrance_roadtrip_escape: "Zvěř unikla · +3 × kombo.",
+      entrance_roadtrip_centerline: "Přejezd přes středovou čáru · −2 body.",
       entrance_roadtrip_points_short: "b",
       entrance_roadtrip_grade_sunday: "Nedělní projížďka",
       entrance_roadtrip_grade_scenic: "Vyhlídková jízda",

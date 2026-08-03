@@ -96534,10 +96534,22 @@ function spawnDustMote(container) {
   // Every main room now has a lower room. Horizontal navigation therefore stays on
   // that floor. All five existing room roots live in one continuous track, so a single
   // transform moves the source and destination together without a paint gap.
+  function lowerRoomTrackPosition() {
+    if (!lowerRoomTrack) return 0;
+    var transform = getComputedStyle(lowerRoomTrack).transform;
+    if (!transform || transform === "none") return parseFloat((lowerRoomTrack.style.transform.match(/translateX\((-?[\d.]+)%\)/) || [])[1]) || 0;
+    var values = transform.slice(transform.indexOf("(") + 1, -1).split(",");
+    var tx = values.length === 16 ? parseFloat(values[12]) : parseFloat(values[4]);
+    var width = lowerRoomTrack.offsetWidth || lowerRoomTrack.getBoundingClientRect().width;
+    return width && isFinite(tx) ? tx / width * 100 : 0;
+  }
   function navigateLowerRoom(name, focusTarget) {
-    if (lowerRoomSlideTimer) {
-      lowerRoomSlideQueue = { name: name, focusTarget: focusTarget };
-      return true;
+    var retargeting = !!lowerRoomSlideTimer;
+    var liveOffset = retargeting ? lowerRoomTrackPosition() : null;
+    if (retargeting) {
+      clearTimeout(lowerRoomSlideTimer);
+      lowerRoomSlideTimer = null;
+      lowerRoomSlideQueue = null;
     }
     var source = activeLowerRoom();
     var target = lowerRoomForStage(name);
@@ -96554,7 +96566,7 @@ function spawnDustMote(container) {
     var duration = reduced ? 1 : 720;
     var viewport = strip.closest(".hunt-viewport");
     if (!viewport || !lowerRoomTrack) return false;
-    var sourceOffset = -fromIndex * 20;
+    var sourceOffset = liveOffset == null ? -fromIndex * 20 : liveOffset;
     var targetOffset = -toIndex * 20;
     lowerRoomTrack.style.transition = "none";
     lowerRoomTrack.style.transform = "translateX(" + sourceOffset + "%)";
@@ -96594,11 +96606,6 @@ function spawnDustMote(container) {
         window.__setLowerRoomNotificationHold(true);
       }
       focusLowerNavigation(focusTarget);
-      var queued = lowerRoomSlideQueue;
-      lowerRoomSlideQueue = null;
-      if (queued && queued.name !== window.currentStageName) {
-        navigateLowerRoom(queued.name, queued.focusTarget);
-      }
     }, duration + 20);
     return true;
   }

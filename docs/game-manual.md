@@ -105,7 +105,8 @@ keys it needs, and an open phone or zoomed computer keeps its own controls.
 The five main rooms each have a featured activity: **Flair Catch**,
 **Hack-Man**, **Octi's Escape**, **Alien Resources**, and **Block Party**.
 Their opening screen or caption shows the controls. Scores and personal bests
-are kept where the activity supports them.
+are kept where the activity supports them. Hack-Man gives quiet synthesized
+feedback for pellets, collisions, game start, and maze clear.
 
 Downstairs adds a different activity to each room:
 

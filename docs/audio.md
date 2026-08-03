@@ -192,6 +192,14 @@ moves, while each half-second brake one-shot snapshots the current car/roof posi
 stage still terminates at the owning bed or SFX destination, so it does not alter trigger,
 focus, teardown, volume-button, or shared-context rules.
 
+Hack-Man's five compact arcade cues—pellet tick, game start, edible ghost, player death,
+and maze clear—are oscillator-only one-shots on `getSfxCtx()`, panned to the retained board
+in either its monitor or room presentation. Pellet ticks have a short retrigger floor and
+alternate pitch to stay light. Simulation-fired cues repeat the hidden/unfocused and live-
+presentation gates before requesting the SFX bus; blur, pause, close, Kill, reset, and state
+restore stop the game's outstanding oscillator nodes without touching the shared context.
+Reduced motion does not mute these cues.
+
 At an effective outside temperature of 24°C or warmer, the running Porsche HUD
 also starts a restrained filtered-noise fan and low motor tone through the same
 shared `audioBed()` route. It reads `__outdoorTempC()` (live weather, pretend-date

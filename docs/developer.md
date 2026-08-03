@@ -395,7 +395,7 @@ Add the focused runner for the ownership boundary you changed:
 | Room-specific interactions | the corresponding `kitchen`/`garden`/`cuddly`/`office`/`balcony` or lower-room focused file; Entrance driving also runs `entrance-driving.js` and `entrance-roadtrip.js` |
 | Apps and games | the named app/game test plus `minigame-vocabulary.js`; include touch tests for shared D-pads or drag controls |
 | Messages and Charlie | `message-*.js`, `chat.js`, `chat-context.js`, `chat-worker.mjs`, `assistant-behavior.mjs`, `safe-actions*.js` |
-| Audio/media lifecycle | `media-transitions.js`, `device-audio.js`, `lower-audio.js`, `piano-message.js`, `performance.js`, `leak.js` |
+| Audio/media lifecycle | `media-transitions.js`, `device-audio.js`, `lower-audio.js`, `pacman-audio.js`, `piano-message.js`, `performance.js`, `leak.js` |
 | Album render signatures | `album-axis.mjs`, `album-render.mjs`, `album-ui.js` |
 | Date/weather/occasion gates | `weather.js` and the corresponding occasion/day test |
 

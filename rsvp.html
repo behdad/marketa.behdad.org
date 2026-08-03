@@ -65014,6 +65014,13 @@ setOfficeProgress("pc", false);
   var pacState = null, pacClock = null;
   var pacRunStartingHigh = 0, pacRunActive = false;
   var PAC_HIGH_KEY = "pacmanHigh"; // personal best survives New, Kill, shutdown, and full loft reset
+  function pacSound(kind, detail) {
+    if (typeof window.playHackManSound === "function") return window.playHackManSound(kind, detail);
+    return false;
+  }
+  function pacStopSound() {
+    if (typeof window.stopHackManSounds === "function") window.stopHackManSounds();
+  }
   function pacRoomPresented() { return !!(pacRoomOverlay && !pacRoomOverlay.hidden); }
   function pacPresented() { return pacRoomPresented() || monitor.classList.contains("show-pacman"); }
   function sizePacmanRoom() {
@@ -65271,11 +65278,13 @@ setOfficeProgress("pc", false);
       if (pacState.fright > 0) {
         pacState.score += 200; ghost.eaten = true; ghost.reverse = false;
         pacBankHigh();
+        pacSound("ghost");
         pacSaveSoon(true); return false;
       }
       pacState.lives--;
       if (pacState.lives <= 0) { pacState.status = "over"; pacStopLoop(); pacOfferBest(); }
       else { pacState.status = "ready"; pacResetActors(true); pacStopLoop(); }
+      pacSound("death", pacState.status === "over");
       pacSaveSoon(true);
       return true;
     }
@@ -65392,6 +65401,7 @@ setOfficeProgress("pc", false);
           pacState.pellets[idx] = false; pacState.dotsEaten++; pacState.releaseIdle = 0;
           pacState.score += PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? 50 : 10;
           pacBankHigh();
+          pacSound("pellet", PAC_MAZE[pacState.player.r][pacState.player.c] === "o");
           if (PAC_MAZE[pacState.player.r][pacState.player.c] === "o") { pacState.fright = 6000; pacReverseReleasedGhosts(); }
           pacSaveSoon(false);
         }
@@ -65416,12 +65426,13 @@ setOfficeProgress("pc", false);
     var won = pacRemaining() === 0 && pacState.status !== "over";
     if (won) { pacState.status = "win"; pacSaveSoon(true); pacOfferBest(); }
     if (changed || wasFrightened !== (pacState.fright > 0)) pacRender(previous);
-    if (won) pacStopLoop(false);
+    if (won) { pacStopLoop(false); pacSound("end"); }
     else if (pacState.status === "running") pacTimer = setTimeout(pacStep, PAC_LOOP_MS);
   }
   function pacStopLoop(snap) {
     if (pacTimer) clearTimeout(pacTimer);
     pacTimer = null; pacClock = null;
+    pacStopSound();
     if (snap !== false) pacStopVisuals(true);
   }
   function pacStartLoop() {
@@ -65436,6 +65447,7 @@ setOfficeProgress("pc", false);
       if (!pacCan(pacState.player, dir)) { pacRender(); return false; }
       pacTrackRun();
       pacState.status = "running"; pacState.paused = false; pacState.direction = dir;
+      pacSound("start");
     }
     else if (pacState.status === "win" || pacState.status === "over") return false;
     if (pacPlayerEl) pacPlayerEl.setAttribute("data-dir", pacState.direction || pacState.desired || "left");
@@ -92709,6 +92721,88 @@ function pannedOut(ctx, elIdOrPan) {
   p.connect(ctx.destination);
   return p;
 }
+// Hack-Man keeps its arcade feedback deliberately tiny: five short oscillator shapes,
+// mixed through the shared SFX bus and panned to whichever presentation currently owns
+// the retained board. The simulation is timer-driven, so every cue repeats its own
+// focus/presentation gate instead of relying on getSfxCtx's hidden-tab guard alone.
+var __hackManCues = [], __hackManLastPelletAt = -Infinity, __hackManPelletFlip = false;
+function stopHackManSounds() {
+  var cues = __hackManCues.splice(0), now;
+  for (var i = 0; i < cues.length; i++) {
+    var cue = cues[i];
+    now = cue.ctx.currentTime;
+    for (var n = 0; n < cue.voices.length; n++) {
+      try {
+        cue.voices[n].gain.gain.cancelScheduledValues(now);
+        cue.voices[n].gain.gain.setValueAtTime(cue.voices[n].gain.gain.value || 0.0001, now);
+        cue.voices[n].gain.gain.linearRampToValueAtTime(0.0001, now + 0.018);
+        cue.voices[n].osc.stop(now + 0.022);
+      } catch (_error) {}
+    }
+    try { cue.out.disconnect(); } catch (_error2) {}
+    if (cue.spatial !== cue.ctx.destination) try { cue.spatial.disconnect(); } catch (_error3) {}
+  }
+}
+window.stopHackManSounds = stopHackManSounds;
+function playHackManSound(kind, power) {
+  if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) return false;
+  var presentation = window.__pacmanPresentation && window.__pacmanPresentation();
+  if (!presentation || !presentation.mode) return false;
+  var nowMs = performance.now();
+  if (kind === "pellet" && nowMs - __hackManLastPelletAt < 72) return false;
+  if (["pellet", "ghost", "death", "start", "end"].indexOf(kind) < 0) return false;
+  var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+  if (!ctx) return false;
+  if (kind === "pellet") __hackManLastPelletAt = nowMs;
+  var spatial = pannedOut(ctx, "monitor-pacman-wrap"), out = ctx.createGain();
+  out.gain.value = 1;
+  out.connect(spatial);
+  var cue = { ctx: ctx, spatial: spatial, out: out, voices: [] };
+  __hackManCues.push(cue);
+  function retire() {
+    for (var i = 0; i < cue.voices.length; i++) if (!cue.voices[i].ended) return;
+    var at = __hackManCues.indexOf(cue); if (at >= 0) __hackManCues.splice(at, 1);
+    try { cue.out.disconnect(); } catch (_error) {}
+    if (cue.spatial !== cue.ctx.destination) try { cue.spatial.disconnect(); } catch (_error2) {}
+  }
+  function tone(freq, offset, duration, gain, type, endFreq) {
+    var start = ctx.currentTime + offset, stop = start + duration;
+    var osc = ctx.createOscillator(), voiceGain = ctx.createGain();
+    osc.type = type || "square";
+    osc.frequency.setValueAtTime(freq, start);
+    if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, stop);
+    voiceGain.gain.setValueAtTime(0.0001, start);
+    voiceGain.gain.linearRampToValueAtTime(gain, start + Math.min(0.008, duration * 0.2));
+    voiceGain.gain.exponentialRampToValueAtTime(0.0001, stop);
+    osc.connect(voiceGain); voiceGain.connect(out);
+    var voice = { osc: osc, gain: voiceGain, ended: false }; cue.voices.push(voice);
+    osc.onended = function () { voice.ended = true; retire(); };
+    osc.start(start); osc.stop(stop + 0.006);
+  }
+  if (kind === "pellet") {
+    __hackManPelletFlip = !__hackManPelletFlip;
+    var pelletHz = power ? 620 : (__hackManPelletFlip ? 980 : 1160);
+    tone(pelletHz, 0, power ? 0.052 : 0.028, power ? 0.020 : 0.012, "square", pelletHz * (power ? 1.55 : 1.22));
+  } else if (kind === "ghost") {
+    tone(330, 0, 0.075, 0.028, "square", 520);
+    tone(520, 0.062, 0.075, 0.025, "square", 820);
+    tone(820, 0.124, 0.095, 0.021, "square", 1240);
+  } else if (kind === "death") {
+    tone(power ? 560 : 620, 0, 0.18, 0.032, "triangle", 390);
+    tone(390, 0.14, 0.19, 0.030, "triangle", 240);
+    tone(240, 0.28, power ? 0.34 : 0.25, 0.027, "sawtooth", power ? 72 : 110);
+  } else if (kind === "start") {
+    tone(330, 0, 0.075, 0.022, "triangle");
+    tone(440, 0.065, 0.075, 0.021, "triangle");
+    tone(660, 0.13, 0.105, 0.019, "triangle");
+  } else {
+    [392, 523.25, 659.25, 783.99, 1046.5].forEach(function (freq, i) {
+      tone(freq, i * 0.07, 0.16, 0.020 - i * 0.0015, "triangle");
+    });
+  }
+  return true;
+}
+window.playHackManSound = playHackManSound;
 // Garden-party low-end lift: a low-shelf that adds weight below ~120 Hz to the synth
 // dance beds (techno/waltz/disco/swing/salsa/bhangra/bandari/polka/horah/bulgar/dupak/furiant/cumbia). Spliced in
 // AFTER each bed's master gain — i.e. post-compressor, so the boost isn't swallowed by

@@ -19,7 +19,7 @@ var HARNESS = [
 var result = lib.runPageSync("rsvp.html", HARNESS, 3000, { patchRaf: true });
 if (!result) process.exit(1);
 var step = result.steps && result.steps.uv;
-var ok = result.errors.length === 0 && step && step.caption === "entrance_windows_uv" &&
-  step.windowCount === 5 && step.uvLive;
-console.log(ok ? "  ✓ UV window payoff gets its dedicated caption" : "  ✗ UV window payoff regression", step);
+var ok = result.errors.length === 0 && step && step.caption === "lower_entrance" && !step.flash &&
+  step.windowCount === 5 && step.uvLive && step.lights.every(function (windowState) { return windowState.on; });
+console.log(ok ? "  ✓ UV windows react without replacing the room caption" : "  ✗ UV window payoff regression", step);
 if (!ok) process.exit(1);

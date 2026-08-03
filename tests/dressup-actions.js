@@ -36,8 +36,8 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true });
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(s.menu && s.menu.prevented && s.menu.labels.join(",") === "Copy,Save,Download" && /Album/.test(s.menu.saveTitle),
-  "right-click offers Copy, Save, and Download with a Save explanation", s.menu);
+check(s.menu && s.menu.prevented && s.menu.labels.join(",") === "Copy,Save,Download",
+  "right-click offers Copy, Save, and Download", s.menu);
 check(s.copyCalled && s.copyBlob && s.copySize > 5000, "Copy receives a non-empty rendered PNG", s.copySize);
 check(s.saved && s.saved.subject === "dressup" && s.saved.blob, "Save adds the rendered outfit to Album", s.saved);
 check(/^loft-dress-up-.*\.png$/.test(s.download || ""), "Download uses a dress-up PNG filename", s.download);

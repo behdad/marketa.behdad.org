@@ -33,8 +33,8 @@ var harness = String.raw`<script>
       !behdadReact.classList.contains("host-bump") && !marketaReact.classList.contains("host-bump"));
 
     marketa.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
-    check("keyboard activation starts the same synchronized reaction",
-      behdadReact.classList.contains("host-bump") && marketaReact.classList.contains("host-bump"));
+    check("the decorative hosts do not claim keyboard activation",
+      !behdadReact.classList.contains("host-bump") && !marketaReact.classList.contains("host-bump"));
 
     behdadReact.classList.remove("host-bump");
     marketaReact.classList.remove("host-bump");

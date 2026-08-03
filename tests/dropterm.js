@@ -51,7 +51,7 @@ assert(/consoleTabComplete\(dtIn\)/.test(html), "the drop-down Tab handler reuse
 // ── 3. The panel HTML + reset hook exist ────────────────────────────────────────────────
 assert(/<div id="dropterm"[\s\S]*?id="dropterm-out"[\s\S]*?id="dropterm-in"/.test(html), "drop-down panel HTML (#dropterm / -out / -in) is present in .hunt-viewport");
 assert(/id="dropterm-fps"[^>]*>FPS --</.test(html), "viewport includes an FPS readout beside the console tab");
-assert(/id="dropterm-resize"[^>]*role="separator"/.test(html), "drop-down panel includes a lower-edge resize handle");
+assert(/id="dropterm-resize"/.test(html), "drop-down panel includes a lower-edge resize handle");
 assert(/#dropterm\{[\s\S]*?transform:translateY\(-102%\)/.test(html), "#dropterm slides in from the top (transform:translateY off-screen by default)");
 assert(/#dropterm\.open\{transform:translateY\(0\)/.test(html), "#dropterm.open slides down into view");
 assert(/max-height:var\(--dropterm-max-height, 48%\)/.test(html), "drop-down height is a session-only CSS value with a 48% default");

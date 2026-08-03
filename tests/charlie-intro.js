@@ -18,7 +18,7 @@ var HARNESS = [
   ' S("before",{delivered:window.__deliverCharlieIntroNow&&window.__deliverCharlieIntroNow(),received:window.__phoneMessageReceived&&window.__phoneMessageReceived("charlie")});',
   ' var ordinary=window.__deliverPhoneMessage&&window.__deliverPhoneMessage("cue_mail"); var intro=window.__deliverCharlieIntroNow&&window.__deliverCharlieIntroNow();',
   ' S("delivery",{ordinary:ordinary,intro:intro,received:window.__phoneMessageReceived&&window.__phoneMessageReceived("charlie")});',
-  ' window.__openMessagesAt("charlie"); await sleep(40); var charlieRow=document.querySelector(".pm-msg-row[data-message-id=charlie] .pm-msg-text"); S("copy",charlieRow&&charlieRow.textContent);',
+  ' var charlieMessages=window.__chatContext("What messages did Charlie send?").apps.messages;var charlieMessage=charlieMessages&&charlieMessages.find(function(m){return m.id==="charlie";});S("copy",{text:charlieMessage&&charlieMessage.text,messages:charlieMessages});',
   ' var tower=document.getElementById("office-pc-desk-trio"), mon=document.getElementById("office-monitor"); if(tower)tower.classList.add("on"); if(mon)mon.classList.add("here","screen-on","show-caps");',
   ' window.__monitorChatTurnstile=function(){return Promise.resolve("test-token");}; window.__runMsgAction("charlie"); await sleep(120);',
   ' S("action",{room:window.currentStageName,chat:mon&&mon.classList.contains("show-chat"),opened:window.__monitorChatWasOpened&&window.__monitorChatWasOpened()});',
@@ -41,7 +41,7 @@ var s = result.steps;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.before.delivered === false && !s.before.received, "Charlie cannot be the first text", s.before);
 check(s.delivery.ordinary === true && s.delivery.intro === true && s.delivery.received, "Charlie can introduce themself after an ordinary phase-two text", s.delivery);
-check(!!s.copy && !/Esc escapes|Backspace/.test(s.copy), "the varied introduction stays conversational instead of appending keyboard instructions", s.copy);
+check(!!s.copy.text && !/Esc escapes|Backspace/.test(s.copy.text), "the varied introduction stays conversational instead of appending keyboard instructions", s.copy);
 check(s.action.room === "office" && s.action.chat && s.action.opened, "tapping Charlie's text opens Chat on the office computer", s.action);
 check(s.once.redelivered === false && !s.once.received, "the introduction does not repeat after Chat was opened or phone state was reset", s.once);
 

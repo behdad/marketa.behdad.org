@@ -203,7 +203,9 @@ in first. Acceleration builds progressively, the limiter is at 7,500 rpm, and a
 well-timed shift near 7,000 rpm reaches 100 km/h in about six seconds. Sixth gear
 is for relaxed cruising rather than instant acceleration; top speed is 263 km/h.
 On the highway, falling far enough to lug gears two through six below idle returns
-the shifter to neutral; first remains available to pull away.
+the shifter to neutral; first remains available to pull away. A high- or low-RPM
+shift suggestion replaces the normal highway caption only after the condition has
+held long enough to avoid flicker.
 
 Complete three forward street laps to unlock the highway. On the third lap a
 top-left **Fancy a roadtrip?** card offers **Take the highway** or **Later**;

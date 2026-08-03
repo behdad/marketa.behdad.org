@@ -289,9 +289,32 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         mirrorWinter: visiblePath(document.getElementById("entrance-roadtrip-mirror-winter"), hud)
       }
     };
+    window.__entranceDriveControl("throttle", false);
     window.__entranceDriveSetMotion(25, 6);
     step(20);
     report.steps.lowSpeedNeutral = { gear: state().drive.gear, speed: state().drive.speed };
+    window.__entranceDriveControl("throttle", true);
+    window.__entranceDriveSetMotion(66, 1);
+    step(700);
+    var shiftUpEarly = state().drive.instruction;
+    step(200);
+    var shiftUpReady = state().drive.instruction;
+    window.__entranceDriveControl("throttle", false);
+    window.__entranceDriveSetMotion(55, 4);
+    step(20);
+    step(700);
+    var shiftDownEarly = state().drive.instruction;
+    step(150);
+    var shiftDownReady = state().drive.instruction;
+    window.__entranceDriveSetMotion(120, 3);
+    step(20);
+    report.steps.shiftCoaching = {
+      upEarly: shiftUpEarly,
+      upReady: shiftUpReady,
+      downEarly: shiftDownEarly,
+      downReady: shiftDownReady,
+      cleared: state().drive.instruction
+    };
     window.__entranceDriveSetMotion(90, 3);
     window.__entranceDriveControl("throttle", true);
     await sleep(45);
@@ -806,6 +829,13 @@ check(activation && activation.retained.roomArt.display !== "none" && activation
   "roadtrip presentation retains scene/car geometry for localized Porsche audio", activation && activation.retained);
 check(s.lowSpeedNeutral && s.lowSpeedNeutral.gear === 0 && s.lowSpeedNeutral.speed > 20,
   "the highway selects neutral before a too-slow upper gear can lug below idle", s.lowSpeedNeutral);
+check(s.shiftCoaching &&
+  s.shiftCoaching.upEarly === "entrance_roadtrip_drive" &&
+  s.shiftCoaching.upReady === "entrance_drive_shift_up" &&
+  s.shiftCoaching.downEarly === "entrance_roadtrip_drive" &&
+  s.shiftCoaching.downReady === "entrance_drive_shift_down" &&
+  s.shiftCoaching.cleared === "entrance_roadtrip_drive",
+  "sustained highway RPM earns delayed shift coaching without caption flicker", s.shiftCoaching);
 var focusPause = s.focusPause;
 check(focusPause &&
   focusPause.end.drive.roadtrip.elapsedSeconds === focusPause.start.drive.roadtrip.elapsedSeconds &&

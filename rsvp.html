@@ -98259,13 +98259,16 @@ function spawnDustMote(container) {
     if (window.__clearSkyMeteors) window.__clearSkyMeteors(); // ...nor does a shower's streaks: the sky you left keeps none of them
     if (window.__clearRoomFireworks) window.__clearRoomFireworks(); // one-shot garden fireworks never ride into another room
     if (name !== "balcony" && window.__clearBalconyPrecip) window.__clearBalconyPrecip();
+    // Unpark every room the moving viewport can expose before changing the transform. In
+    // particular, Chrome can otherwise snapshot the Balcony's large SVG paint chunks while
+    // they are still visibility:hidden and omit them until the settle-time parking repaint.
+    parkAfterSlide(idx, fromIdx);
     strip.style.transform = "translateX(-" + (idx * 20) + "%)";
     strip.classList.toggle("viewing-office", name === "office"); // WebKit paints the monitor's foreignObjects even at opacity:0 and lets them escape the strip clip, leaking into whichever room is on screen; the CSS gate below hides them whenever the office isn't the viewed room
     strip.classList.toggle("viewing-balcony", name === "balcony");
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
     if (fromIdx !== idx && window.__loftStateChanged) window.__loftStateChanged("room.change", { room: name }, "ui");
-    parkAfterSlide(idx, fromIdx); // traversed rooms stay live through the pan; only the destination remains afterwards
     if (window.__syncLaptopSaverLoop) window.__syncLaptopSaverLoop(); // off-room device canvases/DOM loops hold their exact frame until the office returns
     if (window.__syncMonitorSaverLoop) window.__syncMonitorSaverLoop();
     if (window.__syncMonitorEqLoop) window.__syncMonitorEqLoop();

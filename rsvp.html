@@ -921,12 +921,14 @@ footer{margin-top:2.6rem}
 #entrance-roadtrip-crack,#entrance-roadtrip-shatter{opacity:0;transition:opacity .16s ease}
 #entrance-room.roadtrip-cracked #entrance-roadtrip-crack{opacity:calc(.28 + var(--roadtrip-damage,.6) * .68)}
 #entrance-room.roadtrip-shattered #entrance-roadtrip-shatter{opacity:.96}
-#entrance-drive-hud-svg.roadtrip-shoulder-rumble{animation:entrance-roadtrip-shoulder-rumble .12s steps(2,end) infinite}
+#entrance-drive-hud-svg.roadtrip-shoulder-rumble{
+  animation:entrance-roadtrip-shoulder-rumble var(--roadtrip-rumble-period,.16s) steps(2,end) infinite
+}
 #entrance-drive-hud-svg.roadtrip-impact-bump{animation:entrance-roadtrip-impact-bump .54s ease-out}
 #entrance-drive-hud-svg.roadtrip-impact-heavy{animation:entrance-roadtrip-impact-heavy 1.08s ease-out}
 @keyframes entrance-roadtrip-shoulder-rumble{
   0%{translate:0 0}
-  50%{translate:0 1.5px}
+  50%{translate:0 var(--roadtrip-rumble-y,.5px)}
 }
 @keyframes entrance-roadtrip-impact-bump{
   0%,100%{transform:translate(0,0)}
@@ -35664,7 +35666,14 @@ window.__entranceRoomOpen = false;
     roadtripState.shoulderZone = zone;
     if (zone !== "road") roadtripState.shoulderDistance += Math.max(0, distance);
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");
-    if (driveHudSvg) driveHudSvg.classList.toggle("roadtrip-shoulder-rumble", zone !== "road");
+    var wheelSpeed = Math.abs(driveState.speed);
+    var rumbleMotion = Math.min(1, wheelSpeed / 110);
+    var shouldRumble = zone !== "road" && wheelSpeed > .5;
+    if (driveHudSvg) {
+      driveHudSvg.classList.toggle("roadtrip-shoulder-rumble", shouldRumble);
+      driveHudSvg.style.setProperty("--roadtrip-rumble-y", (.08 + rumbleMotion * 1.42).toFixed(2) + "px");
+      driveHudSvg.style.setProperty("--roadtrip-rumble-period", (.22 - rumbleMotion * .1).toFixed(3) + "s");
+    }
     room.classList.toggle("roadtrip-on-shoulder", zone !== "road");
     room.classList.toggle("roadtrip-on-gravel", zone === "gravel");
     if (zone === "road" || seconds <= 0) return;

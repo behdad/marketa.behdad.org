@@ -174,6 +174,8 @@ reduction, speed bleed, classes, and exposed test state.
 The windshield road and its edge, double-yellow, and dashed lane markings are sampled perspective
 polygons: their filled widths converge with the asphalt at the horizon rather than using fixed SVG
 strokes. The rumble strip remains a separate dashed path beside the filled white edge band.
+Shoulder view vibration is wheel-speed driven and must clear at a stop; stationary RPM vibration stays
+local to the Porsche/cockpit instead of shaking the road scene.
 `porscheTireAudioMix()` is the deterministic speed/steering/surface projection for the continuous
 road, tire, wind, corner-squeal, and shoulder textures. It shares the drivetrain bed but uses a
 separate tire spatial output so a closed roof can muffle high frequencies without the engine's

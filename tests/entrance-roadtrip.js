@@ -61,6 +61,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-roadtrip-rain", "entrance-roadtrip-snow", "entrance-roadtrip-winter"
   ];
   var report = { errors: [], steps: {} };
+  var attended = true;
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function state() { return window.__entranceRoomState(); }
@@ -206,7 +207,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       gravel: window.__entranceDriveTireAudio(100, 5, "gravel")
     };
 
-    Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
+    Object.defineProperty(document, "hasFocus", { value: function () { return attended; }, configurable: true });
     window.__unlockAllRooms();
     window.goToStage("balcony");
     window.__openEntranceRoom();
@@ -286,6 +287,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         mirrorSnow: visiblePath(document.getElementById("entrance-roadtrip-mirror-snow"), hud),
         mirrorWinter: visiblePath(document.getElementById("entrance-roadtrip-mirror-winter"), hud)
       }
+    };
+    window.__entranceDriveSetMotion(90, 3);
+    window.__entranceDriveControl("throttle", true);
+    await sleep(45);
+    attended = false;
+    window.dispatchEvent(new Event("blur"));
+    var focusPauseStart = copy(state());
+    step(1000);
+    await sleep(120);
+    var focusPauseEnd = copy(state());
+    attended = true;
+    window.dispatchEvent(new Event("focus"));
+    await sleep(90);
+    var focusPauseResumed = copy(state());
+    report.steps.focusPause = {
+      start: focusPauseStart,
+      end: focusPauseEnd,
+      resumed: focusPauseResumed
     };
     window.__setBalconyRain(false, "test");
     window.__setBalconySnow(true, "test");
@@ -778,6 +797,17 @@ check(activation && activation.retained.roomArt.display !== "none" && activation
   activation.retained.spatial && activation.retained.spatial.anchor === "entrance-porsche" &&
   isFinite(activation.retained.spatial.pan),
   "roadtrip presentation retains scene/car geometry for localized Porsche audio", activation && activation.retained);
+var focusPause = s.focusPause;
+check(focusPause &&
+  focusPause.end.drive.roadtrip.elapsedSeconds === focusPause.start.drive.roadtrip.elapsedSeconds &&
+  focusPause.end.drive.roadtrip.distance === focusPause.start.drive.roadtrip.distance &&
+  focusPause.end.drive.roadtrip.score === focusPause.start.drive.roadtrip.score &&
+  focusPause.end.drive.speed === focusPause.start.drive.speed &&
+  Object.keys(focusPause.end.drive.holds).every(function (key) { return !focusPause.end.drive.holds[key]; }) &&
+  focusPause.resumed.drive.roadtrip.elapsedSeconds > focusPause.end.drive.roadtrip.elapsedSeconds &&
+  focusPause.resumed.drive.roadtrip.elapsedSeconds - focusPause.end.drive.roadtrip.elapsedSeconds < .3 &&
+  focusPause.resumed.drive.roadtrip.distance > focusPause.end.drive.roadtrip.distance,
+  "blur freezes the complete highway simulation, releases controls, and resumes without catch-up", focusPause);
 check(activation && activation.beforeClasses.indexOf("entrance-clouded") >= 0 &&
   activation.beforeClasses.indexOf("entrance-raining") >= 0 &&
   activation.beforeClasses.every(function (name) { return activation.roomClasses.indexOf(name) >= 0; }) &&

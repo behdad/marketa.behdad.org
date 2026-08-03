@@ -34873,6 +34873,9 @@ window.__entranceRoomOpen = false;
       document.visibilityState !== "hidden" && document.hasFocus() &&
       !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
   }
+  function roadtripSimulationAttended() {
+    return !roadtripState.active || (document.visibilityState !== "hidden" && document.hasFocus());
+  }
   function entranceDriveMusicWanted() {
     return !!(entranceDriveAudible() && driveState.hudOpen);
   }
@@ -37675,8 +37678,9 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function porscheDriveStep(milliseconds) {
-    // Background tabs throttle timers heavily. Keep the elapsed time instead of
-    // throwing it away, while limiting one catch-up step to a manageable second.
+    // Highway progress is strictly attended play. A direct/testing step is gated too,
+    // so no caller can advance time, traffic, police, or score behind another window.
+    if (!roadtripSimulationAttended()) return driveState;
     var dt = Math.max(0, Math.min(1000, Number(milliseconds) || 0));
     var seconds = dt / 1000;
     var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
@@ -37796,6 +37800,10 @@ window.__entranceRoomOpen = false;
     driveTimer = null;
     if (!window.__entranceRoomOpen ||
         (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
+      driveLastTime = 0;
+      return;
+    }
+    if (!roadtripSimulationAttended()) {
       driveLastTime = 0;
       return;
     }
@@ -38497,8 +38505,10 @@ window.__entranceRoomOpen = false;
   function updatePorscheDriveLifecycle() {
     updatePorscheIdle();
     updatePorscheDriveAudio();
+    var unattendedRoadtrip = !roadtripSimulationAttended();
     if (!window.__entranceRoomOpen ||
-        (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) {
+        (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) ||
+        unattendedRoadtrip) {
       cancelPorscheShifterPress();
       cancelPorscheTouchSteering();
       setPorscheDriveShiftKeyHeld(false);

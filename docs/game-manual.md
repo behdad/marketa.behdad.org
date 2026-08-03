@@ -222,6 +222,11 @@ the lane while the road and weather continue through the windshield. Yellow
 curve signs announce the next matching bend. The car drifts toward the outside
 of a bend unless you steer with it.
 
+Leaving the game window or switching tabs pauses the whole highway simulation:
+trip time, road motion, traffic, wildlife, police, spawns, distance, and scoring
+all freeze. Held driving controls are released, and returning resumes from the
+same instant without a catch-up jump.
+
 You can cross either white edge line onto the shoulder. The rumble strip shakes
 the view; farther out, gravel reduces grip and steadily bleeds speed. It is useful
 as an emergency escape route, but slower than staying on the pavement.

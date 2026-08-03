@@ -5587,8 +5587,13 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 /* One clipped actor-cell gutter per tunnel edge provides a transform-free wrap handoff. */
 .pac-actors{grid-area:1/1/16/20;display:grid;grid-template:repeat(180,minmax(0,1fr))/repeat(252,minmax(0,1fr));width:110.526316%;margin-left:-5.263158%;min-width:0;min-height:0;pointer-events:none}
 .pac-actor{grid-row:var(--ar)/span 12;grid-column:var(--agc)/span 12;min-width:0;min-height:0;place-self:center}
-.pac-player{width:3px;height:3px;border-radius:50%;background:conic-gradient(from var(--mouth),#ffd83d 0 42%,transparent 42% 58%,#ffd83d 58% 100%)}
-.pac-player[data-dir="right"]{--mouth:0deg}.pac-player[data-dir="down"]{--mouth:90deg}.pac-player[data-dir="left"]{--mouth:180deg}.pac-player[data-dir="up"]{--mouth:270deg}
+@property --pac-mouth-gap{syntax:"<percentage>";inherits:false;initial-value:8%}
+.pac-player{--pac-mouth-gap:8%;width:3px;height:3px;border-radius:50%;background:conic-gradient(from var(--mouth),#ffd83d 0 calc(50% - var(--pac-mouth-gap)),transparent calc(50% - var(--pac-mouth-gap)) calc(50% + var(--pac-mouth-gap)),#ffd83d calc(50% + var(--pac-mouth-gap)) 100%)}
+/* A conic gradient starts at twelve o'clock; its transparent slice is opposite that
+   start, so each facing angle is a quarter-turn behind the direction of travel. */
+.pac-player[data-dir="right"]{--mouth:270deg}.pac-player[data-dir="down"]{--mouth:0deg}.pac-player[data-dir="left"]{--mouth:90deg}.pac-player[data-dir="up"]{--mouth:180deg}
+#monitor-pacman-wrap .pac-chomp{animation:pac-chomp .14s ease-in-out}
+@keyframes pac-chomp{0%,100%{--pac-mouth-gap:8%}50%{--pac-mouth-gap:0%}}
 .pac-ghost{width:3px;height:3px;border-radius:1.5px 1.5px .6px .6px;background:radial-gradient(circle at 35% 37%,#172d96 0 9%,transparent 10%),radial-gradient(circle at 65% 37%,#172d96 0 9%,transparent 10%),radial-gradient(circle at 35% 36%,#fff 0 20%,transparent 21%),radial-gradient(circle at 65% 36%,#fff 0 20%,transparent 21%),linear-gradient(var(--ghost),var(--ghost));box-shadow:inset 0 -1px 0 rgba(255,255,255,.3),0 0 .8px rgba(255,255,255,.32)}
 .pac-ghost.frightened{background:radial-gradient(circle at 35% 39%,#fff 0 10%,transparent 11%),radial-gradient(circle at 65% 39%,#fff 0 10%,transparent 11%),linear-gradient(#4164ff,#253fc8);box-shadow:inset 0 -1px 0 rgba(255,255,255,.3),0 0 1px rgba(65,100,255,.8)}
 .pac-ghost.eyes{background:radial-gradient(circle at 35% 50%,#172d96 0 12%,transparent 13%),radial-gradient(circle at 65% 50%,#172d96 0 12%,transparent 13%),radial-gradient(circle at 35% 48%,#fff 0 27%,transparent 28%),radial-gradient(circle at 65% 48%,#fff 0 27%,transparent 28%);box-shadow:none}
@@ -5611,6 +5616,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pac-wrap.pac-killed .pac-player{background:#77777d}
 .pac-wrap.pac-killed .pac-ghost{background:#f8f5ec}
 .pac-wrap.pac-killed .pac-message{font-size:2.5px;color:#ffd83d}
+@media (prefers-reduced-motion:reduce){.pac-player.pac-chomp{animation:none}}
 #office-monitor.death-pacman #monitor-pacman{pointer-events:none}
 #office-monitor.death-mines #monitor-mines{pointer-events:none}
 #office-monitor.death-classics #monitor-mines,#office-monitor.death-solitaire #monitor-mines{pointer-events:none}
@@ -65010,7 +65016,7 @@ setOfficeProgress("pc", false);
     { mode: "scatter", ms: 5000 }, { mode: "chase", ms: 20000 },
     { mode: "scatter", ms: 5000 }, { mode: "chase", ms: Infinity }
   ];
-  var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacFrame = null, pacCheckpointTicks = 0, pacDying = false;
+  var pacUnlocked = false, pacBuilt = false, pacTimer = null, pacFrame = null, pacChompTimer = null, pacCheckpointTicks = 0, pacDying = false;
   var pacState = null, pacClock = null;
   var pacRunStartingHigh = 0, pacRunActive = false;
   var PAC_HIGH_KEY = "pacmanHigh"; // personal best survives New, Kill, shutdown, and full loft reset
@@ -65102,6 +65108,7 @@ setOfficeProgress("pc", false);
   function pacStopVisuals(snap) {
     if (pacFrame) cancelAnimationFrame(pacFrame);
     pacFrame = null;
+    pacClearChomp();
     [pacPlayerEl].concat(pacGhostEls).forEach(function (el) {
       if (!el) return;
       pacRemoveWrapCopy(el);
@@ -65194,6 +65201,20 @@ setOfficeProgress("pc", false);
     }
     pacPaintText();
   }
+  function pacChomp() {
+    if (!pacPlayerEl || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+    // Pellet intervals can be close to the one-shot's duration. Reset first so every
+    // pellet gets one full close/open cycle, then let animationend clean the state.
+    pacPlayerEl.classList.remove("pac-chomp");
+    void pacPlayerEl.offsetWidth;
+    pacPlayerEl.classList.add("pac-chomp");
+    clearTimeout(pacChompTimer);
+    pacChompTimer = setTimeout(pacClearChomp, 180);
+  }
+  function pacClearChomp() {
+    clearTimeout(pacChompTimer); pacChompTimer = null;
+    if (pacPlayerEl) pacPlayerEl.classList.remove("pac-chomp");
+  }
   function pacBuild() {
     if (pacBuilt || !pacWrap) return;
     pacBuilt = true;
@@ -65214,7 +65235,11 @@ setOfficeProgress("pc", false);
       }
     }
     var actors = document.createElement("div"); actors.className = "pac-actors"; pacBoard.appendChild(actors);
-    pacPlayerEl = document.createElement("b"); pacPlayerEl.className = "pac-actor pac-player"; actors.appendChild(pacPlayerEl);
+    pacPlayerEl = document.createElement("b"); pacPlayerEl.className = "pac-actor pac-player";
+    pacPlayerEl.addEventListener("animationend", function (event) {
+      if (event.animationName === "pac-chomp") pacClearChomp();
+    });
+    actors.appendChild(pacPlayerEl);
     ["#e85d75", "#64d7e8", "#f4a261"].forEach(function (color) {
       var ghost = document.createElement("b"); ghost.className = "pac-actor pac-ghost"; ghost.style.setProperty("--ghost", color); actors.appendChild(ghost); pacGhostEls.push(ghost);
     });
@@ -65384,7 +65409,7 @@ setOfficeProgress("pc", false);
       player: { r: pacState.player.r, c: pacState.player.c },
       ghosts: pacState.ghosts.map(function (g) { return { r: g.r, c: g.c }; })
     };
-    var changed = false;
+    var changed = false, atePellet = false;
     var playerInterval = pacState.playerAte === "power" ? PAC_PLAYER_POWER_MS :
       pacState.fright > 0 ? (pacState.playerAte ? PAC_PLAYER_FRIGHT_DOT_MS : PAC_PLAYER_FRIGHT_CLEAR_MS) :
       pacState.playerAte ? PAC_PLAYER_DOT_MS : PAC_PLAYER_CLEAR_MS;
@@ -65398,6 +65423,7 @@ setOfficeProgress("pc", false);
         var idx = pacCellIndex(pacState.player.r, pacState.player.c);
         pacState.playerAte = pacState.pellets[idx] ? (PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? "power" : true) : false;
         if (pacState.playerAte) {
+          atePellet = true;
           pacState.pellets[idx] = false; pacState.dotsEaten++; pacState.releaseIdle = 0;
           pacState.score += PAC_MAZE[pacState.player.r][pacState.player.c] === "o" ? 50 : 10;
           pacBankHigh();
@@ -65426,6 +65452,7 @@ setOfficeProgress("pc", false);
     var won = pacRemaining() === 0 && pacState.status !== "over";
     if (won) { pacState.status = "win"; pacSaveSoon(true); pacOfferBest(); }
     if (changed || wasFrightened !== (pacState.fright > 0)) pacRender(previous);
+    if (atePellet) pacChomp();
     if (won) { pacStopLoop(false); pacSound("end"); }
     else if (pacState.status === "running") pacTimer = setTimeout(pacStep, PAC_LOOP_MS);
   }

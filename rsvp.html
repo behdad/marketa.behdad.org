@@ -34610,7 +34610,13 @@ window.__entranceRoomOpen = false;
     343, 355, 373, 386, 402, 420, 433, 452, 468, 560,
     578, 596, 615, 632, 648, 668, 687, 705, 723, 744
   ];
-  var ROADTRIP_POLICE_FIRST_DISTANCE = 620;
+  var ROADTRIP_POLICE_FIRST_DISTANCE = 950;
+  var ROADTRIP_POLICE_WARNING_AHEAD = 240;
+  var ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS = 3;
+  var ROADTRIP_POLICE_FLASH_STARTS = [.18, .68, 1.18];
+  var ROADTRIP_POLICE_FLASH_DURATION = .22;
+  var ROADTRIP_POLICE_REPEAT_DISTANCE = 1200;
+  var ROADTRIP_POLICE_REPEAT_STEP = 120;
   var ROADTRIP_POLICE_REFUSAL_SECONDS = 20;
   var ROADTRIP_POLICE_REFUSAL_DISTANCE = 500;
   var roadtripPool = [];
@@ -35475,9 +35481,12 @@ window.__entranceRoomOpen = false;
   function beginRoadtripPoliceEncounter(ahead) {
     var police = roadtripState.police;
     if (!roadtripState.active || police.phase !== "idle") return false;
+    var stationLead = Number(ahead);
+    if (!Number.isFinite(stationLead) || stationLead <= 0) stationLead = ROADTRIP_POLICE_WARNING_AHEAD;
+    stationLead = Math.max(140, stationLead);
     police.phase = "warning";
-    police.stationAt = roadtripState.distance + Math.max(140, Number(ahead) || 150);
-    police.warningCarAt = roadtripState.distance + 135;
+    police.stationAt = roadtripState.distance + stationLead;
+    police.warningCarAt = roadtripState.distance + Math.min(135, stationLead - 15);
     police.warningElapsed = 0;
     police.warningFlashCount = 0;
     police.warningLight = false;
@@ -35665,20 +35674,25 @@ window.__entranceRoomOpen = false;
       return;
     }
     if (police.phase === "idle" && roadtripState.distance >= police.nextDistance) {
-      beginRoadtripPoliceEncounter(150);
+      beginRoadtripPoliceEncounter();
     }
     if (police.phase === "warning") {
       police.warningElapsed += seconds;
       police.warningCarAt -= 24 * seconds;
-      var flashStarts = [.18, .68, 1.18];
-      while (police.warningFlashCount < flashStarts.length &&
-          police.warningElapsed >= flashStarts[police.warningFlashCount]) {
+      while (police.warningFlashCount < ROADTRIP_POLICE_FLASH_STARTS.length &&
+          police.warningElapsed >= ROADTRIP_POLICE_FLASH_STARTS[police.warningFlashCount]) {
         police.warningFlashCount++;
       }
-      police.warningLight = flashStarts.some(function (start) {
-        return police.warningElapsed >= start && police.warningElapsed < start + .22;
+      police.warningLight = ROADTRIP_POLICE_FLASH_STARTS.some(function (start) {
+        return police.warningElapsed >= start &&
+          police.warningElapsed < start + ROADTRIP_POLICE_FLASH_DURATION;
       });
-      if (police.stationAt - roadtripState.distance <= 7) detectRoadtripPoliceSpeed();
+      var warningCompleteAt = ROADTRIP_POLICE_FLASH_STARTS[ROADTRIP_POLICE_FLASH_STARTS.length - 1] +
+        ROADTRIP_POLICE_FLASH_DURATION;
+      if (police.stationAt - roadtripState.distance <= 7 &&
+          police.warningElapsed >= warningCompleteAt + ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS) {
+        detectRoadtripPoliceSpeed();
+      }
     } else if (police.phase === "pursuit") {
       police.pursuitElapsed += seconds;
       police.pursuitDistance += distance;
@@ -35705,7 +35719,8 @@ window.__entranceRoomOpen = false;
       police.cooldownElapsed += seconds;
       if (police.cooldownElapsed >= 4) {
         police.phase = "idle";
-        police.nextDistance = roadtripState.distance + 760 + police.tickets % 4 * 80;
+        police.nextDistance = roadtripState.distance + ROADTRIP_POLICE_REPEAT_DISTANCE +
+          police.tickets % 4 * ROADTRIP_POLICE_REPEAT_STEP;
         police.cooldownElapsed = 0;
         police.overLimit = 0;
         police.fine = 0;
@@ -38573,6 +38588,10 @@ window.__entranceRoomOpen = false;
           speedLimit: ROADTRIP_SPEED_LIMIT,
           enforcementSpeed: ROADTRIP_POLICE_ENFORCE_SPEED,
           runEndSpeed: ROADTRIP_POLICE_RUN_END_SPEED,
+          policeFirstDistance: ROADTRIP_POLICE_FIRST_DISTANCE,
+          policeWarningAhead: ROADTRIP_POLICE_WARNING_AHEAD,
+          policeWarningHeadroom: ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS,
+          policeRepeatDistance: ROADTRIP_POLICE_REPEAT_DISTANCE,
           policeEscapeSpeed: ROADTRIP_POLICE_ESCAPE_SPEED,
           policeEscapeDistance: ROADTRIP_POLICE_ESCAPE_DISTANCE,
           police: {

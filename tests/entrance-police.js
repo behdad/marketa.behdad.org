@@ -50,6 +50,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         speedLimit: trip().speedLimit,
         enforcementSpeed: trip().enforcementSpeed,
         runEndSpeed: trip().runEndSpeed,
+        firstDistance: trip().policeFirstDistance,
+        warningAhead: trip().policeWarningAhead,
+        warningHeadroom: trip().policeWarningHeadroom,
+        repeatDistance: trip().policeRepeatDistance,
         escapeSpeed: trip().policeEscapeSpeed,
         escapeDistance: trip().policeEscapeDistance,
         speedSign: !!document.getElementById("entrance-roadtrip-speed-90"),
@@ -59,15 +63,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       };
 
       setMotion(110, 3);
-      window.__entranceRoadtripPolice(150);
+      window.__entranceRoadtripPolice();
+      var warningLead = trip().police.stationAt - trip().distance;
       step(200, 7);
       report.steps.warning = {
         police: copy(trip().police),
+        lead: warningLead,
         warningVisible: document.querySelector(".entrance-roadtrip-police-warning").getAttribute("visibility"),
         roadsideVisible: trip().police.roadsideVisible
       };
       window.__entranceRoadtripSetDistance(trip().police.stationAt - 6);
-      step(20);
+      step(1000, 2);
+      report.steps.warningHeadroom = copy(trip().police);
+      step(1000, 2);
       report.steps.tolerated = copy(trip());
 
       report.steps.fineSchedule = [111, 120, 130, 140, 141].map(function (speed) {
@@ -188,12 +196,18 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.pursuitStepHook === "function" &&
   s.contract.speedLimit === 90 &&
   s.contract.enforcementSpeed === 110 && s.contract.runEndSpeed === 150 &&
+  s.contract.firstDistance === 950 && s.contract.warningAhead === 240 &&
+  s.contract.warningHeadroom === 3 && s.contract.repeatDistance === 1200 &&
   s.contract.escapeSpeed === 200 && s.contract.escapeDistance === 55 &&
   s.contract.speedSign && s.contract.speedFurniture,
   "the highway posts a 90 km/h limit and exposes the 110/150 enforcement thresholds", s.contract);
 check(s.warning && s.warning.police.warningFlashCount === 3 &&
-  s.warning.warningVisible === "visible" && s.warning.roadsideVisible,
-  "one oncoming vehicle gives exactly three high-beam flashes before the roadside car", s.warning);
+  s.warning.warningVisible === "visible" && !s.warning.roadsideVisible && s.warning.lead === 240 &&
+  s.warning.lead / (s.contract.enforcementSpeed / 3.6) - 1.4 >= s.contract.warningHeadroom,
+  "one oncoming vehicle gives exactly three high-beam flashes with a longer braking runway", s.warning);
+check(s.warningHeadroom && s.warningHeadroom.phase === "warning" &&
+  s.warningHeadroom.warningElapsed < 4.4,
+  "the trap cannot measure speed until three seconds after the final flash", s.warningHeadroom);
 check(s.tolerated && s.tolerated.active && s.tolerated.police.phase === "cooldown" &&
   s.tolerated.police.detectedSpeed <= 110 && s.tolerated.police.pursuits === 0 &&
   s.tolerated.police.tickets === 0 && s.tolerated.police.fines === 0,

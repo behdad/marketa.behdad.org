@@ -192,8 +192,10 @@ entities below its lower edge, so a pooled vehicle is never painted in both view
 The nested `drive.roadtrip.police` state owns the infrequent speed trap independently of the bounded
 traffic pool. `stepRoadtripPolice()` advances its warning → pursuit → cooldown state machine;
 `paintRoadtripPolice()` projects a dedicated oncoming warning car, parked patrol car, and rear-view
-pursuit use without competing for pooled traffic slots. The warning car exposes exactly three
-distance-safe high-beam flashes. Posted speed is 90 km/h and enforcement begins above 110.
+pursuit use without competing for pooled traffic slots. The first trap begins after 950 metres;
+later traps are spaced by 1,200–1,560 metres. The warning car exposes exactly three high-beam
+flashes with the patrol car 240 metres ahead; detection is gated until at least three seconds after
+the third flash finishes. Posted speed is 90 km/h and enforcement begins above 110.
 `ROADTRIP_POLICE_STANDARD_FINES` indexes Alberta's complete 1–50 km/h standard schedule, including
 the published 20% surcharge; 51+ stores `fine: null`, sets `courtRequired`, and increments summonses
 rather than inventing an amount. A right-shoulder stop at 2.5 km/h or less settles the ticket or

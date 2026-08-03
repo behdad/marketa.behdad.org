@@ -227,8 +227,9 @@ The centre mirror is live: its road and markings follow the bends behind you,
 cloud, smoke, rain, snow, and winter cover match the windshield, and traffic you
 have just passed remains visible until it falls out of mirror range.
 
-The posted highway limit is 90 km/h. An occasional parked police car is announced
-by one oncoming driver flashing its high beams three times. Police allow speeds
+The posted highway limit is 90 km/h. Infrequent parked police cars are announced
+well ahead by one oncoming driver flashing its high beams three times, leaving
+at least three more seconds before measurement to slow safely. Police allow speeds
 through 110 km/h; above that, a patrol car and siren appear in the rear-view
 mirror. Move onto the right shoulder and stop to receive a fine scaled to the
 speed at which you passed the police. Fixed amounts follow Alberta's current

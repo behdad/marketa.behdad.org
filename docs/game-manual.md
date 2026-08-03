@@ -231,6 +231,10 @@ Reverse also moves the highway: a missed pickup remains behind briefly, so you
 can back up, select a forward gear, and collect it on the next forward crossing.
 Reverse adds to the odometer but never earns highway distance points.
 
+The highway landscape follows the effective game date in both the windshield
+and mirror: fresh muddy spring, deep-green summer, gold-and-rust autumn, or
+bare, snow-covered winter. Summer runs through September 21.
+
 Leaving the game window or switching tabs pauses the whole highway simulation:
 trip time, road motion, traffic, wildlife, police, spawns, distance, and scoring
 all freeze. Held driving controls are released, and returning resumes from the

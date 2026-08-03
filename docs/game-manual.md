@@ -247,9 +247,11 @@ its 20% surcharge. At 51 km/h or more over the limit there is no invented fixed
 amount: the outcome is a mandatory court appearance, but the patrol car always
 chases before that is resolved. An ordinary fixed-dollar roadside stop settles
 the ticket without an arrest and lets the highway run continue; a court-required
-stop issues a summons, then returns the stopped car to the block with the dashboard
-still open. Ignoring the stop, or trying to leave during the pursuit, lets police
-catch the Porsche: it is forced through a visible progressive slowdown with the
+stop keeps the highway in view for a brief arrest sequence: red/blue light washes
+the stopped cabin, the patrol car fills the mirror, an officer approaches and knocks,
+and a bilingual court-summons card records the measured overage. It then fades back
+to the block with the dashboard still open. Ignoring the stop, or trying to leave
+during the pursuit, lets police catch the Porsche: it is forced through a visible progressive slowdown with the
 patrol car and siren still present, then the highway run ends after a brief stopped
 beat and adds a 1,000-point gameplay penalty. None of these outcomes ends or resets
 the loft game. At 180 km/h or faster the Porsche can instead open a 55 m gap. The

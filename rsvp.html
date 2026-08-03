@@ -919,6 +919,10 @@ footer{margin-top:2.6rem}
 #entrance-room:not(.entrance-day) .entrance-roadtrip-mirror-sky{fill:#142a38}
 #entrance-room:not(.entrance-day) .entrance-roadtrip-mirror-verge{fill:#26352e}
 #entrance-room:not(.entrance-day) .entrance-roadtrip-mirror-road{fill:#20272c}
+.entrance-roadtrip-arrest-copy{font-family:Fraunces,Georgia,serif;text-anchor:middle}
+#entrance-roadtrip-arrest-title{font-size:15px;font-weight:800;letter-spacing:1.4px;fill:#453a31}
+#entrance-roadtrip-arrest-kicker{font-size:8px;font-weight:700;letter-spacing:1.8px;fill:#4a6b94}
+#entrance-roadtrip-arrest-line{font-size:10.5px;font-weight:650;fill:#8e3a4a}
 #entrance-roadtrip-crack,#entrance-roadtrip-shatter{opacity:0;transition:opacity .16s ease}
 #entrance-room.roadtrip-cracked #entrance-roadtrip-crack{opacity:calc(.28 + var(--roadtrip-damage,.6) * .68)}
 #entrance-room.roadtrip-shattered #entrance-roadtrip-shatter{opacity:.96}
@@ -32202,6 +32206,36 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                 <path d="M284-114H396Q404-114 406-106" fill="none" stroke="#5a6368" stroke-width=".8" opacity=".72" stroke-linecap="round"/>
               </g>
             </g>
+            <g id="entrance-roadtrip-arrest" aria-hidden="true" visibility="hidden" pointer-events="none">
+              <g clip-path="url(#entrance-roadtrip-windshield-clip)">
+                <rect id="entrance-roadtrip-arrest-blue" x="0" y="-120" width="680" height="216" fill="#4a6b94" opacity="0" style="mix-blend-mode:screen"/>
+                <rect id="entrance-roadtrip-arrest-red" x="0" y="-120" width="680" height="216" fill="#8e3a4a" opacity="0" style="mix-blend-mode:screen"/>
+                <g id="entrance-roadtrip-arrest-hood">
+                  <path d="M86 96Q174 69 278 75Q340 58 402 75Q506 69 594 96Z" fill="#c68e95" stroke="#70404a" stroke-width="2"/>
+                  <path d="M152 91Q254 74 340 78Q426 74 528 91" fill="none" stroke="#efd1d1" stroke-width="2" opacity=".66"/>
+                  <path d="M318 77Q340 69 362 77" fill="none" stroke="#8e3a4a" stroke-width="1.4"/>
+                </g>
+                <g id="entrance-roadtrip-arrest-officer">
+                  <circle cy="-25" r="12" fill="#302d2a"/>
+                  <path d="M-15-10Q0-18 15-10L24 36H-24Z" fill="#343a3e" stroke="#1d2428" stroke-width="1.4"/>
+                  <path d="M-12-8L0 4L12-8M0 4V31" fill="none" stroke="#7f9ec0" stroke-width="2"/>
+                  <path d="M-17-4L-31 18M16-4L29 13" fill="none" stroke="#343a3e" stroke-width="10" stroke-linecap="round"/>
+                  <path id="entrance-roadtrip-arrest-hand" d="M-31 18L-39 14" fill="none" stroke="#d6aa87" stroke-width="6" stroke-linecap="round" opacity="0"/>
+                  <path d="M7-7L13-4L10 3L4 0Z" fill="#d8b55d" stroke="#8e7439" stroke-width=".7"/>
+                  <path d="M-8 8H8" stroke="#1c2326" stroke-width="3"/>
+                </g>
+                <g id="entrance-roadtrip-arrest-card" opacity="0">
+                  <rect x="164" y="-51" width="352" height="82" rx="12" fill="#fffdf8" stroke="#e8dfcc" stroke-width="2"/>
+                  <path d="M164-38H516" stroke="#d9a6a6" stroke-width="2"/>
+                  <g transform="translate(192 -10)" fill="none" stroke="#7d6e5d" stroke-width="2">
+                    <circle cx="0" cy="0" r="9"/><circle cx="23" cy="0" r="9"/><path d="M8-4L15-4M8 4L15 4"/>
+                  </g>
+                  <text id="entrance-roadtrip-arrest-kicker" class="entrance-roadtrip-arrest-copy" x="340" y="-37" data-i="entrance_roadtrip_arrest_kicker">TRAFFIC STOP</text>
+                  <text id="entrance-roadtrip-arrest-title" class="entrance-roadtrip-arrest-copy" x="340" y="-12" data-i="entrance_roadtrip_arrest_title">COURT SUMMONS</text>
+                  <text id="entrance-roadtrip-arrest-line" class="entrance-roadtrip-arrest-copy" x="340" y="10">51 km/h over · mandatory appearance</text>
+                </g>
+              </g>
+            </g>
           </g>
           <g class="entrance-drive-windshield-scenery" clip-path="url(#entrance-drive-windshield-clip)">
             <g class="entrance-drive-windshield-day">
@@ -34621,6 +34655,9 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_CAPTURE_MIN_SECONDS = 2.2;
   var ROADTRIP_POLICE_CAPTURE_MAX_SECONDS = 3.6;
   var ROADTRIP_POLICE_STOPPED_BEAT_SECONDS = 1.25;
+  var ROADTRIP_POLICE_ARREST_SECONDS = 5.8;
+  var ROADTRIP_POLICE_ARREST_KNOCK_AT = 2.35;
+  var ROADTRIP_POLICE_ARREST_RADIO_AT = 3.05;
   var roadtripPool = [];
   var roadtripMirrorPool = [];
   var roadtripLaneMarks = [];
@@ -34640,6 +34677,14 @@ window.__entranceRoomOpen = false;
   var roadtripPoliceWarningNode = null;
   var roadtripPoliceWarningBeams = null;
   var roadtripPoliceMirrorNode = null;
+  var roadtripArrestNode = null;
+  var roadtripArrestBlueNode = null;
+  var roadtripArrestRedNode = null;
+  var roadtripArrestOfficerNode = null;
+  var roadtripArrestHandNode = null;
+  var roadtripArrestCardNode = null;
+  var roadtripArrestLineNode = null;
+  var porscheArrestAudioNodes = [];
   var roadtripImpactTimer = null;
   var roadtripCrackSerial = 0;
   var roadtripState = {
@@ -34699,6 +34744,9 @@ window.__entranceRoomOpen = false;
       captureStartSpeed: 0,
       stoppedElapsed: 0,
       resolutionReason: "",
+      arrestElapsed: 0,
+      arrestKnockPlayed: false,
+      arrestRadioPlayed: false,
       cooldownElapsed: 0,
       runEnded: false,
       endReason: ""
@@ -35042,6 +35090,15 @@ window.__entranceRoomOpen = false;
       roadtripPoliceMirrorNode = roadtripSvgUse(mirrorEntities, "entrance-roadtrip-police-mirror");
       roadtripUseTemplate(roadtripPoliceMirrorNode, "police-oncoming");
     }
+    if (!roadtripArrestNode) {
+      roadtripArrestNode = roadtripElement("entrance-roadtrip-arrest");
+      roadtripArrestBlueNode = roadtripElement("entrance-roadtrip-arrest-blue");
+      roadtripArrestRedNode = roadtripElement("entrance-roadtrip-arrest-red");
+      roadtripArrestOfficerNode = roadtripElement("entrance-roadtrip-arrest-officer");
+      roadtripArrestHandNode = roadtripElement("entrance-roadtrip-arrest-hand");
+      roadtripArrestCardNode = roadtripElement("entrance-roadtrip-arrest-card");
+      roadtripArrestLineNode = roadtripElement("entrance-roadtrip-arrest-line");
+    }
     paintRoadtripScore();
   }
   function roadtripFeedback(key) {
@@ -35070,6 +35127,62 @@ window.__entranceRoomOpen = false;
     // restore timer before publishing the persistent terminal outcome.
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
     roadtripPoliceFeedback(key, values, 0, true);
+  }
+  function roadtripPoliceText(key, values) {
+    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
+    var dict = typeof T === "object" && T[lang] ? T[lang] : null;
+    var text = dict && ((dict.hunt && dict.hunt[key]) || dict[key]) || key;
+    Object.keys(values || {}).forEach(function (name) {
+      text = text.split("{" + name + "}").join(String(values[name]));
+    });
+    return text;
+  }
+  function hideRoadtripArrest() {
+    if (roadtripArrestNode) {
+      roadtripArrestNode.setAttribute("visibility", "hidden");
+      roadtripArrestNode.setAttribute("opacity", "0");
+    }
+    if (roadtripArrestBlueNode) roadtripArrestBlueNode.setAttribute("opacity", "0");
+    if (roadtripArrestRedNode) roadtripArrestRedNode.setAttribute("opacity", "0");
+    if (roadtripArrestCardNode) roadtripArrestCardNode.setAttribute("opacity", "0");
+    stopRoadtripArrestSounds();
+  }
+  function paintRoadtripArrest() {
+    if (!roadtripArrestNode) {
+      roadtripArrestNode = roadtripElement("entrance-roadtrip-arrest");
+      roadtripArrestBlueNode = roadtripElement("entrance-roadtrip-arrest-blue");
+      roadtripArrestRedNode = roadtripElement("entrance-roadtrip-arrest-red");
+      roadtripArrestOfficerNode = roadtripElement("entrance-roadtrip-arrest-officer");
+      roadtripArrestHandNode = roadtripElement("entrance-roadtrip-arrest-hand");
+      roadtripArrestCardNode = roadtripElement("entrance-roadtrip-arrest-card");
+      roadtripArrestLineNode = roadtripElement("entrance-roadtrip-arrest-line");
+    }
+    if (!roadtripArrestNode) return;
+    var police = roadtripState.police;
+    if (!roadtripState.active || police.phase !== "arrest") {
+      hideRoadtripArrest();
+      return;
+    }
+    var elapsed = Math.max(0, police.arrestElapsed);
+    var fade = elapsed <= 5 ? 1 : Math.max(0, (ROADTRIP_POLICE_ARREST_SECONDS - elapsed) / .8);
+    var approach = Math.max(0, Math.min(1, (elapsed - .35) / 2));
+    approach = approach * approach * (3 - 2 * approach);
+    var officerX = -34 + approach * 122;
+    var officerY = 35 + approach * 13;
+    var officerScale = .58 + approach * .9;
+    var lights = Math.floor(elapsed / .32) % 2;
+    roadtripArrestNode.setAttribute("visibility", "visible");
+    roadtripArrestNode.setAttribute("opacity", fade.toFixed(3));
+    if (roadtripArrestBlueNode) roadtripArrestBlueNode.setAttribute("opacity", ((lights ? .08 : .28) * fade).toFixed(3));
+    if (roadtripArrestRedNode) roadtripArrestRedNode.setAttribute("opacity", ((lights ? .27 : .07) * fade).toFixed(3));
+    if (roadtripArrestOfficerNode) roadtripArrestOfficerNode.setAttribute("transform",
+      "translate(" + officerX.toFixed(2) + " " + officerY.toFixed(2) + ") scale(" + officerScale.toFixed(3) + ")");
+    if (roadtripArrestHandNode) roadtripArrestHandNode.setAttribute("opacity",
+      elapsed >= 1.8 && elapsed <= 2.65 ? ".95" : "0");
+    var cardOpacity = Math.max(0, Math.min(1, (elapsed - 2.7) / .45)) * fade;
+    if (roadtripArrestCardNode) roadtripArrestCardNode.setAttribute("opacity", cardOpacity.toFixed(3));
+    if (roadtripArrestLineNode) roadtripArrestLineNode.textContent = roadtripPoliceText(
+      "entrance_roadtrip_arrest_line", { over: police.overLimit });
   }
   function paintRoadtripInvite() {
     if (!roadtripInvite) return;
@@ -35365,7 +35478,10 @@ window.__entranceRoomOpen = false;
       grade.textContent = dict && dict[gradeKey] ? dict[gradeKey] : gradeFallback[gradeKey][lang];
     }
   }
-  window.__refreshEntranceRoadtripHud = paintRoadtripScore;
+  window.__refreshEntranceRoadtripHud = function () {
+    paintRoadtripScore();
+    paintRoadtripArrest();
+  };
   function persistRoadtripBest() {
     if (roadtripState.score <= roadtripState.best) return false;
     roadtripState.best = Math.floor(roadtripState.score);
@@ -35535,11 +35651,48 @@ window.__entranceRoomOpen = false;
     police.captureStartSpeed = 0;
     police.stoppedElapsed = 0;
     police.resolutionReason = "";
+    police.arrestElapsed = 0;
+    police.arrestKnockPlayed = false;
+    police.arrestRadioPlayed = false;
     police.cooldownElapsed = 0;
     police.runEnded = false;
     police.endReason = "";
     hideRoadtripPoliceVisuals();
+    hideRoadtripArrest();
     stopRoadtripPoliceSiren(0);
+  }
+  function cancelRoadtripPoliceEncounter() {
+    var police = roadtripState.police;
+    if (police.phase === "idle" || police.phase === "cooldown" || police.phase === "ended") return false;
+    police.phase = "idle";
+    police.nextDistance = roadtripState.distance + ROADTRIP_POLICE_REPEAT_DISTANCE;
+    police.stationAt = 0;
+    police.warningCarAt = 0;
+    police.warningElapsed = 0;
+    police.warningFlashCount = 0;
+    police.warningLight = false;
+    police.detectedSpeed = 0;
+    police.overLimit = 0;
+    police.fine = 0;
+    police.courtRequired = false;
+    police.pursuitElapsed = 0;
+    police.pursuitDistance = 0;
+    police.refusalElapsed = 0;
+    police.refusalDistance = 0;
+    police.escapeGap = 0;
+    police.mirrorScale = 0;
+    police.captureElapsed = 0;
+    police.captureDuration = 0;
+    police.captureStartSpeed = 0;
+    police.stoppedElapsed = 0;
+    police.resolutionReason = "";
+    police.arrestElapsed = 0;
+    police.arrestKnockPlayed = false;
+    police.arrestRadioPlayed = false;
+    hideRoadtripPoliceVisuals();
+    hideRoadtripArrest();
+    stopRoadtripPoliceSiren(0);
+    return true;
   }
   function beginRoadtripPoliceEncounter(ahead) {
     var police = roadtripState.police;
@@ -35568,6 +35721,10 @@ window.__entranceRoomOpen = false;
     police.captureStartSpeed = 0;
     police.stoppedElapsed = 0;
     police.resolutionReason = "";
+    police.arrestElapsed = 0;
+    police.arrestKnockPlayed = false;
+    police.arrestRadioPlayed = false;
+    hideRoadtripArrest();
     roadtripFeedback("entrance_roadtrip_police_warning");
     paintRoadtripPolice();
     return true;
@@ -35589,7 +35746,6 @@ window.__entranceRoomOpen = false;
   function beginRoadtripPoliceStopped(reason) {
     var police = roadtripState.police;
     if (police.phase !== "pursuit" && police.phase !== "capture") return false;
-    police.phase = "stopped";
     police.resolutionReason = reason;
     police.stoppedElapsed = 0;
     driveState.speed = 0;
@@ -35597,8 +35753,17 @@ window.__entranceRoomOpen = false;
     driveState.throttleHeldMs = 0;
     Object.keys(driveState.holds).forEach(function (key) { driveState.holds[key] = false; });
     driveState.rpm = porscheState.engineOn ? 780 : 0;
-    roadtripPoliceOutcomeFeedback(police.courtRequired ?
-      "entrance_roadtrip_police_court_stopped" : "entrance_roadtrip_police_stopped");
+    if (police.courtRequired) {
+      police.phase = "arrest";
+      police.arrestElapsed = 0;
+      police.arrestKnockPlayed = false;
+      police.arrestRadioPlayed = false;
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_arrest");
+      paintRoadtripArrest();
+    } else {
+      police.phase = "stopped";
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_stopped");
+    }
     return true;
   }
   function beginRoadtripPoliceCapture(reason) {
@@ -35621,7 +35786,8 @@ window.__entranceRoomOpen = false;
   }
   function finishRoadtripPoliceResolution() {
     var police = roadtripState.police;
-    if (police.phase !== "stopped" || Math.abs(driveState.speed) > .25) return false;
+    if ((police.phase !== "stopped" && police.phase !== "arrest") ||
+        Math.abs(driveState.speed) > .25) return false;
     var reason = police.resolutionReason || "refused";
     applyRoadtripPoliceCitation(reason === "refused" ? 1000 : 0);
     police.phase = "ended";
@@ -35730,7 +35896,8 @@ window.__entranceRoomOpen = false;
       });
     }
     if (roadtripPoliceMirrorNode &&
-        (police.phase === "pursuit" || police.phase === "capture" || police.phase === "stopped") &&
+        (police.phase === "pursuit" || police.phase === "capture" ||
+          police.phase === "stopped" || police.phase === "arrest") &&
         roadtripState.active) {
       var pursuitNearness = Math.max(0, Math.min(1, .28 + police.pursuitElapsed / 9));
       if (police.phase !== "pursuit") pursuitNearness = Math.max(.82, pursuitNearness);
@@ -35766,6 +35933,7 @@ window.__entranceRoomOpen = false;
         police.warningCarAt += distance;
       }
       paintRoadtripPolice();
+      paintRoadtripArrest();
       updateRoadtripPoliceSiren();
       return;
     }
@@ -35829,6 +35997,23 @@ window.__entranceRoomOpen = false;
       if (police.stoppedElapsed >= ROADTRIP_POLICE_STOPPED_BEAT_SECONDS) {
         finishRoadtripPoliceResolution();
       }
+    } else if (police.phase === "arrest") {
+      driveState.speed = 0;
+      driveState.gear = 0;
+      driveState.rpm = porscheState.engineOn ? 780 : 0;
+      police.arrestElapsed += seconds;
+      if (!police.arrestKnockPlayed && police.arrestElapsed >= ROADTRIP_POLICE_ARREST_KNOCK_AT) {
+        police.arrestKnockPlayed = true;
+        playRoadtripArrestSound("knock");
+      }
+      if (!police.arrestRadioPlayed && police.arrestElapsed >= ROADTRIP_POLICE_ARREST_RADIO_AT) {
+        police.arrestRadioPlayed = true;
+        playRoadtripArrestSound("radio");
+      }
+      paintRoadtripArrest();
+      if (police.arrestElapsed >= ROADTRIP_POLICE_ARREST_SECONDS) {
+        finishRoadtripPoliceResolution();
+      }
     } else if (police.phase === "cooldown") {
       police.cooldownElapsed += seconds;
       if (police.cooldownElapsed >= 4) {
@@ -35843,6 +36028,7 @@ window.__entranceRoomOpen = false;
       }
     }
     paintRoadtripPolice();
+    paintRoadtripArrest();
     updateRoadtripPoliceSiren();
   }
   function paintRoadtripCurveSigns() {
@@ -36281,6 +36467,7 @@ window.__entranceRoomOpen = false;
     room.classList.remove("roadtrip-on-shoulder", "roadtrip-on-gravel");
     if (driveHudSvg) driveHudSvg.classList.remove("roadtrip-shoulder-rumble");
     hideRoadtripPoliceVisuals();
+    hideRoadtripArrest();
     stopRoadtripPoliceSiren(.1);
     if (clearRun) {
       roadtripState.exitUntilStop = false;
@@ -36292,7 +36479,8 @@ window.__entranceRoomOpen = false;
     if (roadtripState.police.phase === "pursuit") {
       return beginRoadtripPoliceCapture("refused");
     }
-    if (roadtripState.police.phase === "capture" || roadtripState.police.phase === "stopped") {
+    if (roadtripState.police.phase === "capture" || roadtripState.police.phase === "stopped" ||
+        roadtripState.police.phase === "arrest") {
       return true;
     }
     parkRoadtrip(false);
@@ -36402,6 +36590,9 @@ window.__entranceRoomOpen = false;
     if (roadtripState.active && roadtripState.police.phase === "stopped") {
       return roadtripState.police.courtRequired ?
         "entrance_roadtrip_police_court_stopped" : "entrance_roadtrip_police_stopped";
+    }
+    if (roadtripState.active && roadtripState.police.phase === "arrest") {
+      return "entrance_roadtrip_police_arrest";
     }
     if (roadtripState.active && roadtripState.police.phase === "pursuit" &&
         roadtripState.police.escapeGap > 0) return "entrance_roadtrip_police_escape";
@@ -36729,14 +36920,102 @@ window.__entranceRoomOpen = false;
     paintPorscheDriveSpatialOut(spatial, true);
     return spatial;
   }
+  function stopRoadtripArrestSounds() {
+    var live = porscheArrestAudioNodes.splice(0);
+    live.forEach(function (voice) {
+      voice.sources.forEach(function (source) { try { source.stop(); } catch (_error) {} });
+      voice.nodes.forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+    });
+  }
+  function playRoadtripArrestSound(kind) {
+    if (!window.__entranceRoomOpen || roadtripState.police.phase !== "arrest" ||
+        document.hidden || !document.hasFocus()) return false;
+    var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+    if (!ctx) return false;
+    var t = ctx.currentTime;
+    var sources = [];
+    var nodes = [];
+    var endingSource = null;
+    try {
+      if (kind === "knock") {
+        var knock = ctx.createOscillator();
+        var knockGain = ctx.createGain();
+        knock.type = "triangle";
+        knock.frequency.setValueAtTime(118, t);
+        knock.frequency.exponentialRampToValueAtTime(68, t + .24);
+        knockGain.gain.setValueAtTime(.0001, t);
+        knockGain.gain.exponentialRampToValueAtTime(.075, t + .008);
+        knockGain.gain.exponentialRampToValueAtTime(.0001, t + .075);
+        knockGain.gain.setValueAtTime(.0001, t + .13);
+        knockGain.gain.exponentialRampToValueAtTime(.052, t + .142);
+        knockGain.gain.exponentialRampToValueAtTime(.0001, t + .24);
+        knock.connect(knockGain); knockGain.connect(ctx.destination);
+        knock.start(t); knock.stop(t + .27);
+        sources.push(knock); nodes.push(knockGain); endingSource = knock;
+      } else {
+        var duration = .64;
+        var radio = ctx.createBufferSource();
+        var radioFilter = ctx.createBiquadFilter();
+        var radioGain = ctx.createGain();
+        var samples = Math.ceil(ctx.sampleRate * duration);
+        var buffer = ctx.createBuffer(1, samples, ctx.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var i = 0; i < samples; i++) data[i] = Math.random() * 2 - 1;
+        radio.buffer = buffer;
+        radioFilter.type = "bandpass";
+        radioFilter.frequency.value = 1350;
+        radioFilter.Q.value = 1.2;
+        radioGain.gain.setValueAtTime(.0001, t);
+        radioGain.gain.exponentialRampToValueAtTime(.018, t + .025);
+        radioGain.gain.exponentialRampToValueAtTime(.006, t + .42);
+        radioGain.gain.exponentialRampToValueAtTime(.0001, t + duration);
+        radio.connect(radioFilter); radioFilter.connect(radioGain); radioGain.connect(ctx.destination);
+        var cuffA = ctx.createOscillator();
+        var cuffB = ctx.createOscillator();
+        var cuffAGain = ctx.createGain();
+        var cuffBGain = ctx.createGain();
+        cuffA.type = "sine"; cuffB.type = "triangle";
+        cuffA.frequency.setValueAtTime(2100, t + .08);
+        cuffA.frequency.exponentialRampToValueAtTime(940, t + .2);
+        cuffB.frequency.setValueAtTime(1780, t + .31);
+        cuffB.frequency.exponentialRampToValueAtTime(760, t + .45);
+        cuffAGain.gain.setValueAtTime(.0001, t);
+        cuffAGain.gain.setValueAtTime(.032, t + .08);
+        cuffAGain.gain.exponentialRampToValueAtTime(.0001, t + .21);
+        cuffBGain.gain.setValueAtTime(.0001, t);
+        cuffBGain.gain.setValueAtTime(.024, t + .31);
+        cuffBGain.gain.exponentialRampToValueAtTime(.0001, t + .46);
+        cuffA.connect(cuffAGain); cuffAGain.connect(ctx.destination);
+        cuffB.connect(cuffBGain); cuffBGain.connect(ctx.destination);
+        radio.start(t); cuffA.start(t); cuffB.start(t);
+        radio.stop(t + duration); cuffA.stop(t + .23); cuffB.stop(t + .48);
+        sources.push(radio, cuffA, cuffB);
+        nodes.push(radioFilter, radioGain, cuffAGain, cuffBGain);
+        endingSource = radio;
+      }
+      var voice = { sources: sources, nodes: nodes };
+      porscheArrestAudioNodes.push(voice);
+      endingSource.onended = function () {
+        var index = porscheArrestAudioNodes.indexOf(voice);
+        if (index >= 0) porscheArrestAudioNodes.splice(index, 1);
+        voice.nodes.forEach(function (node) { try { node.disconnect(); } catch (_error) {} });
+      };
+      return true;
+    } catch (_error) {
+      sources.forEach(function (source) { try { source.stop(); } catch (_stopError) {} });
+      nodes.forEach(function (node) { try { node.disconnect(); } catch (_disconnectError) {} });
+      return false;
+    }
+  }
   function roadtripPoliceSirenWanted() {
     var phase = roadtripState.police.phase;
     return !!(roadtripState.active &&
-      (phase === "pursuit" || phase === "capture" || phase === "stopped") && entranceDriveAudible());
+      (phase === "pursuit" || phase === "capture" || phase === "stopped" || phase === "arrest") &&
+      entranceDriveAudible());
   }
   function roadtripPoliceSirenLevel() {
     var phase = roadtripState.police.phase;
-    if (phase !== "pursuit" && phase !== "capture" && phase !== "stopped") return 0;
+    if (phase !== "pursuit" && phase !== "capture" && phase !== "stopped" && phase !== "arrest") return 0;
     if (phase !== "pursuit") return .9;
     return Math.max(.04, 1 - roadtripPoliceEscapeRatio() * .94);
   }
@@ -38594,6 +38873,9 @@ window.__entranceRoomOpen = false;
     updatePorscheIdle();
     updatePorscheDriveAudio();
     var unattendedRoadtrip = !roadtripSimulationAttended();
+    if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) {
+      stopRoadtripArrestSounds();
+    }
     if (!window.__entranceRoomOpen ||
         (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) ||
         unattendedRoadtrip) {
@@ -38628,6 +38910,7 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen) return false;
     window.__entranceRoomOpen = false;
     parkRoadtrip(false);
+    cancelRoadtripPoliceEncounter();
     resetRoadtripInvitationSession();
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
     if (window.__restoreLowerRoomCaption) {
@@ -38793,6 +39076,7 @@ window.__entranceRoomOpen = false;
           policePursuitSpeed: ROADTRIP_POLICE_PURSUIT_SPEED,
           policeEscapeDistance: ROADTRIP_POLICE_ESCAPE_DISTANCE,
           policeStoppedBeat: ROADTRIP_POLICE_STOPPED_BEAT_SECONDS,
+          policeArrestDuration: ROADTRIP_POLICE_ARREST_SECONDS,
           police: {
             phase: roadtripState.police.phase,
             nextDistance: roadtripState.police.nextDistance,
@@ -38823,13 +39107,21 @@ window.__entranceRoomOpen = false;
             captureStartSpeed: roadtripState.police.captureStartSpeed,
             stoppedElapsed: roadtripState.police.stoppedElapsed,
             resolutionReason: roadtripState.police.resolutionReason,
+            arrestElapsed: roadtripState.police.arrestElapsed,
+            arrestKnockPlayed: roadtripState.police.arrestKnockPlayed,
+            arrestRadioPlayed: roadtripState.police.arrestRadioPlayed,
             runEnded: roadtripState.police.runEnded,
             endReason: roadtripState.police.endReason,
             sirenActive: !!porschePoliceAudioNodes,
             sirenLevel: roadtripPoliceSirenLevel(),
             mirrorScale: roadtripState.police.mirrorScale,
             roadsideVisible: !!(roadtripPoliceRoadNode && roadtripPoliceRoadNode.getAttribute("visibility") !== "hidden"),
-            mirrorVisible: !!(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("visibility") !== "hidden")
+            mirrorVisible: !!(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("visibility") !== "hidden"),
+            arrestVisible: !!(roadtripArrestNode && roadtripArrestNode.getAttribute("visibility") !== "hidden"),
+            arrestOpacity: Number(roadtripArrestNode && roadtripArrestNode.getAttribute("opacity")) || 0,
+            arrestCardOpacity: Number(roadtripArrestCardNode && roadtripArrestCardNode.getAttribute("opacity")) || 0,
+            arrestOfficerTransform: roadtripArrestOfficerNode ? roadtripArrestOfficerNode.getAttribute("transform") : "",
+            arrestAudioVoices: porscheArrestAudioNodes.length
           },
           curve: roadtripCurvatureAt(roadtripState.distance),
           passedTraffic: roadtripState.entities.filter(function (entity) { return !!entity.passed; }).length,
@@ -38920,7 +39212,7 @@ window.__entranceRoomOpen = false;
   window.__entranceRoadtripPoliceStep = function (speed, seconds) {
     var phase = roadtripState.police.phase;
     if (!roadtripState.active ||
-        (phase !== "pursuit" && phase !== "capture" && phase !== "stopped")) return false;
+        (phase !== "pursuit" && phase !== "capture" && phase !== "stopped" && phase !== "arrest")) return false;
     speed = Math.max(0, Math.min(263, Number(speed) || 0));
     seconds = Math.max(0, Math.min(30, Number(seconds) || 0));
     if (phase === "pursuit") driveState.speed = speed * driveState.facing;
@@ -40527,6 +40819,10 @@ var T = {
       entrance_roadtrip_police_capture: "Police closing in · braking override engaged.",
       entrance_roadtrip_police_stopped: "Stopped · police at the window.",
       entrance_roadtrip_police_court_stopped: "Stopped · police are issuing a court summons.",
+      entrance_roadtrip_police_arrest: "Stopped · officer approaching the driver’s window.",
+      entrance_roadtrip_arrest_kicker: "TRAFFIC STOP",
+      entrance_roadtrip_arrest_title: "COURT SUMMONS",
+      entrance_roadtrip_arrest_line: "{over} km/h over · mandatory appearance",
       entrance_roadtrip_police_ticket: "{over} km/h over · ${fine} fine.",
       entrance_roadtrip_police_summons: "{over} km/h over · court summons.",
       entrance_roadtrip_police_refused: "You didn’t pull over · ${fine} ticket + 1,000-point penalty.",
@@ -41710,6 +42006,10 @@ var T = {
       entrance_roadtrip_police_capture: "Policie tě dostihla · vůz nuceně zpomaluje.",
       entrance_roadtrip_police_stopped: "Zastaveno · policie je u okénka.",
       entrance_roadtrip_police_court_stopped: "Zastaveno · policie vystavuje předvolání k soudu.",
+      entrance_roadtrip_police_arrest: "Zastaveno · policista přichází k okénku řidiče.",
+      entrance_roadtrip_arrest_kicker: "SILNIČNÍ KONTROLA",
+      entrance_roadtrip_arrest_title: "PŘEDVOLÁNÍ K SOUDU",
+      entrance_roadtrip_arrest_line: "Překročení o {over} km/h · povinná účast",
       entrance_roadtrip_police_ticket: "Překročení o {over} km/h · pokuta ${fine}.",
       entrance_roadtrip_police_summons: "Překročení o {over} km/h · předvolání k soudu.",
       entrance_roadtrip_police_refused: "Nezastavil jsi · pokuta ${fine} + ztráta 1 000 bodů.",

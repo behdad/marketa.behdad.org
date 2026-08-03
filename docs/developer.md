@@ -190,7 +190,7 @@ releases it after 38 road units. The mirror's clipped cloud, smoke, rain, snow, 
 the same Entrance classes and `--smoke` value as the windshield. The main windshield hides passed
 entities below its lower edge, so a pooled vehicle is never painted in both views at once.
 The nested `drive.roadtrip.police` state owns the infrequent speed trap independently of the bounded
-traffic pool. `stepRoadtripPolice()` advances its warning → pursuit → capture/stopped → cooldown/ended
+traffic pool. `stepRoadtripPolice()` advances its warning → pursuit → capture/stopped/arrest → cooldown/ended
 state machine;
 `paintRoadtripPolice()` projects a dedicated oncoming warning car, parked patrol car, and rear-view
 pursuit use without competing for pooled traffic slots. The first trap begins after 950 metres;
@@ -201,12 +201,16 @@ the third flash finishes. Posted speed is 90 km/h and enforcement begins above 1
 the published 20% surcharge; 51+ stores `fine: null`, sets `courtRequired`, and increments summonses
 rather than inventing an amount. A right-shoulder stop at 2.5 km/h or less settles the ticket or
 summons. Every enforced speed, including every 51+ court case, first enters pursuit. Ordinary fixed
-fines settle into cooldown without an arrest; a court-required shoulder stop waits through the stopped
-beat, records the summons, and parks the highway with the HUD still open. Twenty attended seconds or
+fines settle into cooldown without an arrest. A court-required shoulder stop or completed capture enters
+the 5.8-second `arrest` phase. `paintRoadtripArrest()` drives the inline SVG from `arrestElapsed`—cabin
+wash, stopped hood, officer approach, bilingual measured-overage summons card, and final fade—without a
+timer or bitmap; the live patrol use remains prominent in the mirror. The phase records the summons and
+parks the highway with the HUD still open only after that sequence. Twenty attended seconds or
 500 metres below the escape threshold without stopping, or an attempted pursuit exit, enters capture:
 the police controller clears held inputs and progressively eases the live drivetrain speed to zero over
-2.2–3.6 seconds while retaining the highway, mirror car, and siren. Only after a further 1.25-second
-stopped beat does it apply the separate 1,000-point refusal penalty and end the highway run. At 180 km/h
+2.2–3.6 seconds while retaining the highway, mirror car, and siren. A fixed-fine capture then uses a
+1.25-second stopped beat; a court capture enters the arrest sequence. Only after that resolution does it
+apply the separate 1,000-point refusal penalty and end the highway run. At 180 km/h
 or faster, separation grows from the patrol car's 170 km/h pursuit pace: the 55 m gap takes about 20
 seconds at 180 and 7 seconds at 200.
 The mirror scale and siren gain follow that separation; reaching 55 metres clears the chase, while
@@ -216,7 +220,9 @@ Ticket, escape, and run-ending outcomes clear any live `entrance-roadtrip` picku
 publish a persistent caption, so an older flash or `caption()` restore timer cannot reclaim the line.
 `__entranceRoadtripPolice(ahead)`, `__entranceRoadtripPoliceDetect(speed)`, and
 `__entranceRoadtripPoliceStep(speed, seconds)` are the deterministic focused-test seams; police
-presentation, capture/stopped phases, and siren state remain transient rather than checkpoint data. Run
+presentation, capture/stopped/arrest phases, and siren state remain transient rather than checkpoint data.
+Escape cannot skip an arrest. Blur/hidden gates pause its elapsed time, while room close/reset cancels the
+transient phase and tears down its overlay and audio. Run
 `tests/entrance-police.js` with the other Entrance tests.
 Wildlife switches to a timed hop-and-verge escape inside 22 road units: a slow approach gives the
 escape its required `0.48s`, while a fast same-lane arrival can reach the collision zone first.

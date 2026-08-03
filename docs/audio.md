@@ -231,14 +231,22 @@ envelope; hidden or unfocused collection remains silent.
 
 A speeding pursuit adds one restrained two-tone siren on the shared SFX handle,
 localized to the live rear-view mirror. Its oscillators exist only while the
-highway police state is pursuit/capture/stopped and the Entrance is visible,
+highway police state is pursuit/capture/stopped/arrest and the Entrance is visible,
 focused, uncovered, and audible. Its master gain falls with the pursuit's modeled separation once the
 Porsche sustains 180+ km/h, then fades and disconnects after escape. During a police
-capture it remains present through the progressive forced slowdown and stopped beat.
+capture it remains present through the progressive forced slowdown and court-arrest sequence.
 An ordinary roadside stop, final resolution, leaving the highway, closing the room,
 hiding the tab, or losing focus fades and disconnects those nodes; focus may recreate
-them while pursuit/capture remains active. The siren never suspends or closes the shared
+them while pursuit/capture/arrest remains active. The siren never suspends or closes the shared
 context.
+
+Court-required stops add two short attended cues on that same shared SFX context:
+a two-tap window knock as the officer reaches the driver, followed by restrained
+radio static and two light metal clicks as the summons card appears. The police
+step clock triggers each cue once; there are no sound timers and no additional
+`AudioContext`. Live source/node records are stopped and disconnected on blur,
+tab hide, room close, highway teardown, or reset. The visual arrest clock pauses
+while unattended, so a hidden or unfocused page cannot advance into either cue.
 
 The drivetrain bed also owns one looped noise source fanned into five continuous
 textures: low road body, tire band, high-speed wind, filtered corner scrub, and a

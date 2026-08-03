@@ -69,11 +69,12 @@ their volume controls never double-scale:
    room stereo panner; headphone mode crossfades to an HRTF panner whose restrained
    position follows the draggable office headphones.
 
-**Volume model (by design):** the in-scene volume **button** controls only music/beds
-(`__songVolume`), so you can turn music down to hear SFX. The console **`volume()`** master
-(`__audioMaster`) is the god-knob over everything (SFX master + folded into `__songVolume`).
-Overall level is otherwise the device's job. The headphone-mode filter (bass shelf +
-lowpass) lives only in the song pipeline — music-only, deliberately not applied to SFX/beds.
+**Volume model (by design):** the in-scene volume **button** controls music/beds and the
+active cross-origin Cinema film (`__songVolume`), so you can turn program audio down to
+hear SFX. The console **`volume()`** master (`__audioMaster`) is the god-knob over
+everything (SFX master + folded into `__songVolume`, including Vimeo). Overall level is
+otherwise the device's job. The headphone-mode filter (bass shelf + lowpass) lives only
+in the song pipeline — music-only, deliberately not applied to SFX/beds or Vimeo.
 
 ## Lower-floor acoustics
 
@@ -266,11 +267,15 @@ Opening Cinema joins the foreground coverage gate, starts the room-local project
 projector score, and leaves the durable projector channel unchanged. The
 physical cinema projector initially creates no iframe. Selecting a film creates
 one; a ready or ping reply subscribes to Vimeo's play, pause, ended, and timeupdate
-events. Messages are accepted only from the active iframe. An ended event—or the
-trusted final timeupdate when Vimeo omits ended—removes the iframe, restores the
-chooser, and releases the whole-loft duck. The side transport sends play/pause
-commands through postMessage. Removing the iframe remains the reliable
-stop/teardown path.
+events, pushes the current `__songVolume()`, and begins a bounded `getEnded` status
+poll. Messages are accepted only from the active iframe. An ended event, a trusted
+final timeupdate, or a true `getEnded` reply removes the iframe, restores the
+chooser, and releases the whole-loft duck. The status reply is the deterministic
+fallback for Vimeo's seek-near-end path, which can reach its recommendations card
+without emitting a terminal subscribed event. The side transport queues and sends
+play/pause commands through postMessage; the shared volume step and console master
+also retarget Vimeo with `setVolume`. Teardown cancels the poll and removes the
+iframe, which remains the reliable cross-origin stop path.
 
 Room navigation gives ordinary room-local ambience a five-second fade. Cuddly projector channels
 use a shorter three-second room-exit fade so they recede behind the visitor without lingering.

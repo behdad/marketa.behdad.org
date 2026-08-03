@@ -33674,6 +33674,10 @@ window.__cinemaVideoLoaded = false;
   var filmPlaying = false;
   var currentFilm = null;
   var vimeoSubscribedWindow = null;
+  var vimeoReadyWindow = null;
+  var vimeoWantedPlaying = null;
+  var vimeoPendingPlayback = null;
+  var vimeoEndPollTimer = null;
   var chooserIndex = 0;
   var cinemaPhotobooth = false;
   var cinemaPhotoboothStateSeen = false;
@@ -33842,21 +33846,66 @@ window.__cinemaVideoLoaded = false;
     if (!frame || !frame.contentWindow) return false;
     var message = { method: method };
     if (value !== undefined) message.value = value;
-    try { frame.contentWindow.postMessage(message, "https://player.vimeo.com"); }
+    try {
+      frame.contentWindow.postMessage(message, "https://player.vimeo.com");
+      window.dispatchEvent(new CustomEvent("cinema:vimeo-command", {
+        detail: { method: method, value: value, frame: frame }
+      }));
+    }
     catch (_error) { return false; }
     return true;
   }
+  function stopVimeoEndPoll() {
+    clearTimeout(vimeoEndPollTimer);
+    vimeoEndPollTimer = null;
+  }
+  function startVimeoEndPoll() {
+    stopVimeoEndPoll();
+    function poll() {
+      var frame = document.getElementById("cinema-player");
+      if (!currentFilm || !frame || frame.contentWindow !== vimeoReadyWindow) {
+        vimeoEndPollTimer = null;
+        return;
+      }
+      tellVimeo("getEnded");
+      vimeoEndPollTimer = setTimeout(poll, 700);
+    }
+    vimeoEndPollTimer = setTimeout(poll, 350);
+  }
+  function currentCinemaVolume() {
+    var level = window.__songVolume ? window.__songVolume() : .15;
+    return Math.max(0, Math.min(1, Number(level) || 0));
+  }
+  function applyCinemaVolume() {
+    var frame = document.getElementById("cinema-player");
+    if (!currentFilm || !frame || frame.contentWindow !== vimeoReadyWindow) return false;
+    return tellVimeo("setVolume", currentCinemaVolume());
+  }
+  window.__applyCinemaVolume = applyCinemaVolume;
   function subscribeVimeoEvents() {
     var frame = document.getElementById("cinema-player");
-    if (!frame || !frame.contentWindow || frame.contentWindow === vimeoSubscribedWindow) return false;
-    vimeoSubscribedWindow = frame.contentWindow;
-    ["play", "pause", "ended", "timeupdate"].forEach(function (name) {
-      tellVimeo("addEventListener", name);
-    });
+    if (!frame || !frame.contentWindow) return false;
+    vimeoReadyWindow = frame.contentWindow;
+    if (frame.contentWindow !== vimeoSubscribedWindow) {
+      vimeoSubscribedWindow = frame.contentWindow;
+      ["play", "pause", "ended", "timeupdate"].forEach(function (name) {
+        tellVimeo("addEventListener", name);
+      });
+    }
+    applyCinemaVolume();
+    if (vimeoPendingPlayback !== null) {
+      tellVimeo(vimeoPendingPlayback ? "play" : "pause");
+      vimeoPendingPlayback = null;
+    }
+    startVimeoEndPoll();
     return true;
   }
   function clearPlayer(showChooser) {
+    stopVimeoEndPoll();
     vimeoSubscribedWindow = null;
+    vimeoReadyWindow = null;
+    vimeoWantedPlaying = null;
+    vimeoPendingPlayback = null;
     playerWrap.replaceChildren();
     playerWrap.hidden = true;
     chooser.hidden = !(showChooser && projectorOn && !projectorShorted);
@@ -34006,8 +34055,12 @@ window.__cinemaVideoLoaded = false;
       if (first) playFilm(first);
       return !!first;
     }
-    tellVimeo(filmPlaying ? "pause" : "play");
-    setFilmPlaying(!filmPlaying, .4);
+    vimeoWantedPlaying = !filmPlaying;
+    var frame = document.getElementById("cinema-player");
+    if (frame && frame.contentWindow === vimeoReadyWindow) {
+      tellVimeo(vimeoWantedPlaying ? "play" : "pause");
+    } else vimeoPendingPlayback = vimeoWantedPlaying;
+    setFilmPlaying(vimeoWantedPlaying, .4);
     return true;
   }
   function nextFilm() {
@@ -34090,7 +34143,10 @@ window.__cinemaVideoLoaded = false;
   function closeCinema() {
     if (!window.__cinemaRoomOpen) return false;
     if (currentFilm) {
-      tellVimeo("pause");
+      vimeoWantedPlaying = false;
+      var frame = document.getElementById("cinema-player");
+      if (frame && frame.contentWindow === vimeoReadyWindow) tellVimeo("pause");
+      else vimeoPendingPlayback = false;
       setFilmPlaying(false, .45);
     } else if (!projectorOn) powerOff();
     window.__cinemaRoomOpen = false;
@@ -34155,6 +34211,11 @@ window.__cinemaVideoLoaded = false;
     var id = button && button.getAttribute("data-vimeo-id");
     if (!/^\d+$/.test(id || "")) return false;
     var hash = button.getAttribute("data-vimeo-hash") || "";
+    stopVimeoEndPoll();
+    vimeoSubscribedWindow = null;
+    vimeoReadyWindow = null;
+    vimeoWantedPlaying = true;
+    vimeoPendingPlayback = null;
     currentFilm = button;
     var selectedAt = chooserFilms().indexOf(button);
     if (selectedAt >= 0) markChooserFilm(selectedAt, false);
@@ -34271,9 +34332,16 @@ window.__cinemaVideoLoaded = false;
     }
     if (!data || (data.player_id && data.player_id !== "cinema-player")) return;
     if (data.event === "ready" || data.method === "ping") subscribeVimeoEvents();
-    else if (data.event === "play") setFilmPlaying(true, .4);
-    else if (data.event === "pause") setFilmPlaying(false, .45);
-    else if (data.event === "ended") {
+    else if (data.method === "getEnded" && data.value === true) {
+      clearPlayer(true);
+      markChooserFilm(chooserIndex, window.__cinemaRoomOpen);
+    } else if (data.event === "play") {
+      vimeoWantedPlaying = true;
+      setFilmPlaying(true, .4);
+    } else if (data.event === "pause") {
+      vimeoWantedPlaying = false;
+      setFilmPlaying(false, .45);
+    } else if (data.event === "ended") {
       clearPlayer(true);
       markChooserFilm(chooserIndex, window.__cinemaRoomOpen);
     } else if (data.event === "timeupdate" && data.data &&
@@ -34292,6 +34360,7 @@ window.__cinemaVideoLoaded = false;
     return { open: !!window.__cinemaRoomOpen, closing: cinemaClosing, powered: projectorOn,
       shorted: projectorShorted, playing: filmPlaying, photobooth: cinemaPhotobooth,
       video: frame ? (frame.src.match(/video\/(\d+)/) || [])[1] || null : null,
+      vimeoReady: !!(frame && frame.contentWindow === vimeoReadyWindow),
       chooserIndex: chooserIndex,
       reactions: Object.assign({}, reactions) };
   };
@@ -72953,6 +73022,7 @@ async def localfont(name):
     for (var vi = 0; vi < songAudios.length; vi++) if (songAudios[vi]) setSongLevel(songAudios[vi], window.__songVolume());
     if (window.__updateSongDoorAcoustics) window.__updateSongDoorAcoustics(); // re-apply the current room's attenuation to the playing song
     if (window.__vidCtrlMasterVolume) window.__vidCtrlMasterVolume(window.__songVolume()); // the film follows the master
+    if (window.__applyCinemaVolume) window.__applyCinemaVolume(); // cross-origin Cinema follows the same music level
   }
   // Two triggers share one volume: the office monitor's own speaker button (SVG, inside
   // the game scene) and #hunt-volume-btn (real HTML button, visible from any room). Both

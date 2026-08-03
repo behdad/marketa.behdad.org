@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 // Trailer (▷ Trailer) cinematic tests: drives window.__startCinematic in headless
-// Chrome and verifies (1) the FULL reel runs to a clean end in ~55-68s and visits all five
-// rooms, (2) the entire run obeys the "texture, not solutions" edit — no roster, spotlight,
-// formal moment, album capture, season preview, projector channel, computer/phone workflow,
-// forced aurora, or held balcony couple — and (3) full end, Take over, and hidden-tab abort
-// leave no cinematic presentation/state behind. A reduced-motion run checks the same edit,
-// and a real post-reel balcony entry proves the normal first-arrival finale remains available.
+// Chrome and verifies (1) the FULL reel runs to a clean end in ~55-68s, crosses floors in
+// deliberately non-map order, and selectively shows the promised games/apps, (2) the entire
+// run keeps Phase 2, the party, solutions, inventories, and major payoffs hidden, and (3) full
+// end, Take over, and hidden-tab abort leave no cinematic/device/game state behind. A
+// reduced-motion run checks the same editorial contract, and a real post-reel balcony entry
+// proves the normal first-arrival finale remains available.
 //
 // Timing method: under --virtual-time-budget timers fast-forward, but performance.now()
 // tracks virtual time — so (end - start) of performance.now() around the run equals the
-// SUMMED beat timeline (waitFor gates resolve immediately when their state is already
-// satisfied, or hit their timeout; both are part of the real timeline). rAF is patched to
-// setTimeout (lib patchRaf) so double-rAF toy reactions actually advance.
+// summed beat timeline. rAF is patched to setTimeout (lib patchRaf) so double-rAF toy
+// reactions actually advance.
 //
 // Usage: node tests/cine.js
 "use strict";
@@ -21,6 +20,7 @@ var lib = require("./lib");
 var COMMON = [
   "function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
   "function finish(report) { report.errors = window.__errs; document.getElementById('__report').textContent = JSON.stringify(report); }",
+  "function seedArcadeLedger() { localStorage.setItem('loftArcadesPlayed', '[\"flair\"]'); localStorage.setItem('loftArcadesSuggested', '[\"pacman\"]'); }",
   // a compact snapshot of every bit of state the reel touches — read after the show ends
   "function snapshot() {",
   "  var strip = document.getElementById('loft-game-strip');",
@@ -42,8 +42,19 @@ var COMMON = [
   "    seasonClass: strip ? ((strip.getAttribute('class') || '').match(/season-[a-z]+/) || [null])[0] : null,",
   "    frameRunning: !!document.querySelector('#hunt-fullscreen-area.cinematic-running'),",
   "    cineCaption: !!document.querySelector('#hunt-caption.cine-caption'),",
-  "    candleLit: !!document.querySelector('#kitchen-candle.lit, #stage-kitchen.k-candle-lit'),",
+  "    secondRound: !!window.__secondRound,",
+  "    lowerRooms: { bathroom:!!window.__bathroomRoomOpen, cinema:!!window.__cinemaRoomOpen, bedroom:!!window.__bedroomRoomOpen, entrance:!!window.__entranceRoomOpen },",
+  "    phoneOpen: !!(window.__chatPhoneState && window.__chatPhoneState().open),",
+  "    arcadeActive: !!(window.__arcadeState && window.__arcadeState().active),",
+  "    tetrisActive: !!(window.__balconyTetrisState && window.__balconyTetrisState().active),",
+  "    bubblesActive: !!(window.__bathroomInteractionState && window.__bathroomInteractionState().bubbles.active),",
+  "    tttPhase: window.__bedroomTicTacToeState ? window.__bedroomTicTacToeState().phase : 'idle',",
+  "    monitorApps: window.__monitorRunningApps ? window.__monitorRunningApps() : [],",
+  "    pcOn: !!document.querySelector('#office-pc-desk-trio.on'),",
+  "    arcadePlayed: localStorage.getItem('loftArcadesPlayed'),",
+  "    arcadeSuggested: localStorage.getItem('loftArcadesSuggested'),",
   "    balconyUnlocked: !!(window.__balconyUnlocked && window.__balconyUnlocked()),",
+  "    maxUnlocked: window.__maxUnlocked ? window.__maxUnlocked() : null,",
   "    stage: window.currentStageName || null,",
   "    captionKey: window.__captionKey ? window.__captionKey() : null",
   "  };",
@@ -59,20 +70,34 @@ var COMMON = [
   "  var panel = document.getElementById('roster-panel');",
   "  var rosterToggle = document.querySelector('.roster-toggle');",
   "  var picker = document.getElementById('garden-djpicker');",
-  "  var phone = document.querySelector('.phone-backdrop.show');",
+  "  var phoneState = window.__chatPhoneState ? window.__chatPhoneState() : {open:false,app:null};",
   "  var projector = window.__cuddlyProjector && window.__cuddlyProjector.channel ? window.__cuddlyProjector.channel() : 'off';",
   "  var albumNow = window.__albumList ? window.__albumList().length : report.albumStart;",
+  "  if (key && key.indexOf('cine_') !== 0) report.spoilers.explanatoryCaption = true;",
   "  if ((window.__rosterOpen && window.__rosterOpen()) || (panel && panel.classList.contains('show'))) report.spoilers.roster = true;",
+  "  if (window.__gardenPartyOn || (window.__guestsIn && window.__guestsIn())) report.spoilers.party = true;",
+  "  if (window.__secondRound) report.spoilers.phase2 = true;",
   "  if ((picker && picker.classList.contains('open')) || (window.__cinematic && rosterToggle && getComputedStyle(rosterToggle).visibility !== 'hidden' && rosterToggle.classList.contains('avail'))) report.spoilers.partyUi = true;",
   "  if (guests && (guests.classList.contains('solo-spot') || guests.querySelector('.spotlighted'))) report.spoilers.spotlight = true;",
   "  if (window.__firstDanceOn || window.__slowDanceOn || window.__toastsOn || window.__groupPhotoOn || window.__sparklersOn || window.__cakeOn || window.__bouquetOn || window.__chairliftOn) report.spoilers.formalMoment = true;",
   "  if (strip && /(?:^|\\s)season-[a-z]+/.test(strip.getAttribute('class') || '')) report.spoilers.season = true;",
   "  if (projector !== 'off' && projector !== 'fire') report.spoilers.projector = true;",
-  "  if ((monitor && /(?:^|\\s)show-/.test(monitor.getAttribute('class') || '')) || phone) report.spoilers.appWorkflow = true;",
   "  if (document.querySelector('#balcony-couple.showing')) report.spoilers.couple = true;",
   "  if (document.querySelector('#stage-garden.aurora-force, #stage-balcony.aurora-force')) report.spoilers.aurora = true;",
   "  if (window.__balconyUnlocked && window.__balconyUnlocked()) report.spoilers.finale = true;",
   "  if (albumNow > report.albumStart) report.spoilers.album = true;",
+  "  if (report.stageOrder[report.stageOrder.length - 1] !== stage) report.stageOrder.push(stage);",
+  "  if (window.__cinemaRoomOpen) report.seenLower.cinema = true;",
+  "  if (window.__bathroomRoomOpen) report.seenLower.bathroom = true;",
+  "  if (window.__bedroomRoomOpen) report.seenLower.bedroom = true;",
+  "  if (window.__entranceRoomOpen) report.seenLower.entrance = true;",
+  "  if (phoneState.open && phoneState.app) report.seenPhoneApps[phoneState.app] = true;",
+  "  if (monitor && monitor.classList.contains('show-life')) report.seenMonitorApps.life = true;",
+  "  if (monitor && monitor.classList.contains('show-code')) report.seenMonitorApps.code = true;",
+  "  if (window.__arcadeState && window.__arcadeState().active) report.seenGames.arcade = true;",
+  "  if (window.__bathroomInteractionState && window.__bathroomInteractionState().bubbles.active) report.seenGames.bubbles = true;",
+  "  if (window.__bedroomTicTacToeState && window.__bedroomTicTacToeState().phase !== 'idle') report.seenGames.ttt = true;",
+  "  if (window.__balconyTetrisState && window.__balconyTetrisState().active) report.seenGames.tetris = true;",
   "  var frame = document.getElementById('hunt-fullscreen-area');",
   "  if (window.__cinematic && frame && frame.classList.contains('cinematic-running') && document.querySelector('#hunt-caption.cine-caption')) report.sawPresentation = true;",
   "}"
@@ -84,20 +109,20 @@ var FULL_HARNESS = [
   "<script>",
   "(function () {",
   COMMON,
-  "  var report = { errors: [], reducedMotion: null, durationMs: null, ended: false, snap: null, realEntryArmed: false, sawCursorDuringRun: false, sawPartyDuringRun: false, peakStage: null, seenStages: {}, seenCaptions: {}, sawPresentation: false, albumStart: 0, spoilers: { roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, appWorkflow:false, couple:false, aurora:false, finale:false, album:false } };",
+  "  var report = { errors: [], reducedMotion: null, durationMs: null, ended: false, snap: null, realEntryArmed: false, sawCursorDuringRun: false, seenStages: {}, stageOrder: [], seenLower: {}, seenPhoneApps: {}, seenMonitorApps: {}, seenGames: {}, seenCaptions: {}, sawPresentation: false, albumStart: 0, spoilers: { party:false, phase2:false, explanatoryCaption:false, roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, couple:false, aurora:false, finale:false, album:false } };",
   "  async function run() {",
   "    report.reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);",
   "    if (!window.__startCinematic) { window.__errs.push('no __startCinematic hook'); return; }",
+  "    seedArcadeLedger();",
   "    var t0 = performance.now();",
   "    window.__startCinematic();",
   "    report.albumStart = window.__albumList ? window.__albumList().length : 0;",
-  "    // poll the whole run: sample that the ghost cursor + party actually appear mid-reel,",
+  "    // Poll the whole run: sample the montage surfaces and detect its clean natural end.",
   "    // and detect the end (the reel flips __cinematic false via its own stopCinematic()).",
   "    var guard = 0;",
   "    while (window.__cinematic && guard < 2000) {",
   "      sample(report);",
   "      if (document.getElementById('cine-cursor')) report.sawCursorDuringRun = true;",
-  "      if (window.__gardenPartyOn) { report.sawPartyDuringRun = true; if (window.currentStageName === 'garden') report.peakStage = 'garden'; }",
   "      await sleep(120);",
   "      guard++;",
   "    }",
@@ -123,13 +148,14 @@ var TAKEOVER_HARNESS = [
   "<script>",
   "(function () {",
   COMMON,
-  "  var report = { errors: [], stoppedMidRun: false, snap: null, seenStages: {}, seenCaptions: {}, sawPresentation: false, albumStart: 0, spoilers: { roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, appWorkflow:false, couple:false, aurora:false, finale:false, album:false } };",
+  "  var report = { errors: [], stoppedMidRun: false, snap: null, seenStages: {}, stageOrder: [], seenLower: {}, seenPhoneApps: {}, seenMonitorApps: {}, seenGames: {}, seenCaptions: {}, sawPresentation: false, albumStart: 0, spoilers: { party:false, phase2:false, explanatoryCaption:false, roster:false, partyUi:false, spotlight:false, formalMoment:false, season:false, projector:false, couple:false, aurora:false, finale:false, album:false } };",
   "  async function run() {",
   "    if (!window.__startCinematic) { window.__errs.push('no __startCinematic hook'); return; }",
+  "    seedArcadeLedger();",
   "    window.__startCinematic();",
   "    report.albumStart = window.__albumList ? window.__albumList().length : 0;",
   "    for (var i=0; i<167 && window.__cinematic; i++) { sample(report); await sleep(120); }",
-  // ~20s in: the party is lit and populated, but no identity/payload UI has been exposed.
+  // ~20s in: the lower-floor bubble game is active; Take over must cancel it cleanly.
   "    report.stoppedMidRun = !!window.__cinematic;",
   "    if (window.__stopCinematic) window.__stopCinematic();",
   "    await sleep(800);",
@@ -154,6 +180,7 @@ var HIDDEN_HARNESS = [
   "  var report = { errors: [], started: false, snap: null };",
   "  async function run() {",
   "    if (!window.__startCinematic) { window.__errs.push('no __startCinematic hook'); return; }",
+  "    seedArcadeLedger();",
   "    Object.defineProperty(document, 'hidden', { configurable:true, get:function(){ return forcedHidden; } });",
   "    window.__startCinematic();",
   "    await sleep(2500);",
@@ -187,22 +214,38 @@ function assertClean(label, s) {
   if (!s.auroraForceGarden && !s.auroraForceBalcony) pass(label + ": aurora override cleared"); else fail(label + ": aurora override cleared", JSON.stringify({ g: s.auroraForceGarden, b: s.auroraForceBalcony }));
   if (!s.seasonClass) pass(label + ": no previewed season stranded"); else fail(label + ": no previewed season stranded", s.seasonClass);
   if (!s.frameRunning && !s.cineCaption) pass(label + ": cinematic presentation classes cleared"); else fail(label + ": cinematic presentation classes cleared", JSON.stringify({ frame: s.frameRunning, caption: s.cineCaption }));
-  if (!s.candleLit) pass(label + ": trailer-owned candle cleared"); else fail(label + ": trailer-owned candle cleared");
+  if (!s.secondRound) pass(label + ": Phase 2 remains locked"); else fail(label + ": Phase 2 remains locked");
+  var strandedLower = Object.keys(s.lowerRooms || {}).filter(function (room) { return s.lowerRooms[room]; });
+  if (!strandedLower.length) pass(label + ": no lower room stranded"); else fail(label + ": no lower room stranded", strandedLower.join(", "));
+  if (!s.phoneOpen) pass(label + ": phone preview closed"); else fail(label + ": phone preview closed");
+  if (!s.arcadeActive && !s.tetrisActive && !s.bubblesActive && s.tttPhase === "idle") pass(label + ": minigames stopped and reset");
+  else fail(label + ": minigames stopped and reset", JSON.stringify({ arcade: s.arcadeActive, tetris: s.tetrisActive, bubbles: s.bubblesActive, ttt: s.tttPhase }));
+  if (!s.pcOn && s.monitorApps.length === 0) pass(label + ": monitor previews shut down"); else fail(label + ": monitor previews shut down", JSON.stringify({ pc: s.pcOn, apps: s.monitorApps }));
+  if (s.arcadePlayed === '["flair"]' && s.arcadeSuggested === '["pacman"]') pass(label + ": passive previews preserve arcade recommendations");
+  else fail(label + ": passive previews preserve arcade recommendations", JSON.stringify({ played: s.arcadePlayed, suggested: s.arcadeSuggested }));
+  if (s.stage === "kitchen" && s.maxUnlocked === 0) pass(label + ": control returns to the Phase 1 starting line");
+  else fail(label + ": control returns to the Phase 1 starting line", JSON.stringify({ stage: s.stage, maxUnlocked: s.maxUnlocked }));
   if (!s.balconyUnlocked) pass(label + ": first-arrival finale remains unspent"); else fail(label + ": first-arrival finale remains unspent");
 }
 
 function assertSpoilerFree(label, s) {
   if (!s) { fail(label + ": run report captured"); return; }
   var shown = Object.keys(s.spoilers || {}).filter(function (k) { return s.spoilers[k]; });
-  if (shown.length === 0) pass(label + ": no solution/payoff systems shown");
-  else fail(label + ": no solution/payoff systems shown", shown.join(", "));
+  if (shown.length === 0) pass(label + ": no party, Phase 2, solution, or payoff systems shown");
+  else fail(label + ": no party, Phase 2, solution, or payoff systems shown", shown.join(", "));
 }
 
-function assertCoverage(label, seen) {
-  var rooms = ["kitchen", "garden", "cuddly", "office", "balcony"];
-  var missing = rooms.filter(function (room) { return !seen || !seen[room]; });
-  if (!missing.length) pass(label + ": all five rooms appear");
-  else fail(label + ": all five rooms appear", "missing " + missing.join(", "));
+function assertKeys(label, seen, expected) {
+  var missing = expected.filter(function (key) { return !seen || !seen[key]; });
+  if (!missing.length) pass(label);
+  else fail(label, "missing " + missing.join(", "));
+}
+
+function assertNonSequential(label, order, exact) {
+  var got = (order || []).join("|");
+  if (exact && got === exact.join("|")) pass(label + ": authored arbitrary cut order held");
+  else if (!exact && /office\|cuddly\|garden\|kitchen/.test(got)) pass(label + ": montage reverses map order");
+  else fail(label + ": montage is non-sequential", got || "no stages sampled");
 }
 
 function assertCaptions(label, seen, expected) {
@@ -226,13 +269,15 @@ if (!r) {
   else fail("ghost cursor visible during the run");
   if (r.sawPresentation) pass("authored film presentation active during the run");
   else fail("authored film presentation active during the run");
-  assertCoverage("full reel", r.seenStages);
-  assertCaptions("full reel", r.seenCaptions, ["cine_open", "cine_details", "cine_garden_texture", "cine_room_rhythm", "cine_arrivals", "cine_quiet_corner", "cine_desk_play", "cine_evening", "cine_invite", "cine_signoff"]);
+  assertNonSequential("full reel", r.stageOrder, ["kitchen", "office", "cuddly", "garden", "kitchen", "office", "cuddly", "balcony", "office", "balcony"]);
+  assertKeys("full reel: selected lower rooms appear", r.seenLower, ["cinema", "bathroom", "bedroom", "entrance"]);
+  assertKeys("full reel: selected phone apps appear", r.seenPhoneApps, ["clock", "mines"]);
+  assertKeys("full reel: selected monitor apps appear", r.seenMonitorApps, ["life", "code"]);
+  assertKeys("full reel: selected minigames appear", r.seenGames, ["arcade", "bubbles", "ttt", "tetris"]);
+  assertCaptions("full reel", r.seenCaptions, ["cine_open", "cine_arcade", "cine_below", "cine_phase1", "cine_anywhere", "cine_phone", "cine_round", "cine_phase2", "cine_soft", "cine_skyline", "cine_apps", "cine_discover", "cine_signoff"]);
   assertSpoilerFree("full reel", r);
-  if (r.sawPartyDuringRun && r.peakStage === "garden") pass("garden party is the showpiece (party lit in the garden mid-reel)");
-  else fail("garden party lit in the garden mid-reel", JSON.stringify({ party: r.sawPartyDuringRun, peak: r.peakStage }));
-  if (r.snap && r.snap.stage === "balcony") pass("reel closes on the balcony");
-  else fail("reel closes on the balcony", r.snap ? r.snap.stage : "no snapshot");
+  if (r.seenLower && r.seenLower.entrance) pass("reel closes over the downstairs Entrance/Porsche shot");
+  else fail("reel closes over the downstairs Entrance/Porsche shot");
   assertClean("full-end", r.snap);
   if (r.realEntryArmed) pass("a later real balcony entry still arms the finale");
   else fail("a later real balcony entry still arms the finale");
@@ -266,8 +311,12 @@ if (!rm) {
   else fail("reduced reel ran to a clean end");
   if (rm.durationMs != null && rm.durationMs <= 40000) pass("reduced reel is shorter (" + (rm.durationMs / 1000).toFixed(1) + "s)");
   else fail("reduced reel is shorter than the full one (<=40s)", rm.durationMs == null ? "null" : (rm.durationMs / 1000).toFixed(1) + "s");
-  assertCoverage("reduced reel", rm.seenStages);
-  assertCaptions("reduced reel", rm.seenCaptions, ["cine_open", "cine_room_rhythm", "cine_arrivals", "cine_quiet_corner", "cine_desk_play", "cine_evening", "cine_invite", "cine_signoff"]);
+  assertNonSequential("reduced reel", rm.stageOrder);
+  assertKeys("reduced reel: selected lower rooms appear", rm.seenLower, ["cinema", "bathroom", "bedroom", "entrance"]);
+  assertKeys("reduced reel: selected phone apps appear", rm.seenPhoneApps, ["clock", "mines"]);
+  assertKeys("reduced reel: selected monitor app appears", rm.seenMonitorApps, ["life"]);
+  assertKeys("reduced reel: selected minigames appear", rm.seenGames, ["arcade", "bubbles", "ttt", "tetris"]);
+  assertCaptions("reduced reel", rm.seenCaptions, ["cine_open", "cine_arcade", "cine_below", "cine_phase1", "cine_anywhere", "cine_phone", "cine_phase2", "cine_round", "cine_skyline", "cine_apps", "cine_signoff"]);
   assertSpoilerFree("reduced reel", rm);
   assertClean("reduced-end", rm.snap);
   if (rm.errors.length === 0) pass("no uncaught JS errors across the reduced reel");

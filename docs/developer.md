@@ -319,26 +319,30 @@ drafts, focus, scroll, live media, runtime frames, or other transient state ride
 ### Trailer lifecycle
 
 Search for `THE TRAILER`, `cinematicTimers`, `paintCineCaption`, and `stopCinematic`. Trailer is a
-fixed 59.6-second editorial timeline. It tells one day-long arc:
-morning rituals, a garden-party swell, two quieter interior beats, blue hour, then the invitation.
-Its content contract remains **story, not solutions**: no solve chain, roster/spotlight, album
-capture, formal moment, season preview, projector channel, monitor/phone workflow, forced aurora,
-or held balcony couple.
+fixed 60-second game montage, separate from ordinary play. Its deliberately non-map order mixes
+main and lower floors, previews selected minigames plus two phone and two monitor apps, and promises
+only the broad structure: Phase 1 unlocks the loft; Phase 2 is free play. Its content contract is
+**invitation, not walkthrough**: no demonstrated triggers or solve chain, complete app inventory,
+roster/spotlight, album capture, formal moment, season preview, forced aurora, held balcony couple,
+or party state. The party and its payoff must never appear.
 `tests/cine.js` samples those negative invariants throughout playback, because a post-teardown
-snapshot alone cannot prove that a payoff was never shown.
+snapshot alone cannot prove that a payoff was never shown; it also asserts the authored cut order
+and selective lower-room/game/app coverage.
 
-Starting Trailer sets `window.__cinematic`, resets to a deterministic daylight kitchen, primes only
-the deferred guitar recording inside the trusted click, and adds `.cinematic-running` to the frame.
+Starting Trailer sets `window.__cinematic`, resets to deterministic Phase 1, primes only the
+Tumbalalaika score inside the trusted click, and adds `.cinematic-running` to the frame.
 That presentation class visibility-hides room navigation and Restart without changing layout;
 fullscreen and audio controls remain usable. `#cine-overlay` is generated inside the viewport and
 owns the letterbox rails, progress line, chapter slugs, ink-cut veil, and opening/closing cards.
 `cineCutTo` switches rooms only while that veil is opaque, temporarily suppressing the ordinary
-room-slide transition. All authored pacing uses `cineBeat`/`runSteps`, while scene input is
-capture-swallowed so only synthetic reel taps reach the SVG. `stopCinematic` is the single cleanup
-path for natural completion, **Take over**, and hidden-tab abort: it clears timers, overlay,
-cursor/ripples, party/UV, defensive legacy payoff state, the trailer-owned kitchen candle, caption
-classes, and listeners. The reduced-motion branch presents the same arc as held tableaux and
-completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
+room-slide transition. Lower rooms and apps use direct preview hooks so the edit never teaches
+their in-scene triggers or exposes launchers. All authored pacing uses `cineBeat`/`runSteps`, while
+scene input is capture-swallowed so only synthetic reel taps reach the SVG. `stopCinematic` is the
+single cleanup path for natural completion, **Take over**, and hidden-tab abort: it clears timers,
+overlay, cursor/ripples, score audio, phone/monitor previews, minigame loops, lower rooms, caption
+classes, and listeners, restores the arcade recommendation ledger, then returns control to the
+locked Phase 1 kitchen. The reduced-motion branch presents the same promise as held tableaux and
+completes in about 24 seconds. `goToStage` suppresses `triggerBalconyFinale` while
 `window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
 
 ### Direct entries

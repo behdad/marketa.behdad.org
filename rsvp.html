@@ -37835,7 +37835,6 @@ var T = {
       act_b0: "The day's done — but the sky isn't. Tap the sun, watch it go. 🌇",
       act_b2: "Bed time. Lights out, switch by the door.",
       act_b2_redirect: "Not the lamp — the little switch by the door. 👉",
-      act_b2_return: "The party switch is still waiting on the balcony. 🎉",
       act_b3: "…that was never the light switch. 🎉 Surprise — the loft doesn't do quiet nights.",
       act_p1: "<em>Pouria</em>'s back behind the bar — go get the drink you skipped this morning. 🍸",
       act_p2: "<em>DJ Sina</em> and <em>DJ Danesh</em> are trading the decks. The garden's dancing — stay for the next one. 💃",
@@ -38987,7 +38986,6 @@ var T = {
       act_b0: "Den skončil — obloha ne. Ťukni na slunce a dívej se, jak zapadá. 🌇",
       act_b2: "Čas spát. Zhasni — vypínačem u dveří.",
       act_b2_redirect: "Ne lampu — ten malý vypínač u dveří. 👉",
-      act_b2_return: "Párty vypínač pořád čeká na balkoně. 🎉",
       act_b3: "…žádný vypínač světla to nebyl. 🎉 Překvapení — v loftu tiché noci nevedeme.",
       act_p1: "<em>Pouria</em> je zpátky za barem — dojdi si pro drink, cos ráno vynechal(a). 🍸",
       act_p2: "<em>DJ Sina</em> a <em>DJ Danesh</em> si předávají gramofony. Zahrada tančí — zůstaň na další. 💃",
@@ -114438,7 +114436,7 @@ function spawnDustMote(container) {
   //
   // Per-session, never localStorage: a ~10-minute experience, and a returning visitor who
   // knows the trick shouldn't have the surprise re-explained to them.
-  var armed = false, live = null, liveMs = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null, bridgeNudged = false;
+  var armed = false, live = null, liveMs = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null;
 
   function el(id) { return document.getElementById(id); }
   function isDusk() { var b = el("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
@@ -114498,7 +114496,7 @@ function spawnDustMote(container) {
     if (next === live) return;
     var prev = beat(live);
     if (prev && prev.exit) prev.exit();
-    live = next; liveMs = 0; bridgeNudged = false;
+    live = next; liveMs = 0;
     if (ACT_MSG[live]) { // the caption lands now; the phone text(s) follow ~5s later so they don't clash
       [].concat(ACT_MSG[live]).forEach(function (mid, i) {
         pendingMsgIds.push(mid);
@@ -114522,14 +114520,10 @@ function spawnDustMote(container) {
     if (!armed || !live) return;
     if (document.hidden || !document.hasFocus() || window.__cinematic) return;
     // Window Tetris owns the balcony while it is active. Its play time should not advance
-    // the second-act caption pacing or the eventual return-to-balcony reminder.
+    // the second-act caption pacing.
     if (window.__balconyTetrisState && window.__balconyTetrisState().active) return;
     liveMs += 1000;
     var b = beat(live);
-    if (b && b.id === "act_b2" && liveMs >= 60000 && !bridgeNudged && window.currentStageName !== "balcony") {
-      bridgeNudged = true;
-      if (window.setCaption) window.setCaption("act_b2_return");
-    }
     if (b && b.afterMs && b.after && liveMs >= b.afterMs) { b.after(); advance(); }
   }
 
@@ -114539,7 +114533,6 @@ function spawnDustMote(container) {
     if (!armed || !live || window.__cinematic) return null;
     var b = beat(live);
     if (b && b.silent) return null;
-    if (b && b.id === "act_b2" && room !== "balcony" && liveMs >= 60000) return "act_b2_return";
     if (!b || b.room !== room || liveMs >= b.claimMs) return null;
     return b.id;
   };

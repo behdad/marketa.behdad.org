@@ -224,7 +224,8 @@ a ♥️ scores `100 ×`, a 💋 scores `250 ×`, and the rarer ∞ scores `500 
 multiplier. Any clean pass or pickup raises the multiplier by one, up to `8×`;
 rear-ending forward traffic cuts the car's speed and resets
 it below the struck vehicle's speed, kicks the view, cracks the windshield, and
-resets it to `1×`. Meeting oncoming traffic in its lane produces a longer, louder
+resets it to `1×`. Each localized crack varies its impact point, angle, branch lengths,
+and smaller fractures while remaining proportional to the strike. Meeting oncoming traffic in its lane produces a longer, louder
 impact, stops and stalls the Porsche, and shatters the windshield until the
 ignition is restarted. Shake, sound, slowdown, and glass damage scale with the
 other object's type and relative speed.

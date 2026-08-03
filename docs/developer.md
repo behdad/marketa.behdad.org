@@ -192,8 +192,11 @@ Collectibles use pooled `heart`, `kiss`, and `inf` entities worth 100/250/500 be
 the original `token` test-seam input remains a compatibility alias for `inf`.
 `roadtripCollisionSeverity()` combines relative velocity with a per-object mass factor. It scales
 speed loss, shake displacement, SFX gain/duration, and crack opacity. Forward traffic and wildlife
-use the localized `.roadtrip-cracked` layer; same-lane oncoming traffic hard-stops/stalls the Porsche
-and uses the full `.roadtrip-shattered` layer. Restart repairs either windshield state.
+use the localized `.roadtrip-cracked` layer. `entranceRoadtripCrackVariant()` rolls a compact origin,
+whole-crack rotation, six primary branches, and two to four secondary fractures; severity also scales
+their reach, and the SVG windshield clip is the final containment boundary. Same-lane oncoming traffic
+hard-stops/stalls the Porsche and uses the independent full `.roadtrip-shattered` layer. Restart repairs
+either windshield state.
 
 The third forward practice wrap unlocks the highway and reveals the owned SVG invitation; it does not
 start the roadtrip. Acceptance persists as `drive.roadtrip.accepted`, while Later is transient and the
@@ -204,7 +207,8 @@ the next Escape dismisses the dashboard and clears the run while retaining unloc
 unlock/practice, while the best score remains localStorage-owned. Checkpoints persist compact settled
 roadtrip counters but not active presentation, spawn timing, or live entities. Run
 `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`, `tests/entrance-recovery.js`, and
-`tests/entrance-roadtrip.js` for this boundary.
+`tests/entrance-roadtrip.js` for this boundary; `tests/entrance-windshield-cracks.js` checks the
+randomized glass geometry and crack/shatter separation without launching a browser.
 Street `driveState.position` uses twice the roadtrip world-travel scale so the compact block loops
 briskly; speed, RPM, odometer distance, and `roadtripState.distance` remain unscaled physical values.
 Checkpoint restore marks the first-drive coach complete before the Entrance reopens; a fresh reset

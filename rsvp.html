@@ -32113,10 +32113,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               </g>
               <rect y="-120" width="680" height="216" fill="url(#entrance-drive-windshield-glaze)"/>
             </g>
-            <g id="entrance-roadtrip-crack" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M369-9L350-29M369-9L389-35M369-9L401-4M369-9L385 16M369-9L350 25M369-9L335-2" stroke="#233039" stroke-width="3" opacity=".34"/>
-              <path d="M369-9L350-29L344-43M350-29L332-34M369-9L389-35L410-43M389-35L397-53M369-9L401-4L419-15M401-4L425 8M369-9L385 16L380 37M385 16L404 31M369-9L350 25L352 47M350 25L331 39M369-9L335-2L318-17M335-2L310 8" stroke="#edf5f3" stroke-width="1.35"/>
-              <circle cx="369" cy="-9" r="4.5" stroke="#edf5f3" stroke-width="1.1"/>
+            <g id="entrance-roadtrip-crack" aria-hidden="true" clip-path="url(#entrance-roadtrip-windshield-clip)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <g id="entrance-roadtrip-crack-geometry">
+                <path id="entrance-roadtrip-crack-shadow" d="M369-9L350-29L344-43M350-29L332-34M369-9L389-35L410-43M389-35L397-53M369-9L401-4L419-15M401-4L425 8M369-9L385 16L380 37M385 16L404 31M369-9L350 25L352 47M350 25L331 39M369-9L335-2L318-17M335-2L310 8" stroke="#233039" stroke-width="3" opacity=".34"/>
+                <path id="entrance-roadtrip-crack-primary" d="M369-9L350-29L344-43M369-9L389-35L410-43M369-9L401-4L419-15M369-9L385 16L380 37M369-9L350 25L352 47M369-9L335-2L318-17" stroke="#edf5f3" stroke-width="1.35"/>
+                <path id="entrance-roadtrip-crack-secondary" d="M350-29L332-34M389-35L397-53M401-4L425 8M385 16L404 31M350 25L331 39M335-2L310 8" stroke="#f6fbfa" stroke-width=".95" opacity=".9"/>
+                <circle id="entrance-roadtrip-crack-core" cx="369" cy="-9" r="4.5" stroke="#edf5f3" stroke-width="1.1"/>
+              </g>
             </g>
             <g id="entrance-roadtrip-shatter" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <path d="M342-3L246-120M342-3L112-78M342-3L0 12M342-3L84 96M342-3L278 96M342-3L438 96M342-3L604 96M342-3L680 22M342-3L594-91M342-3L454-120" stroke="#1c272d" stroke-width="4.6" opacity=".3"/>
@@ -34566,6 +34569,7 @@ window.__entranceRoomOpen = false;
   var roadtripMirrorLanePath = null;
   var roadtripMirrorEdgesPath = null;
   var roadtripImpactTimer = null;
+  var roadtripCrackSerial = 0;
   var roadtripState = {
     active: false,
     exitUntilStop: false,
@@ -34900,6 +34904,87 @@ window.__entranceRoomOpen = false;
   }
   bindRoadtripInviteControl(roadtripInviteAccept, acceptRoadtripInvite);
   bindRoadtripInviteControl(roadtripInviteLater, dismissRoadtripInvite);
+  function entranceRoadtripCrackVariant(severity, random, sequence) {
+    random = typeof random === "function" ? random : Math.random;
+    severity = Math.max(.08, Math.min(1, Number(severity) || .5));
+    sequence = Math.max(0, Math.floor(Number(sequence) || 0));
+    function roll(min, max) {
+      var value = Math.max(0, Math.min(.999999, Number(random()) || 0));
+      return min + (max - min) * value;
+    }
+    function point(originX, originY, angle, distance) {
+      var radians = angle * Math.PI / 180;
+      return { x: originX + Math.cos(radians) * distance, y: originY + Math.sin(radians) * distance };
+    }
+    function svgPoint(value) {
+      function tidy(number) { return number.toFixed(1).replace(/\.0$/, ""); }
+      return tidy(value.x) + "," + tidy(value.y);
+    }
+    var originX = 369 + roll(-24, 24) + (sequence % 3 - 1) * 1.4;
+    var originY = -9 + roll(-9, 9) + (sequence % 2 ? .8 : -.8);
+    var origin = { x: originX, y: originY };
+    var rotation = roll(-13, 13) + (sequence % 5 - 2) * .6;
+    var branchCount = 6;
+    var branchRadius = 24 + severity * 22;
+    var branches = [];
+    var primary = [];
+    var secondary = [];
+    var points = [origin];
+    for (var i = 0; i < branchCount; i++) {
+      var angle = -94 + i * (360 / branchCount) + roll(-11, 11) + (sequence + i) % 3 - 1;
+      var length = branchRadius * roll(.8, 1.15);
+      var kink = point(originX, originY, angle + roll(-9, 9), length * roll(.43, .61));
+      var end = point(originX, originY, angle + roll(-7, 7), length);
+      branches.push({ angle: angle, kink: kink, end: end });
+      points.push(kink, end);
+      primary.push("M" + svgPoint(origin) + "L" + svgPoint(kink) + "L" + svgPoint(end));
+    }
+    var secondaryCount = 2 + Math.floor(roll(0, 3));
+    for (var j = 0; j < secondaryCount; j++) {
+      var branch = branches[(Math.floor(roll(0, branchCount)) + j * 2 + sequence) % branchCount];
+      var forkDirection = roll(0, 1) < .5 ? -1 : 1;
+      var forkAngle = branch.angle + forkDirection * roll(31, 64);
+      var forkLength = (8 + severity * 8) * roll(.78, 1.2);
+      var forkMid = point(branch.kink.x, branch.kink.y, forkAngle + roll(-7, 7), forkLength * roll(.45, .65));
+      var forkEnd = point(branch.kink.x, branch.kink.y, forkAngle + roll(-5, 5), forkLength);
+      points.push(forkMid, forkEnd);
+      secondary.push("M" + svgPoint(branch.kink) + "L" + svgPoint(forkMid) + "L" + svgPoint(forkEnd));
+    }
+    var maxRadius = points.reduce(function (greatest, value) {
+      return Math.max(greatest, Math.hypot(value.x - originX, value.y - originY));
+    }, 0);
+    return {
+      origin: origin,
+      rotation: rotation,
+      primaryPath: primary.join(""),
+      secondaryPath: secondary.join(""),
+      primaryCount: branchCount,
+      secondaryCount: secondaryCount,
+      points: points,
+      maxRadius: maxRadius
+    };
+  }
+  function paintRoadtripCrack(severity) {
+    var crack = roadtripElement("entrance-roadtrip-crack");
+    var geometry = roadtripElement("entrance-roadtrip-crack-geometry");
+    var shadow = roadtripElement("entrance-roadtrip-crack-shadow");
+    var primary = roadtripElement("entrance-roadtrip-crack-primary");
+    var secondary = roadtripElement("entrance-roadtrip-crack-secondary");
+    var core = roadtripElement("entrance-roadtrip-crack-core");
+    if (!crack || !geometry || !shadow || !primary || !secondary || !core) return false;
+    var sequence = roadtripCrackSerial++;
+    var variant = entranceRoadtripCrackVariant(severity, Math.random, sequence);
+    var path = variant.primaryPath + variant.secondaryPath;
+    shadow.setAttribute("d", path);
+    primary.setAttribute("d", variant.primaryPath);
+    secondary.setAttribute("d", variant.secondaryPath);
+    core.setAttribute("cx", variant.origin.x.toFixed(1));
+    core.setAttribute("cy", variant.origin.y.toFixed(1));
+    geometry.setAttribute("transform", "rotate(" + variant.rotation.toFixed(1) + " " +
+      variant.origin.x.toFixed(1) + " " + variant.origin.y.toFixed(1) + ")");
+    crack.setAttribute("data-roadtrip-crack-serial", String(sequence));
+    return true;
+  }
   function repairRoadtripWindshield() {
     room.classList.remove("roadtrip-cracked", "roadtrip-shattered");
     room.style.removeProperty("--roadtrip-damage");
@@ -34979,6 +35064,7 @@ window.__entranceRoomOpen = false;
       room.classList.remove("roadtrip-cracked");
       room.classList.add("roadtrip-shattered");
     } else if (damage === "crack" && !room.classList.contains("roadtrip-shattered")) {
+      paintRoadtripCrack(severity);
       room.classList.add("roadtrip-cracked");
     }
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");

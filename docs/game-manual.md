@@ -212,8 +212,9 @@ the view; farther out, gravel reduces grip and steadily bleeds speed. It is usef
 as an emergency escape route, but slower than staying on the pavement.
 Road and tire noise build with speed; fast steering adds a tire squeal and air
 swoosh, while the rumble strip and gravel have rougher textures.
-The centre mirror is live: traffic you have just passed remains visible behind
-the Porsche until it falls out of mirror range.
+The centre mirror is live: its road and markings follow the bends behind you,
+cloud, smoke, rain, snow, and winter cover match the windshield, and traffic you
+have just passed remains visible until it falls out of mirror range.
 
 Cleanly passing a car or truck scores `100 ×` the current multiplier. Collecting
 a ♥️ scores `100 ×`, a 💋 scores `250 ×`, and the rarer ∞ scores `500 ×` the

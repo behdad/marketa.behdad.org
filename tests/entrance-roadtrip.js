@@ -23,7 +23,16 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-crack",
   "entrance-roadtrip-shatter",
   "entrance-roadtrip-mirror",
+  "entrance-roadtrip-mirror-road",
+  "entrance-roadtrip-mirror-center",
+  "entrance-roadtrip-mirror-lanes",
+  "entrance-roadtrip-mirror-edges",
   "entrance-roadtrip-mirror-entities",
+  "entrance-roadtrip-mirror-clouds",
+  "entrance-roadtrip-mirror-smoke",
+  "entrance-roadtrip-mirror-rain",
+  "entrance-roadtrip-mirror-snow",
+  "entrance-roadtrip-mirror-winter",
   "entrance-roadtrip-clouds",
   "entrance-roadtrip-rain",
   "entrance-roadtrip-snow",
@@ -40,7 +49,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier",
     "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later",
     "entrance-roadtrip-crack", "entrance-roadtrip-shatter", "entrance-roadtrip-mirror",
-    "entrance-roadtrip-mirror-entities", "entrance-roadtrip-clouds",
+    "entrance-roadtrip-mirror-road", "entrance-roadtrip-mirror-center",
+    "entrance-roadtrip-mirror-lanes", "entrance-roadtrip-mirror-edges",
+    "entrance-roadtrip-mirror-entities", "entrance-roadtrip-mirror-clouds",
+    "entrance-roadtrip-mirror-smoke", "entrance-roadtrip-mirror-rain",
+    "entrance-roadtrip-mirror-snow", "entrance-roadtrip-mirror-winter", "entrance-roadtrip-clouds",
     "entrance-roadtrip-rain", "entrance-roadtrip-snow", "entrance-roadtrip-winter"
   ];
   var report = { errors: [], steps: {} };
@@ -260,9 +273,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         clouds: visiblePath(document.getElementById("entrance-roadtrip-clouds"), hud),
         rain: visiblePath(document.getElementById("entrance-roadtrip-rain"), hud),
         snow: visiblePath(document.getElementById("entrance-roadtrip-snow"), hud),
-        winter: visiblePath(document.getElementById("entrance-roadtrip-winter"), hud)
+        winter: visiblePath(document.getElementById("entrance-roadtrip-winter"), hud),
+        mirrorClouds: visiblePath(document.getElementById("entrance-roadtrip-mirror-clouds"), hud),
+        mirrorSmoke: visiblePath(document.getElementById("entrance-roadtrip-mirror-smoke"), hud),
+        mirrorRain: visiblePath(document.getElementById("entrance-roadtrip-mirror-rain"), hud),
+        mirrorSnow: visiblePath(document.getElementById("entrance-roadtrip-mirror-snow"), hud),
+        mirrorWinter: visiblePath(document.getElementById("entrance-roadtrip-mirror-winter"), hud)
       }
     };
+    window.__setBalconyRain(false, "test");
+    window.__setBalconySnow(true, "test");
+    await sleep(40);
+    report.steps.activation.weather.snowMode = {
+      classes: room.getAttribute("class"),
+      rain: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-mirror-rain")).opacity),
+      snow: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-mirror-snow")).opacity)
+    };
+    window.__setBalconySnow(false, "test");
+    window.__setBalconyRain(true, "test");
 
     var asphalt = document.querySelector("#entrance-roadtrip-road .entrance-roadtrip-asphalt");
     var rightWarningNode = visibleCurveSign();
@@ -271,9 +299,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       ahead: Number(rightWarningNode.getAttribute("data-roadtrip-ahead")),
       href: rightWarningNode.getAttribute("href") || rightWarningNode.getAttribute("xlink:href")
     };
+    function mirrorGeometry() {
+      return {
+        road: document.getElementById("entrance-roadtrip-mirror-road").getAttribute("d"),
+        center: document.getElementById("entrance-roadtrip-mirror-center").getAttribute("d"),
+        lanes: document.getElementById("entrance-roadtrip-mirror-lanes").getAttribute("d"),
+        edges: document.getElementById("entrance-roadtrip-mirror-edges").getAttribute("d")
+      };
+    }
     var straightGeometry = asphalt.getAttribute("d");
+    var straightMirror = mirrorGeometry();
     window.__entranceRoadtripSetDistance(158);
-    var rightCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d") };
+    var rightCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry() };
     window.__entranceRoadtripSetDistance(260);
     var leftWarningNode = visibleCurveSign();
     var leftWarning = leftWarningNode && {
@@ -282,9 +319,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       href: leftWarningNode.getAttribute("href") || leftWarningNode.getAttribute("xlink:href")
     };
     window.__entranceRoadtripSetDistance(401);
-    var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d") };
+    var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry() };
     report.steps.curves = {
       straight: straightGeometry,
+      straightMirror: straightMirror,
       roadLineFills: Array.prototype.map.call(document.querySelectorAll(
         ".entrance-roadtrip-edge,.entrance-roadtrip-centerline"), function (node) {
           return getComputedStyle(node).fill;
@@ -553,6 +591,11 @@ check(/window\.__entranceRoadtripStart\s*=/.test(source) && /window\.__entranceR
   /window\.__entranceRoadtripSetDistance\s*=/.test(source) && /window\.__entranceRoadtripSetLane\s*=/.test(source) &&
   /window\.__entranceDriveTireAudio\s*=/.test(source) &&
   /roadtrip\s*:/.test(source), "fresh source exports the focused roadtrip hooks and nested state");
+check(/#entrance-roadtrip-mirror-smoke\{opacity:calc\(var\(--smoke,0\) \* \.4\)/.test(source) &&
+  /entrance-clouded #entrance-roadtrip-mirror-clouds\{opacity:/.test(source) &&
+  /entrance-raining:not\(\.entrance-snowing\) #entrance-roadtrip-mirror-rain\{opacity:/.test(source) &&
+  /entrance-snowing #entrance-roadtrip-mirror-snow\{opacity:/.test(source),
+  "the mirror atmosphere reads the same smoke and Entrance weather state as the windshield");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 7500, {
   patchRaf: true,
@@ -607,7 +650,10 @@ check(activation && activation.beforeClasses.indexOf("entrance-clouded") >= 0 &&
   ["oldRain", "oldSnow", "clouds", "rain", "snow", "winter"].every(function (name) {
     return activation.weather[name].connected && !activation.weather[name].hiddenBy;
   }) && activation.weather.oldRain.opacity > .5 && activation.weather.rain.opacity > .5 &&
-  activation.weather.clouds.opacity > 0,
+  activation.weather.clouds.opacity > 0 && activation.weather.mirrorClouds.opacity > 0 &&
+  activation.weather.mirrorRain.opacity > .5 && activation.weather.mirrorSnow.opacity === 0 &&
+  activation.weather.snowMode && /entrance-snowing/.test(activation.weather.snowMode.classes) &&
+  activation.weather.snowMode.rain === 0 && activation.weather.snowMode.snow > .5,
   "the extended windshield preserves active Entrance weather classes and both old/new overlays", activation && activation.weather);
 
 var curves = s.curves;
@@ -615,10 +661,16 @@ check(curves && curves.rightWarning && curves.rightWarning.direction === "right"
   curves.roadLineFills.length === 3 && curves.roadLineFills.every(function (value) { return value === "none"; }) &&
   /curve-sign-right/.test(curves.rightWarning.href || "") && curves.rightWarning.ahead > 0 &&
   curves.right.state.curve > 0 && curves.right.road !== curves.straight &&
+  curves.right.mirror.road !== curves.straightMirror.road &&
+  curves.right.mirror.center !== curves.straightMirror.center &&
+  curves.right.mirror.lanes !== curves.straightMirror.lanes &&
+  (curves.right.mirror.center.match(/L/g) || []).length >= 20 &&
   curves.leftWarning && curves.leftWarning.direction === "left" &&
   /curve-sign-left/.test(curves.leftWarning.href || "") && curves.leftWarning.ahead > 0 &&
-  curves.left.state.curve < 0 && curves.left.road !== curves.right.road,
-  "alternating road bends reshape the lanes, with a matching warning sign before each turn", curves);
+  curves.left.state.curve < 0 && curves.left.road !== curves.right.road &&
+  curves.left.mirror.road !== curves.right.mirror.road &&
+  curves.left.mirror.edges !== curves.right.mirror.edges,
+  "alternating road bends reshape both windshield and sampled rear-view markings, with a matching warning sign before each turn", curves);
 var shoulder = s.shoulder;
 check(shoulder && shoulder.before.state.drive.roadtrip.playerLane > 2 &&
   shoulder.before.state.drive.roadtrip.shoulderZone === "gravel" &&

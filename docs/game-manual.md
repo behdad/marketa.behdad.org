@@ -234,6 +234,8 @@ Reverse adds to the odometer but never earns highway distance points.
 The highway landscape follows the effective game date in both the windshield
 and mirror: fresh muddy spring, deep-green summer, gold-and-rust autumn, or
 bare, snow-covered winter. Summer runs through September 21.
+At night, the Porsche headlights cast across the near asphalt and shoulders;
+the beam follows steering and the road's bend while weather remains in front.
 
 Leaving the game window or switching tabs pauses the whole highway simulation:
 trip time, road motion, traffic, wildlife, police, spawns, distance, and scoring

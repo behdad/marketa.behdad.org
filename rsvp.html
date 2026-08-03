@@ -949,6 +949,15 @@ footer{margin-top:2.6rem}
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-summer .entrance-roadtrip-mirror-verge{fill:#223629}
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-autumn .entrance-roadtrip-mirror-verge{fill:#393628}
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-winter .entrance-roadtrip-mirror-verge{fill:#485357}
+#entrance-roadtrip-headlights{opacity:0;transition:opacity .32s ease}
+#entrance-room.roadtrip-active:not(.entrance-day)
+  #entrance-drive-hud.drive-engine-on #entrance-roadtrip-headlights{opacity:.16}
+#entrance-room.roadtrip-active:not(.entrance-day).roadtrip-headlights-on
+  #entrance-drive-hud.drive-engine-on #entrance-roadtrip-headlights{opacity:.64}
+#entrance-room.roadtrip-active:not(.entrance-day).roadtrip-headlights-on.entrance-raining
+  #entrance-drive-hud.drive-engine-on #entrance-roadtrip-headlights{opacity:.7}
+#entrance-room.roadtrip-active:not(.entrance-day).roadtrip-headlights-on.entrance-snowing
+  #entrance-drive-hud.drive-engine-on #entrance-roadtrip-headlights{opacity:.68}
 .entrance-roadtrip-arrest-copy{font-family:Fraunces,Georgia,serif;text-anchor:middle}
 #entrance-roadtrip-arrest-title{font-size:15px;font-weight:800;letter-spacing:1.4px;fill:#453a31}
 #entrance-roadtrip-arrest-kicker{font-size:8px;font-weight:700;letter-spacing:1.8px;fill:#4a6b94}
@@ -31953,6 +31962,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <radialGradient id="entrance-roadtrip-token-glow">
               <stop offset="0" stop-color="#fff5ba" stop-opacity=".9"/><stop offset=".45" stop-color="#e7bd49" stop-opacity=".42"/><stop offset="1" stop-color="#d4a73b" stop-opacity="0"/>
             </radialGradient>
+            <linearGradient id="entrance-roadtrip-headlight-beam" gradientUnits="userSpaceOnUse" x1="0" y1="16" x2="0" y2="96">
+              <stop offset="0" stop-color="#fff8cb" stop-opacity=".06"/><stop offset=".28" stop-color="#fff3b8" stop-opacity=".58"/><stop offset=".72" stop-color="#ffe9a2" stop-opacity=".42"/><stop offset="1" stop-color="#ffe6a0" stop-opacity=".16"/>
+            </linearGradient>
+            <filter id="entrance-roadtrip-headlight-soft" x="-12%" y="-24%" width="124%" height="148%">
+              <feGaussianBlur stdDeviation="1.8"/>
+            </filter>
             <clipPath id="entrance-roadtrip-windshield-clip">
               <path d="M0 -120H680V91Q560 69 455 64Q347 60 247 73Q111 87 0 76Z"/>
             </clipPath>
@@ -32154,6 +32169,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   <path d="M348 2L352 13L350 14L345 3Z"/><path d="M354 20L364 37L360 39L349 22Z"/><path d="M371 50L395 80L387 84L364 53Z"/>
                 </g>
                 <path d="M45 88Q340 73 635 88" fill="none" stroke="#fffdf8" stroke-width="1.2" opacity=".09"/>
+              </g>
+              <g id="entrance-roadtrip-headlights" aria-hidden="true" visibility="hidden">
+                <path id="entrance-roadtrip-headlight-left" fill="url(#entrance-roadtrip-headlight-beam)" filter="url(#entrance-roadtrip-headlight-soft)"/>
+                <path id="entrance-roadtrip-headlight-right" fill="url(#entrance-roadtrip-headlight-beam)" filter="url(#entrance-roadtrip-headlight-soft)"/>
               </g>
               <g id="entrance-roadtrip-furniture">
                 <use href="#entrance-roadtrip-sign" transform="translate(87 25) scale(.72)"/>
@@ -34748,6 +34767,9 @@ window.__entranceRoomOpen = false;
   var roadtripRumblePath = null;
   var roadtripEdgePaths = [];
   var roadtripCenterPath = null;
+  var roadtripHeadlightGroup = null;
+  var roadtripHeadlightLeft = null;
+  var roadtripHeadlightRight = null;
   var roadtripMirrorRoadPath = null;
   var roadtripMirrorCenterPath = null;
   var roadtripMirrorLanePath = null;
@@ -35105,6 +35127,11 @@ window.__entranceRoomOpen = false;
           road.appendChild(roadtripRoadPath);
         }
       }
+    }
+    if (!roadtripHeadlightGroup) {
+      roadtripHeadlightGroup = roadtripElement("entrance-roadtrip-headlights");
+      roadtripHeadlightLeft = roadtripElement("entrance-roadtrip-headlight-left");
+      roadtripHeadlightRight = roadtripElement("entrance-roadtrip-headlight-right");
     }
     var laneMarks = roadtripElement("entrance-roadtrip-lane-marks");
     if (!roadtripLaneMarks.length && laneMarks) {
@@ -36209,6 +36236,28 @@ window.__entranceRoomOpen = false;
       node.setAttribute("visibility", "visible");
     });
   }
+  function paintRoadtripHeadlights() {
+    if (!roadtripHeadlightGroup || !roadtripHeadlightLeft || !roadtripHeadlightRight) return;
+    roadtripHeadlightGroup.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+    if (!roadtripState.active) return;
+    var playerRoadFraction = roadtripState.playerLane * ROADTRIP_LANE_FRACTION;
+    var far = roadtripProject(64);
+    var middle = roadtripProject(28);
+    var steer = Math.max(-1, Math.min(1, driveState.steeringAngle / 18));
+    var farCenter = roadtripProjectLateral(far, playerRoadFraction) + steer * 52;
+    var middleCenter = roadtripProjectLateral(middle, playerRoadFraction) + steer * 22;
+    var nearCenter = 340 + steer * 4;
+    roadtripHeadlightLeft.setAttribute("d",
+      "M" + (nearCenter + 20).toFixed(2) + " 95L115 95Q" + (middleCenter - 105).toFixed(2) + " " + middle.y.toFixed(2) + " " +
+      (farCenter - 20).toFixed(2) + " " + far.y.toFixed(2) + "L" + (farCenter + 5).toFixed(2) + " " + far.y.toFixed(2) + "Q" +
+      (middleCenter - 4).toFixed(2) + " " + middle.y.toFixed(2) + " " + (nearCenter + 20).toFixed(2) + " 95Z");
+    roadtripHeadlightRight.setAttribute("d",
+      "M" + (nearCenter - 20).toFixed(2) + " 95L565 95Q" + (middleCenter + 105).toFixed(2) + " " + middle.y.toFixed(2) + " " +
+      (farCenter + 20).toFixed(2) + " " + far.y.toFixed(2) + "L" + (farCenter - 5).toFixed(2) + " " + far.y.toFixed(2) + "Q" +
+      (middleCenter + 4).toFixed(2) + " " + middle.y.toFixed(2) + " " + (nearCenter - 20).toFixed(2) + " 95Z");
+    roadtripHeadlightGroup.setAttribute("data-roadtrip-aim-x", farCenter.toFixed(2));
+    roadtripHeadlightGroup.setAttribute("data-roadtrip-steer", steer.toFixed(3));
+  }
   function paintRoadtripRoad() {
     if (!roadtripState.active) return;
     ensureRoadtripScene();
@@ -36264,6 +36313,7 @@ window.__entranceRoomOpen = false;
         horizontalScale.toFixed(3) + " " + scale.toFixed(3) + ")");
       item.node.setAttribute("visibility", remaining <= ROADTRIP_DRAW_DISTANCE ? "visible" : "hidden");
     });
+    paintRoadtripHeadlights();
     paintRoadtripCurveSigns();
   }
   function roadtripLaneValue(lane) {
@@ -36630,6 +36680,7 @@ window.__entranceRoomOpen = false;
     room.classList.remove("roadtrip-active");
     var world = roadtripElement("entrance-roadtrip-world");
     if (world) world.setAttribute("aria-hidden", "true");
+    if (roadtripHeadlightGroup) roadtripHeadlightGroup.setAttribute("visibility", "hidden");
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");
     if (driveHudSvg) driveHudSvg.setAttribute("viewBox", "0 -31 680 207");
     roadtripPool.forEach(function (entity) { entity.node.setAttribute("visibility", "hidden"); });
@@ -37004,6 +37055,7 @@ window.__entranceRoomOpen = false;
   function paintPorscheDriveHud() {
     var ignitionVisible = !!(window.__entranceRoomOpen && driveState.hudOpen);
     room.classList.toggle("drive-hud-visible", ignitionVisible);
+    room.classList.toggle("roadtrip-headlights-on", !!porscheState.headlightOn);
     if (porsche) porsche.classList.toggle("facing-reversed", driveState.facing < 0);
     if (porsche) porsche.classList.toggle("reversing", ignitionVisible && driveState.gear < 0);
     if (driveHud) {

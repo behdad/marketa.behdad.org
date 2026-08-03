@@ -211,6 +211,9 @@ roadtrip counters but not active presentation, spawn timing, or live entities. R
 randomized glass geometry and crack/shatter separation without launching a browser.
 Street `driveState.position` uses twice the roadtrip world-travel scale so the compact block loops
 briskly; speed, RPM, odometer distance, and `roadtripState.distance` remain unscaled physical values.
+`driveState.odometerKm` is the persistent physical-distance total: every drive step adds
+`abs(speed) × elapsed time`, independent of the street scene's theatrical travel scale. Engine lifecycle
+does not reset it; full game reset does, and Entrance checkpoint capture/restore preserves it.
 Checkpoint restore marks the first-drive coach complete before the Entrance reopens; a fresh reset
 still owns the four-step lesson, and the dashboard help control remains its explicit replay path.
 

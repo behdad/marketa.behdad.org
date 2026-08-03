@@ -192,6 +192,11 @@ street-drive state for the visit.
 The compact block is visually compressed, so its scenery passes at twice the
 highway world rate. The speedometer and accumulated distance remain physical.
 
+The left instrument is a three-digit kilometre odometer, not a lap counter. It
+adds the actual distance travelled on the block and highway, including reverse,
+keeps the same total through engine stops and save/resume, and rolls its compact
+readout over after `999.9 KM`.
+
 The six-speed manual follows the 2010 base Boxster's real gearing: RPM is tied to
 road speed in each selected gear, apart from forgiving clutch slip when launching
 in first. Acceleration builds progressively, the limiter is at 7,500 rpm, and a

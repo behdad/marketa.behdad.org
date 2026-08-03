@@ -8,12 +8,14 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:window.__errs||[],steps:{}};function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}',
   'function state(){return window.__entranceRoomState();}',
+  'function driveAt(speed,gear,seconds){for(var i=0;i<seconds;i++){window.__entranceDriveSetMotion(speed,gear);window.__entranceDriveStep(1000);}}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__setRoomSolved("kitchen",true);window.goToStage("balcony");window.__openEntranceRoom();await sleep(30);window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();await sleep(30);',
-  'var odometer=document.getElementById("entrance-drive-lap-odometer"),started=state(),startedText=odometer&&odometer.textContent;window.__entranceDriveSetMotion(180,4);window.__entranceDriveControl("throttle",true);for(var i=0;i<60;i++)window.__entranceDriveStep(80);window.__entranceDriveControl("throttle",false);await sleep(30);',
-  'var wrapped=state(),wrappedText=odometer&&odometer.textContent,wrappedShape={hasWraps:Object.prototype.hasOwnProperty.call(wrapped.drive,"wraps"),hasLapCount:Object.prototype.hasOwnProperty.call(wrapped.drive,"lapCount")};',
+  'var odometer=document.getElementById("entrance-drive-odometer"),started=state(),startedText=odometer&&odometer.textContent;driveAt(90,3,8);var street=state(),streetText=odometer&&odometer.textContent,shape={hasOdometer:Object.prototype.hasOwnProperty.call(street.drive,"odometerKm"),hasLapCount:Object.prototype.hasOwnProperty.call(street.drive,"lapCount")};',
   'window.__toggleEntrancePorscheEngine();await sleep(20);var stopped=state();window.__toggleEntrancePorscheEngine();await sleep(30);var restarted=state(),restartedText=odometer&&odometer.textContent;',
-  'window.__entranceDriveSetMotion(180,4);window.__entranceDriveControl("throttle",true);for(var j=0;j<60;j++)window.__entranceDriveStep(80);window.__entranceDriveControl("throttle",false);await sleep(20);var beforeSave=state(),saved=window.__saveLoftCheckpoint(),raw=localStorage.getItem("loftCheckpoint:v1"),payload=raw&&JSON.parse(raw);window.__restoreCheckpointSystems(payload&&payload.systems,"afterStage");await sleep(40);report.steps={started:started,startedText:startedText,wrapped:wrapped,wrappedText:wrappedText,wrappedShape:wrappedShape,stopped:stopped,restarted:restarted,restartedText:restartedText,beforeSave:beforeSave,saved:saved,persisted:payload&&payload.systems&&payload.systems.entrance&&payload.systems.entrance.drive,restored:state()};',
+  'var highwayStarted=window.__entranceRoadtripStart();driveAt(90,3,4);var highway=state(),highwayText=odometer&&odometer.textContent;driveAt(-36,-1,4);var reversed=state(),reversedText=odometer&&odometer.textContent;',
+  'var saved=window.__saveLoftCheckpoint(),raw=localStorage.getItem("loftCheckpoint:v1"),payload=raw&&JSON.parse(raw),persisted=payload&&payload.systems&&payload.systems.entrance&&payload.systems.entrance.drive;window.__restoreCheckpointSystems(payload&&payload.systems,"afterStage");await sleep(40);var restored=state(),restoredText=odometer&&odometer.textContent;',
+  'report.steps={started:started,startedText:startedText,street:street,streetText:streetText,shape:shape,stopped:stopped,restarted:restarted,restartedText:restartedText,highwayStarted:highwayStarted,highway:highway,highwayText:highwayText,reversed:reversed,reversedText:reversedText,saved:saved,persisted:persisted,restored:restored,restoredText:restoredText};',
   '}catch(error){report.errors.push(String(error&&error.stack||error));}',
   'document.getElementById("__report").textContent=JSON.stringify(report);},180);});',
   '})();</script>'
@@ -24,8 +26,12 @@ function check(ok, message, detail) {
   if (ok) console.log("  ✓ " + message);
   else { failures++; console.log("  ✗ " + message + (detail ? "   [" + JSON.stringify(detail) + "]" : "")); }
 }
+function displayFor(km) {
+  var tenths = Math.floor(Math.max(0, km) * 10) / 10;
+  return (tenths % 1000).toFixed(1).padStart(5, "0") + " KM";
+}
 
-console.log("rsvp.html Porsche lap-count odometer:");
+console.log("rsvp.html Porsche total-distance odometer:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 6000, {
   patchRaf: true,
   seedRandom: true,
@@ -34,21 +40,29 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 6000, {
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
-check(s.started && s.started.drive.lapCount === 0 && /0$/.test(s.startedText || ""),
-  "engine start initializes a distinct lap counter in the left instrument", s.started);
-check(s.wrapped && s.wrapped.drive.wraps > 0 && s.wrapped.drive.lapCount === s.wrapped.drive.wraps &&
-  s.wrappedShape && s.wrappedShape.hasWraps && s.wrappedShape.hasLapCount &&
-  s.wrappedText && new RegExp(String(s.wrapped.drive.lapCount) + "$").test(s.wrappedText),
-  "completed street wraps increment the separate odometer and its left-instrument readout", s.wrapped);
-check(s.stopped && s.stopped.drive.lapCount === s.wrapped.drive.lapCount,
-  "stopping the engine does not erase the current engine-run count", {stopped:s.stopped,wrapped:s.wrapped});
-check(s.restarted && s.restarted.drive.lapCount === 0 && /0$/.test(s.restartedText || ""),
-  "starting the engine again resets only the odometer count", s.restarted);
-check(s.beforeSave && s.beforeSave.drive.lapCount > 0 && s.saved &&
-  s.persisted && s.persisted.lapCount === s.beforeSave.drive.lapCount &&
-  s.restored && s.restored.drive.lapCount === s.beforeSave.drive.lapCount &&
-  s.restored.drive.wraps === s.beforeSave.drive.wraps,
-  "save-resume persists lapCount alongside, but separately from, the existing wrap state", {
-    beforeSave:s.beforeSave, persisted:s.persisted, restored:s.restored
+check(s.started && s.started.drive.odometerKm === 0 && s.startedText === "000.0 KM",
+  "a fresh game starts a real kilometre odometer at zero", s.started);
+check(s.street && s.street.drive.odometerKm > .15 && s.street.drive.odometerKm < .3 &&
+  s.shape && s.shape.hasOdometer && !s.shape.hasLapCount && s.streetText === displayFor(s.street.drive.odometerKm),
+  "street driving accumulates physical distance and exposes no lap counter", {street:s.street,text:s.streetText,shape:s.shape});
+check(s.stopped && s.restarted &&
+  Math.abs(s.stopped.drive.odometerKm - s.street.drive.odometerKm) < .0001 &&
+  Math.abs(s.restarted.drive.odometerKm - s.street.drive.odometerKm) < .0001 &&
+  s.restartedText === displayFor(s.restarted.drive.odometerKm),
+  "stopping and restarting the engine never resets the odometer", {street:s.street,stopped:s.stopped,restarted:s.restarted});
+check(s.highwayStarted && s.highway && s.highway.drive.roadtrip.active &&
+  s.highway.drive.odometerKm > s.restarted.drive.odometerKm + .07 &&
+  s.highwayText === displayFor(s.highway.drive.odometerKm),
+  "highway kilometres continue the same total", {restarted:s.restarted,highway:s.highway,text:s.highwayText});
+check(s.reversed && s.reversed.drive.odometerKm > s.highway.drive.odometerKm + .025 &&
+  s.reversedText === displayFor(s.reversed.drive.odometerKm),
+  "reverse travel also adds distance instead of subtracting it", {highway:s.highway,reversed:s.reversed,text:s.reversedText});
+check(s.saved && s.persisted && s.restored &&
+  Math.abs(s.persisted.odometerKm - s.reversed.drive.odometerKm) <= .001 &&
+  s.restored.drive.odometerKm >= s.persisted.odometerKm &&
+  s.restored.drive.odometerKm < s.persisted.odometerKm + .005 &&
+  s.restoredText === displayFor(s.restored.drive.odometerKm),
+  "save-resume preserves the accumulating total and its instrument readout", {
+    reversed:s.reversed, persisted:s.persisted, restored:s.restored, text:s.restoredText
   });
 if (failures) process.exit(1);

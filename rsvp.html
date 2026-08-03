@@ -32284,7 +32284,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <g transform="translate(214 79)">
               <circle r="31" fill="url(#entrance-drive-gauge)" stroke="url(#entrance-drive-metal)" stroke-width="3"/>
               <g fill="#dbe7eb" font-size="6" font-weight="700"><text x="-18" y="15">0</text><text x="-24" y="0">50</text><text x="-14" y="-17">100</text><text x="7" y="-22">150</text><text x="22" y="-8">200</text><text x="21" y="12">250</text></g>
-              <text id="entrance-drive-lap-odometer" data-i="entrance_drive_lap" x="0" y="25" fill="#e3f0f4" font-size="4.4" font-weight="700" letter-spacing=".2">LAP 0</text>
+              <text id="entrance-drive-odometer" x="0" y="25" fill="#e3f0f4" font-size="4.8" font-weight="700" letter-spacing=".1">000.0 KM</text>
               <g id="entrance-drive-speed-needle"><path d="M0 0L-18 16" stroke="#e3443c" stroke-width="2" stroke-linecap="round"/><circle r="3.1" fill="#20262a"/></g>
             </g>
             <g transform="translate(338 79)">
@@ -34437,7 +34437,7 @@ window.__entranceRoomOpen = false;
   var driveFuelNeedle = document.getElementById("entrance-drive-fuel-needle");
   var driveTachReadout = document.getElementById("entrance-drive-tach-readout");
   var driveClockReadout = document.getElementById("entrance-drive-clock-readout");
-  var driveLapOdometer = document.getElementById("entrance-drive-lap-odometer");
+  var driveOdometer = document.getElementById("entrance-drive-odometer");
   var driveSteering = document.getElementById("entrance-drive-steering");
   var entranceDoorArt = document.getElementById("entrance-door-art");
   var driveShifter = document.getElementById("entrance-drive-shifter");
@@ -34614,7 +34614,7 @@ window.__entranceRoomOpen = false;
     wheelAngle: 0,
     steeringAngle: 0,
     wraps: 0,
-    lapCount: 0,
+    odometerKm: 0,
     facing: 1,
     yaw: 0,
     spinDirection: 0,
@@ -34791,11 +34791,9 @@ window.__entranceRoomOpen = false;
   function driveGearLabel() {
     return driveState.gear < 0 ? "R" : driveState.gear || "N";
   }
-  function porscheDriveLapLabel() {
-    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
-    var dict = typeof T === "object" && T[lang] ? T[lang] : null;
-    var label = dict && dict.entrance_drive_lap ? dict.entrance_drive_lap : (lang === "cs" ? "Kolo" : "Lap");
-    return label.toUpperCase() + " " + driveState.lapCount;
+  function porscheDriveOdometerLabel() {
+    var tenths = Math.floor(Math.max(0, driveState.odometerKm) * 10) / 10;
+    return (tenths % 1000).toFixed(1).padStart(5, "0") + " KM";
   }
   function roadtripElement(id) {
     return document.getElementById(id);
@@ -35877,7 +35875,7 @@ window.__entranceRoomOpen = false;
       driveClockReadout.textContent = gameHour + ":" + String(gameNow.getMinutes()).padStart(2, "0");
     }
     if (driveTachReadout) driveTachReadout.textContent = driveState.stalled ? "STALL" : driveGearLabel();
-    if (driveLapOdometer) driveLapOdometer.textContent = porscheDriveLapLabel();
+    if (driveOdometer) driveOdometer.textContent = porscheDriveOdometerLabel();
     if (driveShifterTouchPreviewGear !== null) paintPorscheShifter(driveShifterTouchPreviewGear);
     else if (!driveShifterAttemptTimer) paintPorscheShifter(driveState.gear);
     if (driveGearIndicator) {
@@ -36978,6 +36976,7 @@ window.__entranceRoomOpen = false;
     if (driveState.gear > 0) relativeVelocity = Math.min(relativeVelocity, porscheGearSpeedCeiling(driveState.gear));
     else if (driveState.gear < 0) relativeVelocity = Math.max(relativeVelocity, -55);
     driveState.speed = relativeVelocity * driveState.facing;
+    driveState.odometerKm += Math.abs(relativeVelocity) * seconds / 3600;
     // The street is a theatrical loop rather than a kilometre-scale map. Keep the
     // speedometer honest, then progressively compress distance so upper gears read
     // as genuinely fast instead of merely crossing the same short facade more often.
@@ -37002,13 +37001,11 @@ window.__entranceRoomOpen = false;
     while (driveState.position < -648) {
       driveState.position += PORSCHE_WRAP_SPAN;
       driveState.wraps++;
-      driveState.lapCount++;
       if (relativeVelocity > 0) recordRoadtripPracticeLap();
     }
     while (driveState.position > 349) {
       driveState.position -= PORSCHE_WRAP_SPAN;
       driveState.wraps++;
-      driveState.lapCount++;
       if (relativeVelocity > 0) recordRoadtripPracticeLap();
     }
     if (roadtripState.exitUntilStop && Math.abs(driveState.speed) <= .25) {
@@ -37068,7 +37065,7 @@ window.__entranceRoomOpen = false;
     driveState.wheelAngle = 0;
     driveState.steeringAngle = 0;
     driveState.wraps = 0;
-    driveState.lapCount = 0;
+    driveState.odometerKm = 0;
     driveState.facing = 1;
     driveState.yaw = 0;
     driveState.spinDirection = 0;
@@ -37422,7 +37419,6 @@ window.__entranceRoomOpen = false;
         driveState.rpm = 750;
         driveState.gear = 0;
         driveState.temperature = 0;
-        driveState.lapCount = 0;
         completePorscheDriveCoachAction("engine");
         if (entranceNight) {
           porscheState.headlightOn = true;
@@ -37869,7 +37865,7 @@ window.__entranceRoomOpen = false;
         steeringAngle: driveState.steeringAngle,
         wheelAngle: driveState.wheelAngle,
         wraps: driveState.wraps,
-        lapCount: driveState.lapCount,
+        odometerKm: driveState.odometerKm,
         facing: driveState.facing,
         yaw: driveState.yaw,
         spinDirection: driveState.spinDirection,
@@ -38001,7 +37997,7 @@ window.__entranceRoomOpen = false;
           steeringAngle: driveState.steeringAngle,
           wheelAngle: driveState.wheelAngle,
           wraps: driveState.wraps,
-          lapCount: driveState.lapCount,
+          odometerKm: Math.round(driveState.odometerKm * 1000) / 1000,
           facing: driveState.facing,
           yaw: driveState.yaw,
           spinDirection: driveState.spinDirection,
@@ -38061,7 +38057,7 @@ window.__entranceRoomOpen = false;
         if (Number.isFinite(Number(row.drive.steeringAngle))) driveState.steeringAngle = Math.max(-18, Math.min(18, Number(row.drive.steeringAngle)));
         if (Number.isFinite(Number(row.drive.wheelAngle))) driveState.wheelAngle = Number(row.drive.wheelAngle) % 360;
         if (Number.isFinite(Number(row.drive.wraps))) driveState.wraps = Math.max(0, Math.floor(Number(row.drive.wraps)));
-        if (Number.isFinite(Number(row.drive.lapCount))) driveState.lapCount = Math.max(0, Math.floor(Number(row.drive.lapCount)));
+        if (Number.isFinite(Number(row.drive.odometerKm))) driveState.odometerKm = Math.max(0, Math.min(1000000000, Number(row.drive.odometerKm)));
         var roadtrip = row.drive.roadtrip && typeof row.drive.roadtrip === "object" ? row.drive.roadtrip : null;
         if (roadtrip) {
           roadtripState.unlocked = roadtrip.unlocked === true;
@@ -40236,7 +40232,6 @@ var T = {
     entrance_windows_all_off: "The whole building has gone to bed.",
     entrance_windows_uv: "The building is trying to sleep. You're the reason it can't.",
     entrance_intercom_reply: "“Alo?”",
-    entrance_drive_lap: "Lap",
     bedroom_ttt_start_caption: "Click any pane to play tic-tac-toe",
     bedroom_glass_win: "You won — click any pane to clear the board",
     bedroom_glass_loss: "The window won — click any pane to clear the board",
@@ -41398,7 +41393,6 @@ var T = {
     entrance_windows_all_off: "Celý dům šel spát.",
     entrance_windows_uv: "Celý dům se snaží spát. Ty jsi důvod, proč nemůže.",
     entrance_intercom_reply: "„Alo?“",
-    entrance_drive_lap: "Kolo",
     bedroom_ttt_start_caption: "Kliknutím na libovolné políčko spustit piškvorky",
     bedroom_glass_win: "Vyhráli jste — kliknutím na políčko vyčistíte hrací plochu",
     bedroom_glass_loss: "Vitráž vyhrála — kliknutím na políčko vyčistíte hrací plochu",

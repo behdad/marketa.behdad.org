@@ -37168,7 +37168,8 @@ document.addEventListener("keydown", function (event) {
 window.__princeInputActive = false;
 document.addEventListener("keydown", function (event) {
   var princeState = window.__princeState && window.__princeState();
-  var princeBasementActive = !!(princeState && princeState.basement);
+  var princeBasementActive = !!(princeState && princeState.basement) ||
+    !!document.querySelector(".hunt-viewport.prince-basement-open");
   if (!window.__princeInputActive && !princeBasementActive) return;
   // Prince owns ordinary game keys, not browser/system chords or the page-level
   // drop-down console. Ctrl/Cmd+R, find/devtools shortcuts, Alt navigation, and
@@ -96418,6 +96419,12 @@ function spawnDustMote(container) {
     return (T[l] && T[l]["room_" + name]) || T.en["room_" + name] || name;
   }
   function lowerRoomOwnsViewport() {
+    var viewport = document.querySelector(".hunt-viewport");
+    if (viewport && viewport.classList.contains("prince-basement-open")) return true;
+    if (viewport && viewport.classList.contains("entrance-room-open")) return true;
+    if (viewport && viewport.classList.contains("bedroom-room-open")) return true;
+    if (viewport && viewport.classList.contains("cinema-room-open")) return true;
+    if (viewport && viewport.classList.contains("bathroom-room-open")) return true;
     if (window.__cinemaRoomOpen || window.__bathroomRoomOpen ||
         window.__bedroomRoomOpen || window.__entranceRoomOpen) return true;
     var princeState = window.__princeState && window.__princeState();
@@ -96516,6 +96523,14 @@ function spawnDustMote(container) {
     if (window.__cinemaRoomOpen) return lowerRoomForStage("cuddly");
     if (window.__bedroomRoomOpen) return lowerRoomForStage("office");
     if (window.__entranceRoomOpen) return lowerRoomForStage("balcony");
+    var viewport = document.querySelector(".hunt-viewport");
+    if (viewport) {
+      if (viewport.classList.contains("prince-basement-open")) return lowerRoomForStage("garden");
+      if (viewport.classList.contains("entrance-room-open")) return lowerRoomForStage("balcony");
+      if (viewport.classList.contains("bedroom-room-open")) return lowerRoomForStage("office");
+      if (viewport.classList.contains("cinema-room-open")) return lowerRoomForStage("cuddly");
+      if (viewport.classList.contains("bathroom-room-open")) return lowerRoomForStage("kitchen");
+    }
     return null;
   }
   function savedLowerRoom(progress) {

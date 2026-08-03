@@ -107,6 +107,9 @@ check(/entrance_roadtrip_grade_sunday: "Sunday drive"/.test(source) &&
   /entrance_roadtrip_grade_legend: "Highway legend"/.test(source) &&
   /entrance_roadtrip_grade_legend: "Legenda dálnice"/.test(source),
   "English and Czech grade labels cover both ends of the scale");
+check(/gradeFallback\[gradeKey\]\[lang\]/.test(source) &&
+  !/grade\.textContent\s*=.*:\s*gradeKey\s*;/.test(source),
+  "the first HUD paint falls back to a translated grade instead of exposing its dictionary key");
 
 console.log("");
 if (failures) {

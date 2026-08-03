@@ -285,6 +285,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d") };
     report.steps.curves = {
       straight: straightGeometry,
+      roadLineFills: Array.prototype.map.call(document.querySelectorAll(
+        ".entrance-roadtrip-edge,.entrance-roadtrip-centerline"), function (node) {
+          return getComputedStyle(node).fill;
+        }),
       rightWarning: rightWarning,
       right: rightCurve,
       leftWarning: leftWarning,
@@ -608,6 +612,7 @@ check(activation && activation.beforeClasses.indexOf("entrance-clouded") >= 0 &&
 
 var curves = s.curves;
 check(curves && curves.rightWarning && curves.rightWarning.direction === "right" &&
+  curves.roadLineFills.length === 3 && curves.roadLineFills.every(function (value) { return value === "none"; }) &&
   /curve-sign-right/.test(curves.rightWarning.href || "") && curves.rightWarning.ahead > 0 &&
   curves.right.state.curve > 0 && curves.right.road !== curves.straight &&
   curves.leftWarning && curves.leftWarning.direction === "left" &&

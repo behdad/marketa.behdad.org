@@ -339,17 +339,11 @@ classes, and listeners. The reduced-motion branch presents the same arc as held 
 completes in about 18 seconds. `goToStage` suppresses `triggerBalconyFinale` while
 `window.__cinematic` is true, preserving the one-time first-arrival payoff for actual play.
 
-### Direct entries and scripted keys
+### Direct entries
 
 `#play` only selects the game-only shell. `#trailer` starts the fixed cinematic through the same
 checkpoint-preserving path as the Watch button, including recovery. `window.__launchUrlEntryMode()`
 is the focused regression hook used by the URL-entry test.
-
-For deterministic manual repros, `?keys=p3cm` starts directly in a fresh game with neither the
-recovery prompt nor the `CLICK ME` introduction, then sends those ordinary unmodified key gestures
-in order after entry settles. Characters are spaced by 180 ms and pass through the real keyboard
-handlers; URL-encode punctuation when necessary. This clears only the gameplay checkpoint,
-preserving `?date=`, `?time=`, scripts, and other durable apps.
 
 ## Rooms, phases, and unlocking
 

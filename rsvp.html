@@ -110333,44 +110333,6 @@ function spawnDustMote(container) {
     releaseAttract();
   }
   window.__endAttract = endAttract;
-  // Deterministic test URLs may preload a short sequence of ordinary keyboard gestures:
-  // `?keys=p3cm`. Presence of a non-empty sequence explicitly requests a FRESH game, so discard
-  // the gameplay checkpoint and skip both recovery and the CLICK ME introduction. Each character
-  // still travels through the real keyboard listeners; no game API is called directly.
-  // Scripts/messages and date/time overrides are separate durable/context state.
-  var urlKeys = "";
-  try { urlKeys = new URLSearchParams(location.search).get("keys") || ""; } catch (_error) {}
-  var urlKeyChars = Array.from(urlKeys), urlKeyIndex = 0, urlKeysStarted = false, urlKeysTimer = null;
-  function urlKeyCode(key) {
-    if (/^[a-z]$/i.test(key)) return "Key" + key.toUpperCase();
-    if (/^[0-9]$/.test(key)) return "Digit" + key;
-    if (key === " ") return "Space";
-    if (key === "/") return "Slash";
-    if (key === "`") return "Backquote";
-    return "";
-  }
-  function urlKeysState() {
-    return { sequence: urlKeys, index: urlKeyIndex, running: !!urlKeysTimer, started: urlKeysStarted, done: !!urlKeysStarted && urlKeyIndex >= urlKeyChars.length };
-  }
-  function startUrlKeys() {
-    if (!urlKeyChars.length || urlKeysStarted || recoveryGate) return false;
-    urlKeysStarted = true;
-    function next() {
-      urlKeysTimer = null;
-      if (urlKeyIndex >= urlKeyChars.length) return;
-      var key = urlKeyChars[urlKeyIndex++], code = urlKeyCode(key);
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: key, code: code, bubbles: true, cancelable: true }));
-      document.dispatchEvent(new KeyboardEvent("keyup", { key: key, code: code, bubbles: true, cancelable: true }));
-      if (urlKeyIndex < urlKeyChars.length) urlKeysTimer = setTimeout(next, 180);
-    }
-    next();
-    return true;
-  }
-  window.__urlKeysState = urlKeysState;
-  if (urlKeyChars.length) {
-    clearCheckpoint();
-    setTimeout(startUrlKeys, 1500); // normal entry paint + listeners settle before the first gesture
-  }
   // Open (and re-open on reset) on a blinking "wandering without aim" invitation; the first strip
   // tap hands it off to the caption guide via stopHintBlink, then the real first instruction. The
   // espresso-machine invite arrow stays hidden through both intro steps. Skipped mid-cinematic (the show
@@ -110408,10 +110370,7 @@ function spawnDustMote(container) {
   window.addEventListener("pagehide", function () { saveCheckpoint(); });
   setInterval(function () { if (!document.hidden) saveCheckpoint(); }, 2500); // catches stable internal changes that do not publish a state event
   goToStage("kitchen"); // sets the initial room/caption before either opening gate goes on
-  if (urlKeyChars.length) {
-    endAttract();
-    revealEntrySurface();
-  } else if (!showRecoveryGate(loadCheckpoint())) {
+  if (!showRecoveryGate(loadCheckpoint())) {
     showHuntIntro();
   }
 })();

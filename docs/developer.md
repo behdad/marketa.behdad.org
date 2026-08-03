@@ -193,7 +193,11 @@ The nested `drive.roadtrip.police` state owns the infrequent speed trap independ
 traffic pool. `stepRoadtripPolice()` advances its warning → pursuit → capture/stopped/arrest → cooldown/ended
 state machine;
 `paintRoadtripPolice()` projects a dedicated oncoming warning car, parked patrol car, and rear-view
-pursuit use without competing for pooled traffic slots. The first trap begins after 950 metres;
+pursuit use without competing for pooled traffic slots. Once the Porsche passes `stationAt`, the
+dedicated patrol use leaves the windshield and follows the mirror road's right-shoulder projection
+for 62 metres, including tolerated readings. A pursuit smoothsteps that same reflected transform
+toward the following-car transform over 24 metres, avoiding a disappear/reappear cut while the
+patrol pulls out. The first trap begins after 950 metres;
 later traps are spaced by 1,200–1,560 metres. The warning car exposes exactly three high-beam
 flashes with the patrol car 240 metres ahead; detection is gated until at least three seconds after
 the third flash finishes. Posted speed is 90 km/h and enforcement begins above 110.

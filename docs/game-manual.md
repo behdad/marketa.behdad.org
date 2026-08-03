@@ -239,9 +239,11 @@ have just passed remains visible until it falls out of mirror range.
 The posted highway limit is 90 km/h. Infrequent parked police cars are announced
 well ahead by one oncoming driver flashing its high beams three times, leaving
 at least three more seconds before measurement to slow safely. Police allow speeds
-through 110 km/h; above that, a patrol car and siren appear in the rear-view
-mirror. Move onto the right shoulder and stop to receive a fine scaled to the
-speed at which you passed the police. Fixed amounts follow Alberta's current
+through 110 km/h. After any reading, the parked patrol car moves into the right
+side of the rear-view mirror as you pass, then shrinks toward its horizon. Above
+110, that same roadside reflection pulls inward as the patrol car starts chasing
+and the siren sounds. Move onto the right shoulder and stop to receive a fine
+scaled to the speed at which you passed the police. Fixed amounts follow Alberta's current
 [standard schedule](https://www.alberta.ca/speeding-fines-in-alberta), including
 its 20% surcharge. At 51 km/h or more over the limit there is no invented fixed
 amount: the outcome is a mandatory court appearance, but the patrol car always

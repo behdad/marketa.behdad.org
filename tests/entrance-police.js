@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Highway speed-limit and police event: warning, tolerance, pursuit, pull-over, and run-ending cases.
+// Highway police: warning, roadside-to-mirror pass, pursuit, pull-over, arrest, and run-ending cases.
 "use strict";
 
 var lib = require("./lib");
@@ -19,6 +19,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveControl("throttle", false);
     window.__entranceDriveControl("brake", false);
     return window.__entranceDriveSetMotion(speed, gear);
+  }
+  function mirrorSample() {
+    var police = copy(trip().police);
+    var match = /translate\((-?[\d.]+) (-?[\d.]+)\) scale\(([\d.]+)\)/.exec(police.mirrorTransform || "");
+    return {
+      police: police,
+      x: match ? Number(match[1]) : null,
+      y: match ? Number(match[2]) : null,
+      scale: match ? Number(match[3]) : null
+    };
   }
   function meetPolice(speed, pendingFeedback) {
     setMotion(speed, speed >= 180 ? 4 : 3);
@@ -80,15 +90,45 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       step(1000, 2);
       report.steps.tolerated = copy(trip());
 
+      prepareEncounter();
+      var toleratedPass = meetPolice(110);
+      var toleratedStation = toleratedPass.police.stationAt;
+      window.__entranceRoadtripSetDistance(toleratedStation + 2);
+      var toleratedMirrorNear = mirrorSample();
+      window.__entranceRoadtripSetDistance(toleratedStation + 24);
+      var toleratedMirrorMid = mirrorSample();
+      window.__entranceRoadtripSetDistance(toleratedStation + 58);
+      var toleratedMirrorFar = mirrorSample();
+      window.__entranceRoadtripSetDistance(toleratedStation + 63);
+      report.steps.toleratedMirror = {
+        detection: toleratedPass,
+        near: toleratedMirrorNear,
+        mid: toleratedMirrorMid,
+        far: toleratedMirrorFar,
+        gone: mirrorSample()
+      };
+
       report.steps.fineSchedule = [111, 120, 130, 140, 141].map(function (speed) {
         prepareEncounter();
         return { speed: speed, police: meetPolice(speed).police };
       });
 
       prepareEncounter();
-      var pursuit = meetPolice(130);
+      var pursuitDetection = meetPolice(130);
+      var pursuitStation = pursuitDetection.police.stationAt;
+      var pursuitRoadside = mirrorSample();
+      window.__entranceRoadtripSetDistance(pursuitStation + 2);
+      var pursuitJoinNear = mirrorSample();
+      window.__entranceRoadtripSetDistance(pursuitStation + 12);
+      var pursuitJoinMid = mirrorSample();
+      window.__entranceRoadtripSetDistance(pursuitStation + 30);
+      var pursuit = copy(trip());
       report.steps.pursuit = {
         trip: pursuit,
+        roadside: pursuitRoadside,
+        joinNear: pursuitJoinNear,
+        joinMid: pursuitJoinMid,
+        following: mirrorSample(),
         mirror: document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("visibility"),
         instruction: document.getElementById("hunt-caption").textContent.trim()
       };
@@ -163,21 +203,25 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       };
 
       prepareEncounter();
-      meetPolice(200);
+      var twoHundredDetection = meetPolice(200);
+      window.__entranceRoadtripSetDistance(twoHundredDetection.police.stationAt + 30);
       window.__entranceRoadtripPoliceStep(200, 6);
       var twoHundredSix = copy(trip());
       window.__entranceRoadtripPoliceStep(200, 1);
       var twoHundredSeven = copy(trip());
 
       prepareEncounter();
-      meetPolice(180);
+      var oneEightyDetection = meetPolice(180);
+      window.__entranceRoadtripSetDistance(oneEightyDetection.police.stationAt + 30);
       window.__entranceRoadtripPoliceStep(180, 19);
       var oneEightyNineteen = copy(trip());
       window.__entranceRoadtripPoliceStep(180, 1);
       var oneEightyTwenty = copy(trip());
 
       prepareEncounter();
-      var fastPursuit = meetPolice(180);
+      var fastDetection = meetPolice(180);
+      window.__entranceRoadtripSetDistance(fastDetection.police.stationAt + 30);
+      var fastPursuit = copy(trip());
       var fastInitialScale = fastPursuit.police.mirrorScale;
       var fastInitialSiren = fastPursuit.police.sirenLevel;
       window.__entranceRoadtripPoliceStep(180, 5);
@@ -202,7 +246,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       };
 
       prepareEncounter();
-      var severe = meetPolice(150, "entrance_roadtrip_heart");
+      var severeDetection = meetPolice(150, "entrance_roadtrip_heart");
+      window.__entranceRoadtripSetDistance(severeDetection.police.stationAt + 30);
+      var severe = copy(trip());
       window.__entranceRoadtripPoliceStep(140, 20);
       var captureStart = { trip: copy(trip()), speed: state().drive.speed };
       var captureCheckpoint = window.__captureCheckpointSystems().entrance.drive.roadtrip;
@@ -232,7 +278,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.severe.finalFlash = window.__flashCaptionState();
 
       prepareEncounter();
-      meetPolice(130);
+      var refused = meetPolice(130);
+      window.__entranceRoadtripSetDistance(refused.police.stationAt + 30);
       window.__exitEntranceRoadtrip();
       var refusedCapture = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 3);
@@ -316,6 +363,19 @@ check(s.tolerated && s.tolerated.active && s.tolerated.police.phase === "cooldow
   s.tolerated.police.detectedSpeed <= 110 && s.tolerated.police.pursuits === 0 &&
   s.tolerated.police.tickets === 0 && s.tolerated.police.fines === 0,
   "110 km/h is tolerated without a pursuit or ticket", s.tolerated);
+check(s.toleratedMirror && s.toleratedMirror.detection.police.phase === "cooldown" &&
+  s.toleratedMirror.near.police.mirrorVisible &&
+  s.toleratedMirror.near.police.mirrorMode === "roadside" &&
+  s.toleratedMirror.near.x > 340 && s.toleratedMirror.mid.x > 340 &&
+  s.toleratedMirror.far.x > 340 &&
+  s.toleratedMirror.near.scale > s.toleratedMirror.mid.scale &&
+  s.toleratedMirror.mid.scale > s.toleratedMirror.far.scale &&
+  s.toleratedMirror.near.y > s.toleratedMirror.mid.y &&
+  s.toleratedMirror.mid.y > s.toleratedMirror.far.y &&
+  !s.toleratedMirror.gone.police.mirrorVisible &&
+  s.toleratedMirror.gone.police.mirrorMode === "",
+  "a tolerated roadside patrol recedes on the right shoulder toward the mirror horizon",
+  s.toleratedMirror);
 check(s.fineSchedule && JSON.stringify(s.fineSchedule.map(function (entry) {
   return [entry.police.overLimit, entry.police.fine, entry.police.courtRequired];
 })) === JSON.stringify([
@@ -326,8 +386,14 @@ check(s.fineSchedule && JSON.stringify(s.fineSchedule.map(function (entry) {
 check(s.pursuit && s.pursuit.trip.police.phase === "pursuit" &&
   s.pursuit.trip.police.detectedSpeed === 130 && s.pursuit.trip.police.fine === 560 &&
   s.pursuit.trip.police.sirenActive && s.pursuit.trip.police.mirrorVisible &&
-  s.pursuit.mirror === "visible",
-  "speed above tolerance starts a scaled-fine pursuit with siren and a rearview police car", s.pursuit);
+  s.pursuit.roadside.police.roadsideVisible && !s.pursuit.roadside.police.mirrorVisible &&
+  s.pursuit.joinNear.police.mirrorMode === "roadside-pursuit" &&
+  s.pursuit.joinMid.police.mirrorMode === "roadside-pursuit" &&
+  s.pursuit.joinNear.x > s.pursuit.joinMid.x &&
+  s.pursuit.joinNear.scale > s.pursuit.joinMid.scale &&
+  s.pursuit.following.police.mirrorMode === "pursuit" &&
+  s.pursuit.following.x < s.pursuit.joinMid.x && s.pursuit.mirror === "visible",
+  "speeding moves the passed roadside reflection coherently into the pursuing patrol car", s.pursuit);
 check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sirenActive,
   "the pursuit siren tears down while unfocused and returns only when attended", {
     unfocused: s.unfocused, refocused: s.refocused

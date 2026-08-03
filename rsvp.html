@@ -34634,6 +34634,8 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_PURSUIT_SPEED = 170;
   var ROADTRIP_POLICE_ESCAPE_DISTANCE = 55;
   var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
+  var ROADTRIP_POLICE_ROADSIDE_MIRROR_DISTANCE = 62;
+  var ROADTRIP_POLICE_ROADSIDE_JOIN_DISTANCE = 24;
   // Alberta's standard schedule, including the 20% Victims of Crime surcharge.
   // Index = whole km/h over; 51+ has no fixed amount and requires court.
   var ROADTRIP_POLICE_STANDARD_FINES = [0,
@@ -34723,6 +34725,7 @@ window.__entranceRoomOpen = false;
       warningFlashCount: 0,
       warningLight: false,
       detectedSpeed: 0,
+      engagedPursuit: false,
       overLimit: 0,
       fine: 0,
       courtRequired: false,
@@ -35605,6 +35608,8 @@ window.__entranceRoomOpen = false;
       if (node) node.setAttribute("visibility", "hidden");
     });
     if (roadtripPoliceWarningBeams) roadtripPoliceWarningBeams.classList.remove("is-lit");
+    if (roadtripPoliceMirrorNode) roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-police");
+    roadtripState.police.mirrorScale = 0;
   }
   function roadtripPoliceCitationForSpeed(speed) {
     var overLimit = Math.max(0,
@@ -35630,6 +35635,7 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.detectedSpeed = 0;
+    police.engagedPursuit = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
@@ -35672,6 +35678,7 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.detectedSpeed = 0;
+    police.engagedPursuit = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
@@ -35707,6 +35714,7 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.detectedSpeed = 0;
+    police.engagedPursuit = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
@@ -35852,6 +35860,7 @@ window.__entranceRoomOpen = false;
     police.overLimit = citation.overLimit;
     police.fine = citation.fine;
     police.courtRequired = citation.courtRequired;
+    police.engagedPursuit = true;
     police.phase = "pursuit";
     police.pursuits++;
     police.pursuitElapsed = 0;
@@ -35867,15 +35876,19 @@ window.__entranceRoomOpen = false;
     ensureRoadtripScene();
     var police = roadtripState.police;
     var roadHost = roadtripElement("entrance-roadtrip-entities");
+    var stationRemaining = police.stationAt - roadtripState.distance;
+    var roadsidePhase = police.phase === "warning" || police.phase === "pursuit" ||
+      police.phase === "capture" || (!police.engagedPursuit &&
+        (police.phase === "cooldown" || police.phase === "idle"));
+    if (roadtripPoliceRoadNode && police.stationAt > 0 && roadsidePhase &&
+        stationRemaining <= ROADTRIP_DRAW_DISTANCE + 8 && stationRemaining >= 0) {
+      var stationPoint = roadtripProject(stationRemaining);
+      var policeX = roadtripProjectLateral(stationPoint, 1.08);
+      var policeScale = (.11 + stationPoint.perspective * .9) * .96;
+      roadtripPoliceRoadNode.setAttribute("transform", "translate(" + policeX.toFixed(2) + " " + stationPoint.y.toFixed(2) + ") scale(" + policeScale.toFixed(3) + ")");
+      roadtripPoliceRoadNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+    } else if (roadtripPoliceRoadNode) roadtripPoliceRoadNode.setAttribute("visibility", "hidden");
     if (police.phase === "warning") {
-      var stationRemaining = police.stationAt - roadtripState.distance;
-      if (roadtripPoliceRoadNode && stationRemaining <= ROADTRIP_DRAW_DISTANCE + 8 && stationRemaining >= 6) {
-        var stationPoint = roadtripProject(stationRemaining);
-        var policeX = roadtripProjectLateral(stationPoint, 1.08);
-        var policeScale = (.11 + stationPoint.perspective * .9) * .96;
-        roadtripPoliceRoadNode.setAttribute("transform", "translate(" + policeX.toFixed(2) + " " + stationPoint.y.toFixed(2) + ") scale(" + policeScale.toFixed(3) + ")");
-        roadtripPoliceRoadNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
-      } else if (roadtripPoliceRoadNode) roadtripPoliceRoadNode.setAttribute("visibility", "hidden");
       var warningRemaining = police.warningCarAt - roadtripState.distance;
       if (roadtripPoliceWarningNode && warningRemaining <= ROADTRIP_DRAW_DISTANCE + 8 && warningRemaining >= -3) {
         var warningPoint = roadtripProject(warningRemaining);
@@ -35894,14 +35907,20 @@ window.__entranceRoomOpen = false;
         if (roadtripPoliceWarningBeams) roadtripPoliceWarningBeams.setAttribute("visibility", "hidden");
       }
     } else {
-      [roadtripPoliceRoadNode, roadtripPoliceWarningNode, roadtripPoliceWarningBeams].forEach(function (node) {
+      [roadtripPoliceWarningNode, roadtripPoliceWarningBeams].forEach(function (node) {
         if (node) node.setAttribute("visibility", "hidden");
       });
     }
-    if (roadtripPoliceMirrorNode &&
-        (police.phase === "pursuit" || police.phase === "capture" ||
-          police.phase === "stopped" || police.phase === "arrest") &&
-        roadtripState.active) {
+    var following = police.phase === "pursuit" || police.phase === "capture" ||
+      police.phase === "stopped" || police.phase === "arrest";
+    var roadsideBehind = roadtripState.distance - police.stationAt;
+    var roadsideReflection = police.stationAt > 0 && roadsideBehind > 0 &&
+      roadsideBehind <= ROADTRIP_POLICE_ROADSIDE_MIRROR_DISTANCE &&
+      police.phase !== "stopped" && police.phase !== "arrest" &&
+      roadsidePhase;
+    var followingMirror = following && (police.stationAt <= 0 || roadsideBehind > 0 ||
+      police.phase === "stopped" || police.phase === "arrest");
+    if (roadtripPoliceMirrorNode && roadtripState.active && (roadsideReflection || followingMirror)) {
       var pursuitNearness = Math.max(0, Math.min(1, .28 + police.pursuitElapsed / 9));
       if (police.phase !== "pursuit") pursuitNearness = Math.max(.82, pursuitNearness);
       var nearness = Math.max(.025,
@@ -35909,8 +35928,28 @@ window.__entranceRoomOpen = false;
       var mirrorX = 340 - roadtripPlayerLane() * (3 + nearness * 3);
       var mirrorY = -98 + nearness * 18;
       var mirrorScale = .07 + nearness * .18;
+      var mirrorMode = police.phase;
+      if (roadsideReflection) {
+        var roadsidePoint = roadtripMirrorProject(roadsideBehind);
+        var roadsideX = roadsidePoint.center + 1.08 * roadsidePoint.halfWidth;
+        var roadsideScale = .055 + roadsidePoint.perspective * .19;
+        if (police.phase === "pursuit" || police.phase === "capture") {
+          var join = Math.max(0, Math.min(1,
+            roadsideBehind / ROADTRIP_POLICE_ROADSIDE_JOIN_DISTANCE));
+          join = join * join * (3 - 2 * join);
+          mirrorX = roadsideX + (mirrorX - roadsideX) * join;
+          mirrorY = roadsidePoint.y + (mirrorY - roadsidePoint.y) * join;
+          mirrorScale = roadsideScale + (mirrorScale - roadsideScale) * join;
+          mirrorMode = join < 1 ? "roadside-pursuit" : police.phase;
+        } else {
+          mirrorX = roadsideX;
+          mirrorY = roadsidePoint.y;
+          mirrorScale = roadsideScale;
+          mirrorMode = "roadside";
+        }
+      }
       police.mirrorScale = mirrorScale;
-      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-police", police.phase);
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-police", mirrorMode);
       roadtripPoliceMirrorNode.setAttribute("transform", "translate(" + mirrorX.toFixed(2) + " " + mirrorY.toFixed(2) + ") scale(" + mirrorScale.toFixed(3) + ")");
       roadtripPoliceMirrorNode.setAttribute("visibility", "visible");
     } else if (roadtripPoliceMirrorNode) {
@@ -39118,6 +39157,10 @@ window.__entranceRoomOpen = false;
             sirenActive: !!porschePoliceAudioNodes,
             sirenLevel: roadtripPoliceSirenLevel(),
             mirrorScale: roadtripState.police.mirrorScale,
+            mirrorMode: roadtripPoliceMirrorNode ?
+              (roadtripPoliceMirrorNode.getAttribute("data-roadtrip-police") || "") : "",
+            mirrorTransform: roadtripPoliceMirrorNode ?
+              (roadtripPoliceMirrorNode.getAttribute("transform") || "") : "",
             roadsideVisible: !!(roadtripPoliceRoadNode && roadtripPoliceRoadNode.getAttribute("visibility") !== "hidden"),
             mirrorVisible: !!(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("visibility") !== "hidden"),
             arrestVisible: !!(roadtripArrestNode && roadtripArrestNode.getAttribute("visibility") !== "hidden"),

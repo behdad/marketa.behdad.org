@@ -13,7 +13,8 @@ above the scene, select what looks useful, and explore at your own pace.
    **Try landscape** first.
 2. Follow the instruction above the scene.
 3. Move with the side arrows or the five room dots below the scene.
-4. Complete each room's activity to unlock the next room.
+4. Complete each room's activity to unlock the next room. Unfinished rooms retain their own clue;
+   revisiting a completed room replaces it with that room's “Enjoy…” caption.
 5. Reach the balcony and start the party to unlock every room, Messages, guests,
    and free play.
 

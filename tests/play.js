@@ -100,6 +100,9 @@ var RSVP_HARNESS = [
   "    click(expect('office-stainedglass'));",
   "    await sleep(2600);",
   "    report.solve.afterOffice = window.currentStageIndex;",
+  "    report.solve.solvedBeforeParty = window.__solvedRooms ? window.__solvedRooms() : [];",
+  "    if (window.__saveLoftCheckpoint) window.__saveLoftCheckpoint();",
+  "    try { report.solve.savedSolved = JSON.parse(localStorage.getItem('loftCheckpoint:v1') || '{}').progress.solvedRooms || []; } catch (e) { report.solve.savedSolved = []; }",
   "    await sleep(8000);", // let the finale timers (rain/melody/rainbow/fireworks) run
   "    report.solve.final = window.currentStageIndex;",
   "  }",
@@ -109,7 +112,7 @@ var RSVP_HARNESS = [
   "    // kitchen bar is still down (the storm can flip the party switch and raise it,",
   "    // which would legitimately swap in the bar caption and mask this check).",
   "    if (!window.goToStage) return;",
-  "    window.goToStage('kitchen');",            // idx 0 < maxUnlocked (4) → solved
+  "    window.goToStage('kitchen');",
   "    await sleep(80);",
   "    report.revisit = { barUp: !!(window.__barUpNow && window.__barUpNow()) };",
   "    report.revisit.first = window.__captionKey ? window.__captionKey() : null;",  // first solved-entry → base line
@@ -118,6 +121,9 @@ var RSVP_HARNESS = [
   "    window.goToStage('kitchen');",            // second solved-entry → rotation advances
   "    await sleep(80);",
   "    report.revisit.second = window.__captionKey ? window.__captionKey() : null;",
+  "    window.goToStage('office');",
+  "    await sleep(80);",
+  "    report.revisit.office = window.__captionKey ? window.__captionKey() : null;",
   "  }",
   "  async function stormStages() {",
   "    var stages = ['kitchen', 'garden', 'cuddly', 'office', 'balcony'];",
@@ -209,11 +215,17 @@ if (!r) {
   else pass("all solve-path elements exist");
   if (r.solve.final === 4) pass("game solves start to finish (reached balcony)");
   else fail("game solves start to finish", "stage progression: " + JSON.stringify(r.solve));
+  if (JSON.stringify(r.solve.solvedBeforeParty) === JSON.stringify(["kitchen", "garden", "cuddly", "office"])) pass("each completed Phase 1 room owns solved state before the party");
+  else fail("completed Phase 1 rooms own solved state", "solve: " + JSON.stringify(r.solve));
+  if (JSON.stringify(r.solve.savedSolved) === JSON.stringify(r.solve.solvedBeforeParty)) pass("checkpoint persists solved rooms independently of unlock state");
+  else fail("checkpoint persists solved rooms", "solve: " + JSON.stringify(r.solve));
   var rv = r.revisit || {};
   if (rv.first === "explore_kitchen") pass("solved-room revisit shows the exploration base line (explore_kitchen), not a kitchen_* solve key");
   else fail("solved-room revisit shows the exploration base line", "revisit: " + JSON.stringify(rv));
   if (rv.second === rv.first) pass("later solved-room revisits keep the stable exploration caption");
   else fail("later solved-room revisits keep the stable exploration caption", "revisit: " + JSON.stringify(rv));
+  if (rv.office === "explore_office") pass("solved office revisit shows its own exploration caption");
+  else fail("solved office revisit shows its own exploration caption", "revisit: " + JSON.stringify(rv));
   if (r.stormClicked >= 60) pass("click-stormed " + r.stormClicked + " interactive elements");
   else fail("interactive element count sanity", "only " + r.stormClicked);
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");

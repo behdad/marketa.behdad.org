@@ -370,13 +370,14 @@ The normal first phase is a linear solve:
 4. Office call/computer/lighting sequence.
 5. Balcony arrival and finale.
 
-`stageIndex` tracks the current room and `maxUnlocked` the furthest unlocked room. Normal solve paths
-use `__finishSolveAdvance(from, to)`: a delayed completion navigates only if the player is still in
-the source room, while still unlocking the destination if the player moved elsewhere. This stale
-timer guard is important for keyboard, double-click, and click-storm behavior. It is also the
-phase boundary: once `__secondRound` is true it returns without unlocking or navigating. Every
-`__*DoNext` solve walker and clue target has the same phase guard, and object-specific delayed
-completions (including the cuddly blanket and office butterfly) route through this helper.
+`stageIndex` tracks the current room, `maxUnlocked` the furthest unlocked room, and `solvedRooms`
+records completed rooms independently. Normal solve paths use `__finishSolveAdvance(from, to)`,
+which marks `from` solved and unlocks `to`; a delayed completion navigates only if the player is
+still in the source room. This stale-timer guard matters for keyboard and click-storm behavior.
+Once `__secondRound` is true it returns without changing progression. Every `__*DoNext` solve
+walker and clue target has the same phase guard, and object-specific delayed completions route
+through this helper. Checkpoints persist the solved-room list rather than reconstructing it from
+the unlock frontier.
 
 `goToStage(name)` is intentionally permissive for scripting and test use: it calls `unlockThrough`,
 so directly going to a later room unlocks the intervening rooms. Normal UI arrows and dots remain

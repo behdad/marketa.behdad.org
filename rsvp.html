@@ -59877,13 +59877,14 @@ setOfficeProgress("pc", false);
     register({ id: "game.status", kind: "query", description: "Bounded overview of progress, room, activity and session.", run: gameStatus });
     register({ id: "game.progress", kind: "query", run: function () {
       var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0;
-      return { phase: window.__secondRound ? 2 : 1, current_room: window.currentStageName || null, unlocked_rooms: ROOMS.slice(0, Math.max(0, Math.min(ROOMS.length - 1, max)) + 1), solved_rooms: ROOMS.slice(0, Math.max(0, Math.min(ROOMS.length, max))) };
+      var solved = window.__solvedRooms ? window.__solvedRooms() : [];
+      return { phase: window.__secondRound ? 2 : 1, current_room: window.currentStageName || null, unlocked_rooms: ROOMS.slice(0, Math.max(0, Math.min(ROOMS.length - 1, max)) + 1), solved_rooms: solved };
     } });
     register({ id: "game.busy", kind: "query", run: gameBusyState });
     register({ id: "room.current", kind: "query", run: function () { return window.currentStageName || null; } });
     register({ id: "room.list", kind: "query", run: function () {
       var max = window.__maxUnlocked ? window.__maxUnlocked() : window.currentStageIndex || 0;
-      return ROOMS.map(function (room, index) { return { id: room, current: room === window.currentStageName, unlocked: index <= max, solved: index < max }; });
+      return ROOMS.map(function (room, index) { return { id: room, current: room === window.currentStageName, unlocked: index <= max, solved: !!(window.__roomSolved && window.__roomSolved(room)) }; });
     } });
     register({ id: "room.occupants", kind: "query", args: { room: { type: "string", enum: ROOMS } }, run: function (args) { var room = args.room || window.currentStageName; return peopleLocations()[room] || []; } });
     register({ id: "people.locations", kind: "query", run: peopleLocations });
@@ -67040,6 +67041,7 @@ setOfficeProgress("pc", false);
     var now = window.__now ? window.__now() : new Date();
     var rooms = ["kitchen", "garden", "cuddly", "office", "balcony"];
     var maxUnlocked = typeof window.__maxUnlocked === "function" ? window.__maxUnlocked() : (window.currentStageIndex || 0);
+    var solvedRooms = typeof window.__solvedRooms === "function" ? window.__solvedRooms() : [];
     var mins = window.__loftMinsNow ? window.__loftMinsNow() : (now.getHours() * 60 + now.getMinutes());
     var stage = document.getElementById("stage-" + (window.currentStageName || "kitchen"));
     var strip = document.getElementById("loft-game-strip"), balcony = document.getElementById("stage-balcony");
@@ -67095,7 +67097,7 @@ setOfficeProgress("pc", false);
       date: now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0"),
       active_occasion: typeof window.__isOccasionDate === "function" ? window.__isOccasionDate() : null,
       unlocked_rooms: rooms.slice(0, Math.max(0, Math.min(rooms.length - 1, maxUnlocked)) + 1),
-      solved_rooms: rooms.slice(0, Math.max(0, Math.min(rooms.length, maxUnlocked))),
+      solved_rooms: solvedRooms,
       current_hint: currentHint || (hintKey ? (instructions[hintKey] || hintKey) : null),
       current_hint_key: hintKey,
       instructions: instructions,
@@ -95509,6 +95511,31 @@ function spawnDustMote(container) {
   var stageIndex = 0;
   window.currentStageIndex = 0;
   var maxUnlocked = 0;
+  var solvedRooms = Object.create(null);
+  function roomSolved(name) {
+    return STAGES.indexOf(name) !== -1 && !!solvedRooms[name];
+  }
+  function solvedRoomList() {
+    return STAGES.filter(roomSolved);
+  }
+  function setRoomSolved(name, on) {
+    if (STAGES.indexOf(name) === -1) return false;
+    var previous = !!solvedRooms[name];
+    if (on === false) delete solvedRooms[name];
+    else solvedRooms[name] = true;
+    if (previous !== !!solvedRooms[name] && window.__checkpointChanged) window.__checkpointChanged();
+    return previous;
+  }
+  function setSolvedRooms(names) {
+    solvedRooms = Object.create(null);
+    (Array.isArray(names) ? names : []).forEach(function (name) {
+      if (STAGES.indexOf(name) !== -1) solvedRooms[name] = true;
+    });
+  }
+  window.__roomSolved = roomSolved;
+  window.__solvedRooms = solvedRoomList;
+  window.__setRoomSolved = setRoomSolved;
+  window.__setSolvedRooms = setSolvedRooms;
   var captionKey = "kitchen";
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
   var openingGuideShowing = false, openingGuideTimer = null, openingGuideArmTimer = null;
@@ -96209,8 +96236,7 @@ function spawnDustMote(container) {
     // Once the arrival flourish has had its moment, the second act picks the thread back up.
     finaleTimers.push(setTimeout(function () { if (window.__armActTwo) window.__armActTwo(true); }, 4000));
   }
-  // Post-unlock exploration captions. Once a room is solved (it sits behind the unlock
-  // frontier — balcony instead keys off the finale-seen flag), re-entering it stops
+  // Post-solve exploration captions. Once a room owns its solved flag, re-entering it stops
   // repeating the solve instruction and shows a gentle, rotating "enjoy wandering" line.
   // liveSolveState keeps the two rooms whose caption is still meaningfully dynamic even
   // when solved (kitchen with the bar up, office mid-call) on their existing branch.
@@ -96236,12 +96262,7 @@ function spawnDustMote(container) {
   }
   window.__resetExplore = function () { exploreSeen = {}; }; // resetHunt (this IIFE) calls it; explorePtr is reset via its own brick-IIFE hook
   function restoreStageHint(name) {
-    var idx = STAGES.indexOf(name);
-    var solved = (idx >= 0 && idx < maxUnlocked) || (name === "balcony" && balconyIntroSeen);
-    if (name === "office" && !window.__secondRound) {
-      var officeGlass = document.getElementById("office-stainedglass");
-      solved = !!(officeGlass && officeGlass.classList.contains("done"));
-    }
+    var solved = roomSolved(name);
     if (solved && !liveSolveState(name)) { showExploration(name); return; }
     if (name === "kitchen") {
       if (window.__barUpNow && window.__barUpNow()) { setCaption(kitchenCurrentCaption()); updateKitchenInvite(); return; } // bar's up (party OR night) → bar caption + no coffee arrows, regardless of the machine's power
@@ -96674,8 +96695,10 @@ function spawnDustMote(container) {
   };
   window.__finishSolveAdvance = function (from, to) {
     if (window.__secondRound) return false;
+    if (STAGES.indexOf(from) === -1 || STAGES.indexOf(to) === -1) return false;
+    setRoomSolved(from, true);
+    window.__unlockSolvedRoom(to);
     if (STAGES[stageIndex] === from) goToStage(to);
-    else window.__unlockSolvedRoom(to);
     return true;
   };
   window.__maxUnlocked = function () { return maxUnlocked; }; // furthest room reached
@@ -96739,7 +96762,7 @@ function spawnDustMote(container) {
       return b;
     }
     function phaseOneFrontier() {
-      return !window.__secondRound && stageIndex === maxUnlocked && stageIndex < STAGES.length - 1;
+      return !window.__secondRound && !roomSolved(STAGES[stageIndex]);
     }
     function escapeHasLayer() {
       if ((window.__monitorZoomed && window.__monitorZoomed()) ||
@@ -97034,7 +97057,7 @@ function spawnDustMote(container) {
       } else did = false;
       return did;
     }
-    if (er === "kitchen") { if (stageIndex < maxUnlocked) { if (window.__toggleDayNight) window.__toggleDayNight(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // solved → toggle day/night (kitchen ⇄ bar); unsolved → walk the espresso solve (a no-op mid warm-up/brew, so Enter never flips to night then). NB: __kitchenDoNext returns null transiently, not just when solved, so gate the toggle on the room being solved, not on its return.
+    if (er === "kitchen") { if (roomSolved("kitchen")) { if (window.__toggleDayNight) window.__toggleDayNight(); } else if (window.__kitchenDoNext) window.__kitchenDoNext(); } // solved → toggle day/night (kitchen ⇄ bar); unsolved → walk the espresso solve (a no-op mid warm-up/brew, so Enter never flips to night then). NB: __kitchenDoNext returns null transiently, not just when solved, so gate the toggle on the room being solved, not on its return.
     else if (er === "garden") { if (!(window.__gardenDoNext && window.__gardenDoNext())) { if (window.party) window.party(!window.party()); } } // advance the solve (water→music→candles); once solved, toggle the party
     else if (er === "cuddly") { if (!(window.__cuddlyDoNext && window.__cuddlyDoNext())) { if (window.__cuddlyProjector) window.__cuddlyProjector.cycle(); } } // advance the solve (octopus → blanket); once solved, cycle the projector channel
     else if (er === "office") { if (!(window.__officeDoNext && window.__officeDoNext())) { if (window.__wakeMonitorSaver && window.__wakeMonitorSaver()) {} else if (window.__toggleMonitorZoom) window.__toggleMonitorZoom(); } } // walk the finale solve (call→hang up→monitor→dismiss→lights→butterfly); once solved, wake the saver else toggle the monitor zoom
@@ -97883,9 +97906,9 @@ function spawnDustMote(container) {
   };
   window.__gardenClueTarget = function () {
     if (window.__secondRound) return null;
-    // The fairy only guides the still-locked garden solve. Once cuddly-puddly is
-    // available, their click becomes a fāl instead of pointing at already-finished work.
-    if ((window.__maxUnlocked && window.__maxUnlocked()) >= STAGES.indexOf("cuddly")) return null;
+    // The fairy guides the garden until the garden itself is solved. Unlock state is separate:
+    // a scripted jump may expose later rooms without completing this room's clue sequence.
+    if (roomSolved("garden")) return null;
     var id = null;
     if (!gardenState.water) id = "garden-monstera";
     else if (!gardenState.music) id = "garden-guitar";
@@ -98695,6 +98718,7 @@ function spawnDustMote(container) {
     if (gameStrip) gameStrip.classList.toggle("second-round", window.__secondRound);
     if (window.__secondRound) {
       if (window.__unlockAllRooms) window.__unlockAllRooms();
+      STAGES.forEach(function (name) { setRoomSolved(name, true); });
       if (!previous && options.releaseHeld !== false) {
         if (window.__flushHeldPhoneMessages) window.__flushHeldPhoneMessages();
         if (window.__retryShareAutoShow) window.__retryShareAutoShow();
@@ -105596,6 +105620,7 @@ function spawnDustMote(container) {
     if (window.__cuddlyProjector && window.__cuddlyProjector.reset) window.__cuddlyProjector.reset();
     setMusicPausedState(false); // clear any spacebar pause state
     setMaxUnlocked(0, true);
+    setSolvedRooms([]);
     // A fresh game still follows Edmonton's real (or explicitly selected) sky. Phase 1 keeps the
     // espresso kitchen through the second-round bar gate; it no longer needs a fake daytime scene.
     if (window.__resetDayNightState) window.__resetDayNightState(); // forget the prior segment verdict + any twilight() force before re-arming
@@ -108904,6 +108929,7 @@ function spawnDustMote(container) {
       version: LOFT_CHECKPOINT_VERSION, savedAt: Date.now(),
       progress: {
         room: window.currentStageName || "kitchen", maxUnlocked: maxUnlocked,
+        solvedRooms: solvedRoomList(),
         lowerRoom: (activeLowerRoom() || {}).id,
         phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
         daylight: !(balcony && balcony.classList.contains("dusk")),
@@ -109149,6 +109175,7 @@ function spawnDustMote(container) {
     var p = saved.progress || {}, savedMax = Math.max(0, Math.min(STAGES.length - 1, parseInt(p.maxUnlocked, 10) || 0));
     var lowerRoom = savedLowerRoom(p);
     setMaxUnlocked(0, true); unlockThrough(savedMax);
+    setSolvedRooms(p.solvedRooms);
     setSecondRound(!!p.phase2, { releaseHeld: false });
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Across-the-street apartment lights + hidden Block Party regression.
-// Proves the 5x8 physical facade / 10x16 game mapping, independent manual and
-// ambient lights, same-window launch gesture, mouse/touch/keyboard ownership,
+// Proves the 5x8 physical facade / 10x16 game mapping, ambient lights,
+// single-click launch, mouse/touch/keyboard ownership,
 // scoring, persistence, and teardown restoration.
 "use strict";
 
@@ -22,17 +22,15 @@ var HARNESS = [
   'window.goToStage("balcony");await sleep(40);',
   'var grid=document.getElementById("balcony-building-window-grid"),apartments=[].slice.call(grid.querySelectorAll(".balcony-building-window")),cells=[].slice.call(grid.querySelectorAll(".balcony-building-cell"));',
   'S("facade_shape",apartments.length===40&&cells.length===160&&Math.max.apply(null,cells.map(function(c){return +c.dataset.tetrisRow;}))===15&&Math.max.apply(null,cells.map(function(c){return +c.dataset.tetrisCol;}))===9);',
-  'var before=window.__balconyTetrisState().windows.slice();clicks(apartments[7],1);var afterOne=window.__balconyTetrisState().windows.slice(),diff=afterOne.filter(function(v,i){return v!==before[i];}).length;',
-  'S("single_window",diff===1&&afterOne[7]!==before[7]&&!window.__balconyTetrisState().active);',
-  'var beforeAmbient=afterOne.slice();window.__balconyTetrisTest("ambient");var afterAmbient=window.__balconyTetrisState().windows.slice();',
+  'var beforeAmbient=window.__balconyTetrisState().windows.slice();window.__balconyTetrisTest("ambient");var afterAmbient=window.__balconyTetrisState().windows.slice();',
   'S("ambient_individual",afterAmbient.filter(function(v,i){return v!==beforeAmbient[i];}).length===1&&!window.__balconyTetrisState().active);',
   'var focused=false,unattendedBefore=afterAmbient.slice();document.hasFocus=function(){return focused;};window.__balconyTetrisTest("ambient");',
   'S("ambient_unattended",same(unattendedBefore,window.__balconyTetrisState().windows));focused=true;document.hasFocus=function(){return focused;};',
   'var cameoBase=window.__balconyTetrisState().windows.slice(),cameos=window.__balconyTetrisTest("cameos");S("idle_cameos",cameos.attract===4&&cameos.watchers===1&&cameos.state.attract===0&&cameos.state.watchers===0&&same(cameoBase,cameos.state.windows));',
   'var policy=window.__balconyTetrisTest("watcher-policy");S("population_watchers",policy.empty===0&&policy.couple>0&&policy.crowd>.9&&policy.crowd>policy.couple);',
-  'var preGame=window.__balconyTetrisState().windows.slice(),preCaption=window.__captionKey&&window.__captionKey();clicks(apartments[11],2);await sleep(30);',
-  'var started=window.__balconyTetrisState();S("same_window_launch",started.active&&started.board.length===16&&started.board.every(function(r){return r.length===10;})&&document.getElementById("stage-balcony").classList.contains("tetris-on"));',
-  'var gameNormal=started.windows.slice();S("double_click_preserves",gameNormal.every(function(v,i){return v===preGame[i];}));',
+  'var preGame=window.__balconyTetrisState().windows.slice(),preCaption=window.__captionKey&&window.__captionKey();clicks(apartments[11],1);await sleep(30);',
+  'var started=window.__balconyTetrisState();S("single_click_launch",started.active&&started.board.length===16&&started.board.every(function(r){return r.length===10;})&&document.getElementById("stage-balcony").classList.contains("tetris-on"));',
+  'var gameNormal=started.windows.slice();S("single_click_preserves",gameNormal.every(function(v,i){return v===preGame[i];}));',
   'window.__resetActTwo();window.__armActTwo(true);var actBefore=window.__actTwoState();for(var ti=0;ti<20;ti++)window.__actTwoTick();var actAfter=window.__actTwoState();S("party_timer_paused",actBefore.beat==="act_b2"&&actAfter.beat===actBefore.beat&&actAfter.elapsed===actBefore.elapsed);window.__resetActTwo();if(preCaption&&window.setCaption)window.setCaption(preCaption);',
   'var speedBoard=new Array(16).fill(null).map(function(){return new Array(10).fill(null);}),speedPiece={type:"i",rotation:0,x:3,y:0};window.__balconyTetrisTest("set",{board:speedBoard,piece:speedPiece,score:0,lines:9});var speed0=window.__balconyTetrisState();window.__balconyTetrisTest("set",{board:speedBoard,piece:speedPiece,score:0,lines:10});var speed1=window.__balconyTetrisState();window.__balconyTetrisTest("set",{board:speedBoard,piece:speedPiece,score:0,lines:80});var speed8=window.__balconyTetrisState();window.__balconyTetrisTest("set",{board:speedBoard,piece:speedPiece,score:0,lines:290});var speed29=window.__balconyTetrisState();S("level_speed",speed0.level===0&&speed0.gravityMs===800&&speed1.level===1&&speed1.gravityMs===717&&speed8.level===8&&speed8.gravityMs===133&&speed29.level===29&&speed29.gravityMs===17);window.__balconyTetrisTest("set",{board:speedBoard,piece:speedPiece,score:0,lines:0});',
   'var touch0=window.__balconyTetrisState().piece,touchLeft=window.__balconyTetrisTest("touch",{dx:-36,dy:2,ms:300}),touchRot=window.__balconyTetrisTest("touch",{dx:2,dy:2,ms:90});',
@@ -86,13 +84,12 @@ if (!r) fail("harness reported");
 else {
   var checks = {
     facade_shape: "facade is 5x8 physical windows backed by a 10x16 cell board",
-    single_window: "one click toggles only that apartment and does not launch",
     ambient_individual: "ambient controller changes one apartment at a time",
     ambient_unattended: "ambient controller changes nothing while unfocused",
     idle_cameos: "idle facade previews a tetromino and party-watcher silhouettes without changing apartment state",
     population_watchers: "watcher frequency rises with the balcony's live population",
-    same_window_launch: "two nearby window clicks launch the game",
-    double_click_preserves: "the launch double-click preserves the original window lights",
+    single_click_launch: "one apartment click launches the game",
+    single_click_preserves: "the launch click preserves the original window lights",
     party_timer_paused: "the automatic party countdown pauses while Tetris is active",
     level_speed: "ten-line levels follow the classic NES 48→43→…→1 frame gravity curve",
     touch_controls: "tap rotates and a horizontal swipe moves the active piece",

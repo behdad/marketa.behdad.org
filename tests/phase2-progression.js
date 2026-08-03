@@ -24,9 +24,13 @@ var harness = String.raw`<script>
     check("a stale phase-one completion cannot pan in phase two",
       staleResult === false && window.currentStageName === "garden", window.currentStageName);
     var walkers = [window.__kitchenDoNext(), window.__gardenDoNext(), window.__cuddlyDoNext(),
-      window.__officeDoNext(), window.__activateCurrentRoom()];
+      window.__officeDoNext()];
     check("all guided solve walkers are retired in phase two",
       walkers.every(function (value) { return value === null || value === false; }), JSON.stringify(walkers));
+    var activated = window.__activateCurrentRoom();
+    check("the room activation key launches the phase-two room game",
+      activated === true && !document.getElementById("pacman-room-overlay").hidden, String(activated));
+    if (window.__closeMonitorPacman) window.__closeMonitorPacman();
     check("phase-one clue targets and nudges are retired",
       window.__gardenClueTarget() === null && window.__cuddlyDoorNeeded() === false &&
       !document.getElementById("office-pc-desk-trio").classList.contains("inviting") &&

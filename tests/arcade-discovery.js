@@ -30,11 +30,8 @@ var harness = String.raw`<pre id="__report">pending</pre><script>
     S("chair_one_way", !window.__arcadeState().active && window.__arcadeState().playerX !== 278);
 
     pointer(chair, "pointerdown", cx, cy);
-    pointer(chair, "pointermove", cx + 34, cy);
-    pointer(chair, "pointermove", cx + 8, cy);
-    pointer(chair, "pointermove", cx + 36, cy);
-    S("chair_reversal", window.__arcadeState().active);
-    pointer(chair, "pointerup", cx + 36, cy);
+    pointer(chair, "pointerup", cx, cy);
+    S("chair_tap", window.__arcadeState().active);
     window.__arcadeStop();
 
     window.goToStage("kitchen");
@@ -50,11 +47,9 @@ var harness = String.raw`<pre id="__report">pending</pre><script>
     S("pouria_one_way", !window.__flairState().active && window.__flairState().playerX !== 336);
 
     pointer(pouria, "pointerdown", px, py);
-    pointer(pouria, "pointermove", px + 34, py);
-    pointer(pouria, "pointermove", px + 8, py);
-    pointer(pouria, "pointermove", px + 36, py);
-    S("pouria_reversal", window.__flairState().active);
-    pointer(pouria, "pointerup", px + 36, py);
+    pointer(pouria, "pointerup", px, py);
+    click(pouria, px, py);
+    S("pouria_tap", window.__flairState().active);
     window.__flairStop();
 
     window.goToStage("garden");
@@ -74,11 +69,8 @@ var harness = String.raw`<pre id="__report">pending</pre><script>
     var ax = ar.left + ar.width / 2, ay = ar.top + ar.height / 2;
     var before = window.__balconyTetrisState().windows.slice();
     click(apartment, ax, ay);
-    S("window_single", !window.__balconyTetrisState().active &&
-      window.__balconyTetrisState().windows[0] !== before[0]);
-    click(apartment, ax + 10, ay + 3);
     var tetris = window.__balconyTetrisState();
-    S("window_nearby_pair", tetris.active &&
+    S("window_single", tetris.active &&
       tetris.windows.every(function (value, i) { return value === before[i]; }));
 
     report.debug = {
@@ -117,13 +109,12 @@ var result = lib.runPageSync("rsvp.html", harness, 4500, {
 check(!!result, "browser harness completed", result);
 if (result) {
   check(result.steps.chair_one_way, "an ordinary chair drag only repositions it", result.debug);
-  check(result.steps.chair_reversal, "two quick chair reversals launch Alien Resources", result.debug);
+  check(result.steps.chair_tap, "one chair tap launches Alien Resources", result.debug);
   check(result.steps.pouria_one_way, "an ordinary Pouria drag only repositions him", result.debug);
-  check(result.steps.pouria_reversal, "two quick Pouria reversals launch Flair Catch", result.debug);
+  check(result.steps.pouria_tap, "one Pouria tap launches Flair Catch", result.debug);
   check(result.steps.garden_single, "one garden-wall click remains inert", result.debug);
   check(result.steps.garden_nearby_pair, "a nearby garden-wall click pair launches the chase", result.debug);
-  check(result.steps.window_single, "one building-window click only toggles its light", result.debug);
-  check(result.steps.window_nearby_pair, "two nearby window clicks launch Block Party and preserve the lights", result.debug);
+  check(result.steps.window_single, "one building-window click launches Block Party and preserves the lights", result.debug);
   check(!result.errors.length, "no uncaught page errors", result.errors);
 }
 process.exitCode = failures ? 1 : 0;

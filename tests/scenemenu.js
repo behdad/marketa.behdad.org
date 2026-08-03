@@ -54,9 +54,9 @@ check("outside the loft retains the native menu", s.outside_native === true && !
 check("Solve advances one guided step", s.solve_advanced === true, s.solve_advanced);
 check("frontier menus never pan to the previous room", s.garden_prevented && JSON.stringify(s.garden_items) === JSON.stringify(["Solve"]) && s.garden_room === "garden", { items: s.garden_items, room: s.garden_room });
 check("a real layer exposes Escape and delegates to canonical behavior", s.layer_prevented && JSON.stringify(s.layer_items) === JSON.stringify(["Escape"]) && s.escape_zoomed === false && s.escape_room === "office", { items: s.layer_items, zoomed: s.escape_zoomed, room: s.escape_room });
-check("a solved scene suppresses its empty custom menu", !s.phase2_kitchen_prevented && !s.phase2_kitchen_items.length, { prevented: s.phase2_kitchen_prevented, items: s.phase2_kitchen_items });
+check("a solved scene suppresses the native menu without showing an empty custom menu", s.phase2_kitchen_prevented && !s.phase2_kitchen_items.length, { prevented: s.phase2_kitchen_prevented, items: s.phase2_kitchen_items });
 check("Czech menu copy stays in parity", s.czech_prevented && JSON.stringify(s.czech_items) === JSON.stringify(["Vyřešit"]), s.czech_items);
-check("ordinary touch holds still reach contextual scene actions", s.touch_positive && JSON.stringify(s.touch_positive.scene) === JSON.stringify(["Solve","Start over"]) && !s.touch_positive.app, s.touch_positive);
+check("ordinary touch holds still reach the contextual Solve action", s.touch_positive && JSON.stringify(s.touch_positive.scene) === JSON.stringify(["Solve"]) && !s.touch_positive.app, s.touch_positive);
 check("Flair Catch touch holds stay in the action game", s.flair_live && s.flair_hold && !s.flair_hold.scene.length && !s.flair_hold.app, s.flair_hold);
 check("Alien Resources touch holds stay in the action game", s.invaders_live && s.invaders_hold && !s.invaders_hold.scene.length && !s.invaders_hold.app, s.invaders_hold);
 check("Block Party touch holds stay in the action game", s.tetris_live && s.tetris_hold && !s.tetris_hold.scene.length && !s.tetris_hold.app, s.tetris_hold);

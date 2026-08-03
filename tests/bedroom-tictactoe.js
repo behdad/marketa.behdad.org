@@ -10,9 +10,7 @@ var HARNESS = [
   '<script>(function(){',
   'var report={errors:[],steps:{}};function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'function pane(cell){return document.querySelector(".bedroom-ttt-pane[data-cell=\\""+cell+"\\"]");}',
-  'function dbl(cell){pane(cell).dispatchEvent(new MouseEvent("dblclick",{bubbles:true,cancelable:true}));}',
   'function click(cell){pane(cell).dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
-  'function touch(cell){pane(cell).dispatchEvent(new PointerEvent("pointerup",{bubbles:true,cancelable:true,pointerType:"touch"}));}',
   'function key(value){document.dispatchEvent(new KeyboardEvent("keydown",{key:value,bubbles:true,cancelable:true}));}',
   'function cap(){return {text:document.getElementById("hunt-caption").textContent,key:window.__captionKey&&window.__captionKey(),flash:window.__flashCaptionState&&window.__flashCaptionState()};}',
   'var lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]],order=[4,0,2,6,8,1,3,5,7];',
@@ -20,14 +18,14 @@ var HARNESS = [
   'function score(board,turn,depth){var r=result(board);if(r)return r==="O"?10-depth:r==="X"?depth-10:0;var best=turn==="O"?-Infinity:Infinity;order.forEach(function(cell){if(board[cell])return;board[cell]=turn;var n=score(board,turn==="O"?"X":"O",depth+1);board[cell]=null;best=turn==="O"?Math.max(best,n):Math.min(best,n);});return best;}',
   'function bestX(board){var cell=-1,best=Infinity;order.forEach(function(n){if(board[n])return;board[n]="X";var value=score(board,"O",0);board[n]=null;if(value<best){best=value;cell=n;}});return cell;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
-  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip"),leakedDblclicks=0;room.addEventListener("dblclick",function(){leakedDblclicks++;});room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
-  ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(400);report.steps.enterReply=window.__bedroomTicTacToeState();window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
-  ' dbl(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={leaked:leakedDblclicks,other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(400);report.steps.reply=window.__bedroomTicTacToeState();',
-  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();report.steps.paneFlash=document.getElementById("bedroom-stained-glass").classList.contains("glinting");await sleep(400);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(400);report.steps.win=window.__bedroomTicTacToeState();var winLine=document.querySelector(".bedroom-ttt-win-o");report.steps.winLine=winLine&&{x1:winLine.getAttribute("x1"),y1:winLine.getAttribute("y1"),x2:winLine.getAttribute("x2"),y2:winLine.getAttribute("y2"),shadow:!!document.querySelector(".bedroom-ttt-win-shadow")};report.steps.winCaption=cap();',
-  ' dbl(8);report.steps.restart=window.__bedroomTicTacToeState();report.steps.restartCaption=cap();await sleep(400);var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(400);}report.steps.draw=window.__bedroomTicTacToeState();report.steps.drawCaption=cap();',
-  ' setLang("cs");report.steps.cs={glass:document.getElementById("bedroom-stained-glass").getAttribute("aria-label"),caption:cap()};setLang("en");',
-  ' touch(5);await sleep(35);touch(5);report.steps.touch=window.__bedroomTicTacToeState();window.__closeBedroomRoom();report.steps.close=window.__bedroomTicTacToeState();await sleep(450);report.steps.closeSettled=window.__bedroomTicTacToeState();',
-  ' await sleep(300);window.goToStage("office");window.__openBedroomRoom();await sleep(80);dbl(7);report.steps.resetStart=window.__bedroomTicTacToeState();window.__runTransientResetHooks();report.steps.loftReset={room:window.__bedroomRoomState(),game:window.__bedroomTicTacToeState()};await sleep(450);report.steps.loftResetSettled=window.__bedroomTicTacToeState();',
+  ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip");room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
+  ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(620);report.steps.enterReply=window.__bedroomTicTacToeState();window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
+  ' click(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(620);report.steps.reply=window.__bedroomTicTacToeState();',
+  ' click(1);report.steps.turn=window.__bedroomTicTacToeState();report.steps.paneFlash=document.getElementById("bedroom-stained-glass").classList.contains("glinting");await sleep(620);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(620);report.steps.win=window.__bedroomTicTacToeState();var winLine=document.querySelector(".bedroom-ttt-win-o");report.steps.winLine=winLine&&{x1:winLine.getAttribute("x1"),y1:winLine.getAttribute("y1"),x2:winLine.getAttribute("x2"),y2:winLine.getAttribute("y2"),shadow:!!document.querySelector(".bedroom-ttt-win-shadow")};report.steps.winCaption=cap();',
+  ' click(8);report.steps.restart=window.__bedroomTicTacToeState();report.steps.restartCaption=cap();await sleep(620);report.steps.restartOpening=window.__bedroomTicTacToeState();var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(620);}report.steps.draw=window.__bedroomTicTacToeState();report.steps.drawCaption=cap();',
+  ' setLang("cs");report.steps.cs={caption:cap()};setLang("en");',
+  ' click(5);report.steps.drawClear=window.__bedroomTicTacToeState();click(5);report.steps.drawRestart=window.__bedroomTicTacToeState();window.__closeBedroomRoom();report.steps.close=window.__bedroomTicTacToeState();await sleep(620);report.steps.closeSettled=window.__bedroomTicTacToeState();',
+  ' await sleep(300);window.goToStage("office");window.__openBedroomRoom();await sleep(80);click(7);report.steps.resetStart=window.__bedroomTicTacToeState();window.__runTransientResetHooks();report.steps.loftReset={room:window.__bedroomRoomState(),game:window.__bedroomTicTacToeState()};await sleep(620);report.steps.loftResetSettled=window.__bedroomTicTacToeState();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},220);});',
   '})();</script>'
@@ -63,12 +61,11 @@ check(s.enterStart && s.enterStart.phase === "computer" && s.enterStart.aiPendin
   { start: s.enterStart, again: s.enterAgain, reply: s.enterReply });
 check(s.chosen && s.chosen.board[0] === "X" && count(s.chosen.board, "X") === 1 &&
   count(s.chosen.board, "O") === 0 && s.chosen.phase === "computer" && s.chosen.aiPending,
-  "double-click starts with X in the visitor's chosen pane", s.chosen);
-check(s.isolated && s.isolated.leaked === 0 &&
-  s.isolated.other.every(function (classes) {
+  "one click starts with X in the visitor's chosen pane", s.chosen);
+check(s.isolated && s.isolated.other.every(function (classes) {
     return !/\b(?:off|swinging|tidied|made|open)\b/.test(classes);
   }),
-  "the pane double-click is contained to the glass and leaves other Bedroom props alone",
+  "the pane click is contained to the glass and leaves other Bedroom props alone",
   s.isolated);
 check(s.reply && count(s.reply.board, "X") === 1 && count(s.reply.board, "O") === 1 &&
   s.reply.phase === "player" && !s.reply.aiPending,
@@ -92,26 +89,32 @@ check(s.win && s.win.resultCaptionKey === "bedroom_glass_loss" &&
   /window won/i.test(s.winCaption.text) && s.winCaption.flash &&
   s.winCaption.flash.owner === "bedroom-ttt",
   "a computer win is announced visibly as the visitor's loss", s.winCaption);
-check(s.restart && s.restart.board[8] === "X" && count(s.restart.board, "X") === 1 &&
-  count(s.restart.board, "O") === 0 && s.restart.phase === "computer",
-  "double-click after completion clears the board and honors the new start pane", s.restart);
+check(s.restart && count(s.restart.board, "X") === 0 && count(s.restart.board, "O") === 0 &&
+  s.restart.phase === "computer" && s.restart.aiPending &&
+  s.restartOpening && count(s.restartOpening.board, "X") === 0 && count(s.restartOpening.board, "O") === 1 &&
+  s.restartOpening.phase === "player",
+  "the first post-game click clears the board and the previous winner opens immediately",
+  { cleared: s.restart, opening: s.restartOpening });
 check(s.restartCaption && !s.restartCaption.flash &&
   s.restartCaption.key !== "bedroom_glass_loss" &&
   !/window won/i.test(s.restartCaption.text),
   "restart clears the completed game's visible result", s.restartCaption);
 check(s.draw && s.draw.phase === "done" && s.draw.winner === "draw" &&
-  count(s.draw.board, "X") === 5 && count(s.draw.board, "O") === 4,
-  "optimal visitor play reaches and detects a draw", s.draw);
+  count(s.draw.board, "X") === 4 && count(s.draw.board, "O") === 5,
+  "optimal visitor play reaches and detects a draw after the computer opens", s.draw);
 check(s.draw && s.draw.resultCaptionKey === "bedroom_glass_draw" &&
   s.drawCaption && s.drawCaption.key === "bedroom_glass_draw" &&
   /^Draw\b/.test(s.drawCaption.text),
   "a draw is announced distinctly in the visible room caption", s.drawCaption);
-check(s.cs && /Remíza/.test(s.cs.glass) && s.cs.caption &&
-  /Remíza/.test(s.cs.caption.text) && s.cs.caption.key === "bedroom_glass_draw",
-  "the live board and visible result caption switch to Czech", s.cs);
-check(s.touch && s.touch.board[5] === "X" && count(s.touch.board, "X") === 1 &&
-  count(s.touch.board, "O") === 0 && s.touch.phase === "computer" && s.touch.aiPending,
-  "touch double-tap restarts in the tapped pane", s.touch);
+check(s.cs && s.cs.caption && /Remíza/.test(s.cs.caption.text) &&
+  s.cs.caption.key === "bedroom_glass_draw",
+  "the visible result caption switches to Czech", s.cs);
+check(s.drawClear && s.drawClear.phase === "idle" && count(s.drawClear.board, "X") === 0 &&
+  count(s.drawClear.board, "O") === 0 && !s.drawClear.aiPending &&
+  s.drawRestart && s.drawRestart.board[5] === "X" && count(s.drawRestart.board, "X") === 1 &&
+  count(s.drawRestart.board, "O") === 0 && s.drawRestart.phase === "computer" && s.drawRestart.aiPending,
+  "after a draw, one click clears only and the next single click starts in its pane",
+  { cleared: s.drawClear, restarted: s.drawRestart });
 check(s.close && s.close.phase === "idle" && count(s.close.board, "X") === 0 &&
   count(s.close.board, "O") === 0 && !s.close.aiPending &&
   s.closeSettled && count(s.closeSettled.board, "O") === 0,

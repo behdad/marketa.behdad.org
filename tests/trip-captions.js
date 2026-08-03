@@ -86,7 +86,7 @@ if (result) {
     acid: "Time to go for a bicycle ride.",
     froggies: "Reality melting point observed.",
     dmt: "I for one welcome the machine elves.",
-    molly: "Everyone is suddenly your favorite person.",
+    molly: "Everyone is suddenly your favourite person.",
     ketamine: "It’s just a game, within a game, within a game, ...",
     iboga: "Somewhere behind you, the past is still loading."
   };

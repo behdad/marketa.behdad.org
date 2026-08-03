@@ -62,18 +62,18 @@ check(s.whipper && !s.whipper.bubble,
   "an uncarded cream-whipper request stays silent while a trip is active", s.whipper);
 check(s.whipper && s.whipper.ghost === "kitchen-whipper-ghost-rise" && s.whipper.jaw === "kitchen-whipper-laugh-jaw",
   "laughing gas animates Behdad's dispenser apparition and jaw", s.whipper);
-check(s.frogFirst && !s.frogFirst.state.active && !s.frogFirst.classes.length,
-  "the frog's first tap only rasps and arms it", s.frogFirst);
+check(s.frogFirst && s.frogFirst.state.active && s.frogFirst.state.variant === "froggies" && s.frogFirst.classes.join(",") === "froggies",
+  "the frog's first tap starts its trip", s.frogFirst);
 check(s.frog && s.frog.state.active && s.frog.state.variant === "froggies" && s.frog.classes.join(",") === "froggies" && !s.frog.card,
-  "the frog's second tap starts its uncarded trip", s.frog);
+  "another frog tap keeps its uncarded trip active", s.frog);
 check(s.frogLater && s.frogLater.state.active && s.frogLater.state.variant === "froggies" && s.frogLater.classes.join(",") === "froggies",
-  "later frog taps remain armed", s.frogLater);
-check(s.mushroomFirst && !s.mushroomFirst.state.active && !s.mushroomFirst.classes.length,
-  "the mushroom's first tap only wobbles and arms it", s.mushroomFirst);
+  "a later frog tap starts a fresh trip immediately", s.frogLater);
+check(s.mushroomFirst && s.mushroomFirst.state.active && s.mushroomFirst.state.variant === "shrooms" && s.mushroomFirst.classes.join(",") === "shrooms",
+  "the mushroom's first tap starts its trip", s.mushroomFirst);
 check(s.mushroom && s.mushroom.state.active && s.mushroom.state.variant === "shrooms" && s.mushroom.classes.join(",") === "shrooms" && !s.mushroom.card,
-  "the mushroom's second tap starts its uncarded trip", s.mushroom);
+  "another mushroom tap keeps its uncarded trip active", s.mushroom);
 check(s.mushroomLater && s.mushroomLater.state.active && s.mushroomLater.state.variant === "shrooms" && s.mushroomLater.classes.join(",") === "shrooms",
-  "later mushroom taps remain armed", s.mushroomLater);
+  "a later mushroom tap starts a fresh trip immediately", s.mushroomLater);
 check(s.neutral && !s.neutral.state.active && s.neutral.before === s.neutral.after,
   "laughing gas ends without adding a gray tolerance veil", s.neutral);
 

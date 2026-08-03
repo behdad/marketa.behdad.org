@@ -8,6 +8,10 @@ var HARNESS = String.raw`<script>
   var report = { steps: {}, errors: [] };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function step(name, value) { report.steps[name] = value; }
+  function latestUnread() {
+    var rows = document.querySelectorAll(".pm-msg-row.unread");
+    return rows.length ? rows[rows.length - 1].getAttribute("data-message-id") : null;
+  }
   function finish() {
     report.errors = (window.__errs || []).slice();
     var pre = document.createElement("pre"); pre.id = "__report"; pre.textContent = JSON.stringify(report); document.body.appendChild(pre);
@@ -190,7 +194,7 @@ var HARNESS = String.raw`<script>
       momentBefore: momentBefore,
       momentAfter: !!document.querySelector(".pm-msg-row[data-message-id=firstdance] .pm-msg-act"),
       calendarAfter: !!document.querySelector(".pm-msg-row[data-message-id=cue_calendar] .pm-msg-act"),
-      latest: window.__latestUnreadMessage()
+      latest: latestUnread()
     });
 
     if (window.__resetPhoneApps) window.__resetPhoneApps();

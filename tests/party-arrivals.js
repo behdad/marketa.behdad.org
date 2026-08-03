@@ -82,6 +82,15 @@ var harness = String.raw`<script>
         var after = presentUnits();
         var arrived = after.filter(function (unit) { return before.indexOf(unit) === -1; });
         var departed = before.filter(function (unit) { return after.indexOf(unit) === -1; });
+        // A rotation intentionally walks the incoming unit in 1.8s before retiring the outgoing
+        // one. If this sample lands inside that overlap, let the handoff reach steady state before
+        // asserting its departure and cap; the transient fifth unit is part of the animation.
+        if (!departed.length || after.length > 4) {
+          await sleep(2500);
+          after = presentUnits();
+          arrived = after.filter(function (unit) { return before.indexOf(unit) === -1; });
+          departed = before.filter(function (unit) { return after.indexOf(unit) === -1; });
+        }
         check("the revolving door completes an arrival while the page is unfocused",
           arrived.length > 0, JSON.stringify({ before: before, after: after, arrived: arrived }));
         check("the revolving door completes a departure while the page is unfocused",

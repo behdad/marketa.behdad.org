@@ -231,12 +231,15 @@ The posted highway limit is 90 km/h. An occasional parked police car is announce
 by one oncoming driver flashing its high beams three times. Police allow speeds
 through 110 km/h; above that, a patrol car and siren appear in the rear-view
 mirror. Move onto the right shoulder and stop to receive a fine scaled to the
-speed at which you passed the police. Ignoring the stop ends the highway run and
-adds a refusal surcharge. Passing at 150–199 km/h ends the highway run immediately,
-without ending or resetting the loft game. At 200 km/h or faster the Porsche can
-instead open a gap: keep that speed until the patrol car recedes from the mirror
-and its siren fades away. A brief touch of 200 is not enough, and slowing below it
-before the gap is complete lets the pursuit recover.
+speed at which you passed the police. Fixed amounts follow Alberta's current
+[standard schedule](https://www.alberta.ca/speeding-fines-in-alberta), including
+its 20% surcharge. At 51 km/h or more over the limit there is no invented fixed
+amount: the outcome is a mandatory court appearance. Ignoring the stop ends the
+highway run and adds a 1,000-point gameplay penalty. Passing at 150–199 km/h ends
+the highway run immediately, without ending or resetting the loft game. At
+200 km/h or faster the Porsche can instead open a gap: keep that speed until the
+patrol car recedes from the mirror and its siren fades away. A brief touch of 200
+is not enough, and slowing below it before the gap is complete lets the pursuit recover.
 
 The top readout separates elapsed trip time, highway distance, and points: for
 example, `8:16 · 12.4 km · 184 pts`. Time is a measurement, not a speed bonus;

@@ -70,6 +70,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       step(20);
       report.steps.tolerated = copy(trip());
 
+      report.steps.fineSchedule = [111, 120, 130, 140, 141].map(function (speed) {
+        prepareEncounter();
+        return { speed: speed, police: meetPolice(speed).police };
+      });
+
       prepareEncounter();
       var pursuit = meetPolice(130);
       report.steps.pursuit = {
@@ -93,6 +98,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         trip: copy(trip()),
         caption: document.getElementById("hunt-caption").textContent.trim(),
         flash: window.__flashCaptionState()
+      };
+
+      prepareEncounter();
+      meetPolice(145);
+      window.__entranceRoadtripSetLane(2);
+      setMotion(0, 0);
+      step(1000);
+      report.steps.courtStop = {
+        trip: copy(trip()),
+        caption: document.getElementById("hunt-caption").textContent.trim()
       };
 
       prepareEncounter();
@@ -183,8 +198,13 @@ check(s.tolerated && s.tolerated.active && s.tolerated.police.phase === "cooldow
   s.tolerated.police.detectedSpeed <= 110 && s.tolerated.police.pursuits === 0 &&
   s.tolerated.police.tickets === 0 && s.tolerated.police.fines === 0,
   "110 km/h is tolerated without a pursuit or ticket", s.tolerated);
+check(s.fineSchedule && JSON.stringify(s.fineSchedule.map(function (entry) {
+  return [entry.police.overLimit, entry.police.fine, entry.police.courtRequired];
+})) === JSON.stringify([
+  [21, 238, false], [30, 324, false], [40, 560, false], [50, 744, false], [51, null, true]
+]), "Alberta's exact 21/30/40/50-over fines apply and 51-over switches to court", s.fineSchedule);
 check(s.pursuit && s.pursuit.trip.police.phase === "pursuit" &&
-  s.pursuit.trip.police.detectedSpeed === 130 && s.pursuit.trip.police.fine === 750 &&
+  s.pursuit.trip.police.detectedSpeed === 130 && s.pursuit.trip.police.fine === 560 &&
   s.pursuit.trip.police.sirenActive && s.pursuit.trip.police.mirrorVisible &&
   s.pursuit.mirror === "visible",
   "speed above tolerance starts a scaled-fine pursuit with siren and a rearview police car", s.pursuit);
@@ -194,9 +214,16 @@ check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sire
   });
 check(s.stopped && s.stopped.trip.active && s.stopped.trip.police.phase === "cooldown" &&
   s.stopped.trip.police.stops === 1 && s.stopped.trip.police.tickets === 1 &&
-  s.stopped.trip.police.fines === 750 && !s.stopped.trip.police.sirenActive &&
+  s.stopped.trip.police.fines === 560 && s.stopped.trip.police.scorePenalties === 560 &&
+  !s.stopped.trip.police.sirenActive &&
   !s.stopped.trip.police.mirrorVisible && /Pulled over/.test(s.stopped.caption) && !s.stopped.flash,
   "stopping on the right shoulder settles the speed-scaled fine and ends the siren", s.stopped);
+check(s.courtStop && s.courtStop.trip.active && s.courtStop.trip.police.phase === "cooldown" &&
+  s.courtStop.trip.police.overLimit === 55 && s.courtStop.trip.police.fine === null &&
+  s.courtStop.trip.police.courtRequired && s.courtStop.trip.police.summonses === 1 &&
+  s.courtStop.trip.police.tickets === 1 && s.courtStop.trip.police.fines === 0 &&
+  /mandatory court appearance/.test(s.courtStop.caption),
+  "51–59 over resolves as a court summons without an invented fixed amount", s.courtStop);
 check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase === "pursuit" &&
   s.escaped.detected.police.detectedSpeed === 205 &&
   s.escaped.firstFastStep.police.phase === "pursuit" &&
@@ -215,15 +242,18 @@ check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase 
   s.escaped);
 check(s.severe && !s.severe.trip.active && s.severe.trip.police.runEnded &&
   s.severe.trip.police.endReason === "speed" && s.severe.trip.police.detectedSpeed >= 150 &&
-  s.severe.trip.police.tickets === 1 && s.severe.trip.police.fines >= 1250 &&
+  s.severe.trip.police.tickets === 1 && s.severe.trip.police.fine === null &&
+  s.severe.trip.police.courtRequired && s.severe.trip.police.summonses === 1 &&
+  s.severe.trip.police.fines === 0 &&
   /highway run over/.test(s.severe.immediateCaption) &&
   s.severe.finalCaption === s.severe.immediateCaption &&
   !s.severe.immediateFlash && !s.severe.finalFlash &&
   !/collected|multiplier/.test(s.severe.finalCaption),
   "60 km/h over the limit ends only the highway run", s.severe);
 check(s.refused && !s.refused.active && s.refused.police.runEnded &&
-  s.refused.police.endReason === "refused" && s.refused.police.fines === 1750,
-  "exiting instead of pulling over ends the run with the refusal surcharge", s.refused);
+  s.refused.police.endReason === "refused" && s.refused.police.fines === 560 &&
+  s.refused.police.scorePenalties === 1560,
+  "exiting instead of pulling over keeps the official fine separate from the game penalty", s.refused);
 check(s.czech && /pravou krajnici/.test(s.czech),
   "the pursuit instruction is mirrored in Czech", s.czech);
 

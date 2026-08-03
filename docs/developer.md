@@ -193,11 +193,13 @@ The nested `drive.roadtrip.police` state owns the infrequent speed trap independ
 traffic pool. `stepRoadtripPolice()` advances its warning → pursuit → cooldown state machine;
 `paintRoadtripPolice()` projects a dedicated oncoming warning car, parked patrol car, and rear-view
 pursuit use without competing for pooled traffic slots. The warning car exposes exactly three
-distance-safe high-beam flashes. Posted speed is 90 km/h, enforcement begins above 110, and the fine
-is `$250 + $25` per whole enforceable km/h (rounded to `$25`). A right-shoulder stop at 2.5 km/h or
-less settles the ticket. Twenty attended seconds or 500 metres below the 200 km/h escape threshold
-without stopping adds `$1000` and ends the highway run; detection from 150 through 199 km/h ends it
-immediately. At 200 km/h or faster, separation grows from the patrol car's 180 km/h pursuit pace.
+distance-safe high-beam flashes. Posted speed is 90 km/h and enforcement begins above 110.
+`ROADTRIP_POLICE_STANDARD_FINES` indexes Alberta's complete 1–50 km/h standard schedule, including
+the published 20% surcharge; 51+ stores `fine: null`, sets `courtRequired`, and increments summonses
+rather than inventing an amount. A right-shoulder stop at 2.5 km/h or less settles the ticket or
+summons. Twenty attended seconds or 500 metres below the 200 km/h escape threshold without stopping
+adds a separate 1,000-point game penalty and ends the highway run; detection from 150 through
+199 km/h ends it immediately. At 200 km/h or faster, separation grows from the patrol car's 180 km/h pursuit pace.
 The mirror scale and siren gain follow that separation; reaching 55 metres clears the chase, while
 slowing below 200 before then closes the gap and resumes the refusal counters. Neither enforcement
 case resets the loft game.

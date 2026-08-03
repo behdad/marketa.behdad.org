@@ -34601,6 +34601,15 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_PURSUIT_SPEED = 180;
   var ROADTRIP_POLICE_ESCAPE_DISTANCE = 55;
   var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
+  // Alberta's standard schedule, including the 20% Victims of Crime surcharge.
+  // Index = whole km/h over; 51+ has no fixed amount and requires court.
+  var ROADTRIP_POLICE_STANDARD_FINES = [0,
+    105, 109, 114, 118, 121, 126, 130, 134, 139, 144,
+    148, 151, 156, 160, 164, 190, 202, 208, 222, 228,
+    238, 250, 258, 270, 276, 286, 295, 306, 316, 324,
+    343, 355, 373, 386, 402, 420, 433, 452, 468, 560,
+    578, 596, 615, 632, 648, 668, 687, 705, 723, 744
+  ];
   var ROADTRIP_POLICE_FIRST_DISTANCE = 620;
   var ROADTRIP_POLICE_REFUSAL_SECONDS = 20;
   var ROADTRIP_POLICE_REFUSAL_DISTANCE = 500;
@@ -34660,9 +34669,13 @@ window.__entranceRoomOpen = false;
       warningFlashCount: 0,
       warningLight: false,
       detectedSpeed: 0,
+      overLimit: 0,
       fine: 0,
+      courtRequired: false,
       tickets: 0,
       fines: 0,
+      summonses: 0,
+      scorePenalties: 0,
       stops: 0,
       pursuits: 0,
       pursuitElapsed: 0,
@@ -35413,9 +35426,15 @@ window.__entranceRoomOpen = false;
     });
     if (roadtripPoliceWarningBeams) roadtripPoliceWarningBeams.classList.remove("is-lit");
   }
-  function roadtripPoliceFineForSpeed(speed) {
-    var enforceableExcess = Math.max(1, Math.ceil(Math.abs(Number(speed) || 0) - ROADTRIP_POLICE_ENFORCE_SPEED));
-    return Math.ceil((250 + enforceableExcess * 25) / 25) * 25;
+  function roadtripPoliceCitationForSpeed(speed) {
+    var overLimit = Math.max(0,
+      Math.round(Math.abs(Number(speed) || 0)) - ROADTRIP_SPEED_LIMIT);
+    var courtRequired = overLimit >= ROADTRIP_POLICE_STANDARD_FINES.length;
+    return {
+      overLimit: overLimit,
+      courtRequired: courtRequired,
+      fine: courtRequired ? null : (ROADTRIP_POLICE_STANDARD_FINES[overLimit] || 0)
+    };
   }
   function roadtripPoliceEscapeRatio() {
     return Math.max(0, Math.min(1,
@@ -35431,9 +35450,13 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.detectedSpeed = 0;
+    police.overLimit = 0;
     police.fine = 0;
+    police.courtRequired = false;
     police.tickets = 0;
     police.fines = 0;
+    police.summonses = 0;
+    police.scorePenalties = 0;
     police.stops = 0;
     police.pursuits = 0;
     police.pursuitElapsed = 0;
@@ -35459,7 +35482,9 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.detectedSpeed = 0;
+    police.overLimit = 0;
     police.fine = 0;
+    police.courtRequired = false;
     police.pursuitElapsed = 0;
     police.pursuitDistance = 0;
     police.refusalElapsed = 0;
@@ -35470,21 +35495,23 @@ window.__entranceRoomOpen = false;
     paintRoadtripPolice();
     return true;
   }
-  function applyRoadtripPoliceFine(fine) {
+  function applyRoadtripPoliceCitation(scoreSurcharge) {
     var police = roadtripState.police;
-    fine = Math.max(0, Math.round(Number(fine) || 0));
-    police.fine = fine;
+    var fixedFine = police.courtRequired ? 0 : Math.max(0, Math.round(Number(police.fine) || 0));
+    var scorePenalty = fixedFine + Math.max(0, Math.round(Number(scoreSurcharge) || 0));
     police.tickets++;
-    police.fines += fine;
-    roadtripState.score = Math.max(0, roadtripState.score - fine);
+    if (police.courtRequired) police.summonses++;
+    police.fines += fixedFine;
+    police.scorePenalties += scorePenalty;
+    roadtripState.score = Math.max(0, roadtripState.score - scorePenalty);
     roadtripState.multiplier = 1;
     paintRoadtripScore();
     if (window.__checkpointChanged) window.__checkpointChanged();
-    return fine;
+    return scorePenalty;
   }
-  function endRoadtripForPolice(reason, fine) {
+  function endRoadtripForPolice(reason) {
     var police = roadtripState.police;
-    applyRoadtripPoliceFine(fine);
+    applyRoadtripPoliceCitation(reason === "refused" ? 1000 : 0);
     police.phase = "ended";
     police.runEnded = true;
     police.endReason = reason;
@@ -35496,8 +35523,12 @@ window.__entranceRoomOpen = false;
     hideRoadtripPoliceVisuals();
     parkRoadtrip(false);
     roadtripState.exitUntilStop = true;
-    roadtripPoliceOutcomeFeedback(reason === "speed" ? "entrance_roadtrip_police_run_end" :
-      "entrance_roadtrip_police_refused", { fine: police.fine });
+    var outcomeKey = police.courtRequired ?
+      (reason === "speed" ? "entrance_roadtrip_police_court_run_end" :
+        "entrance_roadtrip_police_court_refused") :
+      (reason === "speed" ? "entrance_roadtrip_police_run_end" :
+        "entrance_roadtrip_police_refused");
+    roadtripPoliceOutcomeFeedback(outcomeKey, { fine: police.fine });
     paintPorscheDriveHud();
     return true;
   }
@@ -35505,13 +35536,14 @@ window.__entranceRoomOpen = false;
     var police = roadtripState.police;
     if (police.phase !== "pursuit") return false;
     police.stops++;
-    applyRoadtripPoliceFine(police.fine);
+    applyRoadtripPoliceCitation(0);
     police.phase = "cooldown";
     police.cooldownElapsed = 0;
     driveState.gear = 0;
     driveState.rpm = porscheState.engineOn ? 780 : 0;
     stopRoadtripPoliceSiren(.18);
-    roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_ticket", { fine: police.fine });
+    roadtripPoliceOutcomeFeedback(police.courtRequired ? "entrance_roadtrip_police_summons" :
+      "entrance_roadtrip_police_ticket", { fine: police.fine });
     return true;
   }
   function settleRoadtripPoliceEscape() {
@@ -35520,7 +35552,9 @@ window.__entranceRoomOpen = false;
     police.escapes++;
     police.phase = "cooldown";
     police.cooldownElapsed = 0;
+    police.overLimit = 0;
     police.fine = 0;
+    police.courtRequired = false;
     police.mirrorScale = 0;
     stopRoadtripPoliceSiren(.9);
     roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_escaped");
@@ -35539,9 +35573,12 @@ window.__entranceRoomOpen = false;
       roadtripFeedback("entrance_roadtrip_police_clear");
       return false;
     }
-    police.fine = roadtripPoliceFineForSpeed(detectedSpeed);
+    var citation = roadtripPoliceCitationForSpeed(detectedSpeed);
+    police.overLimit = citation.overLimit;
+    police.fine = citation.fine;
+    police.courtRequired = citation.courtRequired;
     if (detectedSpeed >= ROADTRIP_POLICE_RUN_END_SPEED && detectedSpeed < ROADTRIP_POLICE_ESCAPE_SPEED) {
-      endRoadtripForPolice("speed", police.fine);
+      endRoadtripForPolice("speed");
       return true;
     }
     police.phase = "pursuit";
@@ -35661,7 +35698,7 @@ window.__entranceRoomOpen = false;
           settleRoadtripPoliceEscape();
         } else if (police.refusalElapsed >= ROADTRIP_POLICE_REFUSAL_SECONDS ||
             police.refusalDistance >= ROADTRIP_POLICE_REFUSAL_DISTANCE) {
-          endRoadtripForPolice("refused", police.fine + 1000);
+          endRoadtripForPolice("refused");
         }
       }
     } else if (police.phase === "cooldown") {
@@ -35670,7 +35707,9 @@ window.__entranceRoomOpen = false;
         police.phase = "idle";
         police.nextDistance = roadtripState.distance + 760 + police.tickets % 4 * 80;
         police.cooldownElapsed = 0;
+        police.overLimit = 0;
         police.fine = 0;
+        police.courtRequired = false;
         police.detectedSpeed = 0;
       }
     }
@@ -36064,7 +36103,7 @@ window.__entranceRoomOpen = false;
   function exitRoadtrip() {
     if (!roadtripState.active) return false;
     if (roadtripState.police.phase === "pursuit") {
-      return endRoadtripForPolice("refused", roadtripState.police.fine + 1000);
+      return endRoadtripForPolice("refused");
     }
     parkRoadtrip(false);
     // Leaving returns control to the block; a later highway entry needs a new offer.
@@ -38545,9 +38584,13 @@ window.__entranceRoomOpen = false;
             warningFlashCount: roadtripState.police.warningFlashCount,
             warningLight: roadtripState.police.warningLight,
             detectedSpeed: roadtripState.police.detectedSpeed,
+            overLimit: roadtripState.police.overLimit,
             fine: roadtripState.police.fine,
+            courtRequired: roadtripState.police.courtRequired,
             tickets: roadtripState.police.tickets,
             fines: roadtripState.police.fines,
+            summonses: roadtripState.police.summonses,
+            scorePenalties: roadtripState.police.scorePenalties,
             stops: roadtripState.police.stops,
             pursuits: roadtripState.police.pursuits,
             pursuitElapsed: roadtripState.police.pursuitElapsed,
@@ -40256,9 +40299,12 @@ var T = {
       entrance_roadtrip_police_pull_over: "Police behind · pull onto the right shoulder and stop.",
       entrance_roadtrip_police_escape: "Police receding · hold 200+ to lose them.",
       entrance_roadtrip_police_escaped: "Police lost · sirens fading away.",
-      entrance_roadtrip_police_ticket: "Pulled over · ${fine} fine. Score docked.",
-      entrance_roadtrip_police_run_end: "150–199 km/h · highway run over. ${fine} fine.",
-      entrance_roadtrip_police_refused: "You didn’t pull over · highway run over. ${fine} fine.",
+      entrance_roadtrip_police_ticket: "Pulled over · ${fine} Alberta ticket. Score docked.",
+      entrance_roadtrip_police_summons: "Pulled over · mandatory court appearance. No fixed fine.",
+      entrance_roadtrip_police_run_end: "Highway run over · ${fine} Alberta ticket.",
+      entrance_roadtrip_police_refused: "You didn’t pull over · ${fine} ticket + 1,000-point penalty.",
+      entrance_roadtrip_police_court_run_end: "60+ over · highway run over. Mandatory court appearance.",
+      entrance_roadtrip_police_court_refused: "You didn’t pull over · highway run over. Mandatory court appearance.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it. ☕",
@@ -41435,9 +41481,12 @@ var T = {
       entrance_roadtrip_police_pull_over: "Policie za tebou · zajeď na pravou krajnici a zastav.",
       entrance_roadtrip_police_escape: "Policie se vzdaluje · drž 200+ a setřes ji.",
       entrance_roadtrip_police_escaped: "Policie setřesena · siréna utichá.",
-      entrance_roadtrip_police_ticket: "Zastavení u krajnice · pokuta ${fine}. Skóre sníženo.",
-      entrance_roadtrip_police_run_end: "150–199 km/h · jízda po dálnici končí. Pokuta ${fine}.",
-      entrance_roadtrip_police_refused: "Nezastavil jsi · jízda po dálnici končí. Pokuta ${fine}.",
+      entrance_roadtrip_police_ticket: "Zastavení u krajnice · albertská pokuta ${fine}. Skóre sníženo.",
+      entrance_roadtrip_police_summons: "Zastavení u krajnice · povinné soudní jednání. Bez pevné pokuty.",
+      entrance_roadtrip_police_run_end: "Jízda po dálnici končí · albertská pokuta ${fine}.",
+      entrance_roadtrip_police_refused: "Nezastavil jsi · pokuta ${fine} + ztráta 1 000 bodů.",
+      entrance_roadtrip_police_court_run_end: "60+ nad limitem · jízda končí. Povinné soudní jednání.",
+      entrance_roadtrip_police_court_refused: "Nezastavil jsi · jízda končí. Povinné soudní jednání.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni. ☕",

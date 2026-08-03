@@ -272,6 +272,8 @@ advantage capped at 110, and returns it to the outer lane and cruise speed after
 `driveState.odometerKm` is the persistent physical-distance total: every drive step adds
 `abs(speed) × elapsed time`, independent of the street scene's theatrical travel scale. Engine lifecycle
 does not reset it; full game reset does, and Entrance checkpoint capture/restore preserves it.
+The capture-phase Entrance keyboard owner returns immediately while `__dropTermOpen()` is true;
+otherwise its HUD branch would prevent keys before the focused drop-down console receives them.
 Run `tests/entrance-police.js` for the enforcement state machine.
 RPM and engine temperature remain runtime-only: restore accepts them from older rows, but new
 checkpoint captures omit them so idle ticks cannot churn an otherwise settled recovery snapshot.

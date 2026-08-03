@@ -244,12 +244,18 @@ mirror. Move onto the right shoulder and stop to receive a fine scaled to the
 speed at which you passed the police. Fixed amounts follow Alberta's current
 [standard schedule](https://www.alberta.ca/speeding-fines-in-alberta), including
 its 20% surcharge. At 51 km/h or more over the limit there is no invented fixed
-amount: the outcome is a mandatory court appearance. Ignoring the stop ends the
-highway run and adds a 1,000-point gameplay penalty. Passing at 150–199 km/h ends
-the highway run immediately, without ending or resetting the loft game. At
-200 km/h or faster the Porsche can instead open a gap: keep that speed until the
-patrol car recedes from the mirror and its siren fades away. A brief touch of 200
-is not enough, and slowing below it before the gap is complete lets the pursuit recover.
+amount: the outcome is a mandatory court appearance, but the patrol car always
+chases before that is resolved. An ordinary fixed-dollar roadside stop settles
+the ticket without an arrest and lets the highway run continue; a court-required
+stop issues a summons, then returns the stopped car to the block with the dashboard
+still open. Ignoring the stop, or trying to leave during the pursuit, lets police
+catch the Porsche: it is forced through a visible progressive slowdown with the
+patrol car and siren still present, then the highway run ends after a brief stopped
+beat and adds a 1,000-point gameplay penalty. None of these outcomes ends or resets
+the loft game. At 180 km/h or faster the Porsche can instead open a 55 m gap. The
+patrol car models roughly 170 km/h, so holding 180 takes about 20 seconds while
+200 takes about 7. A brief touch of 180 is not enough, and slowing below it before
+the gap is complete lets the pursuit recover.
 
 The top readout separates elapsed trip time, highway distance, and points: for
 example, `8:16 · 12.4 km · 184 pts`. Time is a measurement, not a speed bonus;

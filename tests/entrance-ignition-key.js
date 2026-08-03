@@ -44,9 +44,9 @@ check(off && on && off.ledAnimation === "entrance-drive-key-led-pulse" && off.le
   off.ledRect.left >= off.fobRect.left && off.ledRect.right <= off.fobRect.left + off.fobRect.width + 1 &&
   off.ledRect.top >= off.fobRect.top && off.ledRect.bottom <= off.fobRect.top + off.fobRect.height + 1,
   "the off-state key LED blinks inside the fob and disappears when running", {off:off,on:on});
-check(off && on && off.offShield === 1 && off.onShield === 1 &&
+check(off && on && off.offShield === 0 && off.onShield === 1 &&
   sameRect(off.offRect, off.onRect) && sameRect(on.offRect, on.onRect),
-  "off and running faces share one upright shield footprint", {off:off,on:on});
+  "the off fob and running crest share one upright footprint", {off:off,on:on});
 check(off && on && off.fobTransform === "translate(10 0)" && on.fobTransform === off.fobTransform &&
   sameSize(off.fobRect, on.fobRect) && sameSize(off.faceRect, on.faceRect) &&
   off.faceTransform !== on.faceTransform,

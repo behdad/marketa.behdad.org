@@ -35307,6 +35307,17 @@ window.__entranceRoomOpen = false;
     var heavy = kind === "heavy";
     severity = Math.max(.08, Math.min(1, Number(severity) || .5));
     roadtripState.lastImpactSeverity = severity;
+    // A glass-damaging impact is the boundary between a scrape and a hit severe
+    // enough to knock the manual transmission out of gear. Release the pedals too,
+    // so a held key/touch cannot immediately rev the now-neutral drivetrain.
+    if (damage === "crack" || damage === "shatter") {
+      driveState.gear = 0;
+      driveState.throttleHeldMs = 0;
+      driveState.shiftCutMs = 0;
+      setPorscheDriveHold("throttle", false);
+      setPorscheDriveHold("clutch", false);
+      paintPorscheShifter(0);
+    }
     room.style.setProperty("--roadtrip-damage", severity.toFixed(3));
     if (damage === "shatter") {
       room.classList.remove("roadtrip-cracked");

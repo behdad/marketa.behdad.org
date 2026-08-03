@@ -176,6 +176,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       released: !!(made.node && made.node.isConnected && made.node.getAttribute("visibility") === "hidden"),
       minSpeed: minSpeed,
       afterDriveSpeed: state().drive.speed,
+      afterDriveGear: state().drive.gear,
       classes: document.getElementById("entrance-room").getAttribute("class"),
       crackOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-crack")).opacity),
       shatterOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-shatter")).opacity),
@@ -962,9 +963,10 @@ check(collision && collision.visual.kind === "traffic" && collision.visual.lane 
   collision.before.score - collision.after.score <= 40 &&
   collision.after.impactSounds > collision.before.impactSounds && collision.after.lastImpactSeverity > 0 &&
   collision.afterDriveSpeed < collision.visual.speed && collision.minSpeed < collision.beforeSpeed * .45 &&
+  collision.afterDriveGear === 0 &&
   collision.after.multiplier === 1 && collision.classes.indexOf("roadtrip-cracked") >= 0 &&
   collision.crackOpacity > .25 && collision.shatterOpacity < .1,
-  "rear-ending traffic deducts a severity-scaled 10–40 points, kicks the Porsche below traffic speed, cracks the glass, and resets the combo", collision);
+  "rear-ending traffic deducts 10–40 points, kicks below traffic speed, neutralizes the gearbox, cracks the glass, and resets the combo", collision);
 var animal = s.animal;
 check(animal && animal.visual.kind === "animal" && animal.visual.lane === "0.5" && animal.visual.display !== "none" &&
   animal.visual.visibility !== "hidden" && /entrance-roadtrip-deer/.test(animal.visual.href || "") && animal.released &&
@@ -981,11 +983,11 @@ check(wildlifeImpact && wildlifeImpact.visual.kind === "animal" &&
   wildlifeImpact.before.drive.roadtrip.score - wildlifeImpact.after.drive.roadtrip.score <= 60 &&
   wildlifeImpact.after.drive.roadtrip.multiplier === 1 &&
   wildlifeImpact.after.drive.roadtrip.impactSounds > wildlifeImpact.before.drive.roadtrip.impactSounds &&
-  wildlifeImpact.after.drive.speed < wildlifeImpact.before.drive.speed &&
+  wildlifeImpact.after.drive.speed < wildlifeImpact.before.drive.speed && wildlifeImpact.after.drive.gear === 0 &&
   wildlifeImpact.after.drive.roadtrip.lastImpactSeverity > 0 && wildlifeImpact.after.drive.roadtrip.lastImpactSeverity < .82 &&
   wildlifeImpact.classes.indexOf("roadtrip-cracked") >= 0 && wildlifeImpact.classes.indexOf("roadtrip-shattered") < 0 &&
   wildlifeImpact.crackOpacity > .25 && wildlifeImpact.shatterOpacity < .1,
-  "a too-fast deer strike deducts a severity-scaled 20–60 points and produces slowdown, sound, shake, and a localized crack",
+  "a too-fast deer strike deducts a severity-scaled 20–60 points, neutralizes the gearbox, and produces slowdown, sound, shake, and a localized crack",
   wildlifeImpact);
 var pass = s.pass;
 check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pass.visual.direction === "forward" && pass.released &&

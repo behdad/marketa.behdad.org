@@ -274,7 +274,9 @@ restarted. Rear-ending forward traffic instead cuts the car's speed below the
 struck vehicle's speed, kicks the view, and cracks the windshield. Each localized
 crack varies its impact point, angle, branch lengths, and smaller fractures while
 remaining proportional to the strike. Shake, sound, slowdown, and glass damage
-also scale with the other object's type and relative speed. Mule deer and snowshoe
+also scale with the other object's type and relative speed. Any hit severe enough
+to crack or shatter the windshield knocks the transmission into neutral and
+releases the accelerator and clutch. Mule deer and snowshoe
 hares visibly leap and zig-zag toward the verge; slowing early gives them the time
 needed to clear safely.
 

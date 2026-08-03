@@ -289,6 +289,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         mirrorWinter: visiblePath(document.getElementById("entrance-roadtrip-mirror-winter"), hud)
       }
     };
+    window.__entranceDriveSetMotion(25, 6);
+    step(20);
+    report.steps.lowSpeedNeutral = { gear: state().drive.gear, speed: state().drive.speed };
     window.__entranceDriveSetMotion(90, 3);
     window.__entranceDriveControl("throttle", true);
     await sleep(45);
@@ -801,6 +804,8 @@ check(activation && activation.retained.roomArt.display !== "none" && activation
   activation.retained.spatial && activation.retained.spatial.anchor === "entrance-porsche" &&
   isFinite(activation.retained.spatial.pan),
   "roadtrip presentation retains scene/car geometry for localized Porsche audio", activation && activation.retained);
+check(s.lowSpeedNeutral && s.lowSpeedNeutral.gear === 0 && s.lowSpeedNeutral.speed > 20,
+  "the highway selects neutral before a too-slow upper gear can lug below idle", s.lowSpeedNeutral);
 var focusPause = s.focusPause;
 check(focusPause &&
   focusPause.end.drive.roadtrip.elapsedSeconds === focusPause.start.drive.roadtrip.elapsedSeconds &&

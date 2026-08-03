@@ -349,15 +349,17 @@ The planning layer has three explicit parts:
 - `AP_SEQUENCE_LIBRARY` holds 30 short authored stories across all rooms plus cross-room relays.
   The five showcase builders also serve as first-play solve walkers; solved-room alternatives cover
   apps, party moments, music, calls, toys, weather, photography, food, and the BBQ.
-- `apPickSequence` is a constrained weighted Markov choice over eight narrative moods. A candidate's
-  score combines its authored base weight, the prior-mood transition multiplier, room age, sequence
-  age, and a frontier-solve boost. Exact stories are excluded for five selections, immediate room
-  repeats are avoided when alternatives exist, and a room at the starvation boundary becomes a
-  hard selection constraint. Randomness comes only from the director's seeded xorshift32 stream;
-  never use `Math.random()` for a new autoplay choice.
+- `apPickSequence` is a constrained weighted choice over eight moods and a five-step
+  arrival→gather→peak→glow→exhale cadence. Its score also links story families (arrivals naturally
+  lead toward music or ceremony, then photographs) and favours the room where the previous relay
+  ended or a neighbouring room. Room/sequence age and frontier solving remain hard priorities:
+  exact stories are excluded for five selections, immediate primary-room repeats are avoided, and
+  the starvation boundary overrides editorial weighting. Randomness comes only from the director's
+  seeded xorshift32 stream; never use `Math.random()` for a new autoplay choice.
 
 Notifications suspend the current `{scene, beat, state}` on the one-deep stack, run an interrupt,
-then cross the explicit `resuming` state before restoring the exact next beat. Hidden and merely
+then cross the explicit `resuming` state before restoring the exact next beat. If the notification
+action moved rooms, a normal navigation beat first rejoins the suspended story. Hidden and merely
 unfocused tabs enter `paused` without consuming a beat. Takeover and deliberate stop are distinct:
 takeover retains the idle-return timer, while `autoplay(false)` clears it. `apOwned` remains the
 cleanup inventory for autonomous effects that cannot be inherited safely; panels and the ghost

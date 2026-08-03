@@ -89,8 +89,9 @@ var HARNESS = [
   "    var exactRecent=true; for(var pi=0;pi<aid.length;pi++)for(var back=1;back<=5&&pi-back>=0;back++)if(aid[pi]===aid[pi-back])exactRecent=false;",
   "    var drought={kitchen:0,garden:0,cuddly:0,office:0,balcony:0}, maxDrought=0; pa.choices.forEach(function(x){Object.keys(drought).forEach(function(room){drought[room]++;});x.rooms.forEach(function(room){drought[room]=0;});Object.keys(drought).forEach(function(room){maxDrought=Math.max(maxDrought,drought[room]);});});",
   "    var roomCounts={}, moods={}, cross=0, minBeats=999, interactive=0, missingVerbs=[]; cat.forEach(function(s){roomCounts[s.room]=(roomCounts[s.room]||0)+1;moods[s.mood]=1;if(s.crossRoom)cross++;minBeats=Math.min(minBeats,s.beats);interactive+=s.taps+s.apps.length+s.verbs.length;s.verbs.forEach(function(v){if(typeof window[v]!=='function'&&missingVerbs.indexOf(v)<0)missingVerbs.push(v);});});",
-  "    var detail=pa.details&&pa.details[0], factors=!!(detail&&detail.candidates&&detail.candidates.length&&typeof detail.candidates[0].markov==='number'&&typeof detail.candidates[0].roomFair==='number'&&typeof detail.candidates[0].sequenceFair==='number');",
-  "    report.model={catalog:cat.length,roomCounts:roomCounts,moods:Object.keys(moods).length,cross:cross,minBeats:minBeats,interactive:interactive,missingVerbs:missingVerbs,sameSeed:aid.join('|')===bid.join('|'),differentSeed:aid.join('|')!==cid.join('|'),exactRecent:exactRecent,maxDrought:maxDrought,factors:factors,choices:aid.slice(0,12),invariants:window.__autoplayInvariants()};",
+  "    var detail=pa.details&&pa.details[0], factors=!!(detail&&detail.candidates&&detail.candidates.length&&typeof detail.candidates[0].markov==='number'&&typeof detail.candidates[0].roomFair==='number'&&typeof detail.candidates[0].sequenceFair==='number'&&typeof detail.candidates[0].cadence==='number'&&typeof detail.candidates[0].continuity==='number'&&typeof detail.candidates[0].travel==='number');",
+  "    var cadenceNames=['arrival','gather','peak','glow','exhale'],cadenceEnergy=[1,2,3,2,0],cadenceHits=0,cadenceOk=pa.choices.every(function(x,i){if(x.energy===cadenceEnergy[i%cadenceEnergy.length])cadenceHits++;return x.cadence===cadenceNames[i%cadenceNames.length]&&typeof x.energy==='number';}),cadenceMatch=cadenceHits/pa.choices.length;",
+  "    report.model={catalog:cat.length,roomCounts:roomCounts,moods:Object.keys(moods).length,cross:cross,minBeats:minBeats,interactive:interactive,missingVerbs:missingVerbs,sameSeed:aid.join('|')===bid.join('|'),differentSeed:aid.join('|')!==cid.join('|'),exactRecent:exactRecent,maxDrought:maxDrought,factors:factors,cadenceOk:cadenceOk,cadenceMatch:cadenceMatch,choices:aid.slice(0,12),invariants:window.__autoplayInvariants()};",
   // ── Phase 1: TAKE OVER IN PLACE + first routine is CHAINED ──
   "    window.goToStage('office'); await sleep(300);",
   "    report.phase1.startedRoom = window.currentStageName;",
@@ -273,8 +274,10 @@ if (!r) {
   else fail("anti-repetition window", JSON.stringify(model.choices));
   if (model.maxDrought <= 5) pass("coverage ledger bounds every room drought (max " + model.maxDrought + " selections)");
   else fail("room fairness bound", JSON.stringify(model));
-  if (model.factors) pass("each probabilistic choice exposes Markov + room + sequence score factors");
+  if (model.factors) pass("each probabilistic choice exposes mood, cadence, story-continuity, travel, room and sequence factors");
   else fail("weighted selection must be inspectable", JSON.stringify(model));
+  if (model.cadenceOk && model.cadenceMatch >= 0.7) pass("the seeded show visibly follows its arrival → peak → exhale cadence (" + Math.round(model.cadenceMatch * 100) + "% exact-energy choices; fairness owns the rest)");
+  else fail("macro pacing cadence", JSON.stringify(model.choices));
   if (model.missingVerbs && model.missingVerbs.length === 0) pass("every named interaction in the sequence catalog resolves to a live game verb");
   else fail("catalog contains missing interaction verbs", JSON.stringify(model.missingVerbs));
   // The director self-checks its own authored intent at parse: every room has a builder + a

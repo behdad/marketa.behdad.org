@@ -109841,7 +109841,8 @@ function spawnDustMote(container) {
     };
   }
   function apNavBeat(room, wait) {
-    return apBeat({ fn: function () { apGoTo(room); }, wait: wait == null ? ROOM_SETTLE_MS : wait, room: room, selfNav: true });
+    return apBeat({ fn: function () { apGoTo(room); }, wait: wait == null ? ROOM_SETTLE_MS : wait,
+      room: room, selfNav: true, label: "nav:" + room });
   }
   function apAppBeat(kind, name, wait, tap) {
     return apBeat({
@@ -109978,6 +109979,11 @@ function spawnDustMote(container) {
   // each a little, then zoom out. The opens come EARLY and briskly (an app every ~4s) — the calm
   // pace belongs to the garden's dwell, not to a dock that should read as busy.
   var MONITOR_APPS = ["mines", "life", "mail", "chat", "calendar", "music"];
+  function apMonitorDockTarget(name) {
+    if (name === "mines" || name === "solitaire" || name === "cards") return "monitor-dock-classics";
+    if (name === "calendar") return "monitor-desk-calendar"; // Calendar is menu-bar/search-only.
+    return "monitor-dock-" + name;
+  }
   function apSceneOffice() {
     var r = [], i;
     if (!apRoomSolved("office")) {
@@ -109986,7 +109992,7 @@ function spawnDustMote(container) {
     }
     r.push(apBeat({ fn: function () { if (window.computer && !window.computer()) window.computer(true); }, wait: 2200, tap: "office-pc-desk-trio", room: "office" }));
     apPickSome(MONITOR_APPS, 4).forEach(function (name) {
-      r.push(apAppBeat("computer", name, 2000, "monitor-dock-" + name));
+      r.push(apAppBeat("computer", name, 2000, apMonitorDockTarget(name)));
       r.push(apBeat({ fn: function () { apMonitorInteract(name); }, wait: 1800, room: "office" }));
     });
     r.push(apBeat({ fn: function () { apCall(window.__toggleMonitorZoom); }, wait: 2400, room: "office" }));
@@ -110168,11 +110174,11 @@ function spawnDustMote(container) {
     apBeat({ fn: function () { apMonitorInteract("mail"); }, wait: 2400, room: "office", label: "mail-open" }),
     apAppBeat("computer", "chat", 2200, "monitor-dock-chat"),
     apBeat({ fn: function () { apMonitorInteract("chat"); }, wait: 1900, room: "office", label: "chat-focus" }),
-    apAppBeat("computer", "calendar", 2200, "monitor-dock-calendar"),
+    apAppBeat("computer", "calendar", 2200, "monitor-desk-calendar"),
     apBeat({ fn: function () { apMonitorInteract("calendar"); }, wait: 2100, room: "office", label: "calendar-page" })
   ]; }
   function apOfficeCalendarLife() { return [
-    apAppBeat("computer", "calendar", 2300, "monitor-dock-calendar"),
+    apAppBeat("computer", "calendar", 2300, "monitor-desk-calendar"),
     apBeat({ fn: function () { apMonitorInteract("calendar"); }, wait: 1900, room: "office", label: "calendar-page" }),
     apBeat({ fn: function () { apMonitorInteract("calendar"); }, wait: 1900, room: "office", label: "calendar-page" }),
     apAppBeat("computer", "life", 2200, "monitor-dock-life"),
@@ -110268,7 +110274,8 @@ function spawnDustMote(container) {
     opts = opts || {};
     return { id: id, room: room, rooms: (opts.rooms || [room]).slice(), mood: mood,
       weight: weight || 1, build: build, solved: !!opts.solved, frontier: !!opts.frontier,
-      crossRoom: !!opts.crossRoom, family: opts.family || id.split(".")[0] };
+      crossRoom: !!opts.crossRoom, family: opts.family || id.split(".")[0],
+      exitRoom: opts.exitRoom || ((opts.rooms && opts.rooms.length) ? opts.rooms[opts.rooms.length - 1] : room) };
   }
   var AP_SEQUENCE_LIBRARY = [
     apSeq("kitchen.espresso", "kitchen", "craft", 1.4, apSceneKitchen, { frontier: true, family: "espresso" }),
@@ -110298,14 +110305,14 @@ function spawnDustMote(container) {
 
     apSeq("balcony.phone-hop", "balcony", "digital", 1.5, apSceneBalcony, { frontier: true, family: "phone" }),
     apSeq("balcony.bbq", "balcony", "craft", 1.3, apBalconyBBQ, { solved: true, family: "food-drink" }),
-    apSeq("balcony.sky", "balcony", "wonder", 1.1, apBalconySky, { solved: true, rooms: ["balcony", "garden"], crossRoom: true, family: "sky" }),
+    apSeq("balcony.sky", "balcony", "wonder", 1.1, apBalconySky, { solved: true, rooms: ["balcony", "garden"], crossRoom: true, family: "sky", exitRoom: "balcony" }),
     apSeq("balcony.phone-music", "balcony", "music", 1.1, apBalconyPhoneMusic, { solved: true, family: "phone" }),
     apSeq("balcony.album-camera", "balcony", "digital", 1.0, apBalconyAlbumCamera, { solved: true, family: "photos" }),
     apSeq("balcony.seasonal-play", "balcony", "playful", 1.0, apBalconySeasonalPlay, { solved: true, family: "kids" }),
 
-    apSeq("relay.music", "garden", "music", 0.9, apMusicRelay, { solved: true, rooms: ["garden", "cuddly", "office"], crossRoom: true, family: "relay" }),
-    apSeq("relay.photos", "garden", "wonder", 0.8, apPhotoRelay, { solved: true, rooms: ["garden", "office", "balcony"], crossRoom: true, family: "relay" }),
-    apSeq("relay.lights", "kitchen", "rest", 0.8, apLightsRelay, { solved: true, rooms: ROOM_RING, crossRoom: true, family: "relay" })
+    apSeq("relay.music", "garden", "music", 0.9, apMusicRelay, { solved: true, rooms: ["garden", "cuddly", "office"], crossRoom: true, family: "music", exitRoom: "cuddly" }),
+    apSeq("relay.photos", "garden", "wonder", 0.8, apPhotoRelay, { solved: true, rooms: ["garden", "office", "balcony"], crossRoom: true, family: "photos" }),
+    apSeq("relay.lights", "kitchen", "rest", 0.8, apLightsRelay, { solved: true, rooms: ROOM_RING, crossRoom: true, family: "sky" })
   ];
 
   // The Markov state is the tone of the last completed selection. Values are multipliers over the
@@ -110323,10 +110330,45 @@ function spawnDustMote(container) {
     rest:    { craft: 1.35, playful: 1.3, social: 1.1, romance: 1.0, wonder: 1.25, digital: 1.1, music: 1.2, rest: 0.45 }
   };
 
+  // Mood makes two neighbouring stories tonally compatible; CADENCE gives the whole show a
+  // larger breath. Every five selections rise from a grounded opening through a lively peak,
+  // then settle. After unlock/fairness/anti-repeat constraints have had their say, the selector
+  // keeps the nearest available energy; weighting still chooses freely inside that editorial lane.
+  var AP_MOOD_ENERGY = { rest: 0, craft: 1, digital: 1, playful: 2, social: 2, romance: 2, wonder: 2, music: 3 };
+  var AP_CADENCE = [
+    { id: "arrival", energy: 1 },
+    { id: "gather", energy: 2 },
+    { id: "peak", energy: 3 },
+    { id: "glow", energy: 2 },
+    { id: "exhale", energy: 0 }
+  ];
+
+  // Families are the SUBJECT of a sequence, while moods are its tone. These links make the next
+  // vignette feel like a reply to the previous one: arrivals lead toward music and ceremony,
+  // ceremony toward photographs, photographs toward calls or the album, and a live set toward a
+  // cosy projector night. Unlisted pairs remain fully eligible at a neutral weight.
+  var AP_FAMILY_TRANSITIONS = {
+    espresso:     { "food-drink": 1.8, guests: 1.45, calls: 1.3 },
+    "food-drink": { music: 1.75, guests: 1.45, moments: 1.35 },
+    party:        { guests: 1.65, music: 1.5, moments: 1.35 },
+    guests:       { moments: 1.75, music: 1.5, photos: 1.4 },
+    music:        { projector: 1.65, moments: 1.5, photos: 1.25 },
+    moments:      { photos: 1.75, projector: 1.45, "food-drink": 1.2 },
+    photos:       { calls: 1.55, sky: 1.4, phone: 1.35, apps: 1.2 },
+    calls:        { guests: 1.7, photos: 1.45, moments: 1.25 },
+    apps:         { calls: 1.55, photos: 1.35, games: 1.25 },
+    phone:        { photos: 1.5, music: 1.4, guests: 1.2 },
+    games:        { "food-drink": 1.45, guests: 1.3, "room-toys": 1.2 },
+    "room-toys": { games: 1.55, kids: 1.45, music: 1.2 },
+    kids:         { guests: 1.4, "room-toys": 1.3, sky: 1.2 },
+    sky:          { projector: 1.65, kids: 1.3, "room-toys": 1.2 },
+    projector:    { music: 1.45, "room-toys": 1.35, "food-drink": 1.15 }
+  };
+
   // ── constrained Markov selector ─────────────────────────────────────────────
-  var apVisits = {}, apSince = {}, apLastRoom = null, apCycleSeen = {};
+  var apVisits = {}, apSince = {}, apLastRoom = null, apLastExitRoom = null, apCycleSeen = {};
   var apSequenceVisits = {}, apSequenceSince = {}, apRecentSequences = [];
-  var apMood = "start", apLastChoice = null, apChoiceTrace = [];
+  var apMood = "start", apLastFamily = null, apCadenceStep = 0, apLastChoice = null, apChoiceTrace = [];
   function apSequenceEligible(s, forcedRoom) {
     var unlocked = apUnlockedRooms();
     if (forcedRoom && s.room !== forcedRoom) return false;
@@ -110339,6 +110381,26 @@ function spawnDustMote(container) {
   function apMarkovWeight(from, to) {
     var row = AP_MOOD_TRANSITIONS[from] || AP_MOOD_TRANSITIONS.start;
     return row[to] == null ? 0.7 : row[to];
+  }
+  function apCadenceWeight(mood) {
+    var phase = AP_CADENCE[apCadenceStep % AP_CADENCE.length];
+    var energy = AP_MOOD_ENERGY[mood] == null ? 1 : AP_MOOD_ENERGY[mood];
+    var distance = Math.abs(phase.energy - energy);
+    return { phase: phase, energy: energy, weight: [1.8, 1.18, 0.72, 0.46][distance] || 0.46 };
+  }
+  function apContinuityWeight(from, to) {
+    if (!from) return 1;
+    if (from === to) return 0.58;
+    var row = AP_FAMILY_TRANSITIONS[from];
+    return row && row[to] ? row[to] : 1;
+  }
+  function apTravelWeight(from, to) {
+    if (!from || !to) return 1;
+    var a = ROOM_RING.indexOf(from), b = ROOM_RING.indexOf(to);
+    if (a < 0 || b < 0) return 1;
+    // Continuing in the room where a relay ended is ideal; neighbouring rooms still read as a
+    // natural walk. Long jumps remain possible, especially when fairness says a room is due.
+    return [1.5, 1.3, 1, 0.78, 0.62][Math.abs(a - b)] || 0.62;
   }
   function apPickSequence(forcedRoom) {
     var unlocked = apUnlockedRooms(), i, s;
@@ -110362,6 +110424,17 @@ function spawnDustMote(container) {
       if (otherRoom.length) pool = otherRoom;
     }
 
+    // Cadence is editorial, never a safety override: a frontier solve or starved room bypasses it.
+    // Otherwise select the nearest available energy lane before applying the richer weighted
+    // model. This is what makes the five-act rise/fall visible rather than merely aspirational.
+    if (!forcedRoom && !starvedRoom && pool.length > 1) {
+      var cadenceTarget = AP_CADENCE[apCadenceStep % AP_CADENCE.length].energy;
+      var nearest = 99;
+      for (i = 0; i < pool.length; i++) nearest = Math.min(nearest, Math.abs(cadenceTarget - AP_MOOD_ENERGY[pool[i].mood]));
+      var paced = pool.filter(function (x) { return Math.abs(cadenceTarget - AP_MOOD_ENERGY[x.mood]) === nearest; });
+      if (paced.length) pool = paced;
+    }
+
     var scored = [], total = 0;
     for (i = 0; i < pool.length; i++) {
       s = pool[i];
@@ -110371,9 +110444,13 @@ function spawnDustMote(container) {
       var roomFair = 1 + Math.min(2.2, roomAge * 0.22);
       var seqFair = 1 + Math.min(1.8, (apSequenceSince[s.id] || 0) * 0.12);
       var solveBoost = !apRoomSolved(s.room) && s.frontier ? 2.4 : 1;
-      var score = s.weight * markov * roomFair * seqFair * solveBoost;
+      var cadence = apCadenceWeight(s.mood);
+      var continuity = apContinuityWeight(apLastFamily, s.family);
+      var travel = apTravelWeight(apLastExitRoom, s.room);
+      var score = s.weight * markov * roomFair * seqFair * solveBoost * cadence.weight * continuity * travel;
       total += score;
-      scored.push({ spec: s, score: score, base: s.weight, markov: markov, roomFair: roomFair, sequenceFair: seqFair, solveBoost: solveBoost });
+      scored.push({ spec: s, score: score, base: s.weight, markov: markov, roomFair: roomFair,
+        sequenceFair: seqFair, solveBoost: solveBoost, cadence: cadence, continuity: continuity, travel: travel });
     }
     var rawRoll = apRand(), roll = rawRoll * total, chosen = scored[scored.length - 1];
     for (i = 0; i < scored.length; i++) { roll -= scored[i].score; if (roll <= 0) { chosen = scored[i]; break; } }
@@ -110383,16 +110460,22 @@ function spawnDustMote(container) {
     for (i = 0; i < AP_SEQUENCE_LIBRARY.length; i++) if (apSequenceEligible(AP_SEQUENCE_LIBRARY[i], null)) apSequenceSince[AP_SEQUENCE_LIBRARY[i].id] = (apSequenceSince[AP_SEQUENCE_LIBRARY[i].id] || 0) + 1;
     for (i = 0; i < s.rooms.length; i++) { apSince[s.rooms[i]] = 0; apCycleSeen[s.rooms[i]] = 1; }
     apSequenceSince[s.id] = 0; apSequenceVisits[s.id] = (apSequenceVisits[s.id] || 0) + 1;
-    apVisits[s.room] = (apVisits[s.room] || 0) + 1; apLastRoom = s.room;
+    apVisits[s.room] = (apVisits[s.room] || 0) + 1; apLastRoom = s.room; apLastExitRoom = s.exitRoom;
     apRecentSequences.push(s.id); if (apRecentSequences.length > SEQUENCE_RECENT_LIMIT) apRecentSequences.shift();
     if (Object.keys(apCycleSeen).length >= unlocked.length) { apLoopCount++; apCycleSeen = {}; }
 
-    apLastChoice = { id: s.id, room: s.room, moodFrom: apMood, moodTo: s.mood,
+    apLastChoice = { id: s.id, room: s.room, exitRoom: s.exitRoom, familyFrom: apLastFamily, familyTo: s.family,
+      moodFrom: apMood, moodTo: s.mood, cadencePhase: chosen.cadence.phase.id,
+      cadenceTarget: chosen.cadence.phase.energy, energy: chosen.cadence.energy,
       roll: rawRoll, total: total, starvedRoom: starvedRoom,
       candidates: scored.map(function (x) { return { id: x.spec.id, score: +x.score.toFixed(5), base: x.base,
-        markov: x.markov, roomFair: +x.roomFair.toFixed(2), sequenceFair: +x.sequenceFair.toFixed(2), solveBoost: x.solveBoost }; }) };
-    apMood = s.mood;
-    apChoiceTrace.push({ id: s.id, room: s.room, rooms: s.rooms.slice(), from: apLastChoice.moodFrom, to: s.mood, roll: +rawRoll.toFixed(6), starvedRoom: starvedRoom });
+        markov: x.markov, roomFair: +x.roomFair.toFixed(2), sequenceFair: +x.sequenceFair.toFixed(2),
+        solveBoost: x.solveBoost, cadence: +x.cadence.weight.toFixed(2), continuity: +x.continuity.toFixed(2),
+        travel: +x.travel.toFixed(2) }; }) };
+    apMood = s.mood; apLastFamily = s.family; apCadenceStep = (apCadenceStep + 1) % AP_CADENCE.length;
+    apChoiceTrace.push({ id: s.id, room: s.room, exitRoom: s.exitRoom, rooms: s.rooms.slice(),
+      from: apLastChoice.moodFrom, to: s.mood, family: s.family, cadence: apLastChoice.cadencePhase,
+      energy: apLastChoice.energy, roll: +rawRoll.toFixed(6), starvedRoom: starvedRoom });
     if (apChoiceTrace.length > AP_TRACE_LIMIT) apChoiceTrace.shift();
     return s;
   }
@@ -110407,10 +110490,17 @@ function spawnDustMote(container) {
     if (ROOM_RING.indexOf(home) === -1) home = "kitchen";
     var others = apPickSome(apUnlockedRooms().filter(function (r) { return r !== home; }), 2);
     var anchor = (ROOM_SPEC[home] || {}).anchor || null;
-    var b = [apBeat({ wait: 1200, tap: anchor, room: home, selfNav: true })]; // look at where we are
-    for (var i = 0; i < others.length; i++) b.push(apNavBeat(others[i], 1400));
-    if (others.length) b.push(apNavBeat(home, 1200));
-    while (b.length < 3) b.push(apBeat({ wait: 1400, tap: anchor, room: home, selfNav: true })); // one room unlocked: still chained
+    var b = [apBeat({ wait: 1200, tap: anchor, room: home, selfNav: true, label: "overture:home" })];
+    for (var i = 0; i < others.length; i++) {
+      b.push(apNavBeat(others[i], 900));
+      b.push(apBeat({ wait: 1250, tap: (ROOM_SPEC[others[i]] || {}).anchor || null,
+        room: others[i], selfNav: true, label: "overture:look" }));
+    }
+    if (others.length) {
+      b.push(apNavBeat(home, 900));
+      b.push(apBeat({ wait: 1000, tap: anchor, room: home, selfNav: true, label: "overture:return" }));
+    }
+    while (b.length < 3) b.push(apBeat({ wait: 1400, tap: anchor, room: home, selfNav: true, label: "overture:hold" }));
     apForcedRoom = home;
     return { room: home, kind: "overture", beats: b, dropped: {} };
   }
@@ -110418,7 +110508,8 @@ function spawnDustMote(container) {
   function apBuildSequence(spec) {
     if (!spec) return null;
     var raw = (spec.build && spec.build()) || [];
-    return { id: spec.id, room: spec.room, rooms: spec.rooms.slice(), mood: spec.mood,
+    return { id: spec.id, room: spec.room, exitRoom: spec.exitRoom, rooms: spec.rooms.slice(),
+      mood: spec.mood, family: spec.family,
       kind: "sequence", beats: apNormalize(raw, spec.room, apRoom(), apReduced), dropped: {} };
   }
   function apNextScene() {
@@ -110489,6 +110580,15 @@ function spawnDustMote(container) {
           var resume = apStack; apStack = null;
           apState("resuming", "interrupt complete");
           apScene = resume.scene; apSceneIdx = resume.idx;
+          // A message action may have panned to an entirely different room. Rejoin the suspended
+          // story before its next action instead of firing that action off-camera. Inserting the
+          // bridge into this run's disposable plan keeps the original next-beat index exact and
+          // lets the ordinary sequencer own its timing and cursor teardown.
+          var resumeBeat = apScene.beats[apSceneIdx];
+          var resumeRoom = resumeBeat && resumeBeat.room;
+          if (resumeRoom && !resumeBeat.selfNav && resumeRoom !== apRoom()) {
+            apScene.beats.splice(apSceneIdx, 0, apNavBeat(resumeRoom, ROOM_SETTLE_MS));
+          }
           apState(resume.state === "overture" ? "overture" : "sequence", "resume " + (apScene.id || apScene.kind));
           continue;
         }
@@ -110552,8 +110652,9 @@ function spawnDustMote(container) {
     apReduced = !!reduceMotion;
     apScene = null; apSceneIdx = 0; apStack = null; apOwned = {};
     apOverturePending = true; apForcedRoom = null;
-    apSeasonBag = []; apCycleSeen = {}; apLastRoom = null;
-    apRecentSequences = []; apMood = "start"; apLastChoice = null; apChoiceTrace = [];
+    apSeasonBag = []; apCycleSeen = {}; apLastRoom = null; apLastExitRoom = null;
+    apRecentSequences = []; apMood = "start"; apLastFamily = null; apCadenceStep = 0;
+    apLastChoice = null; apChoiceTrace = [];
     apSequenceSince = {}; apPausedFrom = null;
     apShowBadge(true);
     if (watchBtn) { watchBtn.hidden = true; watchBtn.classList.remove("nudge"); }
@@ -110666,6 +110767,8 @@ function spawnDustMote(container) {
   };
   window.__autoplayModel = function () {
     return { seed: apSeed, rngState: apRng, rngCalls: apRngCalls, mood: apMood,
+      family: apLastFamily, cadenceStep: apCadenceStep, cadence: AP_CADENCE[apCadenceStep % AP_CADENCE.length].id,
+      exitRoom: apLastExitRoom,
       recent: apRecentSequences.slice(), roomSince: Object.assign({}, apSince),
       sequenceSince: Object.assign({}, apSequenceSince), lastChoice: apLastChoice ? JSON.parse(JSON.stringify(apLastChoice)) : null,
       trace: apChoiceTrace.slice(), transitions: JSON.parse(JSON.stringify(AP_MOOD_TRANSITIONS)) };
@@ -110679,7 +110782,8 @@ function spawnDustMote(container) {
       var raw = (s.build && s.build()) || [];
       var beats = apNormalize(raw, s.room, null, false), total = 0, taps = 0, apps = {}, verbs = {};
       beats.forEach(function (b) { total += b.wait || 0; if (b.tap || b.click) taps++; if (b.act && b.arg) apps[b.act + ":" + b.arg] = 1; if (b.verb) verbs[b.verb] = 1; });
-      return { id: s.id, room: s.room, rooms: s.rooms.slice(), mood: s.mood, family: s.family,
+      return { id: s.id, room: s.room, exitRoom: s.exitRoom, rooms: s.rooms.slice(), mood: s.mood,
+        energy: AP_MOOD_ENERGY[s.mood], family: s.family,
         crossRoom: s.crossRoom, beats: beats.length, totalWait: total, taps: taps,
         apps: Object.keys(apps), verbs: Object.keys(verbs) };
     });
@@ -110695,24 +110799,30 @@ function spawnDustMote(container) {
   window.__autoplayPlan = function (seed, count) {
     var save = {
       seed: apSeed, rng: apRng, calls: apRngCalls, solved: apSolvedOverride, unlocked: apUnlockedOverride,
-      visits: apVisits, since: apSince, lastRoom: apLastRoom, cycle: apCycleSeen, loops: apLoopCount,
+      visits: apVisits, since: apSince, lastRoom: apLastRoom, lastExitRoom: apLastExitRoom,
+      cycle: apCycleSeen, loops: apLoopCount,
       seqVisits: apSequenceVisits, seqSince: apSequenceSince, recent: apRecentSequences,
-      mood: apMood, lastChoice: apLastChoice, trace: apChoiceTrace
+      mood: apMood, lastFamily: apLastFamily, cadenceStep: apCadenceStep,
+      lastChoice: apLastChoice, trace: apChoiceTrace
     };
     apSetSeed(seed == null ? 1 : seed); apSolvedOverride = true; apUnlockedOverride = ROOM_RING.slice();
-    apVisits = {}; apSince = {}; apLastRoom = null; apCycleSeen = {}; apLoopCount = 0;
+    apVisits = {}; apSince = {}; apLastRoom = null; apLastExitRoom = null; apCycleSeen = {}; apLoopCount = 0;
     apSequenceVisits = {}; apSequenceSince = {}; apRecentSequences = []; apMood = "start"; apLastChoice = null; apChoiceTrace = [];
+    apLastFamily = null; apCadenceStep = 0;
     var n = Math.max(1, Math.min(200, parseInt(count, 10) || 24)), out = [], details = [];
     for (var i = 0; i < n; i++) {
       var spec = apPickSequence(null); if (!spec) break;
-      out.push({ id: spec.id, room: spec.room, rooms: spec.rooms.slice(), mood: spec.mood });
+      out.push({ id: spec.id, room: spec.room, exitRoom: spec.exitRoom, rooms: spec.rooms.slice(),
+        mood: spec.mood, family: spec.family, cadence: apLastChoice.cadencePhase, energy: apLastChoice.energy });
       details.push(JSON.parse(JSON.stringify(apLastChoice)));
     }
     var result = { seed: apSeed, count: out.length, choices: out, trace: apChoiceTrace.slice(), details: details, loops: apLoopCount };
     apSeed = save.seed; apRng = save.rng; apRngCalls = save.calls; apSolvedOverride = save.solved; apUnlockedOverride = save.unlocked;
-    apVisits = save.visits; apSince = save.since; apLastRoom = save.lastRoom; apCycleSeen = save.cycle; apLoopCount = save.loops;
+    apVisits = save.visits; apSince = save.since; apLastRoom = save.lastRoom; apLastExitRoom = save.lastExitRoom;
+    apCycleSeen = save.cycle; apLoopCount = save.loops;
     apSequenceVisits = save.seqVisits; apSequenceSince = save.seqSince; apRecentSequences = save.recent;
-    apMood = save.mood; apLastChoice = save.lastChoice; apChoiceTrace = save.trace;
+    apMood = save.mood; apLastFamily = save.lastFamily; apCadenceStep = save.cadenceStep;
+    apLastChoice = save.lastChoice; apChoiceTrace = save.trace;
     return result;
   };
   // test-only: the 90s drift-back is unreachable inside a test budget, so let a harness shorten it.
@@ -110741,7 +110851,9 @@ function spawnDustMote(container) {
       if (s.crossRoom) crossCount++;
       if (!s.build || typeof s.build !== "function") bad.push("sequence has no builder: " + s.id);
       if (!AP_MOOD_TRANSITIONS[s.mood]) bad.push("sequence has unknown mood: " + s.id + " (" + s.mood + ")");
+      if (AP_MOOD_ENERGY[s.mood] == null) bad.push("sequence mood has no energy: " + s.id + " (" + s.mood + ")");
       if (!s.rooms.length || s.rooms.indexOf(s.room) === -1) bad.push("sequence omits primary room: " + s.id);
+      if (ROOM_RING.indexOf(s.exitRoom) === -1) bad.push("sequence has unknown exit room: " + s.id + " → " + s.exitRoom);
       s.rooms.forEach(function (room) { if (ROOM_RING.indexOf(room) === -1) bad.push("sequence has unknown room: " + s.id + " → " + room); });
     });
     ROOM_RING.forEach(function (room) { if ((roomCounts[room] || 0) < 4) bad.push("room needs >=4 sequence choices: " + room); });
@@ -110812,6 +110924,15 @@ function spawnDustMote(container) {
         x.rooms.forEach(function (room) { drought[room] = 0; });
         ROOM_RING.forEach(function (room) { if (drought[room] > STARVE_LIMIT + 1) bad.push("room starved in seeded plan: " + room); });
       });
+      var cadenceHits = 0;
+      for (i = 0; i < p1.choices.length; i++) {
+        var expectedPhase = AP_CADENCE[i % AP_CADENCE.length].id;
+        if (p1.choices[i].cadence !== expectedPhase) bad.push("cadence drift at choice " + i + ": " + p1.choices[i].cadence + " != " + expectedPhase);
+        if (p1.choices[i].energy === AP_CADENCE[i % AP_CADENCE.length].energy) cadenceHits++;
+      }
+      // Fairness occasionally pulls a due room across an energy boundary; the editorial arc must
+      // still be plainly dominant across a long seeded plan.
+      if (cadenceHits / p1.choices.length < 0.7) bad.push("cadence energy match fell below 70%: " + cadenceHits + "/" + p1.choices.length);
     } catch (e) { bad.push("seeded model preview threw: " + e); }
     apSeed = rngSave.seed; apRng = rngSave.rng; apRngCalls = rngSave.calls;
     apInvariants = { ok: !bad.length, problems: bad, sequences: AP_SEQUENCE_LIBRARY.length, crossRoom: crossCount };

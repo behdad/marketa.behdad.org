@@ -23,8 +23,9 @@ restarting its film or game. **Start over** discards it immediately; Restart
 inside the game asks for confirmation.
 
 Prefer watching? **Trailer** is a fixed one-minute preview. **Autoplay** is an
-ongoing tour; select **Take over** whenever you want control. Both respect
-reduced-motion preferences.
+ongoing tour of linked mini-stories, paced from quieter arrivals through party
+peaks and back down again; select **Take over** whenever you want control. Both
+respect reduced-motion preferences.
 
 ## Controls
 

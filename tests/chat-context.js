@@ -64,7 +64,10 @@ check(sources.phrasebook && sources.phrasebook.length === 16 &&
   sources.phrasebook.some(function (p) { return p.english === "I love you" && p.czech === "it’s kind of weird to say it in Czech"; }),
   "phrasebook reuses its canonical English-Czech cards, including Markéta's joke", sources.phrasebook);
 check(sources.photos && sources.photos.length > 0 && sources.photos.every(function (p) { return Array.isArray(p.people) && !p.src && !p.image && !p.data; }) && !/data:image/.test(JSON.stringify(sources.photos)), "Album exposes photo metadata without pixels or URLs", sources.photos);
-check(sources.tattoos && sources.tattoos.length === 6 && sources.tattoos.some(function (t) { return t.artist === "Markéta and Behdad"; }), "tattoo designs retain canonical artist credits", sources.tattoos);
+check(sources.tattoos && sources.tattoos.length === 7 &&
+  sources.tattoos.some(function (t) { return t.design === "pufferfish" && t.artist === "Markéta"; }) &&
+  sources.tattoos.some(function (t) { return t.design === "bored" && t.artist === "Behdad"; }),
+  "tattoo designs retain canonical artist credits", sources.tattoos);
 check(sources.notes && sources.notes.length === 15 && sources.notes.every(function (note) { return typeof note === "string"; }) && !/draft/i.test(JSON.stringify(sources.notes)), "Notes exposes only the couple's authored cards, never a visitor draft", sources.notes);
 check(sources.named && sources.named.length === 1 && sources.named[0].name === "Pouria" && /bartender/i.test(sources.named[0].role), "a named-person question retrieves only the matching public contact", sources.named);
 check(sources.roster && sources.roster.length >= 25 && sources.roster.some(function (p) { return p.name === "Athena" && /wedding boss/i.test(p.role); }), "a generic guest question can retrieve the public cast directory", sources.roster && sources.roster.length);
@@ -75,10 +78,11 @@ check(sources.catalog && sources.catalog.monitor.some(function (a) { return a.id
 check(sources.catalog.monitor.every(function (app) { return workerSet("PUBLIC_MONITOR_APPS").indexOf(app.id) >= 0; }) &&
   sources.catalog.phone.every(function (app) { return workerSet("PUBLIC_PHONE_APPS").indexOf(app.id) >= 0; }),
   "the Worker safety allowlists cover every live monitor and phone registry entry", sources.catalog);
-check(sources.games && sources.games.some(function (g) { return g.id === "flair-catch" && g.location === "kitchen/bar during the party" && /double-click/.test(g.how_to_open) && g.high_score === 17; }) &&
+check(sources.games && sources.games.some(function (g) { return g.id === "flair-catch" && g.location === "kitchen/bar during the party" && /Click Pouria/.test(g.how_to_open) && g.high_score === 17; }) &&
   sources.games.some(function (g) { return g.id === "alien-resources" && /office chair/.test(g.location) && g.high_score === 230; }) &&
   sources.games.some(function (g) { return g.id === "block-party" && /balcony/.test(g.location) && g.high_score === 41; }) &&
   sources.games.some(function (g) { return g.id === "hack-man" && /Search for hackman/.test(g.how_to_open) && g.high_score === 1930; }) &&
+  sources.games.some(function (g) { return g.id === "prince" && /Search for prince/.test(g.how_to_open); }) &&
   sources.games.some(function (g) { return g.id === "mines" && /office computer/.test(g.location) && /phone/.test(g.location); }) &&
   sources.games.some(function (g) { return g.id === "shoot" && g.name === "Shoot" && /Duke Nukem 3D, Doom, or Quake III Arena/.test(g.how_to_open); }) &&
   sources.games.some(function (g) { return g.id === "snake" && !Object.prototype.hasOwnProperty.call(g, "high_score"); }),

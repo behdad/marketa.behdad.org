@@ -77,6 +77,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   var attended = true;
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
+  function metadataCount(node) {
+    return Array.from(node.attributes).filter(function (attribute) {
+      return attribute.name === "role" || attribute.name.indexOf("aria-") === 0;
+    }).length;
+  }
   function state() { return window.__entranceRoomState(); }
   function roadtrip() { return state().drive.roadtrip; }
   function ensureEngine() { if (!state().car.engineOn) window.__toggleEntrancePorscheEngine(); }
@@ -312,7 +317,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       before: offerBeforeDrive,
       after: offerAfterDrive,
       visible: invitation.classList.contains("show"),
-      ariaHidden: invitation.getAttribute("aria-hidden"),
+      metadata: metadataCount(invitation),
       transform: invitation.getAttribute("transform"),
       viewBox: viewBox(),
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim()
@@ -322,15 +327,15 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim(),
       accept: invitation.querySelector("[data-i=entrance_roadtrip_invite_accept]").textContent.trim(),
       later: invitation.querySelector("[data-i=entrance_roadtrip_invite_later]").textContent.trim(),
-      acceptAria: document.getElementById("entrance-roadtrip-invite-accept").getAttribute("aria-label"),
-      laterAria: document.getElementById("entrance-roadtrip-invite-later").getAttribute("aria-label")
+      acceptMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-accept")),
+      laterMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-later"))
     };
     window.setLang("en");
     pressKey("Escape");
     var firstDismissed = {
       state: copy(state()),
       visible: invitation.classList.contains("show"),
-      ariaHidden: invitation.getAttribute("aria-hidden")
+      metadata: metadataCount(invitation)
     };
     window.__hideEntrancePorscheDriveHud();
     window.__openEntrancePorscheDriveHud();
@@ -342,7 +347,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var reoffered = {
       state: copy(state()),
       visible: invitation.classList.contains("show"),
-      ariaHidden: invitation.getAttribute("aria-hidden")
+      metadata: metadataCount(invitation)
     };
     pressKey("Enter");
     await sleep(80);
@@ -917,14 +922,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       classes: room.getAttribute("class"),
       viewBox: viewBox(),
       reentryVisible: reentryButton.classList.contains("show"),
-      reentryAriaHidden: reentryButton.getAttribute("aria-hidden"),
+      reentryMetadata: metadataCount(reentryButton),
       label: reentryButton.textContent.trim(),
       button: box(reentryButton),
       steering: box(document.getElementById("entrance-drive-steering"))
     };
     window.setLang("cs");
     reopened.czechLabel = reentryButton.textContent.trim();
-    reopened.czechAria = reentryButton.getAttribute("aria-label");
     window.setLang("en");
     if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
     var reentryBeforeEnter = copy(state());
@@ -942,7 +946,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var returned = {
       state: copy(state()),
       reentryVisible: reentryButton.classList.contains("show"),
-      reentryAriaHidden: reentryButton.getAttribute("aria-hidden")
+      reentryMetadata: metadataCount(reentryButton)
     };
     reentryButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     var clickedReentry = copy(state());
@@ -1200,7 +1204,7 @@ check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.ac
   /var roadtripInviteVisible[\s\S]{0,1500}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
   /event\.key === "Escape"[\s\S]{0,400}roadtripInviteVisible[\s\S]{0,300}entrance-roadtrip-invite-later/.test(source),
   "the first highway entry is explicit and its full offer owns Enter and Escape");
-check(/id="entrance-roadtrip-reenter"[^>]+data-aria-i="entrance_roadtrip_reenter"/.test(source) &&
+check(/id="entrance-roadtrip-reenter"[^>]+tabindex="0"/.test(source) &&
   /roadtripState\.everAccepted && !roadtripState\.accepted && !roadtripState\.active/.test(source) &&
   /bindRoadtripInviteControl\(roadtripReenter,[\s\S]{0,700}startRoadtrip\(!roadtripState\.paused\)/.test(source),
   "accepted drivers get an explicit compact Road Trip re-entry control");
@@ -1305,15 +1309,15 @@ check(activation && activation.practice.some(function (row) { return row.practic
   activation.offer.before.practiceLaps === 1 && activation.offer.before.unlocked &&
   activation.offer.before.invitationReady && !activation.offer.before.accepted && !activation.offer.before.active &&
   !activation.offer.after.accepted && !activation.offer.after.active && activation.offer.visible &&
-  activation.offer.ariaHidden === "false" && activation.offer.title === "Let’s road trip!" &&
+  activation.offer.metadata === 0 && activation.offer.title === "Let’s road trip!" &&
   activation.offer.transform === "translate(426 0)" &&
   activation.offer.czech.title === "Jedeme na výlet!" && activation.offer.czech.accept === "Vyjet na dálnici" &&
-  activation.offer.czech.later === "Později" && activation.offer.czech.acceptAria === "Vyjet na dálnici" &&
-  activation.offer.czech.laterAria === "Později" &&
+  activation.offer.czech.later === "Později" && activation.offer.czech.acceptMetadata === 0 &&
+  activation.offer.czech.laterMetadata === 0 &&
   activation.offer.viewBox === "0 -31 680 207" && activation.firstDismissed &&
-  !activation.firstDismissed.visible && activation.firstDismissed.ariaHidden === "true" &&
+  !activation.firstDismissed.visible && activation.firstDismissed.metadata === 0 &&
   !activation.firstDismissed.state.drive.roadtrip.active && !activation.firstDismissed.state.drive.roadtrip.accepted &&
-  activation.reoffered && activation.reoffered.visible && activation.reoffered.ariaHidden === "false" &&
+  activation.reoffered && activation.reoffered.visible && activation.reoffered.metadata === 0 &&
   activation.roadtrip.accepted && activation.roadtrip.everAccepted && activation.roadtrip.active,
   "exactly one practice lap shows the first full card; Escape defers it and Enter accepts its next session",
   activation && { practice: activation.practice, offer: activation.offer, roadtrip: activation.roadtrip });
@@ -1688,8 +1692,8 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   !close.reopened.roadtrip.active && close.reopened.roadtrip.paused &&
   !close.reopened.roadtrip.accepted && close.reopened.roadtrip.everAccepted &&
   !close.reopened.roadtrip.invitationVisible && close.reopened.roadtrip.reentryVisible &&
-  close.reopened.reentryVisible && close.reopened.reentryAriaHidden === "false" &&
-  close.reopened.label === "Road Trip" && close.reopened.czechLabel === "Výlet" && close.reopened.czechAria === "Výlet" &&
+  close.reopened.reentryVisible && close.reopened.reentryMetadata === 0 &&
+  close.reopened.label === "Road Trip" && close.reopened.czechLabel === "Výlet" &&
   (close.reopened.button.right <= close.reopened.steering.left || close.reopened.button.left >= close.reopened.steering.right ||
     close.reopened.button.bottom <= close.reopened.steering.top || close.reopened.button.top >= close.reopened.steering.bottom) &&
   !close.reentryBeforeEnter.car.engineOn && !close.reentryBeforeEnter.drive.roadtrip.active &&
@@ -1706,7 +1710,7 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   close.returned.state.drive.hud && !close.returned.state.drive.roadtrip.active && close.returned.state.drive.roadtrip.paused &&
   sameRetainedRun(close.reentered.roadtrip, close.returned.state.drive.roadtrip) &&
   close.returned.state.drive.roadtrip.reentryVisible && close.returned.reentryVisible &&
-  close.returned.reentryAriaHidden === "false" &&
+  close.returned.reentryMetadata === 0 &&
   close.clickedReentry.drive.roadtrip.active && !close.clickedReentry.drive.roadtrip.paused &&
   close.clickedReentry.drive.roadtrip.accepted &&
   sameRetainedRun(close.returned.state.drive.roadtrip, close.clickedReentry.drive.roadtrip),

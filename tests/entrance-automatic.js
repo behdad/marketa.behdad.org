@@ -52,8 +52,8 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
         hitHeight: Math.abs(modeHitMatrix && modeHitMatrix.d || 0) * Number(modeHitNode.getAttribute("height")),
         autoTab: autoButton.getAttribute("tabindex"),
         manualTab: manualButton.getAttribute("tabindex"),
-        autoLabel: autoButton.getAttribute("aria-label"),
-        manualLabel: manualButton.getAttribute("aria-label")
+        autoSelected: autoButton.classList.contains("selected"),
+        manualSelected: manualButton.classList.contains("selected")
       };
 
       manualButton.focus();
@@ -66,7 +66,7 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
         transmission: copy(drive().transmission),
         stored: localStorage.getItem("entranceTransmission:v1"),
         rangeTabs: Array.from(document.querySelectorAll("[data-drive-range]")).map(function (node) {
-          return [node.getAttribute("data-drive-range"), node.getAttribute("tabindex"), node.getAttribute("aria-hidden")];
+          return [node.getAttribute("data-drive-range"), node.getAttribute("tabindex"), node.classList.contains("selected")];
         })
       };
       report.steps.autoCopyEn = {
@@ -76,8 +76,6 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       };
       setLang("cs");
       report.steps.autoCopyCs = {
-        autoLabel: autoButton.getAttribute("aria-label"),
-        manualLabel: manualButton.getAttribute("aria-label"),
         title: document.getElementById("entrance-drive-coach-gear-title").textContent,
         gear: document.getElementById("entrance-drive-coach-gear-desktop").textContent,
         pedals: document.getElementById("entrance-drive-coach-pedals-desktop").textContent
@@ -373,12 +371,12 @@ check(result.errors.length === 0, "behavior harness has no uncaught page errors"
 check(s.controls && s.controls.mode.mode === "auto" && s.controls.hitWidth >= 44 &&
   s.controls.hitHeight >= 44 &&
   s.controls.autoTab === "0" && s.controls.manualTab === "0" &&
-  /automatic/i.test(s.controls.autoLabel) && /manual/i.test(s.controls.manualLabel),
-  "mode buttons are labelled, tabbable and at least 44 CSS px wide on mobile", s.controls);
+  s.controls.autoSelected && !s.controls.manualSelected,
+  "mode controls are visibly selected, tabbable and at least 44 CSS px wide on mobile", s.controls);
 check(s.focusedEnter && !s.focusedEnter.engine && s.focusedEnter.mode === "manual" &&
   s.focusedSpace && !s.focusedSpace.engine && s.focusedSpace.transmission.mode === "auto" &&
   s.focusedSpace.stored === "auto" && s.focusedSpace.rangeTabs.every(function (row) {
-    return row[1] === "0" && row[2] === "false";
+    return row[1] === "0" && row[2] === (row[0] === "P");
   }), "Enter/Space operate focused transmission controls without falling through to ignition", {
     enter: s.focusedEnter, space: s.focusedSpace
   });
@@ -387,9 +385,8 @@ check(s.autoCopyEn && s.autoCopyEn.title === "Select Drive" &&
   /AUTO shifts D1–D7/.test(s.autoCopyEn.pedals) &&
   s.autoCopyCs && s.autoCopyCs.title === "Zařaď D" &&
   s.autoCopyCs.gear === "Shift + ↓ směrem k D · Shift + ↑ směrem k P" &&
-  /AUTO řadí D1–D7/.test(s.autoCopyCs.pedals) &&
-  /automatickou/.test(s.autoCopyCs.autoLabel) && /manuální/.test(s.autoCopyCs.manualLabel),
-  "AUTO coaching and ARIA swap cleanly between English and Czech", {
+  /AUTO řadí D1–D7/.test(s.autoCopyCs.pedals),
+  "AUTO coaching swaps its visible English and Czech copy cleanly", {
     en: s.autoCopyEn, cs: s.autoCopyCs
   });
 check(s.shortcuts && s.shortcuts.mode === "auto", "A/M mode shortcuts operate while the HUD is open", s.shortcuts);

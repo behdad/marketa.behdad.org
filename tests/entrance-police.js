@@ -710,7 +710,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         hudPoints: document.getElementById("entrance-roadtrip-demerit-points").textContent.trim(),
         hudBac: document.getElementById("entrance-roadtrip-bac-value").textContent.trim(),
         hudStatusAbsent: !document.getElementById("entrance-roadtrip-demerit-status"),
-        buttonDisabled: suspendedButton.getAttribute("aria-disabled"),
+        buttonSuspended: suspendedButton.classList.contains("suspended"),
         restart: window.__entranceRoadtripStart(),
         ignition: {
           baseline: blockedBaseline,
@@ -1296,7 +1296,7 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   !s.suspension.state.car.engineOn && s.suspension.state.drive.speed === 0 &&
   s.suspension.state.drive.rpm === 0 && s.suspension.state.drive.gear === 0 &&
   !s.suspension.state.drive.audioActive && !s.suspension.state.drive.musicActive &&
-  s.suspension.buttonDisabled === "true" && /Suspended · 1:00|Suspended · 0:59/.test(s.suspension.buttonText) &&
+  s.suspension.buttonSuspended && /Suspended · 1:00|Suspended · 0:59/.test(s.suspension.buttonText) &&
   /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
   "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",
   s.suspension);

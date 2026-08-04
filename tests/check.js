@@ -1198,6 +1198,24 @@ function checkNoConflictMarkers(file, html) {
   else pass(file + ": no leftover merge conflict markers");
 }
 
+// Loft Day deliberately teaches through visible copy and authored coaches instead of
+// invisible accessibility metadata. Keep that game-specific boundary from regressing
+// when new controls are added; save-the-dates.html follows a different policy.
+function checkMetadataFreeGame(file, html) {
+  if (file !== "rsvp.html") return;
+  var issues = [];
+  var aria = html.match(/\baria-[a-z0-9_-]+/gi) || [];
+  if (aria.length) issues.push("ARIA tokens: " + Array.from(new Set(aria)).join(", "));
+  var markup = html.replace(/<script\b[\s\S]*?<\/script>/gi, "");
+  var roleTags = (markup.match(/<[^>]+>/g) || []).filter(function (tag) {
+    return /\srole\s*=/i.test(tag);
+  });
+  if (roleTags.length) issues.push("explicit role attributes: " + roleTags.length);
+  if (/\.setAttribute\(\s*["']role["']/i.test(html)) issues.push("dynamic role assignment");
+  if (issues.length) fail(file + ": game UI stays free of ARIA and explicit role metadata", issues.join("\n"));
+  else pass(file + ": game UI stays free of ARIA and explicit role metadata");
+}
+
 // Authored source is UTF-8. Keep printable characters visible instead of hiding them
 // behind backslash-u escapes; this also keeps Persian/Czech copy and regex endpoints
 // reviewable as the characters the browser actually sees.
@@ -1248,6 +1266,7 @@ FILES.forEach(function (file) {
   var script = extractScript(html);
   var style = extractStyle(html);
   checkNoConflictMarkers(file, html);
+  checkMetadataFreeGame(file, html);
   checkSyntax(file, script);
   if (script) {
     checkDictParity(file, script);

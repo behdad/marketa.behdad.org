@@ -40656,7 +40656,8 @@ window.__entranceRoomOpen = false;
     }
     if (!driveShifterTouchMoved && !driveShifterTouchSelectorOpen) return;
     var direction = porscheTouchDragDirection(event.clientX, event.clientY);
-    driveShifterTouchPreviewGear = driveShifterTouchSelectorOpen ?
+    driveShifterTouchPreviewGear = driveShifterTouchSelectorOpen ||
+      (porscheTransmission.mode === "auto" && driveShifterTouchMoved) ?
       porscheTouchDirectGear(event.clientX, event.clientY) :
       direction ? porscheDriveGearStepTarget(direction) : 0;
     paintPorscheTouchGearChoice(driveShifterTouchPreviewGear);
@@ -40673,6 +40674,8 @@ window.__entranceRoomOpen = false;
     var touchX = event ? event.clientX : driveShifterTouchLastX;
     var touchY = event ? event.clientY : driveShifterTouchLastY;
     var touchGear = activateTap && touchSelectorOpen ? porscheTouchDirectGear(touchX, touchY) : null;
+    var autoDragRange = activateTap && touchMoved && porscheTransmission.mode === "auto" ?
+      porscheTouchDirectGear(touchX, touchY) : null;
     var touchDirection = pointerType === "touch" && activateTap && touchMoved && !touchSelectorOpen ? porscheTouchDragDirection(touchX, touchY) : 0;
     clearTimeout(driveShifterHoldTimer);
     clearInterval(driveShifterRepeatTimer);
@@ -40690,7 +40693,9 @@ window.__entranceRoomOpen = false;
       try { driveShifter.releasePointerCapture(pointerId); } catch (_error) {}
     }
     if (wasHeld || activateTap) driveShifterSuppressClickUntil = performance.now() + 700;
-    if (activateTap && touchSelectorOpen) {
+    if (autoDragRange) {
+      selectPorscheDriveRange(autoDragRange);
+    } else if (activateTap && touchSelectorOpen) {
       if (porscheTransmission.mode === "auto") selectPorscheDriveRange(touchGear);
       else selectPorscheDriveGear(touchGear, true);
     } else if (pointerType === "touch" && activateTap) {
@@ -40728,6 +40733,10 @@ window.__entranceRoomOpen = false;
       driveShifterHoldTimer = null;
       if (pressSerial !== driveShifterPressSerial || driveShifterPointerId === null || !porscheShifterAvailable()) return;
       driveShifterHeld = true;
+      if (porscheTransmission.mode === "auto") {
+        stepPorscheDriveGear(-1);
+        return;
+      }
       driveShifterTouchPreviewGear = porscheTransmission.mode === "auto" ? porscheTransmission.range : 0;
       setPorscheTouchSelectorOpen(true);
       paintPorscheShifter(driveShifterTouchPreviewGear);
@@ -44257,7 +44266,7 @@ var T = {
       entrance_drive_coach_gear_desktop: "Shift + ↑ / ↓ changes gear",
       entrance_drive_coach_gear_touch: "Long-press the shifter, then drag to choose",
       entrance_drive_coach_auto_gear_title: "Select Drive",
-      entrance_drive_coach_auto_gear_desktop: "Shift + ↓ toward D · Shift + ↑ toward P",
+      entrance_drive_coach_auto_gear_desktop: "Drag the shifter · click toward D · right-click toward P",
       entrance_drive_coach_auto_gear_touch: "Drag the shifter down from P to D",
       entrance_drive_coach_pedals_title: "Now drive",
       entrance_drive_coach_pedals_desktop: "↑ accelerates · ↓ brakes · shift gears as needed",
@@ -45489,7 +45498,7 @@ var T = {
       entrance_drive_coach_gear_desktop: "Shift + ↑ / ↓ řadí rychlosti",
       entrance_drive_coach_gear_touch: "Podrž řadicí páku a tažením zvol rychlost",
       entrance_drive_coach_auto_gear_title: "Zařaď D",
-      entrance_drive_coach_auto_gear_desktop: "Shift + ↓ směrem k D · Shift + ↑ směrem k P",
+      entrance_drive_coach_auto_gear_desktop: "Táhni pákou · kliknutí k D · pravé kliknutí k P",
       entrance_drive_coach_auto_gear_touch: "Přesuň páku dolů z P na D",
       entrance_drive_coach_pedals_title: "Teď jeď",
       entrance_drive_coach_pedals_desktop: "↑ zrychluje · ↓ brzdí · podle potřeby řaď",

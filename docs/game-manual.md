@@ -182,6 +182,8 @@ On desktop:
 - select the ignition key to start or stop the engine;
 - select **AUTO** or **MANUAL** on the dashboard, press `A` / `M`, or use
   `Ctrl`+`←` for AUTO and `Ctrl`+`→` for MANUAL;
+- in AUTO, drag the shifter across several ranges; clicking advances toward D,
+  while a long-press or right-click moves one range toward P;
 - use `←` / `→` to steer; a tap stays gentle, while holding a direction or
   tapping it repeatedly builds progressively stronger steering;
 - in AUTO, use `Shift`+`↓` toward D and `Shift`+`↑` toward P; in MANUAL,
@@ -195,6 +197,8 @@ On touch:
 - slide the pink vertical control upward for progressive acceleration or
   downward for progressive braking, or keep pressing the physical pedals;
 - select **AUTO** or **MANUAL** on the dashboard; in AUTO, select P/R/N/D;
+  the shifter also supports the same multi-range drag, tap-forward, and
+  long-press-backward gestures;
   in MANUAL, drag the shifter up or down to change one gear, or long-press it
   to choose an exact gear from the enlarged pattern.
 

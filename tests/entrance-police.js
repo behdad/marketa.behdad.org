@@ -149,6 +149,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         frontStoppedBeat: trip().policeFrontStoppedBeat,
         parkedBehind: trip().policeParkedBehind,
         rearStopScale: trip().policeRearStopScale,
+        rearStopYOffset: trip().policeRearStopYOffset,
         frontParkedAhead: trip().policeFrontParkedAhead,
         frontParkedScale: trip().policeFrontParkedScale,
         arrestDuration: trip().policeArrestDuration,
@@ -417,6 +418,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var ordinaryArrival = copy(trip());
       window.__entranceRoadtripPoliceStep(0, .624);
       var ordinarySettled = copy(trip());
+      var ordinarySettledPose = mirrorSample();
       window.__entranceRoadtripPoliceStep(0, .0011);
       var ordinaryArrestStart = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 1);
@@ -431,6 +433,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         stopped: ordinaryStopped,
         arrival: ordinaryArrival,
         settled: ordinarySettled,
+        settledPose: ordinarySettledPose,
         arrestStart: ordinaryArrestStart,
         approach: ordinaryApproach,
         card: ordinaryCard,
@@ -973,6 +976,7 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.stoppedBeat === 1.25 &&
   s.contract.frontStoppedBeat === 1.8 &&
   s.contract.parkedBehind === 4 && s.contract.rearStopScale === 3.75 &&
+  s.contract.rearStopYOffset === 6.5 &&
   s.contract.frontParkedAhead === 4 && s.contract.frontParkedScale === 2.15 &&
   s.contract.arrestDuration === 5.8 &&
   s.contract.centerlineSeconds === 10 && s.contract.centerlineFine === 243 &&
@@ -1217,7 +1221,8 @@ check(s.stopped && s.stopped.stopped.active && s.stopped.stopped.police.phase ==
   s.stopped.settled.police.mirrorScale > .8 &&
   s.stopped.settled.police.mirrorRoadFraction === 0 &&
   Math.abs(s.stopped.settled.police.mirrorProjectX - s.stopped.settled.police.mirrorPathX) < .01 &&
-  s.stopped.settled.police.mirrorProjectY - 44 * s.stopped.settled.police.mirrorScale < -111 &&
+  s.stopped.settledPose.y - 44 * s.stopped.settledPose.scale >= -111 &&
+  s.stopped.settledPose.y > -76 && s.stopped.settledPose.y < -72 &&
   !s.stopped.settled.police.sirenActive &&
   s.stopped.arrestStart.police.phase === "arrest" &&
   s.stopped.arrestStart.police.mirrorMode === "shoulder-arrest" &&

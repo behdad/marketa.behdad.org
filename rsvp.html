@@ -35506,6 +35506,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_ROADSIDE_JOIN_DISTANCE = 24;
   var ROADTRIP_POLICE_PARKED_BEHIND = 4;
   var ROADTRIP_POLICE_REAR_STOP_SCALE = 3.75;
+  var ROADTRIP_POLICE_REAR_STOP_Y_OFFSET = 6.5;
   // Alberta's standard schedule, including the 20% Victims of Crime surcharge.
   // Index = whole km/h over; 51+ has no fixed amount and requires court.
   var ROADTRIP_POLICE_STANDARD_FINES = [0,
@@ -37970,6 +37971,7 @@ window.__entranceRoomOpen = false;
       var mirrorRoadFraction = followingLane * ROADTRIP_LANE_FRACTION;
       var mirrorMode = police.phase;
       var mirrorStopScale = 1;
+      var mirrorStopYOffset = 0;
       if (roadsideReflection) {
         if (police.phase === "pursuit" || police.phase === "capture") {
           var join = Math.max(0, Math.min(1,
@@ -38001,6 +38003,7 @@ window.__entranceRoomOpen = false;
           (0 - police.stopMirrorRoadFraction) * stopPull;
         if (!police.stopInFront && police.resolutionReason === "pulled-over") {
           mirrorStopScale += (ROADTRIP_POLICE_REAR_STOP_SCALE - 1) * stopPull;
+          mirrorStopYOffset = ROADTRIP_POLICE_REAR_STOP_Y_OFFSET * stopPull;
         }
         mirrorMode = stopPull < 1 ? "shoulder-arrival" : "shoulder-stopped";
       } else if (police.phase === "arrest") {
@@ -38008,6 +38011,7 @@ window.__entranceRoomOpen = false;
         mirrorRoadFraction = police.stopInFront ? 1.08 : 0;
         if (!police.stopInFront && police.resolutionReason === "pulled-over") {
           mirrorStopScale = ROADTRIP_POLICE_REAR_STOP_SCALE;
+          mirrorStopYOffset = ROADTRIP_POLICE_REAR_STOP_Y_OFFSET;
         }
         mirrorMode = "shoulder-" + police.phase;
       }
@@ -38025,7 +38029,7 @@ window.__entranceRoomOpen = false;
       roadtripPoliceMirrorNode.setAttribute("data-roadtrip-project-y", mirrorPose.y.toFixed(2));
       roadtripPoliceMirrorNode.setAttribute("data-roadtrip-rotation", mirrorPose.rotation.toFixed(2));
       roadtripPoliceMirrorNode.setAttribute("transform", "translate(" + mirrorPose.x.toFixed(2) + " " +
-        mirrorPose.y.toFixed(2) + ") rotate(" + mirrorPose.rotation.toFixed(2) + ") scale(" +
+        (mirrorPose.y + mirrorStopYOffset).toFixed(2) + ") rotate(" + mirrorPose.rotation.toFixed(2) + ") scale(" +
         mirrorScale.toFixed(3) + ")");
       roadtripPoliceMirrorNode.setAttribute("visibility", "visible");
     } else if (roadtripPoliceMirrorNode) {
@@ -42890,6 +42894,7 @@ window.__entranceRoomOpen = false;
           policeFrontStoppedBeat: ROADTRIP_POLICE_FRONT_STOP_SECONDS,
           policeParkedBehind: ROADTRIP_POLICE_PARKED_BEHIND,
           policeRearStopScale: ROADTRIP_POLICE_REAR_STOP_SCALE,
+          policeRearStopYOffset: ROADTRIP_POLICE_REAR_STOP_Y_OFFSET,
           policeFrontParkedAhead: ROADTRIP_POLICE_FRONT_PARKED_AHEAD,
           policeFrontParkedScale: ROADTRIP_POLICE_FRONT_PARKED_SCALE,
           policeArrestDuration: ROADTRIP_POLICE_ARREST_SECONDS,

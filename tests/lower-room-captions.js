@@ -22,6 +22,7 @@ var HARNESS = [
   ' await visit("en",report.en);await visit("cs",report.cs);',
   ' setLang("en");window.goToStage("office");window.setCaption("office_call",true);window.__openBedroomRoom();await sleep(30);var bedroomAction=cap();window.__closeBedroomRoom();var officeReturn=cap();report.bedroomReturn={inside:bedroomAction,upstairs:officeReturn};',
   ' setLang("en");window.goToStage("kitchen");await sleep(20);var upstairs=cap();window.__flashCaptionKey("trip_caption_molly",550,"caption-test");var before=cap();window.__openBathroomRoom();var during=cap();await sleep(620);var restored=cap();var repeat=window.__openBathroomRoom();window.__flashCaptionKey("trip_caption_molly",550,"caption-close-test");window.__closeBathroomRoom();var closing=cap();await sleep(620);var upstairsRestored=cap();report.transient={upstairs:upstairs,before:before,during:during,restored:restored,repeat:repeat,closing:closing,upstairsRestored:upstairsRestored};',
+  ' window.setCaption("lower_dungeon",true);window.__flashCaptionKey("trip_caption_molly",550,"caption-rebase-test");var rebaseBefore=cap();window.setCaption("cuddly",true);var rebaseDuring=cap();await sleep(620);var rebaseRestored=cap();report.rebased={before:rebaseBefore,during:rebaseDuring,restored:rebaseRestored};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},250);});',
   '})();</script>'
@@ -89,6 +90,11 @@ check(transient && transient.closing.key === "trip_caption_molly" &&
   transient.upstairsRestored.key === transient.upstairs.key &&
   transient.upstairsRestored.text === transient.upstairs.text,
   "leaving does not interrupt gameplay copy and restores the upstairs caption afterward", transient);
+var rebased = result.rebased;
+check(rebased && rebased.before.key === "trip_caption_molly" &&
+  rebased.during.key === "trip_caption_molly" && rebased.during.flash &&
+  rebased.restored.key === "cuddly" && !rebased.restored.flash,
+  "a temporary caption restores the newest permanent caption set beneath it", rebased);
 
 console.log("");
 if (failures) {

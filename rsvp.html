@@ -102500,6 +102500,12 @@ function spawnDustMote(container) {
       key === "office_call" || key === "office_computer" || key === "office_find" ||
       key === "office_hint";
   }
+  function stageCaptionUnderFlash(key) {
+    if (!flashedCaption || key === flashedCaption.key) return false;
+    flashedCaption.prevKey = key;
+    flashedCaption.prevHtml = huntText(key);
+    return true;
+  }
   function setCaption(key, force) {
     // Trailer owns the caption completely. Games and lower rooms use force=true for their
     // normal instruction lines, so the gate must admit only the reel's own cine_* invitations;
@@ -102509,7 +102515,9 @@ function spawnDustMote(container) {
     if ((huntIntroShowing || openingGuideShowing) && !force) return; // opening prompt/guide owns the caption until its handoff completes
     if (lowerRoomOwnsViewport() && !force) return; // upstairs beats must not speak over an open lower room
     if (window.__secondRound && phaseOneSolveCaption(key) && !force) return;
-    if (flashedCaption && key !== flashedCaption.key) clearFlashedCaption(null, false);
+    // A flash owns the visible line for its full hold, but permanent progress beneath it
+    // keeps moving. Expiry must reveal the newest instruction, not the one the flash covered.
+    if (stageCaptionUnderFlash(key)) return;
     captionKey = key;
     caption.classList.remove("rsvp-nudge");
     // innerHTML, not textContent: caption copy carries markup — <em> round the cast's names, the
@@ -102608,11 +102616,7 @@ function spawnDustMote(container) {
     }
     // Entry captions become the room's stable line. If gameplay currently owns the
     // visible line, leave it untouched and only change what its temporary flash restores.
-    if (flashedCaption) {
-      flashedCaption.prevKey = key;
-      flashedCaption.prevHtml = huntText(key);
-      return true;
-    }
+    if (stageCaptionUnderFlash(key)) return true;
     setCaption(key, true);
     return captionKey === key;
   };

@@ -787,6 +787,7 @@ var PROBE_HARNESS = [
   "    ok('messages: stale recurring phase-one attempt is not flushed', !(window.__phoneMessageReceived && window.__phoneMessageReceived('cue_mail')));",
   "    if (window.goToStage) window.goToStage('garden');",
   "    ok('garden switch cue: deterministic reveal hook exists', typeof window.__showPartyExitHint === 'function' && window.__showPartyExitHint());",
+  "    var partyExitFlash = window.__flashCaptionState && window.__flashCaptionState(); if (partyExitFlash && window.__clearFlashCaption) window.__clearFlashCaption(partyExitFlash.owner);",
   "    ok('garden switch cue: caption says the party ends but exploration continues', window.__captionKey && window.__captionKey() === 'party_exit_hint' && /not the game/i.test(el('hunt-caption').textContent) && /apps stay open/i.test(el('hunt-caption').textContent));",
   "    ok('garden switch cue: the wall switch pulses until used', gardenWallSwitch.classList.contains('invite-pulse'));",
   "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",

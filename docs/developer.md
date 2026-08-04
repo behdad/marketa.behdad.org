@@ -239,6 +239,9 @@ Wildlife switches to a timed hop-and-verge escape inside 22 road units: a slow a
 escape its required `0.48s`, while a fast same-lane arrival can reach the collision zone first.
 Roadtrip event feedback is routed through the shared lower-room caption flash; do not place transient
 score or coaching copy over the windshield.
+While `__flashCaptionKey()` owns the visible clue line, `setCaption()` stages any newer permanent
+caption as that flash's return target. Let the temporary copy finish; on expiry it must reveal the
+newest room or progress instruction rather than the permanent caption that was visible at flash start.
 `awardRoadtripBonus()` is the only combo-scored path: a close pass and safe wildlife clear are worth
 2/3, while the pooled `heart`, `kiss`, and `inf` collectibles are worth 5/10/25 before a combo capped
 at `3×`. `awardRoadtripDistance()` adds one point per 100 physical metres without the combo;

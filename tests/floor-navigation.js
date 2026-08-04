@@ -30,7 +30,9 @@ var harness = String.raw`<script>
       room: window.currentStageName,
       max: window.__maxUnlocked(),
       bathroom: !!window.__bathroomRoomOpen,
-      dungeon: !!(window.__princeState && window.__princeState().basement)
+      bathroomHidden: document.getElementById("bathroom-room").hidden,
+      dungeon: !!(window.__princeState && window.__princeState().basement),
+      navigation: window.__floorNavigationState()
     };
   }
   function report() {
@@ -48,11 +50,14 @@ var harness = String.raw`<script>
 
     window.__openBathroomRoom();
     await sleep(30);
-    var first = floorState();
-    check("first lower-room arrival shows the vertical Up chevron and its coach",
-      !first.hidden && first.mark === "›" && first.up && !first.down &&
-      !first.hasAriaLabel && !first.hasTitle &&
-      !first.coachHidden && first.coach === "Up gets you back.", first);
+    var earlyDown = floorState();
+    check("descent keeps the Down chevron before the transition midpoint",
+      !earlyDown.hidden && earlyDown.mark === "›" && earlyDown.down && !earlyDown.up &&
+      !earlyDown.hasAriaLabel && !earlyDown.hasTitle && earlyDown.bathroom &&
+      earlyDown.coachHidden && earlyDown.navigation.pending && earlyDown.navigation.target, earlyDown);
+    check("vertical floor travel uses the shorter 400ms transition",
+      getComputedStyle(document.querySelector(".hunt-viewport")).transitionDuration === "0.4s",
+      getComputedStyle(document.querySelector(".hunt-viewport")).transitionDuration);
     var dots = document.getElementById("hunt-dots").getBoundingClientRect();
     var button = document.getElementById("hunt-floor-btn").getBoundingClientRect();
     check("floor control appearance leaves the room dots at their exact center",
@@ -61,14 +66,23 @@ var harness = String.raw`<script>
     check("Up sits to the right of the room dots with breathing room", button.left - dots.right >= 6,
       { dotsRight: dots.right, buttonLeft: button.left });
 
-    await sleep(760);
+    await sleep(210);
+    var first = floorState();
+    check("descent changes to Up at the transition midpoint and reveals its coach",
+      first.up && !first.down && !first.coachHidden && first.coach === "Up gets you back." &&
+      first.navigation.downstairs && !first.navigation.pending, first);
+    await sleep(220);
     check("first-arrival coach remains after the lower room settles", !floorState().coachHidden, floorState());
     window.__bathroomRoomOpen = false;
     window.__syncFloorNavigation();
+    await sleep(220);
+    check("ownership churn cannot retire the coach while navigation reads upstairs",
+      floorState().down && !floorState().coachHidden, floorState());
     window.__bathroomRoomOpen = true;
     window.__syncFloorNavigation();
-    await sleep(40);
-    check("transient lower-room ownership churn does not retire the coach", !floorState().coachHidden, floorState());
+    await sleep(220);
+    check("ownership recovery restores Up without retiring the coach",
+      floorState().up && !floorState().coachHidden, floorState());
 
     setLang("cs");
     var czech = floorState();
@@ -78,13 +92,25 @@ var harness = String.raw`<script>
 
     document.getElementById("hunt-floor-btn").click();
     await sleep(30);
+    var earlyUp = floorState();
+    check("ascent keeps Up before the same transition midpoint",
+      earlyUp.up && !earlyUp.down && !earlyUp.bathroom && !earlyUp.bathroomHidden &&
+      earlyUp.coachHidden && earlyUp.navigation.pending && !earlyUp.navigation.target, earlyUp);
+    await sleep(210);
     var upstairs = floorState();
-    check("Up returns upstairs and becomes the inverse Down control",
+    check("ascent changes to Down at the transition midpoint",
       !upstairs.hidden && upstairs.mark === "›" && upstairs.down && !upstairs.up &&
-      !upstairs.bathroom && upstairs.coachHidden, upstairs);
+      !upstairs.bathroom && !upstairs.bathroomHidden && upstairs.coachHidden &&
+      upstairs.navigation.downstairs === false && !upstairs.navigation.pending, upstairs);
+    await sleep(200);
+    check("upstairs room owns the viewport at the 400ms settle boundary",
+      floorState().bathroomHidden && floorState().down, floorState());
     document.getElementById("hunt-floor-btn").click();
     await sleep(30);
-    check("Down re-enters the paired lower room", floorState().bathroom && floorState().up, floorState());
+    check("re-descent also keeps Down before the midpoint",
+      floorState().bathroom && floorState().down && floorState().navigation.pending, floorState());
+    await sleep(210);
+    check("re-descent changes to Up at the midpoint", floorState().bathroom && floorState().up, floorState());
 
     window.__setMaxUnlocked(0);
     var next = document.getElementById("hunt-next");
@@ -98,6 +124,9 @@ var harness = String.raw`<script>
     var pointerSecond = floorState();
     check("the second pointer press unlocks and enters the next lower room",
       pointerSecond.room === "garden" && pointerSecond.dungeon && pointerSecond.max === 1, pointerSecond);
+    check("lateral lower-room travel keeps its 720ms slide",
+      document.getElementById("lower-room-track").style.transition.indexOf(".72s") !== -1,
+      document.getElementById("lower-room-track").style.transition);
 
     await sleep(760);
     window.__closeMonitorPrince();

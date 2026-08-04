@@ -424,7 +424,7 @@ footer{margin-top:2.6rem}
   --floor-pan:0%;
   position:relative; flex:1 1 auto; min-width:0; overflow:hidden; border-radius:14px;
   box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec; container-type:inline-size;
-  transition:--floor-pan .72s cubic-bezier(.4,0,.2,1);
+  transition:--floor-pan .4s cubic-bezier(.4,0,.2,1);
 }
 @property --floor-pan{
   syntax:"<percentage>";
@@ -438,7 +438,7 @@ footer{margin-top:2.6rem}
 #cinema-room{
   position:absolute; inset:0; z-index:12; overflow:hidden; color:#fffdf8;
   visibility:hidden; pointer-events:none; transform:translateY(100%);
-  transition:transform .72s cubic-bezier(.4,0,.2,1),visibility 0s linear .72s;
+  transition:transform .4s cubic-bezier(.4,0,.2,1),visibility 0s linear .4s;
   background:#211813;
 }
 #cinema-room-art{display:block; width:100%; height:100%}
@@ -603,7 +603,7 @@ footer{margin-top:2.6rem}
 #entrance-room{
   position:absolute; inset:0; z-index:12; overflow:hidden; color:#fffdf8;
   visibility:hidden; pointer-events:none; transform:translateY(100%);
-  transition:transform .72s cubic-bezier(.4,0,.2,1),visibility 0s linear .72s;
+  transition:transform .4s cubic-bezier(.4,0,.2,1),visibility 0s linear .4s;
   background:#15171c;
 }
 #entrance-room-art{
@@ -1301,7 +1301,7 @@ footer{margin-top:2.6rem}
 #bathroom-room{
   position:absolute; inset:0; z-index:12; overflow:hidden;
   visibility:hidden; pointer-events:none; transform:translateY(100%);
-  transition:transform .72s cubic-bezier(.4,0,.2,1),visibility 0s linear .72s;
+  transition:transform .4s cubic-bezier(.4,0,.2,1),visibility 0s linear .4s;
   background:#75675d;
 }
 #bathroom-room-art{display:block; width:100%; height:100%}
@@ -1468,7 +1468,7 @@ footer{margin-top:2.6rem}
 #bedroom-room{
   position:absolute; inset:0; z-index:12; overflow:hidden;
   visibility:hidden; pointer-events:none; transform:translateY(100%);
-  transition:transform .72s cubic-bezier(.4,0,.2,1),visibility 0s linear .72s;
+  transition:transform .4s cubic-bezier(.4,0,.2,1),visibility 0s linear .4s;
   background:#6f4334;
 }
 #bedroom-room-art{display:block;width:100%;height:100%}
@@ -1668,7 +1668,7 @@ footer{margin-top:2.6rem}
   position:relative; inset:auto; flex:0 0 20%; width:20%; height:100%; z-index:auto;
   transform:none;
   translate:0 calc(100% - var(--floor-pan));
-  transition:visibility 0s linear .72s;
+  transition:visibility 0s linear .4s;
 }
 .hunt-viewport:is(.bathroom-room-open,.prince-basement-open,.cinema-room-open,.bedroom-room-open,.entrance-room-open)
   #lower-room-track > :is(#bathroom-room,#prince-basement,#cinema-room,#bedroom-room,#entrance-room){
@@ -6351,7 +6351,7 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   visibility:hidden;
   pointer-events:none;
   transform:translateY(100%);
-  transition:transform .72s cubic-bezier(.4,0,.2,1),visibility 0s linear .72s;
+  transition:transform .4s cubic-bezier(.4,0,.2,1),visibility 0s linear .4s;
   background:#788494 url("art/prince-stone.svg") 0 0/auto 20% repeat;
   image-rendering:pixelated;
 }
@@ -33382,6 +33382,11 @@ function monitorTouchMenusChooserOnly() {
     window.matchMedia("(any-pointer: coarse), (hover: none)").matches;
 }
 
+var LOWER_FLOOR_PAN_MS = 400;
+function lowerFloorCloseDelay(viewport) {
+  return viewport && viewport.classList.contains("lower-room-sliding") ? 720 : LOWER_FLOOR_PAN_MS;
+}
+
 // Bathroom / Toilets is a code-native lower room beneath Kitchen / Bar. It keeps the
 // upstairs stage in place and slides the illustrated room over the same viewport.
 window.__bathroomRoomOpen = false;
@@ -33948,7 +33953,7 @@ window.__bathroomRoomOpen = false;
       closing = false;
       room.hidden = true;
       if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(false);
-    }, 720);
+    }, lowerFloorCloseDelay(viewport));
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     focusUpstairs();
     return true;
@@ -34627,7 +34632,7 @@ window.__cinemaVideoLoaded = false;
       cinemaClosing = false;
       room.hidden = true;
       if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(false);
-    }, 720);
+    }, lowerFloorCloseDelay(viewport));
     refreshProjectorAudio(0.7);
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
     try { ticket.focus({ preventScroll: true }); } catch (_error) { try { ticket.focus(); } catch (_error2) {} }
@@ -41447,7 +41452,7 @@ window.__entranceRoomOpen = false;
     closing = true;
     viewport.classList.remove("entrance-room-open");
     clearTimeout(closeTimer);
-    closeTimer = setTimeout(finishEntranceClose, 720);
+    closeTimer = setTimeout(finishEntranceClose, lowerFloorCloseDelay(viewport));
     if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
     if (!viewport.hasAttribute("tabindex")) viewport.setAttribute("tabindex", "-1");
     try { viewport.focus({ preventScroll: true }); }
@@ -42904,7 +42909,7 @@ window.__bedroomRoomOpen = false;
       closing = false;
       room.hidden = true;
       if (window.__setLowerRoomNotificationHold) window.__setLowerRoomNotificationHold(false);
-    }, 720);
+    }, lowerFloorCloseDelay(viewport));
     return true;
   }
   function openBedroom() {
@@ -76568,6 +76573,7 @@ async def localfont(name):
       window.__restoreLowerRoomCaption();
     }
     princeClosing = true;
+    if (princeMode === "basement" && window.__syncFloorNavigation) window.__syncFloorNavigation();
     window.__princeInputActive = false;
     // Phaser installs its own key suppression inside the retained iframe. Move focus
     // back into the parent document immediately, before the slide-out finishes, or a
@@ -76581,7 +76587,7 @@ async def localfont(name):
     princeSync();
     if (princeMode === "basement" && huntViewport) {
       huntViewport.classList.remove("prince-basement-open");
-      setTimeout(finishPrincePark, 720);
+      setTimeout(finishPrincePark, lowerFloorCloseDelay(huntViewport));
       return;
     }
     var current = document.fullscreenElement || document.webkitFullscreenElement;
@@ -76667,7 +76673,8 @@ async def localfont(name):
   window.__princeState = function () {
     return { open: princePresented, mode: princeMode,
       parked: !princePresented && (!!princeFrame || princeMode === "basement"),
-      overlay: !!(princeOverlay && !princeOverlay.hidden), basement: princePresented && princeMode === "basement",
+      overlay: !!(princeOverlay && !princeOverlay.hidden),
+      basement: princePresented && princeMode === "basement" && !princeClosing,
       initiated: !!princeFrame, playing: !!(princeBasement && princeBasement.classList.contains("playing")),
       iframe: princeFrame ? princeFrame.getAttribute("src") : null, state: princeFrameState,
       browserFullscreen: princeOwnsFullscreen };
@@ -101941,29 +101948,70 @@ function spawnDustMote(container) {
     var princeState = window.__princeState && window.__princeState();
     return !!(princeState && princeState.basement);
   }
+  var floorNavigationDownstairs = lowerRoomOwnsViewport();
+  var floorNavigationTarget = floorNavigationDownstairs;
+  var floorNavigationTimer = null;
+  var floorCoachPending = false;
   function floorText(key) {
     var l = document.documentElement.lang;
     return (T[l] && T[l][key]) || T.en[key] || key;
   }
   function hideFloorCoach() {
+    floorCoachPending = false;
     if (floorCoach) floorCoach.hidden = true;
   }
-  function syncFloorNavigation() {
+  function renderFloorNavigation() {
     if (!floorBtn) return;
-    var downstairs = lowerRoomOwnsViewport();
+    var downstairs = floorNavigationDownstairs;
     floorBtn.hidden = !downstairs && !lowerRoomDiscovered;
     floorBtn.textContent = "›";
     floorBtn.classList.toggle("floor-up", downstairs);
     floorBtn.classList.toggle("floor-down", !downstairs);
     if (floorCoach && !floorCoach.hidden) floorCoach.textContent = floorText("floor_up_coach");
   }
+  function settleFloorNavigation(downstairs) {
+    floorNavigationTimer = null;
+    floorNavigationDownstairs = downstairs;
+    floorNavigationTarget = downstairs;
+    renderFloorNavigation();
+    if (downstairs && floorCoachPending) showFloorCoach();
+  }
+  function syncFloorNavigation() {
+    var downstairs = lowerRoomOwnsViewport();
+    if (downstairs === floorNavigationDownstairs) {
+      clearTimeout(floorNavigationTimer);
+      floorNavigationTimer = null;
+      floorNavigationTarget = downstairs;
+    } else if (!floorNavigationTimer || floorNavigationTarget !== downstairs) {
+      clearTimeout(floorNavigationTimer);
+      floorNavigationTarget = downstairs;
+      var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      floorNavigationTimer = setTimeout(function () {
+        settleFloorNavigation(floorNavigationTarget);
+      }, reduced ? 1 : LOWER_FLOOR_PAN_MS / 2);
+    }
+    renderFloorNavigation();
+  }
   function showFloorCoach() {
     if (!floorCoach || !lowerRoomOwnsViewport()) return;
+    if (!floorNavigationDownstairs) {
+      floorCoachPending = true;
+      return;
+    }
+    floorCoachPending = false;
     floorCoach.textContent = floorText("floor_up_coach");
     floorCoach.hidden = false;
   }
   window.__hideFloorCoach = hideFloorCoach;
   window.__syncFloorNavigation = syncFloorNavigation;
+  window.__floorNavigationState = function () {
+    return {
+      downstairs: floorNavigationDownstairs,
+      target: floorNavigationTarget,
+      pending: !!floorNavigationTimer,
+      actual: lowerRoomOwnsViewport()
+    };
+  };
   var lowerRoomSlideTimer = null;
   var lowerRoomSlideState = null;
   var lowerRoomSlideQueue = null;

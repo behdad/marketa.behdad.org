@@ -34952,6 +34952,9 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_LANE_OFFSET = 7.5;
   var ROADTRIP_LANE_FRACTION = .5;
   var ROADTRIP_STEER_RATE = 1.75;
+  var ROADTRIP_IMPAIRED_ERRATIC_MIN_SPEED = 45;
+  var ROADTRIP_IMPAIRED_DEMERITS = 6;
+  var ROADTRIP_IMPAIRED_SCORE_PENALTY = 250;
   var ROADTRIP_CURVE_CYCLE = 600;
   var ROADTRIP_CURVES = [
     { start: 110, length: 104, direction: 1, strength: .017 },
@@ -35085,6 +35088,10 @@ window.__entranceRoomOpen = false;
     centerlineCrossings: 0,
     shoulderZone: "road",
     shoulderDistance: 0,
+    impairedSteeringPhase: 0,
+    impairedSteeringBias: 0,
+    erraticDrivingSeconds: 0,
+    erraticDriving: false,
     nextSpawnDistance: 34,
     police: {
       phase: "idle",
@@ -35101,6 +35108,7 @@ window.__entranceRoomOpen = false;
       overLimit: 0,
       fine: 0,
       courtRequired: false,
+      impairedDriving: false,
       lastDemerits: 0,
       lastDemeritTotal: 0,
       tickets: 0,
@@ -35759,18 +35767,20 @@ window.__entranceRoomOpen = false;
     var cardOpacity = Math.max(0, Math.min(1, (elapsed - 2.7) / .45)) * fade;
     if (roadtripArrestCardNode) roadtripArrestCardNode.setAttribute("opacity", cardOpacity.toFixed(3));
     var refusalPoints = police.resolutionReason === "refused" ? 5 : 0;
-    var prospectivePoints = roadtripDemeritsForSpeed(police.overLimit) + refusalPoints;
+    var prospectivePoints = roadtripDemeritsForSpeed(police.overLimit) + refusalPoints +
+      (police.impairedDriving ? ROADTRIP_IMPAIRED_DEMERITS : 0);
     var prospectiveTotal = Math.min(ROADTRIP_DEMERIT_SUSPENSION,
       roadtripState.demeritPoints + prospectivePoints);
     var courtStop = police.courtRequired;
-    var titleKey = courtStop ? "entrance_roadtrip_arrest_title" :
-      "entrance_roadtrip_arrest_ticket_title";
+    var titleKey = police.impairedDriving ? "entrance_roadtrip_arrest_impaired_title" :
+      (courtStop ? "entrance_roadtrip_arrest_title" : "entrance_roadtrip_arrest_ticket_title");
     if (roadtripArrestTitleNode) {
       roadtripArrestTitleNode.setAttribute("data-i", titleKey);
       roadtripArrestTitleNode.textContent = roadtripPoliceText(titleKey);
     }
     if (roadtripArrestLineNode) roadtripArrestLineNode.textContent = roadtripPoliceText(
-      courtStop ? "entrance_roadtrip_arrest_line" : "entrance_roadtrip_arrest_ticket_line", {
+      police.impairedDriving ? "entrance_roadtrip_arrest_impaired_line" :
+        (courtStop ? "entrance_roadtrip_arrest_line" : "entrance_roadtrip_arrest_ticket_line"), {
         over: police.overLimit,
         fine: courtStop ? roadtripPoliceText("entrance_roadtrip_court_fine") : "$" + police.fine,
         points: prospectivePoints,
@@ -36316,6 +36326,42 @@ window.__entranceRoomOpen = false;
       fine: courtRequired ? null : (ROADTRIP_POLICE_STANDARD_FINES[overLimit] || 0)
     };
   }
+  function roadtripImpairmentLevel() {
+    if (typeof window.__drinkIntoxicationLevel !== "function") return 0;
+    return Math.max(0, Math.min(1, Number(window.__drinkIntoxicationLevel()) || 0));
+  }
+  function roadtripImpairedSteeringInput(seconds) {
+    var level = roadtripImpairmentLevel();
+    var moving = roadtripState.active && Math.abs(driveState.speed) >= 5;
+    if (!moving || level <= 0 || seconds <= 0) {
+      roadtripState.impairedSteeringBias *= Math.max(0, 1 - Math.max(0, seconds) * 4);
+      if (Math.abs(roadtripState.impairedSteeringBias) < .001) roadtripState.impairedSteeringBias = 0;
+      return roadtripState.impairedSteeringBias;
+    }
+    roadtripState.impairedSteeringPhase += seconds * (1.05 + level * .45);
+    var phase = roadtripState.impairedSteeringPhase;
+    var wave = (Math.sin(phase) + .28 * Math.sin(phase * 2.37 + .8)) / 1.28;
+    var target = wave * level * (.04 + .13 * level);
+    roadtripState.impairedSteeringBias += (target - roadtripState.impairedSteeringBias) *
+      Math.min(1, seconds * 2.8);
+    return roadtripState.impairedSteeringBias;
+  }
+  function syncRoadtripImpairedDriving(seconds) {
+    var level = roadtripImpairmentLevel();
+    var clearlyOffCourse = roadtripState.playerLane < .05 ||
+      Math.abs(roadtripState.playerLane) >= ROADTRIP_RUMBLE_LANE;
+    var accumulating = level >= .5 && Math.abs(driveState.speed) >= ROADTRIP_IMPAIRED_ERRATIC_MIN_SPEED &&
+      clearlyOffCourse;
+    var threshold = 2.6 - level * 1.2;
+    if (accumulating) {
+      roadtripState.erraticDrivingSeconds = Math.min(8,
+        roadtripState.erraticDrivingSeconds + Math.max(0, Number(seconds) || 0));
+    } else {
+      roadtripState.erraticDrivingSeconds = Math.max(0,
+        roadtripState.erraticDrivingSeconds - Math.max(0, Number(seconds) || 0) * .65);
+    }
+    roadtripState.erraticDriving = level >= .5 && roadtripState.erraticDrivingSeconds >= threshold;
+  }
   function roadtripPoliceEscapeRatio() {
     return Math.max(0, Math.min(1,
       roadtripState.police.escapeGap / ROADTRIP_POLICE_ESCAPE_DISTANCE));
@@ -36353,6 +36399,7 @@ window.__entranceRoomOpen = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
+    police.impairedDriving = false;
     police.lastDemerits = 0;
     police.lastDemeritTotal = roadtripState.demeritPoints;
     police.tickets = 0;
@@ -36402,6 +36449,7 @@ window.__entranceRoomOpen = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
+    police.impairedDriving = false;
     police.pursuitElapsed = 0;
     police.pursuitDistance = 0;
     police.refusalElapsed = 0;
@@ -36442,6 +36490,7 @@ window.__entranceRoomOpen = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
+    police.impairedDriving = false;
     police.pursuitElapsed = 0;
     police.pursuitDistance = 0;
     police.refusalElapsed = 0;
@@ -36466,8 +36515,10 @@ window.__entranceRoomOpen = false;
   function applyRoadtripPoliceCitation(scoreSurcharge, refused) {
     var police = roadtripState.police;
     var fixedFine = police.courtRequired ? 0 : Math.max(0, Math.round(Number(police.fine) || 0));
-    var scorePenalty = fixedFine + Math.max(0, Math.round(Number(scoreSurcharge) || 0));
-    var demerits = roadtripDemeritsForSpeed(police.overLimit) + (refused ? 5 : 0);
+    var scorePenalty = fixedFine + Math.max(0, Math.round(Number(scoreSurcharge) || 0)) +
+      (police.impairedDriving ? ROADTRIP_IMPAIRED_SCORE_PENALTY : 0);
+    var demerits = roadtripDemeritsForSpeed(police.overLimit) + (refused ? 5 : 0) +
+      (police.impairedDriving ? ROADTRIP_IMPAIRED_DEMERITS : 0);
     police.tickets++;
     if (police.courtRequired) police.summonses++;
     police.fines += fixedFine;
@@ -36563,10 +36614,11 @@ window.__entranceRoomOpen = false;
     // consumed highway acceptance so the next full block lap can offer a new run.
     resetRoadtripInvitationSession();
     roadtripState.exitUntilStop = false;
-    var outcomeKey = reason === "pulled-over" && police.courtRequired ? "entrance_roadtrip_police_summons" :
+    var outcomeKey = reason === "pulled-over" && police.impairedDriving ? "entrance_roadtrip_police_impaired_summons" :
+      (reason === "pulled-over" && police.courtRequired ? "entrance_roadtrip_police_summons" :
       (reason === "pulled-over" ? "entrance_roadtrip_police_ticket" :
       (police.courtRequired ? "entrance_roadtrip_police_court_refused" :
-        "entrance_roadtrip_police_refused"));
+        "entrance_roadtrip_police_refused")));
     roadtripPoliceOutcomeFeedback(outcomeKey, {
       over: police.overLimit,
       fine: police.courtRequired ? roadtripPoliceText("entrance_roadtrip_court_fine") : "$" + police.fine,
@@ -36593,6 +36645,7 @@ window.__entranceRoomOpen = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
+    police.impairedDriving = false;
     police.mirrorScale = 0;
     stopRoadtripPoliceSiren(.9);
     roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_escaped");
@@ -36605,7 +36658,8 @@ window.__entranceRoomOpen = false;
     var detectedSpeed = Math.round(Math.abs(measuredSpeed));
     police.detectedSpeed = detectedSpeed;
     police.warningLight = false;
-    if (detectedSpeed <= ROADTRIP_POLICE_ENFORCE_SPEED) {
+    police.impairedDriving = roadtripImpairmentLevel() >= .5 && roadtripState.erraticDriving;
+    if (detectedSpeed <= ROADTRIP_POLICE_ENFORCE_SPEED && !police.impairedDriving) {
       police.phase = "cooldown";
       police.cooldownElapsed = 0;
       roadtripFeedback("entrance_roadtrip_police_clear");
@@ -36614,7 +36668,8 @@ window.__entranceRoomOpen = false;
     var citation = roadtripPoliceCitationForSpeed(detectedSpeed);
     police.overLimit = citation.overLimit;
     police.fine = citation.fine;
-    police.courtRequired = citation.courtRequired;
+    police.courtRequired = citation.courtRequired || police.impairedDriving;
+    if (police.courtRequired) police.fine = null;
     police.engagedPursuit = true;
     police.surrenderLatched = false;
     police.phase = "pursuit";
@@ -36625,7 +36680,8 @@ window.__entranceRoomOpen = false;
     police.refusalDistance = 0;
     police.escapeGap = 0;
     police.escapeHoldElapsed = 0;
-    roadtripPoliceFeedback("entrance_roadtrip_police_pursuit", { speed: detectedSpeed }, 4400);
+    roadtripPoliceFeedback(police.impairedDriving ? "entrance_roadtrip_police_impaired_pursuit" :
+      "entrance_roadtrip_police_pursuit", { speed: detectedSpeed }, 4400);
     updateRoadtripPoliceSiren();
     return true;
   }
@@ -36864,6 +36920,7 @@ window.__entranceRoomOpen = false;
         police.overLimit = 0;
         police.fine = 0;
         police.courtRequired = false;
+        police.impairedDriving = false;
         police.detectedSpeed = 0;
       }
     }
@@ -37411,6 +37468,10 @@ window.__entranceRoomOpen = false;
     roadtripState.centerlineCrossings = 0;
     roadtripState.shoulderZone = "road";
     roadtripState.shoulderDistance = 0;
+    roadtripState.impairedSteeringPhase = 0;
+    roadtripState.impairedSteeringBias = 0;
+    roadtripState.erraticDrivingSeconds = 0;
+    roadtripState.erraticDriving = false;
     roadtripState.nextSpawnDistance = 34;
     roadtripState.spawnSerial = 0;
     resetRoadtripPoliceRun();
@@ -37563,6 +37624,7 @@ window.__entranceRoomOpen = false;
       roadtripState.playerLane - roadtripCurvatureAt(roadtripState.distance) * routeTravel * .42));
     syncRoadtripCenterline();
     syncRoadtripShoulder(Math.abs(routeTravel), seconds);
+    syncRoadtripImpairedDriving(seconds);
     var spawned = 0;
     while (roadtripState.distance >= roadtripState.nextSpawnDistance && spawned < 3) {
       var pursuitSpawn = roadtripState.police.phase === "pursuit";
@@ -39225,8 +39287,10 @@ window.__entranceRoomOpen = false;
     }
     var keyboardSteerInput = keyboardSteerDirection * porscheKeyboardSteering.authority;
     var steerInput = porscheTouchSteering.mode === "steering" ? porscheTouchSteering.input : keyboardSteerInput;
-    var steeringTarget = steerInput * 18;
-    driveState.steeringAngle += (steeringTarget - driveState.steeringAngle) * Math.min(1, seconds * (steerInput ? 7 : 4.5));
+    var impairmentSteerInput = roadtripImpairedSteeringInput(seconds);
+    var effectiveSteerInput = Math.max(-1, Math.min(1, steerInput + impairmentSteerInput));
+    var steeringTarget = effectiveSteerInput * 18;
+    driveState.steeringAngle += (steeringTarget - driveState.steeringAngle) * Math.min(1, seconds * (effectiveSteerInput ? 7 : 4.5));
     if (porscheTouchSteering.returning && Math.abs(steeringTarget - driveState.steeringAngle) < .05) {
       driveState.steeringAngle = steeringTarget;
       porscheTouchSteering.returning = false;
@@ -39349,13 +39413,13 @@ window.__entranceRoomOpen = false;
     var travel = -driveState.speed * seconds * roadTravelScale;
     driveState.position += travel;
     if (relativeVelocity > 0) recordRoadtripInvitationTravel(Math.abs(travel));
-    if (steerInput && Math.abs(driveState.speed) > .5) {
+    if (effectiveSteerInput && Math.abs(driveState.speed) > .5) {
       driveState.laneOffset = Math.max(-9, Math.min(9,
-        driveState.laneOffset - steerInput * Math.min(1, Math.abs(driveState.speed) / 45) * seconds * 13));
+        driveState.laneOffset - effectiveSteerInput * Math.min(1, Math.abs(driveState.speed) / 45) * seconds * 13));
       if (roadtripState.active) {
         var shoulderGrip = roadtripState.shoulderZone === "gravel" ? .62 : 1;
         roadtripState.playerLane = Math.max(-ROADTRIP_MAX_LANE, Math.min(ROADTRIP_MAX_LANE,
-          roadtripState.playerLane + steerInput * Math.min(1, Math.abs(driveState.speed) / 45) *
+          roadtripState.playerLane + effectiveSteerInput * Math.min(1, Math.abs(driveState.speed) / 45) *
           seconds * ROADTRIP_STEER_RATE * shoulderGrip));
       }
     }
@@ -40341,6 +40405,10 @@ window.__entranceRoomOpen = false;
           centerlineCrossings: roadtripState.centerlineCrossings,
           shoulderZone: roadtripState.shoulderZone,
           shoulderDistance: roadtripState.shoulderDistance,
+          impairmentLevel: roadtripImpairmentLevel(),
+          impairedSteeringBias: roadtripState.impairedSteeringBias,
+          erraticDrivingSeconds: roadtripState.erraticDrivingSeconds,
+          erraticDriving: roadtripState.erraticDriving,
           speedLimit: ROADTRIP_SPEED_LIMIT,
           enforcementSpeed: ROADTRIP_POLICE_ENFORCE_SPEED,
           policeFirstDistance: ROADTRIP_POLICE_FIRST_DISTANCE,
@@ -40370,6 +40438,7 @@ window.__entranceRoomOpen = false;
             overLimit: roadtripState.police.overLimit,
             fine: roadtripState.police.fine,
             courtRequired: roadtripState.police.courtRequired,
+            impairedDriving: roadtripState.police.impairedDriving,
             lastDemerits: roadtripState.police.lastDemerits,
             lastDemeritTotal: roadtripState.police.lastDemeritTotal,
             tickets: roadtripState.police.tickets,
@@ -40651,6 +40720,7 @@ window.__entranceRoomOpen = false;
     ["exitUntilStop", "playerLane", "distance", "distancePoints", "elapsedSeconds", "score", "multiplier",
       "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
       "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "shoulderZone", "shoulderDistance",
+      "impairedSteeringPhase", "impairedSteeringBias", "erraticDrivingSeconds", "erraticDriving",
       "nextSpawnDistance", "spawnSerial"].forEach(function (key) { state[key] = roadtripState[key]; });
     var police = {};
     Object.keys(roadtripState.police).forEach(function (key) { police[key] = roadtripState.police[key]; });
@@ -40723,6 +40793,10 @@ window.__entranceRoomOpen = false;
     roadtripState.centerlineExcursion = saved.centerlineExcursion === true;
     roadtripState.shoulderZone = ["road", "rumble", "gravel"].indexOf(saved.shoulderZone) >= 0 ? saved.shoulderZone : "road";
     roadtripState.shoulderDistance = roadtripSnapshotNumber(saved.shoulderDistance, 0, 0, 1000000000);
+    roadtripState.impairedSteeringPhase = roadtripSnapshotNumber(saved.impairedSteeringPhase, 0, 0, 1000000000);
+    roadtripState.impairedSteeringBias = roadtripSnapshotNumber(saved.impairedSteeringBias, 0, -.25, .25);
+    roadtripState.erraticDrivingSeconds = roadtripSnapshotNumber(saved.erraticDrivingSeconds, 0, 0, 8);
+    roadtripState.erraticDriving = saved.erraticDriving === true;
     roadtripState.nextSpawnDistance = roadtripSnapshotNumber(saved.nextSpawnDistance,
       roadtripState.distance + 34, 0, 1000000000);
     roadtripState.spawnSerial = Math.max(0, Math.floor(roadtripSnapshotNumber(saved.spawnSerial, 0, 0, 1000000000)));
@@ -42383,6 +42457,7 @@ var T = {
       entrance_roadtrip_police_warning: "Headlights ×3 · police ahead. Limit 90.",
       entrance_roadtrip_police_clear: "Police passed · within the 110 km/h tolerance.",
       entrance_roadtrip_police_pursuit: "Clocked at {speed} km/h · pull onto the right shoulder and stop.",
+      entrance_roadtrip_police_impaired_pursuit: "Erratic impaired driving observed · pull onto the right shoulder and stop.",
       entrance_roadtrip_police_pull_over: "Police behind · pull onto the right shoulder and stop.",
       entrance_roadtrip_police_escape: "Police receding · hold above 215 to lose them.",
       entrance_roadtrip_police_escaped: "Police lost · sirens fading away.",
@@ -42393,8 +42468,10 @@ var T = {
       entrance_roadtrip_arrest_kicker: "TRAFFIC STOP",
       entrance_roadtrip_arrest_title: "COURT SUMMONS",
       entrance_roadtrip_arrest_ticket_title: "SPEEDING TICKET",
+      entrance_roadtrip_arrest_impaired_title: "IMPAIRED DRIVING",
       entrance_roadtrip_arrest_line: "{over} over · {fine} · {points} pts · {total}/15",
       entrance_roadtrip_arrest_ticket_line: "{over} over · fine {fine} · {points} pts · {total}/15",
+      entrance_roadtrip_arrest_impaired_line: "{fine} · {points} pts · {total}/15",
       entrance_roadtrip_arrest_shout_engine: "ENGINE OFF!",
       entrance_roadtrip_arrest_shout_keys: "DROP THE KEYS!",
       entrance_roadtrip_arrest_shout_hands: "HANDS THROUGH THE WHEEL!",
@@ -42403,6 +42480,7 @@ var T = {
       entrance_roadtrip_demerit_suspended: " · licence suspended for {time}",
       entrance_roadtrip_police_ticket: "{over} km/h over · fine {fine} · {points} demerits · {total}/15{status}.",
       entrance_roadtrip_police_summons: "{over} km/h over · {fine} · {points} demerits · {total}/15{status}.",
+      entrance_roadtrip_police_impaired_summons: "Erratic impaired driving · {fine} · {points} demerits · {total}/15{status} · 250-point penalty.",
       entrance_roadtrip_police_refused: "You didn’t pull over · fine {fine} · {points} demerits · {total}/15{status} · 1,000-point penalty.",
       entrance_roadtrip_police_court_refused: "You didn’t pull over · {fine} · {points} demerits · {total}/15{status} · highway run over.",
       kitchen_grind: "Now grind coffee.",
@@ -43588,6 +43666,7 @@ var T = {
       entrance_roadtrip_police_warning: "Troje probliknutí · vpředu policie. Limit 90.",
       entrance_roadtrip_police_clear: "Policie za tebou · do 110 km/h bez postihu.",
       entrance_roadtrip_police_pursuit: "Naměřeno {speed} km/h · zajeď na pravou krajnici a zastav.",
+      entrance_roadtrip_police_impaired_pursuit: "Zpozorována nebezpečná jízda pod vlivem · zajeď na pravou krajnici a zastav.",
       entrance_roadtrip_police_pull_over: "Policie za tebou · zajeď na pravou krajnici a zastav.",
       entrance_roadtrip_police_escape: "Policie se vzdaluje · drž přes 215 a setřes ji.",
       entrance_roadtrip_police_escaped: "Policie setřesena · siréna utichá.",
@@ -43598,8 +43677,10 @@ var T = {
       entrance_roadtrip_arrest_kicker: "SILNIČNÍ KONTROLA",
       entrance_roadtrip_arrest_title: "PŘEDVOLÁNÍ K SOUDU",
       entrance_roadtrip_arrest_ticket_title: "POKUTA ZA RYCHLOST",
+      entrance_roadtrip_arrest_impaired_title: "ŘÍZENÍ POD VLIVEM",
       entrance_roadtrip_arrest_line: "+{over} · {fine} · {points} b. · {total}/15",
       entrance_roadtrip_arrest_ticket_line: "+{over} · pokuta {fine} · {points} b. · {total}/15",
+      entrance_roadtrip_arrest_impaired_line: "{fine} · {points} b. · {total}/15",
       entrance_roadtrip_arrest_shout_engine: "VYPNĚTE MOTOR!",
       entrance_roadtrip_arrest_shout_keys: "ZAHOĎTE KLÍČE!",
       entrance_roadtrip_arrest_shout_hands: "RUCE SKRZ VOLANT!",
@@ -43608,6 +43689,7 @@ var T = {
       entrance_roadtrip_demerit_suspended: " · řidičák pozastaven na {time}",
       entrance_roadtrip_police_ticket: "Překročení o {over} km/h · pokuta {fine} · {points} trestné body · {total}/15{status}.",
       entrance_roadtrip_police_summons: "Překročení o {over} km/h · {fine} · {points} trestných bodů · {total}/15{status}.",
+      entrance_roadtrip_police_impaired_summons: "Nebezpečná jízda pod vlivem · {fine} · {points} trestných bodů · {total}/15{status} · ztráta 250 herních bodů.",
       entrance_roadtrip_police_refused: "Nezastavil jsi · pokuta {fine} · {points} trestných bodů · {total}/15{status} · ztráta 1 000 herních bodů.",
       entrance_roadtrip_police_court_refused: "Nezastavil jsi · {fine} · {points} trestných bodů · {total}/15{status} · jízda končí.",
       kitchen_grind: "Teď umel kávu.",
@@ -87317,6 +87399,9 @@ async def localfont(name):
   // self-clearing blur timer; cleared alongside the sway on room-leave/reset via clearTipsy.
   var drinkTotal = 0, boozeBlurTimer = null; // a "drink" is a wine sip OR a beer-can crack (see registerDrink)
   window.__resetWineSips = function () { drinkTotal = 0; };
+  window.__drinkIntoxicationLevel = function () {
+    return Math.max(0, Math.min(1, (drinkTotal - 2) / 4));
+  };
   function boozeBlur() {
     var rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var bal = document.getElementById("stage-balcony");

@@ -383,10 +383,8 @@ check(shutdown && shutdown.before.car.engineOn && shutdown.before.drive.holds.th
 var friction = s.friction;
 check(friction && friction.forwardStatic.speed === 0 && friction.reverseStatic.speed === 0,
   "static resistance snaps symmetric sub-quarter-km/h residuals exactly to rest", friction);
-check(friction && friction.engineOnLow.speed > 3 && friction.engineOnLow.speed < 4.5 &&
-  friction.engineOnReverse.speed < -3 && friction.engineOnReverse.speed > -4.5 &&
-  Math.abs(friction.engineOnLow.speed + friction.engineOnReverse.speed) < .0001,
-  "low-speed rolling resistance is heavier and directionally symmetric", friction);
+check(friction && friction.engineOnLow.speed === 0 && friction.engineOnReverse.speed === 0,
+  "strong low-speed rolling resistance settles neutral coasting symmetrically", friction);
 check(friction && Math.abs(friction.revvingNeutral.speed - friction.engineOnLow.speed) < .0001 &&
   Math.abs(friction.engineOffLow.speed - friction.engineOnLow.speed) < .0001 &&
   friction.revvingNeutral.rpm >= 7400 && friction.engineOffLow.rpm === 0,

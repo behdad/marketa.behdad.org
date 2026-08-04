@@ -179,7 +179,8 @@ lesson.
 
 On desktop:
 
-- select the ignition key to start or stop the engine;
+- press `Enter` whenever the engine is off, or select the ignition key to start
+  or stop it;
 - select **AUTO** or **MANUAL** on the dashboard, press `A` / `M`, or use
   `Ctrl`+`←` for AUTO and `Ctrl`+`→` for MANUAL;
 - in AUTO, drag the shifter across several ranges; clicking advances toward D,

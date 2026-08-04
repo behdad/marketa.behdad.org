@@ -1787,6 +1787,7 @@ footer{margin-top:2.6rem}
 }
 #hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-left,
 #hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-right{display:none}
+#hunt-fullscreen-area.monitor-content-fullscreen-host #loft-datetime-row{display:none}
 #hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-viewport{
   width:100%;
   height:100%;
@@ -5670,8 +5671,9 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .console-row:focus-within .console-caret{opacity:1; animation:console-caret-blink 1.1s step-end infinite}
 @keyframes console-caret-blink{0%,49%{opacity:1} 50%,100%{opacity:0}}
 /* ── DROP-DOWN TERMINAL (Quake console) ──────────────────────────────────────────
-   A scene-agnostic REPL panel that lives INSIDE .hunt-viewport (so it rides fullscreen)
-   and slides down from the top edge over whatever room is showing. Toggled by the
+   A scene-agnostic REPL panel that lives inside .hunt-viewport (so it rides fullscreen)
+   and slides down from the top edge over whatever room is showing. Its persistent pull-tab
+   and FPS meter live in the OUTER game chrome below the scene. Toggled by the
    backtick key; Esc closes. Plain HTML overlay — NOT the scaled in-world office monitor —
    so the WebKit foreignObject RenderLayer caveats don't apply here; a position/transform
    layer is safe. Deliberately NO mask-image (a RenderLayer that vanished under the monitor
@@ -5694,7 +5696,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    the top of the scene (and anything overlapping it) with a grey wash. */
 #dropterm.open{transform:translateY(0); pointer-events:auto; visibility:visible; transition:transform .22s cubic-bezier(.4,.9,.3,1); box-shadow:0 6px 18px rgba(0,0,0,.38)}
 #dropterm-fps{
-  position:absolute; top:7px; left:30px; z-index:61; display:none; pointer-events:none;
+  position:static; display:none; pointer-events:none;
   color:var(--ink,#453a31); font:10px/1 ui-monospace,Menlo,Consolas,monospace;
   font-variant-numeric:tabular-nums; letter-spacing:0;
   padding:2px 4px; background:rgba(255,253,248,.9); border-radius:4px;
@@ -6232,8 +6234,22 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .occasion-banner:hover,.occasion-banner:focus-visible{background:#762f3d; outline:none; box-shadow:0 4px 14px rgba(0,0,0,.28),0 0 0 2px rgba(255,253,248,.8)}
 .hunt-viewport:fullscreen .occasion-banner{top:14px}
 @media (max-width:520px){ .occasion-banner{font-size:11px; padding:4px 11px; top:6px} }
-/* on-screen current-date pill in the viewport corner (clicking it opens the phone calendar) */
-.loft-datenav{position:absolute; left:3px; bottom:3px; z-index:6; display:flex; align-items:stretch; gap:0; max-width:62%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill holding occasion jumps ◀◀/▶▶, day steps ◀/▶, the date, and an override-only ↺ reset */
+/* Date + time sit in the persistent rose game chrome immediately below the scene, aligned
+   to the scene's left/right edges. Keeping this row outside .hunt-viewport means every lower
+   room sees the same canonical controls without laying them over Road Trip's touch surface. */
+.loft-datetime-row{
+  position:absolute; left:2.6rem; right:2.6rem; top:calc(100% + 3px); z-index:20;
+  display:flex; align-items:flex-start; justify-content:space-between; pointer-events:none;
+}
+.loft-datetime-row:not(.date-time-visible):not(.console-tools-visible){display:none}
+.loft-datetime-row > *{pointer-events:auto}
+#hunt-fullscreen-area > .hunt-frame:has(#loft-datetime-row:is(.date-time-visible,.console-tools-visible)){margin-bottom:calc(.4rem + 29px)}
+.loft-console-tools{
+  position:absolute; left:50%; top:0; translate:-50% 0; display:flex; align-items:center;
+  gap:5px; pointer-events:none;
+}
+.loft-console-tools > *{pointer-events:auto}
+.loft-datenav{position:static; display:flex; align-items:stretch; gap:0; max-width:62%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill holding occasion jumps ◀◀/▶▶, day steps ◀/▶, the date, and an override-only ↺ reset */
 .loft-datepill{display:flex; align-items:center; gap:5px; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); border-right:1px solid rgba(69,58,49,.16); padding:4px 7px; width:9.5em; flex:0 0 9.5em; box-sizing:border-box; cursor:pointer; user-select:none; min-width:0; overflow:hidden} /* stable width fits abbreviated dates without shifting the surrounding controls */
 .loft-datepill:hover{background:rgba(142,58,74,.10)}
 .loft-datepill-txt{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
@@ -6244,16 +6260,18 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .loft-datestep{flex:0 0 2.5em; width:2.5em; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 0; cursor:pointer; user-select:none}
 .loft-datestep:hover{background:rgba(142,58,74,.14)}
 .loft-datestep.loft-datereset{border-left:1px solid rgba(69,58,49,.16)}
-.hunt-viewport:fullscreen .loft-datenav{bottom:8px; left:8px}
-@media (max-width:520px){ .loft-datenav{left:3px; bottom:3px} .loft-datepill,.loft-datestep{font-size:10px} .loft-datepill{padding:3px 8px} .loft-datestep{padding:3px 0} }
+/* Match the narrower touch chrome rails so the row stays aligned with the scene edges. */
+@media (max-width:759px), (pointer:coarse){
+  .loft-datetime-row{left:2.45rem;right:2.45rem}
+}
+@media (max-width:520px){ .loft-datepill,.loft-datestep{font-size:10px} .loft-datepill{padding:3px 8px} .loft-datestep{padding:3px 0} }
 /* the loft's Edmonton wall-clock, mirroring the date pill to the bottom-RIGHT; a click opens the Clock app */
-.loft-timenav{position:absolute; right:3px; bottom:3px; z-index:6; display:flex; align-items:stretch; gap:0; max-width:60%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill: 🕐 time · ↺ reset */
+.loft-timenav{position:static; display:flex; align-items:stretch; gap:0; max-width:60%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill: 🕐 time · ↺ reset */
 .loft-timepill{font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 9px; cursor:pointer; user-select:none; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .loft-timepill:hover{background:rgba(142,58,74,.10)}
 .loft-timestep{flex:0 0 2.5em; width:2.5em; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); padding:4px 0; cursor:pointer; user-select:none}
 .loft-timestep:hover{background:rgba(142,58,74,.14)}
-.hunt-viewport:fullscreen .loft-timenav{bottom:8px; right:8px}
-@media (max-width:520px){ .loft-timenav{right:3px; bottom:3px} .loft-timepill,.loft-timestep{font-size:10px} .loft-timepill{padding:3px 8px} .loft-timestep{padding:3px 0} }
+@media (max-width:520px){ .loft-timepill,.loft-timestep{font-size:10px} .loft-timepill{padding:3px 8px} .loft-timestep{padding:3px 0} }
 .loft-datestep.loft-triangle-step,.loft-timestep.loft-triangle-step{font-size:8px} /* quieter symbols inside unchanged, easy-to-hit cells */
 @media (max-width:520px){.loft-datestep.loft-triangle-step,.loft-timestep.loft-triangle-step{font-size:7px}}
 /* the outdoor thermometer's temperature control — the same pill shape as the date/time navs
@@ -6269,7 +6287,8 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
    overlays. Hide the chrome while a game runs so it can't occlude the game's controls; a game is
    modal (the room dims to a spotlight), so the date/time/roster/console pills aren't wanted
    meanwhile. Pure :has() (used throughout this file) — no per-game JS hook to keep in sync. */
-.hunt-viewport:has(#stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on) :is(.loft-datenav, .loft-timenav, .roster-toggle, .roster-panel),
+#hunt-fullscreen-area:has(#stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on) :is(.loft-datenav, .loft-timenav),
+.hunt-viewport:has(#stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on) :is(.roster-toggle, .roster-panel),
 body:has(#stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on) .loft-tempnav{ display:none !important }
 /* Mobile holds are game input, never a request for Safari's callout or the loft's
    scene menu. Keep desktop right-click available for the intentional app menus. */
@@ -6284,10 +6303,9 @@ body:has(#stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on
 @media (max-width:520px){ .loft-temppill,.loft-tempstep{font-size:10px} .loft-temppill{padding:3px 8px} .loft-tempstep{padding:3px 7px} }
 /* The console's pull-tab stays out of ordinary play until someone has actually explored a console:
    typing in the monitor's JS console or using backtick reveals it for the rest of this page load. */
-/* The pull-tab is a round plate in the scene's top-left whose triangle is both the state
-   and the switch — ▼ to pull the console down, turned ▲ to send it back up. The glyph rotates
-   inside the plate (the plate stays a circle), so it reads as one triangle turning, not two marks. */
-.loft-console-hint{position:absolute; top:3px; left:3px; z-index:61; display:none; align-items:center; justify-content:center; width:22px; height:22px; padding:0; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:50%; cursor:pointer; transition:background .15s, color .15s}
+/* The pull-tab is a round plate in the lower chrome whose triangle is both the state and the
+   switch — ▼ to pull the console down, turned ▲ to send it back up. */
+.loft-console-hint{position:static; display:none; align-items:center; justify-content:center; width:22px; height:22px; padding:0; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:50%; cursor:pointer; transition:background .15s, color .15s}
 .loft-console-hint.discovered{display:inline-flex}
 .loft-console-hint:hover,.loft-console-hint:focus-visible{background:var(--ink,#453a31); color:#f8f5ec}
 .loft-console-hint .ct-mark{display:block; transition:transform .22s cubic-bezier(.4,.9,.3,1)}
@@ -33506,7 +33524,6 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <div id="dropterm-row"><span class="console-ps">&#10095;</span><input id="dropterm-in" class="console-in" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"/></div>
       <div id="dropterm-resize"></div>
     </div>
-    <div id="dropterm-fps">FPS --</div>
   </div>
   <div class="hunt-right" id="hunt-right">
     <div class="hunt-side" id="hunt-side">
@@ -33528,6 +33545,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       </button>
     </div>
     <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked">›</button>
+  </div>
+  <div id="loft-datetime-row" class="loft-datetime-row">
+    <div id="loft-console-tools" class="loft-console-tools">
+      <div id="dropterm-fps">FPS --</div>
+    </div>
   </div>
   </div>
   <div class="hunt-bottom-nav" id="hunt-bottom-nav">
@@ -47360,7 +47382,9 @@ window.addEventListener("hashchange", function () {
     var padX = (parseFloat(areaStyle.paddingLeft) || 0) + (parseFloat(areaStyle.paddingRight) || 0);
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
-    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(bottomNav) -
+    var frameStyle = getComputedStyle(frame);
+    var frameMargins = (parseFloat(frameStyle.marginTop) || 0) + (parseFloat(frameStyle.marginBottom) || 0);
+    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(bottomNav) - frameMargins -
       (watchControls && watchControls.parentNode === area ? outerHeight(watchControls) : 0);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
@@ -68111,7 +68135,7 @@ setOfficeProgress("pc", false);
     consolePrint(matches.join("  "), "console-dim");           // bash-style: list the candidates
   }
   if (consoleIn) {
-    // Only a real user edit unlocks the scene-level console tab. Once unlocked it stays for
+    // Only a real user edit unlocks the outer-chrome console tab. Once unlocked it stays for
     // this page load.
     consoleIn.addEventListener("input", function (e) {
       if (e.isTrusted && consoleIn.value) revealConsoleTab();
@@ -68198,8 +68222,10 @@ setOfficeProgress("pc", false);
   function revealConsoleTab() {
     consoleTabDiscovered = true;
     var tab = document.getElementById("loft-console-hint");
+    var row = document.getElementById("loft-datetime-row");
     if (tab) tab.classList.add("discovered");
     if (dtFps) dtFps.classList.add("discovered");
+    if (row) row.classList.add("console-tools-visible");
     startDropTermFps();
   }
   function openDropTerm() {
@@ -68306,14 +68332,14 @@ setOfficeProgress("pc", false);
       }
     }, true);
   }
-  (function () { // a very subtle top-left chevron: a discoverable hint that pulls the drop-down console down
-    var vp = document.querySelector(".hunt-viewport");
-    if (!vp || document.getElementById("loft-console-hint")) return;
+  (function () { // a subtle lower-chrome chevron that pulls the drop-down console down
+    var tools = document.getElementById("loft-console-tools");
+    if (!tools || document.getElementById("loft-console-hint")) return;
     var b = document.createElement("button");
     b.type = "button"; b.id = "loft-console-hint"; b.className = "loft-console-hint";
     b.innerHTML = '<span class="ct-mark">▼</span>'; // one glyph, rotated by CSS — the same triangle turning, not two swapped marks
     b.addEventListener("click", function (e) { e.stopPropagation(); toggleDropTerm(); });
-    vp.appendChild(b);
+    tools.insertBefore(b, tools.firstChild);
     if (consoleTabDiscovered) b.classList.add("discovered");
     syncConsoleTab(); // ▶ closed / ▼ open, plus the matching label
   })();
@@ -91303,10 +91329,8 @@ async def localfont(name):
                        : (Math.floor(base / TEMP_STEP) + 1) * TEMP_STEP;
     window.__setOutdoorTemp(next);
   }
-  // Below the thermometer, not above it: the console's ▼ pull-tab is pinned to the viewport's
-  // top-left and the thermometer hangs high on the wall, so a "top" placement runs under the tab
-  // (which sits in the viewport's own stacking context, well above a body-level popup) at narrow
-  // widths. eggBubble's default flips up by itself if the bottom ever runs out of room.
+  // Below the thermometer reads most naturally; eggBubble flips up by itself if the bottom
+  // ever runs out of room. The console utility now lives outside the scene, so it cannot collide.
   function placeTempPop() { if (tempPop && thermo) positionEggBubble(tempPop, thermo); }
   function closeTempPop() { if (tempPop) { tempPop.remove(); tempPop = null; } }
   function openTempPop() {
@@ -114821,8 +114845,10 @@ function spawnDustMote(container) {
       show = show || url.searchParams.has("date") || url.searchParams.has("time") || /(?:^|[#&])(?:date|time)=/.test(url.hash || "");
     } catch (e) {}
     var dateNav = document.querySelector(".loft-datenav"), timeNav = document.getElementById("loft-timenav");
+    var row = document.getElementById("loft-datetime-row");
     if (dateNav) dateNav.style.display = show ? "" : "none";
     if (timeNav) timeNav.style.display = show ? "" : "none";
+    if (row) row.classList.toggle("date-time-visible", show);
   }
   function calRefreshDeps() {
     applySeasonDate(); // decor + birthday hats + wedding-day + smoke + new-year sky all read the date
@@ -115312,11 +115338,11 @@ function spawnDustMote(container) {
     jumpToDate(y, m0, dd); calView = { y: y, m: m0 }; calRerenderOpen();
     return { year: y, month: m0 + 1, day: dd };
   };
-  // the on-screen current-date pill: an unobtrusive viewport-corner readout of the loft's day
-  // (window.__now — reflects any jump); a click raises the pocket calendar over the current room
+  // The outer game-chrome date pill reads the loft's day (window.__now — reflects any jump);
+  // a click raises the pocket calendar over the current room, upstairs or down.
   function calMakePill() {
-    var vp = document.querySelector(".hunt-viewport");
-    if (!vp || document.getElementById("loft-datepill")) return;
+    var row = document.getElementById("loft-datetime-row");
+    if (!row || document.getElementById("loft-datepill")) return;
     var nav = document.createElement("div"); nav.className = "loft-datenav";
     function swallowKeys(e) { e.stopPropagation(); } // a focused step button must not leak keys to the game shortcuts (Enter/Space still activate it — that's a default action, not propagation)
     function mkStep(id, glyph, fn) {
@@ -115354,7 +115380,7 @@ function spawnDustMote(container) {
     });
     reset.addEventListener("keydown", swallowKeys);
     nav.appendChild(prev); nav.appendChild(prevDay); nav.appendChild(pill); nav.appendChild(reset); nav.appendChild(nextDay); nav.appendChild(next);
-    vp.appendChild(nav);
+    row.appendChild(nav);
   }
   window.__refreshDatePill = function () {
     var pill = document.getElementById("loft-datepill");
@@ -115386,8 +115412,8 @@ function spawnDustMote(container) {
   // sibling TIME pill, mirrored to the bottom-right: the loft's Edmonton wall-clock, showing the
   // advancing ?time= override when one is set (else real Edmonton time); a click opens the Clock app
   function calMakeTimePill() {
-    var vp = document.querySelector(".hunt-viewport");
-    if (!vp || document.getElementById("loft-timenav")) return;
+    var row = document.getElementById("loft-datetime-row");
+    if (!row || document.getElementById("loft-timenav")) return;
     var nav = document.createElement("div"); nav.id = "loft-timenav"; nav.className = "loft-timenav";
     var pill = document.createElement("button");
     pill.type = "button"; pill.id = "loft-timepill"; pill.className = "loft-timepill";
@@ -115401,7 +115427,7 @@ function spawnDustMote(container) {
     reset.addEventListener("click", function (e) { e.stopPropagation(); calResetTimeOnly(); });
     reset.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") e.stopPropagation(); });
     nav.appendChild(pill); nav.appendChild(reset);
-    vp.appendChild(nav);
+    row.appendChild(nav);
   }
   window.__refreshTimePill = function () {
     var pill = document.getElementById("loft-timepill");

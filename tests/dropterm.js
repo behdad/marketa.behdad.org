@@ -50,7 +50,7 @@ assert(/consoleTabComplete\(dtIn\)/.test(html), "the drop-down Tab handler reuse
 
 // ── 3. The panel HTML + reset hook exist ────────────────────────────────────────────────
 assert(/<div id="dropterm"[\s\S]*?id="dropterm-out"[\s\S]*?id="dropterm-in"/.test(html), "drop-down panel HTML (#dropterm / -out / -in) is present in .hunt-viewport");
-assert(/id="dropterm-fps"[^>]*>FPS --</.test(html), "viewport includes an FPS readout beside the console tab");
+assert(/id="loft-console-tools"[\s\S]*?id="dropterm-fps"[^>]*>FPS --</.test(html), "outer game chrome includes the FPS readout beside the console tab");
 assert(/id="dropterm-resize"/.test(html), "drop-down panel includes a lower-edge resize handle");
 assert(/#dropterm\{[\s\S]*?transform:translateY\(-102%\)/.test(html), "#dropterm slides in from the top (transform:translateY off-screen by default)");
 assert(/#dropterm\.open\{transform:translateY\(0\)/.test(html), "#dropterm.open slides down into view");
@@ -99,12 +99,13 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
   var dOut = new El("dropterm-out");
   var dIn = new El("dropterm-in");
   var dResize = new El("dropterm-resize");
+  var dateTimeRow = new El("loft-datetime-row"); dateTimeRow.classList = clsList(dateTimeRow);
   var viewport = new El("viewport");
   viewport.getBoundingClientRect = function () { return { top: 100, height: 1000 }; };
   dropterm.parentElement = viewport;
   var monOut = new El("monitor-console-out"); // the monitor console's scrollback — must NOT receive the drop-down's output
 
-  var byId = { "dropterm": dropterm, "dropterm-fps": dFps, "dropterm-out": dOut, "dropterm-in": dIn, "dropterm-resize": dResize, "monitor-console-out": monOut };
+  var byId = { "dropterm": dropterm, "dropterm-fps": dFps, "dropterm-out": dOut, "dropterm-in": dIn, "dropterm-resize": dResize, "loft-datetime-row": dateTimeRow, "monitor-console-out": monOut };
   var timers = [];
   var rafs = {}, nextRaf = 1;
   var sandbox = {
@@ -174,7 +175,7 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
 
   // (1) console discovery starts the persistent FPS meter; backtick still toggles the panel
   win.__revealConsoleTab();
-  assert(win.__dropTermFpsRunning() && dFps.classList.contains("discovered"), "console discovery reveals and starts the FPS meter");
+  assert(win.__dropTermFpsRunning() && dFps.classList.contains("discovered") && dateTimeRow.classList.contains("console-tools-visible"), "console discovery reveals the outer-chrome tools and starts the FPS meter");
   win.__toggleDropTerm();
   assert(dropterm.classList.contains("open"), "backtick (toggle) OPENS the drop-down");
   for (var frame = 1; frame <= 50; frame++) {

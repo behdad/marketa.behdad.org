@@ -225,140 +225,40 @@ selected while the Porsche is still rolling in the opposite direction below
 still requires a near standstill. Its current range or drive gear stays visible
 in the centre of the right-hand instrument, including throughout a Road Trip.
 
-The six-speed manual follows the 2010 base Boxster's real gearing: RPM is tied to
-road speed in each selected gear, apart from forgiving clutch slip when launching
-in first. Acceleration builds progressively, the limiter is at 7,500 rpm, and a
-well-timed shift near 7,000 rpm reaches 100 km/h in about six seconds. Sixth gear
-is for relaxed cruising rather than instant acceleration; top speed is 263 km/h.
-On the highway, falling far enough to lug gears two through six below idle returns
-the shifter to neutral; first remains available to pull away. A high- or low-RPM
-shift suggestion replaces the normal highway caption only after the condition has
-held long enough to avoid flicker.
+The six-speed manual ties RPM to road speed and expects the clutch for ordinary
+shifts. The highway caption offers a short shift suggestion when the selected
+gear is clearly too high or low.
 
-Complete three forward street laps to unlock the highway. On the third lap a
-top-left **Fancy a roadtrip?** card offers **Take the highway** or **Later**;
-the dashboard does not leave the street until the highway is accepted. After
-that, the highway remains unlocked. Every later dashboard session begins on the
-block and offers the card after one completed forward lap. Enter accepts a
-visible offer; the later **Road Trip** re-entry sign carries the same Enter hint.
-Escape dismisses an offer for the rest of that dashboard session. The
-same steering, gears, accelerator, and brake apply; highway steering omits the
-street-drive indicator flourish. The Porsche
-performs a full 360° instead of changing direction when hard braking and
-steering from 200 km/h on dry asphalt, 180 in rain, or 160 in snow. Braking
-continues to shed speed throughout the spin. The Porsche
-begins in the inner right-hand lane: rear-view traffic travels ahead in the two
-right lanes, while headlights approach in the two lanes beyond the double
-yellow. The traffic mix includes sedans, pickups, semis, and the RVs common on
-Alberta highways. RVs stay in their direction's right lane, and semis strongly
-prefer it at roughly 70–88 km/h. A semi moves left only to pass slower traffic,
-accelerates to a 20–30 km/h advantage (never above 110), then returns right. The
-same rules are mirrored for oncoming traffic. Steering can cross the centre line, so watch the direction as well as
-the lane while the road and weather continue through the windshield. Yellow
-curve signs announce the next matching bend. The car drifts toward the outside
-of a bend unless you steer with it. When you travel well below traffic speed,
-an occasional faster car may approach in either right-hand lane and move into the other lane when yours
-is blocked. A passing car gives a clear horn when you are stopped in the inner lane, but leaves a
-stopped car on the shoulder alone. Oncoming traffic gives a longer warning horn if you occupy its lane.
-One in five oncoming vehicles also attempts a seeded swerve into the other oncoming lane when that
-lane is clear; the others hold course, so crossing the double yellow remains dangerous.
+Complete three forward street laps to unlock **Road Trip**. Enter accepts its
+visible offer; choosing **Later** leaves you on the block. Afterward, the highway
+remains unlocked and reappears after one forward lap in a later dashboard session.
 
-Reverse also moves the highway: a missed pickup remains behind briefly, so you
-can back up, select a forward gear, and collect it on the next forward crossing.
-Reverse adds to the odometer but never earns highway distance points.
+Road Trip keeps the same steering, transmission, accelerator, and brake. Its
+randomized traffic includes sedans, pickups, semis, and RVs in both directions;
+slower traffic may be passed, horns react to blocked lanes, and some oncoming
+drivers swerve when you stray across the double yellow. Curves, shoulders,
+rumble strips, gravel, day/night, weather, and seasons all affect the drive.
+The centre mirror shows the road, weather, trees, police, and passed traffic
+behind you.
 
-The highway landscape follows the effective game date in both the windshield
-and mirror: fresh muddy spring, deep-green summer, gold-and-rust autumn, or
-bare, snow-covered winter. Summer runs through September 21.
-At night, the Porsche headlights cast across the near asphalt and shoulders;
-the beam follows steering and the road's bend while weather remains in front.
+Hard braking while steering produces a 360° from 200 km/h on dry asphalt, 180
+in rain, or 160 in snow. Leaving or unfocusing the game pauses the highway until
+a fresh steering or pedal input resumes it.
 
-Leaving the game window or switching tabs pauses the whole highway simulation:
-trip time, road motion, traffic, wildlife, police, spawns, distance, and scoring
-all freeze. Held driving controls are released, and returning resumes from the
-same instant after a fresh driving input; the transport shows Play while waiting.
+The posted limit is 90 km/h, with enforcement above 110. An oncoming car flashes
+its high beams before a speed trap. If police pursue, stop safely to resolve the
+ticket or summons; ignoring them escalates the outcome. Very high sustained speed
+can open an escape gap, but a brief burst is not enough. Police stops use Alberta's
+fine schedule, court treatment for 51+ over, and a deliberately theatrical arrival.
 
-You can cross either white edge line onto the shoulder. The rumble strip shakes
-the view; farther out, gravel reduces grip and steadily bleeds speed. It is useful
-as an emergency escape route, but slower than staying on the pavement.
-Road and tire noise build with speed; fast steering adds a tire squeal and air
-swoosh, passing vehicles make a direction- and proximity-aware whoosh, and the
-rumble strip and gravel have rougher textures.
-The centre mirror is live: its road and markings follow the bends behind you,
-roadside trees recede along both verges, cloud, smoke, rain, snow, and winter
-cover match the windshield, and traffic you have just passed remains visible
-until it falls out of mirror range.
+The driver panel keeps separate **Demerits** and **BAC** columns. Each wine, beer,
+or cocktail adds one simplified `0.03` drink-equivalent; one clears per real
+minute. Drink state survives room changes, Road Trip exits, Continue, and reload.
 
-The posted highway limit is 90 km/h. Infrequent parked police cars are announced
-well ahead by one oncoming driver flashing its high beams three times, leaving
-at least three more seconds before measurement to slow safely. Police allow speeds
-through 110 km/h. After any reading, the parked patrol car moves into the right
-side of the rear-view mirror as you pass, then shrinks toward its horizon. Above
-110, that same roadside reflection pulls inward as the patrol car starts chasing
-and its red/blue lightbar alternates with the siren. Reduced-motion mode holds both
-lights steady instead. Move onto the right shoulder and stop to receive a fine
-scaled to the speed at which you passed the police. Fixed amounts follow Alberta's current
-[standard schedule](https://www.alberta.ca/speeding-fines-in-alberta), including
-its 20% surcharge. At 51 km/h or more over the limit there is no invented fixed
-amount: the outcome is a mandatory court appearance, but the patrol car always
-chases before that is resolved. An ordinary fixed-dollar roadside stop settles
-the ticket without an arrest and lets the highway run continue; a court-required
-stop keeps the highway in view for a brief arrest sequence: red/blue light washes
-the stopped cabin, the patrol car fills the mirror, an officer approaches and knocks,
-and a bilingual court-summons card records the measured overage. It then fades back
-to the block with the dashboard still open. Ignoring the stop, or trying to leave
-during the pursuit, lets police catch the Porsche: it is forced through a visible progressive slowdown with the
-patrol car and siren still present, then the highway run ends after a brief stopped
-beat and adds a 1,000-point gameplay penalty. None of these outcomes ends or resets
-the loft game. At 180 km/h or faster the Porsche can instead open a 55 m gap. The
-patrol car models roughly 170 km/h, so holding 180 takes about 20 seconds while
-200 takes about 7. A brief touch of 180 is not enough, and slowing below it before
-the gap is complete lets the pursuit recover.
-
-The driver panel keeps separate **Demerits** and **BAC** columns visible together,
-without a status word competing with those factual values. Each balcony wine sip,
-balcony beer crush, draft pour, requested cocktail, or hands-on mixer serve adds
-one drink-equivalent (shown as `0.03` BAC in the simplified game model), and one
-equivalent clears per real minute.
-That state survives room changes, Road Trip exits, Continue, and a reload; a
-deliberate full-game restart clears it.
-
-The top readout separates elapsed trip time, highway distance, and points: for
-example, `8:16 · 12.4 km · 184 pts`. Time is a measurement, not a speed bonus;
-there is no reward for rushing. Distance adds one unmultiplied point per 100 m
-(`+10` per kilometre). A clean close pass is worth `+2`, wildlife safely clearing
-after a measured approach is `+3`, ♥️ is `+5`, 🍄 is `+7`, 💋 is `+10`, 🐸 is
-`+12`, and the rarer ∞ is `+25`. Each pickup has its own short sound. Those
-bonuses use the current combo
-and raise it by one, up to `3×`.
-Distance never uses the combo.
-
-Crossing into the oncoming side costs two points once per excursion, without
-resetting the combo. Returning fully to the proper side rearms the rule.
-
-Any collision resets the combo to `1×`. A rear-end impact deducts roughly
-`10–40` points and a deer strike roughly `20–60`, scaled by severity. A rabbit
-clip costs only `2–8`, gives a light bump, and never damages the windshield or
-knocks the transmission out of gear. Meeting
-oncoming traffic in its lane deducts `100`, produces a longer, louder impact,
-stops and stalls the Porsche, and shatters the windshield until the ignition is
-restarted. Rear-ending forward traffic instead cuts the car's speed below the
-struck vehicle's speed, kicks the view, and cracks the windshield. Each localized
-crack is a long asymmetric laminated-glass split with offset limbs rather than a
-circular stone chip; its root, lean, lengths, and smaller forks vary on every hit
-while remaining proportional to the strike. Shake, sound, slowdown, and glass damage
-also scale with the other object's type and relative speed. Any hit severe enough
-to crack or shatter the windshield knocks the transmission into neutral and
-releases the accelerator and clutch. Mule deer and snowshoe
-hares visibly leap and zig-zag toward the verge; slowing early gives them the time
-needed to clear safely. Collision room follows the target's visible width: rabbits
-leave the most space, then deer and sedans, pickups, and finally RVs and semis.
-
-The current grade is **Sunday drive** below 100 points, **Scenic run** from
-100–249, **Roadtrip regular** from 250–499, and **Highway legend** at 500 or more.
-The personal best and combo remain beside the three-part trip readout.
-Pass, pickup, wildlife, and collision results briefly use the room caption line
-instead of covering the windshield.
+Distance, clean passes, safely avoided wildlife, and pickups earn points. Clean
+actions build a combo up to `3×`; collisions reset it and may crack or shatter
+the windshield, stall the engine, or knock the transmission into neutral. Slow
+down for deer, snowshoe hares, and the rare blue-bellied hedgehog.
 
 Press Escape or select the top-right × to leave the highway for the
 street view while keeping the dashboard and engine available so the car can be

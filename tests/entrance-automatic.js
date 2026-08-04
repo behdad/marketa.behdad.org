@@ -529,7 +529,7 @@ check(s.validRestore && s.validRestore.transmission.mode === "auto" &&
   ["D", "N"].indexOf(s.validRestore.transmission.range) >= 0 &&
   (s.validRestore.transmission.range === "D" ? s.validRestore.gear >= 1 : s.validRestore.gear === 0),
   "valid checkpoint mode/range/gear restore as one coherent state", s.validRestore);
-check(s.policeStop && s.policeStop.roadtrip.police.phase === "arrest" &&
+check(s.policeStop && s.policeStop.roadtrip.police.phase === "stopped" &&
   s.policeStop.transmission.range === "P" && s.policeStop.gear === 0,
   "a police stop forces AUTO to P", s.policeStop);
 check(s.suspensionStop && !s.suspensionStop.roadtrip.active &&

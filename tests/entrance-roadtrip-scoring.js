@@ -97,7 +97,7 @@ check(!/padStart/.test(paintSource) && /roadtripElapsedLabel/.test(paintSource) 
   "the HUD shows plain time · distance · points values without score padding");
 check(/id="entrance-roadtrip-speed"[^>]*x="258"[^>]*text-anchor="end"/.test(source) &&
   /id="entrance-roadtrip-score"[^>]*x="29"/.test(source) &&
-  /id="entrance-roadtrip-run-panel"[^>]*transform="translate\(-7\.5 -2\.5\)"/.test(source),
+  /id="entrance-roadtrip-run-panel"[^>]*transform="translate\(-9\.5 -3\)"/.test(source),
   "the score stays left while a right-aligned speed slot reserves room through 263 km/h");
 check(/scoringVersion: ROADTRIP_SCORING_VERSION/.test(source) &&
   /distancePoints: roadtripState\.distancePoints/.test(source) &&

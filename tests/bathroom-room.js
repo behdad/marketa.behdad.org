@@ -106,7 +106,7 @@ check(s.bubbles && s.bubbles.filling && s.bubbles.filling.tubFilling && s.bubble
   "filling starts Bubble-gun, the tub body cannot drain it, and the rim drain resets it", s.bubbles);
 check(s.bubbles && s.bubbles.close && s.bubbles.close.live.pointer === "auto" &&
   s.bubbles.close.live.transform === "translate(190,19)" &&
-  s.bubbles.close.live.ring === "circle" && s.bubbles.close.live.hit === "20" &&
+  s.bubbles.close.live.ring === "circle" && s.bubbles.close.live.hit === "8.5" &&
   s.bubbles.close.stopped.room.open && !s.bubbles.close.stopped.room.hidden &&
   !s.bubbles.close.stopped.props.bubbles.active &&
   s.bubbles.close.stopped.props.active.indexOf("bubble-game-over") === -1 &&

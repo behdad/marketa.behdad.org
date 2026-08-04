@@ -7,7 +7,7 @@ var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
   '<script>(function(){',
   'var report={errors:window.__errs||[],steps:{}};function sleep(ms){return new Promise(function(resolve){setTimeout(resolve,ms);});}function box(rect){return {left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};}',
-  'function key(type,key){document.dispatchEvent(new KeyboardEvent(type,{key:key,bubbles:true,cancelable:true}));}',
+  'function key(type,key){document.dispatchEvent(new KeyboardEvent(type,{key:key,code:key,bubbles:true,cancelable:true}));}',
   'function step(count){for(var i=0;i<count;i++){var trip=state().drive.roadtrip;if(trip&&trip.active&&window.__exitEntranceRoadtrip)window.__exitEntranceRoadtrip();window.__entranceDriveStep(80);}}',
   'function setMotion(speed,gear){window.__entranceDriveControl("throttle",false);window.__entranceDriveControl("brake",false);window.__entranceDriveControl("clutch",false);return window.__entranceDriveSetMotion(speed,gear);}',
   'function benchmark100(){setMotion(0,1);window.__entranceDriveControl("throttle",true);var elapsed=0,shifts=[];while(elapsed<9000&&Math.abs(state().drive.speed)<100){window.__entranceDriveStep(20);elapsed+=20;var drive=state().drive;if(drive.rpm>=7000&&drive.gear<3){shifts.push({at:elapsed,speed:drive.speed,rpm:drive.rpm,from:drive.gear});window.__entranceDriveShift(drive.gear+1,true);}}window.__entranceDriveControl("throttle",false);return {elapsed:elapsed,shifts:shifts,state:state()};}',

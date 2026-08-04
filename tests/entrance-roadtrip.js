@@ -1079,8 +1079,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__restoreCheckpointSystems({ entrance: checkpointRow }, "afterStage");
     var checkpointAfter = copy(state());
     var checkpointVisible = visibleChildCount();
-    document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    window.__entranceDriveControl("throttle", true);
+    window.__entranceDriveControl("throttle", false);
     var checkpointResumed = copy(state());
     report.steps.checkpoint = {
       pickup: checkpointPickup,
@@ -1813,7 +1813,7 @@ var checkpointContract = checkpoint && {
   activeBefore: checkpoint.before.drive.roadtrip.active,
   entityCounts: [checkpoint.before.drive.roadtrip.entityCount, checkpoint.after.drive.roadtrip.entityCount],
   hasPausedRun: !!checkpoint.row.drive.roadtrip.pausedRun,
-  pausedAfter: checkpoint.after.drive.roadtrip.paused,
+  resumePendingAfter: checkpoint.after.drive.roadtrip.resumePending,
   reentryAfter: checkpoint.after.drive.roadtrip.reentryVisible,
   sameBeforeAfter: sameRetainedRun(checkpoint.before.drive.roadtrip, checkpoint.after.drive.roadtrip),
   activeResumed: checkpoint.resumed.drive.roadtrip.active,
@@ -1825,15 +1825,16 @@ check(checkpoint && checkpoint.before.drive.roadtrip.active && checkpoint.before
   checkpoint.before.drive.roadtrip.unlocked && checkpoint.before.drive.roadtrip.everAccepted && checkpoint.before.drive.roadtrip.score > 0 &&
   checkpoint.before.drive.roadtrip.entityCount > 0 && checkpoint.row.drive.roadtrip.accepted === false &&
   checkpoint.row.drive.roadtrip.everAccepted === true && checkpoint.row.drive.roadtrip.pausedRun &&
-  checkpoint.after.drive.roadtrip.unlocked && !checkpoint.after.drive.roadtrip.active &&
-  checkpoint.after.drive.roadtrip.paused && !checkpoint.after.drive.roadtrip.accepted && checkpoint.after.drive.roadtrip.everAccepted &&
+  checkpoint.after.drive.roadtrip.unlocked && checkpoint.after.drive.roadtrip.active &&
+  checkpoint.after.drive.roadtrip.resumePending && checkpoint.after.drive.roadtrip.accepted && checkpoint.after.drive.roadtrip.everAccepted &&
   !checkpoint.after.drive.roadtrip.invitationReady && !checkpoint.after.drive.roadtrip.invitationVisible &&
-  checkpoint.after.drive.roadtrip.reentryVisible &&
+  !checkpoint.after.drive.roadtrip.reentryVisible &&
   checkpoint.after.drive.roadtrip.entityCount === checkpoint.before.drive.roadtrip.entityCount &&
-  checkpoint.visible === 0 && sameRetainedRun(checkpoint.before.drive.roadtrip, checkpoint.after.drive.roadtrip) &&
-  checkpoint.resumed.drive.roadtrip.active && !checkpoint.resumed.drive.roadtrip.paused &&
+  checkpoint.visible === checkpoint.after.drive.roadtrip.entityCount &&
+  sameRetainedRun(checkpoint.before.drive.roadtrip, checkpoint.after.drive.roadtrip) &&
+  checkpoint.resumed.drive.roadtrip.active && !checkpoint.resumed.drive.roadtrip.resumePending &&
   sameRetainedRun(checkpoint.after.drive.roadtrip, checkpoint.resumed.drive.roadtrip),
-  "checkpoint restore parks the complete run and compact re-entry resumes it intact",
+  "checkpoint restore presents the complete run paused and fresh driving input resumes it intact",
   checkpointContract);
 var reset = s.reset && s.reset.roadtrip;
 check(reset && !reset.active && !reset.paused && !reset.unlocked && !reset.accepted && !reset.everAccepted &&

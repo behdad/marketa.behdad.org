@@ -35492,6 +35492,7 @@ window.__entranceRoomOpen = false;
     pursuitAhead: 37,
     interval: 41,
     trafficSpeed: 43,
+    summonedType: 47,
     furnitureSide: 53,
     summonedLane: 59,
     summonedAhead: 61,
@@ -38476,10 +38477,12 @@ window.__entranceRoomOpen = false;
     entity.type = type;
     entity.serial = ++roadtripState.spawnSerial;
     entity.lane = roadtripLaneValue(lane);
+    options = options || {};
     var traffic = roadtripIsTrafficType(type);
     entity.direction = traffic ? (entity.lane < 0 ? "oncoming" : "forward") : "";
-    if (type === "rv" || type === "truck") entity.lane = entity.direction === "oncoming" ? -1.5 : 1.5;
-    options = options || {};
+    if ((type === "rv" || type === "truck") && !options.behind) {
+      entity.lane = entity.direction === "oncoming" ? -1.5 : 1.5;
+    }
     entity.at = roadtripState.distance + (options.behind ?
       -Math.max(10, Number(ahead) || ROADTRIP_OVERTAKE_REAR_DISTANCE) :
       Math.max(10, Number(ahead) || ROADTRIP_DRAW_DISTANCE));
@@ -38552,20 +38555,25 @@ window.__entranceRoomOpen = false;
   }
   function roadtripSummonedTrafficPlan(overtaking, serial) {
     serial = Math.max(0, Math.floor(Number(serial) || 0));
+    var types = ["car", "pickup", "truck", "rv"];
+    var typeOrder = roadtripSeededPermutation(types.length, ROADTRIP_SEED_STREAM.summonedType,
+      Math.floor(serial / types.length));
+    var type = types[typeOrder[serial % types.length]];
     var laneRoll = roadtripSeededUint(ROADTRIP_SEED_STREAM.summonedLane, serial);
     var aheadRoll = roadtripSeededUint(ROADTRIP_SEED_STREAM.summonedAhead, serial);
     var speedRoll = roadtripSeededUint(ROADTRIP_SEED_STREAM.summonedSpeed, serial);
     if (overtaking) {
       return {
-        type: "car",
+        type: type,
         lane: laneRoll & 1 ? 1.5 : .5,
-        ahead: ROADTRIP_OVERTAKE_REAR_DISTANCE,
+        ahead: ROADTRIP_OVERTAKE_REAR_DISTANCE + aheadRoll % 4,
         speedKmh: 92 + speedRoll % 4 * 5
       };
     }
     var lane = [-1.5, -.5, .5, 1.5][laneRoll % 4];
+    if (type === "truck" || type === "rv") lane = lane < 0 ? -1.5 : 1.5;
     return {
-      type: "car",
+      type: type,
       lane: lane,
       ahead: 48 + aheadRoll % 7 * 8
     };

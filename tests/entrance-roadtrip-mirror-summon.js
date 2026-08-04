@@ -122,11 +122,14 @@ check(JSON.stringify(steps.planA) === JSON.stringify(steps.planARepeat) &&
   });
 var plannedOvertakerLanes = new Set((steps.planA || []).map(function (row) { return row.overtaker.lane; }));
 var plannedTrafficLanes = new Set((steps.planA || []).map(function (row) { return row.traffic.lane; }));
+var vehicleTypes = ["car", "pickup", "truck", "rv"];
+var plannedOvertakerTypes = new Set((steps.planA || []).map(function (row) { return row.overtaker.type; }));
+var plannedTrafficTypes = new Set((steps.planA || []).map(function (row) { return row.traffic.type; }));
 check(plannedOvertakerLanes.has(.5) && plannedOvertakerLanes.has(1.5) &&
-  plannedTrafficLanes.size > 2 && (steps.planA || []).every(function (row) {
-    return row.overtaker.type === "car" && row.traffic.type === "car";
+  plannedTrafficLanes.size > 2 && vehicleTypes.every(function (type) {
+    return plannedOvertakerTypes.has(type) && plannedTrafficTypes.has(type);
   }),
-  "the seeded summon deck varies sedan lanes without introducing another vehicle type", steps.planA);
+  "repeated seeded summons include sedans, pickups, semis, and RVs across varied lanes", steps.planA);
 var lowEntities = steps.low && steps.low.entities || [];
 check(lowEntities.length === 1 && lowEntities[0].overtakingPlayer && lowEntities[0].direction === "forward" &&
   lowEntities[0].lane === .5 && lowEntities[0].overtakeLaneTarget === 1.5 &&
@@ -134,7 +137,7 @@ check(lowEntities.length === 1 && lowEntities[0].overtakingPlayer && lowEntities
   "a stopped inner-lane double-click queues a horn and an outer-lane pass from behind", steps.low);
 var shoulderEntities = steps.shoulder && steps.shoulder.entities || [];
 var shoulderOvertaker = shoulderEntities[shoulderEntities.length - 1];
-check(shoulderOvertaker && shoulderOvertaker.type === "car" && shoulderOvertaker.overtakingPlayer &&
+check(shoulderOvertaker && vehicleTypes.indexOf(shoulderOvertaker.type) >= 0 && shoulderOvertaker.overtakingPlayer &&
   !shoulderOvertaker.overtakeHornPending,
   "a stopped Porsche on the shoulder never arms a passing horn", steps.shoulder);
 var horns = steps.hornProfiles || {};
@@ -148,17 +151,20 @@ check(horns.passing && horns.passing.kind === "passing" && horns.passing.duratio
 var movingEntities = steps.moving && steps.moving.entities || [];
 var movingLanes = new Set(movingEntities.map(function (row) { return row.lane; }));
 check(movingEntities.length === 4 && movingEntities.every(function (row) {
-  return row.type === "car" && row.overtakingPlayer && row.direction === "forward" &&
+  return vehicleTypes.indexOf(row.type) >= 0 && row.overtakingPlayer && row.direction === "forward" &&
     (row.lane === .5 || row.lane === 1.5);
-}) && movingLanes.has(.5) && movingLanes.has(1.5),
-  "moving low-speed summons can originate in either same-direction lane", steps.moving);
+}) && movingLanes.has(.5) && movingLanes.has(1.5) &&
+  vehicleTypes.every(function (type) {
+    return movingEntities.some(function (row) { return row.type === type; });
+  }),
+  "four low-speed summons expose the full vehicle mix in both same-direction lanes", steps.moving);
 var highEntities = steps.high && steps.high.entities || [];
 var ordinary = highEntities.filter(function (row) { return !row.overtakingPlayer; });
 check(highEntities.length === 6 && ordinary.length === 2 &&
-  ordinary.every(function (row) { return row.type === "car"; }) &&
+  ordinary.every(function (row) { return vehicleTypes.indexOf(row.type) >= 0; }) &&
   new Set(ordinary.map(function (row) { return row.lane; })).size > 1 &&
   ordinary.every(function (row) { return row.at > steps.high.distance; }),
-  "high-speed double-clicks summon sedans in varied lanes ahead", steps.high);
+  "high-speed double-clicks continue the varied vehicle deck in safe lanes ahead", steps.high);
 function newestOncoming(step) {
   return (step && step.entities || []).filter(function (row) {
     return row.direction === "oncoming";
@@ -174,6 +180,9 @@ check(ownLaneOncoming && !ownLaneOncoming.oncomingHorned && wrongLaneOncoming &&
   });
 check(steps.flood && steps.flood.entityCount === steps.flood.poolSize && steps.flood.poolSize === 16,
   "repeated double-clicks deliberately flood every traffic-pool slot", steps.flood);
+check(steps.flood && vehicleTypes.every(function (type) {
+  return steps.flood.entities.some(function (row) { return row.type === type; });
+}), "the flooded live pool visibly contains every summoned vehicle type", steps.flood);
 
 if (failures) process.exit(1);
 console.log("Mirror traffic stress checks passed.");

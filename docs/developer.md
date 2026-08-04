@@ -194,8 +194,10 @@ templates, speed, scale, and mass treatment. Keep the natural spawn table varied
 enough to read as Alberta highway traffic. `deer` and the compatibility-named `rabbit` render as a
 mule deer and snowshoe hare.
 Mirror double-click traffic uses `roadtripSummonedTrafficPlan()` and its own seeded streams, so a
-run reproduces sedan lane, spacing, and speed while different run seeds vary them. This stress
-control summons only `car`; it never borrows the natural highway mix's pickups, semis, or RVs.
+run reproduces vehicle type, lane, spacing, and speed while different run seeds vary them. Each
+four-plan permutation contains a sedan, pickup, semi, and RV. Ordinary summoned heavy vehicles
+normalize to their direction's outer lane; an overtaking heavy vehicle may start in the blocked
+inner lane so `overtakeLaneTarget` can visibly carry it outward around the Porsche.
 The stress control remains deliberately uncapped up to the shared entity-pool limit. A stopped
 Porsche forces its overtaker to begin in the occupied forward lane; the entity-owned
 `overtakeLaneTarget` then carries the visible move into the other forward lane, and arms a horn on

@@ -1044,6 +1044,7 @@ footer{margin-top:2.6rem}
 }
 #entrance-roadtrip-reenter.suspension-ignition-blocked rect{stroke:#ed837d;stroke-width:2.2px}
 #entrance-roadtrip-mirror{opacity:.96}
+#entrance-room.roadtrip-active #entrance-roadtrip-mirror{pointer-events:all;cursor:pointer}
 .entrance-roadtrip-mirror-sky{fill:#9db7c2}
 .entrance-roadtrip-mirror-verge{fill:#7b7659}
 .entrance-roadtrip-mirror-road{fill:#414547}
@@ -38482,6 +38483,21 @@ window.__entranceRoomOpen = false;
     return spawnRoadtripEntity(type, lane, ROADTRIP_OVERTAKE_REAR_DISTANCE,
       { behind: true, speedKmh: speedKmh, honk: honk });
   }
+  function summonRoadtripMirrorTraffic(event) {
+    if (!roadtripState.active) return false;
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    var speed = Math.abs(driveState.speed * driveState.facing);
+    if (speed <= ROADTRIP_OVERTAKE_SPEED_MAX) return !!spawnRoadtripPlayerOvertaker();
+    var serial = roadtripState.spawnSerial;
+    var lane = serial % 2 ? -.5 : -1.5;
+    var ahead = 48 + serial % 7 * 8;
+    return !!spawnRoadtripEntity("car", lane, ahead);
+  }
+  var roadtripMirrorControl = roadtripElement("entrance-roadtrip-mirror");
+  if (roadtripMirrorControl) roadtripMirrorControl.addEventListener("dblclick", summonRoadtripMirrorTraffic);
   function syncRoadtripPlayerOvertaker(seconds) {
     var forwardSpeed = driveState.speed * driveState.facing;
     var eligible = roadtripState.police.phase === "idle" && forwardSpeed >= 0 &&

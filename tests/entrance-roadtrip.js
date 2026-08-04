@@ -953,12 +953,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       viewBox: viewBox(),
       reentryVisible: reentryButton.classList.contains("show"),
       reentryMetadata: metadataCount(reentryButton),
-      label: reentryButton.textContent.trim(),
+      label: reentryButton.textContent.trim().replace(/\s+/g, " "),
       button: box(reentryButton),
       steering: box(document.getElementById("entrance-drive-steering"))
     };
     window.setLang("cs");
-    reopened.czechLabel = reentryButton.textContent.trim();
+    reopened.czechLabel = reentryButton.textContent.trim().replace(/\s+/g, " ");
     window.setLang("en");
     if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
     var reentryBeforeEnter = copy(state());
@@ -1743,7 +1743,7 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   !close.reopened.roadtrip.accepted && close.reopened.roadtrip.everAccepted &&
   !close.reopened.roadtrip.invitationVisible && close.reopened.roadtrip.reentryVisible &&
   close.reopened.reentryVisible && close.reopened.reentryMetadata === 0 &&
-  close.reopened.label === "Road Trip" && close.reopened.czechLabel === "Výlet" &&
+  close.reopened.label === "Road Trip ENTER ↵" && close.reopened.czechLabel === "Výlet ENTER ↵" &&
   (close.reopened.button.right <= close.reopened.steering.left || close.reopened.button.left >= close.reopened.steering.right ||
     close.reopened.button.bottom <= close.reopened.steering.top || close.reopened.button.top >= close.reopened.steering.bottom) &&
   !close.reentryBeforeEnter.car.engineOn && !close.reentryBeforeEnter.drive.roadtrip.active &&

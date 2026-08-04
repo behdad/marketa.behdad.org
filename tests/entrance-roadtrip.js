@@ -1182,6 +1182,15 @@ check(/entrance-roadtrip-season-winter #entrance-roadtrip-rabbit \.entrance-road
   /class="entrance-roadtrip-rabbit-(?:body|head|ear|feet)"/.test(source) &&
   /id="entrance-roadtrip-rabbit"[^>]+stroke="#443c34"/.test(source),
   "the hare keeps grey-brown summer art and changes to outlined off-white winter fur");
+check(/id="entrance-roadtrip-hedgehog"/.test(source) &&
+  /id="entrance-roadtrip-mushroom"/.test(source) && /id="entrance-roadtrip-frog"/.test(source),
+  "the highway owns vector hedgehog, mushroom, and frog art");
+check(/id="entrance-roadtrip-inf"[\s\S]{0,180}<circle cy="-15" r="13"[\s\S]{0,180}M0-15C-3\.2-20-8-20-8-15S-3\.2-10 0-15S8-20 8-15S3\.2-10 0-15/.test(source),
+  "the infinity mark is centred and inset inside its circular badge");
+check(/entity\.type === "car" \? 1\.08/.test(source) &&
+  /roadtripIsTrafficType\(entity\.type\) \? 1\.06 : 1/.test(source) &&
+  /roadtripCollectibleValue\(entity\.type\) \? \.82 : 1/.test(source),
+  "traffic and pickups receive a modest visual scale lift in the windshield and mirror");
 check(/id="entrance-roadtrip-headlight-soft"[^>]+x="-24%"[^>]+width="148%"[\s\S]{0,100}<feGaussianBlur stdDeviation="3\.6"/.test(source) &&
   (source.match(/id="entrance-roadtrip-headlight-(?:left|right)"[^>]+fill-opacity="\.42"/g) || []).length === 2,
   "highway headlights share a softened low-opacity beam treatment");

@@ -47,6 +47,7 @@ var elapsedLabel = loadFunction("roadtripElapsedLabel");
 var distanceLabel = loadFunction("roadtripDistanceLabel");
 var gradeKey = loadFunction("roadtripGradeKey");
 var collisionPenalty = loadFunction("roadtripCollisionPenalty");
+var collectibleValue = loadFunction("roadtripCollectibleValue");
 var legacyScore = loadFunction("roadtripLegacyScore");
 
 check([0, 99, 100, 199, 200, 999].map(distancePoints).join(",") === "0,0,1,1,2,9",
@@ -86,10 +87,10 @@ check(/roadtripState\.score \+= added/.test(distanceAwardSource) &&
   !/awardRoadtripBonus|multiplier/.test(distanceAwardSource),
   "distance points bypass the combo pipeline");
 check(/awardRoadtripBonus\(3\)/.test(source) && /awardRoadtripBonus\(2\)/.test(source) &&
-  /type === "heart" \? 5 : entity\.type === "kiss" \? 10 : 25/.test(source),
-  "safe wildlife, close passes, hearts, kisses, and infinity use 3/2/5/10/25-point bases");
+  ["heart", "mushroom", "kiss", "frog", "inf"].map(collectibleValue).join(",") === "5,7,10,12,25",
+  "safe wildlife, close passes, and the five pickups use their documented point bases");
 check(/roadtripCollisionPenalty\("rear-end"/.test(source) &&
-  /roadtripCollisionPenalty\(rabbitHit \? "rabbit" : "wildlife"/.test(source) &&
+  /roadtripCollisionPenalty\(smallWildlifeHit \? "rabbit" : "wildlife"/.test(source) &&
   /roadtripCollisionPenalty\("head-on"/.test(source),
   "every collision class routes through the shared penalty boundary");
 check(!/padStart/.test(paintSource) && /roadtripElapsedLabel/.test(paintSource) &&

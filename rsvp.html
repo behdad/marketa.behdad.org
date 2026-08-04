@@ -38280,8 +38280,7 @@ window.__entranceRoomOpen = false;
     if (syncRoadtripDemeritState()) return false;
     if (!roadtripResumePending || !roadtripState.active || document.hidden || !document.hasFocus()) return false;
     roadtripTransportPaused = false;
-    roadtripResumePending = false;
-    room.classList.remove("roadtrip-resume-pending");
+    setRoadtripResumePending(false);
     driveLastTime = 0;
     driveState.throttleHeldMs = 0;
     driveState.brakeSpinChecked = false;
@@ -41573,8 +41572,13 @@ window.__entranceRoomOpen = false;
       ensurePorscheDriveFrame();
     }
   }
+  function handlePorscheDriveBlur() {
+    // blur can arrive before hasFocus() reflects the newly unattended window.
+    if (roadtripState.active) setRoadtripResumePending(true);
+    updatePorscheDriveLifecycle();
+  }
   document.addEventListener("visibilitychange", updatePorscheDriveLifecycle);
-  window.addEventListener("blur", updatePorscheDriveLifecycle);
+  window.addEventListener("blur", handlePorscheDriveBlur);
   window.addEventListener("focus", updatePorscheDriveLifecycle);
   function finishEntranceClose() {
     closeTimer = null;

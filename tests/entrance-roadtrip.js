@@ -500,6 +500,25 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveSetMotion(90, 3);
     window.__entranceDriveControl("throttle", true);
     await sleep(45);
+    var transportButton = document.getElementById("hunt-playpause-btn");
+    window.dispatchEvent(new Event("blur"));
+    var earlyBlurImmediate = copy(state());
+    var earlyBlurImmediateButton = transportButton.classList.contains("paused");
+    attended = false;
+    step(1000);
+    var earlyBlurAfterFocusFlip = copy(state());
+    attended = true;
+    window.dispatchEvent(new Event("focus"));
+    await sleep(40);
+    var earlyBlurFocusReturn = copy(state());
+    var earlyBlurFocusReturnButton = transportButton.classList.contains("paused");
+    pressKey("ArrowRight");
+    var earlyBlurResumed = copy(state());
+    var earlyBlurResumedButton = transportButton.classList.contains("paused");
+    releaseKey("ArrowRight");
+
+    window.__entranceDriveControl("throttle", true);
+    await sleep(20);
     attended = false;
     window.dispatchEvent(new Event("blur"));
     var focusPauseStart = copy(state());
@@ -551,6 +570,15 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     pressKey("Escape");
     var focusPauseEscapeAfter = copy(state());
     report.steps.focusPause = {
+      earlyBlur: {
+        immediate: earlyBlurImmediate,
+        immediateButton: earlyBlurImmediateButton,
+        afterFocusFlip: earlyBlurAfterFocusFlip,
+        focusReturn: earlyBlurFocusReturn,
+        focusReturnButton: earlyBlurFocusReturnButton,
+        resumed: earlyBlurResumed,
+        resumedButton: earlyBlurResumedButton
+      },
       start: focusPauseStart,
       end: focusPauseEnd,
       waiting: focusPauseWaiting,
@@ -1338,6 +1366,13 @@ check(reverseRecovery &&
   reverseRecovery);
 var focusPause = s.focusPause;
 check(focusPause &&
+  focusPause.earlyBlur.immediate.drive.roadtrip.resumePending &&
+  focusPause.earlyBlur.immediateButton &&
+  Object.keys(focusPause.earlyBlur.immediate.drive.holds).every(function (key) { return !focusPause.earlyBlur.immediate.drive.holds[key]; }) &&
+  focusPause.earlyBlur.afterFocusFlip.drive.roadtrip.elapsedSeconds === focusPause.earlyBlur.immediate.drive.roadtrip.elapsedSeconds &&
+  focusPause.earlyBlur.afterFocusFlip.drive.roadtrip.distance === focusPause.earlyBlur.immediate.drive.roadtrip.distance &&
+  focusPause.earlyBlur.focusReturn.drive.roadtrip.resumePending && focusPause.earlyBlur.focusReturnButton &&
+  !focusPause.earlyBlur.resumed.drive.roadtrip.resumePending && !focusPause.earlyBlur.resumedButton &&
   focusPause.end.drive.roadtrip.elapsedSeconds === focusPause.start.drive.roadtrip.elapsedSeconds &&
   focusPause.end.drive.roadtrip.distance === focusPause.start.drive.roadtrip.distance &&
   focusPause.end.drive.roadtrip.score === focusPause.start.drive.roadtrip.score &&
@@ -1368,7 +1403,7 @@ check(focusPause &&
   focusPause.escapeWaiting.drive.roadtrip.resumePending && focusPause.escapeWaiting.drive.roadtrip.active &&
   !focusPause.escapeAfter.drive.roadtrip.active && !focusPause.escapeAfter.drive.roadtrip.resumePending &&
   focusPause.escapeAfter.drive.hud && !focusPause.pauseClass,
-  "blur freezes the highway until a gentle fresh keyboard/touch driving input, while Escape exits from the waiting state",
+  "blur latches the highway and Play button even before hasFocus flips, then waits for gentle fresh keyboard/touch input while Escape exits",
   focusPause);
 check(activation && activation.beforeClasses.indexOf("entrance-clouded") >= 0 &&
   activation.beforeClasses.indexOf("entrance-raining") >= 0 &&

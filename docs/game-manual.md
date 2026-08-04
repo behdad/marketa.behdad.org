@@ -263,7 +263,7 @@ the beam follows steering and the road's bend while weather remains in front.
 Leaving the game window or switching tabs pauses the whole highway simulation:
 trip time, road motion, traffic, wildlife, police, spawns, distance, and scoring
 all freeze. Held driving controls are released, and returning resumes from the
-same instant without a catch-up jump.
+same instant after a fresh driving input; the transport shows Play while waiting.
 
 You can cross either white edge line onto the shoulder. The rumble strip shakes
 the view; farther out, gravel reduces grip and steadily bleeds speed. It is useful

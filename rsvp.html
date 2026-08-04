@@ -35065,6 +35065,7 @@ window.__entranceRoomOpen = false;
   var roadtripShiftHintKey = "";
   var roadtripShiftHintMs = 0;
   var roadtripResumePending = false;
+  var roadtripTransportPaused = false;
   var driveBatteryLevel = .75;
   var ROADTRIP_BEST_KEY = "entranceRoadtripBest:v2";
   var ROADTRIP_LEGACY_BEST_KEY = "entranceRoadtripBest:v1";
@@ -38155,10 +38156,12 @@ window.__entranceRoomOpen = false;
     roadtripResumePending = pending;
     room.classList.toggle("roadtrip-resume-pending", pending);
     if (changed && roadtripState.active) syncPorscheDriveInstruction(true);
+    if (changed && window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
     return changed;
   }
   function resumeRoadtripFromDrivingInput() {
     if (syncRoadtripDemeritState()) return false;
+    if (roadtripTransportPaused) return false;
     if (!roadtripResumePending || !roadtripState.active || document.hidden || !document.hasFocus()) return false;
     roadtripResumePending = false;
     room.classList.remove("roadtrip-resume-pending");
@@ -38173,9 +38176,27 @@ window.__entranceRoomOpen = false;
     ensurePorscheDriveFrame();
     return true;
   }
+  function toggleRoadtripTransport() {
+    if (!roadtripState.active) return false;
+    if (roadtripResumePending) {
+      roadtripTransportPaused = false;
+      resumeRoadtripFromDrivingInput();
+    } else {
+      roadtripTransportPaused = true;
+      setRoadtripResumePending(true);
+      updatePorscheDriveLifecycle();
+    }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+    return true;
+  }
+  window.__toggleEntranceRoadtripTransport = toggleRoadtripTransport;
+  window.__entranceRoadtripTransportState = function () {
+    return { active: roadtripState.active, paused: roadtripState.active && roadtripResumePending };
+  };
   function resetRoadtripRun() {
     clearRoadtripEntities();
     roadtripState.paused = false;
+    roadtripTransportPaused = false;
     roadtripState.playerLane = .5;
     roadtripState.distance = 0;
     roadtripState.distancePoints = 0;
@@ -38213,6 +38234,7 @@ window.__entranceRoomOpen = false;
   }
   function parkRoadtrip(clearRun) {
     roadtripState.active = false;
+    roadtripTransportPaused = false;
     roadtripResumePending = false;
     roadtripShiftHintKey = "";
     roadtripShiftHintMs = 0;
@@ -38241,6 +38263,7 @@ window.__entranceRoomOpen = false;
       roadtripState.exitUntilStop = false;
       resetRoadtripRun();
     }
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
   }
   function pauseRoadtrip() {
     if (!roadtripState.active) return false;
@@ -38287,6 +38310,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.police.runEnded) resetRoadtripRun();
     roadtripState.active = true;
     roadtripState.paused = false;
+    roadtripTransportPaused = false;
     paintRoadtripInvite();
     roadtripResumePending = false;
     roadtripShiftHintKey = "";
@@ -38307,6 +38331,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripPolice();
     paintRoadtripScore();
     updateRoadtripPoliceSiren();
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_roadtrip_drive");
     return true;
   }
@@ -38380,7 +38405,8 @@ window.__entranceRoomOpen = false;
   }
   function porscheDriveInstructionKey() {
     if (!driveState.hudOpen) return "lower_entrance";
-    if (roadtripState.active && roadtripResumePending) return "entrance_roadtrip_resume";
+    if (roadtripState.active && roadtripResumePending) return roadtripTransportPaused ?
+      "entrance_roadtrip_transport_paused" : "entrance_roadtrip_resume";
     if (roadtripState.active && roadtripState.police.phase === "capture") {
       return "entrance_roadtrip_police_capture";
     }
@@ -42294,13 +42320,20 @@ document.addEventListener("keydown", function (event) {
         new MouseEvent("click", { bubbles: true, cancelable: true }));
       else if (!(window.__exitEntranceRoadtrip && window.__exitEntranceRoadtrip()) &&
           window.__dismissEntrancePorscheDriveHud) window.__dismissEntrancePorscheDriveHud();
+    } else if ((event.key === "Enter" || event.key === " " || event.key === "Spacebar") &&
+        window.__toggleEntranceRoadtripTransport &&
+        window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState().active) {
+      if (!event.repeat) window.__toggleEntranceRoadtripTransport();
     } else if (event.key === "Enter") {
       if (roadtripInviteVisible) document.getElementById("entrance-roadtrip-invite-accept").dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
       else if (roadtripReenterVisible && document.getElementById("entrance-drive-hud").classList.contains("drive-engine-on"))
         roadtripReenterNode.dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
-      else if (window.__toggleEntrancePorscheEngine) window.__toggleEntrancePorscheEngine();
+      else if (window.__toggleEntrancePorscheEngine &&
+          !document.getElementById("entrance-drive-hud").classList.contains("drive-engine-on")) {
+        window.__toggleEntrancePorscheEngine();
+      }
     } else if ((event.key === " " || event.key === "Spacebar") && roadtripReenterFocused) {
       roadtripReenterNode.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     } else if (window.__entranceDriveKey) {
@@ -43702,6 +43735,7 @@ var T = {
       entrance_roadtrip_drive: "Highway run · dodge traffic; collect ♥️, 💋 & ∞.",
       entrance_roadtrip_unlocked: "One lap down · fancy a roadtrip?",
       entrance_roadtrip_resume: "Roadtrip paused · steer or press a pedal to resume.",
+      entrance_roadtrip_transport_paused: "Road Trip paused · Space, Enter or Play resumes.",
       entrance_roadtrip_invite_title: "Let’s road trip!",
       entrance_roadtrip_invite_accept: "Take the highway",
       entrance_roadtrip_invite_later: "Later",
@@ -44938,6 +44972,7 @@ var T = {
       entrance_roadtrip_drive: "Jízda po dálnici · vyhýbej se provozu; sbírej ♥️, 💋 a ∞.",
       entrance_roadtrip_unlocked: "Jedno kolo za tebou · dáme si výlet?",
       entrance_roadtrip_resume: "Jízda pozastavena · pokračuj volantem nebo pedálem.",
+      entrance_roadtrip_transport_paused: "Jízda pozastavena · pokračuj mezerníkem, Enterem nebo tlačítkem přehrávání.",
       entrance_roadtrip_invite_title: "Jedeme na výlet!",
       entrance_roadtrip_invite_accept: "Vyjet na dálnici",
       entrance_roadtrip_invite_later: "Později",
@@ -76970,6 +77005,7 @@ async def localfont(name):
     return transportSources().some(function (s) { return s.isPlaying(); });
   }
   function toggleMusicPlayback() {
+    if (window.__toggleEntranceRoadtripTransport && window.__toggleEntranceRoadtripTransport()) return;
     var sources = transportSources();
     var playing = sources.filter(function (s) { return s.isPlaying(); });
     if (playing.length) {
@@ -77096,6 +77132,13 @@ async def localfont(name):
     var btn = document.getElementById("hunt-playpause-btn");
     if (window.__announceNowPlaying) window.__announceNowPlaying(); // name the track if it just changed (before the early btn-missing return)
     if (!btn) return;
+    var roadtripTransport = window.__entranceRoadtripTransportState &&
+      window.__entranceRoadtripTransportState();
+    if (roadtripTransport && roadtripTransport.active) {
+      btn.classList.add("shown");
+      btn.classList.toggle("paused", !!roadtripTransport.paused);
+      return;
+    }
     var ws = document.getElementById("cuddly-wallscreen");
     var bedGatedOn = (ws && (ws.classList.contains("chan-coffee") || ws.classList.contains("chan-stars") || ws.classList.contains("chan-workout") || ws.classList.contains("chan-totoro") || ws.classList.contains("chan-aqua"))) || !!window.__gardenPartyOn;
     var songActive = !!(window.__phoneMusicId && window.__phoneMusicId()); // playing or paused-with-progress

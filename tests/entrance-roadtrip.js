@@ -276,8 +276,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     pressDocumentKey("Enter");
     normalHudEnter.started = copy(state());
     pressDocumentKey("Enter");
-    normalHudEnter.stopped = copy(state());
+    normalHudEnter.secondEnter = copy(state());
     report.steps.normalHudEnter = normalHudEnter;
+    // The rest of this long-running harness predates one-way Enter ignition and
+    // assumes a fresh explicit stop/start baseline before its drivetrain sweeps.
+    window.__toggleEntrancePorscheEngine();
     ensureEngine();
     window.__entranceDriveShift(6, true);
     window.__entranceDriveControl("throttle", true);
@@ -1024,6 +1027,26 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       visible: checkpointVisible
     };
     window.__entranceRoadtripStart();
+    var transportButton = document.getElementById("hunt-playpause-btn");
+    var transport = { before: copy(state()) };
+    pressDocumentKey(" ");
+    transport.spacePaused = copy(state());
+    transport.spacePausedButton = transportButton.classList.contains("paused");
+    step(1000);
+    transport.spaceHeld = copy(state());
+    pressDocumentKey(" ");
+    transport.spaceResumed = copy(state());
+    pressDocumentKey("Enter");
+    transport.enterPaused = copy(state());
+    pressDocumentKey("Enter");
+    transport.enterResumed = copy(state());
+    transportButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    transport.buttonPaused = copy(state());
+    transport.buttonPausedClass = transportButton.classList.contains("paused");
+    transportButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    transport.buttonResumed = copy(state());
+    report.steps.transport = transport;
+    window.__entranceRoadtripStart();
     window.__entranceRoadtripSpawn("token", 0);
     var bestBeforeReset = roadtrip().best;
     window.__resetCheckpointSystems();
@@ -1137,7 +1160,7 @@ check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationRea
   /function resetRoadtripInvitationSession\(\)[\s\S]{0,300}roadtripState\.accepted = false;[\s\S]{0,200}roadtripState\.invitationReady = false;/.test(source),
   "the source owns a one-lap initial unlock and full-distance retry gate before first acceptance");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
-  /var roadtripInviteVisible[\s\S]{0,1100}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
+  /var roadtripInviteVisible[\s\S]{0,1500}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
   /event\.key === "Escape"[\s\S]{0,400}roadtripInviteVisible[\s\S]{0,300}entrance-roadtrip-invite-later/.test(source),
   "the first highway entry is explicit and its full offer owns Enter and Escape");
 check(/id="entrance-roadtrip-reenter"[^>]+data-aria-i="entrance_roadtrip_reenter"/.test(source) &&
@@ -1216,8 +1239,21 @@ check(normalHudEnter && !normalHudEnter.before.car.engineOn &&
   !normalHudEnter.before.drive.roadtrip.reentryVisible && !normalHudEnter.before.drive.roadtrip.active &&
   normalHudEnter.started.car.engineOn && !normalHudEnter.started.drive.roadtrip.active &&
   !normalHudEnter.started.drive.roadtrip.reentryVisible &&
-  !normalHudEnter.stopped.car.engineOn && !normalHudEnter.stopped.drive.roadtrip.active,
-  "without the compact mark, document Enter retains the normal engine toggle", normalHudEnter);
+  normalHudEnter.secondEnter.car.engineOn && !normalHudEnter.secondEnter.drive.roadtrip.active,
+  "without the compact mark, document Enter starts but never stops the engine", normalHudEnter);
+var transport = s.transport;
+check(transport && transport.before.drive.roadtrip.active && !transport.before.drive.roadtrip.resumePending &&
+  transport.spacePaused.drive.roadtrip.active && transport.spacePaused.drive.roadtrip.resumePending &&
+  transport.spacePaused.car.engineOn && transport.spacePausedButton &&
+  transport.spaceHeld.drive.roadtrip.elapsedSeconds === transport.spacePaused.drive.roadtrip.elapsedSeconds &&
+  !transport.spaceResumed.drive.roadtrip.resumePending && transport.spaceResumed.car.engineOn,
+  "Space pauses the attended Road Trip in place, freezes time, and resumes without stopping the engine", transport);
+check(transport && transport.enterPaused.drive.roadtrip.resumePending &&
+  !transport.enterResumed.drive.roadtrip.resumePending && transport.enterResumed.car.engineOn,
+  "Enter pauses and resumes Road Trip instead of toggling the engine", transport);
+check(transport && transport.buttonPaused.drive.roadtrip.resumePending && transport.buttonPausedClass &&
+  !transport.buttonResumed.drive.roadtrip.resumePending && transport.buttonResumed.car.engineOn,
+  "the chrome play/pause button owns Road Trip transport while the highway is active", transport);
 check(activation && activation.practice.some(function (row) { return row.practiceLaps === 1 && !row.active; }) &&
   !activation.practice.some(function (row) { return row.practiceLaps > 1; }) &&
   activation.offer.before.practiceLaps === 1 && activation.offer.before.unlocked &&

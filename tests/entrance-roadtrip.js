@@ -204,6 +204,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       classes: document.getElementById("entrance-room").getAttribute("class"),
       crackOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-crack")).opacity),
       shatterOpacity: parseFloat(getComputedStyle(document.getElementById("entrance-roadtrip-shatter")).opacity),
+      caption: document.getElementById("hunt-caption").textContent.trim(),
       traces: traces
     };
   }
@@ -1431,8 +1432,10 @@ check(collectibles.every(function (item, index) {
     item.after.tokens > item.before.tokens &&
     item.after.rewardSounds === item.before.rewardSounds + 1 &&
     item.after.score - item.before.score === collectibleValues[index] * item.before.multiplier &&
+    item.caption.indexOf("+" + (item.after.score - item.before.score) + " pts") >= 0 &&
+    item.caption.indexOf(item.before.multiplier + "× combo") >= 0 &&
     item.after.multiplier > item.before.multiplier;
-}), "heart, kiss, and rare infinity pickups sound and visibly collect for 5, 10, and 25 times the combo",
+}), "heart, kiss, and rare infinity pickups sound, collect, and caption the actual award and combo",
   collectibles);
 var collision = s.collision;
 check(collision && collision.visual.kind === "traffic" && collision.visual.lane === "0.5" && collision.visual.direction === "forward" && collision.released &&
@@ -1450,7 +1453,9 @@ check(animal && animal.visual.kind === "animal" && animal.visual.lane === "0.5" 
   animal.visual.visibility !== "hidden" && /entrance-roadtrip-deer/.test(animal.visual.href || "") && animal.released &&
   animal.after.escapes > animal.before.escapes && animal.after.collisions === animal.before.collisions &&
   animal.after.score - animal.before.score === 3 * animal.before.multiplier &&
-  animal.after.multiplier === Math.min(3, animal.before.multiplier + 1),
+  animal.after.multiplier === Math.min(3, animal.before.multiplier + 1) &&
+  animal.caption.indexOf("+" + (animal.after.score - animal.before.score) + " pts") >= 0 &&
+  animal.caption.indexOf(animal.before.multiplier + "× combo") >= 0,
   "wildlife visibly escapes, awards its safe-clear bonus, and leaves the pool without collision damage", animal);
 var wildlifeImpact = s.wildlifeImpact;
 check(wildlifeImpact && wildlifeImpact.visual.kind === "animal" &&
@@ -1487,8 +1492,10 @@ check(rabbitImpact && /entrance-roadtrip-rabbit/.test(rabbitImpact.visual.href |
 var pass = s.pass;
 check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pass.visual.direction === "forward" && pass.released &&
   pass.after.passes > pass.before.passes && pass.after.collisions === pass.before.collisions &&
-  pass.after.score - pass.before.score === 2 * pass.before.multiplier,
-  "adjacent-lane traffic becomes a clean close pass worth two points before the combo", pass);
+  pass.after.score - pass.before.score === 2 * pass.before.multiplier &&
+  pass.caption.indexOf("+" + (pass.after.score - pass.before.score) + " pts") >= 0 &&
+  pass.caption.indexOf(pass.before.multiplier + "× combo") >= 0,
+  "adjacent-lane traffic captions the actual close-pass award and combo", pass);
 
 var close = s.close;
 check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepted && close.before.roadtrip.entityCount > 0 &&

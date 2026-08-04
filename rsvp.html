@@ -35573,8 +35573,13 @@ window.__entranceRoomOpen = false;
     }
     paintRoadtripScore();
   }
-  function roadtripFeedback(key) {
+  function roadtripFeedback(key, values) {
+    if (values) {
+      roadtripPoliceFeedback(key, values, 2200, false);
+      return true;
+    }
     if (window.__flashCaptionKey) window.__flashCaptionKey(key, 2200, "entrance-roadtrip");
+    return true;
   }
   function roadtripPoliceFeedback(key, values, holdMs, persistent) {
     var lang = document.documentElement.lang === "cs" ? "cs" : "en";
@@ -37208,8 +37213,9 @@ window.__entranceRoomOpen = false;
       if (entity.escaping && entity.escapeElapsed >= .48 && !entity.escapeCounted) {
         entity.escapeCounted = true;
         roadtripState.escapes++;
-        awardRoadtripBonus(3);
-        roadtripFeedback("entrance_roadtrip_escape");
+        var escapeCombo = roadtripState.multiplier;
+        var escapeAward = awardRoadtripBonus(3);
+        roadtripFeedback("entrance_roadtrip_escape", { points: escapeAward, combo: escapeCombo });
         if (window.__checkpointChanged) window.__checkpointChanged();
       }
       if (remaining <= -6) releaseRoadtripEntity(entity);
@@ -37219,11 +37225,13 @@ window.__entranceRoomOpen = false;
       var collectingForward = driveState.speed * driveState.facing > .5;
       if (collectingForward && remaining <= 8 && laneGap <= .48) {
         var value = entity.type === "heart" ? 5 : entity.type === "kiss" ? 10 : 25;
-        awardRoadtripBonus(value);
+        var rewardCombo = roadtripState.multiplier;
+        var rewardAward = awardRoadtripBonus(value);
         roadtripState.tokens++;
         playRoadtripRewardSound(entity.type);
         roadtripFeedback(entity.type === "heart" ? "entrance_roadtrip_heart" :
-          entity.type === "kiss" ? "entrance_roadtrip_kiss" : "entrance_roadtrip_inf");
+          entity.type === "kiss" ? "entrance_roadtrip_kiss" : "entrance_roadtrip_inf",
+          { points: rewardAward, combo: rewardCombo });
         releaseRoadtripEntity(entity);
         if (window.__checkpointChanged) window.__checkpointChanged();
       } else if (remaining <= -60) releaseRoadtripEntity(entity);
@@ -37254,9 +37262,10 @@ window.__entranceRoomOpen = false;
       }
     } else {
       if (laneGap <= 1.05) {
-        awardRoadtripBonus(2);
+        var passCombo = roadtripState.multiplier;
+        var passAward = awardRoadtripBonus(2);
         roadtripState.passes++;
-        roadtripFeedback("entrance_roadtrip_pass");
+        roadtripFeedback("entrance_roadtrip_pass", { points: passAward, combo: passCombo });
       }
       entity.passed = true;
     }
@@ -42344,11 +42353,11 @@ var T = {
       entrance_roadtrip_crash: "Head-on crash · −100 points, windshield shattered, engine stalled.",
       entrance_roadtrip_wildlife_collision: "Wildlife strike · 20–60 point penalty, combo reset.",
       entrance_roadtrip_rabbit_collision: "Rabbit clipped · 2–8 point penalty, combo reset.",
-      entrance_roadtrip_pass: "Clean close pass · +2 × combo.",
-      entrance_roadtrip_heart: "♥️ collected · +5 × combo.",
-      entrance_roadtrip_kiss: "💋 collected · +10 × combo.",
-      entrance_roadtrip_inf: "Rare ∞ collected · +25 × combo.",
-      entrance_roadtrip_escape: "Wildlife clear · +3 × combo.",
+      entrance_roadtrip_pass: "Clean close pass · +{points} pts · {combo}× combo.",
+      entrance_roadtrip_heart: "♥️ collected · +{points} pts · {combo}× combo.",
+      entrance_roadtrip_kiss: "💋 collected · +{points} pts · {combo}× combo.",
+      entrance_roadtrip_inf: "Rare ∞ collected · +{points} pts · {combo}× combo.",
+      entrance_roadtrip_escape: "Wildlife clear · +{points} pts · {combo}× combo.",
       entrance_roadtrip_centerline: "Crossed the centre line · −2 points.",
       entrance_roadtrip_points_short: "pts",
       entrance_roadtrip_demerit_label: "DEMERITS",
@@ -43549,11 +43558,11 @@ var T = {
       entrance_roadtrip_crash: "Čelní srážka · −100 bodů, roztříštěné sklo a zhaslý motor.",
       entrance_roadtrip_wildlife_collision: "Střet se zvěří · ztráta 20–60 bodů, kombo od začátku.",
       entrance_roadtrip_rabbit_collision: "Lehký střet se zajícem · ztráta 2–8 bodů, kombo od začátku.",
-      entrance_roadtrip_pass: "Čisté těsné předjetí · +2 × kombo.",
-      entrance_roadtrip_heart: "♥️ sebráno · +5 × kombo.",
-      entrance_roadtrip_kiss: "💋 sebráno · +10 × kombo.",
-      entrance_roadtrip_inf: "Vzácné ∞ sebráno · +25 × kombo.",
-      entrance_roadtrip_escape: "Zvěř unikla · +3 × kombo.",
+      entrance_roadtrip_pass: "Čisté těsné předjetí · +{points} b · kombo {combo}×.",
+      entrance_roadtrip_heart: "♥️ sebráno · +{points} b · kombo {combo}×.",
+      entrance_roadtrip_kiss: "💋 sebráno · +{points} b · kombo {combo}×.",
+      entrance_roadtrip_inf: "Vzácné ∞ sebráno · +{points} b · kombo {combo}×.",
+      entrance_roadtrip_escape: "Zvěř unikla · +{points} b · kombo {combo}×.",
       entrance_roadtrip_centerline: "Přejezd přes středovou čáru · −2 body.",
       entrance_roadtrip_points_short: "b",
       entrance_roadtrip_demerit_label: "TRESTNÉ BODY",

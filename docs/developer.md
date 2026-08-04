@@ -464,12 +464,12 @@ Visible copy is bilingual. Keep `T.en`, `T.cs`, and any static fallback synchron
 commit. `setLang()` uses `innerHTML` for authored markup; never insert visitor or model text through
 that path. Write printable Unicode directly as UTF-8.
 
-The Loft Day game DOM intentionally has no ARIA attributes, explicit `role` metadata, or native
-`title` tooltips. Its player guidance is visible copy: captions, cards, labels, and explicitly
-authored coaches. Do not add invisible accessibility/tooltip message keys, and do not restore
-metadata to satisfy a stale test. Focused tests should use stable ids, classes, `data-*` state, and
-rendered behavior rather than translated metadata selectors. This stance is specific to the game;
-do not infer it for `save-the-dates.html`.
+The Loft Day game retains some legacy ARIA attributes and explicit `role` metadata, but new controls
+must not add more ARIA labels or native `title` tooltips. Player guidance is visible copy: captions,
+cards, labels, and explicitly authored coaches. Do not add invisible accessibility/tooltip message
+keys, and do not restore metadata to satisfy a stale test. Focused tests should use stable ids,
+classes, `data-*` state, and rendered behavior rather than translated metadata selectors. This
+stance is specific to the game; do not infer it for `save-the-dates.html`.
 
 ## Chat boundary
 

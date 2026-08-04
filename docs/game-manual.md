@@ -180,16 +180,20 @@ lesson.
 On desktop:
 
 - select the ignition key to start or stop the engine;
+- select **AUTO** or **MANUAL** on the dashboard, press `A` / `M`, or use
+  `Ctrl`+`←` for AUTO and `Ctrl`+`→` for MANUAL;
 - use `←` / `→` to steer; a tap stays gentle, while holding a direction or
   tapping it repeatedly builds progressively stronger steering;
-- use `Shift`+`↑` / `Shift`+`↓` to shift one gear;
+- in AUTO, use `Shift`+`↓` toward D and `Shift`+`↑` toward P; in MANUAL,
+  use `Shift`+`↑` / `Shift`+`↓` to shift one gear;
 - hold `↑` to accelerate and `↓` to brake.
 
 On touch:
 
 - drag the steering wheel to steer;
-- drag the shifter up or down to change one gear, or long-press it to choose an
-  exact gear from the enlarged pattern;
+- select **AUTO** or **MANUAL** on the dashboard; in AUTO, select P/R/N/D;
+  in MANUAL, drag the shifter up or down to change one gear, or long-press it
+  to choose an exact gear from the enlarged pattern;
 - press the accelerator and brake pedals directly.
 
 The roof, door, paired side windows, compartments, and lights remain separate
@@ -265,7 +269,8 @@ You can cross either white edge line onto the shoulder. The rumble strip shakes
 the view; farther out, gravel reduces grip and steadily bleeds speed. It is useful
 as an emergency escape route, but slower than staying on the pavement.
 Road and tire noise build with speed; fast steering adds a tire squeal and air
-swoosh, while the rumble strip and gravel have rougher textures.
+swoosh, passing vehicles make a direction- and proximity-aware whoosh, and the
+rumble strip and gravel have rougher textures.
 The centre mirror is live: its road and markings follow the bends behind you,
 roadside trees recede along both verges, cloud, smoke, rain, snow, and winter
 cover match the windshield, and traffic you have just passed remains visible
@@ -298,9 +303,10 @@ patrol car models roughly 170 km/h, so holding 180 takes about 20 seconds while
 the gap is complete lets the pursuit recover.
 
 The driver panel keeps separate **Demerits** and **BAC** columns visible together,
-without a status word competing with those factual values. Each balcony wine sip
-or opened beer adds one drink-equivalent (shown as `0.02` BAC for the game), and
-one equivalent clears per real minute.
+without a status word competing with those factual values. Each balcony wine sip,
+balcony beer crush, draft pour, requested cocktail, or hands-on mixer serve adds
+one drink-equivalent (shown as `0.03` BAC in the simplified game model), and one
+equivalent clears per real minute.
 That state survives room changes, Road Trip exits, Continue, and a reload; a
 deliberate full-game restart clears it.
 

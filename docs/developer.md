@@ -168,6 +168,10 @@ expands its viewBox and HUD while leaving `#entrance-room-art` and `#entrance-po
 spatial-audio geometry remains valid. The roadtrip weather layers follow the Entrance's existing
 day/cloud/rain/snow/winter classes. Keep runtime traffic, wildlife, and tokens capped by the owned
 pool; never let timer- or step-spawned entities accumulate without a bound.
+Entering or leaving Road Trip is an atomic presentation swap: its HUD height, cockpit position,
+world visibility, ordinary windshield scenery, and SVG viewBox must not transition independently.
+Keep those state-owned properties transition-free so a frame can show either Road Trip or street
+driving, never a resized mixture of both.
 The road uses four equal lanes around a dynamic double-yellow centre. Positive-lane traffic advances
 in the two right-hand lanes; negative-lane traffic uses front/headlight art and a negative world
 velocity so it closes faster from the opposite lanes. The Porsche's roadtrip lane is separate from

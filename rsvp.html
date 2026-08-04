@@ -840,14 +840,13 @@ footer{margin-top:2.6rem}
   border:0;border-bottom:5px solid rgba(239,208,170,.62);border-radius:0 0 22px 22px;
   background:linear-gradient(to bottom,#17232c 0 34%,#76533d 34% 78%,#211c19 78% 100%);
   box-shadow:0 9px 16px -3px rgba(8,10,12,.52),0 20px 30px -13px rgba(8,10,12,.56),inset 0 -2px 2px rgba(255,253,248,.14);
-  transition:height .42s cubic-bezier(.22,.8,.24,1),border-radius .42s ease,
-    border-bottom-width .42s ease,transform .38s cubic-bezier(.22,.8,.24,1),opacity .22s ease;
+  transition:transform .38s cubic-bezier(.22,.8,.24,1),opacity .22s ease;
 }
 #entrance-drive-hud svg{display:block;width:100%;height:100%;overflow:hidden}
 #entrance-room.entrance-day #entrance-drive-hud{
   background:linear-gradient(to bottom,#b7ced7 0 34%,#b6845f 34% 78%,#211c19 78% 100%);
 }
-#entrance-drive-cockpit{opacity:1;transform-box:view-box;transform-origin:center;transition:transform .42s cubic-bezier(.22,.8,.24,1)}
+#entrance-drive-cockpit{opacity:1;transform-box:view-box;transform-origin:center}
 #entrance-room.roadtrip-active #entrance-drive-cockpit{transform:translateY(38px)}
 #entrance-room.roadtrip-active #entrance-room-art{opacity:0;pointer-events:none}
 #entrance-room.roadtrip-active #entrance-drive-hud{
@@ -856,10 +855,9 @@ footer{margin-top:2.6rem}
 }
 #entrance-roadtrip-world{
   opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .42s ease,visibility 0s linear .42s;
 }
 #entrance-room.roadtrip-active #entrance-roadtrip-world{
-  opacity:1;visibility:visible;transition-delay:0s;
+  opacity:1;visibility:visible;
 }
 #entrance-roadtrip-world.roadtrip-spinning{
   transform-box:view-box;transform-origin:center;
@@ -875,7 +873,13 @@ footer{margin-top:2.6rem}
 #entrance-room.roadtrip-active .entrance-drive-windshield-scenery >
   :is(.entrance-drive-windshield-day,.entrance-drive-windshield-night,.entrance-drive-windshield-clouds){
   opacity:0 !important;visibility:hidden;
-  transition:opacity .42s ease,visibility 0s linear .42s;
+}
+#entrance-room:is(.roadtrip-active,.roadtrip-handoff) #entrance-drive-hud,
+#entrance-room:is(.roadtrip-active,.roadtrip-handoff) #entrance-drive-cockpit,
+#entrance-room:is(.roadtrip-active,.roadtrip-handoff) #entrance-roadtrip-world,
+#entrance-room:is(.roadtrip-active,.roadtrip-handoff) .entrance-drive-windshield-scenery >
+  :is(.entrance-drive-windshield-day,.entrance-drive-windshield-night,.entrance-drive-windshield-clouds){
+  transition:none;
 }
 #entrance-roadtrip-day{opacity:0;transition:opacity .9s ease}
 #entrance-roadtrip-night{opacity:1;transition:opacity .9s ease}
@@ -38332,7 +38336,20 @@ window.__entranceRoomOpen = false;
     if (roadtripPoliceMirrorNode) roadtripPoliceMirrorNode.setAttribute("visibility", "hidden");
     paintRoadtripScore();
   }
+  var roadtripHandoffSerial = 0;
+  function beginRoadtripHandoff() {
+    var serial = ++roadtripHandoffSerial;
+    room.classList.add("roadtrip-handoff");
+    // Establish the transition-free cascade before changing either presentation state.
+    room.getBoundingClientRect();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (serial === roadtripHandoffSerial) room.classList.remove("roadtrip-handoff");
+      });
+    });
+  }
   function parkRoadtrip(clearRun) {
+    if (room.classList.contains("roadtrip-active")) beginRoadtripHandoff();
     roadtripState.active = false;
     roadtripTransportPaused = false;
     roadtripResumePending = false;
@@ -38415,6 +38432,8 @@ window.__entranceRoomOpen = false;
     roadtripResumePending = false;
     roadtripShiftHintKey = "";
     roadtripShiftHintMs = 0;
+    roadtripHandoffSerial++;
+    room.classList.remove("roadtrip-handoff");
     room.classList.add("roadtrip-active");
     room.classList.remove("roadtrip-resume-pending");
     ensureRoadtripScene();

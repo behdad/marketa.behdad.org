@@ -60035,6 +60035,7 @@ function quickReversalGesture(action) {
     if (making || !row) return false;
     making = true;
     selfServing = !!(opts && opts.selfServe);
+    if (opts && opts.playerDrink && window.__registerDrink) window.__registerDrink();
     endBored(); // an order is an order: phone away, shaker back, before a drop is poured
     if (window.__actPing) window.__actPing("drink"); // second act: the drink you skipped this morning — that's the bar beat done (P1)
     if (window.__bartenderMixing) window.__bartenderMixing(true); // stop his idle sway for the whole make
@@ -60251,7 +60252,7 @@ function quickReversalGesture(action) {
     if (window.goToStage) window.goToStage("kitchen");               // then step behind the bar
     abort();                                  // clear any in-flight make so this one leads
     cooldownUntil = Date.now() + 4000;        // give the requested drink room before the ambient loop resumes
-    startMake(row);
+    startMake(row, { playerDrink: true });
     return "🍸 " + row.name + " — coming right up.";
   };
   // On-demand make at the CALM NIGHT bar: tapping the bartender calls this. Unlike __makeCocktail
@@ -60264,7 +60265,7 @@ function quickReversalGesture(action) {
     if (!row) return false;
     abort();                                  // clear any in-flight make so this tap leads
     cooldownUntil = Date.now() + 4000;
-    return startMake(row);
+    return startMake(row, { playerDrink: true });
   };
 })();
 (function () {
@@ -60274,7 +60275,7 @@ function quickReversalGesture(action) {
   // head, holds, then fades and removes itself. Only one live pour per tap (a re-click restarts it),
   // and a hidden tab clears any in-flight pour so nothing accumulates. Reduced motion still pours —
   // it just skips the animation (a full glass + foam, brief hold). Gated on the bar being up AND you
-  // standing at it, mirroring the bottles/glassware. (A poured beer does NOT count as a "drink".)
+  // standing at it, mirroring the bottles/glassware. Each player pour counts as one drink.
   var SVGNS = "http://www.w3.org/2000/svg";
   function s(tag, attrs, parent) {
     var e = document.createElementNS(SVGNS, tag);
@@ -60307,6 +60308,7 @@ function quickReversalGesture(action) {
     function pour() {
       if (!present()) return;
       T.clear(); // one pour at a time — a fresh click restarts cleanly
+      if (window.__registerDrink) window.__registerDrink();
 
       var nx = T.nx, ny = T.ny, top = ny + 1, bot = ny + 15; // glass interior
       var wrap = s("g", { "class": "beer-pour", style: "pointer-events:none" }, g);
@@ -60709,6 +60711,7 @@ function quickReversalGesture(action) {
   function shakeAndServe() {
     if (busy || !picked.length || !present() || flairBusy()) return false;
     busy = true;
+    if (window.__registerDrink) window.__registerDrink();
     setUserMixing(true); // keep the ambient auto-make held off across the whole shake→pour→serve (resetMix clears it when the drink lands)
     shakerWrap.classList.remove("ready");
     if (window.__actPing) window.__actPing("drink"); // the drink beat — same as watching Pouria mix one
@@ -88989,6 +88992,7 @@ async def localfont(name):
   // self-clearing blur timer; cleared alongside the sway on room-leave/reset via clearTipsy.
   var DRINK_STATE_KEY = "balconyDrinkState:v1";
   var DRINK_DECAY_MS = 60000;
+  var DRINK_BAC_PER_EQUIVALENT = .03;
   var drinkState = { drinkEquivalents: 0, updatedAt: Date.now() };
   var boozeBlurTimer = null; // one equivalent is a wine sip OR a beer-can crack (see registerDrink)
   function persistDrinkState() {
@@ -89023,7 +89027,7 @@ async def localfont(name):
     var current = syncDrinkState(now);
     return {
       drinkEquivalents: current.drinkEquivalents,
-      bac: current.drinkEquivalents * .02,
+      bac: current.drinkEquivalents * DRINK_BAC_PER_EQUIVALENT,
       impairmentLevel: Math.max(0, Math.min(1, (current.drinkEquivalents - 2) / 4)),
       updatedAt: current.updatedAt,
       decayMs: DRINK_DECAY_MS

@@ -70,6 +70,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         state: copy(window.__drinkState()),
         stored: localStorage.getItem(recordKey)
       };
+
+      window.__secondRound = true;
+      window.currentStageName = "kitchen";
+      document.getElementById("stage-kitchen").classList.add("dusk");
+      document.getElementById("kitchen-bar-tap-a").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      report.barDraft = copy(window.__drinkState());
+      window.__makeCocktailHere("Negroni");
+      report.barCocktail = copy(window.__drinkState());
+      window.__bartenderRoomAway();
+      document.querySelector(".mixer-bottle").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      document.querySelector(".mx-shakerwrap").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      report.barMixer = copy(window.__drinkState());
+      document.getElementById("balcony-can").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      report.balconyBeer = copy(window.__drinkState());
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }
@@ -91,23 +105,23 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html persistent BAC and demerit status:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
-check(result && result.restored.drinkEquivalents === 4 && result.restored.bac === .08 &&
+check(result && result.restored.drinkEquivalents === 4 && result.restored.bac === .12 &&
   result.restored.impairmentLevel === .5,
   "the balcony alcohol record restores as the one Road Trip impairment state", result && result.restored);
 check(result && result.nonzero.demeritLabel === "DEMERITS" && result.nonzero.demeritPoints === "3 / 15" &&
-  result.nonzero.bacLabel === "BAC" && result.nonzero.bacValue === "0.08" &&
+  result.nonzero.bacLabel === "BAC" && result.nonzero.bacValue === "0.12" &&
   result.nonzero.statusAbsent && result.nonzero.dividerX === "579",
   "demerits and BAC occupy separate factual columns with no status vocabulary", result && result.nonzero);
 check(result && result.czech.demeritLabel === "TRESTNÉ BODY" &&
   result.czech.demeritPoints === "3 / 15" && result.czech.bacLabel === "BAC" &&
-  result.czech.bacValue === "0.08" && result.czech.statusAbsent,
+  result.czech.bacValue === "0.12" && result.czech.statusAbsent,
   "the separate columns remain compact and factual in Czech", result && result.czech);
-check(result && result.accumulated.drinkEquivalents === 4 && result.accumulated.bac === .08 &&
+check(result && result.accumulated.drinkEquivalents === 4 && result.accumulated.bac === .12 &&
   result.accumulated.impairmentLevel === .5,
   "wine and beer registrations accumulate persistent drink-equivalents", result && result.accumulated);
 check(result && result.beforeMinute.drinkEquivalents === 4 &&
-  result.oneMinute.drinkEquivalents === 3 && result.oneMinute.bac === .06 &&
-  result.threeMinutes.drinkEquivalents === 1 && result.threeMinutes.bac === .02,
+  result.oneMinute.drinkEquivalents === 3 && result.oneMinute.bac === .09 &&
+  result.threeMinutes.drinkEquivalents === 1 && result.threeMinutes.bac === .03,
   "decay removes exactly one drink-equivalent per complete real minute", result && {
     before: result.beforeMinute, one: result.oneMinute, three: result.threeMinutes
   });
@@ -120,6 +134,14 @@ check(result && result.unfocused.storedBefore === result.unfocused.storedAfter,
 check(result && result.fullReset.state.drinkEquivalents === 0 && result.fullReset.state.bac === 0 &&
   result.fullReset.stored === null,
   "a deliberate full-game reset clears alcohol state", result && result.fullReset);
+check(result && result.barDraft.drinkEquivalents === 1 && result.barDraft.bac === .03 &&
+  result.barCocktail.drinkEquivalents === 2 && result.barCocktail.bac === .06 &&
+  result.barMixer.drinkEquivalents === 3 && result.barMixer.bac === .09 &&
+  result.balconyBeer.drinkEquivalents === 4 && result.balconyBeer.bac === .12,
+  "player draft, cocktail, mixer, and balcony beer actions share the BAC tally", result && {
+    draft: result.barDraft, cocktail: result.barCocktail,
+    mixer: result.barMixer, balconyBeer: result.balconyBeer
+  });
 
 if (failures) process.exit(1);
 console.log("persistent BAC and demerit status assertions passed.");

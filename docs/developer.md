@@ -251,6 +251,8 @@ presentation, capture/stopped/arrest phases, and siren state remain transient ra
 The balcony module is the sole owner of alcohol state under `balconyDrinkState:v1`.
 `__registerDrink()` normalizes elapsed wall time before adding an equivalent;
 `__drinkState()` exposes the normalized equivalent count, display BAC, and impairment level to Road Trip.
+The simplified display model adds `DRINK_BAC_PER_EQUIVALENT` (`0.03`) per equivalent; player-requested
+bar cocktails and draft pours use the same registration boundary as balcony wine and beer.
 Decay is timestamp-derived in exact one-minute steps rather than timer-driven, so hidden or unfocused
 pages run no autonomous loop. Checkpoint reset cannot rewind the separate state, while the existing
 full-reset `__resetWineSips()` boundary clears it. Road Trip must read that owner for both the HUD and

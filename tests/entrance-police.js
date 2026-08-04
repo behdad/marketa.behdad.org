@@ -154,6 +154,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var pursuitPlans = [];
       var normalIntervals = [];
       var pursuitIntervals = [];
+      var trafficSeed = 0x12345678;
+      window.__entranceRoadtripSetSeed(trafficSeed);
       for (var planIndex = 0; planIndex < 22; planIndex++) {
         normalPlans.push(window.__entranceRoadtripSpawnPlan(false, planIndex));
         if (planIndex < 18) pursuitPlans.push(window.__entranceRoadtripSpawnPlan(true, planIndex));
@@ -163,6 +165,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         }
       }
       report.steps.pursuitTraffic = {
+        seed: trafficSeed,
         normal: normalPlans,
         pursuit: pursuitPlans,
         normalIntervals: normalIntervals,
@@ -974,11 +977,15 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.demeritHud && s.contract.policeMirrorClipped &&
   s.contract.speedSign && s.contract.speedFurniture,
   "the highway posts 90/110 enforcement and models a Sheriff capable of 210 km/h", s.contract);
-var expectedNaturalTypes = ["car", "heart", "rv", "rabbit", "pickup", "mushroom", "deer", "car",
-  "car", "truck", "frog", "heart", "rabbit", "kiss", "pickup", "inf", "rv", "car", "hedgehog", "truck",
-  "kiss", "pickup"];
-var expectedNaturalLanes = [1.5, .5, -.5, .5, .5, 1.5, 1.5, -1.5,
-  .5, 1.5, .5, 1.5, .5, .5, 1.5, .5, 1.5, -.5, 1.5, -1.5, .5, -.5];
+var expectedNaturalTypes = ["rv", "inf", "rv", "car", "hedgehog", "car", "rabbit", "pickup",
+  "truck", "kiss", "heart", "pickup", "mushroom", "rabbit", "heart", "car", "deer", "pickup",
+  "truck", "car", "frog", "kiss"];
+var expectedNaturalLanes = [1.5, 1.5, -.5, .5, 1.5, -1.5, 1.5, -1.5,
+  -.5, 1.5, 1.5, .5, .5, .5, 1.5, -.5, 1.5, 1.5, -.5, -1.5, 1.5, .5];
+var expectedPursuitTypes = ["truck", "rv", "truck", "rv", "inf", "heart", "car", "mushroom", "frog",
+  "rabbit", "truck", "pickup", "pickup", "car", "kiss", "rv", "car", "car"];
+var expectedPursuitLanes = [-1.5, .5, 1.5, .5, .5, 1.5, .5, 1.5, .5,
+  1.5, .5, -1.5, -.5, .5, .5, .5, .5, -.5];
 var pursuitVehicles = s.pursuitTraffic && s.pursuitTraffic.pursuit.filter(function (plan) {
   return !!plan.direction;
 });
@@ -989,21 +996,29 @@ var pursuitIntervalTotal = s.pursuitTraffic && s.pursuitTraffic.pursuitIntervals
   return sum + value;
 }, 0);
 check(s.pursuitTraffic &&
+  s.pursuitTraffic.seed === 0x12345678 &&
   JSON.stringify(s.pursuitTraffic.normal.map(function (plan) { return plan.type; })) ===
     JSON.stringify(expectedNaturalTypes) &&
   JSON.stringify(s.pursuitTraffic.normal.map(function (plan) { return plan.lane; })) ===
     JSON.stringify(expectedNaturalLanes) &&
-  JSON.stringify(s.pursuitTraffic.normalIntervals) === JSON.stringify([31, 35, 39, 43, 47]) &&
-  JSON.stringify(s.pursuitTraffic.pursuitIntervals) === JSON.stringify([22, 25, 28, 31, 34]) &&
+  JSON.stringify(s.pursuitTraffic.pursuit.map(function (plan) { return plan.type; })) ===
+    JSON.stringify(expectedPursuitTypes) &&
+  JSON.stringify(s.pursuitTraffic.pursuit.map(function (plan) { return plan.lane; })) ===
+    JSON.stringify(expectedPursuitLanes) &&
+  JSON.stringify(s.pursuitTraffic.normalIntervals) === JSON.stringify([36, 32, 43, 31, 30]) &&
+  JSON.stringify(s.pursuitTraffic.pursuitIntervals) === JSON.stringify([26, 23, 31, 22, 21]) &&
+  s.pursuitTraffic.normalIntervals.every(function (interval, index) {
+    return s.pursuitTraffic.pursuitIntervals[index] === Math.round(interval / s.contract.pursuitTrafficDensity);
+  }) &&
   normalIntervalTotal / pursuitIntervalTotal > 1.35 &&
   normalIntervalTotal / pursuitIntervalTotal < 1.45 &&
   pursuitVehicles.length === 12 &&
-  pursuitVehicles.filter(function (plan) { return plan.direction === "oncoming"; }).length === 7 &&
-  pursuitVehicles.filter(function (plan) { return plan.direction === "forward"; }).every(function (plan) {
-    return plan.type === "rv" || plan.type === "truck";
+  pursuitVehicles.filter(function (plan) { return plan.direction === "oncoming"; }).length === 4 &&
+  pursuitVehicles.every(function (plan) {
+    return plan.direction === (plan.lane < 0 ? "oncoming" : "forward");
   }) &&
-  s.pursuitTraffic.pursuit.every(function (plan) { return plan.ahead >= 118; }),
-  "pursuit-only traffic is about 40% denser, oncoming-biased, slow-heavy, and always affords 118 m reaction distance",
+  s.pursuitTraffic.pursuit.every(function (plan) { return plan.ahead >= 118 && plan.ahead <= 128; }),
+  "seeded pursuit traffic is about 40% denser, mixes both directions, and affords 118–128 m reaction distance",
   s.pursuitTraffic);
 check(s.warning && s.warning.police.warningFlashCount === 3 &&
   s.warning.warningVisible === "visible" && !s.warning.roadsideVisible && s.warning.lead === 240 &&

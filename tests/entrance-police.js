@@ -22,12 +22,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function mirrorSample() {
     var police = copy(trip().police);
-    var match = /translate\((-?[\d.]+) (-?[\d.]+)\) scale\(([\d.]+)\)/.exec(police.mirrorTransform || "");
+    var transform = police.mirrorTransform || "";
+    var translate = /translate\((-?[\d.]+) (-?[\d.]+)\)/.exec(transform);
+    var rotate = /rotate\((-?[\d.]+)\)/.exec(transform);
+    var scale = /scale\(([\d.]+)\)/.exec(transform);
     return {
       police: police,
-      x: match ? Number(match[1]) : null,
-      y: match ? Number(match[2]) : null,
-      scale: match ? Number(match[3]) : null,
+      x: translate ? Number(translate[1]) : null,
+      y: translate ? Number(translate[2]) : null,
+      rotation: rotate ? Number(rotate[1]) : 0,
+      scale: scale ? Number(scale[1]) : null,
       roadLeft: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-road-left")),
       roadRight: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-road-right")),
       behind: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-behind"))
@@ -988,6 +992,7 @@ check(s.pursuitCurves && s.pursuitCurves.right.police.mirrorMode === "pursuit" &
   s.pursuitCurves.right.x < s.pursuitCurves.right.roadRight &&
   s.pursuitCurves.left.x > s.pursuitCurves.left.roadLeft &&
   s.pursuitCurves.left.x < s.pursuitCurves.left.roadRight &&
+  s.pursuitCurves.right.rotation > 0 && s.pursuitCurves.left.rotation < 0 &&
   s.pursuitCurves.right.behind === s.pursuitCurves.left.behind &&
   s.pursuitCurves.right.scale === s.pursuitCurves.left.scale,
   "the pursuing Sheriff follows the reflected lane through opposite bends without changing pursuit depth",

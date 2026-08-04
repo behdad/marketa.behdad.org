@@ -34998,6 +34998,16 @@ window.__entranceRoomOpen = false;
     { start: 110, length: 104, direction: 1, strength: .017 },
     { start: 340, length: 122, direction: -1, strength: .0155 }
   ];
+  var ROADTRIP_TERRAIN_CYCLE = 900;
+  var ROADTRIP_TERRAIN_WAVES = [
+    { harmonic: 1, amplitude: 6, phase: -.18 },
+    { harmonic: 2, amplitude: 1.4, phase: .62 }
+  ];
+  var ROADTRIP_ELEVATION_TO_Y = 2.15;
+  var ROADTRIP_MIRROR_ELEVATION_TO_Y = .52;
+  var ROADTRIP_GRADE_CAMERA_TO_Y = 66;
+  var ROADTRIP_WEIGHT_CAMERA_TO_Y = .9;
+  var ROADTRIP_GRADE_GRAVITY_SCALE = .42;
   var ROADTRIP_ROAD_EDGE_LANE = 2;
   var ROADTRIP_RUMBLE_LANE = 1.72;
   var ROADTRIP_MAX_LANE = 2.32;
@@ -35032,6 +35042,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
   var ROADTRIP_POLICE_ROADSIDE_MIRROR_DISTANCE = 62;
   var ROADTRIP_POLICE_ROADSIDE_JOIN_DISTANCE = 24;
+  var ROADTRIP_POLICE_PARKED_BEHIND = 11;
   // Alberta's standard schedule, including the 20% Victims of Crime surcharge.
   // Index = whole km/h over; 51+ has no fixed amount and requires court.
   var ROADTRIP_POLICE_STANDARD_FINES = [0,
@@ -35081,6 +35092,7 @@ window.__entranceRoomOpen = false;
   var roadtripMirrorCenterPath = null;
   var roadtripMirrorLanePath = null;
   var roadtripMirrorEdgesPath = null;
+  var roadtripMirrorWinterPath = null;
   var roadtripMirrorTerrain = null;
   var driveSceneryLayers = null;
   var roadtripSceneryLayers = null;
@@ -35481,11 +35493,13 @@ window.__entranceRoomOpen = false;
     width = Math.max(1, Number(width) || 680);
     return ((Number(offset) || 0) % width + width * 1.5) % width - width * .5;
   }
-  function setEntranceSceneryOffset(nodes, offset, wrapWidth) {
+  function setEntranceSceneryOffset(nodes, offset, wrapWidth, verticalOffset) {
     var wrapped = wrapWidth ? entranceSceneryWrappedOffset(offset, wrapWidth) : Number(offset) || 0;
+    var vertical = Number(verticalOffset) || 0;
     nodes.forEach(function (node) {
-      node.setAttribute("transform", "translate(" + wrapped.toFixed(2) + " 0)");
+      node.setAttribute("transform", "translate(" + wrapped.toFixed(2) + " " + vertical.toFixed(2) + ")");
       node.setAttribute("data-scenery-offset", wrapped.toFixed(2));
+      node.setAttribute("data-scenery-y", vertical.toFixed(2));
     });
     return wrapped;
   }
@@ -35501,9 +35515,10 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.active) return;
     var steer = Math.max(-1, Math.min(1, driveState.steeringAngle / 18));
     var turn = roadtripCurveOffset(ROADTRIP_DRAW_DISTANCE) + steer * 56;
-    setEntranceSceneryOffset(roadtripSceneryLayers.far, -turn * .12, 680);
-    setEntranceSceneryOffset(roadtripSceneryLayers.mid, -turn * .27, 680);
-    setEntranceSceneryOffset(roadtripSceneryLayers.near, -turn * .48, 680);
+    var horizonOffset = roadtripProject(ROADTRIP_DRAW_DISTANCE).y + 8;
+    setEntranceSceneryOffset(roadtripSceneryLayers.far, -turn * .12, 680, horizonOffset * .38);
+    setEntranceSceneryOffset(roadtripSceneryLayers.mid, -turn * .27, 680, horizonOffset * .66);
+    setEntranceSceneryOffset(roadtripSceneryLayers.near, -turn * .48, 680, horizonOffset);
   }
   function entranceScenerySnapshot() {
     ensureEntranceSceneryLayers();
@@ -35608,6 +35623,7 @@ window.__entranceRoomOpen = false;
       roadtripMirrorCenterPath = roadtripElement("entrance-roadtrip-mirror-center");
       roadtripMirrorLanePath = roadtripElement("entrance-roadtrip-mirror-lanes");
       roadtripMirrorEdgesPath = roadtripElement("entrance-roadtrip-mirror-edges");
+      roadtripMirrorWinterPath = roadtripElement("entrance-roadtrip-mirror-winter");
     }
     var mirrorTrees = roadtripElement("entrance-roadtrip-mirror-trees");
     if (!roadtripMirrorTreePool.length && mirrorTrees) {
@@ -36372,16 +36388,63 @@ window.__entranceRoomOpen = false;
     persistRoadtripBest();
     return added;
   }
-  function roadtripProject(remaining) {
+  function roadtripTerrainPhase(distance) {
+    var wrapped = ((Number(distance) || 0) % ROADTRIP_TERRAIN_CYCLE + ROADTRIP_TERRAIN_CYCLE) %
+      ROADTRIP_TERRAIN_CYCLE;
+    return wrapped / ROADTRIP_TERRAIN_CYCLE * Math.PI * 2;
+  }
+  function roadtripTerrainElevationAt(distance) {
+    var phase = roadtripTerrainPhase(distance);
+    return ROADTRIP_TERRAIN_WAVES.reduce(function (elevation, wave) {
+      return elevation + wave.amplitude * Math.sin(phase * wave.harmonic + wave.phase);
+    }, 0);
+  }
+  function roadtripTerrainGradeAt(distance) {
+    var phase = roadtripTerrainPhase(distance);
+    var radiansPerMetre = Math.PI * 2 / ROADTRIP_TERRAIN_CYCLE;
+    return ROADTRIP_TERRAIN_WAVES.reduce(function (grade, wave) {
+      return grade + wave.amplitude * wave.harmonic * radiansPerMetre *
+        Math.cos(phase * wave.harmonic + wave.phase);
+    }, 0);
+  }
+  function roadtripTerrainGravityAt(distance) {
+    return -9.81 * roadtripTerrainGradeAt(distance) * ROADTRIP_GRADE_GRAVITY_SCALE;
+  }
+  function roadtripProjectionAt(distance, remaining, bodyPitch) {
     var progress = Math.max(0, Math.min(1, 1 - remaining / ROADTRIP_DRAW_DISTANCE));
     var perspective = Math.pow(progress, 1.72);
+    var currentElevation = roadtripTerrainElevationAt(distance);
+    var aheadElevation = roadtripTerrainElevationAt(distance + remaining);
+    var elevationDelta = aheadElevation - currentElevation;
+    var grade = roadtripTerrainGradeAt(distance);
+    var cameraGradeY = grade * ROADTRIP_GRADE_CAMERA_TO_Y;
+    var cameraWeightY = (Number(bodyPitch) || 0) * ROADTRIP_WEIGHT_CAMERA_TO_Y;
+    var cameraPitchY = cameraGradeY + cameraWeightY;
+    var baseY = -8 + perspective * 103;
+    var elevationY = -elevationDelta * ROADTRIP_ELEVATION_TO_Y;
     return {
       remaining: remaining,
       progress: progress,
       perspective: perspective,
-      y: -8 + perspective * 103,
+      distance: distance,
+      phase: roadtripTerrainPhase(distance),
+      elevation: currentElevation,
+      aheadElevation: aheadElevation,
+      elevationDelta: elevationDelta,
+      grade: grade,
+      aheadGrade: roadtripTerrainGradeAt(distance + remaining),
+      baseY: baseY,
+      elevationY: elevationY,
+      cameraGradeY: cameraGradeY,
+      cameraWeightY: cameraWeightY,
+      cameraPitchY: cameraPitchY,
+      y: baseY + elevationY + cameraPitchY * (1 - perspective),
       halfWidth: 2.8 + perspective * 319.2
     };
+  }
+  function roadtripProject(remaining) {
+    return roadtripProjectionAt(roadtripState.distance, remaining,
+      driveState.noseLift - driveState.noseDive);
   }
   function roadtripCurvatureAt(distance) {
     var phase = ((distance % ROADTRIP_CURVE_CYCLE) + ROADTRIP_CURVE_CYCLE) % ROADTRIP_CURVE_CYCLE;
@@ -36405,7 +36468,7 @@ window.__entranceRoomOpen = false;
     }
     return offset;
   }
-  function roadtripRearCurveOffset(behind) {
+  function roadtripRearCurveOffsetAt(distance, behind) {
     behind = Math.max(0, Math.min(62, Number(behind) || 0));
     if (!behind) return 0;
     var steps = Math.max(2, Math.ceil(behind / 6));
@@ -36413,21 +36476,84 @@ window.__entranceRoomOpen = false;
     var offset = 0;
     for (var index = 0; index < steps; index++) {
       var back = (index + .5) * step;
-      offset += (behind - back) * roadtripCurvatureAt(roadtripState.distance - back) * step;
+      offset += (behind - back) * roadtripCurvatureAt(distance - back) * step;
     }
     return offset;
   }
-  function roadtripMirrorProject(behind) {
+  function roadtripRearCurveOffset(behind) {
+    return roadtripRearCurveOffsetAt(roadtripState.distance, behind);
+  }
+  function roadtripMirrorProjectionAt(distance, behind) {
     behind = Math.max(0, Math.min(62, Number(behind) || 0));
     var nearness = Math.max(0, Math.min(1, 1 - behind / 62));
     var perspective = Math.pow(nearness, 1.62);
     var halfWidth = 3 + perspective * 55;
+    var currentElevation = roadtripTerrainElevationAt(distance);
+    var behindElevation = roadtripTerrainElevationAt(distance - behind);
+    var elevationDelta = behindElevation - currentElevation;
+    var baseY = -99 + perspective * 22;
     return {
       behind: behind,
       perspective: perspective,
-      y: -99 + perspective * 22,
+      distance: distance,
+      phase: roadtripTerrainPhase(distance),
+      elevation: currentElevation,
+      behindElevation: behindElevation,
+      elevationDelta: elevationDelta,
+      grade: roadtripTerrainGradeAt(distance),
+      behindGrade: roadtripTerrainGradeAt(distance - behind),
+      baseY: baseY,
+      elevationY: -elevationDelta * ROADTRIP_MIRROR_ELEVATION_TO_Y,
+      y: baseY - elevationDelta * ROADTRIP_MIRROR_ELEVATION_TO_Y,
       halfWidth: halfWidth,
-      center: 340 + roadtripRearCurveOffset(behind) * .2
+      center: 340 + roadtripRearCurveOffsetAt(distance, behind) * .2
+    };
+  }
+  function roadtripMirrorProject(behind) {
+    return roadtripMirrorProjectionAt(roadtripState.distance, behind);
+  }
+  function roadtripTerrainSnapshotAt(distance, remaining, bodyPitch) {
+    distance = Number(distance) || 0;
+    remaining = Number.isFinite(Number(remaining)) ? Number(remaining) : ROADTRIP_DRAW_DISTANCE;
+    bodyPitch = Number(bodyPitch) || 0;
+    return {
+      cycle: ROADTRIP_TERRAIN_CYCLE,
+      distance: distance,
+      phase: roadtripTerrainPhase(distance),
+      elevation: roadtripTerrainElevationAt(distance),
+      grade: roadtripTerrainGradeAt(distance),
+      gravityAcceleration: roadtripTerrainGravityAt(distance),
+      bodyPitch: bodyPitch,
+      projection: roadtripProjectionAt(distance, remaining, bodyPitch),
+      mirror: roadtripMirrorProjectionAt(distance, Math.max(0, Math.min(62, Math.abs(remaining))))
+    };
+  }
+  function roadtripMirrorPoseAt(distance, behind, roadFraction) {
+    behind = Math.max(0, Math.min(62, Number(behind) || 0));
+    roadFraction = Number(roadFraction) || 0;
+    var point = roadtripMirrorProjectionAt(distance, behind);
+    var beforeBehind = Math.max(0, behind - 1);
+    var afterBehind = Math.min(62, behind + 1);
+    if (beforeBehind === afterBehind) afterBehind = Math.min(62, behind + .25);
+    var before = roadtripMirrorProjectionAt(distance, beforeBehind);
+    var after = roadtripMirrorProjectionAt(distance, afterBehind);
+    var dx = after.center - before.center;
+    var dy = after.y - before.y;
+    var rotation = Math.atan2(dx, -dy) * 180 / Math.PI;
+    return {
+      distance: distance,
+      behind: behind,
+      roadFraction: roadFraction,
+      x: point.center + roadFraction * point.halfWidth,
+      y: point.y,
+      rotation: rotation,
+      perspective: point.perspective,
+      center: point.center,
+      halfWidth: point.halfWidth,
+      roadLeft: point.center - point.halfWidth,
+      roadRight: point.center + point.halfWidth,
+      grade: point.grade,
+      behindGrade: point.behindGrade
     };
   }
   function roadtripMirrorLinePath(samples, roadFraction) {
@@ -36442,6 +36568,13 @@ window.__entranceRoomOpen = false;
       return "L" + (point.center + innerFraction * point.halfWidth).toFixed(2) + " " + point.y.toFixed(2);
     }).join("");
     return outer + inner + "Z";
+  }
+  function roadtripMirrorOutsidePath(samples, roadFraction, boundaryX) {
+    var far = samples[0];
+    var near = samples[samples.length - 1];
+    return roadtripMirrorLinePath(samples, roadFraction) +
+      "L" + boundaryX + " " + near.y.toFixed(2) +
+      "L" + boundaryX + " " + far.y.toFixed(2) + "Z";
   }
   function roadtripProjectLateral(point, roadFraction) {
     return 340 + roadtripCurveOffset(point.remaining) +
@@ -36904,6 +37037,8 @@ window.__entranceRoomOpen = false;
       var stationPoint = roadtripProject(stationRemaining);
       var policeX = roadtripProjectLateral(stationPoint, 1.08);
       var policeScale = (.11 + stationPoint.perspective * .9) * .96;
+      roadtripPoliceRoadNode.setAttribute("data-roadtrip-ahead", stationRemaining.toFixed(2));
+      roadtripPoliceRoadNode.setAttribute("data-roadtrip-project-y", stationPoint.y.toFixed(2));
       roadtripPoliceRoadNode.setAttribute("transform", "translate(" + policeX.toFixed(2) + " " + stationPoint.y.toFixed(2) + ") scale(" + policeScale.toFixed(3) + ")");
       roadtripPoliceRoadNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
     } else if (roadtripPoliceRoadNode) roadtripPoliceRoadNode.setAttribute("visibility", "hidden");
@@ -36914,6 +37049,8 @@ window.__entranceRoomOpen = false;
         var warningX = roadtripProjectLateral(warningPoint, -.25);
         var warningScale = .11 + warningPoint.perspective * .9;
         var warningTransform = "translate(" + warningX.toFixed(2) + " " + warningPoint.y.toFixed(2) + ") scale(" + warningScale.toFixed(3) + ")";
+        roadtripPoliceWarningNode.setAttribute("data-roadtrip-ahead", warningRemaining.toFixed(2));
+        roadtripPoliceWarningNode.setAttribute("data-roadtrip-project-y", warningPoint.y.toFixed(2));
         roadtripPoliceWarningNode.setAttribute("transform", warningTransform);
         roadtripPoliceWarningNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
         if (roadtripPoliceWarningBeams) {
@@ -36945,41 +37082,51 @@ window.__entranceRoomOpen = false;
       var nearness = Math.max(.025,
         pursuitNearness - police.escapeGap * ROADTRIP_POLICE_MIRROR_GAP_SCALE);
       var followingBehind = 62 * (1 - Math.pow(nearness, 1 / 1.62));
-      var followingPoint = roadtripMirrorProject(followingBehind);
       var followingLane = Math.max(-1.5, Math.min(1.5, roadtripPlayerLane()));
-      var mirrorX = followingPoint.center + followingLane * ROADTRIP_LANE_FRACTION * followingPoint.halfWidth;
-      var mirrorY = -98 + nearness * 18;
-      var mirrorScale = .07 + nearness * .18;
+      var mirrorBehind = followingBehind;
+      var mirrorRoadFraction = followingLane * ROADTRIP_LANE_FRACTION;
       var mirrorMode = police.phase;
-      var mirrorRoadLeft = followingPoint.center - followingPoint.halfWidth;
-      var mirrorRoadRight = followingPoint.center + followingPoint.halfWidth;
       if (roadsideReflection) {
-        var roadsidePoint = roadtripMirrorProject(roadsideBehind);
-        var roadsideX = roadsidePoint.center + 1.08 * roadsidePoint.halfWidth;
-        var roadsideScale = .055 + roadsidePoint.perspective * .19;
         if (police.phase === "pursuit" || police.phase === "capture") {
           var join = Math.max(0, Math.min(1,
             roadsideBehind / ROADTRIP_POLICE_ROADSIDE_JOIN_DISTANCE));
           join = join * join * (3 - 2 * join);
-          mirrorX = roadsideX + (mirrorX - roadsideX) * join;
-          mirrorY = roadsidePoint.y + (mirrorY - roadsidePoint.y) * join;
-          mirrorScale = roadsideScale + (mirrorScale - roadsideScale) * join;
+          mirrorBehind = roadsideBehind + (followingBehind - roadsideBehind) * join;
+          mirrorRoadFraction = 1.08 + (mirrorRoadFraction - 1.08) * join;
           mirrorMode = join < 1 ? "roadside-pursuit" : police.phase;
         } else {
-          mirrorX = roadsideX;
-          mirrorY = roadsidePoint.y;
-          mirrorScale = roadsideScale;
+          mirrorBehind = roadsideBehind;
+          mirrorRoadFraction = 1.08;
           mirrorMode = "roadside";
         }
-        mirrorRoadLeft = roadsidePoint.center - roadsidePoint.halfWidth;
-        mirrorRoadRight = roadsidePoint.center + roadsidePoint.halfWidth;
       }
+      if (police.phase === "capture") {
+        var pullDuration = Math.max(.8, Math.min(1.5, police.captureDuration * .55));
+        var pull = Math.max(0, Math.min(1, police.captureElapsed / pullDuration));
+        pull = pull * pull * (3 - 2 * pull);
+        mirrorBehind += (ROADTRIP_POLICE_PARKED_BEHIND - mirrorBehind) * pull;
+        mirrorRoadFraction += (1.08 - mirrorRoadFraction) * pull;
+        mirrorMode = pull < 1 ? "shoulder-pull" : "shoulder-capture";
+      } else if (police.phase === "stopped" || police.phase === "arrest") {
+        mirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
+        mirrorRoadFraction = 1.08;
+        mirrorMode = "shoulder-" + police.phase;
+      }
+      var mirrorPose = roadtripMirrorPoseAt(roadtripState.distance, mirrorBehind, mirrorRoadFraction);
+      var mirrorScale = .06 + mirrorPose.perspective * .185;
       police.mirrorScale = mirrorScale;
       roadtripPoliceMirrorNode.setAttribute("data-roadtrip-police", mirrorMode);
-      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-road-left", mirrorRoadLeft.toFixed(2));
-      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-road-right", mirrorRoadRight.toFixed(2));
-      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-behind", followingBehind.toFixed(2));
-      roadtripPoliceMirrorNode.setAttribute("transform", "translate(" + mirrorX.toFixed(2) + " " + mirrorY.toFixed(2) + ") scale(" + mirrorScale.toFixed(3) + ")");
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-road-left", mirrorPose.roadLeft.toFixed(2));
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-road-right", mirrorPose.roadRight.toFixed(2));
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-behind", mirrorPose.behind.toFixed(2));
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-road-fraction", mirrorPose.roadFraction.toFixed(3));
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-perspective", mirrorPose.perspective.toFixed(4));
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-project-x", mirrorPose.x.toFixed(2));
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-project-y", mirrorPose.y.toFixed(2));
+      roadtripPoliceMirrorNode.setAttribute("data-roadtrip-rotation", mirrorPose.rotation.toFixed(2));
+      roadtripPoliceMirrorNode.setAttribute("transform", "translate(" + mirrorPose.x.toFixed(2) + " " +
+        mirrorPose.y.toFixed(2) + ") rotate(" + mirrorPose.rotation.toFixed(2) + ") scale(" +
+        mirrorScale.toFixed(3) + ")");
       roadtripPoliceMirrorNode.setAttribute("visibility", "visible");
     } else if (roadtripPoliceMirrorNode) {
       police.mirrorScale = 0;
@@ -36988,6 +37135,11 @@ window.__entranceRoomOpen = false;
       roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-road-left");
       roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-road-right");
       roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-behind");
+      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-road-fraction");
+      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-perspective");
+      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-project-x");
+      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-project-y");
+      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-rotation");
     }
     if (roadHost) {
       if (roadtripPoliceWarningBeams) roadHost.appendChild(roadtripPoliceWarningBeams);
@@ -37170,6 +37322,7 @@ window.__entranceRoomOpen = false;
       roadtripUseTemplate(node, sign.direction > 0 ? "curve-sign-right" : "curve-sign-left");
       node.setAttribute("data-roadtrip-curve", sign.direction > 0 ? "right" : "left");
       node.setAttribute("data-roadtrip-ahead", sign.remaining.toFixed(2));
+      node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
       node.setAttribute("transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
       node.setAttribute("visibility", "visible");
     });
@@ -37211,10 +37364,17 @@ window.__entranceRoomOpen = false;
       samples.push(roadtripProject(ROADTRIP_DRAW_DISTANCE * (1 - sampleIndex / 14)));
     }
     var roadFar = samples[0];
-    var roadNear = samples[samples.length - 1];
     var outerFraction = 1.15;
+    var roadtripWorld = roadtripElement("entrance-roadtrip-world");
+    if (roadtripWorld) {
+      roadtripWorld.setAttribute("data-roadtrip-elevation", roadFar.elevation.toFixed(3));
+      roadtripWorld.setAttribute("data-roadtrip-grade", roadFar.grade.toFixed(5));
+      roadtripWorld.setAttribute("data-roadtrip-horizon-y", roadFar.y.toFixed(2));
+      roadtripWorld.setAttribute("data-roadtrip-camera-pitch-y", roadFar.cameraPitchY.toFixed(3));
+    }
     if (roadtripVergePath) roadtripVergePath.setAttribute("d",
-      "M0 " + roadFar.y.toFixed(2) + "H680V" + roadNear.y.toFixed(2) + "H0Z");
+      roadtripOutsidePath(samples, -outerFraction, 0) +
+      roadtripOutsidePath(samples, outerFraction, 680));
     if (roadtripRoadPath) roadtripRoadPath.setAttribute("d",
       roadtripBandPath(samples, -outerFraction, outerFraction));
     if (roadtripShoulderPath) roadtripShoulderPath.setAttribute("d",
@@ -37259,6 +37419,8 @@ window.__entranceRoomOpen = false;
       var horizontalScale = item.type === "lamp" && side > 0 ? -scale : scale;
       item.node.setAttribute("data-roadtrip-furniture", item.type);
       item.node.setAttribute("data-roadtrip-side", side < 0 ? "left" : "right");
+      item.node.setAttribute("data-roadtrip-ahead", remaining.toFixed(2));
+      item.node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
       item.node.setAttribute("transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" +
         horizontalScale.toFixed(3) + " " + scale.toFixed(3) + ")");
       item.node.setAttribute("visibility", remaining <= ROADTRIP_DRAW_DISTANCE ? "visible" : "hidden");
@@ -37565,8 +37727,11 @@ window.__entranceRoomOpen = false;
     var rearTurn = roadtripRearCurveOffset(62);
     if (roadtripMirrorTerrain) {
       var terrainOffset = rearTurn * .08;
-      roadtripMirrorTerrain.setAttribute("transform", "translate(" + terrainOffset.toFixed(2) + " 0)");
+      var terrainY = roadtripMirrorProject(62).y + 99;
+      roadtripMirrorTerrain.setAttribute("transform", "translate(" + terrainOffset.toFixed(2) + " " +
+        terrainY.toFixed(2) + ")");
       roadtripMirrorTerrain.setAttribute("data-scenery-offset", terrainOffset.toFixed(2));
+      roadtripMirrorTerrain.setAttribute("data-scenery-y", terrainY.toFixed(2));
     }
     var cycle = 80;
     roadtripMirrorTreePool.forEach(function (tree, index) {
@@ -37583,6 +37748,7 @@ window.__entranceRoomOpen = false;
       tree.setAttribute("transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
       tree.setAttribute("opacity", Math.max(0, edgeFade).toFixed(2));
       tree.setAttribute("data-roadtrip-behind", behind.toFixed(2));
+      tree.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
       tree.setAttribute("data-roadtrip-side", side < 0 ? "left" : "right");
       tree.setAttribute("visibility", edgeFade > 0 ? "visible" : "hidden");
     });
@@ -37601,6 +37767,9 @@ window.__entranceRoomOpen = false;
       roadtripMirrorLinePath(mirrorSamples, -.5) + roadtripMirrorLinePath(mirrorSamples, .5));
     if (roadtripMirrorEdgesPath) roadtripMirrorEdgesPath.setAttribute("d",
       roadtripMirrorLinePath(mirrorSamples, -1) + roadtripMirrorLinePath(mirrorSamples, 1));
+    if (roadtripMirrorWinterPath) roadtripMirrorWinterPath.setAttribute("d",
+      roadtripMirrorOutsidePath(mirrorSamples, -1, 274) +
+      roadtripMirrorOutsidePath(mirrorSamples, 1, 406));
     paintRoadtripMirrorScenery();
     var reflected = roadtripState.entities.filter(function (entity) {
       var remaining = entity.at - roadtripState.distance;
@@ -37623,6 +37792,8 @@ window.__entranceRoomOpen = false;
       roadtripUseTemplate(node, mirrorType);
       node.setAttribute("data-roadtrip-mirror-type", entity.type);
       node.setAttribute("data-roadtrip-mirror-direction", entity.direction);
+      node.setAttribute("data-roadtrip-behind", behind.toFixed(2));
+      node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
       node.setAttribute("transform", "translate(" + x.toFixed(2) + " " + y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
       node.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
     });
@@ -37648,6 +37819,8 @@ window.__entranceRoomOpen = false;
         entity.type === "pickup" ? 1.06 : entity.type === "rabbit" ? .58 :
         entity.type === "heart" || entity.type === "kiss" ? .72 : entity.type === "inf" ? .78 : 1;
       var scale = (.11 + point.perspective * .9) * typeScale;
+      entity.node.setAttribute("data-roadtrip-ahead", remaining.toFixed(2));
+      entity.node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
       entity.node.setAttribute("transform", "translate(" + laneX.toFixed(2) + " " + entityY.toFixed(2) + ") rotate(" +
         escapeTurn.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
       entity.node.setAttribute("visibility", roadtripState.active && remaining <= ROADTRIP_DRAW_DISTANCE + 8 && remaining >= -2 ? "visible" : "hidden");
@@ -39530,6 +39703,7 @@ window.__entranceRoomOpen = false;
     var dt = Math.max(0, Math.min(1000, Number(milliseconds) || 0));
     var seconds = dt / 1000;
     var longitudinalSpeedBefore = Math.abs(driveState.speed);
+    var roadtripBodyPitchBefore = driveState.noseLift - driveState.noseDive;
     syncRoadtripPoliceSurrender();
     var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
     var clutch = porscheState.engineOn && driveState.holds.clutch;
@@ -39630,6 +39804,15 @@ window.__entranceRoomOpen = false;
       var rollingResistance = porscheRollingResistance(driveState.speed);
       driveState.speed -= Math.sign(driveState.speed) * Math.min(Math.abs(driveState.speed), rollingResistance * seconds);
     }
+    if (roadtripState.active && porscheState.engineOn && Math.abs(driveState.speed) > .5 && seconds > 0) {
+      var gradeRelativeBefore = driveState.speed * driveState.facing;
+      var gradeRelativeAfter = gradeRelativeBefore +
+        roadtripTerrainGravityAt(roadtripState.distance) * 3.6 * seconds;
+      if (gradeRelativeBefore && Math.sign(gradeRelativeAfter) !== Math.sign(gradeRelativeBefore)) {
+        gradeRelativeAfter = 0;
+      }
+      driveState.speed = gradeRelativeAfter * driveState.facing;
+    }
     settlePorscheStaticSpeed(drivenAcceleration);
     var roadtripLugging = roadtripState.active && driveState.gear > 1 &&
       porscheRpmForSpeed(driveState.speed, driveState.gear) < 1000;
@@ -39723,6 +39906,11 @@ window.__entranceRoomOpen = false;
     var diveResponse = 1 - Math.exp(-seconds * (diveTarget > driveState.noseDive ? 14 : 5));
     driveState.noseDive += (diveTarget - driveState.noseDive) * diveResponse;
     if (driveState.noseDive < .01 && diveTarget === 0) driveState.noseDive = 0;
+    if (roadtripState.active && Math.abs(roadtripBodyPitchBefore -
+        (driveState.noseLift - driveState.noseDive)) >= .005) {
+      paintRoadtripRoad();
+      paintRoadtripEntities();
+    }
     recoverStoppedPorschePosition();
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
@@ -40674,6 +40862,8 @@ window.__entranceRoomOpen = false;
           best: roadtripState.best,
           multiplier: roadtripState.multiplier,
           grade: roadtripGradeKey(roadtripState.score),
+          terrain: roadtripTerrainSnapshotAt(roadtripState.distance, ROADTRIP_DRAW_DISTANCE,
+            driveState.noseLift - driveState.noseDive),
           collisions: roadtripState.collisions,
           passes: roadtripState.passes,
           tokens: roadtripState.tokens,
@@ -40775,6 +40965,18 @@ window.__entranceRoomOpen = false;
               (roadtripPoliceMirrorNode.getAttribute("data-roadtrip-police") || "") : "",
             mirrorTransform: roadtripPoliceMirrorNode ?
               (roadtripPoliceMirrorNode.getAttribute("transform") || "") : "",
+            mirrorBehind: Number(roadtripPoliceMirrorNode &&
+              roadtripPoliceMirrorNode.getAttribute("data-roadtrip-behind")) || 0,
+            mirrorRoadFraction: Number(roadtripPoliceMirrorNode &&
+              roadtripPoliceMirrorNode.getAttribute("data-roadtrip-road-fraction")) || 0,
+            mirrorPerspective: Number(roadtripPoliceMirrorNode &&
+              roadtripPoliceMirrorNode.getAttribute("data-roadtrip-perspective")) || 0,
+            mirrorProjectX: Number(roadtripPoliceMirrorNode &&
+              roadtripPoliceMirrorNode.getAttribute("data-roadtrip-project-x")) || 0,
+            mirrorProjectY: Number(roadtripPoliceMirrorNode &&
+              roadtripPoliceMirrorNode.getAttribute("data-roadtrip-project-y")) || 0,
+            mirrorRotation: Number(roadtripPoliceMirrorNode &&
+              roadtripPoliceMirrorNode.getAttribute("data-roadtrip-rotation")) || 0,
             roadsideVisible: !!(roadtripPoliceRoadNode && roadtripPoliceRoadNode.getAttribute("visibility") !== "hidden"),
             mirrorVisible: !!(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("visibility") !== "hidden"),
             arrestVisible: !!(roadtripArrestNode && roadtripArrestNode.getAttribute("visibility") !== "hidden"),
@@ -40868,6 +41070,12 @@ window.__entranceRoomOpen = false;
     paintRoadtripRoad();
     paintRoadtripEntities();
     return roadtripState.playerLane;
+  };
+  window.__entranceRoadtripTerrain = function (distance, remaining, bodyPitch) {
+    return roadtripTerrainSnapshotAt(distance, remaining, bodyPitch);
+  };
+  window.__entranceRoadtripMirrorPose = function (distance, behind, roadFraction) {
+    return roadtripMirrorPoseAt(Number(distance) || 0, behind, roadFraction);
   };
   window.__entranceRoadtripSpawn = function (type, lane, ahead) {
     if (!roadtripState.active) return false;

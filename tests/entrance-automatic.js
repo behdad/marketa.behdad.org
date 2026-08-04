@@ -85,7 +85,25 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       key("m", "KeyM");
       key("a", "KeyA");
       report.steps.shortcuts = copy(drive().transmission);
+      window.__entranceDriveTransmissionMode("manual", true);
+      report.steps.parkToManual = copy(drive());
+      window.__entranceDriveTransmissionMode("auto", true);
       window.__toggleEntrancePorscheEngine();
+      var rangeSteps = [];
+      ["ArrowDown", "ArrowDown", "ArrowDown", "ArrowUp", "ArrowUp", "ArrowUp",
+        "ArrowDown", "ArrowDown", "ArrowDown"].forEach(function (arrow) {
+        window.__entranceDriveKey(new KeyboardEvent("keydown", {
+          key: arrow, code: arrow, shiftKey: true
+        }), true);
+        rangeSteps.push(copy(drive().transmission));
+        window.__entranceDriveKey(new KeyboardEvent("keyup", {
+          key: arrow, code: arrow, shiftKey: true
+        }), false);
+      });
+      report.steps.rangeShiftGesture = {
+        ranges: rangeSteps.map(function (row) { return row.range; }),
+        holds: copy(drive().holds)
+      };
       key("d", "KeyD");
       window.__entranceDriveStep(1000);
       report.steps.noCreep = copy(drive());
@@ -133,7 +151,7 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
 
       window.__entranceDriveSetMotion(90, 3);
       window.__entranceDriveControl("throttle", false);
-      window.__entranceDriveStep(560);
+      window.__entranceDriveStep(700);
       report.steps.economyUpshift = copy(drive());
       window.__entranceDriveSetMotion(25, 6);
       window.__entranceDriveStep(560);
@@ -309,16 +327,22 @@ check(s.focusedEnter && !s.focusedEnter.engine && s.focusedEnter.mode === "manua
     enter: s.focusedEnter, space: s.focusedSpace
   });
 check(s.autoCopyEn && s.autoCopyEn.title === "Select Drive" &&
-  s.autoCopyEn.gear === "Press D, or select D on the shifter" &&
-  /gears shift automatically/.test(s.autoCopyEn.pedals) &&
+  s.autoCopyEn.gear === "Shift + ↓ toward D · Shift + ↑ toward P" &&
+  /AUTO shifts D1–D7/.test(s.autoCopyEn.pedals) &&
   s.autoCopyCs && s.autoCopyCs.title === "Zařaď D" &&
-  s.autoCopyCs.gear === "Stiskni D nebo zvol D na řadicí páce" &&
-  /rychlosti se řadí automaticky/.test(s.autoCopyCs.pedals) &&
+  s.autoCopyCs.gear === "Shift + ↓ směrem k D · Shift + ↑ směrem k P" &&
+  /AUTO řadí D1–D7/.test(s.autoCopyCs.pedals) &&
   /automatickou/.test(s.autoCopyCs.autoLabel) && /manuální/.test(s.autoCopyCs.manualLabel),
   "AUTO coaching and ARIA swap cleanly between English and Czech", {
     en: s.autoCopyEn, cs: s.autoCopyCs
   });
 check(s.shortcuts && s.shortcuts.mode === "auto", "A/M mode shortcuts operate while the HUD is open", s.shortcuts);
+check(s.parkToManual && s.parkToManual.transmission.mode === "manual" && s.parkToManual.gear === 0,
+  "switching from AUTO P enters MANUAL neutral instead of reverse", s.parkToManual);
+check(s.rangeShiftGesture && s.rangeShiftGesture.ranges.join("") === "RNDNRPRND" &&
+  !s.rangeShiftGesture.holds.throttle && !s.rangeShiftGesture.holds.brake &&
+  !s.rangeShiftGesture.holds.clutch,
+  "AUTO Shift+Up/Down walks P/R/N/D without leaking pedal or clutch input", s.rangeShiftGesture);
 check(s.noCreep && s.noCreep.transmission.range === "D" && s.noCreep.gear === 1 &&
   Math.abs(s.noCreep.speed) < .01, "AUTO D holds D1 at rest without idle creep", s.noCreep);
 check(s.interlocks && !s.interlocks.reverseAccepted && !s.interlocks.driveAccepted &&
@@ -338,28 +362,28 @@ check(s.economyUpshift && s.economyUpshift.gear > 3,
 check(s.lowRpmDownshift && s.lowRpmDownshift.gear < 6 && s.lowRpmDownshift.rpm >= 1300,
   "low-RPM logic downshifts into a usable band", s.lowRpmDownshift);
 check(s.modeMapping && s.modeMapping.manual.gear === 3 &&
-  s.modeMapping.clutchToAuto.transmission.range === "N" &&
-  s.modeMapping.clutchToAuto.gear === 0 && !s.modeMapping.autoClutchHeld,
-  "mode changes preserve a physical gear except that a held manual clutch maps to AUTO N", s.modeMapping);
+  s.modeMapping.clutchToAuto.transmission.range === "D" &&
+  s.modeMapping.clutchToAuto.gear >= 1 && !s.modeMapping.autoClutchHeld,
+  "mid-drive mode changes choose a speed-matched AUTO gear even if the manual clutch was held", s.modeMapping);
 check(s.manualLaunch && s.manualLaunch.start.clutchEngagement.remainingMs > 0 &&
   s.manualLaunch.start.rpm >= 2000 && s.manualLaunch.moving.speed > 0,
   "MANUAL retains its bounded high-RPM clutch launch", s.manualLaunch);
 check(s.headOn && !s.headOn.car.engineOn && s.headOn.drive.stalled &&
   s.headOn.drive.transmission.range === "N" && s.headOn.drive.gear === 0 &&
-  s.restart && s.restart.car.engineOn && s.restart.drive.transmission.range === "N",
-  "a glass-shattering head-on hit stalls and restarts AUTO in N", {
+  s.restart && s.restart.car.engineOn && s.restart.drive.transmission.range === "P",
+  "a glass-shattering head-on hit stalls in N and restarts AUTO in P", {
     headOn: s.headOn && { car: s.headOn.car, drive: s.headOn.drive }, restart: s.restart
   });
-check(s.engineLifecycle && s.engineLifecycle.stopped.transmission.range === "N" &&
-  s.engineLifecycle.stopped.gear === 0 && s.engineLifecycle.restarted.transmission.range === "N" &&
+check(s.engineLifecycle && s.engineLifecycle.stopped.transmission.range === "P" &&
+  s.engineLifecycle.stopped.gear === 0 && s.engineLifecycle.restarted.transmission.range === "P" &&
   s.engineLifecycle.restarted.gear === 0,
-  "engine stop and restart park AUTO in N", s.engineLifecycle);
+  "engine stop and restart park AUTO in P", s.engineLifecycle);
 check(s.roomLifecycle && s.roomLifecycle.closed.transmission.range === "D" &&
   s.roomLifecycle.closed.gear === 2 && s.roomLifecycle.reopened.transmission.range === "D" &&
   s.roomLifecycle.reopened.gear === 2,
   "room navigation clears momentary input without changing AUTO range or gear", s.roomLifecycle);
-check(s.dismissed && s.dismissed.transmission.range === "N" && s.dismissed.gear === 0,
-  "dashboard dismissal parks AUTO in N", s.dismissed);
+check(s.dismissed && s.dismissed.transmission.range === "P" && s.dismissed.gear === 0,
+  "dashboard dismissal parks AUTO in P", s.dismissed);
 check(s.outsideHudShortcut && !s.outsideHudShortcut.accepted && s.outsideHudShortcut.mode === "auto",
   "transmission shortcuts are inactive while the drive HUD is closed", s.outsideHudShortcut);
 check(s.captured && s.captured.transmission.mode === "auto" && s.captured.transmission.range === "D" &&
@@ -378,15 +402,15 @@ check(s.validRestore && s.validRestore.transmission.mode === "auto" &&
   (s.validRestore.transmission.range === "D" ? s.validRestore.gear >= 1 : s.validRestore.gear === 0),
   "valid checkpoint mode/range/gear restore as one coherent state", s.validRestore);
 check(s.policeStop && s.policeStop.roadtrip.police.phase === "arrest" &&
-  s.policeStop.transmission.range === "N" && s.policeStop.gear === 0,
-  "a police stop forces AUTO to N", s.policeStop);
+  s.policeStop.transmission.range === "P" && s.policeStop.gear === 0,
+  "a police stop forces AUTO to P", s.policeStop);
 check(s.suspensionStop && !s.suspensionStop.roadtrip.active &&
   s.suspensionStop.roadtrip.suspended && s.suspensionStop.speed === 0 &&
   s.suspensionStop.gear === 0 && s.suspensionStop.transmission.mode === "auto" &&
-  s.suspensionStop.transmission.range === "N",
-  "licence suspension stops the car and forces AUTO to N", s.suspensionStop);
+  s.suspensionStop.transmission.range === "P",
+  "licence suspension stops the car and forces AUTO to P", s.suspensionStop);
 check(s.reset && s.reset.drive.transmission.mode === "auto" &&
-  s.reset.drive.transmission.range === "N" && s.reset.drive.gear === 0 && s.reset.stored === "auto",
+  s.reset.drive.transmission.range === "P" && s.reset.drive.gear === 0 && s.reset.stored === "auto",
   "full reset clears AUTO runtime state but retains the explicit preference", s.reset);
 
 console.log("");

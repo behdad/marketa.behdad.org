@@ -52,6 +52,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var hedgehogVisual = {
         href: hedgehog && (hedgehog.getAttribute("href") || hedgehog.getAttribute("xlink:href")),
         kind: hedgehog && hedgehog.getAttribute("data-roadtrip-kind"),
+        belly: document.querySelector("#entrance-roadtrip-hedgehog .entrance-roadtrip-hedgehog-belly").getAttribute("fill"),
         scale: scale(hedgehog)
       };
       for (var tick = 0; tick < 10 && state().drive.roadtrip.wildlifeHits === beforeHedgehog.wildlifeHits; tick++) {
@@ -106,10 +107,11 @@ check(result && result.pickups && result.pickups.every(function (item, index) {
     item.after.score - item.before.score === values[index] * item.before.multiplier;
 }), "all five larger pickups render, sound, collect, and award their point values", result && result.pickups);
 check(result && result.hedgehog && result.hedgehog.visual.kind === "animal" &&
-  result.hedgehog.visual.href === "#entrance-roadtrip-hedgehog" && result.hedgehog.visual.scale > 0 &&
+  result.hedgehog.visual.href === "#entrance-roadtrip-hedgehog" && result.hedgehog.visual.belly === "#7f9ec0" &&
+  result.hedgehog.visual.scale > 0 &&
   result.hedgehog.hits === 1 && result.hedgehog.collisions === 1 &&
   result.hedgehog.penalty >= 2 && result.hedgehog.penalty <= 8 && result.hedgehog.released,
-  "the rare hedgehog renders as a small wildlife hazard with a light collision", result && result.hedgehog);
+  "the rare blue-bellied hedgehog renders as a small wildlife hazard with a light collision", result && result.hedgehog);
 check(result && result.car && result.car.href === "#entrance-roadtrip-car" && result.car.scale > 0,
   "the enlarged traffic art still projects into the windshield", result && result.car);
 

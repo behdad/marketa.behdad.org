@@ -29,11 +29,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveRange("D");
       var throttle = document.getElementById("entrance-drive-throttle");
       var horn = document.getElementById("entrance-drive-horn");
+      var steering = document.getElementById("entrance-drive-steering-touch");
+      var hornHit = horn.querySelector(".entrance-drive-hit");
       report.steps.targets = {
         ignition: hitSize("entrance-drive-ignition"),
         clutch: hitSize("entrance-drive-clutch"),
         brake: hitSize("entrance-drive-brake"),
-        throttle: hitSize("entrance-drive-throttle")
+        throttle: hitSize("entrance-drive-throttle"),
+        horn: {
+          shape: hornHit.tagName.toLowerCase(),
+          rx: Number(hornHit.getAttribute("rx")),
+          ry: Number(hornHit.getAttribute("ry"))
+        }
       };
 
       pointer(throttle, "pointerdown", 41, true, 100);
@@ -49,6 +56,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.steeringFirst = window.__entranceRoomState().drive;
       pointer(throttle, "pointerup", 44, false, 100);
       pointer(horn, "pointerup", 43, true, 130);
+
+      pointer(steering, "pointerdown", 45, true, 200);
+      pointer(steering, "pointermove", 45, true, 270);
+      report.steps.rimSteering = window.__entranceRoomState().drive;
+      pointer(steering, "pointerup", 45, true, 270);
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }
@@ -79,10 +91,15 @@ check(steps.targets && steps.targets.ignition.width >= 54 && steps.targets.ignit
   steps.targets.brake.width >= 54 && steps.targets.brake.height >= 63 &&
   steps.targets.throttle.width >= 58 && steps.targets.throttle.height >= 67,
   "ignition and pedal artwork carries enlarged invisible touch targets", steps.targets);
+check(steps.targets && steps.targets.horn.shape === "ellipse" &&
+  steps.targets.horn.rx === 31 && steps.targets.horn.ry === 27,
+  "only the steering-wheel center circle is a horn target", steps.targets && steps.targets.horn);
 check(steps.throttleFirst && steps.throttleFirst.holds.throttle && steps.throttleFirst.steeringAngle > 0,
   "a secondary steering finger works while the primary finger holds the accelerator", steps.throttleFirst);
 check(steps.steeringFirst && steps.steeringFirst.holds.throttle && steps.steeringFirst.steeringAngle < 0,
   "a secondary accelerator finger works while the primary finger steers", steps.steeringFirst);
+check(steps.rimSteering && steps.rimSteering.steeringAngle > 0,
+  "the broader wheel remains draggable without making its rim a horn target", steps.rimSteering);
 
 if (failures) {
   console.log("\n" + failures + " Entrance touch-driving assertion(s) failed.");

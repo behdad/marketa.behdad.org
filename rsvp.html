@@ -32852,8 +32852,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <path d="M277 108V127M271.5 115H282.5" stroke="#8e3240" stroke-width="1.7"/><path d="M273 110L281 126M281 110L273 126" stroke="#202326" stroke-width=".8"/>
             </g>
           </g>
-          <g id="entrance-drive-horn" class="entrance-drive-control" data-drive-action="horn" transform="translate(277 93.5) scale(1.1 1.15) translate(-277 -107)">
+          <g id="entrance-drive-steering-touch" class="entrance-drive-control" data-drive-action="steering" transform="translate(277 93.5) scale(1.1 1.15) translate(-277 -107)">
             <path class="entrance-drive-hit" d="M207 55H347V148H207Z"/>
+          </g>
+          <g id="entrance-drive-horn" class="entrance-drive-control" data-drive-action="horn" transform="translate(277 93.5) scale(1.1 1.15) translate(-277 -107)">
+            <ellipse class="entrance-drive-hit" cx="277" cy="119" rx="31" ry="27"/>
           </g>
           <path d="M405 73Q475 58 590 72V137H407Z" fill="#c69770" stroke="#795640" stroke-width="1.5"/>
           <path d="M421 87H585" stroke="url(#entrance-drive-metal)" stroke-width="4"/>
@@ -35053,6 +35056,7 @@ window.__entranceRoomOpen = false;
     startX: 0,
     input: 0,
     mode: "idle",
+    hornEnabled: false,
     hornTimer: null,
     returning: false
   };
@@ -36242,6 +36246,7 @@ window.__entranceRoomOpen = false;
       porscheKeyboardSteering.lastPressAt = -Infinity;
       porscheTouchSteering.input = 0;
       porscheTouchSteering.mode = "idle";
+      porscheTouchSteering.hornEnabled = false;
       porscheTouchSteering.returning = false;
       parkRoadtrip(false);
       roadtripState.paused = false;
@@ -40159,7 +40164,7 @@ window.__entranceRoomOpen = false;
     porscheTouchSteering.hornTimer = null;
     porscheTouchHornPulseTimer = null;
   }
-  function beginPorscheTouchSteering(event, control) {
+  function beginPorscheTouchSteering(event, control, hornEnabled) {
     if (syncRoadtripDemeritState()) return false;
     if (porscheTouchSteering.pointerId !== null) return false;
     clearPorscheTouchHornTimers();
@@ -40168,15 +40173,18 @@ window.__entranceRoomOpen = false;
     porscheTouchSteering.startX = event.clientX;
     porscheTouchSteering.input = 0;
     porscheTouchSteering.mode = "pending";
+    porscheTouchSteering.hornEnabled = !!hornEnabled;
     // Give horizontal travel first claim on the shared horn center so a steering
     // gesture cannot leak a horn transient before its intent is known.
-    porscheTouchSteering.hornTimer = setTimeout(function () {
-      porscheTouchSteering.hornTimer = null;
-      if (porscheTouchSteering.mode === "pending") {
-        porscheTouchSteering.mode = "horn";
-        startPorscheHornSound();
-      }
-    }, 160);
+    if (porscheTouchSteering.hornEnabled) {
+      porscheTouchSteering.hornTimer = setTimeout(function () {
+        porscheTouchSteering.hornTimer = null;
+        if (porscheTouchSteering.mode === "pending") {
+          porscheTouchSteering.mode = "horn";
+          startPorscheHornSound();
+        }
+      }, 160);
+    }
     try { control.setPointerCapture(event.pointerId); } catch (_error) {}
     return true;
   }
@@ -40208,17 +40216,19 @@ window.__entranceRoomOpen = false;
     if (porscheTouchSteering.pointerId === null ||
         event && event.pointerId !== porscheTouchSteering.pointerId) return false;
     var mode = porscheTouchSteering.mode;
+    var hornEnabled = porscheTouchSteering.hornEnabled;
     clearPorscheTouchHornTimers();
     porscheTouchSteering.pointerId = null;
     porscheTouchSteering.input = 0;
     porscheTouchSteering.mode = "idle";
+    porscheTouchSteering.hornEnabled = false;
     if (mode === "steering") {
       porscheTouchSteering.returning = true;
       stopPorscheHornSound();
       ensurePorscheDriveFrame();
     } else if (mode === "horn") {
       stopPorscheHornSound();
-    } else if (mode === "pending" && activateTap && startPorscheHornSound()) {
+    } else if (mode === "pending" && hornEnabled && activateTap && startPorscheHornSound()) {
       porscheTouchHornPulseTimer = setTimeout(function () {
         porscheTouchHornPulseTimer = null;
         stopPorscheHornSound();
@@ -41463,7 +41473,7 @@ window.__entranceRoomOpen = false;
     var holdWasLatched = false;
     var holdReleased = true;
     function release(event) {
-      if (action === "horn") {
+      if (action === "horn" || action === "steering") {
         if (event && (event.pointerType === "touch" || event.pointerId === porscheTouchSteering.pointerId)) {
           finishPorscheTouchSteering(event, event.type === "pointerup");
           return;
@@ -41481,11 +41491,13 @@ window.__entranceRoomOpen = false;
       event.preventDefault();
       event.stopPropagation();
       if (action === "horn") {
-        if (event.pointerType === "touch") beginPorscheTouchSteering(event, control);
+        if (event.pointerType === "touch") beginPorscheTouchSteering(event, control, true);
         else {
           startPorscheHornSound();
           try { control.setPointerCapture(event.pointerId); } catch (_error) {}
         }
+      } else if (action === "steering" && event.pointerType === "touch") {
+        beginPorscheTouchSteering(event, control, false);
       }
       if (hold && driveState.hudOpen) {
         holdReleased = false;
@@ -41500,7 +41512,7 @@ window.__entranceRoomOpen = false;
     control.addEventListener("pointerup", release);
     control.addEventListener("pointercancel", release);
     control.addEventListener("lostpointercapture", release);
-    if (action === "horn") control.addEventListener("pointermove", movePorscheTouchSteering);
+    if (action === "horn" || action === "steering") control.addEventListener("pointermove", movePorscheTouchSteering);
     control.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();

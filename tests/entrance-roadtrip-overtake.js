@@ -30,6 +30,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       lane: Number(node && node.getAttribute("data-roadtrip-lane")),
       ahead: Number(node && node.getAttribute("data-roadtrip-ahead")),
       overtaking: node && node.getAttribute("data-roadtrip-overtaking-player"),
+      laneTarget: Number(node && node.getAttribute("data-roadtrip-overtake-lane-target")),
+      laneChanged: node && node.getAttribute("data-roadtrip-overtake-lane-changed"),
       horned: node && node.getAttribute("data-roadtrip-horned"),
       visibility: node && node.getAttribute("visibility")
     };
@@ -63,7 +65,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           audioVoices: state().trafficAudioVoices
         };
 
-        step(600, 2);
+        step(600);
+        report.steps.shifting = {
+          source: sample(node),
+          mirrorVisible: !!mirrorEntity()
+        };
+        step(600);
         report.steps.alongside = {
           source: sample(node),
           mirrorVisible: !!mirrorEntity(),
@@ -98,7 +105,7 @@ console.log("rsvp.html slow-traffic overtaking:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
 check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 12/.test(source) &&
   /function syncRoadtripPlayerOvertaker\(seconds\)[\s\S]{0,900}forwardSpeed <= ROADTRIP_OVERTAKE_SPEED_MAX/.test(source) &&
-  /spawnRoadtripEntity\(type, lane, ROADTRIP_OVERTAKE_REAR_DISTANCE,[\s\S]{0,100}behind: true/.test(source),
+  /spawnRoadtripEntity\(plan\.type, lane, plan\.ahead,[\s\S]{0,140}behind: true/.test(source),
   "only sustained travel at 70 km/h or less schedules a vehicle from behind");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
@@ -113,15 +120,21 @@ var steps = result && result.steps || {};
 check(steps.waiting && !steps.waiting.overtaker && steps.waiting.state.overtakeCooldown > 0,
   "the first passing car stays infrequent", steps.waiting);
 check(steps.behind && steps.behind.source.overtaking === "true" &&
-  steps.behind.source.direction === "forward" && steps.behind.source.lane === 1.5 &&
+  steps.behind.source.direction === "forward" && steps.behind.source.lane === .5 &&
+  steps.behind.source.laneTarget === 1.5 && steps.behind.source.laneChanged === "false" &&
   steps.behind.source.ahead < -20 && steps.behind.source.visibility === "hidden" &&
   steps.behind.mirrorVisible && steps.behind.mirrorType === steps.behind.source.type &&
   steps.behind.audioVoices >= 1,
-  "the faster car and its whoosh first have a visible source in the mirror", steps.behind);
+  "the faster car first appears behind the stopped Porsche in its inner lane", steps.behind);
+check(steps.shifting && steps.shifting.source.lane > .5 && steps.shifting.source.lane < 1.5 &&
+  steps.shifting.source.laneTarget === 1.5 && steps.shifting.source.laneChanged === "true" &&
+  steps.shifting.mirrorVisible,
+  "the mirror visibly carries the overtaker across to the open outer lane", steps.shifting);
 check(steps.alongside && steps.alongside.source.ahead > -2 &&
+  steps.alongside.source.lane === 1.5 &&
   steps.alongside.source.visibility !== "hidden" && !steps.alongside.mirrorVisible &&
   steps.alongside.source.horned === "true",
-  "the car transfers atomically from mirror to windshield and occasionally horns while passing a stopped player", steps.alongside);
+  "the stopped inner-lane pass always horns after shifting into the outer lane", steps.alongside);
 check(steps.ahead && steps.ahead.source.ahead > 8 && steps.ahead.source.overtaking === "false" &&
   !steps.ahead.mirrorVisible && steps.ahead.passes === steps.behind.passes,
   "the passing car continues ahead without awarding a player pass", steps.ahead);

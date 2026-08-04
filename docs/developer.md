@@ -193,6 +193,13 @@ Traffic types are `car`, `pickup`, `truck` (semi), and `rv`; each owns rear and 
 templates, speed, scale, and mass treatment. Keep the natural spawn table varied, with RVs common
 enough to read as Alberta highway traffic. `deer` and the compatibility-named `rabbit` render as a
 mule deer and snowshoe hare.
+Mirror double-click traffic uses `roadtripSummonedTrafficPlan()` and its own seeded streams, so a
+run reproduces the summoned type, lane, spacing, and speed while different run seeds vary them.
+The stress control remains deliberately uncapped up to the shared entity-pool limit. A stopped
+Porsche forces its overtaker to begin in the occupied forward lane; the entity-owned
+`overtakeLaneTarget` then carries the visible move into the other forward lane, and arms a horn on
+every such stopped pass. Moving low-speed summons may originate in either forward lane and move
+only when they initially share the Porsche's lane.
 `roadtripCurvatureAt()` defines alternating eased bends. `roadtripCurveOffset()` integrates the
 upcoming curve into the sampled asphalt, shoulder, lane, furniture, sign, and entity projection,
 while the current curvature adds a small unsteered outside drift. Curve-warning uses are separately

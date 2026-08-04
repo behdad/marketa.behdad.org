@@ -257,7 +257,8 @@ same rules are mirrored for oncoming traffic. Steering can cross the centre line
 the lane while the road and weather continue through the windshield. Yellow
 curve signs announce the next matching bend. The car drifts toward the outside
 of a bend unless you steer with it. When you travel well below traffic speed,
-an occasional faster car may approach in the mirror, pass, and honk if you are stopped.
+an occasional faster car may approach in either right-hand lane and move into the other lane when yours
+is blocked. A passing car always honks when you are stopped in its lane.
 
 Reverse also moves the highway: a missed pickup remains behind briefly, so you
 can back up, select a forward gear, and collect it on the next forward crossing.

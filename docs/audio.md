@@ -235,7 +235,7 @@ spatial stage. Hearts play a soft rising pair, kisses a brighter swept pair, and
 the rare infinity a four-note shimmer. Each voice disconnects after its short
 envelope; hidden or unfocused collection remains silent.
 
-Some faster traffic passing a stopped Porsche adds one short horn on that same
+Faster traffic passing a stopped Porsche in its lane adds one short horn on that same
 shared context. Its gain follows distance and cabin exposure, its stereo position
 follows the passing lane, and its oscillators disconnect after the envelope.
 

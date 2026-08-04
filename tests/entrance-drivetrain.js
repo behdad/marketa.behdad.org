@@ -8,6 +8,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 (function () {
   var report = { errors: [], steps: {} };
   var attended = true;
+  function roomState() { return window.__entranceRoomState(); }
   function state() { return window.__entranceRoomState().drive; }
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function step(milliseconds, count) {
@@ -30,6 +31,27 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
+
+        var offRestBefore = copy(roomState());
+        for (var offPress = 0; offPress < 4; offPress++) {
+          window.__entranceDriveControl("throttle", true);
+          step(250, 2);
+          window.__entranceDriveControl("throttle", false);
+        }
+        var offRestAfter = copy(roomState());
+        var offCheckpoint = window.__captureCheckpointSystems().entrance;
+        window.__entranceDriveSetMotion(18, 0);
+        window.__restoreCheckpointSystems({ entrance: offCheckpoint }, "afterStage");
+        var offRestoredBefore = copy(roomState());
+        window.__entranceDriveControl("throttle", true);
+        step(250, 4);
+        window.__entranceDriveControl("throttle", false);
+        report.steps.offEngineRest = {
+          before: offRestBefore,
+          repeated: offRestAfter,
+          restoredBefore: offRestoredBefore,
+          restoredAfter: copy(roomState())
+        };
         window.__toggleEntrancePorscheEngine();
 
         report.steps.ratioSpeedsAt3000 = [1, 2, 3, 4, 5, 6].map(function (gear) {
@@ -83,6 +105,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceDriveControl("clutch", false);
         report.steps.rollingRelease = copy(state());
 
+        setMotion(24, 1);
+        window.__entranceDriveControl("throttle", true);
+        step(20, 8);
+        var shutdownBefore = copy(roomState());
+        window.__toggleEntrancePorscheEngine();
+        var shutdownImmediate = copy(roomState());
+        step(100, 6);
+        report.steps.engineShutdown = {
+          before: shutdownBefore,
+          immediate: shutdownImmediate,
+          after: copy(roomState())
+        };
+        window.__toggleEntrancePorscheEngine();
+
         setMotion(120, 3);
         window.__entranceDriveControl("brake", true);
         step(20, 1);
@@ -124,6 +160,33 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.steps.pausedPitch = {
           attended: attendedPitch, before: pausedBefore, after: pausedAfter
         };
+        attended = true;
+        window.dispatchEvent(new Event("focus"));
+        window.__toggleEntrancePorscheEngine();
+        var offResumeBefore = copy(roomState());
+        for (var resumePress = 0; resumePress < 3; resumePress++) {
+          window.__entranceDriveControl("throttle", true);
+          window.__entranceDriveControl("throttle", false);
+        }
+        report.steps.offEngineRoadtripResume = {
+          before: offResumeBefore,
+          after: copy(roomState())
+        };
+
+        window.__exitEntranceRoadtrip();
+        window.__entranceDriveSetMotion(12, 0);
+        var forwardCoastBefore = copy(state());
+        step(100, 4);
+        var forwardCoastAfter = copy(state());
+        window.__entranceDriveSetMotion(-12, 0);
+        var reverseCoastBefore = copy(state());
+        step(100, 4);
+        report.steps.offEngineCoast = {
+          forwardBefore: forwardCoastBefore,
+          forwardAfter: forwardCoastAfter,
+          reverseBefore: reverseCoastBefore,
+          reverseAfter: copy(state())
+        };
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -157,6 +220,16 @@ check(s.ratioSpeedsAt3000 && s.ratioSpeedsAt3000.length === 6 &&
   "all six published manual ratios map 3,000 rpm to wheel speed coherently", s.ratioSpeedsAt3000);
 check(s.coupled && Math.abs(s.coupled.rpm - s.coupled.expectedRpm) < .5,
   "an engaged clutch keeps engine RPM locked to wheel speed after road load", s.coupled);
+var offRest = s.offEngineRest;
+check(offRest && !offRest.before.car.engineOn && !offRest.repeated.car.engineOn &&
+  offRest.before.drive.speed === 0 && offRest.repeated.drive.speed === 0 &&
+  offRest.before.drive.position === offRest.repeated.drive.position &&
+  offRest.before.drive.odometerKm === offRest.repeated.drive.odometerKm &&
+  !offRest.restoredBefore.car.engineOn && !offRest.restoredAfter.car.engineOn &&
+  offRest.restoredBefore.drive.speed === 0 && offRest.restoredAfter.drive.speed === 0 &&
+  offRest.restoredBefore.drive.position === offRest.restoredAfter.drive.position &&
+  offRest.restoredBefore.drive.odometerKm === offRest.restoredAfter.drive.odometerKm,
+  "repeated engine-off throttle stays exactly stopped before and after checkpoint restore", offRest);
 check(s.firstLow && s.firstLow.after.speed >= s.firstLow.before.speed + 12 && s.firstLow.after.rpm >= 2250,
   "first gear pulls promptly through the low-RPM launch range", s.firstLow);
 check(s.secondLow && s.secondLow.after.speed >= s.secondLow.before.speed + 9 &&
@@ -179,6 +252,12 @@ check(launch && s.rollingRelease && s.rollingRelease.noseLift < launch.released.
   "the same clutch load produces less pitch once the car is already rolling", {
     standing: launch && launch.released, rolling: s.rollingRelease
   });
+var shutdown = s.engineShutdown;
+check(shutdown && shutdown.before.car.engineOn && shutdown.before.drive.holds.throttle &&
+  !shutdown.immediate.car.engineOn && shutdown.immediate.drive.speed === 0 &&
+  shutdown.immediate.drive.rpm === 0 && shutdown.immediate.drive.gear === 0 &&
+  !shutdown.immediate.drive.holds.throttle && shutdown.after.drive.speed === 0,
+  "switching off with throttle held clears every powered launch state and remains stopped", shutdown);
 var brakePitch = s.brakePitch;
 check(brakePitch && brakePitch.hardStep.longitudinalDeceleration > brakePitch.shortStep.longitudinalDeceleration &&
   brakePitch.hardStep.noseDive > brakePitch.shortStep.noseDive &&
@@ -201,6 +280,20 @@ check(pausedPitch && pausedPitch.before.noseDive > 0 &&
   pausedPitch.after.noseDive === pausedPitch.before.noseDive &&
   pausedPitch.after.pitchTransform === pausedPitch.before.pitchTransform,
   "an unfocused Road Trip freezes brake pitch with the rest of the simulation", pausedPitch);
+var offResume = s.offEngineRoadtripResume;
+check(offResume && !offResume.before.car.engineOn && offResume.before.drive.speed === 0 &&
+  offResume.before.drive.roadtrip.active && offResume.before.drive.roadtrip.resumePending &&
+  !offResume.after.car.engineOn && offResume.after.drive.speed === 0 &&
+  offResume.after.drive.position === offResume.before.drive.position &&
+  offResume.after.drive.odometerKm === offResume.before.drive.odometerKm &&
+  offResume.after.drive.roadtrip.resumePending,
+  "engine-off throttle cannot wake an attention-paused Road Trip", offResume);
+var coast = s.offEngineCoast;
+check(coast && coast.forwardBefore.speed === 12 && coast.forwardAfter.speed > 0 &&
+  coast.forwardAfter.speed < coast.forwardBefore.speed &&
+  coast.reverseBefore.speed === -12 && coast.reverseAfter.speed < 0 &&
+  coast.reverseAfter.speed > coast.reverseBefore.speed,
+  "engine-off forward and reverse motion retain passive coasting resistance", coast);
 
 console.log("");
 if (failures) {

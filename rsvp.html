@@ -39379,7 +39379,11 @@ window.__entranceRoomOpen = false;
   function setPorscheDriveHold(name, held) {
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     held = !!held;
-    if (held) resumeRoadtripFromDrivingInput();
+    // The pedal may still press with the ignition off, but it is not a driving
+    // input then: do not wake a parked simulation or release Road Trip's
+    // attention pause. An already-moving car keeps its existing coast loop.
+    var canAdvanceSimulation = name !== "throttle" || porscheState.engineOn;
+    if (held && canAdvanceSimulation) resumeRoadtripFromDrivingInput();
     if (name === "throttle" && held && syncRoadtripPoliceSurrender()) held = false;
     var wasHeld = driveState.holds[name];
     driveState.holds[name] = held;
@@ -39416,7 +39420,7 @@ window.__entranceRoomOpen = false;
     driveControls.forEach(function (control) {
       if (control.getAttribute("data-drive-hold") === name) control.classList.toggle("pressed", !!held);
     });
-    if (held) ensurePorscheDriveFrame();
+    if (held && (canAdvanceSimulation || Math.abs(driveState.speed) > .02)) ensurePorscheDriveFrame();
     return true;
   }
   function togglePorscheDriveGlovebox() {
@@ -39647,7 +39651,9 @@ window.__entranceRoomOpen = false;
     porscheDriveStep(now - driveLastTime);
     driveLastTime = now;
     if (porscheState.engineOn || Math.abs(driveState.speed) > .02 || porscheTouchSteering.mode === "steering" ||
-        porscheTouchSteering.returning || Object.keys(driveState.holds).some(function (key) { return driveState.holds[key]; })) {
+        porscheTouchSteering.returning || Object.keys(driveState.holds).some(function (key) {
+          return driveState.holds[key] && (key !== "throttle" || porscheState.engineOn);
+        })) {
       var delay = document.hidden || !document.hasFocus() ? 100 : 16;
       driveTimer = setTimeout(function () { porscheDriveTick(performance.now()); }, delay);
     }

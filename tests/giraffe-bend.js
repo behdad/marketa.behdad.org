@@ -10,8 +10,8 @@ var harness = [
   ' var deer=document.getElementById("garden-deer"),out={errors:(window.__errs||[]).slice()};',
   ' function click(){deer.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   ' out.hasPoses=!!(deer&&deer.querySelector("#garden-deer-neck-rest")&&deer.querySelector("#garden-deer-neck-bent"));',
-  ' click();click();out.beforeThird=deer.classList.contains("bending");',
-  ' click();out.onThird=deer.classList.contains("bending");',
+  ' click();out.beforeSecond=deer.classList.contains("bending");',
+  ' click();out.onSecond=deer.classList.contains("bending");',
   ' setTimeout(function(){out.afterHold=deer.classList.contains("bending");out.errors=(window.__errs||[]).slice();document.getElementById("__report").textContent=JSON.stringify(out);},2050);',
   '},250);});',
   '})();</script>'
@@ -31,8 +31,8 @@ if (!result) {
 }
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(result.hasPoses, "resting and deep-bend neck poses both exist");
-check(result.beforeThird === false, "the first two taps keep the ordinary neck");
-check(result.onThird === true, "the third tap folds the neck");
+check(result.beforeSecond === false, "the first tap keeps the ordinary neck");
+check(result.onSecond === true, "the second tap folds the neck");
 check(result.afterHold === false, "the giraffe returns to its resting pose");
 
 console.log("");

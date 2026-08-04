@@ -99,13 +99,12 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
   var dOut = new El("dropterm-out");
   var dIn = new El("dropterm-in");
   var dResize = new El("dropterm-resize");
-  var dateTimeRow = new El("loft-datetime-row"); dateTimeRow.classList = clsList(dateTimeRow);
   var viewport = new El("viewport");
   viewport.getBoundingClientRect = function () { return { top: 100, height: 1000 }; };
   dropterm.parentElement = viewport;
   var monOut = new El("monitor-console-out"); // the monitor console's scrollback — must NOT receive the drop-down's output
 
-  var byId = { "dropterm": dropterm, "dropterm-fps": dFps, "dropterm-out": dOut, "dropterm-in": dIn, "dropterm-resize": dResize, "loft-datetime-row": dateTimeRow, "monitor-console-out": monOut };
+  var byId = { "dropterm": dropterm, "dropterm-fps": dFps, "dropterm-out": dOut, "dropterm-in": dIn, "dropterm-resize": dResize, "monitor-console-out": monOut };
   var timers = [];
   var rafs = {}, nextRaf = 1;
   var sandbox = {
@@ -175,7 +174,7 @@ assert(/localStorage\.removeItem\(DT_SCROLL_KEY\)/.test(html), "full reset remov
 
   // (1) console discovery starts the persistent FPS meter; backtick still toggles the panel
   win.__revealConsoleTab();
-  assert(win.__dropTermFpsRunning() && dFps.classList.contains("discovered") && dateTimeRow.classList.contains("console-tools-visible"), "console discovery reveals the outer-chrome tools and starts the FPS meter");
+  assert(win.__dropTermFpsRunning() && dFps.classList.contains("discovered"), "console discovery reveals and starts the outer-chrome FPS meter");
   win.__toggleDropTerm();
   assert(dropterm.classList.contains("open"), "backtick (toggle) OPENS the drop-down");
   for (var frame = 1; frame <= 50; frame++) {

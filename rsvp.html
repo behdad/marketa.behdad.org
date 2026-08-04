@@ -1787,7 +1787,7 @@ footer{margin-top:2.6rem}
 }
 #hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-left,
 #hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-right{display:none}
-#hunt-fullscreen-area.monitor-content-fullscreen-host #loft-datetime-row{display:none}
+#hunt-fullscreen-area.monitor-content-fullscreen-host :is(#loft-datetime-row,#loft-console-tools){display:none}
 #hunt-fullscreen-area.monitor-content-fullscreen-host .hunt-viewport{
   width:100%;
   height:100%;
@@ -2257,9 +2257,11 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .fs-hint-link{background:none; border:0; padding:0; font:inherit; color:var(--wine); text-decoration:underline; text-underline-offset:2px; cursor:pointer}
 .fs-hint-link:hover{color:var(--ink)}
 .hunt-bottom-nav{
-  position:relative; display:flex; justify-content:center; align-items:center;
-  z-index:20; width:fit-content; max-width:100%; margin:.5rem auto 0;
+  position:relative; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center; z-index:20; width:calc(100% - 5.2rem);
+  max-width:calc(1140px - 5.2rem); margin:.5rem auto 0;
 }
+.hunt-room-nav{position:relative; grid-column:2; grid-row:1; display:flex; justify-content:center; align-items:center; width:fit-content; max-width:100%}
 .hunt-dots{display:flex; justify-content:center; align-items:center; gap:.15rem}
 /* the room-nav dots sit on their own cream pill inside the burgundy shell — the device's
    button row — keeping the muted/active-wine dots legible (they'd vanish on burgundy) */
@@ -2290,6 +2292,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #hunt-floor-coach[hidden]{display:none}
 #hunt-fullscreen-area:has(#entrance-room.roadtrip-active) #hunt-floor-coach{display:none}
 @media (max-width:759px){
+  .hunt-bottom-nav{width:calc(100% - 4.9rem);max-width:calc(100% - 4.9rem)}
   .hunt-floor-slot{left:calc(100% + .45rem)}
   #hunt-floor-coach{font-size:.75rem}
 }
@@ -6234,22 +6237,17 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .occasion-banner:hover,.occasion-banner:focus-visible{background:#762f3d; outline:none; box-shadow:0 4px 14px rgba(0,0,0,.28),0 0 0 2px rgba(255,253,248,.8)}
 .hunt-viewport:fullscreen .occasion-banner{top:14px}
 @media (max-width:520px){ .occasion-banner{font-size:11px; padding:4px 11px; top:6px} }
-/* Date + time sit in the persistent rose game chrome immediately below the scene, aligned
-   to the scene's left/right edges. Keeping this row outside .hunt-viewport means every lower
-   room sees the same canonical controls without laying them over Road Trip's touch surface. */
-.loft-datetime-row{
-  position:absolute; left:2.6rem; right:2.6rem; top:calc(100% + 3px); z-index:20;
-  display:flex; align-items:flex-start; justify-content:space-between; pointer-events:none;
-}
-.loft-datetime-row:not(.date-time-visible):not(.console-tools-visible){display:none}
-.loft-datetime-row > *{pointer-events:auto}
-#hunt-fullscreen-area > .hunt-frame:has(#loft-datetime-row:is(.date-time-visible,.console-tools-visible)){margin-bottom:calc(.4rem + 29px)}
+/* Date + time share the existing room-navigation row: date on the scene's left edge,
+   room buttons fixed in the centre, time on the right. display:contents lets the canonical
+   controls join that grid without creating a second row or changing its height. */
+.loft-datetime-row{display:contents}
+.loft-datetime-row:not(.date-time-visible){display:none}
 .loft-console-tools{
-  position:absolute; left:50%; top:0; translate:-50% 0; display:flex; align-items:center;
-  gap:5px; pointer-events:none;
+  position:absolute; left:calc(2.6rem + 3px); bottom:calc(100% + 3px); z-index:20;
+  display:flex; align-items:center; gap:5px; pointer-events:none;
 }
 .loft-console-tools > *{pointer-events:auto}
-.loft-datenav{position:static; display:flex; align-items:stretch; gap:0; max-width:62%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill holding occasion jumps ◀◀/▶▶, day steps ◀/▶, the date, and an override-only ↺ reset */
+.loft-datenav{position:static; grid-column:1; grid-row:1; justify-self:start; align-self:center; display:flex; align-items:stretch; gap:0; max-width:100%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill holding occasion jumps ◀◀/▶▶, day steps ◀/▶, the date, and an override-only ↺ reset */
 .loft-datepill{display:flex; align-items:center; gap:5px; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); border-right:1px solid rgba(69,58,49,.16); padding:4px 7px; width:9.5em; flex:0 0 9.5em; box-sizing:border-box; cursor:pointer; user-select:none; min-width:0; overflow:hidden} /* stable width fits abbreviated dates without shifting the surrounding controls */
 .loft-datepill:hover{background:rgba(142,58,74,.10)}
 .loft-datepill-txt{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0}
@@ -6260,13 +6258,12 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .loft-datestep{flex:0 0 2.5em; width:2.5em; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 0; cursor:pointer; user-select:none}
 .loft-datestep:hover{background:rgba(142,58,74,.14)}
 .loft-datestep.loft-datereset{border-left:1px solid rgba(69,58,49,.16)}
-/* Match the narrower touch chrome rails so the row stays aligned with the scene edges. */
 @media (max-width:759px), (pointer:coarse){
-  .loft-datetime-row{left:2.45rem;right:2.45rem}
+  .loft-console-tools{left:calc(2.45rem + 3px)}
 }
 @media (max-width:520px){ .loft-datepill,.loft-datestep{font-size:10px} .loft-datepill{padding:3px 8px} .loft-datestep{padding:3px 0} }
 /* the loft's Edmonton wall-clock, mirroring the date pill to the bottom-RIGHT; a click opens the Clock app */
-.loft-timenav{position:static; display:flex; align-items:stretch; gap:0; max-width:60%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill: 🕐 time · ↺ reset */
+.loft-timenav{position:static; grid-column:3; grid-row:1; justify-self:end; align-self:center; display:flex; align-items:stretch; gap:0; max-width:100%; background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:11px; overflow:hidden} /* ONE unified pill: 🕐 time · ↺ reset */
 .loft-timepill{font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; padding:4px 9px; cursor:pointer; user-select:none; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .loft-timepill:hover{background:rgba(142,58,74,.10)}
 .loft-timestep{flex:0 0 2.5em; width:2.5em; display:inline-flex; align-items:center; justify-content:center; font-family:"Source Serif 4",serif; font-size:11px; line-height:1; color:var(--ink,#453a31); background:transparent; border:none; border-left:1px solid rgba(69,58,49,.16); padding:4px 0; cursor:pointer; user-select:none}
@@ -6303,8 +6300,8 @@ body:has(#stage-kitchen.flair-on, #stage-office.arcade, #stage-balcony.tetris-on
 @media (max-width:520px){ .loft-temppill,.loft-tempstep{font-size:10px} .loft-temppill{padding:3px 8px} .loft-tempstep{padding:3px 7px} }
 /* The console's pull-tab stays out of ordinary play until someone has actually explored a console:
    typing in the monitor's JS console or using backtick reveals it for the rest of this page load. */
-/* The pull-tab is a round plate in the lower chrome whose triangle is both the state and the
-   switch — ▼ to pull the console down, turned ▲ to send it back up. */
+/* The pull-tab and FPS meter keep their old scene-left x positions but sit immediately north
+   of the scene in the top rose chrome. The triangle turns ▼/▲ without replacing its glyph. */
 .loft-console-hint{position:static; display:none; align-items:center; justify-content:center; width:22px; height:22px; padding:0; font-size:11px; line-height:1; color:var(--ink,#453a31); background:rgba(255,253,248,.97); border:1px solid rgba(69,58,49,.18); border-radius:50%; cursor:pointer; transition:background .15s, color .15s}
 .loft-console-hint.discovered{display:inline-flex}
 .loft-console-hint:hover,.loft-console-hint:focus-visible{background:var(--ink,#453a31); color:#f8f5ec}
@@ -33546,17 +33543,18 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
     </div>
     <button type="button" id="hunt-next" class="hunt-nav hunt-nav-next locked">›</button>
   </div>
-  <div id="loft-datetime-row" class="loft-datetime-row">
-    <div id="loft-console-tools" class="loft-console-tools">
-      <div id="dropterm-fps">FPS --</div>
-    </div>
+  <div id="loft-console-tools" class="loft-console-tools">
+    <div id="dropterm-fps">FPS --</div>
   </div>
   </div>
   <div class="hunt-bottom-nav" id="hunt-bottom-nav">
-    <div class="hunt-dots" id="hunt-dots"></div>
-    <div class="hunt-floor-slot">
-      <button type="button" id="hunt-floor-btn" class="hunt-nav floor-down" hidden>›</button>
-      <div id="hunt-floor-coach" hidden>Up gets you back.</div>
+    <div id="loft-datetime-row" class="loft-datetime-row"></div>
+    <div class="hunt-room-nav">
+      <div class="hunt-dots" id="hunt-dots"></div>
+      <div class="hunt-floor-slot">
+        <button type="button" id="hunt-floor-btn" class="hunt-nav floor-down" hidden>›</button>
+        <div id="hunt-floor-coach" hidden>Up gets you back.</div>
+      </div>
     </div>
   </div>
   <div id="prince-focus-overlay" hidden>
@@ -47520,6 +47518,7 @@ window.addEventListener("hashchange", function () {
     // genuine Fullscreen API state, so this doesn't change real behavior at all.
     if (!area.classList.contains("is-fullscreen") || !frame || !viewport || !caption || !dots) {
       if (frame) { frame.style.width = ""; frame.style.height = ""; frame.style.maxWidth = ""; }
+      if (bottomNav) { bottomNav.style.width = ""; bottomNav.style.maxWidth = ""; }
       if (window.__refitZoom) window.__refitZoom(); // re-fit a desk zoom to the restored frame, in lockstep with the resize
       return;
     }
@@ -47527,9 +47526,7 @@ window.addEventListener("hashchange", function () {
     var padX = (parseFloat(areaStyle.paddingLeft) || 0) + (parseFloat(areaStyle.paddingRight) || 0);
     var padY = (parseFloat(areaStyle.paddingTop) || 0) + (parseFloat(areaStyle.paddingBottom) || 0);
     var areaW = area.clientWidth - padX;
-    var frameStyle = getComputedStyle(frame);
-    var frameMargins = (parseFloat(frameStyle.marginTop) || 0) + (parseFloat(frameStyle.marginBottom) || 0);
-    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(bottomNav) - frameMargins -
+    var areaH = area.clientHeight - padY - outerHeight(caption) - outerHeight(bottomNav) -
       (watchControls && watchControls.parentNode === area ? outerHeight(watchControls) : 0);
     if (areaW <= 0 || areaH <= 0) return;
     var navW = prevBtn ? prevBtn.offsetWidth : 0;
@@ -47544,6 +47541,7 @@ window.addEventListener("hashchange", function () {
     var viewportW = Math.min(areaW - chrome, areaH * 2);
     var viewportH = viewportW / 2;
     frame.style.width = (viewportW + chrome) + "px";
+    if (bottomNav) { bottomNav.style.width = viewportW + "px"; bottomNav.style.maxWidth = "none"; }
     frame.style.maxWidth = "none"; // the fullscreen CSS override that lifts .hunt-frame's base
     // max-width:1140 rides a selector list containing :-webkit-full-screen, which Firefox can drop
     // wholesale — so the frame stays capped at 1140 and the scene never zooms up. Force it inline.
@@ -68367,10 +68365,8 @@ setOfficeProgress("pc", false);
   function revealConsoleTab() {
     consoleTabDiscovered = true;
     var tab = document.getElementById("loft-console-hint");
-    var row = document.getElementById("loft-datetime-row");
     if (tab) tab.classList.add("discovered");
     if (dtFps) dtFps.classList.add("discovered");
-    if (row) row.classList.add("console-tools-visible");
     startDropTermFps();
   }
   function openDropTerm() {

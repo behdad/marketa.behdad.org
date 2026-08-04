@@ -38,6 +38,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.steps.roomPacman = hold("", roomPacman, document.getElementById("pacman-room-host"));
         report.steps.monitorPacman = hold("show-pacman", monitor, document.getElementById("monitor-pacman-wrap"));
         roomPacman.hidden = roomPacmanWasHidden;
+        window.goToStage("balcony");
+        window.__openEntranceRoom();
+        report.steps.entranceCar = hold("", document.getElementById("entrance-room"),
+          document.getElementById("entrance-porsche"));
+        window.__closeEntranceRoom();
         window.__closeSceneContextMenu();
         office.classList.add("arcade");
         var desktop = new MouseEvent("contextmenu", {
@@ -81,6 +86,9 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 });
 check(result.steps.desktop && result.steps.desktop.menu.length > 0,
   "an ordinary desktop right-click remains available", result.steps.desktop);
+check(result.steps.entranceCar && result.steps.entranceCar.prevented &&
+  result.steps.entranceCar.menu.length === 0,
+  "a downstairs car hold never leaks the phase-one Solve menu", result.steps.entranceCar);
 
 if (failures) {
   console.log("\n" + failures + " arcade long-press assertion(s) failed.");

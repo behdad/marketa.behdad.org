@@ -34910,6 +34910,7 @@ window.__entranceRoomOpen = false;
   var roadtripSuspensionTimer = null;
   var roadtripState = {
     active: false,
+    paused: false,
     exitUntilStop: false,
     playerLane: .5,
     unlocked: false,
@@ -35605,7 +35606,12 @@ window.__entranceRoomOpen = false;
       return false;
     }
     if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active) return false;
-    var started = startRoadtrip(true);
+    roadtripState.exitUntilStop = false;
+    roadtripState.accepted = true;
+    roadtripState.invitationReady = false;
+    roadtripState.invitationDistance = 0;
+    roadtripState.invitationDismissed = true;
+    var started = startRoadtrip(!roadtripState.paused);
     paintRoadtripInvite();
     if (started && window.__checkpointChanged) window.__checkpointChanged();
     return started;
@@ -36041,7 +36047,6 @@ window.__entranceRoomOpen = false;
     });
     if (roadtripPoliceWarningBeams) roadtripPoliceWarningBeams.classList.remove("is-lit");
     if (roadtripPoliceMirrorNode) roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-police");
-    roadtripState.police.mirrorScale = 0;
   }
   function roadtripPoliceCitationForSpeed(speed) {
     var overLimit = Math.max(0,
@@ -36279,6 +36284,7 @@ window.__entranceRoomOpen = false;
     police.phase = "ended";
     police.runEnded = true;
     police.endReason = reason === "pulled-over" ? "court" : reason;
+    roadtripState.paused = false;
     stopRoadtripPoliceSiren(.18);
     parkRoadtrip(false);
     // A run-ending police outcome returns to ordinary block driving. Clear the
@@ -36782,6 +36788,21 @@ window.__entranceRoomOpen = false;
   function clearRoadtripEntities() {
     roadtripState.entities.slice().forEach(releaseRoadtripEntity);
   }
+  function syncRoadtripEntityNode(entity) {
+    var traffic = entity.type === "car" || entity.type === "pickup" || entity.type === "truck" || entity.type === "rv";
+    roadtripUseTemplate(entity.node, entity.direction === "oncoming" ? entity.type + "-oncoming" : entity.type);
+    entity.node.setAttribute("data-roadtrip-type", entity.type);
+    entity.node.setAttribute("data-roadtrip-direction", entity.direction);
+    entity.node.setAttribute("data-roadtrip-speed", String(Math.round(entity.velocity * 3.6)));
+    entity.node.setAttribute("data-roadtrip-escaping", entity.escaping ? "true" : "false");
+    entity.node.setAttribute("data-roadtrip-passing", entity.passing ? "true" : "false");
+    entity.node.setAttribute("data-roadtrip-kind", traffic ? "traffic" :
+      entity.type === "deer" || entity.type === "rabbit" ? "animal" : "collectible");
+    var collectibleValue = entity.type === "heart" ? 5 : entity.type === "kiss" ? 10 : entity.type === "inf" ? 25 : 0;
+    entity.node.setAttribute("data-roadtrip-value", String(collectibleValue));
+    entity.node.setAttribute("data-roadtrip-lane", String(entity.lane));
+    entity.node.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+  }
   function spawnRoadtripEntity(type, lane, ahead) {
     if (type === "token") type = "inf"; // compatibility for the original focused test seam
     var allowed = ["car", "pickup", "truck", "rv", "deer", "rabbit", "heart", "kiss", "inf"];
@@ -36809,19 +36830,7 @@ window.__entranceRoomOpen = false;
         type === "pickup" ? 84 + entity.serial % 3 * 7 : 88 + entity.serial % 4 * 6;
     entity.cruiseVelocity = (entity.direction === "oncoming" ? -1 : 1) * speedKmh / 3.6;
     entity.velocity = traffic ? entity.cruiseVelocity : 0;
-    roadtripUseTemplate(entity.node, entity.direction === "oncoming" ? type + "-oncoming" : type);
-    entity.node.setAttribute("data-roadtrip-type", type);
-    entity.node.setAttribute("data-roadtrip-direction", entity.direction);
-    entity.node.setAttribute("data-roadtrip-speed", String(Math.round(entity.velocity * 3.6)));
-    entity.node.setAttribute("data-roadtrip-escaping", "false");
-    entity.node.setAttribute("data-roadtrip-passing", "false");
-    entity.node.setAttribute("data-roadtrip-kind",
-      traffic ? "traffic" :
-      type === "deer" || type === "rabbit" ? "animal" : "collectible");
-    var collectibleValue = type === "heart" ? 5 : type === "kiss" ? 10 : type === "inf" ? 25 : 0;
-    entity.node.setAttribute("data-roadtrip-value", String(collectibleValue));
-    entity.node.setAttribute("data-roadtrip-lane", String(entity.lane));
-    entity.node.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+    syncRoadtripEntityNode(entity);
     roadtripState.entities.push(entity);
     paintRoadtripEntities();
     return entity.node;
@@ -37074,6 +37083,7 @@ window.__entranceRoomOpen = false;
   }
   function resetRoadtripRun() {
     clearRoadtripEntities();
+    roadtripState.paused = false;
     roadtripState.playerLane = .5;
     roadtripState.distance = 0;
     roadtripState.distancePoints = 0;
@@ -37095,6 +37105,7 @@ window.__entranceRoomOpen = false;
     roadtripState.nextSpawnDistance = 34;
     roadtripState.spawnSerial = 0;
     resetRoadtripPoliceRun();
+    repairRoadtripWindshield();
     room.classList.remove("roadtrip-on-shoulder", "roadtrip-on-gravel");
     if (driveHudSvg) driveHudSvg.classList.remove("roadtrip-shoulder-rumble");
     roadtripMirrorPool.forEach(function (node) { node.setAttribute("visibility", "hidden"); });
@@ -37130,31 +37141,25 @@ window.__entranceRoomOpen = false;
       resetRoadtripRun();
     }
   }
-  function exitRoadtrip() {
+  function pauseRoadtrip() {
     if (!roadtripState.active) return false;
-    if (roadtripResumePending) {
-      cancelRoadtripPoliceEncounter();
-      parkRoadtrip(false);
-      resetRoadtripInvitationSession();
-      roadtripState.exitUntilStop = true;
-      syncPorscheDriveInstruction(true);
-      if (window.__checkpointChanged) window.__checkpointChanged();
-      return true;
-    }
-    if (roadtripState.police.phase === "pursuit") {
-      return beginRoadtripPoliceCapture("refused");
-    }
     if (roadtripState.police.phase === "capture" || roadtripState.police.phase === "stopped" ||
-        roadtripState.police.phase === "arrest") {
-      return true;
-    }
+        roadtripState.police.phase === "arrest") return false;
+    roadtripState.paused = !roadtripState.police.runEnded;
     parkRoadtrip(false);
-    // Leaving returns control to the block; repeat runs use the compact HUD button.
     resetRoadtripInvitationSession();
     roadtripState.exitUntilStop = true;
     syncPorscheDriveInstruction(true);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
+  }
+  function exitRoadtrip() {
+    if (!roadtripState.active) return false;
+    if (roadtripState.police.phase === "capture" || roadtripState.police.phase === "stopped" ||
+        roadtripState.police.phase === "arrest") {
+      return true;
+    }
+    return pauseRoadtrip();
   }
   function startRoadtrip(forceFresh) {
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
@@ -37180,6 +37185,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.active) return true;
     if (roadtripState.police.runEnded) resetRoadtripRun();
     roadtripState.active = true;
+    roadtripState.paused = false;
     paintRoadtripInvite();
     roadtripResumePending = false;
     roadtripShiftHintKey = "";
@@ -37199,6 +37205,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripEntities();
     paintRoadtripPolice();
     paintRoadtripScore();
+    updateRoadtripPoliceSiren();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_roadtrip_drive");
     return true;
   }
@@ -39367,7 +39374,7 @@ window.__entranceRoomOpen = false;
     else if (action === "engine") {
       porscheState.engineOn = !porscheState.engineOn;
       if (porscheState.engineOn) {
-        repairRoadtripWindshield();
+        if (!roadtripState.paused) repairRoadtripWindshield();
         driveState.stalled = false;
         driveState.rpm = 750;
         driveState.gear = 0;
@@ -39422,7 +39429,8 @@ window.__entranceRoomOpen = false;
   function dismissPorscheDriveHud() {
     cancelPorscheShifterPress();
     setPorscheDriveShiftKeyHeld(false);
-    parkRoadtrip(true);
+    if (roadtripState.active) pauseRoadtrip();
+    else parkRoadtrip(!roadtripState.paused);
     resetRoadtripInvitationSession();
     var wasRunning = porscheState.engineOn;
     porscheState.engineOn = false;
@@ -39443,7 +39451,8 @@ window.__entranceRoomOpen = false;
   function hidePorscheDriveHudOnly() {
     cancelPorscheShifterPress();
     setPorscheDriveShiftKeyHeld(false);
-    parkRoadtrip(false);
+    if (roadtripState.active) pauseRoadtrip();
+    else parkRoadtrip(false);
     resetRoadtripInvitationSession();
     driveState.hudOpen = false;
     driveState.stalled = false;
@@ -39718,8 +39727,10 @@ window.__entranceRoomOpen = false;
   function closeEntrance() {
     if (!window.__entranceRoomOpen) return false;
     window.__entranceRoomOpen = false;
-    parkRoadtrip(false);
-    cancelRoadtripPoliceEncounter();
+    if (roadtripState.active) {
+      if (!pauseRoadtrip()) parkRoadtrip(false);
+    } else parkRoadtrip(false);
+    if (!roadtripState.paused) cancelRoadtripPoliceEncounter();
     resetRoadtripInvitationSession();
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName);
     if (window.__restoreLowerRoomCaption) {
@@ -39856,6 +39867,7 @@ window.__entranceRoomOpen = false;
         tireMarks: tireMarks ? tireMarks.childNodes.length : 0,
         roadtrip: {
           active: roadtripState.active && room.classList.contains("roadtrip-active"),
+          paused: roadtripState.paused,
           resumePending: roadtripResumePending,
           exitUntilStop: roadtripState.exitUntilStop,
           playerLane: roadtripPlayerLane(),
@@ -39973,9 +39985,12 @@ window.__entranceRoomOpen = false;
           mirrorCount: roadtripMirrorPool.filter(function (node) {
             return node.getAttribute("visibility") !== "hidden";
           }).length,
+          entities: roadtripState.entities.map(captureRoadtripEntity),
+          damage: captureRoadtripDamage(),
           entityCount: roadtripState.entities.length,
           poolSize: roadtripPool.length,
-          nextSpawnDistance: roadtripState.nextSpawnDistance
+          nextSpawnDistance: roadtripState.nextSpawnDistance,
+          spawnSerial: roadtripState.spawnSerial
         }
       },
       reactions: Object.assign({}, reactions),
@@ -40075,10 +40090,233 @@ window.__entranceRoomOpen = false;
   };
   window.__refreshPorscheDriveClimate = updatePorscheDriveAc;
   window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
+  function roadtripSnapshotNumber(value, fallback, min, max) {
+    value = Number(value);
+    if (!Number.isFinite(value)) return fallback;
+    return Math.max(min, Math.min(max, value));
+  }
+  function captureRoadtripDamage() {
+    var kind = room.classList.contains("roadtrip-shattered") ? "shattered" :
+      room.classList.contains("roadtrip-cracked") ? "cracked" : "";
+    var snapshot = {
+      kind: kind,
+      severity: roadtripSnapshotNumber(room.style.getPropertyValue("--roadtrip-damage"), 0, 0, 1),
+      crackSerial: roadtripCrackSerial
+    };
+    if (kind === "cracked") {
+      var crack = roadtripElement("entrance-roadtrip-crack");
+      var geometry = roadtripElement("entrance-roadtrip-crack-geometry");
+      var shadow = roadtripElement("entrance-roadtrip-crack-shadow");
+      var primary = roadtripElement("entrance-roadtrip-crack-primary");
+      var secondary = roadtripElement("entrance-roadtrip-crack-secondary");
+      snapshot.geometry = {
+        serial: crack ? crack.getAttribute("data-roadtrip-crack-serial") || "" : "",
+        transform: geometry ? geometry.getAttribute("transform") || "" : "",
+        shadow: shadow ? shadow.getAttribute("d") || "" : "",
+        primary: primary ? primary.getAttribute("d") || "" : "",
+        secondary: secondary ? secondary.getAttribute("d") || "" : ""
+      };
+    }
+    return snapshot;
+  }
+  function restoreRoadtripDamage(snapshot) {
+    repairRoadtripWindshield();
+    if (!snapshot || typeof snapshot !== "object") return;
+    var severity = roadtripSnapshotNumber(snapshot.severity, 0, 0, 1);
+    if (severity > 0) room.style.setProperty("--roadtrip-damage", severity.toFixed(3));
+    roadtripCrackSerial = Math.max(0, Math.floor(roadtripSnapshotNumber(
+      snapshot.crackSerial, roadtripCrackSerial, 0, 1000000000)));
+    if (snapshot.kind === "shattered") {
+      room.classList.add("roadtrip-shattered");
+      return;
+    }
+    if (snapshot.kind !== "cracked") return;
+    var saved = snapshot.geometry && typeof snapshot.geometry === "object" ? snapshot.geometry : null;
+    var pathSafe = function (value) {
+      return typeof value === "string" && value.length <= 12000 && /^[A-Za-z0-9.,+\-\s]*$/.test(value);
+    };
+    var transformSafe = saved && typeof saved.transform === "string" && saved.transform.length <= 120 &&
+      /^rotate\([-+\d.]+ [-+\d.]+ [-+\d.]+\)$/.test(saved.transform);
+    if (saved && pathSafe(saved.shadow) && pathSafe(saved.primary) && pathSafe(saved.secondary) && transformSafe) {
+      roadtripElement("entrance-roadtrip-crack-shadow").setAttribute("d", saved.shadow);
+      roadtripElement("entrance-roadtrip-crack-primary").setAttribute("d", saved.primary);
+      roadtripElement("entrance-roadtrip-crack-secondary").setAttribute("d", saved.secondary);
+      roadtripElement("entrance-roadtrip-crack-geometry").setAttribute("transform", saved.transform);
+      roadtripElement("entrance-roadtrip-crack").setAttribute("data-roadtrip-crack-serial",
+        /^\d+$/.test(saved.serial) ? saved.serial : "0");
+    } else {
+      paintRoadtripCrack(severity || .5);
+    }
+    room.classList.add("roadtrip-cracked");
+  }
+  function captureRoadtripEntity(entity) {
+    return {
+      type: entity.type,
+      serial: entity.serial,
+      lane: entity.lane,
+      direction: entity.direction,
+      at: entity.at,
+      escaping: !!entity.escaping,
+      escapeElapsed: entity.escapeElapsed,
+      escapeCounted: !!entity.escapeCounted,
+      passed: !!entity.passed,
+      passing: !!entity.passing,
+      passTargetSerial: entity.passTargetSerial,
+      escapeDirection: entity.escapeDirection,
+      cruiseVelocity: entity.cruiseVelocity,
+      velocity: entity.velocity
+    };
+  }
+  function restoreRoadtripEntities(rows) {
+    ensureRoadtripScene();
+    clearRoadtripEntities();
+    if (!Array.isArray(rows)) return;
+    var allowed = ["car", "pickup", "truck", "rv", "deer", "rabbit", "heart", "kiss", "inf"];
+    rows.slice(0, ROADTRIP_POOL_SIZE).forEach(function (row) {
+      if (!row || allowed.indexOf(row.type) < 0) return;
+      var entity = roadtripPool.find(function (slot) { return !slot.active; });
+      if (!entity) return;
+      entity.active = true;
+      entity.type = row.type;
+      entity.serial = Math.max(1, Math.floor(roadtripSnapshotNumber(row.serial, 1, 1, 1000000000)));
+      entity.lane = roadtripSnapshotNumber(row.lane, .5, -ROADTRIP_MAX_LANE, ROADTRIP_MAX_LANE);
+      entity.direction = ["", "forward", "oncoming"].indexOf(row.direction) >= 0 ? row.direction : "";
+      entity.at = roadtripSnapshotNumber(row.at, roadtripState.distance + 18, -1000000000, 1000000000);
+      entity.escaping = row.escaping === true;
+      entity.escapeElapsed = roadtripSnapshotNumber(row.escapeElapsed, 0, 0, 1000000000);
+      entity.escapeCounted = row.escapeCounted === true;
+      entity.passed = row.passed === true;
+      entity.passing = row.passing === true;
+      entity.passTargetSerial = Math.max(0, Math.floor(roadtripSnapshotNumber(row.passTargetSerial, 0, 0, 1000000000)));
+      entity.escapeDirection = Number(row.escapeDirection) < 0 ? -1 : 1;
+      entity.cruiseVelocity = roadtripSnapshotNumber(row.cruiseVelocity, 0, -1000, 1000);
+      entity.velocity = roadtripSnapshotNumber(row.velocity, 0, -1000, 1000);
+      roadtripState.spawnSerial = Math.max(roadtripState.spawnSerial, entity.serial);
+      syncRoadtripEntityNode(entity);
+      roadtripState.entities.push(entity);
+    });
+  }
+  function captureRoadtripRun() {
+    var state = {};
+    ["exitUntilStop", "playerLane", "distance", "distancePoints", "elapsedSeconds", "score", "multiplier",
+      "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
+      "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "shoulderZone", "shoulderDistance",
+      "nextSpawnDistance", "spawnSerial"].forEach(function (key) { state[key] = roadtripState[key]; });
+    var police = {};
+    Object.keys(roadtripState.police).forEach(function (key) { police[key] = roadtripState.police[key]; });
+    return {
+      version: 1,
+      state: state,
+      drive: {
+        stalled: driveState.stalled,
+        gear: driveState.gear,
+        speed: driveState.speed,
+        rpm: driveState.rpm,
+        temperature: driveState.temperature,
+        position: driveState.position,
+        laneOffset: driveState.laneOffset,
+        steeringAngle: driveState.steeringAngle,
+        wheelAngle: driveState.wheelAngle,
+        facing: driveState.facing,
+        yaw: driveState.yaw
+      },
+      police: police,
+      entities: roadtripState.entities.map(captureRoadtripEntity),
+      damage: captureRoadtripDamage()
+    };
+  }
+  function restoreRoadtripPolice(snapshot) {
+    resetRoadtripPoliceRun();
+    if (!snapshot || typeof snapshot !== "object") return;
+    var phases = ["idle", "warning", "pursuit", "capture", "stopped", "arrest", "cooldown", "ended"];
+    Object.keys(roadtripState.police).forEach(function (key) {
+      var current = roadtripState.police[key];
+      var value = snapshot[key];
+      if (key === "phase") {
+        if (phases.indexOf(value) >= 0) roadtripState.police.phase = value;
+      } else if (key === "fine" && value === null) {
+        roadtripState.police.fine = null;
+      } else if (typeof current === "boolean") {
+        if (typeof value === "boolean") roadtripState.police[key] = value;
+      } else if (typeof current === "number") {
+        if (Number.isFinite(Number(value))) roadtripState.police[key] = Math.max(-1000000000,
+          Math.min(1000000000, Number(value)));
+      } else if (typeof current === "string" && typeof value === "string" && value.length <= 80) {
+        roadtripState.police[key] = value;
+      }
+    });
+  }
+  function restoreRoadtripRun(snapshot) {
+    if (!snapshot || Number(snapshot.version) !== 1 || !snapshot.state || snapshot.police && snapshot.police.runEnded === true) {
+      return false;
+    }
+    resetRoadtripRun();
+    var saved = snapshot.state;
+    roadtripState.exitUntilStop = saved.exitUntilStop === true;
+    roadtripState.playerLane = roadtripSnapshotNumber(saved.playerLane, .5, -ROADTRIP_MAX_LANE, ROADTRIP_MAX_LANE);
+    roadtripState.distance = roadtripSnapshotNumber(saved.distance, 0, 0, 1000000000);
+    roadtripState.distancePoints = Math.max(0, Math.floor(roadtripSnapshotNumber(saved.distancePoints, 0, 0,
+      roadtripDistancePoints(roadtripState.distance))));
+    roadtripState.elapsedSeconds = roadtripSnapshotNumber(saved.elapsedSeconds, 0, 0, 1000000000);
+    roadtripState.score = Math.floor(roadtripSnapshotNumber(saved.score, 0, -1000000000, 1000000000));
+    roadtripState.multiplier = Math.max(1, Math.min(3, Math.floor(roadtripSnapshotNumber(saved.multiplier, 1, 1, 3))));
+    ["collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
+      "centerlineCrossings"].forEach(function (key) {
+      roadtripState[key] = Math.max(0, Math.floor(roadtripSnapshotNumber(saved[key], 0, 0, 1000000000)));
+    });
+    roadtripState.lastImpactSeverity = roadtripSnapshotNumber(saved.lastImpactSeverity, 0, 0, 1);
+    roadtripState.centerlineExcursion = saved.centerlineExcursion === true;
+    roadtripState.shoulderZone = ["road", "rumble", "gravel"].indexOf(saved.shoulderZone) >= 0 ? saved.shoulderZone : "road";
+    roadtripState.shoulderDistance = roadtripSnapshotNumber(saved.shoulderDistance, 0, 0, 1000000000);
+    roadtripState.nextSpawnDistance = roadtripSnapshotNumber(saved.nextSpawnDistance,
+      roadtripState.distance + 34, 0, 1000000000);
+    roadtripState.spawnSerial = Math.max(0, Math.floor(roadtripSnapshotNumber(saved.spawnSerial, 0, 0, 1000000000)));
+    restoreRoadtripPolice(snapshot.police);
+    var savedDrive = snapshot.drive && typeof snapshot.drive === "object" ? snapshot.drive : {};
+    driveState.stalled = savedDrive.stalled === true;
+    driveState.gear = Math.max(-1, Math.min(6, Math.round(roadtripSnapshotNumber(savedDrive.gear, 0, -1, 6))));
+    driveState.speed = roadtripSnapshotNumber(savedDrive.speed, 0, -263, 263);
+    driveState.rpm = roadtripSnapshotNumber(savedDrive.rpm, porscheState.engineOn ? 780 : 0, 0, 7500);
+    driveState.temperature = roadtripSnapshotNumber(savedDrive.temperature, 0, 0, 1);
+    driveState.position = roadtripSnapshotNumber(savedDrive.position, 0, -648, 349);
+    driveState.laneOffset = roadtripSnapshotNumber(savedDrive.laneOffset, 0, -9, 9);
+    driveState.steeringAngle = roadtripSnapshotNumber(savedDrive.steeringAngle, 0, -18, 18);
+    driveState.wheelAngle = roadtripSnapshotNumber(savedDrive.wheelAngle, 0, -1000000000, 1000000000) % 360;
+    driveState.facing = Number(savedDrive.facing) < 0 ? -1 : 1;
+    driveState.yaw = roadtripSnapshotNumber(savedDrive.yaw, driveState.facing < 0 ? 180 : 0, -1000000000, 1000000000);
+    restoreRoadtripEntities(snapshot.entities);
+    restoreRoadtripDamage(snapshot.damage);
+    roadtripState.active = false;
+    roadtripState.paused = true;
+    roadtripState.accepted = false;
+    if (roadtripState.score > roadtripState.best) roadtripState.best = roadtripState.score;
+    paintRoadtripScore();
+    return true;
+  }
   var entranceCheckpoint = {
     capture: function () {
       var car = {};
       Object.keys(porscheState).forEach(function (key) { car[key] = !!porscheState[key]; });
+      var roadtrip = {
+        scoringVersion: ROADTRIP_SCORING_VERSION,
+        unlocked: roadtripState.unlocked,
+        accepted: false,
+        everAccepted: roadtripState.everAccepted,
+        practiceLaps: roadtripState.practiceLaps,
+        distance: Math.round(roadtripState.distance * 100) / 100,
+        distancePoints: roadtripState.distancePoints,
+        elapsedSeconds: Math.round(roadtripState.elapsedSeconds * 100) / 100,
+        score: roadtripState.score,
+        multiplier: roadtripState.multiplier,
+        collisions: roadtripState.collisions,
+        passes: roadtripState.passes,
+        tokens: roadtripState.tokens,
+        escapes: roadtripState.escapes,
+        wildlifeHits: roadtripState.wildlifeHits
+      };
+      if ((roadtripState.active || roadtripState.paused) && !roadtripState.police.runEnded) {
+        roadtrip.pausedRun = captureRoadtripRun();
+      }
       return {
         windows: windowIds.map(function (id) { return windowLights[id] ? "1" : "0"; }).join(""),
         lamps: { left: !!entranceLamps.left, right: !!entranceLamps.right },
@@ -40099,23 +40337,7 @@ window.__entranceRoomOpen = false;
           yaw: driveState.yaw,
           spinDirection: driveState.spinDirection,
           spins: driveState.spins,
-          roadtrip: {
-            scoringVersion: ROADTRIP_SCORING_VERSION,
-            unlocked: roadtripState.unlocked,
-            accepted: false,
-            everAccepted: roadtripState.everAccepted,
-            practiceLaps: roadtripState.practiceLaps,
-            distance: Math.round(roadtripState.distance * 100) / 100,
-            distancePoints: roadtripState.distancePoints,
-            elapsedSeconds: Math.round(roadtripState.elapsedSeconds * 100) / 100,
-            score: roadtripState.score,
-            multiplier: roadtripState.multiplier,
-            collisions: roadtripState.collisions,
-            passes: roadtripState.passes,
-            tokens: roadtripState.tokens,
-            escapes: roadtripState.escapes,
-            wildlifeHits: roadtripState.wildlifeHits
-          }
+          roadtrip: roadtrip
         }
       };
     },
@@ -40197,6 +40419,11 @@ window.__entranceRoomOpen = false;
             roadtripState.best = roadtripState.score;
             try { localStorage.setItem(ROADTRIP_BEST_KEY, String(roadtripState.best)); }
             catch (_error) {}
+          }
+          if (restoreRoadtripRun(roadtrip.pausedRun)) {
+            roadtripState.unlocked = true;
+            roadtripState.practiceLaps = 1;
+            roadtripState.everAccepted = true;
           }
         }
       }

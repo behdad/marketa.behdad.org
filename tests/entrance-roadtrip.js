@@ -843,9 +843,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       reentered: reentered, returned: returned, clickedReentry: clickedReentry };
 
     var bestBeforeDismiss = roadtrip().best;
+    var runBeforeDismiss = copy(roadtrip());
     window.__dismissEntrancePorscheDriveHud();
     report.steps.dismiss = {
       bestBefore: bestBeforeDismiss,
+      before: runBeforeDismiss,
       roadtrip: copy(roadtrip()),
       classes: room.getAttribute("class"),
       viewBox: viewBox(),
@@ -920,13 +922,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var checkpointRow = window.__captureCheckpointSystems().entrance;
     window.__restoreCheckpointSystems({ entrance: checkpointRow }, "afterStage");
     var checkpointAfter = copy(state());
+    var checkpointVisible = visibleChildCount();
+    document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var checkpointResumed = copy(state());
     report.steps.checkpoint = {
       pickup: checkpointPickup,
       transient: entityVisual(checkpointTransient.node),
       before: checkpointBefore,
       row: checkpointRow,
       after: checkpointAfter,
-      visible: visibleChildCount()
+      resumed: checkpointResumed,
+      visible: checkpointVisible
     };
     window.__entranceRoadtripStart();
     window.__entranceRoadtripSpawn("token", 0);
@@ -959,6 +966,39 @@ function check(ok, message, detail) {
     failures++;
     console.log("  ✗ " + message + (detail == null ? "" : "   [" + JSON.stringify(detail) + "]"));
   }
+}
+function retainedRun(run) {
+  var keys = ["playerLane", "distance", "distancePoints", "elapsedSeconds", "score", "multiplier",
+    "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
+    "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "shoulderZone", "shoulderDistance",
+    "nextSpawnDistance", "spawnSerial"];
+  var value = {};
+  keys.forEach(function (key) { value[key] = run && run[key]; });
+  value.police = run && run.police && {
+    phase: run.police.phase,
+    nextDistance: run.police.nextDistance,
+    stationAt: run.police.stationAt,
+    warningCarAt: run.police.warningCarAt,
+    warningElapsed: run.police.warningElapsed,
+    warningFlashCount: run.police.warningFlashCount,
+    warningLight: run.police.warningLight,
+    detectedSpeed: run.police.detectedSpeed,
+    overLimit: run.police.overLimit,
+    fine: run.police.fine,
+    courtRequired: run.police.courtRequired,
+    pursuitElapsed: run.police.pursuitElapsed,
+    pursuitDistance: run.police.pursuitDistance,
+    escapeGap: run.police.escapeGap,
+    escapeHoldElapsed: run.police.escapeHoldElapsed,
+    runEnded: run.police.runEnded,
+    endReason: run.police.endReason
+  };
+  value.entities = run && run.entities;
+  value.damage = run && run.damage;
+  return value;
+}
+function sameRetainedRun(left, right) {
+  return JSON.stringify(retainedRun(left)) === JSON.stringify(retainedRun(right));
 }
 
 console.log("rsvp.html Entrance highway roadtrip:");
@@ -996,14 +1036,15 @@ check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.ac
   "the first highway entry is explicit and its full offer owns Enter and Escape");
 check(/id="entrance-roadtrip-reenter"[^>]+data-aria-i="entrance_roadtrip_reenter"/.test(source) &&
   /roadtripState\.everAccepted && !roadtripState\.accepted && !roadtripState\.active/.test(source) &&
-  /bindRoadtripInviteControl\(roadtripReenter,[\s\S]{0,500}startRoadtrip\(true\)/.test(source),
+  /bindRoadtripInviteControl\(roadtripReenter,[\s\S]{0,700}startRoadtrip\(!roadtripState\.paused\)/.test(source),
   "accepted drivers get an explicit compact Road Trip re-entry control");
 check(/var roadtripReenterVisible = roadtripReenterNode && roadtripReenterNode\.classList\.contains\("show"\)/.test(source) &&
   /event\.key === "Enter"[\s\S]{0,350}roadtripReenterVisible && document\.getElementById\("entrance-drive-hud"\)\.classList\.contains\("drive-engine-on"\)[\s\S]{0,180}roadtripReenterNode\.dispatchEvent/.test(source),
   "document Enter starts compact Road Trip re-entry only after the engine is running");
-check(/roadtrip:\s*\{[\s\S]{0,220}unlocked: roadtripState\.unlocked,[\s\S]{0,100}accepted: false,[\s\S]{0,100}everAccepted: roadtripState\.everAccepted,/.test(source) &&
+check(/var roadtrip = \{[\s\S]{0,220}unlocked: roadtripState\.unlocked,[\s\S]{0,100}accepted: false,[\s\S]{0,100}everAccepted: roadtripState\.everAccepted,/.test(source) &&
+  /roadtrip\.pausedRun = captureRoadtripRun\(\)/.test(source) &&
   /roadtripState\.accepted = false;\s*roadtripState\.invitationReady = false;\s*roadtripState\.invitationDistance = 0;\s*roadtripState\.invitationDismissed = false;/.test(source),
-  "checkpoint capture preserves prior acceptance without authorizing an active highway session");
+  "checkpoint capture preserves prior acceptance and a paused run without authorizing an active session");
 
 if (process.argv.indexOf("--source-only") >= 0) {
   if (failures) process.exit(1);
@@ -1365,39 +1406,45 @@ check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pa
 
 var close = s.close;
 check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepted && close.before.roadtrip.entityCount > 0 &&
-  !close.closed.roadtrip.active && close.closed.classes.indexOf("roadtrip-active") < 0 &&
+  !close.closed.roadtrip.active && close.closed.roadtrip.paused && close.closed.classes.indexOf("roadtrip-active") < 0 &&
   close.closed.viewBox === "0 -31 680 207" && close.closed.aspectRatio === "xMidYMax slice" &&
   !close.closed.reentryVisible &&
-  close.parked.distance === close.closed.roadtrip.distance && close.parked.entityCount === close.closed.roadtrip.entityCount &&
-  !close.reopened.roadtrip.active && !close.reopened.roadtrip.accepted && close.reopened.roadtrip.everAccepted &&
+  sameRetainedRun(close.before.roadtrip, close.closed.roadtrip) &&
+  sameRetainedRun(close.closed.roadtrip, close.parked) &&
+  !close.reopened.roadtrip.active && close.reopened.roadtrip.paused &&
+  !close.reopened.roadtrip.accepted && close.reopened.roadtrip.everAccepted &&
   !close.reopened.roadtrip.invitationVisible && close.reopened.roadtrip.reentryVisible &&
   close.reopened.reentryVisible && close.reopened.reentryAriaHidden === "false" &&
   close.reopened.label === "Road Trip" && close.reopened.czechLabel === "Výlet" && close.reopened.czechAria === "Výlet" &&
   (close.reopened.button.right <= close.reopened.steering.left || close.reopened.button.left >= close.reopened.steering.right ||
     close.reopened.button.bottom <= close.reopened.steering.top || close.reopened.button.top >= close.reopened.steering.bottom) &&
   !close.reentryBeforeEnter.car.engineOn && !close.reentryBeforeEnter.drive.roadtrip.active &&
+  close.reentryBeforeEnter.drive.roadtrip.paused &&
   close.reentryBeforeEnter.drive.roadtrip.reentryVisible &&
   close.reentryEngineStarted.car.engineOn && !close.reentryEngineStarted.drive.roadtrip.active &&
+  close.reentryEngineStarted.drive.roadtrip.paused &&
   close.reentryEngineStarted.drive.roadtrip.reentryVisible &&
-  close.reentered.roadtrip.active && close.reentered.roadtrip.accepted && close.reentered.roadtrip.everAccepted &&
+  close.reentered.roadtrip.active && !close.reentered.roadtrip.paused &&
+  close.reentered.roadtrip.accepted && close.reentered.roadtrip.everAccepted &&
   close.reentered.car.engineOn &&
-  close.reentered.roadtrip.distance === 0 && close.reentered.roadtrip.entityCount === 0 &&
+  sameRetainedRun(close.reopened.roadtrip, close.reentered.roadtrip) &&
   close.reentered.viewBox === "0 -120 680 340" && !close.reentered.reentryVisible &&
-  close.returned.state.drive.hud && !close.returned.state.drive.roadtrip.active &&
+  close.returned.state.drive.hud && !close.returned.state.drive.roadtrip.active && close.returned.state.drive.roadtrip.paused &&
+  sameRetainedRun(close.reentered.roadtrip, close.returned.state.drive.roadtrip) &&
   close.returned.state.drive.roadtrip.reentryVisible && close.returned.reentryVisible &&
   close.returned.reentryAriaHidden === "false" &&
-  close.clickedReentry.drive.roadtrip.active && close.clickedReentry.drive.roadtrip.accepted,
-  "accepted drivers regain a non-overlapping bilingual Road Trip button; Enter starts the engine, then starts a fresh run", close);
+  close.clickedReentry.drive.roadtrip.active && !close.clickedReentry.drive.roadtrip.paused &&
+  close.clickedReentry.drive.roadtrip.accepted &&
+  sameRetainedRun(close.returned.state.drive.roadtrip, close.clickedReentry.drive.roadtrip),
+  "accepted drivers regain a non-overlapping bilingual Road Trip button; Enter starts the engine, then resumes the exact run", close);
 var dismiss = s.dismiss && s.dismiss.roadtrip;
-check(dismiss && !dismiss.active && dismiss.unlocked && dismiss.entityCount === 0 &&
+check(dismiss && !dismiss.active && dismiss.paused && dismiss.unlocked && dismiss.entityCount > 0 &&
   dismiss.everAccepted && !dismiss.reentryVisible &&
   s.dismiss.dom === dismiss.poolSize && s.dismiss.visible === 0 &&
-  dismiss.distance === 0 && dismiss.distancePoints === 0 && dismiss.elapsedSeconds === 0 &&
-  dismiss.score === 0 && dismiss.multiplier === 1 &&
-  dismiss.collisions === 0 && dismiss.passes === 0 && dismiss.tokens === 0 && dismiss.escapes === 0 &&
+  sameRetainedRun(s.dismiss.before, dismiss) &&
   dismiss.best >= s.dismiss.bestBefore && s.dismiss.classes.indexOf("roadtrip-active") < 0 &&
   s.dismiss.viewBox === "0 -31 680 207",
-  "dashboard dismissal ends and clears the run while retaining unlock and best", s.dismiss);
+  "dashboard dismissal hides but retains the paused run", s.dismiss);
 var steering = s.steering;
 check(steering && steering.after.state.drive.roadtrip.playerLane < steering.before.state.drive.roadtrip.playerLane &&
   steering.after.road !== steering.before.road && steering.after.entityX > steering.before.entityX &&
@@ -1421,29 +1468,43 @@ check(exitLadder && exitLadder.streetAfterExit && !exitLadder.streetAfterExit.dr
   "block driving remains available after stopping until the highway is deliberately accepted again",
   exitLadder && exitLadder.streetAfterExit);
 check(exitLadder && exitLadder.first.open && exitLadder.first.drive.hud && exitLadder.first.car.engineOn &&
-  !exitLadder.first.drive.roadtrip.active && exitLadder.first.drive.roadtrip.exitUntilStop &&
+  !exitLadder.first.drive.roadtrip.active && exitLadder.first.drive.roadtrip.paused &&
+  exitLadder.first.drive.roadtrip.exitUntilStop &&
   exitLadder.first.drive.roadtrip.reentryVisible &&
   exitLadder.second.open && !exitLadder.second.drive.hud && !exitLadder.second.car.engineOn &&
-  !exitLadder.second.drive.roadtrip.exitUntilStop && !exitLadder.second.drive.roadtrip.reentryVisible && !exitLadder.third.open,
-  "successive Escapes leave highway, dismiss the HUD, then dismiss Entrance",
+  exitLadder.second.drive.roadtrip.paused && !exitLadder.second.drive.roadtrip.reentryVisible &&
+  !exitLadder.third.open && exitLadder.third.drive.roadtrip.paused,
+  "successive Escapes pause the highway, dismiss the HUD, then dismiss Entrance without clearing the run",
   exitLadder);
 var checkpoint = s.checkpoint;
+var checkpointContract = checkpoint && {
+  activeBefore: checkpoint.before.drive.roadtrip.active,
+  entityCounts: [checkpoint.before.drive.roadtrip.entityCount, checkpoint.after.drive.roadtrip.entityCount],
+  hasPausedRun: !!checkpoint.row.drive.roadtrip.pausedRun,
+  pausedAfter: checkpoint.after.drive.roadtrip.paused,
+  reentryAfter: checkpoint.after.drive.roadtrip.reentryVisible,
+  sameBeforeAfter: sameRetainedRun(checkpoint.before.drive.roadtrip, checkpoint.after.drive.roadtrip),
+  activeResumed: checkpoint.resumed.drive.roadtrip.active,
+  pausedResumed: checkpoint.resumed.drive.roadtrip.paused,
+  sameAfterResume: sameRetainedRun(checkpoint.after.drive.roadtrip, checkpoint.resumed.drive.roadtrip),
+  visible: checkpoint.visible
+};
 check(checkpoint && checkpoint.before.drive.roadtrip.active && checkpoint.before.drive.roadtrip.accepted &&
   checkpoint.before.drive.roadtrip.unlocked && checkpoint.before.drive.roadtrip.everAccepted && checkpoint.before.drive.roadtrip.score > 0 &&
   checkpoint.before.drive.roadtrip.entityCount > 0 && checkpoint.row.drive.roadtrip.accepted === false &&
-  checkpoint.row.drive.roadtrip.everAccepted === true &&
+  checkpoint.row.drive.roadtrip.everAccepted === true && checkpoint.row.drive.roadtrip.pausedRun &&
   checkpoint.after.drive.roadtrip.unlocked && !checkpoint.after.drive.roadtrip.active &&
-  !checkpoint.after.drive.roadtrip.accepted && checkpoint.after.drive.roadtrip.everAccepted &&
+  checkpoint.after.drive.roadtrip.paused && !checkpoint.after.drive.roadtrip.accepted && checkpoint.after.drive.roadtrip.everAccepted &&
   !checkpoint.after.drive.roadtrip.invitationReady && !checkpoint.after.drive.roadtrip.invitationVisible &&
-  checkpoint.after.drive.roadtrip.reentryVisible && checkpoint.after.drive.roadtrip.entityCount === 0 &&
-  checkpoint.visible === 0 && Math.abs(checkpoint.after.drive.roadtrip.distance -
-    checkpoint.before.drive.roadtrip.distance) <= .01 &&
-  checkpoint.after.drive.roadtrip.score === checkpoint.before.drive.roadtrip.score &&
-  checkpoint.after.drive.roadtrip.multiplier === checkpoint.before.drive.roadtrip.multiplier,
-  "checkpoint restore keeps durable highway progress but returns parked, unaccepted, and entity-free",
-  checkpoint);
+  checkpoint.after.drive.roadtrip.reentryVisible &&
+  checkpoint.after.drive.roadtrip.entityCount === checkpoint.before.drive.roadtrip.entityCount &&
+  checkpoint.visible === 0 && sameRetainedRun(checkpoint.before.drive.roadtrip, checkpoint.after.drive.roadtrip) &&
+  checkpoint.resumed.drive.roadtrip.active && !checkpoint.resumed.drive.roadtrip.paused &&
+  sameRetainedRun(checkpoint.after.drive.roadtrip, checkpoint.resumed.drive.roadtrip),
+  "checkpoint restore parks the complete run and compact re-entry resumes it intact",
+  checkpointContract);
 var reset = s.reset && s.reset.roadtrip;
-check(reset && !reset.active && !reset.unlocked && !reset.accepted && !reset.everAccepted &&
+check(reset && !reset.active && !reset.paused && !reset.unlocked && !reset.accepted && !reset.everAccepted &&
   !reset.invitationVisible && !reset.reentryVisible &&
   reset.practiceLaps === 0 && reset.entityCount === 0 &&
   s.reset.dom === reset.poolSize && s.reset.visible === 0 &&

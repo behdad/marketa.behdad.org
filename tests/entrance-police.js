@@ -261,6 +261,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripPoliceStep(0, .6);
       var courtResolved = copy(trip());
       var courtResolvedCaption = document.getElementById("hunt-caption").textContent.trim();
+      var courtReturnOffer = copy(state());
+      var courtTerminalCheckpoint = window.__captureCheckpointSystems().entrance.drive.roadtrip;
+      document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
+      var courtFreshEntry = copy(trip());
       report.steps.courtStop = {
         stopped: courtStopped,
         stoppedCaption: courtStoppedCaption,
@@ -272,7 +277,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         paused: courtPaused,
         fade: courtFade,
         trip: courtResolved,
-        returnOffer: copy(state()),
+        terminalCheckpoint: courtTerminalCheckpoint,
+        freshEntry: courtFreshEntry,
+        returnOffer: courtReturnOffer,
         hudOpen: state().drive.hud,
         caption: courtResolvedCaption
       };
@@ -392,16 +399,29 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var refused = meetPolice(130);
       window.__entranceRoadtripSetDistance(refused.police.stationAt + 30);
       window.__exitEntranceRoadtrip();
+      var refusedPaused = copy(trip());
+      document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
+      var refusedResumed = copy(trip());
+      window.__entranceRoadtripPoliceStep(130, 20);
       var refusedCapture = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 3);
       window.__entranceRoadtripPoliceStep(0, 2);
-      report.steps.refused = { capture: refusedCapture, trip: copy(trip()) };
+      report.steps.refused = {
+        paused: refusedPaused,
+        resumed: refusedResumed,
+        capture: refusedCapture,
+        trip: copy(trip())
+      };
 
       prepareEncounter();
       window.__entranceRoadtripSetDemerits(10, 0);
       var suspensionDetection = meetPolice(130);
       window.__entranceRoadtripSetDistance(suspensionDetection.police.stationAt + 30);
       window.__exitEntranceRoadtrip();
+      document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
+      window.__entranceRoadtripPoliceStep(130, 20);
       window.__entranceRoadtripPoliceStep(0, 3);
       window.__entranceRoadtripPoliceStep(0, 2);
       var suspendedTrip = copy(trip());
@@ -597,8 +617,13 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.trip.police.summonses === 1 && s.courtStop.trip.police.tickets === 1 &&
   s.courtStop.trip.police.fines === 0 && !s.courtStop.trip.police.sirenActive &&
   s.courtStop.trip.demeritPoints === 6 && s.courtStop.trip.police.lastDemerits === 6 &&
+  !Object.prototype.hasOwnProperty.call(s.courtStop.terminalCheckpoint, "pausedRun") &&
+  s.courtStop.freshEntry.active && !s.courtStop.freshEntry.paused &&
+  s.courtStop.freshEntry.distance === 0 && s.courtStop.freshEntry.elapsedSeconds === 0 &&
+  s.courtStop.freshEntry.score === 0 && s.courtStop.freshEntry.entityCount === 0 &&
+  s.courtStop.freshEntry.damage.kind === "" && s.courtStop.freshEntry.police.phase === "idle" &&
   /55 km\/h over · court-set fine · 6 demerits · 6\/15/.test(s.courtStop.caption),
-  "court-only arrest approaches, sounds, translates, pauses unattended, then fades to the block",
+  "court-only arrest resolves terminally and its next Road Trip starts fresh",
   s.courtStop);
 check(s.shoutThreshold && s.shoutThreshold.exactlyHundred.police.overLimit === 100 &&
   !s.shoutThreshold.exactlyHundred.police.arrestShoutPlayed &&
@@ -671,13 +696,17 @@ check(s.severe && s.severe.detected.active && s.severe.detected.police.phase ===
   !/collected|multiplier/.test(s.severe.finalCaption),
   "court-speed capture progressively stops in-scene before citation, parking, or checkpointing",
   s.severe);
-check(s.refused && s.refused.capture.active && s.refused.capture.police.phase === "capture" &&
+check(s.refused && !s.refused.paused.active && s.refused.paused.paused &&
+  s.refused.paused.police.phase === "pursuit" && s.refused.paused.police.detectedSpeed === 130 &&
+  s.refused.resumed.active && !s.refused.resumed.paused &&
+  s.refused.resumed.police.phase === "pursuit" && s.refused.resumed.police.detectedSpeed === 130 &&
+  s.refused.capture.active && s.refused.capture.police.phase === "capture" &&
   s.refused.capture.police.sirenActive && s.refused.capture.police.mirrorVisible &&
   !s.refused.trip.active && s.refused.trip.police.runEnded &&
   s.refused.trip.police.endReason === "refused" && s.refused.trip.police.fines === 560 &&
   s.refused.trip.police.scorePenalties === 1560 && s.refused.trip.demeritPoints === 9 &&
   s.refused.trip.police.lastDemerits === 9 && !s.refused.trip.police.arrestVisible,
-  "ordinary refusal captures without the court-only arrest scene", s.refused);
+  "a paused pursuit resumes intact and ordinary refusal still captures without the court-only arrest scene", s.refused);
 check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &&
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&

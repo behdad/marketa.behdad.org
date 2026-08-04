@@ -38032,13 +38032,18 @@ window.__entranceRoomOpen = false;
         ROADTRIP_POLICE_FLASH_DURATION;
       var radarReadyAt = warningCompleteAt + ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS;
       var stationRemaining = police.stationAt - roadtripState.distance;
-      if (police.warningElapsed >= radarReadyAt) {
-        var approachSpeed = Math.round(Math.abs(Number.isFinite(Number(radarSampleSpeed)) ?
-          Number(radarSampleSpeed) : Number(driveState.speed) || 0));
-        if (stationRemaining <= 0) {
-          police.radarRearTracking = true;
-          police.radarRearDistance = Math.max(police.radarRearDistance, -stationRemaining);
+      var approachSpeed = Math.round(Math.abs(Number.isFinite(Number(radarSampleSpeed)) ?
+        Number(radarSampleSpeed) : Number(driveState.speed) || 0));
+      if (stationRemaining <= 0) {
+        police.radarRearTracking = true;
+        police.radarRearDistance = Math.max(police.radarRearDistance, -stationRemaining);
+        // Crossing the patrol is the last pre-impact sample when a collision at
+        // the station stalls the car before the rear-radar hold can complete.
+        if (approachSpeed > ROADTRIP_POLICE_ENFORCE_SPEED) {
+          police.radarPeakSpeed = Math.max(police.radarPeakSpeed, approachSpeed);
         }
+      }
+      if (police.warningElapsed >= radarReadyAt) {
         if (police.radarRearTracking) police.radarRearElapsed += seconds;
         if (approachSpeed > ROADTRIP_POLICE_ENFORCE_SPEED) {
           police.radarPeakSpeed = Math.max(police.radarPeakSpeed, approachSpeed);

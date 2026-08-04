@@ -236,6 +236,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       prepareEncounter();
       setMotion(0, 0);
       window.__entranceRoadtripPolice(150);
+      var stationImpactAt = trip().police.stationAt;
+      window.__entranceRoadtripSetDistance(stationImpactAt - 2);
+      window.__entranceRoadtripSetLane(-.5);
+      window.__entranceRoadtripSpawn("car", -.5, 8);
+      setMotion(200, 4);
+      step(100);
+      var stationImpactCrash = copy(state());
+      step(1000, 5);
+      report.steps.stationImpactRadar = {
+        stationAt: stationImpactAt,
+        crashed: stationImpactCrash,
+        enforced: copy(state())
+      };
+      if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
+
+      prepareEncounter();
+      setMotion(0, 0);
+      window.__entranceRoadtripPolice(150);
       step(1000, 5);
       var distanceRadarStation = trip().police.stationAt;
       window.__entranceRoadtripSetDistance(distanceRadarStation + 39);
@@ -994,6 +1012,21 @@ check(s.rearRadarCrash &&
   s.rearRadarCrash.enforced.drive.roadtrip.police.pursuits === 1,
   "the radar samples before a same-step boundary crash can erase the measured speed",
   s.rearRadarCrash);
+check(s.stationImpactRadar &&
+  s.stationImpactRadar.crashed.drive.roadtrip.police.phase === "warning" &&
+  s.stationImpactRadar.crashed.drive.roadtrip.police.warningElapsed < 1 &&
+  s.stationImpactRadar.crashed.drive.roadtrip.police.radarRearTracking &&
+  s.stationImpactRadar.crashed.drive.roadtrip.police.radarPeakSpeed >= 199 &&
+  s.stationImpactRadar.crashed.drive.roadtrip.distance >= s.stationImpactRadar.stationAt &&
+  s.stationImpactRadar.crashed.drive.roadtrip.collisions === 1 &&
+  s.stationImpactRadar.crashed.drive.speed === 0 && !s.stationImpactRadar.crashed.car.engineOn &&
+  s.stationImpactRadar.enforced.drive.roadtrip.police.phase === "pursuit" &&
+  s.stationImpactRadar.enforced.drive.roadtrip.police.detectedSpeed ===
+    s.stationImpactRadar.crashed.drive.roadtrip.police.radarPeakSpeed &&
+  s.stationImpactRadar.enforced.drive.roadtrip.police.courtRequired &&
+  s.stationImpactRadar.enforced.drive.roadtrip.police.pursuits === 1,
+  "a high-speed crash at the patrol preserves the pre-impact reading until rear radar can enforce it",
+  s.stationImpactRadar);
 check(s.rearRadarDistance &&
   s.rearRadarDistance.before.drive.roadtrip.police.phase === "warning" &&
   s.rearRadarDistance.before.drive.roadtrip.police.radarRearDistance < s.contract.rearRadarDistance &&

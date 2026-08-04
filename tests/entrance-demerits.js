@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Road Trip demerits survive reload/reset, expire by wall clock, and reinstate at seven points.
+// Road Trip demerits survive reload/checkpoint resets, clear on a full game reset,
+// expire by wall clock, and reinstate at seven points.
 "use strict";
 
 var lib = require("./lib");
@@ -30,11 +31,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var unfocused = copy(state());
         window.__resetCheckpointSystems();
         var reset = copy(state());
+        var persisted = JSON.parse(localStorage.getItem(recordKey));
+        window.__activateExtinguisher();
+        await sleep(850);
+        var fullReset = copy(state());
         sessionStorage.setItem(resultKey, JSON.stringify({
           restored: restored,
           unfocused: unfocused,
           reset: reset,
-          persisted: JSON.parse(localStorage.getItem(recordKey))
+          persisted: persisted,
+          fullReset: fullReset,
+          fullResetPersisted: localStorage.getItem(recordKey)
         }));
         localStorage.setItem(recordKey, JSON.stringify({ points: 15, suspendedUntil: Date.now() - 1 }));
         sessionStorage.setItem(phaseKey, "2");
@@ -93,6 +100,11 @@ check(s.unfocused && s.unfocused.suspended && s.unfocused.demeritPoints === 15 &
 check(s.reset && s.reset.suspended && s.reset.demeritPoints === 15 && s.persisted &&
   s.persisted.points === 15 && s.persisted.suspendedUntil > Date.now(),
   "checkpoint reset cannot erase or roll back the separate driver record", { reset: s.reset, persisted: s.persisted });
+check(s.fullReset && !s.fullReset.suspended && s.fullReset.demeritPoints === 0 &&
+  s.fullResetPersisted === null,
+  "a deliberate full game reset clears the driver record and suspension", {
+    reset: s.fullReset, persisted: s.fullResetPersisted
+  });
 check(s.expired && !s.expired.suspended && s.expired.demeritPoints === 7 &&
   s.expired.demeritWarning === false && s.normalized && s.normalized.points === 7 &&
   s.normalized.suspendedUntil === 0,

@@ -210,7 +210,8 @@ readout over after `999.9 KM`.
 Automatic mode uses P/R/N/D and shifts D1–D7 itself. Drive and Reverse may be
 selected while the Porsche is still rolling in the opposite direction below
 10 km/h; at 10 km/h or faster the opposite range remains locked out, and Park
-still requires a near standstill.
+still requires a near standstill. Its current range or drive gear stays visible
+in the centre of the right-hand instrument, including throughout a Road Trip.
 
 The six-speed manual follows the 2010 base Boxster's real gearing: RPM is tied to
 road speed in each selected gear, apart from forgiving clutch slip when launching

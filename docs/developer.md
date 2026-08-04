@@ -158,6 +158,9 @@ deterministic focused-test seams when tuning this model.
 The automatic range interlock uses `PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH`: R↔D is valid only
 while opposite-direction speed is strictly below 10 km/h, and the same boundary validates restored
 range/speed snapshots. Keep this separate from the manual gearbox's wrong-direction stall rule.
+`#entrance-drive-auto-readout` is the persistent P/R/N/D1–D7 display in the right-hand instrument;
+`paintPorscheDriveHud()` updates it from `driveGearLabel()` across selection, automatic shifts,
+checkpoint restore, reset, and the shared Road Trip lifecycle.
 
 `spinPorscheOnBrake()` owns both hard-brake gestures. The block's 180° turn reverses facing and
 signed speed; Road Trip's 360° leaves both intact after ordinary braking has reduced speed. Their

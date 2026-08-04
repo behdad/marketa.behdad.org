@@ -35014,6 +35014,8 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_FIRST_DISTANCE = 950;
   var ROADTRIP_POLICE_WARNING_AHEAD = 240;
   var ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS = 3;
+  var ROADTRIP_POLICE_REAR_RADAR_SECONDS = .8;
+  var ROADTRIP_POLICE_REAR_RADAR_DISTANCE = 40;
   var ROADTRIP_POLICE_FLASH_STARTS = [.18, .68, 1.18];
   var ROADTRIP_POLICE_FLASH_DURATION = .22;
   var ROADTRIP_POLICE_REPEAT_DISTANCE = 1200;
@@ -35118,6 +35120,9 @@ window.__entranceRoomOpen = false;
       warningFlashCount: 0,
       warningLight: false,
       radarPeakSpeed: 0,
+      radarRearTracking: false,
+      radarRearElapsed: 0,
+      radarRearDistance: 0,
       detectedSpeed: 0,
       offence: "",
       engagedPursuit: false,
@@ -36416,6 +36421,9 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.radarPeakSpeed = 0;
+    police.radarRearTracking = false;
+    police.radarRearElapsed = 0;
+    police.radarRearDistance = 0;
     police.detectedSpeed = 0;
     police.offence = "";
     police.engagedPursuit = false;
@@ -36467,6 +36475,9 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.radarPeakSpeed = 0;
+    police.radarRearTracking = false;
+    police.radarRearElapsed = 0;
+    police.radarRearDistance = 0;
     police.detectedSpeed = 0;
     police.offence = "";
     police.engagedPursuit = false;
@@ -36509,6 +36520,9 @@ window.__entranceRoomOpen = false;
     police.warningFlashCount = 0;
     police.warningLight = false;
     police.radarPeakSpeed = 0;
+    police.radarRearTracking = false;
+    police.radarRearElapsed = 0;
+    police.radarRearDistance = 0;
     police.detectedSpeed = 0;
     police.offence = "";
     police.engagedPursuit = false;
@@ -36568,6 +36582,9 @@ window.__entranceRoomOpen = false;
     police.warningElapsed = 0;
     police.warningFlashCount = 0;
     police.radarPeakSpeed = 0;
+    police.radarRearTracking = false;
+    police.radarRearElapsed = 0;
+    police.radarRearDistance = 0;
     police.detectedSpeed = Math.round(Math.abs(Number(driveState.speed) || 0));
     police.impairedDriving = roadtripImpairmentLevel() >= .5 && roadtripState.erraticDriving;
     return startRoadtripPolicePursuit("solid-line", {
@@ -36848,7 +36865,7 @@ window.__entranceRoomOpen = false;
       if (roadtripPoliceRoadNode) roadHost.appendChild(roadtripPoliceRoadNode);
     }
   }
-  function stepRoadtripPolice(distance, seconds) {
+  function stepRoadtripPolice(distance, seconds, radarSampleSpeed) {
     var police = roadtripState.police;
     seconds = Math.max(0, Number(seconds) || 0);
     distance = Math.max(0, Number(distance) || 0);
@@ -36882,14 +36899,22 @@ window.__entranceRoomOpen = false;
         ROADTRIP_POLICE_FLASH_DURATION;
       var radarReadyAt = warningCompleteAt + ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS;
       var stationRemaining = police.stationAt - roadtripState.distance;
-      if (police.warningElapsed >= radarReadyAt && stationRemaining > 0) {
-        var approachSpeed = Math.round(Math.abs(Number(driveState.speed) || 0));
+      if (police.warningElapsed >= radarReadyAt) {
+        var approachSpeed = Math.round(Math.abs(Number.isFinite(Number(radarSampleSpeed)) ?
+          Number(radarSampleSpeed) : Number(driveState.speed) || 0));
+        if (stationRemaining <= 0) {
+          police.radarRearTracking = true;
+          police.radarRearDistance = Math.max(police.radarRearDistance, -stationRemaining);
+        }
+        if (police.radarRearTracking) police.radarRearElapsed += seconds;
         if (approachSpeed > ROADTRIP_POLICE_ENFORCE_SPEED) {
           police.radarPeakSpeed = Math.max(police.radarPeakSpeed, approachSpeed);
         }
-      }
-      if (stationRemaining <= 7 && police.warningElapsed >= radarReadyAt) {
-        detectRoadtripPoliceSpeed(police.radarPeakSpeed || undefined);
+        if (police.radarRearTracking &&
+            (police.radarRearElapsed + 1e-9 >= ROADTRIP_POLICE_REAR_RADAR_SECONDS ||
+              police.radarRearDistance >= ROADTRIP_POLICE_REAR_RADAR_DISTANCE)) {
+          detectRoadtripPoliceSpeed(police.radarPeakSpeed || approachSpeed);
+        }
       }
     } else if (police.phase === "pursuit") {
       syncRoadtripPoliceSurrender();
@@ -37711,6 +37736,9 @@ window.__entranceRoomOpen = false;
       roadtripState.nextSpawnDistance += roadtripSpawnInterval(pursuitSpawn, roadtripState.spawnSerial);
       spawned++;
     }
+    // Capture the radar sample before entity resolution can knock speed down or
+    // stall the car in this same simulation step.
+    var policeRadarSampleSpeed = driveState.speed;
     var liveEntities = roadtripState.entities.slice();
     liveEntities.forEach(function (entity) { entity.at += entity.velocity * seconds; });
     liveEntities.forEach(function (entity) { syncRoadtripSemiLane(entity, seconds); });
@@ -37719,7 +37747,7 @@ window.__entranceRoomOpen = false;
       if (remaining > ROADTRIP_DRAW_DISTANCE + 24) releaseRoadtripEntity(entity);
       else resolveRoadtripEntity(entity, remaining, seconds);
     });
-    stepRoadtripPolice(Math.max(0, routeTravel), seconds);
+    stepRoadtripPolice(Math.max(0, routeTravel), seconds, policeRadarSampleSpeed);
     if (!roadtripState.active) return;
     paintRoadtripRoad();
     paintRoadtripEntities();
@@ -40498,6 +40526,8 @@ window.__entranceRoomOpen = false;
           policeFirstDistance: ROADTRIP_POLICE_FIRST_DISTANCE,
           policeWarningAhead: ROADTRIP_POLICE_WARNING_AHEAD,
           policeWarningHeadroom: ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS,
+          policeRearRadarSeconds: ROADTRIP_POLICE_REAR_RADAR_SECONDS,
+          policeRearRadarDistance: ROADTRIP_POLICE_REAR_RADAR_DISTANCE,
           policeRepeatDistance: ROADTRIP_POLICE_REPEAT_DISTANCE,
           policeEscapeSpeed: ROADTRIP_POLICE_ESCAPE_SPEED,
           policePursuitSpeed: ROADTRIP_POLICE_PURSUIT_SPEED,
@@ -40517,6 +40547,9 @@ window.__entranceRoomOpen = false;
             warningFlashCount: roadtripState.police.warningFlashCount,
             warningLight: roadtripState.police.warningLight,
             radarPeakSpeed: roadtripState.police.radarPeakSpeed,
+            radarRearTracking: roadtripState.police.radarRearTracking,
+            radarRearElapsed: roadtripState.police.radarRearElapsed,
+            radarRearDistance: roadtripState.police.radarRearDistance,
             detectedSpeed: roadtripState.police.detectedSpeed,
             offence: roadtripState.police.offence,
             surrenderLatched: roadtripState.police.surrenderLatched,
@@ -40680,7 +40713,7 @@ window.__entranceRoomOpen = false;
     speed = Math.max(0, Math.min(263, Number(speed) || 0));
     seconds = Math.max(0, Math.min(30, Number(seconds) || 0));
     if (phase === "pursuit") driveState.speed = speed * driveState.facing;
-    stepRoadtripPolice(speed / 3.6 * seconds, seconds);
+    stepRoadtripPolice(speed / 3.6 * seconds, seconds, speed);
     return roadtripState.police.phase;
   };
   window.__entranceRoadtripDemeritsForSpeed = roadtripDemeritsForSpeed;

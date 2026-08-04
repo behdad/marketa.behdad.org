@@ -70,6 +70,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         firstDistance: trip().policeFirstDistance,
         warningAhead: trip().policeWarningAhead,
         warningHeadroom: trip().policeWarningHeadroom,
+        rearRadarSeconds: trip().policeRearRadarSeconds,
+        rearRadarDistance: trip().policeRearRadarDistance,
         repeatDistance: trip().policeRepeatDistance,
         escapeSpeed: trip().policeEscapeSpeed,
         pursuitSpeed: trip().policePursuitSpeed,
@@ -139,8 +141,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripSpawn("car", -.5, 10);
       step(100);
       var radarCrashed = copy(state());
-      window.__entranceRoadtripSetDistance(radarCrashed.drive.roadtrip.police.stationAt - 6);
-      step(100);
+      window.__entranceRoadtripSetDistance(radarCrashed.drive.roadtrip.police.stationAt + 2);
+      step(100, 8);
       var radarDetected = copy(state());
       window.__entranceRoadtripSetLane(.5);
       step(1000);
@@ -158,6 +160,61 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         cited: copy(state())
       };
       if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
+
+      prepareEncounter();
+      setMotion(90, 3);
+      window.__entranceRoadtripPolice(150);
+      step(1000, 5);
+      var rearRadarStation = trip().police.stationAt;
+      window.__entranceRoadtripSetDistance(rearRadarStation + 2);
+      setMotion(130, 3);
+      step(100);
+      var rearRadarAccelerated = copy(state());
+      setMotion(90, 3);
+      step(100, 6);
+      var rearRadarHolding = copy(state());
+      step(100, 2);
+      var rearRadarEnforced = copy(state());
+      step(100);
+      report.steps.rearRadar = {
+        accelerated: rearRadarAccelerated,
+        holding: rearRadarHolding,
+        enforced: rearRadarEnforced,
+        repeated: copy(state())
+      };
+
+      prepareEncounter();
+      setMotion(0, 0);
+      window.__entranceRoadtripPolice(150);
+      step(1000, 5);
+      var crashRadarStation = trip().police.stationAt;
+      window.__entranceRoadtripSetDistance(crashRadarStation - 2);
+      window.__entranceRoadtripSetLane(-.5);
+      window.__entranceRoadtripSpawn("car", -.5, 10);
+      setMotion(140, 3);
+      step(100);
+      var rearRadarCrashed = copy(state());
+      step(700);
+      report.steps.rearRadarCrash = {
+        crashed: rearRadarCrashed,
+        enforced: copy(state())
+      };
+      if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
+
+      prepareEncounter();
+      setMotion(0, 0);
+      window.__entranceRoadtripPolice(150);
+      step(1000, 5);
+      var distanceRadarStation = trip().police.stationAt;
+      window.__entranceRoadtripSetDistance(distanceRadarStation + 39);
+      setMotion(130, 3);
+      step(10);
+      var rearRadarBeforeDistance = copy(state());
+      step(20);
+      report.steps.rearRadarDistance = {
+        before: rearRadarBeforeDistance,
+        enforced: copy(state())
+      };
 
       prepareEncounter();
       var toleratedPass = meetPolice(110);
@@ -633,7 +690,8 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.speedLimit === 90 &&
   s.contract.enforcementSpeed === 110 &&
   s.contract.firstDistance === 950 && s.contract.warningAhead === 240 &&
-  s.contract.warningHeadroom === 3 && s.contract.repeatDistance === 1200 &&
+  s.contract.warningHeadroom === 3 && s.contract.rearRadarSeconds === .8 &&
+  s.contract.rearRadarDistance === 40 && s.contract.repeatDistance === 1200 &&
   s.contract.escapeSpeed === 215 && s.contract.pursuitSpeed === 210 &&
   s.contract.surrenderSpeed === 100 &&
   s.contract.escapeDistance === 100 && s.contract.escapeHoldSeconds === 12 &&
@@ -712,6 +770,43 @@ check(s.radarPeak && s.radarPeak.beforeApproach.police.phase === "warning" &&
   s.radarPeak.cited.drive.roadtrip.demeritPoints === 4,
   "radar keeps the pre-crash peak and a surrendered car stopped in a travel lane promptly gets the calm officer approach and citation",
   s.radarPeak);
+check(s.rearRadar &&
+  s.rearRadar.accelerated.drive.roadtrip.police.phase === "warning" &&
+  s.rearRadar.accelerated.drive.roadtrip.police.radarRearTracking &&
+  s.rearRadar.accelerated.drive.roadtrip.police.radarPeakSpeed >= 129 &&
+  s.rearRadar.accelerated.drive.roadtrip.police.radarRearElapsed > 0 &&
+  s.rearRadar.holding.drive.roadtrip.police.phase === "warning" &&
+  s.rearRadar.holding.drive.roadtrip.police.radarRearElapsed < s.contract.rearRadarSeconds &&
+  s.rearRadar.enforced.drive.roadtrip.police.phase === "pursuit" &&
+  s.rearRadar.enforced.drive.roadtrip.police.detectedSpeed ===
+    s.rearRadar.accelerated.drive.roadtrip.police.radarPeakSpeed &&
+  s.rearRadar.enforced.drive.roadtrip.police.pursuits === 1 &&
+  s.rearRadar.repeated.drive.roadtrip.police.pursuits === 1,
+  "rear-facing radar retains acceleration after the parked unit and opens only one pursuit when its timed window closes",
+  s.rearRadar);
+check(s.rearRadarCrash &&
+  s.rearRadarCrash.crashed.drive.roadtrip.police.phase === "warning" &&
+  s.rearRadarCrash.crashed.drive.roadtrip.police.radarRearTracking &&
+  s.rearRadarCrash.crashed.drive.roadtrip.police.radarPeakSpeed >= 139 &&
+  s.rearRadarCrash.crashed.drive.roadtrip.collisions === 1 &&
+  s.rearRadarCrash.crashed.drive.speed === 0 && !s.rearRadarCrash.crashed.car.engineOn &&
+  s.rearRadarCrash.enforced.drive.roadtrip.police.phase === "pursuit" &&
+  s.rearRadarCrash.enforced.drive.roadtrip.police.detectedSpeed ===
+    s.rearRadarCrash.crashed.drive.roadtrip.police.radarPeakSpeed &&
+  s.rearRadarCrash.enforced.drive.roadtrip.police.pursuits === 1,
+  "the radar samples before a same-step boundary crash can erase the measured speed",
+  s.rearRadarCrash);
+check(s.rearRadarDistance &&
+  s.rearRadarDistance.before.drive.roadtrip.police.phase === "warning" &&
+  s.rearRadarDistance.before.drive.roadtrip.police.radarRearDistance < s.contract.rearRadarDistance &&
+  s.rearRadarDistance.before.drive.roadtrip.police.radarRearElapsed < s.contract.rearRadarSeconds &&
+  s.rearRadarDistance.enforced.drive.roadtrip.police.phase === "pursuit" &&
+  s.rearRadarDistance.enforced.drive.roadtrip.police.radarRearDistance >= s.contract.rearRadarDistance &&
+  s.rearRadarDistance.enforced.drive.roadtrip.police.radarRearElapsed < s.contract.rearRadarSeconds &&
+  s.rearRadarDistance.enforced.drive.roadtrip.police.detectedSpeed === 130 &&
+  s.rearRadarDistance.enforced.drive.roadtrip.police.pursuits === 1,
+  "the explicit rearward distance cap closes the radar window before its time cap at high speed",
+  s.rearRadarDistance);
 check(s.toleratedMirror && s.toleratedMirror.detection.police.phase === "cooldown" &&
   s.toleratedMirror.near.police.mirrorVisible &&
   s.toleratedMirror.near.police.mirrorMode === "roadside" &&

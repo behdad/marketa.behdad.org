@@ -7,6 +7,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 <script>
 (function () {
   var report = { errors: [], steps: {} };
+  var attended = true;
   function state() { return window.__entranceRoomState().drive; }
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function step(milliseconds, count) {
@@ -22,7 +23,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         Object.defineProperty(document, "hasFocus", {
-          value: function () { return true; }, configurable: true
+          value: function () { return attended; }, configurable: true
         });
         window.getSfxCtx = function () { return null; };
         window.__unlockAllRooms();
@@ -81,6 +82,48 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         step(20, 40);
         window.__entranceDriveControl("clutch", false);
         report.steps.rollingRelease = copy(state());
+
+        setMotion(120, 3);
+        window.__entranceDriveControl("brake", true);
+        step(20, 1);
+        var hardBrakeStep = copy(state());
+        setMotion(.5, 1);
+        window.__entranceDriveControl("brake", true);
+        step(20, 1);
+        var shortBrakeStep = copy(state());
+
+        setMotion(120, 3);
+        window.__entranceDriveControl("brake", true);
+        step(20, 8);
+        var braking = copy(state());
+        window.__entranceDriveControl("brake", false);
+        step(20, 4);
+        var easing = copy(state());
+        step(20, 80);
+        var brakeSettled = copy(state());
+        setMotion(0, 0);
+        step(20, 20);
+        var stopped = copy(state());
+        step(20, 20);
+        var idleStable = copy(state());
+        report.steps.brakePitch = {
+          hardStep: hardBrakeStep, shortStep: shortBrakeStep, braking: braking,
+          easing: easing, settled: brakeSettled, stopped: stopped, idleStable: idleStable
+        };
+
+        setMotion(100, 3);
+        window.__entranceRoadtripStart();
+        window.__entranceDriveControl("brake", true);
+        step(20, 6);
+        var attendedPitch = copy(state());
+        attended = false;
+        window.dispatchEvent(new Event("blur"));
+        var pausedBefore = copy(state());
+        window.__entranceDriveStep(600);
+        var pausedAfter = copy(state());
+        report.steps.pausedPitch = {
+          attended: attendedPitch, before: pausedBefore, after: pausedAfter
+        };
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -136,6 +179,28 @@ check(launch && s.rollingRelease && s.rollingRelease.noseLift < launch.released.
   "the same clutch load produces less pitch once the car is already rolling", {
     standing: launch && launch.released, rolling: s.rollingRelease
   });
+var brakePitch = s.brakePitch;
+check(brakePitch && brakePitch.hardStep.longitudinalDeceleration > brakePitch.shortStep.longitudinalDeceleration &&
+  brakePitch.hardStep.noseDive > brakePitch.shortStep.noseDive &&
+  /^rotate\(-/.test(brakePitch.hardStep.pitchTransform),
+  "nose-down pitch scales with measured longitudinal deceleration", brakePitch && {
+    hard: brakePitch.hardStep, short: brakePitch.shortStep
+  });
+check(brakePitch && brakePitch.braking.noseDive > 1.5 &&
+  brakePitch.easing.noseDive > 0 && brakePitch.easing.noseDive < brakePitch.braking.noseDive &&
+  brakePitch.settled.noseDive === 0 && brakePitch.settled.pitchTransform === "rotate(0.00 296 316)",
+  "hard braking dives promptly, then settles smoothly as the pedal eases", brakePitch);
+check(brakePitch && brakePitch.stopped.speed === 0 && brakePitch.stopped.noseDive === 0 &&
+  brakePitch.idleStable.speed === 0 && brakePitch.idleStable.noseDive === 0 &&
+  brakePitch.idleStable.pitchTransform === brakePitch.stopped.pitchTransform,
+  "a stopped idling car gains no pitch wobble", brakePitch && {
+    stopped: brakePitch.stopped, stable: brakePitch.idleStable
+  });
+var pausedPitch = s.pausedPitch;
+check(pausedPitch && pausedPitch.before.noseDive > 0 &&
+  pausedPitch.after.noseDive === pausedPitch.before.noseDive &&
+  pausedPitch.after.pitchTransform === pausedPitch.before.pitchTransform,
+  "an unfocused Road Trip freezes brake pitch with the rest of the simulation", pausedPitch);
 
 console.log("");
 if (failures) {

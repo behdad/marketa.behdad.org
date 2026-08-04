@@ -34917,6 +34917,9 @@ window.__entranceRoomOpen = false;
   var PORSCHE_CLUTCH_MIN_SLIP_RPM = 700;
   var PORSCHE_CLUTCH_FULL_SLIP_RPM = 5000;
   var PORSCHE_NOSE_LIFT_MAX_DEG = 2.4;
+  var PORSCHE_NOSE_DIVE_MAX_DEG = 3.1;
+  var PORSCHE_NOSE_DIVE_MIN_DECEL = .9;
+  var PORSCHE_NOSE_DIVE_FULL_DECEL = 21.5;
   var driveFrame = null;
   var driveTimer = null;
   var driveLastTime = 0;
@@ -35190,6 +35193,8 @@ window.__entranceRoomOpen = false;
     clutchEngagementRpm: 0,
     clutchEngagementStrength: 0,
     noseLift: 0,
+    noseDive: 0,
+    longitudinalDeceleration: 0,
     temperature: 0,
     holds: { throttle: false, brake: false, clutch: false, steerLeft: false, steerRight: false }
   };
@@ -37851,7 +37856,11 @@ window.__entranceRoomOpen = false;
     driveState.clutchEngagementDurationMs = 0;
     driveState.clutchEngagementRpm = 0;
     driveState.clutchEngagementStrength = 0;
-    if (clearLift) driveState.noseLift = 0;
+    if (clearLift) {
+      driveState.noseLift = 0;
+      driveState.noseDive = 0;
+      driveState.longitudinalDeceleration = 0;
+    }
   }
   function beginPorscheClutchEngagement() {
     clearPorscheClutchEngagement(false);
@@ -37914,8 +37923,11 @@ window.__entranceRoomOpen = false;
     var wheelTransform = "rotate(" + driveState.wheelAngle.toFixed(2) + ")";
     if (porscheFrontWheelSpin) porscheFrontWheelSpin.setAttribute("transform", wheelTransform);
     if (porscheRearWheelSpin) porscheRearWheelSpin.setAttribute("transform", wheelTransform);
-    if (porschePitch) porschePitch.setAttribute("transform", "rotate(" +
-      driveState.noseLift.toFixed(2) + " 296 316)");
+    if (porschePitch) {
+      var bodyPitch = driveState.noseLift - driveState.noseDive;
+      if (Math.abs(bodyPitch) < .005) bodyPitch = 0;
+      porschePitch.setAttribute("transform", "rotate(" + bodyPitch.toFixed(2) + " 296 316)");
+    }
     if (porscheFrontWheelSteer) {
       var roadWheelTurn = driveState.steeringAngle * .22;
       var roadWheelNarrowing = 1 - Math.abs(driveState.steeringAngle) * .004;
@@ -39372,6 +39384,7 @@ window.__entranceRoomOpen = false;
     if (!roadtripSimulationAttended()) return driveState;
     var dt = Math.max(0, Math.min(1000, Number(milliseconds) || 0));
     var seconds = dt / 1000;
+    var longitudinalSpeedBefore = Math.abs(driveState.speed);
     syncRoadtripPoliceSurrender();
     var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
     var clutch = porscheState.engineOn && driveState.holds.clutch;
@@ -39547,6 +39560,21 @@ window.__entranceRoomOpen = false;
       roadtripState.exitUntilStop = false;
     }
     stepRoadtrip(roadtripRouteTravel, seconds);
+    var longitudinalSpeedAfter = Math.abs(driveState.speed);
+    var actualDeceleration = seconds > 0 ?
+      Math.max(0, (longitudinalSpeedBefore - longitudinalSpeedAfter) / 3.6 / seconds) : 0;
+    driveState.longitudinalDeceleration = actualDeceleration;
+    // Pedal braking follows measured speed loss rather than the requested pedal force. Abrupt
+    // non-pedal slowdowns (a collision or police capture) share the same weight transfer, while
+    // ordinary rolling resistance stays visually level. Exponential attack/release is monotonic:
+    // it settles cleanly at rest and cannot introduce another stopped-car wobble.
+    var diveDeceleration = brake || actualDeceleration >= 4 ? actualDeceleration : 0;
+    var diveRange = PORSCHE_NOSE_DIVE_FULL_DECEL - PORSCHE_NOSE_DIVE_MIN_DECEL;
+    var diveTarget = PORSCHE_NOSE_DIVE_MAX_DEG * Math.max(0, Math.min(1,
+      (diveDeceleration - PORSCHE_NOSE_DIVE_MIN_DECEL) / diveRange));
+    var diveResponse = 1 - Math.exp(-seconds * (diveTarget > driveState.noseDive ? 14 : 5));
+    driveState.noseDive += (diveTarget - driveState.noseDive) * diveResponse;
+    if (driveState.noseDive < .01 && diveTarget === 0) driveState.noseDive = 0;
     recoverStoppedPorschePosition();
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
@@ -40432,6 +40460,8 @@ window.__entranceRoomOpen = false;
           strength: driveState.clutchEngagementStrength
         },
         noseLift: driveState.noseLift,
+        noseDive: driveState.noseDive,
+        longitudinalDeceleration: driveState.longitudinalDeceleration,
         pitchTransform: porschePitch ? porschePitch.getAttribute("transform") : "",
         temperature: driveState.temperature,
         gloveboxOpen: driveState.gloveboxOpen,
@@ -40862,7 +40892,8 @@ window.__entranceRoomOpen = false;
         clutchEngagementDurationMs: driveState.clutchEngagementDurationMs,
         clutchEngagementRpm: driveState.clutchEngagementRpm,
         clutchEngagementStrength: driveState.clutchEngagementStrength,
-        noseLift: driveState.noseLift
+        noseLift: driveState.noseLift,
+        noseDive: driveState.noseDive
       },
       police: police,
       entities: roadtripState.entities.map(captureRoadtripEntity),
@@ -40942,6 +40973,8 @@ window.__entranceRoomOpen = false;
     driveState.clutchEngagementRpm = roadtripSnapshotNumber(savedDrive.clutchEngagementRpm, 0, 0, 7500);
     driveState.clutchEngagementStrength = roadtripSnapshotNumber(savedDrive.clutchEngagementStrength, 0, 0, 1);
     driveState.noseLift = roadtripSnapshotNumber(savedDrive.noseLift, 0, 0, PORSCHE_NOSE_LIFT_MAX_DEG);
+    driveState.noseDive = roadtripSnapshotNumber(savedDrive.noseDive, 0, 0, PORSCHE_NOSE_DIVE_MAX_DEG);
+    driveState.longitudinalDeceleration = 0;
     restoreRoadtripEntities(snapshot.entities);
     restoreRoadtripDamage(snapshot.damage);
     roadtripState.active = false;

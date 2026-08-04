@@ -426,10 +426,10 @@ check(s.focusedEnter && !s.focusedEnter.engine && s.focusedEnter.mode === "manua
     enter: s.focusedEnter, space: s.focusedSpace
   });
 check(s.autoCopyEn && s.autoCopyEn.title === "Select Drive" &&
-  s.autoCopyEn.gear === "Shift + ↓ toward D · Shift + ↑ toward P" &&
+  s.autoCopyEn.gear === "Drag the shifter · click toward D · right-click toward P" &&
   /AUTO shifts D1–D7/.test(s.autoCopyEn.pedals) &&
   s.autoCopyCs && s.autoCopyCs.title === "Zařaď D" &&
-  s.autoCopyCs.gear === "Shift + ↓ směrem k D · Shift + ↑ směrem k P" &&
+  s.autoCopyCs.gear === "Táhni pákou · kliknutí k D · pravé kliknutí k P" &&
   /AUTO řadí D1–D7/.test(s.autoCopyCs.pedals),
   "AUTO coaching swaps its visible English and Czech copy cleanly", {
     en: s.autoCopyEn, cs: s.autoCopyCs

@@ -252,7 +252,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           mid: captureMid,
           arrest: arrestStart,
           shouted: arrestShouted,
-          expectedPark: window.__entranceRoadtripMirrorPose(drive().roadtrip.distance, 11, 1.08)
+          expectedPark: window.__entranceRoadtripMirrorPose(drive().roadtrip.distance, 4, 0)
         };
 
         window.__entranceRoadtripStart();
@@ -267,10 +267,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var calmStart = { state: copy(drive().roadtrip.police), placement: policePlacement() };
         window.__entranceRoadtripPoliceStep(0, .9);
         var calmLater = { state: copy(drive().roadtrip.police), placement: policePlacement() };
+        window.__entranceRoadtripPoliceStep(0, .4);
+        var calmParked = { state: copy(drive().roadtrip.police), placement: policePlacement() };
+        window.__entranceRoadtripPoliceStep(0, .5);
+        var calmHeld = { state: copy(drive().roadtrip.police), placement: policePlacement() };
         report.steps.policeCalmPark = {
           start: calmStart,
           later: calmLater,
-          expectedPark: window.__entranceRoadtripMirrorPose(drive().roadtrip.distance, 11, 1.08)
+          parked: calmParked,
+          held: calmHeld,
+          expectedPark: window.__entranceRoadtripMirrorPose(drive().roadtrip.distance, 4, 0)
         };
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
@@ -384,29 +390,34 @@ check(capturePark && capturePark.start.state.phase === "capture" && capturePark.
   capturePark.start.placement.visible && capturePark.mid.placement.visible &&
   Math.abs(capturePark.mid.placement.roadFraction - 1.08) <
     Math.abs(capturePark.start.placement.roadFraction - 1.08) &&
-  Math.abs(capturePark.mid.placement.behind - 11) <
-    Math.abs(capturePark.start.placement.behind - 11),
-  "capture visibly moves the Sheriff off the travel lane and toward a fixed shoulder depth", capturePark);
+  Math.abs(capturePark.mid.placement.behind - 4) <
+    Math.abs(capturePark.start.placement.behind - 4),
+  "capture visibly brings the Sheriff close behind while it leaves the roadside", capturePark);
 check(capturePark && capturePark.arrest.state.phase === "arrest" &&
   capturePark.shouted.state.phase === "arrest" && capturePark.shouted.state.arrestShoutPlayed &&
   capturePark.arrest.placement.visible && capturePark.arrest.placement.mode === "shoulder-arrest" &&
-  close(capturePark.arrest.placement.behind, 11, .001) &&
-  close(capturePark.arrest.placement.roadFraction, 1.08, .001) &&
+  close(capturePark.arrest.placement.behind, 4, .001) &&
+  close(capturePark.arrest.placement.roadFraction, 0, .001) &&
   capturePark.arrest.placement.transform === capturePark.shouted.placement.transform &&
   close(capturePark.arrest.placement.x, capturePark.expectedPark.x, .011) &&
   close(capturePark.arrest.placement.y, capturePark.expectedPark.y, .011) &&
   close(capturePark.arrest.placement.rotation, capturePark.expectedPark.rotation, .011),
-  "the Sheriff remains parked on the reflected shoulder throughout the shouted arrest approach", capturePark);
+  "the Sheriff remains parked directly behind throughout the shouted arrest approach", capturePark);
 
 var calmPark = s.policeCalmPark;
-check(calmPark && calmPark.start.state.phase === "arrest" && calmPark.later.state.phase === "arrest" &&
-  !calmPark.later.state.arrestShoutPlayed && calmPark.start.placement.visible &&
-  calmPark.start.placement.mode === "shoulder-arrest" &&
-  calmPark.start.placement.transform === calmPark.later.placement.transform &&
-  close(calmPark.start.placement.x, calmPark.expectedPark.x, .011) &&
-  close(calmPark.start.placement.y, calmPark.expectedPark.y, .011) &&
-  close(calmPark.start.placement.rotation, calmPark.expectedPark.rotation, .011),
-  "a calm pulled-over citation keeps the Sheriff parked on the shoulder behind the player", calmPark);
+check(calmPark && calmPark.start.state.phase === "stopped" && calmPark.later.state.phase === "stopped" &&
+  calmPark.start.placement.visible && calmPark.start.placement.mode === "shoulder-arrival" &&
+  Math.abs(calmPark.later.placement.behind - 4) < Math.abs(calmPark.start.placement.behind - 4) &&
+  Math.abs(calmPark.later.placement.roadFraction) < Math.abs(calmPark.start.placement.roadFraction) &&
+  calmPark.parked.state.phase === "arrest" && calmPark.held.state.phase === "arrest" &&
+  !calmPark.held.state.arrestShoutPlayed && calmPark.parked.placement.mode === "shoulder-arrest" &&
+  calmPark.parked.placement.transform === calmPark.held.placement.transform &&
+  close(calmPark.parked.placement.behind, 4, .001) &&
+  close(calmPark.parked.placement.roadFraction, 0, .001) &&
+  close(calmPark.parked.placement.x, calmPark.expectedPark.x, .011) &&
+  close(calmPark.parked.placement.y, calmPark.expectedPark.y, .011) &&
+  close(calmPark.parked.placement.rotation, calmPark.expectedPark.rotation, .011),
+  "a calm pulled-over citation brings the Sheriff directly behind and holds it there", calmPark);
 
 if (failures) {
   console.log("\n" + failures + " Road Trip terrain assertion(s) failed.");

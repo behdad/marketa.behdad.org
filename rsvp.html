@@ -34893,6 +34893,7 @@ window.__entranceRoomOpen = false;
   var intercomResponses = 0;
   var porscheIdleNodes = null;
   var porscheDriveAudioNodes = null;
+  var roadtripTrafficAudioVoices = {};
   var porschePoliceAudioNodes = null;
   var porscheDriveAcNodes = null;
   var porscheDriveMusicNodes = null;
@@ -37489,6 +37490,7 @@ window.__entranceRoomOpen = false;
   }
   function releaseRoadtripEntity(entity) {
     if (!entity || !entity.active) return;
+    stopRoadtripTrafficAudioVoice(entity.serial, .1);
     entity.active = false;
     entity.type = "";
     entity.direction = "";
@@ -37918,6 +37920,7 @@ window.__entranceRoomOpen = false;
     hideRoadtripPoliceVisuals();
     hideRoadtripArrest();
     stopRoadtripPoliceSiren(.1);
+    stopRoadtripTrafficAudio(.1);
     if (clearRun) {
       roadtripState.exitUntilStop = false;
       resetRoadtripRun();
@@ -38420,10 +38423,9 @@ window.__entranceRoomOpen = false;
     }
     paintRoadtripInvite();
   }
-  // Keep the approved source mixes intact, then place only Fancy-Stupid's driving
-  // sounds in the scene. Car-borne sounds follow the moving body; cabin music and
-  // ABS stay with their HUD controls. The roof treatment belongs after each source's
-  // authored gain so open-top unity still means exactly the existing mix.
+  // Block-drive sounds keep following the moving car. On the highway the powertrain
+  // stays in the cabin while tire noise follows only the player's small lane offset;
+  // otherwise the street car's visual wrap becomes an abrupt stereo jump.
   var PORSCHE_DRIVE_SPATIAL = {
     engine: { anchor: "entrance-porsche", edgeRolloff: .24, closedCutoff: 1050 },
     music: { anchor: "entrance-drive-hud", edgeRolloff: .08, closedCutoff: 2600 },
@@ -38436,8 +38438,30 @@ window.__entranceRoomOpen = false;
     reward: { anchor: "entrance-drive-hud", edgeRolloff: .04, closedCutoff: 7200 },
     police: { anchor: "entrance-roadtrip-mirror", edgeRolloff: .05, closedCutoff: 3400 }
   };
+  function roadtripCabinExposure() {
+    return porscheState.roofOpen ? 1 : porscheState.windowOpen ? .78 : .52;
+  }
   function porscheDriveSpatialProfile(kind) {
     var cfg = PORSCHE_DRIVE_SPATIAL[kind] || PORSCHE_DRIVE_SPATIAL.engine;
+    var highwayTire = roadtripState.active && (kind === "tire" || kind === "screech");
+    if (roadtripState.active && (kind === "engine" || highwayTire)) {
+      var roadPan = highwayTire ? Math.max(-.22, Math.min(.22,
+        roadtripPlayerLane() / ROADTRIP_MAX_LANE * .22)) : 0;
+      var closedGain = kind === "engine" ? .74 : .58;
+      var windowGain = kind === "engine" ? .86 : .79;
+      return {
+        kind: kind,
+        anchor: kind === "engine" ? "roadtrip-cabin" : "roadtrip-tires",
+        pan: roadPan,
+        gain: porscheState.roofOpen ? 1 : porscheState.windowOpen ? windowGain : closedGain,
+        cutoff: porscheState.roofOpen ? 18000 : porscheState.windowOpen ?
+          Math.min(12000, cfg.closedCutoff * 2.4) : cfg.closedCutoff,
+        roofOpen: porscheState.roofOpen,
+        windowOpen: porscheState.windowOpen,
+        smoothing: kind === "engine" ? .24 : .16,
+        mode: "roadtrip"
+      };
+    }
     var pan = panForElId(cfg.anchor);
     var distanceGain = 1 / (1 + Math.abs(pan) * cfg.edgeRolloff);
     return {
@@ -38446,22 +38470,25 @@ window.__entranceRoomOpen = false;
       pan: pan,
       gain: distanceGain * (porscheState.roofOpen ? 1 : .74),
       cutoff: porscheState.roofOpen ? 18000 : cfg.closedCutoff,
-      roofOpen: porscheState.roofOpen
+      roofOpen: porscheState.roofOpen,
+      windowOpen: porscheState.windowOpen,
+      smoothing: .06,
+      mode: "exterior"
     };
   }
-  function setPorscheDriveSpatialParam(param, value, time, immediate) {
+  function setPorscheDriveSpatialParam(param, value, time, immediate, smoothing) {
     param.cancelScheduledValues(time);
     if (immediate) param.setValueAtTime(value, time);
-    else param.setTargetAtTime(value, time, .06);
+    else param.setTargetAtTime(value, time, smoothing || .06);
   }
   function paintPorscheDriveSpatialOut(spatial, immediate) {
     if (!spatial) return;
     var profile = porscheDriveSpatialProfile(spatial.kind);
     var t = spatial.ctx.currentTime;
     try {
-      setPorscheDriveSpatialParam(spatial.filter.frequency, profile.cutoff, t, immediate);
-      setPorscheDriveSpatialParam(spatial.gain.gain, profile.gain, t, immediate);
-      if (spatial.panner) setPorscheDriveSpatialParam(spatial.panner.pan, profile.pan, t, immediate);
+      setPorscheDriveSpatialParam(spatial.filter.frequency, profile.cutoff, t, immediate, profile.smoothing);
+      setPorscheDriveSpatialParam(spatial.gain.gain, profile.gain, t, immediate, profile.smoothing);
+      if (spatial.panner) setPorscheDriveSpatialParam(spatial.panner.pan, profile.pan, t, immediate, profile.smoothing);
       spatial.profile = profile;
     } catch (_error) {}
   }
@@ -38478,6 +38505,130 @@ window.__entranceRoomOpen = false;
       panner: panner, profile: null, nodes: panner ? [filter, gain, panner] : [filter, gain] };
     paintPorscheDriveSpatialOut(spatial, true);
     return spatial;
+  }
+  function roadtripTrafficAudioProfile(entity, remaining) {
+    entity = entity || {};
+    var traffic = ["car", "pickup", "truck", "rv"].indexOf(entity.type) >= 0;
+    remaining = Number(remaining);
+    if (!isFinite(remaining)) remaining = Number(entity.at) - roadtripState.distance;
+    if (!isFinite(remaining)) remaining = 0;
+    var point = roadtripProject(Math.max(0, remaining));
+    var lane = Number(entity.lane) || 0;
+    var projectedX = roadtripProjectLateral(point, lane * ROADTRIP_LANE_FRACTION);
+    var pan = Math.max(-.68, Math.min(.68, (projectedX - 340) / 340 * 1.12));
+    var playerMps = driveState.speed * driveState.facing / 3.6;
+    var relativeKmh = Math.abs(playerMps - (Number(entity.velocity) || 0)) * 3.6;
+    var proximity = Math.max(0, 1 - Math.abs(remaining) / (remaining < 0 ? 30 : 46));
+    proximity = Math.pow(proximity, 1.35);
+    var laneGap = Math.abs(roadtripPlayerLane() - lane);
+    var laneFalloff = 1 / (1 + laneGap * .3);
+    var relativeScale = Math.max(0, Math.min(1.25, (relativeKmh - 6) / 150));
+    var size = entity.type === "truck" ? 1.28 : entity.type === "rv" ? 1.2 :
+      entity.type === "pickup" ? 1.08 : 1;
+    var exposure = roadtripCabinExposure();
+    return {
+      audible: !!(roadtripState.active && traffic && remaining <= 46 && remaining >= -30 && proximity > 0),
+      pan: pan,
+      gain: .0001 + proximity * laneFalloff * (.006 + relativeScale * .064) * size * exposure,
+      frequency: 720 + Math.min(2600, relativeKmh * 11),
+      relativeKmh: relativeKmh,
+      proximity: proximity,
+      projectedX: projectedX,
+      exposure: exposure,
+      smoothing: .12
+    };
+  }
+  function stopRoadtripTrafficAudioVoice(serial, fadeSeconds) {
+    var key = String(serial);
+    var voice = roadtripTrafficAudioVoices[key];
+    if (!voice) return false;
+    delete roadtripTrafficAudioVoices[key];
+    var fade = typeof fadeSeconds === "number" ? Math.max(0, fadeSeconds) : .12;
+    function dispose() {
+      try { voice.source.stop(); } catch (_error) {}
+      [voice.source, voice.filter, voice.gain, voice.panner].forEach(function (node) {
+        if (node) try { node.disconnect(); } catch (_error) {}
+      });
+    }
+    if (!fade) {
+      dispose();
+      return true;
+    }
+    try {
+      var now = voice.bed.currentTime;
+      voice.gain.gain.cancelScheduledValues(now);
+      voice.gain.gain.setValueAtTime(voice.gain.gain.value || .0001, now);
+      voice.gain.gain.setTargetAtTime(.0001, now, Math.max(.015, fade / 3));
+    } catch (_error) {}
+    setTimeout(dispose, fade * 1000 + 40);
+    return true;
+  }
+  function stopRoadtripTrafficAudio(fadeSeconds) {
+    Object.keys(roadtripTrafficAudioVoices).forEach(function (serial) {
+      stopRoadtripTrafficAudioVoice(serial, fadeSeconds);
+    });
+  }
+  function startRoadtripTrafficAudioVoice(entity, profile) {
+    var audio = porscheDriveAudioNodes;
+    if (!audio || !profile.audible || roadtripTrafficAudioVoices[String(entity.serial)]) return null;
+    var source = null;
+    var filter = null;
+    var gain = null;
+    var panner = null;
+    try {
+      source = audio.bed.createBufferSource();
+      filter = audio.bed.createBiquadFilter();
+      gain = audio.bed.createGain();
+      panner = audio.bed.createStereoPanner ? audio.bed.createStereoPanner() : null;
+      var now = audio.bed.currentTime;
+      source.buffer = audio.noiseBuffer;
+      source.loop = true;
+      filter.type = "bandpass";
+      filter.Q.value = .54;
+      filter.frequency.value = profile.frequency;
+      gain.gain.setValueAtTime(.0001, now);
+      gain.gain.setTargetAtTime(profile.gain, now, .08);
+      source.connect(filter); filter.connect(gain); gain.connect(panner || audio.bed.destination);
+      if (panner) {
+        panner.pan.value = profile.pan;
+        panner.connect(audio.bed.destination);
+      }
+      var voice = { bed: audio.bed, source: source, filter: filter, gain: gain,
+        panner: panner, profile: profile };
+      roadtripTrafficAudioVoices[String(entity.serial)] = voice;
+      source.start();
+      return voice;
+    } catch (_error) {
+      [source, filter, gain, panner].forEach(function (node) {
+        if (node) try { node.disconnect(); } catch (_disconnectError) {}
+      });
+      return null;
+    }
+  }
+  function paintRoadtripTrafficAudio() {
+    if (!porscheDriveAudioNodes || !roadtripState.active) {
+      stopRoadtripTrafficAudio(.08);
+      return;
+    }
+    var live = {};
+    roadtripState.entities.forEach(function (entity) {
+      var profile = roadtripTrafficAudioProfile(entity, entity.at - roadtripState.distance);
+      if (!profile.audible) return;
+      var key = String(entity.serial);
+      live[key] = true;
+      var voice = roadtripTrafficAudioVoices[key] || startRoadtripTrafficAudioVoice(entity, profile);
+      if (!voice) return;
+      voice.profile = profile;
+      try {
+        var now = voice.bed.currentTime;
+        voice.filter.frequency.setTargetAtTime(profile.frequency, now, .1);
+        voice.gain.gain.setTargetAtTime(profile.gain, now, .08);
+        if (voice.panner) voice.panner.pan.setTargetAtTime(profile.pan, now, profile.smoothing);
+      } catch (_error) {}
+    });
+    Object.keys(roadtripTrafficAudioVoices).forEach(function (serial) {
+      if (!live[serial]) stopRoadtripTrafficAudioVoice(serial, .12);
+    });
   }
   function stopRoadtripArrestSounds() {
     var live = porscheArrestAudioNodes.splice(0);
@@ -38705,6 +38856,7 @@ window.__entranceRoomOpen = false;
     } else stopRoadtripPoliceSiren();
   }
   function stopPorscheDriveAudio() {
+    stopRoadtripTrafficAudio(0);
     if (!porscheDriveAudioNodes) return;
     var driveAudio = porscheDriveAudioNodes;
     porscheDriveAudioNodes = null;
@@ -39046,9 +39198,10 @@ window.__entranceRoomOpen = false;
       base.connect(out);
       harmonic.connect(harmonicGain); harmonicGain.connect(out);
       pulse.connect(pulseGain); pulseGain.connect(out);
-      road.connect(roadFilter); roadFilter.connect(roadGain); roadGain.connect(out);
+      road.connect(roadFilter); roadFilter.connect(roadGain);
       var spatial = porscheDriveSpatialOut(bed, "engine");
       var tireSpatial = porscheDriveSpatialOut(bed, "tire");
+      roadGain.connect(tireSpatial.input);
       road.connect(tireFilter); tireFilter.connect(tireGain); tireGain.connect(tireSpatial.input);
       road.connect(windFilter); windFilter.connect(windGain); windGain.connect(tireSpatial.input);
       road.connect(cornerFilter); cornerFilter.connect(cornerGain); cornerGain.connect(tireSpatial.input);
@@ -39076,7 +39229,8 @@ window.__entranceRoomOpen = false;
         cornerFilter: cornerFilter,
         cornerGain: cornerGain,
         cornerTone: cornerTone,
-        cornerToneGain: cornerToneGain
+        cornerToneGain: cornerToneGain,
+        noiseBuffer: buffer
       };
       base.start(); harmonic.start(); pulse.start(); road.start(); cornerTone.start();
       paintPorscheDriveAudio();
@@ -39111,6 +39265,7 @@ window.__entranceRoomOpen = false;
       paintPorscheDriveSpatialOut(audio.spatial, false);
       paintPorscheDriveSpatialOut(audio.tireSpatial, false);
     } catch (_error) {}
+    paintRoadtripTrafficAudio();
     paintPorscheDriveMusic();
   }
   function updatePorscheDriveAudio() {
@@ -40892,6 +41047,7 @@ window.__entranceRoomOpen = false;
           suspensionSeconds: ROADTRIP_SUSPENSION_MS / 1000,
           impactSounds: roadtripState.impactSounds,
           rewardSounds: roadtripState.rewardSounds,
+          trafficAudioVoices: Object.keys(roadtripTrafficAudioVoices).length,
           lastImpactSeverity: roadtripState.lastImpactSeverity,
           centerlineExcursion: roadtripState.centerlineExcursion,
           centerlineCrossings: roadtripState.centerlineCrossings,
@@ -41060,6 +41216,7 @@ window.__entranceRoomOpen = false;
     return { speed: driveState.speed, gear: driveState.gear, rpm: driveState.rpm };
   };
   window.__entranceDriveSpatialAudio = porscheDriveSpatialProfile;
+  window.__entranceRoadtripTrafficAudio = roadtripTrafficAudioProfile;
   window.__entranceRoadtripStart = function () {
     var started = startRoadtrip(true);
     if (started && window.__checkpointChanged) window.__checkpointChanged();

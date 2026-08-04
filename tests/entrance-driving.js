@@ -121,17 +121,22 @@ check(s.brakeAudio && !s.brakeAudio.low.active && s.brakeAudio.low.screechGain =
   "brake audio stays silent below threshold and foregrounds tire screech over quiet ABS at speed", s.brakeAudio);
 var spatial = s.spatialAudio;
 check(spatial && spatial.closed && spatial.open &&
-  spatial.closed.engine.anchor === "entrance-porsche" && spatial.closed.screech.anchor === "entrance-porsche" &&
+  (spatial.closed.engine.mode === "roadtrip" ?
+    spatial.closed.engine.anchor === "roadtrip-cabin" && spatial.closed.engine.pan === 0 &&
+      spatial.closed.screech.anchor === "roadtrip-tires" :
+    spatial.closed.engine.anchor === "entrance-porsche" && spatial.closed.screech.anchor === "entrance-porsche") &&
   spatial.closed.music.anchor === "entrance-drive-hud" && spatial.closed.abs.anchor === "entrance-drive-brake" &&
   ["engine", "music", "screech", "abs"].every(function (kind) {
     return !spatial.closed[kind].roofOpen && spatial.open[kind].roofOpen &&
       spatial.closed[kind].gain < spatial.open[kind].gain &&
       spatial.closed[kind].cutoff < spatial.open[kind].cutoff;
-  }), "engine, music, screech, and ABS use localized outputs softened by the closed roof", spatial);
+  }), "driving sources use their mode-specific spatial outputs and open-roof treatment", spatial);
 check(s.spatialMoved && spatial &&
-  Math.abs(s.spatialMoved.engine.pan - spatial.closed.engine.pan) > .05 &&
+  (spatial.closed.engine.mode === "roadtrip" ?
+    s.spatialMoved.engine.pan === 0 && spatial.closed.engine.pan === 0 :
+    Math.abs(s.spatialMoved.engine.pan - spatial.closed.engine.pan) > .05) &&
   Math.abs(s.spatialMoved.music.pan - spatial.closed.music.pan) < .01,
-  "car-borne audio follows road travel while the cabin score stays anchored to the HUD", {
+  "powertrain pan follows exterior travel or remains cabin-centred by driving mode", {
     initial: spatial && spatial.closed, moved: s.spatialMoved
   });
 check(s.rpmMap && Math.abs(s.rpmMap.second100 - 6320.2) < 2 &&

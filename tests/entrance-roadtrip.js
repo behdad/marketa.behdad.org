@@ -240,7 +240,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   async function run() {
     var hooks = ["__entranceRoadtripStart", "__entranceRoadtripSpawn", "__entranceRoadtripSetDistance",
       "__entranceRoadtripSetLane", "__entranceDriveStep", "__entranceDriveSetMotion",
-      "__entranceDriveTireAudio", "__entranceRoomState"];
+      "__entranceDriveTireAudio", "__entranceDriveSpatialAudio", "__entranceRoadtripTrafficAudio",
+      "__entranceRoomState"];
     report.steps.fresh = {
       ids: requiredIds.map(function (id) { return [id, !!document.getElementById(id)]; }),
       hooks: hooks.map(function (name) { return [name, typeof window[name]]; })
@@ -267,6 +268,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setBalconyOvercast(true, "test");
     window.__setBalconyRain(true, "test");
     window.__openEntrancePorscheDriveHud();
+    report.steps.exteriorSpatial = {
+      engine: window.__entranceDriveSpatialAudio("engine"),
+      tire: window.__entranceDriveSpatialAudio("tire")
+    };
     var normalHudEnter = { before: copy(state()) };
     pressDocumentKey("Enter");
     normalHudEnter.started = copy(state());
@@ -335,6 +340,49 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     };
     pressKey("Enter");
     await sleep(80);
+    window.__entranceRoadtripSetLane(-2.32);
+    var highwayLeft = {
+      engine: window.__entranceDriveSpatialAudio("engine"),
+      tire: window.__entranceDriveSpatialAudio("tire")
+    };
+    window.__entranceRoadtripSetLane(2.32);
+    var highwayRight = {
+      engine: window.__entranceDriveSpatialAudio("engine"),
+      tire: window.__entranceDriveSpatialAudio("tire")
+    };
+    window.__entranceRoadtripSetLane(.5);
+    window.__entranceDriveSetMotion(100, 4);
+    var trafficEntityLeft = { type: "car", direction: "oncoming", lane: -.5, velocity: -25 };
+    var trafficEntityRight = { type: "car", direction: "forward", lane: 1.5, velocity: 25 };
+    var trafficClosed = {
+      leftNear: window.__entranceRoadtripTrafficAudio(trafficEntityLeft, 8),
+      leftFar: window.__entranceRoadtripTrafficAudio(trafficEntityLeft, 40),
+      rightNear: window.__entranceRoadtripTrafficAudio(trafficEntityRight, 8),
+      tire: window.__entranceDriveSpatialAudio("tire")
+    };
+    document.getElementById("entrance-porsche-window").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var trafficWindow = {
+      leftNear: window.__entranceRoadtripTrafficAudio(trafficEntityLeft, 8),
+      tire: window.__entranceDriveSpatialAudio("tire")
+    };
+    document.getElementById("entrance-porsche-roof").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var trafficRoof = {
+      leftNear: window.__entranceRoadtripTrafficAudio(trafficEntityLeft, 8),
+      tire: window.__entranceDriveSpatialAudio("tire")
+    };
+    document.getElementById("entrance-porsche-roof").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    document.getElementById("entrance-porsche-window").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.steps.spatialAudio = {
+      left: highwayLeft,
+      right: highwayRight,
+      closed: trafficClosed,
+      window: trafficWindow,
+      roof: trafficRoof
+    };
     var activeClasses = Array.prototype.slice.call(room.classList);
     report.steps.activation = {
       offer: offer,
@@ -632,6 +680,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.shoulder = { before: shoulderBefore, after: shoulderAfter, recovered: shoulderRecovered };
 
     window.__entranceRoadtripStart();
+    ensureEngine();
+    window.__updatePorscheIdle();
+    await sleep(30);
     window.__entranceRoadtripSetLane(.5);
     var mirrorTraffic = spawn("car", 1.5);
     window.__entranceRoadtripSetDistance(11);
@@ -1121,6 +1172,33 @@ check(tireAudio && tireAudio.highway.tireGain > tireAudio.urban.tireGain &&
   tireAudio.gravel.tireGain > tireAudio.rumble.tireGain &&
   tireAudio.gravel.roadGain > tireAudio.rumble.roadGain,
   "highway speed raises tire/wind beds, fast steering squeals, and shoulder surfaces grow rougher", tireAudio);
+var exteriorSpatial = s.exteriorSpatial;
+var spatialAudio = s.spatialAudio;
+check(exteriorSpatial && exteriorSpatial.engine.mode === "exterior" &&
+  exteriorSpatial.engine.anchor === "entrance-porsche" && exteriorSpatial.tire.mode === "exterior" &&
+  exteriorSpatial.tire.anchor === "entrance-porsche",
+  "block driving keeps the moving exterior Porsche as its spatial source", exteriorSpatial);
+check(spatialAudio && spatialAudio.left.engine.mode === "roadtrip" &&
+  spatialAudio.left.engine.anchor === "roadtrip-cabin" && spatialAudio.left.engine.pan === 0 &&
+  spatialAudio.right.engine.pan === 0 && spatialAudio.left.engine.smoothing >= .2 &&
+  spatialAudio.left.tire.anchor === "roadtrip-tires" && spatialAudio.left.tire.pan <= -.21 &&
+  spatialAudio.right.tire.pan >= .21 && spatialAudio.left.tire.smoothing >= .15,
+  "highway powertrain stays cabin-centred while tire and road audio follow lanes with gentle bounded pan",
+  spatialAudio && { left: spatialAudio.left, right: spatialAudio.right });
+check(spatialAudio && spatialAudio.closed.leftNear.audible &&
+  spatialAudio.closed.leftNear.pan < 0 && spatialAudio.closed.rightNear.pan > 0 &&
+  Math.abs(spatialAudio.closed.leftNear.pan) <= .68 && Math.abs(spatialAudio.closed.rightNear.pan) <= .68 &&
+  spatialAudio.closed.leftNear.gain > spatialAudio.closed.leftFar.gain &&
+  spatialAudio.closed.leftNear.gain > spatialAudio.closed.rightNear.gain &&
+  spatialAudio.closed.leftNear.relativeKmh > spatialAudio.closed.rightNear.relativeKmh &&
+  spatialAudio.closed.leftNear.smoothing >= .1,
+  "each passing vehicle projects a smooth bounded pan and scales its whoosh by distance and relative speed",
+  spatialAudio && spatialAudio.closed);
+check(spatialAudio && spatialAudio.closed.leftNear.gain < spatialAudio.window.leftNear.gain &&
+  spatialAudio.window.leftNear.gain < spatialAudio.roof.leftNear.gain &&
+  spatialAudio.closed.tire.gain < spatialAudio.window.tire.gain &&
+  spatialAudio.window.tire.gain < spatialAudio.roof.tire.gain,
+  "opening a window and then the roof progressively admits road and passing-traffic wind", spatialAudio);
 
 var activation = s.activation;
 var normalHudEnter = s.normalHudEnter;
@@ -1154,9 +1232,10 @@ check(activation && activation.roomClasses.indexOf("roadtrip-active") >= 0 &&
   Math.abs(activation.geometry.hud.top - activation.geometry.room.top) <= 1,
   "activation expands the dashboard SVG and HUD to the full Entrance view", activation);
 check(activation && activation.retained.roomArt.display !== "none" && activation.retained.porsche.display !== "none" &&
-  activation.retained.spatial && activation.retained.spatial.anchor === "entrance-porsche" &&
+  activation.retained.spatial && activation.retained.spatial.anchor === "roadtrip-cabin" &&
+  activation.retained.spatial.pan === 0 &&
   isFinite(activation.retained.spatial.pan),
-  "roadtrip presentation retains scene/car geometry for localized Porsche audio", activation && activation.retained);
+  "roadtrip presentation retains scene/car geometry while powertrain audio stays in the cabin", activation && activation.retained);
 check(s.speedHud && s.speedHud.map(function (row) { return row.band; }).join(" ") ===
     "safe warning warning danger danger escape" &&
   s.speedHud.map(function (row) { return row.text; }).join(" ") ===
@@ -1352,11 +1431,12 @@ check(shoulder && shoulder.before.state.drive.roadtrip.playerLane > 2 &&
   shoulder.recovered.svgClasses.indexOf("roadtrip-shoulder-rumble") < 0,
   "the Porsche can cross the edge line onto a rumbling gravel shoulder that bleeds speed and restores road grip", shoulder);
 var mirror = s.mirror;
-check(mirror && mirror.passed.passes === 1 && mirror.visible && mirror.visible.type === "car" &&
+check(mirror && mirror.passed.passes === 1 && mirror.passed.trafficAudioVoices >= 1 &&
+  mirror.visible && mirror.visible.type === "car" &&
   mirror.visible.direction === "forward" && /car-oncoming/.test(mirror.visible.href || "") &&
   /translate\(/.test(mirror.visible.transform || "") && mirror.visible.visibility !== "hidden" &&
   mirror.source.visibility === "hidden" && mirror.cleared && mirror.mirrorChildren === 6,
-  "the rear-view mirror reflects passed traffic with its approaching face, then clears it at mirror range", mirror);
+  "a passed car gets its own wind voice and reflects with its approaching face before both clear", mirror);
 
 var pool = s.pool;
 check(pool && pool.started && pool.first.state.poolSize > 0 &&

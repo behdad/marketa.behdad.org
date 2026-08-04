@@ -228,7 +228,8 @@ top-left **Fancy a roadtrip?** card offers **Take the highway** or **Later**;
 the dashboard does not leave the street until the highway is accepted. After
 that, the highway remains unlocked. Every later dashboard session begins on the
 block and offers the card after one completed forward lap. Enter accepts a
-visible offer; Escape dismisses it for the rest of that dashboard session. The
+visible offer; the later **Road Trip** re-entry sign carries the same Enter hint.
+Escape dismisses an offer for the rest of that dashboard session. The
 same steering, gears, accelerator, and brake apply; highway steering omits the
 street-drive indicator flourish. The Porsche
 performs a full 360° instead of changing direction when hard braking and

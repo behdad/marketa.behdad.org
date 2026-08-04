@@ -55,6 +55,25 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
         autoSelected: autoButton.classList.contains("selected"),
         manualSelected: manualButton.classList.contains("selected")
       };
+      var ignition = document.getElementById("entrance-drive-ignition");
+      var blockedAutoShift = window.__entranceDriveRange("D");
+      var blockedAutoPulse = {
+        accepted: blockedAutoShift,
+        pulsing: ignition.classList.contains("shift-blocked"),
+        animation: getComputedStyle(document.getElementById("entrance-drive-key-face")).animationName,
+        transmission: copy(drive().transmission)
+      };
+      window.__entranceDriveTransmissionMode("manual", false);
+      var blockedManualShift = window.__entranceDriveShift(1, true);
+      report.steps.engineOffShift = {
+        auto: blockedAutoPulse,
+        manual: {
+          accepted: blockedManualShift,
+          pulsing: ignition.classList.contains("shift-blocked"),
+          gear: drive().gear
+        }
+      };
+      window.__entranceDriveTransmissionMode("auto", false);
 
       manualButton.focus();
       key("Enter", "Enter", manualButton);
@@ -373,6 +392,11 @@ check(s.controls && s.controls.mode.mode === "auto" && s.controls.hitWidth >= 44
   s.controls.autoTab === "0" && s.controls.manualTab === "0" &&
   s.controls.autoSelected && !s.controls.manualSelected,
   "mode controls are visibly selected, tabbable and at least 44 CSS px wide on mobile", s.controls);
+check(s.engineOffShift && !s.engineOffShift.auto.accepted && s.engineOffShift.auto.pulsing &&
+  s.engineOffShift.auto.animation === "entrance-drive-ignition-shift-blocked" &&
+  s.engineOffShift.auto.transmission.range === "P" && !s.engineOffShift.manual.accepted &&
+  s.engineOffShift.manual.pulsing && s.engineOffShift.manual.gear === 0,
+  "AUTO and MANUAL shift attempts with the engine off pulse the ignition key", s.engineOffShift);
 check(s.focusedEnter && !s.focusedEnter.engine && s.focusedEnter.mode === "manual" &&
   s.focusedSpace && !s.focusedSpace.engine && s.focusedSpace.transmission.mode === "auto" &&
   s.focusedSpace.stored === "auto" && s.focusedSpace.rangeTabs.every(function (row) {

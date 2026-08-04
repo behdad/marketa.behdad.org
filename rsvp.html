@@ -1167,6 +1167,21 @@ footer{margin-top:2.6rem}
   0%,100%{opacity:.34}
   50%{opacity:1}
 }
+#entrance-drive-ignition.shift-blocked #entrance-drive-key-face{
+  animation:entrance-drive-ignition-shift-blocked .62s ease-in-out;
+}
+#entrance-drive-ignition.shift-blocked #entrance-drive-key-led{
+  animation:entrance-drive-ignition-led-blocked .62s steps(2,end);
+}
+@keyframes entrance-drive-ignition-shift-blocked{
+  0%,100%{transform:scale(1)}
+  22%,66%{transform:scale(1.13)}
+  44%,88%{transform:scale(.96)}
+}
+@keyframes entrance-drive-ignition-led-blocked{
+  0%,100%{opacity:.34}
+  25%,75%{opacity:1}
+}
 #entrance-drive-ac-air{opacity:0;transition:opacity .3s ease}
 #entrance-drive-hud.drive-ac-blasting #entrance-drive-ac-air{opacity:1}
 #entrance-drive-ac-air path{
@@ -1234,6 +1249,8 @@ footer{margin-top:2.6rem}
   #entrance-drive-glovebox-cavity,#entrance-drive-glovebox-contents,#entrance-drive-glovebox-door,
   #entrance-drive-key-face,#entrance-drive-key-face-off,#entrance-drive-key-face-on{transition-duration:.01ms}
   #entrance-drive-hud:not(.drive-engine-on) #entrance-drive-key-led{animation:none;opacity:.72}
+  #entrance-drive-ignition.shift-blocked #entrance-drive-key-face{animation:none}
+  #entrance-drive-ignition.shift-blocked #entrance-drive-key-led{animation:none;opacity:1}
   #entrance-roadtrip-reenter.suspension-ignition-blocked{animation:none}
 }
 .entrance-drive-key{
@@ -34965,6 +34982,7 @@ window.__entranceRoomOpen = false;
   var driveClockReadout = document.getElementById("entrance-drive-clock-readout");
   var driveOdometer = document.getElementById("entrance-drive-odometer");
   var driveSteering = document.getElementById("entrance-drive-steering");
+  var driveIgnition = document.getElementById("entrance-drive-ignition");
   var entranceDoorArt = document.getElementById("entrance-door-art");
   var driveShifter = document.getElementById("entrance-drive-shifter");
   var driveShifterLever = document.getElementById("entrance-drive-shifter-lever");
@@ -35767,10 +35785,20 @@ window.__entranceRoomOpen = false;
     if (explicit && window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
+  function pulsePorscheIgnitionKey() {
+    if (!driveIgnition || porscheState.engineOn || !driveState.hudOpen) return false;
+    driveIgnition.classList.remove("shift-blocked");
+    driveIgnition.getBoundingClientRect();
+    driveIgnition.classList.add("shift-blocked");
+    return true;
+  }
   function selectPorscheDriveRange(range) {
     range = String(range || "").toUpperCase();
     if (porscheTransmission.mode !== "auto" || ["P", "R", "N", "D"].indexOf(range) < 0) return false;
-    if (range !== "P" && range !== "N" && !porscheState.engineOn) return false;
+    if (range !== "P" && range !== "N" && !porscheState.engineOn) {
+      pulsePorscheIgnitionKey();
+      return false;
+    }
     var relativeSpeed = driveState.speed * driveState.facing;
     if (range === "P" && Math.abs(relativeSpeed) > .5) {
       if (window.__flashCaptionKey) window.__flashCaptionKey(
@@ -40247,7 +40275,10 @@ window.__entranceRoomOpen = false;
     gear = Number(gear);
     if (gear < -1 || gear > 6 || gear !== Math.round(gear)) return false;
     if (syncRoadtripDemeritState()) return false;
-    if (gear !== 0 && !porscheState.engineOn) return false;
+    if (gear !== 0 && !porscheState.engineOn) {
+      pulsePorscheIgnitionKey();
+      return false;
+    }
     if (gear !== 0 && porscheState.engineOn && !driveState.holds.clutch && !clutchBypass) {
       neutralPorscheTransmission();
       previewPorscheShifterAttempt(gear);
@@ -40295,7 +40326,9 @@ window.__entranceRoomOpen = false;
     return selectPorscheDriveGear(next, true);
   }
   function porscheShifterAvailable() {
-    return !!(driveState.hudOpen && (porscheState.engineOn || driveState.stalled));
+    var available = !!(driveState.hudOpen && (porscheState.engineOn || driveState.stalled));
+    if (!available && driveState.hudOpen) pulsePorscheIgnitionKey();
+    return available;
   }
   function activatePorscheShifterTap(target, clutchBypass) {
     if (!porscheShifterAvailable()) return false;
@@ -41474,8 +41507,13 @@ window.__entranceRoomOpen = false;
       if (mode) setPorscheTransmissionMode(mode, true);
       else if (range) selectPorscheDriveRange(range);
       if (action === "ignition") togglePorscheEngine();
-      if (gear !== null && (porscheState.engineOn || driveState.stalled)) selectPorscheDriveGear(gear);
+      if (gear !== null) selectPorscheDriveGear(gear);
     });
+  });
+  if (driveIgnition) driveIgnition.addEventListener("animationend", function (event) {
+    if (event.animationName === "entrance-drive-ignition-shift-blocked") {
+      driveIgnition.classList.remove("shift-blocked");
+    }
   });
   if (driveShifter) {
     driveShifter.addEventListener("pointerdown", beginPorscheShifterPress, true);

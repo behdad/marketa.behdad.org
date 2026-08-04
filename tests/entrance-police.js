@@ -41,6 +41,26 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       ariaLabels: group.querySelectorAll("[aria-label]").length + (group.hasAttribute("aria-label") ? 1 : 0)
     };
   }
+  function frontFlashSample() {
+    var group = document.getElementById("entrance-roadtrip-police-front-flashes");
+    var blue = document.getElementById("entrance-roadtrip-police-front-flash-blue");
+    var red = document.getElementById("entrance-roadtrip-police-front-flash-red");
+    var blueStyle = getComputedStyle(blue);
+    var redStyle = getComputedStyle(red);
+    return {
+      visible: group.getAttribute("visibility"),
+      active: group.classList.contains("is-pursuing"),
+      transform: group.getAttribute("transform") || "",
+      blueAnimation: blueStyle.animationName,
+      redAnimation: redStyle.animationName,
+      blueDuration: blueStyle.animationDuration,
+      redDuration: redStyle.animationDuration,
+      blueIterations: blueStyle.animationIterationCount,
+      redIterations: redStyle.animationIterationCount,
+      blueOpacity: Number(blueStyle.opacity),
+      redOpacity: Number(redStyle.opacity)
+    };
+  }
   function mirrorSample() {
     var police = copy(trip().police);
     var transform = police.mirrorTransform || "";
@@ -367,7 +387,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveControl("steerLeft", false);
       await sleep(80);
       report.steps.refocused = copy(trip().police);
-      window.__entranceRoadtripSetLane(2);
+      window.__entranceRoadtripSetLane(.5);
       window.__flashCaptionKey("entrance_roadtrip_heart", 10000, "entrance-roadtrip");
       setMotion(0, 0);
       step(1000);
@@ -478,10 +498,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
       prepareEncounter();
       meetPolice(145);
-      window.__entranceRoadtripSetLane(2);
+      window.__entranceRoadtripSetLane(1.5);
       setMotion(0, 0);
       step(1000);
       var courtStopped = copy(trip());
+      var courtStoppedFlashes = frontFlashSample();
       var courtStoppedCaption = document.getElementById("hunt-caption").textContent.trim();
       var courtBlockedThrottle = window.__entranceDriveControl("throttle", true);
       var courtBlockedRange = window.__entranceDriveRange("D");
@@ -528,6 +549,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.courtStop = {
         stopped: courtStopped,
         stoppedCaption: courtStoppedCaption,
+        stoppedFlashes: courtStoppedFlashes,
         blockedThrottle: courtBlockedThrottle,
         blockedRange: courtBlockedRange,
         blockedMotion: courtBlockedMotion,
@@ -552,18 +574,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
       prepareEncounter();
       meetPolice(179);
-      window.__entranceRoadtripSetLane(2);
+      window.__entranceRoadtripSetLane(.5);
       setMotion(0, 0);
       step(1000);
+      var eightyNineStopped = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 1.8);
       window.__entranceRoadtripPoliceStep(0, 1.5);
       var eightyNineOver = copy(trip());
 
       prepareEncounter();
       meetPolice(180);
-      window.__entranceRoadtripSetLane(2);
+      window.__entranceRoadtripSetLane(1.5);
       setMotion(0, 0);
       step(1000);
+      var ninetyOverStopped = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 1.8);
       window.__entranceRoadtripPoliceStep(0, 1.5);
       var ninetyOverEnglish = copy(trip());
@@ -579,7 +603,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveControl("steerLeft", false);
       window.setLang("en");
       report.steps.shoutThreshold = {
+        eightyNineStopped: eightyNineStopped,
         eightyNineOver: eightyNineOver,
+        ninetyOverStopped: ninetyOverStopped,
         ninetyOverEnglish: ninetyOverEnglish,
         ninetyOverCzech: ninetyOverCzech,
         blurred: overHundredBlurred
@@ -918,8 +944,8 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.pursuitTrafficDensity === 1.4 && s.contract.pursuitReactionDistance === 118 &&
   s.contract.stoppedBeat === 1.25 &&
   s.contract.frontStoppedBeat === 1.8 &&
-  s.contract.parkedBehind === 5 && s.contract.rearStopScale === 2.25 &&
-  s.contract.frontParkedAhead === 5 && s.contract.frontParkedScale === 1.65 &&
+  s.contract.parkedBehind === 4 && s.contract.rearStopScale === 3.75 &&
+  s.contract.frontParkedAhead === 4 && s.contract.frontParkedScale === 2.15 &&
   s.contract.arrestDuration === 5.8 &&
   s.contract.centerlineSeconds === 10 && s.contract.centerlineFine === 243 &&
   s.contract.centerlineDemerits === 2 &&
@@ -1145,6 +1171,7 @@ check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sire
     unfocused: s.unfocused, refocused: s.refocused
   });
 check(s.stopped && s.stopped.stopped.active && s.stopped.stopped.police.phase === "stopped" &&
+  s.stopped.stopped.playerLane === .5 && !s.stopped.stopped.police.sirenActive &&
   s.stopped.stopped.police.stops === 1 && !s.stopped.stopped.police.arrestVisible &&
   s.stopped.stopped.police.mirrorMode === "shoulder-arrival" &&
   s.stopped.stopped.police.mirrorBehind === s.stopped.stopped.police.stopMirrorBehind &&
@@ -1154,15 +1181,23 @@ check(s.stopped && s.stopped.stopped.active && s.stopped.stopped.police.phase ==
   s.stopped.arrival.police.mirrorBehind < s.stopped.stopped.police.mirrorBehind &&
   s.stopped.arrival.police.mirrorBehind > s.contract.parkedBehind &&
   s.stopped.arrival.police.mirrorScale > s.stopped.stopped.police.mirrorScale &&
+  !s.stopped.arrival.police.sirenActive &&
   s.stopped.settled.police.phase === "stopped" &&
   s.stopped.settled.police.mirrorBehind < s.stopped.arrival.police.mirrorBehind &&
   s.stopped.settled.police.mirrorBehind >= s.contract.parkedBehind &&
   s.stopped.settled.police.mirrorScale > s.stopped.arrival.police.mirrorScale &&
-  s.stopped.settled.police.mirrorScale > .45 &&
+  s.stopped.settled.police.mirrorScale > .8 &&
+  s.stopped.settled.police.mirrorRoadFraction === 0 &&
+  Math.abs(s.stopped.settled.police.mirrorProjectX - s.stopped.settled.police.mirrorPathX) < .01 &&
+  s.stopped.settled.police.mirrorProjectY - 44 * s.stopped.settled.police.mirrorScale < -111 &&
+  !s.stopped.settled.police.sirenActive &&
   s.stopped.arrestStart.police.phase === "arrest" &&
   s.stopped.arrestStart.police.mirrorMode === "shoulder-arrest" &&
   s.stopped.arrestStart.police.mirrorBehind === s.contract.parkedBehind &&
-  s.stopped.arrestStart.police.mirrorScale > .45 && s.stopped.arrestStart.police.arrestVisible &&
+  s.stopped.arrestStart.police.mirrorScale > .8 &&
+  s.stopped.arrestStart.police.mirrorRoadFraction === 0 &&
+  Math.abs(s.stopped.arrestStart.police.mirrorProjectX - s.stopped.arrestStart.police.mirrorPathX) < .01 &&
+  !s.stopped.arrestStart.police.sirenActive && s.stopped.arrestStart.police.arrestVisible &&
   s.stopped.approach.police.phase === "arrest" &&
   s.stopped.approach.police.arrestOfficerTransform !== s.stopped.stopped.police.arrestOfficerTransform &&
   s.stopped.card.police.phase === "arrest" && s.stopped.card.police.arrestCardOpacity > .5 &&
@@ -1215,14 +1250,28 @@ check(s.demeritWarning && s.demeritWarning.trip.active &&
   "eight points enters the warning state without suspending the Road Trip", s.demeritWarning);
 check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.stopped.police.phase === "stopped" && s.courtStop.stopped.police.tickets === 0 &&
-  s.courtStop.stopped.police.summonses === 0 && s.courtStop.stopped.police.sirenActive &&
+  s.courtStop.stopped.playerLane === 1.5 &&
+  s.courtStop.stopped.police.summonses === 0 && !s.courtStop.stopped.police.sirenActive &&
   !s.courtStop.stopped.police.mirrorVisible && !s.courtStop.stopped.police.arrestVisible &&
   s.courtStop.stopped.police.stopInFront && s.courtStop.stopped.police.frontVisible &&
   s.courtStop.stopped.police.frontMode === "front-arrival" &&
   s.courtStop.stopped.police.frontAhead === 1.5 &&
-  s.courtStop.stopped.police.frontRoadFraction === 1.08 &&
-  s.courtStop.stopped.police.frontScale > 1.5 &&
+  s.courtStop.stopped.police.stopFrontApproachRoadFraction === .25 &&
+  s.courtStop.stopped.police.stopFrontRoadFraction === .75 &&
+  s.courtStop.stopped.police.frontRoadFraction === .25 &&
+  s.courtStop.stopped.police.frontScale > 2 &&
   s.courtStop.stopped.police.frontBlocksDrive &&
+  s.courtStop.stopped.police.frontFlashesVisible && s.courtStop.stopped.police.frontFlashesActive &&
+  s.courtStop.stopped.police.frontFlashesTransform === s.courtStop.stopped.police.frontTransform &&
+  s.courtStop.stoppedFlashes.visible === "visible" && s.courtStop.stoppedFlashes.active &&
+  s.courtStop.stoppedFlashes.transform === s.courtStop.stopped.police.frontTransform &&
+  s.courtStop.stoppedFlashes.blueAnimation === "entrance-roadtrip-police-mirror-flash-blue" &&
+  s.courtStop.stoppedFlashes.redAnimation === "entrance-roadtrip-police-mirror-flash-red" &&
+  s.courtStop.stoppedFlashes.blueDuration === "0.64s" &&
+  s.courtStop.stoppedFlashes.redDuration === "0.64s" &&
+  s.courtStop.stoppedFlashes.blueIterations === "infinite" &&
+  s.courtStop.stoppedFlashes.redIterations === "infinite" &&
+  Math.abs(s.courtStop.stoppedFlashes.blueOpacity - s.courtStop.stoppedFlashes.redOpacity) > .7 &&
   s.courtStop.blockedThrottle && !s.courtStop.blockedRange && !s.courtStop.blockedMotion &&
   s.courtStop.driveBlocked.speed === 0 && s.courtStop.driveBlocked.gear === 0 &&
   s.courtStop.driveBlocked.transmission.range === "P" && !s.courtStop.driveBlocked.holds.throttle &&
@@ -1236,14 +1285,21 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.frontSettled.police.frontAhead <= s.contract.frontParkedAhead &&
   s.courtStop.frontSettled.police.frontRoadFraction ===
     s.courtStop.frontSettled.police.stopFrontRoadFraction &&
-  s.courtStop.frontSettled.police.frontScale > 1.45 &&
+  Math.abs(s.courtStop.frontSettled.police.frontProjectX -
+    s.courtStop.frontSettled.police.frontPathX) < .01 &&
+  s.courtStop.frontSettled.police.frontScale > 1.9 &&
+  !s.courtStop.frontSettled.police.sirenActive &&
+  s.courtStop.frontSettled.police.frontFlashesActive &&
   s.courtStop.frontSettled.police.frontBlocksDrive &&
   s.courtStop.arrestStart.police.phase === "arrest" &&
   s.courtStop.arrestStart.police.frontMode === "front-arrest" &&
   s.courtStop.arrestStart.police.frontAhead === s.contract.frontParkedAhead &&
   s.courtStop.arrestStart.police.frontRoadFraction ===
     s.courtStop.arrestStart.police.stopFrontRoadFraction &&
-  s.courtStop.arrestStart.police.frontScale > 1.45 &&
+  Math.abs(s.courtStop.arrestStart.police.frontProjectX -
+    s.courtStop.arrestStart.police.frontPathX) < .01 &&
+  s.courtStop.arrestStart.police.frontScale > 1.9 &&
+  !s.courtStop.arrestStart.police.sirenActive && s.courtStop.arrestStart.police.frontFlashesActive &&
   s.courtStop.arrestStart.police.frontBlocksDrive && s.courtStop.arrestStart.police.arrestVisible &&
   s.courtStop.approach.active && s.courtStop.approach.police.phase === "arrest" &&
   s.courtStop.approach.police.arrestOfficerTransform !== s.courtStop.stopped.police.arrestOfficerTransform &&
@@ -1276,11 +1332,29 @@ check(s.courtStop && s.courtStop.stopped.active &&
   "a court-level stop puts the patrol ahead before the summons and its next Road Trip starts fresh",
   s.courtStop);
 check(s.shoutThreshold && s.shoutThreshold.eightyNineOver.police.overLimit === 89 &&
+  s.shoutThreshold.eightyNineStopped.playerLane === .5 &&
+  s.shoutThreshold.eightyNineStopped.police.stopFrontApproachRoadFraction === .75 &&
+  s.shoutThreshold.eightyNineStopped.police.stopFrontRoadFraction === .25 &&
+  s.shoutThreshold.eightyNineStopped.police.frontRoadFraction === .75 &&
+  !s.shoutThreshold.eightyNineStopped.police.sirenActive &&
+  s.shoutThreshold.eightyNineStopped.police.frontFlashesActive &&
   !s.shoutThreshold.eightyNineOver.police.arrestShoutPlayed &&
+  Math.abs(s.shoutThreshold.eightyNineOver.police.frontProjectX -
+    s.shoutThreshold.eightyNineOver.police.frontPathX) < .01 &&
+  !s.shoutThreshold.eightyNineOver.police.sirenActive &&
   s.shoutThreshold.eightyNineOver.police.arrestShoutOpacity === 0 &&
   s.shoutThreshold.eightyNineOver.police.arrestHandcuffsOpacity === 0 &&
   s.shoutThreshold.ninetyOverEnglish.police.overLimit === 90 &&
+  s.shoutThreshold.ninetyOverStopped.playerLane === 1.5 &&
+  s.shoutThreshold.ninetyOverStopped.police.stopFrontApproachRoadFraction === .25 &&
+  s.shoutThreshold.ninetyOverStopped.police.stopFrontRoadFraction === .75 &&
+  s.shoutThreshold.ninetyOverStopped.police.frontRoadFraction === .25 &&
+  s.shoutThreshold.ninetyOverStopped.police.sirenActive &&
+  s.shoutThreshold.ninetyOverStopped.police.frontFlashesActive &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestShoutPlayed &&
+  Math.abs(s.shoutThreshold.ninetyOverEnglish.police.frontProjectX -
+    s.shoutThreshold.ninetyOverEnglish.police.frontPathX) < .01 &&
+  s.shoutThreshold.ninetyOverEnglish.police.sirenActive &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestShoutOpacity > .9 &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestHandcuffsOpacity === 1 &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestShoutText ===
@@ -1356,9 +1430,9 @@ check(s.refused && !s.refused.paused.active && s.refused.paused.paused &&
   s.refused.capture.active && s.refused.capture.police.phase === "capture" &&
   s.refused.capture.police.sirenActive && s.refused.capture.police.mirrorVisible &&
   s.refused.approach.police.phase === "arrest" && s.refused.approach.police.arrestVisible &&
-  s.refused.approach.police.resolutionReason === "refused" &&
+  s.refused.approach.police.resolutionReason === "refused" && s.refused.approach.police.sirenActive &&
   s.refused.shout.police.phase === "arrest" && s.refused.shout.police.arrestShoutPlayed &&
-  s.refused.shout.police.arrestShoutOpacity > .9 &&
+  s.refused.shout.police.arrestShoutOpacity > .9 && s.refused.shout.police.sirenActive &&
   !s.refused.trip.active && s.refused.trip.police.runEnded &&
   s.refused.trip.police.endReason === "refused" && s.refused.trip.police.fines === 560 &&
   s.refused.trip.police.scorePenalties === 1560 && s.refused.trip.demeritPoints === 9 &&

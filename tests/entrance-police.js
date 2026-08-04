@@ -611,6 +611,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var suspendedTrip = copy(trip());
       var suspendedCaption = document.getElementById("hunt-caption").textContent.trim();
       var suspendedButton = document.getElementById("entrance-roadtrip-reenter");
+      if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
+      window.__hideEntrancePorscheDriveHud();
+      var blockedBaseline = copy(state());
+      var roomAttemptOne = window.__toggleEntrancePorscheEngine();
+      var roomAttemptTwo = window.__toggleEntrancePorscheEngine();
+      var blockedRoom = copy(state());
+      window.__openEntrancePorscheDriveHud();
+      document.getElementById("entrance-drive-ignition").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
+      document.getElementById("entrance-drive-ignition").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
+      var blockedHud = copy(state());
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
+      var blockedKeyboard = copy(state());
+      var blockedStatus = document.getElementById("entrance-roadtrip-demerit-status");
       report.steps.suspension = {
         trip: suspendedTrip,
         caption: suspendedCaption,
@@ -620,8 +636,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         hudStatus: document.getElementById("entrance-roadtrip-demerit-status").textContent.trim(),
         hudBand: document.getElementById("entrance-roadtrip-demerit-status").getAttribute("data-roadtrip-demerit-band"),
         buttonDisabled: suspendedButton.getAttribute("aria-disabled"),
-        restart: window.__entranceRoadtripStart()
+        restart: window.__entranceRoadtripStart(),
+        ignition: {
+          baseline: blockedBaseline,
+          roomReturns: [roomAttemptOne, roomAttemptTwo],
+          room: blockedRoom,
+          hud: blockedHud,
+          keyboard: blockedKeyboard,
+          caption: document.getElementById("hunt-caption").textContent.trim(),
+          captionBlink: document.getElementById("hunt-caption").classList.contains("hint-blink"),
+          statusPulse: blockedStatus.classList.contains("suspension-ignition-blocked"),
+          reenterPulse: suspendedButton.classList.contains("suspension-ignition-blocked"),
+          statusAnimation: getComputedStyle(blockedStatus).animationName
+        }
       };
+      window.__entranceRoadtripSetDemerits(15, Date.now() - 1);
+      var expiredStart = window.__toggleEntrancePorscheEngine();
+      report.steps.suspension.expiry = { started: expiredStart, state: copy(state()) };
+      if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
       window.__entranceRoadtripSetDemerits(0, 0);
 
       window.setLang("cs");
@@ -651,6 +683,45 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         before: teardownBefore,
         closed: teardownClosed,
         reset: copy(state())
+      };
+    } catch (error) {
+      report.errors.push(String(error && error.stack || error));
+    }
+    report.errors = (window.__errs || []).concat(report.errors);
+    document.getElementById("__report").textContent = JSON.stringify(report);
+  }
+  window.addEventListener("load", function () { setTimeout(run, 180); });
+})();
+</script>`;
+
+var REDUCED_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+<script>
+(function () {
+  function state() { return window.__entranceRoomState(); }
+  async function run() {
+    var report = { errors: [], steps: {} };
+    try {
+      window.__unlockAllRooms();
+      window.goToStage("balcony");
+      window.__openEntranceRoom();
+      await new Promise(function (resolve) { setTimeout(resolve, 40); });
+      window.__openEntrancePorscheDriveHud();
+      window.__entranceRoadtripSetDemerits(15, Date.now() + 60000);
+      window.__toggleEntrancePorscheEngine();
+      window.__toggleEntrancePorscheEngine();
+      var status = document.getElementById("entrance-roadtrip-demerit-status");
+      var button = document.getElementById("entrance-roadtrip-reenter");
+      var statusStyle = getComputedStyle(status);
+      var buttonStyle = getComputedStyle(button);
+      report.steps.blocked = {
+        state: state(),
+        statusPulse: status.classList.contains("suspension-ignition-blocked"),
+        buttonPulse: button.classList.contains("suspension-ignition-blocked"),
+        statusAnimation: statusStyle.animationName,
+        buttonAnimation: buttonStyle.animationName,
+        statusStroke: statusStyle.stroke,
+        statusStrokeWidth: statusStyle.strokeWidth,
+        captionBlink: document.getElementById("hunt-caption").classList.contains("hint-blink")
       };
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
@@ -1063,6 +1134,31 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
   "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",
   s.suspension);
+var blockedIgnition = s.suspension && s.suspension.ignition;
+var blockedBaselineCount = blockedIgnition && (blockedIgnition.baseline.car.activations.engine || 0);
+check(blockedIgnition && blockedIgnition.baseline.drive.hud === false &&
+  JSON.stringify(blockedIgnition.roomReturns) === JSON.stringify([true, true]) &&
+  blockedIgnition.room.car.engineOn === false && blockedIgnition.room.drive.rpm === 0 &&
+  blockedIgnition.room.drive.gear === 0 && !blockedIgnition.room.car.idleActive &&
+  !blockedIgnition.room.drive.audioActive &&
+  blockedIgnition.room.car.activations.engine === blockedBaselineCount + 2 &&
+  blockedIgnition.hud.car.engineOn === false && blockedIgnition.hud.drive.rpm === 0 &&
+  blockedIgnition.hud.drive.gear === 0 && !blockedIgnition.hud.car.idleActive &&
+  !blockedIgnition.hud.drive.audioActive &&
+  blockedIgnition.hud.car.activations.engine === blockedBaselineCount + 4 &&
+  blockedIgnition.keyboard.car.engineOn === false && blockedIgnition.keyboard.drive.rpm === 0 &&
+  blockedIgnition.keyboard.drive.gear === 0 && !blockedIgnition.keyboard.car.idleActive &&
+  !blockedIgnition.keyboard.drive.audioActive &&
+  blockedIgnition.keyboard.car.activations.engine === blockedBaselineCount + 6 &&
+  /Licence suspended · Road Trip returns in (?:1:00|0:59)\./.test(blockedIgnition.caption) &&
+  blockedIgnition.captionBlink && blockedIgnition.statusPulse && blockedIgnition.reenterPulse &&
+  blockedIgnition.statusAnimation === "entrance-roadtrip-suspension-blocked" &&
+  s.suspension.expiry.started && s.suspension.expiry.state.car.engineOn &&
+  s.suspension.expiry.state.drive.rpm === 750 &&
+  s.suspension.expiry.state.drive.roadtrip.demeritPoints === 7 &&
+  !s.suspension.expiry.state.drive.roadtrip.suspended,
+  "suspension blocks repeated room, HUD, and Enter ignition attempts without engine/audio leakage, then expires normally",
+  s.suspension);
 check(s.czech && /přes 215/.test(s.czech.escape) &&
   /^Překročení o \{over\} km\/h · pokuta \{fine\} · \{points\} trestné body · \{total\}\/15\{status\}\.$/.test(s.czech.fine) &&
   /^Překročení o \{over\} km\/h · \{fine\} · \{points\} trestných bodů · \{total\}\/15\{status\}\.$/.test(s.czech.court) &&
@@ -1079,6 +1175,22 @@ check(s.teardown && s.teardown.before.active && s.teardown.before.police.phase =
   !s.teardown.reset.drive.roadtrip.active && !s.teardown.reset.drive.roadtrip.police.arrestVisible &&
   s.teardown.reset.drive.roadtrip.police.arrestAudioVoices === 0,
   "room close and full reset tear down arrest state, visuals, siren, and one-shots", s.teardown);
+
+var reducedResult = lib.runPageSync("rsvp.html", REDUCED_MOTION_HARNESS, 2500, {
+  forceReduce: true,
+  chromeFlags: "--force-prefers-reduced-motion=reduce --autoplay-policy=no-user-gesture-required --window-size=1100,900"
+});
+var reduced = reducedResult && reducedResult.steps && reducedResult.steps.blocked;
+check(reducedResult && reducedResult.errors.length === 0, "no uncaught errors in reduced-motion suspension probe",
+  reducedResult && reducedResult.errors);
+check(reduced && reduced.state.car.engineOn === false && reduced.state.drive.rpm === 0 &&
+  !reduced.state.car.idleActive && !reduced.state.drive.audioActive &&
+  reduced.state.car.activations.engine === 2 && reduced.state.drive.roadtrip.suspended &&
+  reduced.statusPulse && reduced.buttonPulse && reduced.captionBlink &&
+  reduced.statusAnimation === "none" && reduced.buttonAnimation === "none" &&
+  reduced.statusStroke === "rgb(255, 253, 248)" && reduced.statusStrokeWidth === "0.8px",
+  "reduced motion replaces the suspension blink with a static emphasized status",
+  reduced);
 
 if (failures) {
   console.log("\n" + failures + " highway-police assertion(s) failed.");

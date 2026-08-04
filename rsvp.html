@@ -951,6 +951,18 @@ footer{margin-top:2.6rem}
 #entrance-roadtrip-demerit-status{font-size:7px;letter-spacing:.25px;fill:#8fd39b}
 #entrance-roadtrip-demerit-status[data-roadtrip-demerit-band="warning"]{fill:#f2cf73}
 #entrance-roadtrip-demerit-status[data-roadtrip-demerit-band="suspended"]{fill:#ed837d}
+@keyframes entrance-roadtrip-suspension-blocked{
+  0%,100%{opacity:1}
+  35%,70%{opacity:.18}
+}
+#entrance-roadtrip-demerit-status.suspension-ignition-blocked,
+#entrance-roadtrip-reenter.suspension-ignition-blocked{
+  animation:entrance-roadtrip-suspension-blocked .32s steps(2,end) 3;
+}
+#entrance-roadtrip-demerit-status.suspension-ignition-blocked{
+  stroke:#fffdf8;stroke-width:.8px;paint-order:stroke fill;
+}
+#entrance-roadtrip-reenter.suspension-ignition-blocked rect{stroke:#ed837d;stroke-width:2.2px}
 #entrance-roadtrip-mirror{opacity:.96}
 .entrance-roadtrip-mirror-sky{fill:#9db7c2}
 .entrance-roadtrip-mirror-verge{fill:#7b7659}
@@ -1156,6 +1168,8 @@ footer{margin-top:2.6rem}
   #entrance-drive-glovebox-cavity,#entrance-drive-glovebox-contents,#entrance-drive-glovebox-door,
   #entrance-drive-key-face,#entrance-drive-key-face-off,#entrance-drive-key-face-on{transition-duration:.01ms}
   #entrance-drive-hud:not(.drive-engine-on) #entrance-drive-key-led{animation:none;opacity:.72}
+  #entrance-roadtrip-demerit-status.suspension-ignition-blocked,
+  #entrance-roadtrip-reenter.suspension-ignition-blocked{animation:none}
 }
 .entrance-drive-key{
   fill:#202326;font:700 7px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -34807,6 +34821,7 @@ window.__entranceRoomOpen = false;
   var roadtripInviteLater = document.getElementById("entrance-roadtrip-invite-later");
   var roadtripReenter = document.getElementById("entrance-roadtrip-reenter");
   var roadtripReenterText = document.getElementById("entrance-roadtrip-reenter-text");
+  var roadtripDemeritStatus = document.getElementById("entrance-roadtrip-demerit-status");
   var driveCoachStep = 1;
   var driveCoachComplete = false;
   var driveCoachDismissed = false;
@@ -35078,6 +35093,7 @@ window.__entranceRoomOpen = false;
   var roadtripImpactTimer = null;
   var roadtripCrackSerial = 0;
   var roadtripSuspensionTimer = null;
+  var roadtripSuspensionIgnitionTimer = null;
   var roadtripState = {
     active: false,
     paused: false,
@@ -35692,6 +35708,7 @@ window.__entranceRoomOpen = false;
     room.classList.toggle("roadtrip-demerit-warning",
       roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING && !suspended);
     room.classList.toggle("roadtrip-suspended", suspended);
+    if (!suspended && roadtripSuspensionIgnitionTimer) clearRoadtripSuspensionIgnitionPulse();
     return suspended;
   }
   function roadtripSuspensionClock() {
@@ -35709,6 +35726,32 @@ window.__entranceRoomOpen = false;
       paintRoadtripScore();
     }, Math.min(1000, remaining + 5));
   }
+  function clearRoadtripSuspensionIgnitionPulse() {
+    clearTimeout(roadtripSuspensionIgnitionTimer);
+    roadtripSuspensionIgnitionTimer = null;
+    [roadtripDemeritStatus, roadtripReenter].forEach(function (node) {
+      if (node) node.classList.remove("suspension-ignition-blocked");
+    });
+  }
+  function pulseRoadtripSuspensionIgnition() {
+    roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
+    paintRoadtripInvite();
+    paintRoadtripScore();
+    clearRoadtripSuspensionIgnitionPulse();
+    void room.getBoundingClientRect();
+    [roadtripDemeritStatus, roadtripReenter].forEach(function (node) {
+      if (node) node.classList.add("suspension-ignition-blocked");
+    });
+    roadtripSuspensionIgnitionTimer = setTimeout(clearRoadtripSuspensionIgnitionPulse, 1050);
+  }
+  [roadtripDemeritStatus, roadtripReenter].forEach(function (node) {
+    if (!node) return;
+    node.addEventListener("animationend", function (event) {
+      if (event.animationName === "entrance-roadtrip-suspension-blocked") {
+        node.classList.remove("suspension-ignition-blocked");
+      }
+    });
+  });
   function roadtripDemeritsForSpeed(overLimit) {
     overLimit = Math.max(0, Math.floor(Number(overLimit) || 0));
     if (!overLimit) return 0;
@@ -36173,7 +36216,7 @@ window.__entranceRoomOpen = false;
     var grade = roadtripElement("entrance-roadtrip-grade");
     var demeritLabel = roadtripElement("entrance-roadtrip-demerit-label");
     var demeritPoints = roadtripElement("entrance-roadtrip-demerit-points");
-    var demeritStatus = roadtripElement("entrance-roadtrip-demerit-status");
+    var demeritStatus = roadtripDemeritStatus;
     var lang = document.documentElement.lang === "cs" ? "cs" : "en";
     var dict = typeof T === "object" && T[lang] ? T[lang] : null;
     var pointsUnit = dict && dict.entrance_roadtrip_points_short ? dict.entrance_roadtrip_points_short : "pts";
@@ -39990,6 +40033,10 @@ window.__entranceRoomOpen = false;
       playPorschePropSound(action, porscheState.trunkOpen);
     }
     else if (action === "engine") {
+      if (!porscheState.engineOn && syncRoadtripDemeritState()) {
+        pulseRoadtripSuspensionIgnition();
+        return true;
+      }
       porscheState.engineOn = !porscheState.engineOn;
       clearPorscheClutchEngagement(true);
       if (porscheState.engineOn) {

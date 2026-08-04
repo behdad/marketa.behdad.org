@@ -17,7 +17,7 @@ var HARNESS = [
   'function labels(){return window.__lowerPortalContextMenu?window.__lowerPortalContextMenu():[];}',
   'var cases=[',
   ' ["kitchen","kitchen-bathroom-marker",function(){return window.__bathroomRoomState().open;},function(){window.__closeBathroomRoom();}],',
-  ' ["garden","garden-dungeon-marker",function(){return window.__princeState().basement;},function(){click("prince-basement-close");}],',
+  ' ["garden","garden-dungeon-marker",function(){return window.__princeState().basement;},function(){window.__closeMonitorPrince();}],',
   ' ["cuddly","cuddly-cinema-ticket",function(){return window.__cinemaRoomState().open;},function(){window.__closeCinemaRoom();}],',
   ' ["office","office-bedroom-marker",function(){return window.__bedroomRoomState().open;},function(){window.__closeBedroomRoom();}],',
   ' ["balcony","balcony-entrance-marker",function(){return window.__entranceRoomState().open;},function(){window.__closeEntranceRoom();}]',

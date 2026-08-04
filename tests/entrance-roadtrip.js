@@ -963,7 +963,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     ensureEngine();
     window.__entranceRoadtripStart();
     window.__entranceDriveSetMotion(100, 3);
-    document.getElementById("entrance-room-close").click();
+    document.getElementById("hunt-floor-btn").click();
+    var floorControlExit = copy(state());
+    await sleep(760);
+    window.__openEntranceRoom();
+    await sleep(30);
+    window.__openEntrancePorscheDriveHud();
+    ensureEngine();
+    window.__entranceRoadtripStart();
+    window.__entranceDriveSetMotion(100, 3);
+    window.__exitEntranceRoadtrip();
     var closeControlExit = copy(state());
     step(250);
     var closeControlRolling = copy(state());
@@ -982,6 +991,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     pressKey("Escape");
     var thirdEscape = copy(state());
     report.steps.exitLadder = {
+      floorControl: floorControlExit,
       closeControl: closeControlExit,
       rolling: closeControlRolling,
       streetAfterExit: streetAfterExit,
@@ -1628,6 +1638,10 @@ check(steering && steering.after.state.drive.roadtrip.playerLane < steering.befo
   "left steering moves the world right without triggering street indicator flourishes on the highway",
   steering);
 var exitLadder = s.exitLadder;
+check(exitLadder && !exitLadder.floorControl.open && !exitLadder.floorControl.drive.roadtrip.active &&
+  exitLadder.floorControl.drive.roadtrip.paused,
+  "the shared Up control returns upstairs while preserving the paused highway run",
+  exitLadder && exitLadder.floorControl);
 check(exitLadder && exitLadder.closeControl.open && exitLadder.closeControl.drive.hud &&
   exitLadder.closeControl.car.engineOn && !exitLadder.closeControl.drive.roadtrip.active &&
   !exitLadder.closeControl.drive.roadtrip.accepted && !exitLadder.closeControl.drive.roadtrip.invitationVisible &&
@@ -1635,7 +1649,7 @@ check(exitLadder && exitLadder.closeControl.open && exitLadder.closeControl.driv
   exitLadder.closeControl.drive.roadtrip.exitUntilStop &&
   !exitLadder.rolling.drive.roadtrip.active && exitLadder.rolling.drive.roadtrip.exitUntilStop &&
   exitLadder.rolling.drive.roadtrip.reentryVisible,
-  "the highway close control returns to the street HUD with Road Trip available without auto-resuming",
+  "the highway exit returns to the street HUD with Road Trip available without auto-resuming",
   exitLadder && { closeControl: exitLadder.closeControl, rolling: exitLadder.rolling });
 check(exitLadder && exitLadder.streetAfterExit && !exitLadder.streetAfterExit.drive.roadtrip.active &&
   !exitLadder.streetAfterExit.drive.roadtrip.accepted && !exitLadder.streetAfterExit.drive.roadtrip.exitUntilStop &&

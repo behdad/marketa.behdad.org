@@ -21,8 +21,8 @@ var HARNESS = [
   ' var roster=document.querySelector(".roster-panel"),rosterToggle=document.querySelector(".roster-toggle"),rosterBackdrop=document.querySelector(".roster-backdrop");roster.classList.add("show");rosterBackdrop.classList.add("show");rosterToggle.classList.add("avail");',
   ' var badge=surface("msg-badge show"),coach=surface("msg-badge-coach show"),thumb=surface("msg-thumb show"),call=surface("call-ring show");',
   ' key("ArrowDown");await sleep(80);',
-  ' var roomBox=room.getBoundingClientRect(),viewBox=viewport.getBoundingClientRect(),kitchenBox=document.getElementById("stage-kitchen").getBoundingClientRect(),bathroomCloseStyle=getComputedStyle(document.getElementById("bathroom-room-close")),cinemaCloseStyle=getComputedStyle(document.getElementById("cinema-room-close")),princeCloseStyle=getComputedStyle(document.getElementById("prince-basement-close"));',
-  ' report.steps.down={state:window.__bathroomRoomState(),room:window.currentStageName,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("bathroom-room-open"),geometry:{room:[roomBox.left,roomBox.top,roomBox.width,roomBox.height],viewport:[viewBox.left,viewBox.top,viewBox.width,viewBox.height],kitchenBottom:kitchenBox.bottom,controls:{bathroom:[parseFloat(bathroomCloseStyle.width),parseFloat(bathroomCloseStyle.height),parseFloat(bathroomCloseStyle.right),parseFloat(bathroomCloseStyle.top)],cinema:[parseFloat(cinemaCloseStyle.width),parseFloat(cinemaCloseStyle.height),parseFloat(cinemaCloseStyle.right),parseFloat(cinemaCloseStyle.top)],prince:[parseFloat(princeCloseStyle.width),parseFloat(princeCloseStyle.height),parseFloat(princeCloseStyle.right),parseFloat(princeCloseStyle.top)]}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility],images:room.querySelectorAll("img").length};',
+  ' var roomBox=room.getBoundingClientRect(),viewBox=viewport.getBoundingClientRect(),kitchenBox=document.getElementById("stage-kitchen").getBoundingClientRect(),floorButton=document.getElementById("hunt-floor-btn"),floorBox=floorButton.getBoundingClientRect(),dotsBox=document.getElementById("hunt-dots").getBoundingClientRect();',
+  ' report.steps.down={state:window.__bathroomRoomState(),room:window.currentStageName,covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("bathroom-room-open"),geometry:{room:[roomBox.left,roomBox.top,roomBox.width,roomBox.height],viewport:[viewBox.left,viewBox.top,viewBox.width,viewBox.height],kitchenBottom:kitchenBox.bottom,floor:{mark:floorButton.textContent,label:floorButton.getAttribute("aria-label"),gap:floorBox.left-dotsBox.right}},roster:[getComputedStyle(rosterToggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(rosterBackdrop).visibility],messages:[getComputedStyle(badge).visibility,getComputedStyle(coach).visibility,getComputedStyle(thumb).visibility,getComputedStyle(call).visibility],images:room.querySelectorAll("img").length};',
   ' var props=Array.from(room.querySelectorAll("[data-bath-action]")),propHitsBefore=window.__bathroomInteractionState().hits;',
   ' props.forEach(function(el,index){click(el);keyOn(el,index%2?" ":"Enter");});report.steps.props={count:props.length,targets:props.map(function(el){return [el.id,el.getAttribute("data-bath-action")];}),before:propHitsBefore,state:window.__bathroomInteractionState()};window.__resetBathroomProps();',
   ' var tub=document.getElementById("bathroom-tub"),drain=document.getElementById("bathroom-tub-drain-action"),bubbles=Array.from(room.querySelectorAll("[data-bath-bubble]"));click(tub);var tubFilling=window.__bathroomInteractionState();await sleep(1200);var bubbleStart=window.__bathroomInteractionState();bubbles.forEach(click);var bubbleDone=window.__bathroomInteractionState();click(tub);var bodyRepeat=window.__bathroomInteractionState();click(drain);var tubDraining=window.__bathroomInteractionState();await sleep(800);var bubbleReset=window.__bathroomInteractionState();report.steps.bubbles={count:bubbles.length,hits:bubbles.map(function(el){var hit=el.querySelector(".bathroom-bubble-hit");return [el.id,!!hit,hit&&getComputedStyle(hit).r];}),filling:tubFilling,bodyRepeat:bodyRepeat,draining:tubDraining,start:bubbleStart.bubbles,done:bubbleDone.bubbles,reset:bubbleReset.bubbles};',
@@ -40,7 +40,7 @@ var HARNESS = [
   ' dblclick(document.getElementById("kitchen-pan-1"));await sleep(30);report.steps.interactive=window.__bathroomRoomState();',
   ' dblclick(document.getElementById("kitchen-wall"));await sleep(80);report.steps.mouse=window.__bathroomRoomState();',
   ' touchup(document.getElementById("kitchen-wall"));await sleep(20);touchup(document.getElementById("kitchen-wall"));await sleep(80);report.steps.touch=window.__bathroomRoomState();',
-  ' window.__openBathroomRoom();await sleep(60);click(document.getElementById("bathroom-room-close"));await sleep(760);report.steps.dismiss=window.__bathroomRoomState();',
+  ' window.__openBathroomRoom();await sleep(60);click(document.getElementById("hunt-floor-btn"));await sleep(760);report.steps.dismiss=window.__bathroomRoomState();',
   ' window.__openBathroomRoom();await sleep(60);window.goToStage("office");await sleep(80);report.steps.navigate={state:window.__bathroomRoomState(),room:window.currentStageName};window.goToStage("kitchen");',
   ' var times=[],oldStep=window.__calStepTime;window.__calStepTime=function(n){times.push(n);};key("ArrowDown",{shiftKey:true});window.__calStepTime=oldStep;report.steps.shift={times:times,state:window.__bathroomRoomState()};',
   ' window.__secondRound=true;document.getElementById("stage-kitchen").classList.add("dusk");var mixStarted=window.__makeCocktailHere();var mixBefore=window.__ambientMaking();window.__openBathroomRoom();await sleep(30);report.steps.barLeak={started:mixStarted,before:mixBefore,after:window.__ambientMaking(),userMixing:window.__userMixing(),sfxAllowed:window.__bartenderSfxAllowed("kitchen-bartender")};key("ArrowUp");await sleep(760);',
@@ -70,14 +70,11 @@ check(s.down && s.down.geometry &&
   s.down.geometry.room.every(function (value, index) { return Math.abs(value - s.down.geometry.viewport[index]) < 0.7; }) &&
   s.down.geometry.kitchenBottom <= s.down.geometry.viewport[1] + s.down.geometry.viewport[3] * 0.05,
   "entry completes the downward pan while preserving Kitchen / Bar above", s.down && s.down.geometry);
-check(s.down && s.down.geometry && s.down.geometry.controls &&
-  s.down.geometry.controls.bathroom.every(function (value, index) {
-    return Math.abs(value - s.down.geometry.controls.cinema[index]) < 0.7 &&
-      Math.abs(value - s.down.geometry.controls.prince[index]) < 0.7;
-  }) &&
-  s.down.geometry.controls.bathroom[2] <= 8.5 && s.down.geometry.controls.bathroom[3] <= 8.5,
-  "all lower rooms share one tightly tucked close-control geometry",
-  s.down && s.down.geometry && s.down.geometry.controls);
+check(s.down && s.down.geometry && s.down.geometry.floor &&
+  s.down.geometry.floor.mark === "↑" && s.down.geometry.floor.label === "Go upstairs" &&
+  s.down.geometry.floor.gap >= 6,
+  "the shared Up control sits beside the room dots",
+  s.down && s.down.geometry && s.down.geometry.floor);
 check(s.down && s.down.roster.every(function (value) { return value === "hidden"; }),
   "Who's here controls and panel hide while the bathroom owns the viewport", s.down && s.down.roster);
 check(s.down && s.down.messages.every(function (value) { return value === "hidden"; }),
@@ -171,7 +168,7 @@ check(s.interactive && !s.interactive.open && s.mouse && !s.mouse.open && s.touc
   "kitchen props and bare background no longer open Bathroom",
   { interactive: s.interactive, mouse: s.mouse, touch: s.touch });
 check(s.dismiss && !s.dismiss.open && s.dismiss.hidden,
-  "the visible dismiss control closes and settles the room", s.dismiss);
+  "the shared Up control closes and settles the room", s.dismiss);
 check(s.navigate && !s.navigate.state.open && s.navigate.room === "office",
   "ordinary room navigation closes the bathroom", s.navigate);
 check(s.shift && s.shift.times.join(",") === "-1" && !s.shift.state.open,

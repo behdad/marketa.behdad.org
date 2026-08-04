@@ -1261,7 +1261,7 @@ if (process.argv.indexOf("--source-only") >= 0) {
   process.exit(0);
 }
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 7500, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 3500, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,

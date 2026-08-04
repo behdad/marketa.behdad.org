@@ -66,6 +66,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         escapeSpeed: trip().policeEscapeSpeed,
         pursuitSpeed: trip().policePursuitSpeed,
         escapeDistance: trip().policeEscapeDistance,
+        escapeHoldSeconds: trip().policeEscapeHoldSeconds,
         stoppedBeat: trip().policeStoppedBeat,
         arrestDuration: trip().policeArrestDuration,
         speedSign: !!document.getElementById("entrance-roadtrip-speed-90"),
@@ -205,10 +206,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       prepareEncounter();
       var twoHundredDetection = meetPolice(200);
       window.__entranceRoadtripSetDistance(twoHundredDetection.police.stationAt + 30);
-      window.__entranceRoadtripPoliceStep(200, 6);
+      window.__entranceRoadtripPoliceStep(200, 14);
       var twoHundredSix = copy(trip());
       window.__entranceRoadtripPoliceStep(200, 1);
       var twoHundredSeven = copy(trip());
+      window.__entranceRoadtripPoliceStep(200, 10);
+      var twoHundredHeld = copy(trip());
 
       prepareEncounter();
       var oneEightyDetection = meetPolice(180);
@@ -224,18 +227,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var fastPursuit = copy(trip());
       var fastInitialScale = fastPursuit.police.mirrorScale;
       var fastInitialSiren = fastPursuit.police.sirenLevel;
-      window.__entranceRoadtripPoliceStep(180, 5);
+      window.__entranceRoadtripPoliceStep(200, 15);
       var brieflyFast = copy(trip());
-      window.__entranceRoadtripPoliceStep(179, 1);
+      window.__entranceRoadtripPoliceStep(150, 5);
       var recovered = copy(trip());
       window.__flashCaptionKey("entrance_roadtrip_kiss", 10000, "entrance-roadtrip");
-      window.__entranceRoadtripPoliceStep(180, 20);
+      window.__entranceRoadtripPoliceStep(200, 17);
       report.steps.escaped = {
         detected: fastPursuit,
         initialScale: fastInitialScale,
         initialSiren: fastInitialSiren,
         twoHundredSix: twoHundredSix,
         twoHundredSeven: twoHundredSeven,
+        twoHundredHeld: twoHundredHeld,
         oneEightyNineteen: oneEightyNineteen,
         oneEightyTwenty: oneEightyTwenty,
         brieflyFast: brieflyFast,
@@ -347,11 +351,12 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.enforcementSpeed === 110 &&
   s.contract.firstDistance === 950 && s.contract.warningAhead === 240 &&
   s.contract.warningHeadroom === 3 && s.contract.repeatDistance === 1200 &&
-  s.contract.escapeSpeed === 180 && s.contract.pursuitSpeed === 170 &&
-  s.contract.escapeDistance === 55 && s.contract.stoppedBeat === 1.25 &&
+  s.contract.escapeSpeed === 180 && s.contract.pursuitSpeed === 180 &&
+  s.contract.escapeDistance === 80 && s.contract.escapeHoldSeconds === 10 &&
+  s.contract.stoppedBeat === 1.25 &&
   s.contract.arrestDuration === 5.8 &&
   s.contract.speedSign && s.contract.speedFurniture,
-  "the highway posts 90/110 enforcement and models the 180/170 escape pace", s.contract);
+  "the highway posts 90/110 enforcement and models a Sheriff capable of 180 km/h", s.contract);
 check(s.warning && s.warning.police.warningFlashCount === 3 &&
   s.warning.warningVisible === "visible" && !s.warning.roadsideVisible && s.warning.lead === 240 &&
   s.warning.lead / (s.contract.enforcementSpeed / 3.6) - 1.4 >= s.contract.warningHeadroom,
@@ -437,25 +442,31 @@ check(s.courtStop && s.courtStop.stopped.active &&
 check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase === "pursuit" &&
   s.escaped.detected.police.detectedSpeed === 180 &&
   s.escaped.twoHundredSix.police.phase === "pursuit" &&
-  s.escaped.twoHundredSix.police.escapeGap > 49 && s.escaped.twoHundredSix.police.escapeGap < 51 &&
+  s.escaped.twoHundredSix.police.escapeGap > 77 && s.escaped.twoHundredSix.police.escapeGap < 79 &&
   s.escaped.twoHundredSix.police.mirrorScale < s.escaped.initialScale &&
-  s.escaped.twoHundredSeven.police.phase === "cooldown" &&
+  s.escaped.twoHundredSeven.police.phase === "pursuit" &&
+  s.escaped.twoHundredSeven.police.escapeHoldElapsed > .5 &&
+  s.escaped.twoHundredSeven.police.escapeHoldElapsed < .7 &&
+  s.escaped.twoHundredHeld.police.phase === "cooldown" &&
   s.escaped.oneEightyNineteen.police.phase === "pursuit" &&
-  s.escaped.oneEightyNineteen.police.escapeGap > 52 && s.escaped.oneEightyNineteen.police.escapeGap < 54 &&
-  s.escaped.oneEightyTwenty.police.phase === "cooldown" &&
+  s.escaped.oneEightyNineteen.police.escapeGap === 0 &&
+  s.escaped.oneEightyTwenty.police.phase === "pursuit" &&
   s.escaped.brieflyFast.police.phase === "pursuit" &&
   s.escaped.brieflyFast.police.escapeGap > 0 &&
+  s.escaped.brieflyFast.police.escapeHoldElapsed > .5 &&
+  s.escaped.brieflyFast.police.escapeHoldElapsed < .7 &&
   s.escaped.brieflyFast.police.sirenLevel < s.escaped.initialSiren &&
   s.escaped.recovered.police.phase === "pursuit" &&
   s.escaped.recovered.police.escapeGap < s.escaped.brieflyFast.police.escapeGap &&
+  s.escaped.recovered.police.escapeHoldElapsed === 0 &&
   s.escaped.recovered.police.mirrorScale > s.escaped.brieflyFast.police.mirrorScale &&
   s.escaped.recovered.police.sirenLevel > s.escaped.brieflyFast.police.sirenLevel &&
-  s.escaped.recovered.police.refusalElapsed === 1 &&
+  s.escaped.recovered.police.refusalElapsed === 5 &&
   s.escaped.cleared.active && s.escaped.cleared.police.phase === "cooldown" &&
   s.escaped.cleared.police.escapes === 1 && !s.escaped.cleared.police.sirenActive &&
   !s.escaped.cleared.police.mirrorVisible && s.escaped.cleared.police.tickets === 0 &&
   /Police lost/.test(s.escaped.caption) && !s.escaped.flash,
-  "the 55 m gap takes about 20 seconds at 180 and 7 at 200, while 179 lets pursuit recover",
+  "the Sheriff reaches 180 and a ten-second breakaway must survive any slowdown before escape",
   s.escaped);
 check(s.severe && s.severe.detected.active && s.severe.detected.police.phase === "pursuit" &&
   s.severe.detected.police.detectedSpeed === 150 && s.severe.detected.police.courtRequired &&
@@ -489,7 +500,7 @@ check(s.refused && s.refused.capture.active && s.refused.capture.police.phase ==
   s.refused.trip.police.endReason === "refused" && s.refused.trip.police.fines === 560 &&
   s.refused.trip.police.scorePenalties === 1560 && !s.refused.trip.police.arrestVisible,
   "ordinary refusal captures without the court-only arrest scene", s.refused);
-check(s.czech && /180\+/.test(s.czech.escape) &&
+check(s.czech && /přes 180/.test(s.czech.escape) &&
   /^Překročení o \{over\} km\/h · pokuta \$\{fine\}\.$/.test(s.czech.fine) &&
   /^Překročení o \{over\} km\/h · předvolání k soudu\.$/.test(s.czech.court),
   "escape and recorded-overage outcomes are mirrored in natural Czech order", s.czech);

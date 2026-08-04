@@ -34739,8 +34739,9 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_TOLERANCE = 20;
   var ROADTRIP_POLICE_ENFORCE_SPEED = ROADTRIP_SPEED_LIMIT + ROADTRIP_POLICE_TOLERANCE;
   var ROADTRIP_POLICE_ESCAPE_SPEED = 180;
-  var ROADTRIP_POLICE_PURSUIT_SPEED = 170;
-  var ROADTRIP_POLICE_ESCAPE_DISTANCE = 55;
+  var ROADTRIP_POLICE_PURSUIT_SPEED = 180;
+  var ROADTRIP_POLICE_ESCAPE_DISTANCE = 80;
+  var ROADTRIP_POLICE_ESCAPE_HOLD_SECONDS = 10;
   var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
   var ROADTRIP_POLICE_ROADSIDE_MIRROR_DISTANCE = 62;
   var ROADTRIP_POLICE_ROADSIDE_JOIN_DISTANCE = 24;
@@ -34855,6 +34856,7 @@ window.__entranceRoomOpen = false;
       refusalElapsed: 0,
       refusalDistance: 0,
       escapeGap: 0,
+      escapeHoldElapsed: 0,
       escapes: 0,
       mirrorScale: 0,
       captureElapsed: 0,
@@ -35814,6 +35816,7 @@ window.__entranceRoomOpen = false;
     police.refusalElapsed = 0;
     police.refusalDistance = 0;
     police.escapeGap = 0;
+    police.escapeHoldElapsed = 0;
     police.escapes = 0;
     police.mirrorScale = 0;
     police.captureElapsed = 0;
@@ -35851,6 +35854,7 @@ window.__entranceRoomOpen = false;
     police.refusalElapsed = 0;
     police.refusalDistance = 0;
     police.escapeGap = 0;
+    police.escapeHoldElapsed = 0;
     police.mirrorScale = 0;
     police.captureElapsed = 0;
     police.captureDuration = 0;
@@ -35887,6 +35891,7 @@ window.__entranceRoomOpen = false;
     police.refusalElapsed = 0;
     police.refusalDistance = 0;
     police.escapeGap = 0;
+    police.escapeHoldElapsed = 0;
     police.mirrorScale = 0;
     police.captureElapsed = 0;
     police.captureDuration = 0;
@@ -35995,7 +36000,8 @@ window.__entranceRoomOpen = false;
   }
   function settleRoadtripPoliceEscape() {
     var police = roadtripState.police;
-    if (police.phase !== "pursuit" || police.escapeGap < ROADTRIP_POLICE_ESCAPE_DISTANCE) return false;
+    if (police.phase !== "pursuit" || police.escapeGap < ROADTRIP_POLICE_ESCAPE_DISTANCE ||
+        police.escapeHoldElapsed < ROADTRIP_POLICE_ESCAPE_HOLD_SECONDS) return false;
     police.escapes++;
     police.phase = "cooldown";
     police.cooldownElapsed = 0;
@@ -36032,6 +36038,7 @@ window.__entranceRoomOpen = false;
     police.refusalElapsed = 0;
     police.refusalDistance = 0;
     police.escapeGap = 0;
+    police.escapeHoldElapsed = 0;
     roadtripPoliceFeedback("entrance_roadtrip_police_pursuit", { speed: detectedSpeed }, 4400);
     updateRoadtripPoliceSiren();
     return true;
@@ -36170,16 +36177,29 @@ window.__entranceRoomOpen = false;
         settleRoadtripPoliceStop();
       } else {
         var pursuitSpeed = Math.abs(Number(driveState.speed) || 0);
-        if (pursuitSpeed >= ROADTRIP_POLICE_ESCAPE_SPEED) {
-          police.escapeGap += Math.max(0, pursuitSpeed - ROADTRIP_POLICE_PURSUIT_SPEED) / 3.6 * seconds;
+        if (pursuitSpeed > ROADTRIP_POLICE_PURSUIT_SPEED) {
+          var previousEscapeGap = police.escapeGap;
+          var escapeRate = (pursuitSpeed - ROADTRIP_POLICE_PURSUIT_SPEED) / 3.6;
+          police.escapeGap += escapeRate * seconds;
+          if (police.escapeGap >= ROADTRIP_POLICE_ESCAPE_DISTANCE) {
+            var thresholdSeconds = previousEscapeGap >= ROADTRIP_POLICE_ESCAPE_DISTANCE ? 0 :
+              (ROADTRIP_POLICE_ESCAPE_DISTANCE - previousEscapeGap) / escapeRate;
+            police.escapeHoldElapsed += Math.max(0, seconds - thresholdSeconds);
+          } else {
+            police.escapeHoldElapsed = 0;
+          }
         } else {
+          police.escapeHoldElapsed = 0;
           police.escapeGap = Math.max(0, police.escapeGap -
             (ROADTRIP_POLICE_ESCAPE_SPEED - pursuitSpeed +
               ROADTRIP_POLICE_ESCAPE_SPEED - ROADTRIP_POLICE_PURSUIT_SPEED) / 3.6 * seconds);
-          police.refusalElapsed += seconds;
-          police.refusalDistance += distance;
+          if (pursuitSpeed < ROADTRIP_POLICE_ESCAPE_SPEED) {
+            police.refusalElapsed += seconds;
+            police.refusalDistance += distance;
+          }
         }
-        if (police.escapeGap >= ROADTRIP_POLICE_ESCAPE_DISTANCE) {
+        if (police.escapeGap >= ROADTRIP_POLICE_ESCAPE_DISTANCE &&
+            police.escapeHoldElapsed >= ROADTRIP_POLICE_ESCAPE_HOLD_SECONDS) {
           settleRoadtripPoliceEscape();
         } else if (police.refusalElapsed >= ROADTRIP_POLICE_REFUSAL_SECONDS ||
             police.refusalDistance >= ROADTRIP_POLICE_REFUSAL_DISTANCE) {
@@ -39425,6 +39445,7 @@ window.__entranceRoomOpen = false;
           policeEscapeSpeed: ROADTRIP_POLICE_ESCAPE_SPEED,
           policePursuitSpeed: ROADTRIP_POLICE_PURSUIT_SPEED,
           policeEscapeDistance: ROADTRIP_POLICE_ESCAPE_DISTANCE,
+          policeEscapeHoldSeconds: ROADTRIP_POLICE_ESCAPE_HOLD_SECONDS,
           policeStoppedBeat: ROADTRIP_POLICE_STOPPED_BEAT_SECONDS,
           policeArrestDuration: ROADTRIP_POLICE_ARREST_SECONDS,
           police: {
@@ -39450,6 +39471,7 @@ window.__entranceRoomOpen = false;
             refusalElapsed: roadtripState.police.refusalElapsed,
             refusalDistance: roadtripState.police.refusalDistance,
             escapeGap: roadtripState.police.escapeGap,
+            escapeHoldElapsed: roadtripState.police.escapeHoldElapsed,
             escapeRatio: roadtripPoliceEscapeRatio(),
             escapes: roadtripState.police.escapes,
             captureElapsed: roadtripState.police.captureElapsed,
@@ -41172,7 +41194,7 @@ var T = {
       entrance_roadtrip_police_clear: "Police passed · within the 110 km/h tolerance.",
       entrance_roadtrip_police_pursuit: "Clocked at {speed} km/h · pull onto the right shoulder and stop.",
       entrance_roadtrip_police_pull_over: "Police behind · pull onto the right shoulder and stop.",
-      entrance_roadtrip_police_escape: "Police receding · hold 180+ to lose them.",
+      entrance_roadtrip_police_escape: "Police receding · hold above 180 to lose them.",
       entrance_roadtrip_police_escaped: "Police lost · sirens fading away.",
       entrance_roadtrip_police_capture: "Police closing in · braking override engaged.",
       entrance_roadtrip_police_stopped: "Stopped · police at the window.",
@@ -42361,7 +42383,7 @@ var T = {
       entrance_roadtrip_police_clear: "Policie za tebou · do 110 km/h bez postihu.",
       entrance_roadtrip_police_pursuit: "Naměřeno {speed} km/h · zajeď na pravou krajnici a zastav.",
       entrance_roadtrip_police_pull_over: "Policie za tebou · zajeď na pravou krajnici a zastav.",
-      entrance_roadtrip_police_escape: "Policie se vzdaluje · drž 180+ a setřes ji.",
+      entrance_roadtrip_police_escape: "Policie se vzdaluje · drž přes 180 a setřes ji.",
       entrance_roadtrip_police_escaped: "Policie setřesena · siréna utichá.",
       entrance_roadtrip_police_capture: "Policie tě dostihla · vůz nuceně zpomaluje.",
       entrance_roadtrip_police_stopped: "Zastaveno · policie je u okénka.",

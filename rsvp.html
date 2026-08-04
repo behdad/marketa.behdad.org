@@ -923,7 +923,13 @@ footer{margin-top:2.6rem}
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;
   letter-spacing:.8px;
 }
-#entrance-roadtrip-score{font-size:10.5px;letter-spacing:.25px}
+#entrance-roadtrip-speed{font-size:16px;letter-spacing:.15px}
+#entrance-roadtrip-speed[data-roadtrip-speed-band="safe"]{fill:#8fd39b}
+#entrance-roadtrip-speed[data-roadtrip-speed-band="warning"]{fill:#f2cf73}
+#entrance-roadtrip-speed[data-roadtrip-speed-band="danger"]{fill:#ed837d}
+#entrance-roadtrip-speed[data-roadtrip-speed-band="escape"]{fill:#a83d46;animation:entrance-roadtrip-speed-pulse .9s ease-in-out infinite alternate}
+#entrance-roadtrip-score{font-size:6.5px;letter-spacing:.15px;fill:#f0d8b8}
+@keyframes entrance-roadtrip-speed-pulse{to{fill:#df5363}}
 #entrance-roadtrip-best{font-size:10px}
 #entrance-roadtrip-multiplier{font-size:13px;fill:#f2cf73}
 #entrance-roadtrip-grade{font-size:9px;letter-spacing:.25px;fill:#f0d8b8}
@@ -1226,6 +1232,7 @@ footer{margin-top:2.6rem}
   #entrance-drive-hud-svg.roadtrip-impact-bump,
   #entrance-drive-hud-svg.roadtrip-impact-heavy,
   #entrance-drive-hud-svg.roadtrip-shoulder-rumble{animation:none}
+  #entrance-roadtrip-speed[data-roadtrip-speed-band="escape"]{animation:none}
   #cinema-room .cinema-prop.reacting,#cinema-room.spraying #cinema-water-spray,
   #cinema-room.projector-shorted #cinema-screen-shell{animation:none}
 }
@@ -32235,7 +32242,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             </g>
             <g aria-hidden="true">
               <rect x="18" y="-111" width="250" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
-              <text id="entrance-roadtrip-score" class="entrance-roadtrip-hud-text" x="31" y="-87">0:00 · 0.0 km · 0 pts</text>
+              <text id="entrance-roadtrip-speed" class="entrance-roadtrip-hud-text" x="31" y="-91" data-roadtrip-speed-band="safe">0 km/h</text>
+              <text id="entrance-roadtrip-score" class="entrance-roadtrip-hud-text" x="31" y="-78">0:00 · 0.0 km · 0 pts</text>
               <rect x="412" y="-111" width="250" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
               <text id="entrance-roadtrip-grade" class="entrance-roadtrip-hud-text" x="425" y="-83">Sunday drive</text>
               <text id="entrance-roadtrip-best" class="entrance-roadtrip-hud-text" x="646" y="-96" text-anchor="end">★ 0</text>
@@ -35600,6 +35608,7 @@ window.__entranceRoomOpen = false;
     }, heavy ? 1160 : light ? 360 : 620);
   }
   function paintRoadtripScore() {
+    var speed = roadtripElement("entrance-roadtrip-speed");
     var score = roadtripElement("entrance-roadtrip-score");
     var best = roadtripElement("entrance-roadtrip-best");
     var multiplier = roadtripElement("entrance-roadtrip-multiplier");
@@ -35608,6 +35617,12 @@ window.__entranceRoomOpen = false;
     var dict = typeof T === "object" && T[lang] ? T[lang] : null;
     var pointsUnit = dict && dict.entrance_roadtrip_points_short ? dict.entrance_roadtrip_points_short : "pts";
     var scoreValue = Math.floor(Number(roadtripState.score) || 0);
+    var speedValue = Math.round(Math.abs(Number(driveState.speed) || 0));
+    if (speed) {
+      speed.textContent = speedValue + " km/h";
+      speed.setAttribute("data-roadtrip-speed-band", speedValue <= 100 ? "safe" :
+        speedValue <= 150 ? "warning" : speedValue < 180 ? "danger" : "escape");
+    }
     if (score) score.textContent = roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
       roadtripDistanceLabel(roadtripState.distance, lang) + " km · " + scoreValue + " " + pointsUnit;
     if (best) best.textContent = "★ " + Math.max(0, Math.floor(roadtripState.best));

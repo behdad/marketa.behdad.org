@@ -14,6 +14,7 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-furniture",
   "entrance-roadtrip-curve-signs",
   "entrance-roadtrip-entities",
+  "entrance-roadtrip-speed",
   "entrance-roadtrip-score",
   "entrance-roadtrip-best",
   "entrance-roadtrip-multiplier",
@@ -51,7 +52,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-drive-hud-svg", "entrance-roadtrip-world", "entrance-roadtrip-road",
     "entrance-roadtrip-lane-marks", "entrance-roadtrip-furniture", "entrance-roadtrip-entities",
     "entrance-roadtrip-curve-signs",
-    "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier", "entrance-roadtrip-grade",
+    "entrance-roadtrip-speed", "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier", "entrance-roadtrip-grade",
     "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later",
     "entrance-roadtrip-crack", "entrance-roadtrip-shatter", "entrance-roadtrip-mirror",
     "entrance-roadtrip-mirror-housing", "entrance-roadtrip-mirror-gasket",
@@ -319,6 +320,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         mirrorWinter: visiblePath(document.getElementById("entrance-roadtrip-mirror-winter"), hud)
       }
     };
+    function speedHudAt(value) {
+      window.__entranceDriveSetMotion(value, 4);
+      window.__refreshEntranceRoadtripHud();
+      var node = document.getElementById("entrance-roadtrip-speed");
+      return { text: node.textContent, band: node.getAttribute("data-roadtrip-speed-band") };
+    }
+    report.steps.speedHud = [speedHudAt(100), speedHudAt(101), speedHudAt(150),
+      speedHudAt(151), speedHudAt(179), speedHudAt(180)];
     window.__entranceDriveControl("throttle", false);
     window.__entranceDriveSetMotion(25, 6);
     step(20);
@@ -943,6 +952,11 @@ check(activation && activation.retained.roomArt.display !== "none" && activation
   activation.retained.spatial && activation.retained.spatial.anchor === "entrance-porsche" &&
   isFinite(activation.retained.spatial.pan),
   "roadtrip presentation retains scene/car geometry for localized Porsche audio", activation && activation.retained);
+check(s.speedHud && s.speedHud.map(function (row) { return row.band; }).join(" ") ===
+    "safe warning warning danger danger escape" &&
+  s.speedHud.map(function (row) { return row.text; }).join(" ") ===
+    "100 km/h 101 km/h 150 km/h 151 km/h 179 km/h 180 km/h",
+  "the dominant speed readout changes from green through gold and red to the 180+ escape band", s.speedHud);
 check(s.lowSpeedNeutral && s.lowSpeedNeutral.gear === 0 && s.lowSpeedNeutral.speed > 20,
   "the highway selects neutral before a too-slow upper gear can lug below idle", s.lowSpeedNeutral);
 check(s.shiftCoaching &&

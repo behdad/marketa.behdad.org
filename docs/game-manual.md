@@ -11,6 +11,8 @@ select what looks useful, and wander at your own pace.
 ## Start here
 
 1. Select **CLICK ME**. On a narrow phone, landscape orientation works best.
+   The first coach points out the clue line; select the scene or press `Enter`
+   to dismiss it.
 2. Follow the instruction above the scene. It always describes the next part
    of the current room's activity.
 3. Use the side arrows or room dots to move among rooms you have reached.

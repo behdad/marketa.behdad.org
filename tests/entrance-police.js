@@ -8,8 +8,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 <script>
 (function () {
   var report = { errors: [], steps: {} };
-  var frontFlashAnimationIds = new WeakMap();
-  var frontFlashAnimationSerial = 0;
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function state() { return window.__entranceRoomState(); }
@@ -49,18 +47,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var red = document.getElementById("entrance-roadtrip-police-front-flash-red");
     var blueStyle = getComputedStyle(blue);
     var redStyle = getComputedStyle(red);
-    var blueClock = blue.getAnimations()[0] || null;
-    var redClock = red.getAnimations()[0] || null;
-    function clockId(clock) {
-      if (!clock) return 0;
-      if (!frontFlashAnimationIds.has(clock)) {
-        frontFlashAnimationIds.set(clock, ++frontFlashAnimationSerial);
-      }
-      return frontFlashAnimationIds.get(clock);
-    }
     return {
       visible: group.getAttribute("visibility"),
       active: group.classList.contains("is-pursuing"),
+      phase: group.getAttribute("data-roadtrip-flash-phase") || "",
       transform: group.getAttribute("transform") || "",
       blueAnimation: blueStyle.animationName,
       redAnimation: redStyle.animationName,
@@ -69,15 +59,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       blueIterations: blueStyle.animationIterationCount,
       redIterations: redStyle.animationIterationCount,
       blueOpacity: Number(blueStyle.opacity),
-      redOpacity: Number(redStyle.opacity),
-      blueClockId: clockId(blueClock),
-      redClockId: clockId(redClock),
-      blueClockStart: blueClock ? Number(blueClock.startTime) : null,
-      redClockStart: redClock ? Number(redClock.startTime) : null,
-      blueClockTime: blueClock ? Number(blueClock.currentTime) : null,
-      redClockTime: redClock ? Number(redClock.currentTime) : null,
-      blueClockState: blueClock ? blueClock.playState : "",
-      redClockState: redClock ? redClock.playState : ""
+      redOpacity: Number(redStyle.opacity)
     };
   }
   function mirrorSample() {
@@ -542,7 +524,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripPoliceStep(0, .0009);
       var courtAfterTransition = copy(trip());
       var courtAfterTransitionFlashes = frontFlashSample();
-      window.__entranceRoadtripPoliceStep(0, 1);
+      window.__entranceRoadtripPoliceStep(0, .32);
+      var courtNextPhaseFlashes = frontFlashSample();
+      window.__entranceRoadtripPoliceStep(0, .68);
       var courtApproach = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 1.5);
       var courtKnock = copy(trip());
@@ -589,6 +573,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         atTransitionFlashes: courtAtTransitionFlashes,
         afterTransition: courtAfterTransition,
         afterTransitionFlashes: courtAfterTransitionFlashes,
+        nextPhaseFlashes: courtNextPhaseFlashes,
         approach: courtApproach,
         knock: courtKnock,
         card: courtCard,
@@ -1303,12 +1288,9 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.stopped.police.frontFlashesTransform === s.courtStop.stopped.police.frontTransform &&
   s.courtStop.stoppedFlashes.visible === "visible" && s.courtStop.stoppedFlashes.active &&
   s.courtStop.stoppedFlashes.transform === s.courtStop.stopped.police.frontTransform &&
-  s.courtStop.stoppedFlashes.blueAnimation === "entrance-roadtrip-police-mirror-flash-blue" &&
-  s.courtStop.stoppedFlashes.redAnimation === "entrance-roadtrip-police-mirror-flash-red" &&
-  s.courtStop.stoppedFlashes.blueDuration === "0.64s" &&
-  s.courtStop.stoppedFlashes.redDuration === "0.64s" &&
-  s.courtStop.stoppedFlashes.blueIterations === "infinite" &&
-  s.courtStop.stoppedFlashes.redIterations === "infinite" &&
+  s.courtStop.stoppedFlashes.blueAnimation === "none" &&
+  s.courtStop.stoppedFlashes.redAnimation === "none" &&
+  /^(blue|red)$/.test(s.courtStop.stoppedFlashes.phase) &&
   Math.abs(s.courtStop.stoppedFlashes.blueOpacity - s.courtStop.stoppedFlashes.redOpacity) > .7 &&
   s.courtStop.blockedThrottle && !s.courtStop.blockedRange && !s.courtStop.blockedMotion &&
   s.courtStop.driveBlocked.speed === 0 && s.courtStop.driveBlocked.gear === 0 &&
@@ -1370,29 +1352,24 @@ check(s.courtStop && s.courtStop.stopped.active &&
   "a court-level stop puts the patrol ahead before the summons and its next Road Trip starts fresh",
   s.courtStop);
 check(s.courtStop &&
-  s.courtStop.beforeTransitionFlashes.blueClockState === "running" &&
-  s.courtStop.atTransitionFlashes.blueClockState === "running" &&
-  s.courtStop.afterTransitionFlashes.blueClockState === "running" &&
-  s.courtStop.beforeTransitionFlashes.redClockState === "running" &&
-  s.courtStop.atTransitionFlashes.redClockState === "running" &&
-  s.courtStop.afterTransitionFlashes.redClockState === "running" &&
-  s.courtStop.beforeTransitionFlashes.blueClockStart === s.courtStop.atTransitionFlashes.blueClockStart &&
-  s.courtStop.beforeTransitionFlashes.blueClockStart === s.courtStop.afterTransitionFlashes.blueClockStart &&
-  s.courtStop.beforeTransitionFlashes.redClockStart === s.courtStop.atTransitionFlashes.redClockStart &&
-  s.courtStop.beforeTransitionFlashes.redClockStart === s.courtStop.afterTransitionFlashes.redClockStart &&
-  s.courtStop.atTransitionFlashes.blueClockTime >= s.courtStop.beforeTransitionFlashes.blueClockTime &&
-  s.courtStop.afterTransitionFlashes.blueClockTime >= s.courtStop.atTransitionFlashes.blueClockTime &&
-  s.courtStop.atTransitionFlashes.redClockTime >= s.courtStop.beforeTransitionFlashes.redClockTime &&
-  s.courtStop.afterTransitionFlashes.redClockTime >= s.courtStop.atTransitionFlashes.redClockTime &&
+  s.courtStop.arrestStart.police.frontFlashElapsed >=
+    s.courtStop.frontSettled.police.frontFlashElapsed &&
+  s.courtStop.afterTransition.police.frontFlashElapsed >=
+    s.courtStop.arrestStart.police.frontFlashElapsed &&
   s.courtStop.beforeTransitionFlashes.visible === "visible" &&
   s.courtStop.atTransitionFlashes.visible === "visible" &&
   s.courtStop.afterTransitionFlashes.visible === "visible" &&
   s.courtStop.beforeTransitionFlashes.active && s.courtStop.atTransitionFlashes.active &&
   s.courtStop.afterTransitionFlashes.active &&
+  s.courtStop.afterTransitionFlashes.blueAnimation === "none" &&
+  s.courtStop.afterTransitionFlashes.redAnimation === "none" &&
+  s.courtStop.nextPhaseFlashes.phase !== s.courtStop.afterTransitionFlashes.phase &&
+  s.courtStop.nextPhaseFlashes.blueOpacity === s.courtStop.afterTransitionFlashes.redOpacity &&
+  s.courtStop.nextPhaseFlashes.redOpacity === s.courtStop.afterTransitionFlashes.blueOpacity &&
   s.courtStop.afterTransition.police.phase === "arrest" &&
   s.courtStop.afterTransition.police.frontFlashesTransform ===
     s.courtStop.afterTransition.police.frontTransform,
-  "the front lightbar keeps one running red/blue clock across stopped-to-arrest",
+  "the front lightbar repaints from one simulation-time red/blue phase across stopped-to-arrest",
   {
     before: s.courtStop && s.courtStop.beforeTransitionFlashes,
     at: s.courtStop && s.courtStop.atTransitionFlashes,

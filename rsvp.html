@@ -35573,6 +35573,8 @@ window.__entranceRoomOpen = false;
   var roadtripPoliceRoadNode = null;
   var roadtripPoliceFrontNode = null;
   var roadtripPoliceFrontFlashNode = null;
+  var roadtripPoliceFrontFlashBlueNode = null;
+  var roadtripPoliceFrontFlashRedNode = null;
   var roadtripPoliceWarningNode = null;
   var roadtripPoliceWarningBeams = null;
   var roadtripPoliceMirrorNode = null;
@@ -35675,6 +35677,7 @@ window.__entranceRoomOpen = false;
       captureDuration: 0,
       captureStartSpeed: 0,
       stoppedElapsed: 0,
+      frontFlashElapsed: 0,
       stopInFront: false,
       stopMirrorBehind: ROADTRIP_POLICE_PARKED_BEHIND,
       stopMirrorRoadFraction: 1.08,
@@ -36442,6 +36445,10 @@ window.__entranceRoomOpen = false;
         "#entrance-roadtrip-police-mirror-flash-red");
       if (frontFlashBlue) frontFlashBlue.id = "entrance-roadtrip-police-front-flash-blue";
       if (frontFlashRed) frontFlashRed.id = "entrance-roadtrip-police-front-flash-red";
+      roadtripPoliceFrontFlashBlueNode = frontFlashBlue;
+      roadtripPoliceFrontFlashRedNode = frontFlashRed;
+      if (frontFlashBlue) frontFlashBlue.style.animation = "none";
+      if (frontFlashRed) frontFlashRed.style.animation = "none";
       roadtripPoliceFrontFlashNode.classList.add("is-pursuing");
       roadtripPoliceFrontFlashNode.setAttribute("visibility", "hidden");
       entities.appendChild(roadtripPoliceFrontFlashNode);
@@ -37560,6 +37567,7 @@ window.__entranceRoomOpen = false;
     police.captureDuration = 0;
     police.captureStartSpeed = 0;
     police.stoppedElapsed = 0;
+    police.frontFlashElapsed = 0;
     police.stopInFront = false;
     police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
     police.stopMirrorRoadFraction = 1.08;
@@ -37610,6 +37618,7 @@ window.__entranceRoomOpen = false;
     police.captureDuration = 0;
     police.captureStartSpeed = 0;
     police.stoppedElapsed = 0;
+    police.frontFlashElapsed = 0;
     police.stopInFront = false;
     police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
     police.stopMirrorRoadFraction = 1.08;
@@ -37650,6 +37659,7 @@ window.__entranceRoomOpen = false;
     police.courtRequired = false;
     police.impairedDriving = false;
     police.pursuitElapsed = 0;
+    police.frontFlashElapsed = 0;
     police.pursuitDistance = 0;
     police.refusalElapsed = 0;
     police.refusalDistance = 0;
@@ -38100,11 +38110,25 @@ window.__entranceRoomOpen = false;
     }
     if (roadtripPoliceFrontFlashNode && roadtripState.active && frontStop &&
         roadtripPoliceFrontNode && roadtripPoliceFrontNode.getAttribute("visibility") === "visible") {
+      var steadyFrontFlashes = !!(window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      var blueFrontFlash = Math.floor(police.frontFlashElapsed / .32) % 2 === 0;
+      if (roadtripPoliceFrontFlashBlueNode) {
+        roadtripPoliceFrontFlashBlueNode.style.opacity = steadyFrontFlashes ? ".72" :
+          (blueFrontFlash ? ".98" : ".1");
+      }
+      if (roadtripPoliceFrontFlashRedNode) {
+        roadtripPoliceFrontFlashRedNode.style.opacity = steadyFrontFlashes ? ".72" :
+          (blueFrontFlash ? ".1" : ".98");
+      }
+      roadtripPoliceFrontFlashNode.setAttribute("data-roadtrip-flash-phase",
+        steadyFrontFlashes ? "steady" : (blueFrontFlash ? "blue" : "red"));
       roadtripPoliceFrontFlashNode.setAttribute("transform",
         roadtripPoliceFrontNode.getAttribute("transform") || "");
       roadtripPoliceFrontFlashNode.setAttribute("visibility", "visible");
     } else if (roadtripPoliceFrontFlashNode) {
       roadtripPoliceFrontFlashNode.setAttribute("visibility", "hidden");
+      roadtripPoliceFrontFlashNode.removeAttribute("data-roadtrip-flash-phase");
       roadtripPoliceFrontFlashNode.removeAttribute("transform");
     }
     if (roadHost) {
@@ -38130,6 +38154,9 @@ window.__entranceRoomOpen = false;
       paintRoadtripArrest();
       updateRoadtripPoliceSiren();
       return;
+    }
+    if (["pursuit", "capture", "stopped", "arrest"].indexOf(police.phase) >= 0) {
+      police.frontFlashElapsed += seconds;
     }
     if (police.phase === "idle" && roadtripState.distance >= police.nextDistance) {
       beginRoadtripPoliceEncounter();
@@ -42948,6 +42975,7 @@ window.__entranceRoomOpen = false;
             captureDuration: roadtripState.police.captureDuration,
             captureStartSpeed: roadtripState.police.captureStartSpeed,
             stoppedElapsed: roadtripState.police.stoppedElapsed,
+            frontFlashElapsed: roadtripState.police.frontFlashElapsed,
             stopInFront: roadtripState.police.stopInFront,
             stopMirrorBehind: roadtripState.police.stopMirrorBehind,
             stopMirrorRoadFraction: roadtripState.police.stopMirrorRoadFraction,
@@ -43005,6 +43033,8 @@ window.__entranceRoomOpen = false;
               roadtripPoliceFrontFlashNode.classList.contains("is-pursuing")),
             frontFlashesTransform: roadtripPoliceFrontFlashNode ?
               (roadtripPoliceFrontFlashNode.getAttribute("transform") || "") : "",
+            frontFlashesPhase: roadtripPoliceFrontFlashNode ?
+              (roadtripPoliceFrontFlashNode.getAttribute("data-roadtrip-flash-phase") || "") : "",
             roadsideVisible: !!(roadtripPoliceRoadNode && roadtripPoliceRoadNode.getAttribute("visibility") !== "hidden"),
             mirrorVisible: !!(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("visibility") !== "hidden"),
             arrestVisible: !!(roadtripArrestNode && roadtripArrestNode.getAttribute("visibility") !== "hidden"),

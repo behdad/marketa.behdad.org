@@ -1305,12 +1305,21 @@ footer{margin-top:2.6rem}
 #entrance-drive-hud.glovebox-open #entrance-drive-glovebox-cavity{opacity:1}
 #entrance-drive-hud.glovebox-open #entrance-drive-glovebox-contents{opacity:1;transform:translateY(0);transition-delay:.12s}
 #entrance-drive-hud.glovebox-open #entrance-drive-glovebox-door{transform:scaleY(-.82)}
+#entrance-drive-shifter.rev-coach :is(#entrance-drive-manual-knob,#entrance-drive-auto-knob){
+  transform-box:fill-box;transform-origin:center;
+  animation:entrance-drive-shifter-rev-coach .62s ease-in-out infinite;
+}
+@keyframes entrance-drive-shifter-rev-coach{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.13)}
+}
 @media (prefers-reduced-motion:reduce){
   #entrance-drive-glovebox-cavity,#entrance-drive-glovebox-contents,#entrance-drive-glovebox-door,
   #entrance-drive-key-face,#entrance-drive-key-face-off,#entrance-drive-key-face-on{transition-duration:.01ms}
   #entrance-drive-hud:not(.drive-engine-on) #entrance-drive-key-led{animation:none;opacity:.72}
   #entrance-drive-ignition.shift-blocked #entrance-drive-key-face{animation:none}
   #entrance-drive-ignition.shift-blocked #entrance-drive-key-led{animation:none;opacity:1}
+  #entrance-drive-shifter.rev-coach :is(#entrance-drive-manual-knob,#entrance-drive-auto-knob){animation:none;opacity:.68}
   #entrance-roadtrip-reenter.suspension-ignition-blocked{animation:none}
 }
 .entrance-drive-key{
@@ -35284,6 +35293,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_AUTO_SHIFT_DWELL_MS = 550;
   var PORSCHE_AUTO_UPSHIFT_RPM = 5950;
   var PORSCHE_AUTO_KICKDOWN_MAX_RPM = 5600;
+  var PORSCHE_REV_SHIFT_PROMPT_RPM = 6500;
   var PORSCHE_AUTO_SHIFT_BLEND_MS = 320;
   function porscheDefaultTransmissionMode() {
     return "auto";
@@ -38818,6 +38828,13 @@ window.__entranceRoomOpen = false;
     if (roadtripState.active && roadtripState.police.phase === "pursuit" &&
         roadtripState.police.escapeGap > 0) return "entrance_roadtrip_police_escape";
     if (roadtripState.active && roadtripState.police.phase === "pursuit") return "entrance_roadtrip_police_pull_over";
+    if (porscheState.engineOn && driveState.rpm >= PORSCHE_REV_SHIFT_PROMPT_RPM &&
+        (porscheTransmission.mode === "auto" ?
+          porscheTransmission.range === "P" || porscheTransmission.range === "N" :
+          driveState.gear === 0)) {
+      return porscheTransmission.mode === "auto" ?
+        "entrance_drive_rev_shift_auto" : "entrance_drive_rev_shift_manual";
+    }
     if (roadtripState.active) {
       return porscheTransmission.mode === "manual" && roadtripShiftHintMs >= 850 && roadtripShiftHintKey ?
         roadtripShiftHintKey : "entrance_roadtrip_drive";
@@ -39262,6 +39279,11 @@ window.__entranceRoomOpen = false;
     paintPorscheTransmission();
     paintPorscheDriveAc();
     var rpm = Math.max(0, Math.min(8000, driveState.rpm));
+    if (driveShifter) driveShifter.classList.toggle("rev-coach",
+      porscheState.engineOn && rpm >= PORSCHE_REV_SHIFT_PROMPT_RPM &&
+      (porscheTransmission.mode === "auto" ?
+        porscheTransmission.range === "P" || porscheTransmission.range === "N" :
+        driveState.gear === 0));
     if (porsche) {
       var revVibration = Math.max(0, Math.min(1, (rpm - 750) / 7250));
       porsche.style.setProperty("--porsche-vibe-x", (.1 + revVibration * .24).toFixed(3) + "px");
@@ -44421,6 +44443,8 @@ var T = {
       entrance_drive_shift_up: "Shift ↑ · it wants another gear.",
       entrance_drive_shift_down: "Shift ↓ · give the engine some leverage.",
       entrance_drive_ignition_hint: "Press Enter to start. The key is on the left.",
+      entrance_drive_rev_shift_auto: "Shift into D to drive.",
+      entrance_drive_rev_shift_manual: "Shift into 1st to drive.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
       entrance_roadtrip_drive: "Highway run · dodge traffic; collect ♥️, 💋 & ∞.",
       entrance_roadtrip_unlocked: "One lap down · fancy a roadtrip?",
@@ -45653,6 +45677,8 @@ var T = {
       entrance_drive_shift_up: "Shift ↑ · chce další rychlost.",
       entrance_drive_shift_down: "Shift ↓ · dej motoru víc síly.",
       entrance_drive_ignition_hint: "Stiskni Enter a nastartuj. Klíček je vlevo.",
+      entrance_drive_rev_shift_auto: "Zařaď D a rozjeď se.",
+      entrance_drive_rev_shift_manual: "Zařaď jedničku a rozjeď se.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
       entrance_roadtrip_drive: "Jízda po dálnici · vyhýbej se provozu; sbírej ♥️, 💋 a ∞.",
       entrance_roadtrip_unlocked: "Jedno kolo za tebou · dáme si výlet?",

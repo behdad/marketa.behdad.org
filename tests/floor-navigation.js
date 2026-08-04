@@ -193,6 +193,19 @@ var harness = String.raw`<script>
     document.dispatchEvent(new KeyboardEvent("keyup", {
       key: "Shift", code: "ShiftLeft", bubbles: true, cancelable: true
     }));
+    var coach = document.getElementById("hunt-floor-coach");
+    coach.hidden = false;
+    window.__entranceDriveRange("D");
+    window.__entranceRoadtripStart();
+    await sleep(30);
+    check("the Up coach stays out of the active Road Trip",
+      getComputedStyle(coach).display === "none" && !coach.hidden,
+      { display: getComputedStyle(coach).display, hidden: coach.hidden });
+    window.__hideEntrancePorscheDriveHud();
+    await sleep(30);
+    check("the preserved Up coach returns after Road Trip",
+      getComputedStyle(coach).display !== "none" && !coach.hidden,
+      { display: getComputedStyle(coach).display, hidden: coach.hidden });
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

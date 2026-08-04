@@ -78,6 +78,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       key: key, bubbles: true, cancelable: true
     }));
   }
+  function pressDocumentKey(key) {
+    document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: key, bubbles: true, cancelable: true
+    }));
+  }
   function releaseKey(key) {
     (document.activeElement || document).dispatchEvent(new KeyboardEvent("keyup", {
       key: key, bubbles: true, cancelable: true
@@ -253,6 +258,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setBalconyOvercast(true, "test");
     window.__setBalconyRain(true, "test");
     window.__openEntrancePorscheDriveHud();
+    var normalHudEnter = { before: copy(state()) };
+    pressDocumentKey("Enter");
+    normalHudEnter.started = copy(state());
+    pressDocumentKey("Enter");
+    normalHudEnter.stopped = copy(state());
+    report.steps.normalHudEnter = normalHudEnter;
     ensureEngine();
     window.__entranceDriveShift(6, true);
     window.__entranceDriveControl("throttle", true);
@@ -803,10 +814,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     reopened.czechLabel = reentryButton.textContent.trim();
     reopened.czechAria = reentryButton.getAttribute("aria-label");
     window.setLang("en");
-    reentryButton.focus();
-    reentryButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
+    var reentryBeforeEnter = copy(state());
+    pressDocumentKey("Enter");
+    var reentryEngineStarted = copy(state());
+    pressDocumentKey("Enter");
     var reentered = {
       roadtrip: copy(roadtrip()),
+      car: copy(state().car),
       classes: room.getAttribute("class"),
       viewBox: viewBox(),
       reentryVisible: reentryButton.classList.contains("show")
@@ -824,6 +839,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     step(20);
     report.steps.close = { before: closeBefore, closed: closed, parked: parked, reopened: reopened,
       closedWrapStart: closedWrapStart, ignoredClosedWrap: ignoredClosedWrap,
+      reentryBeforeEnter: reentryBeforeEnter, reentryEngineStarted: reentryEngineStarted,
       reentered: reentered, returned: returned, clickedReentry: clickedReentry };
 
     var bestBeforeDismiss = roadtrip().best;
@@ -982,6 +998,9 @@ check(/id="entrance-roadtrip-reenter"[^>]+data-aria-i="entrance_roadtrip_reenter
   /roadtripState\.everAccepted && !roadtripState\.accepted && !roadtripState\.active/.test(source) &&
   /bindRoadtripInviteControl\(roadtripReenter,[\s\S]{0,500}startRoadtrip\(true\)/.test(source),
   "accepted drivers get an explicit compact Road Trip re-entry control");
+check(/var roadtripReenterVisible = roadtripReenterNode && roadtripReenterNode\.classList\.contains\("show"\)/.test(source) &&
+  /event\.key === "Enter"[\s\S]{0,350}roadtripReenterVisible && document\.getElementById\("entrance-drive-hud"\)\.classList\.contains\("drive-engine-on"\)[\s\S]{0,180}roadtripReenterNode\.dispatchEvent/.test(source),
+  "document Enter starts compact Road Trip re-entry only after the engine is running");
 check(/roadtrip:\s*\{[\s\S]{0,220}unlocked: roadtripState\.unlocked,[\s\S]{0,100}accepted: false,[\s\S]{0,100}everAccepted: roadtripState\.everAccepted,/.test(source) &&
   /roadtripState\.accepted = false;\s*roadtripState\.invitationReady = false;\s*roadtripState\.invitationDistance = 0;\s*roadtripState\.invitationDismissed = false;/.test(source),
   "checkpoint capture preserves prior acceptance without authorizing an active highway session");
@@ -1018,6 +1037,13 @@ check(tireAudio && tireAudio.highway.tireGain > tireAudio.urban.tireGain &&
   "highway speed raises tire/wind beds, fast steering squeals, and shoulder surfaces grow rougher", tireAudio);
 
 var activation = s.activation;
+var normalHudEnter = s.normalHudEnter;
+check(normalHudEnter && !normalHudEnter.before.car.engineOn &&
+  !normalHudEnter.before.drive.roadtrip.reentryVisible && !normalHudEnter.before.drive.roadtrip.active &&
+  normalHudEnter.started.car.engineOn && !normalHudEnter.started.drive.roadtrip.active &&
+  !normalHudEnter.started.drive.roadtrip.reentryVisible &&
+  !normalHudEnter.stopped.car.engineOn && !normalHudEnter.stopped.drive.roadtrip.active,
+  "without the compact mark, document Enter retains the normal engine toggle", normalHudEnter);
 check(activation && activation.practice.some(function (row) { return row.practiceLaps === 1 && !row.active; }) &&
   !activation.practice.some(function (row) { return row.practiceLaps > 1; }) &&
   activation.offer.before.practiceLaps === 1 && activation.offer.before.unlocked &&
@@ -1349,14 +1375,19 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   close.reopened.label === "Road Trip" && close.reopened.czechLabel === "Výlet" && close.reopened.czechAria === "Výlet" &&
   (close.reopened.button.right <= close.reopened.steering.left || close.reopened.button.left >= close.reopened.steering.right ||
     close.reopened.button.bottom <= close.reopened.steering.top || close.reopened.button.top >= close.reopened.steering.bottom) &&
+  !close.reentryBeforeEnter.car.engineOn && !close.reentryBeforeEnter.drive.roadtrip.active &&
+  close.reentryBeforeEnter.drive.roadtrip.reentryVisible &&
+  close.reentryEngineStarted.car.engineOn && !close.reentryEngineStarted.drive.roadtrip.active &&
+  close.reentryEngineStarted.drive.roadtrip.reentryVisible &&
   close.reentered.roadtrip.active && close.reentered.roadtrip.accepted && close.reentered.roadtrip.everAccepted &&
+  close.reentered.car.engineOn &&
   close.reentered.roadtrip.distance === 0 && close.reentered.roadtrip.entityCount === 0 &&
   close.reentered.viewBox === "0 -120 680 340" && !close.reentered.reentryVisible &&
   close.returned.state.drive.hud && !close.returned.state.drive.roadtrip.active &&
   close.returned.state.drive.roadtrip.reentryVisible && close.returned.reentryVisible &&
   close.returned.reentryAriaHidden === "false" &&
   close.clickedReentry.drive.roadtrip.active && close.clickedReentry.drive.roadtrip.accepted,
-  "accepted drivers regain a non-overlapping bilingual Road Trip button that starts a fresh run after every exit", close);
+  "accepted drivers regain a non-overlapping bilingual Road Trip button; Enter starts the engine, then starts a fresh run", close);
 var dismiss = s.dismiss && s.dismiss.roadtrip;
 check(dismiss && !dismiss.active && dismiss.unlocked && dismiss.entityCount === 0 &&
   dismiss.everAccepted && !dismiss.reentryVisible &&

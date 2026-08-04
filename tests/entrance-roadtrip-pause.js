@@ -38,6 +38,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__openEntrancePorscheDriveHud();
     if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
     window.__entranceRoadtripStart();
+    window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(120, 3);
     window.__entranceRoadtripSpawn("deer", .5, 8);
     window.__entranceDriveStep(100);

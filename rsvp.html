@@ -34727,6 +34727,7 @@ window.__entranceRoomOpen = false;
   var lastDriveInstruction = "";
   var roadtripShiftHintKey = "";
   var roadtripShiftHintMs = 0;
+  var roadtripResumePending = false;
   var driveBatteryLevel = .75;
   var ROADTRIP_BEST_KEY = "entranceRoadtripBest:v2";
   var ROADTRIP_LEGACY_BEST_KEY = "entranceRoadtripBest:v1";
@@ -35057,10 +35058,12 @@ window.__entranceRoomOpen = false;
   function entranceDriveAudible() {
     return !!(porscheState.engineOn && window.__entranceRoomOpen &&
       document.visibilityState !== "hidden" && document.hasFocus() &&
+      (!roadtripState.active || !roadtripResumePending) &&
       !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
   }
   function roadtripSimulationAttended() {
-    return !roadtripState.active || (document.visibilityState !== "hidden" && document.hasFocus());
+    return !roadtripState.active || (!roadtripResumePending &&
+      document.visibilityState !== "hidden" && document.hasFocus());
   }
   function entranceDriveMusicWanted() {
     return !!(entranceDriveAudible() && driveState.hudOpen);
@@ -35076,7 +35079,7 @@ window.__entranceRoomOpen = false;
   }
   function entranceDriveAcWanted() {
     return !!(entranceDriveAcVisible() && document.visibilityState !== "hidden" &&
-      document.hasFocus() &&
+      document.hasFocus() && (!roadtripState.active || !roadtripResumePending) &&
       !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
   }
   function paintPorscheDriveAc() {
@@ -36728,6 +36731,29 @@ window.__entranceRoomOpen = false;
     paintRoadtripMirror();
     paintRoadtripPolice();
   }
+  function setRoadtripResumePending(pending) {
+    pending = !!(roadtripState.active && pending);
+    var changed = roadtripResumePending !== pending;
+    roadtripResumePending = pending;
+    room.classList.toggle("roadtrip-resume-pending", pending);
+    if (changed && roadtripState.active) syncPorscheDriveInstruction(true);
+    return changed;
+  }
+  function resumeRoadtripFromDrivingInput() {
+    if (!roadtripResumePending || !roadtripState.active || document.hidden || !document.hasFocus()) return false;
+    roadtripResumePending = false;
+    room.classList.remove("roadtrip-resume-pending");
+    driveLastTime = 0;
+    driveState.throttleHeldMs = 0;
+    driveState.brakeSpinChecked = false;
+    porscheKeyboardSteering.direction = 0;
+    porscheKeyboardSteering.authority = 0;
+    porscheKeyboardSteering.heldMs = 0;
+    syncPorscheDriveInstruction(true);
+    updatePorscheDriveAudio();
+    ensurePorscheDriveFrame();
+    return true;
+  }
   function resetRoadtripRun() {
     clearRoadtripEntities();
     roadtripState.playerLane = .5;
@@ -36759,9 +36785,10 @@ window.__entranceRoomOpen = false;
   }
   function parkRoadtrip(clearRun) {
     roadtripState.active = false;
+    roadtripResumePending = false;
     roadtripShiftHintKey = "";
     roadtripShiftHintMs = 0;
-    room.classList.remove("roadtrip-active");
+    room.classList.remove("roadtrip-active", "roadtrip-resume-pending");
     var world = roadtripElement("entrance-roadtrip-world");
     if (world) world.setAttribute("aria-hidden", "true");
     if (roadtripHeadlightGroup) roadtripHeadlightGroup.setAttribute("visibility", "hidden");
@@ -36787,6 +36814,15 @@ window.__entranceRoomOpen = false;
   }
   function exitRoadtrip() {
     if (!roadtripState.active) return false;
+    if (roadtripResumePending) {
+      cancelRoadtripPoliceEncounter();
+      parkRoadtrip(false);
+      resetRoadtripInvitationSession();
+      roadtripState.exitUntilStop = true;
+      syncPorscheDriveInstruction(true);
+      if (window.__checkpointChanged) window.__checkpointChanged();
+      return true;
+    }
     if (roadtripState.police.phase === "pursuit") {
       return beginRoadtripPoliceCapture("refused");
     }
@@ -36822,9 +36858,11 @@ window.__entranceRoomOpen = false;
     if (roadtripState.police.runEnded) resetRoadtripRun();
     roadtripState.active = true;
     paintRoadtripInvite();
+    roadtripResumePending = false;
     roadtripShiftHintKey = "";
     roadtripShiftHintMs = 0;
     room.classList.add("roadtrip-active");
+    room.classList.remove("roadtrip-resume-pending");
     ensureRoadtripScene();
     var world = roadtripElement("entrance-roadtrip-world");
     if (world) world.setAttribute("aria-hidden", "false");
@@ -36906,6 +36944,7 @@ window.__entranceRoomOpen = false;
   }
   function porscheDriveInstructionKey() {
     if (!driveState.hudOpen) return "lower_entrance";
+    if (roadtripState.active && roadtripResumePending) return "entrance_roadtrip_resume";
     if (roadtripState.active && roadtripState.police.phase === "capture") {
       return "entrance_roadtrip_police_capture";
     }
@@ -38099,7 +38138,9 @@ window.__entranceRoomOpen = false;
   function movePorscheTouchSteering(event) {
     if (event.pointerId !== porscheTouchSteering.pointerId) return false;
     var dx = event.clientX - porscheTouchSteering.startX;
+    var resumed = false;
     if (porscheTouchSteering.mode !== "steering" && Math.abs(dx) >= 10) {
+      resumed = resumeRoadtripFromDrivingInput();
       clearPorscheTouchHornTimers();
       stopPorscheHornSound();
       porscheTouchSteering.mode = "steering";
@@ -38107,7 +38148,8 @@ window.__entranceRoomOpen = false;
       signalPorscheSteering(dx < 0 ? "left" : "right");
     }
     if (porscheTouchSteering.mode === "steering") {
-      porscheTouchSteering.input = Math.max(-1, Math.min(1, dx / porscheTouchSteeringTravel()));
+      porscheTouchSteering.input = Math.max(-1, Math.min(1, dx / porscheTouchSteeringTravel())) *
+        (resumed ? PORSCHE_KEYBOARD_STEER_BASE : 1);
       driveState.steeringAngle = porscheTouchSteering.input * 18;
       paintPorscheDrivePosition();
       ensurePorscheDriveFrame();
@@ -38369,6 +38411,7 @@ window.__entranceRoomOpen = false;
   function setPorscheDriveHold(name, held) {
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     held = !!held;
+    if (held) resumeRoadtripFromDrivingInput();
     var wasHeld = driveState.holds[name];
     driveState.holds[name] = held;
     if ((name === "steerLeft" || name === "steerRight") && wasHeld !== held) {
@@ -38641,6 +38684,7 @@ window.__entranceRoomOpen = false;
     if (!event) return false;
     var key = String(event.key || "").toLowerCase();
     var code = String(event.code || "");
+    if (roadtripResumePending && down && event.repeat) return !!window.__entranceRoomOpen;
     var shiftKeyEvent = code === "ShiftLeft" || code === "ShiftRight" || key === "shift";
     if (shiftKeyEvent) {
       if (down && !event.repeat && window.__entranceRoomOpen && driveState.hudOpen) {
@@ -39262,6 +39306,9 @@ window.__entranceRoomOpen = false;
   // the street or building below it must leave the driving controls alive.
   // Only the HUD's own close button (or Esc/Backspace) dismisses it.
   function updatePorscheDriveLifecycle() {
+    if (roadtripState.active && (document.hidden || !document.hasFocus())) {
+      setRoadtripResumePending(true);
+    }
     updatePorscheIdle();
     updatePorscheDriveAudio();
     var unattendedRoadtrip = !roadtripSimulationAttended();
@@ -39438,6 +39485,7 @@ window.__entranceRoomOpen = false;
         tireMarks: tireMarks ? tireMarks.childNodes.length : 0,
         roadtrip: {
           active: roadtripState.active && room.classList.contains("roadtrip-active"),
+          resumePending: roadtripResumePending,
           exitUntilStop: roadtripState.exitUntilStop,
           playerLane: roadtripPlayerLane(),
           unlocked: roadtripState.unlocked,
@@ -41217,6 +41265,7 @@ var T = {
       entrance_drive_stalled: "You killed it. Restart the engine.",
       entrance_roadtrip_drive: "Highway run · dodge traffic; collect ♥️, 💋 & ∞.",
       entrance_roadtrip_unlocked: "One lap down · fancy a roadtrip?",
+      entrance_roadtrip_resume: "Roadtrip paused · steer or press a pedal to resume.",
       entrance_roadtrip_invite_title: "Let’s road trip!",
       entrance_roadtrip_invite_accept: "Take the highway",
       entrance_roadtrip_invite_later: "Later",
@@ -42407,6 +42456,7 @@ var T = {
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
       entrance_roadtrip_drive: "Jízda po dálnici · vyhýbej se provozu; sbírej ♥️, 💋 a ∞.",
       entrance_roadtrip_unlocked: "Jedno kolo za tebou · dáme si výlet?",
+      entrance_roadtrip_resume: "Jízda pozastavena · pokračuj volantem nebo pedálem.",
       entrance_roadtrip_invite_title: "Jedeme na výlet!",
       entrance_roadtrip_invite_accept: "Vyjet na dálnici",
       entrance_roadtrip_invite_later: "Později",

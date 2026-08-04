@@ -78,6 +78,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       key: key, bubbles: true, cancelable: true
     }));
   }
+  function releaseKey(key) {
+    (document.activeElement || document).dispatchEvent(new KeyboardEvent("keyup", {
+      key: key, bubbles: true, cancelable: true
+    }));
+  }
   function box(el) {
     var r = el.getBoundingClientRect();
     return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
@@ -430,12 +435,66 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     attended = true;
     window.dispatchEvent(new Event("focus"));
     await sleep(90);
-    var focusPauseResumed = copy(state());
+    var focusPauseWaiting = copy(state());
+    var focusPauseWaitingClass = room.classList.contains("roadtrip-resume-pending");
+    step(1000);
+    var focusPauseWaitingStep = copy(state());
+    (document.activeElement || document).dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowLeft", repeat: true, bubbles: true, cancelable: true
+    }));
+    var focusPauseRepeatedKey = copy(state());
+    pressKey("ArrowLeft");
+    var focusPauseKeyboardImmediate = copy(state());
+    step(20);
+    var focusPauseKeyboardStep = copy(state());
+    releaseKey("ArrowLeft");
+
+    attended = false;
+    window.dispatchEvent(new Event("blur"));
+    var focusPauseTouchStart = copy(state());
+    step(1000);
+    attended = true;
+    window.dispatchEvent(new Event("focus"));
+    await sleep(90);
+    var focusPauseTouchWaiting = copy(state());
+    var brakeControl = document.getElementById("entrance-drive-brake");
+    brakeControl.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true, cancelable: true, pointerId: 91, pointerType: "touch", isPrimary: true
+    }));
+    var focusPauseTouchImmediate = copy(state());
+    step(20);
+    brakeControl.dispatchEvent(new PointerEvent("pointerup", {
+      bubbles: true, cancelable: true, pointerId: 91, pointerType: "touch", isPrimary: true
+    }));
+    var focusPauseTouchStep = copy(state());
+
+    attended = false;
+    window.dispatchEvent(new Event("blur"));
+    attended = true;
+    window.dispatchEvent(new Event("focus"));
+    await sleep(40);
+    var focusPauseEscapeWaiting = copy(state());
+    pressKey("Escape");
+    var focusPauseEscapeAfter = copy(state());
     report.steps.focusPause = {
       start: focusPauseStart,
       end: focusPauseEnd,
-      resumed: focusPauseResumed
+      waiting: focusPauseWaiting,
+      waitingClass: focusPauseWaitingClass,
+      waitingStep: focusPauseWaitingStep,
+      repeatedKey: focusPauseRepeatedKey,
+      keyboardImmediate: focusPauseKeyboardImmediate,
+      keyboardStep: focusPauseKeyboardStep,
+      touchStart: focusPauseTouchStart,
+      touchWaiting: focusPauseTouchWaiting,
+      touchImmediate: focusPauseTouchImmediate,
+      touchStep: focusPauseTouchStep,
+      escapeWaiting: focusPauseEscapeWaiting,
+      escapeAfter: focusPauseEscapeAfter,
+      pauseClass: room.classList.contains("roadtrip-resume-pending")
     };
+    window.__entranceRoadtripStart();
+    window.__entranceDriveSetMotion(90, 3);
     window.__setBalconyRain(false, "test");
     window.__setBalconySnow(true, "test");
     await sleep(40);
@@ -1029,10 +1088,33 @@ check(focusPause &&
   focusPause.end.drive.roadtrip.score === focusPause.start.drive.roadtrip.score &&
   focusPause.end.drive.speed === focusPause.start.drive.speed &&
   Object.keys(focusPause.end.drive.holds).every(function (key) { return !focusPause.end.drive.holds[key]; }) &&
-  focusPause.resumed.drive.roadtrip.elapsedSeconds > focusPause.end.drive.roadtrip.elapsedSeconds &&
-  focusPause.resumed.drive.roadtrip.elapsedSeconds - focusPause.end.drive.roadtrip.elapsedSeconds < .3 &&
-  focusPause.resumed.drive.roadtrip.distance > focusPause.end.drive.roadtrip.distance,
-  "blur freezes the complete highway simulation, releases controls, and resumes without catch-up", focusPause);
+  focusPause.waiting.drive.roadtrip.resumePending && focusPause.waitingClass &&
+  focusPause.waiting.drive.instruction === "entrance_roadtrip_resume" &&
+  focusPause.waitingStep.drive.roadtrip.elapsedSeconds === focusPause.end.drive.roadtrip.elapsedSeconds &&
+  focusPause.waitingStep.drive.roadtrip.distance === focusPause.end.drive.roadtrip.distance &&
+  focusPause.waitingStep.drive.speed === focusPause.end.drive.speed &&
+  focusPause.repeatedKey.drive.roadtrip.resumePending &&
+  Object.keys(focusPause.repeatedKey.drive.holds).every(function (key) { return !focusPause.repeatedKey.drive.holds[key]; }) &&
+  !focusPause.keyboardImmediate.drive.roadtrip.resumePending &&
+  focusPause.keyboardImmediate.drive.roadtrip.elapsedSeconds === focusPause.waitingStep.drive.roadtrip.elapsedSeconds &&
+  focusPause.keyboardImmediate.drive.roadtrip.distance === focusPause.waitingStep.drive.roadtrip.distance &&
+  focusPause.keyboardImmediate.drive.speed === focusPause.waitingStep.drive.speed &&
+  focusPause.keyboardImmediate.drive.keyboardSteering.authority <= .3 &&
+  focusPause.keyboardStep.drive.roadtrip.elapsedSeconds > focusPause.keyboardImmediate.drive.roadtrip.elapsedSeconds &&
+  focusPause.keyboardStep.drive.roadtrip.elapsedSeconds - focusPause.keyboardImmediate.drive.roadtrip.elapsedSeconds <= .03 &&
+  Math.abs(focusPause.keyboardStep.drive.roadtrip.playerLane - focusPause.keyboardImmediate.drive.roadtrip.playerLane) < .02 &&
+  focusPause.touchWaiting.drive.roadtrip.resumePending &&
+  focusPause.touchWaiting.drive.roadtrip.elapsedSeconds === focusPause.touchStart.drive.roadtrip.elapsedSeconds &&
+  focusPause.touchWaiting.drive.roadtrip.distance === focusPause.touchStart.drive.roadtrip.distance &&
+  !focusPause.touchImmediate.drive.roadtrip.resumePending && focusPause.touchImmediate.drive.holds.brake &&
+  focusPause.touchImmediate.drive.speed === focusPause.touchWaiting.drive.speed &&
+  focusPause.touchStep.drive.speed > focusPause.touchImmediate.drive.speed - 3 &&
+  !focusPause.touchStep.drive.holds.brake &&
+  focusPause.escapeWaiting.drive.roadtrip.resumePending && focusPause.escapeWaiting.drive.roadtrip.active &&
+  !focusPause.escapeAfter.drive.roadtrip.active && !focusPause.escapeAfter.drive.roadtrip.resumePending &&
+  focusPause.escapeAfter.drive.hud && !focusPause.pauseClass,
+  "blur freezes the highway until a gentle fresh keyboard/touch driving input, while Escape exits from the waiting state",
+  focusPause);
 check(activation && activation.beforeClasses.indexOf("entrance-clouded") >= 0 &&
   activation.beforeClasses.indexOf("entrance-raining") >= 0 &&
   activation.beforeClasses.every(function (name) { return activation.roomClasses.indexOf(name) >= 0; }) &&

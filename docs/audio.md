@@ -185,6 +185,8 @@ leaving, dismissing the HUD, stopping/stalling the engine, hiding, or unfocusing
 closes only that bed. Speed gently raises its tempo and opens its low-pass filter, while RPM
 adds a smaller brightness lift. Its master follows `__songVolume()` so the music button and
 session master scale it independently of the Porsche engine/drivetrain bed.
+During an active Road Trip, returning focus keeps the simulation and all Porsche driving
+audio paused until a fresh steering or pedal input resumes both from a clean frame boundary.
 
 Fancy-Stupid's engine/drivetrain, driving loop, tire screech, and ABS chatter keep their
 authored source gains and then enter a car-only spatial output stage. Engine and tire noise

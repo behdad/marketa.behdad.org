@@ -1216,9 +1216,9 @@ check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74
   /id="entrance-roadtrip-mirror-gasket"[^>]+stroke="#13191c"/.test(source) &&
   /clipPath id="entrance-roadtrip-mirror-clip">\s*<path/.test(source),
   "the mirror uses a rounded charcoal trapezoidal housing, dark gasket, and matching reflection clip");
-check(/id="entrance-roadtrip-curve-sign-right"[\s\S]{0,260}M-7-28V-37Q-7-47 3-47H7M3-51L7-47L3-43[^>]+stroke="#17191b"[^>]+stroke-linecap="square"[^>]+stroke-linejoin="miter"/.test(source) &&
-  /id="entrance-roadtrip-curve-sign-left"[\s\S]{0,260}M7-28V-37Q7-47-3-47H-7M-3-51L-7-47L-3-43/.test(source),
-  "curve signs use contained, dark, sharp-cornered single-turn arrows");
+check(/id="entrance-roadtrip-curve-sign-right"[\s\S]{0,260}M-7-28C-7-39-3-46 7-50M1-52L7-50L5-44[^>]+stroke="#17191b"[^>]+stroke-linecap="round"[^>]+stroke-linejoin="round"/.test(source) &&
+  /id="entrance-roadtrip-curve-sign-left"[\s\S]{0,260}M7-28C7-39 3-46-7-50M-1-52L-7-50L-5-44/.test(source),
+  "curve signs use contained, dark, softened single-turn arrows");
 check(source.indexOf('id="entrance-roadtrip-winter"') < source.indexOf('id="entrance-roadtrip-road"'),
   "accumulated snow paints beneath the road so shoulder markings remain visible at the horizon");
 check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&

@@ -139,6 +139,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.unfocused = copy(trip().police);
       document.hasFocus = function () { return true; };
       window.dispatchEvent(new Event("focus"));
+      window.__entranceDriveControl("steerLeft", true);
+      window.__entranceDriveControl("steerLeft", false);
       await sleep(80);
       report.steps.refocused = copy(trip().police);
       window.__entranceRoadtripSetLane(2);
@@ -177,6 +179,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var courtPaused = copy(trip());
       document.hasFocus = function () { return true; };
       window.dispatchEvent(new Event("focus"));
+      window.__entranceDriveControl("steerLeft", true);
+      window.__entranceDriveControl("steerLeft", false);
       window.setLang("en");
       window.__entranceRoadtripPoliceStep(0, 2);
       var courtFade = copy(trip());
@@ -197,6 +201,39 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         returnOffer: copy(state()),
         hudOpen: state().drive.hud,
         caption: courtResolvedCaption
+      };
+
+      prepareEncounter();
+      meetPolice(190);
+      window.__entranceRoadtripSetLane(2);
+      setMotion(0, 0);
+      step(1000);
+      window.__entranceRoadtripPoliceStep(0, 1.5);
+      var exactlyHundredOver = copy(trip());
+
+      prepareEncounter();
+      meetPolice(191);
+      window.__entranceRoadtripSetLane(2);
+      setMotion(0, 0);
+      step(1000);
+      window.__entranceRoadtripPoliceStep(0, 1.5);
+      var overHundredEnglish = copy(trip());
+      window.setLang("cs");
+      var overHundredCzech = copy(trip());
+      document.hasFocus = function () { return false; };
+      window.dispatchEvent(new Event("blur"));
+      await sleep(60);
+      var overHundredBlurred = copy(trip());
+      document.hasFocus = function () { return true; };
+      window.dispatchEvent(new Event("focus"));
+      window.__entranceDriveControl("steerLeft", true);
+      window.__entranceDriveControl("steerLeft", false);
+      window.setLang("en");
+      report.steps.shoutThreshold = {
+        exactlyHundred: exactlyHundredOver,
+        overHundredEnglish: overHundredEnglish,
+        overHundredCzech: overHundredCzech,
+        blurred: overHundredBlurred
       };
 
       prepareEncounter();
@@ -436,6 +473,18 @@ check(s.courtStop && s.courtStop.stopped.active &&
   /55 km\/h over · court summons/.test(s.courtStop.caption),
   "court-only arrest approaches, sounds, translates, pauses unattended, then fades to the block",
   s.courtStop);
+check(s.shoutThreshold && s.shoutThreshold.exactlyHundred.police.overLimit === 100 &&
+  !s.shoutThreshold.exactlyHundred.police.arrestShoutPlayed &&
+  s.shoutThreshold.exactlyHundred.police.arrestShoutOpacity === 0 &&
+  s.shoutThreshold.overHundredEnglish.police.overLimit === 101 &&
+  s.shoutThreshold.overHundredEnglish.police.arrestShoutPlayed &&
+  s.shoutThreshold.overHundredEnglish.police.arrestShoutOpacity > .9 &&
+  s.shoutThreshold.overHundredEnglish.police.arrestShoutText === "OUT OF THE CAR!" &&
+  s.shoutThreshold.overHundredEnglish.police.arrestAudioVoices > 0 &&
+  s.shoutThreshold.overHundredCzech.police.arrestShoutText === "VYSTUPTE Z VOZU!" &&
+  s.shoutThreshold.blurred.police.arrestAudioVoices === 0,
+  "only a strictly greater-than-100 overage adds the bilingual shout and its audio tears down on blur",
+  s.shoutThreshold);
 check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase === "pursuit" &&
   s.escaped.detected.police.detectedSpeed === 180 &&
   s.escaped.twoHundredSix.police.phase === "pursuit" &&

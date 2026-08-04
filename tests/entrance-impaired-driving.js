@@ -41,10 +41,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         Math.min.apply(Math, samples.map(function (row) { return row.lane; }))
     };
   }
-  function policeSample(count, lane, speed) {
+  function policeSample(count, lane, speed, steps) {
     window.__entranceRoadtripSetDemerits(0, 0);
     prepare(count, lane, speed || 70);
-    for (var i = 0; i < 6; i++) window.__entranceDriveStep(400);
+    for (var i = 0; i < (steps || 6); i++) {
+      if (steps) window.__entranceDriveSetMotion(speed || 70, 2);
+      window.__entranceDriveStep(400);
+    }
     var approach = copy(trip());
     window.__entranceRoadtripPolice(150);
     window.__entranceRoadtripPoliceDetect(90);
@@ -71,10 +74,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           title: document.getElementById("entrance-roadtrip-arrest-title").textContent.trim(),
           line: document.getElementById("entrance-roadtrip-arrest-line").textContent.trim()
         };
-        window.__entranceRoadtripPoliceStep(0, 3);
+        window.__entranceRoadtripPoliceStep(0, 6);
         report.impairedOutcome = copy(trip());
         report.outcomeCaption = document.getElementById("hunt-caption").textContent.trim();
-        report.impairedCenterline = policeSample(4, -.5);
+        report.impairedCenterline = policeSample(4, -.5, 70, 25);
         window.__entranceRoadtripSetLane(2);
         window.__entranceRoadtripPoliceStep(0, .5);
         window.__entranceRoadtripPoliceStep(0, 3);
@@ -82,7 +85,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           title: document.getElementById("entrance-roadtrip-arrest-title").textContent.trim(),
           line: document.getElementById("entrance-roadtrip-arrest-line").textContent.trim()
         };
-        window.__entranceRoadtripPoliceStep(0, 3);
+        window.__entranceRoadtripPoliceStep(0, 6);
         report.combinedOutcome = copy(trip());
         report.combinedCaption = document.getElementById("hunt-caption").textContent.trim();
       } catch (error) {

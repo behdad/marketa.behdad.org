@@ -487,6 +487,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       '#entrance-roadtrip-furniture [data-roadtrip-furniture="lamp"]'), function (node) {
         return { side: node.getAttribute("data-roadtrip-side"), transform: node.getAttribute("transform") };
       });
+    report.steps.speedSigns = Array.prototype.map.call(document.querySelectorAll(
+      '#entrance-roadtrip-furniture [data-roadtrip-furniture="speed-90"]'), function (node) {
+        return { side: node.getAttribute("data-roadtrip-side"), transform: node.getAttribute("transform") };
+      });
 
     window.__entranceRoadtripSetDistance(0);
     window.__entranceRoadtripSetLane(2.14);
@@ -1043,6 +1047,9 @@ check(s.lamps && s.lamps.length >= 2 && s.lamps.every(function (lamp) {
   var scale = String(lamp.transform || "").match(/scale\(([-.\d]+) ([-.\d]+)\)/);
   return scale && (lamp.side === "right" ? Number(scale[1]) < 0 : Number(scale[1]) > 0) && Number(scale[2]) > 0;
 }), "roadside lamp heads mirror by side so both point inward toward the carriageway", s.lamps);
+check(s.speedSigns && s.speedSigns.length >= 2 && s.speedSigns.every(function (sign) {
+  return sign.side === "right";
+}), "forward-facing 90 km/h signs appear only on the right side of the road", s.speedSigns);
 var shoulder = s.shoulder;
 check(shoulder && shoulder.before.state.drive.roadtrip.playerLane > 2 &&
   shoulder.before.state.drive.roadtrip.shoulderZone === "gravel" &&

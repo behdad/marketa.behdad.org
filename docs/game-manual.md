@@ -233,7 +233,8 @@ Complete three forward street laps to unlock **Road Trip**. Enter accepts its
 visible offer; choosing **Later** leaves you on the block. Afterward, the highway
 remains unlocked and reappears after one forward lap in a later dashboard session.
 
-Road Trip keeps the same steering, transmission, accelerator, and brake. Its
+Road Trip keeps the same steering, transmission, accelerator, and brake. AUTO
+provides gentle curve lane assist; MANUAL leaves curve steering entirely to you. Its
 randomized traffic includes sedans, pickups, semis, and RVs in both directions;
 slower traffic may be passed, horns react to blocked lanes, and some oncoming
 drivers swerve when you stray across the double yellow. Curves, shoulders,

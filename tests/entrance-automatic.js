@@ -247,6 +247,27 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       };
       window.__toggleEntrancePorscheEngine();
 
+      function curveDrift(mode) {
+        window.__entranceDriveTransmissionMode(mode, true);
+        if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
+        window.__entranceRoadtripStart();
+        window.__entranceRoadtripSetDistance(158);
+        window.__entranceRoadtripSetLane(.5);
+        window.__entranceDriveSetMotion(90, 3);
+        window.__entranceDriveStep(400);
+        var current = copy(drive());
+        return {
+          mode: current.transmission.mode,
+          lane: current.roadtrip.playerLane,
+          distance: current.roadtrip.distance,
+          driftPerMetre: (.5 - current.roadtrip.playerLane) / (current.roadtrip.distance - 158)
+        };
+      }
+      report.steps.curveAssist = {
+        automatic: curveDrift("auto"),
+        manual: curveDrift("manual")
+      };
+
       window.__entranceDriveTransmissionMode("auto", true);
       window.__entranceDriveSetMotion(100, 3);
       window.__entranceRoadtripStart();
@@ -465,6 +486,12 @@ check(s.manualDirectionSafety && s.manualDirectionSafety.lowSpeedAccepted &&
   !s.manualDirectionSafety.unsafeAccepted && !s.manualDirectionSafety.unsafe.car.engineOn &&
   s.manualDirectionSafety.unsafe.drive.stalled && s.manualDirectionSafety.unsafe.drive.gear === 0,
   "MANUAL retains its separate 6 km/h wrong-direction stall boundary", s.manualDirectionSafety);
+check(s.curveAssist && s.curveAssist.automatic.mode === "auto" &&
+  s.curveAssist.manual.mode === "manual" &&
+  s.curveAssist.automatic.driftPerMetre > 0 &&
+  s.curveAssist.manual.driftPerMetre > s.curveAssist.automatic.driftPerMetre * 2.2,
+  "AUTO keeps gentle curve lane assist while MANUAL receives full unassisted curve drift",
+  s.curveAssist);
 check(s.headOn && !s.headOn.car.engineOn && s.headOn.drive.stalled &&
   s.headOn.drive.transmission.range === "P" && s.headOn.drive.gear === 0 &&
   s.restart && s.restart.car.engineOn && s.restart.drive.transmission.range === "P",

@@ -18,6 +18,7 @@ var harness = String.raw`<script>
   function floorState() {
     var button = document.getElementById("hunt-floor-btn");
     var coach = document.getElementById("hunt-floor-coach");
+    var glyph = getComputedStyle(button, "::before");
     return {
       hidden: button.hidden,
       mark: button.textContent,
@@ -32,6 +33,17 @@ var harness = String.raw`<script>
       bathroom: !!window.__bathroomRoomOpen,
       bathroomHidden: document.getElementById("bathroom-room").hidden,
       dungeon: !!(window.__princeState && window.__princeState().basement),
+      glyph: {
+        content: glyph.content,
+        position: glyph.position,
+        left: glyph.left,
+        top: glyph.top,
+        width: glyph.width,
+        height: glyph.height,
+        borderTop: glyph.borderTopWidth,
+        borderRight: glyph.borderRightWidth,
+        buttonTransform: getComputedStyle(button).transform
+      },
       navigation: window.__floorNavigationState()
     };
   }
@@ -65,6 +77,12 @@ var harness = String.raw`<script>
       { before: freshDotsCenter, after: dots.left + dots.width / 2 });
     check("Up sits to the right of the room dots with breathing room", button.left - dots.right >= 6,
       { dotsRight: dots.right, buttonLeft: button.left });
+    check("floor directions use a centered CSS-drawn chevron instead of rotated font metrics",
+      earlyDown.glyph.content !== "none" && earlyDown.glyph.position === "absolute" &&
+      Math.abs(parseFloat(earlyDown.glyph.left) - parseFloat(earlyDown.glyph.top)) < .1 &&
+      Math.abs(parseFloat(earlyDown.glyph.width) - parseFloat(earlyDown.glyph.height)) < .1 &&
+      parseFloat(earlyDown.glyph.borderTop) > 0 && parseFloat(earlyDown.glyph.borderRight) > 0 &&
+      earlyDown.glyph.buttonTransform === "none", earlyDown.glyph);
 
     await sleep(210);
     var first = floorState();
@@ -198,6 +216,13 @@ if (oldClosePresent.length) failed = true;
 var coachHasExpiry = /floorCoachTimer|setTimeout\s*\(\s*hideFloorCoach/.test(source);
 console.log("  " + (!coachHasExpiry ? "✓" : "✗") + " first-arrival Up coach has no timed expiry");
 if (coachHasExpiry) failed = true;
+
+var allCssChevrons = /\.hunt-nav-prev::before\{transform:[^}]*rotate\(-135deg\)/.test(source) &&
+  /\.hunt-nav-next::before\{transform:[^}]*rotate\(45deg\)/.test(source) &&
+  /#hunt-floor-btn\.floor-up::before\{transform:[^}]*rotate\(-45deg\)/.test(source) &&
+  /#hunt-floor-btn\.floor-down::before\{transform:[^}]*rotate\(135deg\)/.test(source);
+console.log("  " + (allCssChevrons ? "✓" : "✗") + " room and floor controls share the CSS-drawn chevron primitive");
+if (!allCssChevrons) failed = true;
 
 if (failed) process.exit(1);
 console.log("floor navigation: all checks passed");

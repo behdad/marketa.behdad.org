@@ -21,8 +21,10 @@ var harness = String.raw`<script>
     return {
       hidden: button.hidden,
       mark: button.textContent,
-      label: button.getAttribute("aria-label"),
-      title: button.title,
+      up: button.classList.contains("floor-up"),
+      down: button.classList.contains("floor-down"),
+      hasAriaLabel: button.hasAttribute("aria-label"),
+      hasTitle: button.hasAttribute("title"),
       coachHidden: coach.hidden,
       coach: coach.textContent,
       room: window.currentStageName,
@@ -45,9 +47,10 @@ var harness = String.raw`<script>
     window.__openBathroomRoom();
     await sleep(30);
     var first = floorState();
-    check("first lower-room arrival shows a labelled Up control and its coach",
-      !first.hidden && first.mark === "↑" && first.label === "Go upstairs" &&
-      first.title === first.label && !first.coachHidden && first.coach === "Up gets you back.", first);
+    check("first lower-room arrival shows the vertical Up chevron and its coach",
+      !first.hidden && first.mark === "›" && first.up && !first.down &&
+      !first.hasAriaLabel && !first.hasTitle &&
+      !first.coachHidden && first.coach === "Up gets you back.", first);
     var dots = document.getElementById("hunt-dots").getBoundingClientRect();
     var button = document.getElementById("hunt-floor-btn").getBoundingClientRect();
     check("Up sits to the right of the room dots with breathing room", button.left - dots.right >= 6,
@@ -64,19 +67,19 @@ var harness = String.raw`<script>
 
     setLang("cs");
     var czech = floorState();
-    check("the live control and coach switch to Czech",
-      czech.label === "Jít nahoru" && czech.title === czech.label && czech.coach === "Nahoru se vrátíš.", czech);
+    check("the live coach switches to Czech without adding control labels",
+      !czech.hasAriaLabel && !czech.hasTitle && czech.coach === "Nahoru se vrátíš.", czech);
     setLang("en");
 
     document.getElementById("hunt-floor-btn").click();
     await sleep(30);
     var upstairs = floorState();
     check("Up returns upstairs and becomes the inverse Down control",
-      !upstairs.hidden && upstairs.mark === "↓" && upstairs.label === "Go downstairs" &&
+      !upstairs.hidden && upstairs.mark === "›" && upstairs.down && !upstairs.up &&
       !upstairs.bathroom && upstairs.coachHidden, upstairs);
     document.getElementById("hunt-floor-btn").click();
     await sleep(30);
-    check("Down re-enters the paired lower room", floorState().bathroom && floorState().mark === "↑", floorState());
+    check("Down re-enters the paired lower room", floorState().bathroom && floorState().up, floorState());
 
     window.__setMaxUnlocked(0);
     var next = document.getElementById("hunt-next");

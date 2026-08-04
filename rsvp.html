@@ -1067,6 +1067,9 @@ footer{margin-top:2.6rem}
 #entrance-room.drive-hud-visible #entrance-drive-help{display:block;pointer-events:all}
 #entrance-roadtrip-invite{display:none;pointer-events:none}
 #entrance-roadtrip-invite.show{display:inline;pointer-events:all}
+#entrance-roadtrip-reenter{display:none;pointer-events:none;cursor:pointer;outline:none}
+#entrance-roadtrip-reenter.show{display:inline;pointer-events:all}
+#entrance-roadtrip-reenter:focus rect{stroke:#fffdf8;stroke-width:2}
 .entrance-roadtrip-invite-button{cursor:pointer}
 .entrance-roadtrip-invite-button:focus{outline:none}
 .entrance-roadtrip-invite-button:focus rect{stroke:#fffdf8;stroke-width:2}
@@ -32680,6 +32683,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <text class="entrance-roadtrip-invite-copy" x="193" y="16" font-size="9.5" data-i="entrance_roadtrip_invite_later">Later</text>
             </g>
           </g>
+          <g id="entrance-roadtrip-reenter" transform="translate(552 -21)" role="button" tabindex="0" focusable="true" aria-hidden="true" data-aria-i="entrance_roadtrip_reenter">
+            <rect x="0" y="0" width="91" height="27" rx="8" fill="#453a31" fill-opacity=".96" stroke="#d9a6a6" stroke-width="1.5"/>
+            <text class="entrance-roadtrip-invite-copy" x="45.5" y="18" font-size="10.5" font-weight="700" data-i="entrance_roadtrip_reenter">Road Trip</text>
+          </g>
           <g id="entrance-drive-help" transform="translate(47 0)">
             <circle cx="648" cy="20" r="10" fill="#453a31" stroke="#f0d8b8" stroke-width="1.4"/>
             <text x="648" y="24" text-anchor="middle" fill="#fffdf8" font-family="Georgia,serif" font-size="12" font-weight="700">?</text>
@@ -34587,6 +34594,7 @@ window.__entranceRoomOpen = false;
   var roadtripInvite = document.getElementById("entrance-roadtrip-invite");
   var roadtripInviteAccept = document.getElementById("entrance-roadtrip-invite-accept");
   var roadtripInviteLater = document.getElementById("entrance-roadtrip-invite-later");
+  var roadtripReenter = document.getElementById("entrance-roadtrip-reenter");
   var driveCoachStep = 1;
   var driveCoachComplete = false;
   var driveCoachDismissed = false;
@@ -34811,6 +34819,7 @@ window.__entranceRoomOpen = false;
     playerLane: .5,
     unlocked: false,
     accepted: false,
+    everAccepted: false,
     invitationReady: false,
     invitationDistance: 0,
     invitationDismissed: false,
@@ -35317,17 +35326,25 @@ window.__entranceRoomOpen = false;
       "entrance_roadtrip_arrest_line", { over: police.overLimit });
   }
   function paintRoadtripInvite() {
-    if (!roadtripInvite) return;
     var visible = !!(window.__entranceRoomOpen && driveState.hudOpen && roadtripState.unlocked &&
       roadtripState.invitationReady && !roadtripState.accepted && !roadtripState.active &&
-      !roadtripState.invitationDismissed);
-    roadtripInvite.classList.toggle("show", visible);
-    roadtripInvite.setAttribute("aria-hidden", visible ? "false" : "true");
+      !roadtripState.invitationDismissed && !roadtripState.everAccepted);
+    if (roadtripInvite) {
+      roadtripInvite.classList.toggle("show", visible);
+      roadtripInvite.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+    var reentryVisible = !!(window.__entranceRoomOpen && driveState.hudOpen &&
+      roadtripState.unlocked && roadtripState.everAccepted && !roadtripState.accepted && !roadtripState.active);
+    if (roadtripReenter) {
+      roadtripReenter.classList.toggle("show", reentryVisible);
+      roadtripReenter.setAttribute("aria-hidden", reentryVisible ? "false" : "true");
+    }
   }
   function acceptRoadtripInvite(event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.unlocked || !roadtripState.invitationReady || roadtripState.accepted) return false;
     roadtripState.accepted = true;
+    roadtripState.everAccepted = true;
     roadtripState.invitationReady = false;
     roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = true;
@@ -35354,6 +35371,14 @@ window.__entranceRoomOpen = false;
   }
   bindRoadtripInviteControl(roadtripInviteAccept, acceptRoadtripInvite);
   bindRoadtripInviteControl(roadtripInviteLater, dismissRoadtripInvite);
+  bindRoadtripInviteControl(roadtripReenter, function (event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active) return false;
+    var started = startRoadtrip(true);
+    paintRoadtripInvite();
+    if (started && window.__checkpointChanged) window.__checkpointChanged();
+    return started;
+  });
   function resetRoadtripInvitationSession() {
     roadtripState.accepted = false;
     roadtripState.invitationReady = false;
@@ -36770,7 +36795,7 @@ window.__entranceRoomOpen = false;
       return true;
     }
     parkRoadtrip(false);
-    // Leaving returns control to the block; a later highway entry needs a new offer.
+    // Leaving returns control to the block; repeat runs use the compact HUD button.
     resetRoadtripInvitationSession();
     roadtripState.exitUntilStop = true;
     syncPorscheDriveInstruction(true);
@@ -36782,12 +36807,13 @@ window.__entranceRoomOpen = false;
     if (forceFresh) {
       roadtripState.exitUntilStop = false;
       roadtripState.accepted = true;
+      roadtripState.everAccepted = true;
       roadtripState.invitationReady = false;
       roadtripState.invitationDistance = 0;
       roadtripState.invitationDismissed = true;
       if (!roadtripState.unlocked) {
         roadtripState.unlocked = true;
-        roadtripState.practiceLaps = Math.max(3, roadtripState.practiceLaps);
+        roadtripState.practiceLaps = Math.max(1, roadtripState.practiceLaps);
       }
       resetRoadtripRun();
     }
@@ -36795,6 +36821,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.active) return true;
     if (roadtripState.police.runEnded) resetRoadtripRun();
     roadtripState.active = true;
+    paintRoadtripInvite();
     roadtripShiftHintKey = "";
     roadtripShiftHintMs = 0;
     room.classList.add("roadtrip-active");
@@ -36832,12 +36859,12 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return;
     if (roadtripState.unlocked) return;
     roadtripState.practiceLaps++;
-    if (roadtripState.practiceLaps >= 3) unlockRoadtrip();
+    if (roadtripState.practiceLaps >= 1) unlockRoadtrip();
     else if (window.__checkpointChanged) window.__checkpointChanged();
   }
   function recordRoadtripInvitationTravel(distance) {
     if (!window.__entranceRoomOpen || !driveState.hudOpen || roadtripState.active ||
-        !roadtripState.unlocked || roadtripState.accepted || roadtripState.invitationReady ||
+        !roadtripState.unlocked || roadtripState.everAccepted || roadtripState.accepted || roadtripState.invitationReady ||
         roadtripState.invitationDismissed) return;
     roadtripState.invitationDistance += Math.max(0, Number(distance) || 0);
     if (roadtripState.invitationDistance < PORSCHE_WRAP_SPAN) return;
@@ -38589,6 +38616,7 @@ window.__entranceRoomOpen = false;
     repairRoadtripWindshield();
     roadtripState.unlocked = false;
     roadtripState.accepted = false;
+    roadtripState.everAccepted = false;
     roadtripState.invitationReady = false;
     roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = false;
@@ -39414,10 +39442,12 @@ window.__entranceRoomOpen = false;
           playerLane: roadtripPlayerLane(),
           unlocked: roadtripState.unlocked,
           accepted: roadtripState.accepted,
+          everAccepted: roadtripState.everAccepted,
           invitationReady: roadtripState.invitationReady,
           invitationDistance: roadtripState.invitationDistance,
           invitationDistanceRequired: PORSCHE_WRAP_SPAN,
           invitationVisible: !!(roadtripInvite && roadtripInvite.classList.contains("show")),
+          reentryVisible: !!(roadtripReenter && roadtripReenter.classList.contains("show")),
           practiceLaps: roadtripState.practiceLaps,
           distance: roadtripState.distance,
           distancePoints: roadtripState.distancePoints,
@@ -39627,6 +39657,7 @@ window.__entranceRoomOpen = false;
             scoringVersion: ROADTRIP_SCORING_VERSION,
             unlocked: roadtripState.unlocked,
             accepted: false,
+            everAccepted: roadtripState.everAccepted,
             practiceLaps: roadtripState.practiceLaps,
             distance: Math.round(roadtripState.distance * 100) / 100,
             distancePoints: roadtripState.distancePoints,
@@ -39687,10 +39718,15 @@ window.__entranceRoomOpen = false;
         if (roadtrip) {
           roadtripState.unlocked = roadtrip.unlocked === true;
           if (Number.isFinite(Number(roadtrip.practiceLaps))) {
-            roadtripState.practiceLaps = Math.max(0, Math.min(3, Math.floor(Number(roadtrip.practiceLaps))));
+            roadtripState.practiceLaps = Math.max(0, Math.min(1, Math.floor(Number(roadtrip.practiceLaps))));
           }
-          if (roadtripState.unlocked) roadtripState.practiceLaps = 3;
+          if (roadtripState.unlocked) roadtripState.practiceLaps = 1;
           roadtripState.accepted = false;
+          roadtripState.everAccepted = roadtrip.everAccepted === true || roadtripState.best > 0 ||
+            Number(roadtrip.distance) > 0 || Number(roadtrip.elapsedSeconds) > 0 ||
+            Number.isFinite(Number(roadtrip.score)) && Number(roadtrip.score) !== 0 ||
+            Number(roadtrip.collisions) > 0 || Number(roadtrip.passes) > 0 || Number(roadtrip.tokens) > 0 ||
+            Number(roadtrip.escapes) > 0 || Number(roadtrip.wildlifeHits) > 0;
           roadtripState.invitationReady = false;
           roadtripState.invitationDistance = 0;
           roadtripState.invitationDismissed = false;
@@ -39793,6 +39829,9 @@ document.addEventListener("keydown", function (event) {
     if (event.code === "Backquote" || event.key === "`") return;
     var roadtripInviteNode = document.getElementById("entrance-roadtrip-invite");
     var roadtripInviteVisible = roadtripInviteNode && roadtripInviteNode.classList.contains("show");
+    var roadtripReenterNode = document.getElementById("entrance-roadtrip-reenter");
+    var roadtripReenterFocused = roadtripReenterNode && roadtripReenterNode.classList.contains("show") &&
+      event.target === roadtripReenterNode;
     if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
       if (roadtripInviteVisible) document.getElementById("entrance-roadtrip-invite-later").dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
@@ -39801,7 +39840,11 @@ document.addEventListener("keydown", function (event) {
     } else if (event.key === "Enter") {
       if (roadtripInviteVisible) document.getElementById("entrance-roadtrip-invite-accept").dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
+      else if (roadtripReenterFocused) roadtripReenterNode.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       else if (window.__toggleEntrancePorscheEngine) window.__toggleEntrancePorscheEngine();
+    } else if ((event.key === " " || event.key === "Spacebar") && roadtripReenterFocused) {
+      roadtripReenterNode.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     } else if (window.__entranceDriveKey) {
       window.__entranceDriveKey(event, true);
     }
@@ -41173,10 +41216,11 @@ var T = {
       entrance_drive_ignition_hint: "Start the ignition. The key is on the left.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
       entrance_roadtrip_drive: "Highway run · dodge traffic; collect ♥️, 💋 & ∞.",
-      entrance_roadtrip_unlocked: "Three laps down · fancy a roadtrip?",
+      entrance_roadtrip_unlocked: "One lap down · fancy a roadtrip?",
       entrance_roadtrip_invite_title: "Let’s road trip!",
       entrance_roadtrip_invite_accept: "Take the highway",
       entrance_roadtrip_invite_later: "Later",
+      entrance_roadtrip_reenter: "Road Trip",
       entrance_roadtrip_collision: "Rear-end impact · 10–40 point penalty, combo reset.",
       entrance_roadtrip_crash: "Head-on crash · −100 points, windshield shattered, engine stalled.",
       entrance_roadtrip_wildlife_collision: "Wildlife strike · 20–60 point penalty, combo reset.",
@@ -42362,10 +42406,11 @@ var T = {
       entrance_drive_ignition_hint: "Nastartuj. Klíček je vlevo.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
       entrance_roadtrip_drive: "Jízda po dálnici · vyhýbej se provozu; sbírej ♥️, 💋 a ∞.",
-      entrance_roadtrip_unlocked: "Tři kola za tebou · dáme si výlet?",
+      entrance_roadtrip_unlocked: "Jedno kolo za tebou · dáme si výlet?",
       entrance_roadtrip_invite_title: "Jedeme na výlet!",
       entrance_roadtrip_invite_accept: "Vyjet na dálnici",
       entrance_roadtrip_invite_later: "Později",
+      entrance_roadtrip_reenter: "Výlet",
       entrance_roadtrip_collision: "Náraz zezadu · ztráta 10–40 bodů, kombo od začátku.",
       entrance_roadtrip_crash: "Čelní srážka · −100 bodů, roztříštěné sklo a zhaslý motor.",
       entrance_roadtrip_wildlife_collision: "Střet se zvěří · ztráta 20–60 bodů, kombo od začátku.",

@@ -22,6 +22,7 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-invite",
   "entrance-roadtrip-invite-accept",
   "entrance-roadtrip-invite-later",
+  "entrance-roadtrip-reenter",
   "entrance-roadtrip-crack",
   "entrance-roadtrip-shatter",
   "entrance-roadtrip-mirror",
@@ -53,7 +54,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-roadtrip-lane-marks", "entrance-roadtrip-furniture", "entrance-roadtrip-entities",
     "entrance-roadtrip-curve-signs",
     "entrance-roadtrip-speed", "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier", "entrance-roadtrip-grade",
-    "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later",
+    "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later", "entrance-roadtrip-reenter",
     "entrance-roadtrip-crack", "entrance-roadtrip-shatter", "entrance-roadtrip-mirror",
     "entrance-roadtrip-mirror-housing", "entrance-roadtrip-mirror-gasket",
     "entrance-roadtrip-mirror-road", "entrance-roadtrip-mirror-center",
@@ -289,11 +290,31 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       laterAria: document.getElementById("entrance-roadtrip-invite-later").getAttribute("aria-label")
     };
     window.setLang("en");
+    pressKey("Escape");
+    var firstDismissed = {
+      state: copy(state()),
+      visible: invitation.classList.contains("show"),
+      ariaHidden: invitation.getAttribute("aria-hidden")
+    };
+    window.__hideEntrancePorscheDriveHud();
+    window.__openEntrancePorscheDriveHud();
+    ensureEngine();
+    window.__entranceDriveSetMotion(263, 6);
+    window.__entranceDriveControl("throttle", true);
+    for (var reofferTick = 0; reofferTick < 20 && !roadtrip().invitationReady; reofferTick++) step(80);
+    window.__entranceDriveControl("throttle", false);
+    var reoffered = {
+      state: copy(state()),
+      visible: invitation.classList.contains("show"),
+      ariaHidden: invitation.getAttribute("aria-hidden")
+    };
     pressKey("Enter");
     await sleep(80);
     var activeClasses = Array.prototype.slice.call(room.classList);
     report.steps.activation = {
       offer: offer,
+      firstDismissed: firstDismissed,
+      reoffered: reoffered,
       beforeClasses: beforeClasses,
       practice: practice,
       roadtrip: copy(roadtrip()),
@@ -701,48 +722,50 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var retainedSpawn = spawn("token", 1);
     var closeBefore = { roadtrip: copy(roadtrip()), node: entityVisual(retainedSpawn.node), viewBox: viewBox() };
     window.__closeEntranceRoom();
-    var closed = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox(), aspectRatio: aspectRatio(), dom: childCount(), visible: visibleChildCount() };
+    var reentryButton = document.getElementById("entrance-roadtrip-reenter");
+    var closed = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox(), aspectRatio: aspectRatio(), dom: childCount(), visible: visibleChildCount(), reentryVisible: reentryButton.classList.contains("show") };
     var closedWrapStart = state().drive.wraps;
     for (var closedTick = 0; closedTick < 40 && state().drive.wraps === closedWrapStart; closedTick++) step(1000);
     var ignoredClosedWrap = state().drive.wraps;
-    for (var nearBoundaryTick = 0; nearBoundaryTick < 3000 &&
-        state().drive.wraps === ignoredClosedWrap && state().drive.position > -647; nearBoundaryTick++) {
-      window.__entranceDriveSetMotion(60, 2);
-      step(1);
-    }
-    var closedWrapEnd = state().drive.wraps;
-    var closedPosition = state().drive.position;
     var parked = copy(roadtrip());
     window.__openEntranceRoom();
     await sleep(30);
-    var reopened = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox() };
-    var reopenedSettleWrap = state().drive.wraps;
-    step(80);
-    var street = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox() };
-    var reopenedLap = state().drive.wraps;
-    window.__entranceDriveSetMotion(120, 3);
-    window.__entranceDriveControl("throttle", true);
-    var lastBeforeOffer = copy(state());
-    for (var reopenTick = 0; reopenTick < 5000 && !roadtrip().invitationReady; reopenTick++) {
-      step(20);
-      if (!roadtrip().invitationReady) lastBeforeOffer = copy(state());
-    }
-    window.__entranceDriveControl("throttle", false);
-    var offeredAfterLap = copy(state());
-    pressKey("Escape");
-    var dismissedOffer = copy(state());
-    var dismissedLap = state().drive.wraps;
-    window.__entranceDriveSetMotion(120, 3);
-    window.__entranceDriveControl("throttle", true);
-    for (var dismissedTick = 0; dismissedTick < 40 && state().drive.wraps === dismissedLap; dismissedTick++) step(1000);
-    window.__entranceDriveControl("throttle", false);
-    var stillDismissed = copy(state());
+    var reopened = {
+      roadtrip: copy(roadtrip()),
+      classes: room.getAttribute("class"),
+      viewBox: viewBox(),
+      reentryVisible: reentryButton.classList.contains("show"),
+      reentryAriaHidden: reentryButton.getAttribute("aria-hidden"),
+      label: reentryButton.textContent.trim(),
+      button: box(reentryButton),
+      steering: box(document.getElementById("entrance-drive-steering"))
+    };
+    window.setLang("cs");
+    reopened.czechLabel = reentryButton.textContent.trim();
+    reopened.czechAria = reentryButton.getAttribute("aria-label");
+    window.setLang("en");
+    reentryButton.focus();
+    reentryButton.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    var reentered = {
+      roadtrip: copy(roadtrip()),
+      classes: room.getAttribute("class"),
+      viewBox: viewBox(),
+      reentryVisible: reentryButton.classList.contains("show")
+    };
+    window.__exitEntranceRoadtrip();
+    var returned = {
+      state: copy(state()),
+      reentryVisible: reentryButton.classList.contains("show"),
+      reentryAriaHidden: reentryButton.getAttribute("aria-hidden")
+    };
+    reentryButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var clickedReentry = copy(state());
+    window.__exitEntranceRoadtrip();
+    window.__entranceDriveSetMotion(0, 1);
+    step(20);
     report.steps.close = { before: closeBefore, closed: closed, parked: parked, reopened: reopened,
       closedWrapStart: closedWrapStart, ignoredClosedWrap: ignoredClosedWrap,
-      closedWrapEnd: closedWrapEnd, closedPosition: closedPosition,
-      reopenedSettleWrap: reopenedSettleWrap, reopenedWrap: reopenedLap,
-      street: street, lastBeforeOffer: lastBeforeOffer, offeredAfterLap: offeredAfterLap,
-      dismissedOffer: dismissedOffer, stillDismissed: stillDismissed };
+      reentered: reentered, returned: returned, clickedReentry: clickedReentry };
 
     var bestBeforeDismiss = roadtrip().best;
     window.__dismissEntrancePorscheDriveHud();
@@ -758,6 +781,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
     window.__entranceRoadtripStart();
+    window.__entranceDriveSetMotion(120, 3);
     var steeringSpawn = spawn("token", -1);
     var steeringRoad = document.querySelector("#entrance-roadtrip-road .entrance-roadtrip-asphalt");
     var steeringBefore = {
@@ -783,6 +807,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
     window.__entranceRoadtripStart();
+    window.__entranceDriveSetMotion(100, 3);
     document.getElementById("entrance-room-close").click();
     var closeControlExit = copy(state());
     step(250);
@@ -886,16 +911,21 @@ check(source.indexOf('id="entrance-roadtrip-winter"') < source.indexOf('id="entr
   "accumulated snow paints beneath the road so shoulder markings remain visible at the horizon");
 check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&
   /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;\s*if \(roadtripState\.unlocked\) return;\s*roadtripState\.practiceLaps\+\+/.test(source) &&
+  /roadtripState\.practiceLaps >= 1\) unlockRoadtrip\(\)/.test(source) &&
   /function recordRoadtripInvitationTravel\(distance\)[\s\S]{0,800}roadtripState\.invitationDistance \+= [^;]+;[\s\S]{0,300}roadtripState\.invitationDistance < PORSCHE_WRAP_SPAN[\s\S]{0,300}roadtripState\.invitationReady = true;/.test(source) &&
   /function resetRoadtripInvitationSession\(\)[\s\S]{0,300}roadtripState\.accepted = false;[\s\S]{0,200}roadtripState\.invitationReady = false;/.test(source),
-  "the source owns a three-lap initial unlock and full-distance per-session invitation gate");
+  "the source owns a one-lap initial unlock and full-distance retry gate before first acceptance");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
-  /var roadtripInviteVisible[\s\S]{0,700}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
+  /var roadtripInviteVisible[\s\S]{0,1100}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
   /event\.key === "Escape"[\s\S]{0,400}roadtripInviteVisible[\s\S]{0,300}entrance-roadtrip-invite-later/.test(source),
-  "highway entry is explicit and the visible offer owns Enter and Escape");
-check(/roadtrip:\s*\{[\s\S]{0,180}unlocked: roadtripState\.unlocked,[\s\S]{0,80}accepted: false,/.test(source) &&
+  "the first highway entry is explicit and its full offer owns Enter and Escape");
+check(/id="entrance-roadtrip-reenter"[^>]+data-aria-i="entrance_roadtrip_reenter"/.test(source) &&
+  /roadtripState\.everAccepted && !roadtripState\.accepted && !roadtripState\.active/.test(source) &&
+  /bindRoadtripInviteControl\(roadtripReenter,[\s\S]{0,500}startRoadtrip\(true\)/.test(source),
+  "accepted drivers get an explicit compact Road Trip re-entry control");
+check(/roadtrip:\s*\{[\s\S]{0,220}unlocked: roadtripState\.unlocked,[\s\S]{0,100}accepted: false,[\s\S]{0,100}everAccepted: roadtripState\.everAccepted,/.test(source) &&
   /roadtripState\.accepted = false;\s*roadtripState\.invitationReady = false;\s*roadtripState\.invitationDistance = 0;\s*roadtripState\.invitationDismissed = false;/.test(source),
-  "checkpoint capture and restore cannot authorize or activate a highway session");
+  "checkpoint capture preserves prior acceptance without authorizing an active highway session");
 
 if (process.argv.indexOf("--source-only") >= 0) {
   if (failures) process.exit(1);
@@ -930,8 +960,8 @@ check(tireAudio && tireAudio.highway.tireGain > tireAudio.urban.tireGain &&
 
 var activation = s.activation;
 check(activation && activation.practice.some(function (row) { return row.practiceLaps === 1 && !row.active; }) &&
-  activation.practice.some(function (row) { return row.practiceLaps === 2 && !row.active; }) &&
-  activation.offer.before.practiceLaps === 3 && activation.offer.before.unlocked &&
+  !activation.practice.some(function (row) { return row.practiceLaps > 1; }) &&
+  activation.offer.before.practiceLaps === 1 && activation.offer.before.unlocked &&
   activation.offer.before.invitationReady && !activation.offer.before.accepted && !activation.offer.before.active &&
   !activation.offer.after.accepted && !activation.offer.after.active && activation.offer.visible &&
   activation.offer.ariaHidden === "false" && activation.offer.title === "Let’s road trip!" &&
@@ -939,8 +969,12 @@ check(activation && activation.practice.some(function (row) { return row.practic
   activation.offer.czech.title === "Jedeme na výlet!" && activation.offer.czech.accept === "Vyjet na dálnici" &&
   activation.offer.czech.later === "Později" && activation.offer.czech.acceptAria === "Vyjet na dálnici" &&
   activation.offer.czech.laterAria === "Později" &&
-  activation.offer.viewBox === "0 -31 680 207" && activation.roadtrip.accepted && activation.roadtrip.active,
-  "the third practice lap offers a right-side roadtrip card without auto-starting, and acceptance enters the highway",
+  activation.offer.viewBox === "0 -31 680 207" && activation.firstDismissed &&
+  !activation.firstDismissed.visible && activation.firstDismissed.ariaHidden === "true" &&
+  !activation.firstDismissed.state.drive.roadtrip.active && !activation.firstDismissed.state.drive.roadtrip.accepted &&
+  activation.reoffered && activation.reoffered.visible && activation.reoffered.ariaHidden === "false" &&
+  activation.roadtrip.accepted && activation.roadtrip.everAccepted && activation.roadtrip.active,
+  "exactly one practice lap shows the first full card; Escape defers it and Enter accepts its next session",
   activation && { practice: activation.practice, offer: activation.offer, roadtrip: activation.roadtrip });
 check(activation && activation.roomClasses.indexOf("roadtrip-active") >= 0 &&
   activation.viewBox === "0 -120 680 340" &&
@@ -1222,27 +1256,28 @@ check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pa
   "adjacent-lane traffic becomes a clean close pass worth two points before the combo", pass);
 
 var close = s.close;
-check(close && close.before.roadtrip.active && close.before.roadtrip.entityCount > 0 &&
+check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepted && close.before.roadtrip.entityCount > 0 &&
   !close.closed.roadtrip.active && close.closed.classes.indexOf("roadtrip-active") < 0 &&
   close.closed.viewBox === "0 -31 680 207" && close.closed.aspectRatio === "xMidYMax slice" &&
+  !close.closed.reentryVisible &&
   close.parked.distance === close.closed.roadtrip.distance && close.parked.entityCount === close.closed.roadtrip.entityCount &&
-  close.ignoredClosedWrap > close.closedWrapStart && close.closedWrapEnd === close.ignoredClosedWrap &&
-  close.closedPosition <= -647 && close.closedPosition > -648 && !close.parked.invitationReady &&
-  !close.reopened.roadtrip.active && !close.reopened.roadtrip.accepted && !close.reopened.roadtrip.invitationVisible &&
-  close.reopenedSettleWrap > close.closedWrapEnd && !close.reopened.roadtrip.invitationReady &&
-  close.reopened.roadtrip.invitationDistance < close.reopened.roadtrip.invitationDistanceRequired &&
-  !close.street.roadtrip.active && close.street.viewBox === "0 -31 680 207" &&
-  !close.street.roadtrip.invitationReady &&
-  close.lastBeforeOffer.drive.roadtrip.invitationDistance <
-    close.lastBeforeOffer.drive.roadtrip.invitationDistanceRequired &&
-  close.offeredAfterLap.drive.roadtrip.invitationDistance ===
-    close.offeredAfterLap.drive.roadtrip.invitationDistanceRequired &&
-  close.offeredAfterLap.drive.roadtrip.invitationReady && close.offeredAfterLap.drive.roadtrip.invitationVisible &&
-  close.dismissedOffer.open && close.dismissedOffer.drive.hud && close.dismissedOffer.car.engineOn &&
-  !close.dismissedOffer.drive.roadtrip.invitationVisible && !close.stillDismissed.drive.roadtrip.invitationVisible,
-  "a near-boundary rolling reopen needs one full live block lap before offering, and Escape dismisses it for that HUD session", close);
+  !close.reopened.roadtrip.active && !close.reopened.roadtrip.accepted && close.reopened.roadtrip.everAccepted &&
+  !close.reopened.roadtrip.invitationVisible && close.reopened.roadtrip.reentryVisible &&
+  close.reopened.reentryVisible && close.reopened.reentryAriaHidden === "false" &&
+  close.reopened.label === "Road Trip" && close.reopened.czechLabel === "Výlet" && close.reopened.czechAria === "Výlet" &&
+  (close.reopened.button.right <= close.reopened.steering.left || close.reopened.button.left >= close.reopened.steering.right ||
+    close.reopened.button.bottom <= close.reopened.steering.top || close.reopened.button.top >= close.reopened.steering.bottom) &&
+  close.reentered.roadtrip.active && close.reentered.roadtrip.accepted && close.reentered.roadtrip.everAccepted &&
+  close.reentered.roadtrip.distance === 0 && close.reentered.roadtrip.entityCount === 0 &&
+  close.reentered.viewBox === "0 -120 680 340" && !close.reentered.reentryVisible &&
+  close.returned.state.drive.hud && !close.returned.state.drive.roadtrip.active &&
+  close.returned.state.drive.roadtrip.reentryVisible && close.returned.reentryVisible &&
+  close.returned.reentryAriaHidden === "false" &&
+  close.clickedReentry.drive.roadtrip.active && close.clickedReentry.drive.roadtrip.accepted,
+  "accepted drivers regain a non-overlapping bilingual Road Trip button that starts a fresh run after every exit", close);
 var dismiss = s.dismiss && s.dismiss.roadtrip;
 check(dismiss && !dismiss.active && dismiss.unlocked && dismiss.entityCount === 0 &&
+  dismiss.everAccepted && !dismiss.reentryVisible &&
   s.dismiss.dom === dismiss.poolSize && s.dismiss.visible === 0 &&
   dismiss.distance === 0 && dismiss.distancePoints === 0 && dismiss.elapsedSeconds === 0 &&
   dismiss.score === 0 && dismiss.multiplier === 1 &&
@@ -1261,28 +1296,33 @@ var exitLadder = s.exitLadder;
 check(exitLadder && exitLadder.closeControl.open && exitLadder.closeControl.drive.hud &&
   exitLadder.closeControl.car.engineOn && !exitLadder.closeControl.drive.roadtrip.active &&
   !exitLadder.closeControl.drive.roadtrip.accepted && !exitLadder.closeControl.drive.roadtrip.invitationVisible &&
+  exitLadder.closeControl.drive.roadtrip.reentryVisible &&
   exitLadder.closeControl.drive.roadtrip.exitUntilStop &&
-  !exitLadder.rolling.drive.roadtrip.active && exitLadder.rolling.drive.roadtrip.exitUntilStop,
-  "the highway close control returns to the street HUD and cannot immediately auto-resume while rolling",
+  !exitLadder.rolling.drive.roadtrip.active && exitLadder.rolling.drive.roadtrip.exitUntilStop &&
+  exitLadder.rolling.drive.roadtrip.reentryVisible,
+  "the highway close control returns to the street HUD with Road Trip available without auto-resuming",
   exitLadder && { closeControl: exitLadder.closeControl, rolling: exitLadder.rolling });
 check(exitLadder && exitLadder.streetAfterExit && !exitLadder.streetAfterExit.drive.roadtrip.active &&
   !exitLadder.streetAfterExit.drive.roadtrip.accepted && !exitLadder.streetAfterExit.drive.roadtrip.exitUntilStop &&
-  exitLadder.streetAfterExit.drive.speed > 0,
+  exitLadder.streetAfterExit.drive.roadtrip.reentryVisible && exitLadder.streetAfterExit.drive.speed > 0,
   "block driving remains available after stopping until the highway is deliberately accepted again",
   exitLadder && exitLadder.streetAfterExit);
 check(exitLadder && exitLadder.first.open && exitLadder.first.drive.hud && exitLadder.first.car.engineOn &&
   !exitLadder.first.drive.roadtrip.active && exitLadder.first.drive.roadtrip.exitUntilStop &&
+  exitLadder.first.drive.roadtrip.reentryVisible &&
   exitLadder.second.open && !exitLadder.second.drive.hud && !exitLadder.second.car.engineOn &&
-  !exitLadder.second.drive.roadtrip.exitUntilStop && !exitLadder.third.open,
+  !exitLadder.second.drive.roadtrip.exitUntilStop && !exitLadder.second.drive.roadtrip.reentryVisible && !exitLadder.third.open,
   "successive Escapes leave highway, dismiss the HUD, then dismiss Entrance",
   exitLadder);
 var checkpoint = s.checkpoint;
 check(checkpoint && checkpoint.before.drive.roadtrip.active && checkpoint.before.drive.roadtrip.accepted &&
-  checkpoint.before.drive.roadtrip.unlocked && checkpoint.before.drive.roadtrip.score > 0 &&
+  checkpoint.before.drive.roadtrip.unlocked && checkpoint.before.drive.roadtrip.everAccepted && checkpoint.before.drive.roadtrip.score > 0 &&
   checkpoint.before.drive.roadtrip.entityCount > 0 && checkpoint.row.drive.roadtrip.accepted === false &&
+  checkpoint.row.drive.roadtrip.everAccepted === true &&
   checkpoint.after.drive.roadtrip.unlocked && !checkpoint.after.drive.roadtrip.active &&
-  !checkpoint.after.drive.roadtrip.accepted && !checkpoint.after.drive.roadtrip.invitationReady &&
-  !checkpoint.after.drive.roadtrip.invitationVisible && checkpoint.after.drive.roadtrip.entityCount === 0 &&
+  !checkpoint.after.drive.roadtrip.accepted && checkpoint.after.drive.roadtrip.everAccepted &&
+  !checkpoint.after.drive.roadtrip.invitationReady && !checkpoint.after.drive.roadtrip.invitationVisible &&
+  checkpoint.after.drive.roadtrip.reentryVisible && checkpoint.after.drive.roadtrip.entityCount === 0 &&
   checkpoint.visible === 0 && Math.abs(checkpoint.after.drive.roadtrip.distance -
     checkpoint.before.drive.roadtrip.distance) <= .01 &&
   checkpoint.after.drive.roadtrip.score === checkpoint.before.drive.roadtrip.score &&
@@ -1290,7 +1330,8 @@ check(checkpoint && checkpoint.before.drive.roadtrip.active && checkpoint.before
   "checkpoint restore keeps durable highway progress but returns parked, unaccepted, and entity-free",
   checkpoint);
 var reset = s.reset && s.reset.roadtrip;
-check(reset && !reset.active && !reset.unlocked && !reset.accepted && !reset.invitationVisible &&
+check(reset && !reset.active && !reset.unlocked && !reset.accepted && !reset.everAccepted &&
+  !reset.invitationVisible && !reset.reentryVisible &&
   reset.practiceLaps === 0 && reset.entityCount === 0 &&
   s.reset.dom === reset.poolSize && s.reset.visible === 0 &&
   reset.distance === 0 && reset.distancePoints === 0 && reset.elapsedSeconds === 0 &&

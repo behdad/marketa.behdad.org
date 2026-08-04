@@ -925,16 +925,18 @@ footer{margin-top:2.6rem}
   font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;
   letter-spacing:.8px;
 }
-#entrance-roadtrip-speed{font-size:16px;letter-spacing:.15px}
+#entrance-roadtrip-speed{font-size:23px;letter-spacing:-.45px}
 #entrance-roadtrip-speed[data-roadtrip-speed-band="safe"]{fill:#8fd39b}
 #entrance-roadtrip-speed[data-roadtrip-speed-band="warning"]{fill:#f2cf73}
 #entrance-roadtrip-speed[data-roadtrip-speed-band="danger"]{fill:#ed837d}
 #entrance-roadtrip-speed[data-roadtrip-speed-band="escape"]{fill:#a83d46;animation:entrance-roadtrip-speed-pulse .9s ease-in-out infinite alternate}
-#entrance-roadtrip-score{font-size:6.5px;letter-spacing:.15px;fill:#f0d8b8}
+#entrance-roadtrip-score{font-size:8.2px;letter-spacing:.05px;fill:#f0d8b8}
+#entrance-roadtrip-score-points{font-size:11px;fill:#fffdf8}
 @keyframes entrance-roadtrip-speed-pulse{to{fill:#df5363}}
-#entrance-roadtrip-best{font-size:10px}
-#entrance-roadtrip-multiplier{font-size:13px;fill:#f2cf73}
-#entrance-roadtrip-grade{font-size:9px;letter-spacing:.25px;fill:#f0d8b8}
+#entrance-roadtrip-meta-panel,
+#entrance-roadtrip-best,
+#entrance-roadtrip-multiplier,
+#entrance-roadtrip-grade{display:none}
 #entrance-roadtrip-mirror{opacity:.96}
 .entrance-roadtrip-mirror-sky{fill:#9db7c2}
 .entrance-roadtrip-mirror-verge{fill:#7b7659}
@@ -32280,12 +32282,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             </g>
             <g aria-hidden="true">
               <rect x="18" y="-111" width="250" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
-              <text id="entrance-roadtrip-speed" class="entrance-roadtrip-hud-text" x="31" y="-91" data-roadtrip-speed-band="safe">0 km/h</text>
-              <text id="entrance-roadtrip-score" class="entrance-roadtrip-hud-text" x="31" y="-78">0:00 · 0.0 km · 0 pts</text>
-              <rect x="412" y="-111" width="250" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
+              <text id="entrance-roadtrip-speed" class="entrance-roadtrip-hud-text" x="258" y="-82" text-anchor="end" data-roadtrip-speed-band="safe">0 km/h</text>
+              <text id="entrance-roadtrip-score" class="entrance-roadtrip-hud-text" x="29" y="-94">
+                <tspan id="entrance-roadtrip-score-trip" x="29">0:00 · 0.0 km</tspan>
+                <tspan id="entrance-roadtrip-score-points" x="29" dy="14">0 pts</tspan>
+              </text>
+              <rect id="entrance-roadtrip-meta-panel" x="412" y="-111" width="250" height="39" rx="9" fill="#172027" fill-opacity=".72" stroke="#f0d8b8" stroke-opacity=".44"/>
               <text id="entrance-roadtrip-grade" class="entrance-roadtrip-hud-text" x="425" y="-83">Scenic drive</text>
-              <text id="entrance-roadtrip-best" class="entrance-roadtrip-hud-text" x="646" y="-96" text-anchor="end">★ 0</text>
-              <text id="entrance-roadtrip-multiplier" class="entrance-roadtrip-hud-text" x="646" y="-81" text-anchor="end">×1</text>
+              <text id="entrance-roadtrip-best" class="entrance-roadtrip-hud-text" x="425" y="-84">★ 0</text>
+              <text id="entrance-roadtrip-multiplier" class="entrance-roadtrip-hud-text" x="646" y="-83" text-anchor="end">×1</text>
               <g id="entrance-roadtrip-mirror" aria-hidden="true">
                 <path id="entrance-roadtrip-mirror-housing" d="M282-115H398Q407-115 408-105L411-87Q412-75 400-74H280Q268-75 269-87L272-105Q273-115 282-115Z" fill="#2d3438" stroke="#171c20" stroke-width="1.6"/>
                 <g clip-path="url(#entrance-roadtrip-mirror-clip)">
@@ -35733,6 +35738,8 @@ window.__entranceRoomOpen = false;
   function paintRoadtripScore() {
     var speed = roadtripElement("entrance-roadtrip-speed");
     var score = roadtripElement("entrance-roadtrip-score");
+    var scoreTrip = roadtripElement("entrance-roadtrip-score-trip");
+    var scorePoints = roadtripElement("entrance-roadtrip-score-points");
     var best = roadtripElement("entrance-roadtrip-best");
     var multiplier = roadtripElement("entrance-roadtrip-multiplier");
     var grade = roadtripElement("entrance-roadtrip-grade");
@@ -35746,8 +35753,14 @@ window.__entranceRoomOpen = false;
       speed.setAttribute("data-roadtrip-speed-band", speedValue <= 100 ? "safe" :
         speedValue <= 150 ? "warning" : speedValue < 180 ? "danger" : "escape");
     }
-    if (score) score.textContent = roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
-      roadtripDistanceLabel(roadtripState.distance, lang) + " km · " + scoreValue + " " + pointsUnit;
+    if (scoreTrip && scorePoints) {
+      scoreTrip.textContent = roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
+        roadtripDistanceLabel(roadtripState.distance, lang) + " km";
+      scorePoints.textContent = scoreValue + " " + pointsUnit;
+    } else if (score) {
+      score.textContent = roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
+        roadtripDistanceLabel(roadtripState.distance, lang) + " km · " + scoreValue + " " + pointsUnit;
+    }
     if (best) best.textContent = "★ " + Math.max(0, Math.floor(roadtripState.best));
     if (multiplier) multiplier.textContent = "×" + roadtripState.multiplier;
     if (grade) {

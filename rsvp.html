@@ -988,7 +988,7 @@ footer{margin-top:2.6rem}
 #entrance-room.entrance-roadtrip-season-spring #entrance-roadtrip-mirror-trees{fill:#4d7048}
 #entrance-room.entrance-roadtrip-season-summer #entrance-roadtrip-mirror-trees{fill:#294b35}
 #entrance-room.entrance-roadtrip-season-autumn #entrance-roadtrip-mirror-trees{fill:#785137}
-#entrance-room.entrance-roadtrip-season-winter #entrance-roadtrip-mirror-trees{fill:#56615e}
+#entrance-room.entrance-roadtrip-season-winter #entrance-roadtrip-mirror-trees{fill:#3f4b48;stroke:#273330;stroke-width:.35}
 #entrance-room.entrance-roadtrip-season-winter #entrance-roadtrip-rabbit .entrance-roadtrip-rabbit-body{fill:#e3e2d9}
 #entrance-room.entrance-roadtrip-season-winter #entrance-roadtrip-rabbit .entrance-roadtrip-rabbit-head{fill:#d2d3cc}
 #entrance-room.entrance-roadtrip-season-winter #entrance-roadtrip-rabbit .entrance-roadtrip-rabbit-ear{fill:#dedfd7}
@@ -32583,8 +32583,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                       <path d="M260-99Q293-104 324-99T371-100T420-99V-87H260Z" fill="#dce1dc"/>
                     </g>
                   </g>
-                  <g id="entrance-roadtrip-mirror-trees"></g>
                   <path id="entrance-roadtrip-mirror-winter" d="M274-91Q307-94 340-90T406-92V-77H274Z" fill="#f1f2ed"/>
+                  <g id="entrance-roadtrip-mirror-trees"></g>
                   <path id="entrance-roadtrip-mirror-road" class="entrance-roadtrip-mirror-road" d="M337-99L343-99L396-77H284Z"/>
                   <path id="entrance-roadtrip-mirror-center" d="M339.8-99L339.8-77M340.2-99L340.2-77" fill="none" stroke="#d8a72d" stroke-width=".65"/>
                   <path id="entrance-roadtrip-mirror-lanes" d="M338.5-99L311-77M341.5-99L369-77" fill="none" stroke="#f5f3e9" stroke-width=".75" stroke-dasharray="2.2 2.5"/>
@@ -38471,26 +38471,38 @@ window.__entranceRoomOpen = false;
       roadtripMirrorTerrain.setAttribute("data-scenery-offset", terrainOffset.toFixed(2));
       roadtripMirrorTerrain.setAttribute("data-scenery-y", terrainY.toFixed(2));
     }
-    var cycle = 80;
+    var furnitureCycle = ROADTRIP_FURNITURE_SIZE * 21;
+    var roadsideTrees = roadtripFurniturePool.filter(function (item) { return item.type === "tree"; });
     roadtripMirrorTreePool.forEach(function (tree, index) {
-      var behind = ((roadtripState.distance + index * 10) % cycle + cycle) % cycle;
+      var source = roadsideTrees[index];
+      if (!source) {
+        tree.setAttribute("visibility", "hidden");
+        tree.removeAttribute("data-roadtrip-source-index");
+        return;
+      }
+      var treeAt = source.index * 21 + 4;
+      var behind = ((roadtripState.distance - treeAt) % furnitureCycle + furnitureCycle) % furnitureCycle;
       if (!roadtripState.active || behind > 62) {
         tree.setAttribute("visibility", "hidden");
+        tree.setAttribute("data-roadtrip-behind", behind.toFixed(2));
+        tree.setAttribute("data-roadtrip-source-index", String(source.index));
         return;
       }
       var point = roadtripMirrorProject(behind);
-      var side = index % 2 ? 1 : -1;
+      var side = source.index % 2 ? 1 : -1;
       var x = point.center + side * (point.halfWidth + 2.2 + point.perspective * 2.8);
       var scale = .1 + point.perspective * .42;
+      var topY = point.y - scale * 22;
       var edgeFade = Math.min(1, behind / 3, (62 - behind) / 7);
-      tree.setAttribute("transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" +
-        scale.toFixed(3) + " " + (-scale).toFixed(3) + ")");
+      tree.setAttribute("transform", "translate(" + x.toFixed(2) + " " + topY.toFixed(2) + ") scale(" +
+        scale.toFixed(3) + " " + scale.toFixed(3) + ")");
       tree.setAttribute("opacity", Math.max(0, edgeFade).toFixed(2));
       tree.setAttribute("data-roadtrip-behind", behind.toFixed(2));
       tree.setAttribute("data-roadtrip-base-y", point.y.toFixed(2));
-      tree.setAttribute("data-roadtrip-top-y", (point.y - scale * 22).toFixed(2));
+      tree.setAttribute("data-roadtrip-top-y", topY.toFixed(2));
       tree.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
       tree.setAttribute("data-roadtrip-side", side < 0 ? "left" : "right");
+      tree.setAttribute("data-roadtrip-source-index", String(source.index));
       tree.setAttribute("visibility", edgeFade > 0 ? "visible" : "hidden");
     });
   }

@@ -1514,13 +1514,14 @@ check(curves && curves.right.headlights && curves.right.headlights.span >= 600 &
   /646\.00 95Z$/.test(curves.right.headlights.right || ""),
   "the two low-opacity headlight fans cover both shoulders with a narrow, softened centre overlap",
   curves && curves.right.headlights);
-var mirrorTreeNear = curves && curves.mirrorTreesNear && curves.mirrorTreesNear[0];
-var mirrorTreeFarther = curves && curves.mirrorTreesFarther && curves.mirrorTreesFarther[0];
+var mirrorTreeNear = curves && curves.mirrorTreesNear && curves.mirrorTreesNear.find(function (tree) { return tree.visible; });
+var mirrorTreeFarther = curves && curves.mirrorTreesFarther && curves.mirrorTreesFarther.find(function (tree) { return tree.visible; });
 check(mirrorTreeNear && mirrorTreeFarther && mirrorTreeNear.visible && mirrorTreeFarther.visible &&
   mirrorTreeFarther.behind > mirrorTreeNear.behind &&
   scaleFromTransform(mirrorTreeFarther.transform) < scaleFromTransform(mirrorTreeNear.transform) &&
+  curves.mirrorTreesNear.filter(function (tree) { return tree.visible; }).length === 1 &&
   curves.mirrorTreesNear.length === 8 && !/entrance-roadtrip-mirror-(?:lamp|post)/.test(source),
-  "rear-view trees recede toward the curve-aware vanishing point without reflected lamp or post furniture", {
+  "the one actually passed rear-view tree recedes toward the curve-aware vanishing point without reflected lamp or post furniture", {
     near: mirrorTreeNear, farther: mirrorTreeFarther
   });
 check(s.lamps && s.lamps.length >= 2 && s.lamps.every(function (lamp) {

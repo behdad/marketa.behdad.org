@@ -34839,6 +34839,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_ENFORCE_SPEED = ROADTRIP_SPEED_LIMIT + ROADTRIP_POLICE_TOLERANCE;
   var ROADTRIP_POLICE_ESCAPE_SPEED = 180;
   var ROADTRIP_POLICE_PURSUIT_SPEED = 180;
+  var ROADTRIP_POLICE_SURRENDER_SPEED = 100;
   var ROADTRIP_POLICE_ESCAPE_DISTANCE = 80;
   var ROADTRIP_POLICE_ESCAPE_HOLD_SECONDS = 10;
   var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
@@ -34949,6 +34950,7 @@ window.__entranceRoomOpen = false;
       warningLight: false,
       detectedSpeed: 0,
       engagedPursuit: false,
+      surrenderLatched: false,
       overLimit: 0,
       fine: 0,
       courtRequired: false,
@@ -36055,6 +36057,23 @@ window.__entranceRoomOpen = false;
     return Math.max(0, Math.min(1,
       roadtripState.police.escapeGap / ROADTRIP_POLICE_ESCAPE_DISTANCE));
   }
+  function syncRoadtripPoliceSurrender() {
+    var police = roadtripState.police;
+    if (!roadtripState.active || police.phase !== "pursuit") return false;
+    var forwardSpeed = driveState.speed * driveState.facing;
+    if (!police.surrenderLatched && forwardSpeed < ROADTRIP_POLICE_SURRENDER_SPEED) {
+      police.surrenderLatched = true;
+      police.escapeGap = 0;
+      police.escapeHoldElapsed = 0;
+      driveState.throttleHeldMs = 0;
+      driveState.holds.throttle = false;
+      driveControls.forEach(function (control) {
+        if (control.getAttribute("data-drive-hold") === "throttle") control.classList.remove("pressed");
+      });
+      syncPorscheDriveInstruction(true);
+    }
+    return police.surrenderLatched;
+  }
   function resetRoadtripPoliceRun() {
     var police = roadtripState.police;
     police.phase = "idle";
@@ -36066,6 +36085,7 @@ window.__entranceRoomOpen = false;
     police.warningLight = false;
     police.detectedSpeed = 0;
     police.engagedPursuit = false;
+    police.surrenderLatched = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
@@ -36113,6 +36133,7 @@ window.__entranceRoomOpen = false;
     police.warningLight = false;
     police.detectedSpeed = 0;
     police.engagedPursuit = false;
+    police.surrenderLatched = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
@@ -36151,6 +36172,7 @@ window.__entranceRoomOpen = false;
     police.warningLight = false;
     police.detectedSpeed = 0;
     police.engagedPursuit = false;
+    police.surrenderLatched = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
@@ -36253,6 +36275,7 @@ window.__entranceRoomOpen = false;
     var reason = police.resolutionReason || "refused";
     var citation = applyRoadtripPoliceCitation(reason === "refused" ? 1000 : 0,
       reason === "refused");
+    police.surrenderLatched = false;
     police.phase = "ended";
     police.runEnded = true;
     police.endReason = reason === "pulled-over" ? "court" : reason;
@@ -36281,6 +36304,7 @@ window.__entranceRoomOpen = false;
     police.stops++;
     if (police.courtRequired) return beginRoadtripPoliceStopped("pulled-over");
     var citation = applyRoadtripPoliceCitation(0, false);
+    police.surrenderLatched = false;
     if (citation.suspended) {
       police.phase = "ended";
       police.runEnded = true;
@@ -36319,6 +36343,7 @@ window.__entranceRoomOpen = false;
     if (police.phase !== "pursuit" || police.escapeGap < ROADTRIP_POLICE_ESCAPE_DISTANCE ||
         police.escapeHoldElapsed < ROADTRIP_POLICE_ESCAPE_HOLD_SECONDS) return false;
     police.escapes++;
+    police.surrenderLatched = false;
     police.phase = "cooldown";
     police.cooldownElapsed = 0;
     police.overLimit = 0;
@@ -36347,6 +36372,7 @@ window.__entranceRoomOpen = false;
     police.fine = citation.fine;
     police.courtRequired = citation.courtRequired;
     police.engagedPursuit = true;
+    police.surrenderLatched = false;
     police.phase = "pursuit";
     police.pursuits++;
     police.pursuitElapsed = 0;
@@ -36487,6 +36513,7 @@ window.__entranceRoomOpen = false;
         detectRoadtripPoliceSpeed();
       }
     } else if (police.phase === "pursuit") {
+      syncRoadtripPoliceSurrender();
       police.pursuitElapsed += seconds;
       police.pursuitDistance += distance;
       if (roadtripState.playerLane >= ROADTRIP_RUMBLE_LANE && Math.abs(driveState.speed) <= 2.5) {
@@ -38753,6 +38780,7 @@ window.__entranceRoomOpen = false;
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     held = !!held;
     if (held) resumeRoadtripFromDrivingInput();
+    if (name === "throttle" && held && syncRoadtripPoliceSurrender()) held = false;
     var wasHeld = driveState.holds[name];
     driveState.holds[name] = held;
     if ((name === "steerLeft" || name === "steerRight") && wasHeld !== held) {
@@ -38801,6 +38829,7 @@ window.__entranceRoomOpen = false;
     if (!roadtripSimulationAttended()) return driveState;
     var dt = Math.max(0, Math.min(1000, Number(milliseconds) || 0));
     var seconds = dt / 1000;
+    syncRoadtripPoliceSurrender();
     var throttle = porscheState.engineOn && driveState.holds.throttle ? 1 : 0;
     var clutch = porscheState.engineOn && driveState.holds.clutch;
     var brake = driveState.holds.brake ? 1 : 0;
@@ -39876,6 +39905,7 @@ window.__entranceRoomOpen = false;
           policeRepeatDistance: ROADTRIP_POLICE_REPEAT_DISTANCE,
           policeEscapeSpeed: ROADTRIP_POLICE_ESCAPE_SPEED,
           policePursuitSpeed: ROADTRIP_POLICE_PURSUIT_SPEED,
+          policeSurrenderSpeed: ROADTRIP_POLICE_SURRENDER_SPEED,
           policeEscapeDistance: ROADTRIP_POLICE_ESCAPE_DISTANCE,
           policeEscapeHoldSeconds: ROADTRIP_POLICE_ESCAPE_HOLD_SECONDS,
           policeStoppedBeat: ROADTRIP_POLICE_STOPPED_BEAT_SECONDS,
@@ -39889,6 +39919,7 @@ window.__entranceRoomOpen = false;
             warningFlashCount: roadtripState.police.warningFlashCount,
             warningLight: roadtripState.police.warningLight,
             detectedSpeed: roadtripState.police.detectedSpeed,
+            surrenderLatched: roadtripState.police.surrenderLatched,
             overLimit: roadtripState.police.overLimit,
             fine: roadtripState.police.fine,
             courtRequired: roadtripState.police.courtRequired,

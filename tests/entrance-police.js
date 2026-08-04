@@ -68,6 +68,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         repeatDistance: trip().policeRepeatDistance,
         escapeSpeed: trip().policeEscapeSpeed,
         pursuitSpeed: trip().policePursuitSpeed,
+        surrenderSpeed: trip().policeSurrenderSpeed,
         escapeDistance: trip().policeEscapeDistance,
         escapeHoldSeconds: trip().policeEscapeHoldSeconds,
         stoppedBeat: trip().policeStoppedBeat,
@@ -154,6 +155,65 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         trip: copy(trip()),
         caption: document.getElementById("hunt-caption").textContent.trim(),
         flash: window.__flashCaptionState()
+      };
+
+      prepareEncounter();
+      meetPolice(130);
+      setMotion(101, 3);
+      window.__entranceDriveControl("throttle", true);
+      var aboveThresholdBefore = state().drive.speed;
+      step(250);
+      var aboveThreshold = copy(state());
+      setMotion(99, 3);
+      step(50);
+      var latched = copy(state());
+      window.__entranceDriveKey(new KeyboardEvent("keydown", {
+        key: "ArrowUp", code: "ArrowUp", bubbles: true, cancelable: true
+      }), true);
+      var keyboardThrottle = copy(state());
+      var throttleControl = document.getElementById("entrance-drive-throttle");
+      throttleControl.dispatchEvent(new PointerEvent("pointerdown", {
+        bubbles: true, cancelable: true, pointerId: 818, pointerType: "touch", isPrimary: true
+      }));
+      var touchThrottle = {
+        state: copy(state()),
+        pressed: throttleControl.classList.contains("pressed")
+      };
+      throttleControl.dispatchEvent(new PointerEvent("pointerup", {
+        bubbles: true, cancelable: true, pointerId: 818, pointerType: "touch", isPrimary: true
+      }));
+      step(400);
+      var throttleBlocked = copy(state());
+      var controlStart = copy(state());
+      window.__entranceDriveControl("steerRight", true);
+      window.__entranceDriveControl("brake", true);
+      step(300);
+      var controlsLive = copy(state());
+      window.__entranceDriveControl("steerRight", false);
+      window.__entranceDriveControl("brake", false);
+      setMotion(0, 0);
+      window.__entranceDriveControl("clutch", true);
+      var reverseSelected = window.__entranceDriveShift(-1);
+      window.__entranceDriveControl("clutch", false);
+      window.__entranceDriveControl("throttle", true);
+      step(400);
+      var reverseBlocked = copy(state());
+      var latchedCaption = document.getElementById("hunt-caption").textContent.trim();
+      var resetStarted = window.__entranceRoadtripStart();
+      report.steps.surrenderLatch = {
+        aboveBefore: aboveThresholdBefore,
+        above: aboveThreshold,
+        latched: latched,
+        caption: latchedCaption,
+        keyboardThrottle: keyboardThrottle,
+        touchThrottle: touchThrottle,
+        blocked: throttleBlocked,
+        controlStart: controlStart,
+        controlsLive: controlsLive,
+        reverseSelected: reverseSelected,
+        reverseBlocked: reverseBlocked,
+        resetStarted: resetStarted,
+        reset: copy(state())
       };
 
       prepareEncounter();
@@ -420,6 +480,7 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.firstDistance === 950 && s.contract.warningAhead === 240 &&
   s.contract.warningHeadroom === 3 && s.contract.repeatDistance === 1200 &&
   s.contract.escapeSpeed === 180 && s.contract.pursuitSpeed === 180 &&
+  s.contract.surrenderSpeed === 100 &&
   s.contract.escapeDistance === 80 && s.contract.escapeHoldSeconds === 10 &&
   s.contract.stoppedBeat === 1.25 &&
   s.contract.arrestDuration === 5.8 &&
@@ -481,6 +542,29 @@ check(s.stopped && s.stopped.trip.active && s.stopped.trip.police.phase === "coo
   /40 km\/h over · fine \$560 · 4 demerits · 4\/15/.test(s.stopped.caption) &&
   !s.stopped.flash,
   "the roadside outcome uses the recorded overage before the scaled fine", s.stopped);
+check(s.surrenderLatch && s.surrenderLatch.aboveBefore === 101 &&
+  s.surrenderLatch.above.drive.speed > s.surrenderLatch.aboveBefore &&
+  !s.surrenderLatch.above.drive.roadtrip.police.surrenderLatched &&
+  s.surrenderLatch.latched.drive.speed < 100 &&
+  s.surrenderLatch.latched.drive.roadtrip.police.surrenderLatched &&
+  !s.surrenderLatch.latched.drive.holds.throttle &&
+  !s.surrenderLatch.keyboardThrottle.drive.holds.throttle &&
+  !s.surrenderLatch.touchThrottle.state.drive.holds.throttle && !s.surrenderLatch.touchThrottle.pressed &&
+  s.surrenderLatch.blocked.drive.speed <= s.surrenderLatch.latched.drive.speed &&
+  s.surrenderLatch.blocked.drive.roadtrip.police.surrenderLatched &&
+  s.surrenderLatch.controlsLive.drive.speed < s.surrenderLatch.controlStart.drive.speed &&
+  s.surrenderLatch.controlsLive.drive.roadtrip.playerLane > s.surrenderLatch.controlStart.drive.roadtrip.playerLane &&
+  s.surrenderLatch.controlsLive.drive.steeringAngle > 0 &&
+  s.surrenderLatch.controlsLive.drive.holds.brake && s.surrenderLatch.controlsLive.drive.holds.steerRight &&
+  s.surrenderLatch.controlsLive.drive.roadtrip.police.surrenderLatched &&
+  s.surrenderLatch.reverseSelected && s.surrenderLatch.reverseBlocked.drive.gear === -1 &&
+  s.surrenderLatch.reverseBlocked.drive.speed === 0 && !s.surrenderLatch.reverseBlocked.drive.holds.throttle &&
+  s.surrenderLatch.reverseBlocked.drive.roadtrip.police.surrenderLatched &&
+  /pull onto the right shoulder and stop/.test(s.surrenderLatch.caption) &&
+  s.surrenderLatch.resetStarted && s.surrenderLatch.reset.drive.roadtrip.police.phase === "idle" &&
+  !s.surrenderLatch.reset.drive.roadtrip.police.surrenderLatched,
+  "101 can accelerate, but the first sub-100 speed latches surrender across keyboard, touch, clutch, and reverse while preserving brake and steering",
+  s.surrenderLatch);
 check(s.demeritWarning && s.demeritWarning.trip.active &&
   s.demeritWarning.trip.demeritPoints === 8 && s.demeritWarning.trip.demeritWarning &&
   !s.demeritWarning.trip.suspended && s.demeritWarning.trip.police.lastDemerits === 3 &&
@@ -555,7 +639,7 @@ check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase 
   s.escaped.recovered.police.refusalElapsed === 5 &&
   s.escaped.cleared.active && s.escaped.cleared.police.phase === "cooldown" &&
   s.escaped.cleared.police.escapes === 1 && !s.escaped.cleared.police.sirenActive &&
-  s.escaped.cleared.demeritPoints === 0 &&
+  s.escaped.cleared.demeritPoints === 0 && !s.escaped.cleared.police.surrenderLatched &&
   !s.escaped.cleared.police.mirrorVisible && s.escaped.cleared.police.tickets === 0 &&
   /Police lost/.test(s.escaped.caption) && !s.escaped.flash,
   "the Sheriff reaches 180 and a ten-second breakaway must survive any slowdown before escape",

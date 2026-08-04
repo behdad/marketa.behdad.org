@@ -34963,6 +34963,12 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_ROAD_EDGE_LANE = 2;
   var ROADTRIP_RUMBLE_LANE = 1.72;
   var ROADTRIP_MAX_LANE = 2.32;
+  var ROADTRIP_CENTERLINE_ENFORCE_LANE = -.18;
+  var ROADTRIP_CENTERLINE_ENFORCE_SECONDS = 2;
+  // Alberta AR 304/2002 s15(1)(a): the $203 specified penalty plus the
+  // 20% victim surcharge is $243 payable; the offence carries 2 demerits.
+  var ROADTRIP_CENTERLINE_FINE = 243;
+  var ROADTRIP_CENTERLINE_DEMERITS = 2;
   var ROADTRIP_SPEED_LIMIT = 90;
   var ROADTRIP_POLICE_TOLERANCE = 20;
   var ROADTRIP_POLICE_ENFORCE_SPEED = ROADTRIP_SPEED_LIMIT + ROADTRIP_POLICE_TOLERANCE;
@@ -35086,6 +35092,8 @@ window.__entranceRoomOpen = false;
     lastImpactSeverity: 0,
     centerlineExcursion: false,
     centerlineCrossings: 0,
+    centerlineElapsed: 0,
+    centerlineEnforced: false,
     shoulderZone: "road",
     shoulderDistance: 0,
     impairedSteeringPhase: 0,
@@ -35103,6 +35111,7 @@ window.__entranceRoomOpen = false;
       warningLight: false,
       radarPeakSpeed: 0,
       detectedSpeed: 0,
+      offence: "",
       engagedPursuit: false,
       surrenderLatched: false,
       overLimit: 0,
@@ -35767,20 +35776,26 @@ window.__entranceRoomOpen = false;
     var cardOpacity = Math.max(0, Math.min(1, (elapsed - 2.7) / .45)) * fade;
     if (roadtripArrestCardNode) roadtripArrestCardNode.setAttribute("opacity", cardOpacity.toFixed(3));
     var refusalPoints = police.resolutionReason === "refused" ? 5 : 0;
-    var prospectivePoints = roadtripDemeritsForSpeed(police.overLimit) + refusalPoints +
+    var offencePoints = police.offence === "solid-line" ? ROADTRIP_CENTERLINE_DEMERITS :
+      roadtripDemeritsForSpeed(police.overLimit);
+    var prospectivePoints = offencePoints + refusalPoints +
       (police.impairedDriving ? ROADTRIP_IMPAIRED_DEMERITS : 0);
     var prospectiveTotal = Math.min(ROADTRIP_DEMERIT_SUSPENSION,
       roadtripState.demeritPoints + prospectivePoints);
     var courtStop = police.courtRequired;
     var titleKey = police.impairedDriving ? "entrance_roadtrip_arrest_impaired_title" :
-      (courtStop ? "entrance_roadtrip_arrest_title" : "entrance_roadtrip_arrest_ticket_title");
+      (courtStop ? "entrance_roadtrip_arrest_title" :
+        (police.offence === "solid-line" ? "entrance_roadtrip_arrest_centerline_title" :
+          "entrance_roadtrip_arrest_ticket_title"));
     if (roadtripArrestTitleNode) {
       roadtripArrestTitleNode.setAttribute("data-i", titleKey);
       roadtripArrestTitleNode.textContent = roadtripPoliceText(titleKey);
     }
     if (roadtripArrestLineNode) roadtripArrestLineNode.textContent = roadtripPoliceText(
       police.impairedDriving ? "entrance_roadtrip_arrest_impaired_line" :
-        (courtStop ? "entrance_roadtrip_arrest_line" : "entrance_roadtrip_arrest_ticket_line"), {
+        (courtStop ? "entrance_roadtrip_arrest_line" :
+          (police.offence === "solid-line" ? "entrance_roadtrip_arrest_centerline_line" :
+            "entrance_roadtrip_arrest_ticket_line")), {
         over: police.overLimit,
         fine: courtStop ? roadtripPoliceText("entrance_roadtrip_court_fine") : "$" + police.fine,
         points: prospectivePoints,
@@ -36394,6 +36409,7 @@ window.__entranceRoomOpen = false;
     police.warningLight = false;
     police.radarPeakSpeed = 0;
     police.detectedSpeed = 0;
+    police.offence = "";
     police.engagedPursuit = false;
     police.surrenderLatched = false;
     police.overLimit = 0;
@@ -36444,6 +36460,7 @@ window.__entranceRoomOpen = false;
     police.warningLight = false;
     police.radarPeakSpeed = 0;
     police.detectedSpeed = 0;
+    police.offence = "";
     police.engagedPursuit = false;
     police.surrenderLatched = false;
     police.overLimit = 0;
@@ -36485,6 +36502,7 @@ window.__entranceRoomOpen = false;
     police.warningLight = false;
     police.radarPeakSpeed = 0;
     police.detectedSpeed = 0;
+    police.offence = "";
     police.engagedPursuit = false;
     police.surrenderLatched = false;
     police.overLimit = 0;
@@ -36512,12 +36530,53 @@ window.__entranceRoomOpen = false;
     paintRoadtripPolice();
     return true;
   }
+  function startRoadtripPolicePursuit(offence, citation, feedbackKey, values) {
+    var police = roadtripState.police;
+    police.offence = offence;
+    police.overLimit = citation.overLimit || 0;
+    police.fine = citation.fine;
+    police.courtRequired = citation.courtRequired === true;
+    police.warningLight = false;
+    police.engagedPursuit = true;
+    police.surrenderLatched = false;
+    police.phase = "pursuit";
+    police.pursuits++;
+    police.pursuitElapsed = 0;
+    police.pursuitDistance = 0;
+    police.refusalElapsed = 0;
+    police.refusalDistance = 0;
+    police.escapeGap = 0;
+    police.escapeHoldElapsed = 0;
+    roadtripPoliceFeedback(feedbackKey, values || {}, 4400);
+    paintRoadtripPolice();
+    updateRoadtripPoliceSiren();
+    return true;
+  }
+  function beginRoadtripCenterlinePursuit() {
+    var police = roadtripState.police;
+    if (!roadtripState.active || ["idle", "warning", "cooldown"].indexOf(police.phase) < 0) return false;
+    police.stationAt = 0;
+    police.warningCarAt = 0;
+    police.warningElapsed = 0;
+    police.warningFlashCount = 0;
+    police.radarPeakSpeed = 0;
+    police.detectedSpeed = Math.round(Math.abs(Number(driveState.speed) || 0));
+    police.impairedDriving = roadtripImpairmentLevel() >= .5 && roadtripState.erraticDriving;
+    return startRoadtripPolicePursuit("solid-line", {
+      overLimit: 0,
+      fine: police.impairedDriving ? null : ROADTRIP_CENTERLINE_FINE,
+      courtRequired: police.impairedDriving
+    }, police.impairedDriving ? "entrance_roadtrip_police_impaired_pursuit" :
+      "entrance_roadtrip_police_centerline_pursuit");
+  }
   function applyRoadtripPoliceCitation(scoreSurcharge, refused) {
     var police = roadtripState.police;
     var fixedFine = police.courtRequired ? 0 : Math.max(0, Math.round(Number(police.fine) || 0));
     var scorePenalty = fixedFine + Math.max(0, Math.round(Number(scoreSurcharge) || 0)) +
       (police.impairedDriving ? ROADTRIP_IMPAIRED_SCORE_PENALTY : 0);
-    var demerits = roadtripDemeritsForSpeed(police.overLimit) + (refused ? 5 : 0) +
+    var offenceDemerits = police.offence === "solid-line" ? ROADTRIP_CENTERLINE_DEMERITS :
+      roadtripDemeritsForSpeed(police.overLimit);
+    var demerits = offenceDemerits + (refused ? 5 : 0) +
       (police.impairedDriving ? ROADTRIP_IMPAIRED_DEMERITS : 0);
     police.tickets++;
     if (police.courtRequired) police.summonses++;
@@ -36594,7 +36653,8 @@ window.__entranceRoomOpen = false;
       police.cooldownElapsed = 0;
       stopRoadtripPoliceSiren(.18);
       hideRoadtripArrest();
-      roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_ticket", {
+      roadtripPoliceOutcomeFeedback(police.offence === "solid-line" ?
+        "entrance_roadtrip_police_centerline_ticket" : "entrance_roadtrip_police_ticket", {
         over: police.overLimit,
         fine: "$" + police.fine,
         points: citation.demerits,
@@ -36616,7 +36676,8 @@ window.__entranceRoomOpen = false;
     roadtripState.exitUntilStop = false;
     var outcomeKey = reason === "pulled-over" && police.impairedDriving ? "entrance_roadtrip_police_impaired_summons" :
       (reason === "pulled-over" && police.courtRequired ? "entrance_roadtrip_police_summons" :
-      (reason === "pulled-over" ? "entrance_roadtrip_police_ticket" :
+      (reason === "pulled-over" ? (police.offence === "solid-line" ?
+        "entrance_roadtrip_police_centerline_ticket" : "entrance_roadtrip_police_ticket") :
       (police.courtRequired ? "entrance_roadtrip_police_court_refused" :
         "entrance_roadtrip_police_refused")));
     roadtripPoliceOutcomeFeedback(outcomeKey, {
@@ -36646,6 +36707,7 @@ window.__entranceRoomOpen = false;
     police.fine = 0;
     police.courtRequired = false;
     police.impairedDriving = false;
+    police.offence = "";
     police.mirrorScale = 0;
     stopRoadtripPoliceSiren(.9);
     roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_escaped");
@@ -36666,24 +36728,13 @@ window.__entranceRoomOpen = false;
       return false;
     }
     var citation = roadtripPoliceCitationForSpeed(detectedSpeed);
-    police.overLimit = citation.overLimit;
-    police.fine = citation.fine;
-    police.courtRequired = citation.courtRequired || police.impairedDriving;
-    if (police.courtRequired) police.fine = null;
-    police.engagedPursuit = true;
-    police.surrenderLatched = false;
-    police.phase = "pursuit";
-    police.pursuits++;
-    police.pursuitElapsed = 0;
-    police.pursuitDistance = 0;
-    police.refusalElapsed = 0;
-    police.refusalDistance = 0;
-    police.escapeGap = 0;
-    police.escapeHoldElapsed = 0;
-    roadtripPoliceFeedback(police.impairedDriving ? "entrance_roadtrip_police_impaired_pursuit" :
-      "entrance_roadtrip_police_pursuit", { speed: detectedSpeed }, 4400);
-    updateRoadtripPoliceSiren();
-    return true;
+    if (police.impairedDriving) {
+      citation.courtRequired = true;
+      citation.fine = null;
+    }
+    return startRoadtripPolicePursuit("speeding", citation,
+      police.impairedDriving ? "entrance_roadtrip_police_impaired_pursuit" :
+        "entrance_roadtrip_police_pursuit", { speed: detectedSpeed });
   }
   function paintRoadtripPolice() {
     ensureRoadtripScene();
@@ -36922,6 +36973,7 @@ window.__entranceRoomOpen = false;
         police.courtRequired = false;
         police.impairedDriving = false;
         police.detectedSpeed = 0;
+        police.offence = "";
       }
     }
     paintRoadtripPolice();
@@ -37080,15 +37132,32 @@ window.__entranceRoomOpen = false;
     var drag = zone === "gravel" ? .15 : .035;
     driveState.speed *= Math.max(0, 1 - drag * seconds);
   }
-  function syncRoadtripCenterline() {
+  function syncRoadtripCenterline(seconds) {
+    seconds = Math.max(0, Number(seconds) || 0);
     if (!roadtripState.centerlineExcursion && roadtripState.playerLane < -.05) {
       roadtripState.centerlineExcursion = true;
+      roadtripState.centerlineElapsed = 0;
+      roadtripState.centerlineEnforced = false;
       roadtripState.centerlineCrossings++;
       roadtripState.score -= 2;
       roadtripFeedback("entrance_roadtrip_centerline");
       if (window.__checkpointChanged) window.__checkpointChanged();
     } else if (roadtripState.centerlineExcursion && roadtripState.playerLane > .08) {
       roadtripState.centerlineExcursion = false;
+      roadtripState.centerlineElapsed = 0;
+      roadtripState.centerlineEnforced = false;
+      return;
+    }
+    if (!roadtripState.centerlineExcursion || roadtripState.centerlineEnforced) return;
+    if (roadtripState.playerLane > ROADTRIP_CENTERLINE_ENFORCE_LANE ||
+        document.hidden || !document.hasFocus()) {
+      roadtripState.centerlineElapsed = 0;
+      return;
+    }
+    roadtripState.centerlineElapsed += seconds;
+    if (roadtripState.centerlineElapsed >= ROADTRIP_CENTERLINE_ENFORCE_SECONDS) {
+      roadtripState.centerlineEnforced = true;
+      beginRoadtripCenterlinePursuit();
     }
   }
   function releaseRoadtripEntity(entity) {
@@ -37466,6 +37535,8 @@ window.__entranceRoomOpen = false;
     roadtripState.lastImpactSeverity = 0;
     roadtripState.centerlineExcursion = false;
     roadtripState.centerlineCrossings = 0;
+    roadtripState.centerlineElapsed = 0;
+    roadtripState.centerlineEnforced = false;
     roadtripState.shoulderZone = "road";
     roadtripState.shoulderDistance = 0;
     roadtripState.impairedSteeringPhase = 0;
@@ -37622,9 +37693,9 @@ window.__entranceRoomOpen = false;
     if (routeTravel > 0) awardRoadtripDistance();
     roadtripState.playerLane = Math.max(-ROADTRIP_MAX_LANE, Math.min(ROADTRIP_MAX_LANE,
       roadtripState.playerLane - roadtripCurvatureAt(roadtripState.distance) * routeTravel * .42));
-    syncRoadtripCenterline();
-    syncRoadtripShoulder(Math.abs(routeTravel), seconds);
     syncRoadtripImpairedDriving(seconds);
+    syncRoadtripCenterline(seconds);
+    syncRoadtripShoulder(Math.abs(routeTravel), seconds);
     var spawned = 0;
     while (roadtripState.distance >= roadtripState.nextSpawnDistance && spawned < 3) {
       var pursuitSpawn = roadtripState.police.phase === "pursuit";
@@ -40403,6 +40474,11 @@ window.__entranceRoomOpen = false;
           lastImpactSeverity: roadtripState.lastImpactSeverity,
           centerlineExcursion: roadtripState.centerlineExcursion,
           centerlineCrossings: roadtripState.centerlineCrossings,
+          centerlineElapsed: roadtripState.centerlineElapsed,
+          centerlineEnforced: roadtripState.centerlineEnforced,
+          centerlineEnforcementSeconds: ROADTRIP_CENTERLINE_ENFORCE_SECONDS,
+          centerlineFine: ROADTRIP_CENTERLINE_FINE,
+          centerlineDemerits: ROADTRIP_CENTERLINE_DEMERITS,
           shoulderZone: roadtripState.shoulderZone,
           shoulderDistance: roadtripState.shoulderDistance,
           impairmentLevel: roadtripImpairmentLevel(),
@@ -40434,6 +40510,7 @@ window.__entranceRoomOpen = false;
             warningLight: roadtripState.police.warningLight,
             radarPeakSpeed: roadtripState.police.radarPeakSpeed,
             detectedSpeed: roadtripState.police.detectedSpeed,
+            offence: roadtripState.police.offence,
             surrenderLatched: roadtripState.police.surrenderLatched,
             overLimit: roadtripState.police.overLimit,
             fine: roadtripState.police.fine,
@@ -40719,7 +40796,8 @@ window.__entranceRoomOpen = false;
     var state = {};
     ["exitUntilStop", "playerLane", "distance", "distancePoints", "elapsedSeconds", "score", "multiplier",
       "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
-      "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "shoulderZone", "shoulderDistance",
+      "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "centerlineElapsed",
+      "centerlineEnforced", "shoulderZone", "shoulderDistance",
       "impairedSteeringPhase", "impairedSteeringBias", "erraticDrivingSeconds", "erraticDriving",
       "nextSpawnDistance", "spawnSerial"].forEach(function (key) { state[key] = roadtripState[key]; });
     var police = {};
@@ -40791,6 +40869,9 @@ window.__entranceRoomOpen = false;
     });
     roadtripState.lastImpactSeverity = roadtripSnapshotNumber(saved.lastImpactSeverity, 0, 0, 1);
     roadtripState.centerlineExcursion = saved.centerlineExcursion === true;
+    roadtripState.centerlineElapsed = roadtripSnapshotNumber(saved.centerlineElapsed, 0, 0,
+      ROADTRIP_CENTERLINE_ENFORCE_SECONDS);
+    roadtripState.centerlineEnforced = saved.centerlineEnforced === true;
     roadtripState.shoulderZone = ["road", "rumble", "gravel"].indexOf(saved.shoulderZone) >= 0 ? saved.shoulderZone : "road";
     roadtripState.shoulderDistance = roadtripSnapshotNumber(saved.shoulderDistance, 0, 0, 1000000000);
     roadtripState.impairedSteeringPhase = roadtripSnapshotNumber(saved.impairedSteeringPhase, 0, 0, 1000000000);
@@ -42458,6 +42539,7 @@ var T = {
       entrance_roadtrip_police_clear: "Police passed · within the 110 km/h tolerance.",
       entrance_roadtrip_police_pursuit: "Clocked at {speed} km/h · pull onto the right shoulder and stop.",
       entrance_roadtrip_police_impaired_pursuit: "Erratic impaired driving observed · pull onto the right shoulder and stop.",
+      entrance_roadtrip_police_centerline_pursuit: "Stayed across the double solid line · pull onto the right shoulder and stop.",
       entrance_roadtrip_police_pull_over: "Police behind · pull onto the right shoulder and stop.",
       entrance_roadtrip_police_escape: "Police receding · hold above 215 to lose them.",
       entrance_roadtrip_police_escaped: "Police lost · sirens fading away.",
@@ -42469,9 +42551,11 @@ var T = {
       entrance_roadtrip_arrest_title: "COURT SUMMONS",
       entrance_roadtrip_arrest_ticket_title: "SPEEDING TICKET",
       entrance_roadtrip_arrest_impaired_title: "IMPAIRED DRIVING",
+      entrance_roadtrip_arrest_centerline_title: "SOLID-LINE TICKET",
       entrance_roadtrip_arrest_line: "{over} over · {fine} · {points} pts · {total}/15",
       entrance_roadtrip_arrest_ticket_line: "{over} over · fine {fine} · {points} pts · {total}/15",
       entrance_roadtrip_arrest_impaired_line: "{fine} · {points} pts · {total}/15",
+      entrance_roadtrip_arrest_centerline_line: "double solid · fine {fine} · {points} pts · {total}/15",
       entrance_roadtrip_arrest_shout_engine: "ENGINE OFF!",
       entrance_roadtrip_arrest_shout_keys: "DROP THE KEYS!",
       entrance_roadtrip_arrest_shout_hands: "HANDS THROUGH THE WHEEL!",
@@ -42479,6 +42563,7 @@ var T = {
       entrance_roadtrip_demerit_warning: " · demerit warning",
       entrance_roadtrip_demerit_suspended: " · licence suspended for {time}",
       entrance_roadtrip_police_ticket: "{over} km/h over · fine {fine} · {points} demerits · {total}/15{status}.",
+      entrance_roadtrip_police_centerline_ticket: "Crossed the double solid line · fine {fine} · {points} demerits · {total}/15{status}.",
       entrance_roadtrip_police_summons: "{over} km/h over · {fine} · {points} demerits · {total}/15{status}.",
       entrance_roadtrip_police_impaired_summons: "Erratic impaired driving · {fine} · {points} demerits · {total}/15{status} · 250-point penalty.",
       entrance_roadtrip_police_refused: "You didn’t pull over · fine {fine} · {points} demerits · {total}/15{status} · 1,000-point penalty.",
@@ -43667,6 +43752,7 @@ var T = {
       entrance_roadtrip_police_clear: "Policie za tebou · do 110 km/h bez postihu.",
       entrance_roadtrip_police_pursuit: "Naměřeno {speed} km/h · zajeď na pravou krajnici a zastav.",
       entrance_roadtrip_police_impaired_pursuit: "Zpozorována nebezpečná jízda pod vlivem · zajeď na pravou krajnici a zastav.",
+      entrance_roadtrip_police_centerline_pursuit: "Zůstal jsi za dvojitou plnou čárou · zajeď na pravou krajnici a zastav.",
       entrance_roadtrip_police_pull_over: "Policie za tebou · zajeď na pravou krajnici a zastav.",
       entrance_roadtrip_police_escape: "Policie se vzdaluje · drž přes 215 a setřes ji.",
       entrance_roadtrip_police_escaped: "Policie setřesena · siréna utichá.",
@@ -43678,9 +43764,11 @@ var T = {
       entrance_roadtrip_arrest_title: "PŘEDVOLÁNÍ K SOUDU",
       entrance_roadtrip_arrest_ticket_title: "POKUTA ZA RYCHLOST",
       entrance_roadtrip_arrest_impaired_title: "ŘÍZENÍ POD VLIVEM",
+      entrance_roadtrip_arrest_centerline_title: "POKUTA ZA PLNOU ČÁRU",
       entrance_roadtrip_arrest_line: "+{over} · {fine} · {points} b. · {total}/15",
       entrance_roadtrip_arrest_ticket_line: "+{over} · pokuta {fine} · {points} b. · {total}/15",
       entrance_roadtrip_arrest_impaired_line: "{fine} · {points} b. · {total}/15",
+      entrance_roadtrip_arrest_centerline_line: "dvojitá plná · pokuta {fine} · {points} b. · {total}/15",
       entrance_roadtrip_arrest_shout_engine: "VYPNĚTE MOTOR!",
       entrance_roadtrip_arrest_shout_keys: "ZAHOĎTE KLÍČE!",
       entrance_roadtrip_arrest_shout_hands: "RUCE SKRZ VOLANT!",
@@ -43688,6 +43776,7 @@ var T = {
       entrance_roadtrip_demerit_warning: " · varování",
       entrance_roadtrip_demerit_suspended: " · řidičák pozastaven na {time}",
       entrance_roadtrip_police_ticket: "Překročení o {over} km/h · pokuta {fine} · {points} trestné body · {total}/15{status}.",
+      entrance_roadtrip_police_centerline_ticket: "Přejezd dvojité plné čáry · pokuta {fine} · {points} trestné body · {total}/15{status}.",
       entrance_roadtrip_police_summons: "Překročení o {over} km/h · {fine} · {points} trestných bodů · {total}/15{status}.",
       entrance_roadtrip_police_impaired_summons: "Nebezpečná jízda pod vlivem · {fine} · {points} trestných bodů · {total}/15{status} · ztráta 250 herních bodů.",
       entrance_roadtrip_police_refused: "Nezastavil jsi · pokuta {fine} · {points} trestných bodů · {total}/15{status} · ztráta 1 000 herních bodů.",

@@ -80,6 +80,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         pursuitReactionDistance: trip().pursuitReactionDistance,
         stoppedBeat: trip().policeStoppedBeat,
         arrestDuration: trip().policeArrestDuration,
+        centerlineSeconds: trip().centerlineEnforcementSeconds,
+        centerlineFine: trip().centerlineFine,
+        centerlineDemerits: trip().centerlineDemerits,
         demeritHud: ["entrance-roadtrip-meta-panel", "entrance-roadtrip-demerit-label",
           "entrance-roadtrip-demerit-points", "entrance-roadtrip-demerit-status"].every(function (id) {
           return !!document.getElementById(id);
@@ -178,6 +181,44 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         prepareEncounter();
         return { speed: speed, police: meetPolice(speed).police };
       });
+
+      prepareEncounter();
+      setMotion(90, 3);
+      window.__entranceRoadtripSetLane(-.5);
+      step(1000);
+      var briefCenterline = copy(trip());
+      window.__entranceRoadtripSetLane(.5);
+      step(20);
+      var briefCenterlineCleared = copy(trip());
+      prepareEncounter();
+      setMotion(90, 3);
+      window.__entranceRoadtripSetLane(-.5);
+      step(1000);
+      step(900);
+      var centerlineGrace = copy(trip());
+      step(200);
+      var centerlinePursuit = copy(trip());
+      var centerlinePursuitCaption = document.getElementById("hunt-caption").textContent.trim();
+      window.__entranceRoadtripSetLane(.5);
+      setMotion(0, 0);
+      window.__entranceRoadtripPoliceStep(0, .1);
+      window.__entranceRoadtripPoliceStep(0, 3.1);
+      var centerlineCard = copy(trip());
+      var centerlineCardTitle = document.getElementById("entrance-roadtrip-arrest-title").textContent.trim();
+      var centerlineCardLine = document.getElementById("entrance-roadtrip-arrest-line").textContent.trim();
+      window.__entranceRoadtripPoliceStep(0, 3);
+      report.steps.centerlinePolice = {
+        brief: briefCenterline,
+        briefCleared: briefCenterlineCleared,
+        grace: centerlineGrace,
+        pursuit: centerlinePursuit,
+        pursuitCaption: centerlinePursuitCaption,
+        card: centerlineCard,
+        cardTitle: centerlineCardTitle,
+        cardLine: centerlineCardLine,
+        cited: copy(trip()),
+        caption: document.getElementById("hunt-caption").textContent.trim()
+      };
 
       prepareEncounter();
       var pursuitDetection = meetPolice(130);
@@ -533,7 +574,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.czech = window.T && window.T.cs && window.T.cs.hunt ? {
         escape: window.T.cs.hunt.entrance_roadtrip_police_escape,
         fine: window.T.cs.hunt.entrance_roadtrip_police_ticket,
-        court: window.T.cs.hunt.entrance_roadtrip_police_summons
+        court: window.T.cs.hunt.entrance_roadtrip_police_summons,
+        centerlinePursuit: window.T.cs.hunt.entrance_roadtrip_police_centerline_pursuit,
+        centerlineTicket: window.T.cs.hunt.entrance_roadtrip_police_centerline_ticket,
+        centerlineTitle: window.T.cs.hunt.entrance_roadtrip_arrest_centerline_title
       } : null;
 
       prepareEncounter();
@@ -596,6 +640,8 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.pursuitTrafficDensity === 1.4 && s.contract.pursuitReactionDistance === 118 &&
   s.contract.stoppedBeat === 1.25 &&
   s.contract.arrestDuration === 5.8 &&
+  s.contract.centerlineSeconds === 2 && s.contract.centerlineFine === 243 &&
+  s.contract.centerlineDemerits === 2 &&
   s.contract.demeritHud &&
   s.contract.speedSign && s.contract.speedFurniture,
   "the highway posts 90/110 enforcement and models a Sheriff capable of 210 km/h", s.contract);
@@ -686,6 +732,32 @@ check(s.fineSchedule && JSON.stringify(s.fineSchedule.map(function (entry) {
 ]) && s.fineSchedule.every(function (entry) { return entry.police.phase === "pursuit"; }),
   "Alberta's exact fines remain and every enforced speed, including 51-over, starts pursuit",
   s.fineSchedule);
+check(s.centerlinePolice &&
+  s.centerlinePolice.brief.police.phase === "idle" &&
+  s.centerlinePolice.brief.centerlineElapsed > 0 &&
+  s.centerlinePolice.brief.centerlineElapsed < s.contract.centerlineSeconds &&
+  !s.centerlinePolice.brief.centerlineEnforced &&
+  s.centerlinePolice.briefCleared.centerlineElapsed === 0 &&
+  !s.centerlinePolice.briefCleared.centerlineEnforced &&
+  s.centerlinePolice.grace.police.phase === "idle" &&
+  s.centerlinePolice.grace.centerlineElapsed < s.contract.centerlineSeconds &&
+  s.centerlinePolice.pursuit.centerlineEnforced &&
+  s.centerlinePolice.pursuit.police.phase === "pursuit" &&
+  s.centerlinePolice.pursuit.police.offence === "solid-line" &&
+  s.centerlinePolice.pursuit.police.fine === 243 &&
+  s.centerlinePolice.pursuit.police.overLimit === 0 &&
+  /double solid line/.test(s.centerlinePolice.pursuitCaption) &&
+  s.centerlinePolice.card.police.phase === "arrest" &&
+  s.centerlinePolice.cardTitle === "SOLID-LINE TICKET" &&
+  /double solid · fine \$243 · 2 pts · 2\/15/.test(s.centerlinePolice.cardLine) &&
+  s.centerlinePolice.cited.police.phase === "cooldown" &&
+  s.centerlinePolice.cited.police.tickets === 1 &&
+  s.centerlinePolice.cited.police.fines === 243 &&
+  s.centerlinePolice.cited.police.lastDemerits === 2 &&
+  s.centerlinePolice.cited.demeritPoints === 2 &&
+  /double solid line · fine \$243 · 2 demerits · 2\/15/.test(s.centerlinePolice.caption),
+  "a brief dodge is forgiven, while two seconds across the double solid line starts the shared $243/2-demerit pursuit and stop",
+  s.centerlinePolice);
 check(s.pursuit && s.pursuit.trip.police.phase === "pursuit" &&
   s.pursuit.trip.police.detectedSpeed === 130 && s.pursuit.trip.police.fine === 560 &&
   s.pursuit.trip.police.sirenActive && s.pursuit.trip.police.mirrorVisible &&
@@ -897,8 +969,11 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   s.suspension);
 check(s.czech && /přes 215/.test(s.czech.escape) &&
   /^Překročení o \{over\} km\/h · pokuta \{fine\} · \{points\} trestné body · \{total\}\/15\{status\}\.$/.test(s.czech.fine) &&
-  /^Překročení o \{over\} km\/h · \{fine\} · \{points\} trestných bodů · \{total\}\/15\{status\}\.$/.test(s.czech.court),
-  "escape and recorded-overage outcomes are mirrored in natural Czech order", s.czech);
+  /^Překročení o \{over\} km\/h · \{fine\} · \{points\} trestných bodů · \{total\}\/15\{status\}\.$/.test(s.czech.court) &&
+  /dvojitou plnou čárou/.test(s.czech.centerlinePursuit) &&
+  /Přejezd dvojité plné čáry/.test(s.czech.centerlineTicket) &&
+  s.czech.centerlineTitle === "POKUTA ZA PLNOU ČÁRU",
+  "speed and solid-line outcomes are mirrored in natural Czech order", s.czech);
 check(s.teardown && s.teardown.before.active && s.teardown.before.police.phase === "arrest" &&
   s.teardown.before.police.arrestVisible && s.teardown.before.police.arrestAudioVoices > 0 &&
   !s.teardown.closed.open && !s.teardown.closed.drive.roadtrip.active &&

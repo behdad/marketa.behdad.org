@@ -997,7 +997,8 @@ function check(ok, message, detail) {
 function retainedRun(run) {
   var keys = ["playerLane", "distance", "distancePoints", "elapsedSeconds", "score", "multiplier",
     "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
-    "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "shoulderZone", "shoulderDistance",
+    "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "centerlineElapsed",
+    "centerlineEnforced", "shoulderZone", "shoulderDistance",
     "nextSpawnDistance", "spawnSerial"];
   var value = {};
   keys.forEach(function (key) { value[key] = run && run[key]; });
@@ -1010,6 +1011,7 @@ function retainedRun(run) {
     warningFlashCount: run.police.warningFlashCount,
     warningLight: run.police.warningLight,
     detectedSpeed: run.police.detectedSpeed,
+    offence: run.police.offence,
     overLimit: run.police.overLimit,
     fine: run.police.fine,
     courtRequired: run.police.courtRequired,
@@ -1176,7 +1178,7 @@ check(centerline && centerline.before.score === 5 && centerline.before.multiplie
   centerline.held.score === centerline.first.score && centerline.held.centerlineCrossings === 1 &&
   centerline.second.score === 1 && centerline.second.multiplier === 2 &&
   centerline.second.centerlineCrossings === 2 && centerline.second.demeritPoints === 0,
-  "crossing the centre line costs two game points without inventing a demerit citation path", centerline);
+  "brief centre-line crossings cost two game points without reaching police enforcement", centerline);
 var reverseRecovery = s.reverseRecovery;
 check(reverseRecovery &&
   reverseRecovery.missed.state.drive.roadtrip.score === 0 &&

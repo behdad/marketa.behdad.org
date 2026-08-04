@@ -41,9 +41,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         Math.min.apply(Math, samples.map(function (row) { return row.lane; }))
     };
   }
-  function policeSample(count, lane) {
+  function policeSample(count, lane, speed) {
     window.__entranceRoadtripSetDemerits(0, 0);
-    prepare(count, lane, 70);
+    prepare(count, lane, speed || 70);
     for (var i = 0; i < 6; i++) window.__entranceDriveStep(400);
     var approach = copy(trip());
     window.__entranceRoadtripPolice(150);
@@ -62,8 +62,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.third = sampleDrift(3);
         report.sixth = sampleDrift(6);
         report.impairedSteady = policeSample(4, .5);
-        report.soberErratic = policeSample(0, -.5);
-        report.impairedErratic = policeSample(4, -.5);
+        report.soberErratic = policeSample(0, 2);
+        report.impairedErratic = policeSample(4, 2, 100);
         window.__entranceRoadtripSetLane(2);
         window.__entranceRoadtripPoliceStep(0, .5);
         window.__entranceRoadtripPoliceStep(0, 3);
@@ -74,6 +74,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceRoadtripPoliceStep(0, 3);
         report.impairedOutcome = copy(trip());
         report.outcomeCaption = document.getElementById("hunt-caption").textContent.trim();
+        report.impairedCenterline = policeSample(4, -.5);
+        window.__entranceRoadtripSetLane(2);
+        window.__entranceRoadtripPoliceStep(0, .5);
+        window.__entranceRoadtripPoliceStep(0, 3);
+        report.combinedCard = {
+          title: document.getElementById("entrance-roadtrip-arrest-title").textContent.trim(),
+          line: document.getElementById("entrance-roadtrip-arrest-line").textContent.trim()
+        };
+        window.__entranceRoadtripPoliceStep(0, 3);
+        report.combinedOutcome = copy(trip());
+        report.combinedCaption = document.getElementById("hunt-caption").textContent.trim();
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -128,5 +139,18 @@ check(result && result.impairedOutcome.police.runEnded &&
   result.impairedCard.line.indexOf("0 over") < 0 && /250-point penalty/.test(result.outcomeCaption),
   "an impaired stop uses the existing arrest path with a six-point and 250-score consequence",
   result && { card: result.impairedCard, outcome: result.impairedOutcome, caption: result.outcomeCaption });
+check(result && result.impairedCenterline.approach.erraticDriving &&
+  result.impairedCenterline.detected.police.phase === "pursuit" &&
+  result.impairedCenterline.detected.police.offence === "solid-line" &&
+  result.impairedCenterline.detected.police.impairedDriving &&
+  result.impairedCenterline.detected.police.courtRequired &&
+  result.combinedOutcome.police.runEnded &&
+  result.combinedOutcome.police.lastDemerits === 8 &&
+  result.combinedOutcome.police.scorePenalties === 250 &&
+  result.combinedCard.title === "IMPAIRED DRIVING" && /8 pts/.test(result.combinedCard.line) &&
+  /250-point penalty/.test(result.combinedCaption),
+  "impaired driving across the double solid line stacks both demerit offences while retaining the impaired court path",
+  result && { detected: result.impairedCenterline, card: result.combinedCard,
+    outcome: result.combinedOutcome, caption: result.combinedCaption });
 if (failures) process.exit(1);
 console.log("impaired highway driving assertions passed.");

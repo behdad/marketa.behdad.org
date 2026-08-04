@@ -104,14 +104,39 @@ var harness = String.raw`<script>
 
   if (window.goToStage) window.goToStage("garden");
   if (window.__summonGuests) window.__summonGuests();
+  var oldRetarget = window.__retargetPartyGain, departureRetargets = [];
+  window.__retargetPartyGain = function (ctx, param, value, fade) {
+    departureRetargets.push({ value: value, fade: fade });
+    return oldRetarget(ctx, param, value, fade);
+  };
   if (window.__finishPartyLifecycle) window.__finishPartyLifecycle("test");
+  var fadingDeparture = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
+  check("the visible guest walk-out linearly fades the active party bed for the whole goodbye",
+    window.__partyWindingDown && window.__partyWindingDown() && fadingDeparture && fadingDeparture.active && fadingDeparture.gain === 0 &&
+      departureRetargets.some(function (row) { return row.value === 0 && row.fade && row.fade.linear === 3.1; }),
+    { state: fadingDeparture, retargets: departureRetargets });
+  var staleRetargetCalls = 0;
+  oldRetarget({ currentTime: 1 }, {
+    value: 0.5,
+    cancelAndHoldAtTime: function () { staleRetargetCalls++; },
+    setTargetAtTime: function () { staleRetargetCalls++; },
+    linearRampToValueAtTime: function () { staleRetargetCalls++; }
+  }, 0.25, 0.4);
+  check("ordinary volume changes cannot shorten the in-progress goodbye ramp", staleRetargetCalls === 0, staleRetargetCalls);
   var extendedWalkout = window.__extendPartyLifecycle && window.__extendPartyLifecycle();
-  check("requesting more party cancels an in-progress guest walk-out", extendedWalkout && window.__gardenPartyOn && !(window.__partyWindingDown && window.__partyWindingDown()) && window.__partyLifecycleState().attended === 0);
+  var recoveredDeparture = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
+  check("requesting more party cancels the walk-out and restores its music gain",
+    extendedWalkout && window.__gardenPartyOn && !(window.__partyWindingDown && window.__partyWindingDown()) && window.__partyLifecycleState().attended === 0 &&
+      recoveredDeparture && !recoveredDeparture.active && recoveredDeparture.gain === 1 &&
+      departureRetargets.some(function (row) { return row.value > 0 && row.fade && row.fade.linear === 0.35; }),
+    { state: recoveredDeparture, retargets: departureRetargets });
+  window.__retargetPartyGain = oldRetarget;
   var cakeStarted = window.__startCakeCutting && window.__startCakeCutting();
   if (window.__completeCakeCutting) window.__completeCakeCutting();
   check("natural cake completion starts the graceful early finale", cakeStarted && window.__partyWindingDown && window.__partyWindingDown());
   if (window.__setPartyMode) window.__setPartyMode(false, true);
-  check("cake finale uses the normal party teardown", !window.__gardenPartyOn && !window.__cakeOn);
+  var stoppedDeparture = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
+  check("cake finale uses the normal party teardown", !window.__gardenPartyOn && !window.__cakeOn && stoppedDeparture && !stoppedDeparture.active && stoppedDeparture.gain === 1);
 
   document.documentElement.lang = "cs";
   if (window.__setGardenParty) window.__setGardenParty(true, false);

@@ -326,6 +326,15 @@ under the song everywhere and returns when the song stops. Every dance bed retar
 projection by cancelling-and-holding its current AudioParam automation first; overlapping monitor
 focus and song fades therefore cannot leave an old duck ramp stranded after both gates clear.
 
+While a visible graceful party wind-down walks the guests out, a separate
+`__partyDepartureGain` linearly lowers the active dance master over the same 3.1 seconds. The
+dance scheduler and its `audioBed()` remain live until normal party teardown, so the shared
+context and bed refcount are unchanged. Cancelling the goodbye holds the in-flight value and
+restores the current attention-ducked mix over 350 ms; an immediate or direct teardown cancels
+the pending wind-down and closes the dance through its existing node-owned lifecycle. Ordinary
+volume/attention retargets update their scalars but defer touching the master while the goodbye
+ramp owns it, so a room or foreground-state change cannot shorten the fade.
+
 ## Kill switch / overrides (unchanged)
 
 - `AUDIO_PIPELINE_ENABLED` (in `ensureAudioGraph`'s block) — owner's kill switch: `false`

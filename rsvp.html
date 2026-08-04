@@ -47953,7 +47953,17 @@ setMusicPausedState(false);
   window.__retargetPartyGain = function (ctx, param, value, timeConstant) {
     if (!ctx || !param) return;
     var now = ctx.currentTime;
+    var linear = timeConstant && typeof timeConstant === "object" && typeof timeConstant.linear === "number";
+    var departureState = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
+    // Once the goodbye owns this master, ordinary volume/attention updates record their
+    // scalar but must not replace the 3.1s walk-out ramp. Cancellation clears the state
+    // first, then retargets to the latest combined mix.
+    if (departureState && departureState.active && !linear) return;
     holdProjectorGain(param, now);
+    if (linear) {
+      param.linearRampToValueAtTime(value, now + Math.max(0.01, timeConstant.linear));
+      return;
+    }
     param.setTargetAtTime(value, now, timeConstant || 0.05);
   };
   function beginProjectorRoomFade(ctx, master, fadeSecs, finish) {
@@ -49360,7 +49370,7 @@ setMusicPausedState(false);
   var LEAD_GAIN = 0.1;                                        // keep under the kick (0.95) / bass (0.42)
   var LEAD_ECHO = [[3, 0.42], [6, 0.18]];                    // dub echoes: [sixteenths later, gain ×]
   function semi(base, n) { return base * Math.pow(2, n / 12); }
-  function partyVol() { return 1.0 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); } // *__partyDuck: ducks way down while a cuddly projector channel plays. was 1.2 — trimmed to unity to claw back headroom for the +6dB low-end lift (techno is the only bed mixed above unity, already clipping at the top volume step)
+  function partyVol() { return 1.0 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); } // attentional duck + graceful-goodbye fade; was 1.2 — trimmed to unity to claw back headroom for the +6dB low-end lift
   // Garden-sourced room modeling: the party thumps in the garden, heard from elsewhere.
   // garden/office center, kitchen from the right, cuddly from the left — all a touch faint
   // vs the garden; balcony comes through the door (position + fainter, opening it lets more in).
@@ -49641,7 +49651,7 @@ setMusicPausedState(false);
     12,null,11,null,12,null     // bar8 D:  D  C# D  (leading-tone turn home)
   ];
   function wSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function waltzVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function waltzVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function waltzMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "waltz"; }
   function wBass(ctx, t, freq) {                                  // the "oom": a round bass note on beat 1
     var tri = ctx.createOscillator(); tri.type = "triangle"; tri.frequency.value = freq;
@@ -49840,7 +49850,7 @@ setMusicPausedState(false);
     -100,null,null,null, 0,null,null,null     // bar16 slide down and land soft on the tonic A
   ];
   function tSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function tangoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function tangoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function tangoMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "tango"; }
   function tBass(ctx, t, freq) {                                 // a short, staccato, PROWLING bass note
     var saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = freq;
@@ -50012,7 +50022,7 @@ setMusicPausedState(false);
   // wah-clav funk riff, offset from the bar root (null = rest), one bar of 16ths, repeats.
   var D_CLAV_PAT = [0,null,null,7, null,12,null,7, null,null,3,null, 7,null,10,null];
   function dSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function discoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function discoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function discoMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "disco"; }
   function dKick(ctx, t) {                                        // four-on-the-floor thump
     var o = ctx.createOscillator(); o.type = "sine";
@@ -50192,7 +50202,7 @@ setMusicPausedState(false);
   // syncopated brass rhythm, one bar of 12 triplet slots (2 = long accent, 1 = short push).
   var S_BRASS_PAT = [2,0,0, 0,0,1, 0,0,1, 0,0,0];
   function sSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function swingVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function swingVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function swingMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "swing"; }
   function sBass(ctx, t, freq) {                                  // walking upright bass, staccato
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -50358,7 +50368,7 @@ setMusicPausedState(false);
   // offbeat-leaning arpeggio — rests the downbeat, rolls up then back down for the salsa churn.
   var S_MONT = [null, 0, 1, null, 2, 3, 2, 1];
   function sSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function salsaVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function salsaVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function salsaMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "salsa"; }
   function sNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -50545,7 +50555,7 @@ setMusicPausedState(false);
     0, null, 2, 0, null, -3, 0, null    // bar4 (dip below the tonic to turn the phrase)
   ];
   function hSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function bhangraVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function bhangraVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function bhangraMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "bhangra"; }
   function hNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -50722,7 +50732,7 @@ setMusicPausedState(false);
     for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
     return b;
   }
-  function baVol() { return 0.82 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function baVol() { return 0.82 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function baWant() { return !!window.__gardenPartyOn && window.__partyDance === "bandari"; }
   function baDum(ctx, t) {                                       // deep first accent: DUM . . . . .
     var o = ctx.createOscillator(); o.type = "sine";
@@ -50886,7 +50896,7 @@ setMusicPausedState(false);
   ];
   function kMaj(base, deg) { var oct = Math.floor(deg / 7), s = K_MAJ[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function kSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function kVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function kVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function kWant() { return !!window.__gardenPartyOn && window.__partyDance === "polka"; }
   function kOom(ctx, t, freq) {                                   // the "oom": a round tuba-ish bass on the beat
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51016,7 +51026,7 @@ setMusicPausedState(false);
   function hFreq(base, deg) { var oct = Math.floor(deg / 7), s = H_SCALE[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function hSemi(base, n) { return base * Math.pow(2, n / 12); }
   function hStepDur(step) { return H8 * (1 - 0.2 * (step / 32)); } // accelerando across the loop, resets at the top
-  function hVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function hVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function hWant() { return !!window.__gardenPartyOn && window.__partyDance === "horah"; }
   function hOom(ctx, t, freq) {                                   // oom bass on beat 1
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51152,7 +51162,7 @@ setMusicPausedState(false);
   ];
   function bgFreq(base, deg) { var oct = Math.floor(deg / 7), s = BG_SCALE[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function bgSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function bgVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function bgVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function bgWant() { return !!window.__gardenPartyOn && window.__partyDance === "bulgar"; }
   function bgOom(ctx, t, freq) {                                  // heavy bass on the grouping downbeats
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51284,7 +51294,7 @@ setMusicPausedState(false);
     2, 0, 0, null      // bar8: E  D  D  .
   ];
   function duSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function duVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function duVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function duWant() { return !!window.__gardenPartyOn && window.__partyDance === "dupak"; }
   function duStamp(ctx, t, freq) {                                // stamped bass downbeat + a rustic drone fifth
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51415,7 +51425,7 @@ setMusicPausedState(false);
     for (var i = FU_START.length - 1; i >= 0; i--) if (step >= FU_START[i]) return i;
     return 0;
   }
-  function fuVol() { return 0.83 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function fuVol() { return 0.83 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function fuWant() { return !!window.__gardenPartyOn && window.__partyDance === "furiant"; }
   function fuStomp(ctx, t, freq) {                               // heel + bass make each changing group boundary unmistakable
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51563,7 +51573,7 @@ setMusicPausedState(false);
     0,null,3,null, 5,null,3,null, 0,null,null,2, null,0,null,null
   ];
   function cuSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function cuVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
+  function cuVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
   function cuWant() { return !!window.__gardenPartyOn && window.__partyDance === "cumbia"; }
   function cuBass(ctx, t, freq) {                                 // warm round tumbao bass
     var o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = freq;
@@ -52491,6 +52501,22 @@ setMusicPausedState(false);
   // changes re-evaluate and FADE the transition (~1s). Call with a bool to record whether
   // a projector channel is on; call with no arg to re-evaluate the current foreground.
   // window.__partyDuck feeds each dance Vol() (default 1 via `|| 1`); only the active dance has a ctx.
+  var PARTY_VOLUME_APPLIERS = ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyTangoMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyBandariMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume", "__applyBulgarMusicVolume", "__applyDupakMusicVolume", "__applyFuriantMusicVolume", "__applyCumbiaMusicVolume"];
+  function applyPartyBedVolumes(fade) {
+    PARTY_VOLUME_APPLIERS.forEach(function (fn) { if (window[fn]) window[fn](fade); });
+  }
+  // The visible all-guests goodbye keeps the dance scheduler and its audioBed alive, but
+  // linearly lowers only the dance master for the duration of the gate walk. This is a
+  // separate scalar from the foreground-media duck so cancelling the goodbye can restore
+  // the exact current attention mix without touching the shared AudioContext or bed count.
+  window.__partyDepartureGain = 1;
+  var partyDepartureFadeActive = false;
+  window.__setPartyDepartureFade = function (departing, fadeTime, retarget) {
+    partyDepartureFadeActive = !!departing;
+    window.__partyDepartureGain = partyDepartureFadeActive ? 0 : 1;
+    if (retarget !== false) applyPartyBedVolumes({ linear: typeof fadeTime === "number" ? fadeTime : 0.35 });
+  };
+  window.__partyDepartureFadeState = function () { return { active: partyDepartureFadeActive, gain: window.__partyDepartureGain }; };
   window.__setPartyDuck = function (musicActive, fadeTime) {
     if (musicActive !== undefined) window.__projMusicActive = !!musicActive;
     // All three attentional gates are room-scoped: step away/dismiss and the party swells
@@ -52504,7 +52530,7 @@ setMusicPausedState(false);
                officeScreen || loftSong || !!window.__princeInputActive || !!window.__cinemaVideoLoaded;
     window.__partyDuck = duck ? 0.06 : 1; // foreground media leads; retain only a faint distant party thump
     var fade = typeof fadeTime === "number" ? fadeTime : 0.4;
-    ["__applyPartyMusicVolume", "__applyWaltzMusicVolume", "__applyTangoMusicVolume", "__applyDiscoMusicVolume", "__applySwingMusicVolume", "__applySalsaMusicVolume", "__applyBhangraMusicVolume", "__applyBandariMusicVolume", "__applyPolkaMusicVolume", "__applyHorahMusicVolume", "__applyBulgarMusicVolume", "__applyDupakMusicVolume", "__applyFuriantMusicVolume", "__applyCumbiaMusicVolume"].forEach(function (fn) { if (window[fn]) window[fn](fade); });
+    applyPartyBedVolumes(fade);
   };
   var chanObj = { fire: fire, coffee: svgChan, workout: svgChan, aqua: svgChan, totoro: svgChan, stars: svgChan, off: off };
   var current = projectorPreferred();
@@ -89141,6 +89167,13 @@ async def localfont(name):
     var partyWindDownTimer = null;
     var WINDDOWN_MS = 3100; // ~the guest-gate-leave stroll (3.2s CSS) — keep the party + UV lit this long
     function clearWindDown() { if (partyWindDownTimer) { clearTimeout(partyWindDownTimer); partyWindDownTimer = null; } }
+    window.__cancelPartyWindDown = function (recoverMusic) {
+      var pending = !!partyWindDownTimer;
+      var fadeState = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
+      clearWindDown();
+      if ((pending || (fadeState && fadeState.active)) && window.__setPartyDepartureFade) window.__setPartyDepartureFade(false, recoverMusic ? 0.35 : 0, recoverMusic !== false);
+      return pending;
+    };
     // Should turning the party OFF walk the guests out first (vs. the instant snap teardown)? Only
     // when the user is actually WATCHING the garden and there's a lit party with guests on the floor
     // — never for programmatic teardowns (the cinematic/trailer must stay synchronous),
@@ -89158,6 +89191,7 @@ async def localfont(name):
     function teardownPartyNow() {
       if (window.__setUvParty) window.__setUvParty(false);
       if (window.__setGardenParty) window.__setGardenParty(false, true);
+      if (window.__setPartyDepartureFade) window.__setPartyDepartureFade(false, 0, false);
     }
     function setPartyMode(on, immediate, userInitiated) {
       on = !!on;
@@ -89165,8 +89199,8 @@ async def localfont(name):
       partyswitch.classList.toggle("on", on);
       if (on) {
         // Toggling back ON — cancel any pending graceful teardown and walk the leaving guests back in.
-        var wasWindingDown = !!partyWindDownTimer;
-        clearWindDown();
+        var wasWindingDown = window.__cancelPartyWindDown ? window.__cancelPartyWindDown(true) : !!partyWindDownTimer;
+        if (!window.__cancelPartyWindDown) clearWindDown();
         if (window.__cancelGuestsWalkOut) window.__cancelGuestsWalkOut();
         if (wasWindingDown && window.__restartPartyLifecycle) window.__restartPartyLifecycle();
         var daytimeBBQ = !!window.__bbqDayPartyOn || !!(window.__bbqDateNow && window.__bbqDateNow());
@@ -89183,6 +89217,7 @@ async def localfont(name):
         // Walk everyone out but KEEP the party + blacklight lit for the stroll; tear down after.
         var walking = window.__walkGuestsOut ? window.__walkGuestsOut() : 0;
         if (walking > 0) {
+          if (window.__setPartyDepartureFade) window.__setPartyDepartureFade(true, WINDDOWN_MS / 1000);
           partyWindDownTimer = setTimeout(function () {
             partyWindDownTimer = null;
             teardownPartyNow(); // dancers/lights fade (base #trip-melt-dancers now transitions opacity), guests already gone
@@ -108852,6 +108887,9 @@ function spawnDustMote(container) {
   function setGardenParty(on, userInitiated) {
     on = !!on;
     var wasOn = !!window.__gardenPartyOn;
+    // A direct reset/cinematic teardown can pre-empt the visible goodbye. Cancel its timer
+    // and retain the already-faded level until the active dance bed closes below.
+    if (!on && window.__partyWindingDown && window.__partyWindingDown() && window.__cancelPartyWindDown) window.__cancelPartyWindDown(false);
     window.__gardenPartyOn = on;
     if (window.__expireStaleMessageActions) window.__expireStaleMessageActions(); // retire context-bound arrows immediately; their text stays as read thread history
     if (on && !wasOn && !window.__totoroWatchActive) {

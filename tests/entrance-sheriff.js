@@ -45,9 +45,13 @@ check(officer.indexOf('data-police-authority="alberta-sheriffs"') >= 0 &&
       return officer.indexOf('id="' + id + '"') >= 0;
     }), "the arrest officer has the campaign hat, vest, badge, radio, and body camera silhouette");
 check(shout.indexOf('id="entrance-roadtrip-arrest-shout-text"') >= 0 &&
-  shout.indexOf('data-i="entrance_roadtrip_arrest_shout"') >= 0 &&
-  source.indexOf('entrance_roadtrip_arrest_shout: "OUT OF THE CAR!"') >= 0 &&
-  source.indexOf('entrance_roadtrip_arrest_shout: "VYSTUPTE Z VOZU!"') >= 0,
+  ["engine", "keys", "hands"].every(function (line) {
+    return shout.indexOf('data-i="entrance_roadtrip_arrest_shout_' + line + '"') >= 0;
+  }) &&
+  source.indexOf('entrance_roadtrip_arrest_shout_engine: "ENGINE OFF!"') >= 0 &&
+  source.indexOf('entrance_roadtrip_arrest_shout_hands: "HANDS THROUGH THE WHEEL!"') >= 0 &&
+  source.indexOf('entrance_roadtrip_arrest_shout_engine: "VYPNĚTE MOTOR!"') >= 0 &&
+  source.indexOf('entrance_roadtrip_arrest_shout_hands: "RUCE SKRZ VOLANT!"') >= 0,
   "the severe-arrest shout is present and bilingual");
 check(source.indexOf("var ROADTRIP_POLICE_ARREST_SHOUT_OVER = 100;") >= 0 &&
   source.indexOf("police.overLimit > ROADTRIP_POLICE_ARREST_SHOUT_OVER") >= 0 &&

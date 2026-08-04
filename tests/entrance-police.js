@@ -522,9 +522,11 @@ check(s.shoutThreshold && s.shoutThreshold.exactlyHundred.police.overLimit === 1
   s.shoutThreshold.overHundredEnglish.police.overLimit === 101 &&
   s.shoutThreshold.overHundredEnglish.police.arrestShoutPlayed &&
   s.shoutThreshold.overHundredEnglish.police.arrestShoutOpacity > .9 &&
-  s.shoutThreshold.overHundredEnglish.police.arrestShoutText === "OUT OF THE CAR!" &&
+  s.shoutThreshold.overHundredEnglish.police.arrestShoutText ===
+    "ENGINE OFF! DROP THE KEYS! HANDS THROUGH THE WHEEL!" &&
   s.shoutThreshold.overHundredEnglish.police.arrestAudioVoices > 0 &&
-  s.shoutThreshold.overHundredCzech.police.arrestShoutText === "VYSTUPTE Z VOZU!" &&
+  s.shoutThreshold.overHundredCzech.police.arrestShoutText ===
+    "VYPNĚTE MOTOR! ZAHOĎTE KLÍČE! RUCE SKRZ VOLANT!" &&
   s.shoutThreshold.blurred.police.arrestAudioVoices === 0,
   "only a strictly greater-than-100 overage adds the bilingual shout and its audio tears down on blur",
   s.shoutThreshold);

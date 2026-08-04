@@ -49,7 +49,8 @@ their volume controls never double-scale:
 
 1. **Beds / dances** → `audioBed()`. Each bed's graph ends at the handle's `.destination`,
    which is a per-bed unity **`_out` gain** → the shared lower-floor boundary →
-   `ac.destination`. Music/projector/dance beds
+   `ac.destination`. Party dances alone insert one additional unity departure gain between
+   `_out` and the lower-floor boundary. Music/projector/dance beds
    apply the volume-button level at their own in-graph `_masterGain` (`__songVolume()`);
    ambient environmental beds (fire, aqua hush, wind…) sit at fixed low levels and are NOT
    scaled by the button. The `bandari` source keeps its fast coastal 6/8 graph.
@@ -127,7 +128,8 @@ kill everyone else. So each handle's lifecycle acts on its own nodes:
 - **`audioBed()` handle:**
   - `.suspend()` → ramp `_out` gain to ~0 over 20 ms (a music "pause" = **mute-in-place**).
   - `.resume()` → ramp `_out` gain back to 1 (un-mute / start).
-  - `.close()` → decrement the active-bed count and `disconnect()` `_out`. The bed's own
+  - `.close()` → decrement the active-bed count and `disconnect()` `_out` (plus the party-only
+    departure node, when present). The bed's own
     oscillators/sources are already stopped by the caller's fade-then-stop, so this never
     pops. Idempotent (guarded), so a double-close can't under-count.
 - **`getSfxCtx()` handle:** `resume/suspend/close` are all no-ops. Leftover per-effect
@@ -326,14 +328,15 @@ under the song everywhere and returns when the song stops. Every dance bed retar
 projection by cancelling-and-holding its current AudioParam automation first; overlapping monitor
 focus and song fades therefore cannot leave an old duck ramp stranded after both gates clear.
 
-While a visible graceful party wind-down walks the guests out, a separate
-`__partyDepartureGain` linearly lowers the active dance master over the same 3.1 seconds. The
-dance scheduler and its `audioBed()` remain live until normal party teardown, so the shared
-context and bed refcount are unchanged. Cancelling the goodbye holds the in-flight value and
-restores the current attention-ducked mix over 350 ms; an immediate or direct teardown cancels
-the pending wind-down and closes the dance through its existing node-owned lifecycle. Ordinary
-volume/attention retargets update their scalars but defer touching the master while the goodbye
-ramp owns it, so a room or foreground-state change cannot shorten the fade.
+While a visible graceful party wind-down walks the guests out, the dedicated output gain
+linearly lowers every connected party bed over the same 3.1 seconds. It sits downstream of each
+dance's master, bass lift, and panner, so every party source crosses the fade before reaching the
+shared lower-floor bus. The dance scheduler and its `audioBed()` remain live until normal party
+teardown, leaving the shared context and bed refcount unchanged. Cancelling the goodbye ramps
+the still-connected output back to unity over 350 ms; an immediate or direct teardown cancels
+the pending wind-down and closes the dance through its existing node-owned lifecycle. Volume
+and foreground-duck changes remain independent because they operate on the upstream dance
+master and cannot replace the output fade's automation.
 
 ## Kill switch / overrides (unchanged)
 

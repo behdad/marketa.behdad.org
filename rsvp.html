@@ -43420,13 +43420,54 @@ function audioBusProxy(ac, out, lifecycle) {
   p.resume = lifecycle.resume; p.suspend = lifecycle.suspend; p.close = lifecycle.close;
   return p;
 }
-function audioBed() {
+var __partyAudioOutputs = new Set();
+function partyAudioOutputValue(rec) {
+  var now = rec.ac.currentTime;
+  if (now >= rec.endAt || rec.endAt <= rec.startAt) return rec.target;
+  if (now <= rec.startAt) return rec.startValue;
+  return rec.startValue + (rec.target - rec.startValue) * ((now - rec.startAt) / (rec.endAt - rec.startAt));
+}
+function retargetPartyAudioOutput(rec, target, duration) {
+  if (!rec || !rec.connected) return;
+  var now = rec.ac.currentTime, value = partyAudioOutputValue(rec), seconds = Math.max(0, +duration || 0);
+  try {
+    rec.node.gain.cancelScheduledValues(now);
+    rec.node.gain.setValueAtTime(value, now);
+    if (seconds) rec.node.gain.linearRampToValueAtTime(target, now + seconds);
+    else rec.node.gain.setValueAtTime(target, now);
+  } catch (_error) {}
+  rec.startAt = now; rec.endAt = now + seconds; rec.startValue = value; rec.target = target;
+}
+window.__retargetPartyAudioOutputs = function (target, duration) {
+  __partyAudioOutputs.forEach(function (rec) { retargetPartyAudioOutput(rec, target, duration); });
+  return __partyAudioOutputs.size;
+};
+window.__partyAudioOutputState = function () {
+  return Array.from(__partyAudioOutputs).map(function (rec) {
+    return { connected: rec.connected, gain: partyAudioOutputValue(rec), target: rec.target,
+      startAt: rec.startAt, endAt: rec.endAt, contextState: rec.ac.state };
+  });
+};
+function audioBed(kind) {
   var ac = getAudioCtx();
   if (!ac) return null;
   resumeSharedAudio();
   var out = ac.createGain();
   out.gain.value = 1;
-  out.connect(lowerFloorAudioOutput(ac));
+  var partyOutput = null, partyRec = null;
+  if (kind === "party") {
+    partyOutput = ac.createGain();
+    var departure = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
+    var initial = departure && departure.active ? 0 : 1;
+    partyOutput.gain.value = initial;
+    partyOutput.connect(lowerFloorAudioOutput(ac));
+    out.connect(partyOutput);
+    partyRec = { ac: ac, node: partyOutput, connected: true, startAt: ac.currentTime,
+      endAt: ac.currentTime, startValue: initial, target: initial };
+    __partyAudioOutputs.add(partyRec);
+  } else {
+    out.connect(lowerFloorAudioOutput(ac));
+  }
   __activeAudioBeds++;
   var closed = false;
   function ramp(to) {
@@ -43435,7 +43476,17 @@ function audioBed() {
   return audioBusProxy(ac, out, {
     resume: function () { ramp(1); return Promise.resolve(); },     // un-mute (pause off / start)
     suspend: function () { ramp(0.0001); return Promise.resolve(); }, // mute-in-place (pause on)
-    close: function () { if (!closed) { closed = true; __activeAudioBeds--; try { out.disconnect(); } catch (e) {} } return Promise.resolve(); }
+    close: function () {
+      if (!closed) {
+        closed = true; __activeAudioBeds--;
+        try { out.disconnect(); } catch (e) {}
+        if (partyRec) {
+          partyRec.connected = false; __partyAudioOutputs.delete(partyRec);
+          try { partyOutput.disconnect(); } catch (e2) {}
+        }
+      }
+      return Promise.resolve();
+    }
   });
 }
 var T = {
@@ -47953,17 +48004,7 @@ setMusicPausedState(false);
   window.__retargetPartyGain = function (ctx, param, value, timeConstant) {
     if (!ctx || !param) return;
     var now = ctx.currentTime;
-    var linear = timeConstant && typeof timeConstant === "object" && typeof timeConstant.linear === "number";
-    var departureState = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
-    // Once the goodbye owns this master, ordinary volume/attention updates record their
-    // scalar but must not replace the 3.1s walk-out ramp. Cancellation clears the state
-    // first, then retargets to the latest combined mix.
-    if (departureState && departureState.active && !linear) return;
     holdProjectorGain(param, now);
-    if (linear) {
-      param.linearRampToValueAtTime(value, now + Math.max(0.01, timeConstant.linear));
-      return;
-    }
     param.setTargetAtTime(value, now, timeConstant || 0.05);
   };
   function beginProjectorRoomFade(ctx, master, fadeSecs, finish) {
@@ -49370,7 +49411,7 @@ setMusicPausedState(false);
   var LEAD_GAIN = 0.1;                                        // keep under the kick (0.95) / bass (0.42)
   var LEAD_ECHO = [[3, 0.42], [6, 0.18]];                    // dub echoes: [sixteenths later, gain ×]
   function semi(base, n) { return base * Math.pow(2, n / 12); }
-  function partyVol() { return 1.0 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); } // attentional duck + graceful-goodbye fade; was 1.2 — trimmed to unity to claw back headroom for the +6dB low-end lift
+  function partyVol() { return 1.0 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); } // attentional duck; was 1.2 — trimmed to unity to claw back headroom for the +6dB low-end lift
   // Garden-sourced room modeling: the party thumps in the garden, heard from elsewhere.
   // garden/office center, kitchen from the right, cuddly from the left — all a touch faint
   // vs the garden; balcony comes through the door (position + fainter, opening it lets more in).
@@ -49555,7 +49596,7 @@ setMusicPausedState(false);
       stopPartyMusic();
       setMusicPausedState(false); // a freshly-lit party is never born paused
       partySuspended = false;
-      partyCtx = audioBed();
+      partyCtx = audioBed("party");
       if (!partyCtx) return;
       try { var p = partyCtx.resume && partyCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = partyCtx.currentTime;
@@ -49651,7 +49692,7 @@ setMusicPausedState(false);
     12,null,11,null,12,null     // bar8 D:  D  C# D  (leading-tone turn home)
   ];
   function wSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function waltzVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function waltzVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function waltzMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "waltz"; }
   function wBass(ctx, t, freq) {                                  // the "oom": a round bass note on beat 1
     var tri = ctx.createOscillator(); tri.type = "triangle"; tri.frequency.value = freq;
@@ -49723,7 +49764,7 @@ setMusicPausedState(false);
       stopWaltzMusic();
       setMusicPausedState(false);
       waltzSuspended = false;
-      waltzCtx = audioBed();
+      waltzCtx = audioBed("party");
       if (!waltzCtx) return;
       try { var p = waltzCtx.resume && waltzCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = waltzCtx.currentTime;
@@ -49850,7 +49891,7 @@ setMusicPausedState(false);
     -100,null,null,null, 0,null,null,null     // bar16 slide down and land soft on the tonic A
   ];
   function tSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function tangoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function tangoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function tangoMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "tango"; }
   function tBass(ctx, t, freq) {                                 // a short, staccato, PROWLING bass note
     var saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = freq;
@@ -49947,7 +49988,7 @@ setMusicPausedState(false);
       stopTangoMusic();
       setMusicPausedState(false);
       tangoSuspended = false;
-      tangoCtx = audioBed();
+      tangoCtx = audioBed("party");
       if (!tangoCtx) return;
       try { var p = tangoCtx.resume && tangoCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = tangoCtx.currentTime;
@@ -50022,7 +50063,7 @@ setMusicPausedState(false);
   // wah-clav funk riff, offset from the bar root (null = rest), one bar of 16ths, repeats.
   var D_CLAV_PAT = [0,null,null,7, null,12,null,7, null,null,3,null, 7,null,10,null];
   function dSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function discoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function discoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function discoMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "disco"; }
   function dKick(ctx, t) {                                        // four-on-the-floor thump
     var o = ctx.createOscillator(); o.type = "sine";
@@ -50123,7 +50164,7 @@ setMusicPausedState(false);
       stopDiscoMusic();
       setMusicPausedState(false);
       discoSuspended = false;
-      discoCtx = audioBed();
+      discoCtx = audioBed("party");
       if (!discoCtx) return;
       try { var p = discoCtx.resume && discoCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = discoCtx.currentTime;
@@ -50202,7 +50243,7 @@ setMusicPausedState(false);
   // syncopated brass rhythm, one bar of 12 triplet slots (2 = long accent, 1 = short push).
   var S_BRASS_PAT = [2,0,0, 0,0,1, 0,0,1, 0,0,0];
   function sSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function swingVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function swingVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function swingMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "swing"; }
   function sBass(ctx, t, freq) {                                  // walking upright bass, staccato
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -50286,7 +50327,7 @@ setMusicPausedState(false);
       stopSwingMusic();
       setMusicPausedState(false);
       swingSuspended = false;
-      swingCtx = audioBed();
+      swingCtx = audioBed("party");
       if (!swingCtx) return;
       try { var p = swingCtx.resume && swingCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = swingCtx.currentTime;
@@ -50368,7 +50409,7 @@ setMusicPausedState(false);
   // offbeat-leaning arpeggio — rests the downbeat, rolls up then back down for the salsa churn.
   var S_MONT = [null, 0, 1, null, 2, 3, 2, 1];
   function sSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function salsaVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function salsaVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function salsaMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "salsa"; }
   function sNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -50477,7 +50518,7 @@ setMusicPausedState(false);
       stopSalsaMusic();
       setMusicPausedState(false);
       salsaSuspended = false;
-      salsaCtx = audioBed();
+      salsaCtx = audioBed("party");
       if (!salsaCtx) return;
       try { var p = salsaCtx.resume && salsaCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = salsaCtx.currentTime;
@@ -50555,7 +50596,7 @@ setMusicPausedState(false);
     0, null, 2, 0, null, -3, 0, null    // bar4 (dip below the tonic to turn the phrase)
   ];
   function hSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function bhangraVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function bhangraVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function bhangraMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "bhangra"; }
   function hNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -50649,7 +50690,7 @@ setMusicPausedState(false);
       stopBhangraMusic();
       setMusicPausedState(false);
       bhangraSuspended = false;
-      bhangraCtx = audioBed();
+      bhangraCtx = audioBed("party");
       if (!bhangraCtx) return;
       try { var p = bhangraCtx.resume && bhangraCtx.resume(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
       var now = bhangraCtx.currentTime;
@@ -50732,7 +50773,7 @@ setMusicPausedState(false);
     for (var i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
     return b;
   }
-  function baVol() { return 0.82 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function baVol() { return 0.82 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function baWant() { return !!window.__gardenPartyOn && window.__partyDance === "bandari"; }
   function baDum(ctx, t) {                                       // deep first accent: DUM . . . . .
     var o = ctx.createOscillator(); o.type = "sine";
@@ -50823,7 +50864,7 @@ setMusicPausedState(false);
     try {
       baStop();
       setMusicPausedState(false); baSuspended = false;
-      baCtx = audioBed();
+      baCtx = audioBed("party");
       if (!baCtx) return;
       try { var pr = baCtx.resume && baCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = baCtx.currentTime;
@@ -50896,7 +50937,7 @@ setMusicPausedState(false);
   ];
   function kMaj(base, deg) { var oct = Math.floor(deg / 7), s = K_MAJ[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function kSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function kVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function kVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function kWant() { return !!window.__gardenPartyOn && window.__partyDance === "polka"; }
   function kOom(ctx, t, freq) {                                   // the "oom": a round tuba-ish bass on the beat
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -50951,7 +50992,7 @@ setMusicPausedState(false);
     try {
       kStop();
       setMusicPausedState(false); kSuspended = false;
-      kCtx = audioBed();                                          // polka bed
+      kCtx = audioBed("party");                                  // polka bed
       if (!kCtx) return;
       try { var pr = kCtx.resume && kCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = kCtx.currentTime;
@@ -51026,7 +51067,7 @@ setMusicPausedState(false);
   function hFreq(base, deg) { var oct = Math.floor(deg / 7), s = H_SCALE[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function hSemi(base, n) { return base * Math.pow(2, n / 12); }
   function hStepDur(step) { return H8 * (1 - 0.2 * (step / 32)); } // accelerando across the loop, resets at the top
-  function hVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function hVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function hWant() { return !!window.__gardenPartyOn && window.__partyDance === "horah"; }
   function hOom(ctx, t, freq) {                                   // oom bass on beat 1
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51084,7 +51125,7 @@ setMusicPausedState(false);
     try {
       hStop();
       setMusicPausedState(false); hSuspended = false;
-      hCtx = audioBed();                                          // horah / freylekhs bed
+      hCtx = audioBed("party");                                  // horah / freylekhs bed
       if (!hCtx) return;
       try { var pr = hCtx.resume && hCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = hCtx.currentTime;
@@ -51162,7 +51203,7 @@ setMusicPausedState(false);
   ];
   function bgFreq(base, deg) { var oct = Math.floor(deg / 7), s = BG_SCALE[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function bgSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function bgVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function bgVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function bgWant() { return !!window.__gardenPartyOn && window.__partyDance === "bulgar"; }
   function bgOom(ctx, t, freq) {                                  // heavy bass on the grouping downbeats
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51222,7 +51263,7 @@ setMusicPausedState(false);
     try {
       bgStop();
       setMusicPausedState(false); bgSuspended = false;
-      bgCtx = audioBed();                                         // klezmer bulgar bed
+      bgCtx = audioBed("party");                                 // klezmer bulgar bed
       if (!bgCtx) return;
       try { var pr = bgCtx.resume && bgCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = bgCtx.currentTime;
@@ -51294,7 +51335,7 @@ setMusicPausedState(false);
     2, 0, 0, null      // bar8: E  D  D  .
   ];
   function duSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function duVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function duVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function duWant() { return !!window.__gardenPartyOn && window.__partyDance === "dupak"; }
   function duStamp(ctx, t, freq) {                                // stamped bass downbeat + a rustic drone fifth
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51354,7 +51395,7 @@ setMusicPausedState(false);
     try {
       duStop();
       setMusicPausedState(false); duSuspended = false;
-      duCtx = audioBed();                                         // dupák bed
+      duCtx = audioBed("party");                                 // dupák bed
       if (!duCtx) return;
       try { var pr = duCtx.resume && duCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = duCtx.currentTime;
@@ -51425,7 +51466,7 @@ setMusicPausedState(false);
     for (var i = FU_START.length - 1; i >= 0; i--) if (step >= FU_START[i]) return i;
     return 0;
   }
-  function fuVol() { return 0.83 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function fuVol() { return 0.83 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function fuWant() { return !!window.__gardenPartyOn && window.__partyDance === "furiant"; }
   function fuStomp(ctx, t, freq) {                               // heel + bass make each changing group boundary unmistakable
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
@@ -51500,7 +51541,7 @@ setMusicPausedState(false);
     try {
       fuStop();
       setMusicPausedState(false); fuSuspended = false;
-      fuCtx = audioBed();
+      fuCtx = audioBed("party");
       if (!fuCtx) return;
       try { var pr = fuCtx.resume && fuCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = fuCtx.currentTime;
@@ -51573,7 +51614,7 @@ setMusicPausedState(false);
     0,null,3,null, 5,null,3,null, 0,null,null,2, null,0,null,null
   ];
   function cuSemi(base, n) { return base * Math.pow(2, n / 12); }
-  function cuVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1) * (window.__partyDepartureGain == null ? 1 : window.__partyDepartureGain); }
+  function cuVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
   function cuWant() { return !!window.__gardenPartyOn && window.__partyDance === "cumbia"; }
   function cuBass(ctx, t, freq) {                                 // warm round tumbao bass
     var o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = freq;
@@ -51642,7 +51683,7 @@ setMusicPausedState(false);
     try {
       cuStop();
       setMusicPausedState(false); cuSuspended = false;
-      cuCtx = audioBed();                                         // cumbia bed
+      cuCtx = audioBed("party");                                 // cumbia bed
       if (!cuCtx) return;
       try { var pr = cuCtx.resume && cuCtx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
       var now = cuCtx.currentTime;
@@ -52506,17 +52547,19 @@ setMusicPausedState(false);
     PARTY_VOLUME_APPLIERS.forEach(function (fn) { if (window[fn]) window[fn](fade); });
   }
   // The visible all-guests goodbye keeps the dance scheduler and its audioBed alive, but
-  // linearly lowers only the dance master for the duration of the gate walk. This is a
-  // separate scalar from the foreground-media duck so cancelling the goodbye can restore
-  // the exact current attention mix without touching the shared AudioContext or bed count.
+  // linearly lowers each party bed's dedicated LAST output node for the duration of the gate
+  // walk. That node is downstream of every dance master/panner and upstream of the shared
+  // lower-floor bus, so no active party source can bypass it. It is separate from the
+  // foreground-media duck and the audioBed pause gain.
   window.__partyDepartureGain = 1;
   var partyDepartureFadeActive = false;
   window.__setPartyDepartureFade = function (departing, fadeTime, retarget) {
     partyDepartureFadeActive = !!departing;
     window.__partyDepartureGain = partyDepartureFadeActive ? 0 : 1;
-    if (retarget !== false) applyPartyBedVolumes({ linear: typeof fadeTime === "number" ? fadeTime : 0.35 });
+    if (retarget !== false && window.__retargetPartyAudioOutputs) window.__retargetPartyAudioOutputs(window.__partyDepartureGain, typeof fadeTime === "number" ? fadeTime : 0.35);
   };
-  window.__partyDepartureFadeState = function () { return { active: partyDepartureFadeActive, gain: window.__partyDepartureGain }; };
+  window.__partyDepartureFadeState = function () { return { active: partyDepartureFadeActive, gain: window.__partyDepartureGain,
+    outputs: window.__partyAudioOutputState ? window.__partyAudioOutputState() : [] }; };
   window.__setPartyDuck = function (musicActive, fadeTime) {
     if (musicActive !== undefined) window.__projMusicActive = !!musicActive;
     // All three attentional gates are room-scoped: step away/dismiss and the party swells

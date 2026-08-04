@@ -79,8 +79,8 @@ var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 check(/window\.__retargetPartyGain\s*=\s*function/.test(source) &&
       (source.match(/window\.__retargetPartyGain\([^\n]*_masterGain\.gain/g) || []).length === 14,
   "every party dance bed cancels and holds stale gain automation before retargeting");
-check((source.match(/function (?:party|waltz|tango|disco|swing|salsa|bhangra|ba|k|h|bg|du|fu|cu)Vol\(\)[^\n]*__partyDepartureGain/g) || []).length === 14,
-  "every registered party dance includes the graceful-departure gain");
+check((source.match(/(?:partyCtx|waltzCtx|tangoCtx|discoCtx|swingCtx|salsaCtx|bhangraCtx|baCtx|kCtx|hCtx|bgCtx|duCtx|fuCtx|cuCtx)\s*=\s*audioBed\("party"\)/g) || []).length === 14,
+  "every registered party dance routes through the graceful-departure output bus");
 
 console.log("");
 if (failures) { console.log(failures + " device-audio assertion" + (failures === 1 ? "" : "s") + " failed."); process.exit(1); }

@@ -1034,8 +1034,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     transport.spacePausedButton = transportButton.classList.contains("paused");
     step(1000);
     transport.spaceHeld = copy(state());
+    window.__entranceDriveControl("throttle", true);
+    transport.pedalResumed = copy(state());
+    window.__entranceDriveControl("throttle", false);
     pressDocumentKey(" ");
-    transport.spaceResumed = copy(state());
+    transport.steeringPaused = copy(state());
+    window.__entranceDriveControl("steerLeft", true);
+    transport.steeringResumed = copy(state());
+    window.__entranceDriveControl("steerLeft", false);
     pressDocumentKey("Enter");
     transport.enterPaused = copy(state());
     pressDocumentKey("Enter");
@@ -1246,8 +1252,10 @@ check(transport && transport.before.drive.roadtrip.active && !transport.before.d
   transport.spacePaused.drive.roadtrip.active && transport.spacePaused.drive.roadtrip.resumePending &&
   transport.spacePaused.car.engineOn && transport.spacePausedButton &&
   transport.spaceHeld.drive.roadtrip.elapsedSeconds === transport.spacePaused.drive.roadtrip.elapsedSeconds &&
-  !transport.spaceResumed.drive.roadtrip.resumePending && transport.spaceResumed.car.engineOn,
-  "Space pauses the attended Road Trip in place, freezes time, and resumes without stopping the engine", transport);
+  !transport.pedalResumed.drive.roadtrip.resumePending && transport.pedalResumed.car.engineOn &&
+  transport.steeringPaused.drive.roadtrip.resumePending &&
+  !transport.steeringResumed.drive.roadtrip.resumePending && transport.steeringResumed.car.engineOn,
+  "Space pauses Road Trip in place; a fresh pedal or steering input resumes without stopping the engine", transport);
 check(transport && transport.enterPaused.drive.roadtrip.resumePending &&
   !transport.enterResumed.drive.roadtrip.resumePending && transport.enterResumed.car.engineOn,
   "Enter pauses and resumes Road Trip instead of toggling the engine", transport);

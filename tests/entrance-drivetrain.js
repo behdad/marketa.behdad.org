@@ -48,6 +48,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
+        window.__entranceDriveTransmissionMode("manual", false);
 
         var offRestBefore = copy(roomState());
         for (var offPress = 0; offPress < 4; offPress++) {

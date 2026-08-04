@@ -43,6 +43,8 @@ var harness = String.raw`<script>
     window.__resetLowerRoomDiscovery();
     window.goToStage("kitchen");
     check("fresh upstairs chrome hides Down until discovery", floorState().hidden, floorState());
+    var freshDots = document.getElementById("hunt-dots").getBoundingClientRect();
+    var freshDotsCenter = freshDots.left + freshDots.width / 2;
 
     window.__openBathroomRoom();
     await sleep(30);
@@ -53,6 +55,9 @@ var harness = String.raw`<script>
       !first.coachHidden && first.coach === "Up gets you back.", first);
     var dots = document.getElementById("hunt-dots").getBoundingClientRect();
     var button = document.getElementById("hunt-floor-btn").getBoundingClientRect();
+    check("floor control appearance leaves the room dots at their exact center",
+      Math.abs(dots.left + dots.width / 2 - freshDotsCenter) < .5,
+      { before: freshDotsCenter, after: dots.left + dots.width / 2 });
     check("Up sits to the right of the room dots with breathing room", button.left - dots.right >= 6,
       { dotsRight: dots.right, buttonLeft: button.left });
 

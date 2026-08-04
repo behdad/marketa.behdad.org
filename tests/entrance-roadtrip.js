@@ -1229,6 +1229,7 @@ check(spatialAudio && spatialAudio.closed.leftNear.audible &&
   Math.abs(spatialAudio.closed.leftNear.pan) <= .68 && Math.abs(spatialAudio.closed.rightNear.pan) <= .68 &&
   spatialAudio.closed.leftNear.gain > spatialAudio.closed.leftFar.gain &&
   spatialAudio.closed.leftNear.gain > spatialAudio.closed.rightNear.gain &&
+  spatialAudio.closed.leftNear.gain >= .1 &&
   spatialAudio.closed.leftNear.relativeKmh > spatialAudio.closed.rightNear.relativeKmh &&
   spatialAudio.closed.leftNear.smoothing >= .1,
   "each passing vehicle projects a smooth bounded pan and scales its whoosh by distance and relative speed",

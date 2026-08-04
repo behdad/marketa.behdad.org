@@ -235,9 +235,11 @@ spatial stage. Hearts play a soft rising pair, kisses a brighter swept pair, and
 the rare infinity a four-note shimmer. Each voice disconnects after its short
 envelope; hidden or unfocused collection remains silent.
 
-Faster traffic passing a stopped Porsche in its lane adds one short horn on that same
-shared context. Its gain follows distance and cabin exposure, its stereo position
-follows the passing lane, and its oscillators disconnect after the envelope.
+Faster traffic passing a Porsche stopped in the inner lane adds one 0.66-second horn on that same
+shared context; a stopped shoulder or outer-lane Porsche stays silent. Oncoming traffic adds a
+distinct 1.35-second warning only when the Porsche occupies that vehicle's negative lane, latched
+once per entity. Both gains follow distance and cabin exposure, their stereo position follows the
+vehicle lane, and their oscillators disconnect after the envelope.
 
 A speeding pursuit adds one restrained two-tone siren on the shared SFX handle,
 localized to the live rear-view mirror. Its oscillators exist only while the

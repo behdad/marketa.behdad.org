@@ -43798,7 +43798,8 @@ var T = {
       office_call: "Call Prague first — it's on the laptop.",
       office_computer: "Play with the PC (not the laptop).",
       office_hangup: "Hang up now.",
-      complete: "You made it through the whole loft ♥",
+      room_progress: "Rooms seen: {n}/10 · keep exploring.",
+      complete: "You’ve seen the whole loft ♥",
       balcony: "There will be BBQ 🔥🍖🌽🍷",
       // ── post-unlock exploration captions: shown on re-entry to a solved room instead of its solve instruction ──
       explore_kitchen: "Enjoy wandering — the kitchen keeps more than coffee. ☕",
@@ -45035,7 +45036,8 @@ var T = {
       office_call: "Nejdřív zavolej do Prahy — hovor je na notebooku.",
       office_computer: "Pohraj si s PC (ne s notebookem).",
       office_hangup: "Teď zavěs.",
-      complete: "Prošli jste celým bytem ♥",
+      room_progress: "Navštíveno: {n}/10 · pokračuj dál.",
+      complete: "Prohlédli jste si celý loft ♥",
       balcony: "Bude tu grilovačka 🔥🍖🌽🍷",
       // ── titulky pro prozkoumávání: zobrazí se při návratu do vyřešeného pokoje místo návodu ──
       explore_kitchen: "Toulej se — kuchyně skrývá víc než kávu. ☕",
@@ -101787,6 +101789,40 @@ function spawnDustMote(container) {
   window.__solvedRooms = solvedRoomList;
   window.__setRoomSolved = setRoomSolved;
   window.__setSolvedRooms = setSolvedRooms;
+  var ROOM_IDS = STAGES.concat(["bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
+  var seenRooms = Object.create(null);
+  function roomSeen(name) {
+    return ROOM_IDS.indexOf(name) !== -1 && !!seenRooms[name];
+  }
+  function seenRoomList() {
+    return ROOM_IDS.filter(roomSeen);
+  }
+  function setSeenRooms(names) {
+    seenRooms = Object.create(null);
+    (Array.isArray(names) ? names : []).forEach(function (name) {
+      if (ROOM_IDS.indexOf(name) !== -1) seenRooms[name] = true;
+    });
+    if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
+    return seenRoomList();
+  }
+  function showRoomProgress() {
+    var count = seenRoomList().length;
+    if (!count || !window.__flashCaptionKey) return false;
+    return window.__flashCaptionKey(count === ROOM_IDS.length ? "complete" : "room_progress",
+      count === ROOM_IDS.length ? 5200 : 2800, "room-progress", { n: count });
+  }
+  function markRoomSeen(name, options) {
+    if (ROOM_IDS.indexOf(name) === -1 || roomSeen(name) || window.__cinematic) return false;
+    seenRooms[name] = true;
+    if (window.__checkpointChanged) window.__checkpointChanged();
+    if (!(options && options.silent) && attractOver()) showRoomProgress();
+    return true;
+  }
+  window.__roomSeen = roomSeen;
+  window.__seenRooms = seenRoomList;
+  window.__setSeenRooms = setSeenRooms;
+  window.__markRoomSeen = markRoomSeen;
+  window.__showRoomProgress = showRoomProgress;
   var captionKey = "kitchen";
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
   var openingGuideShowing = false, openingGuideTimer = null, openingGuideArmTimer = null;
@@ -102120,6 +102156,8 @@ function spawnDustMote(container) {
   }
   window.__markLowerRoomDiscovered = markLowerRoomDiscovered;
   window.__markLowerRoomEntered = function () {
+    var lowerRoom = activeLowerRoom();
+    if (lowerRoom) markRoomSeen(lowerRoom.id);
     syncFloorNavigation();
     if (lowerRoomOrientationShown) return false;
     lowerRoomOrientationShown = true;
@@ -102405,14 +102443,26 @@ function spawnDustMote(container) {
     }
     return true;
   }
-  window.__flashCaptionKey = function (key, holdMs, owner) {
+  function captionWithReplacements(key, replacements) {
+    var html = huntText(key);
+    if (!replacements) return html;
+    Object.keys(replacements).forEach(function (name) {
+      var safe = String(replacements[name]).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      html = html.split("{" + name + "}").join(safe);
+    });
+    return html;
+  }
+  window.__flashCaptionKey = function (key, holdMs, owner, replacements) {
     if (!key) return false;
     clearFlashedCaption(null, true);
     var prevHtml = caption.innerHTML, prevKey = captionKey;
     setCaption(key, true);
     if (captionKey !== key) return false;
+    caption.innerHTML = captionWithReplacements(key, replacements);
     caption.classList.add("temporary-caption-live");
-    var f = { key: key, prevHtml: prevHtml, prevKey: prevKey, owner: owner || "general", timer: null };
+    var f = { key: key, prevHtml: prevHtml, prevKey: prevKey, owner: owner || "general",
+      replacements: replacements || null, timer: null };
     flashedCaption = f;
     f.timer = setTimeout(function () {
       if (flashedCaption === f) clearFlashedCaption(f.owner, true);
@@ -102489,7 +102539,8 @@ function spawnDustMote(container) {
   window.refreshHuntCaption = function () {
     if (recoveryGate && recoverySaved) { showRecoveryCaption(recoverySaved); return; }
     if (captionKey === "rsvp_exit") { showRsvpNudge(); return; }
-    caption.innerHTML = huntText(captionKey);
+    caption.innerHTML = captionWithReplacements(captionKey,
+      flashedCaption && flashedCaption.key === captionKey ? flashedCaption.replacements : null);
   };
   var finaleTimers = [];
   var balconyIntroSeen = false;
@@ -102862,6 +102913,7 @@ function spawnDustMote(container) {
     setCaption(name);
     if (name === "garden" && window.__gardenPartyOn && window.__refreshGardenCaption) window.__refreshGardenCaption();
     restoreStageHint(name);
+    markRoomSeen(name, { silent: !!(opts && opts.seenSilent) });
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
     if (window.__updateWhistler) window.__updateWhistler(); // re-evaluate Whistler's presence/room for the new view
@@ -111767,7 +111819,6 @@ function spawnDustMote(container) {
     }
     if (glass) glass.classList.add("done", "zoomed");
     if (officeDim) officeDim.style.opacity = "0.72";
-    setCaption("complete");
     setTimeout(function () {
       window.__finishSolveAdvance("office", "balcony");
     }, 2000);
@@ -111993,11 +112044,12 @@ function spawnDustMote(container) {
     setMusicPausedState(false); // clear any spacebar pause state
     setMaxUnlocked(0, true);
     setSolvedRooms([]);
+    setSeenRooms([]);
     // A fresh game still follows Edmonton's real (or explicitly selected) sky. Phase 1 keeps the
     // espresso kitchen through the second-round bar gate; it no longer needs a fake daytime scene.
     if (window.__resetDayNightState) window.__resetDayNightState(); // forget the prior segment verdict + any twilight() force before re-arming
     if (window.__startAutoDayNight) window.__startAutoDayNight();   // force-sync now, even while CLICK ME still owns the scene
-    goToStage("kitchen");
+    goToStage("kitchen", { seenSilent: true });
     if (window.__showHuntIntro) {
       window.__showHuntIntro(); // every fresh run keeps the clean CLICK ME introduction
       if (enterPageMode) setGameOnlyEntered(true); // recovery already supplied the first page interaction, so enlarge now
@@ -115320,6 +115372,7 @@ function spawnDustMote(container) {
       progress: {
         room: window.currentStageName || "kitchen", maxUnlocked: maxUnlocked,
         solvedRooms: solvedRoomList(),
+        seenRooms: seenRoomList(),
         lowerRoom: (activeLowerRoom() || {}).id,
         phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
         daylight: !(balcony && balcony.classList.contains("dusk")),
@@ -115581,6 +115634,7 @@ function spawnDustMote(container) {
     var lowerRoom = savedLowerRoom(p);
     setMaxUnlocked(0, true); unlockThrough(savedMax);
     setSolvedRooms(p.solvedRooms);
+    setSeenRooms(Array.isArray(p.seenRooms) ? p.seenRooms : ["kitchen", p.room, p.lowerRoom]);
     setSecondRound(!!p.phase2, { releaseHeld: false });
     balconyIntroSeen = savedMax >= STAGES.length - 1;
     if (window.__checkpointPhoneRestore && saved.phone) window.__checkpointPhoneRestore(saved.phone);
@@ -115594,7 +115648,7 @@ function spawnDustMote(container) {
     else if (p.party && window.__setGardenParty) window.__setGardenParty(true, false);
     if (window.bbq) window.bbq(!!p.bbq);
     if (window.__setDayNight) window.__setDayNight(!p.daylight);
-    goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked]);
+    goToStage(STAGES.indexOf(p.room) <= maxUnlocked ? p.room : STAGES[maxUnlocked], { seenSilent: true });
     if (hasSystems && window.__restoreCheckpointSystems) window.__restoreCheckpointSystems(restoreSystems, "afterStage");
     // Lower rooms retain their own entry semantics: transient illustrated props reset,
     // Cinema restores its saved projector power without creating or resuming a Vimeo iframe,
@@ -115873,7 +115927,7 @@ function spawnDustMote(container) {
   window.addEventListener("loft:statechange", scheduleCheckpoint);
   window.addEventListener("pagehide", function () { saveCheckpoint(); });
   setInterval(function () { if (!document.hidden) saveCheckpoint(); }, 2500); // catches stable internal changes that do not publish a state event
-  goToStage("kitchen"); // sets the initial room/caption before either opening gate goes on
+  goToStage("kitchen", { seenSilent: true }); // sets the initial room/caption before either opening gate goes on
   if (!showRecoveryGate(loadCheckpoint())) {
     showHuntIntro();
   }

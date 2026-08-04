@@ -94,38 +94,58 @@ function parseReport(dom) {
 // (the report is set well before the budget runs out).
 function runPageSync(file, harness, budgetMs, opts) {
   opts = opts || {};
-  var scratch = makeScratch(file, harness, hook(opts));
-  var profile = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-chrome-"));
-  var dom;
-  try {
-    dom = child.execSync(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix, profile), {
-      stdio: ["ignore", "pipe", "pipe"],
-      maxBuffer: 64 * 1024 * 1024,
-      timeout: budgetMs + 30000
-    }).toString();
-  } finally {
-    fs.unlinkSync(scratch);
-    fs.rmSync(profile, { recursive: true, force: true });
+  var lastError = null;
+  for (var attempt = 0; attempt < 2; attempt++) {
+    var scratch = makeScratch(file, harness, hook(opts));
+    var profile = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-chrome-"));
+    var dom = "";
+    try {
+      dom = child.execSync(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix, profile), {
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 64 * 1024 * 1024,
+        timeout: budgetMs + 30000
+      }).toString();
+      var report = parseReport(dom);
+      if (report) return report;
+    } catch (error) {
+      lastError = error;
+    } finally {
+      fs.unlinkSync(scratch);
+      fs.rmSync(profile, { recursive: true, force: true });
+    }
   }
-  return parseReport(dom);
+  if (lastError && !dom) throw lastError;
+  return null;
 }
 
 // Async runner (state.js): lets independent captures run concurrently.
 function runPage(file, harness, budgetMs, opts) {
   opts = opts || {};
-  var scratch = makeScratch(file, harness, hook(opts));
-  var profile = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-chrome-"));
-  return new Promise(function (resolve, reject) {
-    child.exec(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix, profile), {
-      maxBuffer: 64 * 1024 * 1024,
-      timeout: budgetMs + 30000
-    }, function (err, stdout) {
-      try { fs.unlinkSync(scratch); } catch (e) {}
-      try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {}
-      if (err && !stdout) return reject(err);
-      try { resolve(parseReport(stdout.toString())); } catch (e) { reject(e); }
+  function attempt(remaining) {
+    var scratch = makeScratch(file, harness, hook(opts));
+    var profile = fs.mkdtempSync(path.join(os.tmpdir(), "wedding-chrome-"));
+    return new Promise(function (resolve, reject) {
+      child.exec(chromeCmd(scratch, budgetMs, opts.chromeFlags, opts.urlSuffix, profile), {
+        maxBuffer: 64 * 1024 * 1024,
+        timeout: budgetMs + 30000
+      }, function (err, stdout) {
+        try { fs.unlinkSync(scratch); } catch (e) {}
+        try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) {}
+        var report = null;
+        var parseError = null;
+        try { report = stdout && parseReport(stdout.toString()); } catch (error) { parseError = error; }
+        if (report) return resolve(report);
+        if (remaining > 0) return resolve(attempt(remaining - 1));
+        if (err && !stdout) return reject(err);
+        if (parseError) return reject(parseError);
+        resolve(null);
+      });
     });
-  });
+  }
+  // A busy all-tests sweep can starve one fresh Chrome profile or its virtual-time
+  // budget. Retry only a missing/malformed transport report; real assertion data is
+  // returned untouched and still fails in the caller.
+  return attempt(1);
 }
 
 module.exports = {

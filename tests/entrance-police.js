@@ -20,6 +20,27 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceDriveControl("brake", false);
     return window.__entranceDriveSetMotion(speed, gear);
   }
+  function flashSample() {
+    var group = document.getElementById("entrance-roadtrip-police-mirror-flashes");
+    var blue = document.getElementById("entrance-roadtrip-police-mirror-flash-blue");
+    var red = document.getElementById("entrance-roadtrip-police-mirror-flash-red");
+    var blueStyle = getComputedStyle(blue);
+    var redStyle = getComputedStyle(red);
+    return {
+      visible: group.getAttribute("visibility"),
+      active: group.classList.contains("is-pursuing"),
+      transform: group.getAttribute("transform") || "",
+      blueAnimation: blueStyle.animationName,
+      redAnimation: redStyle.animationName,
+      blueDuration: blueStyle.animationDuration,
+      redDuration: redStyle.animationDuration,
+      blueIterations: blueStyle.animationIterationCount,
+      redIterations: redStyle.animationIterationCount,
+      blueOpacity: Number(blueStyle.opacity),
+      redOpacity: Number(redStyle.opacity),
+      ariaLabels: group.querySelectorAll("[aria-label]").length + (group.hasAttribute("aria-label") ? 1 : 0)
+    };
+  }
   function mirrorSample() {
     var police = copy(trip().police);
     var transform = police.mirrorTransform || "";
@@ -34,7 +55,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       scale: scale ? Number(scale[1]) : null,
       roadLeft: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-road-left")),
       roadRight: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-road-right")),
-      behind: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-behind"))
+      behind: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-behind")),
+      flashes: flashSample()
     };
   }
   function meetPolice(speed, pendingFeedback) {
@@ -125,7 +147,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         police: copy(trip().police),
         lead: warningLead,
         warningVisible: document.querySelector(".entrance-roadtrip-police-warning").getAttribute("visibility"),
-        roadsideVisible: trip().police.roadsideVisible
+        roadsideVisible: trip().police.roadsideVisible,
+        flashes: flashSample()
       };
       window.__entranceRoadtripSetDistance(trip().police.stationAt - 6);
       step(1000, 2);
@@ -319,6 +342,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       setMotion(0, 0);
       step(1000);
       var ordinaryStopped = copy(trip());
+      var ordinaryStoppedFlashes = flashSample();
       var ordinaryStoppedCaption = document.getElementById("hunt-caption").textContent.trim();
       window.__entranceRoadtripPoliceStep(0, 1);
       var ordinaryApproach = copy(trip());
@@ -334,6 +358,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         card: ordinaryCard,
         cardTitle: ordinaryCardTitle,
         cardLine: ordinaryCardLine,
+        stoppedFlashes: ordinaryStoppedFlashes,
+        resolvedFlashes: flashSample(),
         stoppedCaption: ordinaryStoppedCaption,
         caption: document.getElementById("hunt-caption").textContent.trim(),
         flash: window.__flashCaptionState()
@@ -551,7 +577,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripSetDistance(severeDetection.police.stationAt + 30);
       var severe = copy(trip());
       window.__entranceRoadtripPoliceStep(140, 20);
-      var captureStart = { trip: copy(trip()), speed: state().drive.speed };
+      var captureStart = { trip: copy(trip()), speed: state().drive.speed, flashes: flashSample() };
       var captureCheckpoint = window.__captureCheckpointSystems().entrance.drive.roadtrip;
       window.__entranceRoadtripPoliceStep(0, 1);
       var captureOne = { trip: copy(trip()), speed: state().drive.speed };
@@ -772,6 +798,27 @@ var REDUCED_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed
         statusStrokeWidth: statusStyle.strokeWidth,
         captionBlink: document.getElementById("hunt-caption").classList.contains("hint-blink")
       };
+      window.__entranceRoadtripSetDemerits(0, 0);
+      window.__toggleEntrancePorscheEngine();
+      window.__entranceRoadtripStart();
+      window.__entranceDriveSetMotion(130, 3);
+      window.__entranceRoadtripPolice(150);
+      var stationAt = state().drive.roadtrip.police.stationAt;
+      window.__entranceRoadtripSetDistance(stationAt - 6);
+      window.__entranceRoadtripPoliceDetect(130);
+      window.__entranceRoadtripSetDistance(stationAt + 30);
+      var flashGroup = document.getElementById("entrance-roadtrip-police-mirror-flashes");
+      var flashBlue = document.getElementById("entrance-roadtrip-police-mirror-flash-blue");
+      var flashRed = document.getElementById("entrance-roadtrip-police-mirror-flash-red");
+      report.steps.flashes = {
+        phase: state().drive.roadtrip.police.phase,
+        visible: flashGroup.getAttribute("visibility"),
+        active: flashGroup.classList.contains("is-pursuing"),
+        blueAnimation: getComputedStyle(flashBlue).animationName,
+        redAnimation: getComputedStyle(flashRed).animationName,
+        blueOpacity: Number(getComputedStyle(flashBlue).opacity),
+        redOpacity: Number(getComputedStyle(flashRed).opacity)
+      };
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }
@@ -855,8 +902,12 @@ check(s.pursuitTraffic &&
   s.pursuitTraffic);
 check(s.warning && s.warning.police.warningFlashCount === 3 &&
   s.warning.warningVisible === "visible" && !s.warning.roadsideVisible && s.warning.lead === 240 &&
+  s.warning.flashes.visible === "hidden" && !s.warning.flashes.active &&
+  s.warning.flashes.blueAnimation === "none" && s.warning.flashes.redAnimation === "none" &&
+  s.warning.flashes.ariaLabels === 0 &&
   s.warning.lead / (s.contract.enforcementSpeed / 3.6) - 1.4 >= s.contract.warningHeadroom,
-  "one oncoming vehicle gives exactly three high-beam flashes with a longer braking runway", s.warning);
+  "one oncoming vehicle gives exactly three high-beam flashes without activating the pursuit lightbar",
+  s.warning);
 check(s.warningHeadroom && s.warningHeadroom.phase === "warning" &&
   s.warningHeadroom.warningElapsed < 4.4,
   "the trap cannot measure speed until three seconds after the final flash", s.warningHeadroom);
@@ -937,6 +988,9 @@ check(s.toleratedMirror && s.toleratedMirror.detection.police.phase === "cooldow
   s.toleratedMirror.mid.scale > s.toleratedMirror.far.scale &&
   s.toleratedMirror.near.y > s.toleratedMirror.mid.y &&
   s.toleratedMirror.mid.y > s.toleratedMirror.far.y &&
+  s.toleratedMirror.near.flashes.visible === "hidden" && !s.toleratedMirror.near.flashes.active &&
+  s.toleratedMirror.mid.flashes.visible === "hidden" && !s.toleratedMirror.mid.flashes.active &&
+  s.toleratedMirror.far.flashes.visible === "hidden" && !s.toleratedMirror.far.flashes.active &&
   !s.toleratedMirror.gone.police.mirrorVisible &&
   s.toleratedMirror.gone.police.mirrorMode === "",
   "a tolerated roadside patrol recedes on the right shoulder toward the mirror horizon",
@@ -984,8 +1038,21 @@ check(s.pursuit && s.pursuit.trip.police.phase === "pursuit" &&
   s.pursuit.joinNear.x > s.pursuit.joinMid.x &&
   s.pursuit.joinNear.scale > s.pursuit.joinMid.scale &&
   s.pursuit.following.police.mirrorMode === "pursuit" &&
-  s.pursuit.following.x < s.pursuit.joinMid.x && s.pursuit.mirror === "visible",
-  "speeding moves the passed roadside reflection coherently into the pursuing patrol car", s.pursuit);
+  s.pursuit.following.x < s.pursuit.joinMid.x && s.pursuit.mirror === "visible" &&
+  s.pursuit.roadside.flashes.visible === "hidden" && !s.pursuit.roadside.flashes.active &&
+  s.pursuit.joinNear.flashes.visible === "visible" && s.pursuit.joinNear.flashes.active &&
+  s.pursuit.following.flashes.visible === "visible" && s.pursuit.following.flashes.active &&
+  s.pursuit.following.flashes.transform === s.pursuit.following.police.mirrorTransform &&
+  s.pursuit.following.flashes.blueAnimation === "entrance-roadtrip-police-mirror-flash-blue" &&
+  s.pursuit.following.flashes.redAnimation === "entrance-roadtrip-police-mirror-flash-red" &&
+  s.pursuit.following.flashes.blueDuration === "0.64s" &&
+  s.pursuit.following.flashes.redDuration === "0.64s" &&
+  s.pursuit.following.flashes.blueIterations === "infinite" &&
+  s.pursuit.following.flashes.redIterations === "infinite" &&
+  Math.abs(s.pursuit.following.flashes.blueOpacity - s.pursuit.following.flashes.redOpacity) > .7 &&
+  s.pursuit.following.flashes.ariaLabels === 0,
+  "speeding moves the roadside reflection into a transform-matched, alternating red/blue pursuit lightbar",
+  s.pursuit);
 check(s.pursuitCurves && s.pursuitCurves.right.police.mirrorMode === "pursuit" &&
   s.pursuitCurves.left.police.mirrorMode === "pursuit" &&
   s.pursuitCurves.right.x > s.pursuitCurves.left.x + 2 &&
@@ -1018,6 +1085,9 @@ check(s.stopped && s.stopped.stopped.active && s.stopped.stopped.police.phase ==
   s.stopped.trip.police.lastDemerits === 4 && s.stopped.trip.police.lastDemeritTotal === 4 &&
   !s.stopped.trip.police.sirenActive &&
   !s.stopped.trip.police.mirrorVisible && !s.stopped.trip.police.arrestVisible &&
+  s.stopped.stoppedFlashes.visible === "visible" && s.stopped.stoppedFlashes.active &&
+  s.stopped.resolvedFlashes.visible === "hidden" && !s.stopped.resolvedFlashes.active &&
+  s.stopped.resolvedFlashes.transform === "" &&
   /40 km\/h over · fine \$560 · 4 demerits · 4\/15/.test(s.stopped.caption) &&
   !s.stopped.flash,
   "an ordinary stop gets a calm officer approach and ticket card before the recorded fine", s.stopped);
@@ -1136,6 +1206,7 @@ check(s.severe && s.severe.detected.active && s.severe.detected.police.phase ===
   s.severe.detected.police.sirenActive && s.severe.detected.police.mirrorVisible &&
   s.severe.captureStart.trip.active && s.severe.captureStart.trip.police.phase === "capture" &&
   s.severe.captureStart.trip.police.captureStartSpeed === 140 &&
+  s.severe.captureStart.flashes.visible === "visible" && s.severe.captureStart.flashes.active &&
   s.severe.captureOne.speed > 0 && s.severe.captureOne.speed < 140 &&
   s.severe.captureTwo.speed >= 0 && s.severe.captureTwo.speed < s.severe.captureOne.speed &&
   s.severe.captureOne.trip.police.sirenActive && s.severe.captureOne.trip.police.mirrorVisible &&
@@ -1282,6 +1353,7 @@ var reducedResult = lib.runPageSync("rsvp.html", REDUCED_MOTION_HARNESS, 2500, {
   chromeFlags: "--force-prefers-reduced-motion=reduce --autoplay-policy=no-user-gesture-required --window-size=1100,900"
 });
 var reduced = reducedResult && reducedResult.steps && reducedResult.steps.blocked;
+var reducedFlashes = reducedResult && reducedResult.steps && reducedResult.steps.flashes;
 check(reducedResult && reducedResult.errors.length === 0, "no uncaught errors in reduced-motion suspension probe",
   reducedResult && reducedResult.errors);
 check(reduced && reduced.state.car.engineOn === false && reduced.state.drive.rpm === 0 &&
@@ -1292,6 +1364,12 @@ check(reduced && reduced.state.car.engineOn === false && reduced.state.drive.rpm
   reduced.statusStroke === "rgb(255, 253, 248)" && reduced.statusStrokeWidth === "0.8px",
   "reduced motion replaces the suspension blink with a static emphasized status",
   reduced);
+check(reducedFlashes && reducedFlashes.phase === "pursuit" &&
+  reducedFlashes.visible === "visible" && reducedFlashes.active &&
+  reducedFlashes.blueAnimation === "none" && reducedFlashes.redAnimation === "none" &&
+  reducedFlashes.blueOpacity === .72 && reducedFlashes.redOpacity === .72,
+  "reduced motion keeps steady paired pursuit lights instead of alternating them",
+  reducedFlashes);
 
 if (failures) {
   console.log("\n" + failures + " highway-police assertion(s) failed.");

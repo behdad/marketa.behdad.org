@@ -204,7 +204,10 @@ pursuit use without competing for pooled traffic slots. Once the Porsche passes 
 dedicated patrol use leaves the windshield and follows the mirror road's right-shoulder projection
 for 62 metres, including tolerated readings. A pursuit smoothsteps that same reflected transform
 toward the following-car transform over 24 metres, avoiding a disappear/reappear cut while the
-patrol pulls out. The first trap begins after 950 metres;
+patrol pulls out. A sibling clipped SVG overlay follows that exact transform and alternates the
+lightbar only for pursuit/capture/stopped/arrest; it remains hidden for a tolerated roadside
+reflection, and the reduced-motion media rule replaces the alternation with steady paired lights.
+The first trap begins after 950 metres;
 later traps are spaced by 1,200–1,560 metres. The warning car exposes exactly three high-beam
 flashes with the patrol car 240 metres ahead; detection is gated until at least three seconds after
 the third flash finishes. Posted speed is 90 km/h and enforcement begins above 110.

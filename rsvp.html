@@ -35338,6 +35338,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_STATIC_SPEED_KMH = .25;
   var PORSCHE_LOW_SPEED_RESISTANCE_KMH = 20;
   var PORSCHE_LOW_SPEED_RESISTANCE_BOOST = 12;
+  var PORSCHE_HIDDEN_HUD_RESISTANCE_MULTIPLIER = 5;
   var PORSCHE_TRANSMISSION_KEY = "entranceTransmission:v1";
   var PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH = 10;
   var PORSCHE_AUTO_SHIFT_DWELL_MS = 550;
@@ -41396,7 +41397,8 @@ window.__entranceRoomOpen = false;
       spinPorscheOnBrake(longitudinalSpeedBefore, Math.sign(steerInput));
     }
     if (!braking && !throttleCoupled) {
-      var rollingResistance = porscheRollingResistance(driveState.speed);
+      var rollingResistance = porscheRollingResistance(driveState.speed) *
+        (driveState.hudOpen ? 1 : PORSCHE_HIDDEN_HUD_RESISTANCE_MULTIPLIER);
       driveState.speed -= Math.sign(driveState.speed) * Math.min(Math.abs(driveState.speed), rollingResistance * seconds);
     }
     if (roadtripState.active && porscheState.engineOn && Math.abs(driveState.speed) > .5 && seconds > 0) {
@@ -41497,7 +41499,8 @@ window.__entranceRoomOpen = false;
     // non-pedal slowdowns (a collision or police capture) share the same weight transfer, while
     // ordinary rolling resistance stays visually level. Exponential attack/release is monotonic:
     // it settles cleanly at rest and cannot introduce another stopped-car wobble.
-    var diveDeceleration = brake || actualDeceleration >= 4 ? actualDeceleration : 0;
+    var diveDeceleration = driveState.hudOpen && (brake || actualDeceleration >= 4) ?
+      actualDeceleration : 0;
     var diveRange = PORSCHE_NOSE_DIVE_FULL_DECEL - PORSCHE_NOSE_DIVE_MIN_DECEL;
     var diveSpeedScale = Math.max(0, Math.min(1,
       longitudinalSpeedBefore / PORSCHE_NOSE_DIVE_FULL_SPEED_KMH));

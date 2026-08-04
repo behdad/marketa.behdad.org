@@ -76,6 +76,7 @@ function run(label, chromeFlags) {
 
 console.log("rsvp.html Entrance date controls:");
 run("desktop", "--window-size=1100,900");
+run("wide desktop", "--window-size=2048,700");
 run("mobile landscape", "--window-size=844,390");
 
 console.log("");

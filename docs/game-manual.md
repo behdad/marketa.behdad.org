@@ -190,11 +190,13 @@ On desktop:
 
 On touch:
 
-- drag the steering wheel to steer;
+- slide the blue horizontal control to steer smoothly, or keep dragging the
+  steering wheel;
+- slide the pink vertical control upward for progressive acceleration or
+  downward for progressive braking, or keep pressing the physical pedals;
 - select **AUTO** or **MANUAL** on the dashboard; in AUTO, select P/R/N/D;
   in MANUAL, drag the shifter up or down to change one gear, or long-press it
-  to choose an exact gear from the enlarged pattern;
-- press the accelerator and brake pedals directly.
+  to choose an exact gear from the enlarged pattern.
 
 The roof, door, paired side windows, compartments, and lights remain separate
 car controls. Outside highway mode, closing the dashboard keeps the settled

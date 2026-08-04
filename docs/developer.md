@@ -63,6 +63,12 @@ state effects. `.loft-entered` enlarges direct game mode without claiming browse
 `tests/game-entry-loader.js`, `tests/game-only-layout.js`, `tests/url-entry.js`, `tests/recovery.js`, and
 `tests/monitor-fullscreen.js` when changing this area.
 
+Android keyboard animation shrinks the visual viewport through several transient heights. The
+`__gameSoftKeyboardOpen` gate keeps fullscreen sizing and device-zoom refits off that hot path, then
+allows the ordinary resize fit once the viewport returns; the viewport meta also requests
+`interactive-widget=resizes-visual` so opening an editor does not relayout the full game shell.
+Keep this handling geometry-only—text inputs and their app-specific positioning still own focus.
+
 ## State ownership
 
 There is intentionally no central store. State lives in four places:
@@ -519,6 +525,7 @@ Add the focused runner for the ownership boundary you changed:
 | Room solve and Enter ownership | `enter.js`, `phase2-progression.js`, `progression-transitions.js` |
 | Main/lower navigation | `navigation.js`, `upstairs-keyboard-navigation.js`, `delayed-pan.js`, `rapid-navigation.js`, `lower-shortcuts.js`, `lower-room-*.js` |
 | Entry, recovery, reset, trailer | `game-entry-loader.js`, `game-only-layout.js`, `url-entry.js`, `recovery.js`, `checkpoint-*.js`, `reset-hooks.js`, `cine.js` |
+| Android keyboard viewport | `android-keyboard.js` |
 | Monitor/phone shells and menus | `menu.js`, `laptopmenu.js`, `systemmenu.js`, `monitor-*.js`, `phone-*.js` |
 | Room-specific interactions | the corresponding `kitchen`/`garden`/`cuddly`/`office`/`balcony` or lower-room focused file; Entrance driving also runs `entrance-driving.js` and `entrance-roadtrip.js` |
 | Apps and games | the named app/game test plus `minigame-vocabulary.js`; include touch tests for shared D-pads or drag controls |

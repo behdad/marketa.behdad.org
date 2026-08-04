@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual">
 <script>
   // Full page (hero/dates/RSVP) by default. The #play/#trailer entry family, or
   // the /loft-day alias path, strips the scaffolding down to just the game (the Loft Day
@@ -33553,6 +33553,41 @@ function contextMenuHost() {
     document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
 }
 
+// Android animates the visual viewport through several intermediate heights while its
+// keyboard opens. Re-fitting the 5-room SVG on every one of those frames can evict the
+// scene's composited layer and briefly paint black, so viewport consumers can freeze
+// expensive scene geometry until the keyboard has returned to its original height.
+(function () {
+  var baseline = 0, keyboardOpen = false;
+  function isTextEntry(el) {
+    return !!(el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || "") || el.isContentEditable));
+  }
+  function viewportHeight(override) {
+    if (typeof override === "number") return override;
+    return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  }
+  function sync(override) {
+    var height = viewportHeight(override);
+    var focused = isTextEntry(document.activeElement);
+    if (focused && !baseline) baseline = Math.max(height, window.innerHeight || 0);
+    var threshold = Math.max(96, baseline * 0.18);
+    keyboardOpen = !!(baseline && baseline - height > threshold);
+    if (!focused && !keyboardOpen) baseline = 0;
+    return keyboardOpen;
+  }
+  document.addEventListener("focusin", function (e) {
+    if (!isTextEntry(e.target)) return;
+    var height = viewportHeight();
+    baseline = Math.max(baseline, height, window.innerHeight || 0);
+    sync(height);
+  }, true);
+  document.addEventListener("focusout", function () { setTimeout(sync, 0); }, true);
+  window.addEventListener("resize", function () { sync(); });
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", function () { sync(); });
+  window.__gameSoftKeyboardOpen = function () { return keyboardOpen; };
+  window.__syncGameSoftKeyboardViewport = sync; // focused regression-test hook
+})();
+
 function monitorTouchMenusChooserOnly() {
   return navigator.maxTouchPoints > 0 && window.matchMedia &&
     window.matchMedia("(any-pointer: coarse), (hover: none)").matches;
@@ -46812,6 +46847,7 @@ window.addEventListener("hashchange", function () {
     bottomNav.style.marginTop = -(bottomNav.offsetHeight / 2) + "px";
   }
   function sizeFullscreenFrame() {
+    if (window.__gameSoftKeyboardOpen && window.__gameSoftKeyboardOpen()) return;
     setChromeOverlap(); // before any measurement below — it changes what the rows cost
     // checks the class (not just isFullscreen()) so it also works from a synthetic
     // test that toggles .is-fullscreen without a real requestFullscreen() call --
@@ -47032,7 +47068,7 @@ window.addEventListener("hashchange", function () {
   }
   document.addEventListener("fullscreenchange", onFsChange);
   document.addEventListener("webkitfullscreenchange", onFsChange);
-  window.addEventListener("resize", sizeFullscreenFrame); // orientation change / DevTools resize while fullscreen
+  window.addEventListener("resize", sizeFullscreenFrame); // keyboard-sized resizes are ignored inside sizeFullscreenFrame; orientation changes still fit normally
   // The overlap offset is half of each row's LIVE height, and the caption's height changes
   // with every room hint, console caption() and language switch (CS lines wrap where EN
   // doesn't). Observing the boxes catches all of those without threading a call through the
@@ -79941,7 +79977,10 @@ async def localfont(name):
       refitRetryTimer = setTimeout(function () { refitRetryTimer = null; scheduleRefitZoom(false); }, 120);
     }
   }
-  window.addEventListener("resize", function () { scheduleRefitZoom(false); });
+  window.addEventListener("resize", function () {
+    if (window.__gameSoftKeyboardOpen && window.__gameSoftKeyboardOpen()) return;
+    scheduleRefitZoom(false);
+  });
   document.addEventListener("fullscreenchange", function () { scheduleRefitZoom(true); });
   document.addEventListener("webkitfullscreenchange", function () { scheduleRefitZoom(true); });
   window.__refitZoom = refitZoom;

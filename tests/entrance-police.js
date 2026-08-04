@@ -27,7 +27,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       police: police,
       x: match ? Number(match[1]) : null,
       y: match ? Number(match[2]) : null,
-      scale: match ? Number(match[3]) : null
+      scale: match ? Number(match[3]) : null,
+      roadLeft: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-road-left")),
+      roadRight: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-road-right")),
+      behind: Number(document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("data-roadtrip-behind"))
     };
   }
   function meetPolice(speed, pendingFeedback) {
@@ -137,6 +140,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         mirror: document.querySelector(".entrance-roadtrip-police-mirror").getAttribute("visibility"),
         instruction: document.getElementById("hunt-caption").textContent.trim()
       };
+      var pursuitRightCurve = mirrorSample();
+      window.__entranceRoadtripSetDistance(401);
+      var pursuitLeftCurve = mirrorSample();
+      report.steps.pursuitCurves = { right: pursuitRightCurve, left: pursuitLeftCurve };
       document.hasFocus = function () { return false; };
       window.dispatchEvent(new Event("blur"));
       await sleep(60);
@@ -548,6 +555,17 @@ check(s.pursuit && s.pursuit.trip.police.phase === "pursuit" &&
   s.pursuit.following.police.mirrorMode === "pursuit" &&
   s.pursuit.following.x < s.pursuit.joinMid.x && s.pursuit.mirror === "visible",
   "speeding moves the passed roadside reflection coherently into the pursuing patrol car", s.pursuit);
+check(s.pursuitCurves && s.pursuitCurves.right.police.mirrorMode === "pursuit" &&
+  s.pursuitCurves.left.police.mirrorMode === "pursuit" &&
+  s.pursuitCurves.right.x > s.pursuitCurves.left.x + 2 &&
+  s.pursuitCurves.right.x > s.pursuitCurves.right.roadLeft &&
+  s.pursuitCurves.right.x < s.pursuitCurves.right.roadRight &&
+  s.pursuitCurves.left.x > s.pursuitCurves.left.roadLeft &&
+  s.pursuitCurves.left.x < s.pursuitCurves.left.roadRight &&
+  s.pursuitCurves.right.behind === s.pursuitCurves.left.behind &&
+  s.pursuitCurves.right.scale === s.pursuitCurves.left.scale,
+  "the pursuing Sheriff follows the reflected lane through opposite bends without changing pursuit depth",
+  s.pursuitCurves);
 check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sirenActive,
   "the pursuit siren tears down while unfocused and returns only when attended", {
     unfocused: s.unfocused, refocused: s.refocused

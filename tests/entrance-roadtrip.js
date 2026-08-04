@@ -9,6 +9,12 @@ var lib = require("./lib");
 var REQUIRED_IDS = [
   "entrance-drive-hud-svg",
   "entrance-roadtrip-world",
+  "entrance-roadtrip-day-far",
+  "entrance-roadtrip-day-mid",
+  "entrance-roadtrip-day-near",
+  "entrance-roadtrip-night-far",
+  "entrance-roadtrip-night-mid",
+  "entrance-roadtrip-night-near",
   "entrance-roadtrip-road",
   "entrance-roadtrip-lane-marks",
   "entrance-roadtrip-furniture",
@@ -32,6 +38,8 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-mirror-center",
   "entrance-roadtrip-mirror-lanes",
   "entrance-roadtrip-mirror-edges",
+  "entrance-roadtrip-mirror-terrain",
+  "entrance-roadtrip-mirror-trees",
   "entrance-roadtrip-mirror-entities",
   "entrance-roadtrip-mirror-clouds",
   "entrance-roadtrip-mirror-smoke",
@@ -560,8 +568,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var straightGeometry = asphalt.getAttribute("d");
     var straightMirror = mirrorGeometry();
     var straightWinter = winterGeometry();
+    var straightScenery = copy(state().drive.scenery);
     window.__entranceRoadtripSetDistance(158);
-    var rightCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry(), winter: winterGeometry() };
+    var headlightGroup = document.getElementById("entrance-roadtrip-headlights");
+    var rightCurve = {
+      state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry(), winter: winterGeometry(),
+      scenery: copy(state().drive.scenery),
+      headlights: {
+        span: Number(headlightGroup.getAttribute("data-roadtrip-wash-span")),
+        overlap: Number(headlightGroup.getAttribute("data-roadtrip-inner-overlap")),
+        left: document.getElementById("entrance-roadtrip-headlight-left").getAttribute("d"),
+        right: document.getElementById("entrance-roadtrip-headlight-right").getAttribute("d")
+      }
+    };
     window.__entranceRoadtripSetDistance(260);
     var leftWarningNode = visibleCurveSign();
     var leftWarning = leftWarningNode && {
@@ -570,11 +589,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       href: leftWarningNode.getAttribute("href") || leftWarningNode.getAttribute("xlink:href")
     };
     window.__entranceRoadtripSetDistance(401);
-    var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry(), winter: winterGeometry() };
+    var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry(), winter: winterGeometry(), scenery: copy(state().drive.scenery) };
+    window.__entranceRoadtripSetDistance(6);
+    var mirrorTreesNear = copy(roadtrip().mirrorTrees);
+    window.__entranceRoadtripSetDistance(16);
+    var mirrorTreesFarther = copy(roadtrip().mirrorTrees);
     report.steps.curves = {
       straight: straightGeometry,
       straightMirror: straightMirror,
       straightWinter: straightWinter,
+      straightScenery: straightScenery,
       roadLines: Array.prototype.map.call(document.querySelectorAll(
         ".entrance-roadtrip-edge,.entrance-roadtrip-centerline"), function (node) {
           return { fill: getComputedStyle(node).fill, stroke: getComputedStyle(node).stroke,
@@ -583,7 +607,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       rightWarning: rightWarning,
       right: rightCurve,
       leftWarning: leftWarning,
-      left: leftCurve
+      left: leftCurve,
+      mirrorTreesNear: mirrorTreesNear,
+      mirrorTreesFarther: mirrorTreesFarther
     };
     report.steps.lamps = Array.prototype.map.call(document.querySelectorAll(
       '#entrance-roadtrip-furniture [data-roadtrip-furniture="lamp"]'), function (node) {
@@ -1015,6 +1041,22 @@ check(/#entrance-roadtrip-mirror-smoke\{opacity:calc\(var\(--smoke,0\) \* \.4\)/
   /entrance-raining:not\(\.entrance-snowing\) #entrance-roadtrip-mirror-rain\{opacity:/.test(source) &&
   /entrance-snowing #entrance-roadtrip-mirror-snow\{opacity:/.test(source),
   "the mirror atmosphere reads the same smoke and Entrance weather state as the windshield");
+check(/id="entrance-drive-day-far"[^>]+data-scenery-layer="far"[\s\S]{0,1800}translate\(-522 -8\)[\s\S]{0,3800}translate\(793 -8\)/.test(source) &&
+  /id="entrance-drive-night-far"[^>]+data-scenery-layer="far"[\s\S]{0,1400}translate\(-522 -8\)[\s\S]{0,3000}translate\(793 -8\)/.test(source) &&
+  /id="entrance-drive-day-near"[^>]+data-scenery-layer="near"[\s\S]{0,1200}translate\(-72 57\)[\s\S]{0,2800}translate\(742 57\)/.test(source),
+  "ordinary HUD mountains and near trees extend beyond both windshield edges");
+check(["day-far", "day-mid", "day-near", "night-far", "night-mid", "night-near"].every(function (name) {
+  var escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  var match = source.match(new RegExp('id="entrance-roadtrip-' + escaped + '"[\\s\\S]{0,1500}</g>'));
+  return match && /data-scenery-tile-width="680"/.test(match[0]) && /x="-680"/.test(match[0]) && /x="680"/.test(match[0]);
+}), "each highway parallax layer carries matching offscreen tiles on both sides");
+check(/entrance-roadtrip-season-winter #entrance-roadtrip-rabbit \.entrance-roadtrip-rabbit-body\{fill:#e3e2d9\}/.test(source) &&
+  /class="entrance-roadtrip-rabbit-(?:body|head|ear|feet)"/.test(source) &&
+  /id="entrance-roadtrip-rabbit"[^>]+stroke="#443c34"/.test(source),
+  "the hare keeps grey-brown summer art and changes to outlined off-white winter fur");
+check(/id="entrance-roadtrip-headlight-soft"[^>]+x="-24%"[^>]+width="148%"[\s\S]{0,100}<feGaussianBlur stdDeviation="3\.6"/.test(source) &&
+  (source.match(/id="entrance-roadtrip-headlight-(?:left|right)"[^>]+fill-opacity="\.42"/g) || []).length === 2,
+  "highway headlights share a softened low-opacity beam treatment");
 check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74H280Q268-75[^\"]+" fill="#2d3438"[^>]+stroke="#171c20"/.test(source) &&
   /id="entrance-roadtrip-mirror-gasket"[^>]+stroke="#13191c"/.test(source) &&
   /clipPath id="entrance-roadtrip-mirror-clip">\s*<path/.test(source),
@@ -1243,6 +1285,50 @@ check(curves && curves.rightWarning && curves.rightWarning.direction === "right"
   curves.right.mirror.road.farCenter > curves.straightMirror.road.farCenter + 1 &&
   curves.left.mirror.road.farCenter < curves.straightMirror.road.farCenter - 1,
   "rear-view bends accumulate toward opposite horizon sides while every near road and marking stays centred", curves);
+function firstSceneryOffset(snapshot, layer) {
+  return snapshot && snapshot.roadtrip && snapshot.roadtrip[layer] && snapshot.roadtrip[layer][0];
+}
+function scaleFromTransform(transform) {
+  var match = String(transform || "").match(/scale\(([-.\d]+)/);
+  return match ? Number(match[1]) : NaN;
+}
+var straightFar = firstSceneryOffset(curves && curves.straightScenery, "far");
+var straightMid = firstSceneryOffset(curves && curves.straightScenery, "mid");
+var straightNear = firstSceneryOffset(curves && curves.straightScenery, "near");
+var rightFar = firstSceneryOffset(curves && curves.right.scenery, "far");
+var rightMid = firstSceneryOffset(curves && curves.right.scenery, "mid");
+var rightNear = firstSceneryOffset(curves && curves.right.scenery, "near");
+var leftFar = firstSceneryOffset(curves && curves.left.scenery, "far");
+var leftMid = firstSceneryOffset(curves && curves.left.scenery, "mid");
+var leftNear = firstSceneryOffset(curves && curves.left.scenery, "near");
+check(curves && rightFar < straightFar && rightMid < straightMid && rightNear < straightNear &&
+  Math.abs(rightFar - straightFar) < Math.abs(rightMid - straightMid) &&
+  Math.abs(rightMid - straightMid) < Math.abs(rightNear - straightNear) &&
+  leftFar > straightFar && leftMid > straightMid && leftNear > straightNear &&
+  Math.abs(leftFar - straightFar) < Math.abs(leftMid - straightMid) &&
+  Math.abs(leftMid - straightMid) < Math.abs(leftNear - straightNear) &&
+  curves.right.state.mirrorTerrainOffset > 0 && curves.left.state.mirrorTerrainOffset < 0,
+  "far mountains, foothills, near terrain, and mirror terrain counter-shift in coherent parallax through both bends", {
+    straight: curves && curves.straightScenery,
+    right: curves && curves.right.scenery,
+    left: curves && curves.left.scenery,
+    mirror: curves && [curves.right.state.mirrorTerrainOffset, curves.left.state.mirrorTerrainOffset]
+  });
+check(curves && curves.right.headlights && curves.right.headlights.span >= 600 &&
+  curves.right.headlights.overlap >= 8 && curves.right.headlights.overlap <= 12 &&
+  /^M34\.00 95Q/.test(curves.right.headlights.left || "") &&
+  /646\.00 95Z$/.test(curves.right.headlights.right || ""),
+  "the two low-opacity headlight fans cover both shoulders with a narrow, softened centre overlap",
+  curves && curves.right.headlights);
+var mirrorTreeNear = curves && curves.mirrorTreesNear && curves.mirrorTreesNear[0];
+var mirrorTreeFarther = curves && curves.mirrorTreesFarther && curves.mirrorTreesFarther[0];
+check(mirrorTreeNear && mirrorTreeFarther && mirrorTreeNear.visible && mirrorTreeFarther.visible &&
+  mirrorTreeFarther.behind > mirrorTreeNear.behind &&
+  scaleFromTransform(mirrorTreeFarther.transform) < scaleFromTransform(mirrorTreeNear.transform) &&
+  curves.mirrorTreesNear.length === 8 && !/entrance-roadtrip-mirror-(?:lamp|post)/.test(source),
+  "rear-view trees recede toward the curve-aware vanishing point without reflected lamp or post furniture", {
+    near: mirrorTreeNear, farther: mirrorTreeFarther
+  });
 check(s.lamps && s.lamps.length >= 2 && s.lamps.every(function (lamp) {
   var scale = String(lamp.transform || "").match(/scale\(([-.\d]+) ([-.\d]+)\)/);
   return scale && (lamp.side === "right" ? Number(scale[1]) < 0 : Number(scale[1]) > 0) && Number(scale[2]) > 0;

@@ -187,6 +187,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           reverseBefore: reverseCoastBefore,
           reverseAfter: copy(state())
         };
+
+        window.__toggleEntrancePorscheEngine();
+        setMotion(139, 3);
+        window.__entranceDriveControl("steerLeft", true);
+        window.__entranceDriveControl("brake", true);
+        step(20, 1);
+        var belowSpin = copy(state());
+        window.__entranceDriveControl("brake", false);
+        window.__entranceDriveControl("steerLeft", false);
+        setMotion(141, 3);
+        window.__entranceDriveControl("steerLeft", true);
+        window.__entranceDriveControl("brake", true);
+        step(20, 1);
+        report.steps.brakeSpinBoundary = { below: belowSpin, above: copy(state()) };
+        window.__entranceDriveControl("brake", false);
+        window.__entranceDriveControl("steerLeft", false);
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -294,6 +310,11 @@ check(coast && coast.forwardBefore.speed === 12 && coast.forwardAfter.speed > 0 
   coast.reverseBefore.speed === -12 && coast.reverseAfter.speed < 0 &&
   coast.reverseAfter.speed > coast.reverseBefore.speed,
   "engine-off forward and reverse motion retain passive coasting resistance", coast);
+check(s.brakeSpinBoundary && s.brakeSpinBoundary.below.spins === 0 &&
+  s.brakeSpinBoundary.below.facing === 1 && s.brakeSpinBoundary.above.spins === 1 &&
+  s.brakeSpinBoundary.above.facing === -1 && s.brakeSpinBoundary.above.yaw === -180,
+  "braking with steering stays stable at 139 km/h and flips at 141 km/h",
+  s.brakeSpinBoundary);
 
 console.log("");
 if (failures) {

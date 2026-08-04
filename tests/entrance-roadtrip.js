@@ -300,11 +300,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     pressDocumentKey("Enter");
     normalHudEnter.secondEnter = copy(state());
     report.steps.normalHudEnter = normalHudEnter;
-    // The rest of this long-running harness predates one-way Enter ignition and
-    // assumes a fresh explicit stop/start baseline before its drivetrain sweeps.
+    // The rest of this long-running harness assumes a fresh explicit stop/start
+    // baseline before its drivetrain sweeps.
     window.__toggleEntrancePorscheEngine();
     ensureEngine();
-    window.__entranceDriveShift(6, true);
+    window.__entranceDriveRange("D", true);
     window.__entranceDriveControl("throttle", true);
 
     var room = document.getElementById("entrance-room");
@@ -448,6 +448,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.speedHud = [speedHudAt(100), speedHudAt(101), speedHudAt(150),
       speedHudAt(151), speedHudAt(215), speedHudAt(216)];
     window.__entranceDriveControl("throttle", false);
+    window.__entranceDriveTransmissionMode("manual", true);
     window.__entranceDriveSetMotion(25, 6);
     step(20);
     report.steps.lowSpeedNeutral = { gear: state().drive.gear, speed: state().drive.speed };
@@ -473,6 +474,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       downReady: shiftDownReady,
       cleared: state().drive.instruction
     };
+    window.__entranceDriveTransmissionMode("auto", true);
     window.__entranceRoadtripStart();
     window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(90, 3);

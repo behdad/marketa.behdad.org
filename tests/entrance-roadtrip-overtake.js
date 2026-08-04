@@ -47,18 +47,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripStart();
         window.__entranceDriveSetMotion(0, 0);
+        report.steps.start = {
+          state: state(),
+          classes: document.getElementById("entrance-room").getAttribute("class")
+        };
         window.__entranceRoadtripSetLane(.5);
         ["throttle", "brake", "clutch", "steerLeft", "steerRight"].forEach(function (name) {
           window.__entranceDriveControl(name, false);
         });
 
-        step(1000, 11);
+        step(1000, 4);
         report.steps.waiting = { state: state(), overtaker: !!overtaker() };
         step(1000);
         var node = overtaker();
+        var behindSource = sample(node);
+        step(20);
         var mirror = mirrorEntity();
         report.steps.behind = {
-          source: sample(node),
+          source: behindSource,
           mirrorVisible: !!mirror,
           mirrorType: mirror && mirror.getAttribute("data-roadtrip-mirror-type"),
           passes: state().passes,
@@ -103,10 +109,10 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html slow-traffic overtaking:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 12/.test(source) &&
+check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 5/.test(source) &&
   /function syncRoadtripPlayerOvertaker\(seconds\)[\s\S]{0,900}forwardSpeed <= ROADTRIP_OVERTAKE_SPEED_MAX/.test(source) &&
   /spawnRoadtripEntity\(plan\.type, lane, plan\.ahead,[\s\S]{0,140}behind: true/.test(source),
-  "only sustained travel at 70 km/h or less schedules a vehicle from behind");
+  "only travel at 70 km/h or less schedules a vehicle from behind after five seconds");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
   patchRaf: true,
@@ -117,8 +123,11 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
 });
 check(result && result.errors.length === 0, "the focused drive has no uncaught errors", result && result.errors);
 var steps = result && result.steps || {};
+check(steps.start && steps.start.state.playerLane === 2.08 &&
+  steps.start.state.shoulderZone === "gravel" && /roadtrip-on-gravel/.test(steps.start.classes),
+  "a fresh Road Trip opens parked on the right shoulder", steps.start);
 check(steps.waiting && !steps.waiting.overtaker && steps.waiting.state.overtakeCooldown > 0,
-  "the first passing car stays infrequent", steps.waiting);
+  "rear traffic waits through the first four seconds", steps.waiting);
 check(steps.behind && steps.behind.source.overtaking === "true" &&
   steps.behind.source.direction === "forward" && steps.behind.source.lane === .5 &&
   steps.behind.source.laneTarget === 1.5 && steps.behind.source.laneChanged === "false" &&

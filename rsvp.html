@@ -37076,17 +37076,17 @@ window.__entranceRoomOpen = false;
     severity = Math.max(.08, Math.min(1, Number(severity) || .5));
     roadtripState.lastImpactSeverity = severity;
     porscheHaptic(heavy ? [90, 35, 130] : light ? 40 : [55, 30, 75]);
-    // A glass-damaging impact is the boundary between a scrape and a hit severe
-    // enough to knock the transmission out of gear. Release the pedals too,
-    // so a held key/touch cannot immediately rev the now-neutral drivetrain.
+    // A shattered windshield is the boundary for knocking AUTO out of drive. A lesser
+    // crack may still kick a manual lever loose, but the PDK keeps its selected range.
+    // Release the pedals either way so a held key/touch does not power through the hit.
     if (damage === "crack" || damage === "shatter") {
-      neutralPorscheTransmission();
+      if (damage === "shatter" || porscheTransmission.mode !== "auto") neutralPorscheTransmission();
       driveState.throttleHeldMs = 0;
       driveState.shiftCutMs = 0;
       clearPorscheClutchEngagement(true);
       setPorscheDriveHold("throttle", false);
       setPorscheDriveHold("clutch", false);
-      paintPorscheShifter(0);
+      paintPorscheShifter(porscheTransmission.mode === "auto" ? porscheTransmission.range : driveState.gear);
     }
     room.style.setProperty("--roadtrip-damage", severity.toFixed(3));
     if (damage === "shatter") {

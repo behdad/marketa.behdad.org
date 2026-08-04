@@ -9,9 +9,9 @@ var HARNESS = [
   'var report={errors:window.__errs||[]};',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   'window.__unlockAllRooms();window.goToStage("balcony");window.__openEntranceRoom();window.__openEntrancePorscheDriveHud();window.__toggleEntrancePorscheEngine();',
-  'window.__entranceDriveSetMotion(30,2);var before=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var street=window.__entranceRoomState().drive.position;',
-  'var started=window.__entranceRoadtripStart();window.__entranceDriveSetMotion(30,2);var highwayBefore=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var highway=window.__entranceRoomState().drive.position;',
-  'report.before=before;report.street=street;report.started=started;report.highwayBefore=highwayBefore;report.highway=highway;',
+  'window.__entranceDriveSetMotion(30,2);var before=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var streetState=window.__entranceRoomState().drive;',
+  'var started=window.__entranceRoadtripStart();window.__entranceRoadtripSetLane(.5);window.__entranceDriveSetMotion(30,2);var highwayBefore=window.__entranceRoomState().drive.position;window.__entranceDriveStep(1000);var highwayState=window.__entranceRoomState().drive;',
+  'report.before=before;report.street=streetState.position;report.streetSpeed=Math.abs(streetState.speed);report.started=started;report.highwayBefore=highwayBefore;report.highway=highwayState.position;report.highwaySpeed=Math.abs(highwayState.speed);',
   '}catch(error){report.errors.push(String(error&&error.stack||error));}',
   'document.getElementById("__report").textContent=JSON.stringify(report);},140);});',
   '})();</script>'
@@ -32,11 +32,15 @@ console.log("rsvp.html block driving travel rate:");
 check(result && result.errors.length === 0, "no uncaught page errors", result && result.errors);
 var streetTravel = result && Math.abs(result.street - result.before);
 var highwayTravel = result && Math.abs(result.highway - result.highwayBefore);
+var speedAdjustedRatio = result && streetTravel / highwayTravel * result.highwaySpeed / result.streetSpeed;
 check(result && result.started && streetTravel > 0 && highwayTravel > 0 &&
-  Math.abs(streetTravel / highwayTravel - 2) < .03,
-  "the block moves at twice the highway world rate for the same road speed", {
+  result.streetSpeed > 0 && result.highwaySpeed > 0 && Math.abs(speedAdjustedRatio - 2) < .03,
+  "the block moves at twice the highway world rate after normalizing grade-adjusted speed", {
     streetTravel: streetTravel,
-    highwayTravel: highwayTravel
+    highwayTravel: highwayTravel,
+    streetSpeed: result && result.streetSpeed,
+    highwaySpeed: result && result.highwaySpeed,
+    speedAdjustedRatio: speedAdjustedRatio
   });
 if (failed) process.exit(1);
 console.log("block driving travel-rate assertions passed.");

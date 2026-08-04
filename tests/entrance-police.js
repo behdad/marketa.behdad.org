@@ -438,6 +438,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         trip: suspendedTrip,
         caption: suspendedCaption,
         buttonText: suspendedButton.textContent.trim(),
+        buttonTextY: document.getElementById("entrance-roadtrip-reenter-text").getAttribute("y"),
         buttonDisabled: suspendedButton.getAttribute("aria-disabled"),
         restart: window.__entranceRoadtripStart()
       };
@@ -728,6 +729,7 @@ check(s.refused && !s.refused.paused.active && s.refused.paused.paused &&
 check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &&
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
+  s.suspension.buttonTextY === "17" &&
   s.suspension.buttonDisabled === "true" && /Suspended · 1:00|Suspended · 0:59/.test(s.suspension.buttonText) &&
   /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
   "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",

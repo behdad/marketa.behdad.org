@@ -1155,16 +1155,18 @@ check(s.courtStop && s.courtStop.stopped.active &&
 check(s.shoutThreshold && s.shoutThreshold.eightyNineOver.police.overLimit === 89 &&
   !s.shoutThreshold.eightyNineOver.police.arrestShoutPlayed &&
   s.shoutThreshold.eightyNineOver.police.arrestShoutOpacity === 0 &&
+  s.shoutThreshold.eightyNineOver.police.arrestHandcuffsOpacity === 0 &&
   s.shoutThreshold.ninetyOverEnglish.police.overLimit === 90 &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestShoutPlayed &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestShoutOpacity > .9 &&
+  s.shoutThreshold.ninetyOverEnglish.police.arrestHandcuffsOpacity === 1 &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestShoutText ===
     "ENGINE OFF! DROP THE KEYS! HANDS THROUGH THE WHEEL!" &&
   s.shoutThreshold.ninetyOverEnglish.police.arrestAudioVoices > 0 &&
   s.shoutThreshold.ninetyOverCzech.police.arrestShoutText ===
     "VYPNĚTE MOTOR! ZAHOĎTE KLÍČE! RUCE SKRZ VOLANT!" &&
   s.shoutThreshold.blurred.police.arrestAudioVoices === 0,
-  "the bilingual command shout begins at 90 over and its audio tears down on blur",
+  "the bilingual command shout and handcuffs begin at 90 over, and its audio tears down on blur",
   s.shoutThreshold);
 check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase === "pursuit" &&
   s.escaped.detected.police.detectedSpeed === 216 &&

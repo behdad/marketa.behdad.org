@@ -281,13 +281,13 @@ var fine = runDefault("fine pointer", {});
 var coarse = runDefault("coarse no-hover pointer", { forceCoarsePointer: true });
 var hybrid = runDefault("hybrid primary-fine pointer", { forceHybridPointer: true });
 var installed = runDefault("standalone fine pointer", { forceStandalone: true });
-check(fine.mode === "manual", "a fine primary pointer defaults to MANUAL", fine);
+check(fine.mode === "auto", "a fine primary pointer defaults to AUTO", fine);
 check(coarse.mode === "auto" && coarse.primaryCoarse && coarse.noHover,
-  "only a coarse no-hover primary pointer defaults to AUTO", coarse);
-check(hybrid.mode === "manual" && !hybrid.primaryCoarse && hybrid.anyCoarse,
-  "a hybrid laptop remains MANUAL", hybrid);
-check(installed.mode === "manual" && installed.standalone,
-  "installed-app display mode does not alter the pointer default", installed);
+  "a coarse no-hover primary pointer defaults to AUTO", coarse);
+check(hybrid.mode === "auto" && !hybrid.primaryCoarse && hybrid.anyCoarse,
+  "a hybrid laptop defaults to AUTO", hybrid);
+check(installed.mode === "auto" && installed.standalone,
+  "the installed app defaults to AUTO", installed);
 
 var result = lib.runPageSync("rsvp.html", MAIN_HARNESS, 9000, {
   patchRaf: true,
@@ -296,7 +296,7 @@ var result = lib.runPageSync("rsvp.html", MAIN_HARNESS, 9000, {
 if (!result) { console.log("  ✗ behavior harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "behavior harness has no uncaught page errors", result.errors);
-check(s.controls && s.controls.mode.mode === "manual" && s.controls.hitWidth >= 44 &&
+check(s.controls && s.controls.mode.mode === "auto" && s.controls.hitWidth >= 44 &&
   s.controls.hitHeight >= 44 &&
   s.controls.autoTab === "0" && s.controls.manualTab === "0" &&
   /automatic/i.test(s.controls.autoLabel) && /manual/i.test(s.controls.manualLabel),

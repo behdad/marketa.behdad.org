@@ -50,6 +50,7 @@ var harness = String.raw`<script>
       czechLive.caption === "Navštíveno: 3/10 · pokračuj dál.", czechLive);
     setLang("en");
 
+    window.__clearFlashCaption("room-progress");
     window.goToStage("kitchen");
     var revisit = snapshot();
     check("revisiting a room neither increments nor replays progress",
@@ -69,6 +70,31 @@ var harness = String.raw`<script>
       checkpoint && checkpoint.progress &&
       JSON.stringify(checkpoint.progress.seenRooms) === JSON.stringify(["kitchen", "garden", "cuddly"]),
       checkpoint && checkpoint.progress);
+
+    window.__setSeenRooms(["kitchen", "garden", "dungeon"]);
+    window.goToStage("garden");
+    window.__openGardenPrince();
+    await sleep(40);
+    window.__navigateLowerRoom("cuddly");
+    await sleep(800);
+    var lowerPan = snapshot();
+    check("a lower-floor pan counts only its settled lower-room destination",
+      JSON.stringify(lowerPan.seen) === JSON.stringify(["kitchen", "garden", "dungeon", "cinema"]) &&
+      lowerPan.seen.indexOf("cuddly") === -1 && lowerPan.caption.indexOf("4/10") !== -1,
+      lowerPan);
+    window.__navigateLowerRoom("balcony");
+    await sleep(800);
+    var entrancePan = snapshot();
+    check("continuing downstairs still skips every hidden paired upstairs room",
+      JSON.stringify(entrancePan.seen) === JSON.stringify(["kitchen", "garden", "dungeon", "cinema", "entrance"]) &&
+      entrancePan.seen.indexOf("balcony") === -1 && entrancePan.caption.indexOf("5/10") !== -1,
+      entrancePan);
+    window.__closeEntranceRoom();
+    var balconyReturn = snapshot();
+    check("returning Up from Entrance counts Balcony when it becomes visible",
+      JSON.stringify(balconyReturn.seen) === JSON.stringify(["kitchen", "garden", "balcony", "dungeon", "cinema", "entrance"]) &&
+      balconyReturn.caption.indexOf("6/10") !== -1,
+      balconyReturn);
 
     setLang("en");
     window.__unlockAllRooms();
@@ -111,7 +137,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 7000, { patchRaf: true, seedRandom: true });
+var result = lib.runPageSync("rsvp.html", harness, 9000, { patchRaf: true, seedRandom: true });
 if (!result) { console.error("room progress: no report"); process.exit(1); }
 var failed = false;
 result.checks.forEach(function (item) {

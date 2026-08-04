@@ -102224,7 +102224,9 @@ function spawnDustMote(container) {
     lowerRoomTrack.style.transform = "translateX(" + sourceOffset + "%)";
     viewport.classList.add("lower-room-sliding");
     lowerRoomTrack.getBoundingClientRect();
-    if (!goToStage(name, { rosterNavigation: true })) {
+    // This aligns the hidden main-floor strip beneath a lower-floor pan; the visitor
+    // sees the lower destination only, so do not also count its paired upstairs room.
+    if (!goToStage(name, { rosterNavigation: true, recordVisit: false })) {
       viewport.classList.remove("lower-room-sliding");
       lowerRoomTrack.style.transition = "";
       lowerRoomTrack.style.transform = "";
@@ -102653,6 +102655,7 @@ function spawnDustMote(container) {
     return flashedCaption ? { key: flashedCaption.key, owner: flashedCaption.owner } : null;
   };
   var lowerRoomReturnCaption = null;
+  var lowerRoomReturnVisitSuppressed = false;
   window.__setLowerRoomCaption = function (key) {
     if (!key) return false;
     if (lowerRoomReturnCaption) lowerRoomReturnCaption.roomKey = key;
@@ -102674,6 +102677,9 @@ function spawnDustMote(container) {
     if (!saved || (key && saved.roomKey !== key)) return false;
     var roomKey = saved.roomKey;
     lowerRoomReturnCaption = null;
+    if (!lowerRoomReturnVisitSuppressed && window.currentStageName) {
+      markRoomSeen(window.currentStageName);
+    }
     if (flashedCaption && flashedCaption.prevKey === roomKey) {
       flashedCaption.prevKey = saved.key;
       flashedCaption.prevHtml = saved.html;
@@ -103031,12 +103037,19 @@ function spawnDustMote(container) {
   };
   markFarRooms(0); // the loft opens in the kitchen and nothing pans on load, so park the far rooms now
   function goToStage(name, opts) {
-    if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
-    var lowerPrince = window.__princeState && window.__princeState();
-    if (lowerPrince && lowerPrince.basement && window.__closeMonitorPrince) window.__closeMonitorPrince();
-    if (window.__bathroomRoomOpen && window.__closeBathroomRoom) window.__closeBathroomRoom();
-    if (window.__entranceRoomOpen && window.__closeEntranceRoom) window.__closeEntranceRoom();
-    if (window.__bedroomRoomOpen && window.__closeBedroomRoom) window.__closeBedroomRoom();
+    // Closing a lower room as plumbing for another destination must not count the
+    // paired upstairs room: it never became visible between the two pans.
+    lowerRoomReturnVisitSuppressed = true;
+    try {
+      if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
+      var lowerPrince = window.__princeState && window.__princeState();
+      if (lowerPrince && lowerPrince.basement && window.__closeMonitorPrince) window.__closeMonitorPrince();
+      if (window.__bathroomRoomOpen && window.__closeBathroomRoom) window.__closeBathroomRoom();
+      if (window.__entranceRoomOpen && window.__closeEntranceRoom) window.__closeEntranceRoom();
+      if (window.__bedroomRoomOpen && window.__closeBedroomRoom) window.__closeBedroomRoom();
+    } finally {
+      lowerRoomReturnVisitSuppressed = false;
+    }
     var rosterOpen = rosterHoldsOccupants();
     var rosterNavigation = !!(opts && opts.rosterNavigation);
     if (rosterOpen && name !== window.currentStageName && !rosterNavigation) return false;
@@ -103088,7 +103101,9 @@ function spawnDustMote(container) {
     setCaption(name);
     if (name === "garden" && window.__gardenPartyOn && window.__refreshGardenCaption) window.__refreshGardenCaption();
     restoreStageHint(name);
-    markRoomSeen(name, { silent: !!(opts && opts.seenSilent) });
+    if (!opts || opts.recordVisit !== false) {
+      markRoomSeen(name, { silent: !!(opts && opts.seenSilent) });
+    }
     updateNav();
     if (window.__homeCat) window.__homeCat(name); // the loose cat follows the player between rooms
     if (window.__updateWhistler) window.__updateWhistler(); // re-evaluate Whistler's presence/room for the new view

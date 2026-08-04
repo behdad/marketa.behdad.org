@@ -61,6 +61,10 @@ Each main-floor room has a room directly below it:
 - While downstairs, `←` and `→` move among the five lower rooms. Escape,
   Backspace, or × also returns upstairs.
 
+Room progress counts the room where a pan settles. Moving downstairs does not
+also count the hidden main-floor rooms crossed or aligned beneath that pan; the
+paired main room counts when you return Up and actually see it.
+
 Each main room also contains a small in-scene route downstairs. These routes
 open on their first click or tap; there is no secret double-click requirement.
 Finding either the route or `↓` unlocks lower-floor navigation for the run.

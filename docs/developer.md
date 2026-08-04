@@ -304,6 +304,9 @@ The main progression values have separate jobs:
 - `stageIndex` / `currentStageName` identify the visible paired room;
 - `maxUnlocked` is the furthest main room available to normal navigation;
 - `solvedRooms` records each room's completion independently;
+- `seenRooms` records only player-visible settled destinations; lower-floor navigation uses
+  `goToStage(..., { recordVisit: false })` for its hidden main-floor alignment, and the shared
+  lower-room return records the paired main room only on a real upward reveal;
 - `window.__secondRound` is the latched phase-two state.
 
 Phase one is the linear kitchen → garden → cuddly → office → balcony solve. Each room's controller

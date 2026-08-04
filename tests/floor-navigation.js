@@ -114,8 +114,9 @@ var harness = String.raw`<script>
       key: "ArrowDown", code: "ArrowDown", shiftKey: true, bubbles: true, cancelable: true
     }));
     var shiftedDown = window.__entranceRoomState().drive;
-    check("Shift then Down changes gear without counting as brake",
-      shiftedDown.gear === -1 && shiftedDown.holds.clutch && !shiftedDown.holds.brake, shiftedDown);
+    check("Shift then Down selects reverse without counting as brake",
+      shiftedDown.transmission.mode === "auto" && shiftedDown.transmission.range === "R" &&
+        !shiftedDown.holds.brake, shiftedDown);
     document.dispatchEvent(new KeyboardEvent("keyup", {
       key: "ArrowDown", code: "ArrowDown", shiftKey: true, bubbles: true, cancelable: true
     }));

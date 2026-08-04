@@ -1224,7 +1224,7 @@ check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pa
 var close = s.close;
 check(close && close.before.roadtrip.active && close.before.roadtrip.entityCount > 0 &&
   !close.closed.roadtrip.active && close.closed.classes.indexOf("roadtrip-active") < 0 &&
-  close.closed.viewBox === "0 -31 680 207" && close.closed.aspectRatio === "xMidYMax meet" &&
+  close.closed.viewBox === "0 -31 680 207" && close.closed.aspectRatio === "xMidYMax slice" &&
   close.parked.distance === close.closed.roadtrip.distance && close.parked.entityCount === close.closed.roadtrip.entityCount &&
   close.ignoredClosedWrap > close.closedWrapStart && close.closedWrapEnd === close.ignoredClosedWrap &&
   close.closedPosition <= -647 && close.closedPosition > -648 && !close.parked.invitationReady &&

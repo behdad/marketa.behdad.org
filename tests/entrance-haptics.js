@@ -61,9 +61,9 @@ console.log("rsvp.html Entrance driving haptics:");
 check(result && result.errors.length === 0, "haptics harness has no uncaught page errors", result && result.errors);
 check(result && result.afterIgnition.length === 1 && Array.isArray(result.afterIgnition[0]),
   "starting the ignition produces one short two-stage pulse", result && result.afterIgnition);
-check(result && result.afterManualShift.length === 2 && result.afterManualShift[1] === 14,
+check(result && result.afterManualShift.length === 2 && result.afterManualShift[1] === 40,
   "a successful manual shift produces one light pulse", result && result.afterManualShift);
-check(result && result.afterAutoRange.length === 3 && result.afterAutoRange[2] === 14,
+check(result && result.afterAutoRange.length === 3 && result.afterAutoRange[2] === 40,
   "a successful automatic range change produces one light pulse", result && result.afterAutoRange);
 check(result && result.afterCollision.length === 4 && Array.isArray(result.afterCollision[3]) &&
   result.afterCollision[3].length === 3,

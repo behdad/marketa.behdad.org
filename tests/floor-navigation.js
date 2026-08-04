@@ -53,6 +53,15 @@ var harness = String.raw`<script>
     check("Up sits to the right of the room dots with breathing room", button.left - dots.right >= 6,
       { dotsRight: dots.right, buttonLeft: button.left });
 
+    await sleep(760);
+    check("first-arrival coach remains after the lower room settles", !floorState().coachHidden, floorState());
+    window.__bathroomRoomOpen = false;
+    window.__syncFloorNavigation();
+    window.__bathroomRoomOpen = true;
+    window.__syncFloorNavigation();
+    await sleep(40);
+    check("transient lower-room ownership churn does not retire the coach", !floorState().coachHidden, floorState());
+
     setLang("cs");
     var czech = floorState();
     check("the live control and coach switch to Czech",

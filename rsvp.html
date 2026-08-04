@@ -35319,7 +35319,7 @@ window.__entranceRoomOpen = false;
       document.visibilityState !== "hidden" && document.hasFocus());
   }
   function entranceDriveMusicWanted() {
-    return !!(entranceDriveAudible() && driveState.hudOpen);
+    return !!(entranceDriveAudible() && driveState.hudOpen && Math.abs(driveState.speed) > 3);
   }
   function porscheDriveAcHot() {
     if (typeof window.__outdoorTempC !== "function") return false;
@@ -38287,11 +38287,17 @@ window.__entranceRoomOpen = false;
     if (entranceDriveAcWanted()) startPorscheDriveAc();
     else stopPorscheDriveAc();
   }
+  function porscheDriveMusicMotion() {
+    return Math.max(0, Math.min(1, (Math.abs(driveState.speed) - 3) / 147));
+  }
   function porscheDriveMusicVolume() {
-    return 2 * (window.__songVolume ? window.__songVolume() : .5);
+    var motion = porscheDriveMusicMotion();
+    if (!motion) return 0;
+    return 2 * (window.__songVolume ? window.__songVolume() : .5) *
+      (.14 + .86 * Math.pow(motion, .7));
   }
   function porscheDriveMusicTempo() {
-    return 104 + Math.min(22, Math.abs(driveState.speed) * .11);
+    return 86 + 42 * Math.pow(porscheDriveMusicMotion(), .65);
   }
   function porscheDriveMusicFrequency(base, semitones) {
     return base * Math.pow(2, semitones / 12);
@@ -38457,10 +38463,10 @@ window.__entranceRoomOpen = false;
     if (!music) return;
     try {
       var now = music.bed.currentTime;
-      var motion = Math.min(1, Math.abs(driveState.speed) / 150);
+      var motion = porscheDriveMusicMotion();
       var revs = Math.min(1, Math.max(0, driveState.rpm - 750) / 6500);
       music.tone.frequency.setTargetAtTime(1750 + motion * 1450 + revs * 450, now, .18);
-      music.master.gain.setTargetAtTime(porscheDriveMusicVolume() * (.86 + motion * .14), now, .12);
+      music.master.gain.setTargetAtTime(porscheDriveMusicVolume(), now, .12);
       paintPorscheDriveSpatialOut(music.spatial, false);
     } catch (_error) {}
   }
@@ -39373,6 +39379,7 @@ window.__entranceRoomOpen = false;
     recoverStoppedPorschePosition();
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
+    updatePorscheDriveMusic();
     paintPorscheDriveAudio();
     return driveState;
   }
@@ -40280,6 +40287,11 @@ window.__entranceRoomOpen = false;
         acBlasting: !!(driveHud && driveHud.classList.contains("drive-ac-blasting")),
         acAudioActive: !!porscheDriveAcNodes,
         musicActive: !!porscheDriveMusicNodes,
+        musicProfile: {
+          wanted: entranceDriveMusicWanted(),
+          gain: porscheDriveMusicVolume(),
+          tempo: porscheDriveMusicTempo()
+        },
         brakeScreeches: porscheBrakeScreeches,
         tireAudio: porscheTireAudioMix(),
         frameActive: !!driveFrame,

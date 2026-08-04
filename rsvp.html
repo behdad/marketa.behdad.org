@@ -38700,12 +38700,13 @@ window.__entranceRoomOpen = false;
   }
   function spawnRoadtripPlayerOvertaker() {
     var plan = roadtripSummonedTrafficPlan(true, roadtripState.spawnSerial);
-    var stopped = Math.abs(driveState.speed * driveState.facing) <= 5;
+    var forwardSpeed = Math.max(0, driveState.speed * driveState.facing);
     var occupiedLane = roadtripOccupiedForwardLane();
-    var lane = stopped && occupiedLane ? occupiedLane : plan.lane;
-    var laneTarget = occupiedLane && lane === occupiedLane ? (lane === .5 ? 1.5 : .5) : lane;
+    var lane = occupiedLane === .5 ? .5 : 1.5;
+    var laneTarget = lane === .5 ? 1.5 : .5;
+    var slowInLane = forwardSpeed < 60 && occupiedLane === lane;
     return spawnRoadtripEntity(plan.type, lane, plan.ahead,
-      { behind: true, speedKmh: plan.speedKmh, honk: stopped && occupiedLane === .5,
+      { behind: true, speedKmh: plan.speedKmh, honk: slowInLane,
         overtakeLaneTarget: laneTarget });
   }
   function summonRoadtripMirrorTraffic(event) {

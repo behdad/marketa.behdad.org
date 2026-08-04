@@ -51,12 +51,26 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           state: state(),
           classes: document.getElementById("entrance-room").getAttribute("class")
         };
-        window.__entranceRoadtripSetLane(.5);
         ["throttle", "brake", "clutch", "steerLeft", "steerRight"].forEach(function (name) {
           window.__entranceDriveControl(name, false);
         });
 
         report.steps.waiting = { state: state(), overtaker: !!overtaker() };
+        step(20);
+        var shoulderNode = overtaker();
+        report.steps.shoulderBehind = sample(shoulderNode);
+        step(600, 2);
+        report.steps.shoulderAlongside = sample(shoulderNode);
+
+        window.__dismissEntrancePorscheDriveHud();
+        window.__openEntrancePorscheDriveHud();
+        if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
+        window.__entranceRoadtripStart();
+        window.__entranceDriveSetMotion(0, 0);
+        window.__entranceRoadtripSetLane(.5);
+        ["throttle", "brake", "clutch", "steerLeft", "steerRight"].forEach(function (name) {
+          window.__entranceDriveControl(name, false);
+        });
         step(20);
         var node = overtaker();
         var behindSource = sample(node);
@@ -88,6 +102,21 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           passes: state().passes,
           audioVoices: state().trafficAudioVoices
         };
+
+        function hornProbe(speed) {
+          window.__dismissEntrancePorscheDriveHud();
+          window.__openEntrancePorscheDriveHud();
+          if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
+          window.__entranceRoadtripStart();
+          window.__entranceDriveSetMotion(speed, 3);
+          window.__entranceRoadtripSetLane(1.5);
+          var probe = window.__entranceRoadtripSpawnOvertaker();
+          for (var index = 0; index < 16 &&
+              probe.getAttribute("data-roadtrip-horned") !== "true"; index++) step(250);
+          return sample(probe);
+        }
+        report.steps.slowHorn = hornProbe(59);
+        report.steps.sixtyHorn = hornProbe(60);
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -127,6 +156,14 @@ check(steps.start && steps.start.state.playerLane === 2.08 &&
   "a fresh Road Trip opens parked on the right shoulder", steps.start);
 check(steps.waiting && !steps.waiting.overtaker && steps.waiting.state.overtakeCooldown === 0,
   "rear traffic is armed as soon as the fresh Road Trip opens", steps.waiting);
+check(steps.shoulderBehind && steps.shoulderBehind.overtaking === "true" &&
+  steps.shoulderBehind.lane === 1.5 && steps.shoulderBehind.laneTarget === .5 &&
+  steps.shoulderBehind.laneChanged === "false" && !steps.shoulderBehind.horned,
+  "traffic behind a shoulder-parked Porsche starts right and moves to the left lane",
+  steps.shoulderBehind);
+check(steps.shoulderAlongside && steps.shoulderAlongside.lane === .5 &&
+  steps.shoulderAlongside.laneChanged === "true" && !steps.shoulderAlongside.horned,
+  "the shoulder pass completes in the left lane without honking", steps.shoulderAlongside);
 check(steps.behind && steps.behind.source.overtaking === "true" &&
   steps.behind.source.direction === "forward" && steps.behind.source.lane === .5 &&
   steps.behind.source.laneTarget === 1.5 && steps.behind.source.laneChanged === "false" &&
@@ -146,6 +183,10 @@ check(steps.alongside && steps.alongside.source.ahead > -2 &&
 check(steps.ahead && steps.ahead.source.ahead > 8 && steps.ahead.source.overtaking === "false" &&
   !steps.ahead.mirrorVisible && steps.ahead.passes === steps.behind.passes,
   "the passing car continues ahead without awarding a player pass", steps.ahead);
+check(steps.slowHorn && steps.slowHorn.horned === "true" &&
+  steps.sixtyHorn && steps.sixtyHorn.horned !== "true",
+  "a rear vehicle honks only below 60 km/h when the Porsche occupies its lane",
+  { slow: steps.slowHorn, sixty: steps.sixtyHorn });
 
 if (failures) process.exit(1);
 console.log("Slow-traffic overtaking checks passed.");

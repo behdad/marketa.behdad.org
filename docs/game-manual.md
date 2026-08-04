@@ -256,7 +256,8 @@ accelerates to a 20–30 km/h advantage (never above 110), then returns right. T
 same rules are mirrored for oncoming traffic. Steering can cross the centre line, so watch the direction as well as
 the lane while the road and weather continue through the windshield. Yellow
 curve signs announce the next matching bend. The car drifts toward the outside
-of a bend unless you steer with it.
+of a bend unless you steer with it. When you travel well below traffic speed,
+an occasional faster car may approach in the mirror and pass.
 
 Reverse also moves the highway: a missed pickup remains behind briefly, so you
 can back up, select a forward gear, and collect it on the next forward crossing.

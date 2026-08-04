@@ -348,7 +348,7 @@ The personal best and combo remain beside the three-part trip readout.
 Pass, pickup, wildlife, and collision results briefly use the room caption line
 instead of covering the windshield.
 
-Press Escape or select the dashboard close control to leave the highway for the
+Press Escape or select the top-right × to leave the highway for the
 street view while keeping the dashboard and engine available so the car can be
 fully braked. Leaving never resumes the highway automatically: complete another
 block lap and accept the new offer to return. Escape again closes the dashboard;

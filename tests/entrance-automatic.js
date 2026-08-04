@@ -151,7 +151,7 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
 
       window.__entranceDriveSetMotion(90, 3);
       window.__entranceDriveControl("throttle", false);
-      window.__entranceDriveStep(700);
+      window.__entranceDriveStep(1000);
       report.steps.economyUpshift = copy(drive());
       window.__entranceDriveSetMotion(25, 6);
       window.__entranceDriveStep(560);

@@ -83,7 +83,7 @@ var harness = [
   'var arcadeX0=window.__arcadeState().playerX,arcadeLeftOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true})),arcadeX1=window.__arcadeState().playerX,arcadeRightOwned=!document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,cancelable:true})),arcadeX2=window.__arcadeState().playerX;',
   'var arcadeNight=document.getElementById("stage-balcony").classList.contains("dusk"),arcadeShortcutsOwned=modalOwns(["ArrowUp","ArrowDown","Tab","c","n"]);',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
-  'out.arcade={title:arcadeTitle&&arcadeTitle.textContent,score:document.querySelector("#office-alien-layer .arcade-score").textContent,high:document.querySelector("#office-alien-layer .arcade-high").textContent,arrows:arcadeLeftOwned&&arcadeRightOwned&&arcadeX1<arcadeX0&&arcadeX2===arcadeX0,shortcutsHeld:arcadeShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===arcadeNight,spaceFired:window.__arcadeState().shots===shotsBefore+1,musicHeld:window.__musicPaused===musicBefore};',
+  'out.arcade={title:arcadeTitle&&arcadeTitle.textContent,score:document.querySelector("#office-alien-layer .arcade-score").textContent,high:document.querySelector("#office-alien-layer .arcade-high").textContent,circular:!!arcadeClose&&arcadeClose.querySelector(".game-close-ring").tagName.toLowerCase()==="circle"&&arcadeClose.querySelector(".mini-hit").getAttribute("r")==="20",arrows:arcadeLeftOwned&&arcadeRightOwned&&arcadeX1<arcadeX0&&arcadeX2===arcadeX0,shortcutsHeld:arcadeShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===arcadeNight,spaceFired:window.__arcadeState().shots===shotsBefore+1,musicHeld:window.__musicPaused===musicBefore};',
   'arcadeClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
   'out.arcade.closed=!window.__arcadeState().active;',
   'window.__arcadeTest(1,16);var arcadeEscLeaked=0;',
@@ -97,7 +97,7 @@ var harness = [
   'var flairNight=document.getElementById("stage-balcony").classList.contains("dusk"),flairShortcutsOwned=modalOwns(["ArrowUp","ArrowDown","Tab","c","n"]);',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
   'var pauseLabel=document.querySelector("#kitchen-flair-layer .game-pause-label");',
-  'out.flair={title:flairTitle&&flairTitle.textContent,score:document.querySelector("#kitchen-flair-layer .flair-score").textContent,high:document.querySelector("#kitchen-flair-layer .flair-high").textContent,arrows:flairLeftOwned&&flairRightOwned&&flairX1<flairX0&&flairX2===flairX0,shortcutsHeld:flairShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===flairNight,paused:window.__flairState().paused,pauseLabel:pauseLabel&&pauseLabel.textContent,musicHeld:window.__musicPaused===flairMusicBefore};',
+  'out.flair={title:flairTitle&&flairTitle.textContent,score:document.querySelector("#kitchen-flair-layer .flair-score").textContent,high:document.querySelector("#kitchen-flair-layer .flair-high").textContent,circular:!!flairClose&&flairClose.querySelector(".game-close-ring").tagName.toLowerCase()==="circle"&&flairClose.querySelector(".mini-hit").getAttribute("r")==="20",arrows:flairLeftOwned&&flairRightOwned&&flairX1<flairX0&&flairX2===flairX0,shortcutsHeld:flairShortcutsOwned&&document.getElementById("stage-balcony").classList.contains("dusk")===flairNight,paused:window.__flairState().paused,pauseLabel:pauseLabel&&pauseLabel.textContent,musicHeld:window.__musicPaused===flairMusicBefore};',
   'document.dispatchEvent(new KeyboardEvent("keydown",{key:" ",bubbles:true,cancelable:true}));',
   'out.flair.resumed=!window.__flairState().paused;',
   'flairClose.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));',
@@ -137,14 +137,14 @@ check(rendered && /CLICK ROTATE/.test(rendered.enTetris.text) && /KLIK OTOČ/.te
   rendered && JSON.stringify({ en: rendered.enTetris, cs: rendered.csTetris }));
 check(rendered && rendered.arcade.title === "ALIEN RESOURCES" &&
       rendered.arcade.score === "0" && /^\d+$/.test(rendered.arcade.high) && rendered.arcade.spaceFired &&
-      rendered.arcade.arrows && rendered.arcade.shortcutsHeld && rendered.arcade.musicHeld &&
+      rendered.arcade.circular && rendered.arcade.arrows && rendered.arcade.shortcutsHeld && rendered.arcade.musicHeld &&
       rendered.arcade.closed && rendered.arcade.escapeOwned,
   "Alien Resources owns its action and exit keys",
   rendered && JSON.stringify(rendered.arcade));
 check(rendered && rendered.flair.title === "FLAIR CATCH" &&
       rendered.flair.score === "0" && /^\d+$/.test(rendered.flair.high) && rendered.flair.paused &&
       rendered.flair.pauseLabel === "PAUSED" && rendered.flair.musicHeld &&
-      rendered.flair.arrows && rendered.flair.shortcutsHeld && rendered.flair.resumed &&
+      rendered.flair.circular && rendered.flair.arrows && rendered.flair.shortcutsHeld && rendered.flair.resumed &&
       rendered.flair.closed && rendered.flair.escapeOwned,
   "Flair Catch owns its action and exit keys",
   rendered && JSON.stringify(rendered.flair));

@@ -1509,6 +1509,12 @@ footer{margin-top:2.6rem}
 #bathroom-bubble-hud .bubble-hud-label{font-size:5.5px;fill:#d9d0bd}
 #bathroom-bubble-hud .bubble-hud-value{font-size:8px;font-weight:700}
 #bathroom-bubble-hud .bubble-hud-result{font:700 8px Fraunces,Georgia,serif;fill:#f6d98a}
+#bathroom-bubble-close{pointer-events:none}
+#bathroom-room.bubble-hunt #bathroom-bubble-close,
+#bathroom-room.bubble-game-over #bathroom-bubble-close{pointer-events:auto}
+.game-close-btn{outline:none}
+.game-close-btn:hover .seg-hover,.game-close-btn:focus-visible .seg-hover{opacity:.55}
+.game-close-btn:focus-visible .game-close-ring{stroke:#fffdf8;stroke-width:2}
 .bathroom-bubble{
   cursor:pointer;transform-box:fill-box;transform-origin:center;
   animation:bathroom-bubble-float 1.7s ease-in-out infinite alternate;
@@ -5513,8 +5519,8 @@ html.is-webkit #office-monitor.dev-zoomed .dock-app:active .dock-tile{box-shadow
 #office-monitor.show-code #monitor-code{opacity:1; pointer-events:auto}
 #monitor-code-close{cursor:pointer}
 #monitor-code-close:hover .seg-hover{opacity:.55}
-/* the mini-games' close button (JS-drawn in #kitchen-flair-layer / the arcade layer) reuses the monitor close look */
-.game-close-btn:hover .seg-hover{opacity:.55}
+/* Flair Catch and Alien Resources draw the same circular game-local close control
+   as Bubble-gun into their own topmost layers. */
 .code-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:row; gap:1.4px; background:#0d130e; padding:1.6px 2px 2px; font-family:ui-monospace,Menlo,monospace; color:#cfe3cf}
 /* left sidebar: a slim scrollable list of saved script names, with a +/− header (new/delete) */
 .code-side{flex:none; width:26.5px; min-height:0; display:flex; flex-direction:column; gap:0.7px} /* six 4px header keys + five .5px gaps fit exactly, so Email no longer spills into Run */
@@ -30790,6 +30796,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <text class="bubble-hud-label" x="134" y="29">TIME</text>
           <text id="bathroom-bubble-time" class="bubble-hud-value" x="164" y="29">30</text>
           <text id="bathroom-bubble-result" class="bubble-hud-result" x="22" y="39"></text>
+          <g id="bathroom-bubble-close" class="game-close-btn" tabindex="0" cursor="pointer" transform="translate(190,19)">
+            <circle class="mini-hit" r="20" fill="#000" opacity="0"/>
+            <circle class="game-close-ring" r="13" fill="#c8c2b4" stroke="#8a8272" stroke-width="1.2"/>
+            <path d="M-8.5 -5.5A10 10 0 0 1 8.5 -5.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".3"/>
+            <circle class="seg-hover" r="13" fill="#7c7466" opacity="0"/>
+            <path d="M-5 -5L5 5M5 -5L-5 5" fill="none" stroke="#453a31" stroke-width="2" stroke-linecap="round"/>
+          </g>
         </g>
         <g id="bathroom-bubble-hunt">
           <g id="bathroom-bubble-1" class="bathroom-bubble" data-bath-bubble="1">
@@ -33635,6 +33648,7 @@ window.__bathroomRoomOpen = false;
   var bubbleHudHigh = document.getElementById("bathroom-bubble-high");
   var bubbleHudTime = document.getElementById("bathroom-bubble-time");
   var bubbleHudResult = document.getElementById("bathroom-bubble-result");
+  var bubbleHudClose = document.getElementById("bathroom-bubble-close");
   var bubbleGameTimer = null;
   var bubbleRespawnTimer = null;
   var bubbleComboTimer = null;
@@ -33649,7 +33663,7 @@ window.__bathroomRoomOpen = false;
     "toilet-flush", "book-flip", "bubble-hunt", "bubble-complete", "bubble-game-over"];
   if (!room || !viewport || !art || !stoolPosition ||
       !stool || !scaleNeedle || !scaleReading || !bubbleHudScore || !bubbleHudHigh ||
-      !bubbleHudTime || !bubbleHudResult ||
+      !bubbleHudTime || !bubbleHudResult || !bubbleHudClose ||
       !mirrorAction || !mirrorDoodle) return;
 
   function bubbleHigh() {
@@ -34209,6 +34223,11 @@ window.__bathroomRoomOpen = false;
   }, { passive: false });
   art.addEventListener("click", activateFromEvent);
   art.addEventListener("keydown", activateFromEvent);
+  bubbleHudClose.addEventListener("click", function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    stopBubbleHunt(true);
+  });
   art.addEventListener("animationend", function (event) {
     if (event.animationName === "bathroom-water-run") room.classList.remove("sink-running");
     else if (event.animationName === "bathroom-mirror-shimmer") room.classList.remove("mirror-shimmer");
@@ -55830,10 +55849,10 @@ function quickReversalGesture(action) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); triggerSprinkler(); }
     });
   }
-  // Shared vocabulary and close button for the two hidden mini-games (Invaders / Flair-Catch),
+  // Shared close button for the two hidden mini-games (Invaders / Flair-Catch),
   // which live in
   // separate IIFEs — hence a window hook so both reach it. Modeled on the monitor apps' close
-  // button: a grey rounded pill with a gloss and an ink ×, darkening on hover via .seg-hover.
+  // button: a circular grey control with a gloss and an ink ×, darkening on hover via .seg-hover.
   // Drawn into each game's own topmost layer (pointer-events:none), so it sets pointer-events:auto.
   // The visible × stays compact, while its localized name consistently means "Exit game".
   window.__gameText = function (key) {
@@ -55863,10 +55882,10 @@ function quickReversalGesture(action) {
     g.setAttribute("tabindex", "0");
     g.setAttribute("transform", "translate(646,26)"); // top-right of the 680×340 room
     g.innerHTML =
-      '<rect class="mini-hit" x="-20" y="-20" width="40" height="40" fill="#000" opacity="0"/>' +
-      '<rect x="-13" y="-13" width="26" height="26" rx="7" fill="#c8c2b4" stroke="#8a8272" stroke-width="1.2"/>' +
-      '<rect x="-11" y="-11.5" width="22" height="10" rx="5" fill="#ffffff" opacity="0.3"/>' +
-      '<rect class="seg-hover" x="-13" y="-13" width="26" height="26" rx="7" fill="#7c7466" opacity="0"/>' +
+      '<circle class="mini-hit" r="20" fill="#000" opacity="0"/>' +
+      '<circle class="game-close-ring" r="13" fill="#c8c2b4" stroke="#8a8272" stroke-width="1.2"/>' +
+      '<path d="M-8.5 -5.5A10 10 0 0 1 8.5 -5.5" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".3"/>' +
+      '<circle class="seg-hover" r="13" fill="#7c7466" opacity="0"/>' +
       '<path d="M-5 -5 L5 5 M5 -5 L-5 5" fill="none" stroke="#453a31" stroke-width="2" stroke-linecap="round"/>';
     g.addEventListener("click", function (e) { e.stopPropagation(); onClose(); }); // don't bubble to a stage zoom-out
     layer.appendChild(g);

@@ -119,7 +119,8 @@ Downstairs adds a different activity to each room:
 - **Bathroom:** fill the tub to begin the 30-second **Bubble-gun** round. Click
   bubbles for one point, or drag the stool to aim and release to fire for two.
   The countdown begins with the first shot or pop. Once full, the tub body will
-  not drain accidentally; select the top rim to drain it.
+  not drain accidentally; select the top rim to drain it. The HUD × ends only
+  the round and leaves the Bathroom open.
 - **Dungeon:** select the play wall to start or resume Prince of Persia. Escape
   leaves the presentation without discarding the run.
 - **Cinema:** wake the projector, choose a film, and use its visible playback

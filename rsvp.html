@@ -35103,6 +35103,7 @@ window.__entranceRoomOpen = false;
   var roadtripCrackSerial = 0;
   var roadtripSuspensionTimer = null;
   var roadtripSuspensionIgnitionTimer = null;
+  var roadtripSuspensionStopActive = false;
   var roadtripState = {
     active: false,
     paused: false,
@@ -35717,7 +35718,8 @@ window.__entranceRoomOpen = false;
     room.classList.toggle("roadtrip-demerit-warning",
       roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING && !suspended);
     room.classList.toggle("roadtrip-suspended", suspended);
-    if (!suspended && roadtripSuspensionIgnitionTimer) clearRoadtripSuspensionIgnitionPulse();
+    if (suspended) enforceRoadtripSuspensionStop();
+    else if (roadtripSuspensionIgnitionTimer) clearRoadtripSuspensionIgnitionPulse();
     return suspended;
   }
   function roadtripSuspensionClock() {
@@ -35761,6 +35763,74 @@ window.__entranceRoomOpen = false;
       }
     });
   });
+  function enforceRoadtripSuspensionStop() {
+    if (roadtripSuspensionStopActive || roadtripSuspensionRemainingMs() <= 0) return false;
+    roadtripSuspensionStopActive = true;
+    var wasRoadtripActive = roadtripState.active;
+    try {
+      cancelPorscheShifterPress();
+      cancelPorscheTouchSteering();
+      setPorscheDriveShiftKeyHeld(false);
+      clearTimeout(porscheSpinTimer);
+      porscheSpinTimer = null;
+      if (driveFrame) cancelAnimationFrame(driveFrame);
+      if (driveTimer) clearTimeout(driveTimer);
+      driveFrame = null;
+      driveTimer = null;
+      driveLastTime = 0;
+      porscheState.engineOn = false;
+      porscheState.headlightOn = false;
+      porscheState.taillightOn = false;
+      driveState.stalled = false;
+      driveState.gear = 0;
+      driveState.speed = 0;
+      driveState.rpm = 0;
+      driveState.temperature = 0;
+      driveState.redlineMs = 0;
+      driveState.throttleHeldMs = 0;
+      driveState.shiftCutMs = 0;
+      driveState.brakeSpinChecked = false;
+      driveState.steeringAngle = 0;
+      driveState.spinning = false;
+      driveState.spinDirection = 0;
+      driveState.yaw = driveState.facing < 0 ? 180 : 0;
+      clearPorscheClutchEngagement(true);
+      Object.keys(driveState.holds).forEach(function (key) { driveState.holds[key] = false; });
+      porscheKeyboardSteering.direction = 0;
+      porscheKeyboardSteering.authority = 0;
+      porscheKeyboardSteering.heldMs = 0;
+      porscheKeyboardSteering.lastPressDirection = 0;
+      porscheKeyboardSteering.lastPressAt = -Infinity;
+      porscheTouchSteering.input = 0;
+      porscheTouchSteering.mode = "idle";
+      porscheTouchSteering.returning = false;
+      parkRoadtrip(false);
+      roadtripState.paused = false;
+      roadtripState.exitUntilStop = false;
+      roadtripState.accepted = false;
+      roadtripState.invitationReady = false;
+      roadtripState.invitationDistance = 0;
+      roadtripState.invitationDismissed = false;
+      if (wasRoadtripActive) {
+        roadtripState.police.phase = "ended";
+        roadtripState.police.runEnded = true;
+        roadtripState.police.endReason = "suspended";
+      }
+      stopPorscheHornSound();
+      stopPorscheIdle();
+      stopPorscheDriveAudio();
+      stopPorscheDriveAc(0);
+      stopPorscheDriveMusic(0);
+      clearPorscheIndicator();
+      if (porsche) porsche.classList.remove("engine-idling", "braking", "spinning");
+      recoverStoppedPorschePosition();
+      paintPorscheDrivePosition();
+      syncPorscheState();
+    } finally {
+      roadtripSuspensionStopActive = false;
+    }
+    return true;
+  }
   function roadtripDemeritsForSpeed(overLimit) {
     overLimit = Math.max(0, Math.floor(Number(overLimit) || 0));
     if (!overLimit) return 0;
@@ -37595,6 +37665,7 @@ window.__entranceRoomOpen = false;
     return changed;
   }
   function resumeRoadtripFromDrivingInput() {
+    if (syncRoadtripDemeritState()) return false;
     if (!roadtripResumePending || !roadtripState.active || document.hidden || !document.hasFocus()) return false;
     roadtripResumePending = false;
     room.classList.remove("roadtrip-resume-pending");
@@ -39098,6 +39169,7 @@ window.__entranceRoomOpen = false;
     porscheTouchHornPulseTimer = null;
   }
   function beginPorscheTouchSteering(event, control) {
+    if (syncRoadtripDemeritState()) return false;
     if (porscheTouchSteering.pointerId !== null || event.isPrimary === false) return false;
     clearPorscheTouchHornTimers();
     stopPorscheHornSound();
@@ -39118,6 +39190,7 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function movePorscheTouchSteering(event) {
+    if (syncRoadtripDemeritState()) return false;
     if (event.pointerId !== porscheTouchSteering.pointerId) return false;
     var dx = event.clientX - porscheTouchSteering.startX;
     var resumed = false;
@@ -39208,6 +39281,7 @@ window.__entranceRoomOpen = false;
   function selectPorscheDriveGear(gear, clutchBypass) {
     gear = Number(gear);
     if (gear < -1 || gear > 6 || gear !== Math.round(gear)) return false;
+    if (syncRoadtripDemeritState()) return false;
     if (gear !== 0 && !porscheState.engineOn) return false;
     if (gear !== 0 && porscheState.engineOn && !driveState.holds.clutch && !clutchBypass) {
       driveState.gear = 0;
@@ -39394,6 +39468,7 @@ window.__entranceRoomOpen = false;
   }
   function setPorscheDriveHold(name, held) {
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
+    if (syncRoadtripDemeritState()) return true;
     held = !!held;
     // The pedal may still press with the ignition off, but it is not a driving
     // input then: do not wake a parked simulation or release Road Trip's
@@ -39448,6 +39523,7 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function porscheDriveStep(milliseconds) {
+    if (syncRoadtripDemeritState()) return driveState;
     // Highway progress is strictly attended play. A direct/testing step is gated too,
     // so no caller can advance time, traffic, police, or score behind another window.
     if (!roadtripSimulationAttended()) return driveState;
@@ -40573,7 +40649,7 @@ window.__entranceRoomOpen = false;
         },
         brakeScreeches: porscheBrakeScreeches,
         tireAudio: porscheTireAudioMix(),
-        frameActive: !!driveFrame,
+        frameActive: !!(driveFrame || driveTimer),
         tireMarks: tireMarks ? tireMarks.childNodes.length : 0,
         scenery: entranceScenerySnapshot(),
         roadtrip: {
@@ -40749,6 +40825,7 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveRpmForSpeed = porscheRpmForSpeed;
   window.__entranceDriveAcceleration = porscheDriveAcceleration;
   window.__entranceDriveSetMotion = function (speed, gear) {
+    if (syncRoadtripDemeritState()) return false;
     gear = Math.round(Number(gear) || 0);
     if (gear < -1 || gear > 6) return false;
     speed = Math.max(-263, Math.min(263, Number(speed) || 0));

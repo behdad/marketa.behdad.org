@@ -599,6 +599,50 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       };
 
       prepareEncounter();
+      if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
+      setMotion(96, 3);
+      window.__entranceDriveControl("throttle", true);
+      window.__entranceDriveControl("brake", true);
+      window.__entranceDriveControl("clutch", true);
+      window.__entranceDriveControl("steerRight", true);
+      step(120);
+      var suspensionMoving = copy(state());
+      window.__entranceRoadtripSetDemerits(15, Date.now() + 60000);
+      var suspensionImmediate = copy(state());
+      var suspensionInputAttempts = [];
+      for (var blockedInputIndex = 0; blockedInputIndex < 3; blockedInputIndex++) {
+        suspensionInputAttempts.push({
+          throttle: window.__entranceDriveControl("throttle", true),
+          brake: window.__entranceDriveControl("brake", true),
+          clutch: window.__entranceDriveControl("clutch", true),
+          steerLeft: window.__entranceDriveControl("steerLeft", true),
+          steerRight: window.__entranceDriveControl("steerRight", true),
+          gear: window.__entranceDriveShift(4),
+          motion: window.__entranceDriveSetMotion(88, 3),
+          keyboard: window.__entranceDriveKey(
+            new KeyboardEvent("keydown", { key: "ArrowUp", code: "ArrowUp", bubbles: true }), true)
+        });
+        step(1000);
+      }
+      var suspensionInputsBlocked = copy(state());
+      window.__entranceRoadtripSetDemerits(15, Date.now() - 1);
+      var suspensionExpiredParked = copy(state());
+      var suspensionExpiredStarted = window.__toggleEntrancePorscheEngine();
+      var suspensionExpiredRunning = copy(state());
+      if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
+      window.__entranceRoadtripSetDemerits(0, 0);
+      report.steps.suspensionStop = {
+        moving: suspensionMoving,
+        immediate: suspensionImmediate,
+        attempts: suspensionInputAttempts,
+        blocked: suspensionInputsBlocked,
+        expiredParked: suspensionExpiredParked,
+        expiredStarted: suspensionExpiredStarted,
+        expiredRunning: suspensionExpiredRunning
+      };
+
+      prepareEncounter();
+      if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
       window.__entranceRoadtripSetDemerits(10, 0);
       var suspensionDetection = meetPolice(130);
       window.__entranceRoadtripSetDistance(suspensionDetection.police.stationAt + 30);
@@ -609,9 +653,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripPoliceStep(0, 3);
       window.__entranceRoadtripPoliceStep(0, 6);
       var suspendedTrip = copy(trip());
+      var suspendedState = copy(state());
       var suspendedCaption = document.getElementById("hunt-caption").textContent.trim();
       var suspendedButton = document.getElementById("entrance-roadtrip-reenter");
-      if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
       window.__hideEntrancePorscheDriveHud();
       var blockedBaseline = copy(state());
       var roomAttemptOne = window.__toggleEntrancePorscheEngine();
@@ -629,6 +673,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var blockedStatus = document.getElementById("entrance-roadtrip-demerit-status");
       report.steps.suspension = {
         trip: suspendedTrip,
+        state: suspendedState,
         caption: suspendedCaption,
         buttonText: suspendedButton.textContent.trim(),
         buttonTextY: document.getElementById("entrance-roadtrip-reenter-text").getAttribute("y"),
@@ -1124,12 +1169,62 @@ check(s.refused && !s.refused.paused.active && s.refused.paused.paused &&
   s.refused.trip.police.lastDemerits === 9 && !s.refused.trip.police.arrestVisible,
   "a paused pursuit resumes intact; refusal at any ticket speed forces capture, shouted approach, and citation",
   s.refused);
+var suspensionStop = s.suspensionStop;
+var suspensionImmediateHolds = suspensionStop && Object.keys(suspensionStop.immediate.drive.holds).every(function (key) {
+  return suspensionStop.immediate.drive.holds[key] === false;
+});
+var suspensionBlockedHolds = suspensionStop && Object.keys(suspensionStop.blocked.drive.holds).every(function (key) {
+  return suspensionStop.blocked.drive.holds[key] === false;
+});
+check(suspensionStop && suspensionStop.moving.car.engineOn && suspensionStop.moving.drive.roadtrip.active &&
+  suspensionStop.moving.drive.speed > 0 && suspensionStop.moving.drive.gear === 3 &&
+  suspensionStop.moving.drive.rpm > 0 && suspensionStop.moving.drive.holds.throttle &&
+  suspensionStop.moving.drive.holds.brake && suspensionStop.moving.drive.holds.clutch &&
+  suspensionStop.moving.drive.holds.steerRight && suspensionStop.moving.drive.frameActive &&
+  suspensionStop.immediate.car.engineOn === false && suspensionStop.immediate.drive.speed === 0 &&
+  suspensionStop.immediate.drive.rpm === 0 && suspensionStop.immediate.drive.gear === 0 &&
+  suspensionImmediateHolds && suspensionStop.immediate.drive.clutchEngagement.remainingMs === 0 &&
+  suspensionStop.immediate.drive.clutchEngagement.durationMs === 0 &&
+  suspensionStop.immediate.drive.clutchEngagement.releaseRpm === 0 &&
+  suspensionStop.immediate.drive.clutchEngagement.strength === 0 &&
+  suspensionStop.immediate.drive.steeringAngle === 0 &&
+  suspensionStop.immediate.drive.keyboardSteering.direction === 0 &&
+  suspensionStop.immediate.drive.keyboardSteering.authority === 0 &&
+  !suspensionStop.immediate.drive.frameActive && !suspensionStop.immediate.drive.audioActive &&
+  !suspensionStop.immediate.drive.musicActive && !suspensionStop.immediate.drive.acAudioActive &&
+  !suspensionStop.immediate.car.idleActive && !suspensionStop.immediate.drive.roadtrip.active &&
+  !suspensionStop.immediate.drive.roadtrip.paused &&
+  suspensionStop.immediate.drive.roadtrip.police.runEnded &&
+  suspensionStop.immediate.drive.roadtrip.police.endReason === "suspended" &&
+  suspensionStop.attempts.length === 3 && suspensionStop.attempts.every(function (attempt) {
+    return attempt.throttle && attempt.brake && attempt.clutch && attempt.steerLeft &&
+      attempt.steerRight && attempt.keyboard && !attempt.gear && !attempt.motion;
+  }) &&
+  suspensionStop.blocked.car.engineOn === false && suspensionStop.blocked.drive.speed === 0 &&
+  suspensionStop.blocked.drive.rpm === 0 && suspensionStop.blocked.drive.gear === 0 &&
+  suspensionBlockedHolds && !suspensionStop.blocked.drive.frameActive &&
+  !suspensionStop.blocked.drive.audioActive && !suspensionStop.blocked.drive.musicActive &&
+  suspensionStop.blocked.drive.position === suspensionStop.immediate.drive.position &&
+  suspensionStop.blocked.drive.odometerKm === suspensionStop.immediate.drive.odometerKm &&
+  suspensionStop.blocked.drive.roadtrip.distance === suspensionStop.immediate.drive.roadtrip.distance &&
+  suspensionStop.blocked.drive.roadtrip.elapsedSeconds === suspensionStop.immediate.drive.roadtrip.elapsedSeconds &&
+  !suspensionStop.expiredParked.car.engineOn && suspensionStop.expiredParked.drive.speed === 0 &&
+  suspensionStop.expiredParked.drive.rpm === 0 && suspensionStop.expiredParked.drive.gear === 0 &&
+  suspensionStop.expiredParked.drive.roadtrip.demeritPoints === 7 &&
+  !suspensionStop.expiredParked.drive.roadtrip.suspended && suspensionStop.expiredStarted &&
+  suspensionStop.expiredRunning.car.engineOn && suspensionStop.expiredRunning.drive.speed === 0 &&
+  suspensionStop.expiredRunning.drive.rpm === 750 && suspensionStop.expiredRunning.drive.gear === 0,
+  "suspension atomically stops a moving running car, defeats repeated drivetrain inputs, and never restores motion on expiry",
+  suspensionStop);
 check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &&
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
   s.suspension.buttonTextY === "17" &&
   s.suspension.hudPoints === "15 / 15" && s.suspension.hudBand === "suspended" &&
   /^SUSPENDED (?:1:00|0:59)$/.test(s.suspension.hudStatus) &&
+  !s.suspension.state.car.engineOn && s.suspension.state.drive.speed === 0 &&
+  s.suspension.state.drive.rpm === 0 && s.suspension.state.drive.gear === 0 &&
+  !s.suspension.state.drive.audioActive && !s.suspension.state.drive.musicActive &&
   s.suspension.buttonDisabled === "true" && /Suspended · 1:00|Suspended · 0:59/.test(s.suspension.buttonText) &&
   /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
   "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",

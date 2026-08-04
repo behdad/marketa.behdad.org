@@ -35630,6 +35630,8 @@ window.__entranceRoomOpen = false;
       captureDuration: 0,
       captureStartSpeed: 0,
       stoppedElapsed: 0,
+      stopMirrorBehind: ROADTRIP_POLICE_PARKED_BEHIND,
+      stopMirrorRoadFraction: 1.08,
       resolutionReason: "",
       arrestElapsed: 0,
       arrestShoutPlayed: false,
@@ -37477,6 +37479,8 @@ window.__entranceRoomOpen = false;
     police.captureDuration = 0;
     police.captureStartSpeed = 0;
     police.stoppedElapsed = 0;
+    police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
+    police.stopMirrorRoadFraction = 1.08;
     police.resolutionReason = "";
     police.arrestElapsed = 0;
     police.arrestShoutPlayed = false;
@@ -37522,6 +37526,8 @@ window.__entranceRoomOpen = false;
     police.captureDuration = 0;
     police.captureStartSpeed = 0;
     police.stoppedElapsed = 0;
+    police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
+    police.stopMirrorRoadFraction = 1.08;
     police.resolutionReason = "";
     police.arrestElapsed = 0;
     police.arrestShoutPlayed = false;
@@ -37567,6 +37573,8 @@ window.__entranceRoomOpen = false;
     police.captureDuration = 0;
     police.captureStartSpeed = 0;
     police.stoppedElapsed = 0;
+    police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
+    police.stopMirrorRoadFraction = 1.08;
     police.resolutionReason = "";
     police.arrestElapsed = 0;
     police.arrestShoutPlayed = false;
@@ -37652,6 +37660,17 @@ window.__entranceRoomOpen = false;
       suspended: roadtripSuspensionRemainingMs() > 0
     };
   }
+  function beginRoadtripPoliceArrest() {
+    var police = roadtripState.police;
+    police.phase = "arrest";
+    police.arrestElapsed = 0;
+    police.arrestShoutPlayed = false;
+    police.arrestKnockPlayed = false;
+    police.arrestRadioPlayed = false;
+    roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_arrest");
+    paintRoadtripArrest();
+    return true;
+  }
   function beginRoadtripPoliceStopped(reason) {
     var police = roadtripState.police;
     if (police.phase !== "pursuit" && police.phase !== "capture") return false;
@@ -37663,14 +37682,24 @@ window.__entranceRoomOpen = false;
     driveState.throttleHeldMs = 0;
     Object.keys(driveState.holds).forEach(function (key) { driveState.holds[key] = false; });
     driveState.rpm = porscheState.engineOn ? 780 : 0;
-    police.phase = "arrest";
-    police.arrestElapsed = 0;
-    police.arrestShoutPlayed = false;
-    police.arrestKnockPlayed = false;
-    police.arrestRadioPlayed = false;
-    roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_arrest");
-    paintRoadtripArrest();
-    return true;
+    if (reason === "pulled-over" && !police.courtRequired) {
+      police.stopMirrorBehind = Math.max(ROADTRIP_POLICE_PARKED_BEHIND,
+        Number(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("data-roadtrip-behind")) ||
+          ROADTRIP_POLICE_ROADSIDE_MIRROR_DISTANCE);
+      var stopMirrorRoadFraction = roadtripPoliceMirrorNode &&
+        roadtripPoliceMirrorNode.getAttribute("data-roadtrip-road-fraction");
+      police.stopMirrorRoadFraction = stopMirrorRoadFraction === null ? NaN :
+        Number(stopMirrorRoadFraction);
+      if (!Number.isFinite(police.stopMirrorRoadFraction)) {
+        police.stopMirrorRoadFraction = roadtripPlayerLane() * ROADTRIP_LANE_FRACTION;
+      }
+      police.phase = "stopped";
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_stopped");
+      paintRoadtripPolice();
+      paintRoadtripArrest();
+      return true;
+    }
+    return beginRoadtripPoliceArrest();
   }
   function beginRoadtripPoliceCapture(reason) {
     var police = roadtripState.police;
@@ -37869,7 +37898,16 @@ window.__entranceRoomOpen = false;
         mirrorBehind += (ROADTRIP_POLICE_PARKED_BEHIND - mirrorBehind) * pull;
         mirrorRoadFraction += (1.08 - mirrorRoadFraction) * pull;
         mirrorMode = pull < 1 ? "shoulder-pull" : "shoulder-capture";
-      } else if (police.phase === "stopped" || police.phase === "arrest") {
+      } else if (police.phase === "stopped") {
+        var stopPull = Math.max(0, Math.min(1,
+          police.stoppedElapsed / ROADTRIP_POLICE_STOPPED_BEAT_SECONDS));
+        stopPull = stopPull * stopPull * (3 - 2 * stopPull);
+        mirrorBehind = police.stopMirrorBehind +
+          (ROADTRIP_POLICE_PARKED_BEHIND - police.stopMirrorBehind) * stopPull;
+        mirrorRoadFraction = police.stopMirrorRoadFraction +
+          (1.08 - police.stopMirrorRoadFraction) * stopPull;
+        mirrorMode = stopPull < 1 ? "shoulder-arrival" : "shoulder-stopped";
+      } else if (police.phase === "arrest") {
         mirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
         mirrorRoadFraction = 1.08;
         mirrorMode = "shoulder-" + police.phase;
@@ -38025,7 +38063,7 @@ window.__entranceRoomOpen = false;
       driveState.rpm = porscheState.engineOn ? 780 : 0;
       police.stoppedElapsed += seconds;
       if (police.stoppedElapsed >= ROADTRIP_POLICE_STOPPED_BEAT_SECONDS) {
-        finishRoadtripPoliceResolution();
+        beginRoadtripPoliceArrest();
       }
     } else if (police.phase === "arrest") {
       driveState.speed = 0;
@@ -42562,6 +42600,8 @@ window.__entranceRoomOpen = false;
             captureDuration: roadtripState.police.captureDuration,
             captureStartSpeed: roadtripState.police.captureStartSpeed,
             stoppedElapsed: roadtripState.police.stoppedElapsed,
+            stopMirrorBehind: roadtripState.police.stopMirrorBehind,
+            stopMirrorRoadFraction: roadtripState.police.stopMirrorRoadFraction,
             resolutionReason: roadtripState.police.resolutionReason,
             arrestElapsed: roadtripState.police.arrestElapsed,
             arrestShoutPlayed: roadtripState.police.arrestShoutPlayed,
@@ -44733,7 +44773,7 @@ var T = {
       entrance_roadtrip_police_escape: "Police receding · hold above 215 to lose them.",
       entrance_roadtrip_police_escaped: "Police lost · sirens fading away.",
       entrance_roadtrip_police_capture: "Police closing in · braking override engaged.",
-      entrance_roadtrip_police_stopped: "Stopped · police at the window.",
+      entrance_roadtrip_police_stopped: "Stopped · police pulling in behind.",
       entrance_roadtrip_police_court_stopped: "Stopped · police are issuing a court summons.",
       entrance_roadtrip_police_arrest: "Stopped · officer approaching the driver’s window.",
       entrance_roadtrip_arrest_kicker: "TRAFFIC STOP",
@@ -45970,7 +46010,7 @@ var T = {
       entrance_roadtrip_police_escape: "Policie se vzdaluje · drž přes 215 a setřes ji.",
       entrance_roadtrip_police_escaped: "Policie setřesena · siréna utichá.",
       entrance_roadtrip_police_capture: "Policie tě dostihla · vůz nuceně zpomaluje.",
-      entrance_roadtrip_police_stopped: "Zastaveno · policie je u okénka.",
+      entrance_roadtrip_police_stopped: "Zastaveno · policie zajíždí za tebou.",
       entrance_roadtrip_police_court_stopped: "Zastaveno · policie vystavuje předvolání k soudu.",
       entrance_roadtrip_police_arrest: "Zastaveno · policista přichází k okénku řidiče.",
       entrance_roadtrip_arrest_kicker: "SILNIČNÍ KONTROLA",

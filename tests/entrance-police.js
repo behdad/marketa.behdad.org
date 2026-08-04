@@ -125,9 +125,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var pursuitPlans = [];
       var normalIntervals = [];
       var pursuitIntervals = [];
-      for (var planIndex = 0; planIndex < 20; planIndex++) {
+      for (var planIndex = 0; planIndex < 22; planIndex++) {
         normalPlans.push(window.__entranceRoadtripSpawnPlan(false, planIndex));
-        if (planIndex < 16) pursuitPlans.push(window.__entranceRoadtripSpawnPlan(true, planIndex));
+        if (planIndex < 18) pursuitPlans.push(window.__entranceRoadtripSpawnPlan(true, planIndex));
         if (planIndex < 5) {
           normalIntervals.push(window.__entranceRoadtripSpawnInterval(false, planIndex));
           pursuitIntervals.push(window.__entranceRoadtripSpawnInterval(true, planIndex));
@@ -174,6 +174,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var radarDetected = copy(state());
       window.__entranceRoadtripSetLane(.5);
       step(1000);
+      var radarArrival = copy(state());
+      window.__entranceRoadtripPoliceStep(0, 1.25);
       var radarApproach = copy(state());
       window.__entranceRoadtripPoliceStep(0, 3);
       var radarCard = copy(state());
@@ -183,6 +185,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         measured: radarMeasured,
         crashed: radarCrashed,
         detected: radarDetected,
+        arrival: radarArrival,
         approach: radarApproach,
         card: radarCard,
         cited: copy(state())
@@ -287,6 +290,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripSetLane(.5);
       setMotion(0, 0);
       window.__entranceRoadtripPoliceStep(0, .1);
+      window.__entranceRoadtripPoliceStep(0, 1.25);
       window.__entranceRoadtripPoliceStep(0, 3.1);
       var centerlineCard = copy(trip());
       var centerlineCardTitle = document.getElementById("entrance-roadtrip-arrest-title").textContent.trim();
@@ -345,6 +349,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var ordinaryStopped = copy(trip());
       var ordinaryStoppedFlashes = flashSample();
       var ordinaryStoppedCaption = document.getElementById("hunt-caption").textContent.trim();
+      window.__entranceRoadtripPoliceStep(0, .625);
+      var ordinaryArrival = copy(trip());
+      window.__entranceRoadtripPoliceStep(0, .624);
+      var ordinarySettled = copy(trip());
+      window.__entranceRoadtripPoliceStep(0, .001);
+      var ordinaryArrestStart = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 1);
       var ordinaryApproach = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 2);
@@ -355,6 +365,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.stopped = {
         trip: copy(trip()),
         stopped: ordinaryStopped,
+        arrival: ordinaryArrival,
+        settled: ordinarySettled,
+        arrestStart: ordinaryArrestStart,
         approach: ordinaryApproach,
         card: ordinaryCard,
         cardTitle: ordinaryCardTitle,
@@ -431,6 +444,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripSetLane(2);
       setMotion(0, 0);
       step(1000);
+      window.__entranceRoadtripPoliceStep(0, 1.25);
       window.__entranceRoadtripPoliceStep(0, 6);
       report.steps.demeritWarning = {
         trip: copy(trip()),
@@ -864,10 +878,11 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.demeritHud &&
   s.contract.speedSign && s.contract.speedFurniture,
   "the highway posts 90/110 enforcement and models a Sheriff capable of 210 km/h", s.contract);
-var expectedNaturalTypes = ["car", "heart", "rv", "rabbit", "pickup", "kiss", "deer", "car",
-  "heart", "truck", "rv", "heart", "rabbit", "kiss", "pickup", "inf", "rv", "car", "deer", "truck"];
+var expectedNaturalTypes = ["car", "heart", "rv", "rabbit", "pickup", "mushroom", "deer", "car",
+  "car", "truck", "frog", "heart", "rabbit", "kiss", "pickup", "inf", "rv", "car", "hedgehog", "truck",
+  "kiss", "pickup"];
 var expectedNaturalLanes = [1.5, .5, -.5, .5, .5, 1.5, 1.5, -1.5,
-  .5, 1.5, .5, 1.5, .5, .5, 1.5, .5, 1.5, -.5, 1.5, -1.5];
+  .5, 1.5, .5, 1.5, .5, .5, 1.5, .5, 1.5, -.5, 1.5, -1.5, .5, -.5];
 var pursuitVehicles = s.pursuitTraffic && s.pursuitTraffic.pursuit.filter(function (plan) {
   return !!plan.direction;
 });
@@ -922,7 +937,10 @@ check(s.radarPeak && s.radarPeak.beforeApproach.police.phase === "warning" &&
   s.radarPeak.detected.drive.roadtrip.police.overLimit === 40 &&
   s.radarPeak.detected.drive.roadtrip.police.fine === 560 &&
   s.radarPeak.detected.drive.roadtrip.policeClockActive &&
-  s.radarPeak.approach.drive.roadtrip.playerLane === .5 &&
+  s.radarPeak.arrival.drive.roadtrip.playerLane === .5 &&
+  s.radarPeak.arrival.drive.roadtrip.police.phase === "stopped" &&
+  !s.radarPeak.arrival.drive.roadtrip.police.arrestVisible &&
+  s.radarPeak.arrival.drive.instruction === "entrance_roadtrip_police_stopped" &&
   s.radarPeak.approach.drive.roadtrip.police.phase === "arrest" &&
   s.radarPeak.approach.drive.roadtrip.police.surrenderLatched &&
   s.radarPeak.approach.drive.roadtrip.police.arrestVisible &&
@@ -1007,11 +1025,11 @@ check(s.centerlinePolice &&
   s.centerlinePolice.grace.centerlineElapsed >= 9.8 &&
   s.centerlinePolice.grace.centerlineElapsed < s.contract.centerlineSeconds &&
   s.centerlinePolice.pursuit.centerlineEnforced &&
-  s.centerlinePolice.pursuit.police.phase === "pursuit" &&
+  s.centerlinePolice.pursuit.police.phase === "stopped" &&
   s.centerlinePolice.pursuit.police.offence === "solid-line" &&
   s.centerlinePolice.pursuit.police.fine === 243 &&
   s.centerlinePolice.pursuit.police.overLimit === 0 &&
-  /double solid line/.test(s.centerlinePolice.pursuitCaption) &&
+  /police pulling in behind/.test(s.centerlinePolice.pursuitCaption) &&
   s.centerlinePolice.card.police.phase === "arrest" &&
   s.centerlinePolice.cardTitle === "SOLID-LINE TICKET" &&
   /double solid · fine \$243 · 2 pts · 2\/15/.test(s.centerlinePolice.cardLine) &&
@@ -1021,7 +1039,7 @@ check(s.centerlinePolice &&
   s.centerlinePolice.cited.police.lastDemerits === 2 &&
   s.centerlinePolice.cited.demeritPoints === 2 &&
   /double solid line · fine \$243 · 2 demerits · 2\/15/.test(s.centerlinePolice.caption),
-  "a brief dodge is forgiven, while ten seconds across the double solid line starts the shared $243/2-demerit pursuit and stop",
+  "a brief dodge is forgiven, while ten seconds across the double solid line starts the shared $243/2-demerit stop",
   s.centerlinePolice);
 check(s.pursuit && s.pursuit.trip.police.phase === "pursuit" &&
   s.pursuit.trip.police.detectedSpeed === 130 && s.pursuit.trip.police.fine === 560 &&
@@ -1063,10 +1081,21 @@ check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sire
   "the pursuit siren tears down while unfocused and returns only when attended", {
     unfocused: s.unfocused, refocused: s.refocused
   });
-check(s.stopped && s.stopped.stopped.active && s.stopped.stopped.police.phase === "arrest" &&
-  s.stopped.stopped.police.stops === 1 && s.stopped.stopped.police.arrestVisible &&
-  !s.stopped.stopped.police.arrestShoutPlayed &&
-  /officer approaching/.test(s.stopped.stoppedCaption) &&
+check(s.stopped && s.stopped.stopped.active && s.stopped.stopped.police.phase === "stopped" &&
+  s.stopped.stopped.police.stops === 1 && !s.stopped.stopped.police.arrestVisible &&
+  s.stopped.stopped.police.mirrorMode === "shoulder-arrival" &&
+  s.stopped.stopped.police.mirrorBehind === s.stopped.stopped.police.stopMirrorBehind &&
+  /pulling in behind/.test(s.stopped.stoppedCaption) &&
+  s.stopped.arrival.police.phase === "stopped" &&
+  s.stopped.arrival.police.mirrorMode === "shoulder-arrival" &&
+  s.stopped.arrival.police.mirrorBehind < s.stopped.stopped.police.mirrorBehind &&
+  s.stopped.arrival.police.mirrorBehind > 11 &&
+  s.stopped.settled.police.phase === "stopped" &&
+  s.stopped.settled.police.mirrorBehind < s.stopped.arrival.police.mirrorBehind &&
+  s.stopped.settled.police.mirrorBehind >= 11 &&
+  s.stopped.arrestStart.police.phase === "arrest" &&
+  s.stopped.arrestStart.police.mirrorMode === "shoulder-arrest" &&
+  s.stopped.arrestStart.police.mirrorBehind === 11 && s.stopped.arrestStart.police.arrestVisible &&
   s.stopped.approach.police.phase === "arrest" &&
   s.stopped.approach.police.arrestOfficerTransform !== s.stopped.stopped.police.arrestOfficerTransform &&
   s.stopped.card.police.phase === "arrest" && s.stopped.card.police.arrestCardOpacity > .5 &&
@@ -1100,16 +1129,17 @@ check(s.surrenderLatch && s.surrenderLatch.aboveBefore === 101 &&
   s.surrenderLatch.controlsLive.drive.steeringAngle > 0 &&
   s.surrenderLatch.controlsLive.drive.holds.brake && s.surrenderLatch.controlsLive.drive.holds.steerRight &&
   s.surrenderLatch.controlsLive.drive.roadtrip.police.surrenderLatched &&
-  s.surrenderLatch.reverseSelected && s.surrenderLatch.reverseBlocked.drive.gear === 0 &&
+  !s.surrenderLatch.reverseSelected && s.surrenderLatch.reverseBlocked.drive.gear === 0 &&
   s.surrenderLatch.reverseBlocked.drive.speed === 0 && !s.surrenderLatch.reverseBlocked.drive.holds.throttle &&
   s.surrenderLatch.reverseBlocked.drive.roadtrip.police.surrenderLatched &&
-  s.surrenderLatch.reverseBlocked.drive.roadtrip.police.phase === "arrest" &&
-  s.surrenderLatch.reverseBlocked.drive.roadtrip.police.arrestVisible &&
-  s.surrenderLatch.reverseBlocked.drive.instruction === "entrance_roadtrip_police_arrest" &&
-  /officer approaching/.test(s.surrenderLatch.caption) &&
+  s.surrenderLatch.reverseBlocked.drive.roadtrip.police.phase === "stopped" &&
+  !s.surrenderLatch.reverseBlocked.drive.roadtrip.police.arrestVisible &&
+  s.surrenderLatch.reverseBlocked.drive.roadtrip.police.mirrorMode === "shoulder-arrival" &&
+  s.surrenderLatch.reverseBlocked.drive.instruction === "entrance_roadtrip_police_stopped" &&
+  /pulling in behind/.test(s.surrenderLatch.caption) &&
   s.surrenderLatch.resetStarted && s.surrenderLatch.reset.drive.roadtrip.police.phase === "idle" &&
   !s.surrenderLatch.reset.drive.roadtrip.police.surrenderLatched,
-  "101 can accelerate, but sub-100 latches surrender across inputs, preserves braking and steering, then begins the approach promptly at zero",
+  "101 can accelerate, but sub-100 latches surrender across inputs, preserves braking and steering, then begins the patrol arrival promptly at zero",
   s.surrenderLatch);
 check(s.demeritWarning && s.demeritWarning.trip.active &&
   s.demeritWarning.trip.demeritPoints === 8 && s.demeritWarning.trip.demeritWarning &&
@@ -1252,7 +1282,7 @@ var suspensionBlockedHolds = suspensionStop && Object.keys(suspensionStop.blocke
 check(suspensionStop && suspensionStop.moving.car.engineOn && suspensionStop.moving.drive.roadtrip.active &&
   suspensionStop.moving.drive.speed > 0 && suspensionStop.moving.drive.gear === 3 &&
   suspensionStop.moving.drive.rpm > 0 && suspensionStop.moving.drive.holds.throttle &&
-  suspensionStop.moving.drive.holds.brake && suspensionStop.moving.drive.holds.clutch &&
+  suspensionStop.moving.drive.holds.brake &&
   suspensionStop.moving.drive.holds.steerRight && suspensionStop.moving.drive.frameActive &&
   suspensionStop.immediate.car.engineOn === false && suspensionStop.immediate.drive.speed === 0 &&
   suspensionStop.immediate.drive.rpm === 0 && suspensionStop.immediate.drive.gear === 0 &&

@@ -1297,7 +1297,7 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
   s.suspension.buttonTextY === "17" &&
-  s.suspension.hudPoints === "15 / 15" && s.suspension.hudBand === "suspended" &&
+  s.suspension.hudPoints === "15 / 15 · 0.00" && s.suspension.hudBand === "suspended" &&
   /^SUSPENDED (?:1:00|0:59)$/.test(s.suspension.hudStatus) &&
   !s.suspension.state.car.engineOn && s.suspension.state.drive.speed === 0 &&
   s.suspension.state.drive.rpm === 0 && s.suspension.state.drive.gear === 0 &&

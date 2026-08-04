@@ -297,6 +297,13 @@ patrol car models roughly 170 km/h, so holding 180 takes about 20 seconds while
 200 takes about 7. A brief touch of 180 is not enough, and slowing below it before
 the gap is complete lets the pursuit recover.
 
+The driver panel keeps demerits and BAC visible together. Any nonzero demerit
+record reads **On file** instead of **Clean**; warning and suspension states still
+take priority. Each balcony wine sip or opened beer adds one drink-equivalent
+(shown as `0.02` BAC for the game), and one equivalent clears per real minute.
+That state survives room changes, Road Trip exits, Continue, and a reload; a
+deliberate full-game restart clears it.
+
 The top readout separates elapsed trip time, highway distance, and points: for
 example, `8:16 · 12.4 km · 184 pts`. Time is a measurement, not a speed bonus;
 there is no reward for rushing. Distance adds one unmultiplied point per 100 m

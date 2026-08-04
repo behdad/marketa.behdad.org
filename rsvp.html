@@ -32427,8 +32427,8 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <text id="entrance-roadtrip-grade" class="entrance-roadtrip-hud-text" x="425" y="-83">Scenic drive</text>
               <text id="entrance-roadtrip-best" class="entrance-roadtrip-hud-text" x="425" y="-84">★ 0</text>
               <text id="entrance-roadtrip-multiplier" class="entrance-roadtrip-hud-text" x="646" y="-83" text-anchor="end">×1</text>
-              <text id="entrance-roadtrip-demerit-label" class="entrance-roadtrip-hud-text" x="526" y="-96" text-anchor="middle">DEMERITS</text>
-              <text id="entrance-roadtrip-demerit-points" class="entrance-roadtrip-hud-text" x="526" y="-79" text-anchor="middle">0 / 15</text>
+              <text id="entrance-roadtrip-demerit-label" class="entrance-roadtrip-hud-text" x="526" y="-96" text-anchor="middle">DEMERITS · BAC</text>
+              <text id="entrance-roadtrip-demerit-points" class="entrance-roadtrip-hud-text" x="526" y="-79" text-anchor="middle">0 / 15 · 0.00</text>
               <text id="entrance-roadtrip-demerit-status" class="entrance-roadtrip-hud-text" x="648" y="-82" text-anchor="end" data-roadtrip-demerit-band="clean">CLEAN</text>
               <g id="entrance-roadtrip-mirror" aria-hidden="true">
                 <path id="entrance-roadtrip-mirror-housing" d="M282-115H398Q407-115 408-105L411-87Q412-75 400-74H280Q268-75 269-87L272-105Q273-115 282-115Z" fill="#2d3438" stroke="#171c20" stroke-width="1.6"/>
@@ -36753,13 +36753,16 @@ window.__entranceRoomOpen = false;
     if (multiplier) multiplier.textContent = "×" + roadtripState.multiplier;
     var suspended = roadtripSuspensionRemainingMs() > 0;
     var demeritBand = suspended ? "suspended" :
-      roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING ? "warning" : "clean";
-    if (demeritLabel) demeritLabel.textContent = roadtripPoliceText("entrance_roadtrip_demerit_label");
-    if (demeritPoints) demeritPoints.textContent = roadtripState.demeritPoints + " / " + ROADTRIP_DEMERIT_SUSPENSION;
+      roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING ? "warning" :
+        roadtripState.demeritPoints > 0 ? "active" : "clean";
+    if (demeritLabel) demeritLabel.textContent = roadtripPoliceText("entrance_roadtrip_demerit_label") + " · BAC";
+    if (demeritPoints) demeritPoints.textContent = roadtripState.demeritPoints + " / " +
+      ROADTRIP_DEMERIT_SUSPENSION + " · " + roadtripBacLevel().toFixed(2);
     if (demeritStatus) {
       demeritStatus.textContent = roadtripPoliceText(suspended ? "entrance_roadtrip_demerit_status_suspended" :
         demeritBand === "warning" ? "entrance_roadtrip_demerit_status_warning" :
-          "entrance_roadtrip_demerit_status_clean", suspended ? { time: roadtripSuspensionClock() } : null);
+          roadtripState.demeritPoints > 0 ? "entrance_roadtrip_demerit_status_active" :
+            "entrance_roadtrip_demerit_status_clean", suspended ? { time: roadtripSuspensionClock() } : null);
       demeritStatus.setAttribute("data-roadtrip-demerit-band", demeritBand);
     }
     if (grade) {
@@ -37041,8 +37044,15 @@ window.__entranceRoomOpen = false;
     };
   }
   function roadtripImpairmentLevel() {
+    if (typeof window.__drinkState === "function") {
+      return Math.max(0, Math.min(1, Number(window.__drinkState().impairmentLevel) || 0));
+    }
     if (typeof window.__drinkIntoxicationLevel !== "function") return 0;
     return Math.max(0, Math.min(1, Number(window.__drinkIntoxicationLevel()) || 0));
+  }
+  function roadtripBacLevel() {
+    if (typeof window.__drinkState !== "function") return 0;
+    return Math.max(0, Number(window.__drinkState().bac) || 0);
   }
   function roadtripImpairedSteeringInput(seconds) {
     var level = roadtripImpairmentLevel();
@@ -41785,6 +41795,9 @@ window.__entranceRoomOpen = false;
           shoulderZone: roadtripState.shoulderZone,
           shoulderDistance: roadtripState.shoulderDistance,
           impairmentLevel: roadtripImpairmentLevel(),
+          bac: roadtripBacLevel(),
+          drinkEquivalents: typeof window.__drinkState === "function" ?
+            window.__drinkState().drinkEquivalents : 0,
           impairedSteeringBias: roadtripState.impairedSteeringBias,
           erraticDrivingSeconds: roadtripState.erraticDrivingSeconds,
           erraticDriving: roadtripState.erraticDriving,
@@ -43967,6 +43980,7 @@ var T = {
       entrance_roadtrip_points_short: "pts",
       entrance_roadtrip_demerit_label: "DEMERITS",
       entrance_roadtrip_demerit_status_clean: "CLEAN",
+      entrance_roadtrip_demerit_status_active: "ON FILE",
       entrance_roadtrip_demerit_status_warning: "WARNING",
       entrance_roadtrip_demerit_status_suspended: "SUSPENDED {time}",
       entrance_roadtrip_grade_sunday: "Scenic drive",
@@ -45204,6 +45218,7 @@ var T = {
       entrance_roadtrip_points_short: "b",
       entrance_roadtrip_demerit_label: "TRESTNÉ BODY",
       entrance_roadtrip_demerit_status_clean: "BEZ POSTIHU",
+      entrance_roadtrip_demerit_status_active: "V EVIDENCI",
       entrance_roadtrip_demerit_status_warning: "VAROVÁNÍ",
       entrance_roadtrip_demerit_status_suspended: "POZASTAVENO {time}",
       entrance_roadtrip_grade_sunday: "Vyhlídková jízda",
@@ -88993,11 +89008,57 @@ async def localfont(name):
   // "Booze chemistry" beat: every 2nd full glass Behdad drinks flashes the ethanol card and
   // softens the balcony scene with a brief blur (separate from the last-drop tipsy sway). One
   // self-clearing blur timer; cleared alongside the sway on room-leave/reset via clearTipsy.
-  var drinkTotal = 0, boozeBlurTimer = null; // a "drink" is a wine sip OR a beer-can crack (see registerDrink)
-  window.__resetWineSips = function () { drinkTotal = 0; };
-  window.__drinkIntoxicationLevel = function () {
-    return Math.max(0, Math.min(1, (drinkTotal - 2) / 4));
+  var DRINK_STATE_KEY = "balconyDrinkState:v1";
+  var DRINK_DECAY_MS = 60000;
+  var drinkState = { drinkEquivalents: 0, updatedAt: Date.now() };
+  var boozeBlurTimer = null; // one equivalent is a wine sip OR a beer-can crack (see registerDrink)
+  function persistDrinkState() {
+    try { localStorage.setItem(DRINK_STATE_KEY, JSON.stringify(drinkState)); }
+    catch (_error) {}
+  }
+  function restoreDrinkState() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(DRINK_STATE_KEY) || "null"); }
+    catch (_error) {}
+    if (!saved || typeof saved !== "object") return;
+    drinkState.drinkEquivalents = Math.max(0, Math.min(100,
+      Math.floor(Number(saved.drinkEquivalents) || 0)));
+    drinkState.updatedAt = Math.max(0, Number(saved.updatedAt) || Date.now());
+    if (drinkState.updatedAt > Date.now()) drinkState.updatedAt = Date.now();
+  }
+  function syncDrinkState(now) {
+    now = Math.max(0, Number(now) || Date.now());
+    if (!drinkState.drinkEquivalents) {
+      drinkState.updatedAt = now;
+      return drinkState;
+    }
+    var decayed = Math.floor(Math.max(0, now - drinkState.updatedAt) / DRINK_DECAY_MS);
+    if (!decayed) return drinkState;
+    drinkState.drinkEquivalents = Math.max(0, drinkState.drinkEquivalents - decayed);
+    drinkState.updatedAt = drinkState.drinkEquivalents ?
+      drinkState.updatedAt + decayed * DRINK_DECAY_MS : now;
+    persistDrinkState();
+    return drinkState;
+  }
+  function drinkSnapshot(now) {
+    var current = syncDrinkState(now);
+    return {
+      drinkEquivalents: current.drinkEquivalents,
+      bac: current.drinkEquivalents * .02,
+      impairmentLevel: Math.max(0, Math.min(1, (current.drinkEquivalents - 2) / 4)),
+      updatedAt: current.updatedAt,
+      decayMs: DRINK_DECAY_MS
+    };
+  }
+  restoreDrinkState();
+  window.__drinkState = function (now) { return drinkSnapshot(now); };
+  window.__resetWineSips = function () {
+    drinkState.drinkEquivalents = 0;
+    drinkState.updatedAt = Date.now();
+    try { localStorage.removeItem(DRINK_STATE_KEY); } catch (_error) {}
+    if (window.__refreshEntranceRoadtripHud) window.__refreshEntranceRoadtripHud();
   };
+  window.__drinkIntoxicationLevel = function () { return drinkSnapshot().impairmentLevel; };
   function boozeBlur() {
     var rm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var bal = document.getElementById("stage-balcony");
@@ -89013,9 +89074,14 @@ async def localfont(name):
   // one shared tally across every drink — wine sips AND beer-can cracks: soft blur from the 3rd
   // drink (the ethanol card flashes at that reveal), the woozy wobble added from the 4th on.
   function registerDrink() {
-    drinkTotal++;
-    if (drinkTotal === 3) triggerBoozeChem();
-    else if (drinkTotal >= 4) { boozeBlur(); goTipsy(); }
+    var before = drinkSnapshot();
+    if (!before.drinkEquivalents) drinkState.updatedAt = Date.now();
+    drinkState.drinkEquivalents = Math.min(100, before.drinkEquivalents + 1);
+    persistDrinkState();
+    if (drinkState.drinkEquivalents === 3) triggerBoozeChem();
+    else if (drinkState.drinkEquivalents >= 4) { boozeBlur(); goTipsy(); }
+    if (window.__refreshEntranceRoadtripHud) window.__refreshEntranceRoadtripHud();
+    return drinkSnapshot();
   }
   window.__registerDrink = registerDrink;
   function goTipsy() {

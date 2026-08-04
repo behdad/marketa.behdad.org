@@ -248,6 +248,13 @@ publish a persistent caption, so an older flash or `caption()` restore timer can
 `__entranceRoadtripPolice(ahead)`, `__entranceRoadtripPoliceDetect(speed)`, and
 `__entranceRoadtripPoliceStep(speed, seconds)` are the deterministic focused-test seams; police
 presentation, capture/stopped/arrest phases, and siren state remain transient rather than checkpoint data.
+The balcony module is the sole owner of alcohol state under `balconyDrinkState:v1`.
+`__registerDrink()` normalizes elapsed wall time before adding an equivalent;
+`__drinkState()` exposes the normalized equivalent count, display BAC, and impairment level to Road Trip.
+Decay is timestamp-derived in exact one-minute steps rather than timer-driven, so hidden or unfocused
+pages run no autonomous loop. Checkpoint reset cannot rewind the separate state, while the existing
+full-reset `__resetWineSips()` boundary clears it. Road Trip must read that owner for both the HUD and
+police/steering impairment; do not add a second BAC counter to `roadtripState`.
 Escape cannot skip an arrest. Blur/hidden gates pause its elapsed time, while room close/reset cancels the
 transient phase and tears down its overlay and audio. Run
 `tests/entrance-police.js` with the other Entrance tests.

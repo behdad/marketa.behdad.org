@@ -149,5 +149,9 @@ console.log("  " + (!oldClosePresent.length ? "✓" : "✗") + " lower rooms no 
   (!oldClosePresent.length ? "" : " — " + oldClosePresent.join(", ")));
 if (oldClosePresent.length) failed = true;
 
+var coachHasExpiry = /floorCoachTimer|setTimeout\s*\(\s*hideFloorCoach/.test(source);
+console.log("  " + (!coachHasExpiry ? "✓" : "✗") + " first-arrival Up coach has no timed expiry");
+if (coachHasExpiry) failed = true;
+
 if (failed) process.exit(1);
 console.log("floor navigation: all checks passed");

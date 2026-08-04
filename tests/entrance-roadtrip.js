@@ -91,6 +91,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return {
       display: getComputedStyle(dialog).display,
       panelFill: dialog.querySelector("rect").getAttribute("fill"),
+      panelOpacity: dialog.querySelector("rect").getAttribute("fill-opacity"),
       title: dialog.querySelector('[data-i="entrance_roadtrip_pause_title"]').textContent.trim(),
       line: dialog.querySelector('[data-i="entrance_roadtrip_pause_line"]').textContent.trim(),
       captionVisibility: getComputedStyle(document.getElementById("hunt-caption")).visibility
@@ -1412,6 +1413,7 @@ check(focusPause &&
   focusPause.waiting.drive.instruction === "entrance_roadtrip_resume" &&
   focusPause.waitingPresentation.display !== "none" &&
   focusPause.waitingPresentation.panelFill === "#8e3a4a" &&
+  focusPause.waitingPresentation.panelOpacity === ".5" &&
   focusPause.waitingPresentation.title === "PAUSED" &&
   /Space, Enter or Play/.test(focusPause.waitingPresentation.line) &&
   focusPause.waitingPresentation.captionVisibility === "hidden" &&

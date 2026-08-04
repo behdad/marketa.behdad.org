@@ -28,38 +28,46 @@ var harness = String.raw`<script>
   async function run() {
     window.__endAttract();
     setLang("en");
+    window.__secondRound = false;
     window.__setSeenRooms(["kitchen"]);
     window.goToStage("garden");
+    var phaseOne = snapshot();
+    check("Phase 1 tracks an upstairs visit without replacing its game clue",
+      phaseOne.seen.length === 2 && phaseOne.key !== "room_progress" &&
+      (!phaseOne.flash || phaseOne.flash.owner !== "room-progress"), phaseOne);
+
+    window.__secondRound = true;
+    window.goToStage("cuddly");
     var english = snapshot();
-    check("a first intermediate visit reports compact English progress",
-      english.seen.length === 2 && english.key === "room_progress" &&
-      english.caption === "Rooms seen: 2/10 · keep exploring." &&
+    check("a first Phase 2 visit reports compact English progress",
+      english.seen.length === 3 && english.key === "room_progress" &&
+      english.caption === "Rooms seen: 3/10 · keep exploring." &&
       english.flash && english.flash.owner === "room-progress", english);
 
     setLang("cs");
     var czechLive = snapshot();
     check("a live progress caption keeps its count when switched to Czech",
-      czechLive.caption === "Navštíveno: 2/10 · pokračuj dál.", czechLive);
+      czechLive.caption === "Navštíveno: 3/10 · pokračuj dál.", czechLive);
     setLang("en");
 
     window.goToStage("kitchen");
     var revisit = snapshot();
     check("revisiting a room neither increments nor replays progress",
-      revisit.seen.length === 2 && (!revisit.flash || revisit.flash.owner !== "room-progress"), revisit);
+      revisit.seen.length === 3 && (!revisit.flash || revisit.flash.owner !== "room-progress"), revisit);
 
     window.__cinematic = true;
-    window.goToStage("cuddly");
+    window.goToStage("office");
     window.__cinematic = false;
     var editorial = snapshot();
     check("editorial cinematic cuts do not count as room visits",
-      editorial.seen.length === 2 && editorial.seen.indexOf("cuddly") === -1, editorial);
+      editorial.seen.length === 3 && editorial.seen.indexOf("office") === -1, editorial);
 
     window.goToStage("garden");
     window.__saveLoftCheckpoint();
     var checkpoint = window.__loadLoftCheckpoint();
     check("checkpoints persist the exact seen-room set",
       checkpoint && checkpoint.progress &&
-      JSON.stringify(checkpoint.progress.seenRooms) === JSON.stringify(["kitchen", "garden"]),
+      JSON.stringify(checkpoint.progress.seenRooms) === JSON.stringify(["kitchen", "garden", "cuddly"]),
       checkpoint && checkpoint.progress);
 
     setLang("en");

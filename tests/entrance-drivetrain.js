@@ -20,6 +20,23 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     });
     return window.__entranceDriveSetMotion(speed, gear);
   }
+  function benchmark100() {
+    setMotion(0, 1);
+    window.__entranceDriveControl("throttle", true);
+    var elapsed = 0;
+    var shifts = [];
+    while (elapsed < 9000 && Math.abs(state().speed) < 100) {
+      window.__entranceDriveStep(20);
+      elapsed += 20;
+      var drive = state();
+      if (drive.rpm >= 7000 && drive.gear < 3) {
+        shifts.push({ at: elapsed, speed: drive.speed, rpm: drive.rpm, from: drive.gear });
+        window.__entranceDriveShift(drive.gear + 1, true);
+      }
+    }
+    window.__entranceDriveControl("throttle", false);
+    return { elapsed: elapsed, shifts: shifts, state: copy(state()) };
+  }
   window.addEventListener("load", function () {
     setTimeout(function () {
       try {
@@ -79,6 +96,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         step(20, 60);
         window.__entranceDriveControl("throttle", false);
         report.steps.secondLow = { before: secondBefore, after: copy(state()) };
+        report.steps.benchmark100 = benchmark100();
 
         setMotion(0, 1);
         window.__entranceDriveControl("clutch", true);
@@ -118,6 +136,41 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           after: copy(roomState())
         };
         window.__toggleEntrancePorscheEngine();
+
+        setMotion(.24, 0);
+        step(10, 1);
+        var forwardStatic = copy(state());
+        setMotion(-.24, 0);
+        step(10, 1);
+        var reverseStatic = copy(state());
+        setMotion(8, 0);
+        step(1000, 1);
+        var engineOnLowCoast = copy(state());
+        setMotion(-8, 0);
+        step(1000, 1);
+        var engineOnReverseCoast = copy(state());
+        setMotion(8, 0);
+        window.__entranceDriveControl("throttle", true);
+        step(1000, 1);
+        var revvingNeutralCoast = copy(state());
+        window.__entranceDriveControl("throttle", false);
+        setMotion(60, 0);
+        step(1000, 1);
+        var normalCoast = copy(state());
+        window.__toggleEntrancePorscheEngine();
+        setMotion(8, 0);
+        step(1000, 1);
+        var engineOffLowCoast = copy(state());
+        window.__toggleEntrancePorscheEngine();
+        report.steps.friction = {
+          forwardStatic: forwardStatic,
+          reverseStatic: reverseStatic,
+          engineOnLow: engineOnLowCoast,
+          engineOnReverse: engineOnReverseCoast,
+          revvingNeutral: revvingNeutralCoast,
+          normal: normalCoast,
+          engineOffLow: engineOffLowCoast
+        };
 
         setMotion(120, 3);
         window.__entranceDriveControl("brake", true);
@@ -251,6 +304,10 @@ check(s.firstLow && s.firstLow.after.speed >= s.firstLow.before.speed + 12 && s.
 check(s.secondLow && s.secondLow.after.speed >= s.secondLow.before.speed + 9 &&
   s.secondLow.after.rpm >= s.secondLow.before.rpm + 550,
   "second gear builds wheel speed and RPM without the old low-rev wait", s.secondLow);
+check(s.benchmark100 && s.benchmark100.elapsed >= 5600 && s.benchmark100.elapsed <= 6300 &&
+  s.benchmark100.state.speed >= 100 && s.benchmark100.shifts.length === 1 &&
+  s.benchmark100.shifts[0].from === 1 && s.benchmark100.state.gear === 2,
+  "rolling-friction changes preserve the published 5.9-second 0–100 launch", s.benchmark100);
 var launch = s.clutchDump;
 check(launch && launch.held.rpm >= 7000 && launch.released.clutchEngagement.remainingMs >= 650 &&
   launch.released.clutchEngagement.strength >= .9,
@@ -274,6 +331,19 @@ check(shutdown && shutdown.before.car.engineOn && shutdown.before.drive.holds.th
   shutdown.immediate.drive.rpm === 0 && shutdown.immediate.drive.gear === 0 &&
   !shutdown.immediate.drive.holds.throttle && shutdown.after.drive.speed === 0,
   "switching off with throttle held clears every powered launch state and remains stopped", shutdown);
+var friction = s.friction;
+check(friction && friction.forwardStatic.speed === 0 && friction.reverseStatic.speed === 0,
+  "static resistance snaps symmetric sub-quarter-km/h residuals exactly to rest", friction);
+check(friction && friction.engineOnLow.speed > 3 && friction.engineOnLow.speed < 4.5 &&
+  friction.engineOnReverse.speed < -3 && friction.engineOnReverse.speed > -4.5 &&
+  Math.abs(friction.engineOnLow.speed + friction.engineOnReverse.speed) < .0001,
+  "low-speed rolling resistance is heavier and directionally symmetric", friction);
+check(friction && Math.abs(friction.revvingNeutral.speed - friction.engineOnLow.speed) < .0001 &&
+  Math.abs(friction.engineOffLow.speed - friction.engineOnLow.speed) < .0001 &&
+  friction.revvingNeutral.rpm >= 7400 && friction.engineOffLow.rpm === 0,
+  "neutral coasting uses the same wheel resistance whether revving, idling, or engine-off", friction);
+check(friction && Math.abs(friction.normal.speed - 55.64) < .001,
+  "normal-speed neutral coasting retains the prior resistance curve above the low-speed taper", friction);
 var brakePitch = s.brakePitch;
 check(brakePitch && brakePitch.hardStep.longitudinalDeceleration > brakePitch.shortStep.longitudinalDeceleration &&
   brakePitch.hardStep.noseDive > brakePitch.shortStep.noseDive &&

@@ -34944,6 +34944,9 @@ window.__entranceRoomOpen = false;
   var PORSCHE_NOSE_DIVE_MIN_DECEL = .9;
   var PORSCHE_NOSE_DIVE_FULL_DECEL = 21.5;
   var PORSCHE_BRAKE_SPIN_MIN_SPEED = 140;
+  var PORSCHE_STATIC_SPEED_KMH = .25;
+  var PORSCHE_LOW_SPEED_RESISTANCE_KMH = 18;
+  var PORSCHE_LOW_SPEED_RESISTANCE_BOOST = 4.2;
   var driveFrame = null;
   var driveTimer = null;
   var driveLastTime = 0;
@@ -37903,6 +37906,16 @@ window.__entranceRoomOpen = false;
     // deliberately sparse torque samples without changing their curve shape.
     return Math.max(0, Math.min(5.8, engine * 1.06 * lowGearAssist) - resistance);
   }
+  function porscheRollingResistance(speed) {
+    var kmh = Math.abs(Number(speed) || 0);
+    var lowSpeedTaper = Math.max(0, 1 - kmh / PORSCHE_LOW_SPEED_RESISTANCE_KMH);
+    return 2.8 + kmh * .026 + PORSCHE_LOW_SPEED_RESISTANCE_BOOST * lowSpeedTaper * lowSpeedTaper;
+  }
+  function settlePorscheStaticSpeed(drivenAcceleration) {
+    if (drivenAcceleration > 0 || Math.abs(driveState.speed) > PORSCHE_STATIC_SPEED_KMH) return false;
+    driveState.speed = 0;
+    return true;
+  }
   function clearPorscheClutchEngagement(clearLift) {
     driveState.clutchEngagementMs = 0;
     driveState.clutchEngagementDurationMs = 0;
@@ -39480,6 +39493,7 @@ window.__entranceRoomOpen = false;
     var engagementFade = (engagementFadeStart + engagementFadeEnd) / 2;
     var engagementPortion = seconds ? Math.min(dt, engagementStartMs) / dt : 0;
     var drivenAcceleration = 0;
+    var throttleCoupled = !!(throttle && driveState.gear && !clutch);
     if (porscheState.engineOn) {
       driveState.temperature = Math.min(1, driveState.temperature + seconds / 20);
       if (throttle && driveState.gear && !clutch) driveState.throttleHeldMs += dt;
@@ -39536,10 +39550,11 @@ window.__entranceRoomOpen = false;
       }
       spinPorscheOnBrake(before, Math.sign(steerInput));
     }
-    if (!throttle && !braking) {
-      var rollingResistance = 2.8 + Math.abs(driveState.speed) * .026;
+    if (!braking && !throttleCoupled) {
+      var rollingResistance = porscheRollingResistance(driveState.speed);
       driveState.speed -= Math.sign(driveState.speed) * Math.min(Math.abs(driveState.speed), rollingResistance * seconds);
     }
+    settlePorscheStaticSpeed(drivenAcceleration);
     var roadtripLugging = roadtripState.active && driveState.gear > 1 &&
       porscheRpmForSpeed(driveState.speed, driveState.gear) < 1000;
     if (roadtripLugging || !throttle && !clutch && driveState.gear > 2 && Math.abs(driveState.speed) < 2.2) {
@@ -39616,6 +39631,7 @@ window.__entranceRoomOpen = false;
       roadtripState.exitUntilStop = false;
     }
     stepRoadtrip(roadtripRouteTravel, seconds);
+    settlePorscheStaticSpeed(drivenAcceleration);
     var longitudinalSpeedAfter = Math.abs(driveState.speed);
     var actualDeceleration = seconds > 0 ?
       Math.max(0, (longitudinalSpeedBefore - longitudinalSpeedAfter) / 3.6 / seconds) : 0;

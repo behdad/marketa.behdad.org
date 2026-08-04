@@ -35490,6 +35490,11 @@ window.__entranceRoomOpen = false;
     return !roadtripState.active || (!roadtripResumePending &&
       document.visibilityState !== "hidden" && document.hasFocus());
   }
+  function roadtripPoliceClockActive() {
+    return roadtripState.active &&
+      ["warning", "pursuit", "capture", "stopped", "arrest", "cooldown"].indexOf(
+        roadtripState.police.phase) >= 0;
+  }
   function entranceDriveMusicWanted() {
     return !!(entranceDriveAudible() && driveState.hudOpen && Math.abs(driveState.speed) > 3);
   }
@@ -40640,7 +40645,8 @@ window.__entranceRoomOpen = false;
     if (!driveLastTime) driveLastTime = now;
     porscheDriveStep(now - driveLastTime);
     driveLastTime = now;
-    if (porscheState.engineOn || Math.abs(driveState.speed) > .02 || porscheTouchSteering.mode === "steering" ||
+    if (porscheState.engineOn || Math.abs(driveState.speed) > .02 || roadtripPoliceClockActive() ||
+        porscheTouchSteering.mode === "steering" ||
         porscheTouchSteering.returning || Object.keys(driveState.holds).some(function (key) {
           return driveState.holds[key] && (key !== "throttle" || porscheState.engineOn);
         })) {
@@ -41651,6 +41657,7 @@ window.__entranceRoomOpen = false;
           policeWarningHeadroom: ROADTRIP_POLICE_WARNING_HEADROOM_SECONDS,
           policeRearRadarSeconds: ROADTRIP_POLICE_REAR_RADAR_SECONDS,
           policeRearRadarDistance: ROADTRIP_POLICE_REAR_RADAR_DISTANCE,
+          policeClockActive: roadtripPoliceClockActive(),
           policeRepeatDistance: ROADTRIP_POLICE_REPEAT_DISTANCE,
           policeEscapeSpeed: ROADTRIP_POLICE_ESCAPE_SPEED,
           policePursuitSpeed: ROADTRIP_POLICE_PURSUIT_SPEED,

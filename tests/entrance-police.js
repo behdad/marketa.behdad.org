@@ -876,6 +876,7 @@ check(s.radarPeak && s.radarPeak.beforeApproach.police.phase === "warning" &&
   s.radarPeak.detected.drive.roadtrip.police.detectedSpeed === 130 &&
   s.radarPeak.detected.drive.roadtrip.police.overLimit === 40 &&
   s.radarPeak.detected.drive.roadtrip.police.fine === 560 &&
+  s.radarPeak.detected.drive.roadtrip.policeClockActive &&
   s.radarPeak.approach.drive.roadtrip.playerLane === .5 &&
   s.radarPeak.approach.drive.roadtrip.police.phase === "arrest" &&
   s.radarPeak.approach.drive.roadtrip.police.surrenderLatched &&

@@ -185,10 +185,15 @@ Entering or leaving Road Trip is an atomic presentation swap: its HUD height, co
 world visibility, ordinary windshield scenery, and SVG viewBox must not transition independently.
 Keep those state-owned properties transition-free so a frame can show either Road Trip or street
 driving, never a resized mixture of both.
-The road uses four equal lanes around a dynamic double-yellow centre. Positive-lane traffic advances
-in the two right-hand lanes; negative-lane traffic uses front/headlight art and a negative world
-velocity so it closes faster from the opposite lanes. The Porsche's roadtrip lane is separate from
-the side-view SVG lane offset and starts at `0.5`, the inner right-hand lane.
+`drive.roadtrip.route` owns the `calgary` → `turnoff` → `banff` sequence and is included in the
+version-2 paused-run snapshot. Calgary uses three equal lanes in each direction around a wide,
+impassable dirt median, starts the Porsche on the outer shoulder at `3.08`, and forces terrain
+elevation, grade, and curvature to zero. After 75 attended seconds, a six-second right-turn
+approach keeps the flat scenery; only the Banff phase restores the original four-lane mountain road, 90 km/h signs,
+terrain, and curves. Route changes clear live entities before changing lane geometry.
+Positive-lane traffic advances on the right-hand carriageway; negative-lane traffic uses
+front/headlight art and a negative world velocity so it closes faster from the opposite lanes.
+The Porsche's roadtrip lane remains separate from the side-view SVG lane offset.
 Traffic types are `car`, `pickup`, `truck` (semi), and `rv`; each owns rear and oncoming-front
 templates, speed, scale, and mass treatment. Keep the natural spawn table varied, with RVs common
 enough to read as Alberta highway traffic. `deer` and the compatibility-named `rabbit` render as a
@@ -200,18 +205,17 @@ normalize to their direction's outer lane; an overtaking heavy vehicle may start
 inner lane so `overtakeLaneTarget` can visibly carry it outward around the Porsche.
 The stress control remains deliberately uncapped up to the shared entity-pool limit. A stopped
 Porsche forces its overtaker to begin in the occupied forward lane; the entity-owned
-`overtakeLaneTarget` then carries the visible move into the other forward lane, and arms a horn on
-every stopped inner-lane pass. A stopped shoulder or outer-lane Porsche never arms that horn.
-Moving low-speed summons may originate in either forward lane and move only when they initially
-share the Porsche's lane. `roadtripTrafficHornProfile()` owns the distance/cabin/spatial projection:
+`overtakeLaneTarget` then carries the visible move into an adjacent open lane and arms a horn below
+60 km/h. A shoulder stop stays silent. Moving low-speed summons may originate in any forward lane
+and move only when they initially share the Porsche's lane. `roadtripTrafficHornProfile()` owns the distance/cabin/spatial projection:
 passing horns use a 0.66-second envelope, while an oncoming vehicle whose own negative lane is
 occupied uses a distinct 1.35-second warning and latches `oncomingHorned` after one successful voice.
 `roadtripOncomingEvasionDecision()` shuffles one positive decision through every five entity serials,
 giving an exact seeded 20% plan without runtime randomness. On first wrong-lane proximity, the entity
-latches that decision. A selected vehicle commits only if `roadtripOncomingEvasionSafe()` finds the
-other negative lane free of the Porsche and oncoming traffic within 24 road units; its lane then
-interpolates at 2.4 lane units/second from `-.5` to `-1.5` or vice versa. An unsafe selected vehicle
-and the other 80% hold course. No branch targets a positive/player-direction lane.
+latches that decision. A selected vehicle commits only if `roadtripOncomingEvasionSafe()` finds an
+adjacent negative lane free of the Porsche and oncoming traffic within 24 road units; its lane then
+interpolates at 2.4 lane units/second. An unsafe selected vehicle and the other 80% hold course. No
+branch targets a positive/player-direction lane.
 `roadtripCurvatureAt()` defines alternating eased bends. `roadtripCurveOffset()` integrates the
 upcoming curve into the sampled asphalt, shoulder, lane, furniture, sign, and entity projection,
 while the current curvature adds a small unsteered outside drift. Curve-warning uses are separately

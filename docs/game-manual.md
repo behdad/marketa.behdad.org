@@ -234,8 +234,12 @@ visible offer; choosing **Later** leaves you on the block. Afterward, the highwa
 remains unlocked and reappears after one forward lap in a later dashboard session.
 
 Road Trip keeps the same steering, transmission, accelerator, and brake. AUTO
-provides gentle curve lane assist; MANUAL leaves curve steering entirely to you. Its
-randomized traffic includes sedans, pickups, semis, and RVs in both directions;
+provides gentle curve lane assist; MANUAL leaves curve steering entirely to you.
+It begins on the straight, divided six-lane highway to Calgary: flat prairie, a
+wide dirt median that cannot be crossed, a 110 km/h limit, and no curves. After
+roughly 75 seconds, the Banff exit turns right into the mountain leg, where the
+road narrows, curves return, and the limit drops to 90. Its randomized traffic
+includes sedans, pickups, semis, and RVs in both directions;
 slower traffic may be passed, horns react to blocked lanes, and some oncoming
 drivers swerve when you stray across the double yellow. Curves, shoulders,
 rumble strips, gravel, day/night, weather, and seasons all affect the drive.
@@ -246,11 +250,11 @@ Hard braking while steering produces a 360° from 200 km/h on dry asphalt, 180
 in rain, or 160 in snow. Leaving or unfocusing the game pauses the highway until
 a fresh steering or pedal input resumes it.
 
-The posted limit is 90 km/h, with enforcement above 110. An oncoming car flashes
-its high beams before a speed trap. If police pursue, stop safely to resolve the
-ticket or summons; ignoring them escalates the outcome. Very high sustained speed
-can open an escape gap, but a brief burst is not enough. Police stops use Alberta's
-fine schedule, court treatment for 51+ over, and a deliberately theatrical arrival.
+Police allow a 20 km/h tolerance above the posted limit. An oncoming car flashes
+its high beams before a speed trap. If police pursue, stop safely to resolve the ticket
+or summons; ignoring them escalates the outcome. Very high sustained speed can open
+an escape gap, but a brief burst is not enough. Police stops use Alberta's fine schedule,
+court treatment for 51+ over, and a deliberately theatrical arrival.
 
 The driver panel keeps separate **Demerits** and **BAC** columns. Each wine, beer,
 or cocktail adds one simplified `0.03` drink-equivalent; one clears per real

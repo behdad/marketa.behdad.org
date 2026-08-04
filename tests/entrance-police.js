@@ -15,6 +15,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function step(ms, count) {
     for (var i = 0; i < (count || 1); i++) window.__entranceDriveStep(ms);
   }
+  function startBanff() {
+    var started = window.__entranceRoadtripStart();
+    if (started) window.__entranceRoadtripSetRoute("banff", 0);
+    return started;
+  }
   function setMotion(speed, gear) {
     window.__entranceDriveControl("throttle", false);
     window.__entranceDriveControl("brake", false);
@@ -91,7 +96,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function prepareEncounter() {
     window.__entranceRoadtripSetDemerits(0, 0);
-    window.__entranceRoadtripStart();
+    startBanff();
     window.__entranceRoadtripSetLane(.5);
     setMotion(0, 0);
   }
@@ -104,6 +109,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntrancePorscheDriveHud();
       if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
       window.__entranceRoadtripStart();
+      window.__entranceRoadtripSetRoute("banff", 0);
       report.steps.contract = {
         hook: typeof window.__entranceRoadtripPolice,
         detectHook: typeof window.__entranceRoadtripPoliceDetect,
@@ -473,7 +479,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       step(400);
       var reverseBlocked = copy(state());
       var latchedCaption = document.getElementById("hunt-caption").textContent.trim();
-      var resetStarted = window.__entranceRoadtripStart();
+      var resetStarted = startBanff();
       report.steps.surrenderLatch = {
         aboveBefore: aboveThresholdBefore,
         above: aboveThreshold,
@@ -814,7 +820,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         hudBac: document.getElementById("entrance-roadtrip-bac-value").textContent.trim(),
         hudStatusAbsent: !document.getElementById("entrance-roadtrip-demerit-status"),
         buttonSuspended: suspendedButton.classList.contains("suspended"),
-        restart: window.__entranceRoadtripStart(),
+        restart: startBanff(),
         ignition: {
           baseline: blockedBaseline,
           roomReturns: [roomAttemptOne, roomAttemptTwo],
@@ -904,6 +910,7 @@ var REDUCED_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed
       window.__entranceRoadtripSetDemerits(0, 0);
       window.__toggleEntrancePorscheEngine();
       window.__entranceRoadtripStart();
+      window.__entranceRoadtripSetRoute("banff", 0);
       window.__entranceDriveSetMotion(130, 3);
       window.__entranceRoadtripPolice(150);
       var stationAt = state().drive.roadtrip.police.stationAt;
@@ -959,9 +966,9 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   JSON.stringify(s.contract.demeritSchedule) === JSON.stringify([2, 2, 3, 3, 4, 4, 6]) &&
   s.contract.speedLimit === 90 &&
   s.contract.enforcementSpeed === 110 &&
-  s.contract.firstDistance === 950 && s.contract.warningAhead === 240 &&
+  s.contract.firstDistance === 1800 && s.contract.warningAhead === 240 &&
   s.contract.warningHeadroom === 3 && s.contract.rearRadarSeconds === .8 &&
-  s.contract.rearRadarDistance === 40 && s.contract.repeatDistance === 1200 &&
+  s.contract.rearRadarDistance === 40 && s.contract.repeatDistance === 2400 &&
   s.contract.escapeSpeed === 215 && s.contract.pursuitSpeed === 210 &&
   s.contract.surrenderSpeed === 100 &&
   s.contract.escapeDistance === 100 && s.contract.escapeHoldSeconds === 12 &&

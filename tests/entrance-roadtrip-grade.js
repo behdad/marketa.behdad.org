@@ -19,6 +19,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveControl(name, false);
     });
   }
+  function startBanff() {
+    var started = window.__entranceRoadtripStart();
+    if (started) window.__entranceRoadtripSetRoute("banff", 0);
+    return started;
+  }
   function translateY(node) {
     var match = String(node && node.getAttribute("transform") || "").match(/translate\([-+.\d]+ ([-+.\d]+)/);
     return match ? Number(match[1]) : null;
@@ -66,7 +71,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     };
   }
   function sampleRoadsidePolice(distance) {
-    window.__entranceRoadtripStart();
+    startBanff();
     clearHolds();
     setDistance(distance - 150);
     window.__entranceRoadtripPolice(140);
@@ -90,7 +95,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        startBanff();
         clearHolds();
 
         var zero = terrain(0, 112, 0);
@@ -231,7 +236,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           scan.maxGrade.distance, scan.minGrade.distance
         ]).map(sampleRoadsidePolice);
 
-        window.__entranceRoadtripStart();
+        startBanff();
         clearHolds();
         setDistance(260);
         window.__entranceRoadtripSetLane(.5);
@@ -255,7 +260,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           expectedPark: window.__entranceRoadtripMirrorPose(drive().roadtrip.distance, 4, 0)
         };
 
-        window.__entranceRoadtripStart();
+        startBanff();
         clearHolds();
         setDistance(600);
         window.__entranceRoadtripSetLane(1.9);

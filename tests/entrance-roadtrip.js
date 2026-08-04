@@ -101,6 +101,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function startRoadtripInLane(lane) {
     var started = window.__entranceRoadtripStart();
     if (started) {
+      window.__entranceRoadtripSetRoute("banff", 0);
       window.__entranceRoadtripSetSeed(0x12345678);
       window.__entranceRoadtripSetLane(lane == null ? .5 : lane);
     }
@@ -373,6 +374,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     };
     pressKey("Enter");
     await sleep(80);
+    window.__entranceRoadtripSetRoute("banff", 0);
     window.__entranceRoadtripSetLane(-2.32);
     var highwayLeft = {
       engine: window.__entranceDriveSpatialAudio("engine"),

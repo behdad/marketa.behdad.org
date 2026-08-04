@@ -32,9 +32,10 @@ var roadtripMirrorTreePool = trees;
 var roadtripMirrorTerrain = attrNode();
 var ROADTRIP_FURNITURE_SIZE = 14;
 var roadtripFurniturePool = Array.from({ length: ROADTRIP_FURNITURE_SIZE }, function (_, index) {
-  return { index: index, type: index % 7 === 0 ? "speed-90" : index % 5 === 0 ? "lamp" : index % 3 === 0 ? "post" : "tree" };
+  return { index: index, type: index % 7 === 0 ? "speed-limit" : index % 5 === 0 ? "lamp" : index % 3 === 0 ? "post" : "tree" };
 });
 var roadtripState = { active: true, distance: 60 };
+function roadtripIsCalgaryRoute() { return false; }
 function roadtripRearCurveOffset() { return 0; }
 function roadtripFurnitureSide(item) { return item.index % 2 ? 1 : -1; }
 function roadtripMirrorProject(behind) {
@@ -44,10 +45,10 @@ function roadtripMirrorProject(behind) {
 
 var paint = functionMatch ? Function(
   "roadtripMirrorTreePool", "roadtripMirrorTerrain", "roadtripState", "roadtripFurniturePool", "ROADTRIP_FURNITURE_SIZE",
-  "roadtripRearCurveOffset", "roadtripFurnitureSide", "roadtripMirrorProject",
+  "roadtripIsCalgaryRoute", "roadtripRearCurveOffset", "roadtripFurnitureSide", "roadtripMirrorProject",
   "return (" + functionMatch[0] + ");"
 )(roadtripMirrorTreePool, roadtripMirrorTerrain, roadtripState, roadtripFurniturePool, ROADTRIP_FURNITURE_SIZE,
-  roadtripRearCurveOffset, roadtripFurnitureSide, roadtripMirrorProject) : function () {};
+  roadtripIsCalgaryRoute, roadtripRearCurveOffset, roadtripFurnitureSide, roadtripMirrorProject) : function () {};
 paint();
 
 var visible = trees.filter(function (tree) { return tree.getAttribute("visibility") === "visible"; });

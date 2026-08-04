@@ -38,8 +38,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       window.__entranceRoadtripStart();
+      window.__entranceRoadtripSetRoute("banff", 0);
       var firstFreshSeed = state().runSeed;
       window.__entranceRoadtripStart();
+      window.__entranceRoadtripSetRoute("banff", 0);
       var secondFreshSeed = state().runSeed;
       report.steps.freshSeeds = [firstFreshSeed, secondFreshSeed];
       report.steps.seedA = plan(0x12345678);

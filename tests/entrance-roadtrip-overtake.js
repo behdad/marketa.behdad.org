@@ -14,6 +14,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function step(ms, count) {
     for (var index = 0; index < (count || 1); index++) window.__entranceDriveStep(ms);
   }
+  function startBanff() {
+    var started = window.__entranceRoadtripStart();
+    if (started) {
+      window.__entranceRoadtripSetRoute("banff", 0);
+      window.__entranceRoadtripSetLane(2.08);
+    }
+    return started;
+  }
   function overtaker() {
     return document.querySelector('#entrance-roadtrip-entities [data-roadtrip-overtaking-player="true"]');
   }
@@ -45,7 +53,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        startBanff();
         window.__entranceDriveSetMotion(0, 0);
         report.steps.start = {
           state: state(),
@@ -65,7 +73,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__dismissEntrancePorscheDriveHud();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        startBanff();
         window.__entranceDriveSetMotion(0, 0);
         window.__entranceRoadtripSetLane(.5);
         ["throttle", "brake", "clutch", "steerLeft", "steerRight"].forEach(function (name) {
@@ -110,7 +118,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           window.__dismissEntrancePorscheDriveHud();
           window.__openEntrancePorscheDriveHud();
           if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-          window.__entranceRoadtripStart();
+          startBanff();
           window.__entranceDriveSetMotion(speed, 3);
           window.__entranceRoadtripSetLane(1.5);
           var probe = window.__entranceRoadtripSpawnOvertaker();

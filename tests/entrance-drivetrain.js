@@ -394,9 +394,10 @@ check(friction && Math.abs(friction.normal.speed - 55.64) < .001,
   "normal-speed neutral coasting retains the prior resistance curve above the low-speed taper", friction);
 var brakePitch = s.brakePitch;
 check(brakePitch && brakePitch.hardStep.longitudinalDeceleration > brakePitch.shortStep.longitudinalDeceleration &&
-  brakePitch.hardStep.noseDive > brakePitch.shortStep.noseDive &&
+  brakePitch.hardStep.noseDive > brakePitch.shortStep.noseDive * 10 &&
+  brakePitch.shortStep.noseDive < .02 &&
   /^rotate\(-/.test(brakePitch.hardStep.pitchTransform),
-  "nose-down pitch scales with measured longitudinal deceleration", brakePitch && {
+  "nose-down pitch scales with measured deceleration and nearly disappears at crawling speed", brakePitch && {
     hard: brakePitch.hardStep, short: brakePitch.shortStep
   });
 check(brakePitch && brakePitch.braking.noseDive > 1.5 &&

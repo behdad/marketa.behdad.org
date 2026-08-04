@@ -160,10 +160,11 @@ check(restored && restored.state.open && restored.state.drive.hud &&
   !restored.state.drive.roadtrip.reentryVisible && !restored.buttonVisible &&
   restored.transportVisible && restored.transportPaused,
   "Continue restores the paused highway frame with an explicit Play control", restored && restored.state);
-check(restored && same(restored.expected, restored.run) && restored.run.damage.kind === "cracked" &&
+check(restored && same(restored.expected, restored.run) && restored.run.state.runSeed > 0 &&
+  restored.run.damage.kind === "cracked" &&
   restored.run.damage.geometry.primary === restored.crackPrimary && restored.run.police.phase === "warning" &&
   restored.run.entities.length >= 2,
-  "reload preserves score/time/distance, traffic positions, crack geometry, and police state exactly",
+  "reload preserves the run seed, score/time/distance, traffic positions, crack geometry, and police state exactly",
   restored && { expected: restored.expected, run: restored.run });
 check(restored && restored.frozenAfter.distance === restored.frozenBefore.distance &&
   restored.frozenAfter.elapsedSeconds === restored.frozenBefore.elapsedSeconds &&

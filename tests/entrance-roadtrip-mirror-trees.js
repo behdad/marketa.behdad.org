@@ -36,6 +36,7 @@ var roadtripFurniturePool = Array.from({ length: ROADTRIP_FURNITURE_SIZE }, func
 });
 var roadtripState = { active: true, distance: 60 };
 function roadtripRearCurveOffset() { return 0; }
+function roadtripFurnitureSide(item) { return item.index % 2 ? 1 : -1; }
 function roadtripMirrorProject(behind) {
   var perspective = Math.max(0, 1 - behind / 62);
   return { center: 340, halfWidth: 3 + perspective * 55, perspective: perspective, y: -99 + perspective * 22 };
@@ -43,10 +44,10 @@ function roadtripMirrorProject(behind) {
 
 var paint = functionMatch ? Function(
   "roadtripMirrorTreePool", "roadtripMirrorTerrain", "roadtripState", "roadtripFurniturePool", "ROADTRIP_FURNITURE_SIZE",
-  "roadtripRearCurveOffset", "roadtripMirrorProject",
+  "roadtripRearCurveOffset", "roadtripFurnitureSide", "roadtripMirrorProject",
   "return (" + functionMatch[0] + ");"
 )(roadtripMirrorTreePool, roadtripMirrorTerrain, roadtripState, roadtripFurniturePool, ROADTRIP_FURNITURE_SIZE,
-  roadtripRearCurveOffset, roadtripMirrorProject) : function () {};
+  roadtripRearCurveOffset, roadtripFurnitureSide, roadtripMirrorProject) : function () {};
 paint();
 
 var visible = trees.filter(function (tree) { return tree.getAttribute("visibility") === "visible"; });
@@ -83,7 +84,7 @@ check(/for \(var mirrorTreeIndex = 0; mirrorTreeIndex < 8; mirrorTreeIndex\+\+\)
   /mirrorTree\.setAttribute\("href", "#entrance-drive-conifer"\)/.test(source),
   "the tree pool reuses the native SVG conifer without new assets");
 check(/roadtripFurniturePool\.filter\(function \(item\) \{ return item\.type === "tree"; \}\)/.test(source) &&
-  /var treeAt = source\.index \* 21 \+ 4/.test(source) && /var side = source\.index % 2 \? 1 : -1/.test(source),
+  /var treeAt = source\.index \* 21 \+ 4/.test(source) && /var side = roadtripFurnitureSide\(source\)/.test(source),
   "mirror trees reuse the windshield furniture cadence and roadside side");
 check(/entrance-roadtrip-season-spring #entrance-roadtrip-mirror-trees\{fill:#4d7048\}/.test(source) &&
   /entrance-roadtrip-season-winter #entrance-roadtrip-mirror-trees\{fill:#3f4b48;stroke:#273330;stroke-width:\.35\}/.test(source),

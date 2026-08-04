@@ -81,6 +81,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
   }
   function viewBox() { return document.getElementById("entrance-drive-hud-svg").getAttribute("viewBox"); }
+  function aspectRatio() { return document.getElementById("entrance-drive-hud-svg").getAttribute("preserveAspectRatio"); }
   function visiblePath(el, stop) {
     var hidden = null;
     for (var node = el; node && node !== stop.parentNode; node = node.parentElement) {
@@ -297,6 +298,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       roadtrip: copy(roadtrip()),
       roomClasses: activeClasses,
       viewBox: viewBox(),
+      aspectRatio: aspectRatio(),
       geometry: { room: box(room), hud: box(hud), svg: box(svg) },
       retained: {
         roomArt: { display: getComputedStyle(document.getElementById("entrance-room-art")).display },
@@ -690,7 +692,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var retainedSpawn = spawn("token", 1);
     var closeBefore = { roadtrip: copy(roadtrip()), node: entityVisual(retainedSpawn.node), viewBox: viewBox() };
     window.__closeEntranceRoom();
-    var closed = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox(), dom: childCount(), visible: visibleChildCount() };
+    var closed = { roadtrip: copy(roadtrip()), classes: room.getAttribute("class"), viewBox: viewBox(), aspectRatio: aspectRatio(), dom: childCount(), visible: visibleChildCount() };
     var closedWrapStart = state().drive.wraps;
     for (var closedTick = 0; closedTick < 40 && state().drive.wraps === closedWrapStart; closedTick++) step(1000);
     var ignoredClosedWrap = state().drive.wraps;
@@ -933,6 +935,7 @@ check(activation && activation.practice.some(function (row) { return row.practic
   activation && { practice: activation.practice, offer: activation.offer, roadtrip: activation.roadtrip });
 check(activation && activation.roomClasses.indexOf("roadtrip-active") >= 0 &&
   activation.viewBox === "0 -120 680 340" &&
+  activation.aspectRatio === "xMidYMax slice" &&
   activation.geometry.hud.height >= activation.geometry.room.height * .95 &&
   Math.abs(activation.geometry.hud.top - activation.geometry.room.top) <= 1,
   "activation expands the dashboard SVG and HUD to the full Entrance view", activation);
@@ -1207,7 +1210,7 @@ check(pass && pass.visual.kind === "traffic" && pass.visual.lane === "1.5" && pa
 var close = s.close;
 check(close && close.before.roadtrip.active && close.before.roadtrip.entityCount > 0 &&
   !close.closed.roadtrip.active && close.closed.classes.indexOf("roadtrip-active") < 0 &&
-  close.closed.viewBox === "0 -31 680 207" &&
+  close.closed.viewBox === "0 -31 680 207" && close.closed.aspectRatio === "xMidYMax meet" &&
   close.parked.distance === close.closed.roadtrip.distance && close.parked.entityCount === close.closed.roadtrip.entityCount &&
   close.ignoredClosedWrap > close.closedWrapStart && close.closedWrapEnd === close.ignoredClosedWrap &&
   close.closedPosition <= -647 && close.closedPosition > -648 && !close.parked.invitationReady &&

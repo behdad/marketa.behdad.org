@@ -40866,6 +40866,14 @@ window.__entranceRoomOpen = false;
     if (!event) return false;
     var key = String(event.key || "").toLowerCase();
     var code = String(event.code || "");
+    var transmissionModeArrow = event.ctrlKey && !event.metaKey && !event.altKey &&
+      (code === "ArrowLeft" || code === "ArrowRight");
+    if (transmissionModeArrow) {
+      if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
+      if (down && !event.repeat) setPorscheTransmissionMode(
+        code === "ArrowLeft" ? "auto" : "manual", true);
+      return true;
+    }
     if (roadtripResumePending && down && event.repeat) return !!window.__entranceRoomOpen;
     var shiftKeyEvent = code === "ShiftLeft" || code === "ShiftRight" || key === "shift";
     if (shiftKeyEvent) {
@@ -42461,6 +42469,13 @@ document.addEventListener("keydown", function (event) {
   if (window.__dropTermOpen && window.__dropTermOpen()) return;
   var entranceRoom = document.getElementById("entrance-room");
   var driveHudOpen = entranceRoom && entranceRoom.classList.contains("drive-hud-visible");
+  if (driveHudOpen && event.ctrlKey && !event.metaKey && !event.altKey &&
+      (event.code === "ArrowLeft" || event.code === "ArrowRight")) {
+    if (window.__entranceDriveKey) window.__entranceDriveKey(event, true);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
   if (driveHudOpen && !event.ctrlKey && !event.metaKey) {
     if (event.code === "Backquote" || event.key === "`") return;
     if (event.key === "Tab") return;
@@ -42554,9 +42569,11 @@ document.addEventListener("keyup", function (event) {
   if (!window.__entranceRoomOpen || !window.__entranceDriveKey) return;
   if (window.__dropTermOpen && window.__dropTermOpen()) return;
   var entranceRoom = document.getElementById("entrance-room");
-  if (entranceRoom && entranceRoom.classList.contains("drive-hud-visible") &&
-      !event.ctrlKey && !event.metaKey) {
-    if (event.key === "Tab") return;
+  var driveRelease = event.code === "Space" || event.code === "ArrowUp" ||
+    event.code === "ArrowDown" || event.code === "ArrowLeft" ||
+    event.code === "ArrowRight" || event.code === "ShiftLeft" ||
+    event.code === "ShiftRight";
+  if (entranceRoom && entranceRoom.classList.contains("drive-hud-visible") && driveRelease) {
     window.__entranceDriveKey(event, false);
     event.preventDefault();
     event.stopImmediatePropagation();

@@ -27,10 +27,12 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function state() { return window.__entranceRoomState(); }
   function drive() { return state().drive; }
-  function key(key, code, target) {
-    (target || document).dispatchEvent(new KeyboardEvent("keydown", {
+  function key(key, code, target, modifiers) {
+    var event = new KeyboardEvent("keydown", Object.assign({
       key: key, code: code || key, bubbles: true, cancelable: true
-    }));
+    }, modifiers || {}));
+    (target || document).dispatchEvent(event);
+    return event;
   }
   async function run() {
     try {
@@ -85,6 +87,20 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       key("m", "KeyM");
       key("a", "KeyA");
       report.steps.shortcuts = copy(drive().transmission);
+      var ctrlRight = key("ArrowRight", "ArrowRight", null, { ctrlKey: true });
+      var ctrlRightMode = copy(drive().transmission);
+      var ctrlLeft = key("ArrowLeft", "ArrowLeft", null, { ctrlKey: true });
+      report.steps.ctrlShortcuts = {
+        right: ctrlRightMode,
+        left: copy(drive().transmission),
+        rightPrevented: ctrlRight.defaultPrevented,
+        leftPrevented: ctrlLeft.defaultPrevented
+      };
+      key("ArrowUp", "ArrowUp");
+      document.dispatchEvent(new KeyboardEvent("keyup", {
+        key: "ArrowUp", code: "ArrowUp", ctrlKey: true, bubbles: true, cancelable: true
+      }));
+      report.steps.ctrlPedalRelease = copy(drive().holds);
       window.__entranceDriveTransmissionMode("manual", true);
       report.steps.parkToManual = copy(drive());
       window.__entranceDriveTransmissionMode("auto", true);
@@ -377,6 +393,12 @@ check(s.autoCopyEn && s.autoCopyEn.title === "Select Drive" &&
     en: s.autoCopyEn, cs: s.autoCopyCs
   });
 check(s.shortcuts && s.shortcuts.mode === "auto", "A/M mode shortcuts operate while the HUD is open", s.shortcuts);
+check(s.ctrlShortcuts && s.ctrlShortcuts.right.mode === "manual" &&
+  s.ctrlShortcuts.left.mode === "auto" && s.ctrlShortcuts.rightPrevented &&
+  s.ctrlShortcuts.leftPrevented,
+  "Ctrl+Right selects MANUAL and Ctrl+Left selects AUTO without steering or browser scroll", s.ctrlShortcuts);
+check(s.ctrlPedalRelease && !s.ctrlPedalRelease.throttle,
+  "releasing the accelerator while Ctrl is held cannot masquerade as cruise control", s.ctrlPedalRelease);
 check(s.parkToManual && s.parkToManual.transmission.mode === "manual" && s.parkToManual.gear === 0,
   "switching from AUTO P enters MANUAL neutral instead of reverse", s.parkToManual);
 check(s.rangeShiftGesture && s.rangeShiftGesture.ranges.join("") === "RNDNRPRND" &&

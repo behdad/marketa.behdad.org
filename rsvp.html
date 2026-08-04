@@ -35498,7 +35498,8 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
   var ROADTRIP_POLICE_ROADSIDE_MIRROR_DISTANCE = 62;
   var ROADTRIP_POLICE_ROADSIDE_JOIN_DISTANCE = 24;
-  var ROADTRIP_POLICE_PARKED_BEHIND = 11;
+  var ROADTRIP_POLICE_PARKED_BEHIND = 5;
+  var ROADTRIP_POLICE_REAR_STOP_SCALE = 2.25;
   // Alberta's standard schedule, including the 20% Victims of Crime surcharge.
   // Index = whole km/h over; 51+ has no fixed amount and requires court.
   var ROADTRIP_POLICE_STANDARD_FINES = [0,
@@ -35523,6 +35524,8 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_CAPTURE_MAX_SECONDS = 3.6;
   var ROADTRIP_POLICE_STOPPED_BEAT_SECONDS = 1.25;
   var ROADTRIP_POLICE_FRONT_STOP_SECONDS = 1.8;
+  var ROADTRIP_POLICE_FRONT_PARKED_AHEAD = 5;
+  var ROADTRIP_POLICE_FRONT_PARKED_SCALE = 1.65;
   var ROADTRIP_POLICE_ARREST_SECONDS = 5.8;
   var ROADTRIP_POLICE_ARREST_SHOUT_OVER = 90;
   var ROADTRIP_POLICE_ARREST_SHOUT_AT = 1.3;
@@ -35660,6 +35663,7 @@ window.__entranceRoomOpen = false;
       stopInFront: false,
       stopMirrorBehind: ROADTRIP_POLICE_PARKED_BEHIND,
       stopMirrorRoadFraction: 1.08,
+      stopFrontRoadFraction: 0,
       resolutionReason: "",
       arrestElapsed: 0,
       arrestShoutPlayed: false,
@@ -36142,6 +36146,7 @@ window.__entranceRoomOpen = false;
   function selectPorscheDriveRange(range) {
     range = String(range || "").toUpperCase();
     if (porscheTransmission.mode !== "auto" || ["P", "R", "N", "D"].indexOf(range) < 0) return false;
+    if (roadtripFrontStopBlocksDrive() && range !== "P" && range !== "N") return false;
     if (range !== "P" && range !== "N" && !porscheState.engineOn) {
       pulsePorscheIgnitionKey();
       return false;
@@ -37392,6 +37397,8 @@ window.__entranceRoomOpen = false;
     if (roadtripPoliceFrontNode) {
       roadtripPoliceFrontNode.removeAttribute("data-roadtrip-police");
       roadtripPoliceFrontNode.removeAttribute("data-roadtrip-ahead");
+      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-road-fraction");
+      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-scale");
     }
     if (roadtripPoliceMirrorFlashNode) {
       roadtripPoliceMirrorFlashNode.classList.remove("is-pursuing");
@@ -37472,6 +37479,11 @@ window.__entranceRoomOpen = false;
     }
     return police.surrenderLatched;
   }
+  function roadtripFrontStopBlocksDrive() {
+    var police = roadtripState.police;
+    return !!(roadtripState.active && police.stopInFront &&
+      (police.phase === "stopped" || police.phase === "arrest"));
+  }
   function resetRoadtripPoliceRun() {
     var police = roadtripState.police;
     police.phase = "idle";
@@ -37516,6 +37528,7 @@ window.__entranceRoomOpen = false;
     police.stopInFront = false;
     police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
     police.stopMirrorRoadFraction = 1.08;
+    police.stopFrontRoadFraction = 0;
     police.resolutionReason = "";
     police.arrestElapsed = 0;
     police.arrestShoutPlayed = false;
@@ -37564,6 +37577,7 @@ window.__entranceRoomOpen = false;
     police.stopInFront = false;
     police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
     police.stopMirrorRoadFraction = 1.08;
+    police.stopFrontRoadFraction = 0;
     police.resolutionReason = "";
     police.arrestElapsed = 0;
     police.arrestShoutPlayed = false;
@@ -37612,6 +37626,7 @@ window.__entranceRoomOpen = false;
     police.stopInFront = false;
     police.stopMirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
     police.stopMirrorRoadFraction = 1.08;
+    police.stopFrontRoadFraction = 0;
     police.resolutionReason = "";
     police.arrestElapsed = 0;
     police.arrestShoutPlayed = false;
@@ -37640,6 +37655,7 @@ window.__entranceRoomOpen = false;
     police.escapeGap = 0;
     police.escapeHoldElapsed = 0;
     police.stopInFront = false;
+    police.stopFrontRoadFraction = 0;
     roadtripPoliceFeedback(feedbackKey, values || {}, 4400);
     paintRoadtripPolice();
     updateRoadtripPoliceSiren();
@@ -37721,6 +37737,7 @@ window.__entranceRoomOpen = false;
     Object.keys(driveState.holds).forEach(function (key) { driveState.holds[key] = false; });
     driveState.rpm = porscheState.engineOn ? 780 : 0;
     police.stopInFront = reason === "pulled-over" && police.courtRequired;
+    police.stopFrontRoadFraction = roadtripPlayerLane() * ROADTRIP_LANE_FRACTION;
     if (reason === "pulled-over") {
       police.stopMirrorBehind = Math.max(ROADTRIP_POLICE_PARKED_BEHIND,
         Number(roadtripPoliceMirrorNode && roadtripPoliceMirrorNode.getAttribute("data-roadtrip-behind")) ||
@@ -37919,6 +37936,7 @@ window.__entranceRoomOpen = false;
       var mirrorBehind = followingBehind;
       var mirrorRoadFraction = followingLane * ROADTRIP_LANE_FRACTION;
       var mirrorMode = police.phase;
+      var mirrorStopScale = 1;
       if (roadsideReflection) {
         if (police.phase === "pursuit" || police.phase === "capture") {
           var join = Math.max(0, Math.min(1,
@@ -37948,14 +37966,20 @@ window.__entranceRoomOpen = false;
           (ROADTRIP_POLICE_PARKED_BEHIND - police.stopMirrorBehind) * stopPull;
         mirrorRoadFraction = police.stopMirrorRoadFraction +
           (1.08 - police.stopMirrorRoadFraction) * stopPull;
+        if (!police.stopInFront && police.resolutionReason === "pulled-over") {
+          mirrorStopScale += (ROADTRIP_POLICE_REAR_STOP_SCALE - 1) * stopPull;
+        }
         mirrorMode = stopPull < 1 ? "shoulder-arrival" : "shoulder-stopped";
       } else if (police.phase === "arrest") {
         mirrorBehind = ROADTRIP_POLICE_PARKED_BEHIND;
         mirrorRoadFraction = 1.08;
+        if (!police.stopInFront && police.resolutionReason === "pulled-over") {
+          mirrorStopScale = ROADTRIP_POLICE_REAR_STOP_SCALE;
+        }
         mirrorMode = "shoulder-" + police.phase;
       }
       var mirrorPose = roadtripMirrorPoseAt(roadtripState.distance, mirrorBehind, mirrorRoadFraction);
-      var mirrorScale = .06 + mirrorPose.perspective * .185;
+      var mirrorScale = (.06 + mirrorPose.perspective * .185) * mirrorStopScale;
       police.mirrorScale = mirrorScale;
       roadtripPoliceMirrorNode.setAttribute("data-roadtrip-police", mirrorMode);
       roadtripPoliceMirrorNode.setAttribute("data-roadtrip-road-left", mirrorPose.roadLeft.toFixed(2));
@@ -37999,14 +38023,18 @@ window.__entranceRoomOpen = false;
       var frontProgress = police.phase === "arrest" ? 1 : Math.max(0, Math.min(1,
         police.stoppedElapsed / ROADTRIP_POLICE_FRONT_STOP_SECONDS));
       frontProgress = frontProgress * frontProgress * (3 - 2 * frontProgress);
-      var frontAhead = 1.5 + 16.5 * frontProgress;
+      var frontAhead = 1.5 + (ROADTRIP_POLICE_FRONT_PARKED_AHEAD - 1.5) * frontProgress;
       var frontPoint = roadtripProject(frontAhead);
-      var frontX = roadtripProjectLateral(frontPoint, 1.08);
-      var frontScale = (.11 + frontPoint.perspective * .9) * .96;
+      var frontRoadFraction = 1.08 + (police.stopFrontRoadFraction - 1.08) * frontProgress;
+      var frontX = roadtripProjectLateral(frontPoint, frontRoadFraction);
+      var frontScale = (.11 + frontPoint.perspective * .9) * .96 *
+        ROADTRIP_POLICE_FRONT_PARKED_SCALE;
       roadtripPoliceFrontNode.setAttribute("data-roadtrip-police",
         police.phase === "arrest" ? "front-arrest" :
           (frontProgress < 1 ? "front-arrival" : "front-stopped"));
       roadtripPoliceFrontNode.setAttribute("data-roadtrip-ahead", frontAhead.toFixed(2));
+      roadtripPoliceFrontNode.setAttribute("data-roadtrip-road-fraction", frontRoadFraction.toFixed(3));
+      roadtripPoliceFrontNode.setAttribute("data-roadtrip-scale", frontScale.toFixed(3));
       roadtripPoliceFrontNode.setAttribute("transform", "translate(" + frontX.toFixed(2) + " " +
         frontPoint.y.toFixed(2) + ") scale(" + frontScale.toFixed(3) + ")");
       roadtripPoliceFrontNode.setAttribute("visibility", "visible");
@@ -38014,6 +38042,8 @@ window.__entranceRoomOpen = false;
       roadtripPoliceFrontNode.setAttribute("visibility", "hidden");
       roadtripPoliceFrontNode.removeAttribute("data-roadtrip-police");
       roadtripPoliceFrontNode.removeAttribute("data-roadtrip-ahead");
+      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-road-fraction");
+      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-scale");
     }
     if (roadHost) {
       if (roadtripPoliceWarningBeams) roadHost.appendChild(roadtripPoliceWarningBeams);
@@ -41022,6 +41052,7 @@ window.__entranceRoomOpen = false;
     gear = Number(gear);
     if (gear < -1 || gear > 6 || gear !== Math.round(gear)) return false;
     if (syncRoadtripDemeritState()) return false;
+    if (roadtripFrontStopBlocksDrive() && gear !== 0) return false;
     if (gear !== 0 && !porscheState.engineOn) {
       pulsePorscheIgnitionKey();
       return false;
@@ -41251,6 +41282,7 @@ window.__entranceRoomOpen = false;
     if (syncRoadtripDemeritState()) return true;
     held = !!held;
     if (name === "clutch" && porscheTransmission.mode === "auto") held = false;
+    if (name === "throttle" && held && roadtripFrontStopBlocksDrive()) held = false;
     // The pedal may still press with the ignition off, but it is not a driving
     // input then: do not wake a parked simulation or release Road Trip's
     // attention pause. An already-moving car keeps its existing coast loop.
@@ -42648,6 +42680,10 @@ window.__entranceRoomOpen = false;
           overtakeCooldown: roadtripState.overtakeCooldown,
           policeStoppedBeat: ROADTRIP_POLICE_STOPPED_BEAT_SECONDS,
           policeFrontStoppedBeat: ROADTRIP_POLICE_FRONT_STOP_SECONDS,
+          policeParkedBehind: ROADTRIP_POLICE_PARKED_BEHIND,
+          policeRearStopScale: ROADTRIP_POLICE_REAR_STOP_SCALE,
+          policeFrontParkedAhead: ROADTRIP_POLICE_FRONT_PARKED_AHEAD,
+          policeFrontParkedScale: ROADTRIP_POLICE_FRONT_PARKED_SCALE,
           policeArrestDuration: ROADTRIP_POLICE_ARREST_SECONDS,
           police: {
             phase: roadtripState.police.phase,
@@ -42691,6 +42727,8 @@ window.__entranceRoomOpen = false;
             stopInFront: roadtripState.police.stopInFront,
             stopMirrorBehind: roadtripState.police.stopMirrorBehind,
             stopMirrorRoadFraction: roadtripState.police.stopMirrorRoadFraction,
+            stopFrontRoadFraction: roadtripState.police.stopFrontRoadFraction,
+            frontBlocksDrive: roadtripFrontStopBlocksDrive(),
             resolutionReason: roadtripState.police.resolutionReason,
             arrestElapsed: roadtripState.police.arrestElapsed,
             arrestShoutPlayed: roadtripState.police.arrestShoutPlayed,
@@ -42723,6 +42761,10 @@ window.__entranceRoomOpen = false;
               (roadtripPoliceFrontNode.getAttribute("data-roadtrip-police") || "") : "",
             frontAhead: Number(roadtripPoliceFrontNode &&
               roadtripPoliceFrontNode.getAttribute("data-roadtrip-ahead")) || 0,
+            frontRoadFraction: Number(roadtripPoliceFrontNode &&
+              roadtripPoliceFrontNode.getAttribute("data-roadtrip-road-fraction")) || 0,
+            frontScale: Number(roadtripPoliceFrontNode &&
+              roadtripPoliceFrontNode.getAttribute("data-roadtrip-scale")) || 0,
             frontTransform: roadtripPoliceFrontNode ?
               (roadtripPoliceFrontNode.getAttribute("transform") || "") : "",
             roadsideVisible: !!(roadtripPoliceRoadNode && roadtripPoliceRoadNode.getAttribute("visibility") !== "hidden"),
@@ -42779,6 +42821,7 @@ window.__entranceRoomOpen = false;
   window.__entranceDriveAcceleration = porscheDriveAcceleration;
   window.__entranceDriveSetMotion = function (speed, gear) {
     if (syncRoadtripDemeritState()) return false;
+    if (roadtripFrontStopBlocksDrive()) return false;
     gear = Math.round(Number(gear) || 0);
     if (gear < -1 || gear > (porscheTransmission.mode === "auto" ? 7 : 6)) return false;
     speed = Math.max(-263, Math.min(263, Number(speed) || 0));

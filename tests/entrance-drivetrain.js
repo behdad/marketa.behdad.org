@@ -71,6 +71,46 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         };
         window.__toggleEntrancePorscheEngine();
 
+        setMotion(60, 3);
+        window.__entranceDriveKey(new KeyboardEvent("keydown", {
+          key: "Shift", code: "ShiftLeft", shiftKey: true
+        }), true);
+        window.__entranceDriveKey(new KeyboardEvent("keydown", {
+          key: "ArrowDown", code: "ArrowDown", shiftKey: true
+        }), true);
+        var downshiftHeld = copy(state());
+        window.__entranceDriveKey(new KeyboardEvent("keyup", {
+          key: "Shift", code: "ShiftLeft"
+        }), false);
+        var downshiftClutchReleased = copy(state());
+        window.__entranceDriveKey(new KeyboardEvent("keyup", {
+          key: "ArrowDown", code: "ArrowDown"
+        }), false);
+        var downshiftReleased = copy(state());
+        setMotion(40, 1);
+        window.__entranceDriveKey(new KeyboardEvent("keydown", {
+          key: "Shift", code: "ShiftLeft", shiftKey: true
+        }), true);
+        window.__entranceDriveKey(new KeyboardEvent("keydown", {
+          key: "ArrowUp", code: "ArrowUp", shiftKey: true
+        }), true);
+        var upshiftHeld = copy(state());
+        window.__entranceDriveKey(new KeyboardEvent("keyup", {
+          key: "Shift", code: "ShiftLeft"
+        }), false);
+        var upshiftClutchReleased = copy(state());
+        window.__entranceDriveKey(new KeyboardEvent("keyup", {
+          key: "ArrowUp", code: "ArrowUp"
+        }), false);
+        report.steps.shiftPedalHandoff = {
+          downHeld: downshiftHeld,
+          downClutchReleased: downshiftClutchReleased,
+          downReleased: downshiftReleased,
+          upHeld: upshiftHeld,
+          upClutchReleased: upshiftClutchReleased,
+          upReleased: copy(state())
+        };
+
         report.steps.ratioSpeedsAt3000 = [1, 2, 3, 4, 5, 6].map(function (gear) {
           var ratios = [3.667, 2.05, 1.407, 1.133, .972, .841];
           var speed = 3000 * 60 * 2.0948 / (ratios[gear - 1] * 3.875 * 1000);
@@ -289,6 +329,14 @@ check(s.ratioSpeedsAt3000 && s.ratioSpeedsAt3000.length === 6 &&
   "all six published manual ratios map 3,000 rpm to wheel speed coherently", s.ratioSpeedsAt3000);
 check(s.coupled && Math.abs(s.coupled.rpm - s.coupled.expectedRpm) < .5,
   "an engaged clutch keeps engine RPM locked to wheel speed after road load", s.coupled);
+var shiftHandoff = s.shiftPedalHandoff;
+check(shiftHandoff && shiftHandoff.downHeld.gear === 2 && shiftHandoff.downHeld.holds.clutch &&
+  !shiftHandoff.downHeld.holds.brake && !shiftHandoff.downClutchReleased.holds.clutch &&
+  shiftHandoff.downClutchReleased.holds.brake && !shiftHandoff.downReleased.holds.brake &&
+  shiftHandoff.upHeld.gear === 2 && shiftHandoff.upHeld.holds.clutch &&
+  shiftHandoff.upHeld.holds.throttle && !shiftHandoff.upClutchReleased.holds.clutch &&
+  shiftHandoff.upClutchReleased.holds.throttle && !shiftHandoff.upReleased.holds.throttle,
+  "shift arrows hand throttle/brake to the held arrow only after the clutch gesture", shiftHandoff);
 var offRest = s.offEngineRest;
 check(offRest && !offRest.before.car.engineOn && !offRest.repeated.car.engineOn &&
   offRest.before.drive.speed === 0 && offRest.repeated.drive.speed === 0 &&

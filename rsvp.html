@@ -34971,6 +34971,7 @@ window.__entranceRoomOpen = false;
   var driveShifterPressSerial = 0;
   var driveShifterSuppressClickUntil = 0;
   var driveShiftKeyHeld = false;
+  var driveDownshiftArrowHeld = false;
   var lastDriveInstruction = "";
   var roadtripShiftHintKey = "";
   var roadtripShiftHintMs = 0;
@@ -35787,6 +35788,7 @@ window.__entranceRoomOpen = false;
       cancelPorscheShifterPress();
       cancelPorscheTouchSteering();
       setPorscheDriveShiftKeyHeld(false);
+      driveDownshiftArrowHeld = false;
       clearTimeout(porscheSpinTimer);
       porscheSpinTimer = null;
       if (driveFrame) cancelAnimationFrame(driveFrame);
@@ -39952,6 +39954,7 @@ window.__entranceRoomOpen = false;
     cancelPorscheTouchSteering();
     porscheTouchSteering.returning = false;
     setPorscheDriveShiftKeyHeld(false);
+    driveDownshiftArrowHeld = false;
     if (driveFrame) cancelAnimationFrame(driveFrame);
     if (driveTimer) clearTimeout(driveTimer);
     driveFrame = null;
@@ -40022,13 +40025,17 @@ window.__entranceRoomOpen = false;
         else if (driveState.holds.brake) stepPorscheDriveGear(-1);
       }
       setPorscheDriveShiftKeyHeld(down);
+      if (!down && driveDownshiftArrowHeld) {
+        driveDownshiftArrowHeld = false;
+        setPorscheDriveHold("brake", true);
+      }
     }
     else if (!down && !event.shiftKey) setPorscheDriveShiftKeyHeld(false);
     var shiftedGearStep = event.shiftKey && (code === "ArrowUp" || code === "ArrowDown");
     if (shiftedGearStep && down) {
       if (!event.repeat) stepPorscheDriveGear(code === "ArrowUp" ? 1 : -1);
-      driveCoachNeedsFreshPedal = true; // Shift+arrow changes gear and briefly holds a pedal; require a fresh pedal action for the lesson.
-      setPorscheDriveHold(code === "ArrowUp" ? "throttle" : "brake", true);
+      if (code === "ArrowUp") setPorscheDriveHold("throttle", true);
+      else driveDownshiftArrowHeld = true;
       return !!window.__entranceRoomOpen;
     }
     var hold = code === "Space" || code === "ArrowUp" || key === " " || key === "spacebar" || key === "arrowup" ? "throttle" :
@@ -40037,6 +40044,7 @@ window.__entranceRoomOpen = false;
       code === "ArrowLeft" || key === "arrowleft" ? "steerLeft" :
       code === "ArrowRight" || key === "arrowright" ? "steerRight" : null;
     if (!down && hold) {
+      if (hold === "brake") driveDownshiftArrowHeld = false;
       setPorscheDriveHold(hold, false);
       return !!window.__entranceRoomOpen;
     }
@@ -40387,6 +40395,7 @@ window.__entranceRoomOpen = false;
   function dismissPorscheDriveHud() {
     cancelPorscheShifterPress();
     setPorscheDriveShiftKeyHeld(false);
+    driveDownshiftArrowHeld = false;
     if (roadtripState.active) pauseRoadtrip();
     else parkRoadtrip(!roadtripState.paused);
     resetRoadtripInvitationSession();
@@ -40410,6 +40419,7 @@ window.__entranceRoomOpen = false;
   function hidePorscheDriveHudOnly() {
     cancelPorscheShifterPress();
     setPorscheDriveShiftKeyHeld(false);
+    driveDownshiftArrowHeld = false;
     if (roadtripState.active) pauseRoadtrip();
     else parkRoadtrip(false);
     resetRoadtripInvitationSession();
@@ -40659,6 +40669,7 @@ window.__entranceRoomOpen = false;
       cancelPorscheShifterPress();
       cancelPorscheTouchSteering();
       setPorscheDriveShiftKeyHeld(false);
+      driveDownshiftArrowHeld = false;
       stopPorscheHornSound();
       Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
       if (driveFrame) cancelAnimationFrame(driveFrame);

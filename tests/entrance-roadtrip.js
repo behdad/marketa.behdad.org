@@ -1605,6 +1605,7 @@ var oncomingCrash = s.oncomingCrash;
 check(oncomingCrash && oncomingCrash.before.visual.direction === "oncoming" &&
   !oncomingCrash.after.state.car.engineOn && oncomingCrash.after.state.drive.stalled &&
   oncomingCrash.after.state.drive.speed === 0 && oncomingCrash.after.state.drive.gear === 0 &&
+  oncomingCrash.after.state.drive.transmission.range === "P" &&
   oncomingCrash.after.state.drive.roadtrip.collisions > oncomingCrash.before.state.drive.roadtrip.collisions &&
   oncomingCrash.after.state.drive.roadtrip.score - oncomingCrash.before.state.drive.roadtrip.score === -100 &&
   oncomingCrash.after.state.drive.roadtrip.multiplier === 1 &&

@@ -466,9 +466,9 @@ check(s.manualDirectionSafety && s.manualDirectionSafety.lowSpeedAccepted &&
   s.manualDirectionSafety.unsafe.drive.stalled && s.manualDirectionSafety.unsafe.drive.gear === 0,
   "MANUAL retains its separate 6 km/h wrong-direction stall boundary", s.manualDirectionSafety);
 check(s.headOn && !s.headOn.car.engineOn && s.headOn.drive.stalled &&
-  s.headOn.drive.transmission.range === "N" && s.headOn.drive.gear === 0 &&
+  s.headOn.drive.transmission.range === "P" && s.headOn.drive.gear === 0 &&
   s.restart && s.restart.car.engineOn && s.restart.drive.transmission.range === "P",
-  "a glass-shattering head-on hit stalls in N and restarts AUTO in P", {
+  "a glass-shattering head-on hit stalls AUTO in P and restarts there", {
     headOn: s.headOn && { car: s.headOn.car, drive: s.headOn.drive }, restart: s.restart
   });
 check(s.engineLifecycle && s.engineLifecycle.stopped.transmission.range === "P" &&

@@ -241,11 +241,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var hooks = ["__entranceRoadtripStart", "__entranceRoadtripSpawn", "__entranceRoadtripSetDistance",
       "__entranceRoadtripSetLane", "__entranceDriveStep", "__entranceDriveSetMotion",
       "__entranceDriveTireAudio", "__entranceDriveSpatialAudio", "__entranceRoadtripTrafficAudio",
-      "__entranceRoomState"];
+      "__entranceRoadtripSpawnPlan", "__entranceRoomState"];
     report.steps.fresh = {
       ids: requiredIds.map(function (id) { return [id, !!document.getElementById(id)]; }),
       hooks: hooks.map(function (name) { return [name, typeof window[name]]; })
     };
+    report.steps.naturalTrafficPlan = Array.from({ length: 20 }, function (_, serial) {
+      return window.__entranceRoadtripSpawnPlan(false, serial);
+    });
     if (report.steps.fresh.ids.some(function (row) { return !row[1]; }) ||
         report.steps.fresh.hooks.some(function (row) { return row[1] !== "function"; })) {
       throw new Error("fresh-page roadtrip contract is incomplete");
@@ -1203,6 +1206,12 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.fresh && s.fresh.ids.every(function (row) { return row[1]; }) &&
   s.fresh.hooks.every(function (row) { return row[1] === "function"; }),
   "a fresh page owns the complete DOM and scripting contract", s.fresh);
+var innerLaneSedans = (s.naturalTrafficPlan || []).filter(function (plan) {
+  return plan.type === "car" && plan.direction === "forward" && plan.lane === .5;
+});
+check(innerLaneSedans.length === 1,
+  "the natural cycle occasionally puts one same-direction sedan in the inner left lane",
+  s.naturalTrafficPlan);
 var tireAudio = s.tireAudio;
 check(tireAudio && tireAudio.highway.tireGain > tireAudio.urban.tireGain &&
   tireAudio.highway.windGain > tireAudio.urban.windGain &&

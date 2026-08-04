@@ -305,7 +305,9 @@ scale/formatting and randomized glass geometry/crack separation without launchin
 Street `driveState.position` uses twice the roadtrip world-travel scale so the compact block loops
 briskly; speed, RPM, odometer distance, and `roadtripState.distance` remain unscaled physical values.
 Roadtrip spawn normalization puts RVs in the outer/right lane for either travel direction and
-starts semis there as well. `syncRoadtripSemiLane()` detects slower same-direction traffic ahead,
+starts semis there as well. The deterministic 20-entry natural cycle includes one forward sedan
+in the inner/left lane so that lane is occasionally occupied without becoming a constant wall.
+`syncRoadtripSemiLane()` detects slower same-direction traffic ahead,
 moves the semi into its direction-relative inner/left lane, raises it to a 26–30 km/h passing
 advantage capped at 110, and returns it to the outer lane and cruise speed after clearance.
 `driveState.odometerKm` is the persistent physical-distance total: every drive step adds

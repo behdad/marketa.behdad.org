@@ -39877,12 +39877,15 @@ window.__entranceRoomOpen = false;
     osc.start(t); thud.start(t); osc.stop(t + .47); thud.stop(t + .47);
     osc.onended = function () { try { osc.disconnect(); thud.disconnect(); out.disconnect(); } catch (_error) {} };
   }
-  function porscheBrakeAudioMix(speed) {
+  function porscheBrakeAudioMix(speed, highway) {
     var active = Math.abs(speed) >= 65;
     var severity = active ? Math.max(0, Math.min(1, (Math.abs(speed) - 65) / 175)) : 0;
+    if (highway == null) highway = roadtripState.active;
     return {
       active: active,
-      absGain: active ? .006 + severity * .003 : 0,
+      // At highway cadence the retriggered low pulse reads as constant chatter beneath
+      // the tire scream. Keep ABS feedback for street braking, but leave Road Trip clean.
+      absGain: active && !highway ? .006 + severity * .003 : 0,
       screechGain: active ? .32 + severity * .12 : 0,
       screechToneGain: active ? .11 + severity * .04 : 0,
       // Hard braking should read as one continuous tire scream; the caller
@@ -39966,9 +39969,13 @@ window.__entranceRoomOpen = false;
     screechGain.gain.setValueAtTime(.0001, t);
     screechGain.gain.exponentialRampToValueAtTime(mix.screechGain, t + .012);
     screechGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
-    absGain.gain.setValueAtTime(.0001, t);
-    absGain.gain.exponentialRampToValueAtTime(mix.absGain, t + .008);
-    absGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
+    if (mix.absGain > 0) {
+      absGain.gain.setValueAtTime(.0001, t);
+      absGain.gain.exponentialRampToValueAtTime(mix.absGain, t + .008);
+      absGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);
+    } else {
+      absGain.gain.setValueAtTime(0, t);
+    }
     screechToneGain.gain.setValueAtTime(.0001, t);
     screechToneGain.gain.exponentialRampToValueAtTime(mix.screechToneGain, t + .016);
     screechToneGain.gain.exponentialRampToValueAtTime(.0001, t + mix.duration);

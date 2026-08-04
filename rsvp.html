@@ -31483,6 +31483,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         <g id="entrance-porsche" transform="translate(328 -9)">
 
           <g id="entrance-porsche-vibration">
+          <g id="entrance-porsche-pitch" transform="rotate(0 296 316)">
           <g id="entrance-porsche-scale" class="entrance-porsche-scale" transform="translate(8 345) scale(.85) translate(-8 -345)">
           <path class="entrance-porsche-drag-hit" d="M8 263Q55 255 137 258L164 250H252Q284 252 346 269Q362 277 368 291L366 309Q356 324 329 324H60Q20 324 8 309Z" fill="transparent" stroke="transparent" pointer-events="fill"/>
           <path class="entrance-porsche-reverse-beam" d="M345 270L430 246V316L345 291Z" fill="#fff0cb"/>
@@ -31741,6 +31742,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <g id="entrance-porsche-mirror">
             <path d="M164 250Q153 244 144 248Q143 256 158 260L166 256Z" fill="#676f73" stroke="#252b2e" stroke-width="1.2"/>
             <path d="M160 250Q152 247 147 250Q149 254 159 256Z" fill="#9ca5a8" opacity=".62"/>
+          </g>
           </g>
           </g>
           </g>
@@ -34816,6 +34818,7 @@ window.__entranceRoomOpen = false;
   var driveTouchSelector = document.getElementById("entrance-drive-touch-selector");
   var driveTouchGearChoices = driveTouchSelector ? Array.prototype.slice.call(driveTouchSelector.querySelectorAll("[data-touch-gear]")) : [];
   var driveGlovebox = document.getElementById("entrance-drive-glovebox");
+  var porschePitch = document.getElementById("entrance-porsche-pitch");
   var porscheFrontWheelSpin = document.getElementById("entrance-porsche-front-wheel-spin");
   var porscheFrontWheelSteer = document.getElementById("entrance-porsche-front-wheel-steer");
   var porscheRearWheelSpin = document.getElementById("entrance-porsche-rear-wheel-spin");
@@ -34892,6 +34895,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_BASE_Y = -9;
   var PORSCHE_WRAP_SPAN = 986;
   var PORSCHE_ROAD_TRAVEL_SCALE = 2.5;
+  // Porsche-published 2010 2.9L Boxster 6MT ratios/final drive, with its 235/50R17 rear tire.
   var PORSCHE_GEAR_RATIOS = { "-1": 3.333, "1": 3.667, "2": 2.05, "3": 1.407,
     "4": 1.133, "5": .972, "6": .841 };
   var PORSCHE_FINAL_DRIVE = 3.875;
@@ -34900,6 +34904,11 @@ window.__entranceRoomOpen = false;
   var PORSCHE_MASS_KG = 1335;
   var PORSCHE_GEAR_SPEED_CEILINGS = { "1": 66.3, "2": 118.7, "3": 172.9,
     "4": 214.7, "5": 250.3, "6": 263 };
+  var PORSCHE_CLUTCH_ENGAGEMENT_BASE_MS = 580;
+  var PORSCHE_CLUTCH_ENGAGEMENT_RANGE_MS = 180;
+  var PORSCHE_CLUTCH_MIN_SLIP_RPM = 700;
+  var PORSCHE_CLUTCH_FULL_SLIP_RPM = 5000;
+  var PORSCHE_NOSE_LIFT_MAX_DEG = 2.4;
   var driveFrame = null;
   var driveTimer = null;
   var driveLastTime = 0;
@@ -35146,6 +35155,11 @@ window.__entranceRoomOpen = false;
     redlineMs: 0,
     throttleHeldMs: 0,
     shiftCutMs: 0,
+    clutchEngagementMs: 0,
+    clutchEngagementDurationMs: 0,
+    clutchEngagementRpm: 0,
+    clutchEngagementStrength: 0,
+    noseLift: 0,
     temperature: 0,
     holds: { throttle: false, brake: false, clutch: false, steerLeft: false, steerRight: false }
   };
@@ -36069,6 +36083,7 @@ window.__entranceRoomOpen = false;
       driveState.gear = 0;
       driveState.throttleHeldMs = 0;
       driveState.shiftCutMs = 0;
+      clearPorscheClutchEngagement(true);
       setPorscheDriveHold("throttle", false);
       setPorscheDriveHold("clutch", false);
       paintPorscheShifter(0);
@@ -37626,7 +37641,7 @@ window.__entranceRoomOpen = false;
       (60 * PORSCHE_TIRE_CIRCUMFERENCE);
   }
   function porscheTorqueFactor(rpm) {
-    var curve = [[750, .35], [2000, .65], [3500, .9], [4400, 1], [6000, 1],
+    var curve = [[750, .45], [1400, .58], [2200, .72], [3500, .9], [4400, 1], [6000, 1],
       [6400, .97], [7000, .85], [7500, .7]];
     rpm = Math.max(curve[0][0], Math.min(curve[curve.length - 1][0], Number(rpm) || 0));
     for (var index = 1; index < curve.length; index++) {
@@ -37644,12 +37659,52 @@ window.__entranceRoomOpen = false;
     var torque = 290 * porscheTorqueFactor(rpm);
     var engine = torque * ratio * PORSCHE_FINAL_DRIVE * .88 /
       (PORSCHE_MASS_KG * PORSCHE_TIRE_RADIUS);
+    var lowRpm = Math.max(0, Math.min(1, (2400 - rpm) / 1650));
+    var lowGearAssist = Math.abs(Number(gear)) <= 2 ? 1 + lowRpm * .24 : 1;
     var metresPerSecond = Math.abs(Number(speed) || 0) / 3.6;
     var resistance = .15 + .00028 * metresPerSecond * metresPerSecond;
     // The effective wheel force includes the launch Porsche quoted in its 5.9 s
     // 0–100 km/h figure; the small calibration factor closes the gap left by the
     // deliberately sparse torque samples without changing their curve shape.
-    return Math.max(0, Math.min(5.8, engine * 1.06) - resistance);
+    return Math.max(0, Math.min(5.8, engine * 1.06 * lowGearAssist) - resistance);
+  }
+  function clearPorscheClutchEngagement(clearLift) {
+    driveState.clutchEngagementMs = 0;
+    driveState.clutchEngagementDurationMs = 0;
+    driveState.clutchEngagementRpm = 0;
+    driveState.clutchEngagementStrength = 0;
+    if (clearLift) driveState.noseLift = 0;
+  }
+  function beginPorscheClutchEngagement() {
+    clearPorscheClutchEngagement(false);
+    if (!porscheState.engineOn || !driveState.holds.throttle || driveState.gear < 1 ||
+        driveState.gear > 2 || driveState.stalled) return false;
+    var coupledRpm = Math.max(750, porscheRpmForSpeed(driveState.speed, driveState.gear));
+    var slipRpm = driveState.rpm - coupledRpm;
+    if (slipRpm <= PORSCHE_CLUTCH_MIN_SLIP_RPM) return false;
+    var strength = Math.max(0, Math.min(1,
+      (slipRpm - PORSCHE_CLUTCH_MIN_SLIP_RPM) /
+      (PORSCHE_CLUTCH_FULL_SLIP_RPM - PORSCHE_CLUTCH_MIN_SLIP_RPM)));
+    var speedScale = Math.max(.22, 1 - Math.abs(driveState.speed) /
+      porscheGearSpeedCeiling(driveState.gear));
+    strength *= driveState.gear === 1 ? 1 : .82;
+    var duration = PORSCHE_CLUTCH_ENGAGEMENT_BASE_MS + PORSCHE_CLUTCH_ENGAGEMENT_RANGE_MS * strength;
+    driveState.clutchEngagementMs = duration;
+    driveState.clutchEngagementDurationMs = duration;
+    driveState.clutchEngagementRpm = driveState.rpm;
+    driveState.clutchEngagementStrength = strength;
+    driveState.throttleHeldMs = Math.max(driveState.throttleHeldMs, 220);
+    driveState.noseLift = Math.max(driveState.noseLift,
+      PORSCHE_NOSE_LIFT_MAX_DEG * strength * speedScale * .28);
+    paintPorscheDrivePosition();
+    return true;
+  }
+  function porscheClutchSlipFloor(coupledRpm, throttle, engagementFade) {
+    var settledFloor = throttle && Math.abs(driveState.gear) === 1 && coupledRpm < 2350 ? 2350 : 750;
+    if (!engagementFade || !driveState.clutchEngagementRpm) return Math.max(coupledRpm, settledFloor);
+    var releaseRpm = Math.max(settledFloor, driveState.clutchEngagementRpm);
+    return Math.max(coupledRpm,
+      settledFloor + (releaseRpm - settledFloor) * engagementFade * engagementFade);
   }
   function clampPorscheDriveSpeedToGear() {
     if (driveState.gear > 0) driveState.speed = Math.min(driveState.speed, porscheGearSpeedCeiling(driveState.gear));
@@ -37681,6 +37736,8 @@ window.__entranceRoomOpen = false;
     var wheelTransform = "rotate(" + driveState.wheelAngle.toFixed(2) + ")";
     if (porscheFrontWheelSpin) porscheFrontWheelSpin.setAttribute("transform", wheelTransform);
     if (porscheRearWheelSpin) porscheRearWheelSpin.setAttribute("transform", wheelTransform);
+    if (porschePitch) porschePitch.setAttribute("transform", "rotate(" +
+      driveState.noseLift.toFixed(2) + " 296 316)");
     if (porscheFrontWheelSteer) {
       var roadWheelTurn = driveState.steeringAngle * .22;
       var roadWheelNarrowing = 1 - Math.abs(driveState.steeringAngle) * .004;
@@ -38880,6 +38937,7 @@ window.__entranceRoomOpen = false;
     driveState.redlineMs = 0;
     driveState.throttleHeldMs = 0;
     driveState.shiftCutMs = 0;
+    clearPorscheClutchEngagement(true);
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     playPorscheStallSound();
     syncPorscheState();
@@ -38903,6 +38961,7 @@ window.__entranceRoomOpen = false;
       return false;
     }
     var previousGear = driveState.gear;
+    if (gear !== previousGear) clearPorscheClutchEngagement(false);
     driveState.gear = gear;
     if (previousGear > 0 && gear > 0 && gear !== previousGear && Math.abs(relativeSpeed) > 4) {
       driveState.shiftCutMs = 350;
@@ -39079,6 +39138,10 @@ window.__entranceRoomOpen = false;
     if (name === "throttle" && held && syncRoadtripPoliceSurrender()) held = false;
     var wasHeld = driveState.holds[name];
     driveState.holds[name] = held;
+    if (name === "clutch" && wasHeld !== held) {
+      if (held) clearPorscheClutchEngagement(false);
+      else beginPorscheClutchEngagement();
+    }
     if ((name === "steerLeft" || name === "steerRight") && wasHeld !== held) {
       var direction = name === "steerLeft" ? -1 : 1;
       if (held) {
@@ -39154,6 +39217,14 @@ window.__entranceRoomOpen = false;
       porscheTouchSteering.returning = false;
     }
     var ratio = PORSCHE_GEAR_RATIOS[String(driveState.gear)] || 0;
+    var engagementStartMs = !clutch && driveState.gear > 0 ? driveState.clutchEngagementMs : 0;
+    var engagementDurationMs = Math.max(1, driveState.clutchEngagementDurationMs || 1);
+    var engagementEndMs = Math.max(0, engagementStartMs - dt);
+    var engagementFadeStart = engagementStartMs / engagementDurationMs;
+    var engagementFadeEnd = engagementEndMs / engagementDurationMs;
+    var engagementFade = (engagementFadeStart + engagementFadeEnd) / 2;
+    var engagementPortion = seconds ? Math.min(dt, engagementStartMs) / dt : 0;
+    var drivenAcceleration = 0;
     if (porscheState.engineOn) {
       driveState.temperature = Math.min(1, driveState.temperature + seconds / 20);
       if (throttle && driveState.gear && !clutch) driveState.throttleHeldMs += dt;
@@ -39161,26 +39232,37 @@ window.__entranceRoomOpen = false;
       driveState.shiftCutMs = Math.max(0, driveState.shiftCutMs - dt);
       var freeRpm = 780 + throttle * 6720;
       var coupledRpm = porscheRpmForSpeed(driveState.speed, driveState.gear);
-      // The real manual gearing locks road speed to RPM. Only the first-gear launch gets
-      // a forgiving automatic clutch slip around 2350 RPM so a digital pedal does not stall.
-      var launchSlip = throttle && Math.abs(driveState.gear) === 1 && coupledRpm < 2350 ? 2350 : 0;
-      var targetRpm = clutch || !driveState.gear ? freeRpm :
-        Math.max(750, Math.min(7500, Math.max(coupledRpm, launchSlip)));
-      driveState.rpm += (targetRpm - driveState.rpm) * Math.min(1, seconds * (clutch || !driveState.gear ? 4.6 : 7.5));
+      if (clutch || !driveState.gear) {
+        driveState.rpm += (freeRpm - driveState.rpm) * Math.min(1, seconds * 4.6);
+      } else if (engagementStartMs > 0) {
+        driveState.rpm = porscheClutchSlipFloor(coupledRpm, throttle, engagementFadeStart);
+      } else {
+        // Once the clutch is home, RPM follows wheel speed exactly. The sole exception
+        // is a short first-gear slip floor that makes a digital pedal usable from rest.
+        var coupledTargetRpm = porscheClutchSlipFloor(coupledRpm, throttle, 0);
+        if (coupledTargetRpm > coupledRpm && driveState.rpm < coupledTargetRpm) {
+          driveState.rpm += (coupledTargetRpm - driveState.rpm) * Math.min(1, seconds * 16);
+        } else {
+          driveState.rpm = coupledTargetRpm;
+        }
+      }
+      driveState.rpm = Math.max(750, Math.min(7500, driveState.rpm));
       if (driveState.gear && !clutch) {
         var direction = (driveState.gear < 0 ? -1 : 1) * driveState.facing;
-        var pedalRamp = Math.max(0, Math.min(1, driveState.throttleHeldMs / 450));
+        var pedalRampMs = Math.abs(driveState.gear) <= 2 ? 280 : 450;
+        var pedalRamp = Math.max(0, Math.min(1, driveState.throttleHeldMs / pedalRampMs));
         var limiter = driveState.rpm >= 7490 ? 0 : 1;
-        var acceleration = throttle && !driveState.shiftCutMs ?
-          porscheDriveAcceleration(driveState.rpm, driveState.gear, driveState.speed) * pedalRamp * limiter : 0;
-        driveState.speed += direction * acceleration * 3.6 * seconds;
+        var clutchBoost = engagementStartMs > 0 ?
+          3 * driveState.clutchEngagementStrength * (.35 + .65 * engagementFade) * engagementPortion : 0;
+        drivenAcceleration = throttle && !driveState.shiftCutMs ?
+          (porscheDriveAcceleration(driveState.rpm, driveState.gear, driveState.speed) * pedalRamp + clutchBoost) * limiter : 0;
+        driveState.speed += direction * drivenAcceleration * 3.6 * seconds;
         if (!throttle) driveState.speed -= Math.sign(driveState.speed || direction) * Math.min(Math.abs(driveState.speed), (2.2 + ratio * .8) * seconds);
       }
-      if (driveState.rpm >= 7350) driveState.redlineMs += dt;
-      else driveState.redlineMs = Math.max(0, driveState.redlineMs - dt * 1.6);
     } else {
       driveState.throttleHeldMs = 0;
       driveState.shiftCutMs = 0;
+      clearPorscheClutchEngagement(false);
       driveState.rpm += (0 - driveState.rpm) * Math.min(1, seconds * 8);
     }
     var braking = brake * 78;
@@ -39213,6 +39295,34 @@ window.__entranceRoomOpen = false;
     if (driveState.gear > 0) relativeVelocity = Math.min(relativeVelocity, porscheGearSpeedCeiling(driveState.gear));
     else if (driveState.gear < 0) relativeVelocity = Math.max(relativeVelocity, -55);
     driveState.speed = relativeVelocity * driveState.facing;
+    if (porscheState.engineOn && driveState.gear && !clutch) {
+      var coupledAfter = porscheRpmForSpeed(driveState.speed, driveState.gear);
+      var coupledFloorAfter = porscheClutchSlipFloor(coupledAfter, throttle, engagementFadeEnd);
+      if (engagementStartMs > 0) {
+        driveState.rpm = coupledFloorAfter;
+      } else if (coupledFloorAfter > coupledAfter && driveState.rpm < coupledFloorAfter) {
+        driveState.rpm = Math.max(coupledAfter, driveState.rpm);
+      } else {
+        driveState.rpm = coupledFloorAfter;
+      }
+      driveState.rpm = Math.max(750, Math.min(7500, driveState.rpm));
+    }
+    if (engagementStartMs > 0 && drivenAcceleration > 0) {
+      var launchSpeedScale = Math.max(.22, 1 - Math.abs(driveState.speed) /
+        porscheGearSpeedCeiling(driveState.gear));
+      var liftTarget = PORSCHE_NOSE_LIFT_MAX_DEG * driveState.clutchEngagementStrength *
+        launchSpeedScale * Math.min(1, drivenAcceleration / 8.5) * (.45 + .55 * engagementFade);
+      driveState.noseLift += (liftTarget - driveState.noseLift) * Math.min(1, seconds * 16);
+    } else {
+      driveState.noseLift *= Math.max(0, 1 - seconds * 5.2);
+      if (driveState.noseLift < .01) driveState.noseLift = 0;
+    }
+    if (engagementStartMs > 0) {
+      driveState.clutchEngagementMs = engagementEndMs;
+      if (!engagementEndMs) clearPorscheClutchEngagement(false);
+    }
+    if (driveState.rpm >= 7350) driveState.redlineMs += dt;
+    else driveState.redlineMs = Math.max(0, driveState.redlineMs - dt * 1.6);
     driveState.odometerKm += Math.abs(relativeVelocity) * seconds / 3600;
     updateRoadtripShiftHint(dt);
     // The street is a theatrical loop rather than a kilometre-scale map. Keep the
@@ -39320,6 +39430,7 @@ window.__entranceRoomOpen = false;
     driveState.redlineMs = 0;
     driveState.throttleHeldMs = 0;
     driveState.shiftCutMs = 0;
+    clearPorscheClutchEngagement(true);
     driveState.temperature = 0;
     parkRoadtrip(true);
     repairRoadtripWindshield();
@@ -39662,6 +39773,7 @@ window.__entranceRoomOpen = false;
     }
     else if (action === "engine") {
       porscheState.engineOn = !porscheState.engineOn;
+      clearPorscheClutchEngagement(true);
       if (porscheState.engineOn) {
         if (!roadtripState.paused) repairRoadtripWindshield();
         driveState.stalled = false;
@@ -39730,6 +39842,7 @@ window.__entranceRoomOpen = false;
     driveState.rpm = 0;
     driveState.gear = 0;
     driveState.temperature = 0;
+    clearPorscheClutchEngagement(true);
     clearPorscheIndicator();
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     if (wasRunning) playPorscheEngineSound(false);
@@ -40125,6 +40238,14 @@ window.__entranceRoomOpen = false;
         speed: driveState.speed,
         rpm: driveState.rpm,
         shiftCutMs: driveState.shiftCutMs,
+        clutchEngagement: {
+          remainingMs: driveState.clutchEngagementMs,
+          durationMs: driveState.clutchEngagementDurationMs,
+          releaseRpm: driveState.clutchEngagementRpm,
+          strength: driveState.clutchEngagementStrength
+        },
+        noseLift: driveState.noseLift,
+        pitchTransform: porschePitch ? porschePitch.getAttribute("transform") : "",
         temperature: driveState.temperature,
         gloveboxOpen: driveState.gloveboxOpen,
         position: driveState.position,
@@ -40326,6 +40447,7 @@ window.__entranceRoomOpen = false;
     driveState.throttleHeldMs = 0;
     driveState.shiftCutMs = 0;
     driveState.redlineMs = 0;
+    clearPorscheClutchEngagement(true);
     driveState.brakeSpinChecked = false;
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
@@ -40525,7 +40647,12 @@ window.__entranceRoomOpen = false;
         steeringAngle: driveState.steeringAngle,
         wheelAngle: driveState.wheelAngle,
         facing: driveState.facing,
-        yaw: driveState.yaw
+        yaw: driveState.yaw,
+        clutchEngagementMs: driveState.clutchEngagementMs,
+        clutchEngagementDurationMs: driveState.clutchEngagementDurationMs,
+        clutchEngagementRpm: driveState.clutchEngagementRpm,
+        clutchEngagementStrength: driveState.clutchEngagementStrength,
+        noseLift: driveState.noseLift
       },
       police: police,
       entities: roadtripState.entities.map(captureRoadtripEntity),
@@ -40591,6 +40718,13 @@ window.__entranceRoomOpen = false;
     driveState.wheelAngle = roadtripSnapshotNumber(savedDrive.wheelAngle, 0, -1000000000, 1000000000) % 360;
     driveState.facing = Number(savedDrive.facing) < 0 ? -1 : 1;
     driveState.yaw = roadtripSnapshotNumber(savedDrive.yaw, driveState.facing < 0 ? 180 : 0, -1000000000, 1000000000);
+    driveState.clutchEngagementDurationMs = roadtripSnapshotNumber(
+      savedDrive.clutchEngagementDurationMs, 0, 0, 2000);
+    driveState.clutchEngagementMs = roadtripSnapshotNumber(savedDrive.clutchEngagementMs,
+      0, 0, driveState.clutchEngagementDurationMs);
+    driveState.clutchEngagementRpm = roadtripSnapshotNumber(savedDrive.clutchEngagementRpm, 0, 0, 7500);
+    driveState.clutchEngagementStrength = roadtripSnapshotNumber(savedDrive.clutchEngagementStrength, 0, 0, 1);
+    driveState.noseLift = roadtripSnapshotNumber(savedDrive.noseLift, 0, 0, PORSCHE_NOSE_LIFT_MAX_DEG);
     restoreRoadtripEntities(snapshot.entities);
     restoreRoadtripDamage(snapshot.damage);
     roadtripState.active = false;

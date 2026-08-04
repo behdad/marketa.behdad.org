@@ -56,12 +56,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           window.__entranceDriveControl(name, false);
         });
 
-        step(1000, 4);
         report.steps.waiting = { state: state(), overtaker: !!overtaker() };
-        step(1000);
+        step(20);
         var node = overtaker();
         var behindSource = sample(node);
-        step(20);
+        step(60);
         var mirror = mirrorEntity();
         report.steps.behind = {
           source: behindSource,
@@ -109,10 +108,10 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html slow-traffic overtaking:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 5/.test(source) &&
+check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 0/.test(source) &&
   /function syncRoadtripPlayerOvertaker\(seconds\)[\s\S]{0,900}forwardSpeed <= ROADTRIP_OVERTAKE_SPEED_MAX/.test(source) &&
   /spawnRoadtripEntity\(plan\.type, lane, plan\.ahead,[\s\S]{0,140}behind: true/.test(source),
-  "only travel at 70 km/h or less schedules a vehicle from behind after five seconds");
+  "travel at 70 km/h or less can schedule a vehicle from behind immediately");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
   patchRaf: true,
@@ -126,8 +125,8 @@ var steps = result && result.steps || {};
 check(steps.start && steps.start.state.playerLane === 2.08 &&
   steps.start.state.shoulderZone === "gravel" && /roadtrip-on-gravel/.test(steps.start.classes),
   "a fresh Road Trip opens parked on the right shoulder", steps.start);
-check(steps.waiting && !steps.waiting.overtaker && steps.waiting.state.overtakeCooldown > 0,
-  "rear traffic waits through the first four seconds", steps.waiting);
+check(steps.waiting && !steps.waiting.overtaker && steps.waiting.state.overtakeCooldown === 0,
+  "rear traffic is armed as soon as the fresh Road Trip opens", steps.waiting);
 check(steps.behind && steps.behind.source.overtaking === "true" &&
   steps.behind.source.direction === "forward" && steps.behind.source.lane === .5 &&
   steps.behind.source.laneTarget === 1.5 && steps.behind.source.laneChanged === "false" &&

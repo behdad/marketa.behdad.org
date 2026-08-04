@@ -98,6 +98,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     };
   }
   function ensureEngine() { if (!state().car.engineOn) window.__toggleEntrancePorscheEngine(); }
+  function startRoadtripInLane(lane) {
+    var started = window.__entranceRoadtripStart();
+    if (started) {
+      window.__entranceRoadtripSetSeed(0x12345678);
+      window.__entranceRoadtripSetLane(lane == null ? .5 : lane);
+    }
+    return started;
+  }
   function step(ms, count) { for (var i = 0; i < (count || 1); i++) window.__entranceDriveStep(ms); }
   function pressKey(key) {
     (document.activeElement || document).dispatchEvent(new KeyboardEvent("keydown", {
@@ -191,7 +199,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return match ? Number(match[1]) : null;
   }
   function resolveSpawn(type, lane, counter) {
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     ensureEngine();
     window.__entranceDriveSetMotion(type === "deer" || type === "rabbit" ? 36 : 120,
       type === "deer" || type === "rabbit" ? 2 : 3);
@@ -229,10 +237,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function probeTargetWidth(type, hitGap, clearGap) {
     function attempt(gap) {
-      window.__entranceRoadtripStart();
+      startRoadtripInLane();
       ensureEngine();
-      window.__entranceDriveSetMotion(type === "deer" || type === "rabbit" ? 36 : 120,
-        type === "deer" || type === "rabbit" ? 2 : 3);
+      window.__entranceDriveSetMotion(type === "deer" || type === "rabbit" ? 36 : 160,
+        type === "deer" || type === "rabbit" ? 2 : 4);
       window.__entranceDriveControl("throttle", false);
       var made = spawn(type, .5, 8);
       var center = Number(made.node && made.node.getAttribute("data-roadtrip-lane"));
@@ -475,7 +483,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       cleared: state().drive.instruction
     };
     window.__entranceDriveTransmissionMode("auto", true);
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(90, 3);
     spawn("heart", .5, 5);
@@ -498,17 +506,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       held: centerlineHeld,
       second: centerlineSecond
     };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceRoadtripSetLane(1.5);
-    window.__entranceDriveSetMotion(36, 2);
+    window.__entranceDriveSetMotion(72, 3);
+    window.__entranceDriveControl("throttle", true);
     var recoveredHeart = spawn("heart", .5, 5);
     step(800);
     var reverseMissed = { state: copy(state()), visible: recoveredHeart.node.getAttribute("visibility") };
+    window.__entranceDriveControl("throttle", false);
     window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(-20, -1);
     step(1000);
     var reverseBackedUp = { state: copy(state()), visible: recoveredHeart.node.getAttribute("visibility") };
-    window.__entranceDriveSetMotion(36, 2);
+    window.__entranceDriveSetMotion(72, 3);
     step(500);
     var reverseCollected = { state: copy(state()), visible: recoveredHeart.node.getAttribute("visibility") };
     report.steps.reverseRecovery = {
@@ -516,7 +526,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       backedUp: reverseBackedUp,
       collected: reverseCollected
     };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceRoadtripSetLane(.5);
     window.__entranceDriveSetMotion(90, 3);
     window.__entranceDriveControl("throttle", true);
@@ -620,7 +630,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       escapeAfter: focusPauseEscapeAfter,
       pauseClass: room.classList.contains("roadtrip-resume-pending")
     };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceDriveSetMotion(90, 3);
     window.__setBalconyRain(false, "test");
     window.__setBalconySnow(true, "test");
@@ -738,7 +748,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var shoulderRecovered = { state: copy(state()), classes: room.getAttribute("class"), svgClasses: svg.getAttribute("class") };
     report.steps.shoulder = { before: shoulderBefore, after: shoulderAfter, recovered: shoulderRecovered };
 
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     ensureEngine();
     window.__updatePorscheIdle();
     await sleep(30);
@@ -772,7 +782,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__dismissEntrancePorscheDriveHud();
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
-    var poolStarted = window.__entranceRoadtripStart();
+    var poolStarted = startRoadtripInLane();
     var spawnTypes = ["car", "pickup", "truck", "rv", "deer", "rabbit", "heart", "kiss", "inf"];
     for (var a = 0; a < 240; a++) window.__entranceRoadtripSpawn(spawnTypes[a % spawnTypes.length], (a % 3) - 1);
     var firstStorm = { state: copy(roadtrip()), dom: childCount() };
@@ -782,13 +792,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__dismissEntrancePorscheDriveHud();
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
-    var freshStarted = window.__entranceRoadtripStart();
+    var freshStarted = startRoadtripInLane();
     window.__entranceDriveShift(6, true);
     window.__entranceDriveControl("throttle", true);
     var progressBefore = copy(roadtrip());
     step(250);
     report.steps.progress = { started: freshStarted, before: progressBefore, after: copy(roadtrip()) };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     var forwardTraffic = spawn("car", 1.5);
     var oncomingTraffic = spawn("truck", -.5);
     var pickupTraffic = spawn("pickup", .5);
@@ -811,7 +821,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         oncomingScale: transformScale(oncomingTraffic.node)
       }
     };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceDriveSetMotion(0, 0);
     window.__entranceDriveControl("throttle", false);
     var rightLaneRv = spawn("rv", .5, 80);
@@ -827,7 +837,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var forwardPassTarget = spawn("rv", 1.5, 80);
     var forwardPassingSemi = spawn("truck", .5, 60);
     var oncomingPassTarget = spawn("rv", -1.5, 80);
-    var oncomingPassingSemi = spawn("truck", -.5, 110);
+    var oncomingPassingSemi = spawn("truck", -.5, 100);
     step(1000, 2);
     report.steps.heavyLanePolicy = {
       home: heavyHomeLanes,
@@ -836,7 +846,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       oncomingTarget: entityVisual(oncomingPassTarget.node),
       oncomingPassing: entityVisual(oncomingPassingSemi.node)
     };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     var hoppingRabbit = spawn("rabbit", .5);
     var hopBefore = {
       visual: entityVisual(hoppingRabbit.node),
@@ -862,7 +872,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       rv: probeTargetWidth("rv", .43, .48),
       truck: probeTargetWidth("truck", .45, .50)
     };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceDriveSetMotion(160, 3);
     window.__entranceDriveControl("steerLeft", true);
     step(1000);
@@ -893,7 +903,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
     window.__entranceDriveSetMotion(145, 3);
     window.__entranceDriveControl("throttle", true);
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     var wildlifeImpactBefore = copy(state());
     var wildlifeImpactSpawn = spawn("deer", .5);
     for (var wildlifeTick = 0; wildlifeTick < 10 && roadtrip().wildlifeHits === wildlifeImpactBefore.drive.roadtrip.wildlifeHits; wildlifeTick++) step(80);
@@ -908,7 +918,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     };
     if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
     window.__toggleEntrancePorscheEngine();
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceDriveSetMotion(145, 3);
     window.__entranceDriveControl("throttle", true);
     var rabbitImpactBefore = copy(state());
@@ -993,7 +1003,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceDriveSetMotion(120, 3);
     var steeringSpawn = spawn("token", -1);
     var steeringRoad = document.querySelector("#entrance-roadtrip-road .entrance-roadtrip-asphalt");
@@ -1019,7 +1029,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceDriveSetMotion(100, 3);
     document.getElementById("hunt-floor-btn").click();
     var floorControlExit = copy(state());
@@ -1028,7 +1038,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     await sleep(30);
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceDriveSetMotion(100, 3);
     window.__exitEntranceRoadtrip();
     var closeControlExit = copy(state());
@@ -1041,7 +1051,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     step(1000);
     window.__entranceDriveControl("throttle", false);
     var streetAfterExit = copy(state());
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     pressKey("Escape");
     var firstEscape = copy(state());
     pressKey("Escape");
@@ -1081,7 +1091,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       resumed: checkpointResumed,
       visible: checkpointVisible
     };
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     var transportButton = document.getElementById("hunt-playpause-btn");
     var transport = { before: copy(state()) };
     pressDocumentKey(" ");
@@ -1107,7 +1117,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     transportButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     transport.buttonResumed = copy(state());
     report.steps.transport = transport;
-    window.__entranceRoadtripStart();
+    startRoadtripInLane();
     window.__entranceRoadtripSpawn("token", 0);
     var bestBeforeReset = roadtrip().best;
     window.__resetCheckpointSystems();

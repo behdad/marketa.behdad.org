@@ -33707,6 +33707,13 @@ window.__bathroomRoomOpen = false;
     updateBubbleHud();
     bubbleGameTimer = setTimeout(bubbleGameTick, 100);
   }
+  function armBubbleGameClock() {
+    if (bubbleGameEndsAt || !room.classList.contains("bubble-hunt")) return false;
+    bubbleGameEndsAt = performance.now() + BUBBLE_GAME_MS;
+    updateBubbleHud();
+    bubbleGameTimer = setTimeout(bubbleGameTick, 100);
+    return true;
+  }
   function awardBubble(points) {
     bubbleScore += points + (bubbleCombo >= 3 ? 1 : 0);
     bubbleCombo++;
@@ -33807,16 +33814,17 @@ window.__bathroomRoomOpen = false;
     bubbleComboTimer = null;
     bubbleScore = 0;
     bubbleCombo = 0;
-    bubbleGameEndsAt = performance.now() + BUBBLE_GAME_MS;
+    bubbleGameEndsAt = 0;
     bubbleHudResult.textContent = "";
     bubblePopped = {};
     bubbleComplete = false;
     room.classList.remove("bubble-complete", "bubble-game-over");
     respawnBubbleTargets();
     room.classList.add("bubble-hunt");
-    updateBubbleHud();
+    bubbleHudScore.textContent = "0";
+    bubbleHudHigh.textContent = String(bubbleHigh());
+    bubbleHudTime.textContent = "30";
     setBathroomCaption("bathroom_bubbles_start");
-    bubbleGameTimer = setTimeout(bubbleGameTick, 100);
   }
   function stopBubbleHunt(restoreCaption) {
     clearTimeout(bubbleTimer);
@@ -33833,6 +33841,8 @@ window.__bathroomRoomOpen = false;
     bubbles.forEach(function (bubble) { bubble.classList.remove("popped"); });
     bubbleScore = 0;
     bubbleCombo = 0;
+    bubbleGameEndsAt = 0;
+    bubbleHudTime.textContent = "30";
     bubbleHudResult.textContent = "";
     if (restoreCaption) setBathroomCaption("lower_bathroom");
   }
@@ -33866,6 +33876,7 @@ window.__bathroomRoomOpen = false;
       event.preventDefault();
       event.stopPropagation();
     }
+    armBubbleGameClock();
     var id = bubble.getAttribute("data-bath-bubble");
     bubblePopped[id] = true;
     bubble.classList.add("popped");
@@ -33884,6 +33895,7 @@ window.__bathroomRoomOpen = false;
   function fireStoolShot() {
     if (!window.__bathroomRoomOpen || !room.classList.contains("bubble-hunt") ||
         !stoolShotLayer) return false;
+    armBubbleGameClock();
     var stoolXCenter = 380 + stoolX;
     var target = bubbles.filter(function (bubble) {
       return !bubble.classList.contains("popped");
@@ -34258,6 +34270,8 @@ window.__bathroomRoomOpen = false;
       },
       bubbles: {
         active: room.classList.contains("bubble-hunt"),
+        clockRunning: bubbleGameEndsAt > 0,
+        time: bubbleHudTime.textContent,
         popped: Object.keys(bubblePopped).length,
         total: bubbles.length,
         complete: bubbleComplete

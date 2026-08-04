@@ -41,7 +41,7 @@ check(staticEdges.length === 2 && staticEdges.every(function (tag) {
 check((staticDashes.match(/<path d="[^"]+Z"\/>/g) || []).length === 6,
   "all six initial dashed lane marks are closed filled polygons");
 
-var project = between("function roadtripProject(remaining)", "function roadtripCurvatureAt(distance)");
+var project = between("function roadtripProjectionAt(distance, remaining, bodyPitch)", "function roadtripProject(remaining)");
 var halfWidth = project.match(/halfWidth:\s*([\d.]+)\s*\+\s*perspective\s*\*\s*([\d.]+)/);
 var paint = between("function paintRoadtripRoad()", "function roadtripLaneValue(lane)");
 var outer = paint.match(/var outerFraction = ([\d.]+);/);

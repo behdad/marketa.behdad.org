@@ -29,6 +29,7 @@ var REQUIRED_IDS = [
   "entrance-roadtrip-invite-accept",
   "entrance-roadtrip-invite-later",
   "entrance-roadtrip-reenter",
+  "entrance-roadtrip-pause-dialog",
   "entrance-roadtrip-crack",
   "entrance-roadtrip-shatter",
   "entrance-roadtrip-mirror",
@@ -63,6 +64,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     "entrance-roadtrip-curve-signs",
     "entrance-roadtrip-speed", "entrance-roadtrip-score", "entrance-roadtrip-best", "entrance-roadtrip-multiplier", "entrance-roadtrip-grade",
     "entrance-roadtrip-invite", "entrance-roadtrip-invite-accept", "entrance-roadtrip-invite-later", "entrance-roadtrip-reenter",
+    "entrance-roadtrip-pause-dialog",
     "entrance-roadtrip-crack", "entrance-roadtrip-shatter", "entrance-roadtrip-mirror",
     "entrance-roadtrip-mirror-housing", "entrance-roadtrip-mirror-gasket",
     "entrance-roadtrip-mirror-road", "entrance-roadtrip-mirror-center",
@@ -84,6 +86,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function state() { return window.__entranceRoomState(); }
   function roadtrip() { return state().drive.roadtrip; }
+  function pausePresentation() {
+    var dialog = document.getElementById("entrance-roadtrip-pause-dialog");
+    return {
+      display: getComputedStyle(dialog).display,
+      panelFill: dialog.querySelector("rect").getAttribute("fill"),
+      title: dialog.querySelector('[data-i="entrance_roadtrip_pause_title"]').textContent.trim(),
+      line: dialog.querySelector('[data-i="entrance_roadtrip_pause_line"]').textContent.trim(),
+      captionVisibility: getComputedStyle(document.getElementById("hunt-caption")).visibility
+    };
+  }
   function ensureEngine() { if (!state().car.engineOn) window.__toggleEntrancePorscheEngine(); }
   function step(ms, count) { for (var i = 0; i < (count || 1); i++) window.__entranceDriveStep(ms); }
   function pressKey(key) {
@@ -536,6 +548,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     await sleep(90);
     var focusPauseWaiting = copy(state());
     var focusPauseWaitingClass = room.classList.contains("roadtrip-resume-pending");
+    var focusPauseWaitingPresentation = pausePresentation();
     step(1000);
     var focusPauseWaitingStep = copy(state());
     (document.activeElement || document).dispatchEvent(new KeyboardEvent("keydown", {
@@ -544,6 +557,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var focusPauseRepeatedKey = copy(state());
     pressKey("ArrowLeft");
     var focusPauseKeyboardImmediate = copy(state());
+    var focusPauseKeyboardPresentation = pausePresentation();
     step(20);
     var focusPauseKeyboardStep = copy(state());
     releaseKey("ArrowLeft");
@@ -589,9 +603,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       end: focusPauseEnd,
       waiting: focusPauseWaiting,
       waitingClass: focusPauseWaitingClass,
+      waitingPresentation: focusPauseWaitingPresentation,
       waitingStep: focusPauseWaitingStep,
       repeatedKey: focusPauseRepeatedKey,
       keyboardImmediate: focusPauseKeyboardImmediate,
+      keyboardPresentation: focusPauseKeyboardPresentation,
       keyboardStep: focusPauseKeyboardStep,
       touchStart: focusPauseTouchStart,
       touchWaiting: focusPauseTouchWaiting,
@@ -1394,12 +1410,19 @@ check(focusPause &&
   Object.keys(focusPause.end.drive.holds).every(function (key) { return !focusPause.end.drive.holds[key]; }) &&
   focusPause.waiting.drive.roadtrip.resumePending && focusPause.waitingClass &&
   focusPause.waiting.drive.instruction === "entrance_roadtrip_resume" &&
+  focusPause.waitingPresentation.display !== "none" &&
+  focusPause.waitingPresentation.panelFill === "#8e3a4a" &&
+  focusPause.waitingPresentation.title === "PAUSED" &&
+  /Space, Enter or Play/.test(focusPause.waitingPresentation.line) &&
+  focusPause.waitingPresentation.captionVisibility === "hidden" &&
   focusPause.waitingStep.drive.roadtrip.elapsedSeconds === focusPause.end.drive.roadtrip.elapsedSeconds &&
   focusPause.waitingStep.drive.roadtrip.distance === focusPause.end.drive.roadtrip.distance &&
   focusPause.waitingStep.drive.speed === focusPause.end.drive.speed &&
   focusPause.repeatedKey.drive.roadtrip.resumePending &&
   Object.keys(focusPause.repeatedKey.drive.holds).every(function (key) { return !focusPause.repeatedKey.drive.holds[key]; }) &&
   !focusPause.keyboardImmediate.drive.roadtrip.resumePending &&
+  focusPause.keyboardPresentation.display === "none" &&
+  focusPause.keyboardPresentation.captionVisibility === "visible" &&
   focusPause.keyboardImmediate.drive.roadtrip.elapsedSeconds === focusPause.waitingStep.drive.roadtrip.elapsedSeconds &&
   focusPause.keyboardImmediate.drive.roadtrip.distance === focusPause.waitingStep.drive.roadtrip.distance &&
   focusPause.keyboardImmediate.drive.speed === focusPause.waitingStep.drive.speed &&

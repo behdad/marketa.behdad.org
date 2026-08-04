@@ -102,6 +102,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           passes: state().passes,
           audioVoices: state().trafficAudioVoices
         };
+        report.steps.repeat = {
+          cooldown: state().overtakeCooldown
+        };
 
         function hornProbe(speed) {
           window.__dismissEntrancePorscheDriveHud();
@@ -183,6 +186,9 @@ check(steps.alongside && steps.alongside.source.ahead > -2 &&
 check(steps.ahead && steps.ahead.source.ahead > 8 && steps.ahead.source.overtaking === "false" &&
   !steps.ahead.mirrorVisible && steps.ahead.passes === steps.behind.passes,
   "the passing car continues ahead without awarding a player pass", steps.ahead);
+check(steps.repeat && steps.repeat.cooldown > 0 && steps.repeat.cooldown <= 11,
+  "a stopped Porsche schedules its next rear vehicle within the denser 7–11 second cadence",
+  steps.repeat);
 check(steps.slowHorn && steps.slowHorn.horned === "true" &&
   steps.sixtyHorn && steps.sixtyHorn.horned !== "true",
   "a rear vehicle honks only below 60 km/h when the Porsche occupies its lane",

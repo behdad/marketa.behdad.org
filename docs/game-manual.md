@@ -260,6 +260,8 @@ of a bend unless you steer with it. When you travel well below traffic speed,
 an occasional faster car may approach in either right-hand lane and move into the other lane when yours
 is blocked. A passing car gives a clear horn when you are stopped in the inner lane, but leaves a
 stopped car on the shoulder alone. Oncoming traffic gives a longer warning horn if you occupy its lane.
+One in five oncoming vehicles also attempts a seeded swerve into the other oncoming lane when that
+lane is clear; the others hold course, so crossing the double yellow remains dangerous.
 
 Reverse also moves the highway: a missed pickup remains behind briefly, so you
 can back up, select a forward gear, and collect it on the next forward crossing.

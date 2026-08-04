@@ -35494,7 +35494,8 @@ window.__entranceRoomOpen = false;
     furnitureSide: 53,
     summonedLane: 59,
     summonedAhead: 61,
-    summonedSpeed: 67
+    summonedSpeed: 67,
+    oncomingEvasion: 71
   };
   var ROADTRIP_POLICE_MIRROR_GAP_SCALE = .022;
   var ROADTRIP_POLICE_ROADSIDE_MIRROR_DISTANCE = 62;
@@ -38466,6 +38467,11 @@ window.__entranceRoomOpen = false;
     entity.overtakeHornPending = false;
     entity.overtakeHorned = false;
     entity.oncomingHorned = false;
+    entity.oncomingEvasionDecided = false;
+    entity.oncomingEvasionRequested = false;
+    entity.oncomingEvading = false;
+    entity.oncomingEvasionOrigin = 0;
+    entity.oncomingEvasionTarget = 0;
     entity.overtakeLaneTarget = 0;
     entity.overtakeLaneChanged = false;
     entity.passTargetSerial = 0;
@@ -38476,6 +38482,10 @@ window.__entranceRoomOpen = false;
     entity.node.removeAttribute("data-roadtrip-overtaking-player");
     entity.node.removeAttribute("data-roadtrip-horned");
     entity.node.removeAttribute("data-roadtrip-oncoming-horned");
+    entity.node.removeAttribute("data-roadtrip-oncoming-evasion-decided");
+    entity.node.removeAttribute("data-roadtrip-oncoming-evasion-requested");
+    entity.node.removeAttribute("data-roadtrip-oncoming-evading");
+    entity.node.removeAttribute("data-roadtrip-oncoming-evasion-target");
     entity.node.removeAttribute("data-roadtrip-overtake-lane-target");
     entity.node.removeAttribute("data-roadtrip-overtake-lane-changed");
     entity.node.removeAttribute("transform");
@@ -38504,6 +38514,14 @@ window.__entranceRoomOpen = false;
     entity.node.setAttribute("data-roadtrip-escaping", entity.escaping ? "true" : "false");
     entity.node.setAttribute("data-roadtrip-passing", entity.passing ? "true" : "false");
     entity.node.setAttribute("data-roadtrip-overtaking-player", entity.overtakingPlayer ? "true" : "false");
+    if (entity.direction === "oncoming") {
+      entity.node.setAttribute("data-roadtrip-oncoming-evasion-decided",
+        entity.oncomingEvasionDecided ? "true" : "false");
+      entity.node.setAttribute("data-roadtrip-oncoming-evasion-requested",
+        entity.oncomingEvasionRequested ? "true" : "false");
+      entity.node.setAttribute("data-roadtrip-oncoming-evading", entity.oncomingEvading ? "true" : "false");
+      entity.node.setAttribute("data-roadtrip-oncoming-evasion-target", String(entity.oncomingEvasionTarget));
+    }
     if (entity.overtakingPlayer) {
       entity.node.setAttribute("data-roadtrip-overtake-lane-target", String(entity.overtakeLaneTarget));
       entity.node.setAttribute("data-roadtrip-overtake-lane-changed", entity.overtakeLaneChanged ? "true" : "false");
@@ -38547,6 +38565,11 @@ window.__entranceRoomOpen = false;
     entity.overtakeHornPending = entity.overtakingPlayer && options.honk === true;
     entity.overtakeHorned = false;
     entity.oncomingHorned = false;
+    entity.oncomingEvasionDecided = false;
+    entity.oncomingEvasionRequested = false;
+    entity.oncomingEvading = false;
+    entity.oncomingEvasionOrigin = entity.direction === "oncoming" ? entity.lane : 0;
+    entity.oncomingEvasionTarget = entity.direction === "oncoming" ? entity.lane : 0;
     entity.overtakeLaneTarget = entity.overtakingPlayer && options.overtakeLaneTarget != null ?
       roadtripLaneValue(options.overtakeLaneTarget) : entity.lane;
     entity.overtakeLaneChanged = false;
@@ -38687,6 +38710,41 @@ window.__entranceRoomOpen = false;
     entity.node.setAttribute("data-roadtrip-overtake-lane-target", String(target));
     entity.node.setAttribute("data-roadtrip-overtake-lane-changed", entity.overtakeLaneChanged ? "true" : "false");
   }
+  function roadtripOncomingEvasionDecision(serial) {
+    var index = Math.max(0, Math.floor(Number(serial) || 1) - 1);
+    var cycle = Math.floor(index / 5);
+    var order = roadtripSeededPermutation(5, ROADTRIP_SEED_STREAM.oncomingEvasion, cycle);
+    return order[index % 5] === 0;
+  }
+  function roadtripOncomingEvasionSafe(entity, targetLane) {
+    if (!entity || targetLane >= 0 || Math.abs(roadtripPlayerLane() - targetLane) <= .52) return false;
+    return !roadtripState.entities.some(function (candidate) {
+      return candidate.active && candidate !== entity && candidate.direction === "oncoming" &&
+        Math.abs(candidate.lane - targetLane) <= .42 && Math.abs(candidate.at - entity.at) < 24;
+    });
+  }
+  function decideRoadtripOncomingEvasion(entity) {
+    if (!entity || entity.oncomingEvasionDecided) return !!(entity && entity.oncomingEvading);
+    entity.oncomingEvasionDecided = true;
+    entity.oncomingEvasionRequested = roadtripOncomingEvasionDecision(entity.serial);
+    entity.oncomingEvasionOrigin = entity.lane <= -1 ? -1.5 : -.5;
+    entity.oncomingEvasionTarget = entity.oncomingEvasionOrigin === -.5 ? -1.5 : -.5;
+    entity.oncomingEvading = entity.oncomingEvasionRequested &&
+      roadtripOncomingEvasionSafe(entity, entity.oncomingEvasionTarget);
+    entity.node.setAttribute("data-roadtrip-oncoming-evasion-decided", "true");
+    entity.node.setAttribute("data-roadtrip-oncoming-evasion-requested",
+      entity.oncomingEvasionRequested ? "true" : "false");
+    entity.node.setAttribute("data-roadtrip-oncoming-evading", entity.oncomingEvading ? "true" : "false");
+    entity.node.setAttribute("data-roadtrip-oncoming-evasion-target", String(entity.oncomingEvasionTarget));
+    return entity.oncomingEvading;
+  }
+  function syncRoadtripOncomingEvasionLane(entity, seconds) {
+    if (!entity || !entity.active || !entity.oncomingEvading || entity.passed) return;
+    var laneDelta = entity.oncomingEvasionTarget - entity.lane;
+    var laneStep = Math.min(Math.abs(laneDelta), Math.max(0, Number(seconds) || 0) * 2.4);
+    entity.lane += Math.sign(laneDelta) * laneStep;
+    entity.node.setAttribute("data-roadtrip-lane", entity.lane.toFixed(3).replace(/\.000$/, ""));
+  }
   function syncRoadtripSemiLane(entity, seconds) {
     if (!entity || !entity.active || entity.type !== "truck") return;
     var travelSign = entity.direction === "oncoming" ? -1 : 1;
@@ -38825,11 +38883,13 @@ window.__entranceRoomOpen = false;
       } else if (remaining <= -60) releaseRoadtripEntity(entity);
       return;
     }
-    if (entity.direction === "oncoming" && !entity.oncomingHorned && entity.lane < 0 &&
-        roadtripPlayerLane() < 0 && laneGap <= .52 && remaining >= 10 && remaining <= 38 &&
-        playRoadtripOncomingWarningHorn(entity, remaining)) {
-      entity.oncomingHorned = true;
-      entity.node.setAttribute("data-roadtrip-oncoming-horned", "true");
+    if (entity.direction === "oncoming" && entity.lane < 0 && roadtripPlayerLane() < 0 &&
+        laneGap <= .52 && remaining >= 10 && remaining <= 38) {
+      decideRoadtripOncomingEvasion(entity);
+      if (!entity.oncomingHorned && playRoadtripOncomingWarningHorn(entity, remaining)) {
+        entity.oncomingHorned = true;
+        entity.node.setAttribute("data-roadtrip-oncoming-horned", "true");
+      }
     }
     if (entity.passed) {
       if (remaining <= -38) releaseRoadtripEntity(entity);
@@ -39257,6 +39317,7 @@ window.__entranceRoomOpen = false;
     liveEntities.forEach(function (entity) { entity.at += entity.velocity * seconds; });
     liveEntities.forEach(function (entity) { syncRoadtripSemiLane(entity, seconds); });
     liveEntities.forEach(function (entity) { syncRoadtripPlayerOvertakerLane(entity, seconds); });
+    liveEntities.forEach(function (entity) { syncRoadtripOncomingEvasionLane(entity, seconds); });
     liveEntities.forEach(function (entity) {
       var remaining = entity.at - roadtripState.distance;
       if (remaining > ROADTRIP_DRAW_DISTANCE + 24) releaseRoadtripEntity(entity);
@@ -43050,6 +43111,9 @@ window.__entranceRoomOpen = false;
   window.__entranceRoadtripSummonPlan = function (overtaking, serial) {
     return roadtripSummonedTrafficPlan(!!overtaking, serial);
   };
+  window.__entranceRoadtripOncomingEvasionDecision = function (serial) {
+    return roadtripOncomingEvasionDecision(serial);
+  };
   window.__entranceRoadtripSetSeed = function (seed) {
     roadtripState.runSeed = Math.floor(Math.max(0, Math.min(4294967295, Number(seed) || 0))) >>> 0;
     if (roadtripState.active) {
@@ -43169,6 +43233,11 @@ window.__entranceRoomOpen = false;
       overtakeHornPending: !!entity.overtakeHornPending,
       overtakeHorned: !!entity.overtakeHorned,
       oncomingHorned: !!entity.oncomingHorned,
+      oncomingEvasionDecided: !!entity.oncomingEvasionDecided,
+      oncomingEvasionRequested: !!entity.oncomingEvasionRequested,
+      oncomingEvading: !!entity.oncomingEvading,
+      oncomingEvasionOrigin: entity.oncomingEvasionOrigin,
+      oncomingEvasionTarget: entity.oncomingEvasionTarget,
       overtakeLaneTarget: entity.overtakeLaneTarget,
       overtakeLaneChanged: !!entity.overtakeLaneChanged,
       passTargetSerial: entity.passTargetSerial,
@@ -43202,6 +43271,13 @@ window.__entranceRoomOpen = false;
       entity.overtakeHornPending = row.overtakeHornPending === true;
       entity.overtakeHorned = row.overtakeHorned === true;
       entity.oncomingHorned = row.oncomingHorned === true;
+      entity.oncomingEvasionDecided = row.oncomingEvasionDecided === true;
+      entity.oncomingEvasionRequested = row.oncomingEvasionRequested === true;
+      entity.oncomingEvading = row.oncomingEvading === true;
+      entity.oncomingEvasionOrigin = roadtripSnapshotNumber(row.oncomingEvasionOrigin,
+        entity.lane, -1.5, -.5);
+      entity.oncomingEvasionTarget = roadtripSnapshotNumber(row.oncomingEvasionTarget,
+        entity.lane, -1.5, -.5);
       entity.overtakeLaneTarget = roadtripSnapshotNumber(row.overtakeLaneTarget,
         entity.lane, .5, 1.5);
       entity.overtakeLaneChanged = row.overtakeLaneChanged === true;

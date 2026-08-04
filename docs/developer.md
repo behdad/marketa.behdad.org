@@ -206,6 +206,12 @@ Moving low-speed summons may originate in either forward lane and move only when
 share the Porsche's lane. `roadtripTrafficHornProfile()` owns the distance/cabin/spatial projection:
 passing horns use a 0.66-second envelope, while an oncoming vehicle whose own negative lane is
 occupied uses a distinct 1.35-second warning and latches `oncomingHorned` after one successful voice.
+`roadtripOncomingEvasionDecision()` shuffles one positive decision through every five entity serials,
+giving an exact seeded 20% plan without runtime randomness. On first wrong-lane proximity, the entity
+latches that decision. A selected vehicle commits only if `roadtripOncomingEvasionSafe()` finds the
+other negative lane free of the Porsche and oncoming traffic within 24 road units; its lane then
+interpolates at 2.4 lane units/second from `-.5` to `-1.5` or vice versa. An unsafe selected vehicle
+and the other 80% hold course. No branch targets a positive/player-direction lane.
 `roadtripCurvatureAt()` defines alternating eased bends. `roadtripCurveOffset()` integrates the
 upcoming curve into the sampled asphalt, shoulder, lane, furniture, sign, and entity projection,
 while the current curvature adds a small unsteered outside drift. Curve-warning uses are separately

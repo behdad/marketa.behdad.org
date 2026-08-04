@@ -89,7 +89,7 @@ check(/awardRoadtripBonus\(3\)/.test(source) && /awardRoadtripBonus\(2\)/.test(s
   /type === "heart" \? 5 : entity\.type === "kiss" \? 10 : 25/.test(source),
   "safe wildlife, close passes, hearts, kisses, and infinity use 3/2/5/10/25-point bases");
 check(/roadtripCollisionPenalty\("rear-end"/.test(source) &&
-  /roadtripCollisionPenalty\("wildlife"/.test(source) &&
+  /roadtripCollisionPenalty\(rabbitHit \? "rabbit" : "wildlife"/.test(source) &&
   /roadtripCollisionPenalty\("head-on"/.test(source),
   "every collision class routes through the shared penalty boundary");
 check(!/padStart/.test(paintSource) && /roadtripElapsedLabel/.test(paintSource) &&
@@ -102,8 +102,8 @@ check(/scoringVersion: ROADTRIP_SCORING_VERSION/.test(source) &&
 check(/odometerKm: Math\.round\(driveState\.odometerKm/.test(checkpointCaptureSource) &&
   !/\brpm:|\btemperature:/.test(checkpointCaptureSource),
   "checkpoint capture keeps the durable odometer but excludes ticking RPM and temperature");
-check(/entrance_roadtrip_grade_sunday: "Sunday drive"/.test(source) &&
-  /entrance_roadtrip_grade_sunday: "Nedělní projížďka"/.test(source) &&
+check(/entrance_roadtrip_grade_sunday: "Scenic drive"/.test(source) &&
+  /entrance_roadtrip_grade_sunday: "Vyhlídková jízda"/.test(source) &&
   /entrance_roadtrip_grade_legend: "Highway legend"/.test(source) &&
   /entrance_roadtrip_grade_legend: "Legenda dálnice"/.test(source),
   "English and Czech grade labels cover both ends of the scale");

@@ -226,7 +226,7 @@ result.checks.forEach(function (item) {
 if (result.errors.length) { failed = true; console.error("runtime errors:\n  " + result.errors.join("\n  ")); }
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
-var oldCloseIds = ["bathroom-room-close", "cinema-room-close", "prince-basement-close", "bedroom-room-close", "entrance-room-close"];
+var oldCloseIds = ["bathroom-room-close", "cinema-room-close", "bedroom-room-close", "entrance-room-close"];
 var oldClosePresent = oldCloseIds.filter(function (id) { return source.indexOf('id="' + id + '"') !== -1; });
 console.log("  " + (!oldClosePresent.length ? "✓" : "✗") + " lower rooms no longer render corner dismiss X controls" +
   (!oldClosePresent.length ? "" : " — " + oldClosePresent.join(", ")));

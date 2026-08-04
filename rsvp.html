@@ -6475,6 +6475,14 @@ html.is-webkit .chat-log{overflow:hidden} /* scaled foreignObject scroll layers 
   background:#788494 url("art/prince-stone.svg") 0 0/auto 20% repeat;
   image-rendering:pixelated;
 }
+#prince-basement-close{
+  position:absolute;z-index:2;top:clamp(4px,.55vw,8px);right:clamp(4px,.55vw,8px);
+  width:clamp(28px,3vw,38px);height:clamp(28px,3vw,38px);padding:0;box-sizing:border-box;
+  display:none;place-items:center;border:1px solid rgba(255,253,248,.72);border-radius:50%;
+  color:#fffdf8;background:rgba(29,25,24,.88);cursor:pointer;font:clamp(20px,2vw,24px)/1 sans-serif
+}
+#prince-basement.playing #prince-basement-close{display:grid}
+#prince-basement-close:hover,#prince-basement-close:focus-visible{background:#8e3a4a;outline:2px solid #fffdf8}
 .hunt-viewport.prince-basement-open #prince-basement{
   visibility:visible;
   pointer-events:auto;
@@ -33407,6 +33415,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
         </div>
         <div id="prince-basement-host"></div>
       </div>
+      <button type="button" id="prince-basement-close">×</button>
     </div>
     <div id="pacman-room-overlay" tabindex="-1" hidden>
       <div id="pacman-room-host"></div>
@@ -76442,6 +76451,7 @@ async def localfont(name):
   var princeHost = document.getElementById("monitor-prince-host");
   var princeOverlayClose = document.getElementById("prince-focus-close");
   var princeBasement = document.getElementById("prince-basement");
+  var princeBasementClose = document.getElementById("prince-basement-close");
   var princeBasementHost = document.getElementById("prince-basement-host");
   var princeDungeonSet = document.getElementById("prince-dungeon-set");
   var princePlayWall = document.getElementById("prince-play-wall");
@@ -77015,6 +77025,19 @@ async def localfont(name):
     if (typeof playCreakSound === "function") playCreakSound("prince-play-wall");
     return true;
   }
+  function dismissPrinceBasementGame() {
+    if (!princePresented || princeMode !== "basement" || !window.__princeInputActive) return false;
+    releasePrinceContextMenu();
+    window.__princeInputActive = false;
+    endPrinceDpadDrag();
+    princeBasement.classList.remove("playing");
+    princeSync();
+    runPrinceDungeonDrip();
+    runPrinceDungeonRat();
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_dungeon");
+    try { window.focus(); } catch (_error) {}
+    return true;
+  }
   function activatePrinceDungeonProp(prop) {
     if (!prop || !princePresented || princeMode !== "basement" || window.__princeInputActive) return false;
     var action = prop.getAttribute("data-action");
@@ -77331,6 +77354,14 @@ async def localfont(name):
     });
     button.addEventListener("dblclick", function (event) { event.preventDefault(); event.stopPropagation(); });
   });
+  if (princeBasementClose) {
+    princeBasementClose.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      dismissPrinceBasementGame();
+    });
+    princeBasementClose.addEventListener("dblclick", function (event) { event.preventDefault(); event.stopPropagation(); });
+  }
   // The now-playing screen's pause/play toggle: pauses the current song, or resumes it
   // if paused. play()/pause() fire the listeners above, which repaint the button + bars.
   var pauseBtn = document.getElementById("monitor-pause-btn");

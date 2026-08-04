@@ -81,6 +81,8 @@ check(/scheduleDoorCreak\(\)[\s\S]*?__roomAutonomyAllowed\("balcony"\)[\s\S]*?pl
   /__roomAutonomyAllowed\("balcony"\)\) playFinishMelody/.test(source) &&
   /function autoSky\(\)[\s\S]*?__roomAutonomyAllowed\("balcony"\)/.test(source),
   "the delayed door, arrival, and party-sky one-shots use the containment gate");
+check(/setInterval\(function \(\) \{[\s\S]*?__roomAutonomyAllowed\("balcony"\)[\s\S]*?phoneNotify\(\);[\s\S]*?\}, 19000\)/.test(source),
+  "the unopened-phone nudge cannot leak through a foreground lower room");
 
 console.log("");
 if (failures) {

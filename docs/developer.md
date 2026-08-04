@@ -202,8 +202,10 @@ The top-centre ornament is a live SVG mirror. `paintRoadtripMirror()` samples th
 model behind the Porsche, so its road edges, double-yellow centre, lane dividers, and reflected
 traffic share one rearward projection. That projection pins the wide near edge at the mirror centre;
 historical curvature accumulates only toward the horizon, so a bend must never slide or skew the
-near base. A clean traffic pass keeps the pooled entity alive briefly behind the player, projects it
-into a separate six-use mirror pool, swaps forward traffic to its front/headlight template, and
+near base. An eight-use roadside-tree pool follows the same rear projection on alternating verges;
+the shared conifer glyph is vertically flipped so its trunk base, rather than its crown, stays planted
+at the projected road edge. A clean traffic pass keeps the pooled entity alive briefly behind the
+player, projects it into a separate six-use mirror pool, swaps forward traffic to its front/headlight template, and
 releases it after 38 road units. The mirror's clipped cloud, smoke, rain, snow, and winter layers read
 the same Entrance classes and `--smoke` value as the windshield. The main windshield hides passed
 entities below its lower edge, so a pooled vehicle is never painted in both views at once.

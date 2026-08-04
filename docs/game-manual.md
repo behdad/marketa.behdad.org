@@ -266,8 +266,9 @@ as an emergency escape route, but slower than staying on the pavement.
 Road and tire noise build with speed; fast steering adds a tire squeal and air
 swoosh, while the rumble strip and gravel have rougher textures.
 The centre mirror is live: its road and markings follow the bends behind you,
-cloud, smoke, rain, snow, and winter cover match the windshield, and traffic you
-have just passed remains visible until it falls out of mirror range.
+roadside trees recede along both verges, cloud, smoke, rain, snow, and winter
+cover match the windshield, and traffic you have just passed remains visible
+until it falls out of mirror range.
 
 The posted highway limit is 90 km/h. Infrequent parked police cars are announced
 well ahead by one oncoming driver flashing its high beams three times, leaving

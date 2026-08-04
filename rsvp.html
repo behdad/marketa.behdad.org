@@ -5694,7 +5694,7 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 .pac-actors{grid-area:1/1/16/20;display:grid;grid-template:repeat(180,minmax(0,1fr))/repeat(252,minmax(0,1fr));width:110.526316%;margin-left:-5.263158%;min-width:0;min-height:0;pointer-events:none}
 .pac-actor{grid-row:var(--ar)/span 12;grid-column:var(--agc)/span 12;min-width:0;min-height:0;place-self:center}
 @property --pac-mouth-gap{syntax:"<percentage>";inherits:false;initial-value:8%}
-.pac-player{--pac-mouth-gap:8%;width:3px;height:3px;border-radius:50%;background:conic-gradient(from var(--mouth),#ffd83d 0 calc(50% - var(--pac-mouth-gap)),transparent calc(50% - var(--pac-mouth-gap)) calc(50% + var(--pac-mouth-gap)),#ffd83d calc(50% + var(--pac-mouth-gap)) 100%)}
+.pac-player{--pac-mouth-gap:8%;width:var(--pac-player-width,3px);height:3px;border-radius:50%;background:conic-gradient(from var(--mouth),#ffd83d 0 calc(50% - var(--pac-mouth-gap)),transparent calc(50% - var(--pac-mouth-gap)) calc(50% + var(--pac-mouth-gap)),#ffd83d calc(50% + var(--pac-mouth-gap)) 100%)}
 /* A conic gradient starts at twelve o'clock; its transparent slice is opposite that
    start, so each facing angle is a quarter-turn behind the direction of travel. */
 .pac-player[data-dir="right"]{--mouth:270deg}.pac-player[data-dir="down"]{--mouth:0deg}.pac-player[data-dir="left"]{--mouth:90deg}.pac-player[data-dir="up"]{--mouth:180deg}
@@ -68817,7 +68817,7 @@ setOfficeProgress("pc", false);
   var PAC_PLAYER_DOT_MS = 150, PAC_PLAYER_CLEAR_MS = 133, PAC_GHOST_MS = 142;
   var PAC_PLAYER_FRIGHT_DOT_MS = 135, PAC_PLAYER_FRIGHT_CLEAR_MS = 118, PAC_PLAYER_POWER_MS = 168;
   var PAC_GHOST_FRIGHT_MS = 213, PAC_GHOST_TUNNEL_MS = 266, PAC_GHOST_EYES_MS = 107;
-  var PAC_LOOP_MS = 20, PAC_VISUAL_SUBSTEPS = 12, PAC_VISUAL_TUNNEL_PAD = 1;
+  var PAC_LOOP_MS = 20, PAC_VISUAL_SUBSTEPS = 12, PAC_VISUAL_TUNNEL_PAD = 1, PAC_PLAYER_SIZE = 3;
   var PAC_MODE_SCHEDULE = [
     { mode: "scatter", ms: 7000 }, { mode: "chase", ms: 20000 },
     { mode: "scatter", ms: 7000 }, { mode: "chase", ms: 20000 },
@@ -68837,11 +68837,25 @@ setOfficeProgress("pc", false);
   }
   function pacRoomPresented() { return !!(pacRoomOverlay && !pacRoomOverlay.hidden); }
   function pacPresented() { return pacRoomPresented() || monitor.classList.contains("show-pacman"); }
+  function pacFitPlayer() {
+    if (!pacPlayerEl || !pacPresented()) return null;
+    pacPlayerEl.style.removeProperty("--pac-player-width");
+    var rect = pacPlayerEl.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    var width = PAC_PLAYER_SIZE * rect.height / rect.width;
+    if (!Number.isFinite(width) || width <= 0) return null;
+    Array.prototype.forEach.call(pacWrap.querySelectorAll(".pac-player"), function (player) {
+      player.style.setProperty("--pac-player-width", width.toFixed(4) + "px");
+    });
+    rect = pacPlayerEl.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }
   function sizePacmanRoom() {
     if (!pacRoomPresented() || !pacRoomHost) return;
     var rect = pacRoomOverlay.getBoundingClientRect();
     var scale = Math.max(1, Math.min((rect.width - 44) / 124, (rect.height - 30) / 42));
     pacRoomHost.style.transform = "scale(" + scale.toFixed(4) + ")";
+    pacFitPlayer();
   }
   function pacHigh() { try { return parseInt(localStorage.getItem(PAC_HIGH_KEY), 10) || 0; } catch (e) { return 0; } }
   function pacSetHigh(n) { try { localStorage.setItem(PAC_HIGH_KEY, String(n)); } catch (e) {} }
@@ -69344,6 +69358,7 @@ setOfficeProgress("pc", false);
     if (pacRoomPresented()) closePacmanRoomApp(false, false, true);
     if (!pacUnlocked || !monitor.classList.contains("show-caps") || monitor.classList.contains("show-pacman")) return;
     stopSaver(); clearTimeout(saverTimer); saverTimer = null; pacBuild(); monitor.classList.add("show-pacman");
+    requestAnimationFrame(pacFitPlayer);
     if (pacState.status === "running") { pacTrackRun(); pacStartLoop(); }
     playLaptopClickSound("office-monitor");
     if (window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "pacman", active: true }, "ui");
@@ -69361,6 +69376,7 @@ setOfficeProgress("pc", false);
     return { mode: pacRoomPresented() ? "room" : monitor.classList.contains("show-pacman") ? "monitor" : null,
       room: pacRoomPresented() ? pacRoomOrigin : monitor.classList.contains("show-pacman") ? "office" : null };
   };
+  window.__fitPacmanPlayer = pacFitPlayer;
   window.__pacmanUnlocked = function () { return pacUnlocked; };
   window.__pacmanState = function () {
     return pacState ? {
@@ -69445,9 +69461,13 @@ setOfficeProgress("pc", false);
   if (pacRoomClose) pacRoomClose.addEventListener("click", function (e) {
     e.preventDefault(); e.stopPropagation(); closePacmanRoomApp(true);
   });
-  window.addEventListener("resize", sizePacmanRoom);
-  document.addEventListener("fullscreenchange", sizePacmanRoom);
-  document.addEventListener("webkitfullscreenchange", sizePacmanRoom);
+  function resizePacmanPresentation() {
+    if (pacRoomPresented()) sizePacmanRoom();
+    else if (pacPresented()) pacFitPlayer();
+  }
+  window.addEventListener("resize", resizePacmanPresentation);
+  document.addEventListener("fullscreenchange", resizePacmanPresentation);
+  document.addEventListener("webkitfullscreenchange", resizePacmanPresentation);
   window.addEventListener("keydown", function (e) {
     if (!pacRoomPresented() || (e.key !== "Escape" && e.key !== "Esc")) return;
     e.preventDefault(); e.stopImmediatePropagation(); closePacmanRoomApp(true);

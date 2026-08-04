@@ -198,6 +198,9 @@ street-drive state for the visit.
 
 The compact block is visually compressed, so its scenery passes at twice the
 highway world rate. The speedometer and accumulated distance remain physical.
+Hard braking while steering turns the Porsche through 180° from 140 km/h on a
+dry block, 120 in rain, or 100 in snow. If the reversed car stops after leaving
+the frame, it returns at the nearest usable edge.
 
 The left instrument is a three-digit kilometre odometer, not a lap counter. It
 adds the actual distance travelled on the block and highway, including reverse,
@@ -227,6 +230,9 @@ block and offers the card after one completed forward lap. Enter accepts a
 visible offer; Escape dismisses it for the rest of that dashboard session. The
 same steering, gears, accelerator, and brake apply; highway steering omits the
 street-drive indicator flourish. The Porsche
+performs a full 360° instead of changing direction when hard braking and
+steering from 200 km/h on dry asphalt, 180 in rain, or 160 in snow. Braking
+continues to shed speed throughout the spin. The Porsche
 begins in the inner right-hand lane: rear-view traffic travels ahead in the two
 right lanes, while headlights approach in the two lanes beyond the double
 yellow. The traffic mix includes sedans, pickups, semis, and the RVs common on

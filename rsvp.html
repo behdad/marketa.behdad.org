@@ -861,6 +861,17 @@ footer{margin-top:2.6rem}
 #entrance-room.roadtrip-active #entrance-roadtrip-world{
   opacity:1;visibility:visible;transition-delay:0s;
 }
+#entrance-roadtrip-world.roadtrip-spinning{
+  transform-box:view-box;transform-origin:center;
+  animation:entrance-roadtrip-brake-spin .72s cubic-bezier(.2,.72,.3,1) both;
+}
+@keyframes entrance-roadtrip-brake-spin{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(var(--roadtrip-spin-to,360deg))}
+}
+@media (prefers-reduced-motion:reduce){
+  #entrance-roadtrip-world.roadtrip-spinning{animation:none}
+}
 #entrance-room.roadtrip-active .entrance-drive-windshield-scenery >
   :is(.entrance-drive-windshield-day,.entrance-drive-windshield-night,.entrance-drive-windshield-clouds){
   opacity:0 !important;visibility:hidden;
@@ -35056,6 +35067,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_NOSE_DIVE_MIN_DECEL = .9;
   var PORSCHE_NOSE_DIVE_FULL_DECEL = 21.5;
   var PORSCHE_BRAKE_SPIN_MIN_SPEED = 140;
+  var PORSCHE_ROADTRIP_SPIN_MIN_SPEED = 200;
   var PORSCHE_STATIC_SPEED_KMH = .25;
   var PORSCHE_LOW_SPEED_RESISTANCE_KMH = 20;
   var PORSCHE_LOW_SPEED_RESISTANCE_BOOST = 12;
@@ -38878,10 +38890,10 @@ window.__entranceRoomOpen = false;
     if (Math.abs(driveState.speed) > .01) return false;
     var recovered = false;
     if (driveState.position < -600) {
-      driveState.position = driveState.facing < 0 ? -575 : 275;
+      driveState.position = driveState.facing < 0 ? -260 : 275;
       recovered = true;
     } else if (driveState.position > 300) {
-      driveState.position = driveState.facing > 0 ? 275 : -575;
+      driveState.position = driveState.facing > 0 ? 275 : -260;
       recovered = true;
     }
     if (recovered) paintPorscheDrivePosition();
@@ -39899,24 +39911,42 @@ window.__entranceRoomOpen = false;
     porscheSpinTimer = null;
     driveState.spinning = false;
     if (porsche) porsche.classList.remove("spinning");
+    var roadtripWorld = roadtripElement("entrance-roadtrip-world");
+    if (roadtripWorld) roadtripWorld.classList.remove("roadtrip-spinning");
     paintPorscheDrivePosition();
     paintPorscheDriveHud();
   }
+  function porscheBrakeSpinThreshold() {
+    var threshold = roadtripState.active ? PORSCHE_ROADTRIP_SPIN_MIN_SPEED : PORSCHE_BRAKE_SPIN_MIN_SPEED;
+    if (room.classList.contains("entrance-snowing")) return threshold - 40;
+    if (room.classList.contains("entrance-raining")) return threshold - 20;
+    return threshold;
+  }
   function spinPorscheOnBrake(speed, steerInput) {
-    if (driveState.brakeSpinChecked || Math.abs(speed) < PORSCHE_BRAKE_SPIN_MIN_SPEED || !steerInput) return false;
+    if (driveState.brakeSpinChecked || !steerInput || Math.abs(speed) < porscheBrakeSpinThreshold()) return false;
+    var roadtripSpin = roadtripState.active;
     driveState.brakeSpinChecked = true;
     driveState.spinDirection = steerInput;
     var from = driveState.yaw;
-    var to = from + steerInput * 180;
+    var to = from + steerInput * (roadtripSpin ? 360 : 180);
     driveState.yaw = to;
     driveState.facing = Math.abs(to % 360) < .01 ? 1 : -1;
-    driveState.speed *= -1;
+    if (!roadtripSpin) driveState.speed *= -1;
     driveState.spins++;
     driveState.spinning = true;
     if (porsche) {
       porsche.style.setProperty("--porsche-spin-from", from + "deg");
       porsche.style.setProperty("--porsche-spin-to", to + "deg");
       porsche.classList.add("spinning");
+    }
+    if (roadtripSpin) {
+      var roadtripWorld = roadtripElement("entrance-roadtrip-world");
+      if (roadtripWorld) {
+        roadtripWorld.style.setProperty("--roadtrip-spin-to", steerInput * 360 + "deg");
+        roadtripWorld.classList.remove("roadtrip-spinning");
+        void roadtripWorld.getBBox();
+        roadtripWorld.classList.add("roadtrip-spinning");
+      }
     }
     clearTimeout(porscheSpinTimer);
     porscheSpinTimer = setTimeout(finishPorscheBrakeSpin, 740);
@@ -40581,7 +40611,7 @@ window.__entranceRoomOpen = false;
         // tire-mark cadence remains unchanged and drivetrain state is untouched.
         if (skidNow - lastSkidSoundAt > 300 && playPorscheSkidSound(before)) lastSkidSoundAt = skidNow;
       }
-      spinPorscheOnBrake(before, Math.sign(steerInput));
+      spinPorscheOnBrake(longitudinalSpeedBefore, Math.sign(steerInput));
     }
     if (!braking && !throttleCoupled) {
       var rollingResistance = porscheRollingResistance(driveState.speed);

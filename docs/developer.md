@@ -159,6 +159,10 @@ The automatic range interlock uses `PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH`: R�
 while opposite-direction speed is strictly below 10 km/h, and the same boundary validates restored
 range/speed snapshots. Keep this separate from the manual gearbox's wrong-direction stall rule.
 
+`spinPorscheOnBrake()` owns both hard-brake gestures. The block's 180° turn reverses facing and
+signed speed; Road Trip's 360° leaves both intact after ordinary braking has reduced speed. Their
+dry thresholds are 140 and 200 km/h respectively, reduced by 20 in rain and 40 in snow.
+
 The first-person world is native SVG under `#entrance-drive-hud-svg`. `#entrance-room.roadtrip-active`
 expands its viewBox and HUD while leaving `#entrance-room-art` and `#entrance-porsche` rendered so
 spatial-audio geometry remains valid. The roadtrip weather layers follow the Entrance's existing

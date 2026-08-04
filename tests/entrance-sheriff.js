@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Alberta Sheriff patrol and >100-over arrest escalation structure.
+// Alberta Sheriff patrol and severe-stop escalation structure.
 "use strict";
 
 var fs = require("fs");
@@ -53,11 +53,12 @@ check(shout.indexOf('id="entrance-roadtrip-arrest-shout-text"') >= 0 &&
   source.indexOf('entrance_roadtrip_arrest_shout_engine: "VYPNĚTE MOTOR!"') >= 0 &&
   source.indexOf('entrance_roadtrip_arrest_shout_hands: "RUCE SKRZ VOLANT!"') >= 0,
   "the severe-arrest shout is present and bilingual");
-check(source.indexOf("var ROADTRIP_POLICE_ARREST_SHOUT_OVER = 100;") >= 0 &&
-  source.indexOf("police.overLimit > ROADTRIP_POLICE_ARREST_SHOUT_OVER") >= 0 &&
+check(source.indexOf("var ROADTRIP_POLICE_ARREST_SHOUT_OVER = 90;") >= 0 &&
+  source.indexOf("police.overLimit >= ROADTRIP_POLICE_ARREST_SHOUT_OVER") >= 0 &&
+  source.indexOf('police.resolutionReason === "refused"') >= 0 &&
   source.indexOf('playRoadtripArrestSound("shout")') >= 0 &&
   source.indexOf('kind === "shout"') >= 0,
-  "the escalation is strictly greater than 100 over and owns a filtered shout voice");
+  "90-over and refusal escalations own a filtered shout voice");
 check(source.indexOf("stopRoadtripArrestSounds();") >= 0 &&
   /var live = porscheArrestAudioNodes\.splice\(0\)/.test(source),
   "all arrest voices share the existing teardown path");

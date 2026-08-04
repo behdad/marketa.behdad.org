@@ -61,6 +61,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         hook: typeof window.__entranceRoadtripPolice,
         detectHook: typeof window.__entranceRoadtripPoliceDetect,
         pursuitStepHook: typeof window.__entranceRoadtripPoliceStep,
+        spawnPlanHook: typeof window.__entranceRoadtripSpawnPlan,
+        spawnIntervalHook: typeof window.__entranceRoadtripSpawnInterval,
         demeritHook: typeof window.__entranceRoadtripDemeritsForSpeed,
         demeritSchedule: [1, 15, 16, 30, 31, 50, 51].map(window.__entranceRoadtripDemeritsForSpeed),
         speedLimit: trip().speedLimit,
@@ -74,6 +76,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         surrenderSpeed: trip().policeSurrenderSpeed,
         escapeDistance: trip().policeEscapeDistance,
         escapeHoldSeconds: trip().policeEscapeHoldSeconds,
+        pursuitTrafficDensity: trip().pursuitTrafficDensity,
+        pursuitReactionDistance: trip().pursuitReactionDistance,
         stoppedBeat: trip().policeStoppedBeat,
         arrestDuration: trip().policeArrestDuration,
         demeritHud: ["entrance-roadtrip-meta-panel", "entrance-roadtrip-demerit-label",
@@ -84,6 +88,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         speedFurniture: Array.prototype.some.call(document.querySelectorAll("#entrance-roadtrip-furniture use"), function (node) {
           return (node.getAttribute("href") || node.getAttribute("xlink:href")) === "#entrance-roadtrip-speed-90";
         })
+      };
+      var normalPlans = [];
+      var pursuitPlans = [];
+      var normalIntervals = [];
+      var pursuitIntervals = [];
+      for (var planIndex = 0; planIndex < 20; planIndex++) {
+        normalPlans.push(window.__entranceRoadtripSpawnPlan(false, planIndex));
+        if (planIndex < 16) pursuitPlans.push(window.__entranceRoadtripSpawnPlan(true, planIndex));
+        if (planIndex < 5) {
+          normalIntervals.push(window.__entranceRoadtripSpawnInterval(false, planIndex));
+          pursuitIntervals.push(window.__entranceRoadtripSpawnInterval(true, planIndex));
+        }
+      }
+      report.steps.pursuitTraffic = {
+        normal: normalPlans,
+        pursuit: pursuitPlans,
+        normalIntervals: normalIntervals,
+        pursuitIntervals: pursuitIntervals
       };
 
       setMotion(110, 3);
@@ -101,6 +123,38 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.warningHeadroom = copy(trip().police);
       step(1000, 2);
       report.steps.tolerated = copy(trip());
+
+      prepareEncounter();
+      setMotion(0, 0);
+      window.__entranceRoadtripPolice(150);
+      step(1000, 5);
+      var radarBeforeApproach = copy(trip());
+      setMotion(131, 3);
+      step(100);
+      var radarMeasured = copy(trip());
+      window.__entranceRoadtripSetLane(-.5);
+      window.__entranceRoadtripSpawn("car", -.5, 10);
+      step(100);
+      var radarCrashed = copy(state());
+      window.__entranceRoadtripSetDistance(radarCrashed.drive.roadtrip.police.stationAt - 6);
+      step(100);
+      var radarDetected = copy(state());
+      window.__entranceRoadtripSetLane(.5);
+      step(1000);
+      var radarApproach = copy(state());
+      window.__entranceRoadtripPoliceStep(0, 3);
+      var radarCard = copy(state());
+      window.__entranceRoadtripPoliceStep(0, 3);
+      report.steps.radarPeak = {
+        beforeApproach: radarBeforeApproach,
+        measured: radarMeasured,
+        crashed: radarCrashed,
+        detected: radarDetected,
+        approach: radarApproach,
+        card: radarCard,
+        cited: copy(state())
+      };
+      if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
 
       prepareEncounter();
       var toleratedPass = meetPolice(110);
@@ -162,8 +216,23 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__flashCaptionKey("entrance_roadtrip_heart", 10000, "entrance-roadtrip");
       setMotion(0, 0);
       step(1000);
+      var ordinaryStopped = copy(trip());
+      var ordinaryStoppedCaption = document.getElementById("hunt-caption").textContent.trim();
+      window.__entranceRoadtripPoliceStep(0, 1);
+      var ordinaryApproach = copy(trip());
+      window.__entranceRoadtripPoliceStep(0, 2);
+      var ordinaryCard = copy(trip());
+      var ordinaryCardTitle = document.getElementById("entrance-roadtrip-arrest-title").textContent.trim();
+      var ordinaryCardLine = document.getElementById("entrance-roadtrip-arrest-line").textContent.trim();
+      window.__entranceRoadtripPoliceStep(0, 3);
       report.steps.stopped = {
         trip: copy(trip()),
+        stopped: ordinaryStopped,
+        approach: ordinaryApproach,
+        card: ordinaryCard,
+        cardTitle: ordinaryCardTitle,
+        cardLine: ordinaryCardLine,
+        stoppedCaption: ordinaryStoppedCaption,
         caption: document.getElementById("hunt-caption").textContent.trim(),
         flash: window.__flashCaptionState()
       };
@@ -233,6 +302,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripSetLane(2);
       setMotion(0, 0);
       step(1000);
+      window.__entranceRoadtripPoliceStep(0, 6);
       report.steps.demeritWarning = {
         trip: copy(trip()),
         caption: document.getElementById("hunt-caption").textContent.trim()
@@ -296,22 +366,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       };
 
       prepareEncounter();
-      meetPolice(190);
+      meetPolice(179);
       window.__entranceRoadtripSetLane(2);
       setMotion(0, 0);
       step(1000);
       window.__entranceRoadtripPoliceStep(0, 1.5);
-      var exactlyHundredOver = copy(trip());
+      var eightyNineOver = copy(trip());
 
       prepareEncounter();
-      meetPolice(191);
+      meetPolice(180);
       window.__entranceRoadtripSetLane(2);
       setMotion(0, 0);
       step(1000);
       window.__entranceRoadtripPoliceStep(0, 1.5);
-      var overHundredEnglish = copy(trip());
+      var ninetyOverEnglish = copy(trip());
       window.setLang("cs");
-      var overHundredCzech = copy(trip());
+      var ninetyOverCzech = copy(trip());
       document.hasFocus = function () { return false; };
       window.dispatchEvent(new Event("blur"));
       await sleep(60);
@@ -322,53 +392,53 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveControl("steerLeft", false);
       window.setLang("en");
       report.steps.shoutThreshold = {
-        exactlyHundred: exactlyHundredOver,
-        overHundredEnglish: overHundredEnglish,
-        overHundredCzech: overHundredCzech,
+        eightyNineOver: eightyNineOver,
+        ninetyOverEnglish: ninetyOverEnglish,
+        ninetyOverCzech: ninetyOverCzech,
         blurred: overHundredBlurred
       };
 
       prepareEncounter();
       var twoHundredDetection = meetPolice(200);
       window.__entranceRoadtripSetDistance(twoHundredDetection.police.stationAt + 30);
-      window.__entranceRoadtripPoliceStep(200, 14);
-      var twoHundredSix = copy(trip());
-      window.__entranceRoadtripPoliceStep(200, 1);
-      var twoHundredSeven = copy(trip());
-      window.__entranceRoadtripPoliceStep(200, 10);
-      var twoHundredHeld = copy(trip());
+      window.__entranceRoadtripPoliceStep(200, 5);
+      var twoHundred = copy(trip());
 
       prepareEncounter();
-      var oneEightyDetection = meetPolice(180);
-      window.__entranceRoadtripSetDistance(oneEightyDetection.police.stationAt + 30);
-      window.__entranceRoadtripPoliceStep(180, 19);
-      var oneEightyNineteen = copy(trip());
-      window.__entranceRoadtripPoliceStep(180, 1);
-      var oneEightyTwenty = copy(trip());
+      var exactThresholdDetection = meetPolice(215);
+      window.__entranceRoadtripSetDistance(exactThresholdDetection.police.stationAt + 30);
+      window.__entranceRoadtripPoliceStep(215, 5);
+      var exactThreshold = copy(trip());
 
       prepareEncounter();
-      var fastDetection = meetPolice(180);
+      var fastDetection = meetPolice(216);
       window.__entranceRoadtripSetDistance(fastDetection.police.stationAt + 30);
       var fastPursuit = copy(trip());
       var fastInitialScale = fastPursuit.police.mirrorScale;
       var fastInitialSiren = fastPursuit.police.sirenLevel;
-      window.__entranceRoadtripPoliceStep(200, 15);
-      var brieflyFast = copy(trip());
-      window.__entranceRoadtripPoliceStep(150, 5);
+      window.__entranceRoadtripPoliceStep(216, 30);
+      var leadFifty = copy(trip());
+      window.__entranceRoadtripPoliceStep(216, 30);
+      var leadHundred = copy(trip());
+      window.__entranceRoadtripPoliceStep(216, 11);
+      var heldEleven = copy(trip());
+      window.__entranceRoadtripPoliceStep(214, 2);
       var recovered = copy(trip());
       window.__flashCaptionKey("entrance_roadtrip_kiss", 10000, "entrance-roadtrip");
-      window.__entranceRoadtripPoliceStep(200, 17);
+      window.__entranceRoadtripPoliceStep(216, 11);
+      var requalified = copy(trip());
+      window.__entranceRoadtripPoliceStep(216, 1);
       report.steps.escaped = {
         detected: fastPursuit,
         initialScale: fastInitialScale,
         initialSiren: fastInitialSiren,
-        twoHundredSix: twoHundredSix,
-        twoHundredSeven: twoHundredSeven,
-        twoHundredHeld: twoHundredHeld,
-        oneEightyNineteen: oneEightyNineteen,
-        oneEightyTwenty: oneEightyTwenty,
-        brieflyFast: brieflyFast,
+        twoHundred: twoHundred,
+        exactThreshold: exactThreshold,
+        leadFifty: leadFifty,
+        leadHundred: leadHundred,
+        heldEleven: heldEleven,
         recovered: recovered,
+        requalified: requalified,
         cleared: copy(trip()),
         caption: document.getElementById("hunt-caption").textContent.trim(),
         flash: window.__flashCaptionState()
@@ -417,11 +487,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripPoliceStep(130, 20);
       var refusedCapture = copy(trip());
       window.__entranceRoadtripPoliceStep(0, 3);
-      window.__entranceRoadtripPoliceStep(0, 2);
+      var refusedApproach = copy(trip());
+      window.__entranceRoadtripPoliceStep(0, 1.5);
+      var refusedShout = copy(trip());
+      window.__entranceRoadtripPoliceStep(0, 4.5);
       report.steps.refused = {
         paused: refusedPaused,
         resumed: refusedResumed,
         capture: refusedCapture,
+        approach: refusedApproach,
+        shout: refusedShout,
         trip: copy(trip())
       };
 
@@ -434,7 +509,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         new MouseEvent("click", { bubbles: true, cancelable: true }));
       window.__entranceRoadtripPoliceStep(130, 20);
       window.__entranceRoadtripPoliceStep(0, 3);
-      window.__entranceRoadtripPoliceStep(0, 2);
+      window.__entranceRoadtripPoliceStep(0, 6);
       var suspendedTrip = copy(trip());
       var suspendedCaption = document.getElementById("hunt-caption").textContent.trim();
       var suspendedButton = document.getElementById("entrance-roadtrip-reenter");
@@ -508,20 +583,52 @@ var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.contract && s.contract.hook === "function" && s.contract.detectHook === "function" &&
   s.contract.pursuitStepHook === "function" &&
+  s.contract.spawnPlanHook === "function" && s.contract.spawnIntervalHook === "function" &&
   s.contract.demeritHook === "function" &&
   JSON.stringify(s.contract.demeritSchedule) === JSON.stringify([2, 2, 3, 3, 4, 4, 6]) &&
   s.contract.speedLimit === 90 &&
   s.contract.enforcementSpeed === 110 &&
   s.contract.firstDistance === 950 && s.contract.warningAhead === 240 &&
   s.contract.warningHeadroom === 3 && s.contract.repeatDistance === 1200 &&
-  s.contract.escapeSpeed === 180 && s.contract.pursuitSpeed === 180 &&
+  s.contract.escapeSpeed === 215 && s.contract.pursuitSpeed === 210 &&
   s.contract.surrenderSpeed === 100 &&
-  s.contract.escapeDistance === 80 && s.contract.escapeHoldSeconds === 10 &&
+  s.contract.escapeDistance === 100 && s.contract.escapeHoldSeconds === 12 &&
+  s.contract.pursuitTrafficDensity === 1.4 && s.contract.pursuitReactionDistance === 118 &&
   s.contract.stoppedBeat === 1.25 &&
   s.contract.arrestDuration === 5.8 &&
   s.contract.demeritHud &&
   s.contract.speedSign && s.contract.speedFurniture,
-  "the highway posts 90/110 enforcement and models a Sheriff capable of 180 km/h", s.contract);
+  "the highway posts 90/110 enforcement and models a Sheriff capable of 210 km/h", s.contract);
+var expectedNaturalTypes = ["car", "heart", "rv", "rabbit", "pickup", "kiss", "deer", "car",
+  "heart", "truck", "rv", "heart", "rabbit", "kiss", "pickup", "inf", "rv", "car", "deer", "truck"];
+var expectedNaturalLanes = [1.5, .5, -.5, .5, .5, 1.5, 1.5, -1.5,
+  .5, 1.5, .5, 1.5, .5, .5, 1.5, .5, 1.5, -.5, 1.5, -1.5];
+var pursuitVehicles = s.pursuitTraffic && s.pursuitTraffic.pursuit.filter(function (plan) {
+  return !!plan.direction;
+});
+var normalIntervalTotal = s.pursuitTraffic && s.pursuitTraffic.normalIntervals.reduce(function (sum, value) {
+  return sum + value;
+}, 0);
+var pursuitIntervalTotal = s.pursuitTraffic && s.pursuitTraffic.pursuitIntervals.reduce(function (sum, value) {
+  return sum + value;
+}, 0);
+check(s.pursuitTraffic &&
+  JSON.stringify(s.pursuitTraffic.normal.map(function (plan) { return plan.type; })) ===
+    JSON.stringify(expectedNaturalTypes) &&
+  JSON.stringify(s.pursuitTraffic.normal.map(function (plan) { return plan.lane; })) ===
+    JSON.stringify(expectedNaturalLanes) &&
+  JSON.stringify(s.pursuitTraffic.normalIntervals) === JSON.stringify([31, 35, 39, 43, 47]) &&
+  JSON.stringify(s.pursuitTraffic.pursuitIntervals) === JSON.stringify([22, 25, 28, 31, 34]) &&
+  normalIntervalTotal / pursuitIntervalTotal > 1.35 &&
+  normalIntervalTotal / pursuitIntervalTotal < 1.45 &&
+  pursuitVehicles.length === 12 &&
+  pursuitVehicles.filter(function (plan) { return plan.direction === "oncoming"; }).length === 7 &&
+  pursuitVehicles.filter(function (plan) { return plan.direction === "forward"; }).every(function (plan) {
+    return plan.type === "rv" || plan.type === "truck";
+  }) &&
+  s.pursuitTraffic.pursuit.every(function (plan) { return plan.ahead >= 118; }),
+  "pursuit-only traffic is about 40% denser, oncoming-biased, slow-heavy, and always affords 118 m reaction distance",
+  s.pursuitTraffic);
 check(s.warning && s.warning.police.warningFlashCount === 3 &&
   s.warning.warningVisible === "visible" && !s.warning.roadsideVisible && s.warning.lead === 240 &&
   s.warning.lead / (s.contract.enforcementSpeed / 3.6) - 1.4 >= s.contract.warningHeadroom,
@@ -533,6 +640,32 @@ check(s.tolerated && s.tolerated.active && s.tolerated.police.phase === "cooldow
   s.tolerated.police.detectedSpeed <= 110 && s.tolerated.police.pursuits === 0 &&
   s.tolerated.police.tickets === 0 && s.tolerated.police.fines === 0,
   "110 km/h is tolerated without a pursuit or ticket", s.tolerated);
+check(s.radarPeak && s.radarPeak.beforeApproach.police.phase === "warning" &&
+  s.radarPeak.beforeApproach.police.radarPeakSpeed === 0 &&
+  s.radarPeak.measured.police.phase === "warning" &&
+  s.radarPeak.measured.police.radarPeakSpeed === 130 &&
+  s.radarPeak.crashed.drive.roadtrip.police.phase === "warning" &&
+  s.radarPeak.crashed.drive.roadtrip.police.radarPeakSpeed === 130 &&
+  s.radarPeak.crashed.drive.roadtrip.collisions === 1 &&
+  s.radarPeak.crashed.drive.speed === 0 && !s.radarPeak.crashed.car.engineOn &&
+  s.radarPeak.detected.drive.roadtrip.police.phase === "pursuit" &&
+  s.radarPeak.detected.drive.roadtrip.police.detectedSpeed === 130 &&
+  s.radarPeak.detected.drive.roadtrip.police.overLimit === 40 &&
+  s.radarPeak.detected.drive.roadtrip.police.fine === 560 &&
+  s.radarPeak.approach.drive.roadtrip.playerLane === .5 &&
+  s.radarPeak.approach.drive.roadtrip.police.phase === "arrest" &&
+  s.radarPeak.approach.drive.roadtrip.police.surrenderLatched &&
+  s.radarPeak.approach.drive.roadtrip.police.arrestVisible &&
+  s.radarPeak.approach.drive.instruction === "entrance_roadtrip_police_arrest" &&
+  s.radarPeak.card.drive.roadtrip.police.phase === "arrest" &&
+  s.radarPeak.card.drive.roadtrip.police.arrestCardOpacity > .5 &&
+  !s.radarPeak.card.drive.roadtrip.police.arrestShoutPlayed &&
+  s.radarPeak.cited.drive.roadtrip.police.phase === "cooldown" &&
+  s.radarPeak.cited.drive.roadtrip.police.tickets === 1 &&
+  s.radarPeak.cited.drive.roadtrip.police.fines === 560 &&
+  s.radarPeak.cited.drive.roadtrip.demeritPoints === 4,
+  "radar keeps the pre-crash peak and a surrendered car stopped in a travel lane promptly gets the calm officer approach and citation",
+  s.radarPeak);
 check(s.toleratedMirror && s.toleratedMirror.detection.police.phase === "cooldown" &&
   s.toleratedMirror.near.police.mirrorVisible &&
   s.toleratedMirror.near.police.mirrorMode === "roadside" &&
@@ -579,7 +712,16 @@ check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sire
   "the pursuit siren tears down while unfocused and returns only when attended", {
     unfocused: s.unfocused, refocused: s.refocused
   });
-check(s.stopped && s.stopped.trip.active && s.stopped.trip.police.phase === "cooldown" &&
+check(s.stopped && s.stopped.stopped.active && s.stopped.stopped.police.phase === "arrest" &&
+  s.stopped.stopped.police.stops === 1 && s.stopped.stopped.police.arrestVisible &&
+  !s.stopped.stopped.police.arrestShoutPlayed &&
+  /officer approaching/.test(s.stopped.stoppedCaption) &&
+  s.stopped.approach.police.phase === "arrest" &&
+  s.stopped.approach.police.arrestOfficerTransform !== s.stopped.stopped.police.arrestOfficerTransform &&
+  s.stopped.card.police.phase === "arrest" && s.stopped.card.police.arrestCardOpacity > .5 &&
+  !s.stopped.card.police.arrestShoutPlayed && s.stopped.cardTitle === "SPEEDING TICKET" &&
+  /40 over · fine \$560 · 4 pts · 4\/15/.test(s.stopped.cardLine) &&
+  s.stopped.trip.active && s.stopped.trip.police.phase === "cooldown" &&
   s.stopped.trip.police.stops === 1 && s.stopped.trip.police.tickets === 1 &&
   s.stopped.trip.police.fines === 560 && s.stopped.trip.police.scorePenalties === 560 &&
   s.stopped.trip.demeritPoints === 4 && !s.stopped.trip.demeritWarning &&
@@ -588,7 +730,7 @@ check(s.stopped && s.stopped.trip.active && s.stopped.trip.police.phase === "coo
   !s.stopped.trip.police.mirrorVisible && !s.stopped.trip.police.arrestVisible &&
   /40 km\/h over · fine \$560 · 4 demerits · 4\/15/.test(s.stopped.caption) &&
   !s.stopped.flash,
-  "the roadside outcome uses the recorded overage before the scaled fine", s.stopped);
+  "an ordinary stop gets a calm officer approach and ticket card before the recorded fine", s.stopped);
 check(s.surrenderLatch && s.surrenderLatch.aboveBefore === 101 &&
   s.surrenderLatch.above.drive.speed > s.surrenderLatch.aboveBefore &&
   !s.surrenderLatch.above.drive.roadtrip.police.surrenderLatched &&
@@ -604,13 +746,16 @@ check(s.surrenderLatch && s.surrenderLatch.aboveBefore === 101 &&
   s.surrenderLatch.controlsLive.drive.steeringAngle > 0 &&
   s.surrenderLatch.controlsLive.drive.holds.brake && s.surrenderLatch.controlsLive.drive.holds.steerRight &&
   s.surrenderLatch.controlsLive.drive.roadtrip.police.surrenderLatched &&
-  s.surrenderLatch.reverseSelected && s.surrenderLatch.reverseBlocked.drive.gear === -1 &&
+  s.surrenderLatch.reverseSelected && s.surrenderLatch.reverseBlocked.drive.gear === 0 &&
   s.surrenderLatch.reverseBlocked.drive.speed === 0 && !s.surrenderLatch.reverseBlocked.drive.holds.throttle &&
   s.surrenderLatch.reverseBlocked.drive.roadtrip.police.surrenderLatched &&
-  /pull onto the right shoulder and stop/.test(s.surrenderLatch.caption) &&
+  s.surrenderLatch.reverseBlocked.drive.roadtrip.police.phase === "arrest" &&
+  s.surrenderLatch.reverseBlocked.drive.roadtrip.police.arrestVisible &&
+  s.surrenderLatch.reverseBlocked.drive.instruction === "entrance_roadtrip_police_arrest" &&
+  /officer approaching/.test(s.surrenderLatch.caption) &&
   s.surrenderLatch.resetStarted && s.surrenderLatch.reset.drive.roadtrip.police.phase === "idle" &&
   !s.surrenderLatch.reset.drive.roadtrip.police.surrenderLatched,
-  "101 can accelerate, but the first sub-100 speed latches surrender across keyboard, touch, clutch, and reverse while preserving brake and steering",
+  "101 can accelerate, but sub-100 latches surrender across inputs, preserves braking and steering, then begins the approach promptly at zero",
   s.surrenderLatch);
 check(s.demeritWarning && s.demeritWarning.trip.active &&
   s.demeritWarning.trip.demeritPoints === 8 && s.demeritWarning.trip.demeritWarning &&
@@ -627,6 +772,7 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.approach.police.arrestOfficerTransform !== s.courtStop.stopped.police.arrestOfficerTransform &&
   s.courtStop.knock.police.arrestKnockPlayed && !s.courtStop.knock.police.arrestRadioPlayed &&
   s.courtStop.card.police.arrestKnockPlayed && s.courtStop.card.police.arrestRadioPlayed &&
+  !s.courtStop.card.police.arrestShoutPlayed && s.courtStop.card.police.arrestShoutOpacity === 0 &&
   s.courtStop.card.police.arrestCardOpacity > .9 &&
   s.courtStop.czech.kicker === "SILNIČNÍ KONTROLA" &&
   s.courtStop.czech.title === "PŘEDVOLÁNÍ K SOUDU" &&
@@ -652,49 +798,48 @@ check(s.courtStop && s.courtStop.stopped.active &&
   /55 km\/h over · court-set fine · 6 demerits · 6\/15/.test(s.courtStop.caption),
   "court-only arrest resolves terminally and its next Road Trip starts fresh",
   s.courtStop);
-check(s.shoutThreshold && s.shoutThreshold.exactlyHundred.police.overLimit === 100 &&
-  !s.shoutThreshold.exactlyHundred.police.arrestShoutPlayed &&
-  s.shoutThreshold.exactlyHundred.police.arrestShoutOpacity === 0 &&
-  s.shoutThreshold.overHundredEnglish.police.overLimit === 101 &&
-  s.shoutThreshold.overHundredEnglish.police.arrestShoutPlayed &&
-  s.shoutThreshold.overHundredEnglish.police.arrestShoutOpacity > .9 &&
-  s.shoutThreshold.overHundredEnglish.police.arrestShoutText ===
+check(s.shoutThreshold && s.shoutThreshold.eightyNineOver.police.overLimit === 89 &&
+  !s.shoutThreshold.eightyNineOver.police.arrestShoutPlayed &&
+  s.shoutThreshold.eightyNineOver.police.arrestShoutOpacity === 0 &&
+  s.shoutThreshold.ninetyOverEnglish.police.overLimit === 90 &&
+  s.shoutThreshold.ninetyOverEnglish.police.arrestShoutPlayed &&
+  s.shoutThreshold.ninetyOverEnglish.police.arrestShoutOpacity > .9 &&
+  s.shoutThreshold.ninetyOverEnglish.police.arrestShoutText ===
     "ENGINE OFF! DROP THE KEYS! HANDS THROUGH THE WHEEL!" &&
-  s.shoutThreshold.overHundredEnglish.police.arrestAudioVoices > 0 &&
-  s.shoutThreshold.overHundredCzech.police.arrestShoutText ===
+  s.shoutThreshold.ninetyOverEnglish.police.arrestAudioVoices > 0 &&
+  s.shoutThreshold.ninetyOverCzech.police.arrestShoutText ===
     "VYPNĚTE MOTOR! ZAHOĎTE KLÍČE! RUCE SKRZ VOLANT!" &&
   s.shoutThreshold.blurred.police.arrestAudioVoices === 0,
-  "only a strictly greater-than-100 overage adds the bilingual shout and its audio tears down on blur",
+  "the bilingual command shout begins at 90 over and its audio tears down on blur",
   s.shoutThreshold);
 check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase === "pursuit" &&
-  s.escaped.detected.police.detectedSpeed === 180 &&
-  s.escaped.twoHundredSix.police.phase === "pursuit" &&
-  s.escaped.twoHundredSix.police.escapeGap > 77 && s.escaped.twoHundredSix.police.escapeGap < 79 &&
-  s.escaped.twoHundredSix.police.mirrorScale < s.escaped.initialScale &&
-  s.escaped.twoHundredSeven.police.phase === "pursuit" &&
-  s.escaped.twoHundredSeven.police.escapeHoldElapsed > .5 &&
-  s.escaped.twoHundredSeven.police.escapeHoldElapsed < .7 &&
-  s.escaped.twoHundredHeld.police.phase === "cooldown" &&
-  s.escaped.oneEightyNineteen.police.phase === "pursuit" &&
-  s.escaped.oneEightyNineteen.police.escapeGap === 0 &&
-  s.escaped.oneEightyTwenty.police.phase === "pursuit" &&
-  s.escaped.brieflyFast.police.phase === "pursuit" &&
-  s.escaped.brieflyFast.police.escapeGap > 0 &&
-  s.escaped.brieflyFast.police.escapeHoldElapsed > .5 &&
-  s.escaped.brieflyFast.police.escapeHoldElapsed < .7 &&
-  s.escaped.brieflyFast.police.sirenLevel < s.escaped.initialSiren &&
+  s.escaped.detected.police.detectedSpeed === 216 &&
+  s.escaped.twoHundred.police.phase === "pursuit" &&
+  s.escaped.twoHundred.police.escapeGap === 0 && s.escaped.twoHundred.police.escapeHoldElapsed === 0 &&
+  s.escaped.exactThreshold.police.phase === "pursuit" &&
+  s.escaped.exactThreshold.police.escapeGap === 0 && s.escaped.exactThreshold.police.escapeHoldElapsed === 0 &&
+  s.escaped.leadFifty.police.phase === "pursuit" &&
+  s.escaped.leadFifty.police.escapeGap > 49 && s.escaped.leadFifty.police.escapeGap < 51 &&
+  s.escaped.leadHundred.police.phase === "pursuit" &&
+  s.escaped.leadHundred.police.escapeGap > 99 && s.escaped.leadHundred.police.escapeGap < 101 &&
+  s.escaped.leadHundred.police.escapeHoldElapsed === 0 &&
+  s.escaped.heldEleven.police.phase === "pursuit" &&
+  s.escaped.heldEleven.police.escapeHoldElapsed > 10.9 &&
+  s.escaped.heldEleven.police.escapeHoldElapsed < 11.1 &&
+  s.escaped.heldEleven.police.mirrorScale < s.escaped.initialScale &&
   s.escaped.recovered.police.phase === "pursuit" &&
-  s.escaped.recovered.police.escapeGap < s.escaped.brieflyFast.police.escapeGap &&
+  s.escaped.recovered.police.escapeGap < s.escaped.heldEleven.police.escapeGap &&
   s.escaped.recovered.police.escapeHoldElapsed === 0 &&
-  s.escaped.recovered.police.mirrorScale > s.escaped.brieflyFast.police.mirrorScale &&
-  s.escaped.recovered.police.sirenLevel > s.escaped.brieflyFast.police.sirenLevel &&
-  s.escaped.recovered.police.refusalElapsed === 5 &&
+  s.escaped.requalified.police.phase === "pursuit" &&
+  s.escaped.requalified.police.escapeGap > 100 &&
+  s.escaped.requalified.police.escapeHoldElapsed > 10.9 &&
+  s.escaped.requalified.police.escapeHoldElapsed < 11.1 &&
   s.escaped.cleared.active && s.escaped.cleared.police.phase === "cooldown" &&
   s.escaped.cleared.police.escapes === 1 && !s.escaped.cleared.police.sirenActive &&
   s.escaped.cleared.demeritPoints === 0 && !s.escaped.cleared.police.surrenderLatched &&
   !s.escaped.cleared.police.mirrorVisible && s.escaped.cleared.police.tickets === 0 &&
   /Police lost/.test(s.escaped.caption) && !s.escaped.flash,
-  "the Sheriff reaches 180 and a ten-second breakaway must survive any slowdown before escape",
+  "200 cannot escape a 210 Sheriff; escape requires above 215, 100 m of lead, then twelve uninterrupted seconds",
   s.escaped);
 check(s.severe && s.severe.detected.active && s.severe.detected.police.phase === "pursuit" &&
   s.severe.detected.police.detectedSpeed === 150 && s.severe.detected.police.courtRequired &&
@@ -715,6 +860,7 @@ check(s.severe && s.severe.detected.active && s.severe.detected.police.phase ===
   s.severe.trip.police.endReason === "refused" &&
   s.severe.trip.police.tickets === 1 && s.severe.trip.police.fine === null &&
   s.severe.trip.police.courtRequired && s.severe.trip.police.summonses === 1 &&
+  s.severe.trip.police.arrestShoutPlayed &&
   s.severe.trip.police.fines === 0 && s.severe.trip.police.scorePenalties === 1000 &&
   s.severe.trip.demeritPoints === 11 && s.severe.trip.police.lastDemerits === 11 &&
   /highway run over/.test(s.severe.immediateCaption) &&
@@ -729,11 +875,16 @@ check(s.refused && !s.refused.paused.active && s.refused.paused.paused &&
   s.refused.resumed.police.phase === "pursuit" && s.refused.resumed.police.detectedSpeed === 130 &&
   s.refused.capture.active && s.refused.capture.police.phase === "capture" &&
   s.refused.capture.police.sirenActive && s.refused.capture.police.mirrorVisible &&
+  s.refused.approach.police.phase === "arrest" && s.refused.approach.police.arrestVisible &&
+  s.refused.approach.police.resolutionReason === "refused" &&
+  s.refused.shout.police.phase === "arrest" && s.refused.shout.police.arrestShoutPlayed &&
+  s.refused.shout.police.arrestShoutOpacity > .9 &&
   !s.refused.trip.active && s.refused.trip.police.runEnded &&
   s.refused.trip.police.endReason === "refused" && s.refused.trip.police.fines === 560 &&
   s.refused.trip.police.scorePenalties === 1560 && s.refused.trip.demeritPoints === 9 &&
   s.refused.trip.police.lastDemerits === 9 && !s.refused.trip.police.arrestVisible,
-  "a paused pursuit resumes intact and ordinary refusal still captures without the court-only arrest scene", s.refused);
+  "a paused pursuit resumes intact; refusal at any ticket speed forces capture, shouted approach, and citation",
+  s.refused);
 check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &&
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
@@ -744,7 +895,7 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
   "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",
   s.suspension);
-check(s.czech && /přes 180/.test(s.czech.escape) &&
+check(s.czech && /přes 215/.test(s.czech.escape) &&
   /^Překročení o \{over\} km\/h · pokuta \{fine\} · \{points\} trestné body · \{total\}\/15\{status\}\.$/.test(s.czech.fine) &&
   /^Překročení o \{over\} km\/h · \{fine\} · \{points\} trestných bodů · \{total\}\/15\{status\}\.$/.test(s.czech.court),
   "escape and recorded-overage outcomes are mirrored in natural Czech order", s.czech);

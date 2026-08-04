@@ -366,13 +366,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       }
     };
     function speedHudAt(value) {
-      window.__entranceDriveSetMotion(value, 4);
+      window.__entranceDriveSetMotion(value, value > 214 ? 5 : 4);
       window.__refreshEntranceRoadtripHud();
       var node = document.getElementById("entrance-roadtrip-speed");
       return { text: node.textContent, band: node.getAttribute("data-roadtrip-speed-band") };
     }
     report.steps.speedHud = [speedHudAt(100), speedHudAt(101), speedHudAt(150),
-      speedHudAt(151), speedHudAt(179), speedHudAt(180)];
+      speedHudAt(151), speedHudAt(215), speedHudAt(216)];
     window.__entranceDriveControl("throttle", false);
     window.__entranceDriveSetMotion(25, 6);
     step(20);
@@ -1157,8 +1157,8 @@ check(activation && activation.retained.roomArt.display !== "none" && activation
 check(s.speedHud && s.speedHud.map(function (row) { return row.band; }).join(" ") ===
     "safe warning warning danger danger escape" &&
   s.speedHud.map(function (row) { return row.text; }).join(" ") ===
-    "100 km/h 101 km/h 150 km/h 151 km/h 179 km/h 180 km/h",
-  "the dominant speed readout changes from green through gold and red to the 180+ escape band", s.speedHud);
+    "100 km/h 101 km/h 150 km/h 151 km/h 215 km/h 216 km/h",
+  "the dominant speed readout changes from green through gold and red to the above-215 escape band", s.speedHud);
 check(s.lowSpeedNeutral && s.lowSpeedNeutral.gear === 0 && s.lowSpeedNeutral.speed > 20,
   "the highway selects neutral before a too-slow upper gear can lug below idle", s.lowSpeedNeutral);
 check(s.shiftCoaching &&

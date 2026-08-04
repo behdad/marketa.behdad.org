@@ -250,7 +250,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       prepareEncounter();
       setMotion(90, 3);
       window.__entranceRoadtripSetLane(-.5);
-      step(1000);
+      step(1000, 9);
       step(900);
       var centerlineGrace = copy(trip());
       step(200);
@@ -698,7 +698,7 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.pursuitTrafficDensity === 1.4 && s.contract.pursuitReactionDistance === 118 &&
   s.contract.stoppedBeat === 1.25 &&
   s.contract.arrestDuration === 5.8 &&
-  s.contract.centerlineSeconds === 2 && s.contract.centerlineFine === 243 &&
+  s.contract.centerlineSeconds === 10 && s.contract.centerlineFine === 243 &&
   s.contract.centerlineDemerits === 2 &&
   s.contract.demeritHud &&
   s.contract.speedSign && s.contract.speedFurniture,
@@ -835,6 +835,7 @@ check(s.centerlinePolice &&
   s.centerlinePolice.briefCleared.centerlineElapsed === 0 &&
   !s.centerlinePolice.briefCleared.centerlineEnforced &&
   s.centerlinePolice.grace.police.phase === "idle" &&
+  s.centerlinePolice.grace.centerlineElapsed >= 9.8 &&
   s.centerlinePolice.grace.centerlineElapsed < s.contract.centerlineSeconds &&
   s.centerlinePolice.pursuit.centerlineEnforced &&
   s.centerlinePolice.pursuit.police.phase === "pursuit" &&
@@ -851,7 +852,7 @@ check(s.centerlinePolice &&
   s.centerlinePolice.cited.police.lastDemerits === 2 &&
   s.centerlinePolice.cited.demeritPoints === 2 &&
   /double solid line · fine \$243 · 2 demerits · 2\/15/.test(s.centerlinePolice.caption),
-  "a brief dodge is forgiven, while two seconds across the double solid line starts the shared $243/2-demerit pursuit and stop",
+  "a brief dodge is forgiven, while ten seconds across the double solid line starts the shared $243/2-demerit pursuit and stop",
   s.centerlinePolice);
 check(s.pursuit && s.pursuit.trip.police.phase === "pursuit" &&
   s.pursuit.trip.police.detectedSpeed === 130 && s.pursuit.trip.police.fine === 560 &&

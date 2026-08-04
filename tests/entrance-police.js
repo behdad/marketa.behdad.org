@@ -76,6 +76,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         escapeHoldSeconds: trip().policeEscapeHoldSeconds,
         stoppedBeat: trip().policeStoppedBeat,
         arrestDuration: trip().policeArrestDuration,
+        demeritHud: ["entrance-roadtrip-meta-panel", "entrance-roadtrip-demerit-label",
+          "entrance-roadtrip-demerit-points", "entrance-roadtrip-demerit-status"].every(function (id) {
+          return !!document.getElementById(id);
+        }),
         speedSign: !!document.getElementById("entrance-roadtrip-speed-90"),
         speedFurniture: Array.prototype.some.call(document.querySelectorAll("#entrance-roadtrip-furniture use"), function (node) {
           return (node.getAttribute("href") || node.getAttribute("xlink:href")) === "#entrance-roadtrip-speed-90";
@@ -439,6 +443,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         caption: suspendedCaption,
         buttonText: suspendedButton.textContent.trim(),
         buttonTextY: document.getElementById("entrance-roadtrip-reenter-text").getAttribute("y"),
+        hudPoints: document.getElementById("entrance-roadtrip-demerit-points").textContent.trim(),
+        hudStatus: document.getElementById("entrance-roadtrip-demerit-status").textContent.trim(),
+        hudBand: document.getElementById("entrance-roadtrip-demerit-status").getAttribute("data-roadtrip-demerit-band"),
         buttonDisabled: suspendedButton.getAttribute("aria-disabled"),
         restart: window.__entranceRoadtripStart()
       };
@@ -512,6 +519,7 @@ check(s.contract && s.contract.hook === "function" && s.contract.detectHook === 
   s.contract.escapeDistance === 80 && s.contract.escapeHoldSeconds === 10 &&
   s.contract.stoppedBeat === 1.25 &&
   s.contract.arrestDuration === 5.8 &&
+  s.contract.demeritHud &&
   s.contract.speedSign && s.contract.speedFurniture,
   "the highway posts 90/110 enforcement and models a Sheriff capable of 180 km/h", s.contract);
 check(s.warning && s.warning.police.warningFlashCount === 3 &&
@@ -730,6 +738,8 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
   s.suspension.buttonTextY === "17" &&
+  s.suspension.hudPoints === "15 / 15" && s.suspension.hudBand === "suspended" &&
+  /^SUSPENDED (?:1:00|0:59)$/.test(s.suspension.hudStatus) &&
   s.suspension.buttonDisabled === "true" && /Suspended · 1:00|Suspended · 0:59/.test(s.suspension.buttonText) &&
   /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
   "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",

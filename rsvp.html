@@ -943,10 +943,14 @@ footer{margin-top:2.6rem}
 #entrance-roadtrip-score{font-size:8.2px;letter-spacing:.05px;fill:#f0d8b8}
 #entrance-roadtrip-score-points{font-size:11px;fill:#fffdf8}
 @keyframes entrance-roadtrip-speed-pulse{to{fill:#df5363}}
-#entrance-roadtrip-meta-panel,
 #entrance-roadtrip-best,
 #entrance-roadtrip-multiplier,
 #entrance-roadtrip-grade{display:none}
+#entrance-roadtrip-demerit-label{font-size:6.2px;letter-spacing:.65px;fill:#f0d8b8}
+#entrance-roadtrip-demerit-points{font-size:12px;letter-spacing:.15px}
+#entrance-roadtrip-demerit-status{font-size:7px;letter-spacing:.25px;fill:#8fd39b}
+#entrance-roadtrip-demerit-status[data-roadtrip-demerit-band="warning"]{fill:#f2cf73}
+#entrance-roadtrip-demerit-status[data-roadtrip-demerit-band="suspended"]{fill:#ed837d}
 #entrance-roadtrip-mirror{opacity:.96}
 .entrance-roadtrip-mirror-sky{fill:#9db7c2}
 .entrance-roadtrip-mirror-verge{fill:#7b7659}
@@ -32331,6 +32335,9 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <text id="entrance-roadtrip-grade" class="entrance-roadtrip-hud-text" x="425" y="-83">Scenic drive</text>
               <text id="entrance-roadtrip-best" class="entrance-roadtrip-hud-text" x="425" y="-84">★ 0</text>
               <text id="entrance-roadtrip-multiplier" class="entrance-roadtrip-hud-text" x="646" y="-83" text-anchor="end">×1</text>
+              <text id="entrance-roadtrip-demerit-label" class="entrance-roadtrip-hud-text" x="425" y="-96">DEMERITS</text>
+              <text id="entrance-roadtrip-demerit-points" class="entrance-roadtrip-hud-text" x="425" y="-79">0 / 15</text>
+              <text id="entrance-roadtrip-demerit-status" class="entrance-roadtrip-hud-text" x="648" y="-82" text-anchor="end" data-roadtrip-demerit-band="clean">CLEAN</text>
               <g id="entrance-roadtrip-mirror" aria-hidden="true">
                 <path id="entrance-roadtrip-mirror-housing" d="M282-115H398Q407-115 408-105L411-87Q412-75 400-74H280Q268-75 269-87L272-105Q273-115 282-115Z" fill="#2d3438" stroke="#171c20" stroke-width="1.6"/>
                 <g clip-path="url(#entrance-roadtrip-mirror-clip)">
@@ -35625,6 +35632,7 @@ window.__entranceRoomOpen = false;
     roadtripSuspensionTimer = setTimeout(function () {
       roadtripSuspensionTimer = null;
       paintRoadtripInvite();
+      paintRoadtripScore();
     }, Math.min(1000, remaining + 5));
   }
   function roadtripDemeritsForSpeed(overLimit) {
@@ -35651,6 +35659,7 @@ window.__entranceRoomOpen = false;
     syncRoadtripDemeritState();
     persistRoadtripDemerits();
     paintRoadtripInvite();
+    paintRoadtripScore();
   }
   function hideRoadtripArrest() {
     if (roadtripArrestNode) {
@@ -36070,6 +36079,9 @@ window.__entranceRoomOpen = false;
     var best = roadtripElement("entrance-roadtrip-best");
     var multiplier = roadtripElement("entrance-roadtrip-multiplier");
     var grade = roadtripElement("entrance-roadtrip-grade");
+    var demeritLabel = roadtripElement("entrance-roadtrip-demerit-label");
+    var demeritPoints = roadtripElement("entrance-roadtrip-demerit-points");
+    var demeritStatus = roadtripElement("entrance-roadtrip-demerit-status");
     var lang = document.documentElement.lang === "cs" ? "cs" : "en";
     var dict = typeof T === "object" && T[lang] ? T[lang] : null;
     var pointsUnit = dict && dict.entrance_roadtrip_points_short ? dict.entrance_roadtrip_points_short : "pts";
@@ -36090,6 +36102,17 @@ window.__entranceRoomOpen = false;
     }
     if (best) best.textContent = "★ " + Math.max(0, Math.floor(roadtripState.best));
     if (multiplier) multiplier.textContent = "×" + roadtripState.multiplier;
+    var suspended = roadtripSuspensionRemainingMs() > 0;
+    var demeritBand = suspended ? "suspended" :
+      roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING ? "warning" : "clean";
+    if (demeritLabel) demeritLabel.textContent = roadtripPoliceText("entrance_roadtrip_demerit_label");
+    if (demeritPoints) demeritPoints.textContent = roadtripState.demeritPoints + " / " + ROADTRIP_DEMERIT_SUSPENSION;
+    if (demeritStatus) {
+      demeritStatus.textContent = roadtripPoliceText(suspended ? "entrance_roadtrip_demerit_status_suspended" :
+        demeritBand === "warning" ? "entrance_roadtrip_demerit_status_warning" :
+          "entrance_roadtrip_demerit_status_clean", suspended ? { time: roadtripSuspensionClock() } : null);
+      demeritStatus.setAttribute("data-roadtrip-demerit-band", demeritBand);
+    }
     if (grade) {
       var gradeKey = roadtripGradeKey(scoreValue);
       var gradeFallback = {
@@ -42158,6 +42181,10 @@ var T = {
       entrance_roadtrip_escape: "Wildlife clear · +3 × combo.",
       entrance_roadtrip_centerline: "Crossed the centre line · −2 points.",
       entrance_roadtrip_points_short: "pts",
+      entrance_roadtrip_demerit_label: "DEMERITS",
+      entrance_roadtrip_demerit_status_clean: "CLEAN",
+      entrance_roadtrip_demerit_status_warning: "WARNING",
+      entrance_roadtrip_demerit_status_suspended: "SUSPENDED {time}",
       entrance_roadtrip_grade_sunday: "Scenic drive",
       entrance_roadtrip_grade_scenic: "Scenic run",
       entrance_roadtrip_grade_regular: "Roadtrip regular",
@@ -43357,6 +43384,10 @@ var T = {
       entrance_roadtrip_escape: "Zvěř unikla · +3 × kombo.",
       entrance_roadtrip_centerline: "Přejezd přes středovou čáru · −2 body.",
       entrance_roadtrip_points_short: "b",
+      entrance_roadtrip_demerit_label: "TRESTNÉ BODY",
+      entrance_roadtrip_demerit_status_clean: "BEZ POSTIHU",
+      entrance_roadtrip_demerit_status_warning: "VAROVÁNÍ",
+      entrance_roadtrip_demerit_status_suspended: "POZASTAVENO {time}",
       entrance_roadtrip_grade_sunday: "Vyhlídková jízda",
       entrance_roadtrip_grade_scenic: "Vyhlídková jízda",
       entrance_roadtrip_grade_regular: "Výletový mazák",

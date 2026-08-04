@@ -68,7 +68,7 @@ function chromeCmd(scratch, budgetMs, extraFlags, urlSuffix, profile) {
   // dev's speakers with a glitchy pile-up of overlapping sounds. The tests only inspect
   // the DOM/report — they never assert on audible output — so muting is free.
   return (process.env.CHROME_BIN || "google-chrome") + " --headless=new --disable-gpu --mute-audio --window-size=1100,900 " +
-    "--user-data-dir=" + JSON.stringify(profile) + " --no-first-run " +
+    "--user-data-dir=" + JSON.stringify(profile) + " --no-first-run --no-default-browser-check " +
     (extraFlags ? extraFlags + " " : "") +
     "--virtual-time-budget=" + budgetMs + " --dump-dom " + JSON.stringify("file://" + scratch + (urlSuffix || ""));
 }

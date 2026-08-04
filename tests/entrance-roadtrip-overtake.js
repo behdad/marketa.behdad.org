@@ -30,6 +30,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       lane: Number(node && node.getAttribute("data-roadtrip-lane")),
       ahead: Number(node && node.getAttribute("data-roadtrip-ahead")),
       overtaking: node && node.getAttribute("data-roadtrip-overtaking-player"),
+      horned: node && node.getAttribute("data-roadtrip-horned"),
       visibility: node && node.getAttribute("visibility")
     };
   }
@@ -49,7 +50,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           window.__entranceDriveControl(name, false);
         });
 
-        step(1000, 25);
+        step(1000, 11);
         report.steps.waiting = { state: state(), overtaker: !!overtaker() };
         step(1000);
         var node = overtaker();
@@ -95,7 +96,7 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html slow-traffic overtaking:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) &&
+check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 12/.test(source) &&
   /function syncRoadtripPlayerOvertaker\(seconds\)[\s\S]{0,900}forwardSpeed <= ROADTRIP_OVERTAKE_SPEED_MAX/.test(source) &&
   /spawnRoadtripEntity\(type, lane, ROADTRIP_OVERTAKE_REAR_DISTANCE,[\s\S]{0,100}behind: true/.test(source),
   "only sustained travel at 70 km/h or less schedules a vehicle from behind");
@@ -118,8 +119,9 @@ check(steps.behind && steps.behind.source.overtaking === "true" &&
   steps.behind.audioVoices >= 1,
   "the faster car and its whoosh first have a visible source in the mirror", steps.behind);
 check(steps.alongside && steps.alongside.source.ahead > -2 &&
-  steps.alongside.source.visibility !== "hidden" && !steps.alongside.mirrorVisible,
-  "the car transfers atomically from mirror to windshield while passing", steps.alongside);
+  steps.alongside.source.visibility !== "hidden" && !steps.alongside.mirrorVisible &&
+  steps.alongside.source.horned === "true",
+  "the car transfers atomically from mirror to windshield and occasionally horns while passing a stopped player", steps.alongside);
 check(steps.ahead && steps.ahead.source.ahead > 8 && steps.ahead.source.overtaking === "false" &&
   !steps.ahead.mirrorVisible && steps.ahead.passes === steps.behind.passes,
   "the passing car continues ahead without awarding a player pass", steps.ahead);

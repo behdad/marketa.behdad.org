@@ -835,13 +835,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           keyboard: blockedKeyboard,
           caption: document.getElementById("hunt-caption").textContent.trim(),
           captionBlink: document.getElementById("hunt-caption").classList.contains("hint-blink"),
+          keyDisplay: getComputedStyle(document.getElementById("entrance-drive-ignition-fob")).display,
           reenterPulse: suspendedButton.classList.contains("suspension-ignition-blocked"),
           buttonAnimation: getComputedStyle(suspendedButton).animationName
         }
       };
       window.__entranceRoadtripSetDemerits(15, Date.now() - 1);
       var expiredStart = window.__toggleEntrancePorscheEngine();
-      report.steps.suspension.expiry = { started: expiredStart, state: copy(state()) };
+      report.steps.suspension.expiry = {
+        started: expiredStart,
+        state: copy(state()),
+        keyDisplay: getComputedStyle(document.getElementById("entrance-drive-ignition-fob")).display
+      };
       if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
       window.__entranceRoadtripSetDemerits(0, 0);
 
@@ -1579,10 +1584,11 @@ check(blockedIgnition && blockedIgnition.baseline.drive.hud === false &&
   !blockedIgnition.keyboard.drive.audioActive &&
   blockedIgnition.keyboard.car.activations.engine === blockedBaselineCount + 6 &&
   blockedIgnition.caption === "Licence suspended · Road Trip temporarily unavailable." &&
-  blockedIgnition.captionBlink && blockedIgnition.reenterPulse &&
+  blockedIgnition.captionBlink && blockedIgnition.keyDisplay === "none" && blockedIgnition.reenterPulse &&
   blockedIgnition.buttonAnimation === "entrance-roadtrip-suspension-blocked" &&
   s.suspension.expiry.started && s.suspension.expiry.state.car.engineOn &&
   s.suspension.expiry.state.drive.rpm === 750 &&
+  s.suspension.expiry.keyDisplay !== "none" &&
   s.suspension.expiry.state.drive.roadtrip.demeritPoints === 7 &&
   !s.suspension.expiry.state.drive.roadtrip.suspended,
   "suspension blocks repeated room, HUD, and Enter ignition attempts without engine/audio leakage, then expires normally",

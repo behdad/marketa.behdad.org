@@ -13,6 +13,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       button: 0, isPrimary: primary, clientX: x, clientY: 100
     }));
   }
+  function hitSize(id) {
+    var node = document.querySelector("#" + id + " .entrance-drive-hit");
+    return { width: Number(node.getAttribute("width")), height: Number(node.getAttribute("height")) };
+  }
   window.addEventListener("load", function () { setTimeout(function () {
     try {
       Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
@@ -25,6 +29,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveRange("D");
       var throttle = document.getElementById("entrance-drive-throttle");
       var horn = document.getElementById("entrance-drive-horn");
+      report.steps.targets = {
+        ignition: hitSize("entrance-drive-ignition"),
+        clutch: hitSize("entrance-drive-clutch"),
+        brake: hitSize("entrance-drive-brake"),
+        throttle: hitSize("entrance-drive-throttle")
+      };
 
       pointer(throttle, "pointerdown", 41, true, 100);
       pointer(horn, "pointerdown", 42, false, 200);
@@ -64,6 +74,11 @@ function check(ok, message, detail) {
 console.log("rsvp.html Entrance two-finger touch driving:");
 check(result && result.errors.length === 0, "touch harness has no uncaught page errors", result && result.errors);
 var steps = result && result.steps || {};
+check(steps.targets && steps.targets.ignition.width >= 54 && steps.targets.ignition.height >= 57 &&
+  steps.targets.clutch.width >= 48 && steps.targets.clutch.height >= 63 &&
+  steps.targets.brake.width >= 54 && steps.targets.brake.height >= 63 &&
+  steps.targets.throttle.width >= 58 && steps.targets.throttle.height >= 67,
+  "ignition and pedal artwork carries enlarged invisible touch targets", steps.targets);
 check(steps.throttleFirst && steps.throttleFirst.holds.throttle && steps.throttleFirst.steeringAngle > 0,
   "a secondary steering finger works while the primary finger holds the accelerator", steps.throttleFirst);
 check(steps.steeringFirst && steps.steeringFirst.holds.throttle && steps.steeringFirst.steeringAngle < 0,

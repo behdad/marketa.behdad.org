@@ -1091,8 +1091,8 @@ check(centerline && centerline.before.score === 5 && centerline.before.multiplie
   centerline.first.centerlineCrossings === 1 && centerline.first.centerlineExcursion &&
   centerline.held.score === centerline.first.score && centerline.held.centerlineCrossings === 1 &&
   centerline.second.score === 1 && centerline.second.multiplier === 2 &&
-  centerline.second.centerlineCrossings === 2,
-  "crossing the centre line costs two points once per excursion without resetting the combo", centerline);
+  centerline.second.centerlineCrossings === 2 && centerline.second.demeritPoints === 0,
+  "crossing the centre line costs two game points without inventing a demerit citation path", centerline);
 var reverseRecovery = s.reverseRecovery;
 check(reverseRecovery &&
   reverseRecovery.missed.state.drive.roadtrip.score === 0 &&

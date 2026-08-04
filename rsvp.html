@@ -1071,6 +1071,8 @@ footer{margin-top:2.6rem}
 #entrance-roadtrip-invite.show{display:inline;pointer-events:all}
 #entrance-roadtrip-reenter{display:none;pointer-events:none;cursor:pointer;outline:none}
 #entrance-roadtrip-reenter.show{display:inline;pointer-events:all}
+#entrance-roadtrip-reenter.suspended{cursor:not-allowed;opacity:.82}
+#entrance-roadtrip-reenter.suspended text{font-size:8.5px}
 #entrance-roadtrip-reenter:focus rect{stroke:#fffdf8;stroke-width:2}
 .entrance-roadtrip-invite-button{cursor:pointer}
 .entrance-roadtrip-invite-button:focus{outline:none}
@@ -32759,7 +32761,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           </g>
           <g id="entrance-roadtrip-reenter" transform="translate(552 -21)" role="button" tabindex="0" focusable="true" aria-hidden="true" data-aria-i="entrance_roadtrip_reenter">
             <rect x="0" y="0" width="91" height="27" rx="8" fill="#453a31" fill-opacity=".96" stroke="#d9a6a6" stroke-width="1.5"/>
-            <text class="entrance-roadtrip-invite-copy" x="45.5" y="18" font-size="10.5" font-weight="700" data-i="entrance_roadtrip_reenter">Road Trip</text>
+            <text id="entrance-roadtrip-reenter-text" class="entrance-roadtrip-invite-copy" x="45.5" y="18" font-size="10.5" font-weight="700" data-i="entrance_roadtrip_reenter">Road Trip</text>
           </g>
           <g id="entrance-drive-help" transform="translate(47 0)">
             <circle cx="648" cy="20" r="10" fill="#453a31" stroke="#f0d8b8" stroke-width="1.4"/>
@@ -34669,6 +34671,7 @@ window.__entranceRoomOpen = false;
   var roadtripInviteAccept = document.getElementById("entrance-roadtrip-invite-accept");
   var roadtripInviteLater = document.getElementById("entrance-roadtrip-invite-later");
   var roadtripReenter = document.getElementById("entrance-roadtrip-reenter");
+  var roadtripReenterText = document.getElementById("entrance-roadtrip-reenter-text");
   var driveCoachStep = 1;
   var driveCoachComplete = false;
   var driveCoachDismissed = false;
@@ -34805,6 +34808,11 @@ window.__entranceRoomOpen = false;
   var driveBatteryLevel = .75;
   var ROADTRIP_BEST_KEY = "entranceRoadtripBest:v2";
   var ROADTRIP_LEGACY_BEST_KEY = "entranceRoadtripBest:v1";
+  var ROADTRIP_DEMERIT_KEY = "entranceRoadtripDemerits:v1";
+  var ROADTRIP_DEMERIT_WARNING = 8;
+  var ROADTRIP_DEMERIT_SUSPENSION = 15;
+  var ROADTRIP_SUSPENSION_MS = 60000;
+  var ROADTRIP_REINSTATEMENT_POINTS = 7;
   var ROADTRIP_SCORING_VERSION = 2;
   var ROADTRIP_POOL_SIZE = 16;
   var ROADTRIP_FURNITURE_SIZE = 14;
@@ -34892,6 +34900,7 @@ window.__entranceRoomOpen = false;
   var porscheArrestAudioNodes = [];
   var roadtripImpactTimer = null;
   var roadtripCrackSerial = 0;
+  var roadtripSuspensionTimer = null;
   var roadtripState = {
     active: false,
     exitUntilStop: false,
@@ -34914,6 +34923,8 @@ window.__entranceRoomOpen = false;
     tokens: 0,
     escapes: 0,
     wildlifeHits: 0,
+    demeritPoints: 0,
+    suspendedUntil: 0,
     impactSounds: 0,
     rewardSounds: 0,
     lastImpactSeverity: 0,
@@ -34935,6 +34946,8 @@ window.__entranceRoomOpen = false;
       overLimit: 0,
       fine: 0,
       courtRequired: false,
+      lastDemerits: 0,
+      lastDemeritTotal: 0,
       tickets: 0,
       fines: 0,
       summonses: 0,
@@ -34991,6 +35004,7 @@ window.__entranceRoomOpen = false;
     holds: { throttle: false, brake: false, clutch: false, steerLeft: false, steerRight: false }
   };
   if (!room || !viewport || !closeButton || !balconyStage) return;
+  restoreRoadtripDemerits();
   try {
     var storedRoadtripBestRaw = localStorage.getItem(ROADTRIP_BEST_KEY);
     var storedRoadtripBest = storedRoadtripBestRaw === null ? NaN : Number(storedRoadtripBestRaw);
@@ -35362,6 +35376,87 @@ window.__entranceRoomOpen = false;
     });
     return text;
   }
+  function persistRoadtripDemerits() {
+    try {
+      localStorage.setItem(ROADTRIP_DEMERIT_KEY, JSON.stringify({
+        points: roadtripState.demeritPoints,
+        suspendedUntil: roadtripState.suspendedUntil
+      }));
+    } catch (_error) {}
+  }
+  function restoreRoadtripDemerits() {
+    var record = null;
+    try { record = JSON.parse(localStorage.getItem(ROADTRIP_DEMERIT_KEY) || "null"); }
+    catch (_error) {}
+    if (!record || typeof record !== "object") return false;
+    var points = Math.max(0, Math.min(ROADTRIP_DEMERIT_SUSPENSION,
+      Math.floor(Number(record.points) || 0)));
+    var suspendedUntil = Math.max(0, Number(record.suspendedUntil) || 0);
+    if (points >= ROADTRIP_DEMERIT_SUSPENSION && suspendedUntil <= Date.now()) {
+      points = ROADTRIP_REINSTATEMENT_POINTS;
+      suspendedUntil = 0;
+    } else if (points < ROADTRIP_DEMERIT_SUSPENSION) {
+      suspendedUntil = 0;
+    }
+    roadtripState.demeritPoints = points;
+    roadtripState.suspendedUntil = suspendedUntil;
+    persistRoadtripDemerits();
+    return true;
+  }
+  function roadtripSuspensionRemainingMs() {
+    return Math.max(0, roadtripState.suspendedUntil - Date.now());
+  }
+  function syncRoadtripDemeritState() {
+    if (roadtripState.suspendedUntil && roadtripSuspensionRemainingMs() <= 0) {
+      roadtripState.demeritPoints = ROADTRIP_REINSTATEMENT_POINTS;
+      roadtripState.suspendedUntil = 0;
+      persistRoadtripDemerits();
+    }
+    var suspended = roadtripSuspensionRemainingMs() > 0;
+    room.classList.toggle("roadtrip-demerit-warning",
+      roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING && !suspended);
+    room.classList.toggle("roadtrip-suspended", suspended);
+    return suspended;
+  }
+  function roadtripSuspensionClock() {
+    var seconds = Math.max(0, Math.ceil(roadtripSuspensionRemainingMs() / 1000));
+    return Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+  }
+  function scheduleRoadtripSuspensionPaint() {
+    clearTimeout(roadtripSuspensionTimer);
+    roadtripSuspensionTimer = null;
+    var remaining = roadtripSuspensionRemainingMs();
+    if (!remaining) return;
+    roadtripSuspensionTimer = setTimeout(function () {
+      roadtripSuspensionTimer = null;
+      paintRoadtripInvite();
+    }, Math.min(1000, remaining + 5));
+  }
+  function roadtripDemeritsForSpeed(overLimit) {
+    overLimit = Math.max(0, Math.floor(Number(overLimit) || 0));
+    if (!overLimit) return 0;
+    if (overLimit <= 15) return 2;
+    if (overLimit <= 30) return 3;
+    if (overLimit <= 50) return 4;
+    return 6;
+  }
+  function roadtripDemeritStatusText() {
+    if (roadtripSuspensionRemainingMs() > 0) return roadtripPoliceText(
+      "entrance_roadtrip_demerit_suspended", { time: roadtripSuspensionClock() });
+    if (roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING) {
+      return roadtripPoliceText("entrance_roadtrip_demerit_warning");
+    }
+    return "";
+  }
+  function setRoadtripDemerits(points, suspendedUntil) {
+    roadtripState.demeritPoints = Math.max(0, Math.min(ROADTRIP_DEMERIT_SUSPENSION,
+      Math.floor(Number(points) || 0)));
+    roadtripState.suspendedUntil = roadtripState.demeritPoints >= ROADTRIP_DEMERIT_SUSPENSION ?
+      Math.max(0, Number(suspendedUntil) || 0) : 0;
+    syncRoadtripDemeritState();
+    persistRoadtripDemerits();
+    paintRoadtripInvite();
+  }
   function hideRoadtripArrest() {
     if (roadtripArrestNode) {
       roadtripArrestNode.setAttribute("visibility", "hidden");
@@ -35421,13 +35516,23 @@ window.__entranceRoomOpen = false;
     }
     var cardOpacity = Math.max(0, Math.min(1, (elapsed - 2.7) / .45)) * fade;
     if (roadtripArrestCardNode) roadtripArrestCardNode.setAttribute("opacity", cardOpacity.toFixed(3));
+    var refusalPoints = police.resolutionReason === "refused" ? 5 : 0;
+    var prospectivePoints = roadtripDemeritsForSpeed(police.overLimit) + refusalPoints;
+    var prospectiveTotal = Math.min(ROADTRIP_DEMERIT_SUSPENSION,
+      roadtripState.demeritPoints + prospectivePoints);
     if (roadtripArrestLineNode) roadtripArrestLineNode.textContent = roadtripPoliceText(
-      "entrance_roadtrip_arrest_line", { over: police.overLimit });
+      "entrance_roadtrip_arrest_line", {
+        over: police.overLimit,
+        fine: roadtripPoliceText("entrance_roadtrip_court_fine"),
+        points: prospectivePoints,
+        total: prospectiveTotal
+      });
   }
   function paintRoadtripInvite() {
+    var suspended = syncRoadtripDemeritState();
     var visible = !!(window.__entranceRoomOpen && driveState.hudOpen && roadtripState.unlocked &&
       roadtripState.invitationReady && !roadtripState.accepted && !roadtripState.active &&
-      !roadtripState.invitationDismissed && !roadtripState.everAccepted);
+      !roadtripState.invitationDismissed && !roadtripState.everAccepted && !suspended);
     if (roadtripInvite) {
       roadtripInvite.classList.toggle("show", visible);
       roadtripInvite.setAttribute("aria-hidden", visible ? "false" : "true");
@@ -35436,11 +35541,25 @@ window.__entranceRoomOpen = false;
       roadtripState.unlocked && roadtripState.everAccepted && !roadtripState.accepted && !roadtripState.active);
     if (roadtripReenter) {
       roadtripReenter.classList.toggle("show", reentryVisible);
+      roadtripReenter.classList.toggle("suspended", reentryVisible && suspended);
       roadtripReenter.setAttribute("aria-hidden", reentryVisible ? "false" : "true");
+      roadtripReenter.setAttribute("aria-disabled", suspended ? "true" : "false");
+      roadtripReenter.setAttribute("aria-label", suspended ?
+        roadtripPoliceText("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() }) :
+        roadtripPoliceText("entrance_roadtrip_reenter"));
     }
+    if (roadtripReenterText) roadtripReenterText.textContent = suspended ?
+      roadtripPoliceText("entrance_roadtrip_suspended_short", { time: roadtripSuspensionClock() }) :
+      roadtripPoliceText("entrance_roadtrip_reenter");
+    scheduleRoadtripSuspensionPaint();
   }
   function acceptRoadtripInvite(event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (syncRoadtripDemeritState()) {
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
+      paintRoadtripInvite();
+      return false;
+    }
     if (!roadtripState.unlocked || !roadtripState.invitationReady || roadtripState.accepted) return false;
     roadtripState.accepted = true;
     roadtripState.everAccepted = true;
@@ -35472,6 +35591,11 @@ window.__entranceRoomOpen = false;
   bindRoadtripInviteControl(roadtripInviteLater, dismissRoadtripInvite);
   bindRoadtripInviteControl(roadtripReenter, function (event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (syncRoadtripDemeritState()) {
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
+      paintRoadtripInvite();
+      return false;
+    }
     if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active) return false;
     var started = startRoadtrip(true);
     paintRoadtripInvite();
@@ -35939,6 +36063,8 @@ window.__entranceRoomOpen = false;
     police.overLimit = 0;
     police.fine = 0;
     police.courtRequired = false;
+    police.lastDemerits = 0;
+    police.lastDemeritTotal = roadtripState.demeritPoints;
     police.tickets = 0;
     police.fines = 0;
     police.summonses = 0;
@@ -36043,19 +36169,34 @@ window.__entranceRoomOpen = false;
     paintRoadtripPolice();
     return true;
   }
-  function applyRoadtripPoliceCitation(scoreSurcharge) {
+  function applyRoadtripPoliceCitation(scoreSurcharge, refused) {
     var police = roadtripState.police;
     var fixedFine = police.courtRequired ? 0 : Math.max(0, Math.round(Number(police.fine) || 0));
     var scorePenalty = fixedFine + Math.max(0, Math.round(Number(scoreSurcharge) || 0));
+    var demerits = roadtripDemeritsForSpeed(police.overLimit) + (refused ? 5 : 0);
     police.tickets++;
     if (police.courtRequired) police.summonses++;
     police.fines += fixedFine;
     police.scorePenalties += scorePenalty;
+    police.lastDemerits = demerits;
+    roadtripState.demeritPoints = Math.min(ROADTRIP_DEMERIT_SUSPENSION,
+      roadtripState.demeritPoints + demerits);
+    police.lastDemeritTotal = roadtripState.demeritPoints;
+    if (roadtripState.demeritPoints >= ROADTRIP_DEMERIT_SUSPENSION) {
+      roadtripState.suspendedUntil = Date.now() + ROADTRIP_SUSPENSION_MS;
+    }
+    persistRoadtripDemerits();
+    syncRoadtripDemeritState();
     roadtripState.score = Math.max(0, roadtripState.score - scorePenalty);
     roadtripState.multiplier = 1;
     paintRoadtripScore();
     if (window.__checkpointChanged) window.__checkpointChanged();
-    return scorePenalty;
+    return {
+      scorePenalty: scorePenalty,
+      demerits: demerits,
+      total: roadtripState.demeritPoints,
+      suspended: roadtripSuspensionRemainingMs() > 0
+    };
   }
   function beginRoadtripPoliceStopped(reason) {
     var police = roadtripState.police;
@@ -36104,7 +36245,8 @@ window.__entranceRoomOpen = false;
     if ((police.phase !== "stopped" && police.phase !== "arrest") ||
         Math.abs(driveState.speed) > .25) return false;
     var reason = police.resolutionReason || "refused";
-    applyRoadtripPoliceCitation(reason === "refused" ? 1000 : 0);
+    var citation = applyRoadtripPoliceCitation(reason === "refused" ? 1000 : 0,
+      reason === "refused");
     police.phase = "ended";
     police.runEnded = true;
     police.endReason = reason === "pulled-over" ? "court" : reason;
@@ -36117,7 +36259,13 @@ window.__entranceRoomOpen = false;
     var outcomeKey = reason === "pulled-over" ? "entrance_roadtrip_police_summons" :
       (police.courtRequired ? "entrance_roadtrip_police_court_refused" :
         "entrance_roadtrip_police_refused");
-    roadtripPoliceOutcomeFeedback(outcomeKey, { over: police.overLimit, fine: police.fine });
+    roadtripPoliceOutcomeFeedback(outcomeKey, {
+      over: police.overLimit,
+      fine: police.courtRequired ? roadtripPoliceText("entrance_roadtrip_court_fine") : "$" + police.fine,
+      points: citation.demerits,
+      total: citation.total,
+      status: roadtripDemeritStatusText()
+    });
     paintPorscheDriveHud();
     return true;
   }
@@ -36126,14 +36274,38 @@ window.__entranceRoomOpen = false;
     if (police.phase !== "pursuit") return false;
     police.stops++;
     if (police.courtRequired) return beginRoadtripPoliceStopped("pulled-over");
-    applyRoadtripPoliceCitation(0);
+    var citation = applyRoadtripPoliceCitation(0, false);
+    if (citation.suspended) {
+      police.phase = "ended";
+      police.runEnded = true;
+      police.endReason = "suspended";
+      stopRoadtripPoliceSiren(.18);
+      parkRoadtrip(false);
+      resetRoadtripInvitationSession();
+      roadtripState.exitUntilStop = false;
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_police_ticket", {
+        over: police.overLimit,
+        fine: "$" + police.fine,
+        points: citation.demerits,
+        total: citation.total,
+        status: roadtripDemeritStatusText()
+      });
+      paintPorscheDriveHud();
+      return true;
+    }
     police.phase = "cooldown";
     police.cooldownElapsed = 0;
     driveState.gear = 0;
     driveState.rpm = porscheState.engineOn ? 780 : 0;
     stopRoadtripPoliceSiren(.18);
     roadtripPoliceOutcomeFeedback(police.courtRequired ? "entrance_roadtrip_police_summons" :
-      "entrance_roadtrip_police_ticket", { over: police.overLimit, fine: police.fine });
+      "entrance_roadtrip_police_ticket", {
+        over: police.overLimit,
+        fine: "$" + police.fine,
+        points: citation.demerits,
+        total: citation.total,
+        status: roadtripDemeritStatusText()
+      });
     return true;
   }
   function settleRoadtripPoliceEscape() {
@@ -36953,6 +37125,11 @@ window.__entranceRoomOpen = false;
   }
   function startRoadtrip(forceFresh) {
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
+    if (syncRoadtripDemeritState()) {
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
+      paintRoadtripInvite();
+      return false;
+    }
     if (forceFresh) {
       roadtripState.exitUntilStop = false;
       roadtripState.accepted = true;
@@ -39593,6 +39770,7 @@ window.__entranceRoomOpen = false;
   window.__openEntrancePorscheDriveHud = openPorscheDriveHud;
   window.__hideEntrancePorscheDriveHud = hidePorscheDriveHudOnly;
   window.__entranceRoomState = function () {
+    syncRoadtripDemeritState();
     return {
       open: !!window.__entranceRoomOpen,
       closing: closing,
@@ -39667,6 +39845,16 @@ window.__entranceRoomOpen = false;
           tokens: roadtripState.tokens,
           escapes: roadtripState.escapes,
           wildlifeHits: roadtripState.wildlifeHits,
+          demeritPoints: roadtripState.demeritPoints,
+          demeritWarning: roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING &&
+            roadtripSuspensionRemainingMs() <= 0,
+          suspended: roadtripSuspensionRemainingMs() > 0,
+          suspendedUntil: roadtripState.suspendedUntil,
+          suspensionRemainingSeconds: Math.max(0, Math.ceil(roadtripSuspensionRemainingMs() / 1000)),
+          demeritWarningAt: ROADTRIP_DEMERIT_WARNING,
+          demeritSuspensionAt: ROADTRIP_DEMERIT_SUSPENSION,
+          reinstatementPoints: ROADTRIP_REINSTATEMENT_POINTS,
+          suspensionSeconds: ROADTRIP_SUSPENSION_MS / 1000,
           impactSounds: roadtripState.impactSounds,
           rewardSounds: roadtripState.rewardSounds,
           lastImpactSeverity: roadtripState.lastImpactSeverity,
@@ -39698,6 +39886,8 @@ window.__entranceRoomOpen = false;
             overLimit: roadtripState.police.overLimit,
             fine: roadtripState.police.fine,
             courtRequired: roadtripState.police.courtRequired,
+            lastDemerits: roadtripState.police.lastDemerits,
+            lastDemeritTotal: roadtripState.police.lastDemeritTotal,
             tickets: roadtripState.police.tickets,
             fines: roadtripState.police.fines,
             summonses: roadtripState.police.summonses,
@@ -39835,6 +40025,15 @@ window.__entranceRoomOpen = false;
     if (phase === "pursuit") driveState.speed = speed * driveState.facing;
     stepRoadtripPolice(speed / 3.6 * seconds, seconds);
     return roadtripState.police.phase;
+  };
+  window.__entranceRoadtripDemeritsForSpeed = roadtripDemeritsForSpeed;
+  window.__entranceRoadtripSetDemerits = function (points, suspendedUntil) {
+    setRoadtripDemerits(points, suspendedUntil);
+    return {
+      points: roadtripState.demeritPoints,
+      suspendedUntil: roadtripState.suspendedUntil,
+      suspended: roadtripSuspensionRemainingMs() > 0
+    };
   };
   window.__refreshPorscheDriveClimate = updatePorscheDriveAc;
   window.__applyPorscheDriveMusicVolume = function () { paintPorscheDriveMusic(); };
@@ -41433,6 +41632,8 @@ var T = {
       entrance_roadtrip_invite_accept: "Take the highway",
       entrance_roadtrip_invite_later: "Later",
       entrance_roadtrip_reenter: "Road Trip",
+      entrance_roadtrip_suspended_short: "Suspended · {time}",
+      entrance_roadtrip_suspended: "Licence suspended · Road Trip returns in {time}.",
       entrance_roadtrip_collision: "Rear-end impact · 10–40 point penalty, combo reset.",
       entrance_roadtrip_crash: "Head-on crash · −100 points, windshield shattered, engine stalled.",
       entrance_roadtrip_wildlife_collision: "Wildlife strike · 20–60 point penalty, combo reset.",
@@ -41460,12 +41661,15 @@ var T = {
       entrance_roadtrip_police_arrest: "Stopped · officer approaching the driver’s window.",
       entrance_roadtrip_arrest_kicker: "TRAFFIC STOP",
       entrance_roadtrip_arrest_title: "COURT SUMMONS",
-      entrance_roadtrip_arrest_line: "{over} km/h over · mandatory appearance",
+      entrance_roadtrip_arrest_line: "{over} over · {fine} · {points} pts · {total}/15",
       entrance_roadtrip_arrest_shout: "OUT OF THE CAR!",
-      entrance_roadtrip_police_ticket: "{over} km/h over · ${fine} fine.",
-      entrance_roadtrip_police_summons: "{over} km/h over · court summons.",
-      entrance_roadtrip_police_refused: "You didn’t pull over · ${fine} ticket + 1,000-point penalty.",
-      entrance_roadtrip_police_court_refused: "You didn’t pull over · highway run over. Mandatory court appearance.",
+      entrance_roadtrip_court_fine: "court-set fine",
+      entrance_roadtrip_demerit_warning: " · demerit warning",
+      entrance_roadtrip_demerit_suspended: " · licence suspended for {time}",
+      entrance_roadtrip_police_ticket: "{over} km/h over · fine {fine} · {points} demerits · {total}/15{status}.",
+      entrance_roadtrip_police_summons: "{over} km/h over · {fine} · {points} demerits · {total}/15{status}.",
+      entrance_roadtrip_police_refused: "You didn’t pull over · fine {fine} · {points} demerits · {total}/15{status} · 1,000-point penalty.",
+      entrance_roadtrip_police_court_refused: "You didn’t pull over · {fine} · {points} demerits · {total}/15{status} · highway run over.",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it. ☕",
@@ -42625,6 +42829,8 @@ var T = {
       entrance_roadtrip_invite_accept: "Vyjet na dálnici",
       entrance_roadtrip_invite_later: "Později",
       entrance_roadtrip_reenter: "Výlet",
+      entrance_roadtrip_suspended_short: "Pozastaveno · {time}",
+      entrance_roadtrip_suspended: "Řidičák pozastaven · výlet se vrátí za {time}.",
       entrance_roadtrip_collision: "Náraz zezadu · ztráta 10–40 bodů, kombo od začátku.",
       entrance_roadtrip_crash: "Čelní srážka · −100 bodů, roztříštěné sklo a zhaslý motor.",
       entrance_roadtrip_wildlife_collision: "Střet se zvěří · ztráta 20–60 bodů, kombo od začátku.",
@@ -42652,12 +42858,15 @@ var T = {
       entrance_roadtrip_police_arrest: "Zastaveno · policista přichází k okénku řidiče.",
       entrance_roadtrip_arrest_kicker: "SILNIČNÍ KONTROLA",
       entrance_roadtrip_arrest_title: "PŘEDVOLÁNÍ K SOUDU",
-      entrance_roadtrip_arrest_line: "Překročení o {over} km/h · povinná účast",
+      entrance_roadtrip_arrest_line: "+{over} · {fine} · {points} b. · {total}/15",
       entrance_roadtrip_arrest_shout: "VYSTUPTE Z VOZU!",
-      entrance_roadtrip_police_ticket: "Překročení o {over} km/h · pokuta ${fine}.",
-      entrance_roadtrip_police_summons: "Překročení o {over} km/h · předvolání k soudu.",
-      entrance_roadtrip_police_refused: "Nezastavil jsi · pokuta ${fine} + ztráta 1 000 bodů.",
-      entrance_roadtrip_police_court_refused: "Nezastavil jsi · jízda končí. Povinné soudní jednání.",
+      entrance_roadtrip_court_fine: "pokutu určí soud",
+      entrance_roadtrip_demerit_warning: " · varování",
+      entrance_roadtrip_demerit_suspended: " · řidičák pozastaven na {time}",
+      entrance_roadtrip_police_ticket: "Překročení o {over} km/h · pokuta {fine} · {points} trestné body · {total}/15{status}.",
+      entrance_roadtrip_police_summons: "Překročení o {over} km/h · {fine} · {points} trestných bodů · {total}/15{status}.",
+      entrance_roadtrip_police_refused: "Nezastavil jsi · pokuta {fine} · {points} trestných bodů · {total}/15{status} · ztráta 1 000 herních bodů.",
+      entrance_roadtrip_police_court_refused: "Nezastavil jsi · {fine} · {points} trestných bodů · {total}/15{status} · jízda končí.",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni. ☕",

@@ -40,6 +40,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return copy(trip());
   }
   function prepareEncounter() {
+    window.__entranceRoadtripSetDemerits(0, 0);
     window.__entranceRoadtripStart();
     window.__entranceRoadtripSetLane(.5);
     setMotion(0, 0);
@@ -57,6 +58,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         hook: typeof window.__entranceRoadtripPolice,
         detectHook: typeof window.__entranceRoadtripPoliceDetect,
         pursuitStepHook: typeof window.__entranceRoadtripPoliceStep,
+        demeritHook: typeof window.__entranceRoadtripDemeritsForSpeed,
+        demeritSchedule: [1, 15, 16, 30, 31, 50, 51].map(window.__entranceRoadtripDemeritsForSpeed),
         speedLimit: trip().speedLimit,
         enforcementSpeed: trip().enforcementSpeed,
         firstDistance: trip().policeFirstDistance,
@@ -151,6 +154,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         trip: copy(trip()),
         caption: document.getElementById("hunt-caption").textContent.trim(),
         flash: window.__flashCaptionState()
+      };
+
+      prepareEncounter();
+      window.__entranceRoadtripSetDemerits(5, 0);
+      meetPolice(120);
+      window.__entranceRoadtripSetLane(2);
+      setMotion(0, 0);
+      step(1000);
+      report.steps.demeritWarning = {
+        trip: copy(trip()),
+        caption: document.getElementById("hunt-caption").textContent.trim()
       };
 
       prepareEncounter();
@@ -323,6 +337,25 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripPoliceStep(0, 2);
       report.steps.refused = { capture: refusedCapture, trip: copy(trip()) };
 
+      prepareEncounter();
+      window.__entranceRoadtripSetDemerits(10, 0);
+      var suspensionDetection = meetPolice(130);
+      window.__entranceRoadtripSetDistance(suspensionDetection.police.stationAt + 30);
+      window.__exitEntranceRoadtrip();
+      window.__entranceRoadtripPoliceStep(0, 3);
+      window.__entranceRoadtripPoliceStep(0, 2);
+      var suspendedTrip = copy(trip());
+      var suspendedCaption = document.getElementById("hunt-caption").textContent.trim();
+      var suspendedButton = document.getElementById("entrance-roadtrip-reenter");
+      report.steps.suspension = {
+        trip: suspendedTrip,
+        caption: suspendedCaption,
+        buttonText: suspendedButton.textContent.trim(),
+        buttonDisabled: suspendedButton.getAttribute("aria-disabled"),
+        restart: window.__entranceRoadtripStart()
+      };
+      window.__entranceRoadtripSetDemerits(0, 0);
+
       window.setLang("cs");
       prepareEncounter();
       meetPolice(180);
@@ -380,6 +413,8 @@ var s = result.steps || {};
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(s.contract && s.contract.hook === "function" && s.contract.detectHook === "function" &&
   s.contract.pursuitStepHook === "function" &&
+  s.contract.demeritHook === "function" &&
+  JSON.stringify(s.contract.demeritSchedule) === JSON.stringify([2, 2, 3, 3, 4, 4, 6]) &&
   s.contract.speedLimit === 90 &&
   s.contract.enforcementSpeed === 110 &&
   s.contract.firstDistance === 950 && s.contract.warningAhead === 240 &&
@@ -439,11 +474,18 @@ check(s.unfocused && !s.unfocused.sirenActive && s.refocused && s.refocused.sire
 check(s.stopped && s.stopped.trip.active && s.stopped.trip.police.phase === "cooldown" &&
   s.stopped.trip.police.stops === 1 && s.stopped.trip.police.tickets === 1 &&
   s.stopped.trip.police.fines === 560 && s.stopped.trip.police.scorePenalties === 560 &&
+  s.stopped.trip.demeritPoints === 4 && !s.stopped.trip.demeritWarning &&
+  s.stopped.trip.police.lastDemerits === 4 && s.stopped.trip.police.lastDemeritTotal === 4 &&
   !s.stopped.trip.police.sirenActive &&
   !s.stopped.trip.police.mirrorVisible && !s.stopped.trip.police.arrestVisible &&
-  /40 km\/h over · \$560 fine/.test(s.stopped.caption) &&
+  /40 km\/h over · fine \$560 · 4 demerits · 4\/15/.test(s.stopped.caption) &&
   !s.stopped.flash,
   "the roadside outcome uses the recorded overage before the scaled fine", s.stopped);
+check(s.demeritWarning && s.demeritWarning.trip.active &&
+  s.demeritWarning.trip.demeritPoints === 8 && s.demeritWarning.trip.demeritWarning &&
+  !s.demeritWarning.trip.suspended && s.demeritWarning.trip.police.lastDemerits === 3 &&
+  /3 demerits · 8\/15 · demerit warning/.test(s.demeritWarning.caption),
+  "eight points enters the warning state without suspending the Road Trip", s.demeritWarning);
 check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.stopped.police.phase === "arrest" && s.courtStop.stopped.police.tickets === 0 &&
   s.courtStop.stopped.police.summonses === 0 && s.courtStop.stopped.police.sirenActive &&
@@ -457,7 +499,7 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.card.police.arrestCardOpacity > .9 &&
   s.courtStop.czech.kicker === "SILNIČNÍ KONTROLA" &&
   s.courtStop.czech.title === "PŘEDVOLÁNÍ K SOUDU" &&
-  /Překročení o 55 km\/h · povinná účast/.test(s.courtStop.czech.line) &&
+  /\+55 · pokutu určí soud · 6 b\. · 6\/15/.test(s.courtStop.czech.line) &&
   s.courtStop.paused.police.arrestElapsed === s.courtStop.card.police.arrestElapsed &&
   !s.courtStop.paused.police.sirenActive && s.courtStop.paused.police.arrestAudioVoices === 0 &&
   s.courtStop.fade.active && s.courtStop.fade.police.arrestOpacity > 0 &&
@@ -470,7 +512,8 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.trip.police.fine === null && s.courtStop.trip.police.courtRequired &&
   s.courtStop.trip.police.summonses === 1 && s.courtStop.trip.police.tickets === 1 &&
   s.courtStop.trip.police.fines === 0 && !s.courtStop.trip.police.sirenActive &&
-  /55 km\/h over · court summons/.test(s.courtStop.caption),
+  s.courtStop.trip.demeritPoints === 6 && s.courtStop.trip.police.lastDemerits === 6 &&
+  /55 km\/h over · court-set fine · 6 demerits · 6\/15/.test(s.courtStop.caption),
   "court-only arrest approaches, sounds, translates, pauses unattended, then fades to the block",
   s.courtStop);
 check(s.shoutThreshold && s.shoutThreshold.exactlyHundred.police.overLimit === 100 &&
@@ -510,6 +553,7 @@ check(s.escaped && s.escaped.detected.active && s.escaped.detected.police.phase 
   s.escaped.recovered.police.refusalElapsed === 5 &&
   s.escaped.cleared.active && s.escaped.cleared.police.phase === "cooldown" &&
   s.escaped.cleared.police.escapes === 1 && !s.escaped.cleared.police.sirenActive &&
+  s.escaped.cleared.demeritPoints === 0 &&
   !s.escaped.cleared.police.mirrorVisible && s.escaped.cleared.police.tickets === 0 &&
   /Police lost/.test(s.escaped.caption) && !s.escaped.flash,
   "the Sheriff reaches 180 and a ten-second breakaway must survive any slowdown before escape",
@@ -534,6 +578,7 @@ check(s.severe && s.severe.detected.active && s.severe.detected.police.phase ===
   s.severe.trip.police.tickets === 1 && s.severe.trip.police.fine === null &&
   s.severe.trip.police.courtRequired && s.severe.trip.police.summonses === 1 &&
   s.severe.trip.police.fines === 0 && s.severe.trip.police.scorePenalties === 1000 &&
+  s.severe.trip.demeritPoints === 11 && s.severe.trip.police.lastDemerits === 11 &&
   /highway run over/.test(s.severe.immediateCaption) &&
   s.severe.finalCaption === s.severe.immediateCaption &&
   !s.severe.immediateFlash && !s.severe.finalFlash &&
@@ -544,11 +589,19 @@ check(s.refused && s.refused.capture.active && s.refused.capture.police.phase ==
   s.refused.capture.police.sirenActive && s.refused.capture.police.mirrorVisible &&
   !s.refused.trip.active && s.refused.trip.police.runEnded &&
   s.refused.trip.police.endReason === "refused" && s.refused.trip.police.fines === 560 &&
-  s.refused.trip.police.scorePenalties === 1560 && !s.refused.trip.police.arrestVisible,
+  s.refused.trip.police.scorePenalties === 1560 && s.refused.trip.demeritPoints === 9 &&
+  s.refused.trip.police.lastDemerits === 9 && !s.refused.trip.police.arrestVisible,
   "ordinary refusal captures without the court-only arrest scene", s.refused);
+check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &&
+  s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
+  s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
+  s.suspension.buttonDisabled === "true" && /Suspended · 1:00|Suspended · 0:59/.test(s.suspension.buttonText) &&
+  /9 demerits · 15\/15 · licence suspended for/.test(s.suspension.caption) && !s.suspension.restart,
+  "refusal stacks five points onto the offence, caps at 15, ends the run, and disables re-entry",
+  s.suspension);
 check(s.czech && /přes 180/.test(s.czech.escape) &&
-  /^Překročení o \{over\} km\/h · pokuta \$\{fine\}\.$/.test(s.czech.fine) &&
-  /^Překročení o \{over\} km\/h · předvolání k soudu\.$/.test(s.czech.court),
+  /^Překročení o \{over\} km\/h · pokuta \{fine\} · \{points\} trestné body · \{total\}\/15\{status\}\.$/.test(s.czech.fine) &&
+  /^Překročení o \{over\} km\/h · \{fine\} · \{points\} trestných bodů · \{total\}\/15\{status\}\.$/.test(s.czech.court),
   "escape and recorded-overage outcomes are mirrored in natural Czech order", s.czech);
 check(s.teardown && s.teardown.before.active && s.teardown.before.police.phase === "arrest" &&
   s.teardown.before.police.arrestVisible && s.teardown.before.police.arrestAudioVoices > 0 &&

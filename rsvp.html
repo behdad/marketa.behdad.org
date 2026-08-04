@@ -35022,6 +35022,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_LOW_SPEED_RESISTANCE_KMH = 20;
   var PORSCHE_LOW_SPEED_RESISTANCE_BOOST = 12;
   var PORSCHE_TRANSMISSION_KEY = "entranceTransmission:v1";
+  var PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH = 10;
   var PORSCHE_AUTO_SHIFT_DWELL_MS = 550;
   var PORSCHE_AUTO_UPSHIFT_RPM = 5950;
   var PORSCHE_AUTO_KICKDOWN_MAX_RPM = 5600;
@@ -35608,8 +35609,8 @@ window.__entranceRoomOpen = false;
       var relativeSpeed = driveState.speed * driveState.facing;
       if (!porscheState.engineOn) savedRange = "P";
       else if (driveState.stalled || (savedRange === "P" && Math.abs(relativeSpeed) > .5) ||
-          (savedRange === "R" && relativeSpeed > 2.5) ||
-          (savedRange === "D" && relativeSpeed < -2.5)) savedRange = "N";
+          (savedRange === "R" && relativeSpeed >= PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH) ||
+          (savedRange === "D" && relativeSpeed <= -PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH)) savedRange = "N";
       porscheTransmission.range = savedRange;
       if (savedRange === "P" || savedRange === "N") driveState.gear = 0;
       else if (savedRange === "R") driveState.gear = -1;
@@ -35717,12 +35718,12 @@ window.__entranceRoomOpen = false;
         "entrance_drive_auto_park_interlock", 2600, "entrance-transmission");
       return false;
     }
-    if (range === "R" && relativeSpeed > 2.5) {
+    if (range === "R" && relativeSpeed >= PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH) {
       if (window.__flashCaptionKey) window.__flashCaptionKey(
         "entrance_drive_auto_reverse_interlock", 2600, "entrance-transmission");
       return false;
     }
-    if (range === "D" && relativeSpeed < -2.5) {
+    if (range === "D" && relativeSpeed <= -PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH) {
       if (window.__flashCaptionKey) window.__flashCaptionKey(
         "entrance_drive_auto_drive_interlock", 2600, "entrance-transmission");
       return false;
@@ -43757,8 +43758,8 @@ var T = {
       entrance_drive_auto_park_hint: "Automatic is in P · select D to drive.",
       entrance_drive_auto_neutral_hint: "Automatic is in N · select D to drive.",
       entrance_drive_auto_park_interlock: "Stop before selecting Park.",
-      entrance_drive_auto_reverse_interlock: "Stop before selecting reverse.",
-      entrance_drive_auto_drive_interlock: "Stop before selecting Drive.",
+      entrance_drive_auto_reverse_interlock: "Slow below 10 km/h before selecting reverse.",
+      entrance_drive_auto_drive_interlock: "Slow below 10 km/h before selecting Drive.",
       entrance_drive_shift_up: "Shift ↑ · it wants another gear.",
       entrance_drive_shift_down: "Shift ↓ · give the engine some leverage.",
       entrance_drive_ignition_hint: "Start the ignition. The key is on the left.",
@@ -44994,8 +44995,8 @@ var T = {
       entrance_drive_auto_park_hint: "Automat je v P · pro jízdu zařaď D.",
       entrance_drive_auto_neutral_hint: "Automat je v N · pro jízdu zařaď D.",
       entrance_drive_auto_park_interlock: "Před zařazením P zastav.",
-      entrance_drive_auto_reverse_interlock: "Před zařazením zpátečky zastav.",
-      entrance_drive_auto_drive_interlock: "Před zařazením D zastav.",
+      entrance_drive_auto_reverse_interlock: "Před zařazením zpátečky zpomal pod 10 km/h.",
+      entrance_drive_auto_drive_interlock: "Před zařazením D zpomal pod 10 km/h.",
       entrance_drive_shift_up: "Shift ↑ · chce další rychlost.",
       entrance_drive_shift_down: "Shift ↓ · dej motoru víc síly.",
       entrance_drive_ignition_hint: "Nastartuj. Klíček je vlevo.",

@@ -155,6 +155,10 @@ pedal ramp calibrate a correctly shifted 0–100 km/h run near the published 5.9
 `__entranceDriveRpmForSpeed()`, `__entranceDriveAcceleration()`, and `__entranceDriveSetMotion()` as
 deterministic focused-test seams when tuning this model.
 
+The automatic range interlock uses `PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH`: R↔D is valid only
+while opposite-direction speed is strictly below 10 km/h, and the same boundary validates restored
+range/speed snapshots. Keep this separate from the manual gearbox's wrong-direction stall rule.
+
 The first-person world is native SVG under `#entrance-drive-hud-svg`. `#entrance-room.roadtrip-active`
 expands its viewBox and HUD while leaving `#entrance-room-art` and `#entrance-porsche` rendered so
 spatial-audio geometry remains valid. The roadtrip weather layers follow the Entrance's existing

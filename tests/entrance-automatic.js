@@ -108,16 +108,32 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       window.__entranceDriveStep(1000);
       report.steps.noCreep = copy(drive());
 
-      window.__entranceDriveSetMotion(20, 1);
-      var reverseAccepted = window.__entranceDriveRange("R");
-      var afterReverseRefusal = copy(drive());
+      window.__entranceDriveSetMotion(9.9, 1);
+      var rollingReverseAccepted = window.__entranceDriveRange("R");
+      var afterRollingReverse = copy(drive());
+      window.__entranceDriveSetMotion(-9.9, -1);
+      var rollingDriveAccepted = window.__entranceDriveRange("D");
+      var afterRollingDrive = copy(drive());
+      window.__entranceDriveSetMotion(10, 1);
+      var reverseAtLimitAccepted = window.__entranceDriveRange("R");
+      var afterReverseAtLimit = copy(drive());
+      var reverseAtLimitCaption = document.getElementById("hunt-caption").textContent;
+      setLang("cs");
       window.__entranceDriveSetMotion(-10, -1);
-      var driveAccepted = window.__entranceDriveRange("D");
+      var driveAtLimitAccepted = window.__entranceDriveRange("D");
+      var driveAtLimitCaption = document.getElementById("hunt-caption").textContent;
+      setLang("en");
       report.steps.interlocks = {
-        reverseAccepted: reverseAccepted,
-        afterReverseRefusal: afterReverseRefusal,
-        driveAccepted: driveAccepted,
-        afterDriveRefusal: copy(drive())
+        rollingReverseAccepted: rollingReverseAccepted,
+        afterRollingReverse: afterRollingReverse,
+        rollingDriveAccepted: rollingDriveAccepted,
+        afterRollingDrive: afterRollingDrive,
+        reverseAtLimitAccepted: reverseAtLimitAccepted,
+        afterReverseAtLimit: afterReverseAtLimit,
+        reverseAtLimitCaption: reverseAtLimitCaption,
+        driveAtLimitAccepted: driveAtLimitAccepted,
+        afterDriveAtLimit: copy(drive()),
+        driveAtLimitCaption: driveAtLimitCaption
       };
 
       window.__entranceDriveSetMotion(0, 0);
@@ -183,6 +199,21 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       window.__entranceDriveControl("throttle", false);
       report.steps.manualLaunch = { start: launchStart, moving: launchMoving };
 
+      window.__entranceDriveSetMotion(5.9, 1);
+      window.__entranceDriveControl("clutch", true);
+      var lowSpeedManualReverseAccepted = window.__entranceDriveShift(-1);
+      var lowSpeedManualReverse = copy(state());
+      window.__entranceDriveSetMotion(6.1, 1);
+      var unsafeManualReverseAccepted = window.__entranceDriveShift(-1);
+      var unsafeManualReverse = copy(state());
+      report.steps.manualDirectionSafety = {
+        lowSpeedAccepted: lowSpeedManualReverseAccepted,
+        lowSpeed: lowSpeedManualReverse,
+        unsafeAccepted: unsafeManualReverseAccepted,
+        unsafe: unsafeManualReverse
+      };
+      window.__toggleEntrancePorscheEngine();
+
       window.__entranceDriveTransmissionMode("auto", true);
       window.__entranceDriveSetMotion(100, 3);
       window.__entranceRoadtripStart();
@@ -226,6 +257,15 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
         pausedTransmission: captured.drive.roadtrip.pausedRun && captured.drive.roadtrip.pausedRun.drive.transmission,
         runtimeKeys: Object.keys(captured.drive.transmission).sort()
       };
+      var rollingOpposite = copy(captured);
+      rollingOpposite.porsche.engineOn = true;
+      rollingOpposite.drive.transmission = { mode: "auto", range: "D" };
+      rollingOpposite.drive.gear = 1;
+      rollingOpposite.drive.speed = -9.9;
+      rollingOpposite.drive.facing = 1;
+      delete rollingOpposite.drive.roadtrip.pausedRun;
+      window.__restoreCheckpointSystems({ entrance: rollingOpposite }, "afterStage");
+      report.steps.rollingOppositeRestore = copy(drive());
       var corrupt = copy(captured);
       corrupt.porsche.engineOn = true;
       corrupt.drive.transmission = { mode: "auto", range: "D" };
@@ -345,10 +385,18 @@ check(s.rangeShiftGesture && s.rangeShiftGesture.ranges.join("") === "RNDNRPRND"
   "AUTO Shift+Up/Down walks P/R/N/D without leaking pedal or clutch input", s.rangeShiftGesture);
 check(s.noCreep && s.noCreep.transmission.range === "D" && s.noCreep.gear === 1 &&
   Math.abs(s.noCreep.speed) < .01, "AUTO D holds D1 at rest without idle creep", s.noCreep);
-check(s.interlocks && !s.interlocks.reverseAccepted && !s.interlocks.driveAccepted &&
-  s.interlocks.afterReverseRefusal.transmission.range === "D" &&
-  s.interlocks.afterDriveRefusal.transmission.range === "R",
-  "D↔R interlocks require a stop", s.interlocks);
+check(s.interlocks && s.interlocks.rollingReverseAccepted && s.interlocks.rollingDriveAccepted &&
+  s.interlocks.afterRollingReverse.transmission.range === "R" &&
+  s.interlocks.afterRollingReverse.gear === -1 && s.interlocks.afterRollingReverse.speed === 9.9 &&
+  s.interlocks.afterRollingDrive.transmission.range === "D" &&
+  s.interlocks.afterRollingDrive.gear === 1 && s.interlocks.afterRollingDrive.speed === -9.9,
+  "AUTO accepts R↔D while rolling in the opposite direction below 10 km/h", s.interlocks);
+check(s.interlocks && !s.interlocks.reverseAtLimitAccepted && !s.interlocks.driveAtLimitAccepted &&
+  s.interlocks.afterReverseAtLimit.transmission.range === "D" &&
+  s.interlocks.afterDriveAtLimit.transmission.range === "R" &&
+  s.interlocks.reverseAtLimitCaption === "Slow below 10 km/h before selecting reverse." &&
+  s.interlocks.driveAtLimitCaption === "Před zařazením D zpomal pod 10 km/h.",
+  "AUTO rejects opposite-direction R↔D at the 10 km/h safety boundary", s.interlocks);
 check(s.zeroToHundred && s.zeroToHundred.speed >= 100 && s.zeroToHundred.elapsed <= 9000 &&
   s.zeroToHundred.gears.length >= 2,
   "AUTO launches smoothly and reaches 100 km/h through multiple gears", s.zeroToHundred);
@@ -368,6 +416,12 @@ check(s.modeMapping && s.modeMapping.manual.gear === 3 &&
 check(s.manualLaunch && s.manualLaunch.start.clutchEngagement.remainingMs > 0 &&
   s.manualLaunch.start.rpm >= 2000 && s.manualLaunch.moving.speed > 0,
   "MANUAL retains its bounded high-RPM clutch launch", s.manualLaunch);
+check(s.manualDirectionSafety && s.manualDirectionSafety.lowSpeedAccepted &&
+  s.manualDirectionSafety.lowSpeed.car.engineOn && !s.manualDirectionSafety.lowSpeed.drive.stalled &&
+  s.manualDirectionSafety.lowSpeed.drive.gear === -1 &&
+  !s.manualDirectionSafety.unsafeAccepted && !s.manualDirectionSafety.unsafe.car.engineOn &&
+  s.manualDirectionSafety.unsafe.drive.stalled && s.manualDirectionSafety.unsafe.drive.gear === 0,
+  "MANUAL retains its separate 6 km/h wrong-direction stall boundary", s.manualDirectionSafety);
 check(s.headOn && !s.headOn.car.engineOn && s.headOn.drive.stalled &&
   s.headOn.drive.transmission.range === "N" && s.headOn.drive.gear === 0 &&
   s.restart && s.restart.car.engineOn && s.restart.drive.transmission.range === "P",
@@ -391,6 +445,10 @@ check(s.captured && s.captured.transmission.mode === "auto" && s.captured.transm
   s.captured.pausedTransmission.range === "D" &&
   s.captured.runtimeKeys.join(",") === "mode,range",
   "checkpoints persist only AUTO mode/range, never controller cooldowns", s.captured);
+check(s.rollingOppositeRestore && s.rollingOppositeRestore.transmission.mode === "auto" &&
+  s.rollingOppositeRestore.transmission.range === "D" && s.rollingOppositeRestore.gear === 1 &&
+  s.rollingOppositeRestore.speed === -9.9,
+  "a valid below-limit opposite roll survives AUTO checkpoint validation", s.rollingOppositeRestore);
 check(s.corruptRestore && s.corruptRestore.transmission.mode === "auto" &&
   s.corruptRestore.transmission.range === "N" && s.corruptRestore.gear === 0,
   "corrupt opposite-direction AUTO checkpoints recover atomically to N", s.corruptRestore);

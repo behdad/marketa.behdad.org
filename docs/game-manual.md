@@ -200,6 +200,11 @@ adds the actual distance travelled on the block and highway, including reverse,
 keeps the same total through engine stops and save/resume, and rolls its compact
 readout over after `999.9 KM`.
 
+Automatic mode uses P/R/N/D and shifts D1–D7 itself. Drive and Reverse may be
+selected while the Porsche is still rolling in the opposite direction below
+10 km/h; at 10 km/h or faster the opposite range remains locked out, and Park
+still requires a near standstill.
+
 The six-speed manual follows the 2010 base Boxster's real gearing: RPM is tied to
 road speed in each selected gear, apart from forgiving clutch slip when launching
 in first. Acceleration builds progressively, the limiter is at 7,500 rpm, and a

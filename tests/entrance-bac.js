@@ -18,10 +18,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function hud() {
     return {
-      label: document.getElementById("entrance-roadtrip-demerit-label").textContent.trim(),
-      points: document.getElementById("entrance-roadtrip-demerit-points").textContent.trim(),
-      status: document.getElementById("entrance-roadtrip-demerit-status").textContent.trim(),
-      band: document.getElementById("entrance-roadtrip-demerit-status").getAttribute("data-roadtrip-demerit-band")
+      demeritLabel: document.getElementById("entrance-roadtrip-demerit-label").textContent.trim(),
+      demeritPoints: document.getElementById("entrance-roadtrip-demerit-points").textContent.trim(),
+      bacLabel: document.getElementById("entrance-roadtrip-bac-label").textContent.trim(),
+      bacValue: document.getElementById("entrance-roadtrip-bac-value").textContent.trim(),
+      statusAbsent: !document.getElementById("entrance-roadtrip-demerit-status"),
+      dividerX: document.getElementById("entrance-roadtrip-record-divider").getAttribute("x1")
     };
   }
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
@@ -92,12 +94,14 @@ check(result && result.errors.length === 0, "no uncaught page errors", result &&
 check(result && result.restored.drinkEquivalents === 4 && result.restored.bac === .08 &&
   result.restored.impairmentLevel === .5,
   "the balcony alcohol record restores as the one Road Trip impairment state", result && result.restored);
-check(result && result.nonzero.status === "ON FILE" && result.nonzero.band === "active" &&
-  /DEMERITS · BAC/.test(result.nonzero.label) &&
-  /3 \/ 15 · 0\.08/.test(result.nonzero.points),
-  "nonzero demerits never claim CLEAN and the same panel shows BAC", result && result.nonzero);
-check(result && result.czech.status === "V EVIDENCI" && /TRESTNÉ BODY · BAC/.test(result.czech.label),
-  "the nonzero driver-record status remains concise in Czech", result && result.czech);
+check(result && result.nonzero.demeritLabel === "DEMERITS" && result.nonzero.demeritPoints === "3 / 15" &&
+  result.nonzero.bacLabel === "BAC" && result.nonzero.bacValue === "0.08" &&
+  result.nonzero.statusAbsent && result.nonzero.dividerX === "579",
+  "demerits and BAC occupy separate factual columns with no status vocabulary", result && result.nonzero);
+check(result && result.czech.demeritLabel === "TRESTNÉ BODY" &&
+  result.czech.demeritPoints === "3 / 15" && result.czech.bacLabel === "BAC" &&
+  result.czech.bacValue === "0.08" && result.czech.statusAbsent,
+  "the separate columns remain compact and factual in Czech", result && result.czech);
 check(result && result.accumulated.drinkEquivalents === 4 && result.accumulated.bac === .08 &&
   result.accumulated.impairmentLevel === .5,
   "wine and beer registrations accumulate persistent drink-equivalents", result && result.accumulated);

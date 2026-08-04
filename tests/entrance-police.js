@@ -112,7 +112,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         centerlineFine: trip().centerlineFine,
         centerlineDemerits: trip().centerlineDemerits,
         demeritHud: ["entrance-roadtrip-meta-panel", "entrance-roadtrip-demerit-label",
-          "entrance-roadtrip-demerit-points", "entrance-roadtrip-demerit-status"].every(function (id) {
+          "entrance-roadtrip-demerit-points", "entrance-roadtrip-record-divider",
+          "entrance-roadtrip-bac-label", "entrance-roadtrip-bac-value"].every(function (id) {
           return !!document.getElementById(id);
         }),
         speedSign: !!document.getElementById("entrance-roadtrip-speed-90"),
@@ -700,7 +701,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true }));
       var blockedKeyboard = copy(state());
-      var blockedStatus = document.getElementById("entrance-roadtrip-demerit-status");
       report.steps.suspension = {
         trip: suspendedTrip,
         state: suspendedState,
@@ -708,8 +708,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         buttonText: suspendedButton.textContent.trim(),
         buttonTextY: document.getElementById("entrance-roadtrip-reenter-text").getAttribute("y"),
         hudPoints: document.getElementById("entrance-roadtrip-demerit-points").textContent.trim(),
-        hudStatus: document.getElementById("entrance-roadtrip-demerit-status").textContent.trim(),
-        hudBand: document.getElementById("entrance-roadtrip-demerit-status").getAttribute("data-roadtrip-demerit-band"),
+        hudBac: document.getElementById("entrance-roadtrip-bac-value").textContent.trim(),
+        hudStatusAbsent: !document.getElementById("entrance-roadtrip-demerit-status"),
         buttonDisabled: suspendedButton.getAttribute("aria-disabled"),
         restart: window.__entranceRoadtripStart(),
         ignition: {
@@ -720,9 +720,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           keyboard: blockedKeyboard,
           caption: document.getElementById("hunt-caption").textContent.trim(),
           captionBlink: document.getElementById("hunt-caption").classList.contains("hint-blink"),
-          statusPulse: blockedStatus.classList.contains("suspension-ignition-blocked"),
           reenterPulse: suspendedButton.classList.contains("suspension-ignition-blocked"),
-          statusAnimation: getComputedStyle(blockedStatus).animationName
+          buttonAnimation: getComputedStyle(suspendedButton).animationName
         }
       };
       window.__entranceRoadtripSetDemerits(15, Date.now() - 1);
@@ -784,18 +783,13 @@ var REDUCED_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed
       window.__entranceRoadtripSetDemerits(15, Date.now() + 60000);
       window.__toggleEntrancePorscheEngine();
       window.__toggleEntrancePorscheEngine();
-      var status = document.getElementById("entrance-roadtrip-demerit-status");
       var button = document.getElementById("entrance-roadtrip-reenter");
-      var statusStyle = getComputedStyle(status);
       var buttonStyle = getComputedStyle(button);
       report.steps.blocked = {
         state: state(),
-        statusPulse: status.classList.contains("suspension-ignition-blocked"),
         buttonPulse: button.classList.contains("suspension-ignition-blocked"),
-        statusAnimation: statusStyle.animationName,
         buttonAnimation: buttonStyle.animationName,
-        statusStroke: statusStyle.stroke,
-        statusStrokeWidth: statusStyle.strokeWidth,
+        statusAbsent: !document.getElementById("entrance-roadtrip-demerit-status"),
         captionBlink: document.getElementById("hunt-caption").classList.contains("hint-blink")
       };
       window.__entranceRoadtripSetDemerits(0, 0);
@@ -1297,8 +1291,8 @@ check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
   s.suspension.buttonTextY === "17" &&
-  s.suspension.hudPoints === "15 / 15 · 0.00" && s.suspension.hudBand === "suspended" &&
-  /^SUSPENDED (?:1:00|0:59)$/.test(s.suspension.hudStatus) &&
+  s.suspension.hudPoints === "15 / 15" && s.suspension.hudBac === "0.00" &&
+  s.suspension.hudStatusAbsent &&
   !s.suspension.state.car.engineOn && s.suspension.state.drive.speed === 0 &&
   s.suspension.state.drive.rpm === 0 && s.suspension.state.drive.gear === 0 &&
   !s.suspension.state.drive.audioActive && !s.suspension.state.drive.musicActive &&
@@ -1323,8 +1317,8 @@ check(blockedIgnition && blockedIgnition.baseline.drive.hud === false &&
   !blockedIgnition.keyboard.drive.audioActive &&
   blockedIgnition.keyboard.car.activations.engine === blockedBaselineCount + 6 &&
   blockedIgnition.caption === "Licence suspended · Road Trip temporarily unavailable." &&
-  blockedIgnition.captionBlink && blockedIgnition.statusPulse && blockedIgnition.reenterPulse &&
-  blockedIgnition.statusAnimation === "entrance-roadtrip-suspension-blocked" &&
+  blockedIgnition.captionBlink && blockedIgnition.reenterPulse &&
+  blockedIgnition.buttonAnimation === "entrance-roadtrip-suspension-blocked" &&
   s.suspension.expiry.started && s.suspension.expiry.state.car.engineOn &&
   s.suspension.expiry.state.drive.rpm === 750 &&
   s.suspension.expiry.state.drive.roadtrip.demeritPoints === 7 &&
@@ -1359,10 +1353,9 @@ check(reducedResult && reducedResult.errors.length === 0, "no uncaught errors in
 check(reduced && reduced.state.car.engineOn === false && reduced.state.drive.rpm === 0 &&
   !reduced.state.car.idleActive && !reduced.state.drive.audioActive &&
   reduced.state.car.activations.engine === 2 && reduced.state.drive.roadtrip.suspended &&
-  reduced.statusPulse && reduced.buttonPulse && reduced.captionBlink &&
-  reduced.statusAnimation === "none" && reduced.buttonAnimation === "none" &&
-  reduced.statusStroke === "rgb(255, 253, 248)" && reduced.statusStrokeWidth === "0.8px",
-  "reduced motion replaces the suspension blink with a static emphasized status",
+  reduced.statusAbsent && reduced.buttonPulse && reduced.captionBlink &&
+  reduced.buttonAnimation === "none",
+  "reduced motion keeps suspension feedback on the re-entry control and caption",
   reduced);
 check(reducedFlashes && reducedFlashes.phase === "pursuit" &&
   reducedFlashes.visible === "visible" && reducedFlashes.active &&

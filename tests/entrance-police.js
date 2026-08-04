@@ -1245,7 +1245,7 @@ check(blockedIgnition && blockedIgnition.baseline.drive.hud === false &&
   blockedIgnition.keyboard.drive.gear === 0 && !blockedIgnition.keyboard.car.idleActive &&
   !blockedIgnition.keyboard.drive.audioActive &&
   blockedIgnition.keyboard.car.activations.engine === blockedBaselineCount + 6 &&
-  /Licence suspended · Road Trip returns in (?:1:00|0:59)\./.test(blockedIgnition.caption) &&
+  blockedIgnition.caption === "Licence suspended · Road Trip temporarily unavailable." &&
   blockedIgnition.captionBlink && blockedIgnition.statusPulse && blockedIgnition.reenterPulse &&
   blockedIgnition.statusAnimation === "entrance-roadtrip-suspension-blocked" &&
   s.suspension.expiry.started && s.suspension.expiry.state.car.engineOn &&

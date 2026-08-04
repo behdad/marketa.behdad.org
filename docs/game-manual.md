@@ -333,6 +333,10 @@ dismissed by using the control they indicate; the driving card can also be
 selected to put it away and reopened with its `?` button. Continue does not
 replay the first-drive lesson in a recovered game.
 
+The first downstairs visit after opening the page points out the Up control.
+That coach stays through the room's arrival and caption changes until you return
+upstairs or dismiss the lower room.
+
 ## Saves, Continue, and Restart
 
 Progress is checkpointed automatically in this browser after solving the Kitchen or deliberately

@@ -28,6 +28,9 @@ var harness = String.raw`<script>
       hasTitle: button.hasAttribute("title"),
       coachHidden: coach.hidden,
       coach: coach.textContent,
+      coachZ: parseInt(getComputedStyle(coach).zIndex, 10),
+      bottomNavZ: parseInt(getComputedStyle(document.getElementById("hunt-bottom-nav")).zIndex, 10),
+      lowerRoomZ: parseInt(getComputedStyle(document.getElementById("lower-room-track")).zIndex, 10),
       room: window.currentStageName,
       max: window.__maxUnlocked(),
       bathroom: !!window.__bathroomRoomOpen,
@@ -89,6 +92,9 @@ var harness = String.raw`<script>
     check("descent changes to Up at the transition midpoint and reveals its coach",
       first.up && !first.down && !first.coachHidden && first.coach === "Up gets you back." &&
       first.navigation.downstairs && !first.navigation.pending, first);
+    check("the Up coach paints above the active lower-room scene",
+      first.coachZ > 0 && first.bottomNavZ > first.lowerRoomZ,
+      { coach: first.coachZ, bottomNav: first.bottomNavZ, lowerRoom: first.lowerRoomZ });
     await sleep(220);
     check("first-arrival coach remains after the lower room settles", !floorState().coachHidden, floorState());
     window.__bathroomRoomOpen = false;

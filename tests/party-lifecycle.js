@@ -131,11 +131,13 @@ var harness = String.raw`<script>
   var stoppedDeparture = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
   check("cake finale uses the normal party teardown", !window.__gardenPartyOn && !window.__cakeOn && stoppedDeparture && !stoppedDeparture.active && stoppedDeparture.gain === 1);
 
-  document.documentElement.lang = "cs";
+  setLang("cs");
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   if (window.goToStage) window.goToStage("kitchen");
+  if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
   if (window.__setGardenParty) window.__setGardenParty(false, true);
-  check("manual party-end copy is localized in Czech", !window.__gardenPartyOn && /hra ne/i.test(document.getElementById("hunt-caption").textContent) && /aplikace/i.test(document.getElementById("hunt-caption").textContent));
+  var partyEndCaption = document.getElementById("hunt-caption").textContent;
+  check("manual party-end copy is localized in Czech", !window.__gardenPartyOn && /hra ne/i.test(partyEndCaption) && /aplikace/i.test(partyEndCaption), partyEndCaption);
   report();
 })();
 </script>`;

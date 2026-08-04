@@ -1292,7 +1292,7 @@ check(suspensionStop && suspensionStop.moving.car.engineOn && suspensionStop.mov
 check(s.suspension && !s.suspension.trip.active && s.suspension.trip.suspended &&
   s.suspension.trip.demeritPoints === 15 && s.suspension.trip.police.lastDemerits === 9 &&
   s.suspension.trip.police.lastDemeritTotal === 15 && s.suspension.trip.police.runEnded &&
-  s.suspension.buttonTextY === "17" &&
+  s.suspension.buttonTextY === "19" &&
   s.suspension.hudPoints === "15 / 15" && s.suspension.hudBac === "0.00" &&
   s.suspension.hudStatusAbsent &&
   !s.suspension.state.car.engineOn && s.suspension.state.drive.speed === 0 &&

@@ -86,6 +86,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     await sleep(260);
     var frozenAfter = copy(state().drive.roadtrip);
     var reentry = document.getElementById("entrance-roadtrip-reenter");
+    var transport = document.getElementById("hunt-playpause-btn");
     report.steps.restored = {
       state: restored,
       expected: durableRun(expected),
@@ -94,9 +95,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       frozenAfter: frozenAfter,
       buttonVisible: reentry.classList.contains("show"),
       buttonLabel: reentry.textContent.trim(),
+      transportVisible: transport.classList.contains("shown"),
+      transportPaused: transport.classList.contains("paused"),
       crackPrimary: document.getElementById("entrance-roadtrip-crack-primary").getAttribute("d")
     };
-    reentry.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    transport.click();
     var resumed = copy(state());
     var resumedRun = pausedRun();
     report.steps.resumed = { state: resumed, run: durableRun(resumedRun) };
@@ -153,9 +156,10 @@ var resumed = result.steps && result.steps.resumed;
 var engine = result.steps && result.steps.engineCycle;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(restored && restored.state.open && restored.state.drive.hud &&
-  !restored.state.drive.roadtrip.active && restored.state.drive.roadtrip.paused &&
-  restored.state.drive.roadtrip.reentryVisible && restored.buttonVisible && restored.buttonLabel === "Road Trip",
-  "Continue restores the Entrance HUD with an explicit paused Road Trip", restored && restored.state);
+  restored.state.drive.roadtrip.active && restored.state.drive.roadtrip.resumePending &&
+  !restored.state.drive.roadtrip.reentryVisible && !restored.buttonVisible &&
+  restored.transportVisible && restored.transportPaused,
+  "Continue restores the paused highway frame with an explicit Play control", restored && restored.state);
 check(restored && same(restored.expected, restored.run) && restored.run.damage.kind === "cracked" &&
   restored.run.damage.geometry.primary === restored.crackPrimary && restored.run.police.phase === "warning" &&
   restored.run.entities.length >= 2,
@@ -169,9 +173,9 @@ check(restored && restored.frozenAfter.distance === restored.frozenBefore.distan
   "the restored run stays frozen until explicit re-entry", restored && {
     before: restored.frozenBefore, after: restored.frozenAfter
   });
-check(resumed && resumed.state.drive.roadtrip.active && !resumed.state.drive.roadtrip.paused &&
+check(resumed && resumed.state.drive.roadtrip.active && !resumed.state.drive.roadtrip.resumePending &&
   same(restored.expected, resumed.run),
-  "the compact Road Trip button resumes the exact restored run", resumed && resumed.state.drive.roadtrip);
+  "Play resumes the exact restored run", resumed && resumed.state.drive.roadtrip);
 check(engine && !engine.off.car.engineOn && engine.off.drive.roadtrip.paused &&
   engine.off.drive.roadtrip.damage.kind === "cracked" && engine.started.car.engineOn &&
   engine.started.drive.roadtrip.paused && engine.started.drive.roadtrip.damage.kind === "cracked" &&

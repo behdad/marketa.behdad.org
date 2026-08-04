@@ -38328,6 +38328,7 @@ window.__entranceRoomOpen = false;
     return { active: roadtripState.active, paused: roadtripState.active && roadtripResumePending };
   };
   function resetRoadtripRun() {
+    restoreRoadtripOnEntranceOpen = false;
     clearRoadtripEntities();
     roadtripState.paused = false;
     roadtripTransportPaused = false;
@@ -38367,6 +38368,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripScore();
   }
   var roadtripHandoffSerial = 0;
+  var restoreRoadtripOnEntranceOpen = false;
   function beginRoadtripHandoff() {
     var serial = ++roadtripHandoffSerial;
     room.classList.add("roadtrip-handoff");
@@ -38478,6 +38480,15 @@ window.__entranceRoomOpen = false;
     updateRoadtripPoliceSiren();
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("entrance_roadtrip_drive");
+    return true;
+  }
+  function restoreRoadtripPresentationWhenReady() {
+    if (!restoreRoadtripOnEntranceOpen || !window.__entranceRoomOpen || !driveState.hudOpen) return false;
+    restoreRoadtripOnEntranceOpen = false;
+    roadtripState.accepted = true;
+    if (!startRoadtrip(false)) return false;
+    roadtripTransportPaused = true;
+    setRoadtripResumePending(true);
     return true;
   }
   function unlockRoadtrip() {
@@ -41661,6 +41672,7 @@ window.__entranceRoomOpen = false;
     window.__entranceRoomOpen = true;
     if (window.__hideCallRing) window.__hideCallRing();
     paintPorscheDriveHud();
+    restoreRoadtripPresentationWhenReady();
     updatePorscheDriveLifecycle();
     if (window.__homeCatLower) window.__homeCatLower("entrance");
     if (window.__updateLowerFloorAcoustics) window.__updateLowerFloorAcoustics();
@@ -42431,6 +42443,7 @@ window.__entranceRoomOpen = false;
             roadtripState.unlocked = true;
             roadtripState.practiceLaps = 1;
             roadtripState.everAccepted = true;
+            restoreRoadtripOnEntranceOpen = true;
           }
         }
       }
@@ -42446,6 +42459,7 @@ window.__entranceRoomOpen = false;
       paintPorscheDrivePosition();
       paintRoadtripScore();
       syncPorscheState();
+      restoreRoadtripPresentationWhenReady();
       if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     },
     reset: function () {

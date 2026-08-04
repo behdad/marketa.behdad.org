@@ -35070,6 +35070,11 @@ window.__entranceRoomOpen = false;
   var PORSCHE_KEYBOARD_STEER_BASE = .28;
   var PORSCHE_KEYBOARD_STEER_BUILD_MS = 760;
   var PORSCHE_KEYBOARD_STEER_TAP_WINDOW_MS = 420;
+  function porscheHaptic(pattern) {
+    if (document.hidden || !navigator.vibrate) return false;
+    try { return navigator.vibrate(pattern); }
+    catch (_error) { return false; }
+  }
   var porscheDoorCloseTimer = null;
   var porscheBodyClickTimer = null;
   var porscheDrag = { active: false, moved: false, suppressClick: false, pointerId: null, startX: 0, startY: 0, startPosition: 0, startLane: 0 };
@@ -35819,6 +35824,7 @@ window.__entranceRoomOpen = false;
         "entrance_drive_auto_drive_interlock", 2600, "entrance-transmission");
       return false;
     }
+    var previousRange = porscheTransmission.range;
     porscheTransmission.range = range;
     clearPorscheClutchEngagement(true);
     driveState.holds.clutch = false;
@@ -35837,6 +35843,7 @@ window.__entranceRoomOpen = false;
     if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) {
       playDryClickSound("entrance-drive-shifter");
     }
+    if (range !== previousRange) porscheHaptic(14);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
@@ -36694,6 +36701,7 @@ window.__entranceRoomOpen = false;
     var light = kind === "light";
     severity = Math.max(.08, Math.min(1, Number(severity) || .5));
     roadtripState.lastImpactSeverity = severity;
+    porscheHaptic(heavy ? [65, 30, 90] : light ? 18 : [35, 25, 48]);
     // A glass-damaging impact is the boundary between a scrape and a hit severe
     // enough to knock the transmission out of gear. Release the pedals too,
     // so a held key/touch cannot immediately rev the now-neutral drivetrain.
@@ -40322,6 +40330,7 @@ window.__entranceRoomOpen = false;
     completePorscheDriveCoachAction("gear");
     paintPorscheDriveHud();
     if (typeof playDryClickSound === "function" && window.__entranceRoomOpen) playDryClickSound("entrance-drive-shifter");
+    if (gear !== previousGear) porscheHaptic(14);
     return true;
   }
   function porscheDriveGearStepTarget(direction) {
@@ -41285,6 +41294,7 @@ window.__entranceRoomOpen = false;
         }
       }
       playPorscheEngineSound(porscheState.engineOn);
+      porscheHaptic(porscheState.engineOn ? [18, 20, 38] : 22);
     }
     else if (action === "headlight") porscheState.headlightOn = !porscheState.headlightOn;
     else if (action === "taillight") porscheState.taillightOn = !porscheState.taillightOn;

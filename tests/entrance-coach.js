@@ -84,6 +84,8 @@ window.addEventListener("load", function () { setTimeout(function () {
     var reentryBox = reentry.getBoundingClientRect();
     var helpBox = help.getBoundingClientRect();
     report.reentryGap = helpBox.left - reentryBox.right;
+    report.coachAboveReentry = !!(reentry.compareDocumentPosition(
+      document.getElementById("entrance-drive-coach")) & Node.DOCUMENT_POSITION_FOLLOWING);
     reentry.classList.remove("show");
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
@@ -191,6 +193,8 @@ check(result && result.copy && /Ctrl/.test(result.copy.en) && /Ctrl/.test(result
   "the dedicated cruise step teaches Ctrl in both languages", result && result.copy);
 check(result && result.reentryGap >= 8,
   "desktop Road Trip button clears driving help", result && result.reentryGap);
+check(result && result.coachAboveReentry,
+  "driving coach paints above the Road Trip button", result && result.coachAboveReentry);
 check(mobile && mobile.errors.length === 0 && mobile.fresh.show && mobile.fresh.step === 1,
   "mobile coach starts with ignition", mobile);
 check(mobile && mobile.started.show && mobile.started.step === 3,

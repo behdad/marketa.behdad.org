@@ -28,7 +28,9 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.after = JSON.parse(JSON.stringify(state()));
     report.dom = {
       shown: document.getElementById("entrance-roadtrip-route-chooser").classList.contains("show"),
-      selected: document.querySelector(".entrance-roadtrip-route-choice.selected").dataset.roadtripRouteChoice
+      selected: document.querySelector(".entrance-roadtrip-route-choice.selected").dataset.roadtripRouteChoice,
+      svgZ: Number(getComputedStyle(document.getElementById("entrance-drive-hud-svg")).zIndex),
+      touchZ: Number(getComputedStyle(document.getElementById("entrance-drive-touch-controls")).zIndex)
     };
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
@@ -57,6 +59,8 @@ check(result && result.after.routeChooserOpen && result.after.routeChoice === "b
   "recovery restores the chooser instead of launching its selected route", {
     after: result && result.after, dom: result && result.dom
   });
+check(result && result.dom.svgZ > result.dom.touchZ,
+  "the open chooser stacks above the blue and pink controls", result && result.dom);
 
 if (failed) process.exit(1);
 console.log("Road Trip chooser-recovery assertions passed.");

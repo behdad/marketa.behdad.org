@@ -8,6 +8,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 <script>
 window.addEventListener("load", function () { setTimeout(function () {
   var report = { errors: window.__errs || [] };
+  function pointer(target, type, id, x, y) {
+    target.dispatchEvent(new PointerEvent(type, {
+      bubbles: true, cancelable: true, pointerId: id, pointerType: "touch",
+      button: 0, isPrimary: true, clientX: x, clientY: y
+    }));
+  }
   try {
     Object.defineProperty(document, "hasFocus", {
       value: function () { return true; }, configurable: true
@@ -34,6 +40,30 @@ window.addEventListener("load", function () { setTimeout(function () {
       range: after.transmission.range,
       gear: after.gear
     };
+
+    window.__toggleEntrancePorscheEngine();
+    window.__entranceDriveSetMotion(9, 0);
+    var pedalPad = document.getElementById("entrance-drive-touch-pedals");
+    document.body.appendChild(pedalPad);
+    pedalPad.style.cssText += ";display:block;position:fixed;left:300px;top:80px;width:70px;height:140px";
+    var pedalRect = pedalPad.getBoundingClientRect();
+    pointer(pedalPad, "pointerdown", 71, pedalRect.left + pedalRect.width / 2,
+      pedalRect.top + pedalRect.height / 2);
+    var heldBeforeIgnition = window.__entranceRoomState().drive;
+    var positionBeforeIgnition = heldBeforeIgnition.position;
+    window.__toggleEntrancePorscheEngine();
+    window.__entranceDriveStep(1000);
+    var restarted = window.__entranceRoomState().drive;
+    pointer(pedalPad, "pointerup", 71, pedalRect.left + pedalRect.width / 2,
+      pedalRect.top + pedalRect.height / 2);
+    report.restart = {
+      heldSpeed: heldBeforeIgnition.touchControls.holdSpeed,
+      speed: restarted.speed,
+      positionBefore: positionBeforeIgnition,
+      positionAfter: restarted.position,
+      range: restarted.transmission.range,
+      gear: restarted.gear
+    };
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
   }
@@ -55,6 +85,10 @@ var park = result && result.park;
 check(park && park.accepted && park.range === "P" && park.gear === 0 &&
   park.beforeSpeed === 0 && park.afterSpeed === 0 && park.beforePosition === park.afterPosition,
   "Park cancels sub-interlock roll and throttle cannot move the car", park);
+var restart = result && result.restart;
+check(restart && restart.heldSpeed === 9 && restart.range === "P" && restart.gear === 0 &&
+  restart.speed === 0 && restart.positionBefore === restart.positionAfter,
+  "ignition in Park cannot restore a stale center-band held speed", restart);
 
 if (failed) process.exit(1);
 console.log("Park-lock assertions passed.");

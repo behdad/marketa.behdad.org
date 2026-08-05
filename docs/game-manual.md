@@ -231,16 +231,20 @@ shifts. The highway caption offers a short shift suggestion when the selected
 gear is clearly too high or low.
 
 Complete three forward street laps to unlock **Road Trip**. Enter accepts its
-visible offer; choosing **Later** leaves you on the block. Afterward, the highway
+visible offer; choosing **Later** leaves you on the block. The route chooser then
+lets you start from Calgary, Banff, or the road to Abraham Lake; Left and Right
+change the selected segment, while Enter launches it. Afterward, the highway
 remains unlocked and reappears after one forward lap in a later dashboard session.
 
 Road Trip keeps the same steering, transmission, accelerator, and brake. AUTO
 provides gentle curve lane assist; MANUAL leaves curve steering entirely to you.
-It begins on the straight, divided six-lane highway to Calgary: flat prairie, a
-wide dirt median that cannot be crossed, a 110 km/h limit, and no curves. After
-roughly 75 seconds, the Banff exit turns right into the mountain leg, where the
-road narrows, curves return, and the limit drops to 90. Its randomized traffic
-includes sedans, pickups, semis, and RVs in both directions;
+The full route begins on the straight, divided six-lane highway to Calgary: flat
+prairie, a wide dirt median that cannot be crossed, a 110 km/h limit, and no
+curves. After roughly 75 seconds, the Banff exit turns right into the mountain
+leg, where the road narrows, curves return, and the limit drops to 90. Ninety
+seconds later, another right turn begins the quieter two-lane Abraham Lake road:
+mountains and wildlife on the left, turquoise water on the right, and a 100 km/h
+limit. Its randomized traffic includes sedans, pickups, semis, and RVs in both directions;
 slower traffic may be passed, horns react to blocked lanes, and some oncoming
 drivers swerve when you stray across the double yellow. Curves, shoulders,
 rumble strips, gravel, day/night, weather, and seasons all affect the drive.
@@ -261,14 +265,19 @@ The driver panel keeps separate **Demerits** and **BAC** columns. Each wine, bee
 or cocktail adds one simplified `0.03` drink-equivalent; one clears per real
 minute. Drink state survives room changes, Road Trip exits, Continue, and reload.
 
+The Abraham Lake leg slows on its final approach and ends at the camp. Camp props
+are clickable; arrows stay in the scene, while Escape, Backspace, or the top-right ×
+returns to the Entrance dashboard.
+
 Distance, clean passes, safely avoided wildlife, and pickups earn points. Clean
 actions build a combo up to `3×`; collisions reset it and may crack or shatter
 the windshield, stall the engine, or knock the transmission into neutral. Slow
 down for deer, snowshoe hares, and the rare blue-bellied hedgehog.
 
-Press Escape or select the top-right × to leave the highway for the
+Press Escape, Backspace, or select the top-right × to leave the highway for the
 street view while keeping the dashboard and engine available so the car can be
-fully braked. Leaving never resumes the highway automatically: complete another
+fully braked.
+Leaving never resumes the highway automatically: complete another
 block lap and accept the new offer to return. Escape again closes the dashboard;
 once it is closed, Escape leaves the Entrance. Returning upstairs by another
 route also parks the run.

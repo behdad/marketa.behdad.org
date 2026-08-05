@@ -12,8 +12,14 @@ var lib = require("./lib"); // head hook + scratch-copy page runner (shared with
 
 var COMMON = [
   "function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }",
+  "function describeFireTarget(el, type) {",
+  "  if (!el) return type + ':missing';",
+  "  var token = el.id || el.getAttribute && (el.getAttribute('data-camp-car-action') || el.getAttribute('data-roadtrip-route-choice') || el.getAttribute('href') || el.getAttribute('class')) || el.tagName;",
+  "  return type + ':' + String(token).replace(/\\s+/g, '.').slice(0, 180);",
+  "}",
   "function fire(el, type) {",
   "  if (!el) return false;",
+  "  window.__lastPlayFire = describeFireTarget(el, type);",
   "  if (type === 'enter') el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));",
   "  else el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));",
   "  return true;",
@@ -21,6 +27,7 @@ var COMMON = [
   "function click(id) { return fire(document.getElementById(id), 'click'); }",
   "function finish(report) {",
   "  report.errors = window.__errs;",
+  "  report.errorTarget = window.__firstPlayErrorTarget || '';",
   "  document.getElementById('__report').textContent = JSON.stringify(report);",
   "}",
   "function pointerEls() {",
@@ -47,11 +54,15 @@ var COMMON = [
   "  }",
   "  await sleep(1500);",
   "  for (var j = 0; j < els.length; j++) {",
-  "    fire(els[j], 'dblclick');",
-  "    fire(els[j], 'enter');",
+  "    // External links already receive click coverage. Re-activating a target=_blank",
+  "    // anchor can surface an opaque cross-origin Script error in headless Chrome.",
+  "    if (els[j].tagName !== 'A') { fire(els[j], 'dblclick'); fire(els[j], 'enter'); }",
   "    if (j % 15 === 0) await sleep(150);",
   "  }",
-  "}"
+  "}",
+  "window.addEventListener('error', function () {",
+  "  if (!window.__firstPlayErrorTarget) window.__firstPlayErrorTarget = window.__lastPlayFire || 'before-fire';",
+  "});"
 ].join("\n");
 
 var RSVP_HARNESS = [
@@ -229,7 +240,8 @@ if (!r) {
   if (r.stormClicked >= 60) pass("click-stormed " + r.stormClicked + " interactive elements");
   else fail("interactive element count sanity", "only " + r.stormClicked);
   if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
-  else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n"));
+  else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n") +
+    (r.errorTarget ? "\nafter " + r.errorTarget : ""));
 }
 
 console.log("");

@@ -186,12 +186,25 @@ Entering or leaving Road Trip is an atomic presentation swap: its HUD height, co
 world visibility, ordinary windshield scenery, and SVG viewBox must not transition independently.
 Keep those state-owned properties transition-free so a frame can show either Road Trip or street
 driving, never a resized mixture of both.
-`drive.roadtrip.route` owns the `calgary` → `turnoff` → `banff` sequence and is included in the
+`drive.roadtrip.route` owns the `calgary` → `turnoff` → `banff` → `lake-turnoff` →
+`abraham` → `camp` sequence and is included in the
 version-2 paused-run snapshot. Calgary uses three equal lanes in each direction around a wide,
 impassable dirt median, starts the Porsche on the outer shoulder at `3.08`, and forces terrain
 elevation, grade, and curvature to zero. After 75 attended seconds, a six-second right-turn
 approach keeps the flat scenery; only the Banff phase restores the original four-lane mountain road, 90 km/h signs,
 terrain, and curves. Route changes clear live entities before changing lane geometry.
+Banff runs for 90 attended seconds before a second six-second right turn. Abraham Lake narrows to
+one lane in each direction, posts 100 km/h, reduces the traffic cadence, and runs for 75 attended
+seconds. `syncRoadtripCampApproachSpeed()` eases the car to rest before `arriveRoadtripCamp()`
+parks it and swaps the road for the full-viewport camp. The route chooser writes `routeChoice` and
+uses `setRoadtripStartingSegment()` so Calgary, Banff, and Abraham are valid deterministic starts.
+The camp's exact Entrance Porsche is cloned once by `ensureRoadtripCampPorsche()`; mark any copied
+component before stripping duplicate ids, and keep each prop's transparent hit path separate so a
+pointer action cannot toggle the whole car. `syncRoadtripCampLayers()` keeps atmospheric overlays
+behind the camp figures while precipitation remains in front. The capture-phase Entrance keyboard
+owner treats `roadtrip-route-camp` as a navigation boundary: arrows are consumed, ordinary game
+shortcuts pass through, and Escape/Backspace dispatch the same exit as `#entrance-roadtrip-dismiss`. Run
+`tests/entrance-roadtrip-camp.js` when changing that boundary.
 Positive-lane traffic advances on the right-hand carriageway; negative-lane traffic uses
 front/headlight art and a negative world velocity so it closes faster from the opposite lanes.
 The Porsche's roadtrip lane remains separate from the side-view SVG lane offset.

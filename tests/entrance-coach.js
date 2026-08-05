@@ -49,6 +49,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__entranceDriveControl("throttle", false);
 
     key("keydown", "Control", "ControlLeft", { ctrlKey: true });
+    report.cruisePressed = coach();
     key("keyup", "Control", "ControlLeft");
     report.tooSlowForCruise = coach();
     window.__entranceDriveSetMotion(72, 3);
@@ -108,8 +109,9 @@ check(result && result.shifted.arrowTips.length === 2 &&
   "the final arrows reach the pedal faces", result && result.shifted.arrowTips);
 check(result && result.driven.show && result.driven.step === 5,
   "using a pedal advances to a dedicated cruise lesson", result && result.driven);
-check(result && result.tooSlowForCruise.show && result.tooSlowForCruise.step === 5,
-  "Ctrl below cruise speed keeps the cruise lesson visible", result && result.tooSlowForCruise);
+check(result && !result.cruisePressed.show && !result.tooSlowForCruise.show,
+  "pressing Ctrl dismisses the cruise lesson even below cruise speed",
+  result && { pressed: result.cruisePressed, released: result.tooSlowForCruise });
 check(result && !result.cruised.show,
   "setting cruise completes the lesson", result && result.cruised);
 check(result && result.reset.coach.show && result.reset.coach.step === 1 &&

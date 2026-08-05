@@ -126,6 +126,10 @@ latch.
 Keep progression coverage in `tests/play.js`, `tests/enter.js`, `tests/phase2-progression.js`, and
 `tests/progression-transitions.js`.
 
+After an authored party finale or 120 attended seconds, party teardown schedules the stable
+`downstairs_entrance` message. Its legacy `lower:entrance` action navigates to the Balcony and opens
+Entrance; it is not part of the random party cue pool.
+
 ## Entrance driving and Road Trip
 
 Search for `porscheDrive`, `roadtripState`, `entranceRoadtrip`, and `__entranceDriveStep`. The

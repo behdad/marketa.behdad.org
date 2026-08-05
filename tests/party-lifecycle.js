@@ -66,6 +66,10 @@ var harness = String.raw`<script>
   check("accepting the final cue schedules an attended early ending", finaleState.finaleAt > finaleState.attended && (finaleState.finaleReason === "lastdance" || finaleState.finaleReason === "lastsong"), finaleState);
   window.__advancePartyLifecycle(24);
   check("the accepted final dance or song ends the party", !window.__gardenPartyOn);
+  check("a finished party schedules Behdad’s road-trip invitation", window.__partyLifecycleState().roadtripInvitePending);
+  var roadtripOffered = window.__offerPartyRoadtripInvite && window.__offerPartyRoadtripInvite();
+  check("the post-party invitation uses the authored road-trip message", roadtripOffered && window.__phoneMessageReceived("downstairs_entrance") &&
+    T.en.msg_downstairs_entrance_body === "Fancy a road trip? 🚗🏔️🏕️" && T.cs.msg_downstairs_entrance_body === "Nechceš vyrazit na výlet? 🚗🏔️🏕️");
   check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
 
   // Put Act Two on its first reception beat, then stop the party before its delayed
@@ -138,6 +142,8 @@ var harness = String.raw`<script>
   if (window.__setGardenParty) window.__setGardenParty(false, true);
   var partyEndCaption = document.getElementById("hunt-caption").textContent;
   check("manual party-end copy is localized in Czech", !window.__gardenPartyOn && /hra ne/i.test(partyEndCaption) && /aplikace/i.test(partyEndCaption), partyEndCaption);
+  if (window.__runMsgAction) window.__runMsgAction("downstairs_entrance");
+  check("accepting the road-trip invitation opens Entrance", window.currentStageName === "balcony" && window.__entranceRoomOpen);
   report();
 })();
 </script>`;

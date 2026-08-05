@@ -89,8 +89,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
         var marketa = document.getElementById("entrance-roadtrip-camp-marketa");
         var behdad = document.getElementById("entrance-roadtrip-camp-behdad");
-        click(marketa);
-        click(behdad);
+        click(marketa.querySelector(".entrance-roadtrip-camp-character-head"));
+        click(behdad.querySelector(".entrance-roadtrip-camp-character-head"));
         report.people = {
           marketa: marketa.querySelector(".entrance-roadtrip-camp-character-head").classList.contains("laughing"),
           behdad: behdad.querySelector(".entrance-roadtrip-camp-character-head").classList.contains("laughing")

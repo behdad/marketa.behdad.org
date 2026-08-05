@@ -206,11 +206,13 @@ celestial bodies, and expanded winter mountain snow.
 The capture-phase Entrance key owner consumes Camping navigation. Enter, Escape, and Backspace
 dismiss camp before the backing Balcony stage can handle the key. Camp actions go through
 `bindRoadtripCampAction()`. Animate untransformed inner wrappers, cap runtime SVG effects, and keep
-effects in the target's coordinate space.
+effects in the target's coordinate space. Camper placement stays on the outer group, drag offsets
+stay on `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the nested head.
 
 Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
-`tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-interactions.js`, and
-`tests/entrance-roadtrip-camp-sky.js` for this boundary.
+`tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-interactions.js`,
+`tests/entrance-roadtrip-camp-people-drag.js`, and `tests/entrance-roadtrip-camp-sky.js` for this
+boundary.
 
 ### Scoring, police, and durable records
 

@@ -160,8 +160,10 @@ check((source.match(/class="bedroom-lamp-pedestal"/g) || []).length === 2 &&
   (source.match(/class="bedroom-lamp-shade"/g) || []).length === 2 &&
   (source.match(/class="bedroom-lamp-fixture" transform="translate\([^"]+\) scale\(\.8\)"/g) || []).length === 2 &&
   (source.match(/class="bedroom-lamp-hit"/g) || []).length === 2 &&
-  source.indexOf('id="bedroom-side-tables"') < source.indexOf('id="bedroom-lamps"'),
-  "matching brass mushroom lamps scale to eighty percent over the painted bedside tables");
+  source.indexOf('id="bedroom-bed"') < source.indexOf('id="bedroom-side-tables"') &&
+  source.indexOf('id="bedroom-side-tables"') < source.indexOf('class="bedroom-linen"') &&
+  source.indexOf('class="bedroom-linen"') < source.indexOf('id="bedroom-lamps"'),
+  "the tables sit over the bed frame, under the duvet, with matching brass lamps in front");
 check(!/<image[^>]+bedroom/i.test(source),
   "Bedroom remains code-native rather than embedding a raster room image");
 check(/id="bedroom-party-coats"[^>]*pointer-events="none"/.test(source) &&

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Shift-clicking a route card is a private test shortcut to the chosen segment's exit.
+// Shift-clicking or touch-long-pressing a route card shortcuts to the chosen segment's exit.
 "use strict";
 
 var fs = require("fs");
@@ -43,6 +43,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.shifted.banff = choose("banff", true);
         report.shifted.abraham = choose("abraham", true);
         report.normalAbraham = choose("abraham", false);
+        openChooser();
+        var touchChoice = document.getElementById("entrance-roadtrip-route-banff");
+        touchChoice.dispatchEvent(new PointerEvent("pointerdown", {
+          bubbles: true, cancelable: true, pointerId: 41, pointerType: "touch", button: 0,
+          clientX: 340, clientY: 80
+        }));
+        setTimeout(function () {
+          touchChoice.dispatchEvent(new PointerEvent("pointerup", {
+            bubbles: true, cancelable: true, pointerId: 41, pointerType: "touch", button: 0,
+            clientX: 340, clientY: 80
+          }));
+          report.longPressedBanff = roadtrip();
+          report.errors = (window.__errs || []).concat(report.errors);
+          document.getElementById("__report").textContent = JSON.stringify(report);
+        }, 680);
+        return;
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -62,7 +78,7 @@ function check(ok, message, detail) {
   }
 }
 
-console.log("rsvp.html Road Trip Shift-click shortcut:");
+console.log("rsvp.html Road Trip route shortcuts:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
 check(/ROADTRIP_SHORTCUT_REMAINING_SECONDS = 3/.test(source),
   "the private shortcut leaves three attended seconds in the selected segment");
@@ -92,5 +108,10 @@ var normal = result && result.normalAbraham || {};
 check(normal.route === "abraham" && normal.abrahamElapsed === 0,
   "an ordinary Abraham Lake click still starts the segment at its beginning", normal);
 
+var longPressed = result && result.longPressedBanff || {};
+check(longPressed.route === "banff" &&
+  Math.abs(longPressed.banffElapsed - (longPressed.banffSeconds - 3)) < .2,
+  "a mobile long-press uses the same near-exit shortcut", longPressed);
+
 if (failures) process.exit(1);
-console.log("Road Trip Shift-click shortcut checks passed.");
+console.log("Road Trip route shortcut checks passed.");

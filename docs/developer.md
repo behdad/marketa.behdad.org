@@ -173,9 +173,10 @@ The route is part of the version-2 paused-run snapshot. Route changes clear live
 changing road geometry. Signs are projected beyond the current road edge by
 `positionRoadtripExitSign()`; fixed road fractions fail on Calgary's wider divided highway.
 
-The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click is a
-private test shortcut that begins three seconds before the chosen segment's exit. Its open state
-and selected card are checkpointed; recovery reopens the chooser without launching the route.
+The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click or a
+touch long-press is a private test shortcut that begins three seconds before the chosen segment's
+exit. Its open state and selected card are checkpointed; recovery reopens the chooser without
+launching the route.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
 spawn plans deterministic from the run seed and never add timer-driven unbounded entities.

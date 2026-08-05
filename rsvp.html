@@ -37743,10 +37743,10 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
-  function launchRoadtripRoute(route, event) {
+  function launchRoadtripRoute(route, event, forceShortcut) {
     var routeDuration = route === "calgary" ? ROADTRIP_CALGARY_SECONDS :
       route === "banff" ? ROADTRIP_BANFF_SECONDS : ROADTRIP_ABRAHAM_SECONDS;
-    var shortcutElapsed = event && event.shiftKey ?
+    var shortcutElapsed = forceShortcut || event && event.shiftKey ?
       Math.max(0, routeDuration - ROADTRIP_SHORTCUT_REMAINING_SECONDS) : 0;
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.routeChooserOpen || !setRoadtripRouteChoice(route, false)) return false;
@@ -37786,7 +37786,48 @@ window.__entranceRoomOpen = false;
   bindRoadtripInviteControl(roadtripInviteLater, dismissRoadtripInvite);
   bindRoadtripInviteControl(roadtripRouteLater, dismissRoadtripInvite);
   roadtripRouteChoices.forEach(function (choice) {
+    var longPressTimer = null;
+    var longPressPointer = null;
+    var longPressX = 0;
+    var longPressY = 0;
+    var suppressClick = false;
+    function cancelLongPress() {
+      if (longPressTimer) clearTimeout(longPressTimer);
+      longPressTimer = null;
+      longPressPointer = null;
+    }
+    choice.addEventListener("pointerdown", function (event) {
+      if (event.pointerType === "mouse" || event.button !== 0 || !roadtripState.routeChooserOpen) return;
+      cancelLongPress();
+      longPressPointer = event.pointerId;
+      longPressX = event.clientX;
+      longPressY = event.clientY;
+      longPressTimer = setTimeout(function () {
+        longPressTimer = null;
+        if (longPressPointer === null || !roadtripState.routeChooserOpen) return;
+        suppressClick = true;
+        longPressPointer = null;
+        launchRoadtripRoute(choice.getAttribute("data-roadtrip-route-choice"), null, true);
+        setTimeout(function () { suppressClick = false; }, 700);
+      }, 600);
+    });
+    choice.addEventListener("pointermove", function (event) {
+      if (event.pointerId !== longPressPointer) return;
+      if (Math.hypot(event.clientX - longPressX, event.clientY - longPressY) > 12) cancelLongPress();
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (type) {
+      choice.addEventListener(type, function (event) {
+        if (event.pointerId === longPressPointer) cancelLongPress();
+      });
+    });
+    choice.addEventListener("contextmenu", function (event) { event.preventDefault(); });
     choice.addEventListener("click", function (event) {
+      if (suppressClick) {
+        suppressClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       launchRoadtripRoute(choice.getAttribute("data-roadtrip-route-choice"), event);
     });
     choice.addEventListener("keydown", function (event) {

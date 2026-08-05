@@ -140,7 +140,8 @@ loop.
 ### Driving model
 
 Input must flow through the shared steering, transmission, throttle, brake, and dismiss owners.
-The four-step `driveCoach` follows those same action owners. Its `?` control parks the drivetrain,
+The `driveCoach` follows those same action owners; desktop teaches cruise before pedals, while touch
+skips cruise and combines steering with the pedal pad. Its `?` control parks the drivetrain,
 clears cruise, and starts again at ignition; checkpoint recovery does not replay it automatically.
 Keyboard steering ramps from a gentle tap to full authority; touch steering and pedal pads provide
 direct analog input. A standalone Control tap captures a forward speed floor at 10 km/h or above;

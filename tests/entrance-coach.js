@@ -38,28 +38,23 @@ window.addEventListener("load", function () { setTimeout(function () {
       animation: getComputedStyle(document.querySelector(
         '[data-coach-step="2"] .entrance-drive-coach-arrow')).animationName,
       targetAnimation: getComputedStyle(document.querySelector(
-        '[data-coach-step="4"] .entrance-drive-coach-arrow')).animationName
+        '[data-coach-step="5"] .entrance-drive-coach-arrow')).animationName
     };
     key("keydown", "ArrowLeft", "ArrowLeft");
     key("keyup", "ArrowLeft", "ArrowLeft");
     report.steered = coach();
     window.__entranceDriveRange("D");
     report.shifted = coach();
-    report.shifted.arrowTips = Array.prototype.map.call(
-      document.querySelectorAll('[data-coach-step="4"] .entrance-drive-coach-arrow'),
+    key("keydown", "Control", "ControlLeft", { ctrlKey: true });
+    report.cruisePressed = coach();
+    report.cruisePressed.arrowTips = Array.prototype.map.call(
+      document.querySelectorAll('[data-coach-step="5"] .entrance-drive-coach-arrow'),
       function (arrow) { var box = arrow.getBBox(); return box.y + box.height; });
+    key("keyup", "Control", "ControlLeft");
+    report.tooSlowForCruise = coach();
     window.__entranceDriveControl("throttle", true);
     report.driven = coach();
     window.__entranceDriveControl("throttle", false);
-
-    key("keydown", "Control", "ControlLeft", { ctrlKey: true });
-    report.cruisePressed = coach();
-    key("keyup", "Control", "ControlLeft");
-    report.tooSlowForCruise = coach();
-    window.__entranceDriveSetMotion(72, 3);
-    key("keydown", "Control", "ControlLeft", { ctrlKey: true });
-    key("keyup", "Control", "ControlLeft");
-    report.cruised = coach();
     document.getElementById("entrance-drive-help").dispatchEvent(new MouseEvent("click", {
       bubbles: true, cancelable: true
     }));
@@ -168,17 +163,16 @@ check(result && result.started.steerArrow &&
 check(result && result.steered.show && result.steered.step === 3,
   "steering advances to Drive", result && result.steered);
 check(result && result.shifted.show && result.shifted.step === 4,
-  "selecting D advances to the pedals and cruise lesson", result && result.shifted);
-check(result && result.shifted.arrowTips.length === 2 &&
-  result.shifted.arrowTips.every(function (tip) { return tip >= 159; }),
-  "the final arrows reach the pedal faces", result && result.shifted.arrowTips);
-check(result && result.driven.show && result.driven.step === 5,
-  "using a pedal advances to a dedicated cruise lesson", result && result.driven);
-check(result && !result.cruisePressed.show && !result.tooSlowForCruise.show,
-  "pressing Ctrl dismisses the cruise lesson even below cruise speed",
+  "selecting D advances to the dedicated cruise lesson", result && result.shifted);
+check(result && result.cruisePressed.show && result.cruisePressed.step === 5 &&
+  result.tooSlowForCruise.show && result.tooSlowForCruise.step === 5,
+  "pressing Ctrl advances to pedals even below cruise speed",
   result && { pressed: result.cruisePressed, released: result.tooSlowForCruise });
-check(result && !result.cruised.show,
-  "setting cruise completes the lesson", result && result.cruised);
+check(result && result.cruisePressed.arrowTips.length === 2 &&
+  result.cruisePressed.arrowTips.every(function (tip) { return tip >= 159; }),
+  "the final arrows reach the pedal faces", result && result.cruisePressed.arrowTips);
+check(result && !result.driven.show,
+  "using a pedal completes the lesson", result && result.driven);
 check(result && result.reset.coach.show && result.reset.coach.step === 1 &&
   !result.reset.state.car.engineOn && result.reset.state.drive.transmission.range === "P" &&
   result.reset.state.drive.speed === 0 && !result.reset.state.drive.cruise.active,
@@ -199,7 +193,7 @@ check(mobile && mobile.errors.length === 0 && mobile.fresh.show && mobile.fresh.
   "mobile coach starts with ignition", mobile);
 check(mobile && mobile.started.show && mobile.started.step === 3,
   "mobile advances directly from ignition to the shifter", mobile && mobile.started);
-check(mobile && mobile.shifted.show && mobile.shifted.step === 4 &&
+check(mobile && mobile.shifted.show && mobile.shifted.step === 5 &&
   mobile.shifted.targets.blue && mobile.shifted.targets.pink,
   "mobile follows the shifter with one coach for both sliders", mobile && mobile.shifted);
 check(mobile && mobile.shifted.targets.arrows.length === 2 &&

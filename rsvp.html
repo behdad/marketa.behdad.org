@@ -1405,7 +1405,7 @@ footer{margin-top:2.6rem}
 @media (pointer:coarse){
   .entrance-drive-coach-desktop{display:none}
   .entrance-drive-coach-touch{display:block}
-  [data-coach-step="4"] .entrance-drive-coach-arrow{display:none}
+  [data-coach-step="5"] .entrance-drive-coach-arrow{display:none}
 }
 #entrance-roadtrip-invite{display:none;pointer-events:none}
 #entrance-roadtrip-invite.show{display:inline;pointer-events:all}
@@ -33825,7 +33825,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <g class="entrance-drive-coach-touch"><text id="entrance-drive-coach-gear-touch" class="entrance-drive-coach-copy entrance-drive-coach-line" x="340" y="5" data-i="entrance_drive_coach_gear_touch">Long-press the shifter, then drag to choose</text></g>
               <path class="entrance-drive-coach-arrow" d="M425 37H433V67H443L429 86L415 67H425Z"/>
             </g>
-            <g class="entrance-drive-coach-step" data-coach-step="4">
+            <g class="entrance-drive-coach-step" data-coach-step="5">
               <rect class="entrance-drive-coach-panel" x="110" y="-23" width="460" height="36" rx="10" fill="#453a31" stroke="#d9a6a6" stroke-width="1.5"/>
               <text class="entrance-drive-coach-copy entrance-drive-coach-title" x="340" y="-7" data-i="entrance_drive_coach_pedals_title">Now drive</text>
               <g class="entrance-drive-coach-desktop"><text id="entrance-drive-coach-pedals-desktop" class="entrance-drive-coach-copy entrance-drive-coach-line" x="340" y="5" data-i="entrance_drive_coach_pedals_desktop">↑ accelerates · ↓ brakes</text></g>
@@ -33833,7 +33833,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <path class="entrance-drive-coach-arrow" d="M208 37H216V142H227L212 163L197 142H208Z"/>
               <path class="entrance-drive-coach-arrow" d="M347 37H355V142H366L351 163L336 142H347Z"/>
             </g>
-            <g class="entrance-drive-coach-step" data-coach-step="5">
+            <g class="entrance-drive-coach-step" data-coach-step="4">
               <rect class="entrance-drive-coach-panel" x="110" y="-23" width="460" height="36" rx="10" fill="#453a31" stroke="#d9a6a6" stroke-width="1.5"/>
               <g>
                 <rect x="132" y="-18" width="74" height="27" rx="7" fill="#111" stroke="#a9a9a9" stroke-width="1.4"/>
@@ -36624,11 +36624,11 @@ window.__entranceRoomOpen = false;
     driveCoachSteps.forEach(function (step) {
       step.classList.toggle("active", Number(step.getAttribute("data-coach-step")) === driveCoachStep);
     });
-    var combinedTouchControls = porscheDriveCoachTouchMode() && driveCoachStep === 4;
+    var combinedTouchControls = porscheDriveCoachTouchMode() && driveCoachStep === 5;
     if (driveTouchSteerPad) driveTouchSteerPad.classList.toggle("coach-target",
       showing && (driveCoachStep === 2 || combinedTouchControls));
     if (driveTouchPedalPad) driveTouchPedalPad.classList.toggle("coach-target",
-      showing && driveCoachStep === 4);
+      showing && driveCoachStep === 5);
   }
   function showPorscheDriveCoach() {
     driveCoachDismissed = false;
@@ -36667,16 +36667,16 @@ window.__entranceRoomOpen = false;
   function completePorscheDriveCoachAction(action) {
     if (driveCoachComplete) return;
     var touchCoach = porscheDriveCoachTouchMode();
-    var expected = { engine: 1, steer: 2, gear: 3, pedal: 4, cruise: 5 }[action];
-    if (touchCoach && driveCoachStep === 4 && (action === "steer" || action === "pedal")) expected = 4;
+    var expected = touchCoach ? { engine: 1, gear: 3, steer: 5, pedal: 5 }[action] :
+      { engine: 1, steer: 2, gear: 3, cruise: 4, pedal: 5 }[action];
     if (expected !== driveCoachStep) return;
-    if (driveCoachStep >= 5 || driveCoachStep === 4 && touchCoach) {
+    if (driveCoachStep >= 5) {
       driveCoachComplete = true;
       dismissPorscheDriveCoach();
       return;
     }
-    driveCoachStep = action === "engine" && touchCoach ? 3 : driveCoachStep + 1;
-    if (action === "gear" && driveCoachStep === 4) {
+    driveCoachStep = touchCoach ? action === "engine" ? 3 : 5 : driveCoachStep + 1;
+    if (driveCoachStep === 5) {
       driveCoachNeedsFreshPedal = !!(driveState.holds.throttle || driveState.holds.brake);
     }
     showPorscheDriveCoach();

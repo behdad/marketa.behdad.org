@@ -115,8 +115,9 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html Abraham Lake camp interactions:");
 var source = require("fs").readFileSync(require("path").join(lib.ROOT, "rsvp.html"), "utf8");
-check(/@keyframes entrance-roadtrip-camp-eye-wiggle\{20%\{transform:rotate\(-9deg\)\}45%\{transform:rotate\(11deg\)\}70%\{transform:rotate\(-6deg\)\}\}/.test(source),
-  "the bark eyes rotate in place without a lateral translation");
+var eyeFrames = source.match(/@keyframes entrance-roadtrip-camp-eye-wiggle\{[^}]+\}[^}]+\}[^}]+\}/);
+check(eyeFrames && /rotate\(/.test(eyeFrames[0]) && /scale\(/.test(eyeFrames[0]) &&
+  !/translate/.test(eyeFrames[0]), "the bark eyes visibly flex in place without a lateral translation");
 var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
   patchRaf: true,
   seedRandom: true,

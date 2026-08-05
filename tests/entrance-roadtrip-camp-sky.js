@@ -10,6 +10,7 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
 <script>
 (function () {
   var report = { errors: [] };
+  function click(node) { node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
   window.addEventListener("load", function () {
     setTimeout(async function () {
       try {
@@ -28,28 +29,57 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
         report.day = {
           entranceDay: room.classList.contains("entrance-day"),
           sunOpacity: getComputedStyle(sun).opacity,
+          sunPointer: getComputedStyle(sun).pointerEvents,
           nightOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-night")).opacity
         };
-        window.night();
+        var caption = document.getElementById("hunt-caption");
+        var beforeToggle = { caption: caption.textContent, toasts: document.querySelectorAll(".season-toast").length };
+        click(sun);
         await new Promise(function (resolve) { setTimeout(resolve, 80); });
+        report.sunToggle = {
+          dusk: document.getElementById("stage-balcony").classList.contains("dusk"),
+          entranceDay: room.classList.contains("entrance-day"),
+          caption: caption.textContent,
+          toasts: document.querySelectorAll(".season-toast").length,
+          before: beforeToggle
+        };
         window.__applyMoonPhases();
         var frac = window.__moonPhase().frac;
         report.night = {
           entranceDay: room.classList.contains("entrance-day"),
           starsOpacity: getComputedStyle(stars).opacity,
+          moonPointer: getComputedStyle(moon).pointerEvents,
           starAnimation: getComputedStyle(stars.querySelector(".twinkle")).animationName,
           lineAnimation: getComputedStyle(stars.querySelector(".const-lines")).animationName,
           moonOpacity: getComputedStyle(moon).opacity,
           phase: moonPhase.getAttribute("d"),
           expectedPhase: window.__moonShadowD(590, -86, 15, frac)
         };
-        window.overcast(true);
+        click(moon);
         await new Promise(function (resolve) { setTimeout(resolve, 80); });
+        report.moonToggle = {
+          dusk: document.getElementById("stage-balcony").classList.contains("dusk"),
+          entranceDay: room.classList.contains("entrance-day"),
+          caption: caption.textContent,
+          toasts: document.querySelectorAll(".season-toast").length
+        };
+        window.overcast(true);
+        window.__setDayNight(true);
+        await new Promise(function (resolve) { setTimeout(resolve, 80); });
+        var cloudStars = stars.querySelectorAll(".entrance-roadtrip-camp-cloud-star");
+        var hiddenScatter = stars.querySelector("#entrance-roadtrip-camp-star-scatter circle:not(.entrance-roadtrip-camp-cloud-star)");
         report.clouded = {
           stamped: room.classList.contains("entrance-clouded"),
           starsOpacity: getComputedStyle(stars).opacity,
+          subsetOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-star-scatter")).opacity,
+          subsetCount: cloudStars.length,
+          subsetAnimation: getComputedStyle(cloudStars[0]).animationName,
+          hiddenDisplay: getComputedStyle(hiddenScatter).display,
+          constellationsOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-const-dipper")).opacity,
           moonOpacity: getComputedStyle(moon).opacity,
-          sunOpacity: getComputedStyle(sun).opacity
+          sunOpacity: getComputedStyle(sun).opacity,
+          sunPointer: getComputedStyle(sun).pointerEvents,
+          moonPointer: getComputedStyle(moon).pointerEvents
         };
         window.overcast(false);
         window.__applySeason("winter", true);
@@ -100,15 +130,25 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 2600, {
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "sky state changes raise no page errors", result && result.errors);
-check(result && result.day.entranceDay && Number(result.day.sunOpacity) > 0 && Number(result.day.nightOpacity) === 0,
+check(result && result.day.entranceDay && Number(result.day.sunOpacity) > 0 && result.day.sunPointer === "all" && Number(result.day.nightOpacity) === 0,
   "clear daytime shows the camp sun and hides the night layer", result && result.day);
+check(result && result.sunToggle.dusk && !result.sunToggle.entranceDay &&
+  result.sunToggle.caption === result.sunToggle.before.caption && result.sunToggle.toasts === result.sunToggle.before.toasts,
+  "tapping the camp sun silently changes the shared state to night", result && result.sunToggle);
 check(result && !result.night.entranceDay && Number(result.night.starsOpacity) > 0 && Number(result.night.moonOpacity) > 0 &&
-  result.night.starAnimation === "star-twinkle" && result.night.lineAnimation === "const-lines-pulse",
+  result.night.moonPointer === "all" && result.night.starAnimation === "star-twinkle" && result.night.lineAnimation === "const-lines-pulse",
   "night uses the loft's twinkle and constellation pulse", result && result.night);
 check(result && result.night.phase === result.night.expectedPhase,
   "the campsite moon terminator matches the effective date", result && result.night);
-check(result && result.clouded.stamped && Number(result.clouded.starsOpacity) === 0 && Number(result.clouded.moonOpacity) === 0,
-  "cloud cover hides stars and moon", result && result.clouded);
+check(result && !result.moonToggle.dusk && result.moonToggle.entranceDay &&
+  result.moonToggle.caption === result.sunToggle.before.caption && result.moonToggle.toasts === result.sunToggle.before.toasts,
+  "tapping the camp moon silently changes the shared state to day", result && result.moonToggle);
+check(result && result.clouded.stamped && Number(result.clouded.starsOpacity) > 0 &&
+  Number(result.clouded.subsetOpacity) > 0 && Number(result.clouded.subsetOpacity) < .25 &&
+  result.clouded.subsetCount === 8 && result.clouded.subsetAnimation === "star-twinkle" &&
+  result.clouded.hiddenDisplay === "none" && Number(result.clouded.constellationsOpacity) === 0 &&
+  Number(result.clouded.moonOpacity) === 0 && result.clouded.sunPointer === "none" && result.clouded.moonPointer === "none",
+  "cloud cover keeps only eight dim animated stars and hides the moon", result && result.clouded);
 check(result && result.winter.stamped && result.winter.season === "winter" && Number(result.winter.snowOpacity) > 0,
   "winter reveals the expanded mountain snow", result && result.winter);
 check(result && result.summer.season === "summer" && Number(result.summer.snowOpacity) === 0,

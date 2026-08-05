@@ -24,10 +24,15 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var lake = document.getElementById("entrance-roadtrip-camp-lake");
         var ripples = document.getElementById("entrance-roadtrip-camp-ripples");
         var fish = document.getElementById("entrance-roadtrip-camp-fish");
+        report.randomAngles = [
+          window.__entranceRoadtripCampStone(2, false).angle,
+          window.__entranceRoadtripCampStone(2, false).angle
+        ];
+        ripples.replaceChildren();
         report.skips = [
-          window.__entranceRoadtripCampStone(2, false),
-          window.__entranceRoadtripCampStone(3, false),
-          window.__entranceRoadtripCampStone(4, true)
+          window.__entranceRoadtripCampStone(2, false, -60),
+          window.__entranceRoadtripCampStone(3, false, 0),
+          window.__entranceRoadtripCampStone(4, true, 60)
         ];
         report.lake = {
           title: lake.getAttribute("title"),
@@ -129,14 +134,19 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
 check(result && result.errors.length === 0, "interactions run without uncaught errors", result && result.errors);
 check(result && result.skips && result.skips.map(function (row) { return row.skips; }).join(",") === "2,3,4",
   "a stone can skip exactly two, three, or four times", result && result.skips);
+check(result && result.randomAngles && result.randomAngles.every(function (angle) {
+  return angle >= -60 && angle <= 60;
+}) && result.randomAngles[0] !== result.randomAngles[1],
+  "ordinary throws randomize a continuous heading within ±60 degrees", result && result.randomAngles);
 check(result && result.lake && result.lake.lastSkips === "4" && result.lake.lastFish === "true" &&
   result.lake.rippleCount === 9 && result.lake.fishCount === 1 && result.lake.stones === 0,
   "the lake paints only ripples and the occasional jumping fish", result && result.lake);
-check(result && result.lake && JSON.stringify(result.lake.trajectory.map(function (row) { return row[1]; })) ===
-  JSON.stringify([47, 37, 27, 17]) &&
+check(result && result.lake &&
   result.lake.trajectory.every(function (row, index, rows) {
-    return row[2] === 9 - index && (!index || Math.abs(row[0] - rows[index - 1][0]) === 8);
-  }), "stone skips recede up the lake on a shallow shrinking diagonal", result && result.lake.trajectory);
+    return row[2] === 9 - index && Math.abs(row[1] - (47 - index * 5)) < .01 &&
+      (!index || Math.abs((row[0] - rows[index - 1][0]) - Math.sin(Math.PI / 3) * 10) < .01);
+  }), "a forced +60-degree throw recedes from shore on the expected shrinking diagonal",
+  result && result.lake.trajectory);
 check(result && result.poplar && result.poplar.triggered && result.poplar.wrapperAnimation === "none" &&
   result.poplar.eyeAnimations.length === 3 && result.poplar.eyeAnimations.every(function (name) {
     return name === "entrance-roadtrip-camp-eye-wiggle";

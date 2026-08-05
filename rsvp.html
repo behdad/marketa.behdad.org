@@ -38227,7 +38227,7 @@ window.__entranceRoomOpen = false;
     removeRoadtripCampEffect(fish, 1300 + (delay || 0));
     return true;
   }
-  function throwRoadtripCampStone(event, forcedSkips, forcedFish) {
+  function throwRoadtripCampStone(event, forcedSkips, forcedFish, forcedAngle) {
     if (roadtripState.route !== "camp") return null;
     var layer = roadtripElement("entrance-roadtrip-camp-ripples");
     if (!layer) return null;
@@ -38235,14 +38235,19 @@ window.__entranceRoomOpen = false;
     var x = Math.max(34, Math.min(646, point.x));
     var skips = Math.max(2, Math.min(4, Math.floor(Number(forcedSkips) ||
       (2 + Math.floor(Math.random() * 3)))));
-    var direction = x > 500 ? -1 : x < 180 ? 1 : x < 340 ? -1 : 1;
+    var angle = Number(forcedAngle);
+    if (!Number.isFinite(angle)) angle = Math.random() * 120 - 60;
+    angle = Math.max(-60, Math.min(60, angle));
+    var angleRadians = angle * Math.PI / 180;
+    var skipX = Math.sin(angleRadians) * 10;
+    var skipY = Math.cos(angleRadians) * 10;
     var shorelineY = 47;
     var skipPath = [];
     for (var index = 0; index < skips; index++) {
       while (layer.children.length >= 12) layer.firstElementChild.remove();
       var ripple = roadtripCampSvgNode("ellipse");
-      var rippleX = Math.max(22, Math.min(658, x + direction * index * 8));
-      var rippleY = shorelineY - index * 10;
+      var rippleX = Math.max(22, Math.min(658, x + index * skipX));
+      var rippleY = shorelineY - index * skipY;
       ripple.setAttribute("class", "entrance-roadtrip-camp-ripple");
       ripple.setAttribute("cx", rippleX);
       ripple.setAttribute("cy", rippleY);
@@ -38259,7 +38264,7 @@ window.__entranceRoomOpen = false;
       Math.max(0, skips - 2) * 110);
     layer.setAttribute("data-last-skips", skips);
     layer.setAttribute("data-last-fish", fishJumps ? "true" : "false");
-    return { skips: skips, fish: fishJumps, path: skipPath };
+    return { skips: skips, fish: fishJumps, angle: angle, path: skipPath };
   }
   function restartRoadtripCampOneShot(node, className) {
     if (!node) return false;
@@ -38310,8 +38315,8 @@ window.__entranceRoomOpen = false;
     });
   bindRoadtripCampAction(campTent, function () { campTent.classList.toggle("open"); });
   bindRoadtripCampAction(campPot, function () { campPot.classList.toggle("simmering"); });
-  window.__entranceRoadtripCampStone = function (skips, fish) {
-    return throwRoadtripCampStone(null, skips, fish);
+  window.__entranceRoadtripCampStone = function (skips, fish, angle) {
+    return throwRoadtripCampStone(null, skips, fish, angle);
   };
   document.addEventListener("keydown", function (event) {
     if (!campNotebookModal || (event.key !== "Escape" && event.key !== "Esc" && event.key !== "Backspace")) return;

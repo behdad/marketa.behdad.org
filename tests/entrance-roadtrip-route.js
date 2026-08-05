@@ -88,15 +88,15 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html Calgary-to-Banff route:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_CALGARY_SECONDS = 75/.test(source) &&
-  /ROADTRIP_TURNOFF_SECONDS = 6/.test(source),
+check(/ROADTRIP_CALGARY_DESKTOP_SECONDS = 75/.test(source) &&
+  /ROADTRIP_TURNOFF_DESKTOP_SECONDS = 6/.test(source),
   "the attended Calgary leg and right-turn approach keep their explicit durations");
 check(/ROADTRIP_CALGARY_SPEED_LIMIT = 110/.test(source) &&
   /ROADTRIP_BANFF_SPEED_LIMIT = 90/.test(source) &&
   /ROADTRIP_POLICE_FIRST_DISTANCE = 1800/.test(source) &&
   /ROADTRIP_POLICE_REPEAT_DISTANCE = 2400/.test(source),
   "the route owns its posted limits and sparser police cadence");
-check(/if \(roadtripState\.route === "calgary"\) return 0;[\s\S]{0,80}if \(roadtripState\.route === "turnoff"\) return \.021;/.test(source),
+check(/if \(roadtripState\.route === "calgary"\) return 0;\s*if \(roadtripState\.route === "turnoff" \|\| roadtripState\.route === "lake-turnoff"\) return \.021;/.test(source),
   "Calgary has no curves before the explicit exit turn");
 check(/ROADTRIP_CALGARY_MEDIAN_FRACTION = \.14/.test(source) &&
   /ROADTRIP_CALGARY_ROAD_FRACTION = 1\.2/.test(source) &&

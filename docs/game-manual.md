@@ -266,7 +266,8 @@ or cocktail adds one simplified `0.03` drink-equivalent; one clears per real
 minute. Drink state survives room changes, Road Trip exits, Continue, and reload.
 
 The Abraham Lake leg slows on its final approach and ends at the camp. Camp props
-are clickable; arrows stay in the scene, while Escape, Backspace, or the top-right ×
+are clickable: the lake, poplar eyes, tent, cooking pot, campers, notebook, and parked
+car each react. Arrows stay in the scene, while Escape, Backspace, or the top-right ×
 returns to the Entrance dashboard.
 
 Distance, clean passes, safely avoided wildlife, and pickups earn points. Clean

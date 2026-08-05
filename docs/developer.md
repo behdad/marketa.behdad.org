@@ -204,7 +204,10 @@ pointer action cannot toggle the whole car. `syncRoadtripCampLayers()` keeps atm
 behind the camp figures while precipitation remains in front. The capture-phase Entrance keyboard
 owner treats `roadtrip-route-camp` as a navigation boundary: arrows are consumed, ordinary game
 shortcuts pass through, and Escape/Backspace dispatch the same exit as `#entrance-roadtrip-dismiss`. Run
-`tests/entrance-roadtrip-camp.js` when changing that boundary.
+`tests/entrance-roadtrip-camp.js` when changing that boundary. Camp object handlers use
+`bindRoadtripCampAction()`; their one-shot animation classes belong on untransformed inner wrappers,
+and lake effects cap and remove their runtime SVG children. Run
+`tests/entrance-roadtrip-camp-interactions.js` when changing them.
 Positive-lane traffic advances on the right-hand carriageway; negative-lane traffic uses
 front/headlight art and a negative world velocity so it closes faster from the opposite lanes.
 The Porsche's roadtrip lane remains separate from the side-view SVG lane offset.

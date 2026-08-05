@@ -206,6 +206,15 @@ var harness = String.raw`<script>
     check("the preserved Up coach returns after Road Trip",
       getComputedStyle(coach).display !== "none" && !coach.hidden,
       { display: getComputedStyle(coach).display, hidden: coach.hidden });
+    window.__resetLowerRoomDiscovery();
+    window.__cinematic = true;
+    document.getElementById("hunt-fullscreen-area").classList.add("cinematic-running");
+    window.__markLowerRoomEntered();
+    check("Trailer mode suppresses the player-only Up coach",
+      coach.hidden && getComputedStyle(coach).display === "none",
+      { display: getComputedStyle(coach).display, hidden: coach.hidden });
+    document.getElementById("hunt-fullscreen-area").classList.remove("cinematic-running");
+    window.__cinematic = false;
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

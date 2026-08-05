@@ -28,6 +28,13 @@ window.addEventListener("load", function () { setTimeout(function () {
 
     window.__toggleEntrancePorscheEngine();
     report.started = coach();
+    var steerArrowBox = document.querySelector(
+      '[data-coach-step="2"] .entrance-drive-coach-arrow').getBBox();
+    report.started.steerArrow = {
+      width: steerArrowBox.width,
+      height: steerArrowBox.height,
+      heads: document.querySelectorAll('[data-coach-step="2"] .entrance-drive-coach-arrowhead').length
+    };
     key("keydown", "ArrowLeft", "ArrowLeft");
     key("keyup", "ArrowLeft", "ArrowLeft");
     report.steered = coach();
@@ -87,6 +94,10 @@ check(result && result.fresh.show && result.fresh.step === 1,
   "a fresh dashboard starts with ignition", result && result.fresh);
 check(result && result.started.show && result.started.step === 2,
   "starting advances to steering", result && result.started);
+check(result && result.started.steerArrow &&
+  result.started.steerArrow.width > 100 && result.started.steerArrow.height < 4 &&
+  result.started.steerArrow.heads === 2,
+  "steering uses a horizontal double-headed arrow over the wheel", result && result.started.steerArrow);
 check(result && result.steered.show && result.steered.step === 3,
   "steering advances to Drive", result && result.steered);
 check(result && result.shifted.show && result.shifted.step === 4,

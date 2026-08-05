@@ -114,7 +114,15 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.shifted = coach();
     report.shifted.targets = {
       blue: document.getElementById("entrance-drive-touch-steer").classList.contains("coach-target"),
-      pink: document.getElementById("entrance-drive-touch-pedals").classList.contains("coach-target")
+      pink: document.getElementById("entrance-drive-touch-pedals").classList.contains("coach-target"),
+      arrows: Array.prototype.map.call(document.querySelectorAll(
+        ".entrance-drive-touch-coach-arrow"), function (arrow) {
+          return {
+            display: getComputedStyle(arrow).display,
+            paths: arrow.querySelectorAll("path").length,
+            animation: getComputedStyle(arrow).animationName
+          };
+        })
     };
     report.copy = {
       en: T.en.hunt.entrance_drive_coach_auto_pedals_touch,
@@ -190,6 +198,12 @@ check(mobile && mobile.started.show && mobile.started.step === 3,
 check(mobile && mobile.shifted.show && mobile.shifted.step === 4 &&
   mobile.shifted.targets.blue && mobile.shifted.targets.pink,
   "mobile follows the shifter with one coach for both sliders", mobile && mobile.shifted);
+check(mobile && mobile.shifted.targets.arrows.length === 2 &&
+  mobile.shifted.targets.arrows.every(function (arrow) {
+    return arrow.display !== "none" && arrow.paths === 1 &&
+      /^entrance-drive-touch-coach-(down|right)$/.test(arrow.animation);
+  }), "mobile coach points to both sliders with animated single-path arrows",
+  mobile && mobile.shifted.targets.arrows);
 check(mobile && /Blue/.test(mobile.copy.en) && /pink/.test(mobile.copy.en) &&
   /Modrý/.test(mobile.copy.cs) && /růžový/.test(mobile.copy.cs),
   "combined slider coaching is bilingual", mobile && mobile.copy);

@@ -18,6 +18,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       route: state.drive.roadtrip.route,
       hudOpen: state.drive.hud,
       engineOn: state.car.engineOn,
+      speed: state.drive.speed,
       day: room.classList.contains("entrance-day"),
       classes: room.getAttribute("class") || ""
     };
@@ -45,9 +46,27 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripStart();
+        window.__entranceRoadtripSetRoute("abraham", 75);
+        window.__entranceDriveSetMotion(0, 1);
+        window.__entranceDriveStep(100);
+        report.noMomentum = snapshot();
+
         window.__entranceRoadtripSetRoute("abraham", 74.5);
-        window.__entranceDriveSetMotion(30, 1);
-        window.__entranceDriveStep(1000);
+        if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
+        window.__entranceDriveSetMotion(80, 1);
+        var campSign = document.getElementById("entrance-roadtrip-camp-exit");
+        report.signApproach = {
+          visibility: campSign.getAttribute("visibility"),
+          transform: campSign.getAttribute("transform"),
+          en: document.querySelector("#entrance-roadtrip-camp-sign text").textContent
+        };
+        setLang("cs");
+        report.signApproach.cs = document.querySelector("#entrance-roadtrip-camp-sign text").textContent;
+        setLang("en");
+        window.__entranceDriveStep(500);
+        report.slowing = snapshot();
+        report.signAfterEntrance = campSign.getAttribute("visibility");
+        window.__entranceDriveStep(500);
 
         var room = document.getElementById("entrance-room");
         var dismiss = document.getElementById("entrance-roadtrip-dismiss");
@@ -115,8 +134,18 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
 });
 
 check(result && result.errors.length === 0, "the camp opens without uncaught errors", result && result.errors);
+check(result && campIsOpen(result.noMomentum) && result.noMomentum.speed === 0,
+  "a car already stopped past the entrance reaches camp without borrowed momentum", result && result.noMomentum);
+check(result && result.slowing && result.slowing.route === "abraham" &&
+  result.slowing.speed > 10 && result.slowing.speed < 80,
+  "passing the entrance starts an autonomous slowdown before the camp handoff", result && result.slowing);
+check(result && result.signApproach && result.signApproach.visibility === "visible" &&
+  /translate\(/.test(result.signApproach.transform || "") &&
+  result.signApproach.en === "CAMPING" && result.signApproach.cs === "KEMP" &&
+  result.signAfterEntrance === "hidden",
+  "a bilingual right-turn camping sign passes on the final Abraham approach", result && result.signApproach);
 check(result && campIsOpen(result.arrival),
-  "the attended Abraham Lake timer paints the parked camp on arrival", result && result.arrival);
+  "the camp fades in once the autonomous slowdown drops below 10 km/h", result && result.arrival);
 check(result && result.dismiss.displayed === "grid" && result.dismiss.type === "button",
   "the camp exposes its dedicated top-right dismiss button", result && result.dismiss);
 check(result && result.navKeys.length === 4 && result.navKeys.every(function (row) {

@@ -32548,6 +32548,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <text x="-41" y="-50" font-size="8" font-family="Arial,sans-serif" font-weight="700" fill="#f8f5ec">ABRAHAM LAKE</text>
               <path d="M20-53H39M31-61L39-53L31-45" fill="none" stroke="#f8f5ec" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
             </g>
+            <g id="entrance-roadtrip-camp-sign">
+              <path d="M0 0V-50" stroke="#697276" stroke-width="3"/>
+              <rect x="-42" y="-67" width="84" height="30" rx="3" fill="#356849" stroke="#e8e5d7" stroke-width="2"/>
+              <text x="-34" y="-48" font-size="8" font-family="Arial,sans-serif" font-weight="700" fill="#f8f5ec"
+                data-i="entrance_roadtrip_camp_sign">CAMPING</text>
+              <path d="M17-52H32M25-59L32-52L25-45" fill="none" stroke="#f8f5ec" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
             <g id="entrance-roadtrip-curve-sign-right">
               <path d="M0 0V-42" stroke="#697276" stroke-width="3"/>
               <path d="M0-58L18-40L0-22L-18-40Z" fill="#e5b949" stroke="#17191b" stroke-width="2"/>
@@ -32913,6 +32920,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <g id="entrance-roadtrip-curve-signs"></g>
               <use id="entrance-roadtrip-banff-exit" href="#entrance-roadtrip-banff-sign" visibility="hidden"/>
               <use id="entrance-roadtrip-abraham-exit" href="#entrance-roadtrip-abraham-sign" visibility="hidden"/>
+              <use id="entrance-roadtrip-camp-exit" href="#entrance-roadtrip-camp-sign" visibility="hidden"/>
               <!-- The road engine owns runtime children and their transforms. -->
               <g id="entrance-roadtrip-entities"></g>
               <g id="entrance-roadtrip-camp">
@@ -36010,7 +36018,9 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_BANFF_SECONDS = 90;
   var ROADTRIP_LAKE_TURNOFF_SECONDS = 6;
   var ROADTRIP_ABRAHAM_SECONDS = 75;
-  var ROADTRIP_CAMP_SLOWDOWN_SECONDS = 12;
+  var ROADTRIP_CAMP_SIGN_SECONDS = 6;
+  var ROADTRIP_CAMP_ARRIVAL_SPEED = 10;
+  var ROADTRIP_CAMP_BRAKE_RATE = 2.4;
   var ROADTRIP_CENTERLINE_ENFORCE_LANE = -.18;
   var ROADTRIP_CENTERLINE_ENFORCE_SECONDS = 10;
   // Alberta AR 304/2002 s15(1)(a): the $203 specified penalty plus the
@@ -36118,6 +36128,7 @@ window.__entranceRoomOpen = false;
   var roadtripMirrorTerrain = null;
   var roadtripBanffExitNode = null;
   var roadtripAbrahamExitNode = null;
+  var roadtripCampExitNode = null;
   var driveSceneryLayers = null;
   var roadtripSceneryLayers = null;
   var roadtripPoliceRoadNode = null;
@@ -36988,6 +36999,7 @@ window.__entranceRoomOpen = false;
     }
     if (!roadtripBanffExitNode) roadtripBanffExitNode = roadtripElement("entrance-roadtrip-banff-exit");
     if (!roadtripAbrahamExitNode) roadtripAbrahamExitNode = roadtripElement("entrance-roadtrip-abraham-exit");
+    if (!roadtripCampExitNode) roadtripCampExitNode = roadtripElement("entrance-roadtrip-camp-exit");
     var mirrorTrees = roadtripElement("entrance-roadtrip-mirror-trees");
     if (!roadtripMirrorTreePool.length && mirrorTrees) {
       for (var mirrorTreeIndex = 0; mirrorTreeIndex < 8; mirrorTreeIndex++) {
@@ -38287,14 +38299,15 @@ window.__entranceRoomOpen = false;
   }, true);
   function syncRoadtripCampApproachSpeed(seconds) {
     if (roadtripState.route !== "abraham") return;
-    var remaining = Math.max(0, ROADTRIP_ABRAHAM_SECONDS - roadtripState.abrahamElapsed);
-    if (remaining > ROADTRIP_CAMP_SLOWDOWN_SECONDS) return;
-    var progress = remaining / ROADTRIP_CAMP_SLOWDOWN_SECONDS;
-    var target = ROADTRIP_ABRAHAM_SPEED_LIMIT * progress * progress;
+    if (roadtripState.abrahamElapsed < ROADTRIP_ABRAHAM_SECONDS) return;
     var speed = Math.abs(Number(driveState.speed) || 0);
-    if (speed <= target) return;
-    var eased = speed + (target - speed) * Math.min(1, Math.max(0, seconds) * 2.4);
-    driveState.speed = (driveState.speed < 0 ? -1 : 1) * Math.max(target, eased);
+    if (speed < ROADTRIP_CAMP_ARRIVAL_SPEED) {
+      arriveRoadtripCamp();
+      return;
+    }
+    var eased = speed * Math.exp(-Math.max(0, seconds) * ROADTRIP_CAMP_BRAKE_RATE);
+    driveState.speed = (driveState.speed < 0 ? -1 : 1) * eased;
+    if (eased < ROADTRIP_CAMP_ARRIVAL_SPEED) arriveRoadtripCamp();
   }
   function arriveRoadtripCamp() {
     roadtripState.route = "camp";
@@ -38380,11 +38393,8 @@ window.__entranceRoomOpen = false;
         roadtripFeedback("entrance_roadtrip_abraham_arrival");
       }
     } else if (roadtripState.route === "abraham") {
-      roadtripState.abrahamElapsed += seconds;
-      if (roadtripState.abrahamElapsed >= ROADTRIP_ABRAHAM_SECONDS &&
-          (roadtripState.police.phase === "idle" || roadtripState.police.phase === "cooldown")) {
-        arriveRoadtripCamp();
-      }
+      roadtripState.abrahamElapsed = Math.min(ROADTRIP_ABRAHAM_SECONDS,
+        roadtripState.abrahamElapsed + seconds);
     }
   }
   function roadtripTerrainPhase(distance) {
@@ -39676,6 +39686,23 @@ window.__entranceRoomOpen = false;
         roadtripAbrahamExitNode.setAttribute("visibility", "visible");
       } else {
         roadtripAbrahamExitNode.setAttribute("visibility", "hidden");
+      }
+    }
+    if (roadtripCampExitNode) {
+      var campSignStart = ROADTRIP_ABRAHAM_SECONDS - ROADTRIP_CAMP_SIGN_SECONDS;
+      if (roadtripState.route === "abraham" && roadtripState.abrahamElapsed >= campSignStart &&
+          roadtripState.abrahamElapsed < ROADTRIP_ABRAHAM_SECONDS) {
+        var campSignProgress = Math.max(0, Math.min(1,
+          (roadtripState.abrahamElapsed - campSignStart) / ROADTRIP_CAMP_SIGN_SECONDS));
+        var campSignRemaining = 104 - campSignProgress * 82;
+        var campSignPoint = roadtripProject(campSignRemaining);
+        var campSignX = roadtripProjectLateral(campSignPoint, 1.06);
+        var campSignScale = .16 + campSignPoint.perspective * .82;
+        roadtripCampExitNode.setAttribute("transform", "translate(" + campSignX.toFixed(2) + " " +
+          campSignPoint.y.toFixed(2) + ") scale(" + campSignScale.toFixed(3) + ")");
+        roadtripCampExitNode.setAttribute("visibility", "visible");
+      } else {
+        roadtripCampExitNode.setAttribute("visibility", "hidden");
       }
     }
     paintRoadtripHeadlights();
@@ -46730,6 +46757,7 @@ var T = {
       entrance_roadtrip_banff_arrival: "Banff road · mountains, curves, limit 90.",
       entrance_roadtrip_abraham_exit: "Abraham Lake turnoff ahead · turn right.",
       entrance_roadtrip_abraham_arrival: "David Thompson Country · lake right, mountain left, limit 100.",
+      entrance_roadtrip_camp_sign: "CAMPING",
       entrance_roadtrip_camp_arrival: "Did you do your RSVP?!",
       entrance_roadtrip_camp_car_aria: "Open or close Fancy Stupid’s door",
       entrance_roadtrip_camp_car_door_aria: "Open or close Fancy Stupid’s door",
@@ -48012,6 +48040,7 @@ var T = {
       entrance_roadtrip_banff_arrival: "Silnice na Banff · hory, zatáčky, limit 90.",
       entrance_roadtrip_abraham_exit: "Odbočka k jezeru Abraham před tebou · zahni doprava.",
       entrance_roadtrip_abraham_arrival: "Kraj Davida Thompsona · jezero vpravo, hora vlevo, limit 100.",
+      entrance_roadtrip_camp_sign: "KEMP",
       entrance_roadtrip_camp_arrival: "Už jste vyplnili RSVP?!",
       entrance_roadtrip_camp_car_aria: "Otevřít nebo zavřít dveře Fancy Stupid",
       entrance_roadtrip_camp_car_door_aria: "Otevřít nebo zavřít dveře Fancy Stupid",

@@ -4,7 +4,7 @@
 var lib = require("./lib");
 var harness = String.raw`<script>
 (function () {
-  var names = ["jay", "spencer", "bahareh", "madla", "athena", "lauren", "marketa", "behdad", "hamid", "ali"];
+  var names = ["jay", "spencer", "bahareh", "madla", "athena", "lauren", "ayushi", "marketa", "behdad", "hamid", "ali"];
   var values = {};
   names.forEach(function (name) { values[name] = window.__partyDrinkPreference(name); });
   var pre = document.createElement("pre");
@@ -28,6 +28,7 @@ if (result) {
   check(result.values.jay === "beer" && result.values.spencer === "beer", "Jay and Spencer prefer beer", result.values);
   check(["bahareh", "madla", "athena", "lauren"].every(function (name) { return result.values[name] === "wine"; }),
     "Bahareh, Madla, Athena and Lauren prefer wine", result.values);
+  check(result.values.ayushi === "cocktail", "Ayushi prefers a cocktail", result.values);
   check(result.values.marketa === "diet-coke" && result.values.behdad === "diet-coke",
     "Markéta and Behdad prefer Diet Coke", result.values);
   check(result.values.hamid === "any" && result.values.ali === "any",

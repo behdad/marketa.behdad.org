@@ -1,10 +1,10 @@
-// tests/officehangout.js — Node DOM-shim harness for the OFFICE HANGOUT COUPLE controller.
+// tests/officehangout.js — Node DOM-shim harness for the OFFICE HANGOUT GUEST controller.
 //
 // Chrome is wedged on this box (state/play/enter/menu can't run), so this proves the pure JS
 // logic of the officeHangout() IIFE against a hand-rolled minimal DOM/window shim rather than a
 // real browser. It EXTRACTS the exact IIFE source from rsvp.html (so it can't drift from the
 // shipped code) and evaluates it in a sandbox with just enough DOM to exercise:
-//   1) rotation varies the couple across showings,
+//   1) rotation varies the guest group across showings (including Ayushi solo),
 //   2) the one-room exclusion holds (skips anyone on the garden floor / at the bar / on the balcony),
 //   3) __officeCoupleNow() reports the current couple's member ids (and null when empty),
 //   4) drinks roll per showing and respect the actual holder's preference,
@@ -72,15 +72,16 @@ function El(classes) {
 
 // office-hangout layer with one <g> per couple (class = of-<key>)
 var officeLayer = El("");
-var COUPLE_CLASSES = ["of-aligoli","of-spencerjay","of-farhanglauren","of-alirezamahzad","of-chinnellrafi","of-hamidathena","of-baharakpayman","of-madlarobert"];
+var COUPLE_CLASSES = ["of-aligoli","of-spencerjay","of-farhanglauren","of-alirezamahzad","of-chinnellrafi","of-hamidathena","of-baharakpayman","of-madlarobert","of-ayushi"];
 COUPLE_CLASSES.forEach(function (c) {
   var couple = El("of-couple " + c);
-  couple._children.push(El("of-person of-p1"), El("of-person of-p2"));
+  couple._children.push(El("of-person of-p1"));
+  if (c !== "of-ayushi") couple._children.push(El("of-person of-p2"));
   officeLayer._children.push(couple);
 });
 
 // garden-guests: each member gets a .g-<name> child so onFloor() can find them
-var GUESTS = ["ali","goli","spencer","jay","farhang","lauren","alireza","mahzad","chinnell","rafi","hamid","athena","baharak","payman","madla","robert"];
+var GUESTS = ["ali","goli","spencer","jay","farhang","lauren","alireza","mahzad","chinnell","rafi","hamid","athena","baharak","payman","madla","robert","ayushi"];
 var gardenGuests = El("");
 GUESTS.forEach(function (n) { gardenGuests._children.push(El("g-" + n)); });
 
@@ -128,7 +129,7 @@ sandbox.rosterHoldsOccupants = function () { return false; }; // the extracted c
 sandbox.__partyGuestAttended = function () { return true; }; // every shim couple has already entered this party
 sandbox.__partyDrinkPreference = function (name) {
   return ({ jay: "beer", spencer: "beer", bahareh: "wine", madla: "wine", athena: "wine",
-    lauren: "wine", marketa: "diet-coke", behdad: "diet-coke", hamid: "any" })[name] || "any";
+    lauren: "wine", ayushi: "cocktail", marketa: "diet-coke", behdad: "diet-coke", hamid: "any" })[name] || "any";
 };
 
 // evaluate the extracted IIFE in the sandbox
@@ -166,6 +167,10 @@ ok(JSON.stringify(sandbox.__officeCoupleNow()) === JSON.stringify(who), "__offic
 var travelBuddies = sandbox.officefolks("chinnell");
 ok(!!travelBuddies && travelBuddies[0] === "chinnell" && travelBuddies[1] === "rafi" &&
   presentClass() === "of-chinnellrafi", "Chinnell+Rafi participate in forced office visits");
+var solo = sandbox.officefolks("ayushi");
+ok(JSON.stringify(solo) === '["ayushi"]' && presentClass() === "of-ayushi" &&
+  presentEl().querySelectorAll(".of-person").length === 1,
+  "Ayushi participates as a solo office appearance");
 
 // 3) unspecified drinks still roll — sample many forced shows, expect beer, wine AND empty,
 //    and p1-only / p2-only / both variants to all occur.
@@ -244,9 +249,10 @@ gardenGuests.querySelector(".g-goli").classList.add("arrived");
 sandbox.__barCoupleNow = function () { return ["spencer", "jay"]; };
 // Farhang+Lauren on the balcony:
 sandbox.__balconySmokerNow = function () { return ["farhang", "lauren"]; };
+sandbox.__cuddlyVisitorsNow = function () { return [{ key: "ayushi" }]; };
 sandbox.__updateOfficeHangout();
 var violated = false, sawSomeone = false, sawFloorPair = false;
-var EXCLUDED = { spencer:1, jay:1, farhang:1, lauren:1 };
+var EXCLUDED = { spencer:1, jay:1, farhang:1, lauren:1, ayushi:1 };
 for (var q = 0; q < 300; q++) {
   advance(60000);
   var m = sandbox.__officeCoupleNow();
@@ -255,7 +261,7 @@ for (var q = 0; q < 300; q++) {
     for (var mi = 0; mi < m.length; mi++) { if (EXCLUDED[m[mi]]) violated = true; if (m[mi] === "ali") sawFloorPair = true; }
   }
 }
-ok(!violated, "one-room rule holds: office never shows anyone at the bar / on the balcony");
+ok(!violated, "one-room rule holds: office never shows anyone at the bar, on the balcony, or visiting the nook");
 ok(sawSomeone, "one-room rule still lets eligible couples in (didn't just go permanently empty)");
 ok(sawFloorPair, "the garden floor is NOT an office exclusion (a dancing couple can still drift in)");
 

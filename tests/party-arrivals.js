@@ -30,7 +30,7 @@ var harness = String.raw`<script>
     ["chinnell", ".g-chinnell"], ["alireza", ".g-alireza"], ["ali", ".g-ali"],
     ["spencer", ".g-spencer"], ["farhang", ".g-farhang"], ["patricia", ".g-patricia"],
     ["madla", ".g-madla"], ["hamid", ".g-hamid"], ["baharak", ".g-baharak"],
-    ["bahareh", ".g-bahareh"], ["musicians", ".g-danbern"]
+    ["bahareh", ".g-bahareh"], ["ayushi", ".g-ayushi"], ["musicians", ".g-danbern"]
   ];
   function presentUnits() {
     var group = document.getElementById("garden-guests");
@@ -72,6 +72,13 @@ var harness = String.raw`<script>
 
         await sleep(12000);
         var beforeCount = arrivedCount(), before = presentUnits();
+        // The initial fill can hand off into its first rotation before this sample. Let the
+        // deliberate 1.8s incoming/outgoing overlap settle before recording the baseline.
+        if (before.length > 4) {
+          await sleep(2500);
+          beforeCount = arrivedCount();
+          before = presentUnits();
+        }
         check("the unattended initial fill reaches the four-family floor capacity",
           before.length === 4, JSON.stringify({ count: beforeCount, units: before }));
         var centerGuests = ordinaryGuestInCenter();
@@ -98,7 +105,7 @@ var harness = String.raw`<script>
         check("the revolving door never drifts above the four-family floor capacity",
           after.length <= 4, JSON.stringify({ count: arrivedCount(), units: after }));
 
-        for (var rotation = 0; rotation < 7; rotation++) {
+        for (var rotation = 0; rotation < units.length - 4; rotation++) {
           window.__partyRosterRotateNow();
           await sleep(2000);
         }
@@ -129,7 +136,7 @@ var harness = String.raw`<script>
 })();
 </script>`;
 
-var result = lib.runPageSync("rsvp.html", harness, 52000, {
+var result = lib.runPageSync("rsvp.html", harness, 56000, {
   forceMotion: true,
   patchRaf: true,
   seedRandom: true

@@ -36,13 +36,13 @@ var HARNESS = String.raw`<script>
   document.getElementById("cuddly-outlet").dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
 
   setTimeout(function () {
-    check("the roof no longer summons a visitor duo",
+    check("the roof no longer summons a visitor group",
       !window.__cuddlyRoofSummon && roofVisitors === 0,
       String(roofVisitors));
     check("the outlet does not summon the dance-floor roster", guestCalls === 0, String(guestCalls));
     check("the outlet no longer triggers Madla", madlaCalls === 0, String(madlaCalls));
     check("the outlet summons a Cuddly visitor group without starting the party",
-      !window.__gardenPartyOn && window.currentStageName === "cuddly" && window.__cuddlyVisitorsNow().length >= 2,
+      !window.__gardenPartyOn && window.currentStageName === "cuddly" && window.__cuddlyVisitorsNow().length >= 1,
       window.currentStageName + "/" + window.__gardenPartyOn + "/" + window.__cuddlyVisitorsNow().length);
     check("the explicit outlet visit works at night",
       document.getElementById("stage-cuddly").classList.contains("dusk"),

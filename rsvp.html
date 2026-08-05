@@ -868,7 +868,7 @@ footer{margin-top:2.6rem}
 #entrance-drive-touch-steer::before{left:18px;right:18px;top:50%;height:2px;transform:translateY(-50%);background:rgba(255,253,248,.58)}
 #entrance-drive-touch-steer::after{left:50%;top:13px;bottom:13px;width:1px;background:rgba(255,253,248,.32)}
 #entrance-drive-touch-pedals::before{top:18px;bottom:18px;left:50%;width:2px;transform:translateX(-50%);background:rgba(255,253,248,.58)}
-#entrance-drive-touch-pedals::after{top:50%;left:12px;right:12px;height:1px;background:rgba(255,253,248,.34)}
+#entrance-drive-touch-pedals::after{top:30%;bottom:30%;left:12px;right:12px;border-top:1px solid rgba(255,253,248,.4);border-bottom:1px solid rgba(255,253,248,.4);background:rgba(255,253,248,.08)}
 .entrance-drive-touch-knob{
   position:absolute;z-index:2;left:50%;top:50%;width:34px;height:34px;margin:-17px;
   border-radius:50%;background:#fffdf8;border:2px solid rgba(69,58,49,.56);
@@ -33935,7 +33935,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <rect class="entrance-drive-coach-panel" x="110" y="-23" width="460" height="36" rx="10" fill="#453a31" stroke="#d9a6a6" stroke-width="1.5"/>
               <text class="entrance-drive-coach-copy entrance-drive-coach-title" x="340" y="-7" data-i="entrance_drive_coach_pedals_title">Now drive</text>
               <g class="entrance-drive-coach-desktop"><text id="entrance-drive-coach-pedals-desktop" class="entrance-drive-coach-copy entrance-drive-coach-line" x="340" y="5" data-i="entrance_drive_coach_pedals_desktop">↑ accelerates · ↓ brakes</text></g>
-              <g class="entrance-drive-coach-touch"><text id="entrance-drive-coach-pedals-touch" class="entrance-drive-coach-copy entrance-drive-coach-line" x="340" y="5" data-i="entrance_drive_coach_pedals_touch">Slide the pink control or hold a pedal · shift as needed</text></g>
+              <g class="entrance-drive-coach-touch"><text id="entrance-drive-coach-pedals-touch" class="entrance-drive-coach-copy entrance-drive-coach-line" x="340" y="5" data-i="entrance_drive_coach_pedals_touch">Blue steers · pink accelerates/brakes · centre holds speed</text></g>
               <path class="entrance-drive-coach-arrow" d="M208 37H216V142H227L212 163L197 142H208Z"/>
               <path class="entrance-drive-coach-arrow" d="M347 37H355V142H366L351 163L336 142H347Z"/>
             </g>
@@ -36091,7 +36091,8 @@ window.__entranceRoomOpen = false;
     pointerId: null,
     input: 0,
     throttle: 0,
-    brake: 0
+    brake: 0,
+    holdSpeed: null
   };
   var porscheKeyboardSteering = {
     direction: 0,
@@ -36104,6 +36105,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_KEYBOARD_STEER_BUILD_MS = 760;
   var PORSCHE_KEYBOARD_STEER_TAP_WINDOW_MS = 420;
   var PORSCHE_TOUCH_THROTTLE_CURVE = 1.6;
+  var PORSCHE_TOUCH_PEDAL_ZONE = .3;
   function porscheHaptic(pattern) {
     if (document.hidden || !navigator.vibrate) return false;
     try { return navigator.vibrate(pattern); }
@@ -43216,9 +43218,24 @@ window.__entranceRoomOpen = false;
     driveTouchPedalPad.classList.toggle("throttling", porscheTouchPedals.throttle > 0);
     driveTouchPedalPad.classList.toggle("braking", porscheTouchPedals.brake > 0);
   }
+  function porscheTouchPedalAxis(event) {
+    var rect = driveTouchPedalPad.getBoundingClientRect();
+    var portion = Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height)));
+    if (portion < PORSCHE_TOUCH_PEDAL_ZONE) {
+      return (PORSCHE_TOUCH_PEDAL_ZONE - portion) / PORSCHE_TOUCH_PEDAL_ZONE;
+    }
+    if (portion > 1 - PORSCHE_TOUCH_PEDAL_ZONE) {
+      return -((portion - (1 - PORSCHE_TOUCH_PEDAL_ZONE)) / PORSCHE_TOUCH_PEDAL_ZONE);
+    }
+    return 0;
+  }
   function updatePorscheTouchPedalPad(event) {
     if (!driveTouchPedalPad || event.pointerId !== porscheTouchPedals.pointerId) return false;
-    porscheTouchPedals.input = -porscheTouchPadAxis(event, driveTouchPedalPad, true);
+    var input = porscheTouchPedalAxis(event);
+    if (!input && (porscheTouchPedals.input || porscheTouchPedals.holdSpeed === null)) {
+      porscheTouchPedals.holdSpeed = driveState.speed;
+    } else if (input) porscheTouchPedals.holdSpeed = null;
+    porscheTouchPedals.input = input;
     // Preserve full throttle at the top while stretching the low end into a finer
     // progressive range for controlled partial acceleration.
     porscheTouchPedals.throttle = Math.pow(Math.max(0, porscheTouchPedals.input),
@@ -43247,6 +43264,7 @@ window.__entranceRoomOpen = false;
     porscheTouchPedals.input = 0;
     porscheTouchPedals.throttle = 0;
     porscheTouchPedals.brake = 0;
+    porscheTouchPedals.holdSpeed = null;
     setPorscheDriveHold("throttle", false);
     setPorscheDriveHold("brake", false);
     if (driveTouchPedalPad) driveTouchPedalPad.classList.remove("active");
@@ -43766,6 +43784,12 @@ window.__entranceRoomOpen = false;
           driveState.speed = driveState.cruiseTarget * driveState.facing;
         }
       }
+    }
+    if (porscheTouchPedals.pointerId !== null && !porscheTouchPedals.input &&
+        Number.isFinite(porscheTouchPedals.holdSpeed) &&
+        !(roadtripState.active && (roadtripState.exitUntilStop || roadtripFrontStopBlocksDrive() ||
+          ["capture", "stopped", "arrest"].indexOf(roadtripState.police.phase) >= 0))) {
+      driveState.speed = porscheTouchPedals.holdSpeed;
     }
     settlePorscheStaticSpeed(drivenAcceleration);
     var roadtripLugging = porscheTransmission.mode === "manual" && roadtripState.active && driveState.gear > 1 &&
@@ -44900,6 +44924,7 @@ window.__entranceRoomOpen = false;
           steering: porscheTouchSteering.input,
           throttle: porscheTouchPedals.throttle,
           brake: porscheTouchPedals.brake,
+          holdSpeed: porscheTouchPedals.holdSpeed,
           steeringActive: porscheTouchSteering.pointerId !== null,
           pedalsActive: porscheTouchPedals.pointerId !== null
         },
@@ -47415,9 +47440,9 @@ var T = {
       entrance_drive_coach_auto_gear_touch: "Drag the shifter down from P to D",
       entrance_drive_coach_pedals_title: "Now drive",
       entrance_drive_coach_pedals_desktop: "↑ accelerates · ↓ brakes",
-      entrance_drive_coach_pedals_touch: "Blue steers · pink accelerates and brakes",
+      entrance_drive_coach_pedals_touch: "Blue steers · pink accelerates/brakes · centre holds speed",
       entrance_drive_coach_auto_pedals_desktop: "↑ accelerates · ↓ brakes",
-      entrance_drive_coach_auto_pedals_touch: "Blue steers · pink accelerates and brakes",
+      entrance_drive_coach_auto_pedals_touch: "Blue steers · pink accelerates/brakes · centre holds speed",
       entrance_drive_coach_cruise_title: "Auto-cruise",
       entrance_drive_coach_cruise_text: "At 10+ km/h, tap Ctrl to hold speed",
       entrance_roadtrip_exit: "Leave highway",
@@ -48716,9 +48741,9 @@ var T = {
       entrance_drive_coach_auto_gear_touch: "Přesuň páku dolů z P na D",
       entrance_drive_coach_pedals_title: "Teď jeď",
       entrance_drive_coach_pedals_desktop: "↑ zrychluje · ↓ brzdí",
-      entrance_drive_coach_pedals_touch: "Modrý ovladač řídí · růžový zrychluje a brzdí",
+      entrance_drive_coach_pedals_touch: "Modrý řídí · růžový zrychluje/brzdí · střed drží rychlost",
       entrance_drive_coach_auto_pedals_desktop: "↑ zrychluje · ↓ brzdí",
-      entrance_drive_coach_auto_pedals_touch: "Modrý ovladač řídí · růžový zrychluje a brzdí",
+      entrance_drive_coach_auto_pedals_touch: "Modrý řídí · růžový zrychluje/brzdí · střed drží rychlost",
       entrance_drive_coach_cruise_title: "Tempomat",
       entrance_drive_coach_cruise_text: "Při 10+ km/h stiskni Ctrl a rychlost se bude držet",
       entrance_roadtrip_exit: "Opustit dálnici",

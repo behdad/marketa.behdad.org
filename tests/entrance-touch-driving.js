@@ -84,16 +84,27 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       report.steps.padLayout = {
         shown: getComputedStyle(steerPad).pointerEvents === "auto" && getComputedStyle(pedalPad).pointerEvents === "auto",
         steer: { width: sr.width, height: sr.height },
-        pedals: { width: pr.width, height: pr.height }
+        pedals: { width: pr.width, height: pr.height },
+        holdBand: {
+          top: parseFloat(getComputedStyle(pedalPad, "::after").top),
+          bottom: parseFloat(getComputedStyle(pedalPad, "::after").bottom)
+        }
       };
-      pointer(pedalPad, "pointerdown", 51, true, pr.left + pr.width / 2, pr.top + 12);
+      pointer(pedalPad, "pointerdown", 51, true, pr.left + pr.width / 2, pr.top);
       pointer(steerPad, "pointerdown", 52, false, sr.right - 12, sr.top + sr.height / 2);
       report.steps.padCombo = window.__entranceRoomState().drive;
-      pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.top + pr.height * .3);
+      pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.top + pr.height * .15);
       report.steps.padThrottleSmooth = window.__entranceRoomState().drive;
+      window.__entranceDriveSetMotion(72, 3);
+      pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.top + pr.height * .5);
+      report.steps.padNeutral = window.__entranceRoomState().drive;
+      window.__entranceDriveStep(1000);
+      report.steps.padNeutralHeld = window.__entranceRoomState().drive;
+      pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.top + pr.height * .85);
+      report.steps.padBrakeSmooth = window.__entranceRoomState().drive;
       pointer(steerPad, "pointermove", 52, false, sr.left + sr.width * .75, sr.top + sr.height / 2);
       report.steps.padSmooth = window.__entranceRoomState().drive;
-      pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.bottom - 12);
+      pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.bottom);
       report.steps.padBrake = window.__entranceRoomState().drive;
       pointer(steerPad, "pointerup", 52, false, sr.left + sr.width * .75, sr.top + sr.height / 2);
       pointer(pedalPad, "pointerup", 51, true, pr.left + pr.width / 2, pr.bottom - 12);
@@ -145,16 +156,29 @@ check(steps.steeringFirst && steps.steeringFirst.holds.throttle && steps.steerin
 check(steps.rimSteering && steps.rimSteering.steeringAngle > 0,
   "the broader wheel remains draggable without making its rim a horn target", steps.rimSteering);
 check(steps.padLayout && steps.padLayout.shown && steps.padLayout.steer.width >= 132 &&
-  steps.padLayout.pedals.height >= 112,
+  steps.padLayout.pedals.height >= 112 &&
+  Math.abs(steps.padLayout.holdBand.top / steps.padLayout.pedals.height - .3) < .01 &&
+  Math.abs(steps.padLayout.holdBand.bottom / steps.padLayout.pedals.height - .3) < .01,
   "coarse pointers get visible horizontal and vertical driving pads", steps.padLayout);
 check(steps.padCombo && steps.padCombo.holds.throttle && steps.padCombo.steeringAngle > 0 &&
-  steps.padCombo.touchControls.throttle > .7 && steps.padCombo.touchControls.steering > .7,
+  steps.padCombo.touchControls.throttle === 1 && steps.padCombo.touchControls.steering > .7,
   "two fingers can steer and accelerate through the new pads simultaneously", steps.padCombo);
 check(steps.padThrottleSmooth && steps.padThrottleSmooth.holds.throttle &&
   steps.padThrottleSmooth.touchControls.throttle > .2 &&
   steps.padThrottleSmooth.touchControls.throttle < .5 &&
   steps.padThrottleSmooth.touchControls.brake === 0,
   "the upper pedal travel provides progressive partial throttle", steps.padThrottleSmooth);
+check(steps.padNeutral && !steps.padNeutral.holds.throttle && !steps.padNeutral.holds.brake &&
+  steps.padNeutral.touchControls.throttle === 0 && steps.padNeutral.touchControls.brake === 0 &&
+  Math.abs(steps.padNeutral.touchControls.holdSpeed - 72) < .01 &&
+  steps.padNeutralHeld && Math.abs(steps.padNeutralHeld.speed - 72) < .01,
+  "the middle 40% holds its entry speed instead of coasting", {
+    neutral: steps.padNeutral, held: steps.padNeutralHeld
+  });
+check(steps.padBrakeSmooth && steps.padBrakeSmooth.holds.brake &&
+  !steps.padBrakeSmooth.holds.throttle && steps.padBrakeSmooth.touchControls.brake > .45 &&
+  steps.padBrakeSmooth.touchControls.brake < .55,
+  "the lower pedal travel provides progressive partial braking", steps.padBrakeSmooth);
 check(steps.padSmooth && steps.padSmooth.touchControls.steering > .25 &&
   steps.padSmooth.touchControls.steering < .75,
   "steering strength follows smooth horizontal finger position", steps.padSmooth);

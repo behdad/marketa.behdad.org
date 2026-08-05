@@ -144,7 +144,9 @@ The `driveCoach` follows those same action owners; desktop teaches cruise before
 skips cruise and combines steering with the pedal pad. Its `?` control parks the drivetrain,
 clears cruise, and starts again at ignition; checkpoint recovery does not replay it automatically.
 Keyboard steering ramps from a gentle tap to full authority; touch steering and pedal pads provide
-direct analog input. A standalone Control tap captures a forward speed floor at 10 km/h or above;
+direct analog input. The pedal pad maps its outer 30% zones progressively to throttle/brake and
+holds entry speed while a finger remains in the middle 40%. A standalone Control tap captures a
+forward speed floor at 10 km/h or above;
 acceleration can exceed it, another tap retargets it, and braking, an invalid drivetrain state,
 police capture, or the Camping approach releases it. AUTO and MANUAL share the same physical motion state but have
 separate shift rules. The automatic R↔D interlock is valid only below 10 km/h in the opposite

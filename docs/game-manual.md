@@ -138,7 +138,8 @@ On desktop:
 
 On touch, start the engine to reveal the blue steering slider and pink accelerator/brake slider, or
 use the physical wheel, pedals, mode buttons, and shifter. The coach introduces the shifter before
-showing both sliders together. AUTO offers P/R/N/D; MANUAL supports step shifts or an exact-gear
+showing both sliders together. The pink slider's middle holds the current speed; its outer 30% zones
+progressively accelerate or brake. AUTO offers P/R/N/D; MANUAL supports step shifts or an exact-gear
 chooser by long-pressing the shifter.
 
 The roof, door, windows, compartments, and lights are separate controls. The odometer records real

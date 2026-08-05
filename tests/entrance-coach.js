@@ -123,8 +123,13 @@ window.addEventListener("load", function () { setTimeout(function () {
     };
     report.copy = {
       en: T.en.hunt.entrance_drive_coach_auto_pedals_touch,
-      cs: T.cs.hunt.entrance_drive_coach_auto_pedals_touch
+      cs: T.cs.hunt.entrance_drive_coach_auto_pedals_touch,
+      liveWidth: document.getElementById("entrance-drive-coach-pedals-touch").getComputedTextLength()
     };
+    window.setLang("cs");
+    report.copy.csLiveWidth = document.getElementById(
+      "entrance-drive-coach-pedals-touch").getComputedTextLength();
+    window.setLang("en");
     var reentry = document.getElementById("entrance-roadtrip-reenter");
     reentry.classList.add("show");
     var reentryBox = reentry.getBoundingClientRect();
@@ -202,9 +207,10 @@ check(mobile && mobile.shifted.targets.arrows.length === 2 &&
       /^entrance-drive-touch-coach-(down|right)$/.test(arrow.animation);
   }), "mobile coach points to both sliders with animated single-path arrows",
   mobile && mobile.shifted.targets.arrows);
-check(mobile && /Blue/.test(mobile.copy.en) && /pink/.test(mobile.copy.en) &&
-  /Modrý/.test(mobile.copy.cs) && /růžový/.test(mobile.copy.cs),
-  "combined slider coaching is bilingual", mobile && mobile.copy);
+check(mobile && /Blue/.test(mobile.copy.en) && /pink/.test(mobile.copy.en) && /centre/.test(mobile.copy.en) &&
+  /Modrý/.test(mobile.copy.cs) && /růžový/.test(mobile.copy.cs) && /střed/.test(mobile.copy.cs) &&
+  mobile.copy.liveWidth < 440 && mobile.copy.csLiveWidth < 440,
+  "combined slider coaching explains the hold zone bilingually without overflowing", mobile && mobile.copy);
 check(mobile && !mobile.usedControl.show,
   "using either combined control completes the mobile coach", mobile && mobile.usedControl);
 check(mobile && mobile.reentryGap >= 8,

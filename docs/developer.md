@@ -201,6 +201,9 @@ independent of throttle or residual momentum; below 10 km/h, `arriveRoadtripCamp
 fades in the full-viewport camp. The route chooser writes `routeChoice` and uses
 `setRoadtripStartingSegment()` so Calgary, Banff, and Abraham are valid deterministic starts;
 Shift-click supplies an elapsed offset three seconds before the chosen segment's exit.
+Camping publishes `entrance_roadtrip_camp_arrival` through `__setLowerRoomCaption()` so the RSVP
+reminder retains keyed, localized ownership for the whole camp visit. Its `hint-blink` attention
+phase ends after 2.2 seconds without changing or releasing that keyed caption.
 The camp's exact Entrance Porsche is cloned once by `ensureRoadtripCampPorsche()`; mark any copied
 component before stripping duplicate ids, and keep each prop's transparent hit path separate so a
 pointer action cannot toggle the whole car. `syncRoadtripCampLayers()` keeps atmospheric overlays

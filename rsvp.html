@@ -35959,6 +35959,7 @@ window.__entranceRoomOpen = false;
   var roadtripShiftHintKey = "";
   var roadtripShiftHintMs = 0;
   var roadtripCampCaptionTimer = null;
+  var roadtripCampCaptionBlinkTimer = null;
   var roadtripResumePending = false;
   var roadtripTransportPaused = false;
   var driveBatteryLevel = .75;
@@ -37053,10 +37054,20 @@ window.__entranceRoomOpen = false;
   function roadtripFeedback(key, values) {
     if (key === "entrance_roadtrip_camp_arrival" && !values) {
       clearTimeout(roadtripCampCaptionTimer);
+      clearTimeout(roadtripCampCaptionBlinkTimer);
       roadtripCampCaptionTimer = setTimeout(function () {
         roadtripCampCaptionTimer = null;
         if (!roadtripState.active || roadtripState.route !== "camp") return;
-        roadtripPoliceFeedback(key, {}, 0, true, true);
+        lastDriveInstruction = key;
+        if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(key);
+        var captionNode = document.querySelector(".scene-caption");
+        if (captionNode) {
+          captionNode.classList.add("hint-blink");
+          roadtripCampCaptionBlinkTimer = setTimeout(function () {
+            roadtripCampCaptionBlinkTimer = null;
+            captionNode.classList.remove("hint-blink");
+          }, 2200);
+        }
       }, 900);
       return true;
     }
@@ -40590,6 +40601,8 @@ window.__entranceRoomOpen = false;
   function parkRoadtrip(clearRun) {
     clearTimeout(roadtripCampCaptionTimer);
     roadtripCampCaptionTimer = null;
+    clearTimeout(roadtripCampCaptionBlinkTimer);
+    roadtripCampCaptionBlinkTimer = null;
     if (roadtripState.route === "camp") {
       var captionNode = document.querySelector(".scene-caption");
       if (captionNode) captionNode.classList.remove("hint-blink");
@@ -46767,7 +46780,7 @@ var T = {
       entrance_roadtrip_abraham_exit: "Abraham Lake turnoff ahead · turn right.",
       entrance_roadtrip_abraham_arrival: "David Thompson Country · lake right, mountain left, limit 100.",
       entrance_roadtrip_camp_sign: "CAMPING",
-      entrance_roadtrip_camp_arrival: "Did you do your RSVP?!",
+      entrance_roadtrip_camp_arrival: "Congrats! You reached the end of the game. Now go do your RSVP!",
       entrance_roadtrip_camp_car_aria: "Open or close Fancy Stupid’s door",
       entrance_roadtrip_camp_car_door_aria: "Open or close Fancy Stupid’s door",
       entrance_roadtrip_camp_car_frunk_aria: "Open or close Fancy Stupid’s front trunk",
@@ -48050,7 +48063,7 @@ var T = {
       entrance_roadtrip_abraham_exit: "Odbočka k jezeru Abraham před tebou · zahni doprava.",
       entrance_roadtrip_abraham_arrival: "Kraj Davida Thompsona · jezero vpravo, hora vlevo, limit 100.",
       entrance_roadtrip_camp_sign: "KEMP",
-      entrance_roadtrip_camp_arrival: "Už jste vyplnili RSVP?!",
+      entrance_roadtrip_camp_arrival: "Gratulujeme! Dojeli jste na konec hry. Teď běžte vyplnit RSVP!",
       entrance_roadtrip_camp_car_aria: "Otevřít nebo zavřít dveře Fancy Stupid",
       entrance_roadtrip_camp_car_door_aria: "Otevřít nebo zavřít dveře Fancy Stupid",
       entrance_roadtrip_camp_car_frunk_aria: "Otevřít nebo zavřít přední kufr Fancy Stupid",

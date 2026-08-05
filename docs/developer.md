@@ -198,8 +198,9 @@ one lane in each direction, posts 100 km/h, reduces the traffic cadence, and run
 seconds. Its right-pointing Camping sign projects through the final six seconds. Once that route
 timer reaches the entrance, `syncRoadtripCampApproachSpeed()` owns an exponential slowdown
 independent of throttle or residual momentum; below 10 km/h, `arriveRoadtripCamp()` parks it and
-fades in the full-viewport camp. The route chooser writes `routeChoice` and
-uses `setRoadtripStartingSegment()` so Calgary, Banff, and Abraham are valid deterministic starts.
+fades in the full-viewport camp. The route chooser writes `routeChoice` and uses
+`setRoadtripStartingSegment()` so Calgary, Banff, and Abraham are valid deterministic starts;
+Shift-click supplies an elapsed offset three seconds before the chosen segment's exit.
 The camp's exact Entrance Porsche is cloned once by `ensureRoadtripCampPorsche()`; mark any copied
 component before stripping duplicate ids, and keep each prop's transparent hit path separate so a
 pointer action cannot toggle the whole car. `syncRoadtripCampLayers()` keeps atmospheric overlays

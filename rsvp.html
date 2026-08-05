@@ -36018,6 +36018,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_BANFF_SECONDS = 90;
   var ROADTRIP_LAKE_TURNOFF_SECONDS = 6;
   var ROADTRIP_ABRAHAM_SECONDS = 75;
+  var ROADTRIP_SHORTCUT_REMAINING_SECONDS = 3;
   var ROADTRIP_CAMP_SIGN_SECONDS = 6;
   var ROADTRIP_CAMP_ARRIVAL_SPEED = 10;
   var ROADTRIP_CAMP_BRAKE_RATE = 2.4;
@@ -37554,10 +37555,14 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function launchRoadtripRoute(route, event) {
+    var routeDuration = route === "calgary" ? ROADTRIP_CALGARY_SECONDS :
+      route === "banff" ? ROADTRIP_BANFF_SECONDS : ROADTRIP_ABRAHAM_SECONDS;
+    var shortcutElapsed = event && event.shiftKey ?
+      Math.max(0, routeDuration - ROADTRIP_SHORTCUT_REMAINING_SECONDS) : 0;
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.routeChooserOpen || !setRoadtripRouteChoice(route, false)) return false;
     roadtripState.routeChooserOpen = false;
-    var started = startRoadtrip(true, route);
+    var started = startRoadtrip(true, route, shortcutElapsed);
     if (started && window.__checkpointChanged) window.__checkpointChanged();
     return started;
   }
@@ -40549,15 +40554,19 @@ window.__entranceRoomOpen = false;
     if (roadtripPoliceMirrorNode) roadtripPoliceMirrorNode.setAttribute("visibility", "hidden");
     paintRoadtripScore();
   }
-  function setRoadtripStartingSegment(route) {
+  function setRoadtripStartingSegment(route, elapsed) {
     route = ["calgary", "banff", "abraham"].indexOf(route) >= 0 ? route : "calgary";
+    var routeDuration = route === "calgary" ? ROADTRIP_CALGARY_SECONDS :
+      route === "banff" ? ROADTRIP_BANFF_SECONDS : ROADTRIP_ABRAHAM_SECONDS;
+    elapsed = Math.min(routeDuration, Math.max(0, Number(elapsed) || 0));
     roadtripState.routeChoice = route;
     roadtripState.route = route;
-    roadtripState.routeElapsed = route === "calgary" ? 0 : ROADTRIP_CALGARY_SECONDS;
+    roadtripState.routeElapsed = route === "calgary" ? elapsed : ROADTRIP_CALGARY_SECONDS;
     roadtripState.turnoffElapsed = route === "calgary" ? 0 : ROADTRIP_TURNOFF_SECONDS;
-    roadtripState.banffElapsed = route === "abraham" ? ROADTRIP_BANFF_SECONDS : 0;
+    roadtripState.banffElapsed = route === "abraham" ? ROADTRIP_BANFF_SECONDS :
+      route === "banff" ? elapsed : 0;
     roadtripState.lakeTurnoffElapsed = route === "abraham" ? ROADTRIP_LAKE_TURNOFF_SECONDS : 0;
-    roadtripState.abrahamElapsed = 0;
+    roadtripState.abrahamElapsed = route === "abraham" ? elapsed : 0;
     roadtripState.playerLane = route === "calgary" ? ROADTRIP_START_LANE :
       route === "banff" ? 1.5 : ROADTRIP_ABRAHAM_START_LANE;
     clearRoadtripEntities();
@@ -40636,7 +40645,7 @@ window.__entranceRoomOpen = false;
     }
     return pauseRoadtrip();
   }
-  function startRoadtrip(forceFresh, startingRoute) {
+  function startRoadtrip(forceFresh, startingRoute, startingElapsed) {
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
     if (syncRoadtripDemeritState()) {
       roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
@@ -40655,7 +40664,7 @@ window.__entranceRoomOpen = false;
         roadtripState.practiceLaps = Math.max(1, roadtripState.practiceLaps);
       }
       resetRoadtripRun(true);
-      setRoadtripStartingSegment(startingRoute || "calgary");
+      setRoadtripStartingSegment(startingRoute || "calgary", startingElapsed);
     }
     if (!roadtripState.unlocked || !roadtripState.accepted) return false;
     if (roadtripState.active) return true;

@@ -1,48 +1,39 @@
 # The Loft Game Manual
 
-Loft Day is a point-and-click visit to ten connected rooms. It begins with a
-short trail of practical clues, then opens into free exploration: games,
-music, messages, apps, guests, and a great many things that are best found by
-trying them.
+Loft Day is a point-and-click visit to ten connected rooms. Follow a short clue trail, then explore
+the loft, games, music, messages, apps, guests, and lower floor at your own pace.
 
-No adventure-game experience is required. Read the line above the scene,
-select what looks useful, and wander at your own pace.
+No adventure-game experience is required. Read the caption above the scene and try whatever looks
+useful.
 
 ## Start here
 
 1. Select **CLICK ME**. On a narrow phone, landscape orientation works best.
-   The first coach points out the clue line; select the scene or press `Enter`
-   to dismiss it.
-2. Follow the instruction above the scene. It always describes the next part
-   of the current room's activity.
-3. Use the side arrows or room dots to move among rooms you have reached.
-4. Complete a room to unlock the next one.
-5. Reach the Balcony and let the game introduce what comes next.
+2. Select the scene or press `Enter` to dismiss the opening coach.
+3. Follow the caption above the scene.
+4. Complete each room to unlock the next one.
+5. Reach the Balcony to open the rest of the game.
 
-There are two phases:
+The game has two phases:
 
-- **Phase 1** is the five-room clue trail. Each unfinished room keeps its own
-  instruction sequence. Solving one records that room independently; when you
-  revisit it, its instruction is replaced by that room's stable “Enjoy…” line,
-  even if later rooms are still unfinished.
-- **Phase 2** unlocks the full main floor and retires the solve trail. Room
-  objects, games, devices, Messages, and the lower floor become a free-form
-  playground. Nothing requires a particular order.
+- **Phase 1:** a five-room clue trail. Each unfinished room remembers its next step. A completed
+  room shows a stable exploration caption when revisited.
+- **Phase 2:** free exploration across both floors. Rooms, games, devices, Messages, and activities
+  no longer require a particular order.
 
-The five Phase 1 activities are intentionally simple:
+The Phase 1 activities are:
 
 - **Kitchen:** make an espresso.
 - **Garden:** care for a plant, add music, and set the light.
-- **Cuddly-puddly:** follow Octi's lead around the room.
+- **Cuddly-puddly:** follow Octi's lead.
 - **Office:** use both computers, then settle the room for the evening.
 - **Balcony:** complete the handoff into Phase 2.
 
-`Enter` performs the next guided action if you would rather follow the clue
-from the keyboard.
+Press `Enter` to perform the next guided action.
 
-## Moving through all ten rooms
+## Moving between rooms
 
-Each main-floor room has a room directly below it:
+Each main room has a room directly below it:
 
 | Main floor | Lower floor |
 | --- | --- |
@@ -52,297 +43,153 @@ Each main-floor room has a room directly below it:
 | Office | Bedroom |
 | Balcony | Entrance |
 
-- Select the side arrows or room dots to travel on the main floor. There is no
-  scene-swipe navigation.
-- `←` and `→` move one adjacent room at a time. A held key waits for each room
-  to settle before continuing, on both floors.
-- `1`–`5` jump to the corresponding room on the floor you are currently on.
-- `↓` enters the room directly below; `↑` returns to its paired main room.
-- While downstairs, `←` and `→` move among the five lower rooms. Escape,
-  Backspace, or × also returns upstairs.
+- Select the side arrows or room dots to travel on the main floor.
+- Press `←` or `→` to move one room at a time.
+- Press `1`–`5` to jump to a room on the current floor.
+- Press `↓` to enter the paired lower room and `↑` to return.
+- While downstairs, `←` and `→` move along the lower floor.
+- Escape, Backspace, ×, or the top-left arrow dismisses the current layer or returns upstairs.
 
-Room progress counts the room where a pan settles. Moving downstairs does not
-also count the hidden main-floor rooms crossed or aligned beneath that pan; the
-paired main room counts when you return Up and actually see it.
+Each main room also has an in-scene route downstairs. Finding either that route or using `↓`
+unlocks lower-floor navigation for the current run.
 
-Each main room also contains a small in-scene route downstairs. These routes
-open on their first click or tap; there is no secret double-click requirement.
-Finding either the route or `↓` unlocks lower-floor navigation for the run.
+## Objects and shortcuts
 
-## How objects behave
+A click or tap is the main discovery gesture. Some objects can also be dragged; a short tap still
+uses their ordinary action. Right-click opens local actions. On touch, press and hold without
+moving.
 
-- A normal click or tap is the discovery gesture. The room portals and the
-  marquee room games no longer depend on hidden double- or triple-clicks.
-- Some objects are draggable. A drag moves them; a tap without movement uses
-  their click action. Pouria at the bar and the Office chair follow this rule.
-- Flair Catch starts from a tap on Pouria, Alien Resources from a tap on the
-  Office chair, and Block Party from a tap on a Balcony building window.
-- Right-click opens an object's local actions. On touch, press and hold without
-  moving. Live action games reserve holds for play.
-- Escape and Backspace dismiss the topmost game, device, dialog, or room layer.
-  The top-left arrow and visible × controls do the same.
+Press `?` outside a typing field for the complete shortcut card. The essentials are:
 
-If the guided trail is stuck, press `Enter`. As an explicit skip, double-click
-or double-tap a locked destination dot, or press that room's number.
-
-## Keyboard essentials
-
-Press `?` at any time outside a typing field for the full shortcut card. The
-most useful controls are:
-
-- `←` / `→`: previous or next room
+- `←` / `→`: adjacent room
 - `↓` / `↑`: downstairs or upstairs
-- `1`–`5`: jump to a room on the current floor
-- `Enter`: advance Phase 1; in Phase 2, start the current room's main activity
-- `C`: open or close the phone
-- `M`: open the Office monitor; `L` opens the laptop
-- `/`: open Messages directly
+- `1`–`5`: room on the current floor
+- `Enter`: next guided action; in Phase 2, the room's main activity
+- `C`: phone
+- `/`: Messages
+- `M`: Office monitor
+- `L`: Office laptop
 - `D`: day or night
 - `Space`: current game action or media play/pause
 - `F`: browser fullscreen
-- Escape / Backspace: back or dismiss
+- Escape / Backspace: dismiss or go back
 - `R`: Restart, with confirmation
 
-Shortcuts pause while you type. A running game takes the movement and action
-keys it needs, and an open phone or zoomed computer keeps its own controls.
+Typing fields, open devices, and active games keep the keys they need. If the Phase 1 trail is
+stuck, press `Enter`. As an explicit skip, double-click or double-tap a locked destination dot, or
+press its room number.
 
-## Free exploration highlights
+## Things to explore
 
-The five main rooms each have a featured activity: **Flair Catch**,
-**Hack-Man**, **Octi's Escape**, **Alien Resources**, and **Block Party**.
-Their opening screen or caption shows the controls. Scores and personal bests
-are kept where the activity supports them. Hack-Man gives quiet synthesized
-feedback for pellets, collisions, game start, and maze clear.
+The five main rooms feature **Flair Catch**, **Hack-Man**, **Octi's Escape**, **Alien Resources**,
+and **Block Party**. Their opening screen or caption explains the controls.
 
-Downstairs adds a different activity to each room:
+The lower rooms offer:
 
-- **Bathroom:** fill the tub to begin the 30-second **Bubble-gun** round. Click
-  bubbles for one point, or drag the stool to aim and release to fire for two.
-  The countdown begins with the first shot or pop. Once full, the tub body will
-  not drain accidentally; select the top rim to drain it. The HUD × ends only
-  the round and leaves the Bathroom open.
-- **Dungeon:** select the play wall to start or resume Prince of Persia. Escape
-  leaves the presentation without discarding the run.
-- **Cinema:** wake the projector, choose a film, and use its visible playback
-  controls. The × on the projector screen stops playback and returns to the
-  chooser; finishing a film returns there automatically.
-- **Bedroom:** select any stained-glass pane to start tic-tac-toe. After a win
-  or draw, the first click clears the board; the next starts the new game. If
-  the window is due to begin, it makes that move as soon as the board clears.
-  The window occasionally makes one imperfect move, leaving an attentive player
-  a route to win.
-- **Entrance:** select the road to open the driving dashboard.
+- **Bathroom:** fill the tub to start the 30-second Bubble-gun round. Click bubbles for one point,
+  or drag and release the stool to fire for two. The round's × leaves the Bathroom open.
+- **Dungeon:** select the play wall to start or resume Prince of Persia. Escape leaves the
+  presentation without discarding the run.
+- **Cinema:** wake the projector, choose a film, and use its playback controls. The screen × stops
+  the film and returns to the chooser.
+- **Bedroom:** select a stained-glass pane to start tic-tac-toe. After a result, clear the board and
+  select again for a new game.
+- **Entrance:** select the road to open the Porsche dashboard and driving game.
 
-The phone and Office monitor contain more games and toys, including Classics,
-Nibbles, Pac-Man, shooters, Code, Python, Linux, music, video, camera, calendar,
-and drawing tools. The manual deliberately leaves their smaller surprises
-uncatalogued.
+The phone and Office monitor contain more games and tools, including Classics, Nibbles, Pac-Man,
+shooters, Code, Python, Linux, music, video, camera, calendar, and drawing apps. Smaller surprises
+are intentionally left uncatalogued.
 
-When the Garden magic box opens Calendar as its date clue, choosing any day—or
-one of the wedding event rows—puts that day on the lock and returns to it. The
-same Calendar choices keep their ordinary date-navigation behavior everywhere
-else.
+## Phone, Messages, and computers
 
-## Phone and Messages
+Open the phone with `C`, `/` for Messages, or its in-scene control. The first ordinary opening has
+a small math lock; three failed attempts unlock it. Home, Back, and Recents follow familiar phone
+behavior.
 
-Open the pocket phone with `C`, `/` for Messages, or its in-scene control. The
-first ordinary opening has a small math lock; three failed attempts unlock it.
-Home, Back, and Recents work like their familiar phone equivalents.
+Opening a message does not automatically run its activity. Select the activity arrow when ready.
+Right-click or long-press a message or app icon for local actions. **Kill app** resets only that app.
 
-Messages can contain an activity arrow. Opening the notification or message
-does not run that activity; select the arrow when you are ready. A one-time
-coach points out the unread badge and, later, the first actionable arrow. The
-coach remains until the intended control is selected, and new message previews
-wait while the action coach is active.
+The Office laptop handles calls. The larger monitor contains desktop apps and games. Select the
+monitor to zoom, then select its screen. Open Search with an empty query for the app directory;
+type to filter, use the arrows to choose, and press Enter. Closing an app preserves supported state,
+while **Kill app** starts it fresh.
 
-Right-click or long-press a message for its local actions. Right-click or
-long-press an app icon to open, stop, or uninstall it. **Kill app** resets only
-that app, not the loft.
+The monitor's far-right taskbar control expands it inside the browser. This is separate from browser
+fullscreen.
 
-## Office computers
+## Driving and Road Trip
 
-The laptop handles calls. The larger monitor contains desktop apps and games:
-select the monitor to zoom, then select its screen. Open Search with an empty
-query to browse the complete app directory; type to filter, use the arrows to
-choose, and press Enter.
-
-Closing or dismissing an app preserves what that app supports. Its context
-menu can **Kill app** for a fresh session. The far-right taskbar control expands
-the monitor inside the browser; select the surrounding area or press Escape to
-return. This is separate from browser fullscreen.
-
-## Driving
-
-Select the Entrance road to reveal the dashboard. Its four short coaches teach
-ignition, steering, shifting, and pedals in that order; each advances only
-after you perform the action. Select the dashboard `?` to reopen the current
-lesson.
+Select the Entrance road to open the dashboard. Four short coaches teach ignition, steering,
+shifting, and pedals. Select the dashboard `?` to reopen the current lesson.
 
 On desktop:
 
-- press `Enter` whenever the engine is off, or select the ignition key to start
-  or stop it;
-- select **AUTO** or **MANUAL** on the dashboard, press `A` / `M`, or use
-  `Ctrl`+`←` for AUTO and `Ctrl`+`→` for MANUAL;
-- in AUTO, drag the shifter across several ranges; clicking advances toward D,
-  while a long-press or right-click moves one range toward P;
-- use `←` / `→` to steer; a tap stays gentle, while holding a direction or
-  tapping it repeatedly builds progressively stronger steering;
-- in AUTO, use `Shift`+`↓` toward D and `Shift`+`↑` toward P; in MANUAL,
-  use `Shift`+`↑` / `Shift`+`↓` to shift one gear;
-- hold `↑` to accelerate and `↓` to brake.
+- press `Enter` while the engine is off, or select the ignition key;
+- select **AUTO** or **MANUAL**, press `A` / `M`, or use `Ctrl`+`←` / `Ctrl`+`→`;
+- steer with `←` / `→`; holding or repeated taps steer more strongly;
+- accelerate with `↑` and brake with `↓`;
+- in AUTO, use `Shift`+`↓` toward D and `Shift`+`↑` toward P;
+- in MANUAL, use `Shift`+`↑` / `Shift`+`↓` to change gear.
 
-On touch:
+On touch, use the blue steering slider and pink accelerator/brake slider, or the physical wheel,
+pedals, mode buttons, and shifter. AUTO offers P/R/N/D; MANUAL supports step shifts or an exact-gear
+chooser by long-pressing the shifter.
 
-- slide the blue horizontal control to steer smoothly, or keep dragging the
-  steering wheel;
-- slide the tall pink vertical control upward for progressive acceleration or
-  downward for progressive braking; its extended gas range gives fine low-speed
-  control, and the physical pedals remain available;
-- select **AUTO** or **MANUAL** on the dashboard; in AUTO, select P/R/N/D;
-  the shifter also supports the same multi-range drag, tap-forward, and
-  long-press-backward gestures;
-  in MANUAL, drag the shifter up or down to change one gear, or long-press it
-  to choose an exact gear from the enlarged pattern.
+The roof, door, windows, compartments, and lights are separate controls. The odometer records real
+distance across street and highway driving and survives engine stops and Continue.
 
-The roof, door, paired side windows, compartments, and lights remain separate
-car controls. Outside highway mode, closing the dashboard keeps the settled
-street-drive state for the visit.
+Complete one forward street lap to unlock **Road Trip**. Accept the invitation, then choose
+Calgary, Banff, or Abraham Lake as the starting segment. A private testing shortcut starts near a
+segment's exit when its chooser item is Shift-clicked.
 
-The compact block is visually compressed, so its scenery passes at twice the
-highway world rate. The speedometer and accumulated distance remain physical.
-Hard braking while steering turns the Porsche through 180° from 140 km/h on a
-dry block, 120 in rain, or 100 in snow. If the reversed car stops after leaving
-the frame, it returns at the nearest usable edge.
+Road Trip uses the same steering, transmission, accelerator, and brake:
 
-The left instrument is a three-digit kilometre odometer, not a lap counter. It
-adds the actual distance travelled on the block and highway, including reverse,
-keeps the same total through engine stops and save/resume, and rolls its compact
-readout over after `999.9 KM`.
+- Calgary is a straight divided highway with a 110 km/h limit.
+- The Banff leg narrows, curves through the mountains, and has a 90 km/h limit.
+- The Abraham Lake road has one lane each way, wildlife, lake views, and a 100 km/h limit.
 
-Automatic mode uses P/R/N/D and shifts D1–D7 itself. Drive and Reverse may be
-selected while the Porsche is still rolling in the opposite direction below
-10 km/h; at 10 km/h or faster the opposite range remains locked out, and Park
-still requires a near standstill. Its current range or drive gear stays visible
-in the centre of the right-hand instrument, including throughout a Road Trip.
+AUTO provides gentle curve assistance; MANUAL leaves curve steering to the player. Traffic,
+shoulders, gravel, weather, seasons, wildlife, and police affect the trip. Leaving or unfocusing an
+active highway pauses it until fresh driving input resumes it.
 
-The six-speed manual ties RPM to road speed and expects the clutch for ordinary
-shifts. The highway caption offers a short shift suggestion when the selected
-gear is clearly too high or low.
+Police allow 20 km/h above the posted limit. An oncoming car flashes before a speed trap. If police
+pursue, stop safely to resolve the outcome. The driver panel tracks **Demerits** and a simplified
+**BAC**. Demerits expire after three real minutes; one drink-equivalent clears per real minute.
 
-Complete three forward street laps to unlock **Road Trip**. Enter accepts its
-visible offer; choosing **Later** leaves you on the block. The route chooser then
-lets you start from Calgary, Banff, or the road to Abraham Lake; Left and Right
-change the selected segment, while Enter launches it. Afterward, the highway
-remains unlocked and reappears after one forward lap in a later dashboard session.
+Distance, clean passes, avoided wildlife, and pickups earn points. Clean actions build a combo up
+to `3×`; collisions reset it and can damage the windshield, stall the engine, or knock the
+transmission into neutral.
 
-Road Trip keeps the same steering, transmission, accelerator, and brake. AUTO
-provides gentle curve lane assist; MANUAL leaves curve steering entirely to you.
-The full route begins on the straight, divided six-lane highway to Calgary: flat
-prairie, a wide dirt median that cannot be crossed, a 110 km/h limit, and no
-curves. After roughly 75 seconds, the Banff exit turns right into the mountain
-leg, where the road narrows, curves return, and the limit drops to 90. Ninety
-seconds later, another right turn begins the quieter two-lane Abraham Lake road:
-mountains and wildlife on the left, turquoise water on the right, and a 100 km/h
-limit. Its randomized traffic includes sedans, pickups, semis, and RVs in both directions;
-slower traffic may be passed, horns react to blocked lanes, and some oncoming
-drivers swerve when you stray across the double yellow. Curves, shoulders,
-rumble strips, gravel, day/night, weather, and seasons all affect the drive.
-The centre mirror shows the road, weather, trees, police, and passed traffic
-behind you.
+At the Camping sign, the car slows automatically and enters camp below 10 km/h; no remaining
+momentum or extra acceleration is required. The lake, poplar eyes, tent, cooking pot, campers,
+notebook, and parked car react. Stones skip from shore at a randomized heading between −60° and
++60°.
 
-Hard braking while steering produces a 360° from 200 km/h on dry asphalt, 180
-in rain, or 160 in snow. Leaving or unfocusing the game pauses the highway until
-a fresh steering or pedal input resumes it.
+The RSVP reminder pulses, then remains above the camp. Continue returns directly to Camping, and
+the reminder survives leaving and returning focus to the page. Press `Enter`, Escape, Backspace, or
+the top-right × to leave Camping for the Entrance dashboard.
 
-Police allow a 20 km/h tolerance above the posted limit. An oncoming car flashes
-its high beams before a speed trap. If police pursue, stop safely to resolve the ticket
-or summons; ignoring them escalates the outcome. Very high sustained speed can open
-an escape gap, but a brief burst is not enough. Police stops use Alberta's fine schedule,
-court treatment for 51+ over, and a deliberately theatrical arrival.
+Leaving the highway keeps the dashboard available but never resumes the run automatically. Drive
+another street lap and accept the invitation to return.
 
-The driver panel keeps separate **Demerits** and **BAC** columns. Each citation's
-demerits expire after three real minutes. Each wine, beer, or cocktail adds one
-simplified `0.03` drink-equivalent; one clears per real minute. Both records survive
-room changes, Road Trip exits, Continue, and reload.
+## Help, saves, and browser notes
 
-The right-pointing Camping sign marks the Abraham Lake entrance. Once past it, the car slows
-automatically and the camp appears below 10 km/h; arriving does not require another press of the
-accelerator. Camp props
-are clickable: the lake, poplar eyes, tent, cooking pot, campers, notebook, and parked
-car each react. Skipped stones recede from the campsite shore into the lake at a randomized
-−60° to +60° heading. A clicked
-poplar cluster wiggles all three bark eyes around their own centres.
-The end-of-game RSVP reminder pulses briefly, then stays above the camp scene.
-Continuing a saved game already at Camping returns directly to that reminder without a driving-resume pause.
-Press Enter to leave Camping and return to the Entrance dashboard.
-Arrows stay in the scene,
-while Escape, Backspace, or the top-right ×
-returns to the Entrance dashboard.
+The caption is the Phase 1 guide and becomes room or activity feedback in Phase 2. One-time coaches
+point out easy-to-miss controls. Continue does not replay the first-drive lesson.
 
-Distance, clean passes, safely avoided wildlife, and pickups earn points. Clean
-actions build a combo up to `3×`; collisions reset it and may crack or shatter
-the windshield, stall the engine, or knock the transmission into neutral. Slow
-down for deer, snowshoe hares, and the rare blue-bellied hedgehog.
+The game begins checkpointing after the Kitchen is solved or deliberately left for another room.
+On a later visit, **Continue** restores the saved room and floor, progression, durable arrangements,
+Album and Messages data, and safe device shell state. Running games, calls, cameras, and media return
+stopped. **Start over** clears the checkpoint; Restart inside the game asks for confirmation.
 
-Press Escape, Backspace, or select the top-right × to leave the highway for the
-street view while keeping the dashboard and engine available so the car can be
-fully braked.
-Leaving never resumes the highway automatically: complete another
-block lap and accept the new offer to return. Escape again closes the dashboard;
-once it is closed, Escape leaves the Entrance. Returning upstairs by another
-route also parks the run.
+**Trailer** is a separate one-minute preview. It does not consume a save and offers **Take over** to
+start Phase 1.
 
-## Help and coaches
-
-The clue line is the Phase 1 guide. In Phase 2 it becomes a room caption or a
-temporary gameplay result, rather than a stream of puzzle hints.
-
-Press `?` for keyboard help. Individual activities show compact instructions
-when their controls differ, and one-time coaches call attention to genuinely
-easy-to-miss controls such as Messages and the driving dashboard. Coaches are
-dismissed by using the control they indicate; the driving card can also be
-selected to put it away and reopened with its `?` button. Continue does not
-replay the first-drive lesson in a recovered game.
-
-The first downstairs visit after opening the page points out the Up control.
-That coach stays through the room's arrival and caption changes until you return
-upstairs or dismiss the lower room.
-
-## Saves, Continue, and Restart
-
-Progress is checkpointed automatically in this browser after solving the Kitchen or deliberately
-leaving it for another upstairs or downstairs room. Merely entering or partially playing the
-Kitchen does not create a save. On a later visit,
-**Continue** previews and restores the saved room and floor, reached and solved
-rooms, Phase 2 status, durable arrangements, Album and Messages data, and the
-safe shell state of devices.
-
-Transient action is not replayed behind the recovery screen: embedded games,
-calls, cameras, and active media return stopped. The monitor resumes at its
-desktop; the phone resumes Messages when appropriate and otherwise returns to
-its launcher or lock screen. A saved lower room reopens without automatically
-starting its film or game.
-
-**Start over** on the welcome-back screen clears the checkpoint immediately.
-Restart inside the game asks for confirmation.
-
-There is no autoplay or autonomous tour. **Trailer** is a separate, curated
-one-minute preview that runs only when selected. It visits the loft out of
-order, does not consume a saved game, and offers **Take over** to begin Phase 1
-yourself.
-
-## Browser notes
-
-- English and Czech are available, and the choice persists when storage is
-  allowed.
+- English and Czech are available, and the choice persists when storage is allowed.
 - Reduced-motion preferences simplify animation and disable Flair Catch.
-- Camera, torch, sharing, fullscreen, installation, and some computer toys
-  depend on browser support and permission. Denying them does not block Phase 1.
-- Desktop Chrome has the broadest feature coverage. Other modern browsers
-  remain playable, although some embedded monitor media may be unavailable.
-- If audio is silent, interact with the page once; browsers require a click or
-  tap before sound can begin.
+- Camera, torch, sharing, fullscreen, installation, and some computer toys depend on browser support
+  and permission; denying them does not block Phase 1.
+- Desktop Chrome has the broadest feature coverage, but other modern browsers remain playable.
+- If audio is silent, interact with the page once so the browser can enable sound.
 
-The best general strategy is still the simplest one: follow the clue until the
-loft opens up, then click what interests you.
+The simplest strategy remains the best one: follow the clue until the loft opens, then explore.

@@ -24,7 +24,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.goToStage("balcony");
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
+      report.steps.controlsBeforeIgnition = getComputedStyle(
+        document.getElementById("entrance-drive-touch-controls")).display;
       window.__toggleEntrancePorscheEngine();
+      report.steps.controlsAfterIgnition = getComputedStyle(
+        document.getElementById("entrance-drive-touch-controls")).display;
       window.__entranceDriveTransmissionMode("auto", true);
       window.__entranceDriveRange("D");
       var throttle = document.getElementById("entrance-drive-throttle");
@@ -119,6 +123,10 @@ function check(ok, message, detail) {
 console.log("rsvp.html Entrance two-finger touch driving:");
 check(result && result.errors.length === 0, "touch harness has no uncaught page errors", result && result.errors);
 var steps = result && result.steps || {};
+check(steps.controlsBeforeIgnition === "none" && steps.controlsAfterIgnition === "block",
+  "touch steering and pedals stay hidden until ignition", {
+    before: steps.controlsBeforeIgnition, after: steps.controlsAfterIgnition
+  });
 check(steps.targets && steps.targets.ignition.width >= 54 && steps.targets.ignition.height >= 57 &&
   steps.targets.clutch.width >= 48 && steps.targets.clutch.height >= 63 &&
   steps.targets.brake.width >= 54 && steps.targets.brake.height >= 63 &&

@@ -123,7 +123,8 @@ fullscreen.
 
 Select the Entrance road to open the dashboard. The caption above the scene reports the current
 driving state; the visible dashboard controls and shortcuts operate the car. A first-drive coach
-walks through ignition, steering, gear, and pedals; `?` parks the car and restarts that lesson.
+walks through ignition, steering, gear, pedals, and desktop cruise control; `?` parks the car and
+restarts that lesson.
 
 On desktop:
 

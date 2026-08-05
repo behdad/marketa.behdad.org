@@ -40,9 +40,13 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.driven = coach();
     window.__entranceDriveControl("throttle", false);
 
+    key("keydown", "Control", "ControlLeft", { ctrlKey: true });
+    key("keyup", "Control", "ControlLeft");
+    report.tooSlowForCruise = coach();
     window.__entranceDriveSetMotion(72, 3);
     key("keydown", "Control", "ControlLeft", { ctrlKey: true });
     key("keyup", "Control", "ControlLeft");
+    report.cruised = coach();
     document.getElementById("entrance-drive-help").dispatchEvent(new MouseEvent("click", {
       bubbles: true, cancelable: true
     }));
@@ -57,8 +61,10 @@ window.addEventListener("load", function () { setTimeout(function () {
     key("keyup", "Enter", "Enter");
     report.restarted = { coach: coach(), state: window.__entranceRoomState() };
     report.copy = {
-      en: T.en.hunt.entrance_drive_coach_auto_pedals_desktop,
-      cs: T.cs.hunt.entrance_drive_coach_auto_pedals_desktop
+      en: T.en.hunt.entrance_drive_coach_cruise_text,
+      cs: T.cs.hunt.entrance_drive_coach_cruise_text,
+      pedalEn: T.en.hunt.entrance_drive_coach_auto_pedals_desktop,
+      pedalCs: T.cs.hunt.entrance_drive_coach_auto_pedals_desktop
     };
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
@@ -88,8 +94,12 @@ check(result && result.shifted.show && result.shifted.step === 4,
 check(result && result.shifted.arrowTips.length === 2 &&
   result.shifted.arrowTips.every(function (tip) { return tip >= 159; }),
   "the final arrows reach the pedal faces", result && result.shifted.arrowTips);
-check(result && !result.driven.show,
-  "using a pedal completes the lesson", result && result.driven);
+check(result && result.driven.show && result.driven.step === 5,
+  "using a pedal advances to a dedicated cruise lesson", result && result.driven);
+check(result && result.tooSlowForCruise.show && result.tooSlowForCruise.step === 5,
+  "Ctrl below cruise speed keeps the cruise lesson visible", result && result.tooSlowForCruise);
+check(result && !result.cruised.show,
+  "setting cruise completes the lesson", result && result.cruised);
 check(result && result.reset.coach.show && result.reset.coach.step === 1 &&
   !result.reset.state.car.engineOn && result.reset.state.drive.transmission.range === "P" &&
   result.reset.state.drive.speed === 0 && !result.reset.state.drive.cruise.active,
@@ -99,8 +109,9 @@ check(result && result.reset && !result.reset.helpFocusable,
 check(result && result.restarted.coach.show && result.restarted.coach.step === 2 &&
   result.restarted.state.car.engineOn,
   "Enter resumes the restarted lesson by starting the engine", result && result.restarted);
-check(result && result.copy && /Ctrl/.test(result.copy.en) && /Ctrl/.test(result.copy.cs),
-  "the final desktop step teaches cruise in both languages", result && result.copy);
+check(result && result.copy && /Ctrl/.test(result.copy.en) && /Ctrl/.test(result.copy.cs) &&
+  !/Ctrl/.test(result.copy.pedalEn) && !/Ctrl/.test(result.copy.pedalCs),
+  "the dedicated cruise step teaches Ctrl in both languages", result && result.copy);
 
 if (failed) process.exit(1);
 console.log("Driving-coach assertions passed.");

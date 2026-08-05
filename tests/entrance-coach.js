@@ -34,7 +34,11 @@ window.addEventListener("load", function () { setTimeout(function () {
       width: steerArrowBox.width,
       height: steerArrowBox.height,
       y: steerArrowBox.y,
-      pieces: document.querySelectorAll('[data-coach-step="2"] .entrance-drive-coach-arrow').length
+      pieces: document.querySelectorAll('[data-coach-step="2"] .entrance-drive-coach-arrow').length,
+      animation: getComputedStyle(document.querySelector(
+        '[data-coach-step="2"] .entrance-drive-coach-arrow')).animationName,
+      targetAnimation: getComputedStyle(document.querySelector(
+        '[data-coach-step="4"] .entrance-drive-coach-arrow')).animationName
     };
     key("keydown", "ArrowLeft", "ArrowLeft");
     key("keyup", "ArrowLeft", "ArrowLeft");
@@ -100,6 +104,10 @@ check(result && result.started.steerArrow &&
   result.started.steerArrow.width > 100 && result.started.steerArrow.height > 20 &&
   result.started.steerArrow.y <= 41 && result.started.steerArrow.pieces === 1,
   "steering uses one outlined double-headed path over the wheel", result && result.started.steerArrow);
+check(result && result.started.steerArrow &&
+  result.started.steerArrow.animation === "entrance-drive-coach-arrow-steer" &&
+  result.started.steerArrow.targetAnimation === "entrance-drive-coach-arrow-down",
+  "coach arrows animate along their target directions", result && result.started.steerArrow);
 check(result && result.steered.show && result.steered.step === 3,
   "steering advances to Drive", result && result.steered);
 check(result && result.shifted.show && result.shifted.step === 4,

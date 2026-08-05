@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Campsite Porsche controls own precise regions; body drags stay inside the parking space.
+// Campsite Porsche controls own generous prop regions; body drags stay inside the parking space.
 "use strict";
 
 var lib = require("./lib");
@@ -13,8 +13,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function pointHits(paths, x, y) {
     var point = new DOMPoint(x, y);
-    return Array.prototype.filter.call(paths, function (path) { return path.isPointInFill(point); })
+    return Array.prototype.filter.call(paths, function (path) {
+      return getComputedStyle(path).display !== "none" && path.isPointInFill(point);
+    })
       .map(function (path) { return path.getAttribute("data-camp-car-action"); });
+  }
+  function topActionAt(host, x, y) {
+    var point = clientPoint(host, x, y);
+    var target = document.elementFromPoint(point.x, point.y);
+    var hit = target && target.closest && target.closest("[data-camp-car-action]");
+    return hit && hit.getAttribute("data-camp-car-action");
   }
   function clientPoint(host, x, y) {
     var point = host.ownerSVGElement.createSVGPoint();
@@ -40,24 +48,47 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceRoadtripSetRoute("camp", 0);
 
         var style = document.createElement("style");
-        style.textContent = "#entrance-roadtrip-camp-porsche *{transition:none!important}";
+        style.textContent = ".hunt-viewport,#lower-room-track,#entrance-roadtrip-camp-porsche *{transition:none!important}";
         document.head.appendChild(style);
+        var viewport = document.querySelector(".hunt-viewport");
+        viewport.style.setProperty("--floor-pan", "100%");
+        viewport.classList.add("entrance-room-open");
         var host = document.getElementById("entrance-roadtrip-camp-porsche");
         var copy = host.querySelector(".entrance-roadtrip-camp-porsche-copy");
         var dragHit = copy.querySelector(".entrance-roadtrip-camp-car-drag-hit");
+        var carHitHost = dragHit.parentNode;
         var hits = copy.querySelectorAll("[data-camp-car-action]");
         var actionClasses = {
           door: "door-open", frunk: "frunk-open", trunk: "trunk-open",
           window: "windows-open", roof: "roof-open", lamps: "lamps-on"
         };
         var expectedPoints = [
-          ["door", 220, 285], ["frunk", 90, 265], ["trunk", 320, 264],
-          ["window", 220, 241], ["roof", 220, 219],
-          ["lamps", 27, 292], ["lamps", 357, 294]
+          ["door", 170, 280], ["door", 220, 305], ["door", 260, 276],
+          ["frunk", 24, 258], ["frunk", 92, 262], ["frunk", 150, 260],
+          ["trunk", 307, 263], ["trunk", 334, 257], ["trunk", 362, 268],
+          ["window", 174, 249], ["window", 220, 229], ["window", 238, 248],
+          ["roof", 250, 252], ["roof", 270, 242], ["roof", 290, 252],
+          ["lamps", 15, 287], ["lamps", 49, 291],
+          ["lamps", 334, 286], ["lamps", 358, 291]
         ];
         report.points = expectedPoints.map(function (row) {
           return [row[0], pointHits(hits, row[1], row[2])];
         });
+        report.realPoints = expectedPoints.map(function (row) {
+          return [row[0], topActionAt(carHitHost, row[1], row[2])];
+        });
+        report.hitboxes = Array.prototype.filter.call(hits, function (hit) {
+          return getComputedStyle(hit).display !== "none";
+        }).map(function (hit) {
+          var box = hit.getBBox();
+          var rect = hit.getBoundingClientRect();
+          return {
+            action: hit.getAttribute("data-camp-car-action"),
+            local: [box.width, box.height],
+            rendered: [rect.width, rect.height]
+          };
+        });
+        report.coarse = matchMedia("(pointer: coarse)").matches && matchMedia("(hover: none)").matches;
         report.overlaps = [];
         for (var y = 210; y <= 324; y += 2) for (var x = 4; x <= 374; x += 2) {
           var actions = Array.from(new Set(pointHits(hits, x, y)));
@@ -68,8 +99,28 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           actionCount: new Set(Array.prototype.map.call(hits, function (hit) {
             return hit.getAttribute("data-camp-car-action");
           })).size,
-          dragBelowControls: copy.lastElementChild.classList.contains("entrance-roadtrip-camp-car-hits") &&
-            copy.lastElementChild.previousElementSibling === dragHit
+          alignedWithArt: carHitHost.classList.contains("entrance-porsche-scale"),
+          dragBelowControls: carHitHost.lastElementChild.classList.contains("entrance-roadtrip-camp-car-hits") &&
+            carHitHost.lastElementChild.previousElementSibling === dragHit
+        };
+        var trunkHit = copy.querySelector('[data-camp-car-action="trunk"]');
+        host.classList.add("roof-open");
+        host.classList.remove("trunk-open");
+        var roofPoint = clientPoint(carHitHost, 270, 250);
+        var roofStackTarget = document.elementFromPoint(roofPoint.x, roofPoint.y);
+        var roofStackAction = roofStackTarget && roofStackTarget.closest &&
+          roofStackTarget.closest("[data-camp-car-action]");
+        click(roofStackTarget);
+        report.openRoofControl = {
+          action: roofStackAction && roofStackAction.getAttribute("data-camp-car-action"),
+          roofClosed: !host.classList.contains("roof-open"),
+          trunkStayedClosed: !host.classList.contains("trunk-open")
+        };
+        host.classList.add("roof-open");
+        click(trunkHit);
+        report.openRoofTrunkControl = {
+          roofStayedOpen: host.classList.contains("roof-open"),
+          trunkOpened: host.classList.contains("trunk-open")
         };
         window.setLang("cs");
         report.czechDoorTitle = copy.querySelector('[data-camp-car-action="door"]').getAttribute("title");
@@ -174,14 +225,31 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html campsite parked-car controls:");
 check(result && result.errors.length === 0, "controls run without uncaught errors", result && result.errors);
-check(result && result.hitMap && result.hitMap.count === 7 && result.hitMap.actionCount === 6 &&
-  result.hitMap.dragBelowControls, "six controls own seven topmost regions above the body drag surface",
+check(result && result.hitMap && result.hitMap.count === 8 && result.hitMap.actionCount === 6 &&
+  result.hitMap.alignedWithArt && result.hitMap.dragBelowControls,
+  "six controls and the body drag surface share the artwork's scaled coordinate group",
   result && result.hitMap);
 check(result && result.points && result.points.every(function (row) {
-  return row[1].length === 1 && row[1][0] === row[0];
-}), "authored points resolve to exactly the intended car control", result && result.points);
-check(result && result.overlaps && result.overlaps.length === 0,
-  "the precise control regions never overlap", result && result.overlaps);
+  return row[1].indexOf(row[0]) >= 0 && row[1].every(function (action) {
+    return action === row[0] || row[0] === "roof" && action === "window";
+  });
+}), "multiple points across every visible prop include their intended control", result && result.points);
+check(result && result.realPoints && result.realPoints.every(function (row) {
+  return row[1] === row[0];
+}), "the browser exposes every practical point as the topmost intended control", result && result.realPoints);
+check(result && result.overlaps && result.overlaps.every(function (row) {
+  return row[2].length === 2 && row[2].indexOf("roof") >= 0 &&
+    (row[2].indexOf("window") >= 0 || row[2].indexOf("door") >= 0);
+}), "only the visible folded roof overlaps its adjacent window/body controls", result && result.overlaps);
+var localMinimums = {
+  door: [100, 60], frunk: [150, 33], trunk: [75, 24],
+  window: [95, 30], roof: [55, 34], lamps: [50, 40]
+};
+check(result && result.hitboxes && result.hitboxes.every(function (row) {
+  var minimum = localMinimums[row.action];
+  return row.local[0] >= minimum[0] && row.local[1] >= minimum[1] &&
+    Math.min(row.rendered[0], row.rendered[1]) >= 28;
+}), "each control has generous local coverage and a practical rendered short edge", result && result.hitboxes);
 check(result && result.czechDoorTitle === "Otevřít nebo zavřít dveře Fancy Stupid",
   "generated control titles follow the active language", result && result.czechDoorTitle);
 check(result && result.props && result.props.isolated && result.props.captionStayed &&
@@ -200,6 +268,37 @@ check(result && result.touchDrag && result.touchDrag.x === "-30.00" && result.to
   result && result.touchDrag);
 check(result && result.controlPrecedence && result.controlPrecedence.doorOpened && result.controlPrecedence.carStayed,
   "a prop press toggles the prop without starting a car drag", result && result.controlPrecedence);
+check(result && result.openRoofControl && result.openRoofControl.action === "roof" &&
+  result.openRoofControl.roofClosed &&
+  result.openRoofControl.trunkStayedClosed,
+  "clicking the folded soft top closes it without toggling the trunk", result && result.openRoofControl);
+check(result && result.openRoofTrunkControl && result.openRoofTrunkControl.roofStayedOpen &&
+  result.openRoofTrunkControl.trunkOpened,
+  "the rear trunk remains independently clickable beside an open soft top", result && result.openRoofTrunkControl);
+
+var coarseResult = lib.runPageSync("rsvp.html", HARNESS, 5200, {
+  patchRaf: true,
+  forceMotion: true,
+  forceCoarsePointer: true,
+  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  chromeFlags: "--window-size=844,520"
+});
+check(coarseResult && coarseResult.errors.length === 0 && coarseResult.coarse,
+  "touch-first sizing runs without errors under coarse-pointer media", coarseResult && coarseResult.errors);
+check(coarseResult && coarseResult.realPoints && coarseResult.realPoints.every(function (row) {
+  return row[1] === row[0];
+}), "coarse-pointer hit testing keeps every practical prop point topmost", coarseResult && coarseResult.realPoints);
+check(coarseResult && coarseResult.hitboxes && coarseResult.hitboxes.every(function (row) {
+  if (row.action === "roof") {
+    return row.rendered[0] >= 36 && row.rendered[1] >= 22 && row.rendered[0] * row.rendered[1] >= 800;
+  }
+  return row.rendered[0] >= 32 && row.rendered[1] >= 22 && row.rendered[0] * row.rendered[1] >= 1000;
+}), "coarse-pointer controls retain broad rendered coverage in the mobile layout",
+  coarseResult && coarseResult.hitboxes);
+check(coarseResult && coarseResult.controlPrecedence && coarseResult.controlPrecedence.doorOpened &&
+  coarseResult.controlPrecedence.carStayed,
+  "coarse-pointer prop presses retain precedence over whole-car dragging",
+  coarseResult && coarseResult.controlPrecedence);
 
 if (failures) process.exit(1);
 console.log("Campsite parked-car assertions passed.");

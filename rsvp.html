@@ -1210,6 +1210,9 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-drag-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:grab}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:pointer;outline:none}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit:focus-visible{stroke:#fffdf8;stroke-width:2;stroke-dasharray:5 3;vector-effect:non-scaling-stroke}
+#entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-roof-stack-hit{display:none}
+#entrance-roadtrip-camp-porsche.roof-open .entrance-roadtrip-camp-roof-closed-hit{display:none}
+#entrance-roadtrip-camp-porsche.roof-open .entrance-roadtrip-camp-roof-stack-hit{display:inline}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-door-open{
   opacity:0;transform-box:view-box;transform-origin:164px 258px;transform:scaleX(.08);
   transition:transform .32s cubic-bezier(.4,0,.2,1),opacity .18s ease
@@ -38528,24 +38531,28 @@ window.__entranceRoomOpen = false;
       roof: "roof-open",
       lamps: "lamps-on"
     };
+    // The cloned artwork keeps this internal scale; its hit layers must share that coordinate space.
+    var carHitHost = copy.querySelector(".entrance-porsche-scale") || copy;
     var carDragHit = document.createElementNS("http://www.w3.org/2000/svg", "path");
     carDragHit.setAttribute("class", "entrance-roadtrip-camp-car-drag-hit");
     carDragHit.setAttribute("d", "M8 263Q55 255 137 258L164 250H252Q284 252 346 269Q362 277 368 291L366 309Q356 324 329 324H60Q20 324 8 309Z");
-    copy.appendChild(carDragHit);
+    carHitHost.appendChild(carDragHit);
     var carHitLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
     carHitLayer.setAttribute("class", "entrance-roadtrip-camp-car-hits");
     [
-      ["door", "M165 264L258 266L255 289Q251 306 238 316Q207 321 172 317L165 294Z"],
-      ["frunk", "M29 270Q91 261 155 255L150 267Q91 274 31 282Z"],
-      ["trunk", "M281 259Q322 258 349 271L357 282Q323 271 283 268Z"],
-      ["window", "M177 254L197 229H231Q241 230 247 239L258 255Z"],
-      ["roof", "M194 218Q217 213 240 219L247 225Q220 219 198 225Z"],
-      ["lamps", "M9 286Q27 282 45 286L44 296Q27 302 10 300Z"],
-      ["lamps", "M345 287Q363 284 370 293L368 302L348 295Z"]
+      ["door", "M165 259L269 259L268 291Q264 315 244 325Q206 330 164 321L164 294Z"],
+      ["frunk", "M7 252Q79 242 164 245L161 278Q100 274 70 264L70 262Q35 255 7 264Z"],
+      ["trunk", "M300 240Q334 237 359 252Q371 258 378 270L365 274Q340 270 302 274Z"],
+      ["window", "M168 257L187 226Q218 218 249 226L267 257Z"],
+      ["roof", "M174 192Q218 180 260 193L274 220L252 223Q218 215 184 223L170 220Z", "entrance-roadtrip-camp-roof-closed-hit"],
+      ["roof", "M242 232Q268 226 292 239L299 258L289 267L246 267L240 253Z", "entrance-roadtrip-camp-roof-stack-hit"],
+      ["lamps", "M5 268Q35 261 65 268L66 290Q60 304 52 312Q28 316 5 307Z"],
+      ["lamps", "M308 275Q347 268 380 280L378 322Q344 325 308 302Z"]
     ].forEach(function (row) {
       var hit = document.createElementNS("http://www.w3.org/2000/svg", "path");
       var labelKey = "entrance_roadtrip_camp_car_" + row[0] + "_aria";
       hit.setAttribute("class", "entrance-roadtrip-camp-car-hit");
+      if (row[2]) hit.classList.add(row[2]);
       hit.setAttribute("d", row[1]);
       hit.setAttribute("data-camp-car-action", row[0]);
       hit.setAttribute("data-title-i", labelKey);
@@ -38553,7 +38560,7 @@ window.__entranceRoomOpen = false;
       hit.setAttribute("title", roadtripCampCopy(labelKey));
       carHitLayer.appendChild(hit);
     });
-    copy.appendChild(carHitLayer);
+    carHitHost.appendChild(carHitLayer);
     function activateCampCarProp(event) {
       var target = event.target && event.target.closest ? event.target.closest("[data-camp-car-action]") : null;
       if (!target || roadtripState.route !== "camp") return false;

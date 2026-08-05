@@ -875,6 +875,11 @@ footer{margin-top:2.6rem}
   box-shadow:0 2px 7px rgba(31,31,31,.42);transition:transform .12s cubic-bezier(.2,.75,.25,1)
 }
 .entrance-drive-touch-pad.active .entrance-drive-touch-knob{transition:none}
+.entrance-drive-touch-pad.coach-target{animation:entrance-drive-touch-coach .8s ease-in-out infinite}
+@keyframes entrance-drive-touch-coach{
+  0%,100%{box-shadow:0 4px 12px rgba(8,10,12,.38),inset 0 1px 0 rgba(255,255,255,.22),0 0 0 2px rgba(192,57,43,.75)}
+  50%{box-shadow:0 4px 12px rgba(8,10,12,.38),inset 0 1px 0 rgba(255,255,255,.22),0 0 0 6px rgba(192,57,43,.18)}
+}
 .entrance-drive-touch-direction{position:absolute;z-index:1;color:#fffdf8;font:700 19px/1 Arial,sans-serif;text-shadow:0 1px 2px rgba(31,31,31,.45)}
 #entrance-drive-touch-steer .touch-left{left:13px;top:50%;transform:translateY(-52%)}
 #entrance-drive-touch-steer .touch-right{right:13px;top:50%;transform:translateY(-52%)}
@@ -1362,6 +1367,7 @@ footer{margin-top:2.6rem}
 @media (pointer:coarse){
   .entrance-drive-coach-desktop{display:none}
   .entrance-drive-coach-touch{display:block}
+  [data-coach-step="4"] .entrance-drive-coach-arrow{display:none}
 }
 #entrance-roadtrip-invite{display:none;pointer-events:none}
 #entrance-roadtrip-invite.show{display:inline;pointer-events:all}
@@ -1521,6 +1527,7 @@ footer{margin-top:2.6rem}
   #entrance-drive-ignition.shift-blocked #entrance-drive-key-face{animation:none}
   #entrance-drive-ignition.shift-blocked #entrance-drive-key-led{animation:none;opacity:1}
   .entrance-drive-coach-arrow{animation:none}
+  .entrance-drive-touch-pad.coach-target{animation:none;outline:3px solid #c0392b;outline-offset:2px}
   #entrance-drive-shifter.rev-coach :is(#entrance-drive-manual-knob,#entrance-drive-auto-knob){animation:none;opacity:.68}
   #entrance-roadtrip-reenter.suspension-ignition-blocked{animation:none}
 }
@@ -36490,6 +36497,9 @@ window.__entranceRoomOpen = false;
     props.forEach(function (prop) { prop.classList.remove("reacting"); });
     setPorscheHornDoorAnswering(false);
   }
+  function porscheDriveCoachTouchMode() {
+    return window.matchMedia("(pointer: coarse)").matches;
+  }
   function paintPorscheDriveCoach() {
     if (!driveCoach) return;
     var showing = !!driveState.hudOpen && !roadtripState.active && !driveCoachDismissed;
@@ -36497,8 +36507,11 @@ window.__entranceRoomOpen = false;
     driveCoachSteps.forEach(function (step) {
       step.classList.toggle("active", Number(step.getAttribute("data-coach-step")) === driveCoachStep);
     });
-    if (driveTouchSteerPad) driveTouchSteerPad.classList.toggle("coach-target", showing && driveCoachStep === 2);
-    if (driveTouchPedalPad) driveTouchPedalPad.classList.toggle("coach-target", showing && driveCoachStep === 4);
+    var combinedTouchControls = porscheDriveCoachTouchMode() && driveCoachStep === 4;
+    if (driveTouchSteerPad) driveTouchSteerPad.classList.toggle("coach-target",
+      showing && (driveCoachStep === 2 || combinedTouchControls));
+    if (driveTouchPedalPad) driveTouchPedalPad.classList.toggle("coach-target",
+      showing && driveCoachStep === 4);
   }
   function showPorscheDriveCoach() {
     driveCoachDismissed = false;
@@ -36536,15 +36549,16 @@ window.__entranceRoomOpen = false;
   }
   function completePorscheDriveCoachAction(action) {
     if (driveCoachComplete) return;
+    var touchCoach = porscheDriveCoachTouchMode();
     var expected = { engine: 1, steer: 2, gear: 3, pedal: 4, cruise: 5 }[action];
+    if (touchCoach && driveCoachStep === 4 && (action === "steer" || action === "pedal")) expected = 4;
     if (expected !== driveCoachStep) return;
-    var desktopCruiseLesson = window.matchMedia("(min-width: 760px)").matches;
-    if (driveCoachStep >= 5 || driveCoachStep === 4 && !desktopCruiseLesson) {
+    if (driveCoachStep >= 5 || driveCoachStep === 4 && touchCoach) {
       driveCoachComplete = true;
       dismissPorscheDriveCoach();
       return;
     }
-    driveCoachStep++;
+    driveCoachStep = action === "engine" && touchCoach ? 3 : driveCoachStep + 1;
     if (action === "gear" && driveCoachStep === 4) {
       driveCoachNeedsFreshPedal = !!(driveState.holds.throttle || driveState.holds.brake);
     }
@@ -43919,7 +43933,9 @@ window.__entranceRoomOpen = false;
     var wasOpen = driveState.hudOpen;
     driveState.hudOpen = true;
     if (!wasOpen && roadtripState.unlocked) resetRoadtripInvitationSession();
-    if (porscheState.engineOn && driveCoachStep === 1) driveCoachStep = 2;
+    if (porscheState.engineOn && driveCoachStep === 1) {
+      driveCoachStep = porscheDriveCoachTouchMode() ? 3 : 2;
+    }
     if (driveCoachComplete) dismissPorscheDriveCoach();
     else showPorscheDriveCoach();
     paintPorscheDriveHud();
@@ -46902,9 +46918,9 @@ var T = {
       entrance_drive_coach_auto_gear_touch: "Drag the shifter down from P to D",
       entrance_drive_coach_pedals_title: "Now drive",
       entrance_drive_coach_pedals_desktop: "↑ accelerates · ↓ brakes",
-      entrance_drive_coach_pedals_touch: "Slide the pink control or hold a pedal · shift as needed",
+      entrance_drive_coach_pedals_touch: "Blue steers · pink accelerates and brakes",
       entrance_drive_coach_auto_pedals_desktop: "↑ accelerates · ↓ brakes",
-      entrance_drive_coach_auto_pedals_touch: "Slide the pink control or hold a pedal · AUTO shifts D1–D7",
+      entrance_drive_coach_auto_pedals_touch: "Blue steers · pink accelerates and brakes",
       entrance_drive_coach_cruise_title: "Auto-cruise",
       entrance_drive_coach_cruise_text: "At 10+ km/h, tap Ctrl to hold speed",
       entrance_roadtrip_exit: "Leave highway",
@@ -48191,9 +48207,9 @@ var T = {
       entrance_drive_coach_auto_gear_touch: "Přesuň páku dolů z P na D",
       entrance_drive_coach_pedals_title: "Teď jeď",
       entrance_drive_coach_pedals_desktop: "↑ zrychluje · ↓ brzdí",
-      entrance_drive_coach_pedals_touch: "Posouvej růžový ovladač nebo drž pedál · podle potřeby řaď",
+      entrance_drive_coach_pedals_touch: "Modrý ovladač řídí · růžový zrychluje a brzdí",
       entrance_drive_coach_auto_pedals_desktop: "↑ zrychluje · ↓ brzdí",
-      entrance_drive_coach_auto_pedals_touch: "Posouvej růžový ovladač nebo drž pedál · AUTO řadí D1–D7",
+      entrance_drive_coach_auto_pedals_touch: "Modrý ovladač řídí · růžový zrychluje a brzdí",
       entrance_drive_coach_cruise_title: "Tempomat",
       entrance_drive_coach_cruise_text: "Při 10+ km/h stiskni Ctrl a rychlost se bude držet",
       entrance_roadtrip_exit: "Opustit dálnici",

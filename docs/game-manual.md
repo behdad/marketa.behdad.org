@@ -136,8 +136,9 @@ On desktop:
 - in AUTO, use `Shift`+`↓` toward D and `Shift`+`↑` toward P;
 - in MANUAL, use `Shift`+`↑` / `Shift`+`↓` to change gear.
 
-On touch, start the engine to reveal the blue steering slider and pink accelerator/brake slider, or use the physical wheel,
-pedals, mode buttons, and shifter. AUTO offers P/R/N/D; MANUAL supports step shifts or an exact-gear
+On touch, start the engine to reveal the blue steering slider and pink accelerator/brake slider, or
+use the physical wheel, pedals, mode buttons, and shifter. The coach introduces the shifter before
+showing both sliders together. AUTO offers P/R/N/D; MANUAL supports step shifts or an exact-gear
 chooser by long-pressing the shifter.
 
 The roof, door, windows, compartments, and lights are separate controls. The odometer records real

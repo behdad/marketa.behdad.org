@@ -87,6 +87,41 @@ window.addEventListener("load", function () { setTimeout(function () {
 </script>`;
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 2400, { patchRaf: true });
+var MOBILE_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+<script>
+window.addEventListener("load", function () { setTimeout(function () {
+  var report = { errors: window.__errs || [] };
+  function coach() {
+    var root = document.getElementById("entrance-drive-coach");
+    var active = root && root.querySelector("[data-coach-step].active");
+    return { show: !!(root && root.classList.contains("show")), step: active && Number(active.dataset.coachStep) };
+  }
+  function key(type, key, code) {
+    document.dispatchEvent(new KeyboardEvent(type, { key: key, code: code, bubbles: true, cancelable: true }));
+  }
+  try {
+    Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
+    window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
+    window.__openEntrancePorscheDriveHud(); report.fresh = coach();
+    window.__toggleEntrancePorscheEngine(); report.started = coach();
+    window.__entranceDriveRange("D");
+    report.shifted = coach();
+    report.shifted.targets = {
+      blue: document.getElementById("entrance-drive-touch-steer").classList.contains("coach-target"),
+      pink: document.getElementById("entrance-drive-touch-pedals").classList.contains("coach-target")
+    };
+    report.copy = {
+      en: T.en.hunt.entrance_drive_coach_auto_pedals_touch,
+      cs: T.cs.hunt.entrance_drive_coach_auto_pedals_touch
+    };
+    key("keydown", "ArrowLeft", "ArrowLeft"); key("keyup", "ArrowLeft", "ArrowLeft");
+    report.usedControl = coach();
+  } catch (error) { report.errors.push(String(error && error.stack || error)); }
+  document.getElementById("__report").textContent = JSON.stringify(report);
+}, 180); });
+</script>`;
+var mobile = lib.runPageSync("rsvp.html", MOBILE_HARNESS, 2400,
+  { patchRaf: true, forceCoarsePointer: true });
 var failed = false;
 function check(ok, message, detail) {
   console.log("  " + (ok ? "✓" : "✗") + " " + message +
@@ -134,6 +169,18 @@ check(result && result.restarted.coach.show && result.restarted.coach.step === 2
 check(result && result.copy && /Ctrl/.test(result.copy.en) && /Ctrl/.test(result.copy.cs) &&
   !/Ctrl/.test(result.copy.pedalEn) && !/Ctrl/.test(result.copy.pedalCs),
   "the dedicated cruise step teaches Ctrl in both languages", result && result.copy);
+check(mobile && mobile.errors.length === 0 && mobile.fresh.show && mobile.fresh.step === 1,
+  "mobile coach starts with ignition", mobile);
+check(mobile && mobile.started.show && mobile.started.step === 3,
+  "mobile advances directly from ignition to the shifter", mobile && mobile.started);
+check(mobile && mobile.shifted.show && mobile.shifted.step === 4 &&
+  mobile.shifted.targets.blue && mobile.shifted.targets.pink,
+  "mobile follows the shifter with one coach for both sliders", mobile && mobile.shifted);
+check(mobile && /Blue/.test(mobile.copy.en) && /pink/.test(mobile.copy.en) &&
+  /Modrý/.test(mobile.copy.cs) && /růžový/.test(mobile.copy.cs),
+  "combined slider coaching is bilingual", mobile && mobile.copy);
+check(mobile && !mobile.usedControl.show,
+  "using either combined control completes the mobile coach", mobile && mobile.usedControl);
 
 if (failed) process.exit(1);
 console.log("Driving-coach assertions passed.");

@@ -33,6 +33,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.started.steerArrow = {
       width: steerArrowBox.width,
       height: steerArrowBox.height,
+      y: steerArrowBox.y,
       heads: document.querySelectorAll('[data-coach-step="2"] .entrance-drive-coach-arrowhead').length
     };
     key("keydown", "ArrowLeft", "ArrowLeft");
@@ -96,6 +97,7 @@ check(result && result.started.show && result.started.step === 2,
   "starting advances to steering", result && result.started);
 check(result && result.started.steerArrow &&
   result.started.steerArrow.width > 100 && result.started.steerArrow.height < 4 &&
+  result.started.steerArrow.y <= 54 &&
   result.started.steerArrow.heads === 2,
   "steering uses a horizontal double-headed arrow over the wheel", result && result.started.steerArrow);
 check(result && result.steered.show && result.steered.step === 3,

@@ -65,9 +65,10 @@ check(sources.phrasebook && sources.phrasebook.length === 16 &&
   sources.phrasebook.some(function (p) { return p.english === "I love you" && p.czech === "it’s kind of weird to say it in Czech"; }),
   "phrasebook reuses its canonical English-Czech cards, including Markéta's joke", sources.phrasebook);
 check(sources.photos && sources.photos.length > 0 && sources.photos.every(function (p) { return Array.isArray(p.people) && !p.src && !p.image && !p.data; }) && !/data:image/.test(JSON.stringify(sources.photos)), "Album exposes photo metadata without pixels or URLs", sources.photos);
-check(sources.tattoos && sources.tattoos.length === 7 &&
+check(sources.tattoos && sources.tattoos.length === 8 &&
   sources.tattoos.some(function (t) { return t.design === "pufferfish" && t.artist === "Markéta"; }) &&
-  sources.tattoos.some(function (t) { return t.design === "bored" && t.artist === "Behdad"; }),
+  sources.tattoos.some(function (t) { return t.design === "bored" && t.artist === "Behdad"; }) &&
+  sources.tattoos.some(function (t) { return t.design === "ayushi" && t.artist === "Ayushi" && t.relationship === "Diva"; }),
   "tattoo designs retain canonical artist credits", sources.tattoos);
 check(sources.notes && sources.notes.length === 15 && sources.notes.every(function (note) { return typeof note === "string"; }) && !/draft/i.test(JSON.stringify(sources.notes)), "Notes exposes only the couple's authored cards, never a visitor draft", sources.notes);
 check(sources.named && sources.named.length === 1 && sources.named[0].name === "Pouria" && /bartender/i.test(sources.named[0].role), "a named-person question retrieves only the matching public contact", sources.named);

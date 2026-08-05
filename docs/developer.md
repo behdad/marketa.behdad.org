@@ -218,6 +218,11 @@ and each poplar eye path owns its own `fill-box` pivot beneath the cluster's sha
 skip ripples start at the campsite shoreline, choose a continuous heading from −60° to +60° around
 straight-out, shrink with distance, and cap and remove their runtime SVG children. Run
 `tests/entrance-roadtrip-camp-interactions.js` when changing them.
+Checkpoint restoration keeps live highway routes resume-pending, but the terminal `camp` route is
+never resume-pending—even after blur/visibility lifecycle events—so its permanent RSVP caption is
+not hidden behind the driving pause state.
+While Camping owns the Entrance overlay, document-level Enter dismisses the camp before the backing
+Balcony room can interpret it as its Tetris shortcut.
 The separate `entranceRoadtripDemerits:v1` driver record stores timestamped citation batches.
 Each batch expires after three wall-clock minutes; active suspension discards the old batches and
 reinstatement creates a fresh seven-point batch. `scheduleRoadtripDemeritExpiryPaint()` updates an

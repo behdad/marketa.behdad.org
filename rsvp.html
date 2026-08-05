@@ -40486,7 +40486,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripPolice();
   }
   function setRoadtripResumePending(pending) {
-    pending = !!(roadtripState.active && pending);
+    pending = !!(roadtripState.active && roadtripState.route !== "camp" && pending);
     var changed = roadtripResumePending !== pending;
     roadtripResumePending = pending;
     room.classList.toggle("roadtrip-resume-pending", pending);
@@ -40730,6 +40730,12 @@ window.__entranceRoomOpen = false;
     restoreRoadtripOnEntranceOpen = false;
     roadtripState.accepted = true;
     if (!startRoadtrip(false)) return false;
+    if (roadtripState.route === "camp") {
+      roadtripTransportPaused = false;
+      setRoadtripResumePending(false);
+      syncPorscheDriveInstruction(true);
+      return true;
+    }
     roadtripTransportPaused = true;
     setRoadtripResumePending(true);
     return true;
@@ -45233,9 +45239,18 @@ document.addEventListener("keydown", function (event) {
     if (event.code === "Backquote" || event.key === "`") return;
     if (event.key === "Tab") return;
     if (campSceneOpen) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        var campEnterDismiss = document.getElementById("entrance-roadtrip-dismiss");
+        if (campEnterDismiss) campEnterDismiss.dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }));
+        else if (window.__exitEntranceRoadtrip) window.__exitEntranceRoadtrip();
+        return;
+      }
       var campControl = event.target && event.target.closest &&
         event.target.closest("#entrance-roadtrip-camp [tabindex]");
-      if (campControl && (event.key === "Enter" || event.key === " " || event.key === "Spacebar")) {
+      if (campControl && (event.key === " " || event.key === "Spacebar")) {
         campControl.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
         event.preventDefault();
         event.stopImmediatePropagation();

@@ -14,7 +14,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       key: window.__captionKey && window.__captionKey(),
       text: caption && caption.textContent,
       blinking: !!(caption && caption.classList.contains("hint-blink")),
-      route: window.__entranceRoomState().drive.roadtrip.route
+      route: window.__entranceRoomState().drive.roadtrip.route,
+      resumePending: window.__entranceRoomState().drive.roadtrip.resumePending,
+      entranceOpen: window.__entranceRoomState().open,
+      downstairs: window.__floorNavigationState().actual,
+      tetrisActive: window.__balconyTetrisState().active,
+      captionVisibility: caption && getComputedStyle(caption).visibility,
+      pauseDialog: getComputedStyle(document.getElementById("entrance-roadtrip-pause-dialog")).display
     };
   }
   window.addEventListener("load", function () {
@@ -36,12 +42,23 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.afterLanguageRoundTrip = snapshot();
             setTimeout(function () {
               report.steady = snapshot();
-              document.dispatchEvent(new KeyboardEvent("keydown", {
-                key: "Escape", code: "Escape", bubbles: true, cancelable: true
-              }));
-              report.afterExit = snapshot();
-              report.errors = (window.__errs || []).concat(report.errors);
-              document.getElementById("__report").textContent = JSON.stringify(report);
+              var checkpoint = window.__captureCheckpointSystems().entrance;
+              window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
+              report.afterContinue = snapshot();
+              window.dispatchEvent(new Event("blur"));
+              setTimeout(function () {
+                report.afterAttentionPause = snapshot();
+                window.dispatchEvent(new Event("focus"));
+                setTimeout(function () {
+                  report.afterRefocus = snapshot();
+                  document.dispatchEvent(new KeyboardEvent("keydown", {
+                    key: "Enter", code: "Enter", bubbles: true, cancelable: true
+                  }));
+                  report.afterExit = snapshot();
+                  report.errors = (window.__errs || []).concat(report.errors);
+                  document.getElementById("__report").textContent = JSON.stringify(report);
+                }, 400);
+              }, 400);
             }, 2400);
           } catch (error) {
             report.errors.push(String(error && error.stack || error));
@@ -97,9 +114,29 @@ check(steady.route === "camp" && steady.key === "entrance_roadtrip_camp_arrival"
   steady.text === "Congrats! You reached the end of the game. Now go do your RSVP!" && !steady.blinking,
   "the same reminder becomes steady without disappearing", steady);
 
+var afterContinue = result && result.afterContinue || {};
+check(afterContinue.route === "camp" && !afterContinue.resumePending &&
+  afterContinue.key === "entrance_roadtrip_camp_arrival" &&
+  afterContinue.text === "Congrats! You reached the end of the game. Now go do your RSVP!" &&
+  afterContinue.captionVisibility === "visible" && afterContinue.pauseDialog === "none",
+  "Continue restores Camping directly with its permanent RSVP reminder", afterContinue);
+
+var afterAttentionPause = result && result.afterAttentionPause || {};
+check(afterAttentionPause.route === "camp" && !afterAttentionPause.resumePending &&
+  afterAttentionPause.key === "entrance_roadtrip_camp_arrival" &&
+  afterAttentionPause.captionVisibility === "visible" && afterAttentionPause.pauseDialog === "none",
+  "Camping keeps its reminder when an attention pause fires", afterAttentionPause);
+
+var afterRefocus = result && result.afterRefocus || {};
+check(afterRefocus.route === "camp" && afterRefocus.entranceOpen && afterRefocus.downstairs &&
+  !afterRefocus.resumePending && afterRefocus.key === "entrance_roadtrip_camp_arrival" &&
+  afterRefocus.captionVisibility === "visible" && afterRefocus.pauseDialog === "none",
+  "refocus keeps Entrance ownership and the Camping reminder", afterRefocus);
+
 var afterExit = result && result.afterExit || {};
-check(afterExit.key !== "entrance_roadtrip_camp_arrival" && !afterExit.blinking,
-  "leaving Camping retires its reminder animation", afterExit);
+check(afterExit.key !== "entrance_roadtrip_camp_arrival" && !afterExit.blinking &&
+  !afterExit.tetrisActive,
+  "Enter leaves Camping without starting Balcony Tetris", afterExit);
 
 if (failures) process.exit(1);
 console.log("Camping RSVP caption checks passed.");

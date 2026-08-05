@@ -274,6 +274,8 @@ car each react. Skipped stones recede from the campsite shore into the lake at a
 −60° to +60° heading. A clicked
 poplar cluster wiggles all three bark eyes around their own centres.
 The end-of-game RSVP reminder pulses briefly, then stays above the camp scene.
+Continuing a saved game already at Camping returns directly to that reminder without a driving-resume pause.
+Press Enter to leave Camping and return to the Entrance dashboard.
 Arrows stay in the scene,
 while Escape, Backspace, or the top-right ×
 returns to the Entrance dashboard.

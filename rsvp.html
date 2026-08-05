@@ -1190,6 +1190,9 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 }
 #entrance-room.roadtrip-active.roadtrip-route-camp #entrance-roadtrip-camp{pointer-events:auto}
 #entrance-roadtrip-camp-porsche{pointer-events:all}
+#entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-porsche-copy{cursor:grab}
+#entrance-roadtrip-camp-porsche.is-dragging .entrance-roadtrip-camp-porsche-copy{cursor:grabbing}
+#entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-drag-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:grab}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:pointer;outline:none}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit:focus-visible{stroke:#fffdf8;stroke-width:2;stroke-dasharray:5 3;vector-effect:non-scaling-stroke}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-door-open{
@@ -38443,31 +38446,36 @@ window.__entranceRoomOpen = false;
     host.appendChild(copy);
     host.classList.add("roof-open", "windows-open");
     var carActions = {
-      door: { className: "door-open", on: "entrance_roadtrip_camp_door_open", off: "entrance_roadtrip_camp_door_closed" },
-      frunk: { className: "frunk-open", on: "entrance_roadtrip_camp_frunk_open", off: "entrance_roadtrip_camp_frunk_closed" },
-      trunk: { className: "trunk-open", on: "entrance_roadtrip_camp_trunk_open", off: "entrance_roadtrip_camp_trunk_closed" },
-      window: { className: "windows-open", on: "entrance_roadtrip_camp_windows_open", off: "entrance_roadtrip_camp_windows_closed" },
-      roof: { className: "roof-open", on: "entrance_roadtrip_camp_roof_open", off: "entrance_roadtrip_camp_roof_closed" },
-      lamps: { className: "lamps-on", on: "entrance_roadtrip_camp_lamps_on", off: "entrance_roadtrip_camp_lamps_off" }
+      door: "door-open",
+      frunk: "frunk-open",
+      trunk: "trunk-open",
+      window: "windows-open",
+      roof: "roof-open",
+      lamps: "lamps-on"
     };
+    var carDragHit = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    carDragHit.setAttribute("class", "entrance-roadtrip-camp-car-drag-hit");
+    carDragHit.setAttribute("d", "M8 263Q55 255 137 258L164 250H252Q284 252 346 269Q362 277 368 291L366 309Q356 324 329 324H60Q20 324 8 309Z");
+    copy.appendChild(carDragHit);
     var carHitLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
     carHitLayer.setAttribute("class", "entrance-roadtrip-camp-car-hits");
     [
-      ["door", "M154 251L266 252L266 291Q259 312 238 322H164L154 293Z"],
-      ["frunk", "M18 263L166 250L166 279L19 295Z"],
-      ["trunk", "M276 253L342 256Q365 264 372 284L364 294L278 274Z"],
-      ["window", "M174 258L195 224H233Q245 225 252 238L266 258Z"],
-      ["roof", "M247 244Q268 239 287 249L294 263H246Z"],
-      ["lamps", "M7 268Q30 259 58 266L58 287Q36 304 7 304Z"],
-      ["lamps", "M334 262Q363 266 373 283L370 304L338 294Z"]
+      ["door", "M165 264L258 266L255 289Q251 306 238 316Q207 321 172 317L165 294Z"],
+      ["frunk", "M29 270Q91 261 155 255L150 267Q91 274 31 282Z"],
+      ["trunk", "M281 259Q322 258 349 271L357 282Q323 271 283 268Z"],
+      ["window", "M177 254L197 229H231Q241 230 247 239L258 255Z"],
+      ["roof", "M194 218Q217 213 240 219L247 225Q220 219 198 225Z"],
+      ["lamps", "M9 286Q27 282 45 286L44 296Q27 302 10 300Z"],
+      ["lamps", "M345 287Q363 284 370 293L368 302L348 295Z"]
     ].forEach(function (row) {
       var hit = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      var label = roadtripCampCopy("entrance_roadtrip_camp_car_" + row[0] + "_aria");
+      var labelKey = "entrance_roadtrip_camp_car_" + row[0] + "_aria";
       hit.setAttribute("class", "entrance-roadtrip-camp-car-hit");
       hit.setAttribute("d", row[1]);
       hit.setAttribute("data-camp-car-action", row[0]);
+      hit.setAttribute("data-title-i", labelKey);
       hit.setAttribute("tabindex", "0");
-      hit.setAttribute("title", label);
+      hit.setAttribute("title", roadtripCampCopy(labelKey));
       carHitLayer.appendChild(hit);
     });
     copy.appendChild(carHitLayer);
@@ -38475,10 +38483,9 @@ window.__entranceRoomOpen = false;
       var target = event.target && event.target.closest ? event.target.closest("[data-camp-car-action]") : null;
       if (!target || roadtripState.route !== "camp") return false;
       var action = target.getAttribute("data-camp-car-action");
-      var config = carActions[action];
-      if (!config) return false;
-      var on = host.classList.toggle(config.className);
-      roadtripFeedback(on ? config.on : config.off);
+      var className = carActions[action];
+      if (!className) return false;
+      host.classList.toggle(className);
       return true;
     }
     carHitLayer.addEventListener("click", function (event) {
@@ -38492,6 +38499,66 @@ window.__entranceRoomOpen = false;
       event.preventDefault();
       event.stopPropagation();
     });
+    var carDrag = { active: false, moved: false, pointerId: null, startX: 0, startY: 0, x: 0, y: 0, originX: 0, originY: 0 };
+    function carDragPoint(event) {
+      var svg = host.ownerSVGElement;
+      var matrix = host.getScreenCTM && host.getScreenCTM();
+      if (!svg || !matrix || !matrix.inverse) return null;
+      try {
+        var point = svg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        return point.matrixTransform(matrix.inverse());
+      } catch (_error) { return null; }
+    }
+    function paintCampCarDrag() {
+      copy.setAttribute("transform", "translate(" + carDrag.x.toFixed(2) + " " + carDrag.y.toFixed(2) + ")");
+      host.setAttribute("data-camp-car-drag-x", carDrag.x.toFixed(2));
+      host.setAttribute("data-camp-car-drag-y", carDrag.y.toFixed(2));
+    }
+    function finishCampCarDrag(event) {
+      if (!carDrag.active || event && event.pointerId !== carDrag.pointerId) return false;
+      carDrag.active = false;
+      carDrag.pointerId = null;
+      host.classList.remove("is-dragging");
+      return true;
+    }
+    copy.addEventListener("pointerdown", function (event) {
+      if (roadtripState.route !== "camp" || event.button !== undefined && event.button !== 0 ||
+          event.target.closest && event.target.closest("[data-camp-car-action]")) return;
+      if (!(event.target.closest && event.target.closest(".entrance-roadtrip-camp-car-drag-hit"))) return;
+      var point = carDragPoint(event);
+      if (!point) return;
+      carDrag.active = true;
+      carDrag.moved = false;
+      carDrag.pointerId = event.pointerId;
+      carDrag.startX = point.x;
+      carDrag.startY = point.y;
+      carDrag.originX = carDrag.x;
+      carDrag.originY = carDrag.y;
+      if (copy.setPointerCapture) try { copy.setPointerCapture(event.pointerId); } catch (_error) {}
+    });
+    copy.addEventListener("pointermove", function (event) {
+      if (!carDrag.active || event.pointerId !== carDrag.pointerId) return;
+      var point = carDragPoint(event);
+      if (!point) return;
+      if (!carDrag.moved && Math.abs(point.x - carDrag.startX) + Math.abs(point.y - carDrag.startY) <= 3) return;
+      if (!carDrag.moved) {
+        carDrag.moved = true;
+        host.classList.add("is-dragging");
+      }
+      carDrag.x = Math.max(-30, Math.min(10, carDrag.originX + point.x - carDrag.startX));
+      carDrag.y = Math.max(-8, Math.min(8, carDrag.originY + point.y - carDrag.startY));
+      paintCampCarDrag();
+      event.preventDefault();
+    });
+    copy.addEventListener("pointerup", finishCampCarDrag);
+    copy.addEventListener("pointercancel", finishCampCarDrag);
+    host.addEventListener("touchmove", function (event) {
+      if (roadtripState.route === "camp" && event.target.closest &&
+          event.target.closest(".entrance-roadtrip-camp-car-drag-hit")) event.preventDefault();
+    }, { passive: false });
+    paintCampCarDrag();
     host.setAttribute("data-ready", "true");
   }
   var campNotebook = roadtripElement("entrance-roadtrip-camp-notebook");
@@ -47668,18 +47735,6 @@ var T = {
       entrance_roadtrip_camp_car_window_aria: "Raise or lower Fancy Stupid’s windows",
       entrance_roadtrip_camp_car_roof_aria: "Raise or lower Fancy Stupid’s top",
       entrance_roadtrip_camp_car_lamps_aria: "Switch Fancy Stupid’s lamps",
-      entrance_roadtrip_camp_door_open: "Fancy Stupid’s door is open.",
-      entrance_roadtrip_camp_door_closed: "Fancy Stupid’s door is closed.",
-      entrance_roadtrip_camp_frunk_open: "Fancy Stupid’s front trunk is open.",
-      entrance_roadtrip_camp_frunk_closed: "Fancy Stupid’s front trunk is closed.",
-      entrance_roadtrip_camp_trunk_open: "Fancy Stupid’s rear trunk is open.",
-      entrance_roadtrip_camp_trunk_closed: "Fancy Stupid’s rear trunk is closed.",
-      entrance_roadtrip_camp_windows_open: "Fancy Stupid’s windows are down.",
-      entrance_roadtrip_camp_windows_closed: "Fancy Stupid’s windows are up.",
-      entrance_roadtrip_camp_roof_open: "Fancy Stupid’s top is down.",
-      entrance_roadtrip_camp_roof_closed: "Fancy Stupid’s top is up.",
-      entrance_roadtrip_camp_lamps_on: "Fancy Stupid’s lamps are on.",
-      entrance_roadtrip_camp_lamps_off: "Fancy Stupid’s lamps are off.",
       entrance_roadtrip_camp_lake_aria: "Skip a stone across Abraham Lake",
       entrance_roadtrip_camp_poplar_aria: "Wiggle the poplar eyes",
       entrance_roadtrip_camp_pine_aria: "Drop a pinecone",
@@ -48968,18 +49023,6 @@ var T = {
       entrance_roadtrip_camp_car_window_aria: "Stáhnout nebo vytáhnout okna Fancy Stupid",
       entrance_roadtrip_camp_car_roof_aria: "Stáhnout nebo vytáhnout střechu Fancy Stupid",
       entrance_roadtrip_camp_car_lamps_aria: "Rozsvítit nebo zhasnout světla Fancy Stupid",
-      entrance_roadtrip_camp_door_open: "Dveře Fancy Stupid jsou otevřené.",
-      entrance_roadtrip_camp_door_closed: "Dveře Fancy Stupid jsou zavřené.",
-      entrance_roadtrip_camp_frunk_open: "Přední kufr Fancy Stupid je otevřený.",
-      entrance_roadtrip_camp_frunk_closed: "Přední kufr Fancy Stupid je zavřený.",
-      entrance_roadtrip_camp_trunk_open: "Zadní kufr Fancy Stupid je otevřený.",
-      entrance_roadtrip_camp_trunk_closed: "Zadní kufr Fancy Stupid je zavřený.",
-      entrance_roadtrip_camp_windows_open: "Okna Fancy Stupid jsou stažená.",
-      entrance_roadtrip_camp_windows_closed: "Okna Fancy Stupid jsou vytažená.",
-      entrance_roadtrip_camp_roof_open: "Střecha Fancy Stupid je stažená.",
-      entrance_roadtrip_camp_roof_closed: "Střecha Fancy Stupid je vytažená.",
-      entrance_roadtrip_camp_lamps_on: "Světla Fancy Stupid svítí.",
-      entrance_roadtrip_camp_lamps_off: "Světla Fancy Stupid jsou zhasnutá.",
       entrance_roadtrip_camp_lake_aria: "Hodit žabku přes jezero Abraham",
       entrance_roadtrip_camp_poplar_aria: "Rozhýbat oči na topolech",
       entrance_roadtrip_camp_pine_aria: "Shodit šišku",

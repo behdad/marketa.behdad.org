@@ -38,6 +38,15 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceRoadtripSetRoute("camp", 0);
 
         var marketa = document.getElementById("entrance-roadtrip-camp-marketa");
+        var behdad = document.getElementById("entrance-roadtrip-camp-behdad");
+        var tent = document.getElementById("entrance-roadtrip-camp-tent");
+        var car = document.getElementById("entrance-roadtrip-camp-porsche");
+        report.paintOrder = {
+          marketaBeforeTent: !!(marketa.compareDocumentPosition(tent) & Node.DOCUMENT_POSITION_FOLLOWING),
+          marketaBeforeCar: !!(marketa.compareDocumentPosition(car) & Node.DOCUMENT_POSITION_FOLLOWING),
+          behdadBeforeTent: !!(behdad.compareDocumentPosition(tent) & Node.DOCUMENT_POSITION_FOLLOWING),
+          behdadBeforeCar: !!(behdad.compareDocumentPosition(car) & Node.DOCUMENT_POSITION_FOLLOWING)
+        };
         var marketaMover = marketa.querySelector(".entrance-roadtrip-camp-character-drag");
         var marketaHit = marketa.querySelector(".entrance-roadtrip-camp-character-drag-hit");
         var marketaChair = marketaHit.nextElementSibling;
@@ -62,7 +71,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           settled: !marketa.classList.contains("dragging")
         };
 
-        var behdad = document.getElementById("entrance-roadtrip-camp-behdad");
         var behdadMover = behdad.querySelector(".entrance-roadtrip-camp-character-drag");
         var behdadHit = behdad.querySelector(".entrance-roadtrip-camp-character-drag-hit");
         start = centre(behdadHit);
@@ -145,6 +153,10 @@ function sameDelta(rows) {
 console.log("rsvp.html campsite camper dragging:");
 check(result && result.errors.length === 0,
   "camper drag harness has no uncaught errors", result && result.errors);
+check(result && result.paintOrder && result.paintOrder.marketaBeforeTent &&
+  result.paintOrder.marketaBeforeCar && result.paintOrder.behdadBeforeTent &&
+  result.paintOrder.behdadBeforeCar,
+  "both campers and their chairs paint behind the tent and parked car", result && result.paintOrder);
 check(result && result.marketa && result.marketa.offset[0] === 38 && result.marketa.offset[1] === 14 &&
   result.marketa.outerTransform === "translate(205 112) scale(.88)" && result.marketa.settled,
   "mouse dragging clamps Markéta and her chair inside their campsite area", result && result.marketa);

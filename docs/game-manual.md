@@ -196,8 +196,9 @@ On touch:
 
 - slide the blue horizontal control to steer smoothly, or keep dragging the
   steering wheel;
-- slide the pink vertical control upward for progressive acceleration or
-  downward for progressive braking, or keep pressing the physical pedals;
+- slide the tall pink vertical control upward for progressive acceleration or
+  downward for progressive braking; its extended gas range gives fine low-speed
+  control, and the physical pedals remain available;
 - select **AUTO** or **MANUAL** on the dashboard; in AUTO, select P/R/N/D;
   the shifter also supports the same multi-range drag, tap-forward, and
   long-press-backward gestures;

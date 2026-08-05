@@ -860,7 +860,7 @@ footer{margin-top:2.6rem}
 }
 #entrance-drive-touch-pedals{
   right:5px;bottom:5px;
-  width:clamp(62px,12vw,82px);height:clamp(118px,27vh,158px);border-radius:999px;
+  width:clamp(62px,12vw,82px);height:clamp(168px,54vh,280px);max-height:calc(100% - 42px);border-radius:999px;
   background:rgba(198,142,149,.82)
 }
 .entrance-drive-touch-pad::before,.entrance-drive-touch-pad::after{content:"";position:absolute;opacity:.82}
@@ -894,7 +894,6 @@ footer{margin-top:2.6rem}
 @media (any-pointer:coarse), (hover:none){#entrance-room.drive-hud-visible #entrance-drive-touch-controls{display:block}}
 @media (any-pointer:coarse) and (max-height:520px), (hover:none) and (max-height:520px){
   #entrance-drive-touch-steer{height:52px}
-  #entrance-drive-touch-pedals{height:112px}
   .entrance-drive-touch-pedal-label.accel{top:25px}.entrance-drive-touch-pedal-label.brake{bottom:25px}
 }
 #entrance-room.entrance-day #entrance-drive-hud{
@@ -35414,6 +35413,7 @@ window.__entranceRoomOpen = false;
   var PORSCHE_KEYBOARD_STEER_BASE = .28;
   var PORSCHE_KEYBOARD_STEER_BUILD_MS = 760;
   var PORSCHE_KEYBOARD_STEER_TAP_WINDOW_MS = 420;
+  var PORSCHE_TOUCH_THROTTLE_CURVE = 1.6;
   function porscheHaptic(pattern) {
     if (document.hidden || !navigator.vibrate) return false;
     try { return navigator.vibrate(pattern); }
@@ -41541,7 +41541,10 @@ window.__entranceRoomOpen = false;
   function updatePorscheTouchPedalPad(event) {
     if (!driveTouchPedalPad || event.pointerId !== porscheTouchPedals.pointerId) return false;
     porscheTouchPedals.input = -porscheTouchPadAxis(event, driveTouchPedalPad, true);
-    porscheTouchPedals.throttle = Math.max(0, porscheTouchPedals.input);
+    // Preserve full throttle at the top while stretching the low end into a finer
+    // progressive range for controlled partial acceleration.
+    porscheTouchPedals.throttle = Math.pow(Math.max(0, porscheTouchPedals.input),
+      PORSCHE_TOUCH_THROTTLE_CURVE);
     porscheTouchPedals.brake = Math.max(0, -porscheTouchPedals.input);
     setPorscheDriveHold("throttle", porscheTouchPedals.throttle > 0);
     setPorscheDriveHold("brake", porscheTouchPedals.brake > 0);

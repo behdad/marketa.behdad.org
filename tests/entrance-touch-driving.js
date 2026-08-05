@@ -40,8 +40,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       document.getElementById("entrance-drive-touch-controls").style.display = "block";
       document.body.appendChild(steerPad);
       document.body.appendChild(pedalPad);
-      steerPad.style.cssText += ";display:block;position:fixed;left:10px;top:100px;width:160px;height:60px";
-      pedalPad.style.cssText += ";display:block;position:fixed;left:300px;top:80px;width:70px;height:140px";
+      steerPad.style.cssText += ";display:block;position:fixed;left:10px;top:100px;width:160px";
+      pedalPad.style.cssText += ";display:block;position:fixed;left:300px;top:80px;width:70px";
+      var nativeSteerRect = steerPad.getBoundingClientRect();
+      var nativePedalRect = pedalPad.getBoundingClientRect();
+      report.steps.nativePadLayout = {
+        steerHeight: nativeSteerRect.height,
+        pedalHeight: nativePedalRect.height
+      };
+      steerPad.style.height = "60px";
+      pedalPad.style.height = "140px";
       var hornHit = horn.querySelector(".entrance-drive-hit");
       report.steps.targets = {
         ignition: hitSize("entrance-drive-ignition"),
@@ -90,6 +98,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       pointer(pedalPad, "pointerdown", 51, true, pr.left + pr.width / 2, pr.top + 12);
       pointer(steerPad, "pointerdown", 52, false, sr.right - 12, sr.top + sr.height / 2);
       report.steps.padCombo = window.__entranceRoomState().drive;
+      pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.top + pr.height * .3);
+      report.steps.padThrottleSmooth = window.__entranceRoomState().drive;
       pointer(steerPad, "pointermove", 52, false, sr.left + sr.width * .75, sr.top + sr.height / 2);
       report.steps.padSmooth = window.__entranceRoomState().drive;
       pointer(pedalPad, "pointermove", 51, true, pr.left + pr.width / 2, pr.bottom - 12);
@@ -134,6 +144,9 @@ check(steps.coachSteer && steps.coachSteer.blue && !steps.coachSteer.pink && ste
   "steering coach advertises both the blue pad and the original wheel", steps.coachSteer);
 check(steps.coachPedals && !steps.coachPedals.blue && steps.coachPedals.pink && steps.coachPedals.pedalArrows === 2,
   "driving coach advertises both the pink pad and the original pedals", steps.coachPedals);
+check(steps.nativePadLayout && steps.nativePadLayout.pedalHeight >= 168 &&
+  steps.nativePadLayout.pedalHeight >= steps.nativePadLayout.steerHeight * 2.5,
+  "the live pedal pad has extended analog travel", steps.nativePadLayout);
 check(steps.throttleFirst && steps.throttleFirst.holds.throttle && steps.throttleFirst.steeringAngle > 0,
   "a secondary steering finger works while the primary finger holds the accelerator", steps.throttleFirst);
 check(steps.steeringFirst && steps.steeringFirst.holds.throttle && steps.steeringFirst.steeringAngle < 0,
@@ -146,6 +159,11 @@ check(steps.padLayout && steps.padLayout.shown && steps.padLayout.steer.width >=
 check(steps.padCombo && steps.padCombo.holds.throttle && steps.padCombo.steeringAngle > 0 &&
   steps.padCombo.touchControls.throttle > .7 && steps.padCombo.touchControls.steering > .7,
   "two fingers can steer and accelerate through the new pads simultaneously", steps.padCombo);
+check(steps.padThrottleSmooth && steps.padThrottleSmooth.holds.throttle &&
+  steps.padThrottleSmooth.touchControls.throttle > .2 &&
+  steps.padThrottleSmooth.touchControls.throttle < .5 &&
+  steps.padThrottleSmooth.touchControls.brake === 0,
+  "the upper pedal travel provides progressive partial throttle", steps.padThrottleSmooth);
 check(steps.padSmooth && steps.padSmooth.touchControls.steering > .25 &&
   steps.padSmooth.touchControls.steering < .75,
   "steering strength follows smooth horizontal finger position", steps.padSmooth);

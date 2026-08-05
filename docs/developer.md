@@ -152,9 +152,10 @@ through the dashboard's existing steering, shift, throttle, brake, and dismiss o
 Keyboard steering starts at 28% authority, builds to full over 760 ms while held, and adds 22%
 for same-direction presses inside a 420 ms tap window; reversing resets to the gentle baseline.
 The direct touch-wheel input and the coarse-pointer blue steering pad bypass that transient
-keyboard ramp. The pink pedal pad owns a second pointer independently, maps its vertical position
+keyboard ramp. The tall pink pedal pad owns a second pointer independently, maps its vertical position
 to analog throttle or brake strength, and projects the active side through the existing pedal-hold
-state so dashboard animation, coaching, Road Trip resume, and lifecycle cleanup stay shared. The
+state so dashboard animation, coaching, Road Trip resume, and lifecycle cleanup stay shared. Its
+`PORSCHE_TOUCH_THROTTLE_CURVE` exponent stretches the low end without reducing full throttle. The
 wheel and physical pedal targets remain active alongside both pads.
 
 The drivetrain uses the 2010 base Boxster's six manual ratios (`3.667`, `2.050`, `1.407`, `1.133`,

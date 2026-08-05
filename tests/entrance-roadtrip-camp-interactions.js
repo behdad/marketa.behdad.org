@@ -35,7 +35,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           lastFish: ripples.getAttribute("data-last-fish"),
           rippleCount: ripples.children.length,
           fishCount: fish.children.length,
-          stones: document.querySelectorAll(".entrance-roadtrip-camp-stone").length
+          stones: document.querySelectorAll(".entrance-roadtrip-camp-stone").length,
+          trajectory: Array.prototype.map.call(ripples.children, function (ripple) {
+            return [Number(ripple.getAttribute("cx")), Number(ripple.getAttribute("cy")),
+              Number(ripple.getAttribute("rx"))];
+          }).slice(-4)
         };
 
         var poplars = document.querySelectorAll("#entrance-roadtrip-camp-aspen>g");
@@ -127,6 +131,11 @@ check(result && result.skips && result.skips.map(function (row) { return row.ski
 check(result && result.lake && result.lake.lastSkips === "4" && result.lake.lastFish === "true" &&
   result.lake.rippleCount === 9 && result.lake.fishCount === 1 && result.lake.stones === 0,
   "the lake paints only ripples and the occasional jumping fish", result && result.lake);
+check(result && result.lake && JSON.stringify(result.lake.trajectory.map(function (row) { return row[1]; })) ===
+  JSON.stringify([47, 37, 27, 17]) &&
+  result.lake.trajectory.every(function (row, index, rows) {
+    return row[2] === 9 - index && (!index || Math.abs(row[0] - rows[index - 1][0]) === 8);
+  }), "stone skips recede up the lake on a shallow shrinking diagonal", result && result.lake.trajectory);
 check(result && result.poplar && result.poplar.triggered && result.poplar.wrapperAnimation === "none" &&
   result.poplar.eyeAnimations.length === 3 && result.poplar.eyeAnimations.every(function (name) {
     return name === "entrance-roadtrip-camp-eye-wiggle";

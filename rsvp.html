@@ -38233,28 +38233,33 @@ window.__entranceRoomOpen = false;
     if (!layer) return null;
     var point = roadtripCampPoint(event);
     var x = Math.max(34, Math.min(646, point.x));
-    var y = Math.max(15, Math.min(44, point.y));
     var skips = Math.max(2, Math.min(4, Math.floor(Number(forcedSkips) ||
       (2 + Math.floor(Math.random() * 3)))));
-    var direction = x > 500 ? -1 : 1;
+    var direction = x > 500 ? -1 : x < 180 ? 1 : x < 340 ? -1 : 1;
+    var shorelineY = 47;
+    var skipPath = [];
     for (var index = 0; index < skips; index++) {
       while (layer.children.length >= 12) layer.firstElementChild.remove();
       var ripple = roadtripCampSvgNode("ellipse");
+      var rippleX = Math.max(22, Math.min(658, x + direction * index * 8));
+      var rippleY = shorelineY - index * 10;
       ripple.setAttribute("class", "entrance-roadtrip-camp-ripple");
-      ripple.setAttribute("cx", Math.max(22, Math.min(658, x + direction * index * 29)));
-      ripple.setAttribute("cy", y + (index % 2 ? 2 : 0));
-      ripple.setAttribute("rx", 7 + index * 1.4);
-      ripple.setAttribute("ry", 2.1 + index * .35);
+      ripple.setAttribute("cx", rippleX);
+      ripple.setAttribute("cy", rippleY);
+      ripple.setAttribute("rx", 9 - index);
+      ripple.setAttribute("ry", 2.8 - index * .4);
       ripple.style.animationDelay = index * 125 + "ms";
       layer.appendChild(ripple);
+      skipPath.push({ x: rippleX, y: rippleY });
       removeRoadtripCampEffect(ripple, 1100 + index * 125);
     }
     var fishJumps = typeof forcedFish === "boolean" ? forcedFish : Math.random() < .24;
-    if (fishJumps) spawnRoadtripCampFish(x + direction * Math.max(1, skips - 1) * 29, y - 1,
+    var lastSkip = skipPath[skipPath.length - 1];
+    if (fishJumps) spawnRoadtripCampFish(lastSkip.x, lastSkip.y - 1,
       Math.max(0, skips - 2) * 110);
     layer.setAttribute("data-last-skips", skips);
     layer.setAttribute("data-last-fish", fishJumps ? "true" : "false");
-    return { skips: skips, fish: fishJumps };
+    return { skips: skips, fish: fishJumps, path: skipPath };
   }
   function restartRoadtripCampOneShot(node, className) {
     if (!node) return false;

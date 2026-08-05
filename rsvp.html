@@ -1209,9 +1209,8 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp-porsche.is-dragging .entrance-roadtrip-camp-porsche-copy{cursor:grabbing}
 #entrance-roadtrip-camp-porsche .entrance-porsche-wheel{cursor:pointer}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-drag-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:grab}
-#entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:pointer;outline:none}
+#entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:pointer}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-wheel-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:pointer}
-#entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit:focus-visible{stroke:#fffdf8;stroke-width:2;stroke-dasharray:5 3;vector-effect:non-scaling-stroke}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-roof-stack-hit{display:none}
 #entrance-roadtrip-camp-porsche.roof-open .entrance-roadtrip-camp-roof-closed-hit{display:none}
 #entrance-roadtrip-camp-porsche.roof-open .entrance-roadtrip-camp-roof-stack-hit{display:inline}
@@ -1247,8 +1246,10 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 }
 #entrance-roadtrip-camp-porsche.trunk-open .entrance-roadtrip-camp-trunk-panel{transform:rotate(-54deg)}
 #entrance-roadtrip-camp-porsche.trunk-open .entrance-roadtrip-camp-trunk-well{opacity:1}
-#entrance-roadtrip-camp-porsche.lamps-on :is(.entrance-porsche-headlight-on,.entrance-porsche-taillight-on,
-  .entrance-porsche-headlight-beam,.entrance-porsche-taillight-glow,.entrance-porsche-running-light){opacity:1}
+#entrance-roadtrip-camp-porsche.headlights-on :is(.entrance-porsche-headlight-on,.entrance-porsche-headlight-beam),
+#entrance-roadtrip-camp-porsche.headlights-on .entrance-roadtrip-camp-front-running-lamp .entrance-porsche-running-light,
+#entrance-roadtrip-camp-porsche.taillights-on :is(.entrance-porsche-taillight-on,.entrance-porsche-taillight-glow),
+#entrance-roadtrip-camp-porsche.taillights-on .entrance-roadtrip-camp-rear-running-lamp .entrance-porsche-running-light{opacity:1}
 #entrance-roadtrip-camp-notebook{cursor:pointer;outline:none}
 #entrance-roadtrip-camp-notebook:focus-visible .entrance-roadtrip-camp-notebook-page{stroke:#fffdf8;stroke-width:2}
 .entrance-roadtrip-notebook-backdrop{
@@ -38526,6 +38527,8 @@ window.__entranceRoomOpen = false;
     mark("#entrance-porsche-frunk-panel", "entrance-roadtrip-camp-frunk-panel");
     mark("#entrance-porsche-trunk-well", "entrance-roadtrip-camp-trunk-well");
     mark("#entrance-porsche-trunk-panel", "entrance-roadtrip-camp-trunk-panel");
+    mark("#entrance-porsche-front-running-lamp", "entrance-roadtrip-camp-front-running-lamp");
+    mark("#entrance-porsche-rear-running-lamp", "entrance-roadtrip-camp-rear-running-lamp");
     copy.querySelectorAll("[id]").forEach(function (node) { node.removeAttribute("id"); });
     host.appendChild(copy);
     host.classList.add("roof-open", "windows-open");
@@ -38535,7 +38538,8 @@ window.__entranceRoomOpen = false;
       trunk: "trunk-open",
       window: "windows-open",
       roof: "roof-open",
-      lamps: "lamps-on"
+      headlights: "headlights-on",
+      taillights: "taillights-on"
     };
     // The cloned artwork keeps this internal scale; its hit layers must share that coordinate space.
     var carHitHost = copy.querySelector(".entrance-porsche-scale") || copy;
@@ -38552,18 +38556,14 @@ window.__entranceRoomOpen = false;
       ["window", "M168 257L187 226Q218 218 249 226L267 257Z"],
       ["roof", "M174 192Q218 180 260 193L274 220L252 223Q218 215 184 223L170 220Z", "entrance-roadtrip-camp-roof-closed-hit"],
       ["roof", "M242 232Q268 226 292 239L299 258L289 267L246 267L240 253Z", "entrance-roadtrip-camp-roof-stack-hit"],
-      ["lamps", "M5 268Q35 261 65 268L66 290Q60 304 52 312Q28 316 5 307Z"],
-      ["lamps", "M308 275Q347 268 380 280L378 322Q344 325 308 302Z"]
+      ["headlights", "M5 268Q35 261 65 268L66 290Q60 304 52 312Q28 316 5 307Z"],
+      ["taillights", "M308 275Q347 268 380 280L378 322Q344 325 308 302Z"]
     ].forEach(function (row) {
       var hit = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      var labelKey = "entrance_roadtrip_camp_car_" + row[0] + "_aria";
       hit.setAttribute("class", "entrance-roadtrip-camp-car-hit");
       if (row[2]) hit.classList.add(row[2]);
       hit.setAttribute("d", row[1]);
       hit.setAttribute("data-camp-car-action", row[0]);
-      hit.setAttribute("data-title-i", labelKey);
-      hit.setAttribute("tabindex", "0");
-      hit.setAttribute("title", roadtripCampCopy(labelKey));
       carHitLayer.appendChild(hit);
     });
     [["front", 95], ["rear", 296]].forEach(function (row) {
@@ -38593,12 +38593,6 @@ window.__entranceRoomOpen = false;
         event.stopPropagation();
         return;
       }
-      if (!activateCampCarProp(event)) return;
-      event.preventDefault();
-      event.stopPropagation();
-    });
-    carHitLayer.addEventListener("keydown", function (event) {
-      if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
       if (!activateCampCarProp(event)) return;
       event.preventDefault();
       event.stopPropagation();
@@ -48046,13 +48040,6 @@ var T = {
       entrance_roadtrip_camp_fire_no_tinder: "The match dies. Add tinder first.",
       entrance_roadtrip_camp_fire_no_twigs: "The tinder burns out. It needed twigs.",
       entrance_roadtrip_camp_fire_no_logs: "The tinder and twigs burn away. Add logs before lighting.",
-      entrance_roadtrip_camp_car_aria: "Open or close Fancy Stupid’s door",
-      entrance_roadtrip_camp_car_door_aria: "Open or close Fancy Stupid’s door",
-      entrance_roadtrip_camp_car_frunk_aria: "Open or close Fancy Stupid’s front trunk",
-      entrance_roadtrip_camp_car_trunk_aria: "Open or close Fancy Stupid’s rear trunk",
-      entrance_roadtrip_camp_car_window_aria: "Raise or lower Fancy Stupid’s windows",
-      entrance_roadtrip_camp_car_roof_aria: "Raise or lower Fancy Stupid’s top",
-      entrance_roadtrip_camp_car_lamps_aria: "Switch Fancy Stupid’s lamps",
       entrance_roadtrip_camp_lake_aria: "Skip a stone across Abraham Lake",
       entrance_roadtrip_camp_poplar_aria: "Wiggle the poplar eyes",
       entrance_roadtrip_camp_pine_aria: "Drop a pinecone",
@@ -49334,13 +49321,6 @@ var T = {
       entrance_roadtrip_camp_fire_no_tinder: "Sirka zhasla. Nejdřív přidej troud.",
       entrance_roadtrip_camp_fire_no_twigs: "Troud vyhořel. Potřeboval třísky.",
       entrance_roadtrip_camp_fire_no_logs: "Troud i třísky shořely. Před zapálením přidej polena.",
-      entrance_roadtrip_camp_car_aria: "Otevřít nebo zavřít dveře Fancy Stupid",
-      entrance_roadtrip_camp_car_door_aria: "Otevřít nebo zavřít dveře Fancy Stupid",
-      entrance_roadtrip_camp_car_frunk_aria: "Otevřít nebo zavřít přední kufr Fancy Stupid",
-      entrance_roadtrip_camp_car_trunk_aria: "Otevřít nebo zavřít zadní kufr Fancy Stupid",
-      entrance_roadtrip_camp_car_window_aria: "Stáhnout nebo vytáhnout okna Fancy Stupid",
-      entrance_roadtrip_camp_car_roof_aria: "Stáhnout nebo vytáhnout střechu Fancy Stupid",
-      entrance_roadtrip_camp_car_lamps_aria: "Rozsvítit nebo zhasnout světla Fancy Stupid",
       entrance_roadtrip_camp_lake_aria: "Hodit žabku přes jezero Abraham",
       entrance_roadtrip_camp_poplar_aria: "Rozhýbat oči na topolech",
       entrance_roadtrip_camp_pine_aria: "Shodit šišku",

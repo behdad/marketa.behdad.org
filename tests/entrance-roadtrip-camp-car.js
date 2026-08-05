@@ -60,7 +60,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var hits = copy.querySelectorAll("[data-camp-car-action]");
         var actionClasses = {
           door: "door-open", frunk: "frunk-open", trunk: "trunk-open",
-          window: "windows-open", roof: "roof-open", lamps: "lamps-on"
+          window: "windows-open", roof: "roof-open",
+          headlights: "headlights-on", taillights: "taillights-on"
         };
         var expectedPoints = [
           ["door", 170, 280], ["door", 220, 305], ["door", 260, 276],
@@ -68,8 +69,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           ["trunk", 307, 263], ["trunk", 334, 257], ["trunk", 362, 268],
           ["window", 174, 249], ["window", 220, 229], ["window", 238, 248],
           ["roof", 250, 252], ["roof", 270, 242], ["roof", 290, 252],
-          ["lamps", 15, 287], ["lamps", 49, 291],
-          ["lamps", 334, 286], ["lamps", 358, 291]
+          ["headlights", 15, 287], ["headlights", 49, 291],
+          ["taillights", 334, 286], ["taillights", 358, 291]
         ];
         report.points = expectedPoints.map(function (row) {
           return [row[0], pointHits(hits, row[1], row[2])];
@@ -122,9 +123,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           roofStayedOpen: host.classList.contains("roof-open"),
           trunkOpened: host.classList.contains("trunk-open")
         };
-        window.setLang("cs");
-        report.czechDoorTitle = copy.querySelector('[data-camp-car-action="door"]').getAttribute("title");
-        window.setLang("en");
+        report.labelCount = copy.querySelectorAll("[tabindex],[title],[data-title-i],[aria-label]").length;
 
         Object.keys(actionClasses).forEach(function (action) { host.classList.remove(actionClasses[action]); });
         function snapshot() {
@@ -162,8 +161,25 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           frunk: [opacity(".entrance-roadtrip-camp-frunk-panel"), opacity(".entrance-roadtrip-camp-frunk-well")],
           trunk: [getComputedStyle(copy.querySelector(".entrance-roadtrip-camp-trunk-panel")).transform,
             opacity(".entrance-roadtrip-camp-trunk-well")],
-          lamps: opacity(".entrance-porsche-headlight-on")
+          headlights: opacity(".entrance-porsche-headlight-on"),
+          taillights: opacity(".entrance-porsche-taillight-on")
         };
+        host.classList.remove("taillights-on");
+        report.frontLightsOnly = {
+          front: opacity(".entrance-porsche-headlight-on"),
+          rear: opacity(".entrance-porsche-taillight-on"),
+          frontRunning: opacity(".entrance-roadtrip-camp-front-running-lamp .entrance-porsche-running-light"),
+          rearRunning: opacity(".entrance-roadtrip-camp-rear-running-lamp .entrance-porsche-running-light")
+        };
+        host.classList.remove("headlights-on");
+        host.classList.add("taillights-on");
+        report.rearLightsOnly = {
+          front: opacity(".entrance-porsche-headlight-on"),
+          rear: opacity(".entrance-porsche-taillight-on"),
+          frontRunning: opacity(".entrance-roadtrip-camp-front-running-lamp .entrance-porsche-running-light"),
+          rearRunning: opacity(".entrance-roadtrip-camp-rear-running-lamp .entrance-porsche-running-light")
+        };
+        host.classList.add("headlights-on");
 
         var wheels = copy.querySelectorAll("[data-camp-car-wheel]");
         var sparkles = copy.querySelectorAll(".entrance-porsche-wheel-sparkle");
@@ -247,9 +263,9 @@ function transformNear(value, x, y) {
 
 console.log("rsvp.html campsite parked-car controls:");
 check(result && result.errors.length === 0, "controls run without uncaught errors", result && result.errors);
-check(result && result.hitMap && result.hitMap.count === 8 && result.hitMap.actionCount === 6 &&
+check(result && result.hitMap && result.hitMap.count === 8 && result.hitMap.actionCount === 7 &&
   result.hitMap.alignedWithArt && result.hitMap.dragBelowControls,
-  "six controls and the body drag surface share the artwork's scaled coordinate group",
+  "seven controls and the body drag surface share the artwork's scaled coordinate group",
   result && result.hitMap);
 check(result && result.points && result.points.every(function (row) {
   return row[1].indexOf(row[0]) >= 0 && row[1].every(function (action) {
@@ -265,23 +281,30 @@ check(result && result.overlaps && result.overlaps.every(function (row) {
 }), "only the visible folded roof overlaps its adjacent window/body controls", result && result.overlaps);
 var localMinimums = {
   door: [100, 60], frunk: [150, 33], trunk: [75, 24],
-  window: [95, 30], roof: [55, 34], lamps: [50, 40]
+  window: [95, 30], roof: [55, 34], headlights: [50, 40], taillights: [50, 40]
 };
 check(result && result.hitboxes && result.hitboxes.every(function (row) {
   var minimum = localMinimums[row.action];
   return row.local[0] >= minimum[0] && row.local[1] >= minimum[1] &&
     Math.min(row.rendered[0], row.rendered[1]) >= 28;
 }), "each control has generous local coverage and a practical rendered short edge", result && result.hitboxes);
-check(result && result.czechDoorTitle === "Otevřít nebo zavřít dveře Fancy Stupid",
-  "generated control titles follow the active language", result && result.czechDoorTitle);
+check(result && result.labelCount === 0,
+  "parked-car props carry no focus or accessibility labels", result && result.labelCount);
 check(result && result.props && result.props.isolated && result.props.captionStayed &&
   Object.values(result.props.classes).every(Boolean),
   "every prop toggles independently without replacing the campsite caption", result && result.props);
 check(result && result.props && result.props.door.join(",") === "1,0,1" &&
   result.props.roof.join(",") === "0,1,1" && result.props.window === "hidden" &&
   result.props.frunk.join(",") === "1,1" && result.props.trunk[0] !== "none" &&
-  result.props.trunk[1] === "1" && result.props.lamps === "1",
-  "all six toggles produce visible state changes", result && result.props);
+  result.props.trunk[1] === "1" && result.props.headlights === "1" && result.props.taillights === "1",
+  "all seven toggles produce visible state changes", result && result.props);
+check(result && result.frontLightsOnly && result.rearLightsOnly &&
+  result.frontLightsOnly.front === "1" && result.frontLightsOnly.rear === "0" &&
+  result.frontLightsOnly.frontRunning === "1" && result.frontLightsOnly.rearRunning === "0" &&
+  result.rearLightsOnly.front === "0" && result.rearLightsOnly.rear === "1" &&
+  result.rearLightsOnly.frontRunning === "0" && result.rearLightsOnly.rearRunning === "1",
+  "front and rear light regions control only their own lamps",
+  { front: result && result.frontLightsOnly, rear: result && result.rearLightsOnly });
 check(result && result.wheelSparkles && result.wheelSparkles.count === 2 &&
   result.wheelSparkles.front && result.wheelSparkles.rear &&
   transformNear(result.wheelSparkles.frontTransform, 95, 316) &&

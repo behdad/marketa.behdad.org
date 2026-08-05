@@ -203,6 +203,10 @@ The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 `__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,
 celestial bodies, and expanded winter mountain snow.
 
+`__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
+and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed
+or unattended.
+
 The capture-phase Entrance key owner consumes Camping navigation. Enter, Escape, and Backspace
 dismiss camp before the backing Balcony stage can handle the key. Camp actions go through
 `bindRoadtripCampAction()`. Animate untransformed inner wrappers, cap runtime SVG effects, and keep
@@ -213,7 +217,7 @@ stay on `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the
 Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`, and
-`tests/entrance-roadtrip-camp-sky.js` for this
+`tests/entrance-roadtrip-camp-sky.js`, and `tests/entrance-roadtrip-camp-audio.js` for this
 boundary.
 
 ### Scoring, police, and durable records

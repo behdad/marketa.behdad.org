@@ -38485,6 +38485,7 @@ window.__entranceRoomOpen = false;
       ensureRoadtripCampPorsche();
       syncRoadtripCampLayers();
     }
+    if (window.__updateRoadtripCampAudio) window.__updateRoadtripCampAudio();
   }
   function syncRoadtripCampLayers() {
     var camp = roadtripElement("entrance-roadtrip-camp");
@@ -39019,6 +39020,7 @@ window.__entranceRoomOpen = false;
       var selected = item === "tinder" ? campFireState.tinder : item === "twigs" ? campFireState.twigs : campFireState.logs === item;
       if (node) node.classList.toggle("selected", selected);
     });
+    if (window.__updateRoadtripCampAudio) window.__updateRoadtripCampAudio();
   }
   function syncRoadtripCampFireCaption(blink) {
     var key = campFireCaptionKey();
@@ -41522,6 +41524,7 @@ window.__entranceRoomOpen = false;
       roadtripState.exitUntilStop = false;
       resetRoadtripRun(false);
     }
+    if (window.__updateRoadtripCampAudio) window.__updateRoadtripCampAudio();
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
   }
   function pauseRoadtrip() {
@@ -47225,7 +47228,7 @@ window.__refreshRoomAmbience = function () {
   ["__updateFireSound", "__updateAquaSound", "__updateTotoroSound",
      "__updateGardenBirdsong", "__updateKettleHum", "__updateRadioSound",
      "__updatePcFan", "__updateCinemaProjectorHum", "__updateACHum", "__updateCityHum",
-     "__updateWind", "__updateRainSound", "__updatePorscheIdle"].forEach(function (name) {
+     "__updateWind", "__updateRainSound", "__updatePorscheIdle", "__updateRoadtripCampAudio"].forEach(function (name) {
     try { if (typeof window[name] === "function") window[name](); } catch (_error) {}
   });
 };
@@ -47395,6 +47398,8 @@ function audioBed(kind) {
     partyRec = { ac: ac, node: partyOutput, connected: true, startAt: ac.currentTime,
       endAt: ac.currentTime, startValue: initial, target: initial };
     __partyAudioOutputs.add(partyRec);
+  } else if (kind === "outdoor") {
+    out.connect(loftAudioDestination(ac));
   } else {
     out.connect(lowerFloorAudioOutput(ac));
   }
@@ -47419,6 +47424,164 @@ function audioBed(kind) {
     }
   });
 }
+(function () {
+  var bed = null, sources = [], master = null, fireBuffer = null, fireSource = null;
+  var fireGain = null, windGain = null, rainGain = null, stormGain = null;
+  var mix = { fire: 0, wind: 0, rain: 0, storm: 0 };
+
+  function campsiteAttended() {
+    var room = document.getElementById("entrance-room");
+    return !!(window.__entranceRoomOpen && room && room.classList.contains("roadtrip-active") &&
+      room.classList.contains("roadtrip-route-camp") && !document.hidden &&
+      document.visibilityState !== "hidden" && document.hasFocus() &&
+      !document.getElementById("loft-recovery-gate") &&
+      !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()));
+  }
+  function fireIsLit() {
+    var scene = document.getElementById("entrance-roadtrip-camp");
+    return !!(scene && scene.classList.contains("fire-built") && !scene.classList.contains("fire-out"));
+  }
+  function layerActive(name) {
+    return window.__weatherLayerActive ? !!window.__weatherLayerActive(name) :
+      name === "rain" ? !!window.__wxRain : !!window.__wxStorm;
+  }
+  function noiseBuffer(ctx, seconds, kind) {
+    var length = Math.ceil(ctx.sampleRate * seconds);
+    var buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    var data = buffer.getChannelData(0), smooth = 0, crackle = 0;
+    for (var i = 0; i < length; i++) {
+      var white = Math.random() * 2 - 1;
+      if (kind === "wind") {
+        smooth = smooth * .985 + white * .015;
+        var gust = .45 + .32 * Math.sin(i / length * Math.PI * 6.4) +
+          .18 * Math.sin(i / length * Math.PI * 17.7);
+        data[i] = (white * .24 + smooth * 2.1) * Math.max(.14, gust);
+      } else if (kind === "fire") {
+        if (Math.random() < .000075) crackle += .5 + Math.random() * .5;
+        crackle *= .9955;
+        smooth = smooth * .91 + white * .09;
+        data[i] = white * .035 + smooth * .11 + crackle * white;
+      } else {
+        data[i] = white;
+      }
+    }
+    return buffer;
+  }
+  function source(ctx, buffer, filterType, frequency, q, gain) {
+    var src = ctx.createBufferSource();
+    var filter = ctx.createBiquadFilter();
+    src.buffer = buffer;
+    src.loop = true;
+    filter.type = filterType;
+    filter.frequency.value = frequency;
+    filter.Q.value = q;
+    src.connect(filter);
+    filter.connect(gain);
+    src.start();
+    var record = { source: src, filter: filter };
+    sources.push(record);
+    return record;
+  }
+  function target(param, value, seconds) {
+    if (!param || !bed) return;
+    try {
+      var now = bed.currentTime;
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(Math.max(.0001, param.value), now);
+      param.linearRampToValueAtTime(Math.max(.0001, value), now + seconds);
+    } catch (_error) {}
+  }
+  function paintMix() {
+    if (!bed) return;
+    var raining = layerActive("rain"), storming = layerActive("storm");
+    mix.fire = fireIsLit() ? .04 : 0;
+    mix.wind = storming ? .03 : .012;
+    mix.rain = raining ? (storming ? .05 : .03) : 0;
+    mix.storm = storming ? .018 : 0;
+    if (mix.fire && !fireSource) {
+      fireSource = source(bed, fireBuffer, "bandpass", 1450, .55, fireGain);
+    }
+    target(fireGain.gain, mix.fire, .32);
+    if (!mix.fire && fireSource) {
+      var fadingFire = fireSource;
+      fireSource = null;
+      setTimeout(function () {
+        try { fadingFire.source.stop(); } catch (_error) {}
+        try { fadingFire.source.disconnect(); fadingFire.filter.disconnect(); } catch (_error2) {}
+        var index = sources.indexOf(fadingFire);
+        if (index >= 0) sources.splice(index, 1);
+      }, 430);
+    }
+    target(windGain.gain, mix.wind, .7);
+    target(rainGain.gain, mix.rain, .55);
+    target(stormGain.gain, mix.storm, .8);
+  }
+  function start() {
+    if (bed || !campsiteAttended()) return;
+    try {
+      bed = audioBed("outdoor");
+      if (!bed) return;
+      master = bed.createGain();
+      fireGain = bed.createGain();
+      windGain = bed.createGain();
+      rainGain = bed.createGain();
+      stormGain = bed.createGain();
+      master.gain.value = .9;
+      [fireGain, windGain, rainGain, stormGain].forEach(function (gain) {
+        gain.gain.value = .0001;
+        gain.connect(master);
+      });
+      master.connect(bed.destination);
+      var wind = noiseBuffer(bed, 7, "wind");
+      fireBuffer = noiseBuffer(bed, 6, "fire");
+      source(bed, wind, "bandpass", 780, .48, windGain);
+      source(bed, noiseBuffer(bed, 3, "rain"), "highpass", 1250, .35, rainGain);
+      source(bed, wind, "lowpass", 185, .5, stormGain);
+      paintMix();
+    } catch (_error) { stop(.05); }
+  }
+  function stop(fadeSecs) {
+    if (!bed) return;
+    fadeSecs = typeof fadeSecs === "number" ? fadeSecs : .45;
+    var oldBed = bed, oldSources = sources.slice(), oldMaster = master;
+    bed = null; sources = []; master = fireGain = windGain = rainGain = stormGain = null;
+    fireBuffer = fireSource = null;
+    mix = { fire: 0, wind: 0, rain: 0, storm: 0 };
+    try {
+      var now = oldBed.currentTime;
+      oldMaster.gain.cancelScheduledValues(now);
+      oldMaster.gain.setValueAtTime(Math.max(.0001, oldMaster.gain.value), now);
+      oldMaster.gain.linearRampToValueAtTime(.0001, now + fadeSecs);
+    } catch (_error) {}
+    setTimeout(function () {
+      oldSources.forEach(function (rec) {
+        try { rec.source.stop(); } catch (_error) {}
+        try { rec.source.disconnect(); rec.filter.disconnect(); } catch (_error2) {}
+      });
+      try { oldBed.close(); } catch (_error2) {}
+    }, fadeSecs * 1000 + 100);
+  }
+  function update() {
+    if (!campsiteAttended()) stop();
+    else {
+      start();
+      paintMix();
+    }
+    return window.__entranceRoadtripCampAudioState();
+  }
+  window.__updateRoadtripCampAudio = update;
+  window.__entranceRoadtripCampAudioState = function () {
+    return { active: !!bed, attended: campsiteAttended(), fireLit: fireIsLit(),
+      rain: layerActive("rain"), storm: layerActive("storm"), mix: {
+        fire: mix.fire, wind: mix.wind, rain: mix.rain, storm: mix.storm
+      }, fireSource: !!fireSource, sources: sources.length,
+      outdoor: !!(bed && bed._ac === __sharedAC) };
+  };
+  window.addEventListener("blur", function () { stop(); });
+  window.addEventListener("focus", update);
+  document.addEventListener("visibilitychange", update);
+  (function tick() { update(); setTimeout(tick, 800); })();
+})();
 var T = {
   en: {
     hunt_title: "Loft Day",

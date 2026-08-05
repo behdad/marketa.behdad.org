@@ -49,7 +49,8 @@ their volume controls never double-scale:
 
 1. **Beds / dances** → `audioBed()`. Each bed's graph ends at the handle's `.destination`,
    which is a per-bed unity **`_out` gain** → the shared lower-floor boundary →
-   `ac.destination`. Party dances alone insert one additional unity departure gain between
+   `ac.destination`. The campsite's explicit `audioBed("outdoor")` route skips only the indoor
+   lower-floor filter while retaining the same shared master/context. Party dances alone insert one additional unity departure gain between
    `_out` and the lower-floor boundary. Music/projector/dance beds
    apply the volume-button level at their own in-graph `_masterGain` (`__songVolume()`);
    ambient environmental beds (fire, aqua hush, wind…) sit at fixed low levels and are NOT
@@ -175,7 +176,7 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 
 - **Continuous ambient beds** (fire, aqua hush, totoro rain, bird, kettle, radio, PC fan, projector hum,
   Porsche idle/drivetrain, road bed, and driving loop,
-  AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
+  campsite fire/weather, AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
   **self-teardown on blur/hide** (`updateFocusGatedAudio` re-checks each). When they stop,
   the refcount drops and the manager can suspend. The recovery Continue/Start over cover also
   counts as a room-ambience cover, keeping its saved-room preview silent until a choice is made.
@@ -189,6 +190,12 @@ adds a smaller brightness lift. Its master follows `__songVolume()` so the music
 session master scale it independently of the Porsche engine/drivetrain bed.
 During an active Road Trip, returning focus keeps the simulation and all Porsche driving
 audio paused until a fresh steering or pedal input resumes both from a clean frame boundary.
+
+Abraham Lake Camping owns one bounded outdoor bed: soft wind is always present, completed lit
+fire raises its crackle layer, rain raises a brighter precipitation layer, and storm weather also
+raises wind and low rumble. The layers retarget gains in place; blur, hide, route pause/dismiss,
+recovery cover, or Entrance close fades and closes the bed; extinguishing fades and stops only the
+fire source.
 
 Fancy-Stupid's engine/drivetrain, driving loop, tire screech, and ABS chatter keep their
 authored source gains and then enter a car-only spatial output stage. Engine and tire noise

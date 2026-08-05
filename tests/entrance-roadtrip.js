@@ -349,7 +349,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     offer.czech = {
       title: invitation.querySelector("[data-i=entrance_roadtrip_invite_title]").textContent.trim(),
       accept: invitation.querySelector("[data-i=entrance_roadtrip_invite_accept]").textContent.trim(),
-      later: invitation.querySelector("[data-i=entrance_roadtrip_invite_later]").textContent.trim(),
       acceptMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-accept")),
       laterMetadata: metadataCount(document.getElementById("entrance-roadtrip-invite-later"))
     };
@@ -1353,8 +1352,7 @@ check(activation && activation.practice.some(function (row) { return row.practic
   activation.offer.metadata === 0 && activation.offer.title === "Let’s road trip!" &&
   activation.offer.transform === "translate(426 0)" &&
   activation.offer.czech.title === "Jedeme na výlet!" && activation.offer.czech.accept === "Vyjet na dálnici" &&
-  activation.offer.czech.later === "Později" && activation.offer.czech.acceptMetadata === 0 &&
-  activation.offer.czech.laterMetadata === 0 &&
+  activation.offer.czech.acceptMetadata === 0 && activation.offer.czech.laterMetadata === 0 &&
   activation.offer.viewBox === "0 -31 680 207" && activation.firstDismissed &&
   !activation.firstDismissed.visible && activation.firstDismissed.metadata === 0 &&
   !activation.firstDismissed.state.drive.roadtrip.active && !activation.firstDismissed.state.drive.roadtrip.accepted &&
@@ -1745,7 +1743,7 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   !close.reopened.roadtrip.accepted && close.reopened.roadtrip.everAccepted &&
   !close.reopened.roadtrip.invitationVisible && close.reopened.roadtrip.reentryVisible &&
   close.reopened.reentryVisible && close.reopened.reentryMetadata === 0 &&
-  close.reopened.label === "Road Trip ENTER ↵" && close.reopened.czechLabel === "Výlet ENTER ↵" &&
+  close.reopened.label === "Road Trip" && close.reopened.czechLabel === "Výlet" &&
   (close.reopened.button.right <= close.reopened.steering.left || close.reopened.button.left >= close.reopened.steering.right ||
     close.reopened.button.bottom <= close.reopened.steering.top || close.reopened.button.top >= close.reopened.steering.bottom) &&
   !close.reentryBeforeEnter.car.engineOn && !close.reentryBeforeEnter.drive.roadtrip.active &&

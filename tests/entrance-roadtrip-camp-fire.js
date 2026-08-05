@@ -13,6 +13,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     return true;
   }
+  function clickAtCampPoint(x, y) {
+    var svg = document.getElementById("entrance-drive-hud-svg");
+    if (!svg) return null;
+    var roomRect = document.getElementById("entrance-room").getBoundingClientRect();
+    var scale = Math.max(roomRect.width / 680, roomRect.height / 340);
+    var point = {
+      x: roomRect.left + (roomRect.width - 680 * scale) / 2 + x * scale,
+      y: roomRect.top + roomRect.height - 340 * scale + (y + 120) * scale
+    };
+    var target = document.elementFromPoint(point.x, point.y);
+    click(target);
+    return {
+      id: target && target.id,
+      tag: target && target.tagName,
+      parent: target && target.parentElement && target.parentElement.id,
+      point: [point.x, point.y]
+    };
+  }
   function snap() {
     var state = window.__entranceRoomState().drive.roadtrip.campFire;
     return {
@@ -24,22 +42,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     };
   }
   window.addEventListener("load", function () {
+    window.__unlockAllRooms();
+    window.goToStage("balcony");
     setTimeout(function () {
       try {
-        window.__unlockAllRooms();
-        window.goToStage("balcony");
         window.__openEntranceRoom();
+        document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
+        document.getElementById("entrance-room").scrollIntoView({ block: "center" });
         window.__openEntrancePorscheDriveHud();
         window.__entranceRoadtripStart();
         report.coachVisibleAfterStart = document.getElementById("entrance-drive-coach").classList.contains("show");
         window.__entranceRoadtripSetRoute("camp", 0);
         report.initial = snap();
         var caption = document.getElementById("hunt-caption");
-        caption.classList.add("intro-guide");
-        caption.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+        click(caption);
         report.captionClickOpened = snap().gameOpen;
-        click(document.getElementById("entrance-roadtrip-fire-close"));
-        click(document.getElementById("entrance-roadtrip-camp-empty-pit"));
+        report.pitTarget = clickAtCampPoint(340, 121);
         report.pitClickOpened = snap().gameOpen;
         window.__entranceRoadtripCampFirePlace("twigs");
         window.__entranceRoadtripCampFirePlace("twigs");
@@ -83,7 +101,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.errors.push(String(error && error.stack || error));
         document.getElementById("__report").textContent = JSON.stringify(report);
       }
-    }, 260);
+    }, 1000);
   });
 })();
 </script>`;
@@ -111,9 +129,10 @@ check(result && result.coachVisibleAfterStart === false,
   result && result.coachVisibleAfterStart);
 check(result && result.toggle && !result.toggle.twigs,
   "clicking a selected material again removes it from the pit", result && result.toggle);
-check(result && result.captionClickOpened && result.pitClickOpened,
-  "the arrival caption and empty firepit both open the builder", result && {
-    caption: result.captionClickOpened, pit: result.pitClickOpened
+check(result && !result.captionClickOpened && result.pitClickOpened &&
+  result.pitTarget && result.pitTarget.parent === "entrance-roadtrip-camp-empty-pit",
+  "only the empty firepit opens the builder", result && {
+    caption: result.captionClickOpened, pit: result.pitClickOpened, target: result.pitTarget
   });
 check(result && result.tinderOnly.result === "entrance_roadtrip_camp_fire_no_twigs" &&
   !result.tinderOnly.state.tinder, "tinder alone burns away without twigs", result && result.tinderOnly);

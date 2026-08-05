@@ -1068,6 +1068,8 @@ footer{margin-top:2.6rem}
 @keyframes entrance-roadtrip-camp-fire{to{transform:scale(.92,1.12)}}
 #entrance-roadtrip-camp-finished-fire{opacity:0;pointer-events:none;transition:opacity .55s ease}
 #entrance-roadtrip-camp.fire-built #entrance-roadtrip-camp-finished-fire{opacity:1;pointer-events:auto}
+.entrance-roadtrip-camp-fire-hit{pointer-events:none}
+#entrance-roadtrip-camp.fire-built:not(.fire-out) .entrance-roadtrip-camp-fire-hit{pointer-events:all}
 #entrance-roadtrip-camp.fire-out #entrance-roadtrip-camp-fire>*:not(.entrance-roadtrip-camp-fire-hit){opacity:0}
 #entrance-roadtrip-camp-cold-fire-hit{pointer-events:none;cursor:pointer}
 #entrance-roadtrip-camp.fire-out #entrance-roadtrip-camp-cold-fire-hit{pointer-events:all}
@@ -1090,8 +1092,6 @@ footer{margin-top:2.6rem}
 #entrance-roadtrip-fire-game.failed .fire-game-spark{animation:entrance-roadtrip-fire-fail .7s ease-out both}
 @keyframes entrance-roadtrip-fire-grow{from{opacity:0;transform:scale(.15)}35%{opacity:1;transform:scale(.45)}to{opacity:1;transform:scale(1)}}
 @keyframes entrance-roadtrip-fire-fail{from{opacity:0;transform:translateY(8px) scale(.2)}35%{opacity:1}to{opacity:0;transform:translateY(-12px) scale(.8)}}
-#hunt-caption.camp-fire-invite{pointer-events:auto;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:.16em}
-#hunt-caption.camp-fire-invite.intro-guide::before{pointer-events:auto;cursor:pointer}
 #entrance-roadtrip-camp-lake,
 #entrance-roadtrip-camp-aspen>g,
 #entrance-roadtrip-camp-tent,
@@ -33068,7 +33068,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   <g fill="#b7aa93" stroke="#574d43" stroke-width="1.3"><ellipse rx="82" ry="22" fill="#5b5247"/><circle cx="-62" cy="-8" r="18"/><circle cx="-35" cy="-18" r="19"/><circle cx="-5" cy="-21" r="18"/><circle cx="27" cy="-18" r="19"/><circle cx="59" cy="-7" r="18"/></g>
                   <path d="M-57 18L54-16M-52-17L58 18" stroke="#3c2e25" stroke-width="8" stroke-linecap="round"/>
                   <g id="entrance-roadtrip-camp-fire">
-                    <ellipse class="entrance-roadtrip-camp-fire-hit" cx="0" cy="-17" rx="39" ry="39" fill="#000" fill-opacity="0" pointer-events="all"/>
+                    <ellipse class="entrance-roadtrip-camp-fire-hit" cx="0" cy="-17" rx="39" ry="39" fill="#000" fill-opacity="0"/>
                     <path d="M-22 2Q-31-20-9-37Q-12-17 0-11Q2-37 22-51Q19-25 30-12Q35 4 20 13H-17Q-29 10-22 2Z" fill="#d94b2f" stroke="#712f25" stroke-width="1.5"/>
                     <path d="M-11 8Q-15-9 2-25Q0-7 11-4Q16-14 20-22Q27-4 18 9Z" fill="#f2b43b"/>
                     <path d="M-2 9Q-4 0 6-9Q4 3 11 9Z" fill="#fff0a1"/>
@@ -38541,9 +38541,6 @@ window.__entranceRoomOpen = false;
       var selected = item === "tinder" ? campFireState.tinder : item === "twigs" ? campFireState.twigs : campFireState.logs === item;
       if (node) node.classList.toggle("selected", selected);
     });
-    var caption = document.getElementById("hunt-caption");
-    if (caption) caption.classList.toggle("camp-fire-invite",
-      roadtripState.route === "camp" && !campFireState.complete && !campFireState.open);
   }
   function syncRoadtripCampFireCaption(blink) {
     var key = campFireCaptionKey();
@@ -38650,19 +38647,6 @@ window.__entranceRoomOpen = false;
     event.stopImmediatePropagation();
     replayRoadtripCampFire();
   }, true);
-  var campCaption = document.getElementById("hunt-caption");
-  function activateRoadtripCampCaption(event) {
-    if (!campCaption || !campCaption.classList.contains("camp-fire-invite")) return false;
-    if (window.__finishOpeningGuide) window.__finishOpeningGuide();
-    if (!campFireState.open && !openRoadtripCampFire()) return false;
-    event.preventDefault();
-    event.stopPropagation();
-    return true;
-  }
-  if (campCaption) {
-    campCaption.addEventListener("pointerdown", activateRoadtripCampCaption);
-    campCaption.addEventListener("click", activateRoadtripCampCaption);
-  }
   bindRoadtripCampAction(campLake, function (event) { throwRoadtripCampStone(event); });
   Array.prototype.forEach.call(document.querySelectorAll("#entrance-roadtrip-camp-aspen>g"), function (poplar) {
     bindRoadtripCampAction(poplar, function () {
@@ -41058,6 +41042,7 @@ window.__entranceRoomOpen = false;
   }
   function startRoadtrip(forceFresh, startingRoute, startingElapsed) {
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
+    if (window.__finishOpeningGuide) window.__finishOpeningGuide();
     if (syncRoadtripDemeritState()) {
       roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
       paintRoadtripInvite();

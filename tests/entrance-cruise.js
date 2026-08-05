@@ -33,13 +33,11 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__entranceDriveTransmissionMode("auto", true);
     window.__entranceDriveSetMotion(100, 4);
 
-    key("keydown", "ArrowUp", "ArrowUp");
-    key("keyup", "ArrowUp", "ArrowUp");
+    window.__entranceDriveStep(16);
     report.coach = {
-      state: drive().cruise,
       caption: document.getElementById("hunt-caption").textContent,
-      en: T.en.hunt.entrance_drive_cruise_coach,
-      cs: T.cs.hunt.entrance_drive_cruise_coach
+      en: T.en.hunt.entrance_drive_auto_desktop,
+      cs: T.cs.hunt.entrance_drive_auto_desktop
     };
 
     key("keydown", "Control", "ControlLeft", { ctrlKey: true });
@@ -114,9 +112,9 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html desktop cruise control:");
 check(result && result.errors.length === 0, "cruise harness has no uncaught errors", result && result.errors);
-check(result && result.coach && result.coach.state.coached && /Ctrl/.test(result.coach.caption) &&
+check(result && result.coach && /Ctrl/.test(result.coach.caption) &&
   /Ctrl/.test(result.coach.en) && /Ctrl/.test(result.coach.cs),
-  "the dedicated cruise coach names Control in both languages", result && result.coach);
+  "the initial driving instruction teaches cruise in both languages", result && result.coach);
 check(result && result.chord && result.chord.transmission.mode === "manual" && !result.chord.cruise.active,
   "Ctrl+Right changes transmission without toggling cruise", result && result.chord);
 check(result && result.claimed && result.engaged.cruise.active &&

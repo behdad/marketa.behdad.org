@@ -36318,7 +36318,6 @@ window.__entranceRoomOpen = false;
     temperature: 0,
     cruiseActive: false,
     cruiseTarget: 0,
-    cruiseCoachShown: false,
     holds: { throttle: false, brake: false, clutch: false, steerLeft: false, steerRight: false }
   };
   if (!room || !viewport || !balconyStage) return;
@@ -40711,6 +40710,8 @@ window.__entranceRoomOpen = false;
     paintRoadtripScore();
   }
   function porscheDriveInstructionKey() {
+    var touchDrive = navigator.maxTouchPoints > 0 && window.matchMedia &&
+      window.matchMedia("(any-pointer: coarse), (hover: none)").matches;
     if (!driveState.hudOpen) return "lower_entrance";
     if (roadtripState.active && roadtripState.route === "camp") return "entrance_roadtrip_camp_arrival";
     if (roadtripState.active && roadtripResumePending) return roadtripTransportPaused ?
@@ -40744,12 +40745,12 @@ window.__entranceRoomOpen = false;
     if (porscheTransmission.mode === "auto") {
       return porscheTransmission.range === "P" ? "entrance_drive_auto_park_hint" :
         porscheTransmission.range === "N" ? "entrance_drive_auto_neutral_hint" :
-        "entrance_drive_auto";
+        touchDrive ? "entrance_drive_auto" : "entrance_drive_auto_desktop";
     }
     if (!driveState.gear) return "entrance_drive_neutral_hint";
     if (driveState.gear > 0 && driveState.gear < 6 && driveState.rpm >= 6800) return "entrance_drive_shift_up";
     if (driveState.gear > 2 && driveState.rpm < 2000 && Math.abs(driveState.speed) > 4) return "entrance_drive_shift_down";
-    return "entrance_drive_manual";
+    return touchDrive ? "entrance_drive_manual" : "entrance_drive_manual_desktop";
   }
   function updateRoadtripShiftHint(milliseconds) {
     if (!roadtripState.active || porscheTransmission.mode !== "manual") {
@@ -42891,8 +42892,6 @@ window.__entranceRoomOpen = false;
     if (name === "throttle" && held && syncRoadtripPoliceSurrender()) held = false;
     var wasHeld = driveState.holds[name];
     driveState.holds[name] = held;
-    if (name === "throttle" && wasHeld && !held && window.__entranceRoomOpen &&
-        driveState.hudOpen && !document.hidden && document.hasFocus()) coachPorscheCruise();
     if (name === "clutch" && wasHeld !== held) {
       if (held) clearPorscheClutchEngagement(false);
       else beginPorscheClutchEngagement();
@@ -42970,13 +42969,6 @@ window.__entranceRoomOpen = false;
     if (driveHud) driveHud.classList.toggle("drive-cruise-on", active);
     paintPorscheDriveHud();
     return active;
-  }
-  function coachPorscheCruise() {
-    if (driveState.cruiseCoachShown || Math.abs(driveState.speed) < 30) return false;
-    driveState.cruiseCoachShown = true;
-    if (window.__flashCaptionKey) window.__flashCaptionKey(
-      "entrance_drive_cruise_coach", 5000, "entrance-drive-cruise");
-    return true;
   }
   function togglePorscheDriveGlovebox() {
     if (!driveState.hudOpen) return false;
@@ -43312,7 +43304,6 @@ window.__entranceRoomOpen = false;
     driveState.temperature = 0;
     driveState.cruiseActive = false;
     driveState.cruiseTarget = 0;
-    driveState.cruiseCoachShown = false;
     parkRoadtrip(true);
     repairRoadtripWindshield();
     roadtripState.unlocked = false;
@@ -44259,8 +44250,7 @@ window.__entranceRoomOpen = false;
         spins: driveState.spins,
         spinning: driveState.spinning,
         holds: Object.assign({}, driveState.holds),
-        cruise: { active: driveState.cruiseActive, target: driveState.cruiseTarget,
-          coached: driveState.cruiseCoachShown },
+        cruise: { active: driveState.cruiseActive, target: driveState.cruiseTarget },
         instruction: lastDriveInstruction,
         audioActive: !!porscheDriveAudioNodes,
         outsideTemperature: typeof window.__outdoorTempC === "function" ? window.__outdoorTempC() : null,
@@ -46694,7 +46684,9 @@ var T = {
       bedroom_ttt_wait_caption: "The window’s turn · it has a plan",
       lower_entrance: "Fancy-Stupid! · click the road to take the wheel.",
       entrance_drive_manual: "Let’s drive manual.",
+      entrance_drive_manual_desktop: "Manual · ↑ accelerates · ↓ brakes · tap Ctrl to hold speed.",
       entrance_drive_auto: "Automatic · steer, accelerate and brake.",
+      entrance_drive_auto_desktop: "Automatic · ↑ accelerates · ↓ brakes · tap Ctrl to hold speed.",
       entrance_drive_mode_auto: "Automatic transmission.",
       entrance_drive_mode_manual: "Manual transmission.",
       entrance_drive_status_auto: "Automatic, {gear}",
@@ -46715,7 +46707,6 @@ var T = {
       entrance_drive_rev_shift_auto: "Shift into D to drive.",
       entrance_drive_rev_shift_manual: "Shift into 1st to drive.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
-      entrance_drive_cruise_coach: "Tired of feathering the accelerator? Tap Ctrl to hold your speed.",
       entrance_drive_cruise_active: "Cruising at {speed} km/h · tap Ctrl to reset the held speed · brake to cancel.",
       entrance_roadtrip_drive: "Highway run · dodge traffic; collect ♥️, 🍄, 💋, 🐸 & ∞.",
       entrance_roadtrip_unlocked: "One lap down · fancy a roadtrip?",
@@ -47965,7 +47956,9 @@ var T = {
       bedroom_ttt_wait_caption: "Vitráž je na tahu · má svůj plán",
       lower_entrance: "Fancy-Stupid! · klikni na silnici a usedni za volant.",
       entrance_drive_manual: "Jeďme s manuálem.",
+      entrance_drive_manual_desktop: "Manuál · ↑ zrychluje · ↓ brzdí · Ctrl udrží rychlost.",
       entrance_drive_auto: "Automat · řiď, zrychluj a brzdi.",
+      entrance_drive_auto_desktop: "Automat · ↑ zrychluje · ↓ brzdí · Ctrl udrží rychlost.",
       entrance_drive_mode_auto: "Automatická převodovka.",
       entrance_drive_mode_manual: "Manuální převodovka.",
       entrance_drive_status_auto: "Automat, {gear}",
@@ -47986,7 +47979,6 @@ var T = {
       entrance_drive_rev_shift_auto: "Zařaď D a rozjeď se.",
       entrance_drive_rev_shift_manual: "Zařaď jedničku a rozjeď se.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
-      entrance_drive_cruise_coach: "Nebaví tě pořád mačkat plyn? Klepni na Ctrl a udržíš rychlost.",
       entrance_drive_cruise_active: "Tempomat drží {speed} km/h · Ctrl nastaví novou rychlost · brzda ho zruší.",
       entrance_roadtrip_drive: "Jízda po dálnici · vyhýbej se provozu; sbírej ♥️, 🍄, 💋, 🐸 a ∞.",
       entrance_roadtrip_unlocked: "Jedno kolo za tebou · dáme si výlet?",

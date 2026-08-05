@@ -167,13 +167,16 @@ to `3×`; collisions reset it and can damage the windshield, stall the engine, o
 transmission into neutral.
 
 At the Camping sign, the car slows automatically and enters camp below 10 km/h; no remaining
-momentum or extra acceleration is required. The lake, poplar eyes, tent, cooking pot, campers,
-notebook, and parked car react. Stones skip from shore at a randomized heading between −60° and
-+60°.
+momentum or extra acceleration is required. Click the empty pit, add tinder, twigs, and either log
+arrangement, then light it. Missing fuel burns out. Click the fire to extinguish it, then click the
+cold pit to build again.
 
-The RSVP reminder pulses, then remains above the camp. Continue returns directly to Camping, and
-the reminder survives leaving and returning focus to the page. Press `Enter`, Escape, Backspace, or
-the top-right × to leave Camping for the Entrance dashboard.
+The lake, poplar eyes, tent, campers, notebook, and parked car react. Stones skip from shore at a
+randomized heading between −60° and +60°.
+
+After the fire grows, the RSVP reminder pulses, then remains above the camp. Continue returns
+directly to Camping and retains a completed fire. Press `Enter`, Escape, Backspace, or the top-right
+× to leave Camping for the Entrance dashboard.
 
 Leaving the highway keeps the dashboard available but never resumes the run automatically. Drive
 another street lap and accept the invitation to return.

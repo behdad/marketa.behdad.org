@@ -188,18 +188,21 @@ At the Abraham entrance, `syncRoadtripCampApproachSpeed()` slows the car indepen
 or momentum. Below 10 km/h, `arriveRoadtripCamp()` parks the drivetrain and activates the camp
 overlay inside Entrance.
 
-Camping publishes `entrance_roadtrip_camp_arrival` through `__setLowerRoomCaption()`. Its brief
-`hint-blink` phase ends without releasing the keyed caption. The `camp` route is never resume-
-pending, including after checkpoint restore, blur, or visibility changes; otherwise the generic
-driving-pause rule hides the caption.
+Camping begins with an empty pit and publishes `entrance_roadtrip_camp_fire_invite` through
+`__setLowerRoomCaption()`. `campFireState` owns the focused build, fuel chain, log arrangement, and
+success transition. Built and lit/off state are durable; unfinished fuel resets on Continue.
+Success restores the finished fire/pot composition and the
+permanent `entrance_roadtrip_camp_arrival` RSVP caption. The `camp` route is never resume-pending,
+including after checkpoint restore, blur, or visibility changes.
 
 The capture-phase Entrance key owner consumes Camping navigation. Enter, Escape, and Backspace
 dismiss camp before the backing Balcony stage can handle the key. Camp actions go through
 `bindRoadtripCampAction()`. Animate untransformed inner wrappers, cap runtime SVG effects, and keep
 effects in the target's coordinate space.
 
-Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-caption.js`, and
-`tests/entrance-roadtrip-camp-interactions.js` for this boundary.
+Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
+`tests/entrance-roadtrip-camp-caption.js`, and `tests/entrance-roadtrip-camp-interactions.js` for
+this boundary.
 
 ### Scoring, police, and durable records
 

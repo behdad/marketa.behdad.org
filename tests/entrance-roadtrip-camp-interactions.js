@@ -80,13 +80,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.tentOpen = tent.classList.contains("open");
 
         var pot = document.getElementById("entrance-roadtrip-camp-pot");
-        report.potStartsBoiling = pot.classList.contains("simmering");
-        click(pot);
-        report.potStops = !pot.classList.contains("simmering");
-        pot.dispatchEvent(new KeyboardEvent("keydown", {
-          key: "Enter", code: "Enter", bubbles: true, cancelable: true
-        }));
-        report.potKeyboardStarts = pot.classList.contains("simmering");
+        report.potStartsCold = !pot.classList.contains("simmering");
 
         marketa.querySelector(".entrance-roadtrip-camp-character-head").classList.remove("laughing");
         var fullscreenArea = document.getElementById("hunt-fullscreen-area");
@@ -160,10 +154,8 @@ check(result && result.poplar && result.poplar.triggered && result.poplar.wrappe
 check(result && result.people && result.people.marketa && result.people.behdad,
   "each camper gets an independent head laugh", result && result.people);
 check(result && result.tentOpen, "the tent flap opens", result && result.tentOpen);
-check(result && result.potStartsBoiling && result.potStops && result.potKeyboardStarts,
-  "the rattling pot starts hot and toggles by pointer or keyboard", result && {
-    starts: result.potStartsBoiling, stops: result.potStops, keyboard: result.potKeyboardStarts
-  });
+check(result && result.potStartsCold,
+  "the hidden pot does not boil before the fire is built", result && result.potStartsCold);
 check(result && result.notebook && result.notebook.open && result.notebook.hostedInFullscreen &&
   result.notebook.didNotAlsoWiggle,
   "the notebook opens inside fullscreen and remains independent from Markéta’s reaction",

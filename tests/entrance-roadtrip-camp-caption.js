@@ -40,26 +40,34 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.czech = snapshot();
             setLang("en");
             report.afterLanguageRoundTrip = snapshot();
+            window.__entranceRoadtripCampFireStart();
+            window.__entranceRoadtripCampFirePlace("tinder");
+            window.__entranceRoadtripCampFirePlace("twigs");
+            window.__entranceRoadtripCampFirePlace("stack");
+            window.__entranceRoadtripCampFireLight();
             setTimeout(function () {
-              report.steady = snapshot();
-              var checkpoint = window.__captureCheckpointSystems().entrance;
-              window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
-              report.afterContinue = snapshot();
-              window.dispatchEvent(new Event("blur"));
+              report.completed = snapshot();
               setTimeout(function () {
-                report.afterAttentionPause = snapshot();
-                window.dispatchEvent(new Event("focus"));
+                report.steady = snapshot();
+                var checkpoint = window.__captureCheckpointSystems().entrance;
+                window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
+                report.afterContinue = snapshot();
+                window.dispatchEvent(new Event("blur"));
                 setTimeout(function () {
-                  report.afterRefocus = snapshot();
-                  document.dispatchEvent(new KeyboardEvent("keydown", {
-                    key: "Enter", code: "Enter", bubbles: true, cancelable: true
-                  }));
-                  report.afterExit = snapshot();
-                  report.errors = (window.__errs || []).concat(report.errors);
-                  document.getElementById("__report").textContent = JSON.stringify(report);
+                  report.afterAttentionPause = snapshot();
+                  window.dispatchEvent(new Event("focus"));
+                  setTimeout(function () {
+                    report.afterRefocus = snapshot();
+                    document.dispatchEvent(new KeyboardEvent("keydown", {
+                      key: "Enter", code: "Enter", bubbles: true, cancelable: true
+                    }));
+                    report.afterExit = snapshot();
+                    report.errors = (window.__errs || []).concat(report.errors);
+                    document.getElementById("__report").textContent = JSON.stringify(report);
+                  }, 400);
                 }, 400);
-              }, 400);
-            }, 2400);
+              }, 2400);
+            }, 1650);
           } catch (error) {
             report.errors.push(String(error && error.stack || error));
             document.getElementById("__report").textContent = JSON.stringify(report);
@@ -84,7 +92,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html Camping RSVP caption:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 7000, {
   forceMotion: true,
   urlSuffix: "?date=2026-07-15&time=12:00#play",
   chromeFlags: "--window-size=1100,900"
@@ -93,21 +101,26 @@ check(result && result.errors.length === 0, "the caption lifecycle has no uncaug
   result && result.errors);
 
 var arrival = result && result.arrival || {};
-check(arrival.route === "camp" && arrival.key === "entrance_roadtrip_camp_arrival" &&
-  arrival.text === "Congrats! You reached the end of the game. Now go do your RSVP!" && arrival.blinking,
-  "Camping owns the persistent English RSVP reminder", arrival);
+check(arrival.route === "camp" && arrival.key === "entrance_roadtrip_camp_fire_invite" &&
+  arrival.text === "What a beautiful campsite! Let’s build a fire." && arrival.blinking,
+  "Camping first invites the player to build a fire", arrival);
 
 var czech = result && result.czech || {};
-check(czech.key === "entrance_roadtrip_camp_arrival" &&
-  czech.text === "Gratulujeme! Dojeli jste na konec hry. Teď běžte vyplnit RSVP!",
-  "the persistent reminder follows a Czech language switch", czech);
+check(czech.key === "entrance_roadtrip_camp_fire_invite" &&
+  czech.text === "To je ale krásné tábořiště! Pojďme rozdělat oheň.",
+  "the fire invitation follows a Czech language switch", czech);
 
 var afterLanguageRoundTrip = result && result.afterLanguageRoundTrip || {};
 check(afterLanguageRoundTrip.route === "camp" &&
-  afterLanguageRoundTrip.key === "entrance_roadtrip_camp_arrival" &&
-  afterLanguageRoundTrip.text === "Congrats! You reached the end of the game. Now go do your RSVP!" &&
+  afterLanguageRoundTrip.key === "entrance_roadtrip_camp_fire_invite" &&
+  afterLanguageRoundTrip.text === "What a beautiful campsite! Let’s build a fire." &&
   afterLanguageRoundTrip.blinking,
-  "the reminder remains keyed after caption re-rendering", afterLanguageRoundTrip);
+  "the invitation remains keyed after caption re-rendering", afterLanguageRoundTrip);
+
+var completed = result && result.completed || {};
+check(completed.key === "entrance_roadtrip_camp_arrival" &&
+  completed.text === "Congrats! You reached the end of the game. Now go do your RSVP!" && completed.blinking,
+  "the completed fire reveals the RSVP reminder", completed);
 
 var steady = result && result.steady || {};
 check(steady.route === "camp" && steady.key === "entrance_roadtrip_camp_arrival" &&

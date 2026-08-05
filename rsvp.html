@@ -33398,6 +33398,14 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <g fill="#dbe7eb" font-size="6" font-weight="700"><text x="-18" y="15">0</text><text x="-24" y="0">50</text><text x="-14" y="-17">100</text><text x="7" y="-22">150</text><text x="22" y="-8">200</text><text x="21" y="12">250</text></g>
               <text id="entrance-drive-odometer" x="0" y="25" fill="#e3f0f4" font-size="4.8" font-weight="700" letter-spacing=".1">000.0 KM</text>
               <g id="entrance-drive-speed-needle"><path d="M0 0L-18 16" stroke="#e3443c" stroke-width="2" stroke-linecap="round"/><circle r="3.1" fill="#20262a"/></g>
+              <g id="entrance-drive-cruise-indicator" transform="translate(0 15)" opacity="0">
+                <g transform="translate(-7 0) scale(.17)" fill="none" stroke="#8fe2d0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M-16 5A18 18 0 1 1 16 5"/>
+                  <path d="M0 5L-9-5M-18-10L-12-9L-15-4"/>
+                  <path d="M-14-5L-10-2M-7-11L-5-7M0-13V-9M7-11L5-7M14-5L10-2"/>
+                </g>
+                <text id="entrance-drive-cruise-speed" x="3" y="2" fill="#8fe2d0" font-size="6.2" font-weight="800">100</text>
+              </g>
             </g>
             <g transform="translate(338 79)">
               <circle r="31" fill="url(#entrance-drive-gauge)" stroke="url(#entrance-drive-metal)" stroke-width="3"/>
@@ -35692,6 +35700,8 @@ window.__entranceRoomOpen = false;
   var driveFuelNeedle = document.getElementById("entrance-drive-fuel-needle");
   var driveTachReadout = document.getElementById("entrance-drive-tach-readout");
   var driveAutoReadout = document.getElementById("entrance-drive-auto-readout");
+  var driveCruiseIndicator = document.getElementById("entrance-drive-cruise-indicator");
+  var driveCruiseSpeed = document.getElementById("entrance-drive-cruise-speed");
   var driveClockReadout = document.getElementById("entrance-drive-clock-readout");
   var driveOdometer = document.getElementById("entrance-drive-odometer");
   var driveSteering = document.getElementById("entrance-drive-steering");
@@ -35887,6 +35897,8 @@ window.__entranceRoomOpen = false;
   var driveShifterSuppressClickUntil = 0;
   var driveShiftKeyHeld = false;
   var driveDownshiftArrowHeld = false;
+  var driveControlKeyDown = false;
+  var driveControlChord = false;
   var lastDriveInstruction = "";
   var roadtripShiftHintKey = "";
   var roadtripShiftHintMs = 0;
@@ -36299,6 +36311,9 @@ window.__entranceRoomOpen = false;
     noseDive: 0,
     longitudinalDeceleration: 0,
     temperature: 0,
+    cruiseActive: false,
+    cruiseTarget: 0,
+    cruiseCoachShown: false,
     holds: { throttle: false, brake: false, clutch: false, steerLeft: false, steerRight: false }
   };
   if (!room || !viewport || !balconyStage) return;
@@ -36496,11 +36511,13 @@ window.__entranceRoomOpen = false;
     return 1;
   }
   function neutralPorscheTransmission() {
+    setPorscheCruiseActive(false);
     driveState.gear = 0;
     if (porscheTransmission.mode === "auto") porscheTransmission.range = "N";
     resetPorscheAutomaticRuntime();
   }
   function parkPorscheTransmission() {
+    setPorscheCruiseActive(false);
     driveState.gear = 0;
     if (porscheTransmission.mode === "auto") porscheTransmission.range = "P";
     resetPorscheAutomaticRuntime();
@@ -36553,6 +36570,7 @@ window.__entranceRoomOpen = false;
   function setPorscheTransmissionMode(mode, explicit) {
     mode = mode === "auto" ? "auto" : mode === "manual" ? "manual" : "";
     if (!mode) return false;
+    setPorscheCruiseActive(false);
     var changed = mode !== porscheTransmission.mode;
     var previousMode = porscheTransmission.mode;
     var previousRange = porscheTransmission.range;
@@ -36628,6 +36646,7 @@ window.__entranceRoomOpen = false;
       return false;
     }
     var previousRange = porscheTransmission.range;
+    if (range !== "D") setPorscheCruiseActive(false);
     porscheTransmission.range = range;
     clearPorscheClutchEngagement(true);
     driveState.holds.clutch = false;
@@ -41186,6 +41205,8 @@ window.__entranceRoomOpen = false;
     }
     if (driveTachReadout) driveTachReadout.textContent = driveState.stalled ? "STALL" : driveGearLabel();
     if (driveAutoReadout) driveAutoReadout.textContent = driveGearLabel();
+    if (driveCruiseIndicator) driveCruiseIndicator.setAttribute("opacity", driveState.cruiseActive ? "1" : "0");
+    if (driveCruiseSpeed) driveCruiseSpeed.textContent = String(Math.round(driveState.cruiseTarget));
     if (driveOdometer) driveOdometer.textContent = porscheDriveOdometerLabel();
     if (driveShifterTouchPreviewGear !== null) paintPorscheShifter(driveShifterTouchPreviewGear);
     else if (!driveShifterAttemptTimer) paintPorscheShifter(
@@ -42854,6 +42875,7 @@ window.__entranceRoomOpen = false;
     if (!Object.prototype.hasOwnProperty.call(driveState.holds, name)) return false;
     if (syncRoadtripDemeritState()) return true;
     held = !!held;
+    if (name === "brake" && held) setPorscheCruiseActive(false);
     if (name === "clutch" && porscheTransmission.mode === "auto") held = false;
     if (name === "throttle" && held && roadtripFrontStopBlocksDrive()) held = false;
     // The pedal may still press with the ignition off, but it is not a driving
@@ -42864,6 +42886,8 @@ window.__entranceRoomOpen = false;
     if (name === "throttle" && held && syncRoadtripPoliceSurrender()) held = false;
     var wasHeld = driveState.holds[name];
     driveState.holds[name] = held;
+    if (name === "throttle" && wasHeld && !held && window.__entranceRoomOpen &&
+        driveState.hudOpen && !document.hidden && document.hasFocus()) coachPorscheCruise();
     if (name === "clutch" && wasHeld !== held) {
       if (held) clearPorscheClutchEngagement(false);
       else beginPorscheClutchEngagement();
@@ -42896,6 +42920,57 @@ window.__entranceRoomOpen = false;
       if (control.getAttribute("data-drive-hold") === name) control.classList.toggle("pressed", !!held);
     });
     if (held && (canAdvanceSimulation || Math.abs(driveState.speed) > .02)) ensurePorscheDriveFrame();
+    return true;
+  }
+  function porscheCruiseAvailable() {
+    var relativeSpeed = driveState.speed * driveState.facing;
+    if (!window.__entranceRoomOpen || !driveState.hudOpen || !porscheState.engineOn ||
+        driveState.stalled || driveState.gear <= 0 || relativeSpeed < 10 || driveState.holds.brake) return false;
+    if (porscheTransmission.mode === "auto" && porscheTransmission.range !== "D") return false;
+    if (roadtripState.exitUntilStop || roadtripFrontStopBlocksDrive() ||
+        ["capture", "stopped", "arrest"].indexOf(roadtripState.police.phase) >= 0) return false;
+    return !(roadtripState.active && (roadtripState.route === "camp" ||
+      roadtripState.route === "abraham" && roadtripState.abrahamElapsed >= ROADTRIP_ABRAHAM_SECONDS));
+  }
+  function setPorscheCruiseActive(active) {
+    active = !!active;
+    if (!active) {
+      driveState.cruiseActive = false;
+      driveState.cruiseTarget = 0;
+      if (driveHud) driveHud.classList.remove("drive-cruise-on");
+      paintPorscheDriveHud();
+      return true;
+    }
+    if (!porscheCruiseAvailable()) return false;
+    resumeRoadtripFromDrivingInput();
+    driveState.cruiseActive = true;
+    driveState.cruiseTarget = driveState.speed * driveState.facing;
+    if (driveHud) driveHud.classList.add("drive-cruise-on");
+    if (window.__flashCaptionKey) window.__flashCaptionKey(
+      "entrance_drive_cruise_active", 3200, "entrance-drive-cruise",
+      { speed: Math.round(driveState.cruiseTarget) });
+    paintPorscheDriveHud();
+    ensurePorscheDriveFrame();
+    return true;
+  }
+  function restorePorscheCruiseSnapshot(snapshot) {
+    var target = snapshot && Number(snapshot.target);
+    var relativeSpeed = driveState.speed * driveState.facing;
+    var active = !!(snapshot && snapshot.active === true && Number.isFinite(target) &&
+      target >= 10 && target <= 263 && relativeSpeed >= 10 && driveState.gear > 0 &&
+      porscheState.engineOn && !driveState.stalled &&
+      (porscheTransmission.mode !== "auto" || porscheTransmission.range === "D"));
+    driveState.cruiseActive = active;
+    driveState.cruiseTarget = active ? target : 0;
+    if (driveHud) driveHud.classList.toggle("drive-cruise-on", active);
+    paintPorscheDriveHud();
+    return active;
+  }
+  function coachPorscheCruise() {
+    if (driveState.cruiseCoachShown || Math.abs(driveState.speed) < 30) return false;
+    driveState.cruiseCoachShown = true;
+    if (window.__flashCaptionKey) window.__flashCaptionKey(
+      "entrance_drive_cruise_coach", 5000, "entrance-drive-cruise");
     return true;
   }
   function togglePorscheDriveGlovebox() {
@@ -43035,6 +43110,15 @@ window.__entranceRoomOpen = false;
         gradeRelativeAfter = 0;
       }
       driveState.speed = gradeRelativeAfter * driveState.facing;
+    }
+    if (driveState.cruiseActive) {
+      if (!porscheCruiseAvailable()) setPorscheCruiseActive(false);
+      else if (!brake && !driveState.holds.throttle) {
+        var cruiseRelativeSpeed = driveState.speed * driveState.facing;
+        if (cruiseRelativeSpeed < driveState.cruiseTarget) {
+          driveState.speed = driveState.cruiseTarget * driveState.facing;
+        }
+      }
     }
     settlePorscheStaticSpeed(drivenAcceleration);
     var roadtripLugging = porscheTransmission.mode === "manual" && roadtripState.active && driveState.gear > 1 &&
@@ -43186,6 +43270,8 @@ window.__entranceRoomOpen = false;
     porscheTouchSteering.returning = false;
     setPorscheDriveShiftKeyHeld(false);
     driveDownshiftArrowHeld = false;
+    driveControlKeyDown = false;
+    driveControlChord = false;
     if (driveFrame) cancelAnimationFrame(driveFrame);
     if (driveTimer) clearTimeout(driveTimer);
     driveFrame = null;
@@ -43219,6 +43305,9 @@ window.__entranceRoomOpen = false;
     driveState.shiftCutMs = 0;
     clearPorscheClutchEngagement(true);
     driveState.temperature = 0;
+    driveState.cruiseActive = false;
+    driveState.cruiseTarget = 0;
+    driveState.cruiseCoachShown = false;
     parkRoadtrip(true);
     repairRoadtripWindshield();
     roadtripState.unlocked = false;
@@ -43244,12 +43333,27 @@ window.__entranceRoomOpen = false;
     if (!event) return false;
     var key = String(event.key || "").toLowerCase();
     var code = String(event.code || "");
+    var controlKeyEvent = code === "ControlLeft" || code === "ControlRight" || key === "control";
+    if (controlKeyEvent) {
+      if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
+      if (down && !event.repeat) {
+        driveControlKeyDown = true;
+        driveControlChord = false;
+      } else if (!down && driveControlKeyDown) {
+        if (!driveControlChord) setPorscheCruiseActive(true);
+        driveControlKeyDown = false;
+        driveControlChord = false;
+      }
+      return true;
+    }
     var transmissionModeArrow = event.ctrlKey && !event.metaKey && !event.altKey &&
       (code === "ArrowLeft" || code === "ArrowRight");
     if (transmissionModeArrow) {
       if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
-      if (down && !event.repeat) setPorscheTransmissionMode(
-        code === "ArrowLeft" ? "auto" : "manual", true);
+      if (down && !event.repeat) {
+        driveControlChord = true;
+        setPorscheTransmissionMode(code === "ArrowLeft" ? "auto" : "manual", true);
+      }
       return true;
     }
     if (roadtripResumePending && down && event.repeat) return !!window.__entranceRoomOpen;
@@ -43959,9 +44063,11 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) {
       stopRoadtripArrestSounds();
     }
-    if (!window.__entranceRoomOpen ||
-        (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) ||
-        unattendedRoadtrip) {
+    var driveSceneCovered = window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered();
+    if (!window.__entranceRoomOpen || driveSceneCovered || unattendedRoadtrip) {
+      if (!window.__entranceRoomOpen || driveSceneCovered) setPorscheCruiseActive(false);
+      driveControlKeyDown = false;
+      driveControlChord = false;
       cancelPorscheShifterPress();
       cancelPorscheTouchSteering();
       cancelPorscheTouchPedals();
@@ -44148,6 +44254,8 @@ window.__entranceRoomOpen = false;
         spins: driveState.spins,
         spinning: driveState.spinning,
         holds: Object.assign({}, driveState.holds),
+        cruise: { active: driveState.cruiseActive, target: driveState.cruiseTarget,
+          coached: driveState.cruiseCoachShown },
         instruction: lastDriveInstruction,
         audioActive: !!porscheDriveAudioNodes,
         outsideTemperature: typeof window.__outdoorTempC === "function" ? window.__outdoorTempC() : null,
@@ -44735,7 +44843,7 @@ window.__entranceRoomOpen = false;
     var police = {};
     Object.keys(roadtripState.police).forEach(function (key) { police[key] = roadtripState.police[key]; });
     return {
-      version: 2,
+      version: 3,
       state: state,
       drive: {
         stalled: driveState.stalled,
@@ -44755,7 +44863,8 @@ window.__entranceRoomOpen = false;
         clutchEngagementRpm: driveState.clutchEngagementRpm,
         clutchEngagementStrength: driveState.clutchEngagementStrength,
         noseLift: driveState.noseLift,
-        noseDive: driveState.noseDive
+        noseDive: driveState.noseDive,
+        cruise: { active: driveState.cruiseActive, target: driveState.cruiseTarget }
       },
       police: police,
       entities: roadtripState.entities.map(captureRoadtripEntity),
@@ -44785,7 +44894,7 @@ window.__entranceRoomOpen = false;
   }
   function restoreRoadtripRun(snapshot) {
     var version = snapshot && Number(snapshot.version);
-    if (!snapshot || (version !== 1 && version !== 2) || !snapshot.state || snapshot.police && snapshot.police.runEnded === true) {
+    if (!snapshot || (version !== 1 && version !== 2 && version !== 3) || !snapshot.state || snapshot.police && snapshot.police.runEnded === true) {
       return false;
     }
     resetRoadtripRun(false);
@@ -44857,6 +44966,7 @@ window.__entranceRoomOpen = false;
     driveState.noseDive = roadtripSnapshotNumber(savedDrive.noseDive, 0, 0, PORSCHE_NOSE_DIVE_MAX_DEG);
     driveState.longitudinalDeceleration = 0;
     restorePorscheTransmissionSnapshot(savedDrive.transmission);
+    restorePorscheCruiseSnapshot(savedDrive.cruise);
     restoreRoadtripEntities(snapshot.entities);
     restoreRoadtripDamage(snapshot.damage);
     roadtripState.active = false;
@@ -44909,6 +45019,7 @@ window.__entranceRoomOpen = false;
           odometerKm: Math.round(driveState.odometerKm * 1000) / 1000,
           facing: driveState.facing,
           yaw: driveState.yaw,
+          cruise: { active: driveState.cruiseActive, target: driveState.cruiseTarget },
           spinDirection: driveState.spinDirection,
           spins: driveState.spins,
           roadtrip: roadtrip
@@ -44957,6 +45068,7 @@ window.__entranceRoomOpen = false;
         if (Number.isFinite(Number(row.drive.wraps))) driveState.wraps = Math.max(0, Math.floor(Number(row.drive.wraps)));
         if (Number.isFinite(Number(row.drive.odometerKm))) driveState.odometerKm = Math.max(0, Math.min(1000000000, Number(row.drive.odometerKm)));
         restorePorscheTransmissionSnapshot(row.drive.transmission);
+        restorePorscheCruiseSnapshot(row.drive.cruise);
         var roadtrip = row.drive.roadtrip && typeof row.drive.roadtrip === "object" ? row.drive.roadtrip : null;
         if (roadtrip) {
           roadtripState.unlocked = roadtrip.unlocked === true;
@@ -45072,14 +45184,15 @@ document.addEventListener("keydown", function (event) {
   var campSceneOpen = entranceRoom && entranceRoom.classList.contains("roadtrip-active") &&
     entranceRoom.classList.contains("roadtrip-route-camp");
   var driveHudOpen = entranceRoom && entranceRoom.classList.contains("drive-hud-visible");
-  if (driveHudOpen && !campSceneOpen && event.ctrlKey && !event.metaKey && !event.altKey &&
-      (event.code === "ArrowLeft" || event.code === "ArrowRight")) {
+  if (driveHudOpen && !campSceneOpen && !event.metaKey && !event.altKey &&
+      (event.code === "ControlLeft" || event.code === "ControlRight" || event.key === "Control")) {
     if (window.__entranceDriveKey) window.__entranceDriveKey(event, true);
     event.preventDefault();
     event.stopImmediatePropagation();
     return;
   }
-  if (driveHudOpen && !event.ctrlKey && !event.metaKey) {
+  if (driveHudOpen && (!event.ctrlKey || event.code === "ArrowDown" || event.code === "ArrowLeft" ||
+      event.code === "ArrowRight") && !event.metaKey) {
     if (event.code === "Backquote" || event.key === "`") return;
     if (event.key === "Tab") return;
     if (campSceneOpen) {
@@ -45218,7 +45331,8 @@ document.addEventListener("keyup", function (event) {
   var driveRelease = event.code === "Space" || event.code === "ArrowUp" ||
     event.code === "ArrowDown" || event.code === "ArrowLeft" ||
     event.code === "ArrowRight" || event.code === "ShiftLeft" ||
-    event.code === "ShiftRight";
+    event.code === "ShiftRight" || event.code === "ControlLeft" ||
+    event.code === "ControlRight";
   if (entranceRoom && entranceRoom.classList.contains("drive-hud-visible") &&
       !(entranceRoom.classList.contains("roadtrip-active") && entranceRoom.classList.contains("roadtrip-route-camp")) && driveRelease) {
     window.__entranceDriveKey(event, false);
@@ -46596,6 +46710,8 @@ var T = {
       entrance_drive_rev_shift_auto: "Shift into D to drive.",
       entrance_drive_rev_shift_manual: "Shift into 1st to drive.",
       entrance_drive_stalled: "You killed it. Restart the engine.",
+      entrance_drive_cruise_coach: "Tired of feathering the accelerator? Tap Ctrl to hold your speed.",
+      entrance_drive_cruise_active: "Cruising at {speed} km/h · tap Ctrl to reset the held speed · brake to cancel.",
       entrance_roadtrip_drive: "Highway run · dodge traffic; collect ♥️, 🍄, 💋, 🐸 & ∞.",
       entrance_roadtrip_unlocked: "One lap down · fancy a roadtrip?",
       entrance_roadtrip_resume: "Roadtrip paused · steer or press a pedal to resume.",
@@ -47863,6 +47979,8 @@ var T = {
       entrance_drive_rev_shift_auto: "Zařaď D a rozjeď se.",
       entrance_drive_rev_shift_manual: "Zařaď jedničku a rozjeď se.",
       entrance_drive_stalled: "Motor zhasl. Nastartuj ho znovu.",
+      entrance_drive_cruise_coach: "Nebaví tě pořád mačkat plyn? Klepni na Ctrl a udržíš rychlost.",
+      entrance_drive_cruise_active: "Tempomat drží {speed} km/h · Ctrl nastaví novou rychlost · brzda ho zruší.",
       entrance_roadtrip_drive: "Jízda po dálnici · vyhýbej se provozu; sbírej ♥️, 🍄, 💋, 🐸 a ∞.",
       entrance_roadtrip_unlocked: "Jedno kolo za tebou · dáme si výlet?",
       entrance_roadtrip_resume: "Jízda pozastavena · pokračuj volantem nebo pedálem.",

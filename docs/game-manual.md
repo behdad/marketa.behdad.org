@@ -130,6 +130,7 @@ On desktop:
 - select **AUTO** or **MANUAL**, press `A` / `M`, or use `Ctrl`+`←` / `Ctrl`+`→`;
 - steer with `←` / `→`; holding or repeated taps steer more strongly;
 - accelerate with `↑` and brake with `↓`;
+- tap `Ctrl` to hold or reset cruising speed; brake to cancel;
 - in AUTO, use `Shift`+`↓` toward D and `Shift`+`↑` toward P;
 - in MANUAL, use `Shift`+`↑` / `Shift`+`↓` to change gear.
 

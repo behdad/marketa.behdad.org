@@ -141,8 +141,11 @@ loop.
 
 Input must flow through the shared steering, transmission, throttle, brake, and dismiss owners.
 Keyboard steering ramps from a gentle tap to full authority; touch steering and pedal pads provide
-direct analog input. AUTO and MANUAL share the same physical motion state but have separate shift
-rules. The automatic R↔D interlock is valid only below 10 km/h in the opposite direction.
+direct analog input. A standalone Control tap captures a forward speed floor at 10 km/h or above;
+acceleration can exceed it, another tap retargets it, and braking, an invalid drivetrain state,
+police capture, or the Camping approach releases it. AUTO and MANUAL share the same physical motion state but have
+separate shift rules. The automatic R↔D interlock is valid only below 10 km/h in the opposite
+direction.
 
 The six-speed manual derives coupled RPM from road speed, with launch slip as the exception.
 `spinPorscheOnBrake()` owns both hard-brake gestures. `driveState.odometerKm` records physical
@@ -213,11 +216,12 @@ must not rewind either record; full reset clears them through their existing own
 The first forward practice wrap unlocks Road Trip. Unlock and best score survive sessions, while
 invitation acceptance and active presentation do not. Checkpoint restore may retain a paused run,
 but active highway presentation resumes only through Entrance and requires explicit driving input
-unless the route is terminal Camping.
+unless the route is terminal Camping. The paused-run drive snapshot also owns cruise activation and
+its held-speed target; unattended lifecycle cleanup releases momentary inputs without clearing it.
 
 Primary coverage is `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`,
-`tests/entrance-recovery.js`, `tests/entrance-roadtrip.js`, `tests/entrance-roadtrip-pause.js`,
-`tests/entrance-roadtrip-scoring.js`, `tests/entrance-windshield-cracks.js`,
+`tests/entrance-recovery.js`, `tests/entrance-cruise.js`, `tests/entrance-roadtrip.js`,
+`tests/entrance-roadtrip-pause.js`, `tests/entrance-roadtrip-scoring.js`, `tests/entrance-windshield-cracks.js`,
 `tests/entrance-demerits.js`, and `tests/entrance-police.js`.
 
 ## Apps and minigames

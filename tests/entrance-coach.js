@@ -79,6 +79,12 @@ window.addEventListener("load", function () { setTimeout(function () {
       pedalEn: T.en.hunt.entrance_drive_coach_auto_pedals_desktop,
       pedalCs: T.cs.hunt.entrance_drive_coach_auto_pedals_desktop
     };
+    var reentry = document.getElementById("entrance-roadtrip-reenter");
+    reentry.classList.add("show");
+    var reentryBox = reentry.getBoundingClientRect();
+    var helpBox = help.getBoundingClientRect();
+    report.reentryGap = helpBox.left - reentryBox.right;
+    reentry.classList.remove("show");
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
   }
@@ -114,6 +120,12 @@ window.addEventListener("load", function () { setTimeout(function () {
       en: T.en.hunt.entrance_drive_coach_auto_pedals_touch,
       cs: T.cs.hunt.entrance_drive_coach_auto_pedals_touch
     };
+    var reentry = document.getElementById("entrance-roadtrip-reenter");
+    reentry.classList.add("show");
+    var reentryBox = reentry.getBoundingClientRect();
+    var helpBox = document.getElementById("entrance-drive-help").getBoundingClientRect();
+    report.reentryGap = helpBox.left - reentryBox.right;
+    reentry.classList.remove("show");
     key("keydown", "ArrowLeft", "ArrowLeft"); key("keyup", "ArrowLeft", "ArrowLeft");
     report.usedControl = coach();
   } catch (error) { report.errors.push(String(error && error.stack || error)); }
@@ -121,7 +133,7 @@ window.addEventListener("load", function () { setTimeout(function () {
 }, 180); });
 </script>`;
 var mobile = lib.runPageSync("rsvp.html", MOBILE_HARNESS, 2400,
-  { patchRaf: true, forceCoarsePointer: true });
+  { patchRaf: true, forceCoarsePointer: true, chromeFlags: "--window-size=844,390" });
 var failed = false;
 function check(ok, message, detail) {
   console.log("  " + (ok ? "✓" : "✗") + " " + message +
@@ -169,6 +181,8 @@ check(result && result.restarted.coach.show && result.restarted.coach.step === 2
 check(result && result.copy && /Ctrl/.test(result.copy.en) && /Ctrl/.test(result.copy.cs) &&
   !/Ctrl/.test(result.copy.pedalEn) && !/Ctrl/.test(result.copy.pedalCs),
   "the dedicated cruise step teaches Ctrl in both languages", result && result.copy);
+check(result && result.reentryGap >= 8,
+  "desktop Road Trip button clears driving help", result && result.reentryGap);
 check(mobile && mobile.errors.length === 0 && mobile.fresh.show && mobile.fresh.step === 1,
   "mobile coach starts with ignition", mobile);
 check(mobile && mobile.started.show && mobile.started.step === 3,
@@ -181,6 +195,8 @@ check(mobile && /Blue/.test(mobile.copy.en) && /pink/.test(mobile.copy.en) &&
   "combined slider coaching is bilingual", mobile && mobile.copy);
 check(mobile && !mobile.usedControl.show,
   "using either combined control completes the mobile coach", mobile && mobile.usedControl);
+check(mobile && mobile.reentryGap >= 8,
+  "mobile Road Trip button clears driving help", mobile && mobile.reentryGap);
 
 if (failed) process.exit(1);
 console.log("Driving-coach assertions passed.");

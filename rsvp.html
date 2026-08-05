@@ -6157,21 +6157,23 @@ html.is-webkit .tattoo-grid, html.is-webkit .mail-body, html.is-webkit .mail-lis
 #monitor-tattoo-close:hover .seg-hover,#monitor-tattoo-back:hover .seg-hover{opacity:.55}
 #monitor-tattoo-back{opacity:0;pointer-events:none}
 #office-monitor.show-tattoo #monitor-tattoo-back.is-visible{opacity:1;pointer-events:auto}
-.tattoo-wrap{width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#f6ebe8; font-family:sans-serif; font-size:2.5px; line-height:1.3; color:#453a31; overflow:hidden} /* no position:relative — the paint canvas anchors to its own .tattoo-canvas-wrap, and a wrap layer vanished the whole app under the monitor's scaled foreignObject (WebKit bug 23113) */
+.tattoo-wrap{--tattoo-skin-behdad:#e6b489; --tattoo-skin-marketa:#f2cfae; width:124px; height:42px; box-sizing:border-box; display:flex; flex-direction:column; background:#f6ebe8; font-family:sans-serif; font-size:2.5px; line-height:1.3; color:#453a31; overflow:hidden} /* no position:relative — the paint canvas anchors to its own .tattoo-canvas-wrap, and a wrap layer vanished the whole app under the monitor's scaled foreignObject (WebKit bug 23113) */
 .tattoo-lead{flex:none; padding:1px 3px 0; color:#716455; font-size:2.3px; line-height:1.25}
 .tattoo-grid{flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:1.6px; padding:1.6px 3px 2px; overflow-y:scroll; scrollbar-width:thin; scrollbar-color:rgba(69,58,49,.45) transparent}
 .tattoo-grid::-webkit-scrollbar{width:2.5px}
 .tattoo-grid::-webkit-scrollbar-thumb{background:rgba(69,58,49,.45); border-radius:1px}
 .tattoo-grid::-webkit-scrollbar-track{background:transparent}
 .tattoo-cell{display:flex; flex-direction:column; align-items:center; cursor:pointer}
-.tattoo-thumb{width:100%; aspect-ratio:1/1; box-sizing:border-box; padding:0.8px; object-fit:contain; border-radius:1px; background:#fff; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.2)}
+.tattoo-thumb{width:100%; aspect-ratio:1/1; box-sizing:border-box; padding:0.8px; object-fit:contain; border-radius:1px; box-shadow:inset 0 0 0 0.3px rgba(69,58,49,0.2)}
+.tattoo-skin-behdad{background:var(--tattoo-skin-behdad)}
+.tattoo-skin-marketa{background:var(--tattoo-skin-marketa)}
 .tattoo-cell:hover .tattoo-thumb{box-shadow:inset 0 0 0 0.6px #c68e95}
 .tattoo-cap{white-space:nowrap; text-align:center; font-size:2px; color:#716455; margin-top:0.3px}
 .tattoo-credit{flex:none; width:100%; text-align:center; font-size:2px; color:#716455; padding:0 3px 0.6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .tattoo-new{display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1/1; box-sizing:border-box; border-radius:1px; background:#f7efe9; border:0.4px dashed #c68e95; color:#c68e95; font-size:5px; line-height:1}
 .tattoo-cell:hover .tattoo-new{background:#faf3ef}
 .tattoo-preview{flex:1; display:grid; grid-template:minmax(0,1fr)/minmax(0,1fr); place-items:center; min-height:0; padding:2px; overflow:hidden} /* minmax(0,1fr) tracks (grid-stack, not position:absolute) so the artist overlay survives the monitor's scaled foreignObject — WebKit bug 23113 — and the image is contained to the card instead of the track growing to the image's intrinsic height and cropping it */
-.tattoo-preview img{grid-area:1/1; max-width:100%; max-height:100%; object-fit:contain; border-radius:1px; background:#fff; box-shadow:0 0.5px 2px rgba(0,0,0,0.25)}
+.tattoo-preview img{grid-area:1/1; max-width:100%; max-height:100%; object-fit:contain; border-radius:1px; box-shadow:0 0.5px 2px rgba(0,0,0,0.25)}
 .tattoo-preview .tattoo-artist{grid-area:1/1; justify-self:end; align-self:end; margin:0 0.5px 0.5px 0; line-height:0}
 .tattoo-artist-svg{display:block; height:11px; width:auto; overflow:visible} /* no filter/transform/opacity — this SVG is a descendant of the monitor's scaled foreignObject, and a RenderLayer there vanishes in WebKit (bug 23113) */
 .tattoo-actions{flex:none; display:flex; justify-content:center; padding:1px 3px 2px}
@@ -73904,6 +73906,8 @@ setOfficeProgress("pc", false);
   var tattooCloseBtn = document.getElementById("monitor-tattoo-close");
   var tattooBackBtn = document.getElementById("monitor-tattoo-back");
   var TATTOO_DESIGNS = ["ayushi", "pufferfish", "dinosaur", "princesses", "elephant", "giraffe", "bored", "butterfly"];
+  // Backdrop ownership is independent of the credited artist: only these two sit on Markéta's skin.
+  var TATTOO_MARKETA_DESIGNS = ["elephant", "bored"];
   // who drew each one
   var TATTOO_ARTISTS = { pufferfish: "Markéta", butterfly: "Irene", dinosaur: "Robin", elephant: "Irene", giraffe: "Hannah", princesses: "Elisabeth", bored: "Behdad", ayushi: "Ayushi" };
   // Relationships belong only in the expanded design credit; gallery captions stay compact.
@@ -73927,6 +73931,9 @@ setOfficeProgress("pc", false);
   function tattooDesignSrc(id) {
     var vectorTattooIds = ["ayushi", "bored", "butterfly", "dinosaur", "elephant", "giraffe", "princesses", "pufferfish"];
     return "art/tattoo/" + id + (vectorTattooIds.indexOf(id) !== -1 ? ".svg" : ".jpg");
+  }
+  function tattooSkinClass(id) {
+    return TATTOO_MARKETA_DESIGNS.indexOf(id) !== -1 ? "tattoo-skin-marketa" : "tattoo-skin-behdad";
   }
   function tattooPaintClosePill() {
     var back = tattooView !== "gallery";
@@ -74210,7 +74217,7 @@ setOfficeProgress("pc", false);
     TATTOO_DESIGNS.forEach(function (id) {
       var cell = tattooDiv("tattoo-cell", grid);
       var img = document.createElement("img");
-      img.className = "tattoo-thumb"; img.alt = ""; img.src = tattooDesignSrc(id);
+      img.className = "tattoo-thumb " + tattooSkinClass(id); img.alt = ""; img.src = tattooDesignSrc(id);
       cell.appendChild(img);
       tattooBindCopyTarget(img, function () { return tattooImageBlob(img); });
       tattooDiv("tattoo-cap", cell, tattooT("tt_by") + " " + TATTOO_ARTISTS[id]);
@@ -74220,6 +74227,7 @@ setOfficeProgress("pc", false);
   function renderTattooDesign() {
     var prev = tattooDiv("tattoo-preview", tattooWrap);
     var img = document.createElement("img");
+    img.className = tattooSkinClass(tattooDesign);
     img.alt = tattooT("tt_design_" + tattooDesign); img.src = tattooDesignSrc(tattooDesign);
     prev.appendChild(img);
     tattooBindCopyTarget(img, function () { return tattooImageBlob(img); });

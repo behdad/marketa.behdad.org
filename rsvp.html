@@ -1207,8 +1207,10 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp-porsche{pointer-events:all}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-porsche-copy{cursor:grab}
 #entrance-roadtrip-camp-porsche.is-dragging .entrance-roadtrip-camp-porsche-copy{cursor:grabbing}
+#entrance-roadtrip-camp-porsche .entrance-porsche-wheel{cursor:pointer}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-drag-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:grab}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:pointer;outline:none}
+#entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-wheel-hit{fill:#000;fill-opacity:0;stroke:none;pointer-events:all;cursor:pointer}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-car-hit:focus-visible{stroke:#fffdf8;stroke-width:2;stroke-dasharray:5 3;vector-effect:non-scaling-stroke}
 #entrance-roadtrip-camp-porsche .entrance-roadtrip-camp-roof-stack-hit{display:none}
 #entrance-roadtrip-camp-porsche.roof-open .entrance-roadtrip-camp-roof-closed-hit{display:none}
@@ -38564,6 +38566,15 @@ window.__entranceRoomOpen = false;
       hit.setAttribute("title", roadtripCampCopy(labelKey));
       carHitLayer.appendChild(hit);
     });
+    [["front", 95], ["rear", 296]].forEach(function (row) {
+      var hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      hit.setAttribute("class", "entrance-roadtrip-camp-wheel-hit");
+      hit.setAttribute("cx", row[1]);
+      hit.setAttribute("cy", "316");
+      hit.setAttribute("r", "29");
+      hit.setAttribute("data-camp-car-wheel", row[0]);
+      carHitLayer.appendChild(hit);
+    });
     carHitHost.appendChild(carHitLayer);
     function activateCampCarProp(event) {
       var target = event.target && event.target.closest ? event.target.closest("[data-camp-car-action]") : null;
@@ -38575,6 +38586,13 @@ window.__entranceRoomOpen = false;
       return true;
     }
     carHitLayer.addEventListener("click", function (event) {
+      var wheel = event.target && event.target.closest ? event.target.closest("[data-camp-car-wheel]") : null;
+      if (wheel && roadtripState.route === "camp") {
+        sparklePorscheWheel(wheel.getAttribute("data-camp-car-wheel"), event, copy);
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (!activateCampCarProp(event)) return;
       event.preventDefault();
       event.stopPropagation();
@@ -42077,12 +42095,14 @@ window.__entranceRoomOpen = false;
     tone.onended = function () { try { gain.disconnect(); } catch (_error) {} };
     return true;
   }
-  function sparklePorscheWheel(wheel, event) {
-    var sparkle = document.querySelector("#entrance-porsche-wheel-sparkles .entrance-porsche-wheel-sparkle:nth-child(" + (wheel === "front" ? "1" : "2") + ")");
+  function sparklePorscheWheel(wheel, event, carRoot) {
+    carRoot = carRoot || porsche;
+    var sparkles = carRoot ? carRoot.querySelectorAll(".entrance-porsche-wheel-sparkle") : [];
+    var sparkle = sparkles[wheel === "front" ? 0 : 1];
     if (!sparkle) return;
     var x = wheel === "front" ? 95 : 296;
     var y = 316;
-    var svg = porsche && porsche.ownerSVGElement;
+    var svg = carRoot && carRoot.ownerSVGElement;
     var sparkleSpace = sparkle.parentNode;
     if (event && svg && sparkleSpace && sparkleSpace.getScreenCTM && svg.createSVGPoint) {
       try {

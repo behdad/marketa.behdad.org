@@ -165,6 +165,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           lamps: opacity(".entrance-porsche-headlight-on")
         };
 
+        var wheels = copy.querySelectorAll("[data-camp-car-wheel]");
+        var sparkles = copy.querySelectorAll(".entrance-porsche-wheel-sparkle");
+        function clickWheel(index, x) {
+          var point = clientPoint(carHitHost, x, 316);
+          wheels[index].dispatchEvent(new MouseEvent("click", {
+            bubbles: true, cancelable: true, clientX: point.x, clientY: point.y
+          }));
+        }
+        clickWheel(0, 95);
+        clickWheel(1, 296);
+        report.wheelSparkles = {
+          count: sparkles.length,
+          front: sparkles[0] && sparkles[0].classList.contains("sparkling"),
+          rear: sparkles[1] && sparkles[1].classList.contains("sparkling"),
+          frontTransform: sparkles[0] && sparkles[0].getAttribute("transform"),
+          rearTransform: sparkles[1] && sparkles[1].getAttribute("transform")
+        };
+
         pointer(dragHit, host, "pointerdown", 140, 300, 11, "mouse");
         pointer(dragHit, host, "pointermove", 900, 900, 11, "mouse");
         pointer(dragHit, host, "pointerup", 900, 900, 11, "mouse");
@@ -222,6 +240,10 @@ function check(ok, message, detail) {
     console.log("  ✗ " + message + (detail == null ? "" : "   [" + JSON.stringify(detail) + "]"));
   }
 }
+function transformNear(value, x, y) {
+  var match = /^translate\(([-.\d]+) ([-.\d]+)\)$/.exec(value || "");
+  return !!match && Math.abs(+match[1] - x) < 2 && Math.abs(+match[2] - y) < 2;
+}
 
 console.log("rsvp.html campsite parked-car controls:");
 check(result && result.errors.length === 0, "controls run without uncaught errors", result && result.errors);
@@ -260,6 +282,11 @@ check(result && result.props && result.props.door.join(",") === "1,0,1" &&
   result.props.frunk.join(",") === "1,1" && result.props.trunk[0] !== "none" &&
   result.props.trunk[1] === "1" && result.props.lamps === "1",
   "all six toggles produce visible state changes", result && result.props);
+check(result && result.wheelSparkles && result.wheelSparkles.count === 2 &&
+  result.wheelSparkles.front && result.wheelSparkles.rear &&
+  transformNear(result.wheelSparkles.frontTransform, 95, 316) &&
+  transformNear(result.wheelSparkles.rearTransform, 296, 316),
+  "each parked wheel sparkles at its own clicked center", result && result.wheelSparkles);
 check(result && result.mouseDrag && result.mouseDrag.x === "10.00" && result.mouseDrag.y === "8.00" &&
   result.mouseDrag.released, "mouse dragging clamps at the parking-space front/lower edge",
   result && result.mouseDrag);

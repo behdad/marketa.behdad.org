@@ -33,6 +33,9 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.steered = coach();
     window.__entranceDriveRange("D");
     report.shifted = coach();
+    report.shifted.arrowTips = Array.prototype.map.call(
+      document.querySelectorAll('[data-coach-step="4"] .entrance-drive-coach-arrowhead'),
+      function (arrow) { var box = arrow.getBBox(); return box.y + box.height; });
     window.__entranceDriveControl("throttle", true);
     report.driven = coach();
     window.__entranceDriveControl("throttle", false);
@@ -82,6 +85,9 @@ check(result && result.steered.show && result.steered.step === 3,
   "steering advances to Drive", result && result.steered);
 check(result && result.shifted.show && result.shifted.step === 4,
   "selecting D advances to the pedals and cruise lesson", result && result.shifted);
+check(result && result.shifted.arrowTips.length === 2 &&
+  result.shifted.arrowTips.every(function (tip) { return tip >= 159; }),
+  "the final arrows reach the pedal faces", result && result.shifted.arrowTips);
 check(result && !result.driven.show,
   "using a pedal completes the lesson", result && result.driven);
 check(result && result.reset.coach.show && result.reset.coach.step === 1 &&

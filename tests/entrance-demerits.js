@@ -58,6 +58,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntrancePorscheDriveHud();
       report.steps.reinstatedStart = window.__entranceRoadtripStart();
       report.steps.reinstated = copy(state());
+      report.steps.expiring = window.__entranceRoadtripSetDemerits(3, 0, Date.now() + 80);
+      report.steps.expiringState = copy(state());
+      report.steps.expiringPersisted = JSON.parse(localStorage.getItem(recordKey));
+      await sleep(150);
+      report.steps.decayed = copy(state());
+      report.steps.decayedPersisted = JSON.parse(localStorage.getItem(recordKey));
       window.setLang("cs");
       report.steps.czech = {
         suspended: window.T.cs.hunt.entrance_roadtrip_suspended,
@@ -112,6 +118,19 @@ check(s.expired && !s.expired.suspended && s.expired.demeritPoints === 7 &&
 check(s.reinstatedStart && s.reinstated && s.reinstated.active && !s.reinstated.suspended &&
   s.reinstated.demeritPoints === 7,
   "the reinstated driver can start Road Trip again", s.reinstated);
+check(s.expiring && s.expiring.points === 3 &&
+  s.expiringState && s.expiringState.demeritExpirySeconds === 180 &&
+  s.expiringState.nextDemeritExpirySeconds === 1 && s.expiringPersisted &&
+  s.expiringPersisted.entries && s.expiringPersisted.entries.length === 1 &&
+  s.expiring.expiresAt === s.expiringPersisted.entries[0].expiresAt,
+  "each persisted demerit batch carries a three-minute wall-clock expiry", {
+    set: s.expiring, state: s.expiringState, persisted: s.expiringPersisted
+  });
+check(s.decayed && s.decayed.demeritPoints === 0 && s.decayed.demeritBatches.length === 0 &&
+  s.decayedPersisted && s.decayedPersisted.points === 0 && s.decayedPersisted.entries.length === 0,
+  "the HUD and stored driver record clear when the batch expires", {
+    state: s.decayed, persisted: s.decayedPersisted
+  });
 check(s.czech && /Řidičák pozastaven/.test(s.czech.suspended) && /varování/.test(s.czech.warning) &&
   /trestné body/.test(s.czech.ticket),
   "suspension, warning, and citation feedback are present in Czech", s.czech);

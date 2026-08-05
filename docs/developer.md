@@ -208,6 +208,11 @@ shortcuts pass through, and Escape/Backspace dispatch the same exit as `#entranc
 `bindRoadtripCampAction()`; their one-shot animation classes belong on untransformed inner wrappers,
 and lake effects cap and remove their runtime SVG children. Run
 `tests/entrance-roadtrip-camp-interactions.js` when changing them.
+The separate `entranceRoadtripDemerits:v1` driver record stores timestamped citation batches.
+Each batch expires after three wall-clock minutes; active suspension discards the old batches and
+reinstatement creates a fresh seven-point batch. `scheduleRoadtripDemeritExpiryPaint()` updates an
+idle HUD at the next expiry, while every drive/input gate also calls `syncRoadtripDemeritState()`.
+Run `tests/entrance-demerits.js` when changing that lifecycle.
 Positive-lane traffic advances on the right-hand carriageway; negative-lane traffic uses
 front/headlight art and a negative world velocity so it closes faster from the opposite lanes.
 The Porsche's roadtrip lane remains separate from the side-view SVG lane offset.

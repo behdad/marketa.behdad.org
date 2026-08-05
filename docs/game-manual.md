@@ -261,9 +261,10 @@ or summons; ignoring them escalates the outcome. Very high sustained speed can o
 an escape gap, but a brief burst is not enough. Police stops use Alberta's fine schedule,
 court treatment for 51+ over, and a deliberately theatrical arrival.
 
-The driver panel keeps separate **Demerits** and **BAC** columns. Each wine, beer,
-or cocktail adds one simplified `0.03` drink-equivalent; one clears per real
-minute. Drink state survives room changes, Road Trip exits, Continue, and reload.
+The driver panel keeps separate **Demerits** and **BAC** columns. Each citation's
+demerits expire after three real minutes. Each wine, beer, or cocktail adds one
+simplified `0.03` drink-equivalent; one clears per real minute. Both records survive
+room changes, Road Trip exits, Continue, and reload.
 
 The Abraham Lake leg slows on its final approach and ends at the camp. Camp props
 are clickable: the lake, poplar eyes, tent, cooking pot, campers, notebook, and parked

@@ -35958,6 +35958,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_DEMERIT_KEY = "entranceRoadtripDemerits:v1";
   var ROADTRIP_DEMERIT_WARNING = 8;
   var ROADTRIP_DEMERIT_SUSPENSION = 15;
+  var ROADTRIP_DEMERIT_EXPIRY_MS = 180000;
   var ROADTRIP_SUSPENSION_MS = 60000;
   var ROADTRIP_REINSTATEMENT_POINTS = 7;
   var ROADTRIP_SCORING_VERSION = 2;
@@ -36142,6 +36143,8 @@ window.__entranceRoomOpen = false;
   var roadtripImpactTimer = null;
   var roadtripCrackSerial = 0;
   var roadtripSuspensionTimer = null;
+  var roadtripDemeritExpiryTimer = null;
+  var roadtripDemeritExpiryAt = 0;
   var roadtripSuspensionIgnitionTimer = null;
   var roadtripSuspensionStopActive = false;
   var roadtripState = {
@@ -36176,6 +36179,7 @@ window.__entranceRoomOpen = false;
     escapes: 0,
     wildlifeHits: 0,
     demeritPoints: 0,
+    demeritEntries: [],
     suspendedUntil: 0,
     impactSounds: 0,
     rewardSounds: 0,
@@ -37092,44 +37096,119 @@ window.__entranceRoomOpen = false;
     try {
       localStorage.setItem(ROADTRIP_DEMERIT_KEY, JSON.stringify({
         points: roadtripState.demeritPoints,
-        suspendedUntil: roadtripState.suspendedUntil
+        suspendedUntil: roadtripState.suspendedUntil,
+        entries: roadtripState.demeritEntries.map(function (entry) {
+          return { points: entry.points, expiresAt: entry.expiresAt };
+        }),
+        updatedAt: Date.now()
       }));
     } catch (_error) {}
+  }
+  function normalizeRoadtripDemeritEntries(entries, now) {
+    var normalized = [];
+    var remaining = ROADTRIP_DEMERIT_SUSPENSION;
+    (Array.isArray(entries) ? entries : []).forEach(function (entry) {
+      if (!entry || typeof entry !== "object" || remaining <= 0) return;
+      var points = Math.max(0, Math.floor(Number(entry.points) || 0));
+      var expiresAt = Math.max(0, Number(entry.expiresAt) || 0);
+      if (!points || expiresAt <= now) return;
+      points = Math.min(points, remaining);
+      normalized.push({ points: points, expiresAt: expiresAt });
+      remaining -= points;
+    });
+    return normalized;
+  }
+  function roadtripDemeritEntryTotal() {
+    return roadtripState.demeritEntries.reduce(function (total, entry) {
+      return total + entry.points;
+    }, 0);
+  }
+  function roadtripNextDemeritExpiryAt() {
+    if (roadtripState.suspendedUntil || !roadtripState.demeritEntries.length) return 0;
+    return roadtripState.demeritEntries.reduce(function (next, entry) {
+      return !next || entry.expiresAt < next ? entry.expiresAt : next;
+    }, 0);
+  }
+  function scheduleRoadtripDemeritExpiryPaint() {
+    var next = roadtripNextDemeritExpiryAt();
+    if (!next) {
+      clearTimeout(roadtripDemeritExpiryTimer);
+      roadtripDemeritExpiryTimer = null;
+      roadtripDemeritExpiryAt = 0;
+      return;
+    }
+    if (roadtripDemeritExpiryTimer && roadtripDemeritExpiryAt === next) return;
+    clearTimeout(roadtripDemeritExpiryTimer);
+    roadtripDemeritExpiryAt = next;
+    roadtripDemeritExpiryTimer = setTimeout(function () {
+      roadtripDemeritExpiryTimer = null;
+      roadtripDemeritExpiryAt = 0;
+      syncRoadtripDemeritState();
+      paintRoadtripInvite();
+      paintRoadtripScore();
+    }, Math.max(0, next - Date.now()) + 5);
   }
   function restoreRoadtripDemerits() {
     var record = null;
     try { record = JSON.parse(localStorage.getItem(ROADTRIP_DEMERIT_KEY) || "null"); }
     catch (_error) {}
     if (!record || typeof record !== "object") return false;
+    var now = Date.now();
     var points = Math.max(0, Math.min(ROADTRIP_DEMERIT_SUSPENSION,
       Math.floor(Number(record.points) || 0)));
     var suspendedUntil = Math.max(0, Number(record.suspendedUntil) || 0);
-    if (points >= ROADTRIP_DEMERIT_SUSPENSION && suspendedUntil <= Date.now()) {
+    var entries = normalizeRoadtripDemeritEntries(record.entries, now);
+    if (points >= ROADTRIP_DEMERIT_SUSPENSION && suspendedUntil > now) {
+      entries = [];
+    } else if (points >= ROADTRIP_DEMERIT_SUSPENSION && suspendedUntil <= now) {
       points = ROADTRIP_REINSTATEMENT_POINTS;
       suspendedUntil = 0;
-    } else if (points < ROADTRIP_DEMERIT_SUSPENSION) {
+      entries = [{ points: points, expiresAt: now + ROADTRIP_DEMERIT_EXPIRY_MS }];
+    } else {
       suspendedUntil = 0;
+      if (!Array.isArray(record.entries) && points) {
+        entries = [{ points: points, expiresAt: now + ROADTRIP_DEMERIT_EXPIRY_MS }];
+      }
+      points = entries.reduce(function (total, entry) { return total + entry.points; }, 0);
     }
     roadtripState.demeritPoints = points;
+    roadtripState.demeritEntries = entries;
     roadtripState.suspendedUntil = suspendedUntil;
     persistRoadtripDemerits();
+    scheduleRoadtripDemeritExpiryPaint();
     return true;
   }
   function roadtripSuspensionRemainingMs() {
     return Math.max(0, roadtripState.suspendedUntil - Date.now());
   }
   function syncRoadtripDemeritState() {
+    var changed = false;
+    var now = Date.now();
     if (roadtripState.suspendedUntil && roadtripSuspensionRemainingMs() <= 0) {
       roadtripState.demeritPoints = ROADTRIP_REINSTATEMENT_POINTS;
+      roadtripState.demeritEntries = [{
+        points: ROADTRIP_REINSTATEMENT_POINTS,
+        expiresAt: now + ROADTRIP_DEMERIT_EXPIRY_MS
+      }];
       roadtripState.suspendedUntil = 0;
-      persistRoadtripDemerits();
+      changed = true;
+    } else if (!roadtripState.suspendedUntil) {
+      var entries = normalizeRoadtripDemeritEntries(roadtripState.demeritEntries, now);
+      var points = entries.reduce(function (total, entry) { return total + entry.points; }, 0);
+      if (entries.length !== roadtripState.demeritEntries.length || points !== roadtripState.demeritPoints) {
+        roadtripState.demeritEntries = entries;
+        roadtripState.demeritPoints = points;
+        changed = true;
+      }
     }
+    if (changed) persistRoadtripDemerits();
     var suspended = roadtripSuspensionRemainingMs() > 0;
     room.classList.toggle("roadtrip-demerit-warning",
       roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING && !suspended);
     room.classList.toggle("roadtrip-suspended", suspended);
     if (suspended) enforceRoadtripSuspensionStop();
     else if (roadtripSuspensionIgnitionTimer) clearRoadtripSuspensionIgnitionPulse();
+    scheduleRoadtripDemeritExpiryPaint();
     return suspended;
   }
   function roadtripSuspensionClock() {
@@ -37260,11 +37339,36 @@ window.__entranceRoomOpen = false;
     }
     return "";
   }
-  function setRoadtripDemerits(points, suspendedUntil) {
+  function addRoadtripDemerits(points) {
+    var now = Date.now();
+    roadtripState.demeritEntries = normalizeRoadtripDemeritEntries(roadtripState.demeritEntries, now);
+    roadtripState.demeritPoints = roadtripDemeritEntryTotal();
+    var room = ROADTRIP_DEMERIT_SUSPENSION - roadtripState.demeritPoints;
+    var added = Math.min(room, Math.max(0, Math.floor(Number(points) || 0)));
+    if (added) {
+      roadtripState.demeritEntries.push({
+        points: added,
+        expiresAt: now + ROADTRIP_DEMERIT_EXPIRY_MS
+      });
+      roadtripState.demeritPoints += added;
+    }
+    if (roadtripState.demeritPoints >= ROADTRIP_DEMERIT_SUSPENSION) {
+      roadtripState.demeritEntries = [];
+      roadtripState.suspendedUntil = now + ROADTRIP_SUSPENSION_MS;
+    }
+    return added;
+  }
+  function setRoadtripDemerits(points, suspendedUntil, expiresAt) {
     roadtripState.demeritPoints = Math.max(0, Math.min(ROADTRIP_DEMERIT_SUSPENSION,
       Math.floor(Number(points) || 0)));
     roadtripState.suspendedUntil = roadtripState.demeritPoints >= ROADTRIP_DEMERIT_SUSPENSION ?
       Math.max(0, Number(suspendedUntil) || 0) : 0;
+    roadtripState.demeritEntries = roadtripState.suspendedUntil ? [] :
+      (roadtripState.demeritPoints ? [{
+        points: roadtripState.demeritPoints,
+        expiresAt: Math.max(Date.now() + 1, Number(expiresAt) ||
+          (Date.now() + ROADTRIP_DEMERIT_EXPIRY_MS))
+      }] : []);
     syncRoadtripDemeritState();
     persistRoadtripDemerits();
     paintRoadtripInvite();
@@ -37273,8 +37377,12 @@ window.__entranceRoomOpen = false;
   window.__resetRoadtripDriverRecord = function () {
     clearTimeout(roadtripSuspensionTimer);
     roadtripSuspensionTimer = null;
+    clearTimeout(roadtripDemeritExpiryTimer);
+    roadtripDemeritExpiryTimer = null;
+    roadtripDemeritExpiryAt = 0;
     clearRoadtripSuspensionIgnitionPulse();
     roadtripState.demeritPoints = 0;
+    roadtripState.demeritEntries = [];
     roadtripState.suspendedUntil = 0;
     try { localStorage.removeItem(ROADTRIP_DEMERIT_KEY); } catch (_error) {}
     syncRoadtripDemeritState();
@@ -38815,12 +38923,9 @@ window.__entranceRoomOpen = false;
     police.fines += fixedFine;
     police.scorePenalties += scorePenalty;
     police.lastDemerits = demerits;
-    roadtripState.demeritPoints = Math.min(ROADTRIP_DEMERIT_SUSPENSION,
-      roadtripState.demeritPoints + demerits);
+    syncRoadtripDemeritState();
+    addRoadtripDemerits(demerits);
     police.lastDemeritTotal = roadtripState.demeritPoints;
-    if (roadtripState.demeritPoints >= ROADTRIP_DEMERIT_SUSPENSION) {
-      roadtripState.suspendedUntil = Date.now() + ROADTRIP_SUSPENSION_MS;
-    }
     persistRoadtripDemerits();
     syncRoadtripDemeritState();
     roadtripState.score = Math.max(0, roadtripState.score - scorePenalty);
@@ -44184,6 +44289,12 @@ window.__entranceRoomOpen = false;
           escapes: roadtripState.escapes,
           wildlifeHits: roadtripState.wildlifeHits,
           demeritPoints: roadtripState.demeritPoints,
+          demeritBatches: roadtripState.demeritEntries.map(function (entry) {
+            return { points: entry.points, expiresAt: entry.expiresAt };
+          }),
+          demeritExpirySeconds: ROADTRIP_DEMERIT_EXPIRY_MS / 1000,
+          nextDemeritExpirySeconds: Math.max(0,
+            Math.ceil((roadtripNextDemeritExpiryAt() - Date.now()) / 1000)),
           demeritWarning: roadtripState.demeritPoints >= ROADTRIP_DEMERIT_WARNING &&
             roadtripSuspensionRemainingMs() <= 0,
           suspended: roadtripSuspensionRemainingMs() > 0,
@@ -44541,12 +44652,13 @@ window.__entranceRoomOpen = false;
     return roadtripState.police.phase;
   };
   window.__entranceRoadtripDemeritsForSpeed = roadtripDemeritsForSpeed;
-  window.__entranceRoadtripSetDemerits = function (points, suspendedUntil) {
-    setRoadtripDemerits(points, suspendedUntil);
+  window.__entranceRoadtripSetDemerits = function (points, suspendedUntil, expiresAt) {
+    setRoadtripDemerits(points, suspendedUntil, expiresAt);
     return {
       points: roadtripState.demeritPoints,
       suspendedUntil: roadtripState.suspendedUntil,
-      suspended: roadtripSuspensionRemainingMs() > 0
+      suspended: roadtripSuspensionRemainingMs() > 0,
+      expiresAt: roadtripNextDemeritExpiryAt()
     };
   };
   window.__refreshPorscheDriveClimate = updatePorscheDriveAc;

@@ -193,6 +193,8 @@ impassable dirt median, starts the Porsche on the outer shoulder at `3.08`, and 
 elevation, grade, and curvature to zero. After 75 attended seconds, a six-second right-turn
 approach keeps the flat scenery; only the Banff phase restores the original four-lane mountain road, 90 km/h signs,
 terrain, and curves. Route changes clear live entities before changing lane geometry.
+`positionRoadtripExitSign()` offsets each route sign by its scaled half-width beyond the current
+right road edge; do not place a sign at a fixed road fraction, because Calgary's divided road is wider.
 Banff runs for 90 attended seconds before a second six-second right turn. Abraham Lake narrows to
 one lane in each direction, posts 100 km/h, reduces the traffic cadence, and runs for 75 attended
 seconds. Its right-pointing Camping sign projects through the final six seconds. Once that route

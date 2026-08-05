@@ -197,14 +197,18 @@ Success restores the finished fire/pot composition and the
 permanent `entrance_roadtrip_camp_arrival` RSVP caption. The `camp` route is never resume-pending,
 including after checkpoint restore, blur, or visibility changes.
 
+The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
+`__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,
+celestial bodies, and expanded winter mountain snow.
+
 The capture-phase Entrance key owner consumes Camping navigation. Enter, Escape, and Backspace
 dismiss camp before the backing Balcony stage can handle the key. Camp actions go through
 `bindRoadtripCampAction()`. Animate untransformed inner wrappers, cap runtime SVG effects, and keep
 effects in the target's coordinate space.
 
 Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
-`tests/entrance-roadtrip-camp-caption.js`, and `tests/entrance-roadtrip-camp-interactions.js` for
-this boundary.
+`tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-interactions.js`, and
+`tests/entrance-roadtrip-camp-sky.js` for this boundary.
 
 ### Scoring, police, and durable records
 

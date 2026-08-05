@@ -169,13 +169,7 @@ transmission into neutral.
 
 At the Camping sign, the car slows automatically and enters camp below 10 km/h; no remaining
 momentum or extra acceleration is required. Click the empty pit, add tinder, twigs, and either log
-arrangement, then light it. Missing fuel burns out. Click the fire to extinguish it, then click the
-cold pit to build again.
-
-The lake, poplar eyes, pine trees, tent, campers, notebook, and parked car react. Each camper moves
-with their chair when dragged; their heads and Markéta's notebook remain separate actions. The car
-also moves a short distance within its parking space. Stones skip from shore at a randomized
-heading between −60° and +60°.
+arrangement, then light it. Missing fuel burns out; the campsite remains open for exploration.
 
 After the fire grows, the RSVP reminder pulses, then remains above the camp. Continue returns
 directly to Camping and retains a completed fire. Press `Enter`, Escape, Backspace, or the top-right

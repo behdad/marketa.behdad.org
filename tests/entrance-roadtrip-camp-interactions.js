@@ -97,6 +97,35 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         };
 
         var tent = document.getElementById("entrance-roadtrip-camp-tent");
+        var mamaBear = document.getElementById("entrance-roadtrip-camp-mama-bear");
+        var mamaBearRect = mamaBear && mamaBear.getBoundingClientRect();
+        var campsiteRect = document.getElementById("entrance-roadtrip-camp").getBoundingClientRect();
+        var bearHuffs = 0;
+        window.__entranceRoadtripCampBearHuff = function () { bearHuffs++; };
+        click(mamaBear);
+        var mamaHead = mamaBear.querySelector(".entrance-roadtrip-camp-mama-head");
+        var bearCub = mamaBear.querySelector(".entrance-roadtrip-camp-bear-cub");
+        var bearTriggered = mamaBear.classList.contains("reacting");
+        var headAnimation = getComputedStyle(mamaHead).animationName;
+        var cubAnimation = getComputedStyle(bearCub).animationName;
+        mamaHead.dispatchEvent(new AnimationEvent("animationend", {
+          animationName: "entrance-roadtrip-camp-bear-sniff", bubbles: true
+        }));
+        var bearCleared = !mamaBear.classList.contains("reacting");
+        activateWithKeyboard(mamaBear);
+        report.mamaBear = {
+          present: !!mamaBear,
+          keyboard: mamaBear && mamaBear.getAttribute("tabindex") === "0" && mamaBear.classList.contains("reacting"),
+          inFrontOfPines: mamaBear && !!(pines[0].parentNode.compareDocumentPosition(mamaBear) & Node.DOCUMENT_POSITION_FOLLOWING),
+          behindCamp: mamaBear && !!(mamaBear.compareDocumentPosition(tent) & Node.DOCUMENT_POSITION_FOLLOWING),
+          width: mamaBear && mamaBear.getBBox().width,
+          leftShore: mamaBearRect && (mamaBearRect.left - campsiteRect.left) / campsiteRect.width < .3,
+          triggered: bearTriggered,
+          headAnimation: headAnimation,
+          cubAnimation: cubAnimation,
+          cleared: bearCleared,
+          huffs: bearHuffs
+        };
         click(tent);
         report.tentOpen = tent.classList.contains("open");
         tent.focus({ focusVisible: true });
@@ -184,6 +213,14 @@ check(result && result.pines && result.pines.count === 4 && result.pines.accessi
   result && result.pines);
 check(result && result.people && result.people.marketa && result.people.behdad,
   "each camper gets an independent head laugh", result && result.people);
+check(result && result.mamaBear && result.mamaBear.present && result.mamaBear.keyboard &&
+  result.mamaBear.inFrontOfPines && result.mamaBear.behindCamp &&
+  result.mamaBear.width > 100 && result.mamaBear.leftShore &&
+  result.mamaBear.triggered && result.mamaBear.headAnimation === "entrance-roadtrip-camp-bear-sniff" &&
+  result.mamaBear.cubAnimation === "entrance-roadtrip-camp-bear-peek" && result.mamaBear.cleared &&
+  result.mamaBear.huffs === 2,
+  "the left-shore mama sniffs and huffs while her cub ducks and peeks on pointer or keyboard input",
+  result && result.mamaBear);
 check(result && result.tentOpen, "the tent flap opens", result && result.tentOpen);
 check(result && result.tentFocus && (result.tentFocus.style === "none" || result.tentFocus.width === "0px"),
   "the focused tent never gains a visible border", result && result.tentFocus);

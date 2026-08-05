@@ -1129,6 +1129,21 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp-lake:focus-visible,
 #entrance-roadtrip-camp-aspen>g:focus-visible{outline:2px solid #fffdf8;outline-offset:2px}
 #entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine:focus-visible>path{stroke:#fffdf8;stroke-width:2.4}
+#entrance-roadtrip-camp-mama-bear{cursor:pointer;outline:none}
+.entrance-roadtrip-camp-mama-head,
+.entrance-roadtrip-camp-bear-cub{transform-box:fill-box;transform-origin:center bottom}
+#entrance-roadtrip-camp-mama-bear.reacting .entrance-roadtrip-camp-mama-head{
+  animation:entrance-roadtrip-camp-bear-sniff 1.2s ease-in-out
+}
+#entrance-roadtrip-camp-mama-bear.reacting .entrance-roadtrip-camp-bear-cub{
+  animation:entrance-roadtrip-camp-bear-peek 1.2s ease-in-out
+}
+@keyframes entrance-roadtrip-camp-bear-sniff{
+  0%,100%{transform:none}24%{transform:translateY(-5px) rotate(-7deg)}43%{transform:translateY(-6px) rotate(4deg)}62%{transform:translateY(-5px) rotate(-4deg)}
+}
+@keyframes entrance-roadtrip-camp-bear-peek{
+  0%,100%{transform:none}22%,43%{transform:translate(11px,8px) rotate(-5deg)}72%{transform:translate(-5px,-4px) rotate(6deg)}
+}
 .entrance-roadtrip-camp-pinecone{
   pointer-events:none;transform-box:view-box;transform-origin:center;animation:entrance-roadtrip-camp-pinecone 1.05s cubic-bezier(.34,.02,.36,1) both
 }
@@ -33143,6 +33158,34 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   <g class="entrance-roadtrip-camp-pine" tabindex="0" data-cone-x="678" data-cone-y="5" data-cone-drop="62"
                     data-title-i="entrance_roadtrip_camp_pine_aria"><path d="M642 66L678-28L714 66Z"/></g>
                 </g>
+                <g id="entrance-roadtrip-camp-mama-bear" transform="translate(77 60) scale(.66)" tabindex="0">
+                  <rect x="-85" y="-39" width="145" height="75" fill="#000" fill-opacity="0" pointer-events="all"/>
+                  <g transform="translate(-53 9) scale(.58)">
+                    <g class="entrance-roadtrip-camp-bear-cub" fill="#604637" stroke="#35271f" stroke-width="2">
+                      <ellipse rx="27" ry="16"/>
+                      <circle cx="23" cy="-9" r="12"/>
+                      <circle cx="18" cy="-19" r="4.8"/>
+                      <path d="M-18 11V24M10 10V24" stroke-width="8" stroke-linecap="round"/>
+                      <ellipse cx="32" cy="-5" rx="8" ry="5.5" fill="#8a6a53"/>
+                      <circle cx="26" cy="-11" r="1.5" fill="#171411" stroke="none"/>
+                      <circle cx="38" cy="-6" r="2" fill="#171411" stroke="none"/>
+                    </g>
+                  </g>
+                  <g fill="#493329" stroke="#2b211b" stroke-width="2.2">
+                    <ellipse rx="38" ry="22"/>
+                    <circle cx="-36" cy="-7" r="8"/>
+                    <path d="M-25 14V31M15 13V31" stroke-width="11" stroke-linecap="round"/>
+                    <g class="entrance-roadtrip-camp-mama-head">
+                      <circle cx="32" cy="-13" r="17"/>
+                      <circle cx="24" cy="-27" r="6.5"/>
+                      <circle cx="39" cy="-25" r="5.5"/>
+                      <ellipse cx="44" cy="-7" rx="11" ry="7.5" fill="#80614d"/>
+                      <circle cx="35" cy="-15" r="1.8" fill="#171411" stroke="none"/>
+                      <circle cx="53" cy="-8" r="2.5" fill="#171411" stroke="none"/>
+                      <path d="M38-2Q45 3 51-1" fill="none" stroke="#2b211b" stroke-width="1.6" stroke-linecap="round"/>
+                    </g>
+                  </g>
+                </g>
                 <g id="entrance-roadtrip-camp-tent" transform="translate(18 116)" tabindex="0"
                   data-title-i="entrance_roadtrip_camp_tent_aria">
                   <path d="M2 88Q36 8 91-10Q145-7 189 88Z" fill="#566153" stroke="#2e3731" stroke-width="2.4"/>
@@ -38805,6 +38848,50 @@ window.__entranceRoomOpen = false;
     }, { once: true });
     return true;
   }
+  function playRoadtripCampBearHuff() {
+    try {
+      var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
+      if (!ctx) return false;
+      var now = ctx.currentTime;
+      var out = pannedOut(ctx, "entrance-roadtrip-camp-mama-bear");
+      var grunt = ctx.createOscillator();
+      var gruntGain = ctx.createGain();
+      grunt.type = "triangle";
+      grunt.frequency.setValueAtTime(105, now);
+      grunt.frequency.exponentialRampToValueAtTime(68, now + .58);
+      gruntGain.gain.setValueAtTime(.0001, now);
+      gruntGain.gain.exponentialRampToValueAtTime(.09, now + .05);
+      gruntGain.gain.exponentialRampToValueAtTime(.0001, now + .62);
+      grunt.connect(gruntGain);
+      gruntGain.connect(out);
+      grunt.start(now);
+      grunt.stop(now + .65);
+
+      var duration = .82;
+      var buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * duration), ctx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var index = 0; index < data.length; index++) data[index] = Math.random() * 2 - 1;
+      var breath = ctx.createBufferSource();
+      var filter = ctx.createBiquadFilter();
+      var breathGain = ctx.createGain();
+      breath.buffer = buffer;
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(420, now);
+      filter.frequency.exponentialRampToValueAtTime(190, now + duration);
+      filter.Q.value = .75;
+      breathGain.gain.setValueAtTime(.0001, now);
+      breathGain.gain.exponentialRampToValueAtTime(.13, now + .09);
+      breathGain.gain.setValueAtTime(.1, now + .28);
+      breathGain.gain.exponentialRampToValueAtTime(.0001, now + duration);
+      breath.connect(filter);
+      filter.connect(breathGain);
+      breathGain.connect(out);
+      breath.start(now);
+      breath.stop(now + duration + .02);
+      return true;
+    } catch (_error) { return false; }
+  }
+  window.__entranceRoadtripCampBearHuff = playRoadtripCampBearHuff;
   function dropRoadtripCampPinecone(pine) {
     if (!pine || roadtripState.route !== "camp") return false;
     var cones = pine.querySelectorAll(".entrance-roadtrip-camp-pinecone");
@@ -38864,6 +38951,7 @@ window.__entranceRoomOpen = false;
     });
   }
   var campLake = roadtripElement("entrance-roadtrip-camp-lake");
+  var campMamaBear = roadtripElement("entrance-roadtrip-camp-mama-bear");
   var campTent = roadtripElement("entrance-roadtrip-camp-tent");
   var campPot = roadtripElement("entrance-roadtrip-camp-pot");
   var campSun = roadtripElement("entrance-roadtrip-camp-sun");
@@ -39019,6 +39107,10 @@ window.__entranceRoomOpen = false;
     replayRoadtripCampFire();
   }, true);
   bindRoadtripCampAction(campLake, function (event) { throwRoadtripCampStone(event); });
+  bindRoadtripCampAction(campMamaBear, function () {
+    restartRoadtripCampOneShot(campMamaBear, "reacting");
+    if (window.__entranceRoadtripCampBearHuff) window.__entranceRoadtripCampBearHuff();
+  });
   Array.prototype.forEach.call(document.querySelectorAll("#entrance-roadtrip-camp-aspen>g"), function (poplar) {
     bindRoadtripCampAction(poplar, function () {
       restartRoadtripCampOneShot(poplar.querySelector(".entrance-roadtrip-camp-poplar-eyes"), "wiggling");

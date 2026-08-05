@@ -23,6 +23,9 @@ var harness = String.raw`<script>
   }
   try {
     var light = document.getElementById("garden-growlight");
+    var plant = document.getElementById("garden-dieffenbachia-lift");
+    check("Dieffenbachia paints in front of its grow lights",
+      !!(light.compareDocumentPosition(plant) & Node.DOCUMENT_POSITION_FOLLOWING));
     at(10 * 60 + 59);
     check("grow light is off before 11:00", !isOn(light));
     at(11 * 60);

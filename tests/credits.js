@@ -21,6 +21,21 @@ var harness = String.raw`<script>
       names.indexOf("Farhang") !== -1 && names.indexOf("Spencer") !== -1, names.join(", "));
     check("Ayushi appears in the language-neutral tester roster",
       names.indexOf("Ayushi") !== -1, names.join(", "));
+    check("the five newest testers remain appended in source order",
+      names.slice(-5).join(",") === "Pendar,Mehraveh,Siamak,Navid,Mina", names.join(", "));
+    var sortedNames = window.__loftCreditsTesters("en").map(function (person) { return person.name; });
+    var expectedSorted = names.slice().sort(function (a, b) {
+      return a.localeCompare(b, "en", { sensitivity: "base" });
+    });
+    check("the displayed tester roster is alphabetized at runtime",
+      sortedNames.join(",") === expectedSorted.join(","), sortedNames.join(", "));
+    var creditsLines = window.__loftCreditsLines("en");
+    var testersHeading = creditsLines.indexOf("Testers");
+    var softwareHeading = creditsLines.indexOf("Open-source software");
+    var lineNames = creditsLines.slice(testersHeading + 1, softwareHeading)
+      .filter(Boolean).map(function (line) { return line.trim(); });
+    check("the text credits representation uses the same alphabetized roster",
+      lineNames.join(",") === sortedNames.join(","), lineNames.join(", "));
 
     var otherPeopleCount = window.LOFT_CREDITS.people.length - names.length;
     var current = window.__loftCreditsLayout(names.length, otherPeopleCount);

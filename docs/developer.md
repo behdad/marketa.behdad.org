@@ -214,7 +214,8 @@ owner treats `roadtrip-route-camp` as a navigation boundary: arrows are consumed
 shortcuts pass through, and Escape/Backspace dispatch the same exit as `#entrance-roadtrip-dismiss`. Run
 `tests/entrance-roadtrip-camp.js` when changing that boundary. Camp object handlers use
 `bindRoadtripCampAction()`; their one-shot animation classes belong on untransformed inner wrappers,
-and lake effects cap and remove their runtime SVG children. Run
+and each poplar eye path owns its own `fill-box` pivot beneath the cluster's shared trigger. Lake
+effects cap and remove their runtime SVG children. Run
 `tests/entrance-roadtrip-camp-interactions.js` when changing them.
 The separate `entranceRoadtripDemerits:v1` driver record stores timestamped citation batches.
 Each batch expires after three wall-clock minutes; active suspension discards the old batches and

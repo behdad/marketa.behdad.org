@@ -38,9 +38,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           stones: document.querySelectorAll(".entrance-roadtrip-camp-stone").length
         };
 
-        var poplar = document.querySelector("#entrance-roadtrip-camp-aspen>g");
+        var poplars = document.querySelectorAll("#entrance-roadtrip-camp-aspen>g");
+        var poplar = poplars[0];
         click(poplar);
-        report.poplar = poplar.querySelector(".entrance-roadtrip-camp-poplar-eyes").classList.contains("wiggling");
+        var poplarEyes = poplar.querySelector(".entrance-roadtrip-camp-poplar-eyes");
+        var individualEyes = poplarEyes.querySelectorAll(".entrance-roadtrip-camp-poplar-eye");
+        report.poplar = {
+          triggered: poplarEyes.classList.contains("wiggling"),
+          wrapperAnimation: getComputedStyle(poplarEyes).animationName,
+          eyeAnimations: Array.prototype.map.call(individualEyes, function (eye) {
+            return getComputedStyle(eye).animationName;
+          }),
+          eyeCenters: Array.prototype.map.call(individualEyes, function (eye) {
+            var box = eye.getBBox();
+            return [box.x + box.width / 2, box.y + box.height / 2];
+          }),
+          otherClusterIdle: !poplars[1].querySelector(".entrance-roadtrip-camp-poplar-eyes")
+            .classList.contains("wiggling")
+        };
 
         var marketa = document.getElementById("entrance-roadtrip-camp-marketa");
         var behdad = document.getElementById("entrance-roadtrip-camp-behdad");
@@ -95,6 +110,9 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html Abraham Lake camp interactions:");
+var source = require("fs").readFileSync(require("path").join(lib.ROOT, "rsvp.html"), "utf8");
+check(/@keyframes entrance-roadtrip-camp-eye-wiggle\{20%\{transform:rotate\(-9deg\)\}45%\{transform:rotate\(11deg\)\}70%\{transform:rotate\(-6deg\)\}\}/.test(source),
+  "the bark eyes rotate in place without a lateral translation");
 var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
   patchRaf: true,
   seedRandom: true,
@@ -109,7 +127,11 @@ check(result && result.skips && result.skips.map(function (row) { return row.ski
 check(result && result.lake && result.lake.lastSkips === "4" && result.lake.lastFish === "true" &&
   result.lake.rippleCount === 9 && result.lake.fishCount === 1 && result.lake.stones === 0,
   "the lake paints only ripples and the occasional jumping fish", result && result.lake);
-check(result && result.poplar, "clicking a poplar wiggles its bark eyes", result && result.poplar);
+check(result && result.poplar && result.poplar.triggered && result.poplar.wrapperAnimation === "none" &&
+  result.poplar.eyeAnimations.length === 3 && result.poplar.eyeAnimations.every(function (name) {
+    return name === "entrance-roadtrip-camp-eye-wiggle";
+  }) && new Set(result.poplar.eyeCenters.map(String)).size === 3 && result.poplar.otherClusterIdle,
+  "one poplar click wiggles all three bark eyes around distinct centres", result && result.poplar);
 check(result && result.people && result.people.marketa && result.people.behdad,
   "each camper gets an independent head laugh", result && result.people);
 check(result && result.tentOpen, "the tent flap opens", result && result.tentOpen);

@@ -270,7 +270,8 @@ The right-pointing Camping sign marks the Abraham Lake entrance. Once past it, t
 automatically and the camp appears below 10 km/h; arriving does not require another press of the
 accelerator. Camp props
 are clickable: the lake, poplar eyes, tent, cooking pot, campers, notebook, and parked
-car each react. The end-of-game RSVP reminder pulses briefly, then stays above the camp scene.
+car each react. A clicked poplar cluster wiggles all three bark eyes around their own centres.
+The end-of-game RSVP reminder pulses briefly, then stays above the camp scene.
 Arrows stay in the scene,
 while Escape, Backspace, or the top-right ×
 returns to the Entrance dashboard.

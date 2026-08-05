@@ -19,6 +19,8 @@ var harness = String.raw`<script>
     check("Chinnell, Rafi, Farhang, and Spencer appear in the language-neutral tester roster",
       names.indexOf("Chinnell") !== -1 && names.indexOf("Rafi") !== -1 &&
       names.indexOf("Farhang") !== -1 && names.indexOf("Spencer") !== -1, names.join(", "));
+    check("Ayushi appears in the language-neutral tester roster",
+      names.indexOf("Ayushi") !== -1, names.join(", "));
 
     var otherPeopleCount = window.LOFT_CREDITS.people.length - names.length;
     var current = window.__loftCreditsLayout(names.length, otherPeopleCount);

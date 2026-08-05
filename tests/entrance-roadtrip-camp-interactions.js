@@ -89,12 +89,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.potKeyboardStarts = pot.classList.contains("simmering");
 
         marketa.querySelector(".entrance-roadtrip-camp-character-head").classList.remove("laughing");
+        var fullscreenArea = document.getElementById("hunt-fullscreen-area");
+        fullscreenArea.classList.add("is-fullscreen");
         click(document.getElementById("entrance-roadtrip-camp-notebook"));
+        var notebookBackdrop = document.querySelector(".entrance-roadtrip-notebook-backdrop");
         report.notebook = {
-          open: !!document.querySelector(".entrance-roadtrip-notebook-backdrop"),
+          open: !!notebookBackdrop,
+          hostedInFullscreen: !!notebookBackdrop && notebookBackdrop.parentNode === fullscreenArea,
           didNotAlsoWiggle: !marketa.querySelector(".entrance-roadtrip-camp-character-head").classList.contains("laughing")
         };
         document.querySelector(".entrance-roadtrip-notebook-close").click();
+        fullscreenArea.classList.remove("is-fullscreen");
 
         window.setLang("cs");
         report.czechLakeTitle = lake.getAttribute("title");
@@ -159,8 +164,10 @@ check(result && result.potStartsBoiling && result.potStops && result.potKeyboard
   "the rattling pot starts hot and toggles by pointer or keyboard", result && {
     starts: result.potStartsBoiling, stops: result.potStops, keyboard: result.potKeyboardStarts
   });
-check(result && result.notebook && result.notebook.open && result.notebook.didNotAlsoWiggle,
-  "the notebook remains independent from Markéta’s reaction", result && result.notebook);
+check(result && result.notebook && result.notebook.open && result.notebook.hostedInFullscreen &&
+  result.notebook.didNotAlsoWiggle,
+  "the notebook opens inside fullscreen and remains independent from Markéta’s reaction",
+  result && result.notebook);
 check(result && result.czechLakeTitle === "Hodit žabku přes jezero Abraham",
   "camp interaction labels follow the active language", result && result.czechLakeTitle);
 

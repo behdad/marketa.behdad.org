@@ -34,7 +34,7 @@ window.addEventListener("load", function () { setTimeout(function () {
       width: steerArrowBox.width,
       height: steerArrowBox.height,
       y: steerArrowBox.y,
-      heads: document.querySelectorAll('[data-coach-step="2"] .entrance-drive-coach-arrowhead').length
+      pieces: document.querySelectorAll('[data-coach-step="2"] .entrance-drive-coach-arrow').length
     };
     key("keydown", "ArrowLeft", "ArrowLeft");
     key("keyup", "ArrowLeft", "ArrowLeft");
@@ -42,7 +42,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__entranceDriveRange("D");
     report.shifted = coach();
     report.shifted.arrowTips = Array.prototype.map.call(
-      document.querySelectorAll('[data-coach-step="4"] .entrance-drive-coach-arrowhead'),
+      document.querySelectorAll('[data-coach-step="4"] .entrance-drive-coach-arrow'),
       function (arrow) { var box = arrow.getBBox(); return box.y + box.height; });
     window.__entranceDriveControl("throttle", true);
     report.driven = coach();
@@ -96,10 +96,9 @@ check(result && result.fresh.show && result.fresh.step === 1,
 check(result && result.started.show && result.started.step === 2,
   "starting advances to steering", result && result.started);
 check(result && result.started.steerArrow &&
-  result.started.steerArrow.width > 100 && result.started.steerArrow.height < 4 &&
-  result.started.steerArrow.y <= 54 &&
-  result.started.steerArrow.heads === 2,
-  "steering uses a horizontal double-headed arrow over the wheel", result && result.started.steerArrow);
+  result.started.steerArrow.width > 100 && result.started.steerArrow.height > 20 &&
+  result.started.steerArrow.y <= 41 && result.started.steerArrow.pieces === 1,
+  "steering uses one outlined double-headed path over the wheel", result && result.started.steerArrow);
 check(result && result.steered.show && result.steered.step === 3,
   "steering advances to Drive", result && result.steered);
 check(result && result.shifted.show && result.shifted.step === 4,

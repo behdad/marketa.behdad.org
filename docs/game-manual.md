@@ -119,8 +119,8 @@ fullscreen.
 
 ## Driving and Road Trip
 
-Select the Entrance road to open the dashboard. Four short coaches teach ignition, steering,
-shifting, and pedals. Select the dashboard `?` to reopen the current lesson.
+Select the Entrance road to open the dashboard. The caption above the scene reports the current
+driving state; the visible dashboard controls and shortcuts operate the car.
 
 On desktop:
 
@@ -175,7 +175,7 @@ another street lap and accept the invitation to return.
 ## Help, saves, and browser notes
 
 The caption is the Phase 1 guide and becomes room or activity feedback in Phase 2. One-time coaches
-point out easy-to-miss controls. Continue does not replay the first-drive lesson.
+point out a few easy-to-miss controls elsewhere in the game.
 
 The game begins checkpointing after the Kitchen is solved or deliberately left for another room.
 On a later visit, **Continue** restores the saved room and floor, progression, durable arrangements,

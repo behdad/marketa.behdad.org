@@ -32,11 +32,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var steering = document.getElementById("entrance-drive-steering-touch");
       var steerPad = document.getElementById("entrance-drive-touch-steer");
       var pedalPad = document.getElementById("entrance-drive-touch-pedals");
-      report.steps.coachSteer = {
-        blue: steerPad.classList.contains("coach-target"),
-        pink: pedalPad.classList.contains("coach-target"),
-        wheelArrow: document.querySelector('[data-coach-step="2"] .entrance-drive-coach-arrow') !== null
-      };
       document.getElementById("entrance-drive-touch-controls").style.display = "block";
       document.body.appendChild(steerPad);
       document.body.appendChild(pedalPad);
@@ -81,14 +76,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       pointer(steering, "pointermove", 45, true, 270);
       report.steps.rimSteering = window.__entranceRoomState().drive;
       pointer(steering, "pointerup", 45, true, 270);
-      window.__entranceDriveRange("N");
-      window.__entranceDriveRange("D");
-      report.steps.coachPedals = {
-        blue: steerPad.classList.contains("coach-target"),
-        pink: pedalPad.classList.contains("coach-target"),
-        pedalArrows: document.querySelectorAll('[data-coach-step="4"] .entrance-drive-coach-arrow').length
-      };
-
       var sr = steerPad.getBoundingClientRect(), pr = pedalPad.getBoundingClientRect();
       report.steps.padLayout = {
         shown: getComputedStyle(steerPad).pointerEvents === "auto" && getComputedStyle(pedalPad).pointerEvents === "auto",
@@ -140,10 +127,6 @@ check(steps.targets && steps.targets.ignition.width >= 54 && steps.targets.ignit
 check(steps.targets && steps.targets.horn.shape === "ellipse" &&
   steps.targets.horn.rx === 31 && steps.targets.horn.ry === 27,
   "only the steering-wheel center circle is a horn target", steps.targets && steps.targets.horn);
-check(steps.coachSteer && steps.coachSteer.blue && !steps.coachSteer.pink && steps.coachSteer.wheelArrow,
-  "steering coach advertises both the blue pad and the original wheel", steps.coachSteer);
-check(steps.coachPedals && !steps.coachPedals.blue && steps.coachPedals.pink && steps.coachPedals.pedalArrows === 2,
-  "driving coach advertises both the pink pad and the original pedals", steps.coachPedals);
 check(steps.nativePadLayout && steps.nativePadLayout.pedalHeight >= 168 &&
   steps.nativePadLayout.pedalHeight >= steps.nativePadLayout.steerHeight * 2.5,
   "the live pedal pad has extended analog travel", steps.nativePadLayout);

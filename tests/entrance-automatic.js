@@ -88,19 +88,6 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
           return [node.getAttribute("data-drive-range"), node.getAttribute("tabindex"), node.classList.contains("selected")];
         })
       };
-      report.steps.autoCopyEn = {
-        title: document.getElementById("entrance-drive-coach-gear-title").textContent,
-        gear: document.getElementById("entrance-drive-coach-gear-desktop").textContent,
-        pedals: document.getElementById("entrance-drive-coach-pedals-desktop").textContent
-      };
-      setLang("cs");
-      report.steps.autoCopyCs = {
-        title: document.getElementById("entrance-drive-coach-gear-title").textContent,
-        gear: document.getElementById("entrance-drive-coach-gear-desktop").textContent,
-        pedals: document.getElementById("entrance-drive-coach-pedals-desktop").textContent
-      };
-      setLang("en");
-
       key("m", "KeyM");
       key("a", "KeyA");
       report.steps.shortcuts = copy(drive().transmission);
@@ -424,15 +411,6 @@ check(s.focusedEnter && !s.focusedEnter.engine && s.focusedEnter.mode === "manua
     return row[1] === "0" && row[2] === (row[0] === "P");
   }), "Enter/Space operate focused transmission controls without falling through to ignition", {
     enter: s.focusedEnter, space: s.focusedSpace
-  });
-check(s.autoCopyEn && s.autoCopyEn.title === "Select Drive" &&
-  s.autoCopyEn.gear === "Drag the shifter · click toward D · right-click toward P" &&
-  /AUTO shifts D1–D7/.test(s.autoCopyEn.pedals) &&
-  s.autoCopyCs && s.autoCopyCs.title === "Zařaď D" &&
-  s.autoCopyCs.gear === "Táhni pákou · kliknutí k D · pravé kliknutí k P" &&
-  /AUTO řadí D1–D7/.test(s.autoCopyCs.pedals),
-  "AUTO coaching swaps its visible English and Czech copy cleanly", {
-    en: s.autoCopyEn, cs: s.autoCopyCs
   });
 check(s.shortcuts && s.shortcuts.mode === "auto", "A/M mode shortcuts operate while the HUD is open", s.shortcuts);
 check(s.ctrlShortcuts && s.ctrlShortcuts.right.mode === "manual" &&

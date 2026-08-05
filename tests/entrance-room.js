@@ -174,7 +174,7 @@ check(s.carBodyToggle && s.carBodyToggle.point && s.carBodyToggle.owner === "ent
 check(s.carFocusEnter && !/^entrance-porsche-/.test(s.carFocusEnter.active || "") &&
   !s.carFocusEnter.on.engineOn && s.carFocusEnter.off.engineOn &&
   s.carFocusEnter.off.activations.indicator === s.carFocusEnter.indicatorAfterClick,
-  "a pointer-used Porsche control releases focus while the ignition coach owns the first Enter",
+  "a pointer-used Porsche control releases focus while the dashboard ignition owns the first Enter",
   s.carFocusEnter);
 check(s.carDoorHandoff && [s.carDoorHandoff.roofDown,s.carDoorHandoff.roofUp].every(function(frame){
     return frame.closing && frame.openVisibility === "hidden" && frame.openOpacity === 0 &&

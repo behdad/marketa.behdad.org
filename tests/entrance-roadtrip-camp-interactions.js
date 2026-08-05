@@ -99,6 +99,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var tent = document.getElementById("entrance-roadtrip-camp-tent");
         click(tent);
         report.tentOpen = tent.classList.contains("open");
+        tent.focus({ focusVisible: true });
+        var tentFocus = getComputedStyle(tent);
+        report.tentFocus = { style: tentFocus.outlineStyle, width: tentFocus.outlineWidth };
+        tent.blur();
 
         var pot = document.getElementById("entrance-roadtrip-camp-pot");
         report.potStartsCold = !pot.classList.contains("simmering");
@@ -181,6 +185,8 @@ check(result && result.pines && result.pines.count === 4 && result.pines.accessi
 check(result && result.people && result.people.marketa && result.people.behdad,
   "each camper gets an independent head laugh", result && result.people);
 check(result && result.tentOpen, "the tent flap opens", result && result.tentOpen);
+check(result && result.tentFocus && (result.tentFocus.style === "none" || result.tentFocus.width === "0px"),
+  "the focused tent never gains a visible border", result && result.tentFocus);
 check(result && result.potStartsCold,
   "the hidden pot does not boil before the fire is built", result && result.potStartsCold);
 check(result && result.notebook && result.notebook.open && result.notebook.hostedInFullscreen &&

@@ -37563,6 +37563,7 @@ window.__entranceRoomOpen = false;
   }
   function setRoadtripRouteChoice(route, focus) {
     if (["calgary", "banff", "abraham"].indexOf(route) < 0) return false;
+    var changed = roadtripState.routeChoice !== route;
     roadtripState.routeChoice = route;
     paintRoadtripInvite();
     if (focus) {
@@ -37571,6 +37572,7 @@ window.__entranceRoomOpen = false;
       });
       if (choice && choice.focus) choice.focus();
     }
+    if (changed && window.__checkpointChanged) window.__checkpointChanged();
     return route;
   }
   function moveRoadtripRouteChoice(direction) {
@@ -37592,6 +37594,7 @@ window.__entranceRoomOpen = false;
     roadtripState.routeChooserOpen = true;
     paintRoadtripInvite();
     setRoadtripRouteChoice(roadtripState.routeChoice || "calgary", true);
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   function launchRoadtripRoute(route, event) {
@@ -37623,6 +37626,7 @@ window.__entranceRoomOpen = false;
       roadtripState.invitationDismissed = true;
     }
     paintRoadtripInvite();
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   function bindRoadtripInviteControl(control, action) {
@@ -45139,6 +45143,8 @@ window.__entranceRoomOpen = false;
         unlocked: roadtripState.unlocked,
         accepted: false,
         everAccepted: roadtripState.everAccepted,
+        routeChoice: roadtripState.routeChoice,
+        routeChooserOpen: roadtripState.routeChooserOpen,
         practiceLaps: roadtripState.practiceLaps,
         distance: Math.round(roadtripState.distance * 100) / 100,
         distancePoints: roadtripState.distancePoints,
@@ -45261,12 +45267,19 @@ window.__entranceRoomOpen = false;
             try { localStorage.setItem(ROADTRIP_BEST_KEY, String(roadtripState.best)); }
             catch (_error) {}
           }
-          if (restoreRoadtripRun(roadtrip.pausedRun)) {
+          var restoredRoadtripRun = restoreRoadtripRun(roadtrip.pausedRun);
+          if (restoredRoadtripRun) {
             roadtripState.unlocked = true;
             roadtripState.practiceLaps = 1;
             roadtripState.everAccepted = true;
             restoreRoadtripOnEntranceOpen = true;
           }
+          if (!restoredRoadtripRun) {
+            if (["calgary", "banff", "abraham"].indexOf(roadtrip.routeChoice) >= 0) {
+              roadtripState.routeChoice = roadtrip.routeChoice;
+            }
+            roadtripState.routeChooserOpen = roadtrip.routeChooserOpen === true && roadtripState.unlocked;
+          } else roadtripState.routeChooserOpen = false;
         }
       }
       if (row) {

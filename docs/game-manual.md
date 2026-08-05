@@ -171,8 +171,8 @@ momentum or extra acceleration is required. Click the empty pit, add tinder, twi
 arrangement, then light it. Missing fuel burns out. Click the fire to extinguish it, then click the
 cold pit to build again.
 
-The lake, poplar eyes, tent, campers, notebook, and parked car react. Stones skip from shore at a
-randomized heading between −60° and +60°.
+The lake, poplar eyes, pine trees, tent, campers, notebook, and parked car react. Stones skip from
+shore at a randomized heading between −60° and +60°.
 
 After the fire grows, the RSVP reminder pulses, then remains above the camp. Continue returns
 directly to Camping and retains a completed fire. Press `Enter`, Escape, Backspace, or the top-right

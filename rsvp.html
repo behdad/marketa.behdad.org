@@ -1094,12 +1094,24 @@ footer{margin-top:2.6rem}
 @keyframes entrance-roadtrip-fire-fail{from{opacity:0;transform:translateY(8px) scale(.2)}35%{opacity:1}to{opacity:0;transform:translateY(-12px) scale(.8)}}
 #entrance-roadtrip-camp-lake,
 #entrance-roadtrip-camp-aspen>g,
+#entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine,
 #entrance-roadtrip-camp-tent,
 .entrance-roadtrip-camp-character,
 #entrance-roadtrip-camp-pot{cursor:pointer;outline:none}
 #entrance-roadtrip-camp-pot:focus,#entrance-roadtrip-camp-pot:focus-visible{outline:none}
 :is(#entrance-roadtrip-camp-lake,#entrance-roadtrip-camp-tent,.entrance-roadtrip-camp-character,#entrance-roadtrip-camp-pot):focus-visible,
 #entrance-roadtrip-camp-aspen>g:focus-visible{outline:2px solid #fffdf8;outline-offset:2px}
+#entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine:focus-visible>path{stroke:#fffdf8;stroke-width:2.4}
+.entrance-roadtrip-camp-pinecone{
+  pointer-events:none;transform-box:view-box;transform-origin:center;animation:entrance-roadtrip-camp-pinecone 1.05s cubic-bezier(.34,.02,.36,1) both
+}
+@keyframes entrance-roadtrip-camp-pinecone{
+  0%{opacity:0;transform:translateY(-3px) rotate(-18deg)}
+  12%{opacity:1}
+  68%{transform:translateY(var(--camp-pinecone-drop)) rotate(285deg)}
+  80%{transform:translateY(calc(var(--camp-pinecone-drop) - 7px)) rotate(318deg)}
+  92%,100%{opacity:1;transform:translateY(var(--camp-pinecone-drop)) rotate(342deg)}
+}
 .entrance-roadtrip-camp-ripple{
   fill:none;stroke:#e6faf6;stroke-width:1.25;vector-effect:non-scaling-stroke;pointer-events:none;
   transform-box:fill-box;transform-origin:center;animation:entrance-roadtrip-camp-ripple .86s ease-out both
@@ -1134,6 +1146,7 @@ footer{margin-top:2.6rem}
   #entrance-roadtrip-camp-pot.simmering .entrance-roadtrip-camp-pot-bubble,
   #entrance-roadtrip-fire-game.igniting .fire-game-flame,
   #entrance-roadtrip-fire-game.failed .fire-game-spark{animation:none}
+  .entrance-roadtrip-camp-pinecone{animation:none;transform:translateY(var(--camp-pinecone-drop))}
 }
 #entrance-room.roadtrip-active.roadtrip-route-camp #entrance-roadtrip-camp{pointer-events:auto}
 #entrance-roadtrip-camp-porsche{pointer-events:all}
@@ -33007,8 +33020,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   <circle cx="486" cy="207" r="1.5"/><circle cx="538" cy="103" r="2"/><circle cx="596" cy="171" r="1.6"/>
                   <circle cx="648" cy="117" r="1.8"/>
                 </g>
-                <g fill="#213d32" stroke="#182e27" stroke-width="1">
-                  <path d="M-18 60L24-55L66 60ZM25 62L61-35L98 62ZM603 62L641-45L679 62ZM642 66L678-28L714 66Z"/>
+                <g id="entrance-roadtrip-camp-pines" fill="#213d32" stroke="#182e27" stroke-width="1">
+                  <g class="entrance-roadtrip-camp-pine" tabindex="0" data-cone-x="24" data-cone-y="-8" data-cone-drop="69"
+                    data-title-i="entrance_roadtrip_camp_pine_aria"><path d="M-18 60L24-55L66 60Z"/></g>
+                  <g class="entrance-roadtrip-camp-pine" tabindex="0" data-cone-x="61" data-cone-y="2" data-cone-drop="61"
+                    data-title-i="entrance_roadtrip_camp_pine_aria"><path d="M25 62L61-35L98 62Z"/></g>
+                  <g class="entrance-roadtrip-camp-pine" tabindex="0" data-cone-x="641" data-cone-y="-1" data-cone-drop="64"
+                    data-title-i="entrance_roadtrip_camp_pine_aria"><path d="M603 62L641-45L679 62Z"/></g>
+                  <g class="entrance-roadtrip-camp-pine" tabindex="0" data-cone-x="678" data-cone-y="5" data-cone-drop="62"
+                    data-title-i="entrance_roadtrip_camp_pine_aria"><path d="M642 66L678-28L714 66Z"/></g>
                 </g>
                 <g id="entrance-roadtrip-camp-tent" transform="translate(18 116)" tabindex="0"
                   data-title-i="entrance_roadtrip_camp_tent_aria">
@@ -38495,6 +38515,44 @@ window.__entranceRoomOpen = false;
     }, { once: true });
     return true;
   }
+  function dropRoadtripCampPinecone(pine) {
+    if (!pine || roadtripState.route !== "camp") return false;
+    var cones = pine.querySelectorAll(".entrance-roadtrip-camp-pinecone");
+    if (cones.length >= 2) cones[0].remove();
+    var x = Number(pine.getAttribute("data-cone-x"));
+    var y = Number(pine.getAttribute("data-cone-y"));
+    var drop = Number(pine.getAttribute("data-cone-drop"));
+    var cone = roadtripCampSvgNode("g");
+    var body = roadtripCampSvgNode("path");
+    var cap = roadtripCampSvgNode("path");
+    var scales = roadtripCampSvgNode("path");
+    cone.setAttribute("class", "entrance-roadtrip-camp-pinecone");
+    cone.style.setProperty("--camp-pinecone-drop", drop + "px");
+    cone.style.transformOrigin = x + "px " + y + "px";
+    body.setAttribute("d", "M" + x + " " + (y - 7) + "Q" + (x + 7) + " " + (y - 1) + " " +
+      (x + 4) + " " + (y + 8) + "Q" + x + " " + (y + 13) + " " + (x - 4) + " " + (y + 8) +
+      "Q" + (x - 7) + " " + (y - 1) + " " + x + " " + (y - 7) + "Z");
+    body.setAttribute("fill", "#755034");
+    body.setAttribute("stroke", "#392d24");
+    body.setAttribute("stroke-width", "1.2");
+    cap.setAttribute("d", "M" + (x - 3) + " " + (y - 6) + "Q" + x + " " + (y - 11) + " " +
+      (x + 3) + " " + (y - 6));
+    cap.setAttribute("fill", "none");
+    cap.setAttribute("stroke", "#392d24");
+    cap.setAttribute("stroke-width", "1.4");
+    cap.setAttribute("stroke-linecap", "round");
+    scales.setAttribute("d", "M" + (x - 5) + " " + y + "Q" + x + " " + (y + 4) + " " +
+      (x + 5) + " " + y + "M" + (x - 4) + " " + (y + 5) + "Q" + x + " " + (y + 9) + " " +
+      (x + 4) + " " + (y + 5));
+    scales.setAttribute("fill", "none");
+    scales.setAttribute("stroke", "#b48554");
+    scales.setAttribute("stroke-width", "1");
+    scales.setAttribute("stroke-linecap", "round");
+    cone.append(body, cap, scales);
+    pine.appendChild(cone);
+    removeRoadtripCampEffect(cone, 1450);
+    return cone;
+  }
   function bindRoadtripCampAction(node, action, ignoredSelector) {
     if (!node) return;
     function activate(event) {
@@ -38652,6 +38710,9 @@ window.__entranceRoomOpen = false;
     bindRoadtripCampAction(poplar, function () {
       restartRoadtripCampOneShot(poplar.querySelector(".entrance-roadtrip-camp-poplar-eyes"), "wiggling");
     });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine"), function (pine) {
+    bindRoadtripCampAction(pine, function () { dropRoadtripCampPinecone(pine); });
   });
   [roadtripElement("entrance-roadtrip-camp-marketa"), roadtripElement("entrance-roadtrip-camp-behdad")]
     .forEach(function (person) {
@@ -47354,6 +47415,7 @@ var T = {
       entrance_roadtrip_camp_lamps_off: "Fancy Stupid’s lamps are off.",
       entrance_roadtrip_camp_lake_aria: "Skip a stone across Abraham Lake",
       entrance_roadtrip_camp_poplar_aria: "Wiggle the poplar eyes",
+      entrance_roadtrip_camp_pine_aria: "Drop a pinecone",
       entrance_roadtrip_camp_tent_aria: "Open or close the tent",
       entrance_roadtrip_camp_marketa_aria: "Make Markéta laugh",
       entrance_roadtrip_camp_behdad_aria: "Make Behdad laugh",
@@ -48654,6 +48716,7 @@ var T = {
       entrance_roadtrip_camp_lamps_off: "Světla Fancy Stupid jsou zhasnutá.",
       entrance_roadtrip_camp_lake_aria: "Hodit žabku přes jezero Abraham",
       entrance_roadtrip_camp_poplar_aria: "Rozhýbat oči na topolech",
+      entrance_roadtrip_camp_pine_aria: "Shodit šišku",
       entrance_roadtrip_camp_tent_aria: "Otevřít nebo zavřít stan",
       entrance_roadtrip_camp_marketa_aria: "Rozesmát Markétu",
       entrance_roadtrip_camp_behdad_aria: "Rozesmát Behdada",

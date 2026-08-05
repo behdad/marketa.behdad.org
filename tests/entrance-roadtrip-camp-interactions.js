@@ -11,6 +11,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function click(node) {
     node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
+  function activateWithKeyboard(node) {
+    node.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+  }
   window.addEventListener("load", function () {
     setTimeout(function () {
       try {
@@ -66,6 +69,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             .classList.contains("wiggling")
         };
 
+        var pines = document.querySelectorAll("#entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine");
+        click(pines[0]);
+        activateWithKeyboard(pines[2]);
+        var firstCone = pines[0].querySelector(".entrance-roadtrip-camp-pinecone");
+        var keyboardCone = pines[2].querySelector(".entrance-roadtrip-camp-pinecone");
+        report.pines = {
+          count: pines.length,
+          accessible: Array.prototype.every.call(pines, function (pine) {
+            return pine.getAttribute("tabindex") === "0" && pine.getAttribute("title") === "Drop a pinecone";
+          }),
+          clickDrop: !!firstCone,
+          keyboardDrop: !!keyboardCone,
+          keptWithTarget: !!firstCone && firstCone.parentNode === pines[0] &&
+            !!keyboardCone && keyboardCone.parentNode === pines[2],
+          animation: firstCone && getComputedStyle(firstCone).animationName,
+          drop: firstCone && firstCone.style.getPropertyValue("--camp-pinecone-drop")
+        };
+
         var marketa = document.getElementById("entrance-roadtrip-camp-marketa");
         var behdad = document.getElementById("entrance-roadtrip-camp-behdad");
         click(marketa);
@@ -97,6 +118,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
         window.setLang("cs");
         report.czechLakeTitle = lake.getAttribute("title");
+        report.czechPineTitle = pines[0].getAttribute("title");
         window.setLang("en");
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
@@ -151,6 +173,11 @@ check(result && result.poplar && result.poplar.triggered && result.poplar.wrappe
     return name === "entrance-roadtrip-camp-eye-wiggle";
   }) && new Set(result.poplar.eyeCenters.map(String)).size === 3 && result.poplar.otherClusterIdle,
   "one poplar click wiggles all three bark eyes around distinct centres", result && result.poplar);
+check(result && result.pines && result.pines.count === 4 && result.pines.accessible &&
+  result.pines.clickDrop && result.pines.keyboardDrop && result.pines.keptWithTarget &&
+  result.pines.animation === "entrance-roadtrip-camp-pinecone" && result.pines.drop === "69px",
+  "each pine is accessible and drops its own tumbling cone in the tree coordinate space",
+  result && result.pines);
 check(result && result.people && result.people.marketa && result.people.behdad,
   "each camper gets an independent head laugh", result && result.people);
 check(result && result.tentOpen, "the tent flap opens", result && result.tentOpen);
@@ -162,6 +189,8 @@ check(result && result.notebook && result.notebook.open && result.notebook.hoste
   result && result.notebook);
 check(result && result.czechLakeTitle === "Hodit žabku přes jezero Abraham",
   "camp interaction labels follow the active language", result && result.czechLakeTitle);
+check(result && result.czechPineTitle === "Shodit šišku",
+  "the pine interaction label follows the active language", result && result.czechPineTitle);
 
 if (failures) process.exit(1);
 console.log("Abraham Lake camp interaction assertions passed.");

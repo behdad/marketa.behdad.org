@@ -140,6 +140,8 @@ loop.
 ### Driving model
 
 Input must flow through the shared steering, transmission, throttle, brake, and dismiss owners.
+The four-step `driveCoach` follows those same action owners. Its `?` control parks the drivetrain,
+clears cruise, and starts again at ignition; checkpoint recovery does not replay it automatically.
 Keyboard steering ramps from a gentle tap to full authority; touch steering and pedal pads provide
 direct analog input. A standalone Control tap captures a forward speed floor at 10 km/h or above;
 acceleration can exceed it, another tap retargets it, and braking, an invalid drivetrain state,
@@ -220,7 +222,7 @@ unless the route is terminal Camping. The paused-run drive snapshot also owns cr
 its held-speed target; unattended lifecycle cleanup releases momentary inputs without clearing it.
 
 Primary coverage is `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`,
-`tests/entrance-recovery.js`, `tests/entrance-cruise.js`, `tests/entrance-roadtrip.js`,
+`tests/entrance-recovery.js`, `tests/entrance-coach.js`, `tests/entrance-cruise.js`, `tests/entrance-roadtrip.js`,
 `tests/entrance-roadtrip-pause.js`, `tests/entrance-roadtrip-scoring.js`, `tests/entrance-windshield-cracks.js`,
 `tests/entrance-demerits.js`, and `tests/entrance-police.js`.
 

@@ -82,12 +82,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.complete = snap();
             var checkpoint = window.__captureCheckpointSystems().entrance;
             report.saved = checkpoint.drive.roadtrip.campFireBuilt;
+            click(document.getElementById("entrance-roadtrip-camp-pot"));
+            report.potClickLit = snap();
             click(document.getElementById("entrance-roadtrip-camp-fire"));
             report.extinguished = snap();
             var offCheckpoint = window.__captureCheckpointSystems().entrance;
             var finishedPit = document.getElementById("entrance-roadtrip-camp-finished-fire");
             report.coldPitCursor = getComputedStyle(finishedPit).cursor;
             click(document.getElementById("entrance-roadtrip-camp-pot"));
+            report.potClickCold = snap();
+            click(document.getElementById("entrance-roadtrip-camp-cold-fire-hit"));
             report.replay = snap();
             window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
             report.restored = snap();
@@ -147,6 +151,11 @@ check(result && result.successStart.result === "success" && result.successStart.
 check(result && result.complete && result.complete.state.complete && result.complete.sceneBuilt && result.complete.potBoiling &&
   !result.complete.gameOpen && result.complete.key === "entrance_roadtrip_camp_arrival",
   "the full fuel chain grows into the warm campsite", result && result.complete);
+check(result && result.potClickLit && result.potClickLit.potBoiling && !result.potClickLit.gameOpen &&
+  result.potClickCold && !result.potClickCold.potBoiling && !result.potClickCold.gameOpen,
+  "the pot never controls boiling or opens the fire builder", result && {
+    lit: result.potClickLit, cold: result.potClickCold
+  });
 check(result && result.saved === true && result.restored && result.restored.state.complete && result.restored.sceneBuilt,
   "a completed fire survives checkpoint restore", result && result.restored);
 check(result && result.extinguished &&

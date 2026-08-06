@@ -30,10 +30,6 @@ var harness = [
   ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;',
   ' var blockCalls=0;Math.random=function(){return .5;};window.__monitorMessageRewrite=function(){blockCalls++;return Promise.resolve(JSON.stringify({en:"must not be used"}));};var blockA=window.__deliverAutonomousPhoneMessage("pouria_farhang"),blockB=window.__deliverAutonomousPhoneMessage("hamid_verse"),blockC=window.__deliverAutonomousPhoneMessage("hamid_verse2");window.__openMessagesAt("hamid_verse2");await sleep(30);S("blocklist",{accepted:[blockA,blockB,blockC],rewriteCalls:blockCalls,pouria:row("pouria_farhang")&&row("pouria_farhang").textContent,hamid1:row("hamid_verse")&&row("hamid_verse").textContent,hamid2:row("hamid_verse2")&&row("hamid_verse2").textContent,pending:window.__messageRewritePending()});',
   ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;',
-  ' var tabRequest=null,tabRolls=[0,.5];Math.random=function(){return tabRolls.length?tabRolls.shift():.5;};window.__monitorMessageRewrite=function(value){tabRequest=value;return Promise.resolve(JSON.stringify({en:"AI-rephrased Tab message"}));};',
-  ' var tabEnId=window.__deliverRandomContextText();await sleep(60);window.__openMessagesAt(tabEnId);await sleep(60);var tabEnBody=row(tabEnId);S("tabEn",{id:tabEnId,request:tabRequest,body:tabEnBody&&tabEnBody.textContent,pending:window.__messageRewritePending()});',
-  ' if(window.__closePhoneModal)window.__closePhoneModal(true);await sleep(280);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="cs";window.__secondRound=true;var czechRewriteCalls=0;Math.random=function(){return 0;};window.__monitorMessageRewrite=function(){czechRewriteCalls++;return Promise.resolve(JSON.stringify({en:"must not be used"}));};',
-  ' var tabCsId=window.__deliverRandomContextText();window.__openMessagesAt(tabCsId);await sleep(30);var tabCsBody=row(tabCsId);S("tabCs",{id:tabCsId,rewriteCalls:czechRewriteCalls,body:tabCsBody&&tabCsBody.textContent,pending:window.__messageRewritePending()});',
   ' if(window.__closePhoneModal)window.__closePhoneModal(true);if(window.__resetPhoneApps)window.__resetPhoneApps();document.documentElement.lang="en";window.__secondRound=true;var originalCalls=0;Math.random=function(){return 0;};window.__monitorMessageRewrite=function(){originalCalls++;return Promise.resolve(JSON.stringify({en:"must not be used"}));};var originalAccepted=window.__deliverAutonomousPhoneMessage("athena_banter"),originalMessage=window.__chatMessagesKnowledge().filter(function(message){return message.id==="athena_banter";})[0];S("originalRoll",{accepted:originalAccepted,rewriteCalls:originalCalls,body:originalMessage&&originalMessage.text,pending:window.__messageRewritePending()});Math.random=oldRandom;',
   '}',
   '})();</script>'
@@ -55,7 +51,6 @@ check(result.errors.length === 0, "no uncaught page errors", result.errors);
 var success = result.steps.success || {}, fallback = result.steps.fallback || {};
 var authoredVoices = result.steps.authoredVoices || {}, originalRoll = result.steps.originalRoll || {};
 var blocklist = result.steps.blocklist || {};
-var tabEn = result.steps.tabEn || {}, tabCs = result.steps.tabCs || {};
 check(success.accepted && !success.duplicate && success.pending.join(",") === "cue_mail",
   "one autonomous message owns one in-flight rewrite", success);
 check(success.request && success.request.sender === "Bahareh" &&
@@ -108,15 +103,6 @@ check(blocklist.accepted && blocklist.accepted.every(Boolean) && blocklist.rewri
   blocklist.hamid2 === "رفتم تو آب، آب اومده تا سرِ زانوم." &&
   blocklist.pending.length === 0,
   "Pouria's Farhang line and both Hamid verses bypass Chat verbatim", blocklist);
-check(tabEn.id === "cue_mail" && tabEn.request &&
-  tabEn.request.en === "did you check the mail? 💌 there's a letter for you" &&
-  tabEn.body === "AI-rephrased Tab message" && tabEn.pending.length === 0,
-  "the English Tab shortcut takes the message-rewrite trip", tabEn);
-check(tabCs.id === "cue_mail" && tabCs.rewriteCalls === 0 &&
-  tabCs.body === "koukl(a) jsi do pošty? 💌 máš tam dopis" &&
-  tabCs.pending.length === 0,
-  "the Czech Tab shortcut immediately uses its authored translation", tabCs);
-
 console.log("");
 if (failures) {
   console.log(failures + " check(s) failed.");

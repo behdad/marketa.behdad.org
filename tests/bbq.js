@@ -44,9 +44,8 @@ var harness = String.raw`<script>
     var afterDropIns = window.__cuddlyVisitorDuos().filter(function (id) { return window.__phoneMessageReceived("visit_" + id); }).length;
     check("May 2 suppresses autonomous are-you-home texts", beforeDropIns === afterDropIns, beforeDropIns + " -> " + afterDropIns);
     var moments = ["firstdance", "slowdance", "toasts", "groupphoto", "sparklers", "cake", "bouquet", "chairlift"];
-    for (var mt = 0; mt < 18; mt++) window.__deliverRandomContextText();
-    var deliveredMoments = moments.filter(function (id) { return window.__phoneMessageReceived(id); });
-    check("May 2 excludes wedding-moment texts", deliveredMoments.length === 0, deliveredMoments.join(","));
+    var eligibleMoments = intersection(window.__partyTextChoices(), moments);
+    check("May 2 excludes wedding-moment texts", eligibleMoments.length === 0, eligibleMoments.join(","));
     check("balcony split waits for invitation", !(window.__bbqSplitState && window.__bbqSplitState().on));
     check("grill waits for invitation", !document.getElementById("balcony-smoker").classList.contains("smoking"));
     setTimeout(function () {

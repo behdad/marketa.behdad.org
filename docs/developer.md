@@ -96,12 +96,16 @@ devices, particles, and captions. The lower roots live in `#lower-room-track`;
 `lowerRoomForStage()` defines their pairing and `__navigateLowerRoom(name)` owns horizontal lower-
 floor movement. Individual lower controllers own vertical open and close.
 
+The Phase 2 `#loft-dollhouse` picker reuses those same navigation owners. It appears only after
+lower-floor discovery, and its 5×2 map enables cells from `seenRooms`; never infer picker access
+from `maxUnlocked`. Tab and the grid button share its open/close path.
+
 During a pan, traversed stages remain paintable until transition completion; afterward `stage-far`
 parks distant rooms. A lower-room transition changes the backing main stage and opens the target
 lower panel as one queued operation. Checkpoints store a lower identity only when it matches the
 saved main room.
 
-Start navigation work with `tests/navigation.js`, `tests/upstairs-keyboard-navigation.js`,
+Start navigation work with `tests/navigation.js`, `tests/dollhouse.js`, `tests/upstairs-keyboard-navigation.js`,
 `tests/delayed-pan.js`, `tests/rapid-navigation.js`, `tests/lower-shortcuts.js`, and the relevant
 `tests/lower-room-*.js` files.
 
@@ -321,6 +325,9 @@ Checkpointing begins after the Kitchen is solved or deliberately left. Writes ar
 `reset()`. Restore uses `beforeStage` for state needed before navigation and `afterStage` for state
 that depends on the settled room.
 
+The shared floor/dollhouse coach keeps its retired flag in progression as
+`dollhouseCoachRetired`; Start over clears it with lower-floor discovery.
+
 Persist only bounded, settled intent. Do not restore live timers, calls, cameras, dialogs, drags,
 particles, iframe frames, media playback, or running game loops. A missing `systems` map is a legacy
 record; a missing row in a modern map means that subsystem's fresh default.
@@ -403,7 +410,7 @@ Add focused tests for the ownership boundary changed:
 | Area | Focused tests |
 | --- | --- |
 | Solve and Enter ownership | `enter.js`, `phase2-progression.js`, `progression-transitions.js` |
-| Main/lower navigation | `navigation.js`, `upstairs-keyboard-navigation.js`, `delayed-pan.js`, `rapid-navigation.js`, `lower-shortcuts.js`, `lower-room-*.js` |
+| Main/lower navigation | `navigation.js`, `dollhouse.js`, `upstairs-keyboard-navigation.js`, `delayed-pan.js`, `rapid-navigation.js`, `lower-shortcuts.js`, `lower-room-*.js` |
 | Entry, recovery, reset, trailer | `game-entry-loader.js`, `game-only-layout.js`, `url-entry.js`, `recovery.js`, `checkpoint-*.js`, `reset-hooks.js`, `cine.js` |
 | Monitor, phone, menus | `menu.js`, `laptopmenu.js`, `systemmenu.js`, `monitor-*.js`, `phone-*.js` |
 | Room interactions | the corresponding room or lower-room test; Entrance also uses its driving and Road Trip suites |

@@ -2,7 +2,10 @@
 // Served stew unlocks a clear-night, checkpointed three-constellation finale.
 "use strict";
 
+var fs = require("fs");
+var path = require("path");
 var lib = require("./lib");
+var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
 
 var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <style>
@@ -59,6 +62,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       wisdomShown: wisdom.classList.contains("show"),
       wisdomBubbles: wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble").length,
       wisdomSpeakers: wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-speaker").length,
+      wisdomClose: !!document.getElementById("entrance-roadtrip-camp-wisdom-close"),
+      wisdomShapes: Array.prototype.map.call(wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble"), function (bubble) {
+        var path = bubble.querySelector("path.entrance-roadtrip-camp-wisdom-shape");
+        var box = path && path.getBBox();
+        return {
+          paths: bubble.querySelectorAll("path.entrance-roadtrip-camp-wisdom-shape").length,
+          rects: bubble.querySelectorAll("rect.entrance-roadtrip-camp-wisdom-shape").length,
+          stroke: path && getComputedStyle(path).stroke,
+          x: box && Math.round(box.x),
+          width: box && Math.round(box.width)
+        };
+      }),
       wisdomText: wisdom.textContent.replace(/\s+/g, " ").trim(),
       fireBuilt: roadtrip.campFireBuilt,
       fireLit: roadtrip.campFireLit,
@@ -133,10 +148,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                         setTimeout(function () {
                           try {
                             report.completeRestored = snap();
-                            click(document.getElementById("entrance-roadtrip-camp-wisdom-close"));
+                            click(document.getElementById("entrance-roadtrip-dismiss"));
                             report.exited = snap();
                             click(document.querySelector('[data-roadtrip-reentry-choice="camp"]'));
-                            report.freshArrival = snap();
+                            report.preservedArrival = snap();
                             window.overcast(false); clearNight();
                           } catch (error) { report.errors.push(String(error && error.stack || error)); }
                           finish();
@@ -200,31 +215,46 @@ check(result && result.complete && result.complete.state.complete && !result.com
   result.complete.skyPointer === "none" &&
   result.complete.liveConstellations === 3 && result.complete.moonAfterConstellations && result.complete.wisdomShown &&
   result.complete.wisdomBubbles === 4 && result.complete.wisdomSpeakers === 0 &&
+  !result.complete.wisdomClose &&
+  result.complete.wisdomShapes.every(function (shape) {
+    return shape.paths === 1 && shape.rects === 0 && shape.width <= 215;
+  }) &&
+  result.complete.wisdomShapes.map(function (shape) { return shape.stroke; }).join("|") ===
+    "rgb(217, 166, 166)|rgb(127, 158, 192)|rgb(217, 166, 166)|rgb(127, 158, 192)" &&
+  result.complete.wisdomShapes[0].x >= 460 && result.complete.wisdomShapes[1].x <= 20 &&
+  result.complete.wisdomShapes[2].x >= 485 && result.complete.wisdomShapes[3].x <= 15 &&
   result.complete.wisdomText.indexOf("Until that ends as well.") >= 0 &&
-  result.complete.wisdomText.indexOf("When something is over, something else begins—ad infinitum.") >= 0,
-  "finishing returns to the live sky with three constellations and the four-bubble exchange",
+  result.complete.wisdomText.indexOf("When something is over,") >= 0 &&
+  result.complete.wisdomText.indexOf("something else begins") >= 0 &&
+  result.complete.wisdomText.indexOf("—ad infinitum.") >= 0,
+  "finishing returns to the live sky with four edge-set, speaker-colored path bubbles",
   result && result.complete);
+check(/camp-wisdom-bubble:nth-child\(2\)\{animation-delay:1s\}/.test(source) &&
+  /camp-wisdom-bubble:nth-child\(3\)\{animation-delay:2s\}/.test(source) &&
+  /camp-wisdom-bubble:nth-child\(4\)\{animation-delay:3s\}/.test(source),
+  "the four exchange bubbles reveal one second apart");
 check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
   result.czech.builderNames.join("|") === "Kasiopeja|Velká medvědice|Malá medvědice" &&
   result.czech.liveNames === 0 &&
-  result.czech.wisdom.indexOf("Když něco skončí, něco jiného začne") >= 0,
+  result.czech.wisdom.indexOf("Když něco skončí,") >= 0 &&
+  result.czech.wisdom.indexOf("něco jiného začne") >= 0,
   "builder labels switch to Czech while the permanent sky stays unlabeled", result && result.czech);
 check(result && result.dismissed && result.dismissed.state.wisdomDismissed && !result.dismissed.wisdomShown &&
-  result.dismissed.caption === "entrance_roadtrip_camp_arrival" && result.dismissed.outerDismiss === "grid",
-  "clicking the conversation dismisses it and restores the permanent RSVP caption", result && result.dismissed);
+  result.dismissed.state.sleepPhase === "prompt" &&
+  result.dismissed.caption === "entrance_roadtrip_camp_sleep_prompt" && result.dismissed.outerDismiss === "grid",
+  "clicking the conversation dismisses it and suggests putting out the fire", result && result.dismissed);
 check(result && result.completeRestored && result.completeRestored.state.complete &&
   !result.completeRestored.state.wisdomDismissed && result.completeRestored.wisdomShown &&
+  result.completeRestored.state.sleepPhase === "idle" &&
   result.completeRestored.caption === "entrance_roadtrip_stargazing_title",
   "checkpoint restore returns the undismissed live-sky conversation without a stale invitation",
   result && result.completeRestored);
 check(result && result.exited && !result.exited.campActive,
-  "the conversation corner dismiss exits Camping back to the Road Trip controls", result && result.exited);
-check(result && result.freshArrival && !result.freshArrival.state.complete &&
-  !result.freshArrival.wisdomShown && result.freshArrival.liveOpacity === 0 &&
-  !result.freshArrival.fireBuilt && !result.freshArrival.fireLit &&
-  result.freshArrival.pinecones === 0 && !result.freshArrival.stew &&
-  Object.keys(result.freshArrival.state.progress).every(function (name) { return result.freshArrival.state.progress[name] === 0; }),
-  "choosing Camping after the finale starts a fresh empty campsite", result && result.freshArrival);
+  "the standard campsite exit returns to the Road Trip controls", result && result.exited);
+check(result && result.preservedArrival && result.preservedArrival.state.complete &&
+  result.preservedArrival.wisdomShown && result.preservedArrival.fireBuilt && result.preservedArrival.fireLit &&
+  result.preservedArrival.stew && result.preservedArrival.stew.status === "served",
+  "leaving before the curtain call preserves the finished stargazing campsite", result && result.preservedArrival);
 
 if (failures) process.exit(1);
 console.log("Campsite stargazing assertions passed.");

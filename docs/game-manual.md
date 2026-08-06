@@ -192,8 +192,10 @@ and every fixed pantry item, then cook it in the camp pot. The lid lets you peek
 and opens when dinner is ready; an extinguished fire pauses it. Serve then, or reset a comically overcooked pot.
 After serving, click the sky to carry the whole game through sunset into a clear night. Trace
 Cassiopeia, Ursa Major, and Ursa Minor; the completed constellations and closing campfire exchange
-remain in the live campsite until dismissed. Closing that final exchange ends the campsite, so the
-next **Camping** visit begins again at an empty firepit.
+remain in the live campsite. Dismiss the exchange, then put out the fire when the sleep suggestion
+appears. The campers retire into the glowing tent, the campsite goes dark, and a few rising Zs lead
+back to the RSVP reminder. Leaving before that curtain call finishes preserves Camping; leaving
+after it finishes makes the next **Camping** visit begin again at an empty firepit.
 
 Leaving the highway keeps the dashboard available and never resumes the run automatically. The
 **Road Trip** control offers the actions currently available: continue a paused run, start a new

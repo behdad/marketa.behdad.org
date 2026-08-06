@@ -226,10 +226,12 @@ The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 celestial bodies, and expanded winter mountain snow. Served stew unlocks the campsite sky; selecting
 it during daylight commits the shared day/night state to night, locally clears camp weather, and then
 opens the stargazing trace. Completion closes that overlay, paints the constellations into the live
-campsite, and holds the four-bubble exchange until dismissal. `campStargazingState` checkpoints exact
-trace and dismissal state but always restores the trace overlay closed; a fresh camp arrival resets it.
-The exchange's own close action ends and resets the campsite session, while ordinary Camping
-dismissal still preserves it.
+campsite, and holds the four edge-set, integrated-tail bubbles until dismissal; Behdad's pink and
+Markéta's blue bubbles reveal one second apart. Dismissal changes the caption to the sleep prompt;
+clicking the fire starts the ordered fire-out → campers → tent-light → darkness → Zs curtain call.
+`campStargazingState` checkpoints exact trace progress and `campSleepState.phase`, but
+always restores the trace overlay closed. Leaving pauses an unfinished curtain call and preserves the
+campsite; leaving after its congratulations phase resets fire, stew, stargazing, and finale state.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed
@@ -247,7 +249,8 @@ Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`,
 `tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-audio.js`,
-`tests/entrance-roadtrip-camp-stew.js`, and `tests/entrance-roadtrip-camp-stargazing.js` for this boundary.
+`tests/entrance-roadtrip-camp-stew.js`, `tests/entrance-roadtrip-camp-stargazing.js`, and
+`tests/entrance-roadtrip-camp-sleep.js` for this boundary.
 
 ### Scoring, police, and durable records
 

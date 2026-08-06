@@ -19,7 +19,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       gear: state.drive.gear,
       range: state.drive.transmission.range,
       position: state.drive.position,
-      distance: state.drive.roadtrip.distance
+      distance: state.drive.roadtrip.distance,
+      routeElapsed: state.drive.roadtrip.routeElapsed
     };
   }
   function pressEscape() {
@@ -144,20 +145,23 @@ var validCoast = result && result.validCoast || {};
 check(parked.engineOn && parked.range === "P" && parked.gear === 0 && parked.speed === 0,
   "a fresh near-exit shortcut drops carried momentum and starts parked", parked);
 check(parkedThrottle.range === "P" && parkedThrottle.gear === 0 && parkedThrottle.speed === 0 &&
-  parkedThrottle.position === parked.position && parkedThrottle.distance === parked.distance,
-  "accelerating in AUTO Park cannot move the shortcut-started car", {
+  parkedThrottle.position === parked.position && parkedThrottle.distance === parked.distance &&
+  parkedThrottle.routeElapsed === parked.routeElapsed,
+  "accelerating in AUTO Park cannot move or advance the shortcut-started car", {
     before: parked, after: parkedThrottle
   });
 check(!engineOffThrottle.engineOn && engineOffThrottle.range === "P" &&
   engineOffThrottle.gear === 0 && engineOffThrottle.speed === 0 &&
-  engineOffThrottle.position === parked.position && engineOffThrottle.distance === parked.distance,
+  engineOffThrottle.position === parked.position && engineOffThrottle.distance === parked.distance &&
+  engineOffThrottle.routeElapsed === parked.routeElapsed,
   "engine-off acceleration cannot propel the shortcut-started car", engineOffThrottle);
 check(restartedParkThrottle.engineOn && restartedParkThrottle.range === "P" &&
   restartedParkThrottle.gear === 0 && restartedParkThrottle.speed === 0 &&
-  restartedParkThrottle.position === parked.position && restartedParkThrottle.distance === parked.distance,
-  "restarting in AUTO Park still requires selecting a drive range", restartedParkThrottle);
+  restartedParkThrottle.position === parked.position && restartedParkThrottle.distance === parked.distance &&
+  restartedParkThrottle.routeElapsed === parked.routeElapsed,
+  "restarting in AUTO Park still cannot advance the route without Drive", restartedParkThrottle);
 check(validDrive.engineOn && validDrive.range === "D" && validDrive.gear > 0 &&
-  validDrive.speed > 0 && validDrive.distance > parked.distance,
+  validDrive.speed > 0 && validDrive.distance > parked.distance && validDrive.routeElapsed > parked.routeElapsed,
   "fresh acceleration begins after AUTO Drive is selected", validDrive);
 check(validCoast.range === "D" && validCoast.gear > 0 && validCoast.speed > 0 &&
   validCoast.speed < validDrive.speed && validCoast.distance > validDrive.distance,

@@ -53,6 +53,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     });
     return result;
   }
+  function bounds(nodes, xAttribute, yAttribute, padding) {
+    var points = Array.prototype.map.call(nodes, function (node) {
+      return [Number(node.getAttribute(xAttribute)), Number(node.getAttribute(yAttribute))];
+    });
+    return {
+      minX: Math.min.apply(null, points.map(function (point) { return point[0]; })) - padding,
+      maxX: Math.max.apply(null, points.map(function (point) { return point[0]; })) + padding,
+      minY: Math.min.apply(null, points.map(function (point) { return point[1]; })) - padding,
+      maxY: Math.max.apply(null, points.map(function (point) { return point[1]; })) + padding
+    };
+  }
   function dragLiveStar(name, index, dx, dy) {
     var live = document.getElementById("entrance-roadtrip-camp-finale-constellations");
     var star = live.querySelector('[data-live-stargazing-constellation="' + name + '"] [data-live-stargazing-star="' + index + '"]');
@@ -71,6 +82,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var sky = document.getElementById("entrance-roadtrip-camp-sky-hit");
     var outer = document.getElementById("entrance-roadtrip-dismiss");
     var moon = document.getElementById("entrance-roadtrip-camp-moon");
+    var moonGlow = moon.querySelector("circle");
+    var skyHit = document.getElementById("entrance-roadtrip-camp-sky-hit");
+    var liveStars = live.querySelectorAll("[data-live-stargazing-star]");
+    var liveHitRadius = Number(live.querySelector(".entrance-roadtrip-camp-finale-star-hit").getAttribute("r"));
     var wisdomHit = document.getElementById("entrance-roadtrip-camp-wisdom-hit");
     var room = document.getElementById("entrance-room");
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
@@ -97,6 +112,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       liveStars: live.querySelectorAll("[data-live-stargazing-star]").length,
       liveMinHit: Math.min.apply(null, Array.prototype.map.call(live.querySelectorAll(".entrance-roadtrip-camp-finale-star-hit"), function (node) { return Number(node.getAttribute("r")); })),
       liveStarCursor: getComputedStyle(live.querySelector("[data-live-stargazing-star]")).cursor,
+      liveVisualBounds: bounds(liveStars, "data-live-x", "data-live-y", 0),
+      liveHitBounds: bounds(liveStars, "data-live-x", "data-live-y", liveHitRadius),
+      skyBounds: {
+        minX: Number(skyHit.getAttribute("x") || 0),
+        maxX: Number(skyHit.getAttribute("x") || 0) + Number(skyHit.getAttribute("width")),
+        minY: Number(skyHit.getAttribute("y")),
+        maxY: Number(skyHit.getAttribute("y")) + Number(skyHit.getAttribute("height"))
+      },
+      moonBounds: {
+        minX: Number(moonGlow.getAttribute("cx")) - Number(moonGlow.getAttribute("r")),
+        maxX: Number(moonGlow.getAttribute("cx")) + Number(moonGlow.getAttribute("r")),
+        minY: Number(moonGlow.getAttribute("cy")) - Number(moonGlow.getAttribute("r")),
+        maxY: Number(moonGlow.getAttribute("cy")) + Number(moonGlow.getAttribute("r"))
+      },
       builderShapes: shapes(game, "data-stargazing-constellation", "data-stargazing-star", ".entrance-roadtrip-stargazing-star-core"),
       checks: Array.prototype.map.call(game.querySelectorAll(".entrance-roadtrip-stargazing-check"), function (check) {
         var path = check.querySelector("path");
@@ -331,17 +360,29 @@ check(/camp-wisdom-bubble:nth-child\(1\)\{animation-delay:2s\}/.test(source) &&
   /camp-wisdom-bubble:nth-child\(4\)\{animation-delay:5s\}/.test(source),
   "the exchange waits two seconds, then reveals its four bubbles one second apart");
 check(result && result.complete &&
-  same(result.complete.liveShapes.cassiopeia.points, [[45,-108],[78,-75],[113,-91],[140,-66],[176,-94]]) &&
-  same(result.complete.liveShapes["ursa-minor"].points, [[202,-60],[225,-45],[250,-73],[228,-92],[300,-104],[355,-104],[405,-94]]) &&
-  same(result.complete.liveShapes["ursa-major"].points, [[455,-105],[490,-107],[525,-94],[550,-78],[648,-72],[630,-36],[559,-47]]) &&
+  same(result.complete.liveShapes.cassiopeia.points, [[42.6,-94.44],[65.04,-72],[88.84,-82.88],[107.2,-65.88],[131.68,-84.92]]) &&
+  same(result.complete.liveShapes["ursa-minor"].points, [[149.36,-61.8],[165,-51.6],[182,-70.64],[167.04,-83.56],[216,-91.72],[253.4,-91.72],[287.4,-84.92]]) &&
+  same(result.complete.liveShapes["ursa-major"].points, [[321.4,-92.4],[345.2,-93.76],[369,-84.92],[386,-74.04],[452.64,-69.96],[440.4,-45.48],[392.12,-52.96]]) &&
   result.complete.liveShapes.cassiopeia.lines === "0-1 1-2 2-3 3-4" &&
   result.complete.liveShapes["ursa-minor"].lines === "0-1 1-2 2-3 3-0 2-4 4-5 5-6" &&
   result.complete.liveShapes["ursa-major"].lines === "0-1 1-2 2-3 3-4 4-5 5-6 6-3",
   "the completed northern sky preserves the same recognizable silhouettes with Cassiopeia opposite the Dipper around Polaris",
   result && result.complete && result.complete.liveShapes);
+check(result && result.complete &&
+  result.complete.liveHitBounds.minX >= result.complete.skyBounds.minX + 10 &&
+  result.complete.liveHitBounds.maxX <= result.complete.skyBounds.maxX - 10 &&
+  result.complete.liveHitBounds.minY >= result.complete.skyBounds.minY + 10 &&
+  result.complete.liveHitBounds.maxY <= result.complete.skyBounds.maxY - 10 &&
+  result.complete.liveVisualBounds.maxX <= 455,
+  "the reduced live constellations and their full drag targets fit comfortably in the left sky",
+  result && result.complete && { visual: result.complete.liveVisualBounds, hit: result.complete.liveHitBounds, sky: result.complete.skyBounds });
+check(result && result.complete && result.complete.liveHitBounds.maxX < result.complete.moonBounds.minX &&
+  result.complete.moonBounds.minX - result.complete.liveHitBounds.maxX >= 90,
+  "even the constellation drag targets leave a clear gap before the moon's outer glow",
+  result && result.complete && { hit: result.complete.liveHitBounds, moon: result.complete.moonBounds });
 check(result && result.dragged && result.dragged.state.complete && !result.dragged.state.open &&
-  Math.abs(result.dragged.liveShapes.cassiopeia.points[0][0] - 69) < .01 &&
-  Math.abs(result.dragged.liveShapes.cassiopeia.points[0][1] + 78) < .01 &&
+  Math.abs(result.dragged.liveShapes.cassiopeia.points[0][0] - 66.6) < .01 &&
+  Math.abs(result.dragged.liveShapes.cassiopeia.points[0][1] + 64.44) < .01 &&
   result.dragged.livePaths[0] !== result.complete.livePaths[0] &&
   same(result.dragged.state.progress, result.complete.state.progress),
   "dragging one completed star moves it and redraws its connectors without reopening or changing the trace",

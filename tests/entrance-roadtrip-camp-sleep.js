@@ -30,6 +30,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       outerDismiss: getComputedStyle(document.getElementById("entrance-roadtrip-dismiss")).display,
       wisdomShown: document.getElementById("entrance-roadtrip-camp-wisdom").classList.contains("show"),
       wisdomClose: !!document.getElementById("entrance-roadtrip-camp-wisdom-close"),
+      fireBuilderOpen: document.getElementById("entrance-roadtrip-fire-game").classList.contains("open"),
       fireBuilt: roadtrip.campFireBuilt,
       fireLit: roadtrip.campFireLit,
       stew: roadtrip.stew,
@@ -42,6 +43,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       tentOpen: tent.classList.contains("open"),
       tentLight: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-tent-light")).opacity),
       darkness: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).opacity),
+      darknessPointer: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).pointerEvents,
       zzzs: document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz").length,
       classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"].filter(function (name) {
         return camp.classList.contains("camp-sleep-" + name);
@@ -114,6 +116,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.zzz = snap();
             window.__entranceRoadtripCampSleepStep();
             report.complete = snap();
+            report.completeClickTarget = click(document.getElementById("entrance-roadtrip-camp-finale-darkness"));
+            report.completeAfterClick = snap();
             window.setLang("cs");
             report.czechComplete = snap().captionText;
             window.setLang("en");
@@ -182,6 +186,11 @@ check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight
 check(result && result.complete && result.complete.phase === "complete" &&
   result.complete.caption === "entrance_roadtrip_camp_arrival" && /Congrats!/.test(result.complete.captionText),
   "the existing permanent RSVP congratulations caption ends the finale", result && result.complete);
+check(result && result.complete && result.complete.darknessPointer === "all" && result.completeClickTarget &&
+  result.completeAfterClick && result.completeAfterClick.phase === "complete" &&
+  !result.completeAfterClick.fireBuilderOpen,
+  "the completed dark campsite absorbs stray clicks without reopening a dead builder",
+  { target: result && result.completeClickTarget, after: result && result.completeAfterClick });
 check(result && /Gratulujeme!/.test(result.czechComplete || ""),
   "the final congratulations remains bilingual", result && result.czechComplete);
 check(result && result.completeExit && !result.completeExit.campActive && result.fresh &&

@@ -25,6 +25,9 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     report.fresh = coach();
+    var coachClick = new MouseEvent("click", { bubbles: true, cancelable: true });
+    document.getElementById("entrance-drive-coach").dispatchEvent(coachClick);
+    report.clickedCoach = { coach: coach(), prevented: coachClick.defaultPrevented };
 
     window.__toggleEntrancePorscheEngine();
     report.started = coach();
@@ -155,6 +158,9 @@ console.log("rsvp.html driving coach:");
 check(result && result.errors.length === 0, "coach harness has no uncaught errors", result && result.errors);
 check(result && result.fresh.show && result.fresh.step === 1,
   "a fresh dashboard starts with ignition", result && result.fresh);
+check(result && result.clickedCoach && result.clickedCoach.prevented &&
+  result.clickedCoach.coach.show && result.clickedCoach.coach.step === 1,
+  "clicking the coach itself neither dismisses nor advances it", result && result.clickedCoach);
 check(result && result.started.show && result.started.step === 2,
   "starting advances to steering", result && result.started);
 check(result && result.started.steerArrow &&

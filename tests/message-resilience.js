@@ -256,10 +256,10 @@ check(!s.action_game_release.held.active.length && !s.action_game_release.held.m
 check(s.formal_early.accepted && !s.formal_early.ready && s.formal_early.held && !s.formal_early.delivered,
   "formal-moment texts wait through the party's opening stretch", s.formal_early);
 check(s.formal_mature.ready && s.formal_mature.delivered, "formal-moment texts release after 45 attended party seconds", s.formal_mature);
-check(s.action_expiry.beforeUnread === 2 && s.action_expiry.afterUnread === 1 && s.action_expiry.state === "expired" &&
+check(s.action_expiry.beforeUnread === 2 && s.action_expiry.afterUnread === 2 && s.action_expiry.state === "expired" &&
   s.action_expiry.retained && s.action_expiry.momentBefore && !s.action_expiry.momentAfter &&
   s.action_expiry.calendarAfter && s.action_expiry.latest === "cue_calendar",
-  "party-bound actions expire into read history while still-applicable messages keep their action and unread slot", s.action_expiry);
+  "party-bound actions expire without marking unread messages read, while still-applicable messages keep their action", s.action_expiry);
 check(s.retention.before === 40 && s.retention.after === 40 && s.retention.allConversation && s.retention.paired && s.retention.newestUser && s.retention.newestAi, "the bounded thread evicts authored chatter before complete visitor/AI turns", s.retention);
 
 console.log("");

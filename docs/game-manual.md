@@ -107,6 +107,7 @@ a small math lock; three failed attempts unlock it. Home, Back, and Recents foll
 behavior.
 
 Opening a message does not automatically run its activity. Select the activity arrow when ready.
+An activity can expire when its moment passes, but its message stays unread until you read it.
 After a full party or its authored finale, Behdad sends Markéta a private road-trip invitation; its
 activity arrow opens the Entrance.
 Right-click or long-press a message or app icon for local actions. **Kill app** resets only that app.

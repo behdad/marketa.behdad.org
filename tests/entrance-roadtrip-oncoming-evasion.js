@@ -28,6 +28,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripStart();
+        window.__entranceRoadtripSetRoute("banff", 0);
 
         report.steps.deckA = decisions(0x12345678);
         report.steps.deckARepeat = decisions(0x12345678);

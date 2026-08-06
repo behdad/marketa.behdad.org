@@ -238,6 +238,7 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
         window.__entranceDriveTransmissionMode(mode, true);
         if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripStart();
+        window.__entranceRoadtripSetRoute("banff", 0);
         window.__entranceRoadtripSetDistance(158);
         window.__entranceRoadtripSetLane(.5);
         window.__entranceDriveSetMotion(90, 3);
@@ -258,6 +259,7 @@ var MAIN_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-999
       window.__entranceDriveTransmissionMode("auto", true);
       window.__entranceDriveSetMotion(100, 3);
       window.__entranceRoadtripStart();
+      window.__entranceRoadtripSetRoute("banff", 0);
       window.__entranceRoadtripSetLane(-.5);
       window.__entranceRoadtripSpawn("car", -.5, 10);
       window.__entranceDriveStep(1000);

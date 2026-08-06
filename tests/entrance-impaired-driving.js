@@ -17,6 +17,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function prepare(count, lane, speed) {
     setDrinks(count);
     window.__entranceRoadtripStart();
+    window.__entranceRoadtripSetRoute("banff", 0);
     window.__entranceRoadtripSetLane(lane == null ? .5 : lane);
     window.__entranceDriveControl("throttle", false);
     window.__entranceDriveControl("brake", false);

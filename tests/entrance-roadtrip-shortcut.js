@@ -30,9 +30,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function openChooser() {
     if (roadtrip().active) pressEscape();
-    document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
-      new MouseEvent("click", { bubbles: true, cancelable: true })
-    );
+    window.__entranceRoadtripOpenChooser();
   }
   function choose(route, shiftKey) {
     openChooser();

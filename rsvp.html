@@ -37473,6 +37473,10 @@ window.__entranceRoomOpen = false;
     spawnSerial: 0,
     entities: []
   };
+  var roadtripCampResumeRun = null;
+  function roadtripHasPausedRun() {
+    return roadtripState.paused || !!roadtripCampResumeRun;
+  }
   var roadtripSeedNonce = 0;
   function roadtripMixSeed(value) {
     value = Number(value) >>> 0;
@@ -38779,14 +38783,14 @@ window.__entranceRoomOpen = false;
     var choiceX = 0;
     roadtripReenterChoices.forEach(function (choice) {
       var action = choice.getAttribute("data-roadtrip-reentry-choice");
-      var available = reentryChoices && (action === "new" || action === "continue" && roadtripState.paused ||
+      var available = reentryChoices && (action === "new" || action === "continue" && roadtripHasPausedRun() ||
         action === "camp" && roadtripState.campVisited);
       choice.classList.toggle("show", available);
       if (!available) return;
       choice.setAttribute("transform", "translate(" + choiceX + " 0)");
       choiceX += Number(choice.getAttribute("data-roadtrip-choice-width")) + 4;
     });
-    var defaultReentryAction = roadtripState.paused ? "continue" :
+    var defaultReentryAction = roadtripHasPausedRun() ? "continue" :
       roadtripState.campVisited ? "camp" : "new";
     roadtripReenterChoices.forEach(function (choice) {
       choice.classList.toggle("selected", choice.classList.contains("show") &&
@@ -38860,6 +38864,7 @@ window.__entranceRoomOpen = false;
     roadtripState.routeChooserOpen = false;
     parkPorscheForFreshRoadtrip();
     var started = startRoadtrip(true, route, shortcutElapsed);
+    if (started) roadtripCampResumeRun = null;
     if (started && window.__checkpointChanged) window.__checkpointChanged();
     return started;
   }
@@ -38955,7 +38960,16 @@ window.__entranceRoomOpen = false;
       paintRoadtripInvite();
       return false;
     }
-    if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active || !roadtripState.paused) return false;
+    if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active || !roadtripHasPausedRun()) return false;
+    if (!roadtripState.paused) {
+      if (!restoreRoadtripRun(roadtripCampResumeRun)) {
+        roadtripCampResumeRun = null;
+        paintRoadtripInvite();
+        return false;
+      }
+      syncPorscheState();
+      paintPorscheDriveHud();
+    }
     roadtripReentryMenuOpen = false;
     roadtripState.exitUntilStop = false;
     roadtripState.accepted = true;
@@ -38963,6 +38977,7 @@ window.__entranceRoomOpen = false;
     roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = true;
     var started = startRoadtrip(false);
+    if (started) roadtripCampResumeRun = null;
     if (started && roadtripState.route !== "camp") {
       roadtripTransportPaused = true;
       setRoadtripResumePending(true);
@@ -38983,6 +38998,9 @@ window.__entranceRoomOpen = false;
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.unlocked || roadtripState.active || !roadtripState.campVisited) return false;
     roadtripReentryMenuOpen = false;
+    if (roadtripState.paused && !roadtripState.police.runEnded) {
+      roadtripCampResumeRun = captureRoadtripRun();
+    }
     parkPorscheForFreshRoadtrip();
     if (!startRoadtrip(true, "abraham", ROADTRIP_ABRAHAM_SECONDS)) return false;
     arriveRoadtripCamp(true);
@@ -39003,7 +39021,7 @@ window.__entranceRoomOpen = false;
       return false;
     }
     if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active) return false;
-    if (!roadtripState.paused && !roadtripState.campVisited) return openRoadtripRouteChooser();
+    if (!roadtripHasPausedRun() && !roadtripState.campVisited) return openRoadtripRouteChooser();
     roadtripReentryMenuOpen = !roadtripReentryMenuOpen;
     paintRoadtripInvite();
     if (roadtripReentryMenuOpen) {
@@ -45965,6 +45983,7 @@ window.__entranceRoomOpen = false;
     driveState.temperature = 0;
     driveState.cruiseActive = false;
     driveState.cruiseTarget = 0;
+    roadtripCampResumeRun = null;
     parkRoadtrip(true);
     repairRoadtripWindshield();
     roadtripState.unlocked = false;
@@ -47250,6 +47269,7 @@ window.__entranceRoomOpen = false;
   window.__entranceRoadtripHornProfile = roadtripTrafficHornProfile;
   window.__entranceRoadtripStart = function () {
     var started = startRoadtrip(true);
+    if (started) roadtripCampResumeRun = null;
     if (started && window.__checkpointChanged) window.__checkpointChanged();
     return started;
   };
@@ -47528,9 +47548,12 @@ window.__entranceRoomOpen = false;
       "runSeed", "nextSpawnDistance", "overtakeCooldown", "spawnSerial"].forEach(function (key) { state[key] = roadtripState[key]; });
     var police = {};
     Object.keys(roadtripState.police).forEach(function (key) { police[key] = roadtripState.police[key]; });
+    var car = {};
+    Object.keys(porscheState).forEach(function (key) { car[key] = !!porscheState[key]; });
     return {
       version: 3,
       state: state,
+      car: car,
       drive: {
         stalled: driveState.stalled,
         gear: driveState.gear,
@@ -47557,6 +47580,11 @@ window.__entranceRoomOpen = false;
       damage: captureRoadtripDamage()
     };
   }
+  function validRoadtripRunSnapshot(snapshot) {
+    var version = snapshot && Number(snapshot.version);
+    return !!(snapshot && (version === 1 || version === 2 || version === 3) && snapshot.state &&
+      !(snapshot.police && snapshot.police.runEnded === true));
+  }
   function restoreRoadtripPolice(snapshot) {
     resetRoadtripPoliceRun();
     if (!snapshot || typeof snapshot !== "object") return;
@@ -47579,12 +47607,15 @@ window.__entranceRoomOpen = false;
     });
   }
   function restoreRoadtripRun(snapshot) {
-    var version = snapshot && Number(snapshot.version);
-    if (!snapshot || (version !== 1 && version !== 2 && version !== 3) || !snapshot.state || snapshot.police && snapshot.police.runEnded === true) {
-      return false;
-    }
+    if (!validRoadtripRunSnapshot(snapshot)) return false;
+    var version = Number(snapshot.version);
     resetRoadtripRun(false);
     var saved = snapshot.state;
+    if (snapshot.car && typeof snapshot.car === "object") {
+      Object.keys(porscheState).forEach(function (key) {
+        if (typeof snapshot.car[key] === "boolean") porscheState[key] = snapshot.car[key];
+      });
+    }
     roadtripState.exitUntilStop = saved.exitUntilStop === true;
     roadtripState.route = version === 1 ? "banff" :
       (["calgary", "turnoff", "banff", "lake-turnoff", "abraham", "camp"].indexOf(saved.route) >= 0 ?
@@ -47691,7 +47722,11 @@ window.__entranceRoomOpen = false;
       roadtrip.campPinecones = campFireState.pinecones;
       roadtrip.stew = captureCampStew();
       roadtrip.stargazing = captureCampStargazing();
-      if ((roadtripState.active || roadtripState.paused) && !roadtripState.police.runEnded) {
+      roadtrip.campActive = roadtripState.active && roadtripState.route === "camp";
+      if (roadtripCampResumeRun && validRoadtripRunSnapshot(roadtripCampResumeRun)) {
+        roadtrip.pausedRun = roadtripCampResumeRun;
+      } else if ((roadtripState.active || roadtripState.paused) && roadtripState.route !== "camp" &&
+          !roadtripState.police.runEnded) {
         roadtrip.pausedRun = captureRoadtripRun();
       }
       return {
@@ -47817,12 +47852,25 @@ window.__entranceRoomOpen = false;
             try { localStorage.setItem(ROADTRIP_BEST_KEY, String(roadtripState.best)); }
             catch (_error) {}
           }
-          var restoredRoadtripRun = restoreRoadtripRun(roadtrip.pausedRun);
+          var restoreCampPresentation = roadtrip.campActive === true ||
+            !!(roadtrip.pausedRun && roadtrip.pausedRun.state && roadtrip.pausedRun.state.route === "camp");
+          var restoredRoadtripRun = false;
+          if (restoreCampPresentation) {
+            roadtripCampResumeRun = validRoadtripRunSnapshot(roadtrip.pausedRun) &&
+              roadtrip.pausedRun.state.route !== "camp" ? roadtrip.pausedRun : null;
+            arriveRoadtripCamp(true);
+            roadtripState.active = false;
+            roadtripState.paused = false;
+            roadtripState.accepted = false;
+            restoreRoadtripCampOnEntranceOpen = true;
+            restoredRoadtripRun = true;
+          } else {
+            restoredRoadtripRun = restoreRoadtripRun(roadtrip.pausedRun);
+          }
           if (restoredRoadtripRun) {
             roadtripState.unlocked = true;
             roadtripState.practiceLaps = 1;
             roadtripState.everAccepted = true;
-            restoreRoadtripCampOnEntranceOpen = roadtripState.route === "camp";
           }
           if (!restoredRoadtripRun) {
             if (["calgary", "banff", "abraham"].indexOf(roadtrip.routeChoice) >= 0) {

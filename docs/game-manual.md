@@ -195,7 +195,8 @@ clear night; trace Cassiopeia, Ursa Major, and Ursa Minor for the quiet finale.
 
 Leaving the highway keeps the dashboard available and never resumes the run automatically. The
 **Road Trip** control offers the actions currently available: continue a paused run, start a new
-one, or revisit Camping after reaching it.
+one, or revisit Camping after reaching it. Visiting Camping does not replace the paused highway;
+Continue remains available when you return to the dashboard.
 
 ## Help, saves, and browser notes
 

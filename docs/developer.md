@@ -211,7 +211,9 @@ Success restores the finished fire with an empty silver pot and publishes the st
 permanent `entrance_roadtrip_camp_arrival` RSVP caption. The `camp` route is never resume-pending,
 including after checkpoint restore, blur, or visibility changes; dismissing it ends the drive run,
 while the re-entry menu can rebuild the camp presentation without resetting its fire or stew. New
-routes stay provisional in the chooser, so dismissing it preserves any paused highway run.
+routes stay provisional in the chooser, so dismissing it preserves any paused highway run. A camp
+revisit temporarily parks that run in `roadtripCampResumeRun`; checkpoint capture records both the
+camp presentation and that highway snapshot, and Continue restores the snapshot exactly.
 
 `campStewState` owns the exact protein/base choices, six required fixed ingredients, close-up state,
 attended cooking elapsed time, and served/overcooked payoff. `advanceCampStew()` applies the slower

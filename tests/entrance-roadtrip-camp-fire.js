@@ -34,13 +34,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function snap() {
     var state = window.__entranceRoomState().drive.roadtrip.campFire;
     var pot = document.getElementById("entrance-roadtrip-camp-pot");
+    var crate = document.getElementById("entrance-roadtrip-camp-food-crate");
     var openBubble = document.querySelector(".entrance-roadtrip-camp-pot-open-bubble");
+    var potStyle = getComputedStyle(pot), crateStyle = getComputedStyle(crate);
     return {
       state: state,
       sceneBuilt: document.getElementById("entrance-roadtrip-camp").classList.contains("fire-built"),
       gameOpen: document.getElementById("entrance-roadtrip-fire-game").classList.contains("open"),
       potBoiling: pot.classList.contains("simmering"),
       potOpen: pot.classList.contains("open"),
+      potVisible: potStyle.visibility !== "hidden" && Number(potStyle.opacity) > .01,
+      crateVisible: crateStyle.visibility !== "hidden" && Number(crateStyle.opacity) > .01,
+      sceneFood: getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-food")).opacity,
       openSteamActive: getComputedStyle(openBubble).animationName === "entrance-roadtrip-camp-pot-open-steam",
       openBubbles: document.querySelectorAll(".entrance-roadtrip-camp-pot-open-bubble").length,
       key: window.__captionKey && window.__captionKey()
@@ -161,16 +166,19 @@ check(result && result.successStart.result === "success" && result.successStart.
   result.successStart.state.logs === "teepee", "either valid log arrangement can be selected before lighting",
   result && result.successStart);
 check(result && result.complete && result.complete.state.complete && result.complete.sceneBuilt && !result.complete.potBoiling &&
+  !result.complete.potVisible && result.complete.crateVisible && result.complete.sceneFood === "0" &&
   !result.complete.gameOpen && result.complete.key === "entrance_roadtrip_stew_invite",
-  "the full fuel chain grows into the warm campsite with an empty cooking pot", result && result.complete);
-check(result && result.potOpenLit && !result.potOpenLit.potBoiling && result.potOpenLit.potOpen &&
+  "the full fuel chain grows into the warm campsite with only the food crate available", result && result.complete);
+check(result && result.potOpenLit && !result.potOpenLit.potBoiling && !result.potOpenLit.potOpen &&
+  !result.potOpenLit.potVisible && result.potOpenLit.crateVisible && result.potOpenLit.sceneFood === "0" &&
   !result.potOpenLit.openSteamActive && result.potOpenLit.openBubbles >= 5 && !result.potOpenLit.gameOpen &&
   result.potOpenLit.state.lit && result.potClosedLit && !result.potClosedLit.potBoiling &&
-  !result.potClosedLit.potOpen && !result.potClosedLit.openSteamActive && result.potClosedLit.state.lit &&
-  result.potOpenCold && !result.potOpenCold.potBoiling && result.potOpenCold.potOpen &&
+  !result.potClosedLit.potOpen && !result.potClosedLit.potVisible && result.potClosedLit.state.lit &&
+  result.potOpenCold && !result.potOpenCold.potBoiling && !result.potOpenCold.potOpen &&
+  !result.potOpenCold.potVisible && !result.potOpenCold.crateVisible && result.potOpenCold.sceneFood === "0" &&
   !result.potOpenCold.openSteamActive && !result.potOpenCold.state.lit && !result.potOpenCold.gameOpen &&
-  result.potClosedCold && !result.potClosedCold.potOpen && !result.potClosedCold.state.lit,
-  "the empty silver pot still toggles open then closed without pretending to boil", result && {
+  result.potClosedCold && !result.potClosedCold.potOpen && !result.potClosedCold.potVisible && !result.potClosedCold.state.lit,
+  "the empty scene pot stays offstage and inert until a recipe is committed", result && {
     litOpen: result.potOpenLit, litClosed: result.potClosedLit,
     coldOpen: result.potOpenCold, coldClosed: result.potClosedCold
   });

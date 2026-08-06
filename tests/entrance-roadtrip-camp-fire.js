@@ -160,17 +160,17 @@ check(result && result.logsOnly.result === "entrance_roadtrip_camp_fire_no_tinde
 check(result && result.successStart.result === "success" && result.successStart.state.igniting &&
   result.successStart.state.logs === "teepee", "either valid log arrangement can be selected before lighting",
   result && result.successStart);
-check(result && result.complete && result.complete.state.complete && result.complete.sceneBuilt && result.complete.potBoiling &&
-  !result.complete.gameOpen && result.complete.key === "entrance_roadtrip_camp_arrival",
-  "the full fuel chain grows into the warm campsite", result && result.complete);
-check(result && result.potOpenLit && result.potOpenLit.potBoiling && result.potOpenLit.potOpen &&
-  result.potOpenLit.openSteamActive && result.potOpenLit.openBubbles >= 5 && !result.potOpenLit.gameOpen &&
-  result.potOpenLit.state.lit && result.potClosedLit && result.potClosedLit.potBoiling &&
+check(result && result.complete && result.complete.state.complete && result.complete.sceneBuilt && !result.complete.potBoiling &&
+  !result.complete.gameOpen && result.complete.key === "entrance_roadtrip_stew_invite",
+  "the full fuel chain grows into the warm campsite with an empty cooking pot", result && result.complete);
+check(result && result.potOpenLit && !result.potOpenLit.potBoiling && result.potOpenLit.potOpen &&
+  !result.potOpenLit.openSteamActive && result.potOpenLit.openBubbles >= 5 && !result.potOpenLit.gameOpen &&
+  result.potOpenLit.state.lit && result.potClosedLit && !result.potClosedLit.potBoiling &&
   !result.potClosedLit.potOpen && !result.potClosedLit.openSteamActive && result.potClosedLit.state.lit &&
   result.potOpenCold && !result.potOpenCold.potBoiling && result.potOpenCold.potOpen &&
   !result.potOpenCold.openSteamActive && !result.potOpenCold.state.lit && !result.potOpenCold.gameOpen &&
   result.potClosedCold && !result.potClosedCold.potOpen && !result.potClosedCold.state.lit,
-  "the pot toggles open then closed without controlling the boil, with extra steam only over fire", result && {
+  "the empty silver pot still toggles open then closed without pretending to boil", result && {
     litOpen: result.potOpenLit, litClosed: result.potClosedLit,
     coldOpen: result.potOpenCold, coldClosed: result.potClosedCold
   });

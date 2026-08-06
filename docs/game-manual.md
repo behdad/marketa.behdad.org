@@ -172,9 +172,14 @@ At the Camping sign, the car slows automatically and enters camp below 10 km/h; 
 momentum or extra acceleration is required. Click the empty pit, add tinder, twigs, and either log
 arrangement, then light it. Missing fuel burns out; the campsite remains open for exploration.
 
-After the fire grows, the RSVP reminder pulses, then remains above the camp. Continue returns
-directly to Camping and retains a completed fire. Press `Enter`, Escape, Backspace, or the top-right
-× to leave Camping for the Entrance dashboard.
+After the fire grows, a cooking invitation pulses, then remains above the camp. Serving dinner or
+putting the fire out restores the RSVP reminder. Continue returns directly to Camping and retains a
+completed fire. Press `Enter`, Escape, Backspace, or the top-right × to leave Camping for the
+Entrance dashboard.
+
+The lit fire also reveals a food crate. Open it to assemble Camping stew from one protein, one base,
+and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook;
+an extinguished fire pauses it. Serve during the ready moment, or reset a comically overcooked pot.
 
 Leaving the highway keeps the dashboard available but never resumes the run automatically. Drive
 another street lap and accept the invitation to return.

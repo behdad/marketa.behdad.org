@@ -196,9 +196,16 @@ overlay inside Entrance.
 Camping begins with an empty pit and publishes `entrance_roadtrip_camp_fire_invite` through
 `__setLowerRoomCaption()`. `campFireState` owns the focused build, fuel chain, log arrangement, and
 success transition. Built and lit/off state are durable; unfinished fuel resets on Continue.
-Success restores the finished fire/pot composition and the
+Success restores the finished fire with an empty silver pot and publishes the stable, non-clickable
+`entrance_roadtrip_stew_invite` caption while it burns. Serving or extinguishing restores the
 permanent `entrance_roadtrip_camp_arrival` RSVP caption. The `camp` route is never resume-pending,
 including after checkpoint restore, blur, or visibility changes.
+
+`campStewState` owns the exact protein/base choices, six required fixed ingredients, close-up state,
+attended cooking elapsed time, and served/overcooked payoff. `advanceCampStew()` applies the slower
+open-lid rate and advances only with a lit fire in an attended camp; runtime frame deltas are capped
+so returning to a throttled tab cannot skip phases. Recipe/progress/payoff are checkpointed, while
+the builder and lid reopen closed. `arriveRoadtripCamp()` resets stew for a genuinely fresh arrival.
 
 The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 `__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,
@@ -218,7 +225,8 @@ stay on `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the
 Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`, and
-`tests/entrance-roadtrip-camp-sky.js`, and `tests/entrance-roadtrip-camp-audio.js` for this
+`tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-audio.js`, and
+`tests/entrance-roadtrip-camp-stew.js` for this
 boundary.
 
 ### Scoring, police, and durable records

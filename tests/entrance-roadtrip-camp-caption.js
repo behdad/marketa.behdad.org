@@ -118,36 +118,36 @@ check(afterLanguageRoundTrip.route === "camp" &&
   "the invitation remains keyed after caption re-rendering", afterLanguageRoundTrip);
 
 var completed = result && result.completed || {};
-check(completed.key === "entrance_roadtrip_camp_arrival" &&
-  completed.text === "Congrats! You reached the end of the game. Now go do your RSVP!" && completed.blinking,
-  "the completed fire reveals the RSVP reminder", completed);
+check(completed.key === "entrance_roadtrip_stew_invite" &&
+  completed.text === "Let’s cook some stew." && completed.blinking,
+  "the completed fire briefly invites the player to cook", completed);
 
 var steady = result && result.steady || {};
-check(steady.route === "camp" && steady.key === "entrance_roadtrip_camp_arrival" &&
-  steady.text === "Congrats! You reached the end of the game. Now go do your RSVP!" && !steady.blinking,
-  "the same reminder becomes steady without disappearing", steady);
+check(steady.route === "camp" && steady.key === "entrance_roadtrip_stew_invite" &&
+  steady.text === "Let’s cook some stew." && !steady.blinking,
+  "the cooking invitation becomes steady without turning into an opener", steady);
 
 var afterContinue = result && result.afterContinue || {};
 check(afterContinue.route === "camp" && !afterContinue.resumePending &&
-  afterContinue.key === "entrance_roadtrip_camp_arrival" &&
-  afterContinue.text === "Congrats! You reached the end of the game. Now go do your RSVP!" &&
+  afterContinue.key === "entrance_roadtrip_stew_invite" &&
+  afterContinue.text === "Let’s cook some stew." &&
   afterContinue.captionVisibility === "visible" && afterContinue.pauseDialog === "none",
-  "Continue restores Camping directly with its permanent RSVP reminder", afterContinue);
+  "Continue restores Camping directly with its lit-fire cooking invitation", afterContinue);
 
 var afterAttentionPause = result && result.afterAttentionPause || {};
 check(afterAttentionPause.route === "camp" && !afterAttentionPause.resumePending &&
-  afterAttentionPause.key === "entrance_roadtrip_camp_arrival" &&
+  afterAttentionPause.key === "entrance_roadtrip_stew_invite" &&
   afterAttentionPause.captionVisibility === "visible" && afterAttentionPause.pauseDialog === "none",
-  "Camping keeps its reminder when an attention pause fires", afterAttentionPause);
+  "Camping keeps its cooking invitation when an attention pause fires", afterAttentionPause);
 
 var afterRefocus = result && result.afterRefocus || {};
 check(afterRefocus.route === "camp" && afterRefocus.entranceOpen && afterRefocus.downstairs &&
-  !afterRefocus.resumePending && afterRefocus.key === "entrance_roadtrip_camp_arrival" &&
+  !afterRefocus.resumePending && afterRefocus.key === "entrance_roadtrip_stew_invite" &&
   afterRefocus.captionVisibility === "visible" && afterRefocus.pauseDialog === "none",
-  "refocus keeps Entrance ownership and the Camping reminder", afterRefocus);
+  "refocus keeps Entrance ownership and the cooking invitation", afterRefocus);
 
 var afterExit = result && result.afterExit || {};
-check(afterExit.key !== "entrance_roadtrip_camp_arrival" && !afterExit.blinking &&
+check(afterExit.key !== "entrance_roadtrip_stew_invite" && !afterExit.blinking &&
   !afterExit.tetrisActive,
   "Enter leaves Camping without starting Balcony Tetris", afterExit);
 

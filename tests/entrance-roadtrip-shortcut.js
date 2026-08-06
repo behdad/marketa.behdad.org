@@ -149,11 +149,13 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
 check(result && result.errors.length === 0, "the shortcut runs without uncaught errors",
   result && result.errors);
 
-var expectedStartLanes = { calgary: 3.08, banff: 2.08, abraham: 1.08 };
+var expectedStartLanes = { calgary: 3.32, banff: 2.32, abraham: 1.32 };
+var roadEdgeLanes = { calgary: 3, banff: 2, abraham: 1 };
 function parkedOnRightShoulder(snapshot, route) {
   var state = snapshot && snapshot.state || {};
   var motion = snapshot && snapshot.motion || {};
   return state.route === route && state.playerLane === expectedStartLanes[route] &&
+    state.playerLane - roadEdgeLanes[route] >= .3 &&
     state.shoulderZone === "gravel" && motion.range === "P" && motion.gear === 0 && motion.speed === 0;
 }
 var normal = result && result.normal || {};

@@ -227,9 +227,9 @@ celestial bodies, and expanded winter mountain snow. Served stew unlocks the cam
 it during daylight commits the shared day/night state to night, locally clears camp weather, and then
 opens the stargazing trace. Completion closes that overlay, paints the constellations into the live
 campsite behind the moon, enables bounded per-star dragging that redraws each figure's connectors,
-and holds the four edge-set, integrated-tail bubbles until dismissal; Behdad's pink and Markéta's
-blue bubbles reveal one second apart. Drag positions are session-only. Once the fourth reveal
-finishes, a persistent bilingual caption invites a click anywhere; a full-campsite transparent hit
+and holds the four edge-set, integrated-tail bubbles until dismissal; after a two-second beat,
+Behdad's pink and Markéta's blue bubbles reveal one second apart. Drag positions are session-only.
+Once the fourth reveal finishes, a persistent bilingual caption invites a click anywhere; a full-campsite transparent hit
 shield consumes that click, dismisses the exchange, and changes the caption to the sleep prompt
 without activating a prop. Clicking the fire starts the ordered fire-out → campers → tent-light →
 darkness → Zs curtain call. `campStargazingState` checkpoints exact trace and handoff progress plus

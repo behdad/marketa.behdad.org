@@ -69,6 +69,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceDriveControl("throttle", true);
         window.__entranceDriveStep(1000);
         report.restartedParkThrottle = motion();
+        window.__entranceDriveControl("throttle", false);
+        window.__entranceDriveRange("R");
+        window.__entranceDriveStep(1000);
+        report.stationaryReverse = motion();
         window.__entranceDriveRange("D");
         window.__entranceDriveControl("throttle", true);
         for (var driveStep = 0; driveStep < 20; driveStep++) window.__entranceDriveStep(50);
@@ -140,6 +144,7 @@ var parked = result && result.parkedStart || {};
 var parkedThrottle = result && result.parkedThrottle || {};
 var engineOffThrottle = result && result.engineOffThrottle || {};
 var restartedParkThrottle = result && result.restartedParkThrottle || {};
+var stationaryReverse = result && result.stationaryReverse || {};
 var validDrive = result && result.validDrive || {};
 var validCoast = result && result.validCoast || {};
 check(parked.engineOn && parked.range === "P" && parked.gear === 0 && parked.speed === 0,
@@ -160,6 +165,10 @@ check(restartedParkThrottle.engineOn && restartedParkThrottle.range === "P" &&
   restartedParkThrottle.position === parked.position && restartedParkThrottle.distance === parked.distance &&
   restartedParkThrottle.routeElapsed === parked.routeElapsed,
   "restarting in AUTO Park still cannot advance the route without Drive", restartedParkThrottle);
+check(stationaryReverse.range === "R" && stationaryReverse.gear === -1 && stationaryReverse.speed === 0 &&
+  stationaryReverse.position === parked.position && stationaryReverse.distance === parked.distance &&
+  stationaryReverse.routeElapsed === parked.routeElapsed,
+  "selecting Reverse at rest cannot advance the route as forward motion", stationaryReverse);
 check(validDrive.engineOn && validDrive.range === "D" && validDrive.gear > 0 &&
   validDrive.speed > 0 && validDrive.distance > parked.distance && validDrive.routeElapsed > parked.routeElapsed,
   "fresh acceleration begins after AUTO Drive is selected", validDrive);

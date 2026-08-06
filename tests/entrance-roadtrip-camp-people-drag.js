@@ -107,11 +107,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         pointer(notebook, "pointerdown", 34, "touch", bookPoint.x, bookPoint.y);
         pointer(notebook, "pointerup", 34, "touch", bookPoint.x, bookPoint.y);
         click(notebook);
+        var notebookBook = document.querySelector(".entrance-roadtrip-notebook-book");
+        var notebookStyle = notebookBook && getComputedStyle(notebookBook);
         report.notebook = {
           open: !!document.querySelector(".entrance-roadtrip-notebook-backdrop"),
           headIdle: !marketaHead.classList.contains("laughing"),
           keptOffset: marketaMover.getAttribute("transform") === marketaTransform,
-          didNotDrag: !marketa.classList.contains("dragging")
+          didNotDrag: !marketa.classList.contains("dragging"),
+          layout: notebookBook && {
+            clientHeight: notebookBook.clientHeight,
+            scrollHeight: notebookBook.scrollHeight,
+            paddingTop: parseFloat(notebookStyle.paddingTop),
+            paddingBottom: parseFloat(notebookStyle.paddingBottom)
+          }
         };
         document.querySelector(".entrance-roadtrip-notebook-close").click();
 
@@ -176,6 +184,21 @@ check(result && result.notebook && result.notebook.open && result.notebook.headI
   "the notebook still opens independently without starting a drag or head reaction", result && result.notebook);
 check(result && result.bodyClick && result.bodyClick.headIdle && result.bodyClick.notebookClosed,
   "an ordinary body/chair click triggers no old camper action", result && result.bodyClick);
+
+var mobileResult = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+  patchRaf: true,
+  forceMotion: true,
+  forceCoarsePointer: true,
+  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  chromeFlags: "--window-size=390,844"
+});
+check(mobileResult && mobileResult.errors.length === 0,
+  "mobile notebook layout runs without uncaught errors", mobileResult && mobileResult.errors);
+check(mobileResult && mobileResult.notebook && mobileResult.notebook.layout &&
+  mobileResult.notebook.layout.paddingTop <= 10 && mobileResult.notebook.layout.paddingBottom <= 6 &&
+  mobileResult.notebook.layout.scrollHeight <= mobileResult.notebook.layout.clientHeight,
+  "mobile notebook uses tight vertical spacing and fits without scrolling",
+  mobileResult && mobileResult.notebook && mobileResult.notebook.layout);
 
 if (failures) process.exit(1);
 console.log("Campsite camper-drag assertions passed.");

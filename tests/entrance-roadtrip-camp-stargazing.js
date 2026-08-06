@@ -121,7 +121,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                         window.setLang("cs");
                         report.czech = {
                           title: document.querySelector('[data-i="entrance_roadtrip_stargazing_title"]').textContent,
-                          names: Array.prototype.map.call(document.querySelectorAll('#entrance-roadtrip-camp-finale-constellations [data-i^="entrance_roadtrip_stargazing_ursa"],#entrance-roadtrip-camp-finale-constellations [data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
+                          builderNames: Array.prototype.map.call(document.querySelectorAll('#entrance-roadtrip-stargazing-game [data-i^="entrance_roadtrip_stargazing_ursa"],#entrance-roadtrip-stargazing-game [data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
+                          liveNames: document.querySelectorAll('#entrance-roadtrip-camp-finale-constellations text').length,
                           wisdom: document.getElementById("entrance-roadtrip-camp-wisdom").textContent.replace(/\s+/g, " ").trim()
                         };
                         window.setLang("en");
@@ -201,9 +202,10 @@ check(result && result.complete && result.complete.state.complete && !result.com
   "finishing returns to the live sky with three constellations and the four-bubble exchange",
   result && result.complete);
 check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
-  result.czech.names.join("|") === "Kasiopeja|Malá medvědice|Velká medvědice" &&
+  result.czech.builderNames.join("|") === "Kasiopeja|Velká medvědice|Malá medvědice" &&
+  result.czech.liveNames === 0 &&
   result.czech.wisdom.indexOf("Když něco skončí, něco jiného začne") >= 0,
-  "the live constellation labels and conversation switch to Czech", result && result.czech);
+  "builder labels switch to Czech while the permanent sky stays unlabeled", result && result.czech);
 check(result && result.dismissed && result.dismissed.state.wisdomDismissed && !result.dismissed.wisdomShown &&
   result.dismissed.caption === "entrance_roadtrip_camp_arrival" && result.dismissed.outerDismiss === "grid",
   "clicking the conversation dismisses it and restores the permanent RSVP caption", result && result.dismissed);

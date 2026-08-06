@@ -184,18 +184,22 @@ missing fuel burns out, and the campsite remains open for exploration.
 
 After the fire grows, a cooking invitation pulses, then remains above the camp. Serving dinner or
 putting the fire out restores the RSVP reminder. Continue returns directly to Camping and retains a
-completed fire. Press `Enter`, Escape, Backspace, or the top-right × to leave Camping for the
-Entrance dashboard.
+completed fire. Escape, Backspace, or the top-right × leaves Camping for the Entrance dashboard;
+`Enter` never leaves camp. Instead, each deliberate press performs one next step: it builds and
+lights a valid fire, starts a random valid stew, advances it only as far as ready, serves it, opens
+the night sky, then traces one star at a time. Key repeat and quick double presses are ignored.
 
 The lit fire also reveals a food crate. Open it to assemble Camping stew from one protein, one base,
 and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook
-and opens when dinner is ready; an extinguished fire pauses it. Serve then, or reset a comically overcooked pot.
-After serving, click the sky to carry the whole game through sunset into a clear night. Trace
-Cassiopeia, Ursa Major, and Ursa Minor; the completed constellations and closing campfire exchange
-remain in the live campsite. Dismiss the exchange, then put out the fire when the sleep suggestion
-appears. The campers retire into the glowing tent, the campsite goes dark, and a few rising Zs lead
-back to the RSVP reminder. Leaving before that curtain call finishes preserves Camping; leaving
-after it finishes makes the next **Camping** visit begin again at an empty firepit.
+and opens when dinner is ready; an extinguished fire pauses it. Serve then, or reset a comically
+overcooked pot. After serving, click the sky or press `Enter` to carry the whole game through sunset
+into a clear night. Trace Cassiopeia, Ursa Major, and Ursa Minor by selecting each glowing star;
+`Enter` advances exactly one star. The completed constellations and closing campfire exchange remain
+in the live campsite, and their individual stars can be dragged around the night sky. Dismiss the
+exchange, then put out the fire when the sleep suggestion appears. The campers retire into the
+glowing tent, the campsite goes dark, and a few rising Zs lead back to the RSVP reminder. Leaving
+before that curtain call finishes preserves Camping; leaving after it finishes makes the next
+**Camping** visit begin again at an empty firepit.
 
 Leaving the highway keeps the dashboard available and never resumes the run automatically. The
 **Road Trip** control offers the actions currently available: continue a paused run, start a new

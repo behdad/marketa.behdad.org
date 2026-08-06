@@ -226,22 +226,27 @@ The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 celestial bodies, and expanded winter mountain snow. Served stew unlocks the campsite sky; selecting
 it during daylight commits the shared day/night state to night, locally clears camp weather, and then
 opens the stargazing trace. Completion closes that overlay, paints the constellations into the live
-campsite, and holds the four edge-set, integrated-tail bubbles until dismissal; Behdad's pink and
-Markéta's blue bubbles reveal one second apart. Dismissal changes the caption to the sleep prompt;
-clicking the fire starts the ordered fire-out → campers → tent-light → darkness → Zs curtain call.
-`campStargazingState` checkpoints exact trace progress and `campSleepState.phase`, but
-always restores the trace overlay closed. Leaving pauses an unfinished curtain call and preserves the
-campsite; leaving after its congratulations phase resets fire, stew, stargazing, and finale state.
+campsite behind the moon, enables bounded per-star dragging that redraws each figure's connectors,
+and holds the four edge-set, integrated-tail bubbles until dismissal; Behdad's pink and Markéta's
+blue bubbles reveal one second apart. Drag positions are session-only. Dismissal changes the caption
+to the sleep prompt; clicking the fire starts the ordered fire-out → campers → tent-light → darkness
+→ Zs curtain call. `campStargazingState` checkpoints exact trace progress and
+`campSleepState.phase`, but always restores the trace overlay closed. Leaving pauses an unfinished
+curtain call and preserves the campsite; leaving after its congratulations phase resets fire, stew,
+stargazing, and finale state.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed
 or unattended.
 
-The capture-phase Entrance key owner consumes Camping navigation. Enter, Escape, and Backspace
-dismiss camp before the backing Balcony stage can handle the key. Camp actions go through
-`bindRoadtripCampAction()`. Animate untransformed inner wrappers, cap runtime SVG effects, and keep
-effects in the target's coordinate space. Camper placement stays on the outer group, drag offsets
-stay on `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the nested head.
+The capture-phase campsite key owner consumes Enter before Entrance navigation. Plain non-repeat
+Enter calls `roadtripCampDoNext()` for one bounded fire → stew → sunset → trace action; a short
+debounce and the ignition/sunset state gates prevent quick doubles from skipping asynchronous work.
+After completion it remains consumed and inert, so Enter never dismisses camp. Escape and Backspace
+retain dismissal ownership. Pointer actions go through `bindRoadtripCampAction()`. Animate
+untransformed inner wrappers, cap runtime SVG effects, and keep effects in the target's coordinate
+space. Camper placement stays on the outer group, drag offsets stay on
+`.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the nested head.
 `ensureRoadtripCampPorsche()` owns the generated prop hit map and bounded body drag.
 
 Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
@@ -249,8 +254,8 @@ Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`,
 `tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-audio.js`,
-`tests/entrance-roadtrip-camp-stew.js`, `tests/entrance-roadtrip-camp-stargazing.js`, and
-`tests/entrance-roadtrip-camp-sleep.js` for this boundary.
+`tests/entrance-roadtrip-camp-stew.js`, `tests/entrance-roadtrip-camp-stargazing.js`,
+`tests/entrance-roadtrip-camp-sleep.js`, and `tests/entrance-roadtrip-camp-enter.js` for this boundary.
 
 ### Scoring, police, and durable records
 

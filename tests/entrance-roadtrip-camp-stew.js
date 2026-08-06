@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Campsite stew recipe, attended cooking, fire/lid pauses, payoff, replay, and recovery.
+// Campsite stew assembly, real Cook/pot clicks, attended phases, persistence, and replay.
 "use strict";
 
 var lib = require("./lib");
@@ -14,16 +14,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return true;
   }
   function stew() { return window.__entranceRoadtripCampStewState(); }
-  function choose(items) { items.forEach(function (item) { window.__entranceRoadtripCampStewSelect(item); }); }
-  function fullRecipe(protein, base) {
-    choose([protein, base, "tomato", "curry", "water", "salt", "pepper", "chilies"]);
+  function choose(item) { click(document.querySelector('[data-stew-item="' + item + '"]')); }
+  function fullRequired(protein, starch) { choose(protein); choose(starch); }
+  function shown(node) {
+    var css = getComputedStyle(node);
+    return css.display !== "none" && css.visibility !== "hidden" && Number(css.opacity) > .01;
   }
   function lightFire(done) {
     window.__entranceRoadtripCampFirePlace("tinder");
     window.__entranceRoadtripCampFirePlace("twigs");
     window.__entranceRoadtripCampFirePlace("stack");
     window.__entranceRoadtripCampFireLight();
-    setTimeout(done, 1600);
+    setTimeout(done, 2150);
   }
   function syntheticTouchDrag(node, target) {
     var from = node.getBoundingClientRect(), to = target.getBoundingClientRect();
@@ -31,6 +33,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     node.dispatchEvent(new PointerEvent("pointerdown", Object.assign({ clientX: from.left + 5, clientY: from.top + 5 }, common)));
     document.dispatchEvent(new PointerEvent("pointermove", Object.assign({ clientX: to.left + to.width / 2, clientY: to.top + to.height / 2 }, common)));
     document.dispatchEvent(new PointerEvent("pointerup", Object.assign({ clientX: to.left + to.width / 2, clientY: to.top + to.height / 2 }, common)));
+  }
+  function finish() {
+    report.errors = (window.__errs || []).concat(report.errors);
+    document.getElementById("__report").textContent = JSON.stringify(report);
   }
   window.addEventListener("load", function () {
     window.__unlockAllRooms();
@@ -42,113 +48,162 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntrancePorscheDriveHud();
         window.__entranceRoadtripStart();
         window.__entranceRoadtripSetRoute("camp", 0);
+        var camp = document.getElementById("entrance-roadtrip-camp");
         var crate = document.getElementById("entrance-roadtrip-camp-food-crate");
-        report.fresh = { stew: stew(), crate: getComputedStyle(crate).pointerEvents };
+        var pot = document.getElementById("entrance-roadtrip-camp-pot");
+        var grill = document.getElementById("entrance-roadtrip-camp-stew-grill");
+        var corn = document.getElementById("entrance-roadtrip-camp-served-corn");
+        var meal = document.getElementById("entrance-roadtrip-camp-meal");
+        var game = document.getElementById("entrance-roadtrip-stew-game");
+        var cook = document.getElementById("entrance-roadtrip-stew-cook");
+        var close = document.getElementById("entrance-roadtrip-stew-close");
         window.__entranceRoadtripCampFireStart();
         lightFire(function () {
           try {
-            report.ignited = {
+            report.freshFire = {
+              crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: shown(meal),
+              available: camp.classList.contains("stew-crate-available")
+            };
+            click(crate);
+            var itemIds = Array.from(game.querySelectorAll("[data-stew-item]"))
+              .map(function (node) { return node.getAttribute("data-stew-item"); }).sort();
+            report.builder = {
+              open: stew().open,
+              items: itemIds,
+              headings: Array.from(game.querySelectorAll('[data-i="entrance_roadtrip_stew_protein"],[data-i="entrance_roadtrip_stew_starch"]')).map(function (node) { return node.textContent; }),
+              chooseText: /choose one/i.test(game.textContent),
+              title: /camping stew/i.test(game.textContent),
+              cookAboveCards: cook.getBoundingClientRect().bottom < document.querySelector('[data-stew-item="beef"]').getBoundingClientRect().top
+            };
+            window.setLang("cs");
+            report.builder.czech = {
+              headings: Array.from(game.querySelectorAll('[data-i="entrance_roadtrip_stew_protein"],[data-i="entrance_roadtrip_stew_starch"]')).map(function (node) { return node.textContent; }),
+              onion: document.querySelector('[data-i="entrance_roadtrip_stew_onion"]').textContent,
+              garlic: document.querySelector('[data-i="entrance_roadtrip_stew_garlic"]').textContent,
+              ginger: document.querySelector('[data-i="entrance_roadtrip_stew_ginger"]').textContent,
+              carrots: document.querySelector('[data-i="entrance_roadtrip_stew_carrots"]').textContent,
+              celery: document.querySelector('[data-i="entrance_roadtrip_stew_celery"]').textContent,
+              mushrooms: document.querySelector('[data-i="entrance_roadtrip_stew_mushrooms"]').textContent,
+              coriander: document.querySelector('[data-i="entrance_roadtrip_stew_coriander"]').textContent
+            };
+            window.setLang("en");
+            choose("chicken"); choose("beef");
+            var proteinSwap = stew();
+            choose("barley"); choose("pasta");
+            var starchSwap = stew();
+            choose("pasta");
+            click(cook);
+            report.missing = {
+              state: stew(), caption: window.__captionKey(), crate: shown(crate),
+              available: camp.classList.contains("stew-crate-available"), overlay: game.classList.contains("open")
+            };
+            click(close);
+            report.closedDraft = { state: stew(), crate: shown(crate), available: camp.classList.contains("stew-crate-available") };
+            click(crate);
+            report.reopenedDraft = stew();
+
+            var brew = game.querySelector(".entrance-roadtrip-stew-pot-brew");
+            var clearFill = getComputedStyle(brew).fill;
+            var clearOpacity = getComputedStyle(brew).fillOpacity;
+            choose("beef"); choose("pasta");
+            var plainFill = getComputedStyle(brew).fill;
+            choose("curry");
+            var curryFill = getComputedStyle(brew).fill;
+            choose("tomato");
+            var tomatoCurryFill = getComputedStyle(brew).fill;
+            choose("curry");
+            var tomatoFill = getComputedStyle(brew).fill;
+            choose("curry");
+            syntheticTouchDrag(document.querySelector('[data-stew-item="onion"]'), document.getElementById("entrance-roadtrip-stew-pot-drop"));
+            ["garlic", "ginger", "carrots", "celery", "mushrooms", "salt", "pepper", "chilies", "coriander"].forEach(choose);
+            report.assembly = {
+              state: stew(), clearFill: clearFill, clearOpacity: clearOpacity, plainFill: plainFill,
+              curryFill: curryFill, tomatoFill: tomatoFill, tomatoCurryFill: tomatoCurryFill,
+              beefPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="beef"]')).opacity,
+              pastaPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="pasta"]')).opacity,
+              onionPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="onion"]')).opacity,
+              garlicPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="garlic"]')).opacity,
+              gingerPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="ginger"]')).opacity,
+              carrotPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="carrots"]')).opacity,
+              celeryPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="celery"]')).opacity,
+              mushroomPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="mushrooms"]')).opacity,
+              corianderPieces: getComputedStyle(game.querySelector('[data-stew-pot-item="coriander"]')).opacity,
+              packagedPaste: !!game.querySelector('[data-stew-pot-item="tomato"],[data-stew-pot-item="curry"]')
+            };
+            click(cook);
+            report.cookImmediate = {
+              state: stew(), overlay: game.classList.contains("open"), crate: shown(crate),
+              available: camp.classList.contains("stew-crate-available"), pot: pot.classList.contains("has-stew"),
+              grill: camp.classList.contains("stew-cooking"), corn: shown(corn), meal: shown(meal),
               caption: window.__captionKey(),
-              text: document.getElementById("hunt-caption").textContent,
-              crate: getComputedStyle(crate).pointerEvents
+              steam: getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-open-bubble")).animationName,
+              checkpoint: window.__captureCheckpointSystems().entrance.drive.roadtrip.stew
             };
             setTimeout(function () {
               try {
-                report.captionRestored = { key: window.__captionKey(), text: document.getElementById("hunt-caption").textContent };
-                click(document.getElementById("hunt-caption"));
-                report.captionRestored.clickedOpen = stew().open;
-                click(crate);
-                var itemIds = Array.from(document.querySelectorAll("#entrance-roadtrip-stew-game [data-stew-item]"))
-                  .map(function (node) { return node.getAttribute("data-stew-item"); }).sort();
-                report.palette = { ids: itemIds, open: stew().open, scenePot: document.getElementById("entrance-roadtrip-camp-pot").classList.contains("has-stew") };
-
-                choose(["beef", "lamb"]);
-                report.proteinSwap = stew();
-                window.__entranceRoadtripCampStewSelect("lamb");
-                report.proteinRemoved = stew();
-                choose(["tofu", "rice", "beans"]);
-                report.baseSwap = stew();
-                report.missing = { result: window.__entranceRoadtripCampStewCook(), state: stew() };
-
-                var water = document.querySelector('[data-stew-item="water"]');
-                syntheticTouchDrag(water, document.getElementById("entrance-roadtrip-stew-pot-hit"));
-                report.dragged = stew();
-                choose(["tomato", "curry", "salt", "pepper"]);
-                report.beforeLastFixed = stew();
-                choose(["chilies"]);
-                report.completeRecipe = {
+                report.afterRealTime = {
                   state: stew(),
-                  selected: document.querySelectorAll("#entrance-roadtrip-stew-game .entrance-roadtrip-stew-item.selected").length,
-                  scenePot: document.getElementById("entrance-roadtrip-camp-pot").classList.contains("has-stew"),
-                  status: document.getElementById("entrance-roadtrip-stew-status").textContent,
-                  curry: document.querySelector('[data-stew-item="curry"] text').textContent
+                  steam: getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-open-bubble")).animationName,
+                  pot: shown(pot), grill: shown(grill)
                 };
-                setLang("cs");
-                report.czech = {
-                  title: document.querySelector('#entrance-roadtrip-stew-game [data-i="entrance_roadtrip_stew_title"]').textContent,
-                  beans: document.querySelector('[data-stew-item="beans"] text').textContent
+                report.warmed = window.__entranceRoadtripCampStewStep(Math.max(0, 2900 - stew().elapsed));
+                report.warmed.steam = getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-open-bubble")).animationName;
+                click(pot);
+                report.inspected = stew();
+                click(pot);
+                report.ready = window.__entranceRoadtripCampStewStep(Math.max(0, 11600 - stew().elapsed));
+                report.ready.caption = window.__captionKey();
+                report.ready.bubbles = getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-bubble")).animationName;
+                var readyCheckpoint = window.__captureCheckpointSystems().entrance;
+                var fireOutCheckpoint = JSON.parse(JSON.stringify(readyCheckpoint));
+                fireOutCheckpoint.drive.roadtrip.campFireLit = false;
+                window.__restoreCheckpointSystems({ entrance: fireOutCheckpoint }, "afterStage");
+                var resetBefore = stew();
+                report.fireOutRestored = { before: resetBefore, after: window.__entranceRoadtripCampStewStep(4000), pot: shown(pot), grill: shown(grill), crate: shown(crate) };
+                window.__restoreCheckpointSystems({ entrance: readyCheckpoint }, "afterStage");
+                report.readyRestored = { state: stew(), pot: shown(pot), grill: shown(grill), crate: shown(crate) };
+                click(pot);
+                report.served = {
+                  state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal),
+                  crate: shown(crate), caption: window.__captionKey()
                 };
-                setLang("en");
-                report.started = { result: window.__entranceRoadtripCampStewCook(), state: stew() };
-                report.rawServe = { result: window.__entranceRoadtripCampStewServe(), state: stew() };
-                report.closedLid = window.__entranceRoadtripCampStewStep(3000);
+                var servedCheckpoint = window.__captureCheckpointSystems().entrance;
+                window.__restoreCheckpointSystems({ entrance: servedCheckpoint }, "afterStage");
+                report.servedRestored = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal) };
 
-                window.__entranceRoadtripCampStewReset();
-                fullRecipe("beef", "rice");
-                window.__entranceRoadtripCampStewCook();
-                click(document.getElementById("entrance-roadtrip-stew-pot-hit"));
-                report.openLid = window.__entranceRoadtripCampStewStep(3000);
-                click(document.getElementById("entrance-roadtrip-stew-pot-hit"));
-                report.simmer = window.__entranceRoadtripCampStewStep(4700);
-                click(document.getElementById("entrance-roadtrip-camp-fire"));
-                var pausedBefore = stew();
-                report.paused = { before: pausedBefore, after: window.__entranceRoadtripCampStewStep(5000), caption: window.__captionKey() };
                 window.__entranceRoadtripCampFireReplay();
+                report.extinguished = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal), crate: shown(crate) };
+                window.__entranceRoadtripCampFireReplay();
+                report.rebuild = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal), crate: shown(crate) };
                 lightFire(function () {
                   try {
-                    report.resumed = stew();
-                    report.ready = window.__entranceRoadtripCampStewStep(5200);
-                    var readyCheckpoint = window.__captureCheckpointSystems().entrance;
-                    window.__restoreCheckpointSystems({ entrance: readyCheckpoint }, "afterStage");
-                    report.readyRestored = stew();
+                    report.relit = { state: stew(), crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: shown(meal) };
                     click(crate);
-                    report.served = {
-                      result: window.__entranceRoadtripCampStewServe(),
-                      state: stew(),
-                      meal: document.getElementById("entrance-roadtrip-camp").classList.contains("stew-served"),
-                      instruction: window.__entranceRoomState().drive.instruction
+                    choose("tofu"); choose("barley"); choose("onion");
+                    var draftCheckpoint = window.__captureCheckpointSystems().entrance;
+                    window.__restoreCheckpointSystems({ entrance: draftCheckpoint }, "afterStage");
+                    report.draftRestored = { saved: draftCheckpoint.drive.roadtrip.stew, state: stew(), crate: shown(crate), overlay: game.classList.contains("open") };
+                    click(crate);
+                    fullRequired("chicken", "barley");
+                    click(cook);
+                    window.__entranceRoadtripCampStewStep(19000);
+                    report.overcooked = {
+                      state: stew(), caption: window.__captionKey(), pot: shown(pot), grill: shown(grill), crate: shown(crate),
+                      lid: getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-lid-piece")).animationName,
+                      steam: getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-open-bubble")).animationName,
+                      saved: window.__captureCheckpointSystems().entrance.drive.roadtrip.stew
                     };
-                    var servedCheckpoint = window.__captureCheckpointSystems().entrance;
-                    click(crate);
-                    window.__entranceRoadtripCampStewReset();
-                    fullRecipe("lamb", "potatoes");
-                    window.__entranceRoadtripCampStewCook();
-                    report.overcooked = window.__entranceRoadtripCampStewStep(19000);
-                    report.burntServe = window.__entranceRoadtripCampStewServe();
-                    report.replayed = { state: window.__entranceRoadtripCampStewReset(), caption: window.__captionKey() };
-                    window.__restoreCheckpointSystems({ entrance: servedCheckpoint }, "afterStage");
-                    report.servedRestored = stew();
-                    window.__entranceRoadtripSetRoute("abraham", 0);
-                    window.__entranceRoadtripSetRoute("camp", 0);
-                    report.freshArrival = stew();
+                    click(pot);
+                    report.overcookReset = { state: stew(), pot: shown(pot), grill: shown(grill), crate: shown(crate), corn: shown(corn), meal: shown(meal) };
                   } catch (error) { report.errors.push(String(error && error.stack || error)); }
-                  report.errors = (window.__errs || []).concat(report.errors);
-                  document.getElementById("__report").textContent = JSON.stringify(report);
+                  finish();
                 });
-              } catch (error) {
-                report.errors.push(String(error && error.stack || error));
-                document.getElementById("__report").textContent = JSON.stringify(report);
-              }
-            }, 2400);
-          } catch (error) {
-            report.errors.push(String(error && error.stack || error));
-            document.getElementById("__report").textContent = JSON.stringify(report);
-          }
+              } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
+            }, 3200);
+            report.swaps = { protein: proteinSwap, starch: starchSwap };
+          } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
         });
-      } catch (error) {
-        report.errors.push(String(error && error.stack || error));
-        document.getElementById("__report").textContent = JSON.stringify(report);
-      }
+      } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
     }, 900);
   });
 })();
@@ -164,75 +219,88 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite stew:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 10500, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 12000, {
   forceMotion: true,
   urlSuffix: "?date=2026-07-15&time=20:00#play",
   chromeFlags: "--window-size=1100,900"
 });
-check(result && result.errors.length === 0, "the stew loop has no uncaught errors", result && result.errors);
-check(result && result.fresh && result.fresh.stew.phase === "cold" &&
-  result.fresh.stew.status === "assembling" && result.fresh.crate === "none",
-  "fresh Camping starts with an empty silver pot and no food crate", result && result.fresh);
-check(result && result.ignited && result.ignited.caption === "entrance_roadtrip_stew_invite" &&
-  result.ignited.text === "Let’s cook some stew." && result.ignited.crate === "all",
-  "successful ignition briefly invites cooking and reveals the separate crate opener", result && result.ignited);
-check(result && result.captionRestored && result.captionRestored.key === "entrance_roadtrip_stew_invite" &&
-  result.captionRestored.text === "Let’s cook some stew." && !result.captionRestored.clickedOpen,
-  "the non-clickable stew invitation remains while the fire burns",
-  result && result.captionRestored);
-var exactItems = ["beans", "beef", "chilies", "curry", "lamb", "pepper", "pork", "potatoes", "rice", "salt", "tofu", "tomato", "water"];
-check(result && result.palette && JSON.stringify(result.palette.ids) === JSON.stringify(exactItems) &&
-  result.palette.open && !result.palette.scenePot, "the palette contains exactly the approved visual ingredients",
-  result && result.palette);
-check(result && result.proteinSwap && result.proteinSwap.protein === "lamb" &&
-  result.proteinRemoved && !result.proteinRemoved.protein && result.baseSwap && result.baseSwap.starch === "beans",
-  "protein and base choices replace or remove the prior selection", result && {
-    swap: result.proteinSwap, removed: result.proteinRemoved, base: result.baseSwap
-  });
-check(result && result.missing && result.missing.result === "entrance_roadtrip_stew_missing" &&
-  result.missing.state.status === "assembling" && !result.missing.state.recipeComplete,
-  "missing required fixed components cannot start cooking", result && result.missing);
-check(result && result.dragged && result.dragged.water && result.beforeLastFixed &&
-  !result.beforeLastFixed.recipeComplete && result.completeRecipe && result.completeRecipe.state.recipeComplete &&
-  result.completeRecipe.selected === 8 && result.completeRecipe.scenePot &&
-  result.completeRecipe.status === "Raw · everything’s in" && result.completeRecipe.curry === "Curry paste",
-  "touch dragging adds an ingredient, all fixed components complete the recipe, and status/curry copy stays human", result && {
-    dragged: result.dragged, before: result.beforeLastFixed, complete: result.completeRecipe
-  });
-check(result && result.czech && result.czech.title === "Dušené jídlo v kempu" && result.czech.beans === "Fazole",
-  "the builder and new bean base follow a Czech language switch", result && result.czech);
-check(result && result.started && result.started.result === "cooking" && result.started.state.phase === "raw" &&
-  result.rawServe && result.rawServe.result === "raw" && result.rawServe.state.status === "cooking",
-  "raw stew gets a comic reaction without ending the cook", result && { started: result.started, raw: result.rawServe });
-check(result && result.closedLid && result.closedLid.phase === "warming" &&
-  result.openLid && result.openLid.phase === "raw" && result.openLid.elapsed < result.closedLid.elapsed,
-  "a closed lid cooks normally while an open inspection lid cooks more slowly", result && {
-    closed: result.closedLid, open: result.openLid
-  });
-check(result && result.simmer && result.simmer.phase === "simmering" && result.paused &&
-  result.paused.before.elapsed === result.paused.after.elapsed && !result.paused.after.fireLit &&
-  result.paused.caption === "entrance_roadtrip_camp_arrival",
-  "simmering is visual; extinguishing pauses progress and restores the RSVP caption", result && {
-    simmer: result.simmer, paused: result.paused
-  });
-check(result && result.resumed && result.resumed.fireLit && result.ready && result.ready.phase === "ready" &&
-  result.ready.elapsed >= 11500 && result.ready.elapsed < 18500 && result.readyRestored &&
-  result.readyRestored.phase === "ready", "relighting resumes cooking and Continue preserves the generous ready window",
-  result && { resumed: result.resumed, ready: result.ready, restored: result.readyRestored });
-check(result && result.served && result.served.result === "served" && result.served.state.status === "served" &&
-  !result.served.state.open && result.served.meal && result.served.instruction === "entrance_roadtrip_camp_arrival",
-  "serving reveals two bowls and restores the permanent RSVP instruction",
-  result && result.served);
-check(result && result.overcooked && result.overcooked.status === "overcooked" &&
-  result.burntServe === "overcooked" && result.replayed && result.replayed.state.status === "assembling" &&
-  result.replayed.state.phase === "cold" && result.replayed.caption === "entrance_roadtrip_stew_invite",
-  "overcooking is comic; reset restarts the pot and restores the lit-fire invitation", result && {
-    overcooked: result.overcooked, served: result.burntServe, replayed: result.replayed
-  });
-check(result && result.servedRestored && result.servedRestored.status === "served" &&
-  result.freshArrival && result.freshArrival.status === "assembling" && result.freshArrival.phase === "cold" &&
-  !result.freshArrival.recipeComplete, "Continue restores the durable meal while a fresh arrival resets stew consistently",
-  result && { restored: result.servedRestored, fresh: result.freshArrival });
+check(result && result.errors.length === 0, "the real stew interaction loop has no uncaught errors", result && result.errors);
+check(result && result.freshFire && result.freshFire.crate && result.freshFire.available &&
+  !result.freshFire.pot && !result.freshFire.grill && !result.freshFire.meal,
+  "a fresh lit fire is bare and exposes only the food crate", result && result.freshFire);
+var exactItems = ["barley", "beans", "beef", "carrots", "celery", "chicken", "chilies", "coriander", "curry", "garlic", "ginger", "lamb", "mushrooms", "onion", "pasta", "pepper", "pork", "potatoes", "rice", "salt", "tofu", "tomato"];
+check(result && result.builder && result.builder.open && JSON.stringify(result.builder.items) === JSON.stringify(exactItems) &&
+  JSON.stringify(result.builder.headings) === JSON.stringify(["PROTEIN", "BASE"]) && !result.builder.chooseText &&
+  !result.builder.title && result.builder.cookAboveCards && result.builder.czech &&
+  JSON.stringify(result.builder.czech.headings) === JSON.stringify(["BÍLKOVINA", "ZÁKLAD"]) &&
+  JSON.stringify([result.builder.czech.onion, result.builder.czech.garlic, result.builder.czech.ginger,
+    result.builder.czech.carrots, result.builder.czech.celery, result.builder.czech.mushrooms,
+    result.builder.czech.coriander]) ===
+    JSON.stringify(["Cibule", "Česnek", "Zázvor", "Mrkev", "Celer", "Houby", "Koriandr"]),
+  "the compact builder has the exact 22-card bilingual palette, final headings, and top Cook action", result && result.builder);
+check(result && result.swaps && result.swaps.protein.protein === "beef" && result.swaps.starch.starch === "pasta",
+  "the five proteins and five bases remain mutually exclusive", result && result.swaps);
+check(result && result.missing && result.missing.state.status === "assembling" && !result.missing.state.recipeComplete &&
+  result.missing.caption === "entrance_roadtrip_stew_missing" && result.missing.crate && result.missing.available && result.missing.overlay,
+  "the real Cook button refuses only a missing required item without hiding the crate", result && result.missing);
+check(result && result.closedDraft && !result.closedDraft.state.open && result.closedDraft.state.phase === "cold" &&
+  result.closedDraft.crate && result.reopenedDraft && result.reopenedDraft.open && !result.reopenedDraft.recipeComplete,
+  "closing and reopening keeps the crate but starts an empty draft", result && { closed: result.closedDraft, reopened: result.reopenedDraft });
+check(result && result.assembly && result.assembly.state.recipeComplete && result.assembly.state.tomato && result.assembly.state.curry &&
+  result.assembly.state.onion && result.assembly.state.garlic && result.assembly.state.ginger &&
+  result.assembly.state.carrots && result.assembly.state.celery && result.assembly.state.mushrooms &&
+  result.assembly.state.salt && result.assembly.state.pepper && result.assembly.state.chilies && result.assembly.state.coriander &&
+  result.assembly.clearFill === "rgb(191, 228, 234)" && Number(result.assembly.clearOpacity) < .7 &&
+  result.assembly.plainFill === "rgb(117, 82, 60)" && result.assembly.curryFill === "rgb(166, 111, 46)" &&
+  result.assembly.tomatoFill === "rgb(153, 76, 62)" && result.assembly.tomatoCurryFill === "rgb(166, 80, 56)" &&
+  [result.assembly.beefPieces, result.assembly.pastaPieces, result.assembly.onionPieces,
+    result.assembly.garlicPieces, result.assembly.gingerPieces, result.assembly.carrotPieces,
+    result.assembly.celeryPieces, result.assembly.mushroomPieces, result.assembly.corianderPieces].every(function (opacity) { return opacity === "1"; }) &&
+  !result.assembly.packagedPaste,
+  "the cutaway begins with translucent blue water, colours the broth, and mixes every solid without paste packaging", result && result.assembly);
+check(result && result.cookImmediate && result.cookImmediate.state.status === "cooking" && result.cookImmediate.state.phase === "raw" &&
+  !result.cookImmediate.overlay && !result.cookImmediate.crate && !result.cookImmediate.available && result.cookImmediate.pot &&
+  result.cookImmediate.grill && !result.cookImmediate.corn && !result.cookImmediate.meal &&
+  result.cookImmediate.caption === "entrance_roadtrip_stew_cooking_feedback" && result.cookImmediate.steam === "none" &&
+  result.cookImmediate.checkpoint && result.cookImmediate.checkpoint.status === "cooking" &&
+  result.cookImmediate.checkpoint.onion && result.cookImmediate.checkpoint.garlic &&
+  result.cookImmediate.checkpoint.ginger && result.cookImmediate.checkpoint.carrots &&
+  result.cookImmediate.checkpoint.celery && result.cookImmediate.checkpoint.mushrooms &&
+  result.cookImmediate.checkpoint.coriander,
+  "the visible Cook button commits the assembled batch and its add-ins, closes assembly, and moves the pot onto the grill", result && result.cookImmediate);
+check(result && result.afterRealTime && result.afterRealTime.state.status === "cooking" && result.afterRealTime.state.elapsed >= 1000 &&
+  result.afterRealTime.pot && result.afterRealTime.grill && result.warmed && result.warmed.phase === "warming" &&
+  result.warmed.steam === "entrance-roadtrip-camp-pot-first-wisp",
+  "real attended time advances the batch and its warming phase shows one faint wisp", result && { real: result.afterRealTime, warmed: result.warmed });
+check(result && result.inspected && result.inspected.lidOpen && result.ready && result.ready.phase === "ready" &&
+  result.ready.caption === "entrance_roadtrip_stew_ready_feedback" && result.ready.bubbles === "entrance-roadtrip-camp-bubble",
+  "a pre-ready pot click inspects the lid and the ready caption/bubbles arrive on the scene pot", result && { inspected: result.inspected, ready: result.ready });
+check(result && result.fireOutRestored && !result.fireOutRestored.before.fireLit &&
+  result.fireOutRestored.before.phase === "cold" && result.fireOutRestored.before.status === "assembling" &&
+  result.fireOutRestored.after.elapsed === 0 && !result.fireOutRestored.pot && !result.fireOutRestored.grill && !result.fireOutRestored.crate &&
+  result.readyRestored && result.readyRestored.state.phase === "ready" && result.readyRestored.pot && result.readyRestored.grill && !result.readyRestored.crate,
+  "a fire-out checkpoint hard-resets food while a lit checkpoint restores committed cooking", result && { fireOut: result.fireOutRestored, ready: result.readyRestored });
+check(result && result.served && result.served.state.status === "served" && !result.served.pot && result.served.grill &&
+  result.served.corn && result.served.meal && !result.served.crate && result.served.caption === "entrance_roadtrip_stew_served_feedback" &&
+  result.servedRestored && result.servedRestored.state.status === "served" && !result.servedRestored.pot && result.servedRestored.grill &&
+  result.servedRestored.corn && result.servedRestored.meal,
+  "the real ready-pot click serves bowls and corn, and the payoff restores durably", result && { served: result.served, restored: result.servedRestored });
+check(result && result.extinguished && result.extinguished.state.phase === "cold" && !result.extinguished.pot &&
+  !result.extinguished.grill && !result.extinguished.corn && !result.extinguished.meal && !result.extinguished.crate &&
+  result.rebuild && result.rebuild.state.phase === "cold" && !result.rebuild.pot && !result.rebuild.grill &&
+  !result.rebuild.corn && !result.rebuild.meal && !result.rebuild.crate && result.relit && result.relit.crate &&
+  !result.relit.pot && !result.relit.grill && !result.relit.meal,
+  "manual extinguish hard-resets dinner before rebuild, and a freshly lit fire restores the empty crate", result && { extinguished: result.extinguished, rebuild: result.rebuild, relit: result.relit });
+check(result && result.draftRestored && result.draftRestored.saved === null && !result.draftRestored.state.open &&
+  result.draftRestored.state.phase === "cold" && result.draftRestored.crate && !result.draftRestored.overlay,
+  "checkpoint restore discards an open partial draft", result && result.draftRestored);
+check(result && result.overcooked && result.overcooked.state.status === "overcooked" && result.overcooked.state.clankActive &&
+  result.overcooked.caption === "entrance_roadtrip_stew_overcooked_feedback" && result.overcooked.pot && result.overcooked.grill &&
+  !result.overcooked.crate && result.overcooked.lid === "entrance-roadtrip-camp-overcooked-lid" &&
+  result.overcooked.steam === "entrance-roadtrip-camp-pot-open-steam" && result.overcooked.saved.status === "overcooked" &&
+  result.overcookReset && result.overcookReset.state.phase === "cold" && !result.overcookReset.state.clankActive &&
+  !result.overcookReset.pot && !result.overcookReset.grill && result.overcookReset.crate && !result.overcookReset.corn && !result.overcookReset.meal,
+  "overcooking rattles/clanks densely and a real pot click resets to the empty crate", result && { overcooked: result.overcooked, reset: result.overcookReset });
 
 if (failures) process.exit(1);
 console.log("Campsite stew assertions passed.");

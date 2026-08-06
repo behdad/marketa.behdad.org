@@ -44,6 +44,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       clearClass: document.getElementById("entrance-room").classList.contains("camp-stargazing-clear"),
       dusk: document.getElementById("stage-balcony").classList.contains("dusk"),
       skyPointer: getComputedStyle(sky).pointerEvents,
+      skyCursor: getComputedStyle(sky).cursor,
       outerDismiss: getComputedStyle(outer).display,
       campActive: room.classList.contains("roadtrip-active") && room.classList.contains("roadtrip-route-camp"),
       caption: window.__captionKey && window.__captionKey(),
@@ -172,8 +173,9 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 3600, {
 check(result && result.errors.length === 0, "the finale has no uncaught errors", result && result.errors);
 check(result && result.beforeStew && !result.beforeStew.state.eligible && result.beforeStew.skyPointer === "none",
   "the sky remains scenery before dinner is served", result && result.beforeStew);
-check(result && result.ready && result.ready.state.eligible && result.ready.skyPointer === "all",
-  "served stew unlocks the sky in daylight", result && result.ready);
+check(result && result.ready && result.ready.state.eligible && result.ready.skyPointer === "all" &&
+  result.ready.skyCursor === "pointer",
+  "served stew unlocks the sky with the standard pointing-hand cursor", result && result.ready);
 check(result && result.dayOpen === "sunset" && result.sunset && result.sunset.state.sunsetting &&
   result.sunset.sunsetClass && result.sunset.clearClass && result.sunset.dusk &&
   result.sunset.caption === "entrance_roadtrip_stargazing_invite",

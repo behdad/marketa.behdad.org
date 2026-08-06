@@ -33,14 +33,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function snap() {
     var state = window.__entranceRoomState().drive.roadtrip.campFire;
+    var pot = document.getElementById("entrance-roadtrip-camp-pot");
+    var openBubble = document.querySelector(".entrance-roadtrip-camp-pot-open-bubble");
     return {
       state: state,
       sceneBuilt: document.getElementById("entrance-roadtrip-camp").classList.contains("fire-built"),
       gameOpen: document.getElementById("entrance-roadtrip-fire-game").classList.contains("open"),
-      potBoiling: document.getElementById("entrance-roadtrip-camp-pot").classList.contains("simmering"),
-      potPeeking: document.getElementById("entrance-roadtrip-camp-pot").classList.contains("peeking"),
-      potSteamPeek: document.getElementById("entrance-roadtrip-camp-pot").classList.contains("steam-peek"),
-      peekBubbles: document.querySelectorAll(".entrance-roadtrip-camp-pot-peek-bubble").length,
+      potBoiling: pot.classList.contains("simmering"),
+      potOpen: pot.classList.contains("open"),
+      openSteamActive: getComputedStyle(openBubble).animationName === "entrance-roadtrip-camp-pot-open-steam",
+      openBubbles: document.querySelectorAll(".entrance-roadtrip-camp-pot-open-bubble").length,
       key: window.__captionKey && window.__captionKey()
     };
   }
@@ -86,14 +88,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             var checkpoint = window.__captureCheckpointSystems().entrance;
             report.saved = checkpoint.drive.roadtrip.campFireBuilt;
             click(document.getElementById("entrance-roadtrip-camp-pot"));
-            report.potClickLit = snap();
+            report.potOpenLit = snap();
+            click(document.getElementById("entrance-roadtrip-camp-pot"));
+            report.potClosedLit = snap();
             click(document.getElementById("entrance-roadtrip-camp-fire"));
             report.extinguished = snap();
             var offCheckpoint = window.__captureCheckpointSystems().entrance;
             var finishedPit = document.getElementById("entrance-roadtrip-camp-finished-fire");
             report.coldPitCursor = getComputedStyle(finishedPit).cursor;
             click(document.getElementById("entrance-roadtrip-camp-pot"));
-            report.potClickCold = snap();
+            report.potOpenCold = snap();
+            click(document.getElementById("entrance-roadtrip-camp-pot"));
+            report.potClosedCold = snap();
             click(document.getElementById("entrance-roadtrip-camp-cold-fire-hit"));
             report.replay = snap();
             window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
@@ -157,12 +163,16 @@ check(result && result.successStart.result === "success" && result.successStart.
 check(result && result.complete && result.complete.state.complete && result.complete.sceneBuilt && result.complete.potBoiling &&
   !result.complete.gameOpen && result.complete.key === "entrance_roadtrip_camp_arrival",
   "the full fuel chain grows into the warm campsite", result && result.complete);
-check(result && result.potClickLit && result.potClickLit.potBoiling && result.potClickLit.potPeeking &&
-  result.potClickLit.potSteamPeek && result.potClickLit.peekBubbles >= 5 && !result.potClickLit.gameOpen &&
-  result.potClickCold && !result.potClickCold.potBoiling && result.potClickCold.potPeeking &&
-  !result.potClickCold.potSteamPeek && !result.potClickCold.gameOpen,
-  "the pot lifts its lid without controlling the boil, with extra steam only over fire", result && {
-    lit: result.potClickLit, cold: result.potClickCold
+check(result && result.potOpenLit && result.potOpenLit.potBoiling && result.potOpenLit.potOpen &&
+  result.potOpenLit.openSteamActive && result.potOpenLit.openBubbles >= 5 && !result.potOpenLit.gameOpen &&
+  result.potOpenLit.state.lit && result.potClosedLit && result.potClosedLit.potBoiling &&
+  !result.potClosedLit.potOpen && !result.potClosedLit.openSteamActive && result.potClosedLit.state.lit &&
+  result.potOpenCold && !result.potOpenCold.potBoiling && result.potOpenCold.potOpen &&
+  !result.potOpenCold.openSteamActive && !result.potOpenCold.state.lit && !result.potOpenCold.gameOpen &&
+  result.potClosedCold && !result.potClosedCold.potOpen && !result.potClosedCold.state.lit,
+  "the pot toggles open then closed without controlling the boil, with extra steam only over fire", result && {
+    litOpen: result.potOpenLit, litClosed: result.potClosedLit,
+    coldOpen: result.potOpenCold, coldClosed: result.potClosedCold
   });
 check(result && result.saved === true && result.restored && result.restored.state.complete && result.restored.sceneBuilt,
   "a completed fire survives checkpoint restore", result && result.restored);

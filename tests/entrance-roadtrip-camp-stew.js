@@ -34,6 +34,34 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     document.dispatchEvent(new PointerEvent("pointermove", Object.assign({ clientX: to.left + to.width / 2, clientY: to.top + to.height / 2 }, common)));
     document.dispatchEvent(new PointerEvent("pointerup", Object.assign({ clientX: to.left + to.width / 2, clientY: to.top + to.height / 2 }, common)));
   }
+  var camperPointerId = 200;
+  function point(node) {
+    var matrix = node.getScreenCTM();
+    return { x: matrix.e, y: matrix.f };
+  }
+  function dragCamper(id, dx, dy) {
+    var person = document.getElementById(id);
+    var hit = person.querySelector(".entrance-roadtrip-camp-character-drag-hit");
+    var rect = hit.getBoundingClientRect();
+    var pointerId = ++camperPointerId;
+    var common = { bubbles: true, cancelable: true, pointerId: pointerId, pointerType: "mouse", isPrimary: true, button: 0 };
+    var x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+    hit.dispatchEvent(new PointerEvent("pointerdown", Object.assign({ clientX: x, clientY: y }, common)));
+    person.dispatchEvent(new PointerEvent("pointermove", Object.assign({ clientX: x + dx, clientY: y + dy }, common)));
+    person.dispatchEvent(new PointerEvent("pointerup", Object.assign({ clientX: x + dx, clientY: y + dy }, common)));
+  }
+  function trackedCamperDrag(personId, bowlId, dx, dy) {
+    var person = document.getElementById(personId);
+    var mover = person.querySelector(".entrance-roadtrip-camp-character-drag");
+    var bowl = document.getElementById(bowlId);
+    var beforeMover = point(mover), beforeBowl = point(bowl);
+    dragCamper(personId, dx, dy);
+    var afterMover = point(mover), afterBowl = point(bowl);
+    return {
+      moverDx: afterMover.x - beforeMover.x, moverDy: afterMover.y - beforeMover.y,
+      bowlDx: afterBowl.x - beforeBowl.x, bowlDy: afterBowl.y - beforeBowl.y
+    };
+  }
   function finish() {
     report.errors = (window.__errs || []).concat(report.errors);
     document.getElementById("__report").textContent = JSON.stringify(report);
@@ -53,7 +81,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var pot = document.getElementById("entrance-roadtrip-camp-pot");
         var grill = document.getElementById("entrance-roadtrip-camp-stew-grill");
         var corn = document.getElementById("entrance-roadtrip-camp-served-corn");
-        var meal = document.getElementById("entrance-roadtrip-camp-meal");
+        var meals = Array.from(document.querySelectorAll(".entrance-roadtrip-camp-meal"));
+        function mealShown() { return meals.length === 2 && meals.every(shown); }
         var game = document.getElementById("entrance-roadtrip-stew-game");
         var cook = document.getElementById("entrance-roadtrip-stew-cook");
         var close = document.getElementById("entrance-roadtrip-stew-close");
@@ -61,7 +90,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         lightFire(function () {
           try {
             report.freshFire = {
-              crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: shown(meal),
+              crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: mealShown(),
               available: camp.classList.contains("stew-crate-available")
             };
             click(crate);
@@ -134,7 +163,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.cookImmediate = {
               state: stew(), overlay: game.classList.contains("open"), crate: shown(crate),
               available: camp.classList.contains("stew-crate-available"), pot: pot.classList.contains("has-stew"),
-              grill: camp.classList.contains("stew-cooking"), corn: shown(corn), meal: shown(meal),
+              grill: camp.classList.contains("stew-cooking"), corn: shown(corn), meal: mealShown(),
               caption: window.__captionKey(),
               steam: getComputedStyle(pot.querySelector(".entrance-roadtrip-camp-pot-open-bubble")).animationName,
               checkpoint: window.__captureCheckpointSystems().entrance.drive.roadtrip.stew
@@ -164,20 +193,36 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 report.readyRestored = { state: stew(), pot: shown(pot), grill: shown(grill), crate: shown(crate) };
                 click(pot);
                 report.served = {
-                  state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal),
+                  state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(),
                   crate: shown(crate), caption: window.__captionKey()
                 };
+                report.bowlOwnership = meals.map(function (bowl) {
+                  return bowl.parentElement.classList.contains("entrance-roadtrip-camp-character-drag") &&
+                    !!bowl.closest(".entrance-roadtrip-camp-character");
+                });
+                report.bowlDrags = [
+                  trackedCamperDrag("entrance-roadtrip-camp-marketa", "entrance-roadtrip-camp-marketa-meal", 90, -18),
+                  trackedCamperDrag("entrance-roadtrip-camp-marketa", "entrance-roadtrip-camp-marketa-meal", -34, 22),
+                  trackedCamperDrag("entrance-roadtrip-camp-behdad", "entrance-roadtrip-camp-behdad-meal", -90, -16),
+                  trackedCamperDrag("entrance-roadtrip-camp-behdad", "entrance-roadtrip-camp-behdad-meal", 31, 20)
+                ];
+                var bowlsAfterDrag = meals.map(point);
+                window.__setDayNight(true);
+                report.bowlsAfterDayNight = meals.map(point);
                 var servedCheckpoint = window.__captureCheckpointSystems().entrance;
                 window.__restoreCheckpointSystems({ entrance: servedCheckpoint }, "afterStage");
-                report.servedRestored = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal) };
+                report.servedRestored = {
+                  state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(),
+                  bowlsBefore: bowlsAfterDrag, bowlsAfter: meals.map(point)
+                };
 
                 window.__entranceRoadtripCampFireReplay();
-                report.extinguished = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal), crate: shown(crate) };
+                report.extinguished = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(), crate: shown(crate) };
                 window.__entranceRoadtripCampFireReplay();
-                report.rebuild = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: shown(meal), crate: shown(crate) };
+                report.rebuild = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(), crate: shown(crate) };
                 lightFire(function () {
                   try {
-                    report.relit = { state: stew(), crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: shown(meal) };
+                    report.relit = { state: stew(), crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: mealShown() };
                     click(crate);
                     choose("tofu"); choose("barley"); choose("onion");
                     var draftCheckpoint = window.__captureCheckpointSystems().entrance;
@@ -194,7 +239,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                       saved: window.__captureCheckpointSystems().entrance.drive.roadtrip.stew
                     };
                     click(pot);
-                    report.overcookReset = { state: stew(), pot: shown(pot), grill: shown(grill), crate: shown(crate), corn: shown(corn), meal: shown(meal) };
+                    report.overcookReset = { state: stew(), pot: shown(pot), grill: shown(grill), crate: shown(crate), corn: shown(corn), meal: mealShown() };
                   } catch (error) { report.errors.push(String(error && error.stack || error)); }
                   finish();
                 });
@@ -216,6 +261,9 @@ function check(ok, message, detail) {
     failures++;
     console.log("  ✗ " + message + (detail == null ? "" : "   [" + JSON.stringify(detail) + "]"));
   }
+}
+function samePoint(a, b) {
+  return !!(a && b && Math.abs(a.x - b.x) < .5 && Math.abs(a.y - b.y) < .5);
 }
 
 console.log("rsvp.html campsite stew:");
@@ -285,6 +333,16 @@ check(result && result.served && result.served.state.status === "served" && !res
   result.servedRestored && result.servedRestored.state.status === "served" && !result.servedRestored.pot && result.servedRestored.grill &&
   result.servedRestored.corn && result.servedRestored.meal,
   "the real ready-pot click serves bowls and corn, and the payoff restores durably", result && { served: result.served, restored: result.servedRestored });
+check(result && result.bowlOwnership && result.bowlOwnership.every(Boolean) && result.bowlDrags &&
+  result.bowlDrags.every(function (move) {
+    return Math.abs(move.moverDx) + Math.abs(move.moverDy) > 1 &&
+      Math.abs(move.moverDx - move.bowlDx) < .5 && Math.abs(move.moverDy - move.bowlDy) < .5;
+  }) && result.bowlsAfterDayNight && result.servedRestored &&
+  result.servedRestored.bowlsBefore.every(function (before, index) {
+    return samePoint(before, result.bowlsAfterDayNight[index]) && samePoint(before, result.servedRestored.bowlsAfter[index]);
+  }),
+  "each served bowl inherits its camper's repeated drags and remains aligned through day/night and checkpoint restore",
+  result && { ownership: result.bowlOwnership, drags: result.bowlDrags, dayNight: result.bowlsAfterDayNight, restored: result.servedRestored });
 check(result && result.extinguished && result.extinguished.state.phase === "cold" && !result.extinguished.pot &&
   !result.extinguished.grill && !result.extinguished.corn && !result.extinguished.meal && !result.extinguished.crate &&
   result.rebuild && result.rebuild.state.phase === "cold" && !result.rebuild.pot && !result.rebuild.grill &&

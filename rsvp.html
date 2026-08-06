@@ -38316,6 +38316,19 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
+  function parkPorscheForFreshRoadtrip() {
+    cancelPorscheTouchPedals();
+    ["throttle", "brake", "clutch"].forEach(function (name) {
+      setPorscheDriveHold(name, false);
+    });
+    parkPorscheTransmission();
+    driveState.speed = 0;
+    driveState.rpm = porscheState.engineOn ? 780 : 0;
+    driveState.throttleHeldMs = 0;
+    driveState.shiftCutMs = 0;
+    driveState.redlineMs = 0;
+    clearPorscheClutchEngagement(true);
+  }
   function launchRoadtripRoute(route, event, forceShortcut) {
     var routeDuration = route === "calgary" ? ROADTRIP_CALGARY_SECONDS :
       route === "banff" ? ROADTRIP_BANFF_SECONDS : ROADTRIP_ABRAHAM_SECONDS;
@@ -38324,6 +38337,7 @@ window.__entranceRoomOpen = false;
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.routeChooserOpen || !setRoadtripRouteChoice(route, false)) return false;
     roadtripState.routeChooserOpen = false;
+    parkPorscheForFreshRoadtrip();
     var started = startRoadtrip(true, route, shortcutElapsed);
     if (started && window.__checkpointChanged) window.__checkpointChanged();
     return started;

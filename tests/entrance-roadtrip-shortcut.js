@@ -11,6 +11,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 (function () {
   var report = { errors: [], shifted: {} };
   function roadtrip() { return window.__entranceRoomState().drive.roadtrip; }
+  function motion() {
+    var state = window.__entranceRoomState();
+    return {
+      engineOn: state.car.engineOn,
+      speed: state.drive.speed,
+      gear: state.drive.gear,
+      range: state.drive.transmission.range,
+      position: state.drive.position,
+      distance: state.drive.roadtrip.distance
+    };
+  }
   function pressEscape() {
     document.dispatchEvent(new KeyboardEvent("keydown", {
       key: "Escape", code: "Escape", bubbles: true, cancelable: true
@@ -32,6 +43,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   window.addEventListener("load", function () {
     setTimeout(function () {
       try {
+        Object.defineProperty(document, "hasFocus", {
+          value: function () { return true; }, configurable: true
+        });
         window.__unlockAllRooms();
         window.goToStage("balcony");
         window.__openEntranceRoom();
@@ -39,10 +53,33 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripStart();
 
+        window.__entranceDriveRange("D");
+        window.__entranceDriveSetMotion(72, 3);
         report.shifted.calgary = choose("calgary", true);
+        report.parkedStart = motion();
+        window.__entranceDriveControl("throttle", true);
+        window.__entranceDriveStep(1000);
+        report.parkedThrottle = motion();
+        window.__toggleEntrancePorscheEngine();
+        window.__entranceDriveControl("throttle", true);
+        window.__entranceDriveStep(1000);
+        report.engineOffThrottle = motion();
+        window.__toggleEntrancePorscheEngine();
+        window.__entranceDriveControl("throttle", true);
+        window.__entranceDriveStep(1000);
+        report.restartedParkThrottle = motion();
+        window.__entranceDriveRange("D");
+        window.__entranceDriveControl("throttle", true);
+        for (var driveStep = 0; driveStep < 20; driveStep++) window.__entranceDriveStep(50);
+        report.validDrive = motion();
+        window.__entranceDriveControl("throttle", false);
+        window.__entranceDriveStep(300);
+        report.validCoast = motion();
         report.shifted.banff = choose("banff", true);
         report.shifted.abraham = choose("abraham", true);
         report.normalAbraham = choose("abraham", false);
+        window.__entranceDriveRange("D");
+        window.__entranceDriveSetMotion(64, 3);
         openChooser();
         var touchChoice = document.getElementById("entrance-roadtrip-route-banff");
         touchChoice.dispatchEvent(new PointerEvent("pointerdown", {
@@ -55,6 +92,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             clientX: 340, clientY: 80
           }));
           report.longPressedBanff = roadtrip();
+          report.longPressMotion = motion();
           report.errors = (window.__errs || []).concat(report.errors);
           document.getElementById("__report").textContent = JSON.stringify(report);
         }, 680);
@@ -97,6 +135,35 @@ var shifted = result && result.shifted || {};
 check(shifted.calgary && shifted.calgary.route === "calgary" &&
   shifted.calgary.routeElapsed === shifted.calgary.calgarySeconds - 3,
   "Shift-click Calgary starts three seconds before its exit", shifted.calgary);
+var parked = result && result.parkedStart || {};
+var parkedThrottle = result && result.parkedThrottle || {};
+var engineOffThrottle = result && result.engineOffThrottle || {};
+var restartedParkThrottle = result && result.restartedParkThrottle || {};
+var validDrive = result && result.validDrive || {};
+var validCoast = result && result.validCoast || {};
+check(parked.engineOn && parked.range === "P" && parked.gear === 0 && parked.speed === 0,
+  "a fresh near-exit shortcut drops carried momentum and starts parked", parked);
+check(parkedThrottle.range === "P" && parkedThrottle.gear === 0 && parkedThrottle.speed === 0 &&
+  parkedThrottle.position === parked.position && parkedThrottle.distance === parked.distance,
+  "accelerating in AUTO Park cannot move the shortcut-started car", {
+    before: parked, after: parkedThrottle
+  });
+check(!engineOffThrottle.engineOn && engineOffThrottle.range === "P" &&
+  engineOffThrottle.gear === 0 && engineOffThrottle.speed === 0 &&
+  engineOffThrottle.position === parked.position && engineOffThrottle.distance === parked.distance,
+  "engine-off acceleration cannot propel the shortcut-started car", engineOffThrottle);
+check(restartedParkThrottle.engineOn && restartedParkThrottle.range === "P" &&
+  restartedParkThrottle.gear === 0 && restartedParkThrottle.speed === 0 &&
+  restartedParkThrottle.position === parked.position && restartedParkThrottle.distance === parked.distance,
+  "restarting in AUTO Park still requires selecting a drive range", restartedParkThrottle);
+check(validDrive.engineOn && validDrive.range === "D" && validDrive.gear > 0 &&
+  validDrive.speed > 0 && validDrive.distance > parked.distance,
+  "fresh acceleration begins after AUTO Drive is selected", validDrive);
+check(validCoast.range === "D" && validCoast.gear > 0 && validCoast.speed > 0 &&
+  validCoast.speed < validDrive.speed && validCoast.distance > validDrive.distance,
+  "a valid drive gear retains ordinary throttle-release coasting", {
+    powered: validDrive, coast: validCoast
+  });
 check(shifted.banff && shifted.banff.route === "banff" &&
   shifted.banff.banffElapsed === shifted.banff.banffSeconds - 3,
   "Shift-click Banff starts three seconds before its exit", shifted.banff);
@@ -112,6 +179,9 @@ var longPressed = result && result.longPressedBanff || {};
 check(longPressed.route === "banff" &&
   Math.abs(longPressed.banffElapsed - (longPressed.banffSeconds - 3)) < .2,
   "a mobile long-press uses the same near-exit shortcut", longPressed);
+var longPressMotion = result && result.longPressMotion || {};
+check(longPressMotion.range === "P" && longPressMotion.gear === 0 && longPressMotion.speed === 0,
+  "a mobile near-exit shortcut also drops carried momentum", longPressMotion);
 
 if (failures) process.exit(1);
 console.log("Road Trip route shortcut checks passed.");

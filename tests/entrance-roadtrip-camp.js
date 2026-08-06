@@ -15,7 +15,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       entranceOpen: !!window.__entranceRoomOpen,
       stage: window.currentStageName,
       roadtripActive: state.drive.roadtrip.active,
+      roadtripPaused: state.drive.roadtrip.paused,
+      campVisited: state.drive.roadtrip.campVisited,
       route: state.drive.roadtrip.route,
+      routeChooserOpen: state.drive.roadtrip.routeChooserOpen,
+      reentryMenuOpen: document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show"),
       hudOpen: state.drive.hud,
       engineOn: state.car.engineOn,
       speed: state.drive.speed,
@@ -100,6 +104,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         reopenCamp();
         dismiss.click();
         report.afterDismiss = snapshot();
+        document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }));
+        report.afterReenterMenu = snapshot();
+        document.querySelector('[data-roadtrip-reentry-choice="new"]').dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }));
+        report.afterNew = snapshot();
+        document.getElementById("entrance-roadtrip-route-later").dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }));
+        document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }));
+        document.querySelector('[data-roadtrip-reentry-choice="camp"]').dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }));
+        report.afterCampReturn = snapshot();
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
       }
@@ -168,8 +185,18 @@ check(result && result.backspace && result.backspace.prevented && !result.backsp
   "Backspace dismisses camp back to the Entrance dashboard", result && result.backspace);
 check(result && result.afterDismiss && result.afterDismiss.entranceOpen &&
   result.afterDismiss.stage === "balcony" && !result.afterDismiss.roadtripActive &&
-  result.afterDismiss.hudOpen && !/roadtrip-active/.test(result.afterDismiss.classes || ""),
+  !result.afterDismiss.roadtripPaused && result.afterDismiss.campVisited && result.afterDismiss.hudOpen &&
+  !/roadtrip-active/.test(result.afterDismiss.classes || ""),
   "the × also returns to the parked Entrance dashboard", result && result.afterDismiss);
+check(result && result.afterReenterMenu && !result.afterReenterMenu.roadtripActive &&
+  !result.afterReenterMenu.roadtripPaused && result.afterReenterMenu.reentryMenuOpen &&
+  !result.afterReenterMenu.routeChooserOpen,
+  "Road Trip offers explicit actions after a dismissed campsite", result && result.afterReenterMenu);
+check(result && result.afterNew && !result.afterNew.roadtripActive &&
+  !result.afterNew.roadtripPaused && result.afterNew.routeChooserOpen,
+  "New opens the chooser for a fresh Road Trip", result && result.afterNew);
+check(result && campIsOpen(result.afterCampReturn) && result.afterCampReturn.campVisited,
+  "Camping returns directly to the reached campsite", result && result.afterCampReturn);
 
 if (failures) process.exit(1);
 console.log("Abraham Lake camp keyboard assertions passed.");

@@ -111,13 +111,44 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     documentEnter();
     var engineStarted = copy(state());
     documentEnter();
+    var reentryChoice = {
+      state: copy(state()),
+      menuOpen: document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show"),
+      focused: document.activeElement && document.activeElement.getAttribute("data-roadtrip-reentry-choice")
+    };
+    documentEnter();
     var keyboardResumed = copy(state());
     report.steps.engineCycle = {
       off: engineOff,
       started: engineStarted,
+      choice: reentryChoice,
       resumed: keyboardResumed,
       run: durableRun(pausedRun())
     };
+    window.__exitEntranceRoadtrip();
+    report.steps.beforeNew = durableRun(pausedRun());
+    reentry.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    document.querySelector('[data-roadtrip-reentry-choice="new"]').dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.steps.newRun = {
+      state: copy(state()),
+      menuOpen: document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show"),
+      run: durableRun(pausedRun())
+    };
+    document.getElementById("entrance-roadtrip-route-later").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    reentry.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.steps.newDismissed = {
+      state: copy(state()),
+      menuOpen: document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show"),
+      continueVisible: document.querySelector('[data-roadtrip-reentry-choice="continue"]').classList.contains("show"),
+      run: durableRun(pausedRun())
+    };
+    document.querySelector('[data-roadtrip-reentry-choice="new"]').dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    document.querySelector('[data-roadtrip-route-choice="banff"]').dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.steps.newStarted = { state: copy(state()), run: durableRun(pausedRun()) };
   }
   window.addEventListener("load", function () {
     setTimeout(function () {
@@ -155,6 +186,10 @@ if (!result) { console.log("  ✗ harness produced no report"); process.exit(1);
 var restored = result.steps && result.steps.restored;
 var resumed = result.steps && result.steps.resumed;
 var engine = result.steps && result.steps.engineCycle;
+var beforeNew = result.steps && result.steps.beforeNew;
+var fresh = result.steps && result.steps.newRun;
+var freshDismissed = result.steps && result.steps.newDismissed;
+var freshStarted = result.steps && result.steps.newStarted;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(restored && restored.state.open && restored.state.drive.hud &&
   restored.state.drive.roadtrip.active && restored.state.drive.roadtrip.resumePending &&
@@ -181,9 +216,23 @@ check(resumed && resumed.state.drive.roadtrip.active && !resumed.state.drive.roa
 check(engine && !engine.off.car.engineOn && engine.off.drive.roadtrip.paused &&
   engine.off.drive.roadtrip.damage.kind === "cracked" && engine.started.car.engineOn &&
   engine.started.drive.roadtrip.paused && engine.started.drive.roadtrip.damage.kind === "cracked" &&
+  engine.choice.menuOpen && engine.choice.focused === "continue" && engine.choice.state.drive.roadtrip.paused &&
   engine.resumed.drive.roadtrip.active && !engine.resumed.drive.roadtrip.paused &&
   engine.resumed.drive.roadtrip.damage.kind === "cracked" && same(restored.expected, engine.run),
-  "engine-off Enter preserves damage and only the following Enter resumes the same run", engine);
+  "engine-off Enter preserves damage, then the explicit Continue choice resumes the same run", engine);
+check(fresh && !fresh.menuOpen && !fresh.state.drive.roadtrip.active &&
+  fresh.state.drive.roadtrip.paused && fresh.state.drive.roadtrip.routeChooserOpen &&
+  same(beforeNew, fresh.run),
+  "New opens the starting-segment chooser without replacing the paused run", fresh && fresh.state.drive.roadtrip);
+check(freshDismissed && !freshDismissed.state.drive.roadtrip.active &&
+  freshDismissed.state.drive.roadtrip.paused && !freshDismissed.state.drive.roadtrip.routeChooserOpen &&
+  freshDismissed.menuOpen && freshDismissed.continueVisible && same(beforeNew, freshDismissed.run),
+  "dismissing the chooser preserves the old run and offers Continue again", freshDismissed);
+check(freshStarted && freshStarted.state.drive.roadtrip.active &&
+  !freshStarted.state.drive.roadtrip.paused && !freshStarted.state.drive.roadtrip.routeChooserOpen &&
+  freshStarted.state.drive.roadtrip.route === "banff" && freshStarted.run.state.runSeed !== beforeNew.state.runSeed &&
+  freshStarted.run.entities.length === 0 && freshStarted.run.damage.kind === "",
+  "choosing a segment finally replaces the paused run", freshStarted && freshStarted.state.drive.roadtrip);
 
 console.log("");
 if (failures) {

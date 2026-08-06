@@ -180,8 +180,9 @@ changing road geometry. Signs are projected beyond the current road edge by
 The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click or a
 touch long-press is a private test shortcut that begins three seconds before the chosen segment's
 exit. Every chooser launch clears carried motion and parks the transmission before the new route;
-the compact re-entry control instead restores an unfinished paused run exactly. The chooser's open
-state and selected card are checkpointed, and recovery reopens it without launching the route.
+the compact re-entry control offers the exact paused run, a provisional fresh-route chooser, and a
+direct campsite return after `campVisited` is set. The chooser's open state, selected card, and
+campsite availability are checkpointed; recovery reopens the chooser without launching the route.
 Touch-first devices scale attended route and turnoff durations to 72%.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
@@ -201,7 +202,9 @@ success transition. Built and lit/off state are durable; unfinished fuel resets 
 Success restores the finished fire with an empty silver pot and publishes the stable, non-clickable
 `entrance_roadtrip_stew_invite` caption while it burns. Serving or extinguishing restores the
 permanent `entrance_roadtrip_camp_arrival` RSVP caption. The `camp` route is never resume-pending,
-including after checkpoint restore, blur, or visibility changes.
+including after checkpoint restore, blur, or visibility changes; dismissing it ends the drive run,
+while the re-entry menu can rebuild the camp presentation without resetting its fire or stew. New
+routes stay provisional in the chooser, so dismissing it preserves any paused highway run.
 
 `campStewState` owns the exact protein/base choices, six required fixed ingredients, close-up state,
 attended cooking elapsed time, and served/overcooked payoff. `advanceCampStew()` applies the slower

@@ -955,17 +955,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       viewBox: viewBox(),
       reentryVisible: reentryButton.classList.contains("show"),
       reentryMetadata: metadataCount(reentryButton),
-      label: reentryButton.textContent.trim().replace(/\s+/g, " "),
+      label: document.getElementById("entrance-roadtrip-reenter-text").textContent.trim(),
       button: box(reentryButton),
       steering: box(document.getElementById("entrance-drive-steering"))
     };
     window.setLang("cs");
-    reopened.czechLabel = reentryButton.textContent.trim().replace(/\s+/g, " ");
+    reopened.czechLabel = document.getElementById("entrance-roadtrip-reenter-text").textContent.trim();
     window.setLang("en");
     if (state().car.engineOn) window.__toggleEntrancePorscheEngine();
     var reentryBeforeEnter = copy(state());
     pressDocumentKey("Enter");
     var reentryEngineStarted = copy(state());
+    pressDocumentKey("Enter");
+    var reentryMenu = {
+      open: document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show"),
+      focused: document.activeElement && document.activeElement.getAttribute("data-roadtrip-reentry-choice")
+    };
     pressDocumentKey("Enter");
     var reentered = {
       roadtrip: copy(roadtrip()),
@@ -981,6 +986,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       reentryMetadata: metadataCount(reentryButton)
     };
     reentryButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var clickedMenu = document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show");
+    document.querySelector('[data-roadtrip-reentry-choice="continue"]').dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
     var clickedReentry = copy(state());
     window.__exitEntranceRoadtrip();
     window.__entranceDriveSetMotion(0, 1);
@@ -988,7 +996,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.close = { before: closeBefore, closed: closed, parked: parked, reopened: reopened,
       closedWrapStart: closedWrapStart, ignoredClosedWrap: ignoredClosedWrap,
       reentryBeforeEnter: reentryBeforeEnter, reentryEngineStarted: reentryEngineStarted,
-      reentered: reentered, returned: returned, clickedReentry: clickedReentry };
+      reentryMenu: reentryMenu, reentered: reentered, returned: returned,
+      clickedMenu: clickedMenu, clickedReentry: clickedReentry };
 
     var bestBeforeDismiss = roadtrip().best;
     var runBeforeDismiss = copy(roadtrip());
@@ -1248,8 +1257,12 @@ check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.ac
   "the first highway entry is explicit and its full offer owns Enter and Escape");
 check(/id="entrance-roadtrip-reenter"[^>]+tabindex="0"/.test(source) &&
   /roadtripState\.everAccepted && !roadtripState\.accepted\s*&&\s*!roadtripState\.active/.test(source) &&
-  /bindRoadtripInviteControl\(roadtripReenter,[\s\S]*?if \(roadtripState\.paused\)[\s\S]*?startRoadtrip\(false\)[\s\S]*?return openRoadtripRouteChooser\(event\)/.test(source),
-  "accepted drivers get an explicit compact control that resumes paused runs or opens the route chooser");
+  /data-roadtrip-reentry-choice="continue"/.test(source) &&
+  /data-roadtrip-reentry-choice="new"/.test(source) &&
+  /data-roadtrip-reentry-choice="camp"/.test(source) &&
+  /function continuePausedRoadtrip\(event\)[\s\S]*?startRoadtrip\(false\)/.test(source) &&
+  /function beginNewRoadtrip\(event\)[\s\S]*?openRoadtripRouteChooser\(\)/.test(source),
+  "accepted drivers get explicit compact Continue, New, and reached-Camping actions");
 check(/var roadtripReenterVisible = roadtripReenterNode && roadtripReenterNode\.classList\.contains\("show"\)/.test(source) &&
   /event\.key === "Enter"[\s\S]{0,350}roadtripReenterVisible && document\.getElementById\("entrance-drive-hud"\)\.classList\.contains\("drive-engine-on"\)[\s\S]{0,180}roadtripReenterNode\.dispatchEvent/.test(source),
   "document Enter starts compact Road Trip re-entry only after the engine is running");
@@ -1754,6 +1767,7 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   close.reentryEngineStarted.car.engineOn && !close.reentryEngineStarted.drive.roadtrip.active &&
   close.reentryEngineStarted.drive.roadtrip.paused &&
   close.reentryEngineStarted.drive.roadtrip.reentryVisible &&
+  close.reentryMenu.open &&
   close.reentered.roadtrip.active && !close.reentered.roadtrip.paused &&
   close.reentered.roadtrip.accepted && close.reentered.roadtrip.everAccepted &&
   close.reentered.car.engineOn &&
@@ -1763,10 +1777,11 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   sameRetainedRun(close.reentered.roadtrip, close.returned.state.drive.roadtrip) &&
   close.returned.state.drive.roadtrip.reentryVisible && close.returned.reentryVisible &&
   close.returned.reentryMetadata === 0 &&
+  close.clickedMenu &&
   close.clickedReentry.drive.roadtrip.active && !close.clickedReentry.drive.roadtrip.paused &&
   close.clickedReentry.drive.roadtrip.accepted &&
   sameRetainedRun(close.returned.state.drive.roadtrip, close.clickedReentry.drive.roadtrip),
-  "accepted drivers regain a non-overlapping bilingual Road Trip button; Enter starts the engine, then resumes the exact run", close);
+  "accepted drivers regain a non-overlapping bilingual Road Trip menu; Continue resumes the exact run", close);
 var dismiss = s.dismiss && s.dismiss.roadtrip;
 check(dismiss && !dismiss.active && dismiss.paused && dismiss.unlocked && dismiss.entityCount > 0 &&
   dismiss.everAccepted && !dismiss.reentryVisible &&

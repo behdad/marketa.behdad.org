@@ -160,8 +160,10 @@ Road Trip uses the same steering, transmission, accelerator, and brake:
 
 AUTO provides gentle curve assistance; MANUAL leaves curve steering to the player. Traffic,
 shoulders, gravel, weather, seasons, wildlife, and police affect the trip. Leaving an active highway
-pauses it; select **Road Trip** to restore that exact run. Unfocusing pauses it until fresh driving
-input resumes it.
+pauses it. Select **Road Trip**, then **Continue** to restore that exact run or **New** to choose
+another starting segment; the old run is replaced only after a segment is chosen. Once reached,
+**Camping** returns directly to the campsite.
+Unfocusing pauses an active run until fresh driving input resumes it.
 
 Police allow 20 km/h above the posted limit. An oncoming car flashes before a speed trap. If police
 pursue, stop safely to resolve the outcome. The driver panel tracks **Demerits** and a simplified
@@ -184,9 +186,9 @@ The lit fire also reveals a food crate. Open it to assemble Camping stew from on
 and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook;
 an extinguished fire pauses it. Serve during the ready moment, or reset a comically overcooked pot.
 
-Leaving the highway keeps the dashboard available and never resumes the run automatically. Select
-**Road Trip** to return to a paused run. After a completed run, the same control opens the route
-chooser for a fresh parked start.
+Leaving the highway keeps the dashboard available and never resumes the run automatically. The
+**Road Trip** control offers the actions currently available: continue a paused run, start a new
+one, or revisit Camping after reaching it.
 
 ## Help, saves, and browser notes
 

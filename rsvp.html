@@ -1718,8 +1718,15 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-reenter{display:none;pointer-events:none;cursor:pointer;outline:none}
 #entrance-roadtrip-reenter.show{display:inline;pointer-events:all}
 #entrance-roadtrip-reenter.suspended{cursor:not-allowed;opacity:.82}
-#entrance-roadtrip-reenter.suspended text{font-size:8.5px}
-#entrance-roadtrip-reenter:focus rect{stroke:#fffdf8;stroke-width:2}
+#entrance-roadtrip-reenter.suspended>#entrance-roadtrip-reenter-text{font-size:8.5px}
+#entrance-roadtrip-reenter:focus>rect{stroke:#fffdf8;stroke-width:2}
+#entrance-roadtrip-reenter.menu-open>rect{fill:#8e3a4a;stroke:#fffdf8}
+#entrance-roadtrip-reenter-menu{display:none;pointer-events:none}
+#entrance-roadtrip-reenter-menu.show{display:inline;pointer-events:all}
+.entrance-roadtrip-reenter-choice{display:none;cursor:pointer;outline:none}
+.entrance-roadtrip-reenter-choice.show{display:inline}
+.entrance-roadtrip-reenter-choice:focus rect{fill:#8e3a4a;stroke:#fffdf8;stroke-width:2}
+.entrance-roadtrip-reenter-choice text{font-size:8px}
 @media (pointer:coarse){.entrance-roadtrip-enter-hint{display:none}}
 #entrance-roadtrip-pause-dialog{display:none;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(31,20,18,.48))}
 #entrance-room.roadtrip-active.roadtrip-resume-pending #entrance-roadtrip-pause-dialog{display:inline}
@@ -34611,6 +34618,20 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
           <g id="entrance-roadtrip-reenter" transform="translate(479 -22)" tabindex="0" focusable="true">
             <rect x="0" y="0" width="91" height="23" rx="8" fill="#453a31" fill-opacity=".96" stroke="#d9a6a6" stroke-width="1.5"/>
             <text id="entrance-roadtrip-reenter-text" class="entrance-roadtrip-invite-copy" x="45.5" y="15" font-size="10.5" font-weight="700" data-i="entrance_roadtrip_reenter">Road Trip</text>
+            <g id="entrance-roadtrip-reenter-menu">
+              <g class="entrance-roadtrip-reenter-choice" data-roadtrip-reentry-choice="continue" data-roadtrip-choice-width="66" tabindex="0" focusable="true">
+                <rect width="66" height="21" rx="7" fill="#453a31" fill-opacity=".97" stroke="#d9a6a6" stroke-width="1.5"/>
+                <text class="entrance-roadtrip-invite-copy" x="33" y="14" font-weight="700" data-i="entrance_roadtrip_continue">Continue</text>
+              </g>
+              <g class="entrance-roadtrip-reenter-choice" data-roadtrip-reentry-choice="new" data-roadtrip-choice-width="45" tabindex="0" focusable="true">
+                <rect width="45" height="21" rx="7" fill="#453a31" fill-opacity=".97" stroke="#d9a6a6" stroke-width="1.5"/>
+                <text class="entrance-roadtrip-invite-copy" x="22.5" y="14" font-weight="700" data-i="entrance_roadtrip_new">New</text>
+              </g>
+              <g class="entrance-roadtrip-reenter-choice" data-roadtrip-reentry-choice="camp" data-roadtrip-choice-width="63" tabindex="0" focusable="true">
+                <rect width="63" height="21" rx="7" fill="#453a31" fill-opacity=".97" stroke="#d9a6a6" stroke-width="1.5"/>
+                <text class="entrance-roadtrip-invite-copy" x="31.5" y="14" font-weight="700" data-i="entrance_roadtrip_camping">Camping</text>
+              </g>
+            </g>
           </g>
           <g id="entrance-drive-coach" class="entrance-drive-coach">
             <g class="entrance-drive-coach-step active" data-coach-step="1">
@@ -36696,6 +36717,10 @@ window.__entranceRoomOpen = false;
   var roadtripRouteLater = document.getElementById("entrance-roadtrip-route-later");
   var roadtripReenter = document.getElementById("entrance-roadtrip-reenter");
   var roadtripReenterText = document.getElementById("entrance-roadtrip-reenter-text");
+  var roadtripReenterMenu = document.getElementById("entrance-roadtrip-reenter-menu");
+  var roadtripReenterChoices = roadtripReenterMenu ?
+    Array.prototype.slice.call(roadtripReenterMenu.querySelectorAll("[data-roadtrip-reentry-choice]")) : [];
+  var roadtripReentryMenuOpen = false;
   var driveCoachStep = 1;
   var driveCoachComplete = false;
   var driveCoachDismissed = false;
@@ -37124,6 +37149,7 @@ window.__entranceRoomOpen = false;
   var roadtripState = {
     active: false,
     paused: false,
+    campVisited: false,
     exitUntilStop: false,
     playerLane: ROADTRIP_START_LANE,
     unlocked: false,
@@ -38503,7 +38529,10 @@ window.__entranceRoomOpen = false;
   }
   function paintRoadtripInvite() {
     var suspended = syncRoadtripDemeritState();
-    if (suspended) roadtripState.routeChooserOpen = false;
+    if (suspended) {
+      roadtripState.routeChooserOpen = false;
+      roadtripReentryMenuOpen = false;
+    }
     var visible = !!(window.__entranceRoomOpen && driveState.hudOpen && roadtripState.unlocked &&
       roadtripState.invitationReady && !roadtripState.accepted && !roadtripState.active &&
       !roadtripState.invitationDismissed && !roadtripState.everAccepted && !suspended &&
@@ -38517,6 +38546,7 @@ window.__entranceRoomOpen = false;
     if (roadtripReenter) {
       roadtripReenter.classList.toggle("show", reentryVisible);
       roadtripReenter.classList.toggle("suspended", reentryVisible && suspended);
+      roadtripReenter.classList.toggle("menu-open", reentryVisible && roadtripReentryMenuOpen);
     }
     if (roadtripReenterText) {
       roadtripReenterText.textContent = suspended ?
@@ -38527,6 +38557,20 @@ window.__entranceRoomOpen = false;
     var chooserVisible = !!(window.__entranceRoomOpen && driveState.hudOpen &&
       roadtripState.unlocked && roadtripState.routeChooserOpen && !roadtripState.active && !suspended);
     if (roadtripRouteChooser) roadtripRouteChooser.classList.toggle("show", chooserVisible);
+    var reentryChoices = roadtripReentryMenuOpen && reentryVisible && !suspended;
+    if (roadtripReenterMenu) roadtripReenterMenu.classList.toggle("show", reentryChoices);
+    var choiceX = 0;
+    roadtripReenterChoices.forEach(function (choice) {
+      var action = choice.getAttribute("data-roadtrip-reentry-choice");
+      var available = reentryChoices && (action === "new" || action === "continue" && roadtripState.paused ||
+        action === "camp" && roadtripState.campVisited);
+      choice.classList.toggle("show", available);
+      if (!available) return;
+      choice.setAttribute("transform", "translate(" + choiceX + " 0)");
+      choiceX += Number(choice.getAttribute("data-roadtrip-choice-width")) + 4;
+    });
+    if (roadtripReenterMenu) roadtripReenterMenu.setAttribute("transform",
+      "translate(" + (95 - Math.max(0, choiceX - 4)) + " 26)");
     roadtripRouteChoices.forEach(function (choice) {
       choice.classList.toggle("selected",
         choice.getAttribute("data-roadtrip-route-choice") === roadtripState.routeChoice);
@@ -38563,6 +38607,7 @@ window.__entranceRoomOpen = false;
     }
     if (!roadtripState.unlocked || roadtripState.active || roadtripState.accepted) return false;
     if (!roadtripState.invitationReady && !roadtripState.everAccepted) return false;
+    roadtripReentryMenuOpen = false;
     roadtripState.routeChooserOpen = true;
     paintRoadtripInvite();
     setRoadtripRouteChoice(roadtripState.routeChoice || "calgary", true);
@@ -38680,6 +38725,42 @@ window.__entranceRoomOpen = false;
       }
     });
   });
+  function continuePausedRoadtrip(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (syncRoadtripDemeritState()) {
+      roadtripPoliceOutcomeFeedback("entrance_roadtrip_suspended", { time: roadtripSuspensionClock() });
+      paintRoadtripInvite();
+      return false;
+    }
+    if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active || !roadtripState.paused) return false;
+    roadtripReentryMenuOpen = false;
+    roadtripState.exitUntilStop = false;
+    roadtripState.accepted = true;
+    roadtripState.invitationReady = false;
+    roadtripState.invitationDistance = 0;
+    roadtripState.invitationDismissed = true;
+    var started = startRoadtrip(false);
+    paintRoadtripInvite();
+    if (started && window.__checkpointChanged) window.__checkpointChanged();
+    return started;
+  }
+  function beginNewRoadtrip(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (!roadtripState.unlocked || roadtripState.active) return false;
+    roadtripReentryMenuOpen = false;
+    roadtripState.accepted = false;
+    return openRoadtripRouteChooser();
+  }
+  function returnToRoadtripCamp(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+    if (!roadtripState.unlocked || roadtripState.active || !roadtripState.campVisited) return false;
+    roadtripReentryMenuOpen = false;
+    parkPorscheForFreshRoadtrip();
+    if (!startRoadtrip(true, "abraham", ROADTRIP_ABRAHAM_SECONDS)) return false;
+    arriveRoadtripCamp(true);
+    if (window.__checkpointChanged) window.__checkpointChanged();
+    return true;
+  }
   bindRoadtripInviteControl(roadtripReenter, function (event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (syncRoadtripDemeritState()) {
@@ -38688,18 +38769,19 @@ window.__entranceRoomOpen = false;
       return false;
     }
     if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active) return false;
-    roadtripState.exitUntilStop = false;
-    if (roadtripState.paused) {
-      roadtripState.accepted = true;
-      roadtripState.invitationReady = false;
-      roadtripState.invitationDistance = 0;
-      roadtripState.invitationDismissed = true;
-      var started = startRoadtrip(false);
-      paintRoadtripInvite();
-      if (started && window.__checkpointChanged) window.__checkpointChanged();
-      return started;
+    if (!roadtripState.paused && !roadtripState.campVisited) return openRoadtripRouteChooser();
+    roadtripReentryMenuOpen = !roadtripReentryMenuOpen;
+    paintRoadtripInvite();
+    if (roadtripReentryMenuOpen) {
+      var first = roadtripReenterChoices.find(function (choice) { return choice.classList.contains("show"); });
+      if (first && first.focus) first.focus();
     }
-    return openRoadtripRouteChooser(event);
+    return true;
+  });
+  roadtripReenterChoices.forEach(function (choice) {
+    var action = choice.getAttribute("data-roadtrip-reentry-choice");
+    bindRoadtripInviteControl(choice, action === "continue" ? continuePausedRoadtrip :
+      action === "camp" ? returnToRoadtripCamp : beginNewRoadtrip);
   });
   function resetRoadtripInvitationSession() {
     roadtripState.accepted = false;
@@ -38707,6 +38789,7 @@ window.__entranceRoomOpen = false;
     roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = false;
     roadtripState.routeChooserOpen = false;
+    roadtripReentryMenuOpen = false;
     paintRoadtripInvite();
   }
   function entranceRoadtripCrackVariant(severity, random, sequence) {
@@ -40269,13 +40352,17 @@ window.__entranceRoomOpen = false;
     driveState.speed = (driveState.speed < 0 ? -1 : 1) * eased;
     if (eased < ROADTRIP_CAMP_ARRIVAL_SPEED) arriveRoadtripCamp();
   }
-  function arriveRoadtripCamp() {
+  function arriveRoadtripCamp(preserveCamp) {
+    var firstVisit = !roadtripState.campVisited;
     driveCoachStep = 5;
     driveCoachComplete = true;
     driveCoachNeedsFreshPedal = false;
     dismissPorscheDriveCoach();
-    campFireState.lit = false;
-    resetCampStew(false);
+    if (!preserveCamp) {
+      campFireState.lit = false;
+      resetCampStew(false);
+    }
+    roadtripState.campVisited = true;
     roadtripState.route = "camp";
     roadtripState.abrahamElapsed = ROADTRIP_ABRAHAM_SECONDS;
     roadtripState.playerLane = ROADTRIP_ABRAHAM_START_LANE;
@@ -40316,6 +40403,7 @@ window.__entranceRoomOpen = false;
       if (!roadtripState.active || roadtripState.route !== "camp") return;
       syncRoadtripCampFireCaption(true);
     }, 900);
+    if (firstVisit && window.__checkpointChanged) window.__checkpointChanged();
   }
   function syncRoadtripRoute(seconds) {
     seconds = Math.max(0, Number(seconds) || 0);
@@ -42608,10 +42696,11 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.active) return false;
     if (roadtripState.police.phase === "capture" || roadtripState.police.phase === "stopped" ||
         roadtripState.police.phase === "arrest") return false;
-    roadtripState.paused = !roadtripState.police.runEnded;
-    parkRoadtrip(false);
+    var completedCamp = roadtripState.route === "camp";
+    roadtripState.paused = !completedCamp && !roadtripState.police.runEnded;
+    parkRoadtrip(completedCamp);
     resetRoadtripInvitationSession();
-    roadtripState.exitUntilStop = true;
+    roadtripState.exitUntilStop = !completedCamp;
     syncPorscheDriveInstruction(true);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
@@ -45417,6 +45506,7 @@ window.__entranceRoomOpen = false;
     roadtripState.unlocked = false;
     roadtripState.accepted = false;
     roadtripState.everAccepted = false;
+    roadtripState.campVisited = false;
     roadtripState.invitationReady = false;
     roadtripState.invitationDistance = 0;
     roadtripState.invitationDismissed = false;
@@ -46391,6 +46481,7 @@ window.__entranceRoomOpen = false;
         roadtrip: {
           active: roadtripState.active && room.classList.contains("roadtrip-active"),
           paused: roadtripState.paused,
+          campVisited: roadtripState.campVisited,
           resumePending: roadtripResumePending,
           exitUntilStop: roadtripState.exitUntilStop,
           playerLane: roadtripPlayerLane(),
@@ -47112,6 +47203,7 @@ window.__entranceRoomOpen = false;
         unlocked: roadtripState.unlocked,
         accepted: false,
         everAccepted: roadtripState.everAccepted,
+        campVisited: roadtripState.campVisited,
         routeChoice: roadtripState.routeChoice,
         routeChooserOpen: roadtripState.routeChooserOpen,
         practiceLaps: roadtripState.practiceLaps,
@@ -47224,6 +47316,8 @@ window.__entranceRoomOpen = false;
             Number.isFinite(Number(roadtrip.score)) && Number(roadtrip.score) !== 0 ||
             Number(roadtrip.collisions) > 0 || Number(roadtrip.passes) > 0 || Number(roadtrip.tokens) > 0 ||
             Number(roadtrip.escapes) > 0 || Number(roadtrip.wildlifeHits) > 0;
+          roadtripState.campVisited = roadtrip.campVisited === true || roadtrip.campFireBuilt === true ||
+            !!(roadtrip.pausedRun && roadtrip.pausedRun.state && roadtrip.pausedRun.state.route === "camp");
           roadtripState.invitationReady = false;
           roadtripState.invitationDistance = 0;
           roadtripState.invitationDismissed = false;
@@ -47408,9 +47502,31 @@ document.addEventListener("keydown", function (event) {
       roadtripRouteChooserNode.classList.contains("show");
     var roadtripReenterNode = document.getElementById("entrance-roadtrip-reenter");
     var roadtripReenterVisible = roadtripReenterNode && roadtripReenterNode.classList.contains("show");
+    var roadtripReenterMenuNode = document.getElementById("entrance-roadtrip-reenter-menu");
+    var roadtripReenterMenuVisible = roadtripReenterMenuNode &&
+      roadtripReenterMenuNode.classList.contains("show");
     var roadtripReenterFocused = roadtripReenterVisible &&
       event.target === roadtripReenterNode;
-    if (roadtripRouteChooserVisible) {
+    if (roadtripReenterMenuVisible) {
+      var roadtripReenterOptions = Array.prototype.slice.call(
+        roadtripReenterMenuNode.querySelectorAll(".entrance-roadtrip-reenter-choice.show"));
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        var optionIndex = roadtripReenterOptions.indexOf(document.activeElement);
+        if (optionIndex < 0) optionIndex = 0;
+        optionIndex = (optionIndex + (event.key === "ArrowLeft" ? -1 : 1) +
+          roadtripReenterOptions.length) % roadtripReenterOptions.length;
+        roadtripReenterOptions[optionIndex].focus();
+      } else if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+        var activeOption = roadtripReenterOptions.indexOf(document.activeElement) >= 0 ?
+          document.activeElement : roadtripReenterOptions[0];
+        if (activeOption) activeOption.dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true }));
+      } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
+        roadtripReentryMenuOpen = false;
+        paintRoadtripInvite();
+        roadtripReenterNode.focus();
+      }
+    } else if (roadtripRouteChooserVisible) {
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         if (window.__entranceRoadtripMoveRouteChoice) {
           window.__entranceRoadtripMoveRouteChoice(event.key === "ArrowLeft" ? -1 : 1);
@@ -49092,6 +49208,9 @@ var T = {
       entrance_roadtrip_route_banff: "Banff",
       entrance_roadtrip_route_abraham: "Abraham Lake",
       entrance_roadtrip_reenter: "Road Trip",
+      entrance_roadtrip_continue: "Continue",
+      entrance_roadtrip_new: "New",
+      entrance_roadtrip_camping: "Camping",
       entrance_roadtrip_suspended_short: "Suspended · {time}",
       entrance_roadtrip_suspended: "Licence suspended · Road Trip temporarily unavailable.",
       entrance_roadtrip_collision: "Rear-end impact · 10–40 point penalty, combo reset.",
@@ -50414,6 +50533,9 @@ var T = {
       entrance_roadtrip_route_banff: "Banff",
       entrance_roadtrip_route_abraham: "Abraham Lake",
       entrance_roadtrip_reenter: "Výlet",
+      entrance_roadtrip_continue: "Pokračovat",
+      entrance_roadtrip_new: "Nový",
+      entrance_roadtrip_camping: "Kemp",
       entrance_roadtrip_suspended_short: "Pozastaveno · {time}",
       entrance_roadtrip_suspended: "Řidičák pozastaven · výlet je dočasně nedostupný.",
       entrance_roadtrip_collision: "Náraz zezadu · ztráta 10–40 bodů, kombo od začátku.",

@@ -27,6 +27,28 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var match = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(mover.getAttribute("transform") || "");
     return match ? [Number(match[1]), Number(match[2])] : [0, 0];
   }
+  function notebookLayout() {
+    var book = document.querySelector(".entrance-roadtrip-notebook-book");
+    var close = document.querySelector(".entrance-roadtrip-notebook-close");
+    var title = book && book.querySelector("h2");
+    if (!book || !close || !title) return null;
+    var style = getComputedStyle(book);
+    var bookRect = book.getBoundingClientRect();
+    var closeRect = close.getBoundingClientRect();
+    var titleRect = title.getBoundingClientRect();
+    return {
+      clientHeight: book.clientHeight,
+      scrollHeight: book.scrollHeight,
+      paddingTop: parseFloat(style.paddingTop),
+      paddingBottom: parseFloat(style.paddingBottom),
+      bookTop: bookRect.top,
+      bookBottom: bookRect.bottom,
+      viewportHeight: innerHeight,
+      closePosition: getComputedStyle(close).position,
+      closeTop: closeRect.top,
+      titleTop: titleRect.top
+    };
+  }
   window.addEventListener("load", function () {
     setTimeout(function () {
       try {
@@ -107,21 +129,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         pointer(notebook, "pointerdown", 34, "touch", bookPoint.x, bookPoint.y);
         pointer(notebook, "pointerup", 34, "touch", bookPoint.x, bookPoint.y);
         click(notebook);
-        var notebookBook = document.querySelector(".entrance-roadtrip-notebook-book");
-        var notebookStyle = notebookBook && getComputedStyle(notebookBook);
         report.notebook = {
           open: !!document.querySelector(".entrance-roadtrip-notebook-backdrop"),
           headIdle: !marketaHead.classList.contains("laughing"),
           keptOffset: marketaMover.getAttribute("transform") === marketaTransform,
           didNotDrag: !marketa.classList.contains("dragging"),
-          layout: notebookBook && {
-            clientHeight: notebookBook.clientHeight,
-            scrollHeight: notebookBook.scrollHeight,
-            paddingTop: parseFloat(notebookStyle.paddingTop),
-            paddingBottom: parseFloat(notebookStyle.paddingBottom)
-          }
+          layout: notebookLayout()
         };
         document.querySelector(".entrance-roadtrip-notebook-close").click();
+        window.setLang("cs");
+        click(notebook);
+        report.notebook.czechLayout = notebookLayout();
+        document.querySelector(".entrance-roadtrip-notebook-close").click();
+        window.setLang("en");
 
         click(marketaHit);
         report.bodyClick = {
@@ -194,11 +214,32 @@ var mobileResult = lib.runPageSync("rsvp.html", HARNESS, 4500, {
 });
 check(mobileResult && mobileResult.errors.length === 0,
   "mobile notebook layout runs without uncaught errors", mobileResult && mobileResult.errors);
-check(mobileResult && mobileResult.notebook && mobileResult.notebook.layout &&
-  mobileResult.notebook.layout.paddingTop <= 10 && mobileResult.notebook.layout.paddingBottom <= 6 &&
-  mobileResult.notebook.layout.scrollHeight <= mobileResult.notebook.layout.clientHeight,
-  "mobile notebook uses tight vertical spacing and fits without scrolling",
-  mobileResult && mobileResult.notebook && mobileResult.notebook.layout);
+function compactNotebookFits(pageResult) {
+  return pageResult && pageResult.notebook &&
+    [pageResult.notebook.layout, pageResult.notebook.czechLayout].every(function (layout) {
+      return layout && layout.paddingTop <= 6 && layout.paddingBottom <= 4 &&
+        layout.scrollHeight <= layout.clientHeight && layout.bookTop >= 0 &&
+        layout.bookBottom <= layout.viewportHeight && layout.closePosition === "absolute" &&
+        Math.abs(layout.closeTop - layout.titleTop) <= 8;
+    });
+}
+check(compactNotebookFits(mobileResult),
+  "portrait phone book keeps both languages in view with the dismiss beside Chapter 1",
+  mobileResult && mobileResult.notebook);
+
+var mobileLandscapeResult = lib.runPageSync("rsvp.html", HARNESS, 4500, {
+  patchRaf: true,
+  forceMotion: true,
+  forceCoarsePointer: true,
+  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  chromeFlags: "--window-size=844,390"
+});
+check(mobileLandscapeResult && mobileLandscapeResult.errors.length === 0,
+  "landscape mobile notebook layout runs without uncaught errors",
+  mobileLandscapeResult && mobileLandscapeResult.errors);
+check(compactNotebookFits(mobileLandscapeResult),
+  "390×844 phone landscape book keeps both languages in view without scrolling",
+  mobileLandscapeResult && mobileLandscapeResult.notebook);
 
 if (failures) process.exit(1);
 console.log("Campsite camper-drag assertions passed.");

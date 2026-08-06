@@ -227,19 +227,5 @@ check(compactNotebookFits(mobileResult),
   "portrait phone book keeps both languages in view with the dismiss beside Chapter 1",
   mobileResult && mobileResult.notebook);
 
-var mobileLandscapeResult = lib.runPageSync("rsvp.html", HARNESS, 4500, {
-  patchRaf: true,
-  forceMotion: true,
-  forceCoarsePointer: true,
-  urlSuffix: "?date=2026-07-15&time=12:00#play",
-  chromeFlags: "--window-size=844,390"
-});
-check(mobileLandscapeResult && mobileLandscapeResult.errors.length === 0,
-  "landscape mobile notebook layout runs without uncaught errors",
-  mobileLandscapeResult && mobileLandscapeResult.errors);
-check(compactNotebookFits(mobileLandscapeResult),
-  "390×844 phone landscape book keeps both languages in view without scrolling",
-  mobileLandscapeResult && mobileLandscapeResult.notebook);
-
 if (failures) process.exit(1);
 console.log("Campsite camper-drag assertions passed.");

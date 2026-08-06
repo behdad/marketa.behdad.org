@@ -31,6 +31,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       point: [point.x, point.y]
     };
   }
+  function fireRingLayers(node) {
+    var children = Array.prototype.slice.call(node.children);
+    var back = children.findIndex(function (child) {
+      return child.getAttribute && child.getAttribute("href") === "#entrance-roadtrip-camp-fire-ring-back";
+    });
+    var front = children.findIndex(function (child) {
+      return child.getAttribute && child.getAttribute("href") === "#entrance-roadtrip-camp-fire-ring-front";
+    });
+    return { back: back, front: front, contentBetween: front - back > 1, childCount: children.length };
+  }
   function snap() {
     var state = window.__entranceRoomState().drive.roadtrip.campFire;
     var pot = document.getElementById("entrance-roadtrip-camp-pot");
@@ -65,6 +75,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceRoadtripStart();
         report.coachVisibleAfterStart = document.getElementById("entrance-drive-coach").classList.contains("show");
         window.__entranceRoadtripSetRoute("camp", 0);
+        report.fireRing = {
+          backStones: document.querySelectorAll("#entrance-roadtrip-camp-fire-ring-back .entrance-roadtrip-camp-fire-ring-stones > path").length,
+          frontStones: document.querySelectorAll("#entrance-roadtrip-camp-fire-ring-front .entrance-roadtrip-camp-fire-ring-stones > path").length,
+          empty: fireRingLayers(document.getElementById("entrance-roadtrip-camp-empty-pit")),
+          built: fireRingLayers(document.getElementById("entrance-roadtrip-camp-finished-fire")),
+          builder: fireRingLayers(document.getElementById("entrance-roadtrip-fire-build-preview"))
+        };
         report.initial = snap();
         var caption = document.getElementById("hunt-caption");
         click(caption);
@@ -148,6 +165,13 @@ check(result && result.errors.length === 0, "the fire sequence has no uncaught e
 check(result && result.initial && !result.initial.state.complete && !result.initial.sceneBuilt &&
   !result.initial.logsVisible && !result.initial.potBoiling,
   "the campsite arrives with an empty firepit", result && result.initial);
+check(result && result.fireRing && result.fireRing.backStones === 7 && result.fireRing.frontStones === 7 &&
+  result.fireRing.empty.back >= 0 && result.fireRing.empty.front > result.fireRing.empty.back &&
+  result.fireRing.built.back >= 0 && result.fireRing.built.front > result.fireRing.built.back &&
+  result.fireRing.built.contentBetween && result.fireRing.builder.back >= 0 &&
+  result.fireRing.builder.front > result.fireRing.builder.back && result.fireRing.builder.contentBetween,
+  "the complete stone ring layers its front arc over fire content in both campsite views",
+  result && result.fireRing);
 check(result && result.coachVisibleAfterStart === false,
   "Road Trip retires an unfinished dashboard coach before it can cover Camping",
   result && result.coachVisibleAfterStart);

@@ -98,6 +98,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.replay = snap();
             window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
             report.restored = snap();
+            window.__entranceRoadtripSetRoute("abraham", 0);
+            window.__entranceRoadtripSetRoute("camp", 0);
+            report.freshArrival = snap();
             window.__restoreCheckpointSystems({ entrance: offCheckpoint }, "afterStage");
             report.extinguishedRestored = snap();
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
@@ -163,6 +166,9 @@ check(result && result.potClickLit && result.potClickLit.potBoiling && result.po
   });
 check(result && result.saved === true && result.restored && result.restored.state.complete && result.restored.sceneBuilt,
   "a completed fire survives checkpoint restore", result && result.restored);
+check(result && result.freshArrival && result.freshArrival.state.complete &&
+  !result.freshArrival.state.lit && result.freshArrival.sceneBuilt && !result.freshArrival.potBoiling,
+  "reaching Camping anew extinguishes a previously built fire", result && result.freshArrival);
 check(result && result.extinguished &&
   result.extinguished.state.complete && !result.extinguished.state.lit && result.extinguished.sceneBuilt &&
   !result.extinguished.potBoiling &&

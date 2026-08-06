@@ -1725,7 +1725,8 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-reenter-menu.show{display:inline;pointer-events:all}
 .entrance-roadtrip-reenter-choice{display:none;cursor:pointer;outline:none}
 .entrance-roadtrip-reenter-choice.show{display:inline}
-.entrance-roadtrip-reenter-choice:focus rect{fill:#8e3a4a;stroke:#fffdf8;stroke-width:2}
+.entrance-roadtrip-reenter-choice:focus rect,
+.entrance-roadtrip-reenter-choice.selected rect{fill:#8e3a4a;stroke:#fffdf8;stroke-width:2}
 .entrance-roadtrip-reenter-choice text{font-size:8px}
 @media (pointer:coarse){.entrance-roadtrip-enter-hint{display:none}}
 #entrance-roadtrip-pause-dialog{display:none;pointer-events:none;filter:drop-shadow(0 4px 5px rgba(31,20,18,.48))}
@@ -34624,13 +34625,13 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
             <rect x="0" y="0" width="91" height="23" rx="8" fill="#453a31" fill-opacity=".96" stroke="#d9a6a6" stroke-width="1.5"/>
             <text id="entrance-roadtrip-reenter-text" class="entrance-roadtrip-invite-copy" x="45.5" y="15" font-size="10.5" font-weight="700" data-i="entrance_roadtrip_reenter">Road Trip</text>
             <g id="entrance-roadtrip-reenter-menu">
-              <g class="entrance-roadtrip-reenter-choice" data-roadtrip-reentry-choice="continue" data-roadtrip-choice-width="66" tabindex="0" focusable="true">
-                <rect width="66" height="21" rx="7" fill="#453a31" fill-opacity=".97" stroke="#d9a6a6" stroke-width="1.5"/>
-                <text class="entrance-roadtrip-invite-copy" x="33" y="14" font-weight="700" data-i="entrance_roadtrip_continue">Continue</text>
-              </g>
               <g class="entrance-roadtrip-reenter-choice" data-roadtrip-reentry-choice="new" data-roadtrip-choice-width="45" tabindex="0" focusable="true">
                 <rect width="45" height="21" rx="7" fill="#453a31" fill-opacity=".97" stroke="#d9a6a6" stroke-width="1.5"/>
                 <text class="entrance-roadtrip-invite-copy" x="22.5" y="14" font-weight="700" data-i="entrance_roadtrip_new">New</text>
+              </g>
+              <g class="entrance-roadtrip-reenter-choice" data-roadtrip-reentry-choice="continue" data-roadtrip-choice-width="66" tabindex="0" focusable="true">
+                <rect width="66" height="21" rx="7" fill="#453a31" fill-opacity=".97" stroke="#d9a6a6" stroke-width="1.5"/>
+                <text class="entrance-roadtrip-invite-copy" x="33" y="14" font-weight="700" data-i="entrance_roadtrip_continue">Continue</text>
               </g>
               <g class="entrance-roadtrip-reenter-choice" data-roadtrip-reentry-choice="camp" data-roadtrip-choice-width="63" tabindex="0" focusable="true">
                 <rect width="63" height="21" rx="7" fill="#453a31" fill-opacity=".97" stroke="#d9a6a6" stroke-width="1.5"/>
@@ -38575,6 +38576,12 @@ window.__entranceRoomOpen = false;
       choice.setAttribute("transform", "translate(" + choiceX + " 0)");
       choiceX += Number(choice.getAttribute("data-roadtrip-choice-width")) + 4;
     });
+    var defaultReentryAction = roadtripState.paused ? "continue" :
+      roadtripState.campVisited ? "camp" : "new";
+    roadtripReenterChoices.forEach(function (choice) {
+      choice.classList.toggle("selected", choice.classList.contains("show") &&
+        choice.getAttribute("data-roadtrip-reentry-choice") === defaultReentryAction);
+    });
     if (roadtripReenterMenu) roadtripReenterMenu.setAttribute("transform",
       "translate(" + (95 - Math.max(0, choiceX - 4)) + " 26)");
     roadtripRouteChoices.forEach(function (choice) {
@@ -38767,6 +38774,12 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
+  function defaultRoadtripReentryChoice() {
+    return roadtripReenterChoices.find(function (choice) {
+      return choice.classList.contains("show") &&
+        choice.getAttribute("data-roadtrip-reentry-choice") === "continue";
+    }) || roadtripReenterChoices.find(function (choice) { return choice.classList.contains("show"); });
+  }
   bindRoadtripInviteControl(roadtripReenter, function (event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (syncRoadtripDemeritState()) {
@@ -38779,8 +38792,8 @@ window.__entranceRoomOpen = false;
     roadtripReentryMenuOpen = !roadtripReentryMenuOpen;
     paintRoadtripInvite();
     if (roadtripReentryMenuOpen) {
-      var first = roadtripReenterChoices.find(function (choice) { return choice.classList.contains("show"); });
-      if (first && first.focus) first.focus();
+      var defaultChoice = defaultRoadtripReentryChoice();
+      if (defaultChoice && defaultChoice.focus) defaultChoice.focus();
     }
     return true;
   });
@@ -47524,7 +47537,9 @@ document.addEventListener("keydown", function (event) {
         roadtripReenterOptions[optionIndex].focus();
       } else if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
         var activeOption = roadtripReenterOptions.indexOf(document.activeElement) >= 0 ?
-          document.activeElement : roadtripReenterOptions[0];
+          document.activeElement : roadtripReenterOptions.find(function (option) {
+            return option.getAttribute("data-roadtrip-reentry-choice") === "continue";
+          }) || roadtripReenterOptions[0];
         if (activeOption) activeOption.dispatchEvent(
           new MouseEvent("click", { bubbles: true, cancelable: true }));
       } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {

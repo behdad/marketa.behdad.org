@@ -967,9 +967,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     pressDocumentKey("Enter");
     var reentryEngineStarted = copy(state());
     pressDocumentKey("Enter");
+    var selectedReentryChoice = document.querySelector("#entrance-roadtrip-reenter-menu .selected");
     var reentryMenu = {
       open: document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show"),
-      focused: document.activeElement && document.activeElement.getAttribute("data-roadtrip-reentry-choice")
+      focused: document.activeElement && document.activeElement.getAttribute("data-roadtrip-reentry-choice"),
+      selected: selectedReentryChoice && selectedReentryChoice.getAttribute("data-roadtrip-reentry-choice"),
+      order: Array.from(document.querySelectorAll("#entrance-roadtrip-reenter-menu .entrance-roadtrip-reenter-choice.show"))
+        .map(function (choice) { return choice.getAttribute("data-roadtrip-reentry-choice"); })
     };
     pressDocumentKey("Enter");
     var reentered = {
@@ -1768,6 +1772,8 @@ check(close && close.before.roadtrip.active && close.before.roadtrip.everAccepte
   close.reentryEngineStarted.drive.roadtrip.paused &&
   close.reentryEngineStarted.drive.roadtrip.reentryVisible &&
   close.reentryMenu.open &&
+  close.reentryMenu.selected === "continue" &&
+  close.reentryMenu.order.join(",") === "new,continue" &&
   close.reentered.roadtrip.active && !close.reentered.roadtrip.paused &&
   close.reentered.roadtrip.accepted && close.reentered.roadtrip.everAccepted &&
   close.reentered.car.engineOn &&

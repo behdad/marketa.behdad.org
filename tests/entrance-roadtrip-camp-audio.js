@@ -25,6 +25,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.arrival = snap(); await sleep(120); report.steps.fadeIn = snap(); await sleep(580);
     report.steps.calm = snap(); report.steps.calm.before = report.steps.calm.beds - 1;
 
+    window.__exitEntranceRoadtrip();
+    window.__entranceRoadtripSetRoute("camp", 0); window.__updateRoadtripCampAudio();
+    report.steps.rapidReentry = snap();
+
     window.__entranceRoadtripCampFireStart();
     window.__entranceRoadtripCampFirePlace("tinder");
     window.__entranceRoadtripCampFirePlace("twigs");
@@ -94,6 +98,9 @@ check(s.calm && s.calm.audio.active && s.calm.audio.attended && s.calm.audio.out
   !s.calm.audio.fireSource && s.calm.audio.sources === 3 &&
   s.calm.beds === s.calm.before + 1,
   "Camping owns one shared-context outdoor wind bed before the fire is built", s.calm);
+check(s.rapidReentry && s.rapidReentry.audio.active && s.rapidReentry.audio.retiring === 0 &&
+  s.rapidReentry.beds === s.calm.beds,
+  "rapid campsite re-entry retires the fading bed before starting its replacement", s.rapidReentry);
 check(s.lit && s.lit.audio.fireLit && s.lit.audio.mix.fire > 0 && s.lit.audio.fireSource &&
   s.lit.audio.sources === 4 && s.lit.beds === s.calm.beds,
   "the completed lit fire fades its crackle into the existing campsite bed", s.lit);

@@ -199,7 +199,8 @@ raises wind and low rumble. The stargazing clear-night override suppresses those
 precipitation/storm layers while retaining calm wind and fire. The layers retarget from tracked in-flight levels, preserving the
 arrival fade even when several route/weather paints land in the same tick; blur, hide, route pause/dismiss,
 recovery cover, or Entrance close fades and closes the bed; extinguishing fades and stops only the
-fire source.
+fire source. A re-entry during that fade retires the old bed before starting its replacement, so
+two noise beds cannot overlap during the route handoff.
 
 Fancy-Stupid's engine/drivetrain, driving loop, tire screech, and ABS chatter keep their
 authored source gains and then enter a car-only spatial output stage. Engine and tire noise

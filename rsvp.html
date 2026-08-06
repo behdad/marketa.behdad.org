@@ -49275,6 +49275,7 @@ function audioBed(kind) {
   var fireGain = null, windGain = null, rainGain = null, stormGain = null;
   var mix = { fire: 0, wind: 0, rain: 0, storm: 0 };
   var gainRamps = new WeakMap();
+  var retiringBeds = [];
 
   function campsiteAttended() {
     var room = document.getElementById("entrance-room");
@@ -49348,6 +49349,20 @@ function audioBed(kind) {
       gainRamps.set(param, { from: from, to: to, start: now, end: now + seconds });
     } catch (_error) {}
   }
+  function finishRetiringBed(record) {
+    if (!record) return;
+    clearTimeout(record.timer);
+    var index = retiringBeds.indexOf(record);
+    if (index >= 0) retiringBeds.splice(index, 1);
+    record.sources.forEach(function (rec) {
+      try { rec.source.stop(); } catch (_error) {}
+      try { rec.source.disconnect(); rec.filter.disconnect(); } catch (_error2) {}
+    });
+    try { record.bed.close(); } catch (_error3) {}
+  }
+  function finishRetiringBeds() {
+    retiringBeds.slice().forEach(finishRetiringBed);
+  }
   function paintMix() {
     if (!bed) return;
     var room = document.getElementById("entrance-room");
@@ -49380,6 +49395,7 @@ function audioBed(kind) {
   function start() {
     if (bed || !campsiteAttended()) return;
     try {
+      finishRetiringBeds();
       bed = audioBed("outdoor");
       if (!bed) return;
       master = bed.createGain();
@@ -49415,13 +49431,9 @@ function audioBed(kind) {
       oldMaster.gain.setValueAtTime(Math.max(.0001, oldMaster.gain.value), now);
       oldMaster.gain.linearRampToValueAtTime(.0001, now + fadeSecs);
     } catch (_error) {}
-    setTimeout(function () {
-      oldSources.forEach(function (rec) {
-        try { rec.source.stop(); } catch (_error) {}
-        try { rec.source.disconnect(); rec.filter.disconnect(); } catch (_error2) {}
-      });
-      try { oldBed.close(); } catch (_error2) {}
-    }, fadeSecs * 1000 + 100);
+    var retiring = { bed: oldBed, sources: oldSources, timer: null };
+    retiringBeds.push(retiring);
+    retiring.timer = setTimeout(function () { finishRetiringBed(retiring); }, fadeSecs * 1000 + 100);
   }
   function update() {
     if (!campsiteAttended()) stop();
@@ -49443,6 +49455,7 @@ function audioBed(kind) {
         rain: rainGain ? gainRampValue(rainGain.gain, now) : 0,
         storm: stormGain ? gainRampValue(stormGain.gain, now) : 0
       }, fireSource: !!fireSource, sources: sources.length,
+      retiring: retiringBeds.length,
       outdoor: !!(bed && bed._ac === __sharedAC) };
   };
   window.addEventListener("blur", function () { stop(); });

@@ -35,11 +35,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var state = window.__entranceRoomState().drive.roadtrip.campFire;
     var pot = document.getElementById("entrance-roadtrip-camp-pot");
     var crate = document.getElementById("entrance-roadtrip-camp-food-crate");
+    var logs = document.querySelector(".entrance-roadtrip-camp-built-logs");
     var openBubble = document.querySelector(".entrance-roadtrip-camp-pot-open-bubble");
     var potStyle = getComputedStyle(pot), crateStyle = getComputedStyle(crate);
     return {
       state: state,
       sceneBuilt: document.getElementById("entrance-roadtrip-camp").classList.contains("fire-built"),
+      logsVisible: getComputedStyle(logs).opacity !== "0",
       gameOpen: document.getElementById("entrance-roadtrip-fire-game").classList.contains("open"),
       potBoiling: pot.classList.contains("simmering"),
       potOpen: pot.classList.contains("open"),
@@ -143,7 +145,8 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 4500, {
   chromeFlags: "--window-size=1100,900"
 });
 check(result && result.errors.length === 0, "the fire sequence has no uncaught errors", result && result.errors);
-check(result && result.initial && !result.initial.state.complete && !result.initial.sceneBuilt && !result.initial.potBoiling,
+check(result && result.initial && !result.initial.state.complete && !result.initial.sceneBuilt &&
+  !result.initial.logsVisible && !result.initial.potBoiling,
   "the campsite arrives with an empty firepit", result && result.initial);
 check(result && result.coachVisibleAfterStart === false,
   "Road Trip retires an unfinished dashboard coach before it can cover Camping",
@@ -165,7 +168,8 @@ check(result && result.logsOnly.result === "entrance_roadtrip_camp_fire_no_tinde
 check(result && result.successStart.result === "success" && result.successStart.state.igniting &&
   result.successStart.state.logs === "teepee", "either valid log arrangement can be selected before lighting",
   result && result.successStart);
-check(result && result.complete && result.complete.state.complete && result.complete.sceneBuilt && !result.complete.potBoiling &&
+check(result && result.complete && result.complete.state.complete && result.complete.sceneBuilt &&
+  result.complete.logsVisible && !result.complete.potBoiling &&
   !result.complete.potVisible && result.complete.crateVisible && result.complete.sceneFood === "0" &&
   !result.complete.gameOpen && result.complete.key === "entrance_roadtrip_stew_invite",
   "the full fuel chain grows into the warm campsite with only the food crate available", result && result.complete);
@@ -185,15 +189,17 @@ check(result && result.potOpenLit && !result.potOpenLit.potBoiling && !result.po
 check(result && result.saved === true && result.restored && result.restored.state.complete && result.restored.sceneBuilt,
   "a completed fire survives checkpoint restore", result && result.restored);
 check(result && result.freshArrival && result.freshArrival.state.complete &&
-  !result.freshArrival.state.lit && result.freshArrival.sceneBuilt && !result.freshArrival.potBoiling,
+  !result.freshArrival.state.lit && result.freshArrival.sceneBuilt && !result.freshArrival.logsVisible &&
+  !result.freshArrival.potBoiling,
   "reaching Camping anew extinguishes a previously built fire", result && result.freshArrival);
 check(result && result.extinguished &&
   result.extinguished.state.complete && !result.extinguished.state.lit && result.extinguished.sceneBuilt &&
-  !result.extinguished.potBoiling &&
+  !result.extinguished.logsVisible && !result.extinguished.potBoiling &&
   !result.extinguished.gameOpen, "clicking the finished flames extinguishes only the fire",
   result && result.extinguished);
 check(result && result.extinguishedRestored && result.extinguishedRestored.state.complete &&
-  !result.extinguishedRestored.state.lit && result.extinguishedRestored.sceneBuilt,
+  !result.extinguishedRestored.state.lit && result.extinguishedRestored.sceneBuilt &&
+  !result.extinguishedRestored.logsVisible,
   "Continue preserves a built but extinguished campsite", result && result.extinguishedRestored);
 check(result && result.coldPitCursor === "pointer" && result.replay &&
   result.replay.state.complete && result.replay.gameOpen &&

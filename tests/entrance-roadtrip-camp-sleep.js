@@ -43,7 +43,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       tentOpen: tent.classList.contains("open"),
       tentLight: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-tent-light")).opacity),
       darkness: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).opacity),
+      darknessFill: document.getElementById("entrance-roadtrip-camp-finale-darkness").getAttribute("fill"),
       darknessPointer: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).pointerEvents,
+      nightSky: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-night-sky")).opacity),
+      nightSkyUses: document.querySelectorAll("#entrance-roadtrip-camp-finale-night-sky use").length,
       zzzs: document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz").length,
       classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"].filter(function (name) {
         return camp.classList.contains("camp-sleep-" + name);
@@ -177,9 +180,11 @@ check(result && result.campersGone && result.campersGone.phase === "campers-gone
 check(result && result.tentLit && result.tentLit.phase === "tent-lit" && !result.tentLit.tentOpen &&
   result.tentLit.tentLight === 1,
   "the tent closes and glows", result && result.tentLit);
-check(result && result.dark && result.dark.phase === "dark" && result.dark.darkness >= .9 &&
-  result.dark.tentLight === 1,
-  "the campsite darkens almost to black around the glowing tent", result && result.dark);
+check(result && result.dark && result.dark.phase === "dark" && result.dark.darkness === .78 &&
+  result.dark.darknessFill === "#061b2c" && result.dark.nightSky === 1 &&
+  result.dark.nightSkyUses === 4 && result.dark.tentLight === 1,
+  "the campsite settles into deep navy while the stars and solved constellations stay bright",
+  result && result.dark);
 check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight === 0 &&
   result.zzz.zzzs === 3 && result.zzz.classes.indexOf("zzz") >= 0,
   "the tent light goes out and three rising Z marks take over", result && result.zzz);

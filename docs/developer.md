@@ -232,7 +232,8 @@ Behdad's pink and Markéta's blue bubbles reveal one second apart. Drag position
 Once the fourth reveal finishes, a persistent bilingual caption invites a click anywhere; a full-campsite transparent hit
 shield consumes that click, dismisses the exchange, and changes the caption to the sleep prompt
 without activating a prop. Clicking the fire starts the ordered fire-out → campers → tent-light →
-darkness → Zs curtain call. `campStargazingState` checkpoints exact trace and handoff progress plus
+deep-blue darkness with a foreground star/constellation pass → Zs curtain call.
+`campStargazingState` checkpoints exact trace and handoff progress plus
 `campSleepState.phase`, but always restores the trace overlay closed. Leaving pauses an unfinished
 curtain call and preserves the campsite; leaving after its congratulations phase resets fire, stew,
 stargazing, and finale state.

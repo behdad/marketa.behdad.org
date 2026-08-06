@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Interaction smoke tests for both pages: each loads in headless Chrome with
 // errors collected, plays through its core flow, then click-storms every
-// interactive element. Fails on any uncaught JS error or broken flow.
+// interactive element. Fails on any uncaught app JS error or broken flow;
+// the RSVP external-launch probe narrowly filters Chrome's opaque originless error.
 // Slower than check.js (~4s total); run after changes touching game logic
 // or interactions.
 //
@@ -20,14 +21,29 @@ var COMMON = [
   "function fire(el, type) {",
   "  if (!el) return false;",
   "  window.__lastPlayFire = describeFireTarget(el, type);",
+  "  if (el.classList && el.classList.contains('rsvp-send')) window.__rsvpExternalProbeFired = true;",
   "  if (type === 'enter') el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));",
   "  else el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));",
   "  return true;",
   "}",
   "function click(id) { return fire(document.getElementById(id), 'click'); }",
+  "function isExternalLauncher(el) {",
+  "  return !!el && (el.tagName === 'A' || el.classList.contains('party-send') || el.classList.contains('rsvp-send'));",
+  "}",
+  "function isOpaqueRsvpExternalError(e) {",
+  "  return !!window.__rsvpExternalProbeFired && !!e && e.message === 'Script error.' && !e.filename && !e.lineno && !e.colno && !e.error;",
+  "}",
+  "window.__opaqueFilterBeforeRsvpProbe = isOpaqueRsvpExternalError({ message: 'Script error.', filename: '', lineno: 0, colno: 0, error: null });",
+  "window.__weddingTestShouldIgnoreError = isOpaqueRsvpExternalError;",
   "function finish(report) {",
   "  report.errors = window.__errs;",
   "  report.errorTarget = window.__firstPlayErrorTarget || '';",
+  "  report.ignoredOpaqueErrors = window.__ignoredWeddingTestErrors || 0;",
+  "  report.opaqueFilter = {",
+  "    beforeProbe: window.__opaqueFilterBeforeRsvpProbe,",
+  "    external: isOpaqueRsvpExternalError({ message: 'Script error.', filename: '', lineno: 0, colno: 0, error: null }),",
+  "    sameOrigin: isOpaqueRsvpExternalError({ message: 'Script error.', filename: location.href, lineno: 1, colno: 1, error: new Error('boom') })",
+  "  };",
   "  document.getElementById('__report').textContent = JSON.stringify(report);",
   "}",
   "function pointerEls() {",
@@ -48,6 +64,7 @@ var COMMON = [
   "async function storm(report) {",
   "  var els = pointerEls();",
   "  for (var i = 0; i < els.length; i++) {",
+  "    if (isExternalLauncher(els[i])) report.external.clicked.push(els[i].id || els[i].tagName);",
   "    fire(els[i], 'click');",
   "    report.stormClicked++;",
   "    if (i % 15 === 0) await sleep(150);",
@@ -56,11 +73,13 @@ var COMMON = [
   "  for (var j = 0; j < els.length; j++) {",
   "    // External launchers already receive click coverage. Re-activating them can surface",
   "    // an opaque cross-origin Script error in headless Chrome.",
-  "    if (els[j].tagName !== 'A' && els[j].id !== 'rsvp-mail-btn') { fire(els[j], 'dblclick'); fire(els[j], 'enter'); }",
+  "    if (isExternalLauncher(els[j])) report.external.skipped.push(els[j].id || els[j].tagName);",
+  "    else { fire(els[j], 'dblclick'); fire(els[j], 'enter'); }",
   "    if (j % 15 === 0) await sleep(150);",
   "  }",
   "}",
-  "window.addEventListener('error', function () {",
+  "window.addEventListener('error', function (e) {",
+  "  if (isOpaqueRsvpExternalError(e)) return;",
   "  if (!window.__firstPlayErrorTarget) window.__firstPlayErrorTarget = window.__lastPlayFire || 'before-fire';",
   "});"
 ].join("\n");
@@ -70,7 +89,7 @@ var RSVP_HARNESS = [
   "<script>",
   "(function () {",
   COMMON,
-  "  var report = { errors: [], solve: {}, stormClicked: 0, missing: [] };",
+  "  var report = { errors: [], solve: {}, stormClicked: 0, missing: [], external: { clicked: [], skipped: [] } };",
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function solve() {",
   "    click(expect('kitchen-portafilter'));",       // the portafilter advances whichever coffee step comes next
@@ -165,7 +184,7 @@ var INDEX_HARNESS = [
   "<script>",
   "(function () {",
   COMMON,
-  "  var report = { errors: [], found: [], cheatsheetOpen: false, stormClicked: 0, missing: [] };",
+  "  var report = { errors: [], found: [], cheatsheetOpen: false, stormClicked: 0, missing: [], external: { clicked: [], skipped: [] } };",
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function collectEggs() {",
   "    try { localStorage.clear(); } catch (e) {}",
@@ -239,7 +258,13 @@ if (!r) {
   else fail("solved office revisit shows its own exploration caption", "revisit: " + JSON.stringify(rv));
   if (r.stormClicked >= 60) pass("click-stormed " + r.stormClicked + " interactive elements");
   else fail("interactive element count sanity", "only " + r.stormClicked);
-  if (r.errors.length === 0) pass("no uncaught JS errors across the entire run");
+  var ex = r.external || { clicked: [], skipped: [] };
+  var rsvpLaunchers = ["rsvp-gmail-btn", "rsvp-mail-btn"];
+  if (rsvpLaunchers.every(function (id) { return ex.clicked.indexOf(id) !== -1 && ex.skipped.indexOf(id) !== -1; })) pass("external RSVP launchers receive click coverage without redundant re-activation");
+  else fail("external RSVP launcher storm policy", JSON.stringify(ex));
+  if (r.opaqueFilter && !r.opaqueFilter.beforeProbe && r.opaqueFilter.external && !r.opaqueFilter.sameOrigin) pass("opaque-error filter is armed only by the RSVP external probe and preserves same-origin errors");
+  else fail("opaque RSVP error-filter scope", JSON.stringify(r.opaqueFilter));
+  if (r.errors.length === 0) pass("no uncaught JS errors across the entire run" + (r.ignoredOpaqueErrors ? " (ignored " + r.ignoredOpaqueErrors + " opaque external browser error" + (r.ignoredOpaqueErrors === 1 ? "" : "s") + ")" : ""));
   else fail("no uncaught JS errors", r.errors.slice(0, 12).join("\n") +
     (r.errorTarget ? "\nafter " + r.errorTarget : ""));
 }

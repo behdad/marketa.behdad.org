@@ -26,7 +26,13 @@ function hook(opts) {
   return [
     "<script>",
     "window.__errs = [];",
-    "window.addEventListener('error', function (e) { window.__errs.push(String(e.message) + ' @' + (e.filename||'') + ':' + e.lineno); });",
+    "window.addEventListener('error', function (e) {",
+    "  if (window.__weddingTestShouldIgnoreError && window.__weddingTestShouldIgnoreError(e)) {",
+    "    window.__ignoredWeddingTestErrors = (window.__ignoredWeddingTestErrors || 0) + 1;",
+    "    return;",
+    "  }",
+    "  window.__errs.push(String(e.message) + ' @' + (e.filename||'') + ':' + e.lineno);",
+    "});",
     "window.addEventListener('unhandledrejection', function (e) { window.__errs.push('rejection: ' + String(e.reason)); });",
     "window.open = function () { window.__opened = (window.__opened || 0) + 1; return null; };",
     // A real confirm/alert/prompt blocks the main thread and suspends virtual

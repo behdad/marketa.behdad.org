@@ -193,7 +193,8 @@ audio paused until a fresh steering or pedal input resumes both from a clean fra
 
 Abraham Lake Camping owns one bounded outdoor bed: soft wind is always present, completed lit
 fire raises its crackle layer, rain raises a brighter precipitation layer, and storm weather also
-raises wind and low rumble. The layers retarget gains in place; blur, hide, route pause/dismiss,
+raises wind and low rumble. The layers retarget from tracked in-flight levels, preserving the
+arrival fade even when several route/weather paints land in the same tick; blur, hide, route pause/dismiss,
 recovery cover, or Entrance close fades and closes the bed; extinguishing fades and stops only the
 fire source.
 

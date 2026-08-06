@@ -47445,6 +47445,7 @@ function audioBed(kind) {
   var bed = null, sources = [], master = null, fireBuffer = null, fireSource = null;
   var fireGain = null, windGain = null, rainGain = null, stormGain = null;
   var mix = { fire: 0, wind: 0, rain: 0, storm: 0 };
+  var gainRamps = new WeakMap();
 
   function campsiteAttended() {
     var room = document.getElementById("entrance-room");
@@ -47499,13 +47500,23 @@ function audioBed(kind) {
     sources.push(record);
     return record;
   }
+  function gainRampValue(param, now) {
+    var ramp = gainRamps.get(param);
+    if (!ramp) return Math.max(.0001, Number(param.value) || .0001);
+    if (now >= ramp.end || ramp.end <= ramp.start) return ramp.to;
+    if (now <= ramp.start) return ramp.from;
+    return ramp.from + (ramp.to - ramp.from) * ((now - ramp.start) / (ramp.end - ramp.start));
+  }
   function target(param, value, seconds) {
     if (!param || !bed) return;
     try {
       var now = bed.currentTime;
+      var from = gainRampValue(param, now);
+      var to = Math.max(.0001, value);
       param.cancelScheduledValues(now);
-      param.setValueAtTime(Math.max(.0001, param.value), now);
-      param.linearRampToValueAtTime(Math.max(.0001, value), now + seconds);
+      param.setValueAtTime(from, now);
+      param.linearRampToValueAtTime(to, now + seconds);
+      gainRamps.set(param, { from: from, to: to, start: now, end: now + seconds });
     } catch (_error) {}
   }
   function paintMix() {
@@ -47546,6 +47557,7 @@ function audioBed(kind) {
       master.gain.value = .9;
       [fireGain, windGain, rainGain, stormGain].forEach(function (gain) {
         gain.gain.value = .0001;
+        gainRamps.set(gain.gain, { from: .0001, to: .0001, start: bed.currentTime, end: bed.currentTime });
         gain.connect(master);
       });
       master.connect(bed.destination);
@@ -47588,9 +47600,15 @@ function audioBed(kind) {
   }
   window.__updateRoadtripCampAudio = update;
   window.__entranceRoadtripCampAudioState = function () {
+    var now = bed ? bed.currentTime : 0;
     return { active: !!bed, attended: campsiteAttended(), fireLit: fireIsLit(),
       rain: layerActive("rain"), storm: layerActive("storm"), mix: {
         fire: mix.fire, wind: mix.wind, rain: mix.rain, storm: mix.storm
+      }, levels: {
+        fire: fireGain ? gainRampValue(fireGain.gain, now) : 0,
+        wind: windGain ? gainRampValue(windGain.gain, now) : 0,
+        rain: rainGain ? gainRampValue(rainGain.gain, now) : 0,
+        storm: stormGain ? gainRampValue(stormGain.gain, now) : 0
       }, fireSource: !!fireSource, sources: sources.length,
       outdoor: !!(bed && bed._ac === __sharedAC) };
   };

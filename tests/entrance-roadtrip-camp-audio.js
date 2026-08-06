@@ -21,7 +21,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
     window.__openEntrancePorscheDriveHud(); window.__entranceRoadtripStart();
-    window.__entranceRoadtripSetRoute("camp", 0); window.__updateRoadtripCampAudio(); await sleep(700);
+    window.__entranceRoadtripSetRoute("camp", 0); window.__updateRoadtripCampAudio();
+    report.steps.arrival = snap(); await sleep(120); report.steps.fadeIn = snap(); await sleep(580);
     report.steps.calm = snap(); report.steps.calm.before = report.steps.calm.beds - 1;
 
     window.__entranceRoadtripCampFireStart();
@@ -71,6 +72,10 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 7600, {
 if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var s = result.steps || {};
 check(result.errors.length === 0, "the campsite mix has no uncaught errors", result.errors);
+check(s.arrival && s.fadeIn && s.arrival.audio.levels.wind < s.arrival.audio.mix.wind * .2 &&
+  s.fadeIn.audio.levels.wind > s.arrival.audio.levels.wind &&
+  s.fadeIn.audio.levels.wind < s.fadeIn.audio.mix.wind,
+  "repeated arrival paints preserve the campsite wind fade-in", { arrival: s.arrival, fadeIn: s.fadeIn });
 check(s.calm && s.calm.audio.active && s.calm.audio.attended && s.calm.audio.outdoor &&
   !s.calm.audio.fireLit && s.calm.audio.mix.fire === 0 && s.calm.audio.mix.wind > 0 &&
   !s.calm.audio.fireSource && s.calm.audio.sources === 3 &&

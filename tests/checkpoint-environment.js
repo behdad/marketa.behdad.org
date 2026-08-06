@@ -10,7 +10,7 @@ var HARNESS = [
   'if(!sessionStorage.getItem("checkpoint-environment-seeded")){sessionStorage.setItem("checkpoint-environment-seeded","1");localStorage.setItem("loftCheckpoint:v1",JSON.stringify(saved));location.reload();return;}',
   'window.addEventListener("load",function(){setTimeout(function(){try{',
   'var gate=document.getElementById("loft-recovery-gate"),button=gate&&gate.querySelector(".loft-recovery-btn"),covered=[];',
-  '["__restoreCheckpointSystems","__setPartyMode","__setDayNight","goToStage"].forEach(function(name){var original=window[name];if(typeof original!=="function")return;window[name]=function(){covered.push({name:name,gate:!!document.getElementById("loft-recovery-gate")});return original.apply(this,arguments);};});',
+  '["__restoreCheckpointSystems","__setPartyMode","__setDayNight","goToStage"].forEach(function(name){var original=window[name];if(typeof original!=="function")return;window[name]=function(){covered.push({name:name,gate:!!document.getElementById("loft-recovery-gate"),args:Array.prototype.slice.call(arguments)});return original.apply(this,arguments);};});',
   'if(button)button.click();',
   'var restoreCovered=covered.slice();',
   'var restored={room:window.currentStageName,weather:window.__weatherCheckpointState(),aurora:window.__auroraCheckpointState(),season:window.__seasonPreviewName(),temp:window.__outdoorTempOverride(),units:window.__tempDisplayUnits(),particles:{rain:document.querySelectorAll(".balc-drop").length,meteors:document.querySelectorAll(".sky-meteor").length}};',
@@ -43,6 +43,9 @@ if (!result) {
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(result.covered && result.covered.length >= 5 && result.covered.every(function (step) { return step.gate; }) && !result.gateAfter,
   "Continue keeps the recovery paint cover through both restore phases, environment, occasion/daylight, and room settlement", result.covered);
+check(result.covered && result.covered.some(function (step) {
+  return step.name === "__setDayNight" && step.args && step.args[1] === true;
+}), "Continue restores the saved day/night look without its manual-toggle chime", result.covered);
 check(result.restored && result.restored.room === "kitchen" &&
   result.restored.weather && result.restored.weather.rain && result.restored.weather.storm &&
   result.restored.weather.overcast === false && result.restored.particles.rain === 0,

@@ -54,6 +54,9 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__toggleEntrancePorscheEngine();
     window.__entranceDriveStep(1000);
     var restarted = window.__entranceRoomState().drive;
+    var reverseAccepted = window.__entranceDriveRange("R");
+    window.__entranceDriveStep(1000);
+    var reversed = window.__entranceRoomState().drive;
     pointer(pedalPad, "pointerup", 71, pedalRect.left + pedalRect.width / 2,
       pedalRect.top + pedalRect.height / 2);
     report.restart = {
@@ -63,6 +66,15 @@ window.addEventListener("load", function () { setTimeout(function () {
       positionAfter: restarted.position,
       range: restarted.transmission.range,
       gear: restarted.gear
+    };
+    report.reverse = {
+      accepted: reverseAccepted,
+      speed: reversed.speed,
+      positionBefore: restarted.position,
+      positionAfter: reversed.position,
+      range: reversed.transmission.range,
+      gear: reversed.gear,
+      heldSpeed: reversed.touchControls.holdSpeed
     };
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
@@ -89,6 +101,10 @@ var restart = result && result.restart;
 check(restart && restart.heldSpeed === 9 && restart.range === "P" && restart.gear === 0 &&
   restart.speed === 0 && restart.positionBefore === restart.positionAfter,
   "ignition in Park cannot restore a stale center-band held speed", restart);
+var reverse = result && result.reverse;
+check(reverse && reverse.accepted && reverse.range === "R" && reverse.gear === -1 &&
+  reverse.heldSpeed === null && reverse.speed === 0 && reverse.positionBefore === reverse.positionAfter,
+  "shifting Park to Reverse cannot restore stale forward momentum", reverse);
 
 if (failed) process.exit(1);
 console.log("Park-lock assertions passed.");

@@ -54,6 +54,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceRoadtripCampStargazingOpen();
     report.steps.clearNight = snap();
 
+    var finaleCheckpoint = window.__captureCheckpointSystems().entrance;
+    finaleCheckpoint.drive.roadtrip.campFireLit = false;
+    finaleCheckpoint.drive.roadtrip.stargazing = {
+      progress: { cassiopeia: 5, "ursa-major": 7, "ursa-minor": 7 },
+      completed: ["cassiopeia", "ursa-major", "ursa-minor"],
+      complete: true, wisdomDismissed: true, wisdomHandoffReady: false, sleepPhase: "complete"
+    };
+    window.__restoreCheckpointSystems({ entrance: finaleCheckpoint }, "afterStage");
+    window.__updateRoadtripCampAudio(); await sleep(940); report.steps.finale = snap();
+
     window.__entranceRoadtripCampFireReplay(); window.__updateRoadtripCampAudio();
     report.steps.out = snap();
 
@@ -95,14 +105,14 @@ check(s.arrival && s.fadeIn && s.arrival.audio.levels.wind < s.arrival.audio.mix
   "repeated arrival paints preserve the campsite wind fade-in", { arrival: s.arrival, fadeIn: s.fadeIn });
 check(s.calm && s.calm.audio.active && s.calm.audio.attended && s.calm.audio.outdoor &&
   !s.calm.audio.fireLit && s.calm.audio.mix.fire === 0 && s.calm.audio.mix.wind > 0 &&
-  !s.calm.audio.fireSource && s.calm.audio.sources === 3 &&
+  s.calm.audio.mix.lake > 0 && !s.calm.audio.fireSource && s.calm.audio.sources === 4 &&
   s.calm.beds === s.calm.before + 1,
-  "Camping owns one shared-context outdoor wind bed before the fire is built", s.calm);
+  "Camping owns one shared-context outdoor lake-and-wind bed before the fire is built", s.calm);
 check(s.rapidReentry && s.rapidReentry.audio.active && s.rapidReentry.audio.retiring === 0 &&
   s.rapidReentry.beds === s.calm.beds,
   "rapid campsite re-entry retires the fading bed before starting its replacement", s.rapidReentry);
 check(s.lit && s.lit.audio.fireLit && s.lit.audio.mix.fire > 0 && s.lit.audio.fireSource &&
-  s.lit.audio.sources === 4 && s.lit.beds === s.calm.beds,
+  s.lit.audio.sources === 5 && s.lit.beds === s.calm.beds,
   "the completed lit fire fades its crackle into the existing campsite bed", s.lit);
 check(s.rain && s.storm && s.rain.audio.rain && !s.rain.audio.storm &&
   s.rain.audio.mix.rain > 0 && s.storm.audio.storm &&
@@ -113,6 +123,12 @@ check(s.clearNight && s.clearNight.audio.rain && s.clearNight.audio.storm &&
   s.clearNight.audio.mix.rain === 0 && s.clearNight.audio.mix.storm === 0 &&
   s.clearNight.audio.mix.wind < s.storm.audio.mix.wind,
   "the locally clear stargazing sky suppresses hidden rain and storm hiss", s.clearNight);
+check(s.finale && s.finale.audio.active && !s.finale.audio.fireLit &&
+  s.finale.audio.mix.lake > 0 && s.finale.audio.mix.wind > 0 &&
+  s.finale.audio.mix.wind < s.clearNight.audio.mix.wind &&
+  s.finale.audio.levels.lake > 0 && s.finale.audio.levels.wind > 0 &&
+  s.finale.audio.mix.rain === 0 && s.finale.audio.mix.storm === 0,
+  "the sleep finale keeps a quiet lake wash and lower wind without weather hiss", s.finale);
 check(s.out && !s.out.audio.fireLit && s.out.audio.mix.fire === 0 && !s.out.audio.fireSource && s.out.audio.active,
   "extinguishing the fire removes crackle without stopping the outdoor bed", s.out);
 check(s.blur && !s.blur.audio.active && !s.blur.audio.attended && s.blur.beds === s.calm.before,

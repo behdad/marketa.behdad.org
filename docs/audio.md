@@ -178,10 +178,14 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
 
 - **Continuous ambient beds** (fire, aqua hush, totoro rain, bird, kettle, radio, PC fan, projector hum,
   Porsche idle/drivetrain, road bed, and driving loop,
-  campsite fire/weather, AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
+  campsite fire/lake/weather, AC hum, city, wind, rain, call ambience) gate their `want()` on `!hidden && hasFocus` and
   **self-teardown on blur/hide** (`updateFocusGatedAudio` re-checks each). When they stop,
   the refcount drops and the manager can suspend. The recovery Continue/Start over cover also
   counts as a room-ambience cover, keeping its saved-room preview silent until a choice is made.
+
+The campsite outdoor bed keeps a low-passed lake lap under its wind and fire/weather layers. The
+sleep finale retains the lake and halves the calm wind while the locally clear stargazing sky keeps
+rain/storm channels at zero; the night therefore stays audible without reverting to broadband hiss.
 
 The Porsche HUD adds an original compact four-bar driving loop on its own `audioBed()`:
 four-on-the-floor kick, short “doob” bass replies, muted chord stabs, and sparse hats.

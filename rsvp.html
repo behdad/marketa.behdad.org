@@ -49654,8 +49654,8 @@ function audioBed(kind) {
 }
 (function () {
   var bed = null, sources = [], master = null, fireBuffer = null, fireSource = null;
-  var fireGain = null, windGain = null, rainGain = null, stormGain = null;
-  var mix = { fire: 0, wind: 0, rain: 0, storm: 0 };
+  var fireGain = null, lakeGain = null, windGain = null, rainGain = null, stormGain = null;
+  var mix = { fire: 0, lake: 0, wind: 0, rain: 0, storm: 0 };
   var gainRamps = new WeakMap();
   var retiringBeds = [];
 
@@ -49686,6 +49686,10 @@ function audioBed(kind) {
         var gust = .45 + .32 * Math.sin(i / length * Math.PI * 6.4) +
           .18 * Math.sin(i / length * Math.PI * 17.7);
         data[i] = (white * .24 + smooth * 2.1) * Math.max(.14, gust);
+      } else if (kind === "lake") {
+        smooth = smooth * .996 + white * .004;
+        var lap = .38 + .62 * (.5 + .5 * Math.sin(i / length * Math.PI * 5.2));
+        data[i] = (smooth * 3.2 + white * .018) * lap;
       } else if (kind === "fire") {
         if (Math.random() < .000075) crackle += .5 + Math.random() * .5;
         crackle *= .9955;
@@ -49752,8 +49756,11 @@ function audioBed(kind) {
     // Its outdoor mix must follow that local sky instead of leaking the hidden storm hiss.
     var clearNight = !!(room && room.classList.contains("camp-stargazing-clear"));
     var raining = !clearNight && layerActive("rain"), storming = !clearNight && layerActive("storm");
+    var sleeping = !!(document.getElementById("entrance-roadtrip-camp") &&
+      document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-fire-out"));
     mix.fire = fireIsLit() ? .04 : 0;
-    mix.wind = storming ? .03 : .012;
+    mix.lake = sleeping ? .01 : .012;
+    mix.wind = storming ? .03 : sleeping ? .006 : .012;
     mix.rain = raining ? (storming ? .05 : .03) : 0;
     mix.storm = storming ? .018 : 0;
     if (mix.fire && !fireSource) {
@@ -49770,6 +49777,7 @@ function audioBed(kind) {
         if (index >= 0) sources.splice(index, 1);
       }, 430);
     }
+    target(lakeGain.gain, mix.lake, .9);
     target(windGain.gain, mix.wind, .7);
     target(rainGain.gain, mix.rain, .55);
     target(stormGain.gain, mix.storm, .8);
@@ -49782,11 +49790,12 @@ function audioBed(kind) {
       if (!bed) return;
       master = bed.createGain();
       fireGain = bed.createGain();
+      lakeGain = bed.createGain();
       windGain = bed.createGain();
       rainGain = bed.createGain();
       stormGain = bed.createGain();
       master.gain.value = .9;
-      [fireGain, windGain, rainGain, stormGain].forEach(function (gain) {
+      [fireGain, lakeGain, windGain, rainGain, stormGain].forEach(function (gain) {
         gain.gain.value = .0001;
         gainRamps.set(gain.gain, { from: .0001, to: .0001, start: bed.currentTime, end: bed.currentTime });
         gain.connect(master);
@@ -49795,6 +49804,7 @@ function audioBed(kind) {
       var wind = noiseBuffer(bed, 7, "wind");
       fireBuffer = noiseBuffer(bed, 6, "fire");
       source(bed, wind, "bandpass", 780, .48, windGain);
+      source(bed, noiseBuffer(bed, 8, "lake"), "lowpass", 540, .42, lakeGain);
       source(bed, noiseBuffer(bed, 3, "rain"), "highpass", 1250, .35, rainGain);
       source(bed, wind, "lowpass", 185, .5, stormGain);
       paintMix();
@@ -49804,9 +49814,9 @@ function audioBed(kind) {
     if (!bed) return;
     fadeSecs = typeof fadeSecs === "number" ? fadeSecs : .45;
     var oldBed = bed, oldSources = sources.slice(), oldMaster = master;
-    bed = null; sources = []; master = fireGain = windGain = rainGain = stormGain = null;
+    bed = null; sources = []; master = fireGain = lakeGain = windGain = rainGain = stormGain = null;
     fireBuffer = fireSource = null;
-    mix = { fire: 0, wind: 0, rain: 0, storm: 0 };
+    mix = { fire: 0, lake: 0, wind: 0, rain: 0, storm: 0 };
     try {
       var now = oldBed.currentTime;
       oldMaster.gain.cancelScheduledValues(now);
@@ -49830,9 +49840,10 @@ function audioBed(kind) {
     var now = bed ? bed.currentTime : 0;
     return { active: !!bed, attended: campsiteAttended(), fireLit: fireIsLit(),
       rain: layerActive("rain"), storm: layerActive("storm"), mix: {
-        fire: mix.fire, wind: mix.wind, rain: mix.rain, storm: mix.storm
+        fire: mix.fire, lake: mix.lake, wind: mix.wind, rain: mix.rain, storm: mix.storm
       }, levels: {
         fire: fireGain ? gainRampValue(fireGain.gain, now) : 0,
+        lake: lakeGain ? gainRampValue(lakeGain.gain, now) : 0,
         wind: windGain ? gainRampValue(windGain.gain, now) : 0,
         rain: rainGain ? gainRampValue(rainGain.gain, now) : 0,
         storm: stormGain ? gainRampValue(stormGain.gain, now) : 0

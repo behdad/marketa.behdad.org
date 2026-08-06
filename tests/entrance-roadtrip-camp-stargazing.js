@@ -35,6 +35,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var outer = document.getElementById("entrance-roadtrip-dismiss");
     var moon = document.getElementById("entrance-roadtrip-camp-moon");
     var room = document.getElementById("entrance-room");
+    var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
     return {
       state: window.__entranceRoadtripCampStargazingState(),
       openClass: game.classList.contains("open"),
@@ -57,7 +58,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       wisdomShown: wisdom.classList.contains("show"),
       wisdomBubbles: wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble").length,
       wisdomSpeakers: wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-speaker").length,
-      wisdomText: wisdom.textContent.replace(/\s+/g, " ").trim()
+      wisdomText: wisdom.textContent.replace(/\s+/g, " ").trim(),
+      fireBuilt: roadtrip.campFireBuilt,
+      fireLit: roadtrip.campFireLit,
+      pinecones: roadtrip.campPinecones,
+      stew: roadtrip.stew
     };
   }
   function finish() {
@@ -128,8 +133,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                             report.completeRestored = snap();
                             click(document.getElementById("entrance-roadtrip-camp-wisdom-close"));
                             report.exited = snap();
-                            window.__entranceRoadtripSetRoute("abraham", 0);
-                            window.__entranceRoadtripSetRoute("camp", 0);
+                            click(document.querySelector('[data-roadtrip-reentry-choice="camp"]'));
                             report.freshArrival = snap();
                             window.overcast(false); clearNight();
                           } catch (error) { report.errors.push(String(error && error.stack || error)); }
@@ -212,8 +216,10 @@ check(result && result.exited && !result.exited.campActive,
   "the conversation corner dismiss exits Camping back to the Road Trip controls", result && result.exited);
 check(result && result.freshArrival && !result.freshArrival.state.complete &&
   !result.freshArrival.wisdomShown && result.freshArrival.liveOpacity === 0 &&
+  !result.freshArrival.fireBuilt && !result.freshArrival.fireLit &&
+  result.freshArrival.pinecones === 0 && !result.freshArrival.stew &&
   Object.keys(result.freshArrival.state.progress).every(function (name) { return result.freshArrival.state.progress[name] === 0; }),
-  "a genuinely fresh Camping arrival resets stargazing", result && result.freshArrival);
+  "choosing Camping after the finale starts a fresh empty campsite", result && result.freshArrival);
 
 if (failures) process.exit(1);
 console.log("Campsite stargazing assertions passed.");

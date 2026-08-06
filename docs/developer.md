@@ -228,6 +228,8 @@ it during daylight commits the shared day/night state to night, locally clears c
 opens the stargazing trace. Completion closes that overlay, paints the constellations into the live
 campsite, and holds the four-bubble exchange until dismissal. `campStargazingState` checkpoints exact
 trace and dismissal state but always restores the trace overlay closed; a fresh camp arrival resets it.
+The exchange's own close action ends and resets the campsite session, while ordinary Camping
+dismissal still preserves it.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed

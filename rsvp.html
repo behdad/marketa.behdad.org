@@ -40469,6 +40469,22 @@ window.__entranceRoomOpen = false;
     paintCampStargazing();
     return campStargazingSnapshot();
   }
+  function resetRoadtripCampSession() {
+    clearTimeout(campFireTimer);
+    campFireTimer = null;
+    clearRoadtripCampPineconeFlame();
+    campFireState.complete = false;
+    campFireState.lit = false;
+    campFireState.open = false;
+    campFireState.tinder = false;
+    campFireState.twigs = false;
+    campFireState.logs = "";
+    campFireState.igniting = false;
+    campFireState.pinecones = 0;
+    resetCampStew(false);
+    resetCampStargazing();
+    paintRoadtripCampFire();
+  }
   function captureCampStargazing() {
     var snapshot = campStargazingSnapshot();
     return {
@@ -40798,7 +40814,10 @@ window.__entranceRoomOpen = false;
     event.stopPropagation();
   });
   if (campStargazingWisdomClose) campStargazingWisdomClose.addEventListener("click", function (event) {
-    if (roadtripDismiss) roadtripDismiss.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    if (exitRoadtrip()) {
+      resetRoadtripCampSession();
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    }
     event.preventDefault();
     event.stopPropagation();
   });
@@ -40946,11 +40965,7 @@ window.__entranceRoomOpen = false;
     driveCoachNeedsFreshPedal = false;
     dismissPorscheDriveCoach();
     if (!preserveCamp) {
-      campFireState.lit = false;
-      campFireState.pinecones = 0;
-      clearRoadtripCampPineconeFlame();
-      resetCampStew(false);
-      resetCampStargazing();
+      resetRoadtripCampSession();
     }
     roadtripState.campVisited = true;
     roadtripState.route = "camp";

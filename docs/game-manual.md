@@ -190,8 +190,9 @@ Entrance dashboard.
 The lit fire also reveals a food crate. Open it to assemble Camping stew from one protein, one base,
 and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook;
 an extinguished fire pauses it. Serve during the ready moment, or reset a comically overcooked pot.
-After serving, the sky opens stargazing. Selecting it carries the campsite through sunset into a
-clear night; trace Cassiopeia, Ursa Major, and Ursa Minor for the quiet finale.
+After serving, click the sky to carry the whole game through sunset into a clear night. Trace
+Cassiopeia, Ursa Major, and Ursa Minor; the completed constellations and closing campfire exchange
+remain in the live campsite until dismissed.
 
 Leaving the highway keeps the dashboard available and never resumes the run automatically. The
 **Road Trip** control offers the actions currently available: continue a paused run, start a new

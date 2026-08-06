@@ -217,7 +217,9 @@ the builder and lid reopen closed. `arriveRoadtripCamp()` resets stew for a genu
 
 The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 `__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,
-celestial bodies, and expanded winter mountain snow.
+celestial bodies, and expanded winter mountain snow. Served stew plus clear night unlocks the
+late-overlay stargazing view. `campStargazingState` checkpoints per-constellation trace progress but
+always restores the popup closed; a fresh camp arrival resets it.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed
@@ -233,10 +235,9 @@ stay on `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the
 Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
 `tests/entrance-roadtrip-camp-pinecone-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
-`tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`, and
-`tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-audio.js`, and
-`tests/entrance-roadtrip-camp-stew.js` for this
-boundary.
+`tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`,
+`tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-audio.js`,
+`tests/entrance-roadtrip-camp-stew.js`, and `tests/entrance-roadtrip-camp-stargazing.js` for this boundary.
 
 ### Scoring, police, and durable records
 

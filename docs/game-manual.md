@@ -187,6 +187,8 @@ Entrance dashboard.
 The lit fire also reveals a food crate. Open it to assemble Camping stew from one protein, one base,
 and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook;
 an extinguished fire pauses it. Serve during the ready moment, or reset a comically overcooked pot.
+After serving, a clear night sky opens stargazing: trace Cassiopeia, Ursa Major, and Ursa Minor for
+the quiet finale.
 
 Leaving the highway keeps the dashboard available and never resumes the run automatically. The
 **Road Trip** control offers the actions currently available: continue a paused run, start a new

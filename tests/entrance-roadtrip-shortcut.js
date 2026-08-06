@@ -9,7 +9,7 @@ var lib = require("./lib");
 var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>
 (function () {
-  var report = { errors: [], shifted: {} };
+  var report = { errors: [], normal: {}, shifted: {}, longPressed: {} };
   function roadtrip() { return window.__entranceRoomState().drive.roadtrip; }
   function motion() {
     var state = window.__entranceRoomState();
@@ -23,6 +23,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       routeElapsed: state.drive.roadtrip.routeElapsed
     };
   }
+  function start() { return { state: roadtrip(), motion: motion() }; }
   function pressEscape() {
     document.dispatchEvent(new KeyboardEvent("keydown", {
       key: "Escape", code: "Escape", bubbles: true, cancelable: true
@@ -32,12 +33,36 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     if (roadtrip().active) pressEscape();
     window.__entranceRoadtripOpenChooser();
   }
+  function dirtyRun() {
+    if (!roadtrip().active) return;
+    window.__entranceRoadtripSetLane(-Math.max(.5, roadtrip().maxLane - .2));
+    window.__entranceDriveRange("D");
+    window.__entranceDriveSetMotion(72, 3);
+  }
   function choose(route, shiftKey) {
+    dirtyRun();
     openChooser();
     document.getElementById("entrance-roadtrip-route-" + route).dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true, shiftKey: shiftKey })
     );
-    return roadtrip();
+    return start();
+  }
+  function longPress(route, pointerId, done) {
+    dirtyRun();
+    openChooser();
+    var choice = document.getElementById("entrance-roadtrip-route-" + route);
+    choice.dispatchEvent(new PointerEvent("pointerdown", {
+      bubbles: true, cancelable: true, pointerId: pointerId, pointerType: "touch", button: 0,
+      clientX: 340, clientY: 80
+    }));
+    setTimeout(function () {
+      choice.dispatchEvent(new PointerEvent("pointerup", {
+        bubbles: true, cancelable: true, pointerId: pointerId, pointerType: "touch", button: 0,
+        clientX: 340, clientY: 80
+      }));
+      report.longPressed[route] = start();
+      done();
+    }, 680);
   }
   window.addEventListener("load", function () {
     setTimeout(function () {
@@ -52,8 +77,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripStart();
 
-        window.__entranceDriveRange("D");
-        window.__entranceDriveSetMotion(72, 3);
+        report.normal.calgary = choose("calgary", false);
+        report.normal.banff = choose("banff", false);
+        report.normal.abraham = choose("abraham", false);
         report.shifted.calgary = choose("calgary", true);
         report.parkedStart = motion();
         window.__entranceDriveControl("throttle", true);
@@ -80,25 +106,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.validCoast = motion();
         report.shifted.banff = choose("banff", true);
         report.shifted.abraham = choose("abraham", true);
-        report.normalAbraham = choose("abraham", false);
-        window.__entranceDriveRange("D");
-        window.__entranceDriveSetMotion(64, 3);
-        openChooser();
-        var touchChoice = document.getElementById("entrance-roadtrip-route-banff");
-        touchChoice.dispatchEvent(new PointerEvent("pointerdown", {
-          bubbles: true, cancelable: true, pointerId: 41, pointerType: "touch", button: 0,
-          clientX: 340, clientY: 80
-        }));
-        setTimeout(function () {
-          touchChoice.dispatchEvent(new PointerEvent("pointerup", {
-            bubbles: true, cancelable: true, pointerId: 41, pointerType: "touch", button: 0,
-            clientX: 340, clientY: 80
-          }));
-          report.longPressedBanff = roadtrip();
-          report.longPressMotion = motion();
-          report.errors = (window.__errs || []).concat(report.errors);
-          document.getElementById("__report").textContent = JSON.stringify(report);
-        }, 680);
+        longPress("calgary", 41, function () {
+          longPress("banff", 42, function () {
+            longPress("abraham", 43, function () {
+              report.errors = (window.__errs || []).concat(report.errors);
+              document.getElementById("__report").textContent = JSON.stringify(report);
+            });
+          });
+        });
         return;
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
@@ -134,10 +149,26 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
 check(result && result.errors.length === 0, "the shortcut runs without uncaught errors",
   result && result.errors);
 
+var expectedStartLanes = { calgary: 3.08, banff: 2.08, abraham: 1.08 };
+function parkedOnRightShoulder(snapshot, route) {
+  var state = snapshot && snapshot.state || {};
+  var motion = snapshot && snapshot.motion || {};
+  return state.route === route && state.playerLane === expectedStartLanes[route] &&
+    state.shoulderZone === "gravel" && motion.range === "P" && motion.gear === 0 && motion.speed === 0;
+}
+var normal = result && result.normal || {};
+check(Object.keys(expectedStartLanes).every(function (route) {
+  return parkedOnRightShoulder(normal[route], route);
+}), "ordinary route choices discard the prior run and start parked on each right shoulder", normal);
+
 var shifted = result && result.shifted || {};
-check(shifted.calgary && shifted.calgary.route === "calgary" &&
-  shifted.calgary.routeElapsed === shifted.calgary.calgarySeconds - 3,
-  "Shift-click Calgary starts three seconds before its exit", shifted.calgary);
+check(Object.keys(expectedStartLanes).every(function (route) {
+  return parkedOnRightShoulder(shifted[route], route);
+}), "Shift-click shortcuts discard the prior run and start parked on each right shoulder", shifted);
+var shiftedCalgary = shifted.calgary && shifted.calgary.state || {};
+check(shiftedCalgary.route === "calgary" &&
+  shiftedCalgary.routeElapsed === shiftedCalgary.calgarySeconds - 3,
+  "Shift-click Calgary starts three seconds before its exit", shiftedCalgary);
 var parked = result && result.parkedStart || {};
 var parkedThrottle = result && result.parkedThrottle || {};
 var engineOffThrottle = result && result.engineOffThrottle || {};
@@ -175,24 +206,33 @@ check(validCoast.range === "D" && validCoast.gear > 0 && validCoast.speed > 0 &&
   "a valid drive gear retains ordinary throttle-release coasting", {
     powered: validDrive, coast: validCoast
   });
-check(shifted.banff && shifted.banff.route === "banff" &&
-  shifted.banff.banffElapsed === shifted.banff.banffSeconds - 3,
-  "Shift-click Banff starts three seconds before its exit", shifted.banff);
-check(shifted.abraham && shifted.abraham.route === "abraham" &&
-  shifted.abraham.abrahamElapsed === shifted.abraham.abrahamSeconds - 3,
-  "Shift-click Abraham Lake starts three seconds before Camping", shifted.abraham);
+var shiftedBanff = shifted.banff && shifted.banff.state || {};
+check(shiftedBanff.route === "banff" &&
+  shiftedBanff.banffElapsed === shiftedBanff.banffSeconds - 3,
+  "Shift-click Banff starts three seconds before its exit", shiftedBanff);
+var shiftedAbraham = shifted.abraham && shifted.abraham.state || {};
+check(shiftedAbraham.route === "abraham" &&
+  shiftedAbraham.abrahamElapsed === shiftedAbraham.abrahamSeconds - 3,
+  "Shift-click Abraham Lake starts three seconds before Camping", shiftedAbraham);
 
-var normal = result && result.normalAbraham || {};
-check(normal.route === "abraham" && normal.abrahamElapsed === 0,
-  "an ordinary Abraham Lake click still starts the segment at its beginning", normal);
+var normalAbraham = normal.abraham && normal.abraham.state || {};
+check(normalAbraham.route === "abraham" && normalAbraham.abrahamElapsed === 0,
+  "an ordinary Abraham Lake click still starts the segment at its beginning", normalAbraham);
 
-var longPressed = result && result.longPressedBanff || {};
-check(longPressed.route === "banff" &&
-  Math.abs(longPressed.banffElapsed - (longPressed.banffSeconds - 3)) < .2,
-  "a mobile long-press uses the same near-exit shortcut", longPressed);
-var longPressMotion = result && result.longPressMotion || {};
-check(longPressMotion.range === "P" && longPressMotion.gear === 0 && longPressMotion.speed === 0,
-  "a mobile near-exit shortcut also drops carried momentum", longPressMotion);
+var longPressed = result && result.longPressed || {};
+check(Object.keys(expectedStartLanes).every(function (route) {
+  return parkedOnRightShoulder(longPressed[route], route);
+}), "mobile long-press shortcuts discard the prior run and start parked on each right shoulder", longPressed);
+var longCalgary = longPressed.calgary && longPressed.calgary.state || {};
+var longBanff = longPressed.banff && longPressed.banff.state || {};
+var longAbraham = longPressed.abraham && longPressed.abraham.state || {};
+check(longCalgary.route === "calgary" &&
+  Math.abs(longCalgary.routeElapsed - (longCalgary.calgarySeconds - 3)) < .2 &&
+  longBanff.route === "banff" &&
+  Math.abs(longBanff.banffElapsed - (longBanff.banffSeconds - 3)) < .2 &&
+  longAbraham.route === "abraham" &&
+  Math.abs(longAbraham.abrahamElapsed - (longAbraham.abrahamSeconds - 3)) < .2,
+  "mobile long-press uses the same near-exit shortcut for every segment", longPressed);
 
 if (failures) process.exit(1);
 console.log("Road Trip route shortcut checks passed.");

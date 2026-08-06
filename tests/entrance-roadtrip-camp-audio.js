@@ -37,6 +37,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setBalconyStormLayer(true, "test"); window.__updateRoadtripCampAudio();
     report.steps.storm = snap();
 
+    var dinnerCheckpoint = window.__captureCheckpointSystems().entrance;
+    dinnerCheckpoint.drive.roadtrip.campFireBuilt = true;
+    dinnerCheckpoint.drive.roadtrip.campFireLit = true;
+    dinnerCheckpoint.drive.roadtrip.campActive = true;
+    dinnerCheckpoint.drive.roadtrip.stew = {
+      protein: "beef", starch: "barley", status: "served", elapsed: 11600
+    };
+    window.__restoreCheckpointSystems({ entrance: dinnerCheckpoint }, "afterStage");
+    await sleep(80); window.__setDayNight(true);
+    window.__setBalconyRain(true, "test"); window.__setBalconyStormLayer(true, "test");
+    window.__entranceRoadtripCampStargazingOpen();
+    report.steps.clearNight = snap();
+
     window.__entranceRoadtripCampFireReplay(); window.__updateRoadtripCampAudio();
     report.steps.out = snap();
 
@@ -89,6 +102,10 @@ check(s.rain && s.storm && s.rain.audio.rain && !s.rain.audio.storm &&
   s.storm.audio.mix.rain > s.rain.audio.mix.rain &&
   s.storm.audio.mix.wind > s.rain.audio.mix.wind && s.storm.audio.mix.storm > 0,
   "rain is prominent outdoors and a storm raises both precipitation and wind", { rain: s.rain, storm: s.storm });
+check(s.clearNight && s.clearNight.audio.rain && s.clearNight.audio.storm &&
+  s.clearNight.audio.mix.rain === 0 && s.clearNight.audio.mix.storm === 0 &&
+  s.clearNight.audio.mix.wind < s.storm.audio.mix.wind,
+  "the locally clear stargazing sky suppresses hidden rain and storm hiss", s.clearNight);
 check(s.out && !s.out.audio.fireLit && s.out.audio.mix.fire === 0 && !s.out.audio.fireSource && s.out.audio.active,
   "extinguishing the fire removes crackle without stopping the outdoor bed", s.out);
 check(s.blur && !s.blur.audio.active && !s.blur.audio.attended && s.blur.beds === s.calm.before,

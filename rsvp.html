@@ -40406,6 +40406,13 @@ window.__entranceRoomOpen = false;
       complete: campStargazingComplete()
     };
   }
+  function setCampStargazingClear(clear) {
+    if (!room) return;
+    clear = !!clear;
+    var changed = room.classList.contains("camp-stargazing-clear") !== clear;
+    room.classList.toggle("camp-stargazing-clear", clear);
+    if (changed && window.__updateRoadtripCampAudio) window.__updateRoadtripCampAudio();
+  }
   function paintCampStargazing() {
     if (!campStargazingGame) return;
     var eligible = campStargazingEligible();
@@ -40416,9 +40423,7 @@ window.__entranceRoomOpen = false;
     campStargazingGame.classList.toggle("complete", complete);
     if (campFireScene) campFireScene.classList.toggle("stargazing-complete", complete);
     if (campStargazingLive) campStargazingLive.classList.toggle("show", complete);
-    if (room && eligible && complete && !room.classList.contains("camp-stargazing-clear")) {
-      room.classList.add("camp-stargazing-clear");
-    }
+    if (eligible && complete) setCampStargazingClear(true);
     if (campStargazingWisdom) {
       campStargazingWisdom.classList.toggle("show", complete && !campStargazingState.wisdomDismissed);
     }
@@ -40454,7 +40459,7 @@ window.__entranceRoomOpen = false;
     clearTimeout(campStargazingSunsetTimer);
     campStargazingSunsetTimer = null;
     if (campFireScene) campFireScene.classList.remove("stargazing-sunset");
-    if (room) room.classList.remove("camp-stargazing-clear");
+    setCampStargazingClear(false);
     campStargazingState.open = false;
     campStargazingState.wisdomDismissed = false;
     Object.keys(CAMP_STARGAZING_LENGTHS).forEach(function (name) {
@@ -40490,7 +40495,7 @@ window.__entranceRoomOpen = false;
     if (campStargazingSunsetTimer !== null) return "sunset";
     campFireState.open = false;
     campStewState.open = false;
-    if (room) room.classList.add("camp-stargazing-clear");
+    setCampStargazingClear(true);
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
     syncRoadtripCampFireCaption(false);
     if (!balconyStage.classList.contains("dusk")) {
@@ -49334,7 +49339,11 @@ function audioBed(kind) {
   }
   function paintMix() {
     if (!bed) return;
-    var raining = layerActive("rain"), storming = layerActive("storm");
+    var room = document.getElementById("entrance-room");
+    // Stargazing paints an explicitly clear campsite sky over the shared live weather.
+    // Its outdoor mix must follow that local sky instead of leaking the hidden storm hiss.
+    var clearNight = !!(room && room.classList.contains("camp-stargazing-clear"));
+    var raining = !clearNight && layerActive("rain"), storming = !clearNight && layerActive("storm");
     mix.fire = fireIsLit() ? .04 : 0;
     mix.wind = storming ? .03 : .012;
     mix.rain = raining ? (storming ? .05 : .03) : 0;

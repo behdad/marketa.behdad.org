@@ -265,7 +265,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                     fullRequired("chicken", "barley");
                     ["carrots", "mushrooms", "chilies", "coriander"].forEach(choose);
                     click(cook);
-                    window.__entranceRoadtripCampStewStep(19000);
+                    window.__entranceRoadtripCampStewStep(19999);
+                    report.beforeOvercooked = stew();
+                    window.__entranceRoadtripCampStewStep(1);
                     var overcookedCheckpoint = window.__captureCheckpointSystems().entrance;
                     setTimeout(function () {
                       try {
@@ -430,6 +432,10 @@ check(result && result.extinguished && result.extinguished.state.phase === "cold
 check(result && result.draftRestored && result.draftRestored.saved === null && !result.draftRestored.state.open &&
   result.draftRestored.state.phase === "cold" && result.draftRestored.crate && !result.draftRestored.overlay,
   "checkpoint restore discards an open partial draft", result && result.draftRestored);
+check(result && result.beforeOvercooked && result.beforeOvercooked.status === "cooking" &&
+  result.beforeOvercooked.phase === "ready" && result.beforeOvercooked.elapsed === 19999,
+  "stew remains ready for a full twenty seconds before it can burn", result && result.beforeOvercooked);
+
 check(result && result.overcooked && result.overcooked.state.status === "overcooked" && result.overcooked.state.clankActive &&
   result.overcooked.state.lidOpen &&
   result.overcooked.caption === "entrance_roadtrip_stew_overcooked_feedback" && result.overcooked.pot && result.overcooked.grill &&

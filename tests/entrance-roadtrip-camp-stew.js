@@ -328,6 +328,7 @@ function samePoint(a, b) {
 
 console.log("rsvp.html campsite stew:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 12000, {
+  patchRaf: true,
   forceMotion: true,
   urlSuffix: "?date=2026-07-15&time=20:00#play",
   chromeFlags: "--window-size=1100,900"

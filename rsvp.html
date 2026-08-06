@@ -78750,6 +78750,7 @@ setOfficeProgress("pc", false);
       var nameWords = chatFold(person.name).replace(/[^a-z0-9]+/g, " ").trim();
       return nameWords && qWords.indexOf(" " + nameWords + " ") !== -1;
     });
+    var wantsAppCatalog = /(apps?|applications?|programs?|on the phone|on the computer|aplikac|programy|برنامه)/.test(q);
     if (/(calendar|event|wedding|when|date|holiday|occasion|meteor|bbq|barbecue|cookout|brunch|kalend|svatb|kdy|datum|udalost|gril|تقویم|عروسی|تاریخ|کباب)/.test(q) && window.__chatCalendarKnowledge) apps.calendar = window.__chatCalendarKnowledge();
     if (/(photo|album|picture|aspen|fot|obraz|عکس)/.test(q)) apps.album = chatAlbumKnowledge();
     if (/(tattoo|ink|artist|design|tetov|خالکوب)/.test(q) && window.__chatTattooKnowledge) apps.tattoos = window.__chatTattooKnowledge();
@@ -78760,8 +78761,12 @@ setOfficeProgress("pc", false);
     if (/(messages?|texts?|thread|texted|said|zprav|rekl|پیام|گفت)/.test(q) && window.__chatMessagesKnowledge) apps.messages = window.__chatMessagesKnowledge();
     if (/(phrase|phrasebook|translate|translation|czech|cesk|preklad|fraz|عبارت|ترجمه|چک)/.test(q) && window.__chatPhrasebookKnowledge) apps.phrasebook = window.__chatPhrasebookKnowledge();
     if (namedContacts.length) apps.contacts = namedContacts;
-    else if (/(who is|who's|whose|guest|people|person|friend|family|relationship|fun fact|kdo je|host|rodin|vztah|zajimavost|مهمان|کیست|خانواده|رابطه)/.test(q)) apps.contacts = publicContacts;
-    if (/(apps?|applications?|programs?|on the phone|on the computer|aplikac|programy|برنامه)/.test(q) && window.__chatAppCatalog) apps.catalog = window.__chatAppCatalog();
+    else if (/(who is|who's|whose|guest|people|person|friend|family|relationship|fun fact|kdo je|host|rodin|vztah|zajimavost|مهمان|کیست|خانواده|رابطه)/.test(q)) {
+      // A combined cast + app-directory question needs every public name, but not every
+      // biography. Keep the detailed records for focused cast questions so the request stays bounded.
+      apps.contacts = wantsAppCatalog ? publicContacts.map(function (person) { return { name: person.name, role: person.role }; }) : publicContacts;
+    }
+    if (wantsAppCatalog && window.__chatAppCatalog) apps.catalog = window.__chatAppCatalog();
     if (/(games?|minigame|arcade|high ?score|personal best|where.*play|flair|invaders?|alien resources|block party|tetris|hack.?man|pac.?man|mines|solitaire|cards|patience|pasians|game of life|snake|shoot|doom|duke|quake|octi.?s escape|hra|skore|rekord|بازی|امتیاز)/.test(q)) apps.games = chatGamesKnowledge();
     return apps;
   }

@@ -77,6 +77,45 @@ function checkSvgTagBalance(file, html) {
   }
 }
 
+// Roadtrip weather is shared by every route, but campsite builder dialogs are modal.
+// Keep those dialogs in their late-painted host instead of suppressing the weather.
+function checkCampBuilderOverlayOrder(file, html) {
+  if (file !== "rsvp.html") return;
+  function groupRange(id) {
+    var start = html.indexOf('<g id="' + id + '"');
+    if (start === -1) return null;
+    var depth = 0, match, tags = /<g(?:\s|>)|<\/g>/g;
+    tags.lastIndex = start;
+    while ((match = tags.exec(html))) {
+      if (match[0] === "</g>") {
+        depth--;
+        if (depth === 0) return { start: start, end: tags.lastIndex };
+      } else {
+        depth++;
+      }
+    }
+    return null;
+  }
+  var host = groupRange("entrance-roadtrip-camp-builder-overlays");
+  var fire = html.indexOf('<g id="entrance-roadtrip-fire-game"');
+  var stew = html.indexOf('<g id="entrance-roadtrip-stew-game"');
+  var ambient = [
+    '<g id="entrance-roadtrip-clouds"',
+    '<rect id="entrance-roadtrip-smoke"',
+    '<g id="entrance-roadtrip-rain"',
+    '<g id="entrance-roadtrip-snow"',
+    '<rect id="entrance-roadtrip-windshield-glaze"'
+  ].map(function (needle) { return html.indexOf(needle); });
+  var complete = host && fire !== -1 && stew !== -1 && ambient.every(function (index) { return index !== -1; });
+  var ownsBuilders = complete && fire > host.start && fire < host.end && stew > host.start && stew < host.end;
+  var paintsLast = complete && ambient.every(function (index) { return index < host.start; });
+  if (ownsBuilders && paintsLast) {
+    pass(file + ": campsite builders paint above shared roadtrip weather");
+  } else {
+    fail(file + ": campsite builders paint above shared roadtrip weather");
+  }
+}
+
 // Only inspect authored tags. IDs quoted in comments, CSS, or JS strings do not enter
 // the static DOM and must not make this check noisy.
 function checkStaticDomIds(file, html) {
@@ -1291,6 +1330,7 @@ FILES.forEach(function (file) {
   checkTransformClobber(file, style, html);
   checkConsoleOutClipSlack(file, style);
   checkSvgTagBalance(file, html);
+  checkCampBuilderOverlayOrder(file, html);
   checkStaticDomIds(file, html);
   checkMonitorControlSpacing(file, html);
   console.log("");

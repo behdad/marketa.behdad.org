@@ -38888,13 +38888,22 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
-  function parkPorscheForFreshRoadtrip() {
+  function resetPorscheForFreshRoadtrip(keepTransmission) {
     cancelPorscheTouchPedals();
     ["throttle", "brake", "clutch"].forEach(function (name) {
       setPorscheDriveHold(name, false);
     });
-    parkPorscheTransmission();
     driveState.speed = 0;
+    if (keepTransmission) {
+      setPorscheCruiseActive(false);
+      if (porscheTransmission.mode === "auto") {
+        driveState.gear = porscheTransmission.range === "D" ? 1 :
+          porscheTransmission.range === "R" ? -1 : 0;
+      }
+      resetPorscheAutomaticRuntime();
+    } else {
+      parkPorscheTransmission();
+    }
     driveState.rpm = porscheState.engineOn ? 780 : 0;
     driveState.throttleHeldMs = 0;
     driveState.shiftCutMs = 0;
@@ -38909,7 +38918,7 @@ window.__entranceRoomOpen = false;
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.routeChooserOpen || !setRoadtripRouteChoice(route, false)) return false;
     roadtripState.routeChooserOpen = false;
-    parkPorscheForFreshRoadtrip();
+    resetPorscheForFreshRoadtrip(true);
     var started = startRoadtrip(true, route, shortcutElapsed);
     if (started) roadtripCampResumeRun = null;
     if (started && window.__checkpointChanged) window.__checkpointChanged();
@@ -39048,7 +39057,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.paused && !roadtripState.police.runEnded) {
       roadtripCampResumeRun = captureRoadtripRun();
     }
-    parkPorscheForFreshRoadtrip();
+    resetPorscheForFreshRoadtrip(false);
     if (!startRoadtrip(true, "abraham", ROADTRIP_ABRAHAM_SECONDS)) return false;
     arriveRoadtripCamp(true);
     if (window.__checkpointChanged) window.__checkpointChanged();

@@ -81,6 +81,15 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.normal.banff = choose("banff", false);
         report.normal.abraham = choose("abraham", false);
         report.shifted.calgary = choose("calgary", true);
+        report.driveStart = motion();
+        window.__entranceDriveControl("throttle", true);
+        for (var driveStep = 0; driveStep < 20; driveStep++) window.__entranceDriveStep(50);
+        report.validDrive = motion();
+        window.__entranceDriveControl("throttle", false);
+        window.__entranceDriveStep(300);
+        report.validCoast = motion();
+        window.__entranceDriveSetMotion(0, 0);
+        window.__entranceDriveRange("P");
         report.parkedStart = motion();
         window.__entranceDriveControl("throttle", true);
         window.__entranceDriveStep(1000);
@@ -97,13 +106,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__entranceDriveRange("R");
         window.__entranceDriveStep(1000);
         report.stationaryReverse = motion();
-        window.__entranceDriveRange("D");
-        window.__entranceDriveControl("throttle", true);
-        for (var driveStep = 0; driveStep < 20; driveStep++) window.__entranceDriveStep(50);
-        report.validDrive = motion();
-        window.__entranceDriveControl("throttle", false);
-        window.__entranceDriveStep(300);
-        report.validCoast = motion();
         report.shifted.banff = choose("banff", true);
         report.shifted.abraham = choose("abraham", true);
         longPress("calgary", 41, function () {
@@ -151,26 +153,27 @@ check(result && result.errors.length === 0, "the shortcut runs without uncaught 
 
 var expectedStartLanes = { calgary: 3.32, banff: 2.32, abraham: 1.32 };
 var roadEdgeLanes = { calgary: 3, banff: 2, abraham: 1 };
-function parkedOnRightShoulder(snapshot, route) {
+function stoppedInDriveOnRightShoulder(snapshot, route) {
   var state = snapshot && snapshot.state || {};
   var motion = snapshot && snapshot.motion || {};
   return state.route === route && state.playerLane === expectedStartLanes[route] &&
     state.playerLane - roadEdgeLanes[route] >= .3 &&
-    state.shoulderZone === "gravel" && motion.range === "P" && motion.gear === 0 && motion.speed === 0;
+    state.shoulderZone === "gravel" && motion.range === "D" && motion.gear === 1 && motion.speed === 0;
 }
 var normal = result && result.normal || {};
 check(Object.keys(expectedStartLanes).every(function (route) {
-  return parkedOnRightShoulder(normal[route], route);
-}), "ordinary route choices discard the prior run and start parked on each right shoulder", normal);
+  return stoppedInDriveOnRightShoulder(normal[route], route);
+}), "ordinary route choices discard prior motion, retain Drive, and start on each right shoulder", normal);
 
 var shifted = result && result.shifted || {};
 check(Object.keys(expectedStartLanes).every(function (route) {
-  return parkedOnRightShoulder(shifted[route], route);
-}), "Shift-click shortcuts discard the prior run and start parked on each right shoulder", shifted);
+  return stoppedInDriveOnRightShoulder(shifted[route], route);
+}), "Shift-click shortcuts discard prior motion, retain Drive, and start on each right shoulder", shifted);
 var shiftedCalgary = shifted.calgary && shifted.calgary.state || {};
 check(shiftedCalgary.route === "calgary" &&
   shiftedCalgary.routeElapsed === shiftedCalgary.calgarySeconds - 3,
   "Shift-click Calgary starts three seconds before its exit", shiftedCalgary);
+var driveStart = result && result.driveStart || {};
 var parked = result && result.parkedStart || {};
 var parkedThrottle = result && result.parkedThrottle || {};
 var engineOffThrottle = result && result.engineOffThrottle || {};
@@ -178,8 +181,8 @@ var restartedParkThrottle = result && result.restartedParkThrottle || {};
 var stationaryReverse = result && result.stationaryReverse || {};
 var validDrive = result && result.validDrive || {};
 var validCoast = result && result.validCoast || {};
-check(parked.engineOn && parked.range === "P" && parked.gear === 0 && parked.speed === 0,
-  "a fresh near-exit shortcut drops carried momentum and starts parked", parked);
+check(driveStart.engineOn && driveStart.range === "D" && driveStart.gear === 1 && driveStart.speed === 0,
+  "a fresh near-exit shortcut drops carried momentum without changing Drive", driveStart);
 check(parkedThrottle.range === "P" && parkedThrottle.gear === 0 && parkedThrottle.speed === 0 &&
   parkedThrottle.position === parked.position && parkedThrottle.distance === parked.distance &&
   parkedThrottle.routeElapsed === parked.routeElapsed,
@@ -201,8 +204,9 @@ check(stationaryReverse.range === "R" && stationaryReverse.gear === -1 && statio
   stationaryReverse.routeElapsed === parked.routeElapsed,
   "selecting Reverse at rest cannot advance the route as forward motion", stationaryReverse);
 check(validDrive.engineOn && validDrive.range === "D" && validDrive.gear > 0 &&
-  validDrive.speed > 0 && validDrive.distance > parked.distance && validDrive.routeElapsed > parked.routeElapsed,
-  "fresh acceleration begins after AUTO Drive is selected", validDrive);
+  validDrive.speed > 0 && validDrive.distance > driveStart.distance &&
+  validDrive.routeElapsed > driveStart.routeElapsed,
+  "fresh acceleration begins immediately when AUTO Drive was already selected", validDrive);
 check(validCoast.range === "D" && validCoast.gear > 0 && validCoast.speed > 0 &&
   validCoast.speed < validDrive.speed && validCoast.distance > validDrive.distance,
   "a valid drive gear retains ordinary throttle-release coasting", {
@@ -223,8 +227,8 @@ check(normalAbraham.route === "abraham" && normalAbraham.abrahamElapsed === 0,
 
 var longPressed = result && result.longPressed || {};
 check(Object.keys(expectedStartLanes).every(function (route) {
-  return parkedOnRightShoulder(longPressed[route], route);
-}), "mobile long-press shortcuts discard the prior run and start parked on each right shoulder", longPressed);
+  return stoppedInDriveOnRightShoulder(longPressed[route], route);
+}), "mobile long-press shortcuts discard prior motion, retain Drive, and start on each right shoulder", longPressed);
 var longCalgary = longPressed.calgary && longPressed.calgary.state || {};
 var longBanff = longPressed.banff && longPressed.banff.state || {};
 var longAbraham = longPressed.abraham && longPressed.abraham.state || {};

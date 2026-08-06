@@ -115,7 +115,7 @@ check(result && result.errors.length === 0, "the route phases render without unc
 var calgary = result && result.calgary || {};
 var calgaryState = calgary.state || {};
 check(calgaryState.route === "calgary" && calgaryState.routeElapsed < calgaryState.calgarySeconds &&
-  calgaryState.playerLane === 3.08 && calgaryState.maxLane === 3.32 &&
+  calgaryState.playerLane === 3.32 && calgaryState.maxLane === 3.32 &&
   Math.abs(calgaryState.laneFraction - (1.2 - .14) / 3) < .0001,
   "a fresh run starts on Calgary's outer shoulder with six-lane geometry", calgaryState);
 check(calgaryState.speedLimit === 110 && calgaryState.enforcementSpeed === 130 &&

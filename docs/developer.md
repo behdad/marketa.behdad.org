@@ -179,7 +179,7 @@ changing road geometry. Signs are projected beyond the current road edge by
 
 The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click or a
 touch long-press is a private test shortcut that begins three seconds before the chosen segment's
-exit. Every chooser launch clears carried motion and parks the transmission before the new route;
+exit. Every chooser launch clears carried motion while preserving the selected transmission setting;
 the compact re-entry control offers the exact paused run, a provisional fresh-route chooser, and a
 direct campsite return after `campVisited` is set. The chooser's open state, selected card, and
 campsite availability are checkpointed; recovery reopens the chooser without launching the route.

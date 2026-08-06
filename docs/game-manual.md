@@ -150,8 +150,8 @@ distance across street and highway driving and survives engine stops and Continu
 
 Complete one forward street lap to unlock **Road Trip**. Accept the invitation, then choose
 Calgary, Banff, or Abraham Lake as the starting segment. A private testing shortcut starts near a
-segment's exit when its chooser item is Shift-clicked. Each new route starts parked and waits for
-the engine and a drive gear.
+segment's exit when its chooser item is Shift-clicked. Each new route starts stopped on the shoulder
+without changing the selected transmission setting.
 
 Road Trip uses the same steering, transmission, accelerator, and brake:
 

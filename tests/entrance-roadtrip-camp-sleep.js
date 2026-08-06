@@ -45,6 +45,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       darkness: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).opacity),
       darknessFill: document.getElementById("entrance-roadtrip-camp-finale-darkness").getAttribute("fill"),
       darknessPointer: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).pointerEvents,
+      windshieldGlaze: getComputedStyle(document.getElementById("entrance-roadtrip-windshield-glaze")).visibility,
       nightSky: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-night-sky")).opacity),
       nightSkyUses: document.querySelectorAll("#entrance-roadtrip-camp-finale-night-sky use").length,
       zzzs: document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz").length,
@@ -182,8 +183,9 @@ check(result && result.tentLit && result.tentLit.phase === "tent-lit" && !result
   "the tent closes and glows", result && result.tentLit);
 check(result && result.dark && result.dark.phase === "dark" && result.dark.darkness === .78 &&
   result.dark.darknessFill === "#061b2c" && result.dark.nightSky === 1 &&
-  result.dark.nightSkyUses === 4 && result.dark.tentLight === 1,
-  "the campsite settles into deep navy while the stars and solved constellations stay bright",
+  result.dark.nightSkyUses === 4 && result.dark.tentLight === 1 &&
+  result.dark.windshieldGlaze === "hidden",
+  "the campsite settles into seamless deep navy while the stars and solved constellations stay bright",
   result && result.dark);
 check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight === 0 &&
   result.zzz.zzzs === 3 && result.zzz.classes.indexOf("zzz") >= 0,

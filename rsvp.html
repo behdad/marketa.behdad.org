@@ -33039,11 +33039,11 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
               <path d="M20-53H39M31-61L39-53L31-45" fill="none" stroke="#f8f5ec" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
             </g>
             <g id="entrance-roadtrip-camp-sign">
-              <path d="M0 0V-50" stroke="#697276" stroke-width="3"/>
-              <rect x="-42" y="-67" width="84" height="30" rx="3" fill="#356849" stroke="#e8e5d7" stroke-width="2"/>
-              <text x="-34" y="-48" font-size="8" font-family="Arial,sans-serif" font-weight="700" fill="#f8f5ec"
+              <path d="M0 0V-56" stroke="#697276" stroke-width="3.5"/>
+              <rect x="-56" y="-78" width="112" height="39" rx="4" fill="#356849" stroke="#e8e5d7" stroke-width="2.5"/>
+              <text x="-45" y="-53" font-size="11" font-family="Arial,sans-serif" font-weight="700" fill="#f8f5ec"
                 data-i="entrance_roadtrip_camp_sign">CAMPING</text>
-              <path d="M17-52H32M25-59L32-52L25-45" fill="none" stroke="#f8f5ec" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M26-59H45M36-69L46-59L36-49" fill="none" stroke="#f8f5ec" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
             </g>
             <g id="entrance-roadtrip-curve-sign-right">
               <path d="M0 0V-42" stroke="#697276" stroke-width="3"/>
@@ -33441,6 +33441,12 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                 <path d="M495 25Q588 29 680 42V55Q598 38 506 36Z" fill="#8ea6ac"/>
                 <path d="M524 50Q601 55 680 72V83Q615 65 541 61Z" fill="#b2c3c4"/>
                 <path d="M0 39Q91 27 179 25M501 25Q589 27 680 39" fill="none" stroke="#fffdf4" stroke-width="1.4" opacity=".8"/>
+              </g>
+              <g id="entrance-roadtrip-camp-spur" visibility="hidden" pointer-events="none">
+                <path class="entrance-roadtrip-shoulder entrance-roadtrip-camp-spur-shoulder"/>
+                <path class="entrance-roadtrip-asphalt entrance-roadtrip-camp-spur-asphalt"/>
+                <path class="entrance-roadtrip-edge entrance-roadtrip-camp-spur-inner-edge"/>
+                <path class="entrance-roadtrip-edge entrance-roadtrip-camp-spur-outer-edge"/>
               </g>
               <g id="entrance-roadtrip-headlights" visibility="hidden">
                 <path id="entrance-roadtrip-headlight-left" fill="url(#entrance-roadtrip-headlight-beam)" fill-opacity=".42" filter="url(#entrance-roadtrip-headlight-soft)"/>
@@ -37329,7 +37335,13 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_LAKE_TURNOFF_SECONDS = ROADTRIP_LAKE_TURNOFF_DESKTOP_SECONDS * ROADTRIP_DURATION_SCALE;
   var ROADTRIP_ABRAHAM_SECONDS = ROADTRIP_ABRAHAM_DESKTOP_SECONDS * ROADTRIP_DURATION_SCALE;
   var ROADTRIP_SHORTCUT_REMAINING_SECONDS = 3;
-  var ROADTRIP_CAMP_SIGN_SECONDS = 6 * ROADTRIP_DURATION_SCALE;
+  var ROADTRIP_CAMP_SIGN_SECONDS = 7;
+  var ROADTRIP_CAMP_EXIT_LEAD_SECONDS = 2.4;
+  var ROADTRIP_CAMP_EXIT_TAIL_SECONDS = 1.2;
+  var ROADTRIP_CAMP_EXIT_REPEAT_DESKTOP_SECONDS = 60;
+  var ROADTRIP_CAMP_EXIT_REPEAT_MOBILE_SECONDS = 45;
+  var ROADTRIP_CAMP_EXIT_REPEAT_SECONDS = window.matchMedia("(pointer: coarse)").matches ?
+    ROADTRIP_CAMP_EXIT_REPEAT_MOBILE_SECONDS : ROADTRIP_CAMP_EXIT_REPEAT_DESKTOP_SECONDS;
   var ROADTRIP_CAMP_ARRIVAL_SPEED = 10;
   var ROADTRIP_CAMP_BRAKE_RATE = 2.4;
   var ROADTRIP_CENTERLINE_ENFORCE_LANE = -.18;
@@ -37440,6 +37452,7 @@ window.__entranceRoomOpen = false;
   var roadtripBanffExitNode = null;
   var roadtripAbrahamExitNode = null;
   var roadtripCampExitNode = null;
+  var roadtripCampSpurNode = null;
   var driveSceneryLayers = null;
   var roadtripSceneryLayers = null;
   var roadtripPoliceRoadNode = null;
@@ -37489,6 +37502,8 @@ window.__entranceRoomOpen = false;
     banffElapsed: 0,
     lakeTurnoffElapsed: 0,
     abrahamElapsed: 0,
+    campExitCountdown: ROADTRIP_ABRAHAM_SECONDS,
+    campExitLatched: false,
     routeChoice: "calgary",
     routeChooserOpen: false,
     distance: 0,
@@ -38356,6 +38371,7 @@ window.__entranceRoomOpen = false;
     if (!roadtripBanffExitNode) roadtripBanffExitNode = roadtripElement("entrance-roadtrip-banff-exit");
     if (!roadtripAbrahamExitNode) roadtripAbrahamExitNode = roadtripElement("entrance-roadtrip-abraham-exit");
     if (!roadtripCampExitNode) roadtripCampExitNode = roadtripElement("entrance-roadtrip-camp-exit");
+    if (!roadtripCampSpurNode) roadtripCampSpurNode = roadtripElement("entrance-roadtrip-camp-spur");
     var mirrorTrees = roadtripElement("entrance-roadtrip-mirror-trees");
     if (!roadtripMirrorTreePool.length && mirrorTrees) {
       for (var mirrorTreeIndex = 0; mirrorTreeIndex < 8; mirrorTreeIndex++) {
@@ -41309,9 +41325,39 @@ window.__entranceRoomOpen = false;
     event.stopImmediatePropagation();
     closeCampNotebook();
   }, true);
+  function roadtripCampExitCountdownAt(elapsed) {
+    elapsed = Math.max(0, Number(elapsed) || 0);
+    if (elapsed <= ROADTRIP_ABRAHAM_SECONDS) return ROADTRIP_ABRAHAM_SECONDS - elapsed;
+    var phase = (elapsed - ROADTRIP_ABRAHAM_SECONDS) % ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
+    return phase <= .000001 ? 0 : ROADTRIP_CAMP_EXIT_REPEAT_SECONDS - phase;
+  }
+  function roadtripCampExitTiming() {
+    var countdown = Number(roadtripState.campExitCountdown);
+    if (!Number.isFinite(countdown)) countdown = roadtripCampExitCountdownAt(roadtripState.abrahamElapsed);
+    var approaching = countdown <= ROADTRIP_CAMP_SIGN_SECONDS &&
+      countdown >= -ROADTRIP_CAMP_EXIT_TAIL_SECONDS;
+    var visible = roadtripState.route === "abraham" && (roadtripState.campExitLatched || approaching);
+    return {
+      countdown: countdown,
+      visible: visible,
+      takeable: visible && !roadtripState.campExitLatched && countdown <= ROADTRIP_CAMP_EXIT_LEAD_SECONDS,
+      progress: roadtripState.campExitLatched ? 1 : visible ? Math.max(0, Math.min(1,
+        (ROADTRIP_CAMP_SIGN_SECONDS - countdown) /
+        (ROADTRIP_CAMP_SIGN_SECONDS + ROADTRIP_CAMP_EXIT_TAIL_SECONDS))) : 0
+    };
+  }
+  function syncRoadtripCampExit() {
+    if (roadtripState.route !== "abraham" || roadtripState.campExitLatched) return false;
+    var timing = roadtripCampExitTiming();
+    if (!timing.takeable || roadtripState.playerLane < ROADTRIP_ABRAHAM_RUMBLE_LANE) return false;
+    roadtripState.campExitLatched = true;
+    roadtripState.campExitCountdown = ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
+    setPorscheCruiseActive(false);
+    setPorscheDriveHold("throttle", false);
+    return true;
+  }
   function syncRoadtripCampApproachSpeed(seconds) {
-    if (roadtripState.route !== "abraham") return;
-    if (roadtripState.abrahamElapsed < ROADTRIP_ABRAHAM_SECONDS) return;
+    if (roadtripState.route !== "abraham" || !roadtripState.campExitLatched) return;
     var speed = Math.abs(Number(driveState.speed) || 0);
     if (speed < ROADTRIP_CAMP_ARRIVAL_SPEED) {
       arriveRoadtripCamp();
@@ -41322,6 +41368,11 @@ window.__entranceRoomOpen = false;
     if (eased < ROADTRIP_CAMP_ARRIVAL_SPEED) arriveRoadtripCamp();
   }
   function arriveRoadtripCamp(preserveCamp) {
+    if (!preserveCamp && roadtripState.route === "abraham" && roadtripState.campExitLatched) {
+      roadtripState.campExitLatched = false;
+      roadtripState.campExitCountdown = ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
+      roadtripCampResumeRun = captureRoadtripRun();
+    }
     var firstVisit = !roadtripState.campVisited;
     driveCoachStep = 5;
     driveCoachComplete = true;
@@ -41419,6 +41470,8 @@ window.__entranceRoomOpen = false;
         roadtripState.route = "abraham";
         roadtripState.lakeTurnoffElapsed = ROADTRIP_LAKE_TURNOFF_SECONDS;
         roadtripState.abrahamElapsed = 0;
+        roadtripState.campExitCountdown = ROADTRIP_ABRAHAM_SECONDS;
+        roadtripState.campExitLatched = false;
         roadtripState.playerLane = roadtripState.playerLane < 0 ? -.5 : ROADTRIP_ABRAHAM_START_LANE;
         clearRoadtripEntities();
         roadtripState.nextSpawnDistance = roadtripState.distance + 24;
@@ -41426,8 +41479,13 @@ window.__entranceRoomOpen = false;
         roadtripFeedback("entrance_roadtrip_abraham_arrival");
       }
     } else if (roadtripState.route === "abraham") {
-      roadtripState.abrahamElapsed = Math.min(ROADTRIP_ABRAHAM_SECONDS,
-        roadtripState.abrahamElapsed + seconds);
+      roadtripState.abrahamElapsed += seconds;
+      if (!roadtripState.campExitLatched) {
+        roadtripState.campExitCountdown -= seconds;
+        while (roadtripState.campExitCountdown < -ROADTRIP_CAMP_EXIT_TAIL_SECONDS) {
+          roadtripState.campExitCountdown += ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
+        }
+      }
     }
   }
   function roadtripTerrainPhase(distance) {
@@ -42591,6 +42649,45 @@ window.__entranceRoomOpen = false;
     node.setAttribute("transform", "translate(" + x.toFixed(2) + " " +
       point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
   }
+  function paintRoadtripCampSpur(point, progress) {
+    if (!roadtripCampSpurNode) return;
+    var perspective = point.perspective;
+    var center = roadtripProjectLateral(point, 0);
+    var joinInner = center + point.halfWidth * .28;
+    var joinOuter = roadtripProjectLateral(point, 1.08);
+    var joinY = point.y;
+    var mouthTopY = Math.min(91, joinY + 10 + perspective * 28 + progress * 7);
+    var mouthBottomY = Math.min(96, mouthTopY + 12 + perspective * 19);
+    var shoulderInset = 2 + perspective * 5;
+    var shoulder = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-shoulder");
+    var asphalt = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-asphalt");
+    var innerEdge = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-inner-edge");
+    var outerEdge = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-outer-edge");
+    if (shoulder) shoulder.setAttribute("d", "M" + (joinInner - shoulderInset).toFixed(2) + " " +
+      (joinY - shoulderInset).toFixed(2) + "L" + (joinOuter + shoulderInset).toFixed(2) + " " +
+      (joinY + shoulderInset).toFixed(2) + "Q" + (joinOuter + 80 + perspective * 120).toFixed(2) + " " +
+      (joinY + 16).toFixed(2) + " 680 " + (mouthBottomY + shoulderInset).toFixed(2) + "V" +
+      (mouthTopY - shoulderInset).toFixed(2) + "Q" + (joinInner + 58 + perspective * 90).toFixed(2) + " " +
+      (joinY + 5).toFixed(2) + " " + (joinInner - shoulderInset).toFixed(2) + " " +
+      (joinY - shoulderInset).toFixed(2) + "Z");
+    if (asphalt) asphalt.setAttribute("d", "M" + joinInner.toFixed(2) + " " + joinY.toFixed(2) +
+      "L" + joinOuter.toFixed(2) + " " + joinY.toFixed(2) + "Q" +
+      (joinOuter + 76 + perspective * 115).toFixed(2) + " " + (joinY + 15).toFixed(2) +
+      " 680 " + mouthBottomY.toFixed(2) + "V" + mouthTopY.toFixed(2) + "Q" +
+      (joinInner + 56 + perspective * 86).toFixed(2) + " " + (joinY + 5).toFixed(2) + " " +
+      joinInner.toFixed(2) + " " + joinY.toFixed(2) + "Z");
+    if (innerEdge) innerEdge.setAttribute("d", "M" + joinInner.toFixed(2) + " " + joinY.toFixed(2) +
+      "Q" + (joinInner + 56 + perspective * 86).toFixed(2) + " " + (joinY + 5).toFixed(2) +
+      " 680 " + mouthTopY.toFixed(2));
+    if (outerEdge) outerEdge.setAttribute("d", "M" + joinOuter.toFixed(2) + " " + joinY.toFixed(2) +
+      "Q" + (joinOuter + 76 + perspective * 115).toFixed(2) + " " + (joinY + 15).toFixed(2) +
+      " 680 " + mouthBottomY.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-x", joinInner.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-y", joinY.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-mouth-top", mouthTopY.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-mouth-bottom", mouthBottomY.toFixed(2));
+    roadtripCampSpurNode.setAttribute("visibility", "visible");
+  }
   function paintRoadtripRoad() {
     if (!roadtripState.active) return;
     ensureRoadtripScene();
@@ -42727,19 +42824,23 @@ window.__entranceRoomOpen = false;
       }
     }
     if (roadtripCampExitNode) {
-      var campSignStart = ROADTRIP_ABRAHAM_SECONDS - ROADTRIP_CAMP_SIGN_SECONDS;
-      if (roadtripState.route === "abraham" && roadtripState.abrahamElapsed >= campSignStart &&
-          roadtripState.abrahamElapsed < ROADTRIP_ABRAHAM_SECONDS) {
-        var campSignProgress = Math.max(0, Math.min(1,
-          (roadtripState.abrahamElapsed - campSignStart) / ROADTRIP_CAMP_SIGN_SECONDS));
-        var campSignRemaining = 104 - campSignProgress * 82;
+      var campTiming = roadtripCampExitTiming();
+      if (campTiming.visible) {
+        var campSignProgress = campTiming.progress;
+        var campSignRemaining = 106 - campSignProgress * 86;
         var campSignPoint = roadtripProject(campSignRemaining);
-        var campSignScale = .16 + campSignPoint.perspective * .82;
-        positionRoadtripExitSign(roadtripCampExitNode, campSignPoint, campSignScale, 42);
+        var campSignScale = .19 + campSignPoint.perspective * .98;
+        positionRoadtripExitSign(roadtripCampExitNode, campSignPoint, campSignScale, 56);
+        roadtripCampExitNode.setAttribute("data-roadtrip-takeable", campTiming.takeable ? "true" : "false");
         roadtripCampExitNode.setAttribute("visibility", "visible");
+        paintRoadtripCampSpur(campSignPoint, campSignProgress);
       } else {
         roadtripCampExitNode.setAttribute("visibility", "hidden");
+        roadtripCampExitNode.setAttribute("data-roadtrip-takeable", "false");
+        if (roadtripCampSpurNode) roadtripCampSpurNode.setAttribute("visibility", "hidden");
       }
+    } else if (roadtripCampSpurNode) {
+      roadtripCampSpurNode.setAttribute("visibility", "hidden");
     }
     paintRoadtripHeadlights();
     paintRoadtripCurveSigns();
@@ -43546,6 +43647,8 @@ window.__entranceRoomOpen = false;
     roadtripState.banffElapsed = 0;
     roadtripState.lakeTurnoffElapsed = 0;
     roadtripState.abrahamElapsed = 0;
+    roadtripState.campExitCountdown = ROADTRIP_ABRAHAM_SECONDS;
+    roadtripState.campExitLatched = false;
     roadtripState.distance = 0;
     roadtripState.distancePoints = 0;
     roadtripState.elapsedSeconds = 0;
@@ -43598,6 +43701,9 @@ window.__entranceRoomOpen = false;
       route === "banff" ? elapsed : 0;
     roadtripState.lakeTurnoffElapsed = route === "abraham" ? ROADTRIP_LAKE_TURNOFF_SECONDS : 0;
     roadtripState.abrahamElapsed = route === "abraham" ? elapsed : 0;
+    roadtripState.campExitCountdown = route === "abraham" ?
+      roadtripCampExitCountdownAt(elapsed) : ROADTRIP_ABRAHAM_SECONDS;
+    roadtripState.campExitLatched = false;
     roadtripState.playerLane = route === "calgary" ? ROADTRIP_START_LANE :
       route === "banff" ? ROADTRIP_BANFF_START_LANE : ROADTRIP_ABRAHAM_START_LANE;
     clearRoadtripEntities();
@@ -43654,6 +43760,8 @@ window.__entranceRoomOpen = false;
     roadtripFurniturePool.forEach(function (item) { item.node.setAttribute("visibility", "hidden"); });
     roadtripCurveSignPool.forEach(function (node) { node.setAttribute("visibility", "hidden"); });
     roadtripLaneMarks.forEach(function (mark) { mark.setAttribute("visibility", "hidden"); });
+    if (roadtripCampExitNode) roadtripCampExitNode.setAttribute("visibility", "hidden");
+    if (roadtripCampSpurNode) roadtripCampSpurNode.setAttribute("visibility", "hidden");
     room.classList.remove("roadtrip-on-shoulder", "roadtrip-on-gravel");
     if (driveHudSvg) driveHudSvg.classList.remove("roadtrip-shoulder-rumble");
     hideRoadtripPoliceVisuals();
@@ -43800,6 +43908,7 @@ window.__entranceRoomOpen = false;
     distance = Number(distance) || 0;
     roadtripState.elapsedSeconds += Math.max(0, Number(seconds) || 0);
     syncRoadtripRoute(seconds);
+    syncRoadtripCampExit();
     syncRoadtripCampApproachSpeed(seconds);
     if (roadtripState.route === "camp") {
       driveState.speed = 0;
@@ -46049,7 +46158,8 @@ window.__entranceRoomOpen = false;
     held = !!held;
     if (name === "brake" && held) setPorscheCruiseActive(false);
     if (name === "clutch" && porscheTransmission.mode === "auto") held = false;
-    if (name === "throttle" && held && roadtripFrontStopBlocksDrive()) held = false;
+    if (name === "throttle" && held &&
+        (roadtripFrontStopBlocksDrive() || roadtripState.campExitLatched)) held = false;
     // The pedal may still press with the ignition off, but it is not a driving
     // input then: do not wake a parked simulation or release Road Trip's
     // attention pause. An already-moving car keeps its existing coast loop.
@@ -46101,10 +46211,9 @@ window.__entranceRoomOpen = false;
     if (!window.__entranceRoomOpen || !driveState.hudOpen || !porscheState.engineOn ||
         driveState.stalled || driveState.gear <= 0 || relativeSpeed < 10 || driveState.holds.brake) return false;
     if (porscheTransmission.mode === "auto" && porscheTransmission.range !== "D") return false;
-    if (roadtripState.exitUntilStop || roadtripFrontStopBlocksDrive() ||
+    if (roadtripState.exitUntilStop || roadtripState.campExitLatched || roadtripFrontStopBlocksDrive() ||
         ["capture", "stopped", "arrest"].indexOf(roadtripState.police.phase) >= 0) return false;
-    return !(roadtripState.active && (roadtripState.route === "camp" ||
-      roadtripState.route === "abraham" && roadtripState.abrahamElapsed >= ROADTRIP_ABRAHAM_SECONDS));
+    return !(roadtripState.active && roadtripState.route === "camp");
   }
   function setPorscheCruiseActive(active) {
     active = !!active;
@@ -46291,7 +46400,8 @@ window.__entranceRoomOpen = false;
     if (porscheTouchPedals.pointerId !== null && !porscheTouchPedals.input &&
         Number.isFinite(porscheTouchPedals.holdSpeed) &&
         !(porscheTransmission.mode === "auto" && porscheTransmission.range === "P") &&
-        !(roadtripState.active && (roadtripState.exitUntilStop || roadtripFrontStopBlocksDrive() ||
+        !(roadtripState.active && (roadtripState.exitUntilStop || roadtripState.campExitLatched ||
+          roadtripFrontStopBlocksDrive() ||
           ["capture", "stopped", "arrest"].indexOf(roadtripState.police.phase) >= 0))) {
       driveState.speed = porscheTouchPedals.holdSpeed;
     }
@@ -47487,6 +47597,11 @@ window.__entranceRoomOpen = false;
           banffElapsed: roadtripState.banffElapsed,
           lakeTurnoffElapsed: roadtripState.lakeTurnoffElapsed,
           abrahamElapsed: roadtripState.abrahamElapsed,
+          campExitCountdown: roadtripState.campExitCountdown,
+          campExitLatched: roadtripState.campExitLatched,
+          campExitVisible: roadtripCampExitTiming().visible,
+          campExitTakeable: roadtripCampExitTiming().takeable,
+          campExitRepeatSeconds: ROADTRIP_CAMP_EXIT_REPEAT_SECONDS,
           routeChoice: roadtripState.routeChoice,
           routeChooserOpen: roadtripState.routeChooserOpen,
           durationScale: ROADTRIP_DURATION_SCALE,
@@ -47793,8 +47908,11 @@ window.__entranceRoomOpen = false;
     roadtripState.lakeTurnoffElapsed = route === "lake-turnoff" ?
       Math.min(ROADTRIP_LAKE_TURNOFF_SECONDS, elapsed) :
       ["abraham", "camp"].indexOf(route) >= 0 ? ROADTRIP_LAKE_TURNOFF_SECONDS : 0;
-    roadtripState.abrahamElapsed = route === "abraham" ? Math.min(ROADTRIP_ABRAHAM_SECONDS, elapsed) :
+    roadtripState.abrahamElapsed = route === "abraham" ? Math.min(1000000000, elapsed) :
       route === "camp" ? ROADTRIP_ABRAHAM_SECONDS : 0;
+    roadtripState.campExitCountdown = route === "abraham" ?
+      roadtripCampExitCountdownAt(roadtripState.abrahamElapsed) : ROADTRIP_ABRAHAM_SECONDS;
+    roadtripState.campExitLatched = false;
     if (Math.abs(roadtripState.playerLane) > roadtripMaxLane()) {
       roadtripState.playerLane = roadtripState.playerLane < 0 ? -roadtripOuterLane() : roadtripOuterLane();
     }
@@ -48039,7 +48157,8 @@ window.__entranceRoomOpen = false;
   function captureRoadtripRun() {
     var state = {};
     ["exitUntilStop", "route", "routeElapsed", "turnoffElapsed", "banffElapsed", "lakeTurnoffElapsed",
-      "abrahamElapsed", "routeChoice", "playerLane", "distance", "distancePoints", "elapsedSeconds", "score", "multiplier",
+      "abrahamElapsed", "campExitCountdown", "campExitLatched", "routeChoice", "playerLane", "distance",
+      "distancePoints", "elapsedSeconds", "score", "multiplier",
       "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
       "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "centerlineElapsed",
       "centerlineEnforced", "shoulderZone", "shoulderDistance",
@@ -48124,8 +48243,13 @@ window.__entranceRoomOpen = false;
     roadtripState.banffElapsed = roadtripSnapshotNumber(saved.banffElapsed, 0, 0, ROADTRIP_BANFF_SECONDS);
     roadtripState.lakeTurnoffElapsed = roadtripSnapshotNumber(saved.lakeTurnoffElapsed, 0, 0,
       ROADTRIP_LAKE_TURNOFF_SECONDS);
-    roadtripState.abrahamElapsed = roadtripSnapshotNumber(saved.abrahamElapsed, 0, 0,
-      ROADTRIP_ABRAHAM_SECONDS);
+    roadtripState.abrahamElapsed = roadtripSnapshotNumber(saved.abrahamElapsed, 0, 0, 1000000000);
+    roadtripState.campExitCountdown = roadtripSnapshotNumber(saved.campExitCountdown,
+      roadtripState.route === "abraham" ? roadtripCampExitCountdownAt(roadtripState.abrahamElapsed) :
+        ROADTRIP_ABRAHAM_SECONDS,
+      -ROADTRIP_CAMP_EXIT_TAIL_SECONDS,
+      roadtripState.route === "abraham" ? ROADTRIP_CAMP_EXIT_REPEAT_SECONDS : 1000000000);
+    roadtripState.campExitLatched = saved.campExitLatched === true && roadtripState.route === "abraham";
     roadtripState.routeChoice = ["calgary", "banff", "abraham"].indexOf(saved.routeChoice) >= 0 ?
       saved.routeChoice : roadtripState.route === "abraham" || roadtripState.route === "camp" ?
         "abraham" : roadtripState.route === "banff" || roadtripState.route === "lake-turnoff" ? "banff" : "calgary";

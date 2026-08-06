@@ -51,11 +51,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceRoadtripStart();
         window.__entranceRoadtripSetRoute("abraham", 75);
+        window.__entranceRoadtripSetLane(1);
         window.__entranceDriveSetMotion(0, 1);
         window.__entranceDriveStep(100);
         report.noMomentum = snapshot();
 
         window.__entranceRoadtripSetRoute("abraham", 74.5);
+        window.__entranceRoadtripSetLane(1);
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
         window.__entranceDriveSetMotion(80, 1);
         var campSign = document.getElementById("entrance-roadtrip-camp-exit");
@@ -159,8 +161,8 @@ check(result && result.slowing && result.slowing.route === "abraham" &&
 check(result && result.signApproach && result.signApproach.visibility === "visible" &&
   /translate\(/.test(result.signApproach.transform || "") &&
   result.signApproach.en === "CAMPING" && result.signApproach.cs === "KEMP" &&
-  result.signAfterEntrance === "hidden",
-  "a bilingual right-turn camping sign passes on the final Abraham approach", result && result.signApproach);
+  result.signAfterEntrance === "visible",
+  "a bilingual right-turn camping sign remains through the latched Abraham turn", result && result.signApproach);
 check(result && campIsOpen(result.arrival),
   "the camp fades in once the autonomous slowdown drops below 10 km/h", result && result.arrival);
 check(result && result.dismiss.displayed === "grid" && result.dismiss.type === "button",

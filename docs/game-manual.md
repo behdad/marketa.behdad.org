@@ -157,7 +157,8 @@ Road Trip uses the same steering, transmission, accelerator, and brake:
 
 - Calgary is a straight divided highway with a 110 km/h limit.
 - The Banff leg narrows, curves through the mountains, and has a 90 km/h limit.
-- The Abraham Lake road has one lane each way, wildlife, lake views, and a 100 km/h limit.
+- The Abraham Lake road has one lane each way, wildlife, lake views, and a 100 km/h limit. Its
+  Camping turnoff is optional: move onto the right shoulder when the sign and side road arrive.
 
 AUTO provides gentle curve assistance; MANUAL leaves curve steering to the player. Traffic,
 shoulders, gravel, weather, seasons, wildlife, and police affect the trip. Leaving an active highway
@@ -177,10 +178,11 @@ Distance, clean passes, avoided wildlife, and pickups earn points. Clean actions
 to `3×`; collisions reset it and can damage the windshield, stall the engine, or knock the
 transmission into neutral.
 
-At the Camping sign, the car slows automatically and enters camp below 10 km/h; no remaining
-momentum or extra acceleration is required. Click the empty pit, add tinder, kindling, and either
-log arrangement, then light it. A pinecone dropped from the campsite trees can replace the twigs;
-missing fuel burns out, and the campsite remains open for exploration.
+Taking the Camping turnoff latches an automatic slowdown and enters camp below 10 km/h; no remaining
+momentum or extra acceleration is required. Staying on the through lane continues the trip and brings
+the exit back after 60 seconds (45 on touch-first devices). Click the empty pit, add tinder,
+kindling, and either log arrangement, then light it. A pinecone dropped from the campsite trees can
+replace the twigs; missing fuel burns out, and the campsite remains open for exploration.
 
 After the fire grows, a cooking invitation pulses, then remains above the camp. Serving dinner or
 putting the fire out restores the RSVP reminder. Continue returns directly to Camping and retains a

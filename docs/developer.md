@@ -170,7 +170,8 @@ cannot transition independently. Weather and time reuse Entrance state.
 `drive.roadtrip.route` owns:
 
 ```text
-calgary → turnoff → banff → lake-turnoff → abraham → camp
+calgary → turnoff → banff → lake-turnoff → abraham ↺
+                                                └→ camp (optional)
 ```
 
 The route is part of the version-2 paused-run snapshot. Route changes clear live entities before
@@ -187,7 +188,8 @@ Checkpoint recovery retains the saved Entrance/dashboard presentation and interr
 snapshot, but leaves explicit re-entry to Road Trip → Continue. Continue activates the retained
 presentation with `roadtripResumePending` set, so transport Play or fresh driving input owns the
 actual resume. A saved `camp` route still restores its camp presentation directly.
-Touch-first devices scale attended route and turnoff durations to 72%.
+Touch-first devices scale attended route and turnoff durations to 72%. Abraham's optional campsite
+exit then recurs after 60 attended seconds on fine pointers and 45 on coarse pointers.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
 spawn plans deterministic from the run seed and never add timer-driven unbounded entities.
@@ -196,8 +198,10 @@ spawn plans deterministic from the run seed and never add timer-driven unbounded
 
 ### Camping
 
-At the Abraham entrance, `syncRoadtripCampApproachSpeed()` slows the car independently of throttle
-or momentum. Below 10 km/h, `arriveRoadtripCamp()` parks the drivetrain and activates the camp
+`campExitCountdown` preserves Abraham's recurring-exit phase. During its projected sign/spur window,
+crossing onto the right shoulder makes `syncRoadtripCampExit()` latch the turn. Only that latch lets
+`syncRoadtripCampApproachSpeed()` slow independently of throttle or momentum. Below 10 km/h,
+`arriveRoadtripCamp()` retains the Abraham snapshot, parks the drivetrain, and activates the camp
 overlay inside Entrance.
 
 Camping begins with an empty pit and publishes `entrance_roadtrip_camp_fire_invite` through
@@ -252,7 +256,8 @@ space. Camper placement stays on the outer group, drag offsets stay on
 `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the nested head.
 `ensureRoadtripCampPorsche()` owns the generated prop hit map and bounded body drag.
 
-Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
+Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-exit.js`,
+`tests/entrance-roadtrip-camp-fire.js`,
 `tests/entrance-roadtrip-camp-pinecone-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`,

@@ -26,6 +26,7 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
         var moon = document.getElementById("entrance-roadtrip-camp-moon");
         var moonPhase = document.getElementById("entrance-roadtrip-camp-moon-phase");
         var snow = document.getElementById("entrance-roadtrip-camp-winter-snow");
+        var iceBubbles = document.getElementById("entrance-roadtrip-camp-ice-bubbles");
         report.day = {
           entranceDay: room.classList.contains("entrance-day"),
           sunOpacity: getComputedStyle(sun).opacity,
@@ -87,13 +88,16 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
         report.winter = {
           season: room.getAttribute("data-roadtrip-season"),
           stamped: room.classList.contains("entrance-roadtrip-season-winter"),
-          snowOpacity: getComputedStyle(snow).opacity
+          snowOpacity: getComputedStyle(snow).opacity,
+          bubbleOpacity: getComputedStyle(iceBubbles).opacity,
+          bubblePointer: getComputedStyle(iceBubbles).pointerEvents
         };
         window.__applySeason("summer", true);
         await new Promise(function (resolve) { setTimeout(resolve, 40); });
         report.summer = {
           season: room.getAttribute("data-roadtrip-season"),
-          snowOpacity: getComputedStyle(snow).opacity
+          snowOpacity: getComputedStyle(snow).opacity,
+          bubbleOpacity: getComputedStyle(iceBubbles).opacity
         };
       } catch (error) {
         report.errors.push(String(error && error.stack || error));
@@ -122,6 +126,14 @@ check(/\["entrance-roadtrip-camp-moon-phase", 590, -86, 15\]/.test(source),
   "the camp moon participates in the shared phase painter");
 check((source.match(/<path d="M(?:27|102|176|266|348|430|522|615)-/g) || []).length === 8,
   "winter adds snow across all eight campsite peaks");
+var lakeAt = source.indexOf('id="entrance-roadtrip-camp-lake"');
+var bubblesAt = source.indexOf('id="entrance-roadtrip-camp-ice-bubbles"');
+var wavesAt = source.indexOf('id="entrance-roadtrip-camp-lake-waves"');
+var iceBubbleArt = source.match(/<g id="entrance-roadtrip-camp-ice-bubbles"[\s\S]*?<\/g>\s*<path id="entrance-roadtrip-camp-lake-waves"/);
+check(lakeAt >= 0 && bubblesAt > lakeAt && wavesAt > bubblesAt,
+  "trapped bubbles paint over the lake fill but beneath its surface waves");
+check(iceBubbleArt && (iceBubbleArt[0].match(/<ellipse/g) || []).length >= 30,
+  "winter ice carries a field of layered methane-bubble clusters");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 2600, {
   patchRaf: true,
@@ -149,10 +161,13 @@ check(result && result.clouded.stamped && Number(result.clouded.starsOpacity) > 
   result.clouded.hiddenDisplay === "none" && Number(result.clouded.constellationsOpacity) === 0 &&
   Number(result.clouded.moonOpacity) === 0 && result.clouded.sunPointer === "none" && result.clouded.moonPointer === "none",
   "cloud cover keeps only eight dim animated stars and hides the moon", result && result.clouded);
-check(result && result.winter.stamped && result.winter.season === "winter" && Number(result.winter.snowOpacity) > 0,
-  "winter reveals the expanded mountain snow", result && result.winter);
-check(result && result.summer.season === "summer" && Number(result.summer.snowOpacity) === 0,
-  "the expanded snow retreats outside winter", result && result.summer);
+check(result && result.winter.stamped && result.winter.season === "winter" &&
+  Number(result.winter.snowOpacity) > 0 && Number(result.winter.bubbleOpacity) > 0 &&
+  result.winter.bubblePointer === "none",
+  "winter reveals mountain snow and inert bubbles beneath the frozen lake", result && result.winter);
+check(result && result.summer.season === "summer" && Number(result.summer.snowOpacity) === 0 &&
+  Number(result.summer.bubbleOpacity) === 0,
+  "snow and trapped bubbles retreat outside winter", result && result.summer);
 
 if (failures) process.exit(1);
 console.log("Abraham Lake campsite sky checks passed.");

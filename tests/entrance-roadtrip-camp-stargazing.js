@@ -197,6 +197,7 @@ check(result && result.partialRestored && !result.partialRestored.state.open &&
   "Continue restores progress with the popup closed", result && result.partialRestored);
 check(result && result.complete && result.complete.state.complete && !result.complete.state.open &&
   !result.complete.openClass && result.complete.liveOpacity === 1 &&
+  result.complete.skyPointer === "none" &&
   result.complete.liveConstellations === 3 && result.complete.moonAfterConstellations && result.complete.wisdomShown &&
   result.complete.wisdomBubbles === 4 && result.complete.wisdomSpeakers === 0 &&
   result.complete.wisdomText.indexOf("Until that ends as well.") >= 0 &&

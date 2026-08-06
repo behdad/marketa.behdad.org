@@ -2815,10 +2815,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 #hunt-floor-btn[hidden]{display:none}
 #hunt-floor-coach{
   position:absolute; right:-.2rem; bottom:calc(100% + .55rem); z-index:20;
-  max-width:min(15rem,72vw); padding:.38rem .62rem; border-radius:8px;
+  max-width:min(15rem,72vw); padding:.38rem 1.55rem .38rem .62rem; border-radius:8px;
   background:var(--paper); color:var(--wine); border:1px solid var(--wine);
   box-shadow:0 3px 12px rgba(69,58,49,.2); font-size:.82rem; font-weight:600;
-  line-height:1.2; white-space:nowrap; pointer-events:none;
+  line-height:1.2; white-space:nowrap;
+}
+#hunt-floor-coach-dismiss{
+  position:absolute; top:.12rem; right:.16rem; width:1.05rem; height:1.05rem; padding:0;
+  display:grid; place-items:center; border:0; border-radius:50%; background:transparent;
+  color:var(--wine); font:700 1rem/.8 Georgia,serif; cursor:pointer;
 }
 #hunt-floor-coach::after{
   content:""; position:absolute; right:1rem; top:100%; width:.65rem; height:.65rem;
@@ -35057,7 +35062,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
       <div class="hunt-dots" id="hunt-dots"></div>
       <div class="hunt-floor-slot">
         <button type="button" id="hunt-floor-btn" class="hunt-nav floor-down" hidden>›</button>
-        <div id="hunt-floor-coach" hidden>Up gets you back.</div>
+        <div id="hunt-floor-coach" hidden><span id="hunt-floor-coach-text">Up gets you back.</span><button type="button" id="hunt-floor-coach-dismiss" tabindex="-1">×</button></div>
       </div>
     </div>
   </div>
@@ -107651,6 +107656,8 @@ function spawnDustMote(container) {
   var nextBtn = document.getElementById("hunt-next");
   var floorBtn = document.getElementById("hunt-floor-btn");
   var floorCoach = document.getElementById("hunt-floor-coach");
+  var floorCoachText = document.getElementById("hunt-floor-coach-text");
+  var floorCoachDismiss = document.getElementById("hunt-floor-coach-dismiss");
   if (!strip || !caption) return;
   var STAGES = ["kitchen", "garden", "cuddly", "office", "balcony"];
   function huntText(key) {
@@ -107806,7 +107813,7 @@ function spawnDustMote(container) {
     floorBtn.textContent = "›";
     floorBtn.classList.toggle("floor-up", downstairs);
     floorBtn.classList.toggle("floor-down", !downstairs);
-    if (floorCoach && !floorCoach.hidden) floorCoach.textContent = floorText("floor_up_coach");
+    if (floorCoachText && floorCoach && !floorCoach.hidden) floorCoachText.textContent = floorText("floor_up_coach");
   }
   function settleFloorNavigation(downstairs) {
     floorNavigationTimer = null;
@@ -107838,9 +107845,14 @@ function spawnDustMote(container) {
       return;
     }
     floorCoachPending = false;
-    floorCoach.textContent = floorText("floor_up_coach");
+    if (floorCoachText) floorCoachText.textContent = floorText("floor_up_coach");
     floorCoach.hidden = false;
   }
+  if (floorCoachDismiss) floorCoachDismiss.addEventListener("click", function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    hideFloorCoach();
+  });
   window.__hideFloorCoach = hideFloorCoach;
   window.__syncFloorNavigation = syncFloorNavigation;
   window.__floorNavigationState = function () {

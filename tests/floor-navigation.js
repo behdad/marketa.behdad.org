@@ -18,6 +18,10 @@ var harness = String.raw`<script>
   function floorState() {
     var button = document.getElementById("hunt-floor-btn");
     var coach = document.getElementById("hunt-floor-coach");
+    var coachText = document.getElementById("hunt-floor-coach-text");
+    var coachDismiss = document.getElementById("hunt-floor-coach-dismiss");
+    var coachBox = coach.getBoundingClientRect();
+    var dismissBox = coachDismiss.getBoundingClientRect();
     var glyph = getComputedStyle(button, "::before");
     return {
       hidden: button.hidden,
@@ -27,8 +31,17 @@ var harness = String.raw`<script>
       hasAriaLabel: button.hasAttribute("aria-label"),
       hasTitle: button.hasAttribute("title"),
       coachHidden: coach.hidden,
-      coach: coach.textContent,
+      coach: coachText.textContent,
       coachZ: parseInt(getComputedStyle(coach).zIndex, 10),
+      coachDismiss: {
+        type: coachDismiss.type,
+        tabIndex: coachDismiss.tabIndex,
+        hasAriaLabel: coachDismiss.hasAttribute("aria-label"),
+        hasTitle: coachDismiss.hasAttribute("title"),
+        position: getComputedStyle(coachDismiss).position,
+        rightInset: coachBox.right - dismissBox.right,
+        topInset: dismissBox.top - coachBox.top
+      },
       bottomNavZ: parseInt(getComputedStyle(document.getElementById("hunt-bottom-nav")).zIndex, 10),
       lowerRoomZ: parseInt(getComputedStyle(document.getElementById("lower-room-track")).zIndex, 10),
       room: window.currentStageName,
@@ -95,6 +108,12 @@ var harness = String.raw`<script>
     check("the Up coach paints above the active lower-room scene",
       first.coachZ > 0 && first.bottomNavZ > first.lowerRoomZ,
       { coach: first.coachZ, bottomNav: first.bottomNavZ, lowerRoom: first.lowerRoomZ });
+    check("the Up coach owns a small unlabeled dismiss control in its top-right corner",
+      first.coachDismiss.type === "button" && first.coachDismiss.tabIndex === -1 &&
+      !first.coachDismiss.hasAriaLabel && !first.coachDismiss.hasTitle &&
+      first.coachDismiss.position === "absolute" && first.coachDismiss.rightInset >= 0 &&
+      first.coachDismiss.rightInset < 8 && first.coachDismiss.topInset >= 0 && first.coachDismiss.topInset < 8,
+      first.coachDismiss);
     await sleep(220);
     check("first-arrival coach remains after the lower room settles", !floorState().coachHidden, floorState());
     window.__bathroomRoomOpen = false;
@@ -113,6 +132,8 @@ var harness = String.raw`<script>
     check("the live coach switches to Czech without adding control labels",
       !czech.hasAriaLabel && !czech.hasTitle && czech.coach === "Nahoru se vrátíš.", czech);
     setLang("en");
+    document.getElementById("hunt-floor-coach-dismiss").click();
+    check("the hint's own × dismisses it immediately", floorState().coachHidden, floorState());
 
     document.getElementById("hunt-floor-btn").click();
     await sleep(30);

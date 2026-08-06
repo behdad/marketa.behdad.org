@@ -183,6 +183,10 @@ exit. Every chooser launch clears carried motion and parks the transmission befo
 the compact re-entry control offers the exact paused run, a provisional fresh-route chooser, and a
 direct campsite return after `campVisited` is set. The chooser's open state, selected card, and
 campsite availability are checkpointed; recovery reopens the chooser without launching the route.
+Checkpoint recovery retains the saved Entrance/dashboard presentation and interrupted highway
+snapshot, but leaves explicit re-entry to Road Trip → Continue. Continue activates the retained
+presentation with `roadtripResumePending` set, so transport Play or fresh driving input owns the
+actual resume. A saved `camp` route still restores its camp presentation directly.
 Touch-first devices scale attended route and turnoff durations to 72%.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep

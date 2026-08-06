@@ -100,10 +100,24 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       transportPaused: transport.classList.contains("paused"),
       crackPrimary: document.getElementById("entrance-roadtrip-crack-primary").getAttribute("d")
     };
-    transport.click();
+    window.__openEntrancePorscheDriveHud();
+    var resumeReady = copy(state());
+    reentry.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var continueChoice = document.querySelector('[data-roadtrip-reentry-choice="continue"]');
+    var resumeMenuOpen = document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show");
+    continueChoice.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    var resumedPaused = copy(state());
+    window.__entranceDriveControl("throttle", true);
+    window.__entranceDriveControl("throttle", false);
     var resumed = copy(state());
     var resumedRun = pausedRun();
-    report.steps.resumed = { state: resumed, run: durableRun(resumedRun) };
+    report.steps.resumed = {
+      state: resumed,
+      ready: resumeReady,
+      menuOpen: resumeMenuOpen,
+      paused: resumedPaused,
+      run: durableRun(resumedRun)
+    };
     window.__exitEntranceRoadtrip();
     window.__dismissEntrancePorscheDriveHud();
     window.__openEntrancePorscheDriveHud();
@@ -114,14 +128,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var reentryChoice = {
       state: copy(state()),
       menuOpen: document.getElementById("entrance-roadtrip-reenter-menu").classList.contains("show"),
-      focused: document.activeElement && document.activeElement.getAttribute("data-roadtrip-reentry-choice")
+      selected: document.querySelector('[data-roadtrip-reentry-choice="continue"]').classList.contains("selected")
     };
+    documentEnter();
+    var keyboardPaused = copy(state());
     documentEnter();
     var keyboardResumed = copy(state());
     report.steps.engineCycle = {
       off: engineOff,
       started: engineStarted,
       choice: reentryChoice,
+      paused: keyboardPaused,
       resumed: keyboardResumed,
       run: durableRun(pausedRun())
     };
@@ -192,10 +209,10 @@ var freshDismissed = result.steps && result.steps.newDismissed;
 var freshStarted = result.steps && result.steps.newStarted;
 check(result.errors.length === 0, "no uncaught page errors", result.errors);
 check(restored && restored.state.open && restored.state.drive.hud &&
-  restored.state.drive.roadtrip.active && restored.state.drive.roadtrip.resumePending &&
-  !restored.state.drive.roadtrip.reentryVisible && !restored.buttonVisible &&
-  restored.transportVisible && restored.transportPaused,
-  "Continue restores the paused highway frame with an explicit Play control", restored && restored.state);
+  !restored.state.drive.roadtrip.active && restored.state.drive.roadtrip.paused &&
+  !restored.state.drive.roadtrip.resumePending &&
+  restored.state.drive.roadtrip.reentryVisible && restored.buttonVisible,
+  "Continue restores the Entrance HUD without reopening the paused highway", restored && restored.state);
 check(restored && same(restored.expected, restored.run) && restored.run.state.runSeed > 0 &&
   restored.run.damage.kind === "cracked" &&
   restored.run.damage.geometry.primary === restored.crackPrimary && restored.run.police.phase === "warning" &&
@@ -210,13 +227,16 @@ check(restored && restored.frozenAfter.distance === restored.frozenBefore.distan
   "the restored run stays frozen until explicit re-entry", restored && {
     before: restored.frozenBefore, after: restored.frozenAfter
   });
-check(resumed && resumed.state.drive.roadtrip.active && !resumed.state.drive.roadtrip.resumePending &&
+check(resumed && resumed.ready.drive.hud && resumed.ready.drive.roadtrip.reentryVisible &&
+  resumed.menuOpen && resumed.paused.drive.roadtrip.active && resumed.paused.drive.roadtrip.resumePending &&
+  resumed.state.drive.roadtrip.active && !resumed.state.drive.roadtrip.resumePending &&
   same(restored.expected, resumed.run),
-  "Play resumes the exact restored run", resumed && resumed.state.drive.roadtrip);
+  "Road Trip → Continue reopens the exact run paused until fresh driving input", resumed && resumed.state.drive.roadtrip);
 check(engine && !engine.off.car.engineOn && engine.off.drive.roadtrip.paused &&
   engine.off.drive.roadtrip.damage.kind === "cracked" && engine.started.car.engineOn &&
   engine.started.drive.roadtrip.paused && engine.started.drive.roadtrip.damage.kind === "cracked" &&
-  engine.choice.menuOpen && engine.choice.focused === "continue" && engine.choice.state.drive.roadtrip.paused &&
+  engine.choice.menuOpen && engine.choice.selected && engine.choice.state.drive.roadtrip.paused &&
+  engine.paused.drive.roadtrip.active && engine.paused.drive.roadtrip.resumePending &&
   engine.resumed.drive.roadtrip.active && !engine.resumed.drive.roadtrip.paused &&
   engine.resumed.drive.roadtrip.damage.kind === "cracked" && same(restored.expected, engine.run),
   "engine-off Enter preserves damage, then the explicit Continue choice resumes the same run", engine);

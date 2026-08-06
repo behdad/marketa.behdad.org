@@ -164,7 +164,10 @@ shoulders, gravel, weather, seasons, wildlife, and police affect the trip. Leavi
 pauses it. Select **Road Trip**, then **Continue** to restore that exact run or **New** to choose
 another starting segment; the old run is replaced only after a segment is chosen. Once reached,
 **Camping** returns directly to the campsite.
-Unfocusing pauses an active run until fresh driving input resumes it.
+Unfocusing pauses an active run until fresh driving input resumes it. Browser recovery preserves the
+saved Entrance/dashboard presentation, but an interrupted highway remains paused until **Road Trip**
+→ **Continue** is selected. Continue reopens the highway paused; Play or fresh steering/pedal input
+resumes it.
 
 Police allow 20 km/h above the posted limit. An oncoming car flashes before a speed trap. If police
 pursue, stop safely to resolve the outcome. The driver panel tracks **Demerits** and a simplified

@@ -187,7 +187,7 @@ check(s.hudConsole && s.hudConsole.open && s.hudConsole.focused && s.hudConsole.
   "the drop-down console keeps keyboard ownership while the driving HUD is open", s.hudConsole);
 check(s.closedHudNav && !s.closedHudNav.hud && JSON.stringify(s.closedHudNav.rooms) === JSON.stringify(["office"]),
   "closed HUD leaves the entrance arrow-key room navigation active", s.closedHudNav);
-check(s.closed && !s.closed.open && s.closed.drive.hud && !s.closed.drive.audioActive && !s.closed.drive.musicActive &&
+check(s.closed && !s.closed.open && !s.closed.drive.hud && !s.closed.drive.audioActive && !s.closed.drive.musicActive &&
   !s.closed.drive.frameActive && s.closed.drive.speed > 0 && s.closed.drive.position !== 0,
   "leaving parks audio/runtime while retaining the driving state", s.closed);
 

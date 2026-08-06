@@ -197,8 +197,11 @@ or momentum. Below 10 km/h, `arriveRoadtripCamp()` parks the drivetrain and acti
 overlay inside Entrance.
 
 Camping begins with an empty pit and publishes `entrance_roadtrip_camp_fire_invite` through
-`__setLowerRoomCaption()`. `campFireState` owns the focused build, fuel chain, log arrangement, and
-success transition. Built and lit/off state are durable; unfinished fuel resets on Continue.
+`__setLowerRoomCaption()`. `campFireState` owns the focused build, fuel chain, log arrangement,
+bounded pinecone collection, and success transition. Up to four cones dropped into an unlit pit
+persist with the camp and can substitute for twigs; drops onto a lit proper fire flare and burn
+away. The one-shot flame/flare is transient. Built and lit/off state are durable; unfinished fuel
+resets on Continue.
 Success restores the finished fire with an empty silver pot and publishes the stable, non-clickable
 `entrance_roadtrip_stew_invite` caption while it burns. Serving or extinguishing restores the
 permanent `entrance_roadtrip_camp_arrival` RSVP caption. The `camp` route is never resume-pending,
@@ -228,6 +231,7 @@ stay on `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the
 `ensureRoadtripCampPorsche()` owns the generated prop hit map and bounded body drag.
 
 Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-fire.js`,
+`tests/entrance-roadtrip-camp-pinecone-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`, and
 `tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-audio.js`, and

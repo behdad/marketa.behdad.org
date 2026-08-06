@@ -175,8 +175,9 @@ to `3×`; collisions reset it and can damage the windshield, stall the engine, o
 transmission into neutral.
 
 At the Camping sign, the car slows automatically and enters camp below 10 km/h; no remaining
-momentum or extra acceleration is required. Click the empty pit, add tinder, twigs, and either log
-arrangement, then light it. Missing fuel burns out; the campsite remains open for exploration.
+momentum or extra acceleration is required. Click the empty pit, add tinder, kindling, and either
+log arrangement, then light it. A pinecone dropped from the campsite trees can replace the twigs;
+missing fuel burns out, and the campsite remains open for exploration.
 
 After the fire grows, a cooking invitation pulses, then remains above the camp. Serving dinner or
 putting the fire out restores the RSVP reminder. Continue returns directly to Camping and retains a

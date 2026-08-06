@@ -42,9 +42,9 @@ console.log("rsvp.html mobile Road Trip duration:");
 check(desktop && desktop.errors.length === 0 && desktop.scale === 1 &&
   durationsEqual(desktop.durations, [75, 6, 90, 6, 75]),
   "fine-pointer desktop keeps the authored route durations", desktop);
-check(mobile && mobile.errors.length === 0 && mobile.scale === .6 &&
-  durationsEqual(mobile.durations, [45, 3.6, 54, 3.6, 45]),
-  "touch-first mobile uses 60% of every attended route phase", mobile);
+check(mobile && mobile.errors.length === 0 && mobile.scale === .72 &&
+  durationsEqual(mobile.durations, [54, 4.32, 64.8, 4.32, 54]),
+  "touch-first mobile uses 72% of every attended route phase", mobile);
 
 if (failures) process.exit(1);
 console.log("Mobile Road Trip duration checks passed.");

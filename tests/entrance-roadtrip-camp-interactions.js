@@ -136,6 +136,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           wobbling: campMushroom.classList.contains("wobbling"),
           animation: getComputedStyle(campMushroom.querySelector(".entrance-roadtrip-camp-trip-mushroom-inner")).animationName,
           sceneAnimation: getComputedStyle(document.getElementById("entrance-room")).animationName,
+          ridgeAnimation: getComputedStyle(document.getElementById("entrance-roadtrip-camp-ridge")).animationName,
+          lakeAnimation: getComputedStyle(document.getElementById("entrance-roadtrip-camp-lake")).animationName,
+          waveAnimation: getComputedStyle(document.getElementById("entrance-roadtrip-camp-lake-waves")).animationName,
+          starAnimation: getComputedStyle(document.getElementById("entrance-roadtrip-camp-trip-stars")).animationName,
+          fireAnimations: Array.prototype.map.call(document.querySelectorAll(".entrance-roadtrip-camp-fire-outer,.entrance-roadtrip-camp-fire-mid,.entrance-roadtrip-camp-fire-core"), function (flame) {
+            return getComputedStyle(flame).animationName;
+          }),
+          birdsong: window.__campTripBirdsongActive(),
           trip: campMushroomTrip,
           chemistryCard: !!document.querySelector("#molecule-layer .mol-card.mol-show"),
           plantBlooms: window.__tripBloomLoopRunning()
@@ -239,9 +247,15 @@ check(result && result.mamaBear && result.mamaBear.present && result.mamaBear.ke
 check(result && result.mushroom && result.mushroom.present && result.mushroom.aboveCar && result.mushroom.wobbling &&
   result.mushroom.animation === "entrance-roadtrip-camp-mushroom-wobble" &&
   result.mushroom.sceneAnimation === "shrooms-trip" &&
+  result.mushroom.ridgeAnimation === "entrance-roadtrip-camp-trip-mountains" &&
+  result.mushroom.lakeAnimation === "entrance-roadtrip-camp-trip-lake" &&
+  result.mushroom.waveAnimation === "entrance-roadtrip-camp-trip-waves" &&
+  result.mushroom.starAnimation === "entrance-roadtrip-camp-trip-stars" &&
+  result.mushroom.fireAnimations.join(",") === "entrance-roadtrip-camp-trip-fire-outer,entrance-roadtrip-camp-trip-fire-mid,entrance-roadtrip-camp-trip-fire-core" &&
+  result.mushroom.birdsong &&
   result.mushroom.trip && result.mushroom.trip.active && result.mushroom.trip.variant === "shrooms" &&
   !result.mushroom.chemistryCard && !result.mushroom.plantBlooms,
-  "the campsite mushroom launches the visual trip without chemistry or garden-plant fractals",
+  "the campsite mushroom bends the landscape to birdsong without chemistry or garden-plant fractals",
   result && result.mushroom);
 check(result && result.tentOpen, "the tent flap opens", result && result.tentOpen);
 check(result && result.tentFocus && (result.tentFocus.style === "none" || result.tentFocus.width === "0px"),

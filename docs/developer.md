@@ -221,9 +221,10 @@ the builder and lid reopen closed. `arriveRoadtripCamp()` resets stew for a genu
 
 The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 `__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,
-celestial bodies, and expanded winter mountain snow. Served stew plus clear night unlocks the
+celestial bodies, and expanded winter mountain snow. Served stew unlocks the campsite sky; selecting
+it during daylight runs the sunset transition, locally clears camp weather, and then opens the
 late-overlay stargazing view. `campStargazingState` checkpoints per-constellation trace progress but
-always restores the popup closed; a fresh camp arrival resets it.
+always restores the popup closed; the transition timer is transient and a fresh camp arrival resets it.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed

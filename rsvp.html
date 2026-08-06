@@ -1049,6 +1049,7 @@ footer{margin-top:2.6rem}
   :is(#entrance-drive-cockpit,#entrance-drive-cowl-strip,.entrance-drive-windshield-scenery,#entrance-drive-hud-tint){opacity:0;visibility:hidden;pointer-events:none}
 #entrance-room.roadtrip-active.roadtrip-route-camp #entrance-drive-touch-controls{display:none}
 #entrance-roadtrip-abraham-night,#entrance-roadtrip-camp-night{opacity:1}
+#entrance-roadtrip-camp-day,#entrance-roadtrip-camp-night{transition:opacity 1.45s ease}
 #entrance-room.entrance-day :is(#entrance-roadtrip-abraham-night,#entrance-roadtrip-camp-night){opacity:0}
 #entrance-room:not(.entrance-day) :is(#entrance-roadtrip-abraham-day,#entrance-roadtrip-camp-day){opacity:0}
 #entrance-roadtrip-camp-sun,#entrance-roadtrip-camp-moon{cursor:pointer;pointer-events:none}
@@ -1068,6 +1069,20 @@ footer{margin-top:2.6rem}
 #entrance-room.entrance-clouded #entrance-roadtrip-camp-stars>:not(#entrance-roadtrip-camp-star-scatter){opacity:0}
 #entrance-room.entrance-clouded #entrance-roadtrip-camp-star-scatter{opacity:.16}
 #entrance-room.entrance-clouded #entrance-roadtrip-camp-star-scatter>circle:not(.entrance-roadtrip-camp-cloud-star){display:none}
+#entrance-roadtrip-camp-sunset{opacity:0;pointer-events:none}
+#entrance-roadtrip-camp.stargazing-sunset #entrance-roadtrip-camp-sunset{
+  animation:entrance-roadtrip-camp-sunset 1.55s ease-in-out both
+}
+@keyframes entrance-roadtrip-camp-sunset{
+  0%{opacity:0}24%{opacity:.88}70%{opacity:.56}100%{opacity:0}
+}
+#entrance-room.camp-stargazing-clear.roadtrip-route-camp
+  :is(.entrance-cloud-wash,.entrance-rain-weather,.entrance-snow-flakes,
+      #entrance-roadtrip-clouds,#entrance-roadtrip-rain,#entrance-roadtrip-snow){opacity:0!important}
+#entrance-room.camp-stargazing-clear #entrance-roadtrip-camp-sun,
+#entrance-room.camp-stargazing-clear #entrance-roadtrip-camp-moon,
+#entrance-room.camp-stargazing-clear #entrance-roadtrip-camp-stars>g{opacity:1}
+#entrance-room.camp-stargazing-clear #entrance-roadtrip-camp-star-scatter>circle{display:inline}
 #entrance-roadtrip-camp-winter-snow{opacity:0;transition:opacity .8s ease}
 #entrance-room.entrance-roadtrip-season-winter #entrance-roadtrip-camp-winter-snow{opacity:.95}
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-winter #entrance-roadtrip-camp-winter-snow{opacity:.65}
@@ -1077,6 +1092,7 @@ footer{margin-top:2.6rem}
 @media (prefers-reduced-motion:reduce){
   #entrance-roadtrip-camp-sun-rays,#entrance-roadtrip-camp-sun-halo,
   #entrance-roadtrip-camp-stars .twinkle,#entrance-roadtrip-camp-stars .const-lines{animation:none}
+  #entrance-roadtrip-camp.stargazing-sunset #entrance-roadtrip-camp-sunset{animation:none;opacity:0}
 }
 html.frame-rate-low #entrance-roadtrip-camp-stars .twinkle{animation:none!important;opacity:.2;transform:scale(.62)}
 html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .twinkle{opacity:1;transform:scale(1.12)}
@@ -33467,6 +33483,23 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                     <path id="entrance-roadtrip-camp-moon-phase" clip-path="url(#entrance-roadtrip-camp-moon-clip)" fill="#0b1a29" d=""/>
                   </g>
                 </g>
+                <g id="entrance-roadtrip-camp-sunset" pointer-events="none">
+                  <defs>
+                    <linearGradient id="entrance-roadtrip-camp-sunset-wash" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#70485c" stop-opacity=".42"/>
+                      <stop offset=".58" stop-color="#e77d67" stop-opacity=".78"/>
+                      <stop offset="1" stop-color="#f2b66f" stop-opacity=".7"/>
+                    </linearGradient>
+                    <radialGradient id="entrance-roadtrip-camp-sunset-glow">
+                      <stop offset="0" stop-color="#fff0ad" stop-opacity=".9"/>
+                      <stop offset=".38" stop-color="#f8a45e" stop-opacity=".58"/>
+                      <stop offset="1" stop-color="#e77d67" stop-opacity="0"/>
+                    </radialGradient>
+                  </defs>
+                  <rect y="-120" width="680" height="128" fill="url(#entrance-roadtrip-camp-sunset-wash)"/>
+                  <ellipse cx="570" cy="-20" rx="92" ry="46" fill="url(#entrance-roadtrip-camp-sunset-glow)"/>
+                  <circle cx="570" cy="-25" r="12" fill="#ffe28a" opacity=".92"/>
+                </g>
                 <g id="entrance-roadtrip-camp-trip-stars">
                   <g fill="#fff1ac"><circle cx="120" cy="-82" r="2.4"/><circle cx="248" cy="-96" r="1.8"/><circle cx="382" cy="-77" r="2.8"/><circle cx="542" cy="-101" r="2.2"/></g>
                   <g fill="#d9a6a6"><circle cx="171" cy="-55" r="2"/><circle cx="307" cy="-108" r="2.6"/><circle cx="474" cy="-61" r="1.8"/></g>
@@ -39941,6 +39974,7 @@ window.__entranceRoomOpen = false;
   };
   var campStargazingWasEligible = false;
   var campStargazingInviteTimer = null;
+  var campStargazingSunsetTimer = null;
   var campStewFrame = null;
   var campStewLastFrame = 0;
   var campStewClankTimer = null;
@@ -40280,8 +40314,7 @@ window.__entranceRoomOpen = false;
     });
   }
   function campStargazingEligible() {
-    return roadtripState.active && roadtripState.route === "camp" && campStewState.status === "served" &&
-      balconyStage.classList.contains("dusk") && !room.classList.contains("entrance-clouded");
+    return roadtripState.active && roadtripState.route === "camp" && campStewState.status === "served";
   }
   function campStargazingSnapshot() {
     var progress = {};
@@ -40292,6 +40325,7 @@ window.__entranceRoomOpen = false;
     });
     return {
       open: campStargazingState.open,
+      sunsetting: campStargazingSunsetTimer !== null,
       eligible: campStargazingEligible(),
       progress: progress,
       completed: completed,
@@ -40334,6 +40368,10 @@ window.__entranceRoomOpen = false;
   function resetCampStargazing() {
     clearTimeout(campStargazingInviteTimer);
     campStargazingInviteTimer = null;
+    clearTimeout(campStargazingSunsetTimer);
+    campStargazingSunsetTimer = null;
+    if (campFireScene) campFireScene.classList.remove("stargazing-sunset");
+    if (room) room.classList.remove("camp-stargazing-clear");
     campStargazingState.open = false;
     Object.keys(CAMP_STARGAZING_LENGTHS).forEach(function (name) {
       campStargazingState.progress[name] = 0;
@@ -40358,13 +40396,34 @@ window.__entranceRoomOpen = false;
   }
   function openCampStargazing() {
     if (!campStargazingEligible()) return false;
+    if (campStargazingSunsetTimer !== null) return "sunset";
     campFireState.open = false;
     campStewState.open = false;
+    if (room) room.classList.add("camp-stargazing-clear");
+    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+    syncRoadtripCampFireCaption(false);
+    if (!balconyStage.classList.contains("dusk")) {
+      if (campFireScene) {
+        campFireScene.classList.remove("stargazing-sunset");
+        void campFireScene.getBoundingClientRect();
+        campFireScene.classList.add("stargazing-sunset");
+      }
+      if (window.__setDayNight) window.__setDayNight(true);
+      paintRoadtripCampStew();
+      paintCampStargazing();
+      campStargazingSunsetTimer = setTimeout(function () {
+        campStargazingSunsetTimer = null;
+        if (campFireScene) campFireScene.classList.remove("stargazing-sunset");
+        if (!campStargazingEligible()) return;
+        campStargazingState.open = true;
+        paintRoadtripCampStew();
+        paintCampStargazing();
+      }, 1550);
+      return "sunset";
+    }
     campStargazingState.open = true;
     paintRoadtripCampStew();
     paintCampStargazing();
-    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
-    syncRoadtripCampFireCaption(false);
     return true;
   }
   function closeCampStargazing() {

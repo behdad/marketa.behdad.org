@@ -32,6 +32,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       state: window.__entranceRoadtripCampStargazingState(),
       openClass: game.classList.contains("open"),
       completeClass: game.classList.contains("complete"),
+      sunsetClass: document.getElementById("entrance-roadtrip-camp").classList.contains("stargazing-sunset"),
+      clearClass: document.getElementById("entrance-room").classList.contains("camp-stargazing-clear"),
+      dusk: document.getElementById("stage-balcony").classList.contains("dusk"),
       skyPointer: getComputedStyle(sky).pointerEvents,
       outerDismiss: getComputedStyle(outer).display,
       caption: window.__captionKey && window.__captionKey(),
@@ -73,54 +76,58 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             window.__entranceRoadtripCampStewCook();
             window.__entranceRoadtripCampStewStep(11600);
             window.__entranceRoadtripCampStewServe();
-            clearNight();
             report.ready = snap();
-
             window.__setDayNight(false);
-            report.dayOpen = window.__entranceRoadtripCampStargazingOpen();
-            clearNight();
-            window.overcast(true); window.__setDayNight(true);
-            report.cloudOpen = window.__entranceRoadtripCampStargazingOpen();
-            window.overcast(false); clearNight();
-
-            click(document.getElementById("entrance-roadtrip-camp-sky-hit"));
-            report.open = snap();
-            click(document.querySelector('[data-stargazing-constellation="cassiopeia"] [data-stargazing-star="2"]'));
-            report.wrongOrder = snap().state.progress.cassiopeia;
-            trace("cassiopeia");
-            trace("ursa-major", 0);
-            report.partial = snap();
-            var partialCheckpoint = window.__captureCheckpointSystems().entrance;
-            report.partialSaved = partialCheckpoint.drive.roadtrip.stargazing;
-            window.__restoreCheckpointSystems({ entrance: partialCheckpoint }, "afterStage");
             setTimeout(function () {
               try {
-                report.partialRestored = snap();
-                window.__entranceRoadtripCampStargazingOpen();
-                trace("ursa-minor");
-                report.complete = snap();
-                var completeCheckpoint = window.__captureCheckpointSystems().entrance;
-                window.setLang("cs");
-                report.czech = {
-                  title: document.querySelector('[data-i="entrance_roadtrip_stargazing_title"]').textContent,
-                  names: Array.prototype.map.call(document.querySelectorAll('[data-i^="entrance_roadtrip_stargazing_ursa"],[data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
-                  finale: document.querySelector('[data-i="entrance_roadtrip_stargazing_finale"]').textContent
-                };
-                window.setLang("en");
-                click(document.getElementById("entrance-roadtrip-stargazing-close"));
-                report.closed = snap();
-                window.__restoreCheckpointSystems({ entrance: completeCheckpoint }, "afterStage");
+                window.overcast(true);
+                if (window.__applyBalconyWeather) window.__applyBalconyWeather();
+                report.dayOpen = window.__entranceRoadtripCampStargazingOpen();
+                report.sunset = snap();
                 setTimeout(function () {
                   try {
-                    report.completeRestored = snap();
-                    window.__entranceRoadtripSetRoute("abraham", 0);
-                    window.__entranceRoadtripSetRoute("camp", 0);
-                    report.freshArrival = snap();
-                  } catch (error) { report.errors.push(String(error && error.stack || error)); }
-                  finish();
-                }, 180);
+                    report.open = snap();
+                    click(document.querySelector('[data-stargazing-constellation="cassiopeia"] [data-stargazing-star="2"]'));
+                    report.wrongOrder = snap().state.progress.cassiopeia;
+                    trace("cassiopeia");
+                    trace("ursa-major", 0);
+                    report.partial = snap();
+                    var partialCheckpoint = window.__captureCheckpointSystems().entrance;
+                    report.partialSaved = partialCheckpoint.drive.roadtrip.stargazing;
+                    window.__restoreCheckpointSystems({ entrance: partialCheckpoint }, "afterStage");
+                    setTimeout(function () {
+                      try {
+                        report.partialRestored = snap();
+                        window.__entranceRoadtripCampStargazingOpen();
+                        trace("ursa-minor");
+                        report.complete = snap();
+                        var completeCheckpoint = window.__captureCheckpointSystems().entrance;
+                        window.setLang("cs");
+                        report.czech = {
+                          title: document.querySelector('[data-i="entrance_roadtrip_stargazing_title"]').textContent,
+                          names: Array.prototype.map.call(document.querySelectorAll('[data-i^="entrance_roadtrip_stargazing_ursa"],[data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
+                          finale: document.querySelector('[data-i="entrance_roadtrip_stargazing_finale"]').textContent
+                        };
+                        window.setLang("en");
+                        click(document.getElementById("entrance-roadtrip-stargazing-close"));
+                        report.closed = snap();
+                        window.__restoreCheckpointSystems({ entrance: completeCheckpoint }, "afterStage");
+                        setTimeout(function () {
+                          try {
+                            report.completeRestored = snap();
+                            window.__entranceRoadtripSetRoute("abraham", 0);
+                            window.__entranceRoadtripSetRoute("camp", 0);
+                            report.freshArrival = snap();
+                            window.overcast(false); clearNight();
+                          } catch (error) { report.errors.push(String(error && error.stack || error)); }
+                          finish();
+                        }, 180);
+                      } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
+                    }, 180);
+                  } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
+                }, 1750);
               } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
-            }, 180);
+            }, 60);
           } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
         }, 1750);
       } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
@@ -139,7 +146,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite stargazing:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 5600, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 7600, {
   forceMotion: true,
   urlSuffix: "?date=2026-07-15&time=23:00#play",
   chromeFlags: "--window-size=1180,900"
@@ -148,12 +155,14 @@ check(result && result.errors.length === 0, "the finale has no uncaught errors",
 check(result && result.beforeStew && !result.beforeStew.state.eligible && result.beforeStew.skyPointer === "none",
   "the sky remains scenery before dinner is served", result && result.beforeStew);
 check(result && result.ready && result.ready.state.eligible && result.ready.skyPointer === "all",
-  "served stew under a clear night unlocks the sky", result && result.ready);
-check(result && result.dayOpen === false && result.cloudOpen === false,
-  "daylight and cloud both gate stargazing", result && { day: result.dayOpen, cloud: result.cloudOpen });
+  "served stew unlocks the sky in daylight", result && result.ready);
+check(result && result.dayOpen === "sunset" && result.sunset && result.sunset.state.sunsetting &&
+  result.sunset.sunsetClass && result.sunset.clearClass && result.sunset.dusk,
+  "a cloudy daytime selection starts sunset, clears camp weather, and summons night", result && result.sunset);
 check(result && result.open && result.open.openClass && result.open.outerDismiss === "none" &&
+  !result.open.state.sunsetting && result.open.clearClass && result.open.dusk &&
   result.open.constellations === 3 && result.open.stars === 19 && result.open.minHit >= 14,
-  "the clean overlay has exactly three forgiving constellation traces and hides the outer dismiss",
+  "sunset resolves into the clear overlay with three forgiving traces and no outer dismiss",
   result && result.open);
 check(result && result.wrongOrder === 0, "out-of-order stars do not skip the guided trace", result && result.wrongOrder);
 check(result && result.partial && result.partial.state.completed.indexOf("cassiopeia") >= 0 &&

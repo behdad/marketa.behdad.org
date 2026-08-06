@@ -565,7 +565,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var courtTerminalCheckpoint = window.__captureCheckpointSystems().entrance.drive.roadtrip;
       document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
+      var courtRouteChooser = copy(trip());
+      var courtFreshEntryStarted = window.__entranceRoadtripLaunchRouteChoice();
       var courtFreshEntry = copy(trip());
+      if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
+      window.__entranceDriveRange("D");
       report.steps.courtStop = {
         stopped: courtStopped,
         stoppedCaption: courtStoppedCaption,
@@ -591,6 +595,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         fade: courtFade,
         trip: courtResolved,
         terminalCheckpoint: courtTerminalCheckpoint,
+        routeChooser: courtRouteChooser,
+        freshEntryStarted: courtFreshEntryStarted,
         freshEntry: courtFreshEntry,
         returnOffer: courtReturnOffer,
         hudOpen: state().drive.hud,
@@ -1366,6 +1372,8 @@ check(s.courtStop && s.courtStop.stopped.active &&
   s.courtStop.trip.police.fines === 0 && !s.courtStop.trip.police.sirenActive &&
   s.courtStop.trip.demeritPoints === 6 && s.courtStop.trip.police.lastDemerits === 6 &&
   !Object.prototype.hasOwnProperty.call(s.courtStop.terminalCheckpoint, "pausedRun") &&
+  s.courtStop.routeChooser.routeChooserOpen && !s.courtStop.routeChooser.active &&
+  s.courtStop.freshEntryStarted &&
   s.courtStop.freshEntry.active && !s.courtStop.freshEntry.paused &&
   s.courtStop.freshEntry.distance === 0 && s.courtStop.freshEntry.elapsedSeconds === 0 &&
   s.courtStop.freshEntry.score === 0 && s.courtStop.freshEntry.entityCount === 0 &&

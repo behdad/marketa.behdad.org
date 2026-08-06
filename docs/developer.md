@@ -180,8 +180,9 @@ changing road geometry. Signs are projected beyond the current road edge by
 The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click or a
 touch long-press is a private test shortcut that begins three seconds before the chosen segment's
 exit. Every chooser launch clears carried motion and parks the transmission before the new route;
-its open state and selected card are checkpointed, and recovery reopens the chooser without
-launching the route. Touch-first devices scale attended route and turnoff durations to 72%.
+the compact re-entry control instead restores an unfinished paused run exactly. The chooser's open
+state and selected card are checkpointed, and recovery reopens it without launching the route.
+Touch-first devices scale attended route and turnoff durations to 72%.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
 spawn plans deterministic from the run seed and never add timer-driven unbounded entities.

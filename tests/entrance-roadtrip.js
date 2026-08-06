@@ -1241,13 +1241,14 @@ check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationRea
   /function resetRoadtripInvitationSession\(\)[\s\S]{0,300}roadtripState\.accepted = false;[\s\S]{0,200}roadtripState\.invitationReady = false;/.test(source),
   "the source owns a one-lap initial unlock and full-distance retry gate before first acceptance");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
-  /var roadtripInviteVisible[\s\S]{0,1500}event\.key === "Enter"[\s\S]{0,300}entrance-roadtrip-invite-accept/.test(source) &&
-  /event\.key === "Escape"[\s\S]{0,400}roadtripInviteVisible[\s\S]{0,300}entrance-roadtrip-invite-later/.test(source),
+  /function acceptRoadtripInvite\(event\)\s*\{\s*return openRoadtripRouteChooser\(event\);\s*\}/.test(source) &&
+  /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-accept"\)\.dispatchEvent/.test(source) &&
+  /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-later"\)\.dispatchEvent/.test(source),
   "the first highway entry is explicit and its full offer owns Enter and Escape");
 check(/id="entrance-roadtrip-reenter"[^>]+tabindex="0"/.test(source) &&
-  /roadtripState\.everAccepted && !roadtripState\.accepted && !roadtripState\.active/.test(source) &&
-  /bindRoadtripInviteControl\(roadtripReenter,[\s\S]{0,700}startRoadtrip\(!roadtripState\.paused\)/.test(source),
-  "accepted drivers get an explicit compact Road Trip re-entry control");
+  /roadtripState\.everAccepted && !roadtripState\.accepted\s*&&\s*!roadtripState\.active/.test(source) &&
+  /bindRoadtripInviteControl\(roadtripReenter,[\s\S]*?if \(roadtripState\.paused\)[\s\S]*?startRoadtrip\(false\)[\s\S]*?return openRoadtripRouteChooser\(event\)/.test(source),
+  "accepted drivers get an explicit compact control that resumes paused runs or opens the route chooser");
 check(/var roadtripReenterVisible = roadtripReenterNode && roadtripReenterNode\.classList\.contains\("show"\)/.test(source) &&
   /event\.key === "Enter"[\s\S]{0,350}roadtripReenterVisible && document\.getElementById\("entrance-drive-hud"\)\.classList\.contains\("drive-engine-on"\)[\s\S]{0,180}roadtripReenterNode\.dispatchEvent/.test(source),
   "document Enter starts compact Road Trip re-entry only after the engine is running");

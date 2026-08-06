@@ -794,7 +794,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__openEntrancePorscheDriveHud();
     ensureEngine();
     var freshStarted = startRoadtripInLane();
-    window.__entranceDriveShift(6, true);
+    window.__entranceRoadtripSetDistance(99);
+    window.__entranceDriveSetMotion(100, 3);
     window.__entranceDriveControl("throttle", true);
     var progressBefore = copy(roadtrip());
     step(250);

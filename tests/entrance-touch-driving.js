@@ -109,6 +109,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       pointer(steerPad, "pointerup", 52, false, sr.left + sr.width * .75, sr.top + sr.height / 2);
       pointer(pedalPad, "pointerup", 51, true, pr.left + pr.width / 2, pr.bottom - 12);
       report.steps.padReleased = window.__entranceRoomState().drive;
+      window.__entranceDriveStep(1000);
+      report.steps.padReleaseHeld = window.__entranceRoomState().drive;
+
+      pointer(pedalPad, "pointerdown", 61, true, pr.left + pr.width / 2, pr.bottom);
+      pointer(pedalPad, "pointercancel", 61, true, pr.left + pr.width / 2, pr.bottom);
+      report.steps.padCancelled = window.__entranceRoomState().drive;
+
+      window.__entranceDriveSetMotion(84, 3);
+      pointer(pedalPad, "pointerdown", 62, true, pr.left + pr.width / 2, pr.top);
+      pointer(pedalPad, "pointerup", 62, true, pr.left + pr.width / 2, pr.top);
+      report.steps.padThrottleReleased = window.__entranceRoomState().drive;
+      window.__entranceDriveStep(1000);
+      report.steps.padThrottleReleaseHeld = window.__entranceRoomState().drive;
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }
@@ -186,8 +199,22 @@ check(steps.padBrake && steps.padBrake.holds.brake && !steps.padBrake.holds.thro
   steps.padBrake.touchControls.brake > .7,
   "sliding through the pink control switches smoothly from throttle to brake", steps.padBrake);
 check(steps.padReleased && !steps.padReleased.holds.throttle && !steps.padReleased.holds.brake &&
-  !steps.padReleased.touchControls.steeringActive && !steps.padReleased.touchControls.pedalsActive,
-  "releasing both pads returns them to neutral", steps.padReleased);
+  !steps.padReleased.touchControls.steeringActive && !steps.padReleased.touchControls.pedalsActive &&
+  steps.padReleased.cruise.active &&
+  Math.abs(steps.padReleased.cruise.target - steps.padReleased.speed) < .01 &&
+  steps.padReleaseHeld && steps.padReleaseHeld.speed >= steps.padReleased.cruise.target,
+  "lifting from the brake side latches release speed into cruise", {
+    released: steps.padReleased, held: steps.padReleaseHeld
+  });
+check(steps.padCancelled && !steps.padCancelled.cruise.active &&
+  !steps.padCancelled.touchControls.pedalsActive,
+  "a cancelled or lost pedal touch cleans up without engaging cruise", steps.padCancelled);
+check(steps.padThrottleReleased && steps.padThrottleReleased.cruise.active &&
+  Math.abs(steps.padThrottleReleased.cruise.target - 84) < .01 &&
+  steps.padThrottleReleaseHeld && steps.padThrottleReleaseHeld.speed >= 84,
+  "lifting from the accelerator side also latches and holds release speed", {
+    released: steps.padThrottleReleased, held: steps.padThrottleReleaseHeld
+  });
 
 if (failures) {
   console.log("\n" + failures + " Entrance touch-driving assertion(s) failed.");

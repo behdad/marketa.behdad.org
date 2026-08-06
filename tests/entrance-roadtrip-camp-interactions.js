@@ -55,6 +55,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         click(poplar);
         var poplarEyes = poplar.querySelector(".entrance-roadtrip-camp-poplar-eyes");
         var individualEyes = poplarEyes.querySelectorAll(".entrance-roadtrip-camp-poplar-eye");
+        var poplarGeometry = Array.prototype.map.call(poplars, function (cluster) {
+          var paths = cluster.querySelectorAll(":scope>path");
+          return {
+            trunks: paths[0].getAttribute("d"),
+            canopy: paths[1].getAttribute("d"),
+            eyeCenters: Array.prototype.map.call(
+              cluster.querySelectorAll(".entrance-roadtrip-camp-poplar-eye"), function (eye) {
+                var box = eye.getBBox();
+                return [box.x + box.width / 2, box.y + box.height / 2];
+              })
+          };
+        });
         report.poplar = {
           triggered: poplarEyes.classList.contains("wiggling"),
           wrapperAnimation: getComputedStyle(poplarEyes).animationName,
@@ -65,6 +77,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             var box = eye.getBBox();
             return [box.x + box.width / 2, box.y + box.height / 2];
           }),
+          distinctGeometry: poplarGeometry[0].trunks !== poplarGeometry[1].trunks &&
+            poplarGeometry[0].canopy !== poplarGeometry[1].canopy &&
+            JSON.stringify(poplarGeometry[0].eyeCenters) !== JSON.stringify(poplarGeometry[1].eyeCenters),
           otherClusterIdle: !poplars[1].querySelector(".entrance-roadtrip-camp-poplar-eyes")
             .classList.contains("wiggling")
         };
@@ -227,8 +242,10 @@ check(result && result.lake &&
 check(result && result.poplar && result.poplar.triggered && result.poplar.wrapperAnimation === "none" &&
   result.poplar.eyeAnimations.length === 3 && result.poplar.eyeAnimations.every(function (name) {
     return name === "entrance-roadtrip-camp-eye-wiggle";
-  }) && new Set(result.poplar.eyeCenters.map(String)).size === 3 && result.poplar.otherClusterIdle,
-  "one poplar click wiggles all three bark eyes around distinct centres", result && result.poplar);
+  }) && new Set(result.poplar.eyeCenters.map(String)).size === 3 && result.poplar.distinctGeometry &&
+  result.poplar.otherClusterIdle,
+  "the distinct poplar groves keep three independent in-place bark-eye wiggles",
+  result && result.poplar);
 check(result && result.pines && result.pines.count === 4 && result.pines.accessible &&
   result.pines.clickDrop && result.pines.keyboardDrop && result.pines.keptWithTarget &&
   result.pines.animation === "entrance-roadtrip-camp-pinecone" && result.pines.drop === "69px",

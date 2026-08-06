@@ -35,19 +35,16 @@ var HARNESS = [
   "    if (window.__setGardenParty) window.__setGardenParty(true, true); await sleep(150);",
   "    var ret = window.birthday('ali'); await sleep(200);",
   "    report.steps.ali = { ret: ret, bdAli: hasCls('bd-ali'), holiday: hasCls('season-holiday'), party: !!window.__gardenPartyOn, room: window.currentStageName, hatVisible: vis('.bd-hat-ali') };",
-  "    // REGRESSION (the Madla floating-crown bug): the floor is already POPULATED but still filling",
-  "    // (guests-in + trickle), and this birthday person hasn't arrived on it yet. __bdCakeCut only",
-  "    // force-summons when __guestsIn() is FALSE, so here the summon is SKIPPED — startBdCakeCutting",
-  "    // MUST force-arrive the cutter, or its crown (a visibility:visible child) floats over the",
-  "    // visibility:hidden body. Set that exact state deterministically: end Ali's still-running cake",
-  "    // first (else Madla's cut is idempotently skipped), mark the floor populated+trickling, and take",
-  "    // Madla specifically OFF the floor.",
+  "    // REGRESSION (the Madla floating-crown bug): start from an exact small floor where Madla has",
+  "    // not arrived. Her birthday must force her visible under the crown, temporarily summon the",
+  "    // wider crowd, then release only those temporary arrivals back to this seeded floor.",
   "    if (window.__setGardenParty) window.__setGardenParty(true, true); await sleep(150);",
   "    if (window.__endBdCakeCutting) window.__endBdCakeCutting();", // clear the cake the prior step (or party-on) auto-lit, so Madla's cut isn't idempotently skipped
+  "    if (window.__dismissGuests) window.__dismissGuests();",
   "    var gg=document.getElementById('garden-guests'); if(gg) gg.classList.add('guests-in','trickle');",
+  "    ['.g-chinnell','.g-rafi','.g-ayushi'].forEach(function(sel){var el=gg&&gg.querySelector(sel);if(el)el.classList.add('arrived');});",
   "    var gmPre=document.querySelector('.g-madla'); if(gmPre) gmPre.classList.remove('arrived','bd-cutter','leaving');",
-  "    // birthday('madla') runs the FULL reveal: applySeasonDate lights her bd-madla crown, then",
-  "    // bdReveal -> __bdCakeCut. The cake was cleared just above so startBdCakeCutting actually runs.",
+  "    // birthday('madla') runs the full reveal and cake lifecycle against that seeded floor.",
   "    report.steps.madlaPre = { guestsIn: !!(window.__guestsIn && window.__guestsIn()), madlaHidden: gmPre?getComputedStyle(gmPre).visibility:'(absent)', bdCakeOnBefore: !!window.__bdCakeOn };",
   "    window.birthday('madla'); await sleep(800);",
   "    var gm=document.querySelector('.g-madla');",
@@ -121,7 +118,7 @@ function pass(m){console.log("  ✓ "+m);}
 function fail(m,d){failures++;console.log("  ✗ "+m); if(d) console.log("      "+String(d).split("\n").join("\n      "));}
 
 console.log("rsvp.html birthday axis:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 30000, { patchRaf: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 30000, { patchRaf: true, forceMotion: true });
 if (!r) { fail("harness reported (page error before load, or budget too small)"); }
 else {
   var s = r.steps || {};

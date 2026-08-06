@@ -153,7 +153,7 @@ check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRS
   /spawnRoadtripEntity\(plan\.type, lane, plan\.ahead,[\s\S]{0,140}behind: true/.test(source),
   "travel at 70 km/h or less can schedule a vehicle from behind immediately");
 
-var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 1800, {
   patchRaf: true,
   seedRandom: true,
   forceMotion: true,

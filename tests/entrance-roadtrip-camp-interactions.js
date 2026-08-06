@@ -126,6 +126,21 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           cleared: bearCleared,
           huffs: bearHuffs
         };
+        var campMushroom = document.getElementById("entrance-roadtrip-camp-trip-mushroom");
+        click(campMushroom);
+        var campMushroomTrip = window.__tripState();
+        report.mushroom = {
+          present: !!campMushroom,
+          aboveCar: !!(document.getElementById("entrance-roadtrip-camp-porsche")
+            .compareDocumentPosition(campMushroom) & Node.DOCUMENT_POSITION_FOLLOWING),
+          wobbling: campMushroom.classList.contains("wobbling"),
+          animation: getComputedStyle(campMushroom.querySelector(".entrance-roadtrip-camp-trip-mushroom-inner")).animationName,
+          sceneAnimation: getComputedStyle(document.getElementById("entrance-room")).animationName,
+          trip: campMushroomTrip,
+          chemistryCard: !!document.querySelector("#molecule-layer .mol-card.mol-show"),
+          plantBlooms: window.__tripBloomLoopRunning()
+        };
+        window.__stopTrip(true);
         click(tent);
         report.tentOpen = tent.classList.contains("open");
         tent.focus({ focusVisible: true });
@@ -221,6 +236,13 @@ check(result && result.mamaBear && result.mamaBear.present && result.mamaBear.ke
   result.mamaBear.huffs === 2,
   "the left-shore mama sniffs and huffs while her cub ducks and peeks on pointer or keyboard input",
   result && result.mamaBear);
+check(result && result.mushroom && result.mushroom.present && result.mushroom.aboveCar && result.mushroom.wobbling &&
+  result.mushroom.animation === "entrance-roadtrip-camp-mushroom-wobble" &&
+  result.mushroom.sceneAnimation === "shrooms-trip" &&
+  result.mushroom.trip && result.mushroom.trip.active && result.mushroom.trip.variant === "shrooms" &&
+  !result.mushroom.chemistryCard && !result.mushroom.plantBlooms,
+  "the campsite mushroom launches the visual trip without chemistry or garden-plant fractals",
+  result && result.mushroom);
 check(result && result.tentOpen, "the tent flap opens", result && result.tentOpen);
 check(result && result.tentFocus && (result.tentFocus.style === "none" || result.tentFocus.width === "0px"),
   "the focused tent never gains a visible border", result && result.tentFocus);

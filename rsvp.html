@@ -1135,6 +1135,15 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp-aspen>g:focus-visible{outline:2px solid #fffdf8;outline-offset:2px}
 #entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine:focus-visible>path{stroke:#fffdf8;stroke-width:2.4}
 #entrance-roadtrip-camp-mama-bear{cursor:pointer;outline:none}
+.entrance-roadtrip-camp-trip-mushroom{cursor:pointer}
+.entrance-roadtrip-camp-trip-mushroom-inner{transform-box:fill-box;transform-origin:center bottom}
+#entrance-room.camp-shrooms-trip{animation:shrooms-trip 6s linear}
+.entrance-roadtrip-camp-trip-mushroom.wobbling .entrance-roadtrip-camp-trip-mushroom-inner{
+  animation:entrance-roadtrip-camp-mushroom-wobble .68s ease-in-out
+}
+@keyframes entrance-roadtrip-camp-mushroom-wobble{
+  0%,100%{transform:rotate(0) scale(1)}22%{transform:rotate(8deg) scale(1.08,.94)}48%{transform:rotate(-6deg) scale(.96,1.06)}74%{transform:rotate(3deg)}
+}
 .entrance-roadtrip-camp-mama-head,
 .entrance-roadtrip-camp-bear-cub{transform-box:fill-box;transform-origin:center bottom}
 #entrance-roadtrip-camp-mama-bear.reacting .entrance-roadtrip-camp-mama-head{
@@ -11066,7 +11075,7 @@ body:has(#loft-game-strip.iboga) #iboga-heartbeat-veil{animation:iboga-heartbeat
   100%{transform:translate(240px,20px); opacity:0}
 }
 @media (prefers-reduced-motion: reduce){.bird-fly-a, .bird-fly-b{animation:none; opacity:0}}
-@media (prefers-reduced-motion: reduce){#loft-game-strip.shrooms{animation:none}}
+@media (prefers-reduced-motion: reduce){#loft-game-strip.shrooms,#entrance-room.camp-shrooms-trip{animation:none}}
 @media (prefers-reduced-motion: reduce){
   #loft-game-strip.nitrous, #loft-game-strip.acid, #loft-game-strip.molly, #loft-game-strip.froggies, #loft-game-strip.ketamine, #loft-game-strip.iboga{animation:none; filter:none}
   #loft-game-strip.nitrous #loft-float{filter:none}
@@ -33471,6 +33480,15 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   <path d="M-17 98h10M197 98h10" stroke="#4a4037" stroke-width="2.4" stroke-linecap="round"/>
                 </g>
                 <g id="entrance-roadtrip-camp-porsche" transform="translate(417 -54) scale(.78)"></g>
+                <g id="entrance-roadtrip-camp-trip-mushroom" class="entrance-roadtrip-camp-trip-mushroom" transform="translate(535 114)">
+                  <g class="entrance-roadtrip-camp-trip-mushroom-inner">
+                    <path d="M-3 8Q-4 1-2-5H3Q5 1 4 8Q0 10-3 8Z" fill="#ead9b5" stroke="#614738" stroke-width="1"/>
+                    <path d="M-9-4Q-8-14 1-15Q10-14 11-4Q1 0-9-4Z" fill="#a9474e" stroke="#5e3837" stroke-width="1.2"/>
+                    <path d="M-7-3Q1 1 9-3" fill="none" stroke="#e5c5b1" stroke-width="1" opacity=".75"/>
+                    <g fill="#f4e7cd"><circle cx="-4" cy="-8" r="1.5"/><circle cx="2" cy="-11" r="1.3"/><circle cx="6" cy="-6" r="1.1"/></g>
+                  </g>
+                  <rect x="-13" y="-19" width="28" height="31" fill="#000" fill-opacity="0" pointer-events="all"/>
+                </g>
                 <g id="entrance-roadtrip-camp-empty-pit" transform="translate(340 121)" tabindex="0"
                   data-title-i="entrance_roadtrip_camp_fire_invite">
                   <g fill="#b7aa93" stroke="#574d43" stroke-width="1.3"><ellipse rx="82" ry="22" fill="#5b5247"/><circle cx="-62" cy="-8" r="18"/><circle cx="-35" cy="-18" r="19"/><circle cx="-5" cy="-21" r="18"/><circle cx="27" cy="-18" r="19"/><circle cx="59" cy="-7" r="18"/></g>
@@ -39448,6 +39466,7 @@ window.__entranceRoomOpen = false;
   }
   var campLake = roadtripElement("entrance-roadtrip-camp-lake");
   var campMamaBear = roadtripElement("entrance-roadtrip-camp-mama-bear");
+  var campTripMushroom = roadtripElement("entrance-roadtrip-camp-trip-mushroom");
   var campTent = roadtripElement("entrance-roadtrip-camp-tent");
   var campPot = roadtripElement("entrance-roadtrip-camp-pot");
   var campSun = roadtripElement("entrance-roadtrip-camp-sun");
@@ -39457,6 +39476,7 @@ window.__entranceRoomOpen = false;
   var campStewGame = roadtripElement("entrance-roadtrip-stew-game");
   var campFireState = { complete: false, lit: false, open: false, tinder: false, twigs: false, logs: "", igniting: false };
   var campFireTimer = null;
+  var campMushroomTripTimer = null;
   var campPotOpen = false;
   var CAMP_STEW_WARM_MS = 2800;
   var CAMP_STEW_SIMMER_MS = 6300;
@@ -40014,6 +40034,19 @@ window.__entranceRoomOpen = false;
   bindRoadtripCampAction(campMamaBear, function () {
     restartRoadtripCampOneShot(campMamaBear, "reacting");
     if (window.__entranceRoadtripCampBearHuff) window.__entranceRoadtripCampBearHuff();
+  });
+  bindRoadtripCampAction(campTripMushroom, function () {
+    restartRoadtripCampOneShot(campTripMushroom, "wobbling");
+    var trip = window.__tripState && window.__tripState();
+    if ((trip && trip.active) || !window.__startTrip || !window.__startTrip("shrooms", true, false, true)) return;
+    clearTimeout(campMushroomTripTimer);
+    room.classList.remove("camp-shrooms-trip");
+    void room.getBoundingClientRect();
+    room.classList.add("camp-shrooms-trip");
+    campMushroomTripTimer = setTimeout(function () {
+      campMushroomTripTimer = null;
+      room.classList.remove("camp-shrooms-trip");
+    }, 6100);
   });
   Array.prototype.forEach.call(document.querySelectorAll("#entrance-roadtrip-camp-aspen>g"), function (poplar) {
     bindRoadtripCampAction(poplar, function () {
@@ -101635,11 +101668,11 @@ function startTripVariant(variant, noCard, immediateCard, explicitChoice) {
     else if (variant !== "nitrous" && variant !== "iboga") bumpTripTolerance();
   }, TRIP_DURATIONS[variant] || 3000);
 }
-function beginTrip(variant, noCard, immediateCard, explicitChoice) {
+function beginTrip(variant, noCard, immediateCard, explicitChoice, suppressBlooms) {
   if (TRIP_VARIANTS.indexOf(variant) < 0) return false;
   setTripActiveState(true);
   startTripVariant(variant, noCard, immediateCard, explicitChoice);
-  if (variant === "shrooms") startTripBlooms();
+  if (variant === "shrooms" && !suppressBlooms) startTripBlooms();
   return true;
 }
 function stopTrip(resetToleranceToo) {
@@ -101660,8 +101693,8 @@ function stopTrip(resetToleranceToo) {
   if (window.__updateGardenAurora) window.__updateGardenAurora();
   return true;
 }
-window.__startTrip = function (variant, noCard, immediateCard) {
-  return beginTrip(variant, noCard, immediateCard, true);
+window.__startTrip = function (variant, noCard, immediateCard, suppressBlooms) {
+  return beginTrip(variant, noCard, immediateCard, true, suppressBlooms);
 };
 window.__startTripWithImmediateCard = function (variant) {
   return beginTrip(variant, false, true, true);

@@ -78,6 +78,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           completed: ["cassiopeia", "ursa-major", "ursa-minor"],
           complete: true,
           wisdomDismissed: false,
+          wisdomHandoffReady: true,
           sleepPhase: "idle"
         };
         window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");

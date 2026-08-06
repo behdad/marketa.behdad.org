@@ -20,6 +20,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     return true;
   }
+  function clickPoint(node) {
+    var box = node.getBoundingClientRect();
+    var target = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    click(target);
+    return target && target.id;
+  }
   function clearNight() {
     window.storm(false); window.rain(false); window.snow(false); window.overcast(false);
     if (window.__applyBalconyWeather) window.__applyBalconyWeather();
@@ -65,6 +71,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var sky = document.getElementById("entrance-roadtrip-camp-sky-hit");
     var outer = document.getElementById("entrance-roadtrip-dismiss");
     var moon = document.getElementById("entrance-roadtrip-camp-moon");
+    var wisdomHit = document.getElementById("entrance-roadtrip-camp-wisdom-hit");
     var room = document.getElementById("entrance-room");
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
     return {
@@ -110,10 +117,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           rects: bubble.querySelectorAll("rect.entrance-roadtrip-camp-wisdom-shape").length,
           stroke: path && getComputedStyle(path).stroke,
           x: box && Math.round(box.x),
-          width: box && Math.round(box.width)
+          width: box && Math.round(box.width),
+          centerY: box && Math.round(box.y + box.height / 2)
         };
       }),
+      wisdomHit: wisdomHit && {
+        x: Number(wisdomHit.getAttribute("x") || 0),
+        y: Number(wisdomHit.getAttribute("y")),
+        width: Number(wisdomHit.getAttribute("width")),
+        height: Number(wisdomHit.getAttribute("height"))
+      },
       wisdomText: wisdom.textContent.replace(/\s+/g, " ").trim(),
+      tentOpen: document.getElementById("entrance-roadtrip-camp-tent").classList.contains("open"),
       fireBuilt: roadtrip.campFireBuilt,
       fireLit: roadtrip.campFireLit,
       pinecones: roadtrip.campPinecones,
@@ -172,35 +187,45 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                         window.__entranceRoadtripCampStargazingOpen();
                         trace("ursa-minor");
                         report.complete = snap();
-                        var completeCheckpoint = window.__captureCheckpointSystems().entrance;
-                        dragLiveStar("cassiopeia", 0, 24, 30);
-                        click(document.querySelector('[data-live-stargazing-constellation="cassiopeia"] [data-live-stargazing-star="0"]'));
-                        var guardedTouchMove = new Event("touchmove", { bubbles: true, cancelable: true });
-                        document.querySelector('[data-live-stargazing-constellation="cassiopeia"] [data-live-stargazing-star="0"]').dispatchEvent(guardedTouchMove);
-                        report.touchDragGuard = guardedTouchMove.defaultPrevented;
-                        report.dragged = snap();
-                        window.setLang("cs");
-                        report.czech = {
-                          title: document.querySelector('[data-i="entrance_roadtrip_stargazing_title"]').textContent,
-                          builderNames: Array.prototype.map.call(document.querySelectorAll('#entrance-roadtrip-stargazing-game [data-i^="entrance_roadtrip_stargazing_ursa"],#entrance-roadtrip-stargazing-game [data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
-                          liveNames: document.querySelectorAll('#entrance-roadtrip-camp-finale-constellations text').length,
-                          wisdom: document.getElementById("entrance-roadtrip-camp-wisdom").textContent.replace(/\s+/g, " ").trim()
-                        };
-                        window.setLang("en");
-                        click(document.getElementById("entrance-roadtrip-camp-wisdom"));
-                        report.dismissed = snap();
-                        window.__restoreCheckpointSystems({ entrance: completeCheckpoint }, "afterStage");
+                        var tent = document.getElementById("entrance-roadtrip-camp-tent");
+                        report.earlyTarget = clickPoint(tent);
+                        report.earlyClick = snap();
                         setTimeout(function () {
                           try {
-                            report.completeRestored = snap();
-                            click(document.getElementById("entrance-roadtrip-dismiss"));
-                            report.exited = snap();
-                            click(document.querySelector('[data-roadtrip-reentry-choice="camp"]'));
-                            report.preservedArrival = snap();
-                            window.overcast(false); clearNight();
-                          } catch (error) { report.errors.push(String(error && error.stack || error)); }
-                          finish();
-                        }, 180);
+                            report.handoff = snap();
+                            var completeCheckpoint = window.__captureCheckpointSystems().entrance;
+                            report.englishContinue = document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim();
+                            window.setLang("cs");
+                            report.czech = {
+                              title: document.querySelector('[data-i="entrance_roadtrip_stargazing_title"]').textContent,
+                              builderNames: Array.prototype.map.call(document.querySelectorAll('#entrance-roadtrip-stargazing-game [data-i^="entrance_roadtrip_stargazing_ursa"],#entrance-roadtrip-stargazing-game [data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
+                              liveNames: document.querySelectorAll('#entrance-roadtrip-camp-finale-constellations text').length,
+                              wisdom: document.getElementById("entrance-roadtrip-camp-wisdom").textContent.replace(/\s+/g, " ").trim(),
+                              continueText: document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim()
+                            };
+                            window.setLang("en");
+                            report.dismissTarget = clickPoint(tent);
+                            report.dismissed = snap();
+                            dragLiveStar("cassiopeia", 0, 24, 30);
+                            click(document.querySelector('[data-live-stargazing-constellation="cassiopeia"] [data-live-stargazing-star="0"]'));
+                            var guardedTouchMove = new Event("touchmove", { bubbles: true, cancelable: true });
+                            document.querySelector('[data-live-stargazing-constellation="cassiopeia"] [data-live-stargazing-star="0"]').dispatchEvent(guardedTouchMove);
+                            report.touchDragGuard = guardedTouchMove.defaultPrevented;
+                            report.dragged = snap();
+                            window.__restoreCheckpointSystems({ entrance: completeCheckpoint }, "afterStage");
+                            setTimeout(function () {
+                              try {
+                                report.completeRestored = snap();
+                                click(document.getElementById("entrance-roadtrip-dismiss"));
+                                report.exited = snap();
+                                click(document.querySelector('[data-roadtrip-reentry-choice="camp"]'));
+                                report.preservedArrival = snap();
+                                window.overcast(false); clearNight();
+                              } catch (error) { report.errors.push(String(error && error.stack || error)); }
+                              finish();
+                            }, 180);
+                          } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
+                        }, 3550);
                       } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
                     }, 180);
                   } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
@@ -225,7 +250,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite stargazing:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 3600, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 7600, {
   forceReduce: true,
   urlSuffix: "?date=2026-07-15&time=23:00#play",
   chromeFlags: "--window-size=1180,900"
@@ -281,12 +306,25 @@ check(result && result.complete && result.complete.state.complete && !result.com
     "rgb(217, 166, 166)|rgb(127, 158, 192)|rgb(217, 166, 166)|rgb(127, 158, 192)" &&
   result.complete.wisdomShapes[0].x >= 460 && result.complete.wisdomShapes[1].x <= 20 &&
   result.complete.wisdomShapes[2].x >= 485 && result.complete.wisdomShapes[3].x <= 15 &&
+  result.complete.wisdomShapes.slice(1).every(function (shape, index) {
+    var step = shape.centerY - result.complete.wisdomShapes[index].centerY;
+    return step >= 26 && step <= 36;
+  }) &&
+  result.complete.wisdomHit && result.complete.wisdomHit.x === 0 && result.complete.wisdomHit.y === -120 &&
+  result.complete.wisdomHit.width === 680 && result.complete.wisdomHit.height === 340 &&
   result.complete.wisdomText.indexOf("Until that ends as well.") >= 0 &&
   result.complete.wisdomText.indexOf("When something is over,") >= 0 &&
   result.complete.wisdomText.indexOf("something else begins") >= 0 &&
   result.complete.wisdomText.indexOf("—ad infinitum.") >= 0,
   "finishing returns to a non-traceable live sky with draggable stars behind the moon and four edge-set path bubbles",
   result && result.complete);
+check(result && result.complete && !result.complete.state.wisdomHandoffReady &&
+  result.complete.caption === "entrance_roadtrip_stargazing_title" &&
+  result.earlyTarget === "entrance-roadtrip-camp-wisdom-hit" && result.earlyClick &&
+  !result.earlyClick.state.wisdomDismissed && result.earlyClick.state.sleepPhase === "idle" &&
+  !result.earlyClick.tentOpen,
+  "the full-campsite wisdom shield consumes early prop clicks while the exchange reveals",
+  { complete: result && result.complete, target: result && result.earlyTarget, after: result && result.earlyClick });
 check(/camp-wisdom-bubble:nth-child\(2\)\{animation-delay:1s\}/.test(source) &&
   /camp-wisdom-bubble:nth-child\(3\)\{animation-delay:2s\}/.test(source) &&
   /camp-wisdom-bubble:nth-child\(4\)\{animation-delay:3s\}/.test(source),
@@ -309,26 +347,34 @@ check(result && result.dragged && result.dragged.state.complete && !result.dragg
   result && result.dragged);
 check(result && result.touchDragGuard,
   "completed-star touch drags suppress page panning through a non-passive local guard", result && result.touchDragGuard);
+check(result && result.handoff && result.handoff.state.wisdomHandoffReady &&
+  result.handoff.caption === "entrance_roadtrip_stargazing_continue" &&
+  result.englishContinue === "Great wisdom dispensed. Click anywhere to continue.",
+  "the persistent handoff clue appears after all four one-second reveals", result && result.handoff);
 check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
   result.czech.builderNames.join("|") === "Kasiopeja|Velká medvědice|Malá medvědice" &&
   result.czech.liveNames === 0 &&
   result.czech.wisdom.indexOf("Když něco skončí,") >= 0 &&
-  result.czech.wisdom.indexOf("něco jiného začne") >= 0,
+  result.czech.wisdom.indexOf("něco jiného začne") >= 0 &&
+  result.czech.continueText === "Velká moudrost rozdána. Klikni kamkoli a pokračuj.",
   "builder labels switch to Czech while the permanent sky stays unlabeled", result && result.czech);
 check(result && result.dismissed && result.dismissed.state.wisdomDismissed && !result.dismissed.wisdomShown &&
   result.dismissed.state.sleepPhase === "prompt" &&
-  result.dismissed.caption === "entrance_roadtrip_camp_sleep_prompt" && result.dismissed.outerDismiss === "grid",
-  "clicking the conversation dismisses it and suggests putting out the fire", result && result.dismissed);
+  result.dismissed.caption === "entrance_roadtrip_camp_sleep_prompt" && result.dismissed.outerDismiss === "grid" &&
+  result.dismissTarget === "entrance-roadtrip-camp-wisdom-hit" && !result.dismissed.tentOpen,
+  "the next campsite click dismisses the exchange without reaching the underlying prop", result && result.dismissed);
 check(result && result.completeRestored && result.completeRestored.state.complete &&
   !result.completeRestored.state.wisdomDismissed && result.completeRestored.wisdomShown &&
-  result.completeRestored.state.sleepPhase === "idle" &&
-  result.completeRestored.caption === "entrance_roadtrip_stargazing_title",
-  "checkpoint restore returns the undismissed live-sky conversation without a stale invitation",
+  result.completeRestored.state.sleepPhase === "idle" && result.completeRestored.state.wisdomHandoffReady &&
+  result.completeRestored.caption === "entrance_roadtrip_stargazing_continue",
+  "checkpoint restore returns the ready, undismissed live-sky handoff",
   result && result.completeRestored);
 check(result && result.exited && !result.exited.campActive,
   "the standard campsite exit returns to the Road Trip controls", result && result.exited);
 check(result && result.preservedArrival && result.preservedArrival.state.complete &&
-  result.preservedArrival.wisdomShown && result.preservedArrival.fireBuilt && result.preservedArrival.fireLit &&
+  result.preservedArrival.wisdomShown && result.preservedArrival.state.wisdomHandoffReady &&
+  result.preservedArrival.caption === "entrance_roadtrip_stargazing_continue" &&
+  result.preservedArrival.fireBuilt && result.preservedArrival.fireLit &&
   result.preservedArrival.stew && result.preservedArrival.stew.status === "served",
   "leaving before the curtain call preserves the finished stargazing campsite", result && result.preservedArrival);
 

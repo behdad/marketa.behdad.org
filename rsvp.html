@@ -34298,13 +34298,14 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                     <text class="entrance-roadtrip-camp-wisdom-text" x="101"><tspan x="101" y="51" data-i="entrance_roadtrip_stargazing_marketa_1a">…and bad things end—</tspan><tspan x="101" y="62" data-i="entrance_roadtrip_stargazing_marketa_1b">which is also good.</tspan></text>
                   </g>
                   <g class="entrance-roadtrip-camp-wisdom-bubble entrance-roadtrip-camp-wisdom-behdad">
-                    <path class="entrance-roadtrip-camp-wisdom-shape" d="M518 101H531L489 87L545 101H647Q655 101 655 109V121Q655 129 647 129H518Q510 129 510 121V109Q510 101 518 101Z"/>
-                    <text class="entrance-roadtrip-camp-wisdom-text" x="583" y="118" data-i="entrance_roadtrip_stargazing_behdad_2">Until that ends as well.</text>
+                    <path class="entrance-roadtrip-camp-wisdom-shape" d="M518 76H647Q655 76 655 84V96Q655 104 647 104H518Q510 104 510 96V94L489 87L510 86V84Q510 76 518 76Z"/>
+                    <text class="entrance-roadtrip-camp-wisdom-text" x="583" y="93" data-i="entrance_roadtrip_stargazing_behdad_2">Until that ends as well.</text>
                   </g>
                   <g class="entrance-roadtrip-camp-wisdom-bubble entrance-roadtrip-camp-wisdom-marketa">
-                    <path class="entrance-roadtrip-camp-wisdom-shape" d="M20 99H158L204 85L175 99H187Q195 99 195 107V135Q195 143 187 143H20Q12 143 12 135V107Q12 99 20 99Z"/>
-                    <text class="entrance-roadtrip-camp-wisdom-text" x="103"><tspan x="103" y="112" font-style="italic" data-i="entrance_roadtrip_stargazing_marketa_quote_1">When something is over,</tspan> <tspan x="103" y="123" font-style="italic" data-i="entrance_roadtrip_stargazing_marketa_quote_2">something else begins</tspan><tspan x="103" y="135" data-i="entrance_roadtrip_stargazing_ad_infinitum">—ad infinitum.</tspan></text>
+                    <path class="entrance-roadtrip-camp-wisdom-shape" d="M20 103H158L204 89L175 103H187Q195 103 195 111V139Q195 147 187 147H20Q12 147 12 139V111Q12 103 20 103Z"/>
+                    <text class="entrance-roadtrip-camp-wisdom-text" x="103"><tspan x="103" y="116" font-style="italic" data-i="entrance_roadtrip_stargazing_marketa_quote_1">When something is over,</tspan> <tspan x="103" y="127" font-style="italic" data-i="entrance_roadtrip_stargazing_marketa_quote_2">something else begins</tspan><tspan x="103" y="139" data-i="entrance_roadtrip_stargazing_ad_infinitum">—ad infinitum.</tspan></text>
                   </g>
+                  <rect id="entrance-roadtrip-camp-wisdom-hit" y="-120" width="680" height="340" fill="#000" fill-opacity="0"/>
                 </g>
               </g>
             </g>
@@ -40099,8 +40100,11 @@ window.__entranceRoomOpen = false;
   };
   var CAMP_SLEEP_PHASES = ["idle", "prompt", "fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"];
   var CAMP_SLEEP_DELAYS = { "fire-out": 680, "campers-gone": 820, "tent-lit": 900, "dark": 1320, "zzz": 2550 };
+  var CAMP_WISDOM_HANDOFF_MS = 3450;
   var campSleepState = { phase: "idle" };
   var campSleepTimer = null;
+  var campWisdomHandoffReady = false;
+  var campWisdomHandoffTimer = null;
   var campStargazingWasEligible = false;
   var campStargazingInviteTimer = null;
   var campStargazingSunsetTimer = null;
@@ -40517,6 +40521,7 @@ window.__entranceRoomOpen = false;
       sunsetting: campStargazingSunsetTimer !== null,
       eligible: campStargazingEligible(),
       wisdomDismissed: campStargazingState.wisdomDismissed,
+      wisdomHandoffReady: campWisdomHandoffReady,
       sleepPhase: campSleepState.phase,
       progress: progress,
       completed: completed,
@@ -40596,6 +40601,25 @@ window.__entranceRoomOpen = false;
       "camp-sleep-complete");
     paintCampSleepFinale();
   }
+  function campWisdomShowing() {
+    return campStargazingComplete() && !campStargazingState.wisdomDismissed && campSleepState.phase === "idle";
+  }
+  function pauseCampWisdomHandoff() {
+    clearTimeout(campWisdomHandoffTimer);
+    campWisdomHandoffTimer = null;
+  }
+  function scheduleCampWisdomHandoff() {
+    if (campWisdomHandoffReady || campWisdomHandoffTimer !== null || !campWisdomShowing() ||
+        !campSleepFinaleAttended()) return false;
+    campWisdomHandoffTimer = setTimeout(function () {
+      campWisdomHandoffTimer = null;
+      if (!campWisdomShowing() || !campSleepFinaleAttended()) return;
+      campWisdomHandoffReady = true;
+      syncRoadtripCampFireCaption(false);
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    }, CAMP_WISDOM_HANDOFF_MS);
+    return true;
+  }
   function paintCampStargazing() {
     if (!campStargazingGame) return;
     var eligible = campStargazingEligible();
@@ -40609,6 +40633,8 @@ window.__entranceRoomOpen = false;
     if (eligible && complete) setCampStargazingClear(true);
     if (campStargazingWisdom) campStargazingWisdom.classList.toggle("show",
       complete && !campStargazingState.wisdomDismissed && campSleepState.phase === "idle");
+    if (campWisdomShowing()) scheduleCampWisdomHandoff();
+    else pauseCampWisdomHandoff();
     paintCampSleepFinale();
     Array.prototype.forEach.call(campStargazingGame.querySelectorAll("[data-stargazing-constellation]"), function (figure) {
       var name = figure.getAttribute("data-stargazing-constellation");
@@ -40643,6 +40669,8 @@ window.__entranceRoomOpen = false;
     campStargazingSunsetTimer = null;
     if (campFireScene) campFireScene.classList.remove("stargazing-sunset");
     setCampStargazingClear(false);
+    pauseCampWisdomHandoff();
+    campWisdomHandoffReady = false;
     resetCampSleepFinale();
     campStargazingState.open = false;
     campStargazingState.wisdomDismissed = false;
@@ -40678,6 +40706,7 @@ window.__entranceRoomOpen = false;
       completed: snapshot.completed,
       complete: snapshot.complete,
       wisdomDismissed: snapshot.wisdomDismissed,
+      wisdomHandoffReady: snapshot.wisdomHandoffReady,
       sleepPhase: campSleepState.phase
     };
   }
@@ -40693,6 +40722,8 @@ window.__entranceRoomOpen = false;
     campSleepState.phase = CAMP_SLEEP_PHASES.indexOf(row.sleepPhase) >= 0 ? row.sleepPhase :
       campStargazingState.wisdomDismissed ? "prompt" : "idle";
     campStargazingState.wisdomDismissed = campSleepState.phase !== "idle" || campStargazingState.wisdomDismissed;
+    campWisdomHandoffReady = row.wisdomHandoffReady === true && campSleepState.phase === "idle" &&
+      !campStargazingState.wisdomDismissed;
     paintCampStargazing();
     scheduleCampSleepFinale();
   }
@@ -40749,6 +40780,8 @@ window.__entranceRoomOpen = false;
     if (!wasComplete && campStargazingComplete()) {
       campStargazingState.open = false;
       campStargazingState.wisdomDismissed = false;
+      campWisdomHandoffReady = false;
+      pauseCampWisdomHandoff();
     }
     paintCampStargazing();
     if (!wasComplete && campStargazingComplete()) syncRoadtripCampFireCaption(false);
@@ -40801,7 +40834,9 @@ window.__entranceRoomOpen = false;
     return false;
   }
   function dismissCampStargazingWisdom() {
-    if (!campStargazingComplete() || campStargazingState.wisdomDismissed) return false;
+    if (!campWisdomShowing() || !campWisdomHandoffReady) return false;
+    pauseCampWisdomHandoff();
+    campWisdomHandoffReady = false;
     campStargazingState.wisdomDismissed = true;
     campSleepState.phase = "prompt";
     paintCampStargazing();
@@ -40818,7 +40853,9 @@ window.__entranceRoomOpen = false;
       if (!campStargazingComplete()) {
         return campStargazingState.open ? "entrance_roadtrip_stargazing_hint" : "entrance_roadtrip_stargazing_invite";
       }
-      return campStargazingState.wisdomDismissed ? "entrance_roadtrip_camp_arrival" : "entrance_roadtrip_stargazing_title";
+      if (!campStargazingState.wisdomDismissed) return campWisdomHandoffReady ?
+        "entrance_roadtrip_stargazing_continue" : "entrance_roadtrip_stargazing_title";
+      return "entrance_roadtrip_camp_arrival";
     }
     if (campStewState.status === "cooking" && campStewPhase() === "ready") return "entrance_roadtrip_stew_ready_feedback";
     if (campStewState.status === "cooking") return "entrance_roadtrip_stew_cooking_feedback";
@@ -41054,13 +41091,19 @@ window.__entranceRoomOpen = false;
     event.stopPropagation();
   });
   if (campStargazingWisdom) campStargazingWisdom.addEventListener("click", function (event) {
-    dismissCampStargazingWisdom();
+    if (!campWisdomShowing()) return;
+    if (campWisdomHandoffReady) dismissCampStargazingWisdom();
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
   });
   document.addEventListener("visibilitychange", function () {
-    if (document.hidden) pauseCampSleepFinale();
-    else scheduleCampSleepFinale();
+    if (document.hidden) {
+      pauseCampSleepFinale();
+      pauseCampWisdomHandoff();
+    } else {
+      scheduleCampSleepFinale();
+      scheduleCampWisdomHandoff();
+    }
   });
   if (campStargazingGame) {
     Array.prototype.forEach.call(campStargazingGame.querySelectorAll("[data-stargazing-star]"), function (star) {
@@ -41305,6 +41348,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripCampFire();
     paintCampSleepFinale();
     scheduleCampSleepFinale();
+    scheduleCampWisdomHandoff();
     clearTimeout(roadtripCampCaptionTimer);
     roadtripCampCaptionTimer = setTimeout(function () {
       roadtripCampCaptionTimer = null;
@@ -43566,6 +43610,7 @@ window.__entranceRoomOpen = false;
       campStewState.open = false;
       campStargazingState.open = false;
       pauseCampSleepFinale();
+      pauseCampWisdomHandoff();
       stopCampStewClock();
       stopCampStewClank();
       paintRoadtripCampStew();
@@ -43687,6 +43732,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.route === "camp") {
       ensureCampStewClock();
       scheduleCampSleepFinale();
+      scheduleCampWisdomHandoff();
     }
     return true;
   }
@@ -50273,6 +50319,7 @@ var T = {
       entrance_roadtrip_stargazing_invite: "The sky is clear. Click the sky to look up.",
       entrance_roadtrip_stargazing_title: "Stargazing",
       entrance_roadtrip_stargazing_hint: "Tap the glowing star, or press Enter, to trace each constellation.",
+      entrance_roadtrip_stargazing_continue: "Great wisdom dispensed. Click anywhere to continue.",
       entrance_roadtrip_stargazing_cassiopeia: "Cassiopeia",
       entrance_roadtrip_stargazing_ursa_major: "Ursa Major",
       entrance_roadtrip_stargazing_ursa_minor: "Ursa Minor",
@@ -51613,6 +51660,7 @@ var T = {
       entrance_roadtrip_stargazing_invite: "Obloha je jasná. Klikni na ni a podívej se nahoru.",
       entrance_roadtrip_stargazing_title: "Pozorování hvězd",
       entrance_roadtrip_stargazing_hint: "Klepni na zářící hvězdu nebo stiskni Enter a obkresli každé souhvězdí.",
+      entrance_roadtrip_stargazing_continue: "Velká moudrost rozdána. Klikni kamkoli a pokračuj.",
       entrance_roadtrip_stargazing_cassiopeia: "Kasiopeja",
       entrance_roadtrip_stargazing_ursa_major: "Velká medvědice",
       entrance_roadtrip_stargazing_ursa_minor: "Malá medvědice",

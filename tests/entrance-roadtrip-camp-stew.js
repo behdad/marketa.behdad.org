@@ -388,8 +388,9 @@ check(result && result.afterRealTime && result.afterRealTime.state.status === "c
   result.warmed.steam === "entrance-roadtrip-camp-pot-first-wisp",
   "real attended time advances the batch and its warming phase shows one faint wisp", result && { real: result.afterRealTime, warmed: result.warmed });
 check(result && result.inspected && result.inspected.lidOpen && result.ready && result.ready.phase === "ready" &&
+  result.ready.lidOpen &&
   result.ready.caption === "entrance_roadtrip_stew_ready_feedback" && result.ready.bubbles === "entrance-roadtrip-camp-bubble",
-  "a pre-ready pot click inspects the lid and the ready caption/bubbles arrive on the scene pot", result && { inspected: result.inspected, ready: result.ready });
+  "a pre-ready pot click inspects the lid and the ready moment opens it with its caption/bubbles", result && { inspected: result.inspected, ready: result.ready });
 check(result && result.inspectedVisual && result.inspectedVisual.food === "1" && result.inspectedVisual.brewOpacity === "1" &&
   result.inspectedVisual.brewTarget === "#b05a35" && result.inspectedVisual.brewTransition === "0.5s" &&
   result.inspectedVisual.bubble === "entrance-roadtrip-camp-pot-gentle-bubble" &&
@@ -402,7 +403,8 @@ check(result && result.inspectedVisual && result.inspectedVisual.food === "1" &&
 check(result && result.fireOutRestored && !result.fireOutRestored.before.fireLit &&
   result.fireOutRestored.before.phase === "cold" && result.fireOutRestored.before.status === "assembling" &&
   result.fireOutRestored.after.elapsed === 0 && !result.fireOutRestored.pot && !result.fireOutRestored.grill && !result.fireOutRestored.crate &&
-  result.readyRestored && result.readyRestored.state.phase === "ready" && result.readyRestored.pot && result.readyRestored.grill && !result.readyRestored.crate,
+  result.readyRestored && result.readyRestored.state.phase === "ready" && result.readyRestored.state.lidOpen &&
+  result.readyRestored.pot && result.readyRestored.grill && !result.readyRestored.crate,
   "a fire-out checkpoint hard-resets food while a lit checkpoint restores committed cooking", result && { fireOut: result.fireOutRestored, ready: result.readyRestored });
 check(result && result.served && result.served.state.status === "served" && !result.served.pot && result.served.grill &&
   result.served.corn && result.served.meal && !result.served.crate && result.served.caption === "entrance_roadtrip_stew_served_feedback" &&

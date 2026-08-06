@@ -188,8 +188,8 @@ completed fire. Press `Enter`, Escape, Backspace, or the top-right × to leave C
 Entrance dashboard.
 
 The lit fire also reveals a food crate. Open it to assemble Camping stew from one protein, one base,
-and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook;
-an extinguished fire pauses it. Serve during the ready moment, or reset a comically overcooked pot.
+and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook
+and opens when dinner is ready; an extinguished fire pauses it. Serve then, or reset a comically overcooked pot.
 After serving, click the sky to carry the whole game through sunset into a clear night. Trace
 Cassiopeia, Ursa Major, and Ursa Minor; the completed constellations and closing campfire exchange
 remain in the live campsite until dismissed. Closing that final exchange ends the campsite, so the

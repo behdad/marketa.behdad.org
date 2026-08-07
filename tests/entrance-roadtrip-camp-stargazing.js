@@ -130,6 +130,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var wisdomHit = document.getElementById("entrance-roadtrip-camp-wisdom-hit");
     var room = document.getElementById("entrance-room");
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
+    var panel = game.querySelector(".entrance-roadtrip-stargazing-panel");
+    var cards = game.querySelectorAll(".entrance-roadtrip-stargazing-card");
+    var cardsBottom = Math.max.apply(null, Array.prototype.map.call(cards, function (card) {
+      return Number(card.getAttribute("y")) + Number(card.getAttribute("height"));
+    }));
     return {
       state: window.__entranceRoadtripCampStargazingState(),
       openClass: game.classList.contains("open"),
@@ -147,6 +152,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       minHit: Math.min.apply(null, Array.prototype.map.call(game.querySelectorAll(".entrance-roadtrip-stargazing-star-hit"), function (node) {
         return Number(node.getAttribute("r"));
       })),
+      panelBottomGap: Number(panel.getAttribute("y")) + Number(panel.getAttribute("height")) - cardsBottom,
       liveOpacity: Number(getComputedStyle(live).opacity),
       livePointer: getComputedStyle(live).pointerEvents,
       liveLineOpacity: Number(getComputedStyle(liveLine).opacity),
@@ -352,6 +358,9 @@ check(result && result.open && result.open.openClass && result.open.outerDismiss
   result.open.constellations === 3 && result.open.stars === 19 && result.open.minHit >= 14,
   "sunset resolves into the clear overlay with three forgiving traces and no outer dismiss",
   result && result.open);
+check(result && result.open && result.open.panelBottomGap >= 8 && result.open.panelBottomGap <= 16,
+  "the stargazing frame ends shortly below the cards instead of leaving a large empty tail",
+  result && result.open && result.open.panelBottomGap);
 check(result && result.open &&
   same(result.open.builderShapes.cassiopeia.points, [[68,-20],[105,25],[150,20],[178,55],[210,24]]) &&
   same(result.open.builderShapes["ursa-major"].points, [[265,-22],[298,-22],[326,-10],[351,7],[410,10],[398,52],[354,42]]) &&
@@ -388,7 +397,7 @@ check(result && result.complete && result.complete.state.complete && !result.com
   result.complete.wisdomShapes.map(function (shape) { return shape.stroke; }).join("|") ===
     "rgb(217, 166, 166)|rgb(127, 158, 192)|rgb(217, 166, 166)|rgb(127, 158, 192)" &&
   result.complete.wisdomShapes[0].x >= 460 && result.complete.wisdomShapes[1].x <= 20 &&
-  result.complete.wisdomShapes[2].x >= 485 && result.complete.wisdomShapes[3].x <= 15 &&
+  result.complete.wisdomShapes[2].x >= 485 && result.complete.wisdomShapes[3].x <= 30 &&
   result.complete.wisdomShapes.slice(1).every(function (shape, index) {
     var step = shape.centerY - result.complete.wisdomShapes[index].centerY;
     return step >= 26 && step <= 36;

@@ -100,7 +100,7 @@ check(/if \(roadtripState\.route === "calgary"\) return 0;\s*if \(roadtripState\
   "Calgary has no curves before the explicit exit turn");
 check(/ROADTRIP_CALGARY_MEDIAN_FRACTION = \.14/.test(source) &&
   /ROADTRIP_CALGARY_ROAD_FRACTION = 1\.2/.test(source) &&
-  /var calgaryFirstBoundary = medianFraction \+ ROADTRIP_CALGARY_LANE_FRACTION/.test(source),
+  /var calgaryFirstBoundary = ROADTRIP_CALGARY_MEDIAN_FRACTION \+ ROADTRIP_CALGARY_LANE_FRACTION/.test(source),
   "the wide median expands both carriageways instead of narrowing their three equal lanes");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {

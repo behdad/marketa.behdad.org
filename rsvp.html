@@ -37918,6 +37918,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POOL_SIZE = 16;
   var ROADTRIP_FURNITURE_SIZE = 14;
   var ROADTRIP_DRAW_DISTANCE = 112;
+  var ROADTRIP_LOW_PAINT_INTERVAL_MS = 1000 / 30;
   var ROADTRIP_LANE_OFFSET = 7.5;
   var ROADTRIP_BANFF_LANE_FRACTION = .5;
   var ROADTRIP_ABRAHAM_LANE_FRACTION = 1;
@@ -38094,7 +38095,15 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_POLICE_ARREST_SHOUT_AT = 1.3;
   var ROADTRIP_POLICE_ARREST_KNOCK_AT = 2.35;
   var ROADTRIP_POLICE_ARREST_RADIO_AT = 3.05;
+  var ROADTRIP_POLICE_MIRROR_RUNTIME_ATTRS = ["data-roadtrip-police", "data-roadtrip-road-left",
+    "data-roadtrip-road-right", "data-roadtrip-behind", "data-roadtrip-road-fraction",
+    "data-roadtrip-perspective", "data-roadtrip-project-x", "data-roadtrip-path-x",
+    "data-roadtrip-project-y", "data-roadtrip-rotation"];
+  var ROADTRIP_POLICE_FRONT_RUNTIME_ATTRS = ["data-roadtrip-police", "data-roadtrip-ahead",
+    "data-roadtrip-road-fraction", "data-roadtrip-project-x", "data-roadtrip-path-x",
+    "data-roadtrip-scale"];
   var roadtripPool = [];
+  var roadtripPaintOrder = [];
   var roadtripMirrorPool = [];
   var roadtripMirrorTreePool = [];
   var roadtripLaneMarks = [];
@@ -38136,6 +38145,9 @@ window.__entranceRoomOpen = false;
   var roadtripPoliceMirrorNode = null;
   var roadtripPoliceMirrorFlashNode = null;
   var roadtripArrestNode = null;
+  var roadtripWorldPaintElapsedMs = 0;
+  var roadtripWorldPaintLow = false;
+  var roadtripWorldPaintedThisStep = true;
   var roadtripArrestBlueNode = null;
   var roadtripArrestRedNode = null;
   var roadtripArrestOfficerNode = null;
@@ -38873,10 +38885,27 @@ window.__entranceRoomOpen = false;
     parent.appendChild(use);
     return use;
   }
+  function roadtripSetAttribute(node, name, value) {
+    if (!node) return;
+    value = String(value);
+    if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+  }
+  function roadtripRemoveAttribute(node, name) {
+    if (node && node.hasAttribute(name)) node.removeAttribute(name);
+  }
+  function roadtripSetStyleProperty(node, name, value) {
+    if (node && node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value);
+  }
+  function roadtripSetText(node, value) {
+    value = String(value);
+    if (node && node.textContent !== value) node.textContent = value;
+  }
   function roadtripUseTemplate(use, type) {
     var href = "#entrance-roadtrip-" + type;
-    use.setAttribute("href", href);
-    use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", href);
+    if (use.getAttribute("href") !== href) use.setAttribute("href", href);
+    if (use.getAttributeNS("http://www.w3.org/1999/xlink", "href") !== href) {
+      use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", href);
+    }
   }
   function entranceSceneryNodes(ids) {
     return ids.map(roadtripElement).filter(function (node) { return !!node; });
@@ -38907,9 +38936,9 @@ window.__entranceRoomOpen = false;
     var wrapped = wrapWidth ? entranceSceneryWrappedOffset(offset, wrapWidth) : Number(offset) || 0;
     var vertical = Number(verticalOffset) || 0;
     nodes.forEach(function (node) {
-      node.setAttribute("transform", "translate(" + wrapped.toFixed(2) + " " + vertical.toFixed(2) + ")");
-      node.setAttribute("data-scenery-offset", wrapped.toFixed(2));
-      node.setAttribute("data-scenery-y", vertical.toFixed(2));
+      roadtripSetAttribute(node, "transform", "translate(" + wrapped.toFixed(2) + " " + vertical.toFixed(2) + ")");
+      roadtripSetAttribute(node, "data-scenery-offset", wrapped.toFixed(2));
+      roadtripSetAttribute(node, "data-scenery-y", vertical.toFixed(2));
     });
     return wrapped;
   }
@@ -38979,14 +39008,16 @@ window.__entranceRoomOpen = false;
   }
   function setRoadtripBlendOpacity(id, opacity) {
     var node = roadtripElement(id);
-    if (node) node.style.opacity = Math.max(0, Math.min(1, Number(opacity) || 0)).toFixed(3);
+    if (!node) return;
+    var value = Math.max(0, Math.min(1, Number(opacity) || 0)).toFixed(3);
+    if (node.style.opacity !== value) node.style.opacity = value;
   }
   function paintRoadtripRouteBlend() {
     var blend = roadtripRouteBlend();
     var roadtripWorld = roadtripElement("entrance-roadtrip-world");
     if (roadtripWorld) {
       Object.keys(blend).forEach(function (name) {
-        roadtripWorld.setAttribute("data-roadtrip-" + name + "-mix", blend[name].toFixed(3));
+        roadtripSetAttribute(roadtripWorld, "data-roadtrip-" + name + "-mix", blend[name].toFixed(3));
       });
     }
     setRoadtripBlendOpacity("entrance-roadtrip-calgary-flat", blend.calgary);
@@ -39000,8 +39031,8 @@ window.__entranceRoomOpen = false;
       "entrance-roadtrip-camp-exit", "entrance-roadtrip-entities"
     ].forEach(function (id) { setRoadtripBlendOpacity(id, blend.road); });
     setRoadtripBlendOpacity("entrance-roadtrip-windshield-glaze", blend.road * .68);
-    room.style.setProperty("--roadtrip-road-mix", blend.road.toFixed(3));
-    room.style.setProperty("--roadtrip-banff-mix", blend.banff.toFixed(3));
+    roadtripSetStyleProperty(room, "--roadtrip-road-mix", blend.road.toFixed(3));
+    roadtripSetStyleProperty(room, "--roadtrip-banff-mix", blend.banff.toFixed(3));
     return blend;
   }
   function paintRoadtripScenery() {
@@ -40212,29 +40243,29 @@ window.__entranceRoomOpen = false;
     var scoreValue = Math.floor(Number(roadtripState.score) || 0);
     var speedValue = Math.round(Math.abs(Number(driveState.speed) || 0));
     if (speed) {
-      speed.textContent = speedValue + " km/h";
-      speed.setAttribute("data-roadtrip-speed-band", speedValue <= 100 ? "safe" :
+      roadtripSetText(speed, speedValue + " km/h");
+      roadtripSetAttribute(speed, "data-roadtrip-speed-band", speedValue <= 100 ? "safe" :
         speedValue <= 150 ? "warning" : speedValue <= ROADTRIP_POLICE_ESCAPE_SPEED ? "danger" : "escape");
     }
     if (gear) {
-      gear.textContent = driveGearLabel();
-      gear.setAttribute("data-roadtrip-rpm-band", driveState.rpm >= 7000 ? "redline" :
+      roadtripSetText(gear, driveGearLabel());
+      roadtripSetAttribute(gear, "data-roadtrip-rpm-band", driveState.rpm >= 7000 ? "redline" :
         driveState.rpm >= 6000 ? "red" : driveState.rpm >= 5000 ? "yellow" : "green");
     }
     if (scoreTrip && scorePoints) {
-      scoreTrip.textContent = roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
-        roadtripDistanceLabel(roadtripState.distance, lang) + " km";
-      scorePoints.textContent = scoreValue + " " + pointsUnit;
+      roadtripSetText(scoreTrip, roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
+        roadtripDistanceLabel(roadtripState.distance, lang) + " km");
+      roadtripSetText(scorePoints, scoreValue + " " + pointsUnit);
     } else if (score) {
-      score.textContent = roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
-        roadtripDistanceLabel(roadtripState.distance, lang) + " km · " + scoreValue + " " + pointsUnit;
+      roadtripSetText(score, roadtripElapsedLabel(roadtripState.elapsedSeconds) + " · " +
+        roadtripDistanceLabel(roadtripState.distance, lang) + " km · " + scoreValue + " " + pointsUnit);
     }
-    if (best) best.textContent = "★ " + Math.max(0, Math.floor(roadtripState.best));
-    if (multiplier) multiplier.textContent = "×" + roadtripState.multiplier;
-    if (demeritLabel) demeritLabel.textContent = roadtripPoliceText("entrance_roadtrip_demerit_label");
-    if (demeritPoints) demeritPoints.textContent = roadtripState.demeritPoints + " / " + ROADTRIP_DEMERIT_SUSPENSION;
-    if (bacLabel) bacLabel.textContent = "BAC";
-    if (bacValue) bacValue.textContent = roadtripBacLevel().toFixed(2);
+    roadtripSetText(best, "★ " + Math.max(0, Math.floor(roadtripState.best)));
+    roadtripSetText(multiplier, "×" + roadtripState.multiplier);
+    roadtripSetText(demeritLabel, roadtripPoliceText("entrance_roadtrip_demerit_label"));
+    roadtripSetText(demeritPoints, roadtripState.demeritPoints + " / " + ROADTRIP_DEMERIT_SUSPENSION);
+    roadtripSetText(bacLabel, "BAC");
+    roadtripSetText(bacValue, roadtripBacLevel().toFixed(2));
     if (grade) {
       var gradeKey = roadtripGradeKey(scoreValue);
       var gradeFallback = {
@@ -40243,7 +40274,7 @@ window.__entranceRoomOpen = false;
         entrance_roadtrip_grade_regular: { en: "Roadtrip regular", cs: "Výletový mazák" },
         entrance_roadtrip_grade_legend: { en: "Highway legend", cs: "Legenda dálnice" }
       };
-      grade.textContent = dict && dict[gradeKey] ? dict[gradeKey] : gradeFallback[gradeKey][lang];
+      roadtripSetText(grade, dict && dict[gradeKey] ? dict[gradeKey] : gradeFallback[gradeKey][lang]);
     }
   }
   window.__refreshEntranceRoadtripHud = function () {
@@ -43172,6 +43203,21 @@ window.__entranceRoomOpen = false;
       police.impairedDriving ? "entrance_roadtrip_police_impaired_pursuit" :
         "entrance_roadtrip_police_pursuit", { speed: detectedSpeed });
   }
+  function orderRoadtripPoliceLayers(host) {
+    if (!host) return;
+    var layers = [roadtripPoliceWarningBeams, roadtripPoliceWarningNode, roadtripPoliceRoadNode,
+      roadtripPoliceFrontNode, roadtripPoliceFrontFlashNode].filter(function (node) { return !!node; });
+    var cursor = host.lastElementChild;
+    var ordered = true;
+    for (var index = layers.length - 1; index >= 0; index--) {
+      if (cursor !== layers[index]) {
+        ordered = false;
+        break;
+      }
+      cursor = cursor.previousElementSibling;
+    }
+    if (!ordered) layers.forEach(function (node) { host.appendChild(node); });
+  }
   function paintRoadtripPolice() {
     ensureRoadtripScene();
     var police = roadtripState.police;
@@ -43188,8 +43234,8 @@ window.__entranceRoomOpen = false;
       roadtripPoliceRoadNode.setAttribute("data-roadtrip-ahead", stationRemaining.toFixed(2));
       roadtripPoliceRoadNode.setAttribute("data-roadtrip-project-y", stationPoint.y.toFixed(2));
       roadtripPoliceRoadNode.setAttribute("transform", "translate(" + policeX.toFixed(2) + " " + stationPoint.y.toFixed(2) + ") scale(" + policeScale.toFixed(3) + ")");
-      roadtripPoliceRoadNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
-    } else if (roadtripPoliceRoadNode) roadtripPoliceRoadNode.setAttribute("visibility", "hidden");
+      roadtripSetAttribute(roadtripPoliceRoadNode, "visibility", roadtripState.active ? "visible" : "hidden");
+    } else if (roadtripPoliceRoadNode) roadtripSetAttribute(roadtripPoliceRoadNode, "visibility", "hidden");
     if (police.phase === "warning") {
       var warningRemaining = police.warningCarAt - roadtripState.distance;
       if (roadtripPoliceWarningNode && warningRemaining <= ROADTRIP_DRAW_DISTANCE + 8 && warningRemaining >= -3) {
@@ -43200,19 +43246,20 @@ window.__entranceRoomOpen = false;
         roadtripPoliceWarningNode.setAttribute("data-roadtrip-ahead", warningRemaining.toFixed(2));
         roadtripPoliceWarningNode.setAttribute("data-roadtrip-project-y", warningPoint.y.toFixed(2));
         roadtripPoliceWarningNode.setAttribute("transform", warningTransform);
-        roadtripPoliceWarningNode.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+        roadtripSetAttribute(roadtripPoliceWarningNode, "visibility", roadtripState.active ? "visible" : "hidden");
         if (roadtripPoliceWarningBeams) {
           roadtripPoliceWarningBeams.setAttribute("transform", warningTransform);
-          roadtripPoliceWarningBeams.setAttribute("visibility", roadtripState.active && police.warningLight ? "visible" : "hidden");
+          roadtripSetAttribute(roadtripPoliceWarningBeams, "visibility",
+            roadtripState.active && police.warningLight ? "visible" : "hidden");
           roadtripPoliceWarningBeams.classList.toggle("is-lit", police.warningLight);
         }
       } else {
-        if (roadtripPoliceWarningNode) roadtripPoliceWarningNode.setAttribute("visibility", "hidden");
-        if (roadtripPoliceWarningBeams) roadtripPoliceWarningBeams.setAttribute("visibility", "hidden");
+        roadtripSetAttribute(roadtripPoliceWarningNode, "visibility", "hidden");
+        roadtripSetAttribute(roadtripPoliceWarningBeams, "visibility", "hidden");
       }
     } else {
       [roadtripPoliceWarningNode, roadtripPoliceWarningBeams].forEach(function (node) {
-        if (node) node.setAttribute("visibility", "hidden");
+        roadtripSetAttribute(node, "visibility", "hidden");
       });
     }
     var frontStop = police.stopInFront && police.resolutionReason === "pulled-over" &&
@@ -43301,29 +43348,22 @@ window.__entranceRoomOpen = false;
       roadtripPoliceMirrorNode.setAttribute("visibility", "visible");
     } else if (roadtripPoliceMirrorNode) {
       police.mirrorScale = 0;
-      roadtripPoliceMirrorNode.setAttribute("visibility", "hidden");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-police");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-road-left");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-road-right");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-behind");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-road-fraction");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-perspective");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-project-x");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-path-x");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-project-y");
-      roadtripPoliceMirrorNode.removeAttribute("data-roadtrip-rotation");
+      roadtripSetAttribute(roadtripPoliceMirrorNode, "visibility", "hidden");
+      ROADTRIP_POLICE_MIRROR_RUNTIME_ATTRS.forEach(function (name) {
+        roadtripRemoveAttribute(roadtripPoliceMirrorNode, name);
+      });
     }
     var mirrorPursuitFlashes = following && roadtripPoliceMirrorNode &&
       roadtripPoliceMirrorNode.getAttribute("visibility") === "visible";
     if (roadtripPoliceMirrorFlashNode && mirrorPursuitFlashes) {
       roadtripPoliceMirrorFlashNode.setAttribute("transform",
         roadtripPoliceMirrorNode.getAttribute("transform") || "");
-      roadtripPoliceMirrorFlashNode.setAttribute("visibility", "visible");
+      roadtripSetAttribute(roadtripPoliceMirrorFlashNode, "visibility", "visible");
       roadtripPoliceMirrorFlashNode.classList.add("is-pursuing");
     } else if (roadtripPoliceMirrorFlashNode) {
-      roadtripPoliceMirrorFlashNode.setAttribute("visibility", "hidden");
+      roadtripSetAttribute(roadtripPoliceMirrorFlashNode, "visibility", "hidden");
       roadtripPoliceMirrorFlashNode.classList.remove("is-pursuing");
-      roadtripPoliceMirrorFlashNode.removeAttribute("transform");
+      roadtripRemoveAttribute(roadtripPoliceMirrorFlashNode, "transform");
     }
     if (roadtripPoliceFrontNode && roadtripState.active && frontStop) {
       var frontProgress = police.phase === "arrest" ? 1 : Math.max(0, Math.min(1,
@@ -43350,13 +43390,10 @@ window.__entranceRoomOpen = false;
         frontPoint.y.toFixed(2) + ") scale(" + frontScale.toFixed(3) + ")");
       roadtripPoliceFrontNode.setAttribute("visibility", "visible");
     } else if (roadtripPoliceFrontNode) {
-      roadtripPoliceFrontNode.setAttribute("visibility", "hidden");
-      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-police");
-      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-ahead");
-      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-road-fraction");
-      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-project-x");
-      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-path-x");
-      roadtripPoliceFrontNode.removeAttribute("data-roadtrip-scale");
+      roadtripSetAttribute(roadtripPoliceFrontNode, "visibility", "hidden");
+      ROADTRIP_POLICE_FRONT_RUNTIME_ATTRS.forEach(function (name) {
+        roadtripRemoveAttribute(roadtripPoliceFrontNode, name);
+      });
     }
     if (roadtripPoliceFrontFlashNode && roadtripState.active && frontStop &&
         roadtripPoliceFrontNode && roadtripPoliceFrontNode.getAttribute("visibility") === "visible") {
@@ -43377,17 +43414,11 @@ window.__entranceRoomOpen = false;
         roadtripPoliceFrontNode.getAttribute("transform") || "");
       roadtripPoliceFrontFlashNode.setAttribute("visibility", "visible");
     } else if (roadtripPoliceFrontFlashNode) {
-      roadtripPoliceFrontFlashNode.setAttribute("visibility", "hidden");
-      roadtripPoliceFrontFlashNode.removeAttribute("data-roadtrip-flash-phase");
-      roadtripPoliceFrontFlashNode.removeAttribute("transform");
+      roadtripSetAttribute(roadtripPoliceFrontFlashNode, "visibility", "hidden");
+      roadtripRemoveAttribute(roadtripPoliceFrontFlashNode, "data-roadtrip-flash-phase");
+      roadtripRemoveAttribute(roadtripPoliceFrontFlashNode, "transform");
     }
-    if (roadHost) {
-      if (roadtripPoliceWarningBeams) roadHost.appendChild(roadtripPoliceWarningBeams);
-      if (roadtripPoliceWarningNode) roadHost.appendChild(roadtripPoliceWarningNode);
-      if (roadtripPoliceRoadNode) roadHost.appendChild(roadtripPoliceRoadNode);
-      if (roadtripPoliceFrontNode) roadHost.appendChild(roadtripPoliceFrontNode);
-      if (roadtripPoliceFrontFlashNode) roadHost.appendChild(roadtripPoliceFrontFlashNode);
-    }
+    orderRoadtripPoliceLayers(roadHost);
   }
   function stepRoadtripPolice(distance, seconds, radarSampleSpeed) {
     var police = roadtripState.police;
@@ -43554,7 +43585,7 @@ window.__entranceRoomOpen = false;
   function paintRoadtripCurveSigns() {
     if (!roadtripCurveSignPool.length) return;
     if (roadtripIsCalgaryRoute()) {
-      roadtripCurveSignPool.forEach(function (node) { node.setAttribute("visibility", "hidden"); });
+      roadtripCurveSignPool.forEach(function (node) { roadtripSetAttribute(node, "visibility", "hidden"); });
       return;
     }
     var signs = [];
@@ -43572,24 +43603,24 @@ window.__entranceRoomOpen = false;
     roadtripCurveSignPool.forEach(function (node, index) {
       var sign = signs[index];
       if (!sign) {
-        node.setAttribute("visibility", "hidden");
-        node.removeAttribute("data-roadtrip-curve");
+        roadtripSetAttribute(node, "visibility", "hidden");
+        roadtripRemoveAttribute(node, "data-roadtrip-curve");
         return;
       }
       var point = roadtripProject(sign.remaining);
       var x = roadtripProjectLateral(point, 1.08) + 12 + point.perspective * 23;
       var scale = .14 + point.perspective * .83;
       roadtripUseTemplate(node, sign.direction > 0 ? "curve-sign-right" : "curve-sign-left");
-      node.setAttribute("data-roadtrip-curve", sign.direction > 0 ? "right" : "left");
-      node.setAttribute("data-roadtrip-ahead", sign.remaining.toFixed(2));
-      node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
-      node.setAttribute("transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
-      node.setAttribute("visibility", "visible");
+      roadtripSetAttribute(node, "data-roadtrip-curve", sign.direction > 0 ? "right" : "left");
+      roadtripSetAttribute(node, "data-roadtrip-ahead", sign.remaining.toFixed(2));
+      roadtripSetAttribute(node, "data-roadtrip-project-y", point.y.toFixed(2));
+      roadtripSetAttribute(node, "transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
+      roadtripSetAttribute(node, "visibility", "visible");
     });
   }
   function paintRoadtripHeadlights() {
     if (!roadtripHeadlightGroup || !roadtripHeadlightLeft || !roadtripHeadlightRight) return;
-    roadtripHeadlightGroup.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+    roadtripSetAttribute(roadtripHeadlightGroup, "visibility", roadtripState.active ? "visible" : "hidden");
     if (!roadtripState.active) return;
     var playerRoadFraction = roadtripLaneRoadFraction(roadtripState.playerLane);
     var far = roadtripProject(64);
@@ -43598,22 +43629,22 @@ window.__entranceRoomOpen = false;
     var middleCenter = roadtripProjectLateral(middle, playerRoadFraction);
     var nearLeftOuter = 34;
     var nearRightOuter = 646;
-    roadtripHeadlightLeft.setAttribute("d",
+    roadtripSetAttribute(roadtripHeadlightLeft, "d",
       "M" + nearLeftOuter.toFixed(2) + " 95Q" + (middleCenter - 190).toFixed(2) + " " + middle.y.toFixed(2) + " " +
       (farCenter - 42).toFixed(2) + " " + far.y.toFixed(2) + "L" + (farCenter + 42).toFixed(2) + " " + far.y.toFixed(2) + "Q" +
       (middleCenter + 190).toFixed(2) + " " + middle.y.toFixed(2) + " " + nearRightOuter.toFixed(2) + " 95Z");
-    roadtripHeadlightRight.setAttribute("d", "");
-    roadtripHeadlightGroup.setAttribute("data-roadtrip-aim-x", farCenter.toFixed(2));
-    roadtripHeadlightGroup.setAttribute("data-roadtrip-wash-span", (nearRightOuter - nearLeftOuter).toFixed(2));
-    roadtripHeadlightGroup.setAttribute("data-roadtrip-wash-layout", "continuous");
+    roadtripSetAttribute(roadtripHeadlightRight, "d", "");
+    roadtripSetAttribute(roadtripHeadlightGroup, "data-roadtrip-aim-x", farCenter.toFixed(2));
+    roadtripSetAttribute(roadtripHeadlightGroup, "data-roadtrip-wash-span", (nearRightOuter - nearLeftOuter).toFixed(2));
+    roadtripSetAttribute(roadtripHeadlightGroup, "data-roadtrip-wash-layout", "continuous");
   }
   function positionRoadtripExitSign(node, point, scale, halfWidth) {
     var roadFraction = roadtripIsCalgaryRoute() ? ROADTRIP_CALGARY_ROAD_FRACTION : 1;
     var roadRight = roadtripProjectLateral(point, roadFraction);
     var x = roadRight + halfWidth * scale + 6;
-    node.setAttribute("data-roadtrip-road-right", roadRight.toFixed(2));
-    node.setAttribute("data-roadtrip-sign-left", (x - halfWidth * scale).toFixed(2));
-    node.setAttribute("transform", "translate(" + x.toFixed(2) + " " +
+    roadtripSetAttribute(node, "data-roadtrip-road-right", roadRight.toFixed(2));
+    roadtripSetAttribute(node, "data-roadtrip-sign-left", (x - halfWidth * scale).toFixed(2));
+    roadtripSetAttribute(node, "transform", "translate(" + x.toFixed(2) + " " +
       point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
   }
   function paintRoadtripCampSpur(point, signScale, signHalfWidth) {
@@ -43730,10 +43761,10 @@ window.__entranceRoomOpen = false;
     var x = Math.max(roadRight + halfWidth * scale + 6,
       spur ? spur.x + spur.halfWidth + 8 : roadRight + halfWidth * scale + 6);
     var signLeft = x - halfWidth * scale;
-    node.setAttribute("data-roadtrip-road-right", roadRight.toFixed(2));
-    node.setAttribute("data-roadtrip-sign-left", signLeft.toFixed(2));
-    node.setAttribute("data-roadtrip-sign-post-x", x.toFixed(2));
-    node.setAttribute("transform", "translate(" + x.toFixed(2) + " " +
+    roadtripSetAttribute(node, "data-roadtrip-road-right", roadRight.toFixed(2));
+    roadtripSetAttribute(node, "data-roadtrip-sign-left", signLeft.toFixed(2));
+    roadtripSetAttribute(node, "data-roadtrip-sign-post-x", x.toFixed(2));
+    roadtripSetAttribute(node, "transform", "translate(" + x.toFixed(2) + " " +
       (spur ? spur.y : point.y).toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
   }
   function paintRoadtripRoad() {
@@ -43756,56 +43787,56 @@ window.__entranceRoomOpen = false;
     var roadFar = samples[0];
     var roadtripWorld = roadtripElement("entrance-roadtrip-world");
     if (roadtripWorld) {
-      roadtripWorld.setAttribute("data-roadtrip-elevation", roadFar.elevation.toFixed(3));
-      roadtripWorld.setAttribute("data-roadtrip-grade", roadFar.grade.toFixed(5));
-      roadtripWorld.setAttribute("data-roadtrip-horizon-y", roadFar.y.toFixed(2));
-      roadtripWorld.setAttribute("data-roadtrip-camera-pitch-y", roadFar.cameraPitchY.toFixed(3));
-      roadtripWorld.setAttribute("data-roadtrip-median-fraction", medianFraction.toFixed(3));
-      roadtripWorld.setAttribute("data-roadtrip-road-fraction", roadFraction.toFixed(3));
-      roadtripWorld.setAttribute("data-roadtrip-outer-fraction", outerFraction.toFixed(3));
-      roadtripWorld.setAttribute("data-roadtrip-lane-opacity",
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-elevation", roadFar.elevation.toFixed(3));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-grade", roadFar.grade.toFixed(5));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-horizon-y", roadFar.y.toFixed(2));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-camera-pitch-y", roadFar.cameraPitchY.toFixed(3));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-median-fraction", medianFraction.toFixed(3));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-road-fraction", roadFraction.toFixed(3));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-outer-fraction", outerFraction.toFixed(3));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-lane-opacity",
         (geometry.laneBoundaries[0] ? geometry.laneBoundaries[0].opacity : 0).toFixed(3));
-      roadtripWorld.setAttribute("data-roadtrip-extra-lane-opacity", geometry.calgaryMix.toFixed(3));
-      roadtripWorld.setAttribute("data-roadtrip-inner-lane-fraction",
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-extra-lane-opacity", geometry.calgaryMix.toFixed(3));
+      roadtripSetAttribute(roadtripWorld, "data-roadtrip-inner-lane-fraction",
         (geometry.laneBoundaries[0] ? Math.abs(geometry.laneBoundaries[0].fraction) : 0).toFixed(3));
     }
-    if (roadtripVergePath) roadtripVergePath.setAttribute("d",
+    if (roadtripVergePath) roadtripSetAttribute(roadtripVergePath, "d",
       roadtripOutsidePath(samples, -outerFraction, 0) +
       roadtripOutsidePath(samples, outerFraction, 680));
-    if (roadtripRoadPath) roadtripRoadPath.setAttribute("d", divided ?
+    if (roadtripRoadPath) roadtripSetAttribute(roadtripRoadPath, "d", divided ?
       roadtripBandPath(samples, -roadFraction, -medianFraction) +
         roadtripBandPath(samples, medianFraction, roadFraction) :
       roadtripBandPath(samples, -outerFraction, outerFraction));
-    if (roadtripMedianPath) roadtripMedianPath.setAttribute("d", divided ?
+    if (roadtripMedianPath) roadtripSetAttribute(roadtripMedianPath, "d", divided ?
       roadtripBandPath(samples, -medianFraction, medianFraction) : "");
-    if (roadtripMedianRailPaths[0]) roadtripMedianRailPaths[0].setAttribute("d", divided ?
+    if (roadtripMedianRailPaths[0]) roadtripSetAttribute(roadtripMedianRailPaths[0], "d", divided ?
       roadtripBandPath(samples, -medianFraction, -medianFraction + medianRailWidth) : "");
-    if (roadtripMedianRailPaths[1]) roadtripMedianRailPaths[1].setAttribute("d", divided ?
+    if (roadtripMedianRailPaths[1]) roadtripSetAttribute(roadtripMedianRailPaths[1], "d", divided ?
       roadtripBandPath(samples, medianFraction - medianRailWidth, medianFraction) : "");
-    if (roadtripShoulderPath) roadtripShoulderPath.setAttribute("d", divided ?
+    if (roadtripShoulderPath) roadtripSetAttribute(roadtripShoulderPath, "d", divided ?
       roadtripBandPath(samples, -outerFraction, -roadFraction) +
         roadtripBandPath(samples, roadFraction, outerFraction) +
         roadtripBandPath(samples, -medianFraction - medianShoulderWidth, -medianFraction) +
         roadtripBandPath(samples, medianFraction, medianFraction + medianShoulderWidth) :
       roadtripBandPath(samples, -outerFraction, -1) + roadtripBandPath(samples, 1, outerFraction));
-    if (roadtripRumblePath) roadtripRumblePath.setAttribute("d", divided ?
+    if (roadtripRumblePath) roadtripSetAttribute(roadtripRumblePath, "d", divided ?
       roadtripLinePath(samples, -roadFraction - .015) + roadtripLinePath(samples, roadFraction + .015) +
         roadtripLinePath(samples, -medianFraction - medianRumbleWidth) +
         roadtripLinePath(samples, medianFraction + medianRumbleWidth) :
       roadtripLinePath(samples, -1.015) + roadtripLinePath(samples, 1.015));
-    if (roadtripEdgePaths[0]) roadtripEdgePaths[0].setAttribute("d",
+    if (roadtripEdgePaths[0]) roadtripSetAttribute(roadtripEdgePaths[0], "d",
       roadtripBandPath(samples, -roadFraction, -roadFraction + .006));
-    if (roadtripEdgePaths[1]) roadtripEdgePaths[1].setAttribute("d",
+    if (roadtripEdgePaths[1]) roadtripSetAttribute(roadtripEdgePaths[1], "d",
       roadtripBandPath(samples, roadFraction - .006, roadFraction));
-    if (roadtripCenterPath) roadtripCenterPath.setAttribute("d",
+    if (roadtripCenterPath) roadtripSetAttribute(roadtripCenterPath, "d",
       roadtripBandPath(samples, -geometry.centerFraction - geometry.centerWidth / 2,
         -geometry.centerFraction + geometry.centerWidth / 2) +
       roadtripBandPath(samples, geometry.centerFraction - geometry.centerWidth / 2,
         geometry.centerFraction + geometry.centerWidth / 2));
-    if (roadtripWinterGroundPath) roadtripWinterGroundPath.setAttribute("d",
+    if (roadtripWinterGroundPath) roadtripSetAttribute(roadtripWinterGroundPath, "d",
       roadtripOutsidePath(samples, -outerFraction, 0) + roadtripOutsidePath(samples, outerFraction, 680) +
         (divided ? roadtripBandPath(samples, -medianFraction, medianFraction) : ""));
-    if (roadtripWinterEdgePath) roadtripWinterEdgePath.setAttribute("d",
+    if (roadtripWinterEdgePath) roadtripSetAttribute(roadtripWinterEdgePath, "d",
       roadtripBandPath(samples, -outerFraction - .018, -outerFraction) +
       roadtripBandPath(samples, outerFraction, outerFraction + .018));
     var markSpacing = 16;
@@ -43815,7 +43846,7 @@ window.__entranceRoomOpen = false;
     var visibleMarkCount = laneBoundaries.length * 9;
     roadtripLaneMarks.forEach(function (mark, index) {
       if (!laneBoundaries.length) {
-        mark.setAttribute("visibility", "hidden");
+        roadtripSetAttribute(mark, "visibility", "hidden");
         return;
       }
       var boundary = laneBoundaries[index % laneBoundaries.length];
@@ -43828,13 +43859,13 @@ window.__entranceRoomOpen = false;
       var nearX = roadtripProjectLateral(near, laneBoundary);
       var farWidth = .25 + far.perspective * 1.5;
       var nearWidth = .35 + near.perspective * 2.1;
-      mark.setAttribute("d", "M" + (farX - farWidth).toFixed(2) + " " + far.y.toFixed(2) +
+      roadtripSetAttribute(mark, "d", "M" + (farX - farWidth).toFixed(2) + " " + far.y.toFixed(2) +
         "L" + (farX + farWidth).toFixed(2) + " " + far.y.toFixed(2) +
         "L" + (nearX + nearWidth).toFixed(2) + " " + near.y.toFixed(2) +
         "L" + (nearX - nearWidth).toFixed(2) + " " + near.y.toFixed(2) + "Z");
-      mark.setAttribute("visibility", index < visibleMarkCount && remaining <= ROADTRIP_DRAW_DISTANCE ?
+      roadtripSetAttribute(mark, "visibility", index < visibleMarkCount && remaining <= ROADTRIP_DRAW_DISTANCE ?
         "visible" : "hidden");
-      mark.setAttribute("opacity", boundary.opacity.toFixed(3));
+      roadtripSetAttribute(mark, "opacity", boundary.opacity.toFixed(3));
     });
     var furnitureCycle = ROADTRIP_FURNITURE_SIZE * 21;
     var exitSignBands = roadtripExitSignBands();
@@ -43848,17 +43879,17 @@ window.__entranceRoomOpen = false;
       var x = roadtripProjectLateral(point, 0) + side * (point.halfWidth + 13 + point.perspective * 42);
       var scale = .13 + point.perspective * .86;
       var horizontalScale = item.type === "lamp" && side > 0 ? -scale : scale;
-      item.node.setAttribute("data-roadtrip-furniture", displayType);
-      item.node.setAttribute("data-roadtrip-side", side < 0 ? "left" : "right");
-      item.node.setAttribute("data-roadtrip-ahead", remaining.toFixed(2));
-      item.node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
+      roadtripSetAttribute(item.node, "data-roadtrip-furniture", displayType);
+      roadtripSetAttribute(item.node, "data-roadtrip-side", side < 0 ? "left" : "right");
+      roadtripSetAttribute(item.node, "data-roadtrip-ahead", remaining.toFixed(2));
+      roadtripSetAttribute(item.node, "data-roadtrip-project-y", point.y.toFixed(2));
       var signClearance = item.type === "speed-limit" ?
         roadtripSpeedSignClearance(point, scale, exitSignBands) : 999;
-      item.node.setAttribute("data-roadtrip-turn-sign-clearance", signClearance.toFixed(2));
-      item.node.setAttribute("transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" +
+      roadtripSetAttribute(item.node, "data-roadtrip-turn-sign-clearance", signClearance.toFixed(2));
+      roadtripSetAttribute(item.node, "transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" +
         horizontalScale.toFixed(3) + " " + scale.toFixed(3) + ")");
       var abrahamFurniture = roadtripIsAbrahamRoute() && item.type !== "lamp";
-      item.node.setAttribute("visibility", roadtripState.route !== "camp" &&
+      roadtripSetAttribute(item.node, "visibility", roadtripState.route !== "camp" &&
         remaining <= ROADTRIP_DRAW_DISTANCE &&
         (item.type !== "speed-limit" || signClearance >= ROADTRIP_ROADSIDE_SIGN_GAP) &&
         (!calgary || item.type === "speed-limit") && (!roadtripIsAbrahamRoute() || abrahamFurniture) ?
@@ -43871,9 +43902,9 @@ window.__entranceRoomOpen = false;
         var exitPoint = roadtripProject(exitRemaining);
         var exitScale = .16 + exitPoint.perspective * .82;
         positionRoadtripExitSign(roadtripBanffExitNode, exitPoint, exitScale, 42);
-        roadtripBanffExitNode.setAttribute("visibility", "visible");
+        roadtripSetAttribute(roadtripBanffExitNode, "visibility", "visible");
       } else {
-        roadtripBanffExitNode.setAttribute("visibility", "hidden");
+        roadtripSetAttribute(roadtripBanffExitNode, "visibility", "hidden");
       }
     }
     if (roadtripAbrahamExitNode) {
@@ -43884,9 +43915,9 @@ window.__entranceRoomOpen = false;
         var lakeExitPoint = roadtripProject(lakeExitRemaining);
         var lakeExitScale = .16 + lakeExitPoint.perspective * .82;
         positionRoadtripExitSign(roadtripAbrahamExitNode, lakeExitPoint, lakeExitScale, 49);
-        roadtripAbrahamExitNode.setAttribute("visibility", "visible");
+        roadtripSetAttribute(roadtripAbrahamExitNode, "visibility", "visible");
       } else {
-        roadtripAbrahamExitNode.setAttribute("visibility", "hidden");
+        roadtripSetAttribute(roadtripAbrahamExitNode, "visibility", "hidden");
       }
     }
     if (roadtripCampExitNode) {
@@ -43898,15 +43929,15 @@ window.__entranceRoomOpen = false;
         var campSignScale = .19 + campSignPoint.perspective * .98;
         var campSpur = paintRoadtripCampSpur(campSignPoint, campSignScale, 56);
         positionRoadtripCampExitSign(roadtripCampExitNode, campSignPoint, campSignScale, 56, campSpur);
-        roadtripCampExitNode.setAttribute("data-roadtrip-takeable", campTiming.takeable ? "true" : "false");
-        roadtripCampExitNode.setAttribute("visibility", "visible");
+        roadtripSetAttribute(roadtripCampExitNode, "data-roadtrip-takeable", campTiming.takeable ? "true" : "false");
+        roadtripSetAttribute(roadtripCampExitNode, "visibility", "visible");
       } else {
-        roadtripCampExitNode.setAttribute("visibility", "hidden");
-        roadtripCampExitNode.setAttribute("data-roadtrip-takeable", "false");
-        if (roadtripCampSpurNode) roadtripCampSpurNode.setAttribute("visibility", "hidden");
+        roadtripSetAttribute(roadtripCampExitNode, "visibility", "hidden");
+        roadtripSetAttribute(roadtripCampExitNode, "data-roadtrip-takeable", "false");
+        roadtripSetAttribute(roadtripCampSpurNode, "visibility", "hidden");
       }
     } else if (roadtripCampSpurNode) {
-      roadtripCampSpurNode.setAttribute("visibility", "hidden");
+      roadtripSetAttribute(roadtripCampSpurNode, "visibility", "hidden");
     }
     paintRoadtripHeadlights();
     paintRoadtripCurveSigns();
@@ -43976,13 +44007,13 @@ window.__entranceRoomOpen = false;
       driveHudSvg.classList.toggle("roadtrip-shoulder-rumble", shouldRumble);
       var rumbleY = roughness * (.12 + rumbleMotion * 1.5);
       var rumbleX = roughness * roughness * (.04 + rumbleMotion * .48);
-      driveHudSvg.style.setProperty("--roadtrip-rumble-x", rumbleX.toFixed(2) + "px");
-      driveHudSvg.style.setProperty("--roadtrip-rumble-x-neg", (-rumbleX).toFixed(2) + "px");
-      driveHudSvg.style.setProperty("--roadtrip-rumble-y", rumbleY.toFixed(2) + "px");
-      driveHudSvg.style.setProperty("--roadtrip-rumble-y-neg", (-rumbleY * .42).toFixed(2) + "px");
-      driveHudSvg.style.setProperty("--roadtrip-rumble-period",
+      roadtripSetStyleProperty(driveHudSvg, "--roadtrip-rumble-x", rumbleX.toFixed(2) + "px");
+      roadtripSetStyleProperty(driveHudSvg, "--roadtrip-rumble-x-neg", (-rumbleX).toFixed(2) + "px");
+      roadtripSetStyleProperty(driveHudSvg, "--roadtrip-rumble-y", rumbleY.toFixed(2) + "px");
+      roadtripSetStyleProperty(driveHudSvg, "--roadtrip-rumble-y-neg", (-rumbleY * .42).toFixed(2) + "px");
+      roadtripSetStyleProperty(driveHudSvg, "--roadtrip-rumble-period",
         Math.max(.09, .23 - rumbleMotion * .1 - roughness * .02).toFixed(3) + "s");
-      driveHudSvg.setAttribute("data-roadtrip-roughness", roughness.toFixed(3));
+      roadtripSetAttribute(driveHudSvg, "data-roadtrip-roughness", roughness.toFixed(3));
     }
     room.classList.toggle("roadtrip-on-shoulder", zone !== "road");
     room.classList.toggle("roadtrip-on-gravel", zone === "gravel");
@@ -44111,39 +44142,39 @@ window.__entranceRoomOpen = false;
   function syncRoadtripEntityNode(entity) {
     var traffic = roadtripIsTrafficType(entity.type);
     roadtripUseTemplate(entity.node, entity.direction === "oncoming" ? entity.type + "-oncoming" : entity.type);
-    entity.node.setAttribute("data-roadtrip-type", entity.type);
-    entity.node.setAttribute("data-roadtrip-direction", entity.direction);
-    entity.node.setAttribute("data-roadtrip-speed", String(Math.round(entity.velocity * 3.6)));
-    entity.node.setAttribute("data-roadtrip-escaping", entity.escaping ? "true" : "false");
-    entity.node.setAttribute("data-roadtrip-passing", entity.passing ? "true" : "false");
-    entity.node.setAttribute("data-roadtrip-pass-returning", entity.passReturning ? "true" : "false");
-    entity.node.setAttribute("data-roadtrip-following", entity.following ? "true" : "false");
-    entity.node.setAttribute("data-roadtrip-follow-target", String(entity.followTargetSerial || 0));
-    entity.node.setAttribute("data-roadtrip-follow-gap", Number(entity.followGap || 0).toFixed(2));
-    entity.node.setAttribute("data-roadtrip-braking", entity.braking ? "true" : "false");
-    entity.node.setAttribute("data-roadtrip-home-lane", String(entity.homeLane));
-    entity.node.setAttribute("data-roadtrip-pass-target", String(entity.passTargetSerial || 0));
-    entity.node.setAttribute("data-roadtrip-overtaking-player", entity.overtakingPlayer ? "true" : "false");
+    roadtripSetAttribute(entity.node, "data-roadtrip-type", entity.type);
+    roadtripSetAttribute(entity.node, "data-roadtrip-direction", entity.direction);
+    roadtripSetAttribute(entity.node, "data-roadtrip-speed", String(Math.round(entity.velocity * 3.6)));
+    roadtripSetAttribute(entity.node, "data-roadtrip-escaping", entity.escaping ? "true" : "false");
+    roadtripSetAttribute(entity.node, "data-roadtrip-passing", entity.passing ? "true" : "false");
+    roadtripSetAttribute(entity.node, "data-roadtrip-pass-returning", entity.passReturning ? "true" : "false");
+    roadtripSetAttribute(entity.node, "data-roadtrip-following", entity.following ? "true" : "false");
+    roadtripSetAttribute(entity.node, "data-roadtrip-follow-target", String(entity.followTargetSerial || 0));
+    roadtripSetAttribute(entity.node, "data-roadtrip-follow-gap", Number(entity.followGap || 0).toFixed(2));
+    roadtripSetAttribute(entity.node, "data-roadtrip-braking", entity.braking ? "true" : "false");
+    roadtripSetAttribute(entity.node, "data-roadtrip-home-lane", String(entity.homeLane));
+    roadtripSetAttribute(entity.node, "data-roadtrip-pass-target", String(entity.passTargetSerial || 0));
+    roadtripSetAttribute(entity.node, "data-roadtrip-overtaking-player", entity.overtakingPlayer ? "true" : "false");
     if (entity.direction === "oncoming") {
-      entity.node.setAttribute("data-roadtrip-oncoming-evasion-decided",
+      roadtripSetAttribute(entity.node, "data-roadtrip-oncoming-evasion-decided",
         entity.oncomingEvasionDecided ? "true" : "false");
-      entity.node.setAttribute("data-roadtrip-oncoming-evasion-requested",
+      roadtripSetAttribute(entity.node, "data-roadtrip-oncoming-evasion-requested",
         entity.oncomingEvasionRequested ? "true" : "false");
-      entity.node.setAttribute("data-roadtrip-oncoming-evading", entity.oncomingEvading ? "true" : "false");
-      entity.node.setAttribute("data-roadtrip-oncoming-evasion-target", String(entity.oncomingEvasionTarget));
+      roadtripSetAttribute(entity.node, "data-roadtrip-oncoming-evading", entity.oncomingEvading ? "true" : "false");
+      roadtripSetAttribute(entity.node, "data-roadtrip-oncoming-evasion-target", String(entity.oncomingEvasionTarget));
     }
     if (entity.overtakingPlayer) {
-      entity.node.setAttribute("data-roadtrip-overtake-lane-target", String(entity.overtakeLaneTarget));
-      entity.node.setAttribute("data-roadtrip-overtake-lane-changed", entity.overtakeLaneChanged ? "true" : "false");
+      roadtripSetAttribute(entity.node, "data-roadtrip-overtake-lane-target", String(entity.overtakeLaneTarget));
+      roadtripSetAttribute(entity.node, "data-roadtrip-overtake-lane-changed", entity.overtakeLaneChanged ? "true" : "false");
     } else {
-      entity.node.removeAttribute("data-roadtrip-overtake-lane-target");
-      entity.node.removeAttribute("data-roadtrip-overtake-lane-changed");
+      roadtripRemoveAttribute(entity.node, "data-roadtrip-overtake-lane-target");
+      roadtripRemoveAttribute(entity.node, "data-roadtrip-overtake-lane-changed");
     }
-    entity.node.setAttribute("data-roadtrip-kind", traffic ? "traffic" :
+    roadtripSetAttribute(entity.node, "data-roadtrip-kind", traffic ? "traffic" :
       roadtripIsAnimalType(entity.type) ? "animal" : "collectible");
-    entity.node.setAttribute("data-roadtrip-value", String(roadtripCollectibleValue(entity.type)));
-    entity.node.setAttribute("data-roadtrip-lane", String(entity.lane));
-    entity.node.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+    roadtripSetAttribute(entity.node, "data-roadtrip-value", String(roadtripCollectibleValue(entity.type)));
+    roadtripSetAttribute(entity.node, "data-roadtrip-lane", String(entity.lane));
+    roadtripSetAttribute(entity.node, "visibility", roadtripState.active ? "visible" : "hidden");
   }
   function spawnRoadtripEntity(type, lane, ahead, options) {
     if (type === "token") type = "inf"; // compatibility for the original focused test seam
@@ -44717,30 +44748,30 @@ window.__entranceRoomOpen = false;
     if (roadtripMirrorTerrain) {
       var terrainOffset = rearTurn * .08;
       var terrainY = roadtripMirrorProject(62).y + 99;
-      roadtripMirrorTerrain.setAttribute("transform", "translate(" + terrainOffset.toFixed(2) + " " +
+      roadtripSetAttribute(roadtripMirrorTerrain, "transform", "translate(" + terrainOffset.toFixed(2) + " " +
         terrainY.toFixed(2) + ")");
-      roadtripMirrorTerrain.setAttribute("data-scenery-offset", terrainOffset.toFixed(2));
-      roadtripMirrorTerrain.setAttribute("data-scenery-y", terrainY.toFixed(2));
+      roadtripSetAttribute(roadtripMirrorTerrain, "data-scenery-offset", terrainOffset.toFixed(2));
+      roadtripSetAttribute(roadtripMirrorTerrain, "data-scenery-y", terrainY.toFixed(2));
     }
     var furnitureCycle = ROADTRIP_FURNITURE_SIZE * 21;
     var roadsideTrees = roadtripFurniturePool.filter(function (item) { return item.type === "tree"; });
     roadtripMirrorTreePool.forEach(function (tree, index) {
       if (roadtripIsCalgaryRoute()) {
-        tree.setAttribute("visibility", "hidden");
+        roadtripSetAttribute(tree, "visibility", "hidden");
         return;
       }
       var source = roadsideTrees[index];
       if (!source) {
-        tree.setAttribute("visibility", "hidden");
-        tree.removeAttribute("data-roadtrip-source-index");
+        roadtripSetAttribute(tree, "visibility", "hidden");
+        roadtripRemoveAttribute(tree, "data-roadtrip-source-index");
         return;
       }
       var treeAt = source.index * 21 + 4;
       var behind = ((roadtripState.distance - treeAt) % furnitureCycle + furnitureCycle) % furnitureCycle;
       if (!roadtripState.active || behind > 62) {
-        tree.setAttribute("visibility", "hidden");
-        tree.setAttribute("data-roadtrip-behind", behind.toFixed(2));
-        tree.setAttribute("data-roadtrip-source-index", String(source.index));
+        roadtripSetAttribute(tree, "visibility", "hidden");
+        roadtripSetAttribute(tree, "data-roadtrip-behind", behind.toFixed(2));
+        roadtripSetAttribute(tree, "data-roadtrip-source-index", String(source.index));
         return;
       }
       var point = roadtripMirrorProject(behind);
@@ -44749,16 +44780,16 @@ window.__entranceRoomOpen = false;
       var scale = .1 + point.perspective * .42;
       var topY = point.y - scale * 22;
       var edgeFade = Math.min(1, behind / 3, (62 - behind) / 7);
-      tree.setAttribute("transform", "translate(" + x.toFixed(2) + " " + topY.toFixed(2) + ") scale(" +
+      roadtripSetAttribute(tree, "transform", "translate(" + x.toFixed(2) + " " + topY.toFixed(2) + ") scale(" +
         scale.toFixed(3) + " " + scale.toFixed(3) + ")");
-      tree.setAttribute("opacity", Math.max(0, edgeFade).toFixed(2));
-      tree.setAttribute("data-roadtrip-behind", behind.toFixed(2));
-      tree.setAttribute("data-roadtrip-base-y", point.y.toFixed(2));
-      tree.setAttribute("data-roadtrip-top-y", topY.toFixed(2));
-      tree.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
-      tree.setAttribute("data-roadtrip-side", side < 0 ? "left" : "right");
-      tree.setAttribute("data-roadtrip-source-index", String(source.index));
-      tree.setAttribute("visibility", edgeFade > 0 ? "visible" : "hidden");
+      roadtripSetAttribute(tree, "opacity", Math.max(0, edgeFade).toFixed(2));
+      roadtripSetAttribute(tree, "data-roadtrip-behind", behind.toFixed(2));
+      roadtripSetAttribute(tree, "data-roadtrip-base-y", point.y.toFixed(2));
+      roadtripSetAttribute(tree, "data-roadtrip-top-y", topY.toFixed(2));
+      roadtripSetAttribute(tree, "data-roadtrip-project-y", point.y.toFixed(2));
+      roadtripSetAttribute(tree, "data-roadtrip-side", side < 0 ? "left" : "right");
+      roadtripSetAttribute(tree, "data-roadtrip-source-index", String(source.index));
+      roadtripSetAttribute(tree, "visibility", edgeFade > 0 ? "visible" : "hidden");
     });
   }
   function paintRoadtripMirror() {
@@ -44770,17 +44801,17 @@ window.__entranceRoomOpen = false;
     var calgary = roadtripIsCalgaryRoute();
     var medianFraction = ROADTRIP_CALGARY_MEDIAN_FRACTION;
     var roadFraction = calgary ? ROADTRIP_CALGARY_ROAD_FRACTION : 1;
-    if (roadtripMirrorRoadPath) roadtripMirrorRoadPath.setAttribute("d", calgary ?
+    if (roadtripMirrorRoadPath) roadtripSetAttribute(roadtripMirrorRoadPath, "d", calgary ?
       roadtripMirrorBandPath(mirrorSamples, -roadFraction, -medianFraction) +
         roadtripMirrorBandPath(mirrorSamples, medianFraction, roadFraction) :
       roadtripMirrorBandPath(mirrorSamples, -1, 1));
-    if (roadtripMirrorMedianPath) roadtripMirrorMedianPath.setAttribute("d", calgary ?
+    if (roadtripMirrorMedianPath) roadtripSetAttribute(roadtripMirrorMedianPath, "d", calgary ?
       roadtripMirrorBandPath(mirrorSamples, -medianFraction, medianFraction) : "");
-    if (roadtripMirrorCenterPath) roadtripMirrorCenterPath.setAttribute("d", calgary ?
+    if (roadtripMirrorCenterPath) roadtripSetAttribute(roadtripMirrorCenterPath, "d", calgary ?
       roadtripMirrorLinePath(mirrorSamples, -medianFraction - .012) +
         roadtripMirrorLinePath(mirrorSamples, medianFraction + .012) :
       roadtripMirrorLinePath(mirrorSamples, -.018) + roadtripMirrorLinePath(mirrorSamples, .018));
-    if (roadtripMirrorLanePath) roadtripMirrorLanePath.setAttribute("d", calgary ?
+    if (roadtripMirrorLanePath) roadtripSetAttribute(roadtripMirrorLanePath, "d", calgary ?
       [-(medianFraction + ROADTRIP_CALGARY_LANE_FRACTION * 2),
         -(medianFraction + ROADTRIP_CALGARY_LANE_FRACTION),
         medianFraction + ROADTRIP_CALGARY_LANE_FRACTION,
@@ -44788,10 +44819,10 @@ window.__entranceRoomOpen = false;
         return roadtripMirrorLinePath(mirrorSamples, fraction);
       }).join("") : roadtripIsAbrahamRoute() ? "" :
       roadtripMirrorLinePath(mirrorSamples, -.5) + roadtripMirrorLinePath(mirrorSamples, .5));
-    if (roadtripMirrorEdgesPath) roadtripMirrorEdgesPath.setAttribute("d",
+    if (roadtripMirrorEdgesPath) roadtripSetAttribute(roadtripMirrorEdgesPath, "d",
       roadtripMirrorLinePath(mirrorSamples, -roadFraction) +
         roadtripMirrorLinePath(mirrorSamples, roadFraction));
-    if (roadtripMirrorWinterPath) roadtripMirrorWinterPath.setAttribute("d",
+    if (roadtripMirrorWinterPath) roadtripSetAttribute(roadtripMirrorWinterPath, "d",
       roadtripMirrorOutsidePath(mirrorSamples, -1, 274) +
       roadtripMirrorOutsidePath(mirrorSamples, 1, 406));
     paintRoadtripMirrorScenery();
@@ -44803,8 +44834,8 @@ window.__entranceRoomOpen = false;
     roadtripMirrorPool.forEach(function (node, index) {
       var entity = reflected[index];
       if (!entity) {
-        node.setAttribute("visibility", "hidden");
-        node.removeAttribute("data-roadtrip-mirror-type");
+        roadtripSetAttribute(node, "visibility", "hidden");
+        roadtripRemoveAttribute(node, "data-roadtrip-mirror-type");
         return;
       }
       var remaining = entity.at - roadtripState.distance;
@@ -44815,12 +44846,12 @@ window.__entranceRoomOpen = false;
       var scale = (.055 + point.perspective * .19) * (roadtripIsTrafficType(entity.type) ? 1.06 : 1);
       var mirrorType = entity.direction === "forward" ? entity.type + "-oncoming" : entity.type;
       roadtripUseTemplate(node, mirrorType);
-      node.setAttribute("data-roadtrip-mirror-type", entity.type);
-      node.setAttribute("data-roadtrip-mirror-direction", entity.direction);
-      node.setAttribute("data-roadtrip-behind", behind.toFixed(2));
-      node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
-      node.setAttribute("transform", "translate(" + x.toFixed(2) + " " + y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
-      node.setAttribute("visibility", roadtripState.active ? "visible" : "hidden");
+      roadtripSetAttribute(node, "data-roadtrip-mirror-type", entity.type);
+      roadtripSetAttribute(node, "data-roadtrip-mirror-direction", entity.direction);
+      roadtripSetAttribute(node, "data-roadtrip-behind", behind.toFixed(2));
+      roadtripSetAttribute(node, "data-roadtrip-project-y", point.y.toFixed(2));
+      roadtripSetAttribute(node, "transform", "translate(" + x.toFixed(2) + " " + y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
+      roadtripSetAttribute(node, "visibility", roadtripState.active ? "visible" : "hidden");
     });
   }
   function paintRoadtripEntities() {
@@ -44846,13 +44877,20 @@ window.__entranceRoomOpen = false;
         entity.type === "rabbit" ? .58 : entity.type === "hedgehog" ? .52 :
         entity.type === "inf" ? .86 : roadtripCollectibleValue(entity.type) ? .82 : 1;
       var scale = (.11 + point.perspective * .9) * typeScale;
-      entity.node.setAttribute("data-roadtrip-ahead", remaining.toFixed(2));
-      entity.node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
-      entity.node.setAttribute("transform", "translate(" + laneX.toFixed(2) + " " + entityY.toFixed(2) + ") rotate(" +
+      roadtripSetAttribute(entity.node, "data-roadtrip-ahead", remaining.toFixed(2));
+      roadtripSetAttribute(entity.node, "data-roadtrip-project-y", point.y.toFixed(2));
+      roadtripSetAttribute(entity.node, "transform", "translate(" + laneX.toFixed(2) + " " + entityY.toFixed(2) + ") rotate(" +
         escapeTurn.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
-      entity.node.setAttribute("visibility", roadtripState.active && remaining <= ROADTRIP_DRAW_DISTANCE + 8 && remaining >= -2 ? "visible" : "hidden");
-      if (host) host.appendChild(entity.node);
+      roadtripSetAttribute(entity.node, "visibility",
+        roadtripState.active && remaining <= ROADTRIP_DRAW_DISTANCE + 8 && remaining >= -2 ? "visible" : "hidden");
     });
+    var orderChanged = ordered.length !== roadtripPaintOrder.length || ordered.some(function (entity, index) {
+      return roadtripPaintOrder[index] !== entity.node;
+    });
+    if (host && orderChanged) {
+      ordered.forEach(function (entity) { host.appendChild(entity.node); });
+      roadtripPaintOrder = ordered.map(function (entity) { return entity.node; });
+    }
     paintRoadtripMirror();
     paintRoadtripPolice();
   }
@@ -45174,18 +45212,38 @@ window.__entranceRoomOpen = false;
     roadtripState.invitationReady = true;
     paintRoadtripInvite();
   }
+  function roadtripWorldPaintDue(seconds) {
+    var low = roadtripState.route !== "camp" &&
+      !!(window.__frameHealthSlow && window.__frameHealthSlow());
+    if (!low) {
+      roadtripWorldPaintElapsedMs = 0;
+      roadtripWorldPaintLow = false;
+      return true;
+    }
+    if (!roadtripWorldPaintLow) {
+      roadtripWorldPaintElapsedMs = ROADTRIP_LOW_PAINT_INTERVAL_MS;
+      roadtripWorldPaintLow = true;
+    }
+    roadtripWorldPaintElapsedMs += Math.max(0, Number(seconds) || 0) * 1000;
+    if (roadtripWorldPaintElapsedMs < ROADTRIP_LOW_PAINT_INTERVAL_MS) return false;
+    roadtripWorldPaintElapsedMs %= ROADTRIP_LOW_PAINT_INTERVAL_MS;
+    return true;
+  }
   function stepRoadtrip(distance, seconds) {
     if (!roadtripState.active || distance <= 0 && seconds <= 0) return;
     distance = Number(distance) || 0;
+    roadtripWorldPaintedThisStep = roadtripWorldPaintDue(seconds);
     roadtripState.elapsedSeconds += Math.max(0, Number(seconds) || 0);
     if (roadtripState.route === "camp") {
       driveState.speed = 0;
       driveState.rpm = porscheState.engineOn ? 780 : 0;
       driveState.gear = 0;
       if (porscheTransmission.mode === "auto") porscheTransmission.range = "P";
-      paintRoadtripRoad();
-      paintRoadtripEntities();
-      paintRoadtripScore();
+      if (roadtripWorldPaintedThisStep) {
+        paintRoadtripRoad();
+        paintRoadtripEntities();
+        paintRoadtripScore();
+      }
       syncPorscheDriveInstruction(false);
       return;
     }
@@ -45196,6 +45254,7 @@ window.__entranceRoomOpen = false;
     syncRoadtripCampExit();
     syncRoadtripCampApproachSpeed(seconds);
     if (roadtripState.route === "camp") {
+      roadtripWorldPaintedThisStep = true;
       paintRoadtripRoad();
       paintRoadtripEntities();
       paintRoadtripScore();
@@ -45226,9 +45285,11 @@ window.__entranceRoomOpen = false;
     syncRoadtripPlayerOvertaker(seconds);
     stepRoadtripPolice(Math.max(0, routeTravel), seconds, policeRadarSampleSpeed);
     if (!roadtripState.active) return;
-    paintRoadtripRoad();
-    paintRoadtripEntities();
-    paintRoadtripScore();
+    if (roadtripWorldPaintedThisStep) {
+      paintRoadtripRoad();
+      paintRoadtripEntities();
+      paintRoadtripScore();
+    }
   }
   function porscheDriveInstructionKey() {
     var touchDrive = navigator.maxTouchPoints > 0 && window.matchMedia &&
@@ -47808,7 +47869,7 @@ window.__entranceRoomOpen = false;
     var diveResponse = 1 - Math.exp(-seconds * (diveTarget > driveState.noseDive ? 14 : 5));
     driveState.noseDive += (diveTarget - driveState.noseDive) * diveResponse;
     if (driveState.noseDive < .01 && diveTarget === 0) driveState.noseDive = 0;
-    if (roadtripState.active && Math.abs(roadtripBodyPitchBefore -
+    if (roadtripState.active && roadtripWorldPaintedThisStep && Math.abs(roadtripBodyPitchBefore -
         (driveState.noseLift - driveState.noseDive)) >= .005) {
       paintRoadtripRoad();
       paintRoadtripEntities();

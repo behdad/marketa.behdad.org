@@ -44,7 +44,8 @@ check((staticDashes.match(/<path d="[^"]+Z"\/>/g) || []).length === 6,
 var project = between("function roadtripProjectionAt(distance, remaining, bodyPitch)", "function roadtripProject(remaining)");
 var halfWidth = project.match(/halfWidth:\s*([\d.]+)\s*\+\s*perspective\s*\*\s*([\d.]+)/);
 var paint = between("function paintRoadtripRoad()", "function roadtripLaneValue(lane)");
-var outer = paint.match(/var outerFraction = calgary \? ROADTRIP_CALGARY_OUTER_FRACTION : ([\d.]+);/);
+var geometry = between("function roadtripGeometryProfile()", "function setRoadtripBlendOpacity(id, opacity)");
+var outer = geometry.match(/outerFraction:\s*([\d.]+)\s*\+/);
 var farHalf = halfWidth ? Number(halfWidth[1]) : NaN;
 var nearHalf = halfWidth ? farHalf + Number(halfWidth[2]) : NaN;
 var outerFraction = outer ? Number(outer[1]) : NaN;
@@ -54,14 +55,14 @@ check(horizonWidth > 5 && horizonWidth < 7 && nearWidth > 700 && nearWidth / hor
   "the visible asphalt converges narrowly at the horizon and spans the near windshield",
   { horizonWidth: horizonWidth, nearWidth: nearWidth });
 
-check(/var roadFraction = calgary \? ROADTRIP_CALGARY_ROAD_FRACTION : 1;/.test(paint) &&
-  /roadtripEdgePaths\[0\][\s\S]*roadtripBandPath\(samples, -roadFraction, -roadFraction \+ \.006\)/.test(paint) &&
-  /roadtripEdgePaths\[1\][\s\S]*roadtripBandPath\(samples, roadFraction - \.006, roadFraction\)/.test(paint) &&
-  /roadtripCenterPath[\s\S]*calgary \?[\s\S]*-medianFraction - \.018[\s\S]*medianFraction \+ \.018[\s\S]*roadtripBandPath\(samples, -\.030, -\.016\) \+ roadtripBandPath\(samples, \.016, \.030\)/.test(paint),
+check(/var roadFraction = geometry\.roadFraction;/.test(paint) &&
+  /roadtripSetAttribute\(roadtripEdgePaths\[0\], "d",[\s\S]*roadtripBandPath\(samples, -roadFraction, -roadFraction \+ \.006\)/.test(paint) &&
+  /roadtripSetAttribute\(roadtripEdgePaths\[1\], "d",[\s\S]*roadtripBandPath\(samples, roadFraction - \.006, roadFraction\)/.test(paint) &&
+  /roadtripSetAttribute\(roadtripCenterPath, "d",[\s\S]*-geometry\.centerFraction - geometry\.centerWidth \/ 2[\s\S]*geometry\.centerFraction \+ geometry\.centerWidth \/ 2/.test(paint),
   "route-aware runtime edges and centre markings are regenerated as filled bands");
 check(/var farWidth = \.25 \+ far\.perspective \* 1\.5;/.test(paint) &&
   /var nearWidth = \.35 \+ near\.perspective \* 2\.1;/.test(paint) &&
-  /mark\.setAttribute\("d",[\s\S]+nearX - nearWidth[\s\S]+"Z"\);/.test(paint),
+  /roadtripSetAttribute\(mark, "d",[\s\S]+nearX - nearWidth[\s\S]+"Z"\);/.test(paint),
   "runtime lane dashes are closed polygons whose widths grow with perspective");
 
 var mirror = between("function roadtripMirrorProject(behind)", "function roadtripProjectLateral(point, roadFraction)");

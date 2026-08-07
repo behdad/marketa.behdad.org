@@ -42,13 +42,21 @@ function roadtripMirrorProject(behind) {
   var perspective = Math.max(0, 1 - behind / 62);
   return { center: 340, halfWidth: 3 + perspective * 55, perspective: perspective, y: -99 + perspective * 22 };
 }
+function roadtripSetAttribute(node, name, value) {
+  if (node && node.getAttribute(name) !== String(value)) node.setAttribute(name, value);
+}
+function roadtripRemoveAttribute(node, name) {
+  if (node && node.hasAttribute ? node.hasAttribute(name) : node.getAttribute(name)) node.removeAttribute(name);
+}
 
 var paint = functionMatch ? Function(
   "roadtripMirrorTreePool", "roadtripMirrorTerrain", "roadtripState", "roadtripFurniturePool", "ROADTRIP_FURNITURE_SIZE",
   "roadtripIsCalgaryRoute", "roadtripRearCurveOffset", "roadtripFurnitureSide", "roadtripMirrorProject",
+  "roadtripSetAttribute", "roadtripRemoveAttribute",
   "return (" + functionMatch[0] + ");"
 )(roadtripMirrorTreePool, roadtripMirrorTerrain, roadtripState, roadtripFurniturePool, ROADTRIP_FURNITURE_SIZE,
-  roadtripIsCalgaryRoute, roadtripRearCurveOffset, roadtripFurnitureSide, roadtripMirrorProject) : function () {};
+  roadtripIsCalgaryRoute, roadtripRearCurveOffset, roadtripFurnitureSide, roadtripMirrorProject,
+  roadtripSetAttribute, roadtripRemoveAttribute) : function () {};
 paint();
 
 var visible = trees.filter(function (tree) { return tree.getAttribute("visibility") === "visible"; });

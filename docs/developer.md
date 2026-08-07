@@ -252,6 +252,12 @@ eased wheel angle into lateral velocity, speed-weights bend drift, and carries b
 slip into a damped asphalt recovery. `surfaceRoughness` is the shared continuous owner for grip,
 windshield vibration, and live tyre audio; paused-run snapshots retain both it and lateral velocity.
 
+The global frame-health monitor also owns Road Trip's rendering budget. Physics, input, traffic,
+police, scoring state, and audio continue on every driving step, while sustained low frame delivery
+caps the first-person SVG world painter near 30 Hz. Highway painters equality-guard retained SVG
+attributes and preserve traffic/police layer order until depth actually changes, so a steady frame
+does not repeatedly invalidate identical visibility, metadata, or DOM order.
+
 ### Camping
 
 `campExitDistance` preserves Abraham's recurring-exit phase. During its projected sign/spur window,

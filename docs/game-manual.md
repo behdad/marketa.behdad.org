@@ -51,7 +51,8 @@ Each main room has a room directly below it:
 - `Tab` or the window-grid button opens **The Loft** room map. Arrow keys select an already
   discovered room and `Enter` opens it. Discovered rooms are sharp; the others are blurred;
   double-click or double-tap one to unlock it deliberately. Its first card is Kitchen / Bar.
-  Opening the map during a Road Trip leaves the drive paused when the map closes.
+  During a Road Trip or at Camping, the Entrance card mirrors that live scene. Opening the map
+  during a Road Trip leaves the drive paused when the map closes.
 - The first downstairs visit points out the whole-loft button on the left and the floor
   control on the right; its small × dismisses that hint.
 - Escape, Backspace, ×, or the top-left arrow dismisses the current layer or returns upstairs.

@@ -109120,6 +109120,7 @@ function spawnDustMote(container) {
   var dollhouseCuddlyScreenClass = null;
   var dollhouseCuddlyFireStyles = null;
   var dollhouseKitchenStyles = null;
+  var dollhouseRoadtripPauseStyle = null;
   function floorText(key) {
     var l = document.documentElement.lang;
     return (T[l] && T[l][key]) || T.en[key] || key;
@@ -109157,6 +109158,12 @@ function spawnDustMote(container) {
       });
     }
     dollhouseKitchenStyles = null;
+    var roadtripPause = document.getElementById("entrance-roadtrip-pause-dialog");
+    if (roadtripPause && dollhouseRoadtripPauseStyle !== null) {
+      if (dollhouseRoadtripPauseStyle) roadtripPause.setAttribute("style", dollhouseRoadtripPauseStyle);
+      else roadtripPause.removeAttribute("style");
+    }
+    dollhouseRoadtripPauseStyle = null;
     var entranceArt = document.getElementById("entrance-room-art");
     if (entranceArt) entranceArt.classList.remove("dollhouse-day-preview");
   }
@@ -109190,6 +109197,12 @@ function spawnDustMote(container) {
     var entranceArt = document.getElementById("entrance-room-art");
     var balcony = document.getElementById("stage-balcony");
     if (entranceArt) entranceArt.classList.toggle("dollhouse-day-preview", !(balcony && balcony.classList.contains("dusk")));
+    var transport = window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState();
+    var roadtripPause = document.getElementById("entrance-roadtrip-pause-dialog");
+    if (transport && transport.active && roadtripPause && dollhouseRoadtripPauseStyle === null) {
+      dollhouseRoadtripPauseStyle = roadtripPause.getAttribute("style") || "";
+      roadtripPause.style.display = "none";
+    }
   }
   function closeDollhouse() {
     if (!dollhouse) return false;
@@ -109383,6 +109396,7 @@ function spawnDustMote(container) {
     if (window.__primeCuddlyProjectorPreview) window.__primeCuddlyProjectorPreview();
     buildDollhouse();
     var activeLower = activeLowerRoom();
+    var transport = window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState();
     dollhouseRooms.forEach(function (spec) {
       var discovered = roomSeen(spec.room);
       spec.button.classList.toggle("locked", !discovered);
@@ -109391,6 +109405,12 @@ function spawnDustMote(container) {
                                 : !activeLower && window.currentStageName === spec.room));
       var bar = spec.room === "kitchen" && dollhouseBarActive();
       spec.button.classList.toggle("bar-active", bar);
+      if (spec.room === "entrance" && spec.use) {
+        var previewId = transport && transport.active ? "entrance-drive-hud-svg" : "entrance-room-art";
+        spec.use.setAttribute("href", "#" + previewId);
+        spec.use.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#" + previewId);
+        spec.button.classList.toggle("roadtrip-active", previewId === "entrance-drive-hud-svg");
+      }
       spec.label.textContent = spec.room === "kitchen" ? floorText("room_kitchen_bar") : roomDotLabel(spec.room);
     });
     var title = document.getElementById("loft-dollhouse-title");

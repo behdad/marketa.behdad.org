@@ -64,6 +64,10 @@ var harness = String.raw`<script>
     check("opening The Loft pauses an active Road Trip exactly once",
       transportPauseCalls === 1 && transportPaused,
       JSON.stringify({ calls: transportPauseCalls, paused: transportPaused }));
+    check("the Entrance card mirrors the active Road Trip without its pause overlay",
+      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") ===
+        "#entrance-drive-hud-svg" &&
+      document.getElementById("entrance-roadtrip-pause-dialog").style.display === "none");
     check("the first Cuddly-puddly thumbnail is initialized with a warm projector image",
       document.getElementById("cuddly-wallscreen").classList.contains("chan-fire") &&
       !!document.getElementById("cuddly-flame-img").getAttribute("href") &&
@@ -75,6 +79,8 @@ var harness = String.raw`<script>
       document.getElementById("bathroom-waffle-towel").getAttribute("fill") ===
         "url(#bathroom-waffle) #a8a39e");
     key("Tab");
+    check("closing The Loft restores the Road Trip pause overlay",
+      document.getElementById("entrance-roadtrip-pause-dialog").style.display === "");
     window.__entranceRoadtripTransportState = realTransportState;
     window.__toggleEntranceRoadtripTransport = realTransportToggle;
 

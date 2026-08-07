@@ -124,6 +124,8 @@ check(campStars && /camp-const-cassiopeia/.test(campStars[0]) && /camp-const-dip
   "three recognizable northern constellations have linework");
 check(/id="entrance-roadtrip-camp-sun" transform="translate\(590 -86\)"/.test(source),
   "the camp sun shares the moon's exact center");
+check(/id="entrance-roadtrip-camp-sunset"[\s\S]*?<ellipse cx="590" cy="-86" rx="92" ry="46"[\s\S]*?<circle cx="590" cy="-86" r="14"/.test(source),
+  "the campsite sunset stays centered between the sun and moon");
 check(/#entrance-roadtrip-camp-day>rect,#entrance-roadtrip-camp-day>path,\s*#entrance-roadtrip-camp-night>rect\{pointer-events:none\}/.test(source),
   "transparent sky paint cannot intercept the visible celestial toggle");
 check(/\["entrance-roadtrip-camp-moon-phase", 590, -86, 15\]/.test(source),

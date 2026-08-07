@@ -41,7 +41,7 @@ var HARNESS = [
   ' var targetDot=document.querySelectorAll(".hunt-dot")[1];targetDot.focus();click(targetDot);await sleep(780);report.steps.dot={source:state(),target:window.__princeState(),room:window.currentStageName,focused:document.activeElement===targetDot};',
   ' window.goToStage("balcony");key("ArrowDown");await sleep(50);click(document.getElementById("hunt-prev"));await sleep(780);report.steps.prev={source:state(),target:window.__bedroomRoomState(),room:window.currentStageName};',
   ' window.goToStage("balcony");key("ArrowDown");await sleep(50);click(document.getElementById("hunt-next"));await sleep(40);report.steps.next={source:state(),room:window.currentStageName};',
-  ' window.goToStage("balcony");key("ArrowDown");await sleep(50);key("1");await sleep(780);report.steps.number={source:state(),target:window.__bathroomRoomState(),room:window.currentStageName};',
+  ' window.goToStage("balcony");key("ArrowDown");await sleep(50);key("6");await sleep(780);report.steps.number={source:state(),target:window.__bathroomRoomState(),room:window.currentStageName};',
   ' window.goToStage("balcony");',
   ' window.__secondRound=true;key("ArrowDown");await sleep(50);document.getElementById("entrance-name-stone").classList.add("reacting");window.__deliverPhoneMessage("cue_mail");await sleep(80);var badge=document.querySelector(".msg-badge:not(.entrance-probe)"),coach=document.querySelector(".msg-badge-coach:not(.entrance-probe)"),thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.held={state:state(),hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),coach:!!coach&&coach.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show"),thread:window.__phoneMessageThread()};',
   ' click(document.getElementById("hunt-floor-btn"));await sleep(1250);thumb=document.querySelector(".msg-thumb:not(.entrance-probe)");report.steps.closed={state:state(),covered:window.__roomAmbienceCovered(),viewport:viewport.classList.contains("entrance-room-open"),roster:[getComputedStyle(toggle).visibility,getComputedStyle(roster).visibility,getComputedStyle(backdrop).visibility],messages:[getComputedStyle(probeBadge).visibility,getComputedStyle(probeCoach).visibility,getComputedStyle(probeThumb).visibility,getComputedStyle(probeCall).visibility],hold:window.__messageNotificationsHeld(),badge:!!badge&&badge.classList.contains("show"),thumb:!!thumb&&thumb.classList.contains("show")};',
@@ -247,7 +247,7 @@ check(s.up && s.up.open && s.up.drive.holds.throttle && s.escape && s.escape.ope
   {up:s.up,escape:s.escape,backspace:s.backspace});
 check(s.touch && !s.touch.open, "a bare-background touch double-tap stays upstairs", s.touch);
 check(s.number && !s.number.source.open && s.number.target.open && s.number.room === "kitchen",
-  "a number shortcut pans to the corresponding room while remaining downstairs", s.number);
+  "a 6–0 shortcut pans directly to its downstairs room", s.number);
 check(s.left && !s.left.source.open && s.left.target.open && s.left.room === "office" &&
   s.right && s.right.source.open && s.right.room === "balcony",
   "Left pans to Bedroom while Right stays at the lower floor's edge", {left:s.left,right:s.right});

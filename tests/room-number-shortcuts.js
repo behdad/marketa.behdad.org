@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+"use strict";
+
+var lib = require("./lib");
+
+var harness = String.raw`<script>
+(function () {
+  var out = { checks: [], errors: [] };
+  function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+  function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
+  function key(value) {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: value, bubbles: true, cancelable: true }));
+  }
+  function lowerId() {
+    if (window.__bathroomRoomOpen) return "bathroom";
+    if (window.__princeState && window.__princeState().basement) return "dungeon";
+    if (window.__cinemaRoomOpen) return "cinema";
+    if (window.__bedroomRoomOpen) return "bedroom";
+    if (window.__entranceRoomOpen) return "entrance";
+    return null;
+  }
+  async function run() {
+    window.__unlockAllRooms();
+    var upper = ["kitchen", "garden", "cuddly", "office", "balcony"];
+    var lower = ["bathroom", "dungeon", "cinema", "bedroom", "entrance"];
+    var lowerKeys = ["6", "7", "8", "9", "0"];
+    for (var i = 0; i < upper.length; i++) {
+      window.goToStage("kitchen");
+      key(lowerKeys[i]);
+      await sleep(60);
+      check(lowerKeys[i] + " opens " + lower[i],
+        window.currentStageName === upper[i] && lowerId() === lower[i],
+        window.currentStageName + "/" + lowerId());
+      key(String(i + 1));
+      await sleep(800);
+      check(String(i + 1) + " returns to " + upper[i] + " upstairs",
+        window.currentStageName === upper[i] && lowerId() === null,
+        window.currentStageName + "/" + lowerId());
+    }
+    key("0");
+    await sleep(60);
+    key("6");
+    await sleep(800);
+    check("6–0 navigate directly along the lower floor",
+      window.currentStageName === "kitchen" && lowerId() === "bathroom",
+      window.currentStageName + "/" + lowerId());
+    key("?");
+    await sleep(30);
+    var english = document.querySelector(".kbd-dialog");
+    check("English shortcut card names both fixed floors", english &&
+      english.textContent.indexOf("upstairs room") !== -1 &&
+      english.textContent.indexOf("downstairs room") !== -1, english && english.textContent);
+    key("?");
+    await sleep(280);
+    setLang("cs");
+    key("?");
+    await sleep(30);
+    var czech = document.querySelector(".kbd-dialog");
+    check("Czech shortcut card names both fixed floors", czech &&
+      czech.textContent.indexOf("místnost nahoře") !== -1 &&
+      czech.textContent.indexOf("místnost dole") !== -1, czech && czech.textContent);
+  }
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      run().catch(function (error) { out.errors.push(String(error && error.stack || error)); }).then(function () {
+        out.errors = out.errors.concat((window.__errs || []).slice());
+        var pre = document.createElement("pre");
+        pre.id = "__report";
+        pre.textContent = JSON.stringify(out);
+        document.body.appendChild(pre);
+      });
+    }, 250);
+  });
+})();
+</script>`;
+
+var result = lib.runPageSync("rsvp.html", harness, 12000, { patchRaf: true, seedRandom: true });
+if (!result) { console.error("room number shortcuts: no report"); process.exit(1); }
+var failed = false;
+result.checks.forEach(function (item) {
+  console.log("  " + (item.pass ? "✓" : "✗") + " " + item.name +
+    (item.pass || !item.detail ? "" : " — " + item.detail));
+  if (!item.pass) failed = true;
+});
+if (result.errors.length) {
+  failed = true;
+  console.error("runtime errors:\n  " + result.errors.join("\n  "));
+}
+if (failed) process.exit(1);
+console.log("room number shortcuts: all " + result.checks.length + " checks passed");

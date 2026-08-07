@@ -36864,16 +36864,13 @@ window.__bathroomRoomOpen = false;
   if (window.__registerTransientResetHook) window.__registerTransientResetHook("bathroom-room", closeBathroom);
 })();
 
-// Number shortcuts retain the user's floor: upstairs they jump among the five main
-// rooms, while any active lower room pans to the corresponding room below it.
+// Number shortcuts have a fixed floor: 1–5 are the main rooms and 6–0 are their
+// paired lower rooms. Lower-room overlays claim them before the shared document handler.
 function handleLowerRoomNumberShortcut(event) {
-  if (!event || event.key < "1" || event.key > "5") return false;
-  var names = ["kitchen", "garden", "cuddly", "office", "balcony"];
-  if (!window.__navigateLowerRoom) return false;
+  if (!event || !/^[0-9]$/.test(event.key) || !window.__navigateRoomDigit) return false;
   event.preventDefault();
   event.stopImmediatePropagation();
-  window.__navigateLowerRoom(names[parseInt(event.key, 10) - 1], null, { unlockLocked: true });
-  return true;
+  return window.__navigateRoomDigit(event.key);
 }
 
 // A lower bathroom owns its navigation and activation keys while it is visible.
@@ -52749,7 +52746,8 @@ var T = {
     kbd_shift_updown: "clock +30 / −30 min",
     kbd_vertical: "descend / return",
     kbd_console: "open / close the console",
-    kbd_digits: "jump to a room",
+    kbd_digits: "upstairs room",
+    kbd_lower_digits: "downstairs room",
     kbd_devices: "monitor / laptop / cellphone",
     kbd_enter: "advance the room puzzle",
     kbd_d: "day ↔ night",
@@ -54092,7 +54090,8 @@ var T = {
     kbd_shift_updown: "hodiny +30 / −30 min",
     kbd_vertical: "sestoupit / vrátit se",
     kbd_console: "otevřít / zavřít konzoli",
-    kbd_digits: "skok do místnosti",
+    kbd_digits: "místnost nahoře",
+    kbd_lower_digits: "místnost dole",
     kbd_devices: "monitor / notebook / telefon",
     kbd_enter: "pokračovat v hádance místnosti",
     kbd_d: "den ↔ noc",
@@ -55036,6 +55035,7 @@ window.addEventListener("hashchange", function () {
       ["<kbd>Shift</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd>", "kbd_shift_updown"],
       ["<kbd>`</kbd>", "kbd_console"],
       ["<kbd>1</kbd>–<kbd>5</kbd>", "kbd_digits"],
+      ["<kbd>6</kbd>–<kbd>0</kbd>", "kbd_lower_digits"],
       ["<kbd>m</kbd><kbd>l</kbd><kbd>c</kbd>", "kbd_devices"],
       ["<kbd>Enter</kbd>", "kbd_enter"],
       ["<kbd>Esc</kbd><kbd>Backspace</kbd>", "kbd_esc"],
@@ -112553,7 +112553,8 @@ function spawnDustMote(container) {
   // 600ms unlocks it (mirrors the arrow/dot double-click-to-unlock). ` whisks to the office
   // console. d flips day↔night; ↓ descends from Kitchen/Garden/Cuddly/Balcony/Office and ↑
   // returns, while
-  // elsewhere vertical arrows are inert. 1-5 jump to a room, m/l/c summon the monitor/laptop/
+  // elsewhere vertical arrows are inert. 1-5 jump upstairs and 6-0 jump downstairs;
+  // m/l/c summon the monitor/laptop/
   // cellphone, / opens Messages, k toggles the kitten, r resets, n next track, t a trip. Backspace
   // mirrors Escape ("go back") — see the alias below. Ignored while typing / with a modifier.
   // Tab opens the whole-loft picker from the beginning. Its visible grid button and shared
@@ -112610,6 +112611,24 @@ function spawnDustMote(container) {
     syncFloorNavigation();
     return !!closed;
   }
+  function navigateRoomDigit(key) {
+    var digit = parseInt(key, 10);
+    var lower = digit === 0 || digit >= 6;
+    var index = lower ? (digit === 0 ? 4 : digit - 6) : digit - 1;
+    if (index < 0 || index >= STAGES.length) return false;
+    var target = STAGES[index];
+    if (lowerRoomOwnsViewport()) {
+      if (lower) return navigateLowerRoom(target, null, { unlockLocked: true });
+      leaveLowerFloor();
+      return navigateWithRoster(target);
+    }
+    navigateWithRoster(target);
+    if (!lower) return true;
+    markLowerRoomDiscovered();
+    var open = lowerRoomOpenerForStage(target);
+    return !!(open && open());
+  }
+  window.__navigateRoomDigit = navigateRoomDigit;
   if (floorBtn) floorBtn.addEventListener("click", function (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -112723,9 +112742,9 @@ function spawnDustMote(container) {
           }
         }
       }
-    } else if (e.key >= "1" && e.key <= "5") {
+    } else if (/^[0-9]$/.test(e.key)) {
       e.preventDefault();
-      navigateWithRoster(STAGES[parseInt(e.key, 10) - 1]); // jump straight to room 1-5, unlocking it if needed
+      navigateRoomDigit(e.key);
     } else if (e.key === "r" || e.key === "R") {
       e.preventDefault();
       if (window.__requestLoftReset) window.__requestLoftReset({ resetDateTime: false });

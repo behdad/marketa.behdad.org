@@ -46,7 +46,8 @@ Each main room has a room directly below it:
 
 - Select the side arrows or room dots to travel on the main floor.
 - Press `←` or `→` to move one room at a time.
-- Press `1`–`5` to jump to a room on the current floor.
+- Press `1`–`5` to jump to Kitchen through Balcony upstairs.
+- Press `6`–`0` to jump to Bathroom through Entrance downstairs.
 - Press `↓` twice to deliberately unlock the lower floor; after discovery, press it once to enter
   the paired lower room. Press `↑` to return.
 - While downstairs, `←` and `→` move along the lower floor.
@@ -75,7 +76,8 @@ Press `?` outside a typing field for the complete shortcut card. The essentials 
 - `←` / `→`: adjacent room
 - `↓` / `↑`: downstairs or upstairs
 - `Tab`: open or close **The Loft** room map
-- `1`–`5`: room on the current floor
+- `1`–`5`: upstairs room
+- `6`–`0`: downstairs room
 - `Enter`: next guided action; in Phase 2, the room's main activity
 - `C`: phone
 - `/`: Messages

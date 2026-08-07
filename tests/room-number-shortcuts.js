@@ -77,13 +77,14 @@ var harness = String.raw`<script>
     var parked = window.__entranceRoomState().drive.roadtrip;
     key("0");
     await sleep(80);
-    var returned = window.__entranceRoomState().drive.roadtrip;
-    check("0 returns a number-key detour to its paused Road Trip",
+    var returnedState = window.__entranceRoomState();
+    var returned = returnedState.drive.roadtrip;
+    check("0 restores the exact parked Entrance state without resuming Road Trip",
       window.currentStageName === "balcony" && window.__entranceRoomOpen &&
-      beforeDetour.active && !parked.active && parked.paused && returned.active &&
-      returned.resumePending && returned.route === beforeDetour.route &&
-      returned.banffDistance === beforeDetour.banffDistance,
-      JSON.stringify({ before: beforeDetour, parked: parked, returned: returned }));
+      beforeDetour.active && !parked.active && parked.paused && !returned.active &&
+      returned.paused && returnedState.drive.hud === false &&
+      returned.route === beforeDetour.route && returned.banffDistance === beforeDetour.banffDistance,
+      JSON.stringify({ parked: parked, hud: returnedState.drive.hud, returned: returned }));
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Document-level Enter walks Camping one bounded action at a time, including all 19 trace stars
-// and the ready wisdom handoff.
+// Document-level Enter walks Camping without presenting its interactive fire/stargazing builders,
+// then preserves the ready wisdom handoff.
 "use strict";
 
 var lib = require("./lib");
@@ -9,7 +9,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 <style>#entrance-roadtrip-stargazing-game *,#entrance-roadtrip-camp-wisdom{transition:none!important}</style>
 <script>
 (function () {
-  var report = { errors: [], starSteps: [], prevented: [] };
+  var report = { errors: [], prevented: [] };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function enter(repeat) {
     var event = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, repeat: !!repeat });
@@ -25,16 +25,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       fireBuilt: roadtrip.campFireBuilt,
       fireLit: roadtrip.campFireLit,
       igniting: document.getElementById("entrance-roadtrip-fire-game").classList.contains("igniting"),
+      fireBuilderOpen: document.getElementById("entrance-roadtrip-fire-game").classList.contains("open"),
+      fireBuilderFocused: document.getElementById("entrance-roadtrip-fire-game").contains(document.activeElement),
       stew: window.__entranceRoadtripCampStewState(),
       stargazing: window.__entranceRoadtripCampStargazingState(),
       dusk: document.getElementById("stage-balcony").classList.contains("dusk"),
+      sunsetAnimating: document.getElementById("entrance-roadtrip-camp").classList.contains("stargazing-sunset"),
       caption: window.__captionKey && window.__captionKey(),
       wisdomShown: document.getElementById("entrance-roadtrip-camp-wisdom").classList.contains("show"),
       tentOpen: document.getElementById("entrance-roadtrip-camp-tent").classList.contains("open")
     };
-  }
-  function total(progress) {
-    return progress.cassiopeia + progress["ursa-major"] + progress["ursa-minor"];
   }
   async function run() {
     window.__unlockAllRooms();
@@ -48,6 +48,13 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setDayNight(false);
     await sleep(220);
     report.initial = snap();
+
+    document.getElementById("entrance-roadtrip-camp-empty-pit").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.pointerFireBuilder = snap();
+    document.getElementById("entrance-roadtrip-fire-close").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    document.querySelector(".hunt-viewport").focus();
 
     enter(false);
     report.fireStarting = snap();
@@ -69,27 +76,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     await sleep(190);
     enter(false);
     report.stewServed = snap();
+    var stargazingStart = window.__captureCheckpointSystems().entrance;
     await sleep(190);
     enter(false);
-    report.sunsetting = snap();
-    enter(false);
-    await sleep(190);
-    enter(false);
-    report.sunsetGuarded = snap();
-    await sleep(1530);
-    report.builderOpen = snap();
-
-    for (var i = 0; i < 19; i++) {
-      var before = snap();
-      var prevented = enter(false);
-      var after = snap();
-      report.starSteps.push({
-        before: total(before.stargazing.progress), after: total(after.stargazing.progress),
-        progress: after.stargazing.progress, open: after.stargazing.open,
-        active: after.active, prevented: prevented
-      });
-      await sleep(170);
-    }
+    report.stargazingSkipped = snap();
+    var completedCheckpoint = window.__captureCheckpointSystems().entrance;
+    window.__restoreCheckpointSystems({ entrance: stargazingStart }, "afterStage");
+    window.__setDayNight(false);
+    document.getElementById("entrance-roadtrip-camp-sky-hit").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.pointerSunsetting = snap();
+    await sleep(1620);
+    report.pointerTraceOpen = snap();
+    window.__entranceRoadtripCampStargazingClose();
+    window.__restoreCheckpointSystems({ entrance: completedCheckpoint }, "afterStage");
+    window.__setDayNight(true);
+    await sleep(180);
     report.complete = snap();
     enter(false);
     report.completeInert = snap();
@@ -142,9 +144,14 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 12500, {
 check(result && result.errors.length === 0, "the Enter-only campsite walk has no uncaught errors", result && result.errors);
 check(result && result.initial.active && !result.initial.fireBuilt && !result.initial.fireLit,
   "the walk starts at an active empty campsite", result && result.initial);
+check(result && result.pointerFireBuilder.fireBuilderOpen && result.pointerFireBuilder.fireBuilderFocused,
+  "clicking the empty pit still opens and focuses the interactive fire builder",
+  result && result.pointerFireBuilder);
 check(result && result.fireStarting.active && result.fireStarting.igniting &&
-  !result.fireStarting.fireBuilt && !result.fireStarting.fireLit,
-  "one Enter assembles a valid fire and begins lighting it", result && result.fireStarting);
+  !result.fireStarting.fireBuilt && !result.fireStarting.fireLit &&
+  !result.fireStarting.fireBuilderOpen && !result.fireStarting.fireBuilderFocused,
+  "one Enter assembles and lights through the canonical builder while keeping it closed",
+  result && result.fireStarting);
 check(result && result.fireGuarded.igniting && !result.fireGuarded.fireBuilt && result.fireReady.fireBuilt && result.fireReady.fireLit,
   "repeat and double Enter cannot skip the asynchronous ignition", result && { guarded: result.fireGuarded, ready: result.fireReady });
 var cooking = result && result.stewCooking && result.stewCooking.stew;
@@ -158,21 +165,21 @@ check(result && result.stewDoubleGuarded.stew.phase !== "ready" && result.stewRe
   result && { double: result.stewDoubleGuarded.stew, ready: result.stewReady.stew });
 check(result && result.serveDoubleGuarded.stew.status === "cooking" && result.stewServed.stew.status === "served",
   "the following deliberate Enter serves the ready stew", result && result.stewServed);
-check(result && result.sunsetting.stargazing.sunsetting && result.sunsetting.dusk &&
-  !result.sunsetGuarded.stargazing.open && result.sunsetGuarded.active && result.builderOpen.stargazing.open,
-  "the next Enter starts sunset while intervening presses stay inert until the builder opens",
-  result && { start: result.sunsetting, guarded: result.sunsetGuarded, open: result.builderOpen });
-var expected = [];
-for (var i = 1; i <= 19; i++) expected.push({
-  cassiopeia: Math.min(5, i),
-  "ursa-major": Math.min(7, Math.max(0, i - 5)),
-  "ursa-minor": Math.min(7, Math.max(0, i - 12))
-});
-check(result && result.starSteps.length === 19 && result.starSteps.every(function (step, index) {
-  return step.before === index && step.after === index + 1 && step.active && step.prevented &&
-    JSON.stringify(step.progress) === JSON.stringify(expected[index]) && step.open === (index < 18);
-}), "exactly 19 Enter presses reveal one deterministic trace step apiece and never exit Camping",
-  result && result.starSteps);
+check(result && result.stargazingSkipped.active && result.stargazingSkipped.dusk &&
+  result.stargazingSkipped.stargazing.complete && !result.stargazingSkipped.stargazing.open &&
+  !result.stargazingSkipped.sunsetAnimating &&
+  Object.keys(result.stargazingSkipped.stargazing.progress).reduce(function (sum, name) {
+    return sum + result.stargazingSkipped.stargazing.progress[name];
+  }, 0) === 19 && result.stargazingSkipped.wisdomShown &&
+  !result.stargazingSkipped.stargazing.wisdomHandoffReady,
+  "one Enter finishes the canonical stargazing trace with its interactive overlay closed",
+  result && result.stargazingSkipped);
+check(result && result.pointerSunsetting.stargazing.sunsetting && result.pointerSunsetting.dusk &&
+  result.pointerSunsetting.sunsetAnimating &&
+  !result.pointerSunsetting.stargazing.complete && !result.pointerSunsetting.stargazing.open &&
+  result.pointerTraceOpen.stargazing.open && !result.pointerTraceOpen.stargazing.complete,
+  "clicking the sky still opens the interactive trace after sunset",
+  result && { sunset: result.pointerSunsetting, open: result.pointerTraceOpen });
 check(result && result.complete.active && result.complete.stargazing.complete && !result.complete.stargazing.open &&
   result.completeInert.active && result.completeInert.stargazing.complete &&
   JSON.stringify(result.completeInert.stargazing.progress) === JSON.stringify(result.complete.stargazing.progress),

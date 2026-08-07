@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-// Tab and the grid button own a full-loft picker from the beginning. The floor
-// button stays visible but disabled until downstairs is discovered; visited rooms stay sharp.
+// Tab and the grid button own a full-loft picker from the beginning. The floor button stays
+// visible but disabled until downstairs is discovered; Enter opens or deliberately unlocks rooms.
 var lib = require("./lib");
 
 var harness = String.raw`<script>
@@ -10,8 +10,8 @@ var harness = String.raw`<script>
   var out = { checks: [], errors: [] };
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
-  function key(name) {
-    var event = new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true });
+  function key(name, repeat) {
+    var event = new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true, repeat: !!repeat });
     document.dispatchEvent(event);
     return event.defaultPrevented;
   }
@@ -243,6 +243,38 @@ var harness = String.raw`<script>
       JSON.stringify({ seen: window.__seenRooms(), rooms: state().rooms }));
     window.__closeDollhouse();
     if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
+
+    window.goToStage("kitchen");
+    window.__setSeenRooms(["kitchen"]);
+    key("Tab");
+    key("ArrowRight");
+    var lockedMainFirst = key("Enter");
+    var lockedMainFirstState = state(), lockedMainFirstSeen = window.__roomSeen("garden");
+    var lockedMainRepeat = key("Enter", true);
+    var lockedMainRepeatState = state(), lockedMainRepeatSeen = window.__roomSeen("garden");
+    key("Enter");
+    check("a locked main-floor cursor needs two deliberate Enter presses and ignores auto-repeat",
+      lockedMainFirst && lockedMainRepeat && lockedMainFirstState.open && lockedMainRepeatState.open &&
+      !lockedMainFirstSeen && !lockedMainRepeatSeen && !state().open &&
+      window.currentStageName === "garden" && window.__roomSeen("garden"),
+      JSON.stringify({ first: lockedMainFirstState, repeat: lockedMainRepeatState,
+        room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
+
+    window.__setSeenRooms(["kitchen"]);
+    key("Tab");
+    key("ArrowDown");
+    var lockedLowerFirst = key("Enter");
+    var lockedLowerFirstState = state(), lockedLowerFirstSeen = window.__roomSeen("dungeon");
+    var lockedLowerRepeat = key("Enter", true);
+    var lockedLowerRepeatState = state(), lockedLowerRepeatSeen = window.__roomSeen("dungeon");
+    key("Enter");
+    check("the same two-Enter contract unlocks a lower-floor destination",
+      lockedLowerFirst && lockedLowerRepeat && lockedLowerFirstState.open && lockedLowerRepeatState.open &&
+      !lockedLowerFirstSeen && !lockedLowerRepeatSeen && !state().open &&
+      window.currentStageName === "garden" && window.__princeState().basement && window.__roomSeen("dungeon"),
+      JSON.stringify({ first: lockedLowerFirstState, repeat: lockedLowerRepeatState,
+        room: window.currentStageName, dungeon: window.__princeState(), seen: window.__seenRooms(), open: state().open }));
+    window.__closeMonitorPrince();
 
     window.__setSeenRooms(["kitchen"]);
     key("Tab");

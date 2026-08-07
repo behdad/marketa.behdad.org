@@ -109,11 +109,13 @@ access from `maxUnlocked`. Room cards reuse their real SVG art, with a matching 
 for the HTML/CSS Dungeon. The preview temporarily neutralizes Bedroom one-shots, gives the intact
 Entrance façade a daylight wash, primes a warm Cuddly projector frame, and applies the real Bar visibility state to
 the complete Kitchen stage for either a party or second-round night. Double-click and
-touch double-tap deliberately unlock a locked destination. The map owns an arrow-key cursor and uses
-Enter only for discovered destinations. Tab is consumed throughout the game and no scene or chrome
-control participates in browser Tab traversal; a clicked console/editor field may still interpret
-Tab internally. Opening the picker pauses an active Road Trip through its transport owner and does
-not implicitly resume it on close. While that route remains active, the Entrance card swaps its
+touch double-tap deliberately unlock a locked destination. The map owns an arrow-key cursor;
+discovered destinations open with one Enter, while locked destinations reuse the 600 ms deliberate
+unlock window and require two non-repeat Enter presses on the same card. Tab is consumed throughout
+the game and no scene or chrome control participates in browser Tab traversal; a clicked
+console/editor field may still interpret Tab internally. Opening the picker pauses an active Road
+Trip through its transport owner and does not implicitly resume it on close. While that route
+remains active, the Entrance card swaps its
 `<use>` target to the live drive/campsite HUD and temporarily suppresses the full-size pause dialog.
 Lower-card navigation positions the paired main stage with `recordVisit:false`; only the selected
 lower room becomes seen, so its still-locked upper card remains blurred.
@@ -296,8 +298,11 @@ and storm layers from camp/fire/weather state, and tears the whole bed down when
 or unattended.
 
 The capture-phase campsite key owner consumes Enter before Entrance navigation. Plain non-repeat
-Enter calls `roadtripCampDoNext()` for one bounded fire → stew → sunset → trace action; a short
-debounce and the ignition/sunset state gates prevent quick doubles from skipping asynchronous work.
+Enter calls `roadtripCampDoNext()` for one bounded fire → stew → stargazing action. Fire completion
+reuses the builder's open/place/light owners but closes it at ignition and does not move focus into
+the hidden panel. Stargazing completion reuses the canonical trace owner with its overlay closed;
+click/tap still opens each interactive builder. A short debounce and the ignition state gate prevent
+quick doubles from skipping asynchronous work.
 After completion it remains consumed and inert, so Enter never dismisses camp. Escape and Backspace
 retain dismissal ownership. Pointer actions go through `bindRoadtripCampAction()`. Animate
 untransformed inner wrappers, cap runtime SVG effects, and keep effects in the target's coordinate

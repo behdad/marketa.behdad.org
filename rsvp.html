@@ -41243,7 +41243,7 @@ window.__entranceRoomOpen = false;
     paintCampStargazing();
     scheduleCampSleepFinale();
   }
-  function openCampStargazing() {
+  function openCampStargazing(finishNow) {
     if (!campStargazingEligible()) return false;
     if (campStargazingComplete()) return false;
     if (campStargazingSunsetTimer !== null) return "sunset";
@@ -41253,7 +41253,7 @@ window.__entranceRoomOpen = false;
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
     syncRoadtripCampFireCaption(false);
     if (!balconyStage.classList.contains("dusk")) {
-      if (campFireScene) {
+      if (finishNow !== true && campFireScene) {
         campFireScene.classList.remove("stargazing-sunset");
         void campFireScene.getBoundingClientRect();
         campFireScene.classList.add("stargazing-sunset");
@@ -41261,6 +41261,7 @@ window.__entranceRoomOpen = false;
       if (window.__setDayNight) window.__setDayNight(true);
       paintRoadtripCampStew();
       paintCampStargazing();
+      if (finishNow === true) return finishCampStargazing();
       campStargazingSunsetTimer = setTimeout(function () {
         campStargazingSunsetTimer = null;
         if (campFireScene) campFireScene.classList.remove("stargazing-sunset");
@@ -41272,6 +41273,7 @@ window.__entranceRoomOpen = false;
       }, 1550);
       return "sunset";
     }
+    if (finishNow === true) return finishCampStargazing();
     campStargazingState.open = true;
     paintRoadtripCampStew();
     paintCampStargazing();
@@ -41286,9 +41288,9 @@ window.__entranceRoomOpen = false;
     syncRoadtripCampFireCaption(false);
     return true;
   }
-  function traceCampStargazingStar(name, index) {
+  function traceCampStargazingStar(name, index, allowClosed) {
     var length = CAMP_STARGAZING_LENGTHS[name];
-    if (!campStargazingState.open || !length) return false;
+    if ((!campStargazingState.open && !allowClosed) || !length) return false;
     index = Math.floor(Number(index));
     if (index !== campStargazingState.progress[name] || index >= length) return campStargazingSnapshot();
     var wasComplete = campStargazingComplete();
@@ -41304,12 +41306,19 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
     return campStargazingSnapshot();
   }
-  function traceNextCampStargazingStar() {
-    if (!campStargazingState.open) return false;
+  function traceNextCampStargazingStar(allowClosed) {
+    if (!campStargazingState.open && !allowClosed) return false;
     for (var i = 0; i < CAMP_STARGAZING_ORDER.length; i++) {
       var name = CAMP_STARGAZING_ORDER[i], progress = campStargazingState.progress[name];
-      if (progress < CAMP_STARGAZING_LENGTHS[name]) return traceCampStargazingStar(name, progress);
+      if (progress < CAMP_STARGAZING_LENGTHS[name]) {
+        return traceCampStargazingStar(name, progress, allowClosed);
+      }
     }
+    return campStargazingSnapshot();
+  }
+  function finishCampStargazing() {
+    if (!campStargazingEligible() || campStargazingComplete()) return false;
+    while (!campStargazingComplete()) traceNextCampStargazingStar(true);
     return campStargazingSnapshot();
   }
   function startRandomCampStew() {
@@ -41325,7 +41334,7 @@ window.__entranceRoomOpen = false;
   }
   function roadtripCampDoNext() {
     if (!roadtripState.active || roadtripState.route !== "camp" || campNotebookModal) return false;
-    if (campStargazingState.open) return traceNextCampStargazingStar();
+    if (campStargazingState.open) return finishCampStargazing();
     if (campWisdomShowing()) {
       return campWisdomHandoffReady ? dismissCampStargazingWisdom() : campStargazingSnapshot();
     }
@@ -41334,13 +41343,7 @@ window.__entranceRoomOpen = false;
       return campStargazingSnapshot();
     }
     if (!campFireState.complete || !campFireState.lit) {
-      if (campFireState.complete) replayRoadtripCampFire();
-      else openRoadtripCampFire();
-      campFireState.tinder = true;
-      campFireState.twigs = true;
-      campFireState.logs = Math.random() < .5 ? "teepee" : "stack";
-      paintRoadtripCampFire();
-      return lightRoadtripCampFire();
+      return finishRoadtripCampFire();
     }
     if (campStewState.status === "assembling" || campStewState.status === "overcooked") {
       return startRandomCampStew();
@@ -41350,7 +41353,7 @@ window.__entranceRoomOpen = false;
       advanceCampStew(Math.max(0, CAMP_STEW_READY_MS - campStewState.elapsed), true);
       return campStewSnapshot();
     }
-    if (campStewState.status === "served") return openCampStargazing();
+    if (campStewState.status === "served") return openCampStargazing(true);
     return false;
   }
   function dismissCampStargazingWisdom() {
@@ -41438,12 +41441,12 @@ window.__entranceRoomOpen = false;
       }, 2200);
     }
   }
-  function openRoadtripCampFire() {
+  function openRoadtripCampFire(skipFocus) {
     if (roadtripState.route !== "camp" || campFireState.complete || campFireState.igniting) return false;
     campFireState.open = true;
     paintRoadtripCampFire();
     var tinder = roadtripElement("entrance-roadtrip-fire-tinder");
-    if (tinder) try { tinder.focus({ preventScroll: true }); } catch (_error) { try { tinder.focus(); } catch (_error2) {} }
+    if (skipFocus !== true && tinder) try { tinder.focus({ preventScroll: true }); } catch (_error) { try { tinder.focus(); } catch (_error2) {} }
     return true;
   }
   function closeRoadtripCampFire() {
@@ -41500,12 +41503,13 @@ window.__entranceRoomOpen = false;
     roadtripFeedback(key);
     return key;
   }
-  function lightRoadtripCampFire() {
+  function lightRoadtripCampFire(closeBuilder) {
     if (!campFireState.open || campFireState.igniting) return false;
     if (!campFireState.tinder) return failRoadtripCampFire("entrance_roadtrip_camp_fire_no_tinder", false, false);
     if (!campFireState.twigs && !campFireState.pinecones) return failRoadtripCampFire("entrance_roadtrip_camp_fire_no_twigs", true, false);
     if (!campFireState.logs) return failRoadtripCampFire("entrance_roadtrip_camp_fire_no_logs", true, true);
     campFireState.igniting = true;
+    if (closeBuilder === true) campFireState.open = false;
     campFireState.pinecones = 0;
     clearRoadtripCampPineconeFlame();
     paintRoadtripCampFire();
@@ -41523,6 +41527,15 @@ window.__entranceRoomOpen = false;
       if (window.__checkpointChanged) window.__checkpointChanged();
     }, 1500);
     return "success";
+  }
+  function finishRoadtripCampFire() {
+    if (campFireState.complete) {
+      if (replayRoadtripCampFire() !== "rebuild") return false;
+    } else if (!openRoadtripCampFire(true)) return false;
+    if (!campFireState.tinder) placeRoadtripCampFireItem("tinder");
+    if (!campFireState.twigs) placeRoadtripCampFireItem("twigs");
+    if (!campFireState.logs) placeRoadtripCampFireItem(Math.random() < .5 ? "teepee" : "stack");
+    return lightRoadtripCampFire(true);
   }
   bindRoadtripCampAction(roadtripElement("entrance-roadtrip-camp-empty-pit"), openRoadtripCampFire);
   ["tinder", "twigs", "teepee", "stack"].forEach(function (item) {
@@ -109906,6 +109919,8 @@ function spawnDustMote(container) {
   var floorNavigationTimer = null;
   var dollhouseRooms = [];
   var dollhouseCursor = 0;
+  var dollhouseLockedEnterRoom = "";
+  var dollhouseLockedEnterAt = 0;
   var dollhouseCuddlyScreenClass = null;
   var dollhouseCuddlyFireStyles = null;
   var dollhouseKitchenStyles = null;
@@ -110040,6 +110055,8 @@ function spawnDustMote(container) {
     if (!dollhouse) return false;
     var wasOpen = !dollhouse.hidden;
     dollhouse.hidden = true;
+    dollhouseLockedEnterRoom = "";
+    dollhouseLockedEnterAt = 0;
     var area = document.getElementById("hunt-fullscreen-area");
     if (area) area.classList.remove("dollhouse-open");
     restoreDollhousePreviewState();
@@ -110208,7 +110225,12 @@ function spawnDustMote(container) {
   }
   function setDollhouseCursor(index) {
     if (!dollhouseRooms.length) return;
-    dollhouseCursor = Math.max(0, Math.min(dollhouseRooms.length - 1, index));
+    var next = Math.max(0, Math.min(dollhouseRooms.length - 1, index));
+    if (next !== dollhouseCursor) {
+      dollhouseLockedEnterRoom = "";
+      dollhouseLockedEnterAt = 0;
+    }
+    dollhouseCursor = next;
     dollhouseRooms.forEach(function (spec, roomIndex) {
       spec.button.classList.toggle("keyboard-selected", roomIndex === dollhouseCursor);
     });
@@ -110341,8 +110363,23 @@ function spawnDustMote(container) {
     else if (event.key === "ArrowRight") setDollhouseCursor(dollhouseCursor % 5 < 4 ? dollhouseCursor + 1 : dollhouseCursor);
     else if (event.key === "ArrowUp") setDollhouseCursor(dollhouseCursor >= 5 ? dollhouseCursor - 5 : dollhouseCursor);
     else if (event.key === "ArrowDown") setDollhouseCursor(dollhouseCursor < 5 ? dollhouseCursor + 5 : dollhouseCursor);
-    else if (event.key === "Enter" && dollhouseRooms[dollhouseCursor] && roomSeen(dollhouseRooms[dollhouseCursor].room)) {
-      chooseDollhouseRoom(dollhouseRooms[dollhouseCursor]);
+    else if (event.key === "Enter" && dollhouseRooms[dollhouseCursor]) {
+      var selectedRoom = dollhouseRooms[dollhouseCursor];
+      if (roomSeen(selectedRoom.room)) {
+        dollhouseLockedEnterRoom = "";
+        dollhouseLockedEnterAt = 0;
+        chooseDollhouseRoom(selectedRoom);
+      } else if (!event.repeat) {
+        var enterNow = Date.now();
+        if (dollhouseLockedEnterRoom === selectedRoom.room && enterNow - dollhouseLockedEnterAt < 600) {
+          dollhouseLockedEnterRoom = "";
+          dollhouseLockedEnterAt = 0;
+          unlockDollhouseRoom(selectedRoom);
+        } else {
+          dollhouseLockedEnterRoom = selectedRoom.room;
+          dollhouseLockedEnterAt = enterNow;
+        }
+      }
     }
   }, true);
   window.__syncFloorNavigation = syncFloorNavigation;

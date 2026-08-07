@@ -51,8 +51,9 @@ Each main room has a room directly below it:
   the paired lower room. Press `↑` to return.
 - While downstairs, `←` and `→` move along the lower floor.
 - `Tab` or the window-grid button opens **The Loft** room map. Arrow keys select an already
-  discovered room and `Enter` opens it. Discovered rooms are sharp; the others are blurred;
-  double-click or double-tap one to unlock it deliberately. Its first card is Kitchen / Bar.
+  discovered room and `Enter` opens it. On a locked room, press `Enter` twice quickly to unlock it.
+  Discovered rooms are sharp; the others are blurred; double-click or double-tap one to unlock it
+  deliberately. Its first card is Kitchen / Bar.
   During a Road Trip or at Camping, the Entrance card mirrors that live scene. Opening the map
   during a Road Trip leaves the drive paused when the map closes.
 - The window-grid button remains available beside the room dots. The floor button stays visible
@@ -204,15 +205,16 @@ After the fire grows, a cooking invitation pulses, then remains above the camp. 
 putting the fire out restores the RSVP reminder. Continue returns directly to Camping and retains a
 completed fire. Escape, Backspace, or the top-right × leaves Camping for the Entrance dashboard;
 `Enter` never leaves camp. Instead, each deliberate press performs one next step: it builds and
-lights a valid fire, starts a random valid stew, advances it only as far as ready, serves it, opens
-the night sky, then traces one star at a time. Key repeat and quick double presses are ignored.
+lights a valid fire without opening the builder, starts a random valid stew, advances it only as far
+as ready, serves it, then completes stargazing without opening the trace. Key repeat and quick double
+presses are ignored.
 
 The lit fire also reveals a food crate. Open it to assemble Camping stew from one protein, one base,
 and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook
 and opens when dinner is ready; an extinguished fire pauses it. Serve then, or reset a comically
-overcooked pot. After serving, click the sky or press `Enter` to carry the whole game through sunset
-into a clear night. Trace Cassiopeia, Ursa Major, and Ursa Minor by selecting each glowing star;
-`Enter` advances exactly one star. Their loose stars are already seeded in the ordinary camp sky;
+overcooked pot. After serving, click the sky to carry the interactive trace through sunset into a
+clear night, or press `Enter` to finish that trace directly. Trace Cassiopeia, Ursa Major, and Ursa
+Minor by selecting each glowing star. Their loose stars are already seeded in the ordinary camp sky;
 finishing the trace joins them with faint lines. The completed constellations and closing campfire
 exchange remain in the live campsite beneath a broad, rippling northern-lights display, and their
 individual stars can be dragged around the night sky. After all four remarks appear, the caption

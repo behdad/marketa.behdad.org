@@ -23,6 +23,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var tent = document.getElementById("entrance-roadtrip-camp-tent");
     var liveConstellations = document.getElementById("entrance-roadtrip-camp-finale-constellations");
     var finaleConstellations = document.getElementById("entrance-roadtrip-camp-finale-sleep-constellations");
+    var mamaBear = document.querySelector("#entrance-roadtrip-camp-mama-bear .entrance-roadtrip-camp-mama");
+    var corn = document.getElementById("entrance-roadtrip-camp-served-corn");
+    var cornCob = corn && corn.querySelector(".entrance-roadtrip-camp-corn-cob");
+    var cornKernels = corn && corn.querySelector(".entrance-roadtrip-camp-corn-kernels");
     var fieldStars = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-field-star"));
     var radii = fieldStars.map(function (star) { return Number(star.getAttribute("r")); });
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
@@ -44,6 +48,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       campersOpacity: ["marketa", "behdad"].map(function (name) {
         return Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-" + name)).opacity);
       }),
+      mamaTransform: getComputedStyle(mamaBear).transform,
+      mamaAnimation: getComputedStyle(mamaBear).animationName,
+      cornOpacity: Number(getComputedStyle(corn).opacity),
+      cornAnimation: getComputedStyle(corn).animationName,
+      cornCobFill: getComputedStyle(cornCob).fill,
+      cornKernelsOpacity: Number(getComputedStyle(cornKernels).opacity),
       tentOpen: tent.classList.contains("open"),
       tentLight: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-tent-light")).opacity),
       darkness: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).opacity),
@@ -135,6 +145,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.dark = snap();
             window.__entranceRoadtripCampSleepStep();
             report.zzz = snap();
+            [document.querySelector("#entrance-roadtrip-camp-mama-bear .entrance-roadtrip-camp-mama"),
+              document.getElementById("entrance-roadtrip-camp-served-corn")].forEach(function (node) {
+              node.getAnimations().forEach(function (animation) { animation.finish(); });
+            });
+            report.collected = snap();
             window.__entranceRoadtripCampSleepStep();
             report.complete = snap();
             report.completeClickTarget = click(document.getElementById("entrance-roadtrip-camp-finale-darkness"));
@@ -197,8 +212,11 @@ check(result && result.runningExit && !result.runningExit.campActive && result.r
   result.runningReturn.savedPhase === "fire-out",
   "leaving during the curtain call pauses and preserves it", { exit: result && result.runningExit, back: result && result.runningReturn });
 check(result && result.campersGone && result.campersGone.phase === "campers-gone" &&
-  result.campersGone.campersOpacity.every(function (opacity) { return opacity === 0; }),
-  "the campers fade after the fire goes out", result && result.campersGone);
+  result.campersGone.campersOpacity.every(function (opacity) { return opacity === 0; }) &&
+  result.campersGone.mamaTransform === "none" && result.campersGone.cornOpacity === 1 &&
+  result.campersGone.cornCobFill === "rgb(196, 155, 85)" && result.campersGone.cornKernelsOpacity === .18,
+  "the campers fade after the fire goes out and leave two stripped corn cobs behind",
+  result && result.campersGone);
 check(result && result.tentLit && result.tentLit.phase === "tent-lit" && !result.tentLit.tentOpen &&
   result.tentLit.tentLight === 1,
   "the tent closes and glows", result && result.tentLit);
@@ -211,18 +229,25 @@ check(result && result.dark && result.dark.phase === "dark" && result.dark.darkn
   "the campsite settles into deep navy with a varied, desynchronized star field and subdued constellations",
   result && result.dark);
 check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight === 0 &&
-  result.zzz.zzzs === 3 && result.zzz.classes.indexOf("zzz") >= 0,
-  "the tent light goes out and three rising Z marks take over", result && result.zzz);
+  result.zzz.zzzs === 3 && result.zzz.classes.indexOf("zzz") >= 0 &&
+  result.zzz.mamaAnimation === "entrance-roadtrip-camp-bear-collect" &&
+  result.zzz.cornAnimation === "entrance-roadtrip-camp-corn-collected" &&
+  result.collected && result.collected.mamaTransform !== "none" && result.collected.cornOpacity === 0,
+  "the tent light goes out while the mama bear crosses camp and collects the cobs before the phase advances",
+  result && result.zzz);
 check(result && result.complete && result.complete.phase === "complete" &&
-  result.complete.caption === "entrance_roadtrip_camp_arrival" && /Congrats!/.test(result.complete.captionText),
-  "the existing permanent RSVP congratulations caption ends the finale", result && result.complete);
+  result.complete.caption === "entrance_roadtrip_camp_food_warning" &&
+  result.complete.captionText === "Never leave food outside at night." &&
+  result.complete.mamaAnimation === "none" && result.complete.cornAnimation === "none" &&
+  result.complete.mamaTransform !== "none" && result.complete.cornOpacity === 0,
+  "the collected food ends the finale on its safety warning", result && result.complete);
 check(result && result.complete && result.complete.darknessPointer === "all" && result.completeClickTarget &&
   result.completeAfterClick && result.completeAfterClick.phase === "complete" &&
   !result.completeAfterClick.fireBuilderOpen,
   "the completed dark campsite absorbs stray clicks without reopening a dead builder",
   { target: result && result.completeClickTarget, after: result && result.completeAfterClick });
-check(result && /Gratulujeme!/.test(result.czechComplete || ""),
-  "the final congratulations remains bilingual", result && result.czechComplete);
+check(result && result.czechComplete === "Nikdy nenechávejte přes noc jídlo venku.",
+  "the food warning switches to Czech", result && result.czechComplete);
 check(result && result.completeExit && !result.completeExit.campActive && result.fresh &&
   result.fresh.campActive && result.fresh.phase === "idle" && !result.fresh.fireBuilt &&
   !result.fresh.fireLit && !result.fresh.stew && result.fresh.savedPhase === "idle" &&

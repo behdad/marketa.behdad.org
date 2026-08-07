@@ -261,13 +261,15 @@ Behdad's pink and Markéta's blue bubbles reveal one second apart. Drag position
 Once the fourth reveal finishes, a persistent bilingual caption invites a click anywhere; a
 full-campsite transparent hit shield consumes that click, dismisses the exchange, and changes the
 caption to the sleep prompt without activating a prop. Clicking the fire starts the ordered
-fire-out → campers → tent-light →
+fire-out → campers and stripped corn cobs → tent-light →
 deep-blue darkness with a foreground field of static authored stars whose CSS-only twinkles run
 only during the dark finale; the solved constellation copy retreats and remains as subdued context
-instead of competing with the denser sky → Zs curtain call.
+instead of competing with the denser sky → Zs and mama-bear food collection → bilingual food-safety
+warning. The mama's untransformed inner group owns the walk so its campsite placement transform stays
+on the outer group; reduced motion snaps the bear and cobs to their collected positions.
 `campStargazingState` checkpoints exact trace and handoff progress plus
 `campSleepState.phase`, but always restores the trace overlay closed. Leaving pauses an unfinished
-curtain call and preserves the campsite; leaving after its congratulations phase resets fire, stew,
+curtain call and preserves the campsite; leaving after its warning phase resets fire, stew,
 stargazing, and finale state.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,

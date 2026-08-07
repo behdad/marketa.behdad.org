@@ -214,8 +214,9 @@ exchange remain in the live campsite, and their individual stars can be dragged 
 sky. After all four remarks appear, the caption invites a click anywhere to continue; either that
 click or `Enter` dismisses the exchange without leaving Camping or activating a campsite prop. Put
 out the fire when the sleep
-suggestion appears. The campers retire into the glowing tent, the solved constellations recede into
-a much denser twinkling sky, and a few rising Zs lead back to the RSVP reminder. Leaving before that
+suggestion appears. The campers retire into the glowing tent but leave their corn cobs by the fire.
+The solved constellations recede into a much denser twinkling sky; as the Zs rise, the mama bear
+crosses camp to collect the scraps and leaves a final food-storage warning. Leaving before that
 curtain call finishes preserves Camping; leaving after it finishes makes the next **Camping** visit
 begin again at an empty firepit.
 

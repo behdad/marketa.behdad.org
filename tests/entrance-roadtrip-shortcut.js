@@ -139,9 +139,9 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html Road Trip route shortcuts:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_SHORTCUT_REMAINING_SECONDS = 3/.test(source) &&
+check(/ROADTRIP_SHORTCUT_REMAINING_SECONDS = 5/.test(source) &&
   /ROADTRIP_SHORTCUT_REMAINING_DISTANCE = roadtripDistanceForSeconds\(ROADTRIP_SHORTCUT_REMAINING_SECONDS\)/.test(source),
-  "the private shortcut leaves three nominal seconds of travel in the selected segment");
+  "the private shortcut leaves five nominal seconds of travel in the selected segment");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
   patchRaf: true,
@@ -174,7 +174,7 @@ check(Object.keys(expectedStartLanes).every(function (route) {
 var shiftedCalgary = shifted.calgary && shifted.calgary.state || {};
 check(shiftedCalgary.route === "calgary" &&
   Math.abs(shiftedCalgary.routeDistance -
-    (shiftedCalgary.calgaryDistance - 3 * shiftedCalgary.routePaceKmh / 3.6)) < .001,
+    (shiftedCalgary.calgaryDistance - 5 * shiftedCalgary.routePaceKmh / 3.6)) < .001,
   "Shift-click Calgary starts one shortcut-distance before its exit", shiftedCalgary);
 var driveStart = result && result.driveStart || {};
 var parked = result && result.parkedStart || {};
@@ -218,12 +218,12 @@ check(validCoast.range === "D" && validCoast.gear > 0 && validCoast.speed > 0 &&
 var shiftedBanff = shifted.banff && shifted.banff.state || {};
 check(shiftedBanff.route === "banff" &&
   Math.abs(shiftedBanff.banffDistance -
-    (shiftedBanff.banffDistanceRequired - 3 * shiftedBanff.routePaceKmh / 3.6)) < .001,
+    (shiftedBanff.banffDistanceRequired - 5 * shiftedBanff.routePaceKmh / 3.6)) < .001,
   "Shift-click Banff starts one shortcut-distance before its exit", shiftedBanff);
 var shiftedAbraham = shifted.abraham && shifted.abraham.state || {};
 check(shiftedAbraham.route === "abraham" &&
   Math.abs(shiftedAbraham.abrahamDistance -
-    (shiftedAbraham.abrahamDistanceRequired - 3 * shiftedAbraham.routePaceKmh / 3.6)) < .001,
+    (shiftedAbraham.abrahamDistanceRequired - 5 * shiftedAbraham.routePaceKmh / 3.6)) < .001,
   "Shift-click Abraham Lake starts one shortcut-distance before Camping", shiftedAbraham);
 
 var normalAbraham = normal.abraham && normal.abraham.state || {};
@@ -239,13 +239,13 @@ var longBanff = longPressed.banff && longPressed.banff.state || {};
 var longAbraham = longPressed.abraham && longPressed.abraham.state || {};
 check(longCalgary.route === "calgary" &&
   Math.abs(longCalgary.routeDistance -
-    (longCalgary.calgaryDistance - 3 * longCalgary.routePaceKmh / 3.6)) < .2 &&
+    (longCalgary.calgaryDistance - 5 * longCalgary.routePaceKmh / 3.6)) < .2 &&
   longBanff.route === "banff" &&
   Math.abs(longBanff.banffDistance -
-    (longBanff.banffDistanceRequired - 3 * longBanff.routePaceKmh / 3.6)) < .2 &&
+    (longBanff.banffDistanceRequired - 5 * longBanff.routePaceKmh / 3.6)) < .2 &&
   longAbraham.route === "abraham" &&
   Math.abs(longAbraham.abrahamDistance -
-    (longAbraham.abrahamDistanceRequired - 3 * longAbraham.routePaceKmh / 3.6)) < .2,
+    (longAbraham.abrahamDistanceRequired - 5 * longAbraham.routePaceKmh / 3.6)) < .2,
   "mobile long-press uses the same near-exit shortcut for every segment", longPressed);
 
 if (failures) process.exit(1);

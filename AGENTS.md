@@ -45,6 +45,11 @@ allowed exception, owner-confirmed.)
   `w` on that host is the live web root itself — the git working tree *is* the served
   directory, so anything committed and pulled is instantly live, including files you
   didn't mean to expose (see the `.htaccess` note below).
+  A Cloudflare Cache Rule (2026-08) edge-caches the HTML pages (`*.html`, `/`, and the
+  extensionless aliases) for 10 minutes, so the public URL can lag a deploy by up to that
+  long — deliberate, no purge step. `Cache-Control` request headers won't bypass it; to
+  verify a fresh deploy, append a throwaway query string (`?fresh=1` — distinct cache key)
+  or wait out the TTL.
 - **Always mirror English copy edits into Czech in the same commit.** Never let `T.en`/
   `T.cs` (or a static HTML fallback) drift out of sync, even for a one-word tweak.
   Markéta (native Czech speaker) reviews all Czech copy at the end, so don't hold back
@@ -110,7 +115,10 @@ allowed exception, owner-confirmed.)
   REALLY badly" report, `md5sum` local vs live and try to reproduce at the reporter's viewport** —
   a torn read is far likelier than a real break after a burst of deploys, and the symptom (whole-
   page loss of layout) rarely matches whatever change is suspected. Deploying several times in
-  quick succession widens the window.
+  quick succession widens the window. NB the 10-minute edge cache (see the deploy bullet)
+  cuts both ways here: an `md5sum`-vs-live mismatch may just be the cache still serving the
+  pre-deploy page (compare with a `?fresh=1` cache-buster before concluding anything), and a
+  torn read that lands in the edge cache self-heals within 10 minutes.
 - **`AGENTS.md` and its `CLAUDE.md` compatibility symlink are blocked from public access via
   `.htaccess`** (the old file was once reachable at `/CLAUDE.md` — the git working tree = web
   root means anything not explicitly blocked is served). If you add other files that

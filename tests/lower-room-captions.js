@@ -21,6 +21,7 @@ var HARNESS = [
   ' ["loft-game-strip","bathroom-room","cinema-room","bedroom-room","entrance-room","prince-basement"].forEach(function(id){var el=document.getElementById(id);if(el)el.style.transition="none";});',
   ' await visit("en",report.en);await visit("cs",report.cs);',
   ' setLang("en");window.goToStage("office");window.setCaption("office_call",true);window.__openBedroomRoom();await sleep(30);var bedroomAction=cap();window.__closeBedroomRoom();var officeReturn=cap();report.bedroomReturn={inside:bedroomAction,upstairs:officeReturn};',
+  ' setLang("en");window.goToStage("garden");window.setCaption("garden",true);window.__openGardenPrince();await sleep(500);document.getElementById("hunt-floor-btn").click();var dungeonUpImmediate=cap();await sleep(760);report.dungeonUp={immediate:dungeonUpImmediate,settled:cap()};',
   ' setLang("en");window.goToStage("kitchen");await sleep(20);var upstairs=cap();window.__flashCaptionKey("trip_caption_molly",550,"caption-test");var before=cap();window.__openBathroomRoom();var during=cap();await sleep(620);var restored=cap();var repeat=window.__openBathroomRoom();window.__flashCaptionKey("trip_caption_molly",550,"caption-close-test");window.__closeBathroomRoom();var closing=cap();await sleep(620);var upstairsRestored=cap();report.transient={upstairs:upstairs,before:before,during:during,restored:restored,repeat:repeat,closing:closing,upstairsRestored:upstairsRestored};',
   ' window.setCaption("lower_dungeon",true);window.__flashCaptionKey("trip_caption_molly",550,"caption-rebase-test");var rebaseBefore=cap();window.setCaption("cuddly",true);var rebaseDuring=cap();await sleep(620);var rebaseRestored=cap();report.rebased={before:rebaseBefore,during:rebaseDuring,restored:rebaseRestored};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
@@ -74,6 +75,10 @@ check(result.bedroomReturn && result.bedroomReturn.inside.key === "bedroom_ttt_s
   result.bedroomReturn.upstairs.key === "office_call",
   "leaving Bedroom restores the current Office instruction after its tic-tac-toe caption",
   result.bedroomReturn);
+check(result.dungeonUp && result.dungeonUp.immediate.key === "garden" &&
+  result.dungeonUp.settled.key === "garden",
+  "the visible Up button immediately restores Garden copy when leaving Dungeon",
+  result.dungeonUp);
 var transient = result.transient;
 check(transient && transient.before.key === "trip_caption_molly" &&
   transient.during.key === "trip_caption_molly" &&

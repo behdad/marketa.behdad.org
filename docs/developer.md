@@ -215,6 +215,8 @@ on coarse pointers.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
 spawn plans deterministic from the run seed and never add timer-driven unbounded entities.
+`syncRoadtripTrafficLane()` owns faster traffic's pull-out, clearance, and return; Banff may borrow
+an empty opposing inner lane, Calgary stays within its carriageway, and Abraham never weaves.
 `roadtripCurvatureAt()`, `roadtripCurveOffset()`, `syncRoadtripShoulder()`, and
 `paintRoadtripMirror()` are the central geometry owners.
 

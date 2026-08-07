@@ -7,11 +7,12 @@ var lib = require("./lib");
 var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <style>
 #entrance-roadtrip-camp *,#entrance-roadtrip-camp-wisdom{transition:none!important}
-#entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) .entrance-roadtrip-camp-finale-zzz{animation:none!important;opacity:.86!important}
 </style>
 <script>
 (function () {
   var report = { errors: [] };
+  var focused = true;
+  document.hasFocus = function () { return focused; };
   function click(node) {
     if (!node) return false;
     node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
@@ -30,10 +31,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var cornCob = corn && corn.querySelector(".entrance-roadtrip-camp-corn-cob");
     var cornKernels = corn && corn.querySelector(".entrance-roadtrip-camp-corn-kernels");
     var fieldStars = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-field-star"));
+    var zzzNodes = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz"));
     var radii = fieldStars.map(function (star) { return Number(star.getAttribute("r")); });
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
     return {
       phase: window.__entranceRoadtripCampSleepState().phase,
+      phaseElapsed: window.__entranceRoadtripCampSleepState().elapsed,
       sleepComplete: window.__entranceRoadtripCampSleepState().complete,
       caption: window.__captionKey && window.__captionKey(),
       captionText: document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim(),
@@ -46,6 +49,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       fireLit: roadtrip.campFireLit,
       stew: roadtrip.stew,
       savedPhase: roadtrip.stargazing && roadtrip.stargazing.sleepPhase,
+      savedElapsed: roadtrip.stargazing && roadtrip.stargazing.sleepElapsed,
       progress: roadtrip.stargazing && roadtrip.stargazing.progress,
       fireOpacity: Number(getComputedStyle(document.querySelector(".entrance-roadtrip-camp-fire-outer")).opacity),
       campersOpacity: ["marketa", "behdad"].map(function (name) {
@@ -53,10 +57,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       }),
       mamaTransform: getComputedStyle(mamaBear).transform,
       mamaAnimation: getComputedStyle(mamaBear).animationName,
+      mamaPlayState: getComputedStyle(mamaBear).animationPlayState,
+      mamaDelay: getComputedStyle(mamaBear).animationDelay,
       mamaLayer: mamaBearGroup.parentNode && mamaBearGroup.parentNode.id,
       mamaAboveFireRing: !!(finishedFire.compareDocumentPosition(mamaBearGroup) & Node.DOCUMENT_POSITION_FOLLOWING),
       cornOpacity: Number(getComputedStyle(corn).opacity),
       cornAnimation: getComputedStyle(corn).animationName,
+      cornPlayState: getComputedStyle(corn).animationPlayState,
+      cornDelay: getComputedStyle(corn).animationDelay,
       cornCobFill: getComputedStyle(cornCob).fill,
       cornKernelsOpacity: Number(getComputedStyle(cornKernels).opacity),
       tentOpen: tent.classList.contains("open"),
@@ -80,7 +88,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       fieldDelays: new Set(fieldStars.map(function (star) {
         return star.style.getPropertyValue("--camp-star-delay");
       })).size,
-      zzzs: document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz").length,
+      zzzs: zzzNodes.length,
+      zzzDelays: zzzNodes.map(function (node) { return getComputedStyle(node).animationDelay; }),
+      paused: camp.classList.contains("camp-sleep-paused"),
+      fieldPlayState: fieldStars[0] && getComputedStyle(fieldStars[0]).animationPlayState,
       classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"].filter(function (name) {
         return camp.classList.contains("camp-sleep-" + name);
       })
@@ -150,6 +161,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.dark = snap();
             window.__entranceRoadtripCampSleepStep();
             report.zzz = snap();
+            focused = false;
+            window.dispatchEvent(new Event("blur"));
+            report.zzzPaused = snap();
+            var zzzCheckpoint = window.__captureCheckpointSystems();
+            zzzCheckpoint.entrance.drive.roadtrip.stargazing.sleepElapsed = 1400;
+            window.__restoreCheckpointSystems(zzzCheckpoint, "afterStage");
+            report.zzzRestored = snap();
+            focused = true;
+            window.dispatchEvent(new Event("focus"));
+            report.zzzResumed = snap();
             [document.querySelector("#entrance-roadtrip-camp-mama-bear .entrance-roadtrip-camp-mama"),
               document.getElementById("entrance-roadtrip-camp-served-corn")].forEach(function (node) {
               node.getAnimations().forEach(function (animation) { animation.finish(); });
@@ -165,9 +186,28 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.czechWarning = snap().captionText;
             window.setLang("en");
             setTimeout(function () {
+              try {
+                focused = false;
+                window.dispatchEvent(new Event("blur"));
+                report.warningBlurred = snap();
+                report.pausedCheckpoint = window.__captureCheckpointSystems();
+              }
+              catch (error) { report.errors.push(String(error && error.stack || error)); }
+            }, 650);
+            setTimeout(function () {
+              try {
+                report.warningPaused = snap();
+                window.__restoreCheckpointSystems(report.pausedCheckpoint, "afterStage");
+                report.warningRestored = snap();
+                focused = true;
+                window.dispatchEvent(new Event("focus"));
+                report.warningResumed = snap();
+              } catch (error) { report.errors.push(String(error && error.stack || error)); }
+            }, 1550);
+            setTimeout(function () {
               try { report.warningHeld = snap(); }
               catch (error) { report.errors.push(String(error && error.stack || error)); }
-            }, 2850);
+            }, 3600);
             setTimeout(function () {
               try {
                 report.congrats = snap();
@@ -182,7 +222,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 report.fresh = snap();
               } catch (error) { report.errors.push(String(error && error.stack || error)); }
               finish();
-            }, 3250);
+            }, 4100);
             return;
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
           finish();
@@ -203,7 +243,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite sleep finale:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 6500, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 8000, {
   forceReduce: true,
   urlSuffix: "?date=2026-07-15&time=23:00#play",
   chromeFlags: "--window-size=1180,900"
@@ -260,6 +300,19 @@ check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight
   result.collected.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.collected.mamaAboveFireRing,
   "the tent light goes out while the foreground mama bear crosses the fire ring and collects the cobs",
   result && result.zzz);
+check(result && result.zzzPaused && result.zzzPaused.phase === "zzz" && result.zzzPaused.paused &&
+  result.zzzPaused.mamaPlayState === "paused" && result.zzzPaused.cornPlayState === "paused" &&
+  result.zzzResumed && !result.zzzResumed.paused && result.zzzResumed.mamaPlayState === "running" &&
+  result.zzzResumed.cornPlayState === "running",
+  "blur pauses the mama-bear collection in place and focus resumes it",
+  { paused: result && result.zzzPaused, resumed: result && result.zzzResumed });
+check(result && result.zzzRestored && result.zzzRestored.phase === "zzz" &&
+  result.zzzRestored.phaseElapsed === 1400 && result.zzzRestored.savedElapsed === 1400 &&
+  result.zzzRestored.mamaDelay === "-1.4s" && result.zzzRestored.cornDelay === "-1.4s" &&
+  result.zzzRestored.zzzDelays.join("|") === "-1.4s|-1.06s|-0.72s" &&
+  result.zzzRestored.mamaTransform !== "none",
+  "checkpoint restore seeks the bear, cobs, and Zs to the saved point within their beat",
+  result && result.zzzRestored);
 check(result && result.warning && result.warning.phase === "complete" && !result.warning.sleepComplete &&
   result.warning.savedPhase === "complete" && result.warning.caption === "entrance_roadtrip_camp_food_warning" &&
   result.warning.captionText === "Never leave food outside at night." &&
@@ -273,9 +326,24 @@ check(result && result.warningExit && !result.warningExit.campActive && result.w
   result.warningReturn.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.warningReturn.mamaAboveFireRing,
   "leaving during the warning preserves its checkpoint and foreground bear layer",
   { exit: result && result.warningExit, back: result && result.warningReturn });
+check(result && result.warningBlurred && result.warningBlurred.phase === "complete" &&
+  result.warningBlurred.phaseElapsed >= 500 && result.warningBlurred.phaseElapsed < 1000 &&
+  result.warningBlurred.paused && result.warningBlurred.fieldPlayState === "paused" &&
+  result.warningPaused && result.warningPaused.phase === "complete" && result.warningPaused.paused &&
+  Math.abs(result.warningPaused.phaseElapsed - result.warningBlurred.phaseElapsed) <= 15,
+  "moving focus away freezes the warning timer and finale animation in place",
+  { blurred: result && result.warningBlurred, held: result && result.warningPaused });
+check(result && result.warningRestored && result.warningRestored.phase === "complete" &&
+  result.warningRestored.paused &&
+  Math.abs(result.warningRestored.phaseElapsed - result.warningBlurred.savedElapsed) <= 15 &&
+  Math.abs(result.warningRestored.savedElapsed - result.warningBlurred.savedElapsed) <= 15 &&
+  result.warningResumed && !result.warningResumed.paused && result.warningResumed.fieldPlayState === "running",
+  "checkpoint restore retains the attended time and focus resumes the remaining beat",
+  { blurred: result && result.warningBlurred, restored: result && result.warningRestored,
+    resumed: result && result.warningResumed });
 check(result && result.warningHeld && result.warningHeld.phase === "complete" &&
   result.warningHeld.captionText === "Never leave food outside at night.",
-  "the food warning remains for the full first 2.85 seconds", result && result.warningHeld);
+  "paused time does not count toward the warning's three attended seconds", result && result.warningHeld);
 check(result && result.congrats && result.congrats.phase === "congrats" && result.congrats.sleepComplete &&
   result.congrats.savedPhase === "congrats" && result.congrats.caption === "entrance_roadtrip_camp_arrival" &&
   /^Congrats!.*RSVP!$/.test(result.congrats.captionText) &&

@@ -1550,10 +1550,11 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 #entrance-roadtrip-camp.camp-sleep-campers-gone #entrance-roadtrip-camp-served-corn .entrance-roadtrip-camp-corn-cob{fill:#c49b55}
 #entrance-roadtrip-camp.camp-sleep-campers-gone #entrance-roadtrip-camp-served-corn .entrance-roadtrip-camp-corn-kernels{opacity:.18}
 #entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) .entrance-roadtrip-camp-mama{
-  animation:entrance-roadtrip-camp-bear-collect 2.25s linear both
+  animation:entrance-roadtrip-camp-bear-collect 2.25s linear var(--camp-sleep-resume,0ms) both
 }
 #entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) #entrance-roadtrip-camp-served-corn{
-  transform-box:fill-box;transform-origin:center;animation:entrance-roadtrip-camp-corn-collected 2.25s ease-in both
+  transform-box:fill-box;transform-origin:center;
+  animation:entrance-roadtrip-camp-corn-collected 2.25s ease-in var(--camp-sleep-resume,0ms) both
 }
 #entrance-roadtrip-camp.camp-sleep-complete .entrance-roadtrip-camp-mama{transform:translate(340px,49px)}
 #entrance-roadtrip-camp.camp-sleep-complete #entrance-roadtrip-camp-served-corn{opacity:0;transform:scale(.18)}
@@ -1562,10 +1563,10 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
   100%{opacity:0;transform:scale(.18)}
 }
 #entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) .entrance-roadtrip-camp-finale-zzz{
-  animation:entrance-roadtrip-camp-finale-zzz 1.75s ease-out both
+  animation:entrance-roadtrip-camp-finale-zzz 1.75s ease-out var(--camp-sleep-resume,0ms) both
 }
-#entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) .entrance-roadtrip-camp-finale-zzz:nth-child(2){animation-delay:.34s}
-#entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) .entrance-roadtrip-camp-finale-zzz:nth-child(3){animation-delay:.68s}
+#entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) .entrance-roadtrip-camp-finale-zzz:nth-child(2){animation-delay:calc(.34s + var(--camp-sleep-resume,0ms))}
+#entrance-roadtrip-camp.camp-sleep-zzz:not(.camp-sleep-complete) .entrance-roadtrip-camp-finale-zzz:nth-child(3){animation-delay:calc(.68s + var(--camp-sleep-resume,0ms))}
 @keyframes entrance-roadtrip-camp-finale-zzz{
   0%{opacity:0;transform:translateY(8px)}20%{opacity:.9}72%{opacity:.72}100%{opacity:0;transform:translateY(-34px)}
 }
@@ -1596,6 +1597,12 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
   .entrance-roadtrip-camp-pinecone{animation:none;transform:translateY(var(--camp-pinecone-drop))}
 }
 html.frame-rate-low .entrance-roadtrip-camp-finale-field-star{animation:none!important;opacity:var(--camp-star-max)}
+#entrance-roadtrip-camp.camp-sleep-paused :is(
+  .entrance-roadtrip-camp-mama,
+  #entrance-roadtrip-camp-served-corn,
+  .entrance-roadtrip-camp-finale-zzz,
+  .entrance-roadtrip-camp-finale-field-star
+){animation-play-state:paused!important}
 #entrance-room.roadtrip-active.roadtrip-route-camp
   :is(#entrance-roadtrip-camp,#entrance-roadtrip-camp-builder-overlays){pointer-events:auto}
 #entrance-roadtrip-camp-porsche{pointer-events:all}
@@ -40536,8 +40543,9 @@ window.__entranceRoomOpen = false;
   var CAMP_SLEEP_PHASES = ["idle", "prompt", "fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"];
   var CAMP_SLEEP_DELAYS = { "fire-out": 680, "campers-gone": 820, "tent-lit": 900, "dark": 1320, "zzz": 2550, "complete": 3000 };
   var CAMP_WISDOM_HANDOFF_MS = 5450;
-  var campSleepState = { phase: "idle" };
+  var campSleepState = { phase: "idle", elapsed: 0 };
   var campSleepTimer = null;
+  var campSleepTimerStartedAt = null;
   var campWisdomHandoffReady = false;
   var campWisdomHandoffTimer = null;
   var campStargazingWasEligible = false;
@@ -40974,10 +40982,22 @@ window.__entranceRoomOpen = false;
     return Math.max(0, CAMP_SLEEP_PHASES.indexOf(phase));
   }
   function campSleepFinaleAttended() {
-    return roadtripState.active && roadtripState.route === "camp" && !document.hidden;
+    return roadtripState.active && roadtripState.route === "camp" && !document.hidden && document.hasFocus();
+  }
+  function campSleepElapsed() {
+    var elapsed = Math.max(0, Number(campSleepState.elapsed) || 0);
+    if (campSleepTimer !== null && campSleepTimerStartedAt !== null) {
+      elapsed += Math.max(0, performance.now() - campSleepTimerStartedAt);
+    }
+    var delay = CAMP_SLEEP_DELAYS[campSleepState.phase];
+    return delay ? Math.min(delay, elapsed) : 0;
   }
   function campSleepSnapshot() {
-    return { phase: campSleepState.phase, complete: campSleepState.phase === "congrats" };
+    return {
+      phase: campSleepState.phase,
+      elapsed: Math.round(campSleepElapsed()),
+      complete: campSleepState.phase === "congrats"
+    };
   }
   function paintCampSleepBearLayer(collecting) {
     if (!campMamaBear || !campMamaBearHome || !campMamaBearCollectionLayer) return;
@@ -40996,20 +41016,40 @@ window.__entranceRoomOpen = false;
       campFireScene.classList.toggle("camp-sleep-" + name, phaseIndex >= campSleepPhaseIndex(name));
     });
     campFireScene.classList.toggle("camp-sleep-prompt", campSleepState.phase === "prompt");
+    campFireScene.classList.toggle("camp-sleep-paused",
+      !!CAMP_SLEEP_DELAYS[campSleepState.phase] && campSleepTimer === null);
     if (phaseIndex >= campSleepPhaseIndex("tent-lit") && campTent) campTent.classList.remove("open");
   }
+  function syncCampSleepAnimationOffset() {
+    if (!campFireScene) return;
+    var elapsed = campSleepState.phase === "zzz" ? campSleepState.elapsed : 0;
+    campFireScene.style.setProperty("--camp-sleep-resume", elapsed ? -elapsed + "ms" : "0ms");
+  }
   function pauseCampSleepFinale() {
+    if (campSleepTimer !== null && campSleepTimerStartedAt !== null) {
+      campSleepState.elapsed = campSleepElapsed();
+    }
     clearTimeout(campSleepTimer);
     campSleepTimer = null;
+    campSleepTimerStartedAt = null;
+    if (campFireScene && CAMP_SLEEP_DELAYS[campSleepState.phase]) {
+      campFireScene.classList.add("camp-sleep-paused");
+    }
   }
   function scheduleCampSleepFinale() {
     pauseCampSleepFinale();
     var delay = CAMP_SLEEP_DELAYS[campSleepState.phase];
     if (!delay || !campSleepFinaleAttended()) return false;
+    var remaining = Math.max(0, delay - campSleepState.elapsed);
+    campSleepTimerStartedAt = performance.now();
     campSleepTimer = setTimeout(function () {
+      campSleepState.elapsed = campSleepElapsed();
       campSleepTimer = null;
+      campSleepTimerStartedAt = null;
       if (campSleepFinaleAttended()) advanceCampSleepFinale(false);
-    }, delay);
+      else paintCampSleepFinale();
+    }, remaining);
+    if (campFireScene) campFireScene.classList.remove("camp-sleep-paused");
     return true;
   }
   function advanceCampSleepFinale(force) {
@@ -41018,7 +41058,10 @@ window.__entranceRoomOpen = false;
       return campSleepSnapshot();
     }
     if (!force && !campSleepFinaleAttended()) return campSleepSnapshot();
+    pauseCampSleepFinale();
     campSleepState.phase = CAMP_SLEEP_PHASES[phaseIndex + 1];
+    campSleepState.elapsed = 0;
+    syncCampSleepAnimationOffset();
     paintCampSleepFinale();
     syncRoadtripCampFireCaption(false);
     scheduleCampSleepFinale();
@@ -41028,6 +41071,8 @@ window.__entranceRoomOpen = false;
   function startCampSleepFinale() {
     if (campSleepState.phase !== "prompt" || !campStargazingComplete() || !campFireState.lit) return false;
     campSleepState.phase = "fire-out";
+    campSleepState.elapsed = 0;
+    syncCampSleepAnimationOffset();
     campFireState.lit = false;
     clearRoadtripCampPineconeFlame();
     paintRoadtripCampFire();
@@ -41041,9 +41086,11 @@ window.__entranceRoomOpen = false;
   function resetCampSleepFinale() {
     pauseCampSleepFinale();
     campSleepState.phase = "idle";
+    campSleepState.elapsed = 0;
+    syncCampSleepAnimationOffset();
     if (campFireScene) campFireScene.classList.remove("camp-sleep-prompt", "camp-sleep-fire-out",
       "camp-sleep-campers-gone", "camp-sleep-tent-lit", "camp-sleep-dark", "camp-sleep-zzz",
-      "camp-sleep-complete", "camp-sleep-congrats");
+      "camp-sleep-complete", "camp-sleep-congrats", "camp-sleep-paused");
     paintCampSleepFinale();
   }
   function campWisdomShowing() {
@@ -41152,7 +41199,8 @@ window.__entranceRoomOpen = false;
       complete: snapshot.complete,
       wisdomDismissed: snapshot.wisdomDismissed,
       wisdomHandoffReady: snapshot.wisdomHandoffReady,
-      sleepPhase: campSleepState.phase
+      sleepPhase: campSleepState.phase,
+      sleepElapsed: campSleepSnapshot().elapsed
     };
   }
   function restoreCampStargazing(row) {
@@ -41166,9 +41214,12 @@ window.__entranceRoomOpen = false;
     campStargazingState.wisdomDismissed = row.wisdomDismissed === true;
     campSleepState.phase = CAMP_SLEEP_PHASES.indexOf(row.sleepPhase) >= 0 ? row.sleepPhase :
       campStargazingState.wisdomDismissed ? "prompt" : "idle";
+    campSleepState.elapsed = Math.max(0, Math.min(CAMP_SLEEP_DELAYS[campSleepState.phase] || 0,
+      Number(row.sleepElapsed) || 0));
     campStargazingState.wisdomDismissed = campSleepState.phase !== "idle" || campStargazingState.wisdomDismissed;
     campWisdomHandoffReady = row.wisdomHandoffReady === true && campSleepState.phase === "idle" &&
       !campStargazingState.wisdomDismissed;
+    syncCampSleepAnimationOffset();
     paintCampStargazing();
     scheduleCampSleepFinale();
   }
@@ -41288,6 +41339,8 @@ window.__entranceRoomOpen = false;
     campWisdomHandoffReady = false;
     campStargazingState.wisdomDismissed = true;
     campSleepState.phase = "prompt";
+    campSleepState.elapsed = 0;
+    syncCampSleepAnimationOffset();
     paintCampStargazing();
     syncRoadtripCampFireCaption(false);
     if (window.__checkpointChanged) window.__checkpointChanged();
@@ -41559,6 +41612,14 @@ window.__entranceRoomOpen = false;
       scheduleCampSleepFinale();
       scheduleCampWisdomHandoff();
     }
+  });
+  window.addEventListener("blur", function () {
+    pauseCampSleepFinale();
+    pauseCampWisdomHandoff();
+  });
+  window.addEventListener("focus", function () {
+    scheduleCampSleepFinale();
+    scheduleCampWisdomHandoff();
   });
   if (campStargazingGame) {
     Array.prototype.forEach.call(campStargazingGame.querySelectorAll("[data-stargazing-star]"), function (star) {

@@ -278,10 +278,11 @@ outer group moves into `#entrance-roadtrip-camp-mama-collection-layer`, after th
 the collecting bear paints above the ring stones. Reset returns it to its original campsite sibling.
 Reduced motion snaps the bear and cobs to their collected positions.
 `campStargazingState` checkpoints exact trace and handoff progress plus
-`campSleepState.phase`, but always restores the trace overlay closed. Leaving pauses an unfinished
-curtain call and preserves the campsite. The legacy `complete` phase owns the warning and its
-three-second timer; `congrats` is terminal, and leaving only then resets fire, stew, stargazing, and
-finale state.
+`campSleepState.phase` and attended time within that phase, but always restores the trace overlay
+closed. Leaving, hiding the tab, or moving focus to another window pauses an unfinished curtain call,
+including its bear/corn/Z animations; return resumes the remaining beat rather than replaying or
+skipping it. The legacy `complete` phase owns the warning and its three-second attended timer;
+`congrats` is terminal, and leaving only then resets fire, stew, stargazing, and finale state.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed

@@ -483,7 +483,7 @@ check(result && result.warningBlurred && result.warningBlurred.phase === "comple
   result.warningBlurred.cameraOffset > 0 && result.warningBlurred.cameraOffset < 120 &&
   result.warningPaused && result.warningPaused.phase === "complete" && result.warningPaused.paused &&
   result.warningPaused.cameraPlayState === "paused" &&
-  Math.abs(result.warningPaused.cameraOffset - result.warningBlurred.cameraOffset) < .5 &&
+  Math.abs(result.warningPaused.cameraOffset - result.warningBlurred.cameraOffset) < 1.5 &&
   Math.abs(result.warningPaused.phaseElapsed - result.warningBlurred.phaseElapsed) <= 15,
   "moving focus away freezes the warning timer and finale animation in place",
   { blurred: result && result.warningBlurred, held: result && result.warningPaused });

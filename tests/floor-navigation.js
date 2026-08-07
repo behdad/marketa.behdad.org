@@ -86,8 +86,8 @@ var harness = String.raw`<script>
       !earlyDown.hidden && !earlyDown.disabled && earlyDown.mark === "›" && earlyDown.down && !earlyDown.up &&
       !earlyDown.hasAriaLabel && !earlyDown.hasTitle && earlyDown.bathroom &&
       earlyDown.navigation.pending && earlyDown.navigation.target, earlyDown);
-    check("vertical floor travel uses the shorter 400ms transition",
-      getComputedStyle(document.querySelector(".hunt-viewport")).transitionDuration === "0.4s",
+    check("vertical floor travel uses the responsive 240ms transition",
+      getComputedStyle(document.querySelector(".hunt-viewport")).transitionDuration === "0.24s",
       getComputedStyle(document.querySelector(".hunt-viewport")).transitionDuration);
     var dots = document.getElementById("hunt-dots").getBoundingClientRect();
     var button = document.getElementById("hunt-floor-btn").getBoundingClientRect();
@@ -103,7 +103,7 @@ var harness = String.raw`<script>
       parseFloat(earlyDown.glyph.borderTop) > 0 && parseFloat(earlyDown.glyph.borderRight) > 0 &&
       earlyDown.glyph.buttonTransform === "none", earlyDown.glyph);
 
-    await sleep(210);
+    await sleep(130);
     var first = floorState();
     check("descent changes to Up at the transition midpoint",
       first.up && !first.down && !first.disabled &&
@@ -116,20 +116,20 @@ var harness = String.raw`<script>
     check("ascent keeps Up before the same transition midpoint",
       earlyUp.up && !earlyUp.down && !earlyUp.bathroom && !earlyUp.bathroomHidden &&
       earlyUp.navigation.pending && !earlyUp.navigation.target, earlyUp);
-    await sleep(210);
+    await sleep(130);
     var upstairs = floorState();
     check("ascent changes to Down at the transition midpoint",
       !upstairs.hidden && upstairs.mark === "›" && upstairs.down && !upstairs.up &&
       !upstairs.bathroom && !upstairs.bathroomHidden && !upstairs.disabled &&
       upstairs.navigation.downstairs === false && !upstairs.navigation.pending, upstairs);
-    await sleep(200);
-    check("upstairs room owns the viewport at the 400ms settle boundary",
+    await sleep(100);
+    check("upstairs room owns the viewport at the 240ms settle boundary",
       floorState().bathroomHidden && floorState().down, floorState());
     document.getElementById("hunt-floor-btn").click();
     await sleep(30);
     check("re-descent also keeps Down before the midpoint",
       floorState().bathroom && floorState().down && floorState().navigation.pending, floorState());
-    await sleep(210);
+    await sleep(130);
     check("re-descent changes to Up at the midpoint", floorState().bathroom && floorState().up, floorState());
 
     window.__setMaxUnlocked(0);

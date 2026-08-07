@@ -107,7 +107,8 @@ The lower rooms offer:
   the film and returns to the chooser.
 - **Bedroom:** select a stained-glass pane to start tic-tac-toe. After a result, clear the board and
   select again for a new game.
-- **Entrance:** select the road to open the Porsche dashboard and driving game.
+- **Entrance:** select the road to open the Porsche dashboard and driving game. During the Garden
+  party, select the shaking second window from the left to return directly to the party.
 
 The phone and Office monitor contain more games and tools, including Classics, Nibbles, Pac-Man,
 shooters, Code, Python, Linux, music, video, camera, calendar, and drawing apps. Smaller surprises

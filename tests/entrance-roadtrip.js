@@ -696,7 +696,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       scenery: copy(state().drive.scenery),
       headlights: {
         span: Number(headlightGroup.getAttribute("data-roadtrip-wash-span")),
-        overlap: Number(headlightGroup.getAttribute("data-roadtrip-inner-overlap")),
+        layout: headlightGroup.getAttribute("data-roadtrip-wash-layout"),
         left: document.getElementById("entrance-roadtrip-headlight-left").getAttribute("d"),
         right: document.getElementById("entrance-roadtrip-headlight-right").getAttribute("d")
       }
@@ -1253,8 +1253,8 @@ check(/entity\.type === "car" \? 1\.08/.test(source) &&
   /roadtripIsTrafficType\(entity\.type\) \? 1\.06 : 1/.test(source) &&
   /roadtripCollectibleValue\(entity\.type\) \? \.82 : 1/.test(source),
   "traffic and pickups receive a modest visual scale lift in the windshield and mirror");
-check(/id="entrance-roadtrip-headlight-soft"[^>]+x="-24%"[^>]+width="148%"[\s\S]{0,100}<feGaussianBlur stdDeviation="3\.6"/.test(source) &&
-  (source.match(/id="entrance-roadtrip-headlight-(?:left|right)"[^>]+fill-opacity="\.42"/g) || []).length === 2,
+check(/id="entrance-roadtrip-headlight-soft"[^>]+x="-48%"[^>]+width="196%"[\s\S]{0,100}<feGaussianBlur stdDeviation="9"/.test(source) &&
+  (source.match(/id="entrance-roadtrip-headlight-(?:left|right)"[^>]+fill-opacity="\.34"/g) || []).length === 2,
   "highway headlights share a softened low-opacity beam treatment");
 check(/id="entrance-roadtrip-mirror-housing" d="M282-115H398[^\"]+Q412-75 400-74H280Q268-75[^\"]+" fill="#2d3438"[^>]+stroke="#171c20"/.test(source) &&
   /id="entrance-roadtrip-mirror-gasket"[^>]+stroke="#13191c"/.test(source) &&
@@ -1583,10 +1583,10 @@ check(curves && rightFar < straightFar && rightMid < straightMid && rightNear < 
     mirror: curves && [curves.right.state.mirrorTerrainOffset, curves.left.state.mirrorTerrainOffset]
   });
 check(curves && curves.right.headlights && curves.right.headlights.span >= 600 &&
-  curves.right.headlights.overlap >= 8 && curves.right.headlights.overlap <= 12 &&
+  curves.right.headlights.layout === "continuous" &&
   /^M34\.00 95Q/.test(curves.right.headlights.left || "") &&
-  /646\.00 95Z$/.test(curves.right.headlights.right || ""),
-  "the two low-opacity headlight fans cover both shoulders with a narrow, softened centre overlap",
+  /646\.00 95Z$/.test(curves.right.headlights.left || "") && curves.right.headlights.right === "",
+  "one continuous feathered headlight wash covers both shoulders without interior bands",
   curves && curves.right.headlights);
 var mirrorTreeNear = curves && curves.mirrorTreesNear && curves.mirrorTreesNear.find(function (tree) { return tree.visible; });
 var mirrorTreeFarther = curves && curves.mirrorTreesFarther && curves.mirrorTreesFarther.find(function (tree) { return tree.visible; });

@@ -66,15 +66,19 @@ var harness = String.raw`<pre id="__report">pending</pre>
     report.rain = { roomClass: room.getAttribute("class"), opacity: opacity(group) };
     var beforeSteer = left.getAttribute("d");
     var beforeAim = Number(group.getAttribute("data-roadtrip-aim-x"));
+    var beforeLane = window.__entranceRoomState().drive.roadtrip.playerLane;
     window.__entranceDriveControl("steerRight", true);
     window.__entranceDriveStep(320);
     window.__entranceDriveControl("steerRight", false);
+    var steeringAngle = window.__entranceRoomState().drive.steeringAngle;
+    window.__entranceRoadtripSetDistance(158);
+    window.__entranceRoadtripSetLane(beforeLane);
     report.steer = {
       before: beforeSteer,
       after: left.getAttribute("d"),
       beforeAim: beforeAim,
       afterAim: Number(group.getAttribute("data-roadtrip-aim-x")),
-      amount: Number(group.getAttribute("data-roadtrip-steer"))
+      amount: steeringAngle
     };
     window.day();
     await sleep(80);
@@ -103,9 +107,9 @@ check(result && result.switchedOff && result.switchedOff.opacity < result.night.
   "the physical headlight switch reduces the night beam", result && result.switchedOff);
 check(result && result.rain && result.rain.opacity >= result.night.opacity && /entrance-raining/.test(result.rain.roomClass),
   "rain scatters a still-visible beam instead of hiding it", result && result.rain);
-check(result && result.steer && result.steer.before !== result.steer.after && result.steer.afterAim > result.steer.beforeAim + 8 &&
-  result.steer.amount > .2,
-  "beam aim follows live steering on top of the road bend", result && result.steer);
+check(result && result.steer && result.steer.amount > 2 &&
+  Math.abs(result.steer.afterAim - result.steer.beforeAim) < .001,
+  "the car-body headlight wash stays fixed while the steering wheel turns", result && result.steer);
 check(result && result.day && result.day.opacity === 0 && /entrance-day/.test(result.day.roomClass),
   "daylight removes the highway beam", result && result.day);
 

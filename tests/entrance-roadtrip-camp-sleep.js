@@ -589,14 +589,14 @@ var finMotion = lib.runPageSync("rsvp.html", FIN_MOTION_HARNESS, 800, {
 });
 check(finMotion && finMotion.errors.length === 0 && finMotion.normal &&
   finMotion.normal.animation === "entrance-roadtrip-camp-finale-fin-breath" &&
-  finMotion.normal.duration === "3.2s" && finMotion.normal.direction === "alternate" &&
+  finMotion.normal.duration === "10s" && finMotion.normal.direction === "normal" &&
   finMotion.normal.fontSize === "37px" &&
-  finMotion.normal.iterations === "infinite" && finMotion.normal.timing === "ease-in-out" &&
+  finMotion.normal.iterations === "1" && finMotion.normal.timing === "ease-in-out" &&
   finMotion.normal.opacity >= .84 && finMotion.normal.opacity <= 1 &&
   finMotion.normal.transform !== "none" && finMotion.normal.transformBox === "fill-box" &&
   finMotion.low && finMotion.low.animation === "none" && finMotion.low.opacity === 1 &&
   finMotion.low.transform === "none",
-  "the warm-white fin breathes slowly and visibly, then rests under the low-frame-rate fallback",
+  "the warm-white fin breathes three times, settles after ten seconds, and rests under the low-frame-rate fallback",
   finMotion);
 
 if (failures) process.exit(1);

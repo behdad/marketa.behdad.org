@@ -239,7 +239,8 @@ point out a few easy-to-miss controls elsewhere in the game.
 The game begins checkpointing after the Kitchen is solved or deliberately left for another room.
 On a later visit, **Continue** restores the saved room and floor, progression, durable arrangements,
 Album and Messages data, and safe device shell state. Running games, calls, cameras, and media return
-stopped. **Start over** clears the checkpoint; Restart inside the game asks for confirmation.
+stopped. Rooms you had not reached remain locked. **Start over** clears the checkpoint; Restart
+inside the game asks for confirmation.
 
 **Trailer** is a separate one-minute preview. It does not consume a save and offers **Take over** to
 start Phase 1.

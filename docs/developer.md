@@ -380,6 +380,10 @@ The recovery gate previews saved presentation without opening lower controllers 
 Continue performs one real room transition, restores adapters, opens the saved lower room through
 its owner, then removes the gate. Start over clears the checkpoint.
 
+Restore through non-navigating state owners. UI and console conveniences that pan to their prop's
+room (for example `bbq()`) are not checkpoint setters: calling one during Continue can silently
+raise the room-unlock frontier before the saved room is restored.
+
 `loftSessionExport()` / `loftSessionImport()` are smaller portable handoffs containing only progress
 and puzzle state. Personal messages, photos, scripts, and app stores remain browser-local.
 

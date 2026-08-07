@@ -210,8 +210,9 @@ authored backdrops, so scenery, day/night lighting, winter treatment, and distan
 parallax remain in phase through the crossfade. `roadtripGeometryProfile()` applies those same
 weights to road, shoulder, median, centreline, and lane-mark geometry: Calgary's divided highway
 narrows into Banff while surplus lane marks fade, then Banff's divider fades into Abraham's
-single-lane road. The latched Camping approach derives the same blend
-from its automatic slowdown and reaches the stationary camp frame before the route swaps. Signs are
+single-lane road. The latched Camping approach keeps the complete Abraham road frame through its
+automatic slowdown; only the stopped route swap begins the campsite/road opacity handoff, so the
+campsite ground cannot appear as an isolated foreground band before arrival. Signs are
 projected beyond the current road edge by
 `positionRoadtripExitSign()`; fixed road fractions fail on Calgary's wider divided highway.
 

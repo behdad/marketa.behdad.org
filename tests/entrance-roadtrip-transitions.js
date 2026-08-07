@@ -107,7 +107,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       for (var index = 0; index < 24 && state().route !== "camp"; index++) {
         window.__entranceDriveStep(100);
         var frame = state();
-        if (frame.campExitLatched && frame.routeBlend.camp > 0 && frame.routeBlend.camp < 1) {
+        if (frame.campExitLatched && frame.route !== "camp") {
           campFrames.push({ speed: window.__entranceRoomState().drive.speed, blend: frame.routeBlend });
         }
       }
@@ -241,12 +241,11 @@ check(abrahamTraffic.before && abrahamTraffic.after &&
   });
 
 var camp = result && result.camp || {};
-check(camp.frames && camp.frames.length >= 2 && camp.frames.every(function (frame, index) {
-  return frame.blend.camp > 0 && frame.blend.camp < 1 && frame.blend.road > 0 &&
-    frame.blend.road < 1 && (!index || frame.blend.camp >= camp.frames[index - 1].blend.camp);
+check(camp.frames && camp.frames.length >= 2 && camp.frames.every(function (frame) {
+  return frame.blend.camp === 0 && frame.blend.road === 1 && frame.blend.abraham === 1;
   }) && camp.final && camp.final.route === "camp" && camp.final.routeBlend.camp === 1 &&
   camp.final.routeBlend.road === 0,
-  "the automatic slowdown carries Abraham's shared light into the stationary Camping frame", camp);
+  "the automatic slowdown keeps the complete road frame until the stopped Camping handoff", camp);
 function cleanCampReentry(row) {
   return row && row.route === "camp" && row.campClass === true && Number(row.campOpacity) === 1 &&
     Number(row.roadOpacity) === 0;

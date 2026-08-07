@@ -94,9 +94,9 @@ var RSVP_HARNESS = [
   "  async function solve() {",
   "    if (window.__endAttract) window.__endAttract();",
   "    await sleep(40);",
-  "    if (window.__openingGuideShowing && window.__openingGuideShowing()) click(expect('kitchen-cabinet-2'));",
+  "    if (window.__openingGuideShowing && window.__openingGuideShowing()) fire(document.querySelector('#opening-guide-coach .hunt-coach-x'), 'click');",
   "    await sleep(20);",
-  "    if (window.__openingGuideShowing && window.__openingGuideShowing()) click(expect('kitchen-cabinet-2'));",
+  "    if (window.__openingGuideShowing && window.__openingGuideShowing()) fire(document.querySelector('#opening-guide-coach .hunt-coach-x'), 'click');",
   "    await sleep(20);",
   "    click(expect('kitchen-portafilter'));",       // the portafilter advances whichever coffee step comes next
   "    await sleep(2800);",                         // the espresso machine must finish warming before the grinder accepts input

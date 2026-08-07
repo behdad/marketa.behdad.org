@@ -3174,33 +3174,36 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   .hunt-dollhouse-slot{right:calc(100% + .45rem)}
   #hunt-dollhouse-btn,#hunt-floor-btn{width:1.75rem;height:1.75rem}
 }
-.party-bridge-overlay{
+.hunt-coach-overlay{
   position:absolute;inset:0;z-index:64;visibility:hidden;opacity:0;pointer-events:none;
   transition:opacity .22s ease,visibility 0s linear .22s;
-  /* This HTML sibling sits outside #loft-game-strip, so party UV can never tint its red. */
+  /* HTML overlays outside #loft-game-strip keep their arrows out of party UV. */
   filter:none!important;mix-blend-mode:normal!important;color-scheme:light;
 }
-.party-bridge-overlay.show{visibility:visible;opacity:1;transition-delay:0s}
-.party-bridge-overlay svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-.party-bridge-arrow-shadow{fill:none;stroke:#1f1f1f;stroke-width:34;stroke-linecap:round}
-.party-bridge-arrow-line{fill:none;stroke:#ef1717;stroke-width:25;stroke-linecap:round}
-.party-bridge-arrow-head-shadow{fill:#1f1f1f}
-.party-bridge-arrow-head{fill:#ef1717}
-.party-bridge-popup{
+.hunt-coach-overlay.show{visibility:visible;opacity:1;transition-delay:0s}
+.hunt-coach-overlay svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.hunt-coach-arrow{
+  fill:#ef1717;stroke:#1f1f1f;stroke-width:7;stroke-linejoin:round;
+  filter:drop-shadow(0 2px 2px rgba(31,31,31,.5));transform-box:fill-box;transform-origin:center;
+  animation:kitchen-arrow-bounce .9s ease-in-out infinite;
+}
+.hunt-coach-card{
   position:absolute;box-sizing:border-box;pointer-events:auto;cursor:pointer;
-  padding:clamp(.72rem,1.5cqw,1.05rem) clamp(2.65rem,4.5cqw,3.4rem) clamp(.72rem,1.5cqw,1.05rem) clamp(.9rem,2cqw,1.35rem);
-  border:4px solid #ef1717;border-radius:18px;background:rgba(255,253,248,.97);
-  box-shadow:0 7px 24px rgba(0,0,0,.44);color:#382d27;
-  font:700 clamp(19px,2.35cqw,29px)/1.18 "Fraunces",serif;text-align:center;
+  width:min(540px,calc(100% - 24px));
+  padding:.9rem 3rem .9rem 1.15rem;
+  border:2px solid rgba(142,58,74,.52);border-radius:18px;background:rgba(255,253,248,.97);
+  box-shadow:0 5px 18px rgba(69,58,49,.32);color:var(--wine);
+  font:700 clamp(20px,2vw,28px)/1.18 "Fraunces",serif;text-align:center;
   text-wrap:balance;-webkit-tap-highlight-color:transparent;user-select:none;
 }
-.party-bridge-popup-x{
+.hunt-coach-x{
   position:absolute;right:.55rem;top:50%;translate:0 -50%;display:grid;place-items:center;
-  width:clamp(1.8rem,3.2cqw,2.35rem);height:clamp(1.8rem,3.2cqw,2.35rem);
-  border-radius:50%;background:#ef1717;color:#fff;font:800 clamp(20px,2.6cqw,28px)/1 sans-serif;
+  width:2.2rem;height:2.2rem;
+  border-radius:50%;background:var(--wine);color:#fff;font:800 25px/1 sans-serif;
   box-shadow:0 2px 7px rgba(0,0,0,.28);
 }
-@media (prefers-reduced-motion:reduce){.party-bridge-overlay{transition:none}}
+@media (max-width:520px){.hunt-coach-card{padding:.72rem 2.7rem .72rem .85rem;border-radius:15px}.hunt-coach-x{width:1.95rem;height:1.95rem;font-size:22px}}
+@media (prefers-reduced-motion:reduce){.hunt-coach-overlay{transition:none}.hunt-coach-arrow{animation:none}}
 /* Whole-loft picker: two aligned rows of five paired rooms. Live scene previews are used
    where they paint faithfully; stateful lower rooms use stable portrait art instead. */
 #loft-dollhouse{
@@ -3277,34 +3280,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15);
 }
 @media (max-width:759px){ #hunt-caption{max-width:calc(100% - 4.4rem)} }
-/* First-play handoff: establish the top controls first, then point down to the subtitle where
-   each next clue appears. */
+/* First-play handoff: a shared coach card establishes the top controls, then the subtitle.
+   Its transparent full-shell layer swallows background input; only × or Enter advances. */
 #hunt-bottom-nav.intro-guide-nav{z-index:24}
-#hunt-bottom-nav.intro-guide-nav::before{
-  content:attr(data-guide); position:absolute; pointer-events:none; left:50%; top:calc(100% + 11.5rem);
-  width:max-content; max-width:min(25rem,80vw); box-sizing:border-box; transform:translateX(-50%);
-  padding:.35rem .75rem; border-radius:999px; background:var(--paper); color:var(--wine);
-  border:1px solid rgba(142,58,74,.25); box-shadow:0 2px 7px rgba(69,58,49,.2);
-  font-size:clamp(.88rem,2.2vw,1.18rem); font-weight:700; line-height:1.2; text-align:center;
-}
-#hunt-bottom-nav.intro-guide-nav::after{
-  content:""; position:absolute; pointer-events:none; left:50%; top:calc(100% + .2rem);
-  width:140px; height:170px; background:center / contain no-repeat var(--espresso-arrow-up);
-  filter:drop-shadow(0 1px 1px rgba(69,58,49,.35));
-  animation:nav-guide-bob .8s ease-in-out infinite;
-}
-@keyframes nav-guide-bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-4px)}}
-#hunt-caption.intro-guide{color:var(--wine); z-index:8} /* above the permanent occasion ribbon (7) */
-#hunt-caption.intro-guide::before{
-  content:""; position:absolute; pointer-events:none; left:50%; bottom:calc(100% + .2rem);
-  width:120px; height:145px;
-  /* Exact espresso-arrow silhouette, rotated down: same red fill, black 2px outline and joins. */
-  background:center / contain no-repeat var(--espresso-arrow-up);
-  filter:drop-shadow(0 1px 1px rgba(69,58,49,.35));
-  animation:caption-guide-bob .8s ease-in-out infinite;
-}
-@keyframes caption-guide-bob{0%,100%{transform:translate(-50%,0) rotate(180deg)}50%{transform:translate(-50%,-4px) rotate(180deg)}}
-@media (prefers-reduced-motion: reduce){#hunt-caption.intro-guide::before,#hunt-bottom-nav.intro-guide-nav::after{animation:none}}
+#hunt-caption.intro-guide{color:var(--wine);z-index:8}
+#opening-guide-coach.show{pointer-events:auto}
+#opening-guide-coach .hunt-coach-card{cursor:default}
 .scene-caption a{color:var(--wine); text-decoration:none; border-bottom:1px dotted var(--wine); display:inline-block; font-style:normal}
 .scene-caption.rsvp-nudge{animation:rsvp-nudge-float 2.4s ease-in-out infinite}
 @keyframes rsvp-nudge-float{
@@ -14656,13 +14637,13 @@ section{margin:1.9rem 0}
     </a>
   </div>
   <div class="hunt-viewport">
-    <div id="party-switch-coach" class="party-bridge-overlay">
-      <svg><path class="party-bridge-arrow-shadow"/><path class="party-bridge-arrow-line"/><polygon class="party-bridge-arrow-head-shadow"/><polygon class="party-bridge-arrow-head"/></svg>
-      <div class="party-bridge-popup"><span data-i="party_switch_coach">When you’re ready, end the party here.</span><span class="party-bridge-popup-x">×</span></div>
+    <div id="party-switch-coach" class="hunt-coach-overlay">
+      <svg><path class="hunt-coach-arrow"/></svg>
+      <div class="hunt-coach-card"><span class="hunt-coach-copy" data-i="party_switch_coach">When you’re ready, end the party here.</span><span class="hunt-coach-x">×</span></div>
     </div>
-    <div id="party-room-map-coach" class="party-bridge-overlay">
-      <svg><path class="party-bridge-arrow-shadow"/><path class="party-bridge-arrow-line"/><polygon class="party-bridge-arrow-head-shadow"/><polygon class="party-bridge-arrow-head"/></svg>
-      <div class="party-bridge-popup"><span class="party-bridge-room-copy"></span><span class="party-bridge-popup-x">×</span></div>
+    <div id="party-room-map-coach" class="hunt-coach-overlay">
+      <svg><path class="hunt-coach-arrow"/></svg>
+      <div class="hunt-coach-card"><span class="hunt-coach-copy party-bridge-room-copy"></span><span class="hunt-coach-x">×</span></div>
     </div>
     <svg id="loft-game-strip" viewBox="0 0 3400 340" xmlns="http://www.w3.org/2000/svg">
 <defs>
@@ -36028,6 +36009,10 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
   </div>
   </div>
   <p class="scene-caption" id="hunt-caption">Turn on La Maz → run El Maz → brew.</p>
+  <div id="opening-guide-coach" class="hunt-coach-overlay">
+    <svg><path class="hunt-coach-arrow"/></svg>
+    <div class="hunt-coach-card"><span class="hunt-coach-copy"></span><span class="hunt-coach-x">×</span></div>
+  </div>
   <div id="loft-dollhouse" hidden>
     <div class="loft-dollhouse-panel">
       <button type="button" id="loft-dollhouse-close">×</button>
@@ -52184,8 +52169,8 @@ var T = {
       kitchen_warming_up: "Let it warm up first.",
       kitchen_bar: "Bar's open — watch <em>Pouria</em> mix a drink. Or order one. 🍸",
       kitchen_bar_night: "Bar is open. Ask <em>Pouria</em> for a drink… 🍸",
-      intro_guide_nav: "Navigation lives here. Click to continue.",
-      intro_guide: "Clues and instructions appear here. Click to continue.",
+      intro_guide_nav: "Navigation lives here.",
+      intro_guide: "Clues and instructions appear here.",
       flair_hint: "Move Pouria to catch garnishes 🍋; dodge the wasp 🐝.",
       arcade_hint: "Move the chair or use ← → to aim; Space fires. 👾",
       tetris_hint: "Click to rotate; drag to move or drop. Keys: ← → ↑, Space.",
@@ -53532,8 +53517,8 @@ var T = {
       kitchen_warming_up: "Nejdřív ho nech zahřát.",
       kitchen_bar: "Bar je otevřený — sleduj, jak <em>Pouria</em> míchá drink. Nebo si nějaký objednej. 🍸",
       kitchen_bar_night: "Bar je otevřený. Řekni si <em>Pouriovi</em> o drink… 🍸",
-      intro_guide_nav: "Navigace je tady. Klikni a pokračuj.",
-      intro_guide: "Nápovědy a pokyny se objevují tady. Klikni a pokračuj.",
+      intro_guide_nav: "Navigace je tady.",
+      intro_guide: "Nápovědy a pokyny se objevují tady.",
       flair_hint: "Pohybuj Pouriou a chytej ozdoby 🍋; vyhni se vosě 🐝.",
       arcade_hint: "Pohybuj křeslem nebo použij ← → a zamiř; mezerník vystřelí. 👾",
       tetris_hint: "Kliknutím otáčej; tažením posouvej nebo shazuj. Klávesy: ← → ↑, mezerník.",
@@ -112015,10 +112000,7 @@ function spawnDustMote(container) {
     if (captionKey === "rsvp_exit") { showRsvpNudge(); return; }
     caption.innerHTML = captionWithReplacements(captionKey,
       flashedCaption && flashedCaption.key === captionKey ? flashedCaption.replacements : null);
-    if (openingGuideShowing && openingGuideStep === "nav") {
-      var guideNav = document.getElementById("hunt-bottom-nav");
-      if (guideNav) guideNav.setAttribute("data-guide", huntText("intro_guide_nav"));
-    }
+    if (openingGuideShowing) paintOpeningGuide();
   };
   var finaleTimers = [];
   var balconyIntroSeen = false;
@@ -113973,41 +113955,40 @@ function spawnDustMote(container) {
     var coachViewport = document.querySelector(".hunt-viewport");
     var switchCoachOverlay = document.getElementById("party-switch-coach");
     var roomMapCoachOverlay = document.getElementById("party-room-map-coach");
-    function coachPopup(overlay) { return overlay && overlay.querySelector(".party-bridge-popup"); }
-    function setCoachArrow(overlay, x, lineStart, lineEnd, tip, direction) {
-      if (!overlay || !coachViewport) return;
-      var width = coachViewport.clientWidth, height = coachViewport.clientHeight;
+    function coachPopup(overlay) { return overlay && overlay.querySelector(".hunt-coach-card"); }
+    function setCoachArrow(overlay, host, x, lineStart, lineEnd, tip, direction) {
+      if (!overlay || !host) return;
+      var width = host.clientWidth, height = host.clientHeight;
       var svg = overlay.querySelector("svg");
       if (!width || !height || !svg) return;
       svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-      var line = "M" + x.toFixed(1) + " " + lineStart.toFixed(1) + "L" +
-        x.toFixed(1) + " " + lineEnd.toFixed(1);
-      overlay.querySelector(".party-bridge-arrow-shadow").setAttribute("d", line);
-      overlay.querySelector(".party-bridge-arrow-line").setAttribute("d", line);
-      var shadowPoints, redPoints;
+      var shaft = 13, head = 29, headBase, path;
       if (direction === "up") {
-        shadowPoints = x + "," + tip + " " + (x - 36) + "," + (tip + 46) + " " + (x + 36) + "," + (tip + 46);
-        redPoints = x + "," + (tip + 5) + " " + (x - 27) + "," + (tip + 40) + " " + (x + 27) + "," + (tip + 40);
+        headBase = lineEnd;
+        path = "M" + (x - shaft) + " " + lineStart + "H" + (x + shaft) + "V" + headBase +
+          "H" + (x + head) + "L" + x + " " + tip + "L" + (x - head) + " " + headBase +
+          "H" + (x - shaft) + "Z";
       } else {
-        shadowPoints = x + "," + tip + " " + (x - 36) + "," + (tip - 46) + " " + (x + 36) + "," + (tip - 46);
-        redPoints = x + "," + (tip - 5) + " " + (x - 27) + "," + (tip - 40) + " " + (x + 27) + "," + (tip - 40);
+        headBase = lineEnd;
+        path = "M" + (x - shaft) + " " + lineStart + "H" + (x + shaft) + "V" + headBase +
+          "H" + (x + head) + "L" + x + " " + tip + "L" + (x - head) + " " + headBase +
+          "H" + (x - shaft) + "Z";
       }
-      overlay.querySelector(".party-bridge-arrow-head-shadow").setAttribute("points", shadowPoints);
-      overlay.querySelector(".party-bridge-arrow-head").setAttribute("points", redPoints);
+      overlay.querySelector(".hunt-coach-arrow").setAttribute("d", path);
     }
+    window.__setHuntCoachArrow = setCoachArrow;
     function positionSwitchCoach() {
       if (!switchCoachOverlay || !switchCoachOverlay.classList.contains("show") || !coachViewport) return;
       var vr = coachViewport.getBoundingClientRect(), sr = sw.getBoundingClientRect();
       var popup = coachPopup(switchCoachOverlay);
-      var width = Math.min(430, Math.max(290, vr.width * .4), vr.width - 24);
+      var width = popup.offsetWidth;
       var targetX = Math.max(38, Math.min(vr.width - 38, sr.left + sr.width / 2 - vr.left));
       var popupLeft = Math.max(12, Math.min(vr.width - width - 12, targetX - width * .22));
-      popup.style.width = width + "px";
       popup.style.left = popupLeft + "px";
       popup.style.top = Math.max(12, vr.height * .035) + "px";
       var start = popup.offsetTop + popup.offsetHeight + 10;
       var tip = Math.max(start + 54, Math.min(vr.height - 10, sr.top - vr.top - 3));
-      setCoachArrow(switchCoachOverlay, targetX, start, tip - 38, tip, "down");
+      setCoachArrow(switchCoachOverlay, coachViewport, targetX, start, tip - 38, tip, "down");
     }
     function positionRoomMapCoach() {
       if (!roomMapCoachOverlay || !roomMapCoachOverlay.classList.contains("show") || !coachViewport) return;
@@ -114017,12 +113998,11 @@ function spawnDustMote(container) {
       var targetX = br ? br.left + br.width / 2 - vr.left : vr.width / 2;
       targetX = Math.max(42, Math.min(vr.width - 42, targetX));
       var popup = coachPopup(roomMapCoachOverlay);
-      var width = Math.min(590, Math.max(330, vr.width * .52), vr.width - 24);
-      popup.style.width = width + "px";
+      var width = popup.offsetWidth;
       popup.style.left = Math.max(12, Math.min(vr.width - width - 12, targetX - width / 2)) + "px";
       var arrowBottom = Math.min(104, Math.max(78, vr.height * .18));
       popup.style.top = (arrowBottom + 12) + "px";
-      setCoachArrow(roomMapCoachOverlay, targetX, arrowBottom, 39, 3, "up");
+      setCoachArrow(roomMapCoachOverlay, coachViewport, targetX, arrowBottom, 39, 3, "up");
     }
     function positionCoaches() {
       positionSwitchCoach();
@@ -126018,21 +125998,53 @@ function spawnDustMote(container) {
 
   var hintBlinkTimer = null;
   function openingGuideNav() { return document.getElementById("hunt-bottom-nav"); }
+  function openingGuideOverlay() { return document.getElementById("opening-guide-coach"); }
+  function positionOpeningGuide() {
+    if (!openingGuideShowing) return;
+    var overlay = openingGuideOverlay(), area = document.getElementById("hunt-fullscreen-area");
+    var card = overlay && overlay.querySelector(".hunt-coach-card");
+    var target = openingGuideStep === "nav" ? openingGuideNav() : caption;
+    if (!overlay || !area || !card || !target || !window.__setHuntCoachArrow) return;
+    var ar = area.getBoundingClientRect(), tr = target.getBoundingClientRect();
+    var x = Math.max(42, Math.min(ar.width - 42, tr.left + tr.width / 2 - ar.left));
+    var cardLeft = Math.max(12, Math.min(ar.width - card.offsetWidth - 12, x - card.offsetWidth / 2));
+    card.style.left = cardLeft + "px";
+    if (openingGuideStep === "nav") {
+      var upTip = Math.max(3, tr.bottom - ar.top + 3);
+      var arrowBottom = Math.min(ar.height - card.offsetHeight - 24, upTip + Math.max(72, ar.height * .14));
+      card.style.top = (arrowBottom + 12) + "px";
+      window.__setHuntCoachArrow(overlay, area, x, arrowBottom, upTip + 38, upTip, "up");
+    } else {
+      var downTip = Math.min(ar.height - 3, tr.top - ar.top - 3);
+      var cardTop = Math.max(12, downTip - card.offsetHeight - Math.max(72, ar.height * .16));
+      card.style.top = cardTop + "px";
+      var arrowStart = cardTop + card.offsetHeight + 10;
+      window.__setHuntCoachArrow(overlay, area, x, arrowStart, downTip - 38, downTip, "down");
+    }
+  }
+  function paintOpeningGuide() {
+    var overlay = openingGuideOverlay();
+    if (!overlay) return;
+    overlay.classList.toggle("show", !!openingGuideShowing);
+    var copy = overlay.querySelector(".hunt-coach-copy");
+    if (copy && openingGuideShowing) copy.textContent = huntText(openingGuideStep === "nav" ? "intro_guide_nav" : "intro_guide");
+    if (openingGuideShowing) requestAnimationFrame(positionOpeningGuide);
+  }
   function armOpeningGuide() {
     openingGuideArmTimer = setTimeout(function () {
       openingGuideArmTimer = null;
-      if (openingGuideShowing) strip.addEventListener("click", advanceOpeningGuide, true);
+      if (openingGuideShowing) paintOpeningGuide();
     }, 0);
   }
   function clearOpeningGuide() {
     if (openingGuideTimer) { clearTimeout(openingGuideTimer); openingGuideTimer = null; }
     if (openingGuideArmTimer) { clearTimeout(openingGuideArmTimer); openingGuideArmTimer = null; }
-    strip.removeEventListener("click", advanceOpeningGuide, true);
     openingGuideShowing = false;
     openingGuideStep = "";
     caption.classList.remove("intro-guide");
     var nav = openingGuideNav();
-    if (nav) { nav.classList.remove("intro-guide-nav"); nav.removeAttribute("data-guide"); }
+    if (nav) nav.classList.remove("intro-guide-nav");
+    paintOpeningGuide();
   }
   function finishOpeningGuide() {
     if (!openingGuideShowing) return;
@@ -126047,10 +126059,9 @@ function spawnDustMote(container) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
-    strip.removeEventListener("click", advanceOpeningGuide, true);
     if (openingGuideStep !== "nav") { finishOpeningGuide(); return; }
     var nav = openingGuideNav();
-    if (nav) { nav.classList.remove("intro-guide-nav"); nav.removeAttribute("data-guide"); }
+    if (nav) nav.classList.remove("intro-guide-nav");
     openingGuideStep = "caption";
     captionKey = "intro_guide";
     caption.innerHTML = huntText("intro_guide");
@@ -126066,7 +126077,6 @@ function spawnDustMote(container) {
     caption.innerHTML = huntText(captionKey);
     var nav = openingGuideNav();
     if (nav) {
-      nav.setAttribute("data-guide", huntText("intro_guide_nav"));
       nav.classList.add("intro-guide-nav");
     }
     updateKitchenInvite();
@@ -126080,6 +126090,17 @@ function spawnDustMote(container) {
   window.__openingGuideDuration = function () { return openingGuideDuration; };
   window.__finishOpeningGuide = finishOpeningGuide;
   window.__advanceOpeningGuide = advanceOpeningGuide;
+  var openingOverlay = openingGuideOverlay();
+  if (openingOverlay) {
+    openingOverlay.addEventListener("pointerdown", function (event) {
+      event.preventDefault(); event.stopPropagation();
+    });
+    openingOverlay.addEventListener("click", function (event) {
+      event.preventDefault(); event.stopPropagation();
+      if (event.target.closest && event.target.closest(".hunt-coach-x")) advanceOpeningGuide();
+    });
+  }
+  window.addEventListener("resize", positionOpeningGuide);
   // the grace timeout only CALMS the pulse — the "wandering without aim" line and the melting
   // CLICK ME both stay put until a real tap (stopHintBlink) hands off to the caption guide
   function calmIntroBlink() {

@@ -47,20 +47,38 @@ var harness = String.raw`<script>
       window.__phoneMessageReceived && !window.__phoneMessageReceived("downstairs_entrance") &&
       !Object.prototype.hasOwnProperty.call(firstHandoff, "roadtripInvitePending"), firstHandoff);
   var roomCoach = document.getElementById("party-room-map-coach");
+  window.dispatchEvent(new Event("resize"));
+  var roomCoachPopup = roomCoach.querySelector(".hunt-coach-card");
+  var roomCoachArrow = roomCoach.querySelector(".hunt-coach-arrow");
+  function popupStyleSignature(popup) {
+    var s = getComputedStyle(popup);
+    return [s.backgroundColor, s.borderColor, s.borderWidth, s.borderRadius, s.boxShadow,
+      s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft,
+      s.fontFamily, s.fontSize, s.fontWeight, s.lineHeight].join("|");
+  }
+  function arrowShapeSignature(arrow) {
+    return (arrow.getAttribute("d") || "").replace(/-?[0-9]+(?:\.[0-9]+)?/g, "#");
+  }
+  var roomPopupSignature = popupStyleSignature(roomCoachPopup);
+  var roomArrowSignature = arrowShapeSignature(roomCoachArrow);
   check("an incomplete-loft teardown pairs its dynamic popup with the large room-map arrow",
     firstHandoff.roomMapCoachActive && roomCoach.classList.contains("show") &&
       /1 of 10 rooms/i.test(roomCoach.querySelector(".party-bridge-room-copy").textContent) &&
-      !/1 of 10 rooms/i.test(document.getElementById("hunt-caption").textContent),
+      !/1 of 10 rooms/i.test(document.getElementById("hunt-caption").textContent) &&
+      roomCoach.querySelectorAll("svg > .hunt-coach-arrow").length === 1 &&
+      !roomCoach.querySelector("svg polygon,svg rect") &&
+      getComputedStyle(roomCoachArrow).fill === "rgb(239, 23, 23)" &&
+      getComputedStyle(roomCoachArrow).animationName === "kitchen-arrow-bounce",
     roomCoach.querySelector(".party-bridge-room-copy").textContent);
   if (window.__madlaRingForced) window.__madlaRingForced();
   check("the room-map coach queues an incoming call instead of letting it cover the coach",
     !document.querySelector(".call-ring.show") && window.__heldPartyCoachCalls &&
       window.__heldPartyCoachCalls().length === 1, window.__heldPartyCoachCalls && window.__heldPartyCoachCalls());
-  if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
-  check("dismissing the room-map coach retires it and releases the Road Trip invitation once",
+  roomCoachPopup.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  check("clicking the room-map coach dismisses it without opening the map and releases the Road Trip invitation once",
     !window.__partyLifecycleState().roomMapCoachActive &&
       !roomCoach.classList.contains("show") && window.__partyLifecycleState().roadtripInviteDelivered &&
-      window.__phoneMessageReceived("downstairs_entrance"));
+      window.__phoneMessageReceived("downstairs_entrance") && document.getElementById("loft-dollhouse").hidden);
   if (window.__hideCallRing) window.__hideCallRing();
 
   if (window.__setGardenParty) window.__setGardenParty(true, false);
@@ -69,12 +87,31 @@ var harness = String.raw`<script>
   if (window.goToStage) window.goToStage("garden");
   if (window.__showPartySwitchCoach) window.__showPartySwitchCoach();
   var switchCoach = document.getElementById("party-switch-coach");
+  window.dispatchEvent(new Event("resize"));
+  var switchCoachPopup = switchCoach.querySelector(".hunt-coach-card");
+  var switchCoachArrow = switchCoach.querySelector(".hunt-coach-arrow");
   check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
     switchCoach.classList.contains("show") &&
-      /end the party here/i.test(switchCoach.querySelector(".party-bridge-popup").textContent) &&
-      getComputedStyle(switchCoach.querySelector(".party-bridge-arrow-line")).stroke === "rgb(239, 23, 23)" &&
+      /end the party here/i.test(switchCoachPopup.textContent) &&
+      getComputedStyle(switchCoachArrow).fill === "rgb(239, 23, 23)" &&
       document.activeElement !== document.getElementById("garden-lightswitch") &&
       !/end the party here/i.test(document.getElementById("hunt-caption").textContent));
+  check("both bridge coaches share one box, dismiss control, and continuous dancing-arrow contract",
+    popupStyleSignature(switchCoachPopup) === roomPopupSignature &&
+      !switchCoachPopup.style.width && !roomCoachPopup.style.width &&
+      switchCoachPopup.querySelectorAll(":scope > .hunt-coach-x").length === 1 &&
+      roomCoachPopup.querySelectorAll(":scope > .hunt-coach-x").length === 1 &&
+      switchCoachPopup.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
+      roomCoachPopup.querySelectorAll(":scope > .hunt-coach-copy").length === 1 &&
+      switchCoach.querySelectorAll("svg > .hunt-coach-arrow").length === 1 &&
+      !switchCoach.querySelector("svg polygon,svg rect") &&
+      arrowShapeSignature(switchCoachArrow) === roomArrowSignature &&
+      getComputedStyle(switchCoachArrow).animationName === "kitchen-arrow-bounce",
+    JSON.stringify({ switchPopup: popupStyleSignature(switchCoachPopup), roomPopup: roomPopupSignature,
+      switchArrow: arrowShapeSignature(switchCoachArrow), roomArrow: roomArrowSignature }));
+  switchCoachPopup.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  check("clicking the switch coach dismisses it without toggling the wall switch",
+    !switchCoach.classList.contains("show") && window.__gardenPartyOn && window.__partyLifecycleState().switchCoachRetired);
 
   focused = false;
   window.__partyLifecycleTick();

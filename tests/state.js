@@ -58,8 +58,9 @@
 //    - garden wall switch: it keeps its day/night role in phase one, then becomes a
 //      day/party toggle once phase two has unlocked the party. Its delayed exit cue
 //      explains that the loft, phone, and computer remain explorable after the party.
-//    - opening guide: the first scene click points at the caption before the
-//      normal kitchen instruction and espresso-machine arrow take over.
+//    - opening guide: its explicit × walks top navigation → caption before the
+//      normal kitchen instruction and espresso-machine arrow take over; background
+//      clicks stay inert and Enter mirrors the ×.
 //
 // Honest headless limits: the media clock doesn't advance under
 // --virtual-time-budget, so "unpaused" is asserted, not audible progress —
@@ -469,6 +470,8 @@ var PROBE_HARNESS = [
   "  function el(id) { return document.getElementById(id); }",
   "  function has(id, cls) { var e = el(id); return !!(e && e.classList.contains(cls)); }",
   "  function click(id) { var e = el(id); if (!e) return false; var r = e.getBoundingClientRect(); e.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); return true; }",
+  "  function clickAtElementPoint(id) { var e = el(id); if (!e) return false; var r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, top = document.elementFromPoint(x, y); if (!top) return false; top.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: x, clientY: y })); return top; }",
+  "  function clickOpeningGuideX() { var e = document.querySelector('#opening-guide-coach .hunt-coach-x'); if (!e) return false; e.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return true; }",
   "  var STAGES = ['stage-kitchen', 'stage-garden', 'stage-cuddly', 'stage-office', 'stage-balcony'];",
   "  var GROOVERS = ['cuddly-behdad-head', 'cuddly-marketa-head', 'office-skull'];",
   "  function nearestId(n) { while (n && n.nodeType === 1) { if (n.id) return n.id; n = n.parentNode; } return '?'; }",
@@ -492,7 +495,7 @@ var PROBE_HARNESS = [
   "    snap.set(strip, strip.getAttribute('class') || '');",
   "    strip.querySelectorAll('*').forEach(function (e) { snap.set(e, e.getAttribute('class') || ''); });",
   "",
-  "    // The first click teaches the top navigation, then the bottom caption, before any object cue.",
+  "    // The opening coach teaches the top navigation, then the bottom caption, before any object cue.",
   "    // the load snapshot: resetHunt intentionally restores the untouched intro state captured above.",
   "    var introOverlay = el('click-me-overlay'), introMachine = el('kitchen-lamarzocco'), introCabinet = el('kitchen-cabinet-2');",
   "    if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
@@ -500,12 +503,14 @@ var PROBE_HARNESS = [
   "    ok('opening guide: first scene click points to the top navigation', !!(window.__openingGuideShowing && window.__openingGuideShowing()) && window.__openingGuideStep() === 'nav' && has('hunt-bottom-nav', 'intro-guide-nav') && !has('hunt-caption', 'intro-guide'));",
   "    ok('opening guide: espresso-machine cue waits', !has('kitchen-lamarzocco', 'invite-pulse'));",
   "    await sleep(30);",
-  "    click('kitchen-cabinet-2');",
-  "    ok('opening guide: next scene click points to the bottom caption', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !has('hunt-bottom-nav', 'intro-guide-nav') && has('hunt-caption', 'intro-guide'));",
-  "    ok('opening guide: nav acknowledgement does not operate the prop underneath', introCabinet && !introCabinet.classList.contains('open'));",
-  "    await sleep(30); click('kitchen-cabinet-2');",
-  "    ok('opening guide: following scene click dismisses without waiting', !window.__openingGuideShowing() && has('kitchen-lamarzocco', 'invite-pulse'));",
-  "    ok('opening guide: caption acknowledgement does not operate the prop underneath', introCabinet && !introCabinet.classList.contains('open'));",
+  "    var navBlockedTarget = clickAtElementPoint('kitchen-lamarzocco');",
+  "    ok('opening guide: a background prop click neither advances nor operates the room', navBlockedTarget && navBlockedTarget.closest('#opening-guide-coach') && window.__openingGuideShowing() && window.__openingGuideStep() === 'nav' && !introMachine.classList.contains('powered-on') && introCabinet && !introCabinet.classList.contains('open'));",
+  "    clickOpeningGuideX();",
+  "    ok('opening guide: the visible dismiss control points next to the bottom caption', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !has('hunt-bottom-nav', 'intro-guide-nav') && has('hunt-caption', 'intro-guide'));",
+  "    await sleep(30); var captionBlockedTarget = clickAtElementPoint('kitchen-lamarzocco');",
+  "    ok('opening guide: caption-step background remains inert', captionBlockedTarget && captionBlockedTarget.closest('#opening-guide-coach') && window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && !introMachine.classList.contains('powered-on') && introCabinet && !introCabinet.classList.contains('open'));",
+  "    clickOpeningGuideX();",
+  "    ok('opening guide: the second visible dismiss control finishes without waiting', !window.__openingGuideShowing() && has('kitchen-lamarzocco', 'invite-pulse'));",
   "    if (window.__showHuntIntro) window.__showHuntIntro();",
   "    introOverlay = el('click-me-overlay'); if (introOverlay) introOverlay.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));",
@@ -518,9 +523,13 @@ var PROBE_HARNESS = [
   "    await sleep(4200);",
   "    ok('opening guide: nav step remains until acknowledged', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav' && has('hunt-bottom-nav', 'intro-guide-nav'));",
   "    strip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    ok('opening guide: scene-wide clicks do not acknowledge the nav card', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav');",
+  "    clickOpeningGuideX();",
   "    await sleep(30); await sleep(4200);",
   "    ok('opening guide: caption step also remains until acknowledged', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
   "    strip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    ok('opening guide: scene-wide clicks do not acknowledge the caption card', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption');",
+  "    clickOpeningGuideX();",
   "    ok('opening guide: ordinary entry clears after both acknowledgements', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
   "    if (window.__showHuntIntro) window.__showHuntIntro();",
   "    if (window.__toggleFullscreen) window.__toggleFullscreen();",
@@ -530,10 +539,10 @@ var PROBE_HARNESS = [
   "    ok('opening guide: nav remains after fullscreen browser chrome clears', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav' && has('hunt-bottom-nav', 'intro-guide-nav'));",
   "    await sleep(3000);",
   "    ok('opening guide: fullscreen nav still waits for acknowledgement', window.__openingGuideShowing() && window.__openingGuideStep() === 'nav');",
-  "    strip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    clickOpeningGuideX();",
   "    await sleep(30);",
   "    ok('opening guide: fullscreen advances to its bottom caption', window.__openingGuideShowing() && window.__openingGuideStep() === 'caption' && has('hunt-caption', 'intro-guide'));",
-  "    strip.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
+  "    clickOpeningGuideX();",
   "    ok('opening guide: fullscreen caption ends on acknowledgement', !window.__openingGuideShowing() && !has('hunt-caption', 'intro-guide'));",
   "    ok('opening guide: normal kitchen instruction returns', window.__captionKey && window.__captionKey() === 'kitchen', 'caption=' + (window.__captionKey && window.__captionKey()));",
   "    ok('opening guide: espresso-machine cue follows the caption tutorial', has('kitchen-lamarzocco', 'invite-pulse'));",
@@ -767,7 +776,7 @@ var PROBE_HARNESS = [
   "    ok('special day: clicking the permanent ribbon activates the celebration', bannerSummoned===1, 'summoned='+bannerSummoned);",
   "    var fsArea = el('hunt-fullscreen-area'), guideCaption = el('hunt-caption');",
   "    if (fsArea) fsArea.classList.add('chrome-overlap'); if (guideCaption) guideCaption.classList.add('intro-guide');",
-  "    ok('special day: opening-guide arrow layer stays above the permanent ribbon', !!dayBanner && parseInt(getComputedStyle(guideCaption).zIndex, 10) > parseInt(getComputedStyle(dayBanner).zIndex, 10));",
+  "    ok('special day: opening-guide arrow layer stays above the permanent ribbon', !!dayBanner && parseInt(getComputedStyle(el('opening-guide-coach')).zIndex, 10) > parseInt(getComputedStyle(dayBanner).zIndex, 10));",
   "    if (guideCaption) guideCaption.classList.remove('intro-guide'); if (fsArea) fsArea.classList.remove('chrome-overlap');",
   "    ok('special day: the permanent ribbon does not activate or navigate the event scene', !window.__gardenPartyOn && window.currentStageIndex === 0, 'party=' + window.__gardenPartyOn + ' stage=' + window.currentStageIndex);",
   "    history.replaceState(null, '', '?date=2031-10-31');",
@@ -821,7 +830,9 @@ var PROBE_HARNESS = [
   "    await sleep(40);",
   "    ok('garden switch: phase two turns the party back on without repeating the cue', !!window.__gardenPartyOn && el('stage-garden').classList.contains('dusk') && !gardenWallSwitch.classList.contains('invite-pulse'));",
   "    ok('party bridge: the post-teardown room coach holds unrelated phone attention', window.__partyRoomMapCoachActive && window.__partyRoomMapCoachActive() && window.__heldPartyCoachCalls && Array.isArray(window.__heldPartyCoachCalls()));",
-  "    if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();",
+  "    // Isolate the pre-existing unread-badge coach below without dismissing this feature coach",
+  "    // (dismissal would deliberately enqueue the Road Trip notification in the same timing window).",
+  "    if (window.__setPartyRoomMapAttentionHold) window.__setPartyRoomMapAttentionHold(false);",
   "    var msgCoach = document.querySelector('.msg-badge-coach'), msgBadge = document.querySelector('.msg-badge');",
   "    ok('messages: coach stays out of the live notification popup', !msgCoach || !msgCoach.classList.contains('show'));",
   "    if (window.__hideMessageThumb) window.__hideMessageThumb();",
@@ -1259,7 +1270,7 @@ function fail(msg, detail) {
   var jobs = {};
   if (!ONLY || "cascade".indexOf(ONLY) === 0) jobs.cascade = lib.runPage("rsvp.html", CASCADE_HARNESS, 9000, CHROME_OPTS);
   if (!ONLY || "gates".indexOf(ONLY) === 0) jobs.gates = lib.runPage("rsvp.html", GATES_HARNESS, 12000, CHROME_OPTS);
-  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 40000, CHROME_OPTS); // includes the real four/eight-second opening-guide paths + latest-popup-aware message-coach delay
+  if (!ONLY || "probes".indexOf(ONLY) === 0) jobs.probes = lib.runPage("rsvp.html", PROBE_HARNESS, 52000, CHROME_OPTS); // includes the persistent two-step opening guide + latest-popup-aware message-coach delay
   if (!ONLY || "sharegate".indexOf(ONLY) === 0) jobs.sharegate = lib.runPage("loft-day.html", SHARE_GATE_HARNESS, 5000, CHROME_OPTS);
   if (!ONLY || "fullscreen".indexOf(ONLY) === 0) jobs.fullscreen = lib.runPage("rsvp.html", LOFT_FULLSCREEN_HARNESS, 7000, Object.assign({}, CHROME_OPTS, { urlSuffix: "#play" }));
   if (!ONLY || "persian".indexOf(ONLY) === 0) jobs.persian = lib.runPage("rsvp.html", PERSIAN_HARNESS, 9000, CHROME_OPTS);

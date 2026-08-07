@@ -9,8 +9,8 @@ useful.
 ## Start here
 
 1. Select **CLICK ME**. On a narrow phone, landscape orientation works best.
-2. Select the scene or press `Enter` twice while the opening coach points out the top navigation,
-   then the bottom caption.
+2. Use the opening coach’s visible × or press `Enter` twice while it points out the top navigation,
+   then the bottom caption. Other scene clicks stay paused until those two steps are acknowledged.
 3. Follow the caption below the scene.
 4. Complete each room to unlock the next one.
 5. Reach the Balcony to open the rest of the game.

@@ -35,6 +35,11 @@ paints CLICK ME or Continue/Start over before the single-file page finishes load
 action is held behind `#installed-load` until window-load readiness completes. The revealed
 invitation bypasses that cover.
 
+CLICK ME hands fresh play to the two-step `#opening-guide-coach`. Its transparent shell intercepts
+room input while the explicit × or global Enter advances navigation → caption. That guide and the
+two party bridge coaches share the `.hunt-coach-*` card, dismiss control, and single-path arrow
+contract; keep their geometry target-specific but their visual/component markup identical.
+
 The trailer is an editorial timeline, not an autonomous player. `stopCinematic` is the single
 cleanup path for completion, Take over, and hidden-tab abort.
 

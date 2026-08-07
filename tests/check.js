@@ -1319,8 +1319,7 @@ function checkNoUnicodeEscapes() {
 //      subtracts exactly half of each row: the negative margins cancel half of offsetHeight.
 //      "Simplify" it to a bare offsetHeight and the space is freed and handed straight back.
 // Plus the hit-testing hazard: both overlapping rows must be pointer-transparent, with their
-// own controls taking pointer events back, or the half covering the scene eats the strip's
-// background-tap (stopHintBlink, which dismisses the opening prompt on a tap anywhere).
+// own controls taking pointer events back, or the half covering the scene eats ordinary room input.
 
 checkNoUnicodeEscapes();
 checkTrackedSymlinks();

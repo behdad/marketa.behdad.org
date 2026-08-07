@@ -50,6 +50,8 @@ check((source.match(/window\.__secondRound\s*=/g) || []).length === 1 &&
       !(source.match(/window\.__(?:pragueCalled|pcPlayed)\s*=/g) || []).length &&
       /function setOfficeProgress\(kind, on\)[\s\S]*?window\[prop\]\s*=\s*!!on/.test(source),
   "shared progression mirrors have only their named writers");
+check(/setOfficeProgress\("pc", true\)[\s\S]{0,900}setTimeout\(function \(\) \{[\s\S]{0,900}\}, 3000\);/.test(source),
+  "the solved PC clue advances to the lights hint after a short three-second hold");
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

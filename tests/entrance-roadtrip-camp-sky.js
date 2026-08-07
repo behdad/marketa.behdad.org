@@ -128,6 +128,8 @@ check(/id="entrance-roadtrip-camp-sunset"[\s\S]*?<ellipse cx="590" cy="-86" rx="
   "the campsite sunset stays centered between the sun and moon");
 check(/#entrance-roadtrip-camp-day>rect,#entrance-roadtrip-camp-day>path,\s*#entrance-roadtrip-camp-night>rect\{pointer-events:none\}/.test(source),
   "transparent sky paint cannot intercept the visible celestial toggle");
+check(/#entrance-room\.roadtrip-route-camp #entrance-roadtrip-highway-moon\{display:none\}/.test(source),
+  "the generic highway moon cannot show through the campsite sky crossfade");
 check(/\["entrance-roadtrip-camp-moon-phase", 590, -86, 15\]/.test(source),
   "the camp moon participates in the shared phase painter");
 check((source.match(/<path d="M(?:27|102|176|266|348|430|522|615)-/g) || []).length === 8,

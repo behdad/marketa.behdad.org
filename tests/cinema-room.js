@@ -136,9 +136,9 @@ check(s.props && s.props.ids.length === 19 &&
   ["cinema-beam-left","cinema-beam-right","cinema-bike","cinema-bike-marketa","cinema-camera-left","cinema-camera-right",
    "cinema-cushion-wine","cinema-cushion-blue","cinema-table","cinema-weights","cinema-sofa-seat",
    "cinema-sofa-cushion-left","cinema-sofa-cushion-right"].every(function(id){return s.props.reactions[id] === 1;}) &&
-  s.props.tabs.every(function(tab){ return tab === null; }) && s.props.tabStops === 1 &&
-  s.props.poufs.inCinema && !s.props.poufs.inOffice && s.props.poufs.tabindex === "0",
-  "every Cinema prop reacts while the relocated nesting poufs retain their keyboard control", s.props);
+  s.props.tabs.every(function(tab){ return tab === null; }) && s.props.tabStops === 0 &&
+  s.props.poufs.inCinema && !s.props.poufs.inOffice && s.props.poufs.tabindex === "-1",
+  "every Cinema prop reacts while the relocated nesting poufs stay out of the tab order", s.props);
 check(s.props && s.props.weights &&
   s.props.weights.silhouette === "M93 268H140M100 260V276M106 257V279M127 257V279M133 260V276" &&
   s.props.weights.shadePaths === 5 && s.props.weights.pointer === "none" &&

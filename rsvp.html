@@ -1607,6 +1607,8 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
     var(--camp-sleep-pan-resume,0ms) both
 }
 #entrance-roadtrip-camp.camp-sleep-congrats{transform:translateY(120px)}
+#entrance-roadtrip-camp.camp-session-resetting{animation:none!important;transform:none!important}
+#entrance-roadtrip-camp.camp-session-resetting *{animation:none!important;transition:none!important}
 @keyframes entrance-roadtrip-camp-finale-pan{
   from{transform:translateY(0)}
   to{transform:translateY(120px)}
@@ -41662,6 +41664,17 @@ window.__entranceRoomOpen = false;
     resetCampStargazing();
     paintRoadtripCampFire();
   }
+  function resetRoadtripCampSessionBeforeReveal() {
+    if (campFireScene) campFireScene.classList.add("camp-session-resetting");
+    resetRoadtripCampSession();
+    // Commit the fresh base paint while Camping is still transparent. Without this
+    // fence, SVG descendant transitions retain the terminal sky/fin values until the
+    // campsite has already dissolved into view.
+    if (campFireScene) {
+      void campFireScene.getBoundingClientRect();
+      campFireScene.classList.remove("camp-session-resetting");
+    }
+  }
   function captureCampStargazing() {
     var snapshot = campStargazingSnapshot();
     return {
@@ -42347,7 +42360,7 @@ window.__entranceRoomOpen = false;
     driveCoachNeedsFreshPedal = false;
     dismissPorscheDriveCoach();
     if (!preserveCamp) {
-      resetRoadtripCampSession();
+      resetRoadtripCampSessionBeforeReveal();
     }
     roadtripState.campVisited = true;
     // Hand the foreground from motion to place as one mix transition. The outdoor
@@ -45124,7 +45137,7 @@ window.__entranceRoomOpen = false;
     if (forceFresh) {
       // The Abraham arrival dissolve reveals Camping before arriveRoadtripCamp() runs.
       // A new trip must therefore clear the previous campsite before its first road frame.
-      if (!preserveCamp) resetRoadtripCampSession();
+      if (!preserveCamp) resetRoadtripCampSessionBeforeReveal();
       roadtripState.exitUntilStop = false;
       roadtripState.accepted = true;
       roadtripState.everAccepted = true;

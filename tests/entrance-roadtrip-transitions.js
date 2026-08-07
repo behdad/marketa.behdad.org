@@ -6,8 +6,7 @@ var fs = require("fs");
 var path = require("path");
 var lib = require("./lib");
 
-var HARNESS = String.raw`<style>*{transition:none!important}</style>
-<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>
 (function () {
   var report = { errors: [] };
@@ -62,7 +61,10 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
       report.freshCamp = {
         phase: window.__entranceRoadtripCampSleepState().phase,
         visible: document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-congrats"),
-        transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform
+        transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform,
+        finOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-fin")).opacity,
+        nightOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-night-sky")).opacity,
+        darknessOpacity: getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-darkness")).opacity
       };
 
       var initial = state();
@@ -159,8 +161,8 @@ check(/function transitionRoadtripTraffic\(previousRoute\)/.test(source) &&
 check(/function roadtripGeometryProfile\(\)/.test(source) &&
   /var geometry = roadtripGeometryProfile\(\);/.test(source),
   "one route profile owns the visible road-width interpolation");
-check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*if \(!preserveCamp\) resetRoadtripCampSession\(\);/.test(source),
-  "fresh Road Trips clear the previous campsite before any transition frame");
+check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*if \(!preserveCamp\) resetRoadtripCampSessionBeforeReveal\(\);/.test(source),
+  "fresh Road Trips settle the previous campsite before any transition frame");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
   patchRaf: true,
@@ -174,7 +176,8 @@ check(result && result.errors.length === 0, "the transition sweep has no uncaugh
 check(result && result.previousFinale && result.previousFinale.phase === "congrats" &&
   result.previousFinale.visible === true && result.previousFinale.transform !== "none" &&
   result.freshCamp && result.freshCamp.phase === "idle" && result.freshCamp.visible === false &&
-  result.freshCamp.transform === "none",
+  result.freshCamp.transform === "none" && Number(result.freshCamp.finOpacity) === 0 &&
+  Number(result.freshCamp.nightOpacity) === 0 && Number(result.freshCamp.darknessOpacity) === 0,
   "a fresh run removes the prior ~fin~ pan before Camping can dissolve in",
   result && { previousFinale: result.previousFinale, freshCamp: result.freshCamp });
 

@@ -139,9 +139,11 @@ The progression values have distinct roles:
 - `seenRooms`: player-visible settled destinations;
 - `window.__secondRound`: latched Phase 2 state.
 
-Each Phase 1 controller owns its clue sequence and `__*DoNext` walker. Completion calls
-`__finishSolveAdvance(from, to)`, which records the source, unlocks the destination, and navigates
-only if the player is still in the source room. Do not infer completion from unlock state.
+Each Phase 1 controller owns its clue sequence and `__*DoNext` walker. Its final action settles the
+terminal prop and calls `__finishSolveAdvance(from, to[, navigationDelay])` in the same event turn.
+That owner records the source, unlocks the destination, writes the coherent checkpoint, then delays
+only the guarded pan when requested. It navigates only if the player is still in the source room.
+Do not infer completion from unlock state.
 
 `setSecondRound(true)` owns the Phase 2 transition. It unlocks and marks all main rooms solved,
 releases held content, and changes Enter to each room's free-play activity. Only reset clears this

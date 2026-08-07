@@ -111628,12 +111628,21 @@ function spawnDustMote(container) {
     updateNav();
     return true;
   };
-  window.__finishSolveAdvance = function (from, to) {
+  window.__finishSolveAdvance = function (from, to, navigationDelay) {
     if (window.__secondRound) return false;
     if (STAGES.indexOf(from) === -1 || STAGES.indexOf(to) === -1) return false;
+    // Final prop state is already settled by the caller. Own solved/unlocked state in this
+    // same event turn so pagehide cannot checkpoint a terminal prop without its progression.
+    // Any authored pause belongs only to the guarded room pan below.
     setRoomSolved(from, true);
     window.__unlockSolvedRoom(to);
-    if (STAGES[stageIndex] === from) goToStage(to);
+    saveCheckpoint();
+    function advance() {
+      if (!window.__secondRound && roomSolved(from) && STAGES[stageIndex] === from) goToStage(to);
+    }
+    var delay = Math.max(0, parseInt(navigationDelay, 10) || 0);
+    if (delay) setTimeout(advance, delay);
+    else advance();
     return true;
   };
   window.__maxUnlocked = function () { return maxUnlocked; }; // furthest room reached
@@ -112738,7 +112747,7 @@ function spawnDustMote(container) {
     updateGardenHint();
     if (window.__cinematic || window.__secondRound) return; // the cinematic drives room changes itself; phase two has no solve trail
     if (gardenState.water && gardenState.music && gardenState.candles) {
-      setTimeout(function () { window.__finishSolveAdvance("garden", "cuddly"); }, 700);
+      window.__finishSolveAdvance("garden", "cuddly", 700);
     }
   }
   window.markGardenWatered = function () {
@@ -120336,9 +120345,7 @@ function spawnDustMote(container) {
         return;
       }
       el.classList.add("done");
-      setTimeout(function () {
-        window.__finishSolveAdvance("cuddly", "office");
-      }, 700);
+      window.__finishSolveAdvance("cuddly", "office", 700);
     }
     var dragging = false, dragStartPt = null, dragStartOffset = { x: 0, y: 0 }, dragMoved = false;
     el.addEventListener("pointerdown", function (e) {
@@ -120502,9 +120509,7 @@ function spawnDustMote(container) {
     }
     if (glass) glass.classList.add("done", "zoomed");
     if (officeDim) officeDim.style.opacity = "0.72";
-    setTimeout(function () {
-      window.__finishSolveAdvance("office", "balcony");
-    }, 2000);
+    window.__finishSolveAdvance("office", "balcony", 2000);
     setTimeout(function () { if (officeDim) officeDim.style.opacity = "0"; }, 3000);
   });
 

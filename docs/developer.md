@@ -254,6 +254,8 @@ while the re-entry menu can rebuild the camp presentation without resetting its 
 routes stay provisional in the chooser, so dismissing it preserves any paused highway run. A camp
 revisit temporarily parks that run in `roadtripCampResumeRun`; checkpoint capture records both the
 camp presentation and that highway snapshot, and Continue restores the snapshot exactly.
+The Entrance checkpoint row also owns the driving coach’s explicit step/completed/dismissed record.
+Continue restores that record exactly; a row without it is fresh onboarding, never inferred history.
 
 `campStewState` owns the exact protein/base choices, six required fixed ingredients, close-up state,
 attended cooking elapsed time, and served/overcooked payoff. `advanceCampStew()` applies the slower

@@ -25,6 +25,11 @@ window.addEventListener("load", function () { setTimeout(function () {
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     report.fresh = coach();
+    var freshEntrance = window.__captureCheckpointSystems().entrance;
+    report.savedFreshCoach = freshEntrance.drive.coach;
+    delete freshEntrance.drive.coach;
+    window.__restoreCheckpointSystems({ entrance: freshEntrance }, "afterStage");
+    report.missingCoachRestore = coach();
     var coachClick = new MouseEvent("click", { bubbles: true, cancelable: true });
     document.getElementById("entrance-drive-coach").dispatchEvent(coachClick);
     report.clickedCoach = { coach: coach(), prevented: coachClick.defaultPrevented };
@@ -46,6 +51,12 @@ window.addEventListener("load", function () { setTimeout(function () {
     key("keydown", "ArrowLeft", "ArrowLeft");
     key("keyup", "ArrowLeft", "ArrowLeft");
     report.steered = coach();
+    var steeredEntrance = window.__captureCheckpointSystems().entrance;
+    document.getElementById("entrance-drive-help").dispatchEvent(new MouseEvent("click", {
+      bubbles: true, cancelable: true
+    }));
+    window.__restoreCheckpointSystems({ entrance: steeredEntrance }, "afterStage");
+    report.exactCoachRestore = coach();
     window.__entranceDriveRange("D");
     report.shifted = coach();
     key("keydown", "Control", "ControlLeft", { ctrlKey: true });
@@ -93,6 +104,40 @@ window.addEventListener("load", function () { setTimeout(function () {
 </script>`;
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 2400, { patchRaf: true });
+var RECOVERY_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+<script>
+(function () {
+  var marker = "entrance-coach-recovery-v1";
+  window.addEventListener("load", function () { setTimeout(function () {
+    try {
+      if (!sessionStorage.getItem(marker)) {
+        if (window.__endAttract) window.__endAttract();
+        window.__finishSolveAdvance("kitchen", "garden");
+        window.__saveLoftCheckpoint();
+        sessionStorage.setItem(marker, "1");
+        location.reload();
+        return;
+      }
+      var saved = JSON.parse(localStorage.getItem("loftCheckpoint:v1"));
+      var gate = document.getElementById("loft-recovery-gate");
+      gate.querySelector(".loft-recovery-btn.primary").click();
+      window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
+      window.__openEntrancePorscheDriveHud();
+      var root = document.getElementById("entrance-drive-coach");
+      var active = root.querySelector("[data-coach-step].active");
+      document.getElementById("__report").textContent = JSON.stringify({
+        errors: window.__errs || [], gate: !!gate, savedRoom: saved.progress.room,
+        savedCoach: saved.systems.entrance.drive.coach,
+        coach: { show: root.classList.contains("show"), step: active && Number(active.dataset.coachStep) }
+      });
+    } catch (error) {
+      document.getElementById("__report").textContent = JSON.stringify({ errors: [String(error && error.stack || error)] });
+    }
+  }, 180); });
+})();
+</script>`;
+var recovery = lib.runPageSync("rsvp.html", RECOVERY_HARNESS, 2200,
+  { patchRaf: true, urlSuffix: "?coach-recovery=1#play" });
 var MOBILE_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
 <script>
 window.addEventListener("load", function () { setTimeout(function () {
@@ -158,6 +203,16 @@ console.log("rsvp.html driving coach:");
 check(result && result.errors.length === 0, "coach harness has no uncaught errors", result && result.errors);
 check(result && result.fresh.show && result.fresh.step === 1,
   "a fresh dashboard starts with ignition", result && result.fresh);
+check(result && result.savedFreshCoach && result.savedFreshCoach.step === 1 &&
+  !result.savedFreshCoach.complete && !result.savedFreshCoach.dismissed &&
+  result.missingCoachRestore && result.missingCoachRestore.show && result.missingCoachRestore.step === 1,
+  "Continue treats a checkpoint without explicit coach state as fresh onboarding",
+  result && { saved: result.savedFreshCoach, restored: result.missingCoachRestore });
+check(recovery && recovery.errors.length === 0 && recovery.gate && recovery.savedRoom === "garden" &&
+  recovery.savedCoach && recovery.savedCoach.step === 1 && !recovery.savedCoach.complete &&
+  recovery.coach && recovery.coach.show && recovery.coach.step === 1,
+  "fresh Kitchen→Garden progress survives reload/Continue and still teaches the HUD",
+  recovery);
 check(result && result.clickedCoach && result.clickedCoach.prevented &&
   result.clickedCoach.coach.show && result.clickedCoach.coach.step === 1,
   "clicking the coach itself neither dismisses nor advances it", result && result.clickedCoach);
@@ -173,6 +228,8 @@ check(result && result.started.steerArrow &&
   "coach arrows animate along their target directions", result && result.started.steerArrow);
 check(result && result.steered.show && result.steered.step === 3,
   "steering advances to Drive", result && result.steered);
+check(result && result.exactCoachRestore && result.exactCoachRestore.show && result.exactCoachRestore.step === 3,
+  "Continue restores an explicitly saved coach step exactly", result && result.exactCoachRestore);
 check(result && result.shifted.show && result.shifted.step === 4,
   "selecting D advances to the dedicated cruise lesson", result && result.shifted);
 check(result && result.cruisePressed.show && result.cruisePressed.step === 5 &&

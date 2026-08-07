@@ -16,7 +16,7 @@ var PORSCHE = {
 };
 var ROW = { windows: "10101", lamps: { left: true, right: false }, porsche: PORSCHE };
 var DEFAULT_ROADTRIP = { scoringVersion: 2, unlocked: false, accepted: false, everAccepted: false, campVisited: false, routeChoice: "calgary", routeChooserOpen: false, practiceLaps: 0, distance: 0, distancePoints: 0, elapsedSeconds: 0, score: 0, multiplier: 1, collisions: 0, passes: 0, tokens: 0, escapes: 0, wildlifeHits: 0, campFireBuilt: false, campFireLit: false, campPinecones: 0, stew: null };
-var DEFAULT_DRIVE = { hud: false, gloveboxOpen: false, stalled: false, gear: 0, transmission: { mode: "auto", range: "P" }, speed: 0, position: 0, laneOffset: 0, steeringAngle: 0, wheelAngle: 0, wraps: 0, odometerKm: 0, facing: 1, yaw: 0, cruise: { active: false, target: 0 }, spinDirection: 0, spins: 0, roadtrip: DEFAULT_ROADTRIP };
+var DEFAULT_DRIVE = { hud: false, coach: { step: 1, complete: false, dismissed: false }, gloveboxOpen: false, stalled: false, gear: 0, transmission: { mode: "auto", range: "P" }, speed: 0, position: 0, laneOffset: 0, steeringAngle: 0, wheelAngle: 0, wraps: 0, odometerKm: 0, facing: 1, yaw: 0, cruise: { active: false, target: 0 }, spinDirection: 0, spins: 0, roadtrip: DEFAULT_ROADTRIP };
 var SAVED = {
   version: 1,
   savedAt: Date.now(),

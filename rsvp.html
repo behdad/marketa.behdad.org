@@ -49149,6 +49149,11 @@ window.__entranceRoomOpen = false;
         porsche: car,
         drive: {
           hud: driveState.hudOpen,
+          coach: {
+            step: driveCoachStep,
+            complete: driveCoachComplete,
+            dismissed: driveCoachDismissed
+          },
           gloveboxOpen: driveState.gloveboxOpen,
           stalled: driveState.stalled,
           gear: driveState.gear,
@@ -49295,12 +49300,14 @@ window.__entranceRoomOpen = false;
           } else roadtripState.routeChooserOpen = false;
         }
       }
-      if (row) {
-        driveCoachStep = 4;
-        driveCoachComplete = true;
-        driveCoachNeedsFreshPedal = false;
-        dismissPorscheDriveCoach();
-      }
+      var savedCoach = row && row.drive && row.drive.coach && typeof row.drive.coach === "object" ?
+        row.drive.coach : null;
+      driveCoachStep = savedCoach && Number.isFinite(Number(savedCoach.step)) ?
+        Math.max(1, Math.min(5, Math.floor(Number(savedCoach.step)))) : 1;
+      driveCoachComplete = !!(savedCoach && savedCoach.complete === true);
+      driveCoachDismissed = !!(savedCoach && savedCoach.dismissed === true);
+      driveCoachNeedsFreshPedal = false;
+      paintPorscheDriveCoach();
       windowPayoffShown = false;
       paintEntranceWindows();
       paintEntranceLamps();

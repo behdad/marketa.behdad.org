@@ -207,7 +207,10 @@ paused-run snapshot; restore migrates version 1–3 elapsed-route fields into me
 selection clears live entities before changing road geometry. Attended Calgary → Banff and Banff →
 Abraham turnoffs instead feed metre-based weights from `roadtripRouteBlend()` into the already-
 authored backdrops, so scenery, day/night lighting, winter treatment, and distance-scrolled
-parallax remain in phase through the crossfade. The latched Camping approach derives the same blend
+parallax remain in phase through the crossfade. `roadtripGeometryProfile()` applies those same
+weights to road, shoulder, median, centreline, and lane-mark geometry: Calgary's divided highway
+narrows into Banff while surplus lane marks fade, then Banff's divider fades into Abraham's
+single-lane road. The latched Camping approach derives the same blend
 from its automatic slowdown and reaches the stationary camp frame before the route swaps. Signs are
 projected beyond the current road edge by
 `positionRoadtripExitSign()`; fixed road fractions fail on Calgary's wider divided highway.

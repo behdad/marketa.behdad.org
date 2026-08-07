@@ -13,9 +13,20 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
   var report = { errors: [] };
   function state() { return window.__entranceRoomState().drive.roadtrip; }
   function blend() { return state().routeBlend; }
+  function geometry() {
+    var world = document.getElementById("entrance-roadtrip-world");
+    return {
+      median: Number(world.getAttribute("data-roadtrip-median-fraction")),
+      road: Number(world.getAttribute("data-roadtrip-road-fraction")),
+      outer: Number(world.getAttribute("data-roadtrip-outer-fraction")),
+      lane: Number(world.getAttribute("data-roadtrip-lane-opacity")),
+      extraLane: Number(world.getAttribute("data-roadtrip-extra-lane-opacity")),
+      innerLane: Number(world.getAttribute("data-roadtrip-inner-lane-fraction"))
+    };
+  }
   function sampleRoute(route, fraction, required) {
     window.__entranceRoadtripSetRouteDistance(route, required * fraction);
-    return { state: state(), blend: blend() };
+    return { state: state(), blend: blend(), geometry: geometry() };
   }
   window.addEventListener("load", function () { setTimeout(function () {
     try {
@@ -145,6 +156,9 @@ check(/function transitionRoadtripTraffic\(previousRoute\)/.test(source) &&
   /transitionRoadtripTraffic\(previousTurnoffRoute\)/.test(source) &&
   /transitionRoadtripTraffic\(previousLakeTurnoffRoute\)/.test(source),
   "attended road-width changes preserve and retarget the bounded traffic pool");
+check(/function roadtripGeometryProfile\(\)/.test(source) &&
+  /var geometry = roadtripGeometryProfile\(\);/.test(source),
+  "one route profile owns the visible road-width interpolation");
 check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*if \(!preserveCamp\) resetRoadtripCampSession\(\);/.test(source),
   "fresh Road Trips clear the previous campsite before any transition frame");
 
@@ -170,12 +184,26 @@ check(cb.length === 3 && cb[0].blend.calgary > cb[1].blend.calgary &&
   cb[1].blend.banff < cb[2].blend.banff && cb.every(function (row) {
     return Math.abs(row.blend.calgary + row.blend.banff - 1) < .001;
   }), "Calgary dissolves monotonically into Banff throughout the physical turnoff", cb);
+check(cb.length === 3 && cb[0].geometry.median > cb[1].geometry.median &&
+  cb[1].geometry.median > cb[2].geometry.median &&
+  cb[0].geometry.road > cb[1].geometry.road && cb[1].geometry.road > cb[2].geometry.road &&
+  cb[0].geometry.outer > cb[1].geometry.outer && cb[1].geometry.outer > cb[2].geometry.outer &&
+  cb[0].geometry.extraLane > cb[1].geometry.extraLane &&
+  cb[1].geometry.extraLane > cb[2].geometry.extraLane &&
+  cb[0].geometry.innerLane < cb[1].geometry.innerLane &&
+  cb[1].geometry.innerLane < cb[2].geometry.innerLane,
+  "Calgary's median, shoulders, and surplus lanes narrow continuously into Banff", cb);
 var ba = result && result.banffAbraham || [];
 check(ba.length === 3 && ba[0].blend.banff > ba[1].blend.banff &&
   ba[1].blend.banff > ba[2].blend.banff && ba[0].blend.abraham < ba[1].blend.abraham &&
   ba[1].blend.abraham < ba[2].blend.abraham && ba.every(function (row) {
     return Math.abs(row.blend.banff + row.blend.abraham - 1) < .001;
   }), "Banff's light and mountains dissolve monotonically into Abraham Lake", ba);
+check(ba.length === 3 && ba.every(function (row) {
+    return row.geometry.median === 0 && row.geometry.road === 1 && row.geometry.outer === 1.15;
+  }) && ba[0].geometry.lane > ba[1].geometry.lane &&
+  ba[1].geometry.lane > ba[2].geometry.lane,
+  "Banff's lane divider fades continuously into Abraham's single-lane road", ba);
 
 var parallax = result && result.parallax || {};
 var first = parallax.first || {};

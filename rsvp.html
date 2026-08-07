@@ -38860,6 +38860,31 @@ window.__entranceRoomOpen = false;
     }
     return blend;
   }
+  function roadtripGeometryProfile() {
+    var blend = roadtripRouteBlend();
+    var calgaryMix = blend.calgary;
+    var abrahamMix = blend.abraham + blend.camp;
+    var medianFraction = ROADTRIP_CALGARY_MEDIAN_FRACTION * calgaryMix;
+    var calgaryFirstBoundary = ROADTRIP_CALGARY_MEDIAN_FRACTION + ROADTRIP_CALGARY_LANE_FRACTION;
+    var calgarySecondBoundary = calgaryFirstBoundary + ROADTRIP_CALGARY_LANE_FRACTION;
+    var innerBoundary = calgaryFirstBoundary * calgaryMix + .5 * (1 - calgaryMix);
+    return {
+      calgaryMix: calgaryMix,
+      abrahamMix: abrahamMix,
+      medianFraction: medianFraction,
+      roadFraction: 1 + (ROADTRIP_CALGARY_ROAD_FRACTION - 1) * calgaryMix,
+      outerFraction: 1.15 + (ROADTRIP_CALGARY_OUTER_FRACTION - 1.15) * calgaryMix,
+      centerFraction: .023 + .1305 * calgaryMix,
+      centerWidth: .014 - .005 * calgaryMix,
+      laneBoundaries: abrahamMix >= .999 ? [] : [
+        { fraction: -innerBoundary, opacity: 1 - abrahamMix },
+        { fraction: innerBoundary, opacity: 1 - abrahamMix }
+      ].concat(calgaryMix > .001 ? [
+        { fraction: -calgarySecondBoundary, opacity: calgaryMix },
+        { fraction: calgarySecondBoundary, opacity: calgaryMix }
+      ] : [])
+    };
+  }
   function setRoadtripBlendOpacity(id, opacity) {
     var node = roadtripElement(id);
     if (node) node.style.opacity = Math.max(0, Math.min(1, Number(opacity) || 0)).toFixed(3);
@@ -43636,9 +43661,14 @@ window.__entranceRoomOpen = false;
       samples.push(roadtripProject(ROADTRIP_DRAW_DISTANCE * (1 - sampleIndex / 14)));
     }
     var calgary = roadtripIsCalgaryRoute();
-    var medianFraction = ROADTRIP_CALGARY_MEDIAN_FRACTION;
-    var roadFraction = calgary ? ROADTRIP_CALGARY_ROAD_FRACTION : 1;
-    var outerFraction = calgary ? ROADTRIP_CALGARY_OUTER_FRACTION : 1.15;
+    var geometry = roadtripGeometryProfile();
+    var medianFraction = geometry.medianFraction;
+    var roadFraction = geometry.roadFraction;
+    var outerFraction = geometry.outerFraction;
+    var divided = medianFraction > .001;
+    var medianRailWidth = .012 * geometry.calgaryMix;
+    var medianShoulderWidth = .018 * geometry.calgaryMix;
+    var medianRumbleWidth = .009 * geometry.calgaryMix;
     var roadFar = samples[0];
     var roadtripWorld = roadtripElement("entrance-roadtrip-world");
     if (roadtripWorld) {
@@ -43646,59 +43676,66 @@ window.__entranceRoomOpen = false;
       roadtripWorld.setAttribute("data-roadtrip-grade", roadFar.grade.toFixed(5));
       roadtripWorld.setAttribute("data-roadtrip-horizon-y", roadFar.y.toFixed(2));
       roadtripWorld.setAttribute("data-roadtrip-camera-pitch-y", roadFar.cameraPitchY.toFixed(3));
+      roadtripWorld.setAttribute("data-roadtrip-median-fraction", medianFraction.toFixed(3));
+      roadtripWorld.setAttribute("data-roadtrip-road-fraction", roadFraction.toFixed(3));
+      roadtripWorld.setAttribute("data-roadtrip-outer-fraction", outerFraction.toFixed(3));
+      roadtripWorld.setAttribute("data-roadtrip-lane-opacity",
+        (geometry.laneBoundaries[0] ? geometry.laneBoundaries[0].opacity : 0).toFixed(3));
+      roadtripWorld.setAttribute("data-roadtrip-extra-lane-opacity", geometry.calgaryMix.toFixed(3));
+      roadtripWorld.setAttribute("data-roadtrip-inner-lane-fraction",
+        (geometry.laneBoundaries[0] ? Math.abs(geometry.laneBoundaries[0].fraction) : 0).toFixed(3));
     }
     if (roadtripVergePath) roadtripVergePath.setAttribute("d",
       roadtripOutsidePath(samples, -outerFraction, 0) +
       roadtripOutsidePath(samples, outerFraction, 680));
-    if (roadtripRoadPath) roadtripRoadPath.setAttribute("d", calgary ?
+    if (roadtripRoadPath) roadtripRoadPath.setAttribute("d", divided ?
       roadtripBandPath(samples, -roadFraction, -medianFraction) +
         roadtripBandPath(samples, medianFraction, roadFraction) :
       roadtripBandPath(samples, -outerFraction, outerFraction));
-    if (roadtripMedianPath) roadtripMedianPath.setAttribute("d", calgary ?
+    if (roadtripMedianPath) roadtripMedianPath.setAttribute("d", divided ?
       roadtripBandPath(samples, -medianFraction, medianFraction) : "");
-    if (roadtripMedianRailPaths[0]) roadtripMedianRailPaths[0].setAttribute("d", calgary ?
-      roadtripBandPath(samples, -medianFraction, -medianFraction + .012) : "");
-    if (roadtripMedianRailPaths[1]) roadtripMedianRailPaths[1].setAttribute("d", calgary ?
-      roadtripBandPath(samples, medianFraction - .012, medianFraction) : "");
-    if (roadtripShoulderPath) roadtripShoulderPath.setAttribute("d", calgary ?
+    if (roadtripMedianRailPaths[0]) roadtripMedianRailPaths[0].setAttribute("d", divided ?
+      roadtripBandPath(samples, -medianFraction, -medianFraction + medianRailWidth) : "");
+    if (roadtripMedianRailPaths[1]) roadtripMedianRailPaths[1].setAttribute("d", divided ?
+      roadtripBandPath(samples, medianFraction - medianRailWidth, medianFraction) : "");
+    if (roadtripShoulderPath) roadtripShoulderPath.setAttribute("d", divided ?
       roadtripBandPath(samples, -outerFraction, -roadFraction) +
         roadtripBandPath(samples, roadFraction, outerFraction) +
-        roadtripBandPath(samples, -medianFraction - .018, -medianFraction) +
-        roadtripBandPath(samples, medianFraction, medianFraction + .018) :
+        roadtripBandPath(samples, -medianFraction - medianShoulderWidth, -medianFraction) +
+        roadtripBandPath(samples, medianFraction, medianFraction + medianShoulderWidth) :
       roadtripBandPath(samples, -outerFraction, -1) + roadtripBandPath(samples, 1, outerFraction));
-    if (roadtripRumblePath) roadtripRumblePath.setAttribute("d", calgary ?
+    if (roadtripRumblePath) roadtripRumblePath.setAttribute("d", divided ?
       roadtripLinePath(samples, -roadFraction - .015) + roadtripLinePath(samples, roadFraction + .015) +
-        roadtripLinePath(samples, -medianFraction - .008) + roadtripLinePath(samples, medianFraction + .008) :
+        roadtripLinePath(samples, -medianFraction - medianRumbleWidth) +
+        roadtripLinePath(samples, medianFraction + medianRumbleWidth) :
       roadtripLinePath(samples, -1.015) + roadtripLinePath(samples, 1.015));
     if (roadtripEdgePaths[0]) roadtripEdgePaths[0].setAttribute("d",
       roadtripBandPath(samples, -roadFraction, -roadFraction + .006));
     if (roadtripEdgePaths[1]) roadtripEdgePaths[1].setAttribute("d",
       roadtripBandPath(samples, roadFraction - .006, roadFraction));
-    if (roadtripCenterPath) roadtripCenterPath.setAttribute("d", calgary ?
-      roadtripBandPath(samples, -medianFraction - .018, -medianFraction - .009) +
-        roadtripBandPath(samples, medianFraction + .009, medianFraction + .018) :
-      roadtripBandPath(samples, -.030, -.016) + roadtripBandPath(samples, .016, .030));
+    if (roadtripCenterPath) roadtripCenterPath.setAttribute("d",
+      roadtripBandPath(samples, -geometry.centerFraction - geometry.centerWidth / 2,
+        -geometry.centerFraction + geometry.centerWidth / 2) +
+      roadtripBandPath(samples, geometry.centerFraction - geometry.centerWidth / 2,
+        geometry.centerFraction + geometry.centerWidth / 2));
     if (roadtripWinterGroundPath) roadtripWinterGroundPath.setAttribute("d",
       roadtripOutsidePath(samples, -outerFraction, 0) + roadtripOutsidePath(samples, outerFraction, 680) +
-        (calgary ? roadtripBandPath(samples, -medianFraction, medianFraction) : ""));
+        (divided ? roadtripBandPath(samples, -medianFraction, medianFraction) : ""));
     if (roadtripWinterEdgePath) roadtripWinterEdgePath.setAttribute("d",
       roadtripBandPath(samples, -outerFraction - .018, -outerFraction) +
       roadtripBandPath(samples, outerFraction, outerFraction + .018));
     var markSpacing = 16;
     var markCycle = markSpacing * 9;
     var scroll = roadtripState.distance % markCycle;
-    var calgaryFirstBoundary = medianFraction + ROADTRIP_CALGARY_LANE_FRACTION;
-    var calgarySecondBoundary = calgaryFirstBoundary + ROADTRIP_CALGARY_LANE_FRACTION;
-    var laneBoundaries = calgary ?
-      [-calgarySecondBoundary, -calgaryFirstBoundary, calgaryFirstBoundary, calgarySecondBoundary] :
-      roadtripIsAbrahamRoute() ? [] : [-.5, .5];
+    var laneBoundaries = geometry.laneBoundaries;
     var visibleMarkCount = laneBoundaries.length * 9;
     roadtripLaneMarks.forEach(function (mark, index) {
       if (!laneBoundaries.length) {
         mark.setAttribute("visibility", "hidden");
         return;
       }
-      var laneBoundary = laneBoundaries[index % laneBoundaries.length];
+      var boundary = laneBoundaries[index % laneBoundaries.length];
+      var laneBoundary = boundary.fraction;
       var row = Math.floor(index / laneBoundaries.length);
       var remaining = ((row * markSpacing - scroll + markCycle) % markCycle) + 2;
       var far = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, remaining + 6));
@@ -43713,6 +43750,7 @@ window.__entranceRoomOpen = false;
         "L" + (nearX - nearWidth).toFixed(2) + " " + near.y.toFixed(2) + "Z");
       mark.setAttribute("visibility", index < visibleMarkCount && remaining <= ROADTRIP_DRAW_DISTANCE ?
         "visible" : "hidden");
+      mark.setAttribute("opacity", boundary.opacity.toFixed(3));
     });
     var furnitureCycle = ROADTRIP_FURNITURE_SIZE * 21;
     var exitSignBands = roadtripExitSignBands();

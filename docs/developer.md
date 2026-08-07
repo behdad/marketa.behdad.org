@@ -217,8 +217,13 @@ on coarse pointers.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
 spawn plans deterministic from the run seed and never add timer-driven unbounded entities.
-`syncRoadtripTrafficLane()` owns faster traffic's pull-out, clearance, and return; Banff may borrow
-an empty opposing inner lane, Calgary stays within its carriageway, and Abraham never weaves.
+`roadtripSpawnPlan()` assigns natural traffic a route-relative seeded speed; forward traffic's deck
+centres above the posted limit while RVs and semis retain a slower tail. Pursuit and summoned plans
+carry their own explicit seeded speed so changing the natural profile cannot silently retune them.
+`syncRoadtripTrafficLane()` owns faster traffic's pull-out, clearance, return, and car-following
+speed. `roadtripTrafficLead()` selects only the nearest vehicle in the current lane; if a pass is
+blocked, a bounded headway controller slows the follower and exposes its brake-lamp state. Banff may
+borrow an empty opposing inner lane, Calgary stays within its carriageway, and Abraham never weaves.
 `roadtripCurvatureAt()`, `roadtripCurveOffset()`, `syncRoadtripShoulder()`, and
 `paintRoadtripMirror()` are the central geometry owners.
 
@@ -331,8 +336,9 @@ its held-speed target; unattended lifecycle cleanup releases momentary inputs wi
 
 Primary coverage is `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`,
 `tests/entrance-recovery.js`, `tests/entrance-coach.js`, `tests/entrance-cruise.js`, `tests/entrance-roadtrip.js`,
-`tests/entrance-roadtrip-pause.js`, `tests/entrance-roadtrip-scoring.js`, `tests/entrance-windshield-cracks.js`,
-`tests/entrance-demerits.js`, and `tests/entrance-police.js`.
+`tests/entrance-roadtrip-pause.js`, `tests/entrance-roadtrip-scoring.js`,
+`tests/entrance-roadtrip-ai-overtake.js`, `tests/entrance-roadtrip-traffic-speed.js`,
+`tests/entrance-windshield-cracks.js`, `tests/entrance-demerits.js`, and `tests/entrance-police.js`.
 
 ## Apps and minigames
 

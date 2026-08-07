@@ -174,8 +174,10 @@ Road Trip uses the same steering, transmission, accelerator, and brake:
 Route legs and exits advance only with forward travel. Waiting, pausing, or reversing does not move
 the trip silently toward its next segment.
 
-AUTO provides gentle curve assistance; MANUAL leaves curve steering to the player. Traffic,
-shoulders, gravel, weather, seasons, wildlife, and police affect the trip. Leaving an active highway
+AUTO provides gentle curve assistance; MANUAL leaves curve steering to the player. Natural traffic
+paces itself to the posted road, with a slower RV/semi tail; faster drivers pass when a lane is clear
+and queue behind slower vehicles when it is not. Shoulders, gravel, weather, seasons, wildlife, and
+police affect the trip. Leaving an active highway
 pauses it. Select **Road Trip**, then **Continue** to restore that exact run or **New** to choose
 another starting segment; the old run is replaced only after a segment is chosen. Once reached,
 **Camping** returns directly to the campsite.

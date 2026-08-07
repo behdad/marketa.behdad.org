@@ -36,8 +36,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       junctionY: Number(spur.getAttribute("data-roadtrip-junction-y")),
       destinationX: Number(spur.getAttribute("data-roadtrip-destination-x")),
       destinationY: Number(spur.getAttribute("data-roadtrip-destination-y")),
+      junctionInnerX: Number(spur.getAttribute("data-roadtrip-junction-inner-x")),
+      junctionOuterX: Number(spur.getAttribute("data-roadtrip-junction-outer-x")),
+      destinationInnerX: Number(spur.getAttribute("data-roadtrip-destination-inner-x")),
+      destinationOuterX: Number(spur.getAttribute("data-roadtrip-destination-outer-x")),
       nearWidth: Number(spur.getAttribute("data-roadtrip-near-width")),
       farWidth: Number(spur.getAttribute("data-roadtrip-far-width")),
+      speedClearances: Array.prototype.filter.call(
+        document.querySelectorAll("[data-roadtrip-furniture^='speed-']"),
+        function (node) { return node.getAttribute("visibility") === "visible"; }
+      ).map(function (node) {
+        return Number(node.getAttribute("data-roadtrip-turn-sign-clearance"));
+      }),
       afterRoad: !!(road.compareDocumentPosition(spur) & Node.DOCUMENT_POSITION_FOLLOWING)
     };
   }
@@ -57,6 +67,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
         setAbraham(first - 14 * nominalSecond, .5, 50);
         report.farExit = { state: roadtrip(), visual: visual() };
+        setAbraham(first - 7 * nominalSecond, .5, 50);
+        report.midExit = { state: roadtrip(), visual: visual() };
         setAbraham(first - nominalSecond, .5, 50);
         report.firstExit = { state: roadtrip(), visual: visual() };
         setAbraham(first + 3 * nominalSecond, .5, 50);
@@ -100,8 +112,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 </script>`;
 
 function run(coarse) {
-  return lib.runPageSync("rsvp.html", HARNESS, 2800, {
-    patchRaf: true,
+  return lib.runPageSync("rsvp.html", HARNESS, 1200, {
     forceMotion: true,
     seedRandom: true,
     forceCoarsePointer: coarse,
@@ -125,6 +136,21 @@ function camp(state) {
   return state && state.drive && state.drive.roadtrip.route === "camp" &&
     state.drive.roadtrip.active && !state.car.engineOn && state.drive.speed === 0;
 }
+function simpleSpur(visual) {
+  var asphalt = visual && visual.asphalt || "";
+  return /^M/.test(asphalt) && /Z$/.test(asphalt) && !/[CQAS]/.test(asphalt) &&
+    (asphalt.match(/[ML]/g) || []).length === 4 &&
+    visual.junctionInnerX < visual.junctionOuterX &&
+    visual.destinationInnerX < visual.destinationOuterX &&
+    visual.destinationY < visual.junctionY &&
+    visual.destinationInnerX > visual.junctionInnerX &&
+    visual.nearWidth > visual.farWidth;
+}
+function signsClear(visual) {
+  return visual && visual.speedClearances.every(function (gap) {
+    return Number.isFinite(gap) && gap >= 8;
+  });
+}
 
 console.log("rsvp.html optional recurring Camping exit:");
 var desktop = run(false);
@@ -139,8 +165,14 @@ var mobile = run(true);
   check(farState.route === "abraham" && farState.campExitVisible && !farState.campExitTakeable &&
     farVisual.sign === "visible" && farVisual.spur === "visible" &&
     farVisual.destinationX > farVisual.junctionX && farVisual.destinationY < farVisual.junctionY &&
-    farVisual.signPostX > farVisual.destinationX && farVisual.signPostX - farVisual.destinationX < 30,
+    farVisual.signPostX > farVisual.destinationX && farVisual.signPostX - farVisual.destinationX < 30 &&
+    simpleSpur(farVisual) && signsClear(farVisual),
     device + " shows the upper-right branch at the fourteen-second-equivalent travel distance", far);
+  var mid = result && result.midExit || {};
+  check(mid.state && mid.state.campExitVisible && !mid.state.campExitTakeable &&
+    mid.visual && mid.visual.sign === "visible" && mid.visual.spur === "visible" &&
+    simpleSpur(mid.visual) && signsClear(mid.visual),
+    device + " keeps one coherent paved branch through the middle approach", mid);
   var first = result && result.firstExit || {};
   var firstState = first.state || {};
   var firstVisual = first.visual || {};
@@ -155,7 +187,7 @@ var mobile = run(true);
     firstVisual.destinationY < firstVisual.junctionY - 15 &&
     firstVisual.nearWidth > firstVisual.farWidth * 2 && firstVisual.nearWidth < 80 &&
     firstVisual.signPostX > firstVisual.destinationX && firstVisual.signPostX - firstVisual.destinationX < 30 &&
-    /^M/.test(firstVisual.asphalt || "") && /^M/.test(firstVisual.innerEdge || ""),
+    simpleSpur(firstVisual) && signsClear(firstVisual) && /^M/.test(firstVisual.innerEdge || ""),
     device + " paints a receding upper-right spur with its larger sign beside it", firstVisual);
 
   var missed = result && result.missed || {};

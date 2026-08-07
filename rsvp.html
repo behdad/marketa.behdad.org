@@ -37465,6 +37465,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_CAMP_EXIT_LEAD_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_LEAD_SECONDS);
   var ROADTRIP_CAMP_EXIT_TAIL_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_TAIL_SECONDS);
   var ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_REPEAT_SECONDS);
+  var ROADTRIP_ROADSIDE_SIGN_GAP = 8;
   var ROADTRIP_CAMP_ARRIVAL_SPEED = 10;
   var ROADTRIP_CAMP_BRAKE_RATE = 2.4;
   var ROADTRIP_CENTERLINE_ENFORCE_LANE = -.18;
@@ -42773,19 +42774,22 @@ window.__entranceRoomOpen = false;
   }
   function paintRoadtripCampSpur(point, signScale, signHalfWidth) {
     if (!roadtripCampSpurNode) return null;
-    var junctionPoint = roadtripProject(Math.max(4, point.remaining - 12));
+    var junctionPoint = roadtripProject(Math.max(18, point.remaining - 12));
     var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 28));
     var junctionInner = roadtripProjectLateral(junctionPoint, 1);
-    var junctionOuter = roadtripProjectLateral(junctionPoint, 1.22);
+    var junctionOuter = roadtripProjectLateral(junctionPoint, 1.28);
     var junctionY = junctionPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
     var destinationLimit = 680 - signHalfWidth * signScale * 2 - 12;
-    var destinationX = Math.min(destinationLimit, Math.max(
-      mainRoadRight + 18,
-      (junctionInner + junctionOuter) / 2 + 20 + junctionPoint.perspective * 58));
+    var destinationX = Math.max(junctionOuter + 9, Math.min(destinationLimit,
+      (junctionInner + junctionOuter) / 2 + 18 + junctionPoint.perspective * 48));
     var destinationY = destinationPoint.y;
-    var farHalfWidth = 3.5 + destinationPoint.perspective * 5;
-    var shoulderInset = 1.5 + junctionPoint.perspective * 2.5;
+    var farHalfWidth = 2.5 + destinationPoint.perspective * 4.5;
+    var shoulderInset = 1.3 + junctionPoint.perspective * 2.2;
+    var edgeNearWidth = 1 + junctionPoint.perspective * 1.8;
+    var edgeFarWidth = .7 + destinationPoint.perspective * 1.1;
+    var destinationInner = destinationX - farHalfWidth;
+    var destinationOuter = destinationX + farHalfWidth;
     var shoulder = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-shoulder");
     var asphalt = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-asphalt");
     var innerEdge = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-inner-edge");
@@ -42793,27 +42797,27 @@ window.__entranceRoomOpen = false;
     function spurPath(inset) {
       var nearInner = junctionInner - inset;
       var nearOuter = junctionOuter + inset;
-      var farInner = destinationX - farHalfWidth - inset * .35;
-      var farOuter = destinationX + farHalfWidth + inset * .35;
-      return "M" + nearInner.toFixed(2) + " " + (junctionY - inset * .15).toFixed(2) +
-        "C" + (nearInner + 18).toFixed(2) + " " + (junctionY - 20).toFixed(2) + " " +
-        (farInner - 26).toFixed(2) + " " + (destinationY + 18).toFixed(2) + " " +
-        farInner.toFixed(2) + " " + destinationY.toFixed(2) +
-        "L" + farOuter.toFixed(2) + " " + (destinationY + 1.5).toFixed(2) +
-        "C" + (farOuter - 19).toFixed(2) + " " + (destinationY + 25).toFixed(2) + " " +
-        (nearOuter + 10).toFixed(2) + " " + (junctionY - 10).toFixed(2) + " " +
-        nearOuter.toFixed(2) + " " + (junctionY + inset * .3).toFixed(2) + "Z";
+      var farInner = destinationInner - inset * .4;
+      var farOuter = destinationOuter + inset * .4;
+      return "M" + nearInner.toFixed(2) + " " + junctionY.toFixed(2) +
+        "L" + farInner.toFixed(2) + " " + destinationY.toFixed(2) +
+        "L" + farOuter.toFixed(2) + " " + destinationY.toFixed(2) +
+        "L" + nearOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z";
     }
     if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset));
     if (asphalt) asphalt.setAttribute("d", spurPath(0));
     if (innerEdge) innerEdge.setAttribute("d", "M" + junctionInner.toFixed(2) + " " + junctionY.toFixed(2) +
-      "C" + (junctionInner + 18).toFixed(2) + " " + (junctionY - 20).toFixed(2) + " " +
-      (destinationX - farHalfWidth - 26).toFixed(2) + " " + (destinationY + 18).toFixed(2) + " " +
-      (destinationX - farHalfWidth).toFixed(2) + " " + destinationY.toFixed(2));
-    if (outerEdge) outerEdge.setAttribute("d", "M" + junctionOuter.toFixed(2) + " " + junctionY.toFixed(2) +
-      "C" + (junctionOuter + 10).toFixed(2) + " " + (junctionY - 10).toFixed(2) + " " +
-      (destinationX + farHalfWidth - 19).toFixed(2) + " " + (destinationY + 25).toFixed(2) + " " +
-      (destinationX + farHalfWidth).toFixed(2) + " " + (destinationY + 1.5).toFixed(2));
+      "L" + destinationInner.toFixed(2) + " " + destinationY.toFixed(2) +
+      "L" + (destinationInner + edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
+      "L" + (junctionInner + edgeNearWidth).toFixed(2) + " " + junctionY.toFixed(2) + "Z");
+    if (outerEdge) outerEdge.setAttribute("d", "M" + (junctionOuter - edgeNearWidth).toFixed(2) + " " + junctionY.toFixed(2) +
+      "L" + (destinationOuter - edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
+      "L" + destinationOuter.toFixed(2) + " " + destinationY.toFixed(2) +
+      "L" + junctionOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z");
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-inner-x", junctionInner.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-outer-x", junctionOuter.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-destination-inner-x", destinationInner.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-destination-outer-x", destinationOuter.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-x",
       ((junctionInner + junctionOuter) / 2).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-y", junctionY.toFixed(2));
@@ -42823,6 +42827,40 @@ window.__entranceRoomOpen = false;
     roadtripCampSpurNode.setAttribute("data-roadtrip-far-width", (farHalfWidth * 2).toFixed(2));
     roadtripCampSpurNode.setAttribute("visibility", "visible");
     return { x: destinationX, y: destinationY, halfWidth: farHalfWidth, roadRight: mainRoadRight };
+  }
+  function roadtripExitSignBands() {
+    var bands = [];
+    function add(point, scale, height) {
+      bands.push({ top: point.y - height * scale, bottom: point.y });
+    }
+    if (roadtripState.route === "turnoff") {
+      var turnoffProgress = Math.max(0, Math.min(1,
+        roadtripState.turnoffElapsed / ROADTRIP_TURNOFF_SECONDS));
+      var turnoffPoint = roadtripProject(104 - turnoffProgress * 82);
+      add(turnoffPoint, .16 + turnoffPoint.perspective * .82, 68);
+    } else if (roadtripState.route === "lake-turnoff") {
+      var lakeProgress = Math.max(0, Math.min(1,
+        roadtripState.lakeTurnoffElapsed / ROADTRIP_LAKE_TURNOFF_SECONDS));
+      var lakePoint = roadtripProject(104 - lakeProgress * 82);
+      add(lakePoint, .16 + lakePoint.perspective * .82, 70);
+    } else {
+      var campTiming = roadtripCampExitTiming();
+      if (campTiming.visible) {
+        var campPoint = roadtripProject(106 - campTiming.progress * 86);
+        add(campPoint, .19 + campPoint.perspective * .98, 78);
+      }
+    }
+    return bands;
+  }
+  function roadtripSpeedSignClearance(point, scale, bands) {
+    if (!bands.length) return 999;
+    var top = point.y - 58 * scale;
+    var bottom = point.y;
+    return bands.reduce(function (clearance, band) {
+      var gap = bottom < band.top ? band.top - bottom :
+        band.bottom < top ? top - band.bottom : 0;
+      return Math.min(clearance, gap);
+    }, 999);
   }
   function positionRoadtripCampExitSign(node, point, scale, halfWidth, spur) {
     var roadRight = spur ? spur.roadRight : roadtripProjectLateral(point, 1);
@@ -42923,6 +42961,7 @@ window.__entranceRoomOpen = false;
         "visible" : "hidden");
     });
     var furnitureCycle = ROADTRIP_FURNITURE_SIZE * 21;
+    var exitSignBands = roadtripExitSignBands();
     roadtripFurniturePool.forEach(function (item) {
       var remaining = ((item.index * 21 - roadtripState.distance % furnitureCycle + furnitureCycle) % furnitureCycle) + 4;
       var point = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, remaining));
@@ -42937,11 +42976,15 @@ window.__entranceRoomOpen = false;
       item.node.setAttribute("data-roadtrip-side", side < 0 ? "left" : "right");
       item.node.setAttribute("data-roadtrip-ahead", remaining.toFixed(2));
       item.node.setAttribute("data-roadtrip-project-y", point.y.toFixed(2));
+      var signClearance = item.type === "speed-limit" ?
+        roadtripSpeedSignClearance(point, scale, exitSignBands) : 999;
+      item.node.setAttribute("data-roadtrip-turn-sign-clearance", signClearance.toFixed(2));
       item.node.setAttribute("transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" +
         horizontalScale.toFixed(3) + " " + scale.toFixed(3) + ")");
       var abrahamFurniture = roadtripIsAbrahamRoute() && item.type !== "lamp";
       item.node.setAttribute("visibility", roadtripState.route !== "camp" &&
         remaining <= ROADTRIP_DRAW_DISTANCE &&
+        (item.type !== "speed-limit" || signClearance >= ROADTRIP_ROADSIDE_SIGN_GAP) &&
         (!calgary || item.type === "speed-limit") && (!roadtripIsAbrahamRoute() || abrahamFurniture) ?
         "visible" : "hidden");
     });

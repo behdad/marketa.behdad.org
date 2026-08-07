@@ -59,6 +59,31 @@ var harness = String.raw`<script>
     check("Czech shortcut card names both fixed floors", czech &&
       czech.textContent.indexOf("místnost nahoře") !== -1 &&
       czech.textContent.indexOf("místnost dole") !== -1, czech && czech.textContent);
+    key("?");
+    await sleep(280);
+    setLang("en");
+    key("5");
+    await sleep(60);
+    window.__openEntranceRoom();
+    window.__openEntrancePorscheDriveHud();
+    window.__entranceDriveTransmissionMode("auto", false);
+    window.__entranceRoadtripStart();
+    window.__entranceRoadtripSetRouteDistance("banff", 420);
+    var beforeDetour = window.__entranceRoomState().drive.roadtrip;
+    window.__exitEntranceRoadtrip();
+    window.__hideEntrancePorscheDriveHud();
+    key("2");
+    await sleep(800);
+    var parked = window.__entranceRoomState().drive.roadtrip;
+    key("0");
+    await sleep(80);
+    var returned = window.__entranceRoomState().drive.roadtrip;
+    check("0 returns a number-key detour to its paused Road Trip",
+      window.currentStageName === "balcony" && window.__entranceRoomOpen &&
+      beforeDetour.active && !parked.active && parked.paused && returned.active &&
+      returned.resumePending && returned.route === beforeDetour.route &&
+      returned.banffDistance === beforeDetour.banffDistance,
+      JSON.stringify({ before: beforeDetour, parked: parked, returned: returned }));
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

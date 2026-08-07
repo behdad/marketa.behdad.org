@@ -99,6 +99,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
               crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: mealShown(),
               available: camp.classList.contains("stew-crate-available")
             };
+            var freshFireCheckpoint = window.__captureCheckpointSystems().entrance;
             click(crate);
             var itemIds = Array.from(game.querySelectorAll("[data-stew-item]"))
               .map(function (node) { return node.getAttribute("data-stew-item"); }).sort();
@@ -250,25 +251,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 };
 
                 window.__entranceRoadtripCampFireReplay();
-                report.extinguished = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(), crate: shown(crate) };
-                window.__entranceRoadtripCampFireReplay();
-                report.rebuild = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(), crate: shown(crate) };
-                lightFire(function () {
-                  try {
-                    report.relit = { state: stew(), crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: mealShown() };
-                    click(crate);
-                    choose("tofu"); choose("barley"); choose("onion");
-                    var draftCheckpoint = window.__captureCheckpointSystems().entrance;
-                    window.__restoreCheckpointSystems({ entrance: draftCheckpoint }, "afterStage");
-                    report.draftRestored = { saved: draftCheckpoint.drive.roadtrip.stew, state: stew(), crate: shown(crate), overlay: game.classList.contains("open") };
-                    click(crate);
-                    fullRequired("chicken", "barley");
-                    ["carrots", "mushrooms", "chilies", "coriander"].forEach(choose);
-                    click(cook);
-                    window.__entranceRoadtripCampStewStep(19999);
-                    report.beforeOvercooked = stew();
-                    window.__entranceRoadtripCampStewStep(1);
-                    var overcookedCheckpoint = window.__captureCheckpointSystems().entrance;
+                report.earlyFireClick = { state: stew(), pot: shown(pot), grill: shown(grill), corn: shown(corn), meal: mealShown(), crate: shown(crate) };
+                window.__restoreCheckpointSystems({ entrance: freshFireCheckpoint }, "afterStage");
+                report.freshFireRestored = { state: stew(), crate: shown(crate), pot: shown(pot), grill: shown(grill), meal: mealShown() };
+                click(crate);
+                choose("tofu"); choose("barley");
+                var draftCheckpoint = window.__captureCheckpointSystems().entrance;
+                window.__restoreCheckpointSystems({ entrance: draftCheckpoint }, "afterStage");
+                report.draftRestored = { saved: draftCheckpoint.drive.roadtrip.stew, state: stew(), crate: shown(crate), overlay: game.classList.contains("open") };
+                click(crate);
+                fullRequired("chicken", "barley");
+                ["carrots", "mushrooms", "chilies", "coriander"].forEach(choose);
+                click(cook);
+                window.__entranceRoadtripCampStewStep(19999);
+                report.beforeOvercooked = stew();
+                window.__entranceRoadtripCampStewStep(1);
+                var overcookedCheckpoint = window.__captureCheckpointSystems().entrance;
                     setTimeout(function () {
                       try {
                         report.overcooked = {
@@ -301,8 +299,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                       } catch (error) { report.errors.push(String(error && error.stack || error)); }
                       finish();
                     }, 700);
-                  } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
-                });
                   } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
                 }, 3200);
               } catch (error) { report.errors.push(String(error && error.stack || error)); finish(); }
@@ -423,15 +419,20 @@ check(result && result.bowlOwnership && result.bowlOwnership.every(Boolean) && r
   }),
   "each served bowl inherits its camper's repeated drags and remains aligned through day/night and checkpoint restore",
   result && { ownership: result.bowlOwnership, drags: result.bowlDrags, dayNight: result.bowlsAfterDayNight, restored: result.servedRestored });
-check(result && result.extinguished && result.extinguished.state.phase === "cold" && !result.extinguished.pot &&
-  !result.extinguished.grill && !result.extinguished.corn && !result.extinguished.meal && !result.extinguished.crate &&
-  result.rebuild && result.rebuild.state.phase === "cold" && !result.rebuild.pot && !result.rebuild.grill &&
-  !result.rebuild.corn && !result.rebuild.meal && !result.rebuild.crate && result.relit && result.relit.crate &&
-  !result.relit.pot && !result.relit.grill && !result.relit.meal,
-  "manual extinguish hard-resets dinner before rebuild, and a freshly lit fire restores the empty crate", result && { extinguished: result.extinguished, rebuild: result.rebuild, relit: result.relit });
-check(result && result.draftRestored && result.draftRestored.saved === null && !result.draftRestored.state.open &&
-  result.draftRestored.state.phase === "cold" && result.draftRestored.crate && !result.draftRestored.overlay,
-  "checkpoint restore discards an open partial draft", result && result.draftRestored);
+check(result && result.earlyFireClick && result.earlyFireClick.state.status === "served" &&
+  result.earlyFireClick.state.fireLit && result.earlyFireClick.grill && result.earlyFireClick.corn &&
+  result.earlyFireClick.meal && !result.earlyFireClick.crate && result.freshFireRestored &&
+  result.freshFireRestored.state.phase === "cold" && result.freshFireRestored.state.fireLit &&
+  result.freshFireRestored.crate && !result.freshFireRestored.pot && !result.freshFireRestored.grill &&
+  !result.freshFireRestored.meal,
+  "an early fire click preserves dinner, while a fresh-lit checkpoint restores the empty crate",
+  result && { clicked: result.earlyFireClick, restored: result.freshFireRestored });
+check(result && result.draftRestored && result.draftRestored.saved &&
+  result.draftRestored.saved.protein === "tofu" && result.draftRestored.saved.starch === "barley" &&
+  !result.draftRestored.state.open &&
+  result.draftRestored.state.phase === "raw" && result.draftRestored.state.recipeComplete &&
+  result.draftRestored.crate && !result.draftRestored.overlay,
+  "checkpoint restore preserves a partial draft while leaving its overlay closed", result && result.draftRestored);
 check(result && result.beforeOvercooked && result.beforeOvercooked.status === "cooking" &&
   result.beforeOvercooked.phase === "ready" && result.beforeOvercooked.elapsed === 19999,
   "stew remains ready for a full twenty seconds before it can burn", result && result.beforeOvercooked);

@@ -342,6 +342,7 @@ var FIN_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed;lef
 <script>
 window.addEventListener("load", function () {
   var camp = document.getElementById("entrance-roadtrip-camp");
+  var fin = document.getElementById("entrance-roadtrip-camp-finale-fin");
   var breath = document.querySelector(".entrance-roadtrip-camp-finale-fin-breath");
   camp.classList.add("camp-sleep-congrats");
   function frame() {
@@ -352,6 +353,7 @@ window.addEventListener("load", function () {
       direction: style.animationDirection,
       iterations: style.animationIterationCount,
       timing: style.animationTimingFunction,
+      fontSize: getComputedStyle(fin).fontSize,
       opacity: Number(style.opacity),
       transform: style.transform,
       transformBox: style.transformBox,
@@ -570,13 +572,14 @@ var finMotion = lib.runPageSync("rsvp.html", FIN_MOTION_HARNESS, 800, {
 });
 check(finMotion && finMotion.errors.length === 0 && finMotion.normal &&
   finMotion.normal.animation === "entrance-roadtrip-camp-finale-fin-breath" &&
-  finMotion.normal.duration === "6.4s" && finMotion.normal.direction === "alternate" &&
+  finMotion.normal.duration === "3.2s" && finMotion.normal.direction === "alternate" &&
+  finMotion.normal.fontSize === "37px" &&
   finMotion.normal.iterations === "infinite" && finMotion.normal.timing === "ease-in-out" &&
   finMotion.normal.opacity >= .84 && finMotion.normal.opacity <= 1 &&
   finMotion.normal.transform !== "none" && finMotion.normal.transformBox === "fill-box" &&
   finMotion.low && finMotion.low.animation === "none" && finMotion.low.opacity === 1 &&
   finMotion.low.transform === "none",
-  "the warm-white fin breathes slowly and subtly, then rests under the low-frame-rate fallback",
+  "the warm-white fin breathes slowly and visibly, then rests under the low-frame-rate fallback",
   finMotion);
 
 if (failures) process.exit(1);

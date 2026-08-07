@@ -116,23 +116,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             click(document.getElementById("entrance-roadtrip-camp-pot"));
             report.potClosedLit = snap();
             click(document.getElementById("entrance-roadtrip-camp-fire"));
-            report.extinguished = snap();
-            var offCheckpoint = window.__captureCheckpointSystems().entrance;
-            var finishedPit = document.getElementById("entrance-roadtrip-camp-finished-fire");
-            report.coldPitCursor = getComputedStyle(finishedPit).cursor;
-            click(document.getElementById("entrance-roadtrip-camp-pot"));
-            report.potOpenCold = snap();
-            click(document.getElementById("entrance-roadtrip-camp-pot"));
-            report.potClosedCold = snap();
-            click(document.getElementById("entrance-roadtrip-camp-cold-fire-hit"));
-            report.replay = snap();
+            report.earlyFireClick = snap();
             window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
             report.restored = snap();
             window.__entranceRoadtripSetRoute("abraham", 0);
             window.__entranceRoadtripSetRoute("camp", 0);
             report.freshArrival = snap();
-            window.__restoreCheckpointSystems({ entrance: offCheckpoint }, "afterStage");
-            report.extinguishedRestored = snap();
+            var freshPit = document.getElementById("entrance-roadtrip-camp-empty-pit");
+            report.freshPitCursor = getComputedStyle(freshPit).cursor;
+            click(freshPit);
+            report.freshBuild = snap();
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
           report.errors = (window.__errs || []).concat(report.errors);
           document.getElementById("__report").textContent = JSON.stringify(report);
@@ -201,35 +194,27 @@ check(result && result.potOpenLit && !result.potOpenLit.potBoiling && !result.po
   !result.potOpenLit.potVisible && result.potOpenLit.crateVisible && result.potOpenLit.sceneFood === "0" &&
   !result.potOpenLit.openSteamActive && result.potOpenLit.openBubbles >= 5 && !result.potOpenLit.gameOpen &&
   result.potOpenLit.state.lit && result.potClosedLit && !result.potClosedLit.potBoiling &&
-  !result.potClosedLit.potOpen && !result.potClosedLit.potVisible && result.potClosedLit.state.lit &&
-  result.potOpenCold && !result.potOpenCold.potBoiling && !result.potOpenCold.potOpen &&
-  !result.potOpenCold.potVisible && !result.potOpenCold.crateVisible && result.potOpenCold.sceneFood === "0" &&
-  !result.potOpenCold.openSteamActive && !result.potOpenCold.state.lit && !result.potOpenCold.gameOpen &&
-  result.potClosedCold && !result.potClosedCold.potOpen && !result.potClosedCold.potVisible && !result.potClosedCold.state.lit,
+  !result.potClosedLit.potOpen && !result.potClosedLit.potVisible && result.potClosedLit.state.lit,
   "the empty scene pot stays offstage and inert until a recipe is committed", result && {
-    litOpen: result.potOpenLit, litClosed: result.potClosedLit,
-    coldOpen: result.potOpenCold, coldClosed: result.potClosedCold
+    litOpen: result.potOpenLit, litClosed: result.potClosedLit
   });
 check(result && result.saved === true && result.restored && result.restored.state.complete && result.restored.sceneBuilt,
   "a completed fire survives checkpoint restore", result && result.restored);
-check(result && result.freshArrival && result.freshArrival.state.complete &&
-  !result.freshArrival.state.lit && result.freshArrival.sceneBuilt && !result.freshArrival.logsVisible &&
+check(result && result.freshArrival && !result.freshArrival.state.complete &&
+  !result.freshArrival.state.lit && !result.freshArrival.sceneBuilt && !result.freshArrival.logsVisible &&
   !result.freshArrival.potBoiling,
-  "reaching Camping anew extinguishes a previously built fire", result && result.freshArrival);
-check(result && result.extinguished &&
-  result.extinguished.state.complete && !result.extinguished.state.lit && result.extinguished.sceneBuilt &&
-  !result.extinguished.logsVisible && !result.extinguished.potBoiling &&
-  !result.extinguished.gameOpen, "clicking the finished flames extinguishes only the fire",
-  result && result.extinguished);
-check(result && result.extinguishedRestored && result.extinguishedRestored.state.complete &&
-  !result.extinguishedRestored.state.lit && result.extinguishedRestored.sceneBuilt &&
-  !result.extinguishedRestored.logsVisible,
-  "Continue preserves a built but extinguished campsite", result && result.extinguishedRestored);
-check(result && result.coldPitCursor === "pointer" && result.replay &&
-  result.replay.state.complete && result.replay.gameOpen &&
-  !result.replay.state.tinder && !result.replay.state.twigs && !result.replay.state.logs,
-  "the whole cold firepit starts a fresh build before a child can steal the click", result && {
-    cursor: result.coldPitCursor, replay: result.replay
+  "reaching Camping anew starts with an empty firepit", result && result.freshArrival);
+check(result && result.earlyFireClick && result.earlyFireClick.state.complete &&
+  result.earlyFireClick.state.lit && result.earlyFireClick.sceneBuilt &&
+  result.earlyFireClick.logsVisible && result.earlyFireClick.crateVisible &&
+  result.earlyFireClick.key === "entrance_roadtrip_stew_invite" && !result.earlyFireClick.gameOpen,
+  "clicking the lit fire before the sleep prompt cannot extinguish it or skip to congratulations",
+  result && result.earlyFireClick);
+check(result && result.freshPitCursor === "pointer" && result.freshBuild &&
+  !result.freshBuild.state.complete && result.freshBuild.gameOpen &&
+  !result.freshBuild.state.tinder && !result.freshBuild.state.twigs && !result.freshBuild.state.logs,
+  "the whole empty firepit starts a fresh build before a child can steal the click", result && {
+    cursor: result.freshPitCursor, build: result.freshBuild
   });
 
 if (failures) process.exit(1);

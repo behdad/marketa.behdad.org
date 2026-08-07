@@ -246,8 +246,9 @@ persist with the camp and can substitute for twigs; drops onto a lit proper fire
 away. The one-shot flame/flare is transient. Built and lit/off state are durable; unfinished fuel
 resets on Continue.
 Success restores the finished fire with an empty silver pot and publishes the stable, non-clickable
-`entrance_roadtrip_stew_invite` caption while it burns. Serving or extinguishing restores the
-permanent `entrance_roadtrip_camp_arrival` RSVP caption. The `camp` route is never resume-pending,
+`entrance_roadtrip_stew_invite` caption while it burns. A lit fire ignores early replay clicks and
+becomes extinguishable only from the explicit sleep prompt, which prevents dinner/stargazing state
+from being discarded into the terminal RSVP caption. The `camp` route is never resume-pending,
 including after checkpoint restore, blur, or visibility changes; dismissing it ends the drive run,
 while the re-entry menu can rebuild the camp presentation without resetting its fire or stew. New
 routes stay provisional in the chooser, so dismissing it preserves any paused highway run. A camp

@@ -201,9 +201,9 @@ the exit back after roughly 1.7 km (1.25 km on touch-first devices). Click the e
 kindling, and either log arrangement, then light it. A pinecone dropped from the campsite trees can
 replace the twigs; missing fuel burns out, and the campsite remains open for exploration.
 
-After the fire grows, a cooking invitation pulses, then remains above the camp. Serving dinner or
-putting the fire out restores the RSVP reminder. Continue returns directly to Camping and retains a
-completed fire. Escape, Backspace, or the top-right × leaves Camping for the Entrance dashboard;
+After the fire grows, a cooking invitation pulses, then remains above the camp. The fire stays lit
+through dinner and stargazing; it can be put out only when the later sleep suggestion asks for it.
+Continue returns directly to Camping and retains a completed fire. Escape, Backspace, or the top-right × leaves Camping for the Entrance dashboard;
 `Enter` never leaves camp. Instead, each deliberate press performs one next step: it builds and
 lights a valid fire without opening the builder, starts a random valid stew, advances it only as far
 as ready, serves it, then completes stargazing without opening the trace. Key repeat and quick double
@@ -211,7 +211,7 @@ presses are ignored.
 
 The lit fire also reveals a food crate. Open it to assemble Camping stew from one protein, one base,
 and every fixed pantry item, then cook it in the camp pot. The lid lets you peek but slows the cook
-and opens when dinner is ready; an extinguished fire pauses it. Serve then, or reset a comically
+and opens when dinner is ready. Serve then, or reset a comically
 overcooked pot. After serving, click the sky to carry the interactive trace through sunset into a
 clear night, or press `Enter` to finish that trace directly. Trace Cassiopeia, Ursa Major, and Ursa
 Minor by selecting each glowing star. Their loose stars are already seeded in the ordinary camp sky;

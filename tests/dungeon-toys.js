@@ -7,6 +7,7 @@ var lib = require("./lib");
 
 var HARNESS = [
   '<pre id="__report" style="position:fixed;left:-9999px">pending</pre>',
+  '<style>.prince-dungeon-light-pool{transition:none!important}</style>',
   '<script>(function(){',
   'var report={errors:[],steps:{}};function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'function click(id){document.getElementById(id).dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',

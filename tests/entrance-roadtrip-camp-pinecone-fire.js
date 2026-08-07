@@ -68,6 +68,7 @@ var HARNESS = `
         window.__entranceRoadtripStart();
         window.__entranceRoadtripSetRoute("camp", 0);
         report.initial = snap();
+        report.initialCheckpoint = window.__captureCheckpointSystems().entrance;
         var pine = document.querySelector("#entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine");
         for (var index = 0; index < 5; index++) click(pine);
         report.coldCap = snap();
@@ -96,14 +97,17 @@ var HARNESS = `
                   try {
                     report.litFlareExpired = snap();
                     click(document.getElementById("entrance-roadtrip-camp-fire"));
-                    report.builtOut = snap();
+                    report.earlyFireClick = snap();
                     click(pine);
-                    report.builtOutCollected = snap();
-                    click(document.getElementById("entrance-roadtrip-camp-cold-fire-hit"));
-                    report.builtOutBuilder = snap();
+                    report.earlyFireCone = snap();
+                    window.__restoreCheckpointSystems({ entrance: report.coldCheckpoint }, "afterStage");
+                    report.restored = snap();
+                    window.__entranceRoadtripCampFireStart();
                     window.__entranceRoadtripCampFirePlace("tinder");
                     report.coneFailureResult = window.__entranceRoadtripCampFireLight();
                     report.coneFailure = snap();
+                    window.__restoreCheckpointSystems({ entrance: report.initialCheckpoint }, "afterStage");
+                    window.__entranceRoadtripCampFireStart();
                     window.__entranceRoadtripCampFirePlace("tinder");
                     window.__entranceRoadtripCampFirePlace("twigs");
                     window.__entranceRoadtripCampFirePlace("stack");
@@ -112,8 +116,6 @@ var HARNESS = `
                     setTimeout(function () {
                       try {
                         report.twigsSuccess = snap();
-                        window.__restoreCheckpointSystems({ entrance: report.coldCheckpoint }, "afterStage");
-                        report.restored = snap();
                         window.__entranceRoadtripSetRoute("abraham", 0);
                         window.__entranceRoadtripSetRoute("camp", 0);
                         report.freshArrival = snap();
@@ -190,21 +192,18 @@ check(result && result.litFlare && result.litFlare.state.complete && result.litF
     saves: result && result.litFlareSaves,
     checkpoint: result && result.litFlareCheckpoint
   });
-check(result && result.builtOut && result.builtOut.state.complete && !result.builtOut.state.lit &&
-  result.builtOut.state.pinecones === 0 && result.builtOut.builtSlots === 0 && result.builtOut.fireOut &&
-  result.builtOutCollected && result.builtOutCollected.state.complete &&
-  !result.builtOutCollected.state.lit && result.builtOutCollected.state.pinecones === 1 &&
-  result.builtOutCollected.builtSlots === 1 && result.builtOutCollected.burning &&
-  !result.builtOutCollected.flare && result.builtOutBuilder && result.builtOutBuilder.builderSlots === 1,
-  "an extinguished built pit collects a cone and mirrors it in the rebuild view", {
-    pit: result && result.builtOut,
-    collected: result && result.builtOutCollected,
-    builder: result && result.builtOutBuilder
+check(result && result.earlyFireClick && result.earlyFireClick.state.complete && result.earlyFireClick.state.lit &&
+  !result.earlyFireClick.fireOut && result.earlyFireCone && result.earlyFireCone.state.complete &&
+  result.earlyFireCone.state.lit && result.earlyFireCone.state.pinecones === 0 &&
+  result.earlyFireCone.burning && result.earlyFireCone.flare,
+  "the built fire cannot be extinguished early and later cones still burn on contact", {
+    clicked: result && result.earlyFireClick,
+    cone: result && result.earlyFireCone
   });
 check(result && result.coneFailureResult === "entrance_roadtrip_camp_fire_no_logs" &&
-  result.coneFailure && result.coneFailure.state.complete && !result.coneFailure.state.lit &&
+  result.coneFailure && !result.coneFailure.state.complete && !result.coneFailure.state.lit &&
   !result.coneFailure.state.tinder && !result.coneFailure.state.twigs &&
-  result.coneFailure.state.pinecones === 0,
+  result.coneFailure.state.pinecones === 3,
   "a failed no-log attempt consumes one cone when it supplied the kindling", {
     result: result && result.coneFailureResult,
     state: result && result.coneFailure

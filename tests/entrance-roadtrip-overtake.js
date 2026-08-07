@@ -64,7 +64,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         });
 
         report.steps.waiting = { state: state(), overtaker: !!overtaker() };
-        step(20);
+        step(1000, 6);
         var shoulderNode = overtaker();
         report.steps.shoulderBehind = sample(shoulderNode);
         step(600, 2);
@@ -79,7 +79,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         ["throttle", "brake", "clutch", "steerLeft", "steerRight"].forEach(function (name) {
           window.__entranceDriveControl(name, false);
         });
-        step(20);
+        step(1000, 6);
         var node = overtaker();
         var behindSource = sample(node);
         step(60);
@@ -148,10 +148,10 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html slow-traffic overtaking:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 0/.test(source) &&
+check(/ROADTRIP_OVERTAKE_SPEED_MAX = 70/.test(source) && /ROADTRIP_OVERTAKE_FIRST_SECONDS = 6/.test(source) &&
   /function syncRoadtripPlayerOvertaker\(seconds\)[\s\S]{0,900}forwardSpeed <= ROADTRIP_OVERTAKE_SPEED_MAX/.test(source) &&
   /spawnRoadtripEntity\(plan\.type, lane, plan\.ahead,[\s\S]{0,140}behind: true/.test(source),
-  "travel at 70 km/h or less can schedule a vehicle from behind immediately");
+  "travel at 70 km/h or less schedules a vehicle after an opening breathing beat");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 1800, {
   patchRaf: true,
@@ -165,8 +165,8 @@ var steps = result && result.steps || {};
 check(steps.start && steps.start.state.playerLane === 2.08 &&
   steps.start.state.shoulderZone === "gravel" && /roadtrip-on-gravel/.test(steps.start.classes),
   "a fresh Road Trip opens parked on the right shoulder", steps.start);
-check(steps.waiting && !steps.waiting.overtaker && steps.waiting.state.overtakeCooldown === 0,
-  "rear traffic is armed as soon as the fresh Road Trip opens", steps.waiting);
+check(steps.waiting && !steps.waiting.overtaker && steps.waiting.state.overtakeCooldown === 6,
+  "a fresh Road Trip leaves six clear seconds before rear traffic", steps.waiting);
 check(steps.shoulderBehind && steps.shoulderBehind.overtaking === "true" &&
   steps.shoulderBehind.lane === 1.5 && steps.shoulderBehind.laneTarget === .5 &&
   steps.shoulderBehind.laneChanged === "false" && !steps.shoulderBehind.horned,

@@ -234,6 +234,11 @@ pool there, or the scenery dissolve exposes an implausibly empty road.
 `roadtripSpawnPlan()` assigns natural traffic a route-relative seeded speed; forward traffic's deck
 centres above the posted limit while RVs and semis retain a slower tail. Pursuit and summoned plans
 carry their own explicit seeded speed so changing the natural profile cannot silently retune them.
+`scheduleRoadtripNaturalSpawn()` anchors one due spawn to the current distance, briefly retries a
+full pool, and gives wildlife a bounded defer while police or a traffic manoeuvre owns attention;
+it never replays missed intervals as a burst. The police production clock likewise waits, within a
+bounded distance, for visible wildlife or a traffic manoeuvre to clear. Rear overtakers use the same
+attention signals, while direct mirror summons and the pursuit deck remain explicit overrides.
 `syncRoadtripTrafficLane()` owns faster traffic's pull-out, clearance, return, and car-following
 speed. `roadtripTrafficLead()` selects only the nearest vehicle in the current lane; if a pass is
 blocked, a bounded headway controller slows the follower and exposes its brake-lamp state. Banff may

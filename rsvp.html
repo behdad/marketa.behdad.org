@@ -37929,7 +37929,11 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_PURSUIT_REACTION_DISTANCE = 118;
   var ROADTRIP_OVERTAKE_SPEED_MAX = 70;
   var ROADTRIP_OVERTAKE_REAR_DISTANCE = 28;
-  var ROADTRIP_OVERTAKE_FIRST_SECONDS = 0;
+  var ROADTRIP_OVERTAKE_FIRST_SECONDS = 6;
+  var ROADTRIP_SPAWN_RETRY_DISTANCE = 8;
+  var ROADTRIP_INCIDENT_MAX_DEFER_DISTANCE = 90;
+  var ROADTRIP_POLICE_PACING_APPROACH_DISTANCE = 160;
+  var ROADTRIP_POLICE_PACING_MAX_DELAY_DISTANCE = 140;
   var ROADTRIP_TRAFFIC_PASS_GAP = 30;
   var ROADTRIP_TRAFFIC_PASS_CLEARANCE = 14;
   var ROADTRIP_TRAFFIC_PASS_ADVANTAGE_KMH = 8;
@@ -43278,7 +43282,11 @@ window.__entranceRoomOpen = false;
     if (["pursuit", "capture", "stopped", "arrest"].indexOf(police.phase) >= 0) {
       police.frontFlashElapsed += seconds;
     }
-    if (police.phase === "idle" && roadtripState.distance >= police.nextDistance) {
+    var policePacingOverdue = roadtripState.distance - police.nextDistance;
+    var policePacingBlocked = roadtripWildlifeIncidentActive() || roadtripTrafficIncidentActive();
+    if (police.phase === "idle" && roadtripState.distance >= police.nextDistance &&
+        (!policePacingBlocked ||
+          policePacingOverdue >= ROADTRIP_POLICE_PACING_MAX_DELAY_DISTANCE)) {
       beginRoadtripPoliceEncounter();
     }
     if (police.phase === "warning") {
@@ -44111,6 +44119,51 @@ window.__entranceRoomOpen = false;
     return spawnRoadtripEntity(plan.type, plan.lane, plan.ahead,
       plan.speedKmh ? { speedKmh: plan.speedKmh } : undefined);
   }
+  function roadtripIncidentEntityVisible(entity) {
+    if (!entity || !entity.active) return false;
+    var remaining = entity.at - roadtripState.distance;
+    return remaining <= ROADTRIP_DRAW_DISTANCE + 8 &&
+      remaining >= (entity.overtakingPlayer ? -ROADTRIP_OVERTAKE_REAR_DISTANCE - 8 : -2);
+  }
+  function roadtripWildlifeIncidentActive() {
+    return roadtripState.entities.some(function (entity) {
+      return roadtripIncidentEntityVisible(entity) && roadtripIsAnimalType(entity.type);
+    });
+  }
+  function roadtripTrafficIncidentActive() {
+    return roadtripState.entities.some(function (entity) {
+      return roadtripIncidentEntityVisible(entity) && roadtripIsTrafficType(entity.type) &&
+        (entity.overtakingPlayer || entity.passing || entity.passReturning || entity.following);
+    });
+  }
+  function roadtripPoliceIncidentActive() {
+    return ["warning", "pursuit", "capture", "stopped", "arrest"].indexOf(
+      roadtripState.police.phase) >= 0;
+  }
+  function roadtripPolicePacingApproaching() {
+    var remaining = roadtripState.police.nextDistance - roadtripState.distance;
+    return roadtripState.police.phase === "idle" && remaining >= 0 &&
+      remaining <= ROADTRIP_POLICE_PACING_APPROACH_DISTANCE;
+  }
+  function roadtripNaturalSpawnBlocked(plan) {
+    if (!plan || !roadtripIsAnimalType(plan.type)) return false;
+    return roadtripWildlifeIncidentActive() || roadtripTrafficIncidentActive() ||
+      roadtripPoliceIncidentActive() || roadtripPolicePacingApproaching();
+  }
+  function scheduleRoadtripNaturalSpawn() {
+    if (roadtripState.distance < roadtripState.nextSpawnDistance) return false;
+    var pursuing = roadtripState.police.phase === "pursuit";
+    var plan = roadtripSpawnPlan(pursuing, roadtripState.spawnSerial);
+    var overdue = roadtripState.distance - roadtripState.nextSpawnDistance;
+    // Pursuit keeps its authored deck and density. Outside pursuit, hold a
+    // wildlife beat briefly rather than stacking it on another focal event.
+    if (!pursuing && roadtripNaturalSpawnBlocked(plan) &&
+        overdue < ROADTRIP_INCIDENT_MAX_DEFER_DISTANCE) return false;
+    var spawned = roadtripNaturalSpawn();
+    roadtripState.nextSpawnDistance = roadtripState.distance + (spawned ?
+      roadtripSpawnInterval(pursuing, roadtripState.spawnSerial) : ROADTRIP_SPAWN_RETRY_DISTANCE);
+    return !!spawned;
+  }
   function roadtripSummonedTrafficPlan(overtaking, serial) {
     serial = Math.max(0, Math.floor(Number(serial) || 0));
     var types = ["car", "pickup", "truck", "rv"];
@@ -44178,7 +44231,9 @@ window.__entranceRoomOpen = false;
     var forwardSpeed = driveState.speed * driveState.facing;
     var eligible = !roadtripIsAbrahamRoute() && roadtripState.police.phase === "idle" && forwardSpeed >= 0 &&
       forwardSpeed <= ROADTRIP_OVERTAKE_SPEED_MAX;
-    if (!eligible) {
+    var incidentBusy = roadtripPolicePacingApproaching() || roadtripWildlifeIncidentActive() ||
+      roadtripTrafficIncidentActive();
+    if (!eligible || incidentBusy) {
       roadtripState.overtakeCooldown = Math.max(8, roadtripState.overtakeCooldown);
       return false;
     }
@@ -44302,7 +44357,11 @@ window.__entranceRoomOpen = false;
       entity.passReturning = true;
     }
     var lead = !entity.passing ? roadtripTrafficLead(entity, homeLane) : null;
-    if (!entity.passing && passingLane != null && Math.abs(entity.lane - homeLane) < .08) {
+    if (!entity.passing && passingLane != null && Math.abs(entity.lane - homeLane) < .08 &&
+        !roadtripWildlifeIncidentActive() &&
+        !roadtripState.entities.some(function (candidate) {
+          return candidate.active && candidate.overtakingPlayer;
+        })) {
       target = lead;
       if (target && target.passing) target = null;
       var targetGap = target ? separation(target) : Infinity;
@@ -45014,13 +45073,9 @@ window.__entranceRoomOpen = false;
     syncRoadtripImpairedDriving(seconds);
     syncRoadtripCenterline(seconds);
     syncRoadtripShoulder(Math.abs(routeTravel), seconds);
-    var spawned = 0;
-    while (roadtripState.distance >= roadtripState.nextSpawnDistance && spawned < 3) {
-      var pursuitSpawn = roadtripState.police.phase === "pursuit";
-      roadtripNaturalSpawn();
-      roadtripState.nextSpawnDistance += roadtripSpawnInterval(pursuitSpawn, roadtripState.spawnSerial);
-      spawned++;
-    }
+    // Anchor the next beat to the current position. Coarse/throttled steps must
+    // not replay missed intervals as a same-frame burst.
+    scheduleRoadtripNaturalSpawn();
     // Capture the radar sample before entity resolution can knock speed down or
     // stall the car in this same simulation step.
     var policeRadarSampleSpeed = driveState.speed;
@@ -48790,6 +48845,15 @@ window.__entranceRoomOpen = false;
           runSeed: roadtripState.runSeed >>> 0,
           overtakeSpeedMax: ROADTRIP_OVERTAKE_SPEED_MAX,
           overtakeCooldown: roadtripState.overtakeCooldown,
+          incidentPacing: {
+            spawnRetryDistance: ROADTRIP_SPAWN_RETRY_DISTANCE,
+            maxDeferDistance: ROADTRIP_INCIDENT_MAX_DEFER_DISTANCE,
+            policeApproachDistance: ROADTRIP_POLICE_PACING_APPROACH_DISTANCE,
+            policeMaxDelayDistance: ROADTRIP_POLICE_PACING_MAX_DELAY_DISTANCE,
+            wildlifeActive: roadtripWildlifeIncidentActive(),
+            trafficActive: roadtripTrafficIncidentActive(),
+            policeApproaching: roadtripPolicePacingApproaching()
+          },
           policeStoppedBeat: ROADTRIP_POLICE_STOPPED_BEAT_SECONDS,
           policeFrontStoppedBeat: ROADTRIP_POLICE_FRONT_STOP_SECONDS,
           policeParkedBehind: ROADTRIP_POLICE_PARKED_BEHIND,

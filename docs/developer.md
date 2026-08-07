@@ -258,7 +258,12 @@ it during daylight commits the shared day/night state to night, locally clears c
 opens the stargazing trace. The live Cassiopeia/Ursa Major/Ursa Minor geometry supplies the ordinary
 night's three unconnected seed patterns; completion closes the overlay, adds restrained `.55px`
 connectors behind the moon, enables bounded per-star dragging that redraws each figure's connectors,
-and holds the four edge-set, integrated-tail bubbles until dismissal; after a two-second beat,
+and starts the Camping target in the shared `gardenAurora` SVG-curtain engine. That story target
+uses the same octave geometry and gradient shimmer as the Garden/Balcony sky, guarantees a strong
+display independent of the forecast, and runs only while active Camping is clear, dark, solved, and
+pre-fire-out. A class observer follows the campsite/Entrance state owners; the shared rAF still
+self-cancels on exit, blur, visibility loss, and sleep, while reduced motion paints one still frame.
+The live sky holds the four edge-set, integrated-tail bubbles until dismissal; after a two-second beat,
 Behdad's pink and Markéta's blue bubbles reveal one second apart. Drag positions are session-only.
 Once the fourth reveal finishes, a persistent bilingual caption invites a click anywhere; a
 full-campsite transparent hit shield consumes that click, dismisses the exchange, and changes the
@@ -293,7 +298,8 @@ Run `tests/entrance-roadtrip-distance.js`, `tests/entrance-roadtrip-camp.js`, `t
 `tests/entrance-roadtrip-camp-pinecone-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`,
-`tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-audio.js`,
+`tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-aurora.js`,
+`tests/entrance-roadtrip-camp-audio.js`,
 `tests/entrance-roadtrip-camp-stew.js`, `tests/entrance-roadtrip-camp-stargazing.js`,
 `tests/entrance-roadtrip-camp-sleep.js`, and `tests/entrance-roadtrip-camp-enter.js` for this boundary.
 

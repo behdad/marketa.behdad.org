@@ -1490,6 +1490,9 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
 }
 #entrance-roadtrip-camp-finale-constellations.show{opacity:1;pointer-events:all}
 #entrance-roadtrip-camp-finale-constellations:not(.show) :is(.entrance-roadtrip-camp-finale-aurora,.entrance-roadtrip-camp-finale-line){opacity:0}
+#entrance-roadtrip-camp-aurora{
+  opacity:.9;mix-blend-mode:screen;transition:opacity 1.15s ease;pointer-events:none
+}
 #entrance-roadtrip-camp-finale-constellations:not(.show) .entrance-roadtrip-camp-finale-star{cursor:default}
 #entrance-roadtrip-camp-finale-constellations:not(.show) .entrance-roadtrip-camp-finale-star-core{
   opacity:.62;transform:scale(.28)
@@ -1584,6 +1587,7 @@ html.frame-rate-low.constellation-step #entrance-roadtrip-camp-stars .const-line
   .entrance-roadtrip-stargazing-star.next .entrance-roadtrip-stargazing-star-core,
   .entrance-roadtrip-stargazing-aurora path,
   .entrance-roadtrip-camp-finale-field-star{animation:none;opacity:var(--camp-star-max)}
+  #entrance-roadtrip-camp-aurora{transition:none}
   #entrance-roadtrip-camp-wisdom.show .entrance-roadtrip-camp-wisdom-bubble{animation:none;opacity:1}
   #entrance-roadtrip-camp.camp-sleep-zzz .entrance-roadtrip-camp-mama{animation:none;transform:translate(340px,49px)}
   #entrance-roadtrip-camp.camp-sleep-zzz #entrance-roadtrip-camp-served-corn{animation:none;opacity:0;transform:scale(.18)}
@@ -33683,10 +33687,34 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                     </g>
                   </g>
                   <g id="entrance-roadtrip-camp-finale-constellations">
-                    <g class="entrance-roadtrip-camp-finale-aurora" fill="none" stroke-linecap="round" pointer-events="none">
-                      <path d="M35-91Q176-123 315-91T653-98" stroke="#70d7bd" stroke-width="13" opacity=".22"/>
-                      <path d="M29-78Q185-106 331-76T648-82" stroke="#7f9ec0" stroke-width="8" opacity=".25"/>
-                      <path d="M43-67Q191-89 331-64T638-70" stroke="#d9a6d5" stroke-width="5" opacity=".2"/>
+                    <!-- Story-reward northern lights. The shared gardenAurora engine replaces these
+                         placeholder paths on completion with live, Kp-shaped SVG curtains; native SVG
+                         keeps the result compositable in WebKit. The loop runs only between solved
+                         stargazing and the fire-out finale, while this group is the live sky. -->
+                    <g id="entrance-roadtrip-camp-aurora" class="entrance-roadtrip-camp-finale-aurora" pointer-events="none">
+                      <defs>
+                        <linearGradient id="entrance-roadtrip-camp-aurora-grad-1" x1="0" y1="1" x2="0" y2="0">
+                          <stop class="ag-lo" offset="0" stop-color="#5cf0a0" stop-opacity="0"/>
+                          <stop class="ag-mid" offset=".42" stop-color="#42e8c4" stop-opacity=".78"/>
+                          <stop class="ag-hi" offset=".8" stop-color="#9384e8" stop-opacity=".38"/>
+                          <stop class="ag-top" offset="1" stop-color="#ff526f" stop-opacity=".08"/>
+                        </linearGradient>
+                        <linearGradient id="entrance-roadtrip-camp-aurora-grad-2" x1="0" y1="1" x2="0" y2="0">
+                          <stop class="ag-lo" offset="0" stop-color="#72ffb6" stop-opacity="0"/>
+                          <stop class="ag-mid" offset=".4" stop-color="#35dccc" stop-opacity=".72"/>
+                          <stop class="ag-hi" offset=".82" stop-color="#8574df" stop-opacity=".34"/>
+                          <stop class="ag-top" offset="1" stop-color="#f44375" stop-opacity=".06"/>
+                        </linearGradient>
+                        <linearGradient id="entrance-roadtrip-camp-aurora-grad-3" x1="0" y1="1" x2="0" y2="0">
+                          <stop class="ag-lo" offset="0" stop-color="#83efaa" stop-opacity="0"/>
+                          <stop class="ag-mid" offset=".44" stop-color="#4cdec0" stop-opacity=".66"/>
+                          <stop class="ag-hi" offset=".84" stop-color="#aa80df" stop-opacity=".32"/>
+                          <stop class="ag-top" offset="1" stop-color="#ff607f" stop-opacity=".05"/>
+                        </linearGradient>
+                      </defs>
+                      <path class="aurora-curtain ac1" d="M6-58L6-112L674-112L674-58Z" fill="url(#entrance-roadtrip-camp-aurora-grad-1)"/>
+                      <path class="aurora-curtain ac2" d="M6-50L6-106L674-106L674-50Z" fill="url(#entrance-roadtrip-camp-aurora-grad-2)"/>
+                      <path class="aurora-curtain ac3" d="M18-64L18-116L662-116L662-64Z" fill="url(#entrance-roadtrip-camp-aurora-grad-3)"/>
                     </g>
                     <g id="entrance-roadtrip-camp-finale-cassiopeia" data-live-stargazing-constellation="cassiopeia" data-live-stargazing-lines="0-1 1-2 2-3 3-4">
                       <path class="entrance-roadtrip-camp-finale-line" d="M53.735-95.87L70.565-79.04L88.415-87.2L102.185-74.45L120.545-88.73"/>
@@ -59076,8 +59104,9 @@ setMusicPausedState(false);
   document.addEventListener("visibilitychange", function () { window.__updateGardenBirdsong(); });
 })();
 (function () {
-  // ── Northern lights: ONE COMPUTATIONAL aurora, two windows (garden + balcony) ──────
-  // The three <path> curtains per window (#garden-aurora, #balcony-aurora) are pure
+  // ── Northern lights: ONE COMPUTATIONAL aurora, three northern-sky surfaces ─────────
+  // The three <path> curtains per surface (#garden-aurora, #balcony-aurora and the
+  // post-stargazing #entrance-roadtrip-camp-aurora) are pure
   // geometry, recomputed every rAF frame from sums of sines (a few octaves) so the lower
   // edges ripple + drift and never read as a fixed shape. Each curtain also shimmers along
   // its length — the gradient's stop opacities breathe on their own slow sines — and the
@@ -59085,8 +59114,9 @@ setMusicPausedState(false);
   // linearGradients. Pure SVG <path> composites everywhere (a <canvas> in a foreignObject is
   // a WebKit no-op). Both windows watch the same sky (shared dusk + weather + the once-a-night
   // roll), so ONE shared rAF loop drives BOTH curtain groups — no second timer to leak. Each
-  // window has its own sky box (the balcony's is smaller and higher than the garden's), so the
-  // curtain geometry is per-target; the shimmer maths + the gate are shared.
+  // surface has its own sky box, so the curtain geometry is per-target; the shimmer maths,
+  // animation clock and focus/visibility guard are shared. Camping is a story reward rather
+  // than a forecast: completing the trace guarantees a strong show until the fire goes out.
   //
   // WHAT DRIVES IT: the planetary Kp index (0–9) — live from NOAA SWPC when the fetch lands,
   // else rolled per nightfall, or pinned by aurora(7). Kp sets how HIGH the curtains reach,
@@ -59094,8 +59124,9 @@ setMusicPausedState(false);
   // 630nm crown lights up. Darkness (a real solar-depression calculation, below) scales the
   // brightness on top, and __skyCloudy() hides the whole thing — see .aurora-clouded.
   //
-  // Robustness (CLAUDE.md timer-pile-up class): the loop runs ONLY while at least one window's
-  // aurora is actually shown — its room ∧ dusk ∧ ¬cloud ∧ ¬trip — AND the tab is
+  // Robustness (CLAUDE.md timer-pile-up class): the loop runs ONLY while at least one surface's
+  // aurora is actually shown — a loft room at clear dusk, or active Camping after the trace and
+  // before fire-out — AND the tab is
   // visible+focused. The instant NEITHER is shown (or the tab hides/blurs), frame() nulls its
   // handle and returns (no accumulation, no leftover loop). __updateGardenAurora re-evaluates
   // the same gate and (re)starts idempotently; it's pinged from every state path that can flip
@@ -59134,10 +59165,23 @@ setMusicPausedState(false);
       oct: [{ a: 4.5, f: 0.028, s: 0.78 }, { a: 2.6, f: 0.058, s: -1.25 }, { a: 1.3, f: 0.108, s: 2.1 }],
       sh: { lo: [0.58, 0.33, 0.15], mid: [0.58, 0.38, 0.17], hi: [0.28, 0.49, 0.09] } }
   ];
+  // Camping uses the same octave/shimmer model over the full Abraham Lake sky. Its broader
+  // curtains hang lower than the loft windows, with enough fine structure to read at phone size.
+  var CAMP_CURTAINS = [
+    { low: -82, hi: -119, drift: 15, driftHz: 0.039, base: -57,
+      oct: [{ a: 9, f: 0.013, s: 0.48 }, { a: 5.2, f: 0.032, s: -0.82 }, { a: 2.7, f: 0.071, s: 1.42 }],
+      sh: { lo: [0.64, 0.30, 0.13], mid: [0.78, 0.34, 0.14], hi: [0.38, 0.39, 0.11] } },
+    { low: -75, hi: -114, drift: 18, driftHz: 0.029, base: -49,
+      oct: [{ a: 8, f: 0.016, s: -0.39 }, { a: 5.7, f: 0.038, s: 0.96 }, { a: 3, f: 0.079, s: -1.6 }],
+      sh: { lo: [0.68, 0.28, 0.18], mid: [0.72, 0.39, 0.16], hi: [0.34, 0.43, 0.13] } },
+    { low: -87, hi: -118, drift: 11, driftHz: 0.052, base: -65,
+      oct: [{ a: 7.5, f: 0.019, s: 0.72 }, { a: 4.4, f: 0.045, s: -1.16 }, { a: 2.4, f: 0.088, s: 1.92 }],
+      sh: { lo: [0.60, 0.31, 0.15], mid: [0.66, 0.35, 0.18], hi: [0.32, 0.46, 0.10] } }
+  ];
   var SAMPLES = 30;                          // sample count along the top/bottom edges
   // build one target's live handles (curtain paths + gradient shimmer stops), or null if its
   // markup is absent. stage/room/box drive its per-target gate + geometry.
-  function makeTarget(auroraId, stageId, room, gradPrefix, x0, x1, curtains) {
+  function makeTarget(auroraId, stageId, room, gradPrefix, x0, x1, curtains, options) {
     var g = document.getElementById(auroraId), st = document.getElementById(stageId);
     if (!g || !st) return null;
     var paths = [g.querySelector(".ac1"), g.querySelector(".ac2"), g.querySelector(".ac3")];
@@ -59146,11 +59190,18 @@ setMusicPausedState(false);
       var gr = document.getElementById(gradPrefix + n);
       return gr ? { lo: gr.querySelector(".ag-lo"), mid: gr.querySelector(".ag-mid"), hi: gr.querySelector(".ag-hi"), top: gr.querySelector(".ag-top") } : null;
     });
-    return { stage: st, room: room, x0: x0, x1: x1, curtains: curtains, paths: paths, grads: grads };
+    options = options || {};
+    return { stage: st, room: room, x0: x0, x1: x1, curtains: curtains, paths: paths, grads: grads,
+             kind: options.kind || "loft", controlled: options.controlled !== false,
+             minKp: options.minKp || 0, story: options.story === true,
+             scene: options.sceneId ? document.getElementById(options.sceneId) : null };
   }
   var targets = [
     makeTarget("garden-aurora", "stage-garden", "garden", "garden-aurora-grad-", 104, 528, GARDEN_CURTAINS),
-    makeTarget("balcony-aurora", "stage-balcony", "balcony", "balcony-aurora-grad-", 424, 594, BALCONY_CURTAINS)
+    makeTarget("balcony-aurora", "stage-balcony", "balcony", "balcony-aurora-grad-", 424, 594, BALCONY_CURTAINS),
+    makeTarget("entrance-roadtrip-camp-aurora", "entrance-room", null,
+      "entrance-roadtrip-camp-aurora-grad-", 6, 674, CAMP_CURTAINS,
+      { kind: "camp", controlled: false, minKp: 6.2, story: true, sceneId: "entrance-roadtrip-camp" })
   ].filter(Boolean);
   if (!targets.length) return;
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -59294,9 +59345,9 @@ setMusicPausedState(false);
   // the twilight is doing. BRIGHTNESS rides Kp × darkness, so a marginal midsummer night gets a
   // tall but washed-out display rather than a small bright one. A SUMMONED aurora ignores
   // darkness entirely: aurora(true) / aurora(7) is a promise, not a forecast.
-  function auroraDials(kp) {
+  function auroraDials(kp, story) {
     var s = kpStrength(kp);
-    var dark = auroraForced() ? 1 : auroraDarkness();
+    var dark = auroraForced() || story ? 1 : auroraDarkness();
     return {
       kp: kp, s: s, dark: dark,
       bright: Math.min(1.35, (0.25 + 1.05 * s) * (0.25 + 0.75 * dark)),
@@ -59335,11 +59386,14 @@ setMusicPausedState(false);
     for (i = SAMPLES; i >= 0; i--) d += " L" + bot[i][0].toFixed(1) + " " + bot[i][1].toFixed(1);
     return d + " Z";
   }
-  // draw every target's curtains for this frame (both are cheap; the hidden one sits at CSS
-  // opacity 0 anyway, so painting it costs nothing visible and keeps the code branch-free).
-  function draw(t, dl) {
+  function targetDials(tg, kp) { return auroraDials(Math.max(kp, tg.minKp), tg.story); }
+  // Live frames touch only visible targets; stillFrame refreshes all three once so a newly
+  // revealed surface never flashes its authored placeholder.
+  function draw(t, kp, shownOnly) {
     for (var k = 0; k < targets.length; k++) {
       var tg = targets[k];
+      if (shownOnly && !targetShown(tg)) continue;
+      var dl = targetDials(tg, kp);
       for (var i = 0; i < tg.curtains.length; i++) {
         var c = tg.curtains[i];
         tg.paths[i].setAttribute("d", curtainD(c, t + i * 3.1, tg.x0, tg.x1, dl)); // phase-offset so they don't march in step
@@ -59372,10 +59426,14 @@ setMusicPausedState(false);
   // never self-cancel on cloud before the class that hides its last painted frame has landed.
   function applyCloudClass() {
     var c = auroraCloudy();
-    for (var k = 0; k < targets.length; k++) targets[k].stage.classList.toggle("aurora-clouded", c);
+    for (var k = 0; k < targets.length; k++) {
+      if (targets[k].controlled) targets[k].stage.classList.toggle("aurora-clouded", c);
+    }
   }
   function auroraForced() {
-    for (var k = 0; k < targets.length; k++) if (targets[k].stage.classList.contains("aurora-force")) return true;
+    for (var k = 0; k < targets.length; k++) {
+      if (targets[k].controlled && targets[k].stage.classList.contains("aurora-force")) return true;
+    }
     return false;
   }
   // one target's own show gate: its room on-screen ∧ dusk ∧ ¬cloud ∧ ¬trip, or its stage's
@@ -59385,6 +59443,15 @@ setMusicPausedState(false);
   // (and the nightly odds) instead — the loop keeps ticking and simply paints nothing.
   // (visibility/focus is checked once, shared.)
   function targetShown(tg) {
+    if (tg.kind === "camp") {
+      return !!(tg.scene &&
+        tg.stage.classList.contains("roadtrip-active") &&
+        tg.stage.classList.contains("roadtrip-route-camp") &&
+        tg.stage.classList.contains("camp-stargazing-clear") &&
+        !tg.stage.classList.contains("entrance-day") &&
+        tg.scene.classList.contains("stargazing-complete") &&
+        !tg.scene.classList.contains("camp-sleep-fire-out"));
+    }
     if (tg.stage.classList.contains("aurora-hide")) return false;
     if (auroraCloudy()) return false;                      // force still yields to cloud
     if (tg.stage.classList.contains("aurora-force")) return true;
@@ -59403,7 +59470,9 @@ setMusicPausedState(false);
   // brightness to register. Drives aurora()'s status report.
   function auroraVisible() {
     for (var k = 0; k < targets.length; k++) {
-      if (targetShown(targets[k])) return auroraDials(auroraTargetKp()).bright > 0.05;
+      if (targets[k].controlled && targetShown(targets[k])) {
+        return targetDials(targets[k], auroraTargetKp()).bright > 0.05;
+      }
     }
     return false;
   }
@@ -59426,12 +59495,15 @@ setMusicPausedState(false);
     lastNow = now;
     var want = auroraTargetKp();
     kpShown = (kpShown == null) ? want : kpShown + (want - kpShown) * Math.min(1, dt * 0.9);
-    var dl = auroraDials(kpShown);
-    vt += dt * dl.speed;                                  // a Kp-scaled clock, so a speed change never jumps the phase
-    draw(vt, dl);
+    var speedKp = kpShown;
+    for (var k = 0; k < targets.length; k++) {
+      if (targetShown(targets[k])) speedKp = Math.max(speedKp, targets[k].minKp);
+    }
+    vt += dt * auroraDials(speedKp).speed;                 // one phase clock, paced by the strongest visible surface
+    draw(vt, kpShown, true);
     raf = requestAnimationFrame(frame);
   }
-  function stillFrame() { kpShown = auroraTargetKp(); draw(vt, auroraDials(kpShown)); }
+  function stillFrame() { kpShown = auroraTargetKp(); draw(vt, kpShown); }
   function start() {
     if (raf || !shouldRun()) return;            // already live, or not runnable now
     lastNow = 0; raf = requestAnimationFrame(frame);
@@ -59455,7 +59527,7 @@ setMusicPausedState(false);
     if (source === "ui") auroraCheckpointOverride = on === true ? "on" : on === false ? "off" : null;
     else if (!arguments.length || source === "reset") auroraCheckpointOverride = null;
     if (on !== true) forcedKp = null;
-    targets.forEach(function (tg) {
+    targets.filter(function (tg) { return tg.controlled; }).forEach(function (tg) {
       if (on === true) { tg.stage.classList.add("aurora-force"); tg.stage.classList.remove("aurora-hide"); }
       else if (on === false) { tg.stage.classList.add("aurora-hide"); tg.stage.classList.remove("aurora-force"); }
       else { tg.stage.classList.remove("aurora-force", "aurora-hide"); }
@@ -59498,6 +59570,7 @@ setMusicPausedState(false);
     var forcedOn = auroraForced(), cloudy = auroraCloudy();
     var inRoom = false, atDusk = false;
     for (var k = 0; k < targets.length; k++) {
+      if (!targets[k].controlled) continue;
       if (window.currentStageName === targets[k].room) inRoom = true;
       if (targets[k].stage.classList.contains("dusk")) atDusk = true;
     }
@@ -59516,6 +59589,22 @@ setMusicPausedState(false);
              depression: dep, darkness: dark, nightDarkness: auroraNightDarkness(), odds: auroraBase(), why: why };
   };
   window.__gardenAuroraRaf = function () { return raf; }; // test hook: 0 when the loop is stopped
+  window.__campAuroraState = function () {
+    var camp = null;
+    for (var k = 0; k < targets.length; k++) if (targets[k].kind === "camp") camp = targets[k];
+    return camp ? { showing: targetShown(camp), running: !!raf && targetShown(camp),
+      reducedMotion: reduceMotion, kp: Math.max(auroraTargetKp(), camp.minKp) } : null;
+  };
+  // Camping's owner publishes every lifecycle edge as a class. Observing those two owners keeps
+  // this visual subscriber out of the Enter/interaction flow while still stopping in the same
+  // task that hides, exits, restores or advances the campsite.
+  var campTarget = null;
+  for (var ci = 0; ci < targets.length; ci++) if (targets[ci].kind === "camp") campTarget = targets[ci];
+  if (campTarget && window.MutationObserver) {
+    var campAuroraObserver = new MutationObserver(function () { window.__updateGardenAurora(); });
+    campAuroraObserver.observe(campTarget.stage, { attributes: true, attributeFilter: ["class"] });
+    if (campTarget.scene) campAuroraObserver.observe(campTarget.scene, { attributes: true, attributeFilter: ["class"] });
+  }
   document.addEventListener("visibilitychange", function () { window.__updateGardenAurora(); });
   window.addEventListener("focus", function () { window.__updateGardenAurora(); });
   window.addEventListener("blur", function () { window.__updateGardenAurora(); });

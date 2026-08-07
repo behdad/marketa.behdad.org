@@ -128,11 +128,12 @@ console field when you want to type. Desktop app openings retain their ready-to-
 
 Opening a message does not automatically run its activity. Select the activity arrow when ready.
 An activity can expire when its moment passes, but its message stays unread until you read it.
-Shortly after the first party starts, a one-time arrow identifies the Garden wall switch that ends
-the party when the player is ready. Any deliberate party teardown immediately leaves Behdad’s
-private road-trip invitation in Messages; its activity arrow opens the Entrance. The teardown also
-reports how many of the ten rooms have been seen. If rooms remain, a red arrow points to the room
-map until it is opened.
+Shortly after the first party starts, a large dismissible popup and red arrow identify the Garden
+wall switch that ends the party when the player is ready. Any deliberate party teardown prepares
+Behdad’s private road-trip invitation in Messages; its activity arrow opens the Entrance. The
+teardown also reports how many of the ten rooms have been seen. If rooms remain, a second
+dismissible popup and red arrow point to the room map. Calls, notification popups, and the Road Trip
+invitation wait until that coach is dismissed or the map is opened.
 The party itself does not automatically turn into a piano, dawn, or RSVP sequence; those loft
 activities remain free play, and Camping's `~ fin ~` is the game's terminal RSVP coda.
 Right-click or long-press a message or app icon for local actions. **Kill app** resets only that app.

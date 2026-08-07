@@ -429,6 +429,7 @@ footer{margin-top:2.6rem}
   box-shadow:0 3px 10px rgba(69,58,49,.15); background:#f8f5ec; container-type:inline-size;
   transition:--floor-pan .24s cubic-bezier(.4,0,.2,1);
 }
+.hunt-viewport:focus,.hunt-viewport:focus-visible{outline:none}
 @property --floor-pan{
   syntax:"<percentage>";
   inherits:true;
@@ -3152,18 +3153,6 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .hunt-dollhouse-slot{
   position:absolute; right:calc(100% + .7rem); top:50%; transform:translateY(-50%);
 }
-.hunt-dollhouse-slot.party-bridge-coach::after{
-  content:""; position:absolute; z-index:3; pointer-events:none;
-  left:50%; top:calc(100% + .28rem); width:2.45rem; height:3rem;
-  transform:translateX(-50%); background:center / contain no-repeat var(--espresso-arrow-up);
-  filter:drop-shadow(0 2px 2px rgba(69,58,49,.45));
-  animation:party-bridge-map-arrow .9s ease-in-out infinite;
-}
-@keyframes party-bridge-map-arrow{
-  0%,100%{transform:translate(-50%,.22rem)}
-  50%{transform:translate(-50%,-.08rem)}
-}
-@media (prefers-reduced-motion:reduce){.hunt-dollhouse-slot.party-bridge-coach::after{animation:none}}
 #hunt-dollhouse-btn{display:block}
 #hunt-dollhouse-btn,#hunt-floor-btn{width:1.9rem;height:1.9rem}
 #hunt-dollhouse-btn::before{
@@ -3183,9 +3172,35 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   .hunt-bottom-nav{width:calc(100% - 4.9rem);max-width:calc(100% - 4.9rem)}
   .hunt-floor-slot{left:calc(100% + .45rem)}
   .hunt-dollhouse-slot{right:calc(100% + .45rem)}
-  .hunt-dollhouse-slot.party-bridge-coach::after{width:2rem;height:2.45rem;top:calc(100% + .15rem)}
   #hunt-dollhouse-btn,#hunt-floor-btn{width:1.75rem;height:1.75rem}
 }
+.party-bridge-overlay{
+  position:absolute;inset:0;z-index:64;visibility:hidden;opacity:0;pointer-events:none;
+  transition:opacity .22s ease,visibility 0s linear .22s;
+  /* This HTML sibling sits outside #loft-game-strip, so party UV can never tint its red. */
+  filter:none!important;mix-blend-mode:normal!important;color-scheme:light;
+}
+.party-bridge-overlay.show{visibility:visible;opacity:1;transition-delay:0s}
+.party-bridge-overlay svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.party-bridge-arrow-shadow{fill:none;stroke:#1f1f1f;stroke-width:34;stroke-linecap:round}
+.party-bridge-arrow-line{fill:none;stroke:#ef1717;stroke-width:25;stroke-linecap:round}
+.party-bridge-arrow-head-shadow{fill:#1f1f1f}
+.party-bridge-arrow-head{fill:#ef1717}
+.party-bridge-popup{
+  position:absolute;box-sizing:border-box;pointer-events:auto;cursor:pointer;
+  padding:clamp(.72rem,1.5cqw,1.05rem) clamp(2.65rem,4.5cqw,3.4rem) clamp(.72rem,1.5cqw,1.05rem) clamp(.9rem,2cqw,1.35rem);
+  border:4px solid #ef1717;border-radius:18px;background:rgba(255,253,248,.97);
+  box-shadow:0 7px 24px rgba(0,0,0,.44);color:#382d27;
+  font:700 clamp(19px,2.35cqw,29px)/1.18 "Fraunces",serif;text-align:center;
+  text-wrap:balance;-webkit-tap-highlight-color:transparent;user-select:none;
+}
+.party-bridge-popup-x{
+  position:absolute;right:.55rem;top:50%;translate:0 -50%;display:grid;place-items:center;
+  width:clamp(1.8rem,3.2cqw,2.35rem);height:clamp(1.8rem,3.2cqw,2.35rem);
+  border-radius:50%;background:#ef1717;color:#fff;font:800 clamp(20px,2.6cqw,28px)/1 sans-serif;
+  box-shadow:0 2px 7px rgba(0,0,0,.28);
+}
+@media (prefers-reduced-motion:reduce){.party-bridge-overlay{transition:none}}
 /* Whole-loft picker: two aligned rows of five paired rooms. Live scene previews are used
    where they paint faithfully; stateful lower rooms use stable portrait art instead. */
 #loft-dollhouse{
@@ -12409,11 +12424,6 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
 #stage-garden.dusk #garden-lightswitch-rocker{transform:translateY(2px)} /* night: rocker down (symmetric about centre) */
 #garden-lightswitch-led{transition:fill .4s ease}
 #stage-garden.dusk #garden-lightswitch-led{fill:#f6c86a}
-#garden-party-exit-coach-arrow{opacity:0;pointer-events:none;transition:opacity .3s ease}
-#garden-lightswitch.party-bridge-coach ~ #garden-party-exit-coach-arrow{
-  opacity:1;animation:kitchen-arrow-bounce .9s ease-in-out infinite;
-}
-@media (prefers-reduced-motion:reduce){#garden-lightswitch.party-bridge-coach ~ #garden-party-exit-coach-arrow{animation:none}}
 #stage-garden.dusk #garden-caterpillar .cat-crawl{animation:cat-crawl 19s ease-in-out infinite}
 #stage-garden.dusk #garden-caterpillar .cat-body{animation:cat-inch 2.3s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%}
 @keyframes cat-crawl{0%,100%{transform:translateX(0)} 50%{transform:translateX(12px)}}
@@ -14618,7 +14628,7 @@ section{margin:1.9rem 0}
     <div id="loft-datetime-row" class="loft-datetime-row"></div>
     <div class="hunt-room-nav">
       <div class="hunt-dollhouse-slot">
-        <button type="button" id="hunt-dollhouse-btn" class="hunt-nav"></button>
+        <button type="button" id="hunt-dollhouse-btn" class="hunt-nav" tabindex="-1"></button>
       </div>
       <div class="hunt-dots" id="hunt-dots"></div>
       <div class="hunt-floor-slot">
@@ -14646,6 +14656,14 @@ section{margin:1.9rem 0}
     </a>
   </div>
   <div class="hunt-viewport">
+    <div id="party-switch-coach" class="party-bridge-overlay">
+      <svg><path class="party-bridge-arrow-shadow"/><path class="party-bridge-arrow-line"/><polygon class="party-bridge-arrow-head-shadow"/><polygon class="party-bridge-arrow-head"/></svg>
+      <div class="party-bridge-popup"><span data-i="party_switch_coach">When you’re ready, end the party here.</span><span class="party-bridge-popup-x">×</span></div>
+    </div>
+    <div id="party-room-map-coach" class="party-bridge-overlay">
+      <svg><path class="party-bridge-arrow-shadow"/><path class="party-bridge-arrow-line"/><polygon class="party-bridge-arrow-head-shadow"/><polygon class="party-bridge-arrow-head"/></svg>
+      <div class="party-bridge-popup"><span class="party-bridge-room-copy"></span><span class="party-bridge-popup-x">×</span></div>
+    </div>
     <svg id="loft-game-strip" viewBox="0 0 3400 340" xmlns="http://www.w3.org/2000/svg">
 <defs>
 <pattern id="bathroom-waffle" width="8" height="8" patternUnits="userSpaceOnUse">
@@ -16847,9 +16865,6 @@ section{margin:1.9rem 0}
 <rect x="38" y="200" width="13" height="24" rx="2" fill="#eae4d8" stroke="#c4bba8" stroke-width="1"/>
 <rect id="garden-lightswitch-rocker" x="40.5" y="203.5" width="8" height="13" rx="1.5" fill="#d8cfbc" stroke="#b0a690" stroke-width="0.8"/>
 <circle id="garden-lightswitch-led" cx="44.5" cy="220.5" r="1.1" fill="#8a8578"/>
-</g>
-<g id="garden-party-exit-coach-arrow">
-<path d="M38 146h13v29h10l-16.5 22L28 175h10Z" fill="#c0392b" stroke="#1f1f1f" stroke-width="2.3" stroke-linejoin="round"/>
 </g>
 <g id="garden-ukulele" class="hunt-hit" transform="translate(0,50)">
 <rect x="52" y="46" width="6" height="30" rx="2" fill="#8a6a44"/>
@@ -54476,6 +54491,7 @@ function setLang(l) {
   if (window.refreshBalconyTetrisText) window.refreshBalconyTetrisText();
   if (window.refreshSceneMinigameText) window.refreshSceneMinigameText();
   if (window.__refreshEntranceRoadtripHud) window.__refreshEntranceRoadtripHud();
+  if (window.__refreshPartyBridgeCoaches) window.__refreshPartyBridgeCoaches();
   if (window.refreshRoster) window.refreshRoster();
   if (window.__refreshOccasionBanner) window.__refreshOccasionBanner();
   if (window.refreshRoomDots) window.refreshRoomDots();
@@ -92769,6 +92785,9 @@ async def localfont(name):
         msgReplySeq: msgReplySeq,
         phoneSlots: (phoneSlots || phoneDefaultSlots()).slice(),
         mailRead: Object.assign({}, mailRead),
+        heldCalls: (heldCallRings || []).map(function (row) {
+          return { who: row.who, forced: !!row.forced };
+        }).slice(0, 2),
         appRows: [
           { id: "cards", index: cleanCardIndex },
           {
@@ -92807,6 +92826,9 @@ async def localfont(name):
       notesDraft = typeof state.notesDraft === "string" ? state.notesDraft.slice(0, 10000) : "";
       msgDraft = typeof state.msgDraft === "string" ? state.msgDraft.slice(0, 500) : "";
       msgReplySeq = Math.max(0, Math.min(9999, parseInt(state.msgReplySeq, 10) || 0));
+      heldCallRings = (Array.isArray(state.heldCalls) ? state.heldCalls : []).filter(function (row) {
+        return row && (row.who === "madla" || row.who === "prague");
+      }).slice(0, 2).map(function (row) { return { who: row.who, forced: !!row.forced }; });
       if (Array.isArray(state.phoneSlots)) {
         var allowed = phoneDefaultSlots().concat(["chat"]), seenSlots = {};
         phoneSlots = state.phoneSlots.filter(function (id) {
@@ -94520,9 +94542,11 @@ async def localfont(name):
       messageRewriteGeneration++;
       pendingAuthoredRewrites = {};
       deferredAutonomousMessages = [];
+      heldCallRings = [];
       lastAutonomousAuthoredId = null;
       autonomousReplyLinks = {};
       if (deferredAutonomousTimer) { clearTimeout(deferredAutonomousTimer); deferredAutonomousTimer = null; }
+      if (heldCallReleaseT) { clearTimeout(heldCallReleaseT); heldCallReleaseT = null; }
       return resetPhoneAppsBase();
     };
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
@@ -94895,6 +94919,15 @@ async def localfont(name):
     }
     window.__setLowerRoomNotificationHold = function (active) {
       syncActionGameNotificationHold("lower-room", !!active);
+    };
+    window.__setPartyRoomMapAttentionHold = function (active) {
+      syncActionGameNotificationHold("party-room-map", !!active);
+      if (active && typeof callRingUp === "function" && callRingUp()) {
+        holdCallRing(callRingWho, callRingForced);
+        hideCallRing();
+      } else if (!active && typeof scheduleHeldCallRelease === "function") {
+        scheduleHeldCallRelease();
+      }
     };
     function showMessageThumb(id) {
       if (document.hidden || !document.hasFocus()) return; // unattended → the text waits in the app; no ghost thumbnail/buzz
@@ -95583,6 +95616,7 @@ async def localfont(name):
     var madlaRingCount = 0;
     var callRingForced = false; // explicit script/outlet calls may bypass the autonomous phase/party gate
     var callRingEl = null, callRingHideT = null, callRingT = [];
+    var heldCallRings = [], heldCallReleaseT = null;
     function downstairsRejectsIncomingCalls() {
       if (window.__cinemaRoomOpen || window.__bathroomRoomOpen ||
           window.__bedroomRoomOpen || window.__entranceRoomOpen) return true;
@@ -95597,6 +95631,38 @@ async def localfont(name):
       callRingForced = false;
     }
     function callRingUp() { return !!(callRingEl && callRingEl.classList.contains("show")); }
+    function partyRoomMapHoldsAttention() {
+      return !!(window.__partyRoomMapCoachActive && window.__partyRoomMapCoachActive());
+    }
+    function holdCallRing(who, forced) {
+      who = RING_CALLERS[who] ? who : "madla";
+      if (!heldCallRings.some(function (row) { return row.who === who; })) {
+        heldCallRings.push({ who: who, forced: !!forced });
+        if (window.__checkpointChanged) window.__checkpointChanged();
+      }
+      return false;
+    }
+    function drainHeldCallRings() {
+      heldCallReleaseT = null;
+      if (!heldCallRings.length || partyRoomMapHoldsAttention()) return false;
+      if (document.hidden || !document.hasFocus() || downstairsRejectsIncomingCalls() ||
+          callee || anyExternalCall() || isOpen() || callRingUp()) {
+        scheduleHeldCallRelease(1000);
+        return false;
+      }
+      var row = heldCallRings[0];
+      if (!ringCall(row.who, row.forced)) {
+        scheduleHeldCallRelease(1000);
+        return false;
+      }
+      heldCallRings.shift();
+      if (window.__checkpointChanged) window.__checkpointChanged();
+      return true;
+    }
+    function scheduleHeldCallRelease(delay) {
+      if (heldCallReleaseT || !heldCallRings.length || partyRoomMapHoldsAttention()) return;
+      heldCallReleaseT = setTimeout(drainHeldCallRings, delay == null ? 550 : delay);
+    }
     // Answers whoever the card is currently showing — read at click time, so the one listener
     // bound to the card serves every caller.
     function answerRing() {
@@ -95625,6 +95691,7 @@ async def localfont(name):
     function showCallRing(who, forced) {
       callRingWho = RING_CALLERS[who] ? who : "madla";
       callRingForced = !!forced;
+      if (partyRoomMapHoldsAttention()) return holdCallRing(callRingWho, callRingForced);
       if (document.hidden || !document.hasFocus() || downstairsRejectsIncomingCalls()) return; // unattended/downstairs → they'd call back; no ghost ring
       if (callRingUp() || callee || anyExternalCall() || isOpen()) return; // don't ring over a live call or an open phone
       var host = document.querySelector(".hunt-viewport") || document.body;
@@ -95666,6 +95733,7 @@ async def localfont(name):
     // trigger an incoming ring (used by both schedules + the madla()/saturday() console hooks).
     // Refuses while a call's already live or the phone's open (they'd just get a busy tone).
     function ringCall(who, forced) {
+      if (partyRoomMapHoldsAttention()) return holdCallRing(who, forced);
       if (downstairsRejectsIncomingCalls() || callee || anyExternalCall() || isOpen() || callRingUp()) return false;
       if (who === "madla" && madlaRingCount >= 2) return false;
       showCallRing(who, forced);
@@ -95682,6 +95750,9 @@ async def localfont(name):
     window.__madlaRingForced = ringMadlaForced; // explicit script path: bypasses only that autonomous gate
     window.__answerMadla = answerMadla; // test hook: answer as if the ring were tapped
     window.__pragueRing = function () { return ringCall("prague"); };
+    window.__heldPartyCoachCalls = function () {
+      return heldCallRings.map(function (row) { return { who: row.who, forced: row.forced }; });
+    };
     window.__answerPrague = answerPrague;
     // ── daytime schedule ── a single self-rescheduling timer that RARELY fires Madla's incoming
     // ring during attended phase-two daytime play (day, no party, visible+focused, not cinematic, no call
@@ -111233,11 +111304,18 @@ function spawnDustMote(container) {
     }
     renderFloorNavigation();
   }
-  if (dollhouseBtn) dollhouseBtn.addEventListener("click", function (event) {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleDollhouse();
-  });
+  if (dollhouseBtn) {
+    dollhouseBtn.addEventListener("pointerdown", function (event) {
+      // The room map is a global game action, never a browser focus destination.
+      event.preventDefault();
+    });
+    dollhouseBtn.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleDollhouse();
+      if (dollhouseBtn.blur) dollhouseBtn.blur();
+    });
+  }
   if (dollhouseClose) dollhouseClose.addEventListener("click", function (event) {
     event.preventDefault(); event.stopPropagation(); closeDollhouse();
   });
@@ -112305,6 +112383,7 @@ function spawnDustMote(container) {
     strip.classList.toggle("viewing-balcony", name === "balcony");
     window.currentStageIndex = idx;
     window.currentStageName = name; // room-truth for gates that live outside this IIFE (e.g. the fractal-flame loop)
+    if (window.__refreshPartyBridgeCoaches) window.__refreshPartyBridgeCoaches();
     if (fromIdx !== idx && window.__loftStateChanged) window.__loftStateChanged("room.change", { room: name }, "ui");
     if (window.__syncLaptopSaverLoop) window.__syncLaptopSaverLoop(); // off-room device canvases/DOM loops hold their exact frame until the office returns
     if (window.__syncMonitorSaverLoop) window.__syncMonitorSaverLoop();
@@ -113891,6 +113970,64 @@ function spawnDustMote(container) {
     var switchCoachSeen = false, switchCoachRetired = false;
     var handoffShown = false, roadtripInviteDelivered = false, roomMapCoachActive = false;
     var switchCoachDelay = 4200;
+    var coachViewport = document.querySelector(".hunt-viewport");
+    var switchCoachOverlay = document.getElementById("party-switch-coach");
+    var roomMapCoachOverlay = document.getElementById("party-room-map-coach");
+    function coachPopup(overlay) { return overlay && overlay.querySelector(".party-bridge-popup"); }
+    function setCoachArrow(overlay, x, lineStart, lineEnd, tip, direction) {
+      if (!overlay || !coachViewport) return;
+      var width = coachViewport.clientWidth, height = coachViewport.clientHeight;
+      var svg = overlay.querySelector("svg");
+      if (!width || !height || !svg) return;
+      svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+      var line = "M" + x.toFixed(1) + " " + lineStart.toFixed(1) + "L" +
+        x.toFixed(1) + " " + lineEnd.toFixed(1);
+      overlay.querySelector(".party-bridge-arrow-shadow").setAttribute("d", line);
+      overlay.querySelector(".party-bridge-arrow-line").setAttribute("d", line);
+      var shadowPoints, redPoints;
+      if (direction === "up") {
+        shadowPoints = x + "," + tip + " " + (x - 36) + "," + (tip + 46) + " " + (x + 36) + "," + (tip + 46);
+        redPoints = x + "," + (tip + 5) + " " + (x - 27) + "," + (tip + 40) + " " + (x + 27) + "," + (tip + 40);
+      } else {
+        shadowPoints = x + "," + tip + " " + (x - 36) + "," + (tip - 46) + " " + (x + 36) + "," + (tip - 46);
+        redPoints = x + "," + (tip - 5) + " " + (x - 27) + "," + (tip - 40) + " " + (x + 27) + "," + (tip - 40);
+      }
+      overlay.querySelector(".party-bridge-arrow-head-shadow").setAttribute("points", shadowPoints);
+      overlay.querySelector(".party-bridge-arrow-head").setAttribute("points", redPoints);
+    }
+    function positionSwitchCoach() {
+      if (!switchCoachOverlay || !switchCoachOverlay.classList.contains("show") || !coachViewport) return;
+      var vr = coachViewport.getBoundingClientRect(), sr = sw.getBoundingClientRect();
+      var popup = coachPopup(switchCoachOverlay);
+      var width = Math.min(430, Math.max(290, vr.width * .4), vr.width - 24);
+      var targetX = Math.max(38, Math.min(vr.width - 38, sr.left + sr.width / 2 - vr.left));
+      var popupLeft = Math.max(12, Math.min(vr.width - width - 12, targetX - width * .22));
+      popup.style.width = width + "px";
+      popup.style.left = popupLeft + "px";
+      popup.style.top = Math.max(12, vr.height * .035) + "px";
+      var start = popup.offsetTop + popup.offsetHeight + 10;
+      var tip = Math.max(start + 54, Math.min(vr.height - 10, sr.top - vr.top - 3));
+      setCoachArrow(switchCoachOverlay, targetX, start, tip - 38, tip, "down");
+    }
+    function positionRoomMapCoach() {
+      if (!roomMapCoachOverlay || !roomMapCoachOverlay.classList.contains("show") || !coachViewport) return;
+      var vr = coachViewport.getBoundingClientRect();
+      var mapButton = document.getElementById("hunt-dollhouse-btn");
+      var br = mapButton && mapButton.getBoundingClientRect();
+      var targetX = br ? br.left + br.width / 2 - vr.left : vr.width / 2;
+      targetX = Math.max(42, Math.min(vr.width - 42, targetX));
+      var popup = coachPopup(roomMapCoachOverlay);
+      var width = Math.min(590, Math.max(330, vr.width * .52), vr.width - 24);
+      popup.style.width = width + "px";
+      popup.style.left = Math.max(12, Math.min(vr.width - width - 12, targetX - width / 2)) + "px";
+      var arrowBottom = Math.min(104, Math.max(78, vr.height * .18));
+      popup.style.top = (arrowBottom + 12) + "px";
+      setCoachArrow(roomMapCoachOverlay, targetX, arrowBottom, 39, 3, "up");
+    }
+    function positionCoaches() {
+      positionSwitchCoach();
+      positionRoomMapCoach();
+    }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
     function clearInvite(resetRemaining) {
       if (inviteTimer) { clearTimeout(inviteTimer); inviteTimer = null; }
@@ -113903,14 +114040,25 @@ function spawnDustMote(container) {
       if (resetRemaining !== false) switchCoachRemaining = 0;
     }
     function paintRoomMapCoach() {
-      var slot = document.querySelector(".hunt-dollhouse-slot");
-      if (slot) slot.classList.toggle("party-bridge-coach", !!roomMapCoachActive);
+      if (roomMapCoachOverlay) {
+        roomMapCoachOverlay.classList.toggle("show", !!roomMapCoachActive);
+        var copy = roomMapCoachOverlay.querySelector(".party-bridge-room-copy");
+        var count = window.__seenRooms ? Math.max(0, Math.min(10, window.__seenRooms().length)) : 0;
+        if (copy) copy.textContent = huntText("party_rooms_incomplete").replace("{n}", count);
+      }
+      if (window.__setPartyRoomMapAttentionHold) window.__setPartyRoomMapAttentionHold(!!roomMapCoachActive);
+      if (roomMapCoachActive) requestAnimationFrame(positionRoomMapCoach);
     }
     function paint() {
       var partyOn = !!window.__gardenPartyOn;
       var coach = partyOn && !switchCoachRetired && (switchCoachSeen || active);
       sw.classList.toggle("invite-pulse", !!(active && partyOn));
-      sw.classList.toggle("party-bridge-coach", coach);
+      if (switchCoachOverlay) {
+        switchCoachOverlay.classList.toggle("show", !!(coach && window.currentStageName === "garden"));
+        var switchCopy = switchCoachOverlay.querySelector("[data-i=party_switch_coach]");
+        if (switchCopy) switchCopy.textContent = huntText("party_switch_coach");
+        if (coach && window.currentStageName === "garden") requestAnimationFrame(positionSwitchCoach);
+      }
       paintRoomMapCoach();
     }
     function checkpointBridge() {
@@ -113921,9 +114069,6 @@ function spawnDustMote(container) {
       if (!window.__gardenPartyOn || switchCoachSeen || switchCoachRetired) return false;
       switchCoachSeen = true;
       paint();
-      if (window.currentStageName === "garden" && window.__flashCaptionKey) {
-        window.__flashCaptionKey("party_switch_coach", 6200, "party-switch-coach");
-      }
       checkpointBridge();
       return true;
     }
@@ -113997,6 +114142,7 @@ function spawnDustMote(container) {
     }
     function offerRoadtripInvite() {
       if (roadtripInviteDelivered || window.__gardenPartyOn || !window.__secondRound) return false;
+      if (roomMapCoachActive) return false;
       if (window.__phoneMessageReceived && window.__phoneMessageReceived("downstairs_entrance")) {
         roadtripInviteDelivered = true;
         checkpointBridge();
@@ -114017,9 +114163,8 @@ function spawnDustMote(container) {
       count = Math.max(0, Math.min(10, count));
       roomMapCoachActive = count < 10;
       paintRoomMapCoach();
-      if (window.__flashCaptionKey) {
-        window.__flashCaptionKey(count === 10 ? "party_rooms_complete" : "party_rooms_incomplete",
-          6200, "party-roadtrip-handoff", { n: count });
+      if (count === 10 && window.__flashCaptionKey) {
+        window.__flashCaptionKey("party_rooms_complete", 6200, "party-roadtrip-handoff");
       }
       checkpointBridge();
       return offerRoadtripInvite();
@@ -114056,21 +114201,41 @@ function spawnDustMote(container) {
     window.__showPartyExitHint = function () { return show(false); }; // deterministic state-test hook (does not manufacture a phone cue)
     window.__showPartySwitchCoach = showSwitchCoach; // focused test hook: skip only the initial non-blocking delay
     window.__offerPartyFinaleText = offerFinaleText; // focused test hook: deal the next closing message without waiting on party pacing
-    window.__consumePartyExitHint = function () {
+    function retireSwitchCoach() {
+      var changed = !switchCoachRetired;
       active = false;
       switchCoachRetired = true;
       clearSwitchCoach();
       if (window.__clearFlashCaption) window.__clearFlashCaption("party-switch-coach");
       paint();
-      checkpointBridge();
-    };
-    window.__retirePartyRoomMapCoach = function () {
+      if (changed) checkpointBridge();
+      return changed;
+    }
+    window.__consumePartyExitHint = retireSwitchCoach;
+    function retireRoomMapCoach() {
       if (!roomMapCoachActive) return false;
       roomMapCoachActive = false;
       paintRoomMapCoach();
       checkpointBridge();
+      offerRoadtripInvite();
       return true;
-    };
+    }
+    window.__retirePartyRoomMapCoach = retireRoomMapCoach;
+    [switchCoachOverlay, roomMapCoachOverlay].forEach(function (overlay) {
+      var popup = coachPopup(overlay);
+      if (!popup) return;
+      popup.addEventListener("pointerdown", function (event) {
+        event.preventDefault(); event.stopPropagation();
+      });
+      popup.addEventListener("click", function (event) {
+        event.preventDefault(); event.stopPropagation();
+        if (overlay === switchCoachOverlay) retireSwitchCoach();
+        else retireRoomMapCoach();
+      });
+    });
+    window.addEventListener("resize", positionCoaches);
+    window.__refreshPartyBridgeCoaches = paint;
+    window.__partyRoomMapCoachActive = function () { return !!roomMapCoachActive; };
     window.__partyLifecycleChanged = function (on, wasOn) {
       if (on && !wasOn) startFresh();
       else if (!on && wasOn) stopped();

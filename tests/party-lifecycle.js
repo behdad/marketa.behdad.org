@@ -42,28 +42,39 @@ var harness = String.raw`<script>
   check("direct party teardown clears the blacklight and magic-box glow", !window.__gardenPartyOn && strip && !strip.classList.contains("uv-mode") && !breather.uvPartyIntent && !breather.running && (!partySwitch || !partySwitch.classList.contains("on")));
   check("direct party teardown clears camera flashes and stepped spotlights", (!flashBloom || !flashBloom.classList.contains("flashing")) && (!flashWash || !flashWash.classList.contains("flashing")) && !discoInline);
   var firstHandoff = window.__partyLifecycleState ? window.__partyLifecycleState() : {};
-  check("an early deliberate teardown durably delivers the Road Trip handoff immediately",
-    firstHandoff.handoffShown && firstHandoff.roadtripInviteDelivered &&
-      window.__phoneMessageReceived && window.__phoneMessageReceived("downstairs_entrance") &&
+  check("an early deliberate teardown durably records the Road Trip handoff behind its coach",
+    firstHandoff.handoffShown && !firstHandoff.roadtripInviteDelivered &&
+      window.__phoneMessageReceived && !window.__phoneMessageReceived("downstairs_entrance") &&
       !Object.prototype.hasOwnProperty.call(firstHandoff, "roadtripInvitePending"), firstHandoff);
-  check("an incomplete-loft teardown pairs its dynamic caption with the red room-map coach",
-    firstHandoff.roomMapCoachActive && document.querySelector(".hunt-dollhouse-slot").classList.contains("party-bridge-coach") &&
-      /1 of 10 rooms/i.test(document.getElementById("hunt-caption").textContent),
-    document.getElementById("hunt-caption").textContent);
+  var roomCoach = document.getElementById("party-room-map-coach");
+  check("an incomplete-loft teardown pairs its dynamic popup with the large room-map arrow",
+    firstHandoff.roomMapCoachActive && roomCoach.classList.contains("show") &&
+      /1 of 10 rooms/i.test(roomCoach.querySelector(".party-bridge-room-copy").textContent) &&
+      !/1 of 10 rooms/i.test(document.getElementById("hunt-caption").textContent),
+    roomCoach.querySelector(".party-bridge-room-copy").textContent);
+  if (window.__madlaRingForced) window.__madlaRingForced();
+  check("the room-map coach queues an incoming call instead of letting it cover the coach",
+    !document.querySelector(".call-ring.show") && window.__heldPartyCoachCalls &&
+      window.__heldPartyCoachCalls().length === 1, window.__heldPartyCoachCalls && window.__heldPartyCoachCalls());
   if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
-  check("opening the room map retires its coach durably",
+  check("dismissing the room-map coach retires it and releases the Road Trip invitation once",
     !window.__partyLifecycleState().roomMapCoachActive &&
-      !document.querySelector(".hunt-dollhouse-slot").classList.contains("party-bridge-coach"));
+      !roomCoach.classList.contains("show") && window.__partyLifecycleState().roadtripInviteDelivered &&
+      window.__phoneMessageReceived("downstairs_entrance"));
+  if (window.__hideCallRing) window.__hideCallRing();
 
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   check("the unnamed regulars leave when the night bar becomes a party", patrons && getComputedStyle(patrons).opacity === "0");
   check("party starts a fresh lifecycle", window.__partyLifecycleState && window.__partyLifecycleState().attended === 0 && window.__partyLifecycleState().running);
   if (window.goToStage) window.goToStage("garden");
   if (window.__showPartySwitchCoach) window.__showPartySwitchCoach();
-  check("the first-party coach points to the existing wall switch without taking focus",
-    document.getElementById("garden-lightswitch").classList.contains("party-bridge-coach") &&
+  var switchCoach = document.getElementById("party-switch-coach");
+  check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
+    switchCoach.classList.contains("show") &&
+      /end the party here/i.test(switchCoach.querySelector(".party-bridge-popup").textContent) &&
+      getComputedStyle(switchCoach.querySelector(".party-bridge-arrow-line")).stroke === "rgb(239, 23, 23)" &&
       document.activeElement !== document.getElementById("garden-lightswitch") &&
-      /end the party here/i.test(document.getElementById("hunt-caption").textContent));
+      !/end the party here/i.test(document.getElementById("hunt-caption").textContent));
 
   focused = false;
   window.__partyLifecycleTick();
@@ -167,8 +178,11 @@ var harness = String.raw`<script>
   if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
   if (window.__setGardenParty) window.__setGardenParty(false, true);
   var partyEndCaption = document.getElementById("hunt-caption").textContent;
+  var partyEndPopup = document.querySelector("#party-room-map-coach .party-bridge-room-copy").textContent;
   check("manual party-end progress copy is localized in Czech", !window.__gardenPartyOn &&
-    /Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndCaption) && /Pokračuj dál/.test(partyEndCaption), partyEndCaption);
+    /Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndPopup) && /Pokračuj dál/.test(partyEndPopup) &&
+      !/Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndCaption),
+    JSON.stringify({ popup: partyEndPopup, caption: partyEndCaption }));
   if (window.__runMsgAction) window.__runMsgAction("downstairs_entrance");
   check("accepting the road-trip invitation opens Entrance", window.currentStageName === "balcony" && window.__entranceRoomOpen);
   report();

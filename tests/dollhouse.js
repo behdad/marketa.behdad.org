@@ -118,6 +118,10 @@ var harness = String.raw`<script>
       .filter(function (el) { return el.tabIndex >= 0; });
     check("the game exposes no browser tab stops", !tabStops.length,
       tabStops.map(function (el) { return el.id || el.className || el.tagName; }).join(","));
+    var gameViewport = document.querySelector(".hunt-viewport");
+    gameViewport.focus();
+    check("programmatic scene focus never paints a full-frame browser outline",
+      getComputedStyle(gameViewport).outlineStyle === "none", getComputedStyle(gameViewport).outline);
 
     window.__markLowerRoomDiscovered();
     check("discovering downstairs enables the persistent floor button without inventing a coach",
@@ -131,8 +135,13 @@ var harness = String.raw`<script>
       !document.getElementById("hunt-floor-btn").hidden && !document.getElementById("hunt-floor-btn").disabled &&
       !document.getElementById("hunt-dollhouse-btn").hidden && !document.getElementById("hunt-floor-coach"), JSON.stringify(state()));
 
-    document.getElementById("hunt-dollhouse-btn").click();
-    check("using the persistent grid button opens the picker", state().open, JSON.stringify(state()));
+    var gridButton = document.getElementById("hunt-dollhouse-btn");
+    gridButton.focus();
+    gridButton.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "mouse" }));
+    gridButton.click();
+    check("using the persistent grid button opens the picker without retaining browser focus",
+      state().open && gridButton.getAttribute("tabindex") === "-1" && document.activeElement !== gridButton,
+      JSON.stringify({ state: state(), tabindex: gridButton.getAttribute("tabindex"), active: document.activeElement && document.activeElement.id }));
     key("Tab");
     check("Tab closes the same picker without leaving the lower room", !state().open && window.__bathroomRoomOpen, JSON.stringify(state()));
 

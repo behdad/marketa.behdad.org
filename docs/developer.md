@@ -153,9 +153,11 @@ Keep progression coverage in `tests/play.js`, `tests/enter.js`, `tests/phase2-pr
 `tests/progression-transitions.js`.
 
 The `party-roadtrip-bridge` checkpoint adapter owns the one-time Garden switch coach, teardown room
-progress/map coach, and once-per-reset Road Trip handoff. Every unsuppressed party on→off edge writes
-`downstairs_entrance` directly into the checkpointed phone thread; there is no reload-vulnerable
-delay. Below ten distinct `seenRooms`, the map coach remains until `openDollhouse()` retires it.
+progress/map coach, and once-per-reset Road Trip handoff. Every unsuppressed party on→off edge records
+the handoff durably. Below ten distinct `seenRooms`, the dismissible map coach holds notification
+popups and incoming calls through the shared action-attention owner; calls queue in the phone
+checkpoint and `downstairs_entrance` is delivered exactly once after coach dismissal or
+`openDollhouse()`. Thus neither the coach nor its handoff depends on a reload-vulnerable delay.
 At 120 attended seconds the lifecycle offers the existing optional finale cue but never flips the
 party switch itself. The message’s `lower:entrance` action navigates to the Balcony and opens Entrance.
 

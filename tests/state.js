@@ -820,6 +820,8 @@ var PROBE_HARNESS = [
   "    gardenWallSwitch.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));",
   "    await sleep(40);",
   "    ok('garden switch: phase two turns the party back on without repeating the cue', !!window.__gardenPartyOn && el('stage-garden').classList.contains('dusk') && !gardenWallSwitch.classList.contains('invite-pulse'));",
+  "    ok('party bridge: the post-teardown room coach holds unrelated phone attention', window.__partyRoomMapCoachActive && window.__partyRoomMapCoachActive() && window.__heldPartyCoachCalls && Array.isArray(window.__heldPartyCoachCalls()));",
+  "    if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();",
   "    var msgCoach = document.querySelector('.msg-badge-coach'), msgBadge = document.querySelector('.msg-badge');",
   "    ok('messages: coach stays out of the live notification popup', !msgCoach || !msgCoach.classList.contains('show'));",
   "    if (window.__hideMessageThumb) window.__hideMessageThumb();",

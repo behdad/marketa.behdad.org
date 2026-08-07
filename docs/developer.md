@@ -290,7 +290,11 @@ warning for three seconds → the existing bilingual RSVP congratulations. The m
 inner group owns the walk so its campsite placement transform stays on the outer group; at Zs that
 outer group moves into `#entrance-roadtrip-camp-mama-collection-layer`, after the completed fire, so
 the collecting bear paints above the ring stones. Reset returns it to its original campsite sibling.
-Reduced motion snaps the bear and cobs to their collected positions.
+During the checkpointed three-second warning, `#entrance-roadtrip-camp` pans to the already-authored
+dense star field; a translated `<use>` repeats that field above the original scene bounds, and the
+terminal phase reveals the neutral Fraunces `~ fin ~` with the congratulations caption. The pan seeks
+through `--camp-sleep-pan-resume`, pauses with the same attended-time owner, and snaps to its end for
+reduced motion. Reduced motion also snaps the bear and cobs to their collected positions.
 `campStargazingState` checkpoints exact trace and handoff progress plus
 `campSleepState.phase` and attended time within that phase, but always restores the trace overlay
 closed. Leaving, hiding the tab, or moving focus to another window pauses an unfinished curtain call,

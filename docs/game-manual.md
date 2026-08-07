@@ -224,7 +224,8 @@ out the fire when the sleep
 suggestion appears. The campers retire into the glowing tent but leave their corn cobs by the fire.
 The solved constellations recede into a much denser twinkling sky; as the Zs rise, the mama bear
 crosses camp to collect the scraps. The food-storage warning holds for three seconds, then gives way
-to the existing RSVP congratulations. Leaving Camping or switching away pauses the curtain call at
+to the existing RSVP congratulations as the view finishes its restrained pan into the stars and a
+small `~ fin ~` appears. Leaving Camping or switching away pauses the curtain call at
 its current beat; returning continues from there. Leaving after it finishes makes the next
 **Camping** visit begin again at an empty firepit.
 

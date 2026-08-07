@@ -32,6 +32,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var cornKernels = corn && corn.querySelector(".entrance-roadtrip-camp-corn-kernels");
     var fieldStars = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-field-star"));
     var zzzNodes = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz"));
+    var fin = document.getElementById("entrance-roadtrip-camp-finale-fin");
+    var cameraStyle = getComputedStyle(camp);
+    var cameraMatrix = cameraStyle.transform === "none" ? null : new DOMMatrixReadOnly(cameraStyle.transform);
     var radii = fieldStars.map(function (star) { return Number(star.getAttribute("r")); });
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
     return {
@@ -75,6 +78,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       windshieldGlaze: getComputedStyle(document.getElementById("entrance-roadtrip-windshield-glaze")).visibility,
       nightSky: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-night-sky")).opacity),
       nightSkyUses: document.querySelectorAll("#entrance-roadtrip-camp-finale-night-sky use").length,
+      skyStarfieldUses: ["mid", "high"].map(function (name) {
+        var use = document.getElementById("entrance-roadtrip-camp-finale-starfield-" + name);
+        return { href: use.getAttribute("href"), transform: use.getAttribute("transform") };
+      }),
       liveConstellationOpacity: Number(getComputedStyle(liveConstellations).opacity),
       liveConstellationTransform: getComputedStyle(liveConstellations).transform,
       liveConstellationPointer: getComputedStyle(liveConstellations).pointerEvents,
@@ -90,6 +97,15 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       })).size,
       zzzs: zzzNodes.length,
       zzzDelays: zzzNodes.map(function (node) { return getComputedStyle(node).animationDelay; }),
+      cameraAnimation: cameraStyle.animationName,
+      cameraDuration: cameraStyle.animationDuration,
+      cameraDelay: cameraStyle.animationDelay,
+      cameraPlayState: cameraStyle.animationPlayState,
+      cameraOffset: cameraMatrix ? Math.round(cameraMatrix.m42 * 100) / 100 : 0,
+      finOpacity: Number(getComputedStyle(fin).opacity),
+      finText: fin.textContent.replace(/\s+/g, " ").trim(),
+      finFill: getComputedStyle(fin).fill,
+      finFont: getComputedStyle(fin).fontFamily,
       paused: camp.classList.contains("camp-sleep-paused"),
       fieldPlayState: fieldStars[0] && getComputedStyle(fieldStars[0]).animationPlayState,
       classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"].filter(function (name) {
@@ -239,6 +255,67 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 })();
 </script>`;
 
+var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+<style>#entrance-roadtrip-camp *{transition:none!important}</style>
+<script>
+(function () {
+  function frame() {
+    var camp = document.getElementById("entrance-roadtrip-camp");
+    var fin = document.getElementById("entrance-roadtrip-camp-finale-fin");
+    var style = getComputedStyle(camp);
+    var matrix = style.transform === "none" ? null : new DOMMatrixReadOnly(style.transform);
+    return {
+      phase: window.__entranceRoadtripCampSleepState().phase,
+      reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
+      animation: style.animationName,
+      offset: matrix ? Math.round(matrix.m42) : 0,
+      finOpacity: Number(getComputedStyle(fin).opacity),
+      finText: fin.textContent.replace(/\s+/g, " ").trim()
+    };
+  }
+  window.addEventListener("load", function () {
+    window.__unlockAllRooms();
+    window.goToStage("balcony");
+    setTimeout(function () {
+      try {
+        window.__openEntranceRoom();
+        document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
+        window.__openEntrancePorscheDriveHud();
+        window.__entranceRoadtripStart();
+        window.__entranceRoadtripSetRoute("camp", 0);
+        window.__setDayNight(true);
+        var checkpoint = window.__captureCheckpointSystems().entrance;
+        checkpoint.drive.roadtrip.campFireBuilt = true;
+        checkpoint.drive.roadtrip.campFireLit = false;
+        checkpoint.drive.roadtrip.campActive = true;
+        checkpoint.drive.roadtrip.stew = {
+          protein: "tofu", starch: "barley", status: "served", elapsed: 11600
+        };
+        checkpoint.drive.roadtrip.stargazing = {
+          progress: { cassiopeia: 5, "ursa-major": 7, "ursa-minor": 7 },
+          completed: ["cassiopeia", "ursa-major", "ursa-minor"],
+          complete: true,
+          wisdomDismissed: true,
+          wisdomHandoffReady: false,
+          sleepPhase: "complete",
+          sleepElapsed: 1200
+        };
+        window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
+        setTimeout(function () {
+          var report = { warning: frame() };
+          window.__entranceRoadtripCampSleepStep();
+          report.congrats = frame();
+          report.errors = window.__errs || [];
+          document.getElementById("__report").textContent = JSON.stringify(report);
+        }, 220);
+      } catch (error) {
+        document.getElementById("__report").textContent = JSON.stringify({ errors: [String(error && error.stack || error)] });
+      }
+    }, 320);
+  });
+})();
+</script>`;
+
 var failures = 0;
 function check(ok, message, detail) {
   if (ok) console.log("  ✓ " + message);
@@ -293,7 +370,10 @@ check(result && result.tentLit && result.tentLit.phase === "tent-lit" && !result
   "the tent closes and glows", result && result.tentLit);
 check(result && result.dark && result.dark.phase === "dark" && result.dark.darkness === .78 &&
   result.dark.darknessFill === "#061b2c" && result.dark.nightSky === 1 &&
-  result.dark.nightSkyUses === 3 && result.dark.finaleConstellationOpacity === .22 &&
+  result.dark.nightSkyUses === 5 && result.dark.skyStarfieldUses.every(function (use) {
+    return use.href === "#entrance-roadtrip-camp-finale-starfield";
+  }) && result.dark.skyStarfieldUses.map(function (use) { return use.transform; }).join("|") ===
+    "translate(0 -80)|translate(0 -160)" && result.dark.finaleConstellationOpacity === .22 &&
   result.dark.fieldStars >= 120 && result.dark.fieldRadiusMin < .4 && result.dark.fieldRadiusMax > 1.3 &&
   result.dark.fieldDurations > 100 && result.dark.fieldDelays > 100 && result.dark.tentLight === 1 &&
   result.dark.windshieldGlaze === "hidden",
@@ -326,6 +406,9 @@ check(result && result.zzzRestored && result.zzzRestored.phase === "zzz" &&
 check(result && result.warning && result.warning.phase === "complete" && !result.warning.sleepComplete &&
   result.warning.savedPhase === "complete" && result.warning.caption === "entrance_roadtrip_camp_food_warning" &&
   result.warning.captionText === "Never leave food outside at night." &&
+  result.warning.cameraAnimation === "entrance-roadtrip-camp-finale-pan" &&
+  result.warning.cameraDuration === "3s" && result.warning.cameraOffset >= 0 && result.warning.cameraOffset < 2 &&
+  result.warning.finOpacity === 0 &&
   result.warning.mamaAnimation === "none" && result.warning.cornAnimation === "none" &&
   result.warning.mamaTransform !== "none" && result.warning.cornOpacity === 0 &&
   result.warning.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.warning.mamaAboveFireRing,
@@ -341,15 +424,23 @@ check(result && result.warningExit && !result.warningExit.campActive && result.w
 check(result && result.warningBlurred && result.warningBlurred.phase === "complete" &&
   result.warningBlurred.phaseElapsed >= 500 && result.warningBlurred.phaseElapsed < 1000 &&
   result.warningBlurred.paused && result.warningBlurred.fieldPlayState === "paused" &&
+  result.warningBlurred.cameraPlayState === "paused" &&
+  result.warningBlurred.cameraOffset > 0 && result.warningBlurred.cameraOffset < 120 &&
   result.warningPaused && result.warningPaused.phase === "complete" && result.warningPaused.paused &&
+  result.warningPaused.cameraPlayState === "paused" &&
+  Math.abs(result.warningPaused.cameraOffset - result.warningBlurred.cameraOffset) < .5 &&
   Math.abs(result.warningPaused.phaseElapsed - result.warningBlurred.phaseElapsed) <= 15,
   "moving focus away freezes the warning timer and finale animation in place",
   { blurred: result && result.warningBlurred, held: result && result.warningPaused });
 check(result && result.warningRestored && result.warningRestored.phase === "complete" &&
   result.warningRestored.paused &&
+  result.warningRestored.cameraAnimation === "entrance-roadtrip-camp-finale-pan" &&
+  result.warningRestored.cameraPlayState === "paused" && /^-0\./.test(result.warningRestored.cameraDelay) &&
+  result.warningRestored.cameraOffset > 0 && result.warningRestored.cameraOffset < 120 &&
   Math.abs(result.warningRestored.phaseElapsed - result.warningBlurred.savedElapsed) <= 15 &&
   Math.abs(result.warningRestored.savedElapsed - result.warningBlurred.savedElapsed) <= 15 &&
-  result.warningResumed && !result.warningResumed.paused && result.warningResumed.fieldPlayState === "running",
+  result.warningResumed && !result.warningResumed.paused && result.warningResumed.fieldPlayState === "running" &&
+  result.warningResumed.cameraPlayState === "running",
   "checkpoint restore retains the attended time and focus resumes the remaining beat",
   { blurred: result && result.warningBlurred, restored: result && result.warningRestored,
     resumed: result && result.warningResumed });
@@ -361,8 +452,12 @@ check(result && result.warningHeld && result.warningHeld.phase === "complete" &&
 check(result && result.congrats && result.congrats.phase === "congrats" && result.congrats.sleepComplete &&
   result.congrats.savedPhase === "congrats" && result.congrats.caption === "entrance_roadtrip_camp_arrival" &&
   /^Congrats!.*RSVP!$/.test(result.congrats.captionText) &&
+  result.congrats.cameraAnimation === "none" && result.congrats.cameraOffset === 120 &&
+  result.congrats.finOpacity === .9 && result.congrats.finText === "~ fin ~" &&
+  result.congrats.finFill === "rgb(238, 232, 212)" && /Fraunces/.test(result.congrats.finFont) &&
   result.congrats.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.congrats.mamaAboveFireRing,
-  "three seconds later the existing RSVP congratulations becomes the terminal finale", result && result.congrats);
+  "the three-second sky pan lands with a restrained Fraunces fin and the terminal congratulations",
+  result && result.congrats);
 check(result && result.congratsSounds && result.congratsSounds.join("|") === "embers|approach|collect|finale",
   "the terminal congratulations gets one soft completion cue", result && result.congratsSounds);
 check(result && result.congrats && result.congrats.darknessPointer === "all" && result.completeClickTarget &&
@@ -377,9 +472,23 @@ check(result && result.czechWarning === "Nikdy nenechávejte přes noc jídlo ve
 check(result && result.completeExit && !result.completeExit.campActive && result.fresh &&
   result.fresh.campActive && result.fresh.phase === "idle" && !result.fresh.fireBuilt &&
   !result.fresh.fireLit && !result.fresh.stew && result.fresh.savedPhase === "idle" &&
+  result.fresh.cameraAnimation === "none" && result.fresh.cameraOffset === 0 && result.fresh.finOpacity === 0 &&
   result.fresh.mamaLayer === "entrance-roadtrip-camp" && !result.fresh.mamaAboveFireRing &&
   Object.keys(result.fresh.progress || {}).every(function (name) { return result.fresh.progress[name] === 0; }),
   "leaving after completion makes the next Camping visit fresh", { exit: result && result.completeExit, fresh: result && result.fresh });
+
+var reduced = lib.runPageSync("rsvp.html", REDUCED_HARNESS, 1800, {
+  forceReduce: true,
+  urlSuffix: "?date=2026-07-15&time=23:00#play",
+  chromeFlags: "--force-prefers-reduced-motion=reduce --window-size=1180,900"
+});
+check(reduced && reduced.errors.length === 0 && reduced.warning && reduced.warning.reduced &&
+  reduced.warning.phase === "complete" && reduced.warning.animation === "none" &&
+  reduced.warning.offset === 120 && reduced.warning.finOpacity === 0 &&
+  reduced.congrats && reduced.congrats.phase === "congrats" && reduced.congrats.offset === 120 &&
+  reduced.congrats.finOpacity === .9 && reduced.congrats.finText === "~ fin ~",
+  "reduced motion snaps to the safe sky composition while fin still waits for congratulations",
+  reduced);
 
 if (failures) process.exit(1);
 console.log("Campsite sleep-finale assertions passed.");

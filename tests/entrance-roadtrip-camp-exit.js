@@ -39,6 +39,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       junctionInnerX: Number(spur.getAttribute("data-roadtrip-junction-inner-x")),
       junctionRoadRightX: Number(spur.getAttribute("data-roadtrip-junction-road-right-x")),
       junctionOuterX: Number(spur.getAttribute("data-roadtrip-junction-outer-x")),
+      bendInnerX: Number(spur.getAttribute("data-roadtrip-bend-inner-x")),
+      bendOuterX: Number(spur.getAttribute("data-roadtrip-bend-outer-x")),
+      bendY: Number(spur.getAttribute("data-roadtrip-bend-y")),
+      innerEdgeStartX: Number(spur.getAttribute("data-roadtrip-inner-edge-start-x")),
+      innerEdgeStartY: Number(spur.getAttribute("data-roadtrip-inner-edge-start-y")),
       destinationInnerX: Number(spur.getAttribute("data-roadtrip-destination-inner-x")),
       destinationOuterX: Number(spur.getAttribute("data-roadtrip-destination-outer-x")),
       nearWidth: Number(spur.getAttribute("data-roadtrip-near-width")),
@@ -137,14 +142,20 @@ function camp(state) {
   return state && state.drive && state.drive.roadtrip.route === "camp" &&
     state.drive.roadtrip.active && !state.car.engineOn && state.drive.speed === 0;
 }
-function simpleSpur(visual) {
+function connectedSpur(visual) {
   var asphalt = visual && visual.asphalt || "";
-  return /^M/.test(asphalt) && /Z$/.test(asphalt) && !/[CQAS]/.test(asphalt) &&
-    (asphalt.match(/[ML]/g) || []).length === 4 &&
+  return /^M/.test(asphalt) && /Z$/.test(asphalt) &&
+    (asphalt.match(/Q/g) || []).length === 2 &&
+    (asphalt.match(/L/g) || []).length === 1 &&
     visual.junctionInnerX < visual.junctionOuterX &&
     Number.isFinite(visual.junctionRoadRightX) &&
-    visual.junctionInnerX <= visual.junctionRoadRightX - 4 &&
+    visual.junctionInnerX <= visual.junctionRoadRightX - 7 &&
     visual.junctionRoadRightX < visual.junctionOuterX &&
+    visual.bendInnerX < visual.bendOuterX &&
+    visual.destinationY < visual.bendY && visual.bendY < visual.junctionY &&
+    visual.innerEdgeStartX === visual.bendInnerX &&
+    visual.innerEdgeStartY === visual.bendY &&
+    visual.innerEdgeStartY <= visual.junctionY - 5 &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
     visual.destinationInnerX > visual.junctionInnerX &&
@@ -170,12 +181,12 @@ var mobile = run(true);
     farVisual.sign === "visible" && farVisual.spur === "visible" &&
     farVisual.destinationX > farVisual.junctionX && farVisual.destinationY < farVisual.junctionY &&
     farVisual.signPostX > farVisual.destinationX && farVisual.signPostX - farVisual.destinationX < 30 &&
-    simpleSpur(farVisual) && signsClear(farVisual),
+    connectedSpur(farVisual) && signsClear(farVisual),
     device + " shows the upper-right branch at the fourteen-second-equivalent travel distance", far);
   var mid = result && result.midExit || {};
   check(mid.state && mid.state.campExitVisible && !mid.state.campExitTakeable &&
     mid.visual && mid.visual.sign === "visible" && mid.visual.spur === "visible" &&
-    simpleSpur(mid.visual) && signsClear(mid.visual),
+    connectedSpur(mid.visual) && signsClear(mid.visual),
     device + " keeps one coherent paved branch through the middle approach", mid);
   var first = result && result.firstExit || {};
   var firstState = first.state || {};
@@ -191,7 +202,7 @@ var mobile = run(true);
     firstVisual.destinationY < firstVisual.junctionY - 15 &&
     firstVisual.nearWidth > firstVisual.farWidth * 2 && firstVisual.nearWidth < 80 &&
     firstVisual.signPostX > firstVisual.destinationX && firstVisual.signPostX - firstVisual.destinationX < 30 &&
-    simpleSpur(firstVisual) && signsClear(firstVisual) && /^M/.test(firstVisual.innerEdge || ""),
+    connectedSpur(firstVisual) && signsClear(firstVisual) && /^M/.test(firstVisual.innerEdge || ""),
     device + " paints a receding upper-right spur with its larger sign beside it", firstVisual);
 
   var missed = result && result.missed || {};

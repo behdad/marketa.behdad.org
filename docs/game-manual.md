@@ -98,7 +98,8 @@ and **Block Party**. Their opening screen or caption explains the controls.
 The lower rooms offer:
 
 - **Bathroom:** fill the tub to start the 30-second Bubble-gun round. Click bubbles for one point,
-  or drag and release the stool to fire for two. The round's × leaves the Bathroom open.
+  or drag the stool until its guide locks onto a bubble and release to fire for two. The round's ×
+  leaves the Bathroom open.
 - **Dungeon:** select the play wall to start or resume Prince of Persia. Escape leaves the
   presentation without discarding the run.
 - **Cinema:** wake the projector, choose a film, and use its playback controls. The screen × stops

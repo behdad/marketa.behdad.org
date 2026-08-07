@@ -50012,7 +50012,7 @@ function audioBed(kind) {
     mix.fire = fireIsLit() ? .04 : 0;
     mix.lake = sleeping ? .01 : .012;
     mix.wind = storming ? .03 : sleeping ? .006 : .012;
-    mix.rain = raining ? (storming ? .05 : .03) : 0;
+    mix.rain = raining ? (storming ? .018 : .01) : 0;
     mix.storm = storming ? .018 : 0;
     if (mix.fire && !fireSource) {
       fireSource = source(bed, fireBuffer, "bandpass", 1450, .55, fireGain);
@@ -50030,7 +50030,7 @@ function audioBed(kind) {
     }
     target(lakeGain.gain, mix.lake, .9);
     target(windGain.gain, mix.wind, .7);
-    target(rainGain.gain, mix.rain, .55);
+    target(rainGain.gain, mix.rain, 1.2);
     target(stormGain.gain, mix.storm, .8);
   }
   function start() {
@@ -50056,7 +50056,9 @@ function audioBed(kind) {
       fireBuffer = noiseBuffer(bed, 6, "fire");
       source(bed, wind, "bandpass", 780, .48, windGain);
       source(bed, noiseBuffer(bed, 8, "lake"), "lowpass", 540, .42, lakeGain);
-      source(bed, noiseBuffer(bed, 3, "rain"), "highpass", 1250, .35, rainGain);
+      // Keep the campsite shower broad and soft. A high-pass white-noise bed reads as
+      // an abrupt hiss at outdoor speaker levels, especially during initial fade-in.
+      source(bed, noiseBuffer(bed, 3, "rain"), "bandpass", 1550, .42, rainGain);
       source(bed, wind, "lowpass", 185, .5, stormGain);
       paintMix();
     } catch (_error) { stop(.05); }

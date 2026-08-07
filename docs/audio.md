@@ -183,7 +183,8 @@ delegates to it). The pipeline's old song-only idle condition folded into this.
   the refcount drops and the manager can suspend. The recovery Continue/Start over cover also
   counts as a room-ambience cover, keeping its saved-room preview silent until a choice is made.
 
-The campsite outdoor bed keeps a low-passed lake lap under its wind and fire/weather layers. The
+The campsite outdoor bed keeps a low-passed lake lap under its wind and fire/weather layers; its
+rain is a softly band-passed wash rather than a bright broadband hiss. The
 sleep finale retains the lake and halves the calm wind while the locally clear stargazing sky keeps
 rain/storm channels at zero; the night therefore stays audible without reverting to broadband hiss.
 

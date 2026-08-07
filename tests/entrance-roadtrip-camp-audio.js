@@ -115,10 +115,11 @@ check(s.lit && s.lit.audio.fireLit && s.lit.audio.mix.fire > 0 && s.lit.audio.fi
   s.lit.audio.sources === 5 && s.lit.beds === s.calm.beds,
   "the completed lit fire fades its crackle into the existing campsite bed", s.lit);
 check(s.rain && s.storm && s.rain.audio.rain && !s.rain.audio.storm &&
-  s.rain.audio.mix.rain > 0 && s.storm.audio.storm &&
+  s.rain.audio.mix.rain > 0 && s.rain.audio.mix.rain <= 0.01 && s.storm.audio.storm &&
   s.storm.audio.mix.rain > s.rain.audio.mix.rain &&
+  s.storm.audio.mix.rain <= 0.018 &&
   s.storm.audio.mix.wind > s.rain.audio.mix.wind && s.storm.audio.mix.storm > 0,
-  "rain is prominent outdoors and a storm raises both precipitation and wind", { rain: s.rain, storm: s.storm });
+  "rain stays soft outdoors while a storm modestly raises precipitation and wind", { rain: s.rain, storm: s.storm });
 check(s.clearNight && s.clearNight.audio.rain && s.clearNight.audio.storm &&
   s.clearNight.audio.mix.rain === 0 && s.clearNight.audio.mix.storm === 0 &&
   s.clearNight.audio.mix.wind < s.storm.audio.mix.wind,

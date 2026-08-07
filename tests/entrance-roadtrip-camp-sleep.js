@@ -27,6 +27,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var mamaBearGroup = document.getElementById("entrance-roadtrip-camp-mama-bear");
     var mamaBear = mamaBearGroup && mamaBearGroup.querySelector(".entrance-roadtrip-camp-mama");
     var mamaHead = mamaBearGroup && mamaBearGroup.querySelector(".entrance-roadtrip-camp-mama-head");
+    var cubRunner = mamaBearGroup && mamaBearGroup.querySelector(".entrance-roadtrip-camp-cub-runner");
     var finishedFire = document.getElementById("entrance-roadtrip-camp-finished-fire");
     var corn = document.getElementById("entrance-roadtrip-camp-served-corn");
     var cornCob = corn && corn.querySelector(".entrance-roadtrip-camp-corn-cob");
@@ -67,6 +68,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       mamaHeadDelay: getComputedStyle(mamaHead).animationDelay,
       mamaHeadTransform: getComputedStyle(mamaHead).transform,
       mamaFinLook: mamaBearGroup.classList.contains("camp-fin-look"),
+      cubAnimation: getComputedStyle(cubRunner).animationName,
+      cubDelay: getComputedStyle(cubRunner).animationDelay,
+      cubTransform: getComputedStyle(cubRunner).transform,
       mamaLayer: mamaBearGroup.parentNode && mamaBearGroup.parentNode.id,
       mamaAboveFireRing: !!(finishedFire.compareDocumentPosition(mamaBearGroup) & Node.DOCUMENT_POSITION_FOLLOWING),
       cornOpacity: Number(getComputedStyle(corn).opacity),
@@ -257,7 +261,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 report.fresh = snap();
               } catch (error) { report.errors.push(String(error && error.stack || error)); }
               finish();
-            }, 7400);
+            }, 8700);
             return;
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
           finish();
@@ -339,7 +343,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite sleep finale:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 8000, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 10500, {
   forceReduce: true,
   urlSuffix: "?date=2026-07-15&time=23:00#play",
   chromeFlags: "--window-size=1180,900"
@@ -480,8 +484,15 @@ check(result && result.congrats && result.congrats.mamaFinLook &&
   result.congratsBearLook && result.congratsBearLook.mamaFinLook,
   "three seconds after the finale cue, the visible mama bear gives a clear head look",
   { before: result && result.congrats, look: result && result.congratsBearLook });
+check(result && result.congrats &&
+  result.congrats.cubAnimation === "entrance-roadtrip-camp-cub-rejoin" &&
+  result.congrats.cubDelay === "4.25s" && result.congratsBearLook && result.congratsBearLook.mamaFinLook,
+  "the cub waits for mama's look, then bounds across to rejoin her",
+  { before: result && result.congrats, after: result && result.congratsBearLook });
 check(result && result.congratsReload && result.congratsReload.phase === "congrats" &&
   result.congratsReload.mamaFinLook && result.congratsReload.mamaHeadDelay === "3s" &&
+  result.congratsReload.cubAnimation === "entrance-roadtrip-camp-cub-rejoin" &&
+  result.congratsReload.cubDelay === "4.25s" &&
   result.congratsSounds.join("|") === "embers|approach|collect|finale",
   "reloading the terminal fin page re-arms the bear look without replaying its audio",
   result && result.congratsReload);

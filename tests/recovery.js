@@ -76,7 +76,7 @@ check(s.gate.utilityVisibility === "visible" && s.gate.brandDisplay === "block" 
 check(s.translatedRecovery && s.translatedRecovery.brand === "Den v podkroví" && s.translatedRecovery.title === "Vítej zpátky" &&
   /Pokračovat/.test(s.translatedRecovery.continueText) && /Začít znovu/.test(s.translatedRecovery.restartText) && /^Uloženo pracovna · /.test(s.translatedRecovery.summary),
   "changing language repaints the visible recovery choice and saved-room summary", s.translatedRecovery);
-check(s.gate.watchParent === "hunt-fullscreen-area" && s.gate.watchDisplay === "flex", "Trailer occupies the room-dot row during recovery", s.gate);
+check(s.gate.watchParent === "hunt-bottom-nav" && s.gate.watchDisplay === "flex", "Trailer occupies the top row during recovery", s.gate);
 check(!s.gate.watchHidden && s.gate.watchAria === null && s.gate.watchDisplay === "flex", "Trailer remains available beside the recovery choice", s.gate);
 check(s.blocked && s.blocked.gate && s.blocked.room === "kitchen" && !s.blocked.started && !s.blocked.party && !s.blocked.trip && !s.blocked.help && !s.blocked.console && s.blocked.save, "gameplay shortcuts stay inert until a recovery choice is made", s.blocked);
 check(s.right && s.left, "arrow keys move between Start over and Continue", { right: s.right, left: s.left });
@@ -154,7 +154,7 @@ check(s.malformed && s.malformed.inventory &&
   "malformed inventory and damage rows clamp to safe fresh defaults", s.malformed && s.malformed.inventory);
 check(!s.continued.recoveryCaption && s.continued.caption.toLowerCase().indexOf("continue from") === -1, "continuing restores the room caption", s.continued);
 check(!s.continued.recoveryActive && s.continued.leftVisibility === "visible" && s.continued.rightVisibility === "visible" && s.continued.dotsDisplay === "flex", "continuing restores navigation", s.continued);
-check(s.continued.watchParent === "MAIN", "continuing returns Trailer to its document owner", s.continued);
+check(s.continued.watchParent === "MAIN", "continuing restores Trailer below the shared game shell", s.continued);
 check(!s.continued.watchHidden && !s.continued.watchAria && s.continued.watchDisplay === "none", "game-only play hides Trailer after the recovery choice", s.continued);
 
 var restart = lib.runPageSync("rsvp.html", START_OVER_HARNESS, 1900, { patchRaf: true, urlSuffix: "?date=2027-02-14&time=18:30#play" });
@@ -162,7 +162,7 @@ check(!!restart && restart.errors.length === 0, "Start over harness has no uncau
 var startedOver = restart && restart.steps.startedOver;
 check(startedOver && startedOver.confirmations === 0 && !startedOver.gate && !startedOver.save && startedOver.room === "kitchen" && !startedOver.phase2,
   "Start over is the confirmation: it resets immediately without a browser dialog", startedOver);
-check(startedOver && !startedOver.started && startedOver.entered && startedOver.clickMe && startedOver.introActive && startedOver.watchParent === "hunt-fullscreen-area" && startedOver.langsDisplay === "flex" && startedOver.escapeVisibility === "hidden" && !/La Maz/.test(startedOver.caption),
+check(startedOver && !startedOver.started && startedOver.entered && startedOver.clickMe && startedOver.introActive && startedOver.watchParent === "hunt-bottom-nav" && startedOver.langsDisplay === "flex" && startedOver.escapeVisibility === "hidden" && !/La Maz/.test(startedOver.caption),
   "recovery Start over enlarges the page but preserves the clean CLICK ME introduction", startedOver);
 check(startedOver && startedOver.translatedClickMe && startedOver.translatedClickMe.brand === "Den v podkroví" &&
   startedOver.translatedClickMe.word === "KLIKNI!" && startedOver.translatedClickMe.ariaCount === 0,

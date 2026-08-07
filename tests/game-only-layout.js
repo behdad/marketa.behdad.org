@@ -116,12 +116,18 @@ function run(width, height, standalone, fullPage) {
     check("entry hides room navigation and media transport",
       ["hunt-prev","hunt-next","hunt-volume-btn","hunt-playpause-btn","hunt-skip-btn"].every(function(id){
         return getComputedStyle(document.getElementById(id)).visibility === "hidden";
-      }) && getComputedStyle(document.getElementById("hunt-dots")).display === "none");
+      }) && getComputedStyle(document.getElementById("hunt-dots")).display === "none" &&
+      getComputedStyle(document.getElementById("hunt-dollhouse-btn")).visibility === "hidden" &&
+      getComputedStyle(document.getElementById("hunt-floor-btn")).visibility === "hidden");
     check("game-only shell stays inside the viewport width", area.left >= -1 && area.right <= innerWidth + 1,
       JSON.stringify({ innerWidth: innerWidth, left: area.left, right: area.right }));
     check("game-only shell stays within its width and height fit", area.width <= innerWidth + 1 &&
       area.width <= (innerHeight * 2 - 79),
       JSON.stringify({ innerWidth: innerWidth, innerHeight: innerHeight, width: area.width }));
+    check("the invitation does not make the browser page scroll",
+      area.top >= -1 && area.bottom <= innerHeight + 1 &&
+      document.documentElement.scrollHeight <= innerHeight + 1,
+      JSON.stringify({ innerHeight: innerHeight, area: area, scrollHeight: document.documentElement.scrollHeight }));
     if (innerWidth >= 1600 && innerHeight >= 900) {
       check("a large browser uses the full available width instead of the old 1620px cap",
         area.width > 1620 && area.width >= Math.min(innerWidth, innerHeight * 2 - 80) - 1,
@@ -129,9 +135,10 @@ function run(width, height, standalone, fullPage) {
     }
     check("the invitation state keeps Trailer in view", watch.bottom <= innerHeight + 1,
       JSON.stringify({ innerHeight: innerHeight, watchBottom: watch.bottom, areaBottom: area.bottom }));
-    check("Trailer occupies the shell's bottom row",
-      document.querySelector(".watch-controls").parentNode.id === "hunt-fullscreen-area" &&
-      watch.top >= frame.bottom - 1 && watch.bottom <= area.bottom + 1,
+    check("Trailer occupies the shell's top row",
+      document.querySelector(".watch-controls").parentNode.id === "hunt-bottom-nav" &&
+      watch.top >= document.getElementById("hunt-bottom-nav").getBoundingClientRect().top - 1 &&
+      watch.bottom <= frame.top + 1,
       JSON.stringify({ watch: watch, frame: frame, area: area }));
     var invitationWidth = area.width;
     window.__endAttract();
@@ -183,7 +190,7 @@ function run(width, height, standalone, fullPage) {
         check("an in-game extinguisher reset preserves enlarged page mode and returns to CLICK ME",
           window.__gameOnlyEntered() && !window.__gameStarted() && !!document.getElementById("click-me-overlay") &&
           document.getElementById("hunt-fullscreen-area").classList.contains("intro-active") &&
-          document.querySelector(".watch-controls").parentNode.id === "hunt-fullscreen-area");
+          document.querySelector(".watch-controls").parentNode.id === "hunt-bottom-nav");
         window.__endAttract();
         window.reset();
         setTimeout(function () {

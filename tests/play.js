@@ -92,6 +92,12 @@ var RSVP_HARNESS = [
   "  var report = { errors: [], solve: {}, stormClicked: 0, missing: [], external: { clicked: [], skipped: [] } };",
   "  function expect(id) { if (!document.getElementById(id)) report.missing.push(id); return id; }",
   "  async function solve() {",
+  "    if (window.__endAttract) window.__endAttract();",
+  "    await sleep(40);",
+  "    if (window.__openingGuideShowing && window.__openingGuideShowing()) click(expect('kitchen-cabinet-2'));",
+  "    await sleep(20);",
+  "    if (window.__openingGuideShowing && window.__openingGuideShowing()) click(expect('kitchen-cabinet-2'));",
+  "    await sleep(20);",
   "    click(expect('kitchen-portafilter'));",       // the portafilter advances whichever coffee step comes next
   "    await sleep(2800);",                         // the espresso machine must finish warming before the grinder accepts input
   "    click(expect('kitchen-portafilter'));",       // flies to the grinder (FLY_MS), then grinds (GRIND_MS)

@@ -27,6 +27,33 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
       if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
       window.__entranceRoadtripStart();
 
+      window.__entranceRoadtripSetRoute("camp", 0);
+      var finishedCheckpoint = window.__captureCheckpointSystems().entrance;
+      finishedCheckpoint.drive.roadtrip.campActive = true;
+      finishedCheckpoint.drive.roadtrip.campFireBuilt = true;
+      finishedCheckpoint.drive.roadtrip.campFireLit = false;
+      finishedCheckpoint.drive.roadtrip.stargazing = {
+        progress: { cassiopeia: 5, "ursa-major": 7, "ursa-minor": 7 },
+        completed: ["cassiopeia", "ursa-major", "ursa-minor"],
+        complete: true,
+        wisdomDismissed: true,
+        wisdomHandoffReady: false,
+        sleepPhase: "congrats",
+        sleepElapsed: 0
+      };
+      window.__restoreCheckpointSystems({ entrance: finishedCheckpoint }, "afterStage");
+      report.previousFinale = {
+        phase: window.__entranceRoadtripCampSleepState().phase,
+        visible: document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-congrats"),
+        transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform
+      };
+      window.__entranceRoadtripStart();
+      report.freshCamp = {
+        phase: window.__entranceRoadtripCampSleepState().phase,
+        visible: document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-congrats"),
+        transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform
+      };
+
       var initial = state();
       report.calgaryBanff = [.25, .5, .75].map(function (fraction) {
         return sampleRoute("turnoff", fraction, initial.turnoffDistanceRequired);
@@ -102,6 +129,8 @@ check(/function transitionRoadtripTraffic\(previousRoute\)/.test(source) &&
   /transitionRoadtripTraffic\(previousTurnoffRoute\)/.test(source) &&
   /transitionRoadtripTraffic\(previousLakeTurnoffRoute\)/.test(source),
   "attended road-width changes preserve and retarget the bounded traffic pool");
+check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*resetRoadtripCampSession\(\);/.test(source),
+  "fresh Road Trips clear the previous campsite before any transition frame");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
   patchRaf: true,
@@ -112,6 +141,12 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
 });
 check(result && result.errors.length === 0, "the transition sweep has no uncaught errors",
   result && result.errors);
+check(result && result.previousFinale && result.previousFinale.phase === "congrats" &&
+  result.previousFinale.visible === true && result.previousFinale.transform !== "none" &&
+  result.freshCamp && result.freshCamp.phase === "idle" && result.freshCamp.visible === false &&
+  result.freshCamp.transform === "none",
+  "a fresh run removes the prior ~fin~ pan before Camping can dissolve in",
+  result && { previousFinale: result.previousFinale, freshCamp: result.freshCamp });
 
 var cb = result && result.calgaryBanff || [];
 check(cb.length === 3 && cb[0].blend.calgary > cb[1].blend.calgary &&

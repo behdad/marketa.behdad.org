@@ -102,6 +102,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.handoffReady = snap();
     enter(false);
     report.handoffAdvanced = snap();
+    await sleep(180);
+    enter(false);
+    report.sleepStarted = snap();
     window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
     await sleep(180);
     document.getElementById("entrance-roadtrip-camp-wisdom").dispatchEvent(
@@ -182,6 +185,8 @@ check(result && result.handoffReady.active && result.handoffReady.wisdomShown &&
   !result.handoffAdvanced.stargazing.wisdomHandoffReady &&
   result.handoffAdvanced.stargazing.sleepPhase === "prompt" &&
   result.handoffAdvanced.caption === "entrance_roadtrip_camp_sleep_prompt" &&
+  result.sleepStarted.active && result.sleepStarted.stargazing.sleepPhase === "fire-out" &&
+  !result.sleepStarted.fireLit &&
   !result.handoffAdvanced.tentOpen && result.handoffClickBaseline.active &&
   result.handoffClickBaseline.wisdomShown === result.handoffAdvanced.wisdomShown &&
   result.handoffClickBaseline.caption === result.handoffAdvanced.caption &&
@@ -189,6 +194,9 @@ check(result && result.handoffReady.active && result.handoffReady.wisdomShown &&
   JSON.stringify(result.handoffClickBaseline.stargazing) === JSON.stringify(result.handoffAdvanced.stargazing),
   "ready wisdom Enter exactly matches the click handoff without leaving Camping or activating its tent",
   result && { ready: result.handoffReady, enter: result.handoffAdvanced, click: result.handoffClickBaseline });
+check(result && result.sleepStarted.active && result.sleepStarted.stargazing.sleepPhase === "fire-out" &&
+  !result.sleepStarted.fireLit && result.sleepStarted.caption === "entrance_roadtrip_camp_sleep_prompt",
+  "the next Enter accepts the sleep prompt and puts out the fire", result && result.sleepStarted);
 check(result && result.prevented.every(Boolean), "every campsite-owned Enter is consumed before global navigation", result && result.prevented);
 
 if (failures) process.exit(1);

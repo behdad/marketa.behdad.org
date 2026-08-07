@@ -23,7 +23,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var tent = document.getElementById("entrance-roadtrip-camp-tent");
     var liveConstellations = document.getElementById("entrance-roadtrip-camp-finale-constellations");
     var finaleConstellations = document.getElementById("entrance-roadtrip-camp-finale-sleep-constellations");
-    var mamaBear = document.querySelector("#entrance-roadtrip-camp-mama-bear .entrance-roadtrip-camp-mama");
+    var mamaBearGroup = document.getElementById("entrance-roadtrip-camp-mama-bear");
+    var mamaBear = mamaBearGroup && mamaBearGroup.querySelector(".entrance-roadtrip-camp-mama");
+    var finishedFire = document.getElementById("entrance-roadtrip-camp-finished-fire");
     var corn = document.getElementById("entrance-roadtrip-camp-served-corn");
     var cornCob = corn && corn.querySelector(".entrance-roadtrip-camp-corn-cob");
     var cornKernels = corn && corn.querySelector(".entrance-roadtrip-camp-corn-kernels");
@@ -32,6 +34,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
     return {
       phase: window.__entranceRoadtripCampSleepState().phase,
+      sleepComplete: window.__entranceRoadtripCampSleepState().complete,
       caption: window.__captionKey && window.__captionKey(),
       captionText: document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim(),
       campActive: room.classList.contains("roadtrip-active") && room.classList.contains("roadtrip-route-camp"),
@@ -50,6 +53,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       }),
       mamaTransform: getComputedStyle(mamaBear).transform,
       mamaAnimation: getComputedStyle(mamaBear).animationName,
+      mamaLayer: mamaBearGroup.parentNode && mamaBearGroup.parentNode.id,
+      mamaAboveFireRing: !!(finishedFire.compareDocumentPosition(mamaBearGroup) & Node.DOCUMENT_POSITION_FOLLOWING),
       cornOpacity: Number(getComputedStyle(corn).opacity),
       cornAnimation: getComputedStyle(corn).animationName,
       cornCobFill: getComputedStyle(cornCob).fill,
@@ -76,7 +81,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         return star.style.getPropertyValue("--camp-star-delay");
       })).size,
       zzzs: document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz").length,
-      classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"].filter(function (name) {
+      classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"].filter(function (name) {
         return camp.classList.contains("camp-sleep-" + name);
       })
     };
@@ -151,17 +156,34 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             });
             report.collected = snap();
             window.__entranceRoadtripCampSleepStep();
-            report.complete = snap();
-            report.completeClickTarget = click(document.getElementById("entrance-roadtrip-camp-finale-darkness"));
-            report.completeAfterClick = snap();
-            window.setLang("cs");
-            report.czechComplete = snap().captionText;
-            window.setLang("en");
-
+            report.warning = snap();
             click(document.getElementById("entrance-roadtrip-dismiss"));
-            report.completeExit = snap();
+            report.warningExit = snap();
             reenterCamp();
-            report.fresh = snap();
+            report.warningReturn = snap();
+            window.setLang("cs");
+            report.czechWarning = snap().captionText;
+            window.setLang("en");
+            setTimeout(function () {
+              try { report.warningHeld = snap(); }
+              catch (error) { report.errors.push(String(error && error.stack || error)); }
+            }, 2850);
+            setTimeout(function () {
+              try {
+                report.congrats = snap();
+                report.completeClickTarget = click(document.getElementById("entrance-roadtrip-camp-finale-darkness"));
+                report.completeAfterClick = snap();
+                window.setLang("cs");
+                report.czechCongrats = snap().captionText;
+                window.setLang("en");
+                click(document.getElementById("entrance-roadtrip-dismiss"));
+                report.completeExit = snap();
+                reenterCamp();
+                report.fresh = snap();
+              } catch (error) { report.errors.push(String(error && error.stack || error)); }
+              finish();
+            }, 3250);
+            return;
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
           finish();
         }, 220);
@@ -181,7 +203,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite sleep finale:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 2600, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 6500, {
   forceReduce: true,
   urlSuffix: "?date=2026-07-15&time=23:00#play",
   chromeFlags: "--window-size=1180,900"
@@ -214,6 +236,7 @@ check(result && result.runningExit && !result.runningExit.campActive && result.r
 check(result && result.campersGone && result.campersGone.phase === "campers-gone" &&
   result.campersGone.campersOpacity.every(function (opacity) { return opacity === 0; }) &&
   result.campersGone.mamaTransform === "none" && result.campersGone.cornOpacity === 1 &&
+  result.campersGone.mamaLayer === "entrance-roadtrip-camp" && !result.campersGone.mamaAboveFireRing &&
   result.campersGone.cornCobFill === "rgb(196, 155, 85)" && result.campersGone.cornKernelsOpacity === .18,
   "the campers fade after the fire goes out and leave two stripped corn cobs behind",
   result && result.campersGone);
@@ -232,25 +255,45 @@ check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight
   result.zzz.zzzs === 3 && result.zzz.classes.indexOf("zzz") >= 0 &&
   result.zzz.mamaAnimation === "entrance-roadtrip-camp-bear-collect" &&
   result.zzz.cornAnimation === "entrance-roadtrip-camp-corn-collected" &&
-  result.collected && result.collected.mamaTransform !== "none" && result.collected.cornOpacity === 0,
-  "the tent light goes out while the mama bear crosses camp and collects the cobs before the phase advances",
+  result.zzz.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.zzz.mamaAboveFireRing &&
+  result.collected && result.collected.mamaTransform !== "none" && result.collected.cornOpacity === 0 &&
+  result.collected.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.collected.mamaAboveFireRing,
+  "the tent light goes out while the foreground mama bear crosses the fire ring and collects the cobs",
   result && result.zzz);
-check(result && result.complete && result.complete.phase === "complete" &&
-  result.complete.caption === "entrance_roadtrip_camp_food_warning" &&
-  result.complete.captionText === "Never leave food outside at night." &&
-  result.complete.mamaAnimation === "none" && result.complete.cornAnimation === "none" &&
-  result.complete.mamaTransform !== "none" && result.complete.cornOpacity === 0,
-  "the collected food ends the finale on its safety warning", result && result.complete);
-check(result && result.complete && result.complete.darknessPointer === "all" && result.completeClickTarget &&
-  result.completeAfterClick && result.completeAfterClick.phase === "complete" &&
+check(result && result.warning && result.warning.phase === "complete" && !result.warning.sleepComplete &&
+  result.warning.savedPhase === "complete" && result.warning.caption === "entrance_roadtrip_camp_food_warning" &&
+  result.warning.captionText === "Never leave food outside at night." &&
+  result.warning.mamaAnimation === "none" && result.warning.cornAnimation === "none" &&
+  result.warning.mamaTransform !== "none" && result.warning.cornOpacity === 0 &&
+  result.warning.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.warning.mamaAboveFireRing,
+  "the collected food reaches its checkpointed warning beat above the ring", result && result.warning);
+check(result && result.warningExit && !result.warningExit.campActive && result.warningExit.phase === "complete" &&
+  result.warningReturn && result.warningReturn.campActive && result.warningReturn.phase === "complete" &&
+  result.warningReturn.savedPhase === "complete" && result.warningReturn.caption === "entrance_roadtrip_camp_food_warning" &&
+  result.warningReturn.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.warningReturn.mamaAboveFireRing,
+  "leaving during the warning preserves its checkpoint and foreground bear layer",
+  { exit: result && result.warningExit, back: result && result.warningReturn });
+check(result && result.warningHeld && result.warningHeld.phase === "complete" &&
+  result.warningHeld.captionText === "Never leave food outside at night.",
+  "the food warning remains for the full first 2.85 seconds", result && result.warningHeld);
+check(result && result.congrats && result.congrats.phase === "congrats" && result.congrats.sleepComplete &&
+  result.congrats.savedPhase === "congrats" && result.congrats.caption === "entrance_roadtrip_camp_arrival" &&
+  /^Congrats!.*RSVP!$/.test(result.congrats.captionText) &&
+  result.congrats.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.congrats.mamaAboveFireRing,
+  "three seconds later the existing RSVP congratulations becomes the terminal finale", result && result.congrats);
+check(result && result.congrats && result.congrats.darknessPointer === "all" && result.completeClickTarget &&
+  result.completeAfterClick && result.completeAfterClick.phase === "congrats" &&
   !result.completeAfterClick.fireBuilderOpen,
   "the completed dark campsite absorbs stray clicks without reopening a dead builder",
   { target: result && result.completeClickTarget, after: result && result.completeAfterClick });
-check(result && result.czechComplete === "Nikdy nenechávejte přes noc jídlo venku.",
-  "the food warning switches to Czech", result && result.czechComplete);
+check(result && result.czechWarning === "Nikdy nenechávejte přes noc jídlo venku." &&
+  /^Gratulujeme!.*RSVP!$/.test(result.czechCongrats || ""),
+  "both the warning and restored congratulations switch to Czech",
+  { warning: result && result.czechWarning, congrats: result && result.czechCongrats });
 check(result && result.completeExit && !result.completeExit.campActive && result.fresh &&
   result.fresh.campActive && result.fresh.phase === "idle" && !result.fresh.fireBuilt &&
   !result.fresh.fireLit && !result.fresh.stew && result.fresh.savedPhase === "idle" &&
+  result.fresh.mamaLayer === "entrance-roadtrip-camp" && !result.fresh.mamaAboveFireRing &&
   Object.keys(result.fresh.progress || {}).every(function (name) { return result.fresh.progress[name] === 0; }),
   "leaving after completion makes the next Camping visit fresh", { exit: result && result.completeExit, fresh: result && result.fresh });
 

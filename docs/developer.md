@@ -272,12 +272,16 @@ fire-out → campers and stripped corn cobs → tent-light →
 deep-blue darkness with a foreground field of static authored stars whose CSS-only twinkles run
 only during the dark finale; the solved constellation copy retreats and remains as subdued context
 instead of competing with the denser sky → Zs and mama-bear food collection → bilingual food-safety
-warning. The mama's untransformed inner group owns the walk so its campsite placement transform stays
-on the outer group; reduced motion snaps the bear and cobs to their collected positions.
+warning for three seconds → the existing bilingual RSVP congratulations. The mama's untransformed
+inner group owns the walk so its campsite placement transform stays on the outer group; at Zs that
+outer group moves into `#entrance-roadtrip-camp-mama-collection-layer`, after the completed fire, so
+the collecting bear paints above the ring stones. Reset returns it to its original campsite sibling.
+Reduced motion snaps the bear and cobs to their collected positions.
 `campStargazingState` checkpoints exact trace and handoff progress plus
 `campSleepState.phase`, but always restores the trace overlay closed. Leaving pauses an unfinished
-curtain call and preserves the campsite; leaving after its warning phase resets fire, stew,
-stargazing, and finale state.
+curtain call and preserves the campsite. The legacy `complete` phase owns the warning and its
+three-second timer; `congrats` is terminal, and leaving only then resets fire, stew, stargazing, and
+finale state.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed

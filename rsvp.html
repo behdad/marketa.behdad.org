@@ -34109,6 +34109,7 @@ O</text><path stroke="transparent" fill="#453a31" transform="matrix(0.05 0 0 0.0
                   </g>
                   <use href="#entrance-roadtrip-camp-fire-ring-front" pointer-events="none"/>
                 </g>
+                <g id="entrance-roadtrip-camp-mama-collection-layer"></g>
                 <g id="entrance-roadtrip-camp-food-crate" transform="translate(250 147)">
                   <path d="M0 8L58 2L75 14L16 22Z" fill="#6b472d" stroke="#34271f" stroke-width="1.5"/>
                   <path d="M16 22L75 14V50L16 59Z" fill="#9a6841" stroke="#34271f" stroke-width="1.5"/>
@@ -40440,6 +40441,9 @@ window.__entranceRoomOpen = false;
   }
   var campLake = roadtripElement("entrance-roadtrip-camp-lake");
   var campMamaBear = roadtripElement("entrance-roadtrip-camp-mama-bear");
+  var campMamaBearHome = campMamaBear && campMamaBear.parentNode;
+  var campMamaBearHomeNext = campMamaBear && campMamaBear.nextElementSibling;
+  var campMamaBearCollectionLayer = roadtripElement("entrance-roadtrip-camp-mama-collection-layer");
   var campTripMushroom = roadtripElement("entrance-roadtrip-camp-trip-mushroom");
   var campTent = roadtripElement("entrance-roadtrip-camp-tent");
   var campPot = roadtripElement("entrance-roadtrip-camp-pot");
@@ -40478,8 +40482,8 @@ window.__entranceRoomOpen = false;
     wisdomDismissed: false,
     progress: { "cassiopeia": 0, "ursa-major": 0, "ursa-minor": 0 }
   };
-  var CAMP_SLEEP_PHASES = ["idle", "prompt", "fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"];
-  var CAMP_SLEEP_DELAYS = { "fire-out": 680, "campers-gone": 820, "tent-lit": 900, "dark": 1320, "zzz": 2550 };
+  var CAMP_SLEEP_PHASES = ["idle", "prompt", "fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"];
+  var CAMP_SLEEP_DELAYS = { "fire-out": 680, "campers-gone": 820, "tent-lit": 900, "dark": 1320, "zzz": 2550, "complete": 3000 };
   var CAMP_WISDOM_HANDOFF_MS = 5450;
   var campSleepState = { phase: "idle" };
   var campSleepTimer = null;
@@ -40922,12 +40926,22 @@ window.__entranceRoomOpen = false;
     return roadtripState.active && roadtripState.route === "camp" && !document.hidden;
   }
   function campSleepSnapshot() {
-    return { phase: campSleepState.phase, complete: campSleepState.phase === "complete" };
+    return { phase: campSleepState.phase, complete: campSleepState.phase === "congrats" };
+  }
+  function paintCampSleepBearLayer(collecting) {
+    if (!campMamaBear || !campMamaBearHome || !campMamaBearCollectionLayer) return;
+    if (collecting) {
+      if (campMamaBear.parentNode !== campMamaBearCollectionLayer) campMamaBearCollectionLayer.appendChild(campMamaBear);
+    } else if (campMamaBear.parentNode !== campMamaBearHome) {
+      campMamaBearHome.insertBefore(campMamaBear,
+        campMamaBearHomeNext && campMamaBearHomeNext.parentNode === campMamaBearHome ? campMamaBearHomeNext : null);
+    }
   }
   function paintCampSleepFinale() {
     if (!campFireScene) return;
     var phaseIndex = campSleepPhaseIndex(campSleepState.phase);
-    ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"].forEach(function (name) {
+    paintCampSleepBearLayer(phaseIndex >= campSleepPhaseIndex("zzz"));
+    ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"].forEach(function (name) {
       campFireScene.classList.toggle("camp-sleep-" + name, phaseIndex >= campSleepPhaseIndex(name));
     });
     campFireScene.classList.toggle("camp-sleep-prompt", campSleepState.phase === "prompt");
@@ -40949,7 +40963,7 @@ window.__entranceRoomOpen = false;
   }
   function advanceCampSleepFinale(force) {
     var phaseIndex = campSleepPhaseIndex(campSleepState.phase);
-    if (phaseIndex < campSleepPhaseIndex("fire-out") || phaseIndex >= campSleepPhaseIndex("complete")) {
+    if (phaseIndex < campSleepPhaseIndex("fire-out") || phaseIndex >= campSleepPhaseIndex("congrats")) {
       return campSleepSnapshot();
     }
     if (!force && !campSleepFinaleAttended()) return campSleepSnapshot();
@@ -40978,7 +40992,7 @@ window.__entranceRoomOpen = false;
     campSleepState.phase = "idle";
     if (campFireScene) campFireScene.classList.remove("camp-sleep-prompt", "camp-sleep-fire-out",
       "camp-sleep-campers-gone", "camp-sleep-tent-lit", "camp-sleep-dark", "camp-sleep-zzz",
-      "camp-sleep-complete");
+      "camp-sleep-complete", "camp-sleep-congrats");
     paintCampSleepFinale();
   }
   function campWisdomShowing() {
@@ -41229,6 +41243,7 @@ window.__entranceRoomOpen = false;
     return true;
   }
   function campFireCaptionKey() {
+    if (campSleepState.phase === "congrats") return "entrance_roadtrip_camp_arrival";
     if (campSleepState.phase === "complete") return "entrance_roadtrip_camp_food_warning";
     if (campSleepState.phase !== "idle") return "entrance_roadtrip_camp_sleep_prompt";
     if (!campFireState.complete) return "entrance_roadtrip_camp_fire_invite";
@@ -44294,7 +44309,7 @@ window.__entranceRoomOpen = false;
         roadtripState.police.phase === "arrest") {
       return true;
     }
-    var resetCompletedCamp = roadtripState.route === "camp" && campSleepState.phase === "complete";
+    var resetCompletedCamp = roadtripState.route === "camp" && campSleepState.phase === "congrats";
     var exited = pauseRoadtrip();
     if (exited && resetCompletedCamp) {
       resetRoadtripCampSession();

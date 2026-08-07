@@ -218,9 +218,9 @@ leaving Camping or activating a campsite prop. Put
 out the fire when the sleep
 suggestion appears. The campers retire into the glowing tent but leave their corn cobs by the fire.
 The solved constellations recede into a much denser twinkling sky; as the Zs rise, the mama bear
-crosses camp to collect the scraps and leaves a final food-storage warning. Leaving before that
-curtain call finishes preserves Camping; leaving after it finishes makes the next **Camping** visit
-begin again at an empty firepit.
+crosses camp to collect the scraps. The food-storage warning holds for three seconds, then gives way
+to the existing RSVP congratulations. Leaving before that curtain call finishes preserves Camping;
+leaving after it finishes makes the next **Camping** visit begin again at an empty firepit.
 
 Leaving the highway keeps the dashboard available and never resumes the run automatically. The
 **Road Trip** control offers the actions currently available: continue a paused run, start a new

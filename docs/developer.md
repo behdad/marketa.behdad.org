@@ -96,9 +96,17 @@ devices, particles, and captions. The lower roots live in `#lower-room-track`;
 `lowerRoomForStage()` defines their pairing and `__navigateLowerRoom(name)` owns horizontal lower-
 floor movement. Individual lower controllers own vertical open and close.
 
-The Phase 2 `#loft-dollhouse` picker reuses those same navigation owners. It appears only after
-lower-floor discovery, and its 5×2 map enables cells from `seenRooms`; never infer picker access
-from `maxUnlocked`. Tab and the grid button share its open/close path.
+The `#loft-dollhouse` picker reuses those same navigation owners. Tab and the always-visible grid
+button open its full-width 5×2 map; lower-floor discovery adds the shared floor coach. `seenRooms`
+keeps visited thumbnails sharp while locked destinations retain blurred previews; never infer picker
+access from `maxUnlocked`. Room cards reuse their real SVG art, with a matching static SVG portrait
+for the HTML/CSS Dungeon. The preview temporarily neutralizes Bedroom one-shots, gives the intact
+Entrance façade a daylight wash, primes a warm Cuddly projector frame, and applies the real Bar visibility state to
+the complete Kitchen stage for either night or a party. Double-click and
+touch double-tap deliberately unlock a locked destination. The map owns an arrow-key cursor and uses
+Enter only for discovered destinations. Tab is consumed throughout the game and no scene or chrome
+control participates in browser Tab traversal; a clicked console/editor field may still interpret
+Tab internally.
 
 During a pan, traversed stages remain paintable until transition completion; afterward `stage-far`
 parks distant rooms. A lower-room transition changes the backing main stage and opens the target

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-// The whole-loft picker is a Phase-2 reward for finding downstairs. It shares the
-// existing floor-control coach, exposes only visited rooms, and owns Tab/Escape while open.
+// Tab and the grid button own a full-loft picker from the beginning. Downstairs
+// discovery later reveals the shared floor coach; visited rooms stay sharp.
 var lib = require("./lib");
 
 var harness = String.raw`<script>
@@ -17,10 +17,7 @@ var harness = String.raw`<script>
   }
   function state() { return window.__dollhouseState(); }
   function roomButton(name) {
-    return [].slice.call(document.querySelectorAll(".loft-dollhouse-room")).filter(function (button) {
-      var row = state().rooms[Array.prototype.indexOf.call(document.querySelectorAll(".loft-dollhouse-room"), button)];
-      return row && row.room === name;
-    })[0];
+    return document.querySelector('.loft-dollhouse-room[data-dollhouse-room="' + name + '"]');
   }
   function report() {
     out.errors = out.errors.concat((window.__errs || []).slice());
@@ -48,20 +45,44 @@ var harness = String.raw`<script>
     setLang("en");
     window.__resetLowerRoomDiscovery();
     window.__setSeenRooms(["kitchen", "bathroom"]);
+
+    var undiscoveredTab = key("Tab");
+    check("Tab opens The Loft before downstairs is discovered and its grid button is already present",
+      undiscoveredTab && state().eligible && !state().controlsUnlocked && state().button && state().open,
+      JSON.stringify(state()));
+    check("the first Cuddly-puddly thumbnail is initialized with a warm projector image",
+      document.getElementById("cuddly-wallscreen").classList.contains("chan-fire") &&
+      !!document.getElementById("cuddly-flame-img").getAttribute("href") &&
+      document.getElementById("cuddly-flame-img").style.filter === "none");
+    check("the Entrance thumbnail uses the real scene's daylight state",
+      document.getElementById("entrance-room-art").classList.contains("dollhouse-day-preview") &&
+      !document.getElementById("entrance-sky-bg").getAttribute("style"));
+    check("the first Bathroom thumbnail has a towel paint fallback",
+      document.getElementById("bathroom-waffle-towel").getAttribute("fill") ===
+        "url(#bathroom-waffle) #a8a39e");
+    key("Tab");
+
+    document.getElementById("stage-balcony").classList.add("dusk");
+    key("Tab");
+    check("the Entrance thumbnail follows the live night state",
+      !document.getElementById("entrance-room-art").classList.contains("dollhouse-day-preview"));
+    key("Tab");
+    document.getElementById("stage-balcony").classList.remove("dusk");
+
+    await sleep(0);
+    var tabStops = [].slice.call(document.querySelectorAll("button,a[href],input,select,textarea,summary,iframe,[contenteditable],[tabindex]"))
+      .filter(function (el) { return el.tabIndex >= 0; });
+    check("the game exposes no browser tab stops", !tabStops.length,
+      tabStops.map(function (el) { return el.id || el.className || el.tagName; }).join(","));
+
     window.__markLowerRoomDiscovered();
-
-    var phaseOneTab = key("Tab");
-    check("Phase 1 keeps the picker locked even after a downstairs discovery",
-      !phaseOneTab && !state().eligible && !state().button && !state().open, JSON.stringify(state()));
-
-    window.__setSecondRound(true, { releaseHeld: false });
-    check("starting Phase 2 reveals the grid button without inventing a coach",
-      state().eligible && state().button && !state().coach, JSON.stringify(state()));
+    check("discovering downstairs reveals the grid button without inventing a coach",
+      state().eligible && state().controlsUnlocked && state().button && !state().coach, JSON.stringify(state()));
 
     window.goToStage("kitchen");
     window.__openBathroomRoom();
     await sleep(260);
-    check("the first Phase-2 downstairs visit coaches both flanking controls together",
+    check("the first downstairs visit coaches both flanking controls together",
       !document.getElementById("hunt-floor-btn").hidden &&
       !document.getElementById("hunt-dollhouse-btn").hidden && state().coach &&
       document.getElementById("hunt-floor-coach-text").textContent ===
@@ -91,8 +112,18 @@ var harness = String.raw`<script>
       opened.rooms.length === 10 && locked.length === 8 &&
       opened.rooms.filter(function (room) { return !room.locked; }).map(function (room) { return room.room; }).join(",") === "kitchen,bathroom",
       JSON.stringify(opened.rooms));
-    check("locked cells reveal no room names",
-      [].slice.call(document.querySelectorAll(".loft-dollhouse-room:disabled span")).every(function (span) { return span.textContent === "?"; }));
+    check("locked cells retain their real names and blur both name and thumbnail",
+      roomButton("garden").classList.contains("locked") &&
+      roomButton("garden").querySelector("span").textContent === "Garden" &&
+      getComputedStyle(roomButton("garden").querySelector("span")).filter.indexOf("blur") !== -1 &&
+      getComputedStyle(roomButton("garden").querySelector("svg")).filter.indexOf("blur") !== -1);
+    check("all lower previews are SVG uses of their real art or the Dungeon portrait",
+      ["bathroom", "cinema", "bedroom", "entrance"].every(function (name) {
+        return roomButton(name).querySelector('use.loft-dollhouse-live-preview');
+      }) && roomButton("dungeon").querySelector('use[href="#loft-dollhouse-dungeon-art"]'));
+    check("Cinema click targets stay transparent in the cloned room art",
+      getComputedStyle(document.querySelector("#cinema-room-art .cinema-hit")).fill === "rgba(0, 0, 0, 0)",
+      getComputedStyle(document.querySelector("#cinema-room-art .cinema-hit")).fill);
     var roomBeforeKey = window.currentStageName;
     key("ArrowRight");
     check("the open picker blocks room shortcuts from acting underneath it",
@@ -101,8 +132,7 @@ var harness = String.raw`<script>
 
     setLang("cs");
     check("the open overview follows Czech live",
-      document.getElementById("loft-dollhouse-title").textContent === "Celý loft" &&
-      document.getElementById("loft-dollhouse-main-label").textContent === "Hlavní patro" &&
+      document.getElementById("loft-dollhouse-title").textContent === "Loft" &&
       roomButton("kitchen").textContent.indexOf("Kuchyň") !== -1,
       document.getElementById("loft-dollhouse-title").textContent);
     setLang("en");
@@ -126,14 +156,50 @@ var harness = String.raw`<script>
     check("a discovered lower-floor cell opens its paired room",
       !state().open && window.currentStageName === "kitchen" && window.__bathroomRoomOpen, JSON.stringify(state()));
 
+    key("Tab");
+    document.getElementById("loft-game-strip").classList.add("party-on");
+    window.__closeDollhouse(); key("Tab");
+    check("the Kitchen / Bar cell switches its complete live stage to the Bar with the party",
+      roomButton("kitchen").classList.contains("bar-active") &&
+      roomButton("kitchen").querySelector("span").textContent === "Kitchen / Bar" &&
+      roomButton("kitchen").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") === "#stage-kitchen" &&
+      document.getElementById("kitchen-bar").style.opacity === "1" &&
+      document.getElementById("kitchen-post").style.opacity === "1");
+    document.getElementById("loft-game-strip").classList.remove("party-on");
+    window.__closeDollhouse();
+
+    document.getElementById("stage-kitchen").classList.add("dusk");
+    key("Tab");
+    check("the Kitchen / Bar cell also switches to the Bar at night",
+      roomButton("kitchen").classList.contains("bar-active") &&
+      document.getElementById("kitchen-bar").style.opacity === "1");
+    document.getElementById("stage-kitchen").classList.remove("dusk");
+    window.__closeDollhouse();
+
     window.__saveLoftCheckpoint();
     var saved = JSON.parse(localStorage.getItem("loftCheckpoint:v1"));
     check("coach retirement belongs to the loft checkpoint",
       saved && saved.progress && saved.progress.dollhouseCoachRetired === true, JSON.stringify(saved && saved.progress));
 
     window.__resetLowerRoomDiscovery();
-    check("Start-over ownership clears discovery, picker, button, and coach retirement together",
-      !state().eligible && !state().button && !state().open && !state().coachRetired, JSON.stringify(state()));
+    check("Start-over clears discovery and coach retirement but leaves both picker entrances available",
+      state().eligible && !state().controlsUnlocked && state().button && !state().open && !state().coachRetired,
+      JSON.stringify(state()));
+
+    key("Tab");
+    roomButton("garden").dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    check("double-clicking a locked destination deliberately unlocks and enters it",
+      !state().open && window.currentStageName === "garden" && window.__roomSeen("garden"),
+      JSON.stringify({ room: window.currentStageName, open: state().open }));
+
+    window.__setSeenRooms(["kitchen"]);
+    key("Tab");
+    var touchTarget = roomButton("office");
+    touchTarget.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));
+    touchTarget.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));
+    check("double-tapping a locked destination does the same deliberate mobile unlock",
+      !state().open && window.currentStageName === "office" && window.__roomSeen("office"),
+      JSON.stringify({ room: window.currentStageName, open: state().open }));
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

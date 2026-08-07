@@ -48,9 +48,10 @@ Each main room has a room directly below it:
 - Press `1`–`5` to jump to a room on the current floor.
 - Press `↓` to enter the paired lower room and `↑` to return.
 - While downstairs, `←` and `→` move along the lower floor.
-- In Phase 2, the window-grid button left of the room dots opens a whole-loft map. `Tab` opens or
-  closes the same map. Only rooms already discovered can be selected.
-- The first Phase 2 downstairs visit points out the whole-loft button on the left and the floor
+- `Tab` or the window-grid button opens **The Loft** room map. Arrow keys select an already
+  discovered room and `Enter` opens it. Discovered rooms are sharp; the others are blurred;
+  double-click or double-tap one to unlock it deliberately. Its first card is Kitchen / Bar.
+- The first downstairs visit points out the whole-loft button on the left and the floor
   control on the right; its small × dismisses that hint.
 - Escape, Backspace, ×, or the top-left arrow dismisses the current layer or returns upstairs.
 
@@ -67,7 +68,7 @@ Press `?` outside a typing field for the complete shortcut card. The essentials 
 
 - `←` / `→`: adjacent room
 - `↓` / `↑`: downstairs or upstairs
-- `Tab`: whole-loft room map (Phase 2, after finding downstairs)
+- `Tab`: open or close **The Loft** room map
 - `1`–`5`: room on the current floor
 - `Enter`: next guided action; in Phase 2, the room's main activity
 - `C`: phone

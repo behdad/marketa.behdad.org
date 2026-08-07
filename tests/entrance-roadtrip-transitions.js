@@ -1,0 +1,170 @@
+#!/usr/bin/env node
+// Attended route changes keep scenery, parallax, and live traffic continuous.
+"use strict";
+
+var fs = require("fs");
+var path = require("path");
+var lib = require("./lib");
+
+var HARNESS = String.raw`<style>*{transition:none!important}</style>
+<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+<script>
+(function () {
+  var report = { errors: [] };
+  function state() { return window.__entranceRoomState().drive.roadtrip; }
+  function blend() { return state().routeBlend; }
+  function sampleRoute(route, fraction, required) {
+    window.__entranceRoadtripSetRouteDistance(route, required * fraction);
+    return { state: state(), blend: blend() };
+  }
+  window.addEventListener("load", function () { setTimeout(function () {
+    try {
+      Object.defineProperty(document, "hasFocus", { value: function () { return true; }, configurable: true });
+      window.__unlockAllRooms();
+      window.goToStage("balcony");
+      window.__openEntranceRoom();
+      window.__openEntrancePorscheDriveHud();
+      if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
+      window.__entranceRoadtripStart();
+
+      var initial = state();
+      report.calgaryBanff = [.25, .5, .75].map(function (fraction) {
+        return sampleRoute("turnoff", fraction, initial.turnoffDistanceRequired);
+      });
+      report.banffAbraham = [.25, .5, .75].map(function (fraction) {
+        return sampleRoute("lake-turnoff", fraction, initial.lakeTurnoffDistanceRequired);
+      });
+
+      window.__entranceRoadtripSetRouteDistance("banff", 200);
+      window.__entranceRoadtripSetDistance(120);
+      var firstParallax = window.__entranceRoomState().drive.scenery.roadtrip;
+      window.__entranceRoadtripSetDistance(360);
+      var secondParallax = window.__entranceRoomState().drive.scenery.roadtrip;
+      report.parallax = { first: firstParallax, second: secondParallax };
+
+      window.__entranceRoadtripSetDistance(0);
+      window.__entranceRoadtripSetRouteDistance("turnoff", initial.turnoffDistanceRequired * .72);
+      window.__entranceRoadtripSpawn("car", 2.5, 92, { speedKmh: 118 });
+      window.__entranceRoadtripSpawn("truck", -2.5, 78, { speedKmh: 88 });
+      window.__entranceRoadtripSpawn("heart", 1.5, 62);
+      var calgaryTrafficBefore = state();
+      window.__entranceRoadtripStepRouteDistance(initial.turnoffDistanceRequired);
+      report.calgaryTraffic = { before: calgaryTrafficBefore, after: state() };
+
+      window.__entranceRoadtripSetDistance(0);
+      window.__entranceRoadtripSetRouteDistance("lake-turnoff", initial.lakeTurnoffDistanceRequired * .72);
+      window.__entranceRoadtripSpawn("car", 1.5, 92, { speedKmh: 103 });
+      window.__entranceRoadtripSpawn("truck", -1.5, 78, { speedKmh: 82 });
+      window.__entranceRoadtripSpawn("mushroom", .5, 62);
+      var abrahamTrafficBefore = state();
+      window.__entranceRoadtripStepRouteDistance(initial.lakeTurnoffDistanceRequired);
+      report.abrahamTraffic = { before: abrahamTrafficBefore, after: state() };
+
+      window.__entranceRoadtripSetRouteDistance("abraham", initial.abrahamDistanceRequired - 20);
+      window.__entranceRoadtripSetLane(1);
+      window.__entranceDriveSetMotion(80, 3);
+      var campFrames = [];
+      for (var index = 0; index < 24 && state().route !== "camp"; index++) {
+        window.__entranceDriveStep(100);
+        var frame = state();
+        if (frame.campExitLatched && frame.routeBlend.camp > 0 && frame.routeBlend.camp < 1) {
+          campFrames.push({ speed: window.__entranceRoomState().drive.speed, blend: frame.routeBlend });
+        }
+      }
+      report.camp = { frames: campFrames, final: state() };
+    } catch (error) {
+      report.errors.push(String(error && error.stack || error));
+    }
+    report.errors = (window.__errs || []).concat(report.errors);
+    document.getElementById("__report").textContent = JSON.stringify(report);
+  }, 220); });
+})();
+</script>`;
+
+var failures = 0;
+function check(ok, message, detail) {
+  if (ok) console.log("  ✓ " + message);
+  else {
+    failures++;
+    console.log("  ✗ " + message + (detail == null ? "" : "   [" + JSON.stringify(detail) + "]"));
+  }
+}
+function laneBounded(rows, limit) {
+  return rows.every(function (row) { return Math.abs(row.lane) <= limit; });
+}
+
+console.log("rsvp.html attended route-transition continuity:");
+var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
+check(/function roadtripRouteBlend\(\)/.test(source) &&
+  /travel \* \.018/.test(source) && /travel \* \.055/.test(source) && /travel \* \.12/.test(source),
+  "one route blend owns the three distance-parallax rates");
+check(/function transitionRoadtripTraffic\(previousRoute\)/.test(source) &&
+  /transitionRoadtripTraffic\(previousTurnoffRoute\)/.test(source) &&
+  /transitionRoadtripTraffic\(previousLakeTurnoffRoute\)/.test(source),
+  "attended road-width changes preserve and retarget the bounded traffic pool");
+
+var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
+  patchRaf: true,
+  seedRandom: true,
+  forceMotion: true,
+  urlSuffix: "?date=2026-07-15&time=12:00#play",
+  chromeFlags: "--window-size=1100,900"
+});
+check(result && result.errors.length === 0, "the transition sweep has no uncaught errors",
+  result && result.errors);
+
+var cb = result && result.calgaryBanff || [];
+check(cb.length === 3 && cb[0].blend.calgary > cb[1].blend.calgary &&
+  cb[1].blend.calgary > cb[2].blend.calgary && cb[0].blend.banff < cb[1].blend.banff &&
+  cb[1].blend.banff < cb[2].blend.banff && cb.every(function (row) {
+    return Math.abs(row.blend.calgary + row.blend.banff - 1) < .001;
+  }), "Calgary dissolves monotonically into Banff throughout the physical turnoff", cb);
+var ba = result && result.banffAbraham || [];
+check(ba.length === 3 && ba[0].blend.banff > ba[1].blend.banff &&
+  ba[1].blend.banff > ba[2].blend.banff && ba[0].blend.abraham < ba[1].blend.abraham &&
+  ba[1].blend.abraham < ba[2].blend.abraham && ba.every(function (row) {
+    return Math.abs(row.blend.banff + row.blend.abraham - 1) < .001;
+  }), "Banff's light and mountains dissolve monotonically into Abraham Lake", ba);
+
+var parallax = result && result.parallax || {};
+var first = parallax.first || {};
+var second = parallax.second || {};
+var farShift = first.far && second.far ? second.far[0] - first.far[0] : 0;
+var midShift = first.mid && second.mid ? second.mid[0] - first.mid[0] : 0;
+var nearShift = first.near && second.near ? second.near[0] - first.near[0] : 0;
+check(Math.abs(farShift) > 1 && Math.abs(midShift) > Math.abs(farShift) &&
+  Math.abs(nearShift) > Math.abs(midShift),
+  "far, middle, and near scenery retain distinct metre-driven depth", { farShift: farShift, midShift: midShift, nearShift: nearShift });
+
+var calgaryTraffic = result && result.calgaryTraffic || {};
+check(calgaryTraffic.before && calgaryTraffic.after &&
+  calgaryTraffic.after.route === "banff" &&
+  calgaryTraffic.after.entityCount === calgaryTraffic.before.entityCount &&
+  laneBounded(calgaryTraffic.after.entities, 1.5) &&
+  Math.abs((calgaryTraffic.after.nextSpawnDistance - calgaryTraffic.after.distance) -
+    (calgaryTraffic.before.nextSpawnDistance - calgaryTraffic.before.distance)) < .001,
+  "Calgary traffic flows into Banff without a pool or cadence reset", calgaryTraffic);
+var abrahamTraffic = result && result.abrahamTraffic || {};
+var beforeGap = abrahamTraffic.before ?
+  abrahamTraffic.before.nextSpawnDistance - abrahamTraffic.before.distance : 0;
+var afterGap = abrahamTraffic.after ?
+  abrahamTraffic.after.nextSpawnDistance - abrahamTraffic.after.distance : 0;
+check(abrahamTraffic.before && abrahamTraffic.after &&
+  abrahamTraffic.after.route === "abraham" &&
+  abrahamTraffic.after.entityCount === abrahamTraffic.before.entityCount &&
+  laneBounded(abrahamTraffic.after.entities, .5) &&
+  Math.abs(afterGap - Math.max(8, beforeGap * 1.8)) < .001,
+  "Banff traffic rebases safely and thins into Abraham's quieter cadence", {
+    beforeGap: beforeGap, afterGap: afterGap, traffic: abrahamTraffic
+  });
+
+var camp = result && result.camp || {};
+check(camp.frames && camp.frames.length >= 2 && camp.frames.every(function (frame, index) {
+  return frame.blend.camp > 0 && frame.blend.camp < 1 && frame.blend.road > 0 &&
+    frame.blend.road < 1 && (!index || frame.blend.camp >= camp.frames[index - 1].blend.camp);
+  }) && camp.final && camp.final.route === "camp" && camp.final.routeBlend.camp === 1 &&
+  camp.final.routeBlend.road === 0,
+  "the automatic slowdown carries Abraham's shared light into the stationary Camping frame", camp);
+
+if (failures) process.exit(1);
+console.log("Attended route-transition continuity checks passed.");

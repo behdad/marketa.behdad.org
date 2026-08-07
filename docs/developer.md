@@ -203,8 +203,13 @@ calgary → turnoff → banff → lake-turnoff → abraham ↺
 Route legs, turnoffs, and Abraham's recurring campsite exit consume actual forward metres from the
 driving step; `elapsedSeconds` remains HUD/scoring time and must not select scenery. Their authored
 lengths preserve the former pacing at a nominal 100 km/h. The route is part of the version-4
-paused-run snapshot; restore migrates version 1–3 elapsed-route fields into metres. Route changes clear live entities before
-changing road geometry. Signs are projected beyond the current road edge by
+paused-run snapshot; restore migrates version 1–3 elapsed-route fields into metres. Direct segment
+selection clears live entities before changing road geometry. Attended Calgary → Banff and Banff →
+Abraham turnoffs instead feed metre-based weights from `roadtripRouteBlend()` into the already-
+authored backdrops, so scenery, day/night lighting, winter treatment, and distance-scrolled
+parallax remain in phase through the crossfade. The latched Camping approach derives the same blend
+from its automatic slowdown and reaches the stationary camp frame before the route swaps. Signs are
+projected beyond the current road edge by
 `positionRoadtripExitSign()`; fixed road fractions fail on Calgary's wider divided highway.
 
 The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click or a
@@ -223,6 +228,9 @@ on coarse pointers.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
 spawn plans deterministic from the run seed and never add timer-driven unbounded entities.
+At an attended road-width boundary, `transitionRoadtripTraffic()` rebases existing lanes, cancels
+only in-progress lane changes, and scales the remaining next-spawn gap; do not clear the traffic
+pool there, or the scenery dissolve exposes an implausibly empty road.
 `roadtripSpawnPlan()` assigns natural traffic a route-relative seeded speed; forward traffic's deck
 centres above the posted limit while RVs and semis retain a slower tail. Pursuit and summoned plans
 carry their own explicit seeded speed so changing the natural profile cannot silently retune them.

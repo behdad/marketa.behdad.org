@@ -937,7 +937,8 @@ footer{margin-top:2.6rem}
 #entrance-room.roadtrip-active #entrance-roadtrip-dismiss{display:grid}
 #entrance-room.roadtrip-camp-popup-open #entrance-roadtrip-dismiss{display:none;pointer-events:none}
 #entrance-drive-cockpit{opacity:1;transform-box:view-box;transform-origin:center}
-#entrance-room.roadtrip-active #entrance-drive-cockpit{transform:translateY(38px)}
+#entrance-room.roadtrip-active #entrance-drive-cockpit{opacity:var(--roadtrip-road-mix,1);transform:translateY(38px)}
+#entrance-room.roadtrip-active :is(#entrance-drive-cowl-strip,#entrance-drive-hud-tint){opacity:var(--roadtrip-road-mix,1)}
 #entrance-room.roadtrip-active #entrance-room-art{opacity:0;pointer-events:none}
 #entrance-room.roadtrip-active #entrance-drive-hud{
   top:0;bottom:0;height:100%;border-bottom:0;border-radius:0;box-shadow:none;
@@ -1034,11 +1035,19 @@ footer{margin-top:2.6rem}
 #entrance-room.entrance-roadtrip-season-summer :is(#entrance-roadtrip-season-summer,#entrance-roadtrip-mirror-season-summer),
 #entrance-room.entrance-roadtrip-season-autumn :is(#entrance-roadtrip-season-autumn,#entrance-roadtrip-mirror-season-autumn),
 #entrance-room.entrance-roadtrip-season-winter :is(#entrance-roadtrip-season-winter,#entrance-roadtrip-mirror-season-winter){opacity:1}
+#entrance-room.entrance-roadtrip-season-spring #entrance-roadtrip-season-spring,
+#entrance-room.entrance-roadtrip-season-summer #entrance-roadtrip-season-summer,
+#entrance-room.entrance-roadtrip-season-autumn #entrance-roadtrip-season-autumn,
+#entrance-room.entrance-roadtrip-season-winter #entrance-roadtrip-season-winter{opacity:var(--roadtrip-banff-mix,1)}
 #entrance-room:not(.entrance-day) .entrance-roadtrip-season-art{opacity:.58}
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-spring #entrance-roadtrip-season-spring,
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-summer #entrance-roadtrip-season-summer,
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-autumn #entrance-roadtrip-season-autumn,
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-winter #entrance-roadtrip-season-winter{opacity:.58}
+#entrance-room:not(.entrance-day).entrance-roadtrip-season-spring #entrance-roadtrip-season-spring,
+#entrance-room:not(.entrance-day).entrance-roadtrip-season-summer #entrance-roadtrip-season-summer,
+#entrance-room:not(.entrance-day).entrance-roadtrip-season-autumn #entrance-roadtrip-season-autumn,
+#entrance-room:not(.entrance-day).entrance-roadtrip-season-winter #entrance-roadtrip-season-winter{opacity:calc(.58 * var(--roadtrip-banff-mix,1))}
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-spring #entrance-roadtrip-mirror-season-spring,
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-summer #entrance-roadtrip-mirror-season-summer,
 #entrance-room:not(.entrance-day).entrance-roadtrip-season-autumn #entrance-roadtrip-mirror-season-autumn,
@@ -1749,17 +1758,17 @@ html.frame-rate-low .entrance-roadtrip-camp-finale-field-star{animation:none!imp
 #entrance-room.entrance-clouded #entrance-roadtrip-clouds{opacity:.62}
 #entrance-room.entrance-raining:not(.entrance-snowing) #entrance-roadtrip-rain{opacity:.82}
 #entrance-room.entrance-snowing #entrance-roadtrip-snow{opacity:.94}
-#entrance-room.entrance-winter-cover #entrance-roadtrip-winter{opacity:.96}
+#entrance-room.entrance-winter-cover #entrance-roadtrip-winter{opacity:calc(.96 * var(--roadtrip-road-mix,1))}
 #entrance-roadtrip-winter-ground{fill:url(#entrance-roadtrip-snow-sun);opacity:.94}
 #entrance-roadtrip-winter-edges{fill:#fbfcf8;opacity:.72}
 #entrance-roadtrip-winter-sun-reflection,#entrance-roadtrip-winter-contours{opacity:0}
-#entrance-room.entrance-winter-cover #entrance-roadtrip-winter-sun-reflection{opacity:.12}
-#entrance-room.entrance-winter-cover #entrance-roadtrip-winter-contours{opacity:.2}
+#entrance-room.entrance-winter-cover #entrance-roadtrip-winter-sun-reflection{opacity:calc(.12 * var(--roadtrip-road-mix,1))}
+#entrance-room.entrance-winter-cover #entrance-roadtrip-winter-contours{opacity:calc(.2 * var(--roadtrip-banff-mix,1))}
 #entrance-room.entrance-day:not(.entrance-clouded) #entrance-roadtrip-winter-ground{opacity:.99}
 #entrance-room.entrance-day:not(.entrance-clouded) #entrance-roadtrip-winter-edges{fill:#fff;opacity:.86}
-#entrance-room.entrance-winter-cover.entrance-day:not(.entrance-clouded) #entrance-roadtrip-winter-sun-reflection{opacity:.42}
-#entrance-room:not(.entrance-day).entrance-winter-cover #entrance-roadtrip-winter-sun-reflection{opacity:.03}
-#entrance-room:not(.entrance-day).entrance-winter-cover #entrance-roadtrip-winter-contours{opacity:.1}
+#entrance-room.entrance-winter-cover.entrance-day:not(.entrance-clouded) #entrance-roadtrip-winter-sun-reflection{opacity:calc(.42 * var(--roadtrip-road-mix,1))}
+#entrance-room:not(.entrance-day).entrance-winter-cover #entrance-roadtrip-winter-sun-reflection{opacity:calc(.03 * var(--roadtrip-road-mix,1))}
+#entrance-room:not(.entrance-day).entrance-winter-cover #entrance-roadtrip-winter-contours{opacity:calc(.1 * var(--roadtrip-banff-mix,1))}
 #entrance-roadtrip-smoke{opacity:calc(var(--smoke,0) * .4);transition:opacity .9s ease}
 #entrance-room:not(.entrance-day) #entrance-roadtrip-smoke{opacity:0}
 .entrance-roadtrip-hud-text{
@@ -38813,15 +38822,81 @@ window.__entranceRoomOpen = false;
     setEntranceSceneryOffset(driveSceneryLayers.mid, -steer * 24);
     setEntranceSceneryOffset(driveSceneryLayers.near, -steer * 44);
   }
+  function roadtripSmoothstep(value) {
+    value = Math.max(0, Math.min(1, Number(value) || 0));
+    return value * value * (3 - 2 * value);
+  }
+  function roadtripRouteBlend() {
+    var route = roadtripState.route;
+    var blend = { calgary: 0, banff: 0, abraham: 0, camp: 0, road: 1 };
+    if (route === "calgary") blend.calgary = 1;
+    else if (route === "turnoff") {
+      var banffProgress = roadtripSmoothstep(roadtripState.turnoffDistance / ROADTRIP_TURNOFF_DISTANCE);
+      blend.calgary = 1 - banffProgress;
+      blend.banff = banffProgress;
+    } else if (route === "banff") blend.banff = 1;
+    else if (route === "lake-turnoff") {
+      var abrahamProgress = roadtripSmoothstep(
+        roadtripState.lakeTurnoffDistance / ROADTRIP_LAKE_TURNOFF_DISTANCE);
+      blend.banff = 1 - abrahamProgress;
+      blend.abraham = abrahamProgress;
+    } else if (route === "abraham") {
+      blend.abraham = 1;
+      if (roadtripState.campExitLatched) {
+        var campProgress = roadtripSmoothstep((80 - Math.abs(Number(driveState.speed) || 0)) / 70);
+        blend.abraham = 1 - campProgress;
+        blend.camp = campProgress;
+        blend.road = 1 - campProgress;
+      }
+    } else if (route === "camp") {
+      blend.camp = 1;
+      blend.road = 0;
+    }
+    return blend;
+  }
+  function setRoadtripBlendOpacity(id, opacity) {
+    var node = roadtripElement(id);
+    if (node) node.style.opacity = Math.max(0, Math.min(1, Number(opacity) || 0)).toFixed(3);
+  }
+  function paintRoadtripRouteBlend() {
+    var blend = roadtripRouteBlend();
+    var roadtripWorld = roadtripElement("entrance-roadtrip-world");
+    if (roadtripWorld) {
+      Object.keys(blend).forEach(function (name) {
+        roadtripWorld.setAttribute("data-roadtrip-" + name + "-mix", blend[name].toFixed(3));
+      });
+    }
+    setRoadtripBlendOpacity("entrance-roadtrip-calgary-flat", blend.calgary);
+    ["entrance-roadtrip-day-far", "entrance-roadtrip-day-mid", "entrance-roadtrip-day-near",
+      "entrance-roadtrip-night-far", "entrance-roadtrip-night-mid", "entrance-roadtrip-night-near"
+    ].forEach(function (id) { setRoadtripBlendOpacity(id, blend.banff); });
+    setRoadtripBlendOpacity("entrance-roadtrip-abraham-scenery", blend.abraham);
+    setRoadtripBlendOpacity("entrance-roadtrip-camp", blend.camp);
+    ["entrance-roadtrip-road", "entrance-roadtrip-headlights", "entrance-roadtrip-furniture",
+      "entrance-roadtrip-curve-signs", "entrance-roadtrip-banff-exit", "entrance-roadtrip-abraham-exit",
+      "entrance-roadtrip-camp-exit", "entrance-roadtrip-entities"
+    ].forEach(function (id) { setRoadtripBlendOpacity(id, blend.road); });
+    setRoadtripBlendOpacity("entrance-roadtrip-windshield-glaze", blend.road * .68);
+    room.style.setProperty("--roadtrip-road-mix", blend.road.toFixed(3));
+    room.style.setProperty("--roadtrip-banff-mix", blend.banff.toFixed(3));
+    return blend;
+  }
   function paintRoadtripScenery() {
     ensureEntranceSceneryLayers();
     if (!roadtripState.active) return;
     var steer = Math.max(-1, Math.min(1, driveState.steeringAngle / 18));
     var turn = roadtripCurveOffset(ROADTRIP_DRAW_DISTANCE) + steer * 56;
     var horizonOffset = roadtripProject(ROADTRIP_DRAW_DISTANCE).y + 8;
-    setEntranceSceneryOffset(roadtripSceneryLayers.far, -turn * .12, 680, horizonOffset * .38);
-    setEntranceSceneryOffset(roadtripSceneryLayers.mid, -turn * .27, 680, horizonOffset * .66);
-    setEntranceSceneryOffset(roadtripSceneryLayers.near, -turn * .48, 680, horizonOffset);
+    // Total travelled metres, rather than per-leg time, keeps every incoming
+    // layer moving before it becomes visible and prevents a parallax phase jump.
+    var travel = roadtripState.distance;
+    setEntranceSceneryOffset(roadtripSceneryLayers.far,
+      -turn * .12 - travel * .018, 680, horizonOffset * .38);
+    setEntranceSceneryOffset(roadtripSceneryLayers.mid,
+      -turn * .27 - travel * .055, 680, horizonOffset * .66);
+    setEntranceSceneryOffset(roadtripSceneryLayers.near,
+      -turn * .48 - travel * .12, 680, horizonOffset);
+    paintRoadtripRouteBlend();
   }
   function entranceScenerySnapshot() {
     ensureEntranceSceneryLayers();
@@ -42162,6 +42237,38 @@ window.__entranceRoomOpen = false;
     }, 900);
     if (firstVisit && window.__checkpointChanged) window.__checkpointChanged();
   }
+  function roadtripTrafficSpacingScale(route) {
+    return route === "abraham" || route === "camp" ? 1.8 : 1;
+  }
+  function transitionRoadtripTraffic(previousRoute) {
+    var previousScale = roadtripTrafficSpacingScale(previousRoute);
+    var nextScale = roadtripTrafficSpacingScale(roadtripState.route);
+    var spawnRemaining = roadtripState.nextSpawnDistance - roadtripState.distance;
+    if (Number.isFinite(spawnRemaining) && spawnRemaining < 1000000) {
+      roadtripState.nextSpawnDistance = roadtripState.distance +
+        Math.max(8, spawnRemaining * nextScale / previousScale);
+    }
+    roadtripState.entities.forEach(function (entity) {
+      entity.lane = roadtripLaneValue(entity.lane);
+      entity.homeLane = roadtripLaneValue(entity.homeLane);
+      entity.passing = false;
+      entity.passReturning = false;
+      entity.following = false;
+      entity.followTargetSerial = 0;
+      entity.followGap = 0;
+      entity.braking = false;
+      entity.passTargetSerial = 0;
+      if (entity.overtakingPlayer) entity.passed = true;
+      entity.overtakingPlayer = false;
+      entity.overtakeHornPending = false;
+      entity.overtakeLaneTarget = entity.lane;
+      entity.oncomingEvasionOrigin = entity.direction === "oncoming" ? entity.lane : 0;
+      entity.oncomingEvasionTarget = entity.oncomingEvasionOrigin;
+      entity.oncomingEvasionRequested = false;
+      entity.oncomingEvading = false;
+      syncRoadtripEntityNode(entity);
+    });
+  }
   function syncRoadtripRoute(distance) {
     distance = Math.max(0, Number(distance) || 0);
     if (roadtripState.route === "calgary") {
@@ -42177,14 +42284,14 @@ window.__entranceRoomOpen = false;
     } else if (roadtripState.route === "turnoff") {
       roadtripState.turnoffDistance += distance;
       if (roadtripState.turnoffDistance >= ROADTRIP_TURNOFF_DISTANCE) {
+        var previousTurnoffRoute = roadtripState.route;
         roadtripState.route = "banff";
         roadtripState.turnoffDistance = ROADTRIP_TURNOFF_DISTANCE;
         roadtripState.banffDistance = 0;
         roadtripState.playerLane = roadtripState.playerLane < 0 ?
           (roadtripState.playerLane < -1 ? -1.5 : -.5) :
           (roadtripState.playerLane > 1 ? 1.5 : .5);
-        clearRoadtripEntities();
-        roadtripState.nextSpawnDistance = roadtripState.distance + 28;
+        transitionRoadtripTraffic(previousTurnoffRoute);
         syncRoadtripRouteClass();
         roadtripFeedback("entrance_roadtrip_banff_arrival");
       }
@@ -42201,14 +42308,14 @@ window.__entranceRoomOpen = false;
     } else if (roadtripState.route === "lake-turnoff") {
       roadtripState.lakeTurnoffDistance += distance;
       if (roadtripState.lakeTurnoffDistance >= ROADTRIP_LAKE_TURNOFF_DISTANCE) {
+        var previousLakeTurnoffRoute = roadtripState.route;
         roadtripState.route = "abraham";
         roadtripState.lakeTurnoffDistance = ROADTRIP_LAKE_TURNOFF_DISTANCE;
         roadtripState.abrahamDistance = 0;
         roadtripState.campExitDistance = ROADTRIP_ABRAHAM_DISTANCE;
         roadtripState.campExitLatched = false;
         roadtripState.playerLane = roadtripState.playerLane < 0 ? -.5 : ROADTRIP_ABRAHAM_START_LANE;
-        clearRoadtripEntities();
-        roadtripState.nextSpawnDistance = roadtripState.distance + 24;
+        transitionRoadtripTraffic(previousLakeTurnoffRoute);
         syncRoadtripRouteClass();
         roadtripFeedback("entrance_roadtrip_abraham_arrival");
       }
@@ -43996,7 +44103,7 @@ window.__entranceRoomOpen = false;
   function roadtripSpawnInterval(pursuing, serial) {
     serial = Math.max(0, Math.floor(Number(serial) || 0));
     var normal = 30 + Math.floor(roadtripSeededUnit(ROADTRIP_SEED_STREAM.interval, serial) * 18);
-    if (roadtripIsAbrahamRoute()) normal = Math.round(normal * 1.8);
+    normal = Math.round(normal * roadtripTrafficSpacingScale(roadtripState.route));
     return pursuing ? Math.round(normal / ROADTRIP_PURSUIT_TRAFFIC_DENSITY) : normal;
   }
   function roadtripNaturalSpawn() {
@@ -48592,6 +48699,8 @@ window.__entranceRoomOpen = false;
           banffSeconds: ROADTRIP_BANFF_SECONDS,
           lakeTurnoffSeconds: ROADTRIP_LAKE_TURNOFF_SECONDS,
           abrahamSeconds: ROADTRIP_ABRAHAM_SECONDS,
+          routeBlend: roadtripRouteBlend(),
+          trafficSpacingScale: roadtripTrafficSpacingScale(roadtripState.route),
           speedLimit: roadtripSpeedLimit(),
           laneFraction: roadtripLaneFraction(),
           maxLane: roadtripMaxLane(),

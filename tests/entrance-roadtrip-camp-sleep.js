@@ -463,8 +463,8 @@ check(result && result.warningHeld && result.warningHeld.phase === "complete" &&
   result.warningHeld.captionText === "Never leave food outside at night.",
   "paused time does not count toward the warning's three attended seconds", result && result.warningHeld);
 check(result && result.congrats && result.congrats.phase === "congrats" && result.congrats.sleepComplete &&
-  result.congrats.savedPhase === "congrats" && result.congrats.caption === "entrance_roadtrip_camp_arrival" &&
-  /^Congrats!.*RSVP!$/.test(result.congrats.captionText) &&
+  result.congrats.savedPhase === "congrats" && result.congrats.caption === "entrance_roadtrip_camp_finale" &&
+  /^Wow, what a lofty day\..*RSVP!$/.test(result.congrats.captionText) &&
   result.congrats.cameraAnimation === "none" && result.congrats.cameraOffset === 120 &&
   result.congrats.finOpacity === .9 && result.congrats.finText === "~ fin ~" &&
   result.congrats.finFill === "rgb(238, 232, 212)" && /Fraunces/.test(result.congrats.finFont) &&
@@ -491,7 +491,7 @@ check(result && result.congrats && result.congrats.darknessPointer === "all" && 
   "the completed dark campsite absorbs stray clicks without reopening a dead builder",
   { target: result && result.completeClickTarget, after: result && result.completeAfterClick });
 check(result && result.czechWarning === "Nikdy nenechávejte přes noc jídlo venku." &&
-  /^Gratulujeme!.*RSVP!$/.test(result.czechCongrats || ""),
+  /^Páni, to byl ale den na výši\..*RSVP!$/.test(result.czechCongrats || ""),
   "both the warning and restored congratulations switch to Czech",
   { warning: result && result.czechWarning, congrats: result && result.czechCongrats });
 check(result && result.completeExit && !result.completeExit.campActive && result.fresh &&

@@ -35,6 +35,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var fieldStars = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-field-star"));
     var zzzNodes = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz"));
     var fin = document.getElementById("entrance-roadtrip-camp-finale-fin");
+    var finBreath = fin.querySelector(".entrance-roadtrip-camp-finale-fin-breath");
     var cameraStyle = getComputedStyle(camp);
     var cameraMatrix = cameraStyle.transform === "none" ? null : new DOMMatrixReadOnly(cameraStyle.transform);
     var radii = fieldStars.map(function (star) { return Number(star.getAttribute("r")); });
@@ -115,6 +116,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       finText: fin.textContent.replace(/\s+/g, " ").trim(),
       finFill: getComputedStyle(fin).fill,
       finFont: getComputedStyle(fin).fontFamily,
+      finAnimation: getComputedStyle(finBreath).animationName,
       paused: camp.classList.contains("camp-sleep-paused"),
       fieldPlayState: fieldStars[0] && getComputedStyle(fieldStars[0]).animationPlayState,
       classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"].filter(function (name) {
@@ -279,6 +281,7 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
   function frame() {
     var camp = document.getElementById("entrance-roadtrip-camp");
     var fin = document.getElementById("entrance-roadtrip-camp-finale-fin");
+    var breath = fin.querySelector(".entrance-roadtrip-camp-finale-fin-breath");
     var style = getComputedStyle(camp);
     var matrix = style.transform === "none" ? null : new DOMMatrixReadOnly(style.transform);
     return {
@@ -287,7 +290,9 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
       animation: style.animationName,
       offset: matrix ? Math.round(matrix.m42) : 0,
       finOpacity: Number(getComputedStyle(fin).opacity),
-      finText: fin.textContent.replace(/\s+/g, " ").trim()
+      finText: fin.textContent.replace(/\s+/g, " ").trim(),
+      finAnimation: getComputedStyle(breath).animationName,
+      finTransform: getComputedStyle(breath).transform
     };
   }
   window.addEventListener("load", function () {
@@ -331,6 +336,37 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
     }, 320);
   });
 })();
+</script>`;
+
+var FIN_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+<script>
+window.addEventListener("load", function () {
+  var camp = document.getElementById("entrance-roadtrip-camp");
+  var breath = document.querySelector(".entrance-roadtrip-camp-finale-fin-breath");
+  camp.classList.add("camp-sleep-congrats");
+  function frame() {
+    var style = getComputedStyle(breath);
+    return {
+      animation: style.animationName,
+      duration: style.animationDuration,
+      direction: style.animationDirection,
+      iterations: style.animationIterationCount,
+      timing: style.animationTimingFunction,
+      opacity: Number(style.opacity),
+      transform: style.transform,
+      transformBox: style.transformBox,
+      transformOrigin: style.transformOrigin
+    };
+  }
+  var normal = frame();
+  document.documentElement.classList.add("frame-rate-low");
+  var low = frame();
+  document.getElementById("__report").textContent = JSON.stringify({
+    normal: normal,
+    low: low,
+    errors: window.__errs || []
+  });
+});
 </script>`;
 
 var failures = 0;
@@ -472,6 +508,7 @@ check(result && result.congrats && result.congrats.phase === "congrats" && resul
   result.congrats.cameraAnimation === "none" && result.congrats.cameraOffset === 120 &&
   result.congrats.finOpacity === .9 && result.congrats.finText === "~ fin ~" &&
   result.congrats.finFill === "rgb(238, 232, 212)" && /Fraunces/.test(result.congrats.finFont) &&
+  result.congrats.finAnimation === "none" &&
   result.congrats.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.congrats.mamaAboveFireRing,
   "the three-second sky pan lands with a restrained Fraunces fin and the terminal congratulations",
   result && result.congrats);
@@ -522,9 +559,25 @@ check(reduced && reduced.errors.length === 0 && reduced.warning && reduced.warni
   reduced.warning.phase === "complete" && reduced.warning.animation === "none" &&
   reduced.warning.offset === 120 && reduced.warning.finOpacity === 0 &&
   reduced.congrats && reduced.congrats.phase === "congrats" && reduced.congrats.offset === 120 &&
-  reduced.congrats.finOpacity === .9 && reduced.congrats.finText === "~ fin ~",
+  reduced.congrats.finOpacity === .9 && reduced.congrats.finText === "~ fin ~" &&
+  reduced.congrats.finAnimation === "none" && reduced.congrats.finTransform === "none",
   "reduced motion snaps to the safe sky composition while fin still waits for congratulations",
   reduced);
+
+var finMotion = lib.runPageSync("rsvp.html", FIN_MOTION_HARNESS, 800, {
+  urlSuffix: "?date=2026-07-15&time=23:00#play",
+  chromeFlags: "--window-size=1180,900"
+});
+check(finMotion && finMotion.errors.length === 0 && finMotion.normal &&
+  finMotion.normal.animation === "entrance-roadtrip-camp-finale-fin-breath" &&
+  finMotion.normal.duration === "6.4s" && finMotion.normal.direction === "alternate" &&
+  finMotion.normal.iterations === "infinite" && finMotion.normal.timing === "ease-in-out" &&
+  finMotion.normal.opacity >= .84 && finMotion.normal.opacity <= 1 &&
+  finMotion.normal.transform !== "none" && finMotion.normal.transformBox === "fill-box" &&
+  finMotion.low && finMotion.low.animation === "none" && finMotion.low.opacity === 1 &&
+  finMotion.low.transform === "none",
+  "the warm-white fin breathes slowly and subtly, then rests under the low-frame-rate fallback",
+  finMotion);
 
 if (failures) process.exit(1);
 console.log("Campsite sleep-finale assertions passed.");

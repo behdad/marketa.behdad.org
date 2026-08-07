@@ -689,6 +689,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var straightMirror = mirrorGeometry();
     var straightWinter = winterGeometry();
     var straightScenery = copy(state().drive.scenery);
+    var straightState = copy(roadtrip());
     window.__entranceRoadtripSetDistance(158);
     var headlightGroup = document.getElementById("entrance-roadtrip-headlights");
     var rightCurve = {
@@ -719,6 +720,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       straightMirror: straightMirror,
       straightWinter: straightWinter,
       straightScenery: straightScenery,
+      straightState: straightState,
       roadLines: Array.prototype.map.call(document.querySelectorAll(
         "#entrance-roadtrip-road > .entrance-roadtrip-edge," +
         "#entrance-roadtrip-road > .entrance-roadtrip-centerline"), function (node) {
@@ -1556,19 +1558,23 @@ check(curves && curves.rightWarning && curves.rightWarning.direction === "right"
 function firstSceneryOffset(snapshot, layer) {
   return snapshot && snapshot.roadtrip && snapshot.roadtrip[layer] && snapshot.roadtrip[layer][0];
 }
+function curveOnlySceneryOffset(snapshot, layer, distance) {
+  var travelRate = { far: .018, mid: .055, near: .12 }[layer];
+  return firstSceneryOffset(snapshot, layer) + distance * travelRate;
+}
 function scaleFromTransform(transform) {
   var match = String(transform || "").match(/scale\(([-.\d]+)/);
   return match ? Number(match[1]) : NaN;
 }
-var straightFar = firstSceneryOffset(curves && curves.straightScenery, "far");
-var straightMid = firstSceneryOffset(curves && curves.straightScenery, "mid");
-var straightNear = firstSceneryOffset(curves && curves.straightScenery, "near");
-var rightFar = firstSceneryOffset(curves && curves.right.scenery, "far");
-var rightMid = firstSceneryOffset(curves && curves.right.scenery, "mid");
-var rightNear = firstSceneryOffset(curves && curves.right.scenery, "near");
-var leftFar = firstSceneryOffset(curves && curves.left.scenery, "far");
-var leftMid = firstSceneryOffset(curves && curves.left.scenery, "mid");
-var leftNear = firstSceneryOffset(curves && curves.left.scenery, "near");
+var straightFar = curveOnlySceneryOffset(curves && curves.straightScenery, "far", curves.straightState.distance);
+var straightMid = curveOnlySceneryOffset(curves && curves.straightScenery, "mid", curves.straightState.distance);
+var straightNear = curveOnlySceneryOffset(curves && curves.straightScenery, "near", curves.straightState.distance);
+var rightFar = curveOnlySceneryOffset(curves && curves.right.scenery, "far", curves.right.state.distance);
+var rightMid = curveOnlySceneryOffset(curves && curves.right.scenery, "mid", curves.right.state.distance);
+var rightNear = curveOnlySceneryOffset(curves && curves.right.scenery, "near", curves.right.state.distance);
+var leftFar = curveOnlySceneryOffset(curves && curves.left.scenery, "far", curves.left.state.distance);
+var leftMid = curveOnlySceneryOffset(curves && curves.left.scenery, "mid", curves.left.state.distance);
+var leftNear = curveOnlySceneryOffset(curves && curves.left.scenery, "near", curves.left.state.distance);
 check(curves && rightFar < straightFar && rightMid < straightMid && rightNear < straightNear &&
   Math.abs(rightFar - straightFar) < Math.abs(rightMid - straightMid) &&
   Math.abs(rightMid - straightMid) < Math.abs(rightNear - straightNear) &&
@@ -1576,7 +1582,7 @@ check(curves && rightFar < straightFar && rightMid < straightMid && rightNear < 
   Math.abs(leftFar - straightFar) < Math.abs(leftMid - straightMid) &&
   Math.abs(leftMid - straightMid) < Math.abs(leftNear - straightNear) &&
   curves.right.state.mirrorTerrainOffset > 0 && curves.left.state.mirrorTerrainOffset < 0,
-  "far mountains, foothills, near terrain, and mirror terrain counter-shift in coherent parallax through both bends", {
+  "after continuous travel drift, far mountains, foothills, near terrain, and mirror terrain counter-shift through both bends", {
     straight: curves && curves.straightScenery,
     right: curves && curves.right.scenery,
     left: curves && curves.left.scenery,

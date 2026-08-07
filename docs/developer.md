@@ -231,7 +231,10 @@ speed. `roadtripTrafficLead()` selects only the nearest vehicle in the current l
 blocked, a bounded headway controller slows the follower and exposes its brake-lamp state. Banff may
 borrow an empty opposing inner lane, Calgary stays within its carriageway, and Abraham never weaves.
 `roadtripCurvatureAt()`, `roadtripCurveOffset()`, `syncRoadtripShoulder()`, and
-`paintRoadtripMirror()` are the central geometry owners.
+`paintRoadtripMirror()` are the central geometry owners. `stepRoadtripHandling()` integrates the
+eased wheel angle into lateral velocity, speed-weights bend drift, and carries bounded loose-surface
+slip into a damped asphalt recovery. `surfaceRoughness` is the shared continuous owner for grip,
+windshield vibration, and live tyre audio; paused-run snapshots retain both it and lateral velocity.
 
 ### Camping
 
@@ -354,7 +357,7 @@ its held-speed target; unattended lifecycle cleanup releases momentary inputs wi
 
 Primary coverage is `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`,
 `tests/entrance-recovery.js`, `tests/entrance-coach.js`, `tests/entrance-cruise.js`, `tests/entrance-roadtrip.js`,
-`tests/entrance-roadtrip-pause.js`, `tests/entrance-roadtrip-scoring.js`,
+`tests/entrance-roadtrip-handling.js`, `tests/entrance-roadtrip-pause.js`, `tests/entrance-roadtrip-scoring.js`,
 `tests/entrance-roadtrip-ai-overtake.js`, `tests/entrance-roadtrip-traffic-speed.js`,
 `tests/entrance-windshield-cracks.js`, `tests/entrance-demerits.js`, and `tests/entrance-police.js`.
 

@@ -1863,7 +1863,9 @@ html.frame-rate-low .entrance-roadtrip-camp-finale-field-star{animation:none!imp
 #entrance-drive-hud-svg.roadtrip-impact-heavy{animation:entrance-roadtrip-impact-heavy 1.08s ease-out}
 @keyframes entrance-roadtrip-shoulder-rumble{
   0%{translate:0 0}
-  50%{translate:0 var(--roadtrip-rumble-y,.5px)}
+  25%{translate:var(--roadtrip-rumble-x,.15px) var(--roadtrip-rumble-y,.5px)}
+  50%{translate:var(--roadtrip-rumble-x-neg,-.15px) var(--roadtrip-rumble-y-neg,-.2px)}
+  75%{translate:var(--roadtrip-rumble-x-neg,-.15px) var(--roadtrip-rumble-y,.5px)}
 }
 @keyframes entrance-roadtrip-impact-bump{
   0%,100%{transform:translate(0,0)}
@@ -37824,6 +37826,9 @@ window.__entranceRoomOpen = false;
     (ROADTRIP_CALGARY_ROAD_FRACTION - ROADTRIP_CALGARY_MEDIAN_FRACTION) / 3;
   var ROADTRIP_CALGARY_MEDIAN_BARRIER_LANE = .28;
   var ROADTRIP_STEER_RATE = 1.75;
+  var ROADTRIP_STEERING_LOCK_DEG = 14;
+  var ROADTRIP_RUMBLE_ROUGHNESS = .38;
+  var ROADTRIP_GRAVEL_GRIP_LOSS = .42;
   var ROADTRIP_IMPAIRED_ERRATIC_MIN_SPEED = 45;
   var ROADTRIP_IMPAIRED_DEMERITS = 6;
   var ROADTRIP_IMPAIRED_SCORE_PENALTY = 250;
@@ -38088,6 +38093,8 @@ window.__entranceRoomOpen = false;
     centerlineEnforced: false,
     shoulderZone: "road",
     shoulderDistance: 0,
+    lateralVelocity: 0,
+    surfaceRoughness: 0,
     medianBarrier: false,
     impairedSteeringPhase: 0,
     impairedSteeringBias: 0,
@@ -40114,6 +40121,58 @@ window.__entranceRoomOpen = false;
   function roadtripRumbleLane() {
     return roadtripIsCalgaryRoute() ? ROADTRIP_CALGARY_RUMBLE_LANE :
       roadtripIsAbrahamRoute() ? ROADTRIP_ABRAHAM_RUMBLE_LANE : ROADTRIP_BANFF_RUMBLE_LANE;
+  }
+  function roadtripShoulderZoneAt(lane) {
+    var absoluteLane = Math.abs(Number(lane) || 0);
+    if (roadtripIsCalgaryRoute() && absoluteLane < .34) {
+      return absoluteLane < .22 ? "gravel" : "rumble";
+    }
+    return absoluteLane >= roadtripRoadEdgeLane() ? "gravel" :
+      absoluteLane >= roadtripRumbleLane() ? "rumble" : "road";
+  }
+  function roadtripCurveWeight(speed) {
+    var progress = Math.max(0, Math.min(1, (Math.abs(Number(speed) || 0) - 35) / 115));
+    var eased = progress * progress * (3 - 2 * progress);
+    return .78 + eased * .38;
+  }
+  function roadtripSteeringAuthority(speed) {
+    var kmh = Math.abs(Number(speed) || 0);
+    var moving = Math.max(0, Math.min(1, kmh / 45));
+    var highSpeedWeight = Math.max(0, Math.min(1, (kmh - 105) / 120));
+    return moving * (1 - highSpeedWeight * .16);
+  }
+  function stepRoadtripHandling(routeTravel, seconds) {
+    seconds = Math.max(0, Number(seconds) || 0);
+    if (!seconds) return;
+    var normalizedSteer = Math.max(-1, Math.min(1,
+      driveState.steeringAngle / ROADTRIP_STEERING_LOCK_DEG));
+    var roughness = Math.max(0, Math.min(1, roadtripState.surfaceRoughness));
+    var grip = 1 - roughness * ROADTRIP_GRAVEL_GRIP_LOSS;
+    var targetVelocity = normalizedSteer * ROADTRIP_STEER_RATE *
+      roadtripSteeringAuthority(driveState.speed) * grip;
+    var lateralDistance = targetVelocity * seconds;
+    if (roughness > .001) {
+      var settling = !targetVelocity || roadtripState.lateralVelocity * targetVelocity < 0 ||
+        Math.abs(targetVelocity) < Math.abs(roadtripState.lateralVelocity);
+      var response = (settling ? 6.4 : 8.4) * (1 - roughness * .7);
+      var decay = Math.exp(-response * seconds);
+      var previousVelocity = roadtripState.lateralVelocity;
+      lateralDistance = targetVelocity * seconds +
+        (previousVelocity - targetVelocity) * (1 - decay) / response;
+      roadtripState.lateralVelocity = targetVelocity + (previousVelocity - targetVelocity) * decay;
+    } else {
+      roadtripState.lateralVelocity = targetVelocity;
+    }
+    if (Math.abs(roadtripState.lateralVelocity) < .001 && Math.abs(targetVelocity) < .001) {
+      roadtripState.lateralVelocity = 0;
+    }
+    var curveAssist = porscheTransmission.mode === "auto" ? .42 : 1;
+    var curveDrift = roadtripCurvatureAt(roadtripState.distance) * routeTravel * curveAssist *
+      roadtripCurveWeight(driveState.speed) * (1 + roughness * .12);
+    var previousLane = roadtripState.playerLane;
+    roadtripState.playerLane = Math.max(-roadtripMaxLane(), Math.min(roadtripMaxLane(),
+      roadtripState.playerLane + lateralDistance - curveDrift));
+    containRoadtripCalgaryMedian(previousLane);
   }
   function roadtripSpeedLimit() {
     return roadtripIsCalgaryRoute() ? ROADTRIP_CALGARY_SPEED_LIMIT :
@@ -43649,25 +43708,39 @@ window.__entranceRoomOpen = false;
     return roadtripState.medianBarrier;
   }
   function syncRoadtripShoulder(distance, seconds) {
-    var absoluteLane = Math.abs(roadtripState.playerLane);
-    var medianZone = roadtripIsCalgaryRoute() && absoluteLane < .34 ?
-      (absoluteLane < .22 ? "gravel" : "rumble") : "";
-    var zone = medianZone || (absoluteLane >= roadtripRoadEdgeLane() ? "gravel" :
-      absoluteLane >= roadtripRumbleLane() ? "rumble" : "road");
+    seconds = Math.max(0, Number(seconds) || 0);
+    var zone = roadtripShoulderZoneAt(roadtripState.playerLane);
     roadtripState.shoulderZone = zone;
     if (zone !== "road") roadtripState.shoulderDistance += Math.max(0, distance);
+    var roughnessTarget = zone === "gravel" ? 1 : zone === "rumble" ? ROADTRIP_RUMBLE_ROUGHNESS : 0;
+    if (!seconds) {
+      roadtripState.surfaceRoughness = roughnessTarget;
+    } else {
+      var roughnessResponse = roughnessTarget > roadtripState.surfaceRoughness ? 7 : 5.5;
+      roadtripState.surfaceRoughness += (roughnessTarget - roadtripState.surfaceRoughness) *
+        (1 - Math.exp(-roughnessResponse * seconds));
+      if (roadtripState.surfaceRoughness < .001 && !roughnessTarget) roadtripState.surfaceRoughness = 0;
+    }
     if (!driveHudSvg) driveHudSvg = roadtripElement("entrance-drive-hud-svg");
     var wheelSpeed = Math.abs(driveState.speed);
     var rumbleMotion = Math.min(1, wheelSpeed / 110);
-    var shouldRumble = zone !== "road" && wheelSpeed > .5;
+    var roughness = roadtripState.surfaceRoughness;
+    var shouldRumble = roughness > .025 && wheelSpeed > .5;
     if (driveHudSvg) {
       driveHudSvg.classList.toggle("roadtrip-shoulder-rumble", shouldRumble);
-      driveHudSvg.style.setProperty("--roadtrip-rumble-y", (.08 + rumbleMotion * 1.42).toFixed(2) + "px");
-      driveHudSvg.style.setProperty("--roadtrip-rumble-period", (.22 - rumbleMotion * .1).toFixed(3) + "s");
+      var rumbleY = roughness * (.12 + rumbleMotion * 1.5);
+      var rumbleX = roughness * roughness * (.04 + rumbleMotion * .48);
+      driveHudSvg.style.setProperty("--roadtrip-rumble-x", rumbleX.toFixed(2) + "px");
+      driveHudSvg.style.setProperty("--roadtrip-rumble-x-neg", (-rumbleX).toFixed(2) + "px");
+      driveHudSvg.style.setProperty("--roadtrip-rumble-y", rumbleY.toFixed(2) + "px");
+      driveHudSvg.style.setProperty("--roadtrip-rumble-y-neg", (-rumbleY * .42).toFixed(2) + "px");
+      driveHudSvg.style.setProperty("--roadtrip-rumble-period",
+        Math.max(.09, .23 - rumbleMotion * .1 - roughness * .02).toFixed(3) + "s");
+      driveHudSvg.setAttribute("data-roadtrip-roughness", roughness.toFixed(3));
     }
     room.classList.toggle("roadtrip-on-shoulder", zone !== "road");
     room.classList.toggle("roadtrip-on-gravel", zone === "gravel");
-    if (zone === "road" || seconds <= 0) return;
+    if (zone === "road" || !seconds) return;
     var drag = zone === "gravel" ? .15 : .035;
     driveState.speed *= Math.max(0, 1 - drag * seconds);
   }
@@ -44562,6 +44635,8 @@ window.__entranceRoomOpen = false;
     roadtripState.centerlineEnforced = false;
     roadtripState.shoulderZone = "road";
     roadtripState.shoulderDistance = 0;
+    roadtripState.lateralVelocity = 0;
+    roadtripState.surfaceRoughness = 0;
     roadtripState.medianBarrier = false;
     roadtripState.impairedSteeringPhase = 0;
     roadtripState.impairedSteeringBias = 0;
@@ -44600,6 +44675,8 @@ window.__entranceRoomOpen = false;
     roadtripState.campExitLatched = false;
     roadtripState.playerLane = route === "calgary" ? ROADTRIP_START_LANE :
       route === "banff" ? ROADTRIP_BANFF_START_LANE : ROADTRIP_ABRAHAM_START_LANE;
+    roadtripState.lateralVelocity = 0;
+    roadtripState.surfaceRoughness = 0;
     clearRoadtripEntities();
     roadtripState.nextSpawnDistance = roadtripState.distance + (route === "abraham" ? 24 : 28);
     syncRoadtripRouteClass();
@@ -44826,13 +44903,7 @@ window.__entranceRoomOpen = false;
       return;
     }
     if (routeTravel > 0) awardRoadtripDistance();
-    // AUTO's existing partial correction reads as lane assist. MANUAL gets the full
-    // inertial drift of the road bending beneath the car and must steer through it.
-    var curveDrift = porscheTransmission.mode === "auto" ? .42 : 1;
-    var previousRouteLane = roadtripState.playerLane;
-    roadtripState.playerLane = Math.max(-roadtripMaxLane(), Math.min(roadtripMaxLane(),
-      roadtripState.playerLane - roadtripCurvatureAt(roadtripState.distance) * routeTravel * curveDrift));
-    containRoadtripCalgaryMedian(previousRouteLane);
+    stepRoadtripHandling(routeTravel, seconds);
     syncRoadtripImpairedDriving(seconds);
     syncRoadtripCenterline(seconds);
     syncRoadtripShoulder(Math.abs(routeTravel), seconds);
@@ -46178,15 +46249,18 @@ window.__entranceRoomOpen = false;
   function porscheTireAudioMix(speed, steering, shoulderZone) {
     var kmh = Math.max(0, Math.abs(Number(speed == null ? driveState.speed : speed) || 0));
     var steer = Math.min(1, Math.abs(Number(steering == null ? driveState.steeringAngle : steering) || 0) / 18);
+    var explicitZone = shoulderZone != null;
     var zone = shoulderZone || roadtripState.shoulderZone || "road";
     var rolling = Math.max(0, Math.min(1, (kmh - 12) / 148));
     var highway = Math.max(0, Math.min(1, (kmh - 55) / 145));
     var corner = highway * steer;
-    var shoulder = zone === "gravel" ? 1 : zone === "rumble" ? .55 : 0;
+    var shoulder = explicitZone ? (zone === "gravel" ? 1 : zone === "rumble" ? .55 : 0) :
+      Math.max(0, Math.min(1, roadtripState.surfaceRoughness));
     return {
       speed: kmh,
       steering: steer,
       zone: zone,
+      roughness: shoulder,
       roadGain: .0001 + rolling * .078 + shoulder * .04,
       tireGain: .0001 + rolling * .105 + shoulder * .08,
       windGain: .0001 + highway * .092,
@@ -47362,14 +47436,6 @@ window.__entranceRoomOpen = false;
     if (effectiveSteerInput && Math.abs(driveState.speed) > .5) {
       driveState.laneOffset = Math.max(-9, Math.min(9,
         driveState.laneOffset - effectiveSteerInput * Math.min(1, Math.abs(driveState.speed) / 45) * seconds * 13));
-      if (roadtripState.active) {
-        var shoulderGrip = roadtripState.shoulderZone === "gravel" ? .62 : 1;
-        var previousSteerLane = roadtripState.playerLane;
-        roadtripState.playerLane = Math.max(-roadtripMaxLane(), Math.min(roadtripMaxLane(),
-          roadtripState.playerLane + effectiveSteerInput * Math.min(1, Math.abs(driveState.speed) / 45) *
-          seconds * ROADTRIP_STEER_RATE * shoulderGrip));
-        containRoadtripCalgaryMedian(previousSteerLane);
-      }
     }
     // Wheel spin is local to the car. After a 180° spin the scene travel reverses,
     // but the mirrored car must keep rolling in its new forward direction.
@@ -48581,6 +48647,13 @@ window.__entranceRoomOpen = false;
           centerlineDemerits: ROADTRIP_CENTERLINE_DEMERITS,
           shoulderZone: roadtripState.shoulderZone,
           shoulderDistance: roadtripState.shoulderDistance,
+          handling: {
+            lateralVelocity: roadtripState.lateralVelocity,
+            surfaceRoughness: roadtripState.surfaceRoughness,
+            curveWeight: roadtripCurveWeight(driveState.speed),
+            steeringAuthority: roadtripSteeringAuthority(driveState.speed),
+            grip: 1 - roadtripState.surfaceRoughness * ROADTRIP_GRAVEL_GRIP_LOSS
+          },
           medianBarrier: roadtripState.medianBarrier,
           impairmentLevel: roadtripImpairmentLevel(),
           bac: roadtripBacLevel(),
@@ -48868,6 +48941,8 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.active && !startRoadtrip(true)) return false;
     var previousLane = roadtripState.playerLane;
     roadtripState.playerLane = Math.max(-roadtripMaxLane(), Math.min(roadtripMaxLane(), Number(lane) || 0));
+    roadtripState.lateralVelocity = 0;
+    driveState.steeringAngle = 0;
     containRoadtripCalgaryMedian(previousLane);
     syncRoadtripShoulder(0, 0);
     paintRoadtripRoad();
@@ -49107,6 +49182,7 @@ window.__entranceRoomOpen = false;
       "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
       "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "centerlineElapsed",
       "centerlineEnforced", "shoulderZone", "shoulderDistance",
+      "lateralVelocity", "surfaceRoughness",
       "impairedSteeringPhase", "impairedSteeringBias", "erraticDrivingSeconds", "erraticDriving",
       "runSeed", "nextSpawnDistance", "overtakeCooldown", "spawnSerial"].forEach(function (key) { state[key] = roadtripState[key]; });
     var police = {};
@@ -49230,6 +49306,11 @@ window.__entranceRoomOpen = false;
     roadtripState.centerlineEnforced = saved.centerlineEnforced === true;
     roadtripState.shoulderZone = ["road", "rumble", "gravel"].indexOf(saved.shoulderZone) >= 0 ? saved.shoulderZone : "road";
     roadtripState.shoulderDistance = roadtripSnapshotNumber(saved.shoulderDistance, 0, 0, 1000000000);
+    roadtripState.lateralVelocity = roadtripSnapshotNumber(saved.lateralVelocity, 0,
+      -ROADTRIP_STEER_RATE, ROADTRIP_STEER_RATE);
+    roadtripState.surfaceRoughness = roadtripSnapshotNumber(saved.surfaceRoughness,
+      roadtripState.shoulderZone === "gravel" ? 1 :
+        roadtripState.shoulderZone === "rumble" ? ROADTRIP_RUMBLE_ROUGHNESS : 0, 0, 1);
     roadtripState.impairedSteeringPhase = roadtripSnapshotNumber(saved.impairedSteeringPhase, 0, 0, 1000000000);
     roadtripState.impairedSteeringBias = roadtripSnapshotNumber(saved.impairedSteeringBias, 0, -.25, .25);
     roadtripState.erraticDrivingSeconds = roadtripSnapshotNumber(saved.erraticDrivingSeconds, 0, 0, 8);

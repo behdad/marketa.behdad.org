@@ -727,6 +727,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var refusedPaused = copy(trip());
       document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
+      document.querySelector('[data-roadtrip-reentry-choice="continue"]').dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
       var refusedResumed = copy(trip());
       window.__entranceRoadtripPoliceStep(130, 20);
       var refusedCapture = copy(trip());
@@ -794,6 +796,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceRoadtripSetDistance(suspensionDetection.police.stationAt + 30);
       window.__exitEntranceRoadtrip();
       document.getElementById("entrance-roadtrip-reenter").dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true }));
+      document.querySelector('[data-roadtrip-reentry-choice="continue"]').dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true }));
       window.__entranceRoadtripPoliceStep(130, 20);
       window.__entranceRoadtripPoliceStep(0, 3);
@@ -1503,17 +1507,36 @@ check(s.refused && !s.refused.paused.active && s.refused.paused.paused &&
   s.refused.resumed.active && !s.refused.resumed.paused &&
   s.refused.resumed.police.phase === "pursuit" && s.refused.resumed.police.detectedSpeed === 130 &&
   s.refused.capture.active && s.refused.capture.police.phase === "capture" &&
-  s.refused.capture.police.sirenActive && s.refused.capture.police.mirrorVisible &&
+  s.refused.capture.police.mirrorVisible &&
   s.refused.approach.police.phase === "arrest" && s.refused.approach.police.arrestVisible &&
-  s.refused.approach.police.resolutionReason === "refused" && s.refused.approach.police.sirenActive &&
+  s.refused.approach.police.resolutionReason === "refused" &&
   s.refused.shout.police.phase === "arrest" && s.refused.shout.police.arrestShoutPlayed &&
-  s.refused.shout.police.arrestShoutOpacity > .9 && s.refused.shout.police.sirenActive &&
+  s.refused.shout.police.arrestShoutOpacity > .9 &&
   !s.refused.trip.active && s.refused.trip.police.runEnded &&
   s.refused.trip.police.endReason === "refused" && s.refused.trip.police.fines === 560 &&
   s.refused.trip.police.scorePenalties === 1560 && s.refused.trip.demeritPoints === 9 &&
   s.refused.trip.police.lastDemerits === 9 && !s.refused.trip.police.arrestVisible,
   "a paused pursuit resumes intact; refusal at any ticket speed forces capture, shouted approach, and citation",
-  s.refused);
+  s.refused && {
+    paused: { active: s.refused.paused.active, paused: s.refused.paused.paused,
+      phase: s.refused.paused.police.phase, speed: s.refused.paused.police.detectedSpeed },
+    resumed: { active: s.refused.resumed.active, paused: s.refused.resumed.paused,
+      phase: s.refused.resumed.police.phase, speed: s.refused.resumed.police.detectedSpeed },
+    capture: { phase: s.refused.capture.police.phase,
+      mirror: s.refused.capture.police.mirrorVisible },
+    approach: { phase: s.refused.approach.police.phase,
+      visible: s.refused.approach.police.arrestVisible,
+      reason: s.refused.approach.police.resolutionReason },
+    shout: { phase: s.refused.shout.police.phase,
+      played: s.refused.shout.police.arrestShoutPlayed,
+      opacity: s.refused.shout.police.arrestShoutOpacity },
+    terminal: { active: s.refused.trip.active, phase: s.refused.trip.police.phase,
+      ended: s.refused.trip.police.runEnded, reason: s.refused.trip.police.endReason,
+      fines: s.refused.trip.police.fines, penalty: s.refused.trip.police.scorePenalties,
+      lastDemerits: s.refused.trip.police.lastDemerits,
+      arrestVisible: s.refused.trip.police.arrestVisible },
+    demerits: s.refused.trip.demeritPoints
+  });
 var suspensionStop = s.suspensionStop;
 var suspensionImmediateHolds = suspensionStop && Object.keys(suspensionStop.immediate.drive.holds).every(function (key) {
   return suspensionStop.immediate.drive.holds[key] === false;

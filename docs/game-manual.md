@@ -119,6 +119,10 @@ Open the phone with `C`, `/` for Messages, or its in-scene control. The first or
 a small math lock; three failed attempts unlock it. Home, Back, and Recents follow familiar phone
 behavior.
 
+On phones and tablets, opening or restoring an app leaves text fields unfocused so the software
+keyboard does not cover the app. Tap the specific search, message, notes, browser, code, chat, or
+console field when you want to type. Desktop app openings retain their ready-to-type behavior.
+
 Opening a message does not automatically run its activity. Select the activity arrow when ready.
 An activity can expire when its moment passes, but its message stays unread until you read it.
 After a full party or its authored finale, Behdad sends Markéta a private road-trip invitation; its

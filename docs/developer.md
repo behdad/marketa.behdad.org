@@ -410,6 +410,12 @@ The monitor and phone are separate registry-backed shells:
 Do not create a second hand-maintained app catalog. Update the owning record, any intentional
 Worker allowlist, and focused contract tests.
 
+Editable app surfaces share `appTouchConstrained()` and `appAutoFocusTextControl()`. App opens,
+restores, delayed responses, search toggles, and wrapper clicks must not script-focus text controls
+on narrow/coarse layouts; the browser's native focus from a direct tap on the control is the mobile
+keyboard boundary. Desktop may retain ready-to-type focus. Messages may refocus a rebuilt field on
+mobile only when that same logical field already owned focus before the live repaint.
+
 Each game owns its loop, input capture, score, result state, and teardown. App games advertise a
 `game` record; scene games exposed to chat live in `CHAT_SCENE_GAMES`. `PUBLIC_GAME_IDS` is only the
 Worker sanitization allowlist.

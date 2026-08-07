@@ -36079,6 +36079,24 @@ function contextMenuHost() {
     document.querySelector("#hunt-fullscreen-area.is-fullscreen") || document.body;
 }
 
+// Opening an in-game app must not summon a phone/tablet software keyboard. Editable
+// controls still receive their native focus when the visitor taps the control itself;
+// scripted app-open/refocus paths are reserved for desktop-sized, fine-pointer layouts.
+function appTouchConstrained() {
+  if (!window.matchMedia) return false;
+  return window.matchMedia("(max-width: 759px)").matches ||
+    window.matchMedia("(pointer: coarse)").matches ||
+    (navigator.maxTouchPoints > 0 && window.matchMedia("(hover: none)").matches);
+}
+function appAutoFocusTextControl(control, preserveExisting) {
+  if (!control || (appTouchConstrained() && !preserveExisting)) return false;
+  try { control.focus({ preventScroll: true }); }
+  catch (_error) { try { control.focus(); } catch (_error2) { return false; } }
+  return document.activeElement === control;
+}
+window.__appTouchConstrained = appTouchConstrained;
+window.__appAutoFocusTextControl = appAutoFocusTextControl;
+
 // Android animates the visual viewport through several intermediate heights while its
 // keyboard opens. Re-fitting the 5-room SVG on every one of those frames can evict the
 // scene's composited layer and briefly paint black, so viewport consumers can freeze
@@ -55783,7 +55801,7 @@ document.addEventListener("keydown", function (e) {
       input.value = input.value.slice(0, s) + text + input.value.slice(en);
       var pos = s + text.length;
       try { input.setSelectionRange(pos, pos); } catch (er) {}
-      input.focus({ preventScroll: true });
+      appAutoFocusTextControl(input);
       input.dispatchEvent(new Event("input", { bubbles: true })); // repaint the caret lane (it listens for input)
     }, function () {});
   }
@@ -72354,6 +72372,7 @@ setOfficeProgress("pc", false);
     }
     var ta = document.createElement("textarea");
     ta.value = text;
+    ta.readOnly = true;
     ta.style.position = "fixed";
     ta.style.left = "-9999px";
     document.body.appendChild(ta);
@@ -74833,7 +74852,7 @@ setOfficeProgress("pc", false);
         if (!fromCode) consolePrint("harfbuzzjs ready — hb.Face(bytes), hb.Buffer(), hb.shape(...)", "console-dim");
       }, function () {});
     }
-    if (consoleIn) setTimeout(function () { try { consoleIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    if (consoleIn) setTimeout(function () { appAutoFocusTextControl(consoleIn); }, 60);
     playLaptopClickSound("office-monitor");
   }
   function closeConsole(restoreCode) {
@@ -75516,7 +75535,7 @@ setOfficeProgress("pc", false);
     });
   }
   if (consoleWrap) {
-    consoleWrap.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; /* leave a text selection standing so it can be copied — focusing the input would collapse it */ if (consoleIn) { try { consoleIn.focus({ preventScroll: true }); } catch (err) {} } });
+    consoleWrap.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; /* leave a text selection standing so it can be copied — focusing the input would collapse it */ appAutoFocusTextControl(consoleIn); });
     consoleWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   if (consoleCloseBtn) {
@@ -75597,7 +75616,7 @@ setOfficeProgress("pc", false);
     dtPanel.classList.add("open");
     if (!dtWelcomed) { dtWelcomed = true; var prev = activeConsoleOut; activeConsoleOut = dtOut; consolePrint(consoleT("console_welcome"), "console-dim"); activeConsoleOut = prev; }
     startDropTermFps();
-    if (dtIn) setTimeout(function () { try { dtIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    if (dtIn) setTimeout(function () { appAutoFocusTextControl(dtIn); }, 60);
     syncConsoleTab();
   }
   function closeDropTerm() {
@@ -75684,7 +75703,7 @@ setOfficeProgress("pc", false);
   }
   if (dtPanel) {
     // click the panel (but not on a live text selection) focuses the input, like the monitor console
-    dtPanel.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; if (dtIn) { try { dtIn.focus({ preventScroll: true }); } catch (err) {} } });
+    dtPanel.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; appAutoFocusTextControl(dtIn); });
     dtPanel.addEventListener("dblclick", function (e) { e.stopPropagation(); });
     // The open console owns Escape and a stray Backspace so neither dismisses the panel nor
     // reaches the room/browser. Backspace inside its input still edits normally.
@@ -75897,12 +75916,12 @@ setOfficeProgress("pc", false);
     codeLastSavedLanguage = codeLanguage;
     clearCodeDraft();
     codeRefreshPicker(null);
-    if (codeName) { try { codeName.focus(); } catch (e) {} }
+    appAutoFocusTextControl(codeName);
   }
   function codeSave() {
     if (!codeName || !codeCode) return;
     var name = codeName.value.trim();
-    if (!name) { try { codeName.focus(); } catch (e) {} return; } // no nameless files
+    if (!name) { appAutoFocusTextControl(codeName); return; } // no nameless files
     var inferred = codeExplicitLanguage(name);
     var saveLanguage = codeLastSavedName ? codeLastSavedLanguage : (inferred || codeLanguage);
     if (codeNameExistsElsewhere(name, codeLastSavedName, codeLastSavedLanguage)) {
@@ -76152,12 +76171,12 @@ setOfficeProgress("pc", false);
       var diffTitle = document.createElement("div"); diffTitle.className = "code-ai-diff-title"; diffTitle.textContent = "Preview"; codeAiPanel.appendChild(diffTitle);
       codeAiEdits.forEach(function (edit, i) { var ep = document.createElement("pre"); ep.className = "code-ai-diff"; var oldText = codeAiSourceCode.slice(edit.start, edit.end); var lines = ["#" + (i + 1) + " [" + edit.start + "–" + edit.end + "]"]; lines.push(oldText ? "- " + oldText.replace(/\n/g, "\n- ") : "- (nothing)"); lines.push(edit.text ? "+ " + edit.text.replace(/\n/g, "\n+ ") : "+ (deleted)"); ep.textContent = lines.join("\n"); codeAiPanel.appendChild(ep); });
       var applyEdits = document.createElement("button"); applyEdits.className = "code-ai-btn"; applyEdits.type = "button"; applyEdits.textContent = "apply edits";
-      applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!codeCode || codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var out = codeCode.value; var sorted = codeAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { codeAiSetStatus("edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } codeCode.value = out; codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied " + sorted.length + " edits", true); try { codeCode.focus(); } catch (_) {} });
+      applyEdits.addEventListener("click", function (e) { e.stopPropagation(); if (!codeCode || codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var out = codeCode.value; var sorted = codeAiEdits.slice().sort(function (a, b) { return b.start - a.start; }); for (var j = 0; j < sorted.length; j++) { var q = sorted[j]; if (q.start > q.end || q.end > out.length) { codeAiSetStatus("edit range invalid", false); return; } out = out.slice(0, q.start) + q.text + out.slice(q.end); } codeCode.value = out; codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied " + sorted.length + " edits", true); appAutoFocusTextControl(codeCode); });
       codeAiPanel.appendChild(applyEdits);
     }
     if (codeAiSuggestion) {
       var apply = document.createElement("button"); apply.className = "code-ai-btn"; apply.type = "button"; apply.textContent = codeAiReplace ? (codeAiStart === codeAiEnd ? "replace script" : "replace selection") : "insert at cursor";
-      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!codeAiSuggestion || !codeCode) return; if (codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var a = codeAiStart, b = codeAiEnd; if (codeAiReplace && a === b) { a = 0; b = codeCode.value.length; } codeCode.value = codeAiReplace ? codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(b) : codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(a); codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied", true); try { codeCode.focus(); codeCode.setSelectionRange(a + codeAiSuggestion.length, a + codeAiSuggestion.length); } catch (_) {} });
+      apply.addEventListener("click", function (e) { e.stopPropagation(); if (!codeAiSuggestion || !codeCode) return; if (codeCode.value !== codeAiSourceCode) { codeAiSetStatus("code changed — request again", false); return; } var a = codeAiStart, b = codeAiEnd; if (codeAiReplace && a === b) { a = 0; b = codeCode.value.length; } codeCode.value = codeAiReplace ? codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(b) : codeCode.value.slice(0, a) + codeAiSuggestion + codeCode.value.slice(a); codeScheduleAutoSave(); codeScheduleDraft(); codeAiClosePanel(); codeAiSetStatus("applied", true); appAutoFocusTextControl(codeCode); try { codeCode.setSelectionRange(a + codeAiSuggestion.length, a + codeAiSuggestion.length); } catch (_) {} });
       codeAiPanel.appendChild(apply);
       var copy = document.createElement("button"); copy.className = "code-ai-btn"; copy.type = "button"; copy.textContent = "copy";
       copy.addEventListener("click", function (e) { e.stopPropagation(); try { navigator.clipboard.writeText(codeAiSuggestion); codeAiSetStatus("copied", true); } catch (_) {} }); codeAiPanel.appendChild(copy);
@@ -76365,7 +76384,7 @@ setOfficeProgress("pc", false);
         codeLanguage = codeExplicitLanguage(draft.name) || (draft.language === "python" ? "python" : "js"); codeRememberLanguage();
         codeName.value = String(draft.name || ""); codeCode.value = String(draft.code || ""); codeLastSavedName = null; codeLastSavedLanguage = codeLanguage; codeRefreshPicker(null);
       }
-      codeMaybeShowWelcome(); try { codeCode.focus({ preventScroll: true }); } catch (e) {}
+      codeMaybeShowWelcome(); appAutoFocusTextControl(codeCode);
     }, 60);
     playLaptopClickSound("office-monitor");
   }
@@ -76377,7 +76396,8 @@ setOfficeProgress("pc", false);
     codeLastSavedName = null; codeLastSavedLanguage = codeLanguage;
     codeScheduleDraft();
     codeRefreshPicker(null);
-    try { codeCode.focus({ preventScroll: true }); codeCode.setSelectionRange(0, 0); } catch (e) {}
+    appAutoFocusTextControl(codeCode);
+    try { codeCode.setSelectionRange(0, 0); } catch (e) {}
     return true;
   };
   function closeCode() {
@@ -76495,7 +76515,7 @@ setOfficeProgress("pc", false);
   if (codeExplainBtn) codeExplainBtn.addEventListener("click", function (e) { e.stopPropagation(); codeAiRequest("explain"); });
   if (codeFixBtn) codeFixBtn.addEventListener("click", function (e) { e.stopPropagation(); codeAiRequest("fix"); });
   if (codeCompleteBtn) codeCompleteBtn.addEventListener("click", function (e) { e.stopPropagation(); codeAiRequest("complete"); });
-  if (codeAskBtn) codeAskBtn.addEventListener("click", function (e) { e.stopPropagation(); var q = codeAskInput && codeAskInput.value.trim(); if (!q) { if (codeAskInput) codeAskInput.focus(); return; } codeAiRequest("ask", q); });
+  if (codeAskBtn) codeAskBtn.addEventListener("click", function (e) { e.stopPropagation(); var q = codeAskInput && codeAskInput.value.trim(); if (!q) { appAutoFocusTextControl(codeAskInput); return; } codeAiRequest("ask", q); });
   if (codeAskInput) codeAskInput.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); if (codeAskBtn) codeAskBtn.click(); } });
   [codeAskBtn, codeExplainBtn, codeFixBtn, codeCompleteBtn].forEach(function (button) { if (button) button.addEventListener("mousedown", function (e) { e.preventDefault(); }); });
   if (codeCode) codeCode.addEventListener("input", function () { codeScheduleAutoSave(); codeScheduleDraft(); });
@@ -76516,7 +76536,7 @@ setOfficeProgress("pc", false);
       }
       event.preventDefault();
       codeFinishNameEdit();
-      try { codeCode.focus({ preventScroll: true }); } catch (_error) { try { codeCode.focus(); } catch (_error2) {} }
+      appAutoFocusTextControl(codeCode);
     });
     // The app-level Escape closer is registered later on window capture, before a target-level
     // handler could intervene. Register this guard first: conflict editing owns Enter/Escape and
@@ -76734,7 +76754,7 @@ setOfficeProgress("pc", false);
     codeCode.value = before + ins + after;
     var caret = (before + ins).length;
     try { codeCode.setSelectionRange(caret, caret); } catch (e) {}
-    try { codeCode.focus({ preventScroll: true }); } catch (e) {}
+    appAutoFocusTextControl(codeCode);
     codeScheduleAutoSave();
     codeAcHide();
     return true;
@@ -79513,7 +79533,8 @@ setOfficeProgress("pc", false);
     }
     function restoreEditSelection(edit) {
       if (!edit || !edit.target) return;
-      try { edit.target.focus({ preventScroll: true }); edit.target.setSelectionRange(edit.start, edit.end); } catch (e) {}
+      appAutoFocusTextControl(edit.target);
+      try { edit.target.setSelectionRange(edit.start, edit.end); } catch (e) {}
     }
     function dispatchEditInput(target) {
       if (target) target.dispatchEvent(new Event("input", { bubbles: true }));
@@ -79522,7 +79543,7 @@ setOfficeProgress("pc", false);
       if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return false; });
       return new Promise(function (resolve) {
         var ta = document.createElement("textarea");
-        ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+        ta.value = text; ta.readOnly = true; ta.style.position = "fixed"; ta.style.left = "-9999px";
         document.body.appendChild(ta); ta.select();
         var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
         ta.remove(); resolve(ok);
@@ -81959,7 +81980,7 @@ setOfficeProgress("pc", false);
         if (!message.silent) { chatError = ""; chatRetryMessage = null; }
         trimChatHistory(); renderChat();
         settleChatMessage(message, null, message.mode === "group_chat" ? answer : historyAnswer);
-        if (monitor.classList.contains("show-chat")) chatInput.focus();
+        if (monitor.classList.contains("show-chat")) appAutoFocusTextControl(chatInput);
         pumpChatQueue();
       });
     }).catch(function () {
@@ -82028,7 +82049,7 @@ setOfficeProgress("pc", false);
     if (window.__cancelCharlieIntro) window.__cancelCharlieIntro();
     if (window.__monitorChatTurnstile === requestChatTurnstileToken) prepareChatTurnstileToken().catch(function () {});
     playLaptopClickSound("office-monitor");
-    setTimeout(function () { if (monitor.classList.contains("show-chat") && chatInput) chatInput.focus(); }, 80);
+    setTimeout(function () { if (monitor.classList.contains("show-chat")) appAutoFocusTextControl(chatInput); }, 80);
   }
   function closeChat() {
     if (chatKillActive || !monitor.classList.contains("show-chat")) return;
@@ -82390,7 +82411,7 @@ setOfficeProgress("pc", false);
     browserPlusEl.addEventListener("animationend", function () { browserPlusEl.classList.remove("shake"); });
     browserTabsBar.appendChild(browserPlusEl);
   }
-  function focusBrowserUrl() { if (browserUrlIn) { try { browserUrlIn.focus({ preventScroll: true }); } catch (e) {} } }
+  function focusBrowserUrl() { return appAutoFocusTextControl(browserUrlIn); }
   function openDynBrowserTab(silent) {
     // an untouched new tab is already where + would land — just activate it
     for (var i = 0; i < browserDynTabs.length; i++) {
@@ -83347,7 +83368,7 @@ async def localfont(name):
     if (!pyWelcomed) { pyWelcomed = true; pyPrint(pyT("py_welcome"), "console-dim"); }
     if (pyLoadState === "failed") pyLoadState = ""; // reopening retries a failed fetch
     loadPythonRuntime();
-    if (pyIn) setTimeout(function () { try { pyIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    if (pyIn) setTimeout(function () { appAutoFocusTextControl(pyIn); }, 60);
     playLaptopClickSound("office-monitor");
   }
   function closePython(restoreCode) {
@@ -83479,7 +83500,7 @@ async def localfont(name):
     });
   }
   if (pyWrap) {
-    pyWrap.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; /* leave a text selection standing so it can be copied */ if (pyIn) { try { pyIn.focus({ preventScroll: true }); } catch (err) {} } });
+    pyWrap.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; /* leave a text selection standing so it can be copied */ appAutoFocusTextControl(pyIn); });
     pyWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   if (pyCloseBtn) {
@@ -83643,7 +83664,7 @@ async def localfont(name):
     if (lxLoadState === "failed") lxLoadState = ""; // reopening retries a failed fetch
     loadLinuxVM();
     if (lxVM && lxLoadState === "ready") { lxHiddenStop = false; try { if (!lxVM.is_running()) lxVM.run(); } catch (e) {} } // same machine, RAM intact
-    if (lxIn) setTimeout(function () { try { lxIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+    if (lxIn) setTimeout(function () { appAutoFocusTextControl(lxIn); }, 60);
     playLaptopClickSound("office-monitor");
   }
   function closeLinux() {
@@ -83727,7 +83748,7 @@ async def localfont(name):
     });
   }
   if (lxWrap) {
-    lxWrap.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; /* leave a text selection standing so it can be copied */ if (lxIn) { try { lxIn.focus({ preventScroll: true }); } catch (err) {} } });
+    lxWrap.addEventListener("click", function (e) { e.stopPropagation(); var s = window.getSelection && window.getSelection(); if (s && !s.isCollapsed) return; /* leave a text selection standing so it can be copied */ appAutoFocusTextControl(lxIn); });
     lxWrap.addEventListener("dblclick", function (e) { e.stopPropagation(); });
   }
   if (lxCloseBtn) {
@@ -86424,7 +86445,7 @@ async def localfont(name):
     // Already in the console: just re-zoom + refocus, nothing to boot.
     if (monitor.classList.contains("show-console")) {
       if (window.__monitorZoomIn) window.__monitorZoomIn();
-      if (consoleIn) setTimeout(function () { try { consoleIn.focus({ preventScroll: true }); } catch (e) {} }, 60);
+      if (consoleIn) setTimeout(function () { appAutoFocusTextControl(consoleIn); }, 60);
       return;
     }
     pendingBootConsole = true; // the boot / desktop-restore below lands on caps, then opens the console
@@ -87487,8 +87508,8 @@ async def localfont(name):
         closeCode();
         clearTimeout(codeAutoTimer); codeAutoTimer = null; codePendingCommit = null; // drop a pending autosave so it can't resurrect the cleared buffer
         // fresh empty buffer — but the SAVED scripts in both language stores are FILES,
-        // deliberately kept (they survive reset()/reboot() too). Inline clear, never codeNew()
-        // (its trailing codeName.focus() would trap the keyboard in an off-screen input).
+        // deliberately kept (they survive reset()/reboot() too). Inline clear, never codeNew(),
+        // whose trailing editor-focus behavior would target an off-screen input here.
         if (codeName) codeName.value = ""; if (codeCode) codeCode.value = "";
         clearCodeUnsaved();
         try { localStorage.removeItem(CODE_DRAFT_KEY); } catch (e) {}
@@ -89176,13 +89197,14 @@ async def localfont(name):
       builder(body);
       showScreen("app");
       if (id === "messages") {
-        // Messages behaves like a chat: a fresh open is ready to type immediately.
-        // The timeout runs after the phone's screen-class change has made the field visible.
+        // Desktop Messages behaves like a chat and opens ready to type. A touch-constrained
+        // screen lands on the thread instead, so Android does not raise its keyboard before
+        // the visitor taps a field. A live repaint may preserve a field that they already chose.
         setTimeout(function () {
           if (!isOpen() || currentApp !== "messages") return;
           var field = body.querySelector(refocusClass || ".pm-msg-input");
           if (!field) return;
-          try { field.focus({ preventScroll: true }); } catch (_error) { field.focus(); }
+          if (!appAutoFocusTextControl(field, !!refocusClass) && shell) shell.focus();
         }, 0);
       } else if (shell) shell.focus();
     }
@@ -89514,7 +89536,7 @@ async def localfont(name):
         var text = message ? plainMessageText(message) : "";
         if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function () {});
         else {
-          var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
+          var ta = document.createElement("textarea"); ta.value = text; ta.readOnly = true; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select();
           try { document.execCommand("copy"); } catch (_error) {} ta.remove();
         }
         if (refresh) refresh();
@@ -90519,7 +90541,7 @@ async def localfont(name):
       function selectReply(id) {
         msgReplyTarget = id;
         body.innerHTML = ""; renderMessages(body);
-        setTimeout(function () { var f = body.querySelector(".pm-msg-input"); if (f) f.focus(); }, 0);
+        setTimeout(function () { appAutoFocusTextControl(body.querySelector(".pm-msg-input")); }, 0);
       }
       function buildRow(id) {
         var m = MESSAGES[id]; if (!m) return null;
@@ -90716,7 +90738,7 @@ async def localfont(name):
       input.addEventListener("keydown", function (e) {
         if (input.value) return;
         if (e.key === "/") { e.preventDefault(); e.stopPropagation(); close(); return; }
-        if (e.key === "Backspace") { e.preventDefault(); messageInput.focus(); }
+        if (e.key === "Backspace") { e.preventDefault(); appAutoFocusTextControl(messageInput); }
       });
       unreadChk.addEventListener("change", function () { msgUnreadOnly = unreadChk.checked; applyFilter(); });
       readAll.addEventListener("click", function () {
@@ -90725,7 +90747,7 @@ async def localfont(name):
         readAll.disabled = true;
         applyFilter();
       });
-      clr.addEventListener("click", function () { input.value = ""; msgSearchQ = ""; applyFilter(); input.focus(); });
+      clr.addEventListener("click", function () { input.value = ""; msgSearchQ = ""; applyFilter(); appAutoFocusTextControl(input); });
 
       var composer = document.createElement("div"); composer.className = "pm-msg-composebar";
       var replying = document.createElement("div"); replying.className = "pm-msg-replying";
@@ -90748,10 +90770,9 @@ async def localfont(name):
       messageInput.addEventListener("keydown", function (e) {
         if (e.key !== "/" || messageInput.value) return;
         e.preventDefault();
-        input.focus();
-        input.select();
+        if (appAutoFocusTextControl(input)) input.select();
       });
-      replyX.addEventListener("click", function () { msgReplyTarget = null; paintReplying(); messageInput.focus(); });
+      replyX.addEventListener("click", function () { msgReplyTarget = null; paintReplying(); appAutoFocusTextControl(messageInput); });
       form.addEventListener("submit", function (e) {
         e.preventDefault(); e.stopPropagation();
         var text = messageInput.value.trim(), targetId = msgReplyTarget; if (!text) return;
@@ -91578,7 +91599,7 @@ async def localfont(name):
         e.preventDefault(); e.stopPropagation();
         input.blur(); navBack();
       });
-      clr.addEventListener("click", function () { input.value = ""; albumSearchQ = ""; applyFilter(); input.focus(); });
+      clr.addEventListener("click", function () { input.value = ""; albumSearchQ = ""; applyFilter(); appAutoFocusTextControl(input); });
       view.addEventListener("click", function () {
         albumCompact = !albumCompact;
         view.classList.toggle("active", albumCompact);
@@ -112494,8 +112515,7 @@ function spawnDustMote(container) {
     if (!host) return false;
     var input = host.querySelector('input[type="search"]');
     if (input) {
-      try { input.focus({ preventScroll: true }); } catch (_error) { input.focus(); }
-      if (input.select) input.select();
+      if (appAutoFocusTextControl(input) && input.select) input.select();
       return true;
     }
     var toggle = host.querySelector(".calx-search-btn");
@@ -123244,7 +123264,7 @@ function spawnDustMote(container) {
       calSearchOn = false; calSearchQ = "";
       window.__calendarRender(container, surface);
     });
-    clr.addEventListener("click", function () { input.value = ""; apply(); input.focus(); });
+    clr.addEventListener("click", function () { input.value = ""; apply(); appAutoFocusTextControl(input); });
     apply();
     return { bar: bar, body: body, input: input };
   }
@@ -123298,9 +123318,9 @@ function spawnDustMote(container) {
       calCol.appendChild(searchUI.body);
       root.appendChild(calCol);
       container.appendChild(root);
-      // tapping 🔍 drops the cursor straight into the field. preventScroll so focusing the tiny
-      // off-screen monitor foreignObject can't scroll it into view and jerk the viewport.
-      setTimeout(function () { try { searchUI.input.focus({ preventScroll: true }); } catch (e) { try { searchUI.input.focus(); } catch (e2) {} } }, 0);
+      // Desktop jumps straight into search; touch-constrained screens wait for a tap on the
+      // field itself, avoiding a surprise software keyboard over either app surface.
+      setTimeout(function () { appAutoFocusTextControl(searchUI.input); }, 0);
       return;
     }
     var grid = document.createElement("div"); grid.className = "calx-grid";

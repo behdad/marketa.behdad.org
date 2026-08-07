@@ -99,6 +99,22 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
         }
       }
       report.camp = { frames: campFrames, final: state() };
+
+      function campPresentation() {
+        return {
+          route: state().route,
+          campOpacity: document.getElementById("entrance-roadtrip-camp").style.opacity,
+          roadOpacity: document.getElementById("entrance-roadtrip-road").style.opacity,
+          campClass: document.getElementById("entrance-room").classList.contains("roadtrip-route-camp")
+        };
+      }
+      var campChoice = document.querySelector('[data-roadtrip-reentry-choice="camp"]');
+      window.__exitEntranceRoadtrip();
+      campChoice.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      report.firstCampReentry = campPresentation();
+      window.__exitEntranceRoadtrip();
+      campChoice.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      report.secondCampReentry = campPresentation();
     } catch (error) {
       report.errors.push(String(error && error.stack || error));
     }
@@ -129,7 +145,7 @@ check(/function transitionRoadtripTraffic\(previousRoute\)/.test(source) &&
   /transitionRoadtripTraffic\(previousTurnoffRoute\)/.test(source) &&
   /transitionRoadtripTraffic\(previousLakeTurnoffRoute\)/.test(source),
   "attended road-width changes preserve and retarget the bounded traffic pool");
-check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*resetRoadtripCampSession\(\);/.test(source),
+check(/if \(forceFresh\) \{\s*\/\/[^\n]*\n[^\n]*\/\/[^\n]*\n\s*if \(!preserveCamp\) resetRoadtripCampSession\(\);/.test(source),
   "fresh Road Trips clear the previous campsite before any transition frame");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5200, {
@@ -200,6 +216,14 @@ check(camp.frames && camp.frames.length >= 2 && camp.frames.every(function (fram
   }) && camp.final && camp.final.route === "camp" && camp.final.routeBlend.camp === 1 &&
   camp.final.routeBlend.road === 0,
   "the automatic slowdown carries Abraham's shared light into the stationary Camping frame", camp);
+function cleanCampReentry(row) {
+  return row && row.route === "camp" && row.campClass === true && Number(row.campOpacity) === 1 &&
+    Number(row.roadOpacity) === 0;
+}
+check(cleanCampReentry(result && result.firstCampReentry) &&
+  cleanCampReentry(result && result.secondCampReentry),
+  "consecutive Camping re-entries both repaint the campsite instead of alternating with the road",
+  result && { first: result.firstCampReentry, second: result.secondCampReentry });
 
 if (failures) process.exit(1);
 console.log("Attended route-transition continuity checks passed.");

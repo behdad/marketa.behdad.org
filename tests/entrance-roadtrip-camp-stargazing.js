@@ -204,6 +204,18 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           centerY: box && Math.round(box.y + box.height / 2)
         };
       }),
+      wisdomTypography: Array.prototype.map.call(wisdom.querySelectorAll(".entrance-roadtrip-camp-wisdom-bubble"), function (bubble) {
+        var shape = bubble.querySelector("path.entrance-roadtrip-camp-wisdom-shape").getBBox();
+        var text = bubble.querySelector("text");
+        var textBox = text.getBBox();
+        return {
+          fontSize: parseFloat(getComputedStyle(text).fontSize),
+          shapeWidth: Math.round(shape.width),
+          textWidth: Math.round(textBox.width),
+          shapeHeight: Math.round(shape.height),
+          textHeight: Math.round(textBox.height)
+        };
+      }),
       wisdomHit: wisdomHit && {
         x: Number(wisdomHit.getAttribute("x") || 0),
         y: Number(wisdomHit.getAttribute("y")),
@@ -284,6 +296,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                               builderNames: Array.prototype.map.call(document.querySelectorAll('#entrance-roadtrip-stargazing-game [data-i^="entrance_roadtrip_stargazing_ursa"],#entrance-roadtrip-stargazing-game [data-i="entrance_roadtrip_stargazing_cassiopeia"]'), function (node) { return node.textContent; }),
                               liveNames: document.querySelectorAll('#entrance-roadtrip-camp-finale-constellations text').length,
                               wisdom: document.getElementById("entrance-roadtrip-camp-wisdom").textContent.replace(/\s+/g, " ").trim(),
+                              wisdomTypography: snap().wisdomTypography,
                               continueText: document.getElementById("hunt-caption").textContent.replace(/\s+/g, " ").trim()
                             };
                             window.setLang("en");
@@ -392,15 +405,18 @@ check(result && result.complete && result.complete.state.complete && !result.com
   result.complete.wisdomBubbles === 4 && result.complete.wisdomSpeakers === 0 &&
   !result.complete.wisdomClose &&
   result.complete.wisdomShapes.every(function (shape) {
-    return shape.paths === 1 && shape.rects === 0 && shape.width <= 215;
+    return shape.paths === 1 && shape.rects === 0 && shape.width >= 175 && shape.width <= 290;
   }) &&
   result.complete.wisdomShapes.map(function (shape) { return shape.stroke; }).join("|") ===
     "rgb(217, 166, 166)|rgb(127, 158, 192)|rgb(217, 166, 166)|rgb(127, 158, 192)" &&
-  result.complete.wisdomShapes[0].x >= 460 && result.complete.wisdomShapes[1].x <= 20 &&
-  result.complete.wisdomShapes[2].x >= 485 && result.complete.wisdomShapes[3].x <= 30 &&
-  result.complete.wisdomShapes.slice(1).every(function (shape, index) {
-    var step = shape.centerY - result.complete.wisdomShapes[index].centerY;
-    return step >= 26 && step <= 36;
+  result.complete.wisdomShapes[0].x >= 380 && result.complete.wisdomShapes[1].x <= 10 &&
+  result.complete.wisdomShapes[2].x >= 485 && result.complete.wisdomShapes[3].x <= 5 &&
+  Math.abs(result.complete.wisdomShapes[0].centerY - result.complete.wisdomShapes[1].centerY) <= 1 &&
+  result.complete.wisdomShapes[2].centerY - result.complete.wisdomShapes[0].centerY >= 50 &&
+  result.complete.wisdomShapes[3].centerY - result.complete.wisdomShapes[1].centerY >= 55 &&
+  Math.abs(result.complete.wisdomShapes[2].centerY - result.complete.wisdomShapes[3].centerY) <= 8 &&
+  result.complete.wisdomTypography.every(function (row) {
+    return row.fontSize >= 12 && row.textWidth <= row.shapeWidth - 24 && row.textHeight <= row.shapeHeight - 10;
   }) &&
   result.complete.wisdomHit && result.complete.wisdomHit.x === 0 && result.complete.wisdomHit.y === -120 &&
   result.complete.wisdomHit.width === 680 && result.complete.wisdomHit.height === 340 &&
@@ -408,7 +424,7 @@ check(result && result.complete && result.complete.state.complete && !result.com
   result.complete.wisdomText.indexOf("When something is over,") >= 0 &&
   result.complete.wisdomText.indexOf("something else begins") >= 0 &&
   result.complete.wisdomText.indexOf("—ad infinitum.") >= 0,
-  "finishing returns to a non-traceable live sky with draggable stars behind the moon and four edge-set path bubbles",
+  "finishing returns to a non-traceable live sky with draggable stars behind the moon and four large two-column path bubbles",
   result && result.complete);
 check(result && result.complete && !result.complete.state.wisdomHandoffReady &&
   result.complete.caption === "entrance_roadtrip_stargazing_title" &&
@@ -464,8 +480,11 @@ check(result && result.czech && result.czech.title === "Pozorování hvězd" &&
   result.czech.liveNames === 0 &&
   result.czech.wisdom.indexOf("Když něco skončí,") >= 0 &&
   result.czech.wisdom.indexOf("něco jiného začne") >= 0 &&
+  result.czech.wisdomTypography.every(function (row) {
+    return row.fontSize >= 12 && row.textWidth <= row.shapeWidth - 24 && row.textHeight <= row.shapeHeight - 10;
+  }) &&
   result.czech.continueText === "Velká moudrost rozdána. Klikni kamkoli a pokračuj.",
-  "builder labels switch to Czech while the permanent sky stays unlabeled", result && result.czech);
+  "builder labels and spacious wisdom bubbles switch cleanly to Czech while the permanent sky stays unlabeled", result && result.czech);
 check(result && result.dismissed && result.dismissed.state.wisdomDismissed && !result.dismissed.wisdomShown &&
   result.dismissed.state.sleepPhase === "prompt" &&
   result.dismissed.caption === "entrance_roadtrip_camp_sleep_prompt" && result.dismissed.outerDismiss === "grid" &&

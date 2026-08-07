@@ -3,14 +3,15 @@
 Loft Day is a point-and-click visit to ten connected rooms. Follow a short clue trail, then explore
 the loft, games, music, messages, apps, guests, and lower floor at your own pace.
 
-No adventure-game experience is required. Read the caption above the scene and try whatever looks
+No adventure-game experience is required. Read the caption below the scene and try whatever looks
 useful.
 
 ## Start here
 
 1. Select **CLICK ME**. On a narrow phone, landscape orientation works best.
-2. Select the scene or press `Enter` to dismiss the opening coach.
-3. Follow the caption above the scene.
+2. Select the scene or press `Enter` twice while the opening coach points out the top navigation,
+   then the bottom caption.
+3. Follow the caption below the scene.
 4. Complete each room to unlock the next one.
 5. Reach the Balcony to open the rest of the game.
 
@@ -53,8 +54,8 @@ Each main room has a room directly below it:
   double-click or double-tap one to unlock it deliberately. Its first card is Kitchen / Bar.
   During a Road Trip or at Camping, the Entrance card mirrors that live scene. Opening the map
   during a Road Trip leaves the drive paused when the map closes.
-- The first downstairs visit points out the whole-loft button on the left and the floor
-  control on the right; its small × dismisses that hint.
+- The window-grid button remains available beside the room dots. The floor button stays visible
+  but disabled until a downstairs route has been discovered.
 - Escape, Backspace, ×, or the top-left arrow dismisses the current layer or returns upstairs.
 
 Each main room also has an in-scene route downstairs. Finding either that route or using `↓`
@@ -130,7 +131,7 @@ fullscreen.
 
 ## Driving and Road Trip
 
-Select the Entrance road to open the dashboard. The caption above the scene reports the current
+Select the Entrance road to open the dashboard. The caption below the scene reports the current
 driving state; the visible dashboard controls and shortcuts operate the car. A first-drive coach
 walks through ignition, steering, gear, desktop cruise control, and pedals; `?` parks the car and
 restarts that lesson.

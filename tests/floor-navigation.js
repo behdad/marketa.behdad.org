@@ -17,31 +17,15 @@ var harness = String.raw`<script>
   }
   function floorState() {
     var button = document.getElementById("hunt-floor-btn");
-    var coach = document.getElementById("hunt-floor-coach");
-    var coachText = document.getElementById("hunt-floor-coach-text");
-    var coachDismiss = document.getElementById("hunt-floor-coach-dismiss");
-    var coachBox = coach.getBoundingClientRect();
-    var dismissBox = coachDismiss.getBoundingClientRect();
     var glyph = getComputedStyle(button, "::before");
     return {
       hidden: button.hidden,
+      disabled: button.disabled,
       mark: button.textContent,
       up: button.classList.contains("floor-up"),
       down: button.classList.contains("floor-down"),
       hasAriaLabel: button.hasAttribute("aria-label"),
       hasTitle: button.hasAttribute("title"),
-      coachHidden: coach.hidden,
-      coach: coachText.textContent,
-      coachZ: parseInt(getComputedStyle(coach).zIndex, 10),
-      coachDismiss: {
-        type: coachDismiss.type,
-        tabIndex: coachDismiss.tabIndex,
-        hasAriaLabel: coachDismiss.hasAttribute("aria-label"),
-        hasTitle: coachDismiss.hasAttribute("title"),
-        position: getComputedStyle(coachDismiss).position,
-        rightInset: coachBox.right - dismissBox.right,
-        topInset: dismissBox.top - coachBox.top
-      },
       bottomNavZ: parseInt(getComputedStyle(document.getElementById("hunt-bottom-nav")).zIndex, 10),
       lowerRoomZ: parseInt(getComputedStyle(document.getElementById("lower-room-track")).zIndex, 10),
       room: window.currentStageName,
@@ -72,7 +56,8 @@ var harness = String.raw`<script>
     window.__endAttract();
     window.__resetLowerRoomDiscovery();
     window.goToStage("kitchen");
-    check("fresh upstairs chrome hides Down until discovery", floorState().hidden, floorState());
+    check("fresh upstairs chrome shows a disabled Down until discovery",
+      !floorState().hidden && floorState().disabled && !document.getElementById("hunt-dollhouse-btn").hidden, floorState());
     var freshDots = document.getElementById("hunt-dots").getBoundingClientRect();
     var freshDotsCenter = freshDots.left + freshDots.width / 2;
 
@@ -80,9 +65,9 @@ var harness = String.raw`<script>
     await sleep(30);
     var earlyDown = floorState();
     check("descent keeps the Down chevron before the transition midpoint",
-      !earlyDown.hidden && earlyDown.mark === "›" && earlyDown.down && !earlyDown.up &&
+      !earlyDown.hidden && !earlyDown.disabled && earlyDown.mark === "›" && earlyDown.down && !earlyDown.up &&
       !earlyDown.hasAriaLabel && !earlyDown.hasTitle && earlyDown.bathroom &&
-      earlyDown.coachHidden && earlyDown.navigation.pending && earlyDown.navigation.target, earlyDown);
+      earlyDown.navigation.pending && earlyDown.navigation.target, earlyDown);
     check("vertical floor travel uses the shorter 400ms transition",
       getComputedStyle(document.querySelector(".hunt-viewport")).transitionDuration === "0.4s",
       getComputedStyle(document.querySelector(".hunt-viewport")).transitionDuration);
@@ -102,50 +87,22 @@ var harness = String.raw`<script>
 
     await sleep(210);
     var first = floorState();
-    check("descent changes to Up at the transition midpoint and reveals its coach",
-      first.up && !first.down && !first.coachHidden && first.coach === "Up gets you back." &&
+    check("descent changes to Up at the transition midpoint",
+      first.up && !first.down && !first.disabled &&
       first.navigation.downstairs && !first.navigation.pending, first);
-    check("the Up coach paints above the active lower-room scene",
-      first.coachZ > 0 && first.bottomNavZ > first.lowerRoomZ,
-      { coach: first.coachZ, bottomNav: first.bottomNavZ, lowerRoom: first.lowerRoomZ });
-    check("the Up coach owns a small unlabeled dismiss control in its top-right corner",
-      first.coachDismiss.type === "button" && first.coachDismiss.tabIndex === -1 &&
-      !first.coachDismiss.hasAriaLabel && !first.coachDismiss.hasTitle &&
-      first.coachDismiss.position === "absolute" && first.coachDismiss.rightInset >= 0 &&
-      first.coachDismiss.rightInset < 8 && first.coachDismiss.topInset >= 0 && first.coachDismiss.topInset < 8,
-      first.coachDismiss);
-    await sleep(220);
-    check("first-arrival coach remains after the lower room settles", !floorState().coachHidden, floorState());
-    window.__bathroomRoomOpen = false;
-    window.__syncFloorNavigation();
-    await sleep(220);
-    check("ownership churn cannot retire the coach while navigation reads upstairs",
-      floorState().down && !floorState().coachHidden, floorState());
-    window.__bathroomRoomOpen = true;
-    window.__syncFloorNavigation();
-    await sleep(220);
-    check("ownership recovery restores Up without retiring the coach",
-      floorState().up && !floorState().coachHidden, floorState());
-
-    setLang("cs");
-    var czech = floorState();
-    check("the live coach switches to Czech without adding control labels",
-      !czech.hasAriaLabel && !czech.hasTitle && czech.coach === "Nahoru se vrátíš.", czech);
-    setLang("en");
-    document.getElementById("hunt-floor-coach-dismiss").click();
-    check("the hint's own × dismisses it immediately", floorState().coachHidden, floorState());
+    check("no dedicated floor coach remains in the chrome", !document.getElementById("hunt-floor-coach"));
 
     document.getElementById("hunt-floor-btn").click();
     await sleep(30);
     var earlyUp = floorState();
     check("ascent keeps Up before the same transition midpoint",
       earlyUp.up && !earlyUp.down && !earlyUp.bathroom && !earlyUp.bathroomHidden &&
-      earlyUp.coachHidden && earlyUp.navigation.pending && !earlyUp.navigation.target, earlyUp);
+      earlyUp.navigation.pending && !earlyUp.navigation.target, earlyUp);
     await sleep(210);
     var upstairs = floorState();
     check("ascent changes to Down at the transition midpoint",
       !upstairs.hidden && upstairs.mark === "›" && upstairs.down && !upstairs.up &&
-      !upstairs.bathroom && !upstairs.bathroomHidden && upstairs.coachHidden &&
+      !upstairs.bathroom && !upstairs.bathroomHidden && !upstairs.disabled &&
       upstairs.navigation.downstairs === false && !upstairs.navigation.pending, upstairs);
     await sleep(200);
     check("upstairs room owns the viewport at the 400ms settle boundary",
@@ -214,26 +171,20 @@ var harness = String.raw`<script>
     document.dispatchEvent(new KeyboardEvent("keyup", {
       key: "Shift", code: "ShiftLeft", bubbles: true, cancelable: true
     }));
-    var coach = document.getElementById("hunt-floor-coach");
-    coach.hidden = false;
     window.__entranceDriveRange("D");
     window.__entranceRoadtripStart();
     await sleep(30);
-    check("the Up coach stays out of the active Road Trip",
-      getComputedStyle(coach).display === "none" && !coach.hidden,
-      { display: getComputedStyle(coach).display, hidden: coach.hidden });
+    check("Road Trip keeps the persistent chrome coach-free",
+      !document.getElementById("hunt-floor-coach") && !document.getElementById("hunt-dollhouse-btn").hidden);
     window.__hideEntrancePorscheDriveHud();
     await sleep(30);
-    check("the preserved Up coach returns after Road Trip",
-      getComputedStyle(coach).display !== "none" && !coach.hidden,
-      { display: getComputedStyle(coach).display, hidden: coach.hidden });
+    check("leaving Road Trip keeps the same coach-free controls",
+      !document.getElementById("hunt-floor-coach") && !document.getElementById("hunt-floor-btn").hidden);
     window.__resetLowerRoomDiscovery();
     window.__cinematic = true;
     document.getElementById("hunt-fullscreen-area").classList.add("cinematic-running");
     window.__markLowerRoomEntered();
-    check("Trailer mode suppresses the player-only Up coach",
-      coach.hidden && getComputedStyle(coach).display === "none",
-      { display: getComputedStyle(coach).display, hidden: coach.hidden });
+    check("Trailer mode does not recreate a player-only floor coach", !document.getElementById("hunt-floor-coach"));
     document.getElementById("hunt-fullscreen-area").classList.remove("cinematic-running");
     window.__cinematic = false;
   }
@@ -262,9 +213,9 @@ console.log("  " + (!oldClosePresent.length ? "✓" : "✗") + " lower rooms no 
   (!oldClosePresent.length ? "" : " — " + oldClosePresent.join(", ")));
 if (oldClosePresent.length) failed = true;
 
-var coachHasExpiry = /floorCoachTimer|setTimeout\s*\(\s*hideFloorCoach/.test(source);
-console.log("  " + (!coachHasExpiry ? "✓" : "✗") + " first-arrival Up coach has no timed expiry");
-if (coachHasExpiry) failed = true;
+var noFloorCoach = source.indexOf('id="hunt-floor-coach"') === -1 && source.indexOf("showFloorCoach") === -1;
+console.log("  " + (noFloorCoach ? "✓" : "✗") + " floor navigation has no dedicated coach");
+if (!noFloorCoach) failed = true;
 
 var allCssChevrons = /\.hunt-nav-prev::before\{transform:[^}]*rotate\(-135deg\)/.test(source) &&
   /\.hunt-nav-next::before\{transform:[^}]*rotate\(45deg\)/.test(source) &&

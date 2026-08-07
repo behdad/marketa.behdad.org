@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-// Tab and the grid button own a full-loft picker from the beginning. Downstairs
-// discovery later reveals the shared floor coach; visited rooms stay sharp.
+// Tab and the grid button own a full-loft picker from the beginning. The floor
+// button stays visible but disabled until downstairs is discovered; visited rooms stay sharp.
 var lib = require("./lib");
 
 var harness = String.raw`<script>
@@ -58,8 +58,9 @@ var harness = String.raw`<script>
       return true;
     };
     var undiscoveredTab = key("Tab");
-    check("Tab opens The Loft before downstairs is discovered and its grid button is already present",
-      undiscoveredTab && state().eligible && !state().controlsUnlocked && state().button && state().open,
+    check("Tab opens The Loft before downstairs is discovered and both chrome buttons are present",
+      undiscoveredTab && state().eligible && !state().controlsUnlocked && state().button && state().floorDisabled && state().open &&
+        !document.getElementById("hunt-floor-btn").hidden && !document.getElementById("hunt-dollhouse-btn").hidden,
       JSON.stringify(state()));
     check("opening The Loft pauses an active Road Trip exactly once",
       transportPauseCalls === 1 && transportPaused,
@@ -119,38 +120,25 @@ var harness = String.raw`<script>
       tabStops.map(function (el) { return el.id || el.className || el.tagName; }).join(","));
 
     window.__markLowerRoomDiscovered();
-    check("discovering downstairs reveals the grid button without inventing a coach",
-      state().eligible && state().controlsUnlocked && state().button && !state().coach, JSON.stringify(state()));
+    check("discovering downstairs enables the persistent floor button without inventing a coach",
+      state().eligible && state().controlsUnlocked && state().button && !state().floorDisabled &&
+        !document.getElementById("hunt-floor-coach"), JSON.stringify(state()));
 
     window.goToStage("kitchen");
     window.__openBathroomRoom();
     await sleep(260);
-    check("the first downstairs visit coaches both flanking controls together",
-      !document.getElementById("hunt-floor-btn").hidden &&
-      !document.getElementById("hunt-dollhouse-btn").hidden && state().coach &&
-      document.getElementById("hunt-floor-coach-text").textContent ===
-        "Whole loft on the left · floors on the right.", document.getElementById("hunt-floor-coach-text").textContent);
-    setLang("cs");
-    check("the combined coach follows Czech live",
-      document.getElementById("hunt-floor-coach-text").textContent === "Celý loft vlevo · patra vpravo.",
-      document.getElementById("hunt-floor-coach-text").textContent);
-    setLang("en");
+    check("the first downstairs visit keeps both flanking controls visible and the floor control enabled",
+      !document.getElementById("hunt-floor-btn").hidden && !document.getElementById("hunt-floor-btn").disabled &&
+      !document.getElementById("hunt-dollhouse-btn").hidden && !document.getElementById("hunt-floor-coach"), JSON.stringify(state()));
 
-    document.getElementById("hunt-floor-coach-dismiss").click();
-    check("the usual coach dismiss retires the one shared coach", state().coachRetired && !state().coach, JSON.stringify(state()));
-
-    window.__setDollhouseCoachRetired(false, { silent: true });
     document.getElementById("hunt-dollhouse-btn").click();
-    check("using the grid button opens the picker and retires its coach",
-      state().open && state().coachRetired, JSON.stringify(state()));
+    check("using the persistent grid button opens the picker", state().open, JSON.stringify(state()));
     key("Tab");
     check("Tab closes the same picker without leaving the lower room", !state().open && window.__bathroomRoomOpen, JSON.stringify(state()));
 
-    window.__setDollhouseCoachRetired(false, { silent: true });
     var tabHandled = key("Tab");
     var opened = state(), locked = opened.rooms.filter(function (room) { return room.locked; });
-    check("Tab opens the same picker and retires its coach",
-      tabHandled && opened.open && opened.coachRetired, JSON.stringify(opened));
+    check("Tab opens the same picker", tabHandled && opened.open, JSON.stringify(opened));
     check("the 5×2 overview exposes only the two rooms actually visited",
       opened.rooms.length === 10 && locked.length === 8 &&
       opened.rooms.filter(function (room) { return !room.locked; }).map(function (room) { return room.room; }).join(",") === "kitchen,bathroom",
@@ -219,14 +207,11 @@ var harness = String.raw`<script>
     document.getElementById("stage-kitchen").classList.remove("dusk");
     window.__closeDollhouse();
 
-    window.__saveLoftCheckpoint();
-    var saved = JSON.parse(localStorage.getItem("loftCheckpoint:v1"));
-    check("coach retirement belongs to the loft checkpoint",
-      saved && saved.progress && saved.progress.dollhouseCoachRetired === true, JSON.stringify(saved && saved.progress));
-
+    if (window.__bathroomRoomOpen && window.__closeBathroomRoom) window.__closeBathroomRoom();
+    await sleep(450);
     window.__resetLowerRoomDiscovery();
-    check("Start-over clears discovery and coach retirement but leaves both picker entrances available",
-      state().eligible && !state().controlsUnlocked && state().button && !state().open && !state().coachRetired,
+    check("Start-over clears discovery, disables floor travel, and leaves the picker available",
+      state().eligible && !state().controlsUnlocked && state().button && state().floorDisabled && !state().open,
       JSON.stringify(state()));
 
     key("Tab");

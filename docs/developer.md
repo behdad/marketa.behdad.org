@@ -96,9 +96,13 @@ devices, particles, and captions. The lower roots live in `#lower-room-track`;
 `lowerRoomForStage()` defines their pairing and `__navigateLowerRoom(name)` owns horizontal lower-
 floor movement. Individual lower controllers own vertical open and close.
 
+Game chrome places date/time and room navigation above the scene and `#hunt-caption` below it. The
+first-play handoff advances through those two locations before object-level Kitchen guidance begins.
+
 The `#loft-dollhouse` picker reuses those same navigation owners. Tab and the always-visible grid
-button open its full-width 5×2 map; lower-floor discovery adds the shared floor coach. `seenRooms`
-keeps visited thumbnails sharp while locked destinations retain blurred previews; never infer picker
+button open its full-width 5×2 map. The floor button is persistent but disabled until lower-floor
+discovery. `seenRooms` keeps visited thumbnails sharp while locked destinations retain blurred
+previews; never infer picker
 access from `maxUnlocked`. Room cards reuse their real SVG art, with a matching static SVG portrait
 for the HTML/CSS Dungeon. The preview temporarily neutralizes Bedroom one-shots, gives the intact
 Entrance façade a daylight wash, primes a warm Cuddly projector frame, and applies the real Bar visibility state to
@@ -338,9 +342,6 @@ Checkpointing begins after the Kitchen is solved or deliberately left. Writes ar
 `__checkpointChanged`. An adapter provides `capture()`, `restore(row, phase)`, and optionally
 `reset()`. Restore uses `beforeStage` for state needed before navigation and `afterStage` for state
 that depends on the settled room.
-
-The shared floor/dollhouse coach keeps its retired flag in progression as
-`dollhouseCoachRetired`; Start over clears it with lower-floor discovery.
 
 Persist only bounded, settled intent. Do not restore live timers, calls, cameras, dialogs, drags,
 particles, iframe frames, media playback, or running game loops. A missing `systems` map is a legacy

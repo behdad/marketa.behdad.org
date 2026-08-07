@@ -45851,6 +45851,20 @@ window.__entranceRoomOpen = false;
   function roadtripCabinExposure() {
     return porscheState.roofOpen ? 1 : porscheState.windowOpen ? .78 : .52;
   }
+  // panForElId forces a synchronous layout, and the per-tick spatial repaints made every
+  // drive step pay that reflow mid-tick. The anchors drift slowly (HUD chrome is static,
+  // the street car wraps over seconds), so a 250ms-stale pan is inaudible — the params'
+  // setTargetAtTime smoothing glides over the refresh steps.
+  var porscheDrivePanCache = {};
+  window.__porscheDrivePanFlush = function () { porscheDrivePanCache = {}; }; // deterministic test seam: re-read anchors NOW
+  function porscheDrivePanFor(anchor) {
+    var now = performance.now();
+    var hit = porscheDrivePanCache[anchor];
+    if (hit && now - hit.at < 250) return hit.pan;
+    var pan = panForElId(anchor);
+    porscheDrivePanCache[anchor] = { at: now, pan: pan };
+    return pan;
+  }
   function porscheDriveSpatialProfile(kind) {
     var cfg = PORSCHE_DRIVE_SPATIAL[kind] || PORSCHE_DRIVE_SPATIAL.engine;
     var highwayTire = roadtripState.active && (kind === "tire" || kind === "screech");
@@ -45872,7 +45886,7 @@ window.__entranceRoomOpen = false;
         mode: "roadtrip"
       };
     }
-    var pan = panForElId(cfg.anchor);
+    var pan = porscheDrivePanFor(cfg.anchor);
     var distanceGain = 1 / (1 + Math.abs(pan) * cfg.edgeRolloff);
     return {
       kind: kind,

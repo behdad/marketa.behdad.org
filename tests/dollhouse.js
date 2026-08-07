@@ -163,7 +163,7 @@ var harness = String.raw`<script>
 
     setLang("cs");
     check("the open overview follows Czech live",
-      document.getElementById("loft-dollhouse-title").textContent === "Loft" &&
+      document.getElementById("loft-dollhouse-title").textContent === "Loft 🗺️" &&
       roomButton("kitchen").textContent.indexOf("Kuchyň") !== -1,
       document.getElementById("loft-dollhouse-title").textContent);
     setLang("en");

@@ -33,8 +33,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       innerEdge: spur.querySelector(".entrance-roadtrip-camp-spur-inner-edge").getAttribute("d"),
       junctionX: Number(spur.getAttribute("data-roadtrip-junction-x")),
       junctionY: Number(spur.getAttribute("data-roadtrip-junction-y")),
-      mouthTop: Number(spur.getAttribute("data-roadtrip-mouth-top")),
-      mouthBottom: Number(spur.getAttribute("data-roadtrip-mouth-bottom")),
+      destinationX: Number(spur.getAttribute("data-roadtrip-destination-x")),
+      destinationY: Number(spur.getAttribute("data-roadtrip-destination-y")),
+      nearWidth: Number(spur.getAttribute("data-roadtrip-near-width")),
+      farWidth: Number(spur.getAttribute("data-roadtrip-far-width")),
       afterRoad: !!(road.compareDocumentPosition(spur) & Node.DOCUMENT_POSITION_FOLLOWING)
     };
   }
@@ -137,9 +139,12 @@ var mobile = run(true);
     firstVisual.spur === "visible" && firstVisual.afterRoad &&
     Number.isFinite(firstVisual.roadRight) && firstVisual.signLeft - firstVisual.roadRight >= 5.9 &&
     Number.isFinite(firstVisual.junctionX) && Number.isFinite(firstVisual.junctionY) &&
-    firstVisual.mouthBottom > firstVisual.mouthTop &&
+    firstVisual.destinationX > firstVisual.junctionX + 20 &&
+    firstVisual.destinationY < firstVisual.junctionY - 15 &&
+    firstVisual.nearWidth > firstVisual.farWidth * 2 && firstVisual.nearWidth < 80 &&
+    firstVisual.signLeft - firstVisual.destinationX >= 5.9 &&
     /^M/.test(firstVisual.asphalt || "") && /^M/.test(firstVisual.innerEdge || ""),
-    device + " paints the larger sign beyond a connected right-side spur", firstVisual);
+    device + " paints a receding upper-right spur with its larger sign beside it", firstVisual);
 
   var missed = result && result.missed || {};
   check(missed.state && missed.state.route === "abraham" && missed.state.active &&

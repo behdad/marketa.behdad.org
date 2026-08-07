@@ -109124,6 +109124,13 @@ function spawnDustMote(container) {
   var dollhouseCuddlyFireStyles = null;
   var dollhouseKitchenStyles = null;
   var dollhouseRoadtripPauseStyle = null;
+  var dollhouseRoadtripWorldStyle = null;
+  var dollhouseRoadtripCampStyles = null;
+  function dollhouseRoadtripLive(transport) {
+    var entrance = document.getElementById("entrance-room");
+    return !!((transport && transport.active) ||
+      (entrance && entrance.classList.contains("roadtrip-active")));
+  }
   function floorText(key) {
     var l = document.documentElement.lang;
     return (T[l] && T[l][key]) || T.en[key] || key;
@@ -109167,6 +109174,19 @@ function spawnDustMote(container) {
       else roadtripPause.removeAttribute("style");
     }
     dollhouseRoadtripPauseStyle = null;
+    var roadtripWorld = document.getElementById("entrance-roadtrip-world");
+    if (roadtripWorld && dollhouseRoadtripWorldStyle !== null) {
+      if (dollhouseRoadtripWorldStyle) roadtripWorld.setAttribute("style", dollhouseRoadtripWorldStyle);
+      else roadtripWorld.removeAttribute("style");
+    }
+    dollhouseRoadtripWorldStyle = null;
+    if (dollhouseRoadtripCampStyles) {
+      dollhouseRoadtripCampStyles.forEach(function (entry) {
+        if (entry.style) entry.node.setAttribute("style", entry.style);
+        else entry.node.removeAttribute("style");
+      });
+    }
+    dollhouseRoadtripCampStyles = null;
     var entranceArt = document.getElementById("entrance-room-art");
     if (entranceArt) entranceArt.classList.remove("dollhouse-day-preview");
   }
@@ -109202,9 +109222,36 @@ function spawnDustMote(container) {
     if (entranceArt) entranceArt.classList.toggle("dollhouse-day-preview", !(balcony && balcony.classList.contains("dusk")));
     var transport = window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState();
     var roadtripPause = document.getElementById("entrance-roadtrip-pause-dialog");
-    if (transport && transport.active && roadtripPause && dollhouseRoadtripPauseStyle === null) {
+    if (dollhouseRoadtripLive(transport) && roadtripPause && dollhouseRoadtripPauseStyle === null) {
       dollhouseRoadtripPauseStyle = roadtripPause.getAttribute("style") || "";
       roadtripPause.style.display = "none";
+    }
+    var roadtripWorld = document.getElementById("entrance-roadtrip-world");
+    if (dollhouseRoadtripLive(transport) && roadtripWorld && dollhouseRoadtripWorldStyle === null) {
+      dollhouseRoadtripWorldStyle = roadtripWorld.getAttribute("style") || "";
+      roadtripWorld.style.opacity = "1";
+      roadtripWorld.style.visibility = "visible";
+    }
+    var entrance = document.getElementById("entrance-room");
+    if (roadtripWorld && entrance && entrance.classList.contains("roadtrip-route-camp") &&
+        !dollhouseRoadtripCampStyles) {
+      var campPreview = [
+        [document.getElementById("entrance-roadtrip-world-clip"), "clipPath", "none"],
+        [document.getElementById("entrance-roadtrip-camp"), "opacity", "1"],
+        [document.getElementById("entrance-roadtrip-camp-day"), "opacity",
+          entrance.classList.contains("entrance-day") ? "1" : "0"],
+        [document.getElementById("entrance-roadtrip-camp-night"), "opacity",
+          entrance.classList.contains("entrance-day") ? "0" : "1"]
+      ];
+      Array.prototype.forEach.call(roadtripWorld.children, function (node) {
+        if (node.id !== "entrance-roadtrip-world-clip") campPreview.push([node, "display", "none"]);
+      });
+      dollhouseRoadtripCampStyles = campPreview.filter(function (entry) { return entry[0]; })
+        .map(function (entry) {
+          var saved = { node: entry[0], style: entry[0].getAttribute("style") || "" };
+          entry[0].style[entry[1]] = entry[2];
+          return saved;
+        });
     }
   }
   function closeDollhouse() {
@@ -109364,6 +109411,7 @@ function spawnDustMote(container) {
     });
     host.appendChild(button);
     spec.button = button;
+    spec.svg = svg;
     spec.label = label;
     spec.use = use;
     dollhouseRooms.push(spec);
@@ -109409,10 +109457,27 @@ function spawnDustMote(container) {
       var bar = spec.room === "kitchen" && dollhouseBarActive();
       spec.button.classList.toggle("bar-active", bar);
       if (spec.room === "entrance" && spec.use) {
-        var previewId = transport && transport.active ? "entrance-drive-hud-svg" : "entrance-room-art";
+        var liveRoadtrip = dollhouseRoadtripLive(transport);
+        var previewId = liveRoadtrip ? "entrance-roadtrip-world" : "entrance-room-art";
         spec.use.setAttribute("href", "#" + previewId);
         spec.use.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#" + previewId);
-        spec.button.classList.toggle("roadtrip-active", previewId === "entrance-drive-hud-svg");
+        var previewViewBox = "0 0 680 340";
+        if (liveRoadtrip) {
+          var entrance = document.getElementById("entrance-room");
+          previewViewBox = entrance && entrance.classList.contains("roadtrip-route-camp")
+            ? "0 -120 680 340" : "0 -120 680 216";
+        }
+        var box = previewViewBox.trim().split(/\s+/).map(Number);
+        if (box.length !== 4 || box.some(function (value) { return !isFinite(value); })) {
+          box = [0, 0, 680, 340];
+          previewViewBox = box.join(" ");
+        }
+        if (spec.svg) spec.svg.setAttribute("viewBox", previewViewBox);
+        spec.use.setAttribute("x", liveRoadtrip ? 0 : box[0]);
+        spec.use.setAttribute("y", liveRoadtrip ? 0 : box[1]);
+        spec.use.setAttribute("width", box[2]);
+        spec.use.setAttribute("height", box[3]);
+        spec.button.classList.toggle("roadtrip-active", liveRoadtrip);
       }
       spec.label.textContent = spec.room === "kitchen" ? floorText("room_kitchen_bar") : roomDotLabel(spec.room);
     });

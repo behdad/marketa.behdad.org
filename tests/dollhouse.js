@@ -66,7 +66,8 @@ var harness = String.raw`<script>
       JSON.stringify({ calls: transportPauseCalls, paused: transportPaused }));
     check("the Entrance card mirrors the active Road Trip without its pause overlay",
       roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") ===
-        "#entrance-drive-hud-svg" &&
+        "#entrance-roadtrip-world" &&
+      roomButton("entrance").querySelector("svg").getAttribute("viewBox") === "0 -120 680 216" &&
       document.getElementById("entrance-roadtrip-pause-dialog").style.display === "none");
     check("the first Cuddly-puddly thumbnail is initialized with a warm projector image",
       document.getElementById("cuddly-wallscreen").classList.contains("chan-fire") &&
@@ -81,6 +82,26 @@ var harness = String.raw`<script>
     key("Tab");
     check("closing The Loft restores the Road Trip pause overlay",
       document.getElementById("entrance-roadtrip-pause-dialog").style.display === "");
+    document.getElementById("entrance-drive-hud-svg").setAttribute("viewBox", "0 -120 680 340");
+    window.__entranceRoadtripTransportState = function () {
+      return { active: true, paused: false, route: "camp" };
+    };
+    document.getElementById("entrance-room").classList.add("roadtrip-active", "roadtrip-route-camp");
+    key("Tab");
+    check("the Entrance card fills with the live Camping view",
+      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("href") ===
+        "#entrance-roadtrip-world" &&
+      roomButton("entrance").querySelector("svg").getAttribute("viewBox") === "0 -120 680 340" &&
+      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("x") === "0" &&
+      roomButton("entrance").querySelector("use.loft-dollhouse-live-preview").getAttribute("y") === "0" &&
+      document.getElementById("entrance-roadtrip-run-panel").parentElement.style.display === "none");
+    key("Tab");
+    check("closing the Camping preview restores its live SVG styles",
+      document.getElementById("entrance-roadtrip-run-panel").parentElement.style.display === "" &&
+      document.getElementById("entrance-roadtrip-world-clip").style.clipPath === "" &&
+      document.getElementById("entrance-roadtrip-camp").style.opacity === "");
+    document.getElementById("entrance-room").classList.remove("roadtrip-active", "roadtrip-route-camp");
+    document.getElementById("entrance-drive-hud-svg").setAttribute("viewBox", "0 -31 680 207");
     window.__entranceRoadtripTransportState = realTransportState;
     window.__toggleEntranceRoadtripTransport = realTransportToggle;
 

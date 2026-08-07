@@ -110191,6 +110191,7 @@ function spawnDustMote(container) {
   function resetLowerRoomDiscovery() {
     lowerRoomResetUntil = Date.now() + 900; // transient close animations must not rediscover the room through the attended ticker
     lowerRoomDiscovered = false;
+    lastLockedDownAt = 0;
     lowerRoomClueShown = false;
     lowerRoomClueMs = 0;
     try {
@@ -111355,6 +111356,7 @@ function spawnDustMote(container) {
     return !!(a.matches && a.matches("button,a,input,select,textarea,[tabindex]"));
   }
   var lastLockedRightAt = 0;
+  var lastLockedDownAt = 0;
   var upperKeyboardSlideTimer = null;
   function upperKeyboardSlideBusy() { return !!upperKeyboardSlideTimer; }
   function startUpperKeyboardSettle(fromIndex) {
@@ -111457,7 +111459,7 @@ function spawnDustMote(container) {
       if (e.key === "ArrowUp") { e.preventDefault(); if (window.__calStepTime) window.__calStepTime(1); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); if (window.__calStepTime) window.__calStepTime(-1); return; }
     }
-    // Down is a direct lower-room entry; no arming or repeat hint is needed.
+    // Locked horizontal and vertical routes share the same deliberate double-press unlock.
     if (e.key === "ArrowRight") {
       e.preventDefault();
       if (upperKeyboardSlideBusy()) return;
@@ -111498,7 +111500,18 @@ function spawnDustMote(container) {
         // Match the left/right room buttons: release the monitor's desk zoom before
         // handing the same navigation press to the lower-room exit.
         if (window.__monitorZoomed && window.__monitorZoomed() && window.__monitorZoomOut) window.__monitorZoomOut();
-        descendFromStage(e);
+        if (lowerRoomDiscovered) {
+          lastLockedDownAt = 0;
+          descendFromStage(e);
+        } else if (!e.repeat) {
+          var downNow = Date.now();
+          if (downNow - lastLockedDownAt < 600) {
+            lastLockedDownAt = 0;
+            descendFromStage(e);
+          } else {
+            lastLockedDownAt = downNow;
+          }
+        }
       }
     } else if (e.key >= "1" && e.key <= "5") {
       e.preventDefault();

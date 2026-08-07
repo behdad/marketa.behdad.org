@@ -47,7 +47,8 @@ Each main room has a room directly below it:
 - Select the side arrows or room dots to travel on the main floor.
 - Press `←` or `→` to move one room at a time.
 - Press `1`–`5` to jump to a room on the current floor.
-- Press `↓` to enter the paired lower room and `↑` to return.
+- Press `↓` twice to deliberately unlock the lower floor; after discovery, press it once to enter
+  the paired lower room. Press `↑` to return.
 - While downstairs, `←` and `→` move along the lower floor.
 - `Tab` or the window-grid button opens **The Loft** room map. Arrow keys select an already
   discovered room and `Enter` opens it. Discovered rooms are sharp; the others are blurred;
@@ -59,8 +60,8 @@ Each main room has a room directly below it:
   unlock that route deliberately.
 - Escape, Backspace, ×, or the top-left arrow dismisses the current layer or returns upstairs.
 
-Each main room also has an in-scene route downstairs. Finding either that route or using `↓`
-unlocks lower-floor navigation for the current run.
+Each main room also has an in-scene route downstairs. Finding either that route or deliberately
+double-pressing `↓` unlocks lower-floor navigation for the current run.
 
 ## Objects and shortcuts
 

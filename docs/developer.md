@@ -98,6 +98,8 @@ floor movement. Individual lower controllers own vertical open and close.
 
 Game chrome places date/time and room navigation above the scene and `#hunt-caption` below it. The
 first-play handoff advances through those two locations before object-level Kitchen guidance begins.
+Before lower-floor discovery, keyboard Down uses the same 600 ms deliberate double-press unlock as
+locked lateral navigation; after discovery, one Down press enters the paired lower room.
 
 The `#loft-dollhouse` picker reuses those same navigation owners. Tab and the always-visible grid
 button open its full-width 5×2 map. The floor button is persistent but disabled until lower-floor

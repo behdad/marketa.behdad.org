@@ -58,6 +58,19 @@ var harness = String.raw`<script>
     window.goToStage("kitchen");
     check("fresh upstairs chrome shows a disabled Down until discovery",
       !floorState().hidden && floorState().disabled && !document.getElementById("hunt-dollhouse-btn").hidden, floorState());
+    key("ArrowDown");
+    await sleep(30);
+    check("one Down press leaves the undiscovered lower floor locked",
+      !floorState().bathroom && floorState().disabled && !window.__lowerRoomDiscoveryClueState().discovered,
+      floorState());
+    key("ArrowDown");
+    await sleep(30);
+    check("the second Down press deliberately discovers and enters downstairs",
+      floorState().bathroom && !floorState().disabled && window.__lowerRoomDiscoveryClueState().discovered,
+      floorState());
+    window.__closeBathroomRoom();
+    await sleep(450);
+    window.__resetLowerRoomDiscovery();
     var floorSlot = document.querySelector(".hunt-floor-slot");
     floorSlot.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
     await sleep(30);

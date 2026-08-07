@@ -122,6 +122,10 @@ check(campStars && (campStars[0].match(/<circle/g) || []).length >= 45,
   "the camp has a dense authored star field");
 check(campStars && /camp-const-cassiopeia/.test(campStars[0]) && /camp-const-dipper/.test(campStars[0]) && /camp-const-cygnus/.test(campStars[0]),
   "three recognizable northern constellations have linework");
+check(/id="entrance-roadtrip-camp-sun" transform="translate\(590 -86\)"/.test(source),
+  "the camp sun shares the moon's exact center");
+check(/#entrance-roadtrip-camp-day>rect,#entrance-roadtrip-camp-day>path,\s*#entrance-roadtrip-camp-night>rect\{pointer-events:none\}/.test(source),
+  "transparent sky paint cannot intercept the visible celestial toggle");
 check(/\["entrance-roadtrip-camp-moon-phase", 590, -86, 15\]/.test(source),
   "the camp moon participates in the shared phase painter");
 check((source.match(/<path d="M(?:27|102|176|266|348|430|522|615)-/g) || []).length === 8,

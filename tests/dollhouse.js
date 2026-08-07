@@ -231,6 +231,21 @@ var harness = String.raw`<script>
 
     window.__setSeenRooms(["kitchen"]);
     key("Tab");
+    roomButton("cinema").dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    check("unlocking a lower card does not also discover its paired upper room",
+      !state().open && window.currentStageName === "cuddly" && window.__cinemaRoomOpen &&
+      window.__roomSeen("cinema") && !window.__roomSeen("cuddly"),
+      JSON.stringify({ room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
+    key("Tab");
+    check("reopening The Loft keeps only the selected lower card sharp",
+      !roomButton("cinema").classList.contains("locked") &&
+      roomButton("cuddly").classList.contains("locked"),
+      JSON.stringify({ seen: window.__seenRooms(), rooms: state().rooms }));
+    window.__closeDollhouse();
+    if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
+
+    window.__setSeenRooms(["kitchen"]);
+    key("Tab");
     var touchTarget = roomButton("office");
     touchTarget.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));
     touchTarget.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));

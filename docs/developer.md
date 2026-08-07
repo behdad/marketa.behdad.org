@@ -115,6 +115,8 @@ control participates in browser Tab traversal; a clicked console/editor field ma
 Tab internally. Opening the picker pauses an active Road Trip through its transport owner and does
 not implicitly resume it on close. While that route remains active, the Entrance card swaps its
 `<use>` target to the live drive/campsite HUD and temporarily suppresses the full-size pause dialog.
+Lower-card navigation positions the paired main stage with `recordVisit:false`; only the selected
+lower room becomes seen, so its still-locked upper card remains blurred.
 
 During a pan, traversed stages remain paintable until transition completion; afterward `stage-far`
 parks distant rooms. A lower-room transition changes the backing main stage and opens the target

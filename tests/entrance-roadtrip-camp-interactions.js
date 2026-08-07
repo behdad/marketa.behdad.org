@@ -11,9 +11,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   function click(node) {
     node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
-  function activateWithKeyboard(node) {
-    node.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
-  }
   window.addEventListener("load", function () {
     setTimeout(function () {
       try {
@@ -86,18 +83,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
         var pines = document.querySelectorAll("#entrance-roadtrip-camp-pines>.entrance-roadtrip-camp-pine");
         click(pines[0]);
-        activateWithKeyboard(pines[2]);
         var firstCone = pines[0].querySelector(".entrance-roadtrip-camp-pinecone");
-        var keyboardCone = pines[2].querySelector(".entrance-roadtrip-camp-pinecone");
         report.pines = {
           count: pines.length,
-          accessible: Array.prototype.every.call(pines, function (pine) {
-            return pine.getAttribute("tabindex") === "0" && pine.getAttribute("title") === "Drop a pinecone";
+          noTabTargets: Array.prototype.every.call(pines, function (pine) {
+            return !pine.hasAttribute("tabindex") && pine.getAttribute("title") === "Drop a pinecone";
           }),
           clickDrop: !!firstCone,
-          keyboardDrop: !!keyboardCone,
-          keptWithTarget: !!firstCone && firstCone.parentNode === pines[0] &&
-            !!keyboardCone && keyboardCone.parentNode === pines[2],
+          keptWithTarget: !!firstCone && firstCone.parentNode === pines[0],
           animation: firstCone && getComputedStyle(firstCone).animationName,
           drop: firstCone && firstCone.style.getPropertyValue("--camp-pinecone-drop")
         };
@@ -127,10 +120,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           animationName: "entrance-roadtrip-camp-bear-sniff", bubbles: true
         }));
         var bearCleared = !mamaBear.classList.contains("reacting");
-        activateWithKeyboard(mamaBear);
         report.mamaBear = {
           present: !!mamaBear,
-          keyboard: mamaBear && mamaBear.getAttribute("tabindex") === "0" && mamaBear.classList.contains("reacting"),
+          noTabTarget: mamaBear && !mamaBear.hasAttribute("tabindex"),
           inFrontOfPines: mamaBear && !!(pines[0].parentNode.compareDocumentPosition(mamaBear) & Node.DOCUMENT_POSITION_FOLLOWING),
           behindCamp: mamaBear && !!(mamaBear.compareDocumentPosition(tent) & Node.DOCUMENT_POSITION_FOLLOWING),
           width: mamaBear && mamaBear.getBBox().width,
@@ -246,20 +238,20 @@ check(result && result.poplar && result.poplar.triggered && result.poplar.wrappe
   result.poplar.otherClusterIdle,
   "the distinct poplar groves keep three independent in-place bark-eye wiggles",
   result && result.poplar);
-check(result && result.pines && result.pines.count === 4 && result.pines.accessible &&
-  result.pines.clickDrop && result.pines.keyboardDrop && result.pines.keptWithTarget &&
+check(result && result.pines && result.pines.count === 4 && result.pines.noTabTargets &&
+  result.pines.clickDrop && result.pines.keptWithTarget &&
   result.pines.animation === "entrance-roadtrip-camp-pinecone" && result.pines.drop === "69px",
-  "each pine is accessible and drops its own tumbling cone in the tree coordinate space",
+  "each click-only pine stays out of the tab order and drops its cone in the tree coordinate space",
   result && result.pines);
 check(result && result.people && result.people.marketa && result.people.behdad,
   "each camper gets an independent head laugh", result && result.people);
-check(result && result.mamaBear && result.mamaBear.present && result.mamaBear.keyboard &&
+check(result && result.mamaBear && result.mamaBear.present && result.mamaBear.noTabTarget &&
   result.mamaBear.inFrontOfPines && result.mamaBear.behindCamp &&
   result.mamaBear.width > 100 && result.mamaBear.leftShore &&
   result.mamaBear.triggered && result.mamaBear.headAnimation === "entrance-roadtrip-camp-bear-sniff" &&
   result.mamaBear.cubAnimation === "entrance-roadtrip-camp-bear-peek" && result.mamaBear.cleared &&
-  result.mamaBear.huffs === 2,
-  "the left-shore mama sniffs and huffs while her cub ducks and peeks on pointer or keyboard input",
+  result.mamaBear.huffs === 1,
+  "the click-only left-shore mama stays out of the tab order while she sniffs and her cub peeks",
   result && result.mamaBear);
 check(result && result.mushroom && result.mushroom.present && result.mushroom.aboveCar && result.mushroom.wobbling &&
   result.mushroom.animation === "entrance-roadtrip-camp-mushroom-wobble" &&

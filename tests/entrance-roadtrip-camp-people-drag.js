@@ -115,7 +115,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         click(marketaHead);
         report.head = {
           laughing: marketaHead.classList.contains("laughing"),
-          focusable: marketaHead.getAttribute("tabindex") === "0",
+          noTabTarget: !marketaHead.hasAttribute("tabindex"),
           title: marketaHead.getAttribute("title"),
           keptOffset: marketaMover.getAttribute("transform") === marketaTransform,
           didNotDrag: !marketa.classList.contains("dragging")
@@ -195,10 +195,10 @@ check(result && result.behdad && result.behdad.offset[0] === -38 && result.behda
   result.behdad.outerTransform === "translate(475 115) scale(.9)" && result.behdad.pagePanPrevented &&
   result.behdad.settled,
   "touch dragging clamps Behdad and his chair inside their campsite area", result && result.behdad);
-check(result && result.head && result.head.laughing && result.head.focusable &&
+check(result && result.head && result.head.laughing && result.head.noTabTarget &&
   result.head.title === "Make Markéta laugh" && result.head.czechTitle === "Rozesmát Markétu" &&
   result.head.keptOffset && result.head.didNotDrag,
-  "the head remains an independent accessible reaction target", result && result.head);
+  "the click-only head stays out of the tab order and remains an independent reaction target", result && result.head);
 check(result && result.notebook && result.notebook.open && result.notebook.headIdle &&
   result.notebook.keptOffset && result.notebook.didNotDrag,
   "the notebook still opens independently without starting a drag or head reaction", result && result.notebook);

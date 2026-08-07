@@ -243,6 +243,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             setTimeout(function () {
               try {
                 report.congratsBearLook = snap();
+                var finCheckpoint = window.__captureCheckpointSystems();
+                window.__restoreCheckpointSystems(finCheckpoint, "afterStage");
+                report.congratsReload = snap();
                 report.completeClickTarget = click(document.getElementById("entrance-roadtrip-camp-finale-darkness"));
                 report.completeAfterClick = snap();
                 window.setLang("cs");
@@ -254,7 +257,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 report.fresh = snap();
               } catch (error) { report.errors.push(String(error && error.stack || error)); }
               finish();
-            }, 5300);
+            }, 7400);
             return;
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
           finish();
@@ -472,10 +475,15 @@ check(result && result.congratsSounds && result.congratsSounds.join("|") === "em
   "the terminal congratulations gets one soft completion cue", result && result.congratsSounds);
 check(result && result.congrats && result.congrats.mamaFinLook &&
   result.congrats.mamaHeadAnimation === "entrance-roadtrip-camp-bear-fin-look" &&
-  result.congrats.mamaHeadDelay === "1s" && result.congrats.mamaHeadTransform === "none" &&
-  result.congratsBearLook && result.congratsBearLook.mamaHeadTransform !== "none",
-  "one second after the finale cue, the visible mama bear gives a restrained head look",
+  result.congrats.mamaHeadDelay === "3s" && result.congrats.mamaHeadTransform === "none" &&
+  result.congratsBearLook && result.congratsBearLook.mamaFinLook,
+  "three seconds after the finale cue, the visible mama bear gives a clear head look",
   { before: result && result.congrats, look: result && result.congratsBearLook });
+check(result && result.congratsReload && result.congratsReload.phase === "congrats" &&
+  result.congratsReload.mamaFinLook && result.congratsReload.mamaHeadDelay === "3s" &&
+  result.congratsSounds.join("|") === "embers|approach|collect|finale",
+  "reloading the terminal fin page re-arms the bear look without replaying its audio",
+  result && result.congratsReload);
 check(result && result.congrats && result.congrats.darknessPointer === "all" && result.completeClickTarget &&
   result.completeAfterClick && result.completeAfterClick.phase === "congrats" &&
   !result.completeAfterClick.fireBuilderOpen,

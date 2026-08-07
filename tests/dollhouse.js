@@ -46,10 +46,24 @@ var harness = String.raw`<script>
     window.__resetLowerRoomDiscovery();
     window.__setSeenRooms(["kitchen", "bathroom"]);
 
+    var realTransportState = window.__entranceRoadtripTransportState;
+    var realTransportToggle = window.__toggleEntranceRoadtripTransport;
+    var transportPaused = false, transportPauseCalls = 0;
+    window.__entranceRoadtripTransportState = function () {
+      return { active: true, paused: transportPaused };
+    };
+    window.__toggleEntranceRoadtripTransport = function () {
+      transportPauseCalls++;
+      transportPaused = true;
+      return true;
+    };
     var undiscoveredTab = key("Tab");
     check("Tab opens The Loft before downstairs is discovered and its grid button is already present",
       undiscoveredTab && state().eligible && !state().controlsUnlocked && state().button && state().open,
       JSON.stringify(state()));
+    check("opening The Loft pauses an active Road Trip exactly once",
+      transportPauseCalls === 1 && transportPaused,
+      JSON.stringify({ calls: transportPauseCalls, paused: transportPaused }));
     check("the first Cuddly-puddly thumbnail is initialized with a warm projector image",
       document.getElementById("cuddly-wallscreen").classList.contains("chan-fire") &&
       !!document.getElementById("cuddly-flame-img").getAttribute("href") &&
@@ -61,6 +75,8 @@ var harness = String.raw`<script>
       document.getElementById("bathroom-waffle-towel").getAttribute("fill") ===
         "url(#bathroom-waffle) #a8a39e");
     key("Tab");
+    window.__entranceRoadtripTransportState = realTransportState;
+    window.__toggleEntranceRoadtripTransport = realTransportToggle;
 
     document.getElementById("stage-balcony").classList.add("dusk");
     key("Tab");

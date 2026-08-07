@@ -106,7 +106,8 @@ the complete Kitchen stage for either night or a party. Double-click and
 touch double-tap deliberately unlock a locked destination. The map owns an arrow-key cursor and uses
 Enter only for discovered destinations. Tab is consumed throughout the game and no scene or chrome
 control participates in browser Tab traversal; a clicked console/editor field may still interpret
-Tab internally.
+Tab internally. Opening the picker pauses an active Road Trip through its transport owner and does
+not implicitly resume it on close.
 
 During a pan, traversed stages remain paintable until transition completion; afterward `stage-far`
 parks distant rooms. A lower-room transition changes the backing main stage and opens the target

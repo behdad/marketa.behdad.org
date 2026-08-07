@@ -41078,6 +41078,11 @@ window.__entranceRoomOpen = false;
     syncCampSleepAnimationOffset();
     paintCampSleepFinale();
     syncRoadtripCampFireCaption(false);
+    if (window.playCampBearCodaSound) {
+      if (campSleepState.phase === "zzz") window.playCampBearCodaSound("approach");
+      else if (campSleepState.phase === "complete") window.playCampBearCodaSound("collect");
+      else if (campSleepState.phase === "congrats") window.playCampBearCodaSound("finale");
+    }
     scheduleCampSleepFinale();
     if (window.__checkpointChanged) window.__checkpointChanged();
     return campSleepSnapshot();
@@ -41091,6 +41096,7 @@ window.__entranceRoomOpen = false;
     clearRoadtripCampPineconeFlame();
     paintRoadtripCampFire();
     paintCampSleepFinale();
+    if (window.playCampBearCodaSound) window.playCampBearCodaSound("embers");
     if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
     syncRoadtripCampFireCaption(false);
     scheduleCampSleepFinale();
@@ -101621,6 +101627,80 @@ function playFinishMelody(panId) {
     root.start(t0);
     root.stop(t0 + 3.3);
 
+  } catch (e) {}
+}
+// Four quiet, synthesized punctuation marks for the attended campsite curtain call.
+// This is timer-driven audio, so it owns the full crane-rule gate itself: checkpoint
+// painting/restores never call it, and a visible-but-unfocused campsite stays silent.
+function playCampBearCodaSound(kind) {
+  if (document.hidden || !document.hasFocus || !document.hasFocus()) return;
+  if (kind === "embers") {
+    playMonitorSleepSound("entrance-roadtrip-camp-finished-fire");
+    return;
+  }
+  if (kind === "finale") {
+    playFinishMelody("entrance-roadtrip-camp-mama-bear");
+    return;
+  }
+  try {
+    var ctx = getSfxCtx();
+    if (!ctx) return;
+    var t = ctx.currentTime;
+    var out = pannedOut(ctx, "entrance-roadtrip-camp-mama-bear");
+    if (kind === "approach") {
+      // Two padded footfalls under a short, breathy snuffle: recognizably large and
+      // close, but gentle enough not to turn the food-safety beat into a jump scare.
+      [0, .42].forEach(function (offset, index) {
+        var foot = ctx.createOscillator();
+        foot.type = "sine";
+        foot.frequency.setValueAtTime(index ? 58 : 64, t + offset);
+        foot.frequency.exponentialRampToValueAtTime(38, t + offset + .17);
+        var footGain = ctx.createGain();
+        footGain.gain.setValueAtTime(.0001, t + offset);
+        footGain.gain.exponentialRampToValueAtTime(.055, t + offset + .012);
+        footGain.gain.exponentialRampToValueAtTime(.0001, t + offset + .2);
+        foot.connect(footGain); footGain.connect(out);
+        foot.start(t + offset); foot.stop(t + offset + .22);
+      });
+      var breathLength = Math.floor(ctx.sampleRate * .54);
+      var breathBuffer = ctx.createBuffer(1, breathLength, ctx.sampleRate);
+      var breathData = breathBuffer.getChannelData(0);
+      for (var i = 0; i < breathLength; i++) breathData[i] = Math.random() * 2 - 1;
+      var breath = ctx.createBufferSource();
+      breath.buffer = breathBuffer;
+      var breathFilter = ctx.createBiquadFilter();
+      breathFilter.type = "bandpass";
+      breathFilter.frequency.setValueAtTime(520, t + .1);
+      breathFilter.frequency.exponentialRampToValueAtTime(260, t + .62);
+      breathFilter.Q.value = .7;
+      var breathGain = ctx.createGain();
+      breathGain.gain.setValueAtTime(.0001, t + .1);
+      breathGain.gain.exponentialRampToValueAtTime(.018, t + .2);
+      breathGain.gain.exponentialRampToValueAtTime(.0001, t + .62);
+      breath.connect(breathFilter); breathFilter.connect(breathGain); breathGain.connect(out);
+      breath.start(t + .1); breath.stop(t + .65);
+      return;
+    }
+    if (kind === "collect") {
+      // Dry, irregular cob snaps rather than a wet eating sound: she is gathering the
+      // leftovers, and the visual remains the storyteller.
+      [0, .11, .27].forEach(function (offset, index) {
+        var length = Math.floor(ctx.sampleRate * (.055 + index * .008));
+        var buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        var data = buffer.getChannelData(0);
+        for (var j = 0; j < length; j++) data[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / length, 2);
+        var crack = ctx.createBufferSource();
+        crack.buffer = buffer;
+        var crackFilter = ctx.createBiquadFilter();
+        crackFilter.type = "bandpass";
+        crackFilter.frequency.value = 1050 + index * 180;
+        crackFilter.Q.value = 1.1;
+        var crackGain = ctx.createGain();
+        crackGain.gain.value = .038 - index * .006;
+        crack.connect(crackFilter); crackFilter.connect(crackGain); crackGain.connect(out);
+        crack.start(t + offset); crack.stop(t + offset + length / ctx.sampleRate + .01);
+      });
+    }
   } catch (e) {}
 }
 function playSparkSound(panId) {

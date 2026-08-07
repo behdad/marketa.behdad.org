@@ -10,7 +10,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 </style>
 <script>
 (function () {
-  var report = { errors: [] };
+  var report = { errors: [], sounds: [] };
   var focused = true;
   document.hasFocus = function () { return focused; };
   function click(node) {
@@ -105,6 +105,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     document.getElementById("__report").textContent = JSON.stringify(report);
   }
   window.addEventListener("load", function () {
+    window.playCampBearCodaSound = function (kind) { report.sounds.push(kind); };
     window.__unlockAllRooms();
     window.goToStage("balcony");
     setTimeout(function () {
@@ -148,6 +149,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
             click(document.getElementById("entrance-roadtrip-camp-fire"));
             report.fireOut = snap();
+            report.fireOutSounds = report.sounds.slice();
             click(document.getElementById("entrance-roadtrip-dismiss"));
             report.runningExit = snap();
             reenterCamp();
@@ -161,6 +163,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.dark = snap();
             window.__entranceRoadtripCampSleepStep();
             report.zzz = snap();
+            report.zzzSounds = report.sounds.slice();
             focused = false;
             window.dispatchEvent(new Event("blur"));
             report.zzzPaused = snap();
@@ -178,6 +181,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.collected = snap();
             window.__entranceRoadtripCampSleepStep();
             report.warning = snap();
+            report.warningSounds = report.sounds.slice();
             click(document.getElementById("entrance-roadtrip-dismiss"));
             report.warningExit = snap();
             reenterCamp();
@@ -199,6 +203,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 report.warningPaused = snap();
                 window.__restoreCheckpointSystems(report.pausedCheckpoint, "afterStage");
                 report.warningRestored = snap();
+                report.warningRestoredSounds = report.sounds.slice();
                 focused = true;
                 window.dispatchEvent(new Event("focus"));
                 report.warningResumed = snap();
@@ -211,6 +216,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             setTimeout(function () {
               try {
                 report.congrats = snap();
+                report.congratsSounds = report.sounds.slice();
                 report.completeClickTarget = click(document.getElementById("entrance-roadtrip-camp-finale-darkness"));
                 report.completeAfterClick = snap();
                 window.setLang("cs");
@@ -269,6 +275,8 @@ check(result && result.fireOut && result.fireOut.phase === "fire-out" && !result
   result.fireOut.liveConstellationOpacity === .24 && result.fireOut.liveConstellationTransform !== "none" &&
   result.fireOut.liveConstellationPointer === "none",
   "clicking the fire extinguishes it and lets the solved constellations retreat", result && result.fireOut);
+check(result && result.fireOutSounds && result.fireOutSounds.join("|") === "embers",
+  "putting out the fire adds one quiet ember-breath cue", result && result.fireOutSounds);
 check(result && result.runningExit && !result.runningExit.campActive && result.runningReturn &&
   result.runningReturn.phase === "fire-out" && result.runningReturn.stew &&
   result.runningReturn.savedPhase === "fire-out",
@@ -300,6 +308,8 @@ check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight
   result.collected.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.collected.mamaAboveFireRing,
   "the tent light goes out while the foreground mama bear crosses the fire ring and collects the cobs",
   result && result.zzz);
+check(result && result.zzzSounds && result.zzzSounds.join("|") === "embers|approach",
+  "the mama bear enters on one restrained approach cue", result && result.zzzSounds);
 check(result && result.zzzPaused && result.zzzPaused.phase === "zzz" && result.zzzPaused.paused &&
   result.zzzPaused.mamaPlayState === "paused" && result.zzzPaused.cornPlayState === "paused" &&
   result.zzzResumed && !result.zzzResumed.paused && result.zzzResumed.mamaPlayState === "running" &&
@@ -320,6 +330,8 @@ check(result && result.warning && result.warning.phase === "complete" && !result
   result.warning.mamaTransform !== "none" && result.warning.cornOpacity === 0 &&
   result.warning.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.warning.mamaAboveFireRing,
   "the collected food reaches its checkpointed warning beat above the ring", result && result.warning);
+check(result && result.warningSounds && result.warningSounds.join("|") === "embers|approach|collect",
+  "collecting the cobs adds one dry pickup cue", result && result.warningSounds);
 check(result && result.warningExit && !result.warningExit.campActive && result.warningExit.phase === "complete" &&
   result.warningReturn && result.warningReturn.campActive && result.warningReturn.phase === "complete" &&
   result.warningReturn.savedPhase === "complete" && result.warningReturn.caption === "entrance_roadtrip_camp_food_warning" &&
@@ -341,6 +353,8 @@ check(result && result.warningRestored && result.warningRestored.phase === "comp
   "checkpoint restore retains the attended time and focus resumes the remaining beat",
   { blurred: result && result.warningBlurred, restored: result && result.warningRestored,
     resumed: result && result.warningResumed });
+check(result && result.warningRestoredSounds && result.warningRestoredSounds.join("|") === "embers|approach|collect",
+  "checkpoint restore does not replay a timed coda cue", result && result.warningRestoredSounds);
 check(result && result.warningHeld && result.warningHeld.phase === "complete" &&
   result.warningHeld.captionText === "Never leave food outside at night.",
   "paused time does not count toward the warning's three attended seconds", result && result.warningHeld);
@@ -349,6 +363,8 @@ check(result && result.congrats && result.congrats.phase === "congrats" && resul
   /^Congrats!.*RSVP!$/.test(result.congrats.captionText) &&
   result.congrats.mamaLayer === "entrance-roadtrip-camp-mama-collection-layer" && result.congrats.mamaAboveFireRing,
   "three seconds later the existing RSVP congratulations becomes the terminal finale", result && result.congrats);
+check(result && result.congratsSounds && result.congratsSounds.join("|") === "embers|approach|collect|finale",
+  "the terminal congratulations gets one soft completion cue", result && result.congratsSounds);
 check(result && result.congrats && result.congrats.darknessPointer === "all" && result.completeClickTarget &&
   result.completeAfterClick && result.completeAfterClick.phase === "congrats" &&
   !result.completeAfterClick.fireBuilderOpen,

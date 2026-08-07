@@ -475,7 +475,8 @@ check(result && result.congratsSounds && result.congratsSounds.join("|") === "em
   "the terminal congratulations gets one soft completion cue", result && result.congratsSounds);
 check(result && result.congrats && result.congrats.mamaFinLook &&
   result.congrats.mamaHeadAnimation === "entrance-roadtrip-camp-bear-fin-look" &&
-  result.congrats.mamaHeadDelay === "3s" && result.congrats.mamaHeadTransform === "none" &&
+  result.congrats.mamaHeadDelay === "3s" &&
+  (result.congrats.mamaHeadTransform === "none" || result.congrats.mamaHeadTransform === "matrix(1, 0, 0, 1, 0, 0)") &&
   result.congratsBearLook && result.congratsBearLook.mamaFinLook,
   "three seconds after the finale cue, the visible mama bear gives a clear head look",
   { before: result && result.congrats, look: result && result.congratsBearLook });

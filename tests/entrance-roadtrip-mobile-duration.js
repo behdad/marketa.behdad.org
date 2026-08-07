@@ -11,8 +11,10 @@ window.addEventListener("load", function () {
     document.getElementById("__report").textContent = JSON.stringify({
       errors: window.__errs || [],
       scale: roadtrip.durationScale,
-      durations: [roadtrip.calgarySeconds, roadtrip.turnoffSeconds, roadtrip.banffSeconds,
-        roadtrip.lakeTurnoffSeconds, roadtrip.abrahamSeconds]
+      pace: roadtrip.routePaceKmh,
+      distances: [roadtrip.calgaryDistance, roadtrip.turnoffDistanceRequired,
+        roadtrip.banffDistanceRequired, roadtrip.lakeTurnoffDistanceRequired,
+        roadtrip.abrahamDistanceRequired]
     });
   }, 180);
 });
@@ -28,7 +30,8 @@ function run(forceCoarsePointer) {
 var desktop = run(false);
 var mobile = run(true);
 var failures = 0;
-function durationsEqual(actual, expected) {
+function distancesEqual(actual, expectedSeconds, pace) {
+  var expected = expectedSeconds.map(function (seconds) { return seconds * pace / 3.6; });
   return actual && actual.length === expected.length && actual.every(function (value, index) {
     return Math.abs(value - expected[index]) < .000001;
   });
@@ -38,13 +41,13 @@ function check(ok, message, detail) {
   if (!ok) failures++;
 }
 
-console.log("rsvp.html mobile Road Trip duration:");
+console.log("rsvp.html mobile Road Trip distance:");
 check(desktop && desktop.errors.length === 0 && desktop.scale === 1 &&
-  durationsEqual(desktop.durations, [75, 6, 90, 6, 75]),
-  "fine-pointer desktop keeps the authored route durations", desktop);
+  distancesEqual(desktop.distances, [75, 6, 90, 6, 75], desktop.pace),
+  "fine-pointer desktop keeps the authored route lengths", desktop);
 check(mobile && mobile.errors.length === 0 && mobile.scale === .72 &&
-  durationsEqual(mobile.durations, [54, 4.32, 64.8, 4.32, 54]),
-  "touch-first mobile uses 72% of every attended route phase", mobile);
+  distancesEqual(mobile.distances, [54, 4.32, 64.8, 4.32, 54], mobile.pace),
+  "touch-first mobile uses 72% of every route length", mobile);
 
 if (failures) process.exit(1);
-console.log("Mobile Road Trip duration checks passed.");
+console.log("Mobile Road Trip distance checks passed.");

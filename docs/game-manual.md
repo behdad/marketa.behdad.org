@@ -167,6 +167,9 @@ Road Trip uses the same steering, transmission, accelerator, and brake:
 - The Abraham Lake road has one lane each way, wildlife, lake views, and a 100 km/h limit. Its
   Camping turnoff is optional: move onto the right shoulder when the sign and side road arrive.
 
+Route legs and exits advance only with forward travel. Waiting, pausing, or reversing does not move
+the trip silently toward its next segment.
+
 AUTO provides gentle curve assistance; MANUAL leaves curve steering to the player. Traffic,
 shoulders, gravel, weather, seasons, wildlife, and police affect the trip. Leaving an active highway
 pauses it. Select **Road Trip**, then **Continue** to restore that exact run or **New** to choose
@@ -187,7 +190,7 @@ transmission into neutral.
 
 Taking the Camping turnoff latches an automatic slowdown and enters camp below 10 km/h; no remaining
 momentum or extra acceleration is required. Staying on the through lane continues the trip and brings
-the exit back after 60 seconds (45 on touch-first devices). Click the empty pit, add tinder,
+the exit back after roughly 1.7 km (1.25 km on touch-first devices). Click the empty pit, add tinder,
 kindling, and either log arrangement, then light it. A pinecone dropped from the campsite trees can
 replace the twigs; missing fuel burns out, and the campsite remains open for exploration.
 

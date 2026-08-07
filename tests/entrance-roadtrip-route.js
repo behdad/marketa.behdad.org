@@ -56,7 +56,7 @@ var HARNESS = String.raw`<style>
           mountains: opacity("entrance-roadtrip-day-far"),
           season: opacity("entrance-roadtrip-season-summer")
         };
-        for (var index = 0; index < 6; index++) window.__entranceDriveStep(1000);
+        window.__entranceRoadtripStepRouteDistance(state().turnoffDistanceRequired);
         window.__entranceRoadtripSetLane(.05);
         report.banff = {
           state: state(),
@@ -88,9 +88,9 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html Calgary-to-Banff route:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_CALGARY_DESKTOP_SECONDS = 75/.test(source) &&
-  /ROADTRIP_TURNOFF_DESKTOP_SECONDS = 6/.test(source),
-  "the attended Calgary leg and right-turn approach keep their explicit durations");
+check(/ROADTRIP_CALGARY_DISTANCE = roadtripDistanceForSeconds\(ROADTRIP_CALGARY_SECONDS\)/.test(source) &&
+  /ROADTRIP_TURNOFF_DISTANCE = roadtripDistanceForSeconds\(ROADTRIP_TURNOFF_SECONDS\)/.test(source),
+  "the attended Calgary leg and right-turn approach own explicit travel distances");
 check(/ROADTRIP_CALGARY_SPEED_LIMIT = 110/.test(source) &&
   /ROADTRIP_BANFF_SPEED_LIMIT = 90/.test(source) &&
   /ROADTRIP_POLICE_FIRST_DISTANCE = 1800/.test(source) &&
@@ -138,7 +138,8 @@ check(turnoff.state && turnoff.state.route === "turnoff" && /roadtrip-route-turn
 
 var banff = result && result.banff || {};
 var banffState = banff.state || {};
-check(banffState.route === "banff" && banffState.turnoffElapsed === banffState.turnoffSeconds &&
+check(banffState.route === "banff" &&
+  Math.abs(banffState.turnoffDistance - banffState.turnoffDistanceRequired) < .001 &&
   banffState.maxLane === 2.32 && banffState.laneFraction === .5 &&
   banffState.playerLane === .05 && !banffState.medianBarrier,
   "the completed turn switches to the narrower Banff road", banffState);

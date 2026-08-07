@@ -37428,6 +37428,15 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_ABRAHAM_START_LANE = ROADTRIP_ABRAHAM_MAX_LANE;
   var ROADTRIP_MOBILE_DURATION_SCALE = .72;
   var ROADTRIP_DURATION_SCALE = window.matchMedia("(pointer: coarse)").matches ? ROADTRIP_MOBILE_DURATION_SCALE : 1;
+  // Route lengths preserve the former pacing at an ordinary 100 km/h, but route
+  // progression itself consumes only actual forward travel.
+  var ROADTRIP_ROUTE_PACE_KMH = 100;
+  function roadtripDistanceForSeconds(seconds) {
+    return Math.max(0, Number(seconds) || 0) * ROADTRIP_ROUTE_PACE_KMH / 3.6;
+  }
+  function roadtripSecondsForDistance(distance) {
+    return Math.max(0, Number(distance) || 0) * 3.6 / ROADTRIP_ROUTE_PACE_KMH;
+  }
   var ROADTRIP_CALGARY_DESKTOP_SECONDS = 75;
   var ROADTRIP_TURNOFF_DESKTOP_SECONDS = 6;
   var ROADTRIP_BANFF_DESKTOP_SECONDS = 90;
@@ -37446,6 +37455,16 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_CAMP_EXIT_REPEAT_MOBILE_SECONDS = 45;
   var ROADTRIP_CAMP_EXIT_REPEAT_SECONDS = window.matchMedia("(pointer: coarse)").matches ?
     ROADTRIP_CAMP_EXIT_REPEAT_MOBILE_SECONDS : ROADTRIP_CAMP_EXIT_REPEAT_DESKTOP_SECONDS;
+  var ROADTRIP_CALGARY_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CALGARY_SECONDS);
+  var ROADTRIP_TURNOFF_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_TURNOFF_SECONDS);
+  var ROADTRIP_BANFF_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_BANFF_SECONDS);
+  var ROADTRIP_LAKE_TURNOFF_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_LAKE_TURNOFF_SECONDS);
+  var ROADTRIP_ABRAHAM_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_ABRAHAM_SECONDS);
+  var ROADTRIP_SHORTCUT_REMAINING_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_SHORTCUT_REMAINING_SECONDS);
+  var ROADTRIP_CAMP_SIGN_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_SIGN_SECONDS);
+  var ROADTRIP_CAMP_EXIT_LEAD_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_LEAD_SECONDS);
+  var ROADTRIP_CAMP_EXIT_TAIL_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_TAIL_SECONDS);
+  var ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_REPEAT_SECONDS);
   var ROADTRIP_CAMP_ARRIVAL_SPEED = 10;
   var ROADTRIP_CAMP_BRAKE_RATE = 2.4;
   var ROADTRIP_CENTERLINE_ENFORCE_LANE = -.18;
@@ -37601,12 +37620,12 @@ window.__entranceRoomOpen = false;
     invitationDismissed: false,
     practiceLaps: 0,
     route: "calgary",
-    routeElapsed: 0,
-    turnoffElapsed: 0,
-    banffElapsed: 0,
-    lakeTurnoffElapsed: 0,
-    abrahamElapsed: 0,
-    campExitCountdown: ROADTRIP_ABRAHAM_SECONDS,
+    routeDistance: 0,
+    turnoffDistance: 0,
+    banffDistance: 0,
+    lakeTurnoffDistance: 0,
+    abrahamDistance: 0,
+    campExitDistance: ROADTRIP_ABRAHAM_DISTANCE,
     campExitLatched: false,
     routeChoice: "calgary",
     routeChooserOpen: false,
@@ -39090,15 +39109,15 @@ window.__entranceRoomOpen = false;
     clearPorscheClutchEngagement(true);
   }
   function launchRoadtripRoute(route, event, forceShortcut) {
-    var routeDuration = route === "calgary" ? ROADTRIP_CALGARY_SECONDS :
-      route === "banff" ? ROADTRIP_BANFF_SECONDS : ROADTRIP_ABRAHAM_SECONDS;
-    var shortcutElapsed = forceShortcut || event && event.shiftKey ?
-      Math.max(0, routeDuration - ROADTRIP_SHORTCUT_REMAINING_SECONDS) : 0;
+    var routeLength = route === "calgary" ? ROADTRIP_CALGARY_DISTANCE :
+      route === "banff" ? ROADTRIP_BANFF_DISTANCE : ROADTRIP_ABRAHAM_DISTANCE;
+    var shortcutDistance = forceShortcut || event && event.shiftKey ?
+      Math.max(0, routeLength - ROADTRIP_SHORTCUT_REMAINING_DISTANCE) : 0;
     if (event) { event.preventDefault(); event.stopPropagation(); }
     if (!roadtripState.routeChooserOpen || !setRoadtripRouteChoice(route, false)) return false;
     roadtripState.routeChooserOpen = false;
     resetPorscheForFreshRoadtrip(true);
-    var started = startRoadtrip(true, route, shortcutElapsed);
+    var started = startRoadtrip(true, route, shortcutDistance);
     if (started) roadtripCampResumeRun = null;
     if (started && window.__checkpointChanged) window.__checkpointChanged();
     return started;
@@ -39237,7 +39256,7 @@ window.__entranceRoomOpen = false;
       roadtripCampResumeRun = captureRoadtripRun();
     }
     resetPorscheForFreshRoadtrip(false);
-    if (!startRoadtrip(true, "abraham", ROADTRIP_ABRAHAM_SECONDS)) return false;
+    if (!startRoadtrip(true, "abraham", ROADTRIP_ABRAHAM_DISTANCE)) return false;
     arriveRoadtripCamp(true);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
@@ -41429,25 +41448,25 @@ window.__entranceRoomOpen = false;
     event.stopImmediatePropagation();
     closeCampNotebook();
   }, true);
-  function roadtripCampExitCountdownAt(elapsed) {
-    elapsed = Math.max(0, Number(elapsed) || 0);
-    if (elapsed <= ROADTRIP_ABRAHAM_SECONDS) return ROADTRIP_ABRAHAM_SECONDS - elapsed;
-    var phase = (elapsed - ROADTRIP_ABRAHAM_SECONDS) % ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
-    return phase <= .000001 ? 0 : ROADTRIP_CAMP_EXIT_REPEAT_SECONDS - phase;
+  function roadtripCampExitDistanceAt(distance) {
+    distance = Math.max(0, Number(distance) || 0);
+    if (distance <= ROADTRIP_ABRAHAM_DISTANCE) return ROADTRIP_ABRAHAM_DISTANCE - distance;
+    var phase = (distance - ROADTRIP_ABRAHAM_DISTANCE) % ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE;
+    return phase <= .000001 ? 0 : ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE - phase;
   }
   function roadtripCampExitTiming() {
-    var countdown = Number(roadtripState.campExitCountdown);
-    if (!Number.isFinite(countdown)) countdown = roadtripCampExitCountdownAt(roadtripState.abrahamElapsed);
-    var approaching = countdown <= ROADTRIP_CAMP_SIGN_SECONDS &&
-      countdown >= -ROADTRIP_CAMP_EXIT_TAIL_SECONDS;
+    var countdown = Number(roadtripState.campExitDistance);
+    if (!Number.isFinite(countdown)) countdown = roadtripCampExitDistanceAt(roadtripState.abrahamDistance);
+    var approaching = countdown <= ROADTRIP_CAMP_SIGN_DISTANCE &&
+      countdown >= -ROADTRIP_CAMP_EXIT_TAIL_DISTANCE;
     var visible = roadtripState.route === "abraham" && (roadtripState.campExitLatched || approaching);
     return {
       countdown: countdown,
       visible: visible,
-      takeable: visible && !roadtripState.campExitLatched && countdown <= ROADTRIP_CAMP_EXIT_LEAD_SECONDS,
+      takeable: visible && !roadtripState.campExitLatched && countdown <= ROADTRIP_CAMP_EXIT_LEAD_DISTANCE,
       progress: roadtripState.campExitLatched ? 1 : visible ? Math.max(0, Math.min(1,
-        (ROADTRIP_CAMP_SIGN_SECONDS - countdown) /
-        (ROADTRIP_CAMP_SIGN_SECONDS + ROADTRIP_CAMP_EXIT_TAIL_SECONDS))) : 0
+        (ROADTRIP_CAMP_SIGN_DISTANCE - countdown) /
+        (ROADTRIP_CAMP_SIGN_DISTANCE + ROADTRIP_CAMP_EXIT_TAIL_DISTANCE))) : 0
     };
   }
   function syncRoadtripCampExit() {
@@ -41455,7 +41474,7 @@ window.__entranceRoomOpen = false;
     var timing = roadtripCampExitTiming();
     if (!timing.takeable || roadtripState.playerLane < ROADTRIP_ABRAHAM_RUMBLE_LANE) return false;
     roadtripState.campExitLatched = true;
-    roadtripState.campExitCountdown = ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
+    roadtripState.campExitDistance = ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE;
     setPorscheCruiseActive(false);
     setPorscheDriveHold("throttle", false);
     return true;
@@ -41474,7 +41493,7 @@ window.__entranceRoomOpen = false;
   function arriveRoadtripCamp(preserveCamp) {
     if (!preserveCamp && roadtripState.route === "abraham" && roadtripState.campExitLatched) {
       roadtripState.campExitLatched = false;
-      roadtripState.campExitCountdown = ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
+      roadtripState.campExitDistance = ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE;
       roadtripCampResumeRun = captureRoadtripRun();
     }
     var firstVisit = !roadtripState.campVisited;
@@ -41487,7 +41506,7 @@ window.__entranceRoomOpen = false;
     }
     roadtripState.campVisited = true;
     roadtripState.route = "camp";
-    roadtripState.abrahamElapsed = ROADTRIP_ABRAHAM_SECONDS;
+    roadtripState.abrahamDistance = ROADTRIP_ABRAHAM_DISTANCE;
     roadtripState.playerLane = ROADTRIP_ABRAHAM_START_LANE;
     porscheState.roofOpen = true;
     porscheState.windowOpen = true;
@@ -41531,25 +41550,24 @@ window.__entranceRoomOpen = false;
     }, 900);
     if (firstVisit && window.__checkpointChanged) window.__checkpointChanged();
   }
-  function syncRoadtripRoute(seconds) {
-    seconds = Math.max(0, Number(seconds) || 0);
-    // Route progress follows actual travel, not merely selecting a gear.
-    if (Math.abs(driveState.speed) <= PORSCHE_STATIC_SPEED_KMH) seconds = 0;
+  function syncRoadtripRoute(distance) {
+    distance = Math.max(0, Number(distance) || 0);
     if (roadtripState.route === "calgary") {
-      roadtripState.routeElapsed += seconds;
-      if (roadtripState.routeElapsed >= ROADTRIP_CALGARY_SECONDS &&
+      roadtripState.routeDistance += distance;
+      if (roadtripState.routeDistance >= ROADTRIP_CALGARY_DISTANCE &&
           (roadtripState.police.phase === "idle" || roadtripState.police.phase === "cooldown")) {
         roadtripState.route = "turnoff";
-        roadtripState.turnoffElapsed = 0;
+        roadtripState.routeDistance = ROADTRIP_CALGARY_DISTANCE;
+        roadtripState.turnoffDistance = 0;
         syncRoadtripRouteClass();
         roadtripFeedback("entrance_roadtrip_banff_exit");
       }
     } else if (roadtripState.route === "turnoff") {
-      roadtripState.turnoffElapsed += seconds;
-      if (roadtripState.turnoffElapsed >= ROADTRIP_TURNOFF_SECONDS) {
+      roadtripState.turnoffDistance += distance;
+      if (roadtripState.turnoffDistance >= ROADTRIP_TURNOFF_DISTANCE) {
         roadtripState.route = "banff";
-        roadtripState.turnoffElapsed = ROADTRIP_TURNOFF_SECONDS;
-        roadtripState.banffElapsed = 0;
+        roadtripState.turnoffDistance = ROADTRIP_TURNOFF_DISTANCE;
+        roadtripState.banffDistance = 0;
         roadtripState.playerLane = roadtripState.playerLane < 0 ?
           (roadtripState.playerLane < -1 ? -1.5 : -.5) :
           (roadtripState.playerLane > 1 ? 1.5 : .5);
@@ -41559,22 +41577,22 @@ window.__entranceRoomOpen = false;
         roadtripFeedback("entrance_roadtrip_banff_arrival");
       }
     } else if (roadtripState.route === "banff") {
-      roadtripState.banffElapsed += seconds;
-      if (roadtripState.banffElapsed >= ROADTRIP_BANFF_SECONDS &&
+      roadtripState.banffDistance += distance;
+      if (roadtripState.banffDistance >= ROADTRIP_BANFF_DISTANCE &&
           (roadtripState.police.phase === "idle" || roadtripState.police.phase === "cooldown")) {
         roadtripState.route = "lake-turnoff";
-        roadtripState.banffElapsed = ROADTRIP_BANFF_SECONDS;
-        roadtripState.lakeTurnoffElapsed = 0;
+        roadtripState.banffDistance = ROADTRIP_BANFF_DISTANCE;
+        roadtripState.lakeTurnoffDistance = 0;
         syncRoadtripRouteClass();
         roadtripFeedback("entrance_roadtrip_abraham_exit");
       }
     } else if (roadtripState.route === "lake-turnoff") {
-      roadtripState.lakeTurnoffElapsed += seconds;
-      if (roadtripState.lakeTurnoffElapsed >= ROADTRIP_LAKE_TURNOFF_SECONDS) {
+      roadtripState.lakeTurnoffDistance += distance;
+      if (roadtripState.lakeTurnoffDistance >= ROADTRIP_LAKE_TURNOFF_DISTANCE) {
         roadtripState.route = "abraham";
-        roadtripState.lakeTurnoffElapsed = ROADTRIP_LAKE_TURNOFF_SECONDS;
-        roadtripState.abrahamElapsed = 0;
-        roadtripState.campExitCountdown = ROADTRIP_ABRAHAM_SECONDS;
+        roadtripState.lakeTurnoffDistance = ROADTRIP_LAKE_TURNOFF_DISTANCE;
+        roadtripState.abrahamDistance = 0;
+        roadtripState.campExitDistance = ROADTRIP_ABRAHAM_DISTANCE;
         roadtripState.campExitLatched = false;
         roadtripState.playerLane = roadtripState.playerLane < 0 ? -.5 : ROADTRIP_ABRAHAM_START_LANE;
         clearRoadtripEntities();
@@ -41583,11 +41601,11 @@ window.__entranceRoomOpen = false;
         roadtripFeedback("entrance_roadtrip_abraham_arrival");
       }
     } else if (roadtripState.route === "abraham") {
-      roadtripState.abrahamElapsed += seconds;
+      roadtripState.abrahamDistance += distance;
       if (!roadtripState.campExitLatched) {
-        roadtripState.campExitCountdown -= seconds;
-        while (roadtripState.campExitCountdown < -ROADTRIP_CAMP_EXIT_TAIL_SECONDS) {
-          roadtripState.campExitCountdown += ROADTRIP_CAMP_EXIT_REPEAT_SECONDS;
+        roadtripState.campExitDistance -= distance;
+        while (roadtripState.campExitDistance < -ROADTRIP_CAMP_EXIT_TAIL_DISTANCE) {
+          roadtripState.campExitDistance += ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE;
         }
       }
     }
@@ -42929,7 +42947,7 @@ window.__entranceRoomOpen = false;
     });
     if (roadtripBanffExitNode) {
       if (roadtripState.route === "turnoff") {
-        var exitProgress = Math.max(0, Math.min(1, roadtripState.turnoffElapsed / ROADTRIP_TURNOFF_SECONDS));
+        var exitProgress = Math.max(0, Math.min(1, roadtripState.turnoffDistance / ROADTRIP_TURNOFF_DISTANCE));
         var exitRemaining = 104 - exitProgress * 82;
         var exitPoint = roadtripProject(exitRemaining);
         var exitScale = .16 + exitPoint.perspective * .82;
@@ -42942,7 +42960,7 @@ window.__entranceRoomOpen = false;
     if (roadtripAbrahamExitNode) {
       if (roadtripState.route === "lake-turnoff") {
         var lakeExitProgress = Math.max(0, Math.min(1,
-          roadtripState.lakeTurnoffElapsed / ROADTRIP_LAKE_TURNOFF_SECONDS));
+          roadtripState.lakeTurnoffDistance / ROADTRIP_LAKE_TURNOFF_DISTANCE));
         var lakeExitRemaining = 104 - lakeExitProgress * 82;
         var lakeExitPoint = roadtripProject(lakeExitRemaining);
         var lakeExitScale = .16 + lakeExitPoint.perspective * .82;
@@ -43771,12 +43789,12 @@ window.__entranceRoomOpen = false;
     setRoadtripResumePending(false);
     roadtripState.playerLane = ROADTRIP_START_LANE;
     roadtripState.route = "calgary";
-    roadtripState.routeElapsed = 0;
-    roadtripState.turnoffElapsed = 0;
-    roadtripState.banffElapsed = 0;
-    roadtripState.lakeTurnoffElapsed = 0;
-    roadtripState.abrahamElapsed = 0;
-    roadtripState.campExitCountdown = ROADTRIP_ABRAHAM_SECONDS;
+    roadtripState.routeDistance = 0;
+    roadtripState.turnoffDistance = 0;
+    roadtripState.banffDistance = 0;
+    roadtripState.lakeTurnoffDistance = 0;
+    roadtripState.abrahamDistance = 0;
+    roadtripState.campExitDistance = ROADTRIP_ABRAHAM_DISTANCE;
     roadtripState.campExitLatched = false;
     roadtripState.distance = 0;
     roadtripState.distancePoints = 0;
@@ -43817,21 +43835,21 @@ window.__entranceRoomOpen = false;
     if (roadtripPoliceMirrorNode) roadtripPoliceMirrorNode.setAttribute("visibility", "hidden");
     paintRoadtripScore();
   }
-  function setRoadtripStartingSegment(route, elapsed) {
+  function setRoadtripStartingSegment(route, distance) {
     route = ["calgary", "banff", "abraham"].indexOf(route) >= 0 ? route : "calgary";
-    var routeDuration = route === "calgary" ? ROADTRIP_CALGARY_SECONDS :
-      route === "banff" ? ROADTRIP_BANFF_SECONDS : ROADTRIP_ABRAHAM_SECONDS;
-    elapsed = Math.min(routeDuration, Math.max(0, Number(elapsed) || 0));
+    var routeLength = route === "calgary" ? ROADTRIP_CALGARY_DISTANCE :
+      route === "banff" ? ROADTRIP_BANFF_DISTANCE : ROADTRIP_ABRAHAM_DISTANCE;
+    distance = Math.min(routeLength, Math.max(0, Number(distance) || 0));
     roadtripState.routeChoice = route;
     roadtripState.route = route;
-    roadtripState.routeElapsed = route === "calgary" ? elapsed : ROADTRIP_CALGARY_SECONDS;
-    roadtripState.turnoffElapsed = route === "calgary" ? 0 : ROADTRIP_TURNOFF_SECONDS;
-    roadtripState.banffElapsed = route === "abraham" ? ROADTRIP_BANFF_SECONDS :
-      route === "banff" ? elapsed : 0;
-    roadtripState.lakeTurnoffElapsed = route === "abraham" ? ROADTRIP_LAKE_TURNOFF_SECONDS : 0;
-    roadtripState.abrahamElapsed = route === "abraham" ? elapsed : 0;
-    roadtripState.campExitCountdown = route === "abraham" ?
-      roadtripCampExitCountdownAt(elapsed) : ROADTRIP_ABRAHAM_SECONDS;
+    roadtripState.routeDistance = route === "calgary" ? distance : ROADTRIP_CALGARY_DISTANCE;
+    roadtripState.turnoffDistance = route === "calgary" ? 0 : ROADTRIP_TURNOFF_DISTANCE;
+    roadtripState.banffDistance = route === "abraham" ? ROADTRIP_BANFF_DISTANCE :
+      route === "banff" ? distance : 0;
+    roadtripState.lakeTurnoffDistance = route === "abraham" ? ROADTRIP_LAKE_TURNOFF_DISTANCE : 0;
+    roadtripState.abrahamDistance = route === "abraham" ? distance : 0;
+    roadtripState.campExitDistance = route === "abraham" ?
+      roadtripCampExitDistanceAt(distance) : ROADTRIP_ABRAHAM_DISTANCE;
     roadtripState.campExitLatched = false;
     roadtripState.playerLane = route === "calgary" ? ROADTRIP_START_LANE :
       route === "banff" ? ROADTRIP_BANFF_START_LANE : ROADTRIP_ABRAHAM_START_LANE;
@@ -43931,7 +43949,7 @@ window.__entranceRoomOpen = false;
     }
     return exited;
   }
-  function startRoadtrip(forceFresh, startingRoute, startingElapsed) {
+  function startRoadtrip(forceFresh, startingRoute, startingDistance) {
     if (!window.__entranceRoomOpen || !driveState.hudOpen) return false;
     if (window.__finishOpeningGuide) window.__finishOpeningGuide();
     if (syncRoadtripDemeritState()) {
@@ -43951,7 +43969,7 @@ window.__entranceRoomOpen = false;
         roadtripState.practiceLaps = Math.max(1, roadtripState.practiceLaps);
       }
       resetRoadtripRun(true);
-      setRoadtripStartingSegment(startingRoute || "calgary", startingElapsed);
+      setRoadtripStartingSegment(startingRoute || "calgary", startingDistance);
     }
     if (!roadtripState.unlocked || !roadtripState.accepted) return false;
     if (roadtripState.active) return true;
@@ -44036,9 +44054,6 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.active || distance <= 0 && seconds <= 0) return;
     distance = Number(distance) || 0;
     roadtripState.elapsedSeconds += Math.max(0, Number(seconds) || 0);
-    syncRoadtripRoute(seconds);
-    syncRoadtripCampExit();
-    syncRoadtripCampApproachSpeed(seconds);
     if (roadtripState.route === "camp") {
       driveState.speed = 0;
       driveState.rpm = porscheState.engineOn ? 780 : 0;
@@ -44053,6 +44068,16 @@ window.__entranceRoomOpen = false;
     var previousDistance = roadtripState.distance;
     roadtripState.distance = Math.max(0, roadtripState.distance + distance);
     var routeTravel = roadtripState.distance - previousDistance;
+    syncRoadtripRoute(Math.max(0, routeTravel));
+    syncRoadtripCampExit();
+    syncRoadtripCampApproachSpeed(seconds);
+    if (roadtripState.route === "camp") {
+      paintRoadtripRoad();
+      paintRoadtripEntities();
+      paintRoadtripScore();
+      syncPorscheDriveInstruction(false);
+      return;
+    }
     if (routeTravel > 0) awardRoadtripDistance();
     // AUTO's existing partial correction reads as lane assist. MANUAL gets the full
     // inertial drift of the road bending beneath the car and must steer through it.
@@ -47721,12 +47746,20 @@ window.__entranceRoomOpen = false;
           },
           stew: campStewSnapshot(),
           stargazing: campStargazingSnapshot(),
-          routeElapsed: roadtripState.routeElapsed,
-          turnoffElapsed: roadtripState.turnoffElapsed,
-          banffElapsed: roadtripState.banffElapsed,
-          lakeTurnoffElapsed: roadtripState.lakeTurnoffElapsed,
-          abrahamElapsed: roadtripState.abrahamElapsed,
-          campExitCountdown: roadtripState.campExitCountdown,
+          routeDistance: roadtripState.routeDistance,
+          turnoffDistance: roadtripState.turnoffDistance,
+          banffDistance: roadtripState.banffDistance,
+          lakeTurnoffDistance: roadtripState.lakeTurnoffDistance,
+          abrahamDistance: roadtripState.abrahamDistance,
+          campExitDistance: roadtripState.campExitDistance,
+          // Compatibility aliases keep deterministic tooling readable while saved
+          // run ownership and live route progression use metres.
+          routeElapsed: roadtripSecondsForDistance(roadtripState.routeDistance),
+          turnoffElapsed: roadtripSecondsForDistance(roadtripState.turnoffDistance),
+          banffElapsed: roadtripSecondsForDistance(roadtripState.banffDistance),
+          lakeTurnoffElapsed: roadtripSecondsForDistance(roadtripState.lakeTurnoffDistance),
+          abrahamElapsed: roadtripSecondsForDistance(roadtripState.abrahamDistance),
+          campExitCountdown: Number(roadtripState.campExitDistance || 0) * 3.6 / ROADTRIP_ROUTE_PACE_KMH,
           campExitLatched: roadtripState.campExitLatched,
           campExitVisible: roadtripCampExitTiming().visible,
           campExitTakeable: roadtripCampExitTiming().takeable,
@@ -47734,6 +47767,13 @@ window.__entranceRoomOpen = false;
           routeChoice: roadtripState.routeChoice,
           routeChooserOpen: roadtripState.routeChooserOpen,
           durationScale: ROADTRIP_DURATION_SCALE,
+          routePaceKmh: ROADTRIP_ROUTE_PACE_KMH,
+          calgaryDistance: ROADTRIP_CALGARY_DISTANCE,
+          turnoffDistanceRequired: ROADTRIP_TURNOFF_DISTANCE,
+          banffDistanceRequired: ROADTRIP_BANFF_DISTANCE,
+          lakeTurnoffDistanceRequired: ROADTRIP_LAKE_TURNOFF_DISTANCE,
+          abrahamDistanceRequired: ROADTRIP_ABRAHAM_DISTANCE,
+          campExitRepeatDistance: ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE,
           calgarySeconds: ROADTRIP_CALGARY_SECONDS,
           turnoffSeconds: ROADTRIP_TURNOFF_SECONDS,
           banffSeconds: ROADTRIP_BANFF_SECONDS,
@@ -48023,24 +48063,24 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.routeChooserOpen) return false;
     return launchRoadtripRoute(route);
   };
-  window.__entranceRoadtripSetRoute = function (route, elapsed) {
+  function setRoadtripRouteDistance(route, distance) {
     if (!roadtripState.active && !startRoadtrip(true)) return false;
     if (["calgary", "turnoff", "banff", "lake-turnoff", "abraham", "camp"].indexOf(route) < 0) return false;
-    elapsed = Math.max(0, Number(elapsed) || 0);
+    distance = Math.max(0, Number(distance) || 0);
     roadtripState.route = route;
-    roadtripState.routeElapsed = route === "calgary" ?
-      Math.min(ROADTRIP_CALGARY_SECONDS, elapsed) : ROADTRIP_CALGARY_SECONDS;
-    roadtripState.turnoffElapsed = route === "turnoff" ?
-      Math.min(ROADTRIP_TURNOFF_SECONDS, elapsed) : route === "calgary" ? 0 : ROADTRIP_TURNOFF_SECONDS;
-    roadtripState.banffElapsed = route === "banff" ? Math.min(ROADTRIP_BANFF_SECONDS, elapsed) :
-      ["lake-turnoff", "abraham", "camp"].indexOf(route) >= 0 ? ROADTRIP_BANFF_SECONDS : 0;
-    roadtripState.lakeTurnoffElapsed = route === "lake-turnoff" ?
-      Math.min(ROADTRIP_LAKE_TURNOFF_SECONDS, elapsed) :
-      ["abraham", "camp"].indexOf(route) >= 0 ? ROADTRIP_LAKE_TURNOFF_SECONDS : 0;
-    roadtripState.abrahamElapsed = route === "abraham" ? Math.min(1000000000, elapsed) :
-      route === "camp" ? ROADTRIP_ABRAHAM_SECONDS : 0;
-    roadtripState.campExitCountdown = route === "abraham" ?
-      roadtripCampExitCountdownAt(roadtripState.abrahamElapsed) : ROADTRIP_ABRAHAM_SECONDS;
+    roadtripState.routeDistance = route === "calgary" ?
+      Math.min(ROADTRIP_CALGARY_DISTANCE, distance) : ROADTRIP_CALGARY_DISTANCE;
+    roadtripState.turnoffDistance = route === "turnoff" ?
+      Math.min(ROADTRIP_TURNOFF_DISTANCE, distance) : route === "calgary" ? 0 : ROADTRIP_TURNOFF_DISTANCE;
+    roadtripState.banffDistance = route === "banff" ? Math.min(ROADTRIP_BANFF_DISTANCE, distance) :
+      ["lake-turnoff", "abraham", "camp"].indexOf(route) >= 0 ? ROADTRIP_BANFF_DISTANCE : 0;
+    roadtripState.lakeTurnoffDistance = route === "lake-turnoff" ?
+      Math.min(ROADTRIP_LAKE_TURNOFF_DISTANCE, distance) :
+      ["abraham", "camp"].indexOf(route) >= 0 ? ROADTRIP_LAKE_TURNOFF_DISTANCE : 0;
+    roadtripState.abrahamDistance = route === "abraham" ? Math.min(1000000000, distance) :
+      route === "camp" ? ROADTRIP_ABRAHAM_DISTANCE : 0;
+    roadtripState.campExitDistance = route === "abraham" ?
+      roadtripCampExitDistanceAt(roadtripState.abrahamDistance) : ROADTRIP_ABRAHAM_DISTANCE;
     roadtripState.campExitLatched = false;
     if (Math.abs(roadtripState.playerLane) > roadtripMaxLane()) {
       roadtripState.playerLane = roadtripState.playerLane < 0 ? -roadtripOuterLane() : roadtripOuterLane();
@@ -48056,6 +48096,17 @@ window.__entranceRoomOpen = false;
     paintRoadtripRoad();
     paintRoadtripEntities();
     return roadtripState.route;
+  }
+  window.__entranceRoadtripSetRouteDistance = setRoadtripRouteDistance;
+  window.__entranceRoadtripStepRouteDistance = function (distance) {
+    if (!roadtripState.active && !startRoadtrip(true)) return false;
+    syncRoadtripRoute(Math.max(0, Number(distance) || 0));
+    paintRoadtripRoad();
+    paintRoadtripEntities();
+    return roadtripState.route;
+  };
+  window.__entranceRoadtripSetRoute = function (route, elapsed) {
+    return setRoadtripRouteDistance(route, roadtripDistanceForSeconds(elapsed));
   };
   window.__entranceRoadtripSetDistance = function (distance) {
     if (!roadtripState.active && !startRoadtrip(true)) return false;
@@ -48285,8 +48336,8 @@ window.__entranceRoomOpen = false;
   }
   function captureRoadtripRun() {
     var state = {};
-    ["exitUntilStop", "route", "routeElapsed", "turnoffElapsed", "banffElapsed", "lakeTurnoffElapsed",
-      "abrahamElapsed", "campExitCountdown", "campExitLatched", "routeChoice", "playerLane", "distance",
+    ["exitUntilStop", "route", "routeDistance", "turnoffDistance", "banffDistance", "lakeTurnoffDistance",
+      "abrahamDistance", "campExitDistance", "campExitLatched", "routeChoice", "playerLane", "distance",
       "distancePoints", "elapsedSeconds", "score", "multiplier",
       "collisions", "passes", "tokens", "escapes", "wildlifeHits", "impactSounds", "rewardSounds",
       "lastImpactSeverity", "centerlineExcursion", "centerlineCrossings", "centerlineElapsed",
@@ -48298,7 +48349,7 @@ window.__entranceRoomOpen = false;
     var car = {};
     Object.keys(porscheState).forEach(function (key) { car[key] = !!porscheState[key]; });
     return {
-      version: 3,
+      version: 4,
       state: state,
       car: car,
       drive: {
@@ -48329,7 +48380,7 @@ window.__entranceRoomOpen = false;
   }
   function validRoadtripRunSnapshot(snapshot) {
     var version = snapshot && Number(snapshot.version);
-    return !!(snapshot && (version === 1 || version === 2 || version === 3) && snapshot.state &&
+    return !!(snapshot && (version === 1 || version === 2 || version === 3 || version === 4) && snapshot.state &&
       !(snapshot.police && snapshot.police.runEnded === true));
   }
   function restoreRoadtripPolice(snapshot) {
@@ -48367,17 +48418,29 @@ window.__entranceRoomOpen = false;
     roadtripState.route = version === 1 ? "banff" :
       (["calgary", "turnoff", "banff", "lake-turnoff", "abraham", "camp"].indexOf(saved.route) >= 0 ?
         saved.route : "calgary");
-    roadtripState.routeElapsed = roadtripSnapshotNumber(saved.routeElapsed, 0, 0, ROADTRIP_CALGARY_SECONDS);
-    roadtripState.turnoffElapsed = roadtripSnapshotNumber(saved.turnoffElapsed, 0, 0, ROADTRIP_TURNOFF_SECONDS);
-    roadtripState.banffElapsed = roadtripSnapshotNumber(saved.banffElapsed, 0, 0, ROADTRIP_BANFF_SECONDS);
-    roadtripState.lakeTurnoffElapsed = roadtripSnapshotNumber(saved.lakeTurnoffElapsed, 0, 0,
-      ROADTRIP_LAKE_TURNOFF_SECONDS);
-    roadtripState.abrahamElapsed = roadtripSnapshotNumber(saved.abrahamElapsed, 0, 0, 1000000000);
-    roadtripState.campExitCountdown = roadtripSnapshotNumber(saved.campExitCountdown,
-      roadtripState.route === "abraham" ? roadtripCampExitCountdownAt(roadtripState.abrahamElapsed) :
-        ROADTRIP_ABRAHAM_SECONDS,
-      -ROADTRIP_CAMP_EXIT_TAIL_SECONDS,
-      roadtripState.route === "abraham" ? ROADTRIP_CAMP_EXIT_REPEAT_SECONDS : 1000000000);
+    function restoredRouteDistance(distanceKey, elapsedKey, fallback, maximum) {
+      var raw = version >= 4 ? saved[distanceKey] :
+        (Number.isFinite(Number(saved[elapsedKey])) ?
+          Number(saved[elapsedKey]) * ROADTRIP_ROUTE_PACE_KMH / 3.6 : fallback);
+      return roadtripSnapshotNumber(raw, fallback, 0, maximum);
+    }
+    roadtripState.routeDistance = restoredRouteDistance("routeDistance", "routeElapsed", 0,
+      ROADTRIP_CALGARY_DISTANCE);
+    roadtripState.turnoffDistance = restoredRouteDistance("turnoffDistance", "turnoffElapsed", 0,
+      ROADTRIP_TURNOFF_DISTANCE);
+    roadtripState.banffDistance = restoredRouteDistance("banffDistance", "banffElapsed", 0,
+      ROADTRIP_BANFF_DISTANCE);
+    roadtripState.lakeTurnoffDistance = restoredRouteDistance("lakeTurnoffDistance", "lakeTurnoffElapsed", 0,
+      ROADTRIP_LAKE_TURNOFF_DISTANCE);
+    roadtripState.abrahamDistance = restoredRouteDistance("abrahamDistance", "abrahamElapsed", 0, 1000000000);
+    var savedCampExitDistance = version >= 4 ? saved.campExitDistance :
+      Number.isFinite(Number(saved.campExitCountdown)) ?
+        Number(saved.campExitCountdown) * ROADTRIP_ROUTE_PACE_KMH / 3.6 : null;
+    roadtripState.campExitDistance = roadtripSnapshotNumber(savedCampExitDistance,
+      roadtripState.route === "abraham" ? roadtripCampExitDistanceAt(roadtripState.abrahamDistance) :
+        ROADTRIP_ABRAHAM_DISTANCE,
+      -ROADTRIP_CAMP_EXIT_TAIL_DISTANCE,
+      roadtripState.route === "abraham" ? ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE : 1000000000);
     roadtripState.campExitLatched = saved.campExitLatched === true && roadtripState.route === "abraham";
     roadtripState.routeChoice = ["calgary", "banff", "abraham"].indexOf(saved.routeChoice) >= 0 ?
       saved.routeChoice : roadtripState.route === "abraham" || roadtripState.route === "camp" ?

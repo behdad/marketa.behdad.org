@@ -20,6 +20,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       range: state.drive.transmission.range,
       position: state.drive.position,
       distance: state.drive.roadtrip.distance,
+      routeDistance: state.drive.roadtrip.routeDistance,
       routeElapsed: state.drive.roadtrip.routeElapsed
     };
   }
@@ -138,8 +139,9 @@ function check(ok, message, detail) {
 
 console.log("rsvp.html Road Trip route shortcuts:");
 var source = fs.readFileSync(path.join(lib.ROOT, "rsvp.html"), "utf8");
-check(/ROADTRIP_SHORTCUT_REMAINING_SECONDS = 3/.test(source),
-  "the private shortcut leaves three attended seconds in the selected segment");
+check(/ROADTRIP_SHORTCUT_REMAINING_SECONDS = 3/.test(source) &&
+  /ROADTRIP_SHORTCUT_REMAINING_DISTANCE = roadtripDistanceForSeconds\(ROADTRIP_SHORTCUT_REMAINING_SECONDS\)/.test(source),
+  "the private shortcut leaves three nominal seconds of travel in the selected segment");
 
 var result = lib.runPageSync("rsvp.html", HARNESS, 5000, {
   patchRaf: true,
@@ -171,8 +173,9 @@ check(Object.keys(expectedStartLanes).every(function (route) {
 }), "Shift-click shortcuts discard prior motion, retain Drive, and start on each right shoulder", shifted);
 var shiftedCalgary = shifted.calgary && shifted.calgary.state || {};
 check(shiftedCalgary.route === "calgary" &&
-  shiftedCalgary.routeElapsed === shiftedCalgary.calgarySeconds - 3,
-  "Shift-click Calgary starts three seconds before its exit", shiftedCalgary);
+  Math.abs(shiftedCalgary.routeDistance -
+    (shiftedCalgary.calgaryDistance - 3 * shiftedCalgary.routePaceKmh / 3.6)) < .001,
+  "Shift-click Calgary starts one shortcut-distance before its exit", shiftedCalgary);
 var driveStart = result && result.driveStart || {};
 var parked = result && result.parkedStart || {};
 var parkedThrottle = result && result.parkedThrottle || {};
@@ -185,27 +188,27 @@ check(driveStart.engineOn && driveStart.range === "D" && driveStart.gear === 1 &
   "a fresh near-exit shortcut drops carried momentum without changing Drive", driveStart);
 check(parkedThrottle.range === "P" && parkedThrottle.gear === 0 && parkedThrottle.speed === 0 &&
   parkedThrottle.position === parked.position && parkedThrottle.distance === parked.distance &&
-  parkedThrottle.routeElapsed === parked.routeElapsed,
+  parkedThrottle.routeDistance === parked.routeDistance,
   "accelerating in AUTO Park cannot move or advance the shortcut-started car", {
     before: parked, after: parkedThrottle
   });
 check(!engineOffThrottle.engineOn && engineOffThrottle.range === "P" &&
   engineOffThrottle.gear === 0 && engineOffThrottle.speed === 0 &&
   engineOffThrottle.position === parked.position && engineOffThrottle.distance === parked.distance &&
-  engineOffThrottle.routeElapsed === parked.routeElapsed,
+  engineOffThrottle.routeDistance === parked.routeDistance,
   "engine-off acceleration cannot propel the shortcut-started car", engineOffThrottle);
 check(restartedParkThrottle.engineOn && restartedParkThrottle.range === "P" &&
   restartedParkThrottle.gear === 0 && restartedParkThrottle.speed === 0 &&
   restartedParkThrottle.position === parked.position && restartedParkThrottle.distance === parked.distance &&
-  restartedParkThrottle.routeElapsed === parked.routeElapsed,
+  restartedParkThrottle.routeDistance === parked.routeDistance,
   "restarting in AUTO Park still cannot advance the route without Drive", restartedParkThrottle);
 check(stationaryReverse.range === "R" && stationaryReverse.gear === -1 && stationaryReverse.speed === 0 &&
   stationaryReverse.position === parked.position && stationaryReverse.distance === parked.distance &&
-  stationaryReverse.routeElapsed === parked.routeElapsed,
+  stationaryReverse.routeDistance === parked.routeDistance,
   "selecting Reverse at rest cannot advance the route as forward motion", stationaryReverse);
 check(validDrive.engineOn && validDrive.range === "D" && validDrive.gear > 0 &&
   validDrive.speed > 0 && validDrive.distance > driveStart.distance &&
-  validDrive.routeElapsed > driveStart.routeElapsed,
+  validDrive.routeDistance > driveStart.routeDistance,
   "fresh acceleration begins immediately when AUTO Drive was already selected", validDrive);
 check(validCoast.range === "D" && validCoast.gear > 0 && validCoast.speed > 0 &&
   validCoast.speed < validDrive.speed && validCoast.distance > validDrive.distance,
@@ -214,15 +217,17 @@ check(validCoast.range === "D" && validCoast.gear > 0 && validCoast.speed > 0 &&
   });
 var shiftedBanff = shifted.banff && shifted.banff.state || {};
 check(shiftedBanff.route === "banff" &&
-  shiftedBanff.banffElapsed === shiftedBanff.banffSeconds - 3,
-  "Shift-click Banff starts three seconds before its exit", shiftedBanff);
+  Math.abs(shiftedBanff.banffDistance -
+    (shiftedBanff.banffDistanceRequired - 3 * shiftedBanff.routePaceKmh / 3.6)) < .001,
+  "Shift-click Banff starts one shortcut-distance before its exit", shiftedBanff);
 var shiftedAbraham = shifted.abraham && shifted.abraham.state || {};
 check(shiftedAbraham.route === "abraham" &&
-  shiftedAbraham.abrahamElapsed === shiftedAbraham.abrahamSeconds - 3,
-  "Shift-click Abraham Lake starts three seconds before Camping", shiftedAbraham);
+  Math.abs(shiftedAbraham.abrahamDistance -
+    (shiftedAbraham.abrahamDistanceRequired - 3 * shiftedAbraham.routePaceKmh / 3.6)) < .001,
+  "Shift-click Abraham Lake starts one shortcut-distance before Camping", shiftedAbraham);
 
 var normalAbraham = normal.abraham && normal.abraham.state || {};
-check(normalAbraham.route === "abraham" && normalAbraham.abrahamElapsed === 0,
+check(normalAbraham.route === "abraham" && normalAbraham.abrahamDistance === 0,
   "an ordinary Abraham Lake click still starts the segment at its beginning", normalAbraham);
 
 var longPressed = result && result.longPressed || {};
@@ -233,11 +238,14 @@ var longCalgary = longPressed.calgary && longPressed.calgary.state || {};
 var longBanff = longPressed.banff && longPressed.banff.state || {};
 var longAbraham = longPressed.abraham && longPressed.abraham.state || {};
 check(longCalgary.route === "calgary" &&
-  Math.abs(longCalgary.routeElapsed - (longCalgary.calgarySeconds - 3)) < .2 &&
+  Math.abs(longCalgary.routeDistance -
+    (longCalgary.calgaryDistance - 3 * longCalgary.routePaceKmh / 3.6)) < .2 &&
   longBanff.route === "banff" &&
-  Math.abs(longBanff.banffElapsed - (longBanff.banffSeconds - 3)) < .2 &&
+  Math.abs(longBanff.banffDistance -
+    (longBanff.banffDistanceRequired - 3 * longBanff.routePaceKmh / 3.6)) < .2 &&
   longAbraham.route === "abraham" &&
-  Math.abs(longAbraham.abrahamElapsed - (longAbraham.abrahamSeconds - 3)) < .2,
+  Math.abs(longAbraham.abrahamDistance -
+    (longAbraham.abrahamDistanceRequired - 3 * longAbraham.routePaceKmh / 3.6)) < .2,
   "mobile long-press uses the same near-exit shortcut for every segment", longPressed);
 
 if (failures) process.exit(1);

@@ -13,8 +13,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceRoadtripStart();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
   }
-  function setAbraham(elapsed, lane, speed) {
-    window.__entranceRoadtripSetRoute("abraham", elapsed);
+  function setAbraham(distance, lane, speed) {
+    window.__entranceRoadtripSetRouteDistance("abraham", distance);
     window.__entranceRoadtripSetLane(lane);
     window.__entranceDriveSetMotion(speed, speed ? 2 : 0);
   }
@@ -51,25 +51,26 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         begin();
 
         var initial = roadtrip();
-        var first = initial.abrahamSeconds;
-        var repeat = initial.campExitRepeatSeconds;
+        var first = initial.abrahamDistanceRequired;
+        var repeat = initial.campExitRepeatDistance;
+        var nominalSecond = initial.routePaceKmh / 3.6;
 
-        setAbraham(first - 14, .5, 50);
+        setAbraham(first - 14 * nominalSecond, .5, 50);
         report.farExit = { state: roadtrip(), visual: visual() };
-        setAbraham(first - 1, .5, 50);
+        setAbraham(first - nominalSecond, .5, 50);
         report.firstExit = { state: roadtrip(), visual: visual() };
-        for (var missStep = 0; missStep < 3; missStep++) window.__entranceDriveStep(1000);
+        setAbraham(first + 3 * nominalSecond, .5, 50);
         report.missed = { state: roadtrip(), visual: visual() };
 
-        window.__entranceRoadtripSetRoute("calgary", 30);
+        window.__entranceRoadtripSetRouteDistance("calgary", 30);
         report.calgary = visual();
-        window.__entranceRoadtripSetRoute("banff", 30);
+        window.__entranceRoadtripSetRouteDistance("banff", 30);
         report.banff = visual();
 
-        setAbraham(first + repeat - 1, .5, 50);
+        setAbraham(first + repeat - nominalSecond, .5, 50);
         report.repeatExit = { state: roadtrip(), visual: visual() };
 
-        setAbraham(first + 13, .5, 42);
+        setAbraham(first + 13 * nominalSecond, .5, 42);
         window.__exitEntranceRoadtrip();
         var checkpoint = window.__captureCheckpointSystems().entrance;
         report.saved = checkpoint.drive.roadtrip.pausedRun && checkpoint.drive.roadtrip.pausedRun.state;
@@ -77,7 +78,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.restored = roadtrip();
 
         begin();
-        setAbraham(first - .5, 1, 80);
+        setAbraham(first - .5 * nominalSecond, 1, 80);
         window.__entranceDriveStep(100);
         report.slowing = window.__entranceRoomState();
         window.__entranceDriveStep(1000);
@@ -85,7 +86,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         report.campResume = window.__captureCheckpointSystems().entrance.drive.roadtrip.pausedRun;
 
         begin();
-        setAbraham(first - 1, 1, 0);
+        setAbraham(first - nominalSecond, 1, 0);
         window.__entranceDriveStep(100);
         report.noMomentum = window.__entranceRoomState();
       } catch (error) {
@@ -139,7 +140,7 @@ var mobile = run(true);
     farVisual.sign === "visible" && farVisual.spur === "visible" &&
     farVisual.destinationX > farVisual.junctionX && farVisual.destinationY < farVisual.junctionY &&
     farVisual.signPostX > farVisual.destinationX && farVisual.signPostX - farVisual.destinationX < 30,
-    device + " shows the upper-right branch fourteen seconds before the exit", far);
+    device + " shows the upper-right branch at the fourteen-second-equivalent travel distance", far);
   var first = result && result.firstExit || {};
   var firstState = first.state || {};
   var firstVisual = first.visual || {};
@@ -159,26 +160,29 @@ var mobile = run(true);
 
   var missed = result && result.missed || {};
   check(missed.state && missed.state.route === "abraham" && missed.state.active &&
-    missed.state.abrahamElapsed > missed.state.abrahamSeconds &&
-    missed.state.campExitCountdown >= expectedRepeat - 2.01 &&
+    missed.state.abrahamDistance > missed.state.abrahamDistanceRequired &&
+    Math.abs(missed.state.campExitDistance -
+      (missed.state.campExitRepeatDistance - 3 * missed.state.routePaceKmh / 3.6)) < .001 &&
     missed.visual && missed.visual.sign === "hidden" && missed.visual.spur === "hidden",
-    device + " keeps driving after a missed exit and starts the next interval", missed);
+    device + " keeps driving after a missed exit and starts the next distance interval", missed);
   check(result && result.calgary && result.calgary.sign === "hidden" && result.calgary.spur === "hidden" &&
     result.banff && result.banff.sign === "hidden" && result.banff.spur === "hidden",
     device + " does not add the Camping turnoff to Calgary or Banff", result && {
       calgary: result.calgary, banff: result.banff
     });
   var repeated = result && result.repeatExit || {};
-  check(repeated.state && repeated.state.route === "abraham" && repeated.state.campExitCountdown === 1 &&
+  check(repeated.state && repeated.state.route === "abraham" &&
+    Math.abs(repeated.state.campExitDistance - repeated.state.routePaceKmh / 3.6) < .001 &&
     repeated.state.campExitVisible && repeated.visual && repeated.visual.sign === "visible" &&
     repeated.visual.spur === "visible",
-    device + " repeats the exit after exactly " + expectedRepeat + " seconds", repeated);
+    device + " repeats the exit after the " + expectedRepeat + "-second-equivalent travel distance", repeated);
 
   var saved = result && result.saved || {};
   var restored = result && result.restored || {};
-  check(saved.route === "abraham" && Math.abs(saved.campExitCountdown - (expectedRepeat - 13)) < .001 &&
+  check(saved.route === "abraham" && Math.abs(saved.campExitDistance -
+      (restored.campExitRepeatDistance - 13 * restored.routePaceKmh / 3.6)) < .001 &&
     restored.route === "abraham" && restored.paused &&
-    Math.abs(restored.campExitCountdown - saved.campExitCountdown) < .001,
+    Math.abs(restored.campExitDistance - saved.campExitDistance) < .001,
     device + " checkpoints and restores the recurring-exit phase", { saved: saved, restored: restored });
 
   var slowing = result && result.slowing;
@@ -188,7 +192,8 @@ var mobile = run(true);
   check(camp(result && result.arrived), device + " enters Camping below 10 km/h", result && result.arrived);
   check(result && result.campResume && result.campResume.state &&
     result.campResume.state.route === "abraham" &&
-    result.campResume.state.campExitCountdown === expectedRepeat &&
+    Math.abs(result.campResume.state.campExitDistance -
+      expectedRepeat * restored.routePaceKmh / 3.6) < .001 &&
     result.campResume.state.campExitLatched === false,
     device + " retains the Abraham run while Camping is overlaid", result && result.campResume);
   check(camp(result && result.noMomentum),

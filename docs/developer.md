@@ -188,12 +188,15 @@ calgary → turnoff → banff → lake-turnoff → abraham ↺
                                                 └→ camp (optional)
 ```
 
-The route is part of the version-2 paused-run snapshot. Route changes clear live entities before
+Route legs, turnoffs, and Abraham's recurring campsite exit consume actual forward metres from the
+driving step; `elapsedSeconds` remains HUD/scoring time and must not select scenery. Their authored
+lengths preserve the former pacing at a nominal 100 km/h. The route is part of the version-4
+paused-run snapshot; restore migrates version 1–3 elapsed-route fields into metres. Route changes clear live entities before
 changing road geometry. Signs are projected beyond the current road edge by
 `positionRoadtripExitSign()`; fixed road fractions fail on Calgary's wider divided highway.
 
 The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click or a
-touch long-press is a private test shortcut that begins three seconds before the chosen segment's
+touch long-press is a private test shortcut that begins three nominal seconds of travel before the chosen segment's
 exit. Every chooser launch clears carried motion while preserving the selected transmission setting;
 the compact re-entry control offers the exact paused run, a provisional fresh-route chooser, and a
 direct campsite return after `campVisited` is set. The chooser's open state, selected card, and
@@ -202,8 +205,9 @@ Checkpoint recovery retains the saved Entrance/dashboard presentation and interr
 snapshot, but leaves explicit re-entry to Road Trip → Continue. Continue activates the retained
 presentation with `roadtripResumePending` set, so transport Play or fresh driving input owns the
 actual resume. A saved `camp` route still restores its camp presentation directly.
-Touch-first devices scale attended route and turnoff durations to 72%. Abraham's optional campsite
-exit then recurs after 60 attended seconds on fine pointers and 45 on coarse pointers.
+Touch-first devices scale route and turnoff lengths to 72%. Abraham's optional campsite exit then
+recurs after the distance formerly covered in 60 seconds at 100 km/h on fine pointers, or 45 seconds
+on coarse pointers.
 
 Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
 spawn plans deterministic from the run seed and never add timer-driven unbounded entities.
@@ -212,7 +216,7 @@ spawn plans deterministic from the run seed and never add timer-driven unbounded
 
 ### Camping
 
-`campExitCountdown` preserves Abraham's recurring-exit phase. During its projected sign/spur window,
+`campExitDistance` preserves Abraham's recurring-exit phase. During its projected sign/spur window,
 crossing onto the right shoulder makes `syncRoadtripCampExit()` latch the turn. Only that latch lets
 `syncRoadtripCampApproachSpeed()` slow independently of throttle or momentum. Below 10 km/h,
 `arriveRoadtripCamp()` retains the Abraham snapshot, parks the drivetrain, and activates the camp
@@ -270,7 +274,7 @@ space. Camper placement stays on the outer group, drag offsets stay on
 `.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the nested head.
 `ensureRoadtripCampPorsche()` owns the generated prop hit map and bounded body drag.
 
-Run `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-exit.js`,
+Run `tests/entrance-roadtrip-distance.js`, `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-exit.js`,
 `tests/entrance-roadtrip-camp-fire.js`,
 `tests/entrance-roadtrip-camp-pinecone-fire.js`,
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,

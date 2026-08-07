@@ -199,12 +199,21 @@ var harness = String.raw`<script>
     document.getElementById("loft-game-strip").classList.remove("party-on");
     window.__closeDollhouse();
 
+    document.getElementById("loft-game-strip").classList.remove("second-round");
     document.getElementById("stage-kitchen").classList.add("dusk");
     key("Tab");
-    check("the Kitchen / Bar cell also switches to the Bar at night",
+    check("first-round dusk keeps the Kitchen / Bar cell in the live Kitchen mode",
+      !roomButton("kitchen").classList.contains("bar-active") &&
+      document.getElementById("kitchen-bar").style.opacity !== "1");
+    window.__closeDollhouse();
+
+    document.getElementById("loft-game-strip").classList.add("second-round");
+    key("Tab");
+    check("the Kitchen / Bar cell switches to the Bar at night in the second round",
       roomButton("kitchen").classList.contains("bar-active") &&
       document.getElementById("kitchen-bar").style.opacity === "1");
     document.getElementById("stage-kitchen").classList.remove("dusk");
+    document.getElementById("loft-game-strip").classList.remove("second-round");
     window.__closeDollhouse();
 
     if (window.__bathroomRoomOpen && window.__closeBathroomRoom) window.__closeBathroomRoom();

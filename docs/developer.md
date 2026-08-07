@@ -106,7 +106,7 @@ previews; never infer picker
 access from `maxUnlocked`. Room cards reuse their real SVG art, with a matching static SVG portrait
 for the HTML/CSS Dungeon. The preview temporarily neutralizes Bedroom one-shots, gives the intact
 Entrance façade a daylight wash, primes a warm Cuddly projector frame, and applies the real Bar visibility state to
-the complete Kitchen stage for either night or a party. Double-click and
+the complete Kitchen stage for either a party or second-round night. Double-click and
 touch double-tap deliberately unlock a locked destination. The map owns an arrow-key cursor and uses
 Enter only for discovered destinations. Tab is consumed throughout the game and no scene or chrome
 control participates in browser Tab traversal; a clicked console/editor field may still interpret

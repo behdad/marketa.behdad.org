@@ -110536,6 +110536,7 @@ function spawnDustMote(container) {
     var princeState = window.__princeState && window.__princeState();
     return !!(princeState && princeState.basement);
   }
+  window.__lowerRoomOwnsViewport = lowerRoomOwnsViewport;
   var floorNavigationDownstairs = lowerRoomOwnsViewport();
   var floorNavigationTarget = floorNavigationDownstairs;
   var floorNavigationTimer = null;
@@ -111276,6 +111277,9 @@ function spawnDustMote(container) {
     var lowerRoom = activeLowerRoom();
     if (lowerRoom) markRoomSeen(lowerRoom.id);
     syncFloorNavigation();
+    window.dispatchEvent(new CustomEvent("loft:lowerroomenter", {
+      detail: { room: lowerRoom ? lowerRoom.id : null }
+    }));
     return true;
   };
   window.__resetLowerRoomDiscovery = resetLowerRoomDiscovery;
@@ -116839,6 +116843,7 @@ function spawnDustMote(container) {
   // crowd just strikes a pose for the camera.
   var photoFreezeTimer = null, photoMomentCallout = null;
   function endPhotoMoment() {
+    if (photoFreezeTimer) clearTimeout(photoFreezeTimer);
     photoFreezeTimer = null;
     if (photoMomentCallout) dismissEggBubble(photoMomentCallout);
     photoMomentCallout = null;
@@ -116850,6 +116855,10 @@ function spawnDustMote(container) {
   function startPhotoMoment() {
     photoFreezeTimer = null;
     if (!window.__gardenPartyOn) return;
+    if (window.__lowerRoomOwnsViewport && window.__lowerRoomOwnsViewport()) {
+      schedulePhotoMoment();
+      return;
+    }
     if (document.hidden || !document.hasFocus() || window.__musicPaused) { schedulePhotoMoment(); return; } // unattended, or the visitor's already frozen it → try later
     setPartyMomentState("photoFreeze", true);
     if (window.__syncDanceFreeze) window.__syncDanceFreeze();
@@ -116874,6 +116883,9 @@ function spawnDustMote(container) {
     photoMomentCallout = null;
     if (window.__photoFreeze) { setPartyMomentState("photoFreeze", false); if (window.__syncDanceFreeze) window.__syncDanceFreeze(); }
   };
+  window.addEventListener("loft:lowerroomenter", function () {
+    if (photoMomentCallout || window.__photoFreeze) endPhotoMoment();
+  });
   window.__photoMomentNow = function () { if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; } startPhotoMoment(); }; // console/test: trigger one now
   // ── ASPEN AUTO-SNAPS FOR THE ALBUM ─────────────────────────────────────────────
   // Aspen quietly grabs keepsakes for the album OFTEN — a shot every ~14-22s while the party's on,

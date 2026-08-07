@@ -2944,6 +2944,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 }
 #hunt-dollhouse-btn[hidden]{display:none}
 #hunt-floor-btn{display:block;font-size:1.2rem}
+#hunt-floor-btn:disabled{pointer-events:none}
 #hunt-floor-btn.floor-up::before{transform:translate(-50%,-50%) rotate(-45deg)}
 #hunt-floor-btn.floor-down::before{transform:translate(-50%,-50%) rotate(135deg)}
 #hunt-floor-btn[hidden]{display:none}
@@ -111110,6 +111111,30 @@ function spawnDustMote(container) {
     }
     else descendFromStage({ repeat: false });
   });
+  var floorSlot = floorBtn && floorBtn.parentElement;
+  var lastLockedFloorTouchAt = 0;
+  function unlockLockedFloor(event) {
+    if (!floorBtn || !floorBtn.disabled || lowerRoomOwnsViewport()) return false;
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    markLowerRoomDiscovered();
+    return descendFromStage({ repeat: false });
+  }
+  if (floorSlot) {
+    floorSlot.addEventListener("dblclick", unlockLockedFloor);
+    floorSlot.addEventListener("pointerup", function (event) {
+      if (event.pointerType !== "touch" || !floorBtn.disabled) return;
+      var now = Date.now();
+      if (now - lastLockedFloorTouchAt <= 500) {
+        lastLockedFloorTouchAt = 0;
+        unlockLockedFloor(event);
+      } else {
+        lastLockedFloorTouchAt = now;
+      }
+    });
+  }
   // Tab is a game command, never browser focus navigation. Keep its default consumed even
   // before the dollhouse unlocks; clicked console/editor fields may still handle the key.
   document.addEventListener("keydown", function (e) {

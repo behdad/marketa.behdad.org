@@ -58,6 +58,24 @@ var harness = String.raw`<script>
     window.goToStage("kitchen");
     check("fresh upstairs chrome shows a disabled Down until discovery",
       !floorState().hidden && floorState().disabled && !document.getElementById("hunt-dollhouse-btn").hidden, floorState());
+    var floorSlot = document.querySelector(".hunt-floor-slot");
+    floorSlot.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, cancelable: true }));
+    await sleep(30);
+    check("double-clicking the locked Down deliberately discovers and enters downstairs",
+      floorState().bathroom && !floorState().disabled && window.__lowerRoomDiscoveryClueState().discovered,
+      floorState());
+    window.__closeBathroomRoom();
+    await sleep(450);
+    window.__resetLowerRoomDiscovery();
+    floorSlot.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));
+    floorSlot.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerType: "touch" }));
+    await sleep(30);
+    check("double-tapping the locked Down performs the same deliberate mobile unlock",
+      floorState().bathroom && !floorState().disabled && window.__lowerRoomDiscoveryClueState().discovered,
+      floorState());
+    window.__closeBathroomRoom();
+    await sleep(450);
+    window.__resetLowerRoomDiscovery();
     var freshDots = document.getElementById("hunt-dots").getBoundingClientRect();
     var freshDotsCenter = freshDots.left + freshDots.width / 2;
 

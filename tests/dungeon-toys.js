@@ -13,10 +13,11 @@ var HARNESS = [
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   'Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});window.__unlockAllRooms();window.__releaseCat(true);window.goToStage("garden");window.__openGardenPrince();await sleep(100);',
   'report.steps.open={state:window.__princeDungeonState(),rat:document.getElementById("prince-dungeon-rat").classList.contains("scurrying"),catParent:document.getElementById("witchy-chest-cat-pos").parentNode.id,catReaction:window.__dungeonCatRatReaction()};',
-  'click("prince-dungeon-torch-left");report.steps.one={state:window.__princeDungeonState(),caption:window.__captionKey(),wallPointer:getComputedStyle(document.getElementById("prince-play-wall")).pointerEvents};',
-  'click("prince-dungeon-torch-right");report.steps.dark={state:window.__princeDungeonState(),caption:window.__captionKey(),wallPointer:getComputedStyle(document.getElementById("prince-play-wall")).pointerEvents};',
+  'function lights(){return ["left","right"].map(function(side){return Number(getComputedStyle(document.getElementById("prince-dungeon-light-"+side)).opacity);});}',
+  'click("prince-dungeon-torch-left");report.steps.one={state:window.__princeDungeonState(),caption:window.__captionKey(),wallPointer:getComputedStyle(document.getElementById("prince-play-wall")).pointerEvents,lights:lights()};',
+  'click("prince-dungeon-torch-right");report.steps.dark={state:window.__princeDungeonState(),caption:window.__captionKey(),wallPointer:getComputedStyle(document.getElementById("prince-play-wall")).pointerEvents,lights:lights()};',
   'setLang("cs");report.steps.cs={caption:document.getElementById("hunt-caption").textContent.trim()};setLang("en");',
-  'click("prince-dungeon-torch-left");report.steps.relit={state:window.__princeDungeonState(),caption:window.__captionKey()};',
+  'click("prince-dungeon-torch-left");report.steps.relit={state:window.__princeDungeonState(),caption:window.__captionKey(),lights:lights()};',
   'var chain=document.getElementById("prince-dungeon-chain"),rect=chain.getBoundingClientRect();chain.dispatchEvent(new PointerEvent("pointerdown",{pointerId:17,clientX:rect.left+5,clientY:rect.top+5,bubbles:true,cancelable:true}));chain.dispatchEvent(new PointerEvent("pointermove",{pointerId:17,clientX:rect.left+105,clientY:rect.top+205,bubbles:true,cancelable:true}));report.steps.drag=window.__princeDungeonState();chain.dispatchEvent(new PointerEvent("pointerup",{pointerId:17,clientX:rect.left+105,clientY:rect.top+205,bubbles:true,cancelable:true}));report.steps.drop=window.__princeDungeonState();',
   'await sleep(2450);report.steps.later=window.__princeDungeonState();window.__closeMonitorPrince();',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
@@ -39,15 +40,16 @@ check(s.open && s.open.state.dripNodes === 1 && s.open.state.dripRunning && s.op
   s.open.catParent === "prince-cat-overlay" && s.open.catReaction,
   "one drip and one rat share the authored dungeon with its routed cat", s.open);
 check(s.one && s.one.state.torchesOut === 1 && !s.one.state.dark &&
-  s.one.caption === "lower_dungeon" && s.one.wallPointer !== "none",
+  s.one.caption === "lower_dungeon" && s.one.wallPointer !== "none" &&
+  s.one.lights[0] === 0 && s.one.lights[1] > .5,
   "either torch independently leaves the wall readable", s.one);
 check(s.dark && s.dark.state.torchesOut === 2 && s.dark.state.dark &&
-  s.dark.caption === "prince_dark" && s.dark.wallPointer === "none",
+  s.dark.caption === "prince_dark" && s.dark.wallPointer === "none" && s.dark.lights.every(function (opacity) { return opacity === 0; }),
   "both snuffed torches materially darken and disable the play wall", s.dark);
 check(s.cs && s.cs.caption === "Na zeď je příliš tma.",
   "the dark caption switches to Czech", s.cs);
 check(s.relit && s.relit.state.torchesOut === 1 && !s.relit.state.dark &&
-  s.relit.caption === "lower_dungeon",
+  s.relit.caption === "lower_dungeon" && s.relit.lights[0] > .5 && s.relit.lights[1] === 0,
   "relighting one torch restores the wall", s.relit);
 check(s.drag && s.drag.chainX === 14 && s.drag.chainY === 78 && parseFloat(s.drag.gateLift) >= 60,
   "the weighted chain clamps both axes and raises the gate for its secret glimpse", s.drag);

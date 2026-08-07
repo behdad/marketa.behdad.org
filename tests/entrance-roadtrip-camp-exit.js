@@ -27,6 +27,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       takeable: sign.getAttribute("data-roadtrip-takeable"),
       roadRight: Number(sign.getAttribute("data-roadtrip-road-right")),
       signLeft: Number(sign.getAttribute("data-roadtrip-sign-left")),
+      signPostX: Number(sign.getAttribute("data-roadtrip-sign-post-x")),
       transform: sign.getAttribute("transform"),
       spur: spur.getAttribute("visibility"),
       asphalt: spur.querySelector(".entrance-roadtrip-camp-spur-asphalt").getAttribute("d"),
@@ -53,6 +54,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var first = initial.abrahamSeconds;
         var repeat = initial.campExitRepeatSeconds;
 
+        setAbraham(first - 14, .5, 50);
+        report.farExit = { state: roadtrip(), visual: visual() };
         setAbraham(first - 1, .5, 50);
         report.firstExit = { state: roadtrip(), visual: visual() };
         for (var missStep = 0; missStep < 3; missStep++) window.__entranceDriveStep(1000);
@@ -96,7 +99,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 </script>`;
 
 function run(coarse) {
-  return lib.runPageSync("rsvp.html", HARNESS, 4400, {
+  return lib.runPageSync("rsvp.html", HARNESS, 2800, {
     patchRaf: true,
     forceMotion: true,
     seedRandom: true,
@@ -129,6 +132,14 @@ var mobile = run(true);
   var device = index ? "touch" : "desktop";
   var expectedRepeat = index ? 45 : 60;
   check(clean(result), device + " scenario has no uncaught errors", result && result.errors);
+  var far = result && result.farExit || {};
+  var farState = far.state || {};
+  var farVisual = far.visual || {};
+  check(farState.route === "abraham" && farState.campExitVisible && !farState.campExitTakeable &&
+    farVisual.sign === "visible" && farVisual.spur === "visible" &&
+    farVisual.destinationX > farVisual.junctionX && farVisual.destinationY < farVisual.junctionY &&
+    farVisual.signPostX > farVisual.destinationX && farVisual.signPostX - farVisual.destinationX < 30,
+    device + " shows the upper-right branch fourteen seconds before the exit", far);
   var first = result && result.firstExit || {};
   var firstState = first.state || {};
   var firstVisual = first.visual || {};
@@ -142,7 +153,7 @@ var mobile = run(true);
     firstVisual.destinationX > firstVisual.junctionX + 20 &&
     firstVisual.destinationY < firstVisual.junctionY - 15 &&
     firstVisual.nearWidth > firstVisual.farWidth * 2 && firstVisual.nearWidth < 80 &&
-    firstVisual.signLeft - firstVisual.destinationX >= 5.9 &&
+    firstVisual.signPostX > firstVisual.destinationX && firstVisual.signPostX - firstVisual.destinationX < 30 &&
     /^M/.test(firstVisual.asphalt || "") && /^M/.test(firstVisual.innerEdge || ""),
     device + " paints a receding upper-right spur with its larger sign beside it", firstVisual);
 

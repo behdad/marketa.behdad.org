@@ -37439,7 +37439,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_LAKE_TURNOFF_SECONDS = ROADTRIP_LAKE_TURNOFF_DESKTOP_SECONDS * ROADTRIP_DURATION_SCALE;
   var ROADTRIP_ABRAHAM_SECONDS = ROADTRIP_ABRAHAM_DESKTOP_SECONDS * ROADTRIP_DURATION_SCALE;
   var ROADTRIP_SHORTCUT_REMAINING_SECONDS = 3;
-  var ROADTRIP_CAMP_SIGN_SECONDS = 7;
+  var ROADTRIP_CAMP_SIGN_SECONDS = 16;
   var ROADTRIP_CAMP_EXIT_LEAD_SECONDS = 2.4;
   var ROADTRIP_CAMP_EXIT_TAIL_SECONDS = 1.2;
   var ROADTRIP_CAMP_EXIT_REPEAT_DESKTOP_SECONDS = 60;
@@ -42753,20 +42753,21 @@ window.__entranceRoomOpen = false;
     node.setAttribute("transform", "translate(" + x.toFixed(2) + " " +
       point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
   }
-  function paintRoadtripCampSpur(point, progress, signScale, signHalfWidth) {
+  function paintRoadtripCampSpur(point, signScale, signHalfWidth) {
     if (!roadtripCampSpurNode) return null;
-    var junctionPoint = roadtripProject(Math.max(8, point.remaining * .28));
-    var junctionInner = roadtripProjectLateral(junctionPoint, .82);
-    var junctionOuter = roadtripProjectLateral(junctionPoint, 1.04);
+    var junctionPoint = roadtripProject(Math.max(4, point.remaining - 12));
+    var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 28));
+    var junctionInner = roadtripProjectLateral(junctionPoint, 1);
+    var junctionOuter = roadtripProjectLateral(junctionPoint, 1.22);
     var junctionY = junctionPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
     var destinationLimit = 680 - signHalfWidth * signScale * 2 - 12;
     var destinationX = Math.min(destinationLimit, Math.max(
-      mainRoadRight + 100 + progress * 45,
-      (junctionInner + junctionOuter) / 2 + 48));
-    var destinationY = Math.max(-4, point.y - 18 - progress * 4);
-    var farHalfWidth = 5 + point.perspective * 5;
-    var shoulderInset = 3 + junctionPoint.perspective * 3;
+      mainRoadRight + 18,
+      (junctionInner + junctionOuter) / 2 + 20 + junctionPoint.perspective * 58));
+    var destinationY = destinationPoint.y;
+    var farHalfWidth = 3.5 + destinationPoint.perspective * 5;
+    var shoulderInset = 1.5 + junctionPoint.perspective * 2.5;
     var shoulder = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-shoulder");
     var asphalt = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-asphalt");
     var innerEdge = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-inner-edge");
@@ -42803,14 +42804,16 @@ window.__entranceRoomOpen = false;
     roadtripCampSpurNode.setAttribute("data-roadtrip-near-width", (junctionOuter - junctionInner).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-far-width", (farHalfWidth * 2).toFixed(2));
     roadtripCampSpurNode.setAttribute("visibility", "visible");
-    return { x: destinationX, y: destinationY, roadRight: mainRoadRight };
+    return { x: destinationX, y: destinationY, halfWidth: farHalfWidth, roadRight: mainRoadRight };
   }
   function positionRoadtripCampExitSign(node, point, scale, halfWidth, spur) {
     var roadRight = spur ? spur.roadRight : roadtripProjectLateral(point, 1);
-    var signLeft = Math.max(roadRight + 6, (spur ? spur.x : roadRight) + 6);
-    var x = signLeft + halfWidth * scale;
+    var x = Math.max(roadRight + halfWidth * scale + 6,
+      spur ? spur.x + spur.halfWidth + 8 : roadRight + halfWidth * scale + 6);
+    var signLeft = x - halfWidth * scale;
     node.setAttribute("data-roadtrip-road-right", roadRight.toFixed(2));
     node.setAttribute("data-roadtrip-sign-left", signLeft.toFixed(2));
+    node.setAttribute("data-roadtrip-sign-post-x", x.toFixed(2));
     node.setAttribute("transform", "translate(" + x.toFixed(2) + " " +
       (spur ? spur.y : point.y).toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
   }
@@ -42956,7 +42959,7 @@ window.__entranceRoomOpen = false;
         var campSignRemaining = 106 - campSignProgress * 86;
         var campSignPoint = roadtripProject(campSignRemaining);
         var campSignScale = .19 + campSignPoint.perspective * .98;
-        var campSpur = paintRoadtripCampSpur(campSignPoint, campSignProgress, campSignScale, 56);
+        var campSpur = paintRoadtripCampSpur(campSignPoint, campSignScale, 56);
         positionRoadtripCampExitSign(roadtripCampExitNode, campSignPoint, campSignScale, 56, campSpur);
         roadtripCampExitNode.setAttribute("data-roadtrip-takeable", campTiming.takeable ? "true" : "false");
         roadtripCampExitNode.setAttribute("visibility", "visible");

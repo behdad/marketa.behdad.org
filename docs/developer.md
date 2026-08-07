@@ -261,6 +261,16 @@ profiles read their anchor pan through a 250ms cache (`porscheDrivePanFor`) inst
 `panForElId` per tick — the live read forces a synchronous layout, which was the single largest
 per-tick cost on throttled CPUs.
 
+Cross-room state styling uses `html.mir-*` scope-mirror classes instead of top-anchored `:has()`
+(`body:has(…)`, `.hunt-viewport:has(…)`, `#loft-game-strip:has(…)`): those selectors charged every
+DOM mutation anywhere a document-wide style-invalidation sweep (~13ms desktop, 50-80ms throttled —
+the dominant Road Trip frame cost). One MutationObserver over the source elements' class attributes
+(`syncScopeMirrors`, end of the main script) keeps the mirrors true, and the canonical toggle
+functions also ping `window.__syncScopeMirrors()` synchronously so same-task computed-style reads
+(tests, screenshots) stay coherent. `tests/check.js` enforces both invariants: no reintroduced
+top-anchored `:has()`, and CSS↔JS mirror-class parity. Room-scoped `:has()` (a stage, a context
+menu, the touch pads) remains fine.
+
 ### Camping
 
 `campExitDistance` preserves Abraham's recurring-exit phase. During its projected sign/spur window,

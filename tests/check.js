@@ -905,6 +905,34 @@ function checkI18nKeys(file, script, html) {
 //   2. border-box height − vertical padding = exactly 12 of the 2.8px line boxes
 //      (a bottom-pinned scrollback must never straddle a line across the top edge —
 //      and the border-box/content-box math is exactly what silently broke once).
+// Top-anchored :has() (body/.hunt-viewport/#loft-game-strip/…) charges EVERY DOM mutation a
+// document-wide style-invalidation sweep — the dominant Road Trip frame cost before the
+// html.mir-* scope mirrors replaced those rules. Two invariants: (1) no broad :has anchors
+// creep back in; (2) every mir-* class the CSS keys on is one syncScopeMirrors actually sets
+// (and vice versa), so the mirror can't silently drift from the stylesheet.
+function checkScopeMirrorHygiene(file, style, script) {
+  if (file !== "rsvp.html" || !style || !script) return;
+  var broad = [];
+  style.split("\n").forEach(function (line, i) {
+    if (/(?:^|[\s,{}])(?:body|html|\.hunt-viewport|#hunt-fullscreen-area|#loft-game-strip|#entrance-room|#entrance-drive-hud)[^\s,{]*:has\(/.test(line)) {
+      broad.push("style line " + (i + 1) + ": " + line.trim().slice(0, 110));
+    }
+  });
+  if (broad.length) fail(file + ": top-anchored :has() reintroduced — key on an html.mir-* scope mirror instead", broad.join("\n"));
+  else pass(file + ": no top-anchored :has() selectors");
+  var cssMirs = {}, jsMirs = {};
+  (style.match(/\bmir-[a-z-]+/g) || []).forEach(function (m) { cssMirs[m] = true; });
+  (script.match(/toggle\("(mir-[a-z-]+)"/g) || []).forEach(function (m) { jsMirs[m.slice(8, -1)] = true; });
+  var cssOnly = Object.keys(cssMirs).filter(function (m) { return !jsMirs[m]; });
+  var jsOnly = Object.keys(jsMirs).filter(function (m) { return !cssMirs[m]; });
+  if (cssOnly.length || jsOnly.length) {
+    fail(file + ": mir-* scope mirrors drifted between CSS and syncScopeMirrors",
+      (cssOnly.length ? "CSS-only: " + cssOnly.join(", ") : "") +
+      (jsOnly.length ? " JS-only: " + jsOnly.join(", ") : ""));
+  } else {
+    pass(file + ": mir-* scope mirrors agree between CSS and syncScopeMirrors (" + Object.keys(cssMirs).length + ")");
+  }
+}
 function checkConsoleOutClipSlack(file, style) {
   if (file !== "rsvp.html" || !style) return;
   var m = style.match(/\.console-out\{([^}]*)\}/);
@@ -1329,6 +1357,7 @@ FILES.forEach(function (file) {
   checkAnimationKeyframes(file, style);
   checkTransformClobber(file, style, html);
   checkConsoleOutClipSlack(file, style);
+  checkScopeMirrorHygiene(file, style, script);
   checkSvgTagBalance(file, html);
   checkCampBuilderOverlayOrder(file, html);
   checkStaticDomIds(file, html);

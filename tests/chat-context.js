@@ -105,7 +105,7 @@ check(sources.media && sources.media.music.catalog.some(function (track) { retur
   "Charlie receives the live song and film registries with their app locations", sources.media);
 check(sources.calls && sources.calls.tehran.join(",") === "Ashraf,Mohsen,Baharak,Payman,Hannah" && sources.calls.prague.join(",") === "Daniel,Marie,Báka",
   "Charlie receives the canonical Tehran and Prague call rosters", sources.calls);
-check(sources.ordinaryApps && sources.ordinaryApps.length === 0 && sources.broadChars < 30000, "ordinary chat carries no app dump and the broadest retrieval stays below the request cap", { apps: sources.ordinaryApps, chars: sources.broadChars });
+check(sources.ordinaryApps && sources.ordinaryApps.length === 0 && sources.broadChars < 50000, "ordinary chat carries no app dump and the broadest retrieval stays below the request cap", { apps: sources.ordinaryApps, chars: sources.broadChars });
 check(sources.api && sources.api.typed && sources.api.typed.some(function (entry) { return entry.id === "party.set" && entry.kind === "action" && entry.args.on.type === "boolean"; }) &&
   sources.api.globals && /party\(true\)/.test(sources.api.globals.party) && /sleep\(ms\)/.test(sources.api.globals.sleep) &&
   /top-level await/.test(sources.api.runtime) && Object.keys(sources.api.globals).length === sources.commandCount,

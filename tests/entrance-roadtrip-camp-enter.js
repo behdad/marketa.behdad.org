@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Document-level Enter walks Camping one bounded action at a time, including all 19 trace stars.
+// Document-level Enter walks Camping one bounded action at a time, including all 19 trace stars
+// and the ready wisdom handoff.
 "use strict";
 
 var lib = require("./lib");
@@ -26,7 +27,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       igniting: document.getElementById("entrance-roadtrip-fire-game").classList.contains("igniting"),
       stew: window.__entranceRoadtripCampStewState(),
       stargazing: window.__entranceRoadtripCampStargazingState(),
-      dusk: document.getElementById("stage-balcony").classList.contains("dusk")
+      dusk: document.getElementById("stage-balcony").classList.contains("dusk"),
+      caption: window.__captionKey && window.__captionKey(),
+      wisdomShown: document.getElementById("entrance-roadtrip-camp-wisdom").classList.contains("show"),
+      tentOpen: document.getElementById("entrance-roadtrip-camp-tent").classList.contains("open")
     };
   }
   function total(progress) {
@@ -89,6 +93,20 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.complete = snap();
     enter(false);
     report.completeInert = snap();
+    await sleep(180);
+
+    var checkpoint = window.__captureCheckpointSystems().entrance;
+    checkpoint.drive.roadtrip.stargazing.wisdomHandoffReady = true;
+    window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
+    await sleep(180);
+    report.handoffReady = snap();
+    enter(false);
+    report.handoffAdvanced = snap();
+    window.__restoreCheckpointSystems({ entrance: checkpoint }, "afterStage");
+    await sleep(180);
+    document.getElementById("entrance-roadtrip-camp-wisdom").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
+    report.handoffClickBaseline = snap();
   }
   window.addEventListener("load", function () {
     setTimeout(function () {
@@ -155,7 +173,22 @@ check(result && result.starSteps.length === 19 && result.starSteps.every(functio
 check(result && result.complete.active && result.complete.stargazing.complete && !result.complete.stargazing.open &&
   result.completeInert.active && result.completeInert.stargazing.complete &&
   JSON.stringify(result.completeInert.stargazing.progress) === JSON.stringify(result.complete.stargazing.progress),
-  "completed Camping owns Enter as an inert action and remains open", result && result.completeInert);
+  "completed Camping keeps Enter inert until the wisdom handoff is ready", result && result.completeInert);
+check(result && result.handoffReady.active && result.handoffReady.wisdomShown &&
+  result.handoffReady.stargazing.wisdomHandoffReady &&
+  result.handoffReady.caption === "entrance_roadtrip_stargazing_continue" &&
+  result.handoffAdvanced.active && !result.handoffAdvanced.wisdomShown &&
+  result.handoffAdvanced.stargazing.wisdomDismissed &&
+  !result.handoffAdvanced.stargazing.wisdomHandoffReady &&
+  result.handoffAdvanced.stargazing.sleepPhase === "prompt" &&
+  result.handoffAdvanced.caption === "entrance_roadtrip_camp_sleep_prompt" &&
+  !result.handoffAdvanced.tentOpen && result.handoffClickBaseline.active &&
+  result.handoffClickBaseline.wisdomShown === result.handoffAdvanced.wisdomShown &&
+  result.handoffClickBaseline.caption === result.handoffAdvanced.caption &&
+  result.handoffClickBaseline.tentOpen === result.handoffAdvanced.tentOpen &&
+  JSON.stringify(result.handoffClickBaseline.stargazing) === JSON.stringify(result.handoffAdvanced.stargazing),
+  "ready wisdom Enter exactly matches the click handoff without leaving Camping or activating its tent",
+  result && { ready: result.handoffReady, enter: result.handoffAdvanced, click: result.handoffClickBaseline });
 check(result && result.prevented.every(Boolean), "every campsite-owned Enter is consumed before global navigation", result && result.prevented);
 
 if (failures) process.exit(1);

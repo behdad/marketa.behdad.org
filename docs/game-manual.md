@@ -210,9 +210,10 @@ overcooked pot. After serving, click the sky or press `Enter` to carry the whole
 into a clear night. Trace Cassiopeia, Ursa Major, and Ursa Minor by selecting each glowing star;
 `Enter` advances exactly one star. The completed constellations and closing campfire exchange remain
 in the live campsite, and their individual stars can be dragged around the night sky. After all four
-remarks appear, the caption invites a click anywhere to continue; that click dismisses the exchange
-without activating a campsite prop. Put out the fire when the sleep suggestion appears. The campers
-retire into the glowing tent, the campsite goes dark, and a few rising Zs lead back to the RSVP
+remarks appear, the caption invites a click anywhere to continue; either that click or `Enter`
+dismisses the exchange without leaving Camping or activating a campsite prop. Put out the fire when
+the sleep suggestion appears. The campers retire into the glowing tent, the campsite goes dark, and
+a few rising Zs lead back to the RSVP
 reminder. Leaving before that curtain call finishes preserves Camping; leaving after it finishes
 makes the next **Camping** visit begin again at an empty firepit.
 

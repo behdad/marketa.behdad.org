@@ -40927,6 +40927,7 @@ window.__entranceRoomOpen = false;
     if (!campStewState.open) return false;
     resetCampStew(false);
     syncRoadtripCampFireCaption(false);
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   function selectCampStewItem(item) {
@@ -40939,6 +40940,7 @@ window.__entranceRoomOpen = false;
       campStewState[item] = !campStewState[item];
     } else return false;
     paintRoadtripCampStew();
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return campStewSnapshot();
   }
   function startCampStew() {
@@ -40999,7 +41001,8 @@ window.__entranceRoomOpen = false;
     return "served";
   }
   function captureCampStew() {
-    if (campStewState.status === "assembling") return null;
+    if (campStewState.status === "assembling" && !campStewState.protein && !campStewState.starch &&
+        !CAMP_STEW_EXTRAS.some(function (name) { return campStewState[name]; })) return null;
     return {
       protein: campStewState.protein,
       onion: campStewState.onion,
@@ -41021,10 +41024,14 @@ window.__entranceRoomOpen = false;
   }
   function restoreCampStew(row) {
     resetCampStew(false);
-    if (!row || typeof row !== "object" || row.status === "assembling") return;
+    if (!row || typeof row !== "object") return;
     campStewState.protein = CAMP_STEW_PROTEINS.indexOf(row.protein) >= 0 ? row.protein : "";
     CAMP_STEW_EXTRAS.forEach(function (name) { campStewState[name] = row[name] === true; });
     campStewState.starch = CAMP_STEW_STARCHES.indexOf(row.starch) >= 0 ? row.starch : "";
+    if (row.status === "assembling") {
+      paintRoadtripCampStew();
+      return;
+    }
     if (!campStewRecipeComplete()) {
       resetCampStew(false);
       return;
@@ -41633,6 +41640,7 @@ window.__entranceRoomOpen = false;
     else if (item === "teepee" || item === "stack") campFireState.logs = campFireState.logs === item ? "" : item;
     else return false;
     paintRoadtripCampFire();
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   function failRoadtripCampFire(key, consumeTinder, consumeTwigs) {
@@ -41650,6 +41658,7 @@ window.__entranceRoomOpen = false;
     setTimeout(function () { if (campFireGame) campFireGame.classList.remove("failed"); }, 760);
     paintRoadtripCampFire();
     roadtripFeedback(key);
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return key;
   }
   function lightRoadtripCampFire(closeBuilder) {
@@ -49291,6 +49300,13 @@ window.__entranceRoomOpen = false;
       roadtrip.campFireBuilt = campFireState.complete;
       roadtrip.campFireLit = campFireState.complete && campFireState.lit;
       roadtrip.campPinecones = campFireState.pinecones;
+      if (!campFireState.complete && (campFireState.tinder || campFireState.twigs || campFireState.logs)) {
+        roadtrip.campFireDraft = {
+          tinder: campFireState.tinder,
+          twigs: campFireState.twigs,
+          logs: campFireState.logs
+        };
+      }
       roadtrip.stew = captureCampStew();
       roadtrip.stargazing = captureCampStargazing();
       roadtrip.campActive = roadtripState.active && roadtripState.route === "camp";
@@ -49379,9 +49395,12 @@ window.__entranceRoomOpen = false;
           campFireState.complete = roadtrip.campFireBuilt === true;
           campFireState.lit = campFireState.complete && roadtrip.campFireLit !== false;
           campFireState.open = false;
-          campFireState.tinder = false;
-          campFireState.twigs = false;
-          campFireState.logs = "";
+          var campFireDraft = !campFireState.complete && roadtrip.campFireDraft &&
+            typeof roadtrip.campFireDraft === "object" ? roadtrip.campFireDraft : null;
+          campFireState.tinder = !!(campFireDraft && campFireDraft.tinder === true);
+          campFireState.twigs = !!(campFireDraft && campFireDraft.twigs === true);
+          campFireState.logs = campFireDraft && ["teepee", "stack"].indexOf(campFireDraft.logs) >= 0 ?
+            campFireDraft.logs : "";
           campFireState.igniting = false;
           campFireState.pinecones = Number.isFinite(Number(roadtrip.campPinecones)) ?
             Math.max(0, Math.min(4, Math.floor(Number(roadtrip.campPinecones)))) : 0;

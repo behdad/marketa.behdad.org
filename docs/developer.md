@@ -246,7 +246,8 @@ Camping begins with an empty pit and publishes `entrance_roadtrip_camp_fire_invi
 bounded pinecone collection, and success transition. Up to four cones dropped into an unlit pit
 persist with the camp and can substitute for twigs; drops onto a lit proper fire flare and burn
 away. The one-shot flame/flare is transient. Built and lit/off state are durable; unfinished fuel
-resets on Continue.
+choices also checkpoint and restore with the builder closed. An in-flight ignition restores as its
+assembled, actionable fuel state rather than replaying its timer.
 Success restores the finished fire with an empty silver pot and publishes the stable, non-clickable
 `entrance_roadtrip_stew_invite` caption while it burns. A lit fire ignores early replay clicks and
 becomes extinguishable only from the explicit sleep prompt, which prevents dinner/stargazing state
@@ -262,8 +263,9 @@ Continue restores that record exactly; a row without it is fresh onboarding, nev
 `campStewState` owns the exact protein/base choices, six required fixed ingredients, close-up state,
 attended cooking elapsed time, and served/overcooked payoff. `advanceCampStew()` applies the slower
 open-lid rate and advances only with a lit fire in an attended camp; runtime frame deltas are capped
-so returning to a throttled tab cannot skip phases. Recipe/progress/payoff are checkpointed, while
-the builder and lid reopen closed. `arriveRoadtripCamp()` resets stew for a genuinely fresh arrival.
+so returning to a throttled tab cannot skip phases. Recipe drafts, cooking progress, and payoff are
+checkpointed, while the builder and lid restore closed. `arriveRoadtripCamp()` resets stew for a
+genuinely fresh arrival.
 
 The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 `__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,

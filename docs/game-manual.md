@@ -208,14 +208,16 @@ and every fixed pantry item, then cook it in the camp pot. The lid lets you peek
 and opens when dinner is ready; an extinguished fire pauses it. Serve then, or reset a comically
 overcooked pot. After serving, click the sky or press `Enter` to carry the whole game through sunset
 into a clear night. Trace Cassiopeia, Ursa Major, and Ursa Minor by selecting each glowing star;
-`Enter` advances exactly one star. The completed constellations and closing campfire exchange remain
-in the live campsite, and their individual stars can be dragged around the night sky. After all four
-remarks appear, the caption invites a click anywhere to continue; either that click or `Enter`
-dismisses the exchange without leaving Camping or activating a campsite prop. Put out the fire when
-the sleep suggestion appears. The campers retire into the glowing tent, the campsite goes dark, and
-a few rising Zs lead back to the RSVP
-reminder. Leaving before that curtain call finishes preserves Camping; leaving after it finishes
-makes the next **Camping** visit begin again at an empty firepit.
+`Enter` advances exactly one star. Their loose stars are already seeded in the ordinary camp sky;
+finishing the trace joins them with faint lines. The completed constellations and closing campfire
+exchange remain in the live campsite, and their individual stars can be dragged around the night
+sky. After all four remarks appear, the caption invites a click anywhere to continue; either that
+click or `Enter` dismisses the exchange without leaving Camping or activating a campsite prop. Put
+out the fire when the sleep
+suggestion appears. The campers retire into the glowing tent, the solved constellations recede into
+a much denser twinkling sky, and a few rising Zs lead back to the RSVP reminder. Leaving before that
+curtain call finishes preserves Camping; leaving after it finishes makes the next **Camping** visit
+begin again at an empty firepit.
 
 Leaving the highway keeps the dashboard available and never resumes the run automatically. The
 **Road Trip** control offers the actions currently available: continue a paused run, start a new

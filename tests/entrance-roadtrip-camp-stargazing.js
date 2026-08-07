@@ -124,6 +124,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var moonGlow = moon.querySelector("circle");
     var skyHit = document.getElementById("entrance-roadtrip-camp-sky-hit");
     var liveStars = live.querySelectorAll("[data-live-stargazing-star]");
+    var liveLine = live.querySelector(".entrance-roadtrip-camp-finale-line");
     var liveHitRadius = Number(live.querySelector(".entrance-roadtrip-camp-finale-star-hit").getAttribute("r"));
     var campRidge = ridgePoints(document.getElementById("entrance-roadtrip-camp-ridge"));
     var wisdomHit = document.getElementById("entrance-roadtrip-camp-wisdom-hit");
@@ -148,6 +149,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       })),
       liveOpacity: Number(getComputedStyle(live).opacity),
       livePointer: getComputedStyle(live).pointerEvents,
+      liveLineOpacity: Number(getComputedStyle(liveLine).opacity),
+      liveLineStroke: getComputedStyle(liveLine).stroke,
+      liveLineWidth: parseFloat(getComputedStyle(liveLine).strokeWidth),
+      ordinaryPatternOpacities: ["cassiopeia", "dipper", "cygnus"].map(function (name) {
+        return Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-const-" + name)).opacity);
+      }),
       liveConstellations: live.querySelectorAll("[data-live-stargazing-constellation]").length,
       liveStars: live.querySelectorAll("[data-live-stargazing-star]").length,
       liveMinHit: Math.min.apply(null, Array.prototype.map.call(live.querySelectorAll(".entrance-roadtrip-camp-finale-star-hit"), function (node) { return Number(node.getAttribute("r")); })),
@@ -327,8 +334,12 @@ var result = lib.runPageSync("rsvp.html", HARNESS, 10000, {
 });
 function same(actual, expected) { return JSON.stringify(actual) === JSON.stringify(expected); }
 check(result && result.errors.length === 0, "the finale has no uncaught errors", result && result.errors);
-check(result && result.beforeStew && !result.beforeStew.state.eligible && result.beforeStew.skyPointer === "none",
-  "the sky remains scenery before dinner is served", result && result.beforeStew);
+check(result && result.beforeStew && !result.beforeStew.state.eligible && result.beforeStew.skyPointer === "none" &&
+  result.beforeStew.liveOpacity === .68 && result.beforeStew.liveLineOpacity === 0 &&
+  result.beforeStew.livePointer === "none" && result.beforeStew.liveStarCursor === "default" &&
+  result.beforeStew.ordinaryPatternOpacities.every(function (opacity) { return opacity === 0; }),
+  "the ordinary night seeds the three eventual figures as inert, unconnected stars",
+  result && result.beforeStew);
 check(result && result.ready && result.ready.state.eligible && result.ready.skyPointer === "all" &&
   result.ready.skyCursor === "pointer",
   "served stew unlocks the sky with the standard pointing-hand cursor", result && result.ready);
@@ -363,6 +374,8 @@ check(result && result.partialRestored && !result.partialRestored.state.open &&
   "Continue restores progress with the popup closed", result && result.partialRestored);
 check(result && result.complete && result.complete.state.complete && !result.complete.state.open &&
   !result.complete.openClass && result.complete.liveOpacity === 1 &&
+  result.complete.liveLineOpacity === .22 && result.complete.liveLineStroke === "rgb(220, 236, 255)" &&
+  result.complete.liveLineWidth === .55 &&
   result.complete.skyPointer === "none" && result.complete.skyCursor === "default" &&
   result.complete.livePointer === "all" && result.complete.liveStarCursor === "grab" &&
   result.complete.liveConstellations === 3 && result.complete.liveStars === 19 && result.complete.liveMinHit >= 14 &&

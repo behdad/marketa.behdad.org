@@ -21,6 +21,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     var camp = document.getElementById("entrance-roadtrip-camp");
     var room = document.getElementById("entrance-room");
     var tent = document.getElementById("entrance-roadtrip-camp-tent");
+    var liveConstellations = document.getElementById("entrance-roadtrip-camp-finale-constellations");
+    var finaleConstellations = document.getElementById("entrance-roadtrip-camp-finale-sleep-constellations");
+    var fieldStars = Array.prototype.slice.call(document.querySelectorAll(".entrance-roadtrip-camp-finale-field-star"));
+    var radii = fieldStars.map(function (star) { return Number(star.getAttribute("r")); });
     var roadtrip = window.__captureCheckpointSystems().entrance.drive.roadtrip;
     return {
       phase: window.__entranceRoadtripCampSleepState().phase,
@@ -48,6 +52,19 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       windshieldGlaze: getComputedStyle(document.getElementById("entrance-roadtrip-windshield-glaze")).visibility,
       nightSky: Number(getComputedStyle(document.getElementById("entrance-roadtrip-camp-finale-night-sky")).opacity),
       nightSkyUses: document.querySelectorAll("#entrance-roadtrip-camp-finale-night-sky use").length,
+      liveConstellationOpacity: Number(getComputedStyle(liveConstellations).opacity),
+      liveConstellationTransform: getComputedStyle(liveConstellations).transform,
+      liveConstellationPointer: getComputedStyle(liveConstellations).pointerEvents,
+      finaleConstellationOpacity: Number(getComputedStyle(finaleConstellations).opacity),
+      fieldStars: fieldStars.length,
+      fieldRadiusMin: Math.min.apply(null, radii),
+      fieldRadiusMax: Math.max.apply(null, radii),
+      fieldDurations: new Set(fieldStars.map(function (star) {
+        return star.style.getPropertyValue("--camp-star-duration");
+      })).size,
+      fieldDelays: new Set(fieldStars.map(function (star) {
+        return star.style.getPropertyValue("--camp-star-delay");
+      })).size,
       zzzs: document.querySelectorAll(".entrance-roadtrip-camp-finale-zzz").length,
       classes: ["fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete"].filter(function (name) {
         return camp.classList.contains("camp-sleep-" + name);
@@ -160,7 +177,9 @@ check(result && result.exchange && result.exchange.wisdomShown && !result.exchan
   "the exchange has no private close button and keeps the standard campsite exit", result && result.exchange);
 check(result && result.prompt && result.prompt.phase === "prompt" && !result.prompt.wisdomShown &&
   result.prompt.caption === "entrance_roadtrip_camp_sleep_prompt" && result.prompt.fireLit &&
-  result.prompt.savedPhase === "prompt" && /put out the fire/i.test(result.prompt.captionText),
+  result.prompt.savedPhase === "prompt" && result.prompt.liveConstellationOpacity === 1 &&
+  result.prompt.liveConstellationTransform === "none" && result.prompt.liveConstellationPointer === "all" &&
+  /put out the fire/i.test(result.prompt.captionText),
   "dismissing the exchange suggests sleep and putting out the fire", result && result.prompt);
 check(result && /Uhasme oheň/.test(result.czechPrompt || ""),
   "the sleep suggestion switches to Czech", result && result.czechPrompt);
@@ -169,8 +188,10 @@ check(result && result.promptExit && !result.promptExit.campActive && result.pro
   result.promptReturn.fireBuilt && result.promptReturn.fireLit && result.promptReturn.stew,
   "leaving at the prompt preserves the completed campsite", { exit: result && result.promptExit, back: result && result.promptReturn });
 check(result && result.fireOut && result.fireOut.phase === "fire-out" && !result.fireOut.fireLit &&
-  result.fireOut.fireOpacity === 0 && result.fireOut.classes.indexOf("fire-out") >= 0,
-  "clicking the fire starts the curtain call by extinguishing it", result && result.fireOut);
+  result.fireOut.fireOpacity === 0 && result.fireOut.classes.indexOf("fire-out") >= 0 &&
+  result.fireOut.liveConstellationOpacity === .24 && result.fireOut.liveConstellationTransform !== "none" &&
+  result.fireOut.liveConstellationPointer === "none",
+  "clicking the fire extinguishes it and lets the solved constellations retreat", result && result.fireOut);
 check(result && result.runningExit && !result.runningExit.campActive && result.runningReturn &&
   result.runningReturn.phase === "fire-out" && result.runningReturn.stew &&
   result.runningReturn.savedPhase === "fire-out",
@@ -183,9 +204,11 @@ check(result && result.tentLit && result.tentLit.phase === "tent-lit" && !result
   "the tent closes and glows", result && result.tentLit);
 check(result && result.dark && result.dark.phase === "dark" && result.dark.darkness === .78 &&
   result.dark.darknessFill === "#061b2c" && result.dark.nightSky === 1 &&
-  result.dark.nightSkyUses === 4 && result.dark.tentLight === 1 &&
+  result.dark.nightSkyUses === 3 && result.dark.finaleConstellationOpacity === .22 &&
+  result.dark.fieldStars >= 120 && result.dark.fieldRadiusMin < .4 && result.dark.fieldRadiusMax > 1.3 &&
+  result.dark.fieldDurations > 100 && result.dark.fieldDelays > 100 && result.dark.tentLight === 1 &&
   result.dark.windshieldGlaze === "hidden",
-  "the campsite settles into seamless deep navy while the stars and solved constellations stay bright",
+  "the campsite settles into deep navy with a varied, desynchronized star field and subdued constellations",
   result && result.dark);
 check(result && result.zzz && result.zzz.phase === "zzz" && result.zzz.tentLight === 0 &&
   result.zzz.zzzs === 3 && result.zzz.classes.indexOf("zzz") >= 0,

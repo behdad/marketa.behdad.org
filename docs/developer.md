@@ -251,14 +251,18 @@ The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
 `__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,
 celestial bodies, and expanded winter mountain snow. Served stew unlocks the campsite sky; selecting
 it during daylight commits the shared day/night state to night, locally clears camp weather, and then
-opens the stargazing trace. Completion closes that overlay, paints the constellations into the live
-campsite behind the moon, enables bounded per-star dragging that redraws each figure's connectors,
+opens the stargazing trace. The live Cassiopeia/Ursa Major/Ursa Minor geometry supplies the ordinary
+night's three unconnected seed patterns; completion closes the overlay, adds restrained `.55px`
+connectors behind the moon, enables bounded per-star dragging that redraws each figure's connectors,
 and holds the four edge-set, integrated-tail bubbles until dismissal; after a two-second beat,
 Behdad's pink and Markéta's blue bubbles reveal one second apart. Drag positions are session-only.
-Once the fourth reveal finishes, a persistent bilingual caption invites a click anywhere; a full-campsite transparent hit
-shield consumes that click, dismisses the exchange, and changes the caption to the sleep prompt
-without activating a prop. Clicking the fire starts the ordered fire-out → campers → tent-light →
-deep-blue darkness with a foreground star/constellation pass → Zs curtain call.
+Once the fourth reveal finishes, a persistent bilingual caption invites a click anywhere; a
+full-campsite transparent hit shield consumes that click, dismisses the exchange, and changes the
+caption to the sleep prompt without activating a prop. Clicking the fire starts the ordered
+fire-out → campers → tent-light →
+deep-blue darkness with a foreground field of static authored stars whose CSS-only twinkles run
+only during the dark finale; the solved constellation copy retreats and remains as subdued context
+instead of competing with the denser sky → Zs curtain call.
 `campStargazingState` checkpoints exact trace and handoff progress plus
 `campSleepState.phase`, but always restores the trace overlay closed. Leaving pauses an unfinished
 curtain call and preserves the campsite; leaving after its congratulations phase resets fire, stew,

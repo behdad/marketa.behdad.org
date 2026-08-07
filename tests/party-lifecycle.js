@@ -41,10 +41,29 @@ var harness = String.raw`<script>
   });
   check("direct party teardown clears the blacklight and magic-box glow", !window.__gardenPartyOn && strip && !strip.classList.contains("uv-mode") && !breather.uvPartyIntent && !breather.running && (!partySwitch || !partySwitch.classList.contains("on")));
   check("direct party teardown clears camera flashes and stepped spotlights", (!flashBloom || !flashBloom.classList.contains("flashing")) && (!flashWash || !flashWash.classList.contains("flashing")) && !discoInline);
+  var firstHandoff = window.__partyLifecycleState ? window.__partyLifecycleState() : {};
+  check("an early deliberate teardown durably delivers the Road Trip handoff immediately",
+    firstHandoff.handoffShown && firstHandoff.roadtripInviteDelivered &&
+      window.__phoneMessageReceived && window.__phoneMessageReceived("downstairs_entrance") &&
+      !Object.prototype.hasOwnProperty.call(firstHandoff, "roadtripInvitePending"), firstHandoff);
+  check("an incomplete-loft teardown pairs its dynamic caption with the red room-map coach",
+    firstHandoff.roomMapCoachActive && document.querySelector(".hunt-dollhouse-slot").classList.contains("party-bridge-coach") &&
+      /1 of 10 rooms/i.test(document.getElementById("hunt-caption").textContent),
+    document.getElementById("hunt-caption").textContent);
+  if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
+  check("opening the room map retires its coach durably",
+    !window.__partyLifecycleState().roomMapCoachActive &&
+      !document.querySelector(".hunt-dollhouse-slot").classList.contains("party-bridge-coach"));
 
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   check("the unnamed regulars leave when the night bar becomes a party", patrons && getComputedStyle(patrons).opacity === "0");
   check("party starts a fresh lifecycle", window.__partyLifecycleState && window.__partyLifecycleState().attended === 0 && window.__partyLifecycleState().running);
+  if (window.goToStage) window.goToStage("garden");
+  if (window.__showPartySwitchCoach) window.__showPartySwitchCoach();
+  check("the first-party coach points to the existing wall switch without taking focus",
+    document.getElementById("garden-lightswitch").classList.contains("party-bridge-coach") &&
+      document.activeElement !== document.getElementById("garden-lightswitch") &&
+      /end the party here/i.test(document.getElementById("hunt-caption").textContent));
 
   focused = false;
   window.__partyLifecycleTick();
@@ -53,9 +72,9 @@ var harness = String.raw`<script>
   window.__partyLifecycleTick();
   check("focused time counts", window.__partyLifecycleState().attended === 1);
 
-  if (window.goToStage) window.goToStage("garden");
   window.__advancePartyLifecycle(149);
-  check("elapsed attended time does not manufacture a close cue", window.__gardenPartyOn && !window.__partyExitHintActive() && window.__partyLifecycleState().attended === 150);
+  check("attended time offers a gentle close cue without ending the party",
+    window.__gardenPartyOn && window.__partyExitHintActive() && window.__partyLifecycleState().attended === 150);
   window.__advancePartyLifecycle(30);
   check("party remains live after 180 attended seconds", !!window.__gardenPartyOn && window.__partyLifecycleState().attended === 180);
   if (window.goToStage) window.goToStage("kitchen");
@@ -66,9 +85,10 @@ var harness = String.raw`<script>
   check("accepting the final cue schedules an attended early ending", finaleState.finaleAt > finaleState.attended && (finaleState.finaleReason === "lastdance" || finaleState.finaleReason === "lastsong"), finaleState);
   window.__advancePartyLifecycle(24);
   check("the accepted final dance or song ends the party", !window.__gardenPartyOn);
-  check("a finished party schedules Behdad’s road-trip invitation", window.__partyLifecycleState().roadtripInvitePending);
+  check("a finished party keeps the once-per-reset Road Trip handoff durable",
+    window.__partyLifecycleState().roadtripInviteDelivered && window.__phoneMessageReceived("downstairs_entrance"));
   var roadtripOffered = window.__offerPartyRoadtripInvite && window.__offerPartyRoadtripInvite();
-  check("the post-party invitation uses the authored road-trip message", roadtripOffered && window.__phoneMessageReceived("downstairs_entrance") &&
+  check("the post-party invitation uses the authored road-trip message", !roadtripOffered && window.__phoneMessageReceived("downstairs_entrance") &&
     T.en.msg_downstairs_entrance_body === "Fancy a road trip? 🚗🏔️🏕️" && T.cs.msg_downstairs_entrance_body === "Nechceš vyrazit na výlet? 🚗🏔️🏕️");
   check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
 
@@ -141,12 +161,14 @@ var harness = String.raw`<script>
   check("cake finale uses the normal party teardown", !window.__gardenPartyOn && !window.__cakeOn && stoppedDeparture && !stoppedDeparture.active && stoppedDeparture.gain === 1);
 
   setLang("cs");
+  if (window.__resetPartyExitHint) window.__resetPartyExitHint();
   if (window.__setGardenParty) window.__setGardenParty(true, false);
   if (window.goToStage) window.goToStage("kitchen");
   if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
   if (window.__setGardenParty) window.__setGardenParty(false, true);
   var partyEndCaption = document.getElementById("hunt-caption").textContent;
-  check("manual party-end copy is localized in Czech", !window.__gardenPartyOn && /hra ne/i.test(partyEndCaption) && /aplikace/i.test(partyEndCaption), partyEndCaption);
+  check("manual party-end progress copy is localized in Czech", !window.__gardenPartyOn &&
+    /Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndCaption) && /Pokračuj dál/.test(partyEndCaption), partyEndCaption);
   if (window.__runMsgAction) window.__runMsgAction("downstairs_entrance");
   check("accepting the road-trip invitation opens Entrance", window.currentStageName === "balcony" && window.__entranceRoomOpen);
   report();

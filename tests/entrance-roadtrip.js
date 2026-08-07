@@ -1270,16 +1270,16 @@ check(source.indexOf('id="entrance-roadtrip-winter"') < source.indexOf('id="entr
 check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&
   /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;\s*if \(roadtripState\.unlocked\) return;\s*roadtripState\.practiceLaps\+\+/.test(source) &&
   /roadtripState\.practiceLaps >= 1\) unlockRoadtrip\(\)/.test(source) &&
-  /function recordRoadtripInvitationTravel\(distance\)[\s\S]{0,800}roadtripState\.invitationDistance \+= [^;]+;[\s\S]{0,300}roadtripState\.invitationDistance < PORSCHE_WRAP_SPAN[\s\S]{0,300}roadtripState\.invitationReady = true;/.test(source) &&
-  /function resetRoadtripInvitationSession\(\)[\s\S]{0,300}roadtripState\.accepted = false;[\s\S]{0,200}roadtripState\.invitationReady = false;/.test(source),
-  "the source owns a one-lap initial unlock and full-distance retry gate before first acceptance");
+  /function resetRoadtripInvitationSession\(\)[\s\S]{0,450}!roadtripState\.unlocked \|\| roadtripState\.everAccepted[\s\S]{0,300}else if \(!roadtripState\.invitationReady[\s\S]{0,200}roadtripState\.invitationReady = true;/.test(source) &&
+  /invitationReady: roadtripState\.invitationReady,[\s\S]{0,100}invitationDismissed: roadtripState\.invitationDismissed/.test(source),
+  "the source owns a one-lap initial unlock and preserves its unaccepted chooser across sessions");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
   /function acceptRoadtripInvite\(event\)\s*\{\s*return openRoadtripRouteChooser\(event\);\s*\}/.test(source) &&
   /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-accept"\)\.dispatchEvent/.test(source) &&
   /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-later"\)\.dispatchEvent/.test(source),
   "the first highway entry is explicit and its full offer owns Enter and Escape");
 check(/id="entrance-roadtrip-reenter"[^>]+tabindex="0"/.test(source) &&
-  /roadtripState\.everAccepted && !roadtripState\.accepted\s*&&\s*!roadtripState\.active/.test(source) &&
+  /roadtripState\.everAccepted \|\| roadtripState\.invitationDismissed/.test(source) &&
   /data-roadtrip-reentry-choice="continue"/.test(source) &&
   /data-roadtrip-reentry-choice="new"/.test(source) &&
   /data-roadtrip-reentry-choice="camp"/.test(source) &&

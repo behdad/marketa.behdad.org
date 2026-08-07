@@ -128,8 +128,11 @@ console field when you want to type. Desktop app openings retain their ready-to-
 
 Opening a message does not automatically run its activity. Select the activity arrow when ready.
 An activity can expire when its moment passes, but its message stays unread until you read it.
-After a full party or its authored finale, Behdad sends Markéta a private road-trip invitation; its
-activity arrow opens the Entrance.
+Shortly after the first party starts, a one-time arrow identifies the Garden wall switch that ends
+the party when the player is ready. Any deliberate party teardown immediately leaves Behdad’s
+private road-trip invitation in Messages; its activity arrow opens the Entrance. The teardown also
+reports how many of the ten rooms have been seen. If rooms remain, a red arrow points to the room
+map until it is opened.
 The party itself does not automatically turn into a piano, dawn, or RSVP sequence; those loft
 activities remain free play, and Camping's `~ fin ~` is the game's terminal RSVP coda.
 Right-click or long-press a message or app icon for local actions. **Kill app** resets only that app.
@@ -172,7 +175,9 @@ distance across street and highway driving and survives engine stops and Continu
 Complete one forward street lap to unlock **Road Trip**. Accept the invitation, then choose
 Calgary, Banff, or Abraham Lake as the starting segment. A private testing shortcut starts near a
 segment's exit when its chooser item is Shift-clicked. Each new route starts stopped on the shoulder
-without changing the selected transmission setting.
+without changing the selected transmission setting. Closing the dashboard, Entrance, or page after
+that first lap does not consume the unlock or require another lap; the offer, chooser, or compact
+Road Trip control remains available until a route is deliberately started.
 
 Road Trip uses the same steering, transmission, accelerator, and brake:
 

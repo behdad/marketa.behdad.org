@@ -3152,6 +3152,18 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
 .hunt-dollhouse-slot{
   position:absolute; right:calc(100% + .7rem); top:50%; transform:translateY(-50%);
 }
+.hunt-dollhouse-slot.party-bridge-coach::after{
+  content:""; position:absolute; z-index:3; pointer-events:none;
+  left:50%; top:calc(100% + .28rem); width:2.45rem; height:3rem;
+  transform:translateX(-50%); background:center / contain no-repeat var(--espresso-arrow-up);
+  filter:drop-shadow(0 2px 2px rgba(69,58,49,.45));
+  animation:party-bridge-map-arrow .9s ease-in-out infinite;
+}
+@keyframes party-bridge-map-arrow{
+  0%,100%{transform:translate(-50%,.22rem)}
+  50%{transform:translate(-50%,-.08rem)}
+}
+@media (prefers-reduced-motion:reduce){.hunt-dollhouse-slot.party-bridge-coach::after{animation:none}}
 #hunt-dollhouse-btn{display:block}
 #hunt-dollhouse-btn,#hunt-floor-btn{width:1.9rem;height:1.9rem}
 #hunt-dollhouse-btn::before{
@@ -3171,6 +3183,7 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   .hunt-bottom-nav{width:calc(100% - 4.9rem);max-width:calc(100% - 4.9rem)}
   .hunt-floor-slot{left:calc(100% + .45rem)}
   .hunt-dollhouse-slot{right:calc(100% + .45rem)}
+  .hunt-dollhouse-slot.party-bridge-coach::after{width:2rem;height:2.45rem;top:calc(100% + .15rem)}
   #hunt-dollhouse-btn,#hunt-floor-btn{width:1.75rem;height:1.75rem}
 }
 /* Whole-loft picker: two aligned rows of five paired rooms. Live scene previews are used
@@ -12396,6 +12409,11 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
 #stage-garden.dusk #garden-lightswitch-rocker{transform:translateY(2px)} /* night: rocker down (symmetric about centre) */
 #garden-lightswitch-led{transition:fill .4s ease}
 #stage-garden.dusk #garden-lightswitch-led{fill:#f6c86a}
+#garden-party-exit-coach-arrow{opacity:0;pointer-events:none;transition:opacity .3s ease}
+#garden-lightswitch.party-bridge-coach ~ #garden-party-exit-coach-arrow{
+  opacity:1;animation:kitchen-arrow-bounce .9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion:reduce){#garden-lightswitch.party-bridge-coach ~ #garden-party-exit-coach-arrow{animation:none}}
 #stage-garden.dusk #garden-caterpillar .cat-crawl{animation:cat-crawl 19s ease-in-out infinite}
 #stage-garden.dusk #garden-caterpillar .cat-body{animation:cat-inch 2.3s ease-in-out infinite; transform-box:fill-box; transform-origin:50% 100%}
 @keyframes cat-crawl{0%,100%{transform:translateX(0)} 50%{transform:translateX(12px)}}
@@ -16829,6 +16847,9 @@ section{margin:1.9rem 0}
 <rect x="38" y="200" width="13" height="24" rx="2" fill="#eae4d8" stroke="#c4bba8" stroke-width="1"/>
 <rect id="garden-lightswitch-rocker" x="40.5" y="203.5" width="8" height="13" rx="1.5" fill="#d8cfbc" stroke="#b0a690" stroke-width="0.8"/>
 <circle id="garden-lightswitch-led" cx="44.5" cy="220.5" r="1.1" fill="#8a8578"/>
+</g>
+<g id="garden-party-exit-coach-arrow">
+<path d="M38 146h13v29h10l-16.5 22L28 175h10Z" fill="#c0392b" stroke="#1f1f1f" stroke-width="2.3" stroke-linejoin="round"/>
 </g>
 <g id="garden-ukulele" class="hunt-hit" transform="translate(0,50)">
 <rect x="52" y="46" width="6" height="30" rx="2" fill="#8a6a44"/>
@@ -39711,7 +39732,7 @@ window.__entranceRoomOpen = false;
       if (window.__syncScopeMirrors) window.__syncScopeMirrors();
     }
     var reentryVisible = !!(window.__entranceRoomOpen && driveState.hudOpen &&
-      roadtripState.unlocked && roadtripState.everAccepted && !roadtripState.accepted &&
+      roadtripState.unlocked && (roadtripState.everAccepted || roadtripState.invitationDismissed) && !roadtripState.accepted &&
       !roadtripState.active && !roadtripState.routeChooserOpen);
     if (roadtripReenter) {
       roadtripReenter.classList.toggle("show", reentryVisible);
@@ -39783,7 +39804,8 @@ window.__entranceRoomOpen = false;
       return false;
     }
     if (!roadtripState.unlocked || roadtripState.active || roadtripState.accepted) return false;
-    if (!roadtripState.invitationReady && !roadtripState.everAccepted) return false;
+    if (!roadtripState.invitationReady && !roadtripState.invitationDismissed &&
+        !roadtripState.everAccepted) return false;
     roadtripReentryMenuOpen = false;
     roadtripState.routeChooserOpen = true;
     paintRoadtripInvite();
@@ -39979,7 +40001,8 @@ window.__entranceRoomOpen = false;
       paintRoadtripInvite();
       return false;
     }
-    if (!roadtripState.unlocked || !roadtripState.everAccepted || roadtripState.active) return false;
+    if (!roadtripState.unlocked || roadtripState.active) return false;
+    if (!roadtripState.everAccepted) return openRoadtripRouteChooser();
     if (!roadtripHasPausedRun() && !roadtripState.campVisited) return openRoadtripRouteChooser();
     roadtripReentryMenuOpen = !roadtripReentryMenuOpen;
     paintRoadtripInvite();
@@ -39996,10 +40019,17 @@ window.__entranceRoomOpen = false;
   });
   function resetRoadtripInvitationSession() {
     roadtripState.accepted = false;
-    roadtripState.invitationReady = false;
     roadtripState.invitationDistance = 0;
-    roadtripState.invitationDismissed = false;
-    roadtripState.routeChooserOpen = false;
+    // The first completed lap is the durable unlock. Closing Entrance/HUD must not
+    // silently consume its chooser or make the visitor drive another lap.
+    if (!roadtripState.unlocked || roadtripState.everAccepted) {
+      roadtripState.invitationReady = false;
+      roadtripState.invitationDismissed = false;
+      roadtripState.routeChooserOpen = false;
+    } else if (!roadtripState.invitationReady && !roadtripState.invitationDismissed &&
+        !roadtripState.routeChooserOpen) {
+      roadtripState.invitationReady = true;
+    }
     roadtripReentryMenuOpen = false;
     paintRoadtripInvite();
   }
@@ -45342,7 +45372,7 @@ window.__entranceRoomOpen = false;
   function porscheDriveInstructionKey() {
     var touchDrive = navigator.maxTouchPoints > 0 && window.matchMedia &&
       window.matchMedia("(any-pointer: coarse), (hover: none)").matches;
-    if (!driveState.hudOpen) return "lower_entrance";
+    if (!driveState.hudOpen) return roadtripState.unlocked ? "lower_entrance" : "lower_entrance_locked";
     if (roadtripState.active && roadtripState.route === "camp") return campFireCaptionKey();
     if (roadtripState.active && roadtripResumePending) return roadtripTransportPaused ?
       "entrance_roadtrip_transport_paused" : "entrance_roadtrip_resume";
@@ -48443,7 +48473,8 @@ window.__entranceRoomOpen = false;
         clearPorscheIndicator();
         Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
         if (window.__setLowerRoomCaption) {
-          window.__setLowerRoomCaption(driveState.hudOpen ? "entrance_drive_ignition_hint" : "lower_entrance");
+          window.__setLowerRoomCaption(driveState.hudOpen ? "entrance_drive_ignition_hint" :
+            (roadtripState.unlocked ? "lower_entrance" : "lower_entrance_locked"));
         }
       }
       playPorscheEngineSound(porscheState.engineOn);
@@ -48498,7 +48529,8 @@ window.__entranceRoomOpen = false;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     if (wasRunning) playPorscheEngineSound(false);
     syncPorscheState();
-    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(
+      roadtripState.unlocked ? "lower_entrance" : "lower_entrance_locked");
     return true;
   }
   if (driveHudDismiss) driveHudDismiss.addEventListener("click", function (event) {
@@ -48525,7 +48557,8 @@ window.__entranceRoomOpen = false;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     paintPorscheDriveHud();
     syncPorscheState();
-    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("lower_entrance");
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(
+      roadtripState.unlocked ? "lower_entrance" : "lower_entrance_locked");
     return true;
   }
   function playEntranceIntercomRingSound() {
@@ -49079,6 +49112,7 @@ window.__entranceRoomOpen = false;
           accepted: roadtripState.accepted,
           everAccepted: roadtripState.everAccepted,
           invitationReady: roadtripState.invitationReady,
+          invitationDismissed: roadtripState.invitationDismissed,
           invitationDistance: roadtripState.invitationDistance,
           invitationDistanceRequired: PORSCHE_WRAP_SPAN,
           invitationVisible: !!(roadtripInvite && roadtripInvite.classList.contains("show")),
@@ -49855,6 +49889,8 @@ window.__entranceRoomOpen = false;
         campVisited: roadtripState.campVisited,
         routeChoice: roadtripState.routeChoice,
         routeChooserOpen: roadtripState.routeChooserOpen,
+        invitationReady: roadtripState.invitationReady,
+        invitationDismissed: roadtripState.invitationDismissed,
         practiceLaps: roadtripState.practiceLaps,
         distance: Math.round(roadtripState.distance * 100) / 100,
         distancePoints: roadtripState.distancePoints,
@@ -49993,9 +50029,9 @@ window.__entranceRoomOpen = false;
             Number(roadtrip.escapes) > 0 || Number(roadtrip.wildlifeHits) > 0;
           roadtripState.campVisited = roadtrip.campVisited === true || roadtrip.campFireBuilt === true ||
             !!(roadtrip.pausedRun && roadtrip.pausedRun.state && roadtrip.pausedRun.state.route === "camp");
-          roadtripState.invitationReady = false;
+          roadtripState.invitationReady = roadtrip.invitationReady === true;
           roadtripState.invitationDistance = 0;
-          roadtripState.invitationDismissed = false;
+          roadtripState.invitationDismissed = roadtrip.invitationDismissed === true;
           if (Number.isFinite(Number(roadtrip.distance))) roadtripState.distance = Math.max(0, Math.min(1000000000, Number(roadtrip.distance)));
           var restoredDistancePoints = roadtripDistancePoints(roadtripState.distance);
           if (Number(roadtrip.scoringVersion) === ROADTRIP_SCORING_VERSION) {
@@ -50042,7 +50078,11 @@ window.__entranceRoomOpen = false;
             if (["calgary", "banff", "abraham"].indexOf(roadtrip.routeChoice) >= 0) {
               roadtripState.routeChoice = roadtrip.routeChoice;
             }
-            roadtripState.routeChooserOpen = roadtrip.routeChooserOpen === true && roadtripState.unlocked;
+            roadtripState.routeChooserOpen = roadtrip.routeChooserOpen === true && roadtripState.unlocked &&
+              !roadtripState.everAccepted;
+            if (roadtripState.unlocked && !roadtripState.everAccepted &&
+                !roadtripState.invitationReady && !roadtripState.invitationDismissed &&
+                !roadtripState.routeChooserOpen) roadtripState.invitationReady = true;
           } else roadtripState.routeChooserOpen = false;
         }
       }
@@ -51914,6 +51954,7 @@ var T = {
       bedroom_ttt_turn_caption: "Your turn · the window is calling",
       bedroom_ttt_wait_caption: "The window’s turn · it has a plan",
       lower_entrance: "Fancy-Stupid! · click the road to take the wheel.",
+      lower_entrance_locked: "Click the road to take the wheel · one lap unlocks Road Trip.",
       entrance_drive_manual: "Let’s drive manual.",
       entrance_drive_manual_desktop: "Manual · ↑ accelerates · ↓ brakes · tap Ctrl to hold speed.",
       entrance_drive_auto: "Automatic · steer, accelerate and brake.",
@@ -52141,6 +52182,9 @@ var T = {
       cuddly_outlet_visit: "Someone dropped by the cuddly-puddly. 👋",
       party_exit_hint: "Wall switch ends the party, not the game. Apps stay open.",
       party_ended: "Party's over for now, not the game. The loft and apps are still yours.",
+      party_switch_coach: "When you’re ready, end the party here.",
+      party_rooms_incomplete: "You’ve seen {n} of 10 rooms. Keep exploring.",
+      party_rooms_complete: "You’ve seen all 10 rooms. Perfect day for a Road Trip!",
       dj_sina: ["<em>DJ Sina</em> takes over the decks. 🎧", "<em>DJ Sina</em> grabs the ones and twos. 🎧"],
       dj_danesh: ["<em>DJ Danesh</em> takes over the decks. 🎧", "<em>DJ Danesh</em> steps up to spin. 🎧"],
       garden_need_music_candles: "Play music, light candles.",
@@ -53258,6 +53302,7 @@ var T = {
       bedroom_ttt_turn_caption: "Jsi na tahu · okno volá",
       bedroom_ttt_wait_caption: "Vitráž je na tahu · má svůj plán",
       lower_entrance: "Fancy-Stupid! · klikni na silnici a usedni za volant.",
+      lower_entrance_locked: "Klikni na silnici a usedni za volant · jedno kolo odemkne výlet.",
       entrance_drive_manual: "Jeďme s manuálem.",
       entrance_drive_manual_desktop: "Manuál · ↑ zrychluje · ↓ brzdí · Ctrl udrží rychlost.",
       entrance_drive_auto: "Automat · řiď, zrychluj a brzdi.",
@@ -53485,6 +53530,9 @@ var T = {
       cuddly_outlet_visit: "Někdo se zastavil v mazlírně. 👋",
       party_exit_hint: "Vypínač ukončí párty, ne hru. Aplikace zůstávají otevřené.",
       party_ended: "Párty prozatím skončila, hra ne. Loft i aplikace jsou pořád tvoje.",
+      party_switch_coach: "Až budeš chtít, ukonči párty tady.",
+      party_rooms_incomplete: "Prozkoumáno: {n} z 10 místností. Pokračuj dál.",
+      party_rooms_complete: "Prozkoumáno všech 10 místností. Ideální den na výlet!",
       dj_sina: ["Za gramofony jde <em>DJ Sina</em>. 🎧", "<em>DJ Sina</em> bere desky do ruky. 🎧"],
       dj_danesh: ["Za gramofony jde <em>DJ Danesh</em>. 🎧", "<em>DJ Danesh</em> jde roztočit desky. 🎧"],
       garden_need_music_candles: "Zahraj a zapal svíčky.",
@@ -95194,7 +95242,11 @@ async def localfont(name):
       // drips, date announcements, console/test sends and chained followups without source-by-source
       // exceptions, so no notification or unread badge can distract from the solve.
       if (!window.__secondRound) { holdForPhaseTwo(id); return false; }
-      if (holdActionCoachMessage(function () { window.__deliverPhoneMessage(id, autonomous); })) return false;
+      // The party teardown handoff is checkpoint-worthy navigation, not an ambient drip.
+      // Put it in the durable thread immediately; an unrelated phone coach must not leave
+      // the only Road Trip bridge as an in-memory callback that a reload can erase.
+      if (id !== "downstairs_entrance" &&
+          holdActionCoachMessage(function () { window.__deliverPhoneMessage(id, autonomous); })) return false;
       var m = MESSAGES[id];
       // varied copy: entries with a bodyKeys POOL (the friend-duo "are you home?" texts) pick ONE
       // line at delivery and freeze it into bodyKey, so it varies per delivery but stays stable
@@ -111126,6 +111178,7 @@ function spawnDustMote(container) {
   }
   function openDollhouse() {
     if (!dollhouse || !dollhouseEligible() || dollhouseBlocked()) return false;
+    if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
     pauseRoadtripForDollhouse();
     prepareDollhousePreviewState();
     renderDollhouse();
@@ -113832,20 +113885,55 @@ function spawnDustMote(container) {
     if (!sw) return;
     var attendedSeconds = 0, timer = null, active = false, finishing = false;
     var finaleAt = null, finaleReason = null, finaleTextOffered = false, finaleDeck = [];
-    var suppressNextStop = false, inviteTimer = null, roadtripInviteTimer = null;
-    var inviteDeadline = 0, inviteRemaining = 0, roadtripInviteDeadline = 0, roadtripInviteRemaining = 0;
+    var suppressNextStop = false, inviteTimer = null;
+    var inviteDeadline = 0, inviteRemaining = 0;
+    var switchCoachTimer = null, switchCoachDeadline = 0, switchCoachRemaining = 0;
+    var switchCoachSeen = false, switchCoachRetired = false;
+    var handoffShown = false, roadtripInviteDelivered = false, roomMapCoachActive = false;
+    var switchCoachDelay = 4200;
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
     function clearInvite(resetRemaining) {
       if (inviteTimer) { clearTimeout(inviteTimer); inviteTimer = null; }
       inviteDeadline = 0;
       if (resetRemaining !== false) inviteRemaining = 0;
     }
-    function clearRoadtripInvite(resetRemaining) {
-      if (roadtripInviteTimer) { clearTimeout(roadtripInviteTimer); roadtripInviteTimer = null; }
-      roadtripInviteDeadline = 0;
-      if (resetRemaining !== false) roadtripInviteRemaining = 0;
+    function clearSwitchCoach(resetRemaining) {
+      if (switchCoachTimer) { clearTimeout(switchCoachTimer); switchCoachTimer = null; }
+      switchCoachDeadline = 0;
+      if (resetRemaining !== false) switchCoachRemaining = 0;
     }
-    function paint() { sw.classList.toggle("invite-pulse", !!(active && window.__gardenPartyOn)); }
+    function paintRoomMapCoach() {
+      var slot = document.querySelector(".hunt-dollhouse-slot");
+      if (slot) slot.classList.toggle("party-bridge-coach", !!roomMapCoachActive);
+    }
+    function paint() {
+      var partyOn = !!window.__gardenPartyOn;
+      var coach = partyOn && !switchCoachRetired && (switchCoachSeen || active);
+      sw.classList.toggle("invite-pulse", !!(active && partyOn));
+      sw.classList.toggle("party-bridge-coach", coach);
+      paintRoomMapCoach();
+    }
+    function checkpointBridge() {
+      if (window.__checkpointChanged) window.__checkpointChanged();
+    }
+    function showSwitchCoach() {
+      clearSwitchCoach();
+      if (!window.__gardenPartyOn || switchCoachSeen || switchCoachRetired) return false;
+      switchCoachSeen = true;
+      paint();
+      if (window.currentStageName === "garden" && window.__flashCaptionKey) {
+        window.__flashCaptionKey("party_switch_coach", 6200, "party-switch-coach");
+      }
+      checkpointBridge();
+      return true;
+    }
+    function scheduleSwitchCoach(delay) {
+      if (!window.__gardenPartyOn || switchCoachSeen || switchCoachRetired || switchCoachTimer) return false;
+      switchCoachRemaining = Math.max(1, Number(delay) || switchCoachDelay);
+      switchCoachDeadline = performance.now() + switchCoachRemaining;
+      switchCoachTimer = setTimeout(showSwitchCoach, switchCoachRemaining);
+      return true;
+    }
     function show(withFinaleText) {
       if (active || !window.__gardenPartyOn) return false;
       active = true; paint();
@@ -113883,6 +113971,9 @@ function spawnDustMote(container) {
       if (!window.__gardenPartyOn || finishing) return attendedSeconds;
       attendedSeconds += Math.max(0, +seconds || 0);
       if (finaleAt != null && attendedSeconds >= finaleAt) { finish(finaleReason || "finale"); return attendedSeconds; }
+      // A full attended party only offers an ending. The visitor still chooses the wall
+      // switch or accepts one of the existing final-song/dance/sparklers invitations.
+      if (!active && attendedSeconds >= 120) show(true);
       return attendedSeconds;
     }
     function tick() {
@@ -113905,38 +113996,54 @@ function spawnDustMote(container) {
       inviteTimer = setTimeout(function () { clearInvite(); offerAgain(false); }, inviteRemaining);
     }
     function offerRoadtripInvite() {
-      clearRoadtripInvite();
-      if (window.__gardenPartyOn || !window.__secondRound) return false;
-      if (document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic) {
-        scheduleRoadtripInvite();
-        return false;
+      if (roadtripInviteDelivered || window.__gardenPartyOn || !window.__secondRound) return false;
+      if (window.__phoneMessageReceived && window.__phoneMessageReceived("downstairs_entrance")) {
+        roadtripInviteDelivered = true;
+        checkpointBridge();
+        return true;
       }
-      return !!(window.__deliverAutonomousPhoneMessage && window.__deliverAutonomousPhoneMessage("downstairs_entrance"));
+      var delivered = !!(window.__deliverPhoneMessage &&
+        window.__deliverPhoneMessage("downstairs_entrance", true));
+      if (delivered || window.__phoneMessageReceived && window.__phoneMessageReceived("downstairs_entrance")) {
+        roadtripInviteDelivered = true;
+        checkpointBridge();
+      }
+      return roadtripInviteDelivered;
     }
-    function scheduleRoadtripInvite() {
-      clearRoadtripInvite();
-      roadtripInviteRemaining = 8000;
-      roadtripInviteDeadline = performance.now() + roadtripInviteRemaining;
-      roadtripInviteTimer = setTimeout(function () { clearRoadtripInvite(); offerRoadtripInvite(); }, roadtripInviteRemaining);
+    function postPartyHandoff() {
+      if (handoffShown) return offerRoadtripInvite();
+      handoffShown = true;
+      var count = window.__seenRooms ? window.__seenRooms().length : 0;
+      count = Math.max(0, Math.min(10, count));
+      roomMapCoachActive = count < 10;
+      paintRoomMapCoach();
+      if (window.__flashCaptionKey) {
+        window.__flashCaptionKey(count === 10 ? "party_rooms_complete" : "party_rooms_incomplete",
+          6200, "party-roadtrip-handoff", { n: count });
+      }
+      checkpointBridge();
+      return offerRoadtripInvite();
     }
     function startFresh() {
-      clearInvite(); clearRoadtripInvite(); stop();
+      var pendingCoachDelay = switchCoachRemaining;
+      clearInvite(); clearSwitchCoach(); stop();
       attendedSeconds = 0; active = false; finishing = false; suppressNextStop = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
-      paint(); timer = setInterval(tick, 1000);
+      paint(); scheduleSwitchCoach(pendingCoachDelay || switchCoachDelay);
+      timer = setInterval(tick, 1000);
     }
     function stopped() {
       stop(); active = false; paint();
       var suppress = suppressNextStop; suppressNextStop = false;
       var ended = finishing; finishing = false;
-      var roadtripReady = !!ended || attendedSeconds >= 120;
       finaleAt = null; finaleReason = null;
+      clearSwitchCoach();
       if (window.__partyActEnded) window.__partyActEnded();
       if (!suppress && !window.__cinematic) {
         if (window.setCaption) window.setCaption("party_ended");
         scheduleInvite();
+        postPartyHandoff();
       }
-      if (!suppress && roadtripReady) scheduleRoadtripInvite();
       return ended || "manual";
     }
     window.__updatePartyExitHint = function () {
@@ -113947,8 +114054,23 @@ function spawnDustMote(container) {
     };
     window.__partyExitHintActive = function () { return !!(active && window.__gardenPartyOn); };
     window.__showPartyExitHint = function () { return show(false); }; // deterministic state-test hook (does not manufacture a phone cue)
+    window.__showPartySwitchCoach = showSwitchCoach; // focused test hook: skip only the initial non-blocking delay
     window.__offerPartyFinaleText = offerFinaleText; // focused test hook: deal the next closing message without waiting on party pacing
-    window.__consumePartyExitHint = function () { active = false; paint(); };
+    window.__consumePartyExitHint = function () {
+      active = false;
+      switchCoachRetired = true;
+      clearSwitchCoach();
+      if (window.__clearFlashCaption) window.__clearFlashCaption("party-switch-coach");
+      paint();
+      checkpointBridge();
+    };
+    window.__retirePartyRoomMapCoach = function () {
+      if (!roomMapCoachActive) return false;
+      roomMapCoachActive = false;
+      paintRoomMapCoach();
+      checkpointBridge();
+      return true;
+    };
     window.__partyLifecycleChanged = function (on, wasOn) {
       if (on && !wasOn) startFresh();
       else if (!on && wasOn) stopped();
@@ -113981,9 +114103,9 @@ function spawnDustMote(container) {
         inviteRemaining = Math.max(1, inviteDeadline - performance.now());
         clearInvite(false);
       }
-      if (roadtripInviteTimer) {
-        roadtripInviteRemaining = Math.max(1, roadtripInviteDeadline - performance.now());
-        clearRoadtripInvite(false);
+      if (switchCoachTimer) {
+        switchCoachRemaining = Math.max(1, switchCoachDeadline - performance.now());
+        clearSwitchCoach(false);
       }
     };
     window.__resumePartyLifecycle = function () {
@@ -113993,24 +114115,71 @@ function spawnDustMote(container) {
       }
       if (!window.__gardenPartyOn &&
           (!window.__partyForegroundActive || window.__partyForegroundActive())) {
-        var againDelay = inviteRemaining, roadDelay = roadtripInviteRemaining;
+        var againDelay = inviteRemaining;
         if (againDelay > 0) scheduleInvite(againDelay);
-        if (roadDelay > 0) {
-          clearRoadtripInvite();
-          roadtripInviteRemaining = roadDelay;
-          roadtripInviteDeadline = performance.now() + roadDelay;
-          roadtripInviteTimer = setTimeout(function () { clearRoadtripInvite(); offerRoadtripInvite(); }, roadDelay);
-        }
+        if (handoffShown && !roadtripInviteDelivered) offerRoadtripInvite();
+      } else if (window.__gardenPartyOn && switchCoachRemaining > 0) {
+        scheduleSwitchCoach(switchCoachRemaining);
       }
     };
-    window.__partyLifecycleState = function () { return { attended: attendedSeconds, cue: !!active, finishing: finishing || null, finaleAt: finaleAt, finaleReason: finaleReason, running: !!timer, partyAgainPending: !!inviteTimer || inviteRemaining > 0, roadtripInvitePending: !!roadtripInviteTimer || roadtripInviteRemaining > 0 }; };
+    window.__partyLifecycleState = function () { return {
+      attended: attendedSeconds, cue: !!active, finishing: finishing || null,
+      finaleAt: finaleAt, finaleReason: finaleReason, running: !!timer,
+      partyAgainPending: !!inviteTimer || inviteRemaining > 0,
+      switchCoachSeen: switchCoachSeen, switchCoachRetired: switchCoachRetired,
+      handoffShown: handoffShown, roadtripInviteDelivered: roadtripInviteDelivered,
+      roomMapCoachActive: roomMapCoachActive
+    }; };
     window.__offerPartyAgain = function () { return offerAgain(true); };
     window.__offerPartyRoadtripInvite = offerRoadtripInvite; // focused test hook: skip the post-party dramatic beat
     window.__resetPartyExitHint = function () {
       suppressNextStop = true; attendedSeconds = 0; active = false; finishing = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
-      stop(); clearInvite(); clearRoadtripInvite(); paint();
+      switchCoachSeen = false; switchCoachRetired = false;
+      handoffShown = false; roadtripInviteDelivered = false; roomMapCoachActive = false;
+      stop(); clearInvite(); clearSwitchCoach(); paint();
     };
+    var partyBridgeAdapter = {
+      capture: function () {
+        var coachDelay = switchCoachTimer ? Math.max(1, switchCoachDeadline - performance.now()) :
+          switchCoachRemaining;
+        return {
+          switchCoachSeen: switchCoachSeen,
+          switchCoachRetired: switchCoachRetired,
+          switchCoachDelay: Math.max(0, Math.round(coachDelay || 0)),
+          handoffShown: handoffShown,
+          roadtripInviteDelivered: roadtripInviteDelivered,
+          roomMapCoachActive: roomMapCoachActive
+        };
+      },
+      restore: function (row, phase) {
+        if (phase === "beforeStage") {
+          clearSwitchCoach();
+          switchCoachSeen = !!(row && row.switchCoachSeen);
+          switchCoachRetired = !!(row && row.switchCoachRetired);
+          switchCoachRemaining = row && Number.isFinite(Number(row.switchCoachDelay)) ?
+            Math.max(0, Number(row.switchCoachDelay)) : 0;
+          handoffShown = !!(row && row.handoffShown);
+          roadtripInviteDelivered = !!(row && row.roadtripInviteDelivered) ||
+            !!(window.__phoneMessageReceived && window.__phoneMessageReceived("downstairs_entrance"));
+          roomMapCoachActive = !!(row && row.roomMapCoachActive);
+        } else {
+          paint();
+          if (window.__gardenPartyOn && !switchCoachSeen && !switchCoachRetired) {
+            scheduleSwitchCoach(switchCoachRemaining || switchCoachDelay);
+          } else if (!window.__gardenPartyOn && handoffShown && !roadtripInviteDelivered) {
+            offerRoadtripInvite();
+          }
+        }
+      },
+      reset: function () {
+        clearSwitchCoach();
+        switchCoachSeen = false; switchCoachRetired = false;
+        handoffShown = false; roadtripInviteDelivered = false; roomMapCoachActive = false;
+        paint();
+      }
+    };
+    if (window.__registerCheckpointAdapter) window.__registerCheckpointAdapter("party-roadtrip-bridge", partyBridgeAdapter);
   })();
   (function scheduleAmbientPlantSway() {
     var delay = 6000 + Math.random() * 8000;

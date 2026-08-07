@@ -152,9 +152,12 @@ latch.
 Keep progression coverage in `tests/play.js`, `tests/enter.js`, `tests/phase2-progression.js`, and
 `tests/progression-transitions.js`.
 
-After an authored party finale or 120 attended seconds, party teardown schedules the stable
-`downstairs_entrance` message. Its legacy `lower:entrance` action navigates to the Balcony and opens
-Entrance; it is not part of the random party cue pool.
+The `party-roadtrip-bridge` checkpoint adapter owns the one-time Garden switch coach, teardown room
+progress/map coach, and once-per-reset Road Trip handoff. Every unsuppressed party on→off edge writes
+`downstairs_entrance` directly into the checkpointed phone thread; there is no reload-vulnerable
+delay. Below ten distinct `seenRooms`, the map coach remains until `openDollhouse()` retires it.
+At 120 attended seconds the lifecycle offers the existing optional finale cue but never flips the
+party switch itself. The message’s `lower:entrance` action navigates to the Balcony and opens Entrance.
 
 Act Two now ends at party teardown. Its automatic piano → dawn → direct-RSVP tail was removed;
 Camping's `~ fin ~` owns the only terminal RSVP coda. `__partyActEnded()` clears the ticker, delayed
@@ -403,8 +406,10 @@ Demerits live separately in `entranceRoadtripDemerits:v1`; alcohol is owned by t
 `balconyDrinkState:v1`. Road Trip reads those owners for its HUD and impairment. Checkpoint reset
 must not rewind either record; full reset clears them through their existing owners.
 
-The first forward practice wrap unlocks Road Trip. Unlock and best score survive sessions, while
-invitation acceptance and active presentation do not. Checkpoint restore may retain a paused run,
+The first forward practice wrap unlocks Road Trip. Before first acceptance, invitation-ready,
+dismissed/re-entry, and open-chooser state survive HUD/Entrance closure and checkpoint recovery, so
+another practice lap is never required. Unlock and best score survive sessions, while route
+acceptance and active presentation do not. Checkpoint restore may retain a paused run,
 but active highway presentation resumes only through Entrance and requires explicit driving input
 unless the route is terminal Camping. The paused-run drive snapshot also owns cruise activation and
 its held-speed target; unattended lifecycle cleanup releases momentary inputs without clearing it.

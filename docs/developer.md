@@ -255,7 +255,9 @@ windshield vibration, and live tyre audio; paused-run snapshots retain both it a
 crossing onto the right shoulder makes `syncRoadtripCampExit()` latch the turn. Only that latch lets
 `syncRoadtripCampApproachSpeed()` slow independently of throttle or momentum. Below 10 km/h,
 `arriveRoadtripCamp()` retains the Abraham snapshot, parks the drivetrain, and activates the camp
-overlay inside Entrance.
+overlay inside Entrance. The same owner starts the documented audio handoff: the continuous
+vehicle, score, and AC beds retire while the campsite outdoor bed rises; do not split that
+transition across route painters.
 
 Camping begins with an empty pit and publishes `entrance_roadtrip_camp_fire_invite` through
 `__setLowerRoomCaption()`. `campFireState` owns the focused build, fuel chain, log arrangement,
@@ -343,7 +345,7 @@ Run `tests/entrance-roadtrip-distance.js`, `tests/entrance-roadtrip-camp.js`, `t
 `tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
 `tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`,
 `tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-aurora.js`,
-`tests/entrance-roadtrip-camp-audio.js`,
+`tests/entrance-roadtrip-camp-audio.js`, `tests/entrance-roadtrip-camp-audio-handoff.js`,
 `tests/entrance-roadtrip-camp-stew.js`, `tests/entrance-roadtrip-camp-stargazing.js`,
 `tests/entrance-roadtrip-camp-sleep.js`, and `tests/entrance-roadtrip-camp-enter.js` for this boundary.
 

@@ -221,6 +221,19 @@ moves, while each half-second brake one-shot snapshots the current car/roof posi
 stage still terminates at the owning bed or SFX destination, so it does not alter trigger,
 focus, teardown, volume-button, or shared-context rules.
 
+The continuous drivetrain bed now has one downstream vehicle master after the engine/tire
+spatial branches; live passing-traffic voices join it too. It eases in over 220 ms and normally
+retires over 280 ms, so engine stop, pause, and focus changes no longer hard-disconnect live
+oscillators and road noise. Re-entry can start a fresh bed while the old node-owned tail finishes;
+each tail closes only its own `audioBed()` handle.
+
+At the Abraham Lake arrival, `arriveRoadtripCamp()` owns one 1.15-second program handoff: the
+drivetrain/road/traffic master and existing driving score recede together, hot-weather AC clears
+slightly sooner, and the already-authored outdoor lake/wind bed rises underneath. The transition
+does not create or replay a sound, and it leaves all spatial, volume-button, focus/visibility,
+and shared-context ownership unchanged. After the tails finish, Camping again owns exactly one
+outdoor bed.
+
 Hack-Man's five compact arcade cues—pellet tick, game start, edible ghost, player death,
 and maze clear—are oscillator-only one-shots on `getSfxCtx()`, panned to the retained board
 in either its monitor or room presentation. Pellet ticks have a short retrigger floor and
@@ -406,5 +419,6 @@ disabled. It does not create or join the loft’s shared audio graph.
   `tests/cinema-room.js` (foreground coverage, Vimeo teardown, party duck, navigation),
   `tests/lower-audio.js` (all five lower profiles, native fallback attenuation,
   lateral retargeting, exact upstairs restore, and Entrance glass groove),
-  and `tests/piano-message.js` (message transition, layered keys, polyphony,
+  `tests/entrance-roadtrip-camp-audio-handoff.js` (vehicle-master fade, synchronized car-tail
+  ownership, campsite rise, and final one-bed cleanup), and `tests/piano-message.js` (message transition, layered keys, polyphony,
   backing-pause independence, and party continuity). All must pass.

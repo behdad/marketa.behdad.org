@@ -130,6 +130,8 @@ Opening a message does not automatically run its activity. Select the activity a
 An activity can expire when its moment passes, but its message stays unread until you read it.
 After a full party or its authored finale, Behdad sends Markéta a private road-trip invitation; its
 activity arrow opens the Entrance.
+The party itself does not automatically turn into a piano, dawn, or RSVP sequence; those loft
+activities remain free play, and Camping's `~ fin ~` is the game's terminal RSVP coda.
 Right-click or long-press a message or app icon for local actions. **Kill app** resets only that app.
 
 The Office laptop handles calls. The larger monitor contains desktop apps and games. Select the
@@ -181,6 +183,10 @@ Road Trip uses the same steering, transmission, accelerator, and brake:
 
 Route legs and exits advance only with forward travel. Waiting, pausing, or reversing does not move
 the trip silently toward its next segment.
+
+Launching a route temporarily suspends a running upstairs party, including its music and autonomous
+guest moments. Parking or exiting the route restores that same party, dance, DJ, roster, and progress;
+opening Entrance, the dashboard, or the route chooser alone does not suspend it.
 
 AUTO provides gentle curve assistance; MANUAL leaves curve steering to the player. Natural traffic
 paces itself to the posted road, with a slower RV/semi tail; faster drivers pass when a lane is clear

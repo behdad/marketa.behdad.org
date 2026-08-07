@@ -3998,6 +3998,13 @@ html.frame-rate-low #loft-game-strip.uv-mode #stage-garden[data-partydance="tech
 #loft-game-strip.party-on #stage-kitchen > #kitchen-extinguisher,
 #loft-game-strip.party-on #stage-kitchen > #kitchen-bathroom-marker{opacity:1; pointer-events:auto}
 #loft-game-strip.party-on #stage-kitchen > #kitchen-bar{opacity:1}
+/* Road Trip/Camping owns the foreground once a route actually launches. The party remains
+   logically lit upstairs, but every loft-stage animation holds its exact frame until the car
+   returns. JS owns timers/audio at the same boundary; this CSS side covers declarative loops. */
+html.party-foreground-suspended #loft-game-strip.party-on :is(#stage-kitchen,#stage-garden,#stage-cuddly,#stage-office,#stage-balcony),
+html.party-foreground-suspended #loft-game-strip.party-on :is(#stage-kitchen,#stage-garden,#stage-cuddly,#stage-office,#stage-balcony) *{
+  animation-play-state:paused !important
+}
 /* ── BAR GROOVING COUPLES (whitelist) ────────────────────────────────────────
    The couples layer is a direct child group of #stage-kitchen, so the `> g` party
    rule above hides it too. Whitelist it back to opacity:1 under party-on (the layer
@@ -45087,6 +45094,7 @@ window.__entranceRoomOpen = false;
     }
     if (room.classList.contains("roadtrip-active")) beginRoadtripHandoff();
     roadtripState.active = false;
+    if (window.__setPartyForegroundSuspended) window.__setPartyForegroundSuspended(false);
     roadtripTransportPaused = false;
     roadtripResumePending = false;
     roadtripShiftHintKey = "";
@@ -45189,6 +45197,7 @@ window.__entranceRoomOpen = false;
     room.classList.remove("roadtrip-handoff");
     room.classList.add("roadtrip-active");
     room.classList.remove("roadtrip-resume-pending");
+    if (window.__setPartyForegroundSuspended) window.__setPartyForegroundSuspended(true, "roadtrip");
     if (window.__syncScopeMirrors) window.__syncScopeMirrors();
     ensureRoadtripScene();
     syncRoadtripRouteClass();
@@ -51112,6 +51121,43 @@ window.__roomAutonomyAllowed = function (room) {
     document.visibilityState !== "hidden" && document.hasFocus() &&
     !window.__roomAmbienceCovered();
 };
+// Foreground ownership is distinct from the global play/pause transport: Road Trip and
+// Camping temporarily hold the live upstairs party without ending or rerolling it. Party
+// subsystems subscribe once here, rather than guessing from lower-room CSS independently.
+var __partyForegroundSuspended = false;
+var __partyForegroundReason = null;
+var __partyForegroundListeners = new Set();
+window.__partyForegroundActive = function () { return !__partyForegroundSuspended; };
+window.__partyAutonomyAllowed = function (room) {
+  if (!window.__gardenPartyOn || __partyForegroundSuspended) return false;
+  return room ? window.__roomAutonomyAllowed(room) : true;
+};
+window.__registerPartyForegroundLifecycle = function (listener) {
+  if (!listener || typeof listener !== "object") return false;
+  __partyForegroundListeners.add(listener);
+  return true;
+};
+window.__setPartyForegroundSuspended = function (suspended, reason) {
+  suspended = !!suspended;
+  if (suspended === __partyForegroundSuspended) return false;
+  __partyForegroundSuspended = suspended;
+  __partyForegroundReason = suspended ? (reason || "foreground") : null;
+  document.documentElement.classList.toggle("party-foreground-suspended", suspended);
+  __partyForegroundListeners.forEach(function (listener) {
+    try {
+      var fn = suspended ? listener.suspend : listener.resume;
+      if (typeof fn === "function") fn(__partyForegroundReason);
+    } catch (_error) {}
+  });
+  window.dispatchEvent(new CustomEvent("loft:partyforegroundchange", {
+    detail: { suspended: suspended, reason: __partyForegroundReason }
+  }));
+  return true;
+};
+window.__partyForegroundState = function () {
+  return { suspended: __partyForegroundSuspended, reason: __partyForegroundReason,
+    listeners: __partyForegroundListeners.size };
+};
 window.__refreshRoomAmbience = function () {
   ["__updateFireSound", "__updateAquaSound", "__updateTotoroSound",
      "__updateGardenBirdsong", "__updateKettleHum", "__updateRadioSound",
@@ -52139,8 +52185,6 @@ var T = {
       act_p1: "<em>Pouria</em>'s back behind the bar — go get the drink you skipped this morning. 🍸",
       act_p2: "<em>DJ Sina</em> and <em>DJ Danesh</em> are trading the decks. The garden's dancing — stay for the next one. 💃",
       act_p3: "Take an album strip — use the booth on your phone<span class=\"kbd-hint\">, just press <kbd>c</kbd></span>, or the one on the PC. 📷",
-      act_w1: "Piano in the cuddly-puddly. 🎹",
-      act_w2: "One more turn of the sun and it's tomorrow. Go on — bring the morning back. 🌄",
       // ── Trailer: short invitations to explore; never narration or solutions ──
       cine_title_kicker: "Come play for one minute",
       cine_title: "Explore the Loft",
@@ -52637,8 +52681,6 @@ var T = {
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "did you RSVP yet? 😉 no pressure. (some pressure.)",
     msg_dusk_body: "eclipse on the balcony 🌑 come out?",
-    msg_piano_body: "someone's on the piano in the cuddly-puddly 🎹 come sit a minute",
-    msg_dawn_body: "is the sun coming up?? ☀️ we're still dancing 😳 best night",
     msg_danesh_from: "DJ Danesh",
     msg_bahareh_from: "Bahareh",
     msg_irene_from: "Irene",
@@ -53485,8 +53527,6 @@ var T = {
       act_p1: "<em>Pouria</em> je zpátky za barem — dojdi si pro drink, cos ráno vynechal(a). 🍸",
       act_p2: "<em>DJ Sina</em> a <em>DJ Danesh</em> si předávají gramofony. Zahrada tančí — zůstaň na další. 💃",
       act_p3: "Vyfoť se do alba — použij fotokoutek v telefonu<span class=\"kbd-hint\">, stačí zmáčknout <kbd>c</kbd></span>, nebo ten na PC. 📷",
-      act_w1: "V cuddly-puddly zní klavír. 🎹",
-      act_w2: "Ještě jedno otočení slunce a je zítra. No tak — přiveď ráno zpátky. 🌄",
       // ── Trailer: krátké výzvy k objevování, nikdy vyprávění ani řešení ──
       cine_title_kicker: "Pojďte si na minutku hrát",
       cine_title: "Prozkoumejte loft",
@@ -53670,7 +53710,7 @@ var T = {
     // „u baru · Ali & Goli“. Podle toho se taková karta i vyhledává v albu.
     album_room_kitchen: "u baru",
     album_room_garden: "v garden/party",
-    album_room_cuddly: "v cuddly-puddly", // vlastní jméno koutku, česky se nepřekládá (viz msg_piano_body)
+    album_room_cuddly: "v cuddly-puddly", // vlastní jméno koutku, česky se nepřekládá
     album_room_office: "v pracovně",
     album_room_balcony: "na balkoně",
     album_search_ph: "hledat fotky…", // placeholder vyhledávání v albu — filtruje podle toho, kdo je na snímku
@@ -53982,8 +54022,6 @@ var T = {
     msg_mb_from: "markéta & behdad",
     msg_mb_body: "potvrdil(a) jsi už účast? 😉 žádný tlak. (trochu tlaku.)",
     msg_dusk_body: "zatmění na balkoně 🌑 přijdeš ven?",
-    msg_piano_body: "někdo hraje v cuddly-puddly na klavír 🎹 pojď si na chvíli sednout",
-    msg_dawn_body: "to už vychází slunce?? ☀️ pořád tančíme 😳 nejlepší noc",
     msg_danesh_from: "DJ Danesh",
     msg_bahareh_from: "Bahareh",
     msg_irene_from: "Irene",
@@ -55881,6 +55919,10 @@ document.addEventListener("click", function (e) {
     });
   }
 })();
+function partyMusicForegroundWant(dance) {
+  return !!window.__gardenPartyOn && window.__partyDance === dance &&
+    (!window.__partyForegroundActive || window.__partyForegroundActive());
+}
 (function () {
   var cinemaRoom = document.getElementById("cinema-room");
   if (!cinemaRoom) return;
@@ -57720,7 +57762,7 @@ setMusicPausedState(false);
     // techno↔waltz ~every 15s — see setGardenParty), in every room (like the night-sky piano
     // bed) — background music, so no room/focus/visibility gate (look-ahead scheduled, so it
     // stays clean through room changes, focus loss, and a hidden tab)
-    return !!window.__gardenPartyOn && window.__partyDance === "techno";
+    return partyMusicForegroundWant("techno");
   }
   function noiseBuf(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
@@ -57846,12 +57888,17 @@ setMusicPausedState(false);
     if (inBar === 0 && partyFlareOn() && Math.random() < (step === 0 ? 0.45 : 0.12)) schedFlare(ctx, t);
   }
   function partyFlareOn() {
-    return window.__gardenPartyOn && window.__partyDance === "techno" && window.currentStageName === "garden" &&
+    return window.__gardenPartyOn &&
+      (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+      window.__partyDance === "techno" && window.currentStageName === "garden" &&
       document.visibilityState !== "hidden" &&
       !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
   function schedFlare(ctx, t) {
-    setTimeout(function () { if (window.__flareRandomDancer) window.__flareRandomDancer(); },
+    setTimeout(function () {
+      if ((!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+          window.__flareRandomDancer) window.__flareRandomDancer();
+    },
       Math.max(0, (t - ctx.currentTime) * 1000));
   }
   function scheduleParty() {
@@ -57972,7 +58019,7 @@ setMusicPausedState(false);
   ];
   function wSemi(base, n) { return base * Math.pow(2, n / 12); }
   function waltzVol() { return 0.9 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function waltzMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "waltz"; }
+  function waltzMusicWant() { return partyMusicForegroundWant("waltz"); }
   function wBass(ctx, t, freq) {                                  // the "oom": a round bass note on beat 1
     var tri = ctx.createOscillator(); tri.type = "triangle"; tri.frequency.value = freq;
     var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
@@ -58171,7 +58218,7 @@ setMusicPausedState(false);
   ];
   function tSemi(base, n) { return base * Math.pow(2, n / 12); }
   function tangoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function tangoMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "tango"; }
+  function tangoMusicWant() { return partyMusicForegroundWant("tango"); }
   function tBass(ctx, t, freq) {                                 // a short, staccato, PROWLING bass note
     var saw = ctx.createOscillator(); saw.type = "sawtooth"; saw.frequency.value = freq;
     var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
@@ -58343,7 +58390,7 @@ setMusicPausedState(false);
   var D_CLAV_PAT = [0,null,null,7, null,12,null,7, null,null,3,null, 7,null,10,null];
   function dSemi(base, n) { return base * Math.pow(2, n / 12); }
   function discoVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function discoMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "disco"; }
+  function discoMusicWant() { return partyMusicForegroundWant("disco"); }
   function dKick(ctx, t) {                                        // four-on-the-floor thump
     var o = ctx.createOscillator(); o.type = "sine";
     o.frequency.setValueAtTime(160, t);
@@ -58523,7 +58570,7 @@ setMusicPausedState(false);
   var S_BRASS_PAT = [2,0,0, 0,0,1, 0,0,1, 0,0,0];
   function sSemi(base, n) { return base * Math.pow(2, n / 12); }
   function swingVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function swingMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "swing"; }
+  function swingMusicWant() { return partyMusicForegroundWant("swing"); }
   function sBass(ctx, t, freq) {                                  // walking upright bass, staccato
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
     var o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = freq;
@@ -58689,7 +58736,7 @@ setMusicPausedState(false);
   var S_MONT = [null, 0, 1, null, 2, 3, 2, 1];
   function sSemi(base, n) { return base * Math.pow(2, n / 12); }
   function salsaVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function salsaMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "salsa"; }
+  function salsaMusicWant() { return partyMusicForegroundWant("salsa"); }
   function sNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
     var d = buf.getChannelData(0);
@@ -58876,7 +58923,7 @@ setMusicPausedState(false);
   ];
   function hSemi(base, n) { return base * Math.pow(2, n / 12); }
   function bhangraVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function bhangraMusicWant() { return !!window.__gardenPartyOn && window.__partyDance === "bhangra"; }
+  function bhangraMusicWant() { return partyMusicForegroundWant("bhangra"); }
   function hNoise(ctx, dur, shape) {
     var buf = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
     var d = buf.getChannelData(0);
@@ -59053,7 +59100,7 @@ setMusicPausedState(false);
     return b;
   }
   function baVol() { return 0.82 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function baWant() { return !!window.__gardenPartyOn && window.__partyDance === "bandari"; }
+  function baWant() { return partyMusicForegroundWant("bandari"); }
   function baDum(ctx, t) {                                       // deep first accent: DUM . . . . .
     var o = ctx.createOscillator(); o.type = "sine";
     o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(68, t + 0.1);
@@ -59217,7 +59264,7 @@ setMusicPausedState(false);
   function kMaj(base, deg) { var oct = Math.floor(deg / 7), s = K_MAJ[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function kSemi(base, n) { return base * Math.pow(2, n / 12); }
   function kVol() { return 0.8 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function kWant() { return !!window.__gardenPartyOn && window.__partyDance === "polka"; }
+  function kWant() { return partyMusicForegroundWant("polka"); }
   function kOom(ctx, t, freq) {                                   // the "oom": a round tuba-ish bass on the beat
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
     var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
@@ -59347,7 +59394,7 @@ setMusicPausedState(false);
   function hSemi(base, n) { return base * Math.pow(2, n / 12); }
   function hStepDur(step) { return H8 * (1 - 0.2 * (step / 32)); } // accelerando across the loop, resets at the top
   function hVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function hWant() { return !!window.__gardenPartyOn && window.__partyDance === "horah"; }
+  function hWant() { return partyMusicForegroundWant("horah"); }
   function hOom(ctx, t, freq) {                                   // oom bass on beat 1
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
     var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
@@ -59483,7 +59530,7 @@ setMusicPausedState(false);
   function bgFreq(base, deg) { var oct = Math.floor(deg / 7), s = BG_SCALE[((deg % 7) + 7) % 7]; return base * Math.pow(2, (s + 12 * oct) / 12); }
   function bgSemi(base, n) { return base * Math.pow(2, n / 12); }
   function bgVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function bgWant() { return !!window.__gardenPartyOn && window.__partyDance === "bulgar"; }
+  function bgWant() { return partyMusicForegroundWant("bulgar"); }
   function bgOom(ctx, t, freq) {                                  // heavy bass on the grouping downbeats
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
     var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq;
@@ -59615,7 +59662,7 @@ setMusicPausedState(false);
   ];
   function duSemi(base, n) { return base * Math.pow(2, n / 12); }
   function duVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function duWant() { return !!window.__gardenPartyOn && window.__partyDance === "dupak"; }
+  function duWant() { return partyMusicForegroundWant("dupak"); }
   function duStamp(ctx, t, freq) {                                // stamped bass downbeat + a rustic drone fifth
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
     var fifth = ctx.createOscillator(); fifth.type = "sine"; fifth.frequency.value = freq * Math.pow(2, 7 / 12);
@@ -59746,7 +59793,7 @@ setMusicPausedState(false);
     return 0;
   }
   function fuVol() { return 0.83 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function fuWant() { return !!window.__gardenPartyOn && window.__partyDance === "furiant"; }
+  function fuWant() { return partyMusicForegroundWant("furiant"); }
   function fuStomp(ctx, t, freq) {                               // heel + bass make each changing group boundary unmistakable
     var o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = freq;
     var sub = ctx.createOscillator(); sub.type = "sine"; sub.frequency.value = freq / 2;
@@ -59894,7 +59941,7 @@ setMusicPausedState(false);
   ];
   function cuSemi(base, n) { return base * Math.pow(2, n / 12); }
   function cuVol() { return 0.85 * (window.__songVolume ? window.__songVolume() : 0.5) * (window.__partyDuck || 1); }
-  function cuWant() { return !!window.__gardenPartyOn && window.__partyDance === "cumbia"; }
+  function cuWant() { return partyMusicForegroundWant("cumbia"); }
   function cuBass(ctx, t, freq) {                                 // warm round tumbao bass
     var o = ctx.createOscillator(); o.type = "sine"; o.frequency.value = freq;
     var tri = ctx.createOscillator(); tri.type = "triangle"; tri.frequency.value = freq;
@@ -61090,7 +61137,6 @@ setMusicPausedState(false);
     if (window.__updateWorkoutSound) window.__updateWorkoutSound(undefined, 0.3);
     if (window.__updateTotoroSound) window.__updateTotoroSound(); // rainfall follows the totoro channel
     if (window.__updateStarsSound) window.__updateStarsSound(undefined, 0.3);
-    if (window.__actPing) window.__actPing("stars"); // second act: the night-sky channel IS the piano wind-down beat (W1)
     if (window.__updateTotoroMelody) window.__updateTotoroMelody(undefined, 0.3);
     if (window.__updateTotoroWatch) window.__updateTotoroWatch(); // three cameos outside a party, or all eight party kids, follow Totoro
     if (reduceMotion) renderStill(); else start();
@@ -92535,10 +92581,8 @@ async def localfont(name):
       danesh: { fromKey: "msg_danesh_from",  bodyKey: "msg_danesh_body", act: "roster" },  // DJ Danesh gassing up the crowd → tap: open the "who's here" roster
       album:  { fromKey: "msg_irene_from",   bodyKey: "msg_album_body", img: "art/msg-selfie.jpg", act: "app:photobooth" }, // act_p3 → the photobooth
       irene_games: { fromKey: "msg_irene_from", bodyKey: "msg_irene_games_body", act: "games" }, // → the office computer
-      piano:  { fromKey: "msg_mb_from",      bodyKey: "msg_piano_body", act: "piano" },  // act_w1 → the cuddly-puddly + the piano (night-sky) channel
       hannah_piano: { fromKey: "msg_hannah_from", bodyKeys: ["msg_hannah_piano_body_a", "msg_hannah_piano_body_b", "msg_hannah_piano_body_c"], act: "piano" }, // child-sized invitation to discover and play the visible keys; calm or party drip
-      dawn:   { fromKey: "msg_bahareh_from", bodyKey: "msg_dawn_body", apiAction: { id: "room.go", args: { room: "balcony" } } }, // act_w2 → the balcony
-      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body", act: "rsvp" },         // rsvp_exit → the RSVP
+      mb:     { fromKey: "msg_mb_from",      bodyKey: "msg_mb_body", act: "rsvp" }, // explicit RSVP action; never delivered by an automatic loft coda
       charlie: { fromKey: "msg_charlie_from", bodyKeys: ["msg_charlie_body_a", "msg_charlie_body_b", "msg_charlie_body_c", "msg_charlie_body_d", "msg_charlie_body_e", "msg_charlie_body_f"], act: "pc:chat" }, // one-time discovery text → Charlie on the office computer
       // app-cue pool — dripped at random during the party (not beat-driven); no fixed time (a
       // group chat doesn't stamp every line, and random arrival order shouldn't jumble the clock)
@@ -95423,11 +95467,15 @@ async def localfont(name):
     window.__partyTextChoices = function () { return partyTextChoices(false).slice(); }; // deterministic state/test view of the currently eligible party texts
     function cueRemaining() { return partyTextChoices(true); }
     function scheduleCueDrip() {
-      if (cueTimer || !window.__gardenPartyOn || !cuePending().length) return;
+      if (cueTimer || !window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive()) ||
+          !cuePending().length) return;
       cueOpenerArmed = cueFirstOfParty;
       cueTimer = setTimeout(function () {
         cueTimer = null;
-        if (window.__gardenPartyOn && !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
+        if (window.__gardenPartyOn &&
+            (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+            !document.hidden && document.hasFocus() && !window.__cinematic && playerStarted() && autonomousMsgOk()) {
           cueFirstOfParty = false; // an attending player got their look-in; back to the slow cadence
           var rem = cueRemaining();
           if (rem.length) window.__deliverAutonomousPhoneMessage(rem[Math.floor(Math.random() * rem.length)]); // a random un-sent cue
@@ -97645,11 +97693,25 @@ async def localfont(name):
     // GRACEFUL WIND-DOWN state: a pending teardown timer while the guests stroll out (party-off
     // "while watching"). Guarded so a storm of toggles can't double-fire, and a toggle back ON
     // mid-stroll cleanly cancels it and resumes the party.
-    var partyWindDownTimer = null;
+    var partyWindDownTimer = null, partyWindDownDeadline = 0, partyWindDownRemaining = 0;
     var WINDDOWN_MS = 3100; // ~the guest-gate-leave stroll (3.2s CSS) — keep the party + UV lit this long
-    function clearWindDown() { if (partyWindDownTimer) { clearTimeout(partyWindDownTimer); partyWindDownTimer = null; } }
+    function clearWindDown(resetRemaining) {
+      if (partyWindDownTimer) { clearTimeout(partyWindDownTimer); partyWindDownTimer = null; }
+      partyWindDownDeadline = 0;
+      if (resetRemaining !== false) partyWindDownRemaining = 0;
+    }
+    function finishWindDown() {
+      clearWindDown();
+      teardownPartyNow(); // dancers/lights fade; guests have already completed their walk-out
+    }
+    function armWindDown(delay) {
+      clearWindDown(false);
+      partyWindDownRemaining = Math.max(1, Number(delay) || WINDDOWN_MS);
+      partyWindDownDeadline = performance.now() + partyWindDownRemaining;
+      partyWindDownTimer = setTimeout(finishWindDown, partyWindDownRemaining);
+    }
     window.__cancelPartyWindDown = function (recoverMusic) {
-      var pending = !!partyWindDownTimer;
+      var pending = !!partyWindDownTimer || partyWindDownRemaining > 0;
       var fadeState = window.__partyDepartureFadeState && window.__partyDepartureFadeState();
       clearWindDown();
       if ((pending || (fadeState && fadeState.active)) && window.__setPartyDepartureFade) window.__setPartyDepartureFade(false, recoverMusic ? 0.35 : 0, recoverMusic !== false);
@@ -97693,16 +97755,13 @@ async def localfont(name):
       }
       // Turning OFF.
       if (immediate) { clearWindDown(); teardownPartyNow(); return; }
-      if (partyWindDownTimer) return; // a graceful wind-down is already in flight — storm-safe no-op
+      if (partyWindDownTimer || partyWindDownRemaining > 0) return; // a graceful wind-down is already in flight — storm-safe no-op
       if (shouldWindDownGracefully()) {
         // Walk everyone out but KEEP the party + blacklight lit for the stroll; tear down after.
         var walking = window.__walkGuestsOut ? window.__walkGuestsOut() : 0;
         if (walking > 0) {
           if (window.__setPartyDepartureFade) window.__setPartyDepartureFade(true, WINDDOWN_MS / 1000);
-          partyWindDownTimer = setTimeout(function () {
-            partyWindDownTimer = null;
-            teardownPartyNow(); // dancers/lights fade (base #trip-melt-dancers now transitions opacity), guests already gone
-          }, WINDDOWN_MS);
+          armWindDown(WINDDOWN_MS);
           return;
         }
         // nobody actually on the floor → fall through to the instant teardown
@@ -97710,7 +97769,20 @@ async def localfont(name):
       teardownPartyNow();
     }
     window.__setPartyMode = setPartyMode; // the garden light switch turns the party off through here
-    window.__partyWindingDown = function () { return !!partyWindDownTimer; }; // test/console hook
+    window.__pausePartyWindDown = function () {
+      if (!partyWindDownTimer) return false;
+      partyWindDownRemaining = Math.max(1, partyWindDownDeadline - performance.now());
+      clearWindDown(false);
+      return true;
+    };
+    window.__resumePartyWindDown = function () {
+      if (!window.__gardenPartyOn || partyWindDownTimer || !partyWindDownRemaining) return false;
+      armWindDown(partyWindDownRemaining);
+      return true;
+    };
+    window.__partyWindingDown = function () {
+      return !!partyWindDownTimer || partyWindDownRemaining > 0;
+    }; // test/console hook
     partyswitch.addEventListener("click", function () {
       setPartyMode(!partyswitch.classList.contains("on"));
     });
@@ -111828,8 +111900,7 @@ function spawnDustMote(container) {
     balconyIntroSeen = true;
     // The auto day/night keeps tracking the real (or ?time=) clock here — the balcony is where
     // the time-of-day sky matters most, and the advancing-time feature needs it live. The second
-    // act still layers its evening/morning nudges on top (its B0/W2 fallbacks flip via
-    // __autoToggleDusk on ATTENDED time); a real night already showing settles B0 gracefully.
+    // act can still layer its opening-evening nudge on top; a real night settles that beat.
     finaleTimers.forEach(clearTimeout);
     finaleTimers = [];
     var butterfly = document.getElementById("balcony-butterfly");
@@ -113762,9 +113833,18 @@ function spawnDustMote(container) {
     var attendedSeconds = 0, timer = null, active = false, finishing = false;
     var finaleAt = null, finaleReason = null, finaleTextOffered = false, finaleDeck = [];
     var suppressNextStop = false, inviteTimer = null, roadtripInviteTimer = null;
+    var inviteDeadline = 0, inviteRemaining = 0, roadtripInviteDeadline = 0, roadtripInviteRemaining = 0;
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function clearInvite() { if (inviteTimer) { clearTimeout(inviteTimer); inviteTimer = null; } }
-    function clearRoadtripInvite() { if (roadtripInviteTimer) { clearTimeout(roadtripInviteTimer); roadtripInviteTimer = null; } }
+    function clearInvite(resetRemaining) {
+      if (inviteTimer) { clearTimeout(inviteTimer); inviteTimer = null; }
+      inviteDeadline = 0;
+      if (resetRemaining !== false) inviteRemaining = 0;
+    }
+    function clearRoadtripInvite(resetRemaining) {
+      if (roadtripInviteTimer) { clearTimeout(roadtripInviteTimer); roadtripInviteTimer = null; }
+      roadtripInviteDeadline = 0;
+      if (resetRemaining !== false) roadtripInviteRemaining = 0;
+    }
     function paint() { sw.classList.toggle("invite-pulse", !!(active && window.__gardenPartyOn)); }
     function show(withFinaleText) {
       if (active || !window.__gardenPartyOn) return false;
@@ -113806,7 +113886,9 @@ function spawnDustMote(container) {
       return attendedSeconds;
     }
     function tick() {
-      if (!window.__gardenPartyOn || document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic) return;
+      if (!window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive()) ||
+          document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic) return;
       advance(1);
     }
     function offerAgain(force) {
@@ -113818,7 +113900,9 @@ function spawnDustMote(container) {
     }
     function scheduleInvite(delay) {
       clearInvite();
-      inviteTimer = setTimeout(function () { inviteTimer = null; offerAgain(false); }, delay == null ? 120000 + Math.floor(Math.random() * 120000) : delay);
+      inviteRemaining = delay == null ? 120000 + Math.floor(Math.random() * 120000) : delay;
+      inviteDeadline = performance.now() + inviteRemaining;
+      inviteTimer = setTimeout(function () { clearInvite(); offerAgain(false); }, inviteRemaining);
     }
     function offerRoadtripInvite() {
       clearRoadtripInvite();
@@ -113831,7 +113915,9 @@ function spawnDustMote(container) {
     }
     function scheduleRoadtripInvite() {
       clearRoadtripInvite();
-      roadtripInviteTimer = setTimeout(function () { roadtripInviteTimer = null; offerRoadtripInvite(); }, 8000);
+      roadtripInviteRemaining = 8000;
+      roadtripInviteDeadline = performance.now() + roadtripInviteRemaining;
+      roadtripInviteTimer = setTimeout(function () { clearRoadtripInvite(); offerRoadtripInvite(); }, roadtripInviteRemaining);
     }
     function startFresh() {
       clearInvite(); clearRoadtripInvite(); stop();
@@ -113855,7 +113941,8 @@ function spawnDustMote(container) {
     }
     window.__updatePartyExitHint = function () {
       if (!window.__gardenPartyOn) { stop(); active = false; paint(); return; }
-      if (!timer && !finishing) timer = setInterval(tick, 1000);
+      if (!timer && !finishing &&
+          (!window.__partyForegroundActive || window.__partyForegroundActive())) timer = setInterval(tick, 1000);
       paint();
     };
     window.__partyExitHintActive = function () { return !!(active && window.__gardenPartyOn); };
@@ -113888,7 +113975,35 @@ function spawnDustMote(container) {
     window.__restartPartyLifecycle = startFresh; // toggling back on during the walk-out starts a fresh attended stint
     window.__advancePartyLifecycle = advance;    // deterministic tests/console: no three-minute waits
     window.__partyLifecycleTick = tick;           // deterministic attendance-gate test hook
-    window.__partyLifecycleState = function () { return { attended: attendedSeconds, cue: !!active, finishing: finishing || null, finaleAt: finaleAt, finaleReason: finaleReason, running: !!timer, roadtripInvitePending: !!roadtripInviteTimer }; };
+    window.__pausePartyLifecycle = function () {
+      stop();
+      if (inviteTimer) {
+        inviteRemaining = Math.max(1, inviteDeadline - performance.now());
+        clearInvite(false);
+      }
+      if (roadtripInviteTimer) {
+        roadtripInviteRemaining = Math.max(1, roadtripInviteDeadline - performance.now());
+        clearRoadtripInvite(false);
+      }
+    };
+    window.__resumePartyLifecycle = function () {
+      if (window.__gardenPartyOn && !finishing && !timer &&
+          (!window.__partyForegroundActive || window.__partyForegroundActive())) {
+        timer = setInterval(tick, 1000);
+      }
+      if (!window.__gardenPartyOn &&
+          (!window.__partyForegroundActive || window.__partyForegroundActive())) {
+        var againDelay = inviteRemaining, roadDelay = roadtripInviteRemaining;
+        if (againDelay > 0) scheduleInvite(againDelay);
+        if (roadDelay > 0) {
+          clearRoadtripInvite();
+          roadtripInviteRemaining = roadDelay;
+          roadtripInviteDeadline = performance.now() + roadDelay;
+          roadtripInviteTimer = setTimeout(function () { clearRoadtripInvite(); offerRoadtripInvite(); }, roadDelay);
+        }
+      }
+    };
+    window.__partyLifecycleState = function () { return { attended: attendedSeconds, cue: !!active, finishing: finishing || null, finaleAt: finaleAt, finaleReason: finaleReason, running: !!timer, partyAgainPending: !!inviteTimer || inviteRemaining > 0, roadtripInvitePending: !!roadtripInviteTimer || roadtripInviteRemaining > 0 }; };
     window.__offerPartyAgain = function () { return offerAgain(true); };
     window.__offerPartyRoadtripInvite = offerRoadtripInvite; // focused test hook: skip the post-party dramatic beat
     window.__resetPartyExitHint = function () {
@@ -114537,7 +114652,8 @@ function spawnDustMote(container) {
   window.__setSecondRound = setSecondRound;
   setSecondRound(false, { releaseHeld: false });
   function gardenPartyActive() {
-    return window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden") &&
+    return (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+      window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden") &&
       document.visibilityState !== "hidden" &&
       !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
@@ -114628,7 +114744,15 @@ function spawnDustMote(container) {
   window.__retuneDancers = retuneDancers;
   var WALTZ_PERIOD_MS = 15000;
   var waltzAltTimer = null;
+  var waltzAltDeadline = 0, waltzAltRemaining = WALTZ_PERIOD_MS;
   var PARTY_DANCE_ORDER = null; // built lazily at first alternation-setup: ["techno", ...shuffle(rest)]
+  function armWaltzAlternation(delay) {
+    if (waltzAltTimer) clearTimeout(waltzAltTimer);
+    delay = Math.max(1, Number(delay) || WALTZ_PERIOD_MS);
+    waltzAltRemaining = delay;
+    waltzAltDeadline = performance.now() + delay;
+    waltzAltTimer = setTimeout(flipPartyMode, delay);
+  }
   function danceById(id) {
     var d = window.__partyDances || [];
     for (var i = 0; i < d.length; i++) if (d[i].id === id) return d[i];
@@ -114688,10 +114812,17 @@ function spawnDustMote(container) {
     // Second act: watching the decks change hands IS the floor beat paying off, so it settles
     // P2 — but only after this hype line has had its 4.2s, or the next beat would stomp the
     // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.
-    if (window.__actPing) setTimeout(function () { if (window.__gardenPartyOn) window.__actPing("dj"); }, 4600);
+    if (window.__actPing) setTimeout(function () {
+      if (window.__gardenPartyOn &&
+          (!window.__partyForegroundActive || window.__partyForegroundActive())) window.__actPing("dj");
+    }, 4600);
     // when the decks pass to Sina, Danesh is off — he texts the host from the sidelines. Delayed
     // so it doesn't land on the "DJ Sina takes over" caption; fires once (dedup'd in the deliverer).
-    if (!window.__djB && window.__deliverAutonomousPhoneMessage) setTimeout(function () { if (window.__gardenPartyOn && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("danesh"); }, 5200);
+    if (!window.__djB && window.__deliverAutonomousPhoneMessage) setTimeout(function () {
+      if (window.__gardenPartyOn &&
+          (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+          window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("danesh");
+    }, 5200);
   }
   // Manual DJ swap — double-tapping the decks hands the booth to the other friend. Flips the
   // active DJ, reflects it onto the booth, hypes the incoming one, and zeroes the every-3-dances
@@ -114715,18 +114846,20 @@ function spawnDustMote(container) {
   }
   function flipPartyMode() {
     waltzAltTimer = null;
+    waltzAltDeadline = 0;
     if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
-    if (rosterHoldsOccupants()) { waltzAltTimer = setTimeout(flipPartyMode, 1000); return; }
+    if (!window.__partyForegroundActive || !window.__partyForegroundActive()) return;
+    if (rosterHoldsOccupants()) { armWaltzAlternation(1000); return; }
     // don't advance the rotation while the hosts' FIRST DANCE holds the floor on the reserved
     // tango bed — it would crossfade tango away mid-dance. endFirstDance restores the rotation.
     if (!window.__musicPaused && !window.__firstDanceOn) advanceDance();
-    waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
+    armWaltzAlternation(WALTZ_PERIOD_MS);
   }
   window.__nextPartyDance = function () { // manual skip: jump to the next dance now, then keep auto-alternating
     if (!window.__gardenPartyOn) return false;
     if (waltzAltTimer) { clearTimeout(waltzAltTimer); waltzAltTimer = null; }
     advanceDance();
-    waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
+    armWaltzAlternation(WALTZ_PERIOD_MS);
     return true;
   };
   window.__setPartyDance = function (id) { // console dance("name"): jump straight to a named dance
@@ -114749,10 +114882,25 @@ function spawnDustMote(container) {
       PARTY_DANCE_ORDER = window.PARTY_DANCE_ORDER = all.length ? all : ["techno"];
     }
     if (waltzAltTimer) return;
-    waltzAltTimer = setTimeout(flipPartyMode, WALTZ_PERIOD_MS);
+    armWaltzAlternation(WALTZ_PERIOD_MS);
+  }
+  function pauseWaltzAlternation() {
+    if (!waltzAltTimer) return;
+    waltzAltRemaining = Math.max(1, waltzAltDeadline - performance.now());
+    clearTimeout(waltzAltTimer);
+    waltzAltTimer = null;
+    waltzAltDeadline = 0;
+  }
+  function resumeWaltzAlternation() {
+    if (!window.__gardenPartyOn || waltzAltTimer ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    armWaltzAlternation(waltzAltRemaining || WALTZ_PERIOD_MS);
+    waltzAltRemaining = WALTZ_PERIOD_MS;
   }
   function stopWaltzAlternation() {
     if (waltzAltTimer) { clearTimeout(waltzAltTimer); waltzAltTimer = null; }
+    waltzAltDeadline = 0;
+    waltzAltRemaining = WALTZ_PERIOD_MS;
     setPartyDanceState("techno"); // reset; the next fresh party overrides this with PARTY_DANCE_ORDER[0]
   }
   function spawnConfettiPiece() {
@@ -114798,16 +114946,27 @@ function spawnDustMote(container) {
     var have = container ? container.childElementCount : 0;
     for (var i = have, target = confettiTarget(); i < target; i++) spawnConfettiPiece();
   }
-  (function seedConfetti() {
-    function tick() {
-      if (gardenPartyActive()) topUpConfetti(); // top up (covers hidden-tab pauses + room returns)
-      setTimeout(tick, 1400);
-    }
-    setTimeout(tick, 1400);
-  })();
+  var confettiSeedTimer = null;
+  function partyConfettiTick() {
+    confettiSeedTimer = null;
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    if (gardenPartyActive()) topUpConfetti(); // top up (covers hidden-tab pauses + room returns)
+    confettiSeedTimer = setTimeout(partyConfettiTick, 1400);
+  }
+  function startPartyConfetti() {
+    if (confettiSeedTimer || !window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    if (gardenPartyActive()) topUpConfetti();
+    confettiSeedTimer = setTimeout(partyConfettiTick, 1400);
+  }
   function clearConfetti() {
     var c = document.getElementById("garden-confettifx");
     if (c) while (c.firstChild) c.removeChild(c.firstChild); // hard-clear — never trust paused onfinish for teardown
+  }
+  function stopPartyConfetti() {
+    if (confettiSeedTimer) { clearTimeout(confettiSeedTimer); confettiSeedTimer = null; }
+    clearConfetti();
   }
   window.addEventListener("framehealthchange", function (e) {
     if (e.detail && e.detail.slow) clearConfetti();
@@ -114837,7 +114996,9 @@ function spawnDustMote(container) {
     // window is unfocused or hidden). Safe here because arrivals are silent CSS
     // class toggles, not spawned/particle effects — nothing accumulates in a hidden tab (crickets rule
     // still guards every SOUND + WAAPI spawner elsewhere). Paused CSS walks just resume + settle on return.
-    return !!window.__gardenPartyOn && stageIndex === STAGES.indexOf("garden");
+    return !!window.__gardenPartyOn &&
+      (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+      stageIndex === STAGES.indexOf("garden");
   }
   function clearGuestArriveTimer() { if (guestArriveTimer) { clearTimeout(guestArriveTimer); guestArriveTimer = null; } }
   // Mirror the "named crowd is on the floor" signal (#garden-guests.guests-in) onto the
@@ -114880,16 +115041,26 @@ function spawnDustMote(container) {
   // stopped + the class cleared on teardown (party-off / room-leave / tab-hide / reset), so a
   // hidden tab never accumulates a flipped state. Reduced motion is a no-op visually (the CSS
   // holds both modes still) — the class still toggles harmlessly.
-  var hostSoloTimer = null;
+  var hostSoloTimer = null, hostSoloDeadline = 0, hostSoloRemaining = 0;
   function stopHostSolo() { // hard teardown: stop the cycle + drop the class so they return to together
     if (hostSoloTimer) { clearTimeout(hostSoloTimer); hostSoloTimer = null; }
+    hostSoloDeadline = 0; hostSoloRemaining = 0;
     var g = document.getElementById("garden-guests");
     if (g) g.classList.remove("hosts-solo");
   }
+  function pauseHostSolo() {
+    if (!hostSoloTimer) return;
+    hostSoloRemaining = Math.max(1, hostSoloDeadline - performance.now());
+    clearTimeout(hostSoloTimer); hostSoloTimer = null; hostSoloDeadline = 0;
+  }
   function armHostSolo(ms) { // (re)arm the next flip after a given delay — one timer only
     if (hostSoloTimer) return; // idempotent under storm-clicks / re-entry
+    ms = Math.max(1, Number(ms) || 1);
+    hostSoloRemaining = ms;
+    hostSoloDeadline = performance.now() + ms;
     hostSoloTimer = setTimeout(function () {
       hostSoloTimer = null;
+      hostSoloDeadline = 0; hostSoloRemaining = 0;
       var g = document.getElementById("garden-guests");
       if (!g || !g.classList.contains("guests-in") || !guestsWanted()) { if (g) g.classList.remove("hosts-solo"); return; } // off the floor → stop cycling (clear any leftover)
       if (rosterHoldsOccupants()) { armHostSolo(1000); return; }
@@ -114898,7 +115069,12 @@ function spawnDustMote(container) {
       armHostSolo(g.classList.contains("hosts-solo") ? 5000 + Math.random() * 3000 : 8000 + Math.random() * 5000);
     }, ms);
   }
+  function resumeHostSolo() {
+    if (hostSoloTimer || !hostSoloRemaining) return;
+    armHostSolo(hostSoloRemaining);
+  }
   function startHostSolo() { // begin the cycle (they start together; first solo comes after the first together stretch)
+    if (hostSoloTimer) return;
     var g = document.getElementById("garden-guests");
     if (g) g.classList.remove("hosts-solo"); // always begin together
     armHostSolo(8000 + Math.random() * 5000);
@@ -114955,7 +115131,7 @@ function spawnDustMote(container) {
     });
   }
   window.__partyGuestAttended = function (name) { return attendedGuestNames.has(String(name || "").toLowerCase()); };
-  var trickleTimer = null;
+  var trickleTimer = null, trickleDeadline = 0, trickleRemaining = 0;
   // ── DYNAMIC FLOOR BALANCE ────────────────────────────────────────────────────
   // Each present guest is nudged from its fixed home x to an evenly-spread SLOT so the floor reads
   // balanced whoever's on it (the revolving door means only ~5 of the many units are up at once,
@@ -115030,7 +115206,20 @@ function spawnDustMote(container) {
                    .map(function (o) { return o.e; });
   }
   function reducedMotionGuests() { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
-  function clearTrickleTimer() { if (trickleTimer) { clearTimeout(trickleTimer); trickleTimer = null; } }
+  function clearTrickleTimer(resetRemaining) {
+    if (trickleTimer) { clearTimeout(trickleTimer); trickleTimer = null; }
+    trickleDeadline = 0;
+    if (resetRemaining !== false) trickleRemaining = 0;
+  }
+  function pauseTrickleTimer() {
+    if (!trickleTimer) return;
+    trickleRemaining = Math.max(1, trickleDeadline - performance.now());
+    clearTrickleTimer(false);
+  }
+  function resumeTrickleTimer() {
+    if (trickleTimer || !trickleRemaining) return;
+    armTrickle(trickleRemaining);
+  }
   // walk ONE figure in through the gate: grant .arrived (so it shows + dances), set its per-figure
   // walk distance, and ride the one-shot .walking / group .duo-walking so the CSS crosses it from
   // the gate to home (cleared on animationend below). Reduced motion just grants .arrived (no walk).
@@ -115067,6 +115256,7 @@ function spawnDustMote(container) {
   // as the trickle, so nothing runs (or piles up) in a hidden/unfocused tab.
   var GUEST_UNIT_CAP = 4;
   var guestHandoffPending = false;
+  var guestHandoffTimer = null, guestHandoffDeadline = 0, guestHandoffRemaining = 0, guestHandoffLeaving = null;
   var recentArrivals = []; // unit keys that JUST walked in — don't send them straight back out
   function unitKey(u) { return u.id || u.sels[0]; }
   function unitIsPresent(g, u) { var el = g.querySelector(u.sels[0]); return !!(el && el.classList.contains("arrived") && !el.classList.contains("leaving")); }
@@ -115124,6 +115314,36 @@ function spawnDustMote(container) {
   }
   // one rotation beat: bring one waiting unit in, then send one present unit out.
   // The brief overlap keeps the floor lively; steady state still returns to GUEST_UNIT_CAP.
+  function armGuestHandoff(leaving, delay) {
+    if (guestHandoffTimer) clearTimeout(guestHandoffTimer);
+    guestHandoffLeaving = leaving;
+    guestHandoffRemaining = Math.max(1, Number(delay) || 1800);
+    guestHandoffDeadline = performance.now() + guestHandoffRemaining;
+    guestHandoffTimer = setTimeout(function retireUnits() {
+      guestHandoffTimer = null; guestHandoffDeadline = 0; guestHandoffRemaining = 0;
+      if (rosterHoldsOccupants()) { armGuestHandoff(guestHandoffLeaving, 1000); return; }
+      var heldLeaving = guestHandoffLeaving;
+      guestHandoffLeaving = null;
+      guestHandoffPending = false;
+      if (!window.__gardenPartyOn || window.__bbqSplitOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+      leaveEntry(heldLeaving);
+    }, guestHandoffRemaining);
+  }
+  function pauseGuestHandoff() {
+    if (!guestHandoffTimer) return;
+    guestHandoffRemaining = Math.max(1, guestHandoffDeadline - performance.now());
+    clearTimeout(guestHandoffTimer); guestHandoffTimer = null; guestHandoffDeadline = 0;
+  }
+  function resumeGuestHandoff() {
+    if (!guestHandoffPending || guestHandoffTimer || !guestHandoffLeaving) return;
+    armGuestHandoff(guestHandoffLeaving, guestHandoffRemaining || 1);
+  }
+  function clearGuestHandoff() {
+    if (guestHandoffTimer) clearTimeout(guestHandoffTimer);
+    guestHandoffTimer = null; guestHandoffDeadline = 0; guestHandoffRemaining = 0;
+    guestHandoffLeaving = null; guestHandoffPending = false;
+  }
   function rotateGuests(g, present, waiting) {
     if (guestHandoffPending) return;
     var evictable = present.filter(function (u) { return recentArrivals.indexOf(unitKey(u)) < 0 && !unitIsBirthdayHeld(g, u); });
@@ -115134,12 +115354,7 @@ function spawnDustMote(container) {
     if (!leaving || !incoming) return;
     guestHandoffPending = true;
     arriveEntry(incoming); noteArrival(incoming); echoRosterMove("in", incoming, g);
-    setTimeout(function retireUnits() {
-      if (rosterHoldsOccupants()) { setTimeout(retireUnits, 1000); return; }
-      guestHandoffPending = false;
-      if (!window.__gardenPartyOn || window.__bbqSplitOn) return;
-      leaveEntry(leaving);
-    }, 1800);
+    armGuestHandoff(leaving, 1800);
   }
   window.__partyRosterRotateNow = function () {
     clearTrickleTimer();
@@ -115171,8 +115386,12 @@ function spawnDustMote(container) {
   // the waiting units stay hidden (:not(.arrived)); only drops it if the whole roster fits under cap.
   function armTrickle(ms) {
     if (trickleTimer) return; // one timer only (idempotent under storm-clicks / re-entry)
+    ms = Math.max(1, Number(ms) || 1);
+    trickleRemaining = ms;
+    trickleDeadline = performance.now() + ms;
     trickleTimer = setTimeout(function () {
       trickleTimer = null;
+      trickleDeadline = 0; trickleRemaining = 0;
       var g = document.getElementById("garden-guests");
       if (!g) return;
       if (!window.__gardenPartyOn) { armTrickle(1400); return; } // party off — hold. NOTE: no longer gated on being IN the garden — the fill keeps going in the BACKGROUND while you're in another room (off-screen arrivals are instant, see walkFigureIn), so the party GROWS and is bigger when you return
@@ -115265,12 +115484,32 @@ function spawnDustMote(container) {
     }
   }
   window.__updateGardenGuests = updateGardenGuests;
+  window.__pauseGardenGuestRuntime = function () {
+    clearGuestArriveTimer();
+    pauseTrickleTimer();
+    pauseHostSolo();
+    pauseGuestHandoff();
+  };
+  window.__resumeGardenGuestRuntime = function () {
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    resumeHostSolo();
+    resumeTrickleTimer();
+    resumeGuestHandoff();
+    updateGardenGuests();
+  };
+  window.__gardenGuestRuntimeState = function () {
+    return { trickle: !!trickleTimer, hostSolo: !!hostSoloTimer, handoff: !!guestHandoffTimer,
+      trickleRemaining: trickleTimer ? Math.max(0, trickleDeadline - performance.now()) : trickleRemaining,
+      hostSoloRemaining: hostSoloTimer ? Math.max(0, hostSoloDeadline - performance.now()) : hostSoloRemaining,
+      handoffRemaining: guestHandoffTimer ? Math.max(0, guestHandoffDeadline - performance.now()) : guestHandoffRemaining };
+  };
   function clearAllArrived(g) { // wipe every per-figure arrival flag + walk distance + balance slot (teardown)
     if (!g) return;
     var walkers = g.querySelectorAll(".guest.arrived, .guest.walking, .guest.leaving, .guest.bd-honoree");
     for (var i = 0; i < walkers.length; i++) { walkers[i].classList.remove("arrived", "walking", "leaving", "bd-honoree"); }
     recentArrivals.length = 0;
-    guestHandoffPending = false;
+    clearGuestHandoff();
     attendedGuestNames.clear();
     bdCrowdBefore = bdAttendedBefore = null;
     var walks = g.querySelectorAll(".guest-walk");
@@ -115697,12 +115936,14 @@ function spawnDustMote(container) {
     }
     function scheduleAmbientFlare(delay) {
       clearAmbientFlare();
-      if (!window.__gardenPartyOn) return;
+      if (!window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
       ambientFlareTimer = setTimeout(ambientFlareTick, delay == null ? 2800 + Math.random() * 3200 : delay);
     }
     function ambientFlareTick() {
       ambientFlareTimer = null;
-      if (!window.__gardenPartyOn) return;
+      if (!window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
       var watched = window.currentStageName === "garden" && !document.hidden && document.hasFocus() &&
         !window.__photoFreeze && !window.__firstDanceOn && !window.__musicPaused;
       if (watched) {
@@ -116813,25 +117054,31 @@ function spawnDustMote(container) {
   function discoPoolsStepped() { return !!(window.__frameHealthSlow && window.__frameHealthSlow()); }
   function stepDiscoPools() {
     discoStepTimer = null;
-    if (!window.__gardenPartyOn) return; // party ended — stop, don't reschedule
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
     if (!discoPoolsStepped()) { clearDiscoPools(); return; } // desktop: hand back to the CSS sweep (drop inline styles, stop stepping)
     if (gardenPartyActive()) positionDiscoPools(); // freeze (no repaint) while hidden / out of room / reduced-motion
     discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220); // ~1s, lightly jittered so it's not metronomic
   }
   function startDiscoStepper() {
     if (discoStepTimer) return; // one stepper only — idempotent under storm-clicks
+    if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
     if (!discoPoolsStepped()) { clearDiscoPools(); return; } // desktop uses the CSS sweep — no stepper, no inline styles
     if (gardenPartyActive()) positionDiscoPools(); // light them at once (skipped under reduced-motion → CSS wash holds)
     discoStepTimer = setTimeout(stepDiscoPools, 900 + Math.random() * 220);
   }
   window.addEventListener("framehealthchange", function () {
-    if (!window.__gardenPartyOn) return;
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
     stopDiscoStepper();  // clear the old mode's inline pose/timer
     startDiscoStepper(); // low FPS starts steps; recovered FPS hands back to CSS
   });
   function stopDiscoStepper() {
     if (discoStepTimer) { clearTimeout(discoStepTimer); discoStepTimer = null; }
     clearDiscoPools();
+  }
+  function pauseDiscoStepper() {
+    if (discoStepTimer) { clearTimeout(discoStepTimer); discoStepTimer = null; }
   }
   // ── PARTY MODE camera flash (garden) — the front-left guest's camera pops a soft, silent,
   // infrequent flash. SAME background-safety idiom as the disco stepper: ONE self-rescheduling
@@ -116976,7 +117223,8 @@ function spawnDustMote(container) {
   function partyFrozen() { var s = document.getElementById("loft-game-strip"); return !!(s && s.classList.contains("dance-frozen")); }
   function gardenFlashTick() {
     gardenFlashTimer = null;
-    if (!window.__gardenPartyOn) return;                 // party ended — stop, don't reschedule
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
     if (gardenPartyActive()) fireGardenFlash();          // only fire when visible / in-garden / motion-ok
     // when the party's STOPPED to see people, the photographer works the frozen crowd — near-
     // continuous flashes (~0.9-1.4s); otherwise the ambient ~5-9s pop.
@@ -116985,10 +117233,12 @@ function spawnDustMote(container) {
   // freeze on/off changes the pace immediately (don't wait out the current ambient timer)
   window.__syncGardenFlashPace = function () {
     if (gardenFlashTimer) { clearTimeout(gardenFlashTimer); gardenFlashTimer = null; }
-    if (window.__gardenPartyOn) gardenFlashTick();
+    if (window.__gardenPartyOn &&
+        (!window.__partyForegroundActive || window.__partyForegroundActive())) gardenFlashTick();
   };
   function startGardenFlash() {
     if (gardenFlashTimer) return;                        // one spawner only — idempotent under storm-clicks
+    if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
     gardenFlashTimer = setTimeout(gardenFlashTick, 3000 + Math.random() * 3000); // first pop a few seconds in
   }
   function stopGardenFlash() {
@@ -117018,7 +117268,8 @@ function spawnDustMote(container) {
   }
   function startPhotoMoment() {
     photoFreezeTimer = null;
-    if (!window.__gardenPartyOn) return;
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
     if (window.__lowerRoomOwnsViewport && window.__lowerRoomOwnsViewport()) {
       schedulePhotoMoment();
       return;
@@ -117037,7 +117288,8 @@ function spawnDustMote(container) {
   }
   function schedulePhotoMoment() {
     if (photoFreezeTimer) { clearTimeout(photoFreezeTimer); photoFreezeTimer = null; }
-    if (!window.__gardenPartyOn) return;
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
     photoFreezeTimer = setTimeout(startPhotoMoment, 45000 + Math.random() * 30000); // ~45-75s between short photo poses
   }
   window.__startPhotoMoment = schedulePhotoMoment;
@@ -117059,14 +117311,20 @@ function spawnDustMote(container) {
   var albumSnapTimer = null;
   function albumSnapTick() {
     albumSnapTimer = null;
-    if (!window.__gardenPartyOn) return;                 // party ended — stop
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
     if (!document.hidden && document.hasFocus() && !window.__photoFreeze && gardenPartyActive()) {
       fireGardenFlash();
       if (window.__albumAdd) window.__albumAdd();         // a keepsake straight into the album (rotates subject; capped)
     }
     albumSnapTimer = setTimeout(albumSnapTick, 34000 + Math.random() * 20000); // ~34-54s — a relaxed pace (and it stops once every group's been shot)
   }
-  window.__startAlbumSnaps = function () { if (!albumSnapTimer && window.__gardenPartyOn) albumSnapTimer = setTimeout(albumSnapTick, 12000 + Math.random() * 8000); }; // first keepsake ~12-20s into the party
+  window.__startAlbumSnaps = function () {
+    if (!albumSnapTimer && window.__gardenPartyOn &&
+        (!window.__partyForegroundActive || window.__partyForegroundActive())) {
+      albumSnapTimer = setTimeout(albumSnapTick, 12000 + Math.random() * 8000);
+    }
+  }; // first keepsake ~12-20s into the party
   window.__stopAlbumSnaps = function () { if (albumSnapTimer) { clearTimeout(albumSnapTimer); albumSnapTimer = null; } };
   // ── THE WEDDING ALBUM — Aspen's shots, kept as keepsake "polaroids" ────────────
   // Aspen already flashes through the auto photo-moments and when the visitor taps her; those
@@ -117821,6 +118079,7 @@ function spawnDustMote(container) {
   function partyKidFormationTick() {
     partyKidFormationTimer = null;
     if (!window.__gardenPartyOn) return;
+    if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
     if (document.hidden || !document.hasFocus()) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
     if (rosterHoldsOccupants()) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
     if (gardenChaseRunning) { partyKidFormationTimer = setTimeout(partyKidFormationTick, 1000); return; }
@@ -117849,6 +118108,14 @@ function spawnDustMote(container) {
     ["irene", "robin", "navid"].forEach(function (name) {
       var el = document.querySelector("#garden-guests .g-" + name); if (el) el.style.removeProperty("--balance-x");
     });
+  }
+  function pausePartyKidFormation() {
+    if (partyKidFormationTimer) { clearTimeout(partyKidFormationTimer); partyKidFormationTimer = null; }
+  }
+  function resumePartyKidFormation() {
+    if (!window.__gardenPartyOn || partyKidFormationTimer ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    partyKidFormationTimer = setTimeout(partyKidFormationTick, 7000 + Math.random() * 4000);
   }
   window.__setPartyKidFormation = applyPartyKidFormation;
   window.__assignPartyKids = assignPartyKids;
@@ -117989,12 +118256,14 @@ function spawnDustMote(container) {
   }
   function gardenChaseTick() {
     gardenChaseTimer = null;
-    if (!window.__gardenPartyOn) return;         // party ended — stop, don't reschedule
+    if (!window.__gardenPartyOn ||
+        (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
     if (!rosterHoldsOccupants()) startGardenChase(false); // self-gates on visible/focused/in-garden/not-busy/motion
     gardenChaseTimer = setTimeout(gardenChaseTick, 9000 + Math.random() * 9000); // ~9–18s, jittered (never metronomic)
   }
   function startGardenChaseDriver() {
     if (gardenChaseTimer) return;                // one driver only — idempotent under storm-clicks
+    if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
     gardenChaseTimer = setTimeout(gardenChaseTick, 4000 + Math.random() * 5000); // first dash a few seconds into the party
   }
   function stopGardenChase() { clearGardenChase(); } // party over — kill the timer + reset every runner
@@ -118089,7 +118358,7 @@ function spawnDustMote(container) {
       var balcLights = document.getElementById("balcony-lights"); if (balcLights) balcLights.classList.remove("off");
       var balcLamp = document.getElementById("balcony-walllamp"); if (balcLamp) balcLamp.classList.add("on");
       if (window.__updateBalconyLightPulse) window.__updateBalconyLightPulse();
-      if (gardenPartyActive()) topUpConfetti(); // kick it off now; the seed loop keeps it topped
+      startPartyConfetti(); // kick it off now; the bounded seed loop keeps it topped
       startDiscoStepper(); // begin the once-a-second disco-pool hops (idempotent; self-gates on gardenPartyActive)
       startGardenFlash(); // begin the front-left guest's occasional soft camera flash (idempotent; self-gates on gardenPartyActive)
       if (window.__startPhotoMoment) window.__startPhotoMoment(); // schedule the occasional short photo-pose moments
@@ -118133,7 +118402,7 @@ function spawnDustMote(container) {
       stopWaltzAlternation();          // party over — kill the rotation + reset __partyDance to techno
       if (window.stopFlairCatch) window.stopFlairCatch();                 // party over — end any Flair-Catch run + clear its sprites
       if (window.resetBartenderPosition) window.resetBartenderPosition(); // bar's gone — send him back to his spot
-      clearConfetti();
+      stopPartyConfetti();
       stopDiscoStepper();              // party over — kill the disco-pool stepper + drop the pools' inline styles
       stopGardenFlash();               // party over — kill the camera-flash timer + drop any in-flight flash
       if (window.__stopPhotoMoment) window.__stopPhotoMoment(); // party over — end any photo-freeze + its timer
@@ -118169,6 +118438,7 @@ function spawnDustMote(container) {
     if (window.__homeCat && window.currentStageName) window.__homeCat(window.currentStageName); // party on → contain the loose cat to the nook; party off → let it roam again (never stows it)
     if (window.__updateWhistler) window.__updateWhistler(); // party on + Farhang/Lauren arrived → let Whistler out; party off → send him home
     if (window.__partyLifecycleChanged) window.__partyLifecycleChanged(on, wasOn); // attended pacing + explicit finales; repeated idempotent sets never reset its clock
+    if (!on && window.__partyActEnded) window.__partyActEnded(); // direct/cinematic teardown cannot leave the pre-camping sequencer alive
     updateCallCheer(); // party on/off → the far-away call families cheer along (or settle back down)
     if (window.__updateBalconyHangout) window.__updateBalconyHangout(); // party on → the deck crowd + smokers step out (self-gates on being ON the balcony); party off → they clear
     if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // party on → Hamid may be tending a lit BBQ (self-gates on balcony + smoking); party off → he clears
@@ -118181,8 +118451,116 @@ function spawnDustMote(container) {
     // path funnels through here; goToStage and the state-change subscribers have already repainted
     // their ordinary garden/party lines, so the reveal now survives for its intended beat.
     if (on && window.__actPing) window.__actPing("party");
+    if (on && window.__partyForegroundActive && !window.__partyForegroundActive()) {
+      suspendPartyForegroundRuntime();
+    }
   }
   window.__setGardenParty = setGardenParty;
+  function pauseActivePartyBed() {
+    var hooks = {
+      techno: "__pausePartyMusic", waltz: "__pauseWaltzMusic", tango: "__pauseTangoMusic",
+      disco: "__pauseDiscoMusic", swing: "__pauseSwingMusic", salsa: "__pauseSalsaMusic",
+      bhangra: "__pauseBhangraMusic", bandari: "__pauseBandariMusic", polka: "__pausePolkaMusic",
+      horah: "__pauseHorahMusic", bulgar: "__pauseBulgarMusic", dupak: "__pauseDupakMusic",
+      furiant: "__pauseFuriantMusic", cumbia: "__pauseCumbiaMusic"
+    };
+    var hook = hooks[window.__partyDance];
+    return !!(hook && window[hook] && window[hook](true));
+  }
+  function suspendPartyForegroundRuntime() {
+    if (window.__pausePartyLifecycle) window.__pausePartyLifecycle();
+    if (!window.__gardenPartyOn) return;
+    if (window.__pausePartyWindDown) window.__pausePartyWindDown();
+    stopPartyConfetti();
+    pauseWaltzAlternation();
+    pauseDiscoStepper();
+    stopGardenFlash();
+    if (window.__stopPhotoMoment) window.__stopPhotoMoment();
+    if (window.__stopAlbumSnaps) window.__stopAlbumSnaps();
+    if (window.__stopPhotogRounds) window.__stopPhotogRounds();
+    if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
+    if (window.__updateGardenPhotographer) window.__updateGardenPhotographer();
+    stopGardenChase();
+    pausePartyKidFormation();
+    if (window.__pauseGardenGuestRuntime) window.__pauseGardenGuestRuntime();
+    if (window.__pauseBarGroovers) window.__pauseBarGroovers();
+    if (window.__pauseOfficeHangout) window.__pauseOfficeHangout();
+    if (window.__stopCueDrip) window.__stopCueDrip();
+    if (window.__stopGuestFlares) window.__stopGuestFlares();
+    if (window.__pauseActTwoPartyForeground) window.__pauseActTwoPartyForeground();
+    if (window.__pauseBalconyPartyRuntime) window.__pauseBalconyPartyRuntime();
+    if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster();
+    if (window.__updateBalconyPhotog) window.__updateBalconyPhotog();
+    if (window.__dismissBalconyAudienceCallout) window.__dismissBalconyAudienceCallout();
+    updateAllPartyDances(0.7);
+    if (window.__retargetPartyAudioOutputs) window.__retargetPartyAudioOutputs(0, 0.7);
+    if (window.__refreshStageAnimationParking) window.__refreshStageAnimationParking();
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  function resumePartyForegroundRuntime() {
+    if (!window.__gardenPartyOn) {
+      if (window.__resumePartyLifecycle) window.__resumePartyLifecycle();
+      return;
+    }
+    if (window.__partyWindingDown && window.__partyWindingDown()) {
+      if (window.__resumePartyWindDown) window.__resumePartyWindDown();
+      if (window.__refreshStageAnimationParking) window.__refreshStageAnimationParking();
+      if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+      return;
+    }
+    var transportPaused = !!window.__musicPaused;
+    updateAllPartyDances(0.7);
+    if (transportPaused) {
+      pauseActivePartyBed();
+      if (window.__setMusicPaused) window.__setMusicPaused(true);
+    }
+    startPartyConfetti();
+    resumeWaltzAlternation();
+    startDiscoStepper();
+    startGardenFlash();
+    if (window.__startPhotoMoment) window.__startPhotoMoment();
+    if (window.__startAlbumSnaps) window.__startAlbumSnaps();
+    if (window.__startPhotogRounds) window.__startPhotogRounds();
+    if (window.__updateRoomPhotogs) window.__updateRoomPhotogs();
+    if (window.__updateGardenPhotographer) window.__updateGardenPhotographer();
+    startGardenChaseDriver();
+    resumePartyKidFormation();
+    if (window.__resumeGardenGuestRuntime) window.__resumeGardenGuestRuntime();
+    if (window.__resumeBarGroovers) window.__resumeBarGroovers();
+    if (window.__resumeOfficeHangout) window.__resumeOfficeHangout();
+    if (window.__startCueDrip) window.__startCueDrip(true);
+    if (window.__startGuestFlares) window.__startGuestFlares();
+    if (window.__resumePartyLifecycle) window.__resumePartyLifecycle();
+    if (window.__resumeActTwoPartyForeground) window.__resumeActTwoPartyForeground();
+    if (window.__resumeBalconyPartyRuntime) window.__resumeBalconyPartyRuntime();
+    if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster();
+    if (window.__updateBalconyPhotog) window.__updateBalconyPhotog();
+    if (window.__refreshStageAnimationParking) window.__refreshStageAnimationParking();
+    if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+  }
+  if (window.__registerPartyForegroundLifecycle) {
+    window.__registerPartyForegroundLifecycle({
+      suspend: suspendPartyForegroundRuntime,
+      resume: resumePartyForegroundRuntime
+    });
+  }
+  window.__partyForegroundRuntimeState = function () {
+    return {
+      suspended: !!(window.__partyForegroundState && window.__partyForegroundState().suspended),
+      dance: window.__partyDance || null,
+      rotation: !!waltzAltTimer,
+      confetti: !!confettiSeedTimer,
+      disco: !!discoStepTimer,
+      flash: !!gardenFlashTimer,
+      photo: !!photoFreezeTimer,
+      album: !!albumSnapTimer,
+      chase: !!gardenChaseTimer,
+      kidFormation: !!partyKidFormationTimer,
+      guests: window.__gardenGuestRuntimeState ? window.__gardenGuestRuntimeState() : null,
+      lifecycle: window.__partyLifecycleState ? window.__partyLifecycleState() : null,
+      audio: window.__partyAudioOutputState ? window.__partyAudioOutputState() : []
+    };
+  };
   // Tap a party dancer -> that dancer does a celebratory flare (hop + twirl + pop). The
   // .md-hit rects are only clickable while .party-dancing is on (see CSS), so this never
   // eats clicks when the dancers are hidden. One-shot .flaring class, cleared on
@@ -118212,7 +118590,9 @@ function spawnDustMote(container) {
     // cleanup as the tap path). Re-gates at fire time so a setTimeout that lands after the
     // party ends / a room change / a tab hide (or under reduced motion) is a no-op.
     window.__flareRandomDancer = function () {
-      if (!window.__gardenPartyOn || window.currentStageName !== "garden" || document.hidden) return;
+      if (!window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive()) ||
+          window.currentStageName !== "garden" || document.hidden) return;
       if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       var dancers = group.querySelectorAll(".melt-dancer");
       if (dancers.length) flare(dancers[(Math.random() * dancers.length) | 0]);
@@ -118298,7 +118678,9 @@ function spawnDustMote(container) {
     });
     function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
-      return !!window.__gardenPartyOn && !window.__bbqSplitOn && window.currentStageName === "kitchen" && attended();
+      return !!window.__gardenPartyOn &&
+        (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+        !window.__bbqSplitOn && window.currentStageName === "kitchen" && attended();
     }
     // is this person on the garden dance floor right now? (revolving-door presence)
     function onFloor(name) {
@@ -118396,6 +118778,10 @@ function spawnDustMote(container) {
       if (shouldRun()) schedule();
       else stop();
     };
+    window.__pauseBarGroovers = function () {
+      if (timer) { clearTimeout(timer); timer = null; }
+    };
+    window.__resumeBarGroovers = function () { if (shouldRun()) schedule(); };
     // who's grooving at the bar right now → array of member ids, or null. Lets the floor/balcony
     // agents exclude these people from their own rosters (the full mutual-exclusion wiring pass).
     window.__barCoupleNow = function () {
@@ -119232,7 +119618,13 @@ function spawnDustMote(container) {
     var CROWD_LANE = { lo: 88, hi: 288 };
     var SMOKER_LANE = { lo: 508, hi: 648 };
     function reduceMotion() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
-    function onScreen() { return window.currentStageName === "balcony" && (!!window.__gardenPartyOn || bbqCrowdOn); }
+    function onScreen() {
+      if (window.__gardenPartyOn) {
+        return window.__partyAutonomyAllowed ? window.__partyAutonomyAllowed("balcony") :
+          window.currentStageName === "balcony";
+      }
+      return window.currentStageName === "balcony" && bbqCrowdOn;
+    }
     function smokingPolicy() {
       return window.__balconySmokingPolicy ? window.__balconySmokingPolicy() : "all";
     }
@@ -119580,7 +119972,9 @@ function spawnDustMote(container) {
     }
     // Called on the aurora's hidden→visible edge. Public only as a deterministic test seam.
     window.__auroraPartyLookUp = function () {
-      if (!window.__gardenPartyOn || window.currentStageName !== "balcony" ||
+      if (!window.__gardenPartyOn ||
+          (window.__partyAutonomyAllowed && !window.__partyAutonomyAllowed("balcony")) ||
+          window.currentStageName !== "balcony" ||
           !hangout.classList.contains("on") || authoredMomentActive() ||
           !hangout.querySelector(".bh-fig.bh-present")) return false;
       clearAuroraLookUp();
@@ -119593,6 +119987,7 @@ function spawnDustMote(container) {
     var audienceCommented = false;
     window.__balconyAudienceNoticed = function (force) {
       if (audienceCommented || !hangout.classList.contains("on") ||
+          (window.__partyAutonomyAllowed && !window.__partyAutonomyAllowed("balcony")) ||
           document.hidden || !document.hasFocus() || document.querySelector(".egg-bubble")) return null;
       var smokers = ROSTER.filter(function (r) { return r.smoker && figurePresent(r); });
       if (!smokers.length || (!force && Math.random() >= 0.42)) return null;
@@ -119604,6 +119999,11 @@ function spawnDustMote(container) {
       bubble.classList.add("balcony-audience-callout");
       bubble.setAttribute("data-speaker", figKey(speaker));
       return figKey(speaker);
+    };
+    window.__dismissBalconyAudienceCallout = function () {
+      var bubble = document.querySelector(".egg-bubble.balcony-audience-callout");
+      if (bubble) { dismissEggBubble(bubble); bubble.remove(); }
+      clearAuroraLookUp();
     };
     // ── name popups: each figure names itself on click, in the shared white name-card __whoPop —
     // same card, and now the same name · role · relationship · fun-fact text, as the garden/cuddly
@@ -119764,6 +120164,20 @@ function spawnDustMote(container) {
         }, 1600 + Math.random() * 1400);
       })();
     }
+    function stopSmoke() {
+      if (smokeTimer) { clearTimeout(smokeTimer); smokeTimer = null; }
+    }
+    window.__pauseBalconyPartyRuntime = function () {
+      stopSmoke();
+      clearBBQRotation();
+      clearAuroraLookUp();
+      window.__dismissBalconyAudienceCallout();
+    };
+    window.__resumeBalconyPartyRuntime = function () {
+      if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
+      scheduleSmoke();
+      if (bbqCrowdOn) armBBQRotation(20000 + Math.random() * 10000);
+    };
     scheduleSmoke(); // the timer runs for the page's life but only PUFFS when smokeOk() (crickets-gated)
     // re-gate on the same signals the other balcony ambients use, so a tab hidden/unfocused
     // while on the balcony stops puffing immediately (belt-and-suspenders with puffOnce's gate)
@@ -119790,7 +120204,8 @@ function spawnDustMote(container) {
     var shown = false;   // is he actually painted right now?
     function attended() { return !document.hidden && document.hasFocus(); }
     function inRoom() {
-      return window.currentStageName === "balcony" && smoker.classList.contains("smoking");
+      return (!window.__gardenPartyOn || !window.__partyAutonomyAllowed || window.__partyAutonomyAllowed("balcony")) &&
+        window.currentStageName === "balcony" && smoker.classList.contains("smoking");
     }
     function onFloor(name) {
       if (!guests) return false;
@@ -119943,7 +120358,9 @@ function spawnDustMote(container) {
     // She's on the deck for the daytime BBQ AND for the party's smoking crowd — either way there
     // are people out here to shoot.
     function shouldShow() {
-      return window.currentStageName === "balcony" &&
+      var partyAllowed = !window.__gardenPartyOn || !window.__partyAutonomyAllowed ||
+        window.__partyAutonomyAllowed("balcony");
+      return partyAllowed && window.currentStageName === "balcony" &&
         (!!window.__balconyBBQOn || !!window.__gardenPartyOn) &&
         !!(window.__roomHasPhotoSubjects && window.__roomHasPhotoSubjects("balcony"));
     }
@@ -120070,14 +120487,16 @@ function spawnDustMote(container) {
     }
     var lastWhere = ""; // the (room, party-on) pair update() last saw — an ARRIVAL is a change in it
     function update() { // she's out wherever the party is, in whichever of her three rooms is on screen
+      var partyActive = !!window.__gardenPartyOn &&
+        (!window.__partyForegroundActive || window.__partyForegroundActive());
       Object.keys(mounted).forEach(function (room) {
-        mounted[room].g.classList.toggle("showing", !!window.__gardenPartyOn && window.currentStageName === room && hasAmbientSubjects(room));
+        mounted[room].g.classList.toggle("showing", partyActive && window.currentStageName === room && hasAmbientSubjects(room));
       });
       var occupied = hasAmbientSubjects(window.currentStageName);
-      var where = window.currentStageName + "|" + !!window.__gardenPartyOn + "|" + occupied;
+      var where = window.currentStageName + "|" + partyActive + "|" + occupied;
       if (where === lastWhere) return; // a blur/focus/visibility re-run is not an arrival
       lastWhere = where;
-      if (window.__gardenPartyOn && window.currentStageName !== "garden" && occupied) armArrival();
+      if (partyActive && window.currentStageName !== "garden" && occupied) armArrival();
       else if (arriveTimer) { clearTimeout(arriveTimer); arriveTimer = null; }
     }
     window.__updateRoomPhotogs = update;
@@ -120098,13 +120517,16 @@ function spawnDustMote(container) {
     // would double-fire both the flash and the keepsake.
     function shootHere() {
       var room = window.currentStageName;
-      if (!window.__gardenPartyOn || room === "garden" || !attended() || !hasAmbientSubjects(room)) return;
+      if (!window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive()) ||
+          room === "garden" || !attended() || !hasAmbientSubjects(room)) return;
       window.__photogSnap(room, true);                            // silent: an ambient flash, never an autonomous shutter
     }
     function armRound() { if (roundTimer) clearTimeout(roundTimer); roundTimer = setTimeout(roundTick, 22000 + Math.random() * 18000); }
     function roundTick() {
       roundTimer = null;
-      if (!window.__gardenPartyOn) return;                        // party over — stop, don't reschedule
+      if (!window.__gardenPartyOn ||
+          (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
       shootHere();
       armRound();
     }
@@ -120122,7 +120544,12 @@ function spawnDustMote(container) {
         armRound();                                               // re-phase, so the next round is a full interval after THIS frame
       }, 2600 + Math.random() * 900);
     }
-    window.__startPhotogRounds = function () { if (!roundTimer && window.__gardenPartyOn) roundTimer = setTimeout(roundTick, 9000 + Math.random() * 7000); };
+    window.__startPhotogRounds = function () {
+      if (!roundTimer && window.__gardenPartyOn &&
+          (!window.__partyForegroundActive || window.__partyForegroundActive())) {
+        roundTimer = setTimeout(roundTick, 9000 + Math.random() * 7000);
+      }
+    };
     window.__stopPhotogRounds = function () { if (roundTimer) { clearTimeout(roundTimer); roundTimer = null; } if (arriveTimer) { clearTimeout(arriveTimer); arriveTimer = null; } };
     window.__resetRoomPhotogs = function () { window.__stopPhotogRounds(); Object.keys(mounted).forEach(function (room) { mounted[room].g.classList.remove("showing"); mounted[room].bloom.classList.remove("flashing"); if (mounted[room].cam) mounted[room].cam.classList.remove("aiming"); }); };
     document.addEventListener("visibilitychange", update);
@@ -120186,7 +120613,9 @@ function spawnDustMote(container) {
     });
     function attended() { return !document.hidden && document.hasFocus(); }
     function shouldRun() {
-      return !!window.__gardenPartyOn && !window.__bbqSplitOn && window.currentStageName === "office" && attended();
+      return !!window.__gardenPartyOn &&
+        (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+        !window.__bbqSplitOn && window.currentStageName === "office" && attended();
     }
     // is this person on the garden dance floor right now? (revolving-door presence)
     function onFloor(name) {
@@ -120324,6 +120753,10 @@ function spawnDustMote(container) {
       if (shouldRun()) schedule();
       else stop();
     };
+    window.__pauseOfficeHangout = function () {
+      if (timer) { clearTimeout(timer); timer = null; }
+    };
+    window.__resumeOfficeHangout = function () { if (shouldRun()) schedule(); };
     window.__resetOfficeHangout = stop; // goToStage leave-office + global reset
     // who's in the office right now → array of member ids, or null. Lets the floor/bar/balcony
     // agents reciprocally exclude these people from their own rosters (the mutual-exclusion pass).
@@ -130352,10 +130785,10 @@ function spawnDustMote(container) {
 })();
 (function actTwo() {
   // ── THE SECOND ACT: a beat sequencer ────────────────────────────────────────────────
-  // Walks the arc the "Watch the loft" cinematic narrates — dusk → the switch that isn't a
-  // switch → bar → floor → album → piano → dawn → RSVP — as ambient caption nudges over
-  // systems that already ship. Deliberately NOT a quest log: no panel, no counter, no
-  // persistence. Two rules carry the whole design; break either and it turns into one.
+  // Walks the party-opening arc the "Watch the loft" cinematic narrates — dusk → the switch
+  // that isn't a switch → bar → floor → album — as ambient caption nudges over systems that
+  // already ship. Camping owns the only terminal RSVP coda; this sequencer ends with the party.
+  // Deliberately NOT a quest log: no panel, no counter, no persistence. Two rules carry it.
   //
   //  1. COMPLETION IS A LIVE READ, LATCHED. A beat asks the world "is this already so?"
   //     rather than tracking what the player was told — so someone who lit the party before
@@ -130365,18 +130798,16 @@ function spawnDustMote(container) {
   //  2. COMPLETION AND CAPTION-OWNERSHIP ARE SEPARATE. A beat owns its room's caption for a
   //     bounded stretch of time actually SEEN in that room (claimMs), then yields it back to
   //     the room's own rotation while staying live, so it still completes if they get round
-  //     to it later. Fallbacks keep their separate whole-loft attended clock. The final RSVP
-  //     beat takes the line only after the whole arc has completed.
+  //     to it later. Fallbacks keep their separate whole-loft attended clock.
   //
   // Per-session, never localStorage: a ~10-minute experience, and a returning visitor who
   // knows the trick shouldn't have the surprise re-explained to them.
-  var armed = false, live = null, liveMs = 0, claimElapsed = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null;
+  var armed = false, retired = false, live = null, liveMs = 0, claimElapsed = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null;
 
   function el(id) { return document.getElementById(id); }
   function isDusk() { var b = el("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
   function bbqDay() { return !!window.__bbqDayPartyOn || !!(window.__isOccasionDate && window.__isOccasionDate() === "bbq"); }
   function partyOn() { return !!window.__gardenPartyOn; }
-  function starsOn() { var ws = el("cuddly-wallscreen"); return !!(ws && ws.classList.contains("chan-stars")); }
   function roomAttended(room) {
     if (window.currentStageName !== room) return false;
     if (window.__cinemaRoomOpen || window.__bathroomRoomOpen ||
@@ -130406,30 +130837,47 @@ function spawnDustMote(container) {
     { id: "act_p2", room: "garden", claimMs: 60000, afterMs: 60000,
       done: function () { return !!latched.dj; }, after: function () { latched.dj = true; } },
     { id: "act_p3", room: "garden", claimMs: 90000, afterMs: 150000, silent: true,
-      done: function () { return !!latched.booth; }, after: function () { latched.booth = true; } },
-    { id: "act_w1", room: "garden", claimMs: 90000, afterMs: 150000, silent: true,
-      done: function () { return latch("stars", starsOn); }, after: function () { latched.stars = true; } },
-    // dawn only counts once there's been a night to come back from
-    { id: "act_w2", room: "balcony", claimMs: 60000, afterMs: 90000,
-      done: function () { return latch("dawn", function () { return !!latched.dusk && !isDusk(); }); },
-      after: function () { if (window.__autoToggleDusk) window.__autoToggleDusk(); } },
-    // the last word. Never completes — the arc ends here, pointing at the one thing we actually want.
-    { id: "rsvp_exit", room: "balcony", claimMs: Infinity, done: function () { return false; } }
+      done: function () { return !!latched.booth; }, after: function () { latched.booth = true; } }
   ];
   function beat(id) { for (var i = 0; i < BEATS.length; i++) if (BEATS[i].id === id) return BEATS[i]; return null; }
 
   function speak() {
     var b = beat(live);
     if (!b || b.silent || window.__cinematic || document.hidden) return;
+    if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
     if (window.currentStageName !== b.room) return; // it'll get its say when you walk in (see __actBeatHint)
-    if (b.id === "rsvp_exit") { if (window.__showRsvpNudge) window.__showRsvpNudge(); return; }
     if (window.setCaption) window.setCaption(b.id);
   }
   // beats that carry a phone text → the message id delivered (once) the moment the beat goes live
-  var ACT_MSG = { act_b0: "dusk", act_p1: "pouria", act_p2: "group", act_p3: ["album", "irene_games"], act_w1: "piano", act_w2: "dawn", rsvp_exit: "mb" };
-  var MSG_DELAY_MS = 5000, MSG_STAGGER_MS = 4500, msgTimers = [], pendingMsgIds = []; // text arrives ~5s AFTER its caption; ids make party-end retirement inspectable and deterministic
+  var ACT_MSG = { act_b0: "dusk", act_p1: "pouria", act_p2: "group", act_p3: ["album", "irene_games"] };
+  var MSG_DELAY_MS = 5000, MSG_STAGGER_MS = 4500, msgTimers = [], pendingMsgIds = [];
+  var msgDeadlines = {}, msgRemaining = {};
+  var revealDeadline = 0, revealRemaining = 0, redirDeadline = 0, redirRemaining = 0;
+  // Text arrives ~5s after its caption. Deadlines keep that delay exact across a Road Trip hold.
   function clearMsgTimers() {
-    msgTimers.forEach(function (t) { clearTimeout(t); }); msgTimers = []; pendingMsgIds = [];
+    msgTimers.forEach(function (t) { clearTimeout(t); });
+    msgTimers = []; pendingMsgIds = []; msgDeadlines = {}; msgRemaining = {};
+  }
+  function holdMsgTimers() {
+    if (!msgTimers.length) return;
+    var now = performance.now();
+    msgTimers.forEach(function (t) { clearTimeout(t); }); msgTimers = [];
+    pendingMsgIds.forEach(function (mid) {
+      msgRemaining[mid] = Math.max(1, (msgDeadlines[mid] || now + MSG_DELAY_MS) - now);
+      delete msgDeadlines[mid];
+    });
+  }
+  function scheduleActMessage(mid, delay) {
+    delay = Math.max(1, Number(delay) || MSG_DELAY_MS);
+    msgRemaining[mid] = delay;
+    msgDeadlines[mid] = performance.now() + delay;
+    msgTimers.push(setTimeout(function () {
+      var at = pendingMsgIds.indexOf(mid); if (at !== -1) pendingMsgIds.splice(at, 1);
+      delete msgDeadlines[mid]; delete msgRemaining[mid];
+      if (armed && !window.__cinematic &&
+          (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
+          window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage(mid);
+    }, delay));
   }
   function advance(quiet) {
     if (!armed) return;
@@ -130439,13 +130887,14 @@ function spawnDustMote(container) {
     var prev = beat(live);
     if (prev && prev.exit) prev.exit();
     live = next; liveMs = 0; claimElapsed = 0;
+    if (!live) {
+      if (ticker) { clearInterval(ticker); ticker = null; }
+      return;
+    }
     if (ACT_MSG[live]) { // the caption lands now; the phone text(s) follow ~5s later so they don't clash
       [].concat(ACT_MSG[live]).forEach(function (mid, i) {
         pendingMsgIds.push(mid);
-        msgTimers.push(setTimeout(function () {
-          var at = pendingMsgIds.indexOf(mid); if (at !== -1) pendingMsgIds.splice(at, 1);
-          if (armed && !window.__cinematic && window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage(mid);
-        }, MSG_DELAY_MS + i * MSG_STAGGER_MS)); // dedup'd inside; thumbnail gated on attended; extras staggered
+        scheduleActMessage(mid, MSG_DELAY_MS + i * MSG_STAGGER_MS); // dedup'd inside; thumbnail gated on attended; extras staggered
       });
     }
     var now = beat(live);
@@ -130454,12 +130903,13 @@ function spawnDustMote(container) {
   }
 
   // ONE 1s interval drives every fallback. It counts ATTENDED time only: an unattended
-  // window mustn't burn the whole arc down behind the player's back, and B0/W2's fallbacks
-  // reach playDayNightChime through __autoToggleDusk — a timer-driven one-shot sound, which
+  // window mustn't burn the whole arc down behind the player's back, and B0's fallback reaches
+  // playDayNightChime through __autoToggleDusk — a timer-driven one-shot sound, which
   // the crickets rule says needs hidden AND hasFocus (toggleDusk gates the chime itself too;
   // this is the belt to that's braces, and it's what makes the pacing honest besides).
   function tick() {
     if (!armed || !live) return;
+    if (window.__gardenPartyOn && window.__partyForegroundActive && !window.__partyForegroundActive()) return;
     if (document.hidden || !document.hasFocus() || window.__cinematic) return;
     // Window Tetris owns the balcony while it is active. Its play time should not advance
     // the second-act caption pacing.
@@ -130474,6 +130924,7 @@ function spawnDustMote(container) {
   // no (wrong room, yielded, or not armed) and the room's own rotation takes the line back.
   window.__actBeatHint = function (room) {
     if (!armed || !live || window.__cinematic) return null;
+    if (window.__partyForegroundActive && !window.__partyForegroundActive()) return null;
     var b = beat(live);
     if (b && b.silent) return null;
     if (!b || b.room !== room || claimElapsed >= b.claimMs) return null;
@@ -130483,6 +130934,7 @@ function spawnDustMote(container) {
   // reports something that happened; the sequencer decides whether it mattered.
   window.__actPing = function (what) {
     if (!armed || window.__cinematic) return;
+    if (window.__partyForegroundActive && !window.__partyForegroundActive()) return;
     // Starting the party also forces night, whose day/night ping arrives before the dedicated
     // party ping. Do not let that incidental ping skip B2 and erase its reveal.
     if (what === "daynight" && live === "act_b2" && partyOn()) return;
@@ -130502,44 +130954,89 @@ function spawnDustMote(container) {
       if (window.setCaption) window.setCaption("act_b3");
       advance(true);
       if (revealTimer) clearTimeout(revealTimer);
+      revealRemaining = 5200;
+      revealDeadline = performance.now() + revealRemaining;
       revealTimer = setTimeout(function () {
         revealTimer = null;
+        revealDeadline = 0; revealRemaining = 0;
         if (window.__captionKey && window.__captionKey() === "act_b3") speak(); // still ours? then hand over. Otherwise something better is already on screen.
-      }, 5200);
+      }, revealRemaining);
       return;
     }
     advance();
   };
 
   window.__armActTwo = function (skipDusk) {
-    if (armed) return;
+    if (armed || retired) return;
     armed = true;
     if (skipDusk) { latched.dusk = true; latched.wish = true; } // the finale now points straight to the party switch
     if (!ticker) ticker = setInterval(tick, 1000);
     advance();
   };
-  // Party-off retires every queued reception beat before advancing into the quieter
-  // piano/dawn arc. In particular, no bar, DJ or photobooth text can land after teardown.
+  // Party-off retires every queued reception beat and ends this sequencer. Camping owns
+  // the terminal RSVP coda, so no piano, dawn, or direct-RSVP timer follows party teardown.
   window.__partyActEnded = function () {
     if (!armed) return;
     clearMsgTimers();
     if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
-    latched.dusk = true; latched.wish = true; latched.party = true;
-    latched.drink = true; latched.dj = true; latched.booth = true;
-    advance(); // schedules only the wind-down piano beat when it has not already been reached
+    if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
+    revealDeadline = 0; revealRemaining = 0; redirDeadline = 0; redirRemaining = 0;
+    if (ticker) { clearInterval(ticker); ticker = null; }
+    switchPulse(false);
+    retired = true;
+    armed = false; live = null; liveMs = 0; claimElapsed = 0;
   };
   window.__actPendingMessages = function () { return pendingMsgIds.slice(); }; // focused lifecycle test hook
   window.__resetActTwo = function () { // the extinguisher: forget the whole arc, strand nothing
-    armed = false; live = null; liveMs = 0; claimElapsed = 0; latched = {};
+    armed = false; retired = false; live = null; liveMs = 0; claimElapsed = 0; latched = {};
     if (ticker) { clearInterval(ticker); ticker = null; }
     if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
     if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+    revealDeadline = 0; revealRemaining = 0; redirDeadline = 0; redirRemaining = 0;
     clearMsgTimers(); // drop any phone text still waiting out its ~5s delay
     switchPulse(false);
   };
   window.__actBeat = function () { return live; }; // test hook
-  window.__actTwoState = function () { return { armed: armed, beat: live, elapsed: liveMs, claimElapsed: claimElapsed }; }; // focused lifecycle test hook
+  window.__actTwoState = function () {
+    return { armed: armed, retired: retired, beat: live, elapsed: liveMs, claimElapsed: claimElapsed,
+      running: !!ticker, pending: pendingMsgIds.slice() };
+  }; // focused lifecycle test hook
   window.__actTwoTick = tick; // focused lifecycle test hook
+  window.__pauseActTwoPartyForeground = function () {
+    if (ticker) { clearInterval(ticker); ticker = null; }
+    holdMsgTimers();
+    var now = performance.now();
+    if (revealTimer) {
+      revealRemaining = Math.max(1, revealDeadline - now);
+      clearTimeout(revealTimer); revealTimer = null; revealDeadline = 0;
+    }
+    if (redirTimer) {
+      redirRemaining = Math.max(1, redirDeadline - now);
+      clearTimeout(redirTimer); redirTimer = null; redirDeadline = 0;
+    }
+  };
+  window.__resumeActTwoPartyForeground = function () {
+    if (!armed || (window.__partyForegroundActive && !window.__partyForegroundActive())) return;
+    if (live && !ticker) ticker = setInterval(tick, 1000);
+    var pending = pendingMsgIds.slice();
+    pending.forEach(function (mid, i) {
+      scheduleActMessage(mid, msgRemaining[mid] || (MSG_DELAY_MS + i * MSG_STAGGER_MS));
+    });
+    if (revealRemaining > 0 && !revealTimer) {
+      revealDeadline = performance.now() + revealRemaining;
+      revealTimer = setTimeout(function () {
+        revealTimer = null; revealDeadline = 0; revealRemaining = 0;
+        if (window.__captionKey && window.__captionKey() === "act_b3") speak();
+      }, revealRemaining);
+    }
+    if (redirRemaining > 0 && !redirTimer) {
+      redirDeadline = performance.now() + redirRemaining;
+      redirTimer = setTimeout(function () {
+        redirTimer = null; redirDeadline = 0; redirRemaining = 0;
+        if (window.__captionKey && window.__captionKey() === "act_b2_redirect") speak();
+      }, redirRemaining);
+    }
+  };
 
   // Hazard A, the one the whole hinge turns on: told "kill the lights", people click the
   // LIGHTS — the string lights or the wall lamp — and neither does anything here. So don't
@@ -130554,10 +131051,13 @@ function spawnDustMote(container) {
       switchPulse(false);
       requestAnimationFrame(function () { requestAnimationFrame(function () { switchPulse(true); }); }); // drop + re-add so the pulse restarts from the top rather than continuing mid-cycle
       if (redirTimer) clearTimeout(redirTimer);
+      redirRemaining = 4500;
+      redirDeadline = performance.now() + redirRemaining;
       redirTimer = setTimeout(function () {
         redirTimer = null;
+        redirDeadline = 0; redirRemaining = 0;
         if (window.__captionKey && window.__captionKey() === "act_b2_redirect") speak(); // put the instruction back, if the wink's still on screen
-      }, 4500);
+      }, redirRemaining);
     });
   });
 })();

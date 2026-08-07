@@ -156,6 +156,11 @@ After an authored party finale or 120 attended seconds, party teardown schedules
 `downstairs_entrance` message. Its legacy `lower:entrance` action navigates to the Balcony and opens
 Entrance; it is not part of the random party cue pool.
 
+Act Two now ends at party teardown. Its automatic piano → dawn → direct-RSVP tail was removed;
+Camping's `~ fin ~` owns the only terminal RSVP coda. `__partyActEnded()` clears the ticker, delayed
+messages, redirects, and reveal timers and retires the sequencer so a delayed Balcony-finale arm
+cannot resurrect it. Piano, day/night, RSVP compose, and loft free play remain independently callable.
+
 ## Entrance driving and Road Trip
 
 Search for `porscheDrive`, `roadtripState`, `entranceRoadtrip`, and `__entranceDriveStep`. The
@@ -192,6 +197,17 @@ Useful deterministic seams are `__entranceDriveRpmForSpeed()`, `__entranceDriveA
 The first-person world is native SVG inside `#entrance-drive-hud-svg`. Entering or leaving Road Trip
 must remain an atomic presentation swap: HUD size, cockpit position, world visibility, and viewBox
 cannot transition independently. Weather and time reuse Entrance state.
+
+Actual route launch also claims party foreground ownership through
+`__setPartyForegroundSuspended(true, "roadtrip")`; `parkRoadtrip()` releases it. Entrance, HUD, and
+chooser presentation do not claim that owner. The single listener installed by the party controller
+holds its dance deadline, attended clock, guest roster/placements, Act Two beat, particles, room
+projections, balcony callouts, and autonomous photo/kid/disco timers, then fades and retires every
+party audio scheduler. Release re-arms the remaining clocks around the same dance/DJ/roster rather
+than calling `setGardenParty()` or rebuilding the party. This foreground owner is derived runtime
+state—not checkpoint data—because saved Road Trips restore parked and claim it only on explicit
+Continue/route launch. Road Trip transport pause and Camping retain the claim; global music pause is
+a separate user-owned state and remains paused across release.
 
 `drive.roadtrip.route` owns:
 

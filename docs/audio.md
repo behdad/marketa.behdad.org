@@ -379,6 +379,15 @@ the pending wind-down and closes the dance through its existing node-owned lifec
 and foreground-duck changes remain independent because they operate on the upstream dance
 master and cannot replace the output fade's automation.
 
+Road Trip foreground ownership is another independent edge. Actual route launch—not merely
+Entrance, HUD, or chooser—sets `__partyForegroundSuspended`; every dance `want()` closes at that
+boundary, all connected party outputs ramp to zero over 700 ms, and party look-ahead/timer owners
+stop. This includes Camping while it remains the active route. Parking starts only the retained
+dance's one scheduler/output and resumes the same dance clock, DJ, roster, and party progress.
+An explicit global transport pause is remembered separately: release recreates the retained bed
+muted and leaves it held until the player resumes. The owner is intentionally not persisted because
+checkpointed Road Trips restore parked and reclaim foreground only on explicit re-entry.
+
 ## Kill switch / overrides (unchanged)
 
 - `AUDIO_PIPELINE_ENABLED` (in `ensureAudioGraph`'s block) — owner's kill switch: `false`
@@ -421,4 +430,6 @@ disabled. It does not create or join the loft’s shared audio graph.
   lateral retargeting, exact upstairs restore, and Entrance glass groove),
   `tests/entrance-roadtrip-camp-audio-handoff.js` (vehicle-master fade, synchronized car-tail
   ownership, campsite rise, and final one-bed cleanup), and `tests/piano-message.js` (message transition, layered keys, polyphony,
-  backing-pause independence, and party continuity). All must pass.
+  backing-pause independence, and party continuity), plus `tests/party-roadtrip-lifecycle.js`
+  (party fade/suspension, exact resume, global-pause independence, and no obsolete post-party coda).
+  All must pass.

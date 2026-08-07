@@ -73,7 +73,7 @@ var harness = String.raw`<script>
   check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
 
   // Put Act Two on its first reception beat, then stop the party before its delayed
-  // Pouria message lands. Party teardown may queue only the quieter piano wind-down.
+  // Pouria message lands. Camping is the sole terminal coda: party teardown queues nothing.
   if (window.__resetActTwo) window.__resetActTwo();
   if (window.__armActTwo) window.__armActTwo();
   if (window.__setGardenParty) window.__setGardenParty(true, false);
@@ -81,7 +81,12 @@ var harness = String.raw`<script>
   if (window.__setPartyMode) window.__setPartyMode(false, true);
   var afterEnd = window.__actPendingMessages ? window.__actPendingMessages() : [];
   check("party end retires queued reception nudges", beforeEnd.indexOf("pouria") !== -1 && afterEnd.indexOf("pouria") === -1 && afterEnd.indexOf("group") === -1 && afterEnd.indexOf("album") === -1, beforeEnd.join(",") + " -> " + afterEnd.join(","));
-  check("Act Two advances to the wind-down", window.__actBeat && window.__actBeat() === "act_w1" && afterEnd.join(",") === "piano", afterEnd.join(","));
+  var endedAct = window.__actTwoState ? window.__actTwoState() : {};
+  check("party end retires Act Two without an automatic piano, dawn, or direct-RSVP coda",
+    endedAct.armed === false && endedAct.beat === null && endedAct.running === false &&
+      afterEnd.length === 0 && !window.__phoneMessageReceived("piano") &&
+      !window.__phoneMessageReceived("dawn") && !window.__phoneMessageReceived("mb"),
+    { state: endedAct, pending: afterEnd });
 
   var offered = window.__offerPartyAgain && window.__offerPartyAgain();
   var inviteId = window.__phoneMessageReceived("party_again_behdad") ? "party_again_behdad" : (window.__phoneMessageReceived("party_again_marketa") ? "party_again_marketa" : null);

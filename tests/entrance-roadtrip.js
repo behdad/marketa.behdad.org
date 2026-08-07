@@ -183,6 +183,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       escaping: node && node.getAttribute("data-roadtrip-escaping"),
       passing: node && node.getAttribute("data-roadtrip-passing"),
       href: use && (use.getAttribute("href") || use.getAttribute("xlink:href")),
+      x: translateX(node),
       display: node ? getComputedStyle(node).display : null,
       visibility: node && node.getAttribute("visibility")
     };
@@ -719,7 +720,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       straightWinter: straightWinter,
       straightScenery: straightScenery,
       roadLines: Array.prototype.map.call(document.querySelectorAll(
-        ".entrance-roadtrip-edge,.entrance-roadtrip-centerline"), function (node) {
+        "#entrance-roadtrip-road > .entrance-roadtrip-edge," +
+        "#entrance-roadtrip-road > .entrance-roadtrip-centerline"), function (node) {
           return { fill: getComputedStyle(node).fill, stroke: getComputedStyle(node).stroke,
             d: node.getAttribute("d") };
         }),
@@ -1648,13 +1650,15 @@ check(trafficMotion && trafficMotion.before.forward.direction === "forward" &&
 var heavyLanePolicy = s.heavyLanePolicy;
 check(heavyLanePolicy && heavyLanePolicy.home.rv.lane === "1.5" && heavyLanePolicy.home.oppositeRv.lane === "-1.5" &&
   heavyLanePolicy.home.freeSemi.lane === "1.5" && heavyLanePolicy.home.oppositeFreeSemi.lane === "-1.5" &&
+  heavyLanePolicy.home.rv.x > heavyLanePolicy.home.freeSemi.x + 1 &&
+  Math.abs(heavyLanePolicy.home.oppositeRv.x - heavyLanePolicy.home.oppositeFreeSemi.x) < .1 &&
   heavyLanePolicy.home.rv.speed >= 70 && heavyLanePolicy.home.rv.speed <= 82 &&
   Math.abs(heavyLanePolicy.home.oppositeRv.speed) >= 70 && Math.abs(heavyLanePolicy.home.oppositeRv.speed) <= 82 &&
   heavyLanePolicy.forwardPassing.passing === "true" && Number(heavyLanePolicy.forwardPassing.lane) < 1.5 &&
   Math.abs(heavyLanePolicy.forwardPassing.speed) - Math.abs(heavyLanePolicy.forwardTarget.speed) >= 20 &&
   heavyLanePolicy.oncomingPassing.passing === "true" && Number(heavyLanePolicy.oncomingPassing.lane) > -1.5 &&
   Math.abs(heavyLanePolicy.oncomingPassing.speed) - Math.abs(heavyLanePolicy.oncomingTarget.speed) >= 20,
-  "RVs and cruising semis stay right in both directions while passing semis move left at a 20–30 km/h advantage",
+  "cruising RVs sit right of same-lane semis while heavy traffic keeps its right-lane and passing policy",
   heavyLanePolicy);
 var wildlifeHop = s.wildlifeHop;
 check(wildlifeHop && wildlifeHop.before.visual.kind === "animal" &&

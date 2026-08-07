@@ -37,6 +37,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       destinationX: Number(spur.getAttribute("data-roadtrip-destination-x")),
       destinationY: Number(spur.getAttribute("data-roadtrip-destination-y")),
       junctionInnerX: Number(spur.getAttribute("data-roadtrip-junction-inner-x")),
+      junctionRoadRightX: Number(spur.getAttribute("data-roadtrip-junction-road-right-x")),
       junctionOuterX: Number(spur.getAttribute("data-roadtrip-junction-outer-x")),
       destinationInnerX: Number(spur.getAttribute("data-roadtrip-destination-inner-x")),
       destinationOuterX: Number(spur.getAttribute("data-roadtrip-destination-outer-x")),
@@ -141,6 +142,9 @@ function simpleSpur(visual) {
   return /^M/.test(asphalt) && /Z$/.test(asphalt) && !/[CQAS]/.test(asphalt) &&
     (asphalt.match(/[ML]/g) || []).length === 4 &&
     visual.junctionInnerX < visual.junctionOuterX &&
+    Number.isFinite(visual.junctionRoadRightX) &&
+    visual.junctionInnerX <= visual.junctionRoadRightX - 4 &&
+    visual.junctionRoadRightX < visual.junctionOuterX &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
     visual.destinationInnerX > visual.junctionInnerX &&

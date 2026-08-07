@@ -37387,6 +37387,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_LANE_OFFSET = 7.5;
   var ROADTRIP_BANFF_LANE_FRACTION = .5;
   var ROADTRIP_ABRAHAM_LANE_FRACTION = 1;
+  var ROADTRIP_FORWARD_RV_LANE_NUDGE = .035;
   var ROADTRIP_CALGARY_MEDIAN_FRACTION = .14;
   var ROADTRIP_CALGARY_ROAD_FRACTION = 1.2;
   var ROADTRIP_CALGARY_OUTER_FRACTION = 1.34;
@@ -39661,6 +39662,10 @@ window.__entranceRoomOpen = false;
     var roadMagnitude = magnitude <= .5 ? firstCenter * magnitude / .5 :
       firstCenter + (magnitude - .5) * ROADTRIP_CALGARY_LANE_FRACTION;
     return Math.sign(lane) * roadMagnitude;
+  }
+  function roadtripEntityVisualRoadFraction(entity) {
+    return roadtripLaneRoadFraction(entity.lane) +
+      (entity.type === "rv" && entity.direction === "forward" ? ROADTRIP_FORWARD_RV_LANE_NUDGE : 0);
   }
   function roadtripMaxLane() {
     return roadtripIsCalgaryRoute() ? ROADTRIP_CALGARY_MAX_LANE :
@@ -42777,7 +42782,9 @@ window.__entranceRoomOpen = false;
     if (!roadtripCampSpurNode) return null;
     var junctionPoint = roadtripProject(Math.max(18, point.remaining - 12));
     var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 28));
-    var junctionInner = roadtripProjectLateral(junctionPoint, 1);
+    var junctionRoadRight = roadtripProjectLateral(junctionPoint, 1);
+    var junctionOverlap = 4 + junctionPoint.perspective * 8;
+    var junctionInner = junctionRoadRight - junctionOverlap;
     var junctionOuter = roadtripProjectLateral(junctionPoint, 1.28);
     var junctionY = junctionPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
@@ -42807,15 +42814,16 @@ window.__entranceRoomOpen = false;
     }
     if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset));
     if (asphalt) asphalt.setAttribute("d", spurPath(0));
-    if (innerEdge) innerEdge.setAttribute("d", "M" + junctionInner.toFixed(2) + " " + junctionY.toFixed(2) +
+    if (innerEdge) innerEdge.setAttribute("d", "M" + junctionRoadRight.toFixed(2) + " " + junctionY.toFixed(2) +
       "L" + destinationInner.toFixed(2) + " " + destinationY.toFixed(2) +
       "L" + (destinationInner + edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
-      "L" + (junctionInner + edgeNearWidth).toFixed(2) + " " + junctionY.toFixed(2) + "Z");
+      "L" + (junctionRoadRight + edgeNearWidth).toFixed(2) + " " + junctionY.toFixed(2) + "Z");
     if (outerEdge) outerEdge.setAttribute("d", "M" + (junctionOuter - edgeNearWidth).toFixed(2) + " " + junctionY.toFixed(2) +
       "L" + (destinationOuter - edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
       "L" + destinationOuter.toFixed(2) + " " + destinationY.toFixed(2) +
       "L" + junctionOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z");
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-inner-x", junctionInner.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-junction-road-right-x", junctionRoadRight.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-outer-x", junctionOuter.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-inner-x", destinationInner.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-outer-x", destinationOuter.toFixed(2));
@@ -43737,7 +43745,7 @@ window.__entranceRoomOpen = false;
       var remaining = entity.at - roadtripState.distance;
       var behind = Math.max(0, -remaining);
       var point = roadtripMirrorProject(behind);
-      var x = point.center + roadtripLaneRoadFraction(entity.lane) * point.halfWidth;
+      var x = point.center + roadtripEntityVisualRoadFraction(entity) * point.halfWidth;
       var y = point.y;
       var scale = (.055 + point.perspective * .19) * (roadtripIsTrafficType(entity.type) ? 1.06 : 1);
       var mirrorType = entity.direction === "forward" ? entity.type + "-oncoming" : entity.type;
@@ -43757,7 +43765,7 @@ window.__entranceRoomOpen = false;
     ordered.forEach(function (entity) {
       var remaining = entity.at - roadtripState.distance;
       var point = roadtripProject(remaining);
-      var laneX = roadtripProjectLateral(point, roadtripLaneRoadFraction(entity.lane));
+      var laneX = roadtripProjectLateral(point, roadtripEntityVisualRoadFraction(entity));
       var entityY = point.y;
       var escapeTurn = 0;
       if (entity.escaping) {

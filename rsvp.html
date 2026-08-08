@@ -3206,12 +3206,12 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   text-wrap:balance;-webkit-tap-highlight-color:transparent;user-select:none;
 }
 .hunt-coach-x{
-  position:absolute;right:.55rem;top:50%;translate:0 -50%;display:grid;place-items:center;
+  position:absolute;right:.55rem;top:.55rem;display:grid;place-items:center;
   width:2.2rem;height:2.2rem;
   border-radius:50%;background:var(--wine);color:#fff;font:800 25px/1 sans-serif;
   box-shadow:0 2px 7px rgba(0,0,0,.28);
 }
-@media (max-width:520px){.hunt-coach-card{padding:.72rem 2.7rem .72rem .85rem;border-radius:15px}.hunt-coach-x{width:1.95rem;height:1.95rem;font-size:22px}}
+@media (max-width:520px){.hunt-coach-card{padding:.72rem 2.7rem .72rem .85rem;border-radius:15px}.hunt-coach-x{right:.45rem;top:.45rem;width:1.95rem;height:1.95rem;font-size:22px}}
 @media (prefers-reduced-motion:reduce){.hunt-coach-overlay{transition:none}.hunt-coach-arrow{animation:none}}
 /* Whole-loft picker: two aligned rows of five paired rooms. Live scene previews are used
    where they paint faithfully; stateful lower rooms use stable portrait art instead. */
@@ -53429,7 +53429,7 @@ var T = {
     eq_off_note: "This browser plays the songs directly — there's no audio pipeline for the equalizer to pull on. Try it on another device 🎚",
     kbd_title: "Keyboard shortcuts",
     kbd_space: "game action, or play / pause media",
-    kbd_esc: "go back / advance puzzle",
+    kbd_esc: "dismiss / go back",
     kbd_f: "fullscreen",
     kbd_watch: "who’s here? (roster for this room)",
     kbd_tab: "open / close the whole-loft view",
@@ -54800,7 +54800,7 @@ var T = {
     eq_off_note: "Tenhle prohlížeč přehrává písničky napřímo — ekvalizér tu nemá za co tahat. Zkus to na jiném zařízení 🎚",
     kbd_title: "Klávesové zkratky",
     kbd_space: "akce ve hře nebo přehrát / pozastavit média",
-    kbd_esc: "zpět / pokračovat v hádance",
+    kbd_esc: "zavřít / zpět",
     kbd_f: "celá obrazovka",
     kbd_watch: "kdo je tady? (soupiska téhle místnosti)",
     kbd_tab: "otevřít / zavřít pohled na celý loft",
@@ -113784,10 +113784,8 @@ function spawnDustMote(container) {
     event.stopImmediatePropagation();
   }, true);
 
-  // Enter activates the room's main feature. An otherwise-unconsumed top-level Escape reaches the
-  // same action: at room level, "escape the situation" means do the next thing. Window/app/menu
-  // handlers get first refusal and prevent/stop Escape before it arrives here. Backspace dispatches
-  // the existing fullscreen-safe synthetic Escape below, so it shares this exact path.
+  // Enter activates the room's main feature. Escape and Backspace are reserved for dismiss/back:
+  // higher layers get first refusal, but an otherwise-unconsumed room-level escape stays inert.
   function activateCurrentRoom() {
     var er = window.currentStageName, did = true;
     if (window.__secondRound) {
@@ -113835,7 +113833,7 @@ function spawnDustMote(container) {
       if (ae && ae.blur && ae !== document.body) ae.blur();
       return;
     }
-    if (e.key === "Enter" && openingGuideShowing) {
+    if (openingGuideShowing) {
       e.preventDefault();
       e.stopImmediatePropagation();
       advanceOpeningGuide();
@@ -113856,9 +113854,9 @@ function spawnDustMote(container) {
     }
     if (window.__tripPickerOpen && window.__tripPickerOpen()) return;
     if (window.phone && window.phone()) return;
-    // In free exploration Enter launches each room's main activity; Escape/Backspace remain pure
+    // Only Enter may reach a room solve walker or free-play action. Escape/Backspace remain pure
     // dismiss/back gestures and never start a game underneath the layer they just closed.
-    if (window.__secondRound && e.key !== "Enter") return;
+    if (e.key !== "Enter") return;
     var did = activateCurrentRoom();
     if (did) { e.preventDefault(); e.stopPropagation(); if (ae && ae.blur && ae !== document.body) ae.blur(); } // suppress the focused scene object's activation + drop its focus
   }, true); // capture — ahead of scene objects' onActivate

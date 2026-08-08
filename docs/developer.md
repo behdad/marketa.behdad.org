@@ -36,7 +36,8 @@ action is held behind `#installed-load` until window-load readiness completes. T
 invitation bypasses that cover.
 
 CLICK ME hands fresh play to the two-step `#opening-guide-coach`. Its transparent shell intercepts
-room input while the explicit × or global Enter advances navigation → caption. That guide and the
+room input while the upper-right ×, Enter, Escape, or Backspace advances navigation → caption. Only
+Enter can advance a room's solve walker once the guide is gone. That guide and the
 two party bridge coaches share the `.hunt-coach-*` card, dismiss control, and single-path arrow
 contract; keep their geometry target-specific but their visual/component markup identical.
 

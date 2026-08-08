@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Keyboard room-control test: Enter is "do the next thing in this room"; an
-// unconsumed room-level Escape/Backspace uses the same action during phase one; after the party
-// unlocks phase two Enter launches each room's main activity while Escape/Backspace remain back.
+// Keyboard room-control test: Enter is "do the next thing in this room". Escape/Backspace are
+// always dismiss/back controls and never advance a solve walker; after the party unlocks phase two,
+// Enter launches each room's main activity.
 //   - UNSOLVED room  -> Enter presses the next step of that room's solve sequence, so
 //     repeated Enter solves the room and moves on (kitchen espresso, garden water/music/
 //     candles, cuddly octopus/open-balcony-door/blanket, office call/hang-up/monitor/dismiss/

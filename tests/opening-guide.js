@@ -48,6 +48,10 @@ var harness = String.raw`<script>
     overlay.classList.contains("show") && window.__openingGuideStep() === "nav" &&
       copy.textContent === "Navigation lives here." && x.textContent === "×" &&
       card.querySelectorAll(":scope > .hunt-coach-x").length === 1);
+  var cardRect = card.getBoundingClientRect(), xRect = x.getBoundingClientRect();
+  check("the coach dismiss control stays in the true upper-right corner",
+    xRect.top - cardRect.top < 16 && cardRect.right - xRect.right < 16,
+    JSON.stringify({ card: cardRect.toJSON(), dismiss: xRect.toJSON() }));
   check("nav coach stays inside the game shell below its target",
     inside(card.getBoundingClientRect(), area.getBoundingClientRect()) &&
       card.getBoundingClientRect().top > nav.getBoundingClientRect().bottom,
@@ -79,12 +83,19 @@ var harness = String.raw`<script>
       !machine.classList.contains("powered-on") && !cabinet.classList.contains("open"),
     JSON.stringify({ hit: hit && (hit.id || hit.className && String(hit.className)), step: window.__openingGuideStep(),
       powered: machine.classList.contains("powered-on"), open: cabinet.classList.contains("open") }));
-  click(x); await sleep(50); window.dispatchEvent(new Event("resize")); await sleep(30);
-  check("the first × advances to the English caption coach above its target",
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+  await sleep(50); window.dispatchEvent(new Event("resize")); await sleep(30);
+  check("Escape advances to the English caption coach above its target",
     window.__openingGuideStep() === "caption" && copy.textContent === "Clues and instructions appear here." &&
       card.getBoundingClientRect().bottom < document.getElementById("hunt-caption").getBoundingClientRect().top);
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
-  check("global Enter mirrors × and finishes the second step", !window.__openingGuideShowing() && !overlay.classList.contains("show"));
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true }));
+  check("Backspace mirrors × and finishes the second step", !window.__openingGuideShowing() && !overlay.classList.contains("show"));
+  var solveCalls = 0, realKitchenDoNext = window.__kitchenDoNext;
+  window.__kitchenDoNext = function () { solveCalls++; return true; };
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", bubbles: true, cancelable: true }));
+  window.__kitchenDoNext = realKitchenDoNext;
+  check("room-level Escape and Backspace never advance the morning routine", solveCalls === 0 && !machine.classList.contains("powered-on"), String(solveCalls));
 
   await showGuide("cs");
   check("Czech nav coach is concise and localized", copy.textContent === "Navigace je tady." && !/pokračuj/i.test(copy.textContent));

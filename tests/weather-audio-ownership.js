@@ -173,8 +173,8 @@ function exposureOrder(row) {
     row.closed.rain.cutoff < row.windows.rain.cutoff && row.windows.rain.cutoff < row.roof.rain.cutoff;
 }
 function audibleCabinRain(row) {
-  return row && row.roof.rain.gain >= .05 && row.windows.rain.gain >= .038 &&
-    row.closed.rain.gain >= .027;
+  return row && row.roof.rain.gain >= .112 && row.windows.rain.gain >= .082 &&
+    row.closed.rain.gain >= .058;
 }
 
 console.log("rsvp.html weather-audio ownership:");

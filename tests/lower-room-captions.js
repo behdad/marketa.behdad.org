@@ -51,14 +51,14 @@ var expected = {
   en: {
     bathroom: "Bathroom · fixtures welcome.",
     dungeon: "Dungeon · the old game is awake.",
-    cinema: "Cinema · wake the projector, then choose a film.",
+    cinema: "Cinema · choose a film to watch.",
     bedroom: "Click any pane to play tic-tac-toe",
     entrance: "The car is yours to drive · finish the upstairs clue trail to unlock the party first."
   },
   cs: {
     bathroom: "Koupelna · vybavení vítá hru.",
     dungeon: "Žalář · stará hra se probudila.",
-    cinema: "Kino · probuď projektor a pak vyber film.",
+    cinema: "Kino · vyber si film.",
     bedroom: "Kliknutím na libovolné políčko spustit piškvorky",
     entrance: "Autem se můžeš projet hned · nejdřív dokonči horní stopu a odemkni párty."
   }

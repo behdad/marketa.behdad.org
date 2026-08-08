@@ -91,11 +91,15 @@ var harness = String.raw`<script>
   var switchCoachPopup = switchCoach.querySelector(".hunt-coach-card");
   var switchCoachArrow = switchCoach.querySelector(".hunt-coach-arrow");
   check("the first-party coach uses its own readable popup and vivid overlay without taking focus",
-    switchCoach.classList.contains("show") &&
-      /end the party here/i.test(switchCoachPopup.textContent) &&
+      switchCoach.classList.contains("show") &&
+      switchCoachPopup.querySelector(".hunt-coach-copy").textContent === "When the time comes, end the party here." &&
+      T.cs.hunt.party_switch_coach === "Až přijde čas, ukonči párty tady." &&
       getComputedStyle(switchCoachArrow).fill === "rgb(239, 23, 23)" &&
       document.activeElement !== document.getElementById("garden-lightswitch") &&
-      !/end the party here/i.test(document.getElementById("hunt-caption").textContent));
+      !/end the party here/i.test(document.getElementById("hunt-caption").textContent),
+    JSON.stringify({ shown: switchCoach.classList.contains("show"), copy: switchCoachPopup.querySelector(".hunt-coach-copy").textContent,
+      cs: T.cs.hunt.party_switch_coach, fill: getComputedStyle(switchCoachArrow).fill,
+      caption: document.getElementById("hunt-caption").textContent }));
   check("both bridge coaches share one box, dismiss control, and continuous dancing-arrow contract",
     popupStyleSignature(switchCoachPopup) === roomPopupSignature &&
       !switchCoachPopup.style.width && !roomCoachPopup.style.width &&

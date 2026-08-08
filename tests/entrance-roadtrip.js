@@ -1501,12 +1501,11 @@ check(activation && activation.beforeClasses.indexOf("entrance-clouded") >= 0 &&
   activation.beforeClasses.every(function (name) { return activation.roomClasses.indexOf(name) >= 0; }) &&
   ["oldRain", "oldSnow", "clouds", "rain", "snow", "winter"].every(function (name) {
     return activation.weather[name].connected && !activation.weather[name].hiddenBy;
-  }) && activation.weather.oldRain.opacity > .5 && activation.weather.rain.opacity > .5 &&
-  activation.weather.clouds.opacity > 0 && activation.weather.mirrorClouds.opacity > 0 &&
+  }) && activation.weather.rain.opacity > .5 && activation.weather.snow.opacity === 0 &&
   activation.weather.mirrorRain.opacity > .5 && activation.weather.mirrorSnow.opacity === 0 &&
   activation.weather.snowMode && /entrance-snowing/.test(activation.weather.snowMode.classes) &&
   activation.weather.snowMode.rain === 0 && activation.weather.snowMode.snow > .5,
-  "the extended windshield preserves active Entrance weather classes and both old/new overlays", activation && activation.weather);
+  "the extended windshield preserves Entrance weather classes and paints the canonical forward and mirror layers", activation && activation.weather);
 
 var curves = s.curves;
 function mirrorNearCentered(mirror) {

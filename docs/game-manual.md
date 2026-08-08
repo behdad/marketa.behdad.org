@@ -61,7 +61,8 @@ Each main room has a room directly below it:
 - The window-grid button remains available beside the room dots. The floor button stays visible
   but disabled until a downstairs route has been discovered; double-click or double-tap it to
   unlock that route deliberately.
-- Escape, Backspace, ×, or the top-left arrow dismisses the current layer or returns upstairs.
+- Escape, Backspace, ×, or the top-left arrow dismisses the current layer. From an idle lower room,
+  use `↑` or the Up button to return upstairs.
 
 Each main room also has an in-scene route downstairs. Finding either that route or deliberately
 double-pressing `↓` unlocks lower-floor navigation for the current run.

@@ -247,8 +247,8 @@ check(s.carClosed && !s.carClosed.state.roofOpen && !s.carClosed.state.doorOpen 
   "each car control stops propagation and closing panels leaves the independently toggled night lamps alone",
   s.carClosed);
 check(s.up && s.up.open && s.up.drive.holds.throttle && s.escape && s.escape.open && !s.escape.drive.hud &&
-  s.backspace && !s.backspace.open,
-  "Up remains throttle while the HUD is open, Escape closes the HUD, and Backspace returns upstairs",
+  s.backspace && s.backspace.open,
+  "Up remains throttle while the HUD is open, Escape closes the HUD, and idle Backspace stays downstairs",
   {up:s.up,escape:s.escape,backspace:s.backspace});
 check(s.touch && !s.touch.open, "a bare-background touch double-tap stays upstairs", s.touch);
 check(s.number && !s.number.source.open && s.number.target.open && s.number.room === "kitchen",

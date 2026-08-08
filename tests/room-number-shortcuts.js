@@ -31,6 +31,14 @@ var harness = String.raw`<script>
       check(lowerKeys[i] + " opens " + lower[i],
         window.currentStageName === upper[i] && lowerId() === lower[i],
         window.currentStageName + "/" + lowerId());
+      key("Escape");
+      await sleep(20);
+      var afterEscape = lowerId();
+      key("Backspace");
+      await sleep(20);
+      check("bare back keys keep " + lower[i] + " open",
+        window.currentStageName === upper[i] && afterEscape === lower[i] && lowerId() === lower[i],
+        window.currentStageName + "/" + afterEscape + "/" + lowerId());
       key(String(i + 1));
       await sleep(800);
       check(String(i + 1) + " returns to " + upper[i] + " upstairs",

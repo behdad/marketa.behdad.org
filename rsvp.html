@@ -85533,6 +85533,8 @@ async def localfont(name):
   var huntViewport = document.querySelector(".hunt-viewport");
   var princeFrame = null;
   var princeFrameState = "cold";
+  var princeRemote = false;
+  var princeSrcProbe = null;
   var princeMode = null;
   var princePresented = false;
   var princeOwnsFullscreen = false;
@@ -85948,6 +85950,7 @@ async def localfont(name):
     if (!princeFrame || !princeFrame.contentWindow) return;
     var active = princeShouldRun();
     if (!active) endPrinceDpadDrag();
+    if (princeRemote) return; // prince-control targets location.origin; a cross-origin frame can't hear it
     try { princeFrame.contentWindow.postMessage({ kind: "prince-control", active: active }, location.origin); }
     catch (_error) {}
   }
@@ -85984,6 +85987,21 @@ async def localfont(name):
       return true;
     } catch (_error) { return false; }
   };
+  function resolvePrinceSrc() {
+    // princejs/ is untracked (fetch-princejs.sh restores it); fall back to the upstream
+    // GitHub Pages build when it's absent. file:// can't be HEAD-probed — assume local.
+    if (!princeSrcProbe) {
+      princeSrcProbe = location.protocol === "file:"
+        ? Promise.resolve("princejs/index.html")
+        : fetch("princejs/index.html", { method: "HEAD" })
+            .then(function (response) { return response.ok; }, function () { return false; })
+            .then(function (ok) {
+              princeRemote = !ok;
+              return ok ? "princejs/index.html" : "https://oklemenz.github.io/PrinceJS/";
+            });
+    }
+    return princeSrcProbe;
+  }
   function buildPrinceFrame(host) {
     if (princeFrame) {
       if (host && princeFrame.parentNode !== host) host.appendChild(princeFrame);
@@ -85991,18 +86009,20 @@ async def localfont(name):
     }
     if (!host) return;
     var frame = document.createElement("iframe");
-
-    frame.src = "princejs/index.html";
     frame.allow = "autoplay; fullscreen";
     frame.addEventListener("load", function () {
+      if (!frame.getAttribute("src")) return; // about:blank load before the probe lands
       princeFrameState = "loading";
-      installPrinceTouchDpad();
+      if (!princeRemote) installPrinceTouchDpad();
       princeSync();
       setTimeout(focusPrince, 80);
     });
     host.appendChild(frame);
     princeFrame = frame;
     princeFrameState = "loading";
+    resolvePrinceSrc().then(function (src) {
+      if (princeFrame === frame) frame.src = src;
+    });
   }
   function presentPrinceMonitor() {
     princePresented = true;
@@ -86172,7 +86192,7 @@ async def localfont(name):
       princeBasement.hidden = true;
     }
     resetPrinceDungeonProps();
-    if (princeFrame) {
+    if (princeFrame && !princeRemote) {
       try { princeFrame.contentWindow.postMessage({ kind: "prince-control", active: false }, location.origin); } catch (_error) {}
     }
     monitor.classList.remove("show-prince");
@@ -86305,7 +86325,7 @@ async def localfont(name):
       basement: princePresented && princeMode === "basement" && !princeClosing,
       initiated: !!princeFrame, playing: !!(princeBasement && princeBasement.classList.contains("playing")),
       iframe: princeFrame ? princeFrame.getAttribute("src") : null, state: princeFrameState,
-      browserFullscreen: princeOwnsFullscreen };
+      remote: princeRemote, browserFullscreen: princeOwnsFullscreen };
   };
   window.__princeDungeonState = function () {
     var torches = princeDungeonSet ? princeDungeonSet.querySelectorAll(".prince-dungeon-torch.snuffed").length : 0;

@@ -60,7 +60,10 @@ var roots = [
   "princejs/index.html"
 ];
 var missing = roots.filter(function (file) {
-  var source = fs.readFileSync(path.join(lib.ROOT, file), "utf8");
+  var full = path.join(lib.ROOT, file);
+  // princejs/ is untracked (restored by fetch-princejs.sh): audit it only when present.
+  if (file.indexOf("princejs/") === 0 && !fs.existsSync(full)) return false;
+  var source = fs.readFileSync(full, "utf8");
   return !/html[^{}]*\{[^}]*-webkit-tap-highlight-color\s*:\s*transparent/.test(source);
 });
 check(missing.length === 0,

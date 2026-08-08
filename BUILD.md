@@ -34,6 +34,9 @@ what is **verified** (from the on-disk build tree / pins / shas) vs. **reconstru
 - [`doom/BUILD.md`](doom/BUILD.md) — the DOOM runtime.
 - [`duke/BUILD.md`](duke/BUILD.md) — the emduke32 runtime and exact official shareware archive.
 - [`q3/BUILD.md`](q3/BUILD.md) — the ioquake3 runtime and reduced OpenArena arena packs.
+- `princejs/` has no build step and is **untracked**: `./fetch-princejs.sh` (repo root) restores
+  it from upstream at a pinned SHA and applies `princejs-shim.patch`; provenance and the prune
+  list live in that script's header.
 
 Each of these `BUILD.md` files is blocked from public access by `.htaccess`'s basename
 `<Files "BUILD.md">` rule (build recipes are internal). The `COPYING` license files that

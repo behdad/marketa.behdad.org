@@ -1,0 +1,123 @@
+diff -ruN a/princejs/assets/web/game.css b/princejs/assets/web/game.css
+--- a/princejs/assets/web/game.css	2026-08-08 13:51:49.519101654 -0600
++++ b/princejs/assets/web/game.css	2026-08-08 13:51:49.521576497 -0600
+@@ -5,15 +5,9 @@
+     margin: 0;
+     padding: 0;
+     background-color: black;
+-    margin-top: 0.5px
+-}
+-
+-@media (orientation: landscape) {
+-    html,
+-    body {
+-        width: 100vw;
+-        height: 100vh;
+-    }
++    overflow: hidden;
++    display: grid;
++    place-items: center;
+ }
+ 
+ body,
+@@ -25,26 +19,21 @@
+ 
+ .game,
+ .game_container {
+-    display: block;
++    display: grid;
++    place-items: center;
+     touch-action: none;
+     margin: auto;
+-    width: 100%;
+-    height: 100%;
+-}
+-
+-@media (orientation: landscape) {
+-    .game,
+-    .game_container {
+-        width: 100vw;
+-        height: calc(100vh - env(safe-area-inset-bottom, 0px));
+-    }
++    width: min(100vw, 160vh);
++    height: min(62.5vw, 100vh);
+ }
+ 
+ canvas {
++    display: block;
+     width: 100% !important;
+     height: 100% !important;
+     object-fit: contain;
+     image-rendering: pixelated;
++    outline: none;
+ }
+ 
+ .flipped {
+diff -ruN a/princejs/index.html b/princejs/index.html
+--- a/princejs/index.html	2026-08-08 13:51:49.517805516 -0600
++++ b/princejs/index.html	2026-08-08 13:51:49.520331687 -0600
+@@ -23,6 +23,7 @@
+     <link rel="apple-touch-icon" sizes="180x180" href="assets/web/touch-icon-180.png" />
+     <link rel="manifest" href="site.webmanifest" />
+     <link type="text/css" rel="stylesheet" href="assets/web/game.css" />
++    <style>html {-webkit-tap-highlight-color: transparent;}</style>
+     <script type="text/javascript">
+       console.log("%cSource: https://github.com/oklemenz/PrinceJS", "color: blue; font-size:20px; font-weight: bold;");
+     </script>
+@@ -65,7 +66,8 @@
+     </div>
+     <script type="text/javascript">
+       window.onload = () => {
+-        let game = new Phaser.Game(640, 400, Phaser.AUTO, "gameContainer", null, false, false);
++        const game = new Phaser.Game(640, 400, Phaser.AUTO, "gameContainer", null, false, false);
++        window.princeGame = game;
+         game.state.add("Boot", PrinceJS.Boot);
+         game.state.add("Preloader", PrinceJS.Preloader);
+         game.state.add("Game", PrinceJS.Game);
+@@ -74,7 +76,46 @@
+         game.state.add("Credits", PrinceJS.Credits);
+         game.state.add("Cutscene", PrinceJS.Cutscene);
+         game.state.start("Boot");
++        window.parent.postMessage({ kind: "prince-status", state: "ready" }, window.location.origin);
+       };
++      window.addEventListener("message", (event) => {
++        if (event.origin !== window.location.origin || !event.data || event.data.kind !== "prince-control") return;
++        const active = !!event.data.active;
++        if (!window.princeGame) return;
++        window.princeGame.paused = !active;
++        if (window.princeGame.sound) window.princeGame.sound.mute = !active;
++        if (active && window.princeGame.canvas) {
++          window.princeGame.canvas.setAttribute("tabindex", "0");
++          window.princeGame.canvas.focus({ preventScroll: true });
++        }
++      });
++      window.addEventListener("keydown", (event) => {
++        if (event.key !== "Escape" && event.key !== "Backspace") return;
++        event.preventDefault();
++        event.stopImmediatePropagation();
++        window.parent.postMessage({ kind: "prince-exit" }, window.location.origin);
++      }, true);
++      window.addEventListener("contextmenu", (event) => {
++        event.preventDefault();
++        window.parent.postMessage({
++          kind: "prince-contextmenu",
++          x: event.clientX / Math.max(1, window.innerWidth),
++          y: event.clientY / Math.max(1, window.innerHeight)
++        }, window.location.origin);
++      });
++      let princeWasAlive = null;
++      window.setInterval(() => {
++        if (!window.princeGame || window.princeGame.state.current !== "Game") {
++          princeWasAlive = null;
++          return;
++        }
++        const state = window.princeGame.state.getCurrentState();
++        const alive = !!(state && state.kid && state.kid.alive);
++        if (princeWasAlive === true && !alive) {
++          window.parent.postMessage({ kind: "prince-status", state: "lost" }, window.location.origin);
++        }
++        princeWasAlive = alive;
++      }, 160);
+     </script>
+   </body>
+ </html>

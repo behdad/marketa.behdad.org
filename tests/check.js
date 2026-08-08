@@ -306,7 +306,7 @@ function checkTrackedSymlinks() {
 }
 
 function checkLiteralLocalAssets() {
-  var roots = "(?:art|docs|doom|duke|q3|pyodide|linux|harfbuzzjs)";
+  var roots = "(?:art|docs|doom|duke|q3|pyodide|linux|harfbuzzjs|princejs)";
   var refs = new Map();
   function remember(file, value) {
     var clean = value.split(/[?#]/)[0];
@@ -325,7 +325,11 @@ function checkLiteralLocalAssets() {
     while ((match = rootRe.exec(text))) remember(file, match[2]);
   });
   var missing = [];
+  // princejs/ is untracked (restored by fetch-princejs.sh): its refs must resolve only
+  // while a local copy is present; every other root stays mandatory.
+  var princejsPresent = fs.existsSync(path.join(ROOT, "princejs"));
   refs.forEach(function (file, ref) {
+    if (!princejsPresent && /^(?:\.\.?\/)*princejs\//.test(ref)) return;
     if (!fs.existsSync(path.resolve(ROOT, ref))) missing.push(file + ": " + ref);
   });
   if (missing.length) fail("literal local asset references resolve", missing.join("\n"));

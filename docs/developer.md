@@ -41,8 +41,12 @@ Supporting boundaries are:
 - `docs/audio.md`: authoritative audio ownership, graph, attenuation, and teardown rules.
 - `tests/`: zero-build Node/Chrome checks. It is not public.
 - `DEBUGGING.md`: practical Chrome DevTools Protocol, WebKit, and visual-test recipes.
-- `pyodide/`, `linux/`, `harfbuzzjs/`, `dos/`, `doom/`, `duke/`, `q3/`, and `princejs/`: pinned runtime
+- `pyodide/`, `linux/`, `harfbuzzjs/`, `dos/`, `doom/`, `duke/`, and `q3/`: pinned runtime
   deliverables. Treat each as vendored product data, not generated output or an upgrade target.
+- `princejs/`: the same kind of pinned runtime, but untracked — `./fetch-princejs.sh` restores it
+  from upstream at a pinned SHA and applies `princejs-shim.patch` (provenance in the script
+  header). `rsvp.html` probes for it and falls back to the upstream GitHub Pages build when the
+  directory is absent.
 
 The web server exposes the git working tree directly. `.htaccess` is therefore a security boundary,
 not just routing configuration: it blocks developer documents, tests, Worker source/configuration,
@@ -458,6 +462,9 @@ The normal confirmed path is:
 1. Integrate the isolated commit into the primary branch.
 2. Push with `git puff` (the configured force-with-lease alias).
 3. Deploy with `ssh behdad "cd w && git pull"`.
+4. Once per web root (first setup, or if `princejs/` was removed): run `./fetch-princejs.sh` there.
+   The directory is untracked, so `git pull` never creates or updates it; until it exists the
+   Prince app serves from the upstream GitHub Pages fallback.
 
 The live web root is the git checkout. A visitor can fetch `rsvp.html` while `git pull` is rewriting
 the multi-megabyte file and briefly receive truncated HTML. If a post-deploy report shows the entire

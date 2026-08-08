@@ -172,11 +172,14 @@ function exposureOrder(row) {
   return row && row.closed.rain.active && row.windows.rain.active && row.roof.rain.active &&
     row.closed.rain.scene === row.windows.rain.scene && row.windows.rain.scene === row.roof.rain.scene &&
     row.closed.rain.gain < row.windows.rain.gain && row.windows.rain.gain < row.roof.rain.gain &&
-    row.closed.rain.cutoff < row.windows.rain.cutoff && row.windows.rain.cutoff < row.roof.rain.cutoff;
+    row.closed.rain.cutoff < row.windows.rain.cutoff && row.windows.rain.cutoff < row.roof.rain.cutoff &&
+    row.roof.rain.gain >= row.windows.rain.gain * 2 &&
+    row.windows.rain.gain >= row.closed.rain.gain * 3 &&
+    row.windows.rain.cutoff >= row.closed.rain.cutoff * 5;
 }
 function audibleCabinRain(row) {
-  return row && row.roof.rain.gain >= .2 && row.windows.rain.gain >= .147 &&
-    row.closed.rain.gain >= .104;
+  return row && row.roof.rain.gain >= .24 && row.windows.rain.gain >= .11 &&
+    row.closed.rain.gain >= .035;
 }
 
 console.log("rsvp.html weather-audio ownership:");
@@ -213,7 +216,7 @@ check(s.exteriorStreetHud && !s.exteriorStreetHud.wind.active && !s.exteriorStre
   s.exteriorStreetHud);
 check(s.streetEngineOffRain && s.streetEngineOffRain.bedActive &&
   s.streetEngineOffRain.sources === 1 && s.streetEngineOffRain.dedicatedRainSource &&
-  s.streetEngineOffRain.rain.active && s.streetEngineOffRain.rain.gain >= .104,
+  s.streetEngineOffRain.rain.active && s.streetEngineOffRain.rain.gain >= .035,
   "HUD rain is audible before ignition", s.streetEngineOffRain);
 check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
   s.streetThunderClosed.calls.length === 1 &&

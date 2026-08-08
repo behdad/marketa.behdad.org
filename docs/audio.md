@@ -248,7 +248,8 @@ one bounded cabin-rain noise source in the shared AudioContext. Its lifecycle fo
 HUD rather than ignition, so rain remains audible while parked with the engine off. Keeping it
 separate from the road/tyre voice also makes precipitation perceptually distinct. Roof-open,
 windows-open, and closed profiles progressively lower both gain and low-pass cutoff while keeping
-rain unmistakable over the moving drivetrain. Snow suppresses
+rain unmistakable over the moving drivetrain. Rain uses a deliberately wider exposure curve than
+thunder so roof and window changes are immediately audible. Snow suppresses
 the branch with the Entrance rain streaks; Camping remains outdoors on its separate lake/weather bed.
 Engine/HUD teardown, Road Trip pause, blur/hide, foreground coverage, route arrival, and Entrance exit
 therefore remove cabin rain through the drivetrain's existing lifecycle with no duplicate tail.

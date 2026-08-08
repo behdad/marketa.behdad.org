@@ -137,7 +137,8 @@ opens the complete keyboard-shortcut card.
 ### Actions and tools
 
 - `Enter`: perform the next guided action. After the Morning routine it uses the room's main
-  activity; in the Garden / Party, it toggles the party.
+  activity: the daytime Kitchen repeats the espresso steps, the visible Bar starts Flair Catch,
+  and the Garden / Party toggles the party.
 - `Space`: play, pause, or act in the current game or media surface.
 - `C`: open or close the phone.
 - `/`: open or close Messages.

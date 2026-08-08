@@ -143,14 +143,14 @@ var RSVP_HARNESS = [
   "    report.solve.final = window.currentStageIndex;",
   "  }",
   "  async function revisit() {",
-  "    // Post-unlock exploration: re-entering a SOLVED room shows a rotating 'enjoy",
-  "    // wandering' caption, not its solve instruction. Runs BEFORE the storm so the",
+  "    // Post-unlock, pre-Party exploration uses the ordinary solved-room caption and",
+  "    // never revives first-run arrows. Phase-two repeat-coffee coverage lives in phase2-progression.js. Runs BEFORE the storm so the",
   "    // kitchen bar is still down (the storm can flip the party switch and raise it,",
   "    // which would legitimately swap in the bar caption and mask this check).",
   "    if (!window.goToStage) return;",
   "    window.goToStage('kitchen');",
   "    await sleep(80);",
-  "    report.revisit = { barUp: !!(window.__barUpNow && window.__barUpNow()) };",
+  "    report.revisit = { barUp: !!(window.__barUpNow && window.__barUpNow()), invites: document.querySelectorAll('#stage-kitchen .invite-pulse').length };",
   "    report.revisit.first = window.__captionKey ? window.__captionKey() : null;",  // first solved-entry → base line
   "    window.goToStage('garden');",
   "    await sleep(80);",
@@ -256,10 +256,10 @@ if (!r) {
   if (JSON.stringify(r.solve.savedSolved) === JSON.stringify(r.solve.solvedBeforeParty)) pass("checkpoint persists solved rooms independently of unlock state");
   else fail("checkpoint persists solved rooms", "solve: " + JSON.stringify(r.solve));
   var rv = r.revisit || {};
-  if (rv.first === "explore_kitchen") pass("solved-room revisit shows the exploration base line (explore_kitchen), not a kitchen_* solve key");
-  else fail("solved-room revisit shows the exploration base line", "revisit: " + JSON.stringify(rv));
-  if (rv.second === rv.first) pass("later solved-room revisits keep the stable exploration caption");
-  else fail("later solved-room revisits keep the stable exploration caption", "revisit: " + JSON.stringify(rv));
+  if (rv.first === "explore_kitchen" && !rv.barUp && rv.invites === 0) pass("solved pre-Party Kitchen revisit uses exploration copy without invite arrows");
+  else fail("solved pre-Party Kitchen revisit stays clean", "revisit: " + JSON.stringify(rv));
+  if (rv.second === rv.first) pass("later pre-Party Kitchen revisits keep the stable exploration caption");
+  else fail("later pre-Party Kitchen revisits keep the stable exploration caption", "revisit: " + JSON.stringify(rv));
   if (rv.office === "explore_office") pass("solved office revisit shows its own exploration caption");
   else fail("solved office revisit shows its own exploration caption", "revisit: " + JSON.stringify(rv));
   if (r.stormClicked >= 60) pass("click-stormed " + r.stormClicked + " interactive elements");

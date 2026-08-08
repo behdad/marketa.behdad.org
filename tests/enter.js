@@ -38,6 +38,7 @@ var HARNESS = [
   "    if(window.party)window.party(true);await sleep(500);report.phaseTwo=!!window.__secondRound;",
   "    window.goToStage('kitchen');await sleep(300);enter();await sleep(200);report.phaseTwoActions.flairStart=!!(window.__flairState&&window.__flairState().active);key('Escape');await sleep(120);key('Backspace');await sleep(120);report.phaseTwoActions.flairClosed=!!(window.__flairState&&!window.__flairState().active);",
   "    window.goToStage('garden');await sleep(300);var partyBefore=!!(window.party&&window.party());enter();await sleep(200);var pac=window.__pacmanPresentation&&window.__pacmanPresentation();report.phaseTwoActions.partyToggled=partyBefore&&!window.party()&&!!(pac&&!pac.mode);",
+  "    window.goToStage('kitchen');if(window.__setDayNight)window.__setDayNight(false);await sleep(300);var coffeeBefore=window.__kitchenCoffeeNext&&window.__kitchenCoffeeNext(),coffeeClicks=0,coffeeEl=coffeeBefore&&document.getElementById(coffeeBefore);if(coffeeEl)coffeeEl.addEventListener('click',function(){coffeeClicks++;});enter();await sleep(120);var coffeeCaption=window.__captionKey&&window.__captionKey(),coffeeFlair=!!(window.__flairState&&window.__flairState().active);report.phaseTwoActions.dayCoffeeDetail={before:coffeeBefore,clicks:coffeeClicks,caption:coffeeCaption,flair:coffeeFlair,bar:!!(window.__barUpNow&&window.__barUpNow())};report.phaseTwoActions.dayCoffee=!!coffeeBefore&&coffeeClicks===1&&!coffeeFlair&&!report.phaseTwoActions.dayCoffeeDetail.bar&&coffeeCaption!=='kitchen_bar'&&coffeeCaption!=='kitchen_bar_night';",
   "    window.goToStage('cuddly');await sleep(300);enter();await sleep(120);report.phaseTwoActions.octiStart=!!(window.__octiEscapeState&&window.__octiEscapeState().active);key('Escape');await sleep(120);report.phaseTwoActions.octiClosed=!!(window.__octiEscapeState&&!window.__octiEscapeState().active);",
   "    window.goToStage('office');await sleep(300);enter();await sleep(120);report.phaseTwoActions.invadersStart=!!(window.__arcadeState&&window.__arcadeState().active);key('Escape');await sleep(120);report.phaseTwoActions.invadersClosed=!!(window.__arcadeState&&!window.__arcadeState().active);",
   "    if(window.__monitorZoomIn)window.__monitorZoomIn();await sleep(180);enter();await sleep(120);report.phaseTwoActions.monitorZoomSafe=!!(window.__monitorZoomed&&window.__monitorZoomed())&&!!(window.__arcadeState&&!window.__arcadeState().active);if(window.__monitorZoomOut)window.__monitorZoomOut();await sleep(450);",
@@ -66,7 +67,7 @@ if (!r) {
   if (r.gardenEnterGuitar) pass("garden music step: Enter clicks the guitar, not the ukulele");
   else fail("garden music step: Enter clicks the guitar, not the ukulele");
   var p2 = r.phaseTwoActions || {};
-  if (r.phaseTwo && p2.flairStart && p2.flairClosed && p2.partyToggled &&
+  if (r.phaseTwo && p2.flairStart && p2.flairClosed && p2.partyToggled && p2.dayCoffee &&
       p2.octiStart && p2.octiClosed && p2.invadersStart && p2.invadersClosed &&
       p2.monitorZoomSafe && p2.laptopZoomSafe && p2.phoneOpenSafe &&
       p2.tetrisStart && p2.tetrisClosed)

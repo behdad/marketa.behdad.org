@@ -52778,6 +52778,7 @@ var T = {
       entrance_roadtrip_police_impaired_summons: "Erratic impaired driving · {fine} · {points} demerits · {total}/15{status} · 250-point penalty.",
       entrance_roadtrip_police_refused: "You didn’t pull over · fine {fine} · {points} demerits · {total}/15{status} · 1,000-point penalty.",
       entrance_roadtrip_police_court_refused: "You didn’t pull over · {fine} · {points} demerits · {total}/15{status} · highway run over.",
+      kitchen_again: "Go ahead—make another espresso. ☕",
       kitchen_grind: "Now grind coffee.",
       kitchen_brew: "Now brew a shot.",
       kitchen_sip: "Go on, sip it. ☕",
@@ -54154,6 +54155,7 @@ var T = {
       entrance_roadtrip_police_impaired_summons: "Nebezpečná jízda pod vlivem · {fine} · {points} trestných bodů · {total}/15{status} · ztráta 250 herních bodů.",
       entrance_roadtrip_police_refused: "Nezastavil jsi · pokuta {fine} · {points} trestných bodů · {total}/15{status} · ztráta 1 000 herních bodů.",
       entrance_roadtrip_police_court_refused: "Nezastavil jsi · {fine} · {points} trestných bodů · {total}/15{status} · jízda končí.",
+      kitchen_again: "Jen do toho—udělej si další espresso. ☕",
       kitchen_grind: "Teď umel kávu.",
       kitchen_brew: "Teď uvař espresso.",
       kitchen_sip: "Tak si ho usrkni. ☕",
@@ -112740,7 +112742,15 @@ function spawnDustMote(container) {
     if (window.__cinematic && (!force || typeof key !== "string" || key.indexOf("cine_") !== 0)) return;
     if ((huntIntroShowing || openingGuideShowing) && !force) return; // opening prompt/guide owns the caption until its handoff completes
     if (lowerRoomOwnsViewport() && !force) return; // upstairs beats must not speak over an open lower room
-    if (window.__secondRound && phaseOneSolveCaption(key) && !force) return;
+    // The linear room clues retire after the first party, except for the Kitchen's
+    // deliberately repeatable daytime espresso routine. Its real object clicks and
+    // Enter walker must still be able to narrate grind → tamp → brew → sip. Keep the
+    // exception scoped to the visible daytime Kitchen so a late timer cannot speak in
+    // another room or over the bar.
+    var repeatCoffeeCaption = window.__secondRound && window.currentStageName === "kitchen" &&
+      (!window.__barUpNow || !window.__barUpNow()) && typeof key === "string" &&
+      (key === "kitchen" || key.indexOf("kitchen_") === 0);
+    if (window.__secondRound && phaseOneSolveCaption(key) && !repeatCoffeeCaption && !force) return;
     // A flash owns the visible line for its full hold, but permanent progress beneath it
     // keeps moving. Expiry must reveal the newest instruction, not the one the flash covered.
     if (stageCaptionUnderFlash(key)) return;
@@ -112947,11 +112957,11 @@ function spawnDustMote(container) {
   }
   // Post-solve exploration captions. Once a room owns its solved flag, re-entering it stops
   // repeating the solve instruction and shows a gentle, rotating "enjoy wandering" line.
-  // liveSolveState keeps the two rooms whose caption is still meaningfully dynamic even
-  // when solved (kitchen with the bar up, office mid-call) on their existing branch.
+  // liveSolveState keeps the rooms whose caption is still meaningfully dynamic even when
+  // solved (Kitchen's repeatable coffee/bar state, Office mid-call) on their existing branch.
   var exploreSeen = {};
   function liveSolveState(name) {
-    if (name === "kitchen") return !!(window.__barUpNow && window.__barUpNow());
+    if (name === "kitchen") return !!window.__secondRound || !!(window.__barUpNow && window.__barUpNow());
     if (name === "office") return !!(window.__laptopCallLive && window.__laptopCallLive());
     return false;
   }
@@ -112972,11 +112982,19 @@ function spawnDustMote(container) {
   window.__resetExplore = function () { exploreSeen = {}; }; // resetHunt (this IIFE) calls it; explorePtr is reset via its own brick-IIFE hook
   function restoreStageHint(name) {
     var solved = roomSolved(name);
-    if (solved && !liveSolveState(name)) { showExploration(name); return; }
+    if (solved && !liveSolveState(name)) {
+      if (name === "kitchen") updateKitchenInvite(); // a completed solve never revives its first-run object arrows
+      showExploration(name);
+      return;
+    }
     if (name === "kitchen") {
       if (window.__barUpNow && window.__barUpNow()) { setCaption(kitchenCurrentCaption()); updateKitchenInvite(); return; } // bar's up (party OR night) → bar caption + no coffee arrows, regardless of the machine's power
-      if (!kitchenPowered) return;
-      setCaption(kitchenCurrentCaption());
+      // A solved daytime revisit starts with one quiet invitation, not the old guided
+      // arrows. Once the player touches a coffee object (or presses Enter), the existing
+      // step captions take over from the actual machine state.
+      if (window.__secondRound && solved) setCaption("kitchen_again");
+      else setCaption(kitchenCurrentCaption());
+      updateKitchenInvite();
     } else if (name === "garden") {
       updateGardenHint();
     } else if (name === "cuddly") {
@@ -113895,8 +113913,11 @@ function spawnDustMote(container) {
     var er = window.currentStageName, did = true;
     if (window.__secondRound) {
       if (er === "kitchen") {
-        if (window.__setDayNight) window.__setDayNight(true);
-        if (window.__startFlairCatch) window.__startFlairCatch();
+        if (window.__barUpNow && window.__barUpNow()) {
+          if (window.__startFlairCatch) window.__startFlairCatch();
+        } else if (window.__kitchenDoNext) {
+          window.__kitchenDoNext();
+        }
       } else if (er === "garden") {
         if (window.party) window.party(!window.party());
       } else if (er === "cuddly") {
@@ -114242,6 +114263,8 @@ function spawnDustMote(container) {
   function kitchenCurrentCaption() {
     if (window.__nightBarNow && window.__nightBarNow()) return "kitchen_bar_night"; // calm night bar (dusk, no party) → "ask for a drink"
     if (window.__gardenPartyOn) return "kitchen_bar"; // party's on → it's a cocktail bar, not an espresso station
+    if (window.__secondRound && (!kitchenPowered || portafilterSpent)) return "kitchen_again";
+    if (!kitchenPowered) return "kitchen";
     if (!kitchenWarmedUp) return "kitchen_warming_up";
     if (portafilterSpent) return "kitchen_need_knockout";
     if (!kitchenGround) return grinderBeansLeft <= 0 ? "kitchen_grinder_empty" : "kitchen_grind";
@@ -114262,7 +114285,7 @@ function spawnDustMote(container) {
   window.__kitchenCoffeeNext = kitchenCoffeeNext;
   function updateKitchenInvite() {
     var next = null;
-    if (!window.__secondRound && !huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line
+    if (!window.__secondRound && !roomSolved("kitchen") && !huntIntroShowing && !openingGuideShowing && kitchenRounds < KITCHEN_HINT_ROUNDS) { // no object arrow until the intro has taught the caption line; solved revisits stay clean
       next = kitchenCoffeeNext();
     }
     // while the bar's up (garden PARTY or the calm NIGHT bar) the kitchen is a cocktail bar, not an
@@ -114299,11 +114322,10 @@ function spawnDustMote(container) {
     updateKitchenInvite();
     if (window.currentStageName === "kitchen") setCaption(kitchenCurrentCaption());
   };
-  // 'Enter' in the kitchen activates the next pending coffee step — whatever the invite arrow
-  // points at (same order as updateKitchenInvite). Clicking an element runs its onActivate,
-  // which drives the fly-to/step animations, so this advances the sequence one beat.
+  // 'Enter' in the kitchen activates the next pending coffee step. It follows the same
+  // order as the coffee objects, but remains independent of the first-run-only invite arrows.
+  // Clicking an object stays the primary pointer path and runs the same onActivate handlers.
   window.__kitchenDoNext = function () {
-    if (window.__secondRound) return null;
     if (window.__barUpNow && window.__barUpNow()) return null; // bar's up → no coffee step (Enter makes a cocktail instead)
     var nx = kitchenCoffeeNext();
     if (nx) { var el = document.getElementById(nx); if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
@@ -114320,7 +114342,7 @@ function spawnDustMote(container) {
       portafilter.classList.remove("done", "has-grounds");
       portafilter.classList.add("spent");
     }
-    setCaption("kitchen_need_knockout");
+    setCaption(window.__secondRound ? "kitchen_again" : "kitchen_need_knockout");
     updateKitchenInvite();
   };
   updateKitchenInvite();

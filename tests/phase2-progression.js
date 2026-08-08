@@ -23,14 +23,44 @@ var harness = String.raw`<script>
     await sleep(850);
     check("a stale phase-one completion cannot pan in phase two",
       staleResult === false && window.currentStageName === "garden", window.currentStageName);
-    var walkers = [window.__kitchenDoNext(), window.__gardenDoNext(), window.__cuddlyDoNext(),
-      window.__officeDoNext()];
-    check("all guided solve walkers are retired in phase two",
-      walkers.every(function (value) { return value === null || value === false; }), JSON.stringify(walkers));
+    if (window.party && window.party()) window.party(false);
+    if (window.__setDayNight) window.__setDayNight(false);
+    if (window.__setKitchenCoffeeState) window.__setKitchenCoffeeState({ step: "spent", rounds: 1 });
+    if (window.__setSeenRooms) window.__setSeenRooms(["kitchen"]); // isolate the room caption from the first-visit progress flash
+    window.goToStage("kitchen");
+    await sleep(120);
+    check("a solved daytime Kitchen revisit has a quiet repeat invitation",
+      window.__captionKey() === "kitchen_again" &&
+      document.querySelectorAll("#stage-kitchen .invite-pulse").length === 0,
+      JSON.stringify({ caption: window.__captionKey(), invites: document.querySelectorAll("#stage-kitchen .invite-pulse").length }));
+
+    var knockbox = document.getElementById("kitchen-knockbox");
+    var knockboxClicks = 0;
+    knockbox.addEventListener("click", function () { knockboxClicks++; });
+    knockbox.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await sleep(1900);
+    check("a direct coffee-object click resumes the canonical repeat sequence",
+      knockboxClicks === 1 && window.__captionKey() === "kitchen_grind" &&
+      document.querySelectorAll("#stage-kitchen .invite-pulse").length === 0,
+      JSON.stringify({ clicks: knockboxClicks, caption: window.__captionKey(), invites: document.querySelectorAll("#stage-kitchen .invite-pulse").length }));
+
+    var grinder = document.getElementById("kitchen-grinder"), grinderClicks = 0;
+    grinder.addEventListener("click", function () { grinderClicks++; });
+    var kitchenWalker = window.__kitchenDoNext();
+    await sleep(1900);
+    var retiredWalkers = [window.__gardenDoNext(), window.__cuddlyDoNext(), window.__officeDoNext()];
+    check("Enter's coffee walker advances the same sequence while linear room walkers retire",
+      kitchenWalker === "kitchen-grinder" && grinderClicks === 1 &&
+      window.__captionKey() === "kitchen_need_tamp" &&
+      retiredWalkers.every(function (value) { return value === null || value === false; }),
+      JSON.stringify({ kitchen: kitchenWalker, clicks: grinderClicks, caption: window.__captionKey(), retired: retiredWalkers }));
+
+    window.goToStage("garden");
+    var partyBefore = !!(window.party && window.party());
     var activated = window.__activateCurrentRoom();
-    check("the room activation key launches the phase-two room game",
-      activated === true && !document.getElementById("pacman-room-overlay").hidden, String(activated));
-    if (window.__closeMonitorPacman) window.__closeMonitorPacman();
+    check("the room activation key toggles the Garden's main Party activity",
+      activated === true && !partyBefore && !!(window.party && window.party()), String(activated));
+    if (window.party && window.party()) window.party(false);
     check("phase-one clue targets and nudges are retired",
       window.__gardenClueTarget() === null && window.__cuddlyDoorNeeded() === false &&
       !document.getElementById("office-pc-desk-trio").classList.contains("inviting") &&

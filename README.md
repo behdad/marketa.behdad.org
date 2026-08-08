@@ -38,3 +38,18 @@ you're curious how it's made. It's a personal project made with love, not a temp
 a product. If you spot a bug or have an idea, the
 [issue tracker](https://github.com/behdad/marketa.behdad.org/issues) is open. Thanks
 for looking, and enjoy the loft. 💛
+
+## License
+
+- **Code — MIT** ([COPYING](COPYING)): all HTML/CSS/JS authored for this site — the
+  pages' inline code, `tests/`, and the tooling and worker scripts. The MIT grant
+  covers the authored code only, not the artwork, media, or bundled software below.
+- **Original artwork — CC BY-NC 4.0**: the couple's vector illustrations (inline in
+  the pages, standalone in `art/`) and the images generated from them. Declaration
+  and per-file inventory in [art/COPYING](art/COPYING).
+- **All rights reserved**: the two guest artists' live concert recordings (Dan Bern,
+  Orit Shimoni — included with permission) and all personal photos, video, and voice
+  recordings, listed file by file in [art/COPYING](art/COPYING).
+- **Bundled third-party software** (`pyodide/`, `linux/`, `doom/`, `duke/`, `q3/`,
+  `dos/`, `harfbuzzjs/`) keeps its own licenses — each directory carries its own
+  COPYING / license docs, as does any `princejs/` checkout fetched at deploy time.

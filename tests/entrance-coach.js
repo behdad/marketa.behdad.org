@@ -11,7 +11,11 @@ window.addEventListener("load", function () { setTimeout(function () {
   function coach() {
     var root = document.getElementById("entrance-drive-coach");
     var active = root && root.querySelector("[data-coach-step].active");
-    return { show: !!(root && root.classList.contains("show")), step: active && Number(active.dataset.coachStep) };
+    return {
+      show: !!(root && root.classList.contains("show")),
+      step: active && Number(active.dataset.coachStep),
+      help: getComputedStyle(document.getElementById("entrance-drive-help")).display
+    };
   }
   function key(type, key, code, options) {
     document.dispatchEvent(new KeyboardEvent(type, Object.assign({
@@ -93,6 +97,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     var reentryBox = reentry.getBoundingClientRect();
     var helpBox = help.getBoundingClientRect();
     report.reentryGap = helpBox.left - reentryBox.right;
+    report.reentryHelpDisplay = getComputedStyle(help).display;
     report.coachAboveReentry = !!(reentry.compareDocumentPosition(
       document.getElementById("entrance-drive-coach")) & Node.DOCUMENT_POSITION_FOLLOWING);
     reentry.classList.remove("show");
@@ -183,6 +188,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     var reentryBox = reentry.getBoundingClientRect();
     var helpBox = document.getElementById("entrance-drive-help").getBoundingClientRect();
     report.reentryGap = helpBox.left - reentryBox.right;
+    report.reentryHelpDisplay = getComputedStyle(document.getElementById("entrance-drive-help")).display;
     reentry.classList.remove("show");
     key("keydown", "ArrowLeft", "ArrowLeft"); key("keyup", "ArrowLeft", "ArrowLeft");
     report.usedControl = coach();
@@ -203,6 +209,9 @@ console.log("rsvp.html driving coach:");
 check(result && result.errors.length === 0, "coach harness has no uncaught errors", result && result.errors);
 check(result && result.fresh.show && result.fresh.step === 1,
   "a fresh dashboard starts with ignition", result && result.fresh);
+check(result && result.fresh.help === "none" && result.driven.help !== "none",
+  "the help button stays hidden while the coach is already visible",
+  { fresh: result && result.fresh, driven: result && result.driven });
 check(result && result.savedFreshCoach && result.savedFreshCoach.step === 1 &&
   !result.savedFreshCoach.complete && !result.savedFreshCoach.dismissed &&
   result.missingCoachRestore && result.missingCoachRestore.show && result.missingCoachRestore.step === 1,
@@ -253,8 +262,8 @@ check(result && result.restarted.coach.show && result.restarted.coach.step === 2
 check(result && result.copy && /Ctrl/.test(result.copy.en) && /Ctrl/.test(result.copy.cs) &&
   !/Ctrl/.test(result.copy.pedalEn) && !/Ctrl/.test(result.copy.pedalCs),
   "the dedicated cruise step teaches Ctrl in both languages", result && result.copy);
-check(result && result.reentryGap >= 8,
-  "desktop Road Trip button clears driving help", result && result.reentryGap);
+check(result && result.reentryHelpDisplay === "none",
+  "desktop hides driving help while its coach is active", result && result.reentryHelpDisplay);
 check(result && result.coachAboveReentry,
   "driving coach paints above the Road Trip button", result && result.coachAboveReentry);
 check(mobile && mobile.errors.length === 0 && mobile.fresh.show && mobile.fresh.step === 1,
@@ -276,8 +285,8 @@ check(mobile && /Blue/.test(mobile.copy.en) && /pink/.test(mobile.copy.en) && /c
   "combined slider coaching explains the hold zone bilingually without overflowing", mobile && mobile.copy);
 check(mobile && !mobile.usedControl.show,
   "using either combined control completes the mobile coach", mobile && mobile.usedControl);
-check(mobile && mobile.reentryGap >= 8,
-  "mobile Road Trip button clears driving help", mobile && mobile.reentryGap);
+check(mobile && mobile.reentryHelpDisplay === "none",
+  "mobile hides driving help while its coach is active", mobile && mobile.reentryHelpDisplay);
 
 if (failed) process.exit(1);
 console.log("Driving-coach assertions passed.");

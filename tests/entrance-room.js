@@ -282,7 +282,8 @@ check(s.closed && s.closed.state && s.held && s.held.state &&
 
 var source = fs.readFileSync(path.join(__dirname, "..", "rsvp.html"), "utf8");
 var entrance = (source.match(/<div id="entrance-room"[\s\S]*?<\/div>\s*<div id="prince-basement"/) || [""])[0];
-check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(entrance) &&
+check(/THE LOFTS/.test(entrance) && /id="entrance-brick"/.test(source) &&
+  /fill="url\(#entrance-brick\)"/.test(entrance) &&
   /id="entrance-sidewalk"/.test(entrance) && /id="entrance-tree-summer"/.test(entrance),
   "the inline scene carries the facade's brick, stone, canopy, and sidewalk identity");
 check((entrance.match(/class="entrance-prop"/g) || []).length === 10 &&

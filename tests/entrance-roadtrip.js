@@ -1853,8 +1853,9 @@ check(exitLadder && exitLadder.first.open && exitLadder.first.drive.hud && exitL
   exitLadder.first.drive.roadtrip.reentryVisible &&
   exitLadder.second.open && !exitLadder.second.drive.hud && !exitLadder.second.car.engineOn &&
   exitLadder.second.drive.roadtrip.paused && !exitLadder.second.drive.roadtrip.reentryVisible &&
-  !exitLadder.third.open && exitLadder.third.drive.roadtrip.paused,
-  "successive Escapes pause the highway, dismiss the HUD, then dismiss Entrance without clearing the run",
+  exitLadder.third.open && !exitLadder.third.drive.hud && !exitLadder.third.car.engineOn &&
+  exitLadder.third.drive.roadtrip.paused,
+  "successive Escapes pause the highway, dismiss the HUD, then stay inert downstairs without clearing the run",
   exitLadder);
 var checkpoint = s.checkpoint;
 var checkpointContract = checkpoint && {

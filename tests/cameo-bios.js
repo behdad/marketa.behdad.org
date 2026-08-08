@@ -6,7 +6,7 @@
 var lib = require("./lib");
 
 var harness = String.raw`<script>
-(function () {
+(async function () {
   var out = { checks: [], errors: [] };
   function check(name, pass, detail) { out.checks.push({ name: name, pass: !!pass, detail: detail || "" }); }
   function cardName() {
@@ -16,13 +16,22 @@ var harness = String.raw`<script>
   }
   function cardPlacement() {
     var card = document.querySelector(".egg-bubble.who-pop");
+    var rect = card && card.getBoundingClientRect();
+    var call = document.getElementById("laptop-call-remote");
     return card ? {
       left: card.style.left,
-      top: card.style.top,
+      top: parseFloat(card.style.top),
+      bottom: rect.bottom,
+      height: card.offsetHeight,
+      callTop: call && call.getBoundingClientRect().top,
       anchor: card._anchor && card._anchor.id
     } : null;
   }
   function click(el) { if (el) el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })); }
+  function nextFrame() { return new Promise(function (resolve) { requestAnimationFrame(resolve); }); }
+  function expectedCallTop(p) {
+    return Math.max(8, Math.min(window.innerHeight - p.height - 8, p.callTop));
+  }
   function pointerClick(el) {
     if (!el) return;
     el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
@@ -78,6 +87,7 @@ var harness = String.raw`<script>
     var pragueDaniel = document.getElementById("laptop-garden-daniel");
     var pragueFelix = document.getElementById("laptop-garden-felix");
     click(pragueDaniel);
+    await nextFrame();
     var praguePlacement = cardPlacement();
     check("the widened Prague gathering uses the laptop screen's fixed bio position",
       cardName() === "Daniel" && praguePlacement && praguePlacement.anchor === "laptop-garden-daniel",
@@ -85,23 +95,30 @@ var harness = String.raw`<script>
     check("Prague call bios never draw a person arrow",
       !document.querySelector("#laptop-call-scene .guest-spot-arrow"));
     click(pragueFelix);
+    await nextFrame();
     var pragueFelixPlacement = cardPlacement();
-    check("every Prague gathering member reuses exactly the same card coordinates",
+    check("every Prague gathering member shares one horizontal position and stays viewport-clamped",
       cardName() === "Felix" && pragueFelixPlacement &&
-      pragueFelixPlacement.left === praguePlacement.left && pragueFelixPlacement.top === praguePlacement.top,
+      pragueFelixPlacement.left === praguePlacement.left &&
+      Math.abs(praguePlacement.top - expectedCallTop(praguePlacement)) < 0.01 &&
+      Math.abs(pragueFelixPlacement.top - expectedCallTop(pragueFelixPlacement)) < 0.01,
       JSON.stringify({ first: praguePlacement, second: pragueFelixPlacement }));
 
     var luebMadla = document.getElementById("laptop-lueb-sister");
     var luebRobert = document.getElementById("laptop-lueb-husband");
     click(luebMadla);
+    await nextFrame();
     var luebPlacement = cardPlacement();
     click(luebRobert);
+    await nextFrame();
     var luebRobertPlacement = cardPlacement();
-    check("Lübeck family bios share one fixed, arrow-free screen position",
+    check("Lübeck family bios share one fixed horizontal position and stay viewport-clamped",
       cardName() === "Robert" && luebPlacement && luebRobertPlacement &&
       luebPlacement.anchor === "laptop-lueb-sister" &&
       luebRobertPlacement.anchor === "laptop-lueb-husband" &&
-      luebRobertPlacement.left === luebPlacement.left && luebRobertPlacement.top === luebPlacement.top &&
+      luebRobertPlacement.left === luebPlacement.left &&
+      Math.abs(luebPlacement.top - expectedCallTop(luebPlacement)) < 0.01 &&
+      Math.abs(luebRobertPlacement.top - expectedCallTop(luebRobertPlacement)) < 0.01 &&
       !document.querySelector("#laptop-lueb-scene .guest-spot-arrow"),
       JSON.stringify({ first: luebPlacement, second: luebRobertPlacement }));
 

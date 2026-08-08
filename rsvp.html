@@ -38124,7 +38124,8 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_LAKE_TURNOFF_SECONDS = ROADTRIP_LAKE_TURNOFF_DESKTOP_SECONDS * ROADTRIP_DURATION_SCALE;
   var ROADTRIP_ABRAHAM_SECONDS = ROADTRIP_ABRAHAM_DESKTOP_SECONDS * ROADTRIP_DURATION_SCALE;
   var ROADTRIP_SHORTCUT_REMAINING_SECONDS = 5;
-  var ROADTRIP_CAMP_SIGN_SECONDS = 16;
+  var ROADTRIP_CAMP_SIGN_SECONDS = 8;
+  var ROADTRIP_CAMP_SPUR_SECONDS = 5.5;
   var ROADTRIP_CAMP_EXIT_LEAD_SECONDS = 2.4;
   var ROADTRIP_CAMP_EXIT_TAIL_SECONDS = 1.2;
   var ROADTRIP_CAMP_EXIT_REPEAT_DESKTOP_SECONDS = 60;
@@ -38138,6 +38139,7 @@ window.__entranceRoomOpen = false;
   var ROADTRIP_ABRAHAM_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_ABRAHAM_SECONDS);
   var ROADTRIP_SHORTCUT_REMAINING_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_SHORTCUT_REMAINING_SECONDS);
   var ROADTRIP_CAMP_SIGN_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_SIGN_SECONDS);
+  var ROADTRIP_CAMP_SPUR_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_SPUR_SECONDS);
   var ROADTRIP_CAMP_EXIT_LEAD_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_LEAD_SECONDS);
   var ROADTRIP_CAMP_EXIT_TAIL_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_TAIL_SECONDS);
   var ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE = roadtripDistanceForSeconds(ROADTRIP_CAMP_EXIT_REPEAT_SECONDS);
@@ -42660,6 +42662,7 @@ window.__entranceRoomOpen = false;
     return {
       countdown: countdown,
       visible: visible,
+      spurVisible: visible && (roadtripState.campExitLatched || countdown <= ROADTRIP_CAMP_SPUR_DISTANCE),
       takeable: visible && !roadtripState.campExitLatched && countdown <= ROADTRIP_CAMP_EXIT_LEAD_DISTANCE,
       progress: roadtripState.campExitLatched ? 1 : visible ? Math.max(0, Math.min(1,
         (ROADTRIP_CAMP_SIGN_DISTANCE - countdown) /
@@ -42834,12 +42837,16 @@ window.__entranceRoomOpen = false;
         roadtripState.playerLane = roadtripState.playerLane < 0 ? -.5 : ROADTRIP_ABRAHAM_START_LANE;
         transitionRoadtripTraffic(previousLakeTurnoffRoute);
         syncRoadtripRouteClass();
-        roadtripFeedback("entrance_roadtrip_abraham_arrival");
       }
     } else if (roadtripState.route === "abraham") {
       roadtripState.abrahamDistance += distance;
       if (!roadtripState.campExitLatched) {
+        var previousCampExitDistance = roadtripState.campExitDistance;
         roadtripState.campExitDistance -= distance;
+        if (previousCampExitDistance > ROADTRIP_CAMP_SIGN_DISTANCE &&
+            roadtripState.campExitDistance <= ROADTRIP_CAMP_SIGN_DISTANCE) {
+          roadtripFeedback("entrance_roadtrip_abraham_arrival");
+        }
         while (roadtripState.campExitDistance < -ROADTRIP_CAMP_EXIT_TAIL_DISTANCE) {
           roadtripState.campExitDistance += ROADTRIP_CAMP_EXIT_REPEAT_DISTANCE;
         }
@@ -44101,11 +44108,12 @@ window.__entranceRoomOpen = false;
       var tail = cubicTail(start, c1, c2, end, t);
       return tail.start;
     }
+    var innerEdgeStart = .38;
     var innerEdgeX = cubicTail(innerEdgeOrigin, innerEdgeLineControls.c1,
-      innerEdgeLineControls.c2, destinationInner, 0);
+      innerEdgeLineControls.c2, destinationInner, innerEdgeStart);
     var outerEdgeX = cubicTail(junctionOuter, outerControls.c1, outerControls.c2,
       destinationOuter, 0);
-    var innerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, 0);
+    var innerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, innerEdgeStart);
     var outerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, 0);
     var edgeStartWidth = edgeNearWidth * .72;
     var edgeTailWidth = edgeNearWidth * .88;
@@ -44212,7 +44220,7 @@ window.__entranceRoomOpen = false;
     roadtripSetAttribute(node, "data-roadtrip-sign-left", signLeft.toFixed(2));
     roadtripSetAttribute(node, "data-roadtrip-sign-post-x", x.toFixed(2));
     roadtripSetAttribute(node, "transform", "translate(" + x.toFixed(2) + " " +
-      (spur ? spur.y : point.y).toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
+      point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
   }
   function paintRoadtripRoad() {
     if (!roadtripState.active) return;
@@ -44374,7 +44382,9 @@ window.__entranceRoomOpen = false;
         var campSignRemaining = 106 - campSignProgress * 86;
         var campSignPoint = roadtripProject(campSignRemaining);
         var campSignScale = .19 + campSignPoint.perspective * .98;
-        var campSpur = paintRoadtripCampSpur(campSignPoint, campSignScale, 56);
+        var campSpur = campTiming.spurVisible ?
+          paintRoadtripCampSpur(campSignPoint, campSignScale, 56) : null;
+        if (!campTiming.spurVisible) roadtripSetAttribute(roadtripCampSpurNode, "visibility", "hidden");
         positionRoadtripCampExitSign(roadtripCampExitNode, campSignPoint, campSignScale, 56, campSpur);
         roadtripSetAttribute(roadtripCampExitNode, "data-roadtrip-takeable", campTiming.takeable ? "true" : "false");
         roadtripSetAttribute(roadtripCampExitNode, "visibility", "visible");
@@ -45148,8 +45158,10 @@ window.__entranceRoomOpen = false;
         var rewardAward = awardRoadtripBonus(collectibleValue);
         roadtripState.tokens++;
         playRoadtripRewardSound(entity.type);
-        roadtripFeedback("entrance_roadtrip_" + entity.type,
-          { points: rewardAward, combo: rewardCombo });
+        if (!roadtripCampExitTiming().visible) {
+          roadtripFeedback("entrance_roadtrip_" + entity.type,
+            { points: rewardAward, combo: rewardCombo });
+        }
         releaseRoadtripEntity(entity);
         if (window.__checkpointChanged) window.__checkpointChanged();
       } else if (remaining <= -60) releaseRoadtripEntity(entity);

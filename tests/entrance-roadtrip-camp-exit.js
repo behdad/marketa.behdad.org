@@ -65,6 +65,12 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   window.addEventListener("load", function () {
     setTimeout(function () {
       try {
+        var flashed = [];
+        var originalFlashCaptionKey = window.__flashCaptionKey;
+        window.__flashCaptionKey = function (key) {
+          flashed.push(key);
+          return originalFlashCaptionKey.apply(this, arguments);
+        };
         window.__unlockAllRooms();
         window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
           "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
@@ -79,6 +85,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         var repeat = initial.campExitRepeatDistance;
         var nominalSecond = initial.routePaceKmh / 3.6;
 
+        setAbraham(first - 8.2 * nominalSecond, .5, 50);
+        flashed.length = 0;
+        window.__entranceDriveStep(500);
+        report.firstApproachFeedback = flashed.slice();
         setAbraham(first - 14 * nominalSecond, .5, 50);
         report.farExit = { state: roadtrip(), visual: visual() };
         setAbraham(first - 7 * nominalSecond, .5, 50);
@@ -102,6 +112,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
         setAbraham(first + repeat - nominalSecond, .5, 50);
         report.repeatExit = { state: roadtrip(), visual: visual() };
+        setAbraham(first + repeat - 8.2 * nominalSecond, .5, 50);
+        flashed.length = 0;
+        window.__entranceDriveStep(500);
+        report.repeatApproachFeedback = flashed.slice();
 
         setAbraham(first + 13 * nominalSecond, .5, 42);
         window.__exitEntranceRoadtrip();
@@ -170,12 +184,12 @@ function connectedSpur(visual) {
     visual.junctionInnerX <= visual.junctionRoadRightX - 9 &&
     visual.junctionRoadRightX < visual.junctionOuterX &&
     visual.shoulderMouthInnerX >= visual.junctionRoadRightX - .3 &&
-    Math.abs(visual.innerEdgeStartX - visual.shoulderMouthInnerX) <= .02 &&
+    visual.innerEdgeStartX > visual.shoulderMouthInnerX + 3 &&
     visual.innerEdgeStartX < visual.bendInnerX && visual.bendInnerX < visual.destinationInnerX &&
     Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
     visual.outerEdgeStartX < visual.bendOuterX && visual.bendOuterX < visual.destinationOuterX &&
     visual.destinationY < visual.bendY && visual.bendY < visual.innerEdgeStartY &&
-    Math.abs(visual.innerEdgeStartY - visual.junctionY) <= .02 &&
+    visual.innerEdgeStartY < visual.junctionY - 1 &&
     Math.abs(visual.outerEdgeStartY - visual.junctionY) <= .02 &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
@@ -199,17 +213,21 @@ var mobile = run(true);
   var far = result && result.farExit || {};
   var farState = far.state || {};
   var farVisual = far.visual || {};
-  check(farState.route === "abraham" && farState.campExitVisible && !farState.campExitTakeable &&
-    farVisual.sign === "visible" && farVisual.spur === "visible" &&
-    farVisual.destinationX > farVisual.junctionX && farVisual.destinationY < farVisual.junctionY &&
-    farVisual.signPostX > farVisual.destinationX && farVisual.signPostX - farVisual.destinationX < 30 &&
-    connectedSpur(farVisual) && signsClear(farVisual),
-    device + " shows the upper-right branch at the fourteen-second-equivalent travel distance", far);
+  check(farState.route === "abraham" && !farState.campExitVisible && !farState.campExitTakeable &&
+    farVisual.sign === "hidden" && farVisual.spur === "hidden" && signsClear(farVisual),
+    device + " withholds the turnoff at the fourteen-second-equivalent travel distance", far);
   var mid = result && result.midExit || {};
   check(mid.state && mid.state.campExitVisible && !mid.state.campExitTakeable &&
-    mid.visual && mid.visual.sign === "visible" && mid.visual.spur === "visible" &&
-    connectedSpur(mid.visual) && signsClear(mid.visual),
-    device + " keeps one coherent paved branch through the middle approach", mid);
+    mid.visual && mid.visual.sign === "visible" && mid.visual.spur === "hidden" &&
+    signsClear(mid.visual),
+    device + " shows the sign before revealing the nearby paved branch", mid);
+  check(result && result.firstApproachFeedback &&
+    result.firstApproachFeedback.indexOf("entrance_roadtrip_abraham_arrival") >= 0 &&
+    result.repeatApproachFeedback &&
+    result.repeatApproachFeedback.indexOf("entrance_roadtrip_abraham_arrival") >= 0,
+    device + " announces camping at both the first and recurring exit approaches", result && {
+      first: result.firstApproachFeedback, repeat: result.repeatApproachFeedback
+    });
   var first = result && result.firstExit || {};
   var firstState = first.state || {};
   var firstVisual = first.visual || {};

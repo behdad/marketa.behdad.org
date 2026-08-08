@@ -141,15 +141,12 @@ same key.
 - `/`: open Messages.
 - `M`: open the Office monitor.
 - `L`: open the Office laptop.
+- `` ` ``: open or close the full-screen console.
 - `D`: toggle day and night.
 - `?`: open the shortcut card outside a typing field. At the driving dashboard it parks the car and
   restarts the driving coach.
 - `F`: toggle browser fullscreen.
 - `R`: restart after confirmation.
-
-In the Cinema, `Enter` or `Space` wakes the projector, plays the selected film, or pauses and resumes
-the playing film. In the Dungeon, the first back command exits Prince of Persia without discarding
-the run. Lower-room games dismiss back into their room rather than sending you upstairs.
 
 ### Driving
 

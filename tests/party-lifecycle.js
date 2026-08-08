@@ -163,11 +163,18 @@ var harness = String.raw`<script>
       !window.__phoneMessageReceived("dawn") && !window.__phoneMessageReceived("mb"),
     { state: endedAct, pending: afterEnd });
 
-  var offered = window.__offerPartyAgain && window.__offerPartyAgain();
-  var inviteId = window.__phoneMessageReceived("party_again_behdad") ? "party_again_behdad" : (window.__phoneMessageReceived("party_again_marketa") ? "party_again_marketa" : null);
-  check("rare invitation does not restart the party", offered && !!inviteId && !window.__gardenPartyOn, inviteId || "none");
-  if (inviteId && window.__runMsgAction) window.__runMsgAction(inviteId);
-  check("accepting the invitation deliberately restarts it", !!window.__gardenPartyOn);
+  if (window.__pausePartyLifecycle) window.__pausePartyLifecycle();
+  if (window.__resumePartyLifecycle) window.__resumePartyLifecycle();
+  var marketaAgain = window.__deliverPhoneMessage && window.__deliverPhoneMessage("party_again_marketa", true);
+  var behdadAgain = window.__deliverPhoneMessage && window.__deliverPhoneMessage("party_again_behdad", true);
+  check("party teardown and lifecycle re-entry cannot manufacture a party-again invitation",
+    !marketaAgain && !behdadAgain && !window.__phoneMessageReceived("party_again_marketa") &&
+      !window.__phoneMessageReceived("party_again_behdad") &&
+      typeof window.__offerPartyAgain === "undefined" &&
+      !Object.prototype.hasOwnProperty.call(window.__partyLifecycleState(), "partyAgainPending"),
+    window.__partyLifecycleState());
+  if (window.__setPartyMode) window.__setPartyMode(true, true);
+  check("the ordinary party control can still restart it deliberately", !!window.__gardenPartyOn);
 
   var realSparklers = window.sparklers, sparklerCalls = 0;
   window.sparklers = function () { sparklerCalls++; };

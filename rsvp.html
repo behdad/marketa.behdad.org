@@ -53535,8 +53535,6 @@ var T = {
     msg_storm_body: "there's a storm coming! ⛈️",
     msg_behdad_from: "behdad",
     msg_marketa_from: "markéta",
-    msg_partyagain_behdad_body: "who wants another round? the wall switch knows how 🎉",
-    msg_partyagain_marketa_body: "anyone up for one more dance? ✨",
     msg_lastdance_body: "last dance, everyone — grab your person 💞",
     msg_lastsong_body: "last song! make it count 🎧",
     // birthday-announcement text variations; {name} is filled from the BIRTHDAYS row at delivery
@@ -54908,8 +54906,6 @@ var T = {
     msg_storm_body: "blíží se bouřka! ⛈️",
     msg_behdad_from: "behdad",
     msg_marketa_from: "markéta",
-    msg_partyagain_behdad_body: "kdo chce další kolo? vypínač ví, jak na to 🎉",
-    msg_partyagain_marketa_body: "dá si někdo ještě jeden tanec? ✨",
     msg_lastdance_body: "poslední tanec — chyťte si svého člověka 💞",
     msg_lastsong_body: "poslední písnička! ať stojí za to 🎧",
     // varianty narozeninových přání; {name} se doplní z řádku BIRTHDAYS při doručení
@@ -93675,8 +93671,6 @@ async def localfont(name):
       smores:        { fromKey: "msg_bahareh_from", bodyKey: "msg_smores_body",    act: "smores" },        // Bahareh, after dark → taps: balcony + light the bonfire for s'mores
       kids_asleep:   { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsasleep_body_a", "msg_kidsasleep_body_b"], arrival: "kidsleep" }, // informative state: delivery itself puts every kid to sleep; no action affordance
       kids_loose:    { fromKeys: MOM_SENDERS, bodyKeys: ["msg_kidsloose_body_a", "msg_kidsloose_body_b"],   arrival: "kidwake" },  // informative state: the auto-wake has already happened; direct/test delivery also wakes them
-      party_again_behdad: { fromKey: "msg_behdad_from", bodyKey: "msg_partyagain_behdad_body", act: "party" }, // rare post-party invitation; only a deliberate tap relights the party
-      party_again_marketa: { fromKey: "msg_marketa_from", bodyKey: "msg_partyagain_marketa_body", act: "party" },
       lastdance:       { fromKey: "msg_athena_from", bodyKey: "msg_lastdance_body", act: "lastdance" }, // 2:30 close cue; tap runs a final slow dance, then winds down
       lastsong_sina:   { fromKey: "msg_sina_from", bodyKey: "msg_lastsong_body", act: "lastsong" },
       lastsong_danesh: { fromKey: "msg_danesh_from", bodyKey: "msg_lastsong_body", act: "lastsong" },
@@ -95686,7 +95680,6 @@ async def localfont(name):
       if (!messageHasAction(m) || messageActionState[id]) return !!messageActionState[id];
       var typed = m.chatAction || m.apiAction || legacyTypedMsgAction(m.act);
       if ((typed && typed.id === "party.moment.start") || PARTY_BOUND_MESSAGE_ACTIONS[id]) return !window.__gardenPartyOn;
-      if (m.act === "party") return !!window.__gardenPartyOn;
       return false;
     }
     function expireStaleMessageActions() {
@@ -95716,7 +95709,7 @@ async def localfont(name):
     function messageActionIsOneShot(m, action) {
       return !!((action && action.id === "party.moment.start") ||
         (action && action.id === "party.set" && action.args && action.args.on === false) ||
-        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "lastsparklers" || m.act === "party" || m.act === "party_switch")));
+        (m && (m.act === "lastdance" || m.act === "lastsong" || m.act === "lastsparklers" || m.act === "party_switch")));
     }
     window.__expireStaleMessageActions = function () {
       var changed = expireStaleMessageActions();
@@ -95834,7 +95827,6 @@ async def localfont(name):
       if (act.indexOf("arcade:") === 0) { if (window.__launchArcadeGame) window.__launchArcadeGame(act.slice(7)); return; }
       if (act === "invaders") { if (window.goToStage) window.goToStage("office"); setTimeout(function () { if (window.__startArcade) window.__startArcade(); }, 720); return; } // pan to the office, then launch the chair alien-arcade
       if (act === "smores") { if (window.goToStage) window.goToStage("balcony"); setTimeout(function () { if (window.__setSmores) window.__setSmores(true); }, 760); return; } // pan to the balcony, then light the bonfire
-      if (act === "party") { if (window.__setPartyMode) window.__setPartyMode(true); else if (window.__setGardenParty) window.__setGardenParty(true, true); return; } // a post-party invitation only restarts once the visitor accepts it
       if (act === "party_switch") { // Athena leaves the last awake guest in charge: show the wall control without flipping it for them
         if (window.goToStage) window.goToStage("garden");
         setTimeout(function () {
@@ -115503,8 +115495,7 @@ function spawnDustMote(container) {
     if (!sw) return;
     var attendedSeconds = 0, timer = null, active = false, finishing = false;
     var finaleAt = null, finaleReason = null, finaleTextOffered = false, finaleDeck = [];
-    var suppressNextStop = false, inviteTimer = null;
-    var inviteDeadline = 0, inviteRemaining = 0;
+    var suppressNextStop = false;
     var switchCoachTimer = null, switchCoachDeadline = 0, switchCoachRemaining = 0;
     var switchCoachSeen = false, switchCoachRetired = false;
     var handoffShown = false, roadtripInviteDelivered = false, roomMapCoachActive = false;
@@ -115584,11 +115575,6 @@ function spawnDustMote(container) {
       positionRoomMapCoach();
     }
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function clearInvite(resetRemaining) {
-      if (inviteTimer) { clearTimeout(inviteTimer); inviteTimer = null; }
-      inviteDeadline = 0;
-      if (resetRemaining !== false) inviteRemaining = 0;
-    }
     function clearSwitchCoach(resetRemaining) {
       if (switchCoachTimer) { clearTimeout(switchCoachTimer); switchCoachTimer = null; }
       switchCoachDeadline = 0;
@@ -115742,19 +115728,6 @@ function spawnDustMote(container) {
           document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic) return;
       advance(1);
     }
-    function offerAgain(force) {
-      if (window.__gardenPartyOn || !window.__secondRound) return false;
-      if (!force && (document.hidden || (document.hasFocus && !document.hasFocus()) || window.__cinematic)) { scheduleInvite(30000); return false; }
-      if (!force && Math.random() >= 0.32) return false;
-      var id = Math.random() < 0.5 ? "party_again_behdad" : "party_again_marketa";
-      return !!(window.__deliverAutonomousPhoneMessage && window.__deliverAutonomousPhoneMessage(id));
-    }
-    function scheduleInvite(delay) {
-      clearInvite();
-      inviteRemaining = delay == null ? 120000 + Math.floor(Math.random() * 120000) : delay;
-      inviteDeadline = performance.now() + inviteRemaining;
-      inviteTimer = setTimeout(function () { clearInvite(); offerAgain(false); }, inviteRemaining);
-    }
     function roadtripExchangeEligible() {
       return !!(handoffShown && window.__secondRound && !roomMapCoachActive &&
         !coachOverlayShowing(switchCoachOverlay) && window.__seenRooms &&
@@ -115836,7 +115809,7 @@ function spawnDustMote(container) {
         roadtripExchangeRemaining = Math.max(1, roadtripExchangeDeadline - performance.now());
         clearRoadtripExchange(false);
       }
-      clearInvite(); clearSwitchCoach(); stop();
+      clearSwitchCoach(); stop();
       attendedSeconds = 0; active = false; finishing = false; suppressNextStop = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
       paint(); scheduleSwitchCoach(pendingCoachDelay || switchCoachDelay);
@@ -115851,7 +115824,6 @@ function spawnDustMote(container) {
       if (window.__partyActEnded) window.__partyActEnded();
       if (!suppress && !window.__cinematic) {
         if (window.setCaption) window.setCaption("party_ended");
-        scheduleInvite();
         postPartyHandoff();
       }
       return ended || "manual";
@@ -115949,10 +115921,6 @@ function spawnDustMote(container) {
     window.__partyLifecycleTick = tick;           // deterministic attendance-gate test hook
     window.__pausePartyLifecycle = function () {
       stop();
-      if (inviteTimer) {
-        inviteRemaining = Math.max(1, inviteDeadline - performance.now());
-        clearInvite(false);
-      }
       if (switchCoachTimer) {
         switchCoachRemaining = Math.max(1, switchCoachDeadline - performance.now());
         clearSwitchCoach(false);
@@ -115967,11 +115935,6 @@ function spawnDustMote(container) {
           (!window.__partyForegroundActive || window.__partyForegroundActive())) {
         timer = setInterval(tick, 1000);
       }
-      if (!window.__gardenPartyOn &&
-          (!window.__partyForegroundActive || window.__partyForegroundActive())) {
-        var againDelay = inviteRemaining;
-        if (againDelay > 0) scheduleInvite(againDelay);
-      }
       // The four-beat exchange is allowed on either side of teardown. Its checkpointed
       // delay must therefore resume while a qualified party is still running as well.
       if (handoffShown && !roadtripInviteDelivered) offerRoadtripInvite(roadtripExchangeRemaining);
@@ -115982,21 +115945,19 @@ function spawnDustMote(container) {
     window.__partyLifecycleState = function () { return {
       attended: attendedSeconds, cue: !!active, finishing: finishing || null,
       finaleAt: finaleAt, finaleReason: finaleReason, running: !!timer,
-      partyAgainPending: !!inviteTimer || inviteRemaining > 0,
       switchCoachSeen: switchCoachSeen, switchCoachRetired: switchCoachRetired,
       handoffShown: handoffShown, roadtripInviteDelivered: roadtripInviteDelivered,
       roomMapCoachActive: roomMapCoachActive,
       roadtripExchangeNext: roadtripExchangeNextId(),
       roadtripExchangePending: !!roadtripExchangeTimer || roadtripExchangeRemaining > 0
     }; };
-    window.__offerPartyAgain = function () { return offerAgain(true); };
     window.__offerPartyRoadtripInvite = offerRoadtripInvite; // focused test hook: skip the post-party dramatic beat
     window.__resetPartyExitHint = function () {
       suppressNextStop = true; attendedSeconds = 0; active = false; finishing = false;
       finaleAt = null; finaleReason = null; finaleTextOffered = false;
       switchCoachSeen = false; switchCoachRetired = false;
       handoffShown = false; roadtripInviteDelivered = false; roomMapCoachActive = false;
-      stop(); clearInvite(); clearSwitchCoach(); clearRoadtripExchange(); paint();
+      stop(); clearSwitchCoach(); clearRoadtripExchange(); paint();
     };
     var partyBridgeAdapter = {
       capture: function () {

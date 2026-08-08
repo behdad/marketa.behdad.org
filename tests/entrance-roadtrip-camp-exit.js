@@ -170,12 +170,13 @@ function connectedSpur(visual) {
     visual.junctionInnerX <= visual.junctionRoadRightX - 9 &&
     visual.junctionRoadRightX < visual.junctionOuterX &&
     visual.shoulderMouthInnerX >= visual.junctionRoadRightX - .3 &&
-    visual.junctionRoadRightX + 2 < visual.innerEdgeStartX &&
+    Math.abs(visual.innerEdgeStartX - visual.shoulderMouthInnerX) <= .02 &&
     visual.innerEdgeStartX < visual.bendInnerX && visual.bendInnerX < visual.destinationInnerX &&
-    visual.junctionOuterX < visual.outerEdgeStartX &&
+    Math.abs(visual.outerEdgeStartX - visual.junctionOuterX) <= .02 &&
     visual.outerEdgeStartX < visual.bendOuterX && visual.bendOuterX < visual.destinationOuterX &&
     visual.destinationY < visual.bendY && visual.bendY < visual.innerEdgeStartY &&
-    visual.innerEdgeStartY < visual.outerEdgeStartY && visual.outerEdgeStartY < visual.junctionY &&
+    Math.abs(visual.innerEdgeStartY - visual.junctionY) <= .02 &&
+    Math.abs(visual.outerEdgeStartY - visual.junctionY) <= .02 &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
     visual.destinationX >= visual.junctionOuterX + 14 &&

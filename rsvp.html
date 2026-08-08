@@ -43864,10 +43864,11 @@ window.__entranceRoomOpen = false;
         pathOuter.c1.toFixed(2) + " " + control1Y.toFixed(2) + " " +
         nearOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z";
     }
-    var innerEdgeStartT = .68;
-    var outerEdgeStartT = .18;
-    // Split the cubic so the highway-facing edge begins only after the branch
-    // has visibly separated; the outside shoulder remains readable at the mouth.
+    // The asphalt overlaps the highway to make one wide mouth, but its two edge
+    // ribbons begin at the actual shoulder/branch boundaries so no gap appears
+    // while the junction moves through perspective.
+    var innerEdgeOrigin = junctionRoadRight - .25;
+    var innerEdgeLineControls = curveControls(innerEdgeOrigin, destinationInner, false);
     function cubicTail(start, c1, c2, end, t) {
       var p01 = start + (c1 - start) * t;
       var p12 = c1 + (c2 - c1) * t;
@@ -43884,12 +43885,12 @@ window.__entranceRoomOpen = false;
       var tail = cubicTail(start, c1, c2, end, t);
       return tail.start;
     }
-    var innerEdgeX = cubicTail(junctionInner, innerControls.c1, innerControls.c2,
-      destinationInner, innerEdgeStartT);
+    var innerEdgeX = cubicTail(innerEdgeOrigin, innerEdgeLineControls.c1,
+      innerEdgeLineControls.c2, destinationInner, 0);
     var outerEdgeX = cubicTail(junctionOuter, outerControls.c1, outerControls.c2,
-      destinationOuter, outerEdgeStartT);
-    var innerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, innerEdgeStartT);
-    var outerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, outerEdgeStartT);
+      destinationOuter, 0);
+    var innerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, 0);
+    var outerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, 0);
     var edgeStartWidth = edgeNearWidth * .72;
     var edgeTailWidth = edgeNearWidth * .88;
     if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset, true));

@@ -1,663 +1,477 @@
-# Developer guide
+# Loft game developer guide
 
-This guide maps the current implementation. `rsvp.html` moves often, so search for symbols rather
-than line numbers. Names beginning with `__` are usually internal seams for tests or controller
-coordination; only `window.loft` and `loft.api` are intended as public interfaces.
+This guide is the architectural map for `rsvp.html`, the interactive Loft game. It explains where
+state lives, which functions own transitions, how the major game modes fit together, and how to
+change the file without reviving recurring bugs. It intentionally does not duplicate the player
+instructions in [the game manual](game-manual.md), the signal graph in [the audio guide](audio.md),
+or the full workflow and browser incident log in [`AGENTS.md`](../AGENTS.md).
 
-## Repository boundaries
+## Contents
 
-- `save-the-dates.html` is the invitation page.
-- `rsvp.html` is Loft Day: HTML, CSS, inline SVG, bilingual copy, controllers, apps, and console in
-  one self-contained file.
-- `loft-day`, `loft-day.html`, `rsvp`, and `rsvp.html` are tracked aliases for the game.
-- `chat.js` is the Cloudflare Worker behind `/chat`; `chat-knowledge.json` contains verified stable
-  facts and `wrangler.jsonc` owns deployment configuration.
-- `tests/` contains zero-dependency Node and headless-Chrome checks. `tests/lib.js` is the shared
-  scratch-page runner.
-- `art/` holds ordinary media. Self-hosted runtime directories such as `pyodide/`, `linux/`, `dos/`,
-  `doom/`, `duke/`, `q3/`, and `harfbuzzjs/` are pinned deliverables with their own provenance.
+- [Repository and serving model](#repository-and-serving-model)
+- [Runtime architecture](#runtime-architecture)
+- [State and transition ownership](#state-and-transition-ownership)
+- [Navigation and progression](#navigation-and-progression)
+- [Input and feedback routing](#input-and-feedback-routing)
+- [Apps, automation, and chat](#apps-automation-and-chat)
+- [Checkpoints, recovery, and reset](#checkpoints-recovery-and-reset)
+- [Lifecycle, audio, and rendering](#lifecycle-audio-and-rendering)
+- [Localization and UI contracts](#localization-and-ui-contracts)
+- [Development and validation](#development-and-validation)
+- [Commit and deploy safety](#commit-and-deploy-safety)
+- [Source search map](#source-search-map)
 
-There is no frontend build, framework, package bundle, or CDN runtime. Google Fonts is the one
-network exception. Keep game features inside `rsvp.html` unless they need a real deployment
-boundary, such as the chat Worker.
+## Repository and serving model
 
-Apache serves the Git checkout directly. `.htaccess` blocks internal source, tests, configuration,
-and documentation; update its rules when adding another tracked private file.
+The site deliberately has no application build step or framework. Its two maintained pages are
+self-contained HTML files:
 
-## Entry and presentation
+- `save-the-dates.html` is the invitation/save-the-date drop.
+- `rsvp.html` is the game. The `loft-day`, `loft-day.html`, and `rsvp` aliases are symlinks to it.
 
-The ordinary page includes the surrounding invitation. `#play` and the game aliases select the
-game-only shell. `#trailer` starts the curated trailer after entry or recovery settles. Search for
-`urlEntryMode`, `__startGameEntryLoader`, `startCinematic`, and `stopCinematic`.
+The root `index.html` hub is planned but does not yet exist. Until then, `.htaccess` serves
+`save-the-dates.html` for `/`. Keep a new invitation feature in `save-the-dates.html` and a new game
+feature in `rsvp.html` unless there is a strong architectural reason to create another public file.
 
-Fresh and recovered sessions share entry chrome but have different state effects. Game-only entry
-paints CLICK ME or Continue/Start over before the single-file page finishes loading. The selected
-action is held behind `#installed-load` until window-load readiness completes. The revealed
-invitation bypasses that cover.
+Supporting boundaries are:
 
-CLICK ME hands fresh play to the two-step `#opening-guide-coach`. Its transparent shell intercepts
-room input while the upper-right ×, Enter, Escape, or Backspace advances navigation → caption. Only
-Enter can advance a room's solve walker once the guide is gone. That guide and the
-two party bridge coaches share the `.hunt-coach-*` card, dismiss control, and single-path arrow
-contract; keep their geometry target-specific but their visual/component markup identical.
+- `chat.js`, `chat-knowledge.json`, and `wrangler.jsonc`: the Cloudflare chat Worker and its stable
+  knowledge. This is deployed separately from the static site.
+- `docs/game-manual.md`: player-facing concepts and controls.
+- `docs/audio.md`: authoritative audio ownership, graph, attenuation, and teardown rules.
+- `tests/`: zero-build Node/Chrome checks. It is not public.
+- `DEBUGGING.md`: practical Chrome DevTools Protocol, WebKit, and visual-test recipes.
+- `pyodide/`, `linux/`, `harfbuzzjs/`, `dos/`, `doom/`, `duke/`, `q3/`, and `princejs/`: pinned runtime
+  deliverables. Treat each as vendored product data, not generated output or an upgrade target.
 
-The trailer is an editorial timeline, not an autonomous player. `stopCinematic` is the single
-cleanup path for completion, Take over, and hidden-tab abort.
+The web server exposes the git working tree directly. `.htaccess` is therefore a security boundary,
+not just routing configuration: it blocks developer documents, tests, Worker source/configuration,
+and secret files. When adding a local note, fixture, source asset, or tool output, either keep it out
+of the web root or add an explicit denial rule. Never assume an unlinked file is private.
 
-Check these presentations independently:
+## Runtime architecture
 
-1. full RSVP page;
-2. direct `#play` or `#trailer` entry;
-3. installed/standalone PWA entry;
-4. narrow portrait orientation gate;
-5. browser fullscreen versus `.loft-entered` game-only enlargement.
+`rsvp.html` contains the markup, SVG strip, styles, translations, and JavaScript for the whole game.
+Most logic lives in the final large inline script as a sequence of closures. Those closures expose a
+small number of coordination hooks on `window`; there is intentionally no module bundler and no
+single central store.
 
-Start with `tests/game-entry-loader.js`, `tests/game-only-layout.js`, `tests/url-entry.js`,
-`tests/recovery.js`, and `tests/monitor-fullscreen.js`.
+This makes source order part of the architecture:
+
+1. SVG and HTML elements establish the scene and app surfaces.
+2. Early closures may publish deferred registration hooks.
+3. Later owners install navigation, captions, checkpoints, and public APIs.
+4. Initialization projects restored state into the already-created subsystems.
+
+Do not casually move a closure earlier or later. A subsystem that is authored before the checkpoint
+registry must use `__deferCheckpointAdapter`, for example; code that assumes the final registry is
+already present can silently skip restore registration.
+
+There are three useful interface layers:
+
+- **Owner functions** are the canonical in-file mutation paths, such as `goToStage`,
+  `setGardenParty`, `setSecondRound`, and the Road Trip/Camping controller functions. Product code
+  should use them.
+- **Internal `window.__…` hooks** coordinate closures and support diagnostics. They are convenient
+  search entry points, but they are not a stable external API.
+- **`window.loft.api`** is the versioned automation/integration boundary. External tooling should
+  prefer it over internal flags and DOM classes.
+
+The DOM is both presentation and a projection of state. Classes and attributes often mirror a
+closure-owned value so CSS and independent closures can observe it. A mirror is not a second owner:
+changing a class directly does not complete the transition, persist it, stop timers, update captions,
+or notify integrations.
 
 ## State and transition ownership
 
-There is intentionally no central store. State lives in subsystem closures, DOM rendering state,
-limited `window.__...` coordination hooks, and the typed `window.loft` facade.
+The game uses several focused state machines rather than one giant object. That is workable only if
+each transition has one owner.
 
-Every shared transition needs one owner: usually a `set*` function or paired `start*` / `stop*`
-functions. UI handlers, console commands, typed actions, checkpoints, reset, and trailer code must
-call that owner instead of editing mirror classes or flags. Delayed work must be cancellable or
-generation-guarded.
+### The transition rule
 
-Controllers communicate through feature-detected hooks because source order matters. A new state
-axis often needs to re-gate rooms, focus, visibility, audio, people, Messages, and devices. Keep
-those notifications explicit.
+Before changing a value, identify the function that already owns the event. Call or extend that
+function instead of editing its effects from another closure. A complete transition may need to:
 
-Use `__registerTransientResetHook(id, reset)` for small closure-local controllers. Durable systems
-should have an explicit reset owner and, when needed, a checkpoint adapter.
+- update closure state and DOM mirrors;
+- cancel or schedule delayed work;
+- change captions, coaches, focus, and input ownership;
+- checkpoint settled intent;
+- start, attenuate, or stop ambience;
+- emit `loft:statechange` through `__loftStateChanged`.
 
-### Typed API
+This is especially important for Party, projector, phone, navigation, Road Trip, Camping, and
+checkpoint restore. Directly toggling `__gardenPartyOn`, a `body` class, the active room dot, or an
+SVG group's visibility creates a plausible-looking but internally split state.
 
-Search for `initLoftApi`, `register({ id:`, and `__loftStateChanged`. `loft.api` validates bounded
-queries and actions and emits `loft:statechange` after semantic mutations. `stateVersion` advances
-for meaningful room, environment, app, call, media, message, album, and minigame transitions—not
-animation frames or score ticks.
+Delayed work must also belong to the transition. Use an existing timer registry or a generation
+token and re-check current ownership before a callback mutates the scene. `__finishSolveAdvance` is
+the model: it commits progression once, then guards its delayed pan so a later manual navigation
+cannot be overwritten.
 
-Use `loft.api.capabilities()`, `query()`, `perform()`, and `subscribe()` for integrations. Internal
-`__...State` functions are narrower diagnostic seams and may change with their controllers.
+For a small self-contained transient system, register cleanup through
+`__registerTransientResetHook(id, reset)`. A reset hook is not a substitute for a checkpoint adapter;
+it removes timers, overlays, particles, or in-flight interaction that should never survive restore.
 
-`ACTION_SPECS` in `chat.js` is the Worker-side validation boundary. Keep it aligned with the client
-registry; never expose raw selectors, URLs, JavaScript, or private function names.
+### Durable state versus projections
 
-## Rooms, floors, and progression
+The main progression axes are intentionally distinct:
 
-The five main rooms are the `STAGES` array:
-
-| Main stage | Lower panel | Lower identity |
+| State | Meaning | Do not confuse it with |
 | --- | --- | --- |
-| `kitchen` | Bathroom | `bathroom` |
-| `garden` | Prince dungeon | `dungeon` |
-| `cuddly` | Cinema | `cinema` |
-| `office` | Bedroom | `bedroom` |
-| `balcony` | Entrance | `entrance` |
+| `stageIndex` / `currentStageName` | The visible upper room and backing strip position | What has been solved or visited |
+| `maxUnlocked` | Furthest upper-room navigation frontier | Current room |
+| `solvedRooms` | First-run room puzzles completed | A replayed toy action |
+| `seenRooms` | Unique upper and lower rooms visited | Puzzle completion |
+| `__secondRound` | Party/free-exploration story latch | Whether Party music is currently on |
 
-`goToStage(name)` owns main-strip navigation and re-gates room-bound animation, audio, people,
-devices, particles, and captions. The lower roots live in `#lower-room-track`;
-`lowerRoomForStage()` defines their pairing and `__navigateLowerRoom(name)` owns horizontal lower-
-floor movement. Individual lower controllers own vertical open and close.
+The Road Trip, Camping, phone, apps, projector, and room toys add their own closure state. Checkpoint
+adapters serialize only the settled parts that matter after a reload. DOM classes, open dialogs,
+animation progress, and pending timers are reconstructed or discarded.
 
-Game chrome places date/time and room navigation above the scene and `#hunt-caption` below it. The
-first-play handoff advances through those two locations before object-level Kitchen guidance begins.
-Before lower-floor discovery, keyboard Down uses the same 600 ms deliberate double-press unlock as
-locked lateral navigation; after discovery, one Down press enters the paired lower room.
+Use `window.loft.api.capabilities()` and a named `query(id, args)`, or owner-provided diagnostics,
+when inspecting a running game. Reading one class or legacy flag is not enough to establish the
+state of a multi-step transition.
 
-The `#loft-dollhouse` picker reuses those same navigation owners. Tab and the always-visible grid
-button open its full-width 5×2 map. The floor button is persistent but disabled until lower-floor
-discovery. `seenRooms` keeps visited thumbnails sharp while locked destinations retain blurred
-previews; never infer picker
-access from `maxUnlocked`. Room cards reuse their real SVG art, with a matching static SVG portrait
-for the HTML/CSS Dungeon. The preview temporarily neutralizes Bedroom one-shots, gives the intact
-Entrance façade a daylight wash, primes a warm Cuddly projector frame, and applies the real Bar visibility state to
-the complete Kitchen stage for either a party or second-round night. Double-click and
-touch double-tap deliberately unlock a locked destination. The map owns an arrow-key cursor;
-discovered destinations open with one Enter, while locked destinations reuse the 600 ms deliberate
-unlock window and require two non-repeat Enter presses on the same card during Phase 1. Once
-`__secondRound` is active, a single card click/tap or non-repeat Enter unlocks and opens any remaining
-locked destination; this makes the post-party room-map coach directly actionable. Tab is consumed throughout
-the game and no scene or chrome control participates in browser Tab traversal; a clicked
-console/editor field may still interpret Tab internally. Opening the picker pauses an active Road
-Trip through its transport owner and does not implicitly resume it on close. While that route
-remains active, the Entrance card swaps its
-`<use>` target to the live drive/campsite HUD and temporarily suppresses the full-size pause dialog.
-Lower-card navigation positions the paired main stage with `recordVisit:false`; only the selected
-lower room becomes seen, so its still-locked upper card remains blurred.
+## Navigation and progression
 
-During a pan, traversed stages remain paintable until transition completion; afterward `stage-far`
-parks distant rooms. A lower-room transition changes the backing main stage and opens the target
-lower panel as one queued operation. Checkpoints store a lower identity only when it matches the
-saved main room.
+### Room graph
 
-Start navigation work with `tests/navigation.js`, `tests/dollhouse.js`, `tests/upstairs-keyboard-navigation.js`,
-`tests/delayed-pan.js`, `tests/rapid-navigation.js`, `tests/lower-shortcuts.js`, and the relevant
-`tests/lower-room-*.js` files.
+`STAGES` defines the five upper rooms and `goToStage(name, opts)` owns upper-room navigation:
 
-### Progression
-
-The progression values have distinct roles:
-
-- `stageIndex` / `currentStageName`: visible main stage or backing stage for a lower room;
-- `maxUnlocked`: normal-navigation frontier;
-- `solvedRooms`: independent room completion;
-- `seenRooms`: player-visible settled destinations;
-- `window.__secondRound`: latched Phase 2 state.
-
-Each Phase 1 controller owns its clue sequence and `__*DoNext` walker. Its final action settles the
-terminal prop and calls `__finishSolveAdvance(from, to[, navigationDelay])` in the same event turn.
-That owner acts only on the source room's first unsolved → solved transition: it records the source,
-unlocks the destination, writes the coherent checkpoint, then delays only the guarded pan when
-requested. Replaying a completed room returns false without scheduling a handoff. A delayed pan is
-tied to the originating room visit, so leaving and re-entering before it fires cannot pull the player
-forward. Do not infer completion from unlock state.
-
-`setSecondRound(true)` owns the Phase 2 transition. It unlocks and marks all main rooms solved,
-releases held content, and changes Enter to each room's primary free-play action; Garden keeps the
-party toggle as that action while Pac-Man remains object-launched. Only reset clears this latch.
-
-Keep progression coverage in `tests/play.js`, `tests/enter.js`, `tests/phase2-progression.js`, and
-`tests/progression-transitions.js`. `tests/room-progress.js` owns the room-specific bilingual
-captions; `tests/room-roadtrip-bridge.js` reloads between every Road Trip exchange beat and checks
-the hard 10/10 launch/restore boundary.
-
-The `party-roadtrip-bridge` checkpoint adapter owns the one-time Garden switch coach, teardown room
-progress/map coach, and once-per-reset Road Trip handoff. Every unsuppressed party on→off edge records
-the handoff durably. A due switch coach waits until the phone preview/call channel is quiet on every
-paint, including Garden re-entry, then appears only over the Garden. It does not trap room navigation:
-leaving hides it without retiring its checkpointed lesson, returning repaints it, and the live wall
-switch, popup ×, or global Enter retire it. The coach’s actual visible state—not merely its durable due
-flag—owns the shared phone hold, so an existing popup is never stolen and newly arriving popups/calls
-release once after dismissal. Below
-ten distinct `seenRooms`, the dismissible map coach uses the same quiet-channel/attention owner;
-Phase 2's one-action dollhouse
-entry is the exploration path. First lower-room visits use room-specific, language-live copy whose
-remaining count is derived from `seenRooms`, never unlock order. At 10/10 the adapter delivers
-`downstairs_entrance` → `downstairs_roadtrip_where` → `downstairs_roadtrip_journey` →
-`downstairs_roadtrip_go` with checkpointed inter-message timing. Reload resumes the next missing beat;
-the first three rows carry no action and only the final row owns `lower:entrance`. The exchange may
-run while the party is active; the final action uses the canonical party-stop queue and opens
-Entrance only after teardown, with the HUD closed. Unrelated autonomous texts, notification popups,
-and calls stay held until the exchange completes.
-
-The Phase 2 latch plus ten `seenRooms` are the exploration qualifier; authorization additionally
-requires the party to be off. `roadtripAuthorized()` gates every invite, chooser, launch, re-entry,
-and restore path;
-Phase 1 skip-navigation, saved `unlocked` flags, and paused runs cannot bypass it. A street lap is
-optional free-play telemetry and has no progression effect. Reaching 10/10 readies the dashboard
-invitation after teardown. **Let’s go!** awaits the canonical shutdown before opening Entrance with
-the HUD still closed. An intentional road click or global Enter at qualified Entrance is the lenient
-ignored-phone fallback: it uses that same shutdown queue, then opens the HUD. On a fresh HUD the
-driving coach owns attention first; completion or its explicit
-× dismissal repaints the queued Road Trip invitation, and that coach state is checkpointed.
-Deterministic driving tests use the visibly
-named `__entranceRoadtripDevStart()` bypass; production and restore paths never do.
-At 120 attended seconds the lifecycle offers the existing optional finale cue but never flips the
-party switch itself.
-
-Act Two now ends at party teardown. Its automatic piano → dawn → direct-RSVP tail was removed;
-Camping's `~ fin ~` owns the only terminal RSVP coda. `__partyActEnded()` clears the ticker, delayed
-messages, redirects, and reveal timers and retires the sequencer so a delayed Balcony-finale arm
-cannot resurrect it. Piano, day/night, RSVP compose, and loft free play remain independently callable.
-
-## Entrance driving and Road Trip
-
-Search for `porscheDrive`, `roadtripState`, `entranceRoadtrip`, and `__entranceDriveStep`. The
-Entrance controller owns the Porsche, dashboard, drivetrain, road scene,
-Road Trip, and their lifecycle. Road Trip reuses the driving step instead of starting another frame
-loop.
-
-### Driving model
-
-Input must flow through the shared steering, transmission, throttle, brake, and dismiss owners.
-`__entranceDriveKeyboardOwnership()` publishes the controller's `hudOpen`, Road Trip, and pending
-party-stop handoff truth to the capture-phase key router. The rendered `drive-hud-visible` class is
-only presentation and must not decide whether arrows, Enter, or pedals belong to the car.
-The `driveCoach` follows those same action owners; desktop teaches cruise before pedals, while touch
-skips cruise and combines steering with the pedal pad. Its `?` control parks the drivetrain,
-clears cruise, and starts again at ignition; checkpoint recovery does not replay it automatically.
-Keyboard steering ramps from a gentle tap to full authority; touch steering and pedal pads provide
-direct analog input. The pedal pad maps its outer 30% zones progressively to throttle/brake,
-holds entry speed while a finger remains in the middle 40%, and latches a genuine touch release
-into the shared cruise state; cancellation and lifecycle cleanup do not latch. A standalone Control
-tap captures a forward speed floor at 10 km/h or above;
-acceleration can exceed it, another tap retargets it, and braking, an invalid drivetrain state,
-police capture, or the Camping approach releases it. AUTO and MANUAL share the same physical motion state but have
-separate shift rules. The automatic R↔D interlock is valid only below 10 km/h in the opposite
-direction.
-
-The six-speed manual derives coupled RPM from road speed, with launch slip as the exception.
-`spinPorscheOnBrake()` owns both hard-brake gestures. `driveState.odometerKm` records physical
-distance, independent of the street scene's faster visual travel scale, and persists through engine
-stops and checkpoints.
-
-Useful deterministic seams are `__entranceDriveRpmForSpeed()`, `__entranceDriveAcceleration()`,
-`__entranceDriveSetMotion()`, and `__entranceDriveStep()`.
-
-### Road Trip presentation and route
-
-The first-person world is native SVG inside `#entrance-drive-hud-svg`. Entering or leaving Road Trip
-must remain an atomic presentation swap: HUD size, cockpit position, world visibility, and viewBox
-cannot transition independently. Weather and time reuse Entrance state.
-
-Actual route launch also claims party foreground ownership through
-`__setPartyForegroundSuspended(true, "roadtrip")`; `parkRoadtrip()` releases it. Entrance, HUD, and
-chooser presentation do not claim that owner. The single listener installed by the party controller
-holds its dance deadline, attended clock, guest roster/placements, Act Two beat, particles, room
-projections, balcony callouts, and autonomous photo/kid/disco timers, then fades and retires every
-party audio scheduler. Release re-arms the remaining clocks around the same dance/DJ/roster rather
-than calling `setGardenParty()` or rebuilding the party. This foreground owner is derived runtime
-state—not checkpoint data—because saved Road Trips restore parked and claim it only on explicit
-Continue/route launch. Road Trip transport pause and Camping retain the claim; global music pause is
-a separate user-owned state and remains paused across release.
-
-`drive.roadtrip.route` owns:
-
-```text
-calgary → turnoff → banff → lake-turnoff → abraham ↺
-                                                └→ camp (optional)
-```
-
-Route legs, turnoffs, and Abraham's recurring campsite exit consume actual forward metres from the
-driving step; `elapsedSeconds` remains HUD/scoring time and must not select scenery. Their authored
-lengths preserve the former pacing at a nominal 100 km/h. The route is part of the version-4
-paused-run snapshot; restore migrates version 1–3 elapsed-route fields into metres. Direct segment
-selection clears live entities before changing road geometry. Attended Calgary → Banff and Banff →
-Abraham turnoffs instead feed metre-based weights from `roadtripRouteBlend()` into the already-
-authored backdrops, so scenery, day/night lighting, winter treatment, and distance-scrolled
-parallax remain in phase through the crossfade. `roadtripGeometryProfile()` applies those same
-weights to road, shoulder, median, centreline, and lane-mark geometry: Calgary's divided highway
-narrows into Banff while surplus lane marks fade, then Banff's divider fades into Abraham's
-single-lane road. The latched Camping approach keeps the complete Abraham road frame through its
-automatic slowdown; only the stopped route swap begins the campsite/road opacity handoff, so the
-campsite ground cannot appear as an isolated foreground band before arrival. Signs are
-projected beyond the current road edge by
-`positionRoadtripExitSign()`; fixed road fractions fail on Calgary's wider divided highway.
-
-The route chooser writes `routeChoice` through `setRoadtripStartingSegment()`. Shift-click or a
-touch long-press is a private test shortcut that begins three nominal seconds of travel before the chosen segment's
-exit. Every chooser launch clears carried motion while preserving the selected transmission setting;
-the compact re-entry control offers the exact paused run, a provisional fresh-route chooser, and a
-direct campsite return after `campVisited` is set. The chooser's open state, selected card, and
-campsite availability are checkpointed; recovery reopens the chooser without launching the route.
-Checkpoint recovery retains the saved Entrance/dashboard presentation and interrupted highway
-snapshot, but leaves explicit re-entry to Road Trip → Continue. Continue activates the retained
-presentation with `roadtripResumePending` set, so transport Play or fresh driving input owns the
-actual resume. A saved `camp` route still restores its camp presentation directly.
-Touch-first devices scale route and turnoff lengths to 72%. Abraham's optional campsite exit then
-recurs after the distance formerly covered in 60 seconds at 100 km/h on fine pointers, or 45 seconds
-on coarse pointers.
-
-Traffic, wildlife, collectibles, mirror uses, signs, and roadside objects use bounded pools. Keep
-spawn plans deterministic from the run seed and never add timer-driven unbounded entities.
-At an attended road-width boundary, `transitionRoadtripTraffic()` rebases existing lanes, cancels
-only in-progress lane changes, and scales the remaining next-spawn gap; do not clear the traffic
-pool there, or the scenery dissolve exposes an implausibly empty road.
-`roadtripSpawnPlan()` assigns natural traffic a route-relative seeded speed; forward traffic's deck
-centres above the posted limit while RVs and semis retain a slower tail. Pursuit and summoned plans
-carry their own explicit seeded speed so changing the natural profile cannot silently retune them.
-`scheduleRoadtripNaturalSpawn()` anchors one due spawn to the current distance, briefly retries a
-full pool, and gives wildlife a bounded defer while police or a traffic manoeuvre owns attention;
-it never replays missed intervals as a burst. The police production clock likewise waits, within a
-bounded distance, for visible wildlife or a traffic manoeuvre to clear. A Camping-turnoff approach
-is an unbounded roadside owner: a due speed trap waits until that exit has passed rather than sharing
-its sign/junction beat. Rear overtakers use the same attention signals, while direct mirror summons
-and the pursuit deck remain explicit overrides.
-`syncRoadtripTrafficLane()` owns faster traffic's pull-out, clearance, return, and car-following
-speed. `roadtripTrafficLead()` selects only the nearest vehicle in the current lane; if a pass is
-blocked, a bounded headway controller slows the follower and exposes its brake-lamp state. Banff may
-borrow an empty opposing inner lane, Calgary stays within its carriageway, and Abraham never weaves.
-`roadtripCurvatureAt()`, `roadtripCurveOffset()`, `syncRoadtripShoulder()`, and
-`paintRoadtripMirror()` are the central geometry owners. `stepRoadtripHandling()` integrates the
-eased wheel angle into lateral velocity, speed-weights bend drift, and carries bounded loose-surface
-slip into a damped asphalt recovery. `surfaceRoughness` is the shared continuous owner for grip,
-windshield vibration, and live tyre audio; paused-run snapshots retain both it and lateral velocity.
-
-The global frame-health monitor also owns Road Trip's rendering budget. Physics, input, traffic,
-police, scoring state, and audio continue on every driving step, while sustained low frame delivery
-caps the first-person SVG world painter near 30 Hz. Highway painters equality-guard retained SVG
-attributes and preserve traffic/police layer order until depth actually changes, so a steady frame
-does not repeatedly invalidate identical visibility, metadata, or DOM order. Drive-audio spatial
-profiles read their anchor pan through a 250ms cache (`porscheDrivePanFor`) instead of a live
-`panForElId` per tick — the live read forces a synchronous layout, which was the single largest
-per-tick cost on throttled CPUs.
-
-Cross-room state styling uses `html.mir-*` scope-mirror classes instead of top-anchored `:has()`
-(`body:has(…)`, `.hunt-viewport:has(…)`, `#loft-game-strip:has(…)`): those selectors charged every
-DOM mutation anywhere a document-wide style-invalidation sweep (~13ms desktop, 50-80ms throttled —
-the dominant Road Trip frame cost). One MutationObserver over the source elements' class attributes
-(`syncScopeMirrors`, end of the main script) keeps the mirrors true, and the canonical toggle
-functions also ping `window.__syncScopeMirrors()` synchronously so same-task computed-style reads
-(tests, screenshots) stay coherent. `tests/check.js` enforces both invariants: no reintroduced
-top-anchored `:has()`, and CSS↔JS mirror-class parity. Room-scoped `:has()` (a stage, a context
-menu, the touch pads) remains fine.
-
-### Camping
-
-`campExitDistance` preserves Abraham's recurring-exit phase. During its projected sign/spur window,
-crossing onto the right shoulder makes `syncRoadtripCampExit()` latch the turn. Only that latch lets
-`syncRoadtripCampApproachSpeed()` slow independently of throttle or momentum. Below 10 km/h,
-`arriveRoadtripCamp()` retains the Abraham snapshot, parks the drivetrain, and activates the camp
-overlay inside Entrance. The same owner starts the documented audio handoff: the continuous
-vehicle, score, and AC beds retire while the campsite outdoor bed rises; do not split that
-transition across route painters.
-
-Camping begins with an empty pit and publishes `entrance_roadtrip_camp_fire_invite` through
-`__setLowerRoomCaption()`. `campFireState` owns the focused build, fuel chain, log arrangement,
-bounded pinecone collection, and success transition. Up to four cones dropped into an unlit pit
-persist with the camp and can substitute for twigs; drops onto a lit proper fire flare and burn
-away. The one-shot flame/flare is transient. Built and lit/off state are durable; unfinished fuel
-choices also checkpoint and restore with the builder closed. An in-flight ignition restores as its
-assembled, actionable fuel state rather than replaying its timer.
-Success restores the finished fire with an empty silver pot and publishes the stable, non-clickable
-`entrance_roadtrip_stew_invite` caption while it burns. A lit fire ignores early replay clicks and
-becomes extinguishable only from the explicit sleep prompt, which prevents dinner/stargazing state
-from being discarded into the terminal RSVP caption. The `camp` route is never resume-pending,
-including after checkpoint restore, blur, or visibility changes; dismissing it ends the drive run,
-while the re-entry menu can rebuild the camp presentation without resetting its fire or stew. New
-routes stay provisional in the chooser, so dismissing it preserves any paused highway run. A camp
-revisit temporarily parks that run in `roadtripCampResumeRun`; checkpoint capture records both the
-camp presentation and that highway snapshot, and Continue restores the snapshot exactly.
-The Entrance checkpoint row also owns the driving coach’s explicit step/completed/dismissed record.
-Continue restores that record exactly; a row without it is fresh onboarding, never inferred history.
-
-`campStewState` owns the exact protein/base choices, six required fixed ingredients, close-up state,
-attended cooking elapsed time, and served/overcooked payoff. `advanceCampStew()` applies the slower
-open-lid rate and advances only with a lit fire in an attended camp; runtime frame deltas are capped
-so returning to a throttled tab cannot skip phases. Recipe drafts, cooking progress, and payoff are
-checkpointed, while the builder and lid restore closed. `arriveRoadtripCamp()` resets stew for a
-genuinely fresh arrival.
-
-The camp sky uses the loft's `.twinkle` / `.const-lines` animations and
-`__applyMoonPhases()` painter. Entrance day/night, cloud, and highway-season classes gate its sun,
-celestial bodies, and expanded winter mountain snow. Served stew unlocks the campsite sky; selecting
-it during daylight commits the shared day/night state to night, locally clears camp weather, and then
-opens the stargazing trace. The live Cassiopeia/Ursa Major/Ursa Minor geometry supplies the ordinary
-night's three unconnected seed patterns; completion closes the overlay, adds restrained `.55px`
-connectors behind the moon, enables bounded per-star dragging that redraws each figure's connectors,
-and starts the Camping target in the shared `gardenAurora` SVG-curtain engine. That story target
-uses the same octave geometry and gradient shimmer as the Garden/Balcony sky, guarantees a strong
-display independent of the forecast, and runs only while active Camping is clear, dark, solved, and
-pre-fire-out. A class observer follows the campsite/Entrance state owners; the shared rAF still
-self-cancels on exit, blur, visibility loss, and sleep, while reduced motion paints one still frame.
-The live sky holds the four edge-set, integrated-tail bubbles until dismissal; after a two-second beat,
-Behdad's pink and Markéta's blue bubbles reveal one second apart. Drag positions are session-only.
-Once the fourth reveal finishes, a persistent bilingual caption invites a click anywhere; a
-full-campsite transparent hit shield consumes that click, dismisses the exchange, and changes the
-caption to the sleep prompt without activating a prop. Clicking the fire starts the ordered
-fire-out → campers and stripped corn cobs → tent-light →
-deep-blue darkness with a foreground field of static authored stars whose CSS-only twinkles run
-only during the dark finale; the solved constellation copy retreats and remains as subdued context
-instead of competing with the denser sky → Zs and mama-bear food collection → bilingual food-safety
-warning for three seconds → the existing bilingual RSVP congratulations. The mama's untransformed
-inner group owns the walk so its campsite placement transform stays on the outer group; at Zs that
-outer group moves into `#entrance-roadtrip-camp-mama-collection-layer`, after the completed fire, so
-the collecting bear paints above the ring stones. Reset returns it to its original campsite sibling.
-During the checkpointed three-second warning, `#entrance-roadtrip-camp` pans to the already-authored
-dense star field; a translated `<use>` repeats that field above the original scene bounds, and the
-terminal phase reveals the neutral Fraunces `~ fin ~` with one combined congratulations, attended-time,
-and RSVP caption. The pan seeks
-through `--camp-sleep-pan-resume`, pauses with the same attended-time owner, and snaps to its end for
-reduced motion. Reduced motion also snaps the bear and cobs to their collected positions. The
-mama-look and cub-rejoin one-shots do not replace the terminal line; language refreshes reformat the
-frozen duration rather than exposing its placeholder.
-`campStargazingState` checkpoints exact trace and handoff progress plus
-`campSleepState.phase` and attended time within that phase, but always restores the trace overlay
-closed. Leaving, hiding the tab, or moving focus to another window pauses an unfinished curtain call,
-including its bear/corn/Z animations; return resumes the remaining beat rather than replaying or
-skipping it. The legacy `complete` phase owns the warning and its three-second attended timer;
-`congrats` is terminal, and leaving only then resets fire, stew, stargazing, and finale state.
-
-The checkpoint `progress` row owns `attendedMs` and `attendedComplete`. The clock begins only after
-the attract/recovery surface releases the real game, settles its active slice before every checkpoint,
-and runs only while the document is visible and focused. Road Trip's explicit transport pause also
-reconciles the clock through `__syncLoftAttendedTime`; ordinary media pauses do not pause gameplay.
-Entering Camping's terminal `congrats` phase freezes the total before the closing bear beats, so a
-reload/Continue can replay those visuals without adding or losing time. Fresh-game checkpoint clear
-resets both fields.
-
-`__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
-and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed
-or unattended.
-
-The capture-phase campsite key owner consumes Enter before Entrance navigation. Plain non-repeat
-Enter calls `roadtripCampDoNext()` for one bounded fire → stew → stargazing action. Fire completion
-reuses the builder's open/place/light owners but closes it at ignition and does not move focus into
-the hidden panel. Stargazing completion reuses the canonical trace owner with its overlay closed;
-click/tap still opens each interactive builder. A short debounce and the ignition state gate prevent
-quick doubles from skipping asynchronous work.
-After completion it remains consumed and inert, so Enter never dismisses camp. Escape and Backspace
-retain dismissal ownership. Pointer actions go through `bindRoadtripCampAction()`. Animate
-untransformed inner wrappers, cap runtime SVG effects, and keep effects in the target's coordinate
-space. Camper placement stays on the outer group, drag offsets stay on
-`.entrance-roadtrip-camp-character-drag`, and head one-shots stay on the nested head.
-`ensureRoadtripCampPorsche()` owns the generated prop hit map and bounded body drag.
-
-Run `tests/entrance-roadtrip-distance.js`, `tests/entrance-roadtrip-camp.js`, `tests/entrance-roadtrip-camp-exit.js`,
-`tests/entrance-roadtrip-camp-fire.js`,
-`tests/entrance-roadtrip-camp-pinecone-fire.js`,
-`tests/entrance-roadtrip-camp-caption.js`, `tests/entrance-roadtrip-camp-car.js`,
-`tests/entrance-roadtrip-camp-interactions.js`, `tests/entrance-roadtrip-camp-people-drag.js`,
-`tests/entrance-roadtrip-camp-sky.js`, `tests/entrance-roadtrip-camp-aurora.js`,
-`tests/entrance-roadtrip-camp-audio.js`, `tests/entrance-roadtrip-camp-audio-handoff.js`,
-`tests/entrance-roadtrip-camp-stew.js`, `tests/entrance-roadtrip-camp-stargazing.js`,
-`tests/entrance-roadtrip-camp-sleep.js`, and `tests/entrance-roadtrip-camp-enter.js` for this boundary.
-
-### Scoring, police, and durable records
-
-`awardRoadtripBonus()` owns combo-scored rewards; `awardRoadtripDistance()` owns physical-distance
-points; `applyRoadtripPenalty()` owns deductions and combo reset. The checkpoint retains elapsed
-time and the distance-point watermark so recovery cannot award distance twice.
-
-`drive.roadtrip.police` owns warning, pursuit, capture, stop, arrest, cooldown, and end states.
-Presentation advances from simulation state, not free-running timers. Escape cannot skip an arrest;
-blur and hidden gates pause attended time. Use `__entranceRoadtripPolice*` seams and run
-`tests/entrance-police.js` when changing enforcement.
-
-Demerits live separately in `entranceRoadtripDemerits:v1`; alcohol is owned by the Balcony record
-`balconyDrinkState:v1`. Road Trip reads those owners for its HUD and impairment. Checkpoint reset
-must not rewind either record; full reset clears them through their existing owners.
-
-All ten Phase 2 room visits qualify Road Trip; party-off authorizes it. Before first acceptance, invitation-ready, dismissed/re-entry,
-and open-chooser state survive HUD/Entrance closure and checkpoint recovery. Optional forward street
-wraps are still recorded for deterministic driving coverage but do not own progression. Unlock and
-best score survive sessions, while route acceptance and active presentation do not. Checkpoint restore may retain a paused run,
-but active highway presentation resumes only through Entrance and requires explicit driving input
-unless the route is terminal Camping. The paused-run drive snapshot also owns cruise activation and
-its held-speed target; unattended lifecycle cleanup releases momentary inputs without clearing it.
-
-Primary coverage is `tests/entrance-driving.js`, `tests/entrance-lap-odometer.js`,
-`tests/entrance-recovery.js`, `tests/entrance-coach.js`, `tests/entrance-cruise.js`, `tests/entrance-roadtrip.js`,
-`tests/entrance-roadtrip-handling.js`, `tests/entrance-roadtrip-pause.js`, `tests/entrance-roadtrip-scoring.js`,
-`tests/entrance-roadtrip-ai-overtake.js`, `tests/entrance-roadtrip-traffic-speed.js`,
-`tests/entrance-windshield-cracks.js`, `tests/entrance-demerits.js`, and `tests/entrance-police.js`.
-
-## Apps and minigames
-
-The monitor and phone are separate registry-backed shells:
-
-- `DESKTOP_APPS` and `TOOLBAR_APPS` define monitor apps.
-- `PHONE_APPS` defines phone labels, launchers, activities, and game metadata.
-- `__chatMonitorApps()` and `__chatAppCatalog()` project those registries for chat.
-
-Do not create a second hand-maintained app catalog. Update the owning record, any intentional
-Worker allowlist, and focused contract tests.
-
-Editable app surfaces share `appTouchConstrained()` and `appAutoFocusTextControl()`. App opens,
-restores, delayed responses, search toggles, and wrapper clicks must not script-focus text controls
-on narrow/coarse layouts; the browser's native focus from a direct tap on the control is the mobile
-keyboard boundary. Desktop may retain ready-to-type focus. Messages may refocus a rebuilt field on
-mobile only when that same logical field already owned focus before the live repaint.
-
-The first unread-count coach separates introduced, temporarily covered, and retired state. It
-repaints after room/app covers and survives checkpoints until its own × or an actual Messages open
-retires it; a game reset re-arms it. A notification preview or room change is not acknowledgement.
-
-Each game owns its loop, input capture, score, result state, and teardown. App games advertise a
-`game` record; scene games exposed to chat live in `CHAT_SCENE_GAMES`. `PUBLIC_GAME_IDS` is only the
-Worker sanitization allowlist.
-
-Action games publish `minigame.change` through `__loftStateChanged`. Wire every start and stop path,
-including Escape, room leave, blur/hidden state, reset, and game over. High scores normally use
-their own localStorage keys and stay outside the gameplay checkpoint.
-
-## Checkpoints and recovery
-
-Search for `LOFT_CHECKPOINT_KEY`, `checkpointPayload`, `applyCheckpoint`, and
-`__registerCheckpointAdapter`. The 90-day `loftCheckpoint:v1` record contains progression, compact
-puzzle state, cumulative attended play time, selected phone/Album/game data, and a `systems` map from adapters.
-
-Checkpointing begins after the Kitchen is solved or deliberately left. Writes are debounced through
-`__checkpointChanged`. An adapter provides `capture()`, `restore(row, phase)`, and optionally
-`reset()`. Restore uses `beforeStage` for state needed before navigation and `afterStage` for state
-that depends on the settled room.
-
-Persist only bounded, settled intent. Do not restore live timers, calls, cameras, dialogs, drags,
-particles, iframe frames, media playback, or running game loops. A missing `systems` map is a legacy
-record; a missing row in a modern map means that subsystem's fresh default.
-
-The recovery gate previews saved presentation without opening lower controllers or starting media.
-Continue performs one real room transition, restores adapters, opens the saved lower room through
-its owner, then removes the gate. Start over clears the checkpoint.
-
-Restore through non-navigating state owners. UI and console conveniences that pan to their prop's
-room (for example `bbq()`) are not checkpoint setters: calling one during Continue can silently
-raise the room-unlock frontier before the saved room is restored.
-
-`loftSessionExport()` / `loftSessionImport()` are smaller portable handoffs containing only progress
-and puzzle state. Personal messages, photos, scripts, and app stores remain browser-local.
-
-## Audio and lifecycle
-
-All host-page sound uses one shared `AudioContext`. Consumers own nodes and handles, never the
-context. The graph, lower-floor acoustics, focus gates, captured media, and Safari constraints live
-in [audio.md](audio.md); update that file for audio changes.
-
-Every timer, rAF loop, media source, and spawned effect needs a stop path and bounded retained
-collection. Autonomous sounds require visibility and focus. Ordinary songs intentionally may keep
-playing in the background.
-
-## Rendering and browser constraints
-
-The game uses inline SVG and HTML `foreignObject` surfaces. WebKit cannot reliably composite
-layered or replaced content inside scaled foreignObjects; preserve the existing de-layered layouts
-and native SVG image blits. Read `AGENTS.md` and `DEBUGGING.md` before changing monitor composition,
-fullscreen geometry, touch drags, or season-gated paint.
-
-Park off-room work instead of making it transparent. Cap timer-spawned particles because timers can
-continue while animation completion pauses in background tabs.
-
-CSS transform animation replaces an authored SVG `transform`, and `getBBox()` returns local
-coordinates. Put static placement on a wrapper when animating its child, and spawn effects in the
-target's coordinate-space parent.
-
-## Localization and UI contract
-
-Keep `T.en`, `T.cs`, and static fallbacks synchronized. `setLang()` uses `innerHTML` for authored
-markup; never route visitor or model text through it. Write printable Unicode directly as UTF-8.
-
-Loft Day intentionally carries no ARIA attributes, explicit roles, or native title tooltips.
-Guidance is visible copy. Tests should use stable ids, classes, `data-*` state, and rendered behavior.
-This contract is specific to `rsvp.html`, not `save-the-dates.html`.
-
-## Chat boundary
-
-Private Chat, Wedding crew replies, message rewriting, and Code assistance share one browser queue
-and `/chat`, but use different prompts and output contracts. Search for `askChat`, `__chatContext`,
-`group_chat`, `message_rewrite`, and `code_assist`.
-
-The browser sends bounded live context from state and registries. The Worker reconstructs known
-shapes, enforces origin/body/history limits, verifies Turnstile, applies rate limits, disables model
-storage, normalizes output, and validates typed actions. Stable facts belong in
-`chat-knowledge.json`; live state belongs in client context. Never place credentials or private
-facts in either.
-
-Keep registry projections, `PUBLIC_*` allowlists, `ACTION_SPECS`, and Code-assistant instructions
-aligned. Chat tests do not require live model or Turnstile access.
-
-## Local development and tests
-
-Use `file://` for basic inspection and a local HTTP server for media, iframe runtimes, browser APIs,
-and `/chat`. Never track local credentials.
-
-For every change to either self-contained HTML page, run:
-
-```sh
-node tests/check.js
-node tests/state.js
-```
-
-For `rsvp.html` logic or interaction changes, also run:
-
-```sh
-node tests/play.js
-```
-
-Add focused tests for the ownership boundary changed:
-
-| Area | Focused tests |
+| Upper room | Paired lower room |
 | --- | --- |
-| Solve and Enter ownership | `enter.js`, `phase2-progression.js`, `progression-transitions.js` |
-| Main/lower navigation | `navigation.js`, `dollhouse.js`, `upstairs-keyboard-navigation.js`, `delayed-pan.js`, `rapid-navigation.js`, `lower-shortcuts.js`, `lower-room-*.js` |
-| Entry, recovery, reset, trailer | `game-entry-loader.js`, `game-only-layout.js`, `url-entry.js`, `recovery.js`, `checkpoint-*.js`, `reset-hooks.js`, `cine.js` |
-| Monitor, phone, menus | `menu.js`, `laptopmenu.js`, `systemmenu.js`, `monitor-*.js`, `phone-*.js` |
-| Room interactions | the corresponding room or lower-room test; Entrance also uses its driving and Road Trip suites |
-| Apps and games | the named test plus `minigame-vocabulary.js`; include touch coverage for shared controls |
-| Messages and chat | `message-*.js`, `chat.js`, `chat-context.js`, `chat-worker.mjs`, `assistant-behavior.mjs`, `safe-actions*.js` |
-| Audio/media | `media-transitions.js`, `device-audio.js`, `lower-audio.js`, `performance.js`, `leak.js` |
-| Album signatures | `album-axis.mjs`, `album-render.mjs`, `album-ui.js` |
-| Date/weather | `weather.js` and the relevant occasion/day test |
+| Kitchen / Bar | Bathroom |
+| Garden / Party | Dungeon |
+| Cuddly-puddly | Cinema |
+| Office | Bedroom |
+| Balcony | Entrance |
 
-`tests/check.js` owns static and syntax contracts. `tests/state.js` runs independent invariant
-pages. `tests/play.js` solves Phase 1 and click-storms interactions. Add new static assertions only
-for meaningful recurring bug classes.
+The lower floor is the horizontally translated `#lower-room-track`. `lowerRoomForStage()` maps the
+current upper room to its pair, and `__navigateLowerRoom` owns entering and leaving that layer. The
+dollhouse, number keys, arrows, and direct scene controls must converge on these owners rather than
+inventing parallel navigation.
 
-`tests/lib.js` creates a unique scratch page and Chrome profile, captures errors, blocks navigation,
-and cleans up. Manual CDP runs also need a unique profile and port, a cache-busted URL, and an
-`assertFresh` probe. Use real CDP Chrome for visual timing and geometry; virtual-time screenshots
-distort rAF, transitions, WAAPI, media, and some season-gated paint. Check English/Czech and
-desktop/mobile layouts for visible changes.
+Opening the dollhouse can pause or cover a live subsystem. Returning to a room must restore the same
+settled room or paused drive state, not initialize a second instance. Lower-room navigation should
+return to the paired upper room only when the user explicitly asks to go up; Back/Escape first
+dismisses the active game, projector, or overlay owned by that lower room.
 
-## Commit and deploy workflow
+### Morning routine and free exploration
 
-1. Give every delegated task its own branch and worktree.
-2. Keep one discrete issue per commit and preserve unrelated changes.
-3. Run mandatory and focused tests.
-4. Commit with `Co-Authored-By: Codex (GPT-5) <noreply@openai.com>`.
-5. Integrate confirmed work into `main` and remove temporary worktrees.
-6. Push with `git puff` and deploy with `ssh behdad "cd w && git pull"`.
+The first run follows the upper rooms in `STAGES` order. Each room-specific `__…DoNext` walker owns
+its puzzle sequence; `activateCurrentRoom()` routes the global Enter action to the appropriate
+walker. Pointer/touch interaction with the depicted objects remains the primary play path.
 
-The live web root is the remote Git checkout. A pull rewrites `rsvp.html` in place, so a request can
-briefly receive a truncated page. If the whole site appears unstyled or vertically stacked after a
-deploy, compare local and live hashes before diagnosing the latest feature.
+On the first solve, `__finishSolveAdvance(from, to, navigationDelay)` records completion, unlocks the
+next room, checkpoints, and optionally pans. Replaying an already-solved room may run its toy or
+repeatable activity, but it must not auto-advance. Preserve that distinction when adding a shortcut
+or reusing a first-run handler.
 
-The Worker is deployed separately; pulling the frontend does not deploy `chat.js`.
+Starting Party in the Garden routes through `setGardenParty`, which calls `setSecondRound` on the
+first start. That latch opens free exploration and remains set even after Party is stopped; it is
+cleared only by a real reset. Do not use the music, lighting, guest population, or
+`__gardenPartyOn` alone as a proxy for story progress.
 
-## Search map
+The progression bridge uses `seenRooms`, not message-reading or solved-state guesses. Road Trip
+exploration is complete only after Party/free exploration has begun and all ten rooms have been
+visited. If the player reaches the Entrance while Party is still active, the canonical handoff winds
+it down before authorizing the trip. Keep that lenient path: eligibility should not depend on noticing
+or obeying one phone message.
 
-| Area | Search terms |
+### Road Trip and Camping
+
+Road Trip and Camping are modes of the Entrance controller, not separate rooms in `STAGES`. The main
+entry points are easiest to find through `porscheDrive`, `roadtripState`, `entranceRoadtrip`, and
+`__entranceDriveStep`.
+
+Keep these ownership boundaries intact:
+
+- Entrance practice laps and the highway share presentation but have different progress/state.
+- `roadtripExplorationComplete()` answers whether the story prerequisites are met;
+  `roadtripAuthorized()` additionally requires Party to be stopped.
+- `roadtripState` owns route selection, saved run, accepted trip, pause, and Camping availability.
+- Driving input belongs to the HUD/controller only while `__entranceDriveKeyboardOwnership` says it
+  does. A CSS class or visible dashboard is not sufficient keyboard authority.
+- Starting Road Trip calls `__setPartyForegroundSuspended(true, "roadtrip")`; leaving it releases
+  that suspension. This parks Party foreground work without pretending the story latch was reset.
+
+Camping is a checkpointed sequence owned inside the same controller. Its settled progression is
+split across `campFireState`, `campStewState`, `campStargazingState`, and `campSleepState`. The order
+is fire, stew, stargazing, sleep/finale. Restore and replay must project the appropriate scene before
+it becomes visible, so an old finale or unfinished road frame never flashes on entry.
+
+Do not duplicate route geometry, traffic constants, finale timing, or the Camping audio graph in
+this guide. Work from the controller itself, add a focused regression test for the behavior being
+changed, and use [the audio guide](audio.md) for `__updateRoadtripCampAudio` and cabin exposure.
+
+## Input and feedback routing
+
+### Input priority
+
+The capture-phase document keyboard router is the final arbiter for global shortcuts. Its ordering
+is deliberate:
+
+1. Typing targets and browser-reserved key combinations keep their native behavior; explicit
+   developer shortcuts are handled separately.
+2. Open dialogs, coaches, apps, media, minigames, and lower-room controllers get first refusal.
+3. The active driving controller may claim steering/action keys.
+4. Global room navigation and `activateCurrentRoom()` run only if nothing closer owns the key.
+
+Preserve the `activeControlFocused` checks and the capture-phase ordering around Enter. Do not add an
+independent bubble-phase key listener for a room action; it will eventually race a phone field,
+projector, lower-room game, or car HUD.
+
+Escape and Backspace are dismissal/back actions. Backspace is normalized through the Escape path.
+They must not solve a first-run room puzzle. Within a lower room they dismiss its currently playing
+activity or overlay; they do not substitute for the explicit up-room navigation.
+
+Pointer and touch are first-class controls. If a keyboard shortcut changes gameplay, the depicted
+object or visible control still needs an equivalent click/tap path. Mobile drag prevention belongs
+on a delegated non-passive `touchmove` listener on the SVG strip; `touch-action` on SVG children is
+not reliable.
+
+### Captions and coaches
+
+`setCaption(key, force)` owns the stable authored bottom caption. `__flashCaptionKey(key, holdMs,
+owner, replacements)` owns temporary messages and uses an owner token so stale cleanup cannot erase
+a newer flash; `__clearFlashCaption(owner)` clears only the matching owner. Lower rooms temporarily
+replace the upstairs caption through `__setLowerRoomCaption` and `__restoreLowerRoomCaption`.
+
+Use those paths rather than assigning the caption element directly. Token pickups and ambient jokes
+must not permanently cover progression guidance. If a caption depends on language or live state,
+make sure `refreshHuntCaption` can rebuild it after a language change or overlay dismissal.
+
+Coaches are persistent instructional overlays, not captions. Their own controller decides when they
+appear, whether navigation may continue behind them, and which action dismisses them. A coach that
+points at a moving room control must be hidden during the pan and placed only after the destination
+settles. Keep coach focus/tab behavior consistent with the global input contract; decorative SVG
+groups should never become accidental tab stops.
+
+## Apps, automation, and chat
+
+### App registries
+
+`DESKTOP_APPS`, `TOOLBAR_APPS`, and `PHONE_APPS` are the source registries for app identity and
+launch behavior. Context menus, the phone shell, chat capabilities, and checkpoint adapters derive
+from or mirror them. When adding or renaming an app, update the registry and every deliberately
+public catalogue, including `__chatMonitorApps` or `__chatAppCatalog`, rather than special-casing one
+launcher.
+
+App focus is constrained on touch devices. Follow `appTouchConstrained` and
+`appAutoFocusTextControl`: opening an app on mobile must not automatically summon the software
+keyboard unless the user explicitly chose a text control.
+
+App and minigame state follows the same durable/transient rule as rooms. Preserve a meaningful
+selection or score only when a checkpoint adapter says so; close cameras, calls, dialogs, media,
+intervals, and one-shot games during reset or restore.
+
+### Typed API and console
+
+`initLoftApi()` installs API version 3 at `window.loft.api`. Its public surface is:
+
+- `capabilities(options)` for the discoverable action/query catalogue;
+- `describe(id, args)` for one capability's validated shape and current availability;
+- `query(id, args)` for structured reads;
+- `perform(id, args, options)` for validated actions;
+- `subscribe(listener)` for state notifications.
+
+Successful owner transitions call `__loftStateChanged`, which increments `stateVersion` and emits
+`loft:statechange`. If an API action changes the game but subscribers do not hear about it, fix the
+owner transition; do not make the API mutate a DOM projection directly.
+
+The in-game JavaScript console is a separate human-facing interface. Its command roster
+`CONSOLE_CMDS` and help table `CONSOLE_HELP` must remain in parity. Internal `__…` hooks may change as
+the implementation changes; do not document them as a compatibility promise to external clients.
+
+### Chat Worker boundary
+
+The browser builds bounded live context in `__chatContext` and sends it through `askChat` to
+`/chat`. `chat.js` validates requested actions with `ACTION_SPECS`, cleans client context, calls the
+model, and normalizes the result. Stable world facts belong in `chat-knowledge.json`; live room,
+weather, app, and progression state belongs in the client context.
+
+Keep `PUBLIC_MONITOR_APPS`, `PUBLIC_PHONE_APPS`, and `PUBLIC_GAME_IDS` aligned with the browser's
+actual registries and typed capabilities. The Worker must never accept a free-form command and pass
+it into the page. A new chat action needs a bounded schema, an allowlisted client action, and a test
+on both sides of the boundary.
+
+## Checkpoints, recovery, and reset
+
+The durable game checkpoint is `localStorage["loftCheckpoint:v1"]`; schema version and maximum age
+are defined beside `LOFT_CHECKPOINT_VERSION` and the checkpoint owner. Writes begin only after the
+Kitchen is solved or deliberately left, then flow through debounced `__checkpointChanged` calls.
+
+`checkpointPayload()` creates the record and `applyCheckpoint()` restores it. Subsystems register
+settled state with `__registerCheckpointAdapter(id, adapter)`; closures created before that registry
+use `__deferCheckpointAdapter`. Adapters can restore in `beforeStage` or `afterStage` phases so state
+that affects initial rendering lands before the room is exposed.
+
+An adapter should persist **intent**, not runtime mechanics:
+
+- Persist a chosen projector channel, room visitation, Party story latch, completed Camping beat,
+  or paused Road Trip run.
+- Do not persist an open modal, active pointer drag, pending call, camera stream, raw timeout,
+  animation frame, autonomous particle, or currently ringing sound.
+
+For a modern checkpoint, a missing row in the `systems` map means that subsystem starts from its
+fresh default. A record with no `systems` property is an older compact checkpoint and follows the
+legacy restore path. Keep that distinction when adding an adapter; otherwise a new subsystem may
+inherit stale DOM state or accidentally reset an existing save.
+
+The entry recovery gate previews a checkpoint before applying it. `urlEntryMode`,
+`__startGameEntryLoader`, `startCinematic`, and `stopCinematic` own page/game/trailer entry. Continue
+applies the saved state; starting fresh must reset transient systems before the initial room paints.
+
+`loftSessionExport` and `loftSessionImport` are deliberately narrower than a full checkpoint: they
+move progress and puzzle state without exporting bulky or personal app data. Do not broaden that
+contract incidentally while adding a checkpoint field.
+
+## Lifecycle, audio, and rendering
+
+### Attention and autonomous work
+
+`__roomAutonomyAllowed(room)` is the basic attended-room predicate: the room must own the visible,
+focused, uncovered foreground. `__roomAmbienceCovered` and `__foregroundAmbienceCovered` account for
+larger overlays, while `__partyForegroundSuspended` parks Party work during Road Trip.
+
+Use those owners for ambient loops, autonomous sound, timer-spawned effects, and room-only reactions.
+`document.hidden` alone is insufficient: a visible but unfocused window can keep timers alive while
+animation frames are throttled. Autonomous one-shot sounds must also require
+`document.hasFocus()`; direct user-triggered sounds may rely on the triggering interaction.
+
+Particle systems must have bounded cardinality. Prefer a fixed population that replenishes itself
+from each particle's animation completion, or cap and remove stale nodes before spawning. An
+unbounded timer plus animation-finish cleanup will accumulate nodes while the tab is throttled and
+can crash after hours.
+
+All Web Audio uses one shared `AudioContext`. Never suspend or close that context from a feature;
+gate or disconnect that feature's nodes. Read [the audio guide](audio.md) before touching beds,
+weather, Party, cabin exposure, media capture, or route/Camping sound. It is the authoritative graph
+and lifecycle reference.
+
+### Rendering and browser constraints
+
+The scene is a large SVG strip with embedded HTML app surfaces. Two rules prevent many rendering
+regressions:
+
+- A CSS `transform` animation replaces an SVG element's `transform` attribute for its duration.
+  Put static placement on a wrapper group or bake it into coordinates.
+- `getBBox()` returns local coordinates. Spawn an effect in the target's own parent coordinate
+  system, or map it deliberately through a stable ancestor.
+
+WebKit has additional `foreignObject` limitations: layered descendants under a scaled SVG ancestor
+can paint off-position, and replaced content such as canvas/video/iframe may not composite at all.
+Prefer de-layered grid stacking and native SVG `<image>` blits where the existing subsystem already
+uses them. Mirror state onto stable scope classes through `syncScopeMirrors`; avoid introducing a
+top-anchored `:has()` dependency for a large scene.
+
+The maintained incident patterns and verified workarounds live in [`AGENTS.md`](../AGENTS.md); test
+recipes live in [`DEBUGGING.md`](../DEBUGGING.md). Consult both before "fixing" behavior seen only
+under headless virtual time.
+
+## Localization and UI contracts
+
+Player-visible English and Czech copy lives in `T.en` and `T.cs`. Add both keys in the same change;
+`tests/check.js` enforces parity. Write printable Unicode directly as UTF-8. `setLang()` assigns
+authored translation HTML, so preserve intentional markup and use the established `brk-sm` /
+`brk-lg` breaks when the two viewport classes need different wrapping.
+
+After changing copy or layout, inspect both languages at mobile and desktop widths. Czech strings
+are often longer, and a clean English coach or caption can overlap its target in Czech.
+
+The game intentionally avoids browser focus rings on decorative scene objects and global room
+surfaces. Only controls that participate in native keyboard focus should be tab targets. Room-global
+Enter, number keys, and arrows are routed by the document controller; adding `tabindex="0"` to make
+an SVG object "keyboard accessible" can steal that routing and expose an unexplained focus border.
+Use the established pointer action plus global keyboard path rather than inventing a second focus
+model. The game also deliberately has no piecemeal ARIA/role layer; `tests/check.js` enforces that
+contract. A future accessibility model should be a coherent, tested pass—not isolated metadata on
+one scene object.
+
+## Development and validation
+
+Serve the repository over HTTP for interactive work; media, modules, caching, and browser security
+behave differently under `file://`. A simple local server is sufficient. Reuse neither a production
+port nor another developer's server process.
+
+### Testing strategy
+
+[`AGENTS.md`](../AGENTS.md) is the authoritative test matrix. The useful layers are:
+
+| Layer | Purpose | Main entry points |
+| --- | --- | --- |
+| Structural/static | Inline-script syntax, translation parity, SVG balance, console roster, source invariants | `node tests/check.js`, `node tests/state.js` |
+| Full solve | End-to-end first-run solve and interaction storm | `node tests/play.js` |
+| Input contracts | Document-level Enter, menus, mobile/double gestures, lower-room ownership | `tests/enter.js`, `tests/menu.js`, `tests/laptopmenu.js`, focused tests |
+| State systems | Checkpoint restore, replay, Party/Road Trip/Camping, apps, audio lifecycle | focused `tests/*.js` runners |
+| Rendering | Album signatures and manual EN/CS mobile/desktop inspection | `tests/album-axis.mjs`, screenshots or real CDP Chrome |
+
+Any change to either maintained HTML file requires `check.js` and `state.js` before commit. Game
+logic changes also require `play.js`; Enter and menu changes have their named mandatory runners.
+Then run the focused tests closest to the ownership boundary you changed. Do not run an enormous
+suite instead of adding one regression for a newly discovered bug class.
+
+Most browser runners share helpers in `tests/lib.js`. Read a test's header before changing its
+timing model or browser plumbing. A passing source assertion is not a visual proof, and a screenshot
+is not an interaction proof.
+
+### Debugging and visual verification
+
+Headless Chrome can serve a stale `file://` document even with its network cache disabled. Use a
+unique port and profile, append a unique query string, and assert that the loaded source contains
+the code under test before trusting results. Navigating to the identical URL may be a same-document
+navigation rather than a reload.
+
+Virtual-time Chrome also distorts requestAnimationFrame loops, WAAPI geometry, CSS transitions, and
+display-none-to-visible SVG paint. Reproduce live-geometry and season-gated rendering in a real CDP
+Chrome session before changing product code. [`DEBUGGING.md`](../DEBUGGING.md) contains the current
+recipes and the `assertFresh` pattern.
+
+For every visual or interaction change, verify the relevant settled states manually in both
+languages and at roughly 390 px and at least 760 px. For animated systems, inspect entry, active,
+covered/paused, exit, reload, and return-to-room states—not only the attractive middle frame.
+
+## Commit and deploy safety
+
+Every delegated change uses its own branch and worktree. Make one bounded change, run the required
+checks, commit it with the required co-author trailer, and give the owner an isolated test URL. Do
+not mix another completed feature into that commit. Integration, push, and deployment happen only
+after owner confirmation.
+
+The normal confirmed path is:
+
+1. Integrate the isolated commit into the primary branch.
+2. Push with `git puff` (the configured force-with-lease alias).
+3. Deploy with `ssh behdad "cd w && git pull"`.
+
+The live web root is the git checkout. A visitor can fetch `rsvp.html` while `git pull` is rewriting
+the multi-megabyte file and briefly receive truncated HTML. If a post-deploy report shows the entire
+page stacked or unstyled, compare local/live hashes and reproduce at the reported viewport before
+attributing it to the latest feature.
+
+Cloudflare edge-caches HTML, `/`, and extensionless aliases for ten minutes. Request cache headers do
+not bypass that rule. Verify a fresh deploy with a new throwaway query string or wait for the TTL;
+avoid repeated pulls, which increase the torn-read window. The chat Worker has a separate deployment
+path—pulling the static checkout does not publish `chat.js`.
+
+## Source search map
+
+Search symbols rather than relying on line numbers; `rsvp.html` changes too quickly for stable line
+references.
+
+| Concern | Search terms |
 | --- | --- |
-| Localization | `var T =`, `function setLang` |
-| Navigation | `var STAGES`, `goToStage`, `lowerRoomForStage`, `__navigateLowerRoom` |
-| Progression | `solvedRooms`, `__finishSolveAdvance`, `setSecondRound` |
-| Entrance | `porscheDrive`, `roadtripState`, `entranceRoadtrip`, `__entranceDriveStep` |
-| Checkpoints | `LOFT_CHECKPOINT_KEY`, `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter` |
-| Reset | `resetHunt`, `__registerTransientResetHook` |
-| Typed API | `initLoftApi`, `register({ id:`, `__loftStateChanged` |
-| Monitor apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `resetMonitorAppState` |
-| Phone apps | `PHONE_APPS`, `openApp`, `phoneAppReturn`, `__chatAppCatalog` |
-| Games | `CHAT_SCENE_GAMES`, `chatGamesKnowledge`, `minigame.change` |
-| Messages | `var MESSAGES`, `__deliverAutonomousPhoneMessage`, `trimMessageThread` |
-| Chat | `__chatContext`, `askChat`, `ACTION_SPECS`, `cleanContext` |
-| Audio | `getAudioCtx`, `audioBusProxy`, `__updateSharedAudioIdle` |
-| People | `ROSTER`, `__whoIsHere`, `__rosterPresence` |
-| Date/weather | `__now`, `__weddingOccasion`, `__realWx`, `refreshWeatherText` |
-| Album | `albumPhotoSvg`, `ALBUM_SKY_SIG`, `__albumList` |
-| Console | `CONSOLE_HELP`, `CONSOLE_CMDS`, `window.loft` |
-| Trailer | `startCinematic`, `stopCinematic`, `urlEntryMode` |
-
-Debug from the subsystem's state hook and transition owner, then inspect its DOM projection and
-outstanding work. Deleting mirror classes rarely repairs the underlying state.
+| Upper/lower navigation | `STAGES`, `goToStage`, `lowerRoomForStage`, `__navigateLowerRoom` |
+| First-run solves and replay | `__finishSolveAdvance`, `__kitchenDoNext`, `__gardenDoNext`, `__cuddlyDoNext`, `__officeDoNext` |
+| Party/free exploration | `setGardenParty`, `setSecondRound`, `__secondRound`, `seenRooms` |
+| Entrance and Road Trip | `porscheDrive`, `roadtripState`, `roadtripAuthorized`, `__entranceDriveStep` |
+| Camping | `campFireState`, `campStewState`, `campStargazingState`, `campSleepState` |
+| Keyboard routing | `activeControlFocused`, `activateCurrentRoom`, `__entranceDriveKeyboardOwnership` |
+| Captions | `setCaption`, `__flashCaptionKey`, `__setLowerRoomCaption`, `refreshHuntCaption` |
+| Checkpoints | `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter`, `__deferCheckpointAdapter` |
+| Lifecycle | `__roomAutonomyAllowed`, `__foregroundAmbienceCovered`, `__setPartyForegroundSuspended` |
+| Apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `PHONE_APPS`, `appTouchConstrained` |
+| Typed API | `initLoftApi`, `window.loft.api`, `__loftStateChanged` |
+| Chat | `__chatContext`, `askChat`, `ACTION_SPECS`, `PUBLIC_MONITOR_APPS` |
+| Entry/recovery | `urlEntryMode`, `__startGameEntryLoader`, `startCinematic`, `stopCinematic` |
+| Scope mirrors | `syncScopeMirrors` |

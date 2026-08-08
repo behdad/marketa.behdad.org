@@ -153,8 +153,8 @@ only the guarded pan when requested. It navigates only if the player is still in
 Do not infer completion from unlock state.
 
 `setSecondRound(true)` owns the Phase 2 transition. It unlocks and marks all main rooms solved,
-releases held content, and changes Enter to each room's free-play activity. Only reset clears this
-latch.
+releases held content, and changes Enter to each room's primary free-play action; Garden keeps the
+party toggle as that action while Pac-Man remains object-launched. Only reset clears this latch.
 
 Keep progression coverage in `tests/play.js`, `tests/enter.js`, `tests/phase2-progression.js`, and
 `tests/progression-transitions.js`. `tests/room-progress.js` owns the room-specific bilingual

@@ -80,7 +80,7 @@ Press `?` outside a typing field for the complete shortcut card. The essentials 
 - `Tab`: open or close **The Loft** room map
 - `1`–`5`: upstairs room
 - `6`–`0`: downstairs room
-- `Enter`: next guided action; in Phase 2, the room's main activity
+- `Enter`: next guided action; in Phase 2, the room's main activity (in Garden / Party, toggle the party)
 - `C`: phone
 - `/`: Messages
 - `M`: Office monitor

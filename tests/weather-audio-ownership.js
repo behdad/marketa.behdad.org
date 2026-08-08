@@ -1,0 +1,225 @@
+#!/usr/bin/env node
+"use strict";
+
+var lib = require("./lib");
+
+var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">pending</pre>
+<script>(function () {
+  var report = { errors: [], steps: {}, thunder: [] };
+  var focused = true, visibility = "visible";
+  function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+  function car() { return window.__entranceRoomState().car; }
+  function click(id) {
+    document.getElementById(id).dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  }
+  function setExposure(name) {
+    var state = car();
+    var wantRoof = name === "roof-open", wantWindow = name === "windows-open";
+    if (!!state.roofOpen !== wantRoof) click("entrance-porsche-roof");
+    state = car();
+    if (!!state.windowOpen !== wantWindow) click("entrance-porsche-window");
+    return car();
+  }
+  function rainState() { return window.__entranceDriveWeatherAudioState(); }
+  async function fire(label) {
+    var before = report.thunder.length;
+    var scene = window.__autonomousThunderScene();
+    window.triggerBalconyThunder();
+    await sleep(370);
+    report.steps[label] = { scene: scene, calls: report.thunder.slice(before) };
+  }
+  try {
+    Object.defineProperty(document, "hasFocus", { configurable: true, value: function () { return focused; } });
+    Object.defineProperty(document, "hidden", { configurable: true, get: function () { return visibility === "hidden"; } });
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: function () { return visibility; } });
+  } catch (_error) {}
+  window.addEventListener("load", function () { setTimeout(async function () { try {
+    Math.random = function () { return 0; };
+    window.playThunderSound = function (volume, pan, enclosure) {
+      report.thunder.push({ volume: volume, pan: pan, enclosure: enclosure || null,
+        scene: window.__autonomousThunderScene() });
+    };
+    window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+
+    var indoor = {};
+    for (var i = 0; i < 4; i++) {
+      var name = ["kitchen", "garden", "cuddly", "office"][i];
+      window.goToStage(name);
+      var before = report.thunder.length;
+      window.triggerBalconyThunder();
+      await sleep(370);
+      indoor[name] = { scene: window.__autonomousThunderScene(), calls: report.thunder.length - before };
+    }
+    report.steps.indoor = indoor;
+
+    window.goToStage("balcony");
+    await fire("balcony");
+    var queuedBefore = report.thunder.length;
+    window.triggerBalconyThunder();
+    window.goToStage("office");
+    await sleep(370);
+    report.steps.queuedLeave = { calls: report.thunder.length - queuedBefore,
+      scene: window.__autonomousThunderScene() };
+
+    window.goToStage("balcony");
+    window.__openEntranceRoom();
+    document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
+    await fire("entrance");
+
+    window.__openEntrancePorscheDriveHud();
+    window.__toggleEntrancePorscheEngine();
+    window.__setBalconyRain(true, "test");
+    window.__updatePorscheDriveWeatherAudio();
+    await sleep(80);
+    // The real roof/window controls must repaint the branch themselves; do not use the
+    // weather test seam between these snapshots or a stale cabin profile could pass.
+    setExposure("closed");
+    var streetClosed = rainState();
+    await fire("streetThunderClosed");
+    setExposure("windows-open");
+    var streetWindow = rainState();
+    await fire("streetThunderWindows");
+    setExposure("roof-open");
+    var streetRoof = rainState();
+    await fire("streetThunderRoof");
+    report.steps.streetRain = { closed: streetClosed, windows: streetWindow, roof: streetRoof };
+
+    focused = false; window.dispatchEvent(new Event("blur")); await sleep(30);
+    report.steps.rainBlur = rainState();
+    focused = true; window.dispatchEvent(new Event("focus")); await sleep(80);
+    report.steps.rainRefocus = rainState();
+    visibility = "hidden"; document.dispatchEvent(new Event("visibilitychange")); await sleep(30);
+    report.steps.rainHidden = rainState();
+    visibility = "visible"; document.dispatchEvent(new Event("visibilitychange")); await sleep(80);
+    report.steps.rainVisible = rainState();
+
+    window.__entranceRoadtripDevStart();
+    window.__entranceRoadtripSetRoute("banff", 0);
+    setExposure("closed");
+    var highwayClosed = rainState();
+    setExposure("windows-open");
+    var highwayWindow = rainState();
+    setExposure("roof-open");
+    var highwayRoof = rainState();
+    report.steps.highwayRain = { closed: highwayClosed, windows: highwayWindow, roof: highwayRoof };
+
+    // Arm under one exposure, then change it during the flash-to-rumble delay. The
+    // recorded enclosure must be the state at playback, never the stale arm-time state.
+    setExposure("closed");
+    var delayedBefore = report.thunder.length;
+    window.triggerBalconyThunder();
+    setExposure("roof-open");
+    await sleep(370);
+    report.steps.roadtripDelayedExposure = {
+      calls: report.thunder.slice(delayedBefore), current: window.__entranceThunderEnclosure()
+    };
+    setExposure("windows-open"); await fire("roadtripWindows");
+    setExposure("closed"); await fire("roadtripClosed");
+
+    window.__toggleEntranceRoadtripTransport();
+    var pausedBefore = report.thunder.length;
+    window.triggerBalconyThunder(); await sleep(370);
+    report.steps.roadtripPaused = { scene: window.__autonomousThunderScene(),
+      calls: report.thunder.length - pausedBefore, rain: rainState() };
+    window.__toggleEntranceRoadtripTransport();
+
+    window.__entranceRoadtripSetRoute("camp", 0);
+    await fire("camping");
+    report.steps.campingRain = rainState();
+
+    window.__exitEntranceRoadtrip(); await sleep(30);
+    report.steps.dismissed = rainState();
+    window.__setBalconyRain(false, "test");
+  } catch (error) { report.errors.push("harness: " + String(error && error.stack || error)); }
+  report.errors = (window.__errs || []).concat(report.errors);
+  document.getElementById("__report").textContent = JSON.stringify(report);
+  }, 260); });
+})();</script>`;
+
+var failures = 0;
+function check(ok, message, detail) {
+  if (ok) console.log("  ✓ " + message);
+  else { failures++; console.log("  ✗ " + message + (detail ? " — " + JSON.stringify(detail) : "")); }
+}
+function exposureOrder(row) {
+  return row && row.closed.rain.active && row.windows.rain.active && row.roof.rain.active &&
+    row.closed.rain.scene === row.windows.rain.scene && row.windows.rain.scene === row.roof.rain.scene &&
+    row.closed.rain.gain < row.windows.rain.gain && row.windows.rain.gain < row.roof.rain.gain &&
+    row.closed.rain.cutoff < row.windows.rain.cutoff && row.windows.rain.cutoff < row.roof.rain.cutoff;
+}
+
+console.log("rsvp.html weather-audio ownership:");
+var result = lib.runPageSync("rsvp.html", HARNESS, 10000, {
+  patchRaf: true,
+  chromeFlags: "--autoplay-policy=no-user-gesture-required --window-size=1100,900"
+});
+if (!result) { console.log("  ✗ harness produced no report"); process.exit(1); }
+var s = result.steps || {};
+check(result.errors.length === 0, "weather ownership has no uncaught errors", result.errors);
+check(s.indoor && ["kitchen", "garden", "cuddly", "office"].every(function (name) {
+  return s.indoor[name] && s.indoor[name].scene === null && s.indoor[name].calls === 0;
+}), "autonomous thunder stays silent in every indoor loft room", s.indoor);
+check(s.balcony && s.balcony.scene === "balcony" && s.balcony.calls.length === 1 &&
+  !s.balcony.calls[0].enclosure, "Balcony owns unfiltered autonomous thunder", s.balcony);
+check(s.queuedLeave && s.queuedLeave.calls === 0 && s.queuedLeave.scene === null,
+  "leaving an allowed scene cancels its already-queued rumble", s.queuedLeave);
+check(s.entrance && s.entrance.scene === "entrance" && s.entrance.calls.length === 1 &&
+  !s.entrance.calls[0].enclosure, "Entrance owns unfiltered autonomous thunder", s.entrance);
+check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
+  s.streetThunderClosed.calls.length === 1 &&
+  s.streetThunderClosed.calls[0].enclosure.exposure === "closed" &&
+  s.streetThunderWindows && s.streetThunderWindows.calls.length === 1 &&
+  s.streetThunderWindows.calls[0].enclosure.exposure === "windows-open" &&
+  s.streetThunderRoof && s.streetThunderRoof.calls.length === 1 &&
+  s.streetThunderRoof.calls[0].enclosure.exposure === "roof-open" &&
+  s.streetThunderClosed.calls[0].enclosure.gain < s.streetThunderWindows.calls[0].enclosure.gain &&
+  s.streetThunderWindows.calls[0].enclosure.gain < s.streetThunderRoof.calls[0].enclosure.gain &&
+  s.streetThunderClosed.calls[0].enclosure.cutoff < s.streetThunderWindows.calls[0].enclosure.cutoff &&
+  s.streetThunderWindows.calls[0].enclosure.cutoff < s.streetThunderRoof.calls[0].enclosure.cutoff,
+  "Entrance street thunder follows all three cabin exposures", {
+    closed: s.streetThunderClosed, windows: s.streetThunderWindows, roof: s.streetThunderRoof
+  });
+check(exposureOrder(s.streetRain) && s.streetRain.closed.rain.scene === "street" &&
+  s.streetRain.closed.sources === 5 && s.streetRain.windows.sources === 5 &&
+  s.streetRain.roof.sources === 5 && s.streetRain.closed.sharedNoiseSource,
+  "street driving rain shares one bounded car bed and follows all three cabin exposures", s.streetRain);
+check(s.rainBlur && !s.rainBlur.bedActive && s.rainBlur.sources === 0 &&
+  s.rainRefocus && s.rainRefocus.bedActive && s.rainRefocus.rain.active &&
+  s.rainHidden && !s.rainHidden.bedActive && s.rainHidden.sources === 0 &&
+  s.rainVisible && s.rainVisible.bedActive && s.rainVisible.rain.active,
+  "cabin rain tears down and returns cleanly across blur and visibility", {
+    blur: s.rainBlur, refocus: s.rainRefocus, hidden: s.rainHidden, visible: s.rainVisible
+  });
+check(exposureOrder(s.highwayRain) && s.highwayRain.closed.rain.scene === "roadtrip" &&
+  s.highwayRain.closed.sources === 5 && s.highwayRain.windows.sources === 5 &&
+  s.highwayRain.roof.sources === 5,
+  "highway rain keeps the same one-bed source bound and three exposure levels", s.highwayRain);
+var delayed = s.roadtripDelayedExposure;
+check(delayed && delayed.calls.length === 1 && delayed.calls[0].scene === "roadtrip" &&
+  delayed.calls[0].enclosure && delayed.calls[0].enclosure.exposure === "roof-open" &&
+  delayed.current && delayed.current.exposure === "roof-open",
+  "Road Trip thunder snapshots current roof exposure at playback time", delayed);
+check(s.roadtripWindows && s.roadtripWindows.calls.length === 1 &&
+  s.roadtripWindows.calls[0].enclosure.exposure === "windows-open" &&
+  s.roadtripClosed && s.roadtripClosed.calls.length === 1 &&
+  s.roadtripClosed.calls[0].enclosure.exposure === "closed" &&
+  s.roadtripClosed.calls[0].enclosure.gain < s.roadtripWindows.calls[0].enclosure.gain &&
+  s.roadtripClosed.calls[0].enclosure.cutoff < s.roadtripWindows.calls[0].enclosure.cutoff,
+  "Road Trip thunder applies intermediate-window and fully-closed enclosure profiles", {
+    windows: s.roadtripWindows, closed: s.roadtripClosed
+  });
+check(s.roadtripPaused && s.roadtripPaused.scene === null && s.roadtripPaused.calls === 0 &&
+  !s.roadtripPaused.rain.bedActive,
+  "paused Road Trip owns neither queued thunder nor cabin rain", s.roadtripPaused);
+check(s.camping && s.camping.scene === "camping" && s.camping.calls.length === 1 &&
+  !s.camping.calls[0].enclosure && s.campingRain && !s.campingRain.bedActive,
+  "Camping keeps outdoor thunder and leaves the car-rain bed behind", {
+    thunder: s.camping, rain: s.campingRain
+  });
+check(s.dismissed && !s.dismissed.bedActive && s.dismissed.sources === 0,
+  "Road Trip dismissal leaves no cabin-weather source", s.dismissed);
+
+console.log("");
+if (failures) { console.log(failures + " weather-audio assertion" + (failures === 1 ? "" : "s") + " failed."); process.exit(1); }
+console.log("Weather-audio ownership assertions passed.");

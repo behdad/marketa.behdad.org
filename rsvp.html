@@ -45480,6 +45480,7 @@ window.__entranceRoomOpen = false;
   function setRoadtripResumePending(pending) {
     pending = !!(roadtripState.active && roadtripState.route !== "camp" && pending);
     var changed = roadtripResumePending !== pending;
+    if (pending && window.__cancelQueuedAutonomousThunder) window.__cancelQueuedAutonomousThunder();
     roadtripResumePending = pending;
     room.classList.toggle("roadtrip-resume-pending", pending);
     if (window.__syncScopeMirrors) window.__syncScopeMirrors();
@@ -46511,6 +46512,61 @@ window.__entranceRoomOpen = false;
       mode: "exterior"
     };
   }
+  // Weather heard from the moving cabin follows one shared exposure verdict. The roof
+  // wins over the side windows: with the top down the cabin is effectively outdoors;
+  // a cracked-open cabin is intermediate; a fully closed one is quietest and darkest.
+  function porscheCabinWeatherProfile() {
+    var exposure = porscheState.roofOpen ? "roof-open" :
+      porscheState.windowOpen ? "windows-open" : "closed";
+    return {
+      exposure: exposure,
+      gain: exposure === "roof-open" ? 1 : exposure === "windows-open" ? .62 : .34,
+      cutoff: exposure === "roof-open" ? 18000 : exposure === "windows-open" ? 5200 : 1800,
+      roofOpen: porscheState.roofOpen,
+      windowOpen: porscheState.windowOpen
+    };
+  }
+  function porscheCabinRainLayerActive() {
+    var layer = function (name) {
+      return window.__weatherLayerActive ? !!window.__weatherLayerActive(name) :
+        name === "rain" ? !!window.__wxRain : !!window.__wxSnow;
+    };
+    // Entrance suppresses its rain streaks when the shared snow layer is up; the cabin
+    // sound follows that same visual verdict instead of hissing underneath snowfall.
+    return layer("rain") && !layer("snow");
+  }
+  function porscheCabinRainProfile() {
+    var enclosure = porscheCabinWeatherProfile();
+    var highway = roadtripState.active && roadtripState.route !== "camp";
+    var wanted = driveState.hudOpen && entranceDriveAudible() &&
+      (!roadtripState.active || roadtripState.route !== "camp") && porscheCabinRainLayerActive();
+    return {
+      active: !!wanted,
+      scene: highway ? "roadtrip" : "street",
+      exposure: enclosure.exposure,
+      gain: wanted ? .018 * enclosure.gain : .0001,
+      cutoff: enclosure.cutoff,
+      roofOpen: enclosure.roofOpen,
+      windowOpen: enclosure.windowOpen
+    };
+  }
+  // The autonomous loft-weather scheduler lives later in this file. These are narrow
+  // read-only seams into the Entrance owner's private transport and Porsche state.
+  window.__entranceThunderSceneOwner = function () {
+    if (!window.__entranceRoomOpen || !room || room.hidden ||
+        document.getElementById("loft-recovery-gate") ||
+        (window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered())) return null;
+    if (roadtripState.active && room.classList.contains("roadtrip-active")) {
+      if (roadtripState.route === "camp") return "camping";
+      return roadtripResumePending ? null : "roadtrip";
+    }
+    return driveState.hudOpen ? "street" : "entrance";
+  };
+  window.__entranceThunderEnclosure = function () {
+    var owner = window.__entranceThunderSceneOwner();
+    if (owner !== "street" && owner !== "roadtrip") return null;
+    return porscheCabinWeatherProfile();
+  };
   function setPorscheDriveSpatialParam(param, value, time, immediate, smoothing) {
     param.cancelScheduledValues(time);
     if (immediate) param.setValueAtTime(value, time);
@@ -47306,6 +47362,9 @@ window.__entranceRoomOpen = false;
       var cornerGain = bed.createGain();
       var cornerTone = bed.createOscillator();
       var cornerToneGain = bed.createGain();
+      var rainHighpass = bed.createBiquadFilter();
+      var rainFilter = bed.createBiquadFilter();
+      var rainGain = bed.createGain();
       var buffer = bed.createBuffer(1, bed.sampleRate * 2, bed.sampleRate);
       var data = buffer.getChannelData(0);
       for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -47343,6 +47402,13 @@ window.__entranceRoomOpen = false;
       cornerTone.type = "sawtooth";
       cornerTone.frequency.value = 1450;
       cornerToneGain.gain.value = .0001;
+      rainHighpass.type = "highpass";
+      rainHighpass.frequency.value = 620;
+      rainHighpass.Q.value = .3;
+      rainFilter.type = "lowpass";
+      rainFilter.frequency.value = 1800;
+      rainFilter.Q.value = .4;
+      rainGain.gain.value = .0001;
       base.connect(out);
       harmonic.connect(harmonicGain); harmonicGain.connect(out);
       pulse.connect(pulseGain); pulseGain.connect(out);
@@ -47354,6 +47420,11 @@ window.__entranceRoomOpen = false;
       road.connect(windFilter); windFilter.connect(windGain); windGain.connect(tireSpatial.input);
       road.connect(cornerFilter); cornerFilter.connect(cornerGain); cornerGain.connect(tireSpatial.input);
       cornerTone.connect(cornerToneGain); cornerToneGain.connect(tireSpatial.input);
+      // Reuse the drivetrain's bounded looping-noise source. Rain therefore inherits the
+      // same shared-context bed, master fade, pause, blur, route and room teardown without
+      // adding a second source or lifecycle.
+      road.connect(rainHighpass); rainHighpass.connect(rainFilter); rainFilter.connect(rainGain);
+      rainGain.connect(master);
       out.connect(engineFilter); engineFilter.connect(spatial.input);
       porscheDriveAudioNodes = {
         bed: bed,
@@ -47362,7 +47433,8 @@ window.__entranceRoomOpen = false;
         retireTimer: null,
         sources: [base, harmonic, pulse, road, cornerTone],
         nodes: [master, out, engineFilter, harmonicGain, pulseGain, roadFilter, roadGain,
-          tireFilter, tireGain, windFilter, windGain, cornerFilter, cornerGain, cornerToneGain]
+          tireFilter, tireGain, windFilter, windGain, cornerFilter, cornerGain, cornerToneGain,
+          rainHighpass, rainFilter, rainGain]
           .concat(spatial.nodes, tireSpatial.nodes),
         out: out,
         filter: engineFilter,
@@ -47371,6 +47443,7 @@ window.__entranceRoomOpen = false;
         base: base,
         harmonic: harmonic,
         pulse: pulse,
+        road: road,
         roadFilter: roadFilter,
         roadGain: roadGain,
         tireFilter: tireFilter,
@@ -47381,6 +47454,10 @@ window.__entranceRoomOpen = false;
         cornerGain: cornerGain,
         cornerTone: cornerTone,
         cornerToneGain: cornerToneGain,
+        rainHighpass: rainHighpass,
+        rainFilter: rainFilter,
+        rainGain: rainGain,
+        rainProfile: null,
         noiseBuffer: buffer
       };
       base.start(); harmonic.start(); pulse.start(); road.start(); cornerTone.start();
@@ -47389,6 +47466,16 @@ window.__entranceRoomOpen = false;
       if (porscheDriveAudioNodes) stopPorscheDriveAudio(0);
       else if (bed) { try { bed.close(); } catch (_closeError) {} }
     }
+  }
+  function paintPorscheCabinRain(audio) {
+    if (!audio) return;
+    var t = audio.bed.currentTime;
+    var rain = porscheCabinRainProfile();
+    audio.rainProfile = rain;
+    try {
+      audio.rainFilter.frequency.setTargetAtTime(rain.cutoff, t, .18);
+      audio.rainGain.gain.setTargetAtTime(rain.gain, t, rain.active ? .28 : .16);
+    } catch (_error) {}
   }
   function paintPorscheDriveAudio() {
     var audio = porscheDriveAudioNodes;
@@ -47414,6 +47501,7 @@ window.__entranceRoomOpen = false;
       audio.cornerGain.gain.setTargetAtTime(.0001 + tire.cornerGain, t, .035);
       audio.cornerTone.frequency.setTargetAtTime(tire.cornerFrequency * .82, t, .045);
       audio.cornerToneGain.gain.setTargetAtTime(.0001 + tire.cornerGain * .22, t, .035);
+      paintPorscheCabinRain(audio);
       paintPorscheDriveSpatialOut(audio.spatial, false);
       paintPorscheDriveSpatialOut(audio.tireSpatial, false);
     } catch (_error) {}
@@ -47431,6 +47519,24 @@ window.__entranceRoomOpen = false;
     if (porsche) porsche.classList.toggle("engine-idling",
       entranceDriveAudible() && Math.abs(driveState.speed) < .75);
   }
+  function porscheDriveWeatherAudioState() {
+    var audio = porscheDriveAudioNodes;
+    var profile = audio && audio.rainProfile ? audio.rainProfile : porscheCabinRainProfile();
+    return {
+      bedActive: !!audio,
+      sources: audio ? audio.sources.length : 0,
+      sharedNoiseSource: !!(audio && audio.rainHighpass && audio.sources.indexOf(audio.road) >= 0),
+      rain: Object.assign({}, profile, {
+        level: audio && audio.rainGain ? audio.rainGain.gain.value : 0,
+        filter: audio && audio.rainFilter ? audio.rainFilter.frequency.value : 0
+      })
+    };
+  }
+  window.__updatePorscheDriveWeatherAudio = function () {
+    if (porscheDriveAudioNodes) paintPorscheCabinRain(porscheDriveAudioNodes);
+    return porscheDriveWeatherAudioState();
+  };
+  window.__entranceDriveWeatherAudioState = porscheDriveWeatherAudioState;
   function playPorscheStallSound() {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
@@ -95237,6 +95343,7 @@ async def localfont(name):
       build();
       closing = false;
       __phoneCoversRoomAmbience = true;
+      if (window.__cancelQueuedAutonomousThunder) window.__cancelQueuedAutonomousThunder();
       if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
       if (shell) shell.style.translate = ""; // a fresh open re-centres the phone (drops any prior drag offset)
       var fsHost = phoneFullscreenHost();
@@ -99483,6 +99590,7 @@ async def localfont(name):
     else if (postRainRainbowUntil && postRainRainbowAllowed(clouded) && showPostRainRainbow()) postRainRainbowUntil = 0;
     if (window.__catWeatherReact) window.__catWeatherReact(); // the loose cat ducks in from rain / basks on a clear day
     if (window.__updateSunDogs) window.__updateSunDogs(); // cold + clear + a low sun all move on their own; re-gate on the same tick as the rest of the sky
+    if (window.__updatePorscheDriveWeatherAudio) window.__updatePorscheDriveWeatherAudio();
   }
   window.__applyRealWx = applyRealWx; // the advancing-time tick re-evaluates the ambiance in step with day/night
   window.__applyBalconyWeather = applyRealWx; // the storm cycle + console layer setters re-apply through the same merge
@@ -99492,7 +99600,8 @@ async def localfont(name):
     return !!(window.__weatherLayerActive && (window.__weatherLayerActive("rain") || window.__weatherLayerActive("snow") || window.__weatherLayerActive("storm") || window.__weatherLayerActive("overcast")));
   };
   // "is the LIGHTNING layer live?" — the continuous thunder scheduler fires while it is (a forced
-  // dry/real storm, or the game storm cycle); triggerBalconyThunder self-gates dusk + focus.
+  // dry/real storm, or the game storm cycle); triggerBalconyThunder keeps the flash visual
+  // everywhere while gating its delayed rumble on the attended foreground owner.
   window.__stormLightningActive = function () {
     return window.__weatherLayerActive ? window.__weatherLayerActive("storm") : !!window.__wxStorm;
   };
@@ -103219,7 +103328,7 @@ function playBrewSound(panId) {
     });
   } catch (e) {}
 }
-function playThunderSound(volume, panId) {
+function playThunderSound(volume, panId, enclosure) {
   try {
     var ctx = getSfxCtx();
     if (!ctx) return;
@@ -103229,7 +103338,18 @@ function playThunderSound(volume, panId) {
     // when heard through a window from another room, fuller out on the balcony
     var master = ctx.createGain();
     master.gain.value = (typeof volume === "number") ? volume : 1;
-    master.connect(pannedOut(ctx, panId == null ? 0.35 : panId)); // sky-wide storm, nudged a bit to the right
+    var thunderOut = pannedOut(ctx, panId == null ? 0.35 : panId); // sky-wide storm, nudged a bit to the right
+    if (enclosure && typeof enclosure.gain === "number" && typeof enclosure.cutoff === "number") {
+      // Only active Road Trip passes a profile here. Snapshotting the Porsche exposure
+      // before synthesis keeps this one-shot stable even if the roof is toggled mid-rumble.
+      var cabinFilter = ctx.createBiquadFilter();
+      var cabinGain = ctx.createGain();
+      cabinFilter.type = "lowpass";
+      cabinFilter.frequency.value = enclosure.cutoff;
+      cabinFilter.Q.value = .4;
+      cabinGain.gain.value = enclosure.gain;
+      master.connect(cabinFilter); cabinFilter.connect(cabinGain); cabinGain.connect(thunderOut);
+    } else master.connect(thunderOut);
 
     function noiseBurst(dur) {
       var size = Math.max(1, Math.floor(ctx.sampleRate * dur));
@@ -112154,6 +112274,7 @@ function spawnDustMote(container) {
   }
   function openDollhouse() {
     if (!dollhouse || !dollhouseEligible() || dollhouseBlocked()) return false;
+    if (window.__cancelQueuedAutonomousThunder) window.__cancelQueuedAutonomousThunder();
     if (window.__retirePartyRoomMapCoach) window.__retirePartyRoomMapCoach();
     pauseRoadtripForDollhouse();
     prepareDollhousePreviewState();
@@ -113279,6 +113400,7 @@ function spawnDustMote(container) {
     var idx = STAGES.indexOf(name);
     if (idx === -1) return false;
     stageVisitGeneration++;
+    if (idx !== stageIndex && window.__cancelQueuedAutonomousThunder) window.__cancelQueuedAutonomousThunder();
     if (name !== "cuddly" && window.__octiEscapeState && window.__octiEscapeState().active && window.__stopOctiEscape) {
       window.__stopOctiEscape(true); // the cushion game belongs to this room and restores Octi before the pan begins
     }
@@ -120485,12 +120607,44 @@ function spawnDustMote(container) {
   // thunderstorm flashes against the bright sky too; the white #balcony-thunder-flash overlay
   // reads fine either way). The bolt is seen through every window (balcony sky + the kitchen/
   // office windows), so the storm reads from any room; the rumble is full out on the balcony but
-  // much quieter — muffled through glass — when you're inside another room.
+  // only sounds while the attended foreground is Balcony, Entrance, Road Trip, or Camping.
   var lastThunderRoomMoment = -Infinity;
+  var queuedAutonomousThunder = null;
   function campFinaleOwnsQuiet() {
     var camp = document.getElementById("entrance-roadtrip-camp");
     return !!(camp && camp.classList.contains("camp-sleep-congrats"));
   }
+  function autonomousThunderScene() {
+    if (document.visibilityState === "hidden" || document.hidden || !document.hasFocus() ||
+        document.getElementById("loft-recovery-gate")) return null;
+    var area = document.getElementById("hunt-fullscreen-area");
+    if (area && area.classList.contains("dollhouse-open")) return null;
+    var entranceOwner = window.__entranceThunderSceneOwner && window.__entranceThunderSceneOwner();
+    if (entranceOwner) return entranceOwner;
+    if (window.__roomAutonomyAllowed ? window.__roomAutonomyAllowed("balcony") :
+        window.currentStageName === "balcony") return "balcony";
+    return null;
+  }
+  function autonomousThunderPlayback() {
+    var scene = autonomousThunderScene();
+    if (!scene || campFinaleOwnsQuiet()) return null;
+    return {
+      scene: scene,
+      volume: .5,
+      enclosure: (scene === "street" || scene === "roadtrip") && window.__entranceThunderEnclosure ?
+        window.__entranceThunderEnclosure() : null
+    };
+  }
+  window.__autonomousThunderScene = autonomousThunderScene;
+  window.__autonomousThunderPlayback = autonomousThunderPlayback;
+  window.__cancelQueuedAutonomousThunder = function () {
+    if (queuedAutonomousThunder !== null) clearTimeout(queuedAutonomousThunder);
+    queuedAutonomousThunder = null;
+  };
+  window.addEventListener("blur", window.__cancelQueuedAutonomousThunder);
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden || document.visibilityState === "hidden") window.__cancelQueuedAutonomousThunder();
+  });
   function thunderRoomMoment() {
     var now = Date.now();
     if (now - lastThunderRoomMoment < 75000 || document.hidden || !document.hasFocus()) return;
@@ -120523,15 +120677,19 @@ function spawnDustMote(container) {
         requestAnimationFrame(function () { el.classList.add("flash"); });
       });
     });
-    var onBalcony = stageIndex === STAGES.indexOf("balcony");
     thunderRoomMoment();
-    setTimeout(function () {
-      // re-check at PLAY time (the flash->rumble delay can straddle a hide), and require
-      // focus too: the storm timers keep firing for a visible-but-unfocused window, and a
-      // full thunderclap from a window nobody's watching reads as a random loud blast
-      if (document.visibilityState === "hidden" || !document.hasFocus() || campFinaleOwnsQuiet()) return;
-      playThunderSound(onBalcony ? 0.5 : 0.15);
-    }, 320 + Math.random() * 480);
+    var playback = autonomousThunderPlayback();
+    if (playback) {
+      window.__cancelQueuedAutonomousThunder();
+      queuedAutonomousThunder = setTimeout(function () {
+        queuedAutonomousThunder = null;
+        // Re-resolve both foreground ownership and the current Porsche exposure at PLAY
+        // time: a room move, pause, hide, or roof/window toggle can land during this delay.
+        var current = autonomousThunderPlayback();
+        if (!current) return;
+        playThunderSound(current.volume, null, current.enclosure);
+      }, 320 + Math.random() * 480);
+    }
     // the couple startle at the rumble if you're in the nook with them (.shake is
     // after .grooving in source, so it wins over the groove for its brief run)
     if (stageIndex === STAGES.indexOf("cuddly")) {

@@ -204,6 +204,16 @@ session master scale it independently of the Porsche engine/drivetrain bed.
 During an active Road Trip, returning focus keeps the simulation and all Porsche driving
 audio paused until a fresh steering or pedal input resumes both from a clean frame boundary.
 
+Autonomous weather thunder keeps its lightning visuals across the loft, but its delayed rumble is
+owned only by an attended Balcony, Entrance, active Road Trip, or Camping scene. Indoor loft rooms,
+foreground covers, a paused Road Trip, blur/hide, and room navigation are silent; every delayed clap
+rechecks ownership at playback so a queued sound cannot follow the player away. Entrance street
+driving and active Road Trip also snapshot the Porsche roof/window exposure at playback: roof-open
+is full and unfiltered, windows-open is intermediate, and a closed cabin is quieter behind a
+low-pass. The Entrance façade without its driving HUD and Camping remain outside that car-only
+enclosure stage. The explicit `sound("thunder")` command and deliberate monitor-game effects are
+user-triggered SFX, not part of this autonomous weather gate.
+
 Abraham Lake Camping owns one bounded outdoor bed: soft wind is always present, completed lit
 fire raises its crackle layer, rain raises a brighter precipitation layer, and storm weather also
 raises wind and low rumble. The stargazing clear-night override suppresses those underlying
@@ -222,6 +232,14 @@ opening it restores unity/18 kHz. The continuous engine and score retarget as th
 moves, while each half-second brake one-shot snapshots the current car/roof position. This
 stage still terminates at the owning bed or SFX destination, so it does not alter trigger,
 focus, teardown, volume-button, or shared-context rules.
+
+While the visual rain layer is live, both Entrance street driving and active highway Road Trip add
+a restrained cabin-rain branch to that existing drivetrain bed. It reuses the bed's one bounded
+looping-noise source and master fade rather than creating another source/context. Roof-open,
+windows-open, and closed profiles progressively lower both gain and low-pass cutoff. Snow suppresses
+the branch with the Entrance rain streaks; Camping remains outdoors on its separate lake/weather bed.
+Engine/HUD teardown, Road Trip pause, blur/hide, foreground coverage, route arrival, and Entrance exit
+therefore remove cabin rain through the drivetrain's existing lifecycle with no duplicate tail.
 
 The continuous drivetrain bed now has one downstream vehicle master after the engine/tire
 spatial branches; live passing-traffic voices join it too. It eases in over 220 ms and normally
@@ -434,7 +452,9 @@ disabled. It does not create or join the loft’s shared audio graph.
   `tests/lower-audio.js` (all five lower profiles, native fallback attenuation,
   lateral retargeting, exact upstairs restore, and Entrance glass groove),
   `tests/entrance-roadtrip-camp-audio-handoff.js` (vehicle-master fade, synchronized car-tail
-  ownership, campsite rise, and final one-bed cleanup), `tests/piano-message.js` (message transition, layered keys, polyphony,
+  ownership, campsite rise, and final one-bed cleanup), `tests/weather-audio-ownership.js`
+  (scene-gated thunder, delayed Road Trip enclosure snapshots, bounded street/highway cabin rain,
+  three roof/window profiles, and teardown), `tests/piano-message.js` (message transition, layered keys, polyphony,
   backing-pause independence, and party continuity), `tests/piano-lifecycle.js` (durable dismissal,
   explicit-channel rearm, canonical Octi handoff, bilingual close control, and coarse-pointer labels),
   and `tests/piano-checkpoint.js` (reload/Continue persistence), plus `tests/party-roadtrip-lifecycle.js`

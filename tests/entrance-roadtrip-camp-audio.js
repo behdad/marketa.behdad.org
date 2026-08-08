@@ -152,7 +152,8 @@ check((source.match(/new Ctx\(\)/g) || []).length === 1 &&
   /else if \(kind === "outdoor"\) \{\s*out\.connect\(loftAudioDestination\(ac\)\)/.test(source),
   "the campsite route reuses the sole AudioContext through the authored outdoor bed bus");
 check((source.match(/campFinaleOwnsQuiet\(\)/g) || []).length === 3 &&
-  /!document\.hasFocus\(\) \|\| campFinaleOwnsQuiet\(\)/.test(source),
+  /function autonomousThunderPlayback\(\) \{[\s\S]{0,180}campFinaleOwnsQuiet\(\)/.test(source) &&
+  /var current = autonomousThunderPlayback\(\);\s*if \(!current\) return;/.test(source),
   "the terminal campsite blocks both new and already-queued loft thunder");
 
 console.log("");

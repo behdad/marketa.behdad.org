@@ -18,16 +18,16 @@ game experience is required.
 ## Start here
 
 Select **CLICK ME**. The opening coach points out the room navigation at the top and the caption at
-the bottom; dismiss each step with its visible ×. From there, the caption is your guide. Select what
-it mentions, and try anything that looks useful.
+the bottom; dismiss each step with its visible ×. From there, follow the caption when you want
+direction, or try anything that looks useful.
 
 The required path is short. Most objects, games, apps, conversations, and surprises are optional,
 so curiosity is rewarded but never demanded.
 
 ## Finding your way
 
-The top dots show the five main rooms. The side arrows move to the previous or next room, and the
-up/down control changes floors once a downstairs route has been found. Every main room has a paired
+The top dots show the five main rooms. The side arrows move to the previous or next room. Once a
+downstairs route has been found, the up/down control changes floors. Every main room has a paired
 lower room:
 
 | Main floor | Lower floor |
@@ -38,22 +38,23 @@ lower room:
 | Office | Bedroom |
 | Balcony | Entrance |
 
-Each main room contains a route to its lower neighbour. Finding one opens lower-floor navigation for
-the run. The floor control can also be double-clicked or double-tapped as a deliberate shortcut.
+Each main room contains a route to its lower neighbour. Finding any one of them opens lower-floor
+navigation for the rest of the run. Before then, deliberately double-clicking or double-tapping the
+floor control opens the lower room paired with your current room.
 
 The window-grid button opens **The Loft**, a map of all ten rooms. Clear cards are places you have
-visited; blurred cards are still waiting. Before the party, a locked card takes a deliberate
-double-click or double-tap to open. Once the party has begun, one selection unlocks and opens any
+visited; blurred cards are still waiting. Before the Party begins, a locked card takes a deliberate
+double-click or double-tap to open. Once the Party has begun, one selection unlocks and opens any
 remaining room. The map is therefore both a shortcut and the simplest way to see what is left.
 
 During a Road Trip or at Camping, the Entrance card represents that live scene. Opening the map from
-a drive pauses it; returning to the Entrance restores the same paused presentation.
+an active drive pauses it. Choosing Entrance returns to the paused dashboard; resume it yourself.
 
 ## How the day unfolds
 
 ### Morning routine
 
-The caption leads through Kitchen, Garden, Cuddly-puddly, Office, and Balcony. Each room has a small
+The caption leads through Kitchen, Garden, Cuddly-puddly, Office, and Balcony. Each room has a short
 chain of actions and remembers where you stopped. Completing the Balcony finishes the clue trail and
 opens the loft for free exploration.
 
@@ -65,26 +66,25 @@ do not need to remember the total yourself. Visiting is enough; the lower-room g
 
 A coach eventually points to the Garden wall switch that ends the party. You may use it then, dismiss
 the coach and keep dancing, or leave the party running while you explore. Once the party has started
-and all ten rooms have been visited, Behdad and Markéta’s four-message exchange leads to
-**Let’s go!**. That action winds down any active party and takes you to the Entrance. Selecting the
-Entrance road after the same milestone also moves the story forward, so missing a message cannot
-strand you.
+and all ten rooms have been visited, Behdad and Markéta’s message exchange leads to **Let’s go!**.
+That action winds down any active party and takes you to the Entrance. Selecting the Entrance road
+after the same milestone also moves the story forward, so missing the exchange cannot strand you.
 
 ### Road Trip
 
 The Entrance car is available for local driving, but the longer trip belongs to the story milestone
-above. A first-drive coach introduces the dashboard. After that, the **Road Trip** control offers
-Calgary, Banff, and Abraham Lake as starting segments. The last road includes an optional Camping
-turnoff; Camping carries the story through a fire, dinner, stargazing, sleep, and `~ fin ~`.
+above. A first-drive coach introduces the dashboard. After that, **Road Trip** lets you choose where
+along the route to begin. The final road includes the Camping turnoff, which carries the story
+through a fire, dinner, stargazing, sleep, and `~ fin ~`.
 
 ## Captions, coaches, and messages
 
 The caption below the scene gives the current instruction or reports what just happened. During the
 Morning routine it is the main clue trail; later it becomes activity feedback and progression help.
 
-Coaches are larger one-time callouts for controls that are easy to miss. Their visible × dismisses
-the lesson, not the surrounding activity. Party coaches remain attached to the Garden and do not
-prevent room navigation. New notifications and calls wait while a coach is visible rather than
+Coaches are larger callouts for controls that are easy to miss. Their visible × dismisses the
+lesson, not the surrounding activity. The Party handoff coach remains attached to the Garden and
+does not prevent room navigation; while it is visible, new notifications and calls wait rather than
 competing with it.
 
 Messages may suggest an activity, but opening a message never performs that activity automatically.
@@ -96,7 +96,7 @@ If you are unsure what comes next:
 1. Read the bottom caption.
 2. Open **The Loft** and look for a blurred room.
 3. Check Messages for an activity arrow.
-4. After the party and all ten rooms, visit the Entrance road.
+4. If the Party has started and all ten rooms are clear, visit the Entrance road.
 
 ## Pointer and mobile controls
 
@@ -116,18 +116,20 @@ If you are unsure what comes next:
 ## Keyboard navigation
 
 Keyboard commands are global unless a typing field, game, device, or driving dashboard is using the
-same key.
+same key. This section covers the controls needed to find your way; outside a typing field, `?`
+opens the complete keyboard-shortcut card.
 
 ### Rooms and layers
 
-- `←` / `→`: move to an adjacent room.
-- `↓`: enter the paired lower room. Before a downstairs route is known, press it twice deliberately
-  to unlock that route.
+- `←` / `→`: move to an adjacent room. At a locked right-hand frontier, press `→` twice deliberately
+  to open the next room.
+- `↓`: enter the paired lower room. Before any downstairs route is known, press it twice deliberately
+  to open the lower floor.
 - `↑`: return from a lower room.
 - `1`–`5`: jump to Kitchen through Balcony.
 - `6`–`0`: jump to Bathroom through Entrance.
 - `Tab`: open or close **The Loft** room map. Its arrow-key selection follows the room layout;
-  `Enter` opens the selected room. A locked room takes two quick `Enter` presses before the party and
+  `Enter` opens the selected room. A locked room takes two quick `Enter` presses before the Party and
   one after it begins.
 - `Escape` / `Backspace`: dismiss the current activity or layer. In an idle lower room they leave you
   there; use `↑` when you want to go upstairs.
@@ -137,14 +139,13 @@ same key.
 - `Enter`: perform the next guided action. After the Morning routine it uses the room's main
   activity; in the Garden / Party, it toggles the party.
 - `Space`: play, pause, or act in the current game or media surface.
-- `C`: open the phone.
-- `/`: open Messages.
+- `C`: open or close the phone.
+- `/`: open or close Messages.
 - `M`: open the Office monitor.
-- `L`: open the Office laptop.
-- `` ` ``: open or close the full-screen console.
+- `L`: open or close the Office laptop.
+- `` ` ``: open or close the drop-down console.
 - `D`: toggle day and night.
-- `?`: open the shortcut card outside a typing field. At the driving dashboard it parks the car and
-  restarts the driving coach.
+- `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
 - `R`: restart after confirmation.
 
@@ -152,37 +153,37 @@ same key.
 
 - `Enter`: start the engine when it is off.
 - `←` / `→`: steer.
-- `↑` / `↓`: accelerate and brake.
+- `Space` or `↑`: accelerate; `↓`: brake.
 - `A` / `M`: select automatic or manual transmission.
 - `Shift` + `↑` / `↓`: change gear or move the automatic selector toward P/D.
-- `Ctrl`: hold or reset cruising speed; braking cancels it.
+- `Ctrl`: set cruise control at the current speed; braking cancels it.
 
 The driving coach remains the best introduction because it adapts its instructions to the selected
 transmission and input device.
 
 ## Road Trip and Camping
 
-Street laps are optional free driving. Once the Party has started and all ten rooms have been
-visited, finish or dismiss the car coach and use **Road Trip** to choose a route. A new route begins
-stopped on the shoulder and keeps the selected transmission mode.
+Street laps are optional free driving and do not unlock the journey. Once the Party has started and
+all ten rooms have been visited, finish or dismiss the car coach and use **Road Trip** to choose a
+starting segment. A new route begins stopped on the shoulder and keeps the selected transmission
+mode.
 
-Calgary is a straight divided highway, Banff is a narrower mountain leg, and Abraham Lake brings
-wildlife, lake views, and the Camping turnoff. Traffic responds to the posted road, faster drivers
-pass when clear, and weather, gravel, wildlife, police, pickups, and clean passes shape the run.
+The choices move progressively west from Calgary through Banff to Abraham Lake. Start at the
+beginning for the whole drive, or choose a later segment to shorten it. The Camping turnoff appears
+on the Abraham Lake segment and returns if you miss it.
 
 Leaving or unfocusing a highway pauses it. Open **Road Trip** again to **Continue** the saved run,
 start **New**, or return to **Camping** after the campsite has been reached.
 
-At Camping, build and light the fire, prepare stew, and trace the constellations. The fire cannot be
-put out until the later sleep prompt, which prevents an early jump to the ending. If the turnoff is
-missed, it returns farther along the route. The finale caption includes the time spent in loft and
-invites you to share it in the RSVP.
+At Camping, follow the caption through the fire, stew, stargazing, and sleep. The fire cannot be put
+out until the later sleep prompt, so an early click cannot skip the evening. The finale caption
+includes the time spent in loft and invites you to share it in the RSVP.
 
 ## Saves and browser notes
 
 Checkpointing begins after the Kitchen is solved or deliberately left. On a later visit,
-**Continue** restores the room and floor, story progress, durable arrangements, Album, and Messages.
-Running games, calls, cameras, and media return stopped. An interrupted highway returns paused.
+**Continue** restores the room and floor, story progress, durable discoveries, Album, and Messages.
+Running games, calls, cameras, and media return stopped; an interrupted highway returns paused.
 
 The finale clock counts only while the started game is visible, focused, and not explicitly paused;
 its total carries across Continue. **Start over** clears both checkpoint and clock. The one-minute

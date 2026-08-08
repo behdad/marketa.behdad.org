@@ -13,6 +13,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     if (!node) throw new Error("missing click target: " + selector);
     node.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   }
+  function press(key) {
+    document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: key,
+      code: key,
+      bubbles: true,
+      cancelable: true
+    }));
+  }
   function state() {
     var snapshot = window.__entranceRoomState();
     return {
@@ -34,6 +42,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         window.__unlockAllRooms();
+        window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+          "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
+        window.__setSecondRound(true, { releaseHeld: false });
+        if (window.__gardenPartyOn) window.__setPartyMode(false, true);
         window.goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
@@ -72,9 +84,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             report.menu = {
               order: choices.map(function (node) { return node.getAttribute("data-roadtrip-reentry-choice"); }),
               selected: document.querySelector("#entrance-roadtrip-reenter-menu .selected").getAttribute(
-                "data-roadtrip-reentry-choice")
+                "data-roadtrip-reentry-choice"),
+              selectedCount: document.querySelectorAll(
+                "#entrance-roadtrip-reenter-menu .selected").length,
+              focused: document.activeElement &&
+                document.activeElement.getAttribute("data-roadtrip-reentry-choice")
             };
-            click('[data-roadtrip-reentry-choice="continue"]');
+            press("ArrowLeft");
+            report.menu.afterLeft = {
+              selected: document.querySelector("#entrance-roadtrip-reenter-menu .selected").getAttribute(
+                "data-roadtrip-reentry-choice"),
+              selectedCount: document.querySelectorAll(
+                "#entrance-roadtrip-reenter-menu .selected").length,
+              focused: document.activeElement &&
+                document.activeElement.getAttribute("data-roadtrip-reentry-choice")
+            };
+            press("Enter");
             report.continued = state();
           } catch (error) {
             report.errors.push(String(error && error.stack || error));
@@ -121,12 +146,15 @@ check(result && result.saved && result.saved.campActive === true && result.saved
 check(result && result.restoredCamp && result.restoredCamp.active && result.restoredCamp.route === "camp",
   "checkpoint Continue restores the campsite first", result && result.restoredCamp);
 check(result && result.menu && result.menu.order.join(",") === "new,continue,camp" &&
-  result.menu.selected === "continue",
-  "leaving camp keeps Continue visible and selected in the three-action menu", result && result.menu);
+  result.menu.selected === "camp" && result.menu.focused === "camp" && result.menu.selectedCount === 1,
+  "Camping is the sole default selection when all three actions are available", result && result.menu);
+check(result && result.menu && result.menu.afterLeft && result.menu.afterLeft.selected === "continue" &&
+  result.menu.afterLeft.focused === "continue" && result.menu.afterLeft.selectedCount === 1,
+  "ArrowLeft moves both focus and the sole visible selection to Continue", result && result.menu);
 check(result && result.continued && result.continued.active && !result.continued.paused &&
   result.continued.route === "banff" && result.continued.distance === 321 &&
   result.continued.speed === 83 && result.continued.engineOn && result.continued.resumePending,
-  "Continue restores the exact Banff run, paused behind its transport overlay", result && result.continued);
+  "Enter activates the selected Continue action and restores the exact Banff run", result && result.continued);
 
 if (failures) process.exit(1);
 console.log("Camping Continue assertions passed.");

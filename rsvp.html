@@ -2056,7 +2056,6 @@ html.mir-chooser :is(#entrance-drive-dismiss-hud,#entrance-drive-help){display:n
 #entrance-roadtrip-reenter-menu.show{display:inline;pointer-events:all}
 .entrance-roadtrip-reenter-choice{display:none;cursor:pointer;outline:none}
 .entrance-roadtrip-reenter-choice.show{display:inline}
-.entrance-roadtrip-reenter-choice:focus rect,
 .entrance-roadtrip-reenter-choice.selected rect{fill:#8e3a4a;stroke:#fffdf8;stroke-width:2}
 .entrance-roadtrip-reenter-choice text{font-size:8px}
 @media (pointer:coarse){.entrance-roadtrip-enter-hint{display:none}}
@@ -37764,6 +37763,7 @@ window.__entranceRoomOpen = false;
   var roadtripReenterChoices = roadtripReenterMenu ?
     Array.prototype.slice.call(roadtripReenterMenu.querySelectorAll("[data-roadtrip-reentry-choice]")) : [];
   var roadtripReentryMenuOpen = false;
+  var roadtripReentrySelection = "";
   var driveCoachStep = 1;
   var driveCoachComplete = false;
   var driveCoachDismissed = false;
@@ -39801,12 +39801,7 @@ window.__entranceRoomOpen = false;
       choice.setAttribute("transform", "translate(" + choiceX + " 0)");
       choiceX += Number(choice.getAttribute("data-roadtrip-choice-width")) + 4;
     });
-    var defaultReentryAction = roadtripHasPausedRun() ? "continue" :
-      roadtripState.campVisited ? "camp" : "new";
-    roadtripReenterChoices.forEach(function (choice) {
-      choice.classList.toggle("selected", choice.classList.contains("show") &&
-        choice.getAttribute("data-roadtrip-reentry-choice") === defaultReentryAction);
-    });
+    setRoadtripReentrySelection(roadtripReentrySelection, false);
     if (roadtripReenterMenu) roadtripReenterMenu.setAttribute("transform",
       "translate(" + ((91 - Math.max(0, choiceX - 4)) / 2) + " 26)");
     roadtripRouteChoices.forEach(function (choice) {
@@ -40033,11 +40028,30 @@ window.__entranceRoomOpen = false;
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
-  function defaultRoadtripReentryChoice() {
-    return roadtripReenterChoices.find(function (choice) {
-      return choice.classList.contains("show") &&
-        choice.getAttribute("data-roadtrip-reentry-choice") === "continue";
-    }) || roadtripReenterChoices.find(function (choice) { return choice.classList.contains("show"); });
+  function visibleRoadtripReentryChoices() {
+    return roadtripReenterChoices.filter(function (choice) {
+      return choice.classList.contains("show");
+    });
+  }
+  function preferredRoadtripReentryChoice(choices) {
+    choices = choices || visibleRoadtripReentryChoices();
+    return choices.find(function (choice) {
+      return choice.getAttribute("data-roadtrip-reentry-choice") === "camp";
+    }) || choices.find(function (choice) {
+      return choice.getAttribute("data-roadtrip-reentry-choice") === "continue";
+    }) || choices[0] || null;
+  }
+  function setRoadtripReentrySelection(action, focus) {
+    var choices = visibleRoadtripReentryChoices();
+    var selected = choices.find(function (choice) {
+      return choice.getAttribute("data-roadtrip-reentry-choice") === action;
+    }) || preferredRoadtripReentryChoice(choices);
+    roadtripReentrySelection = selected ? selected.getAttribute("data-roadtrip-reentry-choice") : "";
+    roadtripReenterChoices.forEach(function (choice) {
+      choice.classList.toggle("selected", choice === selected);
+    });
+    if (focus && selected && selected.focus) selected.focus();
+    return selected;
   }
   bindRoadtripInviteControl(roadtripReenter, function (event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
@@ -40050,18 +40064,25 @@ window.__entranceRoomOpen = false;
     if (!roadtripState.everAccepted) return openRoadtripRouteChooser();
     if (!roadtripHasPausedRun() && !roadtripState.campVisited) return openRoadtripRouteChooser();
     roadtripReentryMenuOpen = !roadtripReentryMenuOpen;
+    if (roadtripReentryMenuOpen) roadtripReentrySelection = "";
     paintRoadtripInvite();
-    if (roadtripReentryMenuOpen) {
-      var defaultChoice = defaultRoadtripReentryChoice();
-      if (defaultChoice && defaultChoice.focus) defaultChoice.focus();
-    }
+    if (roadtripReentryMenuOpen) setRoadtripReentrySelection(roadtripReentrySelection, true);
     return true;
   });
   roadtripReenterChoices.forEach(function (choice) {
     var action = choice.getAttribute("data-roadtrip-reentry-choice");
+    choice.addEventListener("focus", function () {
+      if (roadtripReentryMenuOpen) setRoadtripReentrySelection(action, false);
+    });
     bindRoadtripInviteControl(choice, action === "continue" ? continuePausedRoadtrip :
       action === "camp" ? returnToRoadtripCamp : beginNewRoadtrip);
   });
+  window.__entranceRoadtripSelectReentry = setRoadtripReentrySelection;
+  window.__entranceRoadtripCloseReentryMenu = function () {
+    roadtripReentryMenuOpen = false;
+    roadtripReentrySelection = "";
+    paintRoadtripInvite();
+  };
   function resetRoadtripInvitationSession() {
     roadtripState.accepted = false;
     roadtripState.invitationDistance = 0;
@@ -50431,21 +50452,21 @@ document.addEventListener("keydown", function (event) {
       var roadtripReenterOptions = Array.prototype.slice.call(
         roadtripReenterMenuNode.querySelectorAll(".entrance-roadtrip-reenter-choice.show"));
       if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        var optionIndex = roadtripReenterOptions.indexOf(document.activeElement);
+        var selectedOption = roadtripReenterMenuNode.querySelector(
+          ".entrance-roadtrip-reenter-choice.show.selected") || document.activeElement;
+        var optionIndex = roadtripReenterOptions.indexOf(selectedOption);
         if (optionIndex < 0) optionIndex = 0;
         optionIndex = (optionIndex + (event.key === "ArrowLeft" ? -1 : 1) +
           roadtripReenterOptions.length) % roadtripReenterOptions.length;
-        roadtripReenterOptions[optionIndex].focus();
+        if (window.__entranceRoadtripSelectReentry) window.__entranceRoadtripSelectReentry(
+          roadtripReenterOptions[optionIndex].getAttribute("data-roadtrip-reentry-choice"), true);
       } else if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
-        var activeOption = roadtripReenterOptions.indexOf(document.activeElement) >= 0 ?
-          document.activeElement : roadtripReenterOptions.find(function (option) {
-            return option.getAttribute("data-roadtrip-reentry-choice") === "continue";
-          }) || roadtripReenterOptions[0];
+        var activeOption = roadtripReenterMenuNode.querySelector(
+          ".entrance-roadtrip-reenter-choice.show.selected");
         if (activeOption) activeOption.dispatchEvent(
           new MouseEvent("click", { bubbles: true, cancelable: true }));
       } else if (event.key === "Escape" || event.key === "Esc" || event.key === "Backspace") {
-        roadtripReentryMenuOpen = false;
-        paintRoadtripInvite();
+        if (window.__entranceRoadtripCloseReentryMenu) window.__entranceRoadtripCloseReentryMenu();
         roadtripReenterNode.focus();
       }
     } else if (roadtripRouteChooserVisible) {

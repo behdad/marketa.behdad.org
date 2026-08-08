@@ -37957,6 +37957,7 @@ window.__entranceRoomOpen = false;
   var lastSkidAt = 0;
   var lastSkidSoundAt = 0;
   var porscheBrakeScreeches = 0;
+  var porscheHighwayBrakeCuePlayed = false;
   var porscheSpinTimer = null;
   var driveShifterAttemptTimer = null;
   var driveShifterHoldTimer = null;
@@ -47027,14 +47028,13 @@ window.__entranceRoomOpen = false;
     if (highway == null) highway = roadtripState.active;
     return {
       active: active,
-      // At highway cadence the retriggered low pulse reads as constant chatter beneath
-      // the tire scream. Keep ABS feedback for street braking, but leave Road Trip clean.
+      // Road Trip gets one restrained tire chirp per pedal press. Repeating the full
+      // street skid every 300 ms stacked several long voices into harsh ABS-like chatter.
       absGain: active && !highway ? .006 + severity * .003 : 0,
-      screechGain: active ? .32 + severity * .12 : 0,
-      screechToneGain: active ? .11 + severity * .04 : 0,
-      // Hard braking should read as one continuous tire scream; the caller
-      // retriggers this overlapping layer while the brake remains held.
-      duration: active ? .9 + severity * .35 : 0,
+      screechGain: active ? (highway ? .07 + severity * .02 : .32 + severity * .12) : 0,
+      screechToneGain: active ? (highway ? .012 + severity * .005 : .11 + severity * .04) : 0,
+      duration: active ? (highway ? .24 + severity * .08 : .9 + severity * .35) : 0,
+      repeatWhileHeld: active && !highway,
       screechFrequency: 1450 + severity * 550
     };
   }
@@ -47764,7 +47764,10 @@ window.__entranceRoomOpen = false;
         if (fallbackDirection) porscheKeyboardSteering.authority = PORSCHE_KEYBOARD_STEER_BASE;
       }
     }
-    if (name === "brake" && !held) driveState.brakeSpinChecked = false;
+    if (name === "brake" && !held) {
+      driveState.brakeSpinChecked = false;
+      porscheHighwayBrakeCuePlayed = false;
+    }
     if (name === "brake" && porsche) porsche.classList.toggle("braking", !!held);
     driveControls.forEach(function (control) {
       if (control.getAttribute("data-drive-hold") === name) control.classList.toggle("pressed", !!held);
@@ -47940,7 +47943,11 @@ window.__entranceRoomOpen = false;
         }
         // Audio retries independently if the shared context was not yet available;
         // tire-mark cadence remains unchanged and drivetrain state is untouched.
-        if (skidNow - lastSkidSoundAt > 300 && playPorscheSkidSound(before)) lastSkidSoundAt = skidNow;
+        if ((!roadtripState.active || !porscheHighwayBrakeCuePlayed) &&
+            skidNow - lastSkidSoundAt > 300 && playPorscheSkidSound(before)) {
+          lastSkidSoundAt = skidNow;
+          if (roadtripState.active) porscheHighwayBrakeCuePlayed = true;
+        }
       }
       spinPorscheOnBrake(longitudinalSpeedBefore, Math.sign(steerInput));
     }

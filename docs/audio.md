@@ -250,12 +250,12 @@ gated by Entrance + HUD + engine + foreground focus. Cooling below the threshold
 leaving or covering the room, hiding/unfocusing the page, or stopping the engine
 removes the vent wash without touching the shared context.
 
-High-speed braking uses a broad filtered-noise screech reinforced by a lightly
+High-speed street braking uses a broad filtered-noise screech reinforced by a lightly
 warbled tire tone; its audio retry is independent from the unchanged tire-mark
 cadence, so a temporarily unavailable shared context cannot swallow the stop.
-The low-passed ABS layer stays subordinate on the street and is suppressed during Road Trip,
-where repeated high-speed brake samples otherwise become constant chatter beneath the continuous
-tire scream. Braking below 65 km/h schedules neither layer.
+The low-passed ABS layer stays subordinate on the street. Road Trip suppresses it and replaces
+the repeating held-brake screech with one brief, quiet tire chirp per pedal press. Braking below
+65 km/h schedules neither layer.
 
 Roadtrip impacts are attended one-shots on `getSfxCtx()`, routed through the
 HUD-centered Porsche spatial stage. A low crash/noise body and high glass-shard

@@ -339,6 +339,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
       "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
     var afterExploration = copy(roadtrip());
+    document.getElementById("entrance-drive-coach-dismiss").dispatchEvent(
+      new MouseEvent("click", { bubbles: true, cancelable: true }));
     await sleep(520);
     var offerBeforeDrive = copy(roadtrip());
     step(250);
@@ -1412,9 +1414,10 @@ check(activation && activation.offer.before.practiceLaps === 1 && activation.off
   activation.offer.viewBox === "0 -31 680 207" && activation.firstDismissed &&
   !activation.firstDismissed.visible && activation.firstDismissed.metadata === 0 &&
   !activation.firstDismissed.state.drive.roadtrip.active && !activation.firstDismissed.state.drive.roadtrip.accepted &&
-  activation.reoffered && activation.reoffered.visible && activation.reoffered.metadata === 0 &&
+  activation.reoffered && !activation.reoffered.visible && activation.reoffered.metadata === 0 &&
+  activation.reoffered.state.drive.roadtrip.reentryVisible &&
   activation.roadtrip.accepted && activation.roadtrip.everAccepted && activation.roadtrip.active,
-  "10/10 shows the first full card; Escape defers it and Enter accepts its next session",
+  "10/10 shows the first full card; Escape defers it and Enter accepts the compact re-entry",
   activation && { offer: activation.offer, firstDismissed: activation.firstDismissed,
     reoffered: activation.reoffered, roadtrip: activation.roadtrip });
 check(activation && activation.roomClasses.indexOf("roadtrip-active") >= 0 &&

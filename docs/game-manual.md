@@ -107,8 +107,8 @@ The lower rooms offer:
   or Escape/Backspace leaves the Bathroom open.
 - **Dungeon:** select the play wall to start or resume Prince of Persia. Escape leaves the
   presentation without discarding the run.
-- **Cinema:** wake the projector, choose a film, and use its playback controls. Bare Enter or Space
-  wakes the projector, then starts the selected film or pauses/resumes the playing one. Escape,
+- **Cinema:** the projector wakes on your first visit; choose a film and use its playback controls.
+  Bare Enter or Space wakes it later, then starts the selected film or pauses/resumes the playing one. Escape,
   Backspace, or the screen × stops a film and returns to the chooser; press Escape or Backspace
   again to turn off the projector.
 - **Bedroom:** select a stained-glass pane to start tic-tac-toe. After a result, clear the board and

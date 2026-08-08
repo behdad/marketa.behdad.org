@@ -38011,6 +38011,7 @@ window.__entranceRoomOpen = false;
   var porscheIdleNodes = null;
   var porscheDriveAudioNodes = null;
   var porscheDriveAudioRetiring = [];
+  var porscheCabinRainAudioNodes = null;
   var roadtripTrafficAudioVoices = {};
   var porschePoliceAudioNodes = null;
   var porscheDriveAcNodes = null;
@@ -46540,13 +46541,16 @@ window.__entranceRoomOpen = false;
   function porscheCabinRainProfile() {
     var enclosure = porscheCabinWeatherProfile();
     var highway = roadtripState.active && roadtripState.route !== "camp";
-    var wanted = driveState.hudOpen && entranceDriveAudible() &&
-      (!roadtripState.active || roadtripState.route !== "camp") && porscheCabinRainLayerActive();
+    var wanted = driveState.hudOpen && window.__entranceRoomOpen &&
+      document.visibilityState !== "hidden" && !document.hidden && document.hasFocus() &&
+      (!roadtripState.active || (!roadtripResumePending && roadtripState.route !== "camp")) &&
+      !(window.__foregroundAmbienceCovered && window.__foregroundAmbienceCovered()) &&
+      porscheCabinRainLayerActive();
     return {
       active: !!wanted,
       scene: highway ? "roadtrip" : "street",
       exposure: enclosure.exposure,
-      gain: wanted ? .09 * enclosure.gain : .0001,
+      gain: wanted ? .16 * enclosure.gain : .0001,
       cutoff: enclosure.cutoff,
       roofOpen: enclosure.roofOpen,
       windowOpen: enclosure.windowOpen
@@ -47369,9 +47373,6 @@ window.__entranceRoomOpen = false;
       var cornerGain = bed.createGain();
       var cornerTone = bed.createOscillator();
       var cornerToneGain = bed.createGain();
-      var rainHighpass = bed.createBiquadFilter();
-      var rainFilter = bed.createBiquadFilter();
-      var rainGain = bed.createGain();
       var buffer = bed.createBuffer(1, bed.sampleRate * 2, bed.sampleRate);
       var data = buffer.getChannelData(0);
       for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -47409,13 +47410,6 @@ window.__entranceRoomOpen = false;
       cornerTone.type = "sawtooth";
       cornerTone.frequency.value = 1450;
       cornerToneGain.gain.value = .0001;
-      rainHighpass.type = "highpass";
-      rainHighpass.frequency.value = 620;
-      rainHighpass.Q.value = .3;
-      rainFilter.type = "lowpass";
-      rainFilter.frequency.value = 1800;
-      rainFilter.Q.value = .4;
-      rainGain.gain.value = .0001;
       base.connect(out);
       harmonic.connect(harmonicGain); harmonicGain.connect(out);
       pulse.connect(pulseGain); pulseGain.connect(out);
@@ -47427,11 +47421,6 @@ window.__entranceRoomOpen = false;
       road.connect(windFilter); windFilter.connect(windGain); windGain.connect(tireSpatial.input);
       road.connect(cornerFilter); cornerFilter.connect(cornerGain); cornerGain.connect(tireSpatial.input);
       cornerTone.connect(cornerToneGain); cornerToneGain.connect(tireSpatial.input);
-      // Reuse the drivetrain's bounded looping-noise source. Rain therefore inherits the
-      // same shared-context bed, master fade, pause, blur, route and room teardown without
-      // adding a second source or lifecycle.
-      road.connect(rainHighpass); rainHighpass.connect(rainFilter); rainFilter.connect(rainGain);
-      rainGain.connect(master);
       out.connect(engineFilter); engineFilter.connect(spatial.input);
       porscheDriveAudioNodes = {
         bed: bed,
@@ -47440,8 +47429,7 @@ window.__entranceRoomOpen = false;
         retireTimer: null,
         sources: [base, harmonic, pulse, road, cornerTone],
         nodes: [master, out, engineFilter, harmonicGain, pulseGain, roadFilter, roadGain,
-          tireFilter, tireGain, windFilter, windGain, cornerFilter, cornerGain, cornerToneGain,
-          rainHighpass, rainFilter, rainGain]
+          tireFilter, tireGain, windFilter, windGain, cornerFilter, cornerGain, cornerToneGain]
           .concat(spatial.nodes, tireSpatial.nodes),
         out: out,
         filter: engineFilter,
@@ -47461,10 +47449,6 @@ window.__entranceRoomOpen = false;
         cornerGain: cornerGain,
         cornerTone: cornerTone,
         cornerToneGain: cornerToneGain,
-        rainHighpass: rainHighpass,
-        rainFilter: rainFilter,
-        rainGain: rainGain,
-        rainProfile: null,
         noiseBuffer: buffer
       };
       base.start(); harmonic.start(); pulse.start(); road.start(); cornerTone.start();
@@ -47474,15 +47458,79 @@ window.__entranceRoomOpen = false;
       else if (bed) { try { bed.close(); } catch (_closeError) {} }
     }
   }
-  function paintPorscheCabinRain(audio) {
-    if (!audio) return;
+  function paintPorscheCabinRainAudio(audio) {
+    if (!audio) return false;
     var t = audio.bed.currentTime;
-    var rain = porscheCabinRainProfile();
-    audio.rainProfile = rain;
+    var profile = porscheCabinRainProfile();
+    audio.profile = profile;
     try {
-      audio.rainFilter.frequency.setTargetAtTime(rain.cutoff, t, .18);
-      audio.rainGain.gain.setTargetAtTime(rain.gain, t, rain.active ? .28 : .16);
+      audio.filter.frequency.setTargetAtTime(profile.cutoff, t, .18);
+      audio.gain.gain.setTargetAtTime(profile.gain, t, profile.active ? .18 : .1);
     } catch (_error) {}
+    return true;
+  }
+  function startPorscheCabinRainAudio() {
+    if (porscheCabinRainAudioNodes || !porscheCabinRainProfile().active) return false;
+    var bed = null;
+    try {
+      bed = audioBed();
+      if (!bed) return false;
+      var source = bed.createBufferSource();
+      var highpass = bed.createBiquadFilter();
+      var filter = bed.createBiquadFilter();
+      var gain = bed.createGain();
+      var buffer = bed.createBuffer(1, bed.sampleRate * 2, bed.sampleRate);
+      var data = buffer.getChannelData(0);
+      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      source.buffer = buffer;
+      source.loop = true;
+      highpass.type = "highpass";
+      highpass.frequency.value = 620;
+      highpass.Q.value = .3;
+      filter.type = "lowpass";
+      filter.frequency.value = 18000;
+      filter.Q.value = .4;
+      gain.gain.value = .0001;
+      source.connect(highpass); highpass.connect(filter); filter.connect(gain); gain.connect(bed.destination);
+      porscheCabinRainAudioNodes = { bed: bed, source: source, highpass: highpass,
+        filter: filter, gain: gain, profile: null, retireTimer: null };
+      source.start();
+      return paintPorscheCabinRainAudio(porscheCabinRainAudioNodes);
+    } catch (_error) {
+      if (bed) try { bed.close(); } catch (_closeError) {}
+      porscheCabinRainAudioNodes = null;
+      return false;
+    }
+  }
+  function stopPorscheCabinRainAudio(fadeSeconds) {
+    if (!porscheCabinRainAudioNodes) return false;
+    var audio = porscheCabinRainAudioNodes;
+    porscheCabinRainAudioNodes = null;
+    var fade = typeof fadeSeconds === "number" ? Math.max(0, fadeSeconds) : .2;
+    function dispose() {
+      try { audio.source.stop(); } catch (_error) {}
+      [audio.source, audio.highpass, audio.filter, audio.gain].forEach(function (node) {
+        try { node.disconnect(); } catch (_error) {}
+      });
+      try { audio.bed.close(); } catch (_error) {}
+    }
+    if (!fade) { dispose(); return true; }
+    try {
+      var now = audio.bed.currentTime;
+      audio.gain.gain.cancelScheduledValues(now);
+      audio.gain.gain.setValueAtTime(Math.max(.0001, audio.gain.gain.value), now);
+      audio.gain.gain.linearRampToValueAtTime(.0001, now + fade);
+    } catch (_error) {}
+    audio.retireTimer = setTimeout(dispose, fade * 1000 + 40);
+    return true;
+  }
+  function updatePorscheCabinRainAudio() {
+    var profile = porscheCabinRainProfile();
+    if (profile.active) {
+      startPorscheCabinRainAudio();
+      if (porscheCabinRainAudioNodes) paintPorscheCabinRainAudio(porscheCabinRainAudioNodes);
+    } else stopPorscheCabinRainAudio();
+    return porscheCabinRainWeatherAudioState();
   }
   function paintPorscheDriveAudio() {
     var audio = porscheDriveAudioNodes;
@@ -47508,7 +47556,6 @@ window.__entranceRoomOpen = false;
       audio.cornerGain.gain.setTargetAtTime(.0001 + tire.cornerGain, t, .035);
       audio.cornerTone.frequency.setTargetAtTime(tire.cornerFrequency * .82, t, .045);
       audio.cornerToneGain.gain.setTargetAtTime(.0001 + tire.cornerGain * .22, t, .035);
-      paintPorscheCabinRain(audio);
       paintPorscheDriveSpatialOut(audio.spatial, false);
       paintPorscheDriveSpatialOut(audio.tireSpatial, false);
     } catch (_error) {}
@@ -47518,6 +47565,7 @@ window.__entranceRoomOpen = false;
   function updatePorscheDriveAudio() {
     if (entranceDriveAudible()) startPorscheDriveAudio();
     else stopPorscheDriveAudio();
+    updatePorscheCabinRainAudio();
     updatePorscheDriveMusic();
     updatePorscheDriveAc();
     updateRoadtripPoliceSiren();
@@ -47526,24 +47574,23 @@ window.__entranceRoomOpen = false;
     if (porsche) porsche.classList.toggle("engine-idling",
       entranceDriveAudible() && Math.abs(driveState.speed) < .75);
   }
-  function porscheDriveWeatherAudioState() {
-    var audio = porscheDriveAudioNodes;
-    var profile = audio && audio.rainProfile ? audio.rainProfile : porscheCabinRainProfile();
+  function porscheCabinRainWeatherAudioState() {
+    var audio = porscheCabinRainAudioNodes;
+    var profile = audio && audio.profile ? audio.profile : porscheCabinRainProfile();
     return {
       bedActive: !!audio,
-      sources: audio ? audio.sources.length : 0,
-      sharedNoiseSource: !!(audio && audio.rainHighpass && audio.sources.indexOf(audio.road) >= 0),
+      sources: audio ? 1 : 0,
+      dedicatedRainSource: !!(audio && audio.source),
       rain: Object.assign({}, profile, {
-        level: audio && audio.rainGain ? audio.rainGain.gain.value : 0,
-        filter: audio && audio.rainFilter ? audio.rainFilter.frequency.value : 0
+        level: audio && audio.gain ? audio.gain.gain.value : 0,
+        filter: audio && audio.filter ? audio.filter.frequency.value : 0
       })
     };
   }
   window.__updatePorscheDriveWeatherAudio = function () {
-    if (porscheDriveAudioNodes) paintPorscheCabinRain(porscheDriveAudioNodes);
-    return porscheDriveWeatherAudioState();
+    return updatePorscheCabinRainAudio();
   };
-  window.__entranceDriveWeatherAudioState = porscheDriveWeatherAudioState;
+  window.__entranceDriveWeatherAudioState = porscheCabinRainWeatherAudioState;
   function playPorscheStallSound() {
     if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
     var ctx = typeof getSfxCtx === "function" ? getSfxCtx() : null;
@@ -49168,6 +49215,7 @@ window.__entranceRoomOpen = false;
     else showPorscheDriveCoach();
     paintPorscheDriveHud();
     updatePorscheDriveMusic();
+    updatePorscheCabinRainAudio();
     refreshEntranceWeatherAudio(.25);
     syncPorscheDriveInstruction(true);
     if (window.__checkpointChanged) window.__checkpointChanged();

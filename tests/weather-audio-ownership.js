@@ -85,6 +85,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     report.steps.exteriorStreetHud = {
       wind: window.__exteriorWindAudioState(), rain: window.__exteriorRainAudioState()
     };
+    window.__updatePorscheDriveWeatherAudio(); await sleep(80);
+    report.steps.streetEngineOffRain = rainState();
     window.__toggleEntrancePorscheEngine();
     window.__updatePorscheDriveWeatherAudio();
     await sleep(80);
@@ -173,8 +175,8 @@ function exposureOrder(row) {
     row.closed.rain.cutoff < row.windows.rain.cutoff && row.windows.rain.cutoff < row.roof.rain.cutoff;
 }
 function audibleCabinRain(row) {
-  return row && row.roof.rain.gain >= .112 && row.windows.rain.gain >= .082 &&
-    row.closed.rain.gain >= .058;
+  return row && row.roof.rain.gain >= .2 && row.windows.rain.gain >= .147 &&
+    row.closed.rain.gain >= .104;
 }
 
 console.log("rsvp.html weather-audio ownership:");
@@ -209,6 +211,10 @@ check(s.exteriorBlur && !s.exteriorBlur.wind.active && !s.exteriorBlur.rain.acti
 check(s.exteriorStreetHud && !s.exteriorStreetHud.wind.active && !s.exteriorStreetHud.rain.active,
   "opening the street HUD retires the exterior beds before cabin weather takes ownership",
   s.exteriorStreetHud);
+check(s.streetEngineOffRain && s.streetEngineOffRain.bedActive &&
+  s.streetEngineOffRain.sources === 1 && s.streetEngineOffRain.dedicatedRainSource &&
+  s.streetEngineOffRain.rain.active && s.streetEngineOffRain.rain.gain >= .104,
+  "HUD rain is audible before ignition", s.streetEngineOffRain);
 check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
   s.streetThunderClosed.calls.length === 1 &&
   s.streetThunderClosed.calls[0].enclosure.exposure === "closed" &&
@@ -225,9 +231,9 @@ check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
   });
 check(exposureOrder(s.streetRain) && audibleCabinRain(s.streetRain) &&
   s.streetRain.closed.rain.scene === "street" &&
-  s.streetRain.closed.sources === 5 && s.streetRain.windows.sources === 5 &&
-  s.streetRain.roof.sources === 5 && s.streetRain.closed.sharedNoiseSource,
-  "street driving rain shares one bounded car bed and follows all three cabin exposures", s.streetRain);
+  s.streetRain.closed.sources === 1 && s.streetRain.windows.sources === 1 &&
+  s.streetRain.roof.sources === 1 && s.streetRain.closed.dedicatedRainSource,
+  "street driving rain owns one bounded cabin bed and follows all three exposures", s.streetRain);
 check(s.rainBlur && !s.rainBlur.bedActive && s.rainBlur.sources === 0 &&
   s.rainRefocus && s.rainRefocus.bedActive && s.rainRefocus.rain.active &&
   s.rainHidden && !s.rainHidden.bedActive && s.rainHidden.sources === 0 &&
@@ -237,8 +243,8 @@ check(s.rainBlur && !s.rainBlur.bedActive && s.rainBlur.sources === 0 &&
   });
 check(exposureOrder(s.highwayRain) && audibleCabinRain(s.highwayRain) &&
   s.highwayRain.closed.rain.scene === "roadtrip" &&
-  s.highwayRain.closed.sources === 5 && s.highwayRain.windows.sources === 5 &&
-  s.highwayRain.roof.sources === 5,
+  s.highwayRain.closed.sources === 1 && s.highwayRain.windows.sources === 1 &&
+  s.highwayRain.roof.sources === 1 && s.highwayRain.roof.dedicatedRainSource,
   "highway rain keeps the same one-bed source bound and three exposure levels", s.highwayRain);
 var delayed = s.roadtripDelayedExposure;
 check(delayed && delayed.calls.length === 1 && delayed.calls[0].scene === "roadtrip" &&

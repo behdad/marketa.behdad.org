@@ -220,7 +220,7 @@ With the Entrance façade open and no driving HUD, the shared wind generator and
 generator each retarget their bounded bed to an `audioBed("outdoor")` route. This is
 local exterior weather, so it bypasses the lower-floor boundary that intentionally muffles upstairs
 loft audio at the Entrance; wind and rain therefore retain their full open-air level and bandwidth.
-Opening the street HUD retires both exterior beds before the drivetrain's cabin rain takes ownership;
+Opening the street HUD retires both exterior beds before the independent cabin-rain bed takes ownership;
 dismissing the HUD restores them. Blur/hide, foreground coverage, room exit, reload, and the existing
 fade-and-close timers retain one-bed ownership, with room exit handing wind back to Balcony.
 
@@ -243,9 +243,10 @@ moves, while each half-second brake one-shot snapshots the current car/roof posi
 stage still terminates at the owning bed or SFX destination, so it does not alter trigger,
 focus, teardown, volume-button, or shared-context rules.
 
-While the visual rain layer is live, both Entrance street driving and active highway Road Trip add
-a restrained cabin-rain branch to that existing drivetrain bed. It reuses the bed's one bounded
-looping-noise source and master fade rather than creating another source/context. Roof-open,
+While the visual rain layer is live, both Entrance street driving and active highway Road Trip own
+one bounded cabin-rain noise source in the shared AudioContext. Its lifecycle follows the attended
+HUD rather than ignition, so rain remains audible while parked with the engine off. Keeping it
+separate from the road/tyre voice also makes precipitation perceptually distinct. Roof-open,
 windows-open, and closed profiles progressively lower both gain and low-pass cutoff while keeping
 rain unmistakable over the moving drivetrain. Snow suppresses
 the branch with the Entrance rain streaks; Camping remains outdoors on its separate lake/weather bed.

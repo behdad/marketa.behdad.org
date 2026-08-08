@@ -209,6 +209,9 @@ loop.
 ### Driving model
 
 Input must flow through the shared steering, transmission, throttle, brake, and dismiss owners.
+`__entranceDriveKeyboardOwnership()` publishes the controller's `hudOpen`, Road Trip, and pending
+party-stop handoff truth to the capture-phase key router. The rendered `drive-hud-visible` class is
+only presentation and must not decide whether arrows, Enter, or pedals belong to the car.
 The `driveCoach` follows those same action owners; desktop teaches cruise before pedals, while touch
 skips cruise and combines steering with the pedal pad. Its `?` control parks the drivetrain,
 clears cruise, and starts again at ignition; checkpoint recovery does not replay it automatically.

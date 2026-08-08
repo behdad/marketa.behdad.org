@@ -48921,6 +48921,14 @@ window.__entranceRoomOpen = false;
     return answerPorscheControl(document.getElementById("entrance-porsche-engine"));
   }
   var driveHudPartyStopPending = false;
+  function porscheDriveKeyboardOwnership() {
+    var entranceOpen = !!window.__entranceRoomOpen;
+    return {
+      owned: entranceOpen && !!(driveState.hudOpen || driveHudPartyStopPending || roadtripState.active),
+      hudOpen: entranceOpen && !!driveState.hudOpen,
+      partyStopPending: entranceOpen && !!driveHudPartyStopPending
+    };
+  }
   function openPorscheDriveHudNow() {
     var wasOpen = driveState.hudOpen;
     driveState.hudOpen = true;
@@ -49809,6 +49817,7 @@ window.__entranceRoomOpen = false;
     };
   };
   window.__toggleEntrancePorscheEngine = togglePorscheEngine;
+  window.__entranceDriveKeyboardOwnership = porscheDriveKeyboardOwnership;
   window.__dismissEntrancePorscheDriveHud = dismissPorscheDriveHud;
   window.__exitEntranceRoadtrip = exitRoadtrip;
   window.__updatePorscheIdle = updatePorscheDriveLifecycle;
@@ -50642,7 +50651,9 @@ document.addEventListener("keydown", function (event) {
   var entranceRoom = document.getElementById("entrance-room");
   var campSceneOpen = entranceRoom && entranceRoom.classList.contains("roadtrip-active") &&
     entranceRoom.classList.contains("roadtrip-route-camp");
-  var driveHudOpen = entranceRoom && entranceRoom.classList.contains("drive-hud-visible");
+  var driveKeyboardOwnership = window.__entranceDriveKeyboardOwnership ?
+    window.__entranceDriveKeyboardOwnership() : { owned: false, hudOpen: false, partyStopPending: false };
+  var driveHudOpen = driveKeyboardOwnership.owned;
   if (driveHudOpen && !campSceneOpen && !event.metaKey && !event.altKey &&
       (event.code === "ControlLeft" || event.code === "ControlRight" || event.key === "Control")) {
     if (window.__entranceDriveKey) window.__entranceDriveKey(event, true);
@@ -50654,6 +50665,11 @@ document.addEventListener("keydown", function (event) {
       event.code === "ArrowRight") && !event.metaKey) {
     if (event.code === "Backquote" || event.key === "`") return;
     if (event.key === "Tab") return;
+    if (driveKeyboardOwnership.partyStopPending) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
     if (campSceneOpen) {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -50811,12 +50827,14 @@ document.addEventListener("keyup", function (event) {
   if (!window.__entranceRoomOpen || !window.__entranceDriveKey) return;
   if (window.__dropTermOpen && window.__dropTermOpen()) return;
   var entranceRoom = document.getElementById("entrance-room");
+  var driveKeyboardOwnership = window.__entranceDriveKeyboardOwnership ?
+    window.__entranceDriveKeyboardOwnership() : { owned: false };
   var driveRelease = event.code === "Space" || event.code === "ArrowUp" ||
     event.code === "ArrowDown" || event.code === "ArrowLeft" ||
     event.code === "ArrowRight" || event.code === "ShiftLeft" ||
     event.code === "ShiftRight" || event.code === "ControlLeft" ||
     event.code === "ControlRight";
-  if (entranceRoom && entranceRoom.classList.contains("drive-hud-visible") &&
+  if (entranceRoom && driveKeyboardOwnership.owned &&
       !(entranceRoom.classList.contains("roadtrip-active") && entranceRoom.classList.contains("roadtrip-route-camp")) && driveRelease) {
     window.__entranceDriveKey(event, false);
     event.preventDefault();

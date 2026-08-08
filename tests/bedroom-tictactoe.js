@@ -19,7 +19,7 @@ var HARNESS = [
   'function bestX(board){var cell=-1,best=Infinity;order.forEach(function(n){if(board[n])return;board[n]="X";var value=score(board,"O",0);board[n]=null;if(value<best){best=value;cell=n;}});return cell;}',
   'window.addEventListener("load",function(){setTimeout(async function(){try{',
   ' Object.defineProperty(document,"hasFocus",{value:function(){return true;},configurable:true});Math.random=function(){return .99;};var room=document.getElementById("bedroom-room"),strip=document.getElementById("loft-game-strip");room.style.transition="none";strip.style.transition="none";window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
-  ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(620);report.steps.enterReply=window.__bedroomTicTacToeState();window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
+  ' key("Enter");report.steps.enterStart=window.__bedroomTicTacToeState();key("Enter");report.steps.enterAgain=window.__bedroomTicTacToeState();await sleep(620);report.steps.enterReply=window.__bedroomTicTacToeState();key("Escape");report.steps.escape={room:window.__bedroomRoomState(),game:window.__bedroomTicTacToeState()};window.__closeBedroomRoom();await sleep(760);window.goToStage("office");window.__openBedroomRoom();await sleep(80);',
   ' click(0);report.steps.chosen=window.__bedroomTicTacToeState();report.steps.isolated={other:Array.from(room.querySelectorAll(".bedroom-prop:not(#bedroom-stained-glass)")).map(function(prop){return prop.getAttribute("class");})};await sleep(620);report.steps.reply=window.__bedroomTicTacToeState();',
   ' click(1);report.steps.turn=window.__bedroomTicTacToeState();report.steps.paneFlash=document.getElementById("bedroom-stained-glass").classList.contains("glinting");await sleep(620);report.steps.secondReply=window.__bedroomTicTacToeState();click(3);await sleep(620);report.steps.win=window.__bedroomTicTacToeState();var winLine=document.querySelector(".bedroom-ttt-win-o");report.steps.winLine=winLine&&{x1:winLine.getAttribute("x1"),y1:winLine.getAttribute("y1"),x2:winLine.getAttribute("x2"),y2:winLine.getAttribute("y2"),shadow:!!document.querySelector(".bedroom-ttt-win-shadow")};report.steps.winCaption=cap();',
   ' click(8);report.steps.restart=window.__bedroomTicTacToeState();report.steps.restartCaption=cap();await sleep(620);report.steps.restartOpening=window.__bedroomTicTacToeState();var guard=0;while(window.__bedroomTicTacToeState().phase!=="done"&&guard++<6){var state=window.__bedroomTicTacToeState();if(state.phase==="player"){click(bestX(state.board));}await sleep(620);}report.steps.draw=window.__bedroomTicTacToeState();report.steps.drawCaption=cap();',
@@ -60,6 +60,9 @@ check(s.enterStart && s.enterStart.phase === "computer" && s.enterStart.aiPendin
   count(s.enterReply.board, "X") === 0 && count(s.enterReply.board, "O") === 1,
   "Bedroom Enter starts once with the computer's opening move",
   { start: s.enterStart, again: s.enterAgain, reply: s.enterReply });
+check(s.escape && s.escape.room.open && s.escape.game.phase === "idle" &&
+  !s.escape.game.aiPending && s.escape.game.board.every(function (cell) { return cell === null; }),
+  "Escape clears tic-tac-toe while leaving Bedroom open", s.escape);
 check(s.chosen && s.chosen.board[0] === "X" && count(s.chosen.board, "X") === 1 &&
   count(s.chosen.board, "O") === 0 && s.chosen.phase === "computer" && s.chosen.aiPending,
   "one click starts with X in the visitor's chosen pane", s.chosen);

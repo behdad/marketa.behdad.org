@@ -104,7 +104,7 @@ The lower rooms offer:
 
 - **Bathroom:** fill the tub to start the 20-second Bubble-gun round. Click bubbles for one point,
   or drag the stool until its guide locks onto a bubble and release to fire for two. The round's ×
-  leaves the Bathroom open.
+  or Escape/Backspace leaves the Bathroom open.
 - **Dungeon:** select the play wall to start or resume Prince of Persia. Escape leaves the
   presentation without discarding the run.
 - **Cinema:** wake the projector, choose a film, and use its playback controls. Bare Enter or Space
@@ -112,7 +112,7 @@ The lower rooms offer:
   Backspace, or the screen × stops a film and returns to the chooser; press Escape or Backspace
   again to turn off the projector.
 - **Bedroom:** select a stained-glass pane to start tic-tac-toe. After a result, clear the board and
-  select again for a new game.
+  select again for a new game; Escape or Backspace clears the current board without leaving.
 - **Entrance:** select the road to open the Porsche dashboard and driving game. During the Garden
   party, select the shaking second window from the left to return directly to the party.
 

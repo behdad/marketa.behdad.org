@@ -113603,10 +113603,8 @@ function spawnDustMote(container) {
       if (window.blacklight) window.blacklight(!window.blacklight()); // toggle the UV / blacklight wash (same as uv()/blacklight())
     } else if (e.key === "w" || e.key === "W") {
       e.preventDefault();
-      // 'w' → toggle the "who's here?" roster for the room on screen. The Trailer is started from
-      // its button, not a key. No-op in the first round (before a party has lit this session) — the
-      // roster is sealed then, so the key does nothing rather than flashing an empty panel.
-      if (window.roster && window.__secondRound) window.roster();
+      // 'w' → toggle the "who's here?" roster for the room on screen while the party is live.
+      if (window.roster && window.__gardenPartyOn) window.roster();
     }
   });
 
@@ -119562,6 +119560,7 @@ function spawnDustMote(container) {
     if (window.__updateBalconyGrillmaster) window.__updateBalconyGrillmaster(); // party on → Hamid may be tending a lit BBQ (self-gates on balcony + smoking); party off → he clears
     if (window.__updateOfficeHangout) window.__updateOfficeHangout(); // party on → the office may draw an occasional hangout couple (self-gates on being IN the office); party off → they clear
     if (window.__syncPartyBBQ) window.__syncPartyBBQ(); // a smoker lit before the party starts the same split; party-off clears it
+    if (window.__syncRosterAvail) window.__syncRosterAvail(); // live-party chrome appears and retires at the same boundary
     if (on && window.__offerDayPartyBBQ) window.__offerDayPartyBBQ(); // programmatic daytime parties get the same early Behdad prompt
     if (on && window.__refreshStageAnimationParking) window.__refreshStageAnimationParking(); // pause every newly-busy off-room CSS timeline in one batched animation snapshot
     if (wasOn !== on && window.__loftStateChanged) window.__loftStateChanged("party.change", { on: on }, userInitiated ? "ui" : "internal");
@@ -129847,7 +129846,12 @@ function spawnDustMote(container) {
         toggleBtn = document.createElement("button");
         toggleBtn.type = "button";
         toggleBtn.className = "roster-toggle";
-        toggleBtn.addEventListener("click", function (e) { e.preventDefault(); toggle(); });
+        toggleBtn.tabIndex = -1; // scene chrome belongs to the game's global keyboard router, not browser Tab order
+        toggleBtn.addEventListener("click", function (e) {
+          e.preventDefault();
+          toggleBtn.blur(); // pointer activation must not leave a native focus ring on the chip
+          toggle();
+        });
         host.appendChild(toggleBtn);
       }
       if (!backdrop) {
@@ -130123,12 +130127,12 @@ function spawnDustMote(container) {
     }
     function setOpen(v) {
       if (!ensureNodes()) return;
-      if (v && !window.__secondRound) return; // first round (no party yet this session): refuse to open — an empty/early roster only confuses. This is the sole choke point, so it covers the h/w keys, roster(true), __toggleRoster(true), and other scripted opens alike. Closing (v=false) is always allowed.
+      if (v && !window.__gardenPartyOn) return; // the live roster is party chrome; refuse stale/empty opens before or after the party
       open = !!v;
       if (!open) clearSpotlight();
       syncGardenRosterFreeze();
       if (open) {
-        returnFocus = document.activeElement;
+        returnFocus = document.activeElement === toggleBtn || document.activeElement === document.body ? null : document.activeElement;
         if (window.__dismissWhoPop) window.__dismissWhoPop();
         if (window.__hideMessageThumb) window.__hideMessageThumb();
         if (window.__closeDjPicker) window.__closeDjPicker(); // roster + jukebox are mutually exclusive
@@ -130156,10 +130160,8 @@ function spawnDustMote(container) {
     }
     function toggle() { setOpen(!open); }
 
-    // The corner chip is offered in EVERY room ONCE we're in the "second round" (a party has lit
-    // this session — see window.__secondRound) — each one has its own live roster then, and an
-    // empty room says so rather than hiding the affordance. In the first round the chip stays
-    // hidden entirely, so a player can't open a confusing empty roster before anyone's arrived.
+    // The corner chip is offered in every room while the party is live. Once the party ends it
+    // closes and disappears; an old roster is stale rather than useful exploration chrome.
     // Poll cheaply so an open panel tracks
     // arrivals and departures (a couple rotating out of the bar, the deck crowd stepping in, the
     // kids sitting down to a game) instead of only refreshing on room entry.
@@ -130181,11 +130183,11 @@ function spawnDustMote(container) {
       }
       var expanded = open ? "true" : "false";
       if (expanded !== chipExpanded) { chipExpanded = expanded; toggleBtn; }
-      if (window.__secondRound) {
+      if (window.__gardenPartyOn) {
         if (!toggleBtn.classList.contains("avail")) toggleBtn.classList.add("avail");
       } else {
         if (toggleBtn.classList.contains("avail")) toggleBtn.classList.remove("avail");
-        if (open) { setOpen(false); return; } // reset dropped us back to the first round — never strand an open panel
+        if (open) { setOpen(false); return; } // party teardown must never strand an open panel
       }
       if (open) render(); // keep the open panel live (presence can change under it)
     }
@@ -130273,7 +130275,7 @@ function spawnDustMote(container) {
       var t = e.target;
       if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
       e.preventDefault();
-      window.__toggleRoster();
+      if (window.__gardenPartyOn) window.__toggleRoster();
     });
     // The roster is modal even after the player clicks through its backdrop to inspect a person.
     // That interaction can move focus away from the panel, so the panel-local Escape handler is

@@ -25,6 +25,9 @@ var harness = String.raw`<script>
     window.__setGardenParty(true, false);
     window.goToStage("garden");
     if (window.__summonGuests) window.__summonGuests();
+    var rosterToggle = document.querySelector(".roster-toggle");
+    check("the Who's here chip is click-only scene chrome", rosterToggle && rosterToggle.tabIndex === -1,
+      rosterToggle && rosterToggle.tabIndex);
     var stage = document.getElementById("stage-garden");
     var ali = document.querySelector("#garden-guests .g-ali");
     var goli = document.querySelector("#garden-guests .g-goli");
@@ -136,6 +139,11 @@ var harness = String.raw`<script>
         check("Escape closes the roster and starts dismissing its person card after a backdrop pick",
           !window.__rosterOpen() && (!fading || !fading.classList.contains("show")),
           String(window.__rosterOpen()) + "/" + !!(fading && fading.classList.contains("show")));
+        window.__setGardenParty(false, false);
+        window.__toggleRoster(true);
+        check("party teardown hides the chip and refuses a stale roster",
+          !rosterToggle.classList.contains("avail") && !window.__rosterOpen(),
+          rosterToggle.className + "/" + window.__rosterOpen());
       } catch (error) {
         out.errors.push("async: " + (error && error.stack || error));
       }

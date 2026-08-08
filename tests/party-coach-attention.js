@@ -17,14 +17,14 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     report.steps[name] = {
       room: window.currentStageName,
       party: !!window.__gardenPartyOn,
-      modal: !!(window.__partySwitchCoachModalActive && window.__partySwitchCoachModalActive()),
+      coach: !!(window.__partySwitchCoachModalActive && window.__partySwitchCoachModalActive()),
       coachDue: !!(window.__partyLifecycleState && window.__partyLifecycleState().switchCoachSeen),
       thumb: visible(".msg-thumb"),
       ring: visible(".call-ring"),
       hold: window.__messageNotificationsHeld ? window.__messageNotificationsHeld() : null,
       heldCalls: window.__heldPartyCoachCalls ? window.__heldPartyCoachCalls() : [],
-      modalClass: document.getElementById("hunt-fullscreen-area").classList.contains("party-switch-modal-open"),
-      scrim: getComputedStyle(overlay.querySelector(".party-switch-scrim-top")).backgroundColor
+      navBlocked: getComputedStyle(document.getElementById("hunt-next")).pointerEvents === "none",
+      scrim: getComputedStyle(overlay.querySelector(".party-switch-scrim-top")).display
     };
   }
   async function run() {
@@ -50,10 +50,18 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       switchBox.top + switchBox.height / 2);
     report.steps.popupCleared.switchHole = !!(switchHit && switchHit.closest &&
       switchHit.closest("#garden-lightswitch"));
+    await sleep(720);
     document.dispatchEvent(new KeyboardEvent("keydown", {
       key: "ArrowRight", code: "ArrowRight", bubbles: true, cancelable: true
     }));
-    snap("navigationBlocked");
+    await sleep(40);
+    snap("navigationAway");
+    await sleep(720);
+    document.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "ArrowLeft", code: "ArrowLeft", bubbles: true, cancelable: true
+    }));
+    await sleep(40);
+    snap("coachOnReturn");
     window.__deliverPhoneMessage("cue_calendar");
     await sleep(30);
     snap("messageDuringCoach");
@@ -122,34 +130,37 @@ function step(name) { return result && result.steps && result.steps[name]; }
 console.log("rsvp.html party coach attention ownership:");
 check(result && result.errors.length === 0, "attention probe has no page errors", result && result.errors);
 var popupBefore = step("popupBeforeCoach"), popupReentry = step("popupOnReentry"), popupCleared = step("popupCleared");
-check(popupBefore && popupBefore.thumb && popupBefore.coachDue && !popupBefore.modal,
+check(popupBefore && popupBefore.thumb && popupBefore.coachDue && !popupBefore.coach,
   "a visible notification keeps the due switch coach off-screen", popupBefore);
-check(popupReentry && popupReentry.room === "garden" && popupReentry.thumb && !popupReentry.modal,
+check(popupReentry && popupReentry.room === "garden" && popupReentry.thumb && !popupReentry.coach,
   "Garden re-entry cannot repaint the coach over that notification", popupReentry);
-check(popupCleared && !popupCleared.thumb && popupCleared.modal && popupCleared.modalClass &&
-  popupCleared.switchHole && popupCleared.scrim !== "rgba(0, 0, 0, 0)",
-  "the quiet channel reveals a soft modal while leaving the real switch exposed", popupCleared);
-check(step("navigationBlocked") && step("navigationBlocked").room === "garden" && step("navigationBlocked").modal,
-  "room navigation is held while the switch coach owns attention", step("navigationBlocked"));
+check(popupCleared && !popupCleared.thumb && popupCleared.coach && !popupCleared.navBlocked &&
+  popupCleared.switchHole && popupCleared.scrim === "none",
+  "the quiet channel reveals a non-modal coach while leaving the switch and navigation live", popupCleared);
+var navigationAway = step("navigationAway"), coachOnReturn = step("coachOnReturn");
+check(navigationAway && navigationAway.room === "cuddly" && !navigationAway.coach && navigationAway.coachDue,
+  "keyboard navigation leaves Garden and hides the still-pending switch coach", navigationAway);
+check(coachOnReturn && coachOnReturn.room === "garden" && coachOnReturn.coach && coachOnReturn.coachDue,
+  "returning to Garden repaints the pending switch coach", coachOnReturn);
 var duringMessage = step("messageDuringCoach"), releasedMessage = step("messageReleased");
-check(duringMessage && duringMessage.modal && !duringMessage.thumb && duringMessage.hold &&
+check(duringMessage && duringMessage.coach && !duringMessage.thumb && duringMessage.hold &&
   duringMessage.hold.messages.join(",") === "cue_calendar",
   "a new notification queues behind the visible coach", duringMessage);
-check(releasedMessage && !releasedMessage.modal && releasedMessage.thumb && releasedMessage.hold &&
+check(releasedMessage && !releasedMessage.coach && releasedMessage.thumb && releasedMessage.hold &&
   releasedMessage.hold.messages.length === 0,
   "the × releases the queued notification exactly once and keeps the party running", releasedMessage);
 var callBefore = step("callBeforeCoach"), callCleared = step("callCleared"), callDuring = step("callDuringCoach");
-check(callBefore && callBefore.ring && callBefore.coachDue && !callBefore.modal,
+check(callBefore && callBefore.ring && callBefore.coachDue && !callBefore.coach,
   "an already-ringing call also keeps the due coach off-screen", callBefore);
-check(callCleared && !callCleared.ring && callCleared.modal,
+check(callCleared && !callCleared.ring && callCleared.coach,
   "the coach appears after the call channel clears", callCleared);
-check(callDuring && callDuring.modal && !callDuring.ring && callDuring.heldCalls.length === 1,
+check(callDuring && callDuring.coach && !callDuring.ring && callDuring.heldCalls.length === 1,
   "a call arriving during the coach is retained instead of overlapping it", callDuring);
 var enterRelease = step("enterReleasedCall");
-check(enterRelease && enterRelease.party && !enterRelease.modal && enterRelease.ring &&
+check(enterRelease && enterRelease.party && !enterRelease.coach && enterRelease.ring &&
   enterRelease.heldCalls.length === 0,
   "global Enter dismisses the coach, keeps the party running, and releases one held call", enterRelease);
-check(step("switchEndsParty") && !step("switchEndsParty").party && !step("switchEndsParty").modal,
+check(step("switchEndsParty") && !step("switchEndsParty").party && !step("switchEndsParty").coach,
   "the exposed Garden switch still ends the party through its canonical owner", step("switchEndsParty"));
 
 if (failed) process.exit(1);

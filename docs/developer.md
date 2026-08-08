@@ -164,10 +164,11 @@ the hard 10/10 launch/restore boundary.
 The `party-roadtrip-bridge` checkpoint adapter owns the one-time Garden switch coach, teardown room
 progress/map coach, and once-per-reset Road Trip handoff. Every unsuppressed party on→off edge records
 the handoff durably. A due switch coach waits until the phone preview/call channel is quiet on every
-paint, including Garden re-entry, then becomes a light modal: four scrim quadrants preserve the live
-SVG wall switch as the only scene hit target, while the popup × and global Enter retire the coach.
-The modal’s actual visible state—not merely its durable due flag—owns the shared phone hold, so an
-existing popup is never stolen and newly arriving popups/calls release once after dismissal. Below
+paint, including Garden re-entry, then appears only over the Garden. It does not trap room navigation:
+leaving hides it without retiring its checkpointed lesson, returning repaints it, and the live wall
+switch, popup ×, or global Enter retire it. The coach’s actual visible state—not merely its durable due
+flag—owns the shared phone hold, so an existing popup is never stolen and newly arriving popups/calls
+release once after dismissal. Below
 ten distinct `seenRooms`, the dismissible map coach uses the same quiet-channel/attention owner;
 Phase 2's one-action dollhouse
 entry is the exploration path. First lower-room visits use room-specific, language-live copy whose

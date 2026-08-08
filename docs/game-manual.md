@@ -129,11 +129,12 @@ console field when you want to type. Desktop app openings retain their ready-to-
 
 Opening a message does not automatically run its activity. Select the activity arrow when ready.
 An activity can expire when its moment passes, but its message stays unread until you read it.
-Shortly after the first party starts, a lightly dimmed popup and red arrow identify the Garden
-wall switch that ends the party when the player is ready. The party keeps playing underneath; use
-the switch to end it, or use the popup’s × or `Enter` to dismiss the lesson and keep dancing. The
-coach waits for an already-visible phone notification or call to finish, and queues new ones while
-it is open. Any deliberate party teardown checks how
+Shortly after the first party starts, a popup and red arrow identify the Garden wall switch that
+ends the party when the player is ready. The party keeps playing underneath; use the switch to end
+it, or use the popup’s × or `Enter` to dismiss the lesson and keep dancing. Room navigation remains
+available: leaving Garden hides the pending lesson, and returning shows it again. The coach waits
+for an already-visible phone notification or call to finish, and queues new ones while it is open.
+Any deliberate party teardown checks how
 many of the ten rooms have actually been visited. If rooms remain, a second dismissible popup and
 red arrow point to the room map; Phase 2 lets one selection unlock and enter any remaining room.
 Each new lower room gives its own short introduction and a live remaining-room count, while an early

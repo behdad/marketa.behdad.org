@@ -19,6 +19,8 @@ function setupScript(body) {
   function snapshot() {
     var aurora = document.getElementById("entrance-roadtrip-camp-aurora");
     var paths = aurora.querySelectorAll(".aurora-curtain");
+    var xValues = Array.from(signature().matchAll(/[ML](-?\d+(?:\.\d+)?)\s/g),
+      function (match) { return Number(match[1]); });
     return {
       state: window.__campAuroraState(),
       raf: window.__gardenAuroraRaf(),
@@ -29,6 +31,7 @@ function setupScript(body) {
         return Number(stop.getAttribute("stop-opacity"));
       }),
       signature: signature(),
+      bounds: { minX: Math.min.apply(Math, xValues), maxX: Math.max.apply(Math, xValues) },
       campActive: document.getElementById("entrance-room").classList.contains("roadtrip-active"),
       clouded: document.getElementById("entrance-room").classList.contains("entrance-clouded"),
       localClear: document.getElementById("entrance-room").classList.contains("camp-stargazing-clear"),
@@ -168,6 +171,7 @@ check(full && full.before && !full.before.state.showing && !full.before.raf && f
   "the aurora stays absent before stargazing is complete", full && full.before);
 check(full && full.liveA && full.liveA.state.showing && full.liveA.state.running && full.liveA.raf &&
   full.liveA.paths === 3 && full.liveA.segments >= 60 && full.liveA.opacity >= .85 &&
+  full.liveA.bounds.minX <= 0 && full.liveA.bounds.maxX >= 680 &&
   full.liveA.clouded && full.liveA.localClear && full.liveA.cloudWash === 0 &&
   full.liveA.stops.some(function (value) { return value > .5; }),
   "completion reveals a dense strong display without rewriting the locally cleared weather state", full && full.liveA);

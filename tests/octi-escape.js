@@ -10,7 +10,7 @@ var HARNESS = [
   'function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}',
   'function click(el){el.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));}',
   'function key(target,k){var e=new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true});return !target.dispatchEvent(e);}',
-  'var report={errors:[],steps:{},debug:{}};function S(k,v){report.steps[k]=!!v;}',
+  'var report={errors:[],steps:{},debug:{}};var focused=true;Object.defineProperty(document,"hasFocus",{configurable:true,value:function(){return focused;}});function S(k,v){report.steps[k]=!!v;}',
   'async function run(){',
   ' window.goToStage("cuddly");await sleep(50);',
   ' var octi=document.getElementById("cuddly-octopus"),trunk=document.getElementById("cuddly-trunk"),stage=document.getElementById("stage-cuddly"),peek=document.getElementById("cuddly-octi-escape-peek"),pillows=[0,1,2].map(function(i){return document.getElementById("cuddly-pillow-"+(i+1));});',
@@ -23,7 +23,7 @@ var HARNESS = [
   ' S("wrong_squishes_once",squishes===1&&missed.active&&missed.finds===0&&missed.target===target&&window.__captionKey()==="octi_escape_wrong");',
   ' await sleep(1000);click(pillows[target]);await sleep(60);var one=window.__octiEscapeState();',
   ' window.__octiEscapeTest("target",1);click(pillows[1]);await sleep(60);var two=window.__octiEscapeState();',
-  ' window.__octiEscapeTest("target",2);click(pillows[2]);await sleep(2300);var won=window.__octiEscapeState();',
+  ' window.__octiEscapeTest("target",2);click(pillows[2]);focused=false;window.dispatchEvent(new Event("blur"));await sleep(2300);var pausedWin={state:window.__octiEscapeState(),caption:window.__captionKey(),scheduler:window.__attentionScheduleState()};focused=true;window.dispatchEvent(new Event("focus"));await sleep(2300);var won=window.__octiEscapeState(),wonCaption=window.__captionKey();',
   ' S("three_find_win",two.finds===2&&!won.active&&!won.inside&&!stage.classList.contains("octi-escape-on")&&!octi.classList.contains("escape-running")&&!octi.classList.contains("escape-returning")&&!octi.classList.contains("in-chest")&&!peek.classList.contains("peeking")&&!peek.classList.contains("found")&&window.__captionKey()==="octi_escape_win");',
   ' window.setCaption("explore_cuddly",true);window.__startOctiEscape();var escapePrevented=key(document,"Escape"),cancelled=window.__octiEscapeState();',
   ' S("escape_first",escapePrevented&&!cancelled.active&&!cancelled.inside&&window.__captionKey()==="explore_cuddly");',
@@ -33,9 +33,10 @@ var HARNESS = [
   ' S("room_leave_cancels",!left.active&&!left.inside&&!octi.classList.contains("in-chest")&&!stage.classList.contains("octi-escape-on"));',
   ' window.goToStage("cuddly");window.__startOctiEscape();click(trunk);var trunked=window.__octiEscapeState();',
   ' S("trunk_keeps_toggle",!trunked.active&&trunked.inside&&octi.classList.contains("falling-in"));',
-  ' window.resetOctopusChest();var reset=window.__octiEscapeState();',
-  ' S("reset_settles",!reset.active&&!reset.inside&&!octi.classList.contains("played")&&!octi.classList.contains("in-chest")&&!octi.classList.contains("falling-in"));',
-  ' report.debug={before:before,invited:invited,armed:armed,started:started,ready:ready,missed:missed,one:one,two:two,won:won};',
+  ' window.resetOctopusChest();var reset=window.__octiEscapeState(),resetJobs=window.__attentionScheduleState().jobs.filter(function(job){return /^minigame-octi/.test(job.owner);});',
+  ' S("reset_settles",!reset.active&&!reset.inside&&!octi.classList.contains("played")&&!octi.classList.contains("in-chest")&&!octi.classList.contains("falling-in")&&resetJobs.length===0);',
+  ' S("win_coda_attended",pausedWin.state.active&&pausedWin.caption==="octi_escape_win"&&pausedWin.scheduler.running===0&&!won.active&&wonCaption==="octi_escape_win");',
+  ' report.debug={before:before,invited:invited,armed:armed,started:started,ready:ready,missed:missed,one:one,two:two,pausedWin:pausedWin,won:won};',
   '}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness: "+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},300);});',
   '})();</script>'
@@ -51,7 +52,7 @@ function check(ok, msg, detail) {
 }
 
 console.log("rsvp.html Octi's Escape:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 9000, { patchRaf: true, forceMotion: true, seedRandom: true, urlSuffix: "#play" });
+var r = lib.runPageSync("rsvp.html", HARNESS, 13000, { patchRaf: true, forceMotion: true, seedRandom: true, urlSuffix: "#play" });
 if (!r) { console.log("  ✗ harness produced no report"); process.exit(1); }
 var checks = {
   solve_click_protected: "the first solve squeeze and a fast repeat cannot launch the optional game",
@@ -59,6 +60,7 @@ var checks = {
   native_peek: "the clue is pointer-inert and painted behind the room's real cushions",
   wrong_squishes_once: "the foreground-covered cushion keeps one ordinary squish and does not advance",
   three_find_win: "three finds return Octi to his canonical outside trunk perch",
+  win_coda_attended: "the win coda parks while unfocused and resumes without losing its result",
   escape_first: "Escape cancels first and restores the pregame caption/state",
   checkpoint_cancels: "checkpoint recovery cancels the transient game before restoring inside state",
   room_leave_cancels: "leaving the room synchronously restores the outside state",

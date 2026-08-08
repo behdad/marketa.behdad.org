@@ -255,6 +255,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
               try {
                 report.congrats = snap();
                 report.congratsSounds = report.sounds.slice();
+                report.terminalIncidentalAccepted = !!window.__captionOverlay("entrance_roadtrip_heart", {
+                  owner: "camp-terminal-real-probe", scope: "lower:entrance", priority: 20,
+                  duration: 1000
+                });
+                report.terminalAfterProbe = snap();
               } catch (error) { report.errors.push(String(error && error.stack || error)); }
             }, 4100);
             setTimeout(function () {
@@ -551,6 +556,10 @@ check(result && result.congrats && result.congrats.phase === "congrats" && resul
   result && result.congrats);
 check(result && result.congratsSounds && result.congratsSounds.join("|") === "embers|approach|collect|finale",
   "the terminal congratulations gets one soft completion cue", result && result.congratsSounds);
+check(result && !result.terminalIncidentalAccepted && result.terminalAfterProbe &&
+  result.terminalAfterProbe.caption === "entrance_roadtrip_camp_attended_time",
+  "the real Camping terminal rejects incidental captions",
+  { accepted: result && result.terminalIncidentalAccepted, after: result && result.terminalAfterProbe });
 check(result && result.congrats && result.congrats.mamaFinLook &&
   result.congrats.mamaHeadAnimation === "entrance-roadtrip-camp-bear-fin-look" &&
   result.congrats.mamaHeadDelay === "3s" &&

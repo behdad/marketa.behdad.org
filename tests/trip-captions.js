@@ -41,7 +41,8 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
         window.__startTrip("acid");
         window.__stopTrip(true);
         report.stopped = state();
-        window.__flashCaptionKey("trip_caption_molly", 550, "trip");
+        window.__captionOverlay("trip_caption_molly", { owner: "trip", scope: "stage:garden",
+          priority: 30, duration: 550, clock: "wall" });
         report.temporary = state();
         await sleep(650);
         report.restored = state();

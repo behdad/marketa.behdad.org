@@ -63,7 +63,8 @@ var HARNESS = [
   'var exitPrevented=key("Escape"),exited=window.__balconyTetrisState();S("escape_restores",exitPrevented&&!exited.active&&!exited.result&&same(exited.windows,gameNormal)&&!stage.classList.contains("tetris-on")&&window.__captionKey&&window.__captionKey()===preCaption);',
   'window.setLang("en");var beforeLeave=window.__balconyTetrisState().windows.slice();window.__startBalconyTetris();window.goToStage("kitchen");var left=window.__balconyTetrisState();S("room_leave_restores",!left.active&&!left.result&&!stage.classList.contains("tetris-on")&&same(left.windows,beforeLeave));',
   'window.goToStage("balcony");var beforeBlur=window.__balconyTetrisState().windows.slice();window.__startBalconyTetris();focused=false;window.dispatchEvent(new Event("blur"));var blurred=window.__balconyTetrisState();S("blur_restores",!blurred.active&&!stage.classList.contains("tetris-on")&&same(blurred.windows,beforeBlur));',
-  'focused=true;window.goToStage("kitchen");window.__openDropTerm();var commandRun=window.tetris();await sleep(100);var commandStarted=window.__balconyTetrisState();S("console_command",window.currentStageName==="balcony"&&commandStarted.active&&commandRun&&typeof commandRun.then==="function");var consoleStayed=window.__dropTermOpen(),backtickPrevented=key("`");S("console_handoff",consoleStayed&&backtickPrevented&&!window.__dropTermOpen()&&window.__balconyTetrisState().active);document.querySelector(".tetris-close").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await commandRun;',
+  'focused=true;window.dispatchEvent(new Event("focus"));window.goToStage("balcony");window.__startBalconyTetris();window.__balconyTetrisTest("gameover");focused=false;window.dispatchEvent(new Event("blur"));await sleep(6800);var parkedResult=window.__balconyTetrisState(),parkedSchedule=window.__attentionScheduleState();S("result_attended_pause",parkedResult.result&&window.__captionKey()==="tetris_game_over"&&parkedSchedule.jobs.some(function(job){return job.owner==="minigame-tetris-result"&&!job.running;}));focused=true;window.dispatchEvent(new Event("focus"));await sleep(6600);S("result_attended_resume",!window.__balconyTetrisState().result&&window.__captionKey()!=="tetris_game_over");',
+  'window.goToStage("kitchen");window.__openDropTerm();var commandRun=window.tetris();await sleep(100);var commandStarted=window.__balconyTetrisState();S("console_command",window.currentStageName==="balcony"&&commandStarted.active&&commandRun&&typeof commandRun.then==="function");var consoleStayed=window.__dropTermOpen(),backtickPrevented=key("`");S("console_handoff",consoleStayed&&backtickPrevented&&!window.__dropTermOpen()&&window.__balconyTetrisState().active);document.querySelector(".tetris-close").dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true}));await commandRun;',
   '}',
   'window.addEventListener("load",function(){setTimeout(function(){run().catch(function(e){window.__errs.push("harness:"+String(e&&e.stack||e));}).then(function(){report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);});},350);});',
   '})();',
@@ -79,7 +80,7 @@ function fail(msg, detail) {
 }
 
 console.log("rsvp.html balcony Block Party:");
-var r = lib.runPageSync("rsvp.html", HARNESS, 5000, { patchRaf: true, forceMotion: true, seedRandom: true });
+var r = lib.runPageSync("rsvp.html", HARNESS, 20000, { patchRaf: true, forceMotion: true, seedRandom: true });
 if (!r) fail("harness reported");
 else {
   var checks = {
@@ -109,6 +110,8 @@ else {
     escape_restores: "Escape exits and restores the exact apartment-light/caption snapshot",
     room_leave_restores: "programmatic room leave tears down and restores synchronously",
     blur_restores: "window blur tears down without background simulation",
+    result_attended_pause: "game-over result and restart instruction park while unfocused",
+    result_attended_resume: "game-over result consumes its remaining attended time after refocus",
     console_command: "tetris() pans to the balcony, starts Block Party, and returns a completion Promise",
     console_handoff: "tetris() leaves the console open and backtick can close it without ending the game"
   };

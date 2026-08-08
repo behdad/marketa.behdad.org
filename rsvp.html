@@ -3289,6 +3289,15 @@ html.revealed #hunt-feedback-btn, html.revealed #hunt-bugs-btn, html.revealed #h
   box-shadow:inset 0 1px 2px rgba(69,58,49,.1), 0 1px 2px rgba(50,18,24,.15);
 }
 @media (max-width:759px){ #hunt-caption{max-width:calc(100% - 4.4rem)} }
+/* A phone held sideways leaves only a shallow chrome band. Literal console captions can be
+   arbitrarily long, so clamp them inside that band instead of growing page scroll. */
+@media (max-height:380px) and (max-width:700px){
+  #hunt-caption{
+    max-width:calc(100% - 3rem); overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+    padding:.14rem .58rem; margin-top:.22rem; font-size:clamp(.76rem,3.7vh,.92rem); line-height:1.12;
+    display:block;
+  }
+}
 /* First-play handoff: a shared coach card establishes the top controls, then the subtitle.
    Its transparent full-shell layer swallows background input; only × or Enter advances. */
 #hunt-bottom-nav.intro-guide-nav{z-index:24}
@@ -38162,7 +38171,6 @@ window.__entranceRoomOpen = false;
   var roadtripShiftHintKey = "";
   var roadtripShiftHintMs = 0;
   var roadtripCampCaptionTimer = null;
-  var roadtripCampCaptionBlinkTimer = null;
   var roadtripResumePending = false;
   var roadtripTransportPaused = false;
   var driveBatteryLevel = .75;
@@ -39504,25 +39512,29 @@ window.__entranceRoomOpen = false;
   }
   function roadtripFeedback(key, values) {
     if (key === "entrance_roadtrip_camp_arrival" && !values) {
-      clearTimeout(roadtripCampCaptionTimer);
-      clearTimeout(roadtripCampCaptionBlinkTimer);
-      roadtripCampCaptionTimer = setTimeout(function () {
+      if (roadtripCampCaptionTimer) {
+        if (window.__cancelAttention) window.__cancelAttention(roadtripCampCaptionTimer);
+        else clearTimeout(roadtripCampCaptionTimer);
+      }
+      var publishArrival = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
+      var arrivalCallback = function () {
         roadtripCampCaptionTimer = null;
         if (!roadtripState.active || roadtripState.route !== "camp") return;
         lastDriveInstruction = key;
-        if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(key);
-        var captionNode = document.querySelector(".scene-caption");
-        if (captionNode) {
-          captionNode.classList.add("hint-blink");
-          roadtripCampCaptionBlinkTimer = setTimeout(function () {
-            roadtripCampCaptionBlinkTimer = null;
-            captionNode.classList.remove("hint-blink");
-          }, 2200);
-        }
-      }, 900);
+        var token = publishArrival ? publishArrival(key, true) :
+          window.__setLowerRoomCaption && window.__setLowerRoomCaption(key);
+        if (token && window.__blinkCaptionClaim) window.__blinkCaptionClaim(token, 2200);
+      };
+      roadtripCampCaptionTimer = window.__scheduleAttended ?
+        window.__scheduleAttended(arrivalCallback, 900,
+          { owner: "roadtrip-camp-arrival", scope: "lower:entrance" }) :
+        setTimeout(arrivalCallback, 900);
       return true;
     }
-    clearTimeout(roadtripCampCaptionTimer);
+    if (roadtripCampCaptionTimer) {
+      if (window.__cancelAttention) window.__cancelAttention(roadtripCampCaptionTimer);
+      else clearTimeout(roadtripCampCaptionTimer);
+    }
     roadtripCampCaptionTimer = null;
     if (!window.__captionOverlay) return false;
     var story = ["entrance_roadtrip_banff_exit", "entrance_roadtrip_banff_arrival",
@@ -39549,13 +39561,7 @@ window.__entranceRoomOpen = false;
       clock: "attended",
       replacements: values || null
     });
-    if (token) {
-      var captionNode = document.querySelector(".scene-caption");
-      if (captionNode) {
-        captionNode.classList.add("hint-blink");
-        setTimeout(function () { captionNode.classList.remove("hint-blink"); }, 700);
-      }
-    }
+    if (token && window.__blinkCaptionClaim) window.__blinkCaptionClaim(token, 700);
     return !!token;
   }
   function roadtripPoliceOutcomeFeedback(key, values) {
@@ -42338,22 +42344,15 @@ window.__entranceRoomOpen = false;
     paintRoadtripCampStew();
     if (window.__updateRoadtripCampAudio) window.__updateRoadtripCampAudio();
   }
-  function syncRoadtripCampFireCaption(blink) {
+  function syncRoadtripCampFireCaption(blink, publisher) {
     var key = campFireCaptionKey();
     lastDriveInstruction = key;
     if (key === "entrance_roadtrip_camp_attended_time" && window.__showLoftAttendedTimeCaption) {
       window.__showLoftAttendedTimeCaption();
-    } else if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(key);
+    } else if (publisher) var token = publisher(key, true);
+    else if (window.__setLowerRoomCaption) token = window.__setLowerRoomCaption(key);
     paintRoadtripCampFire();
-    var caption = document.getElementById("hunt-caption");
-    if (blink && caption) {
-      caption.classList.add("hint-blink");
-      clearTimeout(roadtripCampCaptionBlinkTimer);
-      roadtripCampCaptionBlinkTimer = setTimeout(function () {
-        roadtripCampCaptionBlinkTimer = null;
-        caption.classList.remove("hint-blink");
-      }, 2200);
-    }
+    if (blink && token && window.__blinkCaptionClaim) window.__blinkCaptionClaim(token, 2200);
   }
   function openRoadtripCampFire(skipFocus) {
     if (roadtripState.route !== "camp" || campFireState.complete || campFireState.igniting) return false;
@@ -42906,12 +42905,20 @@ window.__entranceRoomOpen = false;
     paintCampSleepFinale();
     scheduleCampSleepFinale();
     scheduleCampWisdomHandoff();
-    clearTimeout(roadtripCampCaptionTimer);
-    roadtripCampCaptionTimer = setTimeout(function () {
+    if (roadtripCampCaptionTimer) {
+      if (window.__cancelAttention) window.__cancelAttention(roadtripCampCaptionTimer);
+      else clearTimeout(roadtripCampCaptionTimer);
+    }
+    var campArrivalPublisher = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
+    var campArrivalCallback = function () {
       roadtripCampCaptionTimer = null;
       if (!roadtripState.active || roadtripState.route !== "camp") return;
-      syncRoadtripCampFireCaption(true);
-    }, 900);
+      syncRoadtripCampFireCaption(true, campArrivalPublisher);
+    };
+    roadtripCampCaptionTimer = window.__scheduleAttended ?
+      window.__scheduleAttended(campArrivalCallback, 900,
+        { owner: "roadtrip-camp-arrival", scope: "lower:entrance" }) :
+      setTimeout(campArrivalCallback, 900);
     if (firstVisit && window.__checkpointChanged) window.__checkpointChanged();
   }
   function roadtripTrafficSpacingScale(route) {
@@ -45658,10 +45665,11 @@ window.__entranceRoomOpen = false;
     });
   }
   function parkRoadtrip(clearRun) {
-    clearTimeout(roadtripCampCaptionTimer);
+    if (roadtripCampCaptionTimer) {
+      if (window.__cancelAttention) window.__cancelAttention(roadtripCampCaptionTimer);
+      else clearTimeout(roadtripCampCaptionTimer);
+    }
     roadtripCampCaptionTimer = null;
-    clearTimeout(roadtripCampCaptionBlinkTimer);
-    roadtripCampCaptionBlinkTimer = null;
     if (roadtripState.route === "camp") {
       var captionNode = document.querySelector(".scene-caption");
       if (captionNode) captionNode.classList.remove("hint-blink");
@@ -66616,6 +66624,7 @@ function quickReversalGesture(action) {
     if (octopus.classList.contains("falling-in") || octopus.classList.contains("escape-running") || octopus.classList.contains("escape-returning")) return;
     playPlushSquishSound();
     var alreadyPlayed = octopus.classList.contains("played");
+    var publishCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
     octopus.classList.remove("wobble", "popping-out");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
@@ -66624,7 +66633,7 @@ function quickReversalGesture(action) {
         octopus.classList.add("wobble", "played");
         // caption/door-hint AFTER .played is set (they read __cuddlyDoorNeeded, which gates on
         // "played") — else the next-step hint reads a stale not-yet-played Octi and never arms
-        if (!alreadyPlayed && window.setCaption) window.setCaption(window.__cuddlyDoorNeeded && window.__cuddlyDoorNeeded() ? "cuddly_door" : "cuddly_pull");
+        if (!alreadyPlayed && publishCaption) publishCaption(window.__cuddlyDoorNeeded && window.__cuddlyDoorNeeded() ? "cuddly_door" : "cuddly_pull");
         if (!alreadyPlayed && window.__updateCuddlyDoorHint) window.__updateCuddlyDoorHint(); // Octi's done → the door is the next step: start its come-hither wiggle (day only)
       });
     });
@@ -66685,10 +66694,23 @@ function quickReversalGesture(action) {
     return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }
   function clearEscapeTimer() {
-    if (escapeTimer) { clearTimeout(escapeTimer); escapeTimer = null; }
+    if (escapeTimer) {
+      if (window.__cancelAttention) window.__cancelAttention(escapeTimer);
+      else clearTimeout(escapeTimer);
+      escapeTimer = null;
+    }
   }
   function clearEscapeCaptionTimer() {
-    if (escapeCaptionTimer) { clearTimeout(escapeCaptionTimer); escapeCaptionTimer = null; }
+    if (escapeCaptionTimer) {
+      if (window.__cancelAttention) window.__cancelAttention(escapeCaptionTimer);
+      else clearTimeout(escapeCaptionTimer);
+      escapeCaptionTimer = null;
+    }
+  }
+  function scheduleEscape(callback, delay, owner) {
+    return window.__scheduleAttended
+      ? window.__scheduleAttended(callback, delay, { owner: owner, scope: "stage:cuddly" })
+      : setTimeout(callback, delay);
   }
   function escapeCaptionShowing() {
     var key = window.__captionKey ? window.__captionKey() : null;
@@ -66751,12 +66773,12 @@ function quickReversalGesture(action) {
       escapePhase = "guess";
       return;
     }
-    escapeTimer = setTimeout(function () {
+    escapeTimer = scheduleEscape(function () {
       escapeTimer = null;
       if (!escapeActive) return;
       if (escapePeek) escapePeek.classList.remove("peeking");
       escapePhase = "guess";
-    }, delay);
+    }, delay, "minigame-octi-step");
   }
   function showEscapePeek(captionKey) {
     if (!escapeActive || escapeTarget < 0) return;
@@ -66788,7 +66810,7 @@ function quickReversalGesture(action) {
     });
     if (typeof playHeartsSound === "function") playHeartsSound("cuddly-octopus");
     clearEscapeTimer();
-    escapeTimer = setTimeout(function () {
+    escapeTimer = scheduleEscape(function () {
       escapeTimer = null;
       if (!escapeActive) return;
       if (escapePeek) escapePeek.classList.remove("found", "peeking");
@@ -66797,16 +66819,16 @@ function quickReversalGesture(action) {
         void octopus.getBoundingClientRect();
         octopus.classList.add("escape-returning");
       }
-      escapeTimer = setTimeout(function () {
+      escapeTimer = scheduleEscape(function () {
         escapeTimer = null;
         if (!escapeActive) return;
         settleEscape(false);
-        escapeCaptionTimer = setTimeout(function () {
+        escapeCaptionTimer = scheduleEscape(function () {
           escapeCaptionTimer = null;
           if (window.__captionKey && window.__captionKey() === "octi_escape_win") restoreEscapeCaption();
-        }, 1900);
-      }, escapeReduce() ? 80 : 850);
-    }, escapeReduce() ? 220 : 660);
+        }, 1900, "minigame-octi-coda");
+      }, escapeReduce() ? 80 : 850, "minigame-octi-coda");
+    }, escapeReduce() ? 220 : 660, "minigame-octi-coda");
   }
   function chooseEscapePillow(index) {
     if (!escapeActive || index < 0 || index >= escapePillows.length) return false;
@@ -66828,12 +66850,12 @@ function quickReversalGesture(action) {
       escapeFinds === 1 ? "octi_escape_one" : escapeFinds === 2 ? "octi_escape_two" : "octi_escape_win",
       { owner: "minigame-octi", scope: "stage:cuddly", priority: 80 });
     clearEscapeTimer();
-    escapeTimer = setTimeout(function () {
+    escapeTimer = scheduleEscape(function () {
       escapeTimer = null;
       if (!escapeActive) return;
       if (escapeFinds >= 3) finishEscapeWin();
       else chooseNextEscapeTarget();
-    }, escapeReduce() ? 260 : 680);
+    }, escapeReduce() ? 260 : 680, "minigame-octi-step");
     return true;
   }
   function pressEscapePillow(index) {
@@ -66869,10 +66891,10 @@ function quickReversalGesture(action) {
       owner: "minigame-octi", scope: "stage:cuddly", priority: 80
     });
     clearEscapeTimer();
-    escapeTimer = setTimeout(function () {
+    escapeTimer = scheduleEscape(function () {
       escapeTimer = null;
       if (escapeActive) chooseNextEscapeTarget();
-    }, escapeReduce() ? 120 : 780);
+    }, escapeReduce() ? 120 : 780, "minigame-octi-step");
     if (window.__loftStateChanged) {
       window.__loftStateChanged("minigame.change", { game: "octi-escape", active: true }, "ui");
     }
@@ -67075,8 +67097,10 @@ function quickReversalGesture(action) {
       requestAnimationFrame(function () { outlet.classList.add("sparking"); });
     });
     playOutletBuzzSound();
-    if (window.__cuddlyOutletVisit && window.__cuddlyOutletVisit())
-      setTimeout(function () { if (window.setCaption) window.setCaption("cuddly_outlet_visit"); }, 90);
+    if (window.__cuddlyOutletVisit && window.__cuddlyOutletVisit()) {
+      var publishCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
+      setTimeout(function () { if (publishCaption) publishCaption("cuddly_outlet_visit"); }, 90);
+    }
   }
   outlet.addEventListener("click", sparkOutlet);
   outlet.addEventListener("keydown", function (e) {
@@ -70374,14 +70398,15 @@ setOfficeProgress("pc", false);
     // The sequence advances when the call actually CONNECTS (the couple appears) —
     // not when the ring starts. The room hint otherwise only re-checks on a light
     // toggle or a glass click, so set it here too.
+    var callCaptionPublisher = null;
     function markPragueCalled() {
       if (setOfficeProgress("prague", true)) return; // satisfies the office finale's Call-Prague requirement
       // the caption advances only once the call is DISCONNECTED (see dropLine); while
       // the couple's still on screen, a gentle hang-up nudge after a few seconds
       laptopUpdateTimers.push(setTimeout(function () {
         var glass = document.getElementById("office-stainedglass");
-        if (inCall() && glass && !glass.classList.contains("done") && window.setCaption) {
-          window.setCaption("office_hangup");
+        if (inCall() && glass && !glass.classList.contains("done") && callCaptionPublisher) {
+          callCaptionPublisher("office_hangup");
         }
       }, 3000));
     }
@@ -70390,6 +70415,7 @@ setOfficeProgress("pc", false);
       if (laptop.classList.contains("updating") || laptop.classList.contains("rebooting") || anyCall()) return;
       clearLaptopTimers();
       stopLaptopSaver();
+      callCaptionPublisher = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
       callCallee = callee === "lueb" ? "lueb" : "prague";
       laptop.classList.toggle("lueb", callCallee === "lueb"); // picks the remote scene
       syncCallSelfView();
@@ -70452,12 +70478,12 @@ setOfficeProgress("pc", false);
         if (laptop.classList.contains("open")) scheduleLaptopSaver(); // back to idle
         // the sequence advances on disconnect, not connect: point at the computer next
         var glass = document.getElementById("office-stainedglass");
-        if (window.__pragueCalled && glass && !glass.classList.contains("done") && window.setCaption) {
+        if (window.__pragueCalled && glass && !glass.classList.contains("done") && callCaptionPublisher) {
           var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
             var el = document.getElementById(id);
             return el && el.classList.contains("dimmed");
           });
-          window.setCaption(!window.__pcPlayed ? "office_computer" : (lampsOff ? "office_find" : "office_hint"));
+          callCaptionPublisher(!window.__pcPlayed ? "office_computer" : (lampsOff ? "office_find" : "office_hint"));
         }
         if (window.__updateOfficeNudges) window.__updateOfficeNudges();
       }
@@ -71909,6 +71935,7 @@ setOfficeProgress("pc", false);
       return;
     }
     if (!window.__pcPlayed) {
+      var publishCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
       setOfficeProgress("pc", true); // the office sequence's "play with the computer" beat (the butterfly gates on it)
       // ...and powering on advances the office hint to the next step (the caption
       // system elsewhere only re-evaluates on lamp/call/entry events)
@@ -71917,12 +71944,12 @@ setOfficeProgress("pc", false);
       setTimeout(function () {
         if (!window.__pcPlayed || !window.__pragueCalled) return;
         var seqGlass = document.getElementById("office-stainedglass");
-        if (seqGlass && !seqGlass.classList.contains("done") && window.setCaption) {
+        if (seqGlass && !seqGlass.classList.contains("done") && publishCaption) {
           var seqLampsOff = ["office-lamp", "office-pendant"].every(function (id) {
             var el = document.getElementById(id);
             return el && el.classList.contains("dimmed");
           });
-          window.setCaption(seqLampsOff ? "office_find" : "office_hint");
+          publishCaption(seqLampsOff ? "office_find" : "office_hint");
         }
       }, 3000);
       if (window.__updateOfficeNudges) window.__updateOfficeNudges();
@@ -97534,8 +97561,14 @@ async def localfont(name):
     function restoreCaption() {
       if (window.__cancelCaption) window.__cancelCaption("minigame-tetris");
     }
+    function clearResultTimer() {
+      if (!resultTimer) return;
+      if (window.__cancelAttention) window.__cancelAttention(resultTimer);
+      else clearTimeout(resultTimer);
+      resultTimer = null;
+    }
     function dismissResult(restore) {
-      clearTimeout(resultTimer); resultTimer = null;
+      clearResultTimer();
       resultVisible = false;
       stage.classList.remove("tetris-result");
       if (restore) restoreCaption();
@@ -97559,7 +97592,10 @@ async def localfont(name):
         if (window.__captionOverlay) window.__captionOverlay(
           coarseInput ? "tetris_touch_game_over" : "tetris_game_over",
           { owner: "minigame-tetris", scope: "stage:balcony", priority: 80 });
-        resultTimer = setTimeout(function () { dismissResult(true); }, 6500);
+        resultTimer = window.__scheduleAttended
+          ? window.__scheduleAttended(function () { resultTimer = null; dismissResult(true); }, 6500,
+            { owner: "minigame-tetris-result", scope: "stage:balcony" })
+          : setTimeout(function () { resultTimer = null; dismissResult(true); }, 6500);
       } else {
         dismissResult(false);
         if (wasActive || hadResult) restoreCaption();
@@ -111855,7 +111891,7 @@ function spawnDustMote(container) {
     });
   }
   var stageIndex = 0;
-  var stageVisitGeneration = 0;
+  var stageVisitGeneration = 0, captionScopeGeneration = 0;
   window.currentStageIndex = 0;
   var maxUnlocked = 0;
   var solvedRooms = Object.create(null);
@@ -113027,8 +113063,9 @@ function spawnDustMote(container) {
     exclusive: 120
   });
   var captionReturningUpstairs = false;
-  function captionWithReplacements(key, replacements) {
+  function captionWithReplacements(key, replacements, variant) {
     var html = huntText(key);
+    if (Array.isArray(html)) html = html[Math.max(0, Math.min(html.length - 1, variant || 0))] || "";
     if (typeof replacements === "function") replacements = replacements();
     if (!replacements) return html;
     Object.keys(replacements).forEach(function (name) {
@@ -113051,24 +113088,101 @@ function spawnDustMote(container) {
       /^(?:act_|party_ended|party_exit_hint)/.test(key || "") ? CAPTION_PRIORITY.story :
       CAPTION_PRIORITY.base;
   }
-  function createCaptionArbiter(element) {
-    var base = null, overlay = null, exclusive = null, serial = 0;
-    var tickTimer = null, lastTick = performance.now();
+  function createAttentionScheduler() {
+    var jobs = new Map(), serial = 0;
     var attentionBlurred = false;
-    window.addEventListener("blur", function () {
-      attentionBlurred = true;
-      lastTick = performance.now();
-    });
-    window.addEventListener("focus", function () {
-      attentionBlurred = false;
-      lastTick = performance.now();
-    });
-    document.addEventListener("visibilitychange", function () { lastTick = performance.now(); });
     function attended() {
       return !attentionBlurred && !document.hidden && (!document.hasFocus || document.hasFocus());
     }
+    function remaining(job, now) {
+      if (!job) return 0;
+      now = now == null ? performance.now() : now;
+      if (job.clock === "wall") return Math.max(0, job.deadline - now);
+      return Math.max(0, job.remaining - (job.timer ? now - job.started : 0));
+    }
+    function arm(job) {
+      if (!job || job.timer || !jobs.has(job.token)) return;
+      if (job.clock === "attended" && !attended()) return;
+      var wait = remaining(job);
+      if (wait <= 0) { finish(job); return; }
+      job.started = performance.now();
+      if (job.clock === "wall") job.deadline = job.started + wait;
+      job.timer = setTimeout(function () { finish(job); }, wait);
+    }
+    function finish(job) {
+      if (!job || !jobs.has(job.token)) return;
+      clearTimeout(job.timer); job.timer = null;
+      jobs.delete(job.token);
+      job.remaining = 0;
+      job.callback();
+    }
+    function parkAttended() {
+      var now = performance.now();
+      jobs.forEach(function (job) {
+        if (job.clock !== "attended" || !job.timer) return;
+        job.remaining = remaining(job, now);
+        clearTimeout(job.timer); job.timer = null; job.started = 0;
+      });
+    }
+    function resumeAttended() {
+      if (!attended()) return;
+      jobs.forEach(function (job) { if (job.clock === "attended") arm(job); });
+    }
+    window.addEventListener("blur", function () { attentionBlurred = true; parkAttended(); });
+    window.addEventListener("focus", function () { attentionBlurred = false; resumeAttended(); });
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) parkAttended();
+      else resumeAttended();
+    });
+    function schedule(callback, delay, options) {
+      options = options || {};
+      delay = Number(delay);
+      if (typeof callback !== "function" || !Number.isFinite(delay) || delay <= 0) return false;
+      var clock = options.clock === "wall" ? "wall" : "attended";
+      var job = {
+        token: "attention-" + (++serial), owner: String(options.owner || "general"),
+        scope: String(options.scope || "global"), clock: clock, callback: callback,
+        duration: delay, remaining: delay, deadline: clock === "wall" ? performance.now() + delay : 0,
+        started: 0, timer: null
+      };
+      jobs.set(job.token, job); arm(job);
+      return job.token;
+    }
+    function cancel(target) {
+      var changed = false;
+      jobs.forEach(function (job) {
+        if (target && target !== job.token && target !== job.owner && target !== job.scope) return;
+        clearTimeout(job.timer); jobs.delete(job.token); changed = true;
+      });
+      return changed;
+    }
+    function state(token) {
+      var job = token ? jobs.get(token) : null;
+      if (token) return job ? { token: job.token, owner: job.owner, scope: job.scope, clock: job.clock,
+        duration: job.duration, remaining: remaining(job), running: !!job.timer } : null;
+      var rows = [];
+      jobs.forEach(function (entry) { rows.push({ token: entry.token, owner: entry.owner,
+        scope: entry.scope, clock: entry.clock, duration: entry.duration,
+        remaining: remaining(entry), running: !!entry.timer }); });
+      return { attended: attended(), count: rows.length,
+        running: rows.filter(function (row) { return row.running; }).length, jobs: rows };
+    }
+    return { schedule: schedule, cancel: cancel, state: state, attended: attended };
+  }
+  var attentionScheduler = createAttentionScheduler();
+  window.__scheduleAttended = function (callback, delay, options) {
+    options = Object.assign({}, options || {}, { clock: "attended" });
+    return attentionScheduler.schedule(callback, delay, options);
+  };
+  window.__scheduleAttention = attentionScheduler.schedule;
+  window.__cancelAttention = attentionScheduler.cancel;
+  window.__attentionScheduleState = attentionScheduler.state;
+
+  function createCaptionArbiter(element) {
+    var base = null, transient = null, serial = 0, paintCount = 0, batchDepth = 0, paintPending = false;
     function publicClaim(claim) {
       if (!claim) return null;
+      var expiry = claim.expiryToken && attentionScheduler.state(claim.expiryToken);
       return {
         id: claim.id,
         token: claim.token,
@@ -113079,19 +113193,22 @@ function spawnDustMote(container) {
         priority: claim.priority,
         clock: claim.clock,
         duration: claim.duration,
-        remaining: claim.remaining,
+        remaining: expiry ? expiry.remaining : claim.duration,
+        variant: claim.variant == null ? null : claim.variant,
         replacements: claim.replacements || null,
         literal: claim.literal != null
       };
     }
-    function visible() { return exclusive || overlay || base; }
+    function visible() { return transient || base; }
     function paint() {
+      paintCount++;
       var claim = visible();
       var host = element.closest("#hunt-fullscreen-area");
       if (host) host.classList.toggle("caption-reserved-fit", !!(claim &&
         (claim.kind === "exclusive" || claim.format === "rsvp" || claim.priority >= CAPTION_PRIORITY.terminal)));
       element.classList.toggle("temporary-caption-live", !!(claim && claim.kind === "overlay"));
       element.classList.toggle("rsvp-nudge", !!(claim && claim.format === "rsvp"));
+      element.classList.toggle("hint-blink", !!(claim && claim.blink));
       captionKey = claim && claim.key != null ? claim.key : null;
       if (!claim) {
         element.textContent = "";
@@ -113112,104 +113229,93 @@ function spawnDustMote(container) {
         element.textContent = String(claim.renderText());
       } else if (claim.literal != null) {
         element.textContent = String(claim.literal);
-      } else if (claim.html != null) {
-        element.innerHTML = String(typeof claim.html === "function" ? claim.html() : claim.html);
       } else {
-        element.innerHTML = captionWithReplacements(claim.key, claim.replacements);
+        element.innerHTML = captionWithReplacements(claim.key, claim.replacements, claim.variant);
       }
     }
-    function stopTickerIfIdle() {
-      if ((overlay && overlay.duration > 0) || (exclusive && exclusive.duration > 0)) return;
-      clearTimeout(tickTimer);
-      tickTimer = null;
-    }
-    function expire(kind, token) {
-      var claim = kind === "exclusive" ? exclusive : overlay;
-      if (!claim || claim.token !== token) return false;
-      if (kind === "exclusive") exclusive = null;
-      else overlay = null;
+    function requestPaint() {
+      if (batchDepth) { paintPending = true; return; }
       paint();
-      stopTickerIfIdle();
-      return true;
     }
-    function tick() {
-      tickTimer = null;
-      var now = performance.now(), delta = Math.max(0, now - lastTick);
-      lastTick = now;
-      [overlay, exclusive].forEach(function (claim) {
-        if (!claim || !(claim.duration > 0)) return;
-        if (claim.clock === "wall") claim.remaining = Math.max(0, claim.expiresAt - now);
-        else if (attended()) claim.remaining -= delta;
-      });
-      if (overlay && overlay.duration > 0 && overlay.remaining <= 0) expire("overlay", overlay.token);
-      if (exclusive && exclusive.duration > 0 && exclusive.remaining <= 0) expire("exclusive", exclusive.token);
-      if ((overlay && overlay.duration > 0) || (exclusive && exclusive.duration > 0)) {
-        tickTimer = setTimeout(tick, 50);
-      }
+    function dispose(claim) {
+      if (!claim) return;
+      if (claim.expiryToken) attentionScheduler.cancel(claim.expiryToken);
+      if (claim.blinkToken) attentionScheduler.cancel(claim.blinkToken);
+      claim.expiryToken = claim.blinkToken = null;
     }
-    function armTicker() {
-      if (tickTimer) return;
-      lastTick = performance.now();
-      tickTimer = setTimeout(tick, 50);
+    function armExpiry(claim) {
+      if (!claim || !(claim.duration > 0)) return;
+      claim.expiryToken = attentionScheduler.schedule(function () {
+        if (!transient || transient.token !== claim.token) return;
+        transient = null; claim.expiryToken = null;
+        if (typeof claim.onExpire === "function") claim.onExpire(claim.token);
+        requestPaint();
+      }, claim.duration, { owner: "caption-expiry:" + claim.token, scope: claim.scope, clock: claim.clock });
     }
     function normalize(kind, spec) {
       spec = spec || {};
-      var duration = Math.max(0, Number(spec.duration) || 0);
+      var rawDuration = Number(spec.duration);
+      if (spec.duration != null && (!Number.isFinite(rawDuration) || rawDuration < 0)) return null;
+      var duration = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
       var clock = spec.clock === "wall" ? "wall" : "attended";
+      var validScope = typeof spec.scope === "string" && /^(?:global|stage:[a-z0-9_-]+|lower:[a-z0-9_-]+)$/.test(spec.scope);
+      if (spec.scope != null && !validScope) return null;
+      var scope = validScope ? spec.scope : captionViewportScope();
+      var hasPayload = typeof spec.key === "string" && spec.key.length > 0 ||
+        spec.literal != null || typeof spec.renderText === "function" || spec.format === "rsvp";
+      if (!hasPayload) return null;
       return {
         id: ++serial,
         token: "caption-" + serial + "-" + Math.random().toString(36).slice(2),
         kind: kind,
         key: spec.key == null ? null : String(spec.key),
         literal: spec.literal == null ? null : String(spec.literal),
-        html: spec.html == null ? null : spec.html,
         renderText: spec.renderText,
         format: spec.format || "",
         linkKey: spec.linkKey || "",
         replacements: spec.replacements || null,
-        owner: spec.owner || (kind === "base" ? "room" : "general"),
-        scope: spec.scope || captionViewportScope(),
+        variant: Number.isFinite(Number(spec.variant)) ? Math.max(0, Math.floor(Number(spec.variant))) : 0,
+        owner: String(spec.owner || (kind === "base" ? "room" : "general")),
+        scope: scope,
         priority: Number.isFinite(Number(spec.priority)) ? Number(spec.priority) :
           (kind === "exclusive" ? CAPTION_PRIORITY.exclusive : kind === "overlay" ? CAPTION_PRIORITY.feedback : CAPTION_PRIORITY.base),
         duration: duration,
-        remaining: duration,
         clock: clock,
-        expiresAt: clock === "wall" && duration > 0 ? performance.now() + duration : 0
+        expiryToken: null,
+        blinkToken: null,
+        blink: false,
+        onExpire: typeof spec.onExpire === "function" ? spec.onExpire : null
       };
-    }
-    function cancelMismatchedScope(scope) {
-      if (overlay && overlay.scope !== "global" && overlay.scope !== scope) overlay = null;
-      if (exclusive && exclusive.scope !== "global" && exclusive.scope !== scope) exclusive = null;
     }
     function claimBase(spec) {
       var claim = normalize("base", spec);
+      if (!claim || (claim.scope !== "global" && claim.scope !== captionViewportScope())) return false;
       var changedScope = !base || base.scope !== claim.scope;
+      dispose(base);
       base = claim;
-      if (changedScope) cancelMismatchedScope(claim.scope);
-      if (overlay && (overlay.owner === "console" || overlay.owner === "console-html")) overlay = null;
-      if (overlay && (overlay.owner === base.owner || overlay.priority < base.priority)) overlay = null;
-      paint();
-      stopTickerIfIdle();
+      if (changedScope) captionScopeGeneration++;
+      // A viewport move consumes its old transient. Within one viewport the semantic base may
+      // keep updating under feedback, but a strictly stronger base preempts that feedback.
+      if (transient && (changedScope && transient.scope !== "global" ||
+          transient.owner === "console" || claim.priority > transient.priority)) {
+        dispose(transient); transient = null;
+      }
+      requestPaint();
       return claim.token;
     }
     function claimTransient(kind, spec) {
       var claim = normalize(kind, spec);
-      var incumbent = kind === "exclusive" ? exclusive : overlay;
-      if (claim.scope !== "global" && base && claim.scope !== base.scope) return false;
-      var threshold = Math.max(base ? base.priority : CAPTION_PRIORITY.base,
-        kind === "overlay" && exclusive ? exclusive.priority : -Infinity);
-      if (claim.priority < threshold) return false;
-      if (incumbent && incumbent.owner !== claim.owner && claim.priority < incumbent.priority) return false;
-      if (kind === "exclusive") {
-        // An exclusive surface deliberately consumes any interrupted overlay. It cannot
-        // reappear after the modal/cinematic owner leaves.
-        overlay = null;
-        exclusive = claim;
-      } else {
-        overlay = claim;
+      if (!claim || (claim.scope !== "global" && claim.scope !== captionViewportScope())) return false;
+      if (base && claim.scope !== "global" && claim.scope !== base.scope) return false;
+      var incumbent = transient || base;
+      // Different owners need a strict priority win. Equal-priority chatter never queues behind
+      // an exclusive claim; same-owner updates coalesce in place and inherit no stale expiry.
+      if (incumbent && incumbent.owner !== claim.owner && claim.priority <= incumbent.priority) return false;
+      if (base && base.blinkToken) {
+        attentionScheduler.cancel(base.blinkToken); base.blinkToken = null; base.blink = false;
       }
-      paint();
-      if (claim.duration > 0) armTicker();
+      dispose(transient); transient = claim;
+      requestPaint(); armExpiry(claim);
       return claim.token;
     }
     function cancel(target, options) {
@@ -113220,26 +113326,47 @@ function spawnDustMote(container) {
         if (!target) return true;
         return claim.token === target || claim.owner === target || claim.scope === target;
       }
-      if (options.base && matches(base)) { base = null; changed = true; }
-      if (matches(overlay)) { overlay = null; changed = true; }
-      if (matches(exclusive)) { exclusive = null; changed = true; }
-      if (changed) paint();
-      stopTickerIfIdle();
+      if (options.base && matches(base)) { dispose(base); base = null; changed = true; }
+      if (matches(transient)) { dispose(transient); transient = null; changed = true; }
+      if (changed) requestPaint();
       return changed;
     }
-    function clearTransients() {
-      var changed = !!(overlay || exclusive);
-      overlay = null;
-      exclusive = null;
-      if (changed) paint();
-      stopTickerIfIdle();
-      return changed;
+    function clearTransients(options) {
+      options = options || {};
+      if (!transient || transient.owner === options.preserveOwner) return false;
+      dispose(transient); transient = null;
+      requestPaint();
+      return true;
+    }
+    function blink(token, duration) {
+      duration = Number(duration);
+      var claim = transient && transient.token === token ? transient : base && base.token === token ? base : null;
+      if (!claim || visible() !== claim || !Number.isFinite(duration) || duration <= 0) return false;
+      if (claim.blinkToken) attentionScheduler.cancel(claim.blinkToken);
+      claim.blink = true; requestPaint();
+      claim.blinkToken = attentionScheduler.schedule(function () {
+        if (visible() !== claim || claim.token !== token) return;
+        claim.blinkToken = null; claim.blink = false; requestPaint();
+      }, duration, { owner: "caption-blink:" + token, scope: claim.scope, clock: "attended" });
+      return !!claim.blinkToken;
+    }
+    function batch(callback) {
+      batchDepth++;
+      try { return callback(); }
+      finally {
+        batchDepth--;
+        if (!batchDepth && paintPending) { paintPending = false; paint(); }
+      }
+    }
+    function refresh() {
+      requestPaint();
     }
     function state() {
       return {
+        paintCount: paintCount,
         base: publicClaim(base),
-        overlay: publicClaim(overlay),
-        exclusive: publicClaim(exclusive),
+        overlay: transient && transient.kind === "overlay" ? publicClaim(transient) : null,
+        exclusive: transient && transient.kind === "exclusive" ? publicClaim(transient) : null,
         visible: publicClaim(visible())
       };
     }
@@ -113250,7 +113377,9 @@ function spawnDustMote(container) {
       cancel: cancel,
       cancelScope: function (scope) { return cancel(scope); },
       clearTransients: clearTransients,
-      refresh: paint,
+      blink: blink,
+      batch: batch,
+      refresh: refresh,
       state: state
     };
   }
@@ -113258,24 +113387,23 @@ function spawnDustMote(container) {
   window.__captionPriorities = CAPTION_PRIORITY;
   window.__captionArbiter = {
     base: function (key, options) {
+      if (typeof key !== "string" || !key) return false;
       options = Object.assign({}, options || {}, { key: key });
       if (options.priority == null) options.priority = captionBasePriority(key);
       return captionArbiter.base(options);
     },
     overlay: function (key, options) {
+      if (typeof key !== "string" || !key) return false;
       options = Object.assign({}, options || {}, { key: key });
       return captionArbiter.overlay(options);
     },
     exclusive: function (key, options) {
+      if (typeof key !== "string" || !key) return false;
       options = Object.assign({}, options || {}, { key: key });
       return captionArbiter.exclusive(options);
     },
     literal: function (text, options) {
       options = Object.assign({}, options || {}, { literal: text });
-      return options.exclusive ? captionArbiter.exclusive(options) : captionArbiter.overlay(options);
-    },
-    html: function (html, options) {
-      options = Object.assign({}, options || {}, { html: html });
       return options.exclusive ? captionArbiter.exclusive(options) : captionArbiter.overlay(options);
     },
     cancel: captionArbiter.cancel,
@@ -113288,7 +113416,17 @@ function spawnDustMote(container) {
   window.__captionOverlay = window.__captionArbiter.overlay;
   window.__captionExclusive = window.__captionArbiter.exclusive;
   window.__cancelCaption = window.__captionArbiter.cancel;
-  function setCaption(key, force) {
+  window.__blinkCaptionClaim = captionArbiter.blink;
+  var captionDerivationDepth = 0, pendingCaptionBase = null;
+  function publishCaptionBase(spec) {
+    if (captionDerivationDepth) { pendingCaptionBase = spec; return "caption-pending"; }
+    return captionArbiter.base(spec);
+  }
+  function setCaption(key, force, originScope, originGeneration) {
+    if (typeof key !== "string" || !key) return false;
+    var scope = originScope || captionViewportScope();
+    if (scope !== captionViewportScope()) return false;
+    if (originGeneration != null && originGeneration !== captionScopeGeneration) return false;
     // Trailer owns the caption completely. Games and lower rooms use force=true for their
     // normal instruction lines, so the gate must admit only the reel's own cine_* invitations;
     // otherwise a preview would briefly turn into feature documentation. Ordinary caption
@@ -113305,13 +113443,19 @@ function spawnDustMote(container) {
       (!window.__barUpNow || !window.__barUpNow()) && typeof key === "string" &&
       (key === "kitchen" || key.indexOf("kitchen_") === 0);
     if (window.__secondRound && phaseOneSolveCaption(key) && !repeatCoffeeCaption && !force) return;
-    return captionArbiter.base({
+    return publishCaptionBase({
       key: key,
       owner: lowerRoomOwnsViewport() && !captionReturningUpstairs ? "lower-room" : "room",
-      scope: captionViewportScope(),
+      scope: scope,
       priority: captionBasePriority(key)
     });
   }
+  // Capture before arming any delayed/rAF completion. Publishing through this closure can only
+  // affect the viewport that initiated the work, even after a leave-and-reentry race.
+  window.__captureCaptionPublisher = function () {
+    var scope = captionViewportScope(), generation = captionScopeGeneration;
+    return function (key, force) { return setCaption(key, force, scope, generation); };
+  };
   // console toy: caption() reads the line above the scene; caption("text") overwrites it with
   // literal text and returns the previous line (same no-arg-reads / setter-returns-previous idiom
   // as party(), dance() &c). A room change or hint update reclaims the line afterwards.
@@ -113327,25 +113471,11 @@ function spawnDustMote(container) {
     if (typeof opts === "number") blinkMs = opts;                                   // caption(text, blinkMs)
     else if (opts && typeof opts === "object") { blinkMs = +opts.blink || 0; holdMs = +opts.hold || +opts.resume || 0; }
     if (typeof arguments[2] === "number") holdMs = arguments[2];                    // caption(text, blinkMs, holdMs)
-    caption.classList.remove("rsvp-nudge", "hint-blink");
-    var token;
-    if (opts && typeof opts === "object" && opts.html) {
-      token = captionArbiter.overlay({ html: String(text), owner: "console-html", scope: captionViewportScope(),
-        priority: CAPTION_PRIORITY.feedback, duration: holdMs, clock: "wall" });
-    } else {
-      token = captionArbiter.overlay({ literal: String(text), owner: "console", scope: captionViewportScope(),
-        priority: CAPTION_PRIORITY.feedback, duration: holdMs, clock: "wall" });
-    }
+    var token = captionArbiter.overlay({ literal: String(text), owner: "console", scope: captionViewportScope(),
+      priority: CAPTION_PRIORITY.feedback, duration: holdMs, clock: "wall" });
     if (window.echo) window.echo(caption.textContent); // print through the echo side-channel (respects echo(true/false)) — rendered, so markup never reaches the console
-    if (blinkMs > 0) { caption.classList.add("hint-blink"); setTimeout(function () { caption.classList.remove("hint-blink"); }, blinkMs); }
-    if (!token) caption.classList.remove("hint-blink");
+    if (token && Number.isFinite(blinkMs) && blinkMs > 0) captionArbiter.blink(token, blinkMs);
     return prev;
-  };
-  window.__flashCaptionKey = function (key, holdMs, owner, replacements) {
-    if (!key) return false;
-    return !!captionArbiter.overlay({ key: key, owner: owner || "general", scope: captionViewportScope(),
-      priority: CAPTION_PRIORITY.feedback, duration: Math.max(500, +holdMs || 3500),
-      clock: "wall", replacements: replacements || null });
   };
   window.__clearFlashCaption = function (owner) { return captionArbiter.cancel(owner); };
   window.__flashCaptionState = function () {
@@ -113355,10 +113485,12 @@ function spawnDustMote(container) {
   var lowerRoomReturnVisitSuppressed = false;
   window.__setLowerRoomCaption = function (key) {
     if (!key) return false;
-    return !!captionArbiter.base({ key: key, owner: "lower-room", scope: captionViewportScope(),
+    return publishCaptionBase({ key: key, owner: "lower-room", scope: captionViewportScope(),
       priority: captionBasePriority(key) });
   };
-  window.__restoreLowerRoomCaption = function () {
+  window.__restoreLowerRoomCaption = function (expectedKey) {
+    var lower = activeLowerRoom();
+    if (expectedKey && lower) return window.__setLowerRoomCaption(expectedKey);
     if (window.currentStageName) {
       captionReturningUpstairs = true;
       try {
@@ -113369,6 +113501,14 @@ function spawnDustMote(container) {
     }
     return true;
   };
+  function beginCaptionDerivation() { captionDerivationDepth++; }
+  function endCaptionDerivation() {
+    if (!captionDerivationDepth) return false;
+    captionDerivationDepth--;
+    if (captionDerivationDepth || !pendingCaptionBase) return false;
+    var spec = pendingCaptionBase; pendingCaptionBase = null;
+    return captionArbiter.base(spec);
+  }
   // The RSVP CTA is the second act's last beat, once the wandering is done. The key rides
   // captionKey so a language flip re-renders it.
   function showRsvpNudge() {
@@ -113384,7 +113524,7 @@ function spawnDustMote(container) {
     captionArbiter.refresh();
     if (openingGuideShowing) paintOpeningGuide();
   };
-  var finaleTimers = [];
+  var finaleTimers = [], finaleActTimer = null;
   var balconyIntroSeen = false;
   window.__balconyUnlocked = function () { return balconyIntroSeen; }; // "first phase over" = the balcony's been properly reached (gates the autonomous kids-outside chance)
   function triggerBalconyFinale() {
@@ -113398,6 +113538,8 @@ function spawnDustMote(container) {
     // act can still layer its opening-evening nudge on top; a real night settles that beat.
     finaleTimers.forEach(clearTimeout);
     finaleTimers = [];
+    if (finaleActTimer && window.__cancelAttention) window.__cancelAttention(finaleActTimer);
+    finaleActTimer = null;
     var butterfly = document.getElementById("balcony-butterfly");
     var rainbow = document.getElementById("balcony-rainbow");
     if (butterfly) {
@@ -113424,7 +113566,10 @@ function spawnDustMote(container) {
     // driven from goToStage) runs them the whole time you're on the balcony or garden.
     // On ordinary days the finale runs without them.
     // Once the arrival flourish has had its moment, the second act picks the thread back up.
-    finaleTimers.push(setTimeout(function () { if (window.__armActTwo) window.__armActTwo(true); }, 4000));
+    finaleActTimer = window.__scheduleAttended(function () {
+      finaleActTimer = null;
+      if (window.__armActTwo) window.__armActTwo(true);
+    }, 4000, { owner: "balcony-act-arm", scope: "stage:balcony" });
   }
   // Post-solve exploration captions. Once a room owns its solved flag, re-entering it stops
   // repeating the solve instruction and shows a gentle, rotating "enjoy wandering" line.
@@ -114847,10 +114992,11 @@ function spawnDustMote(container) {
     clearTimeout(warmupTimer);
     if (kitchenPowered) {
       kitchenWarmedUp = false;
+      var publishWarmupCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
       warmupTimer = setTimeout(function () {
         kitchenWarmedUp = true;
         if (lamarzocco) { lamarzocco.classList.remove("warming-up"); lamarzocco.classList.add("done"); } // ready — LED settles to solid red, machine dims back
-        if (kitchenPowered) { setCaption(kitchenCurrentCaption()); updateKitchenInvite(); }
+        if (kitchenPowered) { if (publishWarmupCaption) publishWarmupCaption(kitchenCurrentCaption()); updateKitchenInvite(); }
       }, WARMUP_MS);
     } else {
       kitchenWarmedUp = false;
@@ -114902,6 +115048,7 @@ function spawnDustMote(container) {
       return;
     }
     grinding = true;
+    var publishGrindCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
     if (grinder) grinder.classList.remove("invite-pulse");
     flyPortafilterTo("grinder", function () {
       if (grinder) grinder.classList.add("grinding");
@@ -114915,7 +115062,7 @@ function spawnDustMote(container) {
         hideNextGrinderBean();
         if (grinder) { grinder.classList.remove("grinding"); grinder.classList.add("done"); }
         if (portafilter) { portafilter.classList.remove("grounds-flat", "spent"); portafilter.classList.add("has-grounds"); }
-        setCaption("kitchen_need_tamp");
+        if (publishGrindCaption) publishGrindCaption("kitchen_need_tamp");
         updateKitchenInvite();
       }, GRIND_MS);
     });
@@ -114929,6 +115076,7 @@ function spawnDustMote(container) {
   onActivate(tamper, function () {
     if (!window.__kitchenTamperEligible()) return;
     tamped = true;
+    var publishTampCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
     if (tamperPos) tamperPos.classList.remove("invite-pulse");
     flyPortafilterTo("tamper", function () {
       if (window.__wobbleTamper) window.__wobbleTamper();
@@ -114938,7 +115086,7 @@ function spawnDustMote(container) {
       }, 200);
       setTimeout(function () {
         flyPortafilterTo("grouphead", function () {
-          setCaption("kitchen_brew");
+          if (publishTampCaption) publishTampCaption("kitchen_brew");
           updateKitchenInvite();
         });
       }, TAMP_MS);
@@ -114969,6 +115117,7 @@ function spawnDustMote(container) {
     }
     if (portafilter && portafilter.classList.contains("done")) return;
     brewing = true;
+    var publishBrewCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
     if (portafilter) portafilter.classList.add("brewing");
     if (portafilterFly) portafilterFly.classList.remove("invite-pulse");
     playBrewSound();
@@ -114978,7 +115127,7 @@ function spawnDustMote(container) {
       if (portafilter) { portafilter.classList.remove("brewing"); portafilter.classList.add("done"); }
       var shotcup = document.getElementById("kitchen-shotcup");
       if (shotcup) shotcup.classList.add("filled");
-      setCaption("kitchen_sip");
+      if (publishBrewCaption) publishBrewCaption("kitchen_sip");
       updateKitchenInvite();
     }, BREW_MS);
   });
@@ -114988,6 +115137,7 @@ function spawnDustMote(container) {
   window.__kitchenKnockout = function () {
     if (!portafilterSpent || portafilterFlying || portafilterPos !== "grouphead") return false;
     if (knockbox) knockbox.classList.remove("invite-pulse");
+    var publishKnockoutCaption = window.__captureCaptionPublisher && window.__captureCaptionPublisher();
     flyPortafilterTo("knockbox", function () {
       playKnockboxThumpSound();
       if (portafilterFly) {
@@ -115003,7 +115153,7 @@ function spawnDustMote(container) {
         kitchenGround = false;
         tamped = false;
         flyPortafilterTo("grouphead", function () {
-          setCaption("kitchen_grind");
+          if (publishKnockoutCaption) publishKnockoutCaption("kitchen_grind");
           updateKitchenInvite();
         });
       }, KNOCK_MS);
@@ -116698,26 +116848,26 @@ function spawnDustMote(container) {
     var key = window.__djB ? "dj_danesh" : "dj_sina"; // whoever's spinning now
     var arr = ((T[document.documentElement.lang] || {}).hunt || T.en.hunt)[key] || T.en.hunt[key];
     if (arr && arr.length) {
-      captionArbiter.overlay({ html: arr[Math.floor(Math.random() * arr.length)], owner: "dj-shout",
-        scope: captionViewportScope(), priority: CAPTION_PRIORITY.feedback, duration: 4200,
+      var variant = Math.floor(Math.random() * arr.length);
+      var token = captionArbiter.overlay({ key: key, variant: variant, owner: "dj-shout",
+        scope: captionViewportScope(), priority: CAPTION_PRIORITY.story + 1, duration: 4200,
         clock: "attended" });
-      caption.classList.add("hint-blink");
-      setTimeout(function () { caption.classList.remove("hint-blink"); }, 900);
+      if (token) captionArbiter.blink(token, 900);
     }
     // Second act: watching the decks change hands IS the floor beat paying off, so it settles
     // P2 — but only after this hype line has had its 4.2s, or the next beat would stomp the
     // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.
-    if (window.__actPing) setTimeout(function () {
+    if (window.__actPing) window.__scheduleAttended(function () {
       if (window.__gardenPartyOn &&
           (!window.__partyForegroundActive || window.__partyForegroundActive())) window.__actPing("dj");
-    }, 4600);
+    }, 4600, { owner: "dj-handoff", scope: "stage:garden" });
     // when the decks pass to Sina, Danesh is off — he texts the host from the sidelines. Delayed
     // so it doesn't land on the "DJ Sina takes over" caption; fires once (dedup'd in the deliverer).
-    if (!window.__djB && window.__deliverAutonomousPhoneMessage) setTimeout(function () {
+    if (!window.__djB && window.__deliverAutonomousPhoneMessage) window.__scheduleAttended(function () {
       if (window.__gardenPartyOn &&
           (!window.__partyForegroundActive || window.__partyForegroundActive()) &&
           window.__deliverAutonomousPhoneMessage) window.__deliverAutonomousPhoneMessage("danesh");
-    }, 5200);
+    }, 5200, { owner: "dj-message", scope: "stage:garden" });
   }
   // Manual DJ swap — double-tapping the decks hands the booth to the other friend. Flips the
   // active DJ, reflects it onto the booth, hypes the incoming one, and zeroes the every-3-dances
@@ -123679,6 +123829,7 @@ function spawnDustMote(container) {
     if (window.__resetShareAutoShow) window.__resetShareAutoShow();
     window.__runTransientResetHooks();
     captionArbiter.clearTransients();
+    attentionScheduler.cancel(); // no producer handoff from the discarded visit may cross Start over
     if (window.__resetLowerRoomDiscovery) window.__resetLowerRoomDiscovery();
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     if (window.__resetCheckpointSystems) window.__resetCheckpointSystems();
@@ -126590,6 +126741,8 @@ function spawnDustMote(container) {
     // normal (non-cinematic) play is untouched.
     finaleTimers.forEach(clearTimeout);
     finaleTimers = [];
+    if (finaleActTimer && window.__cancelAttention) window.__cancelAttention(finaleActTimer);
+    finaleActTimer = null;
     cineHushSong(); // the montage score belongs only to the reel
     if (window.__closePhoneModal) window.__closePhoneModal(true);
     // Mini-games own rAF/timers and lower rooms own delayed slide teardowns. End each through
@@ -127520,9 +127673,17 @@ function spawnDustMote(container) {
     window.addEventListener("blur", recoveryBlurHandler);
   }
   function applyCheckpoint(saved) {
+    return captionArbiter.batch(function () {
+      beginCaptionDerivation();
+      try { return applyCheckpointNow(saved); }
+      finally { endCaptionDerivation(); }
+    });
+  }
+  function applyCheckpointNow(saved) {
     // Checkpoints carry semantic game state only. Drop every transient caption claim and
     // its cancellation clock before subsystem restore derives one fresh viewport base.
     captionArbiter.clearTransients();
+    attentionScheduler.cancel();
     restoreCheckpointPuzzle(saved.puzzle);
     // A checkpoint predating the adapter registry (including the deliberately compact portable
     // handoff) has no systems property at all. Its legacy puzzle fields remain authoritative
@@ -127575,6 +127736,7 @@ function spawnDustMote(container) {
     hideRecoveryGate();
     syncLoftAttendedTime();
     saveCheckpoint();
+    return true;
   }
   function runGameEntryAction(action) {
     if (window.__startGameEntryLoader) return !!window.__startGameEntryLoader(action);
@@ -132913,7 +133075,7 @@ function spawnDustMote(container) {
   //
   // Per-session, never localStorage: a ~10-minute experience, and a returning visitor who
   // knows the trick shouldn't have the surprise re-explained to them.
-  var armed = false, retired = false, live = null, liveMs = 0, claimElapsed = 0, latched = {}, ticker = null, redirTimer = null, revealTimer = null;
+  var armed = false, retired = false, live = null, liveMs = 0, claimElapsed = 0, latched = {}, ticker = null, redirTimer = null, revealCaptionToken = null;
 
   function el(id) { return document.getElementById(id); }
   function isDusk() { var b = el("stage-balcony"); return !!(b && b.classList.contains("dusk")); }
@@ -132963,7 +133125,37 @@ function spawnDustMote(container) {
   var ACT_MSG = { act_b0: "dusk", act_p1: "pouria", act_p2: "group", act_p3: ["album", "irene_games"] };
   var MSG_DELAY_MS = 5000, MSG_STAGGER_MS = 4500, msgTimers = [], pendingMsgIds = [];
   var msgDeadlines = {}, msgRemaining = {};
-  var revealDeadline = 0, revealRemaining = 0, redirDeadline = 0, redirRemaining = 0;
+  var revealRemaining = 0, redirRemaining = 0;
+  function cancelRevealCaption() {
+    if (revealCaptionToken && window.__cancelCaption) window.__cancelCaption(revealCaptionToken);
+    revealCaptionToken = null;
+  }
+  function publishPartyReveal(delay) {
+    delay = Number(delay);
+    if (!Number.isFinite(delay) || delay <= 0 || !window.__captionOverlay) return false;
+    cancelRevealCaption(); revealRemaining = delay;
+    revealCaptionToken = window.__captionOverlay("act_b3", {
+      owner: "act-reveal", scope: "stage:garden", priority: 61, duration: delay, clock: "attended",
+      onExpire: function (token) {
+        if (token !== revealCaptionToken) return;
+        revealCaptionToken = null; revealRemaining = 0; speak();
+      }
+    });
+    return !!revealCaptionToken;
+  }
+  function cancelRedirTimer() {
+    if (!redirTimer) return;
+    if (window.__cancelAttention) window.__cancelAttention(redirTimer);
+    else clearTimeout(redirTimer);
+    redirTimer = null;
+  }
+  function scheduleRedir(delay) {
+    cancelRedirTimer(); redirRemaining = delay;
+    redirTimer = window.__scheduleAttended(function () {
+      redirTimer = null; redirRemaining = 0;
+      if (window.__captionKey && window.__captionKey() === "act_b2_redirect") speak();
+    }, delay, { owner: "act-two-redirect", scope: "stage:balcony" });
+  }
   // Text arrives ~5s after its caption. Deadlines keep that delay exact across a Road Trip hold.
   function clearMsgTimers() {
     msgTimers.forEach(function (t) { clearTimeout(t); });
@@ -133062,16 +133254,9 @@ function spawnDustMote(container) {
       // This authored reveal is the payoff for that same gesture, so it supersedes only
       // that incidental progress flash and leaves unrelated temporary captions alone.
       if (window.__clearFlashCaption) window.__clearFlashCaption("room-progress");
-      if (window.setCaption) window.setCaption("act_b3");
       advance(true);
-      if (revealTimer) clearTimeout(revealTimer);
-      revealRemaining = 5200;
-      revealDeadline = performance.now() + revealRemaining;
-      revealTimer = setTimeout(function () {
-        revealTimer = null;
-        revealDeadline = 0; revealRemaining = 0;
-        if (window.__captionKey && window.__captionKey() === "act_b3") speak(); // still ours? then hand over. Otherwise something better is already on screen.
-      }, revealRemaining);
+      speak(); // establish act_p1 as the semantic base beneath the bounded reveal
+      publishPartyReveal(5200);
       return;
     }
     advance();
@@ -133089,9 +133274,8 @@ function spawnDustMote(container) {
   window.__partyActEnded = function () {
     if (!armed) return;
     clearMsgTimers();
-    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
-    if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
-    revealDeadline = 0; revealRemaining = 0; redirDeadline = 0; redirRemaining = 0;
+    cancelRevealCaption(); cancelRedirTimer();
+    revealRemaining = 0; redirRemaining = 0;
     if (ticker) { clearInterval(ticker); ticker = null; }
     switchPulse(false);
     retired = true;
@@ -133101,9 +133285,8 @@ function spawnDustMote(container) {
   window.__resetActTwo = function () { // the extinguisher: forget the whole arc, strand nothing
     armed = false; retired = false; live = null; liveMs = 0; claimElapsed = 0; latched = {};
     if (ticker) { clearInterval(ticker); ticker = null; }
-    if (redirTimer) { clearTimeout(redirTimer); redirTimer = null; }
-    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
-    revealDeadline = 0; revealRemaining = 0; redirDeadline = 0; redirRemaining = 0;
+    cancelRedirTimer(); cancelRevealCaption();
+    revealRemaining = 0; redirRemaining = 0;
     clearMsgTimers(); // drop any phone text still waiting out its ~5s delay
     switchPulse(false);
   };
@@ -133116,14 +133299,15 @@ function spawnDustMote(container) {
   window.__pauseActTwoPartyForeground = function () {
     if (ticker) { clearInterval(ticker); ticker = null; }
     holdMsgTimers();
-    var now = performance.now();
-    if (revealTimer) {
-      revealRemaining = Math.max(1, revealDeadline - now);
-      clearTimeout(revealTimer); revealTimer = null; revealDeadline = 0;
+    if (revealCaptionToken && window.__captionState) {
+      var revealClaim = window.__captionState().overlay;
+      if (revealClaim && revealClaim.token === revealCaptionToken) revealRemaining = Math.max(1, revealClaim.remaining);
+      cancelRevealCaption();
     }
     if (redirTimer) {
-      redirRemaining = Math.max(1, redirDeadline - now);
-      clearTimeout(redirTimer); redirTimer = null; redirDeadline = 0;
+      var redirState = window.__attentionScheduleState && window.__attentionScheduleState(redirTimer);
+      if (redirState) redirRemaining = Math.max(1, redirState.remaining);
+      cancelRedirTimer();
     }
   };
   window.__resumeActTwoPartyForeground = function () {
@@ -133133,20 +133317,8 @@ function spawnDustMote(container) {
     pending.forEach(function (mid, i) {
       scheduleActMessage(mid, msgRemaining[mid] || (MSG_DELAY_MS + i * MSG_STAGGER_MS));
     });
-    if (revealRemaining > 0 && !revealTimer) {
-      revealDeadline = performance.now() + revealRemaining;
-      revealTimer = setTimeout(function () {
-        revealTimer = null; revealDeadline = 0; revealRemaining = 0;
-        if (window.__captionKey && window.__captionKey() === "act_b3") speak();
-      }, revealRemaining);
-    }
-    if (redirRemaining > 0 && !redirTimer) {
-      redirDeadline = performance.now() + redirRemaining;
-      redirTimer = setTimeout(function () {
-        redirTimer = null; redirDeadline = 0; redirRemaining = 0;
-        if (window.__captionKey && window.__captionKey() === "act_b2_redirect") speak();
-      }, redirRemaining);
-    }
+    if (revealRemaining > 0 && !revealCaptionToken) publishPartyReveal(revealRemaining);
+    if (redirRemaining > 0 && !redirTimer) scheduleRedir(redirRemaining);
   };
 
   // Hazard A, the one the whole hinge turns on: told "kill the lights", people click the
@@ -133161,14 +133333,7 @@ function spawnDustMote(container) {
       if (window.setCaption) window.setCaption("act_b2_redirect");
       switchPulse(false);
       requestAnimationFrame(function () { requestAnimationFrame(function () { switchPulse(true); }); }); // drop + re-add so the pulse restarts from the top rather than continuing mid-cycle
-      if (redirTimer) clearTimeout(redirTimer);
-      redirRemaining = 4500;
-      redirDeadline = performance.now() + redirRemaining;
-      redirTimer = setTimeout(function () {
-        redirTimer = null;
-        redirDeadline = 0; redirRemaining = 0;
-        if (window.__captionKey && window.__captionKey() === "act_b2_redirect") speak(); // put the instruction back, if the wink's still on screen
-      }, redirRemaining);
+      scheduleRedir(4500);
     });
   });
 })();

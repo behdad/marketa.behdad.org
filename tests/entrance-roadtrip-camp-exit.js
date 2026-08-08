@@ -66,10 +66,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     setTimeout(function () {
       try {
         var flashed = [];
-        var originalFlashCaptionKey = window.__flashCaptionKey;
-        window.__flashCaptionKey = function (key) {
+        var originalCaptionOverlay = window.__captionOverlay;
+        window.__captionOverlay = function (key) {
           flashed.push(key);
-          return originalFlashCaptionKey.apply(this, arguments);
+          return originalCaptionOverlay.apply(this, arguments);
         };
         window.__unlockAllRooms();
         window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",

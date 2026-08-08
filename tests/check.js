@@ -1286,6 +1286,41 @@ function checkMetadataFreeGame(file, html) {
 // #hunt-caption is a shared projection. Producers publish structured claims; only the
 // arbiter renderer may write its text/markup. Keep the common aliases pinned so a new
 // minigame cannot quietly recreate a private save/restore timer beside the arbiter.
+function captionDomWriteHits(script) {
+  var aliases = new Set(["caption", "captionEl"]), selectorAliases = new Set();
+  var declarationCounts = {}, declarationScan = /\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=/g, declarationMatch;
+  while ((declarationMatch = declarationScan.exec(script))) {
+    declarationCounts[declarationMatch[1]] = (declarationCounts[declarationMatch[1]] || 0) + 1;
+  }
+  var assignment = /\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*([^;\n]+)/g, changed = true, match;
+  while (changed) {
+    changed = false; assignment.lastIndex = 0;
+    while ((match = assignment.exec(script))) {
+      var name = match[1], rhs = match[2].trim();
+      if (declarationCounts[name] === 1 && /^document\.(?:querySelector|getElementById)(?:\.bind\(document\))?$/.test(rhs) && !selectorAliases.has(name)) {
+        selectorAliases.add(name); changed = true; continue;
+      }
+      var direct = /^document\.(?:querySelector|getElementById)\(\s*["'](?:#)?hunt-caption["']\s*\)/.test(rhs);
+      var viaSelector = Array.from(selectorAliases).some(function (selector) {
+        return new RegExp("^" + selector.replace(/[$]/g, "\\$") + "\\(\\s*[\"'](?:#)?hunt-caption[\"']\\s*\\)").test(rhs);
+      });
+      if (declarationCounts[name] === 1 && (direct || viaSelector || aliases.has(rhs))) {
+        if (!aliases.has(name)) { aliases.add(name); changed = true; }
+      }
+    }
+  }
+  var names = Array.from(aliases).map(function (name) { return name.replace(/[$]/g, "\\$"); }).join("|");
+  // Keep the alternatives in one regex so bracket notation and method calls follow the same
+  // small alias-dataflow pass above.
+  var aliasWrite = new RegExp("\\b(?:" + names + ")\\s*(?:\\.\\s*(?:innerHTML|textContent|innerText)\\s*=|\\[\\s*[\"'](?:innerHTML|textContent|innerText)[\"']\\s*\\]\\s*=|\\.\\s*replaceChildren\\s*\\(|\\[\\s*[\"']replaceChildren[\"']\\s*\\]\\s*\\()", "i");
+  var directWrite = /document\.(?:querySelector|getElementById)\(\s*["'](?:#)?hunt-caption["']\s*\)\s*(?:\.\s*(?:innerHTML|textContent|innerText)\s*=|\[\s*["'](?:innerHTML|textContent|innerText)["']\s*\]\s*=|\.\s*replaceChildren\s*\(|\[\s*["']replaceChildren["']\s*\]\s*\()/i;
+  var hits = [];
+  script.split("\n").forEach(function (line, index) {
+    if (aliasWrite.test(line) || directWrite.test(line)) hits.push((index + 1) + ": " + line.trim().slice(0, 120));
+  });
+  return hits;
+}
+
 function checkCaptionDomOwnership(file, script) {
   if (file !== "rsvp.html" || !script) return;
   var start = script.indexOf("function createCaptionArbiter(element)");
@@ -1294,18 +1329,22 @@ function checkCaptionDomOwnership(file, script) {
     fail(file + ": caption DOM has one renderer", "createCaptionArbiter boundary missing");
     return;
   }
-  var outside = script.slice(0, start) + script.slice(end);
-  var hits = [], lines = outside.split("\n");
-  lines.forEach(function (line, index) {
-    if (/\b(?:caption|captionEl)\.(?:innerHTML|textContent)\s*=/.test(line)) {
-      hits.push((index + 1) + ": " + line.trim().slice(0, 120));
-    }
-    if (/document\.getElementById\(["']hunt-caption["']\)\.(?:innerHTML|textContent)\s*=/.test(line)) {
-      hits.push((index + 1) + ": " + line.trim().slice(0, 120));
-    }
-  });
+  // Blank the renderer without changing line numbers; diagnostics still point at authored source.
+  var outside = script.slice(0, start) + script.slice(start, end).replace(/[^\n]/g, " ") + script.slice(end);
+  var hits = captionDomWriteHits(outside);
   if (hits.length) fail(file + ": caption DOM has one renderer", hits.join("\n"));
   else pass(file + ": caption DOM has one renderer (structured claims only)");
+
+  var fixture = [
+    'var selected = document.querySelector("#hunt-caption"); selected.textContent = "rogue";',
+    'var cap = caption; cap.innerText = "rogue";',
+    'caption["innerHTML"] = "rogue";',
+    'document.getElementById("hunt-caption").replaceChildren(document.createTextNode("rogue"));',
+    'var qs = document.querySelector.bind(document); var indirect = qs("#hunt-caption"); indirect["replaceChildren"]();'
+  ].join("\n");
+  var fixtureHits = captionDomWriteHits(fixture);
+  if (fixtureHits.length === 5) pass(file + ": caption renderer guard rejects alias/bracket/method bypass fixtures");
+  else fail(file + ": caption renderer guard rejects alias/bracket/method bypass fixtures", fixtureHits.join("\n"));
 }
 
 // Authored source is UTF-8. Keep printable characters visible instead of hiding them

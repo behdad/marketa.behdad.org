@@ -233,20 +233,28 @@ not reliable.
 ### Captions and coaches
 
 `captionArbiter` is the only writer of `#hunt-caption`; `tests/check.js` enforces that boundary. It
-keeps the latest persistent base for the active viewport, one temporary overlay, and one exclusive
-claim. Producers declare an owner, room/lower-room scope, priority, duration, attended- or wall-time
-clock, and optional escaped replacements. Base state keeps updating under feedback. Higher priority
-preempts, lower priority is suppressed rather than queued, same-owner chatter replaces, and a claim
-token prevents stale expiry from clearing a successor. Scope exit cancels scoped transients.
+keeps the latest persistent base for the active viewport and one transient slot whose kind is overlay
+or exclusive. Producers declare an owner, room/lower-room scope, priority, duration, attended- or
+wall-time clock, and optional escaped replacements. Across owners a claim must strictly beat the
+visible transient; lower or equal claims are rejected rather than queued, and preempted transients
+are consumed so they cannot resurface. Same-owner chatter coalesces in place. Base state may update
+under a transient, while scope exit cancels scoped transient ownership.
 
 Use `__captionBase`, `__captionOverlay`, `__captionExclusive`, and
 `__cancelCaption(tokenOrOwner)`. `setCaption` and `__setLowerRoomCaption` remain stable-base helpers;
-the flash hooks are compatibility seams only. Keyed claims rerender on language changes, while the
-intentional `caption()` console toy stays literal. Intro, recovery, and Trailer are exclusive; Road
-Trip story beats outrank score/collision feedback; police and Camping terminal state reject
-incidental copy. Checkpoints store semantic game state only: restore clears claims/timers and derives
-the current base once. Focused coverage is in `tests/caption-arbiter.js` and
-`tests/caption-roadtrip-arbitration.js`.
+`__captureCaptionPublisher()` is the canonical delayed-base helper because it captures both viewport
+scope and the room-visit generation. Keyed claims rerender on language changes; the `caption()`
+console toy is literal-only, including when legacy callers pass `{html:true}`. Intro, recovery, and
+Trailer are exclusive; Road Trip story beats outrank score/collision feedback; police and Camping
+terminal state reject incidental copy. Checkpoint restoration batches caption derivation and paints
+the resulting semantic base once.
+
+Caption expiry and producer handoffs use the shared attention scheduler (`__scheduleAttended`, with
+`__cancelAttention` for owner/token cleanup). Attended jobs park completely while hidden or
+unfocused—there is no polling ticker—and resume with their exact remainder. Use that scheduler for
+actionable timed results and story reveals; wall time is reserved for effects whose time must elapse
+off-screen. Focused coverage is in `tests/caption-arbiter.js`, `tests/caption-delayed-producers.js`,
+and `tests/caption-roadtrip-arbitration.js`.
 
 Coaches are persistent instructional overlays, not captions. Their own controller decides when they
 appear, whether navigation may continue behind them, and which action dismisses them. A coach that
@@ -474,7 +482,7 @@ references.
 | Entrance and Road Trip | `porscheDrive`, `roadtripState`, `roadtripAuthorized`, `__entranceDriveStep` |
 | Camping | `campFireState`, `campStewState`, `campStargazingState`, `campSleepState` |
 | Keyboard routing | `activeControlFocused`, `activateCurrentRoom`, `__entranceDriveKeyboardOwnership` |
-| Captions | `setCaption`, `__flashCaptionKey`, `__setLowerRoomCaption`, `refreshHuntCaption` |
+| Captions | `captionArbiter`, `__captureCaptionPublisher`, `__captionOverlay`, `__setLowerRoomCaption`, `refreshHuntCaption` |
 | Checkpoints | `checkpointPayload`, `applyCheckpoint`, `__registerCheckpointAdapter`, `__deferCheckpointAdapter` |
 | Lifecycle | `__roomAutonomyAllowed`, `__foregroundAmbienceCovered`, `__setPartyForegroundSuspended` |
 | Apps | `DESKTOP_APPS`, `TOOLBAR_APPS`, `PHONE_APPS`, `appTouchConstrained` |

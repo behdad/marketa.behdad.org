@@ -90,7 +90,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__entranceRoadtripPolice(150);
     var stationAt = trip().police.stationAt;
     window.__entranceRoadtripSetDistance(stationAt - 6);
-    if (pendingFeedback) window.__flashCaptionKey(pendingFeedback, 10000, "entrance-roadtrip");
+    if (pendingFeedback) window.__captionOverlay(pendingFeedback, { owner: "entrance-roadtrip",
+      scope: "lower:entrance", priority: 30, duration: 10000, clock: "wall" });
     window.__entranceRoadtripPoliceDetect(speed);
     return copy(trip());
   }
@@ -402,7 +403,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       await sleep(80);
       report.steps.refocused = copy(trip().police);
       window.__entranceRoadtripSetLane(.5);
-      window.__flashCaptionKey("entrance_roadtrip_heart", 10000, "entrance-roadtrip");
+      window.__captionOverlay("entrance_roadtrip_heart", { owner: "entrance-roadtrip",
+        scope: "lower:entrance", priority: 30, duration: 10000, clock: "wall" });
       setMotion(0, 0);
       step(1000);
       var ordinaryStopped = copy(trip());
@@ -671,7 +673,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       var heldEleven = copy(trip());
       window.__entranceRoadtripPoliceStep(214, 2);
       var recovered = copy(trip());
-      window.__flashCaptionKey("entrance_roadtrip_kiss", 10000, "entrance-roadtrip");
+      window.__captionOverlay("entrance_roadtrip_kiss", { owner: "entrance-roadtrip",
+        scope: "lower:entrance", priority: 30, duration: 10000, clock: "wall" });
       window.__entranceRoadtripPoliceStep(216, 11);
       var requalified = copy(trip());
       window.__entranceRoadtripPoliceStep(216, 1);

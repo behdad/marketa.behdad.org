@@ -39,6 +39,10 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         setTimeout(function () {
           try {
             report.arrival = snapshot();
+            report.arrivalIncidentalAccepted = !!window.__captionOverlay("entrance_roadtrip_heart", {
+              owner: "camp-real-probe", scope: "lower:entrance", priority: 20, duration: 1000
+            });
+            report.arrivalAfterProbe = snapshot();
             setLang("cs");
             report.czech = snapshot();
             setLang("en");
@@ -107,6 +111,10 @@ var arrival = result && result.arrival || {};
 check(arrival.route === "camp" && arrival.key === "entrance_roadtrip_camp_fire_invite" &&
   arrival.text === "What a beautiful campsite! Let’s build a fire." && arrival.blinking,
   "Camping first invites the player to build a fire", arrival);
+check(!result.arrivalIncidentalAccepted &&
+  result.arrivalAfterProbe.key === "entrance_roadtrip_camp_fire_invite",
+  "the real Camping controller rejects lower-priority incidental captions",
+  { accepted: result.arrivalIncidentalAccepted, after: result.arrivalAfterProbe });
 
 var czech = result && result.czech || {};
 check(czech.key === "entrance_roadtrip_camp_fire_invite" &&

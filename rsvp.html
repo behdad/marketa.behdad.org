@@ -53468,7 +53468,7 @@ var T = {
     kbd_f: "fullscreen",
     kbd_watch: "who’s here? (roster for this room)",
     kbd_tab: "open / close the whole-loft view",
-    kbd_party: "throw the garden party",
+    kbd_party: "start the Party",
     kbd_u: "toggle the UV / blacklight",
     kbd_arrows: "previous / next room",
     kbd_shift_arrows: "previous / next key day",
@@ -53480,7 +53480,7 @@ var T = {
     kbd_devices: "monitor / laptop / cellphone",
     kbd_enter: "advance the room puzzle",
     kbd_d: "day ↔ night",
-    kbd_r: "reset the loft",
+    kbd_roadtrip: "unlock every room for Road Trip",
     kbd_kitten: "toggle the kitten",
     kbd_s: "season change",
     kbd_n: "next track (dance / piano piece / song)",
@@ -54840,7 +54840,7 @@ var T = {
     kbd_f: "celá obrazovka",
     kbd_watch: "kdo je tady? (soupiska téhle místnosti)",
     kbd_tab: "otevřít / zavřít pohled na celý loft",
-    kbd_party: "spustit zahradní večírek",
+    kbd_party: "spustit párty",
     kbd_u: "přepnout UV / černé světlo",
     kbd_arrows: "předchozí / další místnost",
     kbd_shift_arrows: "předchozí / další významný den",
@@ -54852,7 +54852,7 @@ var T = {
     kbd_devices: "monitor / notebook / telefon",
     kbd_enter: "pokračovat v hádance místnosti",
     kbd_d: "den ↔ noc",
-    kbd_r: "resetovat loft",
+    kbd_roadtrip: "odemknout všechny místnosti pro výlet",
     kbd_kitten: "přepnout kotě",
     kbd_s: "změna sezóny",
     kbd_n: "další skladba (tanec / klavírní skladba / píseň)",
@@ -55802,10 +55802,10 @@ window.addEventListener("hashchange", function () {
       ["<kbd>Shift</kbd>+<kbd>1…8</kbd>", "kbd_trips"],
       ["<kbd>d</kbd>", "kbd_d"],
       ["<kbd>k</kbd>", "kbd_kitten"],
-      ["<kbd>p</kbd>", "kbd_party"],
+      ["<kbd>Shift</kbd>+<kbd>P</kbd>", "kbd_party"],
       ["<kbd>u</kbd>", "kbd_u"],
       ["<kbd>s</kbd>", "kbd_s"],
-      ["<kbd>r</kbd>", "kbd_r"],
+      ["<kbd>Shift</kbd>+<kbd>R</kbd>", "kbd_roadtrip"],
       ["<kbd>?</kbd>", "kbd_qm"]
     ];
     // Backtick is an easter-egg path, not a feature to advertise. Add it to the help card
@@ -56191,7 +56191,7 @@ function setUvMode(on) {
   if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // start the on↔off cross-fade at once, not on the next poll
 }
 // The blacklight is driven solely by the balcony party switch (persistent,
-// #balcony-partyswitch) — also togglable with the 'p' key (see the party keydown below).
+// #balcony-partyswitch) — Shift+P can also start that same Party owner.
 var uvPartyOn = false;
 // The May-2 cookout is a real party (music, dancers, roster, kids) held in daylight without
 // blacklight. Separately, any party becomes a BBQ session once its smoker is lit.
@@ -56494,16 +56494,15 @@ window.__setUvParty = function (on) { // the balcony switch
     };
   };
 })();
-// 'p' throws / dismisses the garden blacklight party — same as flipping the balcony switch
-// (which drives the UV, whisks to the garden, and runs the party). Plain keypress only.
+// Shift+P is the deliberate Party fast-forward. It starts the canonical balcony-switch owner;
+// it never toggles the Party off, and plain P is left alone for local surfaces such as the car.
 document.addEventListener("keydown", function (e) {
-  if ((e.key !== "p" && e.key !== "P") || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+  if ((e.key !== "p" && e.key !== "P") || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
   var t = e.target;
   if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-  var sw = document.getElementById("balcony-partyswitch");
-  if (!sw) return;
+  if (!window.__setPartyMode) return;
   e.preventDefault();
-  sw.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  window.__setPartyMode(true);
 });
 (function () {
   // Right-click Copy/Paste menu for the office-monitor console/python consoles: copy the current
@@ -111685,6 +111684,34 @@ function spawnDustMote(container) {
   window.__setSeenRooms = setSeenRooms;
   window.__markRoomSeen = markRoomSeen;
   window.__showRoomProgress = showRoomProgress;
+  // Deliberate Shift+R fast-forward: establish the Party-era room frontier, record every room as
+  // visited, retire a live Party through its normal wind-down owner, then land at the Entrance
+  // with the dashboard closed. Road Trip's existing authorization owner derives the unlock from
+  // exactly those facts; this shortcut never forges its private flags.
+  window.__prepareRoadtripShortcut = function () {
+    setSecondRound(true);
+    setSeenRooms(ROOM_IDS);
+    function landAtEntrance() {
+      if (window.__hideEntrancePorscheDriveHud) window.__hideEntrancePorscheDriveHud();
+      var lower = window.__lowerRoomNavigationState && window.__lowerRoomNavigationState();
+      if (lower && lower.active && window.__navigateLowerRoom) {
+        window.__navigateLowerRoom("balcony");
+        return true;
+      }
+      if (window.goToStage) window.goToStage("balcony");
+      var open = function () {
+        if (window.__entranceRoomOpen) return true;
+        return !!(window.__openEntranceRoom && window.__openEntranceRoom());
+      };
+      if (!open()) setTimeout(open, 780);
+      return true;
+    }
+    if (window.__gardenPartyOn && window.__stopPartyThen) {
+      window.__stopPartyThen(landAtEntrance);
+      return true;
+    }
+    return landAtEntrance();
+  };
   var captionKey = "kitchen";
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
   var openingGuideShowing = false, openingGuideStep = "", openingGuideTimer = null, openingGuideArmTimer = null;
@@ -113788,6 +113815,11 @@ function spawnDustMote(container) {
       if (window.__stopHintBlink) window.__stopHintBlink();
       return;
     }
+    if (e.shiftKey && (e.key === "r" || e.key === "R")) {
+      e.preventDefault();
+      if (window.__prepareRoadtripShortcut) window.__prepareRoadtripShortcut();
+      return;
+    }
     if (e.shiftKey) { // Shift+arrows time-travel the loft: ←/→ = significant prev/next day, ↑/↓ = clock +/−30 min
       if (e.key === "ArrowLeft") { e.preventDefault(); if (window.__calStepSignificant) window.__calStepSignificant(-1); return; }
       if (e.key === "ArrowRight") { e.preventDefault(); if (window.__calStepSignificant) window.__calStepSignificant(1); return; }
@@ -113851,11 +113883,6 @@ function spawnDustMote(container) {
     } else if (/^[0-9]$/.test(e.key)) {
       e.preventDefault();
       navigateRoomDigit(e.key);
-    } else if (e.key === "r" || e.key === "R") {
-      e.preventDefault();
-      if (window.__requestLoftReset) window.__requestLoftReset({ resetDateTime: false });
-      else if (window.__activateExtinguisher) window.__activateExtinguisher();
-      else resetHunt({ enterPageMode: !!(window.__gameOnlyEntered && window.__gameOnlyEntered()) });
     } else if (e.key === "/") {
       e.preventDefault();
       if (window.__togglePhoneMessages) window.__togglePhoneMessages();

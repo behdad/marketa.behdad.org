@@ -148,7 +148,15 @@ opens the complete keyboard-shortcut card.
 - `D`: toggle day and night.
 - `?`: open or close the complete keyboard-shortcut card outside a typing field.
 - `F`: toggle browser fullscreen.
-- `R`: restart after confirmation.
+
+### Fast-forward shortcuts
+
+- `Shift` + `P`: unlock and start the Party.
+- `Shift` + `R`: mark every room visited, wind down the Party, and go to the Entrance ready for
+  Road Trip.
+
+Plain `P` and `R` have no global shortcut. Restart remains available from the visible reset control
+and the console.
 
 ### Driving
 

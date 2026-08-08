@@ -113,8 +113,8 @@ check(s.bubbles && s.bubbles.aim &&
 check(s.bubbles && s.bubbles.filling && s.bubbles.filling.tubFilling && !s.bubbles.filling.bubbles.active &&
   s.bubbles.bodyRepeat && !s.bubbles.bodyRepeat.tubDraining && s.bubbles.bodyRepeat.bubbles.active &&
   s.bubbles.draining && s.bubbles.draining.tubDraining && s.bubbles.draining.bubbles.active &&
-  s.bubbles.start.active && !s.bubbles.start.clockRunning && s.bubbles.start.time === "30" &&
-  s.bubbles.idle.active && !s.bubbles.idle.clockRunning && s.bubbles.idle.time === "30" &&
+  s.bubbles.start.active && !s.bubbles.start.clockRunning && s.bubbles.start.time === "20" &&
+  s.bubbles.idle.active && !s.bubbles.idle.clockRunning && s.bubbles.idle.time === "20" &&
   s.bubbles.start.popped === 0 &&
   s.bubbles.start.total === 8 && !s.bubbles.start.complete &&
   s.bubbles.done.clockRunning && s.bubbles.done.popped === 8 && s.bubbles.done.complete &&

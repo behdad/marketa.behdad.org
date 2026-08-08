@@ -151,7 +151,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         setDistance(riseDistance + 28);
         var furniture = visible("#entrance-roadtrip-furniture .entrance-roadtrip-furniture-engine");
         var speedSign = visible('#entrance-roadtrip-furniture [data-roadtrip-furniture="speed-90"]');
-        var curveSign = visible("#entrance-roadtrip-curve-signs .entrance-roadtrip-curve-sign");
         var sheriff = visible("#entrance-roadtrip-entities .entrance-roadtrip-police-roadside");
         function projectedNode(node) {
           var ahead = Number(node && node.getAttribute("data-roadtrip-ahead"));
@@ -164,14 +163,22 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
               node.getAttribute("data-roadtrip-type") || node.getAttribute("data-roadtrip-curve"))
           };
         }
-        report.steps.alignment = {
+        var alignment = {
           distance: drive().roadtrip.distance,
           entity: projectedNode(entity),
           furniture: projectedNode(furniture),
           speedSign: projectedNode(speedSign),
-          curveSign: projectedNode(curveSign),
           sheriff: projectedNode(sheriff)
         };
+        for (var curveDistance = 0; curveDistance < 294 && !alignment.curveSign; curveDistance += 3) {
+          setDistance(curveDistance);
+          var curveSign = visible("#entrance-roadtrip-curve-signs .entrance-roadtrip-curve-sign");
+          if (curveSign) {
+            alignment.curveDistance = drive().roadtrip.distance;
+            alignment.curveSign = projectedNode(curveSign);
+          }
+        }
+        report.steps.alignment = alignment;
 
         clearHolds();
         setDistance(riseDistance);

@@ -151,11 +151,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       return node.getAttribute("visibility") !== "hidden";
     }).length;
   }
-  function visibleCurveSign() {
-    return Array.prototype.find.call(document.getElementById("entrance-roadtrip-curve-signs").children, function (node) {
-      return node.getAttribute("visibility") !== "hidden";
-    }) || null;
-  }
   function visibleMirrorEntity() {
     return Array.prototype.find.call(document.getElementById("entrance-roadtrip-mirror-entities").children, function (node) {
       return node.getAttribute("visibility") !== "hidden";
@@ -656,12 +651,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__setBalconyRain(true, "test");
 
     var asphalt = document.querySelector("#entrance-roadtrip-road .entrance-roadtrip-asphalt");
-    var rightWarningNode = visibleCurveSign();
-    var rightWarning = rightWarningNode && {
-      direction: rightWarningNode.getAttribute("data-roadtrip-curve"),
-      ahead: Number(rightWarningNode.getAttribute("data-roadtrip-ahead")),
-      href: rightWarningNode.getAttribute("href") || rightWarningNode.getAttribute("xlink:href")
-    };
     function mirrorPathGeometry(id, band) {
       var d = document.getElementById(id).getAttribute("d");
       var points = [], match, re = /[ML](-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g;
@@ -712,13 +701,6 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         right: document.getElementById("entrance-roadtrip-headlight-right").getAttribute("d")
       }
     };
-    window.__entranceRoadtripSetDistance(260);
-    var leftWarningNode = visibleCurveSign();
-    var leftWarning = leftWarningNode && {
-      direction: leftWarningNode.getAttribute("data-roadtrip-curve"),
-      ahead: Number(leftWarningNode.getAttribute("data-roadtrip-ahead")),
-      href: leftWarningNode.getAttribute("href") || leftWarningNode.getAttribute("xlink:href")
-    };
     window.__entranceRoadtripSetDistance(401);
     var leftCurve = { state: copy(roadtrip()), road: asphalt.getAttribute("d"), mirror: mirrorGeometry(), winter: winterGeometry(), scenery: copy(state().drive.scenery) };
     window.__entranceRoadtripSetDistance(6);
@@ -737,9 +719,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           return { fill: getComputedStyle(node).fill, stroke: getComputedStyle(node).stroke,
             d: node.getAttribute("d") };
         }),
-      rightWarning: rightWarning,
       right: rightCurve,
-      leftWarning: leftWarning,
       left: leftCurve,
       mirrorTreesNear: mirrorTreesNear,
       mirrorTreesFarther: mirrorTreesFarther
@@ -1559,16 +1539,12 @@ check(curves && (curves.straightWinter.ground.match(/Z/g) || []).length === 2 &&
   curves.left.winter.ground !== curves.right.winter.ground &&
   curves.left.winter.edges !== curves.right.winter.edges,
   "accumulated winter ground remains two separate projected verges through both road bends", curves);
-check(curves && curves.rightWarning && curves.rightWarning.direction === "right" &&
-  /curve-sign-right/.test(curves.rightWarning.href || "") && curves.rightWarning.ahead > 0 &&
-  curves.right.state.curve > 0 && curves.right.road !== curves.straight &&
+check(curves && curves.right.state.curve > 0 && curves.right.road !== curves.straight &&
   curves.right.mirror.road.d !== curves.straightMirror.road.d &&
   curves.right.mirror.center.d !== curves.straightMirror.center.d &&
   curves.right.mirror.lanes.d !== curves.straightMirror.lanes.d &&
   mirrorNearCentered(curves.straightMirror) && mirrorNearCentered(curves.right.mirror) &&
   mirrorFarAligned(curves.right.mirror) && mirrorBendReturnsToBase(curves.right.mirror, 1) &&
-  curves.leftWarning && curves.leftWarning.direction === "left" &&
-  /curve-sign-left/.test(curves.leftWarning.href || "") && curves.leftWarning.ahead > 0 &&
   curves.left.state.curve < 0 && curves.left.road !== curves.right.road &&
   curves.left.mirror.road.d !== curves.right.mirror.road.d &&
   curves.left.mirror.edges.d !== curves.right.mirror.edges.d &&

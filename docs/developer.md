@@ -116,7 +116,9 @@ Entrance façade a daylight wash, primes a warm Cuddly projector frame, and appl
 the complete Kitchen stage for either a party or second-round night. Double-click and
 touch double-tap deliberately unlock a locked destination. The map owns an arrow-key cursor;
 discovered destinations open with one Enter, while locked destinations reuse the 600 ms deliberate
-unlock window and require two non-repeat Enter presses on the same card. Tab is consumed throughout
+unlock window and require two non-repeat Enter presses on the same card during Phase 1. Once
+`__secondRound` is active, a single card click/tap or non-repeat Enter unlocks and opens any remaining
+locked destination; this makes the post-party room-map coach directly actionable. Tab is consumed throughout
 the game and no scene or chrome control participates in browser Tab traversal; a clicked
 console/editor field may still interpret Tab internally. Opening the picker pauses an active Road
 Trip through its transport owner and does not implicitly resume it on close. While that route

@@ -293,6 +293,27 @@ var harness = String.raw`<script>
     check("double-tapping a locked destination does the same deliberate mobile unlock",
       !state().open && window.currentStageName === "office" && window.__roomSeen("office"),
       JSON.stringify({ room: window.currentStageName, open: state().open }));
+
+    window.__setSeenRooms(["kitchen"]);
+    window.__setSecondRound(true);
+    window.goToStage("kitchen");
+    key("Tab");
+    roomButton("cinema").click();
+    check("Phase 2 single-click unlocks and opens any locked dollhouse room",
+      !state().open && window.currentStageName === "cuddly" && window.__cinemaRoomOpen &&
+      window.__roomSeen("cinema") && !window.__roomSeen("cuddly"),
+      JSON.stringify({ room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
+    if (window.__cinemaRoomOpen && window.__closeCinemaRoom) window.__closeCinemaRoom();
+
+    window.__setSeenRooms(["kitchen"]);
+    window.goToStage("kitchen");
+    key("Tab");
+    key("ArrowDown");
+    var phaseTwoEnter = key("Enter");
+    check("Phase 2 single-Enter has the same locked-room behavior",
+      phaseTwoEnter && !state().open && window.currentStageName === "kitchen" &&
+      window.__bathroomRoomOpen && window.__roomSeen("bathroom"),
+      JSON.stringify({ room: window.currentStageName, seen: window.__seenRooms(), open: state().open }));
   }
   window.addEventListener("load", function () {
     setTimeout(function () {

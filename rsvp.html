@@ -111126,7 +111126,8 @@ function spawnDustMote(container) {
     button.addEventListener("click", function (event) {
       event.preventDefault();
       event.stopPropagation();
-      chooseDollhouseRoom(spec);
+      if (window.__secondRound && !roomSeen(spec.room)) unlockDollhouseRoom(spec);
+      else chooseDollhouseRoom(spec);
     });
     button.addEventListener("dblclick", function (event) {
       event.preventDefault();
@@ -111134,7 +111135,7 @@ function spawnDustMote(container) {
       if (!roomSeen(spec.room)) unlockDollhouseRoom(spec);
     });
     button.addEventListener("pointerup", function (event) {
-      if (event.pointerType !== "touch" || roomSeen(spec.room)) return;
+      if (event.pointerType !== "touch" || roomSeen(spec.room) || window.__secondRound) return;
       var now = Date.now();
       if (now - lastTouchAt <= 500) {
         event.preventDefault();
@@ -111326,6 +111327,10 @@ function spawnDustMote(container) {
         dollhouseLockedEnterRoom = "";
         dollhouseLockedEnterAt = 0;
         chooseDollhouseRoom(selectedRoom);
+      } else if (window.__secondRound && !event.repeat) {
+        dollhouseLockedEnterRoom = "";
+        dollhouseLockedEnterAt = 0;
+        unlockDollhouseRoom(selectedRoom);
       } else if (!event.repeat) {
         var enterNow = Date.now();
         if (dollhouseLockedEnterRoom === selectedRoom.room && enterNow - dollhouseLockedEnterAt < 600) {

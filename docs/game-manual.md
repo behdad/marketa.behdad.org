@@ -54,7 +54,8 @@ Each main room has a room directly below it:
 - `Tab` or the window-grid button opens **The Loft** room map. Arrow keys select an already
   discovered room and `Enter` opens it. On a locked room, press `Enter` twice quickly to unlock it.
   Discovered rooms are sharp; the others are blurred; double-click or double-tap one to unlock it
-  deliberately. Its first card is Kitchen / Bar.
+  deliberately. After the party begins Phase 2, one click, tap, or `Enter` unlocks and opens any
+  remaining locked card. Its first card is Kitchen / Bar.
   During a Road Trip or at Camping, the Entrance card mirrors that live scene. Opening the map
   during a Road Trip leaves the drive paused when the map closes.
 - The window-grid button remains available beside the room dots. The floor button stays visible

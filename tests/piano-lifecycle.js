@@ -2,8 +2,8 @@
 "use strict";
 
 // The night-sky piano is a dismissible room overlay, not a permanent projector mode.
-// Its dismissal belongs only to the current room/channel visit, and touch-first devices
-// keep the playable keys without advertising computer-key labels.
+// Dismissal is durable until an explicit projector-channel change, and touch-first
+// devices keep the playable keys without advertising computer-key labels.
 var lib = require("./lib");
 
 var HARNESS = String.raw`<script>
@@ -28,6 +28,8 @@ var HARNESS = String.raw`<script>
   window.__cuddlyProjector.set("stars");
   var piano = document.getElementById("cuddly-projector-piano");
   var close = piano.querySelector(".piano-dismiss");
+  var hit = close.querySelector(".mini-hit");
+  var visibleClose = close.querySelector(".piano-dismiss-bg");
   var deck = piano.querySelector(".piano-deck-outline");
   var matrix = close.transform.baseVal.consolidate().matrix;
   var state = window.__projectorPianoState();
@@ -37,6 +39,11 @@ var HARNESS = String.raw`<script>
     matrix.f <= (+deck.getAttribute("y") + 12),
     JSON.stringify({ x: matrix.e, y: matrix.f }));
   check("dismiss control is localized", close.querySelector("title").textContent === "Dismiss piano");
+  check("dismiss artwork is compact while its pointer target stays forgiving",
+    +visibleClose.getAttribute("r") <= 4.1 && +hit.getAttribute("r") >= 9,
+    JSON.stringify({ visible: visibleClose.getAttribute("r"), hit: hit.getAttribute("r") }));
+  check("dismiss artwork uses the piano's dark wood and cream palette",
+    visibleClose.getAttribute("fill") === "#302924" && visibleClose.getAttribute("stroke") === "#f8f5ec");
   window.setLang("cs");
   check("dismiss control has Czech accessibility copy", close.querySelector("title").textContent === "Zavřít piano");
   window.setLang("en");
@@ -44,42 +51,75 @@ var HARNESS = String.raw`<script>
   close.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
   state = window.__projectorPianoState();
   check("pointer dismissal hides only the playable keybed", state.dismissed && !state.enabled && piano.classList.contains("piano-dismissed") && window.__cuddlyProjector.channel() === "stars");
+  check("dismissal enters the checkpoint row", window.__captureCheckpointSystems()["projector-piano"].dismissed === true);
 
-  window.__cuddlyProjector.set("fire");
   window.__cuddlyProjector.set("stars");
   state = window.__projectorPianoState();
-  check("changing away and back rearms the keybed", state.enabled && !state.dismissed && !piano.classList.contains("piano-dismissed"));
+  check("selecting the same projector channel does not rearm the keybed", state.dismissed && !state.enabled);
 
-  var escape = key("Escape");
-  state = window.__projectorPianoState();
-  check("Escape dismisses the keybed before room navigation", escape.defaultPrevented && state.dismissed && !state.enabled);
   window.goToStage("garden");
   window.goToStage("cuddly");
   state = window.__projectorPianoState();
-  check("leaving and returning rearms the keybed", state.enabled && !state.dismissed);
-
-  var backspace = key("Backspace");
-  state = window.__projectorPianoState();
-  check("Backspace mirrors piano Escape", backspace.defaultPrevented && state.dismissed && !state.enabled);
+  check("leaving and returning preserves dismissal", state.dismissed && !state.enabled);
 
   window.__openCinemaRoom();
   var cinemaState = window.__projectorPianoState();
   window.__closeCinemaRoom();
   state = window.__projectorPianoState();
-  check("the lower Cinema owns its layer and rearms the piano on return",
-    cinemaState.enabled === false && cinemaState.dismissed === false && state.enabled && !state.dismissed);
+  check("the lower Cinema owns its layer without rearming the piano",
+    cinemaState.enabled === false && cinemaState.dismissed === true && state.dismissed && !state.enabled);
 
+  window.__cuddlyProjector.set("fire");
+  var awayState = window.__projectorPianoState();
+  window.__cuddlyProjector.set("stars");
+  state = window.__projectorPianoState();
+  check("an explicit channel change rearms the keybed",
+    !awayState.dismissed && state.enabled && !state.dismissed && !piano.classList.contains("piano-dismissed"));
+
+  var escape = key("Escape");
+  state = window.__projectorPianoState();
+  check("Escape dismisses the keybed", escape.defaultPrevented && state.dismissed && !state.enabled);
   window.goToStage("garden");
   window.goToStage("cuddly");
+  state = window.__projectorPianoState();
+  check("room navigation does not undo Escape dismissal", state.dismissed && !state.enabled);
+
+  window.__cuddlyProjector.set("fire");
   window.__cuddlyProjector.set("stars");
-  var calls = [], realDismiss = window.__dismissProjectorPiano, realOcti = window.__startOctiEscape;
+  var backspace = key("Backspace");
+  state = window.__projectorPianoState();
+  check("Backspace mirrors piano Escape", backspace.defaultPrevented && state.dismissed && !state.enabled);
+
+  window.__cuddlyProjector.set("fire");
+  window.__cuddlyProjector.set("stars");
+  var octopus = document.getElementById("cuddly-octopus");
+  octopus.classList.add("played");
+  var calls = [], realDismiss = window.__dismissProjectorPiano;
   window.__dismissProjectorPiano = function () { calls.push("dismiss"); return realDismiss(); };
-  window.__startOctiEscape = function () { calls.push("octi"); return true; };
+  octopus.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  octopus.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  var pointerOcti = window.__octiEscapeState();
+  window.__dismissProjectorPiano = realDismiss;
+  state = window.__projectorPianoState();
+  check("pointer Octi start clears the piano at the canonical game owner",
+    calls.join(",") === "dismiss" && pointerOcti.active && state.dismissed && !state.enabled,
+    JSON.stringify({ calls: calls, octi: pointerOcti }));
+  window.__stopOctiEscape(true);
+
+  window.__cuddlyProjector.set("fire");
+  window.__cuddlyProjector.set("stars");
+  calls = [];
+  var realOcti = window.__startOctiEscape;
+  window.__dismissProjectorPiano = function () { calls.push("dismiss"); return realDismiss(); };
+  window.__startOctiEscape = function () { calls.push("route"); return realOcti(); };
   var enter = key("Enter");
   window.__dismissProjectorPiano = realDismiss;
   window.__startOctiEscape = realOcti;
   state = window.__projectorPianoState();
-  check("global Enter clears the piano before launching Octi", enter.defaultPrevented && calls.join(",") === "dismiss,octi" && state.dismissed && !state.enabled, calls.join(","));
+  check("global Enter reaches the same canonical Octi dismissal",
+    enter.defaultPrevented && calls.join(",") === "route,dismiss" && window.__octiEscapeState().active && state.dismissed && !state.enabled,
+    calls.join(","));
+  window.__stopOctiEscape(true);
   check("desktop retains the computer-key map", state.labels && getComputedStyle(piano.querySelector(".piano-key-label")).display !== "none");
   report();
 })();

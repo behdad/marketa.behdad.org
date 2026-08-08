@@ -12774,7 +12774,7 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
 #cuddly-projector-piano.coarse-input .piano-key-label{display:none}
 #cuddly-projector-piano .piano-dismiss{cursor:pointer;pointer-events:auto}
 #cuddly-projector-piano .piano-dismiss-bg{transition:fill .16s ease,stroke .16s ease}
-#cuddly-projector-piano .piano-dismiss:hover .piano-dismiss-bg{fill:#a64d5e;stroke:#fffdf8}
+#cuddly-projector-piano .piano-dismiss:hover .piano-dismiss-bg{fill:#5b4b40;stroke:#fffdf8}
 #cuddly-projector-piano .piano-coach{opacity:0;pointer-events:none}
 #cuddly-projector-piano.show-coach .piano-coach{animation:piano-coach 5.2s ease both}
 @keyframes piano-coach{
@@ -23454,8 +23454,8 @@ section{margin:1.9rem 0}
  <g class="piano-dismiss" transform="translate(295 84)" tabindex="-1">
   <title data-i="piano_close">Dismiss piano</title>
   <circle class="mini-hit" r="9" fill="#000" opacity="0"/>
-  <circle class="piano-dismiss-bg" r="6.5" fill="#8e3a4a" stroke="#f8f5ec" stroke-width="1"/>
-  <path d="M-2.5 -2.5 L2.5 2.5 M2.5 -2.5 L-2.5 2.5" fill="none" stroke="#fffdf8" stroke-width="1.6" stroke-linecap="round"/>
+  <circle class="piano-dismiss-bg" r="4" fill="#302924" stroke="#f8f5ec" stroke-width="0.8"/>
+  <path d="M-1.55 -1.55 L1.55 1.55 M1.55 -1.55 L-1.55 1.55" fill="none" stroke="#fffdf8" stroke-width="1.15" stroke-linecap="round"/>
  </g>
 </g>
 <!-- subtle channel indicator: six dots (the seasonally ordered coffee/fire pair, then
@@ -61842,6 +61842,10 @@ setMusicPausedState(false);
     current = name;
     if (chanObj[current].init) chanObj[current].init();
     applyChannelClass();
+    // A deliberate channel change is the sole in-session way to reintroduce a dismissed
+    // keybed. Checkpoint/season restores use persist=false, and selecting the same channel
+    // is not a change, so neither can silently undo the visitor's dismissal.
+    if (persist === true && prev !== current && window.__rearmProjectorPiano) window.__rearmProjectorPiano();
     if (window.__syncProjectorPiano) window.__syncProjectorPiano(); // show/release the play-along keys with the night-sky channel
     flashBadge();
     // Central projector-music song takeover, clobber-safe: the music channels suspend the
@@ -62047,12 +62051,18 @@ setMusicPausedState(false);
     keyboard.classList.add("piano-dismissed");
     keyboard.setAttribute("tabindex", "-1");
     if (document.activeElement === keyboard && keyboard.blur) keyboard.blur();
+    if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
   }
   window.__dismissProjectorPiano = dismissPiano;
+  window.__rearmProjectorPiano = function () {
+    if (!dismissed) return false;
+    dismissed = false;
+    keyboard.classList.remove("piano-dismissed");
+    return true;
+  };
   window.__syncProjectorPiano = function () {
     var context = inPianoContext();
-    if (!context && available) dismissed = false; // a room/channel change rearms the keybed for its next visit
     keyboard.classList.toggle("piano-dismissed", context && dismissed);
     var now = enabled();
     keyboard.setAttribute("tabindex", "-1"); // scene controls never join browser Tab traversal
@@ -62127,6 +62137,18 @@ setMusicPausedState(false);
     if (!query) return;
     if (query.addEventListener) query.addEventListener("change", syncInputMode);
     else if (query.addListener) query.addListener(syncInputMode);
+  });
+  window.__deferCheckpointAdapter("projector-piano", {
+    capture: function () { return { dismissed: dismissed }; },
+    restore: function (row, phase) {
+      if (phase !== "beforeStage") return;
+      dismissed = !!(row && row.dismissed === true);
+      window.__syncProjectorPiano();
+    },
+    reset: function () {
+      dismissed = false;
+      window.__syncProjectorPiano();
+    }
   });
   syncInputMode();
   window.__syncProjectorPiano();
@@ -66614,6 +66636,9 @@ function quickReversalGesture(action) {
         window.currentStageName !== "cuddly" || octopusInChest ||
         octopus.classList.contains("falling-in") || octopus.classList.contains("popping-out") ||
         window.__cinematic) return false;
+    // This is the canonical game-start owner used by pointer/touch and global Enter.
+    // Clear the play-along overlay before Octi paints, regardless of the input route.
+    if (window.__dismissProjectorPiano) window.__dismissProjectorPiano();
     clearEscapeTap(false);
     clearEscapeCaptionTimer();
     escapeStartInside = octopusInChest;
@@ -113875,7 +113900,6 @@ function spawnDustMote(container) {
       } else if (er === "garden") {
         if (window.party) window.party(!window.party());
       } else if (er === "cuddly") {
-        if (window.__dismissProjectorPiano) window.__dismissProjectorPiano();
         if (window.__startOctiEscape) window.__startOctiEscape();
       } else if (er === "office") {
         if ((window.__monitorZoomed && window.__monitorZoomed()) ||

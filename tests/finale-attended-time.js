@@ -194,8 +194,8 @@ if (result && !result.harnessError) {
     "duration formatting is natural in both languages", {
       en: result.englishDuration, cs: result.czechDuration, hour: result.hourDuration
     });
-  check(/^47 minutes in loft\. Tell us your time in your RSVP\.$/.test(result.englishCaption) &&
-    result.czechCaption === "47 minut v loftu. Napište nám svůj čas do RSVP.",
+  check(/^Wow, what a lofly day! 47 minutes in loft\. Tell us your time in your RSVP\.$/.test(result.englishCaption) &&
+    result.czechCaption === "Páni, to byl ale loftový den! 47 minut v loftu. Napište nám svůj čas do RSVP.",
     "the finale caption preserves the in-loft pun and refreshes in Czech", {
       en: result.englishCaption, cs: result.czechCaption
     });

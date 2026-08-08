@@ -540,8 +540,8 @@ check(result && result.warningHeld && result.warningHeld.phase === "complete" &&
   result.warningHeld.captionText === "Never leave food outside at night.",
   "paused time does not count toward the warning's three attended seconds", result && result.warningHeld);
 check(result && result.congrats && result.congrats.phase === "congrats" && result.congrats.sleepComplete &&
-  result.congrats.savedPhase === "congrats" && result.congrats.caption === "entrance_roadtrip_camp_finale" &&
-  /^Wow, what a lofly day!.*RSVP!$/.test(result.congrats.captionText) &&
+  result.congrats.savedPhase === "congrats" && result.congrats.caption === "entrance_roadtrip_camp_attended_time" &&
+  /^Wow, what a lofly day! 1 minute in loft\. Tell us your time in your RSVP\.$/.test(result.congrats.captionText) &&
   result.congrats.cameraAnimation === "none" && result.congrats.cameraOffset === 120 &&
   result.congrats.finOpacity === .9 && result.congrats.finText === "~ fin ~" &&
   result.congrats.finFill === "rgb(238, 232, 212)" && /Fraunces/.test(result.congrats.finFont) &&
@@ -565,9 +565,9 @@ check(result && result.congrats &&
   { before: result && result.congrats, after: result && result.congratsBearLook });
 check(result && result.attendedCaption &&
   result.attendedCaption.caption === "entrance_roadtrip_camp_attended_time" &&
-  /^1 minute in loft\. Tell us your time in your RSVP\.$/.test(result.attendedCaption.captionText) &&
-  result.czechAttendedCaption === "1 minuta v loftu. Napište nám svůj čas do RSVP.",
-  "after the bear and cub finish, the caption reports attended time in both languages",
+  /^Wow, what a lofly day! 1 minute in loft\. Tell us your time in your RSVP\.$/.test(result.attendedCaption.captionText) &&
+  result.czechAttendedCaption === "Páni, to byl ale loftový den! 1 minuta v loftu. Napište nám svůj čas do RSVP.",
+  "the combined terminal caption stays stable after the bear and cub finish",
   { en: result && result.attendedCaption, cs: result && result.czechAttendedCaption });
 check(result && result.congratsReload && result.congratsReload.phase === "congrats" &&
   result.congratsReload.mamaFinLook && result.congratsReload.mamaHeadDelay === "3s" &&
@@ -582,7 +582,7 @@ check(result && result.congrats && result.congrats.darknessPointer === "all" && 
   "the completed dark campsite absorbs stray clicks without reopening a dead builder",
   { target: result && result.completeClickTarget, after: result && result.completeAfterClick });
 check(result && result.czechWarning === "Nikdy nenechávejte přes noc jídlo venku." &&
-  /^Páni, to byl ale loftový den!.*RSVP!$/.test(result.czechCongrats || ""),
+  /^Páni, to byl ale loftový den!.*RSVP\.$/.test(result.czechCongrats || ""),
   "both the warning and restored congratulations switch to Czech",
   { warning: result && result.czechWarning, congrats: result && result.czechCongrats });
 check(result && result.completeExit && !result.completeExit.campActive && result.fresh &&

@@ -259,9 +259,9 @@ out the fire when the sleep
 suggestion appears. The campers retire into the glowing tent but leave their corn cobs by the fire.
 The solved constellations recede into a much denser twinkling sky; as the Zs rise, the mama bear
 crosses camp to collect the scraps. The food-storage warning holds for three seconds, then gives way
-to the existing RSVP congratulations as the view finishes its restrained pan into the stars and a
-small `~ fin ~` appears. After the mama bear looks around and her cub rejoins her, the caption reports
-the attended time spent in loft and invites the player to include it in the RSVP. Leaving Camping or
+to a single RSVP finale caption as the view finishes its restrained pan into the stars and a
+small `~ fin ~` appears. That line combines the congratulations with the attended time spent in loft
+and invites the player to include it in the RSVP; the mama bear and cub finish their visual coda without replacing it. Leaving Camping or
 switching away pauses the curtain call at
 its current beat; returning continues from there. Leaving after it finishes makes the next
 **Camping** visit begin again at an empty firepit.

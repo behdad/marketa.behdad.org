@@ -391,12 +391,12 @@ outer group moves into `#entrance-roadtrip-camp-mama-collection-layer`, after th
 the collecting bear paints above the ring stones. Reset returns it to its original campsite sibling.
 During the checkpointed three-second warning, `#entrance-roadtrip-camp` pans to the already-authored
 dense star field; a translated `<use>` repeats that field above the original scene bounds, and the
-terminal phase reveals the neutral Fraunces `~ fin ~` with the congratulations caption. The pan seeks
+terminal phase reveals the neutral Fraunces `~ fin ~` with one combined congratulations, attended-time,
+and RSVP caption. The pan seeks
 through `--camp-sleep-pan-resume`, pauses with the same attended-time owner, and snaps to its end for
-reduced motion. Reduced motion also snaps the bear and cobs to their collected positions. Once the
-mama-look and cub-rejoin one-shots finish, an attended terminal timer replaces the congratulations
-with `entrance_roadtrip_camp_attended_time`; language refreshes reformat the frozen duration rather
-than exposing its placeholder.
+reduced motion. Reduced motion also snaps the bear and cobs to their collected positions. The
+mama-look and cub-rejoin one-shots do not replace the terminal line; language refreshes reformat the
+frozen duration rather than exposing its placeholder.
 `campStargazingState` checkpoints exact trace and handoff progress plus
 `campSleepState.phase` and attended time within that phase, but always restores the trace overlay
 closed. Leaving, hiding the tab, or moving focus to another window pauses an unfinished curtain call,

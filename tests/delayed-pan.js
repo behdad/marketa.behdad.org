@@ -14,6 +14,7 @@ var HARNESS = [
   ' S("hook",typeof window.__finishSolveAdvance);',
   ' window.goToStage("office");window.__finishSolveAdvance("kitchen","garden");S("stale",{room:window.currentStageName,unlocked:window.__maxUnlocked()});',
   ' window.goToStage("kitchen");var cup=document.getElementById("kitchen-shotcup");cup.classList.add("filled");cup.dispatchEvent(new MouseEvent("click",{bubbles:true}));window.goToStage("office");await sleep(780);S("espresso",{room:window.currentStageName,unlocked:window.__maxUnlocked()});',
+  ' window.__setSolvedRooms([]);window.goToStage("office");window.__finishSolveAdvance("office","balcony",250);window.goToStage("garden");window.goToStage("office");await sleep(320);S("reentry",{room:window.currentStageName,solved:window.__roomSolved("office")});',
   '}',
   '})();</script>'
 ].join("\n");
@@ -32,6 +33,7 @@ check(r.errors.length === 0, "no uncaught page errors", r.errors);
 check(s.hook === "function", "shared delayed-advance guard is installed", s.hook);
 check(s.stale.room === "office" && s.stale.unlocked >= 1, "a stale completion unlocks the destination without moving the player", s.stale);
 check(s.espresso.room === "office" && s.espresso.unlocked >= 1, "the real espresso completion cannot pull a player back after they leave", s.espresso);
+check(s.reentry.room === "office" && s.reentry.solved, "a delayed first-solve pan cannot pull the player forward after leaving and re-entering its source room", s.reentry);
 
 console.log("");
 if (failures) { console.log(failures + " check(s) failed."); process.exit(1); }

@@ -149,9 +149,11 @@ The progression values have distinct roles:
 
 Each Phase 1 controller owns its clue sequence and `__*DoNext` walker. Its final action settles the
 terminal prop and calls `__finishSolveAdvance(from, to[, navigationDelay])` in the same event turn.
-That owner records the source, unlocks the destination, writes the coherent checkpoint, then delays
-only the guarded pan when requested. It navigates only if the player is still in the source room.
-Do not infer completion from unlock state.
+That owner acts only on the source room's first unsolved → solved transition: it records the source,
+unlocks the destination, writes the coherent checkpoint, then delays only the guarded pan when
+requested. Replaying a completed room returns false without scheduling a handoff. A delayed pan is
+tied to the originating room visit, so leaving and re-entering before it fires cannot pull the player
+forward. Do not infer completion from unlock state.
 
 `setSecondRound(true)` owns the Phase 2 transition. It unlocks and marks all main rooms solved,
 releases held content, and changes Enter to each room's primary free-play action; Garden keeps the

@@ -111606,6 +111606,7 @@ function spawnDustMote(container) {
     });
   }
   var stageIndex = 0;
+  var stageVisitGeneration = 0;
   window.currentStageIndex = 0;
   var maxUnlocked = 0;
   var solvedRooms = Object.create(null);
@@ -113253,6 +113254,7 @@ function spawnDustMote(container) {
     if (window.__closeSceneContextMenu) window.__closeSceneContextMenu();
     var idx = STAGES.indexOf(name);
     if (idx === -1) return false;
+    stageVisitGeneration++;
     if (name !== "cuddly" && window.__octiEscapeState && window.__octiEscapeState().active && window.__stopOctiEscape) {
       window.__stopOctiEscape(true); // the cushion game belongs to this room and restores Octi before the pan begins
     }
@@ -113439,12 +113441,15 @@ function spawnDustMote(container) {
     if (STAGES.indexOf(from) === -1 || STAGES.indexOf(to) === -1) return false;
     // Final prop state is already settled by the caller. Own solved/unlocked state in this
     // same event turn so pagehide cannot checkpoint a terminal prop without its progression.
-    // Any authored pause belongs only to the guarded room pan below.
-    setRoomSolved(from, true);
+    // Any authored pause belongs only to the guarded room pan below. A replay may settle that
+    // prop again, but only the first real unsolved -> solved edge owns unlock/checkpoint/pan.
+    if (setRoomSolved(from, true)) return false;
+    var solveVisitGeneration = stageVisitGeneration;
     window.__unlockSolvedRoom(to);
     saveCheckpoint();
     function advance() {
-      if (!window.__secondRound && roomSolved(from) && STAGES[stageIndex] === from) goToStage(to);
+      if (!window.__secondRound && roomSolved(from) && STAGES[stageIndex] === from &&
+          stageVisitGeneration === solveVisitGeneration) goToStage(to);
     }
     var delay = Math.max(0, parseInt(navigationDelay, 10) || 0);
     if (delay) setTimeout(advance, delay);

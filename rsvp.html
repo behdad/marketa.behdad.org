@@ -43790,16 +43790,13 @@ window.__entranceRoomOpen = false;
   }
   function paintRoadtripCampSpur(point, signScale, signHalfWidth) {
     if (!roadtripCampSpurNode) return null;
-    var junctionPoint = roadtripProject(Math.max(12, point.remaining - 22));
-    var bendPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE,
-      Math.max(24, point.remaining + 5)));
+    var junctionPoint = roadtripProject(Math.max(8, point.remaining - 36));
     var destinationPoint = roadtripProject(Math.min(ROADTRIP_DRAW_DISTANCE, point.remaining + 32));
     var junctionRoadRight = roadtripProjectLateral(junctionPoint, 1);
-    var junctionOverlap = 9 + junctionPoint.perspective * 16;
+    var junctionOverlap = 12 + junctionPoint.perspective * 19;
     var junctionInner = junctionRoadRight - junctionOverlap;
-    var junctionOuter = junctionRoadRight + 7 + junctionPoint.perspective * 15;
+    var junctionOuter = junctionRoadRight + 9 + junctionPoint.perspective * 17;
     var junctionY = junctionPoint.y;
-    var bendY = bendPoint.y;
     var mainRoadRight = roadtripProjectLateral(point, 1);
     var destinationLimit = 680 - signHalfWidth * signScale * 2 - 12;
     var destinationY = destinationPoint.y;
@@ -43808,14 +43805,9 @@ window.__entranceRoomOpen = false;
     var destinationX = Math.min(destinationLimit, Math.max(
       junctionOuter + 14 + point.perspective * 55,
       destinationRoadRight + 18 + destinationPoint.perspective * 38));
-    var junctionCenter = (junctionInner + junctionOuter) / 2;
-    var bendCenter = junctionCenter + (destinationX - junctionCenter) * .58;
-    var bendHalfWidth = farHalfWidth + 2.4 + bendPoint.perspective * 4.8;
-    var bendInner = bendCenter - bendHalfWidth;
-    var bendOuter = bendCenter + bendHalfWidth;
     var shoulderInset = 1.3 + junctionPoint.perspective * 2.2;
     var edgeNearWidth = 1 + junctionPoint.perspective * 1.8;
-    var edgeMidWidth = .85 + bendPoint.perspective * 1.4;
+    var edgeMidWidth = .85 + point.perspective * 1.4;
     var edgeFarWidth = .7 + destinationPoint.perspective * 1.1;
     var destinationInner = destinationX - farHalfWidth;
     var destinationOuter = destinationX + farHalfWidth;
@@ -43823,73 +43815,86 @@ window.__entranceRoomOpen = false;
     var asphalt = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-asphalt");
     var innerEdge = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-inner-edge");
     var outerEdge = roadtripCampSpurNode.querySelector(".entrance-roadtrip-camp-spur-outer-edge");
+    var travelY = destinationY - junctionY;
+    var control1Y = junctionY + travelY * .43;
+    var control2Y = junctionY + travelY * .82;
+    function curveControls(start, end, outer) {
+      var distance = end - start;
+      return {
+        c1: start + distance * (outer ? .35 : .22),
+        c2: start + distance * (outer ? .78 : .74)
+      };
+    }
+    var innerControls = curveControls(junctionInner, destinationInner, false);
+    var outerControls = curveControls(junctionOuter, destinationOuter, true);
     function spurPath(inset, shoulderMouth) {
       var nearInner = shoulderMouth ? junctionRoadRight - .25 : junctionInner;
       var nearOuter = junctionOuter + inset;
-      var middleInner = bendInner - inset * .72;
-      var middleOuter = bendOuter + inset * .72;
       var farInner = destinationInner - inset * .4;
       var farOuter = destinationOuter + inset * .4;
-      var nearControlY = junctionY + (bendY - junctionY) * .52;
-      var farControlY = bendY + (destinationY - bendY) * .56;
-      var nearControlInner = nearInner + (middleInner - nearInner) * .58;
-      var nearControlOuter = nearOuter + (middleOuter - nearOuter) * .58;
-      var farControlInner = middleInner + (farInner - middleInner) * .62;
-      var farControlOuter = middleOuter + (farOuter - middleOuter) * .62;
+      var pathInner = curveControls(nearInner, farInner, false);
+      var pathOuter = curveControls(nearOuter, farOuter, true);
       return "M" + nearInner.toFixed(2) + " " + junctionY.toFixed(2) +
-        "Q" + nearControlInner.toFixed(2) + " " + nearControlY.toFixed(2) + " " +
-        middleInner.toFixed(2) + " " + bendY.toFixed(2) +
-        "Q" + farControlInner.toFixed(2) + " " + farControlY.toFixed(2) + " " +
+        "C" + pathInner.c1.toFixed(2) + " " + control1Y.toFixed(2) + " " +
+        pathInner.c2.toFixed(2) + " " + control2Y.toFixed(2) + " " +
         farInner.toFixed(2) + " " + destinationY.toFixed(2) +
         "L" + farOuter.toFixed(2) + " " + destinationY.toFixed(2) +
-        "Q" + farControlOuter.toFixed(2) + " " + farControlY.toFixed(2) + " " +
-        middleOuter.toFixed(2) + " " + bendY.toFixed(2) +
-        "Q" + nearControlOuter.toFixed(2) + " " + nearControlY.toFixed(2) + " " +
+        "C" + pathOuter.c2.toFixed(2) + " " + control2Y.toFixed(2) + " " +
+        pathOuter.c1.toFixed(2) + " " + control1Y.toFixed(2) + " " +
         nearOuter.toFixed(2) + " " + junctionY.toFixed(2) + "Z";
     }
-    var nearControlY = junctionY + (bendY - junctionY) * .52;
-    var innerNearControl = junctionInner + (bendInner - junctionInner) * .58;
-    var outerNearControl = junctionOuter + (bendOuter - junctionOuter) * .58;
-    var edgeStartT = .38;
-    // Split the first curve so painted edges begin after the open merge mouth.
-    function quadraticTail(start, control, end) {
-      var first = start + (control - start) * edgeStartT;
-      var second = control + (end - control) * edgeStartT;
+    var innerEdgeStartT = .68;
+    var outerEdgeStartT = .18;
+    // Split the cubic so the highway-facing edge begins only after the branch
+    // has visibly separated; the outside shoulder remains readable at the mouth.
+    function cubicTail(start, c1, c2, end, t) {
+      var p01 = start + (c1 - start) * t;
+      var p12 = c1 + (c2 - c1) * t;
+      var p23 = c2 + (end - c2) * t;
+      var p012 = p01 + (p12 - p01) * t;
+      var p123 = p12 + (p23 - p12) * t;
       return {
-        start: first + (second - first) * edgeStartT,
-        control: second
+        start: p012 + (p123 - p012) * t,
+        c1: p123,
+        c2: p23
       };
     }
-    var innerEdgeX = quadraticTail(junctionInner, innerNearControl, bendInner);
-    var outerEdgeX = quadraticTail(junctionOuter, outerNearControl, bendOuter);
-    var edgeY = quadraticTail(junctionY, nearControlY, bendY);
+    function cubicPoint(start, c1, c2, end, t) {
+      var tail = cubicTail(start, c1, c2, end, t);
+      return tail.start;
+    }
+    var innerEdgeX = cubicTail(junctionInner, innerControls.c1, innerControls.c2,
+      destinationInner, innerEdgeStartT);
+    var outerEdgeX = cubicTail(junctionOuter, outerControls.c1, outerControls.c2,
+      destinationOuter, outerEdgeStartT);
+    var innerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, innerEdgeStartT);
+    var outerEdgeY = cubicTail(junctionY, control1Y, control2Y, destinationY, outerEdgeStartT);
     var edgeStartWidth = edgeNearWidth * .72;
     var edgeTailWidth = edgeNearWidth * .88;
-    var farControlY = bendY + (destinationY - bendY) * .56;
-    var innerFarControl = bendInner + (destinationInner - bendInner) * .62;
-    var outerFarControl = bendOuter + (destinationOuter - bendOuter) * .62;
     if (shoulder) shoulder.setAttribute("d", spurPath(shoulderInset, true));
     if (asphalt) asphalt.setAttribute("d", spurPath(0));
-    if (innerEdge) innerEdge.setAttribute("d", "M" + innerEdgeX.start.toFixed(2) + " " + edgeY.start.toFixed(2) +
-      "Q" + innerEdgeX.control.toFixed(2) + " " + edgeY.control.toFixed(2) + " " +
-      bendInner.toFixed(2) + " " + bendY.toFixed(2) +
-      "Q" + innerFarControl.toFixed(2) + " " + farControlY.toFixed(2) + " " +
+    if (innerEdge) innerEdge.setAttribute("d", "M" + innerEdgeX.start.toFixed(2) + " " + innerEdgeY.start.toFixed(2) +
+      "C" + innerEdgeX.c1.toFixed(2) + " " + innerEdgeY.c1.toFixed(2) + " " +
+      innerEdgeX.c2.toFixed(2) + " " + innerEdgeY.c2.toFixed(2) + " " +
       destinationInner.toFixed(2) + " " + destinationY.toFixed(2) +
       "L" + (destinationInner + edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
-      "Q" + (innerFarControl + edgeMidWidth).toFixed(2) + " " + farControlY.toFixed(2) + " " +
-      (bendInner + edgeNearWidth).toFixed(2) + " " + bendY.toFixed(2) +
-      "Q" + (innerEdgeX.control + edgeTailWidth).toFixed(2) + " " + edgeY.control.toFixed(2) + " " +
-      (innerEdgeX.start + edgeStartWidth).toFixed(2) + " " + edgeY.start.toFixed(2) + "Z");
-    if (outerEdge) outerEdge.setAttribute("d", "M" + (outerEdgeX.start - edgeStartWidth).toFixed(2) + " " + edgeY.start.toFixed(2) +
-      "Q" + (outerEdgeX.control - edgeTailWidth).toFixed(2) + " " + edgeY.control.toFixed(2) + " " +
-      (bendOuter - edgeNearWidth).toFixed(2) + " " + bendY.toFixed(2) +
-      "Q" + (outerFarControl - edgeMidWidth).toFixed(2) + " " + farControlY.toFixed(2) + " " +
+      "C" + (innerEdgeX.c2 + edgeMidWidth).toFixed(2) + " " + innerEdgeY.c2.toFixed(2) + " " +
+      (innerEdgeX.c1 + edgeTailWidth).toFixed(2) + " " + innerEdgeY.c1.toFixed(2) + " " +
+      (innerEdgeX.start + edgeStartWidth).toFixed(2) + " " + innerEdgeY.start.toFixed(2) + "Z");
+    if (outerEdge) outerEdge.setAttribute("d", "M" + (outerEdgeX.start - edgeStartWidth).toFixed(2) + " " + outerEdgeY.start.toFixed(2) +
+      "C" + (outerEdgeX.c1 - edgeTailWidth).toFixed(2) + " " + outerEdgeY.c1.toFixed(2) + " " +
+      (outerEdgeX.c2 - edgeMidWidth).toFixed(2) + " " + outerEdgeY.c2.toFixed(2) + " " +
       (destinationOuter - edgeFarWidth).toFixed(2) + " " + destinationY.toFixed(2) +
       "L" + destinationOuter.toFixed(2) + " " + destinationY.toFixed(2) +
-      "Q" + outerFarControl.toFixed(2) + " " + farControlY.toFixed(2) + " " +
-      bendOuter.toFixed(2) + " " + bendY.toFixed(2) +
-      "Q" + outerEdgeX.control.toFixed(2) + " " + edgeY.control.toFixed(2) + " " +
-      outerEdgeX.start.toFixed(2) + " " + edgeY.start.toFixed(2) + "Z");
+      "C" + outerEdgeX.c2.toFixed(2) + " " + outerEdgeY.c2.toFixed(2) + " " +
+      outerEdgeX.c1.toFixed(2) + " " + outerEdgeY.c1.toFixed(2) + " " +
+      outerEdgeX.start.toFixed(2) + " " + outerEdgeY.start.toFixed(2) + "Z");
+    var bendT = .8;
+    var bendInner = cubicPoint(junctionInner, innerControls.c1, innerControls.c2,
+      destinationInner, bendT);
+    var bendOuter = cubicPoint(junctionOuter, outerControls.c1, outerControls.c2,
+      destinationOuter, bendT);
+    var bendY = cubicPoint(junctionY, control1Y, control2Y, destinationY, bendT);
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-inner-x", junctionInner.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-road-right-x", junctionRoadRight.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-junction-outer-x", junctionOuter.toFixed(2));
@@ -43897,9 +43902,9 @@ window.__entranceRoomOpen = false;
     roadtripCampSpurNode.setAttribute("data-roadtrip-bend-outer-x", bendOuter.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-bend-y", bendY.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-inner-edge-start-x", innerEdgeX.start.toFixed(2));
-    roadtripCampSpurNode.setAttribute("data-roadtrip-inner-edge-start-y", edgeY.start.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-inner-edge-start-y", innerEdgeY.start.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-outer-edge-start-x", outerEdgeX.start.toFixed(2));
-    roadtripCampSpurNode.setAttribute("data-roadtrip-outer-edge-start-y", edgeY.start.toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-outer-edge-start-y", outerEdgeY.start.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-shoulder-mouth-inner-x",
       (junctionRoadRight - .25).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-inner-x", destinationInner.toFixed(2));
@@ -43911,6 +43916,7 @@ window.__entranceRoomOpen = false;
     roadtripCampSpurNode.setAttribute("data-roadtrip-destination-y", destinationY.toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-near-width", (junctionOuter - junctionInner).toFixed(2));
     roadtripCampSpurNode.setAttribute("data-roadtrip-far-width", (farHalfWidth * 2).toFixed(2));
+    roadtripCampSpurNode.setAttribute("data-roadtrip-geometry", "cubic-merge");
     roadtripCampSpurNode.setAttribute("visibility", "visible");
     return { x: destinationX, y: destinationY, halfWidth: farHalfWidth, roadRight: mainRoadRight };
   }

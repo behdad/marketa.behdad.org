@@ -161,21 +161,21 @@ function connectedSpur(visual) {
   var asphalt = visual && visual.asphalt || "";
   var shoulder = visual && visual.shoulder || "";
   return /^M/.test(asphalt) && /Z$/.test(asphalt) && /^M/.test(shoulder) && /Z$/.test(shoulder) &&
-    (asphalt.match(/Q/g) || []).length === 4 &&
+    (asphalt.match(/C/g) || []).length === 2 &&
     (asphalt.match(/L/g) || []).length === 1 &&
-    (visual.innerEdge.match(/Q/g) || []).length === 4 &&
-    (visual.outerEdge.match(/Q/g) || []).length === 4 &&
+    (visual.innerEdge.match(/C/g) || []).length === 2 &&
+    (visual.outerEdge.match(/C/g) || []).length === 2 &&
     visual.junctionInnerX < visual.junctionOuterX &&
     Number.isFinite(visual.junctionRoadRightX) &&
     visual.junctionInnerX <= visual.junctionRoadRightX - 9 &&
     visual.junctionRoadRightX < visual.junctionOuterX &&
     visual.shoulderMouthInnerX >= visual.junctionRoadRightX - .3 &&
-    visual.junctionInnerX < visual.innerEdgeStartX &&
+    visual.junctionRoadRightX + 2 < visual.innerEdgeStartX &&
     visual.innerEdgeStartX < visual.bendInnerX && visual.bendInnerX < visual.destinationInnerX &&
     visual.junctionOuterX < visual.outerEdgeStartX &&
     visual.outerEdgeStartX < visual.bendOuterX && visual.bendOuterX < visual.destinationOuterX &&
     visual.destinationY < visual.bendY && visual.bendY < visual.innerEdgeStartY &&
-    visual.innerEdgeStartY === visual.outerEdgeStartY && visual.innerEdgeStartY < visual.junctionY &&
+    visual.innerEdgeStartY < visual.outerEdgeStartY && visual.outerEdgeStartY < visual.junctionY &&
     visual.destinationInnerX < visual.destinationOuterX &&
     visual.destinationY < visual.junctionY &&
     visual.destinationX >= visual.junctionOuterX + 14 &&

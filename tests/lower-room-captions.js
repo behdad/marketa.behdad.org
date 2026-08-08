@@ -24,6 +24,7 @@ var HARNESS = [
   ' setLang("en");window.goToStage("garden");window.setCaption("garden",true);window.__openGardenPrince();await sleep(500);document.getElementById("hunt-floor-btn").click();var dungeonUpImmediate=cap();await sleep(760);report.dungeonUp={immediate:dungeonUpImmediate,settled:cap()};',
   ' setLang("en");window.goToStage("kitchen");await sleep(20);var upstairs=cap();window.__flashCaptionKey("trip_caption_molly",550,"caption-test");var before=cap();window.__openBathroomRoom();var during=cap();await sleep(620);var restored=cap();var repeat=window.__openBathroomRoom();window.__flashCaptionKey("trip_caption_molly",550,"caption-close-test");window.__closeBathroomRoom();var closing=cap();await sleep(620);var upstairsRestored=cap();report.transient={upstairs:upstairs,before:before,during:during,restored:restored,repeat:repeat,closing:closing,upstairsRestored:upstairsRestored};',
   ' window.setCaption("lower_dungeon",true);window.__flashCaptionKey("trip_caption_molly",550,"caption-rebase-test");var rebaseBefore=cap();window.setCaption("cuddly",true);var rebaseDuring=cap();await sleep(620);var rebaseRestored=cap();report.rebased={before:rebaseBefore,during:rebaseDuring,restored:rebaseRestored};',
+  ' window.__setSecondRound(true,{releaseHeld:false});window.__setGardenParty(true,false);window.__setSeenRooms(["kitchen","garden","cuddly","office","balcony","bathroom","dungeon","cinema","bedroom","entrance"]);window.goToStage("balcony");window.__openEntranceRoom();await sleep(40);setLang("en");var readyEn=cap();setLang("cs");var readyCs=cap();var readyState=window.__entranceRoomState();report.entranceReady={en:readyEn,cs:readyCs,roadtrip:readyState.drive&&readyState.drive.roadtrip,party:!!window.__gardenPartyOn};',
   '}catch(e){window.__errs.push("harness: "+String(e&&e.stack||e));}',
   'report.errors=window.__errs;document.getElementById("__report").textContent=JSON.stringify(report);},250);});',
   '})();</script>'
@@ -72,6 +73,15 @@ var expected = {
     room + " has one stable " + lang.toUpperCase() + " entry caption", caption);
   });
 });
+check(result.entranceReady && result.entranceReady.party &&
+  result.entranceReady.roadtrip && result.entranceReady.roadtrip.explorationComplete &&
+  !result.entranceReady.roadtrip.authorized && !result.entranceReady.roadtrip.unlocked &&
+  result.entranceReady.en.key === "lower_entrance_ready" &&
+  result.entranceReady.en.text === "All 10 rooms seen · click the road to start your Road Trip." &&
+  result.entranceReady.cs.key === "lower_entrance_ready" &&
+  result.entranceReady.cs.text === "Všech 10 pokojů navštíveno · klikni na silnici a vyraz na výlet.",
+  "ten-room Entrance guidance advertises the lenient road action while the Party still runs",
+  result.entranceReady);
 check(result.bedroomReturn && result.bedroomReturn.inside.key === "bedroom_ttt_start_caption" &&
   result.bedroomReturn.upstairs.key === "office_call",
   "leaving Bedroom restores the current Office instruction after its tic-tac-toe caption",

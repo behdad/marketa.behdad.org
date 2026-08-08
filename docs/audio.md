@@ -315,8 +315,10 @@ do not compete with traffic, tire, pursuit, or collision cues.
   `document.hidden || !document.hasFocus()` themselves (X11 gives no occlusion signal).
 - **Projector piano voices** start only from focused keyboard or pointer input and have a
   fixed natural decay. Pointer/key release, focus loss, room/channel change, and tab hide
-  all release the active voice set; party start/stop does not, because playing along is
-  supported during the party.
+  all release the active voice set; the visible ×, Escape/Backspace, and an Enter-launched
+  Octi game also release the set before hiding the keybed. Dismissal leaves the night-sky
+  backing score alone and rearms when the visitor changes room or projector channel. Party
+  start/stop does not release voices, because playing along is supported during the party.
 - **The office laptop's automatic update** keeps animating while the desktop monitor is
   being engaged or is zoomed, but its update click and reboot chime are suppressed at
   callback time. Attention begins on the initiating monitor tap, including the brief
@@ -431,7 +433,8 @@ disabled. It does not create or join the loft’s shared audio graph.
   `tests/lower-audio.js` (all five lower profiles, native fallback attenuation,
   lateral retargeting, exact upstairs restore, and Entrance glass groove),
   `tests/entrance-roadtrip-camp-audio-handoff.js` (vehicle-master fade, synchronized car-tail
-  ownership, campsite rise, and final one-bed cleanup), and `tests/piano-message.js` (message transition, layered keys, polyphony,
-  backing-pause independence, and party continuity), plus `tests/party-roadtrip-lifecycle.js`
+  ownership, campsite rise, and final one-bed cleanup), `tests/piano-message.js` (message transition, layered keys, polyphony,
+  backing-pause independence, and party continuity), and `tests/piano-lifecycle.js` (dismiss/rearm,
+  Octi handoff, bilingual close control, and coarse-pointer labels), plus `tests/party-roadtrip-lifecycle.js`
   (party fade/suspension, exact resume, global-pause independence, and no obsolete post-party coda).
   All must pass.

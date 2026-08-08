@@ -12745,6 +12745,10 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
   opacity:1; visibility:visible; pointer-events:auto;
   transition-delay:0s
 }
+#cuddly-wallscreen.chan-stars #cuddly-projector-piano.piano-dismissed{
+  opacity:0; visibility:hidden; pointer-events:none;
+  transition-delay:0s,.28s
+}
 #cuddly-projector-piano .piano-deck-outline{transition:stroke .18s ease,filter .18s ease}
 #cuddly-projector-piano:focus .piano-deck-outline{
   stroke:#f4c97d; filter:drop-shadow(0 0 2px rgba(244,201,125,.78))
@@ -12764,6 +12768,10 @@ html.mir-minigame #loft-game-strip.uv-mode{filter:none}
   font-family:ui-monospace,Menlo,Consolas,monospace;
   font-size:4.4px; font-weight:700; pointer-events:none; user-select:none
 }
+#cuddly-projector-piano.coarse-input .piano-key-label{display:none}
+#cuddly-projector-piano .piano-dismiss{cursor:pointer;pointer-events:auto}
+#cuddly-projector-piano .piano-dismiss-bg{transition:fill .16s ease,stroke .16s ease}
+#cuddly-projector-piano .piano-dismiss:hover .piano-dismiss-bg{fill:#a64d5e;stroke:#fffdf8}
 #cuddly-projector-piano .piano-coach{opacity:0;pointer-events:none}
 #cuddly-projector-piano.show-coach .piano-coach{animation:piano-coach 5.2s ease both}
 @keyframes piano-coach{
@@ -23439,6 +23447,12 @@ section{margin:1.9rem 0}
   <path d="M222 75.2 L226 79 L230 75.2" fill="#171310" stroke="#e8dfcc" stroke-width=".6" stroke-linejoin="round"/>
   <text x="226" y="64.5" text-anchor="middle" font-family="'Source Serif 4',Georgia,serif" font-size="4.2" fill="#fffdf8" data-i="piano_coach_1">Play along—or pause the channel</text>
   <text x="226" y="70" text-anchor="middle" font-family="'Source Serif 4',Georgia,serif" font-size="4.2" fill="#fffdf8" data-i="piano_coach_2">and take over.</text>
+ </g>
+ <g class="piano-dismiss" transform="translate(295 84)" tabindex="-1">
+  <title data-i="piano_close">Dismiss piano</title>
+  <circle class="mini-hit" r="9" fill="#000" opacity="0"/>
+  <circle class="piano-dismiss-bg" r="6.5" fill="#8e3a4a" stroke="#f8f5ec" stroke-width="1"/>
+  <path d="M-2.5 -2.5 L2.5 2.5 M2.5 -2.5 L-2.5 2.5" fill="none" stroke="#fffdf8" stroke-width="1.6" stroke-linecap="round"/>
  </g>
 </g>
 <!-- subtle channel indicator: six dots (the seasonally ordered coffee/fire pair, then
@@ -53452,6 +53466,7 @@ var T = {
     kbd_g: "next phone message",
     piano_coach_1: "Play along—or pause the channel",
     piano_coach_2: "and take over.",
+    piano_close: "Dismiss piano",
     cinema_title: "What are we watching?",
     cinema_screen_off: "projector off",
     cinema_screen_short: "drying out…",
@@ -54823,6 +54838,7 @@ var T = {
     kbd_g: "další zpráva v telefonu",
     piano_coach_1: "Hraj s námi — nebo kanál pozastav",
     piano_coach_2: "a hraj sólo.",
+    piano_close: "Zavřít piano",
     cinema_title: "Na co se podíváme?",
     cinema_screen_off: "projektor je vypnutý",
     cinema_screen_short: "vysychá…",
@@ -61894,11 +61910,16 @@ setMusicPausedState(false);
   if (!keyboard || !screen) return;
   var KEY_NOTES = { a:60, w:61, s:62, e:63, d:64, f:65, u:66, j:67, i:68, k:69, o:70, l:71, ";":72 };
   var voices = Object.create(null), downByNote = Object.create(null);
-  var pianoCtx = null, pianoBus = null, coachSeen = false, coachTimer = null, available = false;
+  var pianoCtx = null, pianoBus = null, coachSeen = false, coachTimer = null, available = false, dismissed = false;
+  var primaryCoarse = window.matchMedia ? window.matchMedia("(pointer: coarse)") : null;
+  var anyCoarse = window.matchMedia ? window.matchMedia("(any-pointer: coarse)") : null;
 
-  function enabled() {
+  function inPianoContext() {
     return screen.classList.contains("chan-stars") &&
-      window.currentStageName === "cuddly" && !document.hidden;
+      window.currentStageName === "cuddly" && !window.__cinemaRoomOpen;
+  }
+  function enabled() {
+    return inPianoContext() && !dismissed && !document.hidden;
   }
   function ownsComputerKeys() {
     return enabled();
@@ -61983,6 +62004,9 @@ setMusicPausedState(false);
   function releaseAll() {
     Object.keys(voices).forEach(releaseVoice);
   }
+  function syncInputMode() {
+    keyboard.classList.toggle("coarse-input", !!((primaryCoarse && primaryCoarse.matches) || (anyCoarse && anyCoarse.matches)));
+  }
   function showCoach() {
     if (coachSeen) return;
     coachSeen = true;
@@ -61995,17 +62019,32 @@ setMusicPausedState(false);
       keyboard.classList.remove("show-coach");
     }, 5300);
   }
+  function dismissPiano() {
+    if (!inPianoContext() || dismissed) return false;
+    dismissed = true;
+    releaseAll();
+    keyboard.classList.add("piano-dismissed");
+    keyboard.setAttribute("tabindex", "-1");
+    if (document.activeElement === keyboard && keyboard.blur) keyboard.blur();
+    return true;
+  }
+  window.__dismissProjectorPiano = dismissPiano;
   window.__syncProjectorPiano = function () {
+    var context = inPianoContext();
+    if (!context && available) dismissed = false; // a room/channel change rearms the keybed for its next visit
+    keyboard.classList.toggle("piano-dismissed", context && dismissed);
     var now = enabled();
-    keyboard.setAttribute("tabindex", now ? "0" : "-1"); // the one strip tab-stop exists only while its own room/channel is visible
+    keyboard.setAttribute("tabindex", "-1"); // scene controls never join browser Tab traversal
     if (!now) releaseAll();
-    if (now && !available) showCoach();
-    available = now;
+    if (context && !available) showCoach();
+    available = context;
     return now;
   };
   window.__projectorPianoState = function () {
     return {
       enabled: enabled(),
+      dismissed: dismissed,
+      labels: !keyboard.classList.contains("coarse-input"),
       voices: Object.keys(voices).length,
       notes: Object.keys(downByNote).map(Number).sort(function (a, b) { return a - b; }),
       backing: !!(window.__starsPlaying && window.__starsPlaying())
@@ -62032,11 +62071,17 @@ setMusicPausedState(false);
   ["click", "dblclick", "contextmenu"].forEach(function (type) {
     keyboard.addEventListener(type, function (e) { e.stopPropagation(); });
   });
+  var dismiss = keyboard.querySelector(".piano-dismiss");
+  if (dismiss) dismiss.addEventListener("click", function (e) {
+    e.preventDefault(); e.stopPropagation(); dismissPiano();
+  });
   // Capture before the game's global letter shortcuts. The printed map only activates
   // while this keybed's piano channel is visible; Space deliberately falls through to
   // the existing projector play/pause transport.
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && ownsComputerKeys()) { releaseAll(); return; }
+    if ((e.key === "Escape" || e.key === "Esc") && ownsComputerKeys()) {
+      e.preventDefault(); e.stopImmediatePropagation(); dismissPiano(); return;
+    }
     if (e.ctrlKey || e.metaKey || e.altKey || !ownsComputerKeys()) return;
     var k = String(e.key || "").toLowerCase(), note = KEY_NOTES[k];
     if (note == null || !enabled()) return;
@@ -62057,6 +62102,12 @@ setMusicPausedState(false);
     if (document.hidden) releaseAll();
     window.__syncProjectorPiano();
   });
+  [primaryCoarse, anyCoarse].forEach(function (query) {
+    if (!query) return;
+    if (query.addEventListener) query.addEventListener("change", syncInputMode);
+    else if (query.addListener) query.addListener(syncInputMode);
+  });
+  syncInputMode();
   window.__syncProjectorPiano();
 })();
 (function () {
@@ -113794,6 +113845,7 @@ function spawnDustMote(container) {
       } else if (er === "garden") {
         if (window.party) window.party(!window.party());
       } else if (er === "cuddly") {
+        if (window.__dismissProjectorPiano) window.__dismissProjectorPiano();
         if (window.__startOctiEscape) window.__startOctiEscape();
       } else if (er === "office") {
         if ((window.__monitorZoomed && window.__monitorZoomed()) ||

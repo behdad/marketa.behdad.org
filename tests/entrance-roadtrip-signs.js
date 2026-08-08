@@ -24,7 +24,8 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     };
   }
   function sweep(name) {
-    var summary = { visibleViolations: 0, hiddenConflicts: 0, minimumVisible: 999 };
+    var summary = { visibleViolations: 0, hiddenConflicts: 0, minimumVisible: 999,
+      curveVisibleViolations: 0, curveMinimumVisible: 999, curveSuppressed: 0 };
     for (var distance = 0; distance < 294; distance += 3) {
       window.__entranceRoadtripSetDistance(distance);
       Array.prototype.forEach.call(
@@ -37,6 +38,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
           if (!visible && clearance < 8) summary.hiddenConflicts++;
         }
       );
+      Array.prototype.forEach.call(
+        document.querySelectorAll("[data-roadtrip-curve]"),
+        function (curve) {
+          if (curve.getAttribute("visibility") !== "visible") return;
+          var clearance = Number(curve.getAttribute("data-roadtrip-sign-clearance"));
+          summary.curveMinimumVisible = Math.min(summary.curveMinimumVisible, clearance);
+          if (clearance < 8) summary.curveVisibleViolations++;
+        }
+      );
+      summary.curveSuppressed += Number(document.getElementById(
+        "entrance-roadtrip-curve-signs").getAttribute("data-roadtrip-suppressed-overlaps")) || 0;
     }
     report.signs[name].sweep = summary;
   }
@@ -108,7 +120,13 @@ var signs = result && result.signs || {};
     sign.sweep && sign.sweep.visibleViolations === 0 && sign.sweep.hiddenConflicts > 0 &&
     sign.sweep.minimumVisible >= 8,
     name + " sign keeps an eight-pixel longitudinal gap from speed signs", sign.sweep);
+  check(sign.sweep && sign.sweep.curveVisibleViolations === 0 &&
+    sign.sweep.curveMinimumVisible >= 8,
+    name + " route keeps curve warnings clear of every other roadside sign", sign.sweep);
 });
+check(["banff", "abraham", "camp"].some(function (name) {
+  return signs[name] && signs[name].sweep && signs[name].sweep.curveSuppressed > 0;
+}), "the route sweep exercises and suppresses a real sign-overlap case", signs);
 
 var layout = result && result.abrahamLayout || {};
 check(JSON.stringify(layout.lines) === JSON.stringify(["ABRAHAM", "LAKE"]),

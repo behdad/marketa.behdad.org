@@ -43719,6 +43719,26 @@ window.__entranceRoomOpen = false;
       });
     }
     signs.sort(function (a, b) { return b.remaining - a.remaining; });
+    var occupiedBands = roadtripVisibleRoadsideSignBands();
+    var suppressed = 0;
+    signs = signs.filter(function (sign) {
+      var point = roadtripProject(sign.remaining);
+      var scale = .14 + point.perspective * .83;
+      var band = { top: point.y - 58 * scale, bottom: point.y };
+      var clearance = roadtripVerticalBandClearance(band, occupiedBands);
+      sign.point = point;
+      sign.scale = scale;
+      sign.clearance = clearance;
+      if (clearance < ROADTRIP_ROADSIDE_SIGN_GAP) {
+        suppressed++;
+        return false;
+      }
+      occupiedBands.push(band);
+      return true;
+    });
+    var curveSigns = roadtripElement("entrance-roadtrip-curve-signs");
+    if (curveSigns) roadtripSetAttribute(curveSigns,
+      "data-roadtrip-suppressed-overlaps", String(suppressed));
     roadtripCurveSignPool.forEach(function (node, index) {
       var sign = signs[index];
       if (!sign) {
@@ -43726,13 +43746,14 @@ window.__entranceRoomOpen = false;
         roadtripRemoveAttribute(node, "data-roadtrip-curve");
         return;
       }
-      var point = roadtripProject(sign.remaining);
+      var point = sign.point;
       var x = roadtripProjectLateral(point, 1.08) + 12 + point.perspective * 23;
-      var scale = .14 + point.perspective * .83;
+      var scale = sign.scale;
       roadtripUseTemplate(node, sign.direction > 0 ? "curve-sign-right" : "curve-sign-left");
       roadtripSetAttribute(node, "data-roadtrip-curve", sign.direction > 0 ? "right" : "left");
       roadtripSetAttribute(node, "data-roadtrip-ahead", sign.remaining.toFixed(2));
       roadtripSetAttribute(node, "data-roadtrip-project-y", point.y.toFixed(2));
+      roadtripSetAttribute(node, "data-roadtrip-sign-clearance", sign.clearance.toFixed(2));
       roadtripSetAttribute(node, "transform", "translate(" + x.toFixed(2) + " " + point.y.toFixed(2) + ") scale(" + scale.toFixed(3) + ")");
       roadtripSetAttribute(node, "visibility", "visible");
     });
@@ -43916,15 +43937,26 @@ window.__entranceRoomOpen = false;
     }
     return bands;
   }
-  function roadtripSpeedSignClearance(point, scale, bands) {
+  function roadtripVerticalBandClearance(band, bands) {
     if (!bands.length) return 999;
-    var top = point.y - 58 * scale;
-    var bottom = point.y;
-    return bands.reduce(function (clearance, band) {
-      var gap = bottom < band.top ? band.top - bottom :
-        band.bottom < top ? top - band.bottom : 0;
+    return bands.reduce(function (clearance, occupied) {
+      var gap = band.bottom < occupied.top ? occupied.top - band.bottom :
+        occupied.bottom < band.top ? band.top - occupied.bottom : 0;
       return Math.min(clearance, gap);
     }, 999);
+  }
+  function roadtripVisibleRoadsideSignBands() {
+    var bands = roadtripExitSignBands();
+    roadtripFurniturePool.forEach(function (item) {
+      if (item.type !== "speed-limit" || item.node.getAttribute("visibility") !== "visible") return;
+      var point = roadtripProject(Number(item.node.getAttribute("data-roadtrip-ahead")) || 0);
+      var scale = .13 + point.perspective * .86;
+      bands.push({ top: point.y - 58 * scale, bottom: point.y });
+    });
+    return bands;
+  }
+  function roadtripSpeedSignClearance(point, scale, bands) {
+    return roadtripVerticalBandClearance({ top: point.y - 58 * scale, bottom: point.y }, bands);
   }
   function positionRoadtripCampExitSign(node, point, scale, halfWidth, spur) {
     var roadRight = spur ? spur.roadRight : roadtripProjectLateral(point, 1);

@@ -11,7 +11,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   var trafficTypes = ["car", "pickup", "truck", "rv"];
   function state() { return window.__entranceRoomState().drive.roadtrip; }
   function sampleRoute(route, seed) {
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRoute(route, 0);
     window.__entranceRoadtripSetSeed(seed);
     var limit = state().speedLimit;

@@ -18,7 +18,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         window.__entranceRoadtripSetRoute("camp", 0);
 
         var lake = document.getElementById("entrance-roadtrip-camp-lake");

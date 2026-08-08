@@ -30,7 +30,7 @@ var HARNESS = String.raw`<style>
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         var room = document.getElementById("entrance-room");
         report.calgary = {
           state: state(),

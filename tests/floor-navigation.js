@@ -203,7 +203,7 @@ var harness = String.raw`<script>
       key: "Shift", code: "ShiftLeft", bubbles: true, cancelable: true
     }));
     window.__entranceDriveRange("D");
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     await sleep(30);
     check("Road Trip keeps the persistent chrome coach-free",
       !document.getElementById("hunt-floor-coach") && !document.getElementById("hunt-dollhouse-btn").hidden);

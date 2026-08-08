@@ -76,7 +76,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
 
         report.normal.calgary = choose("calgary", false);
         report.normal.banff = choose("banff", false);

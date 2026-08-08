@@ -29,7 +29,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveRange("N");
       report.afterAutoRange = copy(report.pulses);
 
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       window.__entranceDriveSetMotion(100, 3);
       window.__entranceRoadtripSetLane(.5);
       window.__entranceRoadtripSpawn("deer", .5, 8);

@@ -130,11 +130,14 @@ console field when you want to type. Desktop app openings retain their ready-to-
 Opening a message does not automatically run its activity. Select the activity arrow when ready.
 An activity can expire when its moment passes, but its message stays unread until you read it.
 Shortly after the first party starts, a large dismissible popup and red arrow identify the Garden
-wall switch that ends the party when the player is ready. Any deliberate party teardown prepares
-Behdad’s private road-trip invitation in Messages; its activity arrow opens the Entrance. The
-teardown also reports how many of the ten rooms have been seen. If rooms remain, a second
-dismissible popup and red arrow point to the room map. Calls, notification popups, and the Road Trip
-invitation wait until that coach is dismissed or the map is opened.
+wall switch that ends the party when the player is ready. Any deliberate party teardown checks how
+many of the ten rooms have actually been visited. If rooms remain, a second dismissible popup and
+red arrow point to the room map; Phase 2 lets one selection unlock and enter any remaining room.
+Each new lower room gives its own short introduction and a live remaining-room count, while an early
+Entrance visit sends the player back to explore the loft. Calls and unrelated notification popups
+wait while the coach is visible. After all ten rooms have been seen, Behdad and Markéta’s four-line
+Road Trip exchange arrives in order; only **Let’s go!** has an activity arrow, and it opens Entrance
+without starting the dashboard.
 The party itself does not automatically turn into a piano, dawn, or RSVP sequence; those loft
 activities remain free play, and Camping's `~ fin ~` is the game's terminal RSVP coda.
 Right-click or long-press a message or app icon for local actions. **Kill app** resets only that app.
@@ -174,11 +177,12 @@ chooser by long-pressing the shifter.
 The roof, door, windows, compartments, and lights are separate controls. The odometer records real
 distance across street and highway driving and survives engine stops and Continue.
 
-Complete one forward street lap to unlock **Road Trip**. Accept the invitation, then choose
-Calgary, Banff, or Abraham Lake as the starting segment. A private testing shortcut starts near a
-segment's exit when its chooser item is Shift-clicked. Each new route starts stopped on the shoulder
-without changing the selected transmission setting. Closing the dashboard, Entrance, or page after
-that first lap does not consume the unlock or require another lap; the offer, chooser, or compact
+Seeing all ten rooms unlocks **Road Trip**. The exchange’s **Let’s go!** opens Entrance; select the
+road to open the dashboard, then accept the invitation and choose Calgary, Banff, or Abraham Lake as
+the starting segment. Street laps remain optional free driving and do not control progression. A
+private testing shortcut starts near a segment's exit when its chooser item is Shift-clicked. Each
+new route starts stopped on the shoulder without changing the selected transmission setting.
+Closing the dashboard, Entrance, or page does not consume the unlock; the offer, chooser, or compact
 Road Trip control remains available until a route is deliberately started.
 
 Road Trip uses the same steering, transmission, accelerator, and brake:

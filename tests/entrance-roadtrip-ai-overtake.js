@@ -43,7 +43,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
 
         route("banff", 2.08);
         window.__entranceRoadtripSpawn("rv", 1.5, 40, { speedKmh: 70 });

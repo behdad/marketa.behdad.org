@@ -56,7 +56,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntranceRoom();
       await sleep(40);
       window.__openEntrancePorscheDriveHud();
-      report.steps.reinstatedStart = window.__entranceRoadtripStart();
+      report.steps.reinstatedStart = window.__entranceRoadtripDevStart();
       report.steps.reinstated = copy(state());
       report.steps.expiring = window.__entranceRoadtripSetDemerits(3, 0, Date.now() + 80);
       report.steps.expiringState = copy(state());

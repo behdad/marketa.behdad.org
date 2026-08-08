@@ -43,7 +43,7 @@ function setupScript(body) {
     window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
     window.__openEntrancePorscheDriveHud();
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRoute("camp", 0);
     window.__setAurora(false);
     window.__setDayNight(true);

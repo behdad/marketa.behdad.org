@@ -38,7 +38,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     return { key: key, prevented: event.defaultPrevented, state: snapshot() };
   }
   function reopenCamp() {
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRoute("camp", 0);
   }
   window.addEventListener("load", function () {
@@ -49,7 +49,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         window.__entranceRoadtripSetRoute("abraham", 75);
         window.__entranceRoadtripSetLane(1);
         window.__entranceDriveSetMotion(0, 1);

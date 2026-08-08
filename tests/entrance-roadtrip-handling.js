@@ -62,7 +62,7 @@ var harness = String.raw`<pre id="__report">pending</pre>
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     await sleep(40);
 
     report.curves = {

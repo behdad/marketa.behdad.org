@@ -22,7 +22,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntrancePorscheDriveHud();
       enter();
       report.ordinaryStart = state();
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       window.__toggleEntrancePorscheEngine();
       report.highwayOff = state();
       enter();

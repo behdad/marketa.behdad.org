@@ -17,7 +17,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
         if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
 
         window.__entranceDriveRange("P");
         window.__entranceDriveSetMotion(0, 0);

@@ -54,7 +54,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__entranceDriveControl("throttle", false);
       report.steps.shifts = shifts;
 
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       report.steps.roadtrip = snap();
       var captured = copy(window.__captureCheckpointSystems().entrance);
       window.__entranceDriveSetMotion(0, 0);

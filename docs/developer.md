@@ -157,16 +157,29 @@ releases held content, and changes Enter to each room's free-play activity. Only
 latch.
 
 Keep progression coverage in `tests/play.js`, `tests/enter.js`, `tests/phase2-progression.js`, and
-`tests/progression-transitions.js`.
+`tests/progression-transitions.js`. `tests/room-progress.js` owns the room-specific bilingual
+captions; `tests/room-roadtrip-bridge.js` reloads between every Road Trip exchange beat and checks
+the hard 10/10 launch/restore boundary.
 
 The `party-roadtrip-bridge` checkpoint adapter owns the one-time Garden switch coach, teardown room
 progress/map coach, and once-per-reset Road Trip handoff. Every unsuppressed party on→off edge records
 the handoff durably. Below ten distinct `seenRooms`, the dismissible map coach holds notification
-popups and incoming calls through the shared action-attention owner; calls queue in the phone
-checkpoint and `downstairs_entrance` is delivered exactly once after coach dismissal or
-`openDollhouse()`. Thus neither the coach nor its handoff depends on a reload-vulnerable delay.
+popups and incoming calls through the shared action-attention owner; Phase 2's one-action dollhouse
+entry is the exploration path. First lower-room visits use room-specific, language-live copy whose
+remaining count is derived from `seenRooms`, never unlock order. At 10/10 the adapter delivers
+`downstairs_entrance` → `downstairs_roadtrip_where` → `downstairs_roadtrip_journey` →
+`downstairs_roadtrip_go` with checkpointed inter-message timing. Reload resumes the next missing beat;
+the first three rows carry no action and only the final row owns `lower:entrance`. Unrelated autonomous
+texts, notification popups, and calls stay held until the exchange completes.
+
+Ten `seenRooms` are also the sole Road Trip unlock owner. `roadtripExplorationComplete()` gates every
+invite, chooser, launch, re-entry, and restore path; saved `unlocked` flags and paused runs cannot
+bypass it. A street lap is optional free-play telemetry and has no progression effect. Reaching 10/10
+makes the dashboard invitation immediately available, while **Let’s go!** opens Entrance with the HUD
+still closed so the player explicitly selects the road. Deterministic driving tests use the visibly
+named `__entranceRoadtripDevStart()` bypass; production and restore paths never do.
 At 120 attended seconds the lifecycle offers the existing optional finale cue but never flips the
-party switch itself. The message’s `lower:entrance` action navigates to the Balcony and opens Entrance.
+party switch itself.
 
 Act Two now ends at party teardown. Its automatic piano → dawn → direct-RSVP tail was removed;
 Camping's `~ fin ~` owns the only terminal RSVP coda. `__partyActEnded()` clears the ticker, delayed
@@ -415,10 +428,10 @@ Demerits live separately in `entranceRoadtripDemerits:v1`; alcohol is owned by t
 `balconyDrinkState:v1`. Road Trip reads those owners for its HUD and impairment. Checkpoint reset
 must not rewind either record; full reset clears them through their existing owners.
 
-The first forward practice wrap unlocks Road Trip. Before first acceptance, invitation-ready,
-dismissed/re-entry, and open-chooser state survive HUD/Entrance closure and checkpoint recovery, so
-another practice lap is never required. Unlock and best score survive sessions, while route
-acceptance and active presentation do not. Checkpoint restore may retain a paused run,
+All ten room visits unlock Road Trip. Before first acceptance, invitation-ready, dismissed/re-entry,
+and open-chooser state survive HUD/Entrance closure and checkpoint recovery. Optional forward street
+wraps are still recorded for deterministic driving coverage but do not own progression. Unlock and
+best score survive sessions, while route acceptance and active presentation do not. Checkpoint restore may retain a paused run,
 but active highway presentation resumes only through Entrance and requires explicit driving input
 unless the route is terminal Camping. The paused-run drive snapshot also owns cruise activation and
 its held-speed target; unattended lifecycle cleanup releases momentary inputs without clearing it.

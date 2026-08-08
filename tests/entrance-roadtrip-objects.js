@@ -40,7 +40,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       report.plan = Array.from({ length: 22 }, function (_, serial) {
         return window.__entranceRoadtripSpawnPlan(false, serial);
       });
@@ -66,7 +66,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         penalty: beforeHedgehog.score - afterHedgehog.score,
         released: hedgehog && hedgehog.getAttribute("visibility") === "hidden"
       };
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       window.__entranceDriveSetMotion(120, 3);
       var car = window.__entranceRoadtripSpawn("car", 1.5, 40);
       report.car = { href: car && car.getAttribute("href"), scale: scale(car) };

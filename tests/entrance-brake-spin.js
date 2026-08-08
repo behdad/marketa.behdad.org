@@ -52,7 +52,7 @@ window.addEventListener("load", function () {
       window.__entranceDriveStep(20);
       report.recoveryAfter = state();
       weather("dry");
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       report.highway = {
         dryBelow: probe(199, "dry"), dryAt: probe(200, "dry"),
         rainBelow: probe(179, "rain"), rainAt: probe(180, "rain"),

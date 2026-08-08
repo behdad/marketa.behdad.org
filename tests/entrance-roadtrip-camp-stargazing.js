@@ -242,7 +242,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         window.__openEntranceRoom();
         document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
         window.__openEntrancePorscheDriveHud();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         window.__entranceRoadtripSetRoute("camp", 0);
         clearNight();
         report.beforeStew = snap();

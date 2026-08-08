@@ -75,7 +75,7 @@ window.addEventListener("load", function () { setTimeout(function () {
     report.braked = JSON.parse(JSON.stringify(drive()));
     key("keyup", "ArrowDown", "ArrowDown");
 
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     window.__entranceDriveSetMotion(88, 4);
     controlTap();
     window.__toggleEntranceRoadtripTransport();

@@ -75,10 +75,10 @@ var harness = String.raw`<script>
     !document.querySelector(".call-ring.show") && window.__heldPartyCoachCalls &&
       window.__heldPartyCoachCalls().length === 1, window.__heldPartyCoachCalls && window.__heldPartyCoachCalls());
   roomCoachPopup.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-  check("clicking the room-map coach dismisses it without opening the map and releases the Road Trip invitation once",
+  check("clicking the room-map coach dismisses it without opening the map or releasing Road Trip early",
     !window.__partyLifecycleState().roomMapCoachActive &&
-      !roomCoach.classList.contains("show") && window.__partyLifecycleState().roadtripInviteDelivered &&
-      window.__phoneMessageReceived("downstairs_entrance") && document.getElementById("loft-dollhouse").hidden);
+      !roomCoach.classList.contains("show") && !window.__partyLifecycleState().roadtripInviteDelivered &&
+      !window.__phoneMessageReceived("downstairs_entrance") && document.getElementById("loft-dollhouse").hidden);
   if (window.__hideCallRing) window.__hideCallRing();
 
   if (window.__setGardenParty) window.__setGardenParty(true, false);
@@ -137,11 +137,14 @@ var harness = String.raw`<script>
   check("accepting the final cue schedules an attended early ending", finaleState.finaleAt > finaleState.attended && (finaleState.finaleReason === "lastdance" || finaleState.finaleReason === "lastsong"), finaleState);
   window.__advancePartyLifecycle(24);
   check("the accepted final dance or song ends the party", !window.__gardenPartyOn);
-  check("a finished party keeps the once-per-reset Road Trip handoff durable",
-    window.__partyLifecycleState().roadtripInviteDelivered && window.__phoneMessageReceived("downstairs_entrance"));
+  check("a finished party keeps the once-per-reset exploration handoff durable",
+    window.__partyLifecycleState().handoffShown && !window.__partyLifecycleState().roadtripInviteDelivered &&
+      !window.__phoneMessageReceived("downstairs_entrance"));
   var roadtripOffered = window.__offerPartyRoadtripInvite && window.__offerPartyRoadtripInvite();
-  check("the post-party invitation uses the authored road-trip message", !roadtripOffered && window.__phoneMessageReceived("downstairs_entrance") &&
-    T.en.msg_downstairs_entrance_body === "Fancy a road trip? 🚗🏔️🏕️" && T.cs.msg_downstairs_entrance_body === "Nechceš vyrazit na výlet? 🚗🏔️🏕️");
+  check("the Road Trip exchange stays behind 10/10 and keeps its authored opening line",
+    !roadtripOffered && !window.__phoneMessageReceived("downstairs_entrance") &&
+    T.en.msg_downstairs_entrance_body === "Fancy a road trip?" &&
+    T.cs.msg_downstairs_entrance_body === "Nechceš vyrazit na výlet?");
   check("the unnamed regulars return to the calm night bar after the party", patrons && getComputedStyle(patrons).opacity === "1");
 
   // Put Act Two on its first reception beat, then stop the party before its delayed
@@ -224,8 +227,8 @@ var harness = String.raw`<script>
     /Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndPopup) && /Pokračuj dál/.test(partyEndPopup) &&
       !/Prozkoumáno: [0-9]+ z 10 místností/.test(partyEndCaption),
     JSON.stringify({ popup: partyEndPopup, caption: partyEndCaption }));
-  if (window.__runMsgAction) window.__runMsgAction("downstairs_entrance");
-  check("accepting the road-trip invitation opens Entrance", window.currentStageName === "balcony" && window.__entranceRoomOpen);
+  if (window.__runMsgAction) window.__runMsgAction("downstairs_roadtrip_go");
+  check("only the final Road Trip exchange line opens Entrance", window.currentStageName === "balcony" && window.__entranceRoomOpen);
   report();
 })();
 </script>`;

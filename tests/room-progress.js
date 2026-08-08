@@ -51,6 +51,20 @@ var harness = String.raw`<script>
     setLang("en");
 
     window.__clearFlashCaption("room-progress");
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony", "dungeon"]);
+    window.__markRoomSeen("bathroom");
+    var bathroom = snapshot();
+    check("a Bathroom first visit gives its own order-independent remaining count",
+      bathroom.seen.length === 7 && bathroom.key === "room_visit_bathroom_few" &&
+      bathroom.caption === "Here’s the bathroom. 3 more rooms to go.", bathroom);
+    setLang("cs");
+    var bathroomCzech = snapshot();
+    check("room-specific progress remains grammatical and live in Czech",
+      bathroomCzech.caption === "Tady je koupelna. Zbývají ještě 3 místnosti.", bathroomCzech);
+    setLang("en");
+
+    window.__clearFlashCaption("room-progress");
+    window.__setSeenRooms(["kitchen", "garden", "cuddly"]);
     window.goToStage("kitchen");
     var revisit = snapshot();
     check("revisiting a room neither increments nor replays progress",
@@ -80,14 +94,16 @@ var harness = String.raw`<script>
     var lowerPan = snapshot();
     check("a lower-floor pan counts only its settled lower-room destination",
       JSON.stringify(lowerPan.seen) === JSON.stringify(["kitchen", "garden", "dungeon", "cinema"]) &&
-      lowerPan.seen.indexOf("cuddly") === -1 && lowerPan.caption.indexOf("4/10") !== -1,
+      lowerPan.seen.indexOf("cuddly") === -1 &&
+      lowerPan.caption === "This is the cinema. 6 more rooms to go.",
       lowerPan);
     window.__navigateLowerRoom("balcony");
     await sleep(800);
     var entrancePan = snapshot();
     check("continuing downstairs still skips every hidden paired upstairs room",
       JSON.stringify(entrancePan.seen) === JSON.stringify(["kitchen", "garden", "dungeon", "cinema", "entrance"]) &&
-      entrancePan.seen.indexOf("balcony") === -1 && entrancePan.caption.indexOf("5/10") !== -1,
+      entrancePan.seen.indexOf("balcony") === -1 &&
+      entrancePan.caption === "Here’s the front entrance. Explore 5 more rooms before the Road Trip.",
       entrancePan);
     window.__closeEntranceRoom();
     var balconyReturn = snapshot();
@@ -107,14 +123,14 @@ var harness = String.raw`<script>
     await sleep(40);
     var complete = snapshot();
     check("the completion line fires only on the tenth distinct room",
-      complete.seen.length === 10 && complete.key === "complete" &&
-      complete.caption === "You’ve seen the whole loft ♥" &&
+      complete.seen.length === 10 && complete.key === "room_visit_entrance_complete" &&
+      complete.caption === "You’ve seen the whole loft. The road is right outside." &&
       complete.flash && complete.flash.owner === "room-progress", complete);
 
     setLang("cs");
     var czechComplete = snapshot();
     check("the live completion line switches to Czech",
-      czechComplete.caption === "Prohlédli jste si celý loft ♥", czechComplete);
+      czechComplete.caption === "Celý loft je prozkoumaný. Silnice čeká hned venku.", czechComplete);
     setLang("en");
 
     window.__clearFlashCaption("room-progress");

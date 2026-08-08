@@ -20,7 +20,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   window.addEventListener("load", function () { setTimeout(async function () { try {
     window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
-    window.__openEntrancePorscheDriveHud(); window.__entranceRoadtripStart();
+    window.__openEntrancePorscheDriveHud(); window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRoute("camp", 0); window.__updateRoadtripCampAudio();
     report.steps.arrival = snap(); await sleep(120); report.steps.fadeIn = snap(); await sleep(580);
     report.steps.calm = snap(); report.steps.calm.before = report.steps.calm.beds - 1;

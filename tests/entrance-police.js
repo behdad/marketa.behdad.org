@@ -16,7 +16,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     for (var i = 0; i < (count || 1); i++) window.__entranceDriveStep(ms);
   }
   function startBanff() {
-    var started = window.__entranceRoadtripStart();
+    var started = window.__entranceRoadtripDevStart();
     if (started) window.__entranceRoadtripSetRoute("banff", 0);
     return started;
   }
@@ -108,7 +108,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       await sleep(40);
       window.__openEntrancePorscheDriveHud();
       if (!state().car.engineOn) window.__toggleEntrancePorscheEngine();
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       window.__entranceRoadtripSetRoute("banff", 0);
       report.steps.contract = {
         hook: typeof window.__entranceRoadtripPolice,
@@ -919,7 +919,7 @@ var REDUCED_MOTION_HARNESS = String.raw`<pre id="__report" style="position:fixed
       };
       window.__entranceRoadtripSetDemerits(0, 0);
       window.__toggleEntrancePorscheEngine();
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       window.__entranceRoadtripSetRoute("banff", 0);
       window.__entranceDriveSetMotion(130, 3);
       window.__entranceRoadtripPolice(150);

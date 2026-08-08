@@ -67,7 +67,7 @@ var harness = String.raw`<script>
     window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     window.__entranceDriveTransmissionMode("auto", false);
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRouteDistance("banff", 420);
     var beforeDetour = window.__entranceRoomState().drive.roadtrip;
     window.__exitEntranceRoadtrip();

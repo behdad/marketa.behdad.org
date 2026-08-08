@@ -15,7 +15,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     for (var index = 0; index < (count || 1); index++) window.__entranceDriveStep(ms);
   }
   function startBanff() {
-    var started = window.__entranceRoadtripStart();
+    var started = window.__entranceRoadtripDevStart();
     if (started) {
       window.__entranceRoadtripSetRoute("banff", 0);
       window.__entranceRoadtripSetLane(2.08);

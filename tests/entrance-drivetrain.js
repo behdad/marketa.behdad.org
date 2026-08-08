@@ -242,7 +242,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         };
 
         setMotion(100, 3);
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         window.__entranceDriveControl("brake", true);
         step(20, 6);
         var attendedPitch = copy(state());

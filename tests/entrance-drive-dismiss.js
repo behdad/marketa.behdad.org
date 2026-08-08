@@ -23,7 +23,7 @@ var harness = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       hudClose.click();
       report.steps.dashboardClosed = window.__entranceRoomState().drive;
       window.__openEntrancePorscheDriveHud();
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       report.steps.highway = {
         hudClose: getComputedStyle(hudClose).display,
         highwayClose: getComputedStyle(highwayClose).display,

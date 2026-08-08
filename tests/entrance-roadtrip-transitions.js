@@ -35,7 +35,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       window.__openEntranceRoom();
       window.__openEntrancePorscheDriveHud();
       if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
 
       window.__entranceRoadtripSetRoute("camp", 0);
       var finishedCheckpoint = window.__captureCheckpointSystems().entrance;
@@ -57,7 +57,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         visible: document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-congrats"),
         transform: getComputedStyle(document.getElementById("entrance-roadtrip-camp")).transform
       };
-      window.__entranceRoadtripStart();
+      window.__entranceRoadtripDevStart();
       report.freshCamp = {
         phase: window.__entranceRoadtripCampSleepState().phase,
         visible: document.getElementById("entrance-roadtrip-camp").classList.contains("camp-sleep-congrats"),

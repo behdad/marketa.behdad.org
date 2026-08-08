@@ -99,7 +99,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   function ensureEngine() { if (!state().car.engineOn) window.__toggleEntrancePorscheEngine(); }
   function startRoadtripInLane(lane) {
-    var started = window.__entranceRoadtripStart();
+    var started = window.__entranceRoadtripDevStart();
     if (started) {
       window.__entranceRoadtripSetRoute("banff", 0);
       window.__entranceRoadtripSetSeed(0x12345678);
@@ -325,13 +325,17 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     });
     var practice = [];
     var seenPractice = -1;
-    for (var i = 0; i < 1200 && !roadtrip().unlocked; i++) {
+    for (var i = 0; i < 1200 && roadtrip().practiceLaps < 1; i++) {
       step(80);
       if (roadtrip().practiceLaps !== seenPractice) {
         seenPractice = roadtrip().practiceLaps;
         practice.push({ practiceLaps: seenPractice, active: roadtrip().active, unlocked: roadtrip().unlocked });
       }
     }
+    var beforeExploration = copy(roadtrip());
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
+    var afterExploration = copy(roadtrip());
     await sleep(520);
     var offerBeforeDrive = copy(roadtrip());
     step(250);
@@ -425,6 +429,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       reoffered: reoffered,
       beforeClasses: beforeClasses,
       practice: practice,
+      exploration: { before: beforeExploration, after: afterExploration },
       roadtrip: copy(roadtrip()),
       roomClasses: activeClasses,
       viewBox: viewBox(),
@@ -1267,12 +1272,14 @@ check(/id="entrance-roadtrip-curve-sign-right"[\s\S]{0,260}M-7-28C-7-39-3-46 7-5
   "curve signs use contained, dark, softened single-turn arrows");
 check(source.indexOf('id="entrance-roadtrip-winter"') < source.indexOf('id="entrance-roadtrip-road"'),
   "accumulated snow paints beneath the road so shoulder markings remain visible at the horizon");
-check(/function paintRoadtripInvite\(\)[\s\S]{0,500}roadtripState\.invitationReady/.test(source) &&
-  /function recordRoadtripPracticeLap\(\)\s*\{\s*if \(!window\.__entranceRoomOpen \|\| !driveState\.hudOpen\) return;\s*if \(roadtripState\.unlocked\) return;\s*roadtripState\.practiceLaps\+\+/.test(source) &&
-  /roadtripState\.practiceLaps >= 1\) unlockRoadtrip\(\)/.test(source) &&
-  /function resetRoadtripInvitationSession\(\)[\s\S]{0,450}!roadtripState\.unlocked \|\| roadtripState\.everAccepted[\s\S]{0,300}else if \(!roadtripState\.invitationReady[\s\S]{0,200}roadtripState\.invitationReady = true;/.test(source) &&
+check(/function roadtripExplorationComplete\(\)[\s\S]{0,120}window\.__seenRooms\(\)\.length >= 10/.test(source) &&
+  /function startRoadtrip\([^)]*developerBypass\)[\s\S]{0,500}!developerBypass && \(!roadtripExplorationComplete\(\) \|\| !roadtripState\.unlocked\)/.test(source) &&
+  /function unlockRoadtrip\(silent\)\s*\{\s*if \(!roadtripExplorationComplete\(\)\) return false;/.test(source) &&
+  /function recordRoadtripPracticeLap\(\)[\s\S]{0,260}roadtripState\.practiceLaps = 1;[\s\S]{0,80}__checkpointChanged/.test(source) &&
+  !/function recordRoadtripPracticeLap\(\)[\s\S]{0,300}unlockRoadtrip\(/.test(source) &&
+  /roadtripState\.unlocked = roadtripExplorationComplete\(\);/.test(source) &&
   /invitationReady: roadtripState\.invitationReady,[\s\S]{0,100}invitationDismissed: roadtripState\.invitationDismissed/.test(source),
-  "the source owns a one-lap initial unlock and preserves its unaccepted chooser across sessions");
+  "ten seen rooms solely own unlock while optional street laps cannot bypass it");
 check(!/roadtripState\.unlocked && roadtripState\.accepted && !roadtripState\.active[\s\S]{0,200}startRoadtrip\(false\)/.test(source) &&
   /function acceptRoadtripInvite\(event\)\s*\{\s*return openRoadtripRouteChooser\(event\);\s*\}/.test(source) &&
   /if \(roadtripInviteVisible\) document\.getElementById\("entrance-roadtrip-invite-accept"\)\.dispatchEvent/.test(source) &&
@@ -1382,9 +1389,16 @@ check(transport && transport.enterPaused.drive.roadtrip.resumePending &&
 check(transport && transport.buttonPaused.drive.roadtrip.resumePending && transport.buttonPausedClass &&
   !transport.buttonResumed.drive.roadtrip.resumePending && transport.buttonResumed.car.engineOn,
   "the chrome play/pause button owns Road Trip transport while the highway is active", transport);
-check(activation && activation.practice.some(function (row) { return row.practiceLaps === 1 && !row.active; }) &&
+check(activation && activation.practice.some(function (row) {
+    return row.practiceLaps === 1 && !row.active && !row.unlocked;
+  }) &&
   !activation.practice.some(function (row) { return row.practiceLaps > 1; }) &&
-  activation.offer.before.practiceLaps === 1 && activation.offer.before.unlocked &&
+  activation.exploration && activation.exploration.before.practiceLaps === 1 &&
+  !activation.exploration.before.unlocked && !activation.exploration.before.explorationComplete &&
+  activation.exploration.after.unlocked && activation.exploration.after.explorationComplete,
+  "an optional street lap stays locked until all ten rooms have been seen",
+  activation && { practice: activation.practice, exploration: activation.exploration });
+check(activation && activation.offer.before.practiceLaps === 1 && activation.offer.before.unlocked &&
   activation.offer.before.invitationReady && !activation.offer.before.accepted && !activation.offer.before.active &&
   !activation.offer.after.accepted && !activation.offer.after.active && activation.offer.visible &&
   activation.offer.metadata === 0 && activation.offer.title === "Let’s road trip!" &&
@@ -1396,8 +1410,9 @@ check(activation && activation.practice.some(function (row) { return row.practic
   !activation.firstDismissed.state.drive.roadtrip.active && !activation.firstDismissed.state.drive.roadtrip.accepted &&
   activation.reoffered && activation.reoffered.visible && activation.reoffered.metadata === 0 &&
   activation.roadtrip.accepted && activation.roadtrip.everAccepted && activation.roadtrip.active,
-  "exactly one practice lap shows the first full card; Escape defers it and Enter accepts its next session",
-  activation && { practice: activation.practice, offer: activation.offer, roadtrip: activation.roadtrip });
+  "10/10 shows the first full card; Escape defers it and Enter accepts its next session",
+  activation && { offer: activation.offer, firstDismissed: activation.firstDismissed,
+    reoffered: activation.reoffered, roadtrip: activation.roadtrip });
 check(activation && activation.roomClasses.indexOf("roadtrip-active") >= 0 &&
   activation.viewBox === "0 -120 680 340" &&
   activation.aspectRatio === "xMidYMax slice" &&

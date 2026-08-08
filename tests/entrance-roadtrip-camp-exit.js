@@ -10,7 +10,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   var report = { errors: {} };
   function roadtrip() { return window.__entranceRoomState().drive.roadtrip; }
   function begin() {
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
   }
   function setAbraham(distance, lane, speed) {

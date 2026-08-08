@@ -24,7 +24,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
     window.__openEntrancePorscheDriveHud();
     if (!window.__entranceRoomState().car.engineOn) window.__toggleEntrancePorscheEngine();
-    window.__entranceRoadtripStart(); window.__entranceRoadtripSetRoute("abraham", 2);
+    window.__entranceRoadtripDevStart(); window.__entranceRoadtripSetRoute("abraham", 2);
     window.__entranceDriveSetMotion(120, 4); window.__entranceDriveStep(80);
     await sleep(360); report.steps.driving = snap();
 

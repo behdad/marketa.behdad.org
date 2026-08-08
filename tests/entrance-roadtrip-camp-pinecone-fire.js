@@ -65,7 +65,7 @@ var HARNESS = `
         window.__openEntranceRoom();
         document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
         window.__openEntrancePorscheDriveHud();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         window.__entranceRoadtripSetRoute("camp", 0);
         report.initial = snap();
         report.initialCheckpoint = window.__captureCheckpointSystems().entrance;

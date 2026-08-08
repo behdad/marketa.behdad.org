@@ -18,7 +18,7 @@ var HARNESS = String.raw`<style>*{transition:none!important}</style>
         window.goToStage("balcony");
         window.__openEntranceRoom();
         window.__openEntrancePorscheDriveHud();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         window.__entranceRoadtripSetRoute("camp", 0);
         var room = document.getElementById("entrance-room");
         var sun = document.getElementById("entrance-roadtrip-camp-sun");

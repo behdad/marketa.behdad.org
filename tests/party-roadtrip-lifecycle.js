@@ -70,7 +70,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     window.__openEntrancePorscheDriveHud();
     report.steps.hud = { foreground: fg(), active: window.__entranceRoomState().drive.roadtrip.active };
 
-    var started = window.__entranceRoadtripStart();
+    var started = window.__entranceRoadtripDevStart();
     report.steps.started = {
       started: started, foreground: fg(), runtime: runtime(), act: act(), identity: partyIdentity(),
       classed: document.documentElement.classList.contains("party-foreground-suspended"),
@@ -106,7 +106,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
     // An explicit user transport pause is independent: a Road Trip round-trip must not unpause it.
     window.__toggleMusicPlayback();
     var pausedBefore = !!window.__musicPaused;
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     await sleep(920);
     window.__exitEntranceRoadtrip();
     report.steps.transport = {

@@ -72,7 +72,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
         document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
         document.getElementById("entrance-room").scrollIntoView({ block: "center" });
         window.__openEntrancePorscheDriveHud();
-        window.__entranceRoadtripStart();
+        window.__entranceRoadtripDevStart();
         report.coachVisibleAfterStart = document.getElementById("entrance-drive-coach").classList.contains("show");
         window.__entranceRoadtripSetRoute("camp", 0);
         report.fireRing = {

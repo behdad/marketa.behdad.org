@@ -20,7 +20,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function drive() { return window.__entranceRoomState().drive; }
   function begin() {
-    window.__entranceRoadtripStart();
+    window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRoute("banff", 0);
     window.__entranceRoadtripSetDistance(0);
     window.__entranceRoadtripSetSeed(0x12345678);

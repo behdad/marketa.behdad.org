@@ -295,8 +295,10 @@ carry their own explicit seeded speed so changing the natural profile cannot sil
 `scheduleRoadtripNaturalSpawn()` anchors one due spawn to the current distance, briefly retries a
 full pool, and gives wildlife a bounded defer while police or a traffic manoeuvre owns attention;
 it never replays missed intervals as a burst. The police production clock likewise waits, within a
-bounded distance, for visible wildlife or a traffic manoeuvre to clear. Rear overtakers use the same
-attention signals, while direct mirror summons and the pursuit deck remain explicit overrides.
+bounded distance, for visible wildlife or a traffic manoeuvre to clear. A Camping-turnoff approach
+is an unbounded roadside owner: a due speed trap waits until that exit has passed rather than sharing
+its sign/junction beat. Rear overtakers use the same attention signals, while direct mirror summons
+and the pursuit deck remain explicit overrides.
 `syncRoadtripTrafficLane()` owns faster traffic's pull-out, clearance, return, and car-following
 speed. `roadtripTrafficLead()` selects only the nearest vehicle in the current lane; if a pass is
 blocked, a bounded headway controller slows the follower and exposes its brake-lamp state. Banff may

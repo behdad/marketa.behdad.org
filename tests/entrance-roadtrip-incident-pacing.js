@@ -97,6 +97,16 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
       step(100);
       report.steps.policeBounded = copy(trip());
 
+      start("abraham");
+      window.__entranceRoadtripSetRoute("abraham", 72);
+      window.__entranceRoadtripSetDistance(trip().policeFirstDistance + 1);
+      window.__entranceDriveSetMotion(0, 0);
+      step(100);
+      report.steps.campExitProtected = copy(trip());
+      window.__entranceRoadtripSetRoute("abraham", 0);
+      step(100);
+      report.steps.campExitCleared = copy(trip());
+
       start();
       window.__entranceRoadtripSpawn("rabbit", .5, 30);
       report.steps.directSummon = !!window.__entranceRoadtripSpawnOvertaker();
@@ -168,6 +178,13 @@ check(steps.policeBounded && steps.policeBounded.police.phase === "warning" &&
   steps.policeBounded.incidentPacing.wildlifeActive,
   "police deferral has a distance cap, so a persistent conflict cannot create dead air",
   steps.policeBounded);
+check(steps.campExitProtected && steps.campExitProtected.police.phase === "idle" &&
+  steps.campExitProtected.incidentPacing.campExitProtected &&
+  steps.campExitProtected.campExitVisible,
+  "a due speed trap yields while the Camping turnoff owns the roadside", steps.campExitProtected);
+check(steps.campExitCleared && steps.campExitCleared.police.phase === "warning" &&
+  !steps.campExitCleared.incidentPacing.campExitProtected,
+  "the deferred speed trap releases after the Camping turnoff has cleared", steps.campExitCleared);
 check(steps.directSummon === true,
   "an explicit mirror summon bypasses automatic pacing and remains player-owned");
 

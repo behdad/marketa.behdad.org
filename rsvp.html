@@ -43561,6 +43561,7 @@ window.__entranceRoomOpen = false;
     var policePacingOverdue = roadtripState.distance - police.nextDistance;
     var policePacingBlocked = roadtripWildlifeIncidentActive() || roadtripTrafficIncidentActive();
     if (police.phase === "idle" && roadtripState.distance >= police.nextDistance &&
+        !roadtripPoliceCampExitApproaching() &&
         (!policePacingBlocked ||
           policePacingOverdue >= ROADTRIP_POLICE_PACING_MAX_DELAY_DISTANCE)) {
       beginRoadtripPoliceEncounter();
@@ -44508,6 +44509,14 @@ window.__entranceRoomOpen = false;
     var remaining = roadtripState.police.nextDistance - roadtripState.distance;
     return roadtripState.police.phase === "idle" && remaining >= 0 &&
       remaining <= ROADTRIP_POLICE_PACING_APPROACH_DISTANCE;
+  }
+  function roadtripPoliceCampExitApproaching() {
+    if (roadtripState.route !== "abraham") return false;
+    if (roadtripState.campExitLatched) return true;
+    var countdown = Number(roadtripState.campExitDistance);
+    if (!Number.isFinite(countdown)) countdown = roadtripCampExitDistanceAt(roadtripState.abrahamDistance);
+    return countdown >= -ROADTRIP_CAMP_EXIT_TAIL_DISTANCE &&
+      countdown <= ROADTRIP_CAMP_SIGN_DISTANCE + ROADTRIP_POLICE_WARNING_AHEAD;
   }
   function roadtripNaturalSpawnBlocked(plan) {
     if (!plan || !roadtripIsAnimalType(plan.type)) return false;
@@ -49367,7 +49376,8 @@ window.__entranceRoomOpen = false;
             policeMaxDelayDistance: ROADTRIP_POLICE_PACING_MAX_DELAY_DISTANCE,
             wildlifeActive: roadtripWildlifeIncidentActive(),
             trafficActive: roadtripTrafficIncidentActive(),
-            policeApproaching: roadtripPolicePacingApproaching()
+            policeApproaching: roadtripPolicePacingApproaching(),
+            campExitProtected: roadtripPoliceCampExitApproaching()
           },
           policeStoppedBeat: ROADTRIP_POLICE_STOPPED_BEAT_SECONDS,
           policeFrontStoppedBeat: ROADTRIP_POLICE_FRONT_STOP_SECONDS,

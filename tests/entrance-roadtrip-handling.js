@@ -54,8 +54,9 @@ var harness = String.raw`<pre id="__report">pending</pre>
     };
   }
   try {
+    var attended = true;
     Object.defineProperty(document, "hasFocus", {
-      value: function () { return true; }, configurable: true
+      value: function () { return attended; }, configurable: true
     });
     window.__unlockAllRooms();
     window.goToStage("balcony");
@@ -109,6 +110,30 @@ var harness = String.raw`<pre id="__report">pending</pre>
       enteredRoad: enteredRoad,
       recoveryStart: recoveryStart,
       recoveryEnd: recoveryEnd
+    };
+
+    setup("auto", 0, 0, .5);
+    window.__entranceDriveControl("steerLeft", true);
+    step(5);
+    window.__entranceDriveControl("steerLeft", false);
+    var parkingBeforeBlur = copy(drive());
+    attended = false;
+    window.dispatchEvent(new Event("blur"));
+    var parkingBlurred = copy(drive());
+    attended = true;
+    window.dispatchEvent(new Event("focus"));
+    await sleep(40);
+    var parkingWaiting = copy(drive());
+    window.__exitEntranceRoadtrip();
+    var parkingExited = copy(drive());
+    await sleep(1200);
+    var parkingCentred = copy(drive());
+    report.focusPausedExit = {
+      beforeBlur: parkingBeforeBlur,
+      blurred: parkingBlurred,
+      waiting: parkingWaiting,
+      exited: parkingExited,
+      centred: parkingCentred
     };
   } catch (error) {
     report.errors.push(String(error && error.stack || error));
@@ -179,6 +204,28 @@ check(surface && surface.enteredRoad &&
   !/roadtrip-shoulder-rumble/.test(surface.recoveryEnd.visual.className),
   "returning to asphalt carries a short audible/visual slip tail, then restores settled grip",
   surface && { start: surface.recoveryStart, end: surface.recoveryEnd });
+
+var focusPausedExit = result && result.focusPausedExit;
+check(focusPausedExit && focusPausedExit.beforeBlur.steeringAngle < -8 &&
+  focusPausedExit.blurred.roadtrip.resumePending && !focusPausedExit.blurred.frameActive &&
+  focusPausedExit.waiting.roadtrip.resumePending && !focusPausedExit.waiting.frameActive &&
+  !focusPausedExit.exited.roadtrip.active && focusPausedExit.exited.frameActive &&
+  Math.abs(focusPausedExit.centred.steeringAngle) < .25,
+  "exiting a focus-paused Road Trip restarts the parked car loop and centres its released wheel",
+  focusPausedExit && {
+    beforeBlur: { angle: focusPausedExit.beforeBlur.steeringAngle },
+    blurred: {
+      angle: focusPausedExit.blurred.steeringAngle,
+      paused: focusPausedExit.blurred.roadtrip.resumePending,
+      frame: focusPausedExit.blurred.frameActive
+    },
+    exited: {
+      angle: focusPausedExit.exited.steeringAngle,
+      active: focusPausedExit.exited.roadtrip.active,
+      frame: focusPausedExit.exited.frameActive
+    },
+    centred: { angle: focusPausedExit.centred.steeringAngle }
+  });
 
 if (failures) process.exit(1);
 console.log("Road Trip handling assertions passed.");

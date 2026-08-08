@@ -9385,15 +9385,18 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .msg-badge.show{display:block}
 .msg-badge.idle{padding:0;background:#6d8ba3;box-shadow:0 2px 6px rgba(0,0,0,.24)}
 .msg-badge-idle-icon{display:block;width:22px;height:22px;margin:6px auto}
-/* First unread only: teach the badge in place, without stealing the main scene caption. The
-   shared custom property is the exact espresso arrow used by the opening-caption guide. */
+/* First unread only: a durable, non-modal coach below the notification lane. Temporary room,
+   phone and activity covers may hide it, but only its × or opening Messages retires it. */
 .msg-badge.coached{animation:msg-badge-coach-pulse .9s ease-in-out infinite}
-.msg-badge-coach{position:absolute; top:94px; left:max(4px, calc(50% - 254px)); z-index:62; width:max-content; max-width:calc(100% - 8px); padding:7px 10px; border-radius:7px; background:var(--ink); color:var(--paper); box-shadow:0 3px 10px rgba(0,0,0,.28); font:600 26px/1.25 "Source Serif 4",serif; overflow-wrap:anywhere; pointer-events:none; opacity:0; transform:translateY(-3px); transition:opacity .2s ease, transform .2s ease}
+.msg-badge-coach{position:absolute;top:132px;left:max(6px,calc(50% - 254px));z-index:62;box-sizing:border-box;width:min(390px,calc(100% - 12px));min-height:68px;padding:14px 58px 14px 18px;border:2px solid rgba(142,58,74,.58);border-radius:18px;background:rgba(255,253,248,.98);color:var(--wine);box-shadow:0 5px 18px rgba(69,58,49,.32);font:700 26px/1.16 "Fraunces",serif;text-align:center;text-wrap:balance;overflow-wrap:anywhere;pointer-events:none;opacity:0;transform:translateY(-3px);transition:opacity .2s ease,transform .2s ease}
 .msg-badge-coach.show{opacity:1; transform:translateY(0)}
-.msg-badge-coach::before{content:""; position:absolute; left:-5px; bottom:calc(100% + 3px); width:40px; height:48px; background:center / contain no-repeat var(--espresso-arrow-up); filter:drop-shadow(0 1px 1px rgba(69,58,49,.35)); animation:msg-badge-arrow-bob .8s ease-in-out infinite}
+.msg-badge-coach-arrow{position:absolute;left:-2px;bottom:calc(100% + 2px);width:48px;height:108px;overflow:visible;pointer-events:none;filter:drop-shadow(0 2px 2px rgba(31,31,31,.45));animation:msg-badge-arrow-bob .8s ease-in-out infinite}
+.msg-badge-coach-arrow path{fill:#ef1717;stroke:#1f1f1f;stroke-width:3.5;stroke-linejoin:round}
+.msg-badge-coach-dismiss{position:absolute;right:.55rem;top:.55rem;display:grid;place-items:center;width:2.2rem;height:2.2rem;padding:0;border:0;border-radius:50%;background:var(--wine);color:#fff;font:800 25px/1 sans-serif;box-shadow:0 2px 7px rgba(0,0,0,.28);cursor:pointer;pointer-events:auto;-webkit-tap-highlight-color:transparent}
 @keyframes msg-badge-coach-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14); box-shadow:0 3px 12px rgba(192,57,43,.55)}}
 @keyframes msg-badge-arrow-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
-@media (prefers-reduced-motion: reduce){.msg-badge.coached,.msg-badge-coach::before{animation:none} .msg-badge-coach{transition:none}}
+@media (max-width:520px){.msg-badge-coach{top:118px;min-height:62px;padding:11px 52px 11px 14px;border-radius:15px;font-size:22px}.msg-badge-coach-arrow{height:94px}.msg-badge-coach-dismiss{right:.45rem;top:.45rem;width:1.95rem;height:1.95rem;font-size:22px}}
+@media (prefers-reduced-motion: reduce){.msg-badge.coached,.msg-badge-coach-arrow{animation:none}.msg-badge-coach{transition:none}}
 /* incoming-call ring card (Madla; Markéta's parents on a Saturday) — a sibling of .msg-thumb: drops from the top-centre of the
    loft, pulses, and rings for ~15s. Tap anywhere on it to answer. The green answer glyph on the
    right reads as the "pick up" affordance; the wine phone glyph on the left is the caller icon.
@@ -89972,6 +89975,7 @@ async def localfont(name):
       if (shell) shell.focus();
     }
     function openApp(id, titleKey, builder) {
+      if (id === "messages") acknowledgeMsgBadgeCoach("opened");
       // A live Messages repaint (an incoming crew reply, language switch, etc.) rebuilds
       // the app body. Remember which of its two text fields owned the keyboard so that
       // repaint does not unexpectedly throw the user from search back into composing.
@@ -93499,6 +93503,8 @@ async def localfont(name):
         msgDraft: msgDraft,
         msgReplySeq: msgReplySeq,
         msgActionCoachAcknowledged: !!msgActionCoachAcknowledged || messageActionCoachEverUsed(),
+        msgBadgeCoachShown: !!msgBadgeCoachShown,
+        msgBadgeCoachAcknowledged: !!msgBadgeCoachAcknowledged,
         phoneSlots: (phoneSlots || phoneDefaultSlots()).slice(),
         mailRead: Object.assign({}, mailRead),
         heldCalls: (heldCallRings || []).map(function (row) {
@@ -93542,6 +93548,8 @@ async def localfont(name):
       releaseActionCoachMessages();
       msgActionCoachShown = false; msgActionCoachActive = false; msgActionCoachHeld = [];
       msgActionCoachAcknowledged = state.msgActionCoachAcknowledged === true;
+      msgBadgeCoachShown = state.msgBadgeCoachShown === true;
+      msgBadgeCoachAcknowledged = state.msgBadgeCoachAcknowledged === true;
       notesDraft = typeof state.notesDraft === "string" ? state.notesDraft.slice(0, 10000) : "";
       msgDraft = typeof state.msgDraft === "string" ? state.msgDraft.slice(0, 500) : "";
       msgReplySeq = Math.max(0, Math.min(9999, parseInt(state.msgReplySeq, 10) || 0));
@@ -95271,6 +95279,10 @@ async def localfont(name):
       if (heldCallReleaseT) { clearTimeout(heldCallReleaseT); heldCallReleaseT = null; }
       var result = resetPhoneAppsBase();
       msgActionCoachAcknowledged = false;
+      msgBadgeCoachShown = false;
+      msgBadgeCoachAcknowledged = false;
+      cancelMsgBadgeCoachDelay();
+      hideMsgBadgeCoach();
       return result;
     };
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
@@ -95601,7 +95613,7 @@ async def localfont(name):
     window.__runMsgAction = runMsgAction; // test hook
     function openMessagesAt(id) {
       hideMessageThumb();
-      hideMsgBadgeCoach();
+      acknowledgeMsgBadgeCoach("opened");
       msgOpenTarget = id && MESSAGES[id] ? id : null;
       if (msgOpenTarget) { msgUnreadOnly = false; msgSearchQ = ""; } // a retained filter must never hide the notification the visitor just opened
       open(true);
@@ -95693,10 +95705,6 @@ async def localfont(name):
       } // action beats keep unrelated scene notifications clear; their own authored text still lands
       var m = MESSAGES[id]; if (!m) return;
       cancelMsgBadgeCoachDelay();
-      if (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show")) {
-        msgBadgeCoachShown = false; // a popup that immediately covers the coach did not give the player a fair look; retry after this popup leaves
-        cancelMsgBadgeCoachRepeat();
-      }
       hideMsgBadgeCoach(); // never stack the coach over a newer live notification preview
       curThumbId = id; // the whole notification opens and centres this exact message
       // anchor to the scene (.hunt-viewport) so the card drops down from the top of the LOFT, not
@@ -95752,21 +95760,27 @@ async def localfont(name):
     // ── messages shortcut / unread-count badge ── a small red count while messages are unread,
     // then a quiet blue chat icon once the thread is caught up. It appears only after the first
     // message and stays hidden while the phone itself is open; tapping always opens the thread.
-    var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachT = null, msgBadgeCoachDelayT = null, msgBadgeCoachRepeatT = null;
+    var msgBadgeEl = null, msgBadgeCoachEl = null, msgBadgeCoachDelayT = null;
     var msgBadgeCoachShown = false, msgBadgeCoachAcknowledged = false;
     function unreadCount() { expireStaleMessageActions(); var n = 0; for (var i = 0; i < messagesThread.length; i++) if (!messagesRead[messagesThread[i]]) n++; return n; }
     function cancelMsgBadgeCoachDelay() {
       if (msgBadgeCoachDelayT) { clearTimeout(msgBadgeCoachDelayT); msgBadgeCoachDelayT = null; }
     }
-    function cancelMsgBadgeCoachRepeat() {
-      if (msgBadgeCoachRepeatT) { clearTimeout(msgBadgeCoachRepeatT); msgBadgeCoachRepeatT = null; }
-    }
     function hideMsgBadgeCoach() {
-      if (msgBadgeCoachT) { clearTimeout(msgBadgeCoachT); msgBadgeCoachT = null; }
       if (msgBadgeCoachEl) msgBadgeCoachEl.classList.remove("show");
       if (msgBadgeEl) msgBadgeEl.classList.remove("coached");
     }
     window.__hideMsgBadgeCoach = hideMsgBadgeCoach;
+    function acknowledgeMsgBadgeCoach(reason) {
+      if (msgBadgeCoachAcknowledged) { hideMsgBadgeCoach(); return false; }
+      msgBadgeCoachAcknowledged = true;
+      cancelMsgBadgeCoachDelay();
+      hideMsgBadgeCoach();
+      if (window.__checkpointChanged) window.__checkpointChanged();
+      if (window.__loftStateChanged) window.__loftStateChanged("messages.coach", { reason: reason || "dismissed" }, "ui");
+      return true;
+    }
+    window.__dismissMsgBadgeCoach = function () { return acknowledgeMsgBadgeCoach("dismissed"); };
     function showMsgBadgeCoach(host) {
       if (msgBadgeCoachAcknowledged || rosterHoldsOccupants() || document.hidden || !document.hasFocus() || window.__cinematic ||
           (window.__monitorZoomed && window.__monitorZoomed())) return false;
@@ -95774,33 +95788,28 @@ async def localfont(name):
       if (!msgBadgeCoachEl) {
         msgBadgeCoachEl = document.createElement("div");
         msgBadgeCoachEl.className = "msg-badge-coach";
-        msgBadgeCoachEl.setAttribute("data-i", "msg_badge_coach");
+        msgBadgeCoachEl.innerHTML = '<svg class="msg-badge-coach-arrow" viewBox="0 0 46 92"><path d="M23 1 4 25h11v66h16V25h11Z"/></svg><span class="msg-badge-coach-copy" data-i="msg_badge_coach"></span><button type="button" class="msg-badge-coach-dismiss" tabindex="-1">×</button>';
+        var dismiss = msgBadgeCoachEl.querySelector(".msg-badge-coach-dismiss");
+        dismiss.addEventListener("pointerdown", function (event) { event.stopPropagation(); });
+        dismiss.addEventListener("click", function (event) { event.preventDefault(); event.stopPropagation(); acknowledgeMsgBadgeCoach("dismissed"); });
       }
-      msgBadgeCoachEl.textContent = tr("msg_badge_coach");
+      var copy = msgBadgeCoachEl.querySelector(".msg-badge-coach-copy");
+      if (copy) copy.textContent = tr("msg_badge_coach");
       if (msgBadgeCoachEl.parentNode !== host) host.appendChild(msgBadgeCoachEl);
-      msgBadgeCoachEl.classList.remove("show"); void msgBadgeCoachEl.offsetWidth;
       msgBadgeCoachEl.classList.add("show");
       if (msgBadgeEl) msgBadgeEl.classList.add("coached");
-      cancelMsgBadgeCoachRepeat();
       return true;
     }
     function maybeShowMsgBadgeCoach() {
       if (!msgBadgeCoachAcknowledged && !rosterHoldsOccupants() && unreadCount() > 0 && !isOpen() && (!msgThumbEl || !msgThumbEl.classList.contains("show"))) return showMsgBadgeCoach(document.querySelector(".hunt-viewport") || document.body);
       return false;
     }
-    function repeatMsgBadgeCoach() {
-      msgBadgeCoachRepeatT = null;
-      if (msgBadgeCoachAcknowledged) return;
-      maybeShowMsgBadgeCoach();
-      if (!msgBadgeCoachRepeatT) msgBadgeCoachRepeatT = setTimeout(repeatMsgBadgeCoach, 60000); // busy/covered now: try again next minute
-    }
-    window.__repeatMsgBadgeCoach = function () { // test hook: simulate the next minute without making the suite wait
-      cancelMsgBadgeCoachRepeat();
+    window.__repeatMsgBadgeCoach = function () { // test hook: repaint after a temporary cover without waiting on a scene transition
       hideMsgBadgeCoach();
-      repeatMsgBadgeCoach();
+      return maybeShowMsgBadgeCoach();
     };
     function scheduleMsgBadgeCoach() {
-      if (msgBadgeCoachAcknowledged || msgBadgeCoachShown) return;
+      if (msgBadgeCoachAcknowledged || (msgBadgeCoachEl && msgBadgeCoachEl.classList.contains("show"))) return;
       cancelMsgBadgeCoachDelay();
       msgBadgeCoachDelayT = setTimeout(function () { msgBadgeCoachDelayT = null; maybeShowMsgBadgeCoach(); }, 3000);
     }
@@ -95812,10 +95821,6 @@ async def localfont(name):
         msgBadgeEl.type = "button";
         msgBadgeEl.className = "msg-badge";
         msgBadgeEl.addEventListener("click", function () {
-          msgBadgeCoachAcknowledged = true;
-          cancelMsgBadgeCoachDelay();
-          cancelMsgBadgeCoachRepeat();
-          hideMsgBadgeCoach();
           openMessagesAt(null);
         });
       }
@@ -95827,7 +95832,9 @@ async def localfont(name):
         msgBadgeEl.classList.remove("idle");
         msgBadgeEl.textContent = n >= 8 ? "∞" : String(n);
         msgBadgeEl.classList.add("show");
-        if (!msgThumbEl || !msgThumbEl.classList.contains("show")) scheduleMsgBadgeCoach();
+        if (!msgThumbEl || !msgThumbEl.classList.contains("show")) {
+          if (msgBadgeCoachShown) maybeShowMsgBadgeCoach(); else scheduleMsgBadgeCoach();
+        }
       } else if (messagesThread.length > 0 && !isOpen() && !rosterOpen) {
         msgBadgeEl.classList.add("idle", "show");
         msgBadgeEl.innerHTML = '<svg class="msg-badge-idle-icon" viewBox="0 0 12 12"><use href="#dicon-chat"></use></svg>';
@@ -96604,6 +96611,10 @@ async def localfont(name):
     window.__stopSatCall = function () { if (satTimer) { clearTimeout(satTimer); satTimer = null; } };
     scheduleSatCall(); // arm at load
     window.refreshPhoneText = function () {
+      if (msgBadgeCoachEl) {
+        var badgeCoachCopy = msgBadgeCoachEl.querySelector(".msg-badge-coach-copy");
+        if (badgeCoachCopy) badgeCoachCopy.textContent = tr("msg_badge_coach");
+      }
       if (!modal || !shell) return;
       applyNavLabels();
       if (shell.classList.contains("booting")) { paintLock(); return; } // lockscreen labels are language-driven

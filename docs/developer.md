@@ -490,6 +490,10 @@ on narrow/coarse layouts; the browser's native focus from a direct tap on the co
 keyboard boundary. Desktop may retain ready-to-type focus. Messages may refocus a rebuilt field on
 mobile only when that same logical field already owned focus before the live repaint.
 
+The first unread-count coach separates introduced, temporarily covered, and retired state. It
+repaints after room/app covers and survives checkpoints until its own × or an actual Messages open
+retires it; a game reset re-arms it. A notification preview or room change is not acknowledgement.
+
 Each game owns its loop, input capture, score, result state, and teardown. App games advertise a
 `game` record; scene games exposed to chat live in `CHAT_SCENE_GAMES`. `PUBLIC_GAME_IDS` is only the
 Worker sanitization allowlist.

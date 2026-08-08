@@ -161,6 +161,10 @@ var harness = String.raw`<script>
       ["bathroom", "cinema", "bedroom", "entrance"].every(function (name) {
         return roomButton(name).querySelector('use.loft-dollhouse-live-preview');
       }) && roomButton("dungeon").querySelector('use[href="#loft-dollhouse-dungeon-art"]'));
+    check("the Cinema lake belongs only to its dollhouse preview",
+      !!roomButton("cinema").querySelector('use.loft-dollhouse-cinema-lake[href="#cinema-lake-screen-art"]') &&
+      !document.querySelector('#cinema-room use[href="#cinema-lake-screen-art"]') &&
+      !document.getElementById("cinema-screen-lake"));
     check("Cinema click targets stay transparent in the cloned room art",
       getComputedStyle(document.querySelector("#cinema-room-art .cinema-hit")).fill === "rgba(0, 0, 0, 0)",
       getComputedStyle(document.querySelector("#cinema-room-art .cinema-hit")).fill);

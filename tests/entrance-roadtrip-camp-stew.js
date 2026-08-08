@@ -68,6 +68,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   window.addEventListener("load", function () {
     window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
     window.goToStage("balcony");
     setTimeout(function () {
       try {

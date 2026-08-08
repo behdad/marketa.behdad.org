@@ -41,6 +41,9 @@ function setupScript(body) {
   }
   async function prepare() {
     window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
     window.goToStage("balcony");
     await wait(140);
     window.__openEntranceRoom();

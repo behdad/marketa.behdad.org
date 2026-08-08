@@ -18,7 +18,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     Object.defineProperty(document, "visibilityState", { configurable: true, get: function () { return visibility; } });
   } catch (_error) {}
   window.addEventListener("load", function () { setTimeout(async function () { try {
-    window.__unlockAllRooms(); window.goToStage("balcony"); window.__openEntranceRoom();
+    window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
+    window.goToStage("balcony"); window.__openEntranceRoom();
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
     window.__openEntrancePorscheDriveHud(); window.__entranceRoadtripDevStart();
     window.__entranceRoadtripSetRoute("camp", 0); window.__updateRoadtripCampAudio();

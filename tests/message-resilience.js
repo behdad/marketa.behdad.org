@@ -100,7 +100,7 @@ var HARNESS = String.raw`<script>
     if (window.__resetPhoneApps) window.__resetPhoneApps();
     if (window.__closePhoneModal) window.__closePhoneModal(true);
     await sleep(250);
-    window.__secondRound = true;
+    window.__gardenPartyOn = true;
     window.roster(true);
     var rosterAutonomous = window.__deliverAutonomousPhoneMessage("cue_mail");
     var rosterDirect = window.__deliverPhoneMessage("cue_calendar");
@@ -119,6 +119,7 @@ var HARNESS = String.raw`<script>
       autonomousDelivered: window.__phoneMessageReceived("cue_mail"),
       badge: !!document.querySelector(".msg-badge.show")
     });
+    window.__gardenPartyOn = false;
 
     if (window.__resetPhoneApps) window.__resetPhoneApps();
     if (window.__closePhoneModal) window.__closePhoneModal(true);

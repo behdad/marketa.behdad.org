@@ -236,6 +236,9 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   }
   window.addEventListener("load", function () {
     window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__setSeenRooms(["kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"]);
     window.goToStage("balcony");
     setTimeout(function () {
       try {
@@ -411,10 +414,9 @@ check(result && result.complete && result.complete.state.complete && !result.com
     "rgb(217, 166, 166)|rgb(127, 158, 192)|rgb(217, 166, 166)|rgb(127, 158, 192)" &&
   result.complete.wisdomShapes[0].x >= 380 && result.complete.wisdomShapes[1].x <= 10 &&
   result.complete.wisdomShapes[2].x >= 485 && result.complete.wisdomShapes[3].x <= 5 &&
-  Math.abs(result.complete.wisdomShapes[0].centerY - result.complete.wisdomShapes[1].centerY) <= 1 &&
-  result.complete.wisdomShapes[2].centerY - result.complete.wisdomShapes[0].centerY >= 50 &&
-  result.complete.wisdomShapes[3].centerY - result.complete.wisdomShapes[1].centerY >= 55 &&
-  Math.abs(result.complete.wisdomShapes[2].centerY - result.complete.wisdomShapes[3].centerY) <= 8 &&
+  result.complete.wisdomShapes[1].centerY - result.complete.wisdomShapes[0].centerY >= 15 &&
+  result.complete.wisdomShapes[2].centerY - result.complete.wisdomShapes[1].centerY >= 30 &&
+  result.complete.wisdomShapes[3].centerY - result.complete.wisdomShapes[2].centerY >= 35 &&
   result.complete.wisdomTypography.every(function (row) {
     return row.fontSize >= 12 && row.textWidth <= row.shapeWidth - 24 && row.textHeight <= row.shapeHeight - 10;
   }) &&
@@ -424,7 +426,7 @@ check(result && result.complete && result.complete.state.complete && !result.com
   result.complete.wisdomText.indexOf("When something is over,") >= 0 &&
   result.complete.wisdomText.indexOf("something else begins") >= 0 &&
   result.complete.wisdomText.indexOf("—ad infinitum.") >= 0,
-  "finishing returns to a non-traceable live sky with draggable stars behind the moon and four large two-column path bubbles",
+  "finishing returns to a non-traceable live sky with draggable stars behind the moon and four large staggered path bubbles",
   result && result.complete);
 check(result && result.complete && !result.complete.state.wisdomHandoffReady &&
   result.complete.caption === "entrance_roadtrip_stargazing_title" &&

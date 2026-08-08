@@ -9250,14 +9250,19 @@ body.bd-hannah .thr-bd-hannah-only{visibility:visible}
 .pm-msg-request-error{display:flex; align-items:center; justify-content:flex-end; gap:6px; margin-top:3px; padding:0 4px; color:var(--wine); font-size:10px; line-height:1.25}
 .pm-msg-retry{padding:3px 7px; border:1px solid currentColor; border-radius:10px; background:var(--paper); color:var(--wine); font:600 10px/1.2 "Source Serif 4",serif; cursor:pointer}
 .pm-msg-retry:hover,.pm-msg-retry:focus-visible{background:#f1e6dc; outline:2px solid rgba(142,58,74,.18); outline-offset:1px}
-.pm-msg-act{flex:none; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:var(--wine); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(142,58,74,.28)}
+.pm-msg-act{flex:none; width:28px; height:28px; margin-left:auto; padding:0; border:0; border-radius:50%; background:var(--wine); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(142,58,74,.28)}
 .pm-msg-act:hover,.pm-msg-act:focus-visible{background:#743143; outline:2px solid rgba(142,58,74,.25); outline-offset:1px}
 .pm-msg-act.used{background:transparent; color:var(--soft); border:1px solid var(--rule); box-shadow:none}
 .pm-msg-act.used:hover,.pm-msg-act.used:focus-visible{background:rgba(142,58,74,.08); color:var(--wine)}
 .pm-msg-act svg{width:15px; height:15px}
 .pm-msg-line{position:relative}
-.pm-msg-action-coach{position:absolute;right:-2px;bottom:calc(100% + 10px);z-index:3;width:max-content;max-width:calc(100% - 8px);padding:7px 10px;border-radius:7px;background:var(--ink);color:var(--paper);box-shadow:0 3px 10px rgba(0,0,0,.28);font:600 16px/1.25 "Source Serif 4",serif;overflow-wrap:anywhere;white-space:nowrap;animation:pm-msg-coach-in .35s ease-out both;pointer-events:none}
-.pm-msg-action-coach::after{content:"";position:absolute;right:8px;top:calc(100% - 2px);width:40px;height:48px;background:center / contain no-repeat var(--espresso-arrow-up);transform:rotate(180deg);filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
+/* This first-action lesson belongs to the phone, not to one message row. Keeping it on
+   the non-scrolling app surface makes it survive thread repaints and keeps its arrow
+   aligned with the fixed right-hand action column. */
+.pm-msg-action-coach{position:absolute;right:26px;top:52px;z-index:12;width:max-content;max-width:calc(100% - 28px);padding:7px 37px 7px 10px;border-radius:7px;background:var(--ink);color:var(--paper);box-shadow:0 3px 10px rgba(0,0,0,.28);font:600 16px/1.25 "Source Serif 4",serif;overflow-wrap:anywhere;white-space:nowrap;animation:pm-msg-coach-in .35s ease-out both;pointer-events:none}
+.pm-msg-action-coach::after{content:"";position:absolute;right:-1px;top:calc(100% - 2px);width:40px;height:48px;background:center / contain no-repeat var(--espresso-arrow-up);transform:rotate(180deg);filter:drop-shadow(0 1px 1px rgba(69,58,49,.35))}
+.pm-msg-action-coach-x{position:absolute;right:6px;top:6px;pointer-events:auto;width:21px;height:21px;padding:0;border:1px solid rgba(142,58,74,.48);border-radius:50%;background:var(--paper);color:var(--wine);font:800 14px/1 sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.28)}
+.pm-msg-action-coach-x:hover{background:#f1e6dc}
 @keyframes pm-msg-action-nudge{0%,100%{transform:translateX(0)}35%{transform:translateX(-4px)}70%{transform:translateX(0)}}
 @keyframes pm-msg-coach-in{from{opacity:0;transform:translateX(5px)}to{opacity:1;transform:translateX(0)}}
 .pm-msg-row.unread .pm-msg-act:not(.used){animation:pm-msg-action-nudge 1.25s ease-in-out infinite}
@@ -53247,7 +53252,7 @@ var T = {
     msg_mark_read: "Mark as read.",
     msg_mark_unread: "Mark as unread.",
     msg_badge_coach: "New message. Tap to read.",
-    msg_action_coach: "Try the arrow",
+    msg_action_coach: "Try the arrows",
     msg_charlie_from: "Charlie",
     msg_charlie_body_a: "Hi, Charlie here. I know this loft pretty well—ask me anything, or just come chat. 💬",
     msg_charlie_body_b: "Need a clue, directions, or a little company? Message me. —Charlie 💬",
@@ -54619,7 +54624,7 @@ var T = {
     msg_mark_read: "Označit jako přečtené.",
     msg_mark_unread: "Označit jako nepřečtené.",
     msg_badge_coach: "Nová zpráva. Klepni a přečti si ji.",
-    msg_action_coach: "Zkus šipku",
+    msg_action_coach: "Zkus šipky",
     msg_charlie_from: "Charlie",
     msg_charlie_body_a: "Ahoj, tady Charlie. Tenhle loft znám docela dobře — zeptej se mě na cokoli nebo si přijď popovídat. 💬",
     msg_charlie_body_b: "Potřebuješ nápovědu, navigaci nebo trochu společnosti? Napiš mi. —Charlie 💬",
@@ -89927,7 +89932,7 @@ async def localfont(name):
         else if (oldFocus.classList.contains("pm-msg-input")) refocusClass = ".pm-msg-input";
       }
       var keepReturn = currentApp === id && phoneAppReturn && phoneAppReturn.launched === id;
-      if (currentApp === "messages" && id !== "messages") releaseActionCoachMessages();
+      if (currentApp === "messages" && id !== "messages") hideActionCoachMessages();
       leaveCurrentApp();
       if (!keepReturn) setPhoneAppReturn(null);
       currentApp = id;
@@ -91339,12 +91344,10 @@ async def localfont(name):
           var actBtn = document.createElement("button"); actBtn.type = "button"; actBtn.className = "pm-msg-act" + (messageActionUsed[id] ? " used" : "");
           actBtn; actBtn;
           actBtn.innerHTML = '<svg viewBox="0 0 16 16"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-          actBtn.addEventListener("click", function (e) { e.stopPropagation(); releaseActionCoachMessages(); runMsgAction(id); });
-          if (!msgActionCoachShown && !messagesRead[id] && !messageActionUsed[id]) {
+          actBtn.addEventListener("click", function (e) { e.stopPropagation(); runMsgAction(id); });
+          if (!msgActionCoachShown && !msgActionCoachAcknowledged && !messageActionCoachEverUsed() && !messageActionUsed[id]) {
             msgActionCoachShown = true;
             msgActionCoachActive = true;
-            var actionCoach = document.createElement("span"); actionCoach.className = "pm-msg-action-coach"; actionCoach.textContent = tr("msg_action_coach");
-            line.appendChild(actionCoach);
           }
           line.appendChild(actBtn);
         }
@@ -91464,6 +91467,35 @@ async def localfont(name):
         nomatch.textContent = messagesThread.length ? tr("msg_search_none") : tr("msg_empty"); nomatch.style.display = shown ? "none" : "";
         if (msgNewTimer) { clearTimeout(msgNewTimer); msgNewTimer = null; }
         if (soonestExpiry !== Infinity) msgNewTimer = setTimeout(function () { msgNewTimer = null; if (isOpen() && currentApp === "messages") applyFilter(); }, soonestExpiry + 50);
+        paintActionCoach();
+      }
+      function paintActionCoach() {
+        var appSurface = body.parentNode;
+        if (!appSurface) return;
+        var actionCoach = appSurface.querySelector(".pm-msg-action-coach");
+        if (!msgActionCoachActive) {
+          if (actionCoach) { actionCoach.classList.remove("pm-msg-action-coach"); actionCoach.remove(); }
+          return;
+        }
+        if (!actionCoach) {
+          actionCoach = document.createElement("div");
+          actionCoach.className = "pm-msg-action-coach";
+          var coachLabel = document.createElement("span");
+          coachLabel.className = "pm-msg-action-coach-label";
+          actionCoach.appendChild(coachLabel);
+          var coachDismiss = document.createElement("button");
+          coachDismiss.type = "button";
+          coachDismiss.className = "pm-msg-action-coach-x";
+          coachDismiss.tabIndex = -1;
+          coachDismiss.textContent = "×";
+          coachDismiss.addEventListener("click", function (event) {
+            event.preventDefault(); event.stopPropagation();
+            releaseActionCoachMessages();
+          });
+          actionCoach.appendChild(coachDismiss);
+          appSurface.appendChild(actionCoach);
+        }
+        actionCoach.querySelector(".pm-msg-action-coach-label").textContent = tr("msg_action_coach");
       }
       function jumpToMessage(id) {
         if (messagesThread.indexOf(id) === -1) return;
@@ -93225,19 +93257,32 @@ async def localfont(name):
     var notesDraft = ""; // the typed note — session-scoped: survives a language rebuild AND a normal close/reopen; cleared only on a kill (uninstallApp / __resetPhoneApps)
     // Messages is a chronological group chat: authored incoming ids plus session-local visitor /
     // generated crew-reply ids. Authored copy remains language-live; literal replies stay as written.
-    var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null, msgActionCoachShown = false, msgActionCoachActive = false, msgActionCoachHeld = []; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
-    function releaseActionCoachMessages() {
-      if (!msgActionCoachActive) return;
-      msgActionCoachActive = false;
+    var messagesThread = [], messagesRead = {}, messageReactions = {}, messageActionState = {}, messageActionUsed = {}, messagesArrivedAt = {}, msgNewTimer = null, msgOpenTarget = null, msgActionCoachShown = false, msgActionCoachActive = false, msgActionCoachAcknowledged = false, msgActionCoachHeld = []; // read/reaction/action state is session-only; messagesArrivedAt drives the "New" divider; msgOpenTarget is consumed when a notification opens one exact row
+    function messageActionCoachEverUsed() {
+      return Object.keys(messageActionUsed).some(function (id) { return !!messageActionUsed[id]; });
+    }
+    function clearActionCoachNode() {
       document.querySelectorAll(".pm-msg-action-coach").forEach(function (coach) {
         coach.classList.remove("pm-msg-action-coach");
         coach.remove();
       });
+    }
+    function flushActionCoachMessages() {
       var held = msgActionCoachHeld.splice(0);
       held.forEach(function (delivery) { delivery(); });
     }
+    function hideActionCoachMessages() {
+      clearActionCoachNode();
+      flushActionCoachMessages();
+    }
+    function releaseActionCoachMessages() {
+      if (!msgActionCoachActive) return;
+      msgActionCoachActive = false;
+      msgActionCoachAcknowledged = true;
+      hideActionCoachMessages();
+    }
     function holdActionCoachMessage(delivery) {
-      if (!msgActionCoachActive) return false;
+      if (!msgActionCoachActive || currentApp !== "messages" || !document.querySelector(".pm-msg-action-coach")) return false;
       msgActionCoachHeld.push(delivery);
       return true;
     }
@@ -93403,6 +93448,7 @@ async def localfont(name):
         notesDraft: notesDraft,
         msgDraft: msgDraft,
         msgReplySeq: msgReplySeq,
+        msgActionCoachAcknowledged: !!msgActionCoachAcknowledged || messageActionCoachEverUsed(),
         phoneSlots: (phoneSlots || phoneDefaultSlots()).slice(),
         mailRead: Object.assign({}, mailRead),
         heldCalls: (heldCallRings || []).map(function (row) {
@@ -93443,6 +93489,9 @@ async def localfont(name):
     };
     window.__checkpointPhoneRestore = function (state) {
       if (!state || typeof state !== "object") return false;
+      releaseActionCoachMessages();
+      msgActionCoachShown = false; msgActionCoachActive = false; msgActionCoachHeld = [];
+      msgActionCoachAcknowledged = state.msgActionCoachAcknowledged === true;
       notesDraft = typeof state.notesDraft === "string" ? state.notesDraft.slice(0, 10000) : "";
       msgDraft = typeof state.msgDraft === "string" ? state.msgDraft.slice(0, 500) : "";
       msgReplySeq = Math.max(0, Math.min(9999, parseInt(state.msgReplySeq, 10) || 0));
@@ -93506,6 +93555,8 @@ async def localfont(name):
         messageReactions[id] = Array.isArray(row.reactions) ? row.reactions.slice(0, 8) : [];
         messagesArrivedAt[id] = +row.arrivedAt || 0;
       });
+      if (messageActionCoachEverUsed()) msgActionCoachAcknowledged = true;
+      msgActionCoachShown = msgActionCoachAcknowledged;
       charlieIntroOffered = messagesThread.indexOf("charlie") !== -1;
       if (window.__updateMsgBadge) window.__updateMsgBadge();
       return true;
@@ -95012,14 +95063,14 @@ async def localfont(name):
           if (closeMessagesDirectly) setPhoneAppReturn("close", "messages");
           return;
         }
-        if (currentApp === "messages") releaseActionCoachMessages();
+        if (currentApp === "messages") hideActionCoachMessages();
         showHome(); return;
       }
       close();
     }
     function navHome() {
       if (shell.classList.contains("pm-incall")) { hangup(); return; } // can't background a live call — hang up first
-      if (currentApp === "messages") releaseActionCoachMessages();
+      if (currentApp === "messages") hideActionCoachMessages();
       showHome();
     }
     function navRecents() {
@@ -95113,7 +95164,7 @@ async def localfont(name):
     }
     function close(silent) {
       if (!modal) return;
-      releaseActionCoachMessages();
+      hideActionCoachMessages();
       closing = true;
       phFullscreenTransitionUntil = 0;
       cancelHiddenPhoneClose();
@@ -95155,6 +95206,7 @@ async def localfont(name):
     window.__resetPhoneApps = function () { phoneSlots = phoneDefaultSlots(); cardsIndex = 0; notesDraft = ""; pbSavedFrame = null; pbSavedFilter = "none"; pbSavedFrameId = "none"; pbSavedAlbumId = null; albumCompact = false; albumRecapOpen = false; albumSeenMaxId = 0; curAmount = "100"; curFrom = "CAD"; curTo = "CZK"; calcState = null; dressupOn = {}; mailRead = {}; msgUnreadOnly = false; msgSearchQ = ""; msgDraft = ""; msgReplyTarget = null; msgReplySeq = 0; albumSearchQ = ""; messagesThread = []; messagesRead = {}; messageReactions = {}; messageActionState = {}; messageActionUsed = {}; messagesArrivedAt = {}; msgActionCoachShown = false; msgActionCoachActive = false; msgActionCoachHeld = []; phaseTwoHeldMessages = []; Object.keys(MESSAGES).forEach(function (k) { var m = MESSAGES[k]; if (/^reply_/.test(k)) { delete MESSAGES[k]; return; } if (m.bodyKeys) m.bodyKey = null; if (m.fromKeys) m.fromKey = null; delete m.rewrittenBodyEn; }); hideMessageThumb(); if (window.__updateMsgBadge) window.__updateMsgBadge(); if (window.__stopCueDrip) window.__stopCueDrip(); if (window.__startDayDrip) window.__startDayDrip(); if (window.__startCuddlyVisitorDrip) window.__startCuddlyVisitorDrip(); if (window.__hideCallRing) window.__hideCallRing(); if (window.__stopMadla) window.__stopMadla(); if (window.__startMadla) window.__startMadla(); if (window.__stopSatCall) window.__stopSatCall(); if (window.__startSatCall) window.__startSatCall(); if (window.__albumClear) window.__albumClear(); flashWasOn = false; setFlashlight(false); }; // loft reset restores the default launcher, clears notification/read projections and retained app state, and douses the flashlight
     var resetPhoneAppsBase = window.__resetPhoneApps;
     window.__resetPhoneApps = function () {
+      releaseActionCoachMessages();
       recentApps = [];
       madlaRingCount = 0;
       recentsReturnApp = null;
@@ -95167,7 +95219,9 @@ async def localfont(name):
       autonomousReplyLinks = {};
       if (deferredAutonomousTimer) { clearTimeout(deferredAutonomousTimer); deferredAutonomousTimer = null; }
       if (heldCallReleaseT) { clearTimeout(heldCallReleaseT); heldCallReleaseT = null; }
-      return resetPhoneAppsBase();
+      var result = resetPhoneAppsBase();
+      msgActionCoachAcknowledged = false;
+      return result;
     };
     // Console device-command hook: phone("cocktails")/phone("weather") open a named phone app.
     // open(true) is the cinematic lock-skip path (same as __showCocktailInPhone), so a console
@@ -95380,6 +95434,7 @@ async def localfont(name):
       if (id) markMessagesReadThrough(id);
       var m = id && MESSAGES[id], act = m && m.act;
       if (m && messageHasAction(m) && !messageActionAvailable(id, m)) return false;
+      if (m && messageHasAction(m)) releaseActionCoachMessages();
       var typedAction = m && (m.chatAction || m.apiAction || legacyTypedMsgAction(act));
       if (typedAction) { runTypedMsgAction(id, m, typedAction); return; }
       if (!act) { open(true); openApp("messages", "app_messages", renderMessages); return; }

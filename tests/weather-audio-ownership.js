@@ -67,9 +67,25 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
     document.querySelector(".hunt-viewport").classList.add("entrance-room-open");
     await fire("entrance");
 
-    window.__openEntrancePorscheDriveHud();
-    window.__toggleEntrancePorscheEngine();
     window.__setBalconyRain(true, "test");
+    window.__updateWind(); window.__updateRainSound(); await sleep(80);
+    report.steps.exteriorFacade = {
+      wind: window.__exteriorWindAudioState(), rain: window.__exteriorRainAudioState()
+    };
+    focused = false; window.dispatchEvent(new Event("blur")); await sleep(30);
+    report.steps.exteriorBlur = {
+      wind: window.__exteriorWindAudioState(), rain: window.__exteriorRainAudioState()
+    };
+    focused = true; window.dispatchEvent(new Event("focus")); await sleep(80);
+    report.steps.exteriorRefocus = {
+      wind: window.__exteriorWindAudioState(), rain: window.__exteriorRainAudioState()
+    };
+
+    window.__openEntrancePorscheDriveHud();
+    report.steps.exteriorStreetHud = {
+      wind: window.__exteriorWindAudioState(), rain: window.__exteriorRainAudioState()
+    };
+    window.__toggleEntrancePorscheEngine();
     window.__updatePorscheDriveWeatherAudio();
     await sleep(80);
     // The real roof/window controls must repaint the branch themselves; do not use the
@@ -130,6 +146,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
 
     window.__exitEntranceRoadtrip(); await sleep(30);
     report.steps.dismissed = rainState();
+    window.__hideEntrancePorscheDriveHud(); await sleep(80);
+    report.steps.exteriorFacadeReturn = {
+      wind: window.__exteriorWindAudioState(), rain: window.__exteriorRainAudioState()
+    };
+    window.__closeEntranceRoom(); await sleep(30);
+    report.steps.exteriorExit = {
+      wind: window.__exteriorWindAudioState(), rain: window.__exteriorRainAudioState()
+    };
     window.__setBalconyRain(false, "test");
   } catch (error) { report.errors.push("harness: " + String(error && error.stack || error)); }
   report.errors = (window.__errs || []).concat(report.errors);
@@ -166,6 +190,21 @@ check(s.queuedLeave && s.queuedLeave.calls === 0 && s.queuedLeave.scene === null
   "leaving an allowed scene cancels its already-queued rumble", s.queuedLeave);
 check(s.entrance && s.entrance.scene === "entrance" && s.entrance.calls.length === 1 &&
   !s.entrance.calls[0].enclosure, "Entrance owns unfiltered autonomous thunder", s.entrance);
+check(s.exteriorFacade && s.exteriorFacade.wind.active && s.exteriorFacade.wind.source &&
+  s.exteriorFacade.wind.where === "entrance" && s.exteriorFacade.wind.output === "outdoor" &&
+  s.exteriorFacade.wind.targetGain > 0 && s.exteriorFacade.rain.active &&
+  s.exteriorFacade.rain.source && s.exteriorFacade.rain.where === "entrance" &&
+  s.exteriorFacade.rain.output === "outdoor" && s.exteriorFacade.rain.targetGain > 0,
+  "the Entrance façade owns full outdoor wind and visual-rain beds", s.exteriorFacade);
+check(s.exteriorBlur && !s.exteriorBlur.wind.active && !s.exteriorBlur.rain.active &&
+  s.exteriorRefocus && s.exteriorRefocus.wind.active && s.exteriorRefocus.rain.active &&
+  s.exteriorRefocus.wind.where === "entrance" && s.exteriorRefocus.rain.where === "entrance",
+  "Entrance exterior weather tears down on blur and returns as one attended owner", {
+    blur: s.exteriorBlur, refocus: s.exteriorRefocus
+  });
+check(s.exteriorStreetHud && !s.exteriorStreetHud.wind.active && !s.exteriorStreetHud.rain.active,
+  "opening the street HUD retires the exterior beds before cabin weather takes ownership",
+  s.exteriorStreetHud);
 check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
   s.streetThunderClosed.calls.length === 1 &&
   s.streetThunderClosed.calls[0].enclosure.exposure === "closed" &&
@@ -219,6 +258,14 @@ check(s.camping && s.camping.scene === "camping" && s.camping.calls.length === 1
   });
 check(s.dismissed && !s.dismissed.bedActive && s.dismissed.sources === 0,
   "Road Trip dismissal leaves no cabin-weather source", s.dismissed);
+check(s.exteriorFacadeReturn && s.exteriorFacadeReturn.wind.active &&
+  s.exteriorFacadeReturn.rain.active && s.exteriorFacadeReturn.wind.where === "entrance" &&
+  s.exteriorFacadeReturn.rain.where === "entrance" &&
+  s.exteriorExit && s.exteriorExit.wind.where === "balcony" &&
+  s.exteriorExit.rain.where !== "entrance",
+  "leaving the HUD restores the façade beds and room exit hands weather back to Balcony", {
+    facade: s.exteriorFacadeReturn, exit: s.exteriorExit
+  });
 
 console.log("");
 if (failures) { console.log(failures + " weather-audio assertion" + (failures === 1 ? "" : "s") + " failed."); process.exit(1); }

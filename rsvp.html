@@ -46562,6 +46562,11 @@ window.__entranceRoomOpen = false;
     }
     return driveState.hudOpen ? "street" : "entrance";
   };
+  window.__entranceExteriorWeatherAllowed = function () {
+    return window.__entranceThunderSceneOwner() === "entrance" &&
+      document.visibilityState !== "hidden" && !document.hidden && document.hasFocus();
+  };
+  window.__entranceVisualRainActive = porscheCabinRainLayerActive;
   window.__entranceThunderEnclosure = function () {
     var owner = window.__entranceThunderSceneOwner();
     if (owner !== "street" && owner !== "roadtrip") return null;
@@ -49145,6 +49150,11 @@ window.__entranceRoomOpen = false;
       partyStopPending: entranceOpen && !!driveHudPartyStopPending
     };
   }
+  function refreshEntranceWeatherAudio(stopFade) {
+    ["__updateWind", "__updateRainSound"].forEach(function (name) {
+      try { if (typeof window[name] === "function") window[name](stopFade); } catch (_error) {}
+    });
+  }
   function openPorscheDriveHudNow() {
     var wasOpen = driveState.hudOpen;
     driveState.hudOpen = true;
@@ -49156,6 +49166,7 @@ window.__entranceRoomOpen = false;
     else showPorscheDriveCoach();
     paintPorscheDriveHud();
     updatePorscheDriveMusic();
+    refreshEntranceWeatherAudio(.25);
     syncPorscheDriveInstruction(true);
     if (window.__checkpointChanged) window.__checkpointChanged();
     return true;
@@ -49198,6 +49209,7 @@ window.__entranceRoomOpen = false;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     if (wasRunning) playPorscheEngineSound(false);
     syncPorscheState();
+    refreshEntranceWeatherAudio();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(entranceIdleCaptionKey());
     return true;
   }
@@ -49225,6 +49237,7 @@ window.__entranceRoomOpen = false;
     Object.keys(driveState.holds).forEach(function (key) { setPorscheDriveHold(key, false); });
     paintPorscheDriveHud();
     syncPorscheState();
+    refreshEntranceWeatherAudio();
     if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(entranceIdleCaptionKey());
     return true;
   }
@@ -50786,6 +50799,7 @@ window.__entranceRoomOpen = false;
       paintPorscheDrivePosition();
       paintRoadtripScore();
       syncPorscheState();
+      refreshEntranceWeatherAudio();
       restoreRoadtripCampPresentationWhenReady();
       if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-windows");
     },
@@ -100078,8 +100092,9 @@ async def localfont(name):
   // brighter content, so it's highpassed at 300Hz (above city hum's own <260Hz ceiling,
   // so the two beds sit in distinct, non-overlapping bands instead of blurring into one
   // rumble) and lowpassed much higher/broader, around 2.4-4kHz, for an open-air hiss.
-  // Present the whole time you're on the balcony, day or dusk alike (wind isn't a night-
-  // only cue like the crickets) — fixed centered pan, since wind is diffuse/all-around
+  // Present the whole time you're on the balcony or outside at the Entrance façade, day
+  // or dusk alike (wind isn't a night-only cue like the crickets) — fixed centered pan,
+  // since wind is diffuse/all-around
   // rather than coming from one spot, unlike most of this file's element-panned sounds.
   // Two slow LFOs at unrelated, non-integer-ratio periods (~24s and ~63s) are summed and
   // drive BOTH the gain and the filter cutoff together, so loudness and brightness swell
@@ -100098,7 +100113,8 @@ async def localfont(name):
   // other ambient loop in this file).
   var windCtx = null, windSource = null, windGain = null, windFilter = null,
       windLfoDepth = null, windLfo1 = null, windLfo2 = null, windFilterLfo = null,
-      windStormy = false, windWhere = null, windPanner = null, windPanRAF = null, windPanUntil = 0;
+      windStormy = false, windWhere = null, windOutdoor = false, windPanner = null,
+      windPanRAF = null, windPanUntil = 0;
   // Pan the cuddly-door wind to the door's LIVE on-screen position for a beat, so it swooshes
   // WITH the door across a room slide instead of freezing at whatever it read the instant the
   // slide started (the wrong, transient side). Works both ways: entering the nook the door
@@ -100125,6 +100141,8 @@ async def localfont(name):
   }
   function windWant() {
     if (window.__roomAutonomyAllowed("balcony")) return "balcony";
+    if (window.__entranceExteriorWeatherAllowed &&
+        window.__entranceExteriorWeatherAllowed()) return "entrance";
     if (window.__roomAutonomyAllowed("cuddly") && cuddlyDoorOpenForWind()) return "cuddly";
     return null;
   }
@@ -100156,9 +100174,11 @@ async def localfont(name):
   function startWind(where) {
     try {
       stopWind();
-      windCtx = audioBed();
+      var outdoor = where === "entrance";
+      windCtx = audioBed(outdoor ? "outdoor" : undefined);
       if (!windCtx) return;
       windWhere = where;
+      windOutdoor = outdoor;
       var now = windCtx.currentTime;
       windStormy = !!window.__balconyStorm;
       var initial = windTarget(windStormy);
@@ -100246,7 +100266,7 @@ async def localfont(name):
     }, f * 1000 + 100);
     windCtx = null; windSource = null; windGain = null; windFilter = null;
     windLfoDepth = null; windLfo1 = null; windLfo2 = null; windFilterLfo = null;
-    windStormy = false; windWhere = null; windPanner = null;
+    windStormy = false; windWhere = null; windOutdoor = false; windPanner = null;
   }
   // (re)evaluate the wind gate and start/stop/re-level accordingly. The self-polling
   // tick() calls it with no arg (default 0.6s fade); goToStage calls it via
@@ -100261,6 +100281,13 @@ async def localfont(name):
     } else if (!want && windCtx) stopWind(stopFade);
   }
   window.__updateWind = evaluateWind;
+  window.__exteriorWindAudioState = function () {
+    var target = windCtx ? windTarget(windStormy) : null;
+    return { active: !!windCtx, source: !!windSource, where: windWhere,
+      output: windOutdoor ? "outdoor" : windCtx ? "lower-floor" : null,
+      targetGain: target ? target.gain : 0, targetDepth: target ? target.depth : 0,
+      targetFilter: target ? target.filter : 0 };
+  };
   // re-ramp the wind bed to the current target when the weather-duck changes but the storm
   // state hasn't (evaluateWind alone only re-applies on a storm transition)
   window.__applyWindDuck = function () { if (windCtx) applyIntensity(!!window.__balconyStorm, windCtx.currentTime); };
@@ -100268,6 +100295,9 @@ async def localfont(name):
     evaluateWind();
     setTimeout(tick, 1000);
   }
+  window.addEventListener("blur", function () { if (windCtx) stopWind(); });
+  window.addEventListener("focus", evaluateWind);
+  document.addEventListener("visibilitychange", evaluateWind);
   tick();
 })();
 (function () {
@@ -120928,32 +120958,39 @@ function spawnDustMote(container) {
     })();
   })();
   (function () {
-    // Ambient rain patter during a balcony night storm: audible on the balcony itself
-    // (centered, all-around hiss) and — fainter, directional through the doorway — in the
-    // cuddly nook while the balcony door is open, mirroring the two independent VISUAL
+    // Ambient rain patter: audible around the Entrance façade whenever its visual rain is
+    // live, during a balcony night storm, and — fainter, directional through the doorway —
+    // in the cuddly nook while the balcony door is open, mirroring the two independent VISUAL
     // rain gates elsewhere in this file (spawnDrop's rainActive / spawnCuddlyRainDrop's
     // cuddlyRainActive) without depending on their private state. Polled every ~1s rather
     // than hooked into every storm-start/door-toggle/room-nav call site (there are many,
     // scattered) — the same lighter-weight pattern already used for the cricket ambience
     // in this file. One persistent loop; self-cancels the instant nothing wants it.
-    var rainCtx = null, rainGain = null, rainNoise = null, rainInCuddly = false;
+    var rainCtx = null, rainGain = null, rainNoise = null, rainWhere = null, rainOutdoor = false;
     function stageDusk(id) { var s = document.getElementById(id); return !!(s && s.classList.contains("dusk")); }
     function cuddlyDoorOpen() {
       var front = document.getElementById("balcony-door"), nook = document.getElementById("cuddly-balcony-door");
       return !!((front && front.classList.contains("open")) || (nook && nook.classList.contains("open")));
     }
     function rainSoundWant() {
+      if (window.__entranceExteriorWeatherAllowed && window.__entranceExteriorWeatherAllowed() &&
+          window.__entranceVisualRainActive && window.__entranceVisualRainActive()) return "entrance";
       if (!window.__wxRain) return null;
       if (window.__roomAutonomyAllowed("balcony") && stageDusk("stage-balcony")) return "balcony";
       if (window.__roomAutonomyAllowed("cuddly") && stageDusk("stage-cuddly") && cuddlyDoorOpen()) return "cuddly";
       return null;
     }
+    function rainPeak() {
+      return (rainWhere === "cuddly" ? 0.005 : 0.009) * (window.__weatherDuck || 1);
+    }
     function startRain(where) {
       try {
         stopRain();
-        rainCtx = audioBed();
+        var outdoor = where === "entrance";
+        rainCtx = audioBed(outdoor ? "outdoor" : undefined);
         if (!rainCtx) return;
-        rainInCuddly = where === "cuddly";
+        rainWhere = where;
+        rainOutdoor = outdoor;
         var bufferSize = rainCtx.sampleRate * 2;
         var buffer = rainCtx.createBuffer(1, bufferSize, rainCtx.sampleRate);
         var data = buffer.getChannelData(0);
@@ -120969,9 +121006,9 @@ function spawnDustMote(container) {
         lp.frequency.value = 7000;
         rainGain = rainCtx.createGain();
         rainGain.gain.setValueAtTime(0.0001, rainCtx.currentTime);
-        var peak = (rainInCuddly ? 0.005 : 0.009) * (window.__weatherDuck || 1); // fainter through the door; ducked hard while the pocket phone is open
+        var peak = rainPeak(); // fainter through the door; ducked hard while the pocket phone is open
         rainGain.gain.exponentialRampToValueAtTime(peak, rainCtx.currentTime + 1.2);
-        var out = pannedOut(rainCtx, rainInCuddly ? "cuddly-balcony-door" : 0);
+        var out = pannedOut(rainCtx, rainWhere === "cuddly" ? "cuddly-balcony-door" : 0);
         rainNoise.connect(hp); hp.connect(lp); lp.connect(rainGain); rainGain.connect(out);
         rainNoise.start(0);
       } catch (e) {}
@@ -120985,11 +121022,11 @@ function spawnDustMote(container) {
         if (noiseToStop) { try { noiseToStop.stop(); } catch (e) {} }
         if (ctxToClose) { try { ctxToClose.close(); } catch (e) {} }
       }, fade * 1000 + 100);
-      rainCtx = null; rainGain = null; rainNoise = null;
+      rainCtx = null; rainGain = null; rainNoise = null; rainWhere = null; rainOutdoor = false;
     }
     function evaluateRain(stopFade) {
       var want = rainSoundWant();
-      if (want && (!rainCtx || (want === "cuddly") !== rainInCuddly)) startRain(want);
+      if (want && (!rainCtx || want !== rainWhere)) startRain(want);
       else if (!want && rainCtx) stopRain(stopFade);
     }
     function tick() {
@@ -120997,16 +121034,24 @@ function spawnDustMote(container) {
       setTimeout(tick, 1000);
     }
     window.__updateRainSound = evaluateRain;
+    window.__exteriorRainAudioState = function () {
+      return { active: !!rainCtx, source: !!rainNoise, where: rainWhere,
+        output: rainOutdoor ? "outdoor" : rainCtx ? "lower-floor" : null,
+        targetGain: rainCtx ? rainPeak() : 0 };
+    };
     window.__updateRainDuck = function () {
       if (!rainCtx || !rainGain) return;
       try {
-        var peak = (rainInCuddly ? 0.005 : 0.009) * (window.__weatherDuck || 1);
+        var peak = rainPeak();
         var now = rainCtx.currentTime;
         rainGain.gain.cancelScheduledValues(now);
         rainGain.gain.setValueAtTime(Math.max(0.0001, rainGain.gain.value), now);
         rainGain.gain.linearRampToValueAtTime(Math.max(0.0001, peak), now + 0.4);
       } catch (e) {}
     };
+    window.addEventListener("blur", function () { if (rainCtx) stopRain(); });
+    window.addEventListener("focus", evaluateRain);
+    document.addEventListener("visibilitychange", evaluateRain);
     tick();
   })();
   // The LIGHTNING layer's engine: while a storm's lightning is live (a forced dry/wet storm, the

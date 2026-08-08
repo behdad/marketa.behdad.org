@@ -214,6 +214,14 @@ low-pass. The Entrance façade without its driving HUD and Camping remain outsid
 enclosure stage. The explicit `sound("thunder")` command and deliberate monitor-game effects are
 user-triggered SFX, not part of this autonomous weather gate.
 
+With the Entrance façade open and no driving HUD, the shared wind generator and the visual-rain
+generator each retarget their bounded bed to an `audioBed("outdoor")` route. This is
+local exterior weather, so it bypasses the lower-floor boundary that intentionally muffles upstairs
+loft audio at the Entrance; wind and rain therefore retain their full open-air level and bandwidth.
+Opening the street HUD retires both exterior beds before the drivetrain's cabin rain takes ownership;
+dismissing the HUD restores them. Blur/hide, foreground coverage, room exit, reload, and the existing
+fade-and-close timers retain one-bed ownership, with room exit handing wind back to Balcony.
+
 Abraham Lake Camping owns one bounded outdoor bed: soft wind is always present, completed lit
 fire raises its crackle layer, rain raises a brighter precipitation layer, and storm weather also
 raises wind and low rumble. The stargazing clear-night override suppresses those underlying
@@ -453,8 +461,8 @@ disabled. It does not create or join the loft’s shared audio graph.
   lateral retargeting, exact upstairs restore, and Entrance glass groove),
   `tests/entrance-roadtrip-camp-audio-handoff.js` (vehicle-master fade, synchronized car-tail
   ownership, campsite rise, and final one-bed cleanup), `tests/weather-audio-ownership.js`
-  (scene-gated thunder, delayed Road Trip enclosure snapshots, bounded street/highway cabin rain,
-  three roof/window profiles, and teardown), `tests/piano-message.js` (message transition, layered keys, polyphony,
+  (scene-gated thunder, Entrance exterior-weather ownership, delayed enclosure snapshots, bounded
+  street/highway cabin rain, three roof/window profiles, and teardown), `tests/piano-message.js` (message transition, layered keys, polyphony,
   backing-pause independence, and party continuity), `tests/piano-lifecycle.js` (durable dismissal,
   explicit-channel rearm, canonical Octi handoff, bilingual close control, and coarse-pointer labels),
   and `tests/piano-checkpoint.js` (reload/Continue persistence), plus `tests/party-roadtrip-lifecycle.js`

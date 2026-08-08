@@ -172,6 +172,10 @@ function exposureOrder(row) {
     row.closed.rain.gain < row.windows.rain.gain && row.windows.rain.gain < row.roof.rain.gain &&
     row.closed.rain.cutoff < row.windows.rain.cutoff && row.windows.rain.cutoff < row.roof.rain.cutoff;
 }
+function audibleCabinRain(row) {
+  return row && row.roof.rain.gain >= .05 && row.windows.rain.gain >= .038 &&
+    row.closed.rain.gain >= .027;
+}
 
 console.log("rsvp.html weather-audio ownership:");
 var result = lib.runPageSync("rsvp.html", HARNESS, 10000, {
@@ -219,7 +223,8 @@ check(s.streetThunderClosed && s.streetThunderClosed.scene === "street" &&
   "Entrance street thunder follows all three cabin exposures", {
     closed: s.streetThunderClosed, windows: s.streetThunderWindows, roof: s.streetThunderRoof
   });
-check(exposureOrder(s.streetRain) && s.streetRain.closed.rain.scene === "street" &&
+check(exposureOrder(s.streetRain) && audibleCabinRain(s.streetRain) &&
+  s.streetRain.closed.rain.scene === "street" &&
   s.streetRain.closed.sources === 5 && s.streetRain.windows.sources === 5 &&
   s.streetRain.roof.sources === 5 && s.streetRain.closed.sharedNoiseSource,
   "street driving rain shares one bounded car bed and follows all three cabin exposures", s.streetRain);
@@ -230,7 +235,8 @@ check(s.rainBlur && !s.rainBlur.bedActive && s.rainBlur.sources === 0 &&
   "cabin rain tears down and returns cleanly across blur and visibility", {
     blur: s.rainBlur, refocus: s.rainRefocus, hidden: s.rainHidden, visible: s.rainVisible
   });
-check(exposureOrder(s.highwayRain) && s.highwayRain.closed.rain.scene === "roadtrip" &&
+check(exposureOrder(s.highwayRain) && audibleCabinRain(s.highwayRain) &&
+  s.highwayRain.closed.rain.scene === "roadtrip" &&
   s.highwayRain.closed.sources === 5 && s.highwayRain.windows.sources === 5 &&
   s.highwayRain.roof.sources === 5,
   "highway rain keeps the same one-bed source bound and three exposure levels", s.highwayRain);
@@ -241,8 +247,10 @@ check(delayed && delayed.calls.length === 1 && delayed.calls[0].scene === "roadt
   "Road Trip thunder snapshots current roof exposure at playback time", delayed);
 check(s.roadtripWindows && s.roadtripWindows.calls.length === 1 &&
   s.roadtripWindows.calls[0].enclosure.exposure === "windows-open" &&
+  s.roadtripWindows.calls[0].enclosure.gain >= .9 &&
   s.roadtripClosed && s.roadtripClosed.calls.length === 1 &&
   s.roadtripClosed.calls[0].enclosure.exposure === "closed" &&
+  s.roadtripClosed.calls[0].enclosure.gain >= .64 &&
   s.roadtripClosed.calls[0].enclosure.gain < s.roadtripWindows.calls[0].enclosure.gain &&
   s.roadtripClosed.calls[0].enclosure.cutoff < s.roadtripWindows.calls[0].enclosure.cutoff,
   "Road Trip thunder applies intermediate-window and fully-closed enclosure profiles", {

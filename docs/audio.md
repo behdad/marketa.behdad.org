@@ -209,8 +209,10 @@ owned only by an attended Balcony, Entrance, active Road Trip, or Camping scene.
 foreground covers, a paused Road Trip, blur/hide, and room navigation are silent; every delayed clap
 rechecks ownership at playback so a queued sound cannot follow the player away. Entrance street
 driving and active Road Trip also snapshot the Porsche roof/window exposure at playback: roof-open
-is full and unfiltered, windows-open is intermediate, and a closed cabin is quieter behind a
-low-pass. The Entrance façade without its driving HUD and Camping remain outside that car-only
+is prominent and unfiltered, windows-open is intermediate, and a closed cabin remains clearly
+audible but darker behind a low-pass. Cabin weather is mixed high enough to survive the drivetrain
+and road bed; filtering, rather than near-silence, carries most of the enclosure contrast. The
+Entrance façade without its driving HUD and Camping remain outside that car-only
 enclosure stage. The explicit `sound("thunder")` command and deliberate monitor-game effects are
 user-triggered SFX, not part of this autonomous weather gate.
 
@@ -244,7 +246,8 @@ focus, teardown, volume-button, or shared-context rules.
 While the visual rain layer is live, both Entrance street driving and active highway Road Trip add
 a restrained cabin-rain branch to that existing drivetrain bed. It reuses the bed's one bounded
 looping-noise source and master fade rather than creating another source/context. Roof-open,
-windows-open, and closed profiles progressively lower both gain and low-pass cutoff. Snow suppresses
+windows-open, and closed profiles progressively lower both gain and low-pass cutoff while keeping
+rain unmistakable over the moving drivetrain. Snow suppresses
 the branch with the Entrance rain streaks; Camping remains outdoors on its separate lake/weather bed.
 Engine/HUD teardown, Road Trip pause, blur/hide, foreground coverage, route arrival, and Entrance exit
 therefore remove cabin rain through the drivetrain's existing lifecycle with no duplicate tail.

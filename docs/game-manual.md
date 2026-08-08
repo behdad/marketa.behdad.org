@@ -189,7 +189,7 @@ its total carries across Continue. **Start over** clears both checkpoint and clo
 **Trailer** is separate and does not consume a save.
 
 - English and Czech are available, and the choice persists when storage is allowed.
-- Reduced-motion preferences simplify animation and disable Flair Catch.
+- Reduced-motion preferences simplify animation without removing activities.
 - Camera, torch, sharing, fullscreen, installation, and some computer toys depend on browser support
   and permission; denying them does not block the story.
 - If audio is silent, interact with the page once so the browser can enable sound.

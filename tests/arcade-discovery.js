@@ -117,4 +117,13 @@ if (result) {
   check(result.steps.window_single, "one building-window click launches Block Party and preserves the lights", result.debug);
   check(!result.errors.length, "no uncaught page errors", result.errors);
 }
+var reduced = lib.runPageSync("rsvp.html", harness, 4500, {
+  patchRaf: true, forceReduce: true, seedRandom: true,
+  chromeFlags: "--force-prefers-reduced-motion=reduce"
+});
+check(!!reduced, "reduced-motion browser harness completed", reduced);
+if (reduced) {
+  check(reduced.steps.pouria_tap, "reduced motion keeps Flair Catch playable", reduced.debug);
+  check(!reduced.errors.length, "reduced-motion launch has no uncaught page errors", reduced.errors);
+}
 process.exitCode = failures ? 1 : 0;

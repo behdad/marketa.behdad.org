@@ -81,6 +81,8 @@ through a fire, dinner, stargazing, sleep, and `~ fin ~`.
 
 The caption below the scene gives the current instruction or reports what just happened. During the
 Morning routine it is the main clue trail; later it becomes activity feedback and progression help.
+Brief feedback never queues up behind a more important story or outcome, so when it clears the
+caption returns to the latest instruction instead of replaying an older line.
 
 Coaches are larger callouts for controls that are easy to miss. Their visible × dismisses the
 lesson, not the surrounding activity. The Party handoff coach remains attached to the Garden and

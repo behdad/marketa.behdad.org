@@ -99,9 +99,8 @@ if (result) {
   check(result.czech && result.czech.key === "trip_caption_iboga" &&
     result.czech.text === "Někde za tebou se minulost pořád načítá.",
     "language changes translate the temporary caption", result.czech);
-  check(result.roomChange && result.roomChange.flash && result.roomChange.flash.owner === "trip" &&
-    result.roomChange.key === "trip_caption_iboga",
-    "a room change queues its clue beneath the live temporary caption", result.roomChange);
+  check(result.roomChange && !result.roomChange.flash && result.roomChange.key === "office_call",
+    "a room change cancels the previous room's temporary trip caption", result.roomChange);
   check(result.stopped && !result.stopped.flash && result.stopped.key === "garden",
     "stopping a trip restores the previous clue", result.stopped);
   check(result.temporary && result.temporary.key === "trip_caption_molly" &&

@@ -92,20 +92,17 @@ check(result.dungeonUp && result.dungeonUp.immediate.key === "garden" &&
   result.dungeonUp);
 var transient = result.transient;
 check(transient && transient.before.key === "trip_caption_molly" &&
-  transient.during.key === "trip_caption_molly" &&
-  transient.during.text === transient.before.text &&
-  transient.during.flash && transient.during.flash.owner === "caption-test",
-  "entering a lower room does not replace a live gameplay caption", transient);
+  transient.during.key === "lower_bathroom" && !transient.during.flash,
+  "entering a lower room cancels an upstairs-scoped gameplay caption", transient);
 check(transient && transient.restored.key === "lower_bathroom" &&
   transient.restored.text === expected.en.bathroom && !transient.restored.flash,
   "the gameplay caption restores to the active lower room", transient);
 check(transient && transient.repeat === false,
   "reopening an already-active room does not announce it again", transient);
-check(transient && transient.closing.key === "trip_caption_molly" &&
-  transient.closing.flash && transient.closing.flash.owner === "caption-close-test" &&
+check(transient && transient.closing.key === transient.upstairs.key && !transient.closing.flash &&
   transient.upstairsRestored.key === transient.upstairs.key &&
   transient.upstairsRestored.text === transient.upstairs.text,
-  "leaving does not interrupt gameplay copy and restores the upstairs caption afterward", transient);
+  "leaving cancels lower-room copy and derives the upstairs caption immediately", transient);
 var rebased = result.rebased;
 check(rebased && rebased.before.key === "trip_caption_molly" &&
   rebased.during.key === "trip_caption_molly" && rebased.during.flash &&

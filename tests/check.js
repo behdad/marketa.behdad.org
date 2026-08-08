@@ -1283,6 +1283,31 @@ function checkMetadataFreeGame(file, html) {
   else pass(file + ": game UI stays free of ARIA and explicit role metadata");
 }
 
+// #hunt-caption is a shared projection. Producers publish structured claims; only the
+// arbiter renderer may write its text/markup. Keep the common aliases pinned so a new
+// minigame cannot quietly recreate a private save/restore timer beside the arbiter.
+function checkCaptionDomOwnership(file, script) {
+  if (file !== "rsvp.html" || !script) return;
+  var start = script.indexOf("function createCaptionArbiter(element)");
+  var end = script.indexOf("var captionArbiter = createCaptionArbiter(caption);", start);
+  if (start < 0 || end <= start) {
+    fail(file + ": caption DOM has one renderer", "createCaptionArbiter boundary missing");
+    return;
+  }
+  var outside = script.slice(0, start) + script.slice(end);
+  var hits = [], lines = outside.split("\n");
+  lines.forEach(function (line, index) {
+    if (/\b(?:caption|captionEl)\.(?:innerHTML|textContent)\s*=/.test(line)) {
+      hits.push((index + 1) + ": " + line.trim().slice(0, 120));
+    }
+    if (/document\.getElementById\(["']hunt-caption["']\)\.(?:innerHTML|textContent)\s*=/.test(line)) {
+      hits.push((index + 1) + ": " + line.trim().slice(0, 120));
+    }
+  });
+  if (hits.length) fail(file + ": caption DOM has one renderer", hits.join("\n"));
+  else pass(file + ": caption DOM has one renderer (structured claims only)");
+}
+
 // Authored source is UTF-8. Keep printable characters visible instead of hiding them
 // behind backslash-u escapes; this also keeps Persian/Czech copy and regex endpoints
 // reviewable as the characters the browser actually sees.
@@ -1350,6 +1375,7 @@ FILES.forEach(function (file) {
     checkAlbumSkySig(file, script);
     checkSharedStateOwners(file, script);
     checkLaptopUpdateSoundGate(file, script);
+    checkCaptionDomOwnership(file, script);
   }
   checkCssCommentBalance(file, style);
   checkCssBraceBalance(file, style);

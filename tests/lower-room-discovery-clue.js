@@ -27,6 +27,12 @@ var harness = String.raw`<script>
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
   async function run() {
     localStorage.removeItem("lowerRoomDiscovered:v1");
+    var intro = document.getElementById("click-me-overlay");
+    if (intro) intro.click();
+    for (var guideStep = 0; guideStep < 2; guideStep++) {
+      var guideClose = document.querySelector("#opening-guide-coach .hunt-coach-x");
+      if (guideClose) guideClose.click();
+    }
     window.__setSecondRound(true, { releaseHeld: false });
     window.__lowerRoomDiscoveryClueTick(179999, true);
     check("the clue stays quiet until three attended phase-two minutes",

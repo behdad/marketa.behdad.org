@@ -232,14 +232,21 @@ not reliable.
 
 ### Captions and coaches
 
-`setCaption(key, force)` owns the stable authored bottom caption. `__flashCaptionKey(key, holdMs,
-owner, replacements)` owns temporary messages and uses an owner token so stale cleanup cannot erase
-a newer flash; `__clearFlashCaption(owner)` clears only the matching owner. Lower rooms temporarily
-replace the upstairs caption through `__setLowerRoomCaption` and `__restoreLowerRoomCaption`.
+`captionArbiter` is the only writer of `#hunt-caption`; `tests/check.js` enforces that boundary. It
+keeps the latest persistent base for the active viewport, one temporary overlay, and one exclusive
+claim. Producers declare an owner, room/lower-room scope, priority, duration, attended- or wall-time
+clock, and optional escaped replacements. Base state keeps updating under feedback. Higher priority
+preempts, lower priority is suppressed rather than queued, same-owner chatter replaces, and a claim
+token prevents stale expiry from clearing a successor. Scope exit cancels scoped transients.
 
-Use those paths rather than assigning the caption element directly. Token pickups and ambient jokes
-must not permanently cover progression guidance. If a caption depends on language or live state,
-make sure `refreshHuntCaption` can rebuild it after a language change or overlay dismissal.
+Use `__captionBase`, `__captionOverlay`, `__captionExclusive`, and
+`__cancelCaption(tokenOrOwner)`. `setCaption` and `__setLowerRoomCaption` remain stable-base helpers;
+the flash hooks are compatibility seams only. Keyed claims rerender on language changes, while the
+intentional `caption()` console toy stays literal. Intro, recovery, and Trailer are exclusive; Road
+Trip story beats outrank score/collision feedback; police and Camping terminal state reject
+incidental copy. Checkpoints store semantic game state only: restore clears claims/timers and derives
+the current base once. Focused coverage is in `tests/caption-arbiter.js` and
+`tests/caption-roadtrip-arbitration.js`.
 
 Coaches are persistent instructional overlays, not captions. Their own controller decides when they
 appear, whether navigation may continue behind them, and which action dismisses them. A coach that

@@ -13248,9 +13248,16 @@ section{margin:1.9rem 0}
    browser content area. This does not set .is-fullscreen or call the Fullscreen API. */
 :root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.intro-active):not(.recovery-active) >
   :is(.game-langs,.watch-controls){display:none !important}
-:root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.is-fullscreen):not(.intro-active):not(.recovery-active){
-  max-width:min(100vw, calc(200vh - 90px));
+:root:not(.revealed).loft-entered #hunt-fullscreen-area:not(.is-fullscreen):not(.intro-active):not(.recovery-active):not(.caption-reserved-fit){
+  max-width:min(100vw, calc(200vh - 94px));
   margin:0 auto;
+}
+/* Short landscape browsers are height-bound. Reserve a second caption row for exclusive and
+   terminal claims so translated recovery/finale copy remains inside the direct-game viewport. */
+@media (max-height:520px) and (orientation:landscape){
+  :root:not(.revealed) #hunt-fullscreen-area.caption-reserved-fit:not(.is-fullscreen){
+    max-width:min(100vw, calc(200vh - 140px));
+  }
 }
 :root:not(.revealed) .caps,
 :root:not(.revealed) #site-h1,
@@ -37618,7 +37625,9 @@ window.__cinemaVideoLoaded = false;
       projectorShorted = false;
       room.classList.remove("projector-shorted");
       powerOn(false);
-      if (window.__flashCaptionKey) window.__flashCaptionKey("cinema_short_gag", 3000, "cinema");
+      if (window.__captionOverlay) window.__captionOverlay("cinema_short_gag", {
+        owner: "cinema", scope: "lower:cinema", priority: 30, duration: 3000, clock: "attended"
+      });
     }, 3600);
     return true;
   }
@@ -38724,12 +38733,15 @@ window.__entranceRoomOpen = false;
     });
     if (fullyFlipped && !windowPayoffShown) {
       windowPayoffShown = true;
-      if (window.__flashCaptionKey) {
+      if (window.__captionOverlay) {
         var uvLive = loftStrip && loftStrip.classList.contains("uv-mode") &&
           !loftStrip.classList.contains("dance-frozen");
         var payoff = entranceNight ? "entrance_windows_all_off" : "entrance_windows_all_on";
         if (uvLive && entranceNight) payoff = "entrance_windows_uv";
-        window.__flashCaptionKey(payoff, 5000, "entrance-windows");
+        window.__captionOverlay(payoff, {
+          owner: "entrance-windows", scope: "lower:entrance", priority: 30,
+          duration: 5000, clock: "attended"
+        });
       }
     } else if (!fullyFlipped) {
       windowPayoffShown = false;
@@ -39051,10 +39063,13 @@ window.__entranceRoomOpen = false;
     paintPorscheDriveHud();
     if (changed) {
       announcePorscheTransmission();
-      if (explicit && !porscheTransmission.modeCaptionShown && window.__flashCaptionKey) {
+      if (explicit && !porscheTransmission.modeCaptionShown && window.__captionOverlay) {
         porscheTransmission.modeCaptionShown = true;
-        window.__flashCaptionKey(mode === "auto" ? "entrance_drive_mode_auto" :
-          "entrance_drive_mode_manual", 2600, "entrance-transmission");
+        window.__captionOverlay(mode === "auto" ? "entrance_drive_mode_auto" :
+          "entrance_drive_mode_manual", {
+            owner: "entrance-transmission", scope: "lower:entrance", priority: 30,
+            duration: 2600, clock: "attended"
+          });
       }
     }
     if (explicit && window.__checkpointChanged) window.__checkpointChanged();
@@ -39077,18 +39092,21 @@ window.__entranceRoomOpen = false;
     }
     var relativeSpeed = driveState.speed * driveState.facing;
     if (range === "P" && Math.abs(relativeSpeed) > .5) {
-      if (window.__flashCaptionKey) window.__flashCaptionKey(
-        "entrance_drive_auto_park_interlock", 2600, "entrance-transmission");
+      if (window.__captionOverlay) window.__captionOverlay(
+        "entrance_drive_auto_park_interlock", { owner: "entrance-transmission",
+          scope: "lower:entrance", priority: 30, duration: 2600, clock: "attended" });
       return false;
     }
     if (range === "R" && relativeSpeed >= PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH) {
-      if (window.__flashCaptionKey) window.__flashCaptionKey(
-        "entrance_drive_auto_reverse_interlock", 2600, "entrance-transmission");
+      if (window.__captionOverlay) window.__captionOverlay(
+        "entrance_drive_auto_reverse_interlock", { owner: "entrance-transmission",
+          scope: "lower:entrance", priority: 30, duration: 2600, clock: "attended" });
       return false;
     }
     if (range === "D" && relativeSpeed <= -PORSCHE_AUTO_DIRECTION_CHANGE_LIMIT_KMH) {
-      if (window.__flashCaptionKey) window.__flashCaptionKey(
-        "entrance_drive_auto_drive_interlock", 2600, "entrance-transmission");
+      if (window.__captionOverlay) window.__captionOverlay(
+        "entrance_drive_auto_drive_interlock", { owner: "entrance-transmission",
+          scope: "lower:entrance", priority: 30, duration: 2600, clock: "attended" });
       return false;
     }
     var previousRange = porscheTransmission.range;
@@ -39506,40 +39524,62 @@ window.__entranceRoomOpen = false;
     }
     clearTimeout(roadtripCampCaptionTimer);
     roadtripCampCaptionTimer = null;
-    if (values) {
-      roadtripPoliceFeedback(key, values, 2200, false);
-      return true;
-    }
-    if (window.__flashCaptionKey) window.__flashCaptionKey(key, 2200, "entrance-roadtrip");
-    return true;
-  }
-  function roadtripPoliceFeedback(key, values, holdMs, persistent, persistentBlink) {
-    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
-    var dict = typeof T === "object" && T[lang] ? T[lang] : null;
-    var template = dict && ((dict.hunt && dict.hunt[key]) || dict[key]);
-    if (!template) template = key;
-    Object.keys(values || {}).forEach(function (name) {
-      template = template.split("{" + name + "}").join(String(values[name]));
+    if (!window.__captionOverlay) return false;
+    var story = ["entrance_roadtrip_banff_exit", "entrance_roadtrip_banff_arrival",
+      "entrance_roadtrip_abraham_exit", "entrance_roadtrip_abraham_arrival"].indexOf(key) !== -1;
+    var campProgress = /^entrance_roadtrip_(?:camp|stew|stargazing)_/.test(key);
+    var police = /^entrance_roadtrip_police_/.test(key);
+    return !!window.__captionOverlay(key, {
+      owner: story ? "roadtrip-story" : campProgress ? "camp-progress" : police ? "roadtrip-police" : "roadtrip-score",
+      scope: "lower:entrance",
+      priority: story ? 60 : campProgress || police ? 80 : 30,
+      duration: story ? 5200 : 2200,
+      clock: "attended",
+      replacements: values || null
     });
-    // This literal amount/speed line owns the same caption as the stable drive
-    // instruction. Mark that stable key current so the end-of-step HUD repaint
-    // does not immediately overwrite the temporary line.
+  }
+  function roadtripPoliceFeedback(key, values, holdMs) {
     lastDriveInstruction = porscheDriveInstructionKey();
-    if (window.caption) {
-      var options = persistentBlink ? {} : { blink: 700 };
-      if (!persistent) options.hold = holdMs || 4200;
-      window.caption(template, options);
-      if (persistentBlink) {
-        var captionNode = document.querySelector(".scene-caption");
-        if (captionNode) captionNode.classList.add("hint-blink");
+    if (!window.__captionOverlay) return false;
+    var token = window.__captionOverlay(key, {
+      owner: "roadtrip-police",
+      scope: "lower:entrance",
+      priority: 80,
+      duration: holdMs || 4200,
+      clock: "attended",
+      replacements: values || null
+    });
+    if (token) {
+      var captionNode = document.querySelector(".scene-caption");
+      if (captionNode) {
+        captionNode.classList.add("hint-blink");
+        setTimeout(function () { captionNode.classList.remove("hint-blink"); }, 700);
       }
     }
+    return !!token;
   }
   function roadtripPoliceOutcomeFeedback(key, values) {
-    // A pickup/pass flash may still be live when the pursuit resolves. Remove its
-    // restore timer before publishing the persistent terminal outcome.
-    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
-    roadtripPoliceFeedback(key, values, 0, true);
+    if (window.__cancelCaption) {
+      window.__cancelCaption("roadtrip-score");
+      window.__cancelCaption("roadtrip-story");
+      window.__cancelCaption("camp-progress");
+    }
+    lastDriveInstruction = porscheDriveInstructionKey();
+    if (!window.__captionBase) return false;
+    var priorities = window.__captionPriorities || { mandatory: 80, terminal: 100 };
+    var terminal = /^entrance_roadtrip_police_(?:capture|stopped|court_stopped|court_refused|arrest)/.test(key || "");
+    return !!window.__captionBase(key, {
+      owner: "roadtrip-police",
+      scope: "lower:entrance",
+      priority: terminal ? priorities.terminal : priorities.mandatory,
+      replacements: values || null
+    });
+  }
+  function clearRoadtripFeedbackCaptions() {
+    if (!window.__cancelCaption) return;
+    ["entrance-roadtrip", "roadtrip-score", "roadtrip-story", "roadtrip-police", "camp-progress"].forEach(function (owner) {
+      window.__cancelCaption(owner);
+    });
   }
   function roadtripPoliceText(key, values) {
     var lang = document.documentElement.lang === "cs" ? "cs" : "en";
@@ -41528,7 +41568,7 @@ window.__entranceRoomOpen = false;
     campFireState.open = false;
     resetCampStew(true);
     paintRoadtripCampFire();
-    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+    clearRoadtripFeedbackCaptions();
     syncRoadtripCampFireCaption(false);
     return true;
   }
@@ -41594,7 +41634,7 @@ window.__entranceRoomOpen = false;
     campStewState.open = false;
     campPotOpen = false;
     paintRoadtripCampStew();
-    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+    clearRoadtripFeedbackCaptions();
     syncRoadtripCampFireCaption(false);
     campStewReact("happy");
     roadtripFeedback("entrance_roadtrip_stew_served_feedback");
@@ -41904,7 +41944,7 @@ window.__entranceRoomOpen = false;
     paintRoadtripCampFire();
     paintCampSleepFinale();
     if (window.playCampBearCodaSound) window.playCampBearCodaSound("embers");
-    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+    clearRoadtripFeedbackCaptions();
     syncRoadtripCampFireCaption(false);
     scheduleCampSleepFinale();
     if (window.__checkpointChanged) window.__checkpointChanged();
@@ -42072,7 +42112,7 @@ window.__entranceRoomOpen = false;
     campFireState.open = false;
     campStewState.open = false;
     setCampStargazingClear(true);
-    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+    clearRoadtripFeedbackCaptions();
     syncRoadtripCampFireCaption(false);
     if (!balconyStage.classList.contains("dusk")) {
       if (finishNow !== true && campFireScene) {
@@ -42107,7 +42147,7 @@ window.__entranceRoomOpen = false;
     finishCampStargazingTraceDrag();
     campStargazingState.open = false;
     paintCampStargazing();
-    if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+    clearRoadtripFeedbackCaptions();
     syncRoadtripCampFireCaption(false);
     return true;
   }
@@ -42394,7 +42434,7 @@ window.__entranceRoomOpen = false;
       campFireState.igniting = false;
       paintRoadtripCampFire();
       paintRoadtripCampStew();
-      if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+      clearRoadtripFeedbackCaptions();
       syncRoadtripCampFireCaption(true);
       if (window.__checkpointChanged) window.__checkpointChanged();
     }, 1500);
@@ -42427,7 +42467,7 @@ window.__entranceRoomOpen = false;
     }
     if (campStewState.status === "overcooked") {
       resetCampStew(false);
-      if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+      clearRoadtripFeedbackCaptions();
       syncRoadtripCampFireCaption(false);
       if (window.__checkpointChanged) window.__checkpointChanged();
       return;
@@ -42706,7 +42746,7 @@ window.__entranceRoomOpen = false;
   window.__entranceRoadtripCampStewReset = function () {
     var state = resetCampStew(true);
     if (roadtripState.route === "camp") {
-      if (window.__clearFlashCaption) window.__clearFlashCaption("entrance-roadtrip");
+      clearRoadtripFeedbackCaptions();
       syncRoadtripCampFireCaption(false);
     }
     return state;
@@ -48392,9 +48432,10 @@ window.__entranceRoomOpen = false;
     driveState.cruiseTarget = driveState.speed * driveState.facing;
     completePorscheDriveCoachAction("cruise");
     if (driveHud) driveHud.classList.add("drive-cruise-on");
-    if (window.__flashCaptionKey) window.__flashCaptionKey(
-      "entrance_drive_cruise_active", 3200, "entrance-drive-cruise",
-      { speed: Math.round(driveState.cruiseTarget) });
+    if (window.__captionOverlay) window.__captionOverlay("entrance_drive_cruise_active", {
+      owner: "entrance-drive-cruise", scope: "lower:entrance", priority: 30,
+      duration: 3200, clock: "attended", replacements: { speed: Math.round(driveState.cruiseTarget) }
+    });
     paintPorscheDriveHud();
     ensurePorscheDriveFrame();
     return true;
@@ -49351,7 +49392,10 @@ window.__entranceRoomOpen = false;
         setTimeout(function () {
           if (!window.__entranceRoomOpen || document.hidden || !document.hasFocus()) return;
           playEntranceIntercomSound();
-          if (window.__flashCaptionKey) window.__flashCaptionKey("entrance_intercom_reply", 2600, "entrance-intercom");
+          if (window.__captionOverlay) window.__captionOverlay("entrance_intercom_reply", {
+            owner: "entrance-intercom", scope: "lower:entrance", priority: 30,
+            duration: 2600, clock: "attended"
+          });
         }, 720);
       }
     }
@@ -51332,8 +51376,9 @@ window.__bedroomRoomOpen = false;
     tttLine = result.line;
     renderTtt();
     var key = tttResultTextKey(result.winner);
-    if (key && window.__flashCaptionKey) {
-      window.__flashCaptionKey(key, 6000, "bedroom-ttt");
+    if (key && window.__captionOverlay) {
+      window.__captionOverlay(key, { owner: "bedroom-ttt", scope: "lower:bedroom",
+        priority: 60, duration: 6000, clock: "attended" });
     }
   }
   function tttScore(board, turn, depth) {
@@ -64539,24 +64584,21 @@ function quickReversalGesture(action) {
     if (butterflies.length !== 3) return;
     var active = false, score = 0, target = null, endsAt = 0, tickTimer = null;
     var chaseTipShown = false;
-    var caption = document.getElementById("hunt-caption"), savedCaption = null;
     var streaks = new Map(), repairTimers = new Map();
     var STREAK_MS = 2200, BREAK_AT = 6, REPAIR_MS = 12000;
-    function chaseText(key, vars) {
-      var dict = T[document.documentElement.lang] || T.en;
-      var text = dict[key] || T.en[key] || "";
-      Object.keys(vars || {}).forEach(function (name) { text = text.replace("{" + name + "}", vars[name]); });
-      return text;
-    }
     function clearTarget() {
       butterflies.forEach(function (el) { el.classList.remove("butterfly-chase-target"); });
       target = null;
     }
     function paintProgress() {
-      if (!caption || !active) return;
+      if (!active || !window.__captionOverlay) return;
       var seconds = Math.max(0, Math.ceil((endsAt - performance.now()) / 1000));
-      caption.textContent = chaseText("butterfly_chase_progress", { score: score, seconds: seconds });
-      caption.classList.add("temporary-caption-live");
+      window.__captionOverlay("butterfly_chase_progress", {
+        owner: "butterfly-chase",
+        scope: "stage:office",
+        priority: 80,
+        replacements: { score: score, seconds: seconds }
+      });
     }
     function chooseTarget(previous) {
       var choices = butterflies.filter(function (el) { return el !== previous; });
@@ -64564,15 +64606,14 @@ function quickReversalGesture(action) {
       target.classList.add("butterfly-chase-target");
     }
     function restoreCaption(resultKey) {
-      if (!caption || window.currentStageName !== "office") return;
-      var result = chaseText(resultKey);
-      caption.textContent = result;
-      caption.classList.add("temporary-caption-live");
-      setTimeout(function () {
-        if (!caption || caption.textContent !== result || window.currentStageName !== "office") return;
-        caption.innerHTML = savedCaption ? savedCaption.html : "";
-        caption.classList.toggle("temporary-caption-live", !!(savedCaption && savedCaption.temporary));
-      }, 3500);
+      if (window.currentStageName !== "office" || !window.__captionOverlay) return;
+      window.__captionOverlay(resultKey, {
+        owner: "butterfly-chase",
+        scope: "stage:office",
+        priority: 80,
+        duration: 3500,
+        clock: "attended"
+      });
     }
     function finish(won, silent) {
       if (!active) return;
@@ -64583,10 +64624,7 @@ function quickReversalGesture(action) {
       if (!silent) restoreCaption(won ? "butterfly_chase_win" : "butterfly_chase_timeout");
     }
     function restoreSavedCaption() {
-      if (!caption || !savedCaption) return;
-      caption.innerHTML = savedCaption.html;
-      caption.classList.toggle("temporary-caption-live", !!savedCaption.temporary);
-      savedCaption = null;
+      if (window.__cancelCaption) window.__cancelCaption("butterfly-chase");
     }
     function recordActivation(el) {
       if (window.__cinematic || el.classList.contains("butterfly-broken")) return false;
@@ -64604,7 +64642,10 @@ function quickReversalGesture(action) {
       el.classList.remove("flapping", "dancing");
       if (el.id === "office-stainedglass") el.classList.remove("flap", "jiggling");
       el.classList.add("butterfly-broken");
-      if (window.__flashCaptionKey) window.__flashCaptionKey("butterfly_broken_caption", 3500, "butterfly-break");
+      if (window.__captionOverlay) window.__captionOverlay("butterfly_broken_caption", {
+        owner: "butterfly-break", scope: "stage:office", priority: 30,
+        duration: 3500, clock: "attended"
+      });
       repairTimers.set(el, setTimeout(function () {
         repairTimers.delete(el);
         el.classList.remove("butterfly-broken");
@@ -64625,7 +64666,6 @@ function quickReversalGesture(action) {
       active = true;
       score = 0;
       endsAt = performance.now() + 16000;
-      savedCaption = caption ? { html: caption.innerHTML, temporary: caption.classList.contains("temporary-caption-live") } : null;
       chooseTarget(null);
       paintProgress();
       tickTimer = setInterval(tick, 200);
@@ -64638,9 +64678,12 @@ function quickReversalGesture(action) {
         return;
       }
       if (!active) {
-        if (!chaseTipShown && window.__secondRound && window.currentStageName === "office" && window.__flashCaptionKey) {
+        if (!chaseTipShown && window.__secondRound && window.currentStageName === "office" && window.__captionOverlay) {
           chaseTipShown = true;
-          window.__flashCaptionKey("butterfly_chase_tip", 4000, "butterfly-chase-tip");
+          window.__captionOverlay("butterfly_chase_tip", {
+            owner: "butterfly-chase-tip", scope: "stage:office", priority: 30,
+            duration: 4000, clock: "attended"
+          });
         }
         return;
       }
@@ -64950,7 +64993,6 @@ function quickReversalGesture(action) {
     var HIT_R = 18;              // hit radius (per axis) between shot and saucer
     var ARCADE_HIGH_KEY = "invadersHigh"; // own localStorage key — deliberately NOT part of any game-state snapshot (keeps tests/state.js's reset==load clean)
     var arcadeActive = false, arcadeRaf = null, arcadeLastT = 0;
-    var arcadeSavedCaption = null; // the office caption showing before the game armed — restored on game over
     var arcadeAliens = [], arcadeShots = [];
     var arcadeLastSpawn = 0, arcadeLastShot = 0, arcadeScore = 0;
     var ARCADE_MILESTONE = 10; // reward a chime + shockwave every this-many kills
@@ -65109,8 +65151,9 @@ function quickReversalGesture(action) {
       if (stageOffice) stageOffice.classList.add("arcade");
       if (window.__syncScopeMirrors) window.__syncScopeMirrors();
       if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // arcade undoes the UV — drop any eased inline filter now
-      arcadeSavedCaption = window.__captionKey ? window.__captionKey() : null; // remember the room hint to restore on game over
-      if (window.setCaption) window.setCaption("arcade_hint", true); // instruction line above the scene
+      if (window.__captionOverlay) window.__captionOverlay("arcade_hint", {
+        owner: "minigame-invaders", scope: "stage:office", priority: 80
+      });
       spawnAlien(180, -18); spawnAlien(430, -52); // a couple already on the way in
       arcadeLastT = 0;
       arcadeRaf = requestAnimationFrame(arcadeFrame);
@@ -65163,12 +65206,7 @@ function quickReversalGesture(action) {
       if (window.__updateKitchenUvLinger) window.__updateKitchenUvLinger(); // arcade over — restore the UV per the switch's intent
       arcadeScore = 0;
       chair.style.transition = ""; // restore the smooth glide once the game (and cursor-follow) ends
-      // put the caption back to whatever was showing before the game (restoreStageHint alone is only a
-      // refiner and no-ops when the office puzzle's done, which left the arcade hint stranded)
-      if (wasActive && window.setCaption) {
-        if (arcadeSavedCaption) window.setCaption(arcadeSavedCaption, true);
-        else if (window.restoreStageHint) window.restoreStageHint("office");
-      }
+      if (wasActive && window.__cancelCaption) window.__cancelCaption("minigame-invaders");
       if (wasActive && gameOver) arcadeFlourish(finalScore, true, newBest); // terminal result when a saucer gets through; leaving the room ends silently
       if (wasActive && window.__loftStateChanged) window.__loftStateChanged("minigame.change", { game: "invaders", active: false, score: finalScore }, "ui");
       if (newBest && window.__arcadeOfferNext) window.__arcadeOfferNext("invaders");
@@ -66640,7 +66678,7 @@ function quickReversalGesture(action) {
   var ESCAPE_TAP_WINDOW = 1250;
   var escapeActive = false, escapePhase = "idle", escapeFinds = 0;
   var escapeTarget = -1, escapeSelected = 0, escapeLastTarget = -1;
-  var escapeStartInside = false, escapeSavedCaption = null;
+  var escapeStartInside = false;
   var escapeTimer = null, escapeCaptionTimer = null;
   var escapeTap = null, escapeTapTimer = null;
   function escapeReduce() {
@@ -66658,18 +66696,13 @@ function quickReversalGesture(action) {
   }
   function restoreEscapeCaption() {
     clearEscapeCaptionTimer();
-    if (!escapeCaptionShowing()) { escapeSavedCaption = null; return; }
-    if (escapeSavedCaption && window.setCaption) window.setCaption(escapeSavedCaption, true);
-    else if (window.restoreStageHint) window.restoreStageHint("cuddly");
-    escapeSavedCaption = null;
+    if (window.__cancelCaption) window.__cancelCaption("minigame-octi");
   }
   function clearEscapeTap(restoreCaption) {
     if (escapeTapTimer) { clearTimeout(escapeTapTimer); escapeTapTimer = null; }
-    var saved = escapeTap && escapeTap.savedCaption;
     escapeTap = null;
     if (restoreCaption && window.__captionKey && window.__captionKey() === "octi_escape_invite") {
-      if (saved && window.setCaption) window.setCaption(saved, true);
-      else if (window.restoreStageHint) window.restoreStageHint("cuddly");
+      if (window.__cancelCaption) window.__cancelCaption("minigame-octi");
     }
   }
   function updateEscapeSelection(index) {
@@ -66734,7 +66767,9 @@ function quickReversalGesture(action) {
       void escapePeek.getBoundingClientRect();
       escapePeek.classList.add("peeking");
     }
-    if (window.setCaption) window.setCaption(captionKey || "octi_escape_hint", true);
+    if (window.__captionOverlay) window.__captionOverlay(captionKey || "octi_escape_hint", {
+      owner: "minigame-octi", scope: "stage:cuddly", priority: 80
+    });
     armGuess(980);
   }
   function chooseNextEscapeTarget() {
@@ -66748,7 +66783,9 @@ function quickReversalGesture(action) {
   function finishEscapeWin() {
     if (!escapeActive) return;
     escapePhase = "returning";
-    if (window.setCaption) window.setCaption("octi_escape_win", true);
+    if (window.__captionOverlay) window.__captionOverlay("octi_escape_win", {
+      owner: "minigame-octi", scope: "stage:cuddly", priority: 80
+    });
     if (typeof playHeartsSound === "function") playHeartsSound("cuddly-octopus");
     clearEscapeTimer();
     escapeTimer = setTimeout(function () {
@@ -66787,7 +66824,9 @@ function quickReversalGesture(action) {
       escapePeek.classList.add("found");
     }
     escapeFinds++;
-    if (window.setCaption) window.setCaption(escapeFinds === 1 ? "octi_escape_one" : escapeFinds === 2 ? "octi_escape_two" : "octi_escape_win", true);
+    if (window.__captionOverlay) window.__captionOverlay(
+      escapeFinds === 1 ? "octi_escape_one" : escapeFinds === 2 ? "octi_escape_two" : "octi_escape_win",
+      { owner: "minigame-octi", scope: "stage:cuddly", priority: 80 });
     clearEscapeTimer();
     escapeTimer = setTimeout(function () {
       escapeTimer = null;
@@ -66815,7 +66854,6 @@ function quickReversalGesture(action) {
     clearEscapeTap(false);
     clearEscapeCaptionTimer();
     escapeStartInside = octopusInChest;
-    escapeSavedCaption = savedCaption || (window.__captionKey ? window.__captionKey() : null);
     escapeActive = true;
     escapePhase = "dashing";
     escapeFinds = 0;
@@ -66827,7 +66865,9 @@ function quickReversalGesture(action) {
     octopus.classList.add("escape-running");
     var groove = document.getElementById("cuddly-octopus-groove");
     if (groove) groove.classList.remove("grooving");
-    if (window.setCaption) window.setCaption("octi_escape_hint", true);
+    if (window.__captionOverlay) window.__captionOverlay("octi_escape_hint", {
+      owner: "minigame-octi", scope: "stage:cuddly", priority: 80
+    });
     clearEscapeTimer();
     escapeTimer = setTimeout(function () {
       escapeTimer = null;
@@ -66856,7 +66896,9 @@ function quickReversalGesture(action) {
     }
     clearEscapeTap(true);
     escapeTap = { at: now, savedCaption: window.__captionKey ? window.__captionKey() : null };
-    if (window.setCaption) window.setCaption("octi_escape_invite", true);
+    if (window.__captionOverlay) window.__captionOverlay("octi_escape_invite", {
+      owner: "minigame-octi", scope: "stage:cuddly", priority: 80
+    });
     escapeTapTimer = setTimeout(function () {
       escapeTapTimer = null;
       clearEscapeTap(true);
@@ -67704,7 +67746,10 @@ function quickReversalGesture(action) {
   window.__coachDjContext = function () {
     if (contextCoachShown || coarsePointer()) return false;
     contextCoachShown = true;
-    if (window.__flashCaptionKey) window.__flashCaptionKey("dj_right_click_hint", 3500, "dj-context");
+    if (window.__captionOverlay) window.__captionOverlay("dj_right_click_hint", {
+      owner: "dj-context", scope: "stage:garden", priority: 30,
+      duration: 3500, clock: "attended"
+    });
     return true;
   };
   // Panel geometry (garden view-box coords): keep the slab fully left of the booth's x=560
@@ -68776,7 +68821,9 @@ function quickReversalGesture(action) {
       if (stageKitchen) stageKitchen.classList.add("flair-on");
       if (window.__syncScopeMirrors) window.__syncScopeMirrors();
       bartender.style.transition = "none"; // paddle-follow needs to track the cursor with no glide lag
-      if (window.setCaption) window.setCaption("flair_hint", true); // instruction line above the scene
+      if (window.__captionOverlay) window.__captionOverlay("flair_hint", {
+        owner: "minigame-flair", scope: "stage:kitchen", priority: 80
+      });
       flairBuildHud();
       window.__showSceneGameTitle(flairLayer, "game_flair_title");
       flairLastT = 0;
@@ -68853,7 +68900,7 @@ function quickReversalGesture(action) {
       if (stageKitchen) stageKitchen.classList.remove("flair-on");
       if (window.__syncScopeMirrors) window.__syncScopeMirrors();
       bartender.style.transition = ""; // restore the smooth glide once the paddle game's over
-      if (wasActive && window.restoreStageHint) window.restoreStageHint("kitchen"); // put the room/bar hint back
+      if (wasActive && window.__cancelCaption) window.__cancelCaption("minigame-flair");
       if (wasActive && gameOver) flairFlourish(finalScore); // three misses → "last call"; leaving/hiding ends it silently
       // Flair-Catch is an endless score run, not a game with a win state: ANY way out counts
       // as "after the game." The self-serve helper still requires a visible, live bar with
@@ -70898,8 +70945,9 @@ setOfficeProgress("pc", false);
     stopSaver();
     monitorSleeping = true;
     monitor.classList.add("monitor-sleeping", "sleep-nod-off");
-    if (window.__flashCaptionKey)
-      window.__flashCaptionKey("mon_sleep_gag", 5000, "monitor-power");
+    if (window.__captionOverlay)
+      window.__captionOverlay("mon_sleep_gag", { owner: "monitor-power", scope: "stage:office",
+        priority: 30, duration: 5000, clock: "attended" });
     clearTimeout(monitorSleepIntroTimer);
     monitorSleepIntroTimer = setTimeout(function () {
       monitorSleepIntroTimer = null;
@@ -73609,8 +73657,9 @@ setOfficeProgress("pc", false);
     if (action === "shutdown") {
       beginMonitorPowerVisual("shutdown");
       playMonitorShutdownSound("office-monitor");
-      if (window.__flashCaptionKey)
-        window.__flashCaptionKey("mon_shutdown_gag", 5000, "monitor-power");
+      if (window.__captionOverlay)
+        window.__captionOverlay("mon_shutdown_gag", { owner: "monitor-power", scope: "stage:office",
+          priority: 30, duration: 5000, clock: "attended" });
       monitorPowerTimers.push(setTimeout(function () {
         if (pcTower && pcTower.classList.contains("on"))
           pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -73628,8 +73677,9 @@ setOfficeProgress("pc", false);
       monitorPowerTimers.push(setTimeout(function () {
         playMonitorWindowCloseSound("office-monitor");
       }, 280));
-      if (window.__flashCaptionKey)
-        window.__flashCaptionKey("mon_reboot_gag", 5000, "monitor-power");
+      if (window.__captionOverlay)
+        window.__captionOverlay("mon_reboot_gag", { owner: "monitor-power", scope: "stage:office",
+          priority: 30, duration: 5000, clock: "attended" });
       monitorPowerTimers.push(setTimeout(function () {
         if (pcTower.classList.contains("on"))
           pcTower.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -80357,14 +80407,18 @@ setOfficeProgress("pc", false);
     var timers = [], rafId = 0, done = false;
     if (cfg.freeze) { try { cfg.freeze(); } catch (e) {} } // stop the runtime now; it dies frozen behind the flash
     if (cfg.sound) { try { cfg.sound(); } catch (e) {} } // the kill's signature SFX, at the moment of impact
-    var savedKey = window.__captionKey ? window.__captionKey() : null; // reclaim the room hint after
     if (cfg.screenClass) m.classList.add(cfg.screenClass);
     cap.classList.add("caption-death");
     if (cfg.captionClass) cap.classList.add(cfg.captionClass);
     (cfg.beats || []).forEach(function (b) {
       timers.push(setTimeout(function () {
-        if (b.key != null && window.setCaption) window.setCaption(b.key, true); // translated (EN/CS) line
-        else if (b.text != null) cap.textContent = b.text;
+        if (done || !window.__captionArbiter) return;
+        if (b.key != null) window.__captionOverlay(b.key, {
+          owner: "monitor-death", scope: "stage:office", priority: 80
+        });
+        else if (b.text != null) window.__captionArbiter.literal(b.text, {
+          owner: "monitor-death", scope: "stage:office", priority: 80
+        });
       }, b.at || 0));
     });
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -80392,8 +80446,7 @@ setOfficeProgress("pc", false);
       cap.style.fontVariationSettings = "";
       window.__deathFlashCleanup = null;
       if (cfg.close) { try { cfg.close(); } catch (e) {} } // NOW remove show-X, back to the desktop
-      if (savedKey && window.setCaption) window.setCaption(savedKey, true);
-      else if (window.refreshHuntCaption) window.refreshHuntCaption();
+      if (window.__cancelCaption) window.__cancelCaption("monitor-death");
     }
     window.__deathFlashCleanup = cleanup;
     timers.push(setTimeout(cleanup, cfg.dur));
@@ -85782,8 +85835,8 @@ async def localfont(name):
     princeDungeonSet.classList.toggle("right-torch-snuffed", !!right && right.classList.contains("snuffed"));
     var dark = torches.length === 2 && torches.every(function (torch) { return torch.classList.contains("snuffed"); });
     princeDungeonSet.classList.toggle("torchless", dark);
-    if (princePresented && princeMode === "basement" && window.setCaption) {
-      window.setCaption(dark ? "prince_dark" : "lower_dungeon", true);
+    if (princePresented && princeMode === "basement" && window.__setLowerRoomCaption) {
+      window.__setLowerRoomCaption(dark ? "prince_dark" : "lower_dungeon");
     }
   }
   function setPrinceChainPosition(x, y) {
@@ -85800,7 +85853,7 @@ async def localfont(name):
         princeDungeonSet.classList.add("gate-secret-peek");
         playDungeonRatSqueak();
         runPrinceDungeonRat();
-        if (window.setCaption) window.setCaption("prince_gate_secret", true);
+        if (window.__setLowerRoomCaption) window.__setLowerRoomCaption("prince_gate_secret");
       }
     }
   }
@@ -97108,7 +97161,7 @@ async def localfont(name):
     var attractTimer = null, attractCells = [], ambientUntilAttract = 0;
     var watcherTimer = null, watchingWindow = null, watchingWasLit = false;
     var active = false, resultVisible = false, gameRaf = null, lastFrame = 0, gravityElapsed = 0;
-    var resultTimer = null, savedCaption = null, captionSaved = false, normalWindowState = null;
+    var resultTimer = null, normalWindowState = null;
     var pausedSceneAnimations = [];
     var board = [], piece = null, bag = [], score = 0, lines = 0, level = 0, runStartingHigh = 0;
     var tetrisReducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -97479,17 +97532,7 @@ async def localfont(name):
       normalWindowState = null;
     }
     function restoreCaption() {
-      if (!captionSaved) return;
-      var current = window.__captionKey ? window.__captionKey() : null;
-      // A released result card must not overwrite a newer phone/app/room caption
-      // when its bounded timeout expires.
-      if (current === "tetris_hint" || current === "tetris_touch_hint" ||
-          current === "tetris_game_over" || current === "tetris_touch_game_over") {
-        if (savedCaption && window.setCaption) window.setCaption(savedCaption, true);
-        else if (window.restoreStageHint) window.restoreStageHint("balcony");
-      }
-      savedCaption = null;
-      captionSaved = false;
+      if (window.__cancelCaption) window.__cancelCaption("minigame-tetris");
     }
     function dismissResult(restore) {
       clearTimeout(resultTimer); resultTimer = null;
@@ -97513,7 +97556,9 @@ async def localfont(name):
         resultVisible = true;
         stage.classList.add("tetris-result");
         updateHud();
-        if (window.setCaption) window.setCaption(coarseInput ? "tetris_touch_game_over" : "tetris_game_over", true);
+        if (window.__captionOverlay) window.__captionOverlay(
+          coarseInput ? "tetris_touch_game_over" : "tetris_game_over",
+          { owner: "minigame-tetris", scope: "stage:balcony", priority: 80 });
         resultTimer = setTimeout(function () { dismissResult(true); }, 6500);
       } else {
         dismissResult(false);
@@ -97527,10 +97572,6 @@ async def localfont(name):
     function startGame() {
       if (active || window.currentStageName !== "balcony") return false;
       if (resultVisible) dismissResult(false);
-      if (!captionSaved) {
-        savedCaption = window.__captionKey ? window.__captionKey() : null;
-        captionSaved = true;
-      }
       clearTimeout(ambientTimer); ambientTimer = null;
       clearAmbientEffects(true);
       normalWindowState = windows.map(function (windowEl) { return windowEl.classList.contains("lit"); });
@@ -97540,7 +97581,9 @@ async def localfont(name):
       if (window.__arcadeRunStarted) window.__arcadeRunStarted("tetris");
       stage.classList.add("tetris-on");
       if (window.__syncScopeMirrors) window.__syncScopeMirrors();
-      if (window.setCaption) window.setCaption(coarseInput ? "tetris_touch_hint" : "tetris_hint", true);
+      if (window.__captionOverlay) window.__captionOverlay(
+        coarseInput ? "tetris_touch_hint" : "tetris_hint",
+        { owner: "minigame-tetris", scope: "stage:balcony", priority: 80 });
       nextPiece();
       render();
       lastFrame = 0; gravityElapsed = 0;
@@ -105743,7 +105786,10 @@ var currentTripVariant = null;
 var tripGeneration = 0;
 function showTripCaption(variant) {
   var key = "trip_caption_" + variant;
-  if (T.en[key] && window.__flashCaptionKey) window.__flashCaptionKey(key, TRIP_DURATIONS[variant] + 250, "trip");
+  if (T.en[key] && window.__captionOverlay) window.__captionOverlay(key, {
+    owner: "trip", scope: "stage:" + (window.currentStageName || "garden"), priority: 40,
+    duration: TRIP_DURATIONS[variant] + 250, clock: "attended"
+  });
 }
 function hideTripCaption() {
   if (window.__clearFlashCaption) window.__clearFlashCaption("trip");
@@ -105967,8 +106013,11 @@ function flashMolCard(variant, holdMs) {
     c.classList.remove("mol-show");
   });
   card.classList.add("mol-show");
-  if (window.__flashCaptionKey && T.en["mol_caption_" + variant]) {
-    window.__flashCaptionKey("mol_caption_" + variant, Math.min(3500, holdMs || 3500), "chemistry");
+  if (window.__captionOverlay && T.en["mol_caption_" + variant]) {
+    window.__captionOverlay("mol_caption_" + variant, {
+      owner: "chemistry", scope: "stage:" + (window.currentStageName || "garden"), priority: 30,
+      duration: Math.min(3500, holdMs || 3500), clock: "attended"
+    });
   }
   molFlashTimer = setTimeout(function () { card.classList.remove("mol-show"); molFlashTimer = null; }, holdMs);
 }
@@ -111862,17 +111911,22 @@ function spawnDustMote(container) {
   function showRoomProgress(name) {
     if (!window.__secondRound) return false;
     var count = seenRoomList().length;
-    if (!count || !window.__flashCaptionKey) return false;
+    if (!count || !window.__captionOverlay) return false;
     var remaining = Math.max(0, ROOM_IDS.length - count);
     if (!remaining) {
       var completeKey = name === "entrance" ? "room_visit_entrance_complete" : "room_visit_complete";
       if (window.__gardenPartyOn) completeKey += "_party";
-      return window.__flashCaptionKey(completeKey, 5200, "room-progress");
+      return window.__captionOverlay(completeKey, { owner: "room-progress", scope: captionViewportScope(),
+        priority: CAPTION_PRIORITY.progress, duration: 5200, clock: "attended" });
     }
     var key = LOWER_ROOM_PROGRESS_KEYS[name];
-    if (key) return window.__flashCaptionKey(roomRemainingKey(name, remaining), 5200,
-      "room-progress", { n: remaining });
-    return window.__flashCaptionKey("room_progress", 2800, "room-progress", { n: count });
+    if (key) return window.__captionOverlay(roomRemainingKey(name, remaining), {
+      owner: "room-progress", scope: captionViewportScope(), priority: CAPTION_PRIORITY.progress,
+      duration: 5200, clock: "attended", replacements: { n: remaining }
+    });
+    return window.__captionOverlay("room_progress", { owner: "room-progress",
+      scope: captionViewportScope(), priority: CAPTION_PRIORITY.progress, duration: 2800,
+      clock: "attended", replacements: { n: count } });
   }
   function markRoomSeen(name, options) {
     if (ROOM_IDS.indexOf(name) === -1 || roomSeen(name) || window.__cinematic) return false;
@@ -111916,7 +111970,7 @@ function spawnDustMote(container) {
     }
     return landAtEntrance();
   };
-  var captionKey = "kitchen";
+  var captionKey = "kitchen"; // compatibility mirror of the arbiter's visible keyed claim
   var huntIntroShowing = false; // the blinking "wandering without aim" opening prompt owns the caption until the first tap
   var openingGuideShowing = false, openingGuideStep = "", openingGuideTimer = null, openingGuideArmTimer = null;
   var openingGuideDuration = 0; // brief normally; longer only when the same entry gesture also triggered fullscreen browser chrome
@@ -112730,8 +112784,10 @@ function spawnDustMote(container) {
         caption.classList.contains("brick-hint-live") ||
         (window.__captionKey && window.__captionKey() === "rsvp_exit") ||
         (window.__actBeatHint && window.__actBeatHint(window.currentStageName))) return false;
-    if (!window.__flashCaptionKey ||
-        !window.__flashCaptionKey("lower_rooms_clue", 5200, "lower-room-discovery")) return false;
+    if (!window.__captionOverlay || !window.__captionOverlay("lower_rooms_clue", {
+      owner: "lower-room-discovery", scope: captionViewportScope(), priority: CAPTION_PRIORITY.progress,
+      duration: 5200, clock: "attended"
+    })) return false;
     lowerRoomClueShown = true;
     return true;
   }
@@ -112851,8 +112907,10 @@ function spawnDustMote(container) {
       marker.classList.remove("portal-insisting");
       void marker.getBBox();
       marker.classList.add("portal-insisting");
-      if (window.__flashCaptionKey) {
-        window.__flashCaptionKey("lower_portal_insist", 2600, "lower-portal");
+      if (window.__captionOverlay) {
+        window.__captionOverlay("lower_portal_insist", { owner: "lower-portal",
+          scope: captionViewportScope(), priority: CAPTION_PRIORITY.feedback,
+          duration: 2600, clock: "attended" });
       }
     }
     marker.addEventListener("animationend", function (event) {
@@ -112958,12 +113016,278 @@ function spawnDustMote(container) {
       key === "office_call" || key === "office_computer" || key === "office_find" ||
       key === "office_hint";
   }
-  function stageCaptionUnderFlash(key) {
-    if (!flashedCaption || key === flashedCaption.key) return false;
-    flashedCaption.prevKey = key;
-    flashedCaption.prevHtml = huntText(key);
-    return true;
+  var CAPTION_PRIORITY = Object.freeze({
+    base: 0,
+    incidental: 20,
+    feedback: 30,
+    progress: 40,
+    story: 60,
+    mandatory: 80,
+    terminal: 100,
+    exclusive: 120
+  });
+  var captionReturningUpstairs = false;
+  function captionWithReplacements(key, replacements) {
+    var html = huntText(key);
+    if (typeof replacements === "function") replacements = replacements();
+    if (!replacements) return html;
+    Object.keys(replacements).forEach(function (name) {
+      var safe = String(replacements[name]).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      html = html.split("{" + name + "}").join(safe);
+    });
+    return html;
   }
+  function captionViewportScope() {
+    var lower = captionReturningUpstairs ? null : activeLowerRoom();
+    return lower ? "lower:" + lower.id : "stage:" + (window.currentStageName || STAGES[stageIndex] || "kitchen");
+  }
+  function captionBasePriority(key) {
+    return key === "rsvp_exit" || key === "entrance_roadtrip_camp_attended_time" ||
+      key === "entrance_roadtrip_camp_finale" || key === "entrance_roadtrip_camp_arrival" ||
+      /^entrance_roadtrip_police_(?:capture|stopped|court_stopped|court_refused|arrest)/.test(key || "") ? CAPTION_PRIORITY.terminal :
+      /^entrance_roadtrip_(?:camp|stew|stargazing)_/.test(key || "") ||
+      /^entrance_roadtrip_police_/.test(key || "") ? CAPTION_PRIORITY.mandatory :
+      /^(?:act_|party_ended|party_exit_hint)/.test(key || "") ? CAPTION_PRIORITY.story :
+      CAPTION_PRIORITY.base;
+  }
+  function createCaptionArbiter(element) {
+    var base = null, overlay = null, exclusive = null, serial = 0;
+    var tickTimer = null, lastTick = performance.now();
+    var attentionBlurred = false;
+    window.addEventListener("blur", function () {
+      attentionBlurred = true;
+      lastTick = performance.now();
+    });
+    window.addEventListener("focus", function () {
+      attentionBlurred = false;
+      lastTick = performance.now();
+    });
+    document.addEventListener("visibilitychange", function () { lastTick = performance.now(); });
+    function attended() {
+      return !attentionBlurred && !document.hidden && (!document.hasFocus || document.hasFocus());
+    }
+    function publicClaim(claim) {
+      if (!claim) return null;
+      return {
+        id: claim.id,
+        token: claim.token,
+        kind: claim.kind,
+        key: claim.key == null ? null : claim.key,
+        owner: claim.owner,
+        scope: claim.scope,
+        priority: claim.priority,
+        clock: claim.clock,
+        duration: claim.duration,
+        remaining: claim.remaining,
+        replacements: claim.replacements || null,
+        literal: claim.literal != null
+      };
+    }
+    function visible() { return exclusive || overlay || base; }
+    function paint() {
+      var claim = visible();
+      var host = element.closest("#hunt-fullscreen-area");
+      if (host) host.classList.toggle("caption-reserved-fit", !!(claim &&
+        (claim.kind === "exclusive" || claim.format === "rsvp" || claim.priority >= CAPTION_PRIORITY.terminal)));
+      element.classList.toggle("temporary-caption-live", !!(claim && claim.kind === "overlay"));
+      element.classList.toggle("rsvp-nudge", !!(claim && claim.format === "rsvp"));
+      captionKey = claim && claim.key != null ? claim.key : null;
+      if (!claim) {
+        element.textContent = "";
+        return;
+      }
+      if (claim.format === "rsvp") {
+        var lang = document.documentElement.lang, linkKey = claim.linkKey || claim.key + "_link";
+        var link = (T[lang] && T[lang][linkKey]) || T.en[linkKey] || "";
+        element.innerHTML = '<a href="#rsvp-anchor">' + link + "</a>";
+        var anchor = element.querySelector("a");
+        if (anchor) anchor.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (window.__openPhoneRsvpCompose) window.__openPhoneRsvpCompose();
+          else if (window.__openRsvpMail) window.__openRsvpMail();
+        });
+      } else if (typeof claim.renderText === "function") {
+        element.textContent = String(claim.renderText());
+      } else if (claim.literal != null) {
+        element.textContent = String(claim.literal);
+      } else if (claim.html != null) {
+        element.innerHTML = String(typeof claim.html === "function" ? claim.html() : claim.html);
+      } else {
+        element.innerHTML = captionWithReplacements(claim.key, claim.replacements);
+      }
+    }
+    function stopTickerIfIdle() {
+      if ((overlay && overlay.duration > 0) || (exclusive && exclusive.duration > 0)) return;
+      clearTimeout(tickTimer);
+      tickTimer = null;
+    }
+    function expire(kind, token) {
+      var claim = kind === "exclusive" ? exclusive : overlay;
+      if (!claim || claim.token !== token) return false;
+      if (kind === "exclusive") exclusive = null;
+      else overlay = null;
+      paint();
+      stopTickerIfIdle();
+      return true;
+    }
+    function tick() {
+      tickTimer = null;
+      var now = performance.now(), delta = Math.max(0, now - lastTick);
+      lastTick = now;
+      [overlay, exclusive].forEach(function (claim) {
+        if (!claim || !(claim.duration > 0)) return;
+        if (claim.clock === "wall") claim.remaining = Math.max(0, claim.expiresAt - now);
+        else if (attended()) claim.remaining -= delta;
+      });
+      if (overlay && overlay.duration > 0 && overlay.remaining <= 0) expire("overlay", overlay.token);
+      if (exclusive && exclusive.duration > 0 && exclusive.remaining <= 0) expire("exclusive", exclusive.token);
+      if ((overlay && overlay.duration > 0) || (exclusive && exclusive.duration > 0)) {
+        tickTimer = setTimeout(tick, 50);
+      }
+    }
+    function armTicker() {
+      if (tickTimer) return;
+      lastTick = performance.now();
+      tickTimer = setTimeout(tick, 50);
+    }
+    function normalize(kind, spec) {
+      spec = spec || {};
+      var duration = Math.max(0, Number(spec.duration) || 0);
+      var clock = spec.clock === "wall" ? "wall" : "attended";
+      return {
+        id: ++serial,
+        token: "caption-" + serial + "-" + Math.random().toString(36).slice(2),
+        kind: kind,
+        key: spec.key == null ? null : String(spec.key),
+        literal: spec.literal == null ? null : String(spec.literal),
+        html: spec.html == null ? null : spec.html,
+        renderText: spec.renderText,
+        format: spec.format || "",
+        linkKey: spec.linkKey || "",
+        replacements: spec.replacements || null,
+        owner: spec.owner || (kind === "base" ? "room" : "general"),
+        scope: spec.scope || captionViewportScope(),
+        priority: Number.isFinite(Number(spec.priority)) ? Number(spec.priority) :
+          (kind === "exclusive" ? CAPTION_PRIORITY.exclusive : kind === "overlay" ? CAPTION_PRIORITY.feedback : CAPTION_PRIORITY.base),
+        duration: duration,
+        remaining: duration,
+        clock: clock,
+        expiresAt: clock === "wall" && duration > 0 ? performance.now() + duration : 0
+      };
+    }
+    function cancelMismatchedScope(scope) {
+      if (overlay && overlay.scope !== "global" && overlay.scope !== scope) overlay = null;
+      if (exclusive && exclusive.scope !== "global" && exclusive.scope !== scope) exclusive = null;
+    }
+    function claimBase(spec) {
+      var claim = normalize("base", spec);
+      var changedScope = !base || base.scope !== claim.scope;
+      base = claim;
+      if (changedScope) cancelMismatchedScope(claim.scope);
+      if (overlay && (overlay.owner === "console" || overlay.owner === "console-html")) overlay = null;
+      if (overlay && (overlay.owner === base.owner || overlay.priority < base.priority)) overlay = null;
+      paint();
+      stopTickerIfIdle();
+      return claim.token;
+    }
+    function claimTransient(kind, spec) {
+      var claim = normalize(kind, spec);
+      var incumbent = kind === "exclusive" ? exclusive : overlay;
+      if (claim.scope !== "global" && base && claim.scope !== base.scope) return false;
+      var threshold = Math.max(base ? base.priority : CAPTION_PRIORITY.base,
+        kind === "overlay" && exclusive ? exclusive.priority : -Infinity);
+      if (claim.priority < threshold) return false;
+      if (incumbent && incumbent.owner !== claim.owner && claim.priority < incumbent.priority) return false;
+      if (kind === "exclusive") {
+        // An exclusive surface deliberately consumes any interrupted overlay. It cannot
+        // reappear after the modal/cinematic owner leaves.
+        overlay = null;
+        exclusive = claim;
+      } else {
+        overlay = claim;
+      }
+      paint();
+      if (claim.duration > 0) armTicker();
+      return claim.token;
+    }
+    function cancel(target, options) {
+      options = options || {};
+      var changed = false;
+      function matches(claim) {
+        if (!claim) return false;
+        if (!target) return true;
+        return claim.token === target || claim.owner === target || claim.scope === target;
+      }
+      if (options.base && matches(base)) { base = null; changed = true; }
+      if (matches(overlay)) { overlay = null; changed = true; }
+      if (matches(exclusive)) { exclusive = null; changed = true; }
+      if (changed) paint();
+      stopTickerIfIdle();
+      return changed;
+    }
+    function clearTransients() {
+      var changed = !!(overlay || exclusive);
+      overlay = null;
+      exclusive = null;
+      if (changed) paint();
+      stopTickerIfIdle();
+      return changed;
+    }
+    function state() {
+      return {
+        base: publicClaim(base),
+        overlay: publicClaim(overlay),
+        exclusive: publicClaim(exclusive),
+        visible: publicClaim(visible())
+      };
+    }
+    return {
+      base: claimBase,
+      overlay: function (spec) { return claimTransient("overlay", spec); },
+      exclusive: function (spec) { return claimTransient("exclusive", spec); },
+      cancel: cancel,
+      cancelScope: function (scope) { return cancel(scope); },
+      clearTransients: clearTransients,
+      refresh: paint,
+      state: state
+    };
+  }
+  var captionArbiter = createCaptionArbiter(caption);
+  window.__captionPriorities = CAPTION_PRIORITY;
+  window.__captionArbiter = {
+    base: function (key, options) {
+      options = Object.assign({}, options || {}, { key: key });
+      if (options.priority == null) options.priority = captionBasePriority(key);
+      return captionArbiter.base(options);
+    },
+    overlay: function (key, options) {
+      options = Object.assign({}, options || {}, { key: key });
+      return captionArbiter.overlay(options);
+    },
+    exclusive: function (key, options) {
+      options = Object.assign({}, options || {}, { key: key });
+      return captionArbiter.exclusive(options);
+    },
+    literal: function (text, options) {
+      options = Object.assign({}, options || {}, { literal: text });
+      return options.exclusive ? captionArbiter.exclusive(options) : captionArbiter.overlay(options);
+    },
+    html: function (html, options) {
+      options = Object.assign({}, options || {}, { html: html });
+      return options.exclusive ? captionArbiter.exclusive(options) : captionArbiter.overlay(options);
+    },
+    cancel: captionArbiter.cancel,
+    cancelScope: captionArbiter.cancelScope,
+    clearTransients: captionArbiter.clearTransients,
+    refresh: captionArbiter.refresh,
+    state: captionArbiter.state
+  };
+  window.__captionBase = window.__captionArbiter.base;
+  window.__captionOverlay = window.__captionArbiter.overlay;
+  window.__captionExclusive = window.__captionArbiter.exclusive;
+  window.__cancelCaption = window.__captionArbiter.cancel;
   function setCaption(key, force) {
     // Trailer owns the caption completely. Games and lower rooms use force=true for their
     // normal instruction lines, so the gate must admit only the reel's own cine_* invitations;
@@ -112971,7 +113295,7 @@ function spawnDustMote(container) {
     // ownership resumes as soon as stopCinematic clears the flag.
     if (window.__cinematic && (!force || typeof key !== "string" || key.indexOf("cine_") !== 0)) return;
     if ((huntIntroShowing || openingGuideShowing) && !force) return; // opening prompt/guide owns the caption until its handoff completes
-    if (lowerRoomOwnsViewport() && !force) return; // upstairs beats must not speak over an open lower room
+    if (lowerRoomOwnsViewport() && !captionReturningUpstairs && !force) return; // upstairs beats must not speak over an open lower room
     // The linear room clues retire after the first party, except for the Kitchen's
     // deliberately repeatable daytime espresso routine. Its real object clicks and
     // Enter walker must still be able to narrate grind → tamp → brew → sip. Keep the
@@ -112981,15 +113305,12 @@ function spawnDustMote(container) {
       (!window.__barUpNow || !window.__barUpNow()) && typeof key === "string" &&
       (key === "kitchen" || key.indexOf("kitchen_") === 0);
     if (window.__secondRound && phaseOneSolveCaption(key) && !repeatCoffeeCaption && !force) return;
-    // A flash owns the visible line for its full hold, but permanent progress beneath it
-    // keeps moving. Expiry must reveal the newest instruction, not the one the flash covered.
-    if (stageCaptionUnderFlash(key)) return;
-    captionKey = key;
-    caption.classList.remove("rsvp-nudge");
-    // innerHTML, not textContent: caption copy carries markup — <em> round the cast's names, the
-    // same italic the hover tooltips use. Every string here is authored copy from the T dict,
-    // never visitor input, so there's nothing to escape.
-    caption.innerHTML = huntText(key);
+    return captionArbiter.base({
+      key: key,
+      owner: lowerRoomOwnsViewport() && !captionReturningUpstairs ? "lower-room" : "room",
+      scope: captionViewportScope(),
+      priority: captionBasePriority(key)
+    });
   }
   // console toy: caption() reads the line above the scene; caption("text") overwrites it with
   // literal text and returns the previous line (same no-arg-reads / setter-returns-previous idiom
@@ -112999,148 +113320,68 @@ function spawnDustMote(container) {
   // hint-blink attract animation; reduced-motion shows it solid). hold → after that long, RESTORE the
   // previous line (only if nothing else has since claimed the caption — a room change wins).
   window.caption = function (text, opts) {
-    // prevHtml restores the line intact (markup and all); prevText is what a human reads back.
-    // The caller's own text stays LITERAL (textContent) — console input isn't authored copy, and
-    // typing caption("<b>x</b>") must not inject markup. opts.html opts INTO innerHTML for the
-    // one caller that passes authored dictionary copy (the DJ shout-out's <em>DJ Sina</em>).
-    var prevHtml = caption.innerHTML, prev = caption.textContent, prevKey = captionKey;
+    // The caller's own text stays literal: typing caption("<b>x</b>") must not inject markup.
+    var prev = caption.textContent;
     if (arguments.length === 0 || text == null) { if (window.echo) window.echo(prev); return prev; }
     var blinkMs = 0, holdMs = 0;
     if (typeof opts === "number") blinkMs = opts;                                   // caption(text, blinkMs)
     else if (opts && typeof opts === "object") { blinkMs = +opts.blink || 0; holdMs = +opts.hold || +opts.resume || 0; }
-    var asHtml = !!(opts && typeof opts === "object" && opts.html);
     if (typeof arguments[2] === "number") holdMs = arguments[2];                    // caption(text, blinkMs, holdMs)
-    captionKey = null;
     caption.classList.remove("rsvp-nudge", "hint-blink");
-    if (asHtml) caption.innerHTML = String(text); else caption.textContent = String(text);
+    var token;
+    if (opts && typeof opts === "object" && opts.html) {
+      token = captionArbiter.overlay({ html: String(text), owner: "console-html", scope: captionViewportScope(),
+        priority: CAPTION_PRIORITY.feedback, duration: holdMs, clock: "wall" });
+    } else {
+      token = captionArbiter.overlay({ literal: String(text), owner: "console", scope: captionViewportScope(),
+        priority: CAPTION_PRIORITY.feedback, duration: holdMs, clock: "wall" });
+    }
     if (window.echo) window.echo(caption.textContent); // print through the echo side-channel (respects echo(true/false)) — rendered, so markup never reaches the console
     if (blinkMs > 0) { caption.classList.add("hint-blink"); setTimeout(function () { caption.classList.remove("hint-blink"); }, blinkMs); }
-    if (holdMs > 0) {
-      var mine = caption.textContent; // compare on RENDERED text: an html line's markup never matches textContent
-      setTimeout(function () {
-        if (caption.textContent !== mine) return; // someone else (a room change / hint) reclaimed the line — leave it
-        caption.classList.remove("hint-blink");
-        caption.innerHTML = prevHtml; captionKey = prevKey; // resume the previous line, markup intact
-      }, holdMs);
-    }
+    if (!token) caption.classList.remove("hint-blink");
     return prev;
   };
-  var flashedCaption = null;
-  function clearFlashedCaption(owner, restore) {
-    var f = flashedCaption;
-    if (!f || (owner && f.owner !== owner)) return false;
-    flashedCaption = null;
-    clearTimeout(f.timer);
-    caption.classList.remove("temporary-caption-live");
-    if (restore !== false && captionKey === f.key) {
-      if (f.prevKey === "rsvp_exit") showRsvpNudge();
-      else if (f.prevKey != null) setCaption(f.prevKey, true);
-      else { caption.innerHTML = f.prevHtml; captionKey = null; }
-    }
-    return true;
-  }
-  function captionWithReplacements(key, replacements) {
-    var html = huntText(key);
-    if (!replacements) return html;
-    Object.keys(replacements).forEach(function (name) {
-      var safe = String(replacements[name]).replace(/&/g, "&amp;").replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-      html = html.split("{" + name + "}").join(safe);
-    });
-    return html;
-  }
   window.__flashCaptionKey = function (key, holdMs, owner, replacements) {
     if (!key) return false;
-    clearFlashedCaption(null, true);
-    var prevHtml = caption.innerHTML, prevKey = captionKey;
-    setCaption(key, true);
-    if (captionKey !== key) return false;
-    caption.innerHTML = captionWithReplacements(key, replacements);
-    caption.classList.add("temporary-caption-live");
-    var f = { key: key, prevHtml: prevHtml, prevKey: prevKey, owner: owner || "general",
-      replacements: replacements || null, timer: null };
-    flashedCaption = f;
-    f.timer = setTimeout(function () {
-      if (flashedCaption === f) clearFlashedCaption(f.owner, true);
-    }, Math.max(500, +holdMs || 3500));
-    return true;
+    return !!captionArbiter.overlay({ key: key, owner: owner || "general", scope: captionViewportScope(),
+      priority: CAPTION_PRIORITY.feedback, duration: Math.max(500, +holdMs || 3500),
+      clock: "wall", replacements: replacements || null });
   };
-  window.__clearFlashCaption = function (owner) { return clearFlashedCaption(owner, true); };
+  window.__clearFlashCaption = function (owner) { return captionArbiter.cancel(owner); };
   window.__flashCaptionState = function () {
-    return flashedCaption ? { key: flashedCaption.key, owner: flashedCaption.owner } : null;
+    var state = captionArbiter.state().overlay;
+    return state ? { key: state.key, owner: state.owner } : null;
   };
-  var lowerRoomReturnCaption = null;
   var lowerRoomReturnVisitSuppressed = false;
   window.__setLowerRoomCaption = function (key) {
     if (!key) return false;
-    if (lowerRoomReturnCaption) lowerRoomReturnCaption.roomKey = key;
-    else {
-      lowerRoomReturnCaption = {
-        roomKey: key,
-        key: flashedCaption ? flashedCaption.prevKey : captionKey,
-        html: flashedCaption ? flashedCaption.prevHtml : caption.innerHTML
-      };
-    }
-    // Entry captions become the room's stable line. If gameplay currently owns the
-    // visible line, leave it untouched and only change what its temporary flash restores.
-    if (stageCaptionUnderFlash(key)) return true;
-    setCaption(key, true);
-    return captionKey === key;
+    return !!captionArbiter.base({ key: key, owner: "lower-room", scope: captionViewportScope(),
+      priority: captionBasePriority(key) });
   };
-  window.__restoreLowerRoomCaption = function (key) {
-    var saved = lowerRoomReturnCaption;
-    if (!saved || (key && saved.roomKey !== key)) return false;
-    var roomKey = saved.roomKey;
-    lowerRoomReturnCaption = null;
-    if (!lowerRoomReturnVisitSuppressed && window.currentStageName) {
-      markRoomSeen(window.currentStageName);
+  window.__restoreLowerRoomCaption = function () {
+    if (window.currentStageName) {
+      captionReturningUpstairs = true;
+      try {
+        restoreStageHint(window.currentStageName);
+        if (!lowerRoomReturnVisitSuppressed) markRoomSeen(window.currentStageName);
+      }
+      finally { captionReturningUpstairs = false; }
     }
-    if (flashedCaption && flashedCaption.prevKey === roomKey) {
-      flashedCaption.prevKey = saved.key;
-      flashedCaption.prevHtml = saved.html;
-      return true;
-    }
-    if (captionKey !== roomKey) return true;
-    if (saved.key === "rsvp_exit") showRsvpNudge();
-    else if (saved.key != null) setCaption(saved.key, true);
-    else {
-      caption.innerHTML = saved.html;
-      captionKey = null;
-    }
-    // The upstairs room may have changed while its lower room was open (party, calls,
-    // games, day/night). Recompute its live line instead of leaving the cached entry line.
-    if (window.currentStageName) restoreStageHint(window.currentStageName);
     return true;
   };
   // The RSVP CTA is the second act's last beat, once the wandering is done. The key rides
   // captionKey so a language flip re-renders it.
   function showRsvpNudge() {
-    captionKey = "rsvp_exit";
-    var l = document.documentElement.lang, lk = captionKey + "_link";
-    var link = (T[l] && T[l][lk]) || T.en[lk];
-    caption.innerHTML = '<a href="#rsvp-anchor">' + link + '</a>';
-    caption.classList.add("rsvp-nudge");
-    var rsvpA = caption.querySelector("a");
-    if (rsvpA) rsvpA.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation(); // do not let the opening click bubble into the newly mounted phone's outside-click closer
-      if (window.__openPhoneRsvpCompose) window.__openPhoneRsvpCompose();
-      else if (window.__openRsvpMail) window.__openRsvpMail();
-    }); // the in-game RSVP caption opens the phone Mail composer; its Send button owns the external handoff
+    captionArbiter.base({ key: "rsvp_exit", owner: "rsvp", scope: captionViewportScope(),
+      priority: CAPTION_PRIORITY.terminal, format: "rsvp", linkKey: "rsvp_exit_link" });
   }
   window.__showRsvpNudge = showRsvpNudge; // the beat sequencer paints its exit beat through here
   window.setCaption = setCaption;
-  window.__captionKey = function () { return captionKey; }; // current caption key — games snapshot it to restore the room hint after
+  window.__captionKey = function () { return captionKey; };
+  window.__captionState = captionArbiter.state;
 
   window.refreshHuntCaption = function () {
-    if (recoveryGate && recoverySaved) { showRecoveryCaption(recoverySaved); return; }
-    if (captionKey === "rsvp_exit") { showRsvpNudge(); return; }
-    if (captionKey === "entrance_roadtrip_camp_attended_time" && window.__showLoftAttendedTimeCaption) {
-      window.__showLoftAttendedTimeCaption();
-      return;
-    }
-    caption.innerHTML = captionWithReplacements(captionKey,
-      flashedCaption && flashedCaption.key === captionKey ? flashedCaption.replacements : null);
+    captionArbiter.refresh();
     if (openingGuideShowing) paintOpeningGuide();
   };
   var finaleTimers = [];
@@ -113226,10 +113467,12 @@ function spawnDustMote(container) {
       else setCaption(kitchenCurrentCaption());
       updateKitchenInvite();
     } else if (name === "garden") {
-      updateGardenHint();
+      setCaption("garden");
+      if (window.__refreshGardenCaption) window.__refreshGardenCaption();
+      else updateGardenHint();
     } else if (name === "cuddly") {
       var octopusEl = document.getElementById("cuddly-octopus");
-      if (octopusEl && octopusEl.classList.contains("played")) setCaption("cuddly_pull");
+      setCaption(octopusEl && octopusEl.classList.contains("played") ? "cuddly_pull" : "cuddly");
     } else if (name === "office") {
       var lampsOff = ["office-lamp", "office-pendant"].every(function (id) {
         var el = document.getElementById(id);
@@ -113237,10 +113480,13 @@ function spawnDustMote(container) {
       });
       var glassEl = document.getElementById("office-stainedglass");
       if (glassEl && !glassEl.classList.contains("done")) {
-        if (lampsOff) setCaption(!window.__pragueCalled ? "office_call" : (!window.__pcPlayed ? "office_computer" : "office_find"));
-        else if (window.__pragueCalled) setCaption(!window.__pcPlayed ? "office_computer" : "office_hint");
+        if (!window.__pragueCalled) setCaption("office_call");
+        else if (lampsOff) setCaption(!window.__pcPlayed ? "office_computer" : "office_find");
+        else setCaption(!window.__pcPlayed ? "office_computer" : "office_hint");
         if (window.__updateOfficeNudges) window.__updateOfficeNudges();
       }
+    } else if (name === "balcony") {
+      setCaption("balcony");
     }
   }
   window.restoreStageHint = restoreStageHint; // games (Flair Catch, chair arcade) call this to put the room hint back
@@ -115426,8 +115672,10 @@ function spawnDustMote(container) {
       count = Math.max(0, Math.min(10, count));
       roomMapCoachActive = count < 10;
       paintRoomMapCoach();
-      if (count === 10 && window.__flashCaptionKey) {
-        window.__flashCaptionKey("party_rooms_complete", 6200, "party-roadtrip-handoff");
+      if (count === 10 && window.__captionOverlay) {
+        window.__captionOverlay("party_rooms_complete", { owner: "party-roadtrip-handoff",
+          scope: captionViewportScope(), priority: CAPTION_PRIORITY.story,
+          duration: 6200, clock: "attended" });
       }
       checkpointBridge();
       return offerRoadtripInvite(roadtripExchangeRemaining);
@@ -116449,7 +116697,13 @@ function spawnDustMote(container) {
     if (window.__cinematic || window.currentStageName !== "garden") return; // the film owns the caption; from another room the swap is silent
     var key = window.__djB ? "dj_danesh" : "dj_sina"; // whoever's spinning now
     var arr = ((T[document.documentElement.lang] || {}).hunt || T.en.hunt)[key] || T.en.hunt[key];
-    if (arr && arr.length && window.caption) window.caption(arr[Math.floor(Math.random() * arr.length)], { blink: 900, hold: 4200, html: true }); // authored copy — the DJs are named in <em>
+    if (arr && arr.length) {
+      captionArbiter.overlay({ html: arr[Math.floor(Math.random() * arr.length)], owner: "dj-shout",
+        scope: captionViewportScope(), priority: CAPTION_PRIORITY.feedback, duration: 4200,
+        clock: "attended" });
+      caption.classList.add("hint-blink");
+      setTimeout(function () { caption.classList.remove("hint-blink"); }, 900);
+    }
     // Second act: watching the decks change hands IS the floor beat paying off, so it settles
     // P2 — but only after this hype line has had its 4.2s, or the next beat would stomp the
     // very moment it's rewarding. Caption-only either way, so the timer reaches no sound.
@@ -123424,6 +123678,7 @@ function spawnDustMote(container) {
     try { localStorage.removeItem("loftExtinguisherWarned"); } catch (error) {}
     if (window.__resetShareAutoShow) window.__resetShareAutoShow();
     window.__runTransientResetHooks();
+    captionArbiter.clearTransients();
     if (window.__resetLowerRoomDiscovery) window.__resetLowerRoomDiscovery();
     if (window.__clearLoftCheckpoint) window.__clearLoftCheckpoint(); // a deliberate restart must not offer the discarded run on the next load
     if (window.__resetCheckpointSystems) window.__resetCheckpointSystems();
@@ -126052,7 +126307,10 @@ function spawnDustMote(container) {
       setTimeout(function () {
         resetHunt({ enterPageMode: enterPageMode, resetDateTime: resetDateTime });
         if (wipe) wipe.classList.remove("active");
-        if (window.__flashCaptionKey) window.__flashCaptionKey("extinguisher_reset", 4000, "extinguisher");
+        if (window.__captionOverlay) window.__captionOverlay("extinguisher_reset", {
+          owner: "extinguisher", scope: "stage:kitchen", priority: 30,
+          duration: 4000, clock: "attended"
+        });
       }, 700);
     }
     window.__activateExtinguisher = activateExtinguisher; // 'r' key routes the reset through the extinguisher
@@ -126096,7 +126354,10 @@ function spawnDustMote(container) {
         try { warned = localStorage.getItem(extinguisherWarningKey) === "1"; } catch (error) {}
         if (!warned) {
           try { localStorage.setItem(extinguisherWarningKey, "1"); } catch (error) {}
-          if (window.__flashCaptionKey) window.__flashCaptionKey("extinguisher_warning", 2500, "extinguisher");
+          if (window.__captionOverlay) window.__captionOverlay("extinguisher_warning", {
+            owner: "extinguisher", scope: "stage:kitchen", priority: 30,
+            duration: 2500, clock: "attended"
+          });
         } else activateExtinguisher();
       }
     });
@@ -126322,6 +126583,7 @@ function spawnDustMote(container) {
     var cineFrame = document.getElementById("hunt-fullscreen-area");
     if (cineFrame) cineFrame.classList.remove("cinematic-running");
     if (caption) caption.classList.remove("cine-caption", "cine-caption-in");
+    captionArbiter.cancel("cinematic");
     // the balcony finale runs on its OWN finaleTimers (rain/rainbow/fireworks + a delayed
     // showRsvpNudge). A mid-finale cancel must clear those too, or a late nudge would
     // stomp the room caption we're about to restore. Only reached while the show ran, so
@@ -126406,7 +126668,8 @@ function spawnDustMote(container) {
   // reduced-motion disables the keyframes in CSS.
   function paintCineCaption(key) {
     if (!window.__cinematic) return;
-    setCaption(key, true);
+    captionArbiter.exclusive({ key: key, owner: "cinematic", scope: "global",
+      priority: CAPTION_PRIORITY.exclusive });
     if (!caption) return;
     caption.classList.add("cine-caption");
     caption.classList.remove("cine-caption-in");
@@ -126901,11 +127164,16 @@ function spawnDustMote(container) {
   }
   function showLoftAttendedTimeCaption() {
     var key = "entrance_roadtrip_camp_attended_time";
-    var snapshot = loftAttendedSnapshot();
-    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
-    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(key);
-    else setCaption(key, true);
-    caption.innerHTML = captionWithReplacements(key, { time: formatLoftAttendedTime(snapshot.ms, lang) });
+    captionArbiter.base({
+      key: key,
+      owner: "camp-terminal",
+      scope: "lower:entrance",
+      priority: CAPTION_PRIORITY.terminal,
+      replacements: function () {
+        var lang = document.documentElement.lang === "cs" ? "cs" : "en";
+        return { time: formatLoftAttendedTime(loftAttendedSnapshot().ms, lang) };
+      }
+    });
     return caption.textContent;
   }
   window.__syncLoftAttendedTime = syncLoftAttendedTime;
@@ -127095,7 +127363,12 @@ function spawnDustMote(container) {
   }
   function showRecoveryCaption(saved) {
     caption.classList.add("recovery-caption");
-    caption.textContent = recoveryCaptionText(saved);
+    captionArbiter.exclusive({
+      owner: "recovery",
+      scope: "global",
+      priority: CAPTION_PRIORITY.exclusive,
+      renderText: function () { return recoveryCaptionText(saved); }
+    });
   }
   function dockIntroWatchControls(area) {
     var controls = document.querySelector(".watch-controls");
@@ -127186,7 +127459,7 @@ function spawnDustMote(container) {
     restoreIntroWatchControls();
     if (hadRecoveryGate) {
       caption.classList.remove("recovery-caption");
-      window.refreshHuntCaption();
+      captionArbiter.cancel("recovery");
       if (window.__refreshRoomAmbience) window.__refreshRoomAmbience();
       if (window.__syncFloorNavigation) window.__syncFloorNavigation();
     }
@@ -127247,6 +127520,9 @@ function spawnDustMote(container) {
     window.addEventListener("blur", recoveryBlurHandler);
   }
   function applyCheckpoint(saved) {
+    // Checkpoints carry semantic game state only. Drop every transient caption claim and
+    // its cancellation clock before subsystem restore derives one fresh viewport base.
+    captionArbiter.clearTransients();
     restoreCheckpointPuzzle(saved.puzzle);
     // A checkpoint predating the adapter registry (including the deliberately compact portable
     // handoff) has no systems property at all. Its legacy puzzle fields remain authoritative
@@ -127502,6 +127778,7 @@ function spawnDustMote(container) {
     if (openingGuideArmTimer) { clearTimeout(openingGuideArmTimer); openingGuideArmTimer = null; }
     openingGuideShowing = false;
     openingGuideStep = "";
+    captionArbiter.cancel("opening");
     caption.classList.remove("intro-guide");
     var nav = openingGuideNav();
     if (nav) nav.classList.remove("intro-guide-nav");
@@ -127524,8 +127801,8 @@ function spawnDustMote(container) {
     var nav = openingGuideNav();
     if (nav) nav.classList.remove("intro-guide-nav");
     openingGuideStep = "caption";
-    captionKey = "intro_guide";
-    caption.innerHTML = huntText("intro_guide");
+    captionArbiter.exclusive({ key: "intro_guide", owner: "opening", scope: "global",
+      priority: CAPTION_PRIORITY.exclusive });
     caption.classList.add("intro-guide");
     armOpeningGuide();
   }
@@ -127534,8 +127811,10 @@ function spawnDustMote(container) {
     if (window.__cinematic || window.currentStageName !== "kitchen") return;
     openingGuideShowing = true;
     openingGuideStep = "nav";
-    captionKey = kitchenPowered ? kitchenCurrentCaption() : "kitchen";
-    caption.innerHTML = huntText(captionKey);
+    var openingBaseKey = kitchenPowered ? kitchenCurrentCaption() : "kitchen";
+    setCaption(openingBaseKey, true);
+    captionArbiter.exclusive({ key: openingBaseKey, owner: "opening", scope: "global",
+      priority: CAPTION_PRIORITY.exclusive });
     var nav = openingGuideNav();
     if (nav) {
       nav.classList.add("intro-guide-nav");
@@ -127610,8 +127889,8 @@ function spawnDustMote(container) {
     if (window.__cinematic) { releaseAttract(); return; } // no prompt to wait on: whatever was held goes out
     huntIntroShowing = true;
     if (introFlushT) { clearTimeout(introFlushT); introFlushT = null; } // a reset back into attract cancels a flush still in flight
-    captionKey = "intro";
-    caption.innerHTML = huntText("intro");
+    captionArbiter.exclusive({ key: "intro", owner: "opening", scope: "global",
+      priority: CAPTION_PRIORITY.exclusive });
     caption.classList.add("hint-blink");
     var introArea = document.getElementById("hunt-fullscreen-area");
     if (introArea) introArea.classList.add("intro-active");

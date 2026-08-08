@@ -57,7 +57,13 @@ var harness = String.raw`<script>
 
     window.goToStage("kitchen");
     key("ArrowDown");
-    check("one Down press enters and permanently unlocks the lower floor",
+    check("the first Down press only arms the undiscovered lower floor",
+      !window.__bathroomRoomState().open &&
+      window.__lowerRoomDiscoveryClueState().discovered === false &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === null,
+      JSON.stringify(window.__bathroomRoomState()));
+    key("ArrowDown");
+    check("the second Down press enters and permanently unlocks the lower floor",
       window.__bathroomRoomState().open &&
       window.__lowerRoomDiscoveryClueState().discovered === true &&
       localStorage.getItem("lowerRoomDiscovered:v1") === "1",
@@ -89,7 +95,13 @@ var harness = String.raw`<script>
 
     window.goToStage("kitchen");
     key("ArrowDown");
-    check("Start over re-arms first-press discovery",
+    check("Start over re-arms deliberate double-press discovery",
+      !window.__bathroomRoomState().open &&
+      window.__lowerRoomDiscoveryClueState().discovered === false &&
+      localStorage.getItem("lowerRoomDiscovered:v1") === null,
+      JSON.stringify(window.__bathroomRoomState()));
+    key("ArrowDown");
+    check("the second post-reset Down press enters and records discovery",
       window.__bathroomRoomState().open &&
       window.__lowerRoomDiscoveryClueState().discovered === true &&
       localStorage.getItem("lowerRoomDiscovered:v1") === "1",

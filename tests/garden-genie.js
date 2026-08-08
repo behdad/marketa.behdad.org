@@ -24,6 +24,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
           shown: lamp.classList.contains("genie-out"),
           tabindex: genie.getAttribute("tabindex"),
           animation: getComputedStyle(genie).animationName,
+          pointerEvents: getComputedStyle(genie).pointerEvents,
           scale: getComputedStyle(genie).transform
         };
         click(genie);
@@ -64,9 +65,10 @@ check(!!result, "focused browser harness completed", result);
 if (result) {
   check(!result.errors.length, "no uncaught page errors", result.errors);
   check(result.summoned && result.summoned.shown &&
-    result.summoned.tabindex === "0" &&
-    result.summoned.animation === "genie-pop",
-    "the first lamp click summons the genie", result.summoned);
+    result.summoned.tabindex === "-1" &&
+    result.summoned.animation === "genie-pop" &&
+    result.summoned.pointerEvents === "auto",
+    "the first lamp click summons a pointer-active, non-Tab genie", result.summoned);
   check(result.entered && !result.entered.shown &&
     result.entered.tabindex === "-1" && result.entered.overlay &&
     result.entered.presentation && result.entered.presentation.mode === "room" &&

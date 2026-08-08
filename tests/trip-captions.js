@@ -15,7 +15,7 @@ var HARNESS = String.raw`<pre id="__report">pending</pre>
       flash: window.__flashCaptionState(),
       key: window.__captionKey(),
       text: el.textContent,
-      clearsFrame: box.bottom <= frameBox.top + 0.5
+      clearsFrame: box.bottom <= frameBox.top + 0.5 || box.top >= frameBox.bottom - 0.5
     };
   }
   window.addEventListener("load", function () {

@@ -52,20 +52,21 @@ var expected = {
     dungeon: "Dungeon · the old game is awake.",
     cinema: "Cinema · wake the projector, then choose a film.",
     bedroom: "Click any pane to play tic-tac-toe",
-    entrance: "Fancy-Stupid! · click the road to take the wheel."
+    entrance: "The car is yours to drive · finish the upstairs clue trail to unlock the party first."
   },
   cs: {
     bathroom: "Koupelna · vybavení vítá hru.",
     dungeon: "Žalář · stará hra se probudila.",
     cinema: "Kino · probuď projektor a pak vyber film.",
     bedroom: "Kliknutím na libovolné políčko spustit piškvorky",
-    entrance: "Fancy-Stupid! · klikni na silnici a usedni za volant."
+    entrance: "Autem se můžeš projet hned · nejdřív dokonči horní stopu a odemkni párty."
   }
 };
 ["en", "cs"].forEach(function (lang) {
   Object.keys(expected[lang]).forEach(function (room) {
     var caption = result[lang] && result[lang][room];
-    var key = room === "bedroom" ? "bedroom_ttt_start_caption" : "lower_" + room;
+    var key = room === "bedroom" ? "bedroom_ttt_start_caption" :
+      (room === "entrance" ? "lower_entrance_before_party" : "lower_" + room);
     check(caption && caption.key === key &&
       caption.text === expected[lang][room] && !caption.flash,
     room + " has one stable " + lang.toUpperCase() + " entry caption", caption);

@@ -60,9 +60,9 @@ var HARNESS = String.raw`<script>
       window.__cuddlyProjector.channel() === "stars",
       window.currentStageName + "/" + (window.__cuddlyProjector && window.__cuddlyProjector.channel()));
     check("piano foreground ducks the party bed", window.__partyDuck === 0.06, String(window.__partyDuck));
-    check("night-sky channel reveals a focusable one-octave keybed",
+    check("night-sky channel reveals a non-Tab one-octave keybed",
       piano && screen.classList.contains("chan-stars") &&
-      piano.getAttribute("tabindex") === "0" &&
+      piano.getAttribute("tabindex") === "-1" &&
       getComputedStyle(piano).visibility === "visible" &&
       whites.length === 8 && blacks.length === 5,
       JSON.stringify({ channel: screen.className.baseVal, tabindex: piano && piano.getAttribute("tabindex"),

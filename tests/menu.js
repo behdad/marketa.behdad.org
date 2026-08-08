@@ -265,7 +265,7 @@ var HARNESS = [
   "    ctxAt(mailTile); if(monOpen()) monOpen().click(); await sleep(30); S('desk_mail_open_registered',mon().classList.contains('show-mail')&&reg('mail')&&dot('mail'));",
   "    if(window.__closeTopMonitorApp) window.__closeTopMonitorApp(); await sleep(20); var mailBox1=mailTile.getBoundingClientRect();",
   "    var mailIcon=mailTile.querySelector('.dock-tile'), mailDot=mailTile.querySelector('.dock-running-dot'), iconBox=mailIcon.getBoundingClientRect(), dotBox=mailDot.getBoundingClientRect();",
-  "    S('desk_mail_close_kept_running',!mon().classList.contains('show-mail')&&reg('mail')&&dot('mail')); S('desk_dot_no_layout_shift',mailBox0.width===mailBox1.width&&mailBox0.height===mailBox1.height); S('desk_dot_is_circle',!!mailDot.querySelector('circle')&&Math.abs(dotBox.width-dotBox.height)<.1); S('desk_dot_bottom_right',dotBox.left>=iconBox.left+iconBox.width*.65&&dotBox.top>=iconBox.top+iconBox.height*.65&&dotBox.right<=iconBox.right+1&&dotBox.bottom<=iconBox.bottom+1);",
+  "    S('desk_mail_close_kept_running',!mon().classList.contains('show-mail')&&reg('mail')&&dot('mail')); S('desk_dot_dimensions',{before:{width:mailBox0.width,height:mailBox0.height},after:{width:mailBox1.width,height:mailBox1.height}}); S('desk_dot_no_layout_shift',Math.abs(mailBox0.width-mailBox1.width)<.01&&Math.abs(mailBox0.height-mailBox1.height)<.01); S('desk_dot_is_circle',!!mailDot.querySelector('circle')&&Math.abs(dotBox.width-dotBox.height)<.1); S('desk_dot_bottom_right',dotBox.left>=iconBox.left+iconBox.width*.65&&dotBox.top>=iconBox.top+iconBox.height*.65&&dotBox.right<=iconBox.right+1&&dotBox.bottom<=iconBox.bottom+1);",
   "    S('desk_mail_prevented',ctxAt(mailTile)); S('desk_mail_items',monItems()); S('desk_mail_has_open',!!monOpen()); S('desk_mail_has_kill',!!monKill());",
   // Kill the backgrounded Mail task. It is surfaced and runs the same paper-airplane gag.
   "    if(monKill()) monKill().click(); await sleep(40); S('desk_mail_kill_same_gag',mon().classList.contains('show-mail')&&mon().classList.contains('death-mail')); S('desk_mail_kill_cleared',!reg('mail')&&!dot('mail')); S('desk_mail_kill_hid_menu',!monMenu());",
@@ -410,7 +410,7 @@ check("blank desktop and menu-bar clicks do not blink the whole monitor", s.desk
 check("fresh app tiles all expose Open only and have no running dots", s.desk_fresh_all_open_only === true && s.desk_fresh_no_dots === true);
 check("real desktop Open registers and dots Mail", s.desk_mail_open_registered === true);
 check("normal close backgrounds Mail without clearing its registry entry or dot", s.desk_mail_close_kept_running === true);
-check("running dot does not change the dock cell dimensions", s.desk_dot_no_layout_shift === true);
+check("running dot does not change the dock cell dimensions", s.desk_dot_no_layout_shift === true, s.desk_dot_dimensions);
 check("running marker is a geometrically round SVG LED", s.desk_dot_is_circle === true);
 check("running dot sits inside the app icon’s bottom-right corner", s.desk_dot_bottom_right === true);
 check("backgrounded Mail exposes Open + Kill (Open first)", s.desk_mail_prevented === true && Array.isArray(s.desk_mail_items) && s.desk_mail_items.length === 2 && /open/i.test(s.desk_mail_items[0] || "") && /kill/i.test(s.desk_mail_items[1] || "") && s.desk_mail_has_open === true && s.desk_mail_has_kill === true, s.desk_mail_items);

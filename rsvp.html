@@ -41179,10 +41179,15 @@ window.__entranceRoomOpen = false;
   };
   var CAMP_SLEEP_PHASES = ["idle", "prompt", "fire-out", "campers-gone", "tent-lit", "dark", "zzz", "complete", "congrats"];
   var CAMP_SLEEP_DELAYS = { "fire-out": 680, "campers-gone": 820, "tent-lit": 900, "dark": 1320, "zzz": 2550, "complete": 3000 };
+  var CAMP_FIN_ATTENDED_CAPTION_DELAY = 6200;
   var CAMP_WISDOM_HANDOFF_MS = 5450;
   var campSleepState = { phase: "idle", elapsed: 0 };
   var campSleepTimer = null;
   var campSleepTimerStartedAt = null;
+  var campFinAttendedCaptionTimer = null;
+  var campFinAttendedCaptionStartedAt = null;
+  var campFinAttendedCaptionElapsed = 0;
+  var campFinAttendedCaptionShown = false;
   var campWisdomHandoffReady = false;
   var campWisdomHandoffTimer = null;
   var campStargazingWasEligible = false;
@@ -41653,11 +41658,48 @@ window.__entranceRoomOpen = false;
         campMamaBearHomeNext && campMamaBearHomeNext.parentNode === campMamaBearHome ? campMamaBearHomeNext : null);
     }
   }
+  function pauseCampFinAttendedCaption() {
+    if (campFinAttendedCaptionTimer !== null && campFinAttendedCaptionStartedAt !== null) {
+      campFinAttendedCaptionElapsed = Math.min(CAMP_FIN_ATTENDED_CAPTION_DELAY,
+        campFinAttendedCaptionElapsed + Math.max(0, performance.now() - campFinAttendedCaptionStartedAt));
+    }
+    clearTimeout(campFinAttendedCaptionTimer);
+    campFinAttendedCaptionTimer = null;
+    campFinAttendedCaptionStartedAt = null;
+  }
+  function showCampFinAttendedCaption() {
+    if (campSleepState.phase !== "congrats" || campFinAttendedCaptionShown) return false;
+    campFinAttendedCaptionShown = true;
+    lastDriveInstruction = "entrance_roadtrip_camp_attended_time";
+    if (window.__showLoftAttendedTimeCaption) window.__showLoftAttendedTimeCaption();
+    return true;
+  }
+  function scheduleCampFinAttendedCaption() {
+    pauseCampFinAttendedCaption();
+    if (campSleepState.phase !== "congrats" || campFinAttendedCaptionShown || !campSleepFinaleAttended()) return false;
+    var remaining = Math.max(0, CAMP_FIN_ATTENDED_CAPTION_DELAY - campFinAttendedCaptionElapsed);
+    campFinAttendedCaptionStartedAt = performance.now();
+    campFinAttendedCaptionTimer = setTimeout(function () {
+      campFinAttendedCaptionElapsed = CAMP_FIN_ATTENDED_CAPTION_DELAY;
+      campFinAttendedCaptionTimer = null;
+      campFinAttendedCaptionStartedAt = null;
+      if (campSleepFinaleAttended()) showCampFinAttendedCaption();
+    }, remaining);
+    return true;
+  }
+  function resetCampFinAttendedCaption() {
+    pauseCampFinAttendedCaption();
+    campFinAttendedCaptionElapsed = 0;
+    campFinAttendedCaptionShown = false;
+  }
   function armCampFinBearLook() {
-    if (!campMamaBear) return;
-    campMamaBear.classList.remove("camp-fin-look", "camp-fin-look-paused");
-    void campMamaBear.getBoundingClientRect();
-    campMamaBear.classList.add("camp-fin-look");
+    resetCampFinAttendedCaption();
+    if (campMamaBear) {
+      campMamaBear.classList.remove("camp-fin-look", "camp-fin-look-paused");
+      void campMamaBear.getBoundingClientRect();
+      campMamaBear.classList.add("camp-fin-look");
+    }
+    scheduleCampFinAttendedCaption();
   }
   function paintCampSleepFinale() {
     if (!campFireScene) return;
@@ -41714,6 +41756,9 @@ window.__entranceRoomOpen = false;
     pauseCampSleepFinale();
     campSleepState.phase = CAMP_SLEEP_PHASES[phaseIndex + 1];
     campSleepState.elapsed = 0;
+    if (campSleepState.phase === "congrats" && window.__finishLoftAttendedTime) {
+      window.__finishLoftAttendedTime();
+    }
     syncCampSleepAnimationOffset();
     paintCampSleepFinale();
     syncRoadtripCampFireCaption(false);
@@ -41747,6 +41792,7 @@ window.__entranceRoomOpen = false;
   }
   function resetCampSleepFinale() {
     pauseCampSleepFinale();
+    resetCampFinAttendedCaption();
     if (campMamaBear) campMamaBear.classList.remove("camp-fin-look", "camp-fin-look-paused");
     campSleepState.phase = "idle";
     campSleepState.elapsed = 0;
@@ -42344,21 +42390,25 @@ window.__entranceRoomOpen = false;
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) {
       pauseCampSleepFinale();
+      pauseCampFinAttendedCaption();
       pauseCampWisdomHandoff();
       if (campMamaBear) campMamaBear.classList.add("camp-fin-look-paused");
     } else {
       scheduleCampSleepFinale();
+      scheduleCampFinAttendedCaption();
       scheduleCampWisdomHandoff();
       if (campMamaBear) campMamaBear.classList.remove("camp-fin-look-paused");
     }
   });
   window.addEventListener("blur", function () {
     pauseCampSleepFinale();
+    pauseCampFinAttendedCaption();
     pauseCampWisdomHandoff();
     if (campMamaBear) campMamaBear.classList.add("camp-fin-look-paused");
   });
   window.addEventListener("focus", function () {
     scheduleCampSleepFinale();
+    scheduleCampFinAttendedCaption();
     scheduleCampWisdomHandoff();
     if (campMamaBear) campMamaBear.classList.remove("camp-fin-look-paused");
   });
@@ -42548,6 +42598,14 @@ window.__entranceRoomOpen = false;
   window.__entranceRoadtripCampSleepStart = startCampSleepFinale;
   window.__entranceRoadtripCampSleepStep = function () { return advanceCampSleepFinale(true); };
   window.__entranceRoadtripCampSleepState = campSleepSnapshot;
+  window.__entranceRoadtripCampFinCaptionState = function () {
+    var elapsed = campFinAttendedCaptionElapsed;
+    if (campFinAttendedCaptionTimer !== null && campFinAttendedCaptionStartedAt !== null) {
+      elapsed += Math.max(0, performance.now() - campFinAttendedCaptionStartedAt);
+    }
+    return { elapsed: Math.round(Math.min(CAMP_FIN_ATTENDED_CAPTION_DELAY, elapsed)),
+      shown: campFinAttendedCaptionShown, running: campFinAttendedCaptionTimer !== null };
+  };
   window.__entranceRoadtripCampDoNext = roadtripCampDoNext;
   document.addEventListener("keydown", function (event) {
     if (event.key === "Enter" && roadtripState.active && roadtripState.route === "camp" &&
@@ -45296,6 +45354,7 @@ window.__entranceRoomOpen = false;
     if (window.__syncScopeMirrors) window.__syncScopeMirrors();
     if (changed && roadtripState.active) syncPorscheDriveInstruction(true);
     if (changed && window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+    if (changed && window.__syncLoftAttendedTime) window.__syncLoftAttendedTime();
     return changed;
   }
   function resumeRoadtripFromDrivingInput() {
@@ -45436,6 +45495,7 @@ window.__entranceRoomOpen = false;
       campStewState.open = false;
       campStargazingState.open = false;
       pauseCampSleepFinale();
+      pauseCampFinAttendedCaption();
       pauseCampWisdomHandoff();
       stopCampStewClock();
       stopCampStewClank();
@@ -45476,6 +45536,7 @@ window.__entranceRoomOpen = false;
     }
     if (window.__updateRoadtripCampAudio) window.__updateRoadtripCampAudio();
     if (window.__updatePlayPauseBtn) window.__updatePlayPauseBtn();
+    if (window.__syncLoftAttendedTime) window.__syncLoftAttendedTime();
   }
   function pauseRoadtrip() {
     if (!roadtripState.active) return false;
@@ -45570,6 +45631,7 @@ window.__entranceRoomOpen = false;
     if (roadtripState.route === "camp") {
       ensureCampStewClock();
       scheduleCampSleepFinale();
+      scheduleCampFinAttendedCaption();
       scheduleCampWisdomHandoff();
     }
     return true;
@@ -52418,6 +52480,7 @@ var T = {
       entrance_roadtrip_camp_sign: "CAMPING",
       entrance_roadtrip_camp_arrival: "Congrats! You reached the end of the game. <span class=\"camp-rsvp-cta\">Now go do your RSVP!</span>",
       entrance_roadtrip_camp_finale: "Wow, what a lofly day! <span class=\"camp-rsvp-cta\">Now go do your RSVP!</span>",
+      entrance_roadtrip_camp_attended_time: "{time} in loft. <span class=\"camp-rsvp-cta\">Tell us your time in your RSVP.</span>",
       entrance_roadtrip_camp_fire_invite: "What a beautiful campsite! Let’s build a fire.",
       entrance_roadtrip_camp_sleep_prompt: "It’s getting late. Let’s put out the fire and get some sleep.",
       entrance_roadtrip_camp_food_warning: "Never leave food outside at night.",
@@ -53789,6 +53852,7 @@ var T = {
       entrance_roadtrip_camp_sign: "KEMP",
       entrance_roadtrip_camp_arrival: "Gratulujeme! Dojeli jste na konec hry. <span class=\"camp-rsvp-cta\">Teď běžte vyplnit RSVP!</span>",
       entrance_roadtrip_camp_finale: "Páni, to byl ale loftový den! <span class=\"camp-rsvp-cta\">Teď hurá na RSVP!</span>",
+      entrance_roadtrip_camp_attended_time: "{time} v loftu. <span class=\"camp-rsvp-cta\">Napište nám svůj čas do RSVP.</span>",
       entrance_roadtrip_camp_fire_invite: "To je ale krásné tábořiště! Pojďme rozdělat oheň.",
       entrance_roadtrip_camp_sleep_prompt: "Už je pozdě. Uhasme oheň a pojďme spát.",
       entrance_roadtrip_camp_food_warning: "Nikdy nenechávejte přes noc jídlo venku.",
@@ -112508,6 +112572,10 @@ function spawnDustMote(container) {
   window.refreshHuntCaption = function () {
     if (recoveryGate && recoverySaved) { showRecoveryCaption(recoverySaved); return; }
     if (captionKey === "rsvp_exit") { showRsvpNudge(); return; }
+    if (captionKey === "entrance_roadtrip_camp_attended_time" && window.__showLoftAttendedTimeCaption) {
+      window.__showLoftAttendedTimeCaption();
+      return;
+    }
     caption.innerHTML = captionWithReplacements(captionKey,
       flashedCaption && flashedCaption.key === captionKey ? flashedCaption.replacements : null);
     if (openingGuideShowing) paintOpeningGuide();
@@ -126144,6 +126212,75 @@ function spawnDustMote(container) {
   var recoveryReleaseHandler = null, recoveryBlurHandler = null;
   var introWatchParent = null, introWatchNext = null;
   var cinematicRecoveryRaw = null;
+  var loftAttendedMs = 0, loftAttendedStartedAt = null, loftAttendedComplete = false;
+  var loftAttendedPageHeld = false;
+  function loftAttendedEligible() {
+    var transport = window.__entranceRoadtripTransportState && window.__entranceRoadtripTransportState();
+    return !loftAttendedComplete && !loftAttendedPageHeld && attractOver() && !window.__cinematic && !recoveryGate &&
+      !document.hidden && (!document.hasFocus || document.hasFocus()) &&
+      !(transport && transport.active && transport.paused);
+  }
+  function syncLoftAttendedTime() {
+    var now = performance.now();
+    if (loftAttendedStartedAt !== null) {
+      loftAttendedMs += Math.max(0, now - loftAttendedStartedAt);
+      loftAttendedStartedAt = null;
+    }
+    if (loftAttendedEligible()) loftAttendedStartedAt = now;
+    return loftAttendedMs;
+  }
+  function loftAttendedSnapshot() {
+    syncLoftAttendedTime();
+    return { ms: Math.max(0, Math.round(loftAttendedMs)), complete: loftAttendedComplete };
+  }
+  function restoreLoftAttendedTime(row) {
+    loftAttendedStartedAt = null;
+    loftAttendedMs = row && Number.isFinite(Number(row.ms)) ?
+      Math.max(0, Math.min(365 * 24 * 60 * 60 * 1000, Number(row.ms))) : 0;
+    loftAttendedComplete = !!(row && row.complete === true);
+    syncLoftAttendedTime();
+    return loftAttendedSnapshot();
+  }
+  function resetLoftAttendedTime() {
+    loftAttendedStartedAt = null;
+    loftAttendedMs = 0;
+    loftAttendedComplete = false;
+    return { ms: 0, complete: false };
+  }
+  function finishLoftAttendedTime() {
+    syncLoftAttendedTime();
+    loftAttendedComplete = true;
+    loftAttendedStartedAt = null;
+    return loftAttendedSnapshot();
+  }
+  function formatLoftAttendedTime(ms, lang) {
+    var minutes = Math.max(1, Math.round(Math.max(0, Number(ms) || 0) / 60000));
+    var hours = Math.floor(minutes / 60), remainder = minutes % 60;
+    lang = lang === "cs" ? "cs" : "en";
+    function unit(value, enOne, enMany, csOne, csFew, csMany) {
+      if (lang === "en") return value + " " + (value === 1 ? enOne : enMany);
+      return value + " " + (value === 1 ? csOne : value >= 2 && value <= 4 ? csFew : csMany);
+    }
+    if (!hours) return unit(minutes, "minute", "minutes", "minuta", "minuty", "minut");
+    var parts = [unit(hours, "hour", "hours", "hodina", "hodiny", "hodin")];
+    if (remainder) parts.push(unit(remainder, "minute", "minutes", "minuta", "minuty", "minut"));
+    return parts.join(" ");
+  }
+  function showLoftAttendedTimeCaption() {
+    var key = "entrance_roadtrip_camp_attended_time";
+    var snapshot = loftAttendedSnapshot();
+    var lang = document.documentElement.lang === "cs" ? "cs" : "en";
+    if (window.__setLowerRoomCaption) window.__setLowerRoomCaption(key);
+    else setCaption(key, true);
+    caption.innerHTML = captionWithReplacements(key, { time: formatLoftAttendedTime(snapshot.ms, lang) });
+    return caption.textContent;
+  }
+  window.__syncLoftAttendedTime = syncLoftAttendedTime;
+  window.__loftAttendedTimeState = loftAttendedSnapshot;
+  window.__resetLoftAttendedTime = resetLoftAttendedTime;
+  window.__finishLoftAttendedTime = finishLoftAttendedTime;
+  window.__formatLoftAttendedTime = formatLoftAttendedTime;
+  window.__showLoftAttendedTimeCaption = showLoftAttendedTimeCaption;
   function checkpointClass(id, name) { var el = document.getElementById(id); return !!(el && el.classList.contains(name)); }
   function checkpointToggle(id, name, on) { var el = document.getElementById(id); if (el) el.classList.toggle(name, !!on); }
   function checkpointPuzzleState() {
@@ -126222,6 +126359,7 @@ function spawnDustMote(container) {
   }
   function checkpointPayload() {
     var balcony = document.getElementById("stage-balcony");
+    var attended = loftAttendedSnapshot();
     return {
       version: LOFT_CHECKPOINT_VERSION, savedAt: Date.now(),
       progress: {
@@ -126231,7 +126369,8 @@ function spawnDustMote(container) {
         lowerRoom: (activeLowerRoom() || {}).id,
         phase2: !!window.__secondRound, party: !!window.__gardenPartyOn,
         daylight: !(balcony && balcony.classList.contains("dusk")),
-        bbq: !!(window.bbq && window.bbq())
+        bbq: !!(window.bbq && window.bbq()),
+        attendedMs: attended.ms, attendedComplete: attended.complete
       },
       puzzle: checkpointPuzzleState(),
       phone: window.__checkpointPhoneCapture ? window.__checkpointPhoneCapture() : null,
@@ -126269,6 +126408,7 @@ function spawnDustMote(container) {
   function clearCheckpoint() {
     clearTimeout(checkpointWriteTimer); checkpointWriteTimer = null;
     try { localStorage.removeItem(LOFT_CHECKPOINT_KEY); } catch (_error) {}
+    resetLoftAttendedTime();
   }
   function loadCheckpoint() {
     try {
@@ -126490,6 +126630,7 @@ function spawnDustMote(container) {
       restoreSystems["phone-shell"] = Object.assign({}, restoreSystems["phone-shell"], { unlocked: false });
     }
     var p = saved.progress || {}, savedMax = Math.max(0, Math.min(STAGES.length - 1, parseInt(p.maxUnlocked, 10) || 0));
+    restoreLoftAttendedTime({ ms: p.attendedMs, complete: p.attendedComplete });
     var lowerRoom = savedLowerRoom(p);
     setMaxUnlocked(0, true); unlockThrough(savedMax);
     setSolvedRooms(p.solvedRooms);
@@ -126523,6 +126664,7 @@ function spawnDustMote(container) {
     // applied. This makes Continue one atomic reveal instead of exposing fresh-page decor.
     recoveryPreviewLook = null;
     hideRecoveryGate();
+    syncLoftAttendedTime();
     saveCheckpoint();
   }
   function runGameEntryAction(action) {
@@ -126821,6 +126963,7 @@ function spawnDustMote(container) {
     removeClickMe();
     leaveIntroChrome();
     releaseAttract();
+    if (window.__syncLoftAttendedTime) window.__syncLoftAttendedTime();
   }
   window.__endAttract = endAttract;
   // Open (and re-open on reset) on a blinking "wandering without aim" invitation; the first strip
@@ -126857,7 +127000,19 @@ function spawnDustMote(container) {
   }
 
   window.addEventListener("loft:statechange", scheduleCheckpoint);
-  window.addEventListener("pagehide", function () { saveCheckpoint(); });
+  window.addEventListener("blur", syncLoftAttendedTime);
+  window.addEventListener("focus", syncLoftAttendedTime);
+  document.addEventListener("visibilitychange", syncLoftAttendedTime);
+  window.addEventListener("pagehide", function () {
+    syncLoftAttendedTime();
+    loftAttendedPageHeld = true;
+    loftAttendedStartedAt = null;
+    saveCheckpoint();
+  });
+  window.addEventListener("pageshow", function () {
+    loftAttendedPageHeld = false;
+    syncLoftAttendedTime();
+  });
   setInterval(function () { if (!document.hidden) saveCheckpoint(); }, 2500); // catches stable internal changes that do not publish a state event
   goToStage("kitchen", { seenSilent: true }); // sets the initial room/caption before either opening gate goes on
   if (!showRecoveryGate(loadCheckpoint())) {

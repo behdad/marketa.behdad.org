@@ -260,7 +260,9 @@ suggestion appears. The campers retire into the glowing tent but leave their cor
 The solved constellations recede into a much denser twinkling sky; as the Zs rise, the mama bear
 crosses camp to collect the scraps. The food-storage warning holds for three seconds, then gives way
 to the existing RSVP congratulations as the view finishes its restrained pan into the stars and a
-small `~ fin ~` appears. Leaving Camping or switching away pauses the curtain call at
+small `~ fin ~` appears. After the mama bear looks around and her cub rejoins her, the caption reports
+the attended time spent in loft and invites the player to include it in the RSVP. Leaving Camping or
+switching away pauses the curtain call at
 its current beat; returning continues from there. Leaving after it finishes makes the next
 **Camping** visit begin again at an empty firepit.
 
@@ -277,7 +279,9 @@ point out a few easy-to-miss controls elsewhere in the game.
 The game begins checkpointing after the Kitchen is solved or deliberately left for another room.
 On a later visit, **Continue** restores the saved room and floor, progression, durable arrangements,
 Album and Messages data, and safe device shell state. Running games, calls, cameras, and media return
-stopped. Rooms you had not reached remain locked. **Start over** clears the checkpoint; Restart
+stopped. The finale clock accumulates only while the started game is visible, focused, and not on an
+explicitly paused Road Trip, and Continue resumes that accumulated total. Rooms you had not reached
+remain locked. **Start over** clears the checkpoint and its clock; Restart
 inside the game asks for confirmation.
 
 **Trailer** is a separate one-minute preview. It does not consume a save and offers **Take over** to

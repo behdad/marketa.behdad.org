@@ -140,6 +140,11 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
   window.addEventListener("load", function () {
     window.playCampBearCodaSound = function (kind) { report.sounds.push(kind); };
     window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__setSeenRooms([
+      "kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"
+    ]);
     window.goToStage("balcony");
     setTimeout(function () {
       try {
@@ -255,6 +260,14 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
             setTimeout(function () {
               try {
                 report.congratsBearLook = snap();
+              } catch (error) { report.errors.push(String(error && error.stack || error)); }
+            }, 8700);
+            setTimeout(function () {
+              try {
+                report.attendedCaption = snap();
+                window.setLang("cs");
+                report.czechAttendedCaption = snap().captionText;
+                window.setLang("en");
                 var finCheckpoint = window.__captureCheckpointSystems();
                 window.__restoreCheckpointSystems(finCheckpoint, "afterStage");
                 report.congratsReload = snap();
@@ -269,7 +282,7 @@ var HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-9999px">
                 report.fresh = snap();
               } catch (error) { report.errors.push(String(error && error.stack || error)); }
               finish();
-            }, 8700);
+            }, 10600);
             return;
           } catch (error) { report.errors.push(String(error && error.stack || error)); }
           finish();
@@ -303,6 +316,11 @@ var REDUCED_HARNESS = String.raw`<pre id="__report" style="position:fixed;left:-
   }
   window.addEventListener("load", function () {
     window.__unlockAllRooms();
+    window.__setSecondRound(true, { releaseHeld: false });
+    window.__setSeenRooms([
+      "kitchen", "garden", "cuddly", "office", "balcony",
+      "bathroom", "dungeon", "cinema", "bedroom", "entrance"
+    ]);
     window.goToStage("balcony");
     setTimeout(function () {
       try {
@@ -387,7 +405,7 @@ function check(ok, message, detail) {
 }
 
 console.log("rsvp.html campsite sleep finale:");
-var result = lib.runPageSync("rsvp.html", HARNESS, 10500, {
+var result = lib.runPageSync("rsvp.html", HARNESS, 12400, {
   forceReduce: true,
   urlSuffix: "?date=2026-07-15&time=23:00#play",
   chromeFlags: "--window-size=1180,900"
@@ -545,6 +563,12 @@ check(result && result.congrats &&
   result.congrats.cubDelay === "4.25s" && result.congratsBearLook && result.congratsBearLook.mamaFinLook,
   "the cub waits for mama's look, then bounds across to rejoin her",
   { before: result && result.congrats, after: result && result.congratsBearLook });
+check(result && result.attendedCaption &&
+  result.attendedCaption.caption === "entrance_roadtrip_camp_attended_time" &&
+  /^1 minute in loft\. Tell us your time in your RSVP\.$/.test(result.attendedCaption.captionText) &&
+  result.czechAttendedCaption === "1 minuta v loftu. Napište nám svůj čas do RSVP.",
+  "after the bear and cub finish, the caption reports attended time in both languages",
+  { en: result && result.attendedCaption, cs: result && result.czechAttendedCaption });
 check(result && result.congratsReload && result.congratsReload.phase === "congrats" &&
   result.congratsReload.mamaFinLook && result.congratsReload.mamaHeadDelay === "3s" &&
   result.congratsReload.cubAnimation === "entrance-roadtrip-camp-cub-rejoin" &&

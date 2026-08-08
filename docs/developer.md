@@ -393,13 +393,24 @@ During the checkpointed three-second warning, `#entrance-roadtrip-camp` pans to 
 dense star field; a translated `<use>` repeats that field above the original scene bounds, and the
 terminal phase reveals the neutral Fraunces `~ fin ~` with the congratulations caption. The pan seeks
 through `--camp-sleep-pan-resume`, pauses with the same attended-time owner, and snaps to its end for
-reduced motion. Reduced motion also snaps the bear and cobs to their collected positions.
+reduced motion. Reduced motion also snaps the bear and cobs to their collected positions. Once the
+mama-look and cub-rejoin one-shots finish, an attended terminal timer replaces the congratulations
+with `entrance_roadtrip_camp_attended_time`; language refreshes reformat the frozen duration rather
+than exposing its placeholder.
 `campStargazingState` checkpoints exact trace and handoff progress plus
 `campSleepState.phase` and attended time within that phase, but always restores the trace overlay
 closed. Leaving, hiding the tab, or moving focus to another window pauses an unfinished curtain call,
 including its bear/corn/Z animations; return resumes the remaining beat rather than replaying or
 skipping it. The legacy `complete` phase owns the warning and its three-second attended timer;
 `congrats` is terminal, and leaving only then resets fire, stew, stargazing, and finale state.
+
+The checkpoint `progress` row owns `attendedMs` and `attendedComplete`. The clock begins only after
+the attract/recovery surface releases the real game, settles its active slice before every checkpoint,
+and runs only while the document is visible and focused. Road Trip's explicit transport pause also
+reconciles the clock through `__syncLoftAttendedTime`; ordinary media pauses do not pause gameplay.
+Entering Camping's terminal `congrats` phase freezes the total before the closing bear beats, so a
+reload/Continue can replay those visuals without adding or losing time. Fresh-game checkpoint clear
+resets both fields.
 
 `__updateRoadtripCampAudio()` owns one shared-context outdoor bed. It gain-gates fire, wind, rain,
 and storm layers from camp/fire/weather state, and tears the whole bed down when camp is dismissed
@@ -486,7 +497,7 @@ their own localStorage keys and stay outside the gameplay checkpoint.
 
 Search for `LOFT_CHECKPOINT_KEY`, `checkpointPayload`, `applyCheckpoint`, and
 `__registerCheckpointAdapter`. The 90-day `loftCheckpoint:v1` record contains progression, compact
-puzzle state, selected phone/Album/game data, and a `systems` map from adapters.
+puzzle state, cumulative attended play time, selected phone/Album/game data, and a `systems` map from adapters.
 
 Checkpointing begins after the Kitchen is solved or deliberately left. Writes are debounced through
 `__checkpointChanged`. An adapter provides `capture()`, `restore(row, phase)`, and optionally
